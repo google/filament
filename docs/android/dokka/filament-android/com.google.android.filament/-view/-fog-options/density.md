@@ -5,7 +5,9 @@
 [main]\
 open var [density](density.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
-Extinction factor in [1/m] at an altitude 'height'. The extinction factor controls how much light is absorbed and out-scattered per unit of distance. Each unit of extinction reduces the incoming light to 37% of its original value. 
+Extinction factor in [1/m] at an altitude 'height'. 
+
+The extinction factor controls how much light is absorbed and out-scattered per unit of distance. Each unit of extinction reduces the incoming light to 37% of its original value.
 
 Note: The extinction factor is related to the fog density, it's usually some constant K times the density at sea level (more specifically at fog height). The constant K depends on the composition of the fog/atmosphere.
 

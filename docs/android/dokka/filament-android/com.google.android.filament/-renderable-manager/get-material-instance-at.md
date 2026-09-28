@@ -3,6 +3,6 @@
 # getMaterialInstanceAt
 
 [main]\
-open fun [getMaterialInstanceAt](get-material-instance-at.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), primitiveIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [MaterialInstance](../-material-instance/index.md)
+open fun [getMaterialInstanceAt](get-material-instance-at.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), primitiveIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [MaterialInstance](../-material-instance/index.md)
 
-Creates a MaterialInstance Java wrapper object for a particular material instance.
+Retrieves the material instance that is bound to the given primitive.

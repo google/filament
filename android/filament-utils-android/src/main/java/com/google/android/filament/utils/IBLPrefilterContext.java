@@ -68,7 +68,7 @@ public class IBLPrefilterContext {
 
         public Texture run(Texture equirect) {
             long nativeTexture = nEquirectHelperRun(getNativeObject(), equirect.getNativeObject());
-            return new Texture(nativeTexture);
+            return Texture.wrap(nativeTexture);
         }
 
         public void destroy() {
@@ -93,7 +93,7 @@ public class IBLPrefilterContext {
 
         public Texture run(Texture skybox) {
             long nativeTexture = nSpecularFilterRun(getNativeObject(), skybox.getNativeObject());
-            return new Texture(nativeTexture);
+            return Texture.wrap(nativeTexture);
         }
 
         public void destroy() {

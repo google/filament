@@ -4,3 +4,5 @@
 
 [main]\
 [RGBA](index.md)
+
+Four Red, Green, Blue and Alpha channels, float

@@ -51,7 +51,7 @@ object KTX1Loader {
     fun createTexture(engine: Engine, buffer: Buffer, options: Options = Options()): Texture {
         val nativeEngine = engine.nativeObject
         val nativeTexture = nCreateKTXTexture(nativeEngine, buffer, buffer.remaining(), options.srgb)
-        return Texture(nativeTexture)
+        return Texture.wrap(nativeTexture)
     }
 
     /**
@@ -70,7 +70,7 @@ object KTX1Loader {
         }
         val ktxTexture = createTexture(engine, buffer, options)
         val nativeIndirectLight = nCreateIndirectLight(nativeEngine, ktxTexture.nativeObject, sphericalHarmonics)
-        return IndirectLightBundle(IndirectLight(nativeIndirectLight), ktxTexture)
+        return IndirectLightBundle(IndirectLight.wrap(nativeIndirectLight), ktxTexture)
     }
 
     /**
@@ -85,7 +85,7 @@ object KTX1Loader {
         val nativeEngine = engine.nativeObject
         val ktxTexture = createTexture(engine, buffer, options)
         val nativeSkybox = nCreateSkybox(nativeEngine, ktxTexture.nativeObject)
-        return SkyboxBundle(Skybox(nativeSkybox), ktxTexture)
+        return SkyboxBundle(Skybox.wrap(nativeSkybox), ktxTexture)
     }
 
     /**

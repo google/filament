@@ -6,9 +6,3 @@
 open fun [getShading](get-shading.md)(): [Material.Shading](-shading/index.md)
 
 Returns the shading model of this material.
-
-#### See also
-
-| | |
-|---|---|
-| &lt;a href=&quot;https://google.github.io/filament/Materials.html#materialmodels&quot;&gt; | Material Models |

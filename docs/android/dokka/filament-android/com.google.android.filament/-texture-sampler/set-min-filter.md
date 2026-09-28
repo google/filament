@@ -3,9 +3,9 @@
 # setMinFilter
 
 [main]\
-open fun [setMinFilter](set-min-filter.md)(filter: [TextureSampler.MinFilter](-min-filter/index.md))
+open fun [setMinFilter](set-min-filter.md)(v: [TextureSampler.MinFilter](-min-filter/index.md))
 
-Sets the minification filter.
+Sets the minification filter
 
 #### Parameters
 
@@ -13,4 +13,4 @@ main
 
 | | |
 |---|---|
-| filter | minification filter |
+| v | Minification filter |

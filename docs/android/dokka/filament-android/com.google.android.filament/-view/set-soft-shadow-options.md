@@ -5,7 +5,13 @@
 [main]\
 open fun [setSoftShadowOptions](set-soft-shadow-options.md)(options: [View.SoftShadowOptions](-soft-shadow-options/index.md))
 
-Sets soft shadowing options that apply across the entire View. Additional light-specific VSM options can be set with [shadowOptions](../-light-manager/-builder/shadow-options.md). Only applicable when shadow type is set to ShadowType.DPCF. Warning: This API is still experimental and subject to change.
+Sets soft shadowing options that apply across the entire View. 
+
+Additional light-specific soft shadow parameters can be set with LightManager::setShadowOptions.
+
+Only applicable when shadow type is set to ShadowType::PCSS.
+
+This API is still experimental and subject to change.
 
 #### Parameters
 

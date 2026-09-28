@@ -74,12 +74,9 @@ public final class IblLoader {
             Engine engine, String prefix, int level) throws IOException {
         Options opts = new Options();
         opts.inPremultiplied = false;
-        final int faceSize = texture.getWidth(level) * texture.getHeight(level) * 4;
-
-        final int[] offsets = new int[6];
-        for(int i = 0; i < 6; ++i) {
-            offsets[i] = i * faceSize;
-        }
+        final int width = texture.getWidth(level);
+        final int height = texture.getHeight(level);
+        final int faceSize = width * height * 4;
 
         final String[] suffixes = new String[]{"px", "nx", "py", "ny", "pz", "nz"};
 
@@ -95,7 +92,7 @@ public final class IblLoader {
 
         PixelBufferDescriptor buffer = new PixelBufferDescriptor(storage, Format.RGB,
                 Type.UINT_10F_11F_11F_REV);
-        texture.setImage(engine, level, buffer, offsets);
+        texture.setImage(engine, level, 0, 0, 0, width, height, 6, buffer);
         return true;
     }
 

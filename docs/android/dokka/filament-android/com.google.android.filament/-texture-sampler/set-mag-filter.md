@@ -3,9 +3,9 @@
 # setMagFilter
 
 [main]\
-open fun [setMagFilter](set-mag-filter.md)(filter: [TextureSampler.MagFilter](-mag-filter/index.md))
+open fun [setMagFilter](set-mag-filter.md)(v: [TextureSampler.MagFilter](-mag-filter/index.md))
 
-Sets the magnification filter.
+Sets the magnification filter
 
 #### Parameters
 
@@ -13,4 +13,4 @@ main
 
 | | |
 |---|---|
-| filter | magnification filter |
+| v | Magnification filter |

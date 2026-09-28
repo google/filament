@@ -7,4 +7,4 @@ open fun [getEntityManager](get-entity-manager.md)(): [EntityManager](../-entity
 
 #### Return
 
-the [EntityManager](../-entity-manager/index.md) used by this [Engine](index.md)
+EntityManager used by filament

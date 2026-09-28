@@ -3,12 +3,13 @@
 # getParameters
 
 [main]\
-open fun [getParameters](get-parameters.md)(): [List](https://developer.android.com/reference/kotlin/java/util/List.html)&lt;[Material.Parameter](-parameter/index.md)&gt;
+open fun [getParameters](get-parameters.md)(): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Material.ParameterInfo](-parameter-info/index.md)&gt;
 
-Returns a list of Parameter objects representing this material's parameters. The list may be empty if the material has no declared parameters.
+Gets information about this material's parameters.
 
-#### See also
+#### Return
 
-| | |
-|---|---|
-| &lt;a href=&quot;https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/general:parameters&quot;&gt; | General: parameters |
+The number of parameters written to the parameters pointer.
+
+[main]\
+open fun [getParameters](get-parameters.md)(parameters: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Material.ParameterInfo](-parameter-info/index.md)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

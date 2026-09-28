@@ -4,3 +4,5 @@
 
 [main]\
 [FLUSH](index.md)
+
+The command stream is flushed

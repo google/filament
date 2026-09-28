@@ -193,6 +193,7 @@ public:
     ~DriverBase() noexcept override;
 
     void purge() noexcept final;
+    void purgeAll() noexcept final;
 
     // Helpers...
     struct CallbackData {
@@ -315,6 +316,23 @@ public:
     }
 
     /**
+     * Promotes resources to asynchronous mode so that subsequent destruction is routed through the
+     * JobQueue to preserve FIFO ordering.
+     */
+    template<typename T>
+    static inline decltype(auto) promoteToAsync(T&& resource) noexcept {
+        resource->asynchronous = true;
+        return std::forward<T>(resource);
+    }
+
+    template<typename First, typename Second, typename... Rest>
+    static inline void promoteToAsync(First&& first, Second&& second, Rest&&... rest) noexcept {
+        promoteToAsync(std::forward<First>(first));
+        promoteToAsync(std::forward<Second>(second));
+        (promoteToAsync(std::forward<Rest>(rest)), ...);
+    }
+
+    /**
      * Waits for a predicate to become true or until a timeout is reached.
      * Returns ERROR if the driver encountered an unrecoverable error.
      */
@@ -412,6 +430,9 @@ protected:
     void stopServiceThread() noexcept;
 
 private:
+    // Dispatches the callbacks queued so far. Returns false if there were none.
+    bool dispatchQueuedCallbacks() noexcept;
+
     const Platform::DriverConfig mDriverConfig;
 
     mutable utils::Mutex mPurgeLock;

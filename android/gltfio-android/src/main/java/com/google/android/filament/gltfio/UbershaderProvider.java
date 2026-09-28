@@ -59,13 +59,13 @@ public class UbershaderProvider implements MaterialProvider {
     public @Nullable MaterialInstance createMaterialInstance(MaterialKey config,
             @NonNull @Size(min = 8) int[] uvmap, @Nullable String label, @Nullable String extras) {
         long nativeMaterialInstance = nCreateMaterialInstance(mNativeObject, config, uvmap, label, extras);
-        return nativeMaterialInstance == 0 ? null : new MaterialInstance(null, nativeMaterialInstance);
+        return nativeMaterialInstance == 0 ? null : MaterialInstance.wrap(nativeMaterialInstance);
     }
 
     public @Nullable Material getMaterial(MaterialKey config, @NonNull @Size(min = 8) int[] uvmap,
             @Nullable String label) {
         long nativeMaterial = nGetMaterial(mNativeObject, config, uvmap, label);
-        return nativeMaterial == 0 ? null : new Material(nativeMaterial);
+        return nativeMaterial == 0 ? null : Material.wrap(nativeMaterial);
     }
 
     public @NonNull Material[] getMaterials() {
@@ -74,7 +74,7 @@ public class UbershaderProvider implements MaterialProvider {
         long[] natives = new long[count];
         nGetMaterials(mNativeObject, natives);
         for (int i = 0; i < count; i++) {
-            result[i] = new Material(natives[i]);
+            result[i] = Material.wrap(natives[i]);
         }
         return result;
     }

@@ -5,7 +5,7 @@
 [main]\
 open class [Builder](index.md)
 
-Constructs `Engine` objects using a builder pattern.
+Use `Builder` to construct an `Engine` object instance.
 
 ## Constructors
 

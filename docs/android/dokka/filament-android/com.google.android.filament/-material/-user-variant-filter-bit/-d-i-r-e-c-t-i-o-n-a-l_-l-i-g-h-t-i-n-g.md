@@ -3,6 +3,6 @@
 # DIRECTIONAL_LIGHTING
 
 [main]\
-open var [DIRECTIONAL_LIGHTING](-d-i-r-e-c-t-i-o-n-a-l_-l-i-g-h-t-i-n-g.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+val [DIRECTIONAL_LIGHTING](-d-i-r-e-c-t-i-o-n-a-l_-l-i-g-h-t-i-n-g.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 1
 
 Directional lighting

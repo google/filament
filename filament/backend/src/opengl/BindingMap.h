@@ -22,6 +22,7 @@
 #include <backend/DriverEnums.h>
 
 #include <utils/bitset.h>
+#include <utils/compiler.h>
 #include <utils/debug.h>
 
 #include <new>
@@ -69,11 +70,22 @@ public:
         assert_invariant(set < MAX_DESCRIPTOR_SET_COUNT);
         assert_invariant(binding < MAX_DESCRIPTOR_COUNT);
         assert_invariant(entry.binding < 128); // we reserve 1 bit for the type right now
+        // `binding` originates from the material file (see ChunkDescriptorBindingsInfo), which
+        // could be malicious or broken, so the asserts above are not sufficient. Silently drop
+        // out-of-range descriptors instead of corrupting memory: the descriptor simply won't be
+        // active for this program, and get() below can then never be called with it.
+        if (UTILS_VERY_UNLIKELY(set >= MAX_DESCRIPTOR_SET_COUNT ||
+                                binding >= MAX_DESCRIPTOR_COUNT ||
+                                entry.binding >= 128)) {
+            return;
+        }
         mStorage[set][binding] = { uint8_t(entry.binding),
                                    DescriptorSetLayoutDescriptor::isSampler(entry.type) };
         mActiveDescriptors[set].set(binding);
     }
 
+    // `binding` must be a bit set in getActiveDescriptors(set), which insert() guarantees is
+    // always less than MAX_DESCRIPTOR_COUNT (== bitset64::BIT_COUNT).
     GLuint get(descriptor_set_t set, descriptor_binding_t binding) const noexcept {
         assert_invariant(set < MAX_DESCRIPTOR_SET_COUNT);
         assert_invariant(binding < MAX_DESCRIPTOR_COUNT);

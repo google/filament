@@ -3,9 +3,11 @@
 # destroy
 
 [main]\
-open fun [destroy](destroy.md)(entity: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+open fun [destroy](destroy.md)(e: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-Destroys this component from the given entity, children are orphaned.
+Destroys this component from the given entity, children are orphaned. 
+
+If this transform had children, these are orphaned, which means their local transform becomes a world transform. Usually it's nonsensical. It's recommended to make sure that a destroyed transform doesn't have children.
 
 #### Parameters
 
@@ -13,7 +15,7 @@ main
 
 | | |
 |---|---|
-| entity | an [Entity](../-entity/index.md). If this transform had children, these are orphaned, which means their local transform becomes a world transform. Usually it's nonsensical. It's recommended to make sure that a destroyed transform doesn't have children. |
+| e | An entity. |
 
 #### See also
 

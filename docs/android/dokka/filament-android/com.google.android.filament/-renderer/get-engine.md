@@ -5,8 +5,8 @@
 [main]\
 open fun [getEngine](get-engine.md)(): [Engine](../-engine/index.md)
 
-Gets the [Engine](../-engine/index.md) that created this `Renderer`.
+Get the Engine that created this Renderer.
 
 #### Return
 
-[Engine](../-engine/index.md) instance this `Renderer` is associated to.
+A pointer to the Engine instance this Renderer is associated to.

@@ -5,4 +5,6 @@
 [main]\
 [CLAMP_TO_EDGE](index.md)
 
+clamp-to-edge. 
+
 The edge of the texture extends to infinity.

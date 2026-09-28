@@ -77,6 +77,10 @@ InstanceBuffer::Builder& InstanceBuffer::Builder::name(utils::StaticString const
     return BuilderNameMixin::name(name);
 }
 
+InstanceBuffer::Builder& InstanceBuffer::Builder::name(utils::ImmutableCString const& name) noexcept {
+    return BuilderNameMixin::name(name);
+}
+
 InstanceBuffer* InstanceBuffer::Builder::build(Engine& engine) const {
     FILAMENT_CHECK_PRECONDITION(mImpl->mInstanceCount >= 1) << "instanceCount must be >= 1.";
     FILAMENT_CHECK_PRECONDITION(mImpl->mInstanceCount <= engine.getMaxAutomaticInstances())

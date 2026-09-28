@@ -5,4 +5,4 @@
 [main]\
 [UINT_10F_11F_11F_REV](index.md)
 
-unsigned 5.6 (5.5 for blue) float packed in a 32-bit integer.
+three low precision floating-point numbers

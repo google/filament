@@ -9,7 +9,7 @@ Creates the IndirectLight object and returns a pointer to it.
 
 #### Return
 
-A newly created `IndirectLight`
+pointer to the newly created object or nullptr if exceptions are disabled and an error occurred.
 
 #### Parameters
 
@@ -17,11 +17,4 @@ main
 
 | | |
 |---|---|
-| engine | The [Engine](../../-engine/index.md) to associate this `IndirectLight` with. |
-
-#### Throws
-
-| | |
-|---|---|
-| [IllegalStateException](https://developer.android.com/reference/kotlin/java/lang/IllegalStateException.html) | if a parameter to a builder function was invalid. |
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if a runtime error occurred, such as running out of memory or other resources. |
+| engine | Reference to the filament::Engine to associate this IndirectLight with. |

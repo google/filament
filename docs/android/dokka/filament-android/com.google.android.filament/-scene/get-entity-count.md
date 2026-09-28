@@ -5,8 +5,8 @@
 [main]\
 open fun [getEntityCount](get-entity-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
-Returns the total number of Entities in the `Scene`, whether alive or not.
+Returns the total number of Entities in the Scene, whether alive or not.
 
 #### Return
 
-the total number of Entities in the `Scene`.
+Total number of Entities in the Scene.

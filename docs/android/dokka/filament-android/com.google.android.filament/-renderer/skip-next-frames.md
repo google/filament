@@ -5,7 +5,9 @@
 [main]\
 open fun [skipNextFrames](skip-next-frames.md)(frameCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-Requests the next frameCount frames to be skipped. For Debugging.
+Requests the next frameCount frames to be skipped. 
+
+For Debugging.
 
 #### Parameters
 

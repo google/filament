@@ -26,6 +26,7 @@
 #include <utils/FixedCapacityVector.h>
 #include <utils/Hash.h>
 #include <utils/Invocable.h>
+#include <utils/Mutex.h>
 
 #include <Metal/Metal.h>
 #include <tsl/robin_map.h>
@@ -152,10 +153,22 @@ struct BlendState {
 // inserted by the compiler.
 static_assert(sizeof(BlendState) == 56, "BlendState is unexpected size.");
 
-// StateCache caches Metal state objects using StateType as a key.
-// MetalType is the corresponding Metal API type.
-// StateCreator is a functor that creates a new state of type MetalType.
-// HashFn is a functor that hashes StateType.
+/**
+ * StateCache caches Metal state objects using StateType as a key.
+ * MetalType is the corresponding Metal API type.
+ * StateCreator is a functor that creates a new state of type MetalType.
+ * HashFn is a functor that hashes StateType.
+ *
+ * Thread-safety:
+ * StateCache is thread-safe.
+ * getOrCreateState() and removeIf() may be called concurrently across threads:
+ * - Driver thread: performs lookups during command encoding (e.g. bindPipeline)
+ *   and prunes entries during program destruction (destroyProgram).
+ * - Worker threads: background JobQueue worker threads executing asynchronous
+ *   texture uploads (Texture::setImageAsync) may invoke blitting operations
+ *   (via MetalBlitter::blitDepthPlane) that access pipeline, sampler, and
+ *   depth-stencil state caches concurrently with the driver thread.
+ */
 template<typename StateType,
          typename MetalType,
          typename StateCreator,
@@ -173,7 +186,12 @@ public:
 
     void setDevice(id<MTLDevice> device) noexcept { mDevice = device; }
 
+    /**
+     * Erases entries matching the given predicate. Thread-safe.
+     * Typically called by the driver thread during program destruction.
+     */
     void removeIf(utils::Invocable<bool(const StateType&)> fn) noexcept {
+        utils::LockGuard const lock(mLock);
         typename MapType::const_iterator it = mStateCache.begin();
         while (it != mStateCache.end()) {
             const auto& [key, _] = *it;
@@ -185,26 +203,33 @@ public:
         }
     }
 
+    /**
+     * Finds or creates a cached Metal state object. Thread-safe.
+     * Can be invoked concurrently from the driver thread and worker threads.
+     */
     MetalType getOrCreateState(const StateType& state) noexcept {
         assert_invariant(mDevice);
 
-        // Check if a valid state already exists in the cache.
-        auto iter = mStateCache.find(state);
-        if (UTILS_LIKELY(iter != mStateCache.end())) {
-            auto foundState = iter.value();
-            return foundState;
+        // Fast path: check if a valid state already exists in the cache.
+        {
+            utils::LockGuard const lock(mLock);
+            auto iter = mStateCache.find(state);
+            if (UTILS_LIKELY(iter != mStateCache.end())) {
+                return iter.value();
+            }
         }
 
-        // If we reach this point, we couldn't find one in the cache; create a new one.
-        const auto& metalObject = creator(mDevice, state);
+        // Slow path: state wasn't found in cache. Create the new Metal state object
+        // outside the lock.
+        const auto metalObject = creator(mDevice, state);
         assert_invariant(metalObject);
 
-        mStateCache.emplace(std::make_pair(
-            state,
-            metalObject
-        ));
-
-        return metalObject;
+        // Re-acquire lock to insert into the cache. If another thread inserted the same
+        // state while we were compiling, emplace() will return the existing iterator
+        // without replacing it.
+        utils::LockGuard const lock(mLock);
+        auto [iter, inserted] = mStateCache.emplace(state, metalObject);
+        return iter.value();
     }
 
 private:
@@ -212,14 +237,20 @@ private:
     StateCreator creator;
     id<MTLDevice> mDevice = nil;
 
-    MapType mStateCache;
-
+    mutable utils::Mutex mLock;
+    MapType mStateCache UTILS_GUARDED_BY(mLock);
 };
 
-// StateTracker keeps track of state changes made to a Metal command encoder.
-// Different kinds of state, like pipeline state, uniform buffer state, etc., are passed to the
-// current Metal command encoder and persist throughout the lifetime of the encoder (a frame).
-// StateTracker is used to prevent calling redundant state change methods.
+/**
+ * StateTracker keeps track of state changes made to a Metal command encoder.
+ * Different kinds of state, like pipeline state, uniform buffer state, etc., are passed to the
+ * current Metal command encoder and persist throughout the lifetime of the encoder.
+ * StateTracker is used to prevent calling redundant state change methods.
+ *
+ * Thread-safety:
+ * StateTracker is NOT thread-safe. It is designed strictly for single-threaded usage
+ * on the driver thread.
+ */
 template <typename StateType, typename StateEqual = std::equal_to<StateType>>
 class StateTracker {
 public:

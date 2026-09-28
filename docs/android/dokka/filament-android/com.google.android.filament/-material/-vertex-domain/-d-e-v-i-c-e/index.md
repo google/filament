@@ -5,4 +5,4 @@
 [main]\
 [DEVICE](index.md)
 
-Vertices are in normalized device space.
+vertices are in normalized device space

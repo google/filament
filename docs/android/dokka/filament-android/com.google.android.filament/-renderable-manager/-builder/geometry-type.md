@@ -5,7 +5,9 @@
 [main]\
 open fun [geometryType](geometry-type.md)(type: [RenderableManager.Builder.GeometryType](-geometry-type/index.md)): [RenderableManager.Builder](index.md)
 
-Specify whether this renderable has static bounds. In this context his means that the renderable's bounding box cannot change and that the renderable's transform is assumed immutable. Changing the renderable's transform via the TransformManager can lead to corrupted graphics. Note that skinning and morphing are not forbidden. Disabled by default.
+Specify the type of geometry for this renderable. 
+
+DYNAMIC geometry has no restriction, STATIC_BOUNDS geometry means that both the bounds and the world-space transform of the renderable are immutable. STATIC geometry has the same restrictions as STATIC_BOUNDS, but in addition disallows skinning, morphing and changing the VertexBuffer or IndexBuffer in any way.
 
 #### Parameters
 
@@ -13,4 +15,4 @@ main
 
 | | |
 |---|---|
-| enable | whether this renderable has static bounds. false by default. |
+| type | type of geometry. |

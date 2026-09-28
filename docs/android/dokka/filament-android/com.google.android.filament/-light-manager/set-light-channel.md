@@ -3,9 +3,11 @@
 # setLightChannel
 
 [main]\
-open fun [setLightChannel](set-light-channel.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), channel: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
+open fun [setLightChannel](set-light-channel.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), channel: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-Enables or disables a light channel. Light channel 0 is enabled by default.
+Enables or disables a light channel. 
+
+Light channel 0 is enabled by default.
 
 #### Parameters
 
@@ -13,12 +15,20 @@ main
 
 | | |
 |---|---|
-| i | Instance of the component obtained from getInstance(). |
-| channel | Light channel to set |
-| enable | true to enable, false to disable |
+| channel | light channel to enable or disable, between 0 and 7. |
 
-#### See also
+[main]\
+open fun [setLightChannel](set-light-channel.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), channel: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
-| |
-|---|
-| [LightManager.Builder](-builder/light-channel.md) |
+Enables or disables a light channel. 
+
+Light channel 0 is enabled by default.
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| channel | light channel to enable or disable, between 0 and 7. |
+| enable | whether to enable (true) or disable (false) the specified light channel. |

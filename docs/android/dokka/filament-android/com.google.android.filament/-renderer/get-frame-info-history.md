@@ -5,13 +5,13 @@
 [main]\
 open fun [getFrameInfoHistory](get-frame-info-history.md)(outHistory: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Renderer.FrameInfo](-frame-info/index.md)&gt;): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
-Retrieve a history of frame timing information. The maximum frame history size is given by [getMaxFrameHistorySize](get-max-frame-history-size.md). 
+Retrieve a history of frame timing information. 
 
- All or part of the history can be lost when using a different SwapChain in beginFrame(). Provide a pre-allocated array of [FrameInfo](-frame-info/index.md) to receive historical records without garbage collection allocations. 
+The maximum frame history size is given by getMaxFrameHistorySize(). All or part of the history can be lost when using a different SwapChain in beginFrame().
 
 #### Return
 
-the number of FrameInfo populated.
+A vector of FrameInfo.
 
 #### Parameters
 
@@ -25,4 +25,4 @@ main
 
 | |
 |---|
-| [beginFrame](begin-frame.md) |
+| beginFrame |

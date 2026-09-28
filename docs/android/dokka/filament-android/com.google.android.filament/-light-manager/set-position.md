@@ -3,11 +3,9 @@
 # setPosition
 
 [main]\
-open fun [setPosition](set-position.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), x: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), y: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), z: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
+open fun [setPosition](set-position.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), positionx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), positiony: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), positionz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
-Dynamically updates the light's position. 
-
-**note:** The Light's position is ignored for directional lights ([DIRECTIONAL](-type/-d-i-r-e-c-t-i-o-n-a-l/index.md) or [SUN](-type/-s-u-n/index.md)) 
+Dynamically updates the light's position.
 
 #### Parameters
 
@@ -16,12 +14,32 @@ main
 | | |
 |---|---|
 | i | Instance of the component obtained from getInstance(). |
-| x | Light's position x coordinate in world space. The default is 0. |
-| y | Light's position y coordinate in world space. The default is 0. |
-| z | Light's position z coordinate in world space. The default is 0. |
+| positionx | (x component) Light's position in world space. The default is at the origin. |
+| positiony | (y component) Light's position in world space. The default is at the origin. |
+| positionz | (z component) Light's position in world space. The default is at the origin. |
 
 #### See also
 
 | |
 |---|
-| [LightManager.Builder](-builder/position.md) |
+| com.google.android.filament.LightManager.Builder |
+
+[main]\
+open fun [setPosition](set-position.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), position: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
+
+Dynamically updates the light's position.
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| i | Instance of the component obtained from getInstance(). |
+| position | Light's position in world space. The default is at the origin. |
+
+#### See also
+
+| |
+|---|
+| com.google.android.filament.LightManager.Builder |

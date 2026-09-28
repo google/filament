@@ -4,3 +4,5 @@
 
 [main]\
 [DEPTH_STENCIL](index.md)
+
+Two Depth (24-bits) + Stencil (8-bits) channels

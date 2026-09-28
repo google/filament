@@ -4,3 +4,5 @@
 
 [main]\
 [CUBEMAP](index.md)
+
+refracted rays go to the ibl cubemap

@@ -4,3 +4,5 @@
 
 [main]\
 [BONE_INDICES](index.md)
+
+indices of 4 bones, as unsigned integers (uvec4)

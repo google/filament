@@ -236,7 +236,7 @@ class MainActivity : Activity() {
         // We now need a light, let's create a directional light
         light = EntityManager.get().create()
 
-        val (r, g, b) = Colors.cct(5_500.0f)
+        val (r, g, b) = Colors.cct(5_500.0f, null)
         LightManager.Builder(LightManager.Type.DIRECTIONAL)
                 .color(r, g, b)
                 .intensity(110_000.0f)

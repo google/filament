@@ -1,0 +1,473 @@
+{
+  "meta": {
+    "generator_version": "1.0.0",
+    "source_file": "/Users/mathias/sources/git/filament/tools/apigen/tests/java/17_builder_pattern.h"
+  },
+  "includes": {
+    "user": [],
+    "system": [
+      "<stdint.h>"
+    ]
+  },
+  "aliases": [],
+  "enums": [],
+  "classes": [
+    {
+      "name": "BuilderBase",
+      "qualified_name": "filament::BuilderBase",
+      "location": {
+        "file": "tools/apigen/tests/java/17_builder_pattern.h",
+        "line": 9
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [
+        "apigen:skip"
+      ],
+      "type": {
+        "cpp_name": "BuilderBase",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [],
+      "fields": [],
+      "aliases": [],
+      "constants": [],
+      "is_aggregate": false
+    },
+    {
+      "name": "Builder",
+      "qualified_name": "filament::BuilderTest::Builder",
+      "location": {
+        "file": "tools/apigen/tests/java/17_builder_pattern.h",
+        "line": 19
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "Builder",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [
+        "BuilderBase<BuilderDetails>"
+      ],
+      "methods": [
+        {
+          "name": "Builder",
+          "qualified_name": "Builder()",
+          "location": {
+            "file": "tools/apigen/tests/java/17_builder_pattern.h",
+            "line": 21
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": [],
+          "is_constructor": true
+        },
+        {
+          "name": "intensity",
+          "qualified_name": "intensity(float)",
+          "location": {
+            "file": "tools/apigen/tests/java/17_builder_pattern.h",
+            "line": 28
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "Builder &",
+            "qualified_name": "filament::BuilderTest::Builder&",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": true,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "intensity",
+              "type": {
+                "cpp_name": "float",
+                "qualified_name": "float",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "mode",
+          "qualified_name": "mode(Mode)",
+          "location": {
+            "file": "tools/apigen/tests/java/17_builder_pattern.h",
+            "line": 29
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "Builder &",
+            "qualified_name": "filament::BuilderTest::Builder&",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": true,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "mode",
+              "type": {
+                "cpp_name": "Mode",
+                "qualified_name": "filament::BuilderTest::Mode",
+                "category": "enum",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "parent",
+          "qualified_name": "parent(const BuilderTest *)",
+          "location": {
+            "file": "tools/apigen/tests/java/17_builder_pattern.h",
+            "line": 30
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "Builder &",
+            "qualified_name": "filament::BuilderTest::Builder&",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": true,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "parent",
+              "type": {
+                "cpp_name": "const BuilderTest *",
+                "qualified_name": "filament::BuilderTest*",
+                "category": "object",
+                "is_const": true,
+                "is_pointer": true,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "build",
+          "qualified_name": "build(Engine &)",
+          "location": {
+            "file": "tools/apigen/tests/java/17_builder_pattern.h",
+            "line": 32
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "BuilderTest *",
+            "qualified_name": "filament::BuilderTest*",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": true,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "engine",
+              "type": {
+                "cpp_name": "Engine &",
+                "qualified_name": "filament::Engine&",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": true,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": false,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": [],
+      "constants": [],
+      "parent_class": "BuilderTest",
+      "is_nested": true,
+      "is_aggregate": false,
+      "is_builder": true,
+      "category": "builder",
+      "archetype": "builder"
+    },
+    {
+      "name": "BuilderTest",
+      "qualified_name": "filament::BuilderTest",
+      "location": {
+        "file": "tools/apigen/tests/java/17_builder_pattern.h",
+        "line": 11
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "BuilderTest",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [
+        {
+          "name": "getIntensity",
+          "qualified_name": "getIntensity()",
+          "location": {
+            "file": "tools/apigen/tests/java/17_builder_pattern.h",
+            "line": 35
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "float",
+            "qualified_name": "float",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "setIntensity",
+          "qualified_name": "setIntensity(float)",
+          "location": {
+            "file": "tools/apigen/tests/java/17_builder_pattern.h",
+            "line": 36
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "intensity",
+              "type": {
+                "cpp_name": "float",
+                "qualified_name": "float",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": [],
+      "constants": [],
+      "enums": [
+        {
+          "name": "Mode",
+          "qualified_name": "filament::BuilderTest::Mode",
+          "location": {
+            "file": "tools/apigen/tests/java/17_builder_pattern.h",
+            "line": 14
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "underlying_type": "uint8_t",
+          "entries": [
+            {
+              "name": "DEFAULT",
+              "value": 0,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            },
+            {
+              "name": "FAST",
+              "value": 1,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            }
+          ]
+        }
+      ],
+      "is_aggregate": false
+    }
+  ],
+  "functions": []
+}

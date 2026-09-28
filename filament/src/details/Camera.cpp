@@ -106,14 +106,14 @@ void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& projection,
     mFar = far;
 }
 
-void UTILS_NOINLINE FCamera::setCustomEyeProjection(mat4 const* projection, size_t const count,
+void UTILS_NOINLINE FCamera::setCustomEyeProjection(utils::Slice<const math::mat4> projection,
         mat4 const& projectionForCulling, double const near, double const far) {
     const Engine::Config& config = mEngine.getConfig();
 
     FILAMENT_CHECK_PRECONDITION(near != far)
             << "Camera preconditions not met in setCustomEyeProjection(): near = far = " << near;
 
-    FILAMENT_CHECK_PRECONDITION(count >= config.stereoscopicEyeCount)
+    FILAMENT_CHECK_PRECONDITION(projection.size() >= config.stereoscopicEyeCount)
             << "All eye projections must be supplied together, count must be >= "
                "config.stereoscopicEyeCount ("
             << config.stereoscopicEyeCount << ")";

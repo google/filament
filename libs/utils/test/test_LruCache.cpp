@@ -219,16 +219,18 @@ TEST(LruCacheTest, Pop) {
     cache.put(1, 10, releaser);
     cache.put(2, 20, releaser);
 
-    std::optional<int> val1 = cache.pop(1);
-    EXPECT_TRUE(val1.has_value());
-    EXPECT_EQ(*val1, 10);
+    std::optional<LruCache<int, int>::Item> item1 = cache.pop(1);
+    EXPECT_TRUE(item1.has_value());
+    EXPECT_EQ(item1->key, 1);
+    EXPECT_EQ(item1->value, 10);
     EXPECT_EQ(cache.size(), 1);
     EXPECT_EQ(cache.get(1), nullptr);
     EXPECT_NE(cache.get(2), nullptr);
 
-    std::optional<int> val2 = cache.pop(2);
-    EXPECT_TRUE(val2.has_value());
-    EXPECT_EQ(*val2, 20);
+    std::optional<LruCache<int, int>::Item> item2 = cache.pop(2);
+    EXPECT_TRUE(item2.has_value());
+    EXPECT_EQ(item2->key, 2);
+    EXPECT_EQ(item2->value, 20);
     EXPECT_EQ(cache.size(), 0);
 }
 
@@ -265,4 +267,30 @@ TEST(LruCacheTest, LargeKey) {
     cache.put(k3, 300, [](int&&){});
 
     EXPECT_NE(cache.get(k3), nullptr); // k3 present
+}
+
+TEST(LruCacheTest, PopReturnsStoredKey) {
+    struct TaggedKey {
+        long long id;
+        long long tag;
+        bool operator==(TaggedKey const& other) const { return id == other.id; }
+    };
+
+    struct TaggedKeyHash {
+        size_t operator()(TaggedKey const& k) const { return std::hash<long long>{}(k.id); }
+    };
+
+    // Larger than a pointer, so the backing map keys are references to Node::key.
+    static_assert(sizeof(TaggedKey) > sizeof(void*), "TaggedKey must be larger than pointer");
+    LruCache<TaggedKey, int, TaggedKeyHash> cache("LruCacheTest", 2);
+
+    cache.put(TaggedKey{ 1, 100 }, 10, [](int&&) {});
+
+    // Look the entry up with an equal, but distinct, key.
+    std::optional<LruCache<TaggedKey, int, TaggedKeyHash>::Item> item =
+            cache.pop(TaggedKey{ 1, 999 });
+    ASSERT_TRUE(item.has_value());
+    EXPECT_EQ(item->value, 10);
+    EXPECT_EQ(item->key.tag, 100);
+    EXPECT_EQ(cache.size(), 0);
 }

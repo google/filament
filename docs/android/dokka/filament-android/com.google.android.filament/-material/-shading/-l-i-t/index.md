@@ -2,12 +2,7 @@
 
 # LIT
 
+[main]\
 [LIT](index.md)
 
-Default, standard lighting
-
-#### See also
-
-| | |
-|---|---|
-| &lt;a href=&quot;https://google.github.io/filament/Materials.html#materialmodels/litmodel&quot;&gt; | Lit model |
+default, standard lighting

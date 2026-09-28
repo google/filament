@@ -4,3 +4,7 @@
 
 [main]\
 [TIMEOUT_EXPIRED](index.md)
+
+wait()'s timeout expired. 
+
+The Fence condition is not satisfied.

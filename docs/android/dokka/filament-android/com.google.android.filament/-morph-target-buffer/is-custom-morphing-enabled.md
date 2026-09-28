@@ -5,6 +5,10 @@
 [main]\
 open fun [isCustomMorphingEnabled](is-custom-morphing-enabled.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
-#### Return
+Returns true if custom morphing is enabled
 
-true if custom morphing is enabled.
+#### See also
+
+| |
+|---|
+| [MorphTargetBuffer.Builder](-builder/enable-custom-morphing.md) |

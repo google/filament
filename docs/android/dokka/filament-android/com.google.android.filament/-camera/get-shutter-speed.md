@@ -5,8 +5,4 @@
 [main]\
 open fun [getShutterSpeed](get-shutter-speed.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
-Gets the shutter speed in seconds
-
-#### Return
-
-Shutter speed in seconds
+returns this camera's shutter speed in seconds

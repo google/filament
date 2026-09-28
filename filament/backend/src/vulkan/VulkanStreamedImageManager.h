@@ -46,6 +46,13 @@ public:
     void onStreamAcquireImage(fvkmemory::resource_ptr<VulkanTexture> image,
             fvkmemory::resource_ptr<VulkanStream> stream);
 
+    // The following methods are only called from the backend thread.
+    fvkmemory::resource_ptr<VulkanTexture> getTexture(
+            fvkmemory::resource_ptr<VulkanStream> stream, void* ahb) const;
+    void pushImage(fvkmemory::resource_ptr<VulkanStream> stream, void* ahb,
+            fvkmemory::resource_ptr<VulkanTexture> tex);
+    void removeStream(fvkmemory::resource_ptr<VulkanStream> stream);
+
 private:
     struct StreamedTextureBinding {
         uint8_t binding = 0;
@@ -55,6 +62,17 @@ private:
     };
     // keep track of all the stream bindings
     std::vector<StreamedTextureBinding> mStreamedTexturesBindings;
+
+    struct StreamTexture {
+        // We key on the handle id instead of the VulkanStream pointer: the pointer can be recycled
+        // by the handle arena once the stream is destroyed, whereas the id carries an age.
+        fvkmemory::HandleId stream = HandleBase::nullid;
+        void* image = nullptr;
+        fvkmemory::resource_ptr<VulkanTexture> texture;
+
+        bool matches(fvkmemory::HandleId s, void* i) const { return stream == s && image == i; }
+    };
+    std::vector<StreamTexture> mStreamTextures;
 
     VulkanExternalImageManager* mExternalImageManager;
 };

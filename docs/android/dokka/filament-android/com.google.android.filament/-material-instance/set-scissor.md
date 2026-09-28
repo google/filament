@@ -7,9 +7,9 @@ open fun [setScissor](set-scissor.md)(left: [Int](https://kotlinlang.org/api/lat
 
 Set-up a custom scissor rectangle; by default it is disabled. 
 
- The scissor rectangle gets clipped by the View's viewport, in other words, the scissor cannot affect fragments outside of the View's Viewport. 
+The scissor rectangle gets clipped by the View's viewport, in other words, the scissor cannot affect fragments outside of the View's Viewport.
 
- Currently the scissor is not compatible with dynamic resolution and should always be disabled when dynamic resolution is used. 
+Currently the scissor is not compatible with dynamic resolution and should always be disabled when dynamic resolution is used.
 
 #### Parameters
 

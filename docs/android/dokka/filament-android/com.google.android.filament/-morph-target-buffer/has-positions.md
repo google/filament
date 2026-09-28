@@ -5,6 +5,10 @@
 [main]\
 open fun [hasPositions](has-positions.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
-#### Return
+Returns true if this MorphTargetBuffer has a position buffer.
 
-true if this MorphTargetBuffer has a position buffer.
+#### See also
+
+| |
+|---|
+| com.google.android.filament.MorphTargetBuffer.Builder |

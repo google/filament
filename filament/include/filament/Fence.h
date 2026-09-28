@@ -36,6 +36,7 @@ class UTILS_PUBLIC Fence : public FilamentAPI {
 public:
     //! Special \p timeout value to disable wait()'s timeout.
     static constexpr uint64_t FENCE_WAIT_FOR_EVER = backend::FENCE_WAIT_FOR_EVER;
+    static constexpr uint64_t WAIT_FOR_EVER = FENCE_WAIT_FOR_EVER;
 
     //! Error codes for Fence::wait()
     using FenceStatus = backend::FenceStatus;

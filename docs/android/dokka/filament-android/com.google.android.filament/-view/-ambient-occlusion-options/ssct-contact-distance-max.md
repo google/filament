@@ -5,4 +5,4 @@
 [main]\
 open var [ssctContactDistanceMax](ssct-contact-distance-max.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
-Screen Space Cone Tracing (SSCT) options Ambient shadows from dominant light
+max distance for contact

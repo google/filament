@@ -5,4 +5,4 @@
 [main]\
 [SAMPLER_CUBEMAP](index.md)
 
-Cubemap sampler
+Cube map texture

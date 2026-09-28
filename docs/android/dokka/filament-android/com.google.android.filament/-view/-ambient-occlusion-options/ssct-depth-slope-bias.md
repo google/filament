@@ -5,4 +5,4 @@
 [main]\
 open var [ssctDepthSlopeBias](ssct-depth-slope-bias.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
-Screen Space Cone Tracing (SSCT) options Ambient shadows from dominant light
+depth slope bias (mitigate self shadowing)

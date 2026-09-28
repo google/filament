@@ -5,7 +5,9 @@
 [main]\
 open fun [unprotected](unprotected.md)()
 
-Switch the command queue to unprotected mode. Protected mode can be activated via Renderer::beginFrame() using a protected SwapChain.
+Switch the command queue to unprotected mode. 
+
+Protected mode can be activated via Renderer::beginFrame() using a protected SwapChain.
 
 #### See also
 

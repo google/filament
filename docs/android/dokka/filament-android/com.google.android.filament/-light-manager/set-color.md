@@ -3,7 +3,7 @@
 # setColor
 
 [main]\
-open fun [setColor](set-color.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), linearR: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), linearG: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), linearB: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
+open fun [setColor](set-color.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), colorx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colory: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colorz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Dynamically updates the light's hue as linear sRGB
 
@@ -14,13 +14,34 @@ main
 | | |
 |---|---|
 | i | Instance of the component obtained from getInstance(). |
-| linearR | red component of the color (default is 1) |
-| linearG | green component of the color (default is 1) |
-| linearB | blue component of the color (default is 1) |
+| colorx | (x component) Color of the light specified in the linear sRGB color-space. The default is white {1,1,1}. |
+| colory | (y component) Color of the light specified in the linear sRGB color-space. The default is white {1,1,1}. |
+| colorz | (z component) Color of the light specified in the linear sRGB color-space. The default is white {1,1,1}. |
 
 #### See also
 
 | |
 |---|
-| [LightManager.Builder](-builder/color.md) |
+| com.google.android.filament.LightManager.Builder |
+| [getInstance](get-instance.md) |
+
+[main]\
+open fun [setColor](set-color.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), color: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
+
+Dynamically updates the light's hue as linear sRGB
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| i | Instance of the component obtained from getInstance(). |
+| color | Color of the light specified in the linear sRGB color-space. The default is white {1,1,1}. |
+
+#### See also
+
+| |
+|---|
+| com.google.android.filament.LightManager.Builder |
 | [getInstance](get-instance.md) |

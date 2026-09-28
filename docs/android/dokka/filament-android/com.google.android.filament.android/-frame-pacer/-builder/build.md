@@ -5,7 +5,7 @@
 [main]\
 open fun [build](build.md)(engine: [Engine](../../../com.google.android.filament/-engine/index.md)): [FramePacer](../index.md)
 
-Creates the FramePacer object and returns a pointer to it.
+Creates the FramePacer object and returns a wrapper instance.
 
 #### Return
 

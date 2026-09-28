@@ -5,7 +5,9 @@
 [main]\
 open fun [sunHaloFalloff](sun-halo-falloff.md)(haloFalloff: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [LightManager.Builder](index.md)
 
-Defines the halo falloff of the sun. The falloff is a dimensionless number used as an exponent.
+Defines the halo falloff of the sun. 
+
+The falloff is a dimensionless number used as an exponent. Must be at least 1.0.
 
 #### Return
 

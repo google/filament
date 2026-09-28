@@ -7,4 +7,4 @@ open fun [getTransformManager](get-transform-manager.md)(): [TransformManager](.
 
 #### Return
 
-the [TransformManager](../-transform-manager/index.md) used by this [Engine](index.md)
+TransformManager reference

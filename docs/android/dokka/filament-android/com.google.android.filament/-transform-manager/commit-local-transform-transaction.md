@@ -5,9 +5,11 @@
 [main]\
 open fun [commitLocalTransformTransaction](commit-local-transform-transaction.md)()
 
-Commits the currently open local transform transaction. When this returns, calls to getWorldTransform will return the proper value. 
+Commits the currently open local transform transaction. 
 
-Failing to call this method when done updating the local transform will cause a lot of rendering problems. The system never closes the transaction automatically.
+When this returns, calls to getWorldTransform() will return the proper value.
+
+@attention failing to call this method when done updating the local transform will cause a lot of rendering problems. The system never closes the transaction automatically.
 
 If the local transform transaction is not open, this is a no-op.
 

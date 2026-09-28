@@ -41,5 +41,5 @@ import java.lang.annotation.Target;
     ElementType.TYPE,
     ElementType.CONSTRUCTOR})
 public @interface UsedByNative {
-    String value();
+    String value() default "";
 }

@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#include <jni.h>
+#include "common/NioUtils.h"
 
 #include <geometry/SurfaceOrientation.h>
 
-#include "common/NioUtils.h"
+#include <common/JniUtils.h>
+#include <jni.h>
 
 #include <algorithm>
-#include <common/JniUtils.h>
 
 using namespace filament;
 using namespace filament::geometry;

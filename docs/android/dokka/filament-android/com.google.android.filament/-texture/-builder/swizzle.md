@@ -5,7 +5,9 @@
 [main]\
 open fun [swizzle](swizzle.md)(r: [Texture.Swizzle](../-swizzle/index.md), g: [Texture.Swizzle](../-swizzle/index.md), b: [Texture.Swizzle](../-swizzle/index.md), a: [Texture.Swizzle](../-swizzle/index.md)): [Texture.Builder](index.md)
 
-Specifies how a texture's channels map to color components
+Specifies how a texture's channels map to color components 
+
+Texture Swizzle is only supported if isTextureSwizzleSupported() returns true.
 
 #### Return
 
@@ -21,3 +23,9 @@ main
 | g | texture channel for green component |
 | b | texture channel for blue component |
 | a | texture channel for alpha component |
+
+#### See also
+
+| |
+|---|
+| [Texture](../is-texture-swizzle-supported.md) |

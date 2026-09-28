@@ -4,5 +4,3 @@
 
 [main]\
 constructor()
-
-Use `Builder` to construct a `ColorGrading` object instance.

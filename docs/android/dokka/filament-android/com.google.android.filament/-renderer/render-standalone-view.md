@@ -5,16 +5,11 @@
 [main]\
 open fun [renderStandaloneView](render-standalone-view.md)(view: [View](../-view/index.md))
 
-Renders a standalone [View](../-view/index.md) into its associated `RenderTarget`. 
+Render a standalone View into its associated RenderTarget 
 
- This call is mostly equivalent to calling [render](render.md) inside a [beginFrame](begin-frame.md) / [endFrame](end-frame.md) block, but incurs less overhead. It can be used as a poor man's compute API. 
+This call is mostly equivalent to calling render(View*) inside a beginFrame / endFrame block, but incurs less overhead. It can be used as a poor man's compute API.
 
-- 
-   `renderStandaloneView()` must be called **outside** of [beginFrame](begin-frame.md) / [endFrame](end-frame.md).
-- 
-   `renderStandaloneView()` must be called from the [Engine](../-engine/index.md)'s main thread (or external synchronization must be provided). In particular, calls to `renderStandaloneView()` on different `Renderer` instances **must** be synchronized.
-- 
-   `renderStandaloneView()` performs potentially heavy computations and cannot be multi-threaded. However, internally, it is highly multi-threaded to both improve performance and mitigate the call's latency.
+renderStandaloneView() must be called from the Engine's main thread (or external synchronization must be provided). In particular, calls to renderStandaloneView() on different Renderer instances **must** be synchronized.
 
 #### Parameters
 
@@ -22,10 +17,4 @@ main
 
 | | |
 |---|---|
-| view | the [View](../-view/index.md) to render. This View must have an associated [RenderTarget](../-render-target/index.md) |
-
-#### See also
-
-| |
-|---|
-| [View](../-view/index.md) |
+| view | A pointer to the view to render. This View must have a RenderTarget associated to it.<br>@attention renderStandaloneView() must be called outside of beginFrame() / endFrame().<br>@remark renderStandaloneView() perform potentially heavy computations and cannot be multi-threaded. However, internally, renderStandaloneView() is highly multi-threaded to both improve performance in mitigate the call's latency. |

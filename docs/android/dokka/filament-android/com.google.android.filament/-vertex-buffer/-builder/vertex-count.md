@@ -5,7 +5,7 @@
 [main]\
 open fun [vertexCount](vertex-count.md)(vertexCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [VertexBuffer.Builder](index.md)
 
-Size of each buffer in this set, expressed in in number of vertices.
+Size of each buffer in the set in vertex.
 
 #### Return
 
@@ -17,4 +17,4 @@ main
 
 | | |
 |---|---|
-| vertexCount | number of vertices in each buffer in this set |
+| vertexCount | Number of vertices in each buffer in this set. |

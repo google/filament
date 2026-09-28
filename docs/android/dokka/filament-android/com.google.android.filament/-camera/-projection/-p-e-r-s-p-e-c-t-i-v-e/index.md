@@ -5,4 +5,4 @@
 [main]\
 [PERSPECTIVE](index.md)
 
-Perspective projection, objects get smaller as they are farther.
+perspective projection, objects get smaller as they are farther

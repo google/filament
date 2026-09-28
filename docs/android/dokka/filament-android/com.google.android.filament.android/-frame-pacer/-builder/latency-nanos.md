@@ -5,9 +5,7 @@
 [main]\
 open fun [latencyNanos](latency-nanos.md)(latencyNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [FramePacer.Builder](index.md)
 
-Sets the required latency window in terms of time duration. 
-
-The target latency is measured relative to the hardware VSYNC timestamp (`frameTimeNanos`), as opposed to the callback entry/dispatch time. Note that the hardware VSYNC time is always equal to or in the past with respect to the actual callback dispatch time.
+Sets the required latency window in terms of time duration.
 
 #### Return
 

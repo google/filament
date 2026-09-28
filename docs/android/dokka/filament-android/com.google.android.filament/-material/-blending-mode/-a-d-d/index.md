@@ -5,4 +5,4 @@
 [main]\
 [ADD](index.md)
 
-Material is additive (e.g.: hologram).
+material is additive (e.g.: hologram)

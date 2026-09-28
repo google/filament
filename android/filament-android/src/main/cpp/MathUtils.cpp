@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#include <jni.h>
-
 #include <math/mat3.h>
 #include <math/quat.h>
+
+#include <jni.h>
 
 using namespace filament::math;
 

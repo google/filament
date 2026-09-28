@@ -3,6 +3,12 @@
 # getMorphTargetCount
 
 [main]\
-open fun [getMorphTargetCount](get-morph-target-count.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getMorphTargetCount](get-morph-target-count.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
-Gets the morph target count on a renderable.
+Gets the number of morphing in the given entity.
+
+#### See also
+
+| |
+|---|
+| com.google.android.filament.RenderableManager.Builder |

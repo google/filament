@@ -3,11 +3,18 @@
 # color
 
 [main]\
-open fun [color](color.md)(linearR: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), linearG: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), linearB: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [LightManager.Builder](index.md)
+open fun [color](color.md)(colorx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colory: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colorz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [LightManager.Builder](index.md)
 
-Sets the initial color of a light. 
+Sets the initial color of a light.
 
- The light color is specified in the linear sRGB color-space. The default is white. 
+#### Return
+
+This Builder, for chaining calls.
+
+[main]\
+open fun [color](color.md)(color: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [LightManager.Builder](index.md)
+
+Sets the initial color of a light.
 
 #### Return
 
@@ -19,12 +26,4 @@ main
 
 | | |
 |---|---|
-| linearR | red component of the color (default is 1) |
-| linearG | green component of the color (default is 1) |
-| linearB | blue component of the color (default is 1) |
-
-#### See also
-
-| |
-|---|
-| [setColor](../set-color.md) |
+| color | Color of the light specified in the linear sRGB color-space. The default is white {1,1,1}. |

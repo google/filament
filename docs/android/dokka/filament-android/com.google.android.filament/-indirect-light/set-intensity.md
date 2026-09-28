@@ -15,4 +15,4 @@ main
 
 | | |
 |---|---|
-| intensity | Scale factor applied to the environment and irradiance such that the result is in *lux*, or *lumen/m^2* (default = 30000) |
+| intensity | Scale factor applied to the environment and irradiance such that the result is in lux, or *lumen/m^2* (default = 30000) |

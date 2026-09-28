@@ -15,4 +15,4 @@ the diagonal of the scaling matrix applied after the projection matrix.
 
 | |
 |---|
-| com.google.android.filament.Camera |
+| setScaling |

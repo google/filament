@@ -3,13 +3,13 @@
 # getChildren
 
 [main]\
-open fun [getChildren](get-children.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), outEntities: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)&gt;
+open fun [getChildren](get-children.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), children: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Gets a list of children for a transform component.
 
 #### Return
 
-Array of retrieved children [Entity](../-entity/index.md).
+The number of children written to the pointer.
 
 #### Parameters
 
@@ -17,5 +17,6 @@ main
 
 | | |
 |---|---|
-| i | the [EntityInstance](../-entity-instance/index.md) of the transform component to get the children from. |
-| outEntities | array to receive the result sized to the maximum number of children to retrieve. If `null` is given, a new suitable array sized to [getChildCount](get-child-count.md) is allocated. |
+| i | The instance of the transform component to query. |
+| children | Pointer to array-of-Entity. The array must have at least &quot;count&quot; elements. |
+| count | The maximum number of children to retrieve. |

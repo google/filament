@@ -22,14 +22,16 @@
 
 using namespace utils;
 
+using Ref = InternPool<int>::Ref;
+
 TEST(InternPoolTest, AcquireWithCopy) {
     InternPool<int> pool;
 
     FixedCapacityVector<int> value = { 1, 3, 3, 7 };
-    Slice<const int> interned = pool.acquire(value);
+    Ref interned = pool.acquire(value);
 
     EXPECT_FALSE(pool.empty());
-    EXPECT_EQ(value.as_slice(), interned);
+    EXPECT_EQ(value.as_slice(), interned.get());
 }
 
 TEST(InternPoolTest, AcquireWithMove) {
@@ -38,89 +40,72 @@ TEST(InternPoolTest, AcquireWithMove) {
     FixedCapacityVector<int> value = { 1, 3, 3, 7 };
     FixedCapacityVector<int> copy = value;
     const int* data = value.data();
-    Slice<const int> interned = pool.acquire(std::move(value));
+    Ref interned = pool.acquire(std::move(value));
 
     EXPECT_FALSE(pool.empty());
-    EXPECT_EQ(copy.as_slice(), interned);
-    EXPECT_EQ(data, interned.data());
+    EXPECT_EQ(copy.as_slice(), interned.get());
+    EXPECT_EQ(data, interned.get().data());
 }
 
 TEST(InternPoolTest, InternIsUnique) {
     InternPool<int> pool;
 
     FixedCapacityVector<int> value = { 1, 3, 3, 7 };
-    Slice<const int> interned1 = pool.acquire(value);
-    Slice<const int> interned2 = pool.acquire(value);
-    Slice<const int> interned3 = pool.acquire(value);
+    Ref interned1 = pool.acquire(value);
+    Ref interned2 = pool.acquire(value);
+    Ref interned3 = pool.acquire(value);
 
     EXPECT_FALSE(pool.empty());
-    EXPECT_EQ(interned1.begin(), interned2.begin());
-    EXPECT_EQ(interned1.begin(), interned3.begin());
-    EXPECT_EQ(interned1.end(), interned2.end());
-    EXPECT_EQ(interned1.end(), interned3.end());
+    EXPECT_EQ(interned1.get().begin(), interned2.get().begin());
+    EXPECT_EQ(interned1.get().begin(), interned3.get().begin());
+    EXPECT_EQ(interned1.get().end(), interned2.get().end());
+    EXPECT_EQ(interned1.get().end(), interned3.get().end());
 }
 
-TEST(InternPoolTest, ReleaseByValue) {
+TEST(InternPoolTest, ReleasesWhenTheLastReferenceGoesAway) {
     InternPool<int> pool;
 
     FixedCapacityVector<int> value = { 1, 3, 3, 7 };
-    pool.acquire(value);
-
-    EXPECT_FALSE(pool.empty());
-
-    pool.release(value);
+    {
+        Ref interned = pool.acquire(value);
+        EXPECT_FALSE(pool.empty());
+    }
 
     EXPECT_TRUE(pool.empty());
 }
 
-TEST(InternPoolTest, ReleaseByInterned) {
-    InternPool<int> pool;
-
-    FixedCapacityVector<int> value = { 1, 3, 3, 7 };
-    Slice<const int> interned = pool.acquire(value);
-
-    EXPECT_FALSE(pool.empty());
-
-    pool.release(interned);
-
-    EXPECT_TRUE(pool.empty());
-}
-
-TEST(InternPoolTest, AcquireAndReleaseEmpty) {
+TEST(InternPoolTest, AcquireEmpty) {
     InternPool<int> pool;
 
     FixedCapacityVector<int> value = {};
-    Slice<const int> interned = pool.acquire(value);
+    Ref interned = pool.acquire(value);
 
     EXPECT_TRUE(pool.empty());
-    EXPECT_EQ(interned.begin(), nullptr);
-    EXPECT_EQ(interned.end(), nullptr);
+    EXPECT_TRUE(interned.empty());
+    EXPECT_EQ(interned.get().begin(), nullptr);
+    EXPECT_EQ(interned.get().end(), nullptr);
 
-    // Shouldn't crash to release an empty slice even if the pool is empty.
-    pool.release(value);
-    pool.release(interned);
+    // Shouldn't crash when the empty reference is destroyed either.
 }
 
 TEST(InternPoolTest, AcquireAndReleaseManyEqual) {
     InternPool<int> pool;
 
     FixedCapacityVector<int> value = { 1, 3, 3, 7 };
-    pool.acquire(value);
-    pool.acquire(value);
-    pool.acquire(value);
+    {
+        Ref interned1 = pool.acquire(value);
+        {
+            Ref interned2 = pool.acquire(value);
+            {
+                Ref interned3 = pool.acquire(value);
+                EXPECT_FALSE(pool.empty());
+            }
+            EXPECT_FALSE(pool.empty());
+        }
+        EXPECT_FALSE(pool.empty());
+    }
 
-    EXPECT_FALSE(pool.empty());
-
-    pool.release(value);
-    EXPECT_FALSE(pool.empty());
-    pool.release(value);
-    EXPECT_FALSE(pool.empty());
-    pool.release(value);
     EXPECT_TRUE(pool.empty());
-
-#ifdef GTEST_HAS_DEATH_TEST
-    ASSERT_DEATH(pool.release(value), "");
-#endif
 }
 
 TEST(InternPoolTest, AcquireAndReleaseManyDifferent) {
@@ -129,26 +114,66 @@ TEST(InternPoolTest, AcquireAndReleaseManyDifferent) {
     FixedCapacityVector<int> value1 = { 1, 3, 3, 7 };
     FixedCapacityVector<int> value2 = { 4, 2, 0 };
     FixedCapacityVector<int> value3 = { 9999999 };
-    pool.acquire(value1);
-    pool.acquire(value2);
-    pool.acquire(value3);
+    {
+        Ref interned1 = pool.acquire(value1);
+        {
+            Ref interned2 = pool.acquire(value2);
+            {
+                Ref interned3 = pool.acquire(value3);
+                EXPECT_FALSE(pool.empty());
+            }
+            EXPECT_FALSE(pool.empty());
+        }
+        EXPECT_FALSE(pool.empty());
+    }
 
-    EXPECT_FALSE(pool.empty());
-
-    pool.release(value1);
-    EXPECT_FALSE(pool.empty());
-    pool.release(value2);
-    EXPECT_FALSE(pool.empty());
-    pool.release(value3);
     EXPECT_TRUE(pool.empty());
 }
 
-#ifdef GTEST_HAS_DEATH_TEST
-TEST(InternPoolTest, PanicsIfReleaseMissing) {
+TEST(InternPoolTest, MoveTransfersOwnership) {
     InternPool<int> pool;
 
     FixedCapacityVector<int> value = { 1, 3, 3, 7 };
+    {
+        Ref moved;
+        {
+            Ref interned = pool.acquire(value);
+            moved = std::move(interned);
 
-    ASSERT_DEATH(pool.release(value), "");
+            // NOLINTNEXTLINE(bugprone-use-after-move): checking the moved-from state is the point.
+            EXPECT_TRUE(interned.empty());
+        }
+
+        // The moved-from reference going out of scope must not have released the entry.
+        EXPECT_FALSE(pool.empty());
+        EXPECT_EQ(value.as_slice(), moved.get());
+    }
+
+    EXPECT_TRUE(pool.empty());
 }
-#endif // GTEST_HAS_DEATH_TEST
+
+TEST(InternPoolTest, CloneAddsAReference) {
+    InternPool<int> pool;
+
+    FixedCapacityVector<int> value = { 1, 3, 3, 7 };
+    {
+        Ref clone;
+        {
+            Ref interned = pool.acquire(value);
+            clone = interned.clone();
+            EXPECT_EQ(interned.get(), clone.get());
+        }
+
+        EXPECT_FALSE(pool.empty());
+        EXPECT_EQ(value.as_slice(), clone.get());
+    }
+
+    EXPECT_TRUE(pool.empty());
+}
+
+TEST(InternPoolTest, CloneOfAnEmptyReferenceIsEmpty) {
+    Ref empty;
+    Ref clone = empty.clone();
+
+    EXPECT_TRUE(clone.empty());
+}

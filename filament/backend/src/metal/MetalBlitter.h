@@ -20,6 +20,7 @@
 #include <backend/DriverEnums.h>
 
 #include <utils/Hash.h>
+#include <utils/Mutex.h>
 
 #include <Metal/Metal.h>
 #include <tsl/robin_map.h>
@@ -28,6 +29,12 @@ namespace filament::backend {
 
 struct MetalContext;
 
+/**
+ * MetalBlitter provides GPU blitting operations for texture copying and format conversions.
+ *
+ * Thread-safety:
+ * MetalBlitter can be called concurrently from the driver thread and worker threads.
+ */
 class MetalBlitter {
 
 public:
@@ -54,11 +61,14 @@ public:
         }
     };
 
+    /**
+     * Executes a blit operation into the provided command buffer. Thread-safe.
+     */
     void blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args, const char* label);
 
     /**
      * Free resources. Should be called at least once per process when no further calls to blit will
-     * occur.
+     * occur. Thread-safe.
      */
     void shutdown() noexcept;
 
@@ -100,16 +110,27 @@ private:
             uint32_t depthPlaneSource, uint32_t depthPlaneDest, const char* label);
 
     id<MTLFunction> compileFragmentFunction(BlitFunctionKey key) const;
+
+    /**
+     * Returns the cached blit vertex shader function, compiling it if necessary. Thread-safe.
+     */
     id<MTLFunction> getBlitVertexFunction();
+
+    /**
+     * Returns the cached blit fragment shader function for the specified key, compiling it if
+     * necessary. Thread-safe.
+     */
     id<MTLFunction> getBlitFragmentFunction(BlitFunctionKey key);
 
     MetalContext& mContext;
 
+    mutable utils::Mutex mLock;
+
     using HashFn = utils::hash::MurmurHashFn<BlitFunctionKey>;
     using Function = id<MTLFunction>;
-    tsl::robin_map<BlitFunctionKey, Function, HashFn> mBlitFunctions;
+    tsl::robin_map<BlitFunctionKey, Function, HashFn> mBlitFunctions UTILS_GUARDED_BY(mLock);
 
-    id<MTLFunction> mVertexFunction = nil;
+    id<MTLFunction> mVertexFunction UTILS_GUARDED_BY(mLock) = nil;
 };
 
 } // namespace filament::backend

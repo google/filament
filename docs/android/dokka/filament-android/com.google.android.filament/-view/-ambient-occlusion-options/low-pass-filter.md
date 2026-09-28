@@ -5,4 +5,6 @@
 [main]\
 open var [lowPassFilter](low-pass-filter.md): [View.QualityLevel](../-quality-level/index.md)
 
-affects AO smoothness. Recommend setting to HIGH when aoType set to GTAO.
+affects AO smoothness. 
+
+Recommend setting to HIGH when aoType set to GTAO.

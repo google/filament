@@ -5,4 +5,6 @@
 [main]\
 [DECR_CLAMP](index.md)
 
-Decrements the current value. Clamps to 0.
+Decrements the current value. 
+
+Clamps to 0.

@@ -13,8 +13,8 @@ main
 
 | | |
 |---|---|
-| i | the [EntityInstance](../-entity-instance/index.md) of the transform component to re-parent |
-| newParent | the [EntityInstance](../-entity-instance/index.md) of the new parent transform. It is an error to re-parent an entity to a descendant and will cause undefined behaviour. |
+| i | The instance of the transform component to re-parent |
+| newParent | The instance of the new parent transform |
 
 #### See also
 

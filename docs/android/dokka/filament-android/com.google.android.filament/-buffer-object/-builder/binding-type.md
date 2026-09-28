@@ -3,7 +3,7 @@
 # bindingType
 
 [main]\
-open fun [bindingType](binding-type.md)(bindingType: [BufferObject.Builder.BindingType](-binding-type/index.md)): [BufferObject.Builder](index.md)
+open fun [bindingType](binding-type.md)(bindingType: [BufferObject.BindingType](../-binding-type/index.md)): [BufferObject.Builder](index.md)
 
 The binding type for this buffer object. (defaults to VERTEX)
 

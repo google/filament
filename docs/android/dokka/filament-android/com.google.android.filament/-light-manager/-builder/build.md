@@ -7,9 +7,15 @@ open fun [build](build.md)(engine: [Engine](../../-engine/index.md), entity: [In
 
 Adds the Light component to an entity. 
 
- If this component already exists on the given entity, it is first destroyed as if [destroy](../destroy.md) was called. 
+Currently, only 2048 lights can be created on a given Engine.
 
-**warning:** Currently, only 2048 lights can be created on a given Engine.
+#### Return
+
+Success if the component was created successfully, Error otherwise.
+
+If exceptions are disabled and an error occurs, this function is a no-op. Success can be checked by looking at the return value.
+
+If this component already exists on the given entity, it is first destroyed as if destroy(utils::Entity e) was called.
 
 #### Parameters
 
@@ -17,11 +23,5 @@ main
 
 | | |
 |---|---|
-| engine | Reference to the [Engine](../../-engine/index.md) to associate this light with. |
+| engine | Reference to the filament::Engine to associate this light with. |
 | entity | Entity to add the light component to. |
-
-#### Throws
-
-| | |
-|---|---|
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if a runtime error occurred, such as running out of memory or other resources, or if a parameter to a builder function was invalid. |

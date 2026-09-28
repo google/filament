@@ -5,4 +5,4 @@
 [main]\
 [ORTHO](index.md)
 
-Orthonormal projection, preserves distances.
+orthonormal projection, preserves distances

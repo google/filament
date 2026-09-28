@@ -506,6 +506,7 @@ public:
          *
          * @return This Builder, for chaining calls
          */
+        UTILS_NOAPIGEN
         Builder& outputColorSpace(const color::ColorSpace& colorSpace) noexcept;
 
         /**
@@ -515,6 +516,7 @@ public:
          * @param user Optional user data pointer passed to the callback.
          * @return This Builder, for chaining calls.
          */
+        UTILS_NOAPIGEN
         Builder& exportLut(ExportCallback UTILS_NULLABLE callback, void* UTILS_NULLABLE user = nullptr) noexcept;
 
         /**

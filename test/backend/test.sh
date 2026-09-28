@@ -37,9 +37,26 @@ elif [[ "$os_name" == "Darwin" ]]; then
     ASAN_FLAG=""
 fi
 
+# The remaining arguments are parsed after the build, but this one has to be known before it.
+BUILD_ONLY=false
+for arg in "$@"
+do
+    if [[ "$arg" == "--build-only" ]] ; then
+        BUILD_ONLY=true
+    fi
+done
+
 # Build backend test
 echo "Building ${BACKEND_TEST_TARGET}..."
 "${PROJECT_ROOT_DIR}/build.sh" ${ASAN_FLAG} -W -y release -p desktop -X "${PROJECT_ROOT_DIR}/mesa" debug ${BACKEND_TEST_TARGET}
+
+# Used by the ccache warming job, which wants the compiler cache this build populates but has no
+# reason to run the tests themselves. Going through this script rather than repeating the build
+# line above is what keeps the cached objects flag-identical to what a real run asks for.
+if [[ "${BUILD_ONLY}" == "true" ]]; then
+    echo "--build-only given; skipping the test run."
+    exit 0
+fi
 
 set +e
 

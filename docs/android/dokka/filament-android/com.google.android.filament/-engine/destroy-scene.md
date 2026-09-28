@@ -4,13 +4,3 @@
 
 [main]\
 open fun [destroyScene](destroy-scene.md)(scene: [Scene](../-scene/index.md))
-
-Destroys a [Scene](../-scene/index.md) and frees all its associated resources.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| scene | the [Scene](../-scene/index.md) to destroy |

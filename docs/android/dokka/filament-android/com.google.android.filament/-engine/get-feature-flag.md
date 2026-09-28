@@ -18,9 +18,3 @@ main
 | | |
 |---|---|
 | name | name of the feature flag |
-
-#### Throws
-
-| | |
-|---|---|
-| [IllegalArgumentException](https://developer.android.com/reference/kotlin/java/lang/IllegalArgumentException.html) | is thrown if the feature flag doesn't exist |

@@ -23,6 +23,11 @@
 
 #include <backend/DriverApiForward.h>
 
+#include <utils/Panic.h>
+
+#include <cstdlib>
+#include <limits>
+
 namespace filament {
 
 using namespace backend;
@@ -31,12 +36,7 @@ using namespace utils;
 LocalProgramCache::LocalProgramCache(LocalProgramCache const& other)
         : mMaterial(other.mMaterial),
           mCachedPrograms(other.mCachedPrograms.size()),
-          mSpecializationConstants((other.mMaterial != nullptr)
-                                           ? other.mMaterial->getEngine()
-                                                     .getMaterialCache()
-                                                     .getSpecializationConstantsInternPool()
-                                                     .acquire(other.mSpecializationConstants)
-                                           : SpecializationConstants()) {}
+          mSpecializationConstants(other.mSpecializationConstants.clone()) {}
 
 LocalProgramCache& LocalProgramCache::operator=(LocalProgramCache const& other) {
     assert_invariant(mMaterial == nullptr);
@@ -44,15 +44,41 @@ LocalProgramCache& LocalProgramCache::operator=(LocalProgramCache const& other) 
     assert_invariant(mSpecializationConstants.empty());
 
     mMaterial = other.mMaterial;
+    mSpecializationConstants = other.mSpecializationConstants.clone();
     if (mMaterial != nullptr) {
         mCachedPrograms = FixedCapacityVector<Handle<HwProgram>>(other.mCachedPrograms.size());
-        mSpecializationConstants = other.mMaterial->getEngine()
-                .getMaterialCache()
-                .getSpecializationConstantsInternPool()
-                .acquire(other.mSpecializationConstants);
     }
 
     return *this;
+}
+
+uint32_t LocalProgramCache::getCacheSize(MaterialDomain const materialDomain) {
+    switch (materialDomain) {
+        case MaterialDomain::SURFACE:
+            return 1u << (VARIANT_BITS + DYNAMIC_SPEC_CONST_KEY_BITS);
+        case MaterialDomain::POST_PROCESS:
+            return 1u << (POST_PROCESS_VARIANT_BITS + DYNAMIC_SPEC_CONST_KEY_BITS);
+        case MaterialDomain::COMPUTE:
+            return 1u;
+    }
+    return 1u;
+}
+
+LocalProgramCache::CacheKey LocalProgramCache::mapCacheEntryKey(Variant const variant,
+        DynamicSpecConstKey specKey, std::size_t const cacheSize) {
+    // Decouple depth variants from the dynamic specialization space
+    if (Variant::isValidDepthVariant(variant)) {
+        specKey = DynamicSpecConstKey{ 0 };
+    }
+    constexpr CacheKey SPEC_KEY_MASK = (CacheKey{ 1 } << DYNAMIC_SPEC_CONST_KEY_BITS) - 1u;
+    CacheKey const key = (CacheKey{ variant.key } << DYNAMIC_SPEC_CONST_KEY_BITS) |
+                         (CacheKey{ specKey.key } & SPEC_KEY_MASK);
+    FILAMENT_CHECK_POSTCONDITION(key < cacheSize)
+            << "Program cache index out of bounds: variant="
+            << static_cast<uint32_t>(variant.key)
+            << ", specKey=" << static_cast<uint32_t>(specKey.key)
+            << ", index=" << key << ", size=" << cacheSize;
+    return key;
 }
 
 void LocalProgramCache::initializeForMaterial(FEngine& engine, FMaterial const& material,
@@ -68,22 +94,12 @@ void LocalProgramCache::initializeForMaterial(FEngine& engine, FMaterial const& 
             engine.getMaterialCache().getSpecializationConstantsInternPool().acquire(
                     std::move(specializationConstants));
 
-    size_t cachedProgramsSize;
-    switch (material.getMaterialDomain()) {
-        case filament::MaterialDomain::SURFACE:
-            cachedProgramsSize = 1 << (VARIANT_BITS + DYNAMIC_SPEC_CONST_KEY_BITS);
-            break;
-        case filament::MaterialDomain::POST_PROCESS:
-            cachedProgramsSize = 1 << (POST_PROCESS_VARIANT_BITS + DYNAMIC_SPEC_CONST_KEY_BITS);
-            break;
-        case filament::MaterialDomain::COMPUTE:
-            cachedProgramsSize = 1;
-            break;
-    }
-    mCachedPrograms = FixedCapacityVector<Handle<HwProgram>>(cachedProgramsSize);
+    mCachedPrograms =
+            FixedCapacityVector<Handle<HwProgram>>(getCacheSize(material.getMaterialDomain()));
 
     material.getDefinition().acquirePrograms(engine, mCachedPrograms.as_slice(),
-            material.getMaterialParser(), mSpecializationConstants, material.isDefaultMaterial());
+            material.getMaterialParser(), mSpecializationConstants.get(),
+            material.isDefaultMaterial());
 }
 
 void LocalProgramCache::initializeForMaterialInstance(FEngine& engine, FMaterial const& material) {
@@ -99,7 +115,7 @@ void LocalProgramCache::initializeForMaterialInstance(FEngine& engine, FMaterial
                     programs.getSpecializationConstants());
 
     mCachedPrograms =
-            FixedCapacityVector<Handle<HwProgram>>(material.getPrograms().mCachedPrograms.size());
+            FixedCapacityVector<Handle<HwProgram>>(getCacheSize(material.getMaterialDomain()));
 }
 
 Handle<HwProgram> LocalProgramCache::prepareProgramSlow(DriverApi& driver, Variant const variant,
@@ -109,12 +125,14 @@ Handle<HwProgram> LocalProgramCache::prepareProgramSlow(DriverApi& driver, Varia
     FEngine& engine = mMaterial->getEngine();
 
     Handle<HwProgram> result;
-    CacheKey mappedKey = mapCacheEntryKey(variant, specKey);
+    CacheKey const mappedKey = mapCacheEntryKey(variant, specKey, mCachedPrograms.size());
     if (mMaterial->isSharedVariant(variant)) {
         FMaterial const* defaultMaterial = engine.getDefaultMaterial();
         assert_invariant(defaultMaterial);
         LocalProgramCache const& defaultPrograms = defaultMaterial->getPrograms();
-        result = defaultPrograms.mCachedPrograms[mappedKey];
+        CacheKey const defaultMappedKey =
+                mapCacheEntryKey(variant, specKey, defaultPrograms.mCachedPrograms.size());
+        result = defaultPrograms.mCachedPrograms[defaultMappedKey];
         if (!result) {
             result = defaultPrograms.prepareProgram(driver, variant, specKey, priorityQueue);
         }
@@ -139,7 +157,7 @@ ProgramSpecialization LocalProgramCache::getProgramSpecialization(Variant varian
         .materialCrc32 = mMaterial->getMaterialParser().getCrc32(),
         .variant = variant,
         .specKey = specKey,
-        .specializationConstants = mSpecializationConstants,
+        .specializationConstants = mSpecializationConstants.get(),
     };
 }
 
@@ -147,18 +165,16 @@ void LocalProgramCache::terminate(FEngine& engine) {
     assert_invariant(mMaterial != nullptr);
 
     mMaterial->getDefinition().releasePrograms(engine, mCachedPrograms.as_slice(),
-            mMaterial->getMaterialParser(), mSpecializationConstants,
+            mMaterial->getMaterialParser(), mSpecializationConstants.get(),
             mMaterial->isDefaultMaterial());
     engine.getMaterialCache().releaseMaterial(engine, mMaterial->getDefinition());
-    engine.getMaterialCache().getSpecializationConstantsInternPool().release(
-            mSpecializationConstants);
 }
 
 void LocalProgramCache::clear(FEngine& engine) {
     assert_invariant(mMaterial != nullptr);
 
     mMaterial->getDefinition().releasePrograms(engine, mCachedPrograms.as_slice(),
-            mMaterial->getMaterialParser(), mSpecializationConstants,
+            mMaterial->getMaterialParser(), mSpecializationConstants.get(),
             mMaterial->isDefaultMaterial());
 }
 
@@ -181,7 +197,7 @@ Variant LocalProgramCache::filterVariantForGetProgram(Variant variant) const noe
 }
 
 Program::SpecializationConstant LocalProgramCache::getConstantImpl(uint32_t id) const noexcept {
-    return mSpecializationConstants[id];
+    return mSpecializationConstants.get()[id];
 }
 
 Program::SpecializationConstant LocalProgramCache::getConstantImpl(
@@ -201,7 +217,7 @@ void LocalProgramCache::setConstants(
     assert_invariant(mMaterial != nullptr);
 
     auto newSpecializationConstants =
-            FixedCapacityVector<Program::SpecializationConstant>(mSpecializationConstants);
+            FixedCapacityVector<Program::SpecializationConstant>(mSpecializationConstants.get());
 
     bool hasChanged = false;
     for (const auto& [id, value] : constants) {
@@ -222,7 +238,7 @@ void LocalProgramCache::setConstants(
     assert_invariant(mMaterial != nullptr);
 
     auto newSpecializationConstants =
-            FixedCapacityVector<Program::SpecializationConstant>(mSpecializationConstants);
+            FixedCapacityVector<Program::SpecializationConstant>(mSpecializationConstants.get());
 
     bool hasChanged = false;
     for (const auto& [name, value] : constants) {
@@ -260,13 +276,12 @@ void LocalProgramCache::setConstantsImpl(
 
     // Release old resources...
     definition.releasePrograms(engine, mCachedPrograms.as_slice(), materialParser,
-            mSpecializationConstants, isDefaultMaterial);
-    internPool.release(mSpecializationConstants);
+            mSpecializationConstants.get(), isDefaultMaterial);
 
     // Then acquire new ones.
     mSpecializationConstants = internPool.acquire(std::move(constants));
     definition.acquirePrograms(engine, mCachedPrograms.as_slice(), materialParser,
-            mSpecializationConstants, isDefaultMaterial);
+            mSpecializationConstants.get(), isDefaultMaterial);
 }
 
 template int32_t LocalProgramCache::getConstant<int32_t>(uint32_t id) const noexcept;

@@ -3,13 +3,7 @@
 # resetUserTime
 
 [main]\
-open fun [~~resetUserTime~~](reset-user-time.md)()
-
----
-
-### Deprecated
-
----
+open fun [resetUserTime](reset-user-time.md)()
 
 Backward compatibility helper for resetUserTime().
 

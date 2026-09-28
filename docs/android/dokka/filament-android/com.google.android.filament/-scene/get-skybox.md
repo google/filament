@@ -5,12 +5,8 @@
 [main]\
 open fun [getSkybox](get-skybox.md)(): [Skybox](../-skybox/index.md)
 
+Returns the Skybox associated with the Scene.
+
 #### Return
 
-the [Skybox](../-skybox/index.md) or `null` if none is set
-
-#### See also
-
-| |
-|---|
-| [setSkybox(Skybox)](set-skybox.md) |
+The associated Skybox, or nullptr if there is none.

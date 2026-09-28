@@ -5,4 +5,6 @@
 [main]\
 [LINEAR](index.md)
 
-Box filtering. Weighted average of 4 neighbors is used.
+Box filtering. 
+
+Weighted average of 4 neighbors is used.

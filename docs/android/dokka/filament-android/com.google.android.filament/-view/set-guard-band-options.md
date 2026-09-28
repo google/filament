@@ -5,7 +5,9 @@
 [main]\
 open fun [setGuardBandOptions](set-guard-band-options.md)(options: [View.GuardBandOptions](-guard-band-options/index.md))
 
-Enables or disable screen-space guard band. Disabled by default.
+Enables or disable screen-space guard band. 
+
+Disabled by default.
 
 #### Parameters
 

@@ -5,14 +5,8 @@
 [main]\
 open fun [getDepthOfFieldOptions](get-depth-of-field-options.md)(): [View.DepthOfFieldOptions](-depth-of-field-options/index.md)
 
-Gets the Depth of Field options
+Queries the depth of field options.
 
 #### Return
 
-Depth of Field options currently set.
-
-#### See also
-
-| |
-|---|
-| [setDepthOfFieldOptions](set-depth-of-field-options.md) |
+the current depth of field options for this view.

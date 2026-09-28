@@ -5,7 +5,11 @@
 [main]\
 open fun [setAutomaticInstancingEnabled](set-automatic-instancing-enabled.md)(enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
-Enables or disables automatic instancing of render primitives. Instancing of render primitive can greatly reduce CPU overhead but requires the instanced primitives to be identical (i.e. use the same geometry) and use the same MaterialInstance. If it is known that the scene doesn't contain any identical primitives, automatic instancing can have some overhead and it is then best to disable it. Disabled by default.
+Enables or disables automatic instancing of render primitives. 
+
+Instancing of render primitives can greatly reduce CPU overhead but requires the instanced primitives to be identical (i.e. use the same geometry) and use the same MaterialInstance. If it is known that the scene doesn't contain any identical primitives, automatic instancing can have some overhead and it is then best to disable it.
+
+Disabled by default.
 
 #### Parameters
 

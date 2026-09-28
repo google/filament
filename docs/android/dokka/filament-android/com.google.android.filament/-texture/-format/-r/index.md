@@ -4,3 +4,5 @@
 
 [main]\
 [R](index.md)
+
+One Red channel, float

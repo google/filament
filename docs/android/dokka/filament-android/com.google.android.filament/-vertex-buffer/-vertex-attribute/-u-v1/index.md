@@ -4,3 +4,5 @@
 
 [main]\
 [UV1](index.md)
+
+texture coordinates (float2)

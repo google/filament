@@ -4,3 +4,5 @@
 
 [main]\
 [DEFAULT](index.md)
+
+The OS matches the frame rate when the surface is active, but may pick a different rate to better harmonize with concurrent windows or display power policies.

@@ -1,0 +1,616 @@
+{
+  "meta": {
+    "generator_version": "1.0.0",
+    "source_file": "/Users/mathias/sources/git/filament/tools/apigen/tests/java/26_async_callbacks.h"
+  },
+  "includes": {
+    "user": [],
+    "system": [
+      "<backend/CallbackHandler.h>",
+      "<backend/DriverEnums.h>",
+      "<utils/compiler.h>",
+      "<utils/Invocable.h>",
+      "<stdint.h>"
+    ]
+  },
+  "aliases": [],
+  "enums": [],
+  "classes": [
+    {
+      "name": "AsyncCallbacksTest",
+      "qualified_name": "filament::AsyncCallbacksTest",
+      "location": {
+        "file": "tools/apigen/tests/java/26_async_callbacks.h",
+        "line": 28
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "AsyncCallbacksTest",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [
+        {
+          "name": "setFrameScheduledCallback",
+          "qualified_name": "setFrameScheduledCallback(backend::CallbackHandler * _Nullable, FrameScheduledCallback &&, uint64_t)",
+          "location": {
+            "file": "tools/apigen/tests/java/26_async_callbacks.h",
+            "line": 37
+          },
+          "doc": {
+            "brief": "Trailing auxiliary parameter (flags follows handler and callback).",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "handler",
+              "type": {
+                "cpp_name": "backend::CallbackHandler *",
+                "qualified_name": "filament::backend::CallbackHandler*",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": true,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "nullable"
+              },
+              "default_value": "nullptr",
+              "attributes": []
+            },
+            {
+              "name": "callback",
+              "type": {
+                "cpp_name": "FrameScheduledCallback &&",
+                "qualified_name": "utils::Invocable<void (filament::backend::PresentCallable)>&&",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": true,
+                "nullability": "unspecified"
+              },
+              "default_value": "{ }",
+              "attributes": []
+            },
+            {
+              "name": "flags",
+              "type": {
+                "cpp_name": "uint64_t",
+                "qualified_name": "uint64_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": "0",
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": false,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "setFrameCompletedCallback",
+          "qualified_name": "setFrameCompletedCallback(backend::CallbackHandler * _Nullable, FrameCompletedCallback &&)",
+          "location": {
+            "file": "tools/apigen/tests/java/26_async_callbacks.h",
+            "line": 43
+          },
+          "doc": {
+            "brief": "Standard 2-param noexcept method (bypasses wrapJni).",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "handler",
+              "type": {
+                "cpp_name": "backend::CallbackHandler *",
+                "qualified_name": "filament::backend::CallbackHandler*",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": true,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "nullable"
+              },
+              "default_value": "nullptr",
+              "attributes": []
+            },
+            {
+              "name": "callback",
+              "type": {
+                "cpp_name": "FrameCompletedCallback &&",
+                "qualified_name": "utils::Invocable<void (filament::AsyncCallbacksTest *)>&&",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": true,
+                "nullability": "unspecified"
+              },
+              "default_value": "{ }",
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "registerChannelCallback",
+          "qualified_name": "registerChannelCallback(uint32_t, backend::CallbackHandler * _Nullable, SimpleCallback &&)",
+          "location": {
+            "file": "tools/apigen/tests/java/26_async_callbacks.h",
+            "line": 49
+          },
+          "doc": {
+            "brief": "Leading auxiliary parameter (channel precedes handler and callback).",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "channel",
+              "type": {
+                "cpp_name": "uint32_t",
+                "qualified_name": "uint32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "handler",
+              "type": {
+                "cpp_name": "backend::CallbackHandler *",
+                "qualified_name": "filament::backend::CallbackHandler*",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": true,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "nullable"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "callback",
+              "type": {
+                "cpp_name": "SimpleCallback &&",
+                "qualified_name": "utils::Invocable<void ()>&&",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": true,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": false,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "dispatchCustom",
+          "qualified_name": "dispatchCustom(uint32_t, backend::CallbackHandler * _Nullable, SimpleCallback &&, float, uint32_t)",
+          "location": {
+            "file": "tools/apigen/tests/java/26_async_callbacks.h",
+            "line": 56
+          },
+          "doc": {
+            "brief": "Mixed leading and trailing auxiliary parameters.",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "channel",
+              "type": {
+                "cpp_name": "uint32_t",
+                "qualified_name": "uint32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "handler",
+              "type": {
+                "cpp_name": "backend::CallbackHandler *",
+                "qualified_name": "filament::backend::CallbackHandler*",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": true,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "nullable"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "callback",
+              "type": {
+                "cpp_name": "SimpleCallback &&",
+                "qualified_name": "utils::Invocable<void ()>&&",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": true,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "timeout",
+              "type": {
+                "cpp_name": "float",
+                "qualified_name": "float",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "flags",
+              "type": {
+                "cpp_name": "uint32_t",
+                "qualified_name": "uint32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": false,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": [
+        {
+          "name": "FrameScheduledCallback",
+          "qualified_name": "filament::AsyncCallbacksTest::FrameScheduledCallback",
+          "location": {
+            "file": "tools/apigen/tests/java/26_async_callbacks.h",
+            "line": 30
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "backend::FrameScheduledCallback",
+            "qualified_name": "utils::Invocable<void (filament::backend::PresentCallable)>",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          }
+        },
+        {
+          "name": "FrameCompletedCallback",
+          "qualified_name": "filament::AsyncCallbacksTest::FrameCompletedCallback",
+          "location": {
+            "file": "tools/apigen/tests/java/26_async_callbacks.h",
+            "line": 31
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "utils::Invocable<void (AsyncCallbacksTest * _Nonnull)>",
+            "qualified_name": "utils::Invocable<void (filament::AsyncCallbacksTest *)>",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "nonnull"
+          }
+        },
+        {
+          "name": "SimpleCallback",
+          "qualified_name": "filament::AsyncCallbacksTest::SimpleCallback",
+          "location": {
+            "file": "tools/apigen/tests/java/26_async_callbacks.h",
+            "line": 32
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "utils::Invocable<void ()>",
+            "qualified_name": "utils::Invocable<void ()>",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          }
+        }
+      ],
+      "constants": [],
+      "is_aggregate": false
+    }
+  ],
+  "functions": [],
+  "referenced_classes": [
+    {
+      "name": "CallbackHandler",
+      "qualified_name": "filament::backend::CallbackHandler",
+      "location": {
+        "file": "backend/CallbackHandler.h",
+        "line": 62
+      },
+      "doc": {
+        "brief": "A generic interface to dispatch callbacks.",
+        "details": "All APIs that take a callback as argument also take a\nCallbackHandler* which is used to dispatch the\ncallback: CallbackHandler::post() method is called from a service thread as soon\nas possible (this will NEVER be the main thread), CallbackHandler::post()\nis  responsible for scheduling the callback onto the thread the\nuser desires.\n\nThis is intended to make callbacks interoperate with\nthe platform/OS's own messaging system.\n\nCallbackHandler* can always be nullptr in which case the default handler is used. The\ndefault handler always dispatches callbacks on filament's main thread opportunistically.\n\nLife time:\n---------\n\nFilament make no attempts to manage the life time of the CallbackHandler* and never takes\nownership.\nIn particular, this means that the CallbackHandler instance must stay valid until all\npending callbacks are been dispatched.\n\nSimilarly, when shutting down filament, care must be taken to ensure that all pending callbacks\nthat might access filament's state have been dispatched. Filament can no longer ensure this\nbecause callback execution is the responsibility of the CallbackHandler, which is external to\nfilament.\nTypically, the concrete CallbackHandler would have a mechanism to drain and/or wait for all\ncallbacks to be processed.",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "CallbackHandler",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [
+        {
+          "name": "post",
+          "qualified_name": "post(void *, Callback)",
+          "location": {
+            "file": "backend/CallbackHandler.h",
+            "line": 72
+          },
+          "doc": {
+            "brief": "Schedules the callback to be called onto the appropriate thread.",
+            "details": "Typically this will be the application's main thead.\n\nMust be thread-safe.",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "user",
+              "type": {
+                "cpp_name": "void *",
+                "qualified_name": "void*",
+                "category": "void",
+                "is_const": false,
+                "is_pointer": true,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "callback",
+              "type": {
+                "cpp_name": "Callback",
+                "qualified_name": "void (void *)*",
+                "category": "unknown",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": false,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": [
+        {
+          "name": "Callback",
+          "qualified_name": "filament::backend::CallbackHandler::Callback",
+          "location": {
+            "file": "backend/CallbackHandler.h",
+            "line": 64
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "void (*)(void *)",
+            "qualified_name": "void (void *)*",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": true,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          }
+        }
+      ],
+      "constants": [],
+      "is_aggregate": false
+    },
+    {
+      "name": "InvocableBase",
+      "qualified_name": "utils::InvocableBase",
+      "location": {
+        "file": "utils/Invocable.h",
+        "line": 54
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "InvocableBase",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [],
+      "fields": [],
+      "aliases": [],
+      "constants": [],
+      "is_aggregate": false
+    }
+  ]
+}

@@ -17,8 +17,11 @@
 package com.google.android.filament.android;
 
 import android.graphics.Bitmap;
+import android.hardware.HardwareBuffer;
+import android.os.Build;
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 
 import com.google.android.filament.Engine;
 import com.google.android.filament.Texture;
@@ -95,10 +98,27 @@ public final class TextureHelper {
         return BITMAP_CONFIG_RGBA_8888;
     }
 
+    /**
+     * Specify the external image to associate with this Texture from an Android {@link HardwareBuffer}.
+     *
+     * @param engine  Engine this texture is associated to.
+     * @param texture Texture to associate the image with.
+     * @param buffer  An Android {@link HardwareBuffer}.
+     * @return true if successful, false otherwise.
+     */
+    @RequiresApi(Build.VERSION_CODES.O)
+    public static boolean setExternalImage(@NonNull Engine engine,
+            @NonNull Texture texture, @NonNull HardwareBuffer buffer) {
+        return nSetExternalImageByAHB(texture.getNativeObject(), engine.getNativeObject(), buffer);
+    }
+
     private static native void nSetBitmap(long nativeTexture, long nativeEngine,
             int level, int xoffset, int yoffset, int width, int height, Bitmap bitmap, int format);
 
     private static native void nSetBitmapWithCallback(long nativeTexture, long nativeEngine,
             int level, int xoffset, int yoffset, int width, int height, Bitmap bitmap, int format,
             Object handler, Runnable callback);
+
+    private static native boolean nSetExternalImageByAHB(long nativeTexture, long nativeEngine,
+            HardwareBuffer buffer);
 }

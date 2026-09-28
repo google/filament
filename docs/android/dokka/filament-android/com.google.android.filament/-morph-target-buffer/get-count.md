@@ -5,6 +5,8 @@
 [main]\
 open fun [getCount](get-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
+Returns the target count of this MorphTargetBuffer.
+
 #### Return
 
-number of morph targets in this [MorphTargetBuffer](index.md)
+The number of targets the MorphTargetBuffer holds.

@@ -5,4 +5,4 @@
 [main]\
 [TRANSPARENT](index.md)
 
-Material is transparent and color is alpha-pre-multiplied. Affects diffuse lighting only.
+material is transparent and color is alpha-pre-multiplied, affects diffuse lighting only

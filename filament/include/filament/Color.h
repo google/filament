@@ -87,28 +87,28 @@ enum ColorConversion {
 class UTILS_PUBLIC Color {
 public:
     //! converts an RGB color to linear space, the conversion depends on the specified type
-    static LinearColor toLinear(RgbType type, math::float3 color);
+    static LinearColor toLinear(RgbType type, math::float3 color) noexcept;
 
     //! converts an RGBA color to linear space, the conversion depends on the specified type
-    static LinearColorA toLinear(RgbaType type, math::float4 color);
+    static LinearColorA toLinear(RgbaType type, math::float4 color) noexcept;
 
     //! converts an RGB color in sRGB space to an RGB color in linear space
     template<ColorConversion = ACCURATE>
-    static LinearColor toLinear(sRGBColor const& color);
+    static LinearColor toLinear(sRGBColor const& color) noexcept;
 
     /**
      * Converts an RGB color in Rec.709-Linear-D65 ("linear sRGB") space to an
      * RGB color in Rec.709-sRGB-D65 (sRGB) space.
      */
     template<ColorConversion = ACCURATE>
-    static sRGBColor toSRGB(LinearColor const& color);
+    static sRGBColor toSRGB(LinearColor const& color) noexcept;
 
     /**
      * Converts an RGBA color in Rec.709-sRGB-D65 (sRGB) space to an RGBA color in
      * Rec.709-Linear-D65 ("linear sRGB") space the alpha component is left unmodified.
      */
     template<ColorConversion = ACCURATE>
-    static LinearColorA toLinear(sRGBColorA const& color);
+    static LinearColorA toLinear(sRGBColorA const& color) noexcept;
 
     /**
      * Converts an RGBA color in Rec.709-Linear-D65 ("linear sRGB") space to
@@ -116,21 +116,21 @@ public:
      * left unmodified.
      */
     template<ColorConversion = ACCURATE>
-    static sRGBColorA toSRGB(LinearColorA const& color);
+    static sRGBColorA toSRGB(LinearColorA const& color) noexcept;
 
     /**
      * Converts a correlated color temperature to a linear RGB color in sRGB
      * space the temperature must be expressed in kelvin and must be in the
      * range 1,000K to 15,000K.
      */
-    static LinearColor cct(float K);
+    static LinearColor cct(float K) noexcept;
 
     /**
      * Converts a CIE standard illuminant series D to a linear RGB color in
      * sRGB space the temperature must be expressed in kelvin and must be in
      * the range 4,000K to 25,000K
      */
-    static LinearColor illuminantD(float K);
+    static LinearColor illuminantD(float K) noexcept;
 
     /**
      * Computes the Beer-Lambert absorption coefficients from the specified
@@ -144,7 +144,7 @@ public:
      *
      * @return absorption coefficients for the Beer-Lambert law
      */
-    static math::float3 absorptionAtDistance(LinearColor const& color, float distance);
+    static math::float3 absorptionAtDistance(LinearColor const& color, float distance) noexcept;
 
 private:
     static math::float3 sRGBToLinear(math::float3 color) noexcept;
@@ -153,53 +153,53 @@ private:
 
 // Use the default implementation from the header
 template<>
-inline LinearColor Color::toLinear<FAST>(sRGBColor const& color) {
+inline LinearColor Color::toLinear<FAST>(sRGBColor const& color) noexcept {
     return pow(color, 2.2f);
 }
 
 template<>
-inline LinearColorA Color::toLinear<FAST>(sRGBColorA const& color) {
+inline LinearColorA Color::toLinear<FAST>(sRGBColorA const& color) noexcept {
     return LinearColorA{pow(color.rgb, 2.2f), color.a};
 }
 
 template<>
-inline LinearColor Color::toLinear<ACCURATE>(sRGBColor const& color) {
+inline LinearColor Color::toLinear<ACCURATE>(sRGBColor const& color) noexcept {
     return sRGBToLinear(color);
 }
 
 template<>
-inline LinearColorA Color::toLinear<ACCURATE>(sRGBColorA const& color) {
+inline LinearColorA Color::toLinear<ACCURATE>(sRGBColorA const& color) noexcept {
     return LinearColorA{sRGBToLinear(color.rgb), color.a};
 }
 
 // Use the default implementation from the header
 template<>
-inline sRGBColor Color::toSRGB<FAST>(LinearColor const& color) {
+inline sRGBColor Color::toSRGB<FAST>(LinearColor const& color) noexcept {
     return pow(color, 1.0f / 2.2f);
 }
 
 template<>
-inline sRGBColorA Color::toSRGB<FAST>(LinearColorA const& color) {
+inline sRGBColorA Color::toSRGB<FAST>(LinearColorA const& color) noexcept {
     return sRGBColorA{pow(color.rgb, 1.0f / 2.2f), color.a};
 }
 
 template<>
-inline sRGBColor Color::toSRGB<ACCURATE>(LinearColor const& color) {
+inline sRGBColor Color::toSRGB<ACCURATE>(LinearColor const& color) noexcept {
     return linearToSRGB(color);
 }
 
 template<>
-inline sRGBColorA Color::toSRGB<ACCURATE>(LinearColorA const& color) {
+inline sRGBColorA Color::toSRGB<ACCURATE>(LinearColorA const& color) noexcept {
     return sRGBColorA{linearToSRGB(color.rgb), color.a};
 }
 
-inline LinearColor Color::toLinear(RgbType type, math::float3 color) {
+inline LinearColor Color::toLinear(RgbType type, math::float3 color) noexcept {
     return (type == RgbType::LINEAR) ? color : toLinear<ACCURATE>(color);
 }
 
 // converts an RGBA color to linear space
 // the conversion depends on the specified type
-inline LinearColorA Color::toLinear(RgbaType type, math::float4 color) {
+inline LinearColorA Color::toLinear(RgbaType type, math::float4 color) noexcept {
     switch (type) {
         case RgbaType::sRGB:
             return toLinear<ACCURATE>(color) * math::float4{color.a, color.a, color.a, 1.0f};

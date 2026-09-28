@@ -5,7 +5,7 @@
 [main]\
 open fun [getLayer](get-layer.md)(attachment: [RenderTarget.AttachmentPoint](-attachment-point/index.md)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
-Returns the texture-layer set on the given attachment point.
+Returns the texture-layer set on the given attachment point
 
 #### Return
 

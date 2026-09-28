@@ -7,7 +7,7 @@ open fun [unsetScissor](unset-scissor.md)()
 
 Returns the scissor rectangle to its default disabled setting. 
 
- Currently the scissor is not compatible with dynamic resolution and should always be disabled when dynamic resolution is used. 
+Currently the scissor is not compatible with dynamic resolution and should always be disabled when dynamic resolution is used.
 
 #### See also
 

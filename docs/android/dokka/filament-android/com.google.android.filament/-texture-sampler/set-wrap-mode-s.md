@@ -3,9 +3,9 @@
 # setWrapModeS
 
 [main]\
-open fun [setWrapModeS](set-wrap-mode-s.md)(mode: [TextureSampler.WrapMode](-wrap-mode/index.md))
+open fun [setWrapModeS](set-wrap-mode-s.md)(v: [TextureSampler.WrapMode](-wrap-mode/index.md))
 
-Sets the wrapping mode in the s (horizontal) direction.
+Sets the wrap mode for the s (horizontal) texture coordinate
 
 #### Parameters
 
@@ -13,4 +13,4 @@ main
 
 | | |
 |---|---|
-| mode | wrapping mode |
+| v | wrap mode |

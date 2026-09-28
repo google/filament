@@ -5,6 +5,8 @@
 [main]\
 open fun [getFormat](get-format.md)(): [Texture.InternalFormat](-internal-format/index.md)
 
+Return this texture InternalFormat as set by Builder::format().
+
 #### Return
 
-This texture's [InternalFormat](-internal-format/index.md).
+this texture InternalFormat as set by Builder::format().

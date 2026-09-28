@@ -3,11 +3,11 @@
 # setShift
 
 [main]\
-open fun [setShift](set-shift.md)(xshift: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), yshift: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html))
+open fun [setShift](set-shift.md)(shiftx: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), shifty: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html))
 
-Sets an additional matrix that shifts (translates) the projection matrix. 
+Sets an additional matrix that shifts the projection matrix. 
 
- The shift parameters are specified in NDC coordinates, that is, if the translation must be specified in pixels, the xshift and yshift parameters be scaled by 1.0 / viewport.width and 1.0 / viewport.height respectively. 
+By default, this is an identity matrix.
 
 #### Parameters
 
@@ -15,11 +15,36 @@ main
 
 | | |
 |---|---|
-| xshift | horizontal shift in NDC coordinates applied after the projection |
-| yshift | vertical shift in NDC coordinates applied after the projection |
+| shiftx | (x component) x and y translation added to the projection matrix, specified in NDC coordinates, that is, if the translation must be specified in pixels, shift must be scaled by 1.0 / { viewport.width, viewport.height }. |
+| shifty | (y component) x and y translation added to the projection matrix, specified in NDC coordinates, that is, if the translation must be specified in pixels, shift must be scaled by 1.0 / { viewport.width, viewport.height }. |
 
 #### See also
 
 | |
 |---|
-| com.google.android.filament.Camera |
+| setProjection |
+| [setLensProjection](set-lens-projection.md) |
+| setCustomProjection |
+
+[main]\
+open fun [setShift](set-shift.md)(shift: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;)
+
+Sets an additional matrix that shifts the projection matrix. 
+
+By default, this is an identity matrix.
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| shift | x and y translation added to the projection matrix, specified in NDC coordinates, that is, if the translation must be specified in pixels, shift must be scaled by 1.0 / { viewport.width, viewport.height }. |
+
+#### See also
+
+| |
+|---|
+| setProjection |
+| [setLensProjection](set-lens-projection.md) |
+| setCustomProjection |

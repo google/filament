@@ -7,9 +7,7 @@ open fun [setDynamicResolutionOptions](set-dynamic-resolution-options.md)(option
 
 Sets the dynamic resolution options for this view. 
 
- Dynamic resolution options controls whether dynamic resolution is enabled, and if it is, how it behaves. 
-
- If you wish subsequent changes to take effect please call this method again in order to propagate the changes down to the native layer. 
+Dynamic resolution options controls whether dynamic resolution is enabled, and if it is, how it behaves.
 
 #### Parameters
 

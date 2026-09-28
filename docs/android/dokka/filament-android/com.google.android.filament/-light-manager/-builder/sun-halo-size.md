@@ -5,7 +5,9 @@
 [main]\
 open fun [sunHaloSize](sun-halo-size.md)(haloSize: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [LightManager.Builder](index.md)
 
-Defines the halo radius of the sun. The radius of the halo is defined as a multiplier of the sun angular radius.
+Defines the halo radius of the sun. 
+
+The radius of the halo is defined as a multiplier of the sun angular radius. Must be at least 1.0.
 
 #### Return
 

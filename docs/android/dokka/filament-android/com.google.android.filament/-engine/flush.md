@@ -8,3 +8,5 @@ open fun [flush](flush.md)()
 Kicks the hardware thread (e.g. the OpenGL, Vulkan or Metal thread) but does not wait for commands to be either executed or the hardware finished. 
 
 This is typically used after creating a lot of objects to start draining the command queue which has a limited size.
+
+If the backend thread has encountered an unrecoverable error, this function becomes a no-op.

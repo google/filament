@@ -5,11 +5,11 @@
 [main]\
 open fun [hasCamera](has-camera.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
-Query whether a camera is set.
+Returns whether a Camera is set.
 
 #### Return
 
-true if a camera is set, false otherwise
+true if a camera is set.
 
 #### See also
 

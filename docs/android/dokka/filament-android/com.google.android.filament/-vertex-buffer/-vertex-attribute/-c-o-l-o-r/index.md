@@ -4,3 +4,5 @@
 
 [main]\
 [COLOR](index.md)
+
+vertex color (float4)

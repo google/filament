@@ -3,28 +3,10 @@
 # setStencilCompareFunction
 
 [main]\
-open fun [setStencilCompareFunction](set-stencil-compare-function.md)(func: [TextureSampler.CompareFunction](../-texture-sampler/-compare-function/index.md), face: [MaterialInstance.StencilFace](-stencil-face/index.md))
+open fun [setStencilCompareFunction](set-stencil-compare-function.md)(func: [TextureSampler.CompareFunc](../-texture-sampler/-compare-func/index.md))
 
-Sets the stencil comparison function (default is [ALWAYS](../-texture-sampler/-compare-function/-a-l-w-a-y-s/index.md)). 
+open fun [setStencilCompareFunction](set-stencil-compare-function.md)(func: [TextureSampler.CompareFunc](../-texture-sampler/-compare-func/index.md), face: [MaterialInstance.StencilFace](-stencil-face/index.md))
 
- It's possible to set separate stencil comparison functions; one for front-facing polygons, and one for back-facing polygons. The face parameter determines the comparison function(s) updated by this call. 
+Sets the stencil comparison function (default is StencilCompareFunc::A). 
 
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| func | the stencil comparison function |
-| face | the faces to update the comparison function for |
-
-[main]\
-open fun [setStencilCompareFunction](set-stencil-compare-function.md)(func: [TextureSampler.CompareFunction](../-texture-sampler/-compare-function/index.md))
-
-Sets the stencil comparison function for both front and back-facing polygons.
-
-#### See also
-
-| |
-|---|
-| [setStencilCompareFunction(TextureSampler.CompareFunction, StencilFace)](set-stencil-compare-function.md) |
+It's possible to set separate stencil comparison functions; one for front-facing polygons, and one for back-facing polygons. The face parameter determines the comparison function(s) updated by this call.

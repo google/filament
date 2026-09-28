@@ -11,4 +11,4 @@ This flag indicates that the `SwapChain` may be used as a source surface for rea
 
 | |
 |---|
-| [Renderer](../-renderer/copy-frame.md) |
+| com.google.android.filament.Renderer |

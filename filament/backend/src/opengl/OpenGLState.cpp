@@ -270,6 +270,11 @@ void OpenGLState::unbindTexture(
 }
 
 void OpenGLState::unbindTextureUnit(GLuint unit) noexcept {
+    assert_invariant(unit < MAX_TEXTURE_UNIT_COUNT);
+    // see bindSampler(): `unit` is ultimately driven by the material file.
+    if (UTILS_VERY_UNLIKELY(unit >= MAX_TEXTURE_UNIT_COUNT)) {
+        return;
+    }
     update_state(state.textures.units[unit].id, 0u, [&]() {
         activeTexture(unit);
         glBindTexture(state.textures.units[unit].target, 0u);

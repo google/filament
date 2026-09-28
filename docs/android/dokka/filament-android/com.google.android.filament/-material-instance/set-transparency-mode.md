@@ -5,10 +5,4 @@
 [main]\
 open fun [setTransparencyMode](set-transparency-mode.md)(mode: [Material.TransparencyMode](../-material/-transparency-mode/index.md))
 
-Sets the transparency mode for this material instance.
-
-#### See also
-
-| |
-|---|
-| [Material.TransparencyMode](../-material/-transparency-mode/index.md) |
+Specifies how transparent objects should be rendered (default is DEFAULT).

@@ -5,10 +5,6 @@
 [main]\
 open fun [isPostProcessingEnabled](is-post-processing-enabled.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
-Returns true if post-processing is enabled.
+Returns true if post-processing is enabled. 
 
-#### See also
-
-| |
-|---|
-| [setPostProcessingEnabled](set-post-processing-enabled.md) |
+See setPostProcessingEnabled() for more info.

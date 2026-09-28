@@ -5,4 +5,4 @@
 [main]\
 [OPENGL](index.md)
 
-Selects the OpenGL driver (which supports OpenGL ES as well).
+Selects the OpenGL/ES driver (default on Android)

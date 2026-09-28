@@ -3,13 +3,15 @@
 # getInstance
 
 [main]\
-open fun [getInstance](get-instance.md)(entity: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getInstance](get-instance.md)(e: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
-Gets an [EntityInstance](../-entity-instance/index.md) representing the transform component associated with the given [Entity](../-entity/index.md).
+Gets an Instance representing the transform component associated with the given Entity. 
+
+Use Instance::isValid() to make sure the component exists.
 
 #### Return
 
-an [EntityInstance](../-entity-instance/index.md), which represents the transform component associated with the [Entity](../-entity/index.md)`entity`
+An Instance object, which represents the transform component associated with the Entity e.
 
 #### Parameters
 
@@ -17,7 +19,7 @@ main
 
 | | |
 |---|---|
-| entity | an [Entity](../-entity/index.md) |
+| e | An Entity. |
 
 #### See also
 

@@ -5,7 +5,17 @@
 [main]\
 open fun [setShadowingEnabled](set-shadowing-enabled.md)(enabled: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
-Enables or disables shadow mapping. Enabled by default.
+Enables or disables shadow mapping. 
+
+Enabled by default.
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| enabled | true enables shadow mapping, false disables it. |
 
 #### See also
 

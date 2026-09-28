@@ -5,4 +5,4 @@
 [main]\
 [HORIZONTAL](index.md)
 
-The field-of-view angle is defined on the horizontal axis.
+the field-of-view angle is defined on the horizontal axis

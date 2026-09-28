@@ -5,4 +5,4 @@
 [main]\
 val [INVALID](-i-n-v-a-l-i-d.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html) = -1
 
-Value not supported or unavailable.
+value not supported

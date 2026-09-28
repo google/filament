@@ -1,0 +1,491 @@
+{
+  "meta": {
+    "generator_version": "1.0.0",
+    "source_file": "/Users/mathias/sources/git/filament/tools/apigen/tests/java/14_overloads_and_defaults.h"
+  },
+  "includes": {
+    "user": [],
+    "system": [
+      "<math/mat4.h>",
+      "<math/vec3.h>"
+    ]
+  },
+  "enums": [],
+  "classes": [
+    {
+      "name": "OverloadTest",
+      "qualified_name": "filament::OverloadTest",
+      "location": {
+        "file": "tools/apigen/tests/java/14_overloads_and_defaults.h",
+        "line": 25
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "OverloadTest",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [
+        {
+          "name": "configure",
+          "qualified_name": "configure(int, float, Mode)",
+          "location": {
+            "file": "tools/apigen/tests/java/14_overloads_and_defaults.h",
+            "line": 38
+          },
+          "doc": {
+            "brief": "Configures the system with optional mode.",
+            "details": "",
+            "params": {
+              "a": "first parameter",
+              "b": "second parameter",
+              "mode": "operating mode"
+            },
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "a",
+              "type": {
+                "cpp_name": "int",
+                "qualified_name": "int",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "b",
+              "type": {
+                "cpp_name": "float",
+                "qualified_name": "float",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "mode",
+              "type": {
+                "cpp_name": "Mode",
+                "qualified_name": "filament::OverloadTest::Mode",
+                "category": "enum",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": "Mode :: FAST",
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "projection",
+          "qualified_name": "projection(double, double, double, double)",
+          "location": {
+            "file": "tools/apigen/tests/java/14_overloads_and_defaults.h",
+            "line": 48
+          },
+          "doc": {
+            "brief": "Computes projection matrix with default far plane.",
+            "details": "",
+            "params": {
+              "fov": "field of view",
+              "aspect": "aspect ratio",
+              "near": "near plane distance",
+              "far": "far plane distance"
+            },
+            "returns": "projection matrix",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "math::mat4",
+            "qualified_name": "filament::math::details::TMat44<double>",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "fov",
+              "type": {
+                "cpp_name": "double",
+                "qualified_name": "double",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "aspect",
+              "type": {
+                "cpp_name": "double",
+                "qualified_name": "double",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "near",
+              "type": {
+                "cpp_name": "double",
+                "qualified_name": "double",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "far",
+              "type": {
+                "cpp_name": "double",
+                "qualified_name": "double",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": "INFINITY",
+              "attributes": []
+            }
+          ],
+          "is_static": true,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "setIntensity",
+          "qualified_name": "setIntensity(float)",
+          "location": {
+            "file": "tools/apigen/tests/java/14_overloads_and_defaults.h",
+            "line": 54
+          },
+          "doc": {
+            "brief": "Sets light intensity using simple intensity.",
+            "details": "",
+            "params": {
+              "intensity": "luminous intensity"
+            },
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "intensity",
+              "type": {
+                "cpp_name": "float",
+                "qualified_name": "float",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "setIntensity",
+          "qualified_name": "setIntensity(float, float)",
+          "location": {
+            "file": "tools/apigen/tests/java/14_overloads_and_defaults.h",
+            "line": 61
+          },
+          "doc": {
+            "brief": "Sets light intensity using physical power and efficiency.",
+            "details": "",
+            "params": {
+              "watts": "power in watts",
+              "efficiency": "luminous efficiency"
+            },
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "watts",
+              "type": {
+                "cpp_name": "float",
+                "qualified_name": "float",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "efficiency",
+              "type": {
+                "cpp_name": "float",
+                "qualified_name": "float",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "inverse",
+          "qualified_name": "inverse(const math::mat4 &)",
+          "location": {
+            "file": "tools/apigen/tests/java/14_overloads_and_defaults.h",
+            "line": 68
+          },
+          "doc": {
+            "brief": "Computes inverse of double-precision matrix.",
+            "details": "",
+            "params": {
+              "m": "input matrix"
+            },
+            "returns": "inverted matrix",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "math::mat4",
+            "qualified_name": "filament::math::details::TMat44<double>",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "m",
+              "type": {
+                "cpp_name": "const math::mat4 &",
+                "qualified_name": "filament::math::details::TMat44<double>&",
+                "category": "object",
+                "is_const": true,
+                "is_pointer": false,
+                "is_reference": true,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": true,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "inverse",
+          "qualified_name": "inverse(const math::mat4f &)",
+          "location": {
+            "file": "tools/apigen/tests/java/14_overloads_and_defaults.h",
+            "line": 75
+          },
+          "doc": {
+            "brief": "Computes inverse of single-precision matrix.",
+            "details": "",
+            "params": {
+              "m": "input matrix"
+            },
+            "returns": "inverted matrix",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "math::mat4f",
+            "qualified_name": "filament::math::details::TMat44<float>",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "m",
+              "type": {
+                "cpp_name": "const math::mat4f &",
+                "qualified_name": "filament::math::details::TMat44<float>&",
+                "category": "object",
+                "is_const": true,
+                "is_pointer": false,
+                "is_reference": true,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": true,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": [],
+      "enums": [
+        {
+          "name": "Mode",
+          "qualified_name": "filament::OverloadTest::Mode",
+          "location": {
+            "file": "tools/apigen/tests/java/14_overloads_and_defaults.h",
+            "line": 27
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "underlying_type": "uint8_t",
+          "entries": [
+            {
+              "name": "FAST",
+              "value": 0,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            },
+            {
+              "name": "ACCURATE",
+              "value": 1,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "functions": []
+}

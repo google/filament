@@ -5,4 +5,4 @@
 [main]\
 open fun [setStencilWrite](set-stencil-write.md)(enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
-Enables or Disable stencil writes
+Overrides the default stencil-buffer write state that was set on the material.

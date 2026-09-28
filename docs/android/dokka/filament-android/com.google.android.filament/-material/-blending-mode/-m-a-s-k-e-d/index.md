@@ -5,4 +5,4 @@
 [main]\
 [MASKED](index.md)
 
-Material is masked (i.e. alpha tested).
+material is masked (i.e. alpha tested)

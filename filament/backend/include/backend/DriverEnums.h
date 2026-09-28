@@ -1158,7 +1158,7 @@ enum class TextureFormat : uint16_t {
 TextureType getTextureType(TextureFormat format) noexcept;
 
 //! Bitmask describing the intended Texture Usage
-enum class TextureUsage : uint16_t {
+enum class UTILS_APIGEN_FLAGS TextureUsage : uint16_t {
     NONE                = 0x0000,
     COLOR_ATTACHMENT    = 0x0001,            //!< Texture can be used as a color attachment
     DEPTH_ATTACHMENT    = 0x0002,            //!< Texture can be used as a depth attachment
@@ -1781,6 +1781,9 @@ enum class Workaround : uint16_t {
     DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL,
     // Emulate an sRGB swapchain in shader code.
     EMULATE_SRGB_SWAPCHAIN,
+    // WebGL with ANGLE's Metal backend can incur significant overhead when binding many ranges
+    // from a large UBO.
+    DISABLE_MATERIAL_INSTANCE_UNIFORM_BATCHING,
 };
 
 using StereoscopicType = Platform::StereoscopicType;

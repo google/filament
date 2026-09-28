@@ -3,4 +3,4 @@
 # ALL
 
 [main]\
-open var [ALL](-a-l-l.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+val [ALL](-a-l-l.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 255

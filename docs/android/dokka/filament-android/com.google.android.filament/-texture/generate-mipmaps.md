@@ -5,9 +5,9 @@
 [main]\
 open fun [generateMipmaps](generate-mipmaps.md)(engine: [Engine](../-engine/index.md))
 
-Generates all the mipmap levels automatically. This requires the texture to have a color-renderable format. 
+Generates all the mipmap levels automatically. 
 
-This `Texture` instance must **not** use [SAMPLER_CUBEMAP](-sampler/-s-a-m-p-l-e-r_-c-u-b-e-m-a-p/index.md), or it has no effect.
+This requires the texture to have a color-renderable format and usage set to BLIT_SRC | BLIT_DST. If unspecified, usage bits are set automatically.
 
 #### Parameters
 
@@ -15,4 +15,4 @@ main
 
 | | |
 |---|---|
-| engine | [Engine](../-engine/index.md) this texture is associated to. Must be the instance passed to [Builder.build()](-builder/build.md). |
+| engine | Engine this texture is associated to.<br>@attention `engine` must be the instance passed to Builder::build() |

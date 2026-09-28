@@ -1,0 +1,403 @@
+{
+  "meta": {
+    "generator_version": "1.0.0",
+    "source_file": "/Users/mathias/sources/git/filament/tools/apigen/tests/java/19_valued_enums.h"
+  },
+  "includes": {
+    "user": [],
+    "system": [
+      "<stdint.h>"
+    ]
+  },
+  "aliases": [],
+  "enums": [],
+  "classes": [
+    {
+      "name": "ValuedEnumsTest",
+      "qualified_name": "ValuedEnumsTest",
+      "location": {
+        "file": "tools/apigen/tests/java/19_valued_enums.h",
+        "line": 3
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "ValuedEnumsTest",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [
+        {
+          "name": "processFrame",
+          "qualified_name": "processFrame(FrameStatus)",
+          "location": {
+            "file": "tools/apigen/tests/java/19_valued_enums.h",
+            "line": 26
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "FrameStatus",
+            "qualified_name": "ValuedEnumsTest::FrameStatus",
+            "category": "enum",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "status",
+              "type": {
+                "cpp_name": "FrameStatus",
+                "qualified_name": "ValuedEnumsTest::FrameStatus",
+                "category": "enum",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "setFlags",
+          "qualified_name": "setFlags(BitFlags)",
+          "location": {
+            "file": "tools/apigen/tests/java/19_valued_enums.h",
+            "line": 27
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "flags",
+              "type": {
+                "cpp_name": "BitFlags",
+                "qualified_name": "ValuedEnumsTest::BitFlags",
+                "category": "enum",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getFlags",
+          "qualified_name": "getFlags()",
+          "location": {
+            "file": "tools/apigen/tests/java/19_valued_enums.h",
+            "line": 28
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "BitFlags",
+            "qualified_name": "ValuedEnumsTest::BitFlags",
+            "category": "enum",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getAttachment",
+          "qualified_name": "getAttachment()",
+          "location": {
+            "file": "tools/apigen/tests/java/19_valued_enums.h",
+            "line": 29
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "AttachmentPoint",
+            "qualified_name": "ValuedEnumsTest::AttachmentPoint",
+            "category": "enum",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": [],
+      "constants": [],
+      "enums": [
+        {
+          "name": "FrameStatus",
+          "qualified_name": "ValuedEnumsTest::FrameStatus",
+          "location": {
+            "file": "tools/apigen/tests/java/19_valued_enums.h",
+            "line": 5
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "underlying_type": "int32_t",
+          "entries": [
+            {
+              "name": "SKIPPED_SPURIOUS",
+              "value": -2,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            },
+            {
+              "name": "SKIPPED_STALE",
+              "value": -1,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            },
+            {
+              "name": "ACCEPTED",
+              "value": 0,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            }
+          ]
+        },
+        {
+          "name": "BitFlags",
+          "qualified_name": "ValuedEnumsTest::BitFlags",
+          "location": {
+            "file": "tools/apigen/tests/java/19_valued_enums.h",
+            "line": 11
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "underlying_type": "uint32_t",
+          "entries": [
+            {
+              "name": "NONE",
+              "value": 0,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            },
+            {
+              "name": "FLAG_A",
+              "value": 1,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            },
+            {
+              "name": "FLAG_B",
+              "value": 2,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            },
+            {
+              "name": "FLAG_C",
+              "value": 4,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            }
+          ]
+        },
+        {
+          "name": "AttachmentPoint",
+          "qualified_name": "ValuedEnumsTest::AttachmentPoint",
+          "location": {
+            "file": "tools/apigen/tests/java/19_valued_enums.h",
+            "line": 18
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "underlying_type": "uint8_t",
+          "entries": [
+            {
+              "name": "COLOR",
+              "value": 0,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            },
+            {
+              "name": "DEPTH",
+              "value": 1,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            },
+            {
+              "name": "STENCIL",
+              "value": 2,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            },
+            {
+              "name": "COLOR0",
+              "value": 0,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            },
+            {
+              "name": "COLOR1",
+              "value": 3,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            }
+          ]
+        }
+      ],
+      "is_aggregate": false
+    }
+  ],
+  "functions": []
+}

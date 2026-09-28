@@ -3,9 +3,18 @@
 # enableBufferObjects
 
 [main]\
+open fun [enableBufferObjects](enable-buffer-objects.md)(): [VertexBuffer.Builder](index.md)
+
+Allows buffers to be swapped out and shared using BufferObject. 
+
+If buffer objects mode is enabled, clients must call setBufferObjectAt rather than setBufferAt. This allows sharing of data between VertexBuffer objects, but it may slightly increase the memory footprint of Filament's internal bookkeeping.
+
+[main]\
 open fun [enableBufferObjects](enable-buffer-objects.md)(enabled: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [VertexBuffer.Builder](index.md)
 
-Allows buffers to be swapped out and shared using BufferObject. If buffer objects mode is enabled, clients must call setBufferObjectAt rather than setBufferAt. This allows sharing of data between VertexBuffer objects, but it may slightly increase the memory footprint of Filament's internal bookkeeping.
+Allows buffers to be swapped out and shared using BufferObject. 
+
+If buffer objects mode is enabled, clients must call setBufferObjectAt rather than setBufferAt. This allows sharing of data between VertexBuffer objects, but it may slightly increase the memory footprint of Filament's internal bookkeeping.
 
 #### Parameters
 

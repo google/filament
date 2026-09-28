@@ -16,10 +16,26 @@
 
 package com.google.android.filament.android;
 
+import androidx.annotation.NonNull;
+
 import com.google.android.filament.Engine;
 import com.google.android.filament.Fence;
+import com.google.android.filament.proguard.UsedByNative;
 
 public class FilamentHelper {
+
+    /**
+     * Retrieves the native pointer to the JobSystem managed by the Engine.
+     *
+     * @param engine Filament engine whose JobSystem is requested
+     * @return Raw native pointer to the utils::JobSystem
+     */
+    @UsedByNative("FilamentHelper.cpp")
+    public static long getJobSystem(@NonNull Engine engine) {
+        return nGetJobSystem(engine.getNativeObject());
+    }
+
+    private static native long nGetJobSystem(long nativeEngine);
 
     /**
      * Wait for all pending frames to be processed before returning. This is to avoid a race

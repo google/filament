@@ -4,3 +4,5 @@
 
 [main]\
 [CONDITION_SATISFIED](index.md)
+
+The Fence condition is satisfied.

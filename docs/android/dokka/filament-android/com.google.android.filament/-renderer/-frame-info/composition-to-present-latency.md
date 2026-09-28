@@ -4,5 +4,3 @@
 
 [main]\
 open var [compositionToPresentLatency](composition-to-present-latency.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
-
-Time between the start of composition and the expected present time [ns].

@@ -5,7 +5,7 @@
 [main]\
 constructor(type: [LightManager.Type](../-type/index.md))
 
-Creates a light builder and set the light's [Type](../-type/index.md).
+Creates a light builder and set the light's #Type.
 
 #### Parameters
 
@@ -13,4 +13,4 @@ main
 
 | | |
 |---|---|
-| type | [Type](../-type/index.md) of Light object to create. |
+| type | #Type of Light object to create. |

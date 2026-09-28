@@ -3,21 +3,15 @@
 # getSampleCount
 
 [main]\
-open fun [~~getSampleCount~~](get-sample-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getSampleCount](get-sample-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
----
+Returns the sample count set by setSampleCount(). 
 
-### Deprecated
-
----
-
-Returns the effective MSAA sample count. 
-
- A value of 0 or 1 means MSAA is disabled. 
+Effective sample count could be different. A value of 0 or 1 means MSAA is disabled.
 
 #### Return
 
-value set by [setSampleCount](set-sample-count.md)
+value set by setSampleCount().
 
 #### Deprecated
 

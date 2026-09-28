@@ -26,6 +26,7 @@
 #include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
+#include <utils/ImmutableCString.h>
 #include <utils/StaticString.h>
 
 #include <functional>
@@ -61,6 +62,7 @@ class UTILS_PUBLIC VertexBuffer : public FilamentAPI {
     struct BuilderDetails;
 
 public:
+    using VertexAttribute = filament::VertexAttribute;
     using AttributeType = backend::ElementType;
     using BufferDescriptor = backend::BufferDescriptor;
     using AsyncCallStatus = backend::AsyncCallStatus;
@@ -166,6 +168,8 @@ public:
          */
         Builder& advancedSkinning(bool enabled) noexcept;
 
+        using BuilderNameMixin<Builder>::name;
+
         /**
          * Associate an optional name with this VertexBuffer for debugging purposes.
          *
@@ -181,6 +185,7 @@ public:
          * @deprecated Use name(utils::StaticString const&) instead.
          */
         UTILS_DEPRECATED
+        UTILS_NOAPIGEN
         Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept;
 
         /**
@@ -191,7 +196,19 @@ public:
          * @param name A string literal to identify this VertexBuffer
          * @return This Builder, for chaining calls.
          */
+        UTILS_NOAPIGEN
         Builder& name(utils::StaticString const& name) noexcept;
+
+        /**
+         * Associate an optional name with this VertexBuffer for debugging purposes.
+         *
+         * @param name A string to identify this VertexBuffer
+         * @return This Builder, for chaining calls.
+         *
+         * @note This method should be avoided in C++ in favor of the `StaticString` overload.
+         * It is provided primarily for bindings to other languages.
+         */
+        Builder& name(utils::ImmutableCString const& name) noexcept;
 
         /**
          * Specifies a callback that will execute once the resource's data has been fully allocated

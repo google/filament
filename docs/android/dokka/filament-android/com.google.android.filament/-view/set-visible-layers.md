@@ -7,7 +7,11 @@ open fun [setVisibleLayers](set-visible-layers.md)(select: [Int](https://kotlinl
 
 Sets which layers are visible. 
 
- Renderable objects can have one or several layers associated to them. Layers are represented with an 8-bits bitmask, where each bit corresponds to a layer. By default all layers are visible. 
+Renderable objects can have one or several layers associated to them. Layers are represented with an 8-bits bitmask, where each bit corresponds to a layer.
+
+This call sets which of those layers are visible. Renderables in invisible layers won't be rendered.
+
+By default, only layer 0 (bitmask 0x01) is visible.
 
 #### Parameters
 

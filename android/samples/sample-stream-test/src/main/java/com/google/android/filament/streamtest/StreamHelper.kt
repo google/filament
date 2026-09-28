@@ -28,6 +28,7 @@ import android.os.Looper
 import android.view.Display
 
 import com.google.android.filament.*
+import com.google.android.filament.android.StreamHelper as FStreamHelper
 
 
 /**
@@ -127,7 +128,8 @@ class StreamHelper(
 
             if (streamSource == StreamSource.CANVAS_STREAM_ACQUIRED) {
                 val image = imageReader!!.acquireLatestImage()
-                filamentStream!!.setAcquiredImage(
+                FStreamHelper.setAcquiredImage(
+                    filamentStream!!,
                     image.hardwareBuffer!!,
                     directImageHandler
                 ) { image.close() }
@@ -200,9 +202,10 @@ class StreamHelper(
             canvasSurface = Surface(surfaceTexture)
 
             // Create the Filament Stream object that gets bound to the Texture.
-            filamentStream = Stream.Builder()
-                    .stream(surfaceTexture!!)
-                    .build(filamentEngine)
+            filamentStream = FStreamHelper.setStreamSource(
+                Stream.Builder(),
+                surfaceTexture!!
+            ).build(filamentEngine)
 
             filamentTexture.setExternalStream(filamentEngine, filamentStream!!)
         }

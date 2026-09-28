@@ -5,4 +5,6 @@
 [main]\
 [LOW](index.md)
 
-For non-interactive, deferrable workloads. This should not interfere with standard applications.
+For non-interactive, deferrable workloads. 
+
+This should not interfere with standard applications.

@@ -23,6 +23,7 @@
 #include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
+#include <utils/ImmutableCString.h>
 #include <utils/StaticString.h>
 
 #include <math/mat3.h>
@@ -99,6 +100,8 @@ public:
     class Builder : public BuilderBase<BuilderDetails>, public BuilderNameMixin<Builder> {
         friend struct BuilderDetails;
     public:
+        using BuilderNameMixin::name;
+
         Builder() noexcept;
         Builder(Builder const& rhs) noexcept;
         Builder(Builder&& rhs) noexcept;
@@ -118,13 +121,14 @@ public:
          * @deprecated Use Stream::setAcquiredImage instead.
          */
         UTILS_DEPRECATED
+        UTILS_NOAPIGEN
         Builder& stream(void* UTILS_NULLABLE stream) noexcept;
 
         /**
          *
          * @param width initial width of the incoming stream. Whether this value is used is
          *              stream dependent. On Android, it must be set when using
-         *              Builder::stream(long externalTextureId).
+         *              Builder::stream.
          *
          * @return This Builder, for chaining calls.
          */
@@ -134,7 +138,7 @@ public:
          *
          * @param height initial height of the incoming stream. Whether this value is used is
          *              stream dependent. On Android, it must be set when using
-         *              Builder::stream(long externalTextureId).
+         *              Builder::stream.
          *
          * @return This Builder, for chaining calls.
          */
@@ -155,6 +159,7 @@ public:
          * @deprecated Use name(utils::StaticString const&) instead.
          */
         UTILS_DEPRECATED
+        UTILS_NOAPIGEN
         Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept;
 
         /**
@@ -165,7 +170,19 @@ public:
          * @param name A string literal to identify this Stream
          * @return This Builder, for chaining calls.
          */
+        UTILS_NOAPIGEN
         Builder& name(utils::StaticString const& name) noexcept;
+
+        /**
+         * Associate an optional name with this Stream for debugging purposes.
+         *
+         * @param name A string to identify this Stream
+         * @return This Builder, for chaining calls.
+         *
+         * @note This method should be avoided in C++ in favor of the `StaticString` overload.
+         *       It exists primarily for language bindings and dynamic string generation.
+         */
+        Builder& name(utils::ImmutableCString const& name) noexcept;
 
         /**
          * Creates the Stream object and returns a pointer to it.
@@ -207,20 +224,22 @@ public:
      *                   releases the image.
      * @param transform  Optional transform matrix to apply to the image.
      */
+    UTILS_NOAPIGEN
     void setAcquiredImage(void* UTILS_NONNULL image,
             Callback UTILS_NONNULL callback, void* UTILS_NULLABLE userdata, math::mat3f const& transform = math::mat3f()) noexcept;
 
     /**
      * @see setAcquiredImage(void*, Callback, void*)
      *
-     * @param image      Pointer to AHardwareBuffer, casted to void* since this is a public header.
+     * @param image      Pointer to AHardwareBuffer (cast to void* since this is a public header).
      * @param handler    Handler to dispatch the AcquiredImage or nullptr for the default handler.
      * @param callback   This is triggered by Filament when it wishes to release the image.
-     *                   It callback tales two arguments: the AHardwareBuffer and the userdata.
+     *                   This callback takes two arguments: the AHardwareBuffer and the userdata.
      * @param userdata   Optional closure data. Filament will pass this into the callback when it
      *                   releases the image.
      * @param transform  Optional transform matrix to apply to the image.
      */
+    UTILS_NOAPIGEN
     void setAcquiredImage(void* UTILS_NONNULL image,
             backend::CallbackHandler* UTILS_NULLABLE handler,
             Callback UTILS_NONNULL callback, void* UTILS_NULLABLE userdata, math::mat3f const& transform = math::mat3f()) noexcept;
@@ -228,7 +247,7 @@ public:
     /**
      * Updates the size of the incoming stream. Whether this value is used is
      *              stream dependent. On Android, it must be set when using
-     *              Builder::stream(long externalTextureId).
+     *              Builder::stream.
      *
      * @param width     new width of the incoming stream
      * @param height    new height of the incoming stream

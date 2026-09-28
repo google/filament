@@ -5,4 +5,4 @@
 [main]\
 [VULKAN](index.md)
 
-Selects the Vulkan driver if the platform supports it.
+Selects the Vulkan driver if the platform supports it (default on Linux/Windows)

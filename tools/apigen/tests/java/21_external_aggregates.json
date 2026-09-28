@@ -1,0 +1,1105 @@
+{
+  "meta": {
+    "generator_version": "1.0.0",
+    "source_file": "/Users/mathias/sources/git/filament/tools/apigen/tests/java/21_external_aggregates.h"
+  },
+  "includes": {
+    "user": [],
+    "system": [
+      "<filament/Viewport.h>",
+      "<filament/Box.h>",
+      "<utils/compiler.h>"
+    ]
+  },
+  "aliases": [],
+  "enums": [],
+  "classes": [
+    {
+      "name": "ExternalAggregatesTest",
+      "qualified_name": "filament::ExternalAggregatesTest",
+      "location": {
+        "file": "tools/apigen/tests/java/21_external_aggregates.h",
+        "line": 28
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "ExternalAggregatesTest",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [
+        {
+          "name": "copyFrame",
+          "qualified_name": "copyFrame(SwapChain * _Nonnull, const Viewport &, const Viewport &, uint32_t)",
+          "location": {
+            "file": "tools/apigen/tests/java/21_external_aggregates.h",
+            "line": 30
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "dstSwapChain",
+              "type": {
+                "cpp_name": "SwapChain *",
+                "qualified_name": "filament::SwapChain*",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": true,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "nonnull"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "dstViewport",
+              "type": {
+                "cpp_name": "const Viewport &",
+                "qualified_name": "filament::Viewport&",
+                "category": "object",
+                "is_const": true,
+                "is_pointer": false,
+                "is_reference": true,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "srcViewport",
+              "type": {
+                "cpp_name": "const Viewport &",
+                "qualified_name": "filament::Viewport&",
+                "category": "object",
+                "is_const": true,
+                "is_pointer": false,
+                "is_reference": true,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "flags",
+              "type": {
+                "cpp_name": "uint32_t",
+                "qualified_name": "uint32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": "0",
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": false,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "intersects",
+          "qualified_name": "intersects(const Box &)",
+          "location": {
+            "file": "tools/apigen/tests/java/21_external_aggregates.h",
+            "line": 31
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "bool",
+            "qualified_name": "bool",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "box",
+              "type": {
+                "cpp_name": "const Box &",
+                "qualified_name": "filament::Box&",
+                "category": "object",
+                "is_const": true,
+                "is_pointer": false,
+                "is_reference": true,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getBoundingBox",
+          "qualified_name": "getBoundingBox()",
+          "location": {
+            "file": "tools/apigen/tests/java/21_external_aggregates.h",
+            "line": 32
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "Box",
+            "qualified_name": "filament::Box",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": [],
+      "constants": [],
+      "is_aggregate": false
+    }
+  ],
+  "functions": [],
+  "referenced_classes": [
+    {
+      "name": "SwapChain",
+      "qualified_name": "filament::backend::Platform::SwapChain",
+      "location": {
+        "file": "backend/Platform.h",
+        "line": 53
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "SwapChain",
+        "category": "struct",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [],
+      "fields": [],
+      "aliases": [],
+      "constants": [],
+      "parent_class": "Platform",
+      "is_nested": true,
+      "is_aggregate": false
+    },
+    {
+      "name": "Viewport",
+      "qualified_name": "filament::Viewport",
+      "location": {
+        "file": "filament/Viewport.h",
+        "line": 36
+      },
+      "doc": {
+        "brief": "Viewport describes a view port in pixel coordinates",
+        "details": "A view port is represented by its left-bottom coordinate, width and height in pixels.",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "Viewport",
+        "category": "struct",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [
+        "backend::Viewport"
+      ],
+      "methods": [
+        {
+          "name": "right",
+          "qualified_name": "right()",
+          "location": {
+            "file": "backend/DriverEnums.h",
+            "line": 608
+          },
+          "doc": {
+            "brief": "get the right coordinate in window space of the viewport",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "int32_t",
+            "qualified_name": "int32_t",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "top",
+          "qualified_name": "top()",
+          "location": {
+            "file": "backend/DriverEnums.h",
+            "line": 610
+          },
+          "doc": {
+            "brief": "get the top coordinate in window space of the viewport",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "int32_t",
+            "qualified_name": "int32_t",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "Viewport",
+          "qualified_name": "Viewport()",
+          "location": {
+            "file": "filament/Viewport.h",
+            "line": 41
+          },
+          "doc": {
+            "brief": "Creates a Viewport of zero width and height at the origin.",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": [],
+          "is_constructor": true
+        },
+        {
+          "name": "Viewport",
+          "qualified_name": "Viewport(int32_t, int32_t, uint32_t, uint32_t)",
+          "location": {
+            "file": "filament/Viewport.h",
+            "line": 51
+          },
+          "doc": {
+            "brief": "Creates a Viewport from its left-bottom coordinates, width and height in pixels",
+            "details": "",
+            "params": {
+              "left": "left coordinate in pixel",
+              "bottom": "bottom coordinate in pixel",
+              "width": "width in pixel",
+              "height": "height in pixel"
+            },
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "left",
+              "type": {
+                "cpp_name": "int32_t",
+                "qualified_name": "int32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "bottom",
+              "type": {
+                "cpp_name": "int32_t",
+                "qualified_name": "int32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "width",
+              "type": {
+                "cpp_name": "uint32_t",
+                "qualified_name": "uint32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "height",
+              "type": {
+                "cpp_name": "uint32_t",
+                "qualified_name": "uint32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": [],
+          "is_constructor": true
+        },
+        {
+          "name": "empty",
+          "qualified_name": "empty()",
+          "location": {
+            "file": "filament/Viewport.h",
+            "line": 60
+          },
+          "doc": {
+            "brief": "Returns whether the area of the view port is null.",
+            "details": "",
+            "params": {},
+            "returns": "true if either width or height is 0 pixel.",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "bool",
+            "qualified_name": "bool",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [
+        {
+          "name": "left",
+          "qualified_name": "left",
+          "location": {
+            "file": "backend/DriverEnums.h",
+            "line": 603
+          },
+          "doc": {
+            "brief": "left coordinate in window space.",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "int32_t",
+            "qualified_name": "int32_t",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "default_value": null
+        },
+        {
+          "name": "bottom",
+          "qualified_name": "bottom",
+          "location": {
+            "file": "backend/DriverEnums.h",
+            "line": 604
+          },
+          "doc": {
+            "brief": "bottom coordinate in window space.",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "int32_t",
+            "qualified_name": "int32_t",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "default_value": null
+        },
+        {
+          "name": "width",
+          "qualified_name": "width",
+          "location": {
+            "file": "backend/DriverEnums.h",
+            "line": 605
+          },
+          "doc": {
+            "brief": "width in pixels",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "uint32_t",
+            "qualified_name": "uint32_t",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "default_value": null
+        },
+        {
+          "name": "height",
+          "qualified_name": "height",
+          "location": {
+            "file": "backend/DriverEnums.h",
+            "line": 606
+          },
+          "doc": {
+            "brief": "height in pixels",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "uint32_t",
+            "qualified_name": "uint32_t",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "default_value": null
+        }
+      ],
+      "aliases": [],
+      "constants": [],
+      "is_aggregate": true
+    },
+    {
+      "name": "Box",
+      "qualified_name": "filament::Box",
+      "location": {
+        "file": "filament/Box.h",
+        "line": 37
+      },
+      "doc": {
+        "brief": "An axis aligned 3D box represented by its center and half-extent.",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "Box",
+        "category": "struct",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [
+        {
+          "name": "isEmpty",
+          "qualified_name": "isEmpty()",
+          "location": {
+            "file": "filament/Box.h",
+            "line": 49
+          },
+          "doc": {
+            "brief": "Whether the box is empty, i.e.: its extents are zero.",
+            "details": "",
+            "params": {},
+            "returns": "true if the extents of the box are zero",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "bool",
+            "qualified_name": "bool",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getMin",
+          "qualified_name": "getMin()",
+          "location": {
+            "file": "filament/Box.h",
+            "line": 57
+          },
+          "doc": {
+            "brief": "Computes the lowest coordinates corner of the box.",
+            "details": "",
+            "params": {},
+            "returns": "center - halfExtent",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "math::float3",
+            "qualified_name": "filament::math::details::TVec3<float>",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getMax",
+          "qualified_name": "getMax()",
+          "location": {
+            "file": "filament/Box.h",
+            "line": 65
+          },
+          "doc": {
+            "brief": "Computes the largest coordinates corner of the box.",
+            "details": "",
+            "params": {},
+            "returns": "center + halfExtent",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "math::float3",
+            "qualified_name": "filament::math::details::TVec3<float>",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "set",
+          "qualified_name": "set(const math::float3 &, const math::float3 &)",
+          "location": {
+            "file": "filament/Box.h",
+            "line": 75
+          },
+          "doc": {
+            "brief": "Initializes the 3D box from its min / max coordinates on each axis",
+            "details": "",
+            "params": {
+              "min": "lowest coordinates corner of the box",
+              "max": "largest coordinates corner of the box"
+            },
+            "returns": "This bounding box",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "Box &",
+            "qualified_name": "filament::Box&",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": true,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "min",
+              "type": {
+                "cpp_name": "const math::float3 &",
+                "qualified_name": "filament::math::details::TVec3<float>&",
+                "category": "object",
+                "is_const": true,
+                "is_pointer": false,
+                "is_reference": true,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "max",
+              "type": {
+                "cpp_name": "const math::float3 &",
+                "qualified_name": "filament::math::details::TVec3<float>&",
+                "category": "object",
+                "is_const": true,
+                "is_pointer": false,
+                "is_reference": true,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "unionSelf",
+          "qualified_name": "unionSelf(const Box &)",
+          "location": {
+            "file": "filament/Box.h",
+            "line": 87
+          },
+          "doc": {
+            "brief": "Computes the bounding box of the union of two boxes",
+            "details": "",
+            "params": {
+              "box": "The box to be combined with"
+            },
+            "returns": "The bounding box of the union of *this and box",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "Box &",
+            "qualified_name": "filament::Box&",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": true,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "box",
+              "type": {
+                "cpp_name": "const Box &",
+                "qualified_name": "filament::Box&",
+                "category": "object",
+                "is_const": true,
+                "is_pointer": false,
+                "is_reference": true,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "translateTo",
+          "qualified_name": "translateTo(const math::float3 &)",
+          "location": {
+            "file": "filament/Box.h",
+            "line": 97
+          },
+          "doc": {
+            "brief": "Translates the box *to* a given center position",
+            "details": "",
+            "params": {
+              "tr": "position to translate the box to"
+            },
+            "returns": "A box centered in `tr` with the same extent than *this",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "Box",
+            "qualified_name": "filament::Box",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "tr",
+              "type": {
+                "cpp_name": "const math::float3 &",
+                "qualified_name": "filament::math::details::TVec3<float>&",
+                "category": "object",
+                "is_const": true,
+                "is_pointer": false,
+                "is_reference": true,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getBoundingSphere",
+          "qualified_name": "getBoundingSphere()",
+          "location": {
+            "file": "filament/Box.h",
+            "line": 105
+          },
+          "doc": {
+            "brief": "Computes the smallest bounding sphere of the box.",
+            "details": "",
+            "params": {},
+            "returns": "The smallest sphere defined by its center (.xyz) and radius (.w) that contains *this",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "math::float4",
+            "qualified_name": "filament::math::details::TVec4<float>",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "transform",
+          "qualified_name": "transform(const math::mat3f &, const math::float3 &, const Box &)",
+          "location": {
+            "file": "filament/Box.h",
+            "line": 117
+          },
+          "doc": {
+            "brief": "Transform a Box by a linear transform and a translation.",
+            "details": "",
+            "params": {
+              "m": "a 3x3 matrix, the linear transform",
+              "t": "a float3, the translation",
+              "box": "the box to transform"
+            },
+            "returns": "the bounding box of the transformed box",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "Box",
+            "qualified_name": "filament::Box",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "m",
+              "type": {
+                "cpp_name": "const math::mat3f &",
+                "qualified_name": "filament::math::details::TMat33<float>&",
+                "category": "object",
+                "is_const": true,
+                "is_pointer": false,
+                "is_reference": true,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "t",
+              "type": {
+                "cpp_name": "const math::float3 &",
+                "qualified_name": "filament::math::details::TVec3<float>&",
+                "category": "object",
+                "is_const": true,
+                "is_pointer": false,
+                "is_reference": true,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "box",
+              "type": {
+                "cpp_name": "const Box &",
+                "qualified_name": "filament::Box&",
+                "category": "object",
+                "is_const": true,
+                "is_pointer": false,
+                "is_reference": true,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": true,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [
+        {
+          "name": "center",
+          "qualified_name": "center",
+          "location": {
+            "file": "filament/Box.h",
+            "line": 40
+          },
+          "doc": {
+            "brief": "Center of the 3D box",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "math::float3",
+            "qualified_name": "filament::math::details::TVec3<float>",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "default_value": "{ }"
+        },
+        {
+          "name": "halfExtent",
+          "qualified_name": "halfExtent",
+          "location": {
+            "file": "filament/Box.h",
+            "line": 43
+          },
+          "doc": {
+            "brief": "Half extent from the center on all 3 axis",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "math::float3",
+            "qualified_name": "filament::math::details::TVec3<float>",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "default_value": "{ }"
+        }
+      ],
+      "aliases": [],
+      "constants": [],
+      "is_aggregate": true
+    }
+  ]
+}

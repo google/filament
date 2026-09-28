@@ -5,4 +5,4 @@
 [main]\
 [NONE](index.md)
 
-No culling. Front and back faces are visible.
+No culling, front and back faces are visible

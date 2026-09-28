@@ -10,3 +10,9 @@ Returns whether this SwapChain currently has a FrameScheduledCallback set.
 #### Return
 
 true, if the last call to setFrameScheduledCallback set a callback
+
+#### See also
+
+| |
+|---|
+| [SwapChain](set-frame-completed-callback.md) |

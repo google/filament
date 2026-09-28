@@ -5,4 +5,4 @@
 [main]\
 val [PENDING](-p-e-n-d-i-n-g.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html) = -2
 
-Value not yet available (pending completion).
+value not yet available

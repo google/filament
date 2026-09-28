@@ -5,11 +5,11 @@
 [main]\
 open fun [build](build.md)(engine: [Engine](../../-engine/index.md)): [Stream](../index.md)
 
-Creates a new `Stream` object instance.
+Creates the Stream object and returns a pointer to it.
 
 #### Return
 
-newly created `Stream` object
+pointer to the newly created object.
 
 #### Parameters
 
@@ -17,10 +17,4 @@ main
 
 | | |
 |---|---|
-| engine | [Engine](../../-engine/index.md) instance to associate this `Stream` with. |
-
-#### Throws
-
-| | |
-|---|---|
-| [IllegalStateException](https://developer.android.com/reference/kotlin/java/lang/IllegalStateException.html) | if the `Stream` couldn't be created |
+| engine | Reference to the filament::Engine to associate this Stream with. |

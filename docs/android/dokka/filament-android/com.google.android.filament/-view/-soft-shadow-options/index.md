@@ -4,13 +4,15 @@
 
 open class [SoftShadowOptions](index.md)
 
-View-level options for PCSS Shadowing.
+View-level options for PCSS Shadowing. 
+
+**Warning:** This API is still experimental and subject to change.
 
 #### See also
 
-| | |
-|---|---|
-| [setSoftShadowOptions](../set-soft-shadow-options.md) | **Warning:** This API is still experimental and subject to change. |
+| |
+|---|
+| [setSoftShadowOptions](../set-soft-shadow-options.md) |
 
 ## Constructors
 

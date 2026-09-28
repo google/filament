@@ -157,7 +157,7 @@ class MainActivity : Activity() {
         light = EntityManager.get().create()
 
         // Create a color from a temperature (D65)
-        val (r, g, b) = Colors.cct(6_500.0f)
+        val (r, g, b) = Colors.cct(6_500.0f, null)
         LightManager.Builder(LightManager.Type.DIRECTIONAL)
                 .color(r, g, b)
                 // Intensity of the sun in lux on a clear day
@@ -230,8 +230,21 @@ class MainActivity : Activity() {
     }
 
     private fun setupMaterial() {
+        // Verify material parameter reflection and caching invariants
+        val params = material.parameters
+        check(params.any { it.name == "baseColor" && it.type == Material.ParameterType.FLOAT3 && !it.isSampler && !it.isSubpass }) {
+            "Expected baseColor parameter not found in Material parameter reflection!"
+        }
+        check(material.defaultInstance === material.defaultInstance) {
+            "Expected cached defaultInstance identity!"
+        }
+
         // Create an instance of the material to set different parameters on it
         materialInstance = material.createInstance()
+        check(materialInstance.material === material) {
+            "Expected materialInstance.material to match parent material!"
+        }
+
         // Specify that our color is in sRGB so the conversion to linear
         // is done automatically for us. If you already have a linear color
         // you can pass it directly, or use Colors.RgbType.LINEAR

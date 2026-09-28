@@ -2,12 +2,7 @@
 
 # SPECULAR_GLOSSINESS
 
+[main]\
 [SPECULAR_GLOSSINESS](index.md)
 
-Legacy lighting model
-
-#### See also
-
-| | |
-|---|---|
-| &lt;a href=&quot;https://google.github.io/filament/Materials.html#materialmodels/specularglossiness&quot;&gt; | Specular glossiness |
+legacy lighting model

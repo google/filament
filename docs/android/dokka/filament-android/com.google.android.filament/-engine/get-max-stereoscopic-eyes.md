@@ -3,9 +3,11 @@
 # getMaxStereoscopicEyes
 
 [main]\
-open fun [getMaxStereoscopicEyes](get-max-stereoscopic-eyes.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
+open fun [getMaxStereoscopicEyes](get-max-stereoscopic-eyes.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
-Returns the maximum number of stereoscopic eyes supported by Filament. The actual number of eyes rendered is set at Engine creation time with the [stereoscopicEyeCount](-config/stereoscopic-eye-count.md) setting.
+Returns the maximum number of stereoscopic eyes supported by Filament. 
+
+The actual number of eyes rendered is set at Engine creation time with the Engine::Config::stereoscopicEyeCount setting.
 
 #### Return
 

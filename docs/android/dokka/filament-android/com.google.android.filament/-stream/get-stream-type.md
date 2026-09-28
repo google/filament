@@ -5,4 +5,4 @@
 [main]\
 open fun [getStreamType](get-stream-type.md)(): [Stream.StreamType](-stream-type/index.md)
 
-Indicates whether this `Stream` is NATIVE or ACQUIRED.
+Indicates whether this stream is a NATIVE stream or ACQUIRED stream.

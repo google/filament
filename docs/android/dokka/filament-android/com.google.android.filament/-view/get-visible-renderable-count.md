@@ -5,7 +5,9 @@
 [main]\
 open fun [getVisibleRenderableCount](get-visible-renderable-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
-Returns the most recent number of visible renderables for the current Scene as calculated the last time Renderer::render() was called with this View and Scene. Returns -1 if the cache is invalid (e.g. before the first render call, or if the scene was detached).
+Returns the most recent number of visible renderables for the current Scene as calculated the last time Renderer::render() was called with this View and Scene. 
+
+Returns -1 if the cache is invalid (e.g. before the first render call, or if the scene was detached).
 
 #### Return
 

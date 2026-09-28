@@ -3,9 +3,7 @@
 # setBonesAsMatrices
 
 [main]\
-open fun [setBonesAsMatrices](set-bones-as-matrices.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), matrices: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), boneCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
-
-Sets the transforms associated with each bone of a Renderable.
+open fun [setBonesAsMatrices](set-bones-as-matrices.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), transforms: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 #### Parameters
 
@@ -13,7 +11,74 @@ main
 
 | | |
 |---|---|
-| i | Instance of the Renderable |
-| matrices | A FloatBuffer containing boneCount 4x4 packed matrices (i.e. 16 floats each matrix and no gap between matrices) |
-| boneCount | Number of bones to set |
-| offset | Index of the first bone to set |
+| instance | instance of the component obtained from getInstance() |
+| transforms | buffer containing transforms data |
+| count | number of elements (structured element count) in `transforms` |
+| offset | offset in elements (structured element count) in the destination buffer or component |
+
+[main]\
+open fun [setBonesAsMatrices](set-bones-as-matrices.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), transforms: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| instance | instance of the component obtained from getInstance() |
+| transforms | buffer containing transforms data |
+| count | number of elements (structured element count) in `transforms` |
+
+[main]\
+open fun [setBonesAsMatrices](set-bones-as-matrices.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), transforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, arrayOffset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| instance | instance of the component obtained from getInstance() |
+| transforms | array containing transforms data |
+| arrayOffset | offset in elements (structured element count) in `transforms` to skip |
+| count | number of elements (structured element count) in `transforms` |
+| offset | offset in elements (structured element count) in the destination buffer or component |
+
+[main]\
+open fun [setBonesAsMatrices](set-bones-as-matrices.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), transforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| instance | instance of the component obtained from getInstance() |
+| transforms | array containing transforms data |
+| count | number of elements (structured element count) in `transforms` |
+| offset | offset in elements (structured element count) in the destination buffer or component |
+
+[main]\
+open fun [setBonesAsMatrices](set-bones-as-matrices.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), transforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| instance | instance of the component obtained from getInstance() |
+| transforms | array containing transforms data |
+| count | number of elements (structured element count) in `transforms` |
+
+[main]\
+open fun [setBonesAsMatrices](set-bones-as-matrices.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), transforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| instance | instance of the component obtained from getInstance() |
+| transforms | array containing transforms data |

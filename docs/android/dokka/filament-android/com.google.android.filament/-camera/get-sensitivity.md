@@ -5,8 +5,4 @@
 [main]\
 open fun [getSensitivity](get-sensitivity.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
-Gets the sensitivity in ISO
-
-#### Return
-
-Sensitivity in ISO
+returns this camera's sensitivity in ISO

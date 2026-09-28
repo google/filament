@@ -157,7 +157,7 @@ class MainActivity : Activity() {
         light = EntityManager.get().create()
 
         // Create a color from a temperature (5,500K)
-        val (r, g, b) = Colors.cct(5_500.0f)
+        val (r, g, b) = Colors.cct(5_500.0f, null)
         LightManager.Builder(LightManager.Type.DIRECTIONAL)
                 .color(r, g, b)
                 // Intensity of the sun in lux on a clear day

@@ -43,7 +43,7 @@ object HDRLoader {
         if (nativeTexture == 0L) {
             return null;
         }
-        return Texture(nativeTexture)
+        return Texture.wrap(nativeTexture)
     }
 
     private external fun nCreateHDRTexture(nativeEngine: Long, buffer: Buffer, remaining: Int, format: Int): Long

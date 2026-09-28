@@ -1,0 +1,422 @@
+{
+  "meta": {
+    "generator_version": "1.0.0",
+    "source_file": "/Users/mathias/sources/git/filament/tools/apigen/tests/java/20_pixel_buffer_descriptor.h"
+  },
+  "includes": {
+    "user": [],
+    "system": [
+      "<stdint.h>",
+      "<stddef.h>",
+      "<utils/compiler.h>"
+    ]
+  },
+  "aliases": [],
+  "enums": [],
+  "classes": [
+    {
+      "name": "PixelBufferDescriptorTest",
+      "qualified_name": "filament::PixelBufferDescriptorTest",
+      "location": {
+        "file": "tools/apigen/tests/java/20_pixel_buffer_descriptor.h",
+        "line": 14
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "PixelBufferDescriptorTest",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [
+        {
+          "name": "readPixels",
+          "qualified_name": "readPixels(uint32_t, uint32_t, uint32_t, uint32_t, backend::PixelBufferDescriptor &&)",
+          "location": {
+            "file": "tools/apigen/tests/java/20_pixel_buffer_descriptor.h",
+            "line": 16
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "xoffset",
+              "type": {
+                "cpp_name": "uint32_t",
+                "qualified_name": "uint32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "yoffset",
+              "type": {
+                "cpp_name": "uint32_t",
+                "qualified_name": "uint32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "width",
+              "type": {
+                "cpp_name": "uint32_t",
+                "qualified_name": "uint32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "height",
+              "type": {
+                "cpp_name": "uint32_t",
+                "qualified_name": "uint32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "buffer",
+              "type": {
+                "cpp_name": "backend::PixelBufferDescriptor &&",
+                "qualified_name": "filament::backend::PixelBufferDescriptor&&",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": true,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": false,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "readPixels",
+          "qualified_name": "readPixels(RenderTarget * _Nonnull, uint32_t, uint32_t, uint32_t, uint32_t, backend::PixelBufferDescriptor &&)",
+          "location": {
+            "file": "tools/apigen/tests/java/20_pixel_buffer_descriptor.h",
+            "line": 19
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "renderTarget",
+              "type": {
+                "cpp_name": "RenderTarget *",
+                "qualified_name": "filament::RenderTarget*",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": true,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "nonnull"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "xoffset",
+              "type": {
+                "cpp_name": "uint32_t",
+                "qualified_name": "uint32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "yoffset",
+              "type": {
+                "cpp_name": "uint32_t",
+                "qualified_name": "uint32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "width",
+              "type": {
+                "cpp_name": "uint32_t",
+                "qualified_name": "uint32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "height",
+              "type": {
+                "cpp_name": "uint32_t",
+                "qualified_name": "uint32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "buffer",
+              "type": {
+                "cpp_name": "backend::PixelBufferDescriptor &&",
+                "qualified_name": "filament::backend::PixelBufferDescriptor&&",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": true,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": false,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "setImage",
+          "qualified_name": "setImage(Engine &, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, backend::PixelBufferDescriptor &&)",
+          "location": {
+            "file": "tools/apigen/tests/java/20_pixel_buffer_descriptor.h",
+            "line": 23
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "engine",
+              "type": {
+                "cpp_name": "Engine &",
+                "qualified_name": "filament::Engine&",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": true,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "level",
+              "type": {
+                "cpp_name": "uint32_t",
+                "qualified_name": "uint32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "xoffset",
+              "type": {
+                "cpp_name": "uint32_t",
+                "qualified_name": "uint32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "yoffset",
+              "type": {
+                "cpp_name": "uint32_t",
+                "qualified_name": "uint32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "width",
+              "type": {
+                "cpp_name": "uint32_t",
+                "qualified_name": "uint32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "height",
+              "type": {
+                "cpp_name": "uint32_t",
+                "qualified_name": "uint32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "buffer",
+              "type": {
+                "cpp_name": "backend::PixelBufferDescriptor &&",
+                "qualified_name": "filament::backend::PixelBufferDescriptor&&",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": true,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": false,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": [],
+      "constants": [],
+      "is_aggregate": false
+    }
+  ],
+  "functions": []
+}

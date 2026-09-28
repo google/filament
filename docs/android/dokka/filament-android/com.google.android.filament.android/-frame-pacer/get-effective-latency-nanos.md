@@ -5,7 +5,7 @@
 [main]\
 open fun [getEffectiveLatencyNanos](get-effective-latency-nanos.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
 
-Returns the effective target latency in nanoseconds. Calculated as the difference between the target presentation time and the frame's base time.
+Backwards-compatibility alias for [getEffectiveLatency](get-effective-latency.md).
 
 #### Return
 

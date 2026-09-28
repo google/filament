@@ -3,7 +3,7 @@
 # pauseRenderThread
 
 [main]\
-open fun [pauseRenderThread](pause-render-thread.md)(durationNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))
+open fun [pauseRenderThread](pause-render-thread.md)(duration_ns: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))
 
 Stalls the render thread (GPU submission pipeline) for the given duration in nanoseconds. 
 
@@ -15,4 +15,4 @@ main
 
 | | |
 |---|---|
-| durationNanos | The duration to pause the render thread in nanoseconds. |
+| duration_ns | the duration to pause the render thread in nanoseconds. |

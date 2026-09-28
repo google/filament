@@ -31,6 +31,7 @@ import com.google.android.filament.VertexBuffer.AttributeType
 import com.google.android.filament.VertexBuffer.VertexAttribute
 import com.google.android.filament.android.DisplayHelper
 import com.google.android.filament.android.FilamentHelper
+import com.google.android.filament.android.TextureHelper
 import com.google.android.filament.android.UiHelper
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -410,7 +411,7 @@ class MainActivity : Activity() {
                     .external()
                     .build(engine)
 
-                texture!!.setExternalImage(engine, hardwareBuffer!!)
+                TextureHelper.setExternalImage(engine, texture!!, hardwareBuffer!!)
             } else {
                 texture = Texture.Builder()
                     .width(width)

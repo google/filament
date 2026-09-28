@@ -4,3 +4,5 @@
 
 [main]\
 [COLOR5](index.md)
+
+identifies the 6th color attachment

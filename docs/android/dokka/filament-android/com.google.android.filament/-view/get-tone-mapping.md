@@ -11,12 +11,6 @@ open fun [~~getToneMapping~~](get-tone-mapping.md)(): [View.ToneMapping](-tone-m
 
 ---
 
-Returns the tone-mapping function.
-
-#### Return
-
-tone-mapping function.
-
 #### Deprecated
 
 Use [getColorGrading](get-color-grading.md). This always returns [ACES](-tone-mapping/-a-c-e-s/index.md)

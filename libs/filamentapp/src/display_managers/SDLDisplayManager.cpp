@@ -35,7 +35,13 @@ SDLDisplayManager::~SDLDisplayManager() { terminate(); }
 
 bool SDLDisplayManager::init() {
     if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0) {
-        return false;
+        // No display server (e.g. a Linux CI machine without DISPLAY). The video subsystem is
+        // only needed to create a real window: headless runs render into an offscreen swapchain
+        // and never touch one, so keep going with events and timers only.
+        if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_TIMER) < 0) {
+            return false;
+        }
+        mHasVideo = false;
     }
     SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
     return true;
@@ -46,6 +52,19 @@ void SDLDisplayManager::terminate() { SDL_Quit(); }
 
 WindowHandle SDLDisplayManager::createWindow(const char* title, uint32_t w,
         uint32_t h, bool resizable, bool headless) {
+    if (!mHasVideo) {
+        FILAMENT_CHECK_PRECONDITION(headless)
+                << "A windowed app requires a display server, but SDL could not initialize its "
+                   "video subsystem. Use --headless (or --screenshot) to render offscreen.";
+        // FilamentApp2 creates the swapchain from the requested width and height when headless,
+        // so there is nothing to create here. Remember the size: without a real window SDL cannot
+        // answer getWindowSize()/getDrawableSize(), which ImGui needs for its display size.
+        mHeadlessWidth = w;
+        mHeadlessHeight = h;
+        mNativeWindowMap[(WindowHandle) nullptr] = nullptr;
+        return (WindowHandle) nullptr;
+    }
+
     uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
     if (resizable) {
         windowFlags |= SDL_WINDOW_RESIZABLE;
@@ -93,7 +112,14 @@ void SDLDisplayManager::setWindowTitle(WindowHandle window, const char* title) {
 
 void SDLDisplayManager::getWindowSize(WindowHandle window, uint32_t* w,
         uint32_t* h) const {
-    int iw, ih;
+    if (!window) {
+        // Windowless headless surface: report the size the caller asked for.
+        *w = mHeadlessWidth;
+        *h = mHeadlessHeight;
+        return;
+    }
+    // Note: SDL leaves these untouched if the window is invalid, so they must be initialized.
+    int iw = 0, ih = 0;
     SDL_GetWindowSize((SDL_Window*) window, &iw, &ih);
     *w = (uint32_t) iw;
     *h = (uint32_t) ih;
@@ -101,7 +127,14 @@ void SDLDisplayManager::getWindowSize(WindowHandle window, uint32_t* w,
 
 void SDLDisplayManager::getDrawableSize(WindowHandle window, uint32_t* w,
         uint32_t* h) const {
-    int iw, ih;
+    if (!window) {
+        // Windowless headless surface: no HighDPI scaling, so drawable size == window size.
+        *w = mHeadlessWidth;
+        *h = mHeadlessHeight;
+        return;
+    }
+    // Note: SDL leaves these untouched if the window is invalid, so they must be initialized.
+    int iw = 0, ih = 0;
     SDL_GL_GetDrawableSize((SDL_Window*) window, &iw, &ih);
     *w = (uint32_t) iw;
     *h = (uint32_t) ih;

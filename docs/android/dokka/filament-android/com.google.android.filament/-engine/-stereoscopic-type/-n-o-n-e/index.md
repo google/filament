@@ -5,4 +5,4 @@
 [main]\
 [NONE](index.md)
 
-No stereoscopic rendering.
+No stereoscopic rendering

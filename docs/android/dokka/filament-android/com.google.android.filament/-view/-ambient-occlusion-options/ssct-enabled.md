@@ -5,4 +5,4 @@
 [main]\
 open var [ssctEnabled](ssct-enabled.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
-Screen Space Cone Tracing (SSCT) options Ambient shadows from dominant light
+enables or disables SSCT

@@ -4,3 +4,5 @@
 
 [main]\
 [DEPTH](index.md)
+
+identifies the depth attachment

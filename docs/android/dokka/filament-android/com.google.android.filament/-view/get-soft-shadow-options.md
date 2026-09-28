@@ -5,14 +5,8 @@
 [main]\
 open fun [getSoftShadowOptions](get-soft-shadow-options.md)(): [View.SoftShadowOptions](-soft-shadow-options/index.md)
 
-Gets soft shadowing options associated with this View.
+Returns the soft shadowing options associated with this View.
 
 #### Return
 
-soft shadow options currently set.
-
-#### See also
-
-| |
-|---|
-| [setSoftShadowOptions](set-soft-shadow-options.md) |
+value set by setSoftShadowOptions().

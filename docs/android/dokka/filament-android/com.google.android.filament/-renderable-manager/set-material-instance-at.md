@@ -3,12 +3,15 @@
 # setMaterialInstanceAt
 
 [main]\
-open fun [setMaterialInstanceAt](set-material-instance-at.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), primitiveIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), materialInstance: [MaterialInstance](../-material-instance/index.md))
+open fun [setMaterialInstanceAt](set-material-instance-at.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), primitiveIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), materialInstance: [MaterialInstance](../-material-instance/index.md))
 
-Changes the material instance binding for the given primitive.
+Changes the material instance binding for the given primitive. 
+
+The MaterialInstance's material must have a feature level equal or lower to the engine's selected feature level.
 
 #### See also
 
 | |
 |---|
 | [RenderableManager.Builder](-builder/material.md) |
+| [Engine](../-engine/set-active-feature-level.md) |

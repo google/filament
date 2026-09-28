@@ -48,85 +48,114 @@ class InternPool {
             "InternPool is missing entry";
 
 public:
+    /**
+     * An RAII owning handle to an interned slice.
+     *
+     * Keeps the underlying pool entry alive until destroyed; any owner of an interned
+     * Slice<const T> (e.g., as a map key) must retain a Ref to prevent dangling pointers.
+     * Releasing on destruction makes it safe to store in containers without cleanup hooks
+     * (e.g., LRU eviction or clear()).
+     */
+    class Ref {
+    public:
+        Ref() noexcept = default;
+
+        // Copying is deliberately not implicit: an extra reference should be visible at the call
+        // site. Use clone() to make one.
+        Ref(Ref const& rhs) = delete;
+        Ref& operator=(Ref const& rhs) = delete;
+
+        Ref(Ref&& rhs) noexcept : mPool(rhs.mPool), mSlice(rhs.mSlice), mHash(rhs.mHash) {
+            rhs.mPool = nullptr;
+            rhs.mSlice.clear();
+        }
+
+        Ref& operator=(Ref&& rhs) noexcept {
+            if (this != &rhs) {
+                releaseSelf();
+                mPool = rhs.mPool;
+                mSlice = rhs.mSlice;
+                mHash = rhs.mHash;
+                rhs.mPool = nullptr;
+                rhs.mSlice.clear();
+            }
+            return *this;
+        }
+
+        ~Ref() noexcept {
+            releaseSelf();
+        }
+
+        /** Returns another owning reference to the same interned slice. */
+        Ref clone() const noexcept {
+            if (!mPool) {
+                return {};
+            }
+            return Ref{ mPool, mPool->intern(mSlice, mHash), mHash };
+        }
+
+        /** The interned slice this reference keeps alive. Empty if there is none. */
+        Slice<const T> get() const noexcept { return mSlice; }
+
+        /** Returns true if this reference doesn't refer to anything. */
+        bool empty() const noexcept { return mSlice.empty(); }
+
+    private:
+        friend class InternPool;
+
+        Ref(InternPool* UTILS_NONNULL pool, Slice<const T> slice, size_t hash) noexcept
+                : mPool(pool),
+                  mSlice(slice),
+                  mHash(hash) {}
+
+        // Both callers are destruction paths, so this must not throw.
+        void releaseSelf() noexcept {
+            if (mPool) {
+                bool const released = mPool->release(mSlice, mHash);
+                ASSERT_DESTRUCTOR(released, "%s", MISSING_ENTRY_ERROR_STRING);
+            }
+        }
+
+        InternPool* UTILS_NULLABLE mPool = nullptr;
+        Slice<const T> mSlice;
+        size_t mHash = 0;
+    };
+
     InternPool() = default;
     InternPool(InternPool const& rhs) = delete;
     InternPool& operator=(InternPool const& rhs) = delete;
-    InternPool(InternPool&& rhs) = default;
-    InternPool& operator=(InternPool&& rhs) = default;
+    InternPool(InternPool&& rhs) = delete;
+    InternPool& operator=(InternPool&& rhs) = delete;
 
-    /** Acquire an interned copy of value. */
-    Slice<const T> acquire(Slice<const T> slice, size_t hash) noexcept {
-        if (slice.empty()) {
-            return { nullptr, nullptr };
-        }
-        auto it = mMap.find(slice, hash);
-        if (it != mMap.end()) {
-            assert_invariant(it.value().referenceCount < std::numeric_limits<decltype(Entry::referenceCount)>::max());
-            it.value().referenceCount++;
-            return it.key();
-        }
-        FixedCapacityVector<T> value(slice);
-        // TODO: how to use above computed hash here?
-        return mMap.insert({ value.as_slice(), Entry{ 1, std::move(value) } }).first.key();
+    ~InternPool() noexcept {
+        assert_invariant(mMap.empty());
     }
 
-    inline Slice<const T> acquire(Slice<const T> slice) noexcept {
+    /** Acquire an owning reference to an interned copy of value. */
+    Ref acquire(Slice<const T> slice, size_t hash) noexcept {
+        return Ref{ this, intern(slice, hash), hash };
+    }
+
+    inline Ref acquire(Slice<const T> slice) noexcept {
         return acquire(slice, HashSlice{}(slice));
     }
 
-    Slice<const T> acquire(FixedCapacityVector<T>&& value, size_t hash) noexcept {
-        if (value.empty()) {
-            return { nullptr, nullptr };
-        }
-        Slice<const T> slice = value.as_slice();
-        auto it = mMap.find(slice, hash);
-        if (it != mMap.end()) {
-            assert_invariant(it.value().referenceCount < std::numeric_limits<decltype(Entry::referenceCount)>::max());
-            it.value().referenceCount++;
-            return it.key();
-        }
-        // TODO: how to use above computed hash here?
-        return mMap.insert({ slice, Entry{ 1, std::move(value) } }).first.key();
+    inline Ref acquire(FixedCapacityVector<T>&& value, size_t hash) noexcept {
+        return Ref{ this, intern(std::move(value), hash), hash };
     }
 
-    inline Slice<const T> acquire(FixedCapacityVector<T>&& value) noexcept {
+    inline Ref acquire(FixedCapacityVector<T>&& value) noexcept {
         size_t hash = HashSlice{}(value.as_slice());
         return acquire(std::move(value), hash);
     }
 
-    inline Slice<const T> acquire(FixedCapacityVector<T> const& value, size_t hash) noexcept {
+    inline Ref acquire(FixedCapacityVector<T> const& value, size_t hash) noexcept {
         return acquire(value.as_slice(), hash);
     }
 
-    inline Slice<const T> acquire(FixedCapacityVector<T> const& value) noexcept {
+    inline Ref acquire(FixedCapacityVector<T> const& value) noexcept {
         Slice slice = value.as_slice();
         return acquire(slice, HashSlice{}(slice));
-    }
-
-    /** Release interned value. */
-    void release(Slice<const T> slice, size_t hash) {
-        if (slice.empty()) {
-            return;
-        }
-        auto it = mMap.find(slice, hash);
-        FILAMENT_CHECK_PRECONDITION(it != mMap.end()) << MISSING_ENTRY_ERROR_STRING;
-        if (--it.value().referenceCount == 0) {
-            // TODO: change to erase_fast
-            mMap.erase(it);
-        }
-    }
-
-    inline void release(Slice<const T> slice) noexcept {
-        return release(slice, HashSlice{}(slice));
-    }
-
-    inline void release(FixedCapacityVector<T> const& value, size_t hash) noexcept {
-        return release(value.as_slice(), hash);
-    }
-
-    inline void release(FixedCapacityVector<T> const& value) noexcept {
-        Slice slice = value.as_slice();
-        return release(slice, HashSlice{}(slice));
     }
 
     /** Returns true if the pool is empty. */
@@ -142,6 +171,55 @@ public:
     }
 
 private:
+    /** Intern a copy of value, adding a reference to it. Returns the pool's canonical slice. */
+    Slice<const T> intern(Slice<const T> slice, size_t hash) noexcept {
+        if (slice.empty()) {
+            return { nullptr, nullptr };
+        }
+        auto it = mMap.find(slice, hash);
+        if (it != mMap.end()) {
+            assert_invariant(it.value().referenceCount <
+                             std::numeric_limits<decltype(Entry::referenceCount)>::max());
+            it.value().referenceCount++;
+            return it.key();
+        }
+        FixedCapacityVector<T> value(slice);
+        // TODO: how to use above computed hash here?
+        return mMap.insert({ value.as_slice(), Entry{ 1, std::move(value) } }).first.key();
+    }
+
+    Slice<const T> intern(FixedCapacityVector<T>&& value, size_t hash) noexcept {
+        if (value.empty()) {
+            return { nullptr, nullptr };
+        }
+        Slice<const T> slice = value.as_slice();
+        auto it = mMap.find(slice, hash);
+        if (it != mMap.end()) {
+            assert_invariant(it.value().referenceCount <
+                             std::numeric_limits<decltype(Entry::referenceCount)>::max());
+            it.value().referenceCount++;
+            return it.key();
+        }
+        // TODO: how to use above computed hash here?
+        return mMap.insert({ slice, Entry{ 1, std::move(value) } }).first.key();
+    }
+
+    /** Release interned value. Returns false if slice has no entry in the pool. */
+    [[nodiscard]] bool release(Slice<const T> slice, size_t hash) noexcept {
+        if (slice.empty()) {
+            return true;
+        }
+        auto it = mMap.find(slice, hash);
+        if (UTILS_UNLIKELY(it == mMap.end())) {
+            return false;
+        }
+        if (--it.value().referenceCount == 0) {
+            // TODO: change to erase_fast
+            mMap.erase(it);
+        }
+        return true;
+    }
+
     Map mMap;
 };
 

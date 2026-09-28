@@ -5,11 +5,11 @@
 [main]\
 open fun [build](build.md)(engine: [Engine](../../-engine/index.md)): [Material](../index.md)
 
-Creates and returns the Material object.
+Creates the Material object and returns a pointer to it.
 
 #### Return
 
-the newly created object
+pointer to the newly created object or nullptr if exceptions are disabled and an error occurred.
 
 #### Parameters
 
@@ -17,11 +17,4 @@ main
 
 | | |
 |---|---|
-| engine | reference to the Engine instance to associate this Material with |
-
-#### Throws
-
-| | |
-|---|---|
-| [IllegalStateException](https://developer.android.com/reference/kotlin/java/lang/IllegalStateException.html) | if the material could not be created |
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if a parameter to a builder function was invalid. |
+| engine | Reference to the filament::Engine to associate this Material with. |

@@ -5,4 +5,4 @@
 [main]\
 [BYTE](index.md)
 
-signed byte, 8-bit
+signed byte

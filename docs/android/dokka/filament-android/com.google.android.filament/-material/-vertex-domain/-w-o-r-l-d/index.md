@@ -5,4 +5,4 @@
 [main]\
 [WORLD](index.md)
 
-Vertices are in world space.
+vertices are in world space

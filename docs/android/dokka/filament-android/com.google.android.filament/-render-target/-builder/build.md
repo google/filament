@@ -9,4 +9,4 @@ Creates the RenderTarget object and returns a pointer to it.
 
 #### Return
 
-pointer to the newly created object or nullptr if exceptions are disabled and an error occurred.
+pointer to the newly created object.

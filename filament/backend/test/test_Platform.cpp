@@ -20,10 +20,15 @@
 #include <private/backend/PlatformFactory.h>
 
 #include <backend/Platform.h>
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
+#include <backend/platforms/VulkanPlatform.h>
+#endif
 
 #include <utils/Panic.h>
 
 #include <gtest/gtest.h>
+
+#include <array>
 
 namespace test {
 
@@ -82,5 +87,48 @@ TEST_F(PlatformTest, GetDeviceInfo) {
 #endif
     }
 }
+
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
+TEST_F(PlatformTest, VulkanRenderTargetFormatSupport) {
+    if (BackendTest::sBackend != Backend::VULKAN) {
+        GTEST_SKIP() << "This test verifies Vulkan format feature queries.";
+    }
+
+    struct FormatFeature {
+        TextureFormat textureFormat;
+        VkFormat vulkanFormat;
+        VkFormatFeatureFlagBits requiredFeature;
+    };
+
+    constexpr std::array FORMAT_FEATURES = {
+        FormatFeature{ TextureFormat::RGBA8, VK_FORMAT_R8G8B8A8_UNORM,
+                VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT },
+        FormatFeature{ TextureFormat::DEPTH16, VK_FORMAT_D16_UNORM,
+                VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT },
+        FormatFeature{ TextureFormat::DEPTH24, VK_FORMAT_X8_D24_UNORM_PACK32,
+                VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT },
+        FormatFeature{ TextureFormat::DEPTH32F, VK_FORMAT_D32_SFLOAT,
+                VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT },
+        FormatFeature{ TextureFormat::DEPTH24_STENCIL8, VK_FORMAT_D24_UNORM_S8_UINT,
+                VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT },
+        FormatFeature{ TextureFormat::DEPTH32F_STENCIL8, VK_FORMAT_D32_SFLOAT_S8_UINT,
+                VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT },
+        FormatFeature{ TextureFormat::STENCIL8, VK_FORMAT_S8_UINT,
+                VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT },
+    };
+
+    VkPhysicalDevice const physicalDevice =
+            static_cast<VulkanPlatform*>(getPlatform())->getPhysicalDevice();
+    for (FormatFeature const& format : FORMAT_FEATURES) {
+        VkFormatProperties properties;
+        bluevk::vkGetPhysicalDeviceFormatProperties(
+                physicalDevice, format.vulkanFormat, &properties);
+        bool const expected =
+                (properties.optimalTilingFeatures & format.requiredFeature) != 0;
+        EXPECT_EQ(expected, getDriver().isRenderTargetFormatSupported(format.textureFormat));
+    }
+    EXPECT_FALSE(getDriver().isTextureFormatMipmappable(TextureFormat::STENCIL8));
+}
+#endif
 
 } // namespace test

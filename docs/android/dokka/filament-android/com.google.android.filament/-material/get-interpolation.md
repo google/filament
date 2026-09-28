@@ -5,10 +5,6 @@
 [main]\
 open fun [getInterpolation](get-interpolation.md)(): [Material.Interpolation](-interpolation/index.md)
 
-Returns the interpolation mode of this material. This affects how variables are interpolated.
+Returns the interpolation mode of this material. 
 
-#### See also
-
-| | |
-|---|---|
-| &lt;a href=&quot;https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/vertexandattributes:interpolation&quot;&gt; | Vertex and attributes: interpolation |
+This affects how variables are interpolated.

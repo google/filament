@@ -5,8 +5,8 @@
 [main]\
 open fun [getColorGrading](get-color-grading.md)(): [ColorGrading](../-color-grading/index.md)
 
-Returns the [ColorGrading](../-color-grading/index.md) associated to this view.
+Returns the color grading transforms currently associated to this view.
 
 #### Return
 
-A [ColorGrading](../-color-grading/index.md) or null if the default [ColorGrading](../-color-grading/index.md) is in use
+A pointer to the ColorGrading associated to this View.

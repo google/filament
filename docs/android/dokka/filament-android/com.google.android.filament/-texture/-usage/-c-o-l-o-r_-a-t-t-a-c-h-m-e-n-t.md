@@ -5,4 +5,4 @@
 [main]\
 val [COLOR_ATTACHMENT](-c-o-l-o-r_-a-t-t-a-c-h-m-e-n-t.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 1
 
-The texture will be used as a color attachment
+Texture can be used as a color attachment

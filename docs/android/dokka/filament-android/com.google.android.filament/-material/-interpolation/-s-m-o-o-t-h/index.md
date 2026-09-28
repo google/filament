@@ -5,4 +5,4 @@
 [main]\
 [SMOOTH](index.md)
 
-Default, smooth interpolation
+default, smooth interpolation

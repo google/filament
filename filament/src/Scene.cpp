@@ -43,16 +43,16 @@ void Scene::addEntity(Entity const entity) {
     downcast(this)->addEntity(entity);
 }
 
-void Scene::addEntities(const Entity* entities, size_t const count) {
-    downcast(this)->addEntities(entities, count);
+void Scene::addEntities(utils::Slice<const Entity> entities) {
+    downcast(this)->addEntities(entities);
 }
 
 void Scene::remove(Entity const entity) {
     downcast(this)->remove(entity);
 }
 
-void Scene::removeEntities(const Entity* entities, size_t const count) {
-    downcast(this)->removeEntities(entities, count);
+void Scene::removeEntities(utils::Slice<const Entity> entities) {
+    downcast(this)->removeEntities(entities);
 }
 
 void Scene::removeAllEntities() noexcept {

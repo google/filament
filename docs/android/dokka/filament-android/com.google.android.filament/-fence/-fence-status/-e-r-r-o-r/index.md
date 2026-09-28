@@ -4,3 +4,7 @@
 
 [main]\
 [ERROR](index.md)
+
+An error occurred. 
+
+The Fence condition is not satisfied.

@@ -13,7 +13,7 @@ main
 
 | | |
 |---|---|
-| blendMode | either [OPAQUE](-blend-mode/-o-p-a-q-u-e/index.md) or [TRANSLUCENT](-blend-mode/-t-r-a-n-s-l-u-c-e-n-t/index.md) |
+| blendMode | either BlendMode::OPAQUE or BlendMode::TRANSLUCENT |
 
 #### See also
 

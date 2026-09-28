@@ -4,13 +4,3 @@
 
 [main]\
 open fun [destroyColorGrading](destroy-color-grading.md)(colorGrading: [ColorGrading](../-color-grading/index.md))
-
-Destroys a [ColorGrading](../-color-grading/index.md) and frees all its associated resources.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| colorGrading | the [ColorGrading](../-color-grading/index.md) to destroy |

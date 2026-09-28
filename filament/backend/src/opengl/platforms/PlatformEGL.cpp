@@ -372,17 +372,26 @@ bool PlatformEGL::isProtectedContextSupported() const noexcept {
 }
 
 void PlatformEGL::createContext(bool const shared) {
+    // The current rendering API is thread-local and defaults to EGL_OPENGL_ES_API. A desktop GL
+    // context can't be created (nor shared) until this thread binds EGL_OPENGL_API, otherwise
+    // eglCreateContext fails with EGL_BAD_MATCH.
+    EGLenum const api = isOpenGL() ? EGL_OPENGL_API : EGL_OPENGL_ES_API;
+    if (UTILS_UNLIKELY(eglBindAPI(api) == EGL_FALSE)) {
+        logEglError("eglBindAPI");
+        return;
+    }
+
     EGLConfig const config = ext.egl.KHR_no_config_context ? EGL_NO_CONFIG_KHR : mEGLConfig;
 
     EGLContext const context = eglCreateContext(mEGLDisplay, config,
             shared ? mEGLContext : EGL_NO_CONTEXT, mContextAttribs.data());
 
     if (UTILS_UNLIKELY(context == EGL_NO_CONTEXT)) {
-        // eglCreateContext failed
+        // eglCreateContext failed. Don't make EGL_NO_CONTEXT current, the caller would then run
+        // without a context at all, which goes unnoticed in release builds.
         logEglError("eglCreateContext");
+        return;
     }
-
-    assert_invariant(context != EGL_NO_CONTEXT);
 
     eglMakeCurrent(mEGLDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, context);
 

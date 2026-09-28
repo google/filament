@@ -3,9 +3,9 @@
 # face
 
 [main]\
-open fun [face](face.md)(attachment: [RenderTarget.AttachmentPoint](../-attachment-point/index.md), face: [Texture.CubemapFace](../../-texture/-cubemap-face/index.md)): [RenderTarget.Builder](index.md)
+open fun [face](face.md)(attachment: [RenderTarget.AttachmentPoint](../-attachment-point/index.md), face: [RenderTarget.CubemapFace](../-cubemap-face/index.md)): [RenderTarget.Builder](index.md)
 
-Sets the cubemap face for a given attachment point.
+Sets the face for cubemap textures at the given attachment point.
 
 #### Return
 

@@ -5,6 +5,4 @@
 [main]\
 open fun [getMinFilter](get-min-filter.md)(): [TextureSampler.MinFilter](-min-filter/index.md)
 
-#### Return
-
-the minification filter
+returns the minification filter value

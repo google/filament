@@ -25,7 +25,7 @@
 
 namespace filament {
 
-class UTILS_PUBLIC Sync : public FilamentAPI {
+class UTILS_PUBLIC UTILS_NOAPIGEN Sync : public FilamentAPI {
 public:
     using CallbackHandler = backend::CallbackHandler;
     using Callback = backend::Platform::SyncCallback;

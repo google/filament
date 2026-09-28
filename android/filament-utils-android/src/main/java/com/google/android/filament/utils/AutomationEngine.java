@@ -261,7 +261,7 @@ public class AutomationEngine {
         // so there is no need to call Engine#destroyColorGrading here.
         long nativeCg = nGetColorGrading(mNativeObject, engine.getNativeObject());
         if (mColorGrading == null || mColorGrading.getNativeObject() != nativeCg) {
-            mColorGrading = nativeCg == 0 ? null : new ColorGrading(nativeCg);
+            mColorGrading = nativeCg == 0 ? null : ColorGrading.wrap(nativeCg);
         }
         return mColorGrading;
     }

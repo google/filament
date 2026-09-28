@@ -5,4 +5,4 @@
 [main]\
 open fun [getDefaultInstance](get-default-instance.md)(): [MaterialInstance](../-material-instance/index.md)
 
-Returns the material's default instance.
+Returns this material's default instance.

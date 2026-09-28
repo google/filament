@@ -5,4 +5,6 @@
 [main]\
 [REPEAT](index.md)
 
+repeat. 
+
 The texture infinitely repeats in the wrap direction.

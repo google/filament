@@ -1287,3 +1287,83 @@ TEST(JobSystem, EmancipatePoolWorkerThrowsPreconditionPanic) {
     js.emancipate();
 #endif
 }
+
+TEST(JobSystem, NullJobOperations) {
+    JobSystem js(JobSystem::SINGLE_THREADED);
+    js.adopt();
+
+    JobSystem::Job* nullJob = nullptr;
+    js.run(nullJob);
+    EXPECT_EQ(nullJob, nullptr);
+
+    js.run(static_cast<JobSystem::Job*>(nullptr));
+
+    JobSystem::Job* nullRetained = js.runAndRetain(nullptr);
+    EXPECT_EQ(nullRetained, nullptr);
+
+    js.runAndWait(nullJob);
+    js.runAndWait(static_cast<JobSystem::Job*>(nullptr));
+
+    js.cancel(nullJob);
+    js.release(nullJob);
+    js.release(static_cast<JobSystem::Job*>(nullptr));
+    js.waitAndRelease(nullJob);
+
+    EXPECT_EQ(js.retain(nullptr), nullptr);
+
+    js.emancipate();
+}
+
+TEST(JobSystem, JobPoolExhaustionNullJobRun) {
+    JobSystem js(JobSystem::SINGLE_THREADED);
+    js.adopt();
+
+    std::vector<JobSystem::Job*> heldJobs;
+    heldJobs.reserve(JobSystem::MAX_JOB_COUNT);
+
+    // Allocate until JobSystem's pool is completely exhausted
+    JobSystem::Job* job = nullptr;
+    while ((job = js.createJob(nullptr, [](JobSystem&, JobSystem::Job*) {})) != nullptr) {
+        heldJobs.push_back(job);
+    }
+
+    // Pool must be exhausted
+    EXPECT_EQ(heldJobs.size(), JobSystem::MAX_JOB_COUNT);
+
+    // Any further job creation returns nullptr
+    JobSystem::Job* nullJob1 = js.createJob(nullptr, [](JobSystem&, JobSystem::Job*) {});
+    EXPECT_EQ(nullJob1, nullptr);
+
+    JobSystem::Job* nullJob2 = jobs::createJob(js, nullptr, [] {});
+    EXPECT_EQ(nullJob2, nullptr);
+
+    // Passing nullptr to run must safely no-op without crashing or corrupting work queues
+    js.run(nullJob1);
+    EXPECT_EQ(nullJob1, nullptr);
+
+    js.run(jobs::createJob(js, nullptr, [] {}));
+    js.run(static_cast<JobSystem::Job*>(nullptr));
+
+    JobSystem::Job* nullRetained = js.runAndRetain(nullJob1);
+    EXPECT_EQ(nullRetained, nullptr);
+
+    js.runAndWait(nullJob1);
+    js.runAndWait(static_cast<JobSystem::Job*>(nullptr));
+
+    // Release the held jobs
+    for (auto* j : heldJobs) {
+        js.cancel(j);
+    }
+    heldJobs.clear();
+
+    // Verify the pool was drained and can allocate jobs again normally
+    std::atomic<bool> executed{false};
+    JobSystem::Job* nextJob = js.createJob(nullptr, [&executed](JobSystem&, JobSystem::Job*) {
+        executed.store(true, std::memory_order_relaxed);
+    });
+    ASSERT_NE(nextJob, nullptr);
+    js.runAndWait(nextJob);
+    EXPECT_TRUE(executed.load());
+
+    js.emancipate();
+}

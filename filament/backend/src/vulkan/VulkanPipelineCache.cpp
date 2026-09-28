@@ -275,6 +275,10 @@ void VulkanPipelineCache::asyncPrewarmCache(
                     "priority", static_cast<uint32_t>(priorityQueue));
             if (vprogram->isParallelCompilationCanceled()) {
                 FVK_LOGD << "Skipping prewarm for a program that has been destroyed already.";
+                // The condition must still be met on this path, otherwise the
+                // notifyWhenAllProgramsAreReady callback never fires. Nothing else submits this
+                // handle. It is captured by value and ProgramToken has no destructor hook.
+                mCallbackManager.put(cmh);
                 return;
             }
 

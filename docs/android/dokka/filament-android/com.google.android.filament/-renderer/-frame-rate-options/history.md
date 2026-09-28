@@ -4,5 +4,3 @@
 
 [main]\
 open var [history](history.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
-
-History size. higher values, tend to filter more (clamped to 31).

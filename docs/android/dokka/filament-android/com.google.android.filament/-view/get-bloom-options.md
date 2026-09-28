@@ -5,14 +5,8 @@
 [main]\
 open fun [getBloomOptions](get-bloom-options.md)(): [View.BloomOptions](-bloom-options/index.md)
 
-Gets the bloom options
+Queries the bloom options.
 
 #### Return
 
-bloom options currently set.
-
-#### See also
-
-| |
-|---|
-| [setBloomOptions](set-bloom-options.md) |
+the current bloom options for this view.

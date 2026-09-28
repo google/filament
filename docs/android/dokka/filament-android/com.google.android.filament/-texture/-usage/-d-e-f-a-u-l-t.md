@@ -5,4 +5,4 @@
 [main]\
 val [DEFAULT](-d-e-f-a-u-l-t.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 24
 
-by default textures are `UPLOADABLE` and `SAMPLEABLE`
+Default texture usage

@@ -3,9 +3,17 @@
 # getAxisAlignedBoundingBox
 
 [main]\
-open fun [getAxisAlignedBoundingBox](get-axis-aligned-bounding-box.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), out: [Box](../-box/index.md)): [Box](../-box/index.md)
+open fun [getAxisAlignedBoundingBox](get-axis-aligned-bounding-box.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), out: [Box](../-box/index.md)): [Box](../-box/index.md)
 
 Gets the bounding box used for frustum culling.
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| out | pre-allocated Box to receive the data, or null. |
 
 #### See also
 
@@ -13,3 +21,6 @@ Gets the bounding box used for frustum culling.
 |---|
 | [RenderableManager.Builder](-builder/bounding-box.md) |
 | [RenderableManager](set-axis-aligned-bounding-box.md) |
+
+[main]\
+open fun [getAxisAlignedBoundingBox](get-axis-aligned-bounding-box.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Box](../-box/index.md)

@@ -3,16 +3,4 @@
 # presentationDeadlineNanos
 
 [main]\
-open var [~~presentationDeadlineNanos~~](presentation-deadline-nanos.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
-
----
-
-### Deprecated
-
----
-
-How far in advance a buffer must be queued for presentation at a given time in ns On Android you can use getPresentationDeadlineNanos.
-
-#### Deprecated
-
-this value is ignored
+open var [presentationDeadlineNanos](presentation-deadline-nanos.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

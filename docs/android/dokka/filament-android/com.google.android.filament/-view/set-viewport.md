@@ -5,11 +5,9 @@
 [main]\
 open fun [setViewport](set-viewport.md)(viewport: [Viewport](../-viewport/index.md))
 
-Specifies the rectangular rendering area. 
+Sets the rectangular region to render to. 
 
- The viewport specifies where the content of the View (i.e. the Scene) is rendered in the render target. The render target is automatically clipped to the Viewport. 
-
- If you wish subsequent changes to take effect please call this method again in order to propagate the changes down to the native layer. 
+The viewport specifies where the content of the View (i.e. the Scene) is rendered in the render target. The Render target is automatically clipped to the Viewport.
 
 #### Parameters
 
@@ -17,4 +15,4 @@ main
 
 | | |
 |---|---|
-| viewport | The Viewport to render the Scene into. |
+| viewport | The Viewport to render the Scene into. The Viewport is a value-type, it is therefore copied. The parameter can be discarded after this call returns. |

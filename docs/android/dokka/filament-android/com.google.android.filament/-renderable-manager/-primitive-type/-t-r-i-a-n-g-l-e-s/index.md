@@ -4,3 +4,5 @@
 
 [main]\
 [TRIANGLES](index.md)
+
+triangles

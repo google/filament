@@ -9,4 +9,4 @@ Returns the render quality used by this view.
 
 #### Return
 
-value set by [setRenderQuality](set-render-quality.md).
+value set by setRenderQuality().

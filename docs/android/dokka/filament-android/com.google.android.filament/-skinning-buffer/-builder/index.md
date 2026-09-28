@@ -16,5 +16,6 @@ open class [Builder](index.md)
 | Name | Summary |
 |---|---|
 | [boneCount](bone-count.md) | [main]<br>open fun [boneCount](bone-count.md)(boneCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [SkinningBuffer.Builder](index.md)<br>Size of the skinning buffer in bones. |
-| [build](build.md) | [main]<br>open fun [build](build.md)(engine: [Engine](../../-engine/index.md)): [SkinningBuffer](../index.md)<br>Creates and returns the `SkinningBuffer` object. |
-| [initialize](initialize.md) | [main]<br>open fun [initialize](initialize.md)(initialize: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [SkinningBuffer.Builder](index.md)<br>The new buffer is created with identity bones |
+| [build](build.md) | [main]<br>open fun [build](build.md)(engine: [Engine](../../-engine/index.md)): [SkinningBuffer](../index.md)<br>Creates the SkinningBuffer object and returns a pointer to it. |
+| [initialize](initialize.md) | [main]<br>open fun [initialize](initialize.md)(): [SkinningBuffer.Builder](index.md)<br>open fun [initialize](initialize.md)(initialize: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [SkinningBuffer.Builder](index.md)<br>The new buffer is created with identity bones |
+| [name](name.md) | [main]<br>open fun [name](name.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html)): [SkinningBuffer.Builder](index.md)<br>Associate an optional name with this SkinningBuffer for debugging purposes. |

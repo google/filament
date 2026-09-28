@@ -22,3 +22,4 @@ main
 | |
 |---|
 | [RenderableManager.Builder](-builder/global-blend-order-enabled.md) |
+| [setBlendOrderAt](set-blend-order-at.md) |

@@ -1,0 +1,133 @@
+name: 'ccache'
+description: >
+  Configures ccache for a build job and restores the shared compiler cache.
+
+  The top-level CMakeLists.txt enables ccache automatically whenever it is found on PATH (see the
+  "Support for ccache" block), so nothing in the build scripts needs to change; this action only
+  has to set the environment up and populate the cache directory.
+
+  This action never *saves*. Saving is done explicitly by the postsubmit workflow, and only from
+  main, for two reasons:
+    - Cache poisoning. GitHub scopes caches by branch: a pull request can only write entries
+      scoped to its own ref, and can read entries from its base branch and the default branch.
+      Restricting writes to postsubmit-on-main means an untrusted pull request cannot inject an
+      object file that a later main-branch build would consume.
+    - Budget. A repository gets 10 GB of Actions cache in total, shared with the mesa, emsdk,
+      Vulkan SDK and glTF asset caches, and GitHub evicts least-recently-used entries once that
+      is exceeded. Saving on every pull-request run would write a fresh multi-hundred-megabyte
+      entry per push and evict those prerequisites; saving only on main bounds writes to roughly
+      one per submitted change. Saves from release/rc branches are skipped as well: those entries
+      are scoped to their own branch, so no pull request against main could ever read them.
+
+inputs:
+  config:
+    description: >
+      Identifies the build configuration this cache belongs to. The key also carries the runner OS
+      and architecture, so "desktop" on Linux and "desktop" on macOS are already separate caches.
+
+      On Linux there is one cache per configuration, because the postsubmit warmer compiles the
+      configurations in parallel and a GitHub cache entry is written by exactly one job. Splitting
+      them also means a reader downloads only the slice it needs. A job that compiles two
+      configurations restores twice; see test-code-correctness in the presubmit workflow. Each
+      restore adds its budget to the ceiling, so a job is never capped below what it restored.
+
+      Every value needs a writer in postsubmit that compiles the same configuration, otherwise
+      readers restore an entry that cannot hit:
+
+        - desktop-release: the ccache-arm-linux warmer. Read by build-linux, and by the release
+          half of test-code-correctness.
+        - desktop-asan-debug: the ccache-arm-linux warmer. Read by the debug half of
+          test-code-correctness.
+        - desktop-backend-test: the ccache-arm-linux warmer. Read by test-backend.
+        - desktop (macOS only): the build-mac job, whose "continuous" build covers what presubmit
+          mac compiles. macOS is not split because build-mac is already a single writer.
+        - ios: the postsubmit build-ios job. Its "continuous" build compiles the device release
+          objects presubmit needs, plus the debug and simulator ones it does not.
+    required: true
+
+outputs:
+  cache-path:
+    description: 'Directory holding the cache, for a matching actions/cache/save step.'
+    value: ${{ steps.config.outputs.path }}
+  cache-key:
+    description: 'Key this job restored under, for a matching actions/cache/save step.'
+    value: ${{ steps.config.outputs.key }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Configure ccache
+      id: config
+      shell: bash
+      run: |
+        set -e
+
+        CACHE_PATH="${HOME}/.ccache"
+        CACHE_KEY="ccache-${{ runner.os }}-${{ runner.arch }}-${{ inputs.config }}"
+
+        # A property of the cache rather than of the job, so that every job touching an entry
+        # agrees on its ceiling. Budgets are in MiB so a job restoring several caches can add them
+        # up.
+        #
+        # These are guesses. The only measurements are 380 MiB for all three Linux configurations
+        # back when they shared one entry, which predates asan being cached at all, and 563 MiB for
+        # macOS desktop; iOS is unmeasured and compiles debug, release and simulator, so it gets
+        # more room. Correct them from `gh cache list` and from the eviction warning ccache-stats
+        # prints. Headroom is tight: the 10 GB quota is shared with the mesa, emsdk, Vulkan SDK and
+        # glTF caches, and re-earning an evicted mesa entry costs 30 to 60 minutes of paid runner
+        # time.
+        case "${{ inputs.config }}" in
+          ios)     CONFIG_BUDGET_MIB=2048 ;;
+          desktop) CONFIG_BUDGET_MIB=2048 ;;
+          *)       CONFIG_BUDGET_MIB=1024 ;;
+        esac
+
+        # Each restore raises the ceiling by its own budget. A job capped at one configuration's
+        # worth while holding two would evict what it had just downloaded: ccache evicts oldest
+        # first by mtime, and restored objects carry the archive's mtime. The running total lives
+        # in the environment because a composite action cannot count its own invocations; the name
+        # avoids the CCACHE_ prefix so ccache does not read it as a setting.
+        TOTAL_BUDGET_MIB=$(( ${FILAMENT_CCACHE_BUDGET_MIB:-0} + CONFIG_BUDGET_MIB ))
+
+        {
+          echo "path=${CACHE_PATH}"
+          # The commit is appended so that every save writes a new immutable entry; jobs find the
+          # most recent one through the restore-keys prefix below.
+          echo "key=${CACHE_KEY}-${{ github.sha }}"
+          echo "restore-key=${CACHE_KEY}-"
+        } >> "$GITHUB_OUTPUT"
+
+        {
+          echo "CCACHE_DIR=${CACHE_PATH}"
+          # Mi, not M: ccache reads a bare M or G as a decimal multiplier.
+          echo "CCACHE_MAXSIZE=${TOTAL_BUDGET_MIB}Mi"
+          echo "FILAMENT_CCACHE_BUDGET_MIB=${TOTAL_BUDGET_MIB}"
+          # ccache identifies the compiler by mtime and size by default, both of which change
+          # whenever the runner image is rebuilt even when the compiler itself is identical.
+          # Hashing the binary keeps the cache valid across image updates.
+          echo "CCACHE_COMPILERCHECK=content"
+        } >> "$GITHUB_ENV"
+        # Deliberately not setting CCACHE_BASEDIR. The workspace path is fixed on hosted runners
+        # and CMake already emits relative source paths, so it would rewrite nothing; meanwhile
+        # build/launch-c.in hard-codes file_macro sloppiness, so with a basedir in play a hit
+        # could hand back an object whose __FILE__ strings came from a different directory.
+
+    - name: Restore ccache
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ${{ steps.config.outputs.path }}
+        key: ${{ steps.config.outputs.key }}
+        restore-keys: ${{ steps.config.outputs.restore-key }}
+
+    - name: Reset ccache statistics
+      shell: bash
+      # Zeroes the counters only; cached objects are untouched. Without this the summary printed
+      # at the end of the job would include the hit counts accumulated by whichever build
+      # populated the cache.
+      run: |
+        if ! command -v ccache > /dev/null; then
+          echo "::error::ccache is not on PATH. This action must run after the platform prereq" \
+               "action (linux-prereq / mac-prereq), which installs it."
+          exit 1
+        fi
+        ccache --zero-stats

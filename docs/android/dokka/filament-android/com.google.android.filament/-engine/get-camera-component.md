@@ -5,11 +5,11 @@
 [main]\
 open fun [getCameraComponent](get-camera-component.md)(entity: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Camera](../-camera/index.md)
 
-Returns the Camera component of the given `entity`.
+Returns the Camera component of the given entity.
 
 #### Return
 
-the Camera component for this entity or null if the entity doesn't have a Camera component
+A pointer to the Camera component for this entity or nullptr if the entity didn't have a Camera component. The pointer is valid until destroyCameraComponent() is called or the entity itself is destroyed.
 
 #### Parameters
 
@@ -17,4 +17,4 @@ main
 
 | | |
 |---|---|
-| entity | An `entity`. |
+| entity | An entity. |

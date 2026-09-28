@@ -5,4 +5,4 @@
 [main]\
 [FADE](index.md)
 
-Material is transparent and color is alpha-pre-multiplied. Affects specular lighting.
+material is transparent and color is alpha-pre-multiplied, affects specular lighting when adding more entries, change the size of FRenderer::CommandKey::blending

@@ -99,6 +99,8 @@ FilamentApp2::FilamentApp2(const Builder& builder)
           mBackend(builder.mBackend),
           mFeatureLevel(builder.mFeatureLevel),
           mCameraMode(builder.mCameraMode),
+          mCameraHomeEye(builder.mCameraHomeEye),
+          mCameraHomeTarget(builder.mCameraHomeTarget),
           mResizeable(builder.mResizeable),
           mHeadless(builder.mHeadless),
           mStereoscopicEyeCount(builder.mStereoscopicEyeCount),
@@ -202,12 +204,15 @@ void FilamentApp2::init() {
     mViews.emplace_back(mUiView = new CView(*mRenderer, "UI View"));
 
     // set-up the camera manipulators
-    mMainCameraMan =
-            CameraManipulator::Builder().targetPosition(0, 0, -4).flightMoveDamping(15.0).build(
-                    mCameraMode);
-    mDebugCameraMan =
-            CameraManipulator::Builder().targetPosition(0, 0, -4).flightMoveDamping(15.0).build(
-                    mCameraMode);
+    auto buildManipulator = [this]() {
+        return CameraManipulator::Builder()
+                .targetPosition(mCameraHomeTarget.x, mCameraHomeTarget.y, mCameraHomeTarget.z)
+                .orbitHomePosition(mCameraHomeEye.x, mCameraHomeEye.y, mCameraHomeEye.z)
+                .flightMoveDamping(15.0)
+                .build(mCameraMode);
+    };
+    mMainCameraMan = buildManipulator();
+    mDebugCameraMan = buildManipulator();
 
     mMainView->setCamera(mMainCamera);
     mMainView->setCameraManipulator(mMainCameraMan);
@@ -225,7 +230,14 @@ void FilamentApp2::init() {
     // configure the cameras
     configureCamerasForWindow(mCameraParams);
 
-    mMainCamera->lookAt({ 4, 0, -4 }, { 0, 0, -4 }, { 0, 1, 0 });
+    // Seed the camera from the manipulator's home position. This is overwritten from the
+    // manipulator again at the top of every frame (see doFrame), so it only matters to code that
+    // inspects the camera before the first frame is drawn.
+    {
+        filament::math::float3 eye, center, up;
+        mMainCameraMan->getLookAt(&eye, &center, &up);
+        mMainCamera->lookAt(eye, center, up);
+    }
 
     mDepthMaterial =
             Material::Builder()

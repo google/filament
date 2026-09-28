@@ -3,10 +3,6 @@
 # getNear
 
 [main]\
-open fun [getNear](get-near.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open fun [getNear](get-near.md)(): [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)
 
-Gets the distance to the near plane
-
-#### Return
-
-Distance to the near plane
+Returns the frustum's near plane

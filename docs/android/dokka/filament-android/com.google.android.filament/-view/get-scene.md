@@ -5,10 +5,8 @@
 [main]\
 open fun [getScene](get-scene.md)(): [Scene](../-scene/index.md)
 
-Gets this View's associated Scene, or null if none has been assigned.
+Returns the Scene currently associated with this View.
 
-#### See also
+#### Return
 
-| |
-|---|
-| [setScene](set-scene.md) |
+A pointer to the Scene associated to this View. nullptr if no Scene is set.

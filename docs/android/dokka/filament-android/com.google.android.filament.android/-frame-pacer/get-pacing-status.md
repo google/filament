@@ -5,7 +5,7 @@
 [main]\
 open fun [getPacingStatus](get-pacing-status.md)(): [FramePacer.PacingStatus](-pacing-status/index.md)
 
-Returns the current flow control status of the pacing pipeline. If the pipeline is DISPLAY_STARVING, the application may choose to recover by skipping a frame to rebuild queue depth and calling resetPacing().
+Returns the current flow control status of the pacing pipeline.
 
 #### Return
 

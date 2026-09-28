@@ -5,7 +5,9 @@
 [main]\
 open fun [setBloomOptions](set-bloom-options.md)(options: [View.BloomOptions](-bloom-options/index.md))
 
-Sets bloom options.
+Enables or disables bloom in the post-processing stage. 
+
+Disabled by default.
 
 #### Parameters
 
@@ -13,10 +15,4 @@ main
 
 | | |
 |---|---|
-| options | Options for bloom. |
-
-#### See also
-
-| |
-|---|
-| [getBloomOptions](get-bloom-options.md) |
+| options | options. Values may be silently clamped to valid ranges. |

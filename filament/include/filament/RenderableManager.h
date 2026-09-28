@@ -27,6 +27,7 @@
 #include <utils/compiler.h>
 #include <utils/EntityInstance.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/Slice.h>
 
 #include <math/mathfwd.h>
 #include <math/vec3.h>
@@ -129,6 +130,15 @@ public:
      * Retrieve the Entities of all the components of this manager.
      * @return A list, in no particular order, of all the entities managed by this manager.
      */
+    utils::Slice<const utils::Entity> getAllEntities() const noexcept;
+
+    /**
+     * Retrieve the Entities of all the components of this manager.
+     * @return A list, in no particular order, of all the entities managed by this manager.
+     * @deprecated Use getAllEntities() instead.
+     */
+    UTILS_DEPRECATED
+    UTILS_NOAPIGEN
     utils::Entity const* UTILS_NONNULL getEntities() const noexcept;
 
     /**
@@ -136,7 +146,7 @@ public:
      *
      * Clients can specify bones either using this quat-vec3 pair, or by using 4x4 matrices.
      */
-    struct Bone {
+    struct UTILS_NOAPIGEN Bone {
         math::quatf unitQuaternion = { 1.f, 0.f, 0.f, 0.f };
         math::float3 translation = { 0.f, 0.f, 0.f };
         float reserved = 0;
@@ -450,9 +460,19 @@ public:
          * @param boneCount 0 to disable, otherwise the number of bone transforms (up to 255)
          * @param transforms the initial set of transforms (one for each bone)
          */
-        Builder& skinning(size_t boneCount, math::mat4f const* UTILS_NONNULL transforms) noexcept;
-        Builder& skinning(size_t boneCount, Bone const* UTILS_NONNULL bones) noexcept; //!< \overload
+        UTILS_APIGEN_ALTERNATE_NAME(skinningAsMatrices)
+        Builder& skinning(utils::Slice<const math::mat4f> transforms) noexcept;
+        Builder& skinning(utils::Slice<const Bone> bones) noexcept; //!< \overload
         Builder& skinning(size_t boneCount) noexcept; //!< \overload
+
+        UTILS_NOAPIGEN
+        inline Builder& skinning(size_t boneCount, math::mat4f const* UTILS_NONNULL transforms) noexcept {
+            return skinning({ transforms, boneCount });
+        }
+        UTILS_NOAPIGEN
+        inline Builder& skinning(size_t boneCount, Bone const* UTILS_NONNULL bones) noexcept {
+            return skinning({ bones, boneCount });
+        }
 
         /**
          * Define bone indices and weights "pairs" for vertex skinning as a float2.
@@ -504,6 +524,7 @@ public:
          *
          * @see VertexBuffer:Builder:advancedSkinning
          */
+        UTILS_NOAPIGEN
         Builder& boneIndicesAndWeights(size_t primitiveIndex,
                 utils::FixedCapacityVector<
                     utils::FixedCapacityVector<math::float2>> indicesAndWeightsVector) noexcept;
@@ -797,14 +818,27 @@ public:
     bool isScreenSpaceContactShadowsEnabled(Instance instance) const noexcept;
 
     /**
-     * Updates the bone transforms in the range [offset, offset + boneCount).
+     * Updates the bone transforms in the range [offset, offset + transforms.size()).
      * The bones must be pre-allocated using Builder::skinning().
      */
-    void setBones(Instance instance, Bone const* UTILS_NONNULL transforms,
-            size_t boneCount = 1, size_t offset = 0);
+    UTILS_APIGEN_ALTERNATE_NAME(setBonesAsQuaternions)
+    void setBones(Instance instance, utils::Slice<const Bone> transforms, size_t offset = 0);
 
-    void setBones(Instance instance, math::mat4f const* UTILS_NONNULL transforms,
-            size_t boneCount = 1, size_t offset = 0); //!< \overload
+    UTILS_NOAPIGEN
+    inline void setBones(Instance instance, Bone const* UTILS_NONNULL transforms,
+            size_t boneCount = 1, size_t offset = 0) {
+        setBones(instance, { transforms, boneCount }, offset);
+    }
+
+    UTILS_APIGEN_ALTERNATE_NAME(setBonesAsMatrices)
+    void setBones(Instance instance, utils::Slice<const math::mat4f> transforms,
+            size_t offset = 0); //!< \overload
+
+    UTILS_NOAPIGEN
+    inline void setBones(Instance instance, math::mat4f const* UTILS_NONNULL transforms,
+            size_t boneCount = 1, size_t offset = 0) {
+        setBones(instance, { transforms, boneCount }, offset);
+    }
 
     /**
      * Associates a region of a SkinningBuffer to a renderable instance
@@ -827,12 +861,16 @@ public:
      * morphing mode, only the first 4 weights are considered.
      *
      * @param instance Instance of the component obtained from getInstance().
-     * @param weights Pointer to morph target weights to be update.
-     * @param count Number of morph target weights.
+     * @param weights Morph target weights to be updated.
      * @param offset Index of the first morph target weight to set at instance.
      */
-    void setMorphWeights(Instance instance,
-            float const* UTILS_NONNULL weights, size_t count, size_t offset = 0);
+    void setMorphWeights(Instance instance, utils::Slice<const float> weights, size_t offset = 0);
+
+    UTILS_NOAPIGEN
+    inline void setMorphWeights(Instance instance, float const* UTILS_NONNULL weights,
+            size_t count, size_t offset = 0) {
+        setMorphWeights(instance, { weights, count }, offset);
+    }
 
     /**
      * Associates a MorphTargetBuffer to the given primitive.
@@ -896,8 +934,11 @@ public:
     /**
      * Changes the geometry for the given primitive.
      *
-     * Buffers built asynchronously must have completed their creation. See
-     * `VertexBuffer::isCreationComplete()` and `IndexBuffer::isCreationComplete()`.
+     * @param instance Renderable's instance
+     * @param primitiveIndex Primitive index
+     * @param type Specifies the topology of the primitive
+     * @param vertices Specifies the vertex buffer
+     * @param indices Specifies the index buffer
      *
      * @exception utils::PreConditionPanic if a buffer's creation is still in progress or was
      *                                     canceled.
@@ -906,14 +947,18 @@ public:
      */
     void setGeometryAt(Instance instance, size_t primitiveIndex, PrimitiveType type,
             VertexBuffer* UTILS_NONNULL vertices,
-            IndexBuffer* UTILS_NONNULL indices,
-            size_t offset, size_t count);
+            IndexBuffer* UTILS_NONNULL indices);
 
     /**
-     * Changes the geometry for the given primitive. (non-indexed version)
+     * Changes the geometry for the given primitive.
      *
-     * Buffers built asynchronously must have completed their creation. See
-     * `VertexBuffer::isCreationComplete()`.
+     * @param instance Renderable's instance
+     * @param primitiveIndex Primitive index
+     * @param type Specifies the topology of the primitive
+     * @param vertices Specifies the vertex buffer
+     * @param indices Specifies the index buffer
+     * @param offset Specifies where in the index buffer to start reading (expressed as a number of indices)
+     * @param count Number of indices to read
      *
      * @exception utils::PreConditionPanic if the buffer's creation is still in progress or was
      *                                     canceled.
@@ -922,7 +967,43 @@ public:
      */
     void setGeometryAt(Instance instance, size_t primitiveIndex, PrimitiveType type,
             VertexBuffer* UTILS_NONNULL vertices,
-            size_t offset, size_t count);
+            IndexBuffer* UTILS_NONNULL indices,
+            size_t offset, size_t count); //!< \overload
+
+    /**
+     * Changes the geometry for the given primitive. (non-indexed version)
+     *
+     * @param instance Renderable's instance
+     * @param primitiveIndex Primitive index
+     * @param type Specifies the topology of the primitive
+     * @param vertices Specifies the vertex buffer
+     *
+     * @exception utils::PreConditionPanic if the buffer's creation is still in progress or was
+     *                                     canceled.
+     *
+     * \see Builder::geometry()
+     */
+    void setGeometryAt(Instance instance, size_t primitiveIndex, PrimitiveType type,
+            VertexBuffer* UTILS_NONNULL vertices);
+
+    /**
+     * Changes the geometry for the given primitive. (non-indexed version)
+     *
+     * @param instance Renderable's instance
+     * @param primitiveIndex Primitive index
+     * @param type Specifies the topology of the primitive
+     * @param vertices Specifies the vertex buffer
+     * @param offset Specifies where in the vertex buffer to start reading (expressed as a number of vertices)
+     * @param count Number of vertices to read
+     *
+     * @exception utils::PreConditionPanic if the buffer's creation is still in progress or was
+     *                                     canceled.
+     *
+     * \see Builder::geometry()
+     */
+    void setGeometryAt(Instance instance, size_t primitiveIndex, PrimitiveType type,
+            VertexBuffer* UTILS_NONNULL vertices,
+            size_t offset, size_t count); //!< \overload
 
     /**
      * Changes the drawing order for blended primitives. The drawing order is either global or
@@ -1002,6 +1083,7 @@ public:
     template<typename VECTOR, typename INDEX,
             typename = typename is_supported_vector_type<VECTOR>::type,
             typename = typename is_supported_index_type<INDEX>::type>
+    UTILS_NOAPIGEN
     static Box computeAABB(
             VECTOR const* UTILS_NONNULL vertices,
             INDEX const* UTILS_NONNULL indices, size_t count,

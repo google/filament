@@ -21,5 +21,7 @@ runs:
       run: |
         # Install brew prereqs
         brew install coreutils
+        # The top-level CMakeLists.txt turns ccache on automatically when it is on PATH.
+        brew install ccache
         # Install ninja
         source ./build/common/get-ninja.sh

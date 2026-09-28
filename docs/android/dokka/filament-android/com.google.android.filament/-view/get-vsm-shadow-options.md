@@ -5,14 +5,8 @@
 [main]\
 open fun [getVsmShadowOptions](get-vsm-shadow-options.md)(): [View.VsmShadowOptions](-vsm-shadow-options/index.md)
 
-Gets the VSM shadowing options.
+Returns the VSM shadowing options associated with this View.
 
 #### Return
 
-VSM shadow options currently set.
-
-#### See also
-
-| |
-|---|
-| [setVsmShadowOptions](set-vsm-shadow-options.md) |
+value set by setVsmShadowOptions().

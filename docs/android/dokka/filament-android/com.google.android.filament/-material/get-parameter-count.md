@@ -5,10 +5,6 @@
 [main]\
 open fun [getParameterCount](get-parameter-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
-Returns the number of parameters declared by this material. The returned value can be 0.
+Returns the number of parameters declared by this material. 
 
-#### See also
-
-| | |
-|---|---|
-| &lt;a href=&quot;https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/general:parameters&quot;&gt; | General: parameters |
+The returned value can be 0.

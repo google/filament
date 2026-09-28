@@ -3,7 +3,7 @@
 # getLightChannel
 
 [main]\
-open fun [getLightChannel](get-light-channel.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), channel: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open fun [getLightChannel](get-light-channel.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), channel: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Returns whether a light channel is enabled on a specified renderable.
 
@@ -17,5 +17,5 @@ main
 
 | | |
 |---|---|
-| i | Instance of the component obtained from getInstance(). |
+| instance | Instance of the component obtained from getInstance(). |
 | channel | Light channel to query |

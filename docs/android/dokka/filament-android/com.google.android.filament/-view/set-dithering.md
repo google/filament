@@ -5,7 +5,9 @@
 [main]\
 open fun [setDithering](set-dithering.md)(dithering: [View.Dithering](-dithering/index.md))
 
-Enables or disables dithering in the post-processing stage. Enabled by default.
+Enables or disables dithering in the post-processing stage. 
+
+Enabled by default.
 
 #### Parameters
 

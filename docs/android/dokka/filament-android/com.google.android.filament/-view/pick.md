@@ -5,7 +5,9 @@
 [main]\
 open fun [pick](pick.md)(x: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), y: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), handler: [Any](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-any/index.html), callback: [View.OnPickCallback](-on-pick-callback/index.md))
 
-Creates a picking query. Multiple queries can be created (e.g.: multi-touch). Picking queries are all executed when [render](../-renderer/render.md) is called on this View. The provided callback is guaranteed to be called at some point in the future. Typically it takes a couple frames to receive the result of a picking query.
+Creates a picking query. Multiple queries can be created (e.g.: multi-touch). Picking queries are all executed when [render](../-renderer/render.md) is called on this View. The provided callback is guaranteed to be called at some point in the future. 
+
+Typically it takes a couple frames to receive the result of a picking query.
 
 #### Parameters
 

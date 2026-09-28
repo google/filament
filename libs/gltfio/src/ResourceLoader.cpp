@@ -30,6 +30,7 @@
 #include <filament/BufferObject.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
+#include <filament/MaterialEnums.h>
 #include <filament/MorphTargetBuffer.h>
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
@@ -1066,8 +1067,12 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
         for (cgltf_size pindex = 0, pcount = mesh.primitives_count; pindex < pcount; ++pindex) {
             const cgltf_primitive& prim = mesh.primitives[pindex];
             MorphTargetBuffer* const tb = prims[pindex].morphTargetBuffer;
+            if (!tb) {
+                continue;
+            }
             uint32_t const morphTargetOffset = prims[pindex].morphTargetOffset;
-            for (cgltf_size tindex = 0, tcount = prim.targets_count; tindex < tcount; ++tindex) {
+            const cgltf_size tcount = std::min(prim.targets_count, (cgltf_size) MAX_MORPH_TARGETS);
+            for (cgltf_size tindex = 0; tindex < tcount; ++tindex) {
                 const cgltf_morph_target& target = prim.targets[tindex];
                 bool hasNormals = false;
                 for (cgltf_size aindex = 0; aindex < target.attributes_count; aindex++) {
@@ -1090,14 +1095,23 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
         }
     }
 
-    // Kick off jobs for computing tangent frames.
+    // Kick off jobs for computing tangent frames in batches to avoid exhausting the job pool.
     JobSystem* js = &mEngine->getJobSystem();
-    JobSystem::Job* parent = js->createJob();
-    for (Params& params : jobParams) {
-        Params* pptr = &params;
-        js->run(jobs::createJob(*js, parent, [pptr] { TangentsJob::run(pptr); }));
+    constexpr size_t MAX_BATCH_SIZE = JobSystem::MAX_JOB_COUNT / 2;
+    for (size_t offset = 0; offset < jobParams.size(); offset += MAX_BATCH_SIZE) {
+        const size_t batchSize = std::min(jobParams.size() - offset, MAX_BATCH_SIZE);
+        JobSystem::Job* parent = js->createJob();
+        for (size_t j = 0; j < batchSize; ++j) {
+            Params* pptr = &jobParams[offset + j];
+            JobSystem::Job* job = jobs::createJob(*js, parent, [pptr] { TangentsJob::run(pptr); });
+            if (UTILS_LIKELY(job)) {
+                js->run(job);
+            } else {
+                TangentsJob::run(pptr);
+            }
+        }
+        js->runAndWait(parent);
     }
-    js->runAndWait(parent);
 
     // Finally, upload quaternions to the GPU from the main thread.
     for (Params& params : jobParams) {

@@ -5,7 +5,9 @@
 [main]\
 open fun [setTemporalAntiAliasingOptions](set-temporal-anti-aliasing-options.md)(options: [View.TemporalAntiAliasingOptions](-temporal-anti-aliasing-options/index.md))
 
-Enables or disable temporal anti-aliasing (TAA). Disabled by default.
+Enables or disable temporal antialiasing (TAA). 
+
+Disabled by default.
 
 #### Parameters
 
@@ -13,4 +15,4 @@ main
 
 | | |
 |---|---|
-| options | temporal anti-aliasing options |
+| options | temporal antialiasing options |

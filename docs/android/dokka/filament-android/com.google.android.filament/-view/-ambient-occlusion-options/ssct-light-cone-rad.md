@@ -5,4 +5,4 @@
 [main]\
 open var [ssctLightConeRad](ssct-light-cone-rad.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
-Screen Space Cone Tracing (SSCT) options Ambient shadows from dominant light
+full cone angle in radian, between 0 and pi/2

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "Utility.h"
+
 #include "materials/uberarchive.h"
 
 #include <gltfio/AssetLoader.h>
@@ -37,6 +39,7 @@
 
 #include <math/mathfwd.h>
 
+#include <cgltf.h>
 #include <gtest/gtest.h>
 #include <meshoptimizer.h>
 
@@ -93,7 +96,8 @@ static std::vector<uint8_t> makeMeshoptPayload(size_t vertexCount, size_t stride
 }
 
 static std::string makeMeshoptGlbJson(size_t meshoptCount, size_t meshoptEncodedSize,
-        size_t bufferByteLength, size_t stride) {
+        size_t bufferByteLength, size_t stride, const char* mode = "ATTRIBUTES",
+        const char* filter = "NONE") {
     const size_t decodedSize = meshoptCount * stride;
     return std::string(R"({
   "asset": { "version": "2.0" },
@@ -113,8 +117,8 @@ static std::string makeMeshoptGlbJson(size_t meshoptCount, size_t meshoptEncoded
           "byteLength": )" + std::to_string(meshoptEncodedSize) + R"(,
           "byteStride": )" + std::to_string(stride) + R"(,
           "count": )" + std::to_string(meshoptCount) + R"(,
-          "mode": "ATTRIBUTES",
-          "filter": "NONE"
+          "mode": ")" + mode + R"(",
+          "filter": ")" + filter + R"("
         }
       }
     }
@@ -127,11 +131,18 @@ static std::string makeMeshoptGlbJson(size_t meshoptCount, size_t meshoptEncoded
 })";
 }
 
-static std::vector<uint8_t> makeMeshoptGlb(size_t meshoptCount, size_t stride) {
+static std::vector<uint8_t> makeMeshoptGlb(size_t meshoptCount, size_t stride,
+        const char* mode = "ATTRIBUTES", const char* filter = "NONE") {
     static constexpr size_t kEncodedVertexCount = 256;
-    const std::vector<uint8_t> meshopt = makeMeshoptPayload(kEncodedVertexCount, stride);
+    std::vector<uint8_t> meshopt;
+    if (stride > 0 && stride % 4 == 0) {
+        meshopt = makeMeshoptPayload(kEncodedVertexCount, stride);
+    } else {
+        meshopt.assign(32, 0);
+    }
 
-    std::string json = makeMeshoptGlbJson(meshoptCount, meshopt.size(), meshopt.size(), stride);
+    std::string json = makeMeshoptGlbJson(meshoptCount, meshopt.size(), meshopt.size(), stride,
+            mode, filter);
     while ((json.size() % 4u) != 0u) {
         json.push_back(' ');
     }
@@ -152,6 +163,34 @@ static std::vector<uint8_t> makeMeshoptGlb(size_t meshoptCount, size_t stride) {
     appendU32LE(glb, 0x004e4942u);
     glb.insert(glb.end(), meshopt.begin(), meshopt.end());
     return glb;
+}
+
+static bool runDecodeMeshopt(cgltf_meshopt_compression_mode mode, size_t count, size_t stride,
+        cgltf_meshopt_compression_filter filter = cgltf_meshopt_compression_filter_none,
+        cgltf_buffer* bufferOverride = nullptr, size_t offset = 0, size_t size = 32,
+        bool provideBuffer = true) {
+    uint8_t dummyBuffer[32] = {0};
+    cgltf_buffer buffer{};
+    buffer.data = dummyBuffer;
+    buffer.size = sizeof(dummyBuffer);
+
+    cgltf_buffer_view bufferView{};
+    bufferView.has_meshopt_compression = true;
+    bufferView.meshopt_compression.buffer = provideBuffer
+            ? (bufferOverride ? bufferOverride : &buffer)
+            : nullptr;
+    bufferView.meshopt_compression.offset = offset;
+    bufferView.meshopt_compression.size = size;
+    bufferView.meshopt_compression.mode = mode;
+    bufferView.meshopt_compression.count = count;
+    bufferView.meshopt_compression.stride = stride;
+    bufferView.meshopt_compression.filter = filter;
+
+    cgltf_data data{};
+    data.buffer_views_count = 1;
+    data.buffer_views = &bufferView;
+
+    return utility::decodeMeshoptCompression(&data);
 }
 
 } // namespace
@@ -404,6 +443,117 @@ TEST_F(glTFIOTest, MeshoptAllocationFailureRejectsGracefully) {
     AssetLoader::destroy(&assetLoader);
 }
 
+TEST_F(glTFIOTest, MeshoptRejectsInvalidTrianglesCount) {
+    const std::vector<uint8_t> glb = makeMeshoptGlb(1, 4, "TRIANGLES", "NONE");
+
+    AssetLoader* assetLoader = AssetLoader::create({mEngine, mMaterialProvider, mNameManager});
+    ASSERT_NE(assetLoader, nullptr);
+
+    FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({mEngine, ".", false});
+    EXPECT_FALSE(resourceLoader.loadResources(asset));
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+TEST_F(glTFIOTest, MeshoptRejectsInvalidTrianglesStride) {
+    const std::vector<uint8_t> glb = makeMeshoptGlb(3, 3, "TRIANGLES", "NONE");
+
+    AssetLoader* assetLoader = AssetLoader::create({mEngine, mMaterialProvider, mNameManager});
+    ASSERT_NE(assetLoader, nullptr);
+
+    FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({mEngine, ".", false});
+    EXPECT_FALSE(resourceLoader.loadResources(asset));
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+TEST_F(glTFIOTest, MeshoptRejectsInvalidIndicesStride) {
+    const std::vector<uint8_t> glb = makeMeshoptGlb(1, 1, "INDICES", "NONE");
+
+    AssetLoader* assetLoader = AssetLoader::create({mEngine, mMaterialProvider, mNameManager});
+    ASSERT_NE(assetLoader, nullptr);
+
+    FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({mEngine, ".", false});
+    EXPECT_FALSE(resourceLoader.loadResources(asset));
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+TEST_F(glTFIOTest, MeshoptPreconditions) {
+    // Mode ATTRIBUTES: stride must be a multiple of 4 and <= 256.
+    EXPECT_FALSE(runDecodeMeshopt(cgltf_meshopt_compression_mode_attributes, 4, 3));
+    EXPECT_FALSE(runDecodeMeshopt(cgltf_meshopt_compression_mode_attributes, 4, 260));
+
+    // Mode TRIANGLES: count must be a multiple of 3.
+    EXPECT_FALSE(runDecodeMeshopt(cgltf_meshopt_compression_mode_triangles, 4, 2));
+
+    // Mode TRIANGLES / INDICES: stride must be 2 or 4.
+    EXPECT_FALSE(runDecodeMeshopt(cgltf_meshopt_compression_mode_triangles, 6, 1));
+    EXPECT_FALSE(runDecodeMeshopt(cgltf_meshopt_compression_mode_triangles, 6, 3));
+    EXPECT_FALSE(runDecodeMeshopt(cgltf_meshopt_compression_mode_indices, 4, 1));
+    EXPECT_FALSE(runDecodeMeshopt(cgltf_meshopt_compression_mode_indices, 4, 3));
+
+    // Mode TRIANGLES / INDICES: filters are disallowed.
+    EXPECT_FALSE(runDecodeMeshopt(cgltf_meshopt_compression_mode_triangles, 6, 2,
+            cgltf_meshopt_compression_filter_octahedral));
+    EXPECT_FALSE(runDecodeMeshopt(cgltf_meshopt_compression_mode_indices, 4, 2,
+            cgltf_meshopt_compression_filter_exponential));
+
+    // Unsupported mode.
+    EXPECT_FALSE(runDecodeMeshopt(cgltf_meshopt_compression_mode_invalid, 4, 4));
+
+    // Filter OCTAHEDRAL: stride must be 4 or 8.
+    EXPECT_FALSE(runDecodeMeshopt(cgltf_meshopt_compression_mode_attributes, 4, 12,
+            cgltf_meshopt_compression_filter_octahedral));
+
+    // Filter QUATERNION: stride must be 8.
+    EXPECT_FALSE(runDecodeMeshopt(cgltf_meshopt_compression_mode_attributes, 4, 4,
+            cgltf_meshopt_compression_filter_quaternion));
+
+    // Filter EXPONENTIAL: stride must be a multiple of 4.
+    EXPECT_FALSE(runDecodeMeshopt(cgltf_meshopt_compression_mode_attributes, 4, 6,
+            cgltf_meshopt_compression_filter_exponential));
+
+    // Unsupported filter.
+    EXPECT_FALSE(runDecodeMeshopt(cgltf_meshopt_compression_mode_attributes, 4, 4,
+            cgltf_meshopt_compression_filter_max_enum));
+
+    // Mode ATTRIBUTES: count exceeds theoretical maximum.
+    EXPECT_FALSE(runDecodeMeshopt(cgltf_meshopt_compression_mode_attributes,
+            std::numeric_limits<size_t>::max(), 4));
+
+    // Missing buffer.
+    EXPECT_FALSE(runDecodeMeshopt(cgltf_meshopt_compression_mode_attributes, 4, 4,
+            cgltf_meshopt_compression_filter_none, nullptr, 0, 32, /*provideBuffer=*/false));
+
+    // Null buffer data.
+    cgltf_buffer nullDataBuffer{};
+    nullDataBuffer.data = nullptr;
+    nullDataBuffer.size = 32;
+    EXPECT_FALSE(runDecodeMeshopt(cgltf_meshopt_compression_mode_attributes, 4, 4,
+            cgltf_meshopt_compression_filter_none, &nullDataBuffer));
+
+    // Buffer bounds exceeded.
+    uint8_t dummyPayload[16] = {0};
+    cgltf_buffer boundedBuffer{};
+    boundedBuffer.data = dummyPayload;
+    boundedBuffer.size = sizeof(dummyPayload);
+    EXPECT_FALSE(runDecodeMeshopt(cgltf_meshopt_compression_mode_attributes, 4, 4,
+            cgltf_meshopt_compression_filter_none, &boundedBuffer, /*offset=*/8, /*size=*/16));
+}
+
 // A mesh may carry morph-target names (mesh.extras.targetNames) whose count is parsed independently
 // of its morph-target count. When the mesh has no primitives the morph-target count is zero, so the
 // two counts can disagree. createRenderable() must size its name copy by the morph-target count and
@@ -552,7 +702,89 @@ static std::vector<uint8_t> makeMalformedEightBitIndexGlb(uint32_t indexCount) {
     return glb;
 }
 
+static std::vector<uint8_t> makeMorphTargetGlb(int morphTargetCount) {
+    std::string targets;
+    std::string weights = "[";
+    for (int i = 0; i < morphTargetCount; ++i) {
+        targets += (i == 0) ? "{\"TANGENT\":2}" : ",{\"TANGENT\":2}";
+        weights += (i == 0) ? "0.0" : ",0.0";
+    }
+    weights += "]";
+
+    std::string json =
+            "{\"asset\":{\"version\":\"2.0\"},\"scene\":0,\"scenes\":[{\"nodes\":[0]}],"
+            "\"nodes\":[{\"mesh\":0}],"
+            "\"meshes\":[{\"weights\":" + weights + ",\"primitives\":[{\"attributes\":{\"POSITION\":0,\"TANGENT\":1},\"mode\":4,"
+            "\"targets\":[" + targets + "]}]}],"
+            "\"accessors\":["
+            "{\"bufferView\":0,\"componentType\":5126,\"count\":3,\"type\":\"VEC3\","
+            "\"min\":[0,0,0],\"max\":[1,1,1]},"
+            "{\"bufferView\":1,\"componentType\":5126,\"count\":3,\"type\":\"VEC4\"},"
+            "{\"bufferView\":2,\"componentType\":5126,\"count\":3,\"type\":\"VEC3\"}],"
+            "\"bufferViews\":[{\"buffer\":0,\"byteOffset\":0,\"byteLength\":36},"
+            "{\"buffer\":0,\"byteOffset\":36,\"byteLength\":48},"
+            "{\"buffer\":0,\"byteOffset\":84,\"byteLength\":36}],"
+            "\"buffers\":[{\"byteLength\":120}]}";
+
+    while ((json.size() % 4u) != 0u) {
+        json.push_back(' ');
+    }
+
+    std::vector<uint8_t> bin(120, 0);
+    float* fbin = reinterpret_cast<float*>(bin.data());
+    // 3 vertices positions
+    fbin[0] = 0.0f; fbin[1] = 0.0f; fbin[2] = 0.0f;
+    fbin[3] = 1.0f; fbin[4] = 0.0f; fbin[5] = 0.0f;
+    fbin[6] = 0.0f; fbin[7] = 1.0f; fbin[8] = 0.0f;
+    // 3 vertices base tangents (vec4) at byteOffset 36 = float offset 9
+    fbin[9]  = 1.0f; fbin[10] = 0.0f; fbin[11] = 0.0f; fbin[12] = 1.0f;
+    fbin[13] = 1.0f; fbin[14] = 0.0f; fbin[15] = 0.0f; fbin[16] = 1.0f;
+    fbin[17] = 1.0f; fbin[18] = 0.0f; fbin[19] = 0.0f; fbin[20] = 1.0f;
+    // 3 vertices target tangent deltas (vec3) at byteOffset 84 = float offset 21
+    fbin[21] = 0.0f; fbin[22] = 0.0f; fbin[23] = 0.0f;
+    fbin[24] = 0.0f; fbin[25] = 0.0f; fbin[26] = 0.0f;
+    fbin[27] = 0.0f; fbin[28] = 0.0f; fbin[29] = 0.0f;
+
+    while ((bin.size() % 4u) != 0u) {
+        bin.push_back(0);
+    }
+
+    const uint32_t jsonSize = uint32_t(json.size());
+    const uint32_t binSize = uint32_t(bin.size());
+    const uint32_t totalSize = 12u + 8u + jsonSize + 8u + binSize;
+
+    std::vector<uint8_t> glb;
+    glb.reserve(totalSize);
+
+    appendU32LE(glb, 0x46546c67u);
+    appendU32LE(glb, 2u);
+    appendU32LE(glb, totalSize);
+    appendU32LE(glb, jsonSize);
+    appendU32LE(glb, 0x4e4f534au);
+    glb.insert(glb.end(), json.begin(), json.end());
+    appendU32LE(glb, binSize);
+    appendU32LE(glb, 0x004e4942u);
+    glb.insert(glb.end(), bin.begin(), bin.end());
+
+    return glb;
+}
+
 } // namespace
+
+TEST_F(glTFIOTest, MorphTargetsExceedingMaxComputeTangents) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    std::vector<uint8_t> glb = makeMorphTargetGlb(300);
+    FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
 
 TEST_F(glTFIOTest, RejectsOversizedEightBitIndexAccessor) {
     AssetLoader* loader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });

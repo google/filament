@@ -3,13 +3,22 @@
 # getDepth
 
 [main]\
-open fun [getDepth](get-depth.md)(level: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getDepth](get-depth.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
-Queries the number of layers of given level of this texture has.
+Returns the depth of a 3D texture level
 
 #### Return
 
-The number of layers of the given level
+Depth in texel of the specified `level`, clamped to 1.
+
+[main]\
+open fun [getDepth](get-depth.md)(level: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+
+Returns the depth of a 3D texture level
+
+#### Return
+
+Depth in texel of the specified `level`, clamped to 1.
 
 #### Parameters
 
@@ -17,4 +26,4 @@ main
 
 | | |
 |---|---|
-| level | to query the number of layers of. Must be between 0 and [getLevels](get-levels.md) |
+| level | texture level. |

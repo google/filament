@@ -59,7 +59,7 @@ public:
         setCustomProjection(projection, projection, near, far);
     }
 
-    void setCustomEyeProjection(math::mat4 const* projection, size_t count,
+    void setCustomEyeProjection(utils::Slice<const math::mat4> projection,
             math::mat4 const& projectionForCulling, double near, double far);
 
 

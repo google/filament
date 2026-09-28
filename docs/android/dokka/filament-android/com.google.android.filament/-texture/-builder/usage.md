@@ -3,6 +3,20 @@
 # usage
 
 [main]\
-open fun [usage](usage.md)(flags: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Texture.Builder](index.md)
+open fun [usage](usage.md)(usage: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Texture.Builder](index.md)
 
-Sets the usage flags, which is necessary when attaching to [RenderTarget](../../-render-target/index.md). The flags argument much be a combination of [Usage](../-usage/index.md) flags.
+Specifies if the texture will be used as a render target attachment. 
+
+If the texture is potentially rendered into, it may require a different memory layout, which needs to be known during construction.
+
+#### Return
+
+This Builder, for chaining calls.
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| usage | Defaults to Texture::Usage::DEFAULT; c.f. Texture::Usage::COLOR_ATTACHMENT. |

@@ -4,3 +4,7 @@
 
 [main]\
 [FIXED_SOURCE](index.md)
+
+The surface represents a fixed-rate source (like video). 
+
+The OS strongly prioritizes running the display at this exact frame rate regardless of concurrent compositing.

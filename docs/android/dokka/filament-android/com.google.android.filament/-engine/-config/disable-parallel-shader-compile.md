@@ -5,4 +5,10 @@
 [main]\
 open var [disableParallelShaderCompile](disable-parallel-shader-compile.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
-Set to `true` to forcibly disable parallel shader compilation in the backend. Currently only honored by the GL backend.
+Set to `true` to forcibly disable parallel shader compilation in the backend. 
+
+Currently only honored by the GL and Metal backends.
+
+#### Deprecated
+
+use &quot;backend.disable_parallel_shader_compile&quot; feature flag instead

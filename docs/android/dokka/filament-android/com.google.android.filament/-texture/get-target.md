@@ -5,6 +5,8 @@
 [main]\
 open fun [getTarget](get-target.md)(): [Texture.Sampler](-sampler/index.md)
 
+Return this texture Sampler as set by Builder::sampler().
+
 #### Return
 
-This texture [Sampler](-sampler/index.md) type.
+this texture Sampler as set by Builder::sampler()

@@ -3,18 +3,6 @@
 # getFieldOfViewInDegrees
 
 [main]\
-open fun [getFieldOfViewInDegrees](get-field-of-view-in-degrees.md)(direction: [Camera.Fov](-fov/index.md)): [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)
+open fun [getFieldOfViewInDegrees](get-field-of-view-in-degrees.md)(direction: [Camera.Fov](-fov/index.md)): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
-Returns the camera's field of view in degrees.
-
-#### Return
-
-The field of view in degrees.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| direction | The direction of the FOV (VERTICAL or HORIZONTAL). |
+Returns the camera's field of view in degrees

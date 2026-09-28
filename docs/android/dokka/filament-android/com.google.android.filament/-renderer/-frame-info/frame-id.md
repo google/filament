@@ -4,5 +4,3 @@
 
 [main]\
 open var [frameId](frame-id.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
-
-Monotonically increasing frame identifier.

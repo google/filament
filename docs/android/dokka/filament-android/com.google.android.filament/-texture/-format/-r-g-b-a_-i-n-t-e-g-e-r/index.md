@@ -4,3 +4,5 @@
 
 [main]\
 [RGBA_INTEGER](index.md)
+
+Four Red, Green, Blue and Alpha channels, integer

@@ -3,6 +3,15 @@
 # initialize
 
 [main]\
+open fun [initialize](initialize.md)(): [SkinningBuffer.Builder](index.md)
+
+The new buffer is created with identity bones
+
+#### Return
+
+A reference to this Builder for chaining calls.
+
+[main]\
 open fun [initialize](initialize.md)(initialize: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [SkinningBuffer.Builder](index.md)
 
 The new buffer is created with identity bones

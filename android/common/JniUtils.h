@@ -17,11 +17,106 @@
 #ifndef TNT_ANDROID_COMMON_JNIUTILS_H
 #define TNT_ANDROID_COMMON_JNIUTILS_H
 
+#include <filament/TextureSampler.h>
+
+#include <utils/algorithm.h>
+#include <utils/compiler.h>
+#include <utils/Panic.h>
+
 #include <jni.h>
+
+#include <cstring>
 #include <exception>
 #include <type_traits>
-#include <utils/Panic.h>
-#include <utils/compiler.h>
+
+namespace filament::JniUtils {
+
+inline jint to_int(TextureSampler const& sampler) noexcept {
+    return jint(utils::bit_cast<uint32_t>(sampler.getSamplerParams()));
+}
+
+inline TextureSampler from_int(jint params) noexcept {
+    return TextureSampler{
+            utils::bit_cast<backend::SamplerParams>(
+                    static_cast<uint32_t>(params))};
+}
+
+inline jlong to_long(TextureSampler const& sampler) noexcept {
+    return jlong(to_int(sampler));
+}
+
+inline TextureSampler from_long(jlong params) noexcept {
+    return from_int(static_cast<jint>(params));
+}
+
+template<typename T>
+inline jshort to_short(T const& value) noexcept {
+    static_assert(sizeof(T) <= sizeof(uint16_t));
+    static_assert(std::is_trivially_copyable_v<T>);
+    uint16_t bits = 0;
+    std::memcpy(&bits, &value, sizeof(T));
+    return static_cast<jshort>(bits);
+}
+
+template<typename T>
+inline T from_short(jshort bits) noexcept {
+    static_assert(sizeof(T) <= sizeof(uint16_t));
+    static_assert(std::is_trivially_copyable_v<T>);
+    T value{};
+    auto ubits = static_cast<uint16_t>(bits);
+    std::memcpy(&value, &ubits, sizeof(T));
+    return value;
+}
+
+template<typename T>
+inline jint to_int(T const& value) noexcept {
+    static_assert(sizeof(T) <= sizeof(uint32_t));
+    static_assert(std::is_trivially_copyable_v<T>);
+    uint32_t bits = 0;
+    std::memcpy(&bits, &value, sizeof(T));
+    return static_cast<jint>(bits);
+}
+
+template<typename T>
+inline T from_int(jint bits) noexcept {
+    static_assert(sizeof(T) <= sizeof(uint32_t));
+    static_assert(std::is_trivially_copyable_v<T>);
+    T value{};
+    auto ubits = static_cast<uint32_t>(bits);
+    std::memcpy(&value, &ubits, sizeof(T));
+    return value;
+}
+
+template<>
+inline TextureSampler from_int<TextureSampler>(jint params) noexcept {
+    return from_int(params);
+}
+
+template<typename T>
+inline jlong to_long(T const& value) noexcept {
+    static_assert(sizeof(T) <= sizeof(uint64_t));
+    static_assert(std::is_trivially_copyable_v<T>);
+    uint64_t bits = 0;
+    std::memcpy(&bits, &value, sizeof(T));
+    return static_cast<jlong>(bits);
+}
+
+template<typename T>
+inline T from_long(jlong bits) noexcept {
+    static_assert(sizeof(T) <= sizeof(uint64_t));
+    static_assert(std::is_trivially_copyable_v<T>);
+    T value{};
+    auto ubits = static_cast<uint64_t>(bits);
+    std::memcpy(&value, &ubits, sizeof(T));
+    return value;
+}
+
+template<>
+inline TextureSampler from_long<TextureSampler>(jlong params) noexcept {
+    return from_long(params);
+}
+
+} // namespace filament::JniUtils
 
 namespace filament {
 namespace android {

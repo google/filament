@@ -109,15 +109,28 @@ public:
     }
 
     /**
+     * A key/value pair moved out of the cache by pop().
+     */
+    struct Item {
+        Key key;
+        T value;
+    };
+
+    /**
      * Moves the value out of the cache, if it exists.
      *
      * Because this moves the actual value, any previous references to this object returned by a
      * call to get() or put() is invalidated by this call.
      *
+     * The returned key is the one that was stored in the cache, which is not necessarily equal to
+     * the lookup key: a key may hold pointers or references into its associated value, in which case
+     * only the stored key points into the value being returned. Callers re-inserting the value into
+     * another container MUST use the returned key rather than their lookup key.
+     *
      * @param key The key to look up.
      * @param hash The precomputed hash of the key.
      */
-    std::optional<T> pop(Key const& key, size_t hash) {
+    std::optional<Item> pop(Key const& key, size_t hash) {
         auto it = mMap.find(key, hash);
         if (UTILS_UNLIKELY(it == mMap.end())) {
             return std::nullopt;
@@ -144,13 +157,13 @@ public:
             node->next->prev = node->prev;
         }
 
-        T r = std::move(node->value);
         mMap.erase(it);
+        Item item{ std::move(node->key), std::move(node->value) };
         mArena.destroy(node);
-        return r;
+        return item;
     }
 
-    inline std::optional<T> pop(Key const& key) {
+    inline std::optional<Item> pop(Key const& key) {
         return pop(key, Hash{}(key));
     }
 

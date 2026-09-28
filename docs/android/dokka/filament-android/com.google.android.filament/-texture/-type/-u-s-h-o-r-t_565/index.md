@@ -5,4 +5,4 @@
 [main]\
 [USHORT_565](index.md)
 
-unsigned 5/6 bit integers packed in a 16-bit short.
+unsigned int (16-bit), encodes 3 RGB channels

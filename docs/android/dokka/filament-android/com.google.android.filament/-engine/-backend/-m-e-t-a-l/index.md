@@ -5,4 +5,4 @@
 [main]\
 [METAL](index.md)
 
-Selects the Metal driver if the platform supports it.
+Selects the Metal driver if the platform supports it (default on MacOS/iOS).

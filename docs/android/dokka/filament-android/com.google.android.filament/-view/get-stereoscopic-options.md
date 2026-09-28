@@ -5,14 +5,8 @@
 [main]\
 open fun [getStereoscopicOptions](get-stereoscopic-options.md)(): [View.StereoscopicOptions](-stereoscopic-options/index.md)
 
-Gets the stereoscopic options.
+Returns the stereoscopic options associated with this View.
 
 #### Return
 
-options Stereoscopic options currently set.
-
-#### See also
-
-| |
-|---|
-| [setStereoscopicOptions](set-stereoscopic-options.md) |
+value set by setStereoscopicOptions().

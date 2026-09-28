@@ -5,8 +5,8 @@
 [main]\
 open fun [external](external.md)(): [Texture.Builder](index.md)
 
-Creates an external texture. The content must be set using setExternalImage(). The sampler can be SAMPLER_EXTERNAL or SAMPLER_2D depending on the format. Generally YUV formats must use SAMPLER_EXTERNAL. This depends on the backend features and is not validated.
+Creates an external texture. 
 
-#### Return
+The content must be set using setExternalImage(). The sampler can be SAMPLER_EXTERNAL or SAMPLER_2D depending on the format. Generally YUV formats must use SAMPLER_EXTERNAL. This depends on the backend features and is not validated.
 
-This Builder, for chaining calls.
+If the Sampler is set to SAMPLER_EXTERNAL, external() is implied.

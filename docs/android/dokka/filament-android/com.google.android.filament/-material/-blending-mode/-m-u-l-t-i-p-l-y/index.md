@@ -5,4 +5,4 @@
 [main]\
 [MULTIPLY](index.md)
 
-Material darkens what's behind it.
+material darkens what's behind it

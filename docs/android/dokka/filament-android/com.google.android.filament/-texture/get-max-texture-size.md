@@ -7,13 +7,4 @@ open fun [getMaxTextureSize](get-max-texture-size.md)(engine: [Engine](../-engin
 
 #### Return
 
-The maximum size in texels of a texture of type \p type. At least 2048 for 2D textures, 256 for 3D textures
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| engine | [Engine](../-engine/index.md) |
-| type | Texture sampler type |
+the maximum size in texels of a texture of type `type`. At least 2048 for 2D textures, 256 for 3D textures.

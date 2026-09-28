@@ -5,7 +5,11 @@
 [main]\
 open fun [setGridSize](set-grid-size.md)(size: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html))
 
-Sets the grid size for grid-based world origin snapping.
+Sets the grid size for grid-based world origin snapping. 
+
+The world origin used for rendering will snap to a grid of this size. This avoids recomputing all transforms every frame when the camera moves within a grid cell.
+
+Hysteresis is applied automatically to avoid rapid snapping near edges.
 
 #### Parameters
 

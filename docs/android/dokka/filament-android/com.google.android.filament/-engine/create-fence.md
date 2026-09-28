@@ -5,14 +5,8 @@
 [main]\
 open fun [createFence](create-fence.md)(): [Fence](../-fence/index.md)
 
-Creates a [Fence](../-fence/index.md).
+Creates a Fence.
 
 #### Return
 
-a newly created [Fence](../-fence/index.md)
-
-#### Throws
-
-| | |
-|---|---|
-| [IllegalStateException](https://developer.android.com/reference/kotlin/java/lang/IllegalStateException.html) | can be thrown if the [Fence](../-fence/index.md) couldn't be created |
+A pointer to the newly created Fence.

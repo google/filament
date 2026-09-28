@@ -9,12 +9,10 @@ Returns the shift amount used to translate the projection matrix.
 
 #### Return
 
-A 2-double array containing the x and y shift.
+the 2D translation x and y offsets applied after the projection matrix.
 
-#### Parameters
+#### See also
 
-main
-
-| | |
-|---|---|
-| out | A 2-double array where the shift will be stored, or null. |
+| |
+|---|
+| setShift |

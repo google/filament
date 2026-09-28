@@ -5,20 +5,24 @@
 [main]\
 open fun [createInstance](create-instance.md)(): [MaterialInstance](../-material-instance/index.md)
 
-Creates a new instance of this material. Material instances should be freed using [destroyMaterialInstance](../-engine/destroy-material-instance.md).
+Creates a new instance of this material. 
+
+Material instances should be freed using Engine::destroy(const MaterialInstance*).
 
 #### Return
 
-the new instance
+A pointer to the new instance.
 
 [main]\
 open fun [createInstance](create-instance.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html)): [MaterialInstance](../-material-instance/index.md)
 
-Creates a new instance of this material with a specified name. Material instances should be freed using [destroyMaterialInstance](../-engine/destroy-material-instance.md).
+Creates a new instance of this material. 
+
+Material instances should be freed using Engine::destroy(const MaterialInstance*).
 
 #### Return
 
-the new instance
+A pointer to the new instance.
 
 #### Parameters
 
@@ -26,4 +30,4 @@ main
 
 | | |
 |---|---|
-| name | arbitrary label to associate with the given material instance |
+| name | Optional name to associate with the given material instance. If this is null, then the instance inherits the material's name. |

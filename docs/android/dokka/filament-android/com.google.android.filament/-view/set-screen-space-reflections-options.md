@@ -5,7 +5,9 @@
 [main]\
 open fun [setScreenSpaceReflectionsOptions](set-screen-space-reflections-options.md)(options: [View.ScreenSpaceReflectionsOptions](-screen-space-reflections-options/index.md))
 
-Enables or disable screen-space reflections. Disabled by default.
+Enables or disable screen-space reflections. 
+
+Disabled by default.
 
 #### Parameters
 

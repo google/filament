@@ -5,7 +5,7 @@
 [main]\
 open fun [destroyCameraComponent](destroy-camera-component.md)(entity: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-Destroys the [Camera](../-camera/index.md) component associated with the given entity.
+Destroys the Camera component associated with the given entity.
 
 #### Parameters
 
@@ -13,4 +13,4 @@ main
 
 | | |
 |---|---|
-| entity | an entity |
+| entity | An entity. |

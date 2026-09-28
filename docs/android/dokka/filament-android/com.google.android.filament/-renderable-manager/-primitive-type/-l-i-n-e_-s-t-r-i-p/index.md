@@ -4,3 +4,5 @@
 
 [main]\
 [LINE_STRIP](index.md)
+
+line strip

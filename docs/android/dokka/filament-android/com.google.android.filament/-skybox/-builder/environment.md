@@ -7,9 +7,9 @@ open fun [environment](environment.md)(cubemap: [Texture](../../-texture/index.m
 
 Set the environment map (i.e. the skybox content). 
 
-The `Skybox` is rendered as though it were an infinitely large cube with the camera inside it. This means that the cubemap which is mapped onto the cube's exterior will appear mirrored. This follows the OpenGL conventions.
+The Skybox is rendered as though it were an infinitely large cube with the camera inside it. This means that the cubemap which is mapped onto the cube's exterior will appear mirrored. This follows the OpenGL conventions.
 
-The `cmgen` tool generates reflection maps by default which are therefore ideal to use as skyboxes.
+The cmgen tool generates reflection maps by default which are therefore ideal to use as skyboxes.
 
 #### Return
 
@@ -21,7 +21,7 @@ main
 
 | | |
 |---|---|
-| cubemap | A cubemap [Texture](../../-texture/index.md) |
+| cubemap | This Texture must be a cube map. |
 
 #### See also
 

@@ -5,4 +5,4 @@
 [main]\
 [WEBGPU](index.md)
 
-Select the WebGPU driver if platform supports it.
+Selects the Webgpu driver if the platform supports webgpu.

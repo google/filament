@@ -9,4 +9,4 @@ Returns the vertex count.
 
 #### Return
 
-number of vertices in this vertex buffer set
+Number of vertices in this vertex buffer set.

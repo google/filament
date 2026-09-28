@@ -7,4 +7,4 @@ open fun [getRenderableManager](get-renderable-manager.md)(): [RenderableManager
 
 #### Return
 
-the [RenderableManager](../-renderable-manager/index.md) used by this [Engine](index.md)
+RenderableManager reference

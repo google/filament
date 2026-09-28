@@ -5,4 +5,4 @@
 [main]\
 [SAMPLER_EXTERNAL](index.md)
 
-External texture sampler
+External texture

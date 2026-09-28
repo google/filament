@@ -4,3 +4,5 @@
 
 [main]\
 [FRONT](index.md)
+
+Update stencil state for front-facing polygons.

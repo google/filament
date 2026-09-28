@@ -4,3 +4,5 @@
 
 [main]\
 [FRONT_AND_BACK](index.md)
+
+Update stencil state for all polygons.
