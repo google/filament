@@ -625,6 +625,7 @@ public:
 
 private:
     explicit FEngine(Builder const& builder);
+    FEngine(Builder const& builder, Config const& validatedConfig);
     void init();
     void shutdown();
 

@@ -281,7 +281,11 @@ static constexpr float4 sFullScreenTriangleVertices[3] = {
 // these must be static because only a pointer is copied to the render stream
 static constexpr uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
 
-FEngine::FEngine(Builder const& builder) :
+FEngine::FEngine(Builder const& builder)
+        : FEngine(builder, builder->validateConfig(builder->mConfig)) {
+}
+
+FEngine::FEngine(Builder const& builder, Config const& validatedConfig) :
         mBackend(builder->mBackend),
         mActiveFeatureLevel(builder->mFeatureLevel),
         mPlatform(builder->mPlatform),
@@ -292,20 +296,20 @@ FEngine::FEngine(Builder const& builder) :
         mTransformManager(mEntityManager),
         mLightManager(*this),
         mCameraManager(*this),
-        mMaterialCache(builder->mConfig.materialCacheCapacity, builder->mConfig.programCacheCapacity),
+        mMaterialCache(validatedConfig.materialCacheCapacity, validatedConfig.programCacheCapacity),
         mCommandBufferQueue(
-                builder->mConfig.minCommandBufferSizeMB * MiB,
-                builder->mConfig.commandBufferSizeMB * MiB,
+                validatedConfig.minCommandBufferSizeMB * MiB,
+                validatedConfig.commandBufferSizeMB * MiB,
                 builder->mPaused),
         mPerRenderPassArena(
                 "FEngine::mPerRenderPassAllocator",
-                builder->mConfig.perRenderPassArenaSizeMB * MiB + FRenderer::FRAMEGRAPH_ARENA_SIZE),
+                validatedConfig.perRenderPassArenaSizeMB * MiB + FRenderer::FRAMEGRAPH_ARENA_SIZE),
         mHeapAllocator("FEngine::mHeapAllocator", AreaPolicy::NullArea{}),
-        mJobSystem(getJobSystemThreadPoolSize(builder->mConfig)),
+        mJobSystem(getJobSystemThreadPoolSize(validatedConfig)),
         mEngineEpoch(std::chrono::steady_clock::now()),
         mDriverBarrier(1),
         mMainThreadId(ThreadUtils::getThreadId()),
-        mConfig(builder->mConfig),
+        mConfig(validatedConfig),
         mColorGradingBuilder(builder->mColorGradingBuilder)
 {
     // update all the features flags specified in the builder
@@ -1923,7 +1927,6 @@ void Engine::Builder::build(Invocable<void(void*)>&& callback) const {
 #endif
 
 Engine* Engine::Builder::build() const {
-    mImpl->mConfig = BuilderDetails::validateConfig(mImpl->mConfig);
     return FEngine::create(*this);
 }
 

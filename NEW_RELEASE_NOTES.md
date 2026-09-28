@@ -6,3 +6,5 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+- engine: `Engine::Builder::build()` now also validates the `Engine::Config` when the engine is
+  created asynchronously
