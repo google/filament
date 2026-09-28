@@ -422,3 +422,65 @@ jobs:
           bash test/backend/test.sh
       - uses: ./.github/actions/ccache-stats
         if: ${{ !cancelled() }}
+
+  # The Metal half of the backend suite. Separated because Metal only exists on macOS, and the two
+  # share no build. No GPU-enabled one is needed. The hosted macOS runners expose an "Apple
+  # Paravirtual device" through Apple's Virtualization framework.
+  test-backend-metal:
+    name: test-backend-metal
+    runs-on: 'macos-15'
+    timeout-minutes: 60
+    needs: [check-verification]
+    if: always() && !cancelled() && !needs.check-verification.outputs.skip
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/mac-prereq
+      # Deliberately no xcode-select here. The writer of this cache, postsubmit build-mac, uses the
+      # image's default Xcode, and CCACHE_COMPILERCHECK hashes the compiler binary, so selecting a
+      # different one would miss on every object.
+      - uses: ./.github/actions/ccache
+        with:
+          config: desktop
+      - name: Run Metal backend tests
+        shell: bash
+        run: |
+          bash test/backend/test.sh --backend=metal
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
+
+  # A single gate over the backend suites, so that branch protection can require one check rather
+  # than one per backend. The results are inspected explicitly because a job that declares `needs`
+  # is skipped when a dependency fails, and GitHub reports a skipped required check as a successful
+  # one. A skipped dependency is accepted because that is how the verified-commit convention
+  # documented above disables presubmit for a push to main.
+  test-backend-all:
+    name: test-backend-all
+    runs-on: 'ubuntu-24.04'
+    needs: [test-backend, test-backend-metal]
+    if: always() && !cancelled()
+    steps:
+      - name: Check the backend job results
+        shell: bash
+        # Read through the environment rather than interpolating into the script body, so that the
+        # values cannot be parsed as shell.
+        env:
+          TEST_BACKEND: ${{ needs.test-backend.result }}
+          TEST_BACKEND_METAL: ${{ needs.test-backend-metal.result }}
+        run: |
+          echo "test-backend:       ${TEST_BACKEND}"
+          echo "test-backend-metal: ${TEST_BACKEND_METAL}"
+          FAILED=0
+          for RESULT in "${TEST_BACKEND}" "${TEST_BACKEND_METAL}"; do
+            case "${RESULT}" in
+              success|skipped) ;;
+              *) FAILED=1 ;;
+            esac
+          done
+          if [ "${FAILED}" -ne 0 ]; then
+            echo "::error::A backend job did not pass. See the per-job results above, and the job" \
+                 "itself for the failure."
+            exit 1
+          fi

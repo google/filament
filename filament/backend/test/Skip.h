@@ -66,15 +66,25 @@ do {                                                                            
 
 namespace test {
 
+// Tag for a requirement on the swap chain the runner can supply, rather than on the platform. A
+// headless run has no native view and therefore no drawable to present, so a test that depends on
+// presentation cannot pass there on any backend or operating system. Spelled as a tag type so that
+// it reads as SKIP_IF(Headless(), ...) and cannot be confused with the other bool-valued
+// attributes below.
+struct Headless {};
+
 struct SkipEnvironment {
     SkipEnvironment(const SkipEnvironment&) = default;
     explicit SkipEnvironment(test::Backend backend);
     explicit SkipEnvironment(test::OperatingSystem os);
+    explicit SkipEnvironment(Headless);
+    SkipEnvironment(Headless, test::Backend backend);
     SkipEnvironment(test::OperatingSystem os, test::Backend backend);
 
     std::optional<test::Backend> backend;
     std::optional<test::OperatingSystem> os;
     std::optional<bool> isMobile;
+    std::optional<bool> headless;
 
     bool matches();
     // Describes the current state of either matching or mismatching.

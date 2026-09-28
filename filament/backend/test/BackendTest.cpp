@@ -118,6 +118,10 @@ void BackendTest::flushAndWait() {
     getDriver().purge();
 }
 
+bool BackendTest::isHeadless() {
+    return getNativeView().ptr == nullptr;
+}
+
 Handle<HwSwapChain> BackendTest::createSwapChain(uint64_t flags) {
     const NativeView& view = getNativeView();
     if (!view.ptr) {

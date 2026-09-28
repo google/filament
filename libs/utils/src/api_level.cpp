@@ -20,7 +20,10 @@
 #include <utils/api_level.h>
 
 #ifdef __ANDROID__
+#include <cstdlib>
+#include <cstdint>
 #include <mutex>
+
 #include <sys/system_properties.h>
 #endif
 
@@ -35,7 +38,7 @@ int api_level() {
     std::call_once(sApiLevelOnceFlag, []() {
         char sdkVersion[PROP_VALUE_MAX];
         __system_property_get("ro.build.version.sdk", sdkVersion);
-        sApiLevel = atoi(sdkVersion);
+        sApiLevel = std::atoi(sdkVersion);
     });
     return sApiLevel;
 }
