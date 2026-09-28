@@ -78,7 +78,6 @@ struct Texture::BuilderDetails {
     Sampler mTarget = Sampler::SAMPLER_2D;
     InternalFormat mFormat = InternalFormat::RGBA8;
     Usage mUsage = Usage::NONE;
-    bool mHasBlitSrc = false;
     bool mTextureIsSwizzled = false;
     bool mExternal = false;
     bool mAsynchronous = false;
@@ -88,6 +87,73 @@ struct Texture::BuilderDetails {
     CallbackHandler* mAsyncCreationHandler = nullptr;
     Texture::AsyncCompletionCallback mAsyncCreationCallback;
     void* mAsyncCreationUserData = nullptr;
+
+    struct ResolvedParams {
+        Usage usage;
+        uint8_t levels;
+        bool external;
+        bool hasBlitSrc;
+    };
+
+    ResolvedParams resolve(FEngine& engine) const noexcept {
+        // SAMPLER_EXTERNAL implies external textures.
+        bool const external =
+                mExternal || (mTarget == SamplerType::SAMPLER_EXTERNAL);
+
+        uint8_t maxLevelCount = 1;
+        switch (mTarget) {
+            case SamplerType::SAMPLER_2D:
+            case SamplerType::SAMPLER_2D_ARRAY:
+            case SamplerType::SAMPLER_CUBEMAP:
+            case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+                maxLevelCount = FTexture::maxLevelCount(mWidth, mHeight);
+                break;
+            case SamplerType::SAMPLER_3D:
+                maxLevelCount = FTexture::maxLevelCount(std::max(
+                        { mWidth, mHeight, mDepth }));
+                break;
+            case SamplerType::SAMPLER_EXTERNAL:
+                // external samplers can't mipmap
+                maxLevelCount = 1;
+                break;
+        }
+        uint8_t const levels = std::min(mLevels, maxLevelCount);
+
+        Usage usage = mUsage;
+        if (usage == TextureUsage::NONE) {
+            usage = external ? TextureUsage::SAMPLEABLE : TextureUsage::DEFAULT;
+        }
+
+        auto const& featureFlags = engine.features.engine.debug;
+
+        bool const formatGenMipmappable =
+                engine.getDriverApi().isTextureFormatMipmappable(mFormat);
+        // TODO: This exists for backwards compatibility, but should remove when safe.
+        if (UTILS_UNLIKELY(!featureFlags.assert_texture_can_generate_mipmap &&
+                // Guess whether GEN_MIPMAPPABLE should be added or not based the following criteria.
+                (formatGenMipmappable &&
+                        levels > 1 &&
+                        (mWidth > 1 || mHeight > 1) &&
+                        !external))) {
+            usage |= TextureUsage::GEN_MIPMAPPABLE;
+        }
+
+        // TODO: remove in a future filament release.
+        // Clients might not have known that textures that are read need to have BLIT_SRC as usages.
+        // For now, we workaround the issue by making sure any color attachment can be the source of
+        // a copy for readPixels().
+        bool const hasBlitSrc = any(usage & TextureUsage::BLIT_SRC);
+        if (UTILS_UNLIKELY(!hasBlitSrc && any(usage & TextureUsage::COLOR_ATTACHMENT))) {
+            usage |= TextureUsage::BLIT_SRC;
+        }
+
+        return {
+            .usage = usage,
+            .levels = levels,
+            .external = external,
+            .hasBlitSrc = hasBlitSrc,
+        };
+    }
 };
 
 using BuilderType = Texture;
@@ -179,7 +245,7 @@ Texture::Builder& Texture::Builder::async(
     return *this;
 }
 
-Texture* Texture::Builder::build(Engine& engine) {
+Texture* Texture::Builder::build(Engine& engine) const {
     if (mImpl->mTarget != SamplerType::SAMPLER_EXTERNAL) {
         FILAMENT_CHECK_PRECONDITION(Texture::isTextureFormatSupported(engine, mImpl->mFormat))
                 << "Texture format " << uint16_t(mImpl->mFormat)
@@ -239,65 +305,12 @@ Texture* Texture::Builder::build(Engine& engine) {
             << "SamplerType " << uint8_t(mImpl->mTarget) << " not support at feature level "
             << uint8_t(engine.getActiveFeatureLevel());
 
-    // SAMPLER_EXTERNAL implies external textures.
-    if (mImpl->mTarget == SamplerType::SAMPLER_EXTERNAL) {
-        mImpl->mExternal = true;
-    }
+    auto const resolved = mImpl->resolve(downcast(engine));
 
-    uint8_t maxLevelCount;
-    switch (mImpl->mTarget) {
-        case SamplerType::SAMPLER_2D:
-        case SamplerType::SAMPLER_2D_ARRAY:
-        case SamplerType::SAMPLER_CUBEMAP:
-        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
-            maxLevelCount = FTexture::maxLevelCount(mImpl->mWidth, mImpl->mHeight);
-            break;
-        case SamplerType::SAMPLER_3D:
-            maxLevelCount = FTexture::maxLevelCount(std::max(
-                    { mImpl->mWidth, mImpl->mHeight, mImpl->mDepth }));
-            break;
-        case SamplerType::SAMPLER_EXTERNAL:
-            // external samplers can't mipmap
-            maxLevelCount = 1;
-            break;
-    }
-    mImpl->mLevels = std::min(mImpl->mLevels, maxLevelCount);
-
-    if (mImpl->mUsage == TextureUsage::NONE) {
-        mImpl->mUsage = TextureUsage::DEFAULT;
-        if (mImpl->mExternal) {
-            // external textures can't be uploadable
-            mImpl->mUsage = TextureUsage::SAMPLEABLE;
-        }
-    }
-
-    auto const& featureFlags = downcast(engine).features.engine.debug;
-
-    bool const formatGenMipmappable =
-            downcast(engine).getDriverApi().isTextureFormatMipmappable(mImpl->mFormat);
-    // TODO: This exists for backwards compatibility, but should remove when safe.
-    if (!featureFlags.assert_texture_can_generate_mipmap &&
-            // Guess whether GEN_MIPMAPPABLE should be added or not based the following criteria.
-            (formatGenMipmappable &&
-                    mImpl->mLevels > 1 &&
-                    (mImpl->mWidth > 1 || mImpl->mHeight > 1) &&
-                    !mImpl->mExternal)) {
-        mImpl->mUsage |= TextureUsage::GEN_MIPMAPPABLE;
-    }
-
-    // TODO: remove in a future filament release.
-    // Clients might not have known that textures that are read need to have BLIT_SRC as usages. For
-    // now, we workaround the issue by making sure any color attachment can be the source of a copy
-    // for readPixels().
-    mImpl->mHasBlitSrc = any(mImpl->mUsage & TextureUsage::BLIT_SRC);
-    if (!mImpl->mHasBlitSrc && any(mImpl->mUsage & TextureUsage::COLOR_ATTACHMENT)) {
-        mImpl->mUsage |= TextureUsage::BLIT_SRC;
-    }
-
-    const bool sampleable = bool(mImpl->mUsage & TextureUsage::SAMPLEABLE);
+    const bool sampleable = bool(resolved.usage & TextureUsage::SAMPLEABLE);
     const bool swizzled = mImpl->mTextureIsSwizzled;
     const bool imported = mImpl->mImportedId;
-    const bool external = mImpl->mExternal;
+    const bool external = resolved.external;
     const bool asynchronous = mImpl->mAsynchronous;
 
     #if defined(__EMSCRIPTEN__)
@@ -324,20 +337,22 @@ Texture* Texture::Builder::build(Engine& engine) {
 FTexture::FTexture(FEngine& engine, const Builder& builder)
     : mHasBlitSrc(false),
       mExternal(false) {
+    auto const resolved = builder->resolve(engine);
+
     FEngine::DriverApi& driver = engine.getDriverApi();
     mDriver = &driver; // this is unfortunately needed for getHwHandleForSampling()
     mWidth  = static_cast<uint32_t>(builder->mWidth);
     mHeight = static_cast<uint32_t>(builder->mHeight);
     mDepth  = static_cast<uint32_t>(builder->mDepth);
     mFormat = builder->mFormat;
-    mUsage = builder->mUsage;
+    mUsage = resolved.usage;
     mTarget = builder->mTarget;
-    mLevelCount = builder->mLevels;
+    mLevelCount = resolved.levels;
     mSampleCount = builder->mSamples;
     mSwizzle = builder->mSwizzle;
     mTextureIsSwizzled = builder->mTextureIsSwizzled;
-    mHasBlitSrc = builder->mHasBlitSrc;
-    mExternal = builder->mExternal;
+    mHasBlitSrc = resolved.hasBlitSrc;
+    mExternal = resolved.external;
     mTextureType = backend::getTextureType(mFormat);
 
     bool const isImported = builder->mImportedId != 0;
@@ -811,32 +826,37 @@ void FTexture::updateLodRange(uint8_t const level) noexcept {
     updateLodRange(level, 1);
 }
 
-bool FTexture::isTextureFormatSupported(FEngine& engine, InternalFormat const format) noexcept {
-    return engine.getDriverApi().isTextureFormatSupported(format);
+// The capability queries below don't modify the engine, but the synchronous DriverApi calls
+// aren't const.
+
+bool FTexture::isTextureFormatSupported(FEngine const& engine,
+        InternalFormat const format) noexcept {
+    return const_cast<FEngine&>(engine).getDriverApi().isTextureFormatSupported(format);
 }
 
-bool FTexture::isTextureFormatMipmappable(FEngine& engine, InternalFormat const format) noexcept {
-    return engine.getDriverApi().isTextureFormatMipmappable(format);
+bool FTexture::isTextureFormatMipmappable(FEngine const& engine,
+        InternalFormat const format) noexcept {
+    return const_cast<FEngine&>(engine).getDriverApi().isTextureFormatMipmappable(format);
 }
 
 bool FTexture::isTextureFormatCompressed(InternalFormat const format) noexcept {
     return isCompressedFormat(format);
 }
 
-bool FTexture::isProtectedTexturesSupported(FEngine& engine) noexcept {
-    return engine.getDriverApi().isProtectedTexturesSupported();
+bool FTexture::isProtectedTexturesSupported(FEngine const& engine) noexcept {
+    return const_cast<FEngine&>(engine).getDriverApi().isProtectedTexturesSupported();
 }
 
-bool FTexture::isTextureSwizzleSupported(FEngine& engine) noexcept {
-    return engine.getDriverApi().isTextureSwizzleSupported();
+bool FTexture::isTextureSwizzleSupported(FEngine const& engine) noexcept {
+    return const_cast<FEngine&>(engine).getDriverApi().isTextureSwizzleSupported();
 }
 
-size_t FTexture::getMaxTextureSize(FEngine& engine, Sampler type) noexcept {
-    return engine.getDriverApi().getMaxTextureSize(type);
+size_t FTexture::getMaxTextureSize(FEngine const& engine, Sampler type) noexcept {
+    return const_cast<FEngine&>(engine).getDriverApi().getMaxTextureSize(type);
 }
 
-size_t FTexture::getMaxArrayTextureLayers(FEngine& engine) noexcept {
-    return engine.getDriverApi().getMaxArrayTextureLayers();
+size_t FTexture::getMaxArrayTextureLayers(FEngine const& engine) noexcept {
+    return const_cast<FEngine&>(engine).getDriverApi().getMaxArrayTextureLayers();
 }
 
 size_t FTexture::computeTextureDataSize(Format const format, Type const type,

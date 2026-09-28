@@ -771,7 +771,7 @@ public:
          *            memory or other resources.
          * @exception utils::PreConditionPanic if a parameter to a builder function was invalid.
          */
-        Result build(Engine& engine, utils::Entity entity);
+        Result build(Engine& engine, utils::Entity entity) const;
 
     private:
         friend class FEngine;

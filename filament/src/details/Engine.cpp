@@ -1186,6 +1186,11 @@ FCamera* FEngine::getCameraComponent(Entity const entity) noexcept {
     return ci ? mCameraManager.getCamera(ci) : nullptr;
 }
 
+FCamera const* FEngine::getCameraComponent(Entity const entity) const noexcept {
+    auto const ci = mCameraManager.getInstance(entity);
+    return ci ? mCameraManager.getCamera(ci) : nullptr;
+}
+
 void FEngine::destroyCameraComponent(Entity const entity) noexcept {
     mCameraManager.destroy(entity, *this);
 }

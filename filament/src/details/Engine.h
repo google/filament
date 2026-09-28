@@ -280,7 +280,11 @@ public:
         return mTransformManager;
     }
 
-    utils::EntityManager& getEntityManager() noexcept {
+    FTransformManager const& getTransformManager() const noexcept {
+        return mTransformManager;
+    }
+
+    utils::EntityManager& getEntityManager() const noexcept {
         return mEntityManager;
     }
 
@@ -388,6 +392,7 @@ public:
 
     FCamera* createCamera(utils::Entity entity) noexcept;
     FCamera* getCameraComponent(utils::Entity entity) noexcept;
+    FCamera const* getCameraComponent(utils::Entity entity) const noexcept;
     void destroyCameraComponent(utils::Entity entity) noexcept;
 
 
@@ -501,6 +506,10 @@ public:
     }
 
     FDebugRegistry& getDebugRegistry() noexcept {
+        return mDebugRegistry;
+    }
+
+    FDebugRegistry const& getDebugRegistry() const noexcept {
         return mDebugRegistry;
     }
 

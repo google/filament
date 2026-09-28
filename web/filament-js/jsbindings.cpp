@@ -623,7 +623,9 @@ class_<Engine>("Engine")
             allow_raw_pointers())
     /// getCameraComponent ::method::
     /// ::retval:: an instance of [Camera]
-    .function("getCameraComponent", &Engine::getCameraComponent, allow_raw_pointers())
+    .function("getCameraComponent",
+            select_overload<Camera*(utils::Entity entity)>(&Engine::getCameraComponent),
+            allow_raw_pointers())
     /// destroyCameraComponent ::method::
     /// camera ::argument:: an [Entity] with a camera component
     .function("destroyCameraComponent", (void (*)(Engine*, utils::Entity)) []
