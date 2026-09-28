@@ -123,6 +123,10 @@ set(FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB "8" CACHE STRING
     "Size of the Metal handle arena, default 8."
 )
 
+set(FILAMENT_VULKAN_HANDLE_ARENA_SIZE_IN_MB "8" CACHE STRING
+    "Size of the Vulkan handle arena, default 8."
+)
+
 set(FILAMENT_BACKEND_DEBUG_FLAG "" CACHE STRING
     "A debug flag meant for enabling/disabling backend debugging paths"
 )
