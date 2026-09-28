@@ -43,6 +43,11 @@ public:
     static int sArgc;
     static char** sArgv;
 
+    // True when the runner gave us no native view, which is what --headless_only does. Derived
+    // from the view rather than stored, so that it cannot disagree with what createSwapChain()
+    // below actually produces.
+    static bool isHeadless();
+
     // Takes the name of the image that wasn't correct, without the .png suffix
     static void markImageAsFailure(std::string failedImageName);
 

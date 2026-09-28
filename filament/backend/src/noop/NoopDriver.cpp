@@ -87,6 +87,10 @@ void NoopDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
 
 }
 
+bool NoopDriver::isPresentationTimeSupported() {
+    return false;
+}
+
 void NoopDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 }
 

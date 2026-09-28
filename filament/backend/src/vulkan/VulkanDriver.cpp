@@ -525,6 +525,10 @@ void VulkanDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
         CallbackHandler* handler, utils::Invocable<void(void)>&& callback) {
 }
 
+bool VulkanDriver::isPresentationTimeSupported() {
+    return mPlatform->isPresentationTimeSupported();
+}
+
 void VulkanDriver::setPresentationTime(int64_t monotonic_clock_ns) {
     mPlatform->setPresentationTime(monotonic_clock_ns);
 }
