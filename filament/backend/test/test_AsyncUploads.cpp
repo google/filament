@@ -23,8 +23,10 @@
 
 #include <backend/PixelBufferDescriptor.h>
 
+#include <atomic>
 #include <chrono>
 #include <thread>
+#include <vector>
 
 namespace test {
 
@@ -320,6 +322,139 @@ TEST_F(BackendTest, CanceledSetVertexBufferObjectAsyncInvokesCallback) {
     EXPECT_EQ(AsyncCallStatus::CANCELED, result.status)
             << "a canceled call must report that it was canceled, not that it completed";
     EXPECT_FALSE(api.cancelAsyncJob(id));
+}
+
+// FVertexBuffer calls setVertexBufferObjectAsync right after createBufferObjectAsync without
+// waiting for the creation callback, and the draw still has to see the buffer.
+TEST_F(BackendTest, SetVertexBufferObjectAsyncBeforeBufferObjectCreated) {
+    SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
+    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
+
+    constexpr size_t kRenderTargetSize = 64;
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+
+    auto waitFor = [&](const bool& flag) {
+        int attempts = 0;
+        while (!flag && attempts < 1000) {
+            api.finish();
+            executeCommands();
+            getDriver().purge();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            attempts++;
+        }
+        EXPECT_TRUE(flag);
+    };
+
+    AsyncState state;
+
+    // Keeps the worker busy so the creation job below is still queued when the backend runs
+    // setVertexBufferObjectAsync. AMORTIZATION mode always runs in this order, and
+    // THREAD_PREFERRED would race without it.
+    std::atomic_bool releaseWorker = false;
+    api.queueCommandAsync(
+            [&releaseWorker]() {
+                for (int i = 0; i < 1000 && !releaseWorker.load(); i++) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                }
+            },
+            nullptr, signalCallback, &state.commandQueued);
+
+    // Same order as FVertexBuffer's asynchronous build.
+    AttributeArray attributes = { Attribute{ .offset = 0,
+        .stride = sizeof(float2),
+        .buffer = 0,
+        .type = ElementType::FLOAT2,
+        .flags = 0 } };
+    VertexBufferInfoHandle vbih = addCleanup(api.createVertexBufferInfo(1, 1, attributes));
+    VertexBufferHandle vbh = addCleanup(api.createVertexBufferAsync(3, vbih, nullptr,
+            signalCallback, &state.vertexBufferCreated));
+    BufferObjectHandle boh =
+            addCleanup(api.createBufferObjectAsync(sizeof(float2) * 3, BufferObjectBinding::VERTEX,
+                    BufferUsage::STATIC, nullptr, signalCallback, &state.bufferObjectCreated));
+    api.setVertexBufferObjectAsync(vbh, 0, boh, nullptr, signalCallback, &state.vertexBufferSet);
+
+    // A triangle that covers the whole viewport.
+    float2* vertices = (float2*) malloc(sizeof(float2) * 3);
+    vertices[0] = { -1.0, -1.0 };
+    vertices[1] = { 3.0, -1.0 };
+    vertices[2] = { -1.0, 3.0 };
+    BufferDescriptor vertexData(vertices, sizeof(float2) * 3,
+            [](void* buffer, size_t, void*) { free(buffer); });
+    api.updateBufferObjectAsync(boh, std::move(vertexData), 0, nullptr, signalCallback,
+            &state.bufferObjectUpdated);
+
+    executeCommands();
+    releaseWorker = true;
+
+    waitFor(state.commandQueued);
+    waitFor(state.vertexBufferCreated);
+    waitFor(state.bufferObjectCreated);
+    waitFor(state.vertexBufferSet);
+    waitFor(state.bufferObjectUpdated);
+
+    Shader shader = SharedShaders::makeShader(api, *mCleanup,
+            ShaderRequest{
+                .mVertexType = VertexShaderType::Noop,
+                .mFragmentType = FragmentShaderType::White,
+                .mUniformType = ShaderUniformType::None,
+            });
+
+    TextureHandle texture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, kRenderTargetSize, kRenderTargetSize, 1,
+            TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE));
+    RenderTargetHandle renderTarget = addCleanup(api.createRenderTarget(TargetBufferFlags::COLOR,
+            kRenderTargetSize, kRenderTargetSize, 1, 0, { { texture } }, {}, {}));
+
+    IndexBufferHandle ibh =
+            addCleanup(api.createIndexBuffer(ElementType::UINT, 3, BufferUsage::STATIC));
+    uint32_t* indices = (uint32_t*) malloc(sizeof(uint32_t) * 3);
+    indices[0] = 0;
+    indices[1] = 1;
+    indices[2] = 2;
+    api.updateIndexBuffer(ibh,
+            BufferDescriptor(indices, sizeof(uint32_t) * 3,
+                    [](void* buffer, size_t, void*) { free(buffer); }),
+            0);
+    RenderPrimitiveHandle rph =
+            addCleanup(api.createRenderPrimitive(vbh, ibh, PrimitiveType::TRIANGLES));
+
+    PipelineState ps = getColorWritePipelineState();
+    shader.addProgramToPipelineState(ps);
+    ps.primitiveType = PrimitiveType::TRIANGLES;
+    ps.vertexBufferInfo = vbih;
+
+    RenderPassParams params = getClearColorDepthRenderPass(float4(0, 0, 1, 1));
+    params.viewport.width = kRenderTargetSize;
+    params.viewport.height = kRenderTargetSize;
+
+    std::vector<uint8_t> pixels(kRenderTargetSize * kRenderTargetSize * 4);
+    bool readPixelsDone = false;
+    {
+        RenderFrame frame(api);
+        api.beginRenderPass(renderTarget, params);
+        api.bindPipeline(ps);
+        api.bindRenderPrimitive(rph);
+        api.draw2(0, 3, 1);
+        api.endRenderPass();
+
+        api.readPixels(renderTarget, 0, 0, kRenderTargetSize, kRenderTargetSize,
+                PixelBufferDescriptor(pixels.data(), pixels.size(), PixelDataFormat::RGBA,
+                        PixelDataType::UBYTE,
+                        [](void*, size_t, void* user) { *static_cast<bool*>(user) = true; },
+                        &readPixelsDone));
+        api.commit(swapChain);
+    }
+    waitFor(readPixelsDone);
+
+    // Without the vertex attribute every vertex sits at the origin and nothing is drawn, so the
+    // blue clear color stays.
+    size_t const center = (kRenderTargetSize / 2 * kRenderTargetSize + kRenderTargetSize / 2) * 4;
+    EXPECT_EQ(255, pixels[center + 0]) << "the vertex buffer was drawn without its buffer object";
+    EXPECT_EQ(255, pixels[center + 1]);
+    EXPECT_EQ(255, pixels[center + 2]);
 }
 
 TEST_F(BackendTest, DestroyAfterAsyncUpdatePreservesFifo) {
