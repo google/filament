@@ -8,6 +8,30 @@ endif()
 set(TARGET filamentapp)
 set(PUBLIC_HDR_DIR include)
 
+# MeshAssimp depends on assimp and on filamat, neither of which is available for WASM. The samples
+# that use it are host-only anyway.
+if (WASM)
+    set(FILAMENTAPP_HAS_ASSIMP FALSE)
+else()
+    set(FILAMENTAPP_HAS_ASSIMP TRUE)
+endif()
+
+# SDL and the civetweb-based remote web UI are desktop-only. ImGui, on the other hand, is also
+# needed for WASM: batch (automation) mode is driven from the ImGui callback.
+if (IS_HOST_PLATFORM)
+    set(FILAMENTAPP_HAS_SDL TRUE)
+    set(FILAMENTAPP_HAS_WEB_UI TRUE)
+else()
+    set(FILAMENTAPP_HAS_SDL FALSE)
+    set(FILAMENTAPP_HAS_WEB_UI FALSE)
+endif()
+
+if (IS_HOST_PLATFORM OR WASM)
+    set(FILAMENTAPP_HAS_IMGUI TRUE)
+else()
+    set(FILAMENTAPP_HAS_IMGUI FALSE)
+endif()
+
 set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 set(RESOURCE_DIR  "${GENERATION_ROOT}/generated/resources")
@@ -27,9 +51,9 @@ set(PUBLIC_HDRS
         include/filamentapp/Grid.h
         include/filamentapp/FilamentApp.h
         include/filamentapp/FilamentApp2.h
+        include/filamentapp/HeadlessDisplayManager.h
         include/filamentapp/IBL.h
         include/filamentapp/IcoSphere.h
-        include/filamentapp/MeshAssimp.h
         include/filamentapp/NativeWindowHelper.h
         include/filamentapp/Sphere.h
 )
@@ -41,9 +65,9 @@ set(SRCS
         src/Grid.cpp
         src/FilamentApp.cpp
         src/FilamentApp2.cpp
+        src/display_managers/HeadlessDisplayManager.cpp
         src/IBL.cpp
         src/IcoSphere.cpp
-        src/MeshAssimp.cpp
         src/Sphere.cpp
         src/PlatformHelper.cpp
         src/PlatformHelper.h
@@ -52,6 +76,15 @@ set(SRCS
         src/FilamentAppGui.h
         src/FilamentAppGui.cpp
 )
+
+if (FILAMENTAPP_HAS_ASSIMP)
+    list(APPEND PUBLIC_HDRS
+            include/filamentapp/MeshAssimp.h
+    )
+    list(APPEND SRCS
+            src/MeshAssimp.cpp
+    )
+endif()
 
 if (IS_HOST_PLATFORM)
     list(APPEND PUBLIC_HDRS
@@ -64,6 +97,15 @@ if (IS_HOST_PLATFORM)
     )
 endif()
 
+if (WASM)
+    list(APPEND PUBLIC_HDRS
+            include/filamentapp/EmscriptenDisplayManager.h
+    )
+    list(APPEND SRCS
+            src/display_managers/EmscriptenDisplayManager.cpp
+    )
+endif()
+
 if (FILAMENT_SUPPORTS_VULKAN)
     list(APPEND SRCS
             src/backend_platforms/VulkanPlatformHelperCommon.h
@@ -72,9 +114,7 @@ if (FILAMENT_SUPPORTS_VULKAN)
 endif()
 
 set(LIBS
-        assimp
         camutils
-        filamat
         filament
         filament-iblprefilter
         geometry
@@ -86,11 +126,24 @@ set(LIBS
         utils
 )
 
+if (FILAMENTAPP_HAS_ASSIMP)
+    # filamat is only needed by MeshAssimp, which builds materials at runtime.
+    list(APPEND LIBS
+        assimp
+        filamat
+    )
+endif()
+
+if (FILAMENTAPP_HAS_IMGUI)
+    list(APPEND LIBS
+        filagui
+        imgui
+    )
+endif()
+
 if (IS_HOST_PLATFORM)
     list(APPEND LIBS
         civetweb
-        filagui
-        imgui
         imageio
         sdl2
     )
@@ -144,6 +197,10 @@ if (ANDROID)
     if (FILAMENT_SUPPORTS_WEBGPU)
         list(APPEND SRCS src/backend_platforms/WebGPUPlatformHelperAndroid.cpp)
     endif()
+endif()
+
+if (WASM AND FILAMENT_SUPPORTS_WEBGPU)
+    list(APPEND SRCS src/backend_platforms/WebGPUPlatformHelperWasm.cpp)
 endif()
 
 # ==================================================================================================
@@ -239,7 +296,9 @@ include_directories(${PUBLIC_HDR_DIR})
 
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 
-if (FILAMENT_SUPPORTS_WEBGPU)
+# For WASM the WebGPU headers come from the emdawnwebgpu port (--use-port in CMAKE_CXX_FLAGS)
+# rather than from a Dawn build, so there is no dawncpp_headers target to link.
+if (FILAMENT_SUPPORTS_WEBGPU AND NOT WASM)
 target_link_libraries(${TARGET} PRIVATE dawncpp_headers)
 endif()
 
@@ -254,8 +313,13 @@ set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 target_include_directories(${TARGET} PRIVATE
         ${GENERATION_ROOT}
         ${ROOT_DIR}/imageio/include
-        ${ROOT_DIR}/../third_party/libassimp/include
 )
+
+if (FILAMENTAPP_HAS_ASSIMP)
+    target_include_directories(${TARGET} PRIVATE
+            ${ROOT_DIR}/../third_party/libassimp/include
+    )
+endif()
 
 # ==================================================================================================
 # Compiler flags
@@ -266,8 +330,17 @@ else()
     target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
 endif()
 
-if (IS_HOST_PLATFORM)
-    target_compile_definitions(${TARGET} PRIVATE FILAMENTAPP_HAS_SDL FILAMENTAPP_HAS_IMGUI FILAMENTAPP_HAS_WEB_UI)
+if (FILAMENTAPP_HAS_ASSIMP)
+    target_compile_definitions(${TARGET} PRIVATE FILAMENTAPP_HAS_ASSIMP)
+endif()
+if (FILAMENTAPP_HAS_IMGUI)
+    target_compile_definitions(${TARGET} PRIVATE FILAMENTAPP_HAS_IMGUI)
+endif()
+if (FILAMENTAPP_HAS_SDL)
+    target_compile_definitions(${TARGET} PRIVATE FILAMENTAPP_HAS_SDL)
+endif()
+if (FILAMENTAPP_HAS_WEB_UI)
+    target_compile_definitions(${TARGET} PRIVATE FILAMENTAPP_HAS_WEB_UI)
 endif()
 
 

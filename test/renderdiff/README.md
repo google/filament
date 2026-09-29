@@ -72,13 +72,38 @@ renderings, do the following step
 - `--no_rebuild`: Skip rebuilding the executables (`gltf_viewer` and `filament-samples`).
 - `--build-only`: Build the executables and stop, without rendering. Used by the CI job that warms
   the compiler cache.
-- `--num_threads=<number>`: Set the number of threads for rendering. If not set, the system's default is used.
+- `--num_threads=<number>`: Number of renders to run concurrently. Each render uses the whole
+  machine, because the software drivers size their worker pools from the core count, so the default
+  is a quarter of the cores clamped to the range 2 to 4. Raising it oversubscribes the machine.
 
-For example, to run all `MSAA` tests on Vulkan without rebuilding and using 8 threads:
+For example, to run all `MSAA` tests on Vulkan without rebuilding, two renders at a time:
 
 ```
-bash test/renderdiff/local_test.sh --test_filter='MSAA.*vulkan*.*' --no_rebuild --num_threads=8
+bash test/renderdiff/local_test.sh --test_filter='MSAA.*vulkan*.*' --no_rebuild --num_threads=2
 ```
+
+## When a render crashes
+
+A render that dies on a signal is reported as, for example, `error=-6 (killed by SIGABRT)`, and its
+output usually names only the assertion that fired, which says nothing about the call that provoked
+it.
+
+Every run therefore collects what the crash left behind, at no cost when nothing crashed.
+`generate.sh` raises the core limit before rendering and runs `src/report_crashes.sh` on the way
+out, which writes a symbolized backtrace per crash into `out/renderdiff/crashes`. The CI uploads
+that directory with the rest of the renderdiff output, and the backtraces are echoed into the job
+log as well.
+
+The two platforms leave different evidence, and the script handles both:
+
+- On Linux the kernel writes a core, read by `gdb`. Where it goes is `kernel.core_pattern`, which
+  only root can change, so the CI points it at `/tmp/renderdiff-cores`; a local run without that
+  setting usually leaves a `core` file in the test's working directory under `/tmp/renderdiff`,
+  which the script also searches. Cores are deleted once read, because a debug build produces a
+  very large one; set `RENDERDIFF_KEEP_CORES=1` to keep them.
+- On macOS no core is written, regardless of the core limit, but ReportCrash leaves a symbolicated
+  `.ips` report in `~/Library/Logs/DiagnosticReports`. The script renders those as ordinary
+  backtraces with `src/format_ips.py`.
 
 ## Update the golden images
 

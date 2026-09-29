@@ -47,14 +47,18 @@ void WebGPUStagePool::recycleBuffer(wgpu::Buffer buffer) {
     struct UserData final {
         wgpu::Buffer buffer;
         WebGPUStagePool* webGPUStagePool;
+        std::weak_ptr<bool> poolLifetime;
     };
-    auto userData =
-            std::make_unique<UserData>(UserData{ .buffer = buffer, .webGPUStagePool = this });
+    auto userData = std::make_unique<UserData>(UserData{
+        .buffer = buffer,
+        .webGPUStagePool = this,
+        .poolLifetime = mLifetimeToken,
+    });
     buffer.MapAsync(wgpu::MapMode::Write, 0, buffer.GetSize(),
-            wgpu::CallbackMode::AllowProcessEvents,
+            FILAMENT_WEBGPU_MAP_ASYNC_CALLBACK_MODE,
             [data = std::move(userData)](wgpu::MapAsyncStatus status, wgpu::StringView message) {
                 if (UTILS_LIKELY(status == wgpu::MapAsyncStatus::Success)) {
-                    if (!data->webGPUStagePool) {
+                    if (!data->webGPUStagePool || data->poolLifetime.expired()) {
                         return;
                     }
                     utils::LockGuard const lock(data->webGPUStagePool->mMutex);

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <!--
+    Generic page for a Filament sample built for WebAssembly. CMake's add_wasm_demo() generates one
+    copy per sample, as <sample>.html, substituting the sample's name for SAMPLE_NAME.
+    See samples/README.md for how to build, serve and drive it.
+  -->
+  <title>@SAMPLE_NAME@</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #1a1a1a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* The sample sizes the canvas' backing store itself. Leaving the CSS size unset displays it at
+       exactly that size, so what is rendered is what screenshot comparisons see. */
+    canvas {
+      display: block;
+      touch-action: none;
+      outline: none;
+    }
+
+    #message {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 8px 12px;
+      background: #401010;
+      color: #ffd7d7;
+      font: 12px/1.5 monospace;
+      white-space: pre-wrap;
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="canvas" tabindex="0"></canvas>
+  <div id="message"></div>
+  <script src="@SAMPLE_NAME@.js"></script>
+  <script>
+    'use strict';
+
+    // Single place for a driver, such as the renderdiff harness or a human in devtools, to observe
+    // the run instead of scraping the console. Two conditions are terminal and a driver should wait
+    // for either: `exited` once the run finished, and a non-null `error` for every way it can fail.
+    const app = globalThis.filamentApp = {
+      status: 'loading',
+      module: null,
+      error: null,
+      exited: false,
+    };
+
+    const messageElement = document.getElementById('message');
+
+    function fail(status, error) {
+      app.status = status;
+      app.error = String(error);
+      messageElement.style.display = 'block';
+      messageElement.textContent = status + ': ' + app.error;
+      console.error(status, error);
+    }
+
+    // argv comes from the query string, so a sample can be re-driven without rebuilding:
+    //   ?args=--fixed-timestep 0.016 /models/foo.glb   space-separated; convenient for typing
+    //   ?arg=/my%20models/foo.glb                      one parameter per argument, for values
+    //                                                  containing spaces
+    //
+    // Paths refer to the virtual filesystem. This page calls main() as soon as the module is
+    // instantiated, so only files preloaded at link time are there by then. A driver that has to
+    // stage its own inputs needs a page of its own that writes them through Module.FS before
+    // calling callMain(). A run that has to be reproducible should also pass --fixed-timestep,
+    // since requestAnimationFrame otherwise ties the clock to the display.
+    function argvFromLocation() {
+      const params = new URLSearchParams(globalThis.location.search);
+      const argv = params.getAll('arg');
+      const joined = params.get('args');
+      if (joined) {
+        argv.push(...joined.split(' ').filter((argument) => argument.length > 0));
+      }
+      return argv;
+    }
+
+    // Whether argv selects the WebGPU backend. This follows getopt: the last -a/--api wins.
+    function selectsWebGPU(argv) {
+      let api = null;
+      for (let i = 0; i < argv.length; i++) {
+        const argument = argv[i];
+        if ((argument === '-a' || argument === '--api') && i + 1 < argv.length) {
+          api = argv[++i];
+        } else if (argument.startsWith('--api=')) {
+          api = argument.slice('--api='.length);
+        } else if (argument.startsWith('-a') && argument.length > 2 && !argument.startsWith('--')) {
+          api = argument.slice(2);
+        }
+      }
+      return api === 'webgpu';
+    }
+
+    // Requesting a WebGPU device is asynchronous, which main() cannot wait for, so the page does it
+    // up front. WebGPUPlatformWasm picks the device up from Module.preinitializedWebGPUDevice. The
+    // features and limits requested mirror Filament.initWebGPU() in web/filament-js/utilities.js.
+    async function requestWebGPUDevice() {
+      if (!navigator.gpu) {
+        throw new Error('WebGPU is not supported by this browser');
+      }
+      const adapter = await navigator.gpu.requestAdapter();
+      if (!adapter) {
+        throw new Error('no WebGPU adapter is available');
+      }
+      const optionalFeatures = [
+        'immediates',
+        'chromium-experimental-immediate-data',
+        'rg11b10ufloat-renderable',
+        'float32-filterable',
+        'float32-blendable',
+        'depth-clip-control',
+        'depth32float-stencil8',
+        'texture-compression-bc',
+        'texture-compression-etc2',
+        'texture-compression-astc',
+      ];
+      const requiredFeatures = optionalFeatures.filter((feature) => adapter.features.has(feature));
+      const requiredLimits = {};
+      for (const key in adapter.limits) {
+        requiredLimits[key] = adapter.limits[key];
+      }
+      if (adapter.limits.maxImmediateSize === undefined &&
+          requiredFeatures.includes('chromium-experimental-immediate-data')) {
+        requiredLimits.maxImmediateSize = 64;
+      }
+      return adapter.requestDevice({ requiredFeatures, requiredLimits });
+    }
+
+    // Raised by the sample after its final frame, once FilamentApp2::shutdown() has returned. Any
+    // output written to the virtual filesystem is complete by the time this fires.
+    globalThis.addEventListener('filament-app-exit', () => {
+      app.exited = true;
+      app.status = 'exited';
+    });
+
+    FilamentSample({
+      canvas: document.getElementById('canvas'),
+      print: (text) => console.log(text),
+      printErr: (text) => console.error(text),
+      // An abort during callMain() rejects the promise below, but one after main() returns happens
+      // inside a rAF callback, outside this chain, where the page would report 'running' forever.
+      onAbort: (reason) => fail('aborted', reason),
+    }).then(async (module) => {
+      app.module = module;
+      app.status = 'instantiated';
+
+      const argv = argvFromLocation();
+      if (selectsWebGPU(argv)) {
+        try {
+          module.preinitializedWebGPUDevice = await requestWebGPUDevice();
+        } catch (error) {
+          fail('webgpu-failed', error);
+          return;
+        }
+      }
+
+      // INVOKE_RUN=0, so nothing has run yet. callMain() returns once the sample has registered its
+      // frame loop with requestAnimationFrame, and the runtime survives main() (EXIT_RUNTIME=0) to
+      // service those callbacks. A sample that rejects its arguments calls exit() instead, which
+      // callMain() reports as a status rather than an exception, so the status must be checked.
+      const status = module.callMain(argv);
+      if (status) {
+        fail('main-exited', `exit status ${status}; see the console for the reason`);
+        return;
+      }
+      // A zero status is also what main() returns after finishing without a frame loop, as
+      // --help does. The sample reports that by raising 'filament-app-exit' before returning.
+      if (!app.exited) {
+        app.status = 'running';
+      }
+    }).catch((error) => {
+      fail(app.module ? 'main-failed' : 'instantiation-failed', error);
+    });
+  </script>
+</body>
+
+</html>

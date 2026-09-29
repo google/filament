@@ -377,6 +377,9 @@ public:
      *
      * This must be called before endFrame().
      *
+     * @note Not all backends and platforms can schedule the presentation of a frame. This call is
+     *       silently ignored when the presentation time is not supported.
+     *
      * @param monotonic_clock_ns  the presentation configuration timestamp in nanoseconds on the steady clock.
      */
     void setPresentationTime(int64_t monotonic_clock_ns);
@@ -390,6 +393,9 @@ public:
      * can vary on other platforms.
      *
      * This must be called before endFrame().
+     *
+     * @note Not all backends and platforms can schedule the presentation of a frame. This call is
+     *       silently ignored when the presentation time is not supported.
      *
      * @param monotonic_clock  the presentation configuration time point on the steady clock.
      */

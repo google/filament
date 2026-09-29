@@ -349,6 +349,12 @@ void MetalDriver::execute(std::function<void(void)> const& fn) {
     }
 }
 
+bool MetalDriver::isPresentationTimeSupported() {
+    // Metal presents the drawable at a given time with -presentDrawable:atTime:, which is
+    // available on all the platforms we support.
+    return true;
+}
+
 void MetalDriver::setPresentationTime(int64_t monotonic_clock_ns) {
     assert_invariant(mContext->currentDrawSwapChain);
     mContext->currentDrawSwapChain->setPresentationTime(monotonic_clock_ns);
@@ -405,7 +411,12 @@ void MetalDriver::updateDescriptorSetBuffer(
     auto* bo = handle_cast<MetalBufferObject>(boh);
     id<MTLBuffer> mtlBuffer = bo->getBuffer()->getGpuBufferForDraw();
     descriptorSet->buffers[binding] = { mtlBuffer, offset, size };
-    ShaderStageFlags stageFlags = descriptorSet->layout->getBindings()[binding].stageFlags;
+    auto const& bindings = descriptorSet->layout->getBindings();
+    auto found = std::find_if(bindings.begin(), bindings.end(),
+            [binding](const auto& b) { return b.binding == binding; });
+    assert_invariant(found != bindings.end());
+
+    ShaderStageFlags stageFlags = found->stageFlags;
     if (any(stageFlags & ShaderStageFlags::VERTEX)) {
         descriptorSet->vertexResources.push_back(mtlBuffer);
     }
@@ -1258,8 +1269,17 @@ void MetalDriver::terminate() {
     mContext->blitter->shutdown();
     mContext->shaderCompiler->terminate();
 
+    // Flush all pending asynchronous tasks. Some tasks may end up posting follow-up operations to
+    // the `ServiceThread` (e.g., via CountdownCallbackHandler or any user-provided handlers). So we
+    // early stop the ServiceThread to ensure these are processed as well. Tasks posted to the main
+    // thread (due to no user handler) during this process are handled later by `Driver::purge`
+    // within `FEngine::shutdown`.
     if (getJobWorker()) {
         getJobWorker()->terminate();
+    }
+    if constexpr (UTILS_HAS_THREADING) {
+        // Flush any callbacks the drained jobs posted via scheduleCallback().
+        stopServiceThread();
     }
 }
 
