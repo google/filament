@@ -167,6 +167,14 @@ bool PlatformEGLAndroid::makeCurrent(ContextType const type,
 }
 
 void PlatformEGLAndroid::commit(SwapChain* swapChain) noexcept {
+    if (mPerformanceHintSession.isValid() && mStartTimeOfActualWork.time_since_epoch().count() > 0) {
+        auto const actualWorkDuration =
+                std::chrono::duration_cast<std::chrono::nanoseconds>(clock::now() - mStartTimeOfActualWork);
+        if (actualWorkDuration.count() > 0) {
+            mPerformanceHintSession.reportActualWorkDuration(actualWorkDuration.count());
+        }
+        mStartTimeOfActualWork = {};
+    }
     if (UTILS_LIKELY(swapChain)) {
         SwapChainEGLAndroid* const sc = static_cast<SwapChainEGLAndroid*>(swapChain);
         if (UTILS_LIKELY(sc->sur != EGL_NO_SURFACE)) {
@@ -211,15 +219,6 @@ void PlatformEGLAndroid::beginFrame(
     }
 
     PlatformEGL::beginFrame(monotonic_clock_ns, refreshIntervalNs, frameId);
-}
-
-void PlatformEGLAndroid::preCommit() noexcept {
-    if (mPerformanceHintSession.isValid()) {
-        auto const actualWorkDuration =
-                std::chrono::duration_cast<std::chrono::nanoseconds>(clock::now() - mStartTimeOfActualWork);
-        mPerformanceHintSession.reportActualWorkDuration(actualWorkDuration.count());
-    }
-    PlatformEGL::preCommit();
 }
 
 Driver* PlatformEGLAndroid::createDriver(void* sharedContext,

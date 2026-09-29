@@ -127,8 +127,6 @@ protected:
             int64_t refreshIntervalNs,
             uint32_t frameId) noexcept override;
 
-    void preCommit() noexcept override;
-
     /**
      * Whether `EGL_ANDROID_presentation_time` is available.
      * @return true if the presentation time can be set, false otherwise

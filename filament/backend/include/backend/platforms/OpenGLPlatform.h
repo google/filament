@@ -244,12 +244,6 @@ public:
             utils::Invocable<void(size_t index)> postContextChange);
 
     /**
-     * Called by the backend just before calling commit()
-     * @see commit()
-     */
-    virtual void preCommit() noexcept;
-
-    /**
      * Called by the driver once the current frame finishes drawing. Typically, this should present
      * the drawSwapChain. This is for example where `eglMakeCurrent()` would be called.
      * @param swapChain the SwapChain to present.
