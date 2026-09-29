@@ -26,6 +26,7 @@
 
 #if GLTFIO_DRACO_SUPPORTED
 
+#include <limits>
 #include <memory>
 #include <vector>
 
@@ -76,7 +77,12 @@ template<typename T>
 static void convertFaces(cgltf_accessor* target, const draco::Mesh* mesh) {
     FILAMENT_CHECK_PRECONDITION(target->stride == sizeof(T));
 
-    const cgltf_size size = mesh->num_faces() * 3 * sizeof(T);
+    const uint64_t size64 = static_cast<uint64_t>(mesh->num_faces()) * 3 * sizeof(T);
+    if (size64 > std::numeric_limits<cgltf_size>::max()) {
+        slog.e << "Draco face buffer size overflow: " << size64 << io::endl;
+        return;
+    }
+    const cgltf_size size = static_cast<cgltf_size>(size64);
     cgltf_buffer_view* view = target->buffer_view;
     cgltf_buffer* buffer = view->buffer;
     *buffer = { nullptr, size, nullptr, malloc(size) };
@@ -97,7 +103,12 @@ static void convertAttribs(cgltf_accessor* target, const draco::PointAttribute* 
     FILAMENT_CHECK_PRECONDITION(ncomps <= 4 && ncomps == getNumComponents(target->type));
     FILAMENT_CHECK_PRECONDITION(target->stride == attr->num_components() * sizeof(T));
 
-    const uint32_t size = target->stride * n;
+    const uint64_t size64 = static_cast<uint64_t>(target->stride) * n;
+    if (size64 > std::numeric_limits<uint32_t>::max()) {
+        slog.e << "Draco vertex buffer size overflow: " << size64 << io::endl;
+        return;
+    }
+    const uint32_t size = static_cast<uint32_t>(size64);
     cgltf_buffer_view* view = target->buffer_view;
     cgltf_buffer* buffer = view->buffer;
     *buffer = { nullptr, size, nullptr, malloc(size) };
