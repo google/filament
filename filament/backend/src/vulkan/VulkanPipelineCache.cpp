@@ -58,6 +58,8 @@ enum DynamicStateBits : uint16_t {
     DIRTY_DEPTH_BIAS_ENABLE    = 1 << 9,
     // VK_EXT_vertex_input_dynamic_state
     DIRTY_VERTEX_INPUT         = 1 << 10,
+    // VK_EXT_color_write_enable
+    DIRTY_COLOR_WRITE_ENABLE   = 1 << 11,
 };
 
 constexpr bool isDepthTestEnabled(VulkanPipelineCache::RasterState const& raster) noexcept {
@@ -138,6 +140,7 @@ VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device, Vu
           mHasVertexInputDynamicState(context.isVertexInputDynamicStateSupported() && context.isPipelineDynamicStateEnabled()),
           mHasDynamicState(context.isExtendedDynamicStateSupported() && context.isPipelineDynamicStateEnabled()),
           mHasDynamicState2(context.isExtendedDynamicState2Supported() && context.isPipelineDynamicStateEnabled()),
+          mHasColorWriteEnable(context.isColorWriteEnableSupported() && context.isPipelineDynamicStateEnabled()),
           mContext(context) {
     VkPipelineCacheCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
@@ -160,6 +163,7 @@ VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device, Vu
     FVK_LOGD << "Vertex input dynamic state supported: " << mHasVertexInputDynamicState;
     FVK_LOGD << "Extended dynamic state supported: " << mHasDynamicState;
     FVK_LOGD << "Extended dynamic state 2 supported: " << mHasDynamicState2;
+    FVK_LOGD << "Color write enable supported: " << mHasColorWriteEnable;
 #endif
 }
 
@@ -373,7 +377,7 @@ VkPipeline VulkanPipelineCache::createPipeline(
         .scissorCount = 1,
     };
 
-    constexpr size_t maxDynamicStates = 16;
+    constexpr size_t maxDynamicStates = 17;
     size_t numDynamicStates = 2;
     VkDynamicState enabledDynamicStates[maxDynamicStates] = {
         VK_DYNAMIC_STATE_VIEWPORT,
@@ -406,6 +410,10 @@ VkPipeline VulkanPipelineCache::createPipeline(
 
     if (mHasDynamicState2) {
         enabledDynamicStates[numDynamicStates++] = VK_DYNAMIC_STATE_DEPTH_BIAS_ENABLE_EXT;
+    }
+
+    if (mHasColorWriteEnable && mStaticPipelineKey.rasterState.colorTargetCount > 0) {
+        enabledDynamicStates[numDynamicStates++] = VK_DYNAMIC_STATE_COLOR_WRITE_ENABLE_EXT;
     }
 
     VkPipelineDynamicStateCreateInfo dynamicState = {
@@ -594,13 +602,22 @@ void VulkanPipelineCache::bindRasterState(RasterState const& rasterState) noexce
             mDynamicPipelineKey.rasterState : mStaticPipelineKey.rasterState;
     ds2Target.depthBiasEnable = rasterState.depthBiasEnable;
 
+    // In the case color write enabled is supported, the write mask will always be
+    // 0xF (write all channels) and the write is switched on/off in `bindPipeline`
+    if (mHasColorWriteEnable) {
+        mStaticPipelineKey.rasterState.colorWriteMask = 0xf;
+        mDynamicPipelineKey.rasterState.colorWriteMask = rasterState.colorWriteMask;
+    } else {
+        mStaticPipelineKey.rasterState.colorWriteMask = rasterState.colorWriteMask;
+    }
+
+
     mStaticPipelineKey.rasterState.blendEnable = rasterState.blendEnable;
     mStaticPipelineKey.rasterState.alphaToCoverageEnable = rasterState.alphaToCoverageEnable;
     mStaticPipelineKey.rasterState.srcColorBlendFactor = rasterState.srcColorBlendFactor;
     mStaticPipelineKey.rasterState.dstColorBlendFactor = rasterState.dstColorBlendFactor;
     mStaticPipelineKey.rasterState.srcAlphaBlendFactor = rasterState.srcAlphaBlendFactor;
     mStaticPipelineKey.rasterState.dstAlphaBlendFactor = rasterState.dstAlphaBlendFactor;
-    mStaticPipelineKey.rasterState.colorWriteMask = rasterState.colorWriteMask;
     mStaticPipelineKey.rasterState.rasterizationSamples = rasterState.rasterizationSamples;
     mStaticPipelineKey.rasterState.depthClamp = rasterState.depthClamp;
     mStaticPipelineKey.rasterState.colorTargetCount = rasterState.colorTargetCount;
@@ -734,6 +751,9 @@ uint16_t VulkanPipelineCache::computeDirtyDynamicState() noexcept {
         if (mHasDynamicState2) {
             mask |= DIRTY_DEPTH_BIAS_ENABLE;
         }
+        if (mHasColorWriteEnable && mStaticPipelineKey.rasterState.colorTargetCount > 0) {
+            mask |= DIRTY_COLOR_WRITE_ENABLE;
+        }
         return mask;
     }
 
@@ -775,6 +795,16 @@ uint16_t VulkanPipelineCache::computeDirtyDynamicState() noexcept {
     if (mHasDynamicState2) {
         if (mDynamicPipelineKey.rasterState.depthBiasEnable != mBoundDynamicState.rasterState.depthBiasEnable) {
             dirty |= DIRTY_DEPTH_BIAS_ENABLE;
+        }
+    }
+
+    if (mHasColorWriteEnable && mStaticPipelineKey.rasterState.colorTargetCount > 0) {
+        bool const isMaskDirty = mDynamicPipelineKey.rasterState.colorWriteMask !=
+                                 mBoundDynamicState.rasterState.colorWriteMask;
+        bool const isTargetCountDirty = mStaticPipelineKey.rasterState.colorTargetCount !=
+                                        mBoundPipeline.rasterState.colorTargetCount;
+        if (isMaskDirty || isTargetCountDirty) {
+            dirty |= DIRTY_COLOR_WRITE_ENABLE;
         }
     }
 
@@ -865,6 +895,19 @@ void VulkanPipelineCache::bindDynamicState(VkCommandBuffer cmdbuffer, uint16_t d
     if (dirtyMask & DIRTY_DEPTH_BIAS_ENABLE) {
         mBoundDynamicState.rasterState.depthBiasEnable = mDynamicPipelineKey.rasterState.depthBiasEnable;
         vkCmdSetDepthBiasEnableEXT(cmdbuffer, mDynamicPipelineKey.rasterState.depthBiasEnable);
+    }
+
+    if (dirtyMask & DIRTY_COLOR_WRITE_ENABLE) {
+        mBoundDynamicState.rasterState.colorWriteMask =
+                mDynamicPipelineKey.rasterState.colorWriteMask;
+        VkBool32 const enableWrite =
+                mDynamicPipelineKey.rasterState.colorWriteMask ? VK_TRUE : VK_FALSE;
+        VkBool32 writeEnables[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT];
+        for (int idx = 0; idx < mStaticPipelineKey.rasterState.colorTargetCount; ++idx) {
+            writeEnables[idx] = enableWrite;
+        }
+        vkCmdSetColorWriteEnableEXT(cmdbuffer, mStaticPipelineKey.rasterState.colorTargetCount,
+            writeEnables);
     }
 }
 
