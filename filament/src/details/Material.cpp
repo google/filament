@@ -222,14 +222,11 @@ void FMaterial::terminate(FEngine& engine) {
 
 filament::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayout(
         Variant const variant, bool const useVsmDescriptorSetLayout) const noexcept {
-    if (mDefinition.materialDomain == MaterialDomain::SURFACE) {
-        // `variant` is only sensical for MaterialDomain::SURFACE
-        if (Variant::isValidDepthVariant(variant)) {
-            return mEngine.getPerViewDescriptorSetLayoutDepthVariant();
-        }
-        if (Variant::isSSRVariant(variant)) {
-            return mEngine.getPerViewDescriptorSetLayoutSsrVariant();
-        }
+    if (mDefinition.isValidDepthVariant(variant)) {
+        return mEngine.getPerViewDescriptorSetLayoutDepthVariant();
+    }
+    if (mDefinition.isSSRVariant(variant)) {
+        return mEngine.getPerViewDescriptorSetLayoutSsrVariant();
     }
     // mDefinition.perViewDescriptorSetLayout{Vsm} is already resolved for MaterialDomain
     if (useVsmDescriptorSetLayout) {

@@ -107,11 +107,13 @@ class GltfRenderTestCase(RenderTestCase):
             mv_f(tif_src, out_tif_name)
             if os.path.exists(json_src):
                 mv_f(json_src, os.path.join(self.output_dir, f'{out_name}.json'))
-            important_print(f'{out_name} rendering succeeded. output=\n{output}')
+            important_print(f'{out_name} rendering succeeded. model={self.model_path} '
+                            f'output=\n{output}')
         else:
             result = RESULT_FAILED
             important_print(f'{out_name} rendering failed with '
-                            f'error={describe_exit_code(out_code)} output=\n{output}')
+                            f'error={describe_exit_code(out_code)} model={self.model_path} '
+                            f'output=\n{output}')
 
         return out_code, result
 
