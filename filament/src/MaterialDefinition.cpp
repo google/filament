@@ -748,15 +748,13 @@ void MaterialDefinition::processDescriptorSets(FEngine& engine) {
 
 backend::DescriptorSetLayout const& MaterialDefinition::getPerViewDescriptorSetLayoutDescription(
         Variant const variant, bool const useS2dDescriptorSetLayout) const noexcept {
-    if (materialDomain == MaterialDomain::SURFACE) {
-        if (Variant::isValidDepthVariant(variant)) {
-            // Use the layout description used to create the per view depth variant layout.
-            return descriptor_sets::getDepthVariantLayout();
-        }
-        if (Variant::isSSRVariant(variant)) {
-            // Use the layout description used to create the per view SSR variant layout.
-            return descriptor_sets::getSsrVariantLayout();
-        }
+    if (isValidDepthVariant(variant)) {
+        // Use the layout description used to create the per view depth variant layout.
+        return descriptor_sets::getDepthVariantLayout();
+    }
+    if (isSSRVariant(variant)) {
+        // Use the layout description used to create the per view SSR variant layout.
+        return descriptor_sets::getSsrVariantLayout();
     }
     if (useS2dDescriptorSetLayout) {
         return perViewDescriptorSetLayoutS2dDescription;
@@ -769,6 +767,7 @@ Handle<HwProgram> MaterialDefinition::compileProgram(
         ProgramSpecialization const& specialization,
         CompilerPriorityQueue const priorityQueue) const noexcept {
     assert_invariant(engine.hasFeatureLevel(featureLevel));
+    assert_invariant(isVariantValidForDomain(specialization.variant));
     Program pb;
     switch (materialDomain) {
         case MaterialDomain::SURFACE:
@@ -790,7 +789,7 @@ Handle<HwProgram> MaterialDefinition::compileProgram(
     pb.descriptorLayout(+DescriptorSetBindingPoints::PER_VIEW,
             getPerViewDescriptorSetLayoutDescription(
                     specialization.variant,
-                    Variant::isShadowSampler2DVariant(specialization.variant)));
+                    isShadowSampler2DVariant(specialization.variant)));
     pb.descriptorLayout(+DescriptorSetBindingPoints::PER_RENDERABLE,
             descriptor_sets::getPerRenderableLayout());
     pb.descriptorLayout(
@@ -817,7 +816,7 @@ Program MaterialDefinition::getSurfaceProgram(FEngine& engine, MaterialParser co
     Program pb = getProgramWithVariants(engine, parser, specialization, vertexVariant, fragmentVariant);
     pb.multiview(
             engine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW &&
-            Variant::isStereoVariant(specialization.variant));
+            isStereoVariant(specialization.variant));
     return pb;
 }
 
@@ -962,7 +961,8 @@ void MaterialDefinition::releasePrograms(FEngine& engine,
 
 bool MaterialDefinition::isValidProgram(Variant const variant, DynamicSpecConstKey const specKey,
         ShaderModel const sm, bool isStereoSupported) const noexcept {
-    if (!isStereoSupported && Variant::isStereoVariant(variant)) {
+    assert_invariant(isVariantValidForDomain(variant));
+    if (!isStereoSupported && isStereoVariant(variant)) {
         return false;
     }
 
