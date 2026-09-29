@@ -98,16 +98,12 @@ void HeadlessDisplayManager::pollEvents(std::vector<AppEvent>& events) {
             case AppEvent::Type::MOUSE_BUTTON_DOWN:
                 mMouseX = event.mouseButton.x;
                 mMouseY = event.mouseButton.y;
-                if (event.mouseButton.button > 0 && event.mouseButton.button <= 32) {
-                    mMouseButtons |= (1u << (event.mouseButton.button - 1));
-                }
+                appSetMouseButton(mMouseButtons, event.mouseButton.button, true);
                 break;
             case AppEvent::Type::MOUSE_BUTTON_UP:
                 mMouseX = event.mouseButton.x;
                 mMouseY = event.mouseButton.y;
-                if (event.mouseButton.button > 0 && event.mouseButton.button <= 32) {
-                    mMouseButtons &= ~(1u << (event.mouseButton.button - 1));
-                }
+                appSetMouseButton(mMouseButtons, event.mouseButton.button, false);
                 break;
             case AppEvent::Type::RESIZED: {
                 // A scripted resize is applied to the manager's own record of the window, so that

@@ -732,16 +732,18 @@ void FEngine::shutdown() {
         // Driver::terminate() has been called here.
     }
 
-    // Handle any pending deferred destruction for asynchronous objects.
+    // Call user callbacks that might have been scheduled. This is the last chance to run them, so
+    // it has to drain the ones that schedule other callbacks.
+    // These callbacks CANNOT call driver APIs.
+    getDriver().purgeAll();
+
+    // Handle any pending deferred destruction for asynchronous objects. This must run after
+    // purgeAll() because it dispatches the completion callback that settles `mCreationStatus`,
+    // which in turn is used to determine whether an object can be garbage collected below.
     if (isAsynchronousModeEnabled()) {
         gcDeferredAsyncObjectDestruction();
         assert_invariant(mDeferredAsyncObjectDestruction.empty());
     }
-
-    // Finally, call user callbacks that might have been scheduled. This is the last chance to run
-    // them, so it has to drain the ones that schedule other callbacks.
-    // These callbacks CANNOT call driver APIs.
-    getDriver().purgeAll();
 
     // and destroy the CommandStream
     std::destroy_at(std::launder(reinterpret_cast<DriverApi*>(&mDriverApiStorage)));
@@ -1200,6 +1202,35 @@ void FEngine::createLight(const LightManager::Builder& builder, Entity const ent
 
 // -----------------------------------------------------------------------------------------------
 
+template<typename T, typename = void>
+struct HasIsCreationSettled : std::false_type {};
+
+template<typename T>
+struct HasIsCreationSettled<T, std::void_t<decltype(std::declval<T>().isCreationSettled())>>
+        : std::true_type {};
+
+template<typename T>
+void FEngine::destroyOrDeferFrontendObject(T* p) {
+    if constexpr (HasIsCreationSettled<T>::value) {
+        // The presence of 'isCreationSettled' in type T implies it supports asynchronous creation.
+        // While creation is in flight, the creation process holds references to the frontend object
+        // to move `mCreationStatus` out of CREATING (see FTexture::FTexture), so freeing it now
+        // would be a use-after-free on whichever thread runs the completion callback. In regular
+        // (non-async) mode `isCreationSettled` always returns true, so nothing is deferred.
+        if (!p->isCreationSettled()) {
+            mDeferredAsyncObjectDestruction.push_back([this, p]() {
+                if (!p->isCreationSettled()) {
+                    return false;
+                }
+                mHeapAllocator.destroy(p);
+                return true;
+            });
+            return;
+        }
+    }
+    mHeapAllocator.destroy(p);
+}
+
 template<typename T>
 UTILS_NOINLINE
 void FEngine::cleanupResourceList(ResourceList<T>&& list) {
@@ -1208,9 +1239,12 @@ void FEngine::cleanupResourceList(ResourceList<T>&& list) {
         DLOG(INFO) << "cleaning up " << list.size() << " leaked "
                    << CallStack::typeName<T>().c_str();
 #endif
-        list.forEach([this, &allocator = mHeapAllocator](T* item) {
+        list.forEach([this](T* item) {
             item->terminate(*this);
-            allocator.destroy(item);
+            // Leaked asynchronous objects can still be referenced by an in-flight creation, so
+            // this must defer just like terminateAndDestroy(). gcDeferredAsyncObjectDestruction()
+            // in shutdown() drains whatever is deferred here.
+            destroyOrDeferFrontendObject(item);
         });
         list.clear();
     }
@@ -1225,13 +1259,6 @@ bool FEngine::isValid(const T* ptr, ResourceList<T> const& list) const {
     auto& l = const_cast<ResourceList<T>&>(list);
     return l.find(ptr) != l.end();
 }
-
-template <typename T, typename = void>
-struct HasIsCreationSettled : std::false_type {};
-
-template <typename T>
-struct HasIsCreationSettled<T, std::void_t<decltype(std::declval<T>().isCreationSettled())>>
-        : std::true_type {};
 
 template<typename T>
 UTILS_ALWAYS_INLINE
@@ -1251,38 +1278,10 @@ bool FEngine::terminateAndDestroy(const T* ptr, ResourceList<T>& list) {
 
         T* p = const_cast<T*>(ptr);
 
-        if constexpr (HasIsCreationSettled<T>::value) {
-            // The presence of 'isCreationSettled' in type T implies it supports asynchronous
-            // creation. For these asynchronous objects, we can terminate the backend resources
-            // immediately as they are no longer referenced. However, we defer the destruction of
-            // the frontend object if it's still being loaded.
-            // Reason: The creation process is still active and holds a reference to the frontend
-            // object to move `mCreationStatus` out of CREATING (see FTexture::FTexture). Deleting it now
-            // may cause a crash, so we wait until creation completes.
-
-            // Terminate the backend resource immediately as they're unnecessary from this point.
-            p->terminate(*this);
-
-            if (p->isCreationSettled()) {
-                // If creation is complete, we free the frontend object immediately. Note that in
-                // regular (non-async) mode, the `isCreationSettled` method always return true.
-                mHeapAllocator.destroy(p);
-            } else {
-                // We defer the destruction of the frontend object until the creation process
-                // completes. This ensures the object remains valid while the creation process still
-                // holds references to it.
-                mDeferredAsyncObjectDestruction.push_back([this, p]() {
-                    if (!p->isCreationSettled()) {
-                        return false;
-                    }
-                    mHeapAllocator.destroy(p);
-                    return true;
-                });
-            }
-        } else {
-            p->terminate(*this);
-            mHeapAllocator.destroy(p);
-        }
+        // Terminate the backend resources immediately as they're unnecessary from this point. The
+        // frontend object itself may have to outlive this call, see destroyOrDeferFrontendObject().
+        p->terminate(*this);
+        destroyOrDeferFrontendObject(p);
     }
     return success;
 }

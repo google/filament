@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.77.1'
+    implementation 'com.google.android.filament:filament-android:1.77.2'
 }
 ```
 
@@ -50,7 +50,7 @@ Here are all the libraries available in the group `com.google.android.filament`:
 iOS projects can use CocoaPods to install the latest release:
 
 ```shell
-pod 'Filament', '~> 1.77.1'
+pod 'Filament', '~> 1.77.2'
 ```
 
 ## Documentation
@@ -279,7 +279,8 @@ using the `libiblprefilter` library.
 ## How to make contributions
 
 Please read and follow the steps in [CONTRIBUTING.md](/CONTRIBUTING.md). Make sure you are
-familiar with the [code style](/CODE_STYLE.md).
+familiar with the [code style](/CODE_STYLE.md). For reporting vulnerabilities, please consult
+our [Security Policy](/SECURITY.md).
 
 ## Directory structure
 
