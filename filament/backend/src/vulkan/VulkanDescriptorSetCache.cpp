@@ -332,6 +332,14 @@ void VulkanDescriptorSetCache::commit(VulkanCommandBuffer* commands,
 void VulkanDescriptorSetCache::updateBuffer(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
         uint8_t binding, fvkmemory::resource_ptr<VulkanBufferObject> bufferObject,
         VkDeviceSize offset, VkDeviceSize size) noexcept {
+    // `binding` originates from the material file (see ChunkDescriptorBindingsInfo), which could
+    // be malicious or broken. The bitmask lookups below assume a valid binding index, and
+    // `vkUpdateDescriptorSets` would be handed an out-of-range `dstBinding`, so silently drop
+    // the update instead.
+    if (UTILS_VERY_UNLIKELY(binding >= VulkanDescriptorSetLayout::MAX_BINDINGS)) {
+        return;
+    }
+
     VkDescriptorBufferInfo const info = {
         .buffer = bufferObject->getVkBuffer(),
         .offset = offset,
@@ -360,6 +368,11 @@ void VulkanDescriptorSetCache::updateBuffer(fvkmemory::resource_ptr<VulkanDescri
 void VulkanDescriptorSetCache::updateSampler(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
         uint8_t binding, fvkmemory::resource_ptr<VulkanTexture> texture,
         VkSampler sampler) noexcept {
+    // See updateBuffer(): `binding` comes from the material file and can be malicious or broken.
+    if (UTILS_VERY_UNLIKELY(binding >= VulkanDescriptorSetLayout::MAX_BINDINGS)) {
+        return;
+    }
+
     VkDescriptorSet const vkset = set->getVkSet();
     VkImageSubresourceRange range = texture->getPrimaryViewRange();
     VkImageViewType const expectedType = texture->getViewType();
