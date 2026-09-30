@@ -881,6 +881,19 @@ void OpenGLDriver::createIndexBufferAsyncR(
     });
 }
 
+// setVertexBufferObject copies the name as soon as it runs, so the name is made on the backend
+// thread even when the rest of the creation goes to the worker.
+void OpenGLDriver::createBufferObjectName(Handle<HwBufferObject> boh,
+        BufferObjectBinding bindingType) {
+    GLBufferObject* bo = handle_cast<GLBufferObject*>(boh);
+    if (UTILS_UNLIKELY(bindingType == BufferObjectBinding::UNIFORM && getBackendState().isES2())) {
+        bo->gl.id = ++mLastAssignedEmulatedUboId;
+    } else {
+        bo->gl.binding = getBufferBindingType(bindingType);
+        glGenBuffers(1, &bo->gl.id);
+    }
+}
+
 void OpenGLDriver::createBufferObjectCommon(OpenGLState& gl, Handle<HwBufferObject> boh, uint32_t byteCount,
         BufferObjectBinding bindingType, BufferUsage usage, utils::ImmutableCString&& tag) {
     assert_invariant(byteCount > 0);
@@ -890,12 +903,9 @@ void OpenGLDriver::createBufferObjectCommon(OpenGLState& gl, Handle<HwBufferObje
 
     GLBufferObject* bo = handle_cast<GLBufferObject*>(boh);
     if (UTILS_UNLIKELY(bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
-        bo->gl.id = ++mLastAssignedEmulatedUboId;
         bo->gl.buffer = malloc(byteCount);
         memset(bo->gl.buffer, 0, byteCount);
     } else {
-        bo->gl.binding = getBufferBindingType(bindingType);
-        glGenBuffers(1, &bo->gl.id);
         gl.bindBuffer(bo->gl.binding, bo->gl.id);
         glBufferData(bo->gl.binding, byteCount, nullptr, getBufferUsage(usage));
     }
@@ -913,6 +923,7 @@ void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byte
     // subsequent backend APIs can handle operations based on this setting.
     construct<GLBufferObject>(boh, byteCount, bindingType, usage, false);
 
+    createBufferObjectName(boh, bindingType);
     createBufferObjectCommon(getBackendState(), boh, byteCount, bindingType, usage, std::move(tag));
 }
 
@@ -923,6 +934,8 @@ void OpenGLDriver::createBufferObjectAsyncR(Handle<HwBufferObject> boh, uint32_t
     // early. For example, the `asynchronous` field needs to be decided at this stage so that
     // subsequent backend APIs can handle operations based on this setting.
     construct<GLBufferObject>(boh, byteCount, bindingType, usage, true);
+
+    createBufferObjectName(boh, bindingType);
 
     assert_invariant(getJobQueue());
 

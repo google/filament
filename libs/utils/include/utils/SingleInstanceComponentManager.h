@@ -47,6 +47,12 @@ class EntityManager;
 class UTILS_PUBLIC SingleInstanceComponentManagerBase {
 public:
     using ChangeCallback = Invocable<void(Slice<const Entity>)>;
+    /**
+     * An Instance representing a component.
+     *
+     * @note Instances are not stable when a component is added, removed or gc() is called on a
+     * component manager.
+     */
     using Instance = EntityInstanceBase::Type;
 
     static constexpr bool USE_SORTED_DIRTY_ARRAY = false;
@@ -127,6 +133,13 @@ public:
         return getInstance(e) != 0;
     }
 
+    /**
+     * Gets an Instance representing the component associated with the given Entity.
+     * @param e An Entity.
+     * @return An Instance object, or 0 if the entity has no component.
+     * @note Instances are not stable when a component is added, removed or gc() is called
+     *       on a component manager.
+     */
     Instance getInstance(Entity const e) const noexcept {
         auto const pos = mInstanceMap.find(e);
         return pos != mInstanceMap.end() ? pos->second : 0;
@@ -312,6 +325,12 @@ protected:
 public:
     using SoA = StructureOfArrays<Elements ..., Entity>;
     using Structure = typename SoA::Structure;
+    /**
+     * An Instance representing a component.
+     *
+     * @note Instances are not stable when a component is added, removed or gc() is called on a
+     * component manager.
+     */
     using Instance = EntityInstanceBase::Type;
 
     explicit SingleInstanceComponentManager(EntityManager& em, ImmutableCString name,
@@ -358,11 +377,13 @@ public:
 
     // Add a component to the given Entity. If the entity already has a component from this
     // manager, this function is a no-op.
-    // This invalidates all pointers components.
+    // Instances are not stable when a component is added, removed or gc() is called.
+    // This also invalidates all pointers to components.
     Instance addComponent(Entity e);
 
     // Removes a component from the given entity.
-    // This invalidates all pointers components.
+    // Instances are not stable when a component is added, removed or gc() is called.
+    // This also invalidates all pointers to components.
     Instance removeComponent(Entity e);
     void removeComponents(Entity const* entities, size_t count) noexcept;
 

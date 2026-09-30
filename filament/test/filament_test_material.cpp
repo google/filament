@@ -248,6 +248,74 @@ TEST(MaterialInstanceTest, SetConstant) {
     Engine::destroy(engine);
 }
 
+TEST(MaterialInstanceTest, ParameterLargerThanFieldIsRejected) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    ASSERT_NE(engine, nullptr);
+
+    std::string shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(1.0);
+        }
+    )");
+
+    // Layout: "m" at bytes [0, 48), "f" at 48, "g" at 52, "a" at [64, 96).
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("MaterialInstanceTest");
+    builder.material(shaderCode.c_str());
+    builder.parameter("m", filamat::MaterialBuilder::UniformType::MAT3);
+    builder.parameter("f", filamat::MaterialBuilder::UniformType::FLOAT);
+    builder.parameter("g", filamat::MaterialBuilder::UniformType::FLOAT);
+    builder.parameter("a", 2, filamat::MaterialBuilder::UniformType::FLOAT);
+
+    filamat::Package result = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(result.isValid());
+
+    Material* material = Material::Builder()
+            .package(result.getData(), result.getSize())
+            .build(*engine);
+    ASSERT_NE(material, nullptr);
+
+    MaterialInstance* instance = material->createInstance();
+    ASSERT_NE(instance, nullptr);
+
+    instance->setParameter("m", math::mat3f{ 2.0f });
+    EXPECT_EQ(instance->getParameter<math::mat3f>("m"), math::mat3f{ 2.0f });
+    math::mat3f const mat[1] = { math::mat3f{ 3.0f } };
+    instance->setParameter("m", mat, 1);
+    instance->setParameter("f", 1.0f);
+    EXPECT_EQ(instance->getParameter<float>("f"), 1.0f);
+    float const one[1] = { 1.0f };
+    instance->setParameter("f", one, 1);
+    instance->setParameter("g", 3.0f);
+    float const two[2] = { 1.0f, 2.0f };
+    instance->setParameter("a", two, 2);
+
+#if GTEST_HAS_EXCEPTIONS
+    // These stay inside the buffer but overrun the next field.
+    EXPECT_THROW(instance->setParameter("f", math::float4{ 9.0f }), utils::PreconditionPanic);
+    EXPECT_EQ(instance->getParameter<float>("g"), 3.0f);
+    EXPECT_THROW(instance->setParameter("f", math::float2{}), utils::PreconditionPanic);
+    EXPECT_THROW(instance->setParameter("f", math::mat3f{}), utils::PreconditionPanic);
+    EXPECT_THROW(instance->setParameter("m", math::mat4f{}), utils::PreconditionPanic);
+    EXPECT_THROW(instance->setParameter("f", two, 2), utils::PreconditionPanic);
+    math::mat3f const mats[2] = {};
+    EXPECT_THROW(instance->setParameter("m", mats, 2), utils::PreconditionPanic);
+    EXPECT_THROW(instance->getParameter<math::float4>("f"), utils::PreconditionPanic);
+    EXPECT_THROW(instance->getParameter<math::mat3f>("f"), utils::PreconditionPanic);
+    EXPECT_THROW(instance->getParameter<math::mat4f>("m"), utils::PreconditionPanic);
+
+    // This one runs past the end of the buffer.
+    float const three[3] = { 1.0f, 2.0f, 3.0f };
+    EXPECT_THROW(instance->setParameter("a", three, 3), utils::PreconditionPanic);
+#endif
+
+    engine->destroy(instance);
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
+
 TEST(Material, CompileMaterialWithSkinningEnabled) {
     Engine* engine = Engine::create(Engine::Backend::NOOP);
 

@@ -138,10 +138,12 @@ bool FSwapChain::isProtectedContentSupported(FEngine const& engine) noexcept {
 }
 
 utils::tribool FSwapChain::isFrameRateChangeSupported() const noexcept {
-    if (mFrameRateSupportState.is_indeterminate() && mNativeWindow) {
-        mFrameRateSupportState = mEngine.getPlatform()->isFrameRateChangeSupported(mNativeWindow);
+    utils::tribool state = mFrameRateSupportState.load(std::memory_order_relaxed);
+    if (state.is_indeterminate() && mNativeWindow) {
+        state = mEngine.getPlatform()->isFrameRateChangeSupported(mNativeWindow);
+        mFrameRateSupportState.store(state, std::memory_order_relaxed);
     }
-    return mFrameRateSupportState;
+    return state;
 }
 
 void FSwapChain::setFrameRate(float const frameRate, FrameRateCompatibility const compatibility,

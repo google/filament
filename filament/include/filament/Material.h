@@ -500,9 +500,12 @@ public:
     //! Returns this material's default instance.
     MaterialInstance* UTILS_NONNULL getDefaultInstance() noexcept;
 
-    //! Returns this material's default instance.
+    /** @deprecated Use non-const getDefaultInstance() instead. */
+    UTILS_DEPRECATED
     UTILS_NOAPIGEN
-    MaterialInstance const* UTILS_NONNULL getDefaultInstance() const noexcept;
+    MaterialInstance const* UTILS_NONNULL getDefaultInstance() const noexcept {
+        return const_cast<Material*>(this)->getDefaultInstance();
+    }
 
 protected:
     // prevent heap allocation

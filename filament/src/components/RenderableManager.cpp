@@ -359,8 +359,7 @@ RenderableManager::Builder& RenderableManager::Builder::globalBlendOrderEnabled(
 
 UTILS_NOINLINE
 RenderableManager::BuilderDetails::BoneIndicesAndWeights
-RenderableManager::BuilderDetails::processBoneIndicesAndWights(
-        Engine& engine, Entity const entity) const {
+RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engine, Entity const entity) const {
     size_t maxPairsCount = 0; //size of texture, number of bone pairs
     size_t maxPairsCountPerVertex = 0; //maximum of number of bone per vertex
 
@@ -469,8 +468,7 @@ RenderableManager::BuilderDetails::processBoneIndicesAndWights(
                     skinWeights[3 + offset] = -float(pairsCount + 1);
                     for (size_t j = 3; j < tempPairCount; j++) {
                         boneIndicesAndWeights[pairsCount][0] = tempPairs[j][0];
-                        boneIndicesAndWeights[pairsCount][1] =
-                                tempPairs[j][1] / float(boneWeightsSum);
+                        boneIndicesAndWeights[pairsCount][1] = tempPairs[j][1] / float(boneWeightsSum);
                         pairsCount++;
                     }
                 }
@@ -481,7 +479,6 @@ RenderableManager::BuilderDetails::processBoneIndicesAndWights(
                                               std::move(skinWeights));
         } // for all primitives
     }
-    // only part of boneIndicesAndWeights is used for real data
     return { std::move(boneIndicesAndWeights), pairsCount };
 }
 
@@ -652,8 +649,7 @@ void FRenderableManager::create(
         const size_t entryCount = builder->mEntries.size();
         FRenderPrimitive* rp = new FRenderPrimitive[entryCount];
         auto& factory = mHwRenderPrimitiveFactory;
-        MaterialInstance const* const defaultMaterialInstance =
-                engine.getDefaultMaterial()->getDefaultInstance();
+        MaterialInstance const* const defaultMaterialInstance = engine.getDefaultMaterialInstance();
         for (size_t i = 0; i < entryCount; ++i) {
             Entry entry = entries[i];
             // entry.materialInstance must be set to something even if indices/vertices are null
