@@ -175,7 +175,6 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder, MaterialDefinition
 
     mDepthPrecacheDisabled =
             driver.isWorkaroundNeeded(Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL);
-    mDefaultMaterial = engine.getDefaultMaterial();
 
     mPrograms.initializeForMaterial(engine, *this, processSpecializationConstants(builder));
 
@@ -352,8 +351,7 @@ FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
 
 FMaterialInstance* FMaterial::getDefaultInstance() noexcept {
     if (UTILS_UNLIKELY(!mDefaultMaterialInstance)) {
-        mDefaultMaterialInstance =
-                mEngine.createMaterialInstance(this, mDefinition.name.c_str());
+        mDefaultMaterialInstance = mEngine.createMaterialInstance(this, mDefinition.name.c_str());
         mDefaultMaterialInstance->setDefaultInstance(true);
     }
     return mDefaultMaterialInstance;

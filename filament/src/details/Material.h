@@ -50,6 +50,7 @@
 #include <utils/Invocable.h>
 #include <utils/Mutex.h>
 
+#include <atomic>
 #include <string_view>
 
 #include <stddef.h>
@@ -123,10 +124,6 @@ public:
 
     BufferInterfaceBlock::FieldInfo const* reflect(std::string_view name) const noexcept;
 
-    FMaterialInstance const* getDefaultInstance() const noexcept {
-        return const_cast<FMaterial*>(this)->getDefaultInstance();
-    }
-
     FMaterialInstance* getDefaultInstance() noexcept;
 
     FEngine& getEngine() const noexcept  { return mEngine; }
@@ -139,11 +136,10 @@ public:
         if (!isSharedVariant(variant)) {
             return false;
         }
-        FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
-        if (UTILS_UNLIKELY(!pDefaultMaterial)) {
+        FMaterialInstance const* const pDefaultInstance = mEngine.getDefaultMaterialInstance();
+        if (UTILS_UNLIKELY(!pDefaultInstance)) {
             return false;
         }
-        FMaterialInstance const* const pDefaultInstance = pDefaultMaterial->getDefaultInstance();
         pDefaultInstance->use(driver, variant);
         return true;
     }
@@ -207,7 +203,9 @@ public:
     }
     size_t getParameters(ParameterInfo* parameters, size_t count) const noexcept;
 
-    uint32_t generateMaterialInstanceId() const noexcept { return mMaterialInstanceId++; }
+    uint32_t generateMaterialInstanceId() const noexcept {
+        return mMaterialInstanceId.fetch_add(1, std::memory_order_relaxed);
+    }
 
     LocalProgramCache& getPrograms() noexcept { return mPrograms; }
 
@@ -294,10 +292,8 @@ private:
     bool mUseUboBatching = false;
     bool mDepthPrecacheDisabled = false;
 
-    FMaterial const* mDefaultMaterial = nullptr;
-
     // reserve some space to construct the default material instance
-    mutable FMaterialInstance* mDefaultMaterialInstance = nullptr;
+    FMaterialInstance* mDefaultMaterialInstance = nullptr;
 
 #if FILAMENT_ENABLE_MATDBG
     matdbg::MaterialKey mDebuggerId;
@@ -313,7 +309,7 @@ private:
 
     FEngine& mEngine;
     const uint32_t mMaterialId;
-    mutable uint32_t mMaterialInstanceId = 0;
+    mutable std::atomic<uint32_t> mMaterialInstanceId = 0;
 
     LocalProgramCache mPrograms;
 };
