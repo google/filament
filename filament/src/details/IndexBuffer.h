@@ -67,14 +67,14 @@ public:
     // before freeing the object, so it must become true even when creation is canceled.
     // Use isCreationSuccessful() to know whether the resource can be used.
     bool isCreationSettled() const noexcept {
-        return mCreationStatus.load(std::memory_order_relaxed) != CreationStatus::CREATING;
+        return mCreationStatus.load(std::memory_order_acquire) != CreationStatus::CREATING;
     }
 
     // Whether creation finished *and* actually populated the resource. A canceled creation
     // finishes without ever running, so the resource is not usable. This is what the public
     // IndexBuffer::isCreationComplete() reports.
     bool isCreationSuccessful() const noexcept {
-        return mCreationStatus.load(std::memory_order_relaxed) == CreationStatus::CREATED;
+        return mCreationStatus.load(std::memory_order_acquire) == CreationStatus::CREATED;
     }
 
 private:
