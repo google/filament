@@ -327,6 +327,8 @@ allocation_size_t UboManager::calculateRequiredSize(size_t previouslyManagedCoun
     for (size_t i = 0; i < mManagedInstances.size(); ++i) {
         const auto* mi = mManagedInstances[i];
         const AllocationId allocationId = mi->getAllocationId();
+        // Instances at i >= previouslyManagedCount were just added this frame. They are always
+        // dirty but have no old slot held by the GPU, so they don't need an extra one.
         const bool isUpdatedExistingInstance =
                 (i < previouslyManagedCount) && mi->getUniformBuffer().isDirty();
         if (isUpdatedExistingInstance || allocationId == BufferAllocator::REALLOCATION_REQUIRED) {
