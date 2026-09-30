@@ -546,6 +546,17 @@ void VulkanDriver::updateDescriptorSetBuffer(
         uint32_t offset,
         uint32_t size) {
     FVK_SYSTRACE_SCOPE();
+    // `binding` originates from the material file (see ChunkDescriptorBindingsInfo), which could be
+    // malicious or broken: the two chunks are never cross-validated. Validate it here, at the entry
+    // point of every descriptor update, instead of deep in VulkanDescriptorSetCache: an
+    // out-of-range binding would index the per-stage bitmasks of VulkanDescriptorSetLayout out of
+    // range (a stage shift is added, which would also overflow the uint8_t) and would be handed to
+    // vkUpdateDescriptorSets as an out-of-range `dstBinding`. Silently drop the update: the
+    // descriptor simply won't be active for this set.
+    if (UTILS_VERY_UNLIKELY(binding >= VulkanDescriptorSetLayout::MAX_BINDINGS)) {
+        return;
+    }
+
     auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
     auto buffer = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
     mDescriptorSetCache.updateBuffer(set, binding, buffer, offset, size);
@@ -557,6 +568,13 @@ void VulkanDriver::updateDescriptorSetTexture(
         backend::TextureHandle th,
         SamplerParams params) {
     FVK_SYSTRACE_SCOPE();
+    // See updateDescriptorSetBuffer(). Checking here also covers the external image and streamed
+    // image managers below, which store `binding` and apply the update later on, outside of the
+    // descriptor set cache.
+    if (UTILS_VERY_UNLIKELY(binding >= VulkanDescriptorSetLayout::MAX_BINDINGS)) {
+        return;
+    }
+
     auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
 
