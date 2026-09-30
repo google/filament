@@ -518,7 +518,14 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         utils::CString const gltfPath = utils::CString(filename.getAbsolutePath().c_str());
         ResourceConfiguration configuration = {};
         configuration.engine = app->engine;
+#if defined(__EMSCRIPTEN__)
+        // Without a filesystem, gltfio looks external buffers up in the addResourceData() cache
+        // under the gltfPath directory joined with the URI. The loop below registers bare URIs,
+        // so leave gltfPath empty to make those keys match, as the JavaScript bindings do.
+        configuration.gltfPath = "";
+#else
         configuration.gltfPath = gltfPath.c_str();
+#endif
         configuration.normalizeSkinningWeights = true;
 
         if (!app->resourceLoader) {

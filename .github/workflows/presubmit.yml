@@ -300,10 +300,24 @@ jobs:
   # restores desktop-renderdiff from the postsubmit warmer, on a runner tier that costs a fraction
   # of the macOS one. The goldens are generated on this same runner label; macOS renders are still
   # produced by the postsubmit test-renderdiff-mac job, but nothing compares them.
-  test-renderdiff:
-    name: test-renderdiff
+  #
+  # One leg per platform. Desktop renders natively against mesa; web builds wasm and drives a
+  # headless browser. Goldens are kept separately per platform, so the legs never compare against
+  # each other.
+  #
+  # The job has no explicit name. GitHub then names the legs after the matrix value, and a job
+  # skipped by its if is listed under the bare job id instead of an unexpanded matrix expression.
+  # The required check is test-renderdiff below, which gates on these legs.
+  test-renderdiff-platform:
+    strategy:
+      # A desktop regression should not hide a web regression, or vice versa.
+      fail-fast: false
+      matrix:
+        platform: [desktop, web]
     runs-on: 'arm-ubuntu-24.04-16core'
-    timeout-minutes: 45
+    # The web leg additionally builds wasm and renders through a software rasterizer in a browser,
+    # which is substantially slower than rendering natively.
+    timeout-minutes: ${{ matrix.platform == 'web' && 90 || 45 }}
     needs: [check-verification, renderdiff-config]
     # The first clause is the workflow-wide verified-commit convention documented at the top of
     # this file. The second is this job's own: a gate that failed to parse the commit message has
@@ -321,18 +335,61 @@ jobs:
         with:
           compare: 'true'
           golden-branch: ${{ needs.renderdiff-config.outputs.golden-branch }}
-          ccache-config: desktop-renderdiff
+          # The web build restores the cache the postsubmit build-web job writes, which also runs
+          # this leg's build through generate.sh --build-only; the renderdiff action appends the
+          # emsdk version.
+          ccache-config: ${{ matrix.platform == 'web' && 'web-emsdk' || 'desktop-renderdiff' }}
+          platform: ${{ matrix.platform }}
       # Uploaded even when the comparison failed, which is exactly when the images are wanted.
       # Retained long enough to still be there when a golden regression is traced back, months
       # later, to the run that introduced it. These are also the images the golden bootstrap
       # procedure in test/renderdiff/README.md picks up.
+      #
+      # Artifact names must be unique across the matrix, so each leg uploads its own and
+      # test-renderdiff below combines them.
       - name: Upload renderdiff output
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ !cancelled() }}
         with:
-          name: presubmit-renderdiff-result
+          name: presubmit-renderdiff-result-${{ matrix.platform }}
           path: ./out/renderdiff
           retention-days: 100
+
+  # The required check. It passes when RDIFF_ACCEPT_NEW_GOLDENS skipped rendering, and otherwise
+  # only when every platform leg passed.
+  #
+  # It also merges the legs' outputs into the single presubmit-renderdiff-result artifact, because
+  # tools outside this repository (filament-rdiff-server) expect a run to have exactly one
+  # renderdiff artifact. The legs write disjoint files apart from the golden checkout and the test
+  # config, which are identical in both.
+  test-renderdiff:
+    name: test-renderdiff
+    runs-on: 'ubuntu-24.04'
+    needs: [check-verification, renderdiff-config, test-renderdiff-platform]
+    if: always() && !cancelled() && !needs.check-verification.outputs.skip
+    steps:
+      - name: Merge renderdiff output
+        if: needs.test-renderdiff-platform.result != 'skipped'
+        uses: actions/upload-artifact/merge@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: presubmit-renderdiff-result
+          pattern: presubmit-renderdiff-result-*
+          delete-merged: true
+          retention-days: 100
+      - name: Check the platform legs
+        if: ${{ !cancelled() }}
+        env:
+          CONFIG: ${{ needs.renderdiff-config.result }}
+          ACCEPT: ${{ needs.renderdiff-config.outputs.accept }}
+          LEGS: ${{ needs.test-renderdiff-platform.result }}
+        run: |
+          if [[ "${CONFIG}" == success && "${ACCEPT}" == true ]]; then
+            echo "RDIFF_ACCEPT_NEW_GOLDENS is set; rendering was skipped."
+            exit 0
+          fi
+          echo "renderdiff-config: ${CONFIG}, test-renderdiff-platform: ${LEGS}"
+          [[ "${CONFIG}" == success && "${LEGS}" == success ]]
+        shell: bash
 
   test-code-correctness:
     name: test-code-correctness

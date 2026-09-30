@@ -328,6 +328,14 @@ jobs:
       - name: Run build script
         run: |
           cd build/web && printf "y" | ./build.sh continuous
+      # Also the writer for the web renderdiff jobs, which restore this same entry. They build the
+      # wasm gltf_viewer and a release diffimg, neither of which the continuous build compiles:
+      # the samples are excluded from the default wasm build. --build-only runs their exact build
+      # and stops before rendering, and since it reuses the trees configured just above, it only
+      # compiles what they add. Going through the script rather than repeating its build lines is
+      # what keeps the cached objects flag-identical to what those jobs ask for.
+      - name: Warm the renderdiff web build
+        run: bash test/renderdiff/generate.sh --platform=web --build-only
       - uses: ./.github/actions/ccache-stats
         if: ${{ !cancelled() }}
       # See the note on the linux job above: main only, to keep unreadable branch-scoped entries
