@@ -218,6 +218,8 @@ void FMaterial::terminate(FEngine& engine) {
 #endif
 
     mPrograms.terminate(engine);
+
+    engine.getMaterialCache().releaseMaterial(engine, mDefinition);
 }
 
 filament::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayout(

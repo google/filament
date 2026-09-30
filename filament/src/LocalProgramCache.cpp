@@ -36,7 +36,14 @@ using namespace utils;
 LocalProgramCache::LocalProgramCache(LocalProgramCache const& other)
         : mMaterial(other.mMaterial),
           mCachedPrograms(other.mCachedPrograms.size()),
-          mSpecializationConstants(other.mSpecializationConstants.clone()) {}
+          mSpecializationConstants(other.mSpecializationConstants.clone()) {
+    // The copy releases its programs in terminate(), so it must acquire its own references.
+    if (mMaterial != nullptr) {
+        mMaterial->getDefinition().acquirePrograms(mMaterial->getEngine(),
+                mCachedPrograms.as_slice(), mMaterial->getMaterialParser(),
+                mSpecializationConstants.get(), mMaterial->isDefaultMaterial());
+    }
+}
 
 LocalProgramCache& LocalProgramCache::operator=(LocalProgramCache const& other) {
     assert_invariant(mMaterial == nullptr);
@@ -47,6 +54,10 @@ LocalProgramCache& LocalProgramCache::operator=(LocalProgramCache const& other) 
     mSpecializationConstants = other.mSpecializationConstants.clone();
     if (mMaterial != nullptr) {
         mCachedPrograms = FixedCapacityVector<Handle<HwProgram>>(other.mCachedPrograms.size());
+        // The copy releases its programs in terminate(), so it must acquire its own references.
+        mMaterial->getDefinition().acquirePrograms(mMaterial->getEngine(),
+                mCachedPrograms.as_slice(), mMaterial->getMaterialParser(),
+                mSpecializationConstants.get(), mMaterial->isDefaultMaterial());
     }
 
     return *this;
@@ -102,22 +113,6 @@ void LocalProgramCache::initializeForMaterial(FEngine& engine, FMaterial const& 
             material.isDefaultMaterial());
 }
 
-void LocalProgramCache::initializeForMaterialInstance(FEngine& engine, FMaterial const& material) {
-    assert_invariant(mMaterial == nullptr);
-    assert_invariant(mCachedPrograms.empty());
-    assert_invariant(mSpecializationConstants.empty());
-
-    mMaterial = &material;
-    LocalProgramCache const& programs = material.getPrograms();
-
-    mSpecializationConstants =
-            engine.getMaterialCache().getSpecializationConstantsInternPool().acquire(
-                    programs.getSpecializationConstants());
-
-    mCachedPrograms =
-            FixedCapacityVector<Handle<HwProgram>>(getCacheSize(material.getMaterialDomain()));
-}
-
 Handle<HwProgram> LocalProgramCache::prepareProgramSlow(DriverApi& driver, Variant const variant,
         DynamicSpecConstKey specKey, CompilerPriorityQueue const priorityQueue) const noexcept {
     assert_invariant(mMaterial != nullptr);
@@ -164,10 +159,10 @@ ProgramSpecialization LocalProgramCache::getProgramSpecialization(Variant varian
 void LocalProgramCache::terminate(FEngine& engine) {
     assert_invariant(mMaterial != nullptr);
 
+    // We only release programs here; the material definition is released by the material.
     mMaterial->getDefinition().releasePrograms(engine, mCachedPrograms.as_slice(),
             mMaterial->getMaterialParser(), mSpecializationConstants.get(),
             mMaterial->isDefaultMaterial());
-    engine.getMaterialCache().releaseMaterial(engine, mMaterial->getDefinition());
 }
 
 void LocalProgramCache::clear(FEngine& engine) {
