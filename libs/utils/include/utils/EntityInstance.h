@@ -25,6 +25,12 @@
 
 namespace utils {
 
+/**
+ * Base class for component manager instances.
+ *
+ * @note Instances are not stable when a component is added, removed or gc() is called on a
+ * component manager.
+ */
 class UTILS_PUBLIC EntityInstanceBase {
 public:
     using Type = uint32_t;
@@ -32,6 +38,13 @@ protected:
     Type mInstance = 0;
 };
 
+/**
+ * EntityInstance represents a handle to a component within a component manager.
+ *
+ * @note Instances are not stable when a component is added, removed or gc() is called on a
+ * component manager. Clients should store Entity objects instead, and call getInstance()
+ * again when needed.
+ */
 template <typename T, bool EDIT = false>
 class UTILS_PUBLIC EntityInstance : public EntityInstanceBase {
 public:

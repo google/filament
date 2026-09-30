@@ -21,3 +21,9 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - libs: the `IBLPrefilterContext` filters (`EquirectangularToCubemap`, `IrradianceFilter` and
   `SpecularFilter`) now take a non-const input `Texture*`; the overloads taking a
   `Texture const*` are deprecated
+- engine: `TransformManager` now incrementally reorders its components during
+  `Renderer::endFrame()` / `Renderer::skipFrame()`. `TransformManager::Instance` values must not
+  be kept across frames (or across `create()`, `destroy()`, `setParent()`); keep the `Entity` and
+  call `getInstance()` again instead. [⚠️ **API Change**]
+- engine: children orphaned by `TransformManager::destroy()` now have their world transform
+  updated to their local transform, as documented.
