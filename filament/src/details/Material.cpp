@@ -218,6 +218,9 @@ void FMaterial::terminate(FEngine& engine) {
 #endif
 
     mPrograms.terminate(engine);
+    // Release the definition acquired in Material::Builder::build(). Must run after
+    // mPrograms.terminate() so program teardown can still read the definition.
+    engine.getMaterialCache().releaseMaterial(engine, mDefinition);
 }
 
 filament::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayout(

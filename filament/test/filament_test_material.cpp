@@ -19,6 +19,7 @@
 
 #include "details/Engine.h"
 #include "details/Material.h"
+#include "details/MaterialInstance.h"
 #include "details/View.h"
 
 #include <filament/Engine.h>
@@ -244,6 +245,54 @@ TEST(MaterialInstanceTest, SetConstant) {
     EXPECT_EQ(instance->getConstant<bool>("myBool"), true);
 
     engine->destroy(instance);
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
+
+// Regression for https://github.com/google/filament/issues/10487:
+// setConstant() initializes a per-instance LocalProgramCache without acquiring the
+// MaterialDefinition. Destroying that instance must not release the definition, or
+// destroying the Material afterwards use-after-frees.
+TEST(MaterialInstanceTest, SetConstantDestroyDoesNotOverReleaseDefinition) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    ASSERT_NE(engine, nullptr);
+
+    std::string shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(1.0);
+        }
+    )");
+
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("SetConstantOverRelease");
+    builder.material(shaderCode.c_str());
+    builder.constant("probe", filamat::MaterialBuilder::ConstantType::BOOL, false);
+
+    filamat::Package result = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(result.isValid());
+
+    Material* material = Material::Builder()
+            .package(result.getData(), result.getSize())
+            .build(*engine);
+    ASSERT_NE(material, nullptr);
+
+    MaterialInstance* instance = material->createInstance();
+    ASSERT_NE(instance, nullptr);
+    instance->setConstant("probe", true);
+
+    // Flush pending constants so the instance owns an initialized LocalProgramCache
+    // (same path as rendering a frame with the instance).
+    downcast(instance)->prepareProgram(downcast(engine)->getDriverApi(), Variant{ 0 },
+            DynamicSpecConstKey{ 0 }, backend::CompilerPriorityQueue::HIGH);
+
+    MaterialInstance* duplicate = MaterialInstance::duplicate(instance);
+    ASSERT_NE(duplicate, nullptr);
+
+    engine->destroy(instance);
+    engine->destroy(duplicate);
+    // Previously this crashed: instance/duplicate terminate() over-released the definition.
     engine->destroy(material);
     Engine::destroy(engine);
 }

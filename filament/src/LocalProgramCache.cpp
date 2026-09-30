@@ -167,7 +167,9 @@ void LocalProgramCache::terminate(FEngine& engine) {
     mMaterial->getDefinition().releasePrograms(engine, mCachedPrograms.as_slice(),
             mMaterial->getMaterialParser(), mSpecializationConstants.get(),
             mMaterial->isDefaultMaterial());
-    engine.getMaterialCache().releaseMaterial(engine, mMaterial->getDefinition());
+    // MaterialDefinition ownership belongs to FMaterial (acquired in Material::Builder::build).
+    // Instance caches initialized via initializeForMaterialInstance()/duplicate() never
+    // acquire, so releasing here over-releases when setConstant() or duplicate() was used.
 }
 
 void LocalProgramCache::clear(FEngine& engine) {
