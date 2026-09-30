@@ -332,15 +332,6 @@ void VulkanDescriptorSetCache::commit(VulkanCommandBuffer* commands,
 void VulkanDescriptorSetCache::updateBuffer(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
         uint8_t binding, fvkmemory::resource_ptr<VulkanBufferObject> bufferObject,
         VkDeviceSize offset, VkDeviceSize size) noexcept {
-    // See VulkanDriver::updateDescriptorSetBuffer(): `binding` comes from the material file (see
-    // ChunkDescriptorBindingsInfo) and is validated there, at the driver level, for every
-    // descriptor update. This stays as a cheap backstop because the bitmask lookups below assume a
-    // valid binding index and `vkUpdateDescriptorSets` would be handed an out-of-range
-    // `dstBinding`.
-    if (UTILS_VERY_UNLIKELY(binding >= VulkanDescriptorSetLayout::MAX_BINDINGS)) {
-        return;
-    }
-
     VkDescriptorBufferInfo const info = {
         .buffer = bufferObject->getVkBuffer(),
         .offset = offset,
@@ -369,13 +360,6 @@ void VulkanDescriptorSetCache::updateBuffer(fvkmemory::resource_ptr<VulkanDescri
 void VulkanDescriptorSetCache::updateSampler(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
         uint8_t binding, fvkmemory::resource_ptr<VulkanTexture> texture,
         VkSampler sampler) noexcept {
-    // See VulkanDriver::updateDescriptorSetTexture(). Unlike updateBuffer(), the driver is not the
-    // only caller here: VulkanExternalImageManager::updateSetAndLayout() applies external samplers
-    // to the set directly, so the binding is validated again at this level.
-    if (UTILS_VERY_UNLIKELY(binding >= VulkanDescriptorSetLayout::MAX_BINDINGS)) {
-        return;
-    }
-
     VkDescriptorSet const vkset = set->getVkSet();
     VkImageSubresourceRange range = texture->getPrimaryViewRange();
     VkImageViewType const expectedType = texture->getViewType();

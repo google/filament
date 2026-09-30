@@ -546,13 +546,7 @@ void VulkanDriver::updateDescriptorSetBuffer(
         uint32_t offset,
         uint32_t size) {
     FVK_SYSTRACE_SCOPE();
-    // `binding` originates from the material file (see ChunkDescriptorBindingsInfo), which could be
-    // malicious or broken: the two chunks are never cross-validated. Validate it here, at the entry
-    // point of every descriptor update, instead of deep in VulkanDescriptorSetCache: an
-    // out-of-range binding would index the per-stage bitmasks of VulkanDescriptorSetLayout out of
-    // range (a stage shift is added, which would also overflow the uint8_t) and would be handed to
-    // vkUpdateDescriptorSets as an out-of-range `dstBinding`. Silently drop the update: the
-    // descriptor simply won't be active for this set.
+    // Validate at entry: `binding` comes from the material file and may be out of range.
     if (UTILS_VERY_UNLIKELY(binding >= VulkanDescriptorSetLayout::MAX_BINDINGS)) {
         return;
     }
