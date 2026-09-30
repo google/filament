@@ -32,6 +32,14 @@ A transform component is created using TransformManager::create() and destroyed 
 
 ```
 
+# Instance lifetime
+
+An Instance is a transient handle: Instances are not stable when a component is added, removed or gc() is called on a component manager. In addition, TransformManager reorders its components internally to speed up world transform computation, which changes the Instance associated with an Entity. An Instance obtained from getInstance() is only valid until the next call to any of:
+
+- create(), destroy() or setParent() on this TransformManager,
+- commitLocalTransformTransaction(),
+- Renderer::endFrame() or Renderer::skipFrame(), which perform periodic maintenance. Instances must therefore not be kept across frames. Keep the Entity instead, and call getInstance() again when needed; it is a fast lookup. Using a stale Instance doesn't crash but silently accesses the wrong component.
+
 ## Functions
 
 | Name | Summary |

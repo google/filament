@@ -558,7 +558,7 @@ void FTexture::setImageCommon(FEngine& engine, size_t const level,
 void FTexture::setImage(FEngine& engine, size_t const level,
         uint32_t const xoffset, uint32_t const yoffset, uint32_t const zoffset,
         uint32_t const width, uint32_t const height, uint32_t const depth,
-        PixelBufferDescriptor&& p) const {
+        PixelBufferDescriptor&& p) {
 
     FILAMENT_CHECK_PRECONDITION(isCreationSuccessful())
             << "Texture is not usable: its creation is still in progress, or its asynchronous "
@@ -569,15 +569,14 @@ void FTexture::setImage(FEngine& engine, size_t const level,
     engine.getDriverApi().update3DImage(mHandle, uint8_t(level), xoffset, yoffset, zoffset, width,
             height, depth, std::move(p));
 
-    // this method shouldn't have been const
-    const_cast<FTexture*>(this)->updateLodRange(level);
+    updateLodRange(level);
 }
 
 AsyncCallId FTexture::setImageAsync(FEngine& engine, size_t const level,
         uint32_t const xoffset, uint32_t const yoffset, uint32_t const zoffset,
         uint32_t const width, uint32_t const height, uint32_t const depth,
         PixelBufferDescriptor&& p, backend::CallbackHandler* handler,
-        AsyncCompletionCallback callback, void* user) const {
+        AsyncCompletionCallback callback, void* user) {
 
     // We skip the isCreationSuccessful() check for asynchronous APIs because they are designed to
     // function correctly regardless of whether the object's creation process is fully complete.
@@ -590,8 +589,7 @@ AsyncCallId FTexture::setImageAsync(FEngine& engine, size_t const level,
             xoffset, yoffset, zoffset, width, height, depth, std::move(p), handler,
             &TextureCallbackAdapter::func, cbWrapper);
 
-    // this method shouldn't have been const
-    const_cast<FTexture*>(this)->updateLodRange(level);
+    updateLodRange(level);
 
     return id;
 }
@@ -694,7 +692,7 @@ void FTexture::setExternalStream(FEngine& engine, FStream* stream) {
     }
 }
 
-void FTexture::generateMipmaps(FEngine& engine) const {
+void FTexture::generateMipmaps(FEngine& engine) {
     FILAMENT_CHECK_PRECONDITION(!mExternal)
             << "External Textures are not mipmappable.";
     FILAMENT_CHECK_PRECONDITION(isCreationSuccessful())
@@ -717,8 +715,7 @@ void FTexture::generateMipmaps(FEngine& engine) const {
     }
 
     engine.getDriverApi().generateMipmaps(mHandle);
-    // this method shouldn't have been const
-    const_cast<FTexture*>(this)->updateLodRange(0, mLevelCount);
+    updateLodRange(0, mLevelCount);
 }
 
 bool FTexture::textureHandleCanMutate() const noexcept {
