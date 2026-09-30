@@ -7,7 +7,7 @@ import fnmatch
 import subprocess
 import tempfile
 
-from utils import execute, ArgParseImpl, important_print, mkdir_p
+from utils import execute, ArgParseImpl, important_print, mkdir_p, renderer_platform
 from results import RESULT_OK, RESULT_FAILED, RESULT_MISSING, GOLDEN_MISSING
 import test_config
 
@@ -61,7 +61,8 @@ def _run_diffimg(diffimg_path, ref_path, cand_path, tolerance=None, diff_out_pat
       os.remove(config_file)
 
 
-def _compare_goldens(base_dir, comparison_dir, diffimg_path, out_dir=None, test_filter=None, test_config_path=None):
+def _compare_goldens(base_dir, comparison_dir, diffimg_path, out_dir=None, test_filter=None,
+                     test_config_path=None, platform=None):
   def test_name(p):
     return p.replace('.tif', '')
 
@@ -71,6 +72,15 @@ def _compare_goldens(base_dir, comparison_dir, diffimg_path, out_dir=None, test_
   if test_filter:
     golden_files = [f for f in golden_files if fnmatch.fnmatch(test_name(os.path.basename(f)), test_filter)]
     comp_files = [f for f in comp_files if fnmatch.fnmatch(test_name(os.path.basename(f)), test_filter)]
+
+  # A single CI job only renders one platform (desktop renders the native gltf_viewer against
+  # Mesa, web renders the wasm build in a headless browser; each is its own matrix leg), so
+  # without this filter the desktop job would walk the whole golden tree and report every 'web-*'
+  # golden as RESULT_MISSING purely because it never tried to render one. Scoping by platform
+  # lets each matrix leg compare exactly what it produced.
+  if platform:
+    golden_files = [f for f in golden_files if renderer_platform(f) == platform]
+    comp_files = [f for f in comp_files if renderer_platform(f) == platform]
 
   all_files = [os.path.abspath(f) for f in golden_files]
   test_dirs = set(
@@ -147,6 +157,10 @@ def _compare_goldens(base_dir, comparison_dir, diffimg_path, out_dir=None, test_
     if test_filter:
       comparison_files = [f for f in comparison_files \
                           if fnmatch.fnmatch(test_name(os.path.basename(f)), test_filter)]
+    # This glob is independent of the one above, so it needs the same scoping; otherwise a
+    # platform-scoped run would flag another platform's renders as GOLDEN_MISSING.
+    if platform:
+      comparison_files = [f for f in comparison_files if renderer_platform(f) == platform]
 
     for base_file in comparison_files:
       test_case = os.path.relpath(base_file, comp_test_dir)
@@ -157,7 +171,11 @@ def _compare_goldens(base_dir, comparison_dir, diffimg_path, out_dir=None, test_
         })
 
     if output_test_dir:
-      output_fname = os.path.join(output_test_dir, "compare_results.json")
+      # Namespaced when scoped, because the matrix legs upload into a shared artifact tree and
+      # an unqualified 'compare_results.json' would have each leg silently overwrite the other.
+      # Unscoped runs keep the original name for backwards compatibility.
+      basename = 'compare_results.json' if not platform else f'compare_results_{platform}.json'
+      output_fname = os.path.join(output_test_dir, basename)
       results_meta = {
         'results': results,
         'base_dir': os.path.relpath(base_test_dir, output_test_dir),
@@ -234,6 +252,11 @@ if __name__ == '__main__':
   parser.add_argument('--diffimg', help='Path to the diffimg tool.', required=True)
   parser.add_argument('--test_filter', help='Filter for the tests to run')
   parser.add_argument('--test', help='Path to test configuration JSON file for tolerance settings.')
+  parser.add_argument('--platform',
+                      help=('Restrict the comparison to goldens and renders produced by this '
+                            'platform (e.g. "desktop" or "web"). Use this when the run only '
+                            'rendered one platform, so that the other platform\'s goldens are '
+                            'not reported as missing. Also namespaces the output JSON.'))
 
   args, _ = parser.parse_known_args(sys.argv[1:])
 
@@ -248,7 +271,8 @@ if __name__ == '__main__':
     sys.exit(1)
 
   results = _compare_goldens(args.src, dest, args.diffimg, out_dir=args.out,
-                             test_filter=args.test_filter, test_config_path=args.test)
+                             test_filter=args.test_filter, test_config_path=args.test,
+                             platform=args.platform)
 
   # Categorize results
   failed = [k for k in results if k['result'] != RESULT_OK]

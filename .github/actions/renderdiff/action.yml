@@ -27,9 +27,18 @@ inputs:
   ccache-config:
     description: >
       Compiler cache configuration to restore, or empty to build without one. See the ccache action
-      for what each value means and which job writes it.
+      for what each value means and which job writes it. Pass 'web-emsdk' for the web platform;
+      the emsdk version is appended once the SDK is installed.
     required: false
     default: ''
+  platform:
+    description: >
+      Which renderdiff platform to build and render for: 'desktop' runs the native
+      gltf_viewer against mesa, 'web' builds the wasm gltf_viewer and drives it through a
+      headless browser. The two need almost disjoint prerequisites, so only the requested
+      one is installed.
+    required: false
+    default: 'desktop'
 
 # Note that this action does not upload its output. Each caller does that itself, with
 # `if: ${{ !cancelled() }}`, so that the images are still collected when the render or the
@@ -46,7 +55,14 @@ runs:
       if: runner.os == 'Linux'
     - uses: ./.github/actions/get-gltf-assets
     - uses: ./.github/actions/get-mesa
+      if: inputs.platform == 'desktop'
     - uses: ./.github/actions/get-vulkan-sdk
+      if: inputs.platform == 'desktop'
+    # The web leg builds wasm, so it needs the emsdk that build.sh -p wasm expects on $EMSDK.
+    # generate.sh installs playwright and the pinned browser itself, because the browser build is
+    # part of the golden contract.
+    - uses: ./.github/actions/web-prereq
+      if: inputs.platform == 'web'
     # After get-mesa, which is what puts Homebrew's clang on PATH: the build has to use Apple's
     # clang, and the last writer to GITHUB_ENV wins.
     - name: macOS toolchain
@@ -63,10 +79,18 @@ runs:
     # Deliberately after get-mesa, for the reason documented on the presubmit test-backend job:
     # meson picks ccache up automatically when it is on PATH, and a Mesa rebuild would otherwise
     # spend this job's cache budget on objects no other job wants.
+    #
+    # Also after web-prereq, which is what defines GITHUB_EMSDK_VERSION. The web cache is keyed on
+    # that version (see the ccache action), and a caller cannot name it in its `with:` block,
+    # because that is evaluated before this action has installed the SDK. A caller therefore asks
+    # for plain 'web-emsdk' and the version is appended here.
     - uses: ./.github/actions/ccache
       if: inputs.ccache-config != ''
       with:
-        config: ${{ inputs.ccache-config }}
+        config: >-
+          ${{ inputs.ccache-config == 'web-emsdk'
+              && format('web-emsdk-{0}', env.GITHUB_EMSDK_VERSION)
+              || inputs.ccache-config }}
     # generate.sh raises the core limit and extracts the backtrace. The two things it cannot do are
     # done here, because they need root or the network: Ubuntu pipes cores to apport, which throws
     # them away, and gdb is not installed. Neither failure stops the job, since a lost backtrace
@@ -90,7 +114,9 @@ runs:
     # image all land here.
     - name: Render
       shell: bash
-      run: bash test/renderdiff/generate.sh --test="${{ inputs.test-config }}"
+      run: |
+        bash test/renderdiff/generate.sh --test="${{ inputs.test-config }}" \
+            --platform="${{ inputs.platform }}"
     - uses: ./.github/actions/ccache-stats
       if: ${{ !cancelled() && inputs.ccache-config != '' }}
     # Runs even when the render failed, deliberately: a single crashed sample used to skip this
@@ -102,6 +128,11 @@ runs:
     #
     # compare.py exits non-zero when anything fails, and reports which test failed as a GitHub
     # annotation and in the run summary, so this step needs no result plumbing of its own.
+    #
+    # --platform restricts the comparison to what this job actually rendered. Without it, each
+    # platform's job would walk the whole golden tree and report the other platform's goldens as
+    # missing. It also namespaces the results file, so the artifacts of the two platforms can be
+    # merged without one overwriting the other.
     - name: Compare against goldens
       if: ${{ !cancelled() && inputs.compare == 'true' }}
       shell: bash
@@ -126,5 +157,6 @@ runs:
             --src=${GOLDEN_OUTPUT_DIR} \
             --dest=${RENDER_OUTPUT_DIR} \
             --out=${DIFF_OUTPUT_DIR} \
-            --diffimg="${DIFFIMG_PATH}" \
+            --platform="${{ inputs.platform }}" \
+            --diffimg="$(diffimg_path_ "${{ inputs.platform }}")" \
             --test="${{ inputs.test-config }}"

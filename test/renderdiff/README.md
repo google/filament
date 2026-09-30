@@ -16,7 +16,24 @@ In the `test` directory is a list of test descriptions that are specified in JSO
 to glean the structure, and [`arch.md`](../../arch.md) for the end-to-end framework architecture.
 These tests support both `gltf_test` (glTF models) and `sample_test`
 (standalone sample binaries), declaring which **renderers** they run on using the `platform-backend`
-specification format (e.g., `"desktop-opengl"`, `"desktop-vulkan"`).
+specification format (e.g., `"desktop-opengl"`, `"desktop-vulkan"`, `"web-webgl"`).
+
+## Platforms
+
+There are two platforms, and they keep **separate goldens**. The same scene rendered
+natively and in a browser does not produce the same pixels -- different rasterizer,
+different shader compiler -- so a `web-webgl` golden is never compared against a
+`desktop-opengl` one.
+
+| Platform  | How it renders | Backends |
+| --------- | -------------- | -------- |
+| `desktop` | Runs the native `gltf_viewer` headlessly against [Mesa]'s software rasterizers. | `opengl`, `vulkan`, `webgpu` |
+| `web`     | Builds `gltf_viewer` to WebAssembly and drives it in a headless Chromium on [SwiftShader]. | `webgl`, `webgpu` |
+
+The web platform is reproducible only because three things are pinned: the browser build
+(via `playwright` in `rendering_requirements.txt`, asserted at runtime against
+`EXPECTED_BROWSER_VERSION` in `web_renderer.py`), the rasterizer (SwiftShader, asserted at
+startup), and the render size. Changing any of them means regenerating the web goldens.
 
 ## Setting up python
 
@@ -54,6 +71,13 @@ renderings, do the following step
   ```
   bash test/renderdiff/generate.sh
   ```
+- Both scripts default to `--platform=desktop`. To render the web platform instead:
+  ```
+  bash test/renderdiff/generate.sh --platform=web
+  ```
+  This needs an emscripten SDK on `$EMSDK` (`bash build/common/get-emscripten.sh`); the
+  script installs the pinned browser itself. Only one platform is rendered per invocation,
+  matching how CI splits them across runners.
 
 > [!IMPORTANT]
 > **The goldens are rendered on Linux/aarch64.** A golden's path records the platform and the
@@ -67,6 +91,8 @@ renderings, do the following step
 
 - `--test=<path>`: Path to the test suite configuration JSON file (defaults to
   `test/renderdiff/tests/presubmit.json`). For example, `--test=test/renderdiff/tests/sample.json`.
+- `--platform=<desktop|web>`: Which platform to build and render for (defaults to `desktop`).
+  Passed to `compare.py` as well, which scopes the comparison to that platform's goldens.
 - `--test_filter=<filter>`: Run a subset of tests using fnmatch wildcards (`*`). It filters against
   the pattern `{test.name}.{platform}-{backend}.{target}`.
 - `--no_rebuild`: Skip rebuilding the executables (`gltf_viewer` and `filament-samples`).
@@ -75,6 +101,7 @@ renderings, do the following step
 - `--num_threads=<number>`: Number of renders to run concurrently. Each render uses the whole
   machine, because the software drivers size their worker pools from the core count, so the default
   is a quarter of the cores clamped to the range 2 to 4. Raising it oversubscribes the machine.
+  Ignored on `web`, which renders sequentially (one browser page per test).
 
 For example, to run all `MSAA` tests on Vulkan without rebuilding, two renders at a time:
 
@@ -104,6 +131,12 @@ The two platforms leave different evidence, and the script handles both:
 - On macOS no core is written, regardless of the core limit, but ReportCrash leaves a symbolicated
   `.ips` report in `~/Library/Logs/DiagnosticReports`. The script renders those as ordinary
   backtraces with `src/format_ips.py`.
+
+The `web` platform never leaves a core, because a crash happens inside the browser. Instead, every
+web render writes the whole browser console next to its image, as
+`out/renderdiff/renders/<suite>/<name>.console.log`. The file is written whether or not the render
+succeeded, and the CI uploads it with the rest of the output. A failed render also prints the last
+30 console lines into the job log.
 
 ## Update the golden images
 
@@ -159,8 +192,10 @@ Doing the above has multiple effects:
 
 ### From the images a presubmit run produced
 
-Every `test-renderdiff` run attaches its renders to the run as the `presubmit-renderdiff-result`
-artifact, including runs whose comparison failed, which is exactly when the images are interesting.
+Every `test-renderdiff` run attaches its renders as the `presubmit-renderdiff-result` artifact,
+including runs whose comparison failed, which is exactly when the images are interesting. Each
+platform leg uploads its own output, and the `merge-renderdiff-result` job combines them into
+that one artifact.
 This is the route to use when the **Renderdiff Goldens** workflow is not available, for instance
 when the workflow file itself is only present on your branch.
 
@@ -230,9 +265,12 @@ the following
 python3 test/renderdiff/src/viewer.py --diff=[test output]
 ```
 
-where `[test output]` is a directory containing the `compare_results.json` of the test run.
+where `[test output]` is a directory containing the `compare_results*.json` of the test run.
 For example, it could be `out/renderdiff/diffs/presubmit` for the standard path to the
-`presubmit` test output.
+`presubmit` test output. A platform-scoped run writes one file per platform
+(`compare_results_desktop.json`, `compare_results_web.json`); the viewer merges whatever it
+finds, and when a CI run is downloaded it overlays every platform's artifact into one tree
+first.
 
 To see the results of a Pull Request initiated test run, you would do the following
 
