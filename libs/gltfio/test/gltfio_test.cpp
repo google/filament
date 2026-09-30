@@ -16,6 +16,8 @@
 
 #include "Utility.h"
 
+#include "extended/TangentsJobExtended.h"
+
 #include "materials/uberarchive.h"
 
 #include <gltfio/AssetLoader.h>
@@ -38,6 +40,8 @@
 #include <utils/Path.h>
 
 #include <math/mathfwd.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
 
 #include <cgltf.h>
 #include <gtest/gtest.h>
@@ -769,6 +773,214 @@ static std::vector<uint8_t> makeMorphTargetGlb(int morphTargetCount) {
     return glb;
 }
 
+enum class MorphMaterial { NONE, UNLIT, LIT };
+
+// The morph position delta stored for vertex `v` by makeSparseTangentMorphGlb().
+static math::float3 sparseMorphPositionDelta(int v) {
+    return { 0.25f * float(v + 1), 0.5f, -0.125f };
+}
+
+// The base vertex color stored by makeSparseTangentMorphGlb() when `withColors` is set.
+static constexpr math::float4 kSparseMorphBaseColor = { 1.0f, 0.0f, 1.0f, 1.0f };
+
+// Pads `json` and wraps it with `bin` into a GLB container.
+static std::vector<uint8_t> assembleGlb(std::string json, std::vector<uint8_t> const& bin) {
+    while ((json.size() % 4u) != 0u) {
+        json.push_back(' ');
+    }
+
+    const uint32_t jsonSize = uint32_t(json.size());
+    const uint32_t binSize = uint32_t(bin.size());
+    const uint32_t totalSize = 12u + 8u + jsonSize + 8u + binSize;
+
+    std::vector<uint8_t> glb;
+    glb.reserve(totalSize);
+
+    appendU32LE(glb, 0x46546c67u);
+    appendU32LE(glb, 2u);
+    appendU32LE(glb, totalSize);
+    appendU32LE(glb, jsonSize);
+    appendU32LE(glb, 0x4e4f534au);
+    glb.insert(glb.end(), json.begin(), json.end());
+    appendU32LE(glb, binSize);
+    appendU32LE(glb, 0x004e4942u);
+    glb.insert(glb.end(), bin.begin(), bin.end());
+
+    return glb;
+}
+
+// Fills in the JSON fragments that declare `material` and reference it from the first primitive.
+static void morphMaterialJson(MorphMaterial material, std::string* extensionsUsed,
+        std::string* materials, std::string* materialRef) {
+    switch (material) {
+        case MorphMaterial::NONE:
+            break;
+        case MorphMaterial::UNLIT:
+            *extensionsUsed = R"("extensionsUsed":["KHR_materials_unlit"],)";
+            *materials = R"("materials":[{"extensions":{"KHR_materials_unlit":{}}}],)";
+            *materialRef = R"(,"material":0)";
+            break;
+        case MorphMaterial::LIT:
+            *materials = R"("materials":[{}],)";
+            *materialRef = R"(,"material":0)";
+            break;
+    }
+}
+
+// Builds a single-triangle GLB with `morphTargetCount` morph targets. Every target carries the
+// same POSITION delta (see sparseMorphPositionDelta), and only the target at `tangentTargetIndex`
+// additionally carries a TANGENT delta. This reproduces the layouts of issues #10180 (no material)
+// and #10500 (unlit material), where the extended loader used to size slotIndices by a filtered
+// target count but index it by the raw target index. When `withColors` is set, the base primitive
+// also has a COLOR_0 attribute. When `withUvs` is set, it also has a TEXCOORD_0 attribute, which
+// makes lit primitives use mikktspace instead of the provided tangents.
+static std::vector<uint8_t> makeSparseTangentMorphGlb(int morphTargetCount, int tangentTargetIndex,
+        MorphMaterial material, bool withColors = false, bool withUvs = false) {
+    std::string targets;
+    std::string weights = "[";
+    for (int i = 0; i < morphTargetCount; ++i) {
+        if (i > 0) {
+            targets += ",";
+            weights += ",";
+        }
+        targets += (i == tangentTargetIndex) ? R"({"POSITION":3,"TANGENT":4})"
+                                             : R"({"POSITION":3})";
+        weights += "0.0";
+    }
+    weights += "]";
+
+    std::string materialRef;
+    std::string materials;
+    std::string extensionsUsed;
+    morphMaterialJson(material, &extensionsUsed, &materials, &materialRef);
+
+    std::string const colorAttribute = withColors ? R"(,"COLOR_0":5)" : "";
+    std::string const uvAttribute = withUvs ? R"(,"TEXCOORD_0":6)" : "";
+
+    std::string const json =
+            R"({"asset":{"version":"2.0"},)" + extensionsUsed + materials +
+            R"("scene":0,"scenes":[{"nodes":[0]}],"nodes":[{"mesh":0}],)"
+            R"("meshes":[{"weights":)" + weights +
+            R"(,"primitives":[{"attributes":{"POSITION":0,"NORMAL":1,"TANGENT":2)" +
+            colorAttribute + uvAttribute + R"(},"mode":4)" + materialRef + R"(,"targets":[)" +
+            targets + R"(]}]}],)"
+            R"("accessors":[)"
+            R"({"bufferView":0,"componentType":5126,"count":3,"type":"VEC3",)"
+            R"("min":[0,0,0],"max":[1,1,0]},)"
+            R"({"bufferView":1,"componentType":5126,"count":3,"type":"VEC3"},)"
+            R"({"bufferView":2,"componentType":5126,"count":3,"type":"VEC4"},)"
+            R"({"bufferView":3,"componentType":5126,"count":3,"type":"VEC3",)"
+            R"("min":[0.25,0.5,-0.125],"max":[0.75,0.5,-0.125]},)"
+            R"({"bufferView":4,"componentType":5126,"count":3,"type":"VEC3"},)"
+            R"({"bufferView":5,"componentType":5126,"count":3,"type":"VEC4"},)"
+            R"({"bufferView":6,"componentType":5126,"count":3,"type":"VEC2"}],)"
+            R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36},)"
+            R"({"buffer":0,"byteOffset":36,"byteLength":36},)"
+            R"({"buffer":0,"byteOffset":72,"byteLength":48},)"
+            R"({"buffer":0,"byteOffset":120,"byteLength":36},)"
+            R"({"buffer":0,"byteOffset":156,"byteLength":36},)"
+            R"({"buffer":0,"byteOffset":192,"byteLength":48},)"
+            R"({"buffer":0,"byteOffset":240,"byteLength":24}],)"
+            R"("buffers":[{"byteLength":264}]})";
+
+    std::vector<uint8_t> bin(264, 0);
+    float* fbin = reinterpret_cast<float*>(bin.data());
+    // Base positions (3 x vec3) at float offset 0.
+    fbin[3] = 1.0f;
+    fbin[7] = 1.0f;
+    // Base normals (3 x vec3) at float offset 9, all pointing along +Z.
+    for (int v = 0; v < 3; ++v) {
+        fbin[9 + v * 3 + 2] = 1.0f;
+    }
+    // Base tangents (3 x vec4) at float offset 18, all (1, 0, 0, 1).
+    for (int v = 0; v < 3; ++v) {
+        fbin[18 + v * 4 + 0] = 1.0f;
+        fbin[18 + v * 4 + 3] = 1.0f;
+    }
+    // Morph position deltas (3 x vec3) at float offset 30.
+    for (int v = 0; v < 3; ++v) {
+        math::float3 const delta = sparseMorphPositionDelta(v);
+        fbin[30 + v * 3 + 0] = delta.x;
+        fbin[30 + v * 3 + 1] = delta.y;
+        fbin[30 + v * 3 + 2] = delta.z;
+    }
+    // Morph tangent deltas (3 x vec3) at float offset 39 are left at zero.
+    // Base colors (3 x vec4) at float offset 48.
+    for (int v = 0; v < 3; ++v) {
+        for (int c = 0; c < 4; ++c) {
+            fbin[48 + v * 4 + c] = kSparseMorphBaseColor[c];
+        }
+    }
+    // Base UVs (3 x vec2) at float offset 60, equal to the xy of the base positions.
+    fbin[62] = 1.0f;
+    fbin[65] = 1.0f;
+
+    return assembleGlb(json, bin);
+}
+
+// Builds a non-indexed GLB with two triangles forming a unit quad, and a single morph target. The
+// two vertices on the shared edge are duplicated, and the copies differ only in COLOR_0 (red for
+// the first triangle, blue for the second). This is how hard color edges are usually authored. The
+// morph delta depends only on the position, so the copies also receive identical deltas.
+//
+// With a lit material and TEXCOORD_0, the base tangent-space job keeps the copies apart (6
+// vertices) because their colors differ, while the morph target job welds them (4 vertices)
+// because it does not carry the base colors. The morph target data therefore does not line up
+// with the base vertex buffer.
+static std::vector<uint8_t> makeColorSeamMorphGlb(MorphMaterial material) {
+    std::string materialRef;
+    std::string materials;
+    std::string extensionsUsed;
+    morphMaterialJson(material, &extensionsUsed, &materials, &materialRef);
+
+    std::string const json =
+            R"({"asset":{"version":"2.0"},)" + extensionsUsed + materials +
+            R"("scene":0,"scenes":[{"nodes":[0]}],"nodes":[{"mesh":0}],)"
+            R"("meshes":[{"weights":[0.0],)"
+            R"("primitives":[{"attributes":{"POSITION":0,"NORMAL":1,"TEXCOORD_0":2,"COLOR_0":3},)"
+            R"("mode":4)" + materialRef + R"(,"targets":[{"POSITION":4}]}]}],)"
+            R"("accessors":[)"
+            R"({"bufferView":0,"componentType":5126,"count":6,"type":"VEC3",)"
+            R"("min":[0,0,0],"max":[1,1,0]},)"
+            R"({"bufferView":1,"componentType":5126,"count":6,"type":"VEC3"},)"
+            R"({"bufferView":2,"componentType":5126,"count":6,"type":"VEC2"},)"
+            R"({"bufferView":3,"componentType":5126,"count":6,"type":"VEC4"},)"
+            R"({"bufferView":4,"componentType":5126,"count":6,"type":"VEC3",)"
+            R"("min":[0,0,0],"max":[0,0,1]}],)"
+            R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":72},)"
+            R"({"buffer":0,"byteOffset":72,"byteLength":72},)"
+            R"({"buffer":0,"byteOffset":144,"byteLength":48},)"
+            R"({"buffer":0,"byteOffset":192,"byteLength":96},)"
+            R"({"buffer":0,"byteOffset":288,"byteLength":72}],)"
+            R"("buffers":[{"byteLength":360}]})";
+
+    static constexpr math::float2 kCorners[6] = {
+            { 0, 0 }, { 1, 0 }, { 0, 1 },   // first triangle
+            { 1, 0 }, { 1, 1 }, { 0, 1 },   // second triangle, sharing the edge (1,0)-(0,1)
+    };
+
+    std::vector<uint8_t> bin(360, 0);
+    float* fbin = reinterpret_cast<float*>(bin.data());
+    for (int v = 0; v < 6; ++v) {
+        math::float2 const p = kCorners[v];
+        // Positions (6 x vec3) at float offset 0.
+        fbin[v * 3 + 0] = p.x;
+        fbin[v * 3 + 1] = p.y;
+        // Normals (6 x vec3) at float offset 18, all pointing along +Z.
+        fbin[18 + v * 3 + 2] = 1.0f;
+        // UVs (6 x vec2) at float offset 36, equal to the xy of the positions.
+        fbin[36 + v * 2 + 0] = p.x;
+        fbin[36 + v * 2 + 1] = p.y;
+        // Colors (6 x vec4) at float offset 48, red for the first triangle, blue for the second.
+        fbin[48 + v * 4 + (v < 3 ? 0 : 2)] = 1.0f;
+        fbin[48 + v * 4 + 3] = 1.0f;
+        // Morph position deltas (6 x vec3) at float offset 72, a function of the position only.
+        fbin[72 + v * 3 + 2] = 0.5f * (p.x + p.y);
+    }
+
+    return assembleGlb(json, bin);
+}
+
 } // namespace
 
 TEST_F(glTFIOTest, MorphTargetsExceedingMaxComputeTangents) {
@@ -784,6 +996,186 @@ TEST_F(glTFIOTest, MorphTargetsExceedingMaxComputeTangents) {
 
     assetLoader->destroyAsset(asset);
     AssetLoader::destroy(&assetLoader);
+}
+
+// Loads `glb` through the extended loader, uploads its resources, and checks that the single
+// renderable exposes `expectedMorphTargets` morph targets. Out-of-bounds accesses are caught under
+// ASan, and the slot bookkeeping invariants are checked by assert_invariant in debug builds.
+static void loadExtendedMorphAsset(Engine* engine, MaterialProvider* materials,
+        NameComponentManager* names, std::vector<uint8_t> const& glb,
+        size_t expectedMorphTargets) {
+    AssetConfigurationExtended ext{ .gltfPath = "." };
+    AssetLoader* assetLoader = AssetLoader::create({
+            .engine = engine, .materials = materials, .names = names, .ext = &ext });
+    ASSERT_NE(assetLoader, nullptr);
+
+    FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ engine, ".", false });
+    EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+    ASSERT_EQ(asset->getRenderableEntityCount(), 1u);
+    EXPECT_EQ(asset->getMorphTargetCountAt(asset->getRenderableEntities()[0]),
+            expectedMorphTargets);
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+// Issue #10180: with no material, a POSITION-only target preceding a target with TANGENT used to be
+// dropped from the extended loader's morph target list, which made slotIndices too small for the
+// raw index of the later target.
+TEST_F(glTFIOTest, ExtendedMorphTargetsWithoutMaterialDoNotOverflow) {
+    if (!AssetConfigurationExtended::isSupported()) {
+        GTEST_SKIP() << "The extended asset loader is not supported on this platform.";
+    }
+    loadExtendedMorphAsset(mEngine, mMaterialProvider, mNameManager,
+            makeSparseTangentMorphGlb(2, 1, MorphMaterial::NONE), 2u);
+}
+
+// Issue #10500: with an unlit material, only targets with TANGENT used to be kept, so a single
+// high-indexed target with TANGENT wrote far past the end of slotIndices.
+TEST_F(glTFIOTest, ExtendedMorphTargetsWithUnlitMaterialDoNotOverflow) {
+    if (!AssetConfigurationExtended::isSupported()) {
+        GTEST_SKIP() << "The extended asset loader is not supported on this platform.";
+    }
+    loadExtendedMorphAsset(mEngine, mMaterialProvider, mNameManager,
+            makeSparseTangentMorphGlb(10, 9, MorphMaterial::UNLIT), 10u);
+}
+
+// A lit material exercises the path that computes morphed tangent frames for every target. Without
+// UVs, the provided tangents are used. With UVs, mikktspace is used, and it remeshes.
+TEST_F(glTFIOTest, ExtendedMorphTargetsWithLitMaterial) {
+    if (!AssetConfigurationExtended::isSupported()) {
+        GTEST_SKIP() << "The extended asset loader is not supported on this platform.";
+    }
+    loadExtendedMorphAsset(mEngine, mMaterialProvider, mNameManager,
+            makeSparseTangentMorphGlb(10, 9, MorphMaterial::LIT), 10u);
+    loadExtendedMorphAsset(mEngine, mMaterialProvider, mNameManager,
+            makeSparseTangentMorphGlb(10, 9, MorphMaterial::LIT, /* withColors = */ false,
+                    /* withUvs = */ true),
+            10u);
+}
+
+// A morph target job passes its position deltas through the COLORS auxiliary attribute. A base
+// COLOR_0 attribute used to overwrite (or leak) that storage depending on hash map iteration order.
+// This runs the job directly and requires that the output positions are exactly the morph deltas.
+static void expectMorphJobPositionsAreDeltas(MorphMaterial material) {
+    std::vector<uint8_t> const glb =
+            makeSparseTangentMorphGlb(2, 1, material, /* withColors = */ true);
+
+    cgltf_options options{};
+    cgltf_data* data = nullptr;
+    ASSERT_EQ(cgltf_parse(&options, glb.data(), glb.size(), &data), cgltf_result_success);
+    ASSERT_EQ(cgltf_load_buffers(&options, data, "."), cgltf_result_success);
+    ASSERT_EQ(data->meshes_count, 1u);
+    cgltf_primitive const* prim = &data->meshes[0].primitives[0];
+
+    for (int target = 0; target < 2; ++target) {
+        TangentsJobExtended::Params params{ .in = { .prim = prim, .morphTargetIndex = target } };
+        TangentsJobExtended::run(&params);
+        auto& out = params.out;
+
+        ASSERT_EQ(out.vertexCount, 3u);
+        ASSERT_NE(out.positions, nullptr);
+        for (int v = 0; v < 3; ++v) {
+            math::float3 const expected = sparseMorphPositionDelta(v);
+            EXPECT_FLOAT_EQ(out.positions[v].x, expected.x) << "target " << target << " v " << v;
+            EXPECT_FLOAT_EQ(out.positions[v].y, expected.y) << "target " << target << " v " << v;
+            EXPECT_FLOAT_EQ(out.positions[v].z, expected.z) << "target " << target << " v " << v;
+        }
+        // Morph target jobs do not produce colors.
+        EXPECT_EQ(out.colors, nullptr);
+
+        free(out.positions);
+        free(out.tbn);
+        free(out.triangles);
+    }
+    cgltf_free(data);
+}
+
+TEST(glTFIOTangentsJobExtended, MorphTargetWithBaseColorsUnlit) {
+    expectMorphJobPositionsAreDeltas(MorphMaterial::UNLIT);
+}
+
+TEST(glTFIOTangentsJobExtended, MorphTargetWithBaseColorsLit) {
+    expectMorphJobPositionsAreDeltas(MorphMaterial::LIT);
+}
+
+// End-to-end load of morph targets on a primitive with COLOR_0 through the extended loader.
+TEST_F(glTFIOTest, ExtendedMorphTargetsWithBaseColors) {
+    if (!AssetConfigurationExtended::isSupported()) {
+        GTEST_SKIP() << "The extended asset loader is not supported on this platform.";
+    }
+    loadExtendedMorphAsset(mEngine, mMaterialProvider, mNameManager,
+            makeSparseTangentMorphGlb(2, 1, MorphMaterial::NONE, /* withColors = */ true), 2u);
+    loadExtendedMorphAsset(mEngine, mMaterialProvider, mNameManager,
+            makeSparseTangentMorphGlb(2, 1, MorphMaterial::UNLIT, /* withColors = */ true), 2u);
+}
+
+// Runs the base and the morph target tangent-space jobs on the color edge GLB, and returns their
+// output vertex counts.
+static void runColorSeamJobs(MorphMaterial material, size_t* baseVertexCount,
+        size_t* morphVertexCount) {
+    std::vector<uint8_t> const glb = makeColorSeamMorphGlb(material);
+
+    cgltf_options options{};
+    cgltf_data* data = nullptr;
+    ASSERT_EQ(cgltf_parse(&options, glb.data(), glb.size(), &data), cgltf_result_success);
+    ASSERT_EQ(cgltf_load_buffers(&options, data, "."), cgltf_result_success);
+    ASSERT_EQ(data->meshes_count, 1u);
+    cgltf_primitive const* prim = &data->meshes[0].primitives[0];
+
+    auto runJob = [prim](int morphTargetIndex) {
+        TangentsJobExtended::Params params{
+                .in = { .prim = prim, .morphTargetIndex = morphTargetIndex } };
+        TangentsJobExtended::run(&params);
+        auto& out = params.out;
+        size_t const vertexCount = out.vertexCount;
+        free(out.triangles);
+        free(out.tbn);
+        free(out.uv0);
+        free(out.uv1);
+        free(out.positions);
+        free(out.joints);
+        free(out.weights);
+        free(out.colors);
+        return vertexCount;
+    };
+    *baseVertexCount = runJob(TangentsJobExtended::kMorphTargetUnused);
+    *morphVertexCount = runJob(0);
+    cgltf_free(data);
+}
+
+// Guards the premise of ExtendedMorphTargetsWithColorSeam: with a lit material, mikktspace welds
+// the morph target vertices differently from the base vertices. If this ever stops being true
+// (e.g. once morph data is mapped through the triangle corners), the loader test below no longer
+// exercises the mismatch path, and should be revisited.
+TEST(glTFIOTangentsJobExtended, ColorSeamMorphTargetRemeshesDifferently) {
+    size_t baseVertexCount = 0;
+    size_t morphVertexCount = 0;
+    runColorSeamJobs(MorphMaterial::LIT, &baseVertexCount, &morphVertexCount);
+    EXPECT_EQ(baseVertexCount, 6u);
+    EXPECT_EQ(morphVertexCount, 4u);
+
+    // The unlit path does not remesh, so the counts always match.
+    runColorSeamJobs(MorphMaterial::UNLIT, &baseVertexCount, &morphVertexCount);
+    EXPECT_EQ(baseVertexCount, 6u);
+    EXPECT_EQ(morphVertexCount, 6u);
+}
+
+// A morph target whose remeshed vertex count differs from the base used to be uploaded with the
+// base count, which read past the end of the morph data. It is now neutralized with a warning, and
+// the asset must still load with all of its morph targets.
+TEST_F(glTFIOTest, ExtendedMorphTargetsWithColorSeam) {
+    if (!AssetConfigurationExtended::isSupported()) {
+        GTEST_SKIP() << "The extended asset loader is not supported on this platform.";
+    }
+    loadExtendedMorphAsset(mEngine, mMaterialProvider, mNameManager,
+            makeColorSeamMorphGlb(MorphMaterial::LIT), 1u);
+    loadExtendedMorphAsset(mEngine, mMaterialProvider, mNameManager,
+            makeColorSeamMorphGlb(MorphMaterial::UNLIT), 1u);
 }
 
 TEST_F(glTFIOTest, RejectsOversizedEightBitIndexAccessor) {

@@ -31,6 +31,8 @@
 
 #include <cgltf.h>
 
+#include <cstdlib>
+#include <cstring>
 #include <unordered_map>
 #include <variant>
 
@@ -124,7 +126,7 @@ inline std::tuple<VertexBuffer::AttributeType, size_t, void*> getVertexBundle(
 // ResourceLoader.
 std::vector<BufferSlot> computeGeometries(cgltf_primitive const* prim, uint8_t const jobType,
         AttributesMap const& attributesMap, std::vector<int> const& morphTargets, UvMap const& uvmap,
-        filament::Engine* engine) {
+        char const* name, filament::Engine* engine) {
 
     bool const isUnlit = prim->material ? prim->material->unlit : false;
 
@@ -180,6 +182,11 @@ std::vector<BufferSlot> computeGeometries(cgltf_primitive const* prim, uint8_t c
     };
     std::vector<MorphTargetOut> morphTargetOuts;
 
+    // The vertex count and tangent frames of the base vertex buffer. These are used below to
+    // neutralize morph targets whose data does not line up with the base vertices.
+    size_t baseVertexCount = 0;
+    short4 const* baseTbn = nullptr;
+
     for (auto& [key, params]: jobs) {
         uint8_t const jobType = params.jobType;
         TangentsJobExtended::OutputParams& out = params.out;
@@ -229,6 +236,7 @@ std::vector<BufferSlot> computeGeometries(cgltf_primitive const* prim, uint8_t c
                     if (vattr == filament::VertexAttribute::TANGENTS) {
                         vertexBufferBuilder.normalized(vattr);
                         slottedTangent = true;
+                        baseTbn = static_cast<short4 const*>(data);
                     }
                     vslots.push_back({
                         .slot = slot,
@@ -246,12 +254,14 @@ std::vector<BufferSlot> computeGeometries(cgltf_primitive const* prim, uint8_t c
                 auto const [type, byteCount, data] = getVertexBundle(vattr, out);
                 vertexBufferBuilder.attribute(vattr, slot, type);
                 vertexBufferBuilder.normalized(vattr);
+                baseTbn = static_cast<short4 const*>(data);
                 vslots.push_back({
                         .slot = slot,
                         .sizeInBytes = byteCount * vertexCount,
                         .data = data,
                 });
             }
+            baseVertexCount = vertexCount;
 
             assert_invariant(!vslots.empty());
             vertexBufferBuilder.bufferCount(vslots.size());
@@ -283,16 +293,43 @@ std::vector<BufferSlot> computeGeometries(cgltf_primitive const* prim, uint8_t c
             out.positions = nullptr;
             out.tbn = nullptr;
         }
+        // Every job computes a triangle list, but only the index job passes it on. Morph target
+        // jobs share the base topology, so their copy is not needed.
+        free(out.triangles);
+        out.triangles = nullptr;
 
         // We should have passed ownership of all allocation to other parties.
         assert_invariant(out.isEmpty());
     }
 
     if (!morphTargets.empty()) {
-        UTILS_UNUSED_IN_RELEASE
-        auto const vertexCount = morphTargetOuts[0].vertexCount;
         for (auto target: morphTargetOuts) {
-            assert_invariant(target.vertexCount == vertexCount);
+            // FAssetLoader::createRenderable() uploads each morph target using the vertex count of
+            // the base vertex buffer, so the morph data must have exactly that many vertices. The
+            // tangent-space algorithm (e.g. mikktspace) remeshes each job independently, and the
+            // base and morph jobs can weld vertices differently. In that case, the morph data
+            // would be read out of bounds, and its vertices would not correspond to the base
+            // vertices. We neutralize such a target rather than rejecting the whole asset: zero
+            // position deltas, and base tangent frames (the shader blends morph tangent frames
+            // relative to the base).
+            //
+            // TODO: Equal vertex counts do not guarantee that the vertices correspond. The proper
+            // fix is to map morph data onto the base vertices through the triangle corners, which
+            // are shared by all jobs, instead of relying on the remeshed vertex order.
+            if (target.vertexCount != baseVertexCount) {
+                utils::slog.w << "Morph target " << target.morphTarget << " of " << name
+                              << " has " << target.vertexCount << " vertices after remeshing,"
+                              << " but the base has " << baseVertexCount
+                              << ". The target will have no effect." << utils::io::endl;
+                free(target.positions);
+                free(target.tbn);
+                target.positions = (float3*) calloc(baseVertexCount, sizeof(float3));
+                target.tbn = nullptr;
+                if (baseTbn) {
+                    target.tbn = (short4*) malloc(baseVertexCount * sizeof(short4));
+                    memcpy(target.tbn, baseTbn, baseVertexCount * sizeof(short4));
+                }
+            }
             slots.push_back({
                     .offset = 0xdeadbeef,
                     .slot = target.morphTarget,
@@ -335,6 +372,7 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
 
     AttributesMap attributesMap;
     bool hasUv0 = false, hasUv1 = false, hasVertexColor = false, hasNormals = false;
+    bool hasPositions = false;
     int slotCount = 0;
 
     for (cgltf_size aindex = 0; aindex < prim->attributes_count; aindex++) {
@@ -420,6 +458,7 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
         // The positions accessor is required to have min/max properties, use them to expand
         // the bounding box for this primitive.
         if (atype == cgltf_attribute_type_position) {
+            hasPositions = true;
             const float* minp = &accessor->min[0];
             const float* maxp = &accessor->max[0];
             out->aabb.min = min(out->aabb.min, float3(minp[0], minp[1], minp[2]));
@@ -447,12 +486,17 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
         targetsCount = MAX_MORPH_TARGETS;
     }
 
-    // A set of morph targets to generate tangents for.
+    // The morph targets for which a morph BufferSlot is produced. FAssetLoader::createRenderable()
+    // expects a slot for every morph target that carries POSITION data, and looks it up through
+    // slotIndices using the raw target index. The selection must therefore not depend on the
+    // material (e.g. unlit) or on whether the target has tangents. The tangent-space job for each
+    // selected target produces the morphed positions, and also the morphed tangent frames for lit
+    // materials.
     std::vector<int> morphTargets;
 
     Aabb const baseAabb(out->aabb);
     for (cgltf_size targetIndex = 0; targetIndex < targetsCount; targetIndex++) {
-        bool morphTargetHasNormals = false;
+        bool morphTargetHasPositions = false;
         cgltf_morph_target const& target = prim->targets[targetIndex];
         for (cgltf_size aindex = 0; aindex < target.attributes_count; aindex++) {
             cgltf_attribute const& attribute = target.attributes[aindex];
@@ -472,6 +516,10 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
                 return false;
             }
 
+            if (atype == cgltf_attribute_type_position) {
+                morphTargetHasPositions = true;
+            }
+
             if (atype == cgltf_attribute_type_position && accessor->has_min && accessor->has_max) {
                 Aabb targetAabb(baseAabb);
                 float const* minp = &accessor->min[0];
@@ -484,15 +532,15 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
                 out->aabb.min = min(out->aabb.min, targetAabb.min);
                 out->aabb.max = max(out->aabb.max, targetAabb.max);
             }
-
-            if (atype == cgltf_attribute_type_tangent) {
-                morphTargetHasNormals = true;
-                morphTargets.push_back(targetIndex);
-            }
         }
-        // Generate flat normals if necessary.
-        if (!morphTargetHasNormals && prim->material && !prim->material->unlit) {
-            morphTargets.push_back(targetIndex);
+        if (morphTargetHasPositions) {
+            // The morph positions are expressed as deltas relative to the base positions.
+            if (!hasPositions) {
+                utils::slog.e << "Morph target positions without base positions in " << name
+                              << utils::io::endl;
+                return false;
+            }
+            morphTargets.push_back(static_cast<int>(targetIndex));
         }
     }
 
@@ -538,9 +586,12 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
 
     utility::decodeDracoMeshes(gltf, prim, input->dracoCache);
 
-    auto slots = computeGeometries(prim, jobType, attributesMap, morphTargets, out->uvmap, mEngine);
+    auto slots = computeGeometries(prim, jobType, attributesMap, morphTargets, out->uvmap, name,
+            mEngine);
 
-    out->slotIndices.resize(morphTargets.size());
+    // slotIndices is indexed by the raw morph target index (both here and in
+    // FAssetLoader::createRenderable()), so it must span all targets, not only the selected ones.
+    out->slotIndices.resize(targetsCount);
 
     for (size_t i = 0; i < slots.size(); i++) {
         auto& slot = slots[i];
@@ -555,7 +606,10 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
         if (slot.offset == 0xdeadbeef) {
             // we can't fill this here, unfortunately, so this is done in
             // FAssetLoader::createRenderable
-            out->slotIndices[slot.slot] = outSlots.size() + i;
+            assert_invariant(slot.slot >= 0 && size_t(slot.slot) < out->slotIndices.size());
+            if (slot.slot >= 0 && size_t(slot.slot) < out->slotIndices.size()) {
+                out->slotIndices[slot.slot] = outSlots.size() + i;
+            }
         }
     }
 
