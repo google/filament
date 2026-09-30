@@ -376,20 +376,11 @@ utils::FixedCapacityVector<ShaderLanguage> VulkanDriver::getShaderLanguages(
 
 void VulkanDriver::terminate() {
     // Flush all pending asynchronous tasks. Some tasks may end up posting follow-up operations to
-    // the `ServiceThread` (e.g., via CountdownCallbackHandler or any user-provided handlers). So we
-    // early stop the ServiceThread to ensure these are processed as well. Tasks posted to the main
-    // thread (due to no user handler) during this process are handled later by `Driver::purge`
-    // within `FEngine::shutdown`.
+    // the `ServiceThread` (e.g., via CountdownCallbackHandler or any user-provided handlers), which
+    // is stopped at the end of this method. Tasks posted to the main thread (due to no user
+    // handler) during this process are handled later by `Driver::purge` within `FEngine::shutdown`.
     if (getJobWorker()) {
         getJobWorker()->terminate();
-    }
-    // Complete the in-flight readbacks first: their completion callbacks are posted from the
-    // readPixels thread via scheduleDestroy(), and anything posted once the ServiceThread has
-    // joined is never dispatched - the user's callback would silently be dropped.
-    mReadPixels.runUntilComplete();
-    if constexpr (UTILS_HAS_THREADING) {
-        // Flush any callbacks the drained jobs posted via scheduleCallback().
-        stopServiceThread();
     }
 
     // Flush and wait here to make sure all queued commands are executed and resources that are tied
@@ -452,6 +443,12 @@ void VulkanDriver::terminate() {
     mContext.getDebugUtils().terminate();
 
     mPlatform->terminate();
+
+    if constexpr (UTILS_HAS_THREADING) {
+        // Stop last so the callbacks scheduled above, by finish(0)'s readPixels drain and by
+        // mPipelineCache.terminate(), are still dispatched on the ServiceThread.
+        stopServiceThread();
+    }
 }
 
 void VulkanDriver::tick(int) {
