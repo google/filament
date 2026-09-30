@@ -74,10 +74,15 @@ with different options without rebuilding:
 - `?arg=/my%20models/foo.glb&arg=--split-view` passes one argument per parameter, for values that
   contain spaces.
 
-Paths refer to the Emscripten virtual filesystem, whose root is also the asset root. The shell calls
-`main()` as soon as the module is instantiated, and for WebGPU as soon as it has a device, so only
-files preloaded at link time are available. A driver that needs to supply its own inputs has to use
-its own page, which writes them through `Module.FS` before calling `callMain()`.
+Paths refer to the Emscripten virtual filesystem, whose root is also the asset root. By default the
+shell calls `main()` as soon as the module is instantiated, and for WebGPU as soon as it has a
+device, so only files preloaded at link time are available.
+
+**Driving the page.** A driver that needs to supply its own inputs, such as the renderdiff web
+renderer, loads the page with `?autorun=0`. The shell then stops at status `ready`, and the driver
+writes its inputs through `filamentApp.module.FS` and starts the sample with
+`filamentApp.run(argv)`. `run()` requests the WebGPU device first when argv selects WebGPU, exactly
+as autorun does.
 
 **Unsupported options.** `--headless` is rejected because the browser display manager always renders
 to the canvas. `--remote` is rejected because the page is already running in a browser.
@@ -96,19 +101,23 @@ person in the devtools console, does not have to parse console output.
 
 | Field | Meaning |
 |---|---|
-| `status` | Progresses through `loading`, `instantiated` and `running`, and ends in `exited` or in one of the failure states below. |
+| `status` | Progresses through `loading`, `ready`, `starting` and `running`, and ends in `exited` or in one of the failure states below. With `?autorun=0` it stays at `ready` until `run()` is called. |
 | `exited` | Becomes `true` when the run has finished and no further frame will be drawn. |
-| `error` | Becomes a non-null string when the run fails. |
+| `error` | Becomes a non-null string when the run fails. Only the first failure is recorded. |
 | `module` | The Emscripten module once instantiated. For example, `module.FS.readFile()` retrieves a screenshot. |
+| `run(argv)` | Starts the sample. Valid only in status `ready`, and needed only with `?autorun=0`. |
 
 A driver should wait until either `exited` is `true` or `error` is non-null. The failure states are
 the following:
 
 - `instantiation-failed` means the module could not be loaded.
+- `webgpu-failed` means argv selected WebGPU but no device could be obtained.
 - `main-exited` means `main()` returned a non-zero status, typically because an argument was
   rejected. The reason is printed to the console.
 - `main-failed` means `main()` threw.
 - `aborted` means the runtime aborted, including after `main()` has returned.
+- `uncaught` and `rejected` mean an error or a promise rejection escaped to the page, for example
+  a WebGPU operation that failed after `main()` returned.
 
 The page also raises a `filament-app-exit` event on `globalThis` when the run ends. The event fires
 after `FilamentApp2::shutdown()`, so any file the sample wrote, such as a screenshot, is complete by
