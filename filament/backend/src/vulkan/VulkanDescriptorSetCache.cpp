@@ -97,6 +97,15 @@ public:
                 .descriptorCount = actual.inputAttachment,
             };
         }
+        if (UTILS_VERY_UNLIKELY(npools == 0)) {
+            // Vulkan requires poolSizeCount > 0 (VUID-VkDescriptorPoolCreateInfo-poolSizeCount-arraylength).
+            // A broken or malicious material can produce an empty descriptor set layout; provide a
+            // minimal pool size so vkCreateDescriptorPool and vkAllocateDescriptorSets succeed.
+            sizes[npools++] = {
+                .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .descriptorCount = 1,
+            };
+        }
         VkDescriptorPoolCreateInfo info{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
             .pNext = nullptr,
@@ -332,19 +341,23 @@ void VulkanDescriptorSetCache::commit(VulkanCommandBuffer* commands,
 void VulkanDescriptorSetCache::updateBuffer(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
         uint8_t binding, fvkmemory::resource_ptr<VulkanBufferObject> bufferObject,
         VkDeviceSize offset, VkDeviceSize size) noexcept {
+    auto const& bitmask = set->getLayout()->bitmask;
+    size_t const vbit = binding + fvkutils::getVertexStageShift<fvkutils::UniformBufferBitmask>();
+    size_t const fbit = binding + fvkutils::getFragmentStageShift<fvkutils::UniformBufferBitmask>();
+    bool const isDynamic = set->dynamicUboMask.test(vbit) || set->dynamicUboMask.test(fbit);
+    bool const isStatic = bitmask.ubo.test(vbit) || bitmask.ubo.test(fbit);
+    if (UTILS_VERY_UNLIKELY(!isDynamic && !isStatic)) {
+        return;
+    }
+
     VkDescriptorBufferInfo const info = {
         .buffer = bufferObject->getVkBuffer(),
         .offset = offset,
         .range = size,
     };
-    VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-
-    if (set->dynamicUboMask.test(
-                binding + fvkutils::getVertexStageShift<fvkutils::UniformBufferBitmask>()) ||
-            set->dynamicUboMask.test(
-                    binding + fvkutils::getFragmentStageShift<fvkutils::UniformBufferBitmask>())) {
-        type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-    }
+    VkDescriptorType const type = isDynamic
+            ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC
+            : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     VkWriteDescriptorSet descriptorWrite = {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
         .dstSet = set->getVkSet(),
@@ -360,6 +373,13 @@ void VulkanDescriptorSetCache::updateBuffer(fvkmemory::resource_ptr<VulkanDescri
 void VulkanDescriptorSetCache::updateSampler(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
         uint8_t binding, fvkmemory::resource_ptr<VulkanTexture> texture,
         VkSampler sampler) noexcept {
+    auto const& samplerMask = set->getLayout()->bitmask.sampler;
+    size_t const vbit = binding + fvkutils::getVertexStageShift<fvkutils::SamplerBitmask>();
+    size_t const fbit = binding + fvkutils::getFragmentStageShift<fvkutils::SamplerBitmask>();
+    if (UTILS_VERY_UNLIKELY(!samplerMask.test(vbit) && !samplerMask.test(fbit))) {
+        return;
+    }
+
     VkDescriptorSet const vkset = set->getVkSet();
     VkImageSubresourceRange range = texture->getPrimaryViewRange();
     VkImageViewType const expectedType = texture->getViewType();
