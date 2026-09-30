@@ -47,6 +47,12 @@ class EntityManager;
 class UTILS_PUBLIC SingleInstanceComponentManagerBase {
 public:
     using ChangeCallback = Invocable<void(Slice<const Entity>)>;
+    /**
+     * An Instance representing a component.
+     *
+     * @note Instances are not stable when a component is added, removed or gc() is called on a
+     * component manager.
+     */
     using Instance = EntityInstanceBase::Type;
 
     static constexpr bool USE_SORTED_DIRTY_ARRAY = false;
@@ -55,8 +61,9 @@ public:
      * Registers a callback to be triggered when components are added, removed, or modified.
      * @param token A unique identifier for the listener (e.g., 'this' pointer).
      * @param callback The callback to invoke.
-     * @note Registering the same token multiple times will result in multiple
-     *       registrations and the callback being invoked multiple times.
+     * @note Only changes occurring after the callback is registered are buffered and reported
+     *       (matching registerBitset). Registering the same token multiple times will result in
+     *       multiple registrations and the callback being invoked multiple times.
      */
     void registerChangeCallback(void const* token, ChangeCallback callback) noexcept;
 
@@ -114,16 +121,25 @@ public:
     bool popPendingZombie(Entity newEntity, Entity& outZombie) noexcept;
 
     /**
-     * Records a change for the given entity.
-     * Flushes notifications if the internal buffer becomes full.
+     * Records a change for the given entity or slice of entities.
+     * Registered bitsets are updated immediately; if any change callbacks are registered,
+     * the entities are buffered and flushed when the internal buffer becomes full.
      */
     void notifyChange(Entity e) noexcept;
+    void notifyChange(Slice<const Entity> entities) noexcept;
 
     // Non-templated Presence & Instance queries
     bool hasComponent(Entity const e) const noexcept {
         return getInstance(e) != 0;
     }
 
+    /**
+     * Gets an Instance representing the component associated with the given Entity.
+     * @param e An Entity.
+     * @return An Instance object, or 0 if the entity has no component.
+     * @note Instances are not stable when a component is added, removed or gc() is called
+     *       on a component manager.
+     */
     Instance getInstance(Entity const e) const noexcept {
         auto const pos = mInstanceMap.find(e);
         return pos != mInstanceMap.end() ? pos->second : 0;
@@ -259,6 +275,8 @@ protected:
     PagedArenaBitset mEntities UTILS_GUARDED_BY(mEbrEntitiesLock);
 
 private:
+    void recordDirtyEntity(Entity e) noexcept;
+
     EntityManager& mEntityManager;
     ImmutableCString mName;
     bool mAmortizationSupported = false;
@@ -307,6 +325,12 @@ protected:
 public:
     using SoA = StructureOfArrays<Elements ..., Entity>;
     using Structure = typename SoA::Structure;
+    /**
+     * An Instance representing a component.
+     *
+     * @note Instances are not stable when a component is added, removed or gc() is called on a
+     * component manager.
+     */
     using Instance = EntityInstanceBase::Type;
 
     explicit SingleInstanceComponentManager(EntityManager& em, ImmutableCString name,
@@ -353,11 +377,13 @@ public:
 
     // Add a component to the given Entity. If the entity already has a component from this
     // manager, this function is a no-op.
-    // This invalidates all pointers components.
+    // Instances are not stable when a component is added, removed or gc() is called.
+    // This also invalidates all pointers to components.
     Instance addComponent(Entity e);
 
     // Removes a component from the given entity.
-    // This invalidates all pointers components.
+    // Instances are not stable when a component is added, removed or gc() is called.
+    // This also invalidates all pointers to components.
     Instance removeComponent(Entity e);
     void removeComponents(Entity const* entities, size_t count) noexcept;
 

@@ -16,6 +16,7 @@
 
 #include "filament_test_resources.h"
 #include "LocalProgramCache.h"
+#include "MaterialParser.h"
 
 #include "details/Material.h"
 
@@ -181,4 +182,76 @@ TEST(LocalProgramCacheRegressionDeathTest, SurfaceVariantOnPostProcessMaterialIs
     utils::EntityManager::get().destroy(entity);
     engine->destroy(material);
     Engine::destroy(engine);
+}
+
+TEST(MaterialDomainValidation, UserVariantFilterIsInertForPostProcessMaterials) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    ASSERT_NE(engine, nullptr);
+
+    filamat::Package const package = buildPostProcessMaterial(*engine);
+    ASSERT_TRUE(package.isValid());
+    Material* material =
+            Material::Builder().package(package.getData(), package.getSize()).build(*engine);
+    ASSERT_NE(material, nullptr);
+
+    MaterialDefinition const& definition = downcast(material)->getDefinition();
+    ASSERT_EQ(definition.materialDomain, MaterialDomain::POST_PROCESS);
+
+    // A post-process variant key is a plain PostProcessVariant index, not a bitfield of surface
+    // variant bits, so the user variant filter must leave it completely untouched.
+    //
+    // This matters because callers compare the filtered key against the original to decide
+    // whether to skip a variant (see FMaterialInstance::compile). If a filter mask happens to
+    // clear a bit that a post-process key uses as part of its index, that variant silently
+    // disappears from precompilation with no diagnostic.
+    //
+    // Asserting over every mask rather than a specific one keeps this test independent of the
+    // surface variant bit layout, which is exactly what shifts when a variant bit is added or
+    // removed.
+    for (auto const variant: definition.getVariants()) {
+        for (uint32_t mask = 0; mask <= uint32_t(UserVariantFilterBit::ALL); ++mask) {
+            EXPECT_EQ(definition.filterUserVariant(variant, UserVariantFilterMask(mask)).key,
+                    variant.key)
+                    << "post-process variant " << +variant.key
+                    << " was altered by user variant filter mask " << mask;
+        }
+    }
+
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
+
+TEST(MaterialDomainValidation, FeatureLevel0IncludesBothPostProcessVariants) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    ASSERT_NE(engine, nullptr);
+
+    filamat::MaterialBuilder::init();
+    filamat::MaterialBuilder builder;
+    builder.materialDomain(filamat::MaterialBuilder::MaterialDomain::POST_PROCESS)
+            .featureLevel(backend::FeatureLevel::FEATURE_LEVEL_0)
+            .platform(filamat::MaterialBuilder::Platform::MOBILE)
+            .targetApi(filamat::MaterialBuilder::TargetApi::OPENGL)
+            .materialSource(R"(
+                void postProcess(inout PostProcessInputs postProcess) {
+                    postProcess.color = float4(1.0);
+                }
+            )");
+    filamat::Package const package = builder.build(downcast(engine)->getJobSystem());
+    filamat::MaterialBuilder::shutdown();
+    Engine::destroy(engine);
+    ASSERT_TRUE(package.isValid());
+
+    // Inspect ESSL1 specifically: a valid package can still be missing its translucent shaders
+    // if the FL0 surface filter mistakes the post-process index for the DIR bit.
+    MaterialParser parser({ backend::ShaderLanguage::ESSL1 },
+            package.getData(), package.getSize());
+    ASSERT_EQ(parser.parse(), MaterialParser::ParseResult::SUCCESS);
+    for (auto const variant: { PostProcessVariant::OPAQUE, PostProcessVariant::TRANSLUCENT }) {
+        for (auto const stage: { backend::ShaderStage::VERTEX, backend::ShaderStage::FRAGMENT }) {
+            EXPECT_TRUE(parser.hasShader(backend::ShaderModel::MOBILE,
+                    Variant(static_cast<Variant::type_t>(variant)), stage))
+                    << "Missing ESSL1 shader for post-process variant " << int(variant)
+                    << ", stage " << int(stage);
+        }
+    }
 }

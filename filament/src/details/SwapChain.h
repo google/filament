@@ -29,6 +29,8 @@
 
 #include <utils/Invocable.h>
 
+#include <atomic>
+
 #include <stdint.h>
 
 namespace filament {
@@ -105,7 +107,7 @@ private:
     FEngine& mEngine;
     backend::Handle<backend::HwSwapChain> mHwSwapChain;
     bool mFrameScheduledCallbackIsSet = false;
-    mutable utils::tribool mFrameRateSupportState = utils::tribool::kIndeterminate;
+    mutable std::atomic<utils::tribool> mFrameRateSupportState{ utils::tribool::kIndeterminate };
     void* mNativeWindow{};
     uint32_t mWidth{};
     uint32_t mHeight{};

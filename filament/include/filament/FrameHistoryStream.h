@@ -126,8 +126,19 @@ public:
      */
     class NewFramesRange {
     public:
-        NewFramesRange(utils::FixedCapacityVector<Renderer::FrameInfo> history, uint32_t* pLastProcessedFrameId) noexcept
-            : mHistory(std::move(history)), mPLastProcessedFrameId(pLastProcessedFrameId) {}
+        /**
+         * Creates the range of the frames in history that are newer than *pLastProcessedFrameId,
+         * up to (but not including) the oldest one whose timing information is still PENDING,
+         * and sets *pLastProcessedFrameId to the ID of the newest frame in the range, if any.
+         * A null pLastProcessedFrameId is treated as 0 and isn't updated.
+         *
+         * @param history frames ordered from newest to oldest, as returned by
+         *                Renderer::getFrameInfoHistory().
+         * @param pLastProcessedFrameId ID of the last frame processed.
+         * @see FrameHistoryStream::getNewFrames()
+         */
+        NewFramesRange(utils::FixedCapacityVector<Renderer::FrameInfo> history,
+                uint32_t* pLastProcessedFrameId) noexcept;
 
         /**
          * Iterator for NewFramesRange. Yields FrameHistoryStream::Result elements.
@@ -142,10 +153,17 @@ public:
 
             Iterator() noexcept : mIsEnd(true) {}
 
-            Iterator(const Renderer::FrameInfo* historyStart, int const historyIndex, uint32_t* pLastProcessedFrameId) noexcept
+            /**
+             * Iterates from historyStart[historyIndex] (oldest) to historyStart[0] (newest).
+             * Unless pLastProcessedFrameId is null or points to 0, it also yields the IDs missing
+             * between *pLastProcessedFrameId and these frames. Unlike NewFramesRange, it doesn't
+             * skip processed or PENDING frames and doesn't update *pLastProcessedFrameId.
+             * Prefer NewFramesRange::begin().
+             */
+            Iterator(const Renderer::FrameInfo* historyStart, int const historyIndex,
+                    uint32_t const* pLastProcessedFrameId) noexcept
                 : mHistoryStart(historyStart),
                   mHistoryIndex(historyIndex),
-                  mPLastProcessedFrameId(pLastProcessedFrameId),
                   mLastProcessedFrameId(pLastProcessedFrameId ? *pLastProcessedFrameId : 0),
                   mIsEnd(historyIndex < 0) {
                 advance();
@@ -180,50 +198,10 @@ public:
             }
 
         private:
-            void advance() noexcept {
-                if (mIsEnd) {
-                    return;
-                }
-
-                while (mHistoryIndex >= 0) {
-                    auto const& fi = mHistoryStart[mHistoryIndex];
-
-                    if (fi.frameId <= mLastProcessedFrameId) {
-                        mHistoryIndex--;
-                        continue;
-                    }
-
-                    if (mLastProcessedFrameId != 0 && mLastProcessedFrameId + 1 < fi.frameId) {
-                        mLastProcessedFrameId++;
-                        if (mPLastProcessedFrameId) {
-                            *mPLastProcessedFrameId = mLastProcessedFrameId;
-                        }
-                        mCurrentValue = Result(mLastProcessedFrameId);
-                        return;
-                    }
-
-                    if (fi.displayPresent == Renderer::FrameInfo::PENDING ||
-                        fi.presentDeadline == Renderer::FrameInfo::PENDING ||
-                        fi.expectedPresentLatency == Renderer::FrameInfo::PENDING) {
-                        mIsEnd = true;
-                        return;
-                    }
-
-                    mCurrentValue = Result(fi);
-                    mLastProcessedFrameId = fi.frameId;
-                    if (mPLastProcessedFrameId) {
-                        *mPLastProcessedFrameId = mLastProcessedFrameId;
-                    }
-                    mHistoryIndex--;
-                    return;
-                }
-
-                mIsEnd = true;
-            }
+            void advance() noexcept;
 
             const Renderer::FrameInfo* mHistoryStart = nullptr;
             int mHistoryIndex = -1;
-            uint32_t* mPLastProcessedFrameId = nullptr;
             uint32_t mLastProcessedFrameId = 0;
             bool mIsEnd = false;
             Result mCurrentValue;
@@ -236,7 +214,8 @@ public:
          * Returns an iterator pointing to the beginning of the new frames.
          */
         iterator begin() const noexcept {
-            return iterator(mHistory.data(), int(mHistory.size()) - 1, mPLastProcessedFrameId);
+            return iterator(mHistory.data() + mEndIndex, mStartIndex - mEndIndex,
+                    &mLastProcessedFrameId);
         }
 
         /**
@@ -248,7 +227,11 @@ public:
 
     private:
         utils::FixedCapacityVector<Renderer::FrameInfo> mHistory;
-        uint32_t* mPLastProcessedFrameId;
+        // the new frames are mHistory[mStartIndex] (oldest) to mHistory[mEndIndex] (newest)
+        int mStartIndex = -1;
+        int mEndIndex = 0;
+        // the last frame processed before this range
+        uint32_t mLastProcessedFrameId = 0;
     };
 
     /**
@@ -260,6 +243,15 @@ public:
     /**
      * Queries the renderer's frame history and returns a NewFramesRange representing
      * the new frames rendered since the last query.
+     *
+     * The range stops before the oldest new frame whose timing information is still PENDING.
+     * That frame, the frames after it, and the missing frame IDs just before it are returned by
+     * a later call.
+     *
+     * The new frames are consumed when getNewFrames() returns, not as the range is iterated:
+     * frames that aren't iterated (e.g. because the loop exits early) won't be returned again.
+     * The range owns a copy of the frames, so it can be iterated more than once, and it doesn't
+     * depend on this FrameHistoryStream.
      */
     NewFramesRange getNewFrames() noexcept {
         auto history = mRenderer->getFrameInfoHistory(mRenderer->getMaxFrameHistorySize());
@@ -270,6 +262,62 @@ private:
     Renderer* mRenderer;
     uint32_t mLastProcessedFrameId;
 };
+
+inline void FrameHistoryStream::NewFramesRange::Iterator::advance() noexcept {
+    if (mIsEnd) {
+        return;
+    }
+
+    if (mHistoryIndex >= 0) {
+        auto const& fi = mHistoryStart[mHistoryIndex];
+
+        if (mLastProcessedFrameId != 0 && mLastProcessedFrameId + 1 < fi.frameId) {
+            mLastProcessedFrameId++;
+            mCurrentValue = Result(mLastProcessedFrameId);
+            return;
+        }
+
+        mCurrentValue = Result(fi);
+        mLastProcessedFrameId = fi.frameId;
+        mHistoryIndex--;
+        return;
+    }
+
+    mIsEnd = true;
+}
+
+inline FrameHistoryStream::NewFramesRange::NewFramesRange(
+        utils::FixedCapacityVector<Renderer::FrameInfo> history,
+        uint32_t* const pLastProcessedFrameId) noexcept
+        : mHistory(std::move(history)),
+          mLastProcessedFrameId(pLastProcessedFrameId ? *pLastProcessedFrameId : 0) {
+    // history is ordered from newest (index 0) to oldest (back), so we scan from the back to find
+    // the sub-range [endIndex, startIndex] of new, ready frames.
+    int startIndex = int(mHistory.size()) - 1;
+    while (startIndex >= 0 && mHistory[startIndex].frameId <= mLastProcessedFrameId) {
+        --startIndex;
+    }
+
+    int endIndex = startIndex + 1;
+    while (endIndex > 0) {
+        auto const& fi = mHistory[endIndex - 1];
+        if (fi.displayPresent == Renderer::FrameInfo::PENDING ||
+            fi.presentDeadline == Renderer::FrameInfo::PENDING ||
+            fi.expectedPresentLatency == Renderer::FrameInfo::PENDING) {
+            break;
+        }
+        --endIndex;
+    }
+
+    mStartIndex = startIndex;
+    mEndIndex = endIndex;
+
+    // Consume the frames now rather than as the range is iterated, so that iterating (and the
+    // const begin()) has no side effects and the range doesn't point back to its owner.
+    if (pLastProcessedFrameId && startIndex >= endIndex) {
+        *pLastProcessedFrameId = mHistory[endIndex].frameId;
+    }
+}
 
 } // namespace filament
 

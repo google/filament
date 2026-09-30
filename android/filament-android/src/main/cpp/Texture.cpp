@@ -223,7 +223,7 @@ Java_com_google_android_filament_Texture_nSetExternalStream(JNIEnv *env, jclass 
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Texture_nGenerateMipmaps(JNIEnv *env, jclass clazz, jlong nativeTexture, jlong nativeEngine) {
-    Texture const * const that = (Texture const *) nativeTexture;
+    Texture* const that = (Texture*) nativeTexture;
     Engine* const engine = (Engine*) nativeEngine;
     wrapJni(env, [=]() {
         that->generateMipmaps(*engine);

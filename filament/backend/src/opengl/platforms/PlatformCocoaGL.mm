@@ -99,7 +99,7 @@ CocoaGLSwapChain::CocoaGLSwapChain( NSView* inView )
     // We use dispatch_sync to ensure the window/view state is fully initialized and observers
     // are attached before the driver thread proceeds, preventing race conditions during
     // early frame rendering.
-    dispatch_sync(dispatch_get_main_queue(), ^(void) {
+    auto initOnMainThread = ^(void) {
       NSView* strongView = weakView;
       NSMutableArray* strongObservers = weakObservers;
       if ((weakView == nil) || (weakObservers == nil)) {
@@ -142,7 +142,12 @@ CocoaGLSwapChain::CocoaGLSwapChain( NSView* inView )
               aView = aView.superview;
           }
       }
-    });
+    };
+    if ([NSThread isMainThread]) {
+        initOnMainThread();
+    } else {
+        dispatch_sync(dispatch_get_main_queue(), initOnMainThread);
+    }
 }
 
 CocoaGLSwapChain::~CocoaGLSwapChain() noexcept {
@@ -270,7 +275,7 @@ Platform::SwapChain* PlatformCocoaGL::createSwapChain(uint32_t width, uint32_t h
     // backing store is ready before the Driver thread continues.
     // TODO: this might be problematic if someone was both driving the rendering on the main thread
     // and using headless swapchains.
-    dispatch_sync(dispatch_get_main_queue(), ^{
+    auto createHeadlessWindowOnMainThread = ^{
         NSRect frame = NSMakeRect(-10000, -10000, width, height);
         nsView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, width, height)];
 
@@ -289,7 +294,12 @@ Platform::SwapChain* PlatformCocoaGL::createSwapChain(uint32_t width, uint32_t h
             pImpl->mHeadlessSwapChains.push_back(nsView);
             pImpl->mHeadlessWindows.push_back(nsWindow);
         }
-    });
+    };
+    if ([NSThread isMainThread]) {
+        createHeadlessWindowOnMainThread();
+    } else {
+        dispatch_sync(dispatch_get_main_queue(), createHeadlessWindowOnMainThread);
+    }
 
     CocoaGLSwapChain* swapChain = new CocoaGLSwapChain( nsView );
 
@@ -326,11 +336,17 @@ void PlatformCocoaGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept 
         }
     }
 
-    dispatch_async(dispatch_get_main_queue(), ^{
-        // Capture the ARC pointers so they are released on the main thread.
-        (void)headlessWindow;
-        (void)swapChainView;
-    });
+    // If we're already on the main thread, the local strong references above are released when they
+    // go out of scope below, which is what we want. Deferring to the main queue in that case would
+    // leak the view and the window for a caller that drives rendering on the main thread without
+    // running a run loop.
+    if (![NSThread isMainThread]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            // Capture the ARC pointers so they are released on the main thread.
+            (void)headlessWindow;
+            (void)swapChainView;
+        });
+    }
 
     delete cocoaSwapChain;
 }
