@@ -16,11 +16,14 @@
 
 #include <viewer/RemoteServer.h>
 
-#include <CivetServer.h>
-
+#include <utils/CString.h>
 #include <utils/Log.h>
 
+#include <CivetServer.h>
+
+#include <cstdio>
 #include <cstring>
+#include <mutex>
 #include <vector>
 
 using namespace utils;
@@ -34,26 +37,42 @@ public:
     void sendMessage(const char* label, const char* buffer, size_t bufsize);
 };
 
+// Note that MessageReceiver holds per-connection state (mChunk, mReceivedMessage) but a single
+// instance is shared by all connections. The server is configured with a single worker thread
+// (see kServerOptions), which serializes all connections and keeps the label/buffer state machine
+// consistent. mStateMutex is a safety net: if num_threads is ever raised, concurrent connections
+// will interleave their frames (a protocol error) but will never corrupt memory.
 class MessageReceiver : public CivetWebSocketHandler {
    public:
     MessageReceiver(RemoteServer* server) : mServer(server) {}
-    ~MessageReceiver() { delete mReceivedMessage; }
+    ~MessageReceiver() { mServer->releaseReceivedMessage(mReceivedMessage); }
     bool handleData(CivetServer* server, struct mg_connection*, int, char* , size_t) override;
+    void handleClose(CivetServer* server, const struct mg_connection*) override;
    private:
     RemoteServer* mServer;
+    std::mutex mStateMutex;
     std::vector<char> mChunk;
     ReceivedMessage* mReceivedMessage = nullptr;
 };
 
 RemoteServer::RemoteServer(int port) {
+    // civetweb dedicates a worker thread to each WebSocket connection for its entire lifetime, and
+    // all connections share the same MessageReceiver. A single worker thread guarantees that
+    // MessageReceiver is never entered concurrently; additional clients wait until the current one
+    // disconnects. Because a single stale connection would otherwise block the server until TCP
+    // keep-alive kicks in (hours), ping/pong is enabled so that civetweb drops peers that stop
+    // answering (MG_MAX_UNANSWERED_PING * websocket_timeout_ms, about one minute).
     const char* kServerOptions[] = {
-        "listening_ports", "8082",
-        "num_threads",     "2",
-        "error_log_file",  "civetweb.txt",
+        "listening_ports",            "8082",
+        "num_threads",                "1",
+        "enable_websocket_ping_pong", "yes",
+        "websocket_timeout_ms",       "10000",
+        "error_log_file",             "civetweb.txt",
         nullptr,
     };
-    std::string portString = std::to_string(port);
-    kServerOptions[1] = portString.c_str();
+    char portString[16];
+    snprintf(portString, sizeof(portString), "%d", port);
+    kServerOptions[1] = portString;
     mMessageSender = new MessageSender(kServerOptions);
     if (!mMessageSender->getContext()) {
         slog.e << "Unable to start RemoteServer, see civetweb.txt for details." << io::endl;
@@ -78,6 +97,11 @@ RemoteServer::~RemoteServer() {
 char const * RemoteServer::peekIncomingLabel() const {
     std::lock_guard lock(mReceivedMessagesMutex);
     return mIncomingMessage ? mIncomingMessage->label : nullptr;
+}
+
+CString RemoteServer::getIncomingLabel() const {
+    std::lock_guard lock(mReceivedMessagesMutex);
+    return mIncomingMessage ? CString(mIncomingMessage->label) : CString();
 }
 
 ReceivedMessage const * RemoteServer::peekReceivedMessage() const {
@@ -119,6 +143,14 @@ void RemoteServer::setIncomingMessage(ReceivedMessage* message) {
     mIncomingMessage = message;
 }
 
+void RemoteServer::discardIncomingMessage(ReceivedMessage* message) {
+    std::lock_guard lock(mReceivedMessagesMutex);
+    if (mIncomingMessage == message) {
+        mIncomingMessage = nullptr;
+    }
+    releaseReceivedMessage(message);
+}
+
 void RemoteServer::enqueueReceivedMessage(ReceivedMessage* message) {
     std::lock_guard lock(mReceivedMessagesMutex);
 
@@ -131,7 +163,12 @@ void RemoteServer::enqueueReceivedMessage(ReceivedMessage* message) {
             continue;
         }
         if (!strcmp(old_message->label, message->label)) {
-            releaseReceivedMessage(old_message);
+            if (old_message != message) {
+                if (old_message == mIncomingMessage) {
+                    mIncomingMessage = nullptr;
+                }
+                releaseReceivedMessage(old_message);
+            }
             message->messageUid = mNextMessageUid++;
             old_message = message;
             return;
@@ -147,6 +184,10 @@ void RemoteServer::enqueueReceivedMessage(ReceivedMessage* message) {
 
     // If there are no empty slots, then discard the message. This basically never happens.
     slog.e << "Discarding message, message queue overflow." << io::endl;
+    if (message == mIncomingMessage) {
+        mIncomingMessage = nullptr;
+    }
+    releaseReceivedMessage(message);
 }
 
 void RemoteServer::releaseReceivedMessage(ReceivedMessage const* message) {
@@ -171,9 +212,13 @@ bool MessageReceiver::handleData(CivetServer* server, struct mg_connection* conn
                                   char* data, size_t size) {
     const bool final = bits & 0x80;
     const int opcode = bits & 0xf;
-    if (opcode == MG_WEBSOCKET_OPCODE_CONNECTION_CLOSE) {
+    // Ignore all control frames (close, ping, pong, reserved). civetweb consumes ping/pong itself
+    // when enable_websocket_ping_pong is on, but a client may still send them unsolicited.
+    if (opcode >= MG_WEBSOCKET_OPCODE_CONNECTION_CLOSE) {
         return true;
     }
+
+    std::lock_guard lock(mStateMutex);
 
     // Append this frame to the aggregated chunk.
     mChunk.insert(mChunk.end(), data, data + size);
@@ -206,10 +251,35 @@ bool MessageReceiver::handleData(CivetServer* server, struct mg_connection* conn
     return true;
 }
 
+// NOTE: This is invoked off the main thread.
+void MessageReceiver::handleClose(CivetServer* server, const struct mg_connection* conn) {
+    std::lock_guard lock(mStateMutex);
+    // Discard any partially received message so that it doesn't leak and so that the next client
+    // starts with a clean state machine.
+    if (mReceivedMessage) {
+        mServer->discardIncomingMessage(mReceivedMessage);
+        mReceivedMessage = nullptr;
+    }
+    mChunk.clear();
+}
+
 void MessageSender::sendMessage(const char* label, const char* buffer, size_t bufsize) {
-    for (auto iter : connections) {
-        mg_websocket_write(const_cast<mg_connection *>(iter.first), 0x80, label, strlen(label) + 1);
-        mg_websocket_write(const_cast<mg_connection *>(iter.first), 0x80, buffer, bufsize);
+    // The connections map is mutated by civetweb worker threads, so take a snapshot under the
+    // context lock. The writes must happen outside of the context lock, because civetweb acquires
+    // the connection lock before the context lock when closing a connection. Connection objects
+    // are preallocated for the lifetime of the context, so a stale pointer is still valid memory;
+    // at worst the write fails or reaches the next connection that reuses the same slot.
+    std::vector<mg_connection*> targets;
+    mg_lock_context(context);
+    targets.reserve(connections.size());
+    for (auto const& iter : connections) {
+        targets.push_back(iter.first);
+    }
+    mg_unlock_context(context);
+
+    for (mg_connection* conn : targets) {
+        mg_websocket_write(conn, 0x80, label, strlen(label) + 1);
+        mg_websocket_write(conn, 0x80, buffer, bufsize);
     }
 }
 
