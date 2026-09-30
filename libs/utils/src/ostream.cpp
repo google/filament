@@ -40,13 +40,13 @@ namespace utils::io {
 ostream::~ostream() = default;
 
 void ostream::setConsumer(ConsumerCallback consumer, void* user) noexcept {
-    auto* const pImpl = mImpl;
+    auto* const pImpl = mImpl.get();
     LockGuard const lock(pImpl->mLock);
     pImpl->mConsumer = { consumer, user };
 }
 
 ostream& flush(ostream& s) noexcept {
-    auto* const pImpl = s.mImpl;
+    auto* const pImpl = s.mImpl.get();
     pImpl->mLock.lock();
     auto const callback = pImpl->mConsumer;
     if (UTILS_UNLIKELY(callback.first)) {

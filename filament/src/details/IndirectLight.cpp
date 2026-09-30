@@ -149,7 +149,7 @@ IndirectLight::Builder& IndirectLight::Builder::rotation(mat3f const& rotation) 
     return *this;
 }
 
-IndirectLight* IndirectLight::Builder::build(Engine& engine) {
+IndirectLight* IndirectLight::Builder::build(Engine& engine) const {
     if (mImpl->mReflectionsMap) {
         FILAMENT_CHECK_PRECONDITION(
                 mImpl->mReflectionsMap->getTarget() == Texture::Sampler::SAMPLER_CUBEMAP)
