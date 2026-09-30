@@ -70,10 +70,49 @@ def validate_tolerance(tolerance):
 
 _MODEL_SCAN_CACHE = {}
 
+# glTF-Sample-Assets ships several variants of a model under the same file name, e.g.
+# Models/Duck/{glTF,glTF-Binary,glTF-Embedded,glTF-Draco,glTF-Quantized}/Duck.{gltf,glb}.
+# Only glTF-Binary, and failing that glTF, is accepted. The other variants encode the data
+# differently (quantized, Draco, meshopt, ...) and can render differently, so silently falling
+# back to one of them would make a golden depend on which variants happen to be present.
+_PREFERRED_VARIANT_DIRS = ('glTF-Binary', 'glTF')
+_VARIANT_DIR_PREFIX = 'glTF'
+
+
+def _select_model_file(name, files):
+  """
+  Picks the file to use among all files that share a model name within one search path.
+
+  The choice must not depend on the filesystem: glob returns entries in directory order, which
+  differs between runner images. Letting that order decide once swapped Duck to its
+  glTF-Quantized variant and broke the WebGPU golden.
+  """
+  def variant(model_file):
+    return path.basename(path.dirname(model_file))
+
+  for preferred in _PREFERRED_VARIANT_DIRS:
+    matches = [f for f in files if variant(f) == preferred]
+    if len(matches) == 1:
+      return matches[0]
+    if len(matches) > 1:
+      break
+
+  # A single file outside a variant layout, e.g. third_party/models/lucy/lucy.glb.
+  if len(files) == 1 and not variant(files[0]).startswith(_VARIANT_DIR_PREFIX):
+    return files[0]
+
+  candidates = '\n  '.join(sorted(files))
+  raise ValueError(f"Cannot choose a file for model '{name}': expected exactly one file in a "
+                   f"{' or '.join(_PREFERRED_VARIANT_DIRS)} directory. Candidates:\n  {candidates}")
+
+
 def scan_models(search_paths, base_dir=None):
   """
   Recursively scan for .glb and .gltf files across search_paths.
-  Results are cached by the set of resolved search paths.
+  Results are cached by the ordered list of resolved search paths.
+
+  When a model name appears in several search paths, the last search path wins. Within a single
+  search path, the file is chosen by _select_model_file, which raises if the choice is ambiguous.
   """
   resolved_paths = []
   for p in search_paths:
@@ -87,7 +126,8 @@ def scan_models(search_paths, base_dir=None):
     else:
       resolved_paths.append(path.abspath(p))
 
-  cache_key = tuple(sorted(set(resolved_paths)))
+  # Order matters, because a later search path overrides an earlier one.
+  cache_key = tuple(resolved_paths)
   if cache_key in _MODEL_SCAN_CACHE:
     return _MODEL_SCAN_CACHE[cache_key]
 
@@ -97,9 +137,12 @@ def scan_models(search_paths, base_dir=None):
       continue
     glb_files = glob.glob(f'{d}/**/*.glb', recursive=True)
     gltf_files = glob.glob(f'{d}/**/*.gltf', recursive=True)
+    candidates = {}
     for model_file in chain(glb_files, gltf_files):
       name = path.splitext(path.basename(model_file))[0]
-      models[name] = path.abspath(model_file)
+      candidates.setdefault(name, []).append(path.abspath(model_file))
+    for name, files in candidates.items():
+      models[name] = _select_model_file(name, files)
 
   _MODEL_SCAN_CACHE[cache_key] = models
   return models

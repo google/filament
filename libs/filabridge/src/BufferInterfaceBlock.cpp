@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-#include "private/filament/BufferInterfaceBlock.h"
+#include <private/filament/BufferInterfaceBlock.h>
 
 #include <utils/compiler.h>
 #include <utils/Panic.h>
 
+#include <limits>
 #include <utility>
 
 using namespace utils;
@@ -111,7 +112,7 @@ BufferInterfaceBlock::BufferInterfaceBlock(BufferInterfaceBlock&& rhs) noexcept 
 BufferInterfaceBlock& BufferInterfaceBlock::operator=(BufferInterfaceBlock&& rhs) noexcept = default;
 BufferInterfaceBlock::~BufferInterfaceBlock() noexcept = default;
 
-BufferInterfaceBlock::BufferInterfaceBlock(Builder const& builder) noexcept
+BufferInterfaceBlock::BufferInterfaceBlock(Builder const& builder)
     : mName(builder.mName),
       mFieldInfoList(builder.mEntries.size()),
       mAlignment(builder.mAlignment),
@@ -123,7 +124,7 @@ BufferInterfaceBlock::BufferInterfaceBlock(Builder const& builder) noexcept
     auto& uniformsInfoList = mFieldInfoList;
 
     uint32_t i = 0;
-    uint16_t offset = 0;
+    uint64_t offset = 0;
     for (auto const& e : builder.mEntries) {
         size_t alignment = baseAlignmentForType(e.type);
         size_t stride = strideForType(e.type, e.stride);
@@ -140,16 +141,22 @@ BufferInterfaceBlock::BufferInterfaceBlock(Builder const& builder) noexcept
         // calculate the offset for this uniform
         size_t padding = (alignment - (offset % alignment)) % alignment;
         offset += padding;
+        FILAMENT_CHECK_POSTCONDITION(offset <= std::numeric_limits<uint16_t>::max())
+                << "BufferInterfaceBlock \"" << mName.c_str_safe()
+                << "\" field offset exceeds maximum supported size";
 
         FieldInfo& info = uniformsInfoList[i];
-        info = { e.name, offset, uint8_t(stride), e.type, e.isArray, e.size,
+        info = { e.name, uint16_t(offset), uint8_t(stride), e.type, e.isArray, e.size,
                  e.precision, e.associatedSampler, e.minFeatureLevel, e.structName, e.sizeName };
 
         // record this uniform info
         infoMap[{ info.name.data(), info.name.size() }] = i;
 
         // advance offset to next slot
-        offset += stride * std::max(1u, e.size);
+        offset += uint64_t(stride) * std::max(1u, e.size);
+        FILAMENT_CHECK_POSTCONDITION(offset <= std::numeric_limits<uint16_t>::max())
+                << "BufferInterfaceBlock \"" << mName.c_str_safe()
+                << "\" size exceeds maximum supported size";
         ++i;
     }
 
@@ -204,6 +211,8 @@ uint8_t UTILS_NOINLINE BufferInterfaceBlock::baseAlignmentForType(BufferInterfac
         case Type::STRUCT:
             return 4;
     }
+    assert_invariant(false);
+    return 1;
 }
 
 uint8_t UTILS_NOINLINE BufferInterfaceBlock::strideForType(BufferInterfaceBlock::Type type, uint32_t stride) noexcept {
@@ -235,6 +244,8 @@ uint8_t UTILS_NOINLINE BufferInterfaceBlock::strideForType(BufferInterfaceBlock:
         case Type::STRUCT:
             return stride;
     }
+    assert_invariant(false);
+    return 1;
 }
 
 } // namespace filament

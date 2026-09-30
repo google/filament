@@ -96,6 +96,7 @@ void FScene::prepare(JobSystem& js,
     EntityManager const& em = engine.getEntityManager();
     FRenderableManager const& rcm = engine.getRenderableManager();
     FTransformManager const& tcm = engine.getTransformManager();
+    tcm.ensureWorldTransformsUpToDate();
     FLightManager const& lcm = engine.getLightManager();
     // go through the list of entities, and gather the data of those that are renderables
     auto& sceneData = cache.renderableData;

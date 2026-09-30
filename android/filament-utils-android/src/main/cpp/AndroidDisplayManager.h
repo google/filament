@@ -42,8 +42,7 @@ public:
 
     void terminate() override;
 
-    WindowHandle createWindow(const char* title, uint32_t w, uint32_t h,
-            bool resizable, bool headless) override;
+    WindowHandle createWindow(const char* title, uint32_t w, uint32_t h, bool resizable) override;
     void destroyWindow(WindowHandle window) override;
 
     void* getNativeWindow(WindowHandle window) const override;

@@ -16,6 +16,7 @@
 
 #include "Allocators.h"
 #include "Froxelizer.h"
+#include "MaterialParser.h"
 #include "UniformBuffer.h"
 
 #include "components/RenderableManager.h"
@@ -55,8 +56,10 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <functional>
 #include <iostream>
@@ -339,6 +342,35 @@ TEST(FilamentTest, TransformManager) {
     EXPECT_EQ(rangeCount, c);
 }
 
+#if !defined(NDEBUG) && defined(GTEST_HAS_DEATH_TEST)
+TEST(FilamentTest, TransformManagerSetParentCycle) {
+    EntityManager& em = EntityManager::get();
+    FTransformManager tcm(em);
+
+    std::array<Entity, 3> entities;
+    em.create(entities.size(), entities.data());
+
+    tcm.create(entities[0]);
+    TransformManager::Instance const root = tcm.getInstance(entities[0]);
+
+    tcm.create(entities[1], root, mat4f{});
+    TransformManager::Instance const child = tcm.getInstance(entities[1]);
+
+    tcm.create(entities[2], child, mat4f{});
+    TransformManager::Instance const grandchild = tcm.getInstance(entities[2]);
+
+    // Re-parenting a node to itself or any of its descendants must fail an invariant assertion.
+    EXPECT_DEATH(tcm.setParent(root, root), "failed assertion");
+    EXPECT_DEATH(tcm.setParent(root, child), "failed assertion");
+    EXPECT_DEATH(tcm.setParent(root, grandchild), "failed assertion");
+
+    for (auto e : entities) {
+        tcm.destroy(e);
+        em.destroy(e);
+    }
+}
+#endif
+
 TEST(FilamentTest, TransformManagerChildrenIteration) {
     EntityManager& em = EntityManager::get();
     FTransformManager tcm(em);
@@ -559,6 +591,823 @@ TEST(FilamentTest, TransformManagerCallback) {
     tcm.destroy(e);
     em.destroy(e);
     Engine::destroy((Engine**)&engine);
+}
+
+TEST(FilamentTest, TransformManagerHierarchyAndMath) {
+    EntityManager& em = EntityManager::get();
+    FTransformManager tcm(em);
+
+    // Build a 3-level hierarchy:
+    // root (0) -> childA (1), childB (2), childC (3)
+    // childA (1) -> grandChildA1 (4), grandChildA2 (5)
+    // childB (2) -> grandChildB1 (6)
+    std::array<Entity, 7> entities;
+    em.create(entities.size(), entities.data());
+
+    // Asymmetric full 4x4 matrices so every lane and row/col combination is uniquely tested
+    auto makeTestMat = [](float s) -> mat4f {
+        return mat4f{
+            float4{ 1.0f + s,  2.0f - s,  0.5f * s,  0.1f * s },
+            float4{ -0.5f * s, 1.5f + s,  2.5f - s,  0.2f * s },
+            float4{ 0.25f * s, -1.0f + s, 1.25f + s, 0.3f * s },
+            float4{ 10.0f * s, 20.0f * s, 30.0f * s, 1.0f + 0.05f * s }
+        };
+    };
+
+    mat4f const mRoot = makeTestMat(1.0f);
+    mat4f const mChildA = makeTestMat(2.0f);
+    mat4f const mChildB = makeTestMat(3.0f);
+    mat4f const mChildC = makeTestMat(4.0f);
+    mat4f const mGrandA1 = makeTestMat(5.0f);
+    mat4f const mGrandA2 = makeTestMat(6.0f);
+    mat4f const mGrandB1 = makeTestMat(7.0f);
+
+    tcm.create(entities[0], {}, mRoot);
+    auto const iRoot = tcm.getInstance(entities[0]);
+
+    tcm.create(entities[1], iRoot, mChildA);
+    tcm.create(entities[2], iRoot, mChildB);
+    tcm.create(entities[3], iRoot, mChildC);
+    auto const iChildA = tcm.getInstance(entities[1]);
+    auto const iChildB = tcm.getInstance(entities[2]);
+    auto const iChildC = tcm.getInstance(entities[3]);
+
+    tcm.create(entities[4], iChildA, mGrandA1);
+    tcm.create(entities[5], iChildA, mGrandA2);
+    tcm.create(entities[6], iChildB, mGrandB1);
+    auto const iGrandA1 = tcm.getInstance(entities[4]);
+    auto const iGrandA2 = tcm.getInstance(entities[5]);
+    auto const iGrandB1 = tcm.getInstance(entities[6]);
+
+    auto expectMatNear = [](mat4f const& a, mat4f const& b, float eps = 1e-4f) {
+        for (size_t c = 0; c < 4; ++c) {
+            for (size_t r = 0; r < 4; ++r) {
+                float const tol = std::max(eps, std::abs(b[c][r]) * 2e-6f);
+                EXPECT_NEAR(a[c][r], b[c][r], tol) << "col=" << c << " row=" << r;
+            }
+        }
+    };
+
+    // 1. Verify initial world transforms across all levels
+    expectMatNear(tcm.getWorldTransform(iRoot), mRoot);
+    expectMatNear(tcm.getWorldTransform(iChildA), mRoot * mChildA);
+    expectMatNear(tcm.getWorldTransform(iChildB), mRoot * mChildB);
+    expectMatNear(tcm.getWorldTransform(iChildC), mRoot * mChildC);
+    expectMatNear(tcm.getWorldTransform(iGrandA1), (mRoot * mChildA) * mGrandA1);
+    expectMatNear(tcm.getWorldTransform(iGrandA2), (mRoot * mChildA) * mGrandA2);
+    expectMatNear(tcm.getWorldTransform(iGrandB1), (mRoot * mChildB) * mGrandB1);
+
+    // 2. Track change notifications when updating root (all 7 nodes must be notified)
+    std::vector<Entity> notified;
+    tcm.registerChangeCallback(&tcm, [&](Slice<const Entity> changed) {
+        notified.insert(notified.end(), changed.begin(), changed.end());
+    });
+
+    mat4f const mRoot2 = makeTestMat(1.5f);
+    tcm.setTransform(iRoot, mRoot2);
+    tcm.flushNotifications();
+    EXPECT_EQ(notified.size(), 7u);
+
+    expectMatNear(tcm.getWorldTransform(iRoot), mRoot2);
+    expectMatNear(tcm.getWorldTransform(iChildA), mRoot2 * mChildA);
+    expectMatNear(tcm.getWorldTransform(iChildB), mRoot2 * mChildB);
+    expectMatNear(tcm.getWorldTransform(iChildC), mRoot2 * mChildC);
+    expectMatNear(tcm.getWorldTransform(iGrandA1), (mRoot2 * mChildA) * mGrandA1);
+    expectMatNear(tcm.getWorldTransform(iGrandA2), (mRoot2 * mChildA) * mGrandA2);
+    expectMatNear(tcm.getWorldTransform(iGrandB1), (mRoot2 * mChildB) * mGrandB1);
+
+    // 3. Update an intermediate node (childA) -> notifies childA, grandChildA1, grandChildA2 (3 nodes)
+    notified.clear();
+    mat4f const mChildA2 = makeTestMat(2.5f);
+    tcm.setTransform(iChildA, mChildA2);
+    tcm.flushNotifications();
+    EXPECT_EQ(notified.size(), 3u);
+    expectMatNear(tcm.getWorldTransform(iChildA), mRoot2 * mChildA2);
+    expectMatNear(tcm.getWorldTransform(iGrandA1), (mRoot2 * mChildA2) * mGrandA1);
+    expectMatNear(tcm.getWorldTransform(iGrandA2), (mRoot2 * mChildA2) * mGrandA2);
+    expectMatNear(tcm.getWorldTransform(iGrandB1), (mRoot2 * mChildB) * mGrandB1);
+
+    // 4. Update a parented leaf node (grandChildB1) -> notifies 1 node
+    notified.clear();
+    mat4f const mGrandB1_2 = makeTestMat(7.5f);
+    tcm.setTransform(iGrandB1, mGrandB1_2);
+    tcm.flushNotifications();
+    EXPECT_EQ(notified.size(), 1u);
+    expectMatNear(tcm.getWorldTransform(iGrandB1), (mRoot2 * mChildB) * mGrandB1_2);
+
+    // 5. Reparent childA to become a root node (parent == 0)
+    tcm.setParent(iChildA, {});
+    expectMatNear(tcm.getWorldTransform(iChildA), mChildA2);
+    expectMatNear(tcm.getWorldTransform(iGrandA1), mChildA2 * mGrandA1);
+    expectMatNear(tcm.getWorldTransform(iGrandA2), mChildA2 * mGrandA2);
+
+    // 6. Accurate translations mode on both root and child
+    tcm.setAccurateTranslationsEnabled(true);
+    mat4 const dRoot = mat4::translation(double3{ 100000.125, -200000.25, 300000.5 });
+    mat4 const dChild = mat4::translation(double3{ 0.0001220703125, -0.000244140625, 0.00048828125 });
+    tcm.setParent(iChildA, iRoot);
+    tcm.setTransform(iRoot, dRoot);
+    tcm.setTransform(iChildA, dChild);
+    mat4 const expectedWorldAccurate = dRoot * dChild;
+    mat4 const actualWorldAccurate = tcm.getWorldTransformAccurate(iChildA);
+    for (size_t c = 0; c < 4; ++c) {
+        for (size_t r = 0; r < 4; ++r) {
+            EXPECT_NEAR(actualWorldAccurate[c][r], expectedWorldAccurate[c][r], 1e-6);
+        }
+    }
+
+    // 7. Exercise non-recursive transformChildren stack overflow fallback (>128 sibling subtrees)
+    constexpr size_t BRANCH_COUNT = 140;
+    std::vector<Entity> wideEntities(BRANCH_COUNT * 2);
+    em.create(wideEntities.size(), wideEntities.data());
+    mat4f const stepMat = mat4f::translation(float3{ 1.0f, 2.0f, 3.0f });
+    for (size_t i = 0; i < BRANCH_COUNT; ++i) {
+        tcm.create(wideEntities[i], iRoot, stepMat);
+        auto const iBranch = tcm.getInstance(wideEntities[i]);
+        tcm.create(wideEntities[BRANCH_COUNT + i], iBranch, stepMat);
+    }
+
+    for (bool const accurate : { false, true }) {
+        tcm.setAccurateTranslationsEnabled(accurate);
+        tcm.flushNotifications();
+        notified.clear();
+        float const scale = accurate ? 2.0f : 1.0f;
+        mat4f const rootTranslate = mat4f::translation(float3{ 10.0f * scale, 20.0f * scale, 30.0f * scale });
+        tcm.setTransform(iRoot, rootTranslate);
+        tcm.flushNotifications();
+        EXPECT_EQ(notified.size(), 7u + BRANCH_COUNT * 2);
+        mat4f const expectedLeaf = rootTranslate * stepMat * stepMat;
+        for (size_t i = 0; i < BRANCH_COUNT; ++i) {
+            auto const iLeaf = tcm.getInstance(wideEntities[BRANCH_COUNT + i]);
+            expectMatNear(tcm.getWorldTransform(iLeaf), expectedLeaf);
+        }
+    }
+
+    tcm.unregisterChangeCallback(&tcm);
+    notified.clear();
+    utils::PagedArenaBitset dirtyBitset;
+    tcm.registerBitset(&dirtyBitset);
+    for (bool const accurate : { false, true }) {
+        tcm.setAccurateTranslationsEnabled(accurate);
+        tcm.flushNotifications();
+        dirtyBitset.clear();
+        float const scale = accurate ? 2.0f : 1.0f;
+        mat4f const rootTranslate = mat4f::translation(float3{ -5.0f * scale, 15.0f * scale, -25.0f * scale });
+        tcm.setTransform(iRoot, rootTranslate);
+        tcm.flushNotifications();
+        EXPECT_TRUE(notified.empty());
+        EXPECT_EQ(dirtyBitset.size(), 7u + BRANCH_COUNT * 2);
+        mat4f const expectedLeaf = rootTranslate * stepMat * stepMat;
+        for (size_t i = 0; i < BRANCH_COUNT; ++i) {
+            auto const iLeaf = tcm.getInstance(wideEntities[BRANCH_COUNT + i]);
+            expectMatNear(tcm.getWorldTransform(iLeaf), expectedLeaf);
+        }
+    }
+    tcm.unregisterBitset(&dirtyBitset);
+
+    for (auto e : wideEntities) {
+        tcm.destroy(e);
+        em.destroy(e);
+    }
+    for (auto e : entities) {
+        tcm.destroy(e);
+        em.destroy(e);
+    }
+}
+
+TEST(FilamentTest, TransformManagerLazyAndConcurrent) {
+    EntityManager& em = EntityManager::get();
+    FTransformManager tcm(em);
+
+    std::array<Entity, 4> entities;
+    em.create(entities.size(), entities.data());
+
+    mat4f const m0 = mat4f::translation(float3{ 1.0f, 2.0f, 3.0f });
+    mat4f const m1 = mat4f::translation(float3{ 4.0f, 5.0f, 6.0f });
+    mat4f const m2 = mat4f::translation(float3{ 7.0f, 8.0f, 9.0f });
+    mat4f const m3 = mat4f::translation(float3{ 10.0f, 11.0f, 12.0f });
+
+    // Chain: e0 (root) -> e1 -> e2 -> e3
+    tcm.create(entities[0], {}, m0);
+    auto const i0 = tcm.getInstance(entities[0]);
+    tcm.create(entities[1], i0, m1);
+    auto const i1 = tcm.getInstance(entities[1]);
+    tcm.create(entities[2], i1, m2);
+    auto const i2 = tcm.getInstance(entities[2]);
+    tcm.create(entities[3], i2, m3);
+    auto const i3 = tcm.getInstance(entities[3]);
+    tcm.flushNotifications();
+
+    utils::PagedArenaBitset dirtyBitset;
+    tcm.registerBitset(&dirtyBitset);
+    std::atomic<size_t> callbackNotifications{ 0 };
+    tcm.registerChangeCallback(&tcm, [&](Slice<const Entity> changed) {
+        callbackNotifications.fetch_add(changed.size(), std::memory_order_relaxed);
+    });
+
+    // 1. Identical setTransform early exit: 0 notifications and 0 bitset bits
+    dirtyBitset.clear();
+    callbackNotifications.store(0, std::memory_order_relaxed);
+    tcm.setTransform(i0, m0);
+    tcm.setTransform(i1, m1);
+    tcm.setTransform(i2, m2);
+    tcm.setTransform(i3, m3);
+    tcm.flushNotifications();
+    EXPECT_EQ(dirtyBitset.size(), 0u);
+    EXPECT_EQ(callbackNotifications.load(std::memory_order_relaxed), 0u);
+
+    // 2. Repeated updates (T, R, S) and non-contiguous bottom-up + top-down updates:
+    // Update leaf i3 first, then root i0 three times (leaving i1, i2 untouched directly).
+    mat4f const i3New = mat4f::translation(float3{ -1.0f, -2.0f, -3.0f });
+    mat4f const i0Step1 = mat4f::translation(float3{ 10.0f, 0.0f, 0.0f });
+    mat4f const i0Step2 = mat4f::translation(float3{ 10.0f, 20.0f, 0.0f });
+    mat4f const i0Final = mat4f::translation(float3{ 10.0f, 20.0f, 30.0f });
+
+    tcm.setTransform(i3, i3New);
+    tcm.setTransform(i0, i0Step1);
+    tcm.setTransform(i0, i0Step2);
+    tcm.setTransform(i0, i0Final);
+    tcm.flushNotifications();
+
+    // All 4 nodes in the chain must be notified exactly once
+    EXPECT_EQ(dirtyBitset.size(), 4u);
+    EXPECT_EQ(callbackNotifications.load(std::memory_order_relaxed), 4u);
+    EXPECT_EQ(tcm.getWorldTransform(i3), i0Final * m1 * m2 * i3New);
+
+    // 3. Multithreaded concurrent const reads (getWorldTransform / getWorldTransformAccurate)
+    // immediately after setTransform without a prior main-thread flush
+    tcm.setAccurateTranslationsEnabled(true);
+    mat4 const d0 = mat4::translation(double3{ 100000.5, -200000.25, 300000.125 });
+    mat4 const d3 = mat4::translation(double3{ 0.5, 1.25, -2.125 });
+    tcm.setTransform(i0, d0);
+    tcm.setTransform(i3, d3);
+
+    mat4 const expectedAccurate = d0 * mat4(m1) * mat4(m2) * d3;
+    constexpr size_t THREAD_COUNT = 4;
+    std::vector<std::thread> readers;
+    readers.reserve(THREAD_COUNT);
+    for (size_t t = 0; t < THREAD_COUNT; ++t) {
+        readers.emplace_back([&]() {
+            for (int iter = 0; iter < 100; ++iter) {
+                mat4 const actual = tcm.getWorldTransformAccurate(i3);
+                for (size_t c = 0; c < 4; ++c) {
+                    for (size_t r = 0; r < 4; ++r) {
+                        EXPECT_NEAR(actual[c][r], expectedAccurate[c][r], 1e-5);
+                    }
+                }
+            }
+        });
+    }
+    for (auto& th : readers) {
+        th.join();
+    }
+
+    // 4. Verify setTransform(mat4f) clears localTranslationLo even when accurate mode is off
+    // and even when the mat4f high part matches the previously set mat4 high part.
+    tcm.setAccurateTranslationsEnabled(false);
+    mat4 const dLarge = mat4::translation(double3{ 100000.123456789, -200000.987654321, 300000.555555555 });
+    tcm.setTransform(i0, dLarge);
+    mat4f const fLarge = mat4f(dLarge);
+    // High part matches manager[i0].local, but localTranslationLo is non-zero; setTransform(mat4f) must not early-return!
+    tcm.setTransform(i0, fLarge);
+    EXPECT_EQ(tcm.getTransformAccurate(i0), mat4(fLarge));
+    tcm.setAccurateTranslationsEnabled(true);
+    EXPECT_EQ(tcm.getWorldTransformAccurate(i0), mat4(fLarge));
+
+    // 5. Verify ChangeCallback re-entrancy when > MAX_DIRTY_COUNT (16) entities are committed:
+    // Calling getWorldTransform() inside the callback (which fires mid-batch at 16 entities)
+    // must not self-deadlock on mCommitLock and must observe updated world transforms for all
+    // entities in the hierarchy, including those beyond the 16th entity.
+    tcm.setAccurateTranslationsEnabled(false);
+    constexpr size_t kChainLen = 24;
+    Entity chain[kChainLen];
+    em.create(kChainLen, chain);
+    for (size_t k = 0; k < kChainLen; ++k) {
+        auto parent = (k == 0) ? TransformManager::Instance{} : tcm.getInstance(chain[k - 1]);
+        tcm.create(chain[k], parent, mat4f::translation(float3{ 1.0f, 0.0f, 0.0f }));
+    }
+    auto const tailInstance = tcm.getInstance(chain[kChainLen - 1]);
+    size_t reentrantCallbacks = 0;
+    tcm.registerChangeCallback(&chain, [&](Slice<const Entity> changed) {
+        reentrantCallbacks += changed.size();
+        for (Entity e : changed) {
+            auto ci = tcm.getInstance(e);
+            EXPECT_TRUE(ci.isValid());
+            // Re-entrant read of the notified entity and the very last leaf in the 24-node chain
+            (void)tcm.getWorldTransform(ci);
+        }
+        // Even on the first 16-entity flush, the 24th node's world transform must already be updated
+        EXPECT_EQ(tcm.getWorldTransform(tailInstance),
+                mat4f::translation(float3{ float(kChainLen + 1), 0.0f, 0.0f }));
+        // Re-entrant flushNotifications() must not infinitely recurse
+        tcm.flushNotifications();
+    });
+    // Dirty the root of the 24-node chain (+2 instead of +1) and trigger commit via getWorldTransform
+    tcm.setTransform(tcm.getInstance(chain[0]), mat4f::translation(float3{ 2.0f, 0.0f, 0.0f }));
+    EXPECT_EQ(tcm.getWorldTransform(tailInstance),
+            mat4f::translation(float3{ float(kChainLen + 1), 0.0f, 0.0f }));
+    tcm.flushNotifications();
+    EXPECT_GE(reentrantCallbacks, kChainLen);
+    tcm.unregisterChangeCallback(&chain);
+    for (size_t k = 0; k < kChainLen; ++k) {
+        tcm.destroy(chain[k]);
+        em.destroy(chain[k]);
+    }
+
+    tcm.unregisterChangeCallback(&tcm);
+    tcm.unregisterBitset(&dirtyBitset);
+    for (auto e : entities) {
+        tcm.destroy(e);
+        em.destroy(e);
+    }
+}
+
+TEST(FilamentTest, TransformManagerDefragment) {
+    EntityManager& em = EntityManager::get();
+    FTransformManager tcm(em);
+
+    // Build a fragmented hierarchy of 64 entities:
+    // Create leaves first, then intermediate nodes, then roots, and wire parents via setParent
+    // in reverse/scrambled order so parents initially reside at higher Instance indices than
+    // their children and siblings are scattered non-contiguously across the SoA.
+    constexpr size_t kNodeCount = 64;
+    std::vector<Entity> entities(kNodeCount);
+    em.create(kNodeCount, entities.data());
+
+    // Create components in reverse order (index 63 down to 0)
+    for (size_t idx = kNodeCount; idx > 0; --idx) {
+        size_t const i = idx - 1;
+        tcm.create(entities[i], {}, mat4f::translation(float3{ float(i + 1), float(i * 2), -float(i) }));
+    }
+
+    // Wire a 4-ary tree rooted at entities[0], entities[1], entities[2], entities[3]:
+    // For i >= 4, parent is entities[(i - 4) / 4].
+    for (size_t i = 4; i < kNodeCount; ++i) {
+        Entity const parentEntity = entities[(i - 4) / 4];
+        tcm.setParent(tcm.getInstance(entities[i]), tcm.getInstance(parentEntity));
+    }
+
+    // Also destroy a couple of leaf entities to create holes/swap-removals before defragmenting
+    tcm.destroy(entities[kNodeCount - 1]);
+    em.destroy(entities[kNodeCount - 1]);
+    tcm.destroy(entities[kNodeCount - 2]);
+    em.destroy(entities[kNodeCount - 2]);
+    entities.resize(kNodeCount - 2);
+
+    // Snapshot expected local, world, and parent relationships before defragmentation
+    std::vector<mat4f> expectedLocal(entities.size());
+    std::vector<mat4f> expectedWorld(entities.size());
+    std::vector<Entity> expectedParent(entities.size());
+    for (size_t i = 0; i < entities.size(); ++i) {
+        auto const ci = tcm.getInstance(entities[i]);
+        expectedLocal[i] = tcm.getTransform(ci);
+        expectedWorld[i] = tcm.getWorldTransform(ci);
+        expectedParent[i] = tcm.getParent(ci);
+    }
+
+    // Perform incremental amortized defragmentation with a small swap budget (e.g. 3 swaps per step)
+    // and verify hierarchy & transform invariants after every single incremental step.
+    for (size_t step = 0; step < 64; ++step) {
+        // Also dirty a root transform mid-defragmentation to verify ensureWorldTransformsUpToDate()
+        // inside defragment() keeps dirty instances consistent across swaps.
+        if (step == 5) {
+            auto const root0 = tcm.getInstance(entities[0]);
+            mat4f const newRoot0 = mat4f::translation(float3{ 100.0f, 200.0f, 300.0f });
+            tcm.setTransform(root0, newRoot0);
+            expectedLocal[0] = newRoot0;
+            for (size_t i = 0; i < entities.size(); ++i) {
+                expectedWorld[i] = tcm.getWorldTransform(tcm.getInstance(entities[i]));
+            }
+            // Dirty again without reading before defragment() runs!
+            mat4f const newRoot0B = mat4f::translation(float3{ 10.0f, 20.0f, 30.0f });
+            tcm.setTransform(root0, newRoot0B);
+            expectedLocal[0] = newRoot0B;
+        }
+
+        tcm.defragment(3);
+
+        if (step == 5) {
+            // Re-snapshot expectedWorld now that root0 changed to newRoot0B
+            for (size_t i = 0; i < entities.size(); ++i) {
+                expectedWorld[i] = tcm.getWorldTransform(tcm.getInstance(entities[i]));
+            }
+        }
+
+        for (size_t i = 0; i < entities.size(); ++i) {
+            auto const ci = tcm.getInstance(entities[i]);
+            ASSERT_TRUE(ci.isValid());
+            EXPECT_EQ(tcm.getParent(ci), expectedParent[i]);
+            EXPECT_EQ(tcm.getTransform(ci), expectedLocal[i]);
+            mat4f const actualWorld = tcm.getWorldTransform(ci);
+            for (size_t c = 0; c < 4; ++c) {
+                for (size_t r = 0; r < 4; ++r) {
+                    EXPECT_NEAR(actualWorld[c][r], expectedWorld[i][c][r], 1e-4f);
+                }
+            }
+        }
+    }
+
+    // Finish any remaining defragmentation via gc()
+    for (size_t step = 0; step < 16; ++step) {
+        tcm.gc();
+    }
+
+    // Verify strict BFS topological invariants after defragmentation completes:
+    // 1. Every root node (parent == 0) precedes every child node, and for every child node,
+    //    Instance(parent) < Instance(child).
+    // 2. For every parent node, its children occupy strictly contiguous ascending Instance slots
+    //    (nextChildInstance == prevChildInstance + 1).
+    for (size_t i = 0; i < entities.size(); ++i) {
+        auto const ci = tcm.getInstance(entities[i]);
+        Entity const p = tcm.getParent(ci);
+        if (!p.isNull()) {
+            auto const pi = tcm.getInstance(p);
+            EXPECT_LT(uint32_t(pi), uint32_t(ci));
+        }
+
+        uint32_t prevChildIdx = 0;
+        for (auto it = tcm.getChildrenBegin(ci), end = tcm.getChildrenEnd(ci); it != end; ++it) {
+            auto const childCi = *it;
+            EXPECT_GT(uint32_t(childCi), uint32_t(ci));
+            if (prevChildIdx != 0) {
+                EXPECT_EQ(uint32_t(childCi), prevChildIdx + 1u);
+            }
+            prevChildIdx = uint32_t(childCi);
+        }
+    }
+
+    // Verify that the !mTopologyDirty contiguous level-slice fast path in transformChildren()
+    // computes exact world transforms for both root updates and internal subtree updates.
+    tcm.setTransform(tcm.getInstance(entities[2]), mat4f::translation(float3{ -50.0f, 75.0f, -125.0f }));
+    tcm.setTransform(tcm.getInstance(entities[5]), mat4f::translation(float3{ 12.0f, -34.0f, 56.0f }));
+    for (size_t i = 0; i < entities.size(); ++i) {
+        auto const ci = tcm.getInstance(entities[i]);
+        mat4f expected = tcm.getTransform(ci);
+        Entity p = tcm.getParent(ci);
+        while (!p.isNull()) {
+            expected = tcm.getTransform(tcm.getInstance(p)) * expected;
+            p = tcm.getParent(tcm.getInstance(p));
+        }
+        mat4f const actual = tcm.getWorldTransform(ci);
+        for (size_t c = 0; c < 4; ++c) {
+            for (size_t r = 0; r < 4; ++r) {
+                EXPECT_NEAR(actual[c][r], expected[c][r], 1e-4f);
+            }
+        }
+    }
+
+    // Now modify only a deep parent (reparent entities[40] under entities[12] and create a new child
+    // under entities[13]): smart cursor invalidation should rewind only to parent 12 instead of 0,
+    // so a single small defragment(16) call suffices to restore full BFS order across the entire tree.
+    tcm.setParent(tcm.getInstance(entities[40]), tcm.getInstance(entities[12]));
+    Entity const extraLeaf = em.create();
+    tcm.create(extraLeaf, tcm.getInstance(entities[13]), mat4f::translation(float3{ 7.0f, 8.0f, 9.0f }));
+    entities.push_back(extraLeaf);
+
+    tcm.defragment(16);
+
+    for (size_t i = 0; i < entities.size(); ++i) {
+        auto const ci = tcm.getInstance(entities[i]);
+        Entity const p = tcm.getParent(ci);
+        if (!p.isNull()) {
+            auto const pi = tcm.getInstance(p);
+            EXPECT_LT(uint32_t(pi), uint32_t(ci));
+        }
+        uint32_t prevChildIdx = 0;
+        for (auto it = tcm.getChildrenBegin(ci), end = tcm.getChildrenEnd(ci); it != end; ++it) {
+            auto const childCi = *it;
+            EXPECT_GT(uint32_t(childCi), uint32_t(ci));
+            if (prevChildIdx != 0) {
+                EXPECT_EQ(uint32_t(childCi), prevChildIdx + 1u);
+            }
+            prevChildIdx = uint32_t(childCi);
+        }
+    }
+
+    // Now destroy a non-root leaf (entities[42]): smart cursor invalidation rewinds only to
+    // min(oldParent, movedParent) (~slot 35) instead of 0, skipping the first ~35 nodes and
+    // shifting only the remaining ~26 tail nodes left by 1 slot.
+    tcm.destroy(entities[42]);
+    em.destroy(entities[42]);
+    entities.erase(entities.begin() + 42);
+
+    tcm.defragment(28);
+
+    for (size_t i = 0; i < entities.size(); ++i) {
+        auto const ci = tcm.getInstance(entities[i]);
+        Entity const p = tcm.getParent(ci);
+        if (!p.isNull()) {
+            auto const pi = tcm.getInstance(p);
+            EXPECT_LT(uint32_t(pi), uint32_t(ci));
+        }
+        uint32_t prevChildIdx = 0;
+        for (auto it = tcm.getChildrenBegin(ci), end = tcm.getChildrenEnd(ci); it != end; ++it) {
+            auto const childCi = *it;
+            EXPECT_GT(uint32_t(childCi), uint32_t(ci));
+            if (prevChildIdx != 0) {
+                EXPECT_EQ(uint32_t(childCi), prevChildIdx + 1u);
+            }
+            prevChildIdx = uint32_t(childCi);
+        }
+    }
+
+    for (Entity e : entities) {
+        tcm.destroy(e);
+        em.destroy(e);
+    }
+}
+
+TEST(FilamentTest, TransformManagerOrphans) {
+    // Children orphaned by destroy() become roots: their world transform must become their local
+    // transform, and their descendants must follow.
+    EntityManager& em = EntityManager::get();
+    FTransformManager tcm(em);
+
+    mat4f const parentLocal = mat4f::translation(float3{ 10, 0, 0 });
+    mat4f const childLocal = mat4f::translation(float3{ 0, 5, 0 });
+    mat4f const grandChildLocal = mat4f::translation(float3{ 0, 0, 3 });
+
+    auto world = [&tcm](Entity const e) {
+        return tcm.getWorldTransform(tcm.getInstance(e));
+    };
+
+    auto cleanup = [&tcm, &em](std::vector<Entity> const& entities) {
+        tcm.destroyComponents(entities.data(), entities.size());
+        for (Entity const e : entities) {
+            em.destroy(e);
+        }
+    };
+
+    // Single destroy.
+    {
+        Entity const p = em.create();
+        Entity const c = em.create();
+        Entity const g = em.create();
+        tcm.create(p, {}, parentLocal);
+        tcm.create(c, tcm.getInstance(p), childLocal);
+        tcm.create(g, tcm.getInstance(c), grandChildLocal);
+        EXPECT_EQ(world(g), parentLocal * childLocal * grandChildLocal);
+
+        tcm.destroy(p);
+        EXPECT_TRUE(tcm.getParent(tcm.getInstance(c)).isNull());
+        EXPECT_EQ(world(c), childLocal);
+        EXPECT_EQ(world(g), childLocal * grandChildLocal);
+
+        tcm.destroy(c);
+        EXPECT_EQ(world(g), grandChildLocal);
+        cleanup({ p, c, g });
+    }
+
+    // Batch destroy where components move after the orphan is recorded: destroying p moves c
+    // (the last component) into p's slot, then destroying x moves y into x's slot.
+    {
+        Entity const p = em.create();
+        Entity const x = em.create();
+        Entity const y = em.create();
+        Entity const c = em.create();
+        tcm.create(p, {}, parentLocal);
+        tcm.create(x);
+        tcm.create(y);
+        tcm.create(c, tcm.getInstance(p), childLocal);
+        EXPECT_EQ(world(c), parentLocal * childLocal);
+
+        Entity const batch[] = { p, x };
+        tcm.destroyComponents(batch, 2);
+        EXPECT_TRUE(tcm.getParent(tcm.getInstance(c)).isNull());
+        EXPECT_EQ(world(c), childLocal);
+        EXPECT_EQ(world(y), mat4f{});
+        cleanup({ p, x, y, c });
+    }
+
+    // Batch destroy where an orphan is itself destroyed later in the same batch.
+    {
+        Entity const p = em.create();
+        Entity const c = em.create();
+        Entity const g = em.create();
+        tcm.create(p, {}, parentLocal);
+        tcm.create(c, tcm.getInstance(p), childLocal);
+        tcm.create(g, tcm.getInstance(c), grandChildLocal);
+        EXPECT_EQ(world(g), parentLocal * childLocal * grandChildLocal);
+
+        Entity const batch[] = { p, c };
+        tcm.destroyComponents(batch, 2);
+        EXPECT_FALSE(tcm.hasComponent(c));
+        EXPECT_EQ(world(g), grandChildLocal);
+        cleanup({ p, c, g });
+    }
+
+    // Destroy during a local transform transaction.
+    {
+        Entity const p = em.create();
+        Entity const c = em.create();
+        Entity const g = em.create();
+        tcm.create(p, {}, parentLocal);
+        tcm.create(c, tcm.getInstance(p), childLocal);
+        tcm.create(g, tcm.getInstance(c), grandChildLocal);
+
+        tcm.openLocalTransformTransaction();
+        tcm.destroy(p);
+        tcm.commitLocalTransformTransaction();
+        EXPECT_EQ(world(c), childLocal);
+        EXPECT_EQ(world(g), childLocal * grandChildLocal);
+        cleanup({ p, c, g });
+    }
+}
+
+TEST(FilamentTest, TransformManagerRandomizedHierarchy) {
+    // Applies seeded random sequences of hierarchy edits, transform updates, transactions and
+    // partial defragmentations, and checks after every operation that each world transform
+    // matches the product of the local transforms up the parent chain. Periodically, it runs
+    // defragmentation to completion, checks the BFS layout, and exercises the defragmented fast
+    // path. Odd seeds use accurate translations.
+    EntityManager& em = EntityManager::get();
+    constexpr uint32_t kSeedCount = 20;
+    constexpr size_t kOpCount = 200;
+    constexpr size_t kMaxNodes = 64;
+
+    for (uint32_t seed = 0; seed < kSeedCount; ++seed) {
+        SCOPED_TRACE(testing::Message() << "seed=" << seed);
+        std::mt19937 rng(seed);
+        bool const accurate = (seed & 1u) != 0;
+
+        FTransformManager tcm(em);
+        tcm.setAccurateTranslationsEnabled(accurate);
+        std::vector<Entity> nodes;
+
+        auto uniform = [&rng](size_t const n) {
+            return std::uniform_int_distribution<size_t>(0, n - 1)(rng);
+        };
+        auto chance = [&rng](double const p) {
+            return std::bernoulli_distribution(p)(rng);
+        };
+
+        // Accurate seeds use large translations and no rotation: the double-precision reference
+        // is then exact, and world transforms computed in single precision would fail the check.
+        // Other seeds use rotations and small translations.
+        auto randomLocal = [&]() -> mat4 {
+            if (accurate) {
+                std::uniform_real_distribution<double> t(-2e5, 2e5);
+                return mat4::translation(double3{ t(rng), t(rng), t(rng) });
+            }
+            std::uniform_real_distribution<double> t(-10.0, 10.0);
+            std::uniform_real_distribution<float> a(-3.14f, 3.14f);
+            float3 axis{ float(t(rng)), float(t(rng)), float(t(rng)) };
+            if (length(axis) < 1e-3f) {
+                axis = float3{ 0, 1, 0 };
+            }
+            mat4 m{ mat4f::rotation(a(rng), normalize(axis)) };
+            m[3] = double4{ t(rng), t(rng), t(rng), 1.0 };
+            return m;
+        };
+
+        auto setLocal = [&](Entity const e, mat4 const& m) {
+            auto const ci = tcm.getInstance(e);
+            if (chance(0.5)) {
+                tcm.setTransform(ci, m);
+            } else {
+                tcm.setTransform(ci, mat4f(m));
+            }
+        };
+
+        // Returns whether `a` is `n` or one of its ancestors.
+        auto isAncestorOrSelf = [&tcm](Entity const a, Entity const n) {
+            for (Entity e = n; !e.isNull(); e = tcm.getParent(tcm.getInstance(e))) {
+                if (e == a) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        auto checkWorldTransforms = [&]() {
+            for (Entity const e : nodes) {
+                auto const ci = tcm.getInstance(e);
+                ASSERT_TRUE(ci.isValid());
+                mat4 expected = tcm.getTransformAccurate(ci);
+                for (Entity p = tcm.getParent(ci); !p.isNull(); p = tcm.getParent(tcm.getInstance(p))) {
+                    expected = tcm.getTransformAccurate(tcm.getInstance(p)) * expected;
+                }
+                mat4 const actual = accurate ?
+                        tcm.getWorldTransformAccurate(ci) : mat4(tcm.getWorldTransform(ci));
+                for (size_t c = 0; c < 4; ++c) {
+                    for (size_t r = 0; r < 4; ++r) {
+                        double const tolerance =
+                                accurate ? 1e-3 : 1e-4 * (1.0 + std::abs(expected[c][r]));
+                        ASSERT_NEAR(actual[c][r], expected[c][r], tolerance)
+                                << "column=" << c << " row=" << r;
+                    }
+                }
+            }
+        };
+
+        // Once defragmentation completes: roots occupy the first slots, every child comes after
+        // its parent, and siblings are contiguous.
+        auto checkBfsLayout = [&]() {
+            uint32_t rootCount = 0;
+            for (Entity const e : nodes) {
+                rootCount += tcm.getParent(tcm.getInstance(e)).isNull() ? 1u : 0u;
+            }
+            for (Entity const e : nodes) {
+                auto const ci = tcm.getInstance(e);
+                Entity const p = tcm.getParent(ci);
+                if (p.isNull()) {
+                    ASSERT_LE(uint32_t(ci), rootCount);
+                } else {
+                    ASSERT_LT(uint32_t(tcm.getInstance(p)), uint32_t(ci));
+                }
+                uint32_t prevChild = 0;
+                for (auto const child : tcm.getChildrenRange(ci)) {
+                    if (prevChild) {
+                        ASSERT_EQ(uint32_t(child), prevChild + 1u);
+                    }
+                    prevChild = uint32_t(child);
+                }
+            }
+        };
+
+        for (size_t op = 0; op < kOpCount; ++op) {
+            size_t const kind = uniform(100);
+            if (nodes.empty() || (kind < 25 && nodes.size() < kMaxNodes)) {
+                Entity const e = em.create();
+                TransformManager::Instance parent{};
+                if (!nodes.empty() && chance(0.7)) {
+                    parent = tcm.getInstance(nodes[uniform(nodes.size())]);
+                }
+                mat4 const local = randomLocal();
+                if (chance(0.5)) {
+                    tcm.create(e, parent, local);
+                } else {
+                    tcm.create(e, parent, mat4f(local));
+                }
+                nodes.push_back(e);
+            } else if (kind < 40) {
+                Entity const n = nodes[uniform(nodes.size())];
+                Entity const p = chance(0.2) ? Entity{} : nodes[uniform(nodes.size())];
+                if (p.isNull()) {
+                    tcm.setParent(tcm.getInstance(n), {});
+                } else if (!isAncestorOrSelf(n, p)) {
+                    tcm.setParent(tcm.getInstance(n), tcm.getInstance(p));
+                }
+            } else if (kind < 50) {
+                // Destroy 1 to 3 nodes in a single batch; their children are orphaned.
+                size_t const count = std::min(nodes.size(), 1 + uniform(3));
+                std::vector<Entity> batch;
+                for (size_t k = 0; k < count; ++k) {
+                    size_t const index = uniform(nodes.size());
+                    batch.push_back(nodes[index]);
+                    nodes.erase(nodes.begin() + std::ptrdiff_t(index));
+                }
+                tcm.destroyComponents(batch.data(), batch.size());
+                for (Entity const e : batch) {
+                    em.destroy(e);
+                }
+            } else if (kind < 80) {
+                setLocal(nodes[uniform(nodes.size())], randomLocal());
+            } else if (kind < 90) {
+                tcm.defragment(1 + uniform(8));
+            } else if (kind < 95) {
+                tcm.gc();
+            } else {
+                tcm.openLocalTransformTransaction();
+                for (size_t k = 0, n = 1 + uniform(4); k < n; ++k) {
+                    setLocal(nodes[uniform(nodes.size())], randomLocal());
+                }
+                if (chance(0.5)) {
+                    tcm.setParent(tcm.getInstance(nodes[uniform(nodes.size())]), {});
+                }
+                tcm.commitLocalTransformTransaction();
+            }
+
+            checkWorldTransforms();
+            if (HasFatalFailure()) {
+                return;
+            }
+
+            if ((op + 1) % 50 == 0) {
+                for (size_t k = 0; k < 16; ++k) {
+                    tcm.defragment(64);
+                }
+                checkBfsLayout();
+                if (HasFatalFailure()) {
+                    return;
+                }
+                // Transform updates alone keep the defragmented layout, so these exercise the
+                // contiguous level-slice fast path in transformChildren().
+                for (size_t k = 0; k < 4 && !nodes.empty(); ++k) {
+                    setLocal(nodes[uniform(nodes.size())], randomLocal());
+                    checkWorldTransforms();
+                    if (HasFatalFailure()) {
+                        return;
+                    }
+                }
+            }
+        }
+
+        tcm.destroyComponents(nodes.data(), nodes.size());
+        for (Entity const e : nodes) {
+            em.destroy(e);
+        }
+    }
 }
 
 TEST(FilamentTest, UniformInterfaceBlock) {
@@ -791,6 +1640,114 @@ TEST(FilamentTest, UniformBufferSize2) {
     buffer.setUniformArray(f2_offset, &f2, 1);
 
     buffer.invalidate();
+}
+
+TEST(FilamentTest, BufferInterfaceBlockRejectsOffsetWrap) {
+    // 3-field wrap layout: 4000 MAT4s (64000 words) + 1 FLOAT + 100 MAT4s (wraps uint16_t to 68).
+    auto buildWrappedUib = []() {
+        BufferInterfaceBlock::Builder b;
+        b.name("WrappedUib");
+        b.add({
+                { "pad", 4000, BufferInterfaceBlock::Type::MAT4 },
+                { "_maskThreshold", 0, BufferInterfaceBlock::Type::FLOAT },
+                { "wrap", 100, BufferInterfaceBlock::Type::MAT4 },
+        });
+        b.build();
+    };
+    // Single-field 32-bit multiplication wrap (16 * 0x10000000 == 0 mod 2^32).
+    auto buildMulOverflowUib = []() {
+        BufferInterfaceBlock::Builder b;
+        b.name("MulOverflowUib");
+        b.add({
+                { "huge", 0x10000000u, BufferInterfaceBlock::Type::MAT4 },
+        });
+        b.build();
+    };
+#if GTEST_HAS_EXCEPTIONS
+    EXPECT_THROW(buildWrappedUib(), utils::PostconditionPanic);
+    EXPECT_THROW(buildMulOverflowUib(), utils::PostconditionPanic);
+#else
+    EXPECT_DEATH(buildWrappedUib(), "exceeds maximum supported size");
+    EXPECT_DEATH(buildMulOverflowUib(), "exceeds maximum supported size");
+#endif
+}
+
+TEST(FilamentTest, ChunkUniformInterfaceBlockUnflattenValidation) {
+    auto makeUibChunk = [](uint64_t numFields, uint64_t fieldSize, uint8_t fieldType,
+                                uint8_t fieldPrecision) {
+        std::vector<uint8_t> bytes;
+        auto appendBytes = [&](const void* p, size_t n) {
+            auto const* b = static_cast<uint8_t const*>(p);
+            bytes.insert(bytes.end(), b, b + n);
+        };
+        const char blockName[] = "TestBlock";
+        appendBytes(blockName, sizeof(blockName));
+        appendBytes(&numFields, sizeof(numFields));
+        for (uint64_t i = 0; i < numFields; ++i) {
+            const char fieldName[] = "f";
+            appendBytes(fieldName, sizeof(fieldName));
+            appendBytes(&fieldSize, sizeof(fieldSize));
+            appendBytes(&fieldType, sizeof(fieldType));
+            appendBytes(&fieldPrecision, sizeof(fieldPrecision));
+            uint8_t assocSampler = 0;
+            appendBytes(&assocSampler, sizeof(assocSampler));
+        }
+        return bytes;
+    };
+
+    BufferInterfaceBlock uib;
+    // Valid chunk succeeds.
+    {
+        auto buf = makeUibChunk(1, 0, uint8_t(BufferInterfaceBlock::Type::FLOAT),
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_TRUE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    // fieldSize up to UINT16_MAX / 4 fits; one more is rejected.
+    {
+        auto buf = makeUibChunk(1, UINT16_MAX / 4, uint8_t(BufferInterfaceBlock::Type::FLOAT),
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_TRUE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    {
+        auto buf = makeUibChunk(1, UINT16_MAX / 4 + 1, uint8_t(BufferInterfaceBlock::Type::FLOAT),
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_FALSE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    // numFields up to UINT16_MAX fits; one more is rejected.
+    {
+        auto buf = makeUibChunk(UINT16_MAX, 0, uint8_t(BufferInterfaceBlock::Type::FLOAT),
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_TRUE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    {
+        auto buf = makeUibChunk(UINT16_MAX + 1, 0, uint8_t(BufferInterfaceBlock::Type::FLOAT),
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_FALSE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    // Invalid fieldType (Type::STRUCT or out-of-range) is rejected.
+    {
+        auto buf = makeUibChunk(1, 0, uint8_t(BufferInterfaceBlock::Type::STRUCT),
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_FALSE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    {
+        auto buf = makeUibChunk(1, 0, 0xFF,
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_FALSE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    // Invalid fieldPrecision is rejected.
+    {
+        auto buf = makeUibChunk(1, 0, uint8_t(BufferInterfaceBlock::Type::FLOAT), 0xFF);
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_FALSE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
 }
 
 TEST(FilamentTest, BoxCulling) {

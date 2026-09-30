@@ -402,6 +402,7 @@ private:
     void importTextureCommon(OpenGLState& gl, Handle<HwTexture> th, intptr_t id, SamplerType target, uint8_t levels,
             TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
             TextureUsage usage, utils::ImmutableCString&& tag);
+    void createBufferObjectName(Handle<HwBufferObject> boh, BufferObjectBinding bindingType);
     void createBufferObjectCommon(OpenGLState& gl, Handle<HwBufferObject> boh, uint32_t byteCount,
             BufferObjectBinding bindingType, BufferUsage usage, utils::ImmutableCString&& tag);
     void setVertexBufferObjectCommon(Handle<HwVertexBuffer> vbh, uint32_t index,

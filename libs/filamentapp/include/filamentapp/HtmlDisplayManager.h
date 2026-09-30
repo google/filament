@@ -39,8 +39,12 @@ public:
 
     void terminate() override;
 
-    WindowHandle createWindow(const char* title, uint32_t w, uint32_t h,
-            bool resizable, bool headless) override;
+    // Frames are streamed to a browser rather than presented to an OS window, which makes this
+    // manager headless as far as surface handling is concerned. It keeps the default frame pacing,
+    // however, because the remote client is still a consumer waiting on wall-clock time.
+    bool isHeadless() const override { return true; }
+
+    WindowHandle createWindow(const char* title, uint32_t w, uint32_t h, bool resizable) override;
     void destroyWindow(WindowHandle window) override;
 
     void* getNativeWindow(WindowHandle window) const override;

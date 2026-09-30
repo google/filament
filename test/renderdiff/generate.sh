@@ -119,6 +119,23 @@ if [[ "$BUILD_ONLY" == "true" ]]; then
     exit 0
 fi
 
+# Let a crashing render leave a core behind. This costs nothing unless something dies on a signal.
+# Where the core lands is a root-only system setting, which the CI sets separately;
+# report_crashes.sh knows how to find cores either way.
+ulimit -c unlimited 2> /dev/null || \
+    echo "Could not raise the core dump limit; a crashing render will not leave a backtrace."
+
+# A trap rather than a statement after the loop, because the loop is not the only way out of this
+# script: `set -e` is on under CI, and an interrupted run is exactly the kind that has left a core
+# behind.
+touch "${RENDER_START_MARKER}"
+trap 'bash ${RENDERDIFF_TEST_DIR}/src/report_crashes.sh' EXIT
+
+# Every backend renders, whatever the ones before it did, and the failure is reported once the loop
+# is done. Stopping at the first failing backend left the later ones unrendered, which the
+# comparison downstream cannot tell apart from a render that produced no image: one crash reported
+# every golden of the two remaining backends as missing, burying the test that actually broke.
+render_status=0
 for backend in opengl vulkan webgpu; do
     FILAMENT_VK_ICD="${MESA_VK_ICD_PATH}" FILAMENT_OPENGL_LIB="${MESA_LIB_DIR}" \
     python3 ${RENDERDIFF_TEST_DIR}/src/render.py \
@@ -128,7 +145,9 @@ for backend in opengl vulkan webgpu; do
             --test="${TEST_CONFIG}" \
             --output_dir="${RENDER_OUTPUT_DIR}" \
             ${TEST_FILTER:+--test_filter="$TEST_FILTER"} \
-            ${NUM_THREADS:+--num_threads="$NUM_THREADS"} || exit 1
+            ${NUM_THREADS:+--num_threads="$NUM_THREADS"} || render_status=1
 done
 
 end_render_
+
+exit ${render_status}

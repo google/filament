@@ -11,6 +11,8 @@ This value is used to configure the hardware and must typically be strictly smal
 
 This must be called before endFrame().
 
+Note: not all backends and platforms can schedule the presentation of a frame. This call is silently ignored when the presentation time is not supported.
+
 #### Parameters
 
 main
