@@ -26,7 +26,11 @@ scene->addEntity(renderable);
 
 ```
 
-To modify the state of an existing renderable, clients should first use RenderableManager to get a temporary handle called an \em instance. The instance can then be used to get or set the renderable's state. Please note that instances are ephemeral; clients should store entities, not instances.
+# Instance lifetime
+
+An Instance is a transient handle: Instances are not stable when a component is added, removed or gc() is called on a component manager.
+
+Instances must therefore not be kept across frames. Keep the Entity instead, and call getInstance() again when needed; it is a fast lookup. Using a stale Instance doesn't crash but silently accesses the wrong component.
 
 - For details about constructing renderables, see RenderableManager::Builder.
 - To associate a 4x4 transform with an entity, see TransformManager.
@@ -54,7 +58,7 @@ To modify the state of an existing renderable, clients should first use Renderab
 | [getEnabledAttributesAt](get-enabled-attributes-at.md) | [main]<br>open fun [getEnabledAttributesAt](get-enabled-attributes-at.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), primitiveIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Set](https://developer.android.com/reference/kotlin/java/util/Set.html)&lt;[VertexBuffer.VertexAttribute](../-vertex-buffer/-vertex-attribute/index.md)&gt;<br>Retrieves the set of enabled attribute slots in the given primitive's VertexBuffer. |
 | [getEntity](get-entity.md) | [main]<br>open fun [getEntity](get-entity.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)<br>Retrieve the `Entity` of the component from its `Instance`. |
 | [getFogEnabled](get-fog-enabled.md) | [main]<br>open fun [getFogEnabled](get-fog-enabled.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)<br>Returns whether large-scale fog is enabled for this renderable. |
-| [getInstance](get-instance.md) | [main]<br>open fun [getInstance](get-instance.md)(e: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)<br>Gets a temporary handle that can be used to access the renderable state. |
+| [getInstance](get-instance.md) | [main]<br>open fun [getInstance](get-instance.md)(e: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)<br>Gets an Instance representing the renderable component associated with the given Entity. |
 | [getInstanceCount](get-instance-count.md) | [main]<br>open fun [getInstanceCount](get-instance-count.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)<br>Returns the number of instances for this renderable. |
 | [getLayerMask](get-layer-mask.md) | [main]<br>open fun [getLayerMask](get-layer-mask.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)<br>Get the visibility bits. |
 | [getLightChannel](get-light-channel.md) | [main]<br>open fun [getLightChannel](get-light-channel.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), channel: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)<br>Returns whether a light channel is enabled on a specified renderable. |

@@ -476,7 +476,7 @@ void FMaterialInstance::compile(CompilerPriorityQueue const priority,
     if (UTILS_LIKELY(driver.isParallelShaderCompileSupported())) {
         for (auto const variant: definition.getVariants()) {
             // The variant is filtered by the user, skip it.
-            if (variantFilter && variant != Variant::filterUserVariant(variant, variantFilter))
+            if (variantFilter && variant != definition.filterUserVariant(variant, variantFilter))
                 continue;
 
             for (auto const specKey:
@@ -513,7 +513,7 @@ void FMaterialInstance::compile(CompilerPriorityQueue const priority,
 #ifndef NDEBUG
     } else {
         for (UTILS_UNUSED_WITHOUT_TRACING auto const variant: definition.getVariants()) {
-            if (variantFilter && variant != Variant::filterUserVariant(variant, variantFilter))
+            if (variantFilter && variant != definition.filterUserVariant(variant, variantFilter))
                 continue;
 
             for (UTILS_UNUSED_WITHOUT_TRACING auto const specKey:

@@ -1911,7 +1911,7 @@ class_<Texture>("Texture")
     .class_function("isTextureSwizzleSupported", (bool (*)(Engine*)) [] (Engine* engine) {
         return Texture::isTextureSwizzleSupported(*engine);
     }, allow_raw_pointers())
-    .function("generateMipmaps", &Texture::generateMipmaps)
+    .function("generateMipmaps", select_overload<void(Engine&)>(&Texture::generateMipmaps))
     .function("_setImage", EMBIND_LAMBDA(void, (Texture* self,
             Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {
         self->setImage(*engine, level, std::move(*pbd.pbd));
