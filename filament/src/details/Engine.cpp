@@ -349,6 +349,10 @@ FEngine::FEngine(Builder const& builder) :
             &debug.vulkan.enable_debug_utils_names);
     mDebugRegistry.registerProperty("d.vulkan.renderdoc_capture",
             &debug.vulkan.enable_renderdoc_capture);
+
+    // Renderer debug flags
+    mDebugRegistry.registerProperty("d.renderer.disable_set_presentation_time",
+            &debug.renderer.disable_set_presentation_time);
 }
 
 uint32_t FEngine::getJobSystemThreadPoolSize(Config const& config) noexcept {
