@@ -2690,7 +2690,7 @@ void PostProcessManager::clearAncillaryBuffers(DriverApi& driver,
 void PostProcessManager::fogPrepare(DriverApi& driver) noexcept {
     // ensures the material is loaded and material instance created
     auto const& material = getPostProcessMaterial("fog");
-    FMaterial const* const ma = material.getMaterial(mEngine);
+    FMaterial* const ma = material.getMaterial(mEngine);
     FMaterialInstance const* mi = ma->getDefaultInstance();
     mi->commit(driver, getUboManager());
 }
@@ -2701,7 +2701,7 @@ void PostProcessManager::fog(DriverApi& driver) noexcept {
     bindPerRenderableDescriptorSet(driver);
 
     auto const& material = getPostProcessMaterial("fog");
-    FMaterial const* const ma = material.getMaterial(mEngine);
+    FMaterial* const ma = material.getMaterial(mEngine);
     FMaterialInstance const* mi = ma->getDefaultInstance();
     mi->use(driver);
 

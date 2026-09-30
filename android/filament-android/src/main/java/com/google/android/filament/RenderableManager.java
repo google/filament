@@ -56,10 +56,14 @@ import androidx.annotation.Size;
  *
  * }</pre>
  *
- * <p>To modify the state of an existing renderable, clients should first use RenderableManager
- * to get a temporary handle called an \em instance. The instance can then be used to get or set
- * the renderable's state. Please note that instances are ephemeral; clients should store entities,
- * not instances.</p>
+ * <h1>Instance lifetime</h1>
+ *
+ * <p>An Instance is a transient handle: Instances are not stable when a component is added,
+ * removed or gc() is called on a component manager.</p>
+ *
+ * <p>Instances must therefore not be kept across frames. Keep the Entity instead, and call
+ * getInstance() again when needed; it is a fast lookup. Using a stale Instance doesn't crash
+ * but silently accesses the wrong component.</p>
  *
  * <ul>
  *   <li>For details about constructing renderables, see RenderableManager::Builder.</li>
@@ -922,9 +926,18 @@ public class RenderableManager {
     }
 
     /**
-     * Gets a temporary handle that can be used to access the renderable state.
+     * Gets an Instance representing the renderable component associated with the given Entity.
+     *
+     * <p>Use Instance::isValid() to make sure the component exists.
+     * @note The returned Instance is transient and must not be kept across frames, see
+     *       "Instance lifetime" above. Instances are not stable when a component is added,
+     *       removed or gc() is called on a component manager.</p>
+     *
+     * @param e An Entity.
      *
      * @return Non-zero handle if the entity has a renderable component, 0 otherwise.
+     *
+     * @see #hasComponent
      */
     @EntityInstance
     public int getInstance(@Entity int e) {
