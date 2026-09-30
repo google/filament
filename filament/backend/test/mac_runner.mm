@@ -21,6 +21,11 @@
 
 static test::NativeView nativeView;
 
+// The tests used to run on the main thread, which has an 8 MiB stack on macOS. Secondary threads
+// default to 512 KiB, which is not enough for tests that keep sizable buffers on the stack, so we
+// request the same size the main thread would have had. Must be a multiple of 4 KiB.
+static constexpr NSUInteger TEST_THREAD_STACK_SIZE = 8 * 1024 * 1024;
+
 namespace test {
 
 test::NativeView getNativeView() {
@@ -61,7 +66,30 @@ test::NativeView getNativeView() {
         nativeView.height = static_cast<size_t>(drawableSize.height);
     }
 
-    exit(test::runTests());
+    // The tests must not run on the main thread: the Cocoa platforms dispatch_sync to the main
+    // queue (e.g. to create the headless window backing store), which would deadlock against the
+    // main thread blocking on the tests. Use an explicit NSThread rather than a global dispatch
+    // queue, so we can give the tests the same stack size the main thread would have had.
+    NSThread* testThread = [[NSThread alloc] initWithTarget:self
+                                                   selector:@selector(runTests)
+                                                     object:nil];
+    testThread.stackSize = TEST_THREAD_STACK_SIZE;
+    [testThread start];
+}
+
+- (void)runTests {
+    // Unlike a dispatch queue, NSThread does not wrap the thread body in an autorelease pool.
+    @autoreleasepool {
+        int const status = test::runTests();
+
+        // exit() runs atexit handlers and static destructors. The main thread is still spinning the
+        // NSApplication run loop and may be executing AppKit work (including the blocks the GL
+        // platform posts to the main queue), so tearing the process down from this thread would
+        // race it. Hop back to the main thread and exit from there instead.
+        dispatch_async(dispatch_get_main_queue(), ^{
+            exit(status);
+        });
+    }
 }
 
 - (NSView*)createView {
@@ -115,18 +143,6 @@ int main(int argc, char* argv[]) {
     delegate.backend = arguments.backend;
     delegate.headlessOnly = arguments.headlessOnly;
     [app setDelegate:delegate];
-
-    if (arguments.headlessOnly) {
-        // In headless mode, we don't want to start the NSApplication event loop.
-        // Instead, we can manually "finish" launching the app, which will trigger the tests to run.
-        [app finishLaunching];
-        [delegate applicationDidFinishLaunching:
-                        [NSNotification
-                                notificationWithName:NSApplicationDidFinishLaunchingNotification
-                                              object:app]];
-        // The line above calls exit(), so we should not reach here.
-        return 0;
-    }
 
     [app run]; // NOLINT(clang-analyzer-osx.cocoa.RetainCount)
 }

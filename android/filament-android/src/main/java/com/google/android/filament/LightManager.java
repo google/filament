@@ -126,6 +126,15 @@ import static java.lang.annotation.RetentionPolicy.SOURCE;
  * incurring a significant overhead.</li>
  * </ol>
  *
+ * <h1>Instance lifetime</h1>
+ *
+ * <p>An Instance is a transient handle: Instances are not stable when a component is added,
+ * removed or gc() is called on a component manager.</p>
+ *
+ * <p>Instances must therefore not be kept across frames. Keep the Entity instead, and call
+ * getInstance() again when needed; it is a fast lookup. Using a stale Instance doesn't crash
+ * but silently accesses the wrong component.</p>
+ *
  * @see Builder#direction
  * @see Builder#sunAngularRadius
  * @see Builder#position
@@ -654,7 +663,10 @@ public class LightManager {
     /**
      * Gets an Instance representing the Light component associated with the given Entity.
      *
-     * <p>Use Instance::isValid() to make sure the component exists.</p>
+     * <p>Use Instance::isValid() to make sure the component exists.
+     * @note The returned Instance is transient and must not be kept across frames, see
+     *       "Instance lifetime" above. Instances are not stable when a component is added,
+     *       removed or gc() is called on a component manager.</p>
      *
      * @param e An Entity.
      *

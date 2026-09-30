@@ -411,7 +411,6 @@ void MetalDriver::updateDescriptorSetBuffer(
     auto* bo = handle_cast<MetalBufferObject>(boh);
     id<MTLBuffer> mtlBuffer = bo->getBuffer()->getGpuBufferForDraw();
     descriptorSet->buffers[binding] = { mtlBuffer, offset, size };
-
     auto const& bindings = descriptorSet->layout->getBindings();
     auto found = std::find_if(bindings.begin(), bindings.end(),
             [binding](const auto& b) { return b.binding == binding; });
@@ -1270,8 +1269,17 @@ void MetalDriver::terminate() {
     mContext->blitter->shutdown();
     mContext->shaderCompiler->terminate();
 
+    // Flush all pending asynchronous tasks. Some tasks may end up posting follow-up operations to
+    // the `ServiceThread` (e.g., via CountdownCallbackHandler or any user-provided handlers). So we
+    // early stop the ServiceThread to ensure these are processed as well. Tasks posted to the main
+    // thread (due to no user handler) during this process are handled later by `Driver::purge`
+    // within `FEngine::shutdown`.
     if (getJobWorker()) {
         getJobWorker()->terminate();
+    }
+    if constexpr (UTILS_HAS_THREADING) {
+        // Flush any callbacks the drained jobs posted via scheduleCallback().
+        stopServiceThread();
     }
 }
 
