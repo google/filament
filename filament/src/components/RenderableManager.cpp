@@ -652,7 +652,8 @@ void FRenderableManager::create(
         MaterialInstance const* const defaultMaterialInstance = engine.getDefaultMaterialInstance();
         for (size_t i = 0; i < entryCount; ++i) {
             Entry entry = entries[i];
-            if (!entry.materialInstance) {
+            // entry.materialInstance must be set to something even if indices/vertices are null
+            if (UTILS_UNLIKELY(!entry.materialInstance)) {
                 entry.materialInstance = defaultMaterialInstance;
             }
             rp[i].init(factory, driver, entry);

@@ -103,19 +103,19 @@ public:
      */
 
     // Synchronous call to the backend. Returns whether a backend supports a particular format.
-    static bool isTextureFormatSupported(FEngine& engine, InternalFormat format) noexcept;
+    static bool isTextureFormatSupported(FEngine const& engine, InternalFormat format) noexcept;
 
     // Synchronous call to the backend. Returns whether a backend supports mipmapping of a particular format.
-    static bool isTextureFormatMipmappable(FEngine& engine, InternalFormat format) noexcept;
+    static bool isTextureFormatMipmappable(FEngine const& engine, InternalFormat format) noexcept;
 
     // Returns whether particular format is compressed
     static bool isTextureFormatCompressed(InternalFormat format) noexcept;
 
     // Synchronous call to the backend. Returns whether a backend supports protected textures.
-    static bool isProtectedTexturesSupported(FEngine& engine) noexcept;
+    static bool isProtectedTexturesSupported(FEngine const& engine) noexcept;
 
     // Synchronous call to the backend. Returns whether a backend supports texture swizzling.
-    static bool isTextureSwizzleSupported(FEngine& engine) noexcept;
+    static bool isTextureSwizzleSupported(FEngine const& engine) noexcept;
 
     // storage needed on the CPU side for texture data uploads
     static size_t computeTextureDataSize(Format format, Type type,
@@ -145,9 +145,9 @@ public:
     static bool validatePixelFormatAndType(backend::TextureFormat internalFormat,
             backend::PixelDataFormat format, backend::PixelDataType type) noexcept;
 
-    static size_t getMaxTextureSize(FEngine& engine, Sampler type) noexcept;
+    static size_t getMaxTextureSize(FEngine const& engine, Sampler type) noexcept;
 
-    static size_t getMaxArrayTextureLayers(FEngine& engine) noexcept;
+    static size_t getMaxArrayTextureLayers(FEngine const& engine) noexcept;
 
     bool textureHandleCanMutate() const noexcept;
     void updateLodRange(uint8_t level) noexcept;

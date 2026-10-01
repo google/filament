@@ -538,7 +538,7 @@ public:
          *
          * @return pointer to the newly created object.
          */
-        ColorGrading* UTILS_NONNULL build(Engine& engine);
+        ColorGrading* UTILS_NONNULL build(Engine& engine) const;
 
     private:
         friend class FColorGrading;

@@ -174,7 +174,7 @@ public:
          *
          * @see IndexBuffer::setBuffer
          */
-        IndexBuffer* UTILS_NONNULL build(Engine& engine);
+        IndexBuffer* UTILS_NONNULL build(Engine& engine) const;
     private:
         friend class FIndexBuffer;
     };
