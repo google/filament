@@ -20,6 +20,7 @@
 #include <utils/CString.h>
 #include <utils/Invocable.h>
 #include <utils/Logger.h>
+#include <utils/Mutex.h>
 #include <utils/Panic.h>
 
 #include <algorithm>
@@ -52,7 +53,7 @@ constexpr size_t MAX_PROPERTY_NAME_LENGTH = 128;
 constexpr size_t MAX_PROPERTY_VALUE_LENGTH = 128;
 
 template<typename T>
-bool parse(const char* val, T& out) {
+bool parse(const char*, T&) {
     return false;
 }
 
@@ -121,9 +122,9 @@ std::string_view getPropertyFromEnvironment(char const* const name, size_t nameL
     return {};
 }
 #else
-std::string_view getPropertyFromEnvironment(char const* const name, size_t nameLen,
+std::string_view getPropertyFromEnvironment(char const* const name, size_t const nameLen,
         std::array<char, MAX_PROPERTY_VALUE_LENGTH>&) {
-    utils::CString cname{ name, nameLen };
+    CString cname{ name, nameLen };
     std::replace(cname.data(), cname.data() + nameLen, '.', '_');
     char const* const env = getenv(cname.data());
     return env ? std::string_view{ env } : std::string_view{};
@@ -134,18 +135,19 @@ std::string_view getPropertyFromEnvironment(char const* const name, size_t nameL
 
 InternalDebugRegistry::InternalDebugRegistry() noexcept = default;
 
-auto InternalDebugRegistry::getPropertyInfo(const char* name) noexcept -> PropertyInfo {
+auto InternalDebugRegistry::getPropertyInfo(const char* name) const noexcept -> PropertyInfo {
     std::string_view const key{ name };
-    auto& propertyMap = mPropertyMap;
-    if (propertyMap.find(key) == propertyMap.end()) {
+    auto const& propertyMap = mPropertyMap;
+    auto const& it = propertyMap.find(key);
+    if (it == propertyMap.end()) {
         return { nullptr, {}, BOOL };
     }
-    return propertyMap[key];
+    return it->second;
 }
 
 UTILS_NOINLINE
 void* InternalDebugRegistry::getPropertyAddress(const char* name) {
-    auto info = getPropertyInfo(name);
+    auto const info = getPropertyInfo(name);
     ASSERT_PRECONDITION_NON_FATAL(!info.fn,
             "don't use InternalDebugRegistry::getPropertyAddress() when a callback is set. "
             "Use setProperty() instead.");
@@ -154,11 +156,10 @@ void* InternalDebugRegistry::getPropertyAddress(const char* name) {
 
 UTILS_NOINLINE
 void const* InternalDebugRegistry::getPropertyAddress(const char* name) const noexcept {
-    auto info = const_cast<InternalDebugRegistry*>(this)->getPropertyInfo(name);
-    return info.ptr;
+    return getPropertyInfo(name).ptr;
 }
 
-void InternalDebugRegistry::registerProperty(std::string_view const name, void* p, Type type,
+void InternalDebugRegistry::registerProperty(std::string_view const name, void* p, Type const type,
         std::function<void()> fn) noexcept {
     auto& propertyMap = mPropertyMap;
     if (propertyMap.find(name) == propertyMap.end()) {
@@ -209,7 +210,7 @@ void InternalDebugRegistry::registerProperty(std::string_view const name, void* 
 }
 
 bool InternalDebugRegistry::hasProperty(const char* name) const noexcept {
-    return getPropertyAddress(name) != nullptr;
+    return getPropertyInfo(name).ptr != nullptr;
 }
 
 template<typename T>
@@ -228,25 +229,25 @@ bool InternalDebugRegistry::setProperty(const char* name, T v) noexcept {
 }
 
 template<>
-bool InternalDebugRegistry::setProperty<bool>(const char* name, bool v) noexcept {
-    auto info = getPropertyInfo(name);
-    if (!info.ptr) {
+bool InternalDebugRegistry::setProperty<bool>(const char* name, bool const v) noexcept {
+    auto const [ptr, fn, type] = getPropertyInfo(name);
+    if (!ptr) {
         return false;
     }
-    if (info.type == ATOMIC_BOOL) {
-        auto* addr = static_cast<std::atomic<bool>*>(info.ptr);
-        bool old = addr->load(std::memory_order_relaxed);
+    if (type == ATOMIC_BOOL) {
+        auto* addr = static_cast<std::atomic<bool>*>(ptr);
+        bool const old = addr->load(std::memory_order_relaxed);
         addr->store(v, std::memory_order_relaxed);
-        if (info.fn && old != v) {
-            info.fn();
+        if (fn && old != v) {
+            fn();
         }
         return true;
     }
-    bool* const addr = static_cast<bool*>(info.ptr);
-    bool old = *addr;
+    bool* const addr = static_cast<bool*>(ptr);
+    bool const old = *addr;
     *addr = v;
-    if (info.fn && old != v) {
-        info.fn();
+    if (fn && old != v) {
+        fn();
     }
     return true;
 }
@@ -269,7 +270,7 @@ bool InternalDebugRegistry::getProperty(const char* name, T* p) const noexcept {
 
 template<>
 bool InternalDebugRegistry::getProperty<bool>(const char* name, bool* p) const noexcept {
-    auto info = const_cast<InternalDebugRegistry*>(this)->getPropertyInfo(name);
+    auto const info = this->getPropertyInfo(name);
     if (!info.ptr) {
         return false;
     }
@@ -292,8 +293,17 @@ template bool InternalDebugRegistry::getProperty<float3>(const char* name,
 template bool InternalDebugRegistry::getProperty<float4>(const char* name,
         float4* v) const noexcept;
 
+// FIXME: registered names aren't exclusive. Each registerDataSource() overload only checks its
+//        own map, and getDataSource() moves a created DataSource to mDataSourceMap, so a lazy
+//        registration succeeds again once the name has been queried (and a direct and a lazy
+//        registration can share a name). Since unregisterDataSource() erases the name from both
+//        maps, one registrant can then remove another's registration: e.g. a View created after
+//        "d.view.frame_info" was queried also becomes its owner, and destroying either View
+//        removes the other's data source. Fix: keep both kinds in a single map, and create the
+//        DataSource in place.
 bool InternalDebugRegistry::registerDataSource(std::string_view const name, void const* data,
         size_t const count) noexcept {
+    LockGuard const lock(mDataSourceLock);
     auto& dataSourceMap = mDataSourceMap;
     bool const found = dataSourceMap.find(name) == dataSourceMap.end();
     if (found) {
@@ -304,6 +314,7 @@ bool InternalDebugRegistry::registerDataSource(std::string_view const name, void
 
 bool InternalDebugRegistry::registerDataSource(std::string_view const name,
         Invocable<DataSource()>&& creator) noexcept {
+    LockGuard const lock(mDataSourceLock);
     auto& dataSourceCreatorMap = mDataSourceCreatorMap;
     bool const found = dataSourceCreatorMap.find(name) == dataSourceCreatorMap.end();
     if (found) {
@@ -313,28 +324,35 @@ bool InternalDebugRegistry::registerDataSource(std::string_view const name,
 }
 
 void InternalDebugRegistry::unregisterDataSource(std::string_view const name) noexcept {
+    // This waits for a creator running in getDataSource(), since it runs with the lock held.
+    LockGuard const lock(mDataSourceLock);
     mDataSourceCreatorMap.erase(name);
     mDataSourceMap.erase(name);
 }
 
-
 InternalDebugRegistry::DataSource InternalDebugRegistry::getDataSource(
         const char* name) const noexcept {
     std::string_view const key{ name };
-    auto& dataSourceMap = mDataSourceMap;
-    auto const& it = dataSourceMap.find(key);
-    if (UTILS_UNLIKELY(it == dataSourceMap.end())) {
-        auto& dataSourceCreatorMap = mDataSourceCreatorMap;
-        auto const& pos = dataSourceCreatorMap.find(key);
-        if (pos == dataSourceCreatorMap.end()) {
-            return { nullptr, 0u };
-        }
-        DataSource dataSource{ pos->second() };
-        dataSourceMap[key] = dataSource;
-        dataSourceCreatorMap.erase(pos);
-        return dataSource;
+    LockGuard const lock(mDataSourceLock);
+    auto const it = mDataSourceMap.find(key);
+    if (UTILS_LIKELY(it != mDataSourceMap.end())) {
+        return it->second;
     }
-    return it->second;
+    auto const pos = mDataSourceCreatorMap.find(key);
+    if (pos == mDataSourceCreatorMap.end()) {
+        return { nullptr, 0u };
+    }
+    // Run the creator with the lock held. Unlocking around it would let unregisterDataSource(),
+    // and possibly a new registration under the same name, happen while it runs, and we would
+    // then publish a stale result. Holding the lock also guarantees that concurrent first
+    // queries run the creator only once. Since the lock isn't recursive, the creator must not
+    // call back into the data source API (see registerDataSource()).
+    DataSource const dataSource{ pos->second() };
+    // Publish under the registered name: `key` points to the caller's string, which may not
+    // outlive this call.
+    mDataSourceMap[pos->first] = dataSource;
+    mDataSourceCreatorMap.erase(pos);
+    return dataSource;
 }
 
 } // namespace utils

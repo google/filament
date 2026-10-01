@@ -80,6 +80,10 @@ public:
         return mManager.elementAt<CAMERA>(i);
     }
 
+    FCamera const* getCamera(Instance const i) const noexcept {
+        return mManager.elementAt<CAMERA>(i);
+    }
+
     FCamera* create(FEngine& engine, utils::Entity entity);
 
     void destroyComponents(utils::Entity const* entities, size_t count, FEngine& engine) noexcept;

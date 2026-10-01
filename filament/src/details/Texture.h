@@ -63,20 +63,20 @@ public:
     void setImage(FEngine& engine, size_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
             uint32_t width, uint32_t height, uint32_t depth,
-            PixelBufferDescriptor&& buffer) const;
+            PixelBufferDescriptor&& buffer);
 
     AsyncCallId setImageAsync(FEngine& engine, size_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
             uint32_t width, uint32_t height, uint32_t depth,
             PixelBufferDescriptor&& buffer, backend::CallbackHandler* handler,
-            AsyncCompletionCallback callback, void* user) const;
+            AsyncCompletionCallback callback, void* user);
 
     void setExternalImage(FEngine& engine, ExternalImageHandleRef image);
     void setExternalImage(FEngine& engine, void* image);
     void setExternalImage(FEngine& engine, void* image, size_t plane);
     void setExternalStream(FEngine& engine, FStream* stream);
 
-    void generateMipmaps(FEngine& engine) const;
+    void generateMipmaps(FEngine& engine);
 
     bool isCompressed() const noexcept { return isCompressedFormat(mFormat); }
 
@@ -104,19 +104,19 @@ public:
      */
 
     // Synchronous call to the backend. Returns whether a backend supports a particular format.
-    static bool isTextureFormatSupported(FEngine& engine, InternalFormat format) noexcept;
+    static bool isTextureFormatSupported(FEngine const& engine, InternalFormat format) noexcept;
 
     // Synchronous call to the backend. Returns whether a backend supports mipmapping of a particular format.
-    static bool isTextureFormatMipmappable(FEngine& engine, InternalFormat format) noexcept;
+    static bool isTextureFormatMipmappable(FEngine const& engine, InternalFormat format) noexcept;
 
     // Returns whether particular format is compressed
     static bool isTextureFormatCompressed(InternalFormat format) noexcept;
 
     // Synchronous call to the backend. Returns whether a backend supports protected textures.
-    static bool isProtectedTexturesSupported(FEngine& engine) noexcept;
+    static bool isProtectedTexturesSupported(FEngine const& engine) noexcept;
 
     // Synchronous call to the backend. Returns whether a backend supports texture swizzling.
-    static bool isTextureSwizzleSupported(FEngine& engine) noexcept;
+    static bool isTextureSwizzleSupported(FEngine const& engine) noexcept;
 
     // storage needed on the CPU side for texture data uploads
     static size_t computeTextureDataSize(Format format, Type type,
@@ -146,9 +146,9 @@ public:
     static bool validatePixelFormatAndType(backend::TextureFormat internalFormat,
             backend::PixelDataFormat format, backend::PixelDataType type) noexcept;
 
-    static size_t getMaxTextureSize(FEngine& engine, Sampler type) noexcept;
+    static size_t getMaxTextureSize(FEngine const& engine, Sampler type) noexcept;
 
-    static size_t getMaxArrayTextureLayers(FEngine& engine) noexcept;
+    static size_t getMaxArrayTextureLayers(FEngine const& engine) noexcept;
 
     bool textureHandleCanMutate() const noexcept;
     void updateLodRange(uint8_t level) noexcept;

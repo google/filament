@@ -24,6 +24,8 @@
 
 #include "details/Camera.h"
 #include "details/Engine.h"
+#include "details/Material.h"
+#include "details/MaterialInstance.h"
 #include "details/Renderer.h"
 #include "details/View.h"
 
@@ -34,6 +36,7 @@
 #include <filament/Color.h>
 #include <filament/ColorGrading.h>
 #include <filament/ColorSpace.h>
+#include <filament/DebugRegistry.h>
 #include <filament/Engine.h>
 #include <filament/FrameHistoryStream.h>
 #include <filament/Frustum.h>
@@ -62,9 +65,11 @@
 #include <cmath>
 #include <cstddef>
 #include <functional>
+#include <initializer_list>
 #include <iostream>
 #include <limits>
 #include <random>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -2851,6 +2856,166 @@ TEST(FilamentTest, FrameHistoryStreamTest) {
 
     engine->destroy(swapChain);
     engine->destroy(renderer);
+    Engine::destroy(&engine);
+}
+
+// Source compatibility: these constructors are public since 1.72.
+static_assert(std::is_constructible_v<FrameHistoryStream::NewFramesRange,
+        FixedCapacityVector<Renderer::FrameInfo>, uint32_t*>);
+static_assert(std::is_constructible_v<FrameHistoryStream::NewFramesRange::Iterator,
+        Renderer::FrameInfo const*, int, uint32_t*>);
+
+// The NOOP backend never reports PENDING timings, so the tests below use synthetic histories.
+// Like Renderer::getFrameInfoHistory(), newestFirst is ordered from newest to oldest.
+static FixedCapacityVector<Renderer::FrameInfo> makeFrameHistory(
+        std::initializer_list<uint32_t> const newestFirst,
+        std::initializer_list<uint32_t> const pending = {}) {
+    auto history = FixedCapacityVector<Renderer::FrameInfo>::with_capacity(newestFirst.size());
+    for (uint32_t const frameId : newestFirst) {
+        Renderer::FrameInfo info{};
+        info.frameId = frameId;
+        info.displayPresent = Renderer::FrameInfo::INVALID;
+        info.presentDeadline = Renderer::FrameInfo::INVALID;
+        info.expectedPresentLatency = Renderer::FrameInfo::INVALID;
+        if (std::find(pending.begin(), pending.end(), frameId) != pending.end()) {
+            info.displayPresent = Renderer::FrameInfo::PENDING;
+        }
+        history.push_back(info);
+    }
+    return history;
+}
+
+// Returns the IDs yielded by the range, in order, with the missing frame IDs negated.
+static std::vector<int> collectFrameIds(FrameHistoryStream::NewFramesRange const& range) {
+    std::vector<int> ids;
+    for (auto const& result : range) {
+        ids.push_back(result ? int(result.getFrameId()) : -int(result.getMissingId()));
+    }
+    return ids;
+}
+
+// Does what FrameHistoryStream::getNewFrames() does, with a synthetic history.
+static std::vector<int> getNewFrameIds(uint32_t* const pLastProcessedFrameId,
+        std::initializer_list<uint32_t> const newestFirst,
+        std::initializer_list<uint32_t> const pending = {}) {
+    return collectFrameIds(FrameHistoryStream::NewFramesRange(
+            makeFrameHistory(newestFirst, pending), pLastProcessedFrameId));
+}
+
+TEST(FilamentTest, FrameHistoryStreamConsumesFramesWhenQueried) {
+    uint32_t last = 2;
+    FrameHistoryStream::NewFramesRange const range(makeFrameHistory({ 5, 4, 3, 2 }), &last);
+
+    // frames 3 to 5 are consumed when the range is created, not as it's iterated...
+    EXPECT_EQ(last, 5u);
+    auto const first = range.begin();
+    ASSERT_TRUE(first != range.end());
+    EXPECT_TRUE(*first);
+    EXPECT_EQ(first->getFrameId(), 3u);
+
+    // ...so they aren't returned again, even though frames 4 and 5 weren't iterated
+    EXPECT_EQ(getNewFrameIds(&last, { 6, 5, 4, 3, 2 }), std::vector<int>({ 6 }));
+    EXPECT_EQ(last, 6u);
+    EXPECT_TRUE(getNewFrameIds(&last, { 6, 5, 4, 3, 2 }).empty());
+    EXPECT_TRUE(getNewFrameIds(&last, {}).empty());
+    EXPECT_EQ(last, 6u);
+}
+
+TEST(FilamentTest, FrameHistoryStreamRangeCanBeIteratedTwice) {
+    uint32_t last = 1;
+    FrameHistoryStream::NewFramesRange const range(makeFrameHistory({ 5, 3, 2 }), &last);
+    EXPECT_EQ(collectFrameIds(range), std::vector<int>({ 2, 3, -4, 5 }));
+    EXPECT_EQ(collectFrameIds(range), std::vector<int>({ 2, 3, -4, 5 }));
+    EXPECT_EQ(last, 5u);
+}
+
+TEST(FilamentTest, FrameHistoryStreamStopsAtPendingFrame) {
+    uint32_t last = 1;
+    // frame 4 is pending, so frames 4 and 5 are returned later
+    EXPECT_EQ(getNewFrameIds(&last, { 5, 4, 3, 2 }, { 4 }), std::vector<int>({ 2, 3 }));
+    EXPECT_EQ(last, 3u);
+    EXPECT_EQ(getNewFrameIds(&last, { 6, 5, 4, 3 }, { 6 }), std::vector<int>({ 4, 5 }));
+    EXPECT_EQ(last, 5u);
+}
+
+TEST(FilamentTest, FrameHistoryStreamDelaysMissingFramesBeforePendingFrame) {
+    uint32_t last = 5;
+    // frames 6 and 7 are missing and frame 8 is pending: the missing frames are returned with
+    // frame 8, once it's ready
+    EXPECT_TRUE(getNewFrameIds(&last, { 8, 5 }, { 8 }).empty());
+    EXPECT_EQ(last, 5u);
+    EXPECT_EQ(getNewFrameIds(&last, { 8, 5 }), std::vector<int>({ -6, -7, 8 }));
+    EXPECT_EQ(last, 8u);
+}
+
+TEST(FilamentTest, FrameHistoryStreamReportsMissingFrames) {
+    uint32_t last = 0;
+    // no frames are missing before the first one
+    EXPECT_EQ(getNewFrameIds(&last, { 3, 2 }), std::vector<int>({ 2, 3 }));
+    EXPECT_EQ(last, 3u);
+    EXPECT_EQ(getNewFrameIds(&last, { 7, 5, 4 }), std::vector<int>({ 4, 5, -6, 7 }));
+    EXPECT_EQ(last, 7u);
+    // a null pLastProcessedFrameId is treated as 0
+    EXPECT_EQ(getNewFrameIds(nullptr, { 3, 2 }), std::vector<int>({ 2, 3 }));
+}
+
+TEST(FilamentTest, DebugRegistryConstQueriesWithCallback) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    DebugRegistry const& registry = engine->getDebugRegistry();
+
+    // FEngine registers this property with a callback. The const queries below are noexcept
+    // and must not trip the non-const getPropertyAddress() "callback is set" precondition.
+    char const* const name = "d.shadowmap.debug_directional_shadowmap";
+    EXPECT_TRUE(registry.hasProperty(name));
+    EXPECT_NE(registry.getPropertyAddress(name), nullptr);
+    EXPECT_NE(registry.getPropertyAddress<bool>(name), nullptr);
+
+    bool const* p = nullptr;
+    EXPECT_TRUE(registry.getPropertyAddress(name, &p));
+    EXPECT_NE(p, nullptr);
+
+    bool value = false;
+    EXPECT_TRUE(registry.getProperty(name, &value));
+
+    Engine::destroy(&engine);
+}
+
+// FEngine hands out its default material and default material instance as const only.
+// getSkyboxMaterial() isn't const because it creates the skybox material on first use.
+static_assert(std::is_same_v<decltype(std::declval<FEngine const&>().getDefaultMaterial()),
+        FMaterial const*>);
+static_assert(std::is_same_v<decltype(std::declval<FEngine const&>().getDefaultMaterialInstance()),
+        FMaterialInstance const*>);
+
+// Detects whether getSkyboxMaterial() can be called on a T
+template<typename T, typename = void>
+struct has_getSkyboxMaterial : std::false_type {};
+
+template<typename T>
+struct has_getSkyboxMaterial<T, std::void_t<decltype(std::declval<T&>().getSkyboxMaterial())>>
+        : std::true_type {};
+
+static_assert(has_getSkyboxMaterial<FEngine>::value);
+static_assert(!has_getSkyboxMaterial<FEngine const>::value);
+
+TEST(FilamentTest, DefaultMaterialInstance) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    FEngine const& fengine = downcast(*engine);
+
+    // init() creates the default material's default instance
+    FMaterialInstance const* const mi = fengine.getDefaultMaterialInstance();
+    ASSERT_NE(mi, nullptr);
+    EXPECT_EQ(mi->getMaterial(), fengine.getDefaultMaterial());
+    EXPECT_TRUE(mi->isDefaultInstance());
+
+    // renderables built without a material instance use it
+    Entity const entity = engine->getEntityManager().create();
+    RenderableManager::Builder(1).boundingBox({ { 0, 0, 0 }, { 1, 1, 1 } }).build(*engine, entity);
+    RenderableManager const& rcm = engine->getRenderableManager();
+    EXPECT_EQ(rcm.getMaterialInstanceAt(rcm.getInstance(entity), 0), mi);
+
+    engine->destroy(entity);
+    engine->getEntityManager().destroy(entity);
     Engine::destroy(&engine);
 }
 

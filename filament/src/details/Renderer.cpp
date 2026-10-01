@@ -273,10 +273,12 @@ void FRenderer::setPresentationTime(int64_t const monotonic_clock_ns) noexcept {
     setPresentationTime(steady_clock::time_point(nanoseconds(monotonic_clock_ns)));
 }
 
-void FRenderer::setPresentationTime(std::chrono::steady_clock::time_point const monotonic_clock) noexcept {
+void FRenderer::setPresentationTime(
+        std::chrono::steady_clock::time_point const monotonic_clock) noexcept {
     // Backends and platforms that can't honor a presentation time never enter paced mode; we
     // drop the request here so that beginFrame() doesn't see a presentation time at all.
-    if (UTILS_UNLIKELY(!mIsPresentationTimeSupported)) {
+    if (UTILS_UNLIKELY(!mIsPresentationTimeSupported ||
+                       mEngine.debug.renderer.disable_set_presentation_time)) {
         return;
     }
     mPresentationTime = monotonic_clock;
