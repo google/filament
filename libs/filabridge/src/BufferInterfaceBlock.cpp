@@ -55,7 +55,6 @@ BufferInterfaceBlock::Builder& BufferInterfaceBlock::Builder::qualifier(
 
 BufferInterfaceBlock::Builder& BufferInterfaceBlock::Builder::add(
         std::initializer_list<InterfaceBlockEntry> list) {
-    mEntries.reserve(mEntries.size() + list.size());
     for (auto const& item : list) {
         mEntries.push_back({
                 { item.name.data(), item.name.size() },
