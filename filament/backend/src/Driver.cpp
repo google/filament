@@ -123,9 +123,18 @@ void DriverBase::CallbackData::release(CallbackData* data) {
 
 void DriverBase::scheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback) {
     if (handler && UTILS_HAS_THREADING) {
-        LockGuard const lock(mServiceThreadLock);
-        mServiceThreadCallbackQueue.emplace_back(handler, callback, user);
-        mServiceThreadCondition.notify_one();
+        {
+            LockGuard const lock(mServiceThreadLock);
+            if (!mExitRequested) {
+                mServiceThreadCallbackQueue.emplace_back(handler, callback, user);
+                mServiceThreadCondition.notify_one();
+                return;
+            }
+        }
+        // Once exit is requested the ServiceThread may already be gone, so dispatch here. Release
+        // the lock first because CountdownCallbackHandler::post() calls back into this function
+        // and the lock is not recursive.
+        handler->post(user, callback);
     } else {
         LockGuard const lock(mPurgeLock);
         mCallbacks.emplace_back(user, callback);
