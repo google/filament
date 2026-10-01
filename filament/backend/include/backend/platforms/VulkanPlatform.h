@@ -317,6 +317,10 @@ public:
     VkQueue getGraphicsQueue() const noexcept;
 
     /**
+     * @return The queue that was selected for the asynchronous backend operations.
+     */
+    VkQueue getAsyncQueue() const noexcept;
+    /**
     * @return The family index of the protected graphics queue selected for the
     *          Vulkan backend.
     */
