@@ -68,17 +68,21 @@
 
 #include <algorithm>
 #include <array>
-#include <fstream>
+#include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <set>
 #include <sstream>
 #include <string_view>
+#include <vector>
 
+// Only the JIT shader provider optimizes materials, and WASM builds do not have it.
+#if !defined(__EMSCRIPTEN__)
 #if FILAMENT_DISABLE_MATOPT
 #   define OPTIMIZE_MATERIALS false
 #else
 #   define OPTIMIZE_MATERIALS true
+#endif
 #endif
 
 using namespace filament;
@@ -164,23 +168,14 @@ struct App {
 
 const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
 
-std::ifstream::pos_type getFileSize(const char* filename) {
-    std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
-    return in.tellg();
-}
-
-bool loadSettings(const char* filename, Settings* out) {
-    auto contentSize = getFileSize(filename);
-    if (contentSize <= 0) {
-        return false;
-    }
-    std::ifstream in(filename, std::ifstream::binary | std::ifstream::in);
-    std::vector<char> json(static_cast<unsigned long>(contentSize));
-    if (!in.read(json.data(), contentSize)) {
+bool loadSettings(filament::app::AssetLoader const* loader, utils::Path const& filename,
+        Settings* out) {
+    std::vector<uint8_t> json = loader->load(filename);
+    if (json.empty()) {
         return false;
     }
     JsonSerializer serializer;
-    return serializer.readJson(json.data(), contentSize, out);
+    return serializer.readJson(reinterpret_cast<const char*>(json.data()), json.size(), out);
 }
 
 void createGroundPlane(Engine* engine, Scene* scene, App* app) {
@@ -407,26 +402,17 @@ utils::Path getPathForGLTFAsset(std::string_view string) {
     return filename;
 }
 
-bool checkGLTFAsset(const utils::Path& filename) {
-    // Peek at the file size to allow pre-allocation.
-    long const contentSize = static_cast<long>(getFileSize(filename.c_str()));
-    if (contentSize <= 0) {
+bool checkGLTFAsset(filament::app::AssetLoader const* loader, const utils::Path& filename) {
+    std::vector<uint8_t> buffer = loader->load(filename);
+    if (buffer.empty()) {
         std::cerr << "Unable to open " << filename << std::endl;
-        return false;
-    }
-
-    // Consume the glTF file.
-    std::ifstream in(filename.c_str(), std::ifstream::binary | std::ifstream::in);
-    std::vector<uint8_t> buffer(static_cast<unsigned long>(contentSize));
-    if (!in.read((char*) buffer.data(), contentSize)) {
-        std::cerr << "Unable to read " << filename << std::endl;
         return false;
     }
 
     // Try parsing the glTF file to check the validity of the file format.
     cgltf_options options{};
     cgltf_data* sourceAsset = nullptr;
-    cgltf_result result = cgltf_parse(&options, buffer.data(), contentSize, &sourceAsset);
+    cgltf_result result = cgltf_parse(&options, buffer.data(), buffer.size(), &sourceAsset);
     cgltf_free(sourceAsset);
     if (result != cgltf_result_success) {
         slog.e << "Unable to parse glTF file." << io::endl;
@@ -445,7 +431,13 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     auto app = std::make_shared<App>();
     app->config = config;
 
+    // createJitShaderProvider() compiles materials through filamat, which is not built for WASM
+    // since it would pull in glslang and SPIRV-Tools. Only the ubershader archive is available.
+#if defined(__EMSCRIPTEN__)
+    app->materialSource = UBERSHADER;
+#else
     app->materialSource = config.getBool("ubershader") ? UBERSHADER : JITSHADER;
+#endif
     app->actualSize = config.getBool("actual-size");
     app->recomputeAabb = config.getBool("recompute-aabb");
     app->settingsFile = config.getString("settings");
@@ -587,7 +579,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         setupIBL();
     };
 
-    auto setup = [app, loadAsset, loadResources, filename](Engine* engine, View* view,
+    auto setup = [app, appLoader, loadAsset, loadResources, filename](Engine* engine, View* view,
                          Scene* scene) {
         app->engine = engine;
         app->names = new NameComponentManager(EntityManager::get());
@@ -605,20 +597,16 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         // First check if a custom automation spec has been provided. If it fails to load, the app
         // must be closed since it could be invoked from a script.
         if (batchMode && app->batchFile != "default") {
-            auto size = getFileSize(app->batchFile.c_str());
-            if (size > 0) {
-                std::ifstream in(app->batchFile.c_str_safe(),
-                        std::ifstream::binary | std::ifstream::in);
-                std::vector<char> json(static_cast<unsigned long>(size));
-                in.read(json.data(), size);
-                app->automationSpec = AutomationSpec::generate(json.data(), size);
-                if (!app->automationSpec) {
-                    std::cerr << "Unable to parse automation spec: " << app->batchFile.c_str_safe()
-                              << std::endl;
-                    exit(1);
-                }
-            } else {
+            std::vector<uint8_t> json = appLoader->load(utils::Path(app->batchFile.c_str_safe()));
+            if (json.empty()) {
                 std::cerr << "Unable to load automation spec: " << app->batchFile.c_str_safe()
+                          << std::endl;
+                exit(1);
+            }
+            app->automationSpec = AutomationSpec::generate(
+                    reinterpret_cast<const char*>(json.data()), json.size());
+            if (!app->automationSpec) {
+                std::cerr << "Unable to parse automation spec: " << app->batchFile.c_str_safe()
                           << std::endl;
                 exit(1);
             }
@@ -651,8 +639,8 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
         bool const hasSettingsFile = !app->settingsFile.empty();
         if (hasSettingsFile) {
-            bool const success =
-                    loadSettings(app->settingsFile.c_str(), &app->viewer->getSettings());
+            bool const success = loadSettings(appLoader,
+                    utils::Path(app->settingsFile.c_str_safe()), &app->viewer->getSettings());
             if (success) {
                 std::cout << "Loaded settings from " << app->settingsFile.c_str_safe() << std::endl;
             } else {
@@ -667,10 +655,17 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                     app->viewer->getSettings().lighting.lights, scene);
         }
 
+        // The JIT provider lives in the full gltfio target, and WASM builds only gltfio_core.
+        // Referencing it would be a link error, so the branch is compiled out rather than untaken.
+#if defined(__EMSCRIPTEN__)
+        app->materials = createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA,
+                UBERARCHIVE_DEFAULT_SIZE);
+#else
         app->materials = (app->materialSource == JITSHADER)
                                  ? createJitShaderProvider(engine, OPTIMIZE_MATERIALS, {})
                                  : createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA,
                                            UBERARCHIVE_DEFAULT_SIZE);
+#endif
 
         app->assetLoader = AssetLoader::create({ engine, app->materials, app->names });
         app->mainCamera = &view->getCamera();
@@ -1161,10 +1156,11 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                     .postRender(postRender)
                     .animation(animate)
                     .resize(resize)
-                    .dropHandler([app, loadAsset, loadResources, setupIBL](std::string_view path) {
+                    .dropHandler([app, appLoader, loadAsset, loadResources, setupIBL](
+                                         std::string_view path) {
                         utils::Path filename = getPathForGLTFAsset(path);
                         if (!filename.isEmpty()) {
-                            if (checkGLTFAsset(filename)) {
+                            if (checkGLTFAsset(appLoader, filename)) {
                                 app->resourceLoader->asyncCancelLoad();
                                 app->resourceLoader->evictResourceData();
                                 app->viewer->removeAsset();
@@ -1215,7 +1211,6 @@ int main(int argc, char** argv) {
 
     auto loader = samples::getAssetLoader(config);
     auto app = createSampleApp(config, dm.get(), loader.get());
-    app->run();
-    return 0;
+    return samples::runApp(std::move(app), std::move(dm), std::move(loader));
 }
 #endif

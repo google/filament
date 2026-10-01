@@ -84,7 +84,7 @@ bool FramePacer::setupExtraFrame() noexcept {
     return downcast(this)->setupExtraFrame();
 }
 
-void FramePacer::applyPresentationTime(Renderer* renderer) {
+void FramePacer::applyPresentationTime(Renderer* renderer) const {
     downcast(this)->applyPresentationTime(downcast(renderer));
 }
 

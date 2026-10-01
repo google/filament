@@ -319,7 +319,7 @@ public:
      *
      * @param renderer The Filament Renderer displaying the target View.
      */
-    void applyPresentationTime(Renderer* UTILS_NONNULL renderer);
+    void applyPresentationTime(Renderer* UTILS_NONNULL renderer) const;
 
     /**
      * Returns the target presentation timepoint computed during the most recent call to `setupFrame()`.

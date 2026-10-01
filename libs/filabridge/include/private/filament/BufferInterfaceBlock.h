@@ -190,7 +190,7 @@ public:
 private:
     friend class Builder;
 
-    explicit BufferInterfaceBlock(Builder const& builder) noexcept;
+    explicit BufferInterfaceBlock(Builder const& builder);
 
     static uint8_t baseAlignmentForType(Type type) noexcept;
     static uint8_t strideForType(Type type, uint32_t stride) noexcept;

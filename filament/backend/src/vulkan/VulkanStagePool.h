@@ -26,6 +26,7 @@
 #include <backend/DriverEnums.h>
 
 #include <map>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -150,8 +151,9 @@ class VulkanStageImage {
         inline uint32_t height() const { return mImage->height(); }
         inline VmaAllocation memory() const { return mImage->memory(); }
         inline VkImage image() const { return mImage->image(); }
+        inline VkImageTiling tiling() const { return mImage->tiling(); }
 
-      private:
+    private:
         Resource() = delete;
         Resource(const Resource& other) = delete;
         Resource(Resource&& other) = delete;
@@ -162,14 +164,15 @@ class VulkanStageImage {
         RecycleFn mOnRecycleFn;
     };
 
-    VulkanStageImage(VkFormat format, uint32_t width, uint32_t height, VmaAllocation memory,
-            VkImage image, uint64_t lastAccessed)
-        : mFormat(format),
-          mWidth(width),
-          mHeight(height),
-          mMemory(memory),
-          mImage(image),
-          mLastAccessed(lastAccessed) {}
+    VulkanStageImage(VkFormat format, uint32_t width, uint32_t height, VkImageTiling tiling,
+            VmaAllocation memory, VkImage image, uint64_t lastAccessed)
+            : mFormat(format),
+              mWidth(width),
+              mHeight(height),
+              mTiling(tiling),
+              mMemory(memory),
+              mImage(image),
+              mLastAccessed(lastAccessed) {}
 
     VulkanStageImage(const VulkanStageImage& other) = delete;
     VulkanStageImage(VulkanStageImage&& other) = delete;
@@ -182,10 +185,17 @@ class VulkanStageImage {
     inline VmaAllocation memory() const { return mMemory; }
     inline VkImage image() const { return mImage; }
 
-  private:
+    // VK_IMAGE_TILING_LINEAR images are host-mapped and can be written to directly.
+    // VK_IMAGE_TILING_OPTIMAL images are device-local and must be filled with a buffer-to-image
+    // copy. The latter is used when the device does not support VK_FORMAT_FEATURE_BLIT_SRC_BIT
+    // for the format with linear tiling.
+    inline VkImageTiling tiling() const { return mTiling; }
+
+private:
     const VkFormat mFormat;
     const uint32_t mWidth;
     const uint32_t mHeight;
+    const VkImageTiling mTiling;
     const VmaAllocation mMemory;
     const VkImage mImage;
 
@@ -199,7 +209,8 @@ class VulkanStageImage {
 class VulkanStagePool {
 public:
     VulkanStagePool(VmaAllocator allocator, fvkmemory::ResourceManager* resManager,
-            VulkanCommands* commands, const VkPhysicalDeviceLimits* deviceLimits);
+            VulkanCommands* commands, VkPhysicalDevice physicalDevice,
+            const VkPhysicalDeviceLimits* deviceLimits);
 
     // Finds or creates a stage block whose capacity is at least the given
     // number of bytes. Internally, creates and manages and subdivides large
@@ -211,7 +222,11 @@ public:
     fvkmemory::resource_ptr<VulkanStage::Segment> acquireStage(uint32_t numBytes,
             uint32_t alignment = 0);
 
-    // Images have VK_IMAGE_LAYOUT_GENERAL and must not be transitioned to any other layout
+    // Returns an image that can be used as the source of vkCmdBlitImage. The image is in the
+    // TRANSFER_SRC layout when returned, and callers must leave it in that layout once done.
+    // If the device supports VK_FORMAT_FEATURE_BLIT_SRC_BIT for the format with linear tiling,
+    // the image is linear and host-mappable. Otherwise, the image uses optimal tiling and must
+    // be filled with a buffer-to-image copy (see VulkanStageImage::tiling()).
     fvkmemory::resource_ptr<VulkanStageImage::Resource> acquireImage(PixelDataFormat format, PixelDataType type,
             uint32_t width, uint32_t height);
 
@@ -229,7 +244,12 @@ private:
     VmaAllocator mAllocator;
     fvkmemory::ResourceManager* mResManager;
     VulkanCommands* mCommands;
+    VkPhysicalDevice mPhysicalDevice;
     const VkPhysicalDeviceLimits* mDeviceLimits;
+
+    // Returns the tiling to use for a staging image of the given format, such that the image
+    // can be used as a blit source. The result is cached per format.
+    VkImageTiling getStageImageTiling(VkFormat format);
 
     // Takes a number of bytes, and aligns it to the non-coherent atom size.
     // This allows us to ensure that when we flush buffers from the host, we
@@ -253,6 +273,9 @@ private:
     std::multimap<uint32_t, VulkanStage*> mStages;
 
     std::unordered_set<VulkanStageImage*> mFreeImages;
+
+    // Caches the result of getStageImageTiling() per format.
+    std::unordered_map<VkFormat, VkImageTiling> mStageImageTilings;
 
     // Store the current "time" (really just a frame count) and LRU eviction parameters.
     uint64_t mCurrentFrame = 0;

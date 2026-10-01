@@ -293,7 +293,7 @@ inline void createSkins(cgltf_data const* gltf, bool normalize,
     }
 }
 
-static bool indexAccessorFitsBuffer(cgltf_accessor const* accessor, uint32_t bindingSize) {
+static bool indexAccessorFitsBuffer(cgltf_accessor const* accessor, size_t bindingSize) {
     if (!accessor->buffer_view) {
         return false;
     }
@@ -380,29 +380,25 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
                 }
 
                 if (slot.indexBuffer) {
-                    if (accessor->component_type == cgltf_component_type_r_8u) {
-                        // glTF 8-bit indices are 1 byte, but Filament IndexBuffer requires at least
-                        // 16-bit indices. We allocate 2 bytes per index to match the expansion
-                        // performed in the conversion path below.
-                        const size_t size16 = count * sizeof(uint16_t);
-                        void* zeros = malloc(size16);
-                        if (!zeros) {
-                            LOG(ERROR) << "Out of memory allocating zeroed index buffer.";
-                            continue;
-                        }
-                        memset(zeros, 0, size16);
-                        IndexBuffer::BufferDescriptor bd(zeros, size16, FREE_CALLBACK);
-                        slot.indexBuffer->setBuffer(engine, std::move(bd));
-                    } else {
-                        void* zeros = malloc(size);
-                        if (!zeros) {
-                            LOG(ERROR) << "Out of memory allocating zeroed index buffer.";
-                            continue;
-                        }
-                        memset(zeros, 0, size);
-                        IndexBuffer::BufferDescriptor bd(zeros, size, FREE_CALLBACK);
-                        slot.indexBuffer->setBuffer(engine, std::move(bd));
+                    // Size the zeroed blob from the destination. The IndexBuffer holds
+                    // (indexCount * elementSize) bytes, where glTF 8-bit indices are promoted to
+                    // 16-bit because Filament has no 8-bit index type. The accessor's declared
+                    // type has no say in this, which is what keeps the blob within capacity.
+                    size_t const indexCount = slot.indexBuffer->getIndexCount();
+                    size_t const componentSize = cgltf_component_size(accessor->component_type);
+                    size_t const indexSize =
+                            componentSize == 1 ? sizeof(uint16_t) : componentSize;
+                    if (indexCount == 0 || indexSize == 0) {
+                        continue;
                     }
+                    void* zeros = calloc(indexCount, indexSize);
+                    if (!zeros) {
+                        LOG(ERROR) << "Out of memory allocating zeroed index buffer.";
+                        continue;
+                    }
+                    IndexBuffer::BufferDescriptor bd(zeros, indexCount * indexSize,
+                            FREE_CALLBACK);
+                    slot.indexBuffer->setBuffer(engine, std::move(bd));
                     continue;
                 }
             }
@@ -542,29 +538,44 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
                 continue;
             }
 
-            if (!indexAccessorFitsBuffer(accessor, size)) {
+            // Redundant with AssetLoader and with cgltf_validate(): Draco and meshopt decoding
+            // replace the bufferView but never accessor->stride, which cgltf computes at parse
+            // time. Kept as the last check before the bytes reach the driver.
+            if (!utility::isUploadableIndexAccessor(accessor)) {
+                LOG(ERROR) << "Malformed index accessor: indices must be scalar, tightly packed "
+                              "and non-sparse.";
+                return false;
+            }
+
+            // Size the copy from the destination. The IndexBuffer was allocated as
+            // (indexCount * componentSize), with 8-bit indices widened to 16-bit, so that is
+            // exactly how many bytes may be written and, given the check above, exactly how many
+            // source bytes the accessor describes.
+            size_t const indexCount = slot.indexBuffer->getIndexCount();
+            size_t const componentSize = cgltf_component_size(accessor->component_type);
+            size_t const srcByteCount = indexCount * componentSize;
+
+            if (!indexAccessorFitsBuffer(accessor, srcByteCount)) {
                 LOG(ERROR) << "Index accessor size exceeds buffer capacity.";
                 return false;
             }
 
             if (accessor->component_type == cgltf_component_type_r_8u) {
-                if (size_t(size) > std::numeric_limits<size_t>::max() / 2) {
-                    LOG(WARNING) << "Index buffer size would overflow on conversion, skipping.";
-                    continue;
-                }
-                const size_t size16 = size_t(size) * 2;
-                uint16_t* data16 = (uint16_t*) malloc(size16);
+                // glTF 8-bit indices are 1 byte, but Filament has no 8-bit index type, so the
+                // IndexBuffer holds two bytes per index.
+                size_t const dstByteCount = srcByteCount * 2;
+                uint16_t* data16 = (uint16_t*) malloc(dstByteCount);
                 if (!data16) {
                     LOG(WARNING) << "Failed to allocate memory for index buffer conversion, skipping.";
                     continue;
                 }
-                utility::convertBytesToShorts(data16, data, size);
-                IndexBuffer::BufferDescriptor bd(data16, size16, FREE_CALLBACK);
+                utility::convertBytesToShorts(data16, data, srcByteCount);
+                IndexBuffer::BufferDescriptor bd(data16, dstByteCount, FREE_CALLBACK);
 
                 slot.indexBuffer->setBuffer(engine, std::move(bd));
                 continue;
             }
-            IndexBuffer::BufferDescriptor bd(data, size, uploadCallback,
+            IndexBuffer::BufferDescriptor bd(data, srcByteCount, uploadCallback,
                     uploadUserdata(asset, uriDataCache));
             slot.indexBuffer->setBuffer(engine, std::move(bd));
             continue;

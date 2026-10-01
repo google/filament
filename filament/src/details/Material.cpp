@@ -175,7 +175,6 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder, MaterialDefinition
 
     mDepthPrecacheDisabled =
             driver.isWorkaroundNeeded(Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL);
-    mDefaultMaterial = engine.getDefaultMaterial();
 
     mPrograms.initializeForMaterial(engine, *this, processSpecializationConstants(builder));
 
@@ -222,14 +221,11 @@ void FMaterial::terminate(FEngine& engine) {
 
 filament::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayout(
         Variant const variant, bool const useVsmDescriptorSetLayout) const noexcept {
-    if (mDefinition.materialDomain == MaterialDomain::SURFACE) {
-        // `variant` is only sensical for MaterialDomain::SURFACE
-        if (Variant::isValidDepthVariant(variant)) {
-            return mEngine.getPerViewDescriptorSetLayoutDepthVariant();
-        }
-        if (Variant::isSSRVariant(variant)) {
-            return mEngine.getPerViewDescriptorSetLayoutSsrVariant();
-        }
+    if (mDefinition.isValidDepthVariant(variant)) {
+        return mEngine.getPerViewDescriptorSetLayoutDepthVariant();
+    }
+    if (mDefinition.isSSRVariant(variant)) {
+        return mEngine.getPerViewDescriptorSetLayoutSsrVariant();
     }
     // mDefinition.perViewDescriptorSetLayout{Vsm} is already resolved for MaterialDomain
     if (useVsmDescriptorSetLayout) {
@@ -355,8 +351,7 @@ FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
 
 FMaterialInstance* FMaterial::getDefaultInstance() noexcept {
     if (UTILS_UNLIKELY(!mDefaultMaterialInstance)) {
-        mDefaultMaterialInstance =
-                mEngine.createMaterialInstance(this, mDefinition.name.c_str());
+        mDefaultMaterialInstance = mEngine.createMaterialInstance(this, mDefinition.name.c_str());
         mDefaultMaterialInstance->setDefaultInstance(true);
     }
     return mDefaultMaterialInstance;
