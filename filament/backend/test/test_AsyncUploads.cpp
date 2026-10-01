@@ -675,11 +675,6 @@ TEST_F(BackendTest, DestroyAfterAsyncUpdateDoesNotLeaveStaleTextureBinding) {
     api.queueCommandAsync([]() {}, nullptr, signalCallback, &workerDrained);
     waitFor(workerDrained);
 
-    // The GL delete may have been handed back to the backend, which runs it at finish(). The name
-    // has to be free before the new texture is made.
-    api.finish();
-    executeCommands();
-
     // With name reuse this texture gets the old texture's GL name.
     TextureHandle const newTexture = addCleanup(createFilledTexture(kGreen));
     DescriptorSetHandle const newDescriptorSet = shader.createDescriptorSet(api);
@@ -786,11 +781,6 @@ TEST_F(BackendTest, DestroyAfterAsyncUpdateDoesNotLeaveStaleBufferBinding) {
     bool workerDrained = false;
     api.queueCommandAsync([]() {}, nullptr, signalCallback, &workerDrained);
     waitFor(workerDrained);
-
-    // The GL delete may have been handed back to the backend, which runs it at finish(). The name
-    // has to be free before the new buffer is made.
-    api.finish();
-    executeCommands();
 
     // With name reuse this buffer gets the old buffer's GL name.
     BufferObjectHandle const newBuffer = addCleanup(api.createBufferObject(sizeof(float2) * 3,

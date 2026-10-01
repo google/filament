@@ -417,10 +417,6 @@ private:
     void destroyBufferObjectCommon(OpenGLState& gl, Handle<HwBufferObject> boh);
     void destroyIndexBufferCommon(OpenGLState& gl, Handle<HwIndexBuffer> ibh);
     void destroyVertexBufferCommon(Handle<HwVertexBuffer> vbh);
-    // For async objects, unbind runs on the worker and destroy is then handed to runOnBackend.
-    // unbind must read handle fields itself, since pending worker jobs may not have set them yet.
-    template<typename Unbind, typename Destroy>
-    void destroyAfterWorker(bool asynchronous, Unbind unbind, Destroy destroy);
 
     // state required to represent the current render pass
     Handle<HwRenderTarget> mRenderPassTarget;
@@ -481,13 +477,6 @@ private:
     void runEveryNowAndThen(std::function<bool()> fn);
     void executeEveryNowAndThenOps() noexcept;
     std::vector<std::function<bool()>> mEveryNowAndThenOps;
-
-    // Worker jobs hand destroys back here so a GL name is freed on the backend thread, after the
-    // worker's cache has dropped it. Otherwise either cache could match a new object reusing it.
-    void runOnBackend(std::function<void()> fn);
-    void executeBackendOps() noexcept;
-    utils::Mutex mBackendOpsLock;
-    std::vector<std::function<void()>> mBackendOps UTILS_GUARDED_BY(mBackendOpsLock);
 
     // for ES2 sRGB support
     GLSwapChain* mCurrentDrawSwapChain = nullptr;

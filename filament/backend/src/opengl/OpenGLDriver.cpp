@@ -427,9 +427,6 @@ void OpenGLDriver::terminate() {
         stopServiceThread();
     }
 
-    // The drained jobs may have handed destroys back, and those still hold GL names.
-    executeBackendOps();
-
     // wait for the GPU again because JobWorker might have queued more work.
     glFinish();
 
@@ -2309,18 +2306,6 @@ void OpenGLDriver::mapBufferR(MemoryMappedBufferHandle mmbh,
 // Destroying driver objects
 // ------------------------------------------------------------------------------------------------
 
-template<typename Unbind, typename Destroy>
-void OpenGLDriver::destroyAfterWorker(bool asynchronous, Unbind unbind, Destroy destroy) {
-    if (!asynchronous) {
-        destroy();
-        return;
-    }
-    getJobQueue()->push([this, unbind = std::move(unbind), destroy = std::move(destroy)]() mutable {
-        unbind(getWorkerState());
-        runOnBackend(std::move(destroy));
-    });
-}
-
 void OpenGLDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
     DEBUG_MARKER()
     if (vbih) {
@@ -2359,12 +2344,15 @@ void OpenGLDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
 
     if (ibh) {
         GLIndexBuffer const* ib = handle_cast<const GLIndexBuffer*>(ibh);
-        destroyAfterWorker(ib->asynchronous,
-                [this, ibh](OpenGLState& gl) {
-                    GLIndexBuffer const* ib = handle_cast<const GLIndexBuffer*>(ibh);
-                    gl.unbindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
-                },
-                [this, ibh]() { destroyIndexBufferCommon(getBackendState(), ibh); });
+        if (ib->asynchronous) {
+            // The worker deletes the name, so drop it from the backend cache here.
+            getBackendState().unbindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
+            getJobQueue()->push([this, ibh]() {
+                destroyIndexBufferCommon(getWorkerState(), ibh);
+            });
+        } else {
+            destroyIndexBufferCommon(getBackendState(), ibh);
+        }
     }
 }
 
@@ -2385,14 +2373,17 @@ void OpenGLDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
 
     if (boh) {
         GLBufferObject const* bo = handle_cast<const GLBufferObject*>(boh);
-        destroyAfterWorker(bo->asynchronous,
-                [this, boh](OpenGLState& gl) {
-                    GLBufferObject const* bo = handle_cast<const GLBufferObject*>(boh);
-                    if (!(bo->bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
-                        gl.unbindBuffer(bo->gl.binding, bo->gl.id);
-                    }
-                },
-                [this, boh]() { destroyBufferObjectCommon(getBackendState(), boh); });
+        if (bo->asynchronous) {
+            // The worker deletes the name, so drop it from the backend cache here.
+            if (!(bo->bindingType == BufferObjectBinding::UNIFORM && getBackendState().isES2())) {
+                getBackendState().unbindBuffer(bo->gl.binding, bo->gl.id);
+            }
+            getJobQueue()->push([this, boh]() {
+                destroyBufferObjectCommon(getWorkerState(), boh);
+            });
+        } else {
+            destroyBufferObjectCommon(getBackendState(), boh);
+        }
     }
 }
 
@@ -2477,14 +2468,23 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
 
     if (th) {
         GLTexture* t = handle_cast<GLTexture*>(th);
-        destroyAfterWorker(t->asynchronous,
-                [this, th](OpenGLState& gl) {
-                    GLTexture const* t = handle_cast<GLTexture const*>(th);
-                    if (t->gl.imported || any(t->usage & TextureUsage::SAMPLEABLE)) {
-                        gl.unbindTexture(t->gl.target, t->gl.id);
-                    }
-                },
-                [this, th]() { destroyTextureCommon(getBackendState(), th); });
+        if (t->asynchronous) {
+            // The worker may delete the name, so drop it from the backend cache here.
+            if (t->gl.imported || any(t->usage & TextureUsage::SAMPLEABLE)) {
+                getBackendState().unbindTexture(t->gl.target, t->gl.id);
+            }
+            getJobQueue()->push([this, th]() {
+                // A sync view can drop the last reference on the backend, so clear the
+                // worker cache even when this isn't the last reference.
+                GLTexture const* wt = handle_cast<GLTexture const*>(th);
+                if (wt->gl.imported || any(wt->usage & TextureUsage::SAMPLEABLE)) {
+                    getWorkerState().unbindTexture(wt->gl.target, wt->gl.id);
+                }
+                destroyTextureCommon(getWorkerState(), th);
+            });
+        } else {
+            destroyTextureCommon(getBackendState(), th);
+        }
     }
 }
 
@@ -4475,27 +4475,6 @@ void OpenGLDriver::executeEveryNowAndThenOps() noexcept { // NOLINT(*-exception-
     }
 }
 
-void OpenGLDriver::runOnBackend(std::function<void()> fn) {
-    // With a single state (AMORTIZATION) jobs already run on the backend thread.
-    if (mWorkerState == mBackendState) {
-        fn();
-        return;
-    }
-    utils::LockGuard const lock(mBackendOpsLock);
-    mBackendOps.push_back(std::move(fn));
-}
-
-void OpenGLDriver::executeBackendOps() noexcept {
-    std::vector<std::function<void()>> ops;
-    {
-        utils::LockGuard const lock(mBackendOpsLock);
-        std::swap(ops, mBackendOps);
-    }
-    for (auto& op : ops) {
-        op();
-    }
-}
-
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
 void OpenGLDriver::whenFrameComplete(const std::function<void()>& fn) {
     mFrameCompleteOps.push_back(fn);
@@ -4546,7 +4525,6 @@ void OpenGLDriver::tick(int) {
     executeGpuCommandsCompleteOps();
 #endif
     executeEveryNowAndThenOps();
-    executeBackendOps();
     getShaderCompilerService().tick();
     if (getJobWorker()) {
         // This number is randomly/heuristically chosen. Consider making the number optional.
@@ -4667,7 +4645,6 @@ void OpenGLDriver::finish(int) {
     assert_invariant(mGpuCommandCompleteOps.empty());
 #endif
     executeEveryNowAndThenOps();
-    executeBackendOps();
     // Note: since we executed a glFinish(), all pending tasks should be done
 
     // However, some tasks rely on a separated thread to publish their result (e.g.
