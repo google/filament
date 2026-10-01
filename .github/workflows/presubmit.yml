@@ -300,10 +300,29 @@ jobs:
   # restores desktop-renderdiff from the postsubmit warmer, on a runner tier that costs a fraction
   # of the macOS one. The goldens are generated on this same runner label; macOS renders are still
   # produced by the postsubmit test-renderdiff-mac job, but nothing compares them.
+  #
+  # One leg per platform. Desktop renders natively against mesa; web builds wasm and drives a
+  # headless browser. Goldens are kept separately per platform, so the legs never compare against
+  # each other.
   test-renderdiff:
-    name: test-renderdiff
+    name: test-renderdiff (${{ matrix.platform }})
+    strategy:
+      # A desktop regression should not hide a web regression, or vice versa.
+      fail-fast: false
+      matrix:
+        include:
+          - platform: desktop
+            ccache-config: desktop-renderdiff
+            timeout: 45
+          # The web leg additionally builds wasm and renders through a software rasterizer in a
+          # browser, which is substantially slower than rendering natively. Its build restores the
+          # cache the postsubmit build-web job writes, which also runs this leg's build through
+          # generate.sh --build-only; the renderdiff action appends the emsdk version.
+          - platform: web
+            ccache-config: web-emsdk
+            timeout: 90
     runs-on: 'arm-ubuntu-24.04-16core'
-    timeout-minutes: 45
+    timeout-minutes: ${{ matrix.timeout }}
     needs: [check-verification, renderdiff-config]
     # The first clause is the workflow-wide verified-commit convention documented at the top of
     # this file. The second is this job's own: a gate that failed to parse the commit message has
@@ -321,16 +340,20 @@ jobs:
         with:
           compare: 'true'
           golden-branch: ${{ needs.renderdiff-config.outputs.golden-branch }}
-          ccache-config: desktop-renderdiff
+          ccache-config: ${{ matrix.ccache-config }}
+          platform: ${{ matrix.platform }}
       # Uploaded even when the comparison failed, which is exactly when the images are wanted.
       # Retained long enough to still be there when a golden regression is traced back, months
       # later, to the run that introduced it. These are also the images the golden bootstrap
       # procedure in test/renderdiff/README.md picks up.
+      #
+      # Artifact names must be unique across the matrix. viewer.py overlays every artifact of a
+      # run into one tree, so the legs still display together.
       - name: Upload renderdiff output
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ !cancelled() }}
         with:
-          name: presubmit-renderdiff-result
+          name: presubmit-renderdiff-result-${{ matrix.platform }}
           path: ./out/renderdiff
           retention-days: 100
 

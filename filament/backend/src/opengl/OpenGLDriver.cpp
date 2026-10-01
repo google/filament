@@ -397,7 +397,7 @@ void OpenGLDriver::terminate() {
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     // and make sure to execute all the GpuCommandCompleteOps callbacks
-    executeGpuCommandsCompleteOps();
+    executeGpuCommandsCompleteOps(true);
 
     // as well as the FrameCompleteOps callbacks
     if (UTILS_UNLIKELY(!mFrameCompleteOps.empty())) {
@@ -4470,12 +4470,18 @@ void OpenGLDriver::whenGpuCommandsComplete(const std::function<void()>& fn) {
     CHECK_GL_ERROR()
 }
 
-void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept { // NOLINT(*-exception-escape)
+// NOLINTNEXTLINE(*-exception-escape)
+void OpenGLDriver::executeGpuCommandsCompleteOps(bool const afterFinish) noexcept {
     auto& v = mGpuCommandCompleteOps;
     auto it = v.begin();
     while (it != v.end()) {
         auto const& [sync, fn] = *it;
-        GLenum const syncStatus = glClientWaitSync(sync, 0, 0u);
+        GLenum syncStatus = glClientWaitSync(sync, 0, 0u);
+        if (syncStatus == GL_TIMEOUT_EXPIRED && afterFinish) {
+            // glFinish() has returned, so the commands are complete. WebGL still reports the
+            // fence as unsignaled because it only updates sync status between browser tasks.
+            syncStatus = GL_ALREADY_SIGNALED;
+        }
         switch (syncStatus) {
             case GL_TIMEOUT_EXPIRED:
                 // not ready
@@ -4625,7 +4631,7 @@ void OpenGLDriver::finish(int) {
     DEBUG_MARKER()
     glFinish();
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-    executeGpuCommandsCompleteOps();
+    executeGpuCommandsCompleteOps(true);
     assert_invariant(mGpuCommandCompleteOps.empty());
 #endif
     executeEveryNowAndThenOps();

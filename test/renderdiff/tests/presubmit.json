@@ -1,6 +1,7 @@
 {
     "name": "presubmit",
-    "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
+    "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu", "web-webgl", "web-webgpu"],
+
     "presets": [
         {
             "name": "base",
@@ -165,6 +166,9 @@
             "name": "HelloTriangle",
             "description": "Triangle primitive sample test",
             "apply_presets": ["base_sample"],
+            // Sample tests are desktop-only: the WASM build only produces gltf_viewer, and the
+            // web renderer drives batch mode rather than the --screenshot path.
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "hellotriangle"
             }
@@ -173,6 +177,7 @@
             "name": "HelloPBR",
             "description": "Standard PBR pipeline sample test",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "hellopbr"
             }
@@ -181,6 +186,7 @@
             "name": "Suzanne",
             "description": "Filamesh model with standard material sample test",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "suzanne"
             }
@@ -189,6 +195,7 @@
             "name": "Shadowtest",
             "description": "Directional shadow map cast onto a ground shadow plane",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "shadowtest"
             }
@@ -197,6 +204,7 @@
             "name": "RenderTarget",
             "description": "Offscreen RenderTarget rendered then sampled as a texture",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "rendertarget"
             }
@@ -205,6 +213,7 @@
             "name": "Lightbulb",
             "description": "SSAO, bloom and screen space contact shadows",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "lightbulb"
             }
@@ -213,6 +222,7 @@
             "name": "Cloth",
             "description": "Cloth shading model built with a runtime compiled material",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "sample_cloth"
             }
@@ -221,6 +231,7 @@
             "name": "SkinningTest",
             "description": "More than four bones per vertex combined with morph targets",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "skinningtest"
             }
@@ -229,6 +240,7 @@
             "name": "SkinningBuffer",
             "description": "SkinningBuffer shared between two renderables",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "helloskinningbuffer"
             }
@@ -237,6 +249,7 @@
             "name": "Morphing",
             "description": "Morph target buffer blended with per-renderable morph weights",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "hellomorphing"
             }
@@ -245,6 +258,7 @@
             "name": "UvMorphing",
             "description": "Morph target that animates UV coordinates on a textured mesh",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "hellouvmorphing"
             }
@@ -253,6 +267,7 @@
             "name": "HelloSkinning",
             "description": "Vertex skinning with four bone transforms per vertex",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "helloskinning"
             }
@@ -261,6 +276,7 @@
             "name": "FullPbr",
             "description": "Full PBR material set lit by an IBL with a skybox",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "sample_full_pbr"
             }
@@ -269,6 +285,7 @@
             "name": "NormalMap",
             "description": "Tangent space normal mapping on a lit sphere",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "sample_normal_map"
             }
@@ -277,6 +294,7 @@
             "name": "DepthTesting",
             "description": "Non-default depth comparison function via MaterialInstance::setDepthFunc",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "depthtesting",
                 // The ImGui panel is a fixed pixel size, so it covers ~60% of a default-sized
@@ -288,6 +306,7 @@
             "name": "SkinningBufferMoreBones",
             "description": "SkinningBuffer with nine bones per vertex out of a 256 bone buffer",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "helloskinningbuffer_morebones"
             }
@@ -296,6 +315,7 @@
             "name": "MaterialSandbox",
             "description": "Runtime material parameter sandbox",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "material_sandbox",
                 // The sphere sits at the center of the frame, which the fixed-pixel-size ImGui
@@ -308,6 +328,7 @@
             "name": "HybridInstancing",
             "description": "Mixed static and GPU instancing in a particle system",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "hybrid_instancing",
                 // Emitters burst on a stagger spread over the 3s fireworks delay, so the default
@@ -327,6 +348,7 @@
             "name": "ImageViewer",
             "description": "Image decode to texture, defaulting to textures/Moss_01",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "image_viewer"
             }
@@ -335,6 +357,7 @@
             "name": "StrobeColor",
             "description": "Per-frame clear color driven by frame time (liveness guard)",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "strobecolor"
             }
@@ -347,6 +370,7 @@
             "name": "ViewTest",
             "description": "Multiple views sharing a scene (liveness guard)",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "viewtest"
             }
@@ -355,6 +379,7 @@
             "name": "TexturedQuad",
             "description": "Texture upload and sampling on an orthographic quad",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "texturedquad"
             }
@@ -363,6 +388,7 @@
             "name": "VertexBufferLayout",
             "description": "Non-interleaved vertex attributes backed by a single VBO",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "vbotest"
             }
@@ -371,6 +397,7 @@
             "name": "DynamicGeometry",
             "description": "Per-frame vertex buffer updates with renderable rebuilds",
             "apply_presets": ["base_sample"],
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "executable": "animation"
             }
@@ -401,3 +428,4 @@
         }
     ]
 }
+

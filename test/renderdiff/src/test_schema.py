@@ -14,12 +14,18 @@
 # limitations under the License.
 
 import os
+import struct
 import sys
 import tempfile
+import types
 import unittest
 
+import compare
 import renderers
+import results as results_mod
 import test_config
+import update_golden
+import web_renderer
 
 
 class TestSchemaInvariants(unittest.TestCase):
@@ -319,9 +325,332 @@ class TestSchemaInvariants(unittest.TestCase):
             self.assertEqual(sample_cases[0].extra_args, ["--headless"])
 
 
+def _make_tiff(width: int, height: int, pixels: bytes, samples: int = 4) -> bytes:
+    """Builds a minimal little-endian, uncompressed TIFF, matching what Filament writes."""
+    tags = [
+        (256, 4, width),           # ImageWidth
+        (257, 4, height),          # ImageLength
+        (259, 3, 1),               # Compression: none
+        (273, 4, 0),               # StripOffsets, patched below
+        (277, 3, samples),         # SamplesPerPixel
+        (279, 4, len(pixels)),     # StripByteCounts
+    ]
+    header = struct.pack('<2sHI', b'II', 42, 8)
+    ifd_size = 2 + 12 * len(tags) + 4
+    strip_offset = len(header) + ifd_size
+    tags = [(tag, ftype, strip_offset if tag == 273 else value) for tag, ftype, value in tags]
+
+    ifd = struct.pack('<H', len(tags))
+    for tag, ftype, value in sorted(tags):
+        payload = struct.pack('<H', value) + b'\0\0' if ftype == 3 else struct.pack('<I', value)
+        ifd += struct.pack('<HHI', tag, ftype, 1) + payload
+    ifd += struct.pack('<I', 0)
+    return header + ifd + pixels
+
+
+class TestWebRenderer(unittest.TestCase):
+    """Unit tests for the browser-driven renderer's naming and image acceptance rules."""
+
+    def _renderer(self, backend='webgl'):
+        # WebRenderer validates that --executable points at a real WASM bundle, so fake one.
+        self._bundle = tempfile.TemporaryDirectory()
+        self.addCleanup(self._bundle.cleanup)
+        for name in ('gltf_viewer.html', 'gltf_viewer.js', 'gltf_viewer.wasm'):
+            open(os.path.join(self._bundle.name, name), 'w').close()
+        return web_renderer.WebRenderer('web', backend, self._bundle.name)
+
+    def _renderer_with_browser(self, version):
+        renderer = self._renderer()
+        renderer._browser = types.SimpleNamespace(version=version)
+        return renderer
+
+    def test_accepts_the_pinned_browser(self):
+        renderer = self._renderer_with_browser(web_renderer.EXPECTED_BROWSER_VERSION)
+        renderer._check_browser_version()  # must not raise
+
+    def test_rejects_an_unpinned_browser(self):
+        # Without this, an unexpected browser shows up as every web golden mismatching at
+        # once, with nothing pointing at the real cause.
+        renderer = self._renderer_with_browser('999.0.1.2')
+        with self.assertRaises(web_renderer.RasterizerMismatch) as ctx:
+            renderer._check_browser_version()
+        message = str(ctx.exception)
+        self.assertIn('999.0.1.2', message)
+        self.assertIn(web_renderer.EXPECTED_BROWSER_VERSION, message)
+        # The message has to say how to fix it, not just that it is broken.
+        self.assertIn('playwright install chromium', message)
+
+    def test_browser_pin_can_be_overridden(self):
+        renderer = self._renderer_with_browser('999.0.1.2')
+        os.environ['RDIFF_ALLOW_ANY_BROWSER'] = '1'
+        self.addCleanup(os.environ.pop, 'RDIFF_ALLOW_ANY_BROWSER', None)
+        renderer._check_browser_version()  # must not raise
+
+    def test_goldens_are_namespaced_by_platform(self):
+        # Web goldens must never collide with desktop goldens: different rasterizer, different
+        # pixels.
+        renderer = self._renderer()
+        case = web_renderer.WebGltfRenderTestCase(
+            test_name="PointLights",
+            backend="webgl",
+            output_dir="/tmp/out",
+            model="lucy",
+            model_path="/tmp/lucy.glb",
+            test_json_path="/tmp/test.json"
+        )
+        self.assertEqual(case.get_out_name(renderer), "PointLights.web-webgl.lucy")
+        self.assertEqual(case.get_out_tif_name(renderer), "/tmp/out/PointLights.web-webgl.lucy.tif")
+        self.assertEqual(case.get_working_dir(renderer), "/tmp/renderdiff/web-webgl/PointLights/lucy")
+
+        renderer_webgpu = self._renderer(backend='webgpu')
+        case_webgpu = web_renderer.WebGltfRenderTestCase(
+            test_name="PointLights",
+            backend="webgpu",
+            output_dir="/tmp/out",
+            model="lucy",
+            model_path="/tmp/lucy.glb",
+            test_json_path="/tmp/test.json"
+        )
+        self.assertEqual(case_webgpu.get_out_name(renderer_webgpu), "PointLights.web-webgpu.lucy")
+        self.assertEqual(case_webgpu.get_out_tif_name(renderer_webgpu), "/tmp/out/PointLights.web-webgpu.lucy.tif")
+        self.assertEqual(case_webgpu.get_working_dir(renderer_webgpu), "/tmp/renderdiff/web-webgpu/PointLights/lucy")
+
+    def test_rejects_non_web_backend(self):
+        with self.assertRaises(ValueError):
+            self._renderer(backend='vulkan')
+
+    def test_rejects_missing_bundle(self):
+        with tempfile.TemporaryDirectory() as empty:
+            with self.assertRaises(FileNotFoundError):
+                web_renderer.WebRenderer('web', 'webgl', empty)
+
+    def test_sample_tests_are_not_silently_dropped(self):
+        renderer = self._renderer()
+        data = {
+            "name": "Suite",
+            "renderers": ["web-webgl"],
+            "tests": [
+                {
+                    "name": "SampleTest",
+                    "sample_test": {"executable": "hellotriangle", "args": []}
+                }
+            ]
+        }
+        cfg = test_config.RenderTestConfig(data)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with self.assertRaises(NotImplementedError):
+                renderer._create_test_cases(cfg.tests[0], tmpdir)
+
+    def test_accepts_a_well_formed_render(self):
+        renderer = self._renderer()
+        width, height = renderer.RENDER_WIDTH, renderer.RENDER_HEIGHT
+        pixels = bytes((i * 7) % 251 for i in range(width * height * 4))
+        self.assertIsNone(renderer._validate_tif(_make_tiff(width, height, pixels)))
+
+    def test_rejects_wrong_size(self):
+        # The image size depends on an empirically measured ImGui sidebar width, so it can drift
+        # silently. If it ever does, every golden would be rewritten; refuse instead.
+        renderer = self._renderer()
+        width, height = renderer.RENDER_WIDTH + 1, renderer.RENDER_HEIGHT
+        pixels = bytes((i * 7) % 251 for i in range(width * height * 4))
+        problem = renderer._validate_tif(_make_tiff(width, height, pixels))
+        self.assertIsNotNone(problem)
+        self.assertIn('SIDEBAR_WIDTH', problem)
+
+    def test_rejects_blank_render(self):
+        # A correctly sized all-black image is the classic false pass.
+        renderer = self._renderer()
+        width, height = renderer.RENDER_WIDTH, renderer.RENDER_HEIGHT
+        problem = renderer._validate_tif(_make_tiff(width, height, bytes(width * height * 4)))
+        self.assertIsNotNone(problem)
+        self.assertIn('trivial', problem)
+
+    def test_rejects_non_tiff(self):
+        renderer = self._renderer()
+        self.assertIsNotNone(renderer._validate_tif(b'\x89PNG\r\n\x1a\n' + bytes(64)))
+
+
+
+class TestGoldenDeletion(unittest.TestCase):
+    """Deleting goldens is destructive and hard to notice, so the scoping rules are pinned here."""
+
+    def setUp(self):
+        # The real comparator shells out to the native diffimg tool; these tests only care about
+        # which files are selected, not whether their pixels differ.
+        self._real_same = update_golden._same_image_diffimg
+        update_golden._same_image_diffimg = lambda diffimg, a, b: True
+        self.addCleanup(lambda: setattr(update_golden, '_same_image_diffimg', self._real_same))
+
+    def _tree(self, root, names):
+        for name in names:
+            path = os.path.join(root, name)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, 'w') as f:
+                f.write(name)
+
+    def _deletes(self, golden_names, new_names):
+        golden = tempfile.TemporaryDirectory()
+        update = tempfile.TemporaryDirectory()
+        self.addCleanup(golden.cleanup)
+        self.addCleanup(update.cleanup)
+        self._tree(golden.name, golden_names)
+        self._tree(update.name, new_names)
+        deletes, _ = update_golden._get_deletes_updates(update.name, golden.name, 'diffimg')
+        return set(deletes)
+
+    def test_desktop_run_does_not_delete_web_goldens(self):
+        # The regression this guards: web and desktop goldens are produced by separate CI jobs,
+        # so a desktop render set must not be treated as authoritative for web.
+        deletes = self._deletes(
+            golden_names=[
+                'presubmit/Bloom.desktop-opengl.DamagedHelmet.tif',
+                'presubmit/Bloom.web-webgl.DamagedHelmet.tif',
+                'presubmit/Removed.desktop-opengl.DamagedHelmet.tif',
+            ],
+            new_names=['presubmit/Bloom.desktop-opengl.DamagedHelmet.tif'])
+        self.assertEqual(deletes, {'./presubmit/Removed.desktop-opengl.DamagedHelmet.tif'})
+
+    def test_web_run_does_not_delete_desktop_goldens(self):
+        deletes = self._deletes(
+            golden_names=[
+                'presubmit/Bloom.desktop-opengl.DamagedHelmet.tif',
+                'presubmit/Removed.web-webgl.DamagedHelmet.tif',
+                'presubmit/Bloom.web-webgl.DamagedHelmet.tif',
+            ],
+            new_names=['presubmit/Bloom.web-webgl.DamagedHelmet.tif'])
+        self.assertEqual(deletes, {'./presubmit/Removed.web-webgl.DamagedHelmet.tif'})
+
+    def test_empty_render_set_deletes_nothing(self):
+        # A render job that produced nothing (crashed, or was skipped) must not be read as
+        # "every golden is stale".
+        deletes = self._deletes(
+            golden_names=[
+                'presubmit/Bloom.desktop-opengl.DamagedHelmet.tif',
+                'presubmit/Bloom.web-webgl.DamagedHelmet.tif',
+            ],
+            new_names=[])
+        self.assertEqual(deletes, set())
+
+    def test_unnamespaced_files_are_never_deleted(self):
+        # test.json / render_results_*.json do not encode a renderer; they are refreshed by the
+        # update path, never pruned.
+        deletes = self._deletes(
+            golden_names=['presubmit/test.json', 'presubmit/Bloom.web-webgl.X.tif'],
+            new_names=['presubmit/Bloom.web-webgl.X.tif'])
+        self.assertEqual(deletes, set())
+
+    def test_aggregated_run_prunes_both_platforms(self):
+        # When both legs' renders are merged before updating, stale goldens on either platform
+        # are still pruned.
+        deletes = self._deletes(
+            golden_names=[
+                'presubmit/Gone.desktop-opengl.X.tif',
+                'presubmit/Gone.web-webgl.X.tif',
+                'presubmit/Kept.desktop-opengl.X.tif',
+                'presubmit/Kept.web-webgl.X.tif',
+            ],
+            new_names=[
+                'presubmit/Kept.desktop-opengl.X.tif',
+                'presubmit/Kept.web-webgl.X.tif',
+            ])
+        self.assertEqual(deletes, {'./presubmit/Gone.desktop-opengl.X.tif',
+                                   './presubmit/Gone.web-webgl.X.tif'})
+
+
+class TestCompareScoping(unittest.TestCase):
+    """Each CI matrix leg renders one platform, so compare.py must be able to scope to it."""
+
+    def setUp(self):
+        # compare.py shells out to the native diffimg tool. These tests are about which files
+        # get selected, so stand in a comparator that always reports a match.
+        self._real_diffimg = compare._run_diffimg
+        compare._run_diffimg = lambda *args, **kwargs: (True, {})
+        self.addCleanup(lambda: setattr(compare, '_run_diffimg', self._real_diffimg))
+
+    def _tree(self, root, names):
+        for name in names:
+            path = os.path.join(root, name)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, 'wb') as f:
+                f.write(b'tif')
+
+    def _compare(self, golden_names, render_names, platform=None, out_dir=None):
+        golden = tempfile.TemporaryDirectory()
+        render = tempfile.TemporaryDirectory()
+        self.addCleanup(golden.cleanup)
+        self.addCleanup(render.cleanup)
+        self._tree(golden.name, golden_names)
+        self._tree(render.name, render_names)
+        results = compare._compare_goldens(golden.name, render.name, 'diffimg',
+                                           out_dir=out_dir, platform=platform)
+        return {r['name']: r['result'] for r in results}
+
+    GOLDENS = [
+        'presubmit/Bloom.desktop-opengl.Helmet.tif',
+        'presubmit/Bloom.web-webgl.Helmet.tif',
+    ]
+
+    def test_scoped_run_ignores_other_platform(self):
+        # The regression this guards: a desktop-only CI leg walking the whole golden tree
+        # reports every web golden as missing and fails the build.
+        results = self._compare(
+            golden_names=self.GOLDENS,
+            render_names=['presubmit/Bloom.desktop-opengl.Helmet.tif'],
+            platform='desktop')
+        self.assertEqual(results, {'Bloom.desktop-opengl.Helmet.tif': results_mod.RESULT_OK})
+
+    def test_scoped_web_run_ignores_desktop(self):
+        results = self._compare(
+            golden_names=self.GOLDENS,
+            render_names=['presubmit/Bloom.web-webgl.Helmet.tif'],
+            platform='web')
+        self.assertEqual(results, {'Bloom.web-webgl.Helmet.tif': results_mod.RESULT_OK})
+
+    def test_unscoped_run_still_reports_missing(self):
+        # Without --platform the old behaviour must be preserved, otherwise a genuinely
+        # missing render would be silently ignored.
+        results = self._compare(
+            golden_names=self.GOLDENS,
+            render_names=['presubmit/Bloom.desktop-opengl.Helmet.tif'])
+        self.assertEqual(results.get('Bloom.web-webgl.Helmet.tif'), results_mod.RESULT_MISSING)
+
+    def test_scoped_run_ignores_other_platform_renders(self):
+        # A render with no golden is normally GOLDEN_MISSING (a build failure). Another
+        # platform's render must not trigger that in a scoped run.
+        results = self._compare(
+            golden_names=['presubmit/Bloom.desktop-opengl.Helmet.tif'],
+            render_names=[
+                'presubmit/Bloom.desktop-opengl.Helmet.tif',
+                'presubmit/New.web-webgl.Helmet.tif',
+            ],
+            platform='desktop')
+        self.assertEqual(results, {'Bloom.desktop-opengl.Helmet.tif': results_mod.RESULT_OK})
+
+    def test_scoped_run_still_reports_its_own_missing_render(self):
+        # Scoping must not weaken detection within the platform being compared.
+        results = self._compare(
+            golden_names=self.GOLDENS,
+            render_names=[],
+            platform='web')
+        self.assertEqual(results, {'Bloom.web-webgl.Helmet.tif': results_mod.RESULT_MISSING})
+
+    def test_results_filename_is_namespaced_only_when_scoped(self):
+        # Matrix legs upload into a shared artifact tree; an unqualified filename would have
+        # one leg overwrite the other's results.
+        for platform, expected in (('web', 'compare_results_web.json'),
+                                   (None, 'compare_results.json')):
+            out = tempfile.TemporaryDirectory()
+            self.addCleanup(out.cleanup)
+            self._compare(golden_names=self.GOLDENS,
+                          render_names=['presubmit/Bloom.web-webgl.Helmet.tif'],
+                          platform=platform, out_dir=out.name)
+            written = os.listdir(os.path.join(out.name, 'presubmit'))
+            self.assertIn(expected, written)
+
 
 def validate_config_file(file_path: str) -> bool:
     """Parses and validates a given JSON test configuration file."""
+
     if not os.path.exists(file_path):
         print(f"[FAIL] Configuration file does not exist: {file_path}", file=sys.stderr)
         return False
@@ -349,7 +678,12 @@ def main():
     args = parser.parse_args()
 
     print("=== Running Schema Invariant Unit Tests ===")
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestSchemaInvariants)
+    loader = unittest.TestLoader()
+    suite = unittest.TestSuite(
+        loader.loadTestsFromTestCase(cls)
+        for cls in (TestSchemaInvariants, TestWebRenderer, TestGoldenDeletion,
+                    TestCompareScoping))
+
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
     if not result.wasSuccessful():
