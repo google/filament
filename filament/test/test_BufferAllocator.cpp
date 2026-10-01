@@ -305,15 +305,6 @@ TEST_F(BufferAllocatorTest, AlignUp) {
     EXPECT_EQ(mAllocator.alignUp(999), 1024);
 }
 
-TEST_F(BufferAllocatorTest, AlignDown) {
-    EXPECT_EQ(mAllocator.alignDown(0), 0);
-    EXPECT_EQ(mAllocator.alignDown(63), 0);
-    EXPECT_EQ(mAllocator.alignDown(64), 64);
-    EXPECT_EQ(mAllocator.alignDown(100), 64);
-    EXPECT_EQ(mAllocator.alignDown(255), 192);
-    EXPECT_EQ(mAllocator.alignDown(1025), 1024);
-}
-
 TEST_F(BufferAllocatorTest, ValidId) {
     EXPECT_FALSE(BufferAllocator::isValid(BufferAllocator::UNALLOCATED));
     EXPECT_FALSE(BufferAllocator::isValid(BufferAllocator::REALLOCATION_REQUIRED));

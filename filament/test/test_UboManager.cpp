@@ -68,7 +68,6 @@ protected:
     static constexpr size_t COMMAND_BUFFERS_SIZE = 3 * MIN_COMMAND_BUFFERS_SIZE;
     static constexpr allocation_size_t DEFAULT_SLOT_SIZE = 64;
     static constexpr allocation_size_t DEFAULT_TOTAL_SIZE = 1024;
-    static constexpr size_t DEFAULT_MAX_UNIFORM_BUFFER_SIZE = 64 * 1024;
     static constexpr float BUFFER_SIZE_GROWTH_MULTIPLIER =
             UboManager::BUFFER_SIZE_GROWTH_MULTIPLIER;
 
@@ -95,10 +94,6 @@ protected:
                 .package(FILAMENT_TEST_RESOURCES_TEST_MATERIAL_DATA,
                         FILAMENT_TEST_RESOURCES_TEST_MATERIAL_SIZE)
                 .build(*mEngine);
-
-        // Reallocation clamps to this limit; gmock's default of 0 would make every buffer empty.
-        ON_CALL(mMockDriver, getMaxUniformBufferSize())
-                .WillByDefault(Return(DEFAULT_MAX_UNIFORM_BUFFER_SIZE));
     }
 
     FMaterialInstance* createInstance() {
@@ -649,50 +644,7 @@ TEST_F(UboManagerTest, ReallocationSizeGrowsByMultiplier) {
     // calculateRequiredSize() reserves two slots for the instance that failed allocation.
     const allocation_size_t expected = mAllocator.alignUp(
             (numFitting * instanceSize + 2 * instanceSize) * BUFFER_SIZE_GROWTH_MULTIPLIER);
-    ASSERT_LT(expected, DEFAULT_MAX_UNIFORM_BUFFER_SIZE);
     EXPECT_EQ(mUboManager.getTotalSize(), expected);
-}
-
-TEST_F(UboManagerTest, ReallocationSizeIsClampedToMaxUniformBufferSize) {
-    const allocation_size_t instanceSize =
-            mAllocator.alignUp(createInstance()->getUniformBuffer().getSize());
-    const size_t numInstances = DEFAULT_TOTAL_SIZE / instanceSize + 1;
-    for (size_t i = 0; i < numInstances; ++i) {
-        mUboManager.manageMaterialInstance(createInstance());
-    }
-
-    // The limit holds every instance, but is below the size the growth policy asks for.
-    const allocation_size_t limit = numInstances * instanceSize;
-    const allocation_size_t unclamped = mAllocator.alignUp(
-            (numInstances + 1) * instanceSize * BUFFER_SIZE_GROWTH_MULTIPLIER);
-    ASSERT_LT(limit, unclamped);
-    EXPECT_CALL(mMockDriver, getMaxUniformBufferSize()).WillOnce(Return(limit));
-
-    beginFrameDirtying({});
-    EXPECT_EQ(mUboManager.getTotalSize(), limit);
-    for (FMaterialInstance* mi : mManagedInstances) {
-        EXPECT_TRUE(BufferAllocator::isValid(mi->getAllocationId()));
-    }
-}
-
-TEST_F(UboManagerTest, ReallocationClampRoundsUnalignedLimitDown) {
-    const allocation_size_t instanceSize =
-            mAllocator.alignUp(createInstance()->getUniformBuffer().getSize());
-    const size_t numInstances = DEFAULT_TOTAL_SIZE / instanceSize + 1;
-    for (size_t i = 0; i < numInstances; ++i) {
-        mUboManager.manageMaterialInstance(createInstance());
-    }
-
-    // A device limit that is not a multiple of the slot size must be rounded down to one.
-    const allocation_size_t alignedLimit = numInstances * instanceSize;
-    EXPECT_CALL(mMockDriver, getMaxUniformBufferSize())
-            .WillOnce(Return(alignedLimit + DEFAULT_SLOT_SIZE / 2));
-
-    beginFrameDirtying({});
-    EXPECT_EQ(mUboManager.getTotalSize(), alignedLimit);
-    for (FMaterialInstance* mi : mManagedInstances) {
-        EXPECT_TRUE(BufferAllocator::isValid(mi->getAllocationId()));
-    }
 }
 
 TEST_F(UboManagerTest, RetiredAllocationsStaySortedBySerial) {

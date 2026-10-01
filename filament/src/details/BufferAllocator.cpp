@@ -250,9 +250,4 @@ BufferAllocator::allocation_size_t BufferAllocator::alignUp(
     return (size + mSlotSize - 1) & ~(mSlotSize - 1);
 }
 
-BufferAllocator::allocation_size_t BufferAllocator::alignDown(
-        allocation_size_t size) const noexcept {
-    return size & ~(mSlotSize - 1);
-}
-
 } // namespace filament

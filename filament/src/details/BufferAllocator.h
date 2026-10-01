@@ -81,9 +81,6 @@ public:
 
     [[nodiscard]] allocation_size_t alignUp(allocation_size_t size) const noexcept;
 
-    // Rounds `size` down to a multiple of the slot size.
-    [[nodiscard]] allocation_size_t alignDown(allocation_size_t size) const noexcept;
-
     [[nodiscard]] allocation_size_t getAllocationSize(AllocationId id) const;
 
     [[nodiscard]] static bool isValid(AllocationId id);

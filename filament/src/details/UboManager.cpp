@@ -115,7 +115,7 @@ void UboManager::beginFrame(DriverApi& driver) {
     }
 
     // Calculate the required size and grow the Ubo.
-    const allocation_size_t requiredSize = calculateRequiredSize(driver.getMaxUniformBufferSize());
+    const allocation_size_t requiredSize = calculateRequiredSize();
     reallocate(driver, requiredSize);
 
     // Allocate slots for each MI on the new Ubo.
@@ -322,7 +322,7 @@ void UboManager::reallocate(DriverApi& driver, allocation_size_t requiredSize) {
             BufferUsage::DYNAMIC | BufferUsage::SHARED_WRITE_BIT);
 }
 
-allocation_size_t UboManager::calculateRequiredSize(size_t maxUniformBufferSize) {
+allocation_size_t UboManager::calculateRequiredSize() {
     allocation_size_t newBufferSize = 0;
     for (const auto* mi: mManagedInstances) {
         const AllocationId allocationId = mi->getAllocationId();
@@ -336,9 +336,7 @@ allocation_size_t UboManager::calculateRequiredSize(size_t maxUniformBufferSize)
     }
 
     // TODO: Add more buffers if one is not enough?
-    // The device limit may not be a multiple of the slot size, so round it down.
-    return std::min(mAllocator.alignDown((allocation_size_t)maxUniformBufferSize),
-            mAllocator.alignUp(newBufferSize * BUFFER_SIZE_GROWTH_MULTIPLIER));
+    return mAllocator.alignUp(newBufferSize * BUFFER_SIZE_GROWTH_MULTIPLIER);
 }
 
 } // namespace filament
