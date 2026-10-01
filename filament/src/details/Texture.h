@@ -31,7 +31,6 @@
 #include <utils/Invocable.h>
 
 #include <array>
-#include <atomic>
 #include <cmath>
 
 #include <stddef.h>
@@ -89,14 +88,14 @@ public:
     // before freeing the object, so it must become true even when creation is canceled.
     // Use isCreationSuccessful() to know whether the resource can be used.
     bool isCreationSettled() const noexcept {
-        return mCreationStatus.load(std::memory_order_acquire) != CreationStatus::CREATING;
+        return mCreationState.isSettled();
     }
 
     // Whether creation finished *and* actually populated the resource. A canceled creation
     // finishes without ever running, so the resource is not usable. This is what the public
     // Texture::isCreationComplete() reports.
     bool isCreationSuccessful() const noexcept {
-        return mCreationStatus.load(std::memory_order_acquire) == CreationStatus::CREATED;
+        return mCreationState.isSuccessful();
     }
 
     /*
@@ -218,7 +217,7 @@ private:
 
     // Where the creation process is. This is especially useful for asynchronous creation; it only
     // ever moves out of CREATING once, to one of the two terminal states.
-    std::atomic<CreationStatus> mCreationStatus{ CreationStatus::CREATING };
+    CreationState mCreationState;
 };
 
 FILAMENT_DOWNCAST(Texture)

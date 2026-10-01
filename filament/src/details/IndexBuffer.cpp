@@ -124,14 +124,7 @@ FIndexBuffer::FIndexBuffer(FEngine& engine, const Builder& builder)
                 /* userParam1 */ this,
                 /* userParam2 */ builder->mAsyncCreationUserData,
                 /* onCountdownComplete */ [this](backend::AsyncCallStatus const status) {
-                    // Always leaves CREATING, even when canceled: FEngine::destroy waits on that
-                    // to free the object, so one that stays CREATING is deferred forever.
-                    // `release` pairs with the `acquire` loads in the header, so a thread that sees
-                    // the new status also sees what the driver wrote before this callback ran.
-                    mCreationStatus.store(status == backend::AsyncCallStatus::CANCELED
-                                    ? CreationStatus::CANCELED
-                                    : CreationStatus::CREATED,
-                            std::memory_order_release);
+                    mCreationState.settle(status);
                 },
                 /* driver */ &engine.getDriver());
 
@@ -151,8 +144,7 @@ FIndexBuffer::FIndexBuffer(FEngine& engine, const Builder& builder)
         // In regular (non-asynchronous) mode, we know creation is complete as soon as all
         // creation-relevant API calls are recorded into the command stream, because subsequent API
         // calls will always be invoked after that (even including asynchronous version of APIs).
-        // `relaxed` is enough because the object is not visible to other threads yet.
-        mCreationStatus.store(CreationStatus::CREATED, std::memory_order_relaxed);
+        mCreationState.setCreated();
     }
 }
 
