@@ -33,16 +33,8 @@ namespace filament {
 using namespace backend;
 using namespace utils;
 
-LocalProgramCache::LocalProgramCache(LocalProgramCache const& other)
-        : mMaterial(other.mMaterial),
-          mCachedPrograms(other.mCachedPrograms.size()),
-          mSpecializationConstants(other.mSpecializationConstants.clone()) {
-    // The copy releases its programs in terminate(), so it must acquire its own references.
-    if (mMaterial != nullptr) {
-        mMaterial->getDefinition().acquirePrograms(mMaterial->getEngine(),
-                mCachedPrograms.as_slice(), mMaterial->getMaterialParser(),
-                mSpecializationConstants.get(), mMaterial->isDefaultMaterial());
-    }
+LocalProgramCache::LocalProgramCache(LocalProgramCache const& other) {
+    *this = other;
 }
 
 LocalProgramCache& LocalProgramCache::operator=(LocalProgramCache const& other) {
