@@ -26,3 +26,6 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
   call `getInstance()` again instead. [⚠️ **API Change**]
 - engine: children orphaned by `TransformManager::destroy()` now have their world transform
   updated to their local transform, as documented.
+- vulkan: the backend now keeps its `VkPipelineCache` across runs through `Platform::setBlobFunc`,
+  as the GL backend does for program binaries; the blob functions must be set before the `Engine`
+  is created
