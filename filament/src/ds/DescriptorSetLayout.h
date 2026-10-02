@@ -22,6 +22,7 @@
 #include <backend/Handle.h>
 
 #include <utils/bitset.h>
+#include <utils/compiler.h>
 #include <utils/FixedCapacityVector.h>
 
 #include <stddef.h>
@@ -56,6 +57,13 @@ public:
         return mMaxDescriptorBinding;
     }
 
+    // Returns whether `binding` belongs to this layout, i.e. whether it can safely be used to
+    // index the per-binding storage. Note that descriptor bindings can originate from a material
+    // binary and are therefore not necessarily within the layout (see getDescriptorType()).
+    bool hasDescriptor(backend::descriptor_binding_t const binding) const noexcept {
+        return binding < mDescriptorTypes.size();
+    }
+
     bool isValid(backend::descriptor_binding_t const binding) const noexcept {
         return mSamplers[binding] || mUniformBuffers[binding];
     }
@@ -78,6 +86,13 @@ public:
 
     backend::DescriptorType getDescriptorType(
         backend::descriptor_binding_t const binding) const noexcept {
+        // mDescriptorTypes is only sized for the bindings this layout actually declares. Never
+        // index it with an out-of-range binding: `binding` can come from a malformed material
+        // whose sampler interface block is not cross-checked against the descriptor set layout.
+        // Fall back to a safe, non-sampler descriptor type instead of reading out of bounds.
+        if (UTILS_UNLIKELY(!hasDescriptor(binding))) {
+            return backend::DescriptorType::UNIFORM_BUFFER;
+        }
         return mDescriptorTypes[binding];
     }
 
