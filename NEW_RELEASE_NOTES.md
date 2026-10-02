@@ -9,3 +9,6 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - engine: fix PCSS soft shadows of point and spot lights using the directional light's bulb radius
 - engine: fix a shader program leak when rendering PCSS or VSM shadows with the program cache
   disabled
+- vulkan: the backend now keeps its `VkPipelineCache` across runs through `Platform::setBlobFunc`,
+  as the GL backend does for program binaries; the blob functions must be set before the `Engine`
+  is created
