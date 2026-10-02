@@ -468,7 +468,7 @@ TEST_F(AsyncCompletionTest, ConsumedBufferReleaseDoesNothing) {
     {
         DriverBase::AsyncBufferRelease release(getDriver(),
                 BufferDescriptor(nullptr, 0, countRelease, &released));
-        BufferDescriptor const consumed(std::move(*release));
+        BufferDescriptor const consumed(release.detach());
     }
     // `consumed` released the buffer on its way out, which left the guard nothing to schedule.
     EXPECT_EQ(1, released);
