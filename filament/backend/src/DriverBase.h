@@ -37,6 +37,7 @@
 #include <chrono>
 #include <thread>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -294,16 +295,19 @@ public:
 
     /**
      * Holds the payload of an asynchronous upload and hands it to `scheduleDestroy()` when
-     * destroyed. A job that runs takes the descriptor out with `std::move(*guard)`, and the
-     * moved-from descriptor has no callback, so the destructor then does nothing. A job that never
-     * runs, because it was canceled or dropped, still releases the descriptor through its handler,
-     * whichever thread destroys the job.
+     * destroyed. `T` is `BufferDescriptor` or `PixelBufferDescriptor`, held whole because the
+     * consumers of the latter read its pixel fields. A job that runs passes `detach()` to its
+     * consumer, which moves the descriptor out and leaves it without a callback, so the destructor
+     * then does nothing. A job that never runs, because it was canceled or dropped, still
+     * releases the descriptor through its handler, whichever thread destroys the job.
      *
      * Asynchronous jobs must capture their descriptor through this, for the same reason they
      * capture an `AsyncCompletion`.
      */
     template<typename T>
     class AsyncBufferRelease {
+        static_assert(std::is_base_of_v<BufferDescriptor, T>);
+
     public:
         AsyncBufferRelease(DriverBase* driver, T&& data) noexcept
                 : mDriver(driver), mData(std::move(data)) {}
@@ -319,8 +323,9 @@ public:
             mDriver->scheduleDestroy(std::move(mData));
         }
 
-        T& operator*() noexcept { return mData; }
-        T* operator->() noexcept { return &mData; }
+        // The descriptor stays here until the caller moves from the result, so one that is never
+        // consumed is still released by the destructor.
+        T&& detach() noexcept { return std::move(mData); }
 
     private:
         DriverBase* mDriver;
