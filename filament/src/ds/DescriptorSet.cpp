@@ -91,9 +91,16 @@ void DescriptorSet::commitSlow(DescriptorSetLayout const& layout,
     }
     mDescriptorSetHandle = driver.createDescriptorSet(layout.getHandle(), mName);
     mValid.forEachSetBit([&layout, &driver,
-            dsh = mDescriptorSetHandle, descriptors = mDescriptors.data()]
+            dsh = mDescriptorSetHandle, descriptors = mDescriptors.data(), name = mName]
             (backend::descriptor_binding_t const binding) {
-        assert_invariant(layout.isValid(binding));
+        // The binding must belong to the layout before it can be used to index the descriptor
+        // array below; otherwise this would be an out-of-bounds access. This used to be an
+        // assert_invariant(), which is compiled out in release builds.
+        if (UTILS_UNLIKELY(!layout.hasDescriptor(binding))) {
+            LOG(ERROR) << "Descriptor set " << name.c_str() << " has binding " << +binding
+                       << " which is not part of the layout; ignoring.";
+            return;
+        }
         if (layout.isSampler(binding)) {
             driver.updateDescriptorSetTexture(dsh, binding,
                     descriptors[binding].texture.th,
@@ -158,6 +165,12 @@ void DescriptorSet::setBuffer(DescriptorSetLayout const& layout,
         backend::descriptor_binding_t const binding,
         backend::Handle<backend::HwBufferObject> boh, uint32_t const offset, uint32_t const size) {
 
+    // The binding comes from the material and is not necessarily part of the layout;
+    // mDescriptors only has room for layout.getMaxDescriptorBinding() + 1 entries. Reject
+    // anything else before indexing it, as that would be a heap-buffer-overflow.
+    FILAMENT_CHECK_PRECONDITION(layout.hasDescriptor(binding))
+            << "descriptor binding " << +binding << " is not part of the descriptor set layout";
+
     // Validate it's the right kind of descriptor
     using DSLD = backend::DescriptorSetLayoutDescriptor;
     FILAMENT_CHECK_PRECONDITION(DSLD::isBuffer(layout.getDescriptorType(binding)))
@@ -177,6 +190,12 @@ void DescriptorSet::setSampler(
         DescriptorSetLayout const& layout,
         backend::descriptor_binding_t const binding,
         backend::Handle<backend::HwTexture> th, backend::SamplerParams const params) {
+
+    // The binding comes from the material and is not necessarily part of the layout;
+    // mDescriptors only has room for layout.getMaxDescriptorBinding() + 1 entries. Reject
+    // anything else before indexing it, as that would be a heap-buffer-overflow.
+    FILAMENT_CHECK_PRECONDITION(layout.hasDescriptor(binding))
+            << "descriptor binding " << +binding << " is not part of the descriptor set layout";
 
     using namespace backend;
     using DSLD = DescriptorSetLayoutDescriptor;
