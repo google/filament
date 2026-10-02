@@ -257,7 +257,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
                   mPlatform->getProtectedGraphicsQueueFamilyIndex(), mContext, &mSemaphoreManager),
           mPipelineLayoutCache(mPlatform->getDevice()),
           mPipelineCache(*this, mPlatform->getDevice(), mContext),
-          mStagePool(mAllocator, &mResourceManager, &mCommands,
+          mStagePool(mAllocator, &mResourceManager, &mCommands, mPlatform->getPhysicalDevice(),
                   &mContext.getPhysicalDeviceLimits()),
           mBufferCache(mContext, mResourceManager, mAllocator),
           mFramebufferCache(mPlatform->getDevice(),
@@ -376,20 +376,11 @@ utils::FixedCapacityVector<ShaderLanguage> VulkanDriver::getShaderLanguages(
 
 void VulkanDriver::terminate() {
     // Flush all pending asynchronous tasks. Some tasks may end up posting follow-up operations to
-    // the `ServiceThread` (e.g., via CountdownCallbackHandler or any user-provided handlers). So we
-    // early stop the ServiceThread to ensure these are processed as well. Tasks posted to the main
-    // thread (due to no user handler) during this process are handled later by `Driver::purge`
-    // within `FEngine::shutdown`.
+    // the `ServiceThread` (e.g., via CountdownCallbackHandler or any user-provided handlers), which
+    // is stopped at the end of this method. Tasks posted to the main thread (due to no user
+    // handler) during this process are handled later by `Driver::purge` within `FEngine::shutdown`.
     if (getJobWorker()) {
         getJobWorker()->terminate();
-    }
-    // Complete the in-flight readbacks first: their completion callbacks are posted from the
-    // readPixels thread via scheduleDestroy(), and anything posted once the ServiceThread has
-    // joined is never dispatched - the user's callback would silently be dropped.
-    mReadPixels.runUntilComplete();
-    if constexpr (UTILS_HAS_THREADING) {
-        // Flush any callbacks the drained jobs posted via scheduleCallback().
-        stopServiceThread();
     }
 
     // Flush and wait here to make sure all queued commands are executed and resources that are tied
@@ -452,6 +443,12 @@ void VulkanDriver::terminate() {
     mContext.getDebugUtils().terminate();
 
     mPlatform->terminate();
+
+    if constexpr (UTILS_HAS_THREADING) {
+        // Stop last so the callbacks scheduled above, by finish(0)'s readPixels drain and by
+        // mPipelineCache.terminate(), are still dispatched on the ServiceThread.
+        stopServiceThread();
+    }
 }
 
 void VulkanDriver::tick(int) {
@@ -546,6 +543,11 @@ void VulkanDriver::updateDescriptorSetBuffer(
         uint32_t offset,
         uint32_t size) {
     FVK_SYSTRACE_SCOPE();
+    // Validate at entry: `binding` comes from the material file and may be out of range.
+    if (UTILS_VERY_UNLIKELY(binding >= VulkanDescriptorSetLayout::MAX_BINDINGS)) {
+        return;
+    }
+
     auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
     auto buffer = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
     mDescriptorSetCache.updateBuffer(set, binding, buffer, offset, size);
@@ -557,6 +559,13 @@ void VulkanDriver::updateDescriptorSetTexture(
         backend::TextureHandle th,
         SamplerParams params) {
     FVK_SYSTRACE_SCOPE();
+    // See updateDescriptorSetBuffer(). Checking here also covers the external image and streamed
+    // image managers below, which store `binding` and apply the update later on, outside of the
+    // descriptor set cache.
+    if (UTILS_VERY_UNLIKELY(binding >= VulkanDescriptorSetLayout::MAX_BINDINGS)) {
+        return;
+    }
+
     auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
 

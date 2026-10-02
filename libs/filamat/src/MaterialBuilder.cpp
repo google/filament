@@ -943,11 +943,13 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
         const bool targetApiNeedsWgsl = targetApi == TargetApi::WEBGPU;
         const bool targetApiNeedsGlsl = targetApi == TargetApi::OPENGL;
 
+        const bool isSurfaceDomain = mMaterialDomain == MaterialDomain::SURFACE;
+
         // Set when a job fails
         JobSystem::Job* parent = jobSystem.createJob();
 
         for (const auto& v : variants) {
-            if (params.featureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+            if (params.featureLevel == FeatureLevel::FEATURE_LEVEL_0 && isSurfaceDomain) {
                 assert_invariant(params.shaderModel == ShaderModel::MOBILE);
                 assert_invariant(params.targetApi == TargetApi::OPENGL);
                 // skip all variants that can't be used with ESSL1
@@ -1064,7 +1066,8 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                         .domain = mMaterialDomain,
                         .materialInfo = &info,
                         .hasFramebufferFetch = mEnableFramebufferFetch,
-                        .usesClipDistance = v.variant.hasStereo() && info.stereoscopicType == StereoscopicType::INSTANCED,
+                        .usesClipDistance = isSurfaceDomain && v.variant.hasStereo() &&
+                                info.stereoscopicType == StereoscopicType::INSTANCED,
                         .glsl = {},
                 };
 

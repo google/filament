@@ -274,24 +274,41 @@ void FFilamentInstance::recomputeBoundingBoxes() {
         }
     }
 
-    // Kick off a bounding box job for every primitive.
+    // Kick off a bounding box job for every primitive in batches to avoid exhausting the job pool.
     FixedCapacityVector<Aabb> bounds(primitives.size());
     JobSystem& js = mOwner->mEngine->getJobSystem();
-    JobSystem::Job* parent = js.createJob();
-    for (size_t i = 0; i < primitives.size(); ++i) {
-        Aabb& result = bounds[i];
-        const Prim& prim = primitives[i];
-        if (primitives[i].skinIndex < 0) {
-            js.run(jobs::createJob(js, parent, [&prim, &result, computeBoundingBox] {
-                result = computeBoundingBox(prim.prim);
-            }));
-        } else {
-            js.run(jobs::createJob(js, parent, [&prim, &result, computeBoundingBoxSkinned] {
-                result = computeBoundingBoxSkinned(prim);
-            }));
+    constexpr size_t MAX_BATCH_SIZE = JobSystem::MAX_JOB_COUNT / 2;
+    for (size_t offset = 0; offset < primitives.size(); offset += MAX_BATCH_SIZE) {
+        const size_t batchSize = std::min(primitives.size() - offset, MAX_BATCH_SIZE);
+        JobSystem::Job* parent = js.createJob();
+        for (size_t j = 0; j < batchSize; ++j) {
+            const size_t i = offset + j;
+            Aabb& result = bounds[i];
+            const Prim& prim = primitives[i];
+            if (prim.skinIndex < 0) {
+                JobSystem::Job* job = parent ? jobs::createJob(js, parent,
+                        [&prim, &result, computeBoundingBox] {
+                            result = computeBoundingBox(prim.prim);
+                        }) : nullptr;
+                if (UTILS_LIKELY(job)) {
+                    js.run(job);
+                } else {
+                    result = computeBoundingBox(prim.prim);
+                }
+            } else {
+                JobSystem::Job* job = parent ? jobs::createJob(js, parent,
+                        [&prim, &result, computeBoundingBoxSkinned] {
+                            result = computeBoundingBoxSkinned(prim);
+                        }) : nullptr;
+                if (UTILS_LIKELY(job)) {
+                    js.run(job);
+                } else {
+                    result = computeBoundingBoxSkinned(prim);
+                }
+            }
         }
+        js.runAndWait(parent);
     }
-    js.runAndWait(parent);
 
     // Compute the asset-level bounding box.
     size_t primIndex = 0;

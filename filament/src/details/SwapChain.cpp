@@ -122,23 +122,28 @@ void FSwapChain::setFrameCompletedCallback(
     mEngine.getDriverApi().setFrameCompletedCallback(mHwSwapChain, handler, std::move(boundCallback));
 }
 
-bool FSwapChain::isSRGBSwapChainSupported(FEngine& engine) noexcept {
-    return engine.getDriverApi().isSRGBSwapChainSupported();
+// The capability queries below don't modify the engine, but the synchronous DriverApi calls
+// aren't const.
+
+bool FSwapChain::isSRGBSwapChainSupported(FEngine const& engine) noexcept {
+    return const_cast<FEngine&>(engine).getDriverApi().isSRGBSwapChainSupported();
 }
 
-bool FSwapChain::isMSAASwapChainSupported(FEngine& engine, uint32_t samples) noexcept {
-    return engine.getDriverApi().isMSAASwapChainSupported(samples);
+bool FSwapChain::isMSAASwapChainSupported(FEngine const& engine, uint32_t samples) noexcept {
+    return const_cast<FEngine&>(engine).getDriverApi().isMSAASwapChainSupported(samples);
 }
 
-bool FSwapChain::isProtectedContentSupported(FEngine& engine) noexcept {
-    return engine.getDriverApi().isProtectedContentSupported();
+bool FSwapChain::isProtectedContentSupported(FEngine const& engine) noexcept {
+    return const_cast<FEngine&>(engine).getDriverApi().isProtectedContentSupported();
 }
 
 utils::tribool FSwapChain::isFrameRateChangeSupported() const noexcept {
-    if (mFrameRateSupportState.is_indeterminate() && mNativeWindow) {
-        mFrameRateSupportState = mEngine.getPlatform()->isFrameRateChangeSupported(mNativeWindow);
+    utils::tribool state = mFrameRateSupportState.load(std::memory_order_relaxed);
+    if (state.is_indeterminate() && mNativeWindow) {
+        state = mEngine.getPlatform()->isFrameRateChangeSupported(mNativeWindow);
+        mFrameRateSupportState.store(state, std::memory_order_relaxed);
     }
-    return mFrameRateSupportState;
+    return state;
 }
 
 void FSwapChain::setFrameRate(float const frameRate, FrameRateCompatibility const compatibility,

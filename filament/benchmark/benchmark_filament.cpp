@@ -514,6 +514,7 @@ public:
 
     void TearDown(const benchmark::State& state) override {
         downcast(tcm)->unregisterBitset(&dirtyEntities);
+        downcast(engine)->gc();
         Engine::destroy(&engine);
     }
 };
@@ -1144,3 +1145,238 @@ BENCHMARK_F(TransformManagerFixture, setTransformTRSGetWorldTransformInterleaved
     }
     em->destroy(TOTAL_NODES, entities.data());
 }
+
+namespace {
+
+// Helper to construct a 4-ary hierarchy of 1,365 nodes whose SoA Instance slots are fragmented
+// (scrambled creation order + interleaved static background entities) to simulate a long-lived
+// scene after dynamic spawning, despawning, and reparenting.
+struct FragmentedHierarchyScene {
+    static constexpr size_t BRANCHING = 4;
+    static constexpr size_t TREE_NODES = 1 + 4 + 16 + 64 + 256 + 1024; // 1,365 nodes
+    static constexpr size_t INTERNAL_NODES = 1 + 4 + 16 + 64 + 256;    // 341 internal nodes
+
+    std::vector<Entity> treeEntities;
+    std::vector<Entity> bgEntities;
+
+    void setup(EntityManager* em, TransformManager* tcm, size_t bgMultiplier, bool runDefragment) {
+        treeEntities.resize(TREE_NODES);
+        bgEntities.resize(TREE_NODES * bgMultiplier);
+        em->create(treeEntities.size(), treeEntities.data());
+        if (!bgEntities.empty()) {
+            em->create(bgEntities.size(), bgEntities.data());
+        }
+
+        // Deterministic permutation of [0 .. TREE_NODES - 1] so nodes are allocated in scrambled
+        // SoA order (parents after children, siblings far apart in memory).
+        std::vector<size_t> creationOrder(TREE_NODES);
+        for (size_t i = 0; i < TREE_NODES; ++i) {
+            creationOrder[i] = i;
+        }
+        std::mt19937 rng(42);
+        std::shuffle(creationOrder.begin(), creationOrder.end(), rng);
+
+        mat4f const local = mat4f::translation(float3{ 1.0f, 2.0f, 3.0f });
+        size_t bgIdx = 0;
+        for (size_t idx : creationOrder) {
+            tcm->create(treeEntities[idx], {}, local);
+            for (size_t b = 0; b < bgMultiplier; ++b) {
+                tcm->create(bgEntities[bgIdx++], {}, local);
+            }
+        }
+
+        // Wire the 4-ary tree topology using setParent()
+        size_t nextChild = 1;
+        for (size_t p = 0; p < INTERNAL_NODES; ++p) {
+            auto const parentInst = tcm->getInstance(treeEntities[p]);
+            for (size_t b = 0; b < BRANCHING; ++b) {
+                auto const childInst = tcm->getInstance(treeEntities[nextChild++]);
+                tcm->setParent(childInst, parentInst);
+            }
+        }
+
+        if (runDefragment) {
+            downcast(tcm)->defragment(SIZE_MAX);
+        }
+        downcast(tcm)->ensureWorldTransformsUpToDate();
+    }
+
+    void teardown(EntityManager* em, TransformManager* tcm) {
+        for (Entity e : treeEntities) {
+            tcm->destroy(e);
+        }
+        for (Entity e : bgEntities) {
+            tcm->destroy(e);
+        }
+        em->destroy(treeEntities.size(), treeEntities.data());
+        if (!bgEntities.empty()) {
+            em->destroy(bgEntities.size(), bgEntities.data());
+        }
+    }
+};
+
+} // anonymous namespace
+
+BENCHMARK_F(TransformManagerFixture, setTransformHierarchyFragmented)(benchmark::State& state) {
+    FragmentedHierarchyScene scene;
+    scene.setup(em, tcm, 0, false);
+
+    mat4f const matA = mat4f::translation(float3{ 2.0f, 3.0f, 4.0f });
+    mat4f const matB = mat4f::translation(float3{ 5.0f, 6.0f, 7.0f });
+    bool toggle = false;
+    auto const rootInst = tcm->getInstance(scene.treeEntities[0]);
+    auto const leafInst = tcm->getInstance(scene.treeEntities[FragmentedHierarchyScene::TREE_NODES - 1]);
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            toggle = !toggle;
+            tcm->setTransform(rootInst, toggle ? matA : matB);
+            mat4f const& w = tcm->getWorldTransform(leafInst);
+            benchmark::DoNotOptimize(w);
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * FragmentedHierarchyScene::TREE_NODES);
+    }
+
+    scene.teardown(em, tcm);
+}
+
+BENCHMARK_F(TransformManagerFixture, setTransformHierarchyDefragmented)(benchmark::State& state) {
+    FragmentedHierarchyScene scene;
+    scene.setup(em, tcm, 0, true);
+
+    mat4f const matA = mat4f::translation(float3{ 2.0f, 3.0f, 4.0f });
+    mat4f const matB = mat4f::translation(float3{ 5.0f, 6.0f, 7.0f });
+    bool toggle = false;
+    auto const rootInst = tcm->getInstance(scene.treeEntities[0]);
+    auto const leafInst = tcm->getInstance(scene.treeEntities[FragmentedHierarchyScene::TREE_NODES - 1]);
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            toggle = !toggle;
+            tcm->setTransform(rootInst, toggle ? matA : matB);
+            mat4f const& w = tcm->getWorldTransform(leafInst);
+            benchmark::DoNotOptimize(w);
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * FragmentedHierarchyScene::TREE_NODES);
+    }
+
+    scene.teardown(em, tcm);
+}
+
+BENCHMARK_F(TransformManagerFixture, setTransformSceneHierarchyFragmented)(benchmark::State& state) {
+    // 1,365-node animated hierarchy interleaved with 5x background static entities (8,190 total entities)
+    FragmentedHierarchyScene scene;
+    scene.setup(em, tcm, 5, false);
+
+    mat4f const matA = mat4f::translation(float3{ 2.0f, 3.0f, 4.0f });
+    mat4f const matB = mat4f::translation(float3{ 5.0f, 6.0f, 7.0f });
+    bool toggle = false;
+    auto const rootInst = tcm->getInstance(scene.treeEntities[0]);
+    auto const leafInst = tcm->getInstance(scene.treeEntities[FragmentedHierarchyScene::TREE_NODES - 1]);
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            toggle = !toggle;
+            tcm->setTransform(rootInst, toggle ? matA : matB);
+            mat4f const& w = tcm->getWorldTransform(leafInst);
+            benchmark::DoNotOptimize(w);
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * FragmentedHierarchyScene::TREE_NODES);
+    }
+
+    scene.teardown(em, tcm);
+}
+
+BENCHMARK_F(TransformManagerFixture, setTransformSceneHierarchyDefragmented)(benchmark::State& state) {
+    // 1,365-node animated hierarchy interleaved with 5x background static entities (8,190 total entities),
+    // after BFS defragment() packs roots and contiguous sibling runs.
+    FragmentedHierarchyScene scene;
+    scene.setup(em, tcm, 5, true);
+
+    mat4f const matA = mat4f::translation(float3{ 2.0f, 3.0f, 4.0f });
+    mat4f const matB = mat4f::translation(float3{ 5.0f, 6.0f, 7.0f });
+    bool toggle = false;
+    auto const rootInst = tcm->getInstance(scene.treeEntities[0]);
+    auto const leafInst = tcm->getInstance(scene.treeEntities[FragmentedHierarchyScene::TREE_NODES - 1]);
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            toggle = !toggle;
+            tcm->setTransform(rootInst, toggle ? matA : matB);
+            mat4f const& w = tcm->getWorldTransform(leafInst);
+            benchmark::DoNotOptimize(w);
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * FragmentedHierarchyScene::TREE_NODES);
+    }
+
+    scene.teardown(em, tcm);
+}
+
+BENCHMARK_F(TransformManagerFixture, defragmentAmortizedStep)(benchmark::State& state) {
+    FragmentedHierarchyScene scene;
+    scene.setup(em, tcm, 0, true);
+    auto* const ftm = downcast(tcm);
+    auto const rootInst = tcm->getInstance(scene.treeEntities[0]);
+    auto const branch1Inst = tcm->getInstance(scene.treeEntities[1]);
+    auto const branch2Inst = tcm->getInstance(scene.treeEntities[2]);
+    bool toggle = false;
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            // Toggle branch1 (341-node subtree) between level 1 (under root) and level 2 (under branch2).
+            // This shifts the BFS level order of >600 nodes so defragment(64) executes its full 64-swap budget.
+            toggle = !toggle;
+            tcm->setParent(branch1Inst, toggle ? branch2Inst : rootInst);
+            ftm->defragment(64);
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * 64);
+    }
+
+    scene.teardown(em, tcm);
+}
+
+BENCHMARK_F(TransformManagerFixture, defragmentSmartCursorDeepReparent)(benchmark::State& state) {
+    // 8,190 total entities (6,825 static roots + 1,365-node hierarchy).
+    // Reparenting a deep node near the bottom of the tree and calling defragment(64) rewinds
+    // mDefragParentCursor via O(log N) binary search directly to the affected parent instead
+    // of rescanning all 8,190 nodes from index 0.
+    FragmentedHierarchyScene scene;
+    scene.setup(em, tcm, 5, true);
+    auto* const ftm = downcast(tcm);
+    Entity const parentA = scene.treeEntities[FragmentedHierarchyScene::INTERNAL_NODES - 2];
+    Entity const parentB = scene.treeEntities[FragmentedHierarchyScene::INTERNAL_NODES - 1];
+    Entity const leafChild = scene.treeEntities[FragmentedHierarchyScene::TREE_NODES - 5];
+    bool toggle = false;
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            toggle = !toggle;
+            tcm->setParent(tcm->getInstance(leafChild),
+                    tcm->getInstance(toggle ? parentB : parentA));
+            ftm->defragment(64);
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations());
+    }
+
+    scene.teardown(em, tcm);
+}
+
+

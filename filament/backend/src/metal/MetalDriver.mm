@@ -410,13 +410,18 @@ void MetalDriver::updateDescriptorSetBuffer(
     auto* descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
     auto* bo = handle_cast<MetalBufferObject>(boh);
     id<MTLBuffer> mtlBuffer = bo->getBuffer()->getGpuBufferForDraw();
-    descriptorSet->buffers[binding] = { mtlBuffer, offset, size };
-
     auto const& bindings = descriptorSet->layout->getBindings();
     auto found = std::find_if(bindings.begin(), bindings.end(),
             [binding](const auto& b) { return b.binding == binding; });
-    assert_invariant(found != bindings.end());
+    // `binding` originates from the material file (see ChunkDescriptorBindingsInfo), which could
+    // be malicious or broken, so this is not a programming error the way an assert would
+    // suggest. Silently drop the update instead of dereferencing the end iterator below: the
+    // descriptor simply won't be active for this set.
+    if (UTILS_VERY_UNLIKELY(found == bindings.end())) {
+        return;
+    }
 
+    descriptorSet->buffers[binding] = { mtlBuffer, offset, size };
     ShaderStageFlags stageFlags = found->stageFlags;
     if (any(stageFlags & ShaderStageFlags::VERTEX)) {
         descriptorSet->vertexResources.push_back(mtlBuffer);
@@ -439,6 +444,15 @@ void MetalDriver::updateDescriptorSetTexture(
     auto* descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
     auto* texture = handle_cast<MetalTexture>(th);
 
+    auto const& bindings = descriptorSet->layout->getBindings();
+    auto found = std::find_if(bindings.begin(), bindings.end(),
+            [binding](const auto& b) { return b.binding == binding; });
+    // As in updateDescriptorSetBuffer: `binding` originates from the material file and can be
+    // malicious or broken, so drop the update instead of dereferencing the end iterator below.
+    if (UTILS_VERY_UNLIKELY(found == bindings.end())) {
+        return;
+    }
+
     id<MTLTexture> mtlTexture = texture->getMtlTextureForRead();
     if (texture->target == SamplerType::SAMPLER_EXTERNAL) {
         auto externalImage = texture->getExternalImage();
@@ -448,11 +462,6 @@ void MetalDriver::updateDescriptorSetTexture(
     assert_invariant(mtlTexture != nil);
 
     descriptorSet->textures[binding] = MetalDescriptorSet::TextureBinding { mtlTexture, params };
-
-    auto const& bindings = descriptorSet->layout->getBindings();
-    auto found = std::find_if(bindings.begin(), bindings.end(),
-            [binding](const auto& b) { return b.binding == binding; });
-    assert_invariant(found != bindings.end());
 
     ShaderStageFlags stageFlags = found->stageFlags;
     if (any(stageFlags & ShaderStageFlags::VERTEX)) {
@@ -1270,8 +1279,17 @@ void MetalDriver::terminate() {
     mContext->blitter->shutdown();
     mContext->shaderCompiler->terminate();
 
+    // Flush all pending asynchronous tasks. Some tasks may end up posting follow-up operations to
+    // the `ServiceThread` (e.g., via CountdownCallbackHandler or any user-provided handlers). So we
+    // early stop the ServiceThread to ensure these are processed as well. Tasks posted to the main
+    // thread (due to no user handler) during this process are handled later by `Driver::purge`
+    // within `FEngine::shutdown`.
     if (getJobWorker()) {
         getJobWorker()->terminate();
+    }
+    if constexpr (UTILS_HAS_THREADING) {
+        // Flush any callbacks the drained jobs posted via scheduleCallback().
+        stopServiceThread();
     }
 }
 

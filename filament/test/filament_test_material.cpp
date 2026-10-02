@@ -29,6 +29,9 @@
 
 #include <gtest/gtest.h>
 
+#include <string>
+#include <tuple>
+
 using namespace filament;
 
 namespace {
@@ -43,6 +46,9 @@ std::vector<std::unique_ptr<char[]>> churnHeapForMaterialParser() {
     }
     return churn;
 }
+
+// Parameters: (enable_program_cache feature flag, whether to duplicate the instance).
+class SpecializedInstanceLifetimeTest : public testing::TestWithParam<std::tuple<bool, bool>> {};
 
 } // anonymous namespace
 
@@ -242,6 +248,74 @@ TEST(MaterialInstanceTest, SetConstant) {
     EXPECT_EQ(instance->getConstant<float>("myFloat"), 3.0f);
     EXPECT_EQ(instance->getConstant<int32_t>("myInt"), 4);
     EXPECT_EQ(instance->getConstant<bool>("myBool"), true);
+
+    engine->destroy(instance);
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
+
+TEST(MaterialInstanceTest, ParameterLargerThanFieldIsRejected) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    ASSERT_NE(engine, nullptr);
+
+    std::string shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(1.0);
+        }
+    )");
+
+    // Layout: "m" at bytes [0, 48), "f" at 48, "g" at 52, "a" at [64, 96).
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("MaterialInstanceTest");
+    builder.material(shaderCode.c_str());
+    builder.parameter("m", filamat::MaterialBuilder::UniformType::MAT3);
+    builder.parameter("f", filamat::MaterialBuilder::UniformType::FLOAT);
+    builder.parameter("g", filamat::MaterialBuilder::UniformType::FLOAT);
+    builder.parameter("a", 2, filamat::MaterialBuilder::UniformType::FLOAT);
+
+    filamat::Package result = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(result.isValid());
+
+    Material* material = Material::Builder()
+            .package(result.getData(), result.getSize())
+            .build(*engine);
+    ASSERT_NE(material, nullptr);
+
+    MaterialInstance* instance = material->createInstance();
+    ASSERT_NE(instance, nullptr);
+
+    instance->setParameter("m", math::mat3f{ 2.0f });
+    EXPECT_EQ(instance->getParameter<math::mat3f>("m"), math::mat3f{ 2.0f });
+    math::mat3f const mat[1] = { math::mat3f{ 3.0f } };
+    instance->setParameter("m", mat, 1);
+    instance->setParameter("f", 1.0f);
+    EXPECT_EQ(instance->getParameter<float>("f"), 1.0f);
+    float const one[1] = { 1.0f };
+    instance->setParameter("f", one, 1);
+    instance->setParameter("g", 3.0f);
+    float const two[2] = { 1.0f, 2.0f };
+    instance->setParameter("a", two, 2);
+
+#if GTEST_HAS_EXCEPTIONS
+    // These stay inside the buffer but overrun the next field.
+    EXPECT_THROW(instance->setParameter("f", math::float4{ 9.0f }), utils::PreconditionPanic);
+    EXPECT_EQ(instance->getParameter<float>("g"), 3.0f);
+    EXPECT_THROW(instance->setParameter("f", math::float2{}), utils::PreconditionPanic);
+    EXPECT_THROW(instance->setParameter("f", math::mat3f{}), utils::PreconditionPanic);
+    EXPECT_THROW(instance->setParameter("m", math::mat4f{}), utils::PreconditionPanic);
+    EXPECT_THROW(instance->setParameter("f", two, 2), utils::PreconditionPanic);
+    math::mat3f const mats[2] = {};
+    EXPECT_THROW(instance->setParameter("m", mats, 2), utils::PreconditionPanic);
+    EXPECT_THROW(instance->getParameter<math::float4>("f"), utils::PreconditionPanic);
+    EXPECT_THROW(instance->getParameter<math::mat3f>("f"), utils::PreconditionPanic);
+    EXPECT_THROW(instance->getParameter<math::mat4f>("m"), utils::PreconditionPanic);
+
+    // This one runs past the end of the buffer.
+    float const three[3] = { 1.0f, 2.0f, 3.0f };
+    EXPECT_THROW(instance->setParameter("a", three, 3), utils::PreconditionPanic);
+#endif
 
     engine->destroy(instance);
     engine->destroy(material);
@@ -661,3 +735,63 @@ TEST(Material, ProgramCacheLruEvictUAF) {
 
     Engine::destroy(engine);
 }
+
+TEST_P(SpecializedInstanceLifetimeTest, DestroyInstanceKeepsMaterialDefinition) {
+    auto const [enableProgramCache, duplicateInstance] = GetParam();
+
+    Engine* engine = Engine::Builder()
+                             .backend(Engine::Backend::NOOP)
+                             .feature("engine.enable_program_cache", enableProgramCache)
+                             .build();
+    ASSERT_NE(engine, nullptr);
+    FEngine::DriverApi& driver = downcast(engine)->getDriverApi();
+
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("SpecializedInstanceLifetime");
+    builder.material(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(1.0);
+        }
+    )");
+    builder.constant("probe", filamat::MaterialBuilder::ConstantType::BOOL, false);
+    filamat::Package pkg = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(pkg.isValid());
+
+    Material* material = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
+    ASSERT_NE(material, nullptr);
+
+    // prepareProgram() flushes the pending constants, which initializes the instance's own
+    // program cache (this is what rendering a frame does).
+    MaterialInstance* instance = material->createInstance();
+    instance->setConstant("probe", true);
+    downcast(instance)->prepareProgram(driver, Variant{ 0 }, DynamicSpecConstKey{ 0 },
+            backend::CompilerPriorityQueue::HIGH);
+
+    if (duplicateInstance) {
+        MaterialInstance* copy = MaterialInstance::duplicate(instance);
+        ASSERT_NE(copy, nullptr);
+        EXPECT_TRUE(copy->getConstant<bool>("probe"));
+        engine->destroy(copy);
+    }
+    engine->destroy(instance);
+
+    // The material still holds its MaterialDefinition, so building the same package again must
+    // share it rather than create a new one.
+    Material* sameMaterial =
+            Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
+    ASSERT_NE(sameMaterial, nullptr);
+    EXPECT_EQ(&downcast(sameMaterial)->getDefinition(), &downcast(material)->getDefinition());
+
+    engine->destroy(sameMaterial);
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
+
+INSTANTIATE_TEST_SUITE_P(MaterialInstanceTest, SpecializedInstanceLifetimeTest,
+        testing::Combine(testing::Bool(), testing::Bool()),
+        [](testing::TestParamInfo<std::tuple<bool, bool>> const& info) {
+            return std::string(std::get<0>(info.param) ? "ProgramCache" : "NoProgramCache") +
+                   (std::get<1>(info.param) ? "_Duplicated" : "_Single");
+        });

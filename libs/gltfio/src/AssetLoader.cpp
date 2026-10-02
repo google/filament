@@ -750,7 +750,8 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity,
     Aabb aabb;
 
     // glTF spec says that all primitives must have the same number of morph targets.
-    const cgltf_size numMorphTargets = inputPrim ? inputPrim->targets_count : 0;
+    const cgltf_size rawNumMorphTargets = inputPrim ? inputPrim->targets_count : 0;
+    const cgltf_size numMorphTargets = std::min(rawNumMorphTargets, (cgltf_size) MAX_MORPH_TARGETS);
     RenderableManager::Builder builder(primitiveCount);
 
     // For each prim, create a Filament VertexBuffer, IndexBuffer, and MaterialInstance.
@@ -763,7 +764,7 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity,
             slog.e << "Unsupported primitive type in " << name << io::endl;
         }
 
-        if (numMorphTargets != inputPrim->targets_count) {
+        if (rawNumMorphTargets != inputPrim->targets_count) {
             slog.e << "Sister primitives must all have the same number of morph targets."
                    << io::endl;
             mError = true;
@@ -1015,8 +1016,17 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
             return false;
         }
 
+        // The capacity we are about to commit to is (count * componentSize). ResourceLoader
+        // computes the size of the upload from the accessor's stride and type, so reject here any
+        // accessor for which those two quantities can disagree.
+        if (!utility::isUploadableIndexAccessor(accessor)) {
+            slog.e << "Malformed index accessor in " << name
+                   << ": indices must be scalar, tightly packed and non-sparse." << io::endl;
+            return false;
+        }
+
         indices = IndexBuffer::Builder()
-            .indexCount(accessor->count)
+            .indexCount(uint32_t(accessor->count))
             .bufferType(indexType)
             .build(mEngine);
 

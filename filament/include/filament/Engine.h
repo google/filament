@@ -870,7 +870,7 @@ public:
     /**
      * @return EntityManager used by filament
      */
-    utils::EntityManager& getEntityManager() noexcept;
+    utils::EntityManager& getEntityManager() const noexcept;
 
     /**
      * @return RenderableManager reference
@@ -878,14 +878,29 @@ public:
     RenderableManager& getRenderableManager() noexcept;
 
     /**
+     * @return RenderableManager reference
+     */
+    RenderableManager const& getRenderableManager() const noexcept;
+
+    /**
      * @return LightManager reference
      */
     LightManager& getLightManager() noexcept;
 
     /**
+     * @return LightManager reference
+     */
+    LightManager const& getLightManager() const noexcept;
+
+    /**
      * @return TransformManager reference
      */
     TransformManager& getTransformManager() noexcept;
+
+    /**
+     * @return TransformManager reference
+     */
+    TransformManager const& getTransformManager() const noexcept;
 
     /**
      * Helper to enable accurate translations.
@@ -985,6 +1000,16 @@ public:
      *         is called or the entity itself is destroyed.
      */
     Camera* UTILS_NULLABLE getCameraComponent(utils::Entity entity) noexcept;
+
+    /**
+     * Returns the Camera component of the given entity.
+     *
+     * @param entity An entity.
+     * @return A pointer to the Camera component for this entity or nullptr if the entity didn't
+     *         have a Camera component. The pointer is valid until destroyCameraComponent()
+     *         is called or the entity itself is destroyed.
+     */
+    Camera const* UTILS_NULLABLE getCameraComponent(utils::Entity entity) const noexcept;
 
     /**
      * Destroys the Camera component associated with the given entity.
@@ -1343,7 +1368,7 @@ public:
       * @return JobSystem used by filament
       */
     UTILS_NOAPIGEN
-    utils::JobSystem& getJobSystem() noexcept;
+    utils::JobSystem& getJobSystem() const noexcept;
 
 #if defined(__EMSCRIPTEN__)
     /**
@@ -1379,12 +1404,15 @@ public:
     UTILS_NOAPIGEN
     DebugRegistry& getDebugRegistry() noexcept;
 
+    UTILS_NOAPIGEN
+    DebugRegistry const& getDebugRegistry() const noexcept;
+
     /**
      * Check if a feature flag exists
      * @param name name of the feature flag to check
      * @return true if the feature flag exists, false otherwise
      */
-    inline bool hasFeatureFlag(char const* UTILS_NONNULL name) noexcept {
+    inline bool hasFeatureFlag(char const* UTILS_NONNULL name) const noexcept {
         return getFeatureFlag(name).has_value();
     }
 
