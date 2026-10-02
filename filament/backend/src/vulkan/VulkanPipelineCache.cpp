@@ -182,7 +182,7 @@ VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device,
         .pInitialData = initialData.empty() ? nullptr : initialData.data(),
     };
     VkPipelineCache cache = VK_NULL_HANDLE;
-    VkResult result = bluevk::vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &cache);
+    VkResult result = vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &cache);
     if (result == VK_SUCCESS) {
         mSavedCacheSize = initialData.size();
     } else if (!initialData.empty()) {
@@ -190,7 +190,7 @@ VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device,
         createInfo.initialDataSize = 0;
         createInfo.pInitialData = nullptr;
         cache = VK_NULL_HANDLE;
-        result = bluevk::vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &cache);
+        result = vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &cache);
     }
     if (result == VK_SUCCESS) {
         mPipelineCache = cache;
