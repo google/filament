@@ -293,6 +293,41 @@ public:
     };
 
     /**
+     * Holds the payload of an asynchronous upload and hands it to `scheduleDestroy()` when
+     * destroyed. A job that runs takes the descriptor out with `std::move(*guard)`, and the
+     * moved-from descriptor has no callback, so the destructor then does nothing. A job that never
+     * runs, because it was canceled or dropped, still releases the descriptor through its handler,
+     * whichever thread destroys the job.
+     *
+     * Asynchronous jobs must capture their descriptor through this, for the same reason they
+     * capture an `AsyncCompletion`.
+     */
+    template<typename T>
+    class AsyncBufferRelease {
+    public:
+        AsyncBufferRelease(DriverBase* driver, T&& data) noexcept
+                : mDriver(driver), mData(std::move(data)) {}
+
+        AsyncBufferRelease(AsyncBufferRelease&& rhs) noexcept = default;
+
+        AsyncBufferRelease(AsyncBufferRelease const&) = delete;
+        AsyncBufferRelease& operator=(AsyncBufferRelease const&) = delete;
+        AsyncBufferRelease& operator=(AsyncBufferRelease&&) = delete;
+
+        // A moved-from descriptor has no callback, so this does nothing once the job consumed it.
+        ~AsyncBufferRelease() {
+            mDriver->scheduleDestroy(std::move(mData));
+        }
+
+        T& operator*() noexcept { return mData; }
+        T* operator->() noexcept { return &mData; }
+
+    private:
+        DriverBase* mDriver;
+        T mData;
+    };
+
+    /**
      * Runs an asynchronous call that is all CPU work here, on the backend thread, rather than on a
      * job, and reports its completion through the queue.
      *

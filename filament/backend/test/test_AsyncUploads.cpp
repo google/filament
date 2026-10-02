@@ -22,6 +22,8 @@
 #include "Skip.h"
 #include "TrianglePrimitive.h"
 
+#include <backend/BufferDescriptor.h>
+#include <backend/CallbackHandler.h>
 #include <backend/PixelBufferDescriptor.h>
 
 #include <atomic>
@@ -904,6 +906,169 @@ TEST_F(BackendTest, FinishDrainsQueuedAsyncJobs) {
     EXPECT_TRUE(commandRan.load()) << "finish() returned before the queued job ran";
     EXPECT_TRUE(result.fired) << "finish() returned before the job's completion was scheduled";
     EXPECT_EQ(AsyncCallStatus::COMPLETED, result.status);
+}
+
+// Runs each callback inside post() with a thread-local flag set, so a release callback can tell
+// whether it was dispatched through the handler.
+class MarkingHandler final : public CallbackHandler {
+public:
+    void post(void* user, Callback const callback) override {
+        sInPost = true;
+        callback(user);
+        sInPost = false;
+    }
+
+    static inline thread_local bool sInPost = false;
+};
+
+struct ReleaseRecord {
+    std::atomic_bool released = false;
+    std::atomic_bool throughHandler = false;
+};
+
+static void recordRelease(void*, size_t, void* user) {
+    ReleaseRecord* record = static_cast<ReleaseRecord*>(user);
+    record->throughHandler = MarkingHandler::sInPost;
+    record->released = true;
+}
+
+// One call per upload entry point whose job captures a BufferDescriptor.
+struct PendingUploads {
+    ReleaseRecord indexRelease;
+    ReleaseRecord bufferRelease;
+    ReleaseRecord imageRelease;
+    AsyncCallResult indexDone;
+    AsyncCallResult bufferDone;
+    AsyncCallResult imageDone;
+    AsyncCallId ids[3] = {};
+
+    void issue(DriverApi& api, IndexBufferHandle ibh, BufferObjectHandle boh, TextureHandle th,
+            CallbackHandler* handler, void const* data) {
+        ids[0] = api.updateIndexBufferAsync(ibh,
+                BufferDescriptor(data, sizeof(uint32_t) * 3, handler, recordRelease,
+                        &indexRelease),
+                0, nullptr, recordCallback, &indexDone);
+        ids[1] = api.updateBufferObjectAsync(boh,
+                BufferDescriptor(data, sizeof(float2) * 3, handler, recordRelease,
+                        &bufferRelease),
+                0, nullptr, recordCallback, &bufferDone);
+        ids[2] = api.update3DImageAsync(th, 0, 0, 0, 0, 2, 2, 1,
+                PixelBufferDescriptor(data, sizeof(uint32_t) * 4, PixelDataFormat::RGBA,
+                        PixelDataType::UBYTE, handler, recordRelease, &imageRelease),
+                nullptr, recordCallback, &imageDone);
+    }
+};
+
+// A BufferDescriptor's release callback goes through its handler. That has to hold for a canceled
+// upload as well, because the canceled job still owns the descriptor.
+TEST_F(BackendTest, CanceledAsyncUploadReleasesBufferThroughHandler) {
+    SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
+    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+
+    auto waitFor = [&](auto const& flag) {
+        int attempts = 0;
+        while (!flag && attempts < 1000) {
+            api.finish();
+            executeCommands();
+            getDriver().purge();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            attempts++;
+        }
+        EXPECT_TRUE(flag);
+    };
+
+    IndexBufferHandle ibh =
+            addCleanup(api.createIndexBuffer(ElementType::UINT, 3, BufferUsage::STATIC));
+    BufferObjectHandle boh = addCleanup(api.createBufferObject(sizeof(float2) * 3,
+            BufferObjectBinding::VERTEX, BufferUsage::STATIC));
+    TextureHandle th = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, 2, 2, 1, TextureUsage::DEFAULT));
+
+    MarkingHandler handler;
+    std::vector<uint8_t> data(64);
+    PendingUploads uploads;
+    uploads.issue(api, ibh, boh, th, &handler, data.data());
+
+    // The backend halves have not run yet, so each job is dropped when its half tries to queue it.
+    for (AsyncCallId const id : uploads.ids) {
+        EXPECT_TRUE(api.cancelAsyncJob(id));
+    }
+
+    waitFor(uploads.indexDone.fired);
+    waitFor(uploads.bufferDone.fired);
+    waitFor(uploads.imageDone.fired);
+    waitFor(uploads.indexRelease.released);
+    waitFor(uploads.bufferRelease.released);
+    waitFor(uploads.imageRelease.released);
+    EXPECT_TRUE(uploads.indexRelease.throughHandler) << "updateIndexBufferAsync";
+    EXPECT_TRUE(uploads.bufferRelease.throughHandler) << "updateBufferObjectAsync";
+    EXPECT_TRUE(uploads.imageRelease.throughHandler) << "update3DImageAsync";
+}
+
+// Same as above, but the jobs are already queued, so cancelAsyncJob() itself destroys them.
+TEST_F(BackendTest, CanceledQueuedAsyncUploadReleasesBufferThroughHandler) {
+    SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
+    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+
+    auto waitFor = [&](auto const& flag) {
+        int attempts = 0;
+        while (!flag && attempts < 1000) {
+            api.finish();
+            executeCommands();
+            getDriver().purge();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            attempts++;
+        }
+        EXPECT_TRUE(flag);
+    };
+
+    IndexBufferHandle ibh =
+            addCleanup(api.createIndexBuffer(ElementType::UINT, 3, BufferUsage::STATIC));
+    BufferObjectHandle boh = addCleanup(api.createBufferObject(sizeof(float2) * 3,
+            BufferObjectBinding::VERTEX, BufferUsage::STATIC));
+    TextureHandle th = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, 2, 2, 1, TextureUsage::DEFAULT));
+
+    // Holds the worker so the uploads below stay queued until they are canceled.
+    std::atomic_bool releaseWorker = false;
+    AsyncCallResult blockerDone;
+    api.queueCommandAsync(
+            [&releaseWorker]() {
+                for (int i = 0; i < 1000 && !releaseWorker.load(); i++) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                }
+            },
+            nullptr, recordCallback, &blockerDone);
+
+    MarkingHandler handler;
+    std::vector<uint8_t> data(64);
+    PendingUploads uploads;
+    uploads.issue(api, ibh, boh, th, &handler, data.data());
+    executeCommands();
+
+    for (AsyncCallId const id : uploads.ids) {
+        EXPECT_TRUE(api.cancelAsyncJob(id)) << "the upload ran before it could be canceled";
+    }
+    releaseWorker = true;
+
+    waitFor(blockerDone.fired);
+    waitFor(uploads.indexDone.fired);
+    waitFor(uploads.bufferDone.fired);
+    waitFor(uploads.imageDone.fired);
+    waitFor(uploads.indexRelease.released);
+    waitFor(uploads.bufferRelease.released);
+    waitFor(uploads.imageRelease.released);
+    EXPECT_TRUE(uploads.indexRelease.throughHandler) << "updateIndexBufferAsync";
+    EXPECT_TRUE(uploads.bufferRelease.throughHandler) << "updateBufferObjectAsync";
+    EXPECT_TRUE(uploads.imageRelease.throughHandler) << "update3DImageAsync";
 }
 
 } // namespace test
