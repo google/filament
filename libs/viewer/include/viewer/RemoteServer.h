@@ -20,9 +20,11 @@
 #include <viewer/Settings.h>
 
 #include <utils/compiler.h>
+#include <utils/CString.h>
+
+#include <mutex>
 
 #include <stddef.h>
-#include <mutex>
 
 class CivetServer;
 
@@ -61,8 +63,17 @@ public:
     /**
      * Checks if a download is currently in progress and returns its label.
      * Returns null if nothing is being downloaded.
+     *
+     * The returned pointer is owned by the server and may be freed by the network thread at any
+     * time. Prefer getIncomingLabel(), which returns a copy.
      */
     char const* peekIncomingLabel() const;
+
+    /**
+     * Checks if a download is currently in progress and returns a copy of its label.
+     * Returns an empty string if nothing is being downloaded.
+     */
+    utils::CString getIncomingLabel() const;
 
     /**
      * Pops a message off the incoming queue or returns null if there are no unread messages.
@@ -79,12 +90,14 @@ public:
     void sendMessage(const Settings& settings);
     void sendMessage(const char* label, const char* buffer, size_t bufsize);
 
-    // For internal use (makes JNI simpler)
+    // The returned message is still owned by the queue and may be freed by the network thread at
+    // any time. Prefer acquireReceivedMessage().
     ReceivedMessage const* peekReceivedMessage() const;
 
 private:
     void enqueueReceivedMessage(ReceivedMessage* message);
     void setIncomingMessage(ReceivedMessage* message);
+    void discardIncomingMessage(ReceivedMessage* message);
     MessageSender* mMessageSender = nullptr;
     MessageReceiver* mMessageReceiver = nullptr;
     size_t mNextMessageUid = 0;
