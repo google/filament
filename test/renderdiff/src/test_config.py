@@ -226,6 +226,11 @@ class PresetConfig:
     else:
       self.tolerance = None
 
+    self.renderers = data.get('renderers')
+    if self.renderers is not None:
+      assert _is_list_of_strings(self.renderers), \
+        f"Preset '{self.name}' renderers must be a list of strings"
+
     # Strict schema: reject legacy flat fields
     assert 'rendering' not in data, f"Preset '{self.name}' defines legacy root-level 'rendering'; use 'gltf_test'"
     assert 'models' not in data, f"Preset '{self.name}' defines legacy root-level 'models'; use 'gltf_test'"
@@ -250,8 +255,9 @@ class TestConfig:
       assert _is_string(description), "description must be a string"
     self.description = description
 
-    self.renderers = data.get('renderers', default_renderers)
-    assert _is_list_of_strings(self.renderers), f"Test '{self.name}' renderers must be a list of strings"
+    test_renderers = data.get('renderers')
+    if test_renderers is not None:
+      assert _is_list_of_strings(test_renderers), f"Test '{self.name}' renderers must be a list of strings"
 
     self.apply_presets = data.get('apply_presets', [])
     assert _is_list_of_strings(self.apply_presets), f"Test '{self.name}' apply_presets must be a list of strings"
@@ -284,13 +290,17 @@ class TestConfig:
 
     # Note that this needs to applied in order.  Models will be overwritten.
     # Properties will be "added" in order.
-    # Tolerance is inherited from the LAST preset that has one defined
+    # Tolerance and renderers are inherited from the LAST preset that defines them.
+    preset_renderers = None
     for preset_name in self.apply_presets:
       assert preset_name in preset_dict, f"Used preset '{preset_name}' which is not defined in presets"
       preset = preset_dict[preset_name]
 
       if preset.tolerance:
         preset_tolerance = preset.tolerance
+
+      if preset.renderers is not None:
+        preset_renderers = preset.renderers
 
       if self.is_gltf_test:
         assert preset.sample_data is None, \
@@ -325,6 +335,14 @@ class TestConfig:
       self.tolerance = tolerance
     else:
       self.tolerance = preset_tolerance
+
+    # Resolve renderers (test > last preset > root default)
+    if test_renderers is not None:
+      self.renderers = test_renderers
+    elif preset_renderers is not None:
+      self.renderers = preset_renderers
+    else:
+      self.renderers = default_renderers
 
     # 3. Instantiate specific test config
     if self.is_gltf_test:

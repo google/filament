@@ -63,11 +63,16 @@
     const messageElement = document.getElementById('message');
 
     function fail(status, error) {
+      console.error(status, error);
+      // Keep the first failure. Later ones, such as callMain() throwing after the runtime aborted,
+      // are consequences of it.
+      if (app.error !== null) {
+        return;
+      }
       app.status = status;
       app.error = String(error);
       messageElement.style.display = 'block';
       messageElement.textContent = status + ': ' + app.error;
-      console.error(status, error);
     }
 
     // argv comes from the query string, so a sample can be re-driven without rebuilding:
@@ -75,11 +80,12 @@
     //   ?arg=/my%20models/foo.glb                      one parameter per argument, for values
     //                                                  containing spaces
     //
-    // Paths refer to the virtual filesystem. This page calls main() as soon as the module is
-    // instantiated, so only files preloaded at link time are there by then. A driver that has to
-    // stage its own inputs needs a page of its own that writes them through Module.FS before
-    // calling callMain(). A run that has to be reproducible should also pass --fixed-timestep,
-    // since requestAnimationFrame otherwise ties the clock to the display.
+    // Paths refer to the virtual filesystem. By default this page calls main() as soon as the
+    // module is instantiated, so only files preloaded at link time are there by then. A driver
+    // that has to stage its own inputs loads the page with ?autorun=0, writes them through
+    // filamentApp.module.FS, and then calls filamentApp.run(argv). A run that has to be
+    // reproducible should also pass --fixed-timestep, since requestAnimationFrame otherwise ties
+    // the clock to the display.
     function argvFromLocation() {
       const params = new URLSearchParams(globalThis.location.search);
       const argv = params.getAll('arg');
@@ -148,21 +154,30 @@
       app.status = 'exited';
     });
 
-    FilamentSample({
-      canvas: document.getElementById('canvas'),
-      print: (text) => console.log(text),
-      printErr: (text) => console.error(text),
-      // An abort during callMain() rejects the promise below, but one after main() returns happens
-      // inside a rAF callback, outside this chain, where the page would report 'running' forever.
-      onAbort: (reason) => fail('aborted', reason),
-    }).then(async (module) => {
-      app.module = module;
-      app.status = 'instantiated';
+    // Errors that escape the module, such as a WebGPU promise rejected after main() returned,
+    // would otherwise leave the page reporting 'running' until the driver gave up.
+    globalThis.addEventListener('error', (event) => {
+      if (app.error === null) {
+        fail('uncaught', event.message);
+      }
+    });
+    globalThis.addEventListener('unhandledrejection', (event) => {
+      if (app.error === null) {
+        fail('rejected', event.reason);
+      }
+    });
 
-      const argv = argvFromLocation();
+    // Starts the sample with the given argv. With ?autorun=0 the page stops at 'ready' and a
+    // driver calls this itself, after staging its inputs through app.module.FS. It resolves once
+    // main() has returned, which for a sample with a frame loop is when the loop has started.
+    app.run = async (argv) => {
+      if (app.status !== 'ready') {
+        throw new Error(`cannot run from status '${app.status}'`);
+      }
+      app.status = 'starting';
       if (selectsWebGPU(argv)) {
         try {
-          module.preinitializedWebGPUDevice = await requestWebGPUDevice();
+          app.module.preinitializedWebGPUDevice = await requestWebGPUDevice();
         } catch (error) {
           fail('webgpu-failed', error);
           return;
@@ -173,18 +188,41 @@
       // frame loop with requestAnimationFrame, and the runtime survives main() (EXIT_RUNTIME=0) to
       // service those callbacks. A sample that rejects its arguments calls exit() instead, which
       // callMain() reports as a status rather than an exception, so the status must be checked.
-      const status = module.callMain(argv);
+      let status;
+      try {
+        status = app.module.callMain(argv);
+      } catch (error) {
+        fail('main-failed', error);
+        return;
+      }
       if (status) {
         fail('main-exited', `exit status ${status}; see the console for the reason`);
         return;
       }
       // A zero status is also what main() returns after finishing without a frame loop, as
       // --help does. The sample reports that by raising 'filament-app-exit' before returning.
-      if (!app.exited) {
+      if (!app.exited && app.error === null) {
         app.status = 'running';
       }
+    };
+
+    const autorun = new URLSearchParams(globalThis.location.search).get('autorun') !== '0';
+
+    FilamentSample({
+      canvas: document.getElementById('canvas'),
+      print: (text) => console.log(text),
+      printErr: (text) => console.error(text),
+      // An abort during callMain() rejects the promise below, but one after main() returns happens
+      // inside a rAF callback, outside this chain, where the page would report 'running' forever.
+      onAbort: (reason) => fail('aborted', reason),
+    }).then((module) => {
+      app.module = module;
+      app.status = 'ready';
+      if (autorun) {
+        return app.run(argvFromLocation());
+      }
     }).catch((error) => {
-      fail(app.module ? 'main-failed' : 'instantiation-failed', error);
+      fail('instantiation-failed', error);
     });
   </script>
 </body>

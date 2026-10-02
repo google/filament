@@ -25,6 +25,7 @@ Presets allow sharing visual diff tolerances, glTF models/rendering options, or 
 | :--- | :--- | :--- | :--- |
 | `name` | `string` | **Yes** | Unique preset identifier. |
 | `tolerance` | `dict` | Optional | Visual difference threshold specification (diffimg format). |
+| `renderers` | `list[string]` | Optional | Overrides suite-level renderers for tests that apply this preset. The last applied preset that sets it wins. |
 | `gltf_test` | `GltfTestBlock` | Optional | Reusable glTF model search paths, model lists, or rendering automation settings. |
 | `sample_test` | `SampleTestBlock`| Optional | Reusable sample executable arguments, warmup frames, or animation timesteps. |
 
@@ -40,7 +41,7 @@ Each test definition represents a test case and must define **exactly one** of `
 | :--- | :--- | :--- | :--- |
 | `name` | `string` | **Yes** | Unique test name (used in output filenames and results). |
 | `description` | `string` | Optional | Explanatory description of the test case. |
-| `renderers` / `backends` | `list[string]` | Optional | Overrides suite-level renderers for this specific test. |
+| `renderers` / `backends` | `list[string]` | Optional | Overrides suite-level and preset renderers for this specific test. |
 | `apply_presets` | `list[string]` | Optional | Ordered list of presets to inherit from. |
 | `tolerance` | `dict` | Optional | Test-level diff tolerance (overrides preset tolerance). |
 | `gltf_test` | `GltfTestBlock` | **One of** | Present if testing glTF rendering via `gltf_viewer`. |

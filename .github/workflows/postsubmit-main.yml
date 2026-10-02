@@ -9,8 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  # Updating the renderdiff goldens in filament-assets takes three jobs, because the two halves of
-  # the old single job want very different runners.
+  # Updating the renderdiff goldens in filament-assets takes four jobs, because the halves of the
+  # old single job want very different runners.
   #
   # The rendering half has to run on the same runner label presubmit compares on: a golden path
   # records only the platform and the backend, so an image rendered on a different host is simply
@@ -55,15 +55,29 @@ jobs:
           fi
         shell: bash
 
-  # Renders the suite and pushes the result to a branch of filament-assets, for commits that ask
-  # for it with RDIFF_ACCEPT_NEW_GOLDENS. The merge job below then folds that branch into main.
+  # Renders the candidate goldens, one leg per platform, for commits that ask for it with
+  # RDIFF_ACCEPT_NEW_GOLDENS. Desktop renders natively against mesa; web builds wasm and drives a
+  # headless browser.
   #
   # Same runner label as the presubmit test-renderdiff job, deliberately. These are the images that
   # job will compare against, and pinning both to one label removes the runner as a variable.
-  accept-renderdiff-goldens:
-    name: accept-renderdiff-goldens
+  #
+  # This is deliberately separate from accept-renderdiff-goldens below. The push rewrites a single
+  # branch of the goldens repo and prunes goldens that the render set no longer covers, so it has
+  # to see both platforms' renders at once and has to run exactly once. Two legs each pushing to
+  # the same branch would race.
+  render-renderdiff-goldens:
+    name: render-renderdiff-goldens (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: desktop
+            ccache-config: desktop-renderdiff
+          - platform: web
+            ccache-config: web-emsdk
     runs-on: 'arm-ubuntu-24.04-16core'
-    timeout-minutes: 60
+    timeout-minutes: 90
     needs: [renderdiff-goldens-config]
     if: needs.renderdiff-goldens-config.outputs.accept == 'true'
     steps:
@@ -74,16 +88,55 @@ jobs:
       - uses: ./.github/actions/renderdiff
         with:
           compare: 'false'
-          ccache-config: desktop-renderdiff
+          ccache-config: ${{ matrix.ccache-config }}
+          platform: ${{ matrix.platform }}
       # Before the push, so that a failure there still leaves the images somewhere they can be
       # recovered from and pushed by hand.
       - name: Upload renderdiff output
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ !cancelled() }}
         with:
-          name: accept-renderdiff-goldens
+          name: accept-renderdiff-goldens-${{ matrix.platform }}
           path: ./out/renderdiff
           retention-days: 100
+      # The renders alone, for the push job below to overlay into one tree.
+      - name: Upload renders
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: postsubmit-renderdiff-renders-${{ matrix.platform }}
+          path: ./out/renderdiff/renders
+
+  # Pushes the renders of every platform to a branch of filament-assets. The merge job below then
+  # folds that branch into main.
+  #
+  # The implicit success() condition is what matters here: writing goldens from a partial render
+  # set would silently bake in whatever the failed leg did not produce, so a failure on either
+  # platform skips the push entirely rather than publishing half a baseline.
+  accept-renderdiff-goldens:
+    name: accept-renderdiff-goldens
+    runs-on: 'ubuntu-24.04'
+    needs: [renderdiff-goldens-config, render-renderdiff-goldens]
+    if: needs.renderdiff-goldens-config.outputs.accept == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Download renders from every platform
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          # merge-multiple overlays the legs into one tree. Renders are namespaced by renderer
+          # ('...desktop-opengl...', '...web-webgl...') so they cannot collide, and the aggregate
+          # is what lets update_golden.py prune stale goldens on both platforms in a single pass.
+          pattern: postsubmit-renderdiff-renders-*
+          merge-multiple: true
+          path: ./out/renderdiff/renders
+      # update_golden.py compares each render against the current golden with diffimg, so that an
+      # unchanged image is not rewritten.
+      - uses: ./.github/actions/linux-prereq
+      - name: Build diffimg tool
+        run: ./build.sh release diffimg
+        shell: bash
       - name: Push the new goldens to a branch
         env:
           GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}
@@ -98,6 +151,7 @@ jobs:
           python3 test/renderdiff/src/update_golden.py \
               --branch=${GOLDEN_BRANCH} \
               --source=$(pwd)/out/renderdiff/renders \
+              --diffimg=$(pwd)/out/cmake-release/tools/diffimg/diffimg \
               --commit-msg="Auto-update goldens from ${COMMIT_HASH}" \
               --push-to-remote \
               --golden-repo-token=${GH_TOKEN}
@@ -108,13 +162,15 @@ jobs:
   merge-renderdiff-goldens:
     name: merge-renderdiff-goldens
     runs-on: 'ubuntu-24.04'
-    needs: [renderdiff-goldens-config, accept-renderdiff-goldens]
-    # accept-renderdiff-goldens is skipped for the RDIFF_BRANCH path, which is the common case, and
+    needs: [renderdiff-goldens-config, render-renderdiff-goldens, accept-renderdiff-goldens]
+    # The render and push jobs are skipped for the RDIFF_BRANCH path, which is the common case, and
     # a skipped dependency must not skip this job. A failed one must, though: merging a branch the
-    # push half did not finish writing would publish half a golden set.
+    # push half did not finish writing would publish half a golden set. A failed render leg makes
+    # the push job skip rather than fail, so the render result is checked here as well.
     if: >
       always() && !cancelled()
       && needs.renderdiff-goldens-config.result == 'success'
+      && needs.render-renderdiff-goldens.result != 'failure'
       && needs.accept-renderdiff-goldens.result != 'failure'
       && needs.renderdiff-goldens-config.outputs.golden-branch != 'main'
     steps:

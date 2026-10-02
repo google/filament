@@ -188,6 +188,8 @@ class BaseRenderer(abc.ABC):
         self.platform = platform
         self.backend = backend
         self.executable = executable
+        # Subclasses that support filtering overwrite this; _collect_test_cases reads it.
+        self.test_filter = None
 
     @abc.abstractmethod
     def get_env(self) -> dict:
@@ -198,6 +200,67 @@ class BaseRenderer(abc.ABC):
     def run_tests(self, test_config: 'RenderTestConfig', output_dir: str) -> list[dict]:
         """Executes a suite of tests and returns a list of results."""
         pass
+
+    def _make_gltf_test_case(self, test, named_output_dir: str, model: str, model_path: str,
+                             test_json_path: str) -> RenderTestCase:
+        """Hook: how this renderer executes a gltf test."""
+        return GltfRenderTestCase(
+            test_name=test.name,
+            backend=self.backend,
+            output_dir=named_output_dir,
+            model=model,
+            model_path=model_path,
+            test_json_path=test_json_path
+        )
+
+    def _make_sample_test_case(self, test, named_output_dir: str) -> RenderTestCase:
+        """Hook: how this renderer executes a sample test."""
+        return SampleRenderTestCase(
+            test_name=test.name,
+            backend=self.backend,
+            output_dir=named_output_dir,
+            target=test.sample_test.target,
+            executable=test.sample_test.executable,
+            warmup_frames=test.sample_test.warmup_frames,
+            fixed_timestep=test.sample_test.fixed_timestep,
+            extra_args=test.sample_test.args
+        )
+
+    def _create_test_cases(self, test, named_output_dir: str) -> list[RenderTestCase]:
+        mkdir_p(named_output_dir)
+        cases = []
+        if test.is_gltf_test:
+            test_json_path = os.path.abspath(f'{named_output_dir}/{test.name}.simplified.json')
+            with open(test_json_path, 'w') as f:
+                f.write(f'[{test.to_filament_format()}]')
+
+            for model in test.gltf_test.models:
+                model_path = os.path.abspath(test.gltf_test.models_map[model])
+                cases.append(self._make_gltf_test_case(
+                    test, named_output_dir, model, model_path, test_json_path))
+        elif test.is_sample_test:
+            cases.append(self._make_sample_test_case(test, named_output_dir))
+        return cases
+
+    def _collect_test_cases(self, test_config, output_dir: str) -> list[RenderTestCase]:
+        """Expands a suite into the test cases this renderer should actually run."""
+        named_output_dir = os.path.abspath(os.path.join(output_dir, test_config.name))
+        mkdir_p(named_output_dir)
+
+        renderer_spec = f"{self.platform}-{self.backend}"
+        collected = []
+        for test in test_config.tests:
+            if renderer_spec not in test.renderers:
+                continue
+
+            for test_case in self._create_test_cases(test, named_output_dir):
+                test_out_name = test_case.get_out_name(self)
+                if self.test_filter and not fnmatch.fnmatch(test_out_name, self.test_filter):
+                    print(f'Skipping {test_out_name} because it does not match filter')
+                    continue
+                collected.append(test_case)
+        return collected
+
 
 
 class DesktopRenderer(BaseRenderer):
@@ -235,60 +298,14 @@ class DesktopRenderer(BaseRenderer):
     def render_single_test(self, test_case: RenderTestCase) -> dict:
         return test_case.render(self)
 
-    def _create_test_cases(self, test, named_output_dir: str) -> list[RenderTestCase]:
-        mkdir_p(named_output_dir)
-        cases = []
-        if test.is_gltf_test:
-            test_json_path = os.path.abspath(f'{named_output_dir}/{test.name}.simplified.json')
-            with open(test_json_path, 'w') as f:
-                f.write(f'[{test.to_filament_format()}]')
-
-            for model in test.gltf_test.models:
-                model_path = os.path.abspath(test.gltf_test.models_map[model])
-                cases.append(GltfRenderTestCase(
-                    test_name=test.name,
-                    backend=self.backend,
-                    output_dir=named_output_dir,
-                    model=model,
-                    model_path=model_path,
-                    test_json_path=test_json_path
-                ))
-        elif test.is_sample_test:
-            cases.append(SampleRenderTestCase(
-                test_name=test.name,
-                backend=self.backend,
-                output_dir=named_output_dir,
-                target=test.sample_test.target,
-                executable=test.sample_test.executable,
-                warmup_frames=test.sample_test.warmup_frames,
-                fixed_timestep=test.sample_test.fixed_timestep,
-                extra_args=test.sample_test.args
-            ))
-        return cases
-
     def run_tests(self, test_config, output_dir: str) -> list[dict]:
-        named_output_dir = os.path.abspath(os.path.join(output_dir, test_config.name))
-        mkdir_p(named_output_dir)
+        test_cases = self._collect_test_cases(test_config, output_dir)
 
         results = []
         print(f'Rendering {self.platform}-{self.backend} with up to '
               f'{self.concurrent_renders} concurrent renders')
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.concurrent_renders) as executor:
-            futures = []
-            for test in test_config.tests:
-                renderer_spec = f"{self.platform}-{self.backend}"
-                if renderer_spec not in test.renderers:
-                    continue
-
-                test_cases = self._create_test_cases(test, named_output_dir)
-                for test_case in test_cases:
-                    test_out_name = test_case.get_out_name(self)
-                    if self.test_filter and not fnmatch.fnmatch(test_out_name, self.test_filter):
-                        print(f'Skipping {test_out_name} because it does not match filter')
-                        continue
-
-                    futures.append(executor.submit(self.render_single_test, test_case))
-
+            futures = [executor.submit(self.render_single_test, c) for c in test_cases]
             for future in concurrent.futures.as_completed(futures):
                 results.append(future.result())
 
@@ -299,6 +316,12 @@ class RendererFactory:
     def create(platform: str, backend: str, executable: str, **kwargs) -> BaseRenderer:
         if platform == 'desktop':
             return DesktopRenderer(platform, backend, executable, **kwargs)
+        elif platform == 'web':
+            # Imported here, not at module scope: the web renderer needs playwright, and a
+            # desktop-only run should not have to install it.
+            from web_renderer import WebRenderer
+            return WebRenderer(platform, backend, executable, **kwargs)
         else:
             # AndroidRenderer and others would be instantiated here.
             raise NotImplementedError(f"Platform '{platform}' is not fully implemented yet.")
+

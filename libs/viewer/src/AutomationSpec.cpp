@@ -16,9 +16,9 @@
 
 #define JSMN_HEADER
 
-#include <viewer/AutomationSpec.h>
-
 #include "jsonParseUtils.h"
+
+#include <viewer/AutomationSpec.h>
 
 #include <utils/Log.h>
 
@@ -299,13 +299,23 @@ AutomationSpec* AutomationSpec::generate(const char* jsonChunk, size_t size) {
         return nullptr;
     }
 
-    AutomationSpec::Impl* impl = new AutomationSpec::Impl();
-
     // Compute the flattened number of Settings objects.
     size_t total = 0;
     for (const auto& group : groups) {
         total += group.cases.size();
     }
+
+    // A spec that parses but yields no cases (e.g. "[]") is not usable, and is far from
+    // harmless: AutomationEngine::tick() activates case 0 without checking, and decides whether
+    // it has finished with `mCurrentTest == mSpec->size() - 1`. size() is unsigned, so for an
+    // empty spec that comparand wraps to SIZE_MAX and the engine never finishes -- it reads the
+    // case name out of bounds and writes a screenshot every frame until something runs out of
+    // room. Reject it here, where every caller already handles null as a failure to load.
+    if (total == 0) {
+        return nullptr;
+    }
+
+    AutomationSpec::Impl* impl = new AutomationSpec::Impl();
 
     impl->names.resize(groups.size());
     impl->cases.resize(total);
