@@ -590,6 +590,7 @@ struct VulkanPlatformPrivate {
     uint32_t mGraphicsQueueFamilyIndex = INVALID_VK_INDEX;
     uint32_t mGraphicsQueueIndex = INVALID_VK_INDEX;
     VkQueue mGraphicsQueue = VK_NULL_HANDLE;
+    VkQueue mAsyncQueue = VK_NULL_HANDLE;
     uint32_t mProtectedGraphicsQueueFamilyIndex = INVALID_VK_INDEX;
     uint32_t mProtectedGraphicsQueueIndex = INVALID_VK_INDEX;
     VkQueue mProtectedGraphicsQueue = VK_NULL_HANDLE;
@@ -772,6 +773,9 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
             &mImpl->mGraphicsQueue);
     assert_invariant(mImpl->mGraphicsQueue != VK_NULL_HANDLE);
 
+    vkGetDeviceQueue(mImpl->mDevice, mImpl->mGraphicsQueueFamilyIndex, mImpl->mGraphicsQueueIndex + 1,
+            &mImpl->mAsyncQueue);
+
     if (context.mProtectedMemorySupported) {
         assert_invariant(mImpl->mProtectedGraphicsQueueFamilyIndex != INVALID_VK_INDEX);
         assert_invariant(mImpl->mProtectedGraphicsQueueIndex != INVALID_VK_INDEX);
@@ -917,6 +921,10 @@ uint32_t VulkanPlatform::getGraphicsQueueIndex() const noexcept {
 
 VkQueue VulkanPlatform::getGraphicsQueue() const noexcept {
     return mImpl->mGraphicsQueue;
+}
+
+VkQueue VulkanPlatform::getAsyncQueue() const noexcept {
+    return mImpl->mAsyncQueue;
 }
 
 uint32_t VulkanPlatform::getProtectedGraphicsQueueFamilyIndex() const noexcept {
@@ -1212,7 +1220,7 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
         mImpl->mProtectedGraphicsQueueIndex = 0;
     }
 
-    float queuePriority[] = { 1.0f };
+    float queuePriority[] = { 1.0f, 0.9f };
     VkDeviceCreateInfo deviceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
     };
@@ -1237,7 +1245,7 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
         .pNext = requiresGpuPriority ? &queuePriorityCreateInfo : nullptr,
         .queueFamilyIndex = mImpl->mGraphicsQueueFamilyIndex,
-        .queueCount = 1,
+        .queueCount = 2,
         .pQueuePriorities = &queuePriority[0],
     };
     // Protected queue
