@@ -2423,6 +2423,9 @@ void OpenGLDriver::destroyTextureCommon(OpenGLState& gl, Handle<HwTexture> th) {
     GLTexture* t = handle_cast<GLTexture*>(th);
     if (UTILS_LIKELY(!t->gl.imported)) {
         if (UTILS_LIKELY(t->usage & TextureUsage::SAMPLEABLE)) {
+            // Unbind even if views still share the name. The last reference may be dropped on
+            // the other thread, which can't clear this cache.
+            gl.unbindTexture(t->gl.target, t->gl.id);
             // drop a reference
             uint16_t count = 0;
             if (UTILS_UNLIKELY(t->ref)) {
@@ -2436,7 +2439,6 @@ void OpenGLDriver::destroyTextureCommon(OpenGLState& gl, Handle<HwTexture> th) {
             if (count == 0) {
                 // if this was the last reference, we destroy the refcount as well as
                 // the GL texture name itself.
-                gl.unbindTexture(t->gl.target, t->gl.id);
                 if (UTILS_UNLIKELY(t->hwStream)) {
                     detachStream(t);
                 }
@@ -2474,12 +2476,6 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
                 getBackendState().unbindTexture(t->gl.target, t->gl.id);
             }
             getJobQueue()->push([this, th]() {
-                // A sync view can drop the last reference on the backend, so clear the
-                // worker cache even when this isn't the last reference.
-                GLTexture const* wt = handle_cast<GLTexture const*>(th);
-                if (wt->gl.imported || any(wt->usage & TextureUsage::SAMPLEABLE)) {
-                    getWorkerState().unbindTexture(wt->gl.target, wt->gl.id);
-                }
                 destroyTextureCommon(getWorkerState(), th);
             });
         } else {
