@@ -143,7 +143,14 @@ GLDescriptorSet::GLDescriptorSet(OpenGLState& gl, DescriptorSetLayoutHandle dslh
 
 void GLDescriptorSet::update(OpenGLState&,
         descriptor_binding_t binding, GLBufferObject* bo, size_t offset, size_t size) noexcept {
-    assert_invariant(binding < descriptors.size());
+    // `binding` originates from the material file (see ChunkDescriptorBindingsInfo), which
+    // could be malicious or broken, so this is not a programming error the way an assert
+    // would suggest. Silently drop the update instead of indexing out of bounds below: the
+    // descriptor simply won't be active for this set. See also MetalDriver.mm and
+    // VulkanDriver.cpp, which guard the same material-controlled value the same way.
+    if (UTILS_VERY_UNLIKELY(binding >= descriptors.size())) {
+        return;
+    }
     std::visit([=](auto&& arg) {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, Buffer> || std::is_same_v<T, DynamicBuffer>) {
@@ -166,9 +173,14 @@ void GLDescriptorSet::update(OpenGLState&,
 void GLDescriptorSet::update(OpenGLState& gl, HandleAllocatorGL& handleAllocator,
         descriptor_binding_t binding, TextureHandle th, SamplerParams params) noexcept {
 
+    // Validate at entry, as in the buffer overload above: `binding` comes from the
+    // material file and may be out of range.
+    if (UTILS_VERY_UNLIKELY(binding >= descriptors.size())) {
+        return;
+    }
+
     GLTexture* t = th ? handleAllocator.handle_cast<GLTexture*>(th) : nullptr;
 
-    assert_invariant(binding < descriptors.size());
     std::visit([=, &gl](auto&& arg) mutable {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, Sampler> ||
