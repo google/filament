@@ -2018,9 +2018,9 @@ void VulkanDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuff
     // pass a resource_ptr instead, which is ref-counted.
     auto ib = promoteToAsync(resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh));
 
-    getJobQueue()->push([this, ib, p = std::move(p), byteOffset,
+    getJobQueue()->push([this, ib, p = AsyncBufferRelease(this, std::move(p)), byteOffset,
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
-        updateIndexBufferCommon(ib, std::move(p), byteOffset);
+        updateIndexBufferCommon(ib, std::move(*p), byteOffset);
         completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
@@ -2051,9 +2051,9 @@ void VulkanDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferOb
     // pass a resource_ptr instead, which is ref-counted.
     auto bo = promoteToAsync(resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh));
 
-    getJobQueue()->push([this, bo, bd = std::move(bd), byteOffset,
+    getJobQueue()->push([this, bo, bd = AsyncBufferRelease(this, std::move(bd)), byteOffset,
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
-        updateBufferObjectCommon(bo, std::move(bd), byteOffset);
+        updateBufferObjectCommon(bo, std::move(*bd), byteOffset);
         completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
@@ -2106,10 +2106,10 @@ void VulkanDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th,
     auto t = promoteToAsync(resource_ptr<VulkanTexture>::cast(&mResourceManager, th));
 
     getJobQueue()->push([this, t, level, xoffset, yoffset, zoffset, width, height, depth,
-            data = std::move(data),
+            data = AsyncBufferRelease(this, std::move(data)),
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         update3DImageCommon(t, level, xoffset, yoffset, zoffset, width, height, depth,
-                std::move(data));
+                std::move(*data));
         completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }

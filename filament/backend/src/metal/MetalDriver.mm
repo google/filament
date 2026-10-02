@@ -1605,10 +1605,10 @@ void MetalDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuffe
     // the job is canceled or dropped, its reference is the last one and the destructor reports
     // CANCELED; otherwise the block outlives the job and reports COMPLETED once the GPU is done.
     getJobQueue()->push(
-            [this, cmdBuffer, ib, data = std::move(data), byteOffset,
+            [this, cmdBuffer, ib, data = AsyncBufferRelease(this, std::move(data)), byteOffset,
                     completion = std::make_shared<AsyncCompletion>(this, handler, callback, user),
                     tag = std::move(tag)]() mutable {
-                ib->buffer.copyIntoBuffer(cmdBuffer, data.buffer, data.size, byteOffset,
+                ib->buffer.copyIntoBuffer(cmdBuffer, data->buffer, data->size, byteOffset,
                         [&tag]() { return tag.c_str_safe(); });
 
                 [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
@@ -1616,7 +1616,7 @@ void MetalDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuffe
                 }];
 
                 [cmdBuffer commit];
-                scheduleDestroy(std::move(data));
+                scheduleDestroy(std::move(*data));
             },
             jobId);
 }
@@ -1652,10 +1652,10 @@ void MetalDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferObj
 
     // The completion is shared with the completed handler, see updateIndexBufferAsyncR.
     getJobQueue()->push(
-            [this, cmdBuffer, bo, data = std::move(data), byteOffset,
+            [this, cmdBuffer, bo, data = AsyncBufferRelease(this, std::move(data)), byteOffset,
                     completion = std::make_shared<AsyncCompletion>(this, handler, callback, user),
                     tag = std::move(tag)]() mutable {
-                bo->getBuffer()->copyIntoBuffer(cmdBuffer, data.buffer, data.size, byteOffset,
+                bo->getBuffer()->copyIntoBuffer(cmdBuffer, data->buffer, data->size, byteOffset,
                         [&tag]() { return tag.c_str_safe(); });
 
                 [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
@@ -1663,7 +1663,7 @@ void MetalDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferObj
                 }];
 
                 [cmdBuffer commit];
-                scheduleDestroy(std::move(data));
+                scheduleDestroy(std::move(*data));
             },
             jobId);
 }
@@ -1739,18 +1739,18 @@ void MetalDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th, u
     // The completion is shared with the completed handler, see updateIndexBufferAsyncR.
     getJobQueue()->push(
             [this, cmdBuffer, tex, level, xoffset, yoffset, zoffset, width, height, depth,
-                    data = std::move(data),
+                    data = AsyncBufferRelease(this, std::move(data)),
                     completion = std::make_shared<AsyncCompletion>(this, handler, callback, user),
                     tag = std::move(tag)]() mutable {
                 tex->loadImage(cmdBuffer, level,
-                        MTLRegionMake3D(xoffset, yoffset, zoffset, width, height, depth), data);
+                        MTLRegionMake3D(xoffset, yoffset, zoffset, width, height, depth), *data);
 
                 [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
                   completion->schedule(AsyncCallStatus::COMPLETED);
                 }];
 
                 [cmdBuffer commit];
-                scheduleDestroy(std::move(data));
+                scheduleDestroy(std::move(*data));
             },
             jobId);
 }
