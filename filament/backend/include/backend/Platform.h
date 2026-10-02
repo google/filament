@@ -530,6 +530,8 @@ public:
      * from any thread from the time at which setBlobFunc is called until the time that Platform
      * is destroyed. Concurrent calls to these functions from different threads is also allowed.
      * Either function can be null.
+     * The Vulkan backend reads its pipeline cache once, when the Engine is created, so the
+     * functions must be set before then for it to be used.
      *
      * @param insertBlob    an Invocable that inserts a new value into the cache and associates
      *                      it with the given key

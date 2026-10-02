@@ -33,10 +33,12 @@
 
 #include <tsl/robin_map.h>
 
+#include <atomic>
 #include <type_traits>
 
 namespace filament::backend {
 
+class Platform;
 struct VulkanProgram;
 struct VulkanBufferObject;
 struct VulkanTexture;
@@ -98,8 +100,13 @@ public:
      * @param device The device that the pipelines will be created and run on.
      * @param context Information about the current instance of Vulkan, such as supported extensions,
      *                and enabled features.
+     * @param platform Its blob cache, when the application set one, persists the driver's
+     *                 VkPipelineCache across runs: read here, so the blob functions must be set
+     *                 before the Engine is created; written on the driver thread by gc() once
+     *                 pipeline creation has gone quiet, and again by terminate().
      */
-    VulkanPipelineCache(DriverBase& driver, VkDevice device, VulkanContext const& context);
+    VulkanPipelineCache(DriverBase& driver, VkDevice device, VulkanContext const& context,
+            Platform& platform);
 
     // Loads a fake pipeline into memory on a separate thread, with the intent of
     // preloading the Vulkan cache with enough information to have a cache hit when
@@ -256,12 +263,30 @@ private:
 
     void bindDynamicState(VkCommandBuffer cmdbuffer, uint16_t dirtyMask);
 
+    // Writes mPipelineCache to the platform's blob cache, if it has one and the data changed.
+    void savePipelineCache() noexcept;
+
     // Immutable state.
     VkDevice mDevice = VK_NULL_HANDLE;
 
     // Vuklan Driver pipeline cache handle. In the cases a pipeline has been  evicted by the `gc`,
     // recreating the same pipeline is cheaper, helping with frame stalling.
     VkPipelineCache mPipelineCache = VK_NULL_HANDLE;
+
+    Platform& mPlatform;
+
+    // Pipelines created so far, by the driver thread or the prewarm thread.
+    std::atomic<uint32_t> mPipelinesCreated = 0;
+
+    // gc()'s last reading of mPipelinesCreated, the flush event at which it last moved, and
+    // whether pipelines have been created since the cache was last saved.
+    uint32_t mPipelinesSeen = 0;
+    Timestamp mPipelinesSeenAt = 0;
+    bool mPipelinesUnsaved = false;
+
+    // The size of the data last read or written, so a save that would store the same bytes
+    // again writes nothing.
+    size_t mSavedCacheSize = 0;
 
     // Static state used for VkPipeline creation and cache lookup.
     // Dynamically handled fields are set to 0 during binding.
