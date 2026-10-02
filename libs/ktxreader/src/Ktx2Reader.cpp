@@ -134,6 +134,13 @@ static Result transcodeImageLevel(ktx2_transcoder& transcoder,
 
     if (formatInfo.isCompressed) {
         const uint32_t qwordsPerBlock = basisu::get_qwords_per_block(destFormat);
+
+        const uint64_t totalBlocks64 =
+                (uint64_t)levelInfo.m_num_blocks_x * levelInfo.m_num_blocks_y;
+        if (totalBlocks64 > UINT32_MAX) {
+            return Result::COMPRESSED_TRANSCODE_FAILURE;
+        }
+
         const size_t byteCount = (size_t)sizeof(uint64_t) * (size_t)qwordsPerBlock * (size_t)levelInfo.m_total_blocks;
 
         if (qwordsPerBlock != 0 && levelInfo.m_total_blocks != 0 &&

@@ -8528,7 +8528,13 @@ namespace basist
 		if (!pState)
 			pState = &m_def_state;
 
-		const uint32_t total_blocks = num_blocks_x * num_blocks_y;
+		const uint64_t total_blocks_64 = (uint64_t)num_blocks_x * num_blocks_y;
+		if (total_blocks_64 > UINT32_MAX)
+		{
+			BASISU_DEVEL_ERROR("basisu_lowlevel_etc1s_transcoder::transcode_slice: total_blocks overflow\n");
+			return false;
+		}
+		const uint32_t total_blocks = (uint32_t)total_blocks_64;
 
 		if (!output_row_pitch_in_blocks_or_pixels)
 		{
@@ -9407,7 +9413,13 @@ namespace basist
 			// Compute how many blocks should be in the output.
 			const uint32_t num_dst_blocks_x = (orig_width + dst_block_width - 1) / dst_block_width;
 			const uint32_t num_dst_blocks_y = (orig_height + dst_block_height - 1) / dst_block_height;
-			const uint32_t total_dst_blocks = num_dst_blocks_x * num_dst_blocks_y;
+			const uint64_t total_dst_blocks_64 = (uint64_t)num_dst_blocks_x * num_dst_blocks_y;
+			if (total_dst_blocks_64 > UINT32_MAX)
+			{
+				BASISU_DEVEL_ERROR("basis_validate_output_buffer_size: total_dst_blocks overflow\n");
+				return false;
+			}
+			const uint32_t total_dst_blocks = (uint32_t)total_dst_blocks_64;
 
 			assert(total_dst_blocks);
 
@@ -10082,7 +10094,13 @@ namespace basist
 		}
 
 #if BASISD_SUPPORT_UASTC
-		const uint32_t total_blocks = num_blocks_x * num_blocks_y;
+		const uint64_t total_blocks_64 = (uint64_t)num_blocks_x * num_blocks_y;
+		if (total_blocks_64 > UINT32_MAX)
+		{
+			BASISU_DEVEL_ERROR("basisu_lowlevel_uastc_transcoder::transcode_slice: total_blocks overflow\n");
+			return false;
+		}
+		const uint32_t total_blocks = (uint32_t)total_blocks_64;
 
 		if (!output_row_pitch_in_blocks_or_pixels)
 		{
@@ -10612,7 +10630,13 @@ namespace basist
 		}
 
 #if BASISD_SUPPORT_UASTC_HDR
-		const uint32_t total_blocks = num_blocks_x * num_blocks_y;
+		const uint64_t total_blocks_64 = (uint64_t)num_blocks_x * num_blocks_y;
+		if (total_blocks_64 > UINT32_MAX)
+		{
+			BASISU_DEVEL_ERROR("basisu_lowlevel_uastc_hdr_transcoder::transcode_slice: total_blocks overflow\n");
+			return false;
+		}
+		const uint32_t total_blocks = (uint32_t)total_blocks_64;
 
 		if (!output_row_pitch_in_blocks_or_pixels)
 		{
@@ -20039,7 +20063,13 @@ namespace basist
 		level_info.m_block_height = block_height;
 		level_info.m_num_blocks_x = num_blocks_x;
 		level_info.m_num_blocks_y = num_blocks_y;
-		level_info.m_total_blocks = num_blocks_x * num_blocks_y;
+		const uint64_t total_blocks_64 = (uint64_t)num_blocks_x * num_blocks_y;
+		if (total_blocks_64 > UINT32_MAX)
+		{
+			BASISU_DEVEL_ERROR("ktx2_transcoder::get_image_level_info: total_blocks overflow\n");
+			return false;
+		}
+		level_info.m_total_blocks = (uint32_t)total_blocks_64;
 		level_info.m_alpha_flag = m_has_alpha;
 		level_info.m_iframe_flag = false;
 		
@@ -24308,7 +24338,10 @@ namespace basist
 			const uint32_t num_blocks_x = (width + BLOCK_W - 1) / BLOCK_W;
 			const uint32_t num_blocks_y = (height + BLOCK_H - 1) / BLOCK_H;
 
-			const uint32_t total_blocks = num_blocks_x * num_blocks_y;
+			const uint64_t total_blocks_64 = (uint64_t)num_blocks_x * num_blocks_y;
+			if (total_blocks_64 > UINT32_MAX)
+				return false;
+			const uint32_t total_blocks = (uint32_t)total_blocks_64;
 
 			decoded_blocks.resize(num_blocks_x, num_blocks_y);
 			//memset(decoded_blocks.get_ptr(), 0, decoded_blocks.size_in_bytes());
