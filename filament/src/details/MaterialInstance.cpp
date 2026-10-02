@@ -664,9 +664,11 @@ void FMaterialInstance::flushSpecializationConstants() const noexcept {
     }
 
     if (!mPrograms.isInitialized()) {
-        mPrograms.initializeForMaterialInstance(mMaterial->getEngine(), *mMaterial);
+        mPrograms.initializeForMaterial(mMaterial->getEngine(), *mMaterial,
+                std::move(mPendingSpecializationConstants));
+    } else {
+        mPrograms.setConstants(std::move(mPendingSpecializationConstants));
     }
-    mPrograms.setConstants(std::move(mPendingSpecializationConstants));
     mPendingSpecializationConstants.clear();
 }
 
