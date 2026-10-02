@@ -90,15 +90,27 @@ void workaroundSpecConstant(Program::ShaderBlob const& blob,
         uint32_t const wordCount = firstWord >> 16;
         uint32_t const op = firstWord & 0x0000FFFF;
 
+        if (wordCount == 0 || cursor + wordCount > cursorEnd) {
+            break;
+        }
+
         switch(op) {
             case spv::Op::OpSpecConstant:
             case spv::Op::OpSpecConstantTrue:
             case spv::Op::OpSpecConstantFalse: {
+                if (wordCount < 3) {
+                    break;
+                }
                 uint32_t const targetVar = data[cursor + 2];
 
                 UTILS_UNUSED_IN_RELEASE WordMap::const_iterator idItr = varToIdMap.find(targetVar);
                 assert_invariant(idItr != varToIdMap.end() &&
                         "Cannot find variable previously decorated with SpecId");
+
+                if (idItr == varToIdMap.end() ||
+                        idItr->second >= specConstants.size()) {
+                    break;
+                }
 
                 auto const& val = specConstants[idItr->second];
                 std::memcpy(&outputData[outputCursor], &data[cursor], wordCount * 4);
@@ -107,7 +119,8 @@ void workaroundSpecConstant(Program::ShaderBlob const& blob,
                 break;
             }
             case spv::Op::OpDecorate: {
-                if (data[cursor + 2] == spv::Decoration::DecorationSpecId) {
+                if (wordCount >= 4 &&
+                        data[cursor + 2] == spv::Decoration::DecorationSpecId) {
                     uint32_t const targetVar = data[cursor + 1];
                     uint32_t const specId = data[cursor + 3];
                     varToIdMap[targetVar] = specId;
