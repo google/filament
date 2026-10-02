@@ -861,12 +861,23 @@ TEST_F(glTFIOTest, MorphTargetsExceedingMaxComputeTangents) {
     AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
     ASSERT_NE(assetLoader, nullptr);
 
-    std::vector<uint8_t> glb = makeMorphTargetGlb(300);
+    // 20,000 morph targets exceeds both MAX_MORPH_TARGETS (256) and JobSystem::MAX_JOB_COUNT (16,384).
+    std::vector<uint8_t> glb = makeMorphTargetGlb(20000);
     FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
     ASSERT_NE(asset, nullptr);
 
     ResourceLoader resourceLoader({ mEngine, ".", false });
     EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+    ASSERT_EQ(asset->getRenderableEntityCount(), 1u);
+    Entity const renderable = asset->getRenderableEntities()[0];
+    EXPECT_EQ(asset->getMorphTargetCountAt(renderable), MAX_MORPH_TARGETS);
+
+    auto const& renderableManager = mEngine->getRenderableManager();
+    auto const inst = renderableManager.getInstance(renderable);
+    EXPECT_EQ(renderableManager.getMorphTargetCount(inst), MAX_MORPH_TARGETS);
+    ASSERT_NE(renderableManager.getMorphTargetBuffer(inst), nullptr);
+    EXPECT_EQ(renderableManager.getMorphTargetBuffer(inst)->getCount(), MAX_MORPH_TARGETS);
 
     assetLoader->destroyAsset(asset);
     AssetLoader::destroy(&assetLoader);
