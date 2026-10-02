@@ -21,12 +21,19 @@
 
 #include "vulkan/utils/Conversion.h"
 
+#include <backend/Platform.h>
+
 #include <private/utils/Tracing.h>
 
 #include <utils/compiler.h>
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
+
+#include <cstddef>
+#include <cstdint>
+#include <vector>
+
 #if defined(__clang__)
 // Vulkan functions often immediately dereference pointers, so it's fine to pass in a pointer
 // to a stack-allocated variable.
@@ -41,6 +48,18 @@ namespace filament::backend {
 namespace {
 
 using utils::JobSystem;
+
+// The blob-cache key the driver's VkPipelineCache is stored under. One entry: the data carries its
+// own header (vendor, device and pipelineCacheUUID), and a driver given data from another device
+// or driver version ignores it and starts empty.
+constexpr char PIPELINE_CACHE_KEY[] = "filament.vulkan.VkPipelineCache";
+
+// Flush events without a new pipeline (on either thread) before gc() writes the cache. A scene's
+// first frames create pipelines frame after frame, and writing inside that burst would only mean
+// writing it again. Not left to terminate() alone because mobile applications are usually killed,
+// not torn down. The write runs synchronously on the driver thread: one vkGetPipelineCacheData
+// and one insertBlob, once per burst.
+constexpr uint64_t PIPELINE_CACHE_SAVE_QUIET = 120;
 
 enum DynamicStateBits : uint16_t {
     DIRTY_NONE                 = 0,
@@ -134,18 +153,48 @@ void printPipelineFeedbackInfo(VkPipelineCreationFeedbackCreateInfo const& feedb
 
 } // namespace
 
-VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device, VulkanContext const& context)
+VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device,
+        VulkanContext const& context, Platform& platform)
         : mDevice(device),
+          mPlatform(platform),
           mCallbackManager(driver),
           mHasVertexInputDynamicState(context.isVertexInputDynamicStateSupported() && context.isPipelineDynamicStateEnabled()),
           mHasDynamicState(context.isExtendedDynamicStateSupported() && context.isPipelineDynamicStateEnabled()),
           mHasDynamicState2(context.isExtendedDynamicState2Supported() && context.isPipelineDynamicStateEnabled()),
           mHasColorWriteEnable(context.isColorWriteEnableSupported() && context.isPipelineDynamicStateEnabled()),
           mContext(context) {
+    std::vector<uint8_t> initialData;
+    if (mPlatform.hasRetrieveBlobFunc()) {
+        uint8_t probe = 0;
+        size_t const size = mPlatform.retrieveBlob(PIPELINE_CACHE_KEY, sizeof(PIPELINE_CACHE_KEY),
+                &probe, 0);
+        if (size > 0) {
+            initialData.resize(size);
+            if (mPlatform.retrieveBlob(PIPELINE_CACHE_KEY, sizeof(PIPELINE_CACHE_KEY),
+                        initialData.data(), size) != size) {
+                initialData.clear();
+            }
+        }
+    }
     VkPipelineCacheCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+        .initialDataSize = initialData.size(),
+        .pInitialData = initialData.empty() ? nullptr : initialData.data(),
     };
-    bluevk::vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &mPipelineCache);
+    VkPipelineCache cache = VK_NULL_HANDLE;
+    VkResult result = vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &cache);
+    if (result == VK_SUCCESS) {
+        mSavedCacheSize = initialData.size();
+    } else if (!initialData.empty()) {
+        // The spec has a driver ignore incompatible data; this covers one that fails instead.
+        createInfo.initialDataSize = 0;
+        createInfo.pInitialData = nullptr;
+        cache = VK_NULL_HANDLE;
+        result = vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &cache);
+    }
+    if (result == VK_SUCCESS) {
+        mPipelineCache = cache;
+    }
 
     if (mContext.shouldUsePipelineCachePrewarming()) {
         mCompilerThreadPool.init(
@@ -571,6 +620,7 @@ VkPipeline VulkanPipelineCache::createPipeline(
         FVK_LOGE << "vkCreateGraphicsPipelines error " << error;
         return VK_NULL_HANDLE;
     }
+    mPipelinesCreated.fetch_add(1, std::memory_order_relaxed);
     return pipeline;
 }
 
@@ -701,7 +751,26 @@ void VulkanPipelineCache::terminate() noexcept {
     mCallbackManager.terminate();
     mCompilerThreadPool.terminate();
 
+    savePipelineCache();
     vkDestroyPipelineCache(mDevice, mPipelineCache, VKALLOC);
+}
+
+void VulkanPipelineCache::savePipelineCache() noexcept {
+    mPipelinesUnsaved = false;
+    if (!mPlatform.hasInsertBlobFunc()) {
+        return;
+    }
+    size_t size = 0;
+    if (vkGetPipelineCacheData(mDevice, mPipelineCache, &size, nullptr) != VK_SUCCESS ||
+            size == 0 || size == mSavedCacheSize) {
+        return;
+    }
+    std::vector<uint8_t> data(size);
+    if (vkGetPipelineCacheData(mDevice, mPipelineCache, &size, data.data()) != VK_SUCCESS) {
+        return;
+    }
+    mPlatform.insertBlob(PIPELINE_CACHE_KEY, sizeof(PIPELINE_CACHE_KEY), data.data(), size);
+    mSavedCacheSize = size;
 }
 
 void VulkanPipelineCache::gc() noexcept {
@@ -710,6 +779,16 @@ void VulkanPipelineCache::gc() noexcept {
     // FVK_MAX_PIPELINE_AGE flush events in the past, then we can be sure that it is no longer
     // being used by the GPU, and is therefore safe to destroy or reclaim.
     ++mCurrentTime;
+
+    uint32_t const created = mPipelinesCreated.load(std::memory_order_relaxed);
+    if (created != mPipelinesSeen) {
+        mPipelinesSeen = created;
+        mPipelinesSeenAt = mCurrentTime;
+        mPipelinesUnsaved = true;
+    }
+    if (mPipelinesUnsaved && mCurrentTime - mPipelinesSeenAt > PIPELINE_CACHE_SAVE_QUIET) {
+        savePipelineCache();
+    }
 
     // The Vulkan spec says: "When a command buffer begins recording, all state in that command
     // buffer is undefined." Therefore, we need to clear all bindings at this time.
