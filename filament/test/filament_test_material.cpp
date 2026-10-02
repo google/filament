@@ -29,6 +29,9 @@
 
 #include <gtest/gtest.h>
 
+#include <string>
+#include <tuple>
+
 using namespace filament;
 
 namespace {
@@ -43,6 +46,9 @@ std::vector<std::unique_ptr<char[]>> churnHeapForMaterialParser() {
     }
     return churn;
 }
+
+// Parameters: (enable_program_cache feature flag, whether to duplicate the instance).
+class SpecializedInstanceLifetimeTest : public testing::TestWithParam<std::tuple<bool, bool>> {};
 
 } // anonymous namespace
 
@@ -729,3 +735,63 @@ TEST(Material, ProgramCacheLruEvictUAF) {
 
     Engine::destroy(engine);
 }
+
+TEST_P(SpecializedInstanceLifetimeTest, DestroyInstanceKeepsMaterialDefinition) {
+    auto const [enableProgramCache, duplicateInstance] = GetParam();
+
+    Engine* engine = Engine::Builder()
+                             .backend(Engine::Backend::NOOP)
+                             .feature("engine.enable_program_cache", enableProgramCache)
+                             .build();
+    ASSERT_NE(engine, nullptr);
+    FEngine::DriverApi& driver = downcast(engine)->getDriverApi();
+
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("SpecializedInstanceLifetime");
+    builder.material(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(1.0);
+        }
+    )");
+    builder.constant("probe", filamat::MaterialBuilder::ConstantType::BOOL, false);
+    filamat::Package pkg = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(pkg.isValid());
+
+    Material* material = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
+    ASSERT_NE(material, nullptr);
+
+    // prepareProgram() flushes the pending constants, which initializes the instance's own
+    // program cache (this is what rendering a frame does).
+    MaterialInstance* instance = material->createInstance();
+    instance->setConstant("probe", true);
+    downcast(instance)->prepareProgram(driver, Variant{ 0 }, DynamicSpecConstKey{ 0 },
+            backend::CompilerPriorityQueue::HIGH);
+
+    if (duplicateInstance) {
+        MaterialInstance* copy = MaterialInstance::duplicate(instance);
+        ASSERT_NE(copy, nullptr);
+        EXPECT_TRUE(copy->getConstant<bool>("probe"));
+        engine->destroy(copy);
+    }
+    engine->destroy(instance);
+
+    // The material still holds its MaterialDefinition, so building the same package again must
+    // share it rather than create a new one.
+    Material* sameMaterial =
+            Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
+    ASSERT_NE(sameMaterial, nullptr);
+    EXPECT_EQ(&downcast(sameMaterial)->getDefinition(), &downcast(material)->getDefinition());
+
+    engine->destroy(sameMaterial);
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
+
+INSTANTIATE_TEST_SUITE_P(MaterialInstanceTest, SpecializedInstanceLifetimeTest,
+        testing::Combine(testing::Bool(), testing::Bool()),
+        [](testing::TestParamInfo<std::tuple<bool, bool>> const& info) {
+            return std::string(std::get<0>(info.param) ? "ProgramCache" : "NoProgramCache") +
+                   (std::get<1>(info.param) ? "_Duplicated" : "_Single");
+        });
