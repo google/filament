@@ -750,7 +750,7 @@ void FEngine::shutdown() {
     getDriver().purgeAll();
 
     // Handle any pending deferred destruction for asynchronous objects. This must run after
-    // purgeAll() because it dispatches the completion callback that settles `mCreationStatus`,
+    // purgeAll() because it dispatches the completion callback that settles `mCreationState`,
     // which in turn is used to determine whether an object can be garbage collected below.
     if (isAsynchronousModeEnabled()) {
         gcDeferredAsyncObjectDestruction();
@@ -1192,6 +1192,11 @@ FCamera* FEngine::getCameraComponent(Entity const entity) noexcept {
     return ci ? mCameraManager.getCamera(ci) : nullptr;
 }
 
+FCamera const* FEngine::getCameraComponent(Entity const entity) const noexcept {
+    auto const ci = mCameraManager.getInstance(entity);
+    return ci ? mCameraManager.getCamera(ci) : nullptr;
+}
+
 void FEngine::destroyCameraComponent(Entity const entity) noexcept {
     mCameraManager.destroy(entity, *this);
 }
@@ -1224,7 +1229,7 @@ void FEngine::destroyOrDeferFrontendObject(T* p) {
     if constexpr (HasIsCreationSettled<T>::value) {
         // The presence of 'isCreationSettled' in type T implies it supports asynchronous creation.
         // While creation is in flight, the creation process holds references to the frontend object
-        // to move `mCreationStatus` out of CREATING (see FTexture::FTexture), so freeing it now
+        // to move `mCreationState` out of CREATING (see FTexture::FTexture), so freeing it now
         // would be a use-after-free on whichever thread runs the completion callback. In regular
         // (non-async) mode `isCreationSettled` always returns true, so nothing is deferred.
         if (!p->isCreationSettled()) {

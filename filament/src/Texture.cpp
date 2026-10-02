@@ -90,11 +90,12 @@ bool Texture::isCreationComplete() const noexcept {
     return downcast(this)->isCreationSuccessful();
 }
 
-bool Texture::isTextureFormatSupported(Engine& engine, InternalFormat const format) noexcept {
+bool Texture::isTextureFormatSupported(Engine const& engine, InternalFormat const format) noexcept {
     return FTexture::isTextureFormatSupported(downcast(engine), format);
 }
 
-bool Texture::isTextureFormatMipmappable(Engine& engine, InternalFormat const format) noexcept {
+bool Texture::isTextureFormatMipmappable(Engine const& engine,
+        InternalFormat const format) noexcept {
     return FTexture::isTextureFormatMipmappable(downcast(engine), format);
 }
 
@@ -102,11 +103,11 @@ bool Texture::isTextureFormatCompressed(InternalFormat const format) noexcept {
     return FTexture::isTextureFormatCompressed(format);
 }
 
-bool Texture::isProtectedTexturesSupported(Engine& engine) noexcept {
+bool Texture::isProtectedTexturesSupported(Engine const& engine) noexcept {
     return FTexture::isProtectedTexturesSupported(downcast(engine));
 }
 
-bool Texture::isTextureSwizzleSupported(Engine& engine) noexcept {
+bool Texture::isTextureSwizzleSupported(Engine const& engine) noexcept {
     return FTexture::isTextureSwizzleSupported(downcast(engine));
 }
 
@@ -119,11 +120,11 @@ bool Texture::validatePixelFormatAndType(InternalFormat internalFormat, Format f
     return FTexture::validatePixelFormatAndType(internalFormat, format, type);
 }
 
-size_t Texture::getMaxTextureSize(Engine& engine, Sampler type) noexcept {
+size_t Texture::getMaxTextureSize(Engine const& engine, Sampler type) noexcept {
     return FTexture::getMaxTextureSize(downcast(engine), type);
-
 }
-size_t Texture::getMaxArrayTextureLayers(Engine& engine) noexcept {
+
+size_t Texture::getMaxArrayTextureLayers(Engine const& engine) noexcept {
     return FTexture::getMaxArrayTextureLayers(downcast(engine));
 }
 

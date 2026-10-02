@@ -88,7 +88,7 @@ Skybox::Builder& Skybox::Builder::showSun(bool const show) noexcept {
     return *this;
 }
 
-Skybox* Skybox::Builder::build(Engine& engine) {
+Skybox* Skybox::Builder::build(Engine& engine) const {
     FTexture const* cubemap = downcast(mImpl->mEnvironmentMap);
 
     FILAMENT_CHECK_PRECONDITION(!cubemap || cubemap->isCubemap())
