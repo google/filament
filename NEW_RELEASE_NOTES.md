@@ -12,3 +12,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - materials: the new `diffuseTransmission` and `diffuseTransmissionColor` material properties can be
   used in the lit (standard) shading model to create diffusely transmitting (translucent) surfaces
 - variant: completely remove FOG variant bit
+- utils: `bitset` is no longer over-aligned to 16 bytes, which fixes a crash (SIGBUS) creating
+  Vulkan descriptor-set layouts on 32-bit ARM
