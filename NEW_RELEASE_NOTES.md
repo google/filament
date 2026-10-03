@@ -26,3 +26,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
   call `getInstance()` again instead. [⚠️ **API Change**]
 - engine: children orphaned by `TransformManager::destroy()` now have their world transform
   updated to their local transform, as documented.
+- utils: `bitset` is no longer over-aligned to 16 bytes, which fixes a crash (SIGBUS) creating
+  Vulkan descriptor-set layouts on 32-bit ARM
