@@ -27,8 +27,8 @@
 namespace filament::backend {
 
 WebGPUVertexBuffer::WebGPUVertexBuffer(const uint32_t vertexCount, const uint32_t bufferCount,
-        Handle<HwVertexBufferInfo> vertexBufferInfoHandle)
-    : HwVertexBuffer{ vertexCount },
+        Handle<HwVertexBufferInfo> vertexBufferInfoHandle, const bool asynchronous)
+    : HwVertexBuffer{ vertexCount, asynchronous },
       mVertexBufferInfoHandle{ vertexBufferInfoHandle } {
     mBuffers.resize(bufferCount);
 }
