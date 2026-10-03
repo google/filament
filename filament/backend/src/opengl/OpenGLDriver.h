@@ -396,6 +396,7 @@ private:
             uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
             uint32_t width, uint32_t height, uint32_t depth,
             PixelBufferDescriptor&& data);
+    void ensureTextureRef(GLTexture const* src);
     void createTextureViewSwizzleCommon(Handle<HwTexture> th, Handle<HwTexture> srch,
             TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
             TextureSwizzle a, utils::ImmutableCString&& tag);

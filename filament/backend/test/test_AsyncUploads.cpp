@@ -816,4 +816,65 @@ TEST_F(BackendTest, DestroyAfterAsyncUpdateDoesNotLeaveStaleBufferBinding) {
     EXPECT_EQ(0xFFFFFFFFu, color) << "the vertex data went to the destroyed buffer";
 }
 
+TEST_F(BackendTest, AsyncTextureViewRefRace) {
+    SKIP_IF(Backend::VULKAN, "no async");
+    SKIP_IF(Backend::WEBGPU, "no async");
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+    auto waitFor = [&](const bool& flag) {
+        int attempts = 0;
+        while (!flag && attempts < 1000) {
+            api.finish();
+            executeCommands();
+            getDriver().purge();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            attempts++;
+        }
+        EXPECT_TRUE(flag);
+    };
+
+    std::atomic<std::thread::id> workerId{};
+    bool idDone = false;
+    api.queueCommandAsync([&workerId] { workerId = std::this_thread::get_id(); }, nullptr,
+            signalCallback, &idDone);
+    waitFor(idDone);
+    ASSERT_NE(workerId.load(), std::this_thread::get_id()) << "worker is not a separate thread";
+
+    bool created = false;
+    TextureHandle const src = api.createTextureAsync(SamplerType::SAMPLER_2D, 2,
+            TextureFormat::RGBA8, 1, 4, 4, 1, TextureUsage::DEFAULT, nullptr, signalCallback,
+            &created);
+    waitFor(created);
+
+    TextureHandle const v1 = api.createTextureView(src, 0, 1);
+    executeCommands();
+
+    std::atomic_bool drained = false;
+    bool blockerDone = false;
+    bool drainDone = false;
+    // Sleep delays destruction so backend view creation overlaps without barriers.
+    api.queueCommandAsync([] { std::this_thread::sleep_for(std::chrono::milliseconds(200)); },
+            nullptr, signalCallback, &blockerDone);
+    api.destroyTexture(v1);
+    api.queueCommandAsync([&drained] { drained = true; }, nullptr, signalCallback, &drainDone);
+    TextureHandle const v2 = api.createTextureView(src, 0, 2);
+    executeCommands();
+    int drainAttempts = 0;
+    while (!drained.load() && drainAttempts < 2000) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        drainAttempts++;
+    }
+    EXPECT_TRUE(drained.load());
+
+    api.destroyTexture(v2);
+    api.destroyTexture(src);
+    bool finalDone = false;
+    api.queueCommandAsync([] {}, nullptr, signalCallback, &finalDone);
+    waitFor(blockerDone);
+    waitFor(drainDone);
+    waitFor(finalDone);
+}
+
 } // namespace test
