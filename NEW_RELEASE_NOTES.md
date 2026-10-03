@@ -26,3 +26,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
   call `getInstance()` again instead. [⚠️ **API Change**]
 - engine: children orphaned by `TransformManager::destroy()` now have their world transform
   updated to their local transform, as documented.
+- build: add tvOS support (`appletvos`/`appletvsimulator`), Metal-only, via `./build.sh -p tvos`
