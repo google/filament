@@ -615,6 +615,10 @@ void VulkanDriver::flush(int) {
 void VulkanDriver::finish(int dummy) {
     FVK_SYSTRACE_SCOPE();
 
+    if (getJobWorker()) {
+        getJobWorker()->drain();
+    }
+
     endCommandRecording();
 
     // It's not enough to wait on the fences of the buffers submitted.  Present calls are
