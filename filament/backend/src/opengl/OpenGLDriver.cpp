@@ -4647,6 +4647,9 @@ void OpenGLDriver::flush(int) {
 
 void OpenGLDriver::finish(int) {
     DEBUG_MARKER()
+    if (getJobWorker()) {
+        getJobWorker()->drain();
+    }
     glFinish();
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     executeGpuCommandsCompleteOps(true);
