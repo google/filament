@@ -306,6 +306,8 @@ private:
     // allocateHandleInPool()/deallocateHandleFromPool() with the right pool size.
     template<typename D>
     HandleBase::HandleId allocateHandle() {
+        static_assert(alignof(D) <= Allocator::getAlignment(),
+                "handle pools don't support over-aligned types");
         constexpr size_t BUCKET_SIZE = getBucketSize<D>();
         return allocateHandleInPool<BUCKET_SIZE>();
     }
