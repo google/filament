@@ -55,10 +55,18 @@ public:
     using container_type = T;
 
 private:
-    alignas(BIT_COUNT % 128 == 0 ? 16 : alignof(T)) T storage[N];
+    // Naturally aligned on purpose: types containing a bitset live in pool allocators (e.g.
+    // HandleAllocator) that only guarantee alignof(std::max_align_t), which can be 8.
+    // The NEON paths therefore use vld1q/vst1q, which don't require 16-byte alignment.
+    T storage[N];
 
 #if defined(TNT_UTILS_BITSET_USE_NEON)
-    static_assert(alignof(uint64x2_t) == 16, "NEON types must be 16-byte aligned");
+    static uint8x16_t load(T const* s, size_t i) noexcept {
+        return vld1q_u8(reinterpret_cast<uint8_t const*>(s) + i * 16);
+    }
+    static void store(T* s, size_t i, uint8x16_t v) noexcept {
+        vst1q_u8(reinterpret_cast<uint8_t*>(s) + i * 16, v);
+    }
 #endif
 
 public:
@@ -159,10 +167,9 @@ public:
             // Use NEON for bitset multiple of 128 bits.
             // The intermediate computation can't handle more than 31*128 bits because
             // intermediate counts must be 8 bits.
-            uint8x16_t const* const p = reinterpret_cast<uint8x16_t const*>(storage);
-            uint8x16_t counts = vcntq_u8(p[0]);
+            uint8x16_t counts = vcntq_u8(load(storage, 0));
             for (size_t i = 1; i < BIT_COUNT / 128; ++i) {
-                counts += vcntq_u8(p[i]);
+                counts += vcntq_u8(load(storage, i));
             }
             return vaddlvq_u8(counts);
         } else
@@ -179,12 +186,11 @@ public:
     bool any() const noexcept {
 #if defined(TNT_UTILS_BITSET_USE_NEON)
         if (BIT_COUNT % 128 == 0) {
-            uint64x2_t const* const p = reinterpret_cast<uint64x2_t const*>(storage);
-            uint64x2_t r = p[0];
+            uint8x16_t r = load(storage, 0);
             for (size_t i = 1; i < BIT_COUNT / 128; ++i) {
-                r |= p[i];
+                r |= load(storage, i);
             }
-            return bool(r[0] | r[1]);
+            return vmaxvq_u8(r) != 0;
         } else
 #endif
         {
@@ -203,12 +209,11 @@ public:
     bool all() const noexcept {
 #if defined(TNT_UTILS_BITSET_USE_NEON)
         if (BIT_COUNT % 128 == 0) {
-            uint64x2_t const* const p = reinterpret_cast<uint64x2_t const*>(storage);
-            uint64x2_t r = p[0];
+            uint8x16_t r = load(storage, 0);
             for (size_t i = 1; i < BIT_COUNT / 128; ++i) {
-                r &= p[i];
+                r &= load(storage, i);
             }
-            return ~(r[0] & r[1]) == 0ULL;
+            return vminvq_u8(r) == 0xFF;
         } else
 #endif
         {
@@ -223,13 +228,11 @@ public:
     bool operator!=(const bitset& b) const noexcept {
 #if defined(TNT_UTILS_BITSET_USE_NEON)
         if (BIT_COUNT % 128 == 0) {
-            bitset const temp(*this ^ b);
-            uint64x2_t const* const p = reinterpret_cast<uint64x2_t const*>(temp.storage);
-            uint64x2_t r = p[0];
+            uint8x16_t r = load(storage, 0) ^ load(b.storage, 0);
             for (size_t i = 1; i < BIT_COUNT / 128; ++i) {
-                r |= p[i];
+                r |= load(storage, i) ^ load(b.storage, i);
             }
-            return bool(r[0] | r[1]);
+            return vmaxvq_u8(r) != 0;
         } else
 #endif
         {
@@ -248,10 +251,8 @@ public:
     bitset& operator&=(const bitset& b) noexcept {
 #if defined(TNT_UTILS_BITSET_USE_NEON)
         if (BIT_COUNT % 128 == 0) {
-            uint8x16_t* const p = reinterpret_cast<uint8x16_t*>(storage);
-            uint8x16_t const* const q = reinterpret_cast<uint8x16_t const*>(b.storage);
             for (size_t i = 0; i < BIT_COUNT / 128; ++i) {
-                p[i] &= q[i];
+                store(storage, i, load(storage, i) & load(b.storage, i));
             }
         } else
 #endif
@@ -266,10 +267,8 @@ public:
     bitset& operator|=(const bitset& b) noexcept {
 #if defined(TNT_UTILS_BITSET_USE_NEON)
         if (BIT_COUNT % 128 == 0) {
-            uint8x16_t* const p = reinterpret_cast<uint8x16_t*>(storage);
-            uint8x16_t const* const q = reinterpret_cast<uint8x16_t const*>(b.storage);
             for (size_t i = 0; i < BIT_COUNT / 128; ++i) {
-                p[i] |= q[i];
+                store(storage, i, load(storage, i) | load(b.storage, i));
             }
         } else
 #endif
@@ -284,10 +283,8 @@ public:
     bitset& operator^=(const bitset& b) noexcept {
 #if defined(TNT_UTILS_BITSET_USE_NEON)
         if (BIT_COUNT % 128 == 0) {
-            uint8x16_t* const p = reinterpret_cast<uint8x16_t*>(storage);
-            uint8x16_t const* const q = reinterpret_cast<uint8x16_t const*>(b.storage);
             for (size_t i = 0; i < BIT_COUNT / 128; ++i) {
-                p[i] ^= q[i];
+                store(storage, i, load(storage, i) ^ load(b.storage, i));
             }
         } else
 #endif
@@ -303,10 +300,8 @@ public:
         bitset r;
 #if defined(TNT_UTILS_BITSET_USE_NEON)
         if (BIT_COUNT % 128 == 0) {
-            uint8x16_t* const p = (uint8x16_t*) r.storage;
-            uint8x16_t const* const q = (uint8x16_t const*) storage;
             for (size_t i = 0; i < BIT_COUNT / 128; ++i) {
-                p[i] = ~q[i];
+                store(r.storage, i, ~load(storage, i));
             }
         } else
 #endif
@@ -350,6 +345,8 @@ static_assert(sizeof(bitset32) == 4, "bitset32 isn't 32 bits!");
 static_assert(sizeof(bitset64) == 8, "bitset64 isn't 64 bits!");
 static_assert(sizeof(bitset128) == 16, "bitset128 isn't 128 bits!");
 static_assert(sizeof(bitset256) == 32, "bitset256 isn't 256 bits!");
+static_assert(alignof(bitset128) == alignof(uint64_t), "bitset128 must not be over-aligned");
+static_assert(alignof(bitset256) == alignof(uint64_t), "bitset256 must not be over-aligned");
 
 } // namespace utils
 
