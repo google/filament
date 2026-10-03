@@ -156,14 +156,15 @@ id<MTLSamplerState> SamplerStateCreator::operator()(id<MTLDevice> device,
     // MTLSamplerDescriptor.
     // In practice, this means shadows are not supported when running in the simulator.
     if (samplerDescriptor.compareFunction != MTLCompareFunctionNever) {
-#if defined(FILAMENT_APPLETV)
-        // supportsFeatureSet:/MTLFeatureSet_iOS_* are unavailable on tvOS; probe the
-        // equivalent GPU family instead (Apple TV HD is Apple2, Apple TV 4K is Apple3+).
-        const bool supportsComparison = [device supportsFamily:MTLGPUFamilyApple3];
-#else
-        const bool supportsComparison =
-                [device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily3_v1];
+        bool supportsComparison = false;
+        if (@available(iOS 13.0, *)) {
+            supportsComparison = [device supportsFamily:MTLGPUFamilyApple3];
+        } else {
+#if TARGET_OS_IOS
+            // MTLFeatureSet_iOS_* is compile-time unavailable on tvOS.
+            supportsComparison = [device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily3_v1];
 #endif
+        }
         if (!supportsComparison) {
             LOG(WARNING) << "Warning: sample comparison not supported by this GPU";
             samplerDescriptor.compareFunction = MTLCompareFunctionNever;
