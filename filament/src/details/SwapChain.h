@@ -88,11 +88,11 @@ public:
     void setFrameCompletedCallback(backend::CallbackHandler* handler,
                 utils::Invocable<void(SwapChain*)>&& callback) noexcept;
 
-    static bool isSRGBSwapChainSupported(FEngine& engine) noexcept;
+    static bool isSRGBSwapChainSupported(FEngine const& engine) noexcept;
 
-    static bool isMSAASwapChainSupported(FEngine& engine, uint32_t samples) noexcept;
+    static bool isMSAASwapChainSupported(FEngine const& engine, uint32_t samples) noexcept;
 
-    static bool isProtectedContentSupported(FEngine& engine) noexcept;
+    static bool isProtectedContentSupported(FEngine const& engine) noexcept;
 
     utils::tribool isFrameRateChangeSupported() const noexcept;
 

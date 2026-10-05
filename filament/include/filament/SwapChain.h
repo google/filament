@@ -259,7 +259,7 @@ public:
      * @param engine A pointer to the filament Engine
      * @return true if CONFIG_PROTECTED_CONTENT is supported, false otherwise.
      */
-    static bool isProtectedContentSupported(Engine& engine) noexcept;
+    static bool isProtectedContentSupported(Engine const& engine) noexcept;
 
     /**
      * Return whether createSwapChain supports the CONFIG_SRGB_COLORSPACE flag.
@@ -268,7 +268,7 @@ public:
      * @param engine A pointer to the filament Engine
      * @return true if CONFIG_SRGB_COLORSPACE is supported, false otherwise.
      */
-    static bool isSRGBSwapChainSupported(Engine& engine) noexcept;
+    static bool isSRGBSwapChainSupported(Engine const& engine) noexcept;
 
     /**
      * Return whether createSwapChain supports the CONFIG_MSAA_*_SAMPLES flag.
@@ -278,7 +278,7 @@ public:
      * @param samples The number of samples
      * @return true if CONFIG_MSAA_*_SAMPLES is supported, false otherwise.
      */
-    static bool isMSAASwapChainSupported(Engine& engine, uint32_t samples) noexcept;
+    static bool isMSAASwapChainSupported(Engine const& engine, uint32_t samples) noexcept;
 
     /**
      * Return whether this SwapChain supports the setFrameRate() API.

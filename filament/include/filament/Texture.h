@@ -94,19 +94,19 @@ public:
     using AsyncCallId = backend::AsyncCallId;
 
     /** @return Whether a backend supports a particular format. */
-    static bool isTextureFormatSupported(Engine& engine, InternalFormat format) noexcept;
+    static bool isTextureFormatSupported(Engine const& engine, InternalFormat format) noexcept;
 
     /** @return Whether a backend supports mipmapping of a particular format. */
-    static bool isTextureFormatMipmappable(Engine& engine, InternalFormat format) noexcept;
+    static bool isTextureFormatMipmappable(Engine const& engine, InternalFormat format) noexcept;
 
     /** @return Whether particular format is compressed */
     static bool isTextureFormatCompressed(InternalFormat format) noexcept;
 
     /** @return Whether this backend supports protected textures. */
-    static bool isProtectedTexturesSupported(Engine& engine) noexcept;
+    static bool isProtectedTexturesSupported(Engine const& engine) noexcept;
 
     /** @return Whether a backend supports texture swizzling. */
-    static bool isTextureSwizzleSupported(Engine& engine) noexcept;
+    static bool isTextureSwizzleSupported(Engine const& engine) noexcept;
 
     static size_t computeTextureDataSize(Format format, Type type,
             size_t stride, size_t height, size_t alignment) noexcept;
@@ -116,10 +116,10 @@ public:
 
     /** @return the maximum size in texels of a texture of type \p type. At least 2048 for
      * 2D textures, 256 for 3D textures. */
-    static size_t getMaxTextureSize(Engine& engine, Sampler type) noexcept;
+    static size_t getMaxTextureSize(Engine const& engine, Sampler type) noexcept;
 
     /** @return the maximum number of layers supported by texture arrays. At least 256. */
-    static size_t getMaxArrayTextureLayers(Engine& engine) noexcept;
+    static size_t getMaxArrayTextureLayers(Engine const& engine) noexcept;
 
     //! Use Builder to construct a Texture object instance
     class Builder : public BuilderBase<BuilderDetails>, public BuilderNameMixin<Builder> {
@@ -322,7 +322,7 @@ public:
          *            memory or other resources.
          * @exception utils::PreConditionPanic if a parameter to a builder function was invalid.
          */
-        Texture* UTILS_NONNULL build(Engine& engine);
+        Texture* UTILS_NONNULL build(Engine& engine) const;
 
         /* no user serviceable parts below */
 
