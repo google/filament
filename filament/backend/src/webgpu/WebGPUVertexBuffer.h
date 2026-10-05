@@ -21,28 +21,35 @@
 
 #include <backend/Handle.h>
 
+#include <webgpu/webgpu_cpp.h>
+
 #include <cstdint>
 #include <vector>
-
-namespace wgpu {
-class Buffer;
-} // namespace wgpu
 
 namespace filament::backend {
 
 class WebGPUVertexBuffer final : public HwVertexBuffer {
 public:
-    WebGPUVertexBuffer(uint32_t vertexCount, uint32_t bufferCount, Handle<HwVertexBufferInfo>);
+    // The GPU buffer and offset bound to one WebGPU vertex buffer slot (see
+    // WebGPUVertexBufferInfo). Depending on whether the attached buffer object needed a format
+    // conversion, this is either the buffer object's own buffer at the slot's source offset, or
+    // a converted buffer at the slot's offset within it.
+    struct SlotBinding final {
+        wgpu::Buffer buffer;
+        uint64_t offset = 0;
+    };
+
+    WebGPUVertexBuffer(uint32_t vertexCount, size_t slotCount, Handle<HwVertexBufferInfo>);
 
     [[nodiscard]] Handle<HwVertexBufferInfo>& getVertexBufferInfoHandle() {
         return mVertexBufferInfoHandle;
     }
 
-    [[nodiscard]] std::vector<wgpu::Buffer>& getBuffers() { return mBuffers; }
+    [[nodiscard]] std::vector<SlotBinding>& getSlotBindings() { return mSlotBindings; }
 
 private:
     Handle<HwVertexBufferInfo> mVertexBufferInfoHandle;
-    std::vector<wgpu::Buffer> mBuffers;
+    std::vector<SlotBinding> mSlotBindings;
 };
 
 } // namespace filament::backend
