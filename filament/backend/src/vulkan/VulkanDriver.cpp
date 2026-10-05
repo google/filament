@@ -543,6 +543,11 @@ void VulkanDriver::updateDescriptorSetBuffer(
         uint32_t offset,
         uint32_t size) {
     FVK_SYSTRACE_SCOPE();
+    // Validate at entry: `binding` comes from the material file and may be out of range.
+    if (UTILS_VERY_UNLIKELY(binding >= VulkanDescriptorSetLayout::MAX_BINDINGS)) {
+        return;
+    }
+
     auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
     auto buffer = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
     mDescriptorSetCache.updateBuffer(set, binding, buffer, offset, size);
@@ -554,6 +559,13 @@ void VulkanDriver::updateDescriptorSetTexture(
         backend::TextureHandle th,
         SamplerParams params) {
     FVK_SYSTRACE_SCOPE();
+    // See updateDescriptorSetBuffer(). Checking here also covers the external image and streamed
+    // image managers below, which store `binding` and apply the update later on, outside of the
+    // descriptor set cache.
+    if (UTILS_VERY_UNLIKELY(binding >= VulkanDescriptorSetLayout::MAX_BINDINGS)) {
+        return;
+    }
+
     auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
 

@@ -466,7 +466,10 @@ private:
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     // tasks executed on the main thread after the fence signaled
     void whenGpuCommandsComplete(const std::function<void()>& fn);
-    void executeGpuCommandsCompleteOps() noexcept;
+    // When afterFinish is true, the caller has just issued glFinish(), so every fence is known to
+    // have signaled even if the context does not report it yet (WebGL only updates sync status
+    // between browser tasks), and all pending ops are executed.
+    void executeGpuCommandsCompleteOps(bool afterFinish = false) noexcept;
     std::vector<std::pair<GLsync, std::function<void()>>> mGpuCommandCompleteOps;
 
     void whenFrameComplete(const std::function<void()>& fn);

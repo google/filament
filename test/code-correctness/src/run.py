@@ -19,8 +19,11 @@ import yaml
 import hashlib
 import concurrent.futures
 import re
+import subprocess
+import sys
+import tempfile
 
-from utils import execute, ArgParseImpl
+from utils import ArgParseImpl
 
 def get_line(file_name, offset):
   with open(f'{file_name}', 'rb') as file:
@@ -36,16 +39,19 @@ def get_func_name(msg):
     return res[0].replace("'", '')
   return msg
 
-def run_tidy(files):
-  if len(files) == 0:
+def run_tidy(file, fixes_dir):
+  fixes_path = os.path.join(fixes_dir, hashlib.md5(file.encode('utf-8')).hexdigest() + '.yaml')
+  subprocess.run(
+      ['clang-tidy', f'--export-fixes={fixes_path}', '--quiet',
+       '--checks=-*,bugprone-exception-escape', file],
+      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+  # clang-tidy only writes the fixes file when it has at least one diagnostic to report.
+  if not os.path.exists(fixes_path):
     return []
-  files_str = ' '.join(files)
-  hid = hashlib.md5(files_str.encode('utf-8')).hexdigest()
-  _, _ = execute(f'clang-tidy --export-fixes=/tmp/{hid}.yaml --quiet --checks=-*,bugprone-exception-escape {files_str}')
   results = []
-  with open(f'/tmp/{hid}.yaml', 'r') as f:
-    data = yaml.safe_load(f)
-    for d in data['Diagnostics']:
+  with open(fixes_path, 'r') as f:
+    data = yaml.safe_load(f) or {}
+    for d in data.get('Diagnostics') or []:
       if d['DiagnosticName'] != 'bugprone-exception-escape':
         continue
       msg = d['DiagnosticMessage']
@@ -61,35 +67,43 @@ DEFAULT_SRC_GLOBS=[
   'filament/**/*.h',
 ]
 
-def exception_escape_test(src_globs=DEFAULT_SRC_GLOBS):
-  files = []
+def can_analyze(path):
+  # Objective-C++ and the Metal backend include Apple framework headers, so they only compile,
+  # and can only be analyzed, on an Apple host.
+  if sys.platform == 'darwin':
+    return True
+  return not path.endswith('.mm') and '/metal/' not in path
+
+def exception_escape_test(src_globs=DEFAULT_SRC_GLOBS, jobs=None):
+  files = set()
   if not isinstance(src_globs, list):
     src_globs = [src_globs]
   for i in src_globs:
-    files += glob.glob(i, recursive=True)
+    files.update(glob.glob(i, recursive=True))
+  files = [f for f in files if can_analyze(f)]
 
-  num_workers = min(len(files), 5)  # Number of threads to spawn
-  part_len = len(files) // num_workers
-  workloads = []
-  for i in range(num_workers):
-    next = min(len(files), part_len)
-    workloads.append(files[0:next])
-    files = files[next:]
+  # One clang-tidy process per file, handed out as workers free up, keeps every core busy until
+  # the queue drains. Largest files go first, since they tend to take longest and would otherwise
+  # be the ones still running after everything else has finished.
+  files.sort(key=lambda f: os.path.getsize(f), reverse=True)
+  num_workers = max(1, int(jobs) if jobs else (os.cpu_count() or 1))
 
-  all_results = []
-  with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
-    future_to_worker_id = {executor.submit(run_tidy, workloads[i]): i for i in range(num_workers)}
+  all_results = set()
+  with tempfile.TemporaryDirectory() as fixes_dir, \
+      concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+    future_to_file = {executor.submit(run_tidy, f, fixes_dir): f for f in files}
 
-    for future in concurrent.futures.as_completed(future_to_worker_id):
-      worker_id = future_to_worker_id[future]
+    for future in concurrent.futures.as_completed(future_to_file):
       try:
-        all_results.extend(future.result())
+        # A set, because a diagnostic in a header can be reported once for every file that
+        # includes it.
+        all_results.update(future.result())
       except Exception as exc:
-          print(f"Main: Worker {worker_id} generated an exception: {exc}")
+          print(f"Main: Analyzing {future_to_file[future]} generated an exception: {exc}")
   test_name = 'code-correctness::exception-escape'
   failure_str_lines = []
   if len(all_results) > 0:
-    all_results.sort(key=lambda x: x[0])
+    all_results = sorted(all_results)
     failure_str_lines.append(f'Number of failures: {len(all_results)}')
     for fname, line_num, msg in all_results:
       failure_str_lines.append(f'{fname}({line_num}): {msg}()')
@@ -106,7 +120,7 @@ TESTS = [
     'Consider adding \'NOLINT(bugprone-exception-escape)\' for valid suppression this check.',
 
     # Maps a command line argument to a function argument
-    [('exception_escape_globs', 'src_globs')],
+    [('exception_escape_globs', 'src_globs'), ('jobs', 'jobs')],
   )
 ]
 

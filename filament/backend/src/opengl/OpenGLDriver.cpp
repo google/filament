@@ -397,7 +397,7 @@ void OpenGLDriver::terminate() {
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     // and make sure to execute all the GpuCommandCompleteOps callbacks
-    executeGpuCommandsCompleteOps();
+    executeGpuCommandsCompleteOps(true);
 
     // as well as the FrameCompleteOps callbacks
     if (UTILS_UNLIKELY(!mFrameCompleteOps.empty())) {
@@ -2345,6 +2345,8 @@ void OpenGLDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
     if (ibh) {
         GLIndexBuffer const* ib = handle_cast<const GLIndexBuffer*>(ibh);
         if (ib->asynchronous) {
+            // The worker deletes the name, so drop it from the backend cache here.
+            getBackendState().unbindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
             getJobQueue()->push([this, ibh]() {
                 destroyIndexBufferCommon(getWorkerState(), ibh);
             });
@@ -2372,6 +2374,10 @@ void OpenGLDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
     if (boh) {
         GLBufferObject const* bo = handle_cast<const GLBufferObject*>(boh);
         if (bo->asynchronous) {
+            // The worker deletes the name, so drop it from the backend cache here.
+            if (!(bo->bindingType == BufferObjectBinding::UNIFORM && getBackendState().isES2())) {
+                getBackendState().unbindBuffer(bo->gl.binding, bo->gl.id);
+            }
             getJobQueue()->push([this, boh]() {
                 destroyBufferObjectCommon(getWorkerState(), boh);
             });
@@ -2417,6 +2423,9 @@ void OpenGLDriver::destroyTextureCommon(OpenGLState& gl, Handle<HwTexture> th) {
     GLTexture* t = handle_cast<GLTexture*>(th);
     if (UTILS_LIKELY(!t->gl.imported)) {
         if (UTILS_LIKELY(t->usage & TextureUsage::SAMPLEABLE)) {
+            // Unbind even if views still share the name. The last reference may be dropped on
+            // the other thread, which can't clear this cache.
+            gl.unbindTexture(t->gl.target, t->gl.id);
             // drop a reference
             uint16_t count = 0;
             if (UTILS_UNLIKELY(t->ref)) {
@@ -2430,7 +2439,6 @@ void OpenGLDriver::destroyTextureCommon(OpenGLState& gl, Handle<HwTexture> th) {
             if (count == 0) {
                 // if this was the last reference, we destroy the refcount as well as
                 // the GL texture name itself.
-                gl.unbindTexture(t->gl.target, t->gl.id);
                 if (UTILS_UNLIKELY(t->hwStream)) {
                     detachStream(t);
                 }
@@ -2463,6 +2471,10 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
     if (th) {
         GLTexture* t = handle_cast<GLTexture*>(th);
         if (t->asynchronous) {
+            // The worker may delete the name, so drop it from the backend cache here.
+            if (t->gl.imported || any(t->usage & TextureUsage::SAMPLEABLE)) {
+                getBackendState().unbindTexture(t->gl.target, t->gl.id);
+            }
             getJobQueue()->push([this, th]() {
                 destroyTextureCommon(getWorkerState(), th);
             });
@@ -4470,12 +4482,18 @@ void OpenGLDriver::whenGpuCommandsComplete(const std::function<void()>& fn) {
     CHECK_GL_ERROR()
 }
 
-void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept { // NOLINT(*-exception-escape)
+// NOLINTNEXTLINE(*-exception-escape)
+void OpenGLDriver::executeGpuCommandsCompleteOps(bool const afterFinish) noexcept {
     auto& v = mGpuCommandCompleteOps;
     auto it = v.begin();
     while (it != v.end()) {
         auto const& [sync, fn] = *it;
-        GLenum const syncStatus = glClientWaitSync(sync, 0, 0u);
+        GLenum syncStatus = glClientWaitSync(sync, 0, 0u);
+        if (syncStatus == GL_TIMEOUT_EXPIRED && afterFinish) {
+            // glFinish() has returned, so the commands are complete. WebGL still reports the
+            // fence as unsignaled because it only updates sync status between browser tasks.
+            syncStatus = GL_ALREADY_SIGNALED;
+        }
         switch (syncStatus) {
             case GL_TIMEOUT_EXPIRED:
                 // not ready
@@ -4625,7 +4643,7 @@ void OpenGLDriver::finish(int) {
     DEBUG_MARKER()
     glFinish();
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-    executeGpuCommandsCompleteOps();
+    executeGpuCommandsCompleteOps(true);
     assert_invariant(mGpuCommandCompleteOps.empty());
 #endif
     executeEveryNowAndThenOps();

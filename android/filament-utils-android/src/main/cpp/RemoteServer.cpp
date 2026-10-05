@@ -14,9 +14,15 @@
  * limitations under the License.
  */
 
+#include <viewer/RemoteServer.h>
+
+#include <utils/CString.h>
+
 #include <jni.h>
 
-#include <viewer/RemoteServer.h>
+#include <algorithm>
+
+#include <string.h>
 
 using namespace filament::viewer;
 
@@ -39,39 +45,52 @@ Java_com_google_android_filament_utils_RemoteServer_nDestroy(JNIEnv*, jclass, jl
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_google_android_filament_utils_RemoteServer_nPeekIncomingLabel(JNIEnv* env, jclass, jlong native) {
     RemoteServer* server = (RemoteServer*) native;
-    char const* label = server->peekIncomingLabel();
-    return label ? env->NewStringUTF(label) : nullptr;
+    // Copy the label under the server lock; the network thread may free the message at any time.
+    utils::CString const label = server->peekIncomingLabel();
+    return label.empty() ? nullptr : env->NewStringUTF(label.c_str());
+}
+
+// The functions below operate on a message that has been popped off the queue with
+// nAcquireReceivedMessage. Once acquired, the message is owned by the caller and cannot be
+// modified or freed by the network thread, until nReleaseReceivedMessage is called.
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_utils_RemoteServer_nAcquireReceivedMessage(JNIEnv*, jclass, jlong native) {
+    RemoteServer* server = (RemoteServer*) native;
+    return (jlong) server->acquireReceivedMessage();
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_google_android_filament_utils_RemoteServer_nPeekReceivedLabel(JNIEnv* env, jclass, jlong native) {
-    RemoteServer* server = (RemoteServer*) native;
-    ReceivedMessage const* msg = server->peekReceivedMessage();
-    return msg ? env->NewStringUTF(msg->label) : nullptr;
+Java_com_google_android_filament_utils_RemoteServer_nGetReceivedLabel(JNIEnv* env, jclass, jlong nativeMessage) {
+    ReceivedMessage const* msg = (ReceivedMessage const*) nativeMessage;
+    return env->NewStringUTF(msg->label);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_utils_RemoteServer_nPeekReceivedBufferLength(JNIEnv* env, jclass, jlong native) {
-    RemoteServer* server = (RemoteServer*) native;
-    ReceivedMessage const* msg = server->peekReceivedMessage();
-    return msg ? msg->bufferByteCount : 0;
+Java_com_google_android_filament_utils_RemoteServer_nGetReceivedBufferLength(JNIEnv*, jclass, jlong nativeMessage) {
+    ReceivedMessage const* msg = (ReceivedMessage const*) nativeMessage;
+    return (jint) msg->bufferByteCount;
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_utils_RemoteServer_nAcquireReceivedMessage(JNIEnv* env, jclass, jlong native, jobject buffer, jint length) {
-    RemoteServer* server = (RemoteServer*) native;
-    ReceivedMessage const* msg = server->acquireReceivedMessage();
-    if (msg == nullptr) {
-        return;
-    }
-
+Java_com_google_android_filament_utils_RemoteServer_nCopyReceivedBuffer(JNIEnv* env, jclass, jlong nativeMessage, jobject buffer) {
+    ReceivedMessage const* msg = (ReceivedMessage const*) nativeMessage;
     void* address = env->GetDirectBufferAddress(buffer);
     if (address == nullptr) {
         // This should never happen because the Java layer does allocateDirect.
         return;
     }
-
+    // Never copy more than either the destination capacity or the message size.
+    jlong const capacity = env->GetDirectBufferCapacity(buffer);
+    if (capacity < 0) {
+        return;
+    }
+    size_t const length = std::min(size_t(capacity), msg->bufferByteCount);
     memcpy(address, msg->buffer, length);
-    server->releaseReceivedMessage(msg);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_utils_RemoteServer_nReleaseReceivedMessage(JNIEnv*, jclass, jlong native, jlong nativeMessage) {
+    RemoteServer* server = (RemoteServer*) native;
+    server->releaseReceivedMessage((ReceivedMessage const*) nativeMessage);
+}

@@ -20,11 +20,14 @@
 #include "Shader.h"
 #include "SharedShaders.h"
 #include "Skip.h"
+#include "TrianglePrimitive.h"
 
 #include <backend/PixelBufferDescriptor.h>
 
 #include <atomic>
 #include <chrono>
+#include <cstdlib>
+#include <cstring>
 #include <thread>
 #include <vector>
 
@@ -545,6 +548,272 @@ TEST_F(BackendTest, DestroyAfterAsyncUpdatePreservesFifo) {
     waitFor(callbacks.boUpdated);
     waitFor(callbacks.texUpdated);
     waitFor(callbacks.vbSet);
+}
+
+// One async update routes the texture's destroy to the worker. The backend's binding cache must
+// still forget it, or a new texture that gets the same GL name is never actually bound.
+// Only one texture name is freed before the new texture is made, so any driver that reuses freed
+// names hands that one out. A driver that never reuses names passes without reaching the bug.
+TEST_F(BackendTest, DestroyAfterAsyncUpdateDoesNotLeaveStaleTextureBinding) {
+    SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
+    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
+
+    constexpr size_t kRenderTargetSize = 16;
+    constexpr uint32_t kRed = 0xFF0000FF;
+    constexpr uint32_t kGreen = 0xFF00FF00;
+    constexpr uint32_t kBlue = 0xFFFF0000;
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+
+    auto waitFor = [&](const bool& flag) {
+        int attempts = 0;
+        while (!flag && attempts < 1000) {
+            api.finish();
+            executeCommands();
+            getDriver().purge();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            attempts++;
+        }
+        EXPECT_TRUE(flag);
+    };
+
+    Shader shader = SharedShaders::makeShader(api, *mCleanup,
+            ShaderRequest{
+                .mVertexType = VertexShaderType::Textured,
+                .mFragmentType = FragmentShaderType::Textured,
+                .mUniformType = ShaderUniformType::Sampler,
+            });
+
+    TextureHandle colorTexture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, kRenderTargetSize, kRenderTargetSize, 1,
+            TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE));
+    RenderTargetHandle renderTarget = addCleanup(api.createRenderTarget(TargetBufferFlags::COLOR,
+            kRenderTargetSize, kRenderTargetSize, 1, 0, { { colorTexture } }, {}, {}));
+
+    TrianglePrimitive triangle(api);
+    float2 const fullScreen[3] = { { -1.0, -1.0 }, { 3.0, -1.0 }, { -1.0, 3.0 } };
+    triangle.updateVertices(fullScreen);
+
+    PipelineState ps = getColorWritePipelineState();
+    shader.addProgramToPipelineState(ps);
+    ps.primitiveType = PrimitiveType::TRIANGLES;
+    ps.vertexBufferInfo = triangle.getVertexBufferInfo();
+
+    RenderPassParams params = getClearColorDepthRenderPass();
+    params.viewport.width = kRenderTargetSize;
+    params.viewport.height = kRenderTargetSize;
+
+    SamplerParams samplerParams{};
+    samplerParams.filterMin = SamplerMinFilter::NEAREST;
+    samplerParams.filterMag = SamplerMagFilter::NEAREST;
+
+    auto createFilledTexture = [&](uint32_t const color) {
+        TextureHandle const th = api.createTexture(SamplerType::SAMPLER_2D, 1,
+                TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
+        uint32_t* texel = static_cast<uint32_t*>(malloc(sizeof(uint32_t)));
+        *texel = color;
+        api.update3DImage(th, 0, 0, 0, 0, 1, 1, 1,
+                PixelBufferDescriptor(texel, sizeof(uint32_t), PixelDataFormat::RGBA,
+                        PixelDataType::UBYTE, [](void* buffer, size_t, void*) { free(buffer); }));
+        return th;
+    };
+
+    auto drawAndReadCenter = [&](DescriptorSetHandle const descriptorSet) {
+        std::vector<uint8_t> pixels(kRenderTargetSize * kRenderTargetSize * 4);
+        bool readPixelsDone = false;
+        api.bindDescriptorSet(descriptorSet, 0, {});
+        {
+            RenderFrame frame(api);
+            api.beginRenderPass(renderTarget, params);
+            api.bindPipeline(ps);
+            api.bindRenderPrimitive(triangle.getRenderPrimitive());
+            api.draw2(0, 3, 1);
+            api.endRenderPass();
+            api.readPixels(renderTarget, 0, 0, kRenderTargetSize, kRenderTargetSize,
+                    PixelBufferDescriptor(pixels.data(), pixels.size(), PixelDataFormat::RGBA,
+                            PixelDataType::UBYTE,
+                            [](void*, size_t, void* user) { *static_cast<bool*>(user) = true; },
+                            &readPixelsDone));
+            api.commit(swapChain);
+        }
+        waitFor(readPixelsDone);
+        size_t const center =
+                (kRenderTargetSize / 2 * kRenderTargetSize + kRenderTargetSize / 2) * 4;
+        uint32_t color;
+        memcpy(&color, pixels.data() + center, sizeof(color));
+        return color;
+    };
+
+    // A synchronously created texture that the backend samples.
+    TextureHandle const oldTexture = createFilledTexture(kRed);
+    DescriptorSetHandle const oldDescriptorSet =
+            api.createDescriptorSet(shader.getDescriptorSetLayout());
+    api.updateDescriptorSetTexture(oldDescriptorSet, 0, oldTexture, samplerParams);
+    ASSERT_EQ(kRed, drawAndReadCenter(oldDescriptorSet));
+
+    // One async update is enough to make its destroy run on the worker.
+    bool asyncUpdated = false;
+    uint32_t* texel = static_cast<uint32_t*>(malloc(sizeof(uint32_t)));
+    *texel = kRed;
+    api.update3DImageAsync(oldTexture, 0, 0, 0, 0, 1, 1, 1,
+            PixelBufferDescriptor(texel, sizeof(uint32_t), PixelDataFormat::RGBA,
+                    PixelDataType::UBYTE, [](void* buffer, size_t, void*) { free(buffer); }),
+            nullptr, signalCallback, &asyncUpdated);
+    waitFor(asyncUpdated);
+
+    // Moves the upload unit off the old name, so the new texture below is created correctly and
+    // only the sampling unit still caches the old name.
+    addCleanup(createFilledTexture(kBlue));
+
+    api.destroyDescriptorSet(oldDescriptorSet);
+    api.destroyTexture(oldTexture);
+
+    // The worker runs jobs in order, so once this fires the destroy above has run.
+    bool workerDrained = false;
+    api.queueCommandAsync([]() {}, nullptr, signalCallback, &workerDrained);
+    waitFor(workerDrained);
+
+    // With name reuse this texture gets the old texture's GL name.
+    TextureHandle const newTexture = addCleanup(createFilledTexture(kGreen));
+    DescriptorSetHandle const newDescriptorSet = shader.createDescriptorSet(api);
+    api.updateDescriptorSetTexture(newDescriptorSet, 0, newTexture, samplerParams);
+
+    EXPECT_EQ(kGreen, drawAndReadCenter(newDescriptorSet))
+            << "the new texture was never bound; the sampler still reads the destroyed one";
+}
+
+// Same as above for a vertex buffer object. While the backend cache still holds the freed name,
+// uploads to a new buffer with that name go to the destroyed one, and a later real bind exposes an
+// empty buffer to the draw.
+TEST_F(BackendTest, DestroyAfterAsyncUpdateDoesNotLeaveStaleBufferBinding) {
+    SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
+    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
+
+    constexpr size_t kRenderTargetSize = 16;
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+
+    auto waitFor = [&](const bool& flag) {
+        int attempts = 0;
+        while (!flag && attempts < 1000) {
+            api.finish();
+            executeCommands();
+            getDriver().purge();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            attempts++;
+        }
+        EXPECT_TRUE(flag);
+    };
+
+    Shader shader = SharedShaders::makeShader(api, *mCleanup,
+            ShaderRequest{
+                .mVertexType = VertexShaderType::Noop,
+                .mFragmentType = FragmentShaderType::White,
+                .mUniformType = ShaderUniformType::None,
+            });
+
+    TextureHandle colorTexture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, kRenderTargetSize, kRenderTargetSize, 1,
+            TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE));
+    RenderTargetHandle renderTarget = addCleanup(api.createRenderTarget(TargetBufferFlags::COLOR,
+            kRenderTargetSize, kRenderTargetSize, 1, 0, { { colorTexture } }, {}, {}));
+
+    // Everything except the vertex buffer objects is made first, so no other buffer name is
+    // generated between the destroy and the new buffer.
+    AttributeArray attributes = { Attribute{
+        .offset = 0,
+        .stride = sizeof(float2),
+        .buffer = 0,
+        .type = ElementType::FLOAT2,
+        .flags = 0
+    } };
+    VertexBufferInfoHandle const vbih = addCleanup(api.createVertexBufferInfo(1, 1, attributes));
+    VertexBufferHandle const vbh = addCleanup(api.createVertexBuffer(3, vbih));
+    IndexBufferHandle const ibh =
+            addCleanup(api.createIndexBuffer(ElementType::UINT, 3, BufferUsage::STATIC));
+    uint32_t* indices = static_cast<uint32_t*>(malloc(sizeof(uint32_t) * 3));
+    indices[0] = 0;
+    indices[1] = 1;
+    indices[2] = 2;
+    api.updateIndexBuffer(ibh,
+            BufferDescriptor(indices, sizeof(uint32_t) * 3,
+                    [](void* buffer, size_t, void*) { free(buffer); }),
+            0);
+    RenderPrimitiveHandle const rph =
+            addCleanup(api.createRenderPrimitive(vbh, ibh, PrimitiveType::TRIANGLES));
+
+    PipelineState ps = getColorWritePipelineState();
+    shader.addProgramToPipelineState(ps);
+    ps.primitiveType = PrimitiveType::TRIANGLES;
+    ps.vertexBufferInfo = vbih;
+
+    RenderPassParams params = getClearColorDepthRenderPass(float4(0, 0, 1, 1));
+    params.viewport.width = kRenderTargetSize;
+    params.viewport.height = kRenderTargetSize;
+
+    auto makeVertices = [] {
+        float2* vertices = static_cast<float2*>(malloc(sizeof(float2) * 3));
+        vertices[0] = { -1.0, -1.0 };
+        vertices[1] = { 3.0, -1.0 };
+        vertices[2] = { -1.0, 3.0 };
+        return BufferDescriptor(vertices, sizeof(float2) * 3,
+                [](void* buffer, size_t, void*) { free(buffer); });
+    };
+
+    // A synchronously created buffer, left bound in the backend cache.
+    BufferObjectHandle const oldBuffer = api.createBufferObject(sizeof(float2) * 3,
+            BufferObjectBinding::VERTEX, BufferUsage::STATIC);
+    api.updateBufferObject(oldBuffer, makeVertices(), 0);
+
+    // One async update is enough to make its destroy run on the worker.
+    bool asyncUpdated = false;
+    api.updateBufferObjectAsync(oldBuffer, makeVertices(), 0, nullptr, signalCallback,
+            &asyncUpdated);
+    waitFor(asyncUpdated);
+
+    api.destroyBufferObject(oldBuffer);
+
+    // The worker runs jobs in order, so once this fires the destroy above has run.
+    bool workerDrained = false;
+    api.queueCommandAsync([]() {}, nullptr, signalCallback, &workerDrained);
+    waitFor(workerDrained);
+
+    // With name reuse this buffer gets the old buffer's GL name.
+    BufferObjectHandle const newBuffer = addCleanup(api.createBufferObject(sizeof(float2) * 3,
+            BufferObjectBinding::VERTEX, BufferUsage::STATIC));
+    api.setVertexBufferObject(vbh, 0, newBuffer);
+    api.updateBufferObject(newBuffer, makeVertices(), 0);
+
+    // Binds another buffer so the draw below really binds the new buffer's name.
+    addCleanup(api.createBufferObject(sizeof(float2) * 3, BufferObjectBinding::VERTEX,
+            BufferUsage::STATIC));
+
+    std::vector<uint8_t> pixels(kRenderTargetSize * kRenderTargetSize * 4);
+    bool readPixelsDone = false;
+    {
+        RenderFrame frame(api);
+        api.beginRenderPass(renderTarget, params);
+        api.bindPipeline(ps);
+        api.bindRenderPrimitive(rph);
+        api.draw2(0, 3, 1);
+        api.endRenderPass();
+        api.readPixels(renderTarget, 0, 0, kRenderTargetSize, kRenderTargetSize,
+                PixelBufferDescriptor(pixels.data(), pixels.size(), PixelDataFormat::RGBA,
+                        PixelDataType::UBYTE,
+                        [](void*, size_t, void* user) { *static_cast<bool*>(user) = true; },
+                        &readPixelsDone));
+        api.commit(swapChain);
+    }
+    waitFor(readPixelsDone);
+
+    size_t const center = (kRenderTargetSize / 2 * kRenderTargetSize + kRenderTargetSize / 2) * 4;
+    uint32_t color;
+    memcpy(&color, pixels.data() + center, sizeof(color));
+    EXPECT_EQ(0xFFFFFFFFu, color) << "the vertex data went to the destroyed buffer";
 }
 
 } // namespace test
