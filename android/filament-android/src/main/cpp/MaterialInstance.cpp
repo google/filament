@@ -48,6 +48,12 @@ Java_com_google_android_filament_MaterialInstance_nDuplicate(JNIEnv *env, jclass
     return result;
 }
 
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetMaterial(JNIEnv *env, jclass clazz, jlong nativeMaterialInstance) {
+    MaterialInstance const * const that = (MaterialInstance const *) nativeMaterialInstance;
+    return (jlong)that->getMaterial();
+}
+
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_google_android_filament_MaterialInstance_nGetName(JNIEnv *env, jclass clazz, jlong nativeMaterialInstance) {
     MaterialInstance const * const that = (MaterialInstance const *) nativeMaterialInstance;
