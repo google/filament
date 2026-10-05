@@ -168,7 +168,7 @@ bool waitForIncomingLabel(RemoteServer& server, std::string_view expected,
         std::chrono::milliseconds timeout = 5s) {
     auto const deadline = std::chrono::steady_clock::now() + timeout;
     while (std::chrono::steady_clock::now() < deadline) {
-        if (std::string_view(server.getIncomingLabel()) == expected) {
+        if (std::string_view(server.peekIncomingLabel()) == expected) {
             return true;
         }
         std::this_thread::sleep_for(5ms);

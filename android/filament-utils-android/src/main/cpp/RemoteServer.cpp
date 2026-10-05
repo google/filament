@@ -46,7 +46,7 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_com_google_android_filament_utils_RemoteServer_nPeekIncomingLabel(JNIEnv* env, jclass, jlong native) {
     RemoteServer* server = (RemoteServer*) native;
     // Copy the label under the server lock; the network thread may free the message at any time.
-    utils::CString const label = server->getIncomingLabel();
+    utils::CString const label = server->peekIncomingLabel();
     return label.empty() ? nullptr : env->NewStringUTF(label.c_str());
 }
 

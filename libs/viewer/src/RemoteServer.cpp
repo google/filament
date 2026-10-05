@@ -94,27 +94,9 @@ RemoteServer::~RemoteServer() {
     }
 }
 
-char const * RemoteServer::peekIncomingLabel() const {
-    std::lock_guard lock(mReceivedMessagesMutex);
-    return mIncomingMessage ? mIncomingMessage->label : nullptr;
-}
-
-CString RemoteServer::getIncomingLabel() const {
+CString RemoteServer::peekIncomingLabel() const {
     std::lock_guard lock(mReceivedMessagesMutex);
     return mIncomingMessage ? CString(mIncomingMessage->label) : CString();
-}
-
-ReceivedMessage const * RemoteServer::peekReceivedMessage() const {
-    std::lock_guard lock(mReceivedMessagesMutex);
-
-    // Find the oldest message in the queue by looking for the lowest id.
-    // Note that this queue is not a ring buffer, it's just a tiny sparse array.
-    ReceivedMessage const* oldest = nullptr;
-    for (auto msg : mReceivedMessages) {
-        if (msg && (!oldest || msg->messageUid < oldest->messageUid)) oldest = msg;
-    }
-
-    return oldest;
 }
 
 ReceivedMessage const * RemoteServer::acquireReceivedMessage() {
