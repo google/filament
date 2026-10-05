@@ -1,6 +1,7 @@
 {
     "name": "presubmit",
-    "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
+    "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu", "web-webgl", "web-webgpu"],
+
     "presets": [
         {
             "name": "base",
@@ -56,6 +57,8 @@
         },
         {
             "name": "base_sample",
+            // Sample tests are not yet supported by the web renderers.
+            "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
             "sample_test": {
                 "warmup_frames": 10,
                 "fixed_timestep": 0.0166667,
@@ -165,6 +168,8 @@
             "name": "HelloTriangle",
             "description": "Triangle primitive sample test",
             "apply_presets": ["base_sample"],
+            // Sample tests are desktop-only: the WASM build only produces gltf_viewer, and the
+            // web renderer drives batch mode rather than the --screenshot path.
             "sample_test": {
                 "executable": "hellotriangle"
             }
@@ -401,3 +406,4 @@
         }
     ]
 }
+

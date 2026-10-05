@@ -52,7 +52,9 @@ if __name__ == "__main__":
 
   named_output_dir = os.path.join(args.output_dir, test.name)
 
-  with open(os.path.join(named_output_dir, f'render_results_{args.backend}.json'), 'w') as f:
+  # Named by renderer: the platforms share backend names (webgpu), and their outputs are merged.
+  results_name = f'render_results_{args.platform}-{args.backend}.json'
+  with open(os.path.join(named_output_dir, results_name), 'w') as f:
     f.write(json.dumps(results, indent=2))
 
   shutil.copy2(args.test, os.path.join(named_output_dir, 'test.json'))
