@@ -375,7 +375,8 @@ class JavaEmitter:
             return False
         for m in cls.get("methods", []):
             attrs = m.get("attributes", [])
-            if any(a in ("filament:apigen:retained", "apigen:retained") for a in attrs):
+            if any(a in ("filament:apigen:retained", "apigen:retained",
+                         "filament:apigen:retained_lazy", "apigen:retained_lazy") for a in attrs):
                 ret = m.get("return_type", {})
                 cpp_name = ret.get("cpp_name", "") if isinstance(ret, dict) else str(ret)
                 clean = (
@@ -567,7 +568,7 @@ class JavaEmitter:
             has_non_null = True
 
         has_retained_non_null = any(not r["is_nullable"] for r in self.retained_references.values())
-        has_retained_nullable = any(r["is_nullable"] for r in self.retained_references.values())
+        has_retained_nullable = any(r["is_nullable"] or r["is_lazy"] for r in self.retained_references.values())
         has_tagged_array = any(is_tagged_array_method(m) for m in self.methods)
         has_int_range = has_packed_buffer or has_tagged_array or builder_has_packed
         has_non_null = self.is_value_class or (self.builder is not None) or has_buffer or has_packed_buffer or has_tagged_array or has_retained_non_null or any(self.resolve_type_info(m["return_type"], silent=True)[0].get("is_container") for m in methods_to_scan)
@@ -826,8 +827,10 @@ class JavaEmitter:
         # Step 7: Lifecycle & Native Pointer Handle Fields
         if self.archetype == "handle" and not self.base_class:
             for ref in self.retained_references.values():
-                ann = "@Nullable " if (ref.get("is_nullable") or self.name == "MaterialInstance") else ""
-                out.append(f"    private final {ann}{ref['java_type']} {ref['field_name']};")
+                # Lazy references may be omitted at construction and filled in by the getter.
+                ann = "@Nullable " if (ref["is_nullable"] or ref["is_lazy"]) else ""
+                final = "" if ref["is_lazy"] else "final "
+                out.append(f"    private {final}{ann}{ref['java_type']} {ref['field_name']};")
             out.append("    private long mNativeObject;")
             if self.name == "Material":
                 out.append("    private final MaterialInstance mDefaultInstance;")
@@ -1061,11 +1064,10 @@ class JavaEmitter:
                 ctor_params = ["long nativeObject"]
                 assignments = ["        mNativeObject = nativeObject;"]
                 for ref in self.retained_references.values():
-                    # MaterialInstance allows a @Nullable Material in its constructor because
-                    # legacy/internal callers (e.g. RenderableManager, gltfio) can instantiate
-                    # instances via MaterialInstance.wrap(long) where no Java Material wrapper
-                    # is available, leaving mMaterial null.
-                    ann = "@Nullable " if (ref.get("is_nullable") or self.name == "MaterialInstance") else f"{ref['nullability_annotation']} "
+                    # Lazy references (UTILS_APIGEN_RETAINED_LAZY) accept null: internal callers
+                    # (e.g. RenderableManager, gltfio) may wrap a native pointer with no Java
+                    # parent at hand. The getter then resolves the parent through JNI.
+                    ann = "@Nullable " if (ref["is_nullable"] or ref["is_lazy"]) else f"{ref['nullability_annotation']} "
                     ctor_params.append(f"{ann}{ref['java_type']} {ref['param_name']}")
                     assignments.append(f"        {ref['field_name']} = {ref['param_name']};")
 
@@ -1075,9 +1077,10 @@ class JavaEmitter:
                 out.append("    }")
                 out.append("")
 
-                if self.name == "MaterialInstance":
-                    out.append("    /* package */ MaterialInstance(long nativeMaterialInstance) {")
-                    out.append("        this(nativeMaterialInstance, null);")
+                if all(ref["is_lazy"] for ref in self.retained_references.values()):
+                    null_args = ["nativeObject"] + ["null"] * len(self.retained_references)
+                    out.append(f"    /* package */ {self.name}(long nativeObject) {{")
+                    out.append(f"        this({', '.join(null_args)});")
                     out.append("    }")
                     out.append("")
             elif not self.base_class:
@@ -1100,7 +1103,7 @@ class JavaEmitter:
                     wrap_args = ["nativeObject"]
                     all_nullable = True
                     for ref in self.retained_references.values():
-                        is_nullable = bool(ref.get("is_nullable") or self.name == "MaterialInstance")
+                        is_nullable = bool(ref["is_nullable"] or ref["is_lazy"])
                         if not is_nullable:
                             all_nullable = False
                         ann = "@Nullable " if is_nullable else f"{ref['nullability_annotation']} "
@@ -2354,12 +2357,23 @@ class JavaEmitter:
                 lines.append(javadoc)
             ref = self.retained_references[name]
             ann = ref.get("nullability_annotation", "")
-            # MaterialInstance.getMaterial() returns null if created via the single-arg constructor
-            if self.name == "MaterialInstance":
-                ann = ""
             if ann:
                 lines.append(f"    {ann}")
             lines.append(f"    public {ref['java_type']} {name}() {{")
+            if ref["is_lazy"]:
+                # The reference wasn't supplied at construction: query it through JNI and cache it.
+                native_name = "n" + name[0].upper() + name[1:]
+                target_type = ref["java_type"]
+                field_name = ref["field_name"]
+                native_var = f"native{target_type}"
+                lines.append(f"        if ({field_name} == null) {{")
+                lines.append(f"            long {native_var} = {native_name}(getNativeObject());")
+                if ref["is_nullable"]:
+                    lines.append(f"            if ({native_var} == 0) return null;")
+                else:
+                    lines.append(f'            if ({native_var} == 0) throw new IllegalStateException("Couldn\'t get {target_type}");')
+                lines.append(f"            {field_name} = new {target_type}({native_var});")
+                lines.append("        }")
             lines.append(f"        return {ref['field_name']};")
             lines.append("    }")
             return "\n".join(lines)
@@ -3889,7 +3903,7 @@ class JavaEmitter:
                 return None
         if self.is_value_class and name == self.value_type_info.get("buffer_getter"):
             return None
-        if name in self.retained_references:
+        if name in self.retained_references and not self.retained_references[name]["is_lazy"]:
             return None
         if method.get("is_constructor") and self.archetype != "bitfield" and not self.base_class:
             return None

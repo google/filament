@@ -207,10 +207,15 @@ Structured CommonMark details are converted into standard HTML Javadoc (`<p>`, `
 
 ### Retained Objects & Static Handle Factories (`UTILS_APIGEN_RETAINED`, `@RestrictTo wrap(...)`)
 * **Retained Object References (`UTILS_APIGEN_RETAINED`)**:
-  * Methods annotated with `UTILS_APIGEN_RETAINED(type)` (e.g. `Renderer.getEngine()`, `MaterialInstance.getMaterial()`, `MaterialInstance.getEngine()`, `SwapChain.getNativeWindow()`) represent parent or peer objects passed during construction and retained in Java fields.
+  * Methods annotated with `UTILS_APIGEN_RETAINED` (e.g. `Renderer.getEngine()`, `SwapChain.getNativeWindow()`) represent parent or peer objects passed during construction and retained in Java fields.
   * Standardized constructor parameter order: `(long nativeObject, Object ref)`.
   * The Java emitter synthesizes private fields (`private final Engine mEngine;`) and generates zero-cost Java-side getter methods (`public Engine getEngine() { return mEngine; }`) that return the retained reference directly without crossing the JNI boundary or creating redundant wrapper instances.
   * Prunes redundant native JNI getter functions from both Java native declarations and C++ JNI bridge files.
+  * **Rule**: only use `UTILS_APIGEN_RETAINED` if *every* code path creating the Java receiver has the parent at hand. If the receiver can also be wrapped from a raw native pointer (a manager getter, gltfio, `wrap(long)`), use `UTILS_APIGEN_RETAINED_LAZY`; otherwise the getter silently returns `null` for those receivers (this caused the `MaterialInstance.getMaterial()` regression from #10426).
+* **Lazy Retained Object References (`UTILS_APIGEN_RETAINED_LAZY`)**:
+  * For receivers that can also be wrapped from a raw native pointer with no Java parent at hand (e.g. `MaterialInstance::getMaterial()`, since `RenderableManager.getMaterialInstanceAt()` and gltfio wrap instances without a `Material`).
+  * The field is non-final and `@Nullable`, the constructor and `wrap(...)` accept `null`, and a single-argument package constructor `<Class>(long nativeObject)` is synthesized when all retained references are lazy.
+  * The JNI getter is kept. The Java getter returns the field if set, otherwise queries the native object once, wraps the result and caches it (`if (mMaterial == null) { mMaterial = new Material(nGetMaterial(getNativeObject())); }`). The getter keeps the C++ nullability (`UTILS_NONNULL` throws on a null native result, `UTILS_NULLABLE` returns `null`).
 * **Retained Builder Direct NIO Buffers (`has_retained_buffers`)**:
   * If a builder method accepts direct NIO buffers retained by native code across builder configuration, the JNI emitter generates a heap-allocated `BuilderWrapper` (`struct <Class>BuilderWrapper`) holding `std::vector<std::unique_ptr<AutoBuffer>> retainedBuffers;`.
   * In the builder methods, `wrapper->retainedBuffers.push_back(std::make_unique<AutoBuffer>(env, buffer, size))` keeps native direct buffer allocations alive until `build(...)` or builder destruction.
