@@ -877,4 +877,33 @@ TEST_F(BackendTest, AsyncTextureViewRefRace) {
     waitFor(finalDone);
 }
 
+TEST_F(BackendTest, FinishDrainsQueuedAsyncJobs) {
+    SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
+    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+
+    // The sleep keeps a worker thread busy past finish() unless finish() waits for it. In
+    // amortization mode the job never runs without a tick().
+    std::atomic_bool commandRan = false;
+    AsyncCallResult result;
+    api.queueCommandAsync(
+            [&commandRan]() {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                commandRan = true;
+            },
+            nullptr, recordCallback, &result);
+
+    // One finish() with no tick() and no retry.
+    api.finish();
+    executeCommands();
+    getDriver().purge();
+
+    EXPECT_TRUE(commandRan.load()) << "finish() returned before the queued job ran";
+    EXPECT_TRUE(result.fired) << "finish() returned before the job's completion was scheduled";
+    EXPECT_EQ(AsyncCallStatus::COMPLETED, result.status);
+}
+
 } // namespace test
