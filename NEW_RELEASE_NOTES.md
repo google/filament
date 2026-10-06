@@ -6,3 +6,5 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+- matc: external samplers are now declared as `texture_external` in WGSL shaders
+  [⚠️ **New Material Version**]
