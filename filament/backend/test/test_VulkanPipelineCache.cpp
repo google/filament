@@ -28,6 +28,8 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
+#include <condition_variable>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -47,9 +49,16 @@ namespace {
 // callbacks so it outlives the driver, which may still write to it from terminate().
 struct BlobStore {
     std::mutex lock;
+    std::condition_variable inserted;
     std::vector<uint8_t> value;
     int inserts = 0;
     int retrieves = 0;
+
+    // The backend saves from its compiler thread, so a test waits for the write.
+    bool waitForInsert() {
+        std::unique_lock guard(lock);
+        return inserted.wait_for(guard, std::chrono::seconds(10), [this] { return inserts > 0; });
+    }
 
     static void attach(std::shared_ptr<BlobStore> const& store, Platform& platform) {
         platform.setBlobFunc(
@@ -58,6 +67,7 @@ struct BlobStore {
                     auto const* bytes = static_cast<uint8_t const*>(value);
                     store->value.assign(bytes, bytes + size);
                     store->inserts++;
+                    store->inserted.notify_all();
                 },
                 [store](void const*, size_t, void* value, size_t size) -> size_t {
                     std::lock_guard const guard(store->lock);
@@ -152,6 +162,7 @@ TEST_F(VulkanPipelineCacheTest, SavesOncePipelineCreationSettles) {
     auto store = std::make_shared<BlobStore>();
     BlobStore::attach(store, *getPlatform());
     drawThenSettle();
+    ASSERT_TRUE(store->waitForInsert());
 
     std::lock_guard const guard(store->lock);
     EXPECT_EQ(store->inserts, 1);
@@ -164,6 +175,7 @@ TEST_F(VulkanPipelineCacheTest, LoadsWhatItSaved) {
     auto saved = std::make_shared<BlobStore>();
     BlobStore::attach(saved, *getPlatform());
     drawThenSettle();
+    ASSERT_TRUE(saved->waitForInsert());
     std::vector<uint8_t> bytes;
     {
         std::lock_guard const guard(saved->lock);
@@ -202,6 +214,7 @@ TEST_F(VulkanPipelineCacheTest, IgnoresCacheFromAnotherDevice) {
     auto saved = std::make_shared<BlobStore>();
     BlobStore::attach(saved, *getPlatform());
     drawThenSettle();
+    ASSERT_TRUE(saved->waitForInsert());
     std::vector<uint8_t> stale;
     {
         std::lock_guard const guard(saved->lock);
