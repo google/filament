@@ -61,6 +61,9 @@ protected:
         return mCleanup->add(handle);
     }
     void initializeDriver();
+
+    // The config every test driver is created with.
+    static filament::backend::Platform::DriverConfig getDriverConfig();
     void executeCommands();
     void flushAndWait();
 
