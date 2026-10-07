@@ -59,8 +59,8 @@ constexpr char PIPELINE_CACHE_KEY[] = "filament.vulkan.VkPipelineCache";
 // Flush events without a newly compiled pipeline (on either thread) before gc() writes the cache.
 // A scene's first frames compile pipelines frame after frame, and writing inside that burst would
 // only mean writing it again. Not left to terminate() alone because mobile applications are
-// usually killed, not torn down. The write runs synchronously on the driver thread: one
-// vkGetPipelineCacheData and, if the data changed, one insertBlob, once per burst.
+// usually killed, not torn down. The write runs on the compiler thread, so neither the copy nor
+// the application's insertBlob (typically a file write) stalls the driver thread.
 constexpr uint64_t PIPELINE_CACHE_SAVE_QUIET = 120;
 
 // Whether data is a pipeline cache written by this device and driver. The spec has a driver
@@ -220,7 +220,8 @@ VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VulkanPlatform& pla
         mPipelineCache = cache;
     }
 
-    if (mContext.shouldUsePipelineCachePrewarming()) {
+    if (mContext.shouldUsePipelineCachePrewarming() ||
+            mContext.isPipelineCachePersistenceEnabled()) {
         mCompilerThreadPool.init(
             /*threadCount=*/1,
             []() {
@@ -785,10 +786,10 @@ void VulkanPipelineCache::terminate() noexcept {
     mCallbackManager.terminate();
     mCompilerThreadPool.terminate();
 
-    // Nothing compiled means nothing to add, and some drivers (e.g. SwiftShader) do not return
-    // loaded data unchanged.
-    if (mPipelinesUnsaved ||
-            mPipelinesCompiled.load(std::memory_order_relaxed) != mPipelinesSeen) {
+    // The pool dropped any queued save, so one is made here whenever this run compiled anything
+    // (the hash skips the write if it already happened). Nothing compiled means nothing to add,
+    // and some drivers (e.g. SwiftShader) do not return loaded data unchanged.
+    if (mPipelinesCompiled.load(std::memory_order_relaxed) > 0) {
         savePipelineCache();
     }
     vkDestroyPipelineCache(mDevice, mPipelineCache, VKALLOC);
@@ -801,7 +802,7 @@ bool VulkanPipelineCache::savePipelineCache() noexcept {
     }
     std::vector<uint8_t> data;
     VkResult result = VK_INCOMPLETE;
-    // A second try covers the prewarm thread growing the cache between the two calls.
+    // A second try covers pipelines created, on either thread, between the two calls.
     for (int attempt = 0; attempt < 2 && result == VK_INCOMPLETE; attempt++) {
         size_t size = 0;
         if (vkGetPipelineCacheData(mDevice, mPipelineCache, &size, nullptr) != VK_SUCCESS) {
@@ -834,12 +835,19 @@ void VulkanPipelineCache::gc() noexcept {
     if (compiled != mPipelinesSeen) {
         mPipelinesSeen = compiled;
         mPipelinesSeenAt = mCurrentTime;
-        mPipelinesUnsaved = true;
+        mPipelinesUnsaved.store(true, std::memory_order_relaxed);
     }
-    if (mPipelinesUnsaved && mCurrentTime - mPipelinesSeenAt > PIPELINE_CACHE_SAVE_QUIET) {
+    if (mPipelinesUnsaved.load(std::memory_order_relaxed) &&
+            mCurrentTime - mPipelinesSeenAt > PIPELINE_CACHE_SAVE_QUIET) {
         // A failed save is retried after another quiet period, not on every flush.
-        mPipelinesUnsaved = !savePipelineCache();
+        mPipelinesUnsaved.store(false, std::memory_order_relaxed);
         mPipelinesSeenAt = mCurrentTime;
+        mCompilerThreadPool.queue(CompilerPriorityQueue::LOW, std::make_shared<ProgramToken>(),
+                [this]() {
+                    if (!savePipelineCache()) {
+                        mPipelinesUnsaved.store(true, std::memory_order_relaxed);
+                    }
+                });
     }
 
     // The Vulkan spec says: "When a command buffer begins recording, all state in that command
