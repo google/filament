@@ -998,6 +998,8 @@ public class Engine {
      * timely fashion, such as when responding to Android's
      * <code>android.view.SurfaceHolder.Callback.surfaceDestroyed</code></p>
      *
+     * <p>In asynchronous mode this also waits for every asynchronous call issued before it to run.</p>
+     *
      * <p>If the backend thread has encountered an unrecoverable error, this function becomes a no-op.</p>
      */
     public void flushAndWait() {
@@ -1017,6 +1019,8 @@ public class Engine {
      * in cases where a guarantee about the <code>SwapChain</code> destruction is needed in a
      * timely fashion, such as when responding to Android's
      * <code>android.view.SurfaceHolder.Callback.surfaceDestroyed</code></p>
+     *
+     * <p>In asynchronous mode this also waits for every asynchronous call issued before it to run.</p>
      *
      * <p>If the backend thread has encountered an unrecoverable error, this function becomes a no-op and returns false.</p>
      *

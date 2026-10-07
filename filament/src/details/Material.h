@@ -169,6 +169,8 @@ public:
     }
     bool isDoubleSided() const noexcept { return mDefinition.doubleSided; }
     bool hasDoubleSidedCapability() const noexcept { return mDefinition.doubleSidedCapability; }
+    // true if the material was built with `instanced: true` (i.e. MATERIAL_HAS_INSTANCES)
+    bool isInstanced() const noexcept { return mDefinition.instanced; }
     bool isAlphaToCoverageEnabled() const noexcept { return mDefinition.rasterState.alphaToCoverage; }
     float getMaskThreshold() const noexcept { return mDefinition.maskThreshold; }
     bool hasShadowMultiplier() const noexcept { return mDefinition.hasShadowMultiplier; }
