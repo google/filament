@@ -101,6 +101,7 @@ public:
             bool check_crc32_after_loading = false;
             bool enable_material_instance_uniform_batching = true;
             bool enable_fog_as_postprocess = false;
+            bool check_device_sampler_limits = false;
         } material;
         struct {
             bool enable_grid_based_world_origin = false;
