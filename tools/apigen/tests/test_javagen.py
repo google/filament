@@ -3959,6 +3959,78 @@ class TestJavaGen(unittest.TestCase):
         self.assertIn("nGetDummyManager", cpp_src)
         self.assertIn("(jlong)&(that->getDummyManager())", cpp_src)
 
+    def test_deprecated_annotations_fixture(self):
+        """Verify C++ @deprecated documentation annotations generate @Deprecated Java annotations end-to-end."""
+        header_file = self.test_dir / "27_deprecated.h"
+        json_file = self.test_dir / "27_deprecated.json"
+        self.assertTrue(header_file.exists(), "27_deprecated.h fixture not found")
+        self.assertTrue(json_file.exists(), "27_deprecated.json fixture not found")
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            extracted_json = Path(tmp_dir) / "extracted.json"
+            repo_root = Path(__file__).parent.parent.parent.parent
+            ext_res = subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(__file__).parent.parent / "extractor.py"),
+                    str(header_file),
+                    "-I", str(repo_root / "filament/include"),
+                    "-I", str(repo_root / "libs/utils/include"),
+                    "-I", str(repo_root / "libs/math/include"),
+                    "-I", str(repo_root / "filament/backend/include"),
+                    "-o", str(extracted_json),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(ext_res.returncode, 0, f"extractor failed: {ext_res.stderr}")
+
+            res = subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(__file__).parent.parent / "javagen.py"),
+                    "--java-dir", tmp_dir,
+                    "--jni-dir", tmp_dir,
+                    str(extracted_json),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(res.returncode, 0, f"javagen failed: {res.stderr}")
+
+            java_src = (Path(tmp_dir) / "DeprecatedTest.java").read_text()
+            cpp_src = (Path(tmp_dir) / "DeprecatedTest.cpp").read_text()
+
+            expected_java = (self.test_dir / "27_deprecated.java").read_text()
+            expected_cpp = (self.test_dir / "27_deprecated.cpp").read_text()
+
+            self.assertEqual(java_src, expected_java)
+            self.assertEqual(cpp_src, expected_cpp)
+
+            # Explicitly validate @Deprecated placement on class, enums, entries, builder, overloads, and fields
+            self.assertIn("@Deprecated\npublic class DeprecatedTest {", java_src)
+            self.assertIn("    @Deprecated\n    public enum LegacyMode {", java_src)
+            self.assertIn("        /** Non-deprecated entry inside a deprecated enum. */\n        FAST,", java_src)
+            self.assertIn("        @Deprecated\n        SLOW;", java_src)
+            self.assertIn("        @Deprecated\n        MEDIUM,", java_src)
+            self.assertIn("        /** High quality. */\n        HIGH;", java_src)
+            self.assertIn("        @Deprecated\n        public enum BuilderFlag {", java_src)
+            self.assertIn("            @Deprecated\n            LEGACY;", java_src)
+            self.assertIn("        @Deprecated\n        @NonNull\n        public Builder legacyOption(int value) {", java_src)
+            self.assertIn("        @NonNull\n        public Builder modernOption(int value) {", java_src)
+            self.assertIn("        @Deprecated\n        @NonNull\n        public DeprecatedTest build(@NonNull Engine engine) {", java_src)
+            self.assertIn("    @Deprecated\n    public void legacyMethod() {", java_src)
+            self.assertIn("    /** Active non-deprecated instance method. */\n    public void modernMethod() {", java_src)
+            self.assertIn("    @Deprecated\n    public void legacyMethodWithDefaults() {", java_src)
+            self.assertIn("    @Deprecated\n    public void legacyMethodWithDefaults(int count) {", java_src)
+            self.assertIn("    @Deprecated\n    public void legacyMethodWithDefaults(int count, float factor) {", java_src)
+            self.assertIn("    @Deprecated\n    public void legacyVectorMethod(float valuex, float valuey, float valuez) {", java_src)
+            self.assertIn("    @Deprecated\n    public void legacyVectorMethod(@NonNull @Size(min = 3) float[] value) {", java_src)
+            self.assertIn("    @Deprecated\n    public static int legacyStaticMethod(int x) {", java_src)
+            self.assertIn("    @Deprecated\n    public static class LegacyOptions {", java_src)
+            self.assertIn("        @Deprecated\n        public float legacyScale;", java_src)
+            self.assertIn("        public boolean enabled;", java_src)
+
 
 if __name__ == "__main__":
     unittest.main()

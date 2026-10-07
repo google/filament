@@ -998,7 +998,8 @@ public class Engine {
      * timely fashion, such as when responding to Android's
      * <code>android.view.SurfaceHolder.Callback.surfaceDestroyed</code></p>
      *
-     * <p>In asynchronous mode this also waits for every asynchronous call issued before it to run.</p>
+     * <p>In asynchronous mode this also waits for every asynchronous call issued before it to run.
+     * A command passed to runCommandAsync() must not wait on the engine, or this call deadlocks.</p>
      *
      * <p>If the backend thread has encountered an unrecoverable error, this function becomes a no-op.</p>
      */
@@ -1020,7 +1021,8 @@ public class Engine {
      * timely fashion, such as when responding to Android's
      * <code>android.view.SurfaceHolder.Callback.surfaceDestroyed</code></p>
      *
-     * <p>In asynchronous mode this also waits for every asynchronous call issued before it to run.</p>
+     * <p>In asynchronous mode this also waits for every asynchronous call issued before it to run.
+     * A command passed to runCommandAsync() must not wait on the engine, or this call deadlocks.</p>
      *
      * <p>If the backend thread has encountered an unrecoverable error, this function becomes a no-op and returns false.</p>
      *
@@ -1331,6 +1333,7 @@ public class Engine {
          *
          * @deprecated use "backend.disable_parallel_shader_compile" feature flag instead
          */
+        @Deprecated
         public boolean disableParallelShaderCompile = false;
         public StereoscopicType stereoscopicType = StereoscopicType.NONE;
         public long stereoscopicEyeCount = 2;
@@ -1350,6 +1353,7 @@ public class Engine {
          *
          * @deprecated use "backend.opengl.assert_native_window_is_valid" feature flag instead
          */
+        @Deprecated
         public boolean assertNativeWindowIsValid = false;
         /**
          * GPU context priority level.
