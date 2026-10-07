@@ -38,10 +38,10 @@
 
 namespace filament::backend {
 
-class Platform;
 struct VulkanProgram;
 struct VulkanBufferObject;
 struct VulkanTexture;
+class VulkanPlatform;
 
 // VulkanPipelineCache manages a cache of descriptor sets and pipelines.
 //
@@ -97,16 +97,16 @@ public:
      *
      * @param driver The driver this is being instantiated for. This is used only for construction of
      *               the callback manager, which references the driver for scheduling callbacks.
-     * @param device The device that the pipelines will be created and run on.
+     * @param platform Provides the device that the pipelines will be created and run on. With
+     *                 backend.vulkan.enable_pipeline_cache_persistence, its blob cache also
+     *                 persists the driver's VkPipelineCache across runs: read here, so the blob
+     *                 functions must be set before the Engine is created; written on the driver
+     *                 thread by gc() once pipeline compilation has gone quiet, and by terminate().
      * @param context Information about the current instance of Vulkan, such as supported extensions,
      *                and enabled features.
-     * @param platform Its blob cache, when the application set one, persists the driver's
-     *                 VkPipelineCache across runs: read here, so the blob functions must be set
-     *                 before the Engine is created; written on the driver thread by gc() once
-     *                 pipeline creation has gone quiet, and again by terminate().
      */
-    VulkanPipelineCache(DriverBase& driver, VkDevice device, VulkanContext const& context,
-            Platform& platform);
+    VulkanPipelineCache(DriverBase& driver, VulkanPlatform& platform,
+            VulkanContext const& context);
 
     // Loads a fake pipeline into memory on a separate thread, with the intent of
     // preloading the Vulkan cache with enough information to have a cache hit when
@@ -263,8 +263,9 @@ private:
 
     void bindDynamicState(VkCommandBuffer cmdbuffer, uint16_t dirtyMask);
 
-    // Writes mPipelineCache to the platform's blob cache, if it has one and the data changed.
-    void savePipelineCache() noexcept;
+    // Writes mPipelineCache to the platform's blob cache if its data changed. Returns false if the
+    // data could not be read.
+    bool savePipelineCache() noexcept;
 
     // Immutable state.
     VkDevice mDevice = VK_NULL_HANDLE;
@@ -273,20 +274,21 @@ private:
     // recreating the same pipeline is cheaper, helping with frame stalling.
     VkPipelineCache mPipelineCache = VK_NULL_HANDLE;
 
-    Platform& mPlatform;
+    VulkanPlatform& mPlatform;
 
-    // Pipelines created so far, by the driver thread or the prewarm thread.
-    std::atomic<uint32_t> mPipelinesCreated = 0;
+    // Pipelines compiled so far, by the driver thread or the prewarm thread: those the creation
+    // feedback reports as missing mPipelineCache, or all of them without the feedback extension.
+    std::atomic<uint32_t> mPipelinesCompiled = 0;
 
-    // gc()'s last reading of mPipelinesCreated, the flush event at which it last moved, and
-    // whether pipelines have been created since the cache was last saved.
+    // gc()'s last reading of mPipelinesCompiled, the flush event at which it last moved, and
+    // whether pipelines have been compiled since the cache was last saved.
     uint32_t mPipelinesSeen = 0;
     Timestamp mPipelinesSeenAt = 0;
     bool mPipelinesUnsaved = false;
 
-    // The size of the data last read or written, so a save that would store the same bytes
-    // again writes nothing.
-    size_t mSavedCacheSize = 0;
+    // Hash of the data last read or written, so a save that would store the same bytes again
+    // writes nothing.
+    uint32_t mSavedCacheHash = 0;
 
     // Static state used for VkPipeline creation and cache lookup.
     // Dynamically handled fields are set to 0 during binding.

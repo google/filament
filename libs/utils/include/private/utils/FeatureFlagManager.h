@@ -89,6 +89,8 @@ public:
                 // Allow the usage of dynamic state when creating pipelines. This will reduce
                 // the pipeline count and compilation related hitching.
                 bool enable_pipeline_dynamic_state = false;
+                // Persist the VkPipelineCache across runs through the Platform's blob cache.
+                bool enable_pipeline_cache_persistence = false;
             } vulkan;
             bool disable_parallel_shader_compile = false;
             bool disable_amortized_shader_compile = true;

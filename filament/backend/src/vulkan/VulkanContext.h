@@ -137,6 +137,10 @@ public:
         return mPhysicalDeviceProperties.properties.limits;
     }
 
+    inline VkPhysicalDeviceProperties const& getPhysicalDeviceProperties() const noexcept {
+        return mPhysicalDeviceProperties.properties;
+    }
+
     inline uint32_t getPhysicalDeviceVendorId() const noexcept {
         return mPhysicalDeviceProperties.properties.vendorID;
     }
@@ -254,6 +258,10 @@ public:
         return mPipelineDynamicStateEnabled;
     }
 
+    inline bool isPipelineCachePersistenceEnabled() const noexcept {
+        return mPipelineCachePersistenceEnabled;
+    }
+
     inline bool isGlobalPrioritySupported() const noexcept {
         return mGlobalPrioritySupported;
     }
@@ -323,6 +331,7 @@ private:
     bool mParallelShaderCompileDisabled = false;
     bool mStagingBufferBypassEnabled = false;
     bool mPipelineDynamicStateEnabled = false;
+    bool mPipelineCachePersistenceEnabled = false;
 
     fvkutils::VkFormatList mDepthStencilFormats;
     fvkutils::VkFormatList mBlittableDepthStencilFormats;
