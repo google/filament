@@ -1465,21 +1465,34 @@ static const char* to_string(ShaderStageFlags const stageFlags) noexcept {
 
 bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const noexcept {
 
-    auto logSamplerOverflow = [](SamplerInterfaceBlock const& sib) {
+    // An external sampler can use several texture slots, for instance one per plane of a YUV
+    // image. WebGPU always counts a texture_external binding as 4 sampled textures (3 planes and a
+    // 3D LUT), see "exceeds the binding slot limits" in the WebGPU specification.
+    bool const targetsWebGpu = any(mTargetApi & TargetApi::WEBGPU);
+    size_t const externalSamplerSlotCount = targetsWebGpu ? 4 : 2;
+
+    size_t externalSamplerCount = 0;
+    for (auto const& sampler: info.sib.getSamplerInfoList()) {
+        if (sampler.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL) {
+            externalSamplerCount++;
+        }
+    }
+
+    auto logSamplerOverflow = [=](SamplerInterfaceBlock const& sib) {
         auto const& samplers = sib.getSamplerInfoList();
         auto const* stage = to_string(sib.getStageFlags());
         for (auto const& sampler: samplers) {
             LOG(ERROR) << "\"" << sampler.name.c_str() << "\" "
                    << Enums::toString(sampler.type) << " " << stage << '\n';
         }
+        if (externalSamplerCount > 0) {
+            LOG(ERROR) << "Each external sampler counts as " << externalSamplerSlotCount
+                       << " samplers" << (targetsWebGpu ? " when targeting WebGPU." : ".");
+        }
     };
 
-    auto userSamplerCount = info.sib.getSize();
-    for (auto const& sampler: info.sib.getSamplerInfoList()) {
-        if (sampler.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL) {
-            userSamplerCount += 1;
-        }
-    }
+    auto userSamplerCount =
+            info.sib.getSize() + externalSamplerCount * (externalSamplerSlotCount - 1);
 
     switch (info.featureLevel) {
         case FeatureLevel::FEATURE_LEVEL_0:

@@ -18,6 +18,9 @@
 
 #include "MetalArgumentBuffer.h"
 #include "SpirvFixup.h"
+#ifdef FILAMENT_SUPPORTS_WEBGPU
+#include "WgslExternalTextures.h"
+#endif
 
 #include "sca/builtinResource.h"
 #include "sca/GLSLTools.h"
@@ -31,8 +34,9 @@
 #include <filament/MaterialEnums.h>
 
 #include <utils/compiler.h>
+#include <utils/CString.h>
 #include <utils/debug.h>
-#include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/ostream.h>
 
 #include <GlslangToSpv.h>
@@ -334,6 +338,21 @@ void rebindImageSamplerForWGSL(std::vector<uint32_t> &spirv) {
     });
 }
 
+// External samplers are always user parameters, so they only live in the per-material set.
+std::vector<GLSLPostProcessor::ExternalSamplerBinding> collectExternalSamplers(
+        GLSLPostProcessor::Config const& config) {
+    std::vector<GLSLPostProcessor::ExternalSamplerBinding> externalSamplers;
+    if (!config.materialInfo) {
+        return externalSamplers;
+    }
+    for (auto const& info: config.materialInfo->sib.getSamplerInfoList()) {
+        if (info.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL) {
+            externalSamplers.push_back({ +DescriptorSetBindingPoints::PER_MATERIAL, info.binding });
+        }
+    }
+    return externalSamplers;
+}
+
 } // anonymous
 
 GLSLPostProcessor::GLSLPostProcessor(
@@ -569,7 +588,8 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
     }
 }
 
-bool GLSLPostProcessor::spirvToWgsl(SpirvBlob* spirv, std::string* outWsl) {
+bool GLSLPostProcessor::spirvToWgsl(SpirvBlob* spirv, std::string* outWsl,
+        std::vector<ExternalSamplerBinding> const& externalSamplers) {
 #ifdef FILAMENT_SUPPORTS_WEBGPU
     // We need to run some opt-passes at all times to transpile to WGSL
     auto optimizer = createEmptyOptimizer();
@@ -596,29 +616,56 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob* spirv, std::string* outWsl) {
     writerOptions.allowed_features.features.insert(
             ::tint::wgsl::LanguageFeature::kImmediateAddressSpace);
 
-    ::tint::Result<std::string> wgslOut = ::tint::SpirvToWgsl(*spirv, writerOptions);
-
-    if (wgslOut != ::tint::Success) {
-        slog.e << "Tint error ---- : " << wgslOut.Failure().reason << io::endl;
+    auto dumpSpirv = [spirv]() {
         spv_context context = spvContextCreate(SPV_ENV_VULKAN_1_1_SPIRV_1_4);
         spv_text text = nullptr;
         spv_diagnostic diagnostic = nullptr;
         spv_result_t result = spvBinaryToText(context, spirv->data(), spirv->size(),
                 SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES | SPV_BINARY_TO_TEXT_OPTION_COLOR, &text,
                 &diagnostic);
-        slog.e << "Beginning SpirV-output dump with ret " << result << "\n\n"
-               << text->str << "\n\nEndSPIRV\n"
-               << io::endl;
+        LOG(ERROR) << "Beginning SpirV-output dump with ret " << result << "\n\n"
+                   << text->str << "\n\nEndSPIRV\n";
         spvTextDestroy(text);
         spvContextDestroy(context);
+    };
+
+    // This is the equivalent of ::tint::SpirvToWgsl(), with an extra pass on the IR to declare the
+    // external samplers as `texture_external`. SPIR-V has no such type, so the external samplers
+    // were emitted as regular 2D samplers.
+    ::tint::Result<::tint::core::ir::Module> ir = ::tint::spirv::reader::ReadIR(*spirv);
+    if (ir != ::tint::Success) {
+        LOG(ERROR) << "Tint error ---- : " << ir.Failure().reason;
+        dumpSpirv();
         return false;
     }
-    *outWsl = wgslOut.Get();
+
+    if (!externalSamplers.empty()) {
+        // The texture of a sampler is at binding * 2, see rebindImageSamplerForWGSL().
+        std::vector<WgslBindingPoint> bindings;
+        bindings.reserve(externalSamplers.size());
+        for (auto const& sampler: externalSamplers) {
+            bindings.push_back({ sampler.set, uint32_t(sampler.binding) * 2 });
+        }
+        utils::CString error;
+        if (!retypeExternalTextures(ir.Get(), bindings, &error)) {
+            LOG(ERROR) << "Failed to declare external samplers for WGSL: " << error.c_str_safe();
+            return false;
+        }
+    }
+
+    ::tint::Result<::tint::wgsl::writer::Output> wgslOut =
+            ::tint::wgsl::writer::WgslFromIR(ir.Get(), writerOptions);
+    if (wgslOut != ::tint::Success) {
+        LOG(ERROR) << "Tint error ---- : " << wgslOut.Failure().reason;
+        dumpSpirv();
+        return false;
+    }
+    *outWsl = wgslOut.Get().wgsl;
     return true;
 #else
-    slog.i << "Trying to emit WGSL without including WebGPU dependencies,"
-            " please set CMake arg FILAMENT_SUPPORTS_WEBGPU and FILAMENT_SUPPORTS_WEBGPU"
-            << io::endl;
+    (void) externalSamplers;
+    LOG(ERROR) << "Trying to emit WGSL without including WebGPU dependencies,"
+                  " please set CMake arg FILAMENT_SUPPORTS_WEBGPU and FILAMENT_SUPPORTS_WEBGPU";
     return false;
 #endif
 }
@@ -632,7 +679,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
             mOptimization == MaterialBuilder::Optimization::NONE) {
         *outputGlsl = inputShader;
         if (mPrintShaders) {
-            slog.i << *outputGlsl << io::endl;
+            LOG(INFO) << *outputGlsl;
         }
         return true;
     }
@@ -684,7 +731,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
 
     bool const ok = tShader.parse(&DefaultTBuiltInResource, internalConfig.langVersion, false, msg);
     if (!ok) {
-        slog.e << tShader.getInfoLog() << io::endl;
+        LOG(ERROR) << tShader.getInfoLog();
         return false;
     }
 
@@ -699,7 +746,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     // SPIR-V types
     bool const linkOk = program.link(msg);
     if (!linkOk) {
-        slog.e << tShader.getInfoLog() << io::endl;
+        LOG(ERROR) << tShader.getInfoLog();
         return false;
     }
 
@@ -723,13 +770,13 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
                             mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
                 }
                 if (internalConfig.wgslOutput) {
-                    if (!spirvToWgsl(internalConfig.spirvOutput, internalConfig.wgslOutput)) {
+                    if (!spirvToWgsl(internalConfig.spirvOutput, internalConfig.wgslOutput,
+                                collectExternalSamplers(config))) {
                         return false;
                     }
                 }
             } else {
-                slog.e << "GLSL post-processor invoked with optimization level NONE"
-                        << io::endl;
+                LOG(ERROR) << "GLSL post-processor invoked with optimization level NONE";
             }
             break;
         case MaterialBuilder::Optimization::PREPROCESSOR:
@@ -755,7 +802,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
             }
         }
         if (mPrintShaders) {
-            slog.i << *internalConfig.glslOutput << io::endl;
+            LOG(INFO) << *internalConfig.glslOutput;
         }
     }
     return true;
@@ -776,7 +823,7 @@ bool GLSLPostProcessor::preprocessOptimization(TShader& tShader,
             msg, &glsl, forbidIncluder);
 
     if (!ok) {
-        slog.e << tShader.getInfoLog() << io::endl;
+        LOG(ERROR) << tShader.getInfoLog();
         return false;
     }
 
@@ -798,7 +845,7 @@ bool GLSLPostProcessor::preprocessOptimization(TShader& tShader,
         // SPIR-V types
         bool const linkOk = program.link(msg);
         if (!ok || !linkOk) {
-            slog.e << spirvShader.getInfoLog() << io::endl;
+            LOG(ERROR) << spirvShader.getInfoLog();
             return false;
         } else {
             SpvOptions options;
@@ -820,7 +867,8 @@ bool GLSLPostProcessor::preprocessOptimization(TShader& tShader,
                 mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
     }
     if (internalConfig.wgslOutput) {
-        if (!spirvToWgsl(internalConfig.spirvOutput, internalConfig.wgslOutput)) {
+        if (!spirvToWgsl(internalConfig.spirvOutput, internalConfig.wgslOutput,
+                    collectExternalSamplers(config))) {
             return false;
         }
     }
@@ -871,7 +919,7 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
                 mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
     }
     if (internalConfig.wgslOutput) {
-        if (!spirvToWgsl(&spirv, internalConfig.wgslOutput)) {
+        if (!spirvToWgsl(&spirv, internalConfig.wgslOutput, collectExternalSamplers(config))) {
             return false;
         }
     }
@@ -933,7 +981,7 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
         try {
             *internalConfig.glslOutput = glslCompiler.compile();
         } catch (CompilerError e) {
-            slog.e << "ERROR: " << e.what() << io::endl;
+            LOG(ERROR) << "ERROR: " << e.what();
             return false;
         }
 #endif
@@ -960,8 +1008,8 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
                     ext != "GL_OES_EGL_image_external" &&
                     ext != "GL_EXT_shader_framebuffer_fetch" &&
                     ext != "GL_EXT_shader_framebuffer_fetch_non_coherent") {
-                    slog.e << "ERROR: Feature Level 0 shaders cannot require: " << ext << ". "
-                           << "spirv-cross attempted to unilaterally inject it." << io::endl;
+                    LOG(ERROR) << "ERROR: Feature Level 0 shaders cannot require: " << ext << ". "
+                               << "spirv-cross attempted to unilaterally inject it.";
                     return false;
                 }
             }
@@ -976,7 +1024,8 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
 
             bool const validateOk = validateShader.parse(&DefaultTBuiltInResource, glslOptions.version, false, EShMsgDefault);
             if (!validateOk) {
-                slog.e << "ESSL1 Validation failed:\n" << validateShader.getInfoLog() << io::endl;
+                LOG(ERROR) << "ESSL1 Validation failed:\n"
+                           << validateShader.getInfoLog();
                 return false;
             }
         }
@@ -991,8 +1040,7 @@ std::shared_ptr<Optimizer> GLSLPostProcessor::createEmptyOptimizer() {
         if (!filterSpvOptimizerMessage(level)) {
             return;
         }
-        slog.e << stringifySpvOptimizerMessage(level, source, position, message)
-                << io::endl;
+        LOG(ERROR) << stringifySpvOptimizerMessage(level, source, position, message);
     });
     return optimizer;
 }
@@ -1036,7 +1084,7 @@ void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) 
 
     // run optimizer
     if (!optimizer->Run(spirv.data(), spirv.size(), &spirv)) {
-        slog.e << "SPIR-V optimizer pass failed" << io::endl;
+        LOG(ERROR) << "SPIR-V optimizer pass failed";
         return;
     }
 }
