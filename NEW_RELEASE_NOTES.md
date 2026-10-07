@@ -13,6 +13,6 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
   tick. Metal now runs them every frame too
 - java: `Engine.Config.asynchronousFrameBudget` (in nanoseconds) is added
 - web: `Engine$Config.asynchronousFrameBudgetMs` is added
-- vulkan: the backend now keeps its `VkPipelineCache` across runs through `Platform::setBlobFunc`,
-  as the GL backend does for program binaries; the blob functions must be set before the `Engine`
-  is created
+- vulkan: with the `backend.vulkan.enable_pipeline_cache_persistence` feature flag, the backend
+  keeps its `VkPipelineCache` across runs through `Platform::setBlobFunc`, as the GL backend does
+  for program binaries; the blob functions must be set before the `Engine` is created

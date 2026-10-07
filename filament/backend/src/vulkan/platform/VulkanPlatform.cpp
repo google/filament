@@ -348,9 +348,7 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device, bool enableDebugUtils 
         // It is only enabled on the device if protected memory is also supported.
         VK_EXT_PIPELINE_PROTECTED_ACCESS_EXTENSION_NAME,
 
-#if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
         VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME,
-#endif
     };
     ExtensionSet exts;
     // Identify supported physical device extensions
@@ -398,6 +396,15 @@ std::tuple<ExtensionSet, ExtensionSet> pruneExtensions(VkPhysicalDevice device,
     if (driverConfig.stereoscopicType != StereoscopicType::MULTIVIEW) {
         setErase(newDeviceExts, VK_KHR_MULTIVIEW_EXTENSION_NAME);
     }
+
+#if !FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
+    // Outside of shader debugging, only the pipeline cache persistence reads the feedback.
+    if (!driverConfig.featureFlagManager ||
+            !driverConfig.featureFlagManager->features.backend.vulkan
+                     .enable_pipeline_cache_persistence) {
+        setErase(newDeviceExts, VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME);
+    }
+#endif
 
     return std::tuple(newInstExts, newDeviceExts);
 }
@@ -1192,6 +1199,10 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
     context.mPipelineDynamicStateEnabled =
             (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
                                                        .vulkan.enable_pipeline_dynamic_state
+                                             : false);
+    context.mPipelineCachePersistenceEnabled =
+            (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
+                                                       .vulkan.enable_pipeline_cache_persistence
                                              : false);
 
     context.mPipelineCacheEvictionEnabled =
