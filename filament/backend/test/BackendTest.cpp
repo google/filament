@@ -20,6 +20,8 @@
 
 #include "BackendTest.h"
 
+#include <private/utils/FeatureFlagManager.h>
+
 #include <utils/Hash.h>
 
 #include <fstream>
@@ -87,16 +89,26 @@ BackendTest::~BackendTest() {
     delete mPlatform;
 }
 
-void BackendTest::initializeDriver() {
-    auto backend = static_cast<filament::backend::Backend>(sBackend);
-    mPlatform = PlatformFactory::create(&backend);
-    assert_invariant(static_cast<uint8_t>(backend) == static_cast<uint8_t>(sBackend));
+Platform::DriverConfig BackendTest::getDriverConfig() {
+    // Features that are off by default but have tests of their own. Each one does nothing until a
+    // test sets it up (the pipeline cache persistence needs blob functions).
+    static utils::FeatureFlagManager featureFlags;
+    featureFlags.features.backend.vulkan.enable_pipeline_cache_persistence = true;
+
     Platform::DriverConfig driverConfig;
+    driverConfig.featureFlagManager = &featureFlags;
     // Enable asynchronous mode for backends that support it.
     if (sBackend == Backend::METAL || sBackend == Backend::OPENGL) {
         driverConfig.asynchronousMode = Platform::AsynchronousMode::THREAD_PREFERRED;
     }
-    driver = mPlatform->createDriver(nullptr, driverConfig);
+    return driverConfig;
+}
+
+void BackendTest::initializeDriver() {
+    auto backend = static_cast<filament::backend::Backend>(sBackend);
+    mPlatform = PlatformFactory::create(&backend);
+    assert_invariant(static_cast<uint8_t>(backend) == static_cast<uint8_t>(sBackend));
+    driver = mPlatform->createDriver(nullptr, getDriverConfig());
     assert_invariant(driver);
     commandStream = std::make_unique<CommandStream>(*driver, commandBufferQueue.getCircularBuffer());
 }

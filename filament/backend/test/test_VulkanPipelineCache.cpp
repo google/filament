@@ -70,9 +70,14 @@ struct BlobStore {
     }
 };
 
-// Flush events without a new pipeline before the backend writes its cache (gc() runs once per
+// Flush events without a newly compiled pipeline before the backend writes its cache (gc() runs once per
 // frame), with some margin.
 constexpr int SETTLE_FRAMES = 130;
+
+// VkPipelineCacheHeaderVersionOne, without depending on the Vulkan headers: 32 bytes, with
+// pipelineCacheUUID at offset 16.
+constexpr size_t CACHE_HEADER_SIZE = 32;
+constexpr size_t CACHE_UUID_OFFSET = 16;
 
 } // namespace
 
@@ -133,7 +138,7 @@ protected:
         Platform* platform = PlatformFactory::create(&backend);
         ASSERT_NE(platform, nullptr);
         BlobStore::attach(store, *platform);
-        Driver* driver = platform->createDriver(nullptr, Platform::DriverConfig{});
+        Driver* driver = platform->createDriver(nullptr, getDriverConfig());
         ASSERT_NE(driver, nullptr);
         driver->terminate();
         delete driver;
@@ -170,8 +175,7 @@ TEST_F(VulkanPipelineCacheTest, LoadsWhatItSaved) {
     loaded->value = bytes;
     createAndTerminateDriver(loaded);
 
-    // The new driver read the cache, and its own terminate() wrote nothing: a driver that had
-    // rejected the data would have started empty and saved a different (smaller) cache.
+    // The new driver read the cache and compiled nothing, so its terminate() wrote nothing.
     std::lock_guard const guard(loaded->lock);
     EXPECT_GE(loaded->retrieves, 1);
     EXPECT_EQ(loaded->inserts, 0);
@@ -181,10 +185,33 @@ TEST_F(VulkanPipelineCacheTest, LoadsWhatItSaved) {
 TEST_F(VulkanPipelineCacheTest, IgnoresDataFromSomewhereElse) {
     SKIP_IF_NOT(Backend::VULKAN, "The pipeline cache is a Vulkan backend feature");
 
-    // Not a pipeline cache this driver wrote: its header does not match, so the driver must
-    // ignore it and the engine must still come up.
+    // Not a pipeline cache at all: the engine must still come up.
     auto store = std::make_shared<BlobStore>();
     store->value.assign(256, uint8_t(0xAB));
+    createAndTerminateDriver(store);
+
+    std::lock_guard const guard(store->lock);
+    EXPECT_GE(store->retrieves, 1);
+}
+
+TEST_F(VulkanPipelineCacheTest, IgnoresCacheFromAnotherDevice) {
+    SKIP_IF_NOT(Backend::VULKAN, "The pipeline cache is a Vulkan backend feature");
+
+    // A real cache whose pipelineCacheUUID no longer matches, as after a driver update: rejected
+    // before it reaches the driver, which may not ignore it as the spec requires.
+    auto saved = std::make_shared<BlobStore>();
+    BlobStore::attach(saved, *getPlatform());
+    drawThenSettle();
+    std::vector<uint8_t> stale;
+    {
+        std::lock_guard const guard(saved->lock);
+        ASSERT_GE(saved->value.size(), CACHE_HEADER_SIZE);
+        stale = saved->value;
+    }
+    stale[CACHE_UUID_OFFSET] ^= 0xFF;
+
+    auto store = std::make_shared<BlobStore>();
+    store->value = stale;
     createAndTerminateDriver(store);
 
     std::lock_guard const guard(store->lock);
