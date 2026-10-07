@@ -214,7 +214,6 @@ VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VulkanPlatform& pla
         // A matching header does not guarantee the driver takes the data.
         createInfo.initialDataSize = 0;
         createInfo.pInitialData = nullptr;
-        cache = VK_NULL_HANDLE;
         result = vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &cache);
     }
     if (result == VK_SUCCESS) {
