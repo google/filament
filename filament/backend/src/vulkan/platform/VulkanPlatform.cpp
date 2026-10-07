@@ -277,7 +277,10 @@ ExtensionSet getInstanceExtensions(ExtensionSet const& externallyRequiredExts,
     return exts;
 }
 
-ExtensionSet getDeviceExtensions(VkPhysicalDevice device, bool enableDebugUtils = false) {
+// enablePipelineCreationFeedback: the pipeline cache persistence reads the feedback to tell which
+// pipelines were compiled.
+ExtensionSet getDeviceExtensions(VkPhysicalDevice device, bool enableDebugUtils,
+        bool enablePipelineCreationFeedback) {
     ExtensionSet const TARGET_EXTS = {
     // We only support external image for Android for now, but nothing bars us from
     // supporting other platforms.
@@ -314,7 +317,9 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device, bool enableDebugUtils 
         VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME,
         VK_EXT_COLOR_WRITE_ENABLE_EXTENSION_NAME,
 
+#if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
         VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME,
+#endif
     };
     ExtensionSet exts;
     // Identify supported physical device extensions
@@ -330,7 +335,9 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device, bool enableDebugUtils 
         }
 
         if (setContains(TARGET_EXTS, name) ||
-                (enableDebugUtils && name == VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
+                (enableDebugUtils && name == VK_EXT_DEBUG_MARKER_EXTENSION_NAME) ||
+                (enablePipelineCreationFeedback &&
+                        name == VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME)) {
             setInsert(exts, name);
         }
     }
@@ -362,15 +369,6 @@ std::tuple<ExtensionSet, ExtensionSet> pruneExtensions(VkPhysicalDevice device,
     if (driverConfig.stereoscopicType != StereoscopicType::MULTIVIEW) {
         setErase(newDeviceExts, VK_KHR_MULTIVIEW_EXTENSION_NAME);
     }
-
-#if !FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
-    // Outside of shader debugging, only the pipeline cache persistence reads the feedback.
-    if (!driverConfig.featureFlagManager ||
-            !driverConfig.featureFlagManager->features.backend.vulkan
-                     .enable_pipeline_cache_persistence) {
-        setErase(newDeviceExts, VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME);
-    }
-#endif
 
     return std::tuple(newInstExts, newDeviceExts);
 }
@@ -710,7 +708,11 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // If a shared context is not used, we will use our own provided list; otherwise, we do not
     // assume any extensions.
     if (!mImpl->mSharedContext) {
-        deviceExts = getDeviceExtensions(mImpl->mPhysicalDevice, enableDebugUtils);
+        bool const enablePipelineCreationFeedback = driverConfig.featureFlagManager &&
+                driverConfig.featureFlagManager->features.backend.vulkan
+                        .enable_pipeline_cache_persistence;
+        deviceExts = getDeviceExtensions(mImpl->mPhysicalDevice, enableDebugUtils,
+                enablePipelineCreationFeedback);
         auto [prunedInstExts, prunedDeviceExts] =
                 pruneExtensions(mImpl->mPhysicalDevice, driverConfig, instExts, deviceExts);
         instExts = prunedInstExts;
