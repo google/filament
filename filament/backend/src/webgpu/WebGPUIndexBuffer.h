@@ -35,7 +35,8 @@ namespace filament::backend {
  */
 class WebGPUIndexBuffer final : public HwIndexBuffer, public WebGPUBufferBase {
 public:
-    WebGPUIndexBuffer(wgpu::Device const&, uint8_t elementSize, uint32_t indexCount);
+    WebGPUIndexBuffer(wgpu::Device const&, uint8_t elementSize, uint32_t indexCount,
+            bool asynchronous = false);
 
     [[nodiscard]] wgpu::IndexFormat getIndexFormat() const { return mIndexFormat; }
 

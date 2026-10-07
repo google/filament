@@ -93,7 +93,8 @@ void BackendTest::initializeDriver() {
     assert_invariant(static_cast<uint8_t>(backend) == static_cast<uint8_t>(sBackend));
     Platform::DriverConfig driverConfig;
     // Enable asynchronous mode for backends that support it.
-    if (sBackend == Backend::METAL || sBackend == Backend::OPENGL) {
+    if (sBackend == Backend::METAL || sBackend == Backend::OPENGL ||
+            sBackend == Backend::WEBGPU) {
         driverConfig.asynchronousMode = Platform::AsynchronousMode::THREAD_PREFERRED;
     }
     driver = mPlatform->createDriver(nullptr, driverConfig);
