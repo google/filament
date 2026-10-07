@@ -84,10 +84,12 @@ struct BlobStore {
 // frame), with some margin.
 constexpr int SETTLE_FRAMES = 130;
 
-// VkPipelineCacheHeaderVersionOne, without depending on the Vulkan headers: 32 bytes, with
-// pipelineCacheUUID at offset 16.
-constexpr size_t CACHE_HEADER_SIZE = 32;
-constexpr size_t CACHE_UUID_OFFSET = 16;
+// The backend's blob, without depending on its sources or the Vulkan headers: a 44-byte header
+// with driverVersion at offset 20, then the driver's data, which starts with its own 32-byte
+// VkPipelineCacheHeaderVersionOne.
+constexpr size_t BLOB_HEADER_SIZE = 44;
+constexpr size_t BLOB_DRIVER_VERSION_OFFSET = 20;
+constexpr size_t DRIVER_HEADER_SIZE = 32;
 
 } // namespace
 
@@ -206,25 +208,48 @@ TEST_F(VulkanPipelineCacheTest, IgnoresDataFromSomewhereElse) {
     EXPECT_GE(store->retrieves, 1);
 }
 
-TEST_F(VulkanPipelineCacheTest, IgnoresCacheFromAnotherDevice) {
+// A real cache, saved by the fixture's driver, then changed by `change`.
+static std::vector<uint8_t> savedCacheChangedBy(std::shared_ptr<BlobStore> const& saved,
+        void (*change)(std::vector<uint8_t>&)) {
+    std::lock_guard const guard(saved->lock);
+    std::vector<uint8_t> blob = saved->value;
+    change(blob);
+    return blob;
+}
+
+TEST_F(VulkanPipelineCacheTest, IgnoresCacheFromAnotherDriver) {
     SKIP_IF_NOT(Backend::VULKAN, "The pipeline cache is a Vulkan backend feature");
 
-    // A real cache whose pipelineCacheUUID no longer matches, as after a driver update: rejected
-    // before it reaches the driver, which may not ignore it as the spec requires.
+    // As after a driver update that kept the pipelineCacheUUID: rejected before it reaches the
+    // driver, which may not ignore it as the spec requires.
     auto saved = std::make_shared<BlobStore>();
     BlobStore::attach(saved, *getPlatform());
     drawThenSettle();
     ASSERT_TRUE(saved->waitForInsert());
-    std::vector<uint8_t> stale;
-    {
-        std::lock_guard const guard(saved->lock);
-        ASSERT_GE(saved->value.size(), CACHE_HEADER_SIZE);
-        stale = saved->value;
-    }
-    stale[CACHE_UUID_OFFSET] ^= 0xFF;
-
     auto store = std::make_shared<BlobStore>();
-    store->value = stale;
+    store->value = savedCacheChangedBy(saved, [](std::vector<uint8_t>& blob) {
+        ASSERT_GE(blob.size(), BLOB_HEADER_SIZE + DRIVER_HEADER_SIZE);
+        blob[BLOB_DRIVER_VERSION_OFFSET] ^= 0xFF;
+    });
+    createAndTerminateDriver(store);
+
+    std::lock_guard const guard(store->lock);
+    EXPECT_GE(store->retrieves, 1);
+}
+
+TEST_F(VulkanPipelineCacheTest, IgnoresCorruptedCache) {
+    SKIP_IF_NOT(Backend::VULKAN, "The pipeline cache is a Vulkan backend feature");
+
+    // As after a torn write: only the hash in the blob's header can tell.
+    auto saved = std::make_shared<BlobStore>();
+    BlobStore::attach(saved, *getPlatform());
+    drawThenSettle();
+    ASSERT_TRUE(saved->waitForInsert());
+    auto store = std::make_shared<BlobStore>();
+    store->value = savedCacheChangedBy(saved, [](std::vector<uint8_t>& blob) {
+        ASSERT_GE(blob.size(), BLOB_HEADER_SIZE + DRIVER_HEADER_SIZE);
+        blob.back() ^= 0xFF;
+    });
     createAndTerminateDriver(store);
 
     std::lock_guard const guard(store->lock);

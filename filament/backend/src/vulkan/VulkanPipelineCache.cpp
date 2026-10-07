@@ -51,10 +51,29 @@ namespace {
 
 using utils::JobSystem;
 
-// The blob-cache key the driver's VkPipelineCache is stored under. One entry: the data carries its
-// own header (vendor, device and pipelineCacheUUID), checked before it is used. Engines on
-// different devices in one application therefore replace each other's cache.
+// The blob-cache key the driver's VkPipelineCache is stored under. One entry: the blob says which
+// device and driver wrote it, and is checked before it is used. Engines on different devices in
+// one application therefore replace each other's cache.
 constexpr char PIPELINE_CACHE_KEY[] = "filament.vulkan.VkPipelineCache";
+
+// Precedes the driver's data in the blob, as in "Creating a robust pipeline cache with Vulkan"
+// (Arseny Kapoulkine): the driver's own header misses a truncated or corrupted blob, a driver
+// update that keeps the pipelineCacheUUID, and a 32-bit and a 64-bit process on one device.
+struct PipelineCacheBlobHeader {
+    uint32_t magic;          // PIPELINE_CACHE_MAGIC
+    uint32_t dataSize;       // of the driver's data that follows
+    uint32_t dataHash;       // hashPipelineCache() of it
+    uint32_t vendorID;
+    uint32_t deviceID;
+    uint32_t driverVersion;
+    uint32_t driverABI;      // sizeof(void*)
+    uint8_t pipelineCacheUUID[VK_UUID_SIZE];
+};
+// No padding: headers are compared with memcmp.
+static_assert(sizeof(PipelineCacheBlobHeader) == 7 * sizeof(uint32_t) + VK_UUID_SIZE);
+
+// Changes with the layout above.
+constexpr uint32_t PIPELINE_CACHE_MAGIC = 0x31435646; // "FVC1"
 
 // Flush events without a newly compiled pipeline (on either thread) before gc() writes the cache.
 // A scene's first frames compile pipelines frame after frame, and writing inside that burst would
@@ -63,24 +82,51 @@ constexpr char PIPELINE_CACHE_KEY[] = "filament.vulkan.VkPipelineCache";
 // the application's insertBlob (typically a file write) stalls the driver thread.
 constexpr uint64_t PIPELINE_CACHE_SAVE_QUIET = 120;
 
-// Whether data is a pipeline cache written by this device and driver. The spec has a driver
-// ignore anything else, but not every driver does.
-bool isCompatiblePipelineCache(std::vector<uint8_t> const& data,
-        VkPhysicalDeviceProperties const& properties) {
-    VkPipelineCacheHeaderVersionOne header;
-    if (data.size() < sizeof(header)) {
-        return false;
-    }
-    memcpy(&header, data.data(), sizeof(header));
-    return header.headerSize == sizeof(header) &&
-           header.headerVersion == VK_PIPELINE_CACHE_HEADER_VERSION_ONE &&
-           header.vendorID == properties.vendorID &&
-           header.deviceID == properties.deviceID &&
-           memcmp(header.pipelineCacheUUID, properties.pipelineCacheUUID, VK_UUID_SIZE) == 0;
+uint32_t hashPipelineCache(uint8_t const* data, size_t size) {
+    return utils::hash::murmurSlow(data, size, 0);
 }
 
-uint32_t hashPipelineCache(std::vector<uint8_t> const& data) {
-    return utils::hash::murmurSlow(data.data(), data.size(), 0);
+PipelineCacheBlobHeader makePipelineCacheBlobHeader(uint8_t const* data, size_t size,
+        VkPhysicalDeviceProperties const& properties) {
+    PipelineCacheBlobHeader header = {
+        .magic = PIPELINE_CACHE_MAGIC,
+        .dataSize = uint32_t(size),
+        .dataHash = hashPipelineCache(data, size),
+        .vendorID = properties.vendorID,
+        .deviceID = properties.deviceID,
+        .driverVersion = properties.driverVersion,
+        .driverABI = sizeof(void*),
+    };
+    memcpy(header.pipelineCacheUUID, properties.pipelineCacheUUID, VK_UUID_SIZE);
+    return header;
+}
+
+// Whether blob holds a pipeline cache written by this device and driver, in this ABI, intact. The
+// spec has a driver ignore anything else, but not every driver does.
+bool isUsablePipelineCache(std::vector<uint8_t> const& blob,
+        VkPhysicalDeviceProperties const& properties) {
+    PipelineCacheBlobHeader stored;
+    VkPipelineCacheHeaderVersionOne driverHeader;
+    if (blob.size() < sizeof(stored) + sizeof(driverHeader)) {
+        return false;
+    }
+    memcpy(&stored, blob.data(), sizeof(stored));
+    uint8_t const* const data = blob.data() + sizeof(stored);
+    size_t const size = blob.size() - sizeof(stored);
+    if (stored.magic != PIPELINE_CACHE_MAGIC || stored.dataSize != size) {
+        return false;
+    }
+    PipelineCacheBlobHeader const expected = makePipelineCacheBlobHeader(data, size, properties);
+    if (memcmp(&stored, &expected, sizeof(stored)) != 0) {
+        return false;
+    }
+    memcpy(&driverHeader, data, sizeof(driverHeader));
+    return driverHeader.headerSize == sizeof(driverHeader) &&
+           driverHeader.headerVersion == VK_PIPELINE_CACHE_HEADER_VERSION_ONE &&
+           driverHeader.vendorID == properties.vendorID &&
+           driverHeader.deviceID == properties.deviceID &&
+           memcmp(driverHeader.pipelineCacheUUID, properties.pipelineCacheUUID,
+                   VK_UUID_SIZE) == 0;
 }
 
 enum DynamicStateBits : uint16_t {
@@ -185,32 +231,35 @@ VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VulkanPlatform& pla
           mHasDynamicState2(context.isExtendedDynamicState2Supported() && context.isPipelineDynamicStateEnabled()),
           mHasColorWriteEnable(context.isColorWriteEnableSupported() && context.isPipelineDynamicStateEnabled()),
           mContext(context) {
-    std::vector<uint8_t> initialData;
+    std::vector<uint8_t> blob;
     if (mContext.isPipelineCachePersistenceEnabled() && mPlatform.hasRetrieveBlobFunc()) {
         uint8_t probe = 0;
         size_t const size = mPlatform.retrieveBlob(PIPELINE_CACHE_KEY, sizeof(PIPELINE_CACHE_KEY),
                 &probe, 0);
         if (size > 0) {
-            initialData.resize(size);
+            blob.resize(size);
             if (mPlatform.retrieveBlob(PIPELINE_CACHE_KEY, sizeof(PIPELINE_CACHE_KEY),
-                        initialData.data(), size) != size) {
-                initialData.clear();
+                        blob.data(), size) != size) {
+                blob.clear();
             }
         }
-        if (!isCompatiblePipelineCache(initialData, mContext.getPhysicalDeviceProperties())) {
-            initialData.clear();
+        if (!isUsablePipelineCache(blob, mContext.getPhysicalDeviceProperties())) {
+            blob.clear();
         }
     }
+    bool const hasInitialData = !blob.empty();
     VkPipelineCacheCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-        .initialDataSize = initialData.size(),
-        .pInitialData = initialData.empty() ? nullptr : initialData.data(),
+        .initialDataSize = hasInitialData ? blob.size() - sizeof(PipelineCacheBlobHeader) : 0,
+        .pInitialData = hasInitialData ? blob.data() + sizeof(PipelineCacheBlobHeader) : nullptr,
     };
     VkPipelineCache cache = VK_NULL_HANDLE;
     VkResult result = vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &cache);
-    if (result == VK_SUCCESS) {
-        mSavedCacheHash = initialData.empty() ? 0 : hashPipelineCache(initialData);
-    } else if (!initialData.empty()) {
+    if (result == VK_SUCCESS && hasInitialData) {
+        PipelineCacheBlobHeader header;
+        memcpy(&header, blob.data(), sizeof(header));
+        mSavedCacheHash = header.dataHash;
+    } else if (result != VK_SUCCESS && hasInitialData) {
         // A matching header does not guarantee the driver takes the data.
         createInfo.initialDataSize = 0;
         createInfo.pInitialData = nullptr;
@@ -800,26 +849,31 @@ bool VulkanPipelineCache::savePipelineCache() noexcept {
             mPipelineCache == VK_NULL_HANDLE) {
         return true;
     }
-    std::vector<uint8_t> data;
+    // The driver's data goes after the header, which is filled in once its hash is known.
+    constexpr size_t HEADER_SIZE = sizeof(PipelineCacheBlobHeader);
+    std::vector<uint8_t> blob;
+    size_t size = 0;
     VkResult result = VK_INCOMPLETE;
     // A second try covers pipelines created, on either thread, between the two calls.
     for (int attempt = 0; attempt < 2 && result == VK_INCOMPLETE; attempt++) {
-        size_t size = 0;
+        size = 0;
         if (vkGetPipelineCacheData(mDevice, mPipelineCache, &size, nullptr) != VK_SUCCESS) {
             return false;
         }
-        data.resize(size);
-        result = vkGetPipelineCacheData(mDevice, mPipelineCache, &size, data.data());
-        data.resize(size);
+        blob.resize(HEADER_SIZE + size);
+        result = vkGetPipelineCacheData(mDevice, mPipelineCache, &size, blob.data() + HEADER_SIZE);
     }
-    if (result != VK_SUCCESS || data.empty()) {
+    if (result != VK_SUCCESS || size == 0) {
         return false;
     }
-    uint32_t const hash = hashPipelineCache(data);
-    if (hash != mSavedCacheHash) {
-        mPlatform.insertBlob(PIPELINE_CACHE_KEY, sizeof(PIPELINE_CACHE_KEY), data.data(),
-                data.size());
-        mSavedCacheHash = hash;
+    blob.resize(HEADER_SIZE + size);
+    PipelineCacheBlobHeader const header = makePipelineCacheBlobHeader(blob.data() + HEADER_SIZE,
+            size, mContext.getPhysicalDeviceProperties());
+    if (header.dataHash != mSavedCacheHash) {
+        memcpy(blob.data(), &header, HEADER_SIZE);
+        mPlatform.insertBlob(PIPELINE_CACHE_KEY, sizeof(PIPELINE_CACHE_KEY), blob.data(),
+                blob.size());
+        mSavedCacheHash = header.dataHash;
     }
     return true;
 }
