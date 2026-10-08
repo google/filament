@@ -70,6 +70,9 @@ using namespace utils;
 namespace filament {
 namespace {
 
+// Maximum number of draw instances of a renderable when not using an InstanceBuffer.
+constexpr size_t MAX_INSTANCE_COUNT = 32767u;
+
 RenderableManager::Builder::MorphType morphTargetBufferToBuildType(
         const MorphTargetBuffer* const buffer, size_t const morphTargetCount) {
     using MorphType = RenderableManager::Builder::MorphType;
@@ -483,7 +486,7 @@ RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engine, E
 }
 
 RenderableManager::Builder& RenderableManager::Builder::instances(size_t const instanceCount) noexcept {
-    mImpl->mInstanceCount = clamp(static_cast<unsigned int>(instanceCount), 1u, 32767u);
+    mImpl->mInstanceCount = clamp(instanceCount, size_t(1), MAX_INSTANCE_COUNT);
     return *this;
 }
 
@@ -1181,6 +1184,31 @@ size_t FRenderableManager::getInstanceCount(Instance const instance) const noexc
         return info.count;
     }
     return 0;
+}
+
+void FRenderableManager::setInstanceCount(Instance const instance, size_t const instanceCount) {
+    if (UTILS_VERY_UNLIKELY(!instance)) {
+        return;
+    }
+
+    InstancesInfo& info = mManager[instance].instances;
+    // When transforms are supplied via an InstanceBuffer, the count is limited by both
+    // CONFIG_MAX_INSTANCES and the buffer's capacity (same rules as Builder::build()).
+    size_t const maxCount = info.buffer ?
+            std::min(size_t(CONFIG_MAX_INSTANCES), info.buffer->getInstanceCount()) :
+            MAX_INSTANCE_COUNT;
+    if (info.buffer) {
+        FILAMENT_CHECK_PRECONDITION(instanceCount <= maxCount)
+                << "instance count (" << instanceCount
+                << ") must be less than or equal to " << maxCount
+                << " when supplying transforms via an InstanceBuffer.";
+    }
+    // An instance count of 0 is allowed and means the renderable is not drawn.
+    uint16_t const newCount = uint16_t(std::min(instanceCount, maxCount));
+    if (info.count != newCount) {
+        info.count = newCount;
+        mManager.notifyChange(getEntity(instance));
+    }
 }
 
 } // namespace filament

@@ -1,0 +1,89 @@
+plugins {
+    id 'com.android.application'
+    id 'com.google.android.filament-tools'
+}
+
+project.ext.isSample = true
+
+kotlin {
+    jvmToolchain(versions.jdk)
+}
+
+// The C++ samples request assets with the same relative paths as on desktop, where they are laid
+// out by samples/CMakeLists.txt. AndroidAssetLoader strips the leading "assets/", so
+// "assets/ibl/..." maps to "ibl/..." and "textures/..." stays as is in the APK.
+def generatedAssetsDir = project.layout.projectDirectory.dir("src/main/assets")
+
+// Generate the default IBL (assets/ibl/lightroom_14b) with the same cmgen arguments as desktop.
+filament {
+    iblInputFile = project.layout.projectDirectory.file(
+            "../../../third_party/environments/lightroom_14b.hdr")
+    iblOutputDir = generatedAssetsDir.dir("ibl")
+    cmgenArgs = "--quiet --format=ktx --size=256 --extract-blur=0.1 -x " +
+            generatedAssetsDir.dir("ibl/lightroom_14b").asFile.absolutePath
+}
+
+// Stage the textures under textures/, which is where the samples look for them.
+def stageTextures = tasks.register("stageSampleTextures", Sync) {
+    from "../../../third_party/textures"
+    into generatedAssetsDir.dir("textures")
+    exclude '**/URL.txt', '**/CC0.html'
+}
+preBuild.dependsOn stageTextures
+
+clean.doFirst {
+    delete "src/main/assets"
+}
+
+android {
+    namespace 'com.google.android.filament.cppviewer'
+    compileSdk versions.compileSdk
+
+    defaultConfig {
+        applicationId "com.google.android.filament.cppviewer"
+        minSdk versions.minSdk
+        targetSdk versions.targetSdk
+        versionCode 1
+        versionName "1.0"
+
+        externalNativeBuild {
+            cmake {
+                arguments "-DFILAMENT_DIST_DIR=${rootProject.ext.filamentPath}".toString()
+            }
+        }
+
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            version "3.19.0+"
+            path "CMakeLists.txt"
+        }
+    }
+
+    androidResources {
+        ignoreAssetsPattern '!.svn:!.git:!*.txt:!*.html:!*.md'
+    }
+
+    sourceSets {
+        main {
+            assets.srcDirs += [
+                "../../../assets",
+                "../../../third_party/models"
+            ]
+            assets.exclude '**/URL.txt', '**/CC0.html', 'URL.txt', 'CC0.html'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility versions.jdk
+        targetCompatibility versions.jdk
+    }
+}
+
+dependencies {
+    implementation deps.kotlin
+}

@@ -306,10 +306,20 @@ RenderPass::Command* RenderPass::instanceify(
 
     auto equivalent = [](Command const& lhs, Command const& rhs) {
         // This predicate must also filter out commands that are not eligible for auto-instancing.
-        if (UTILS_UNLIKELY(lhs.info.hasSkinning || lhs.info.hasMorphing || lhs.info.instanceCount > 1)) {
+        // Hybrid-instanced commands are excluded even when their instanceCount is 1, because
+        // their info.index refers to the InstanceBuffer's slots in the per-renderable UBO, not to
+        // an entry of the scene's UBO SoA (which is what the processor below reads from).
+        // Commands using an `instanced` material are excluded because such shaders read
+        // objectUniforms.data[0] for non-hybrid draws (see surface_instancing.glsl), so all
+        // merged instances would use the first renderable's data.
+        if (UTILS_UNLIKELY(lhs.info.hasSkinning || lhs.info.hasMorphing ||
+                lhs.info.hasHybridInstancing || lhs.info.hasInstancedMaterial ||
+                lhs.info.instanceCount > 1)) {
             return false;
         }
-        if (UTILS_UNLIKELY(rhs.info.hasSkinning || rhs.info.hasMorphing || rhs.info.instanceCount > 1)) {
+        if (UTILS_UNLIKELY(rhs.info.hasSkinning || rhs.info.hasMorphing ||
+                rhs.info.hasHybridInstancing || rhs.info.hasInstancedMaterial ||
+                rhs.info.instanceCount > 1)) {
             return false;
         }
         // Now check for equality
@@ -696,6 +706,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
             cmd.info.count = primitive.getCount();
             cmd.info.type = primitive.getPrimitiveType();
             cmd.info.isIndexed = primitive.isIndexed();
+            cmd.info.hasInstancedMaterial = ma->isInstanced();
             cmd.info.morphingOffset = primitive.getMorphingBufferOffset();
 // FIXME: morphtarget buffer
 //            cmd.info.morphTargetBuffer = morphing.morphTargetBuffer ?

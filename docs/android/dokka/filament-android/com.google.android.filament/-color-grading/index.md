@@ -80,7 +80,7 @@ Here are the default color grading options:
 | [Builder](-builder/index.md) | [main]<br>open class [Builder](-builder/index.md)<br>Use Builder to construct a ColorGrading object instance |
 | [LutFormat](-lut-format/index.md) | [main]<br>enum [LutFormat](-lut-format/index.md) |
 | [QualityLevel](-quality-level/index.md) | [main]<br>enum [QualityLevel](-quality-level/index.md) |
-| [ToneMapping](-tone-mapping/index.md) | [main]<br>enum [ToneMapping](-tone-mapping/index.md)<br>List of available tone-mapping operators. |
+| [ToneMapping](-tone-mapping/index.md) | [main]<br>enum [~~ToneMapping~~](-tone-mapping/index.md)<br>List of available tone-mapping operators. |
 
 ## Functions
 
