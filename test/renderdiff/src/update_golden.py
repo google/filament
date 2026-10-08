@@ -180,8 +180,9 @@ if __name__ == "__main__":
   parser.add_argument('--branch', help='Branch of the golden repo to write to')
   parser.add_argument('--golden-repo-token', help='Access token for the golden repo')
   parser.add_argument('--push-to-remote', action="store_true", help='Push the golden repo changes to remote')
+  # generate.sh builds diffimg into the debug tree, alongside the renderers.
   parser.add_argument('--diffimg', help='Path to the diffimg tool',
-                      default='./out/cmake-release/tools/diffimg/diffimg')
+                      default='./out/cmake-debug/tools/diffimg/diffimg')
 
   # write-to-branch mode
   parser.add_argument('--source', help='Directory containing the new goldens')
@@ -203,15 +204,15 @@ if __name__ == "__main__":
   diffimg_path = args.diffimg
   # Try to find diffimg if default path doesn't exist, mainly for local interactive use convenience
   if not os.path.exists(diffimg_path):
-    # fallback check for debug build
-    debug_path = './out/cmake-debug/tools/diffimg/diffimg'
-    if os.path.exists(debug_path):
-      diffimg_path = debug_path
+    # fallback check for a release build
+    release_path = './out/cmake-release/tools/diffimg/diffimg'
+    if os.path.exists(release_path):
+      diffimg_path = release_path
 
   # This is the write-to-branch mode
   if args.branch and args.source and args.commit_msg:
     if not os.path.exists(diffimg_path):
-      print(f"Error: diffimg tool not found at {diffimg_path}. Please build it first (e.g., ./build.sh release diffimg)")
+      print(f"Error: diffimg tool not found at {diffimg_path}. Please build it first (e.g., ./build.sh debug diffimg)")
       sys.exit(1)
     assert os.path.exists(args.source), f'{args.source} (--source) directory not found'
     deletes, updates = _get_deletes_updates(args.source, base_golden_dir, diffimg_path)
@@ -230,7 +231,7 @@ if __name__ == "__main__":
   # Else, we're in interactive mode of write-to-branch (for local execution).
   else:
     if not os.path.exists(diffimg_path):
-      print(f"Error: diffimg tool not found at {diffimg_path}. Please build it first (e.g., ./build.sh release diffimg)")
+      print(f"Error: diffimg tool not found at {diffimg_path}. Please build it first (e.g., ./build.sh debug diffimg)")
       sys.exit(1)
     config = _interactive_mode(base_golden_dir, diffimg_path)
     _do_update(golden_manager, config)

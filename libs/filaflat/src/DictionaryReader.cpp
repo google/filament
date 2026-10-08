@@ -30,6 +30,21 @@ using namespace filamat;
 
 namespace filaflat {
 
+namespace {
+
+// Each blob is stored as an 8-byte length header followed by its bytes, so a chunk can hold at
+// most one blob per 8 bytes remaining. Counts beyond that should be rejected before reserve(),
+// which allocates the whole array up front.
+bool isBlobCountPlausible(uint32_t const blobCount,
+        uint8_t const* const cursor, uint8_t const* const end) noexcept {
+    if (cursor > end) {
+        return false;
+    }
+    return blobCount <= size_t(end - cursor) / sizeof(uint64_t);
+}
+
+} // anonymous namespace
+
 bool DictionaryReader::unflatten(ChunkContainer const& container,
         ChunkContainer::Type dictionaryTag,
         BlobDictionary& dictionary) {
@@ -49,6 +64,9 @@ bool DictionaryReader::unflatten(ChunkContainer const& container,
         if (!unflattener.read(&blobCount)) {
             return false;
         }
+        if (!isBlobCountPlausible(blobCount, unflattener.getCursor(), end)) {
+            return false;
+        }
 
         dictionary.reserve(blobCount);
         for (uint32_t i = 0; i < blobCount; i++) {
@@ -63,8 +81,13 @@ bool DictionaryReader::unflatten(ChunkContainer const& container,
             assert_invariant((intptr_t(compressed) % 8) == 0);
 
 #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
+            // GetDecodedBufferSize() returns the blob's declared decoded size. It cannot
+            // validate it because it does not know the input size. smol-v's largest possible
+            // expansion is 8x, from a bunched OpMemberDecorate run where each member costs two
+            // input bytes and emits four output words. Dividing keeps the check free of overflow.
+            constexpr size_t MAX_SMOLV_EXPANSION = 8;
             size_t spirvSize = smolv::GetDecodedBufferSize(compressed, compressedSize);
-            if (spirvSize == 0) {
+            if (spirvSize == 0 || spirvSize / MAX_SMOLV_EXPANSION > compressedSize) {
                 return false;
             }
             ShaderContent spirv(spirvSize);
@@ -81,6 +104,9 @@ bool DictionaryReader::unflatten(ChunkContainer const& container,
     } else if (dictionaryTag == ChunkType::DictionaryMetalLibrary) {
         uint32_t blobCount;
         if (!unflattener.read(&blobCount)) {
+            return false;
+        }
+        if (!isBlobCountPlausible(blobCount, unflattener.getCursor(), end)) {
             return false;
         }
 

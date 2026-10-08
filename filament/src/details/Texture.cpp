@@ -345,7 +345,7 @@ FTexture::FTexture(FEngine& engine, const Builder& builder)
         // mHandle and mHandleForSampling will be created in setExternalImage()
         // If this Texture is used for sampling before setExternalImage() is called,
         // we'll lazily create a 1x1 placeholder texture.
-        mCreationStatus.store(CreationStatus::CREATED, std::memory_order_relaxed);
+        mCreationState.setCreated();
         return;
     }
 
@@ -364,14 +364,7 @@ FTexture::FTexture(FEngine& engine, const Builder& builder)
                 /* userParam1 */ this,
                 /* userParam2 */ builder->mAsyncCreationUserData,
                 /* onCountdownComplete */ [this](backend::AsyncCallStatus const status) {
-                    // Always leaves CREATING, even when canceled: FEngine::destroy waits on that
-                    // to free the object, so one that stays CREATING is deferred forever.
-                    // `std::memory_order_relaxed` should be sufficient because no other variables
-                    // need to be visible to other threads in a strict sequence.
-                    mCreationStatus.store(status == backend::AsyncCallStatus::CANCELED
-                                    ? CreationStatus::CANCELED
-                                    : CreationStatus::CREATED,
-                            std::memory_order_relaxed);
+                    mCreationState.settle(status);
                 },
                 /* driver */ &engine.getDriver());
 
@@ -416,7 +409,7 @@ FTexture::FTexture(FEngine& engine, const Builder& builder)
         // In regular (non-asynchronous) mode, we know creation is complete as soon as all
         // creation-relevant API calls are recorded into the command stream, because subsequent API
         // calls will always be invoked after that (even including asynchronous version of APIs).
-        mCreationStatus.store(CreationStatus::CREATED, std::memory_order_relaxed);
+        mCreationState.setCreated();
     }
 
     mHandleForSampling = mHandle;

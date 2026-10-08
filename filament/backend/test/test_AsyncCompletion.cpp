@@ -131,6 +131,38 @@ struct ServiceThreadRelay : public CallbackHandler {
     std::atomic_bool relayed{ false };
 };
 
+// stopServiceThread() is protected, so the test names it through a derived class.
+struct ServiceThreadAccess : public DriverBase {
+    static void stop(DriverBase* driver) {
+        if constexpr (UTILS_HAS_THREADING) {
+            (driver->*&ServiceThreadAccess::stopServiceThread)();
+        }
+    }
+};
+
+// Runs each callback as soon as it is posted.
+struct InlineHandler : public CallbackHandler {
+    void post(void* user, Callback callback) override { callback(user); }
+};
+
+// Hands its callback back to the driver with another handler, as CountdownCallbackHandler::post()
+// does, so post() re-enters scheduleCallback().
+struct ForwardingHandler : public CallbackHandler {
+    ForwardingHandler(DriverBase* driver, CallbackHandler* next)
+            : driver(driver), next(next) {}
+
+    void post(void* user, Callback callback) override {
+        driver->scheduleCallback(next, user, callback);
+    }
+
+    DriverBase* driver;
+    CallbackHandler* next;
+};
+
+void countCallback(void* user) {
+    static_cast<std::atomic_int*>(user)->fetch_add(1, std::memory_order_relaxed);
+}
+
 } // namespace
 
 TEST_F(AsyncCompletionTest, ScheduleInvokesCallbackOnce) {
@@ -355,4 +387,55 @@ TEST_F(AsyncCompletionTest, PurgeAllDispatchesCallbacksHandedBackByTheServiceThr
     ASSERT_EQ(1u, statuses.size())
             << "a callback relayed by the ServiceThread was never dispatched";
     EXPECT_EQ(AsyncCallStatus::CANCELED, statuses[0]);
+}
+
+TEST_F(AsyncCompletionTest, StopServiceThreadDispatchesQueuedCallbacks) {
+    // OpenGL and Metal stop the ServiceThread right after draining the job queue, so the last jobs'
+    // callbacks are usually still queued when the stop is requested.
+    if constexpr (!UTILS_HAS_THREADING) {
+        GTEST_SKIP() << "there is no ServiceThread";
+    }
+
+    constexpr int count = 64;
+    std::atomic_int dispatched{ 0 };
+    InlineHandler handler;
+    for (int i = 0; i < count; ++i) {
+        getDriver()->scheduleCallback(&handler, &dispatched, countCallback);
+    }
+    ServiceThreadAccess::stop(getDriver());
+
+    EXPECT_EQ(count, dispatched.load()) << "the ServiceThread exited with callbacks still queued";
+}
+
+TEST_F(AsyncCompletionTest, CallbackScheduledAfterServiceThreadStopIsDispatched) {
+    // Code that runs after the stop can still schedule callbacks, and no thread drains the queue
+    // once the ServiceThread has joined.
+    if constexpr (!UTILS_HAS_THREADING) {
+        GTEST_SKIP() << "there is no ServiceThread";
+    }
+
+    ServiceThreadAccess::stop(getDriver());
+
+    std::atomic_int dispatched{ 0 };
+    InlineHandler handler;
+    getDriver()->scheduleCallback(&handler, &dispatched, countCallback);
+
+    EXPECT_EQ(1, dispatched.load()) << "a callback scheduled after the stop was dropped";
+}
+
+TEST_F(AsyncCompletionTest, ReentrantPostAfterServiceThreadStopIsDispatched) {
+    // After the stop, post() runs on the scheduling thread with the queue lock released, because
+    // CountdownCallbackHandler::post() schedules again and the lock is not recursive.
+    if constexpr (!UTILS_HAS_THREADING) {
+        GTEST_SKIP() << "there is no ServiceThread";
+    }
+
+    ServiceThreadAccess::stop(getDriver());
+
+    std::atomic_int dispatched{ 0 };
+    InlineHandler userHandler;
+    ForwardingHandler countdownHandler(getDriver(), &userHandler);
+    getDriver()->scheduleCallback(&countdownHandler, &dispatched, countCallback);
+
+    EXPECT_EQ(1, dispatched.load()) << "a callback forwarded after the stop was dropped";
 }

@@ -427,6 +427,7 @@ protected:
 
     // Stops the `ServiceThread`. This method is called during destruction but may be called
     // explicitly if earlier shutdown is needed. This method is idempotent.
+    // Afterwards, scheduleCallback() calls the handler's post() on the calling thread.
     void stopServiceThread() noexcept;
 
 private:

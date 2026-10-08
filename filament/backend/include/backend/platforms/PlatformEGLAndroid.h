@@ -130,6 +130,12 @@ protected:
     void preCommit() noexcept override;
 
     /**
+     * Whether `EGL_ANDROID_presentation_time` is available.
+     * @return true if the presentation time can be set, false otherwise
+     */
+    bool isPresentationTimeSupported() const noexcept override;
+
+    /**
      * Set the presentation time using `eglPresentationTimeANDROID`
      * @param presentationTimeInNanosecond
      */

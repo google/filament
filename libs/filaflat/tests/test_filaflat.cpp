@@ -28,6 +28,7 @@
 
 #include <vector>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 
 using namespace filaflat;
@@ -307,6 +308,208 @@ TEST_F(FilaflatSecurityTest, SmolvDecodeTruncatedSizeNoOverflow) {
                 << " bytes past the end of the output buffer!";
     }
 }
+
+#endif // FILAMENT_DRIVER_SUPPORTS_VULKAN
+
+
+// 7. Unbounded allocation from attacker-controlled dictionary counts (b/562964630)
+// `reserve()` runs before a single blob is read, so a declared count never has to be backed by
+// actual data. The loop's bounds checks are sound but they all run *after* the allocation.
+
+// Records the largest single allocation while in scope. An allocation bug needs this: the
+// vulnerable code returns false just like the fixed code does, and on Linux a multi-gigabyte
+// request usually succeeds lazily through overcommit instead of throwing, so neither the return
+// value nor a crash is a dependable signal.
+namespace {
+
+size_t gLargestAllocation = 0;
+bool gRecording = false;
+
+class AllocationRecorder {
+public:
+    AllocationRecorder() {
+        gLargestAllocation = 0;
+        gRecording = true;
+    }
+    ~AllocationRecorder() { gRecording = false; }
+    size_t largest() const { return gLargestAllocation; }
+};
+
+} // namespace
+
+void* operator new(size_t size) {
+    if (gRecording && size > gLargestAllocation) {
+        gLargestAllocation = size;
+    }
+    void* const p = malloc(size ? size : 1);
+    if (!p) {
+        // Filament also builds with -fno-exceptions, so do not throw std::bad_alloc here.
+        abort();
+    }
+    return p;
+}
+
+void operator delete(void* p) noexcept { free(p); }
+void operator delete(void* p, size_t) noexcept { free(p); }
+
+
+// Chunk layout is [type u64][size u32][payload]. Blobs are padded to an 8-byte offset from the
+// start of the file by filamat's Flattener, but Unflattener::skipAlignmentPadding() pads to an
+// absolute 8-byte address, so the two only agree when the buffer itself is 8-byte aligned.
+static std::vector<uint8_t> finishChunk(filamat::ChunkType type, std::vector<uint8_t>&& fileData) {
+    const uint32_t payloadSize = uint32_t(fileData.size() - 12);
+    for (int i = 0; i < 8; i++) fileData[i] = uint8_t((uint64_t(type) >> (8 * i)) & 0xFF);
+    for (int i = 0; i < 4; i++) fileData[8 + i] = uint8_t((payloadSize >> (8 * i)) & 0xFF);
+    return std::move(fileData);
+}
+
+TEST_F(FilaflatSecurityTest, DictionarySpirvBlobCountExceedsChunk) {
+    // 0x400000 blobs (64 MB) allocates cheaply, and 0xFFFFFFFF is the reported case: 64 GB from a
+    // 20-byte file. Neither reliably aborts -- Linux overcommit hands back both without touching
+    // a page -- so the capacity check below, not a crash, is what detects the bug.
+    for (uint32_t blobCount : {0x400000u, 0xFFFFFFFFu}) {
+        std::vector<uint8_t> fileData(12, 0); // type + size, patched below
+        write32(fileData, 1);         // compressionScheme
+        write32(fileData, blobCount); // no blob data follows at all
+        fileData = finishChunk(filamat::ChunkType::DictionarySpirv, std::move(fileData));
+
+        ChunkContainer container(fileData.data(), fileData.size());
+        ASSERT_TRUE(container.parse());
+
+        BlobDictionary dictionary;
+        EXPECT_FALSE(DictionaryReader::unflatten(
+                container, filamat::ChunkType::DictionarySpirv, dictionary));
+
+        // Returning false is not enough on its own: the vulnerable code also returns false, from
+        // the read that fails after reserve() already committed the allocation. Each blob costs at
+        // least the 8 bytes of its length header, so the dictionary can never hold more blobs than
+        // the chunk has bytes.
+        EXPECT_LE(dictionary.capacity(), fileData.size())
+                << "VULNERABILITY: reserved " << dictionary.capacity()
+                << " blobs from a " << fileData.size() << "-byte file!";
+    }
+}
+
+TEST_F(FilaflatSecurityTest, DictionaryMetalLibraryBlobCountExceedsChunk) {
+    for (uint32_t blobCount : {0x400000u, 0xFFFFFFFFu}) {
+        std::vector<uint8_t> fileData(12, 0);
+        write32(fileData, blobCount);
+        fileData = finishChunk(filamat::ChunkType::DictionaryMetalLibrary, std::move(fileData));
+
+        ChunkContainer container(fileData.data(), fileData.size());
+        ASSERT_TRUE(container.parse());
+
+        BlobDictionary dictionary;
+        EXPECT_FALSE(DictionaryReader::unflatten(
+                container, filamat::ChunkType::DictionaryMetalLibrary, dictionary));
+        EXPECT_LE(dictionary.capacity(), fileData.size())
+                << "VULNERABILITY: reserved " << dictionary.capacity()
+                << " blobs from a " << fileData.size() << "-byte file!";
+    }
+}
+
+// Guards the new bound against rejecting well-formed input.
+TEST_F(FilaflatSecurityTest, DictionaryMetalLibraryValidBlobsStillParse) {
+    const char* blobs[] = { "metallib", "xyz" };
+
+    std::vector<uint8_t> fileData(12, 0);
+    write32(fileData, 2); // blobCount
+    for (const char* blob : blobs) {
+        while (fileData.size() % 8 != 0) fileData.push_back(0); // alignment padding
+        const size_t len = strlen(blob);
+        write64(fileData, len);
+        fileData.insert(fileData.end(), blob, blob + len);
+    }
+    fileData = finishChunk(filamat::ChunkType::DictionaryMetalLibrary, std::move(fileData));
+
+    ASSERT_EQ(0u, uintptr_t(fileData.data()) % 8) << "reader pads on absolute addresses";
+
+    ChunkContainer container(fileData.data(), fileData.size());
+    ASSERT_TRUE(container.parse());
+
+    BlobDictionary dictionary;
+    ASSERT_TRUE(DictionaryReader::unflatten(
+            container, filamat::ChunkType::DictionaryMetalLibrary, dictionary));
+    ASSERT_EQ(2u, dictionary.size());
+    for (size_t i = 0; i < 2; i++) {
+        const size_t len = strlen(blobs[i]);
+        ASSERT_EQ(len, dictionary[i].size());
+        EXPECT_EQ(0, memcmp(dictionary[i].data(), blobs[i], len));
+    }
+}
+
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
+
+// Builds a DictionarySpirv chunk holding one real smol-v blob.
+static std::vector<uint8_t> makeSpirvDictionaryChunk(const smolv::ByteArray& encoded) {
+    std::vector<uint8_t> fileData(12, 0);
+    for (int i = 0; i < 4; i++) fileData.push_back(i == 0 ? 1 : 0); // compressionScheme = 1
+    for (int i = 0; i < 4; i++) fileData.push_back(i == 0 ? 1 : 0); // blobCount = 1
+    while (fileData.size() % 8 != 0) fileData.push_back(0);
+    for (int i = 0; i < 8; i++) fileData.push_back(uint8_t((uint64_t(encoded.size()) >> (8 * i)) & 0xFF));
+    fileData.insert(fileData.end(), encoded.begin(), encoded.end());
+    return finishChunk(filamat::ChunkType::DictionarySpirv, std::move(fileData));
+}
+
+TEST_F(FilaflatSecurityTest, DictionarySpirvValidBlobStillParses) {
+    const std::vector<uint32_t> spirv = makeTestSpirv(4);
+    const size_t spirvSize = spirv.size() * 4;
+
+    smolv::ByteArray encoded;
+    ASSERT_TRUE(smolv::Encode(spirv.data(), spirvSize, encoded, 0));
+
+    std::vector<uint8_t> fileData = makeSpirvDictionaryChunk(encoded);
+    ASSERT_EQ(0u, uintptr_t(fileData.data()) % 8) << "reader pads on absolute addresses";
+
+    ChunkContainer container(fileData.data(), fileData.size());
+    ASSERT_TRUE(container.parse());
+
+    BlobDictionary dictionary;
+    ASSERT_TRUE(DictionaryReader::unflatten(
+            container, filamat::ChunkType::DictionarySpirv, dictionary));
+    ASSERT_EQ(1u, dictionary.size());
+    ASSERT_EQ(spirvSize, dictionary[0].size());
+    EXPECT_EQ(0, memcmp(dictionary[0].data(), spirv.data(), spirvSize));
+
+    // The decoded/encoded ratio the bound has to accommodate. smol-v's worst sustained expansion
+    // is 8x (a bunched OpMemberDecorate member costs 2 input bytes and emits 16 output bytes), so
+    // real content should sit far below it.
+    EXPECT_LT(spirvSize, 8 * encoded.size());
+}
+
+// The decoded size is taken verbatim from the blob's header word, so a tiny blob can request an
+// arbitrarily large buffer. smolv::GetDecodedBufferSize() cannot bound this itself because it does
+// not know the input size; the caller does.
+TEST_F(FilaflatSecurityTest, DictionarySpirvDecodedSizeExceedsRatio) {
+    const std::vector<uint32_t> spirv = makeTestSpirv(1);
+    smolv::ByteArray encoded;
+    ASSERT_TRUE(smolv::Encode(spirv.data(), spirv.size() * 4, encoded, 0));
+
+    // Claim 4 GB of decoded output from a blob of a few dozen bytes.
+    const uint32_t hugeSize = 0xFFFFFFFFu;
+    memcpy(encoded.data() + 20, &hugeSize, 4); // words[5] == decoded size
+    ASSERT_EQ(hugeSize, smolv::GetDecodedBufferSize(encoded.data(), encoded.size()));
+
+    std::vector<uint8_t> fileData = makeSpirvDictionaryChunk(encoded);
+    ChunkContainer container(fileData.data(), fileData.size());
+    ASSERT_TRUE(container.parse());
+
+    BlobDictionary dictionary;
+    size_t largest;
+    {
+        // The return value cannot tell the fix from the vulnerability here: the vulnerable code
+        // allocates the 4 GB buffer and *then* returns false when Decode rejects the blob.
+        AllocationRecorder recorder;
+        EXPECT_FALSE(DictionaryReader::unflatten(
+                container, filamat::ChunkType::DictionarySpirv, dictionary));
+        largest = recorder.largest();
+    }
+
+    EXPECT_LE(largest, 8 * encoded.size())
+            << "VULNERABILITY: allocated " << largest << " bytes for a "
+            << encoded.size() << "-byte blob!";
+}
+
 
 #endif // FILAMENT_DRIVER_SUPPORTS_VULKAN
 

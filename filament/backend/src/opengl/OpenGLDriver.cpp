@@ -881,6 +881,19 @@ void OpenGLDriver::createIndexBufferAsyncR(
     });
 }
 
+// setVertexBufferObject copies the name as soon as it runs, so the name is made on the backend
+// thread even when the rest of the creation goes to the worker.
+void OpenGLDriver::createBufferObjectName(Handle<HwBufferObject> boh,
+        BufferObjectBinding bindingType) {
+    GLBufferObject* bo = handle_cast<GLBufferObject*>(boh);
+    if (UTILS_UNLIKELY(bindingType == BufferObjectBinding::UNIFORM && getBackendState().isES2())) {
+        bo->gl.id = ++mLastAssignedEmulatedUboId;
+    } else {
+        bo->gl.binding = getBufferBindingType(bindingType);
+        glGenBuffers(1, &bo->gl.id);
+    }
+}
+
 void OpenGLDriver::createBufferObjectCommon(OpenGLState& gl, Handle<HwBufferObject> boh, uint32_t byteCount,
         BufferObjectBinding bindingType, BufferUsage usage, utils::ImmutableCString&& tag) {
     assert_invariant(byteCount > 0);
@@ -890,12 +903,9 @@ void OpenGLDriver::createBufferObjectCommon(OpenGLState& gl, Handle<HwBufferObje
 
     GLBufferObject* bo = handle_cast<GLBufferObject*>(boh);
     if (UTILS_UNLIKELY(bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
-        bo->gl.id = ++mLastAssignedEmulatedUboId;
         bo->gl.buffer = malloc(byteCount);
         memset(bo->gl.buffer, 0, byteCount);
     } else {
-        bo->gl.binding = getBufferBindingType(bindingType);
-        glGenBuffers(1, &bo->gl.id);
         gl.bindBuffer(bo->gl.binding, bo->gl.id);
         glBufferData(bo->gl.binding, byteCount, nullptr, getBufferUsage(usage));
     }
@@ -913,6 +923,7 @@ void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byte
     // subsequent backend APIs can handle operations based on this setting.
     construct<GLBufferObject>(boh, byteCount, bindingType, usage, false);
 
+    createBufferObjectName(boh, bindingType);
     createBufferObjectCommon(getBackendState(), boh, byteCount, bindingType, usage, std::move(tag));
 }
 
@@ -923,6 +934,8 @@ void OpenGLDriver::createBufferObjectAsyncR(Handle<HwBufferObject> boh, uint32_t
     // early. For example, the `asynchronous` field needs to be decided at this stage so that
     // subsequent backend APIs can handle operations based on this setting.
     construct<GLBufferObject>(boh, byteCount, bindingType, usage, true);
+
+    createBufferObjectName(boh, bindingType);
 
     assert_invariant(getJobQueue());
 
@@ -2332,6 +2345,8 @@ void OpenGLDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
     if (ibh) {
         GLIndexBuffer const* ib = handle_cast<const GLIndexBuffer*>(ibh);
         if (ib->asynchronous) {
+            // The worker deletes the name, so drop it from the backend cache here.
+            getBackendState().unbindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
             getJobQueue()->push([this, ibh]() {
                 destroyIndexBufferCommon(getWorkerState(), ibh);
             });
@@ -2359,6 +2374,10 @@ void OpenGLDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
     if (boh) {
         GLBufferObject const* bo = handle_cast<const GLBufferObject*>(boh);
         if (bo->asynchronous) {
+            // The worker deletes the name, so drop it from the backend cache here.
+            if (!(bo->bindingType == BufferObjectBinding::UNIFORM && getBackendState().isES2())) {
+                getBackendState().unbindBuffer(bo->gl.binding, bo->gl.id);
+            }
             getJobQueue()->push([this, boh]() {
                 destroyBufferObjectCommon(getWorkerState(), boh);
             });
@@ -2404,6 +2423,9 @@ void OpenGLDriver::destroyTextureCommon(OpenGLState& gl, Handle<HwTexture> th) {
     GLTexture* t = handle_cast<GLTexture*>(th);
     if (UTILS_LIKELY(!t->gl.imported)) {
         if (UTILS_LIKELY(t->usage & TextureUsage::SAMPLEABLE)) {
+            // Unbind even if views still share the name. The last reference may be dropped on
+            // the other thread, which can't clear this cache.
+            gl.unbindTexture(t->gl.target, t->gl.id);
             // drop a reference
             uint16_t count = 0;
             if (UTILS_UNLIKELY(t->ref)) {
@@ -2417,7 +2439,6 @@ void OpenGLDriver::destroyTextureCommon(OpenGLState& gl, Handle<HwTexture> th) {
             if (count == 0) {
                 // if this was the last reference, we destroy the refcount as well as
                 // the GL texture name itself.
-                gl.unbindTexture(t->gl.target, t->gl.id);
                 if (UTILS_UNLIKELY(t->hwStream)) {
                     detachStream(t);
                 }
@@ -2450,6 +2471,10 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
     if (th) {
         GLTexture* t = handle_cast<GLTexture*>(th);
         if (t->asynchronous) {
+            // The worker may delete the name, so drop it from the backend cache here.
+            if (t->gl.imported || any(t->usage & TextureUsage::SAMPLEABLE)) {
+                getBackendState().unbindTexture(t->gl.target, t->gl.id);
+            }
             getJobQueue()->push([this, th]() {
                 destroyTextureCommon(getWorkerState(), th);
             });
@@ -4542,6 +4567,11 @@ void OpenGLDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch, CallbackHa
 void OpenGLDriver::setFrameCompletedCallback(Handle<HwSwapChain>,
         CallbackHandler*, Invocable<void()>&& /*callback*/) {
     DEBUG_MARKER()
+}
+
+bool OpenGLDriver::isPresentationTimeSupported() {
+    // this is a synchronous call
+    return mPlatform.isPresentationTimeSupported();
 }
 
 void OpenGLDriver::setPresentationTime(int64_t const monotonic_clock_ns) {

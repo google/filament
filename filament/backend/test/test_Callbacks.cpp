@@ -26,6 +26,14 @@ using namespace filament::backend;
 namespace test {
 
 TEST_F(BackendTest, FrameScheduledCallback) {
+    // MetalSwapChain::present() only schedules this callback when it holds a CAMetalDrawable, and
+    // a headless swap chain never acquires one, so on Metal the counters below stay at zero. The
+    // other three backends fire the callback from commit regardless, which is why they pass
+    // headless and are deliberately still covered here. This surfaced when Metal first ran in CI;
+    // any run against a real window still exercises the Metal path.
+    SKIP_IF(SkipEnvironment(Headless(), Backend::METAL),
+            "a headless Metal swap chain has no drawable to present");
+
     auto& api = getDriverApi();
 
     // Create a SwapChain.

@@ -1006,3 +1006,26 @@ TEST(EntityTest, ComponentManager_AutomatedLeapForward_BlocksOnIntersection) {
     // Now it should be advanced to Epoch 1
     EXPECT_EQ(cm.getWatermark(), 1);
 }
+
+TEST(EntityTest, EntityInstanceIncrementDecrement) {
+    struct DummyTag {};
+    using Instance = EntityInstance<DummyTag>;
+
+    Instance i{ 5 };
+    Instance const prevInc = i++;
+    EXPECT_EQ(prevInc.asValue(), 5u);
+    EXPECT_EQ(i.asValue(), 6u);
+
+    Instance const preInc = ++i;
+    EXPECT_EQ(preInc.asValue(), 7u);
+    EXPECT_EQ(i.asValue(), 7u);
+
+    Instance const prevDec = i--;
+    EXPECT_EQ(prevDec.asValue(), 7u);
+    EXPECT_EQ(i.asValue(), 6u);
+
+    Instance const preDec = --i;
+    EXPECT_EQ(preDec.asValue(), 5u);
+    EXPECT_EQ(i.asValue(), 5u);
+}
+

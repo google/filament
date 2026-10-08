@@ -53,10 +53,7 @@ void AndroidDisplayManager::terminate() {
 }
 
 WindowHandle AndroidDisplayManager::createWindow(const char* title, uint32_t w, uint32_t h,
-        bool resizable, bool headless) {
-    if (headless) {
-        return nullptr;
-    }
+        bool resizable) {
     return (WindowHandle) mSurfaceView;
 }
 
