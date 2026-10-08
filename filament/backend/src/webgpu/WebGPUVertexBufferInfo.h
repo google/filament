@@ -19,6 +19,8 @@
 
 #include "DriverBase.h"
 
+#include "webgpu/utils/VertexHelper.h"
+
 #include <backend/DriverEnums.h>
 
 #include <cstdint>
@@ -48,6 +50,9 @@ public:
         uint8_t sourceBufferIndex = 0; // limited by filament::backend::Attribute::buffer
         uint32_t bufferOffset = 0;     // limited by filament::backend::Attribute::offset
         uint8_t stride = 0;            // limited by filament::backend::Attribute::stride
+        // Describes the WebGPU layout of this slot (stride, attribute offsets and formats) and
+        // how to convert the source data into it when the source layout is not directly usable.
+        webgpuutils::VertexSlotRepack repack;
     };
 
     [[nodiscard]] std::vector<WebGPUSlotBindingInfo> const& getWebGPUSlotBindingInfos() const {
