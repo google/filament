@@ -64,6 +64,7 @@ struct VulkanRenderPassContext {
     fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget {};
     fvkmemory::resource_ptr<VulkanRenderPass> renderPass {};
     RenderPassParams params = {};
+    VkRect2D renderArea = {};
     int currentSubpass = 0;
 };
 
