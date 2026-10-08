@@ -558,7 +558,7 @@ void WebGPUDriver::createVertexBufferR(Handle<HwVertexBuffer> vertexBufferHandle
     FWGPU_SYSTRACE_SCOPE();
     const auto vertexBufferInfo = handleCast<WebGPUVertexBufferInfo>(vertexBufferInfoHandle);
     constructHandle<WebGPUVertexBuffer>(vertexBufferHandle, vertexCount,
-            vertexBufferInfo->bufferCount, vertexBufferInfoHandle);
+            vertexBufferInfo->getVertexBufferLayoutCount(), vertexBufferInfoHandle);
     setDebugTag(vertexBufferHandle.getId(), std::move(tag));
 }
 
@@ -1108,9 +1108,11 @@ void WebGPUDriver::setVertexBufferObject(Handle<HwVertexBuffer> vertexBufferHand
         const uint32_t index, Handle<HwBufferObject> bufferObjectHandle) {
     const auto vertexBuffer = handleCast<WebGPUVertexBuffer>(vertexBufferHandle);
     const auto bufferObject = handleCast<WebGPUBufferObject>(bufferObjectHandle);
-    assert_invariant(index < vertexBuffer->getBuffers().size());
-    assert_invariant(bufferObject->getBuffer().GetUsage() & wgpu::BufferUsage::Vertex);
-    vertexBuffer->getBuffers()[index] = bufferObject->getBuffer();
+    auto const vertexBufferInfo =
+            handleCast<WebGPUVertexBufferInfo>(vertexBuffer->getVertexBufferInfoHandle());
+    assert_invariant(index < vertexBufferInfo->bufferCount);
+    bufferObject->attachToVertexBuffer(*vertexBuffer, *vertexBufferInfo, index, mDevice,
+            &mQueueManager, &mStagePool);
 }
 
 void WebGPUDriver::setVertexBufferObjectAsyncR(AsyncCallId jobId,
@@ -2107,13 +2109,13 @@ void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> renderPrimitive
     const auto renderPrimitive = handleCast<WebGPURenderPrimitive>(renderPrimitiveHandle);
     const auto vertexBufferInfo = handleCast<WebGPUVertexBufferInfo>(
             renderPrimitive->vertexBuffer->getVertexBufferInfoHandle());
-    for (size_t slotIndex = 0; slotIndex < vertexBufferInfo->getVertexBufferLayoutCount();
-            slotIndex++) {
-        WebGPUVertexBufferInfo::WebGPUSlotBindingInfo const& bindingInfo =
-                vertexBufferInfo->getWebGPUSlotBindingInfos()[slotIndex];
-        mRenderPassEncoder.SetVertexBuffer(slotIndex,
-                renderPrimitive->vertexBuffer->getBuffers()[bindingInfo.sourceBufferIndex],
-                bindingInfo.bufferOffset);
+    std::vector<WebGPUVertexBuffer::SlotBinding> const& slotBindings =
+            renderPrimitive->vertexBuffer->getSlotBindings();
+    size_t const slotCount = vertexBufferInfo->getVertexBufferLayoutCount();
+    assert_invariant(slotBindings.size() == slotCount);
+    for (size_t slotIndex = 0; slotIndex < slotCount; slotIndex++) {
+        WebGPUVertexBuffer::SlotBinding const& slotBinding = slotBindings[slotIndex];
+        mRenderPassEncoder.SetVertexBuffer(slotIndex, slotBinding.buffer, slotBinding.offset);
     }
     // Index buffer is optional: non-indexed (attribute-less) primitives have none.
     if (renderPrimitive->indexBuffer) {
