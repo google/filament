@@ -813,6 +813,7 @@ public class Renderer {
      *
      * @deprecated Use getMaterialTime() instead.
      */
+    @Deprecated
     public double getUserTime() {
         return nGetUserTime(getNativeObject());
     }
@@ -836,6 +837,7 @@ public class Renderer {
      *
      * @deprecated Use setMaterialTimeEpoch() instead.
      */
+    @Deprecated
     public void resetUserTime() {
         nResetUserTime(getNativeObject());
     }
