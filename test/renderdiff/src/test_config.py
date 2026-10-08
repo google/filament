@@ -72,11 +72,16 @@ _MODEL_SCAN_CACHE = {}
 
 # glTF-Sample-Assets ships several variants of a model under the same file name, e.g.
 # Models/Duck/{glTF,glTF-Binary,glTF-Embedded,glTF-Draco,glTF-Quantized}/Duck.{gltf,glb}.
-# Only glTF-Binary, and failing that glTF, is accepted. The other variants encode the data
-# differently (quantized, Draco, meshopt, ...) and can render differently, so silently falling
+# By default only glTF-Binary, and failing that glTF, is accepted. The other variants encode the
+# data differently (quantized, Draco, meshopt, ...) and can render differently, so silently falling
 # back to one of them would make a golden depend on which variants happen to be present.
+# A test that wants one of the other variants names it explicitly with gltf_test.model_variant.
 _PREFERRED_VARIANT_DIRS = ('glTF-Binary', 'glTF')
 _VARIANT_DIR_PREFIX = 'glTF'
+
+
+def _variant_of(model_file):
+  return path.basename(path.dirname(model_file))
 
 
 def _select_model_file(name, files):
@@ -87,18 +92,15 @@ def _select_model_file(name, files):
   differs between runner images. Letting that order decide once swapped Duck to its
   glTF-Quantized variant and broke the WebGPU golden.
   """
-  def variant(model_file):
-    return path.basename(path.dirname(model_file))
-
   for preferred in _PREFERRED_VARIANT_DIRS:
-    matches = [f for f in files if variant(f) == preferred]
+    matches = [f for f in files if _variant_of(f) == preferred]
     if len(matches) == 1:
       return matches[0]
     if len(matches) > 1:
       break
 
   # A single file outside a variant layout, e.g. third_party/models/lucy/lucy.glb.
-  if len(files) == 1 and not variant(files[0]).startswith(_VARIANT_DIR_PREFIX):
+  if len(files) == 1 and not _variant_of(files[0]).startswith(_VARIANT_DIR_PREFIX):
     return files[0]
 
   candidates = '\n  '.join(sorted(files))
@@ -106,13 +108,28 @@ def _select_model_file(name, files):
                    f"{' or '.join(_PREFERRED_VARIANT_DIRS)} directory. Candidates:\n  {candidates}")
 
 
-def scan_models(search_paths, base_dir=None):
+def _select_model_variant_file(name, files, model_variant):
+  """
+  Picks the file of an explicitly requested variant, or None if the model does not have it.
+  """
+  matches = [f for f in files if _variant_of(f) == model_variant]
+  if len(matches) > 1:
+    candidates = '\n  '.join(sorted(matches))
+    raise ValueError(f"Cannot choose a file for model '{name}': expected exactly one file in a "
+                     f"{model_variant} directory. Candidates:\n  {candidates}")
+  return matches[0] if matches else None
+
+
+def scan_models(search_paths, base_dir=None, model_variant=None):
   """
   Recursively scan for .glb and .gltf files across search_paths.
-  Results are cached by the ordered list of resolved search paths.
+  Results are cached by the ordered list of resolved search paths and the model variant.
 
   When a model name appears in several search paths, the last search path wins. Within a single
   search path, the file is chosen by _select_model_file, which raises if the choice is ambiguous.
+
+  When model_variant is given (e.g. 'glTF-Quantized'), only files directly inside a directory of
+  that name are considered, and models that do not have that variant are left out.
   """
   resolved_paths = []
   for p in search_paths:
@@ -127,7 +144,7 @@ def scan_models(search_paths, base_dir=None):
       resolved_paths.append(path.abspath(p))
 
   # Order matters, because a later search path overrides an earlier one.
-  cache_key = tuple(resolved_paths)
+  cache_key = (tuple(resolved_paths), model_variant)
   if cache_key in _MODEL_SCAN_CACHE:
     return _MODEL_SCAN_CACHE[cache_key]
 
@@ -142,14 +159,20 @@ def scan_models(search_paths, base_dir=None):
       name = path.splitext(path.basename(model_file))[0]
       candidates.setdefault(name, []).append(path.abspath(model_file))
     for name, files in candidates.items():
-      models[name] = _select_model_file(name, files)
+      if model_variant:
+        selected = _select_model_variant_file(name, files, model_variant)
+        if selected:
+          models[name] = selected
+      else:
+        models[name] = _select_model_file(name, files)
 
   _MODEL_SCAN_CACHE[cache_key] = models
   return models
 
 
 class GltfTestConfig:
-  def __init__(self, data, inherited_search_paths=None, inherited_models=None, inherited_rendering=None, base_dir=None):
+  def __init__(self, data, inherited_search_paths=None, inherited_models=None, inherited_rendering=None, base_dir=None,
+               inherited_model_variant=None):
     assert _is_dict(data), "gltf_test must be a dictionary"
 
     # 1. Resolve model search paths
@@ -163,7 +186,14 @@ class GltfTestConfig:
     self.model_search_paths = search_paths
 
     # 2. Discover available models
-    self.models_map = scan_models(self.model_search_paths, base_dir=base_dir)
+    model_variant = data.get('model_variant', inherited_model_variant)
+    if model_variant is not None:
+      assert _is_string(model_variant) and model_variant.startswith(_VARIANT_DIR_PREFIX), \
+        f"gltf_test.model_variant must be a glTF-Sample-Assets variant directory name such as " \
+        f"'glTF-Quantized', got {model_variant!r}"
+    self.model_variant = model_variant
+    self.models_map = scan_models(self.model_search_paths, base_dir=base_dir,
+                                  model_variant=model_variant)
 
     # 3. Resolve models list
     models = list(inherited_models or [])
@@ -175,8 +205,10 @@ class GltfTestConfig:
 
     # Check that each model exists if search paths are provided
     if self.model_search_paths and self.models:
+      variant_note = f" with variant '{model_variant}'" if model_variant else ""
       for m in self.models:
-        assert m in self.models_map, f"Model '{m}' not found in model_search_paths: {self.model_search_paths}"
+        assert m in self.models_map, \
+          f"Model '{m}'{variant_note} not found in model_search_paths: {self.model_search_paths}"
 
     # 4. Resolve rendering automation dictionary
     rendering = dict(inherited_rendering or {})
@@ -281,6 +313,7 @@ class TestConfig:
     # gltf inheritance accumulators
     inherited_search_paths = []
     inherited_models = []
+    inherited_model_variant = None
     inherited_rendering = {}
 
     # sample inheritance accumulators
@@ -313,6 +346,8 @@ class TestConfig:
                 inherited_search_paths.append(sp)
           if 'models' in p_gltf:
             inherited_models = p_gltf['models']
+          if 'model_variant' in p_gltf:
+            inherited_model_variant = p_gltf['model_variant']
           if 'rendering' in p_gltf:
             inherited_rendering.update(p_gltf['rendering'])
       elif self.is_sample_test:
@@ -351,7 +386,8 @@ class TestConfig:
         inherited_search_paths=inherited_search_paths,
         inherited_models=inherited_models,
         inherited_rendering=inherited_rendering,
-        base_dir=base_dir
+        base_dir=base_dir,
+        inherited_model_variant=inherited_model_variant
       )
       self.sample_test = None
     else:
