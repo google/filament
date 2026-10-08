@@ -645,6 +645,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_AsyncUploads.cpp
             test/test_Platform.cpp
             test/test_VulkanPipelineCache.cpp
+            test/test_ViewportCleared.cpp
         )
         if (FILAMENT_SUPPORTS_VULKAN)
             list(APPEND BACKEND_TEST_SRC
