@@ -976,7 +976,7 @@ while getopts ":hacCfgDimp:q:vWslwedtk:bVx:S:X:Py:ETu" opt; do
             ;;
         d)
             PRINT_MATDBG_HELP=true
-            MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=ON, -DFILAMENT_BUILD_FILAMAT=ON"
+            MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=ON -DFILAMENT_BUILD_FILAMAT=ON"
             MATDBG_GRADLE_OPTION="-Pcom.google.android.filament.matdbg"
             ;;
         t)
