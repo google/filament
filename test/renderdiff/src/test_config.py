@@ -14,6 +14,7 @@
 
 from utils import execute, ArgParseImpl
 
+import copy
 import glob
 from itertools import chain
 import json
@@ -66,6 +67,33 @@ def validate_tolerance(tolerance):
     if 'maxFailingPixelsFraction' in tolerance:
       assert isinstance(tolerance['maxFailingPixelsFraction'], (int, float)), "maxFailingPixelsFraction must be numeric"
       assert 0 <= tolerance['maxFailingPixelsFraction'] <= 1.0, "maxFailingPixelsFraction must be 0.0-1.0"
+
+
+def _deep_merge(dest, src):
+  """Merges src into dest. Nested objects merge key by key, and anything else is replaced."""
+  for key, value in src.items():
+    if _is_dict(value) and _is_dict(dest.get(key)):
+      _deep_merge(dest[key], value)
+    else:
+      dest[key] = copy.deepcopy(value)
+
+
+def expand_dotted_keys(rendering):
+  """
+  Expands AutomationSpec-style keys such as "view.bloom.enabled" into nested objects.
+
+  This is the form gltf_viewer's --settings reads. AutomationSpec applies each key as
+  {"view": {"bloom": {"enabled": ...}}} on top of the previous ones, and the Settings parser only
+  touches the fields it is given, so later keys override earlier ones field by field. The merge
+  below reproduces that, which keeps a test meaning the same thing under --batch and --settings.
+  """
+  out = {}
+  for key, value in rendering.items():
+    nested = value
+    for part in reversed(key.split('.')):
+      nested = {part: nested}
+    _deep_merge(out, nested)
+  return out
 
 
 _MODEL_SCAN_CACHE = {}
@@ -369,6 +397,11 @@ class TestConfig:
       'base': self.gltf_test.rendering if self.gltf_test else {}
     }
     return json.dumps(json_out)
+
+  def to_settings_format(self):
+    """The test's rendering settings as the nested JSON read by gltf_viewer --settings."""
+    return json.dumps(expand_dotted_keys(self.gltf_test.rendering if self.gltf_test else {}),
+                      indent=2)
 
 
 class RenderTestConfig:
