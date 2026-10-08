@@ -20,9 +20,9 @@
 #include <filament/Engine.h>
 #include <filament/FilamentAPI.h>
 
-#include <math/vec3.h>
-
 #include <utils/compiler.h>
+
+#include <math/vec3.h>
 
 #include <stdint.h>
 
