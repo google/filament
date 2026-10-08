@@ -341,6 +341,14 @@ Java_com_google_android_filament_RenderableManager_nGetInstanceCount(JNIEnv *env
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nSetInstanceCount(JNIEnv *env, jclass clazz, jlong nativeRenderableManager, jint instance, jint instanceCount) {
+    RenderableManager* const that = (RenderableManager*) nativeRenderableManager;
+    wrapJni(env, [=]() {
+        that->setInstanceCount(EntityInstance<RenderableManager>(instance), (size_t)instanceCount);
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nSetMaterialInstanceAt(JNIEnv *env, jclass clazz, jlong nativeRenderableManager, jint instance, jint primitiveIndex, jlong nativeMaterialInstance) {
     RenderableManager* const that = (RenderableManager*) nativeRenderableManager;
     MaterialInstance const* const materialInstance = (MaterialInstance const*) nativeMaterialInstance;
