@@ -198,6 +198,7 @@ All annotations are defined in [`libs/utils/include/utils/compiler.h`](../../lib
 | :--- | :--- | :--- |
 | `UTILS_NOAPIGEN` | `[[clang::annotate("filament:apigen:skip")]]` | Excludes a class, method, field, constant, or enum from binding generation. |
 | `UTILS_APIGEN_RETAINED` | `[[clang::annotate("filament:apigen:retained")]]` | Informs generator that the returned object or parameter is retained across the Java wrapper lifetime (synthesizes Java field, constructor parameter, wrap parameter, and direct getter; skips JNI getter). |
+| `UTILS_APIGEN_RETAINED_LAZY` | `[[clang::annotate("filament:apigen:retained_lazy")]]` | Like `UTILS_APIGEN_RETAINED`, but the receiver may be wrapped without the reference (e.g. `MaterialInstance` from `RenderableManager` or gltfio). Synthesizes a non-final `@Nullable` field, a single-argument package constructor, and a getter that falls back to the JNI getter (and caches the result) when the field is empty. |
 | `UTILS_APIGEN_FLAGS` | `[[clang::annotate("filament:apigen:flags")]]` | Marks an enum as a bitmask/flags type (`is_flags = true`). |
 | `UTILS_APIGEN_ALTERNATE_NAME(n)` | `[[clang::annotate("filament:apigen:alternate_name:" #n)]]` | Renames a method in Java and JNI export symbol to avoid keyword or signature collisions. |
 | `UTILS_APIGEN_TAGGED_ARRAY` | `[[clang::annotate("filament:apigen:tagged_array")]]` | Collapses template array specializations into unified `<Family>Element` enum-tagged array methods. |

@@ -1171,7 +1171,7 @@ class JniEmitter:
             info = next(c for c in self.cached_fields.values() if c["getter"] == name)
             if not info.get("is_handle_reference"):
                 return None
-        if name in self.retained_references:
+        if name in self.retained_references and not self.retained_references[name]["is_lazy"]:
             return None
         if self.is_value_class and name == self.value_type_info.get("buffer_getter"):
             return None

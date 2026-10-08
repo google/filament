@@ -476,7 +476,7 @@ class ClassContext:
                 continue
             if self.is_value_class and method["name"] == self.value_type_info.get("buffer_getter"):  # type: ignore
                 continue
-            if method["name"] in self.retained_references:
+            if method["name"] in self.retained_references and not self.retained_references[method["name"]]["is_lazy"]:
                 continue
             generated_methods = self._expand_method(method)
             for m in generated_methods:
@@ -1172,13 +1172,22 @@ class ClassContext:
         These references are retained across the lifetime of the handle and served directly
         from Java instance fields rather than bridging through JNI.
 
+        Methods annotated with [[clang::annotate("filament:apigen:retained_lazy")]]
+        (UTILS_APIGEN_RETAINED_LAZY) are retained the same way, but the receiver may be wrapped
+        without the reference. Their descriptor has `is_lazy` set: the getter falls back to a JNI
+        query when the field is empty, so the JNI bridge is still emitted.
+
         Returns:
             Dictionary mapping method name (getter) to its retained reference descriptor.
         """
         retained: Dict[str, Dict[str, Any]] = collections.OrderedDict()
         for m in self.methods:
             attrs = m.get("attributes", [])
-            is_retained = any(
+            is_lazy = any(
+                a in ("filament:apigen:retained_lazy", "apigen:retained_lazy")
+                for a in attrs
+            )
+            is_retained = is_lazy or any(
                 a in ("filament:apigen:retained", "apigen:retained")
                 for a in attrs
             )
@@ -1210,6 +1219,7 @@ class ClassContext:
                 "param_name": param_name,
                 "java_type": java_type,
                 "is_nullable": is_nullable,
+                "is_lazy": is_lazy,
                 "nullability_annotation": nullability_ann,
                 "return_type": ret_t,
                 "method_ir": m,

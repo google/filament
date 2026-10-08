@@ -279,10 +279,14 @@ void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
  * @def UTILS_APIGEN_RETAINED
  * Marks an instance getter method whose returned object is retained in a target language field.
  *
- * Applied to getters returning a parent or peer handle (e.g. `MaterialInstance::getMaterial()`,
- * `Renderer::getEngine()`, or `SwapChain::getNativeWindow()`).
+ * Applied to getters returning a parent or peer handle (e.g. `Renderer::getEngine()` or
+ * `SwapChain::getNativeWindow()`).
  *
  * @pre The referenced object is supplied during construction or factory creation of the receiver.
+ *      Every code path that creates the target language receiver must have the referenced object
+ *      at hand. If the receiver can also be wrapped from a raw native pointer alone (e.g. a
+ *      handle returned by a manager or by an external library), use UTILS_APIGEN_RETAINED_LAZY
+ *      instead, otherwise the getter returns null for those receivers.
  * @invariant The generated target language class caches the referenced object in a private final
  *            field initialized during construction.
  * @invariant The getter is served directly from the cached field without bridging across JNI,
@@ -291,6 +295,22 @@ void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
  *            reachable.
  */
 #define UTILS_APIGEN_RETAINED [[clang::annotate("filament:apigen:retained")]]
+
+/**
+ * @def UTILS_APIGEN_RETAINED_LAZY
+ * Variant of UTILS_APIGEN_RETAINED for references that are not always available at construction.
+ *
+ * Applied to getters returning a parent handle when the receiver can also be wrapped from a raw
+ * native pointer, with no target language parent object at hand (e.g.
+ * `MaterialInstance::getMaterial()` for instances returned by `RenderableManager` or gltfio).
+ *
+ * @invariant The generated target language class caches the referenced object in a private,
+ *            non-final field, initialized during construction when the parent is supplied.
+ * @invariant If the cached field is empty, the getter queries the native object once through
+ *            JNI, wraps the result and caches it. The getter honors the C++ nullability of the
+ *            return type.
+ */
+#define UTILS_APIGEN_RETAINED_LAZY [[clang::annotate("filament:apigen:retained_lazy")]]
 
 /**
  * @def UTILS_APIGEN_FLAGS
@@ -358,6 +378,7 @@ void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
 #define UTILS_NULLABLE
 #define UTILS_NOAPIGEN
 #define UTILS_APIGEN_RETAINED
+#define UTILS_APIGEN_RETAINED_LAZY
 #define UTILS_APIGEN_FLAGS
 #define UTILS_APIGEN_ALTERNATE_NAME(name)
 #define UTILS_APIGEN_TAGGED_ARRAY

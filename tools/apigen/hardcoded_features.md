@@ -62,13 +62,13 @@ To transition APIGen into a fully scalable, generic binding generator across all
 
 * **Locations in Generator**:
   * [`tools/apigen/javagen/java_emitter.py`](java_emitter.py#L3791): Special case for `duplicate()` passing `other.getMaterial()` to `new MaterialInstance(...)`.
-  * [`tools/apigen/javagen/java_emitter.py`](java_emitter.py#L1078): Special case synthesizing package-private fallback constructor `MaterialInstance(long) { this(long, null); }`.
+  * ~~Special case synthesizing package-private fallback constructor `MaterialInstance(long) { this(long, null); }`.~~ Done: driven by `UTILS_APIGEN_RETAINED_LAZY`.
 
 * **Reason**:
   `MaterialInstance` has a retained parent reference to `Material`, but can also be instantiated without a Java `Material` wrapper (e.g. from `gltfio` native loaders via `wrap(long)`), requiring nullable parent retention and custom constructor chaining.
 
 * **Proposed Solution**:
-  * Generalize fallback 1-arg constructor synthesis for any handle class carrying a nullable retained parent reference (`retained_references`).
+  * ~~Generalize fallback 1-arg constructor synthesis for any handle class carrying a nullable retained parent reference (`retained_references`).~~ Done: `MaterialInstance::getMaterial()` is annotated `UTILS_APIGEN_RETAINED_LAZY`; the generator emits the 1-arg constructor and a getter that falls back to `nGetMaterial()` when no `Material` was supplied.
   * Add declarative attribute `UTILS_APIGEN_FACTORY(parent = "other.getMaterial()")` for duplication methods.
 
 ---
