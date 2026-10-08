@@ -726,6 +726,43 @@ TEST_F(FrameGraphTest, ForwardImportedResource) {
     fg.execute(driverApi);
 }
 
+TEST_F(FrameGraphTest, ImportedViewportCleared) {
+
+    const Handle<HwRenderTarget> outputRenderTarget{ 0x1234 };
+    FrameGraphId<FrameGraphTexture> const output = fg.import("outputRenderTarget", {
+            .attachments = TargetBufferFlags::COLOR0,
+            .viewport = { 160, 0, 160, 200 },
+            .keepOverrideStart = TargetBufferFlags::COLOR,
+            .viewportCleared = TargetBufferFlags::COLOR }, outputRenderTarget);
+
+    struct PassData {
+        FrameGraphId<FrameGraphTexture> output;
+    };
+    int executed = 0;
+    auto addPass = [&](FrameGraphId<FrameGraphTexture> target,
+            TargetBufferFlags viewportCleared) -> auto const& {
+        return fg.addPass<PassData>("Pass",
+                [&](FrameGraph::Builder& builder, auto& data) {
+                    data.output = builder.declareRenderPass(builder.write(target,
+                            FrameGraphTexture::Usage::COLOR_ATTACHMENT));
+                },
+                [=, &executed](FrameGraphResources const& resources, auto const&, DriverApi&) {
+                    EXPECT_EQ(resources.getRenderPassInfo().params.flags.viewportCleared,
+                            viewportCleared);
+                    executed++;
+                });
+    };
+
+    // only the 1st pass into the target finds the viewport as it was imported
+    auto const& first = addPass(output, TargetBufferFlags::COLOR);
+    auto const& second = addPass(first->output, TargetBufferFlags::NONE);
+    fg.present(second->output);
+
+    fg.compile();
+    fg.execute(driverApi);
+    EXPECT_EQ(executed, 2);
+}
+
 TEST_F(FrameGraphTest, SubResourcesWrite) {
 
     struct PassData {

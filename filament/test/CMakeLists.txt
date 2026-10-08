@@ -71,6 +71,7 @@ if (FILAMENT_BUILD_TESTING)
                 test_FenceManager.cpp
                 test_FramePacer.cpp
                 test_LocalProgramCache.cpp
+                test_MultipleViews.cpp
                 test_UboManager.cpp
                 test_VertexBuffer.cpp
                 filament_test_exposure.cpp
