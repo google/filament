@@ -1311,6 +1311,17 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
                 const cgltf_attribute_type atype = attribute.type;
                 if (atype == cgltf_attribute_type_position) {
                     // All position attributes must have the same number of components.
+                    //
+                    // Morph-target positions are defined by the glTF 2.0 spec to be VEC3.
+                    // ResourceLoader uploads morph positions as float3/float4 per vertex, so
+                    // a narrower accessor type (e.g. SCALAR) would make uploadBuffers() read
+                    // past the end of the accessor's heap buffer (heap OOB read in
+                    // FMorphTargetBuffer::setPositionsAt). Reject it here, at load time.
+                    if (innerAccessor->type != cgltf_type_vec3) {
+                        slog.e << "Morph target positions must be vec3 in " << name
+                               << io::endl;
+                        return false;
+                    }
                     assert_invariant(!previous || previous->type == innerAccessor->type);
                     previous = innerAccessor;
                     BufferSlot innerSlot = { .accessor = innerAccessor };
