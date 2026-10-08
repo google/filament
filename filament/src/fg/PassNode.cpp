@@ -240,6 +240,12 @@ void RenderPassNode::resolve() noexcept {
             // to clear it the 2nd time, so we clear the imported pass's clear flags.
             pImportedRenderTarget->importedDesc.clearFlags = TargetBufferFlags::NONE;
 
+            // Likewise, only the 1st pass finds the viewport as it was when the target was
+            // imported.
+            rt.backend.params.flags.viewportCleared =
+                    pImportedRenderTarget->importedDesc.viewportCleared & rt.targetBufferFlags;
+            pImportedRenderTarget->importedDesc.viewportCleared = TargetBufferFlags::NONE;
+
             // but don't discard attachments the imported target tells us to keep
             rt.backend.params.flags.discardStart &= ~pImportedRenderTarget->importedDesc.keepOverrideStart;
             rt.backend.params.flags.discardEnd   &= ~pImportedRenderTarget->importedDesc.keepOverrideEnd;
