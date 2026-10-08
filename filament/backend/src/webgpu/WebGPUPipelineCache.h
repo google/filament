@@ -79,13 +79,12 @@ private:
      */
     struct VertexAttribute final {       // size : offset (need multiples of 4 bytes for hashing)
         uint8_t bufferIndex{ 0 };        // 1    : 0
+        uint8_t shaderLocation{ 0 };     // 1    : 1
         // this is the webgpu offset,    //
         // bytes from the start of       //
         // the vertex data               //
         // (interleaved offset)          //
-        uint8_t offset{ 0 };             // 1    : 1
-        uint8_t shaderLocation{ 0 };     // 1    : 2
-        uint8_t padding { 0 };           // 1    : 3
+        uint16_t offset{ 0 };            // 2    : 2
         wgpu::VertexFormat format{ 0 };  // 4    : 4
     };
     static_assert(sizeof(VertexAttribute) == 8, "VertexAttribute must not have implicit padding.");
@@ -95,8 +94,9 @@ private:
      * Part of the pipeline key specifically about one of the vertex buffers
      */
     struct VertexBuffer final {  // size : offset (need multiples of 4 bytes for hashing)
-        uint8_t stride{ 0 };     // 1    : 0
-        uint8_t padding[3]{ 0 }; // 3    : 1
+        // the webgpu stride     //
+        // (arrayStride)         //
+        uint32_t stride{ 0 };    // 4    : 0
         // offset in bytes from  //
         // the start of the      //
         // (physical) GPU buffer //

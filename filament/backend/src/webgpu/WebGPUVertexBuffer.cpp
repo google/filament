@@ -22,15 +22,16 @@
 
 #include <webgpu/webgpu_cpp.h>
 
+#include <cstddef>
 #include <cstdint>
 
 namespace filament::backend {
 
-WebGPUVertexBuffer::WebGPUVertexBuffer(const uint32_t vertexCount, const uint32_t bufferCount,
+WebGPUVertexBuffer::WebGPUVertexBuffer(uint32_t const vertexCount, size_t const slotCount,
         Handle<HwVertexBufferInfo> vertexBufferInfoHandle)
-    : HwVertexBuffer{ vertexCount },
-      mVertexBufferInfoHandle{ vertexBufferInfoHandle } {
-    mBuffers.resize(bufferCount);
+        : HwVertexBuffer{ vertexCount },
+          mVertexBufferInfoHandle{ vertexBufferInfoHandle } {
+    mSlotBindings.resize(slotCount);
 }
 
 } // namespace filament::backend
