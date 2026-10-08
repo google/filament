@@ -524,6 +524,7 @@ export class RenderableManager {
     public setScreenSpaceContactShadows(instance: RenderableManager$Instance, enable: boolean): void;
     public isScreenSpaceContactShadowsEnabled(instance: RenderableManager$Instance): boolean;
     public getInstanceCount(instance: RenderableManager$Instance): number;
+    public setInstanceCount(instance: RenderableManager$Instance, instanceCount: number): void;
     public clearMaterialInstanceAt(instance: RenderableManager$Instance, primitiveIndex: number): void;
     public getBlendOrderAt(instance: RenderableManager$Instance, primitiveIndex: number): number;
     public setGlobalBlendOrderEnabledAt(instance: RenderableManager$Instance,
