@@ -426,6 +426,69 @@ class TestSchemaInvariants(unittest.TestCase):
         self.assertTrue(source["animation"]["enabled"])
 
 
+class TestModelVariant(unittest.TestCase):
+    """Tests the choice among glTF-Sample-Assets variants of a model."""
+
+    def setUp(self):
+        self._models = tempfile.TemporaryDirectory()
+        self.addCleanup(self._models.cleanup)
+        root = self._models.name
+        # Duck has several variants; Box has no quantized variant.
+        for rel in ("Duck/glTF-Binary/Duck.glb", "Duck/glTF/Duck.gltf",
+                    "Duck/glTF-Quantized/Duck.gltf", "Duck/glTF-Draco/Duck.gltf",
+                    "Box/glTF-Binary/Box.glb"):
+            file_path = os.path.join(root, rel)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            open(file_path, "w").close()
+        test_config._MODEL_SCAN_CACHE.clear()
+
+    def _suite(self, preset_gltf, test_gltf):
+        return {
+            "name": "VariantSuite",
+            "renderers": ["desktop-webgpu"],
+            "presets": [{"name": "base", "gltf_test": preset_gltf}],
+            "tests": [{"name": "T", "apply_presets": ["base"], "gltf_test": test_gltf}],
+        }
+
+    def _model_path(self, rel):
+        return os.path.join(self._models.name, rel)
+
+    def test_default_prefers_binary(self):
+        cfg = test_config.RenderTestConfig(self._suite(
+            {"model_search_paths": [self._models.name]}, {"models": ["Duck"]}))
+        self.assertEqual(cfg.tests[0].gltf_test.models_map["Duck"],
+                         self._model_path("Duck/glTF-Binary/Duck.glb"))
+
+    def test_explicit_variant(self):
+        cfg = test_config.RenderTestConfig(self._suite(
+            {"model_search_paths": [self._models.name]},
+            {"models": ["Duck"], "model_variant": "glTF-Quantized"}))
+        gltf = cfg.tests[0].gltf_test
+        self.assertEqual(gltf.model_variant, "glTF-Quantized")
+        self.assertEqual(gltf.models_map["Duck"],
+                         self._model_path("Duck/glTF-Quantized/Duck.gltf"))
+
+    def test_variant_inherited_from_preset(self):
+        cfg = test_config.RenderTestConfig(self._suite(
+            {"model_search_paths": [self._models.name], "model_variant": "glTF-Draco"},
+            {"models": ["Duck"]}))
+        self.assertEqual(cfg.tests[0].gltf_test.models_map["Duck"],
+                         self._model_path("Duck/glTF-Draco/Duck.gltf"))
+
+    def test_missing_variant_is_reported(self):
+        with self.assertRaises(AssertionError) as raised:
+            test_config.RenderTestConfig(self._suite(
+                {"model_search_paths": [self._models.name]},
+                {"models": ["Box"], "model_variant": "glTF-Quantized"}))
+        self.assertIn("glTF-Quantized", str(raised.exception))
+
+    def test_rejects_non_variant_name(self):
+        with self.assertRaises(AssertionError):
+            test_config.RenderTestConfig(self._suite(
+                {"model_search_paths": [self._models.name]},
+                {"models": ["Duck"], "model_variant": "Quantized"}))
+
+
 def _make_tiff(width: int, height: int, pixels: bytes, samples: int = 4) -> bytes:
     """Builds a minimal little-endian, uncompressed TIFF, matching what Filament writes."""
     tags = [
@@ -782,8 +845,8 @@ def main():
     loader = unittest.TestLoader()
     suite = unittest.TestSuite(
         loader.loadTestsFromTestCase(cls)
-        for cls in (TestSchemaInvariants, TestWebRenderer, TestGoldenDeletion,
-                    TestCompareScoping))
+        for cls in (TestSchemaInvariants, TestModelVariant, TestWebRenderer,
+                    TestGoldenDeletion, TestCompareScoping))
 
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
