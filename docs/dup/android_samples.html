@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Tutorials and Samples - Filament</title>
+        <title>Android Samples - Filament</title>
 
 
         <!-- Custom HTML head -->
@@ -158,21 +158,106 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="tutorials-and-samples"><a class="header" href="#tutorials-and-samples">Tutorials and Samples</a></h1>
-<p>New users of Filament are encouraged to peruse through the samples to get a better
-understanding of basic API usage.  Additionally, you will find a list of
-<a href="../dup/android_samples.html">Android samples</a> as well as detailed tutorials
-for <a href="ios.html">iOS</a> and <a href="web/tutorials.html">web</a>.</p>
+                        <h1 id="filament-sample-android-apps"><a class="header" href="#filament-sample-android-apps">Filament sample Android apps</a></h1>
+<p>This directory contains several sample Android applications that demonstrate how to use the
+Filament APIs:</p>
+<h3 id="hello-triangle"><a class="header" href="#hello-triangle"><code>hello-triangle</code></a></h3>
+<p>Demonstrates how to set up a rendering surface for Filament and draw a simple animated triangle.
+This is the best starting point for learning the basic structure of a Filament app.</p>
+<p><img src="../images/samples/sample_hello_triangle.jpg" alt="Hello Triangle" /></p>
+<h3 id="lit-cube"><a class="header" href="#lit-cube"><code>lit-cube</code></a></h3>
+<p>Demonstrates how to create a light and a mesh with the attributes required for lighting.</p>
+<p><img src="../images/samples/sample_lit_cube.jpg" alt="Lit Cube" /></p>
+<h3 id="textured-object"><a class="header" href="#textured-object"><code>textured-object</code></a></h3>
+<p>Demonstrates how to load and use textures for complex materials.</p>
+<p><img src="../images/samples/sample_textured_object.jpg" alt="Textured Object" /></p>
+<h3 id="image-based-lighting"><a class="header" href="#image-based-lighting"><code>image-based-lighting</code></a></h3>
+<p>Demonstrates how to create image-based lights and load complex meshes.</p>
+<p><img src="../images/samples/sample_image_based_lighting.jpg" alt="Image-based Lighting" /></p>
+<h3 id="material-builder"><a class="header" href="#material-builder"><code>material-builder</code></a></h3>
+<p>Demonstrates how to programmatically generate Filament materials on the device with
+<code>MaterialBuilder</code>, as opposed to compiling them on the host machine with <code>matc</code>. This approach
+increases the size of the app because it requires the <code>filamat</code> library.</p>
+<p><img src="../images/samples/sample_material_builder.jpg" alt="Material Builder" /></p>
+<h3 id="gltf-viewer"><a class="header" href="#gltf-viewer"><code>gltf-viewer</code></a></h3>
+<p>Demonstrates how to load glTF models with <code>ModelViewer</code> and how to use the camera manipulator.
+The app can also receive models, zipped glTF files, and HDR environments from a desktop browser
+through the <a href="https://google.github.io/filament/remote/">remote page</a>.</p>
+<p><img src="../images/samples/sample_gltf_viewer.jpg" alt="glTF Viewer" /></p>
+<h3 id="transparent-view"><a class="header" href="#transparent-view"><code>transparent-view</code></a></h3>
+<p>Demonstrates how to render into a transparent <code>SurfaceView</code> so that Android views placed beneath
+it remain visible.</p>
+<p><img src="../images/samples/sample_transparent_rendering.jpg" alt="Transparent View" /></p>
+<h3 id="texture-view"><a class="header" href="#texture-view"><code>texture-view</code></a></h3>
+<p>Demonstrates how to render into a <code>TextureView</code> instead of a <code>SurfaceView</code>.</p>
+<p><img src="../images/samples/sample_texture_view.jpg" alt="Texture View" /></p>
+<h3 id="multi-view"><a class="header" href="#multi-view"><code>multi-view</code></a></h3>
+<p>Demonstrates how to render a single scene with multiple Filament <code>View</code>s, each with its own
+viewport. One of the views is drawn on top of the others with translucent blending.</p>
+<p><img src="../images/samples/sample_multi_view.jpg" alt="Multi View" /></p>
+<h3 id="texture-target"><a class="header" href="#texture-target"><code>texture-target</code></a></h3>
+<p>Demonstrates how to render a scene off-screen into a texture with a <code>RenderTarget</code>, and then use
+that texture on a quad drawn on screen. By default, the texture is backed by an Android
+<code>HardwareBuffer</code> and sampled as an external texture.</p>
+<p><img src="../images/samples/sample_texture_target.jpg" alt="Texture Target" /></p>
+<h3 id="procedural-effect"><a class="header" href="#procedural-effect"><code>procedural-effect</code></a></h3>
+<p>Demonstrates attribute-less rendering, where the vertex shader generates a full-screen quad from
+the vertex index without any vertex attributes. The fragment shader then draws an animated
+procedural pattern driven by a time parameter.</p>
+<p><img src="../images/samples/sample_procedural_effect.jpg" alt="Procedural Effect" /></p>
+<h3 id="procedural-texture-quad"><a class="header" href="#procedural-texture-quad"><code>procedural-texture-quad</code></a></h3>
+<p>Demonstrates how to draw a textured quad whose geometry is generated entirely in the vertex shader
+from the vertex index. This shows that attribute-less geometry can still be combined with regular
+texture sampling.</p>
+<p><img src="../images/samples/sample_procedural_texture_quad.jpg" alt="Procedural Texture Quad" /></p>
+<h3 id="hello-camera"><a class="header" href="#hello-camera"><code>hello-camera</code></a></h3>
+<p>Demonstrates how to use <code>Stream</code> with Android's Camera2 API.</p>
+<p><img src="../images/samples/sample_hello_camera.jpg" alt="Hello Camera" /></p>
+<h3 id="stream-test"><a class="header" href="#stream-test"><code>stream-test</code></a></h3>
+<p>Tests the various ways to interact with <code>Stream</code> by drawing into an external texture using Canvas.
+If the two sets of stripes in the screenshot are perfectly aligned, then the Filament frame and the
+external texture are perfectly synchronized.</p>
+<p><img src="../images/samples/sample_stream_test.jpg" alt="Stream Test" /></p>
+<h3 id="time-projection"><a class="header" href="#time-projection"><code>time-projection</code></a></h3>
+<p>Demonstrates frame pacing with <code>FramePacer</code> and how to drive material animation from the expected
+presentation time instead of the vsync time. The clock hand advances by exactly one step per frame,
+so dropped or late frames are easy to spot. Switches let you inject pauses, change the target frame
+rate, and compare the two timing modes.</p>
+<p><img src="../images/samples/sample_time_projection.jpg" alt="Time Projection" /></p>
+<h3 id="material-instance-stress"><a class="header" href="#material-instance-stress"><code>material-instance-stress</code></a></h3>
+<p>Stress-tests the engine by rendering a grid of 1,000 cubes, each with its own <code>MaterialInstance</code>.
+The color, roughness, and scale of every cube are updated on each frame.</p>
+<p><img src="../images/samples/sample_material_instance_stress.jpg" alt="Material Instance Stress" /></p>
+<h3 id="page-curl"><a class="header" href="#page-curl"><code>page-curl</code></a></h3>
+<p>Pure Java app that demonstrates custom vertex shader animation and two-sided texturing.
+Applies the deformation described in "Deforming Pages of Electronic Books" by Hong et al.
+Users can drag horizontally to turn the page.</p>
+<p><img src="../images/samples/sample_page_curl.jpg" alt="Page Curl" /></p>
+<h3 id="live-wallpaper"><a class="header" href="#live-wallpaper"><code>live-wallpaper</code></a></h3>
+<p>Demonstrates how to use Filament as the renderer for an Android Live Wallpaper.</p>
+<p><img src="../images/samples/example_live_wallpaper.jpg" alt="Live Wallpaper" /></p>
+<h3 id="render-validation"><a class="header" href="#render-validation"><code>render-validation</code></a></h3>
+<p>A tool that renders glTF test scenes with <code>ModelViewer</code> on each configured backend, such as OpenGL
+and Vulkan, and compares the results against golden images. Tests are packaged as zip bundles that
+contain a JSON configuration, models, and goldens, and the app can generate the goldens on the
+device. Failing tests are shown with their difference images.</p>
+<p><img src="../images/samples/sample_render_validation.jpg" alt="Render Validation" /></p>
+<h2 id="building-samples"><a class="header" href="#building-samples">Building Samples</a></h2>
+<p>Before you start, make sure to read <a href="intro.html">Filament's README</a>. You need to be able to
+compile Filament's native library and Filament's AAR for this project. The easiest way to proceed
+is to install all the required dependencies and to run the following commands at the root of the
+source tree.</p>
+<p>To build the samples, please follow the steps described in <a href="building.html#android">BUILDING.md</a></p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../main/materials.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../samples/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../dup/android_samples.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../samples/ios.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -182,11 +267,11 @@ for <a href="ios.html">iOS</a> and <a href="web/tutorials.html">web</a>.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../main/materials.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../samples/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../dup/android_samples.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../samples/ios.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
