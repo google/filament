@@ -3,6 +3,12 @@
 # FILMIC
 
 [main]\
-[FILMIC](index.md)
+[~~FILMIC~~](index.md)
+
+---
+
+### Deprecated
+
+---
 
 Filmic tone mapping, modelled after ACES but applied in sRGB space

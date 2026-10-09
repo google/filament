@@ -125,6 +125,7 @@ FilamentApp2::FilamentApp2(const Builder& builder)
           mDropHandler(builder.mDropHandler),
           mSurfaceCreatedCallback(builder.mSurfaceCreatedCallback),
           mSurfaceDestroyedCallback(builder.mSurfaceDestroyedCallback),
+          mIsSplitView(builder.mSplitView),
           mScreenshotPath(builder.mScreenshotPath),
           mWarmupFrames(builder.mWarmupFrames),
           mFixedTimeStep(builder.mFixedTimeStep),

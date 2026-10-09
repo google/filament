@@ -156,7 +156,16 @@ id<MTLSamplerState> SamplerStateCreator::operator()(id<MTLDevice> device,
     // MTLSamplerDescriptor.
     // In practice, this means shadows are not supported when running in the simulator.
     if (samplerDescriptor.compareFunction != MTLCompareFunctionNever) {
-        if (![device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily3_v1]) {
+        bool supportsComparison = false;
+        if (@available(iOS 13.0, *)) {
+            supportsComparison = [device supportsFamily:MTLGPUFamilyApple3];
+        } else {
+#if TARGET_OS_IOS
+            // MTLFeatureSet_iOS_* is compile-time unavailable on tvOS.
+            supportsComparison = [device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily3_v1];
+#endif
+        }
+        if (!supportsComparison) {
             LOG(WARNING) << "Warning: sample comparison not supported by this GPU";
             samplerDescriptor.compareFunction = MTLCompareFunctionNever;
         }
@@ -189,7 +198,7 @@ id<MTLArgumentEncoder> ArgumentEncoderCreator::operator()(id<MTLDevice> device,
         MTLArgumentDescriptor* bufferArgument = [MTLArgumentDescriptor argumentDescriptor];
         bufferArgument.index = i++;
         bufferArgument.dataType = MTLDataTypePointer;
-        bufferArgument.access = MTLArgumentAccessReadOnly;
+        bufferArgument.access = MTLBindingAccessReadOnly;
         [arguments addObject:bufferArgument];
     }
 
@@ -198,13 +207,13 @@ id<MTLArgumentEncoder> ArgumentEncoderCreator::operator()(id<MTLDevice> device,
         textureArgument.index = i++;
         textureArgument.dataType = MTLDataTypeTexture;
         textureArgument.textureType = textureTypes[j];
-        textureArgument.access = MTLArgumentAccessReadOnly;
+        textureArgument.access = MTLBindingAccessReadOnly;
         [arguments addObject:textureArgument];
 
         MTLArgumentDescriptor* samplerArgument = [MTLArgumentDescriptor argumentDescriptor];
         samplerArgument.index = i++;
         samplerArgument.dataType = MTLDataTypeSampler;
-        samplerArgument.access = MTLArgumentAccessReadOnly;
+        samplerArgument.access = MTLBindingAccessReadOnly;
         [arguments addObject:samplerArgument];
     }
 
