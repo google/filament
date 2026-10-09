@@ -288,6 +288,20 @@ ninja
 <pre><code class="language-shell">./build.sh -p ios debug
 </code></pre>
 <p>See <a href="./ios/samples/README.html">ios/samples/README.md</a> for more information.</p>
+<h2 id="tvos"><a class="header" href="#tvos">tvOS</a></h2>
+<p>tvOS builds use the same toolchain path as iOS and are Metal-only (the OpenGL
+backend is automatically disabled). To build for Apple TV devices and the
+tvOS simulator, and bundle the results as XCFrameworks:</p>
+<pre><code class="language-shell">./build.sh -i -s -p tvos release
+</code></pre>
+<p>Omit <code>-s</code> to skip the simulator slice. Add <code>-a</code> to generate a
+<code>filament-&lt;type&gt;-tvos.tgz</code> archive. Output is installed under
+<code>out/tvos-&lt;type&gt;/filament</code> with one XCFramework per library
+(<code>tvos-arm64</code> and <code>tvos-arm64-simulator</code> slices).</p>
+<p>The deployment floor is tvOS 17.0. Note that the tvOS simulator advertises
+<code>MTLGPUFamilyApple2</code> (the Apple TV HD GPU), so features requiring comparison
+samplers (e.g. PCF shadows) are unavailable in the simulator while remaining
+available on all Apple TV 4K devices (<code>MTLGPUFamilyApple3</code>+).</p>
 <h2 id="windows"><a class="header" href="#windows">Windows</a></h2>
 <h3 id="building-on-windows-with-visual-studio-2019-or-later"><a class="header" href="#building-on-windows-with-visual-studio-2019-or-later">Building on Windows with Visual Studio 2019 or later</a></h3>
 <blockquote>

@@ -590,6 +590,7 @@ struct VulkanPlatformPrivate {
     uint32_t mGraphicsQueueFamilyIndex = INVALID_VK_INDEX;
     uint32_t mGraphicsQueueIndex = INVALID_VK_INDEX;
     VkQueue mGraphicsQueue = VK_NULL_HANDLE;
+    VkQueue mAsyncQueue = VK_NULL_HANDLE;
     uint32_t mProtectedGraphicsQueueFamilyIndex = INVALID_VK_INDEX;
     uint32_t mProtectedGraphicsQueueIndex = INVALID_VK_INDEX;
     VkQueue mProtectedGraphicsQueue = VK_NULL_HANDLE;
@@ -758,10 +759,13 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         requestedFeatures.gpuContextPriority = driverConfig.gpuContextPriority;
     }
 
+    auto queues = getPhysicalDeviceQueueFamilyPropertiesHelper(getPhysicalDevice());
+    const size_t graphicsQueuesCount = queues[mImpl->mGraphicsQueueFamilyIndex].queueCount;
+
     if (mImpl->mDevice == VK_NULL_HANDLE) {
         createLogicalDeviceAndQueues(deviceExts, context.mPhysicalDeviceFeatures.features,
                 context.mPhysicalDeviceVk11Features, context.mProtectedMemorySupported,
-                requestedFeatures);
+                requestedFeatures, graphicsQueuesCount > 1);
     }
 
     assert_invariant(mImpl->mDevice != VK_NULL_HANDLE);
@@ -771,6 +775,12 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     vkGetDeviceQueue(mImpl->mDevice, mImpl->mGraphicsQueueFamilyIndex, mImpl->mGraphicsQueueIndex,
             &mImpl->mGraphicsQueue);
     assert_invariant(mImpl->mGraphicsQueue != VK_NULL_HANDLE);
+
+    if (graphicsQueuesCount > 1) {
+        // If we have more than one graphical queue, use one as the async queue
+        vkGetDeviceQueue(mImpl->mDevice, mImpl->mGraphicsQueueFamilyIndex, mImpl->mGraphicsQueueIndex + 1,
+            &mImpl->mAsyncQueue);
+    }
 
     if (context.mProtectedMemorySupported) {
         assert_invariant(mImpl->mProtectedGraphicsQueueFamilyIndex != INVALID_VK_INDEX);
@@ -917,6 +927,10 @@ uint32_t VulkanPlatform::getGraphicsQueueIndex() const noexcept {
 
 VkQueue VulkanPlatform::getGraphicsQueue() const noexcept {
     return mImpl->mGraphicsQueue;
+}
+
+VkQueue VulkanPlatform::getAsyncQueue() const noexcept {
+    return mImpl->mAsyncQueue;
 }
 
 uint32_t VulkanPlatform::getProtectedGraphicsQueueFamilyIndex() const noexcept {
@@ -1198,7 +1212,7 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
 void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExtensions,
         VkPhysicalDeviceFeatures const& features,
         VkPhysicalDeviceVulkan11Features const& vk11Features, bool createProtectedQueue,
-        MiscDeviceFeatures const& requestedFeatures) noexcept {
+        MiscDeviceFeatures const& requestedFeatures, bool createSecondGraphicsQueue) noexcept {
 
     // Identify and select all the required queues
     mImpl->mGraphicsQueueFamilyIndex =
@@ -1212,7 +1226,7 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
         mImpl->mProtectedGraphicsQueueIndex = 0;
     }
 
-    float queuePriority[] = { 1.0f };
+    float queuePriority[] = { 1.0f, 1.0f };
     VkDeviceCreateInfo deviceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
     };
@@ -1237,7 +1251,7 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
         .pNext = requiresGpuPriority ? &queuePriorityCreateInfo : nullptr,
         .queueFamilyIndex = mImpl->mGraphicsQueueFamilyIndex,
-        .queueCount = 1,
+        .queueCount = (createSecondGraphicsQueue ? 2u : 1u),
         .pQueuePriorities = &queuePriority[0],
     };
     // Protected queue

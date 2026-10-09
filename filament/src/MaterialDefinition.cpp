@@ -505,6 +505,7 @@ void MaterialDefinition::processMain() {
     mMaterialParser->getTransparencyMode(&transparencyMode);
     mMaterialParser->getDoubleSided(&doubleSided);
     mMaterialParser->getCullingMode(&cullingMode);
+    mMaterialParser->getInstanced(&instanced);
 
     if (shading == Shading::UNLIT) {
         mMaterialParser->hasShadowMultiplier(&hasShadowMultiplier);

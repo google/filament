@@ -1435,6 +1435,35 @@ public class RenderableManager {
     }
 
     /**
+     * Changes the number of draw instances of this renderable.
+     *
+     * <p>For renderables using manual instancing (i.e. built with Builder::instances(size_t)),
+     * the instance count is silently clamped between 0 and 32767.</p>
+     *
+     * <p>For renderables built with an InstanceBuffer
+     * (i.e. Builder::instances(size_t, InstanceBuffer*)), the instance count must be less
+     * than or equal to both the InstanceBuffer's instance count and
+     * Engine::getMaxAutomaticInstances().</p>
+     *
+     * <p>An instance count of 0 means the renderable is not drawn in any pass (including shadow
+     * passes), but its component is otherwise left untouched. This allows, for instance, to
+     * allocate resources for a maximum number of instances up front and only draw the ones
+     * currently needed.</p>
+     *
+     * <p>All instances are culled using the same bounding box, so care must be taken to make
+     * sure all instances render inside the renderable's bounding box.</p>
+     *
+     * @param instance Instance of the component obtained from getInstance().
+     * @param instanceCount The new number of instances.
+     *
+     * @see Builder#instances
+     * @see #getInstanceCount
+     */
+    public void setInstanceCount(@EntityInstance int instance, @IntRange(from = 0) int instanceCount) {
+        nSetInstanceCount(getNativeObject(), instance, instanceCount);
+    }
+
+    /**
      * Changes the material instance binding for the given primitive.
      *
      * <p>The MaterialInstance's material must have a feature level equal or lower to the engine's
@@ -1648,6 +1677,7 @@ public class RenderableManager {
     private static native int nGetPrimitiveCount(long nativeRenderableManager, @EntityInstance int instance);
     @IntRange(from = 0)
     private static native int nGetInstanceCount(long nativeRenderableManager, @EntityInstance int instance);
+    private static native void nSetInstanceCount(long nativeRenderableManager, @EntityInstance int instance, @IntRange(from = 0) int instanceCount);
     private static native void nSetMaterialInstanceAt(long nativeRenderableManager, @EntityInstance int instance, @IntRange(from = 0) int primitiveIndex, long nativeMaterialInstance);
     private static native void nClearMaterialInstanceAt(long nativeRenderableManager, @EntityInstance int instance, @IntRange(from = 0) int primitiveIndex);
     private static native long nGetMaterialInstanceAt(long nativeRenderableManager, @EntityInstance int instance, @IntRange(from = 0) int primitiveIndex);
