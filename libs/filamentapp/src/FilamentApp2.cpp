@@ -401,8 +401,11 @@ void FilamentApp2::captureScreenshot(utils::CString const& filepath) {
     filament::Viewport const& vp = view->getViewport();
     size_t const byteCount = size_t(vp.width) * size_t(vp.height) * 4;
 
+    // The callback records the dimensions rather than the View. If the readback is still pending
+    // at shutdown, the callback runs from the engine's final purge, after the views are destroyed.
     struct ScreenshotState {
-        View* view = nullptr;
+        uint32_t width = 0;
+        uint32_t height = 0;
         utils::CString filename;
         FilamentApp2* app = nullptr;
     };
@@ -419,10 +422,9 @@ void FilamentApp2::captureScreenshot(utils::CString const& filepath) {
                     return;
                 }
 
-                const filament::Viewport& vp = state->view->getViewport();
                 image::LinearImage image = image::toLinearWithAlpha<uint8_t>(
-                        vp.width, vp.height, vp.width * 4, pixels, [](uint8_t v) { return v; },
-                        image::sRGBToLinear<filament::math::float4>);
+                        state->width, state->height, state->width * 4, pixels,
+                        [](uint8_t v) { return v; }, image::sRGBToLinear<filament::math::float4>);
 
                 std::ostringstream ss(std::ios::binary);
                 bool const encoded = imageio_lite::ImageEncoder::encode(ss,
@@ -442,9 +444,11 @@ void FilamentApp2::captureScreenshot(utils::CString const& filepath) {
                 }
 
                 delete[] pixels;
+
+                // Quits after the screenshot completes.
                 state->app->close();
             },
-            new ScreenshotState{ view, filepath, this });
+            new ScreenshotState{ vp.width, vp.height, filepath, this });
 
     mRenderer->readPixels((uint32_t) vp.left, (uint32_t) vp.bottom, vp.width, vp.height,
             std::move(buffer));

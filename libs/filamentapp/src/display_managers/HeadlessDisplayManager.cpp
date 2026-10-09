@@ -16,6 +16,10 @@
 
 #include <filamentapp/HeadlessDisplayManager.h>
 
+#if defined(__APPLE__)
+#include <CoreFoundation/CoreFoundation.h>
+#endif
+
 namespace filament::app {
 
 HeadlessDisplayManager::HeadlessDisplayManager()
@@ -28,6 +32,22 @@ void HeadlessDisplayManager::terminate() {
         delete info;
     }
     mWindows.clear();
+}
+
+void HeadlessDisplayManager::runFrameLoop(FrameFn frame) {
+    while (!frame()) {
+#if defined(__APPLE__)
+        // The macOS OpenGL platform performs some of its work on the main thread by blocking its
+        // driver thread in dispatch_sync() on the main queue: the hidden window that backs a
+        // headless swap chain is created there, and so is the first setView/update in
+        // makeCurrent(). A windowed manager services the main queue from its event loop, but this
+        // loop has no events, so it would never run those blocks. The driver thread would then
+        // stall, its fences would never signal, every frame would be skipped, and the main thread
+        // would eventually block on a full command buffer. Running one non-blocking pass of the
+        // main run loop per frame lets those blocks complete without pacing the loop.
+        CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.0, false);
+#endif
+    }
 }
 
 WindowHandle HeadlessDisplayManager::createWindow(const char* title, uint32_t w, uint32_t h,
