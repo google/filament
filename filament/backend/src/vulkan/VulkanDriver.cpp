@@ -2229,6 +2229,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // first render pass. Note however that its contents are often preserved on subsequent render
     // passes, due to multiple views.
     TargetBufferFlags discardStart = params.flags.discardStart;
+    TargetBufferFlags viewportCleared = params.flags.viewportCleared;
     if (rt->isSwapChain()) {
         fvkmemory::resource_ptr<VulkanSwapChain> sc = mCurrentSwapChain;
         assert_invariant(sc);
@@ -2240,6 +2241,8 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
                 return;
             } else {
                 discardStart |= TargetBufferFlags::COLOR;
+                // nothing outside the viewport would be preserved
+                viewportCleared = TargetBufferFlags::NONE;
                 sc->markFirstRenderPass();
             }
         }
@@ -2269,13 +2272,30 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // the non-sampling case.
     VkCommandBuffer const cmdbuffer = commandBuffer->buffer();
 
-    // Scissor is reset with each render pass
+    // Buffers known to hold the clear value in the viewport are cleared there instead of loaded;
+    // the render area becomes the viewport.
+    VkRect2D renderArea = { .offset = {}, .extent = extent };
+    rt->transformClientRectToPlatform(&renderArea);
+    if (any(viewportCleared)) {
+        VkRect2D viewportArea = {
+            .offset = { params.viewport.left, params.viewport.bottom },
+            .extent = { params.viewport.width, params.viewport.height }
+        };
+        rt->transformClientRectToPlatform(&viewportArea);
+        if (viewportArea.extent.width && viewportArea.extent.height) {
+            renderArea = viewportArea;
+        } else {
+            // the viewport is entirely outside the render target
+            viewportCleared = TargetBufferFlags::NONE;
+        }
+    }
+
+    // Scissor is reset to the render area with each render pass.
     // This also takes care of VUID-vkCmdDrawIndexed-None-07832.
-    VkRect2D const scissor{ .offset = { 0, 0 }, .extent = extent };
-    vkCmdSetScissor(cmdbuffer, 0, 1, &scissor);
+    vkCmdSetScissor(cmdbuffer, 0, 1, &renderArea);
 
     VulkanLayout currentDepthStencilLayout = VulkanLayout::UNDEFINED;
-    TargetBufferFlags clearVal = params.flags.clear;
+    TargetBufferFlags clearVal = params.flags.clear | viewportCleared;
     TargetBufferFlags discardEndVal = params.flags.discardEnd;
     if (rt->hasDepthStencil()) {
         if (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) {
@@ -2343,12 +2363,9 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .renderPass = renderPass->getVkRenderPass(),
         .framebuffer = vkfb->getVkFramebuffer(),
 
-        // The renderArea field constrains the LoadOp, but scissoring does not.
-        // Therefore, we do not set the scissor rect here, we only need it in draw().
-        .renderArea = { .offset = {}, .extent = extent }
+        // The renderArea field constrains the LoadOp and StoreOp.
+        .renderArea = renderArea
     };
-
-    rt->transformClientRectToPlatform(&renderPassInfo.renderArea);
 
     VkClearValue clearValues[
             MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT +
@@ -2421,6 +2438,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .renderTarget = rt,
         .renderPass = renderPass,
         .params = params,
+        .renderArea = renderArea,
         .currentSubpass = 0,
     };
 }
@@ -3039,6 +3057,19 @@ void VulkanDriver::scissor(Viewport scissorBox) {
 
     auto rt = mCurrentRenderPass.renderTarget;
     rt->transformClientRectToPlatform(&scissor);
+
+    // Nothing may be drawn outside the render area, which can be smaller than the framebuffer.
+    VkRect2D const& area = mCurrentRenderPass.renderArea;
+    int32_t const x0 = std::max(scissor.offset.x, area.offset.x);
+    int32_t const y0 = std::max(scissor.offset.y, area.offset.y);
+    int32_t const x1 = std::min(scissor.offset.x + int32_t(scissor.extent.width),
+            area.offset.x + int32_t(area.extent.width));
+    int32_t const y1 = std::min(scissor.offset.y + int32_t(scissor.extent.height),
+            area.offset.y + int32_t(area.extent.height));
+    scissor = {
+        .offset = { x0, y0 },
+        .extent = { uint32_t(std::max(x1 - x0, 0)), uint32_t(std::max(y1 - y0, 0)) }
+    };
     vkCmdSetScissor(cmdbuffer, 0, 1, &scissor);
 }
 

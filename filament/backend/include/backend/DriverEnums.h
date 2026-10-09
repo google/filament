@@ -1632,6 +1632,14 @@ struct RenderPassFlags {
      * Discarded buffers' content becomes invalid, they must not be read from again.
      */
     TargetBufferFlags discardEnd;
+
+    /**
+     * bitmask indicating which buffers still hold `clearColor` inside the viewport. They must be
+     * loaded (not set in `clear` or `discardStart`), but a backend may clear them instead and
+     * confine the render pass to the viewport, so nothing outside it is cleared or discarded.
+     * Ignoring this is always correct.
+     */
+    TargetBufferFlags viewportCleared;
 };
 
 // A clear-color value for a color attachment, stored as four doubles. The actual type family

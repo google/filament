@@ -268,6 +268,14 @@ void FRenderer::initializeClearFlags() noexcept {
     mClearFlags = getClearFlags();
 }
 
+// whether two viewports have at least one pixel in common
+static bool intersects(filament::Viewport const& a, filament::Viewport const& b) noexcept {
+    return int64_t(a.left) < int64_t(b.left) + b.width &&
+           int64_t(b.left) < int64_t(a.left) + a.width &&
+           int64_t(a.bottom) < int64_t(b.bottom) + b.height &&
+           int64_t(b.bottom) < int64_t(a.bottom) + a.height;
+}
+
 void FRenderer::setPresentationTime(int64_t const monotonic_clock_ns) noexcept {
     using namespace std::chrono;
     setPresentationTime(steady_clock::time_point(nanoseconds(monotonic_clock_ns)));
@@ -445,6 +453,8 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     }
 
     mPreviousRenderTargets.clear();
+    mSwapChainViewports.clear();
+    mSwapChainClearColor.reset();
 
     mBeginFrameInternal = {};
 
@@ -636,6 +646,11 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
     // targets results in a frame copy from the current frame to the
     // destination.
     driver.makeCurrent(dstSwapChain->getHwHandle(), mSwapChain->getHwHandle());
+
+    // this draws over the SwapChain being rendered, so the Views after it must load
+    if (dstSwapChain == mSwapChain) {
+        mSwapChainClearColor.reset();
+    }
 
     // Clear color to black if the CLEAR flag is set.
     if (flags & CLEAR) {
@@ -1103,6 +1118,26 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     mDiscardStartFlags &= ~TargetBufferFlags::COLOR;
     mClearFlags &= ~TargetBufferFlags::COLOR;
 
+    // A later View into the SwapChain whose viewport no earlier View drew into finds the 1st View's
+    // clear color there. Only for the SwapChain: a custom RenderTarget's textures can be written
+    // outside the Views.
+    filament::Viewport const targetViewport = DEBUG_DYNAMIC_SCALING ? svp : vp;
+    ClearColorValue targetClearColor = clearColor;
+    TargetBufferFlags viewportClearedFlags = TargetBufferFlags::NONE;
+    if (!customRenderTarget) {
+        if (mSwapChainViewports.empty()) {
+            if (mClearOptions.clear) {
+                mSwapChainClearColor = clearColor;
+            }
+        } else if (mSwapChainClearColor && !isRenderingMultiview &&
+                std::none_of(mSwapChainViewports.begin(), mSwapChainViewports.end(),
+                        [&](auto const& v) { return intersects(v, targetViewport); })) {
+            viewportClearedFlags = TargetBufferFlags::COLOR;
+            targetClearColor = *mSwapChainClearColor;
+        }
+        mSwapChainViewports.push_back(targetViewport);
+    }
+
     // the clearFlags and clearColor set below are "sticky" to the imported target, meaning
     // they will apply anytime we render into this target, THIS INCLUDES when this target
     // is "replacing" another one. E.g. typically when the color pass ends-up drawing directly
@@ -1110,12 +1145,13 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     auto [viewRenderTarget, attachmentMask] = getRenderTarget(view);
     FrameGraphId<FrameGraphTexture> const fgViewRenderTarget = fg.import("viewRenderTarget", {
             .attachments = attachmentMask,
-            .viewport = DEBUG_DYNAMIC_SCALING ? svp : vp,
-            .clearColor = clearColor,
+            .viewport = targetViewport,
+            .clearColor = targetClearColor,
             .samples = 0,
             .clearFlags = clearFlags,
             .keepOverrideStart = keepOverrideStartFlags,
-            .keepOverrideEnd = keepOverrideEndFlags
+            .keepOverrideEnd = keepOverrideEndFlags,
+            .viewportCleared = viewportClearedFlags
     }, viewRenderTarget);
 
     const TextureFormat hdrFormat = getHdrFormat(view, needsAlphaChannel);
