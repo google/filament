@@ -306,6 +306,11 @@ private:
     // allocateHandleInPool()/deallocateHandleFromPool() with the right pool size.
     template<typename D>
     HandleBase::HandleId allocateHandle() {
+        // getAlignment() is alignof(std::max_align_t), which is 16 on some targets (e.g. x86-64,
+        // Android arm64) and 8 on others (e.g. armv7, Apple arm64, MSVC), so a 16-byte aligned
+        // type is only caught when building for the latter.
+        static_assert(alignof(D) <= Allocator::getAlignment(),
+                "handle pools don't support over-aligned types");
         constexpr size_t BUCKET_SIZE = getBucketSize<D>();
         return allocateHandleInPool<BUCKET_SIZE>();
     }
