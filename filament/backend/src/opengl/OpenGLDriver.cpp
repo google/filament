@@ -3199,6 +3199,26 @@ size_t OpenGLDriver::getMaxArrayTextureLayers() {
     return mContext.gets.max_array_texture_layers;
 }
 
+size_t OpenGLDriver::getMaxTextureCount(ShaderStage const stage) {
+    return size_t(stage == ShaderStage::VERTEX ? mContext.gets.max_vertex_texture_image_units
+                                               : mContext.gets.max_texture_image_units);
+}
+
+size_t OpenGLDriver::getMaxSamplerCount(ShaderStage const stage) {
+    // In GL, a texture unit holds both the texture and its sampler.
+    return getMaxTextureCount(stage);
+}
+
+size_t OpenGLDriver::getExternalTextureCost() {
+    // OES_EGL_image_external allows an external texture to use up to 3 texture units, but the
+    // actual number (GL_REQUIRED_TEXTURE_IMAGE_UNITS_OES) is only known per texture.
+    return 2;
+}
+
+size_t OpenGLDriver::getExternalSamplerCost() {
+    return getExternalTextureCost();
+}
+
 size_t OpenGLDriver::getUniformBufferOffsetAlignment() {
     return mContext.gets.uniform_buffer_offset_alignment;
 }

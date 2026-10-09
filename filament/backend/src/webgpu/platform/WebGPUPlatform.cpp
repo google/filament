@@ -100,7 +100,9 @@ enum class LimitToValidate : uint8_t {
 constexpr wgpu::Limits REQUIRED_LIMITS = {
     .maxBindGroups = filament::backend::MAX_DESCRIPTOR_SET_COUNT,
     .maxBindingsPerBindGroup = 2 * filament::backend::MAX_DESCRIPTOR_COUNT,
-    .maxSamplersPerShaderStage = 16, // TODO should be set to filament::backend::MAX_SAMPLER_COUNT,
+    // This is the minimum we require (feature levels 1 and 2). Higher limits, when supported by
+    // the adapter, should be requested at device creation instead (see the TODO there).
+    .maxSamplersPerShaderStage = 16,
     .maxStorageBuffersPerShaderStage = filament::backend::MAX_SSBO_COUNT,
     .maxVertexBuffers = 8, // TODO should be set to filament::backend::MAX_VERTEX_BUFFER_COUNT,
     .maxVertexAttributes = filament::backend::MAX_VERTEX_ATTRIBUTE_COUNT,
@@ -648,6 +650,14 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
             std::min(MAX_MIPMAP_STORAGE_TEXTURES_PER_STAGE,
                     supportedLimits.maxStorageTexturesPerShaderStage);
     limitsToRequest.maxImmediateSize = supportedLimits.maxImmediateSize;
+    // TODO: request min(adapter maximum, FEATURE_LEVEL_CAPS[FEATURE_LEVEL_3]) for both
+    //  maxSamplersPerShaderStage and maxSampledTexturesPerShaderStage. Note that
+    //  MAX_SAMPLER_COUNT is a total across stages, not a per-stage limit. When the
+    //  material.check_device_sampler_limits feature flag is set, material creation validates
+    //  sampler usage against the limits granted to the device (see
+    //  WebGPUDriver::getMaxTextureCount() and getMaxSamplerCount()), and those default to the spec
+    //  minimum (16) unless requested here. This matters in particular for external textures, each
+    //  of which counts as 4 sampled textures. getFeatureLevel() also depends on these limits.
     deviceDescriptor.requiredLimits = &limitsToRequest;
 
     deviceDescriptor.SetDeviceLostCallback(wgpu::CallbackMode::AllowSpontaneous,

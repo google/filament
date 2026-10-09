@@ -1474,12 +1474,44 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
         }
     };
 
-    auto userSamplerCount = info.sib.getSize();
-    for (auto const& sampler: info.sib.getSamplerInfoList()) {
-        if (sampler.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL) {
-            userSamplerCount += 1;
+    // Fails if the material uses more samplers than guaranteed by its feature level. Here, each
+    // external sampler counts as a single texture regardless of the backend. Its actual cost
+    // depends on the backend and the device (e.g. 4 textures on WebGPU), and can optionally be
+    // validated when the material is loaded (see MaterialDefinition::checkSamplerLimits()).
+    auto checkSamplerCount = [this, &info, &logSamplerOverflow]() -> bool {
+        if (mNoSamplerValidation) {
+            return true;
         }
-    }
+
+        uint32_t const userSamplerCount = info.sib.getSize();
+
+        // Count how many samplers filament uses based on the material properties. This must
+        // match descriptor_sets::getPerViewDescriptorSetLayout().
+        // note: currently SSAO is not used with unlit, but we want to keep that possibility.
+        uint32_t textureUsedByFilamentCount = 4;    // shadowMap, structure, ssao, fog texture
+        if (info.isLit) {
+            textureUsedByFilamentCount += 2;        // dfg, specular
+        }
+        if (info.reflectionMode == ReflectionMode::SCREEN_SPACE ||
+            info.refractionMode == RefractionMode::SCREEN_SPACE) {
+            textureUsedByFilamentCount += 1;        // ssr
+        }
+        if (mVariantFilter & uint32_t(UserVariantFilterBit::FOG)) {
+            textureUsedByFilamentCount -= 1;        // fog texture
+        }
+
+        uint32_t const maxTextureCount =
+                FEATURE_LEVEL_CAPS[+info.featureLevel].MAX_FRAGMENT_SAMPLER_COUNT;
+        if (userSamplerCount > maxTextureCount - textureUsedByFilamentCount) {
+            LOG(ERROR) << "Error: material \"" << mMaterialName.c_str()
+                   << "\" has feature level " << +info.featureLevel
+                   << " and is using more than " << maxTextureCount - textureUsedByFilamentCount
+                   << " samplers.";
+            logSamplerOverflow(info.sib);
+            return false;
+        }
+        return true;
+    };
 
     switch (info.featureLevel) {
         case FeatureLevel::FEATURE_LEVEL_0:
@@ -1493,32 +1525,7 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
             return true;
         case FeatureLevel::FEATURE_LEVEL_1:
         case FeatureLevel::FEATURE_LEVEL_2: {
-            if (mNoSamplerValidation) {
-                break;
-            }
-
-            constexpr auto maxTextureCount = FEATURE_LEVEL_CAPS[1].MAX_FRAGMENT_SAMPLER_COUNT;
-
-            // count how many samplers filament uses based on the material properties
-            // note: currently SSAO is not used with unlit, but we want to keep that possibility.
-            uint32_t textureUsedByFilamentCount = 4;    // shadowMap, structure, ssao, fog texture
-            if (info.isLit) {
-                textureUsedByFilamentCount += 3;        // froxels, dfg, specular
-            }
-            if (info.reflectionMode == ReflectionMode::SCREEN_SPACE ||
-                info.refractionMode == RefractionMode::SCREEN_SPACE) {
-                textureUsedByFilamentCount += 1;        // ssr
-            }
-            if (mVariantFilter & uint32_t(UserVariantFilterBit::FOG)) {
-                textureUsedByFilamentCount -= 1;        // fog texture
-            }
-
-            if (userSamplerCount > maxTextureCount - textureUsedByFilamentCount) {
-                LOG(ERROR) << "Error: material \"" << mMaterialName.c_str()
-                       << "\" has feature level " << +info.featureLevel
-                       << " and is using more than " << maxTextureCount - textureUsedByFilamentCount
-                       << " samplers.";
-                logSamplerOverflow(info.sib);
+            if (!checkSamplerCount()) {
                 return false;
             }
             auto const& samplerList = info.sib.getSamplerInfoList();
@@ -1536,13 +1543,7 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
             break;
         }
         case FeatureLevel::FEATURE_LEVEL_3: {
-            // TODO: we need constants somewhere for these values
-            // TODO: 16 is artificially low for now, until we have a better idea of what we want
-            if (userSamplerCount > 16) {
-                LOG(ERROR) << "Error: material \"" << mMaterialName.c_str()
-                       << "\" has feature level " << +info.featureLevel
-                       << " and is using more than 16 samplers";
-                logSamplerOverflow(info.sib);
+            if (!checkSamplerCount()) {
                 return false;
             }
             break;

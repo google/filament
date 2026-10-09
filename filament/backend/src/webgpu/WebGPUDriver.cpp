@@ -1008,19 +1008,31 @@ bool WebGPUDriver::isWorkaroundNeeded(Workaround) {
 
 FeatureLevel WebGPUDriver::getFeatureLevel() {
 
+    // Every Filament sampler consumes both a sampled texture and a sampler binding, so the
+    // tighter of the two per-stage limits is what counts (see getMaxTextureCount() and
+    // getMaxSamplerCount()). This is only taken into account when the device limits are validated
+    // (material.check_device_sampler_limits).
+    auto const* const featureFlags = getDriverConfig().featureFlagManager;
+    bool const checkDeviceSamplerLimits =
+            featureFlags && featureFlags->features.material.check_device_sampler_limits;
+    size_t const maxSamplerCount = checkDeviceSamplerLimits
+            ? std::min(mDeviceLimits.maxSampledTexturesPerShaderStage,
+                      mDeviceLimits.maxSamplersPerShaderStage)
+            : mDeviceLimits.maxSamplersPerShaderStage;
+
     // If the max sampler counts do not meet FeatureLevel2 standards, then this is an FeatureLevel1
     // device.
     const auto& featureLevel2 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2];
-    if (mDeviceLimits.maxSamplersPerShaderStage < featureLevel2.MAX_VERTEX_SAMPLER_COUNT ||
-            mDeviceLimits.maxSamplersPerShaderStage < featureLevel2.MAX_FRAGMENT_SAMPLER_COUNT) {
+    if (maxSamplerCount < featureLevel2.MAX_VERTEX_SAMPLER_COUNT ||
+            maxSamplerCount < featureLevel2.MAX_FRAGMENT_SAMPLER_COUNT) {
         return FeatureLevel::FEATURE_LEVEL_1;
     }
 
     // If the max sampler counts do not meet FeatureLevel3 standards, then this is an FeatureLevel2
     // device.
     const auto& featureLevel3 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_3];
-    if (mDeviceLimits.maxSamplersPerShaderStage < featureLevel3.MAX_VERTEX_SAMPLER_COUNT ||
-            mDeviceLimits.maxSamplersPerShaderStage < featureLevel3.MAX_FRAGMENT_SAMPLER_COUNT) {
+    if (maxSamplerCount < featureLevel3.MAX_VERTEX_SAMPLER_COUNT ||
+            maxSamplerCount < featureLevel3.MAX_FRAGMENT_SAMPLER_COUNT) {
         return FeatureLevel::FEATURE_LEVEL_2;
     }
     return FeatureLevel::FEATURE_LEVEL_3;
@@ -1060,6 +1072,29 @@ size_t WebGPUDriver::getMaxTextureSize(const SamplerType target) {
 
 size_t WebGPUDriver::getMaxArrayTextureLayers() {
     return mDeviceLimits.maxTextureArrayLayers;
+}
+
+// Note: these are the limits granted to the device, which may be lower than what the adapter
+// supports (see WebGPUPlatform).
+size_t WebGPUDriver::getMaxTextureCount(ShaderStage) {
+    return mDeviceLimits.maxSampledTexturesPerShaderStage;
+}
+
+size_t WebGPUDriver::getMaxSamplerCount(ShaderStage) {
+    return mDeviceLimits.maxSamplersPerShaderStage;
+}
+
+size_t WebGPUDriver::getExternalTextureCost() {
+    // Per the WebGPU spec, a texture_external binding counts as 4 sampled textures (plus 1 sampler
+    // and 1 uniform buffer) against the per-stage limits. See the "exceeds the binding slot limits"
+    // algorithm in section 8.1.1 (Bind Group Layout Creation) of the W3C Candidate Recommendation
+    // Draft of 15 September 2026:
+    // https://www.w3.org/TR/2026/CRD-webgpu-20260915/#exceeds-the-binding-slot-limits
+    return 4;
+}
+
+size_t WebGPUDriver::getExternalSamplerCost() {
+    return 1;
 }
 
 size_t WebGPUDriver::getUniformBufferOffsetAlignment(){

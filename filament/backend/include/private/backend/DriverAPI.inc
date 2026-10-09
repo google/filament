@@ -427,6 +427,12 @@ DECL_DRIVER_API_SYNCHRONOUS_0(uint8_t, getMaxDrawBuffers)
 DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxUniformBufferSize)
 DECL_DRIVER_API_SYNCHRONOUS_N(size_t, getMaxTextureSize, backend::SamplerType, target)
 DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxArrayTextureLayers)
+// Per-stage limits of the current device. Each sampler descriptor consumes one texture and one
+// sampler, except SAMPLER_EXTERNAL whose cost is given by getExternal{Texture|Sampler}Cost().
+DECL_DRIVER_API_SYNCHRONOUS_N(size_t, getMaxTextureCount, backend::ShaderStage, stage)
+DECL_DRIVER_API_SYNCHRONOUS_N(size_t, getMaxSamplerCount, backend::ShaderStage, stage)
+DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getExternalTextureCost)
+DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getExternalSamplerCost)
 DECL_DRIVER_API_SYNCHRONOUS_0(math::float2, getClipSpaceParams)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage2, backend::Platform::ExternalImageHandleRef, image)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage, void*, image)

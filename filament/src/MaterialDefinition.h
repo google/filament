@@ -238,6 +238,12 @@ private:
     static std::unique_ptr<MaterialDefinition> create(FEngine& engine,
             std::unique_ptr<MaterialParser> parser);
 
+    // Returns false if this material uses more textures or samplers than the current device
+    // supports in a shader stage. This depends on the backend (e.g. the cost of an external
+    // sampler) and on the device, so it can't be validated when the material is compiled.
+    // Only called when the material.check_device_sampler_limits feature flag is set.
+    bool checkSamplerLimits(FEngine& engine) const noexcept;
+
     void processMain();
     void processParameterNames();
     void processBlendingMode();

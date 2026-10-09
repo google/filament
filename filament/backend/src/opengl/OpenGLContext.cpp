@@ -24,6 +24,8 @@
 #include <backend/Platform.h>
 #include <backend/platforms/OpenGLPlatform.h>
 
+#include <private/utils/FeatureFlagManager.h>
+
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Logger.h>
@@ -101,13 +103,16 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
 
     glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE,             &gets.max_renderbuffer_size);
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS,           &gets.max_texture_image_units);
+    glGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS,    &gets.max_vertex_texture_image_units);
     glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS,  &gets.max_combined_texture_image_units);
     glGetIntegerv(GL_MAX_TEXTURE_SIZE,                  &gets.max_texture_size);
     glGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE,         &gets.max_cubemap_texture_size);
     glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE,               &gets.max_3d_texture_size);
     glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS,          &gets.max_array_texture_layers);
 
-    mFeatureLevel = resolveFeatureLevel(major, minor, ext, gets, bugs);
+    bool const checkDeviceSamplerLimits = driverConfig.featureFlagManager &&
+            driverConfig.featureFlagManager->features.material.check_device_sampler_limits;
+    mFeatureLevel = resolveFeatureLevel(major, minor, ext, gets, bugs, checkDeviceSamplerLimits);
 
     initWorkarounds(bugs, &ext, mFeatureLevel);
 
@@ -185,6 +190,7 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
     LOG(INFO) << "GL_MAX_RENDERBUFFER_SIZE = " << gets.max_renderbuffer_size;
     LOG(INFO) << "GL_MAX_SAMPLES = " << gets.max_samples;
     LOG(INFO) << "GL_MAX_TEXTURE_IMAGE_UNITS = " << gets.max_texture_image_units;
+    LOG(INFO) << "GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS = " << gets.max_vertex_texture_image_units;
     LOG(INFO) << "GL_MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS = "
               << gets.max_transform_feedback_separate_attribs;
     LOG(INFO) << "GL_MAX_UNIFORM_BLOCK_SIZE = " << gets.max_uniform_block_size;
@@ -591,7 +597,8 @@ void OpenGLContext::initWorkarounds(Bugs const& bugs, Extensions* ext,
 FeatureLevel OpenGLContext::resolveFeatureLevel(GLint major, GLint minor,
         Extensions const& exts,
         Gets const& gets,
-        Bugs const& bugs) noexcept {
+        Bugs const& bugs,
+        bool const requireVertexTextureUnits) noexcept {
 
     constexpr auto const caps3 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_3];
     constexpr GLint MAX_VERTEX_SAMPLER_COUNT = caps3.MAX_VERTEX_SAMPLER_COUNT;
@@ -600,6 +607,9 @@ FeatureLevel OpenGLContext::resolveFeatureLevel(GLint major, GLint minor,
     (void)exts;
     (void)gets;
     (void)bugs;
+
+    bool const hasVertexTextureUnits = !requireVertexTextureUnits ||
+            gets.max_vertex_texture_image_units >= MAX_VERTEX_SAMPLER_COUNT;
 
     FeatureLevel featureLevel = FeatureLevel::FEATURE_LEVEL_1;
 
@@ -613,6 +623,7 @@ FeatureLevel OpenGLContext::resolveFeatureLevel(GLint major, GLint minor,
             if (exts.EXT_texture_cube_map_array) {
                 featureLevel = FeatureLevel::FEATURE_LEVEL_2;
                 if (gets.max_texture_image_units >= MAX_FRAGMENT_SAMPLER_COUNT &&
+                    hasVertexTextureUnits &&
                     gets.max_combined_texture_image_units >=
                             (MAX_FRAGMENT_SAMPLER_COUNT + MAX_VERTEX_SAMPLER_COUNT)) {
                     featureLevel = FeatureLevel::FEATURE_LEVEL_3;
@@ -643,6 +654,7 @@ FeatureLevel OpenGLContext::resolveFeatureLevel(GLint major, GLint minor,
             featureLevel = FeatureLevel::FEATURE_LEVEL_2;
             // figure out our feature level
             if (gets.max_texture_image_units >= MAX_FRAGMENT_SAMPLER_COUNT &&
+                hasVertexTextureUnits &&
                 gets.max_combined_texture_image_units >=
                 (MAX_FRAGMENT_SAMPLER_COUNT + MAX_VERTEX_SAMPLER_COUNT)) {
                 featureLevel = FeatureLevel::FEATURE_LEVEL_3;
