@@ -437,8 +437,13 @@ jobs:
       - name: Run build script
         # We need to build before clang-tidy can run analysis
         run: |
-          # -b enables ASAN and UBSAN (Address and Undefined Behavior Sanitizers) for the debug build
-          ./build.sh -b -p desktop debug
+          # -b enables ASAN and UBSAN (Address and Undefined Behavior Sanitizers) for the debug build.
+          # -d and -t compile matdbg and fgviewer, which build.sh otherwise always disables, so this
+          # is the only presubmit build that covers them. Their servers only start when
+          # FILAMENT_MATDBG_PORT or FILAMENT_FGVIEWER_PORT is set, so the unit tests below, which
+          # run against this tree, behave the same. The postsubmit desktop-asan-debug warmer must
+          # run this exact command for the cache to hit.
+          ./build.sh -b -d -t -p desktop debug
           # This will build and install the release build. -W and -y none reproduce what
           # build/linux/build.sh passes for a release-only build; they have to, because this build
           # and build-linux share the desktop-release cache.

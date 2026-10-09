@@ -174,7 +174,8 @@ jobs:
   #
   #   desktop-release         build-linux (WebGPU on, from build/linux/build.sh), and the release
   #                           half of test-code-correctness
-  #   desktop-asan-debug      the asan/ubsan debug half of test-code-correctness
+  #   desktop-asan-debug      the asan/ubsan debug half of test-code-correctness, with matdbg
+  #                           and fgviewer enabled
   #   desktop-backend-test    test-backend: asan/ubsan debug with webgpu and osmesa
   #   desktop-renderdiff      test-renderdiff: debug with webgpu and osmesa, no sanitizers, plus
   #                           every sample binary. Also read by the golden generation jobs.
@@ -206,7 +207,7 @@ jobs:
             build: cd build/linux && printf "y" | ./build.sh presubmit
           - config: desktop-asan-debug
             mesa: false
-            build: ./build.sh -b -p desktop debug
+            build: ./build.sh -b -d -t -p desktop debug
           # --build-only stops before running the tests: this job wants the objects, and the tests
           # already run in presubmit. Calling the same script the consumer calls is what keeps the
           # cached objects flag-identical to what it will ask for.

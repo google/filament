@@ -345,7 +345,11 @@
             "description": "Image decode to texture, defaulting to textures/Moss_01",
             "apply_presets": ["base_sample"],
             "sample_test": {
-                "executable": "image_viewer"
+                "executable": "image_viewer",
+                // The screenshot captures only the main view, which is the window width minus
+                // the sample's fixed 410px ViewerGui sidebar. Widen the window by that amount so
+                // the captured view is 512x512 and matches the square input image's aspect.
+                "args": ["--window-size=922x512"]
             }
         },
         {
