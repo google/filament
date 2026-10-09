@@ -444,6 +444,11 @@ void TangentsJobExtended::run(Params* params) {
                 tob.normals(data::get<NORMALS_T>(attributes));
                 break;
             case COLORS_ID:
+                // For morph targets, the COLORS aux slot is used to carry the position deltas
+                // (see POSITIONS_ID above), so the base colors must not overwrite it.
+                if (isMorphTarget) {
+                    break;
+                }
                 data::allocate<COLORS_T>(attributes, vertexCount);
                 data::unpack<COLORS_T>(accessor, attributes, vertexCount);
                 tob.aux(AuxType::COLORS, data::get<COLORS_T>(attributes));
