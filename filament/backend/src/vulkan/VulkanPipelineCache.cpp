@@ -141,6 +141,7 @@ VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device, Vu
           mHasDynamicState(context.isExtendedDynamicStateSupported() && context.isPipelineDynamicStateEnabled()),
           mHasDynamicState2(context.isExtendedDynamicState2Supported() && context.isPipelineDynamicStateEnabled()),
           mHasColorWriteEnable(context.isColorWriteEnableSupported() && context.isPipelineDynamicStateEnabled()),
+          mPipelineCacheEvictionEnabled(context.isPipelineCacheEvictionEnabled()),
           mContext(context) {
     VkPipelineCacheCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
@@ -715,20 +716,45 @@ void VulkanPipelineCache::gc() noexcept {
     // buffer is undefined." Therefore, we need to clear all bindings at this time.
     resetBoundPipeline();
 
-    // NOTE: Due to robin_map restrictions, we cannot use auto or range-based loops.
+    if(mPipelineCacheEvictionEnabled) {
+        // Capacity based eviction
+        if (mPipelines.size() <= FVK_MAX_PIPELINE_COUNT) {
+            return;
+        }
 
-    // Evict any pipelines that have not been used in a while.
-    // Any pipeline older than FVK_MAX_COMMAND_BUFFERS can be safely destroyed.
-   using ConstPipeIterator = decltype(mPipelines)::const_iterator;
-   for (ConstPipeIterator iter = mPipelines.begin(); iter != mPipelines.end();) {
-       const PipelineCacheEntry& cacheEntry = iter.value();
-       if (cacheEntry.lastUsed + FVK_MAX_PIPELINE_AGE < mCurrentTime) {
-           vkDestroyPipeline(mDevice, iter->second.handle, VKALLOC);
-           iter = mPipelines.erase(iter);
-       } else {
-           ++iter;
-       }
-   }
+        // figure out which pipelines have exceeded their time to live.
+        using PipeIterator = decltype(mPipelines)::iterator;
+        std::vector<PipeIterator> expiredCandidates;
+        expiredCandidates.reserve(mPipelines.size());
+
+        for (PipeIterator iter = mPipelines.begin(); iter != mPipelines.end(); ++iter) {
+            const PipelineCacheEntry& cacheEntry = iter.value();
+            if (cacheEntry.lastUsed + FVK_MAX_PIPELINE_AGE < mCurrentTime) {
+                expiredCandidates.push_back(iter);
+            }
+        }
+
+        // If all pipelines are still within the TTL window, do not evict anything.
+        if (expiredCandidates.empty()) {
+            return;
+        }
+
+        // Sort expired piplines oldest first
+        std::sort(expiredCandidates.begin(), expiredCandidates.end(),
+                [](const PipeIterator& a, const PipeIterator& b) {
+                    return a.value().lastUsed < b.value().lastUsed;
+                });
+
+        // Compute how many expired pipelines to evict to meet capacity requirements
+        const size_t excessCount = mPipelines.size() - FVK_MAX_PIPELINE_COUNT;
+        const size_t evictCount = std::min(excessCount, expiredCandidates.size());
+
+        for (size_t i = 0; i < evictCount; ++i) {
+            PipeIterator iter = expiredCandidates[i];
+            vkDestroyPipeline(mDevice, iter.value().handle, VKALLOC);
+            mPipelines.erase(iter);
+        }
+    }
 }
 
 bool VulkanPipelineCache::PipelineEqual::operator()(const PipelineKey& k1,
