@@ -21,12 +21,21 @@
 
 #include "vulkan/utils/Conversion.h"
 
+#include <backend/platforms/VulkanPlatform.h>
+
 #include <private/utils/Tracing.h>
 
 #include <utils/compiler.h>
+#include <utils/Hash.h>
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
+
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <vector>
+
 #if defined(__clang__)
 // Vulkan functions often immediately dereference pointers, so it's fine to pass in a pointer
 // to a stack-allocated variable.
@@ -41,6 +50,84 @@ namespace filament::backend {
 namespace {
 
 using utils::JobSystem;
+
+// The blob-cache key the driver's VkPipelineCache is stored under. One entry: the blob says which
+// device and driver wrote it, and is checked before it is used. Engines on different devices in
+// one application therefore replace each other's cache.
+constexpr char PIPELINE_CACHE_KEY[] = "filament.vulkan.VkPipelineCache";
+
+// Precedes the driver's data in the blob, as in "Creating a robust pipeline cache with Vulkan"
+// (Arseny Kapoulkine): the driver's own header misses a truncated or corrupted blob, a driver
+// update that keeps the pipelineCacheUUID, and a 32-bit and a 64-bit process on one device.
+struct PipelineCacheBlobHeader {
+    uint32_t magic;          // PIPELINE_CACHE_MAGIC
+    uint32_t dataSize;       // of the driver's data that follows
+    uint32_t dataHash;       // hashPipelineCache() of it
+    uint32_t vendorID;
+    uint32_t deviceID;
+    uint32_t driverVersion;
+    uint32_t driverABI;      // sizeof(void*)
+    uint8_t pipelineCacheUUID[VK_UUID_SIZE];
+};
+// No padding: headers are compared with memcmp.
+static_assert(sizeof(PipelineCacheBlobHeader) == 7 * sizeof(uint32_t) + VK_UUID_SIZE);
+
+// Changes with the layout above.
+constexpr uint32_t PIPELINE_CACHE_MAGIC = 0x31435646; // "FVC1"
+
+// Flush events without a newly compiled pipeline (on either thread) before gc() writes the cache.
+// A scene's first frames compile pipelines frame after frame, and writing inside that burst would
+// only mean writing it again. Not left to terminate() alone because mobile applications are
+// usually killed, not torn down. The write runs on the compiler thread, so neither the copy nor
+// the application's insertBlob (typically a file write) stalls the driver thread.
+constexpr uint64_t PIPELINE_CACHE_SAVE_QUIET = 120;
+
+uint32_t hashPipelineCache(uint8_t const* data, size_t size) {
+    return utils::hash::murmurSlow(data, size, 0);
+}
+
+PipelineCacheBlobHeader makePipelineCacheBlobHeader(uint8_t const* data, size_t size,
+        VkPhysicalDeviceProperties const& properties) {
+    PipelineCacheBlobHeader header = {
+        .magic = PIPELINE_CACHE_MAGIC,
+        .dataSize = uint32_t(size),
+        .dataHash = hashPipelineCache(data, size),
+        .vendorID = properties.vendorID,
+        .deviceID = properties.deviceID,
+        .driverVersion = properties.driverVersion,
+        .driverABI = sizeof(void*),
+    };
+    memcpy(header.pipelineCacheUUID, properties.pipelineCacheUUID, VK_UUID_SIZE);
+    return header;
+}
+
+// Whether blob holds a pipeline cache written by this device and driver, in this ABI, intact. The
+// spec has a driver ignore anything else, but not every driver does.
+bool isUsablePipelineCache(std::vector<uint8_t> const& blob,
+        VkPhysicalDeviceProperties const& properties) {
+    PipelineCacheBlobHeader stored;
+    VkPipelineCacheHeaderVersionOne driverHeader;
+    if (blob.size() < sizeof(stored) + sizeof(driverHeader)) {
+        return false;
+    }
+    memcpy(&stored, blob.data(), sizeof(stored));
+    uint8_t const* const data = blob.data() + sizeof(stored);
+    size_t const size = blob.size() - sizeof(stored);
+    if (stored.magic != PIPELINE_CACHE_MAGIC || stored.dataSize != size) {
+        return false;
+    }
+    PipelineCacheBlobHeader const expected = makePipelineCacheBlobHeader(data, size, properties);
+    if (memcmp(&stored, &expected, sizeof(stored)) != 0) {
+        return false;
+    }
+    memcpy(&driverHeader, data, sizeof(driverHeader));
+    return driverHeader.headerSize == sizeof(driverHeader) &&
+           driverHeader.headerVersion == VK_PIPELINE_CACHE_HEADER_VERSION_ONE &&
+           driverHeader.vendorID == properties.vendorID &&
+           driverHeader.deviceID == properties.deviceID &&
+           memcmp(driverHeader.pipelineCacheUUID, properties.pipelineCacheUUID,
+                   VK_UUID_SIZE) == 0;
+}
 
 enum DynamicStateBits : uint16_t {
     DIRTY_NONE                 = 0,
@@ -134,20 +221,56 @@ void printPipelineFeedbackInfo(VkPipelineCreationFeedbackCreateInfo const& feedb
 
 } // namespace
 
-VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device, VulkanContext const& context)
-        : mDevice(device),
+VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VulkanPlatform& platform,
+        VulkanContext const& context)
+        : mDevice(platform.getDevice()),
+          mPlatform(platform),
           mCallbackManager(driver),
           mHasVertexInputDynamicState(context.isVertexInputDynamicStateSupported() && context.isPipelineDynamicStateEnabled()),
           mHasDynamicState(context.isExtendedDynamicStateSupported() && context.isPipelineDynamicStateEnabled()),
           mHasDynamicState2(context.isExtendedDynamicState2Supported() && context.isPipelineDynamicStateEnabled()),
           mHasColorWriteEnable(context.isColorWriteEnableSupported() && context.isPipelineDynamicStateEnabled()),
           mContext(context) {
+    std::vector<uint8_t> blob;
+    if (mContext.isPipelineCachePersistenceEnabled() && mPlatform.hasRetrieveBlobFunc()) {
+        uint8_t probe = 0;
+        size_t const size = mPlatform.retrieveBlob(PIPELINE_CACHE_KEY, sizeof(PIPELINE_CACHE_KEY),
+                &probe, 0);
+        if (size > 0) {
+            blob.resize(size);
+            if (mPlatform.retrieveBlob(PIPELINE_CACHE_KEY, sizeof(PIPELINE_CACHE_KEY),
+                        blob.data(), size) != size) {
+                blob.clear();
+            }
+        }
+        if (!isUsablePipelineCache(blob, mContext.getPhysicalDeviceProperties())) {
+            blob.clear();
+        }
+    }
+    bool const hasInitialData = !blob.empty();
     VkPipelineCacheCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+        .initialDataSize = hasInitialData ? blob.size() - sizeof(PipelineCacheBlobHeader) : 0,
+        .pInitialData = hasInitialData ? blob.data() + sizeof(PipelineCacheBlobHeader) : nullptr,
     };
-    bluevk::vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &mPipelineCache);
+    VkPipelineCache cache = VK_NULL_HANDLE;
+    VkResult result = vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &cache);
+    if (result == VK_SUCCESS && hasInitialData) {
+        PipelineCacheBlobHeader header;
+        memcpy(&header, blob.data(), sizeof(header));
+        mSavedCacheHash = header.dataHash;
+    } else if (result != VK_SUCCESS && hasInitialData) {
+        // A matching header does not guarantee the driver takes the data.
+        createInfo.initialDataSize = 0;
+        createInfo.pInitialData = nullptr;
+        result = vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &cache);
+    }
+    if (result == VK_SUCCESS) {
+        mPipelineCache = cache;
+    }
 
-    if (mContext.shouldUsePipelineCachePrewarming()) {
+    if (mContext.shouldUsePipelineCachePrewarming() ||
+            mContext.isPipelineCachePersistenceEnabled()) {
         mCompilerThreadPool.init(
             /*threadCount=*/1,
             []() {
@@ -537,7 +660,11 @@ VkPipeline VulkanPipelineCache::createPipeline(
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
     FVK_LOGD << "vkCreateGraphicsPipelines with shaders = (" << shaderStages[0].module << ", "
              << shaderStages[1].module << ")";
+#endif
 
+    // The cache-hit bit tells which pipelines were compiled, i.e. which ones added to
+    // mPipelineCache and need it saved.
+    bool const useFeedback = mContext.pipelineCreationFeedbackSupported();
     VkPipelineCreationFeedback stageFeedbacks[SHADER_MODULE_COUNT] = {};
     VkPipelineCreationFeedback pipelineFeedback = {};
     VkPipelineCreationFeedbackCreateInfo feedbackInfo = {
@@ -548,11 +675,11 @@ VkPipeline VulkanPipelineCache::createPipeline(
         .pPipelineStageCreationFeedbacks = stageFeedbacks,
     };
 
-    if (mContext.pipelineCreationFeedbackSupported()) {
+    if (useFeedback) {
         feedbackInfo.pNext = pipelineCreateInfo.pNext;
         pipelineCreateInfo.pNext = &feedbackInfo;
     }
-#endif
+
     VkPipeline pipeline;
     VkResult error = vkCreateGraphicsPipelines(mDevice, mPipelineCache, 1, &pipelineCreateInfo,
             VKALLOC, &pipeline);
@@ -561,7 +688,7 @@ VkPipeline VulkanPipelineCache::createPipeline(
     FVK_LOGD << "vkCreateGraphicsPipelines with shaders = (" << shaderStages[0].module << ", "
              << shaderStages[1].module << ")";
 
-    if (mContext.pipelineCreationFeedbackSupported()) {
+    if (useFeedback) {
         printPipelineFeedbackInfo(feedbackInfo);
     }
 #endif
@@ -570,6 +697,13 @@ VkPipeline VulkanPipelineCache::createPipeline(
     if (error != VK_SUCCESS) {
         FVK_LOGE << "vkCreateGraphicsPipelines error " << error;
         return VK_NULL_HANDLE;
+    }
+    bool const cacheHit = useFeedback &&
+            (pipelineFeedback.flags & VK_PIPELINE_CREATION_FEEDBACK_VALID_BIT) &&
+            (pipelineFeedback.flags &
+                    VK_PIPELINE_CREATION_FEEDBACK_APPLICATION_PIPELINE_CACHE_HIT_BIT);
+    if (!cacheHit) {
+        mPipelinesCompiled.fetch_add(1, std::memory_order_relaxed);
     }
     return pipeline;
 }
@@ -701,7 +835,47 @@ void VulkanPipelineCache::terminate() noexcept {
     mCallbackManager.terminate();
     mCompilerThreadPool.terminate();
 
+    // The pool dropped any queued save, so one is made here whenever this run compiled anything
+    // (the hash skips the write if it already happened). Nothing compiled means nothing to add,
+    // and some drivers (e.g. SwiftShader) do not return loaded data unchanged.
+    if (mPipelinesCompiled.load(std::memory_order_relaxed) > 0) {
+        savePipelineCache();
+    }
     vkDestroyPipelineCache(mDevice, mPipelineCache, VKALLOC);
+}
+
+bool VulkanPipelineCache::savePipelineCache() noexcept {
+    if (!mContext.isPipelineCachePersistenceEnabled() || !mPlatform.hasInsertBlobFunc() ||
+            mPipelineCache == VK_NULL_HANDLE) {
+        return true;
+    }
+    // The driver's data goes after the header, which is filled in once its hash is known.
+    constexpr size_t HEADER_SIZE = sizeof(PipelineCacheBlobHeader);
+    std::vector<uint8_t> blob;
+    size_t size = 0;
+    VkResult result = VK_INCOMPLETE;
+    // A second try covers pipelines created, on either thread, between the two calls.
+    for (int attempt = 0; attempt < 2 && result == VK_INCOMPLETE; attempt++) {
+        size = 0;
+        if (vkGetPipelineCacheData(mDevice, mPipelineCache, &size, nullptr) != VK_SUCCESS) {
+            return false;
+        }
+        blob.resize(HEADER_SIZE + size);
+        result = vkGetPipelineCacheData(mDevice, mPipelineCache, &size, blob.data() + HEADER_SIZE);
+    }
+    if (result != VK_SUCCESS || size == 0) {
+        return false;
+    }
+    blob.resize(HEADER_SIZE + size);
+    PipelineCacheBlobHeader const header = makePipelineCacheBlobHeader(blob.data() + HEADER_SIZE,
+            size, mContext.getPhysicalDeviceProperties());
+    if (header.dataHash != mSavedCacheHash) {
+        memcpy(blob.data(), &header, HEADER_SIZE);
+        mPlatform.insertBlob(PIPELINE_CACHE_KEY, sizeof(PIPELINE_CACHE_KEY), blob.data(),
+                blob.size());
+        mSavedCacheHash = header.dataHash;
+    }
+    return true;
 }
 
 void VulkanPipelineCache::gc() noexcept {
@@ -710,6 +884,25 @@ void VulkanPipelineCache::gc() noexcept {
     // FVK_MAX_PIPELINE_AGE flush events in the past, then we can be sure that it is no longer
     // being used by the GPU, and is therefore safe to destroy or reclaim.
     ++mCurrentTime;
+
+    uint32_t const compiled = mPipelinesCompiled.load(std::memory_order_relaxed);
+    if (compiled != mPipelinesSeen) {
+        mPipelinesSeen = compiled;
+        mPipelinesSeenAt = mCurrentTime;
+        mPipelinesUnsaved.store(true, std::memory_order_relaxed);
+    }
+    if (mPipelinesUnsaved.load(std::memory_order_relaxed) &&
+            mCurrentTime - mPipelinesSeenAt > PIPELINE_CACHE_SAVE_QUIET) {
+        // A failed save is retried after another quiet period, not on every flush.
+        mPipelinesUnsaved.store(false, std::memory_order_relaxed);
+        mPipelinesSeenAt = mCurrentTime;
+        mCompilerThreadPool.queue(CompilerPriorityQueue::LOW, std::make_shared<ProgramToken>(),
+                [this]() {
+                    if (!savePipelineCache()) {
+                        mPipelinesUnsaved.store(true, std::memory_order_relaxed);
+                    }
+                });
+    }
 
     // The Vulkan spec says: "When a command buffer begins recording, all state in that command
     // buffer is undefined." Therefore, we need to clear all bindings at this time.
