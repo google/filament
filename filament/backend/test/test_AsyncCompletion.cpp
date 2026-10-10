@@ -19,8 +19,10 @@
 
 #include "noop/NoopDriver.h"
 
+#include <backend/BufferDescriptor.h>
 #include <backend/CallbackHandler.h>
 #include <backend/DriverEnums.h>
+#include <backend/PixelBufferDescriptor.h>
 
 #include <utils/compiler.h>
 
@@ -438,4 +440,98 @@ TEST_F(AsyncCompletionTest, ReentrantPostAfterServiceThreadStopIsDispatched) {
     getDriver()->scheduleCallback(&countdownHandler, &dispatched, countCallback);
 
     EXPECT_EQ(1, dispatched.load()) << "a callback forwarded after the stop was dropped";
+}
+
+namespace {
+
+void countRelease(void*, size_t, void* user) {
+    ++*static_cast<int*>(user);
+}
+
+} // namespace
+
+TEST_F(AsyncCompletionTest, BufferReleaseDestructionSchedulesRelease) {
+    // A job that never ran still owns its descriptor. Destroying it must schedule the release,
+    // which then runs at the next purge.
+    int released = 0;
+    {
+        DriverBase::AsyncBufferRelease const release(getDriver(),
+                BufferDescriptor(nullptr, 0, countRelease, &released));
+    }
+    EXPECT_EQ(0, released) << "the release callback ran where the guard was destroyed";
+    purge();
+    EXPECT_EQ(1, released);
+}
+
+TEST_F(AsyncCompletionTest, ConsumedBufferReleaseDoesNothing) {
+    int released = 0;
+    {
+        DriverBase::AsyncBufferRelease release(getDriver(),
+                BufferDescriptor(nullptr, 0, countRelease, &released));
+        BufferDescriptor const consumed(release.detach());
+    }
+    // `consumed` released the buffer on its way out, which left the guard nothing to schedule.
+    EXPECT_EQ(1, released);
+    purge();
+    EXPECT_EQ(1, released);
+}
+
+TEST_F(AsyncCompletionTest, MovingBufferReleaseDoesNotReleaseTwice) {
+    int released = 0;
+    {
+        DriverBase::AsyncBufferRelease release(getDriver(),
+                BufferDescriptor(nullptr, 0, countRelease, &released));
+        DriverBase::AsyncBufferRelease const moved(std::move(release));
+    }
+    purge();
+    EXPECT_EQ(1, released);
+}
+
+TEST_F(AsyncCompletionTest, CanceledJobSchedulesBufferRelease) {
+    JobQueue::Ptr queue = JobQueue::create();
+    int released = 0;
+
+    JobQueue::JobId const jobId = queue->push(
+            [release = DriverBase::AsyncBufferRelease(getDriver(),
+                     BufferDescriptor(nullptr, 0, countRelease, &released))]() mutable {});
+    EXPECT_TRUE(queue->cancel(jobId));
+
+    EXPECT_EQ(0, released) << "cancel() ran the release callback on the canceling thread";
+    purge();
+    EXPECT_EQ(1, released);
+}
+
+TEST_F(AsyncCompletionTest, DroppedJobSchedulesBufferRelease) {
+    // `cancelAsyncJob` beat the `...R()` half, so `push()` drops the job on the backend thread.
+    JobQueue::Ptr queue = JobQueue::create();
+    int released = 0;
+
+    JobQueue::JobId const jobId = queue->issueJobId();
+    EXPECT_TRUE(queue->cancel(jobId));
+    JobQueue::JobId const pushedId = queue->push(
+            [release = DriverBase::AsyncBufferRelease(getDriver(),
+                     BufferDescriptor(nullptr, 0, countRelease, &released))]() mutable {},
+            jobId);
+    EXPECT_EQ(JobQueue::InvalidJobId, pushedId);
+
+    EXPECT_EQ(0, released) << "push() ran the release callback on the pushing thread";
+    purge();
+    EXPECT_EQ(1, released);
+}
+
+TEST_F(AsyncCompletionTest, JobDroppedByStoppingQueueSchedulesBufferRelease) {
+    // Also covers PixelBufferDescriptor, which update3DImageAsync uses.
+    JobQueue::Ptr queue = JobQueue::create();
+    int released = 0;
+
+    queue->stop();
+    JobQueue::JobId const pushedId = queue->push(
+            [release = DriverBase::AsyncBufferRelease(getDriver(),
+                     PixelBufferDescriptor(nullptr, 0, PixelDataFormat::RGBA,
+                             PixelDataType::UBYTE, countRelease, &released))]() mutable {});
+    EXPECT_EQ(JobQueue::InvalidJobId, pushedId);
+
+    EXPECT_EQ(0, released) << "push() ran the release callback on the pushing thread";
+    purge();
+    EXPECT_EQ(1, released);
 }
