@@ -380,18 +380,18 @@ FixedCapacityVector<VkQueueFamilyProperties> getPhysicalDeviceQueueFamilyPropert
     return queueFamiliesProperties;
 }
 
-uint32_t identifyGraphicsQueueFamilyIndex(VkPhysicalDevice physicalDevice, VkQueueFlags flags) {
+uint32_t identifyQueueFamilyIndex(VkPhysicalDevice physicalDevice, VkQueueFlags flags) {
     FixedCapacityVector<VkQueueFamilyProperties> const queueFamiliesProperties
             = getPhysicalDeviceQueueFamilyPropertiesHelper(physicalDevice);
-    uint32_t graphicsQueueFamilyIndex = INVALID_VK_INDEX;
+    uint32_t queueFamilyIndex = INVALID_VK_INDEX;
     for (uint32_t j = 0; j < queueFamiliesProperties.size(); ++j) {
         VkQueueFamilyProperties props = queueFamiliesProperties[j];
         if (props.queueCount != 0 && props.queueFlags & flags) {
-            graphicsQueueFamilyIndex = j;
+            queueFamilyIndex = j;
             break;
         }
     }
-    return graphicsQueueFamilyIndex;
+    return queueFamilyIndex;
 }
 
 // Provide a preference ordering of device types.
@@ -442,7 +442,7 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance,
         // Does the device have any command queues that support graphics?
         // In theory, we should also ensure that the device supports presentation of our
         // particular VkSurface, but we don't have a VkSurface yet, so we'll skip this requirement.
-        if (identifyGraphicsQueueFamilyIndex(candidateDevice, VK_QUEUE_GRAPHICS_BIT)
+        if (identifyQueueFamilyIndex(candidateDevice, VK_QUEUE_GRAPHICS_BIT)
             == INVALID_VK_INDEX) {
             continue;
         }
@@ -722,7 +722,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // Initialize the required queues
     if (mImpl->mGraphicsQueueFamilyIndex == INVALID_VK_INDEX) {
         mImpl->mGraphicsQueueFamilyIndex =
-                identifyGraphicsQueueFamilyIndex(mImpl->mPhysicalDevice, VK_QUEUE_GRAPHICS_BIT);
+                identifyQueueFamilyIndex(mImpl->mPhysicalDevice, VK_QUEUE_GRAPHICS_BIT);
     }
 
     // At this point, we should have a family index that points to a family that has > 0 queues for
@@ -734,7 +734,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     }
 
     if (context.mProtectedMemorySupported) {
-        mImpl->mProtectedGraphicsQueueFamilyIndex = identifyGraphicsQueueFamilyIndex(
+        mImpl->mProtectedGraphicsQueueFamilyIndex = identifyQueueFamilyIndex(
                 mImpl->mPhysicalDevice, (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_PROTECTED_BIT));
         // Applying the same logic to the protected queue index (Not sure about shared context and
         // protection)
@@ -1216,12 +1216,12 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
 
     // Identify and select all the required queues
     mImpl->mGraphicsQueueFamilyIndex =
-            identifyGraphicsQueueFamilyIndex(mImpl->mPhysicalDevice, VK_QUEUE_GRAPHICS_BIT);
+            identifyQueueFamilyIndex(mImpl->mPhysicalDevice, VK_QUEUE_GRAPHICS_BIT);
     assert_invariant(mImpl->mGraphicsQueueFamilyIndex != INVALID_VK_INDEX);
     mImpl->mGraphicsQueueIndex = 0;
 
     if (createProtectedQueue) {
-        mImpl->mProtectedGraphicsQueueFamilyIndex = identifyGraphicsQueueFamilyIndex(
+        mImpl->mProtectedGraphicsQueueFamilyIndex = identifyQueueFamilyIndex(
                 mImpl->mPhysicalDevice, (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_PROTECTED_BIT));
         mImpl->mProtectedGraphicsQueueIndex = 0;
     }
