@@ -242,6 +242,10 @@ struct Variant {
         if (isSSRVariant(variant) || isValidDepthVariant(variant)) {
             return variant;
         }
+
+        // filter FOG out since it's turned into spec constant
+        variant.key &= ~FOG;
+
         if (!isLit) {
             // when the shading mode is unlit, remove all the lighting variants
             return variant & UNLIT_MASK;

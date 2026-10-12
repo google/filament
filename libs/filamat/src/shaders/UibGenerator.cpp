@@ -188,7 +188,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "shadowSamplingType",      0, Type::UINT                   },
 
             // ------------------------------------------------------------------------------------
-            // Fog [variant: FOG]
+            // Fog [specialization constant: RUNTIME_CONFIG_HAS_FOG]
             // ------------------------------------------------------------------------------------
             { "fogDensity",              0, Type::FLOAT3,Precision::HIGH },
             { "fogStart",                0, Type::FLOAT, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },

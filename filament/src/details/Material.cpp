@@ -272,12 +272,19 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
     bool const isParallelShaderCompileSupported = driver.isParallelShaderCompileSupported();
     bool const isMaterialLit = mDefinition.isVariantLit;
     MaterialDomain const materialDomain = mDefinition.materialDomain;
+    // Materials compiled without fog support (variantFilter: [fog]) have no fog code, so never
+    // request the fog specialization for them (this mirrors RenderPass::setupColorCommand()).
+    bool const materialHasFog =
+            getSupportedVariants() & UserVariantFilterMask(UserVariantFilterBit::FOG);
 
     if (UTILS_LIKELY(isParallelShaderCompileSupported)) {
         for (auto const variant : variants) {
             for (auto specKey : specKeys) {
                 specKey = DynamicSpecConstKey::filterProgramSpecKey(variant, specKey,
                         materialDomain, isMaterialLit);
+                if (!materialHasFog) {
+                    specKey.setFog(false);
+                }
                 if (mDefinition.isValidProgram(variant, specKey, shaderModel, isStereoSupported)) {
 #ifndef NDEBUG
                     FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
@@ -306,6 +313,9 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
             for (UTILS_UNUSED_WITHOUT_TRACING auto specKey: specKeys) {
                 specKey = DynamicSpecConstKey::filterProgramSpecKey(variant, specKey,
                         materialDomain, isMaterialLit);
+                if (!materialHasFog) {
+                    specKey.setFog(false);
+                }
                 FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
                         "parallel compilation disabled", "name", getName().c_str(), "variantKey",
                         static_cast<uint32_t>(variant.key), "specKey",

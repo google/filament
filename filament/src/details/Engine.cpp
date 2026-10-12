@@ -1814,7 +1814,8 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
     // isMaterialLit means shading != Shading::UNLIT || hasShadowMultiplier;
     const bool isMaterialLit = material->getDefinition().isVariantLit;
     Variant baseVariant{};
-    baseVariant.setFog(view->hasFog());
+    // TODO: Remove this after FOG is fully transferred to spec constant
+    baseVariant.setFog(false);
     baseVariant.setShadowSampler2D(isMaterialLit && view->hasShadowing() && (view->getShadowType() != ShadowType::PCF));
     baseVariant.setStereo(view->hasStereo());
 
@@ -1861,6 +1862,9 @@ FixedCapacityVector<DynamicSpecConstKey> FEngine::getMaterialCompileDynamicSpecC
     baseKey.setDynamicLighting(isMaterialLit && view->hasDynamicLighting());
     baseKey.setExtraDirectionalLights(isMaterialLit && view->hasExtraDirectionalLights());
     baseKey.setDirectionalLighting(isMaterialLit && view->hasDirectionalLighting());
+    // Note: fog can also be disabled per renderable (RenderableManager::setFogEnabled()); like
+    // the variant-based precompile before it, we only precompile the view-level choice here.
+    baseKey.setFog(view->hasFog());
 
     keys.push_back(baseKey);
 

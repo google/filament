@@ -41,6 +41,7 @@ struct DynamicSpecConstKey {
     static constexpr type_t DYNAMIC_LIGHTING = 0x1;
     static constexpr type_t EXTRA_DIRECTIONAL_LIGHTS = 0x2;
     static constexpr type_t DIRECTIONAL_LIGHTING = 0x4;
+    static constexpr type_t FOG = 0x8;
 
     constexpr bool operator==(DynamicSpecConstKey rhs) const noexcept {
         return key == rhs.key;
@@ -86,6 +87,14 @@ struct DynamicSpecConstKey {
         key = (key & ~DIRECTIONAL_LIGHTING) | (v ? DIRECTIONAL_LIGHTING : type_t(0));
     }
 
+    constexpr bool hasFog() const noexcept {
+        return key & FOG;
+    }
+
+    constexpr void setFog(bool v) noexcept {
+        key = (key & ~FOG) | (v ? FOG : type_t(0));
+    }
+
     static constexpr DynamicSpecConstKey filterUserVariant(
             DynamicSpecConstKey key, UserVariantFilterMask filterMask) noexcept {
         if (filterMask & uint32_t(UserVariantFilterBit::DYNAMIC_LIGHTING)) {
@@ -94,6 +103,9 @@ struct DynamicSpecConstKey {
         if (filterMask & uint32_t(UserVariantFilterBit::DIRECTIONAL_LIGHTING)) {
             key.setDirectionalLighting(false);
             key.setExtraDirectionalLights(false);
+        }
+        if (filterMask & uint32_t(UserVariantFilterBit::FOG)) {
+            key.setFog(false);
         }
         return key;
     }
@@ -116,6 +128,15 @@ struct DynamicSpecConstKey {
         return canSupportDirectionalLighting(variant, materialDomain, isLit);
     }
 
+    static constexpr bool canSupportFog(Variant const variant,
+        MaterialDomain const materialDomain, bool const /*isLit*/) noexcept {
+        // Fog applies to lit and unlit surface materials alike, but never to depth or SSR
+        // variants. Whether the material was compiled with fog support at all (variantFilter:
+        // [fog]) is checked by MaterialDefinition::isValidProgram().
+        return materialDomain == MaterialDomain::SURFACE &&
+               !Variant::isValidDepthVariant(variant) && !Variant::isSSRVariant(variant);
+    }
+
     static constexpr bool isValidProgramSpecKey(Variant const variant,
             DynamicSpecConstKey const specKey, MaterialDomain const materialDomain,
             bool const isLit) noexcept {
@@ -126,7 +147,9 @@ struct DynamicSpecConstKey {
                                canSupportExtraDirectionalLights(
                                        variant, materialDomain, isLit))) &&
                (!specKey.hasDirectionalLighting() ||
-                       canSupportDirectionalLighting(variant, materialDomain, isLit));
+                       canSupportDirectionalLighting(variant, materialDomain, isLit)) &&
+               (!specKey.hasFog() ||
+                       canSupportFog(variant, materialDomain, isLit));
     }
 
     static constexpr DynamicSpecConstKey filterProgramSpecKey(Variant const variant,
@@ -140,6 +163,9 @@ struct DynamicSpecConstKey {
         if (!specKey.hasDirectionalLighting() ||
                 !canSupportExtraDirectionalLights(variant, materialDomain, isLit)) {
             specKey.setExtraDirectionalLights(false);
+        }
+        if (!canSupportFog(variant, materialDomain, isLit)) {
+            specKey.setFog(false);
         }
         return specKey;
     }

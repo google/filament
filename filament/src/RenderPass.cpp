@@ -426,6 +426,15 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant, DynamicSpe
     FMaterial const * const UTILS_RESTRICT ma = mi->getMaterial();
     variant = Variant::filterVariant(variant, ma->isVariantLit());
 
+    DynamicSpecConstKey dynamicSpecConstKey = DynamicSpecConstKey::filterProgramSpecKey(
+            variant, specKey, ma->getMaterialDomain(), ma->isVariantLit());
+    // Materials compiled without fog support (variantFilter: [fog]) have no fog code at all,
+    // clear the bit so we don't end up compiling a redundant specialization.
+    if (UTILS_UNLIKELY(
+                !(ma->getSupportedVariants() & UserVariantFilterMask(UserVariantFilterBit::FOG)))) {
+        dynamicSpecConstKey.setFog(false);
+    }
+
     // Below, we evaluate both commands to avoid a branch
 
     uint64_t keyBlending = cmdDraw.key;
@@ -446,6 +455,10 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant, DynamicSpe
     keyDraw |= uint64_t(CustomCommand::PASS);
     keyDraw |= mi->getSortingKey(); // already all set-up for direct or'ing
     keyDraw |= makeField(variant.key, MATERIAL_VARIANT_KEY_MASK, MATERIAL_VARIANT_KEY_SHIFT);
+    // The fog specialization is decided per renderable (see generateCommands()), so unlike the
+    // per-view specialization constants it must participate in the sort key, otherwise commands
+    // using different pipelines would interleave and cause unnecessary pipeline switches.
+    keyDraw |= makeField(dynamicSpecConstKey.hasFog(), MATERIAL_FOG_MASK, MATERIAL_FOG_SHIFT);
     keyDraw |= makeField(rasterState.alphaToCoverage, BLENDING_MASK, BLENDING_SHIFT);
 
     cmdDraw.key = isBlendingCommand ? keyBlending : keyDraw;
@@ -462,8 +475,7 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant, DynamicSpe
     cmdDraw.info.rasterState.inverseFrontFaces = inverseFrontFaces;
     cmdDraw.info.rasterState.depthClamp = hasDepthClamp;
     cmdDraw.info.materialVariant = variant;
-    cmdDraw.info.dynamicSpecConstKey = DynamicSpecConstKey::filterProgramSpecKey(
-            variant, specKey, ma->getMaterialDomain(), ma->isVariantLit());
+    cmdDraw.info.dynamicSpecConstKey = dynamicSpecConstKey;
     // we keep "RasterState::colorWrite" to the value set by material (could be disabled)
 }
 
@@ -630,6 +642,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
         bool const hasSkinningOrMorphing = hasSkinning || hasMorphing;
 
         Variant renderableVariant{ variant };
+        DynamicSpecConstKey renderableSpecKey{ specKey };
 
         // We can't have SSR and shadowing together by construction.
         assert_invariant(!Variant::isSSRVariant(variant) || !hasShadowing);
@@ -641,7 +654,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
         FRenderableManager::MorphingBindingInfo const& morphing = soaMorphing[i];
 
         if constexpr (isColorPass) {
-            renderableVariant.setFog(soaVisibility[i].fog && Variant::isFogVariant(variant));
+            renderableSpecKey.setFog(specKey.hasFog() && soaVisibility[i].fog);
             cmd.key = uint64_t(Pass::COLOR);
         } else if constexpr (isDepthPass) {
             cmd.key = uint64_t(Pass::DEPTH);
@@ -713,7 +726,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
 //                    morphing.morphTargetBuffer->getHwHandle() : SamplerGroupHandle{};
 
             if constexpr (isColorPass) {
-                setupColorCommand(cmd, renderableVariant, specKey, mi,
+                setupColorCommand(cmd, renderableVariant, renderableSpecKey, mi,
                         inverseFrontFaces, hasDepthClamp);
                 const bool blendPass = Pass(cmd.key & PASS_MASK) == Pass::BLENDED;
                 if (blendPass) {
