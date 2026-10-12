@@ -109,6 +109,18 @@ TEST(JobQueue, PopAll) {
     EXPECT_EQ(3, v);
 }
 
+TEST(JobQueue, Empty) {
+    JobQueue::Ptr queue = JobQueue::create();
+    EXPECT_TRUE(queue->empty());
+
+    queue->push([]() {});
+    EXPECT_FALSE(queue->empty());
+
+    JobQueue::Job job = queue->pop(false);
+    ASSERT_TRUE(job);
+    EXPECT_TRUE(queue->empty());
+}
+
 TEST(JobQueue, Cancel) {
     JobQueue::Ptr queue = JobQueue::create();
     int v = 0;
@@ -381,6 +393,36 @@ TEST(AmortizationWorker, TerminateDrainsAllJobs) {
     EXPECT_EQ(2, v);
 }
 
+TEST(AmortizationWorker, Drain) {
+    JobQueue::Ptr queue = JobQueue::create();
+    JobWorker::Ptr worker = AmortizationWorker::create(queue);
+    int v = 0;
+
+    queue->push([&v]() { v++; });
+    queue->push([&v]() { v++; });
+
+    worker->drain();
+    EXPECT_EQ(2, v);
+
+    queue->push([&v]() { v++; });
+    worker->drain();
+    EXPECT_EQ(3, v);
+}
+
+TEST(AmortizationWorker, DrainChainedJobs) {
+    JobQueue::Ptr queue = JobQueue::create();
+    JobWorker::Ptr worker = AmortizationWorker::create(queue);
+    int v = 0;
+
+    queue->push([&queue, &v]() {
+        v++;
+        queue->push([&v]() { v += 10; });
+    });
+
+    worker->drain();
+    EXPECT_EQ(11, v);
+}
+
 
 TEST(ThreadWorker, Process) {
     JobQueue::Ptr queue = JobQueue::create();
@@ -398,6 +440,63 @@ TEST(ThreadWorker, Process) {
     queue->push([&v]() { v++; });
     worker->terminate();
     EXPECT_EQ(2, v.load());
+}
+
+TEST(ThreadWorker, Drain) {
+    JobQueue::Ptr queue = JobQueue::create();
+    JobWorker::Ptr worker = ThreadWorker::create(queue, {});
+    std::atomic_int v = { 0 };
+
+    queue->push([&v]() { v++; });
+    queue->push([&v]() { v++; });
+
+    worker->drain();
+    EXPECT_EQ(2, v.load());
+
+    queue->push([&v]() { v++; });
+    worker->drain();
+    EXPECT_EQ(3, v.load());
+
+    worker->terminate();
+}
+
+TEST(ThreadWorker, DrainWhenEmpty) {
+    JobQueue::Ptr queue = JobQueue::create();
+    JobWorker::Ptr worker = ThreadWorker::create(queue, {});
+
+    worker->drain();
+
+    worker->terminate();
+}
+
+TEST(ThreadWorker, DrainWaitsForInFlightJob) {
+    JobQueue::Ptr queue = JobQueue::create();
+    JobWorker::Ptr worker = ThreadWorker::create(queue, {});
+    std::atomic_bool jobStarted = { false };
+    std::atomic_bool jobFinished = { false };
+
+    queue->push([&jobStarted, &jobFinished]() {
+        jobStarted.store(true);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        jobFinished.store(true);
+    });
+
+    while (!jobStarted.load()) {
+        std::this_thread::yield();
+    }
+
+    worker->drain();
+    EXPECT_TRUE(jobFinished.load());
+
+    worker->terminate();
+}
+
+TEST(ThreadWorker, DrainAfterTerminate) {
+    JobQueue::Ptr queue = JobQueue::create();
+    JobWorker::Ptr worker = ThreadWorker::create(queue, {});
+
+    worker->terminate();
+    worker->drain();
 }
 
 TEST(ThreadWorker, Callbacks) {

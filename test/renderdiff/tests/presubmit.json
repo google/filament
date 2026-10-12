@@ -165,6 +165,18 @@
             }
         },
         {
+            // The glTF-Quantized Duck (KHR_mesh_quantization) stores normals as normalized BYTE3,
+            // and positions and UVs as non-normalized ("scaled") USHORT3 and USHORT2. WebGPU has
+            // no vertex formats for either, so this covers the WebGPU backend's conversion path.
+            "name": "QuantizedMesh",
+            "description": "Quantized vertex attributes (KHR_mesh_quantization)",
+            "apply_presets": ["base"],
+            "gltf_test": {
+                "models": ["Duck"],
+                "model_variant": "glTF-Quantized"
+            }
+        },
+        {
             "name": "HelloTriangle",
             "description": "Triangle primitive sample test",
             "apply_presets": ["base_sample"],
@@ -333,7 +345,11 @@
             "description": "Image decode to texture, defaulting to textures/Moss_01",
             "apply_presets": ["base_sample"],
             "sample_test": {
-                "executable": "image_viewer"
+                "executable": "image_viewer",
+                // The screenshot captures only the main view, which is the window width minus
+                // the sample's fixed 410px ViewerGui sidebar. Widen the window by that amount so
+                // the captured view is 512x512 and matches the square input image's aspect.
+                "args": ["--window-size=922x512"]
             }
         },
         {

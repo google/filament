@@ -948,7 +948,11 @@ add_subdirectory(${EXTERNAL}/cgltf/tnt)
 add_subdirectory(${EXTERNAL}/draco/tnt)
 add_subdirectory(${EXTERNAL}/jsmn/tnt)
 add_subdirectory(${EXTERNAL}/stb/tnt)
-add_subdirectory(${EXTERNAL}/perfetto/tnt)
+if (NOT APPLETV)
+    # Perfetto's subprocess support uses fork()/exec*(), which are __TVOS_PROHIBITED.
+    # The library is only consumed on Android (FILAMENT_ENABLE_PERFETTO).
+    add_subdirectory(${EXTERNAL}/perfetto/tnt)
+endif()
 add_subdirectory(${EXTERNAL}/basisu/tnt)
 
 # imageio-lite is needed for viewer
@@ -1053,4 +1057,9 @@ endif()
 # Generate exported executables for cross-compiled builds (Android, WASM, and iOS)
 if ((NOT CMAKE_CROSSCOMPILING AND NOT FILAMENT_IMPORT_PREBUILT_EXECUTABLES) OR FILAMENT_EXPORT_PREBUILT_EXECUTABLES)
     export(TARGETS matc cmgen filamesh mipgen resgen uberz glslminifier FILE ${IMPORT_EXECUTABLES})
+endif()
+
+# Builds libfilament-samples.a, which the sample-cpp-viewer Android app links against.
+if (ANDROID)
+    add_subdirectory(${FILAMENT}/samples)
 endif()

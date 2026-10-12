@@ -19,6 +19,7 @@
 
 #include <webgpu/webgpu_cpp.h>
 
+#include <cstddef>
 #include <cstdint>
 
 namespace filament::backend {
@@ -48,8 +49,36 @@ public:
 protected:
     WebGPUBufferBase(wgpu::Device const&, wgpu::BufferUsage, uint32_t size, char const* label);
 
+    // Defers the creation of the GPU buffer to a later call to createBuffer().
+    WebGPUBufferBase() = default;
+
+    void createBuffer(wgpu::Device const&, wgpu::BufferUsage, uint32_t size, char const* label);
+
+    /**
+     * Writes `size` bytes into `target` at `byteOffset` through a staging buffer. `fill` is called
+     * with a pointer to the mapped staging memory and must write exactly `size` bytes into it.
+     * The write is padded with zeros to a multiple of 4 bytes, as required by WebGPU.
+     * The same ordering caveat as updateGPUBuffer() applies.
+     */
+    template<typename Fill>
+    static void writeToBuffer(wgpu::Buffer const& target, uint32_t byteOffset, size_t size,
+            WebGPUQueueManager* webGPUQueueManager, WebGPUStagePool* webGPUStagePool,
+            Fill const& fill) {
+        writeToBuffer(
+                target, byteOffset, size, webGPUQueueManager, webGPUStagePool,
+                [](void const* user, uint8_t* destination) {
+                    (*static_cast<Fill const*>(user))(destination);
+                },
+                &fill);
+    }
+
+    using FillFunction = void (*)(void const* user, uint8_t* destination);
+    static void writeToBuffer(wgpu::Buffer const& target, uint32_t byteOffset, size_t size,
+            WebGPUQueueManager* webGPUQueueManager, WebGPUStagePool* webGPUStagePool,
+            FillFunction fill, void const* user);
+
 private:
-    const wgpu::Buffer mBuffer;
+    wgpu::Buffer mBuffer;
 };
 
 } // namespace filament::backend

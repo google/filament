@@ -182,7 +182,7 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder, MaterialDefinition
     // Register the material with matdbg.
     matdbg::DebugServer* server = downcast(engine).debug.server;
     if (UTILS_UNLIKELY(server)) {
-        auto const details = builder.mImpl;
+        auto const& details = builder.mImpl;
         mDebuggerId = server->addMaterial(mDefinition.name, details->mPayload, details->mSize, this);
     }
 #endif

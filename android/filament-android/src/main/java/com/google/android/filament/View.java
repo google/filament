@@ -142,6 +142,7 @@ public class View {
         /** exponential variance shadows (EVSM) */
         VSM,
         /** @deprecated falls back to PCSS */
+        @Deprecated
         DPCF,
         /** EVSM with soft shadows and contact hardening */
         PCSS,
@@ -157,6 +158,7 @@ public class View {
      *
      * @deprecated use AmbientOcclusionOptions::enabled instead
      */
+    @Deprecated
     public enum AmbientOcclusion {
         /** No Ambient Occlusion */
         NONE,
@@ -545,6 +547,7 @@ public class View {
      *
      * @see #setAntiAliasing
      */
+    @Deprecated
     public void setSampleCount() {
         setSampleCount(1);
     }
@@ -569,6 +572,7 @@ public class View {
      *
      * @see #setAntiAliasing
      */
+    @Deprecated
     public void setSampleCount(@IntRange(from = 0) int count) {
         nSetSampleCount(getNativeObject(), count);
     }
@@ -583,6 +587,7 @@ public class View {
      *
      * @deprecated use getMultiSampleAntiAliasingOptions instead
      */
+    @Deprecated
     @IntRange(from = 0)
     public int getSampleCount() {
         return nGetSampleCount(getNativeObject());
@@ -1378,6 +1383,7 @@ public class View {
      *
      * @see #setAmbientOcclusionOptions
      */
+    @Deprecated
     public void setAmbientOcclusion(@NonNull AmbientOcclusion ambientOcclusion) {
         nSetAmbientOcclusion(getNativeObject(), ambientOcclusion.toFilamentNative());
     }
@@ -1391,6 +1397,7 @@ public class View {
      *
      * @see #getAmbientOcclusionOptions
      */
+    @Deprecated
     public AmbientOcclusion getAmbientOcclusion() {
         return EnumCache.sAmbientOcclusionValues[nGetAmbientOcclusion(getNativeObject())];
     }

@@ -201,6 +201,7 @@ struct MaterialDefinition {
     bool hasShadowMultiplier = false;
     bool hasCustomDepthShader = false;
     bool specularAntiAliasing = false;
+    bool instanced = false;
 
     SamplerInterfaceBlock samplerInterfaceBlock;
     BufferInterfaceBlock uniformInterfaceBlock;

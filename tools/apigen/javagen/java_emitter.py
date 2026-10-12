@@ -725,6 +725,9 @@ class JavaEmitter:
             javadoc = generate_javadoc(self.doc, indent_spaces=0)
             if javadoc:
                 out.append(javadoc)
+            annotations = self._get_annotations(self.doc)
+            if annotations:
+                out += self._annotations_to_indented_list(annotations, "")
             
         if self.is_used_by_native:
             out.append("@UsedByNative")
@@ -854,7 +857,8 @@ class JavaEmitter:
         
         # Step 8: Nested Enums and Bitmask Flags
         for enum_ir in self.enums:
-            edoc = generate_javadoc(enum_ir.get("doc", {}), indent_spaces=4)
+            doc = enum_ir.get("doc", {})
+            edoc = generate_javadoc(doc, indent_spaces=4)
             if edoc:
                 out.append(edoc)
             is_flags = enum_ir.get("is_flags", False) or any(a in ("filament:apigen:flags", "filament:flags", "apigen:flags", "flags", "filament:apigen:bitmask", "filament:bitmask", "apigen:bitmask", "bitmask") for a in enum_ir.get("attributes", []))
@@ -873,17 +877,22 @@ class JavaEmitter:
                 out.append("    }")
                 out.append("")
                 continue
+            annotations = self._get_annotations(doc)
+            if annotations:
+                out += self._annotations_to_indented_list(annotations, "    ")
             out.append(f"    public enum {enum_ir['name']} {{")
             custom_enum = is_custom_enum(enum_ir)
             entry_strs = []
             for entry in enum_ir.get("entries", []):
-                edoc = generate_javadoc(entry.get("doc", {}), indent_spaces=8)
+                doc = entry.get("doc", {})
+                edoc = generate_javadoc(doc, indent_spaces=8)
                 name = format_enum_entry_name(enum_ir['name'], entry['name'])
+                entry_line = self._annotations_to_string(self._get_annotations(doc), "        ")
                 if custom_enum:
                     val = entry.get("value", 0)
-                    entry_line = f"        {name}({val})"
+                    entry_line += f"        {name}({val})"
                 else:
-                    entry_line = f"        {name}"
+                    entry_line += f"        {name}"
                 if edoc:
                     entry_strs.append(f"{edoc}\n{entry_line}")
                 else:
@@ -1382,6 +1391,22 @@ class JavaEmitter:
         out.append(GENERATED_FILE_WARNING)
         return "\n".join(out) + "\n"
 
+    def _get_annotations(self, doc) -> str:
+        annotations = []
+        if isinstance(doc, dict):
+            meta = doc.get("meta", {})
+            details = doc.get("details", "")
+            brief = doc.get("brief", "")
+            if "deprecated" in meta or "@deprecated" in details.lower() or "@deprecated" in brief.lower():
+                annotations.append("@Deprecated")
+        return annotations
+
+    def _annotations_to_string(self, annotations, indent = "    ") -> str:
+        return "".join([f"{indent}{annotation}\n" for annotation in annotations])
+
+    def _annotations_to_indented_list(self, annotations, indent = "    ") -> str:
+        return [f"{indent}{annotation}" for annotation in annotations]
+
     def _generate_pojo_struct(self, indent="    ") -> str:
         """Generate Java source code for a POJO options struct class.
 
@@ -1394,6 +1419,9 @@ class JavaEmitter:
         doc = generate_javadoc(self.doc, indent_spaces=len(indent))
         if doc:
             out.append(doc)
+        annotations = self._get_annotations(self.doc)
+        if annotations:
+            out += self._annotations_to_indented_list(annotations, indent)
         out.append(f"{indent}public static class {self.name} {{")
         is_engine_config = (self.name == "Config" and getattr(self.parent_context, "name", "") == "Engine") or (self.name == "Config" and getattr(self, "ctx", None) and getattr(self.ctx, "name", "") == "Engine") or (self.name == "Config" and any(m.get("name") == "create" for m in getattr(self.ctx, "methods", []))) or (self.name == "Config" and getattr(self.ctx, "parent_class", "") == "Engine") or (self.name == "Config" and getattr(self, "ir", {}).get("parent_class") == "Engine")
         if is_engine_config:
@@ -1412,20 +1440,26 @@ class JavaEmitter:
 
         # Nested enums
         for enum_ir in self.enums:
-            edoc = generate_javadoc(enum_ir.get("doc", {}), indent_spaces=len(indent) + 4)
+            doc = enum_ir.get("doc", {})
+            edoc = generate_javadoc(doc, indent_spaces=len(indent) + 4)
             if edoc:
                 out.append(edoc)
+            annotations = self._get_annotations(doc)
+            if annotations:
+                out += self._annotations_to_indented_list(annotations, f"{indent}    ")
             out.append(f"{indent}    public enum {enum_ir['name']} {{")
             custom_enum = is_custom_enum(enum_ir)
             entry_strs = []
             for entry in enum_ir.get("entries", []):
-                vdoc = generate_javadoc(entry.get("doc", {}), indent_spaces=len(indent) + 8)
+                doc = entry.get("doc", {})
+                vdoc = generate_javadoc(doc, indent_spaces=len(indent) + 8)
                 name = format_enum_entry_name(enum_ir['name'], entry['name'])
+                entry_line = self._annotations_to_string(self._get_annotations(doc), f"{indent}        ")
                 if custom_enum:
                     val = entry.get("value", 0)
-                    entry_line = f"{indent}        {name}({val})"
+                    entry_line += f"{indent}        {name}({val})"
                 else:
-                    entry_line = f"{indent}        {name}"
+                    entry_line += f"{indent}        {name}"
                 if vdoc:
                     entry_strs.append(f"{vdoc}\n{entry_line}")
                 else:
@@ -1486,7 +1520,8 @@ class JavaEmitter:
 
             ann_list = self.get_pojo_field_annotation(f, self.name)
             if is_engine_config:
-                ann_list = []
+                is_deprecated = "@Deprecated" in ann_list
+                ann_list = ["@Deprecated"] if is_deprecated else []
             for ann in ann_list:
                 out.append(f"{indent}    {ann}")
 
@@ -1604,6 +1639,9 @@ class JavaEmitter:
             javadoc = generate_javadoc(self.doc, indent_spaces=len(indent))
             if javadoc:
                 out.append(javadoc)
+            annotations = self._get_annotations(self.doc)
+            if annotations:
+                out += self._annotations_to_indented_list(annotations, indent)
                 
         class_decl = f"{indent}public static class {self.name} {{" if is_nested else f"public class {self.name} {{"
         out.append(class_decl)
@@ -1618,6 +1656,9 @@ class JavaEmitter:
                 raw_val = const.get("value")
                 j_type = self.get_java_type(const["type"])
                 val_str = self.format_constant_value(raw_val, j_type, self.constants)
+                ann_list = self._get_annotations(const.get("doc", {}))
+                for ann in ann_list:
+                    out.append(f"{indent}    {ann}")
                 out.append(f"{indent}    public static final {j_type} {c_name} = {val_str};")
             out.append("")
 
@@ -1629,6 +1670,9 @@ class JavaEmitter:
             fcap = fname[0].upper() + fname[1:]
             arr_in = self.get_array_input_info(f["type"])
             f_info, _ = self.resolve_type_info(f["type"], silent=True)
+            ann_list = self._get_annotations(f.get("doc", {}))
+            for ann in ann_list:
+                out.append(f"{indent}    {ann}")
             if arr_in:
                 size = arr_in["size"]
                 scalar = arr_in["scalar"]
@@ -2011,6 +2055,9 @@ class JavaEmitter:
         lines = []
         if javadoc:
             lines.append(javadoc)
+        annotations = self._get_annotations(overload_doc)
+        if annotations:
+            lines += self._annotations_to_indented_list(annotations, indent_str)
         if ret_ann:
             lines.append(f"{indent_str}{ret_ann}")
         lines.append(f"{indent_str}{method_prefix}{ret_type} {name}({', '.join(params_list)}) {{")
@@ -2232,6 +2279,9 @@ class JavaEmitter:
                     conv_lines = []
                     if conv_doc:
                         conv_lines.append(conv_doc)
+                    annotations = self._get_annotations(effective_doc)
+                    if annotations:
+                        conv_lines += self._annotations_to_indented_list(annotations, f"{indent_str}")
                     ctor_prefix = prefix_str if prefix_str else "public "
                     conv_lines.append(f"{indent_str}{ctor_prefix}{self.name}({', '.join(conv_params_list)}) {{")
                     conv_lines.append(f"{body_indent_str}this({', '.join(f_args)});")
@@ -2252,6 +2302,9 @@ class JavaEmitter:
                     conv_lines = []
                     if conv_doc:
                         conv_lines.append(conv_doc)
+                    annotations = self._get_annotations(effective_doc)
+                    if annotations:
+                        conv_lines += self._annotations_to_indented_list(annotations, f"{indent_str}")
                     conv_lines.append(f"{indent_str}@NonNull @Size(min = {size})")
                     conv_lines.append(f"{indent_str}{prefix_str}{j_arr_type} {name}({', '.join(conv_params_list)}) {{")
                     conv_lines.append(f"{body_indent_str}return {name}({', '.join(f_args)});")
@@ -2272,6 +2325,9 @@ class JavaEmitter:
                     conv_lines = []
                     if conv_doc:
                         conv_lines.append(conv_doc)
+                    annotations = self._get_annotations(effective_doc)
+                    if annotations:
+                        conv_lines += self._annotations_to_indented_list(annotations, f"{indent_str}")
                     conv_lines.append(f"{indent_str}@NonNull")
                     conv_lines.append(f"{indent_str}{prefix_str}{struct_name} {name}({', '.join(conv_params_list)}) {{")
                     conv_lines.append(f"{body_indent_str}return {name}({', '.join(f_args)});")
@@ -2284,6 +2340,9 @@ class JavaEmitter:
                     conv_lines = []
                     if conv_doc:
                         conv_lines.append(conv_doc)
+                    annotations = self._get_annotations(effective_doc)
+                    if annotations:
+                        conv_lines += self._annotations_to_indented_list(annotations, f"{indent_str}")
                     if ret_ann:
                         conv_lines.append(f"{indent_str}{ret_ann}")
                     conv_lines.append(f"{indent_str}{prefix_str}{ret_type} {name}({', '.join(conv_params_list)}) {{")
@@ -2363,6 +2422,9 @@ class JavaEmitter:
             lines = []
             if javadoc:
                 lines.append(javadoc)
+            annotations = self._get_annotations(doc)
+            if annotations:
+                lines += self._annotations_to_indented_list(annotations, "    ")
             ref = self.retained_references[name]
             ann = ref.get("nullability_annotation", "")
             if ann:
@@ -2397,6 +2459,9 @@ class JavaEmitter:
             getter_lines = []
             if javadoc:
                 getter_lines.append(javadoc)
+            annotations = self._get_annotations(doc)
+            if annotations:
+                getter_lines += self._annotations_to_indented_list(annotations, "    ")
             if info.get("is_struct"):
                 getter_lines.append("    @NonNull")
                 getter_lines.append(f"    public {info['type']} {name}() {{")
@@ -2437,6 +2502,9 @@ class JavaEmitter:
             lines = []
             if javadoc:
                 lines.append(javadoc)
+            annotations = self._get_annotations(doc)
+            if annotations:
+                lines += self._annotations_to_indented_list(annotations, "    ")
             lines.append("    @NonNull")
             lines.append("    public MaterialInstance getDefaultInstance() {")
             lines.append("        return mDefaultInstance;")
@@ -2454,6 +2522,9 @@ class JavaEmitter:
             lines = []
             if javadoc:
                 lines.append(javadoc)
+            annotations = self._get_annotations(doc)
+            if annotations:
+                lines += self._annotations_to_indented_list(annotations, "    ")    
             lines.append("    @NonNull")
             lines.append("    public ParameterInfo[] getParameters() {")
             lines.append("        int count = getParameterCount();")
@@ -2539,6 +2610,9 @@ class JavaEmitter:
             m1_doc = generate_javadoc(buffer_effective_doc, indent_spaces=4, argument_names=["engine"] + [a["name"] for a in pre_args] + ["buffer"], param_types=buf_param_types)
             if m1_doc:
                 lines.append(m1_doc)
+            annotations = self._get_annotations(doc)
+            if annotations:
+                lines += self._annotations_to_indented_list(annotations, "    ")
             lines.append(f"    public void {name}(@NonNull Engine engine, {pre_p_str}@NonNull Buffer buffer) {{")
             lines.append(f"        {name}(engine, {pre_c_str}buffer, 0, 0, null, null);")
             lines.append("    }")
@@ -2548,6 +2622,9 @@ class JavaEmitter:
             m2_doc = generate_javadoc(buffer_effective_doc, indent_spaces=4, argument_names=["engine"] + [a["name"] for a in pre_args] + ["buffer", "destOffsetInBytes", "count"], param_types=buf_param_types)
             if m2_doc:
                 lines.append(m2_doc)
+            annotations = self._get_annotations(doc)
+            if annotations:
+                lines += self._annotations_to_indented_list(annotations, "    ")
             lines.append(f"    public void {name}(@NonNull Engine engine, {pre_p_str}@NonNull Buffer buffer,")
             lines.append(f"            @IntRange(from = 0) int destOffsetInBytes, @IntRange(from = 0) int count) {{")
             lines.append(f"        {name}(engine, {pre_c_str}buffer, destOffsetInBytes, count, null, null);")
@@ -2558,6 +2635,9 @@ class JavaEmitter:
             m3_doc = generate_javadoc(buffer_effective_doc, indent_spaces=4, argument_names=["engine"] + [a["name"] for a in pre_args] + ["buffer", "destOffsetInBytes", "count", "handler", "callback"], param_types=buf_param_types)
             if m3_doc:
                 lines.append(m3_doc)
+            annotations = self._get_annotations(doc)
+            if annotations:
+                lines += self._annotations_to_indented_list(annotations, "    ")
             lines.append(f"    public void {name}(@NonNull Engine engine, {pre_p_str}@NonNull Buffer buffer,")
             lines.append(f"            @IntRange(from = 0) int destOffsetInBytes, @IntRange(from = 0) int count,")
             lines.append(f"            @Nullable Object handler, @Nullable Runnable callback) {{")
@@ -2629,6 +2709,9 @@ class JavaEmitter:
             m_doc = generate_javadoc(effective_doc, indent_spaces=4, argument_names=arg_names)
             if m_doc:
                 lines.append(m_doc)
+            annotations = self._get_annotations(doc)
+            if annotations:
+                lines += self._annotations_to_indented_list(annotations, "    ")
             lines.append(f"    public void {name}({pre_p_str}@NonNull PixelBufferDescriptor buffer) {{")
             is_read = "read" in name.lower()
             if is_read:
@@ -2720,6 +2803,9 @@ class JavaEmitter:
                 if doc1:
                     lines.append(doc1)
                 call_args_1 = ["getNativeObject()"] + pre_native_args + ["type.ordinal()", values_name, "offset", count_name]
+                annotations = self._get_annotations(doc)
+                if annotations:
+                    lines += self._annotations_to_indented_list(annotations, "    ")
                 lines.append(f"    public void {name}({', '.join(sig1_params)}) {{")
                 lines.append(f"        {native_name}({', '.join(call_args_1)});")
                 lines.append("    }")
@@ -2739,6 +2825,9 @@ class JavaEmitter:
                 if doc2:
                     lines.append(doc2)
                 call_args_2 = pre_call_args + ["type", values_name, "0", count_name]
+                annotations = self._get_annotations(doc)
+                if annotations:
+                    lines += self._annotations_to_indented_list(annotations, "    ")
                 lines.append(f"    public void {name}({', '.join(sig2_params)}) {{")
                 lines.append(f"        {name}({', '.join(call_args_2)});")
                 lines.append("    }")
@@ -2835,6 +2924,9 @@ class JavaEmitter:
                         m1_doc = generate_javadoc(m1_doc_dict, indent_spaces=4, argument_names=pre_arg_names + [buf_name, cnt_name, "offset"], param_types=buf_param_types)
                         if m1_doc:
                             lines.append(m1_doc)
+                        annotations = self._get_annotations(doc)
+                        if annotations:
+                            lines += self._annotations_to_indented_list(annotations, "    ")
                         lines.append(f"    public void {name}({pre_p_str}@NonNull Buffer {buf_name}, @IntRange(from = 0) int {cnt_name}, @IntRange(from = 0) int offset) {{")
                         lines.append(f"        int result = {native_name}(getNativeObject(), {pre_n_str}{buf_name}, {buf_name}.remaining(), {cnt_name}, offset);")
                         lines.append("        if (result < 0) {")
@@ -2851,6 +2943,9 @@ class JavaEmitter:
                         m2_doc = generate_javadoc(m2_doc_dict, indent_spaces=4, argument_names=pre_arg_names + [buf_name, cnt_name], param_types=buf_param_types)
                         if m2_doc:
                             lines.append(m2_doc)
+                        annotations = self._get_annotations(doc)
+                        if annotations:
+                            lines += self._annotations_to_indented_list(annotations, "    ")
                         lines.append(f"    public void {name}({pre_p_str}@NonNull Buffer {buf_name}, @IntRange(from = 0) int {cnt_name}) {{")
                         lines.append(f"        {name}({pre_c_str}{buf_name}, {cnt_name}, 0);")
                         lines.append("    }")
@@ -2863,6 +2958,9 @@ class JavaEmitter:
                         m1_doc = generate_javadoc(m1_doc_dict, indent_spaces=4, argument_names=pre_arg_names + [cnt_name, buf_name], param_types=buf_param_types)
                         if m1_doc:
                             lines.append(m1_doc)
+                        annotations = self._get_annotations(doc)
+                        if annotations:
+                            lines += self._annotations_to_indented_list(annotations, "    ")
                         lines.append(f"    public void {name}({pre_p_str}@IntRange(from = 0) int {cnt_name}, @NonNull Buffer {buf_name}) {{")
                         lines.append(f"        int result = {native_name}(getNativeObject(), {pre_n_str}{buf_name}, {buf_name}.remaining(), {cnt_name});")
                         lines.append("        if (result < 0) {")
@@ -2881,6 +2979,9 @@ class JavaEmitter:
                         m3_doc = generate_javadoc(m3_doc_dict, indent_spaces=4, argument_names=pre_arg_names + [buf_name, "arrayOffset", cnt_name, "offset"], param_types=arr_param_types)
                         if m3_doc:
                             lines.append(m3_doc)
+                        annotations = self._get_annotations(doc)
+                        if annotations:
+                            lines += self._annotations_to_indented_list(annotations, "    ")
                         lines.append(f"    public void {name}({pre_p_str}@NonNull @Size(min = {stride}) {java_type} {buf_name}, @IntRange(from = 0) int arrayOffset, @IntRange(from = 0) int {cnt_name}, @IntRange(from = 0) int offset) {{")
                         lines.append(f"        if ({buf_name}.length < (arrayOffset + {cnt_name}) * {stride}) {{")
                         lines.append(f"            throw new ArrayIndexOutOfBoundsException(\"Array length must be at least \" + ((arrayOffset + {cnt_name}) * {stride}));")
@@ -2897,6 +2998,9 @@ class JavaEmitter:
                         m4_doc = generate_javadoc(m4_doc_dict, indent_spaces=4, argument_names=pre_arg_names + [buf_name, cnt_name, "offset"], param_types=arr_param_types)
                         if m4_doc:
                             lines.append(m4_doc)
+                        annotations = self._get_annotations(doc)
+                        if annotations:
+                            lines += self._annotations_to_indented_list(annotations, "    ")
                         lines.append(f"    public void {name}({pre_p_str}@NonNull @Size(min = {stride}) {java_type} {buf_name}, @IntRange(from = 0) int {cnt_name}, @IntRange(from = 0) int offset) {{")
                         lines.append(f"        {name}({pre_c_str}{buf_name}, 0, {cnt_name}, offset);")
                         lines.append("    }")
@@ -2910,6 +3014,9 @@ class JavaEmitter:
                         m5_doc = generate_javadoc(m5_doc_dict, indent_spaces=4, argument_names=pre_arg_names + [buf_name, cnt_name], param_types=arr_param_types)
                         if m5_doc:
                             lines.append(m5_doc)
+                        annotations = self._get_annotations(doc)
+                        if annotations:
+                            lines += self._annotations_to_indented_list(annotations, "    ")
                         lines.append(f"    public void {name}({pre_p_str}@NonNull @Size(min = {stride}) {java_type} {buf_name}, @IntRange(from = 0) int {cnt_name}) {{")
                         lines.append(f"        {name}({pre_c_str}{buf_name}, 0, {cnt_name}, 0);")
                         lines.append("    }")
@@ -2923,6 +3030,9 @@ class JavaEmitter:
                         m6_doc = generate_javadoc(m6_doc_dict, indent_spaces=4, argument_names=pre_arg_names + [buf_name], param_types=arr_param_types)
                         if m6_doc:
                             lines.append(m6_doc)
+                        annotations = self._get_annotations(doc)
+                        if annotations:
+                            lines += self._annotations_to_indented_list(annotations, "    ")
                         lines.append(f"    public void {name}({pre_p_str}@NonNull @Size(min = {stride}) {java_type} {buf_name}) {{")
                         lines.append(f"        {name}({pre_c_str}{buf_name}, 0, {buf_name}.length / {stride}, 0);")
                         lines.append("    }")
@@ -2935,6 +3045,9 @@ class JavaEmitter:
                         m3_doc = generate_javadoc(m3_doc_dict, indent_spaces=4, argument_names=pre_arg_names + [buf_name, "offset", cnt_name], param_types=arr_param_types)
                         if m3_doc:
                             lines.append(m3_doc)
+                        annotations = self._get_annotations(doc)
+                        if annotations:
+                            lines += self._annotations_to_indented_list(annotations, "    ")
                         lines.append(f"    public void {name}({pre_p_str}@NonNull @Size(min = {stride}) {java_type} {buf_name}, @IntRange(from = 0) int offset, @IntRange(from = 0) int {cnt_name}) {{")
                         lines.append(f"        if ({buf_name}.length < (offset + {cnt_name}) * {stride}) {{")
                         lines.append(f"            throw new ArrayIndexOutOfBoundsException(\"Array length must be at least \" + ((offset + {cnt_name}) * {stride}));")
@@ -2951,6 +3064,9 @@ class JavaEmitter:
                         m4_doc = generate_javadoc(m4_doc_dict, indent_spaces=4, argument_names=pre_arg_names + [buf_name, cnt_name], param_types=arr_param_types)
                         if m4_doc:
                             lines.append(m4_doc)
+                        annotations = self._get_annotations(doc)
+                        if annotations:
+                            lines += self._annotations_to_indented_list(annotations, "    ")
                         lines.append(f"    public void {name}({pre_p_str}@NonNull @Size(min = {stride}) {java_type} {buf_name}, @IntRange(from = 0) int {cnt_name}) {{")
                         lines.append(f"        {name}({pre_c_str}{buf_name}, 0, {cnt_name});")
                         lines.append("    }")
@@ -2964,6 +3080,9 @@ class JavaEmitter:
                         m5_doc = generate_javadoc(m5_doc_dict, indent_spaces=4, argument_names=pre_arg_names + [buf_name], param_types=arr_param_types)
                         if m5_doc:
                             lines.append(m5_doc)
+                        annotations = self._get_annotations(doc)
+                        if annotations:
+                            lines += self._annotations_to_indented_list(annotations, "    ")
                         lines.append(f"    public void {name}({pre_p_str}@NonNull @Size(min = {stride}) {java_type} {buf_name}) {{")
                         lines.append(f"        {name}({pre_c_str}{buf_name}, 0, {buf_name}.length / {stride});")
                         lines.append("    }")
@@ -2984,6 +3103,9 @@ class JavaEmitter:
             lines = []
             if javadoc:
                 lines.append(javadoc)
+            annotations = self._get_annotations(doc)
+            if annotations:
+                lines += self._annotations_to_indented_list(annotations, "    ")
             lines.append(f"    @NonNull @Size(min = {size})")
             lines.append(f"    public {elem_type}[] {name}(@Nullable @Size(min = {size}) {elem_type}[] out) {{")
             lines.append("        if (out == null) {")
@@ -2993,6 +3115,9 @@ class JavaEmitter:
             lines.append("        return out;")
             lines.append("    }")
             lines.append("")
+            annotations = self._get_annotations(doc)
+            if annotations:
+                lines += self._annotations_to_indented_list(annotations, "    ")
             lines.append(f"    @NonNull @Size(min = {size})")
             lines.append(f"    public {elem_type}[] {name}() {{")
             lines.append(f"        return {name}(null);")
@@ -3012,6 +3137,9 @@ class JavaEmitter:
             lines = []
             if javadoc:
                 lines.append(javadoc)
+            annotations = self._get_annotations(doc)
+            if annotations:
+                lines += self._annotations_to_indented_list(annotations, "    ")
             lines.append("    @NonNull")
             lines.append(f"    public {ret_type} {name}(@Nullable {ret_type} out) {{")
             lines.append("        if (out == null) {")
@@ -3024,6 +3152,9 @@ class JavaEmitter:
             lines.append("        return out;")
             lines.append("    }")
             lines.append("")
+            annotations = self._get_annotations(doc)
+            if annotations:
+                lines += self._annotations_to_indented_list(annotations, "    ")
             lines.append("    @NonNull")
             lines.append(f"    public {ret_type} {name}() {{")
             lines.append(f"        return {name}(null);")
@@ -3084,6 +3215,9 @@ class JavaEmitter:
             out = []
             if javadoc:
                 out.append(javadoc)
+            annotations = self._get_annotations(doc)
+            if annotations:
+                out += self._annotations_to_indented_list(annotations, "    ")
             out.append(f"    public void {name}({', '.join(params_list)}) {{")
             out.append(f"        {native_name}(getNativeObject(), {', '.join(call_args)});")
             out.append("    }")
@@ -3124,6 +3258,8 @@ class JavaEmitter:
                             conv_doc = generate_javadoc(effective_doc, indent_spaces=4, argument_names=p_names, param_types=async_param_types)
                             if conv_doc:
                                 out.append(conv_doc)
+                            if annotations:
+                                out += self._annotations_to_indented_list(annotations, "    ")
                             out.append(f"    public void {name}({', '.join(p_params)}) {{")
                             out.append(f"        {name}({', '.join(f_call)});")
                             out.append("    }")
@@ -3779,9 +3915,13 @@ class JavaEmitter:
             return None
         self.emitted_signatures.add(main_sig)
 
+        annotations = self._get_annotations(doc)
+        if annotations:
+            out += self._annotations_to_indented_list(annotations, "    ")
+
         if ret_ann:
             out.append(f"    {ret_ann}")
-            
+
         signature = f"{method_prefix}{ret_type} {name}({', '.join(params_list)})"
         out.append(f"    {signature} {{")
 
@@ -4395,7 +4535,8 @@ class JavaEmitter:
 
         # Step 2: Inner Enums & Flag Bitmask Classes within Builder scope.
         for enum_ir in self.enums:
-            edoc = generate_javadoc(enum_ir.get("doc", {}), indent_spaces=8)
+            doc = enum_ir.get("doc", {})
+            edoc = generate_javadoc(doc, indent_spaces=8)
             if edoc:
                 out.append(edoc)
             is_flags = enum_ir.get("is_flags", False) or any(a in ("filament:apigen:flags", "filament:flags", "apigen:flags", "flags", "filament:apigen:bitmask", "filament:bitmask", "apigen:bitmask", "bitmask") for a in enum_ir.get("attributes", []))
@@ -4414,17 +4555,22 @@ class JavaEmitter:
                 out.append("        }")
                 out.append("")
                 continue
+            annotations = self._get_annotations(doc)
+            if annotations:
+                out += self._annotations_to_indented_list(annotations, "        ")
             out.append(f"        public enum {enum_ir['name']} {{")
             custom_enum = is_custom_enum(enum_ir)
             entry_strs = []
             for entry in enum_ir.get("entries", []):
-                edoc = generate_javadoc(entry.get("doc", {}), indent_spaces=12)
+                doc = entry.get("doc", {})
+                edoc = generate_javadoc(doc, indent_spaces=12)
                 name = format_enum_entry_name(enum_ir['name'], entry['name'])
+                entry_line = self._annotations_to_string(self._get_annotations(doc), "            ")
                 if custom_enum:
                     val = entry.get("value", 0)
-                    entry_line = f"            {name}({val})"
+                    entry_line += f"            {name}({val})"
                 else:
-                    entry_line = f"            {name}"
+                    entry_line += f"            {name}"
                 if edoc:
                     entry_strs.append(f"{edoc}\n{entry_line}")
                 else:
@@ -4573,6 +4719,9 @@ class JavaEmitter:
                 lines = []
                 if javadoc:
                     lines.append(javadoc)
+                annotations = self._get_annotations(doc)
+                if annotations:
+                    lines += self._annotations_to_indented_list(annotations, "        ")
                 lines.append("        @NonNull")
                 lines.append(f"        public {parent_name} build(@NonNull Engine engine) {{")
                 lines.append(f"            long native{parent_name} = nBuilderBuild(mNativeBuilder, engine.getNativeObject());")
@@ -4588,6 +4737,9 @@ class JavaEmitter:
                 lines = []
                 if javadoc:
                     lines.append(javadoc)
+                annotations = self._get_annotations(doc)
+                if annotations:
+                    lines += self._annotations_to_indented_list(annotations, "        ")
                 lines.append("        public void build(@NonNull Engine engine, @Entity int entity) {")
                 lines.append("            if (!nBuilderBuild(mNativeBuilder, engine.getNativeObject(), entity)) {")
                 lines.append(f"                throw new IllegalStateException(\"Couldn't create {parent_name}\");")
@@ -4601,6 +4753,9 @@ class JavaEmitter:
                 lines = []
                 if javadoc:
                     lines.append(javadoc)
+                annotations = self._get_annotations(doc)
+                if annotations:
+                    lines += self._annotations_to_indented_list(annotations, "        ")
                 lines.append("        @Nullable")
                 lines.append(f"        public {parent_name} build() {{")
                 lines.append(f"            long native{parent_name} = nBuilderBuild(mNativeBuilder);")
@@ -4643,6 +4798,9 @@ class JavaEmitter:
                     doc_buf = generate_javadoc(doc_buf_dict, indent_spaces=8, argument_names=[cnt_name, buf_name], param_types=buf_param_types)
                     if doc_buf:
                         lines.append(doc_buf)
+                    annotations = self._get_annotations(doc)
+                    if annotations:
+                        lines += self._annotations_to_indented_list(annotations, "        ")
                     lines.append("        @NonNull")
                     lines.append(f"        public Builder {name}(@IntRange(from = 0) int {cnt_name}, @NonNull Buffer {buf_name}) {{")
                     lines.append(f"            int result = {native_name}(mNativeBuilder, {cnt_name}, {buf_name}, {buf_name}.remaining());")
@@ -4661,6 +4819,9 @@ class JavaEmitter:
                     doc_win = generate_javadoc(doc_win_dict, indent_spaces=8, argument_names=[buf_name, array_offset_name, cnt_name], param_types=arr_param_types)
                     if doc_win:
                         lines.append(doc_win)
+                    annotations = self._get_annotations(doc)
+                    if annotations:
+                        lines += self._annotations_to_indented_list(annotations, "        ")
                     lines.append("        @NonNull")
                     lines.append(f"        public Builder {name}(@NonNull @Size(min = {stride}) {java_type} {buf_name}, @IntRange(from = 0) int {array_offset_name}, @IntRange(from = 0) int {cnt_name}) {{")
                     lines.append(f"            if ({buf_name}.length < ({array_offset_name} + {cnt_name}) * {stride}) {{")
@@ -4679,6 +4840,9 @@ class JavaEmitter:
                     doc_cnt = generate_javadoc(doc_cnt_dict, indent_spaces=8, argument_names=[buf_name, cnt_name], param_types=arr_param_types)
                     if doc_cnt:
                         lines.append(doc_cnt)
+                    annotations = self._get_annotations(doc)
+                    if annotations:
+                        lines += self._annotations_to_indented_list(annotations, "        ")
                     lines.append("        @NonNull")
                     lines.append(f"        public Builder {name}(@NonNull @Size(min = {stride}) {java_type} {buf_name}, @IntRange(from = 0) int {cnt_name}) {{")
                     lines.append(f"            return {name}({buf_name}, 0, {cnt_name});")
@@ -4693,6 +4857,9 @@ class JavaEmitter:
                     doc_arr = generate_javadoc(doc_arr_dict, indent_spaces=8, argument_names=[buf_name], param_types=arr_param_types)
                     if doc_arr:
                         lines.append(doc_arr)
+                    annotations = self._get_annotations(doc)
+                    if annotations:
+                        lines += self._annotations_to_indented_list(annotations, "        ")
                     lines.append("        @NonNull")
                     lines.append(f"        public Builder {name}(@NonNull @Size(min = {stride}) {java_type} {buf_name}) {{")
                     lines.append(f"            return {name}({buf_name}, 0, {buf_name}.length / {stride});")
@@ -4869,6 +5036,9 @@ class JavaEmitter:
                 lines.append("")
         if javadoc:
             lines.append(javadoc)
+        annotations = self._get_annotations(doc)
+        if annotations:
+            lines += self._annotations_to_indented_list(annotations, "        ")
         lines.append("        @NonNull")
         lines.append(f"        public Builder {name}({', '.join(params_list)}) {{")
         for check in input_checks:
@@ -4917,6 +5087,9 @@ class JavaEmitter:
                         overload_params.append(f"{ann_str}{j_type} {safe_a}".strip())
                         overload_call_args.append(safe_a)
                 lines.append("")
+                annotations = self._get_annotations(doc)
+                if annotations:
+                    lines += self._annotations_to_indented_list(annotations, "        ")
                 lines.append("        @NonNull")
                 lines.append(f"        public Builder {name}({', '.join(overload_params)}) {{")
                 lines.append(f"            return {name}({', '.join(overload_call_args)});")

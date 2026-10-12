@@ -269,6 +269,7 @@ public:
         bool hasMorphing : 1;                  //              1 bit
         bool hasHybridInstancing : 1;          //              1 bit
         bool isIndexed : 1;                    //              1 bit
+        bool hasInstancedMaterial : 1;         //              1 bit
 
         DynamicSpecConstKey dynamicSpecConstKey;            // 2 bytes
         uint16_t rfu_padding;                               // 2 bytes

@@ -481,6 +481,11 @@ void MetalDriver::flush(int) {
 void MetalDriver::finish(int) {
     FILAMENT_CHECK_PRECONDITION(!isInRenderPass(mContext))
             << "finish must be called outside of a render pass.";
+
+    if (getJobWorker()) {
+        getJobWorker()->drain();
+    }
+
     // Wait for all frames to finish by submitting and waiting on a dummy command buffer.
     submitPendingCommands(mContext);
 
