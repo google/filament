@@ -301,6 +301,7 @@ public:
     static constexpr RenderFlags HAS_INVERSE_FRONT_FACES   = 0x02;
     static constexpr RenderFlags IS_INSTANCED_STEREOSCOPIC = 0x04;
     static constexpr RenderFlags HAS_DEPTH_CLAMP           = 0x08;
+    static constexpr RenderFlags HAS_FOG_AS_POSTPROCESS    = 0x10;
 
     // Arena used for commands
     using Arena = utils::Arena<
@@ -477,7 +478,8 @@ private:
             math::float3 cameraForward, uint8_t instancedStereoEyeCount) noexcept;
 
     static void setupColorCommand(Command& cmdDraw, Variant variant, DynamicSpecConstKey specKey,
-            FMaterialInstance const* mi, bool inverseFrontFaces, bool hasDepthClamp) noexcept;
+            FMaterialInstance const* mi, bool inverseFrontFaces, bool hasDepthClamp,
+            bool hasFogAsPostProcess) noexcept;
 
     static void updateSummedPrimitiveCounts(
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> vr) noexcept;
