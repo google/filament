@@ -31,10 +31,13 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Logger.h>
+#include <utils/Mutex.h>
 #include <utils/Panic.h>
 #include <utils/trap.h>
 
 #include <math/scalar.h>
+
+#include <memory>
 
 #include <math.h>
 
@@ -447,15 +450,22 @@ void MetalSwapChain::scheduleFrameScheduledCallback(int64_t presentationTimeNs) 
                                     context.driver, flags, presentationTimeNs)];
 
     backend::CallbackHandler* handler = frameScheduled.handler;
-    MetalDriver* driver = context.driver;
+    std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime = context.driverLifetimeTracker;
     [getPendingCommandBuffer(&context) addScheduledHandler:^(id<MTLCommandBuffer> cb) {
         Callback* user = static_cast<Callback*>(callback.p);
         [callback reset];
         if (flags & SwapChain::CALLBACK_DEFAULT_USE_METAL_COMPLETION_HANDLER) {
             Callback::func(user);
-        } else {
-            driver->scheduleCallback(handler, user, &Callback::func);
+            return;
         }
+        if (auto driverTracker = weakDriverLifetime.lock()) {
+            utils::LockGuard const lock(driverTracker->mutex);
+            if (driverTracker->driver) {
+                driverTracker->driver->scheduleCallback(handler, user, &Callback::func);
+                return;
+            }
+        }
+        delete user;
     }];
 }
 
@@ -480,11 +490,18 @@ void MetalSwapChain::scheduleFrameCompletedCallback() {
             [[ReleasablePointer alloc] initWithPointer:new Callback(frameCompleted.callback)];
 
     CallbackHandler* handler = frameCompleted.handler;
-    MetalDriver* driver = context.driver;
+    std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime = context.driverLifetimeTracker;
     [getPendingCommandBuffer(&context) addCompletedHandler:^(id<MTLCommandBuffer> cb) {
         Callback* user = static_cast<Callback*>(callback.p);
         [callback reset];
-        driver->scheduleCallback(handler, user, &Callback::func);
+        if (auto driverTracker = weakDriverLifetime.lock()) {
+            utils::LockGuard const lock(driverTracker->mutex);
+            if (driverTracker->driver) {
+                driverTracker->driver->scheduleCallback(handler, user, &Callback::func);
+                return;
+            }
+        }
+        delete user;
     }];
 }
 
@@ -997,11 +1014,17 @@ void MetalTexture::loadWithCopyBuffer(id<MTLCommandBuffer> blitCommandBuffer, ui
                       destinationLevel:level
                      destinationOrigin:region.origin];
     // We must ensure we only capture a pointer to bufferPool, not "this", as this texture could
-    // be deallocated before the completion handler runs. The MetalBufferPool is guaranteed to
-    // outlive the completion handler.
+    // be deallocated before the completion handler runs. Use DriverLifetimeTracker to ensure the
+    // driver and MetalBufferPool have not been destroyed.
     MetalBufferPool* bufferPool = this->context.bufferPool;
+    std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime = this->context.driverLifetimeTracker;
     [blitCommandBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-        bufferPool->releaseBuffer(entry);
+        if (auto driverTracker = weakDriverLifetime.lock()) {
+            utils::LockGuard const lock(driverTracker->mutex);
+            if (driverTracker->driver) {
+                bufferPool->releaseBuffer(entry);
+            }
+        }
     }];
     [blitCommandEncoder endEncoding];
 }

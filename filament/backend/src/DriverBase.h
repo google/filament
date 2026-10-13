@@ -285,6 +285,10 @@ public:
             }
         }
 
+        void abandon() noexcept {
+            mCallback = nullptr;
+        }
+
     private:
         DriverBase* mDriver;
         CallbackHandler* mHandler;
