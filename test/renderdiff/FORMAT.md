@@ -57,6 +57,7 @@ Used when testing 3D model rendering via `gltf_viewer`.
 | :--- | :--- | :--- | :--- |
 | `model_search_paths` | `list[string]` | Optional | Recursive search paths for `.glb` / `.gltf` models. Typically declared once in a base preset. |
 | `models` | `list[string]` | Optional | List of model names to render (e.g. `["lucy", "FlightHelmet"]`). |
+| `model_variant` | `string` | Optional | glTF-Sample-Assets variant directory to load the models from (e.g. `"glTF-Quantized"`). By default a model is loaded from its `glTF-Binary` directory, or failing that its `glTF` directory, and other variants are never picked implicitly. When set, only files in a directory of this name are used, and a model without that variant is reported as not found. The last preset that sets it is inherited, and the test can override it. |
 | `rendering` | `dict` | Optional | Filament AutomationSpec properties (lighting, camera, post-processing). |
 
 ---

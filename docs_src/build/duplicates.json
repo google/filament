@@ -91,6 +91,14 @@
     "docs_src/README.md": {
         "dest": "dup/docs.md"
     },
+    "android/samples/README.md": {
+        "dest": "dup/android_samples.md",
+        "link_transforms": {
+            "../../docs_src/src_mdbook/src/images/samples": "../images/samples",
+            "../../README.md": "intro.md",
+            "../../BUILDING.md": "building.md"
+        }
+    },
     "test/renderdiff/README.md": {
         "dest": "dup/test_ci_renderdiff.md",
         "link_transforms": {

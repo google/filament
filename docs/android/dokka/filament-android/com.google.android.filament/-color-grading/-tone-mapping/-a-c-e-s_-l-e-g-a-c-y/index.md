@@ -3,6 +3,12 @@
 # ACES_LEGACY
 
 [main]\
-[ACES_LEGACY](index.md)
+[~~ACES_LEGACY~~](index.md)
+
+---
+
+### Deprecated
+
+---
 
 ACES tone mapping, with a brightness modifier to match Filament's legacy tone mapper
