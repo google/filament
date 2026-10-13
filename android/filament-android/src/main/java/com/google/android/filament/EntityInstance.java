@@ -25,6 +25,13 @@ import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.CLASS;
 
+/**
+ * Represents an opaque handle to a component in a component manager.
+ *
+ * <p>Instances are not stable when a component is added, removed or gc() is called on a
+ * component manager. Clients should store entities instead of instances, and query instances
+ * dynamically via <code>getInstance()</code>.</p>
+ */
 @Retention(CLASS)
 @Target({PARAMETER, METHOD, LOCAL_VARIABLE, FIELD})
 public @interface EntityInstance {

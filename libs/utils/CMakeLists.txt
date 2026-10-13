@@ -213,6 +213,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_FixedCircularBuffer.cpp
             test/test_Hash.cpp
             test/test_InternPool.cpp
+            test/test_InternalDebugRegistry.cpp
             test/test_LruCache.cpp
             test/test_JobSystem.cpp
             test/test_MonotonicRingMap.cpp

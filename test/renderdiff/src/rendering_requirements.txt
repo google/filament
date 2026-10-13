@@ -2,3 +2,9 @@ Mako==1.3.10
 MarkupSafe==3.0.2
 PyYAML==6.0.2
 setuptools==83.0.0
+
+# Only needed by the 'web' platform (test/renderdiff/src/web_renderer.py). The version is
+# pinned because it pins the browser: 1.63.0 ships Chromium 153.0.8010.12 (playwright build
+# v1243). Web goldens are only valid for the browser that produced them, so bumping this is a
+# golden-invalidating change -- expect to re-seed the web goldens when you do.
+playwright==1.63.0

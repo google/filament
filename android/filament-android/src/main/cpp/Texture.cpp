@@ -36,13 +36,13 @@ using namespace utils;
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Texture_nIsTextureFormatSupported(JNIEnv *env, jclass clazz, jlong nativeEngine, jint format) {
-    Engine* const engine = (Engine*) nativeEngine;
+    Engine const* const engine = (Engine const*) nativeEngine;
     return (jboolean)Texture::isTextureFormatSupported(*engine, (Texture::InternalFormat)format);
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Texture_nIsTextureFormatMipmappable(JNIEnv *env, jclass clazz, jlong nativeEngine, jint format) {
-    Engine* const engine = (Engine*) nativeEngine;
+    Engine const* const engine = (Engine const*) nativeEngine;
     return (jboolean)Texture::isTextureFormatMipmappable(*engine, (Texture::InternalFormat)format);
 }
 
@@ -53,13 +53,13 @@ Java_com_google_android_filament_Texture_nIsTextureFormatCompressed(JNIEnv *env,
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Texture_nIsProtectedTexturesSupported(JNIEnv *env, jclass clazz, jlong nativeEngine) {
-    Engine* const engine = (Engine*) nativeEngine;
+    Engine const* const engine = (Engine const*) nativeEngine;
     return (jboolean)Texture::isProtectedTexturesSupported(*engine);
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Texture_nIsTextureSwizzleSupported(JNIEnv *env, jclass clazz, jlong nativeEngine) {
-    Engine* const engine = (Engine*) nativeEngine;
+    Engine const* const engine = (Engine const*) nativeEngine;
     return (jboolean)Texture::isTextureSwizzleSupported(*engine);
 }
 
@@ -75,13 +75,13 @@ Java_com_google_android_filament_Texture_nValidatePixelFormatAndType(JNIEnv *env
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_Texture_nGetMaxTextureSize(JNIEnv *env, jclass clazz, jlong nativeEngine, jint type) {
-    Engine* const engine = (Engine*) nativeEngine;
+    Engine const* const engine = (Engine const*) nativeEngine;
     return (jint)Texture::getMaxTextureSize(*engine, (Texture::Sampler)type);
 }
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_Texture_nGetMaxArrayTextureLayers(JNIEnv *env, jclass clazz, jlong nativeEngine) {
-    Engine* const engine = (Engine*) nativeEngine;
+    Engine const* const engine = (Engine const*) nativeEngine;
     return (jint)Texture::getMaxArrayTextureLayers(*engine);
 }
 
@@ -223,7 +223,7 @@ Java_com_google_android_filament_Texture_nSetExternalStream(JNIEnv *env, jclass 
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Texture_nGenerateMipmaps(JNIEnv *env, jclass clazz, jlong nativeTexture, jlong nativeEngine) {
-    Texture const * const that = (Texture const *) nativeTexture;
+    Texture* const that = (Texture*) nativeTexture;
     Engine* const engine = (Engine*) nativeEngine;
     wrapJni(env, [=]() {
         that->generateMipmaps(*engine);

@@ -19,6 +19,7 @@
 
 #include <utils/compiler.h>
 #include <utils/Invocable.h>
+#include <utils/Mutex.h>
 
 #include <array>
 #include <atomic>
@@ -131,38 +132,56 @@ public:
     bool registerDataSource(std::string_view name, void const* UTILS_NULLABLE data,
             size_t count) noexcept;
 
-    // registers a DataSource lazily
+    /**
+     * Registers a DataSource lazily.
+     *
+     * The first getDataSource() call for `name` invokes `creator`, and its result is cached until
+     * unregisterDataSource(). The creator runs at most once per registration, with the data
+     * source lock held, which serializes it with registerDataSource(), unregisterDataSource() and
+     * getDataSource() calls on any thread.
+     *
+     * Consequently, `creator` should be quick, and it must neither call these methods (the lock
+     * isn't recursive) nor wait on a thread that might.
+     */
     bool registerDataSource(std::string_view name,
             utils::Invocable<DataSource()>&& creator) noexcept;
 
+    /**
+     * Unregisters the DataSource, or its creator if it hasn't run yet. If the creator is running,
+     * this waits for it to finish: once this returns, the creator isn't running and won't run.
+     */
     void unregisterDataSource(std::string_view name) noexcept;
 
     bool hasProperty(const char* UTILS_NONNULL name) const noexcept;
 
+    // Asserts if the property has a callback: writing through the returned pointer would
+    // bypass it. Use setProperty() instead.
     void* UTILS_NULLABLE getPropertyAddress(const char* UTILS_NONNULL name);
+
+    // Read-only access; never asserts.
     void const* UTILS_NULLABLE getPropertyAddress(const char* UTILS_NONNULL name) const noexcept;
 
     template<typename T>
-    inline T* UTILS_NULLABLE getPropertyAddress(const char* UTILS_NONNULL name) {
+    T* UTILS_NULLABLE getPropertyAddress(const char* UTILS_NONNULL name) {
         return static_cast<T*>(getPropertyAddress(name));
     }
 
     template<typename T>
-    inline T const* UTILS_NULLABLE getPropertyAddress(
+    T const* UTILS_NULLABLE getPropertyAddress(
             const char* UTILS_NONNULL name) const noexcept {
         return static_cast<T const*>(getPropertyAddress(name));
     }
 
     template<typename T>
-    inline bool getPropertyAddress(const char* UTILS_NONNULL name,
+    bool getPropertyAddress(const char* UTILS_NONNULL name,
             T* UTILS_NULLABLE* UTILS_NONNULL p) {
         *p = getPropertyAddress<T>(name);
         return *p != nullptr;
     }
 
     template<typename T>
-    inline bool getPropertyAddress(const char* UTILS_NONNULL name,
-            T* const UTILS_NULLABLE* UTILS_NONNULL p) const noexcept {
+    bool getPropertyAddress(const char* UTILS_NONNULL name,
+            T const* UTILS_NULLABLE* UTILS_NONNULL p) const noexcept {
         *p = getPropertyAddress<T>(name);
         return *p != nullptr;
     }
@@ -177,6 +196,13 @@ public:
     template<typename T>
     bool setProperty(const char* UTILS_NONNULL name, T v) noexcept;
 
+    /**
+     * Returns the DataSource registered under `name`, or {nullptr, 0} if there is none. For a
+     * lazily registered DataSource, the first call runs its creator (see registerDataSource()).
+     *
+     * The lock only protects the registry, not the data: the returned pointer is valid until the
+     * DataSource is unregistered, and reads must be synchronized with the data's owner.
+     */
     DataSource getDataSource(const char* UTILS_NONNULL name) const noexcept;
 
 private:
@@ -186,12 +212,14 @@ private:
         Type type;
     };
 
-    PropertyInfo getPropertyInfo(const char* UTILS_NONNULL name) noexcept;
+    PropertyInfo getPropertyInfo(const char* UTILS_NONNULL name) const noexcept;
 
     std::unordered_map<std::string_view, PropertyInfo> mPropertyMap;
-    mutable std::unordered_map<std::string_view, DataSource> mDataSourceMap;
-    mutable std::unordered_map<std::string_view, utils::Invocable<DataSource()>>
-            mDataSourceCreatorMap;
+    mutable utils::Mutex mDataSourceLock;
+    mutable std::unordered_map<std::string_view, DataSource> mDataSourceMap
+            UTILS_GUARDED_BY(mDataSourceLock);
+    mutable std::unordered_map<std::string_view, Invocable<DataSource()>> mDataSourceCreatorMap
+            UTILS_GUARDED_BY(mDataSourceLock);
 };
 
 } // namespace utils

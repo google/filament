@@ -41,6 +41,21 @@ RENDER_START_MARKER="${CORE_DUMP_DIR}/render-start"
 # whole suite takes single-digit seconds, so an unoptimized binary costs nothing measurable.
 DIFFIMG_PATH="$(pwd)/out/cmake-debug/tools/diffimg/diffimg"
 
+# The web platform has no desktop debug tree. Its wasm build already configures a release desktop
+# tree in out/cmake-release for the host tools, so diffimg is built there instead. That keeps the
+# web leg to the trees the web-emsdk compiler cache holds, rather than adding one it would compile
+# from scratch on every run.
+WEB_DIFFIMG_PATH="$(pwd)/out/cmake-release/tools/diffimg/diffimg"
+
+# Prints the diffimg that generate.sh built for the given platform ('desktop' or 'web').
+function diffimg_path_() {
+    if [[ "$1" == "web" ]]; then
+        echo "${WEB_DIFFIMG_PATH}"
+    else
+        echo "${DIFFIMG_PATH}"
+    fi
+}
+
 os_name=$(uname -s)
 arch_name=$(uname -m)
 if [[ "$os_name" == "Linux" ]]; then

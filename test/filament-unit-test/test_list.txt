@@ -1,12 +1,27 @@
+# Unit test binaries run by test.sh, one per line, relative to out/cmake-debug and followed by
+# the arguments to pass. Blank lines and lines starting with # are ignored.
+#
+# A leading shards=N splits that binary's tests across N concurrent processes with gtest's
+# built-in sharding. Tests are dealt out round-robin in declaration order, so a binary whose time
+# is concentrated in a few adjacent tests needs at least as many shards as it has slow tests.
+#
+# A leading exclusive runs that binary on its own, after every other job has finished, regardless
+# of where it sits in this list. It is for binaries whose tests fail on a saturated machine even
+# though the code under test is fine. test_utils needs it because its JobSystem lost-wakeup tests
+# start thousands of threads within a 10-second budget, and they run out of time when competing
+# for the CPU with the other test processes. The prefixes can be combined, in which case the
+# shards of an exclusive binary also run one at a time.
+#
+# The slowest entries come first so that they start first when there are fewer CPUs than jobs.
+shards=3 tools/cmgen/test_cmgen compare
+shards=8 libs/filamat/test_filamat
+shards=4 filament/test/test_filament --gtest_filter=-RenderingTest.*
+exclusive libs/utils/test_utils
+libs/filament-matp/test_matp
 libs/viewer/test_settings
-filament/test/test_filament --gtest_filter=-RenderingTest.*
 libs/math/test_math
 libs/image/test_image compare libs/image/tests/reference/
-libs/utils/test_utils
 libs/filaflat/test_filaflat
-libs/filamat/test_filamat
-libs/filament-matp/test_matp
-tools/cmgen/test_cmgen compare
 tools/glslminifier/test_glslminifier
 libs/filameshio/test_filameshio
 libs/camutils/test_camutils

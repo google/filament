@@ -9,6 +9,10 @@
 
 annotation class [EntityInstance](index.md)
 
+Represents an opaque handle to a component in a component manager. 
+
+Instances are not stable when a component is added, removed or gc() is called on a component manager. Clients should store entities instead of instances, and query instances dynamically via `getInstance()`.
+
 ## Properties
 
 | Name | Summary |

@@ -11,6 +11,8 @@ Note that does guarantee that the hardware is actually finished.
 
 This is typically used right after destroying the `SwapChain`, in cases where a guarantee about the `SwapChain` destruction is needed in a timely fashion, such as when responding to Android's `android.view.SurfaceHolder.Callback.surfaceDestroyed`
 
+In asynchronous mode this also waits for every asynchronous call issued before it to run.
+
 If the backend thread has encountered an unrecoverable error, this function becomes a no-op.
 
 [main]\
@@ -23,6 +25,8 @@ Note that does guarantee that the hardware is actually finished.
 A timeout can be specified, if for some reason this flushAndWait doesn't complete before the timeout, it will return false, true otherwise.
 
 This is typically used right after destroying the `SwapChain`, in cases where a guarantee about the `SwapChain` destruction is needed in a timely fashion, such as when responding to Android's `android.view.SurfaceHolder.Callback.surfaceDestroyed`
+
+In asynchronous mode this also waits for every asynchronous call issued before it to run.
 
 If the backend thread has encountered an unrecoverable error, this function becomes a no-op and returns false.
 

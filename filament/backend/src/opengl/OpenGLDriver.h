@@ -396,6 +396,7 @@ private:
             uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
             uint32_t width, uint32_t height, uint32_t depth,
             PixelBufferDescriptor&& data);
+    void ensureTextureRef(GLTexture const* src);
     void createTextureViewSwizzleCommon(Handle<HwTexture> th, Handle<HwTexture> srch,
             TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
             TextureSwizzle a, utils::ImmutableCString&& tag);
@@ -466,7 +467,10 @@ private:
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     // tasks executed on the main thread after the fence signaled
     void whenGpuCommandsComplete(const std::function<void()>& fn);
-    void executeGpuCommandsCompleteOps() noexcept;
+    // When afterFinish is true, the caller has just issued glFinish(), so every fence is known to
+    // have signaled even if the context does not report it yet (WebGL only updates sync status
+    // between browser tasks), and all pending ops are executed.
+    void executeGpuCommandsCompleteOps(bool afterFinish = false) noexcept;
     std::vector<std::pair<GLsync, std::function<void()>>> mGpuCommandCompleteOps;
 
     void whenFrameComplete(const std::function<void()>& fn);

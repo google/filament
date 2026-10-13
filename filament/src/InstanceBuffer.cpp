@@ -33,7 +33,7 @@ void InstanceBuffer::setLocalTransforms(
     downcast(this)->setLocalTransforms(localTransforms, count, offset);
 }
 
-math::mat4f const& InstanceBuffer::getLocalTransform(size_t index) {
+math::mat4f const& InstanceBuffer::getLocalTransform(size_t index) const {
     return downcast(this)->getLocalTransform(index);
 }
 

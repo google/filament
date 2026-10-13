@@ -165,8 +165,15 @@ std::vector<BufferSlot> computeGeometries(cgltf_primitive const* prim, uint8_t c
     utils::JobSystem& js = engine->getJobSystem();
     utils::JobSystem::Job* parent = js.createJob();
     for (auto& [key, params]: jobs) {
-        js.run(utils::jobs::createJob(js, parent,
-                [pptr = &params] { TangentsJobExtended::run(pptr); }));
+        Params* const pptr = &params;
+        utils::JobSystem::Job* job = parent ?
+                utils::jobs::createJob(js, parent, [pptr] { TangentsJobExtended::run(pptr); }) :
+                nullptr;
+        if (UTILS_LIKELY(job)) {
+            js.run(job);
+        } else {
+            TangentsJobExtended::run(pptr);
+        }
     }
     js.runAndWait(parent);
 

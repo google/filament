@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#include "private/filament/DescriptorSets.h"
-
+#include <private/filament/DescriptorSets.h>
 #include <private/filament/EngineEnums.h>
 #include <private/filament/Variant.h>
 
@@ -278,14 +277,18 @@ DescriptorSetLayout getPerViewDescriptorSetLayoutWithVariant(
         Variant const variant,
         MaterialDomain const domain,
         bool const isLit, bool const isSSR, bool const hasFog) noexcept {
-    if (Variant::isValidDepthVariant(variant)) {
-        return depthVariantDescriptorSetLayout;
-    }
-    if (Variant::isSSRVariant(variant)) {
-        return ssrVariantDescriptorSetLayout;
+    bool const isSurface = domain == MaterialDomain::SURFACE;
+    if (isSurface) {
+        if (Variant::isValidDepthVariant(variant)) {
+            return depthVariantDescriptorSetLayout;
+        }
+        if (Variant::isSSRVariant(variant)) {
+            return ssrVariantDescriptorSetLayout;
+        }
     }
     // We need to filter out all the descriptors not included in the "resolved" layout below
-    return getPerViewDescriptorSetLayout(domain, isLit, isSSR, hasFog, Variant::isShadowSampler2DVariant(variant));
+    return getPerViewDescriptorSetLayout(domain, isLit, isSSR, hasFog,
+            isSurface && Variant::isShadowSampler2DVariant(variant));
 }
 
 DescriptorType getDescriptorType(SamplerType const type, SamplerFormat const format) {

@@ -55,7 +55,10 @@ inputs:
           metal-only path for the sole purpose of keeping its flags identical to what this holds.
         - ios: the postsubmit build-ios job. Its "continuous" build compiles the device release
           objects presubmit needs, plus the debug and simulator ones it does not.
-        - web-emsdk-<version>: the postsubmit build-web job. The emsdk version from
+        - web-emsdk-<version>: the postsubmit build-web job. Read by presubmit build-web, and by
+          the web legs of test-renderdiff and of the golden generation jobs, whose build that job
+          also runs through generate.sh --build-only. The renderdiff action takes 'web-emsdk' and
+          appends the version itself, for the reason below. The emsdk version from
           build/common/versions is part of the name on purpose. CCACHE_COMPILERCHECK below cannot
           see an emscripten upgrade, because em++ is a launcher stub that execs em++.py and whose
           contents never change, so the key is what has to change instead: after a bump nothing

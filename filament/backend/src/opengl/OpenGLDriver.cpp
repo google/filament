@@ -397,7 +397,7 @@ void OpenGLDriver::terminate() {
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     // and make sure to execute all the GpuCommandCompleteOps callbacks
-    executeGpuCommandsCompleteOps();
+    executeGpuCommandsCompleteOps(true);
 
     // as well as the FrameCompleteOps callbacks
     if (UTILS_UNLIKELY(!mFrameCompleteOps.empty())) {
@@ -1242,6 +1242,12 @@ void OpenGLDriver::createTextureAsyncR(Handle<HwTexture> th, SamplerType target,
     });
 }
 
+void OpenGLDriver::ensureTextureRef(GLTexture const* src) {
+    if (!src->ref) {
+        src->ref = initHandle<GLTextureRef>();
+    }
+}
+
 void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
         Handle<HwTexture> srch, uint8_t const baseLevel, uint8_t const levelCount, ImmutableCString&& tag) {
     DEBUG_MARKER()
@@ -1253,10 +1259,7 @@ void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
     FILAMENT_CHECK_PRECONDITION(!src->gl.imported)
             << "TextureView can't be created on imported textures";
 
-    if (!src->ref) {
-        // lazily create the ref handle, because most textures will never get a texture view
-        src->ref = initHandle<GLTextureRef>();
-    }
+    ensureTextureRef(src);
 
     GLTexture* t = construct<GLTexture>(th,
             src->target,
@@ -1282,7 +1285,7 @@ void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
     t->ref = src->ref;
     GLTextureRef* ref = handle_cast<GLTextureRef*>(t->ref);
     assert_invariant(ref);
-    ref->count++;
+    ref->count.fetch_add(1, std::memory_order_relaxed);
 
     CHECK_GL_ERROR()
     mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
@@ -1299,10 +1302,7 @@ void OpenGLDriver::createTextureViewSwizzleCommon(Handle<HwTexture> th, Handle<H
     FILAMENT_CHECK_PRECONDITION(!src->gl.imported)
                     << "TextureView can't be created on imported textures";
 
-    if (!src->ref) {
-        // lazily create the ref handle, because most textures will never get a texture view
-        src->ref = initHandle<GLTextureRef>();
-    }
+    assert_invariant(src->ref);
 
     GLTexture* t = handle_cast<GLTexture*>(th);
     t->gl = src->gl;
@@ -1339,7 +1339,7 @@ void OpenGLDriver::createTextureViewSwizzleCommon(Handle<HwTexture> th, Handle<H
     t->ref = src->ref;
     GLTextureRef* const ref = handle_cast<GLTextureRef*>(t->ref);
     assert_invariant(ref);
-    ref->count++;
+    ref->count.fetch_add(1, std::memory_order_relaxed);
 
     CHECK_GL_ERROR()
     mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
@@ -1357,6 +1357,8 @@ void OpenGLDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
     construct<GLTexture>(th, src->target, src->levels, src->samples, src->width, src->height,
             src->depth, src->format, src->usage, src->asynchronous);
 
+    ensureTextureRef(src);
+
     createTextureViewSwizzleCommon(th, srch, r, g, b, a, std::move(tag));
 }
 
@@ -1370,6 +1372,8 @@ void OpenGLDriver::createTextureViewSwizzleAsyncR(Handle<HwTexture> th, Handle<H
     GLTexture const* const src = handle_cast<GLTexture const*>(srch);
     construct<GLTexture>(th, src->target, src->levels, src->samples, src->width, src->height,
             src->depth, src->format, src->usage, src->asynchronous);
+
+    ensureTextureRef(src);
 
     assert_invariant(getJobQueue());
 
@@ -2431,7 +2435,9 @@ void OpenGLDriver::destroyTextureCommon(OpenGLState& gl, Handle<HwTexture> th) {
             if (UTILS_UNLIKELY(t->ref)) {
                 // the common case is that we don't have a ref handle
                 GLTextureRef* const ref = handle_cast<GLTextureRef*>(t->ref);
-                count = --(ref->count);
+                uint16_t const prev = ref->count.fetch_sub(1, std::memory_order_acq_rel);
+                assert_invariant(prev > 0);
+                count = prev - 1;
                 if (count == 0) {
                     destruct(t->ref, ref);
                 }
@@ -4482,12 +4488,18 @@ void OpenGLDriver::whenGpuCommandsComplete(const std::function<void()>& fn) {
     CHECK_GL_ERROR()
 }
 
-void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept { // NOLINT(*-exception-escape)
+// NOLINTNEXTLINE(*-exception-escape)
+void OpenGLDriver::executeGpuCommandsCompleteOps(bool const afterFinish) noexcept {
     auto& v = mGpuCommandCompleteOps;
     auto it = v.begin();
     while (it != v.end()) {
         auto const& [sync, fn] = *it;
-        GLenum const syncStatus = glClientWaitSync(sync, 0, 0u);
+        GLenum syncStatus = glClientWaitSync(sync, 0, 0u);
+        if (syncStatus == GL_TIMEOUT_EXPIRED && afterFinish) {
+            // glFinish() has returned, so the commands are complete. WebGL still reports the
+            // fence as unsignaled because it only updates sync status between browser tasks.
+            syncStatus = GL_ALREADY_SIGNALED;
+        }
         switch (syncStatus) {
             case GL_TIMEOUT_EXPIRED:
                 // not ready
@@ -4635,9 +4647,12 @@ void OpenGLDriver::flush(int) {
 
 void OpenGLDriver::finish(int) {
     DEBUG_MARKER()
+    if (getJobWorker()) {
+        getJobWorker()->drain();
+    }
     glFinish();
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-    executeGpuCommandsCompleteOps();
+    executeGpuCommandsCompleteOps(true);
     assert_invariant(mGpuCommandCompleteOps.empty());
 #endif
     executeEveryNowAndThenOps();

@@ -42,15 +42,15 @@ void SwapChain::setFrameCompletedCallback(backend::CallbackHandler* handler,
     return downcast(this)->setFrameCompletedCallback(handler, std::move(callback));
 }
 
-bool SwapChain::isSRGBSwapChainSupported(Engine& engine) noexcept {
+bool SwapChain::isSRGBSwapChainSupported(Engine const& engine) noexcept {
     return FSwapChain::isSRGBSwapChainSupported(downcast(engine));
 }
 
-bool SwapChain::isMSAASwapChainSupported(Engine& engine, uint32_t samples) noexcept {
+bool SwapChain::isMSAASwapChainSupported(Engine const& engine, uint32_t samples) noexcept {
     return FSwapChain::isMSAASwapChainSupported(downcast(engine), samples);
 }
 
-bool SwapChain::isProtectedContentSupported(Engine& engine) noexcept {
+bool SwapChain::isProtectedContentSupported(Engine const& engine) noexcept {
     return FSwapChain::isProtectedContentSupported(downcast(engine));
 }
 

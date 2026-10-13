@@ -67,6 +67,7 @@ buildscript {
     // Our CMake scripts require a forward-slash path for the FILAMENT_DIST_DIR
     // variable, so here we convert the native path to a forward-slash path.
     filamentPath = filamentPath.replace(File.separator, '/')
+    ext.filamentPath = filamentPath
 
     // Warning: changing this property does not work well with incremental builds.
     def excludeVulkan = providers

@@ -16,13 +16,20 @@
 
 source `dirname $0`/src/preamble.sh
 
-function start_render_() {
+# Which platform's renderers to run. 'desktop' builds and runs the native gltf_viewer;
+# 'web' builds the wasm gltf_viewer and drives it through a headless browser. They have
+# almost disjoint prerequisites (mesa/vulkan vs. emsdk/playwright) and in CI they run on
+# separate matrix legs, so only the requested one is set up.
+PLATFORM="desktop"
+
+DESKTOP_BACKENDS="opengl vulkan webgpu"
+WEB_BACKENDS="webgl webgpu"
+
+WASM_SAMPLES_DIR="$(pwd)/out/cmake-wasm-debug/samples"
+
+function common_setup_() {
     start_
     if [[ ! "$GITHUB_WORKFLOW" ]]; then
-        if [ ! -d ${MESA_LIB_DIR} ]; then
-            bash ${BUILD_COMMON_DIR}/get-mesa.sh
-        fi
-
         if [ ! -d ${GLTF_DIR} ]; then
             cat ${RENDERDIFF_TEST_DIR}/tests/gltf_models.txt | xargs bash ${BUILD_COMMON_DIR}/get-gltf-sample-assets.sh
         fi
@@ -30,13 +37,14 @@ function start_render_() {
         # Install python deps
         python3 -m venv ${VENV_DIR}
         source ${VENV_DIR}/bin/activate
+    fi
+}
 
-        NEEDED_PYTHON_DEPS=()
-        for cmd in "${NEEDED_PYTHON_DEPS[@]}"; do
-            if ! python3 -m pip show -q "${cmd}"; then
-                python3 -m pip install ${cmd}
-            fi
-        done
+function setup_desktop_() {
+    if [[ ! "$GITHUB_WORKFLOW" ]]; then
+        if [ ! -d ${MESA_LIB_DIR} ]; then
+            bash ${BUILD_COMMON_DIR}/get-mesa.sh
+        fi
     fi
     # -W enables the webgpu build
     # -f forces regeneration of cmake build files
@@ -60,8 +68,52 @@ function start_render_() {
             export CXX=`which clang++`
             export CC=`which clang`
         fi
-        ./build.sh -f -W -X ${MESA_DIR} -p desktop debug gltf_viewer filament-samples diffimg
+        ./build.sh -f -W -X ${MESA_DIR} -p desktop debug gltf_viewer filament-samples diffimg || return 1
     fi
+}
+
+function setup_web_() {
+    if [[ ! "${EMSDK}" ]]; then
+        echo "EMSDK is not set; the wasm build needs an emscripten SDK." \
+             "In CI this is done by .github/actions/web-prereq; locally run" \
+             "build/common/get-emscripten.sh and export EMSDK." >&2
+        return 1
+    fi
+
+    # The flags mirror build/web/build.sh, which is what the postsubmit build-web job runs to fill
+    # the web-emsdk compiler cache that the web renderdiff jobs restore. Both builds configure the
+    # same trees with the same options, so their compile lines match:
+    #   -W       enables the webgpu backend, which the web-webgpu renderer needs, and makes the
+    #            wasm build use the in-tree emdawnwebgpu port.
+    #   -y none  skips the separate prebuilt-tools pass. The wasm path already builds the host
+    #            tools in Release in out/cmake-release; the extra pass would configure a tree the
+    #            cache holds nothing for.
+    # build-web does not compile gltf_viewer, which is excluded from the default wasm build, so it
+    # also runs this script with --build-only to put these objects in the same cache.
+    if [[ "$NOREBUILD" == "true" ]] && [[ -f "${WASM_SAMPLES_DIR}/gltf_viewer.wasm" ]]; then
+        echo "Skipping wasm build of gltf_viewer"
+    else
+        ./build.sh -W -y none -p wasm debug gltf_viewer || return 1
+    fi
+
+    # diffimg compares the renders against the goldens, so it is a host tool regardless of the
+    # platform being rendered. It goes into the release tree the wasm build just configured for
+    # its host tools, with the same flags, so this only compiles diffimg's own sources.
+    if [[ "$NOREBUILD" == "true" ]] && [[ -f ${WEB_DIFFIMG_PATH} ]]; then
+        echo "Skipping build of diffimg"
+    else
+        ./build.sh -W -y none -p desktop release diffimg || return 1
+    fi
+}
+
+# Installs the browser the web renderer drives. Separate from setup_web_ because it is only needed
+# to render: the ccache warmer runs with --build-only and has no use for a browser.
+function prepare_web_browser_() {
+    # The web renderer drives a real browser through playwright. The exact browser build is
+    # part of the golden contract (see rendering_requirements.txt), so install the version
+    # playwright pins rather than whatever the runner happens to have.
+    python3 -m pip install -r ${RENDERDIFF_TEST_DIR}/src/rendering_requirements.txt || return 1
+    python3 -m playwright install --with-deps chromium || return 1
 }
 
 function end_render_() {
@@ -72,9 +124,9 @@ function end_render_() {
 }
 
 # Following steps are taken:
-#  - Get and build mesa
-#  - Build gltf_viewer
-#  - Run a test
+#  - Get the prerequisites for the requested platform (mesa, or emsdk + a browser)
+#  - Build gltf_viewer for that platform
+#  - Run a test against each of that platform's backends
 
 TEST_CONFIG="${RENDERDIFF_TEST_DIR}/tests/presubmit.json"
 
@@ -87,6 +139,10 @@ case $i in
     ;;
     --test_filter=*)
     TEST_FILTER="${i#*=}"
+    shift # past argument=value
+    ;;
+    --platform=*)
+    PLATFORM="${i#*=}"
     shift # past argument=value
     ;;
     --no_rebuild)
@@ -107,8 +163,17 @@ case $i in
 esac
 done
 
+case "${PLATFORM}" in
+    desktop) BACKENDS="${DESKTOP_BACKENDS}" ;;
+    web)     BACKENDS="${WEB_BACKENDS}" ;;
+    *)
+        echo "Unknown --platform=${PLATFORM}; expected 'desktop' or 'web'." >&2
+        exit 1
+        ;;
+esac
 
-start_render_ || exit 1
+common_setup_ || exit 1
+setup_${PLATFORM}_ || exit 1
 
 # Used by the ccache warming job, which wants the objects this build produces but has no reason to
 # render: presubmit does that. Going through this script rather than repeating the build line above
@@ -117,6 +182,10 @@ if [[ "$BUILD_ONLY" == "true" ]]; then
     echo "--build-only given; skipping the render."
     end_render_
     exit 0
+fi
+
+if [[ "${PLATFORM}" == "web" ]]; then
+    prepare_web_browser_ || exit 1
 fi
 
 # Let a crashing render leave a core behind. This costs nothing unless something dies on a signal.
@@ -136,16 +205,29 @@ trap 'bash ${RENDERDIFF_TEST_DIR}/src/report_crashes.sh' EXIT
 # comparison downstream cannot tell apart from a render that produced no image: one crash reported
 # every golden of the two remaining backends as missing, burying the test that actually broke.
 render_status=0
-for backend in opengl vulkan webgpu; do
-    FILAMENT_VK_ICD="${MESA_VK_ICD_PATH}" FILAMENT_OPENGL_LIB="${MESA_LIB_DIR}" \
-    python3 ${RENDERDIFF_TEST_DIR}/src/render.py \
-            --executable="$(pwd)/out/cmake-debug/samples/gltf_viewer" \
-            --platform=desktop \
-            --backend=$backend \
-            --test="${TEST_CONFIG}" \
-            --output_dir="${RENDER_OUTPUT_DIR}" \
-            ${TEST_FILTER:+--test_filter="$TEST_FILTER"} \
-            ${NUM_THREADS:+--num_threads="$NUM_THREADS"} || render_status=1
+for backend in ${BACKENDS}; do
+    if [[ "${PLATFORM}" == "web" ]]; then
+        # --executable is the emscripten bundle directory, not a binary: the renderer needs
+        # the shell, the .js loader and the .wasm together. Rendering is sequential (one page
+        # per test), so --num_threads does not apply.
+        python3 ${RENDERDIFF_TEST_DIR}/src/render.py \
+                --executable="${WASM_SAMPLES_DIR}" \
+                --platform=web \
+                --backend=$backend \
+                --test="${TEST_CONFIG}" \
+                --output_dir="${RENDER_OUTPUT_DIR}" \
+                ${TEST_FILTER:+--test_filter="$TEST_FILTER"} || render_status=1
+    else
+        FILAMENT_VK_ICD="${MESA_VK_ICD_PATH}" FILAMENT_OPENGL_LIB="${MESA_LIB_DIR}" \
+        python3 ${RENDERDIFF_TEST_DIR}/src/render.py \
+                --executable="$(pwd)/out/cmake-debug/samples/gltf_viewer" \
+                --platform=desktop \
+                --backend=$backend \
+                --test="${TEST_CONFIG}" \
+                --output_dir="${RENDER_OUTPUT_DIR}" \
+                ${TEST_FILTER:+--test_filter="$TEST_FILTER"} \
+                ${NUM_THREADS:+--num_threads="$NUM_THREADS"} || render_status=1
+    fi
 done
 
 end_render_

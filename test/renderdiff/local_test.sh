@@ -44,6 +44,10 @@ if [[ "$(uname -s)" != "Linux" ]] || [[ "$(uname -m)" != "aarch64" ]]; then
 fi
 
 TEST_CONFIG="${RENDERDIFF_TEST_DIR}/tests/presubmit.json"
+# generate.sh renders one platform per invocation and defaults to desktop. The comparison has to be
+# scoped to the same platform, including when none was given: an unscoped compare.py walks every
+# golden and would report the other platform's goldens as missing renders.
+PLATFORM="desktop"
 PASSTHROUGH_ARGS=()
 
 for i in "$@"
@@ -52,6 +56,9 @@ case $i in
     --test=*)
     TEST_CONFIG="${i#*=}"
     ;;
+    --platform=*)
+    PLATFORM="${i#*=}"
+    ;;
     *)
     PASSTHROUGH_ARGS+=("$i")
     ;;
@@ -59,7 +66,8 @@ esac
 done
 
 # generate.sh builds diffimg along with the renderers, so there is no separate build step here.
-bash `dirname $0`/generate.sh --test="${TEST_CONFIG}" "${PASSTHROUGH_ARGS[@]}" && \
+bash `dirname $0`/generate.sh --test="${TEST_CONFIG}" --platform="${PLATFORM}" \
+        "${PASSTHROUGH_ARGS[@]}" && \
     python3 ${RENDERDIFF_TEST_DIR}/src/golden_manager.py \
             --branch=${GOLDEN_BRANCH} \
             --output=${GOLDEN_OUTPUT_DIR} && \
@@ -67,7 +75,8 @@ bash `dirname $0`/generate.sh --test="${TEST_CONFIG}" "${PASSTHROUGH_ARGS[@]}" &
             --src=${GOLDEN_OUTPUT_DIR} \
             --dest=${RENDER_OUTPUT_DIR} \
             --out=${DIFF_OUTPUT_DIR} \
-            --diffimg="${DIFFIMG_PATH}" \
+            --platform="${PLATFORM}" \
+            --diffimg="$(diffimg_path_ "${PLATFORM}")" \
             --test="${TEST_CONFIG}" "${PASSTHROUGH_ARGS[@]}"
 
 end_

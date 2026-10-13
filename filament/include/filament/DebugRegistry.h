@@ -68,7 +68,7 @@ public:
 
     template<typename T>
     inline T const* UTILS_NULLABLE getPropertyAddress(const char* UTILS_NONNULL name) const noexcept {
-        return static_cast<T*>(getPropertyAddress(name));
+        return static_cast<T const*>(getPropertyAddress(name));
     }
 
     template<typename T>
@@ -80,7 +80,7 @@ public:
 
     template<typename T>
     inline bool getPropertyAddress(const char* UTILS_NONNULL name,
-            T* const UTILS_NULLABLE* UTILS_NONNULL p) const noexcept {
+            T const* UTILS_NULLABLE* UTILS_NONNULL p) const noexcept {
         *p = getPropertyAddress<T>(name);
         return *p != nullptr;
     }
@@ -121,6 +121,17 @@ public:
         size_t count;
     };
 
+    /**
+     * Queries a data source, i.e. an array of debugging data published by Filament.
+     *
+     * Some data sources are created by the first query. The data is owned by Filament and is
+     * only valid while the data source exists; e.g. "d.view.frame_info", an array of
+     * FrameHistory available in debug builds, is removed when its View is destroyed. The data is
+     * updated on the main thread, so it must only be read from that thread.
+     *
+     * @param name Name of the data source to query
+     * @return The data source, or {nullptr, 0} if it doesn't exist
+     */
     DataSource getDataSource(const char* UTILS_NONNULL name) const noexcept;
 
     struct FrameHistory {

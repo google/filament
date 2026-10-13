@@ -68,14 +68,11 @@ public:
     static CacheKey mapCacheEntryKey(Variant variant,
             DynamicSpecConstKey specKey, std::size_t cacheSize);
 
-    // Initialize for use in a Material.
+    // Initialize for use in a Material, or in a MaterialInstance that has its own set of spec
+    // constants.
     void initializeForMaterial(FEngine& engine, FMaterial const& material,
             utils::FixedCapacityVector<backend::Program::SpecializationConstant>
                     specializationConstants);
-
-    // Initialize for use in a MaterialInstance. Copies the set of spec constants currently in use
-    // from its Material.
-    void initializeForMaterialInstance(FEngine& engine, FMaterial const& material);
 
     bool isInitialized() const noexcept { return mMaterial != nullptr; }
 
@@ -165,6 +162,8 @@ private:
     backend::Program::SpecializationConstant getConstantImpl(uint32_t id) const noexcept;
     backend::Program::SpecializationConstant getConstantImpl(std::string_view name) const noexcept;
 
+    // Once initialized, a cache always holds exactly the program references for its current
+    // mSpecializationConstants, which terminate() releases.
     FMaterial const* mMaterial = nullptr;
     mutable utils::FixedCapacityVector<backend::Handle<backend::HwProgram>> mCachedPrograms;
     SpecializationConstantsRef mSpecializationConstants;

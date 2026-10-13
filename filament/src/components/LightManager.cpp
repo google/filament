@@ -158,7 +158,8 @@ LightManager::Builder& LightManager::Builder::lightChannel(unsigned int const ch
     return *this;
 }
 
-LightManager::Builder::Result LightManager::Builder::build(Engine& engine, Entity const entity) {
+LightManager::Builder::Result LightManager::Builder::build(
+        Engine& engine, Entity const entity) const {
     downcast(engine).createLight(*this, entity);
     return Success;
 }

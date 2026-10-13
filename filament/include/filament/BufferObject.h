@@ -136,7 +136,7 @@ public:
          *
          * @see IndexBuffer::setBuffer
          */
-        BufferObject* UTILS_NONNULL build(Engine& engine);
+        BufferObject* UTILS_NONNULL build(Engine& engine) const;
     private:
         friend class FBufferObject;
     };

@@ -18,6 +18,8 @@
 
 #include "details/Material.h"
 
+#include <private/filament/BufferInterfaceBlock.h>
+
 #include <filament/Color.h>
 #include <filament/MaterialEnums.h>
 #include <filament/MaterialInstance.h>
@@ -26,6 +28,7 @@
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/Panic.h>
 
 #include <math/mat3.h>
 #include <math/vec2.h>
@@ -43,6 +46,23 @@ namespace filament {
 using namespace math;
 using namespace backend;
 
+namespace {
+
+// The value type isn't checked against the field type, so a value can be larger than its field.
+// Each array element starts on a 16-byte boundary (std140), matching UniformBuffer.
+bool fitsInField(BufferInterfaceBlock::FieldInfo const& info, size_t const size,
+        size_t const count) noexcept {
+    if (count == 0) {
+        return true;
+    }
+    // std140 array strides are already rounded up to 16 bytes
+    size_t const extent = info.stride * sizeof(uint32_t) * std::max(1u, info.size);
+    size_t const stride = (size + 0xFu) & ~size_t(0xFu);
+    return size <= extent && count - 1 <= (extent - size) / stride;
+}
+
+} // anonymous namespace
+
 // ------------------------------------------------------------------------------------------------
 
 // This is the untyped/sized version of the setParameter: we end up here for e.g. vec4<int> and
@@ -50,10 +70,11 @@ using namespace backend;
 template<size_t Size>
 UTILS_NOINLINE
 void FMaterialInstance::setParameterUntypedImpl(std::string_view const name, const void* value) {
-    ssize_t offset = mMaterial->getUniformInterfaceBlock().getFieldOffset(name, 0);
-    if (UTILS_LIKELY(offset >= 0)) {
-        mUniforms.setUniformUntyped<Size>(size_t(offset), value);  // handles specialization for mat3f
-    }
+    auto const* info = mMaterial->getUniformInterfaceBlock().getFieldInfo(name);
+    FILAMENT_CHECK_PRECONDITION(fitsInField(*info, Size, 1))
+            << "value does not fit parameter \"" << name << "\"";
+    // handles specialization for mat3f
+    mUniforms.setUniformUntyped<Size>(info->getBufferOffset(), value);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -69,10 +90,11 @@ inline void FMaterialInstance::setParameterImpl(std::string_view const name, T c
 // specialization for mat3f
 template<>
 inline void FMaterialInstance::setParameterImpl(std::string_view const name, mat3f const& value) {
-    ssize_t offset = mMaterial->getUniformInterfaceBlock().getFieldOffset(name, 0);
-    if (UTILS_LIKELY(offset >= 0)) {
-        mUniforms.setUniform(size_t(offset), value);
-    }
+    auto const* info = mMaterial->getUniformInterfaceBlock().getFieldInfo(name);
+    // written as an array of three float3
+    FILAMENT_CHECK_PRECONDITION(fitsInField(*info, sizeof(float3), 3))
+            << "value does not fit parameter \"" << name << "\"";
+    mUniforms.setUniform(info->getBufferOffset(), value);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -81,10 +103,10 @@ template<size_t Size>
 UTILS_NOINLINE
 void FMaterialInstance::setParameterUntypedImpl(std::string_view const name,
         const void* value, size_t const count) {
-    ssize_t offset = mMaterial->getUniformInterfaceBlock().getFieldOffset(name, 0);
-    if (UTILS_LIKELY(offset >= 0)) {
-        mUniforms.setUniformArrayUntyped<Size>(size_t(offset), value, count);
-    }
+    auto const* info = mMaterial->getUniformInterfaceBlock().getFieldInfo(name);
+    FILAMENT_CHECK_PRECONDITION(fitsInField(*info, Size, count))
+            << "values do not fit parameter \"" << name << "\"";
+    mUniforms.setUniformArrayUntyped<Size>(info->getBufferOffset(), value, count);
 }
 
 template<typename T>
@@ -205,9 +227,13 @@ template UTILS_PUBLIC void MaterialInstance::setParameter<mat4f>   (const char* 
 
 template<typename T>
 T FMaterialInstance::getParameterImpl(std::string_view const name) const {
-    ssize_t offset = mMaterial->getUniformInterfaceBlock().getFieldOffset(name, 0);
-    assert_invariant(offset>=0);
-    return downcast(this)->getUniformBuffer().getUniform<T>(offset);
+    auto const* info = mMaterial->getUniformInterfaceBlock().getFieldInfo(name);
+    // mat3f is read as an array of three float4
+    constexpr bool isMat3 = std::is_same_v<T, mat3f>;
+    FILAMENT_CHECK_PRECONDITION(
+            fitsInField(*info, isMat3 ? sizeof(float4) : sizeof(T), isMat3 ? 3 : 1))
+            << "parameter \"" << name << "\" is smaller than the requested type";
+    return downcast(this)->getUniformBuffer().getUniform<T>(info->getBufferOffset());
 }
 
 template<typename T>

@@ -78,7 +78,7 @@ Java_com_google_android_filament_FramePacer_nHasGpuFallenBehind(JNIEnv *env, jcl
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_FramePacer_nApplyPresentationTime(JNIEnv *env, jclass clazz, jlong nativeFramePacer, jlong nativeRenderer) {
-    FramePacer* const that = (FramePacer*) nativeFramePacer;
+    FramePacer const * const that = (FramePacer const *) nativeFramePacer;
     Renderer* const renderer = (Renderer*) nativeRenderer;
     wrapJni(env, [=]() {
         that->applyPresentationTime(renderer);

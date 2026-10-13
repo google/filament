@@ -172,7 +172,21 @@ description file) and executing the corresponding tests.</p>
 to glean the structure, and <a href="../../arch.html"><code>arch.md</code></a> for the end-to-end framework architecture.
 These tests support both <code>gltf_test</code> (glTF models) and <code>sample_test</code>
 (standalone sample binaries), declaring which <strong>renderers</strong> they run on using the <code>platform-backend</code>
-specification format (e.g., <code>"desktop-opengl"</code>, <code>"desktop-vulkan"</code>).</p>
+specification format (e.g., <code>"desktop-opengl"</code>, <code>"desktop-vulkan"</code>, <code>"web-webgl"</code>).</p>
+<h2 id="platforms"><a class="header" href="#platforms">Platforms</a></h2>
+<p>There are two platforms, and they keep <strong>separate goldens</strong>. The same scene rendered
+natively and in a browser does not produce the same pixels -- different rasterizer,
+different shader compiler -- so a <code>web-webgl</code> golden is never compared against a
+<code>desktop-opengl</code> one.</p>
+<div class="table-wrapper"><table><thead><tr><th>Platform</th><th>How it renders</th><th>Backends</th></tr></thead><tbody>
+<tr><td><code>desktop</code></td><td>Runs the native <code>gltf_viewer</code> headlessly against <a href="https://docs.mesa3d.org">Mesa</a>'s software rasterizers.</td><td><code>opengl</code>, <code>vulkan</code>, <code>webgpu</code></td></tr>
+<tr><td><code>web</code></td><td>Builds <code>gltf_viewer</code> to WebAssembly and drives it in a headless Chromium on <a href="https://github.com/google/swiftshader">SwiftShader</a>.</td><td><code>webgl</code>, <code>webgpu</code></td></tr>
+</tbody></table>
+</div>
+<p>The web platform is reproducible only because three things are pinned: the browser build
+(via <code>playwright</code> in <code>rendering_requirements.txt</code>, asserted at runtime against
+<code>EXPECTED_BROWSER_VERSION</code> in <code>web_renderer.py</code>), the rasterizer (SwiftShader, asserted at
+startup), and the render size. Changing any of them means regenerating the web goldens.</p>
 <h2 id="setting-up-python"><a class="header" href="#setting-up-python">Setting up python</a></h2>
 <p>The <code>renderdiff</code> project uses <code>python</code> extensively. To install the dependencies for producing
 renderings, do the following step</p>
@@ -209,6 +223,12 @@ golden repo.</li>
 <pre><code>bash test/renderdiff/generate.sh
 </code></pre>
 </li>
+<li>Both scripts default to <code>--platform=desktop</code>. To render the web platform instead:
+<pre><code>bash test/renderdiff/generate.sh --platform=web
+</code></pre>
+This needs an emscripten SDK on <code>$EMSDK</code> (<code>bash build/common/get-emscripten.sh</code>); the
+script installs the pinned browser itself. Only one platform is rendered per invocation,
+matching how CI splits them across runners.</li>
 </ul>
 <blockquote>
 <p>[!IMPORTANT]
@@ -223,6 +243,8 @@ does; to judge it against the goldens, read the presubmit result.</p>
 <ul>
 <li><code>--test=&lt;path&gt;</code>: Path to the test suite configuration JSON file (defaults to
 <code>test/renderdiff/tests/presubmit.json</code>). For example, <code>--test=test/renderdiff/tests/sample.json</code>.</li>
+<li><code>--platform=&lt;desktop|web&gt;</code>: Which platform to build and render for (defaults to <code>desktop</code>).
+Passed to <code>compare.py</code> as well, which scopes the comparison to that platform's goldens.</li>
 <li><code>--test_filter=&lt;filter&gt;</code>: Run a subset of tests using fnmatch wildcards (<code>*</code>). It filters against
 the pattern <code>{test.name}.{platform}-{backend}.{target}</code>.</li>
 <li><code>--no_rebuild</code>: Skip rebuilding the executables (<code>gltf_viewer</code> and <code>filament-samples</code>).</li>
@@ -230,7 +252,8 @@ the pattern <code>{test.name}.{platform}-{backend}.{target}</code>.</li>
 the compiler cache.</li>
 <li><code>--num_threads=&lt;number&gt;</code>: Number of renders to run concurrently. Each render uses the whole
 machine, because the software drivers size their worker pools from the core count, so the default
-is a quarter of the cores clamped to the range 2 to 4. Raising it oversubscribes the machine.</li>
+is a quarter of the cores clamped to the range 2 to 4. Raising it oversubscribes the machine.
+Ignored on <code>web</code>, which renders sequentially (one browser page per test).</li>
 </ul>
 <p>For example, to run all <code>MSAA</code> tests on Vulkan without rebuilding, two renders at a time:</p>
 <pre><code>bash test/renderdiff/local_test.sh --test_filter='MSAA.*vulkan*.*' --no_rebuild --num_threads=2
@@ -255,6 +278,11 @@ very large one; set <code>RENDERDIFF_KEEP_CORES=1</code> to keep them.</li>
 <code>.ips</code> report in <code>~/Library/Logs/DiagnosticReports</code>. The script renders those as ordinary
 backtraces with <code>src/format_ips.py</code>.</li>
 </ul>
+<p>The <code>web</code> platform never leaves a core, because a crash happens inside the browser. Instead, every
+web render writes the whole browser console next to its image, as
+<code>out/renderdiff/renders/&lt;suite&gt;/&lt;name&gt;.console.log</code>. The file is written whether or not the render
+succeeded, and the CI uploads it with the rest of the output. A failed render also prints the last
+30 console lines into the job log.</p>
 <h2 id="update-the-golden-images"><a class="header" href="#update-the-golden-images">Update the golden images</a></h2>
 <p>The golden images are stored in a github repository:
 https://github.com/google/filament-assets. Filament team members should have access to write
@@ -304,8 +332,10 @@ before it merges.</li>
 to the <code>main</code> branch of the golden repo.</li>
 </ul>
 <h3 id="from-the-images-a-presubmit-run-produced"><a class="header" href="#from-the-images-a-presubmit-run-produced">From the images a presubmit run produced</a></h3>
-<p>Every <code>test-renderdiff</code> run attaches its renders to the run as the <code>presubmit-renderdiff-result</code>
-artifact, including runs whose comparison failed, which is exactly when the images are interesting.
+<p>Every <code>test-renderdiff</code> run attaches its renders as the <code>presubmit-renderdiff-result</code> artifact,
+including runs whose comparison failed, which is exactly when the images are interesting. Each
+platform leg (<code>test-renderdiff-platform</code>) uploads its own output, and the <code>test-renderdiff</code> job
+combines them into that one artifact.
 This is the route to use when the <strong>Renderdiff Goldens</strong> workflow is not available, for instance
 when the workflow file itself is only present on your branch.</p>
 <ul>
@@ -368,9 +398,12 @@ images.</p>
 the following</p>
 <pre><code>python3 test/renderdiff/src/viewer.py --diff=[test output]
 </code></pre>
-<p>where <code>[test output]</code> is a directory containing the <code>compare_results.json</code> of the test run.
+<p>where <code>[test output]</code> is a directory containing the <code>compare_results*.json</code> of the test run.
 For example, it could be <code>out/renderdiff/diffs/presubmit</code> for the standard path to the
-<code>presubmit</code> test output.</p>
+<code>presubmit</code> test output. A platform-scoped run writes one file per platform
+(<code>compare_results_desktop.json</code>, <code>compare_results_web.json</code>); the viewer merges whatever it
+finds, and when a CI run is downloaded it overlays every platform's artifact into one tree
+first.</p>
 <p>To see the results of a Pull Request initiated test run, you would do the following</p>
 <pre><code>python3 test/renderdiff/src/viewer.py --pr_number=[PR #] --github_token=[github token]
 </code></pre>

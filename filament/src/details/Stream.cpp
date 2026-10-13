@@ -75,7 +75,7 @@ Stream::Builder& Stream::Builder::name(utils::ImmutableCString const& name) noex
     return BuilderNameMixin::name(name);
 }
 
-Stream* Stream::Builder::build(Engine& engine) {
+Stream* Stream::Builder::build(Engine& engine) const {
     return downcast(engine).createStream(*this);
 }
 

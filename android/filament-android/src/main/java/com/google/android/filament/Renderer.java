@@ -307,8 +307,8 @@ public class Renderer {
      *
      * <p>This must be called before endFrame().</p>
      *
-     * <p>Note: not all backends and platforms can schedule the presentation of a frame. This call
-     * is silently ignored when the presentation time is not supported.</p>
+     * <p>Not all backends and platforms can schedule the presentation of a frame. This call is
+     *       silently ignored when the presentation time is not supported.</p>
      *
      * @param monotonic_clock_ns the presentation configuration timestamp in nanoseconds on the steady clock.
      */
@@ -813,6 +813,7 @@ public class Renderer {
      *
      * @deprecated Use getMaterialTime() instead.
      */
+    @Deprecated
     public double getUserTime() {
         return nGetUserTime(getNativeObject());
     }
@@ -836,6 +837,7 @@ public class Renderer {
      *
      * @deprecated Use setMaterialTimeEpoch() instead.
      */
+    @Deprecated
     public void resetUserTime() {
         nResetUserTime(getNativeObject());
     }

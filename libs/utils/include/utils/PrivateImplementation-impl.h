@@ -41,7 +41,7 @@ PrivateImplementation<T>::PrivateImplementation(ARGS&& ... args) noexcept
 
 template<typename T>
 PrivateImplementation<T>::~PrivateImplementation() noexcept {
-    delete mImpl;
+    delete mImpl.get();
 }
 
 #ifndef UTILS_PRIVATE_IMPLEMENTATION_NON_COPYABLE

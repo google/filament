@@ -1054,3 +1054,8 @@ endif()
 if ((NOT CMAKE_CROSSCOMPILING AND NOT FILAMENT_IMPORT_PREBUILT_EXECUTABLES) OR FILAMENT_EXPORT_PREBUILT_EXECUTABLES)
     export(TARGETS matc cmgen filamesh mipgen resgen uberz glslminifier FILE ${IMPORT_EXECUTABLES})
 endif()
+
+# Builds libfilament-samples.a, which the sample-cpp-viewer Android app links against.
+if (ANDROID)
+    add_subdirectory(${FILAMENT}/samples)
+endif()

@@ -623,7 +623,9 @@ class_<Engine>("Engine")
             allow_raw_pointers())
     /// getCameraComponent ::method::
     /// ::retval:: an instance of [Camera]
-    .function("getCameraComponent", &Engine::getCameraComponent, allow_raw_pointers())
+    .function("getCameraComponent",
+            select_overload<Camera*(utils::Entity entity)>(&Engine::getCameraComponent),
+            allow_raw_pointers())
     /// destroyCameraComponent ::method::
     /// camera ::argument:: an [Entity] with a camera component
     .function("destroyCameraComponent", (void (*)(Engine*, utils::Entity)) []
@@ -1414,6 +1416,7 @@ class_<RenderableManager>("RenderableManager")
     .function("getAxisAlignedBoundingBox", &RenderableManager::getAxisAlignedBoundingBox)
     .function("getPrimitiveCount", &RenderableManager::getPrimitiveCount)
     .function("getInstanceCount", &RenderableManager::getInstanceCount)
+    .function("setInstanceCount", &RenderableManager::setInstanceCount)
     .function("setMaterialInstanceAt", &RenderableManager::setMaterialInstanceAt,
             allow_raw_pointers())
     .function("clearMaterialInstanceAt", &RenderableManager::clearMaterialInstanceAt)
@@ -1909,7 +1912,7 @@ class_<Texture>("Texture")
     .class_function("isTextureSwizzleSupported", (bool (*)(Engine*)) [] (Engine* engine) {
         return Texture::isTextureSwizzleSupported(*engine);
     }, allow_raw_pointers())
-    .function("generateMipmaps", &Texture::generateMipmaps)
+    .function("generateMipmaps", select_overload<void(Engine&)>(&Texture::generateMipmaps))
     .function("_setImage", EMBIND_LAMBDA(void, (Texture* self,
             Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {
         self->setImage(*engine, level, std::move(*pbd.pbd));

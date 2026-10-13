@@ -50,6 +50,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <limits>
+#include <memory>
 #include <tuple>
 #include <utility>
 
@@ -81,7 +82,6 @@ struct ColorGrading::BuilderDetails {
 #pragma clang diagnostic pop
 #endif
 
-    bool hasAdjustments = false;
     bool customToneMapper = false;
 
     // Everything below must be part of the == comparison operator
@@ -135,7 +135,7 @@ struct ColorGrading::BuilderDetails {
     }
 
     bool operator==(const BuilderDetails &rhs) const {
-        // Note: Do NOT compare hasAdjustments and toneMapper
+        // Note: Do NOT compare toneMapper
         return format == rhs.format &&
                dimension == rhs.dimension &&
                luminanceScaling == rhs.luminanceScaling &&
@@ -162,6 +162,10 @@ struct ColorGrading::BuilderDetails {
                outputColorSpace == rhs.outputColorSpace &&
                customLutData == rhs.customLutData &&
                customLutDimension == rhs.customLutDimension;
+    }
+
+    bool hasAdjustments() const noexcept {
+        return BuilderDetails{} != *this;
     }
 };
 
@@ -306,8 +310,13 @@ ColorGrading::Builder& ColorGrading::Builder::outputColorSpace(
 
 ColorGrading::Builder& ColorGrading::Builder::customLut(
         FixedCapacityVector<float3> data, uint8_t const dimension) noexcept {
-    mImpl->customLutData = std::move(data);
-    mImpl->customLutDimension = dimension;
+    if (UTILS_UNLIKELY(dimension == 0 || data.empty())) {
+        mImpl->customLutData.clear();
+        mImpl->customLutDimension = 0;
+    } else {
+        mImpl->customLutData = std::move(data);
+        mImpl->customLutDimension = dimension;
+    }
     return *this;
 }
 
@@ -323,61 +332,15 @@ ColorGrading::Builder& ColorGrading::Builder::fastMath(bool const fastMath) noex
     return *this;
 }
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
-ColorGrading* ColorGrading::Builder::build(Engine& engine) {
-    if (mImpl->customLutDimension == 0 || mImpl->customLutData.empty()) {
-        mImpl->customLutData.clear();
-        mImpl->customLutDimension = 0;
-    } else {
+ColorGrading* ColorGrading::Builder::build(Engine& engine) const {
+    if (UTILS_UNLIKELY(mImpl->customLutDimension != 0 && !mImpl->customLutData.empty())) {
         FILAMENT_CHECK_PRECONDITION(mImpl->customLutData.size() == 
                 size_t(mImpl->customLutDimension) * mImpl->customLutDimension * mImpl->customLutDimension)
                 << "Custom LUT data size does not match dimension^3";
     }
 
-    // We want to see if any of the default adjustment values have been modified
-    // We skip the tonemapping operator on purpose since we always want to apply it
-    BuilderDetails const defaults;
-    bool const hasAdjustments = defaults != *mImpl;
-    mImpl->hasAdjustments = hasAdjustments;
-
-    // Fallback for clients that still use the deprecated ToneMapping API
-    bool const needToneMapper = mImpl->toneMapper == nullptr;
-    if (needToneMapper) {
-        switch (mImpl->toneMapping) {
-            case ToneMapping::LINEAR:
-                mImpl->toneMapper = new LinearToneMapper();
-                break;
-            case ToneMapping::ACES_LEGACY:
-                mImpl->toneMapper = new ACESLegacyToneMapper();
-                break;
-            case ToneMapping::ACES:
-                mImpl->toneMapper = new ACESToneMapper();
-                break;
-            case ToneMapping::FILMIC:
-                mImpl->toneMapper = new FilmicToneMapper();
-                break;
-            case ToneMapping::DISPLAY_RANGE:
-                mImpl->toneMapper = new DisplayRangeToneMapper();
-                break;
-        }
-    }
-
-    FColorGrading* colorGrading = downcast(engine).createColorGrading(*this);
-
-    if (needToneMapper) {
-        delete mImpl->toneMapper;
-        mImpl->toneMapper = nullptr;
-    }
-
-    return colorGrading;
+    return downcast(engine).createColorGrading(*this);
 }
-
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
 
 //------------------------------------------------------------------------------
 // Purkinje shift/scotopic vision
@@ -792,6 +755,8 @@ struct FColorGrading::Config {
     mat3f combinedInTransform;
     float3 curvesDenominator{1.0f};
     float contrastOffset{0.0f};
+    ToneMapper const* toneMapper = nullptr;
+    bool hasAdjustments = false;
 };
 
 // Inside the FColorGrading constructor, TSAN sporadically detects a data race on the config struct;
@@ -803,14 +768,49 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
 
     DriverApi& driver = engine.getDriverApi();
 
+    // We want to see if any of the default adjustment values have been modified
+    // We skip the tonemapping operator on purpose since we always want to apply it
+    bool const hasAdjustments = builder->hasAdjustments();
+
+    // Fallback for clients that still use the deprecated ToneMapping API
+    std::unique_ptr<ToneMapper> fallbackToneMapper;
+    if (UTILS_UNLIKELY(builder->toneMapper == nullptr)) {
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+        switch (builder->toneMapping) {
+            case ToneMapping::LINEAR:
+                fallbackToneMapper = std::make_unique<LinearToneMapper>();
+                break;
+            case ToneMapping::ACES_LEGACY:
+                fallbackToneMapper = std::make_unique<ACESLegacyToneMapper>();
+                break;
+            case ToneMapping::ACES:
+                fallbackToneMapper = std::make_unique<ACESToneMapper>();
+                break;
+            case ToneMapping::FILMIC:
+                fallbackToneMapper = std::make_unique<FilmicToneMapper>();
+                break;
+            case ToneMapping::DISPLAY_RANGE:
+                fallbackToneMapper = std::make_unique<DisplayRangeToneMapper>();
+                break;
+        }
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+    }
+    ToneMapper const* const toneMapper =
+            builder->toneMapper ? builder->toneMapper : fallbackToneMapper.get();
+
     // XXX: The following two conditions also only hold true as long as the input and output color
     // spaces are the same, but we currently don't check that. We must revise these conditions if we
     // ever handle this case.
-    mIsOneDimensional = !builder->hasAdjustments && !builder->luminanceScaling
+    mIsOneDimensional = !hasAdjustments && !builder->luminanceScaling
             && builder->customLutData.empty()
-            && builder->toneMapper->isOneDimensional()
+            && toneMapper->isOneDimensional()
             && engine.features.engine.color_grading.use_1d_lut;
-    mIsLDR = mIsOneDimensional && builder->toneMapper->isLDR();
+    mIsLDR = mIsOneDimensional && toneMapper->isLDR();
 
     Config config = {
         mIsOneDimensional ? 512u : builder->dimension,
@@ -821,7 +821,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
         selectOETF(builder->outputColorSpace),
     };
 
-    float const expScale = builder->hasAdjustments ? std::exp2(builder->exposure) : 1.0f;
+    float const expScale = hasAdjustments ? std::exp2(builder->exposure) : 1.0f;
     for (size_t i = 0; i < config.lutDimension; i++) {
         float val = float(i) * (1.0f / float(config.lutDimension - 1u));
         val = LogC_to_linear(float3{val}).x;
@@ -836,6 +836,8 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     config.combinedInTransform = config.adaptationTransform * config.colorGradingIn;
     config.curvesDenominator = 1.0f / pow(builder->midPoint, builder->shadowGamma - 1.0f);
     config.contrastOffset = MIDDLE_GRAY_ACEScct * (1.0f - builder->contrast);
+    config.toneMapper = toneMapper;
+    config.hasAdjustments = hasAdjustments;
 
     mDimension = config.lutDimension;
 
@@ -873,7 +875,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                                        builder->outputColorSpace == Rec709-Linear-D65;
 
     bool const isDefaultState = !mIsOneDimensional &&
-                                !builder->hasAdjustments &&
+                                !hasAdjustments &&
                                 !builder->customToneMapper &&
                                 !builder->luminanceScaling &&
                                 !builder->gamutMapping &&
@@ -903,7 +905,6 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
         // 1D LUT currently always use fp16
         half* UTILS_RESTRICT p = static_cast<half*>(data);
         if (mIsLDR) {
-            auto toneMapper = builder->toneMapper;
             for (uint32_t rgb = 0, c = config.lutDimension; rgb < c; rgb++) {
                 float3 v = float3(rgb) * (1.0f / float(config.lutDimension - 1u));
 
@@ -1018,7 +1019,7 @@ float4 FColorGrading::hdrColorAt(Builder const& builder, Config const& config,
         size_t r, size_t g, size_t b) noexcept {
 
     float3 v;
-    if (UTILS_UNLIKELY(builder->hasAdjustments)) {
+    if (UTILS_UNLIKELY(config.hasAdjustments)) {
         v = float3{config.precomputedLinear[r], config.precomputedLinear[g], config.precomputedLinear[b]};
 
         // Purkinje shift ("low-light" vision)
@@ -1067,9 +1068,9 @@ float4 FColorGrading::hdrColorAt(Builder const& builder, Config const& config,
 
     // Tone mapping
     if (UTILS_UNLIKELY(builder->luminanceScaling)) {
-        v = luminanceScaling(v, *builder->toneMapper, config.colorGradingLuminance);
+        v = luminanceScaling(v, *config.toneMapper, config.colorGradingLuminance);
     } else {
-        v = (*builder->toneMapper)(v);
+        v = (*config.toneMapper)(v);
     }
 
     // Go back to display color space
@@ -1110,7 +1111,7 @@ void FColorGrading::generateDefaultLUTNeon(FEngine const& engine, void* data,
     JobSystem& js = engine.getJobSystem();
     auto *slices = js.createJob();
 
-    auto const toneMapper = static_cast<const ACESLegacyToneMapper*>(builder->toneMapper);
+    auto const toneMapper = static_cast<const ACESLegacyToneMapper*>(config.toneMapper);
     for (uint32_t b = 0; b < dim; b++) {
         auto work = [data, b, &config, toneMapper](JobSystem&, JobSystem::Job*) {
             FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "ColorGrading::jobDefaultNeon");
@@ -1201,8 +1202,8 @@ void FColorGrading::generateMediumLUTNeon(FEngine const& engine, void* data, Con
             uint32_t const shift = __builtin_ctz(dim);
             uint32_t const sliceCount = dim * dim;
             uint32_t const baseIndex = b << (shift * 2);
-            bool const hasAdj = builder->hasAdjustments;
-            auto const toneMapper = builder->toneMapper;
+            bool const hasAdj = config.hasAdjustments;
+            auto const toneMapper = config.toneMapper;
 
             constexpr uint32_t TILE_SIZE = 64;
             alignas(16) float tile_r[TILE_SIZE];

@@ -48,7 +48,7 @@ Texture::InternalFormat Texture::getFormat() const noexcept {
 void Texture::setImage(Engine& engine, size_t const level,
         uint32_t const xoffset, uint32_t const yoffset, uint32_t const zoffset,
         uint32_t const width, uint32_t const height, uint32_t const depth,
-        PixelBufferDescriptor&& buffer) const {
+        PixelBufferDescriptor&& buffer) {
     downcast(this)->setImage(downcast(engine),
             level, xoffset, yoffset, zoffset, width, height, depth, std::move(buffer));
 }
@@ -57,7 +57,7 @@ backend::AsyncCallId Texture::setImageAsync(Engine& engine, size_t const level,
         uint32_t const xoffset, uint32_t const yoffset, uint32_t const zoffset,
         uint32_t const width, uint32_t const height, uint32_t const depth,
         PixelBufferDescriptor&& buffer, backend::CallbackHandler* handler,
-        AsyncCompletionCallback callback, void* user) const {
+        AsyncCompletionCallback callback, void* user) {
     return downcast(this)->setImageAsync(downcast(engine),
             level, xoffset, yoffset, zoffset, width, height, depth, std::move(buffer),
             handler, std::move(callback), user);
@@ -79,7 +79,7 @@ void Texture::setExternalStream(Engine& engine, Stream* stream) {
     downcast(this)->setExternalStream(downcast(engine), downcast(stream));
 }
 
-void Texture::generateMipmaps(Engine& engine) const {
+void Texture::generateMipmaps(Engine& engine) {
     downcast(this)->generateMipmaps(downcast(engine));
 }
 
@@ -90,11 +90,12 @@ bool Texture::isCreationComplete() const noexcept {
     return downcast(this)->isCreationSuccessful();
 }
 
-bool Texture::isTextureFormatSupported(Engine& engine, InternalFormat const format) noexcept {
+bool Texture::isTextureFormatSupported(Engine const& engine, InternalFormat const format) noexcept {
     return FTexture::isTextureFormatSupported(downcast(engine), format);
 }
 
-bool Texture::isTextureFormatMipmappable(Engine& engine, InternalFormat const format) noexcept {
+bool Texture::isTextureFormatMipmappable(Engine const& engine,
+        InternalFormat const format) noexcept {
     return FTexture::isTextureFormatMipmappable(downcast(engine), format);
 }
 
@@ -102,11 +103,11 @@ bool Texture::isTextureFormatCompressed(InternalFormat const format) noexcept {
     return FTexture::isTextureFormatCompressed(format);
 }
 
-bool Texture::isProtectedTexturesSupported(Engine& engine) noexcept {
+bool Texture::isProtectedTexturesSupported(Engine const& engine) noexcept {
     return FTexture::isProtectedTexturesSupported(downcast(engine));
 }
 
-bool Texture::isTextureSwizzleSupported(Engine& engine) noexcept {
+bool Texture::isTextureSwizzleSupported(Engine const& engine) noexcept {
     return FTexture::isTextureSwizzleSupported(downcast(engine));
 }
 
@@ -119,11 +120,11 @@ bool Texture::validatePixelFormatAndType(InternalFormat internalFormat, Format f
     return FTexture::validatePixelFormatAndType(internalFormat, format, type);
 }
 
-size_t Texture::getMaxTextureSize(Engine& engine, Sampler type) noexcept {
+size_t Texture::getMaxTextureSize(Engine const& engine, Sampler type) noexcept {
     return FTexture::getMaxTextureSize(downcast(engine), type);
-
 }
-size_t Texture::getMaxArrayTextureLayers(Engine& engine) noexcept {
+
+size_t Texture::getMaxArrayTextureLayers(Engine const& engine) noexcept {
     return FTexture::getMaxArrayTextureLayers(downcast(engine));
 }
 

@@ -148,7 +148,7 @@ private:
 
     void reallocate(backend::DriverApi& driver, BufferAllocator::allocation_size_t requiredSize);
 
-    BufferAllocator::allocation_size_t calculateRequiredSize();
+    BufferAllocator::allocation_size_t calculateRequiredSize(size_t previouslyManagedCount);
 
     backend::Handle<backend::HwBufferObject> mUbHandle;
     backend::MemoryMappedBufferHandle mMemoryMappedBufferHandle;

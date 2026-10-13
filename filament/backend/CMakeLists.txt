@@ -308,6 +308,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/utils/SpecializationConstantProcessor.h
             src/webgpu/utils/StringPlaceholderTemplateProcessor.cpp
             src/webgpu/utils/StringPlaceholderTemplateProcessor.h
+            src/webgpu/utils/VertexHelper.cpp
+            src/webgpu/utils/VertexHelper.h
             src/webgpu/WebGPUBlitter.cpp
             src/webgpu/WebGPUBlitter.h
             src/webgpu/WebGPUBufferBase.cpp
@@ -624,6 +626,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_FrameRateControl.cpp
             test/test_MRT.cpp
             test/test_PushConstants.cpp
+            test/test_SpecializationConstants.cpp
             test/test_LoadImage.cpp
             test/test_StencilBuffer.cpp
             test/test_Scissor.cpp
@@ -641,7 +644,8 @@ if (FILAMENT_BUILD_TESTING)
             list(APPEND BACKEND_TEST_SRC
                     test/test_WebGPUAsyncTaskCounter.cpp
                     test/test_WebGPUComposeSwizzle.cpp
-                    test/test_WebGPUSpecializationConstantProcessor.cpp)
+                    test/test_WebGPUSpecializationConstantProcessor.cpp
+                    test/test_WebGPUVertexHelper.cpp)
         endif()
         if (APPLE)
             # Metal-specific tests

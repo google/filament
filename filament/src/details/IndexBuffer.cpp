@@ -86,7 +86,7 @@ IndexBuffer::Builder& IndexBuffer::Builder::async(backend::CallbackHandler* hand
     return *this;
 }
 
-IndexBuffer* IndexBuffer::Builder::build(Engine& engine) {
+IndexBuffer* IndexBuffer::Builder::build(Engine& engine) const {
     FILAMENT_CHECK_PRECONDITION(!mImpl->mAsynchronous || engine.isAsynchronousModeEnabled())
             << "Engine not configured for async operations";
 

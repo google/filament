@@ -16,10 +16,11 @@
 
 #include <viewer/AutomationEngine.h>
 
+#include <imageio-lite/ImageEncoder.h>
+
 #include <image/ColorTransform.h>
 #include <image/ImageOps.h>
 #include <image/LinearImage.h>
-#include <imageio-lite/ImageEncoder.h>
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>
@@ -29,15 +30,14 @@
 #include <filament/TransformManager.h>
 #include <filament/Viewport.h>
 
-#include <utils/EntityManager.h>
-
 #include <backend/PixelBufferDescriptor.h>
 
+#include <utils/EntityManager.h>
 #include <utils/Log.h>
 #include <utils/Path.h>
 
-#include <iomanip>
 #include <fstream>
+#include <iomanip>
 #include <sstream>
 
 using namespace utils;
@@ -295,7 +295,9 @@ void AutomationEngine::tick(Engine* engine, const ViewerContent& content, float 
         return;
     }
 
-    const bool isLastTest = mCurrentTest == mSpec->size() - 1;
+    // Phrased as an addition rather than `mCurrentTest == mSpec->size() - 1` because size() is
+    // unsigned: for an empty spec the subtraction wraps to SIZE_MAX and this is never true.
+    const bool isLastTest = mCurrentTest + 1 >= mSpec->size();
 
     int const digits = (int) log10((double) mSpec->size()) + 1;
     std::ostringstream stringStream;

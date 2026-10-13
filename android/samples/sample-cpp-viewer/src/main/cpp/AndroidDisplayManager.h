@@ -26,7 +26,7 @@
 #include <utils/compiler.h>
 #include <utils/Mutex.h>
 
-#include <jni.h>
+#include <android/native_window.h>
 
 #include <chrono>
 #include <cstdint>
@@ -35,9 +35,20 @@
 
 namespace filament::app {
 
+/**
+ * DisplayManager for the sample-cpp-viewer app.
+ *
+ * Threading: every method must be called on the render thread that owns the FilamentApp2
+ * using this display manager, except pushEvent() and pushTouchEvent(), which may be called from
+ * any thread.
+ *
+ * The native window is not owned. The caller attaches it with setNativeWindow() before the app
+ * creates its swapchain, and must keep it alive until the swapchain is destroyed and
+ * setNativeWindow(nullptr) has been called.
+ */
 class AndroidDisplayManager : public DisplayManager {
 public:
-    AndroidDisplayManager(JavaVM* vm, jobject surfaceView);
+    AndroidDisplayManager();
     ~AndroidDisplayManager() override;
 
     void terminate() override;
@@ -62,15 +73,16 @@ public:
             filament::Renderer* renderer) override;
 
     // Android-specific lifecycle and event methods
-    void setWindowSize(uint32_t w, uint32_t h);
+    void setNativeWindow(ANativeWindow* window) noexcept;
     void pushEvent(const AppEvent& event);
     void pushTouchEvent(int action, float x, float y);
 
 private:
-    JavaVM* mJavaVM;
-    jobject mSurfaceView = nullptr;
-    uint32_t mWidth = 0;
-    uint32_t mHeight = 0;
+    // The handle returned by createWindow(). FilamentApp2 treats a null handle as "no window",
+    // so this is a non-null tag that is independent of the native window's lifetime.
+    WindowHandle windowHandle() const noexcept { return const_cast<AndroidDisplayManager*>(this); }
+
+    ANativeWindow* mNativeWindow = nullptr;
     std::vector<AppEvent> mEventQueue UTILS_GUARDED_BY(mMutex);
     mutable utils::Mutex mMutex;
     std::chrono::time_point<std::chrono::steady_clock> mStartTime;

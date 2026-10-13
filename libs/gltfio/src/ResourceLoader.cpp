@@ -1114,7 +1114,8 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
         JobSystem::Job* parent = js->createJob();
         for (size_t j = 0; j < batchSize; ++j) {
             Params* pptr = &jobParams[offset + j];
-            JobSystem::Job* job = jobs::createJob(*js, parent, [pptr] { TangentsJob::run(pptr); });
+            JobSystem::Job* job = parent ?
+                    jobs::createJob(*js, parent, [pptr] { TangentsJob::run(pptr); }) : nullptr;
             if (UTILS_LIKELY(job)) {
                 js->run(job);
             } else {

@@ -88,12 +88,12 @@ void WebGPUQueueManager::finish() {
     // calling ProcessEvents() to be able to advance an internal sequence ID and reach our callback.
     // This is similar to draining a work queue. We currently have no other way to force the "last"
     // callback to be called.
-    while (mLatestSubmissionState->getStatus() == FenceStatus::TIMEOUT_EXPIRED) {
 #if !defined(__EMSCRIPTEN__)
+    while (mLatestSubmissionState->getStatus() == FenceStatus::TIMEOUT_EXPIRED) {
         mDevice.GetAdapter().GetInstance().ProcessEvents();
-#endif
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
+#endif
 }
 
 std::shared_ptr<WebGPUSubmissionState> WebGPUQueueManager::getLatestSubmissionState() {

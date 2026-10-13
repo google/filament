@@ -166,7 +166,7 @@ public:
          *
          * @return pointer to the newly created object.
          */
-        RenderTarget* UTILS_NONNULL build(Engine& engine);
+        RenderTarget* UTILS_NONNULL build(Engine& engine) const;
 
     private:
         friend class FRenderTarget;

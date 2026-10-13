@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import glob
 import os
 import sys
 import flask
@@ -19,11 +20,17 @@ import pathlib
 import json
 import requests
 import io
+import shutil
 import zipfile
 
 from utils import ArgParseImpl
 
 from flask import Flask, request, make_response, send_from_directory
+
+# Where _resolve_diff_dir overlays multiple artifact trees. Named so it cannot collide with
+# a real artifact directory, which GitHub names '{artifact_name}_{artifact_id}'.
+_MERGED_DIR_NAME = 'merged-artifacts'
+
 
 DIR = pathlib.Path(__file__).parent.absolute()
 HTML_DIR = os.path.join(DIR, "viewer_html")
@@ -169,6 +176,36 @@ def _download_github_artifacts(pr_number, github_token, output_dir= ".") -> None
     print("\nAll available artifacts have been processed.")
   return 'Done'
 
+def _resolve_diff_dir(output_dir):
+  """Returns the directory holding the comparison results for a downloaded run.
+
+  A renderdiff run is a matrix over platforms (desktop natively, web in a browser), and each
+  leg uploads its own artifact, so `output_dir` may hold several extracted artifact trees.
+  Every tree has the same 'renders/goldens/diffs' shape and the files inside are namespaced
+  by renderer ('...desktop-opengl...' vs '...web-webgl...'), so the trees can simply be
+  overlaid into one. That matters because compare_results.json refers to its golden and
+  render directories by relative path, and the server serves each from a single location --
+  merging keeps those paths resolvable while showing every leg's results at once.
+  """
+  roots = sorted(os.path.join(output_dir, d) for d in os.listdir(output_dir)
+                 if os.path.isdir(os.path.join(output_dir, d)) and d != _MERGED_DIR_NAME)
+  if not roots:
+    print(f'No artifacts were extracted into {output_dir}')
+    exit(1)
+
+  # TODO: Clean up the following so that we're not so specific on the path diffs/presubmit
+  if len(roots) == 1:
+    return os.path.join(roots[0], 'diffs/presubmit')
+
+  merged = os.path.join(output_dir, _MERGED_DIR_NAME)
+  if os.path.exists(merged):
+    shutil.rmtree(merged)
+  for root in roots:
+    shutil.copytree(root, merged, dirs_exist_ok=True)
+  print(f'Merged {len(roots)} artifacts into {merged}')
+  return os.path.join(merged, 'diffs/presubmit')
+
+
 def _create_app(config):
   app = Flask(__name__)
 
@@ -240,10 +277,7 @@ if __name__ == '__main__':
     if not res:
       print('Failed to retrieve PR artifacts')
       exit(1)
-
-    # TODO: Clean up the following so that we're not so specific on the paths diffs/presubmit
-    directory_name = list(os.listdir(output_dir))[0]
-    fdir = os.path.join(os.path.join(output_dir, directory_name), 'diffs/presubmit')
+    fdir = _resolve_diff_dir(output_dir)
 
   if args.run_number:
     if not args.github_token:
@@ -254,13 +288,26 @@ if __name__ == '__main__':
     if not res:
       print('Failed to retrieve run artifacts')
       exit(1)
+    fdir = _resolve_diff_dir(output_dir)
 
-    # TODO: Clean up the following so that we're not so specific on the paths diffs/presubmit
-    directory_name = list(os.listdir(output_dir))[0]
-    fdir = os.path.join(os.path.join(output_dir, directory_name), 'diffs/presubmit')
+  # compare.py writes 'compare_results.json' for an unscoped run, but one file per platform
+  # ('compare_results_desktop.json', 'compare_results_web.json', ...) when each CI matrix leg
+  # compares only what it rendered. Merge whatever is present so the viewer shows the whole
+  # run. Every file in a given directory describes the same base/comparison dirs, so only the
+  # result lists need concatenating.
+  result_files = sorted(glob.glob(os.path.join(fdir, 'compare_results*.json')))
+  if not result_files:
+    print(f'No compare_results*.json found in {fdir}')
+    exit(1)
 
-  with open(os.path.join(fdir, 'compare_results.json'), 'r') as f:
-    config = json.loads(f.read())
+  config = None
+  for result_file in result_files:
+    with open(result_file, 'r') as f:
+      part = json.loads(f.read())
+    if config is None:
+      config = part
+    else:
+      config['results'] += part['results']
   config['diff_dir'] = os.path.abspath(fdir)
 
   app = _create_app(config)

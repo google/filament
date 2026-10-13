@@ -73,7 +73,7 @@ SkinningBuffer::Builder& SkinningBuffer::Builder::name(utils::ImmutableCString c
     return BuilderNameMixin::name(name);
 }
 
-SkinningBuffer* SkinningBuffer::Builder::build(Engine& engine) {
+SkinningBuffer* SkinningBuffer::Builder::build(Engine& engine) const {
     return downcast(engine).createSkinningBuffer(*this);
 }
 
