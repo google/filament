@@ -103,6 +103,33 @@ float vmin(const vec4 v) {
     return min(min(v.x, v.y), min(v.z, v.w));
 }
 
+/**
+ * Computes x^2 as a single multiplication.
+ *
+ * @public-api
+ */
+vec2 sq(const vec2 x) {
+    return x * x;
+}
+
+/**
+ * Computes x^2 as a single multiplication.
+ *
+ * @public-api
+ */
+vec3 sq(const vec3 x) {
+    return x * x;
+}
+
+/**
+ * Computes x^2 as a single multiplication.
+ *
+ * @public-api
+ */
+vec4 sq(const vec4 x) {
+    return x * x;
+}
+
 //------------------------------------------------------------------------------
 // Trigonometry
 //------------------------------------------------------------------------------
