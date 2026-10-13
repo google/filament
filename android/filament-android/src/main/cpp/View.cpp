@@ -228,7 +228,7 @@ Java_com_google_android_filament_View_nGetAntiAliasing(JNIEnv *env, jclass clazz
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetTemporalAntiAliasingOptions(JNIEnv *env, jclass clazz, jlong nativeView, jfloat filterWidth, jfloat feedback, jfloat lodBias, jfloat sharpness, jboolean enabled, jfloat upscaling, jboolean filterHistory, jboolean filterInput, jboolean useYCoCg, jboolean hdr, jint boxType, jint boxClipping, jint jitterPattern, jfloat varianceGamma, jboolean preventFlickering, jboolean historyReprojection) {
+Java_com_google_android_filament_View_nSetTemporalAntiAliasingOptions(JNIEnv *env, jclass clazz, jlong nativeView, jfloat filterWidth, jfloat feedback, jfloat lodBias, jfloat sharpness, jboolean enabled, jfloat upscaling, jboolean filterHistory, jboolean filterInput, jboolean useYCoCg, jboolean hdr, jint boxType, jint boxClipping, jint jitterPattern, jfloat varianceGamma, jboolean preventFlickering, jboolean historyReprojection, jboolean motionAdaptiveHistory, jfloat motionDeltaThreshold, jfloat minBoxStrength, jfloat minAlphaStrength, jfloat skyDepthThreshold, jfloat motionHoldFrames, jboolean depthDisocclusion, jfloat disocclusionDepthThreshold, jboolean disocclusionHistoryNeighborhood, jboolean exactLanczosSupport) {
     View* const that = (View*) nativeView;
     View::TemporalAntiAliasingOptions options;
     options.filterWidth = filterWidth;
@@ -247,6 +247,16 @@ Java_com_google_android_filament_View_nSetTemporalAntiAliasingOptions(JNIEnv *en
     options.varianceGamma = varianceGamma;
     options.preventFlickering = (bool)preventFlickering;
     options.historyReprojection = (bool)historyReprojection;
+    options.motionAdaptiveHistory = (bool)motionAdaptiveHistory;
+    options.motionDeltaThreshold = motionDeltaThreshold;
+    options.minBoxStrength = minBoxStrength;
+    options.minAlphaStrength = minAlphaStrength;
+    options.skyDepthThreshold = skyDepthThreshold;
+    options.motionHoldFrames = motionHoldFrames;
+    options.depthDisocclusion = (bool)depthDisocclusion;
+    options.disocclusionDepthThreshold = disocclusionDepthThreshold;
+    options.disocclusionHistoryNeighborhood = (bool)disocclusionHistoryNeighborhood;
+    options.exactLanczosSupport = (bool)exactLanczosSupport;
     that->setTemporalAntiAliasingOptions(options);
 }
 
