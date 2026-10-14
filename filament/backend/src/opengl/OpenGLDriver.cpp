@@ -3199,6 +3199,26 @@ size_t OpenGLDriver::getMaxArrayTextureLayers() {
     return mContext.gets.max_array_texture_layers;
 }
 
+size_t OpenGLDriver::getMaxTextureCount(ShaderStage const stage) {
+    return size_t(stage == ShaderStage::VERTEX ? mContext.gets.max_vertex_texture_image_units
+                                               : mContext.gets.max_texture_image_units);
+}
+
+size_t OpenGLDriver::getMaxSamplerCount(ShaderStage const stage) {
+    // In GL, a texture unit holds both the texture and its sampler.
+    return getMaxTextureCount(stage);
+}
+
+size_t OpenGLDriver::getExternalTextureCost() {
+    // OES_EGL_image_external allows an external texture to use up to 3 texture units, but the
+    // actual number (GL_REQUIRED_TEXTURE_IMAGE_UNITS_OES) is only known per texture.
+    return 2;
+}
+
+size_t OpenGLDriver::getExternalSamplerCost() {
+    return getExternalTextureCost();
+}
+
 size_t OpenGLDriver::getUniformBufferOffsetAlignment() {
     return mContext.gets.uniform_buffer_offset_alignment;
 }
@@ -3380,10 +3400,11 @@ void OpenGLDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuff
         AsyncCallback const callback, void* user) {
     promoteToAsync(handle_cast<GLIndexBuffer*>(ibh));
 
-    getJobQueue()->push([this, ibh, p=std::move(p), byteOffset,
+    getJobQueue()->push([this, ibh, byteOffset,
+            bufferRelease = AsyncBufferRelease(this, std::move(p)),
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         DEBUG_MARKER_NAME("updateIndexBufferAsyncR")
-        updateIndexBufferCommon(getWorkerState(), ibh, std::move(p), byteOffset);
+        updateIndexBufferCommon(getWorkerState(), ibh, bufferRelease.detach(), byteOffset);
         // glFlush() should be called when using a shared context for this operation. Without it,
         // the driver may delay submitting commands to the GPU, preventing other contexts from
         // seeing the changes immediately. This ensures submitting the current commands right away.
@@ -3435,10 +3456,11 @@ void OpenGLDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferOb
         AsyncCallback const callback, void* user) {
     promoteToAsync(handle_cast<GLBufferObject*>(boh));
 
-    getJobQueue()->push([this, boh, bd=std::move(bd), byteOffset,
+    getJobQueue()->push([this, boh, byteOffset,
+            bufferRelease = AsyncBufferRelease(this, std::move(bd)),
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         DEBUG_MARKER_NAME("updateBufferObjectAsyncR")
-        updateBufferObjectCommon(getWorkerState(), boh, std::move(bd), byteOffset);
+        updateBufferObjectCommon(getWorkerState(), boh, bufferRelease.detach(), byteOffset);
         // glFlush() should be called when using a shared context for this operation. Without it,
         // the driver may delay submitting commands to the GPU, preventing other contexts from
         // seeing the changes immediately. This ensures submitting the current commands right away.
@@ -3541,11 +3563,11 @@ void OpenGLDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th,
     promoteToAsync(handle_cast<GLTexture*>(th));
 
     getJobQueue()->push([this, th, level, xoffset, yoffset, zoffset, width, height, depth,
-            data=std::move(data),
+            bufferRelease = AsyncBufferRelease(this, std::move(data)),
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         DEBUG_MARKER_NAME("update3DImageAsync")
         update3DImageCommon(getWorkerState(), th, level, xoffset, yoffset, zoffset, width, height, depth,
-                std::move(data));
+                bufferRelease.detach());
         // glFlush() should be called when using a shared context for this operation. Without it,
         // the driver may delay submitting commands to the GPU, preventing other contexts from
         // seeing the changes immediately. This ensures submitting the current commands right away.

@@ -50,6 +50,7 @@ uint32_t alignValue(uint32_t valueToAlign, uint32_t alignment) {
 
 fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStage::acquireSegment(
         fvkmemory::ResourceManager* resManager, uint32_t segmentOffset, uint32_t numBytes) {
+    assert_invariant(numBytes <= mCapacity && segmentOffset <= mCapacity - numBytes);
     auto segment = fvkmemory::resource_ptr<Segment>::construct(resManager, this, numBytes,
             segmentOffset, [this](uint32_t offset) { mSegments.erase(offset); });
     mSegments.insert({ segmentOffset, segment.get() });
@@ -100,6 +101,8 @@ fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStagePool::acquireStage(uint
 
     if (!pStage) {
         pStage = allocateNewStage(std::max(numBytes, STAGE_SIZE));
+        // The loop may have left an offset computed for a rejected stage.
+        segmentOffset = 0;
     }
 
     // Note: this allocation updates `currentOffset` and `segments` within

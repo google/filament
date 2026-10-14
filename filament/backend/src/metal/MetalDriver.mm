@@ -1579,6 +1579,44 @@ size_t MetalDriver::getMaxArrayTextureLayers() {
     return 256;
 }
 
+size_t MetalDriver::getMaxTextureCount(ShaderStage) {
+    // Textures accessible per stage from an argument buffer, per the Metal Feature Set Tables:
+    // https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
+    auto const& family = mContext->highestSupportedGpuFamily;
+    if (family.apple >= 6 || family.mac >= 2) {
+        return 1'000'000;   // "1M" in the tables. Mac2 is from the 2023 version.
+    }
+    if (family.apple >= 4) {
+        return 96;
+    }
+    return 31;              // Apple2-3
+}
+
+size_t MetalDriver::getMaxSamplerCount(ShaderStage) {
+    // Samplers accessible per stage from an argument buffer, per the Metal Feature Set Tables:
+    // https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
+    auto const& family = mContext->highestSupportedGpuFamily;
+    if (family.apple >= 7) {
+        return 996;     // Apple7-8. Apple9+ allows 500K, but we don't detect families above 7.
+    }
+    if (family.apple >= 6) {
+        return 128;
+    }
+    if (family.mac >= 2) {
+        return 1024;    // Not in the current tables; from the 2023 version.
+    }
+    return 16;          // Apple2-5 (argument buffers tier 1)
+}
+
+size_t MetalDriver::getExternalTextureCost() {
+    // External images are bound as a single (converted) texture.
+    return 1;
+}
+
+size_t MetalDriver::getExternalSamplerCost() {
+    return 1;
+}
+
 size_t MetalDriver::getUniformBufferOffsetAlignment() {
     return ::filament::backend::getUniformBufferOffsetAlignment();
 }
@@ -1610,9 +1648,11 @@ void MetalDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuffe
     // the job is canceled or dropped, its reference is the last one and the destructor reports
     // CANCELED; otherwise the block outlives the job and reports COMPLETED once the GPU is done.
     getJobQueue()->push(
-            [this, cmdBuffer, ib, data = std::move(data), byteOffset,
+            [this, cmdBuffer, ib, byteOffset,
+                    bufferRelease = AsyncBufferRelease(this, std::move(data)),
                     completion = std::make_shared<AsyncCompletion>(this, handler, callback, user),
                     tag = std::move(tag)]() mutable {
+                BufferDescriptor&& data = bufferRelease.detach();
                 ib->buffer.copyIntoBuffer(cmdBuffer, data.buffer, data.size, byteOffset,
                         [&tag]() { return tag.c_str_safe(); });
 
@@ -1657,9 +1697,11 @@ void MetalDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferObj
 
     // The completion is shared with the completed handler, see updateIndexBufferAsyncR.
     getJobQueue()->push(
-            [this, cmdBuffer, bo, data = std::move(data), byteOffset,
+            [this, cmdBuffer, bo, byteOffset,
+                    bufferRelease = AsyncBufferRelease(this, std::move(data)),
                     completion = std::make_shared<AsyncCompletion>(this, handler, callback, user),
                     tag = std::move(tag)]() mutable {
+                BufferDescriptor&& data = bufferRelease.detach();
                 bo->getBuffer()->copyIntoBuffer(cmdBuffer, data.buffer, data.size, byteOffset,
                         [&tag]() { return tag.c_str_safe(); });
 
@@ -1744,9 +1786,10 @@ void MetalDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th, u
     // The completion is shared with the completed handler, see updateIndexBufferAsyncR.
     getJobQueue()->push(
             [this, cmdBuffer, tex, level, xoffset, yoffset, zoffset, width, height, depth,
-                    data = std::move(data),
+                    bufferRelease = AsyncBufferRelease(this, std::move(data)),
                     completion = std::make_shared<AsyncCompletion>(this, handler, callback, user),
                     tag = std::move(tag)]() mutable {
+                PixelBufferDescriptor&& data = bufferRelease.detach();
                 tex->loadImage(cmdBuffer, level,
                         MTLRegionMake3D(xoffset, yoffset, zoffset, width, height, depth), data);
 
