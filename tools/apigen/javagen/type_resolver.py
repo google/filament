@@ -1479,7 +1479,6 @@ class TypeResolver:
         # Case 8: Strip C++ unsigned integer suffixes and normalize unary minus
         val = val.replace("- ", "-")
         val = re.sub(r'(?i)\b(0x[0-9a-f]+|\d+)u(?:ll|l)?\b', r'\1', val)
-        val = re.sub(r'(?i)(?<=[0-9a-fA-F])u(?:ll|l)?$', '', val)
 
         # Case 9: Scalar float without f suffix
         cpp_t = type_info.get("cpp_name", "") if isinstance(type_info, dict) else str(type_info)
