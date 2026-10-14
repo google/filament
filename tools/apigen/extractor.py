@@ -1299,14 +1299,15 @@ class Extractor:
         start_idx = 0
         for i, tok in enumerate(tokens):
             if tok.spelling == cursor.spelling:
+                start_idx = i + 1
                 if (
                     hasattr(tok, "location")
                     and hasattr(cursor, "location")
-                    and tok.location.offset == cursor.location.offset
                 ):
-                    start_idx = i + 1
+                    if tok.location.offset == cursor.location.offset:
+                        break
+                else:
                     break
-                start_idx = i + 1
         post_name_tokens = tokens[start_idx:]
         for i, tok in enumerate(post_name_tokens):
             if tok.spelling == '=':
