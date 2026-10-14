@@ -77,6 +77,9 @@ public:
         bool reversedWindingOrder       : 1;
         bool fog                        : 1;
         GeometryType geometryType       : 2;
+        // Per-View transient, always false in the component. FView::prepare() sets it in the
+        // View's SoA copy for every visible renderable when motion vectors are active.
+        bool motionMoved                : 1;
     };
 
     struct Skinning {

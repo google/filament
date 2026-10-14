@@ -57,6 +57,7 @@
 #include "materials/flare/flare.h"
 #include "materials/fog/fog.h"
 #include "materials/fsr/fsr.h"
+#include "materials/motionVectors/motionVectors.h"
 #include "materials/sgsr/sgsr.h"
 #include "materials/ssao/ssao.h"
 
@@ -175,6 +176,12 @@ void PostProcessManager::PostProcessMaterial::loadMaterial(FEngine& engine) cons
     //       domain, load both OPAQUE and TRANSPARENT variants here.
     auto builder = Material::Builder();
     builder.package(mData, mSize);
+    // PostProcessMaterials are lazily loaded on first use during FrameGraph execution, after
+    // UboManager::beginFrame() has already run in FRenderer::beginFrame(). Any SURFACE-domain
+    // material here (e.g. clearDepth, fog) must disable UBO batching so its default instance can
+    // commit its descriptor set immediately without waiting for the next frame's UboManager slot
+    // allocation.
+    builder.uboBatching(Material::UboBatchingMode::DISABLED);
     for (auto const& constant: mConstants) {
         std::visit([&](auto&& arg) {
             builder.constant(constant.name.data(), constant.name.size(), arg);
@@ -363,6 +370,7 @@ void PostProcessManager::init() noexcept {
     mSsrPassDescriptorSet.init(engine);
     mPostProcessDescriptorSet.init(engine);
     mStructureDescriptorSet.init(engine);
+    mMotionVectorsDescriptorSet.init(engine);
 
     mWorkaroundSplitEasu =
             driver.isWorkaroundNeeded(Workaround::SPLIT_EASU);
@@ -416,6 +424,9 @@ void PostProcessManager::init() noexcept {
         for (auto const& info: getSsaoMaterialList()) {
             registerPostProcessMaterial(info.name, info);
         }
+        for (auto const& info: getMotionVectorsMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
     }
 
     if (engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1)) {
@@ -455,6 +466,7 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
     mPostProcessDescriptorSet.terminate(engine.getDescriptorSetLayoutFactory(), driver);
     mSsrPassDescriptorSet.terminate(driver);
     mStructureDescriptorSet.terminate(driver);
+    mMotionVectorsDescriptorSet.terminate(driver);
 }
 
 Handle<HwTexture> PostProcessManager::getOneTexture() const noexcept {
@@ -740,6 +752,136 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::transparentPicking(FrameGrap
                 });
 
     return pickingRenderPass->picking;
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::motionVectors(FrameGraph& fg,
+        RenderPassBuilder const& passBuilder, uint8_t const renderFlags,
+        FrameGraphId<FrameGraphTexture> const depth,
+        filament::Viewport const& svp, filament::Viewport const& xvp) noexcept {
+
+    // A depth pass over the visible renderables, with the color pass's camera (jittered),
+    // resolution and coverage, in which the renderables that moved also write their motion
+    // vectors (MOT variant). When `depth` is provided (the color pass's depth buffer), it's
+    // attached read-only and only the renderables that moved are drawn; otherwise (e.g. with
+    // MSAA), a transient depth buffer is allocated and static renderables are drawn as occluders.
+    struct MotionVectorsPassData {
+        FrameGraphId<FrameGraphTexture> motionVectors;
+        FrameGraphId<FrameGraphTexture> depth;
+    };
+
+    auto const& motionVectorsPass = fg.addPass<MotionVectorsPassData>(
+            "Object Motion Vectors Pass",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                data.motionVectors = builder.createTexture("Object Motion Vectors", {
+                        .width = svp.width, .height = svp.height,
+                        .format = TextureFormat::RG16F });
+
+                data.motionVectors = builder.write(data.motionVectors,
+                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+
+                TargetBufferFlags clearFlags = TargetBufferFlags::COLOR0;
+                if (depth) {
+                    data.depth = builder.read(depth,
+                            FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+                } else {
+                    // Same format as the structure pass. This depth buffer is never read, so it's
+                    // discarded at the start and the end of the pass.
+                    data.depth = builder.createTexture("Object Motion Vectors Depth", {
+                            .width = svp.width, .height = svp.height,
+                            .format = TextureFormat::DEPTH32F });
+                    data.depth = builder.write(data.depth,
+                            FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+                    clearFlags |= TargetBufferFlags::DEPTH;
+                }
+
+                builder.declareRenderPass("Object Motion Vectors Target", {
+                        .attachments = { .color = { data.motionVectors }, .depth = data.depth },
+                        .clearFlags = clearFlags
+                });
+            },
+            [=, this, passBuilder = passBuilder](FrameGraphResources const& resources,
+                    auto const&, DriverApi& driver) mutable {
+                // bind the per-view descriptorSet that is used for the motion vectors pass
+                getMotionVectorsDescriptorSet().bind(driver);
+                bindPerRenderableDescriptorSet(driver);
+
+                passBuilder.renderFlags(renderFlags);
+                passBuilder.variant(Variant{ Variant::DEPTH_VARIANT });
+                auto commandTypeFlags = passBuilder.getCommandTypeFlags() |
+                        RenderPass::CommandTypeFlags::OBJECT_MOTION_VECTORS;
+                if (depth) {
+                    assert_invariant(!any(commandTypeFlags &
+                            RenderPass::CommandTypeFlags::MOTION_VECTORS_CHANNEL_DEPTH_CLEAR));
+                    commandTypeFlags |= RenderPass::CommandTypeFlags::MOTION_VECTORS_REUSE_DEPTH;
+                }
+                passBuilder.commandTypeFlags(commandTypeFlags);
+
+                RenderPass pass{ passBuilder.build(mEngine, driver) };
+                // same scissor as the color pass, which always renders into an intermediate
+                // buffer when motion vectors are active
+                pass.setScissorViewport(xvp);
+                pass.finalize(mEngine, driver);
+                auto const out = resources.getRenderPassInfo();
+                driver.beginRenderPass(out.target, out.params);
+                pass.getExecutor().execute(mEngine, driver);
+                driver.endRenderPass();
+                unbindAllDescriptorSets(driver);
+            });
+
+    return motionVectorsPass->motionVectors;
+}
+
+void PostProcessManager::readbackMotionVectors(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> const input, bool const hasData,
+        filament::Viewport const& xvp, Handle<HwTexture> const output,
+        uint2 const outputSize) noexcept {
+
+    struct ReadbackPassData {
+        FrameGraphId<FrameGraphTexture> input;
+        FrameGraphId<FrameGraphTexture> output;
+    };
+
+    FrameGraphId<FrameGraphTexture> target = fg.import("Motion Vectors Readback", {
+            .width = outputSize.x, .height = outputSize.y, .format = TextureFormat::RG16F },
+            FrameGraphTexture::Usage::COLOR_ATTACHMENT | FrameGraphTexture::Usage::BLIT_DST,
+            FrameGraphTexture{ .handle = output });
+
+    if (hasData) {
+        // Blit origins are bottom-left on all backends, like viewports.
+        uint2 const origin{ uint32_t(xvp.left), uint32_t(xvp.bottom) };
+        uint2 const size = min(uint2{ xvp.width, xvp.height }, outputSize);
+        auto const& readbackPass = fg.addPass<ReadbackPassData>("Motion Vectors Readback",
+                [&](FrameGraph::Builder& builder, auto& data) {
+                    data.input = builder.read(input, FrameGraphTexture::Usage::BLIT_SRC);
+                    data.output = builder.write(target, FrameGraphTexture::Usage::BLIT_DST);
+                },
+                [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                    driver.blit(resources.getTexture(data.output), 0, 0, { 0, 0 },
+                            resources.getTexture(data.input), 0, 0, origin, size);
+                });
+        target = readbackPass->output;
+    } else {
+        // The zero-texture substitute can't be blitted (format, size and usage differ), and
+        // the motion vectors it stands for are all zero.
+        auto const& readbackPass = fg.addPass<ReadbackPassData>("Motion Vectors Readback (Clear)",
+                [&](FrameGraph::Builder& builder, auto& data) {
+                    data.output = builder.write(target,
+                            FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                    builder.declareRenderPass("Motion Vectors Readback Target", {
+                            .attachments = { .color = { data.output } },
+                            .clearFlags = TargetBufferFlags::COLOR0 });
+                },
+                [](FrameGraphResources const& resources, auto const&, DriverApi& driver) {
+                    auto const out = resources.getRenderPassInfo();
+                    driver.beginRenderPass(out.target, out.params);
+                    driver.endRenderPass();
+                });
+        target = readbackPass->output;
+    }
+
+    // The texture is read outside the FrameGraph. This keeps the pass (and the motion vectors
+    // pass it reads from) from being culled, and its output from being discarded.
+    fg.present(target);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -2995,7 +3137,7 @@ void PostProcessManager::TaaJitterCamera(
 }
 
 void PostProcessManager::configureTemporalAntiAliasingMaterial(backend::DriverApi& driver,
-        TemporalAntiAliasingOptions const& taaOptions) noexcept {
+        TemporalAntiAliasingOptions const& taaOptions, bool const hasMotionVectors) noexcept {
 
     FMaterial* const ma = getPostProcessMaterial("taa").getMaterial(mEngine);
     ma->getPrograms().setConstants({
@@ -3013,6 +3155,7 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(backend::DriverAp
         { "disocclusionHistoryNeighborhood", taaOptions.disocclusionHistoryNeighborhood },
         { "exactLanczosSupport", taaOptions.exactLanczosSupport },
         { "debugVisualizeDisocclusion", mEngine.debug.taa.visualize_disocclusion },
+        { "hasMotionVectors", hasMotionVectors },
     });
 }
 
@@ -3064,6 +3207,7 @@ FMaterialInstance* PostProcessManager::configureColorGradingMaterial(backend::Dr
 FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,
         FrameGraphId<FrameGraphTexture> const depth,
+        FrameGraphId<FrameGraphTexture> const objectMotionVectors,
         filament::Viewport const& xvp,
         filament::Viewport const& vp,
         FrameHistory& frameHistory,
@@ -3074,6 +3218,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
 
     auto const& previous = frameHistory.getPrevious().*pTaa;
     auto& current = frameHistory.getCurrent().*pTaa;
+
+    // TaaJitterCamera (above) only sees camera motion; if objectMotionVectors is non-null a
+    // visible renderable moved this frame, so also hold motionAdaptiveHistory at full strength
+    // during object motion and for motionHoldFrames after it stops (covering background pixels
+    // newly uncovered by the moving object, which have v == 0).
+    if (objectMotionVectors) {
+        current.motionHoldRemaining = taaOptions.motionHoldFrames;
+    }
 
     // if we don't have a history yet, just use the current color buffer as history
     FrameGraphId<FrameGraphTexture> colorHistory = input;
@@ -3103,6 +3255,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
     struct TAAData {
         FrameGraphId<FrameGraphTexture> color;
         FrameGraphId<FrameGraphTexture> depth;
+        FrameGraphId<FrameGraphTexture> objectMotionVectors;
         FrameGraphId<FrameGraphTexture> history;
         FrameGraphId<FrameGraphTexture> depthHistory;
         FrameGraphId<FrameGraphTexture> output;
@@ -3117,6 +3270,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 }
                 data.color = builder.sample(input);
                 data.depth = builder.sample(depth);
+                // The object motion vectors are built against the previous frame's projection,
+                // which is historyProjection only when we have a history; otherwise the zero
+                // texture is used (which also lets the motion vectors pass be culled).
+                if (objectMotionVectors && previous.color.handle) {
+                    data.objectMotionVectors = builder.sample(objectMotionVectors);
+                }
                 data.history = builder.sample(colorHistory);
                 data.depthHistory = builder.sample(depthHistory);
                 data.output = builder.createTexture("TAA output", desc);
@@ -3153,6 +3312,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 auto const history = resources.getTexture(data.history);
                 auto const depthHistory = resources.getTexture(data.depthHistory);
 
+                // The sampler is part of the material even when hasMotionVectors is false, so
+                // it's always set. The zero texture means "no object motion".
+                auto const objectMotionVectorsTexture = data.objectMotionVectors ?
+                        resources.getTexture(data.objectMotionVectors) : getZeroTexture();
+
                 auto const& colorDesc = resources.getDescriptor(data.color);
                 auto const& historyDesc = resources.getDescriptor(data.history);
 
@@ -3166,6 +3330,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 FMaterialInstance* mi = getMaterialInstance(driver, ma, variant);
                 mi->setParameter("color",  color, SamplerParams{});  // nearest
                 mi->setParameter("depth",  depth, SamplerParams{});  // nearest
+                mi->setParameter("objectMotionVectors",
+                        objectMotionVectorsTexture, SamplerParams{});  // nearest
                 mi->setParameter("history", history, SamplerParams{
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR
@@ -4119,6 +4285,108 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugDisplayShadowTexture(
         input = shadomapDebugPass->color;
     }
     return input;
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::debugDisplayMotionVectors(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> const input,
+        FrameGraphId<FrameGraphTexture> const depth,
+        FrameGraphId<FrameGraphTexture> const objectMotionVectors,
+        filament::Viewport const& svp, filament::Viewport const& xvp,
+        FrameHistory const& frameHistory, bool const objectOnly,
+        float const scale) noexcept {
+    if (!objectMotionVectors) {
+        return input;
+    }
+
+    auto const& previous = frameHistory.getPrevious().motionVectors;
+    auto const& current = frameHistory.getCurrent().motionVectors;
+    assert_invariant(current.valid);
+
+    // Without a previous render, the motion vectors are all zero (objectMotionVectors is the
+    // imported zero texture).
+    bool const cameraMotion = !objectOnly && previous.valid;
+
+    mat4f reprojection;
+    float2 const k = previous.valid ? current.clipTransform.xy / previous.clipTransform.xy
+                                    : float2{ 1.0f };
+    if (cameraMotion) {
+        // The padding and guard band transform of a render (ts, see FRenderer::renderJob()), as a
+        // clip-space matrix.
+        auto const clipSpaceTransform = [](float4 const& clipTransform) {
+            mat4 ts = mat4::scaling(double3{ clipTransform.x, clipTransform.y, 1.0 });
+            ts[3].x = clipTransform.z;
+            ts[3].y = clipTransform.w;
+            return ts;
+        };
+
+        // R re-expresses the previous position with this render's padding. It's the identity
+        // unless the dynamic resolution changed ts. The object motion vectors are UV differences,
+        // so only the scale of R, k, applies to them.
+        mat4 const R = clipSpaceTransform(current.clipTransform) *
+                inverse(clipSpaceTransform(previous.clipTransform));
+
+        // Like TAA's, this reprojects a pixel's normalized render-target UV and depth to the clip
+        // space of the previous render, assuming it's static (see taa()).
+        constexpr mat4f normalizedToClip{ mat4f::row_major_init{
+                2, 0, 0, -1,
+                0, 2, 0, -1,
+                0, 0, 1,  0,
+                0, 0, 0,  1
+        }};
+        reprojection = mat4f{ R * previous.projection * inverse(current.projection) } *
+                normalizedToClip;
+    }
+
+    // `input` covers the viewport, which is the xvp region of the depth and motion vectors
+    // buffers. This maps one to the other, in normalized coordinates with a bottom-left origin,
+    // like TAA's colorViewport.
+    float4 const viewport{
+            float(xvp.left) / float(svp.width), float(xvp.bottom) / float(svp.height),
+            float(xvp.width) / float(svp.width), float(xvp.height) / float(svp.height) };
+
+    struct DebugMotionVectorsData {
+        FrameGraphId<FrameGraphTexture> color;
+        FrameGraphId<FrameGraphTexture> depth;
+        FrameGraphId<FrameGraphTexture> objectMotionVectors;
+        FrameGraphId<FrameGraphTexture> output;
+    };
+
+    auto const& debugPass = fg.addPass<DebugMotionVectorsData>("Motion Vectors Debug",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                auto const desc = builder.getDescriptor(input);
+                data.color = builder.sample(input);
+                if (cameraMotion) {
+                    data.depth = builder.sample(depth);
+                }
+                data.objectMotionVectors = builder.sample(objectMotionVectors);
+                data.output = builder.createTexture("Motion Vectors Debug", {
+                        .width = desc.width, .height = desc.height, .format = desc.format });
+                data.output = builder.declareRenderPass(data.output);
+            },
+            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                bindPostProcessDescriptorSet(driver);
+                bindPerRenderableDescriptorSet(driver);
+                auto const depthTexture = data.depth ?
+                        resources.getTexture(data.depth) : getZeroTexture();
+                auto const& material = getPostProcessMaterial("debugMotionVectors");
+                FMaterialInstance* const mi = getMaterialInstance(mEngine, driver, material);
+                mi->setParameter("color", resources.getTexture(data.color),
+                        SamplerParams{});   // nearest
+                mi->setParameter("depth", depthTexture,
+                        SamplerParams{});   // nearest
+                mi->setParameter("objectMotionVectors",
+                        resources.getTexture(data.objectMotionVectors),
+                        SamplerParams{});   // nearest
+                mi->setParameter("reprojection", reprojection);
+                mi->setParameter("objectMotionScale", k);
+                mi->setParameter("motionVectorsViewport", viewport);
+                mi->setParameter("scale", scale);
+                mi->setParameter("cameraMotion", cameraMotion);
+                commitAndRenderFullScreenQuad(driver, resources.getRenderPassInfo(), mi);
+                unbindAllDescriptorSets(driver);
+            });
+
+    return debugPass->output;
 }
 
 } // namespace filament

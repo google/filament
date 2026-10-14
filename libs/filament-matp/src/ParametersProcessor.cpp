@@ -1330,6 +1330,7 @@ static Status processVariantFilter(MaterialBuilder& builder, const JsonishValue&
         strToEnum["fog"]                    = filament::UserVariantFilterBit::FOG;
         strToEnum["ssr"]                    = filament::UserVariantFilterBit::SSR;
         strToEnum["stereo"]                 = filament::UserVariantFilterBit::STE;
+        strToEnum["motionVectors"]          = filament::UserVariantFilterBit::MOTION_VECTORS;
         return strToEnum;
     }();
 

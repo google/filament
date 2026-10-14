@@ -167,6 +167,14 @@ GuardBandOptions const& View::getGuardBandOptions() const noexcept {
     return downcast(this)->getGuardBandOptions();
 }
 
+void View::setMotionVectorsOptions(MotionVectorsOptions const options) noexcept {
+    downcast(this)->setMotionVectorsOptions(options);
+}
+
+MotionVectorsOptions const& View::getMotionVectorsOptions() const noexcept {
+    return downcast(this)->getMotionVectorsOptions();
+}
+
 void View::setColorGrading(ColorGrading* colorGrading) noexcept {
     return downcast(this)->setColorGrading(downcast(colorGrading));
 }

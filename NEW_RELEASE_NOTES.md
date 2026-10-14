@@ -16,3 +16,7 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - vulkan: fix a crash when more than 32 timer queries are outstanding. `createTimerQueryS` returns
   a null handle once the pool is exhausted, and `getTimerQueryValue` reports `ERROR` for it
   (#10658)
+- engine: add `View::setMotionVectorsOptions()`, which renders the motion vectors of moving
+  objects. TAA uses them to reproject these objects, which reduces ghosting. Disabled by default
+- materials: add the `motionVectors` variant filter (`UserVariantFilterBit::MOTION_VECTORS`), which
+  removes the new motion vectors depth variants. `UserVariantFilterBit::ALL` is now `0x1FF` [⚠️ **Recompile Materials**]

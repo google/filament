@@ -68,6 +68,9 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(io::sstream& out,
     if (filament::Variant::isValidDepthVariant(variant)) {
         CodeGenerator::generateDefine(out, "VARIANT_DEPTH");
     }
+    if (filament::Variant::isMotionVectorsVariant(variant)) {
+        CodeGenerator::generateDefine(out, "VARIANT_HAS_MOT");
+    }
 
     switch (stage) {
         case ShaderStage::VERTEX:

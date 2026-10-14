@@ -1,0 +1,133 @@
+material {
+    name : debugMotionVectors,
+    parameters : [
+        {
+            type : sampler2d,
+            name : color,
+            precision: medium
+        },
+        {
+            type : sampler2d,
+            name : depth,
+            precision: high,
+            filterable: false
+        },
+        {
+            type : sampler2d,
+            name : objectMotionVectors,
+            precision: high,
+            filterable: false
+        },
+        {
+            type : mat4,
+            name : reprojection,
+            precision: high
+        },
+        {
+            type : float2,
+            name : objectMotionScale,
+            precision: high
+        },
+        {
+            type : float4,
+            name : motionVectorsViewport,
+            precision: high
+        },
+        {
+            type : float,
+            name : scale,
+            precision: high
+        },
+        {
+            type : bool,
+            name : cameraMotion
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    depthWrite : false,
+    depthCulling : false,
+    domain: postprocess
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        highp vec2 uv = postProcess.normalizedUV;
+        // the color buffer covers the viewport
+        postProcess.vertex.xy = uvToRenderTargetUV(uv);
+        // the viewport is the motionVectorsViewport region of the depth and motion vectors buffers
+        highp vec4 viewport = materialParams.motionVectorsViewport;
+        postProcess.vertex.zw = uvToRenderTargetUV(viewport.xy + uv * viewport.zw);
+    }
+}
+
+fragment {
+    void dummy(){}
+
+    // a saturated color: 0 is red, 1/3 green and 2/3 blue
+    vec3 hueToRgb(const float hue) {
+        return saturate(abs(mod(hue * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0);
+    }
+
+    // See the d.renderer.display_motion_vectors debug property (FRenderer::FRenderer()).
+    void postProcess(inout PostProcessInputs postProcess) {
+        vec4 color = textureLod(materialParams_color, variable_vertex.xy, 0.0);
+
+        // The object motion vectors have the same layout as the depth buffer, but they can be a
+        // 1x1 zero texture, which is why they're sampled with normalized coordinates. They're in
+        // the previous frame's render-target UV space; objectMotionScale converts them to this
+        // frame's render-target UV space, and |v| >= 1 means that the object has no valid previous
+        // position.
+        highp vec2 mvUv = variable_vertex.zw;
+        highp vec2 v = textureLod(materialParams_objectMotionVectors, mvUv, 0.0).rg;
+        bool invalid = any(greaterThanEqual(abs(v), vec2(1.0)));
+        if (!invalid) {
+            v *= materialParams.objectMotionScale;
+        }
+
+        if (materialParams.cameraMotion) {
+            // Reproject the depth buffer's center sample to the previous frame, as if it was
+            // static (like taa.mat), then subtract the object's own motion.
+            highp float depth = textureLod(materialParams_depth, mvUv, 0.0).r;
+            highp vec4 q = materialParams.reprojection * vec4(uvToRenderTargetUV(mvUv), depth, 1.0);
+
+            // A position behind the previous camera (w <= 0) has no usable projection.
+            const highp float kMinW = 1.0e-6;
+            if (q.w > kMinW && !invalid) {
+                highp vec2 uvPrev = uvToRenderTargetUV(q.xy * (0.5 / q.w) + 0.5) - v;
+                v = mvUv - uvPrev;
+            } else {
+                invalid = true;
+            }
+        }
+
+        if (invalid) {
+            // No valid previous position: a black and white checkerboard of 8x8 pixel squares,
+            // from the bottom-left corner on all backends (unlike gl_FragCoord). `color` covers
+            // the viewport, and uvToRenderTargetUV() is its own inverse.
+            highp vec2 pixel = uvToRenderTargetUV(variable_vertex.xy) *
+                    vec2(textureSize(materialParams_color, 0));
+            highp vec2 cell = floor(pixel * 0.125);
+            postProcess.color = vec4(vec3(mod(cell.x + cell.y, 2.0)), color.a);
+            return;
+        }
+
+        // The motion in fractions of the viewport, with y up on all backends (this undoes the
+        // render-target UV flip).
+        highp vec2 m = (uvToRenderTargetUV(v) - uvToRenderTargetUV(vec2(0.0))) /
+                materialParams.motionVectorsViewport.zw;
+
+        // the direction is the hue (counterclockwise from red, to the right), the length the
+        // brightness
+        float brightness = saturate(length(m) * materialParams.scale);
+        vec3 motion = vec3(0.0);
+        if (brightness > 0.0) {
+            motion = hueToRgb(fract(atan(m.y, m.x) * (0.5 / PI) + 1.0)) * brightness;
+        }
+
+        // the scene, dimmed and in grayscale, shows through where the motion is small
+        vec3 scene = vec3(0.5 * luminance(color.rgb));
+        postProcess.color = vec4(scene * (1.0 - brightness) + motion, color.a);
+    }
+}
