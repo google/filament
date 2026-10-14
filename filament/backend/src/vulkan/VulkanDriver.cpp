@@ -45,6 +45,7 @@
 #include <utils/ImmutableCString.h>
 #include <utils/Panic.h>
 
+#include <algorithm>
 #include <chrono>
 #include <mutex>
 #ifndef NDEBUG
@@ -1967,6 +1968,25 @@ size_t VulkanDriver::getMaxTextureSize(SamplerType type) {
 
 size_t VulkanDriver::getMaxArrayTextureLayers() {
     return mContext.getPhysicalDeviceLimits().maxImageArrayLayers;
+}
+
+size_t VulkanDriver::getMaxTextureCount(ShaderStage) {
+    return mContext.getPhysicalDeviceLimits().maxPerStageDescriptorSampledImages;
+}
+
+size_t VulkanDriver::getMaxSamplerCount(ShaderStage) {
+    return mContext.getPhysicalDeviceLimits().maxPerStageDescriptorSamplers;
+}
+
+size_t VulkanDriver::getExternalTextureCost() {
+    // A multi-planar (YCbCr) image may consume more than one descriptor; see
+    // VkSamplerYcbcrConversionImageFormatProperties::combinedImageSamplerDescriptorCount.
+    return 2;
+}
+
+size_t VulkanDriver::getExternalSamplerCost() {
+    // Combined image samplers count against both the sampled image and the sampler limits.
+    return getExternalTextureCost();
 }
 
 size_t VulkanDriver::getUniformBufferOffsetAlignment() {
