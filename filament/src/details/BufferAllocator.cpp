@@ -52,7 +52,9 @@ BufferAllocator::BufferAllocator(allocation_size_t totalSize, allocation_size_t 
 }
 
 void BufferAllocator::reset(allocation_size_t newTotalSize) {
-    assert_invariant(newTotalSize % mSlotSize == 0);
+    FILAMENT_CHECK_PRECONDITION(newTotalSize >= mSlotSize && newTotalSize % mSlotSize == 0)
+            << "Invalid BufferAllocator size " << newTotalSize << " (slot size " << mSlotSize
+            << ")";
 
     mTotalSize = newTotalSize;
     mFreeList.clear();
