@@ -26,9 +26,6 @@ float computeKernelRoughness(const vec3 worldNormal) {
     vec3 du = dFdx(worldNormal);
     vec3 dv = dFdy(worldNormal);
 
-    du *= frameUniforms.derivativesScale.x;
-    dv *= frameUniforms.derivativesScale.y;
-
     float variance = materialParams._specularAntiAliasingVariance *
             // specular AA factor to correct for resolution scaling (DSR and TAAx4)
             dot(vec2(dot(du, du), dot(dv, dv)), sq(frameUniforms.derivativesScale));
