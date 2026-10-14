@@ -759,11 +759,13 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         requestedFeatures.gpuContextPriority = driverConfig.gpuContextPriority;
     }
 
-    const size_t numQueues = getPhysicalDeviceQueueFamilyPropertiesHelper(getPhysicalDevice()).size();
+    auto queues = getPhysicalDeviceQueueFamilyPropertiesHelper(getPhysicalDevice());
+    const size_t graphicsQueuesCount = queues[mImpl->mGraphicsQueueFamilyIndex].queueCount;
+
     if (mImpl->mDevice == VK_NULL_HANDLE) {
         createLogicalDeviceAndQueues(deviceExts, context.mPhysicalDeviceFeatures.features,
                 context.mPhysicalDeviceVk11Features, context.mProtectedMemorySupported,
-                requestedFeatures, numQueues > 1);
+                requestedFeatures, graphicsQueuesCount > 1);
     }
 
     assert_invariant(mImpl->mDevice != VK_NULL_HANDLE);
@@ -774,7 +776,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
             &mImpl->mGraphicsQueue);
     assert_invariant(mImpl->mGraphicsQueue != VK_NULL_HANDLE);
 
-    if (numQueues > 1) {
+    if (graphicsQueuesCount > 1) {
         // If we have more than one graphical queue, use one as the async queue
         vkGetDeviceQueue(mImpl->mDevice, mImpl->mGraphicsQueueFamilyIndex, mImpl->mGraphicsQueueIndex + 1,
             &mImpl->mAsyncQueue);

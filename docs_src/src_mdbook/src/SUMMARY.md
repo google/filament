@@ -9,6 +9,7 @@
   - [Filament](./main/filament.md)
   - [Materials](./main/materials.md)
 - [Tutorials and Samples](./samples/README.md)
+  - [Android Samples](./dup/android_samples.md)
   - [iOS Tutorial](./samples/ios.md)
   - [Web Tutorials](./samples/web/tutorials.md)
     - [triangle](./samples/web/triangle.md)

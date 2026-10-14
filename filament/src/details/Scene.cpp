@@ -141,7 +141,8 @@ void FScene::prepare(JobSystem& js,
                     lightInstances.emplace_back(li, ti);
                 }
             }
-            if (ri) {
+            // Renderables with an instance count of 0 are not drawn, so we skip them entirely.
+            if (ri && rcm.getInstancesInfo(ri).count) {
                 renderableInstances.emplace_back(ri, ti);
             }
         }

@@ -3,6 +3,12 @@
 # NONE
 
 [main]\
-[NONE](index.md)
+[~~NONE~~](index.md)
+
+---
+
+### Deprecated
+
+---
 
 No Ambient Occlusion
