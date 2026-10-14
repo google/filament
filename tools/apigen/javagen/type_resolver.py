@@ -1499,7 +1499,7 @@ class TypeResolver:
         if raw_default is None:
             return None
         val = str(raw_default).strip()
-        if not val or val in ("{}", "{ }"):
+        if not val:
             return None
 
         size = arr_info["size"]
@@ -1511,6 +1511,13 @@ class TypeResolver:
             else str(f_type)
         )
         is_quat = "quat" in t_str.lower() or "tquaternion" in t_str.lower()
+
+        if val in ("{}", "{ }"):
+            if is_quat and size == 4:
+                one_lit = "1.0f" if scalar == "float" else "1.0" if scalar == "double" else "1"
+                zero_lit = "0.0f" if scalar == "float" else "0.0" if scalar == "double" else "0"
+                return [zero_lit, zero_lit, zero_lit, one_lit]
+            return None
 
         if (val.startswith("{") and val.endswith("}")) or (val.startswith("[") and val.endswith("]")):
             inner = val[1:-1].strip()
