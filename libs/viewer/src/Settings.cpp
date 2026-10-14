@@ -344,6 +344,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewSett
             i = parse(tokens, i + 1, jsonChunk, &out->shadowType);
         } else if (compare(tok, jsonChunk, "guardBand") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->guardBand);
+        } else if (compare(tok, jsonChunk, "motionVectors") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->motionVectors);
         } else if (compare(tok, jsonChunk, "vsmShadowOptions") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->vsmShadowOptions);
         } else if (compare(tok, jsonChunk, "postProcessingEnabled") == 0) {
@@ -862,6 +864,7 @@ void applySettings(Engine* engine, const ViewSettings& settings, View* dest) {
     dest->setShadowType(settings.shadowType);
     dest->setVsmShadowOptions(settings.vsmShadowOptions);
     dest->setGuardBandOptions(settings.guardBand);
+    dest->setMotionVectorsOptions(settings.motionVectors);
     dest->setStereoscopicOptions(settings.stereoscopicOptions);
     dest->setPostProcessingEnabled(settings.postProcessingEnabled);
     dest->setBlendMode(static_cast<View::BlendMode>(settings.blendMode));
@@ -1380,6 +1383,7 @@ static std::ostream& operator<<(std::ostream& out, const ViewSettings& in) {
         << "\"shadowType\": " << (in.shadowType) << ",\n"
         << "\"vsmShadowOptions\": " << (in.vsmShadowOptions) << ",\n"
         << "\"guardBand\": " << (in.guardBand) << ",\n"
+        << "\"motionVectors\": " << (in.motionVectors) << ",\n"
         << "\"stereoscopicOptions\": " << (in.stereoscopicOptions) << ",\n"
         << "\"postProcessingEnabled\": " << to_string(in.postProcessingEnabled) << "\n"
         << "}";

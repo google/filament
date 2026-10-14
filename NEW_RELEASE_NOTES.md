@@ -13,3 +13,7 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
   tick. Metal now runs them every frame too
 - java: `Engine.Config.asynchronousFrameBudget` (in nanoseconds) is added
 - web: `Engine$Config.asynchronousFrameBudgetMs` is added
+- engine: add `View::setMotionVectorsOptions()`, which renders the motion vectors of moving
+  objects. TAA uses them to reproject these objects, which reduces ghosting. Disabled by default
+- materials: add the `motionVectors` variant filter (`UserVariantFilterBit::MOTION_VECTORS`), which
+  removes the new motion vectors depth variants. `UserVariantFilterBit::ALL` is now `0x1FF` [⚠️ **Recompile Materials**]

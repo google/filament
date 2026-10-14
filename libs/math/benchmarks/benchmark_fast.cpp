@@ -17,12 +17,18 @@
 
 #include "PerformanceCounters.h"
 
+#include <utils/compiler.h>
+
 #include <math/fast.h>
 #include <math/half.h>
+#include <math/mat4.h>
+#include <math/scalar.h>
+#include <math/vec3.h>
 
 #include <benchmark/benchmark.h>
 
 #include <cmath>
+#include <vector>
 
 using namespace filament::math;
 
@@ -157,3 +163,109 @@ BENCHMARK_TEMPLATE(BM_func, Scalar, StdPow2dot2);
 BENCHMARK_TEMPLATE(BM_func, Scalar, StdExp2dot2Log);
 
 BENCHMARK_TEMPLATE(BM_func, Scalar, Float16);
+
+template <typename T>
+UTILS_NOINLINE
+static void initMatrices(std::vector<details::TMat44<T>>& matrices,
+        std::vector<T>& determinants) noexcept {
+    using M4 = details::TMat44<T>;
+    using V3 = details::TVec3<T>;
+    for (size_t i = 0, c = matrices.size(); i < c; i++) {
+        T const angle = T(i + 1) * T(0.05);
+        M4 const t = M4::translation(V3{ T(i) * T(0.1), T(i) * T(-0.2), T(i) * T(0.3) });
+        M4 const r = M4::eulerZYX(angle, angle * T(0.7), angle * T(-0.3));
+        M4 const s = M4::scaling(V3{ T(1.0) + T(i % 5) * T(0.25),
+                                     T(1.2) + T(i % 7) * T(0.15),
+                                     T(0.8) + T(i % 3) * T(0.35) });
+        matrices[i] = t * r * s;
+        determinants[i] = det(matrices[i]);
+    }
+}
+
+template <typename T, typename Op>
+static void BM_mat4Inverse(benchmark::State& state) noexcept {
+    using M4 = details::TMat44<T>;
+    Op op;
+    state.SetLabel(Op::label());
+    std::vector<M4> data(1024);
+    std::vector<T> determinants(1024);
+    std::vector<M4> res(1024);
+    initMatrices(data, determinants);
+
+    {
+        PerformanceCounters pc(state);
+        for (auto _ : state) {
+            for (size_t i = 0, c = data.size(); i < c; i++) {
+                res[i] = op(data[i], determinants[i]);
+            }
+            benchmark::ClobberMemory();
+            benchmark::DoNotOptimize(res);
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * data.size());
+    }
+}
+
+template <typename T>
+struct GaussJordanInverse4 {
+    using M4 = details::TMat44<T>;
+    M4 operator()(M4 const& m, T) const noexcept {
+        return details::matrix::gaussJordanInverse(m);
+    }
+    static const char* label() { return "gaussJordanInverse(m)"; }
+};
+
+template <typename T>
+struct FastInverse4 {
+    using M4 = details::TMat44<T>;
+    M4 operator()(M4 const& m, T) const noexcept {
+        return inverse(m);
+    }
+    static const char* label() { return "inverse(m)"; }
+};
+
+template <typename T>
+struct FastInverse4WithPrecomputedDet {
+    using M4 = details::TMat44<T>;
+    M4 operator()(M4 const& m, T d) const noexcept {
+        return inverse(m, d);
+    }
+    static const char* label() { return "inverse(m, det)"; }
+};
+
+template <typename T>
+struct DetAndGaussJordanInverse4 {
+    using M4 = details::TMat44<T>;
+    M4 operator()(M4 const& m, T) const noexcept {
+        if (UTILS_VERY_LIKELY(det(m) != T(0))) {
+            return details::matrix::gaussJordanInverse(m);
+        }
+        return M4{};
+    }
+    static const char* label() { return "det(m) + gaussJordanInverse(m)"; }
+};
+
+template <typename T>
+struct DetAndFastInverse4WithDet {
+    using M4 = details::TMat44<T>;
+    M4 operator()(M4 const& m, T) const noexcept {
+        T const d = det(m);
+        if (UTILS_VERY_LIKELY(d != T(0))) {
+            return inverse(m, d);
+        }
+        return M4{};
+    }
+    static const char* label() { return "det(m) + inverse(m, d)"; }
+};
+
+BENCHMARK_TEMPLATE(BM_mat4Inverse, float, GaussJordanInverse4<float>);
+BENCHMARK_TEMPLATE(BM_mat4Inverse, float, FastInverse4<float>);
+BENCHMARK_TEMPLATE(BM_mat4Inverse, float, FastInverse4WithPrecomputedDet<float>);
+BENCHMARK_TEMPLATE(BM_mat4Inverse, float, DetAndGaussJordanInverse4<float>);
+BENCHMARK_TEMPLATE(BM_mat4Inverse, float, DetAndFastInverse4WithDet<float>);
+
+BENCHMARK_TEMPLATE(BM_mat4Inverse, double, GaussJordanInverse4<double>);
+BENCHMARK_TEMPLATE(BM_mat4Inverse, double, FastInverse4<double>);
+BENCHMARK_TEMPLATE(BM_mat4Inverse, double, FastInverse4WithPrecomputedDet<double>);
+BENCHMARK_TEMPLATE(BM_mat4Inverse, double, DetAndGaussJordanInverse4<double>);
+BENCHMARK_TEMPLATE(BM_mat4Inverse, double, DetAndFastInverse4WithDet<double>);

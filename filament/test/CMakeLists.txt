@@ -82,6 +82,10 @@ if (FILAMENT_BUILD_TESTING)
                 filament_test_material.cpp
                 ${RESGEN_SOURCE})
 
+        if (FILAMENT_SUPPORTS_MOTION_VECTORS)
+            target_sources(test_${TARGET} PRIVATE filament_motion_vectors_test.cpp)
+        endif()
+
         target_link_libraries(test_${TARGET} PRIVATE filamat filament gtest)
         target_compile_options(test_${TARGET} PRIVATE ${COMPILER_FLAGS})
         target_include_directories(test_${TARGET} PRIVATE

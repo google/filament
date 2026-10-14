@@ -679,6 +679,8 @@ void FRenderableManager::create(
         setFogEnabled(ci, builder->mFogEnabled);
         // do this after calling setAxisAlignedBoundingBox
         static_cast<Visibility&>(mManager[ci].visibility).geometryType = builder->mGeometryType;
+        // per-View transient, only ever set in a View's copy of the visibility
+        static_cast<Visibility&>(mManager[ci].visibility).motionMoved = false;
         mManager[ci].lightChannels = builder->mLightChannels;
 
         InstancesInfo& instances = manager[ci].instances;

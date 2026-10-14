@@ -71,6 +71,7 @@ public class View {
     private @Nullable TemporalAntiAliasingOptions mTemporalAntiAliasingOptions;
     private @Nullable ScreenSpaceReflectionsOptions mScreenSpaceReflectionsOptions;
     private @Nullable GuardBandOptions mGuardBandOptions;
+    private @Nullable MotionVectorsOptions mMotionVectorsOptions;
     private @Nullable MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
     private @Nullable ColorGrading mColorGrading;
     private @Nullable AmbientOcclusionOptions mAmbientOcclusionOptions;
@@ -694,6 +695,37 @@ public class View {
             mGuardBandOptions = new GuardBandOptions();
         }
         return mGuardBandOptions;
+    }
+
+    /**
+     * Enables or disables the motion vectors pass.
+     *
+     * <p>Disabled by default.</p>
+     *
+     * <p>Motion vectors are only generated when post-processing is enabled, stereo is disabled,
+     * the engine runs at feature level 1 or higher and the device supports RG16F render
+     * targets; otherwise this setting has no effect.</p>
+     *
+     * @param options motion vectors options
+     *
+     * @see MotionVectorsOptions
+     */
+    public void setMotionVectorsOptions(@NonNull MotionVectorsOptions options) {
+        mMotionVectorsOptions = options;
+        nSetMotionVectorsOptions(getNativeObject(), options.enabled);
+    }
+
+    /**
+     * Returns the motion vectors options.
+     *
+     * @return motion vectors options
+     */
+    @NonNull
+    public MotionVectorsOptions getMotionVectorsOptions() {
+        if (mMotionVectorsOptions == null) {
+            mMotionVectorsOptions = new MotionVectorsOptions();
+        }
+        return mMotionVectorsOptions;
     }
 
     /**
@@ -2325,6 +2357,23 @@ public class View {
         public boolean enabled = false;
     }
 
+    /**
+     * Options for the motion vectors pass.
+     *
+     * <p>Motion vectors are generated only when post-processing is enabled, stereo is disabled,
+     * the engine runs at feature level 1 or higher and the device supports RG16F render targets.
+     * They capture the rigid motion of renderables (TransformManager and InstanceBuffer
+     * transforms) and of the camera. Skinning/morphing deformation and the VIEW/DEVICE vertex
+     * domains are not captured.
+     * TAA uses motion vectors automatically when they are enabled.</p>
+     *
+     * @see View#setMotionVectorsOptions
+     */
+    public static class MotionVectorsOptions {
+        /** enables the motion vectors pass */
+        public boolean enabled = false;
+    }
+
     /** Options for stereoscopic (multi-eye) rendering. */
     public static class StereoscopicOptions {
         public boolean enabled = false;
@@ -2384,6 +2433,7 @@ public class View {
     private static native void nSetTemporalAntiAliasingOptions(long nativeView, float filterWidth, float feedback, float lodBias, float sharpness, boolean enabled, float upscaling, boolean filterHistory, boolean filterInput, boolean useYCoCg, boolean hdr, int boxType, int boxClipping, int jitterPattern, float varianceGamma, boolean preventFlickering, boolean historyReprojection, boolean motionAdaptiveHistory, float motionDeltaThreshold, float minBoxStrength, float minAlphaStrength, float skyDepthThreshold, float motionHoldFrames, boolean depthDisocclusion, float disocclusionDepthThreshold, boolean disocclusionHistoryNeighborhood, boolean exactLanczosSupport);
     private static native void nSetScreenSpaceReflectionsOptions(long nativeView, float thickness, float bias, float maxDistance, float stride, boolean enabled);
     private static native void nSetGuardBandOptions(long nativeView, boolean enabled);
+    private static native void nSetMotionVectorsOptions(long nativeView, boolean enabled);
     private static native void nSetMultiSampleAntiAliasingOptions(long nativeView, boolean enabled, int sampleCount, boolean customResolve);
     private static native void nSetColorGrading(long nativeView, long nativeColorGrading);
     private static native void nSetAmbientOcclusionOptions(long nativeView, int aoType, float radius, float power, float bias, float resolution, float intensity, float bilateralThreshold, int quality, int lowPassFilter, int upsampling, boolean enabled, boolean bentNormals, float minHorizonAngleRad, float ssctLightConeRad, float ssctShadowDistance, float ssctContactDistanceMax, float ssctIntensity, float ssctLightDirectionX, float ssctLightDirectionY, float ssctLightDirectionZ, float ssctDepthBias, float ssctDepthSlopeBias, int ssctSampleCount, int ssctRayCount, boolean ssctEnabled, int gtaoSampleSliceCount, int gtaoSampleStepsPerSlice, float gtaoThicknessHeuristic, boolean gtaoUseVisibilityBitmasks, float gtaoConstThickness, boolean gtaoLinearThickness);
