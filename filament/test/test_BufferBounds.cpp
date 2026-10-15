@@ -14,14 +14,18 @@
  * limitations under the License.
  */
 
+#include <filament/Box.h>
 #include <filament/BufferObject.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
+#include <filament/RenderableManager.h>
 #include <filament/VertexBuffer.h>
 
 #include <backend/BufferDescriptor.h>
 #include <backend/DriverEnums.h>
 
+#include <utils/Entity.h>
+#include <utils/EntityManager.h>
 #include <utils/Panic.h>
 
 #include <gtest/gtest.h>
@@ -234,6 +238,102 @@ TEST_F(BufferBoundsTest, BufferObjectRejectsSizeThatWouldWrap) {
     EXPECT_OVERFLOW_REJECTED(
             bo->setBuffer(*mEngine, makeDescriptor(WRAPPING_SIZE), WRAPPING_SIZE_OFFSET));
     mEngine->destroy(bo);
+}
+
+// ---------------------------------------------------------------------------------------------
+// RenderableManager
+// ---------------------------------------------------------------------------------------------
+
+#if GTEST_HAS_EXCEPTIONS
+#define EXPECT_GEOMETRY_OUT_OF_RANGE_REJECTED(statement) \
+        EXPECT_THROW(statement, utils::PreconditionPanic)
+#else
+#define EXPECT_GEOMETRY_OUT_OF_RANGE_REJECTED(statement) \
+        EXPECT_DEATH(statement, "offset .* \\+ count .* > ")
+#endif
+
+TEST_F(BufferBoundsTest, RenderableBuilderRejectsIndexedOffsetCountUint32Wrap) {
+    VertexBuffer* vb = buildVertexBuffer();
+    IndexBuffer* ib = IndexBuffer::Builder()
+            .indexCount(16)
+            .bufferType(IndexBuffer::IndexType::USHORT)
+            .build(*mEngine);
+    utils::Entity const entity = utils::EntityManager::get().create();
+
+    // 0xFFFFFFF0u + 0x20u wraps to 0x10u in uint32_t, which would pass `<= 16` if evaluated in
+    // 32-bit arithmetic.
+    EXPECT_GEOMETRY_OUT_OF_RANGE_REJECTED(
+            RenderableManager::Builder(1)
+                    .boundingBox({{ 0, 0, 0 }, { 1, 1, 1 }})
+                    .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vb, ib,
+                            0xFFFFFFF0u, 0, 2, 0x20u)
+                    .build(*mEngine, entity));
+
+    utils::EntityManager::get().destroy(entity);
+    mEngine->destroy(ib);
+    mEngine->destroy(vb);
+}
+
+TEST_F(BufferBoundsTest, RenderableBuilderRejectsIndexedOffsetCountSizeTWrap) {
+    VertexBuffer* vb = buildVertexBuffer();
+    IndexBuffer* ib = buildIndexBuffer();
+    utils::Entity const entity = utils::EntityManager::get().create();
+
+    EXPECT_GEOMETRY_OUT_OF_RANGE_REJECTED(
+            RenderableManager::Builder(1)
+                    .boundingBox({{ 0, 0, 0 }, { 1, 1, 1 }})
+                    .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vb, ib,
+                            WRAPPING_SIZE_OFFSET, WRAPPING_SIZE)
+                    .build(*mEngine, entity));
+
+    utils::EntityManager::get().destroy(entity);
+    mEngine->destroy(ib);
+    mEngine->destroy(vb);
+}
+
+TEST_F(BufferBoundsTest, RenderableBuilderRejectsNonIndexedOffsetCountUint32Wrap) {
+    VertexBuffer* vb = buildVertexBuffer();
+    utils::Entity const entity = utils::EntityManager::get().create();
+
+    EXPECT_GEOMETRY_OUT_OF_RANGE_REJECTED(
+            RenderableManager::Builder(1)
+                    .boundingBox({{ 0, 0, 0 }, { 1, 1, 1 }})
+                    .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vb,
+                            0xFFFFFFF0u, 0x20u)
+                    .build(*mEngine, entity));
+
+    utils::EntityManager::get().destroy(entity);
+    mEngine->destroy(vb);
+}
+
+TEST_F(BufferBoundsTest, RenderableSetGeometryAtRejectsOffsetCountWrap) {
+    VertexBuffer* vb = buildVertexBuffer();
+    IndexBuffer* ib = buildIndexBuffer();
+    utils::Entity const entity = utils::EntityManager::get().create();
+
+    ASSERT_EQ(RenderableManager::Builder(1)
+                      .boundingBox({{ 0, 0, 0 }, { 1, 1, 1 }})
+                      .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vb, ib, 0, 3)
+                      .build(*mEngine, entity),
+            RenderableManager::Builder::Success);
+
+    auto& rcm = mEngine->getRenderableManager();
+    auto const instance = rcm.getInstance(entity);
+
+    EXPECT_GEOMETRY_OUT_OF_RANGE_REJECTED(
+            rcm.setGeometryAt(instance, 0, RenderableManager::PrimitiveType::TRIANGLES,
+                    vb, ib, 0xFFFFFFF0u, 0x20u));
+    EXPECT_GEOMETRY_OUT_OF_RANGE_REJECTED(
+            rcm.setGeometryAt(instance, 0, RenderableManager::PrimitiveType::TRIANGLES,
+                    vb, ib, WRAPPING_SIZE_OFFSET, WRAPPING_SIZE));
+    EXPECT_GEOMETRY_OUT_OF_RANGE_REJECTED(
+            rcm.setGeometryAt(instance, 0, RenderableManager::PrimitiveType::TRIANGLES,
+                    vb, 0xFFFFFFF0u, 0x20u));
+
+    rcm.destroy(entity);
+    utils::EntityManager::get().destroy(entity);
+    mEngine->destroy(ib);
+    mEngine->destroy(vb);
 }
 
 } // namespace
