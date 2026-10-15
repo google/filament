@@ -17,6 +17,7 @@
 #include "Allocators.h"
 #include "Froxelizer.h"
 #include "MaterialParser.h"
+#include "RenderPrimitive.h"
 #include "UniformBuffer.h"
 
 #include "components/RenderableManager.h"
@@ -40,7 +41,12 @@
 #include <filament/Engine.h>
 #include <filament/FrameHistoryStream.h>
 #include <filament/Frustum.h>
+#include <filament/IndexBuffer.h>
+#include <filament/SkinningBuffer.h>
+#include <filament/SwapChain.h>
 #include <filament/ToneMapper.h>
+#include <filament/VertexBuffer.h>
+#include <filament/Viewport.h>
 
 #include <private/backend/BackendUtils.h>
 
@@ -61,6 +67,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -69,6 +76,7 @@
 #include <iostream>
 #include <limits>
 #include <random>
+#include <thread>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -1943,7 +1951,7 @@ TEST(FilamentTest, FroxelData) {
 
     FScene::LightSoa lights;
     lights.push_back();   // first one is always skipped
-    lights.push_back(float4{ 0, 0, -5, 1 }, 0.0f, 0.0f, -5.0f, 1.0f, float3{}, float3{}, double2{}, e, spotParams, Culler::result_type(1), float2{}, FScene::ShadowInfo{});
+    lights.push_back(e, float4{ 0, 0, -5, 1 }, 0.0f, 0.0f, -5.0f, 1.0f, float3{}, float3{}, double2{}, spotParams, Culler::result_type(1), float2{}, FScene::ShadowInfo{});
 
     {
         froxelData.froxelizeLights(*engine, {}, lights);
@@ -3116,8 +3124,11 @@ TEST(FilamentTest, MultipleDirectionalLights) {
         static_cast<Scene*>(scene)->addEntity(entities[i]);
     }
 
+    FView* view = downcast(engine->createView());
+    view->setScene(scene);
+
     LinearAllocatorArena arena("MultipleDirectionalLights test arena", 3 * 1024 * 1024);
-    FScene::SceneCacheData cache;
+    FScene::SceneCacheData& cache = *view->getSceneCache();
     scene->prepare(engine->getJobSystem(), arena, mat4{}, false, cache);
 
     // the most intense directional light is the dominant one, at index 0 of the LightSoa
@@ -3145,12 +3156,993 @@ TEST(FilamentTest, MultipleDirectionalLights) {
     EXPECT_TRUE(lightData.elementAt<FScene::LIGHT_ENTITY>(0) == entities[0]);
     EXPECT_EQ(0u, cache.extraDirectionalLightCount);
 
+    engine->destroy(view);
     engine->destroy(scene);
     for (auto& e : entities) {
         engine->destroy(e);
         em.destroy(e);
     }
     Engine::destroy((Engine**)&engine);
+}
+
+namespace {
+
+class SceneCacheTest : public testing::Test {
+protected:
+    void SetUp() override {
+        engine = Engine::create(Engine::Backend::NOOP);
+    }
+
+    void TearDown() override {
+        cleanupTrackedResources();
+        Engine::destroy(&engine);
+    }
+
+    void recreateEngine(Engine::Config const& config) {
+        cleanupTrackedResources();
+        Engine::destroy(&engine);
+        engine = Engine::Builder()
+                .backend(Engine::Backend::NOOP)
+                .config(&config)
+                .build();
+    }
+
+    Scene* createScene() {
+        Scene* const s = engine->createScene();
+        mScenes.push_back(s);
+        return s;
+    }
+
+    View* createView() {
+        View* const v = engine->createView();
+        mViews.push_back(v);
+        return v;
+    }
+
+    SkinningBuffer* createSkinningBuffer(uint32_t boneCount) {
+        SkinningBuffer* const sb = SkinningBuffer::Builder().boneCount(boneCount).build(*engine);
+        mSkinningBuffers.push_back(sb);
+        return sb;
+    }
+
+    Entity createEntity() {
+        Entity const e = engine->getEntityManager().create();
+        mEntities.push_back(e);
+        return e;
+    }
+
+    Entity createRenderable(bool withTransform = true) {
+        Entity const e = createEntity();
+        if (withTransform) {
+            engine->getTransformManager().create(e);
+        }
+        RenderableManager::Builder(1)
+                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
+                .build(*engine, e);
+        return e;
+    }
+
+    Entity createPointLight(bool withTransform = true, float3 const& position = { 0, 0, 0 }) {
+        Entity const e = createEntity();
+        if (withTransform) {
+            engine->getTransformManager().create(e);
+        }
+        LightManager::Builder(LightManager::Type::POINT)
+                .position(position)
+                .intensity(1000.0f)
+                .falloff(10.0f)
+                .build(*engine, e);
+        return e;
+    }
+
+    Entity createDirectionalLight(bool withTransform = true,
+            LightManager::Type type = LightManager::Type::DIRECTIONAL,
+            float intensity = 1000.0f) {
+        Entity const e = createEntity();
+        if (withTransform) {
+            engine->getTransformManager().create(e);
+        }
+        LightManager::Builder(type)
+                .intensity(intensity)
+                .direction({ 0, -1, 0 })
+                .build(*engine, e);
+        return e;
+    }
+
+    void prepare(Scene* scene, View* view, mat4 const& worldTransform) {
+        downcast(scene)->prepare(downcast(engine)->getJobSystem(), arena, worldTransform,
+                false, *downcast(view)->getSceneCache());
+    }
+
+    // Attaches a camera to `view`, at z = +5 looking at the origin, so that a unit box at the
+    // origin is visible and anything at z > 5 is behind the camera.
+    void createCamera(View* view) {
+        Entity const e = createEntity();
+        Camera* const camera = engine->createCamera(e);
+        camera->setProjection(45.0, 1.0, 0.1, 100.0);
+        camera->lookAt({ 0, 0, 5 }, { 0, 0, 0 }, { 0, 1, 0 });
+        view->setCamera(camera);
+        view->setViewport({ 0, 0, 64, 64 });
+    }
+
+    // Gives primitive `index` of `builder` its own (never uploaded) vertex and index buffers.
+    // The NOOP backend never reads them; what matters is that every build() allocates a fresh
+    // FRenderPrimitive array.
+    void setGeometry(RenderableManager::Builder& builder, size_t const index) {
+        VertexBuffer* const vb = VertexBuffer::Builder()
+                .vertexCount(3)
+                .bufferCount(1)
+                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3)
+                .build(*engine);
+        mVertexBuffers.push_back(vb);
+        IndexBuffer* const ib = IndexBuffer::Builder()
+                .indexCount(3)
+                .bufferType(IndexBuffer::IndexType::USHORT)
+                .build(*engine);
+        mIndexBuffers.push_back(ib);
+        builder.geometry(index, RenderableManager::PrimitiveType::TRIANGLES, vb, ib, 0, 3);
+    }
+
+    // Renders one frame of `view` through the whole pipeline (FView::prepare(), culling,
+    // RenderPass command generation) with the NOOP backend. Returns false if the frame was skipped.
+    bool renderFrame(View* view) {
+        if (!mRenderer) {
+            mRenderer = engine->createRenderer();
+            mSwapChain = engine->createSwapChain(64, 64);
+        }
+        mVsyncNanos += 16'666'667;
+        if (!mRenderer->beginFrame(mSwapChain, mVsyncNanos)) {
+            return false;
+        }
+        mRenderer->render(view);
+        mRenderer->endFrame();
+        engine->flushAndWait();
+        return true;
+    }
+
+    // Row of `e` in the View's per-frame RenderableSoa (which FView::prepare() partitions),
+    // or 0xFFFFFFFF if it is not there.
+    static uint32_t findFrameRow(View* view, Entity const e) {
+        auto const& soa = downcast(view)->getRenderableData();
+        for (uint32_t i = 0, c = soa.size(); i < c; i++) {
+            if (soa.elementAt<FScene::RENDERABLE_ENTITY>(i) == e) {
+                return i;
+            }
+        }
+        return 0xFFFFFFFFu;
+    }
+
+    static bool hasRenderableRow(View* view, Entity e) {
+        return downcast(view)->getSceneCache()->renderableCache.getIndex(e) != 0xFFFFFFFFu;
+    }
+
+    static bool hasLightRow(View* view, Entity e) {
+        return downcast(view)->getSceneCache()->lightCache.getIndex(e) != 0xFFFFFFFFu;
+    }
+
+    static bool hasDirectionalLight(View* view, Entity e) {
+        return downcast(view)->getSceneCache()->directionalLights[e.getId()];
+    }
+
+    void cleanupTrackedResources() {
+        if (!engine) {
+            return;
+        }
+        for (View* v : mViews) {
+            engine->destroy(v);
+        }
+        mViews.clear();
+        for (Scene* s : mScenes) {
+            engine->destroy(s);
+        }
+        mScenes.clear();
+        for (SkinningBuffer* sb : mSkinningBuffers) {
+            engine->destroy(sb);
+        }
+        mSkinningBuffers.clear();
+        auto& em = engine->getEntityManager();
+        for (Entity const e : mEntities) {
+            engine->destroy(e);
+            if (em.isAlive(e)) {
+                em.destroy(e);
+            }
+        }
+        mEntities.clear();
+        // after the renderables that reference them
+        for (VertexBuffer* vb : mVertexBuffers) {
+            engine->destroy(vb);
+        }
+        mVertexBuffers.clear();
+        for (IndexBuffer* ib : mIndexBuffers) {
+            engine->destroy(ib);
+        }
+        mIndexBuffers.clear();
+        if (mRenderer) {
+            engine->destroy(mSwapChain);
+            engine->destroy(mRenderer);
+            mSwapChain = nullptr;
+            mRenderer = nullptr;
+        }
+    }
+
+    // Not identity, so the first prepare() of a fresh cache is a full rebuild (see B2(c)).
+    mat4 const T = mat4::translation(double3{ 0, 0, -1 });
+
+    Engine* engine = nullptr;
+    LinearAllocatorArena arena{ "SceneCacheTest", 1024 * 1024 };
+    std::vector<View*> mViews;
+    std::vector<Scene*> mScenes;
+    std::vector<SkinningBuffer*> mSkinningBuffers;
+    std::vector<Entity> mEntities;
+    std::vector<VertexBuffer*> mVertexBuffers;
+    std::vector<IndexBuffer*> mIndexBuffers;
+    Renderer* mRenderer = nullptr;
+    SwapChain* mSwapChain = nullptr;
+    uint64_t mVsyncNanos = 0;
+};
+
+} // namespace
+
+TEST_F(SceneCacheTest, DestroyedEntityIsEvictedFromAllViews) {
+    Scene* scene = createScene();
+    View* x = createView();
+    View* y = createView();
+    x->setScene(scene);
+    y->setScene(scene);
+
+    // 1. Prepare X then Y; destroy entities via EntityManager::destroy() while still in Scene.
+    Entity const r1 = createRenderable();
+    Entity const p1 = createPointLight();
+    Entity const d1 = createDirectionalLight();
+    scene->addEntity(r1);
+    scene->addEntity(p1);
+    scene->addEntity(d1);
+
+    prepare(scene, x, T);
+    prepare(scene, y, T);
+    ASSERT_TRUE(hasRenderableRow(x, r1));
+    ASSERT_TRUE(hasRenderableRow(y, r1));
+    ASSERT_TRUE(hasLightRow(x, p1));
+    ASSERT_TRUE(hasLightRow(y, p1));
+    ASSERT_TRUE(hasDirectionalLight(x, d1));
+    ASSERT_TRUE(hasDirectionalLight(y, d1));
+
+    engine->getEntityManager().destroy(r1);
+    engine->getEntityManager().destroy(p1);
+    engine->getEntityManager().destroy(d1);
+
+    prepare(scene, x, T);
+    prepare(scene, y, T);
+    EXPECT_FALSE(hasRenderableRow(x, r1));
+    EXPECT_FALSE(hasRenderableRow(y, r1));
+    EXPECT_FALSE(hasLightRow(x, p1));
+    EXPECT_FALSE(hasLightRow(y, p1));
+    EXPECT_FALSE(hasDirectionalLight(x, d1));
+    EXPECT_FALSE(hasDirectionalLight(y, d1));
+
+    engine->destroy(r1);
+    engine->destroy(p1);
+    engine->destroy(d1);
+
+    // 2. Prepare Y before X, and call engine->destroy(e) before em.destroy(e).
+    Entity const r2 = createRenderable();
+    scene->addEntity(r2);
+    prepare(scene, x, T);
+    prepare(scene, y, T);
+    ASSERT_TRUE(hasRenderableRow(x, r2));
+    ASSERT_TRUE(hasRenderableRow(y, r2));
+
+    engine->destroy(r2);
+    engine->getEntityManager().destroy(r2);
+
+    prepare(scene, y, T);
+    prepare(scene, x, T);
+    EXPECT_FALSE(hasRenderableRow(y, r2));
+    EXPECT_FALSE(hasRenderableRow(x, r2));
+}
+
+TEST_F(SceneCacheTest, SceneSwitchDropsOldSceneRows) {
+    Scene* sceneA = createScene();
+    Scene* sceneB = createScene();
+    View* view = createView();
+
+    Entity const a = createRenderable();
+    Entity const pA = createPointLight();
+    Entity const sunA = createDirectionalLight();
+    Entity const b = createRenderable();
+    sceneA->addEntity(a);
+    sceneA->addEntity(pA);
+    sceneA->addEntity(sunA);
+    sceneB->addEntity(b);
+
+    view->setScene(sceneA);
+    prepare(sceneA, view, T);
+    ASSERT_TRUE(hasRenderableRow(view, a));
+    ASSERT_TRUE(hasLightRow(view, pA));
+    ASSERT_TRUE(hasDirectionalLight(view, sunA));
+
+    view->setScene(sceneB);
+    prepare(sceneB, view, T);
+    EXPECT_FALSE(hasRenderableRow(view, a));
+    EXPECT_FALSE(hasLightRow(view, pA));
+    EXPECT_FALSE(hasDirectionalLight(view, sunA));
+    EXPECT_TRUE(hasRenderableRow(view, b));
+}
+
+TEST_F(SceneCacheTest, SceneSwitchKeepsSharedEntity) {
+    Scene* sceneA = createScene();
+    Scene* sceneB = createScene();
+    View* view = createView();
+
+    Entity const s = createRenderable();
+    sceneA->addEntity(s);
+    sceneB->addEntity(s);
+
+    view->setScene(sceneA);
+    prepare(sceneA, view, T);
+    ASSERT_TRUE(hasRenderableRow(view, s));
+
+    sceneA->remove(s);
+    view->setScene(sceneB);
+    prepare(sceneB, view, T);
+    EXPECT_TRUE(hasRenderableRow(view, s));
+}
+
+TEST_F(SceneCacheTest, FreshCacheLoadsExistingEntities) {
+    Scene* scene = createScene();
+    View* view = createView();
+
+    Entity const e = createRenderable();
+    scene->addEntity(e);
+
+    view->setScene(scene);
+    prepare(scene, view, mat4{});
+    EXPECT_TRUE(hasRenderableRow(view, e));
+}
+
+// An Entity destroyed before it is added can never be pruned lazily (its destruction
+// notification has already been delivered), so addEntity() / addEntities() must not add it.
+TEST_F(SceneCacheTest, AddDestroyedEntityIsNoOp) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& em = engine->getEntityManager();
+
+    Entity const dead = createRenderable();
+    Entity const alive = createRenderable();
+    engine->destroy(dead);
+    em.destroy(dead);
+
+    scene->addEntity(dead);
+    scene->addEntity(alive);
+    EXPECT_FALSE(scene->hasEntity(dead));
+    EXPECT_TRUE(scene->hasEntity(alive));
+    EXPECT_EQ(1u, scene->getEntityCount());
+
+    // the batch path skips dead entities too, and re-adding a live one is still idempotent
+    Entity const batch[] = { dead, alive };
+    scene->addEntities(batch, 2);
+    EXPECT_FALSE(scene->hasEntity(dead));
+    EXPECT_EQ(1u, scene->getEntityCount());
+
+    // the null Entity is never alive
+    scene->addEntity(Entity{});
+    EXPECT_FALSE(scene->hasEntity(Entity{}));
+    EXPECT_EQ(1u, scene->getEntityCount());
+
+    prepare(scene, view, T);
+    EXPECT_FALSE(hasRenderableRow(view, dead));
+    EXPECT_TRUE(hasRenderableRow(view, alive));
+    EXPECT_EQ(1u, scene->getEntityCount());
+}
+
+TEST_F(SceneCacheTest, RemoveAllEntitiesEvictsRows) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+
+    Entity const r = createRenderable();
+    Entity const p = createPointLight();
+    Entity const d = createDirectionalLight();
+
+    // 1. Fast path (same worldTransform).
+    scene->addEntity(r);
+    scene->addEntity(p);
+    scene->addEntity(d);
+    prepare(scene, view, T);
+    ASSERT_EQ(1u, cache.renderableCache.size());
+    ASSERT_EQ(1u, cache.lightCache.size());
+    ASSERT_FALSE(cache.directionalLights.empty());
+
+    scene->removeAllEntities();
+    prepare(scene, view, T);
+    EXPECT_EQ(0u, cache.renderableCache.size());
+    EXPECT_EQ(0u, cache.lightCache.size());
+    EXPECT_TRUE(cache.directionalLights.empty());
+
+    // 2. Full-rebuild path (different worldRotation).
+    mat4 const T2 = mat4::rotation(0.5, double3{ 0, 1, 0 }) * T;
+    scene->addEntity(r);
+    scene->addEntity(p);
+    scene->addEntity(d);
+    prepare(scene, view, T);
+    ASSERT_EQ(1u, cache.renderableCache.size());
+    ASSERT_EQ(1u, cache.lightCache.size());
+    ASSERT_FALSE(cache.directionalLights.empty());
+
+    scene->removeAllEntities();
+    prepare(scene, view, T2);
+    EXPECT_EQ(0u, cache.renderableCache.size());
+    EXPECT_EQ(0u, cache.lightCache.size());
+    EXPECT_TRUE(cache.directionalLights.empty());
+
+    // 3. Re-add r after removeAllEntities() and before prepare().
+    scene->addEntity(r);
+    scene->addEntity(p);
+    scene->addEntity(d);
+    prepare(scene, view, T2);
+    scene->removeAllEntities();
+    scene->addEntity(r);
+    prepare(scene, view, T2);
+    EXPECT_TRUE(hasRenderableRow(view, r));
+    EXPECT_FALSE(hasLightRow(view, p));
+    EXPECT_FALSE(hasDirectionalLight(view, d));
+}
+
+TEST_F(SceneCacheTest, SetSkinningBufferUpdatesCache) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+    auto& rcm = engine->getRenderableManager();
+
+    SkinningBuffer* sb1 = createSkinningBuffer(256);
+    SkinningBuffer* sb2 = createSkinningBuffer(256);
+
+    Entity const e = createEntity();
+    engine->getTransformManager().create(e);
+    RenderableManager::Builder(1)
+            .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
+            .enableSkinningBuffers(true)
+            .skinning(sb1, 256, 0)
+            .build(*engine, e);
+    scene->addEntity(e);
+
+    prepare(scene, view, T);
+    auto const ri = rcm.getInstance(e);
+    auto const handle1 = downcast(rcm).getSkinningBufferInfo(ri).handle;
+    uint32_t const idx1 = cache.renderableCache.getIndex(e);
+    ASSERT_NE(0xFFFFFFFFu, idx1);
+    EXPECT_EQ(handle1,
+            cache.renderableCache.getSoA().elementAt<FScene::SKINNING_BUFFER>(idx1).handle);
+
+    rcm.setSkinningBuffer(ri, sb2, 256, 0);
+    auto const handle2 = downcast(rcm).getSkinningBufferInfo(ri).handle;
+    ASSERT_NE(handle1, handle2);
+
+    prepare(scene, view, T);
+    uint32_t const idx2 = cache.renderableCache.getIndex(e);
+    ASSERT_NE(0xFFFFFFFFu, idx2);
+    EXPECT_EQ(handle2,
+            cache.renderableCache.getSoA().elementAt<FScene::SKINNING_BUFFER>(idx2).handle);
+}
+
+TEST_F(SceneCacheTest, LightDataCapacityForSimdOverRead) {
+    auto roundup4 = [](size_t n) { return (n + 3u) & ~size_t(3u); };
+
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+
+    for (size_t p = 1; p <= 48; ++p) {
+        Entity const e = createPointLight();
+        scene->addEntity(e);
+        prepare(scene, view, T);
+        EXPECT_GT(cache.lightData.capacity(), roundup4(p)) << "p = " << p;
+        EXPECT_GE(cache.lightData.capacity(), roundup4(p + 1)) << "p = " << p;
+    }
+}
+
+TEST_F(SceneCacheTest, EntitiesWithoutTransformUseIdentity) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+    auto& tcm = engine->getTransformManager();
+    auto& rcm = engine->getRenderableManager();
+    auto& lcm = engine->getLightManager();
+
+    float3 const pos{ 1.0f, 2.0f, 3.0f };
+    float3 const expectedPos = (mat4f{ T } * float4{ pos, 1.0f }).xyz;
+
+    Entity const r1 = createRenderable(true);
+    tcm.destroy(r1);
+    Entity const r2 = createRenderable(true);
+    tcm.setTransform(tcm.getInstance(r2), mat4f::translation(float3{ 10.0f, 0.0f, 0.0f }));
+    Entity const p = createPointLight(false, pos);
+    Entity const sun = createDirectionalLight(false, LightManager::Type::SUN);
+
+    scene->addEntity(r1);
+    scene->addEntity(r2);
+    scene->addEntity(p);
+    scene->addEntity(sun);
+
+    // 1. Full rebuild path (first prepare).
+    prepare(scene, view, T);
+
+    uint32_t idxR1 = cache.renderableCache.getIndex(r1);
+    ASSERT_NE(0xFFFFFFFFu, idxR1);
+    EXPECT_EQ(double3{ 0.0 }, cache.renderableCache.getTranslations()[idxR1]);
+    EXPECT_EQ(mat4f{ T }, cache.renderableData.elementAt<FScene::WORLD_TRANSFORM>(idxR1));
+
+    uint32_t idxP = cache.lightCache.getIndex(p);
+    ASSERT_NE(0xFFFFFFFFu, idxP);
+    EXPECT_EQ(double3{ pos }, cache.lightCache.getTranslations()[idxP]);
+    EXPECT_EQ(expectedPos,
+            cache.lightData.elementAt<FScene::POSITION_RADIUS>(
+                    FScene::DIRECTIONAL_LIGHTS_COUNT + idxP).xyz);
+
+    EXPECT_TRUE(hasDirectionalLight(view, sun));
+
+    // 2. Fast path (same T) after dirtying each entity without a transform.
+    rcm.setPriority(rcm.getInstance(r1), 5);
+    tcm.destroy(r2);
+    lcm.setIntensity(lcm.getInstance(p), 2000.0f);
+    lcm.setIntensity(lcm.getInstance(sun), 2000.0f);
+
+    prepare(scene, view, T);
+
+    idxR1 = cache.renderableCache.getIndex(r1);
+    ASSERT_NE(0xFFFFFFFFu, idxR1);
+    EXPECT_EQ(double3{ 0.0 }, cache.renderableCache.getTranslations()[idxR1]);
+    EXPECT_EQ(mat4f{ T }, cache.renderableData.elementAt<FScene::WORLD_TRANSFORM>(idxR1));
+
+    uint32_t const idxR2 = cache.renderableCache.getIndex(r2);
+    ASSERT_NE(0xFFFFFFFFu, idxR2);
+    EXPECT_EQ(double3{ 0.0 }, cache.renderableCache.getTranslations()[idxR2]);
+    EXPECT_EQ(mat4f{ T }, cache.renderableData.elementAt<FScene::WORLD_TRANSFORM>(idxR2));
+
+    idxP = cache.lightCache.getIndex(p);
+    ASSERT_NE(0xFFFFFFFFu, idxP);
+    EXPECT_EQ(double3{ pos }, cache.lightCache.getTranslations()[idxP]);
+    EXPECT_EQ(expectedPos,
+            cache.lightData.elementAt<FScene::POSITION_RADIUS>(
+                    FScene::DIRECTIONAL_LIGHTS_COUNT + idxP).xyz);
+
+    EXPECT_TRUE(hasDirectionalLight(view, sun));
+}
+
+TEST_F(SceneCacheTest, DirectionalLightTies) {
+    Engine::Config config{};
+    config.enableMultipleDirectionalLights = true;
+    recreateEngine(config);
+    ASSERT_NE(nullptr, engine);
+
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+    auto& lcm = engine->getLightManager();
+
+    Entity lights[3] = { createEntity(), createEntity(), createEntity() };
+    std::sort(std::begin(lights), std::end(lights), [](Entity a, Entity b) {
+        return a.getId() < b.getId();
+    });
+
+    for (size_t i = 0; i < 3; ++i) {
+        LightManager::ShadowOptions shadowOpts{};
+        shadowOpts.screenSpaceContactShadows = (i == 0);
+        LightManager::Builder(LightManager::Type::DIRECTIONAL)
+                .intensity(1000.0f)
+                .direction(normalize(float3{ float(i + 1), -1.0f, 0.0f }))
+                .shadowOptions(shadowOpts)
+                .build(*engine, lights[i]);
+        scene->addEntity(lights[i]);
+    }
+
+    prepare(scene, view, T);
+
+    EXPECT_EQ(lights[0], cache.lightData.elementAt<FScene::LIGHT_ENTITY>(0));
+    ASSERT_EQ(2u, cache.extraDirectionalLightCount);
+    auto const li0 = downcast(lcm).getInstance(lights[0]);
+    auto const li1 = downcast(lcm).getInstance(lights[1]);
+    auto const li2 = downcast(lcm).getInstance(lights[2]);
+    EXPECT_NE(li0, cache.extraDirectionalLightInstances[0]);
+    EXPECT_NE(li0, cache.extraDirectionalLightInstances[1]);
+    EXPECT_EQ(li1, cache.extraDirectionalLightInstances[0]);
+    EXPECT_EQ(li2, cache.extraDirectionalLightInstances[1]);
+    EXPECT_TRUE(cache.lightsHaveContactShadows);
+
+    // Enable contact shadows only on non-dominant directional lights, with no punctual lights.
+    LightManager::ShadowOptions noContact{};
+    noContact.screenSpaceContactShadows = false;
+    LightManager::ShadowOptions withContact{};
+    withContact.screenSpaceContactShadows = true;
+    lcm.setShadowOptions(lcm.getInstance(lights[0]), noContact);
+    lcm.setShadowOptions(lcm.getInstance(lights[1]), withContact);
+    lcm.setShadowOptions(lcm.getInstance(lights[2]), withContact);
+
+    prepare(scene, view, T);
+    EXPECT_EQ(lights[0], cache.lightData.elementAt<FScene::LIGHT_ENTITY>(0));
+    EXPECT_FALSE(cache.lightsHaveContactShadows);
+}
+
+TEST_F(SceneCacheTest, ConcurrentDestroyAndViewSceneChanges) {
+    Scene* sceneA = createScene();
+    Scene* sceneB = createScene();
+    View* view1 = createView();
+    View* view2 = createView();
+    auto& em = engine->getEntityManager();
+
+    constexpr size_t kEntityCount = 2048;
+    constexpr size_t kRenderableCount = 16;
+    std::vector<Entity> entities(kEntityCount);
+    em.create(kEntityCount, entities.data());
+    mEntities.insert(mEntities.end(), entities.begin(), entities.end());
+
+    for (size_t i = 0; i < kRenderableCount; ++i) {
+        engine->getTransformManager().create(entities[i]);
+        RenderableManager::Builder(1)
+                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
+                .build(*engine, entities[i]);
+        sceneA->addEntity(entities[i]);
+        sceneB->addEntity(entities[i]);
+    }
+
+    View* extraViews[8];
+    for (View*& v : extraViews) {
+        v = createView();
+    }
+
+    view1->setScene(sceneA);
+    view2->setScene(sceneB);
+    prepare(sceneA, view1, T);
+    prepare(sceneB, view2, T);
+    for (size_t i = 0; i < kRenderableCount; ++i) {
+        ASSERT_TRUE(hasRenderableRow(view1, entities[i]));
+        ASSERT_TRUE(hasRenderableRow(view2, entities[i]));
+    }
+
+    std::atomic<bool> start{ false };
+    std::atomic<bool> done{ false };
+    std::thread destroyer([&] {
+        while (!start.load(std::memory_order_acquire)) {
+        }
+        for (Entity const e : entities) {
+            em.destroy(1, &e);
+        }
+        done.store(true, std::memory_order_release);
+    });
+
+    start.store(true, std::memory_order_release);
+    while (!done.load(std::memory_order_acquire)) {
+        for (View* v : extraViews) {
+            v->setScene(sceneA);
+        }
+        view1->setScene(sceneB);
+        view1->setScene(nullptr);
+        view1->setScene(sceneA);
+        for (View* v : extraViews) {
+            v->setScene(nullptr);
+        }
+        Scene* temp = engine->createScene();
+        view2->setScene(temp);
+        view2->setScene(sceneB);
+        engine->destroy(temp);
+    }
+    destroyer.join();
+
+    view1->setScene(sceneA);
+    view2->setScene(sceneB);
+    prepare(sceneA, view1, T);
+    prepare(sceneB, view2, T);
+    for (size_t i = 0; i < kRenderableCount; ++i) {
+        EXPECT_FALSE(hasRenderableRow(view1, entities[i]));
+        EXPECT_FALSE(hasRenderableRow(view2, entities[i]));
+    }
+}
+
+TEST_F(SceneCacheTest, DestroyedEntityPrunedOnUnregisterView) {
+    Scene* sceneA = createScene();
+    Scene* sceneB = createScene();
+    View* view1 = createView();
+    View* view2 = createView();
+
+    Entity const r1 = createRenderable();
+    Entity const r2 = createRenderable();
+    sceneA->addEntity(r1);
+    sceneA->addEntity(r2);
+
+    view1->setScene(sceneA);
+    prepare(sceneA, view1, T);
+    ASSERT_TRUE(sceneA->hasEntity(r1));
+    ASSERT_TRUE(sceneA->hasEntity(r2));
+    ASSERT_EQ(2u, sceneA->getEntityCount());
+
+    // 1. Destroy r1, then detach view1 before prepare() runs on sceneA.
+    engine->getEntityManager().destroy(r1);
+    view1->setScene(nullptr);
+    EXPECT_FALSE(sceneA->hasEntity(r1));
+    EXPECT_EQ(1u, sceneA->getEntityCount());
+
+    // Even after another View attaches and prepares sceneA, r1 must not remain in sceneA.
+    view2->setScene(sceneA);
+    prepare(sceneA, view2, T);
+    EXPECT_FALSE(sceneA->hasEntity(r1));
+    EXPECT_TRUE(sceneA->hasEntity(r2));
+    EXPECT_EQ(1u, sceneA->getEntityCount());
+
+    // 2. Destroy r2, then switch view2 to sceneB before prepare() runs on sceneA.
+    engine->getEntityManager().destroy(r2);
+    view2->setScene(sceneB);
+    prepare(sceneB, view2, T);
+    EXPECT_FALSE(sceneA->hasEntity(r2));
+    EXPECT_EQ(0u, sceneA->getEntityCount());
+}
+
+// The PRIMITIVES column is a Slice into the FRenderPrimitive array owned by the renderable
+// component, and it is now cached across frames. Rebuilding a renderable frees that array and
+// allocates a new one, so the row must be refreshed before the next frame reads it, all the way
+// down to the per-frame SoA that RenderPass consumes.
+TEST_F(SceneCacheTest, RebuiltRenderableRefreshesFramePrimitives) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    createCamera(view);
+    auto& rcm = engine->getRenderableManager();
+
+    Entity const e = createEntity();
+    engine->getTransformManager().create(e);
+    scene->addEntity(e);
+
+    auto const rebuild = [&](size_t const primitiveCount) {
+        RenderableManager::Builder builder(primitiveCount);
+        builder.boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }});
+        for (size_t i = 0; i < primitiveCount; i++) {
+            setGeometry(builder, i);
+        }
+        builder.build(*engine, e);
+    };
+
+    // Renders a frame, then checks that the row of `e` in the per-frame SoA points to the
+    // component's current primitive array, and that the color pass summed the right count.
+    auto const renderAndCheck = [&](size_t const primitiveCount) {
+        ASSERT_TRUE(renderFrame(view));
+        auto const& soa = downcast(view)->getRenderableData();
+        uint32_t const row = findFrameRow(view, e);
+        ASSERT_NE(0xFFFFFFFFu, row);
+        auto const& visible = downcast(view)->getVisibleRenderables();
+        ASSERT_TRUE(row >= visible.first && row < visible.last) << "the renderable was culled";
+
+        auto const current = downcast(rcm).getRenderPrimitives(rcm.getInstance(e), 0);
+        ASSERT_EQ(primitiveCount, current.size());
+        auto const& cached = soa.elementAt<FScene::PRIMITIVES>(row);
+        EXPECT_EQ(current.data(), cached.data());
+        EXPECT_EQ(current.size(), cached.size());
+        // RenderPass::updateSummedPrimitiveCounts() ran on the frame's PRIMITIVES
+        EXPECT_EQ(primitiveCount, FScene::getPrimitiveCount(soa, visible.first, visible.last));
+    };
+
+    // Built after being added to the Scene: the addComponent() notification brings it in.
+    rebuild(1);
+    ASSERT_NO_FATAL_FAILURE(renderAndCheck(1));
+
+    // Rebuilding frees the previous FRenderPrimitive array: a stale slice would dangle.
+    rebuild(3);
+    ASSERT_NO_FATAL_FAILURE(renderAndCheck(3));
+
+    // Shrinking it would also make a stale slice read past the new array.
+    rebuild(2);
+    ASSERT_NO_FATAL_FAILURE(renderAndCheck(2));
+}
+
+// lightsHaveContactShadows is a property of the Scene's lights, not of the lights visible this
+// frame, and it is kept up to date through setShadowOptions(), which only notifies the caches when
+// the effective (clamped) options actually change.
+TEST_F(SceneCacheTest, ContactShadowsFollowSceneLightsAndShadowOptions) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+    auto& lcm = engine->getLightManager();
+    auto& rcm = engine->getRenderableManager();
+    auto& tcm = engine->getTransformManager();
+
+    Entity const r = createRenderable();
+    Entity const sun = createDirectionalLight();
+    Entity const p = createPointLight();
+    scene->addEntity(r);
+    scene->addEntity(sun);
+    scene->addEntity(p);
+
+    prepare(scene, view, T);
+    EXPECT_FALSE(cache.lightsHaveContactShadows);
+
+    auto const li = lcm.getInstance(p);
+    LightManager::ShadowOptions options = lcm.getShadowOptions(li);
+
+    // 1. Enabling contact shadows on a positional light notifies, and is picked up.
+    options.screenSpaceContactShadows = true;
+    lcm.setShadowOptions(li, options);
+    EXPECT_TRUE(cache.dirtyEntities[p.getId()]);
+    prepare(scene, view, T);
+    EXPECT_TRUE(cache.lightsHaveContactShadows);
+
+    // 2. Setting the same options again is a no-op: nothing is dirtied.
+    lcm.setShadowOptions(li, options);
+    EXPECT_FALSE(cache.dirtyEntities[p.getId()]);
+    EXPECT_FALSE(cache.hasDirtyEntities());
+
+    // 3. Any other field notifies (operator== covers every field), and the comparison is made
+    //    after clamping: 4096 clamps to 2048, so going from 2048 to 4096 is a no-op.
+    options.mapSize = 2048;
+    lcm.setShadowOptions(li, options);
+    EXPECT_TRUE(cache.dirtyEntities[p.getId()]);
+    prepare(scene, view, T);
+    EXPECT_TRUE(cache.lightsHaveContactShadows);
+    options.mapSize = 4096;
+    lcm.setShadowOptions(li, options);
+    EXPECT_FALSE(cache.dirtyEntities[p.getId()]);
+
+    // 4. The dominant directional light counts too.
+    options.screenSpaceContactShadows = false;
+    lcm.setShadowOptions(li, options);
+    prepare(scene, view, T);
+    EXPECT_FALSE(cache.lightsHaveContactShadows);
+
+    auto const sunInstance = lcm.getInstance(sun);
+    LightManager::ShadowOptions sunOptions = lcm.getShadowOptions(sunInstance);
+    sunOptions.screenSpaceContactShadows = true;
+    lcm.setShadowOptions(sunInstance, sunOptions);
+    prepare(scene, view, T);
+    EXPECT_TRUE(cache.lightsHaveContactShadows);
+
+    // 5. Removing that light from the Scene clears it.
+    scene->remove(sun);
+    prepare(scene, view, T);
+    EXPECT_FALSE(cache.lightsHaveContactShadows);
+
+    // 6. End to end: the flag does not depend on light culling. The point light (radius 10) is
+    //    moved to z = +50, behind a camera at z = +5 looking down -z, so it is culled; yet
+    //    View::hasContactShadows() is true because a visible renderable and a Scene light both
+    //    have contact shadows enabled.
+    createCamera(view);
+    rcm.setScreenSpaceContactShadows(rcm.getInstance(r), true);
+    tcm.setTransform(tcm.getInstance(p), mat4f::translation(float3{ 0, 0, 50 }));
+    options.screenSpaceContactShadows = true;
+    lcm.setShadowOptions(li, options);
+    ASSERT_TRUE(renderFrame(view));
+    // the frame's light list was shrunk to the visible lights: only the directional slot is left
+    EXPECT_EQ(FScene::DIRECTIONAL_LIGHTS_COUNT, cache.lightData.size());
+    EXPECT_TRUE(cache.renderablesHaveContactShadows);
+    EXPECT_TRUE(cache.lightsHaveContactShadows);
+    EXPECT_TRUE(downcast(view)->hasContactShadows());
+}
+
+TEST_F(SceneCacheTest, CameraTranslationSkipsRebuildAndPreservesPrecision) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+    auto& tcm = engine->getTransformManager();
+    tcm.setAccurateTranslationsEnabled(true);
+
+    Box const aabb{ { 1.25f, -2.5f, 3.75f }, { 4.5f, 5.5f, 6.5f } };
+    Entity const r = createEntity();
+    tcm.create(r);
+    RenderableManager::Builder(1).boundingBox(aabb).build(*engine, r);
+
+    tcm.setTransform(tcm.getInstance(r),
+            mat4::translation(double3{ 100000.25, -50000.5, 25000.125 }) *
+                    mat4::rotation(0.7, double3{ 0, 1, 0 }) *
+                    mat4::scaling(double3{ 1.5, 2.0, 0.5 }));
+    mat4 const modelR = tcm.getWorldTransformAccurate(tcm.getInstance(r));
+
+    float3 const localLightPos{ 3.5f, -7.25f, 11.125f };
+    Entity const p = createPointLight(true, localLightPos);
+    tcm.setTransform(tcm.getInstance(p),
+            mat4::translation(double3{ 100005.0, -49995.0, 25010.0 }) *
+                    mat4::rotation(-0.35, double3{ 1, 0, 0 }));
+    mat4 const modelP = tcm.getWorldTransformAccurate(tcm.getInstance(p));
+
+    Entity const sun = createDirectionalLight(false);
+
+    scene->addEntity(r);
+    scene->addEntity(p);
+    scene->addEntity(sun);
+
+    mat3 const R1 = mat3::rotation(0.3, double3{ 0, 1, 0 }) *
+            mat3::rotation(-0.2, double3{ 1, 0, 0 });
+    double3 const cam1{ 100000.0, -50000.0, 25000.0 };
+    mat4 const W1 = mat4{ R1 } * mat4::translation(-cam1);
+
+    prepare(scene, view, W1);
+
+    // 1. Pure camera translation does not rebuild the master cache.
+    double3 const cam2{ 100010.5, -50003.25, 24990.75 };
+    mat4 const W2 = mat4{ R1 } * mat4::translation(-cam2);
+    EXPECT_FALSE(downcast(scene)->processDeferredUpdates(W2.upperLeft(), false, cache));
+
+    prepare(scene, view, W2);
+
+    auto const verifyFrameData = [&](mat4 const& W) {
+        uint32_t const idxR = cache.renderableCache.getIndex(r);
+        ASSERT_NE(0xFFFFFFFFu, idxR);
+        mat4f const expectedShaderWorld = mat4f{ W * modelR };
+        EXPECT_EQ(expectedShaderWorld,
+                cache.renderableData.elementAt<FScene::WORLD_TRANSFORM>(idxR));
+
+        Box const expectedAabb = rigidTransform(aabb, expectedShaderWorld);
+        EXPECT_EQ(expectedAabb.center,
+                cache.renderableData.elementAt<FScene::WORLD_AABB_CENTER>(idxR));
+        EXPECT_EQ(expectedAabb.center.x,
+                cache.renderableData.elementAt<FScene::WORLD_AABB_CENTER_X>(idxR));
+        EXPECT_EQ(expectedAabb.center.y,
+                cache.renderableData.elementAt<FScene::WORLD_AABB_CENTER_Y>(idxR));
+        EXPECT_EQ(expectedAabb.center.z,
+                cache.renderableData.elementAt<FScene::WORLD_AABB_CENTER_Z>(idxR));
+        EXPECT_EQ(expectedAabb.halfExtent,
+                cache.renderableData.elementAt<FScene::WORLD_AABB_EXTENT>(idxR));
+
+        uint32_t const idxP = cache.lightCache.getIndex(p);
+        ASSERT_NE(0xFFFFFFFFu, idxP);
+        uint32_t const lightRow = FScene::DIRECTIONAL_LIGHTS_COUNT + idxP;
+        float3 const expectedLightPos = float3((W * (modelP * double4{ localLightPos, 1.0 })).xyz);
+        EXPECT_EQ(expectedLightPos,
+                cache.lightData.elementAt<FScene::POSITION_RADIUS>(lightRow).xyz);
+        EXPECT_EQ(expectedLightPos.x, cache.lightData.elementAt<FScene::POSITION_X>(lightRow));
+        EXPECT_EQ(expectedLightPos.y, cache.lightData.elementAt<FScene::POSITION_Y>(lightRow));
+        EXPECT_EQ(expectedLightPos.z, cache.lightData.elementAt<FScene::POSITION_Z>(lightRow));
+    };
+
+    ASSERT_NO_FATAL_FAILURE(verifyFrameData(W2));
+
+    // 2. Changing the 3x3 rotation of worldTransform triggers a master cache rebuild.
+    mat3 const R2 = mat3::rotation(-0.4, double3{ 0, 0, 1 });
+    mat4 const W3 = mat4{ R2 } * mat4::translation(-cam2);
+    EXPECT_TRUE(downcast(scene)->processDeferredUpdates(W3.upperLeft(), false, cache));
+
+    prepare(scene, view, W3);
+    ASSERT_NO_FATAL_FAILURE(verifyFrameData(W3));
+    EXPECT_EQ(normalize(mat3f{ R2 } * float3{ 0.0f, -1.0f, 0.0f }),
+            cache.lightData.elementAt<FScene::DIRECTION>(0));
+}
+
+TEST_F(SceneCacheTest, UnrelatedEntitiesDoNotDirtySceneCache) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+    auto& rcm = engine->getRenderableManager();
+    auto& lcm = engine->getLightManager();
+    auto& tcm = engine->getTransformManager();
+
+    Entity const inScene = createRenderable();
+    scene->addEntity(inScene);
+
+    mat4 const T{};
+    prepare(scene, view, T);
+    EXPECT_FALSE(cache.hasDirtyEntities());
+
+    // Creating or mutating entities outside the scene must not dirty the scene's view cache.
+    Entity const outsideRenderable = createRenderable();
+    Entity const outsideLight = createPointLight();
+    rcm.setAxisAlignedBoundingBox(rcm.getInstance(outsideRenderable),
+            Box{ { 0, 0, 0 }, { 2, 2, 2 } });
+    lcm.setIntensity(lcm.getInstance(outsideLight), 5000.0f);
+    tcm.setTransform(tcm.getInstance(outsideRenderable), mat4f::translation(float3{ 1, 2, 3 }));
+    downcast(tcm).ensureWorldTransformsUpToDate();
+
+    EXPECT_FALSE(cache.hasDirtyEntities());
+    EXPECT_FALSE(downcast(scene)->processDeferredUpdates(T.upperLeft(), false, cache));
+
+    // Mutating an entity that IS in the scene still marks the cache dirty.
+    tcm.setTransform(tcm.getInstance(inScene), mat4f::translation(float3{ 4, 5, 6 }));
+    downcast(tcm).ensureWorldTransformsUpToDate();
+    EXPECT_TRUE(cache.hasDirtyEntities());
+    EXPECT_TRUE(downcast(scene)->processDeferredUpdates(T.upperLeft(), false, cache));
 }
 
 int main(int argc, char** argv) {

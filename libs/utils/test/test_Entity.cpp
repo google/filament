@@ -1029,3 +1029,32 @@ TEST(EntityTest, EntityInstanceIncrementDecrement) {
     EXPECT_EQ(i.asValue(), 5u);
 }
 
+TEST(EntityTest, GetAliveEntitiesOutParam) {
+    EntityManagerImpl em;
+    Entity entities[4];
+    em.create(4, entities);
+
+    PagedArenaBitset out;
+    // Pre-populate with stale bits to ensure getAliveEntities overwrites existing contents.
+    out.add(9999u);
+    em.getAliveEntities(out);
+
+    EXPECT_EQ(out.size(), 4u);
+    EXPECT_FALSE(out[9999u]);
+    for (Entity const e : entities) {
+        EXPECT_TRUE(out[e.getId()]);
+    }
+
+    em.destroy(entities[1]);
+    em.getAliveEntities(out);
+    EXPECT_EQ(out.size(), 3u);
+    EXPECT_TRUE(out[entities[0].getId()]);
+    EXPECT_FALSE(out[entities[1].getId()]);
+    EXPECT_TRUE(out[entities[2].getId()]);
+    EXPECT_TRUE(out[entities[3].getId()]);
+
+    em.destroy(entities[0]);
+    em.destroy(entities[2]);
+    em.destroy(entities[3]);
+}
+
