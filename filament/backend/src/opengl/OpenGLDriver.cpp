@@ -444,6 +444,16 @@ utils::FixedCapacityVector<ShaderLanguage> OpenGLDriver::getShaderLanguages(
     return { mContext.isES2() ? ShaderLanguage::ESSL1 : ShaderLanguage::ESSL3 };
 }
 
+void OpenGLDriver::flushIfSharedContext() const noexcept {
+    // glFlush() should be called when using a shared context for this operation. Without it,
+    // the driver may delay submitting commands to the GPU, preventing other contexts from
+    // seeing the changes immediately. This ensures submitting the current commands right away.
+    // In AMORTIZATION mode the worker uses the backend's context, so a flush only adds a submit.
+    if (&getWorkerState() != &getBackendState()) {
+        glFlush();
+    }
+}
+
 // ------------------------------------------------------------------------------------------------
 // Change and track GL state
 // ------------------------------------------------------------------------------------------------
@@ -873,10 +883,7 @@ void OpenGLDriver::createIndexBufferAsyncR(
             tag=std::move(tag)]() mutable {
         DEBUG_MARKER_NAME("createIndexBufferAsyncR")
         createIndexBufferCommon(getWorkerState(), ibh, elementType, indexCount, usage, std::move(tag));
-        // glFlush() should be called when using a shared context for this operation. Without it,
-        // the driver may delay submitting commands to the GPU, preventing other contexts from
-        // seeing the changes immediately. This ensures submitting the current commands right away.
-        glFlush();
+        flushIfSharedContext();
         scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     });
 }
@@ -943,10 +950,7 @@ void OpenGLDriver::createBufferObjectAsyncR(Handle<HwBufferObject> boh, uint32_t
             tag=std::move(tag)]() mutable {
         DEBUG_MARKER_NAME("createBufferObjectAsyncR")
         createBufferObjectCommon(getWorkerState(), boh, byteCount, bindingType, usage, std::move(tag));
-        // glFlush() should be called when using a shared context for this operation. Without it,
-        // the driver may delay submitting commands to the GPU, preventing other contexts from
-        // seeing the changes immediately. This ensures submitting the current commands right away.
-        glFlush();
+        flushIfSharedContext();
         scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     });
 }
@@ -1234,10 +1238,7 @@ void OpenGLDriver::createTextureAsyncR(Handle<HwTexture> th, SamplerType target,
         DEBUG_MARKER_NAME("createTextureAsyncR")
         createTextureCommon(getWorkerState(), th, target, levels, format, samples, width, height, depth, usage,
                 std::move(tag));
-        // glFlush() should be called when using a shared context for this operation. Without it,
-        // the driver may delay submitting commands to the GPU, preventing other contexts from
-        // seeing the changes immediately. This ensures submitting the current commands right away.
-        glFlush();
+        flushIfSharedContext();
         scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     });
 }
@@ -1381,10 +1382,7 @@ void OpenGLDriver::createTextureViewSwizzleAsyncR(Handle<HwTexture> th, Handle<H
             tag=std::move(tag)]() mutable {
         DEBUG_MARKER_NAME("createTextureViewSwizzleAsyncR")
         createTextureViewSwizzleCommon(th, srch, r, g, b, a, std::move(tag));
-        // glFlush() should be called when using a shared context for this operation. Without it,
-        // the driver may delay submitting commands to the GPU, preventing other contexts from
-        // seeing the changes immediately. This ensures submitting the current commands right away.
-        glFlush();
+        flushIfSharedContext();
         scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     });
 }
@@ -1598,10 +1596,7 @@ void OpenGLDriver::importTextureAsyncR(Handle<HwTexture> th, intptr_t const id,
         DEBUG_MARKER_NAME("importTextureAsyncR")
         importTextureCommon(getWorkerState(), th, id, target, levels, format, samples, width, height, depth, usage,
             std::move(tag));
-        // glFlush() should be called when using a shared context for this operation. Without it,
-        // the driver may delay submitting commands to the GPU, preventing other contexts from
-        // seeing the changes immediately. This ensures submitting the current commands right away.
-        glFlush();
+        flushIfSharedContext();
         scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     });
 }
@@ -3199,6 +3194,26 @@ size_t OpenGLDriver::getMaxArrayTextureLayers() {
     return mContext.gets.max_array_texture_layers;
 }
 
+size_t OpenGLDriver::getMaxTextureCount(ShaderStage const stage) {
+    return size_t(stage == ShaderStage::VERTEX ? mContext.gets.max_vertex_texture_image_units
+                                               : mContext.gets.max_texture_image_units);
+}
+
+size_t OpenGLDriver::getMaxSamplerCount(ShaderStage const stage) {
+    // In GL, a texture unit holds both the texture and its sampler.
+    return getMaxTextureCount(stage);
+}
+
+size_t OpenGLDriver::getExternalTextureCost() {
+    // OES_EGL_image_external allows an external texture to use up to 3 texture units, but the
+    // actual number (GL_REQUIRED_TEXTURE_IMAGE_UNITS_OES) is only known per texture.
+    return 2;
+}
+
+size_t OpenGLDriver::getExternalSamplerCost() {
+    return getExternalTextureCost();
+}
+
 size_t OpenGLDriver::getUniformBufferOffsetAlignment() {
     return mContext.gets.uniform_buffer_offset_alignment;
 }
@@ -3385,10 +3400,7 @@ void OpenGLDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuff
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         DEBUG_MARKER_NAME("updateIndexBufferAsyncR")
         updateIndexBufferCommon(getWorkerState(), ibh, bufferRelease.detach(), byteOffset);
-        // glFlush() should be called when using a shared context for this operation. Without it,
-        // the driver may delay submitting commands to the GPU, preventing other contexts from
-        // seeing the changes immediately. This ensures submitting the current commands right away.
-        glFlush();
+        flushIfSharedContext();
         completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
@@ -3441,10 +3453,7 @@ void OpenGLDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferOb
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         DEBUG_MARKER_NAME("updateBufferObjectAsyncR")
         updateBufferObjectCommon(getWorkerState(), boh, bufferRelease.detach(), byteOffset);
-        // glFlush() should be called when using a shared context for this operation. Without it,
-        // the driver may delay submitting commands to the GPU, preventing other contexts from
-        // seeing the changes immediately. This ensures submitting the current commands right away.
-        glFlush();
+        flushIfSharedContext();
         completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
@@ -3548,10 +3557,7 @@ void OpenGLDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th,
         DEBUG_MARKER_NAME("update3DImageAsync")
         update3DImageCommon(getWorkerState(), th, level, xoffset, yoffset, zoffset, width, height, depth,
                 bufferRelease.detach());
-        // glFlush() should be called when using a shared context for this operation. Without it,
-        // the driver may delay submitting commands to the GPU, preventing other contexts from
-        // seeing the changes immediately. This ensures submitting the current commands right away.
-        glFlush();
+        flushIfSharedContext();
         completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }

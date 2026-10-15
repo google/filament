@@ -368,6 +368,9 @@ uint32_t FEngine::getJobSystemThreadPoolSize(Config const& config) noexcept {
     int threadCount = int(std::thread::hardware_concurrency()) - 2;
     // make sure we have at least 1 thread though
     threadCount = std::max(1, threadCount);
+    // Leave one slot for the thread that calls Engine::create(), which adopts itself into the
+    // JobSystem.
+    threadCount = std::min(threadCount, int(JobSystem::MAX_THREADS - 1));
     return threadCount;
 }
 

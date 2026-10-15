@@ -172,12 +172,12 @@ MATH_TYPES: Dict[str, Dict[str, Any]] = {
     "filament::math::details::TMat44<double>": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 16, "assert": "assertMat4d", "cpp_type": "math::mat4"},
 
     # Quaternions
-    "math::quatf": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 4, "assert": "assertFloat4", "cpp_type": "math::quatf"},
-    "math::quat": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 4, "assert": "assertDouble4", "cpp_type": "math::quat"},
-    "filament::math::details::TQuaternion<float>": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 4, "assert": "assertFloat4", "cpp_type": "math::quatf"},
-    "filament::math::details::TQuaternion<double>": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 4, "assert": "assertDouble4", "cpp_type": "math::quat"},
-    "math::details::TQuaternion<float>": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 4, "assert": "assertFloat4", "cpp_type": "math::quatf"},
-    "math::details::TQuaternion<double>": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 4, "assert": "assertDouble4", "cpp_type": "math::quat"},
+    "math::quatf": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 4, "assert": "assertFloat4", "cpp_type": "math::quatf", "is_quaternion": True},
+    "math::quat": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 4, "assert": "assertDouble4", "cpp_type": "math::quat", "is_quaternion": True},
+    "filament::math::details::TQuaternion<float>": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 4, "assert": "assertFloat4", "cpp_type": "math::quatf", "is_quaternion": True},
+    "filament::math::details::TQuaternion<double>": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 4, "assert": "assertDouble4", "cpp_type": "math::quat", "is_quaternion": True},
+    "math::details::TQuaternion<float>": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 4, "assert": "assertFloat4", "cpp_type": "math::quatf", "is_quaternion": True},
+    "math::details::TQuaternion<double>": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 4, "assert": "assertDouble4", "cpp_type": "math::quat", "is_quaternion": True},
 
     # Math Vectors (short, ushort, int, uint, byte, ubyte)
     "math::short2": {"java": "short[]", "jni": "jshortArray", "jni_type": "jshortArray", "scalar": "short", "size": 2, "assert": "assertShort2", "cpp_type": "math::short2"},
