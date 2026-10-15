@@ -632,6 +632,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_Scissor.cpp
             test/test_MipLevels.cpp
             test/test_Handles.cpp
+            test/test_BlobCacheKey.cpp
             test/test_CircularBuffer.cpp
             test/test_CommandBufferQueue.cpp
             test/test_DescriptorSet.cpp
