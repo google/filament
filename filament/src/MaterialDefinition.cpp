@@ -24,10 +24,13 @@
 
 #include "ds/ColorPassDescriptorSet.h"
 
+#include <private/filament/DescriptorSets.h>
 #include <private/filament/EngineEnums.h>
 #include <private/filament/PushConstantInfo.h>
 
 #include <filament/MaterialEnums.h>
+
+#include <backend/DriverEnums.h>
 
 #include <utils/Hash.h>
 #include <utils/Logger.h>
@@ -37,6 +40,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <initializer_list>
 #include <iterator>
 #include <memory>
 #include <utility>
@@ -327,7 +331,102 @@ std::unique_ptr<MaterialDefinition> MaterialDefinition::create(FEngine& engine,
         }
     }
 
-    return std::make_unique<MaterialDefinition>(engine, std::move(parser));
+    auto definition = std::make_unique<MaterialDefinition>(engine, std::move(parser));
+    if (engine.features.material.check_device_sampler_limits &&
+            !definition->checkSamplerLimits(engine)) {
+        definition->terminate(engine);
+        return nullptr;
+    }
+    return definition;
+}
+
+bool MaterialDefinition::checkSamplerLimits(FEngine& engine) const noexcept {
+    // Feature level 0 materials have never been validated. On ES2, samplers that a shader doesn't
+    // reference don't consume texture units, so counting the whole layout would reject materials
+    // that work in practice on devices with only 8 units (or no vertex texture units at all).
+    if (featureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+        return true;
+    }
+
+    DriverApi& driver = engine.getDriverApi();
+
+    // A sampler descriptor consumes one texture and one sampler, except for external samplers
+    // whose cost depends on the backend (e.g. 4 textures and 1 sampler on WebGPU).
+    struct Usage {
+        size_t textures = 0;
+        size_t samplers = 0;
+    };
+    size_t const externalTextureCost = driver.getExternalTextureCost();
+    size_t const externalSamplerCost = driver.getExternalSamplerCost();
+
+    auto const countUsage = [externalTextureCost, externalSamplerCost](
+            backend::DescriptorSetLayout const& layout, ShaderStage const stage) {
+        Usage usage;
+        for (auto const& descriptor : layout.descriptors) {
+            if (!DescriptorSetLayoutDescriptor::isSampler(descriptor.type) ||
+                    !hasShaderType(descriptor.stageFlags, stage)) {
+                continue;
+            }
+            bool const isExternal = descriptor.type == DescriptorType::SAMPLER_EXTERNAL;
+            // count is unset (0) for non-array descriptors.
+            size_t const count = std::max<size_t>(descriptor.count, 1);
+            usage.textures += count * (isExternal ? externalTextureCost : 1);
+            usage.samplers += count * (isExternal ? externalSamplerCost : 1);
+        }
+        return usage;
+    };
+
+    // Filament itself doesn't support more than the per-stage maximum of the highest feature
+    // level. This also keeps the total within MAX_SAMPLER_COUNT, which sizes some backend tables
+    // (e.g. the GL texture units).
+    constexpr auto caps = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_3];
+    static_assert(caps.MAX_VERTEX_SAMPLER_COUNT + caps.MAX_FRAGMENT_SAMPLER_COUNT <=
+            MAX_SAMPLER_COUNT);
+
+    for (ShaderStage const stage : { ShaderStage::VERTEX, ShaderStage::FRAGMENT }) {
+        bool const isVertex = stage == ShaderStage::VERTEX;
+        size_t const filamentMax =
+                isVertex ? caps.MAX_VERTEX_SAMPLER_COUNT : caps.MAX_FRAGMENT_SAMPLER_COUNT;
+
+        // Every program uses the PER_RENDERABLE layout (morphing and skinning samplers) and a
+        // PER_VIEW layout. For the latter, the color pass uses the largest one; its PCF and VSM
+        // versions only differ by the type of the shadow map sampler, so either can be used here.
+        Usage const perViewUsage = countUsage(perViewDescriptorSetLayoutPcfDescription, stage);
+        Usage const perRenderableUsage =
+                countUsage(descriptor_sets::getPerRenderableLayout(), stage);
+        Usage const engineUsage = {
+            .textures = perViewUsage.textures + perRenderableUsage.textures,
+            .samplers = perViewUsage.samplers + perRenderableUsage.samplers,
+        };
+        Usage const materialUsage = countUsage(descriptorSetLayoutDescription, stage);
+
+        auto const fits = [&](char const* resource, size_t const engineCount,
+                size_t const materialCount, size_t const deviceMax, size_t const externalCost) {
+            size_t const maxCount = std::min(deviceMax, filamentMax);
+            if (UTILS_LIKELY(engineCount + materialCount <= maxCount)) {
+                return true;
+            }
+            LOG(ERROR) << "The material '" << name.c_str_safe() << "' needs " << materialCount
+                       << (isVertex ? " vertex " : " fragment ") << resource << "s, but only "
+                       << (maxCount > engineCount ? maxCount - engineCount : 0)
+                       << " are available on this device (" << engineCount << " of " << maxCount
+                       << " are used by Filament, and each external sampler uses "
+                       << externalCost << " " << resource << "s).";
+            return false;
+        };
+
+        if (UTILS_UNLIKELY(
+                !fits("texture", engineUsage.textures, materialUsage.textures,
+                        driver.getMaxTextureCount(stage), externalTextureCost) ||
+                !fits("sampler", engineUsage.samplers, materialUsage.samplers,
+                        driver.getMaxSamplerCount(stage), externalSamplerCost))) {
+            for (auto const& sampler : samplerInterfaceBlock.getSamplerInfoList()) {
+                LOG(ERROR) << "\"" << sampler.name.c_str() << "\" " << to_string(sampler.type);
+            }
+            return false;
+        }
+    }
+    return true;
 }
 
 void MaterialDefinition::terminate(FEngine& engine) {
