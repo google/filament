@@ -738,7 +738,9 @@ class JniEmitter:
                                 param_jni_types.append(scalar_jni)
                                 comp_args.append(comp_arg_name)
                             type_cstr = self._strip_namespaces(arr_in["cpp_type"])
-                            cpp_call_args.append(f"{type_cstr}{{{', '.join(comp_args)}}}")
+                            is_quat = arr_in.get("is_quaternion") or "quat" in type_cstr.lower()
+                            ctor_args = [comp_args[3], comp_args[0], comp_args[1], comp_args[2]] if (is_quat and sz == 4) else comp_args
+                            cpp_call_args.append(f"{type_cstr}{{{', '.join(ctor_args)}}}")
                         else:
                             jni_arr_type = arr_in["jni"]
                             jni_arg_name = f"{arg_name}_"
@@ -1910,7 +1912,9 @@ class JniEmitter:
                          comp_args.append(comp_arg_name)
                          
                      type_cstr = self._strip_namespaces(arr_in["cpp_type"])
-                     cpp_call_args.append(f"{type_cstr}{{{', '.join(comp_args)}}}")
+                     is_quat = arr_in.get("is_quaternion") or "quat" in type_cstr.lower()
+                     ctor_args = [comp_args[3], comp_args[0], comp_args[1], comp_args[2]] if (is_quat and size == 4) else comp_args
+                     cpp_call_args.append(f"{type_cstr}{{{', '.join(ctor_args)}}}")
                      
                  else:
                      # Matrix or Pointer Input passed as primitive array
@@ -2064,10 +2068,12 @@ class JniEmitter:
                         for vfield, vinfo in vector_comps.items():
                             sorted_comps = [cname for idx, cname in sorted(vinfo["comps"], key=lambda x: x[0])]
                             cpp_t = vinfo["cpp_type"]
+                            if "quat" in cpp_t.lower() and len(sorted_comps) == 4:
+                                sorted_comps = [sorted_comps[3], sorted_comps[0], sorted_comps[1], sorted_comps[2]]
                             if not cpp_t.startswith("filament::") and not cpp_t.startswith("math::"):
                                 if "LinearColor" in cpp_t:
                                     cpp_t = f"filament::{cpp_t}"
-                                elif "float" in cpp_t:
+                                elif "float" in cpp_t or "quat" in cpp_t:
                                     cpp_t = f"filament::math::{cpp_t}"
                             body_pre.append(f"options.{vfield} = {cpp_t}{{ {', '.join(sorted_comps)} }};")
 

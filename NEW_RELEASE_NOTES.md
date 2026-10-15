@@ -6,3 +6,5 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+- java: Fixed support for quaternions in JNI bindings
+- java: Properly set default values inside structures such as `LightManager.ShadowOptions`
