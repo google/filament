@@ -455,7 +455,10 @@ jobs:
       - name: Check - public header inclusion
         run: bash test/code-correctness/headers-inclusion.sh out/release/filament/include
       - name: Check - Filament unit tests
-        run: bash test/filament-unit-test/test.sh
+        run: |
+          # The tests that render, such as RenderingTest, use Mesa's software Vulkan driver.
+          sudo apt-get install -y libvulkan1 mesa-vulkan-drivers
+          bash test/filament-unit-test/test.sh
 
   test-backend:
     name: test-backend
