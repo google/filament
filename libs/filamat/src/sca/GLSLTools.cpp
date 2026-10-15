@@ -172,8 +172,8 @@ public:
     bool visitBinary(TVisit, TIntermBinary* node) override {
         TOperator const op = node->getOp();
         Symbol symbol;
-        if (op == EOpAssign || op == EOpAddAssign || op == EOpDivAssign || op == EOpSubAssign
-            || op == EOpMulAssign ) {
+        // Capture all assignment operators
+        if (op >= EOpAssign && op <= EOpRightShiftAssign) {
             const TIntermTyped* n = findLValueBase(node->getLeft(), symbol);
             if (n != nullptr && n->getAsSymbolNode() != nullptr) {
                 const TString& symbolTString = n->getAsSymbolNode()->getName();

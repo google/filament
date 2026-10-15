@@ -92,7 +92,7 @@ struct HwMemoryMappedBuffer : public HwBase {
 };
 
 struct HwIndexBuffer : public HwBase {
-    uint32_t count : 26; // 67M indices
+    uint32_t count : INDEX_COUNT_BITS; // 67M indices
     uint32_t elementSize : 5;
     uint32_t asynchronous : 1;
 
@@ -101,9 +101,15 @@ struct HwIndexBuffer : public HwBase {
             count(indexCount), elementSize(elementSize), asynchronous(async) {
         // we could almost store elementSize on 4 bits because it's never > 16 and never 0
         assert_invariant(elementSize > 0 && elementSize <= 16);
-        assert_invariant(indexCount < (1u << 27));
+        assert_invariant(indexCount <= MAX_INDEX_COUNT);
     }
 };
+
+// A new field must take its bits from INDEX_COUNT_BITS, so that MAX_INDEX_COUNT stays accurate.
+static_assert(sizeof(HwIndexBuffer) == sizeof(uint32_t));
+// Keeps `elementSize * indexCount` within uint32_t, which every backend uses for the size.
+// 16 is the largest elementSize HwIndexBuffer accepts.
+static_assert(MAX_INDEX_COUNT <= UINT32_MAX / 16);
 
 struct HwRenderPrimitive : public HwBase {
     PrimitiveType type = PrimitiveType::TRIANGLES;
