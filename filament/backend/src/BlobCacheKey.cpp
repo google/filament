@@ -29,7 +29,7 @@ struct BlobCacheKey::Key {
     // This is why we can't store Program::SpecializationConstant (a std::variant) directly.
     struct Entry {
         uint32_t type;      // index of the active variant alternative
-        uint32_t value;     // raw bits of the active alternative, zero-padded
+        uint32_t value;     // bool as 0/1, other alternatives as their raw 32 bits
     };
     uint64_t id;
     Entry constants[];
@@ -55,11 +55,17 @@ BlobCacheKey::BlobCacheKey(uint64_t id,
         auto const& sc = specConstants[i];
         Key::Entry& entry = mData->constants[i];
         entry.type = uint32_t(sc.index());
-        // entry.value is zero-initialized (memset above), so alternatives smaller than
-        // 32 bits (e.g. bool) leave the remaining bytes deterministic.
+        // Encode explicitly so the layout doesn't depend on endianness, and require every
+        // non-bool alternative to be exactly 32 bits so new types must pick an encoding.
         std::visit([&entry](auto v) {
-            static_assert(sizeof(v) <= sizeof(entry.value));
-            std::memcpy(&entry.value, &v, sizeof(v));
+            using T = decltype(v);
+            if constexpr (std::is_same_v<T, bool>) {
+                entry.value = v ? 1u : 0u;
+            } else {
+                static_assert(sizeof(T) == sizeof(entry.value),
+                        "new SpecializationConstant types need an explicit encoding");
+                std::memcpy(&entry.value, &v, sizeof(v));
+            }
         }, sc);
     }
 }
