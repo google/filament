@@ -16,8 +16,6 @@
 
 #include "../src/details/BufferAllocator.h"
 
-#include <utils/Panic.h>
-
 #include <gtest/gtest.h>
 
 #include <utility>
@@ -345,15 +343,9 @@ TEST_F(BufferAllocatorTest, Reset) {
 TEST_F(BufferAllocatorTest, ResetWithInvalidSize) {
     // Sizes must be a non-zero multiple of the slot size. A size of zero used to cause
     // out-of-bounds writes to mNodes[0] and mNodes[0xFFFFFFFF].
-#if GTEST_HAS_EXCEPTIONS
-    EXPECT_THROW(mAllocator.reset(123), utils::PreconditionPanic);
-    EXPECT_THROW(mAllocator.reset(0), utils::PreconditionPanic);
-    EXPECT_THROW(mAllocator.reset(SLOT_SIZE / 2), utils::PreconditionPanic);
-#else
-    EXPECT_DEATH(mAllocator.reset(123), "Invalid BufferAllocator size");
-    EXPECT_DEATH(mAllocator.reset(0), "Invalid BufferAllocator size");
-    EXPECT_DEATH(mAllocator.reset(SLOT_SIZE / 2), "Invalid BufferAllocator size");
-#endif
+    EXPECT_DEATH(mAllocator.reset(123), "failed assertion");
+    EXPECT_DEATH(mAllocator.reset(0), "failed assertion");
+    EXPECT_DEATH(mAllocator.reset(SLOT_SIZE / 2), "failed assertion");
 }
 
 

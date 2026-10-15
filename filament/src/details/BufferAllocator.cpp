@@ -21,7 +21,6 @@
 #include <utils/algorithm.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/Panic.h>
 
 namespace filament {
 namespace {
@@ -52,9 +51,8 @@ BufferAllocator::BufferAllocator(allocation_size_t totalSize, allocation_size_t 
 }
 
 void BufferAllocator::reset(allocation_size_t newTotalSize) {
-    FILAMENT_CHECK_PRECONDITION(newTotalSize >= mSlotSize && newTotalSize % mSlotSize == 0)
-            << "Invalid BufferAllocator size " << newTotalSize << " (slot size " << mSlotSize
-            << ")";
+    assert_invariant(newTotalSize >= mSlotSize);
+    assert_invariant(newTotalSize % mSlotSize == 0);
 
     mTotalSize = newTotalSize;
     mFreeList.clear();
