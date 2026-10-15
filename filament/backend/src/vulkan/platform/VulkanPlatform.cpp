@@ -277,7 +277,10 @@ ExtensionSet getInstanceExtensions(ExtensionSet const& externallyRequiredExts,
     return exts;
 }
 
-ExtensionSet getDeviceExtensions(VkPhysicalDevice device, bool enableDebugUtils = false) {
+// enablePipelineCreationFeedback: the pipeline cache persistence reads the feedback to tell which
+// pipelines were compiled.
+ExtensionSet getDeviceExtensions(VkPhysicalDevice device, bool enableDebugUtils,
+        bool enablePipelineCreationFeedback) {
     ExtensionSet const TARGET_EXTS = {
     // We only support external image for Android for now, but nothing bars us from
     // supporting other platforms.
@@ -332,7 +335,9 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device, bool enableDebugUtils 
         }
 
         if (setContains(TARGET_EXTS, name) ||
-                (enableDebugUtils && name == VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
+                (enableDebugUtils && name == VK_EXT_DEBUG_MARKER_EXTENSION_NAME) ||
+                (enablePipelineCreationFeedback &&
+                        name == VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME)) {
             setInsert(exts, name);
         }
     }
@@ -703,7 +708,11 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // If a shared context is not used, we will use our own provided list; otherwise, we do not
     // assume any extensions.
     if (!mImpl->mSharedContext) {
-        deviceExts = getDeviceExtensions(mImpl->mPhysicalDevice, enableDebugUtils);
+        bool const enablePipelineCreationFeedback = driverConfig.featureFlagManager &&
+                driverConfig.featureFlagManager->features.backend.vulkan
+                        .enable_pipeline_cache_persistence;
+        deviceExts = getDeviceExtensions(mImpl->mPhysicalDevice, enableDebugUtils,
+                enablePipelineCreationFeedback);
         auto [prunedInstExts, prunedDeviceExts] =
                 pruneExtensions(mImpl->mPhysicalDevice, driverConfig, instExts, deviceExts);
         instExts = prunedInstExts;
@@ -1169,6 +1178,10 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
     context.mPipelineDynamicStateEnabled =
             (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
                                                        .vulkan.enable_pipeline_dynamic_state
+                                             : false);
+    context.mPipelineCachePersistenceEnabled =
+            (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
+                                                       .vulkan.enable_pipeline_cache_persistence
                                              : false);
 
     // We know we need to allocate the protected version of the VK objects
