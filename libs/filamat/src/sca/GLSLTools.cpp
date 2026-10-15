@@ -48,7 +48,7 @@ GLSLangCleaner::~GLSLangCleaner() {
 
 // ------------------------------------------------------------------------------------------------
 // If the error message is associated with API level, this formats it to be more human-readable.
-static void formatApiLevelErrorLog(utils::io::ostream& out, const char* log) {
+static void formatApiLevelErrorLog(io::ostream& out, const char* log) {
     if (!log) return;
     
     std::string_view fullLog(log);
@@ -69,7 +69,7 @@ static void formatApiLevelErrorLog(utils::io::ostream& out, const char* log) {
         size_t endPos = line.find(postfix, startPos);
         if (startPos == std::string_view::npos || endPos == std::string_view::npos) {
             // Doesn't fit to the template, simply print the log as is.
-            out << line << utils::io::endl;
+            out << line << io::endl;
             start = end + 1;
             continue;
         }
@@ -102,7 +102,7 @@ static void formatApiLevelErrorLog(utils::io::ostream& out, const char* log) {
                 out << ((c == '_') ? ' ' : c);
             }
         }
-        out << utils::io::endl;
+        out << io::endl;
         start = end + 1;
     }
 }
@@ -235,8 +235,8 @@ bool GLSLTools::analyzeComputeShader(const std::string& shaderCode,
     EShMessages const msg = glslangFlagsFromTargetApi(targetApi, targetLanguage);
     bool const ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!ok) {
-        utils::slog.e << "ERROR: Unable to parse compute shader:" << utils::io::endl;
-        utils::slog.e << tShader.getInfoLog() << utils::io::endl;
+        utils::slog.e << "ERROR: Unable to parse compute shader:" << io::endl;
+        utils::slog.e << tShader.getInfoLog() << io::endl;
         return false;
     }
 
@@ -246,8 +246,8 @@ bool GLSLTools::analyzeComputeShader(const std::string& shaderCode,
     // Check there is a material function definition in this shader.
     TIntermNode* materialFctNode = ASTHelpers::getFunctionByNameOnly(materialFunctionName, *root);
     if (materialFctNode == nullptr) {
-        utils::slog.e << "ERROR: Invalid compute shader:" << utils::io::endl;
-        utils::slog.e << "ERROR: Unable to find " << materialFunctionName << "() function" << utils::io::endl;
+        utils::slog.e << "ERROR: Invalid compute shader:" << io::endl;
+        utils::slog.e << "ERROR: Unable to find " << materialFunctionName << "() function" << io::endl;
         return false;
     }
 
@@ -273,8 +273,8 @@ std::optional<GLSLTools::FragmentShaderInfo> GLSLTools::analyzeFragmentShader(
     EShMessages const msg = glslangFlagsFromTargetApi(targetApi, targetLanguage);
     bool const ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!ok) {
-        utils::slog.e << "ERROR: Unable to parse fragment shader:" << utils::io::endl;
-        utils::slog.e << tShader.getInfoLog() << utils::io::endl;
+        utils::slog.e << "ERROR: Unable to parse fragment shader:" << io::endl;
+        utils::slog.e << tShader.getInfoLog() << io::endl;
         return std::nullopt;
     }
 
@@ -284,8 +284,8 @@ std::optional<GLSLTools::FragmentShaderInfo> GLSLTools::analyzeFragmentShader(
     // Check there is a material function definition in this shader.
     TIntermNode* materialFctNode = ASTHelpers::getFunctionByNameOnly(materialFunctionName, *root);
     if (materialFctNode == nullptr) {
-        utils::slog.e << "ERROR: Invalid fragment shader:" << utils::io::endl;
-        utils::slog.e << "ERROR: Unable to find " << materialFunctionName << "() function" << utils::io::endl;
+        utils::slog.e << "ERROR: Invalid fragment shader:" << io::endl;
+        utils::slog.e << "ERROR: Unable to find " << materialFunctionName << "() function" << io::endl;
         return std::nullopt;
     }
 
@@ -303,8 +303,8 @@ std::optional<GLSLTools::FragmentShaderInfo> GLSLTools::analyzeFragmentShader(
     TIntermAggregate* prepareMaterialNode =
             ASTHelpers::getFunctionByNameOnly("prepareMaterial", *root);
     if (prepareMaterialNode == nullptr) {
-        utils::slog.e << "ERROR: Invalid fragment shader:" << utils::io::endl;
-        utils::slog.e << "ERROR: Unable to find prepareMaterial() function" << utils::io::endl;
+        utils::slog.e << "ERROR: Invalid fragment shader:" << io::endl;
+        utils::slog.e << "ERROR: Unable to find prepareMaterial() function" << io::endl;
         return std::nullopt;
     }
 
@@ -312,17 +312,17 @@ std::optional<GLSLTools::FragmentShaderInfo> GLSLTools::analyzeFragmentShader(
     bool const prepareMaterialCalled = ASTHelpers::isFunctionCalled(
             prepareMaterialSignature, *materialFctNode, *root);
     if (!prepareMaterialCalled) {
-        utils::slog.e << "ERROR: Invalid fragment shader:" << utils::io::endl;
-        utils::slog.e << "ERROR: prepareMaterial() is not called" << utils::io::endl;
+        utils::slog.e << "ERROR: Invalid fragment shader:" << io::endl;
+        utils::slog.e << "ERROR: prepareMaterial() is not called" << io::endl;
         return std::nullopt;
     }
 
     if (hasCustomSurfaceShading) {
         materialFctNode = ASTHelpers::getFunctionByNameOnly("surfaceShading", *root);
         if (materialFctNode == nullptr) {
-            utils::slog.e << "ERROR: Invalid fragment shader:" << utils::io::endl;
+            utils::slog.e << "ERROR: Invalid fragment shader:" << io::endl;
             utils::slog.e << "ERROR: Unable to find surfaceShading() function"
-                          << utils::io::endl;
+                          << io::endl;
             return std::nullopt;
         }
     }
@@ -353,8 +353,8 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode,
     EShMessages const msg = glslangFlagsFromTargetApi(targetApi, targetLanguage);
     bool const ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!ok) {
-        utils::slog.e << "ERROR: Unable to parse vertex shader" << utils::io::endl;
-        utils::slog.e << tShader.getInfoLog() << utils::io::endl;
+        utils::slog.e << "ERROR: Unable to parse vertex shader" << io::endl;
+        utils::slog.e << tShader.getInfoLog() << io::endl;
         return false;
     }
 
@@ -362,8 +362,8 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode,
     // Check there is a material function definition in this shader.
     TIntermNode* materialFctNode = ASTHelpers::getFunctionByNameOnly("materialVertex", *root);
     if (materialFctNode == nullptr) {
-        utils::slog.e << "ERROR: Invalid vertex shader" << utils::io::endl;
-        utils::slog.e << "ERROR: Unable to find materialVertex() function" << utils::io::endl;
+        utils::slog.e << "ERROR: Invalid vertex shader" << io::endl;
+        utils::slog.e << "ERROR: Unable to find materialVertex() function" << io::endl;
         return false;
     }
 
@@ -428,7 +428,7 @@ bool GLSLTools::findPropertyWritesOperations(std::string_view functionName, size
             ASTHelpers::getFunctionBySignature(functionName, *rootNode);
     if (functionMaterialDef == nullptr) {
         utils::slog.e << "Unable to find function '" << functionName << "' definition."
-                << utils::io::endl;
+                << io::endl;
         return false;
     }
 
@@ -437,7 +437,7 @@ bool GLSLTools::findPropertyWritesOperations(std::string_view functionName, size
 
     if (functionMaterialParameters.size() <= parameterIdx) {
         utils::slog.e << "Unable to find function '" << functionName <<  "' parameterIndex: " <<
-                parameterIdx << utils::io::endl;
+                parameterIdx << io::endl;
         return false;
     }
 
@@ -688,7 +688,7 @@ void GLSLTools::textureLodBias(TIntermediate* intermediate, TIntermNode* root,
     if (!pIntermSymbolLodBias) {
         // something went wrong
         utils::slog.e << "lod bias ignored because \"" << lodBiasSymbolName << "\" was not found!"
-                      << utils::io::endl;
+                      << io::endl;
         return;
     }
 
