@@ -104,28 +104,38 @@ private:
 // TODO: Add more switch cases as needed.
 std::string to_string(TOperator op) {
     switch (op) {
-        case EOpSequence:               return "EOpSequence";
-        case EOpAssign:                 return "EOpAssign";
-        case EOpAddAssign:              return "EOpAddAssign";
-        case EOpSubAssign:              return "EOpSubAssign";
-        case EOpMulAssign:              return "EOpMulAssign";
-        case EOpDivAssign:              return "EOpDivAssign";
-        case EOpVectorSwizzle:          return "EOpVectorSwizzle";
-        case EOpIndexDirectStruct:      return "EOpIndexDirectStruct";
-        case EOpFunction:               return "EOpFunction";
-        case EOpFunctionCall:           return "EOpFunctionCall";
-        case EOpParameters:             return "EOpParameters";
+        case EOpSequence:                return "EOpSequence";
+        case EOpAssign:                  return "EOpAssign";
+        case EOpAddAssign:               return "EOpAddAssign";
+        case EOpSubAssign:               return "EOpSubAssign";
+        case EOpMulAssign:               return "EOpMulAssign";
+        case EOpVectorTimesMatrixAssign: return "EOpVectorTimesMatrixAssign";
+        case EOpVectorTimesScalarAssign: return "EOpVectorTimesScalarAssign";
+        case EOpMatrixTimesScalarAssign: return "EOpMatrixTimesScalarAssign";
+        case EOpMatrixTimesMatrixAssign: return "EOpMatrixTimesMatrixAssign";
+        case EOpDivAssign:               return "EOpDivAssign";
+        case EOpModAssign:               return "EOpModAssign";
+        case EOpAndAssign:               return "EOpAndAssign";
+        case EOpInclusiveOrAssign:       return "EOpInclusiveOrAssign";
+        case EOpExclusiveOrAssign:       return "EOpExclusiveOrAssign";
+        case EOpLeftShiftAssign:         return "EOpLeftShiftAssign";
+        case EOpRightShiftAssign:        return "EOpRightShiftAssign";
+        case EOpVectorSwizzle:           return "EOpVectorSwizzle";
+        case EOpIndexDirectStruct:       return "EOpIndexDirectStruct";
+        case EOpFunction:                return "EOpFunction";
+        case EOpFunctionCall:            return "EOpFunctionCall";
+        case EOpParameters:              return "EOpParameters";
         // branch
-        case EOpKill:                   return "EOpKill";
-        case EOpTerminateInvocation:    return "EOpTerminateInvocation";
-        case EOpDemote:                 return "EOpDemote";
-        case EOpTerminateRayKHR:        return "EOpTerminateRayKHR";
-        case EOpIgnoreIntersectionKHR:  return "EOpIgnoreIntersectionKHR";
-        case EOpReturn:                 return "EOpReturn";
-        case EOpBreak:                  return "EOpBreak";
-        case EOpContinue:               return "EOpContinue";
-        case EOpCase:                   return "EOpCase";
-        case EOpDefault:                return "EOpDefault";
+        case EOpKill:                    return "EOpKill";
+        case EOpTerminateInvocation:     return "EOpTerminateInvocation";
+        case EOpDemote:                  return "EOpDemote";
+        case EOpTerminateRayKHR:         return "EOpTerminateRayKHR";
+        case EOpIgnoreIntersectionKHR:   return "EOpIgnoreIntersectionKHR";
+        case EOpReturn:                  return "EOpReturn";
+        case EOpBreak:                   return "EOpBreak";
+        case EOpContinue:                return "EOpContinue";
+        case EOpCase:                    return "EOpCase";
+        case EOpDefault:                 return "EOpDefault";
         default:
             return std::to_string((int)op);
     }
