@@ -1,0 +1,9 @@
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'third_party/**'
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'third_party/**'
