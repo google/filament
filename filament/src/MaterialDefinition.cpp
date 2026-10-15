@@ -290,6 +290,16 @@ std::unique_ptr<MaterialDefinition> MaterialDefinition::create(FEngine& engine,
         }
     }
 
+    // processDescriptorSets() only asserts on this, which is compiled out in release builds.
+    MaterialParser::DescriptorSetLayoutContainer descriptorSetLayout;
+    if (!parser->getDescriptorSetLayout(&descriptorSetLayout)) {
+        CString name;
+        parser->getName(&name);
+        LOG(ERROR) << "The material '" << name.c_str_safe()
+                   << "' has an invalid descriptor set layout.";
+        return nullptr;
+    }
+
     uint32_t v = 0;
     parser->getShaderModels(&v);
     bitset32 shaderModels;
