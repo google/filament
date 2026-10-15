@@ -563,7 +563,7 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
         // reject invalid geometry parameters
         if (entry.indices) {
             FILAMENT_CHECK_PRECONDITION(
-                    entry.offset + entry.count <= entry.indices->getIndexCount())
+                    size_t(entry.offset) + size_t(entry.count) <= entry.indices->getIndexCount())
                     << "[entity=" << entity.getId() << ", primitive @ " << i << "] offset ("
                     << entry.offset << ") + count (" << entry.count << ") > indexCount ("
                     << entry.indices->getIndexCount() << ")";
@@ -579,7 +579,7 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
                     << "] non-indexed (null IndexBuffer) primitives are incompatible with "
                        "morphing";
             FILAMENT_CHECK_PRECONDITION(
-                    entry.offset + entry.count <= entry.vertices->getVertexCount())
+                    size_t(entry.offset) + size_t(entry.count) <= entry.vertices->getVertexCount())
                     << "[entity=" << entity.getId() << ", primitive @ " << i << "] offset ("
                     << entry.offset << ") + count (" << entry.count << ") > vertexCount ("
                     << entry.vertices->getVertexCount() << ")";
