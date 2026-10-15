@@ -119,7 +119,7 @@ buildscript {
     ext.deps = [
         'androidx': [
             'annotations': "androidx.annotation:annotation:${versions.androidx_annotations}",
-            'core': "androidx.core:core:${versions.androidx_core}",
+            'core': "androidx.core:core:${versions.androidx_core}"
         ],
         'kotlin': "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${versions.kotlin}",
         'coroutines': [
