@@ -175,7 +175,7 @@ public:
 
     utils::io::sstream& generatePushConstants(utils::io::sstream& out,
             MaterialBuilder::PushConstantList const& pushConstants,
-            size_t const layoutLocation, uint32_t startOffset) const;
+            size_t layoutLocation, uint32_t startOffset) const;
 
     static utils::io::sstream& generatePostProcessGetters(utils::io::sstream& out, ShaderStage stage);
     static utils::io::sstream& generateSurfaceGetters(utils::io::sstream& out, ShaderStage stage);
