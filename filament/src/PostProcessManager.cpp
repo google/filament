@@ -322,11 +322,13 @@ void PostProcessManager::init() noexcept {
     auto& engine = mEngine;
     DriverApi& driver = engine.getDriverApi();
 
-    //FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     //debugRegistry.registerProperty("d.ssao.sampleCount", &engine.debug.ssao.sampleCount);
     //debugRegistry.registerProperty("d.ssao.spiralTurns", &engine.debug.ssao.spiralTurns);
     //debugRegistry.registerProperty("d.ssao.kernelSize", &engine.debug.ssao.kernelSize);
     //debugRegistry.registerProperty("d.ssao.stddev", &engine.debug.ssao.stddev);
+    FDebugRegistry& debugRegistry = engine.getDebugRegistry();
+    debugRegistry.registerProperty("d.taa.visualize_disocclusion",
+            &engine.debug.taa.visualize_disocclusion);
 
     mFullScreenQuadRph = engine.getFullScreenRenderPrimitive();
     mFullScreenQuadVbih = engine.getFullScreenVertexBuffer()->getVertexBufferInfoHandle();
@@ -2918,6 +2920,39 @@ void PostProcessManager::TaaJitterCamera(
     current.projection = inoutCameraInfo->projection * inoutCameraInfo->getUserViewMatrix();
     current.frameId = previous.frameId + 1;
 
+    // motionAdaptiveHistory's global hold-off (motionHoldFrames): did the camera itself move
+    // this frame? current.projection is computed above, before jitter is folded in below, so a
+    // truly static camera reproduces a bit-identical projection*view matrix every frame -- any
+    // real difference here is actual camera motion, not jitter. On a real difference (or when
+    // history is empty/reset, so a freshly-seeded single-sample history converges at full rate
+    // before relaxation begins), (re)start the countdown at motionHoldFrames; otherwise let it
+    // decay by one frame, floored at 0.
+    //
+    // motionHoldFrames' own value is not arbitrary -- it is sized to outlast history's
+    // exponential-moving-average recovery from a disocclusion, (1-feedback)^n of the original
+    // error after n frames, which bounds recovery to n = ln(threshold)/ln(1-alpha) frames
+    // (~10.8 at feedback's default 0.12 and taa_harness's own 25% recovery threshold; up to
+    // ~37.8 at the fully-relaxed rate this hold exists to avoid skipping). See
+    // TemporalAntiAliasingOptions::motionHoldFrames in Options.h for the full derivation and
+    // measured numbers -- it changes with `feedback`, so re-derive rather than assume it holds
+    // if that ever moves off its default.
+    constexpr double kCameraStaticThreshold = 1e-6;
+    bool cameraMoved = !previous.color.handle;
+    if (UTILS_LIKELY(!cameraMoved)) {
+        double const* const a = current.projection.asArray();
+        double const* const b = previous.projection.asArray();
+        #pragma nounroll
+        for (size_t i = 0; i < 16; i++) {
+            if (std::abs(a[i] - b[i]) > kCameraStaticThreshold) {
+                cameraMoved = true;
+                break;
+            }
+        }
+    }
+    current.motionHoldRemaining = cameraMoved
+            ? taaOptions.motionHoldFrames
+            : std::max(0.0f, previous.motionHoldRemaining - 1.0f);
+
     auto jitterPosition = [pattern = taaOptions.jitterPattern](size_t const frameIndex) -> float2 {
         using JitterPattern = TemporalAntiAliasingOptions::JitterPattern;
         switch (pattern) {
@@ -2973,7 +3008,11 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(backend::DriverAp
         { "preventFlickering", taaOptions.preventFlickering },
         { "boxType", int32_t(taaOptions.boxType) },
         { "boxClipping", int32_t(taaOptions.boxClipping) },
-        { "varianceGamma", taaOptions.varianceGamma },
+        { "motionAdaptiveHistory", taaOptions.motionAdaptiveHistory },
+        { "depthDisocclusion", taaOptions.depthDisocclusion },
+        { "disocclusionHistoryNeighborhood", taaOptions.disocclusionHistoryNeighborhood },
+        { "exactLanczosSupport", taaOptions.exactLanczosSupport },
+        { "debugVisualizeDisocclusion", mEngine.debug.taa.visualize_disocclusion },
     });
 }
 
@@ -3043,6 +3082,21 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 FrameGraphTexture::Usage::SAMPLEABLE, previous.color);
     }
 
+    // Same fallback for the depth history: with no history yet -- either the first frame, or
+    // the first frame after depthDisocclusion was turned on -- comparing the current depth
+    // against itself (below, in the material) is a no-op disocclusion test, which is what we
+    // want when there's nothing to disocclude from.
+    //
+    // Keeping the depth history is only free when it isn't kept: detaching a texture takes it
+    // out of the frame graph's pool, so it can't be recycled and the depth buffer is
+    // effectively double-buffered for as long as this is on. Skip all of it when the feature
+    // is off, which is the default.
+    FrameGraphId<FrameGraphTexture> depthHistory = depth;
+    if (taaOptions.depthDisocclusion && UTILS_LIKELY(previous.depth.handle)) {
+        depthHistory = fg.import("TAA depth history", previous.depthDesc,
+                FrameGraphTexture::Usage::SAMPLEABLE, previous.depth);
+    }
+
     mat4 const& historyProjection = previous.color.handle ?
             previous.projection : current.projection;
 
@@ -3050,6 +3104,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> color;
         FrameGraphId<FrameGraphTexture> depth;
         FrameGraphId<FrameGraphTexture> history;
+        FrameGraphId<FrameGraphTexture> depthHistory;
         FrameGraphId<FrameGraphTexture> output;
         FrameGraphId<FrameGraphTexture> tonemappedOutput;
     };
@@ -3063,6 +3118,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 data.color = builder.sample(input);
                 data.depth = builder.sample(depth);
                 data.history = builder.sample(colorHistory);
+                data.depthHistory = builder.sample(depthHistory);
                 data.output = builder.createTexture("TAA output", desc);
                 data.output = builder.write(data.output);
                 if (colorGradingConfig.asSubpass) {
@@ -3095,6 +3151,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 auto const color = resources.getTexture(data.color);
                 auto const depth = resources.getTexture(data.depth);
                 auto const history = resources.getTexture(data.history);
+                auto const depthHistory = resources.getTexture(data.depthHistory);
 
                 auto const& colorDesc = resources.getDescriptor(data.color);
                 auto const& historyDesc = resources.getDescriptor(data.history);
@@ -3113,6 +3170,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR
                 });
+                mi->setParameter("depthHistory", depthHistory, SamplerParams{});  // nearest
                 mi->setParameter("alpha", taaOptions.feedback);
 
                 // jitter is negated here because the material wants the sample jitter offset
@@ -3139,6 +3197,47 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 mi->setParameter("historyResolution",
                         float4{ historyDesc.width, historyDesc.height,
                         1.0f / historyDesc.width, 1.0f / historyDesc.height });
+
+                mi->setParameter("motionDeltaThreshold", taaOptions.motionDeltaThreshold);
+                mi->setParameter("minBoxStrength", taaOptions.minBoxStrength);
+                mi->setParameter("minAlphaStrength", taaOptions.minAlphaStrength);
+                mi->setParameter("skyDepthThreshold", taaOptions.skyDepthThreshold);
+                // Ramp: 1.0 right after the camera stopped, 0.0 once the hold has fully expired.
+                float const motionHoldAmount = taaOptions.motionHoldFrames > 0.0f
+                        ? std::clamp(current.motionHoldRemaining / taaOptions.motionHoldFrames,
+                                0.0f, 1.0f)
+                        : 0.0f;
+                mi->setParameter("motionHoldAmount", motionHoldAmount);
+                mi->setParameter("disocclusionDepthThreshold", taaOptions.disocclusionDepthThreshold);
+                // Same sign convention as "jitter" above. With no depth history yet we compare
+                // the current depth buffer against itself, so the delta must be zero.
+                mi->setParameter("previousJitter",
+                        -(previous.depth.handle ? previous.jitter : current.jitter));
+                // AABB_VARIANCE's mean/stdDev statistic is computed in the shader from 9 RENDER-
+                // texel samples around p, but under upscaling p is shared by every output pixel
+                // in the same render texel (see p's own comment in taa.mat) -- so without this
+                // scaling, every one of those output pixels would get clamped to the same
+                // render-texel-granularity statistic, discarding whatever finer, output-
+                // resolution detail history had built up between them via temporal jitter
+                // accumulation. Same "fixed support in OUTPUT-pixel space" question the
+                // reconstruction filter answers by scaling its own kernel argument by this same
+                // taaOptions.upscaling factor (see lanczos2()'s scale parameter) -- the analogous
+                // fix here is widening the statistic's tolerance by that factor, since a render-
+                // texel-granularity stdDev systematically understates the plausible variation at
+                // output resolution by roughly that much. Scaled once here rather than per pixel
+                // in the shader, since it's the same value for the whole frame.
+                //
+                // Measured (taa_harness, DamagedHelmet.glb, 2:1, static -- i.e. no motion to
+                // mask it): unscaled, sharpness_mean drops from AABB's own 0.96 to 0.81 and
+                // edge_rmse_mean rises 44% -- visually, a loss of resolution, gone at 1:1 (where
+                // this scale factor is 1, a no-op) or with plain AABB (no statistic to mis-
+                // scale). Scaled, sharpness_mean recovers to 0.96, matching AABB almost exactly,
+                // while the camera regime (real motion) keeps most of VARIANCE's intended
+                // benefit over AABB (edge_rmse_mean 0.069 vs AABB's 0.072 at 2:1; unscaled had
+                // over-corrected that to 0.062, tighter than intended).
+                float const varianceGamma = taaOptions.varianceGamma *
+                        (taaOptions.upscaling > 1.0f ? taaOptions.upscaling : 1.0f);
+                mi->setParameter("varianceGamma", varianceGamma);
 
                 mi->commit(driver, getUboManager());
                 mi->use(driver);
@@ -3167,18 +3266,34 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 colorGradingConfig.translucent ? RcasMode::ALPHA_PASSTHROUGH : RcasMode::OPAQUE);
     }
 
-    struct ExportColorHistoryData {
+    struct ExportHistoryData {
         FrameGraphId<FrameGraphTexture> color;
+        FrameGraphId<FrameGraphTexture> depth;
     };
-    fg.addPass<ExportColorHistoryData>("Export TAA history",
+    fg.addPass<ExportHistoryData>("Export TAA history",
             [&](FrameGraph::Builder& builder, auto& data) {
                 // We need to use sideEffect here to ensure this pass won't be culled.
                 // The "output" of this pass is going to be used during the next frame as
                 // an "import".
                 builder.sideEffect();
                 data.color = builder.sample(history); // FIXME: an access must be declared for detach(), why?
+                // Export this frame's depth the same way, so next frame's disocclusion test (see the taa
+                // material) has something to compare its reprojected depth against. Note this is the
+                // current frame's own depth buffer (the "depth" parameter above, at render resolution),
+                // not the TAA output -- unlike color, there's no post-TAA "depth" to export.
+                //
+                // Only while depthDisocclusion is on: the detach() below costs a depth buffer's
+                // worth of memory that the frame graph can no longer recycle. When the feature is
+                // turned off, current.depth stays null and the last exported texture is released
+                // as it rolls off the history.
+                if (taaOptions.depthDisocclusion) {
+                    data.depth = builder.sample(depth);
+                }
             }, [&current](FrameGraphResources const& resources, auto const& data) {
                 resources.detach(data.color, &current.color, &current.desc);
+                if (data.depth) {
+                    resources.detach(data.depth, &current.depth, &current.depthDesc);
+                }
             });
 
     return input;

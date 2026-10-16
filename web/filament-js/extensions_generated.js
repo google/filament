@@ -165,9 +165,19 @@ Filament.loadGeneratedExtensions = function() {
             boxType: Filament.View$TemporalAntiAliasingOptions$BoxType.AABB,
             boxClipping: Filament.View$TemporalAntiAliasingOptions$BoxClipping.ACCURATE,
             jitterPattern: Filament.View$TemporalAntiAliasingOptions$JitterPattern.HALTON_23_X16,
-            varianceGamma: 1.0,
+            varianceGamma: 0.7,
             preventFlickering: false,
             historyReprojection: true,
+            motionAdaptiveHistory: false,
+            motionDeltaThreshold: 1.0,
+            minBoxStrength: 0.1,
+            minAlphaStrength: 0.3,
+            skyDepthThreshold: 0.001,
+            motionHoldFrames: 12.0,
+            depthDisocclusion: false,
+            disocclusionDepthThreshold: 0.001,
+            disocclusionHistoryNeighborhood: true,
+            exactLanczosSupport: false,
         };
         return Object.assign(options, overrides);
     };
