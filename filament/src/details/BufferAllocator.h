@@ -92,6 +92,9 @@ public:
 
     [[nodiscard]] allocation_size_t alignUp(allocation_size_t size) const noexcept;
 
+    // Size of a single slot in bytes. All allocations are multiples of this value.
+    [[nodiscard]] allocation_size_t getSlotSize() const noexcept { return mSlotSize; }
+
     [[nodiscard]] allocation_size_t getAllocationSize(AllocationId id) const;
 
     [[nodiscard]] static bool isValid(AllocationId id);
