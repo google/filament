@@ -1450,6 +1450,45 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
     auto spConfig = inputMat->specular;
     *baseColorTexture = mrConfig.base_color_texture;
     *metallicRoughnessTexture = mrConfig.metallic_roughness_texture;
+    if (inputMat->has_pbr_specular_glossiness) {
+        if (sgConfig.diffuse_texture.texture) {
+            *baseColorTexture = sgConfig.diffuse_texture;
+        }
+        if (sgConfig.specular_glossiness_texture.texture) {
+            *metallicRoughnessTexture = sgConfig.specular_glossiness_texture;
+        }
+    }
+
+    struct TextureSlot {
+        bool hasTexture;
+        uint8_t uv;
+    };
+    auto getTextureSlot = [inputMat](const cgltf_texture_view& tv) -> TextureSlot {
+        if (!tv.texture) {
+            return { false, 0 };
+        }
+        if (tv.texcoord < 0 || tv.texcoord >= UvMapSize) {
+            slog.e << "Invalid texture coordinate index " << tv.texcoord << " in material "
+                   << (inputMat->name ? inputMat->name : "unnamed")
+                   << ". Maximum supported index is " << (UvMapSize - 1) << "." << io::endl;
+            return { false, 0 };
+        }
+        return { true, static_cast<uint8_t>(tv.texcoord) };
+    };
+
+    const auto baseColorSlot = getTextureSlot(*baseColorTexture);
+    const auto normalSlot = getTextureSlot(inputMat->normal_texture);
+    const auto occlusionSlot = getTextureSlot(inputMat->occlusion_texture);
+    const auto emissiveSlot = getTextureSlot(inputMat->emissive_texture);
+    const auto clearCoatSlot = getTextureSlot(ccConfig.clearcoat_texture);
+    const auto clearCoatRoughnessSlot = getTextureSlot(ccConfig.clearcoat_roughness_texture);
+    const auto clearCoatNormalSlot = getTextureSlot(ccConfig.clearcoat_normal_texture);
+    const auto transmissionSlot = getTextureSlot(trConfig.transmission_texture);
+    const auto sheenColorSlot = getTextureSlot(shConfig.sheen_color_texture);
+    const auto sheenRoughnessSlot = getTextureSlot(shConfig.sheen_roughness_texture);
+    const auto volumeThicknessSlot = getTextureSlot(vlConfig.thickness_texture);
+    const auto specularSlot = getTextureSlot(spConfig.specular_texture);
+    const auto specularColorSlot = getTextureSlot(spConfig.specular_color_texture);
 
     bool hasTextureTransforms =
         sgConfig.diffuse_texture.has_transform ||
@@ -1472,58 +1511,54 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
         .doubleSided = !!inputMat->double_sided,
         .unlit = !!inputMat->unlit,
         .hasVertexColors = vertexColor,
-        .hasBaseColorTexture = baseColorTexture->texture != nullptr,
-        .hasNormalTexture = inputMat->normal_texture.texture != nullptr,
-        .hasOcclusionTexture = inputMat->occlusion_texture.texture != nullptr,
-        .hasEmissiveTexture = inputMat->emissive_texture.texture != nullptr,
+        .hasBaseColorTexture = baseColorSlot.hasTexture,
+        .hasNormalTexture = normalSlot.hasTexture,
+        .hasOcclusionTexture = occlusionSlot.hasTexture,
+        .hasEmissiveTexture = emissiveSlot.hasTexture,
         .enableDiagnostics = mDiagnosticsEnabled,
-        .baseColorUV = static_cast<uint8_t>(baseColorTexture->texcoord),
-        .hasClearCoatTexture = ccConfig.clearcoat_texture.texture != nullptr,
-        .clearCoatUV = static_cast<uint8_t>(ccConfig.clearcoat_texture.texcoord),
-        .hasClearCoatRoughnessTexture = ccConfig.clearcoat_roughness_texture.texture != nullptr,
-        .clearCoatRoughnessUV = static_cast<uint8_t>(ccConfig.clearcoat_roughness_texture.texcoord),
-        .hasClearCoatNormalTexture = ccConfig.clearcoat_normal_texture.texture != nullptr,
-        .clearCoatNormalUV = static_cast<uint8_t>(ccConfig.clearcoat_normal_texture.texcoord),
+        .baseColorUV = baseColorSlot.uv,
+        .hasClearCoatTexture = clearCoatSlot.hasTexture,
+        .clearCoatUV = clearCoatSlot.uv,
+        .hasClearCoatRoughnessTexture = clearCoatRoughnessSlot.hasTexture,
+        .clearCoatRoughnessUV = clearCoatRoughnessSlot.uv,
+        .hasClearCoatNormalTexture = clearCoatNormalSlot.hasTexture,
+        .clearCoatNormalUV = clearCoatNormalSlot.uv,
         .hasClearCoat = !!inputMat->has_clearcoat,
         .hasTransmission = !!inputMat->has_transmission,
         .hasTextureTransforms = hasTextureTransforms,
-        .emissiveUV = static_cast<uint8_t>(inputMat->emissive_texture.texcoord),
-        .aoUV = static_cast<uint8_t>(inputMat->occlusion_texture.texcoord),
-        .normalUV = static_cast<uint8_t>(inputMat->normal_texture.texcoord),
-        .hasTransmissionTexture = trConfig.transmission_texture.texture != nullptr,
-        .transmissionUV = static_cast<uint8_t>(trConfig.transmission_texture.texcoord),
-        .hasSheenColorTexture = shConfig.sheen_color_texture.texture != nullptr,
-        .sheenColorUV = static_cast<uint8_t>(shConfig.sheen_color_texture.texcoord),
-        .hasSheenRoughnessTexture = shConfig.sheen_roughness_texture.texture != nullptr,
-        .sheenRoughnessUV = static_cast<uint8_t>(shConfig.sheen_roughness_texture.texcoord),
-        .hasVolumeThicknessTexture = vlConfig.thickness_texture.texture != nullptr,
-        .volumeThicknessUV = static_cast<uint8_t>(vlConfig.thickness_texture.texcoord),
+        .emissiveUV = emissiveSlot.uv,
+        .aoUV = occlusionSlot.uv,
+        .normalUV = normalSlot.uv,
+        .hasTransmissionTexture = transmissionSlot.hasTexture,
+        .transmissionUV = transmissionSlot.uv,
+        .hasSheenColorTexture = sheenColorSlot.hasTexture,
+        .sheenColorUV = sheenColorSlot.uv,
+        .hasSheenRoughnessTexture = sheenRoughnessSlot.hasTexture,
+        .sheenRoughnessUV = sheenRoughnessSlot.uv,
+        .hasVolumeThicknessTexture = volumeThicknessSlot.hasTexture,
+        .volumeThicknessUV = volumeThicknessSlot.uv,
         .hasSheen = !!inputMat->has_sheen,
         .hasIOR = !!inputMat->has_ior,
         .hasVolume = !!inputMat->has_volume,
         .hasDispersion = !!inputMat->has_dispersion,
         .hasSpecular = !!inputMat->has_specular,
-        .hasSpecularTexture = spConfig.specular_texture.texture != nullptr,
-        .hasSpecularColorTexture = spConfig.specular_color_texture.texture != nullptr,
-        .specularTextureUV = static_cast<uint8_t>(spConfig.specular_texture.texcoord),
-        .specularColorTextureUV = static_cast<uint8_t>(spConfig.specular_color_texture.texcoord),
+        .hasSpecularTexture = specularSlot.hasTexture,
+        .hasSpecularColorTexture = specularColorSlot.hasTexture,
+        .specularTextureUV = specularSlot.uv,
+        .specularColorTextureUV = specularColorSlot.uv,
     };
 
     if (inputMat->has_pbr_specular_glossiness) {
         matkey.useSpecularGlossiness = true;
-        if (sgConfig.diffuse_texture.texture) {
-            *baseColorTexture = sgConfig.diffuse_texture;
-            matkey.hasBaseColorTexture = true;
-            matkey.baseColorUV = static_cast<uint8_t>(baseColorTexture->texcoord);
-        }
         if (sgConfig.specular_glossiness_texture.texture) {
-            *metallicRoughnessTexture = sgConfig.specular_glossiness_texture;
-            matkey.hasSpecularGlossinessTexture = true;
-            matkey.specularGlossinessUV = static_cast<uint8_t>(metallicRoughnessTexture->texcoord);
+            const auto sgSlot = getTextureSlot(*metallicRoughnessTexture);
+            matkey.hasSpecularGlossinessTexture = sgSlot.hasTexture;
+            matkey.specularGlossinessUV = sgSlot.uv;
         }
     } else {
-        matkey.hasMetallicRoughnessTexture = metallicRoughnessTexture->texture != nullptr;
-        matkey.metallicRoughnessUV = static_cast<uint8_t>(metallicRoughnessTexture->texcoord);
+        const auto mrSlot = getTextureSlot(*metallicRoughnessTexture);
+        matkey.hasMetallicRoughnessTexture = mrSlot.hasTexture;
+        matkey.metallicRoughnessUV = mrSlot.uv;
     }
 
     switch (inputMat->alpha_mode) {

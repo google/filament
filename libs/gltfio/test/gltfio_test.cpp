@@ -897,6 +897,66 @@ TEST_F(glTFIOTest, SkipsInverseBindMatricesOutsideBufferView) {
     fs::remove_all(root);
 }
 
+TEST_F(glTFIOTest, OutOfBoundsTexCoord) {
+    // 1. Direct constrainMaterial() call with out-of-bounds UV indices.
+    MaterialKey key = {};
+    key.hasBaseColorTexture = true;
+    key.baseColorUV = 24;
+    key.hasNormalTexture = true;
+    key.normalUV = 255;
+    key.hasOcclusionTexture = true;
+    key.aoUV = 40;
+
+    UvMap uvmap = {};
+    constrainMaterial(&key, &uvmap);
+
+    EXPECT_FALSE(key.hasBaseColorTexture);
+    EXPECT_EQ(key.baseColorUV, 0u);
+    EXPECT_FALSE(key.hasNormalTexture);
+    EXPECT_EQ(key.normalUV, 0u);
+    EXPECT_FALSE(key.hasOcclusionTexture);
+    EXPECT_EQ(key.aoUV, 0u);
+
+    // 2. Loading a glTF asset containing out-of-bounds, negative, and truncated texCoord values.
+    const std::string gltfJson = R"({
+      "asset": { "version": "2.0" },
+      "scenes": [{ "nodes": [0] }],
+      "nodes": [{ "mesh": 0 }],
+      "meshes": [{ "primitives": [{ "attributes": { "POSITION": 0 }, "material": 0 }] }],
+      "accessors": [{
+        "type": "VEC3",
+        "componentType": 5126,
+        "count": 3,
+        "bufferView": 0,
+        "min": [0, 0, 0],
+        "max": [1, 1, 0]
+      }],
+      "bufferViews": [{ "buffer": 0, "byteLength": 36 }],
+      "buffers": [{
+        "byteLength": 36,
+        "uri": "data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAA"
+      }],
+      "textures": [{}],
+      "materials": [{
+        "name": "OobMaterial",
+        "pbrMetallicRoughness": {
+          "baseColorTexture": { "index": 0, "texCoord": 24 },
+          "metallicRoughnessTexture": { "index": 0, "texCoord": 256 }
+        },
+        "normalTexture": { "index": 0, "texCoord": 255 },
+        "occlusionTexture": { "index": 0, "texCoord": -1 }
+      }]
+    })";
+
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    FilamentAsset* asset = assetLoader->createAsset(
+            reinterpret_cast<const uint8_t*>(gltfJson.data()), gltfJson.size());
+    ASSERT_NE(asset, nullptr);
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

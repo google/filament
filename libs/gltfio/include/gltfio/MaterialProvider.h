@@ -44,6 +44,9 @@ UTILS_WARNING_ENABLE_PADDED
  * \struct MaterialKey MaterialProvider.h gltfio/MaterialProvider.h
  * \brief Small POD structure that specifies the requirements for a glTF material.
  * \note This key is processed by MurmurHashFn so please make padding explicit.
+ * \note All texture coordinate index fields (*UV) represent indices into UvMap and must be strictly
+ *       less than UvMapSize (8). Caller-constructed keys with unvalidated UV indices should be
+ *       passed through constrainMaterial() before being used to index UvMap.
  */
 struct alignas(4) MaterialKey {
     // -- 32 bit boundary --
@@ -189,6 +192,13 @@ public:
     virtual bool needsDummyData(VertexAttribute attrib) const noexcept = 0;
 };
 
+/**
+ * Validates and constrains a MaterialKey in-place to enforce Filament's UV set limits,
+ * populating the given UvMap with the 1-based UV set mapping (0 means unused).
+ *
+ * Any out-of-bounds texture coordinate indices (*UV >= UvMapSize) are logged as errors,
+ * reset to 0, and their corresponding texture flags (has*Texture) are disabled.
+ */
 void constrainMaterial(MaterialKey* key, UvMap* uvmap);
 
 void processShaderString(std::string* shader, const UvMap& uvmap,
