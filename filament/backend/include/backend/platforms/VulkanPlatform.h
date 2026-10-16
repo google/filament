@@ -317,6 +317,16 @@ public:
     VkQueue getGraphicsQueue() const noexcept;
 
     /**
+     * @return The family index of the async queue selected for the Vulkan backend.
+    */
+    uint32_t getAsyncQueueFamilyIndex() const noexcept;
+
+    /**
+     * @return The index of the async queue
+     */
+    uint32_t getAsyncQueueIndex() const noexcept;
+
+    /**
      * @return The queue that was selected for the asynchronous backend operations.
      */
     VkQueue getAsyncQueue() const noexcept;
@@ -614,7 +624,7 @@ private:
     void createLogicalDeviceAndQueues(ExtensionSet const& deviceExtensions,
             VkPhysicalDeviceFeatures const& features,
             VkPhysicalDeviceVulkan11Features const& vk11Features, bool createProtectedQueue,
-            MiscDeviceFeatures const& requestedFeatures, bool createSecondGraphicsQueue) noexcept;
+            MiscDeviceFeatures const& requestedFeatures) noexcept;
 
     friend struct VulkanPlatformPrivate;
 };

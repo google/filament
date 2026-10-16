@@ -380,20 +380,55 @@ FixedCapacityVector<VkQueueFamilyProperties> getPhysicalDeviceQueueFamilyPropert
     return queueFamiliesProperties;
 }
 
-uint32_t identifyGraphicsQueueFamilyIndex(VkPhysicalDevice physicalDevice, VkQueueFlags flags) {
+uint32_t identifyQueueFamilyIndex(VkPhysicalDevice physicalDevice, VkQueueFlags flags) {
     FixedCapacityVector<VkQueueFamilyProperties> const queueFamiliesProperties
             = getPhysicalDeviceQueueFamilyPropertiesHelper(physicalDevice);
-    uint32_t graphicsQueueFamilyIndex = INVALID_VK_INDEX;
+    uint32_t queueFamilyIndex = INVALID_VK_INDEX;
     for (uint32_t j = 0; j < queueFamiliesProperties.size(); ++j) {
         VkQueueFamilyProperties props = queueFamiliesProperties[j];
         if (props.queueCount != 0 && props.queueFlags & flags) {
-            graphicsQueueFamilyIndex = j;
+            queueFamilyIndex = j;
             break;
         }
     }
-    return graphicsQueueFamilyIndex;
+    return queueFamilyIndex;
 }
 
+// The Async queue needs to be a different queue from the main graphics one
+// If there is more than one one virtual queue in the graphics family use the second as the Async
+// If not, use the next available queue that has the transfer property
+// If it does not exist either return INVALID_VK_INDEX
+std::pair<uint32_t, uint32_t> identifyAsyncQueue(VkPhysicalDevice physicalDevice) {
+    uint32_t asyncQueueFamilyIndex = INVALID_VK_INDEX;
+    uint32_t asyncQueueIndex = INVALID_VK_INDEX;
+
+    uint32_t const graphicsQueueFamilyIndex =
+        identifyQueueFamilyIndex(physicalDevice, VK_QUEUE_GRAPHICS_BIT);
+
+    FixedCapacityVector<VkQueueFamilyProperties> const queueFamiliesProperties
+            = getPhysicalDeviceQueueFamilyPropertiesHelper(physicalDevice);
+
+    for (uint32_t j = 0; j < queueFamiliesProperties.size(); ++j) {
+        VkQueueFamilyProperties props = queueFamiliesProperties[j];
+        // Async queue candidate must have the transfer property
+        if (props.queueFlags & VK_QUEUE_TRANSFER_BIT) {
+            // If this is not the same family as the graphics, use the first one
+            if (j != graphicsQueueFamilyIndex) {
+                asyncQueueFamilyIndex = j;
+                asyncQueueIndex = 0;
+            // In case is the graphics family, use the second if available
+            } else if (props.queueCount > 1) {
+                asyncQueueFamilyIndex = j;
+                asyncQueueIndex = 1;
+            }
+        }
+        if (asyncQueueIndex != INVALID_VK_INDEX) {
+            break;
+        }
+    }
+
+    return std::make_pair(asyncQueueFamilyIndex, asyncQueueIndex);
+}
 // Provide a preference ordering of device types.
 // Enum based on:
 // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceType.html
@@ -442,7 +477,7 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance,
         // Does the device have any command queues that support graphics?
         // In theory, we should also ensure that the device supports presentation of our
         // particular VkSurface, but we don't have a VkSurface yet, so we'll skip this requirement.
-        if (identifyGraphicsQueueFamilyIndex(candidateDevice, VK_QUEUE_GRAPHICS_BIT)
+        if (identifyQueueFamilyIndex(candidateDevice, VK_QUEUE_GRAPHICS_BIT)
             == INVALID_VK_INDEX) {
             continue;
         }
@@ -590,6 +625,8 @@ struct VulkanPlatformPrivate {
     uint32_t mGraphicsQueueFamilyIndex = INVALID_VK_INDEX;
     uint32_t mGraphicsQueueIndex = INVALID_VK_INDEX;
     VkQueue mGraphicsQueue = VK_NULL_HANDLE;
+    uint32_t mAsyncQueueFamilyIndex = INVALID_VK_INDEX;
+    uint32_t mAsyncQueueIndex = INVALID_VK_INDEX;
     VkQueue mAsyncQueue = VK_NULL_HANDLE;
     uint32_t mProtectedGraphicsQueueFamilyIndex = INVALID_VK_INDEX;
     uint32_t mProtectedGraphicsQueueIndex = INVALID_VK_INDEX;
@@ -722,7 +759,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // Initialize the required queues
     if (mImpl->mGraphicsQueueFamilyIndex == INVALID_VK_INDEX) {
         mImpl->mGraphicsQueueFamilyIndex =
-                identifyGraphicsQueueFamilyIndex(mImpl->mPhysicalDevice, VK_QUEUE_GRAPHICS_BIT);
+                identifyQueueFamilyIndex(mImpl->mPhysicalDevice, VK_QUEUE_GRAPHICS_BIT);
     }
 
     // At this point, we should have a family index that points to a family that has > 0 queues for
@@ -734,7 +771,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     }
 
     if (context.mProtectedMemorySupported) {
-        mImpl->mProtectedGraphicsQueueFamilyIndex = identifyGraphicsQueueFamilyIndex(
+        mImpl->mProtectedGraphicsQueueFamilyIndex = identifyQueueFamilyIndex(
                 mImpl->mPhysicalDevice, (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_PROTECTED_BIT));
         // Applying the same logic to the protected queue index (Not sure about shared context and
         // protection)
@@ -759,13 +796,10 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         requestedFeatures.gpuContextPriority = driverConfig.gpuContextPriority;
     }
 
-    auto queues = getPhysicalDeviceQueueFamilyPropertiesHelper(getPhysicalDevice());
-    const size_t graphicsQueuesCount = queues[mImpl->mGraphicsQueueFamilyIndex].queueCount;
-
     if (mImpl->mDevice == VK_NULL_HANDLE) {
         createLogicalDeviceAndQueues(deviceExts, context.mPhysicalDeviceFeatures.features,
                 context.mPhysicalDeviceVk11Features, context.mProtectedMemorySupported,
-                requestedFeatures, graphicsQueuesCount > 1);
+                requestedFeatures);
     }
 
     assert_invariant(mImpl->mDevice != VK_NULL_HANDLE);
@@ -776,9 +810,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
             &mImpl->mGraphicsQueue);
     assert_invariant(mImpl->mGraphicsQueue != VK_NULL_HANDLE);
 
-    if (graphicsQueuesCount > 1) {
-        // If we have more than one graphical queue, use one as the async queue
-        vkGetDeviceQueue(mImpl->mDevice, mImpl->mGraphicsQueueFamilyIndex, mImpl->mGraphicsQueueIndex + 1,
+    if (mImpl->mAsyncQueueFamilyIndex != INVALID_VK_INDEX) {
+        vkGetDeviceQueue(mImpl->mDevice, mImpl->mAsyncQueueFamilyIndex, mImpl->mAsyncQueueIndex,
             &mImpl->mAsyncQueue);
     }
 
@@ -927,6 +960,14 @@ uint32_t VulkanPlatform::getGraphicsQueueIndex() const noexcept {
 
 VkQueue VulkanPlatform::getGraphicsQueue() const noexcept {
     return mImpl->mGraphicsQueue;
+}
+
+uint32_t VulkanPlatform::getAsyncQueueFamilyIndex() const noexcept {
+    return mImpl->mAsyncQueueFamilyIndex;
+}
+
+uint32_t VulkanPlatform::getAsyncQueueIndex() const noexcept {
+    return mImpl->mAsyncQueueIndex;
 }
 
 VkQueue VulkanPlatform::getAsyncQueue() const noexcept {
@@ -1212,21 +1253,27 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
 void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExtensions,
         VkPhysicalDeviceFeatures const& features,
         VkPhysicalDeviceVulkan11Features const& vk11Features, bool createProtectedQueue,
-        MiscDeviceFeatures const& requestedFeatures, bool createSecondGraphicsQueue) noexcept {
+        MiscDeviceFeatures const& requestedFeatures) noexcept {
 
     // Identify and select all the required queues
     mImpl->mGraphicsQueueFamilyIndex =
-            identifyGraphicsQueueFamilyIndex(mImpl->mPhysicalDevice, VK_QUEUE_GRAPHICS_BIT);
+            identifyQueueFamilyIndex(mImpl->mPhysicalDevice, VK_QUEUE_GRAPHICS_BIT);
     assert_invariant(mImpl->mGraphicsQueueFamilyIndex != INVALID_VK_INDEX);
     mImpl->mGraphicsQueueIndex = 0;
 
+    const auto asyncQueueDetails= identifyAsyncQueue(getPhysicalDevice());
+    mImpl->mAsyncQueueFamilyIndex = asyncQueueDetails.first;
+    mImpl->mAsyncQueueIndex = asyncQueueDetails.second;
+    bool const hasAsyncQueue = mImpl->mAsyncQueueFamilyIndex != INVALID_VK_INDEX;
+
     if (createProtectedQueue) {
-        mImpl->mProtectedGraphicsQueueFamilyIndex = identifyGraphicsQueueFamilyIndex(
+        mImpl->mProtectedGraphicsQueueFamilyIndex = identifyQueueFamilyIndex(
                 mImpl->mPhysicalDevice, (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_PROTECTED_BIT));
         mImpl->mProtectedGraphicsQueueIndex = 0;
     }
+    bool const hasProtectedQueue = mImpl->mProtectedGraphicsQueueFamilyIndex != INVALID_VK_INDEX;
 
-    float queuePriority[] = { 1.0f, 1.0f };
+    float queuePriority[] = { 1.0f };
     VkDeviceCreateInfo deviceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
     };
@@ -1246,21 +1293,34 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
         .globalPriority = getVkQueueGlobalPriority(requestedFeatures.gpuContextPriority),
     };
 
-    VkDeviceQueueCreateInfo deviceQueueCreateInfo[2] = {};
-    deviceQueueCreateInfo[0] = {
+    std::vector<VkDeviceQueueCreateInfo> queuesCreateInfos;
+    // Graphics queue
+    VkDeviceQueueCreateInfo graphicsQueueCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
         .pNext = requiresGpuPriority ? &queuePriorityCreateInfo : nullptr,
         .queueFamilyIndex = mImpl->mGraphicsQueueFamilyIndex,
-        .queueCount = (createSecondGraphicsQueue ? 2u : 1u),
+        .queueCount = 1,
         .pQueuePriorities = &queuePriority[0],
     };
-    // Protected queue
-    deviceQueueCreateInfo[1] = deviceQueueCreateInfo[0];
-    deviceQueueCreateInfo[1].flags = VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT;
+    queuesCreateInfos.push_back(graphicsQueueCreateInfo);
 
-    bool const hasProtectedQueue = mImpl->mProtectedGraphicsQueueFamilyIndex != INVALID_VK_INDEX;
-    deviceCreateInfo.queueCreateInfoCount = hasProtectedQueue ? 2 : 1;
-    deviceCreateInfo.pQueueCreateInfos = deviceQueueCreateInfo;
+    // Protected queue
+    if (hasProtectedQueue) {
+        VkDeviceQueueCreateInfo protectedQueueCreateInfo = graphicsQueueCreateInfo;
+        protectedQueueCreateInfo.queueFamilyIndex = mImpl->mProtectedGraphicsQueueFamilyIndex;
+        protectedQueueCreateInfo.flags = VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT;
+        queuesCreateInfos.push_back(protectedQueueCreateInfo);
+    }
+
+    // Async queue
+    if (hasAsyncQueue) {
+        VkDeviceQueueCreateInfo asyncQueueCreateInfo = graphicsQueueCreateInfo;
+        asyncQueueCreateInfo.queueFamilyIndex = mImpl->mAsyncQueueFamilyIndex;
+        queuesCreateInfos.push_back(asyncQueueCreateInfo);
+    }
+
+    deviceCreateInfo.queueCreateInfoCount = queuesCreateInfos.size();
+    deviceCreateInfo.pQueueCreateInfos = queuesCreateInfos.data();
 
     // We could simply enable all supported features, but since that may have performance
     // consequences let's just enable the features we need.
