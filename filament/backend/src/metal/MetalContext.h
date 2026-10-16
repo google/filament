@@ -28,11 +28,13 @@
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h>
 
+#include <utils/compiler.h>
 #include <utils/FixedCircularBuffer.h>
 #include <utils/Mutex.h>
 
 #include <array>
 #include <atomic>
+#include <memory>
 #include <stack>
 
 #if defined(FILAMENT_METAL_PROFILING)
@@ -48,8 +50,9 @@ namespace backend {
 class MetalDriver;
 
 struct DriverLifetimeTracker {
+    explicit DriverLifetimeTracker(MetalDriver* driver) noexcept : driver(driver) {}
     utils::Mutex mutex;
-    MetalDriver* driver = nullptr;
+    MetalDriver* driver UTILS_GUARDED_BY(mutex) = nullptr;
 };
 
 class MetalBlitter;

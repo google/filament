@@ -41,6 +41,7 @@
 #include <utils/ImmutableCString.h>
 #include <utils/Invocable.h>
 #include <utils/Logger.h>
+#include <utils/Mutex.h>
 #include <utils/Panic.h>
 #include <utils/sstream.h>
 
@@ -131,8 +132,7 @@ MetalDriver::MetalDriver(PlatformMetal* platform,
           mStereoscopicType(driverConfig.stereoscopicType),
           mAsynchronousMode(driverConfig.asynchronousMode) {
     mContext->driver = this;
-    mContext->driverLifetimeTracker = std::make_shared<DriverLifetimeTracker>();
-    mContext->driverLifetimeTracker->driver = this;
+    mContext->driverLifetimeTracker = std::make_shared<DriverLifetimeTracker>(this);
 
     TrackedMetalBuffer::setPlatform(platform);
     ScopedAllocationTimer::setPlatform(platform);
@@ -1656,8 +1656,17 @@ void MetalDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuffe
                 ib->buffer.copyIntoBuffer(cmdBuffer, data.buffer, data.size, byteOffset,
                         [&tag]() { return tag.c_str_safe(); });
 
+                std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime =
+                        mContext->driverLifetimeTracker;
                 [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-                  completion->schedule(AsyncCallStatus::COMPLETED);
+                  if (auto driverTracker = weakDriverLifetime.lock()) {
+                      utils::LockGuard const lock(driverTracker->mutex);
+                      if (driverTracker->driver) {
+                          completion->schedule(AsyncCallStatus::COMPLETED);
+                          return;
+                      }
+                  }
+                  completion->abandon();
                 }];
 
                 [cmdBuffer commit];
@@ -1705,8 +1714,17 @@ void MetalDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferObj
                 bo->getBuffer()->copyIntoBuffer(cmdBuffer, data.buffer, data.size, byteOffset,
                         [&tag]() { return tag.c_str_safe(); });
 
+                std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime =
+                        mContext->driverLifetimeTracker;
                 [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-                  completion->schedule(AsyncCallStatus::COMPLETED);
+                  if (auto driverTracker = weakDriverLifetime.lock()) {
+                      utils::LockGuard const lock(driverTracker->mutex);
+                      if (driverTracker->driver) {
+                          completion->schedule(AsyncCallStatus::COMPLETED);
+                          return;
+                      }
+                  }
+                  completion->abandon();
                 }];
 
                 [cmdBuffer commit];
@@ -1793,8 +1811,17 @@ void MetalDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th, u
                 tex->loadImage(cmdBuffer, level,
                         MTLRegionMake3D(xoffset, yoffset, zoffset, width, height, depth), data);
 
+                std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime =
+                        mContext->driverLifetimeTracker;
                 [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-                  completion->schedule(AsyncCallStatus::COMPLETED);
+                  if (auto driverTracker = weakDriverLifetime.lock()) {
+                      utils::LockGuard const lock(driverTracker->mutex);
+                      if (driverTracker->driver) {
+                          completion->schedule(AsyncCallStatus::COMPLETED);
+                          return;
+                      }
+                  }
+                  completion->abandon();
                 }];
 
                 [cmdBuffer commit];
@@ -2129,20 +2156,28 @@ void MetalDriver::readTextureCommon(id<MTLTexture> srcTexture, uint8_t level, ui
 #endif
 
     PixelBufferDescriptor* p = new PixelBufferDescriptor(std::move(data));
+    std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime = mContext->driverLifetimeTracker;
     [getPendingCommandBuffer(mContext) addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-        size_t stride = p->stride ? p->stride : width;
-        size_t bpp = PixelBufferDescriptor::computeDataSize(p->format, p->type, 1, 1, 1);
-        size_t bpr = PixelBufferDescriptor::computeDataSize(p->format, p->type, stride, 1, p->alignment);
-        // Metal's texture coordinates have (0, 0) at the top-left of the texture, but readPixels
-        // assumes (0, 0) at bottom-left.
-        MTLRegion srcRegion = MTLRegionMake2D(x, readPixelsTexture.height - y - height, width, height);
-        const uint8_t* bufferStart = (const uint8_t*) p->buffer + (p->left * bpp) +
-                                                                  (p->top * bpr);
+        const size_t stride = p->stride ? p->stride : width;
+        const size_t bpp = PixelBufferDescriptor::computeDataSize(p->format, p->type, 1, 1, 1);
+        const size_t bpr = PixelBufferDescriptor::computeDataSize(
+                p->format, p->type, stride, 1, p->alignment);
+        // Metal's texture coordinates have (0, 0) at the top-left of the texture, but
+        // readPixels assumes (0, 0) at bottom-left.
+        const MTLRegion srcRegion =
+                MTLRegionMake2D(x, readPixelsTexture.height - y - height, width, height);
+        const uint8_t* const bufferStart =
+                (const uint8_t*) p->buffer + (p->left * bpp) + (p->top * bpr);
         [readPixelsTexture getBytes:(void*) bufferStart
                         bytesPerRow:bpr
                          fromRegion:srcRegion
                         mipmapLevel:0];
-        scheduleDestroy(std::move(*p));
+        if (auto driverTracker = weakDriverLifetime.lock()) {
+            utils::LockGuard const lock(driverTracker->mutex);
+            if (driverTracker->driver) {
+                driverTracker->driver->scheduleDestroy(std::move(*p));
+            }
+        }
         delete p;
     }];
 }
