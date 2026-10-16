@@ -24,6 +24,7 @@
 #include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/Panic.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -636,13 +637,23 @@ bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped)
 
     const auto freeFunc = [](void* buffer,
             UTILS_UNUSED size_t size, UTILS_UNUSED void* user) { free(buffer); };
+    // 4 * data.size wraps on 32-bit targets. DataReshaper divides first, so it would write past
+    // the undersized buffer.
+    FILAMENT_CHECK_PRECONDITION(data.size <= SIZE_MAX / 4)
+            << "reshape() source buffer is too large (size=" << data.size << ")";
     const size_t reshapedSize = 4 * data.size / 3;
+    const auto allocate = [reshapedSize]() {
+        auto* const bytes = static_cast<uint8_t*>(malloc(reshapedSize));
+        FILAMENT_CHECK_POSTCONDITION(bytes || !reshapedSize)
+                << "reshape() failed to allocate " << reshapedSize << " bytes";
+        return bytes;
+    };
     const PixelDataFormat reshapedFormat =
         data.format == PixelDataFormat::RGB ? PixelDataFormat::RGBA : PixelDataFormat::RGBA_INTEGER;
     switch (data.type) {
         case PixelDataType::BYTE:
         case PixelDataType::UBYTE: {
-            uint8_t* bytes = static_cast<uint8_t*>(malloc(reshapedSize));
+            uint8_t* bytes = allocate();
             DataReshaper::reshape<uint8_t, 3, 4>(bytes, data.buffer, data.size);
             PixelBufferDescriptor pbd(bytes, reshapedSize, reshapedFormat, data.type,
                     data.alignment, data.left, data.top, data.stride, freeFunc);
@@ -652,7 +663,7 @@ bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped)
         case PixelDataType::SHORT:
         case PixelDataType::USHORT:
         case PixelDataType::HALF: {
-            uint8_t* bytes = static_cast<uint8_t*>(malloc(reshapedSize));
+            uint8_t* bytes = allocate();
             DataReshaper::reshape<uint16_t, 3, 4>(bytes, data.buffer, data.size);
             PixelBufferDescriptor pbd(bytes, reshapedSize, reshapedFormat, data.type,
                     data.alignment, data.left, data.top, data.stride, freeFunc);
@@ -661,7 +672,7 @@ bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped)
         }
         case PixelDataType::INT:
         case PixelDataType::UINT: {
-            uint8_t* bytes = static_cast<uint8_t*>(malloc(reshapedSize));
+            uint8_t* bytes = allocate();
             DataReshaper::reshape<uint32_t, 3, 4>(bytes, data.buffer, data.size);
             PixelBufferDescriptor pbd(bytes, reshapedSize, reshapedFormat, data.type,
                     data.alignment, data.left, data.top, data.stride, freeFunc);
@@ -669,7 +680,7 @@ bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped)
             return true;
         }
         case PixelDataType::FLOAT: {
-            uint8_t* bytes = static_cast<uint8_t*>(malloc(reshapedSize));
+            uint8_t* bytes = allocate();
             DataReshaper::reshape<float, 3, 4>(bytes, data.buffer, data.size);
             PixelBufferDescriptor pbd(bytes, reshapedSize, reshapedFormat, data.type,
                     data.alignment, data.left, data.top, data.stride, freeFunc);
