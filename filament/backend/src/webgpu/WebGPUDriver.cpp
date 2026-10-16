@@ -236,6 +236,10 @@ void WebGPUDriver::flush(int) {
 }
 
 void WebGPUDriver::finish(int /* dummy */) {
+    if (getJobWorker()) {
+        getJobWorker()->drain();
+    }
+
     mQueueManager.finish();
     mPipelineState = {};
 
@@ -1239,9 +1243,10 @@ void WebGPUDriver::updateIndexBufferAsyncR(AsyncCallId jobId,
         AsyncCallback const callback, void* user) {
     assert_invariant(getJobQueue());
     promoteToAsync(handleCast<WebGPUIndexBuffer>(indexBufferHandle));
-    getJobQueue()->push([this, indexBufferHandle, bufferDescriptor = std::move(bufferDescriptor),
-            byteOffset, completion = AsyncCompletion(this, handler, callback, user)]() mutable {
-        updateIndexBuffer(indexBufferHandle, std::move(bufferDescriptor), byteOffset);
+    getJobQueue()->push([this, indexBufferHandle, byteOffset,
+            bufferRelease = AsyncBufferRelease(this, std::move(bufferDescriptor)),
+            completion = AsyncCompletion(this, handler, callback, user)]() mutable {
+        updateIndexBuffer(indexBufferHandle, bufferRelease.detach(), byteOffset);
         completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
@@ -1258,9 +1263,10 @@ void WebGPUDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferOb
         AsyncCallback const callback, void* user) {
     assert_invariant(getJobQueue());
     promoteToAsync(handleCast<WebGPUBufferObject>(bufferObjectHandle));
-    getJobQueue()->push([this, bufferObjectHandle, bufferDescriptor = std::move(bufferDescriptor),
-            byteOffset, completion = AsyncCompletion(this, handler, callback, user)]() mutable {
-        updateBufferObject(bufferObjectHandle, std::move(bufferDescriptor), byteOffset);
+    getJobQueue()->push([this, bufferObjectHandle, byteOffset,
+            bufferRelease = AsyncBufferRelease(this, std::move(bufferDescriptor)),
+            completion = AsyncCompletion(this, handler, callback, user)]() mutable {
+        updateBufferObject(bufferObjectHandle, bufferRelease.detach(), byteOffset);
         completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
@@ -1451,10 +1457,10 @@ void WebGPUDriver::update3DImageAsyncR(AsyncCallId jobId,
     assert_invariant(getJobQueue());
     promoteToAsync(handleCast<WebGPUTexture>(textureHandle));
     getJobQueue()->push([this, textureHandle, level, xoffset, yoffset, zoffset, width, height,
-            depth, pixelBufferDescriptor = std::move(pixelBufferDescriptor),
+            depth, bufferRelease = AsyncBufferRelease(this, std::move(pixelBufferDescriptor)),
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         update3DImage(textureHandle, level, xoffset, yoffset, zoffset, width, height, depth,
-                std::move(pixelBufferDescriptor));
+                bufferRelease.detach());
         completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
