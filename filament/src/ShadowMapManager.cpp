@@ -160,7 +160,10 @@ void ShadowMapManager::updateShadowUbo(FEngine const& engine, FView const& view,
     auto const li = lcm.getInstance(shadowMap.getLightEntity());
 
     float const effectiveBulbRadius = lcm.getEffectiveBulbRadius(li);
-    float2 const normalBias = options.normalBias * shaderParameters.texelSizeAtOneMeterWs;
+    float const wsTexelSizeAtOneMeter = std::max(
+            shaderParameters.texelSizeAtOneMeterWs.x,
+            shaderParameters.texelSizeAtOneMeterWs.y);
+    float const normalBias = options.normalBias * wsTexelSizeAtOneMeter;
     float const bulbRadius = (mSoftShadowOptions.penumbraScale * options.penumbraScale) * effectiveBulbRadius;
 
     const float cw = computeDynamicVsmExponent(
@@ -231,7 +234,7 @@ void ShadowMapManager::updateShadowUbo(FEngine const& engine, FView const& view,
                 options.maxPenumbraRatio : mSoftShadowOptions.maxPenumbraRatio;
         const float penumbraRatioScale =
                 options.penumbraRatioScale * mSoftShadowOptions.penumbraRatioScale;
-        s.shadows[shadowIndex].normalBias = float2{0.0f};
+        s.shadows[shadowIndex].normalBias = 0.0f;
         s.shadows[shadowIndex].maxPenumbraRatio_penumbraRatioScale = packHalf2x16(
                 { resolvedMaxPenumbraRatio, penumbraRatioScale });
     } else {
