@@ -89,6 +89,9 @@ public:
                 // Allow the usage of dynamic state when creating pipelines. This will reduce
                 // the pipeline count and compilation related hitching.
                 bool enable_pipeline_dynamic_state = false;
+                // Allow the eviction of pipelines from the cache based on some user controlled
+                // but backend defined heuristics.
+                bool enable_pipeline_cache_eviction = false;
             } vulkan;
             bool disable_parallel_shader_compile = false;
             bool disable_amortized_shader_compile = true;

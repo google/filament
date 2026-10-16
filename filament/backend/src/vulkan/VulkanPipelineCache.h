@@ -297,6 +297,9 @@ private:
     bool const mHasDynamicState2;
     bool const mHasColorWriteEnable;
 
+    // Cached context capabilities for pipeline cache eviction
+    bool const mPipelineCacheEvictionEnabled;
+
     [[maybe_unused]] VulkanContext const& mContext;
 
     // Name of the bound program, used for perfetto tracing.

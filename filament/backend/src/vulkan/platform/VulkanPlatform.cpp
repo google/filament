@@ -1170,6 +1170,10 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
             (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
                                                        .vulkan.enable_pipeline_dynamic_state
                                              : false);
+    context.mPipelineCacheEvictionEnabled =
+            (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
+                                                       .vulkan.enable_pipeline_cache_eviction
+                                             : false);
 
     // We know we need to allocate the protected version of the VK objects
     context.mProtectedMemorySupported =
