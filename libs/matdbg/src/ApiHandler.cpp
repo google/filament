@@ -185,7 +185,7 @@ bool ApiHandler::handleGetApiShader(struct mg_connection* conn,
                     (uint32_t const*) content.data(), content.size() / 4);
             std::string const shader = mFormatter.format((char const*) glsl.c_str());
             mg_printf(conn, kSuccessHeader.data(), "application/txt");
-            mg_printf(conn, shader.c_str(), shader.size());
+            mg_write(conn, shader.c_str(), shader.size());
             return true;
         }
 
