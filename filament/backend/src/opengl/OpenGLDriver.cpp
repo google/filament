@@ -2531,6 +2531,7 @@ void OpenGLDriver::destroySwapChain(Handle<HwSwapChain> sch) {
 
     if (sch) {
         GLSwapChain const* sc = handle_cast<GLSwapChain*>(sch);
+        getBackendState().unbindFramebuffer(GL_FRAMEBUFFER);
         mPlatform.destroySwapChain(sc->swapChain);
         destruct(sch, sc);
     }
@@ -3284,6 +3285,8 @@ void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> 
 
     GLSwapChain* scDraw = handle_cast<GLSwapChain*>(schDraw);
     GLSwapChain const* scRead = handle_cast<GLSwapChain*>(schRead);
+
+    getBackendState().unbindFramebuffer(GL_FRAMEBUFFER);
 
     mPlatform.makeCurrent(scDraw->swapChain, scRead->swapChain,
             [this]() {

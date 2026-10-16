@@ -876,6 +876,7 @@ PlatformEGL::SwapChainEGL::SwapChainEGL(PlatformEGL const& platform,
 
 void PlatformEGL::SwapChainEGL::terminate(PlatformEGL& platform) {
     if (sur != EGL_NO_SURFACE) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         // - if EGL_KHR_surfaceless_context is supported, mEGLDummySurface is EGL_NO_SURFACE.
         // - this is actually a bit too aggressive, but it is a rare operation.
         platform.egl.makeCurrent(platform.mEGLDummySurface, platform.mEGLDummySurface);
