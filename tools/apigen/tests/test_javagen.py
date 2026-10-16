@@ -3410,6 +3410,73 @@ class TestJavaGen(unittest.TestCase):
         self.assertNotIn("nGetNativeWindow", jni_src)
         self.assertIn("Java_com_google_android_filament_CustomView_nRender", jni_src)
 
+    def test_retained_lazy_references_annotation(self):
+        """Verify that apigen:retained_lazy getters fall back to JNI when no parent was supplied."""
+        from tools.apigen.javagen import JavaEmitter, JniEmitter, ClassContext
+
+        test_ir = {
+            "name": "CustomInstance",
+            "qualified_name": "filament::CustomInstance",
+            "category": "class",
+            "archetype": "handle",
+            "fields": [],
+            "enums": [],
+            "methods": [
+                {
+                    "name": "getMaterial",
+                    "qualified_name": "getMaterial()",
+                    "is_const": True,
+                    "attributes": ["filament:apigen:retained_lazy"],
+                    "return_type": {
+                        "cpp_name": "const Material *",
+                        "qualified_name": "const filament::Material *",
+                        "category": "pointer",
+                        "is_pointer": True,
+                        "nullability": "nonnull",
+                    },
+                    "arguments": [],
+                    "doc": {"brief": "Returns associated Material."}
+                },
+            ]
+        }
+
+        ctx = ClassContext(test_ir, "filament/CustomInstance.h")
+        self.assertTrue(ctx.retained_references["getMaterial"]["is_lazy"])
+
+        java_src = JavaEmitter(ctx).generate_java()
+
+        # 1. Non-final nullable field, plus the parent's native pointer resolved at construction
+        self.assertIn("private @Nullable Material mMaterial;", java_src)
+        self.assertNotIn("private final @Nullable Material mMaterial;", java_src)
+        self.assertIn("private final long mNativeMaterial;", java_src)
+
+        # 2. Canonical constructor accepts null and resolves the native pointer through JNI if
+        #    needed, plus a single-argument package constructor
+        self.assertIn("CustomInstance(long nativeObject, @Nullable Material material) {", java_src)
+        self.assertIn(
+            "        mNativeMaterial = material != null ? material.getNativeObject() : nGetMaterial(nativeObject);",
+            java_src)
+        self.assertIn("/* package */ CustomInstance(long nativeObject) {\n        this(nativeObject, null);", java_src)
+        self.assertIn("public static CustomInstance wrap(long nativeObject) {", java_src)
+
+        # 3. Getter honors C++ nullability and lazily wraps the stored native pointer
+        self.assertIn(
+            "    @NonNull\n"
+            "    public Material getMaterial() {\n"
+            "        if (mMaterial == null) {\n"
+            "            if (mNativeMaterial == 0) throw new IllegalStateException(\"Couldn't get Material\");\n"
+            "            mMaterial = new Material(mNativeMaterial);\n"
+            "        }\n"
+            "        return mMaterial;\n"
+            "    }",
+            java_src)
+
+        # 4. Native declaration and JNI bridge are emitted
+        self.assertIn("private static native long nGetMaterial(long nativeCustomInstance);", java_src)
+        jni_src = JniEmitter(ctx).generate_jni()
+        self.assertIn("Java_com_google_android_filament_CustomInstance_nGetMaterial", jni_src)
+        self.assertIn("->getMaterial()", jni_src)
+
     def test_handle_wrap_factory_and_package_private_constructor(self):
         """Verify that handle classes generate package-private constructors and @RestrictTo wrap factories."""
         from tools.apigen.javagen import JavaEmitter, ClassContext
