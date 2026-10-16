@@ -103,7 +103,7 @@ void reshapeImageImpl(uint8_t* UTILS_RESTRICT dest, const uint8_t* UTILS_RESTRIC
         const srcComponentType* in = (const srcComponentType*) src;
         dstComponentType* out = (dstComponentType*) dest + (dstColumnOffset * dstChannelCount);
         for (size_t column = 0; column < width; ++column) {
-            for (uint8_t channel = 0; channel < minChannelCount; ++channel) {
+            for (size_t channel = 0; channel < minChannelCount; ++channel) {
                 if constexpr (std::is_same_v<dstComponentType, srcComponentType>) {
                     out[channel] = in[inds[channel]];
                 } else {

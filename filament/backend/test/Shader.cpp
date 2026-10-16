@@ -25,10 +25,10 @@ using namespace filament::backend;
 
 Shader::Shader(DriverApi& api, Cleanup& cleanup, ShaderConfig config) : mCleanup(cleanup) {
     utils::FixedCapacityVector<DescriptorSetLayoutDescriptor> kLayouts(config.uniforms.size());
-    for (unsigned char i = 0; i < config.uniforms.size(); ++i) {
+    for (size_t i = 0; i < config.uniforms.size(); ++i) {
         kLayouts[i] = {
                 config.uniforms[i].type.value_or(DescriptorType::UNIFORM_BUFFER),
-                ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, i };
+                ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, static_cast<uint8_t>(i) };
     }
 
     // This assumes that the uniforms will all be in a single descriptor set at index 1.
@@ -37,7 +37,7 @@ Shader::Shader(DriverApi& api, Cleanup& cleanup, ShaderConfig config) : mCleanup
     size_t kDescriptorSetIndex = 0;
     filamat::DescriptorSets descriptors;
     descriptors[kDescriptorSetIndex] = filamat::DescriptorSetInfo(config.uniforms.size());
-    for (unsigned char i = 0; i < config.uniforms.size(); ++i) {
+    for (size_t i = 0; i < config.uniforms.size(); ++i) {
         descriptors[kDescriptorSetIndex][i] = {
                 config.uniforms[i].name, kLayouts[i], config.uniforms[i].samplerInfo };
     }
@@ -49,10 +49,11 @@ Shader::Shader(DriverApi& api, Cleanup& cleanup, ShaderConfig config) : mCleanup
     Program prog = shaderGen.getProgram(api);
 
     Program::DescriptorBindingsInfo bindingsInfo(config.uniforms.size());
-    for (unsigned char i = 0; i < config.uniforms.size(); ++i) {
+    for (size_t i = 0; i < config.uniforms.size(); ++i) {
         bindingsInfo[i] = {
                 config.uniforms[i].name,
-                config.uniforms[i].type.value_or(DescriptorType::UNIFORM_BUFFER), i };
+                config.uniforms[i].type.value_or(DescriptorType::UNIFORM_BUFFER),
+                static_cast<uint8_t>(i) };
     }
     prog.descriptorBindings(0, bindingsInfo);
     mProgram = cleanup.add(api.createProgram(std::move(prog)));

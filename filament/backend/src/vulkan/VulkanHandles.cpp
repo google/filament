@@ -565,7 +565,7 @@ void VulkanVertexBuffer::setBuffer(fvkmemory::resource_ptr<VulkanBufferObject> b
     size_t const count = vbi->getAttributeCount();
     VkBuffer* const vkbuffers = getVkBuffers();
     int8_t const* const attribToBuffer = vbi->getAttributeToBuffer();
-    for (uint8_t attribIndex = 0; attribIndex < count; attribIndex++) {
+    for (size_t attribIndex = 0; attribIndex < count; attribIndex++) {
         if (attribToBuffer[attribIndex] == static_cast<int8_t>(index)) {
             vkbuffers[attribIndex] = bufferObject->getVkBuffer();
             mAttributes.set(attribIndex);
