@@ -345,7 +345,6 @@ TEST_F(BackendTest, CanceledSetVertexBufferObjectAsyncInvokesCallback) {
 // waiting for the creation callback, and the draw still has to see the buffer.
 TEST_F(BackendTest, SetVertexBufferObjectAsyncBeforeBufferObjectCreated) {
     SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
-    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
 
     constexpr size_t kRenderTargetSize = 64;
 
@@ -571,7 +570,6 @@ TEST_F(BackendTest, DestroyAfterAsyncUpdatePreservesFifo) {
 // names hands that one out. A driver that never reuses names passes without reaching the bug.
 TEST_F(BackendTest, DestroyAfterAsyncUpdateDoesNotLeaveStaleTextureBinding) {
     SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
-    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
 
     constexpr size_t kRenderTargetSize = 16;
     constexpr uint32_t kRed = 0xFF0000FF;
@@ -704,7 +702,6 @@ TEST_F(BackendTest, DestroyAfterAsyncUpdateDoesNotLeaveStaleTextureBinding) {
 // empty buffer to the draw.
 TEST_F(BackendTest, DestroyAfterAsyncUpdateDoesNotLeaveStaleBufferBinding) {
     SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
-    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
 
     constexpr size_t kRenderTargetSize = 16;
 
@@ -894,7 +891,6 @@ TEST_F(BackendTest, AsyncTextureViewRefRace) {
 
 TEST_F(BackendTest, FinishDrainsQueuedAsyncJobs) {
     SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
-    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
 
     auto& api = getDriverApi();
     auto swapChain = addCleanup(createSwapChain());
@@ -976,7 +972,6 @@ struct PendingUploads {
 // upload as well, because the canceled job still owns the descriptor.
 TEST_F(BackendTest, CanceledAsyncUploadReleasesBufferThroughHandler) {
     SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
-    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
 
     auto& api = getDriverApi();
     auto swapChain = addCleanup(createSwapChain());
@@ -1025,7 +1020,6 @@ TEST_F(BackendTest, CanceledAsyncUploadReleasesBufferThroughHandler) {
 // Same as above, but the jobs are already queued, so cancelAsyncJob() itself destroys them.
 TEST_F(BackendTest, CanceledQueuedAsyncUploadReleasesBufferThroughHandler) {
     SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
-    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
 
     auto& api = getDriverApi();
     auto swapChain = addCleanup(createSwapChain());

@@ -273,6 +273,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/utils/Spirv.cpp
             src/vulkan/utils/Spirv.h
             src/vulkan/utils/StaticVector.h
+            src/vulkan/utils/TaskHandler.cpp
+            src/vulkan/utils/TaskHandler.h
     )
     if (LINUX)
         list(APPEND SRCS
