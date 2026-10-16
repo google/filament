@@ -241,6 +241,7 @@ if (FILAMENT_BUILD_TESTING)
 
     add_test_gltf("third_party/models/AnimatedMorphCube/AnimatedMorphCube.glb" "AnimatedMorphCube.glb")
     add_test_gltf("third_party/models/DamagedHelmet/DamagedHelmetWebp.glb" "DamagedHelmetWebp.glb")
+    add_test_gltf("libs/gltfio/test/data/invalid_accessor_type.glb" "invalid_accessor_type.glb")
 
     add_custom_target(test_gltfio_files DEPENDS ${GLTF_TEST_FILES})
 
