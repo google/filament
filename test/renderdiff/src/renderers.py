@@ -20,7 +20,7 @@ import sys
 import concurrent.futures
 import fnmatch
 from dataclasses import dataclass, field
-from utils import execute, mkdir_p, mv_f, important_print
+from utils import execute, mkdir_p, important_print
 from results import RESULT_OK, RESULT_FAILED
 
 
@@ -88,7 +88,17 @@ class RenderTestCase(abc.ABC):
 class GltfRenderTestCase(RenderTestCase):
     model: str
     model_path: str
+    # The test as a batch spec. Only the web renderer still drives gltf_viewer through --batch.
     test_json_path: str
+    # The test as the contents of a --settings file, which the desktop renderer uses. It is written
+    # to the working directory rather than the output directory, because update_golden.py treats
+    # every JSON file in the output directory as a golden.
+    settings_json: str = '{}'
+    # These match the sample tests. Under --screenshot gltf_viewer loads the asset synchronously,
+    # so the warmup frames all render the complete scene and the image does not depend on how
+    # fast the machine decodes textures.
+    warmup_frames: int = 10
+    fixed_timestep: float = 0.0166667
 
     @property
     def target_name(self) -> str:
@@ -97,20 +107,36 @@ class GltfRenderTestCase(RenderTestCase):
     def _execute_render(self, renderer: 'BaseRenderer', env: dict, working_dir: str, out_tif_name: str) -> tuple[int, str]:
         out_name = self.get_out_name(renderer)
         executable_abs = os.path.abspath(renderer.executable)
-        cmd = f'{executable_abs} -a {self.backend} --batch={self.test_json_path} -e {self.model_path} --headless'
+
+        settings_json_path = os.path.join(working_dir, f'{self.test_name}.settings.json')
+        with open(settings_json_path, 'w') as f:
+            f.write(self.settings_json)
+
+        # gltf_viewer writes the effective settings next to the screenshot, with a .json extension.
+        out_json_name = os.path.splitext(out_tif_name)[0] + '.json'
+        for stale in (out_tif_name, out_json_name):
+            if os.path.exists(stale):
+                os.remove(stale)
+
+        cmd = (
+            f'{shlex.quote(executable_abs)} -a {self.backend} --headless '
+            f'--settings={shlex.quote(settings_json_path)} '
+            f'--screenshot={shlex.quote(out_tif_name)} --frames={self.warmup_frames} '
+            f'--fixed-timestep={self.fixed_timestep} {shlex.quote(self.model_path)}'
+        )
         out_code, output = execute(cmd, cwd=working_dir, env=env, capture_output=True)
 
-        tif_src = f'{working_dir}/{self.test_name}0.tif'
-        json_src = f'{working_dir}/{self.test_name}0.json'
-        if out_code == 0 and os.path.exists(tif_src):
+        if out_code == 0 and os.path.exists(out_tif_name):
             result = RESULT_OK
-            mv_f(tif_src, out_tif_name)
-            if os.path.exists(json_src):
-                mv_f(json_src, os.path.join(self.output_dir, f'{out_name}.json'))
             important_print(f'{out_name} rendering succeeded. model={self.model_path} '
                             f'output=\n{output}')
         else:
             result = RESULT_FAILED
+            # gltf_viewer writes the settings during setup, before rendering anything, so a failed
+            # render can leave them behind without an image. update_golden.py would treat that
+            # file as a golden, so it is removed to match the old behavior of copying neither.
+            if os.path.exists(out_json_name):
+                os.remove(out_json_name)
             important_print(f'{out_name} rendering failed with '
                             f'error={describe_exit_code(out_code)} model={self.model_path} '
                             f'output=\n{output}')
@@ -210,7 +236,8 @@ class BaseRenderer(abc.ABC):
             output_dir=named_output_dir,
             model=model,
             model_path=model_path,
-            test_json_path=test_json_path
+            test_json_path=test_json_path,
+            settings_json=test.to_settings_format()
         )
 
     def _make_sample_test_case(self, test, named_output_dir: str) -> RenderTestCase:
