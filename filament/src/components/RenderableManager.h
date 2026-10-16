@@ -256,8 +256,8 @@ public:
     struct Entry {
         VertexBuffer* vertices = nullptr;
         IndexBuffer* indices = nullptr;
-        uint32_t offset = 0;
-        uint32_t count = 0;
+        size_t offset = 0;
+        size_t count = 0;
         MaterialInstance const* materialInstance = nullptr;
         PrimitiveType type = PrimitiveType::TRIANGLES;
         uint16_t blendOrder = 0;
