@@ -1414,6 +1414,8 @@ class TypeResolver:
         if raw_val is None:
             return None
         val = str(raw_val).strip()
+        if not val:
+            return None
         attributes = attributes or []
 
         # Case 1: Forced java_float
@@ -1426,14 +1428,18 @@ class TypeResolver:
             return inner
 
         # Case 2: Nullptr
-        if val == "nullptr":
+        if val in ("nullptr", "NULL"):
             return "null"
 
-        # Case 3: Infinity
+        # Case 3: Infinity and FLT_MAX
         if val == "INFINITY":
             return "Float.POSITIVE_INFINITY"
         if val in ("-INFINITY", "- INFINITY"):
             return "Float.NEGATIVE_INFINITY"
+        if val == "FLT_MAX":
+            return "Float.MAX_VALUE"
+        if val in ("-FLT_MAX", "- FLT_MAX"):
+            return "-Float.MAX_VALUE"
 
         # Case 4: Empty braces (default zero initialization)
         if val in ("{}", "{ }"):
@@ -1451,8 +1457,15 @@ class TypeResolver:
                 fixed_parts.append(p_clean)
             return "{" + ", ".join(fixed_parts) + "}"
 
-        # Case 6: Enum values with ::
-        if "::" in val:
+        # Case 6: Chrono durations and clock calls
+        chrono_ns_match = re.match(r"^(?:std::)?chrono::nanoseconds\s*\(\s*(-?\d+)\s*\)$", val)
+        if chrono_ns_match:
+            return chrono_ns_match.group(1)
+        if "steady_clock::now" in val or "system_clock::now" in val or "high_resolution_clock::now" in val:
+            return "System.nanoTime()"
+
+        # Case 7: Enum values with ::
+        if "::" in val and "(" not in val:
             clean_enum = val.replace("::", ".")
             parts = clean_enum.split(".")
             enum_cls = parts[-2]
@@ -1463,15 +1476,92 @@ class TypeResolver:
                     return f"{enclosing_struct_name}.{enum_cls}.{enum_const}"
             return f"{enum_cls}.{enum_const}"
 
-        # Case 7: Scalar float without f suffix
+        # Case 8: Strip C++ unsigned integer suffixes and normalize unary minus
+        val = val.replace("- ", "-")
+        val = re.sub(r'(?i)\b(0x[0-9a-f]+|\d+)u(?:ll|l)?\b', r'\1', val)
+
+        # Case 9: Scalar float without f suffix
         cpp_t = type_info.get("cpp_name", "") if isinstance(type_info, dict) else str(type_info)
         if "float" in cpp_t:
-            val = val.replace("- ", "-")
-            if not val.endswith("f") and not val.startswith("Float."):
+            if not val.endswith("f") and not val.startswith("Float.") and not val.startswith("-Float."):
                 val += "f"
             return val
 
         return val
+
+    def get_array_default_values(
+        self,
+        f_type: Any,
+        raw_default: Optional[str],
+        arr_info: Dict[str, Any]
+    ) -> Optional[List[str]]:
+        """Compute exploded per-component Java default literals for an array, vector, or quaternion field."""
+        if raw_default is None:
+            return None
+        val = str(raw_default).strip()
+        if not val:
+            return None
+
+        size = arr_info["size"]
+        scalar = arr_info["scalar"]
+        is_fixed_arr = arr_info.get("is_fixed_array", False)
+        t_str = (
+            (f_type.get("qualified_name") or f_type.get("cpp_name", ""))
+            if isinstance(f_type, dict)
+            else str(f_type)
+        )
+        is_quat = "quat" in t_str.lower() or "tquaternion" in t_str.lower()
+
+        if val in ("{}", "{ }"):
+            if is_quat and size == 4:
+                one_lit = "1.0f" if scalar == "float" else "1.0" if scalar == "double" else "1"
+                zero_lit = "0.0f" if scalar == "float" else "0.0" if scalar == "double" else "0"
+                return [zero_lit, zero_lit, zero_lit, one_lit]
+            return None
+
+        if (val.startswith("{") and val.endswith("}")) or (val.startswith("[") and val.endswith("]")):
+            inner = val[1:-1].strip()
+            if not inner:
+                return None
+            raw_parts = [p.strip() for p in inner.split(",") if p.strip()]
+        else:
+            raw_parts = [val]
+
+        translated_parts: List[str] = []
+        for p in raw_parts:
+            tp = self.translate_default_value(p, scalar)
+            if tp is None:
+                return None
+            translated_parts.append(tp)
+
+        zero_lit = "0.0f" if scalar == "float" else "0.0" if scalar == "double" else "0"
+
+        if is_quat and size == 4:
+            # TQuaternion(w) initializes (x=0, y=0, z=0, w=w)
+            if len(translated_parts) == 1:
+                return [zero_lit, zero_lit, zero_lit, translated_parts[0]]
+            # TQuaternion(w, x, y, z) initializes (x=x, y=y, z=z, w=w)
+            if len(translated_parts) == 4:
+                return [
+                    translated_parts[1],
+                    translated_parts[2],
+                    translated_parts[3],
+                    translated_parts[0],
+                ]
+            return None
+
+        if not is_fixed_arr:
+            if len(translated_parts) == 1 and size <= 4:
+                return [translated_parts[0]] * size
+            if len(translated_parts) == size:
+                return translated_parts
+            return None
+
+        if len(translated_parts) == size:
+            return translated_parts
+        if len(translated_parts) < size:
+            return translated_parts + [zero_lit] * (size - len(translated_parts))
+        return None
 
     def get_pojo_field_annotation(
         self,
@@ -1734,7 +1824,8 @@ class TypeResolver:
     def get_flattened_leaves(
         self,
         type_info: Union[str, Dict[str, Any]],
-        prefix: str = ""
+        prefix: str = "",
+        default_value: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """Flatten a complex struct or vector type into primitive scalar leaves.
 
@@ -1749,6 +1840,7 @@ class TypeResolver:
         Args:
             type_info: Type string or dictionary.
             prefix: Property prefix for nested member names.
+            default_value: Optional C++ default value expression for the field.
 
         Returns:
             List of leaf descriptor dictionaries detailing names, types, and getter chains.
@@ -1772,10 +1864,12 @@ class TypeResolver:
                 comps = [str(i) for i in range(size)]
             else:
                 comps = ["X", "Y", "Z", "W"][:size]
+            comp_defaults = self.get_array_default_values(type_info, default_value, arr_info)
             leaves = []
-            for comp in comps:
+            for idx, comp in enumerate(comps):
                 leaf_name = f"{prefix}{comp}"
                 leaf_param = f"{prefix[0].lower() + prefix[1:] if prefix else ''}{comp}"
+                comp_def = comp_defaults[idx] if comp_defaults and idx < len(comp_defaults) else None
                 leaves.append({
                     "name": leaf_name,
                     "param_name": leaf_param,
@@ -1787,7 +1881,8 @@ class TypeResolver:
                     "is_fixed_array": is_fixed_arr,
                     "cpp_type": arr_info["cpp_type"],
                     "size": size,
-                    "scalar": scalar
+                    "scalar": scalar,
+                    "default_value": comp_def,
                 })
             return leaves
 
@@ -1829,7 +1924,11 @@ class TypeResolver:
                     continue
                 cap_name = fname[0].upper() + fname[1:]
                 sub_prefix = f"{prefix}{cap_name}"
-                sub_leaves = self.get_flattened_leaves(field["type"], prefix=sub_prefix)
+                sub_leaves = self.get_flattened_leaves(
+                    field["type"],
+                    prefix=sub_prefix,
+                    default_value=field.get("default_value")
+                )
                 for sl in sub_leaves:
                     sl_copy = dict(sl)
                     if not prefix:
@@ -1845,6 +1944,11 @@ class TypeResolver:
         jtype = self.get_java_type(type_info)
         jnitype = self.get_jni_type(type_info)
         param_name = prefix[0].lower() + prefix[1:] if prefix else "val"
+        translated_def = (
+            self.translate_default_value(default_value, type_info)
+            if default_value is not None
+            else None
+        )
         return [{
             "name": prefix,
             "param_name": param_name,
@@ -1853,7 +1957,8 @@ class TypeResolver:
             "jni_type": jnitype,
             "is_math": False,
             "type": type_info,
-            "cpp_type": type_info.get("cpp_name", "") if isinstance(type_info, dict) else str(type_info)
+            "cpp_type": type_info.get("cpp_name", "") if isinstance(type_info, dict) else str(type_info),
+            "default_value": translated_def,
         }]
 
     def get_struct_leaf_accessors(
@@ -2020,9 +2125,18 @@ class TypeResolver:
                         comp_arg = f"{sub_prefix[0].lower() + sub_prefix[1:]}{idx}"
                         lines.append(f"{var_name}.{fname}[{idx}] = {comp_arg};")
                 else:
+                    is_quat = (
+                        arr_info.get("is_quaternion")
+                        or "quat" in arr_info.get("cpp_type", "").lower()
+                    )
+                    comp_order = (
+                        ["w", "x", "y", "z"]
+                        if (is_quat and size == 4)
+                        else ["x", "y", "z", "w"][:size]
+                    )
                     comp_args = [
                         f"{sub_prefix[0].lower() + sub_prefix[1:]}{c.upper()}"
-                        for c in ["x", "y", "z", "w"][:size]
+                        for c in comp_order
                     ]
                     lines.append(f"{var_name}.{fname} = {{ {', '.join(comp_args)} }};")
             elif self.is_aggregate_struct(f["type"]):

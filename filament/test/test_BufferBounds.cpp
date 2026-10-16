@@ -103,9 +103,13 @@ protected:
 #if GTEST_HAS_EXCEPTIONS
 #define EXPECT_OVERFLOW_REJECTED(statement) \
         EXPECT_THROW(statement, utils::PreconditionPanic)
+#define EXPECT_INDEX_COUNT_REJECTED(statement) \
+        EXPECT_THROW(statement, utils::PreconditionPanic)
 #else
 #define EXPECT_OVERFLOW_REJECTED(statement) \
         EXPECT_DEATH(statement, "buffer overflow")
+#define EXPECT_INDEX_COUNT_REJECTED(statement) \
+        EXPECT_DEATH(statement, "exceeds the maximum")
 #endif
 
 // ---------------------------------------------------------------------------------------------
@@ -162,6 +166,30 @@ TEST_F(BufferBoundsTest, IndexBufferRejectsOversizedAsyncWrite) {
     EXPECT_OVERFLOW_REJECTED(ib->setBufferAsync(
             *mEngine, makeDescriptor(INDEX_CAPACITY + 4), 0, nullptr, nullptr, nullptr));
     mEngine->destroy(ib);
+}
+
+TEST_F(BufferBoundsTest, IndexBufferAcceptsMaxIndexCount) {
+    IndexBuffer* ib = IndexBuffer::Builder()
+            .indexCount(uint32_t(MAX_INDEX_COUNT))
+            .bufferType(IndexBuffer::IndexType::UINT)
+            .build(*mEngine);
+    EXPECT_NE(ib, nullptr);
+    mEngine->destroy(ib);
+}
+
+TEST_F(BufferBoundsTest, IndexBufferRejectsIndexCountAboveMax) {
+    EXPECT_INDEX_COUNT_REJECTED(IndexBuffer::Builder()
+            .indexCount(uint32_t(MAX_INDEX_COUNT + 1))
+            .bufferType(IndexBuffer::IndexType::UINT)
+            .build(*mEngine));
+}
+
+TEST_F(BufferBoundsTest, IndexBufferRejectsIndexCountThatWrapsByteSize) {
+    // The byte size of this many UINT indices does not fit in 32 bits.
+    EXPECT_INDEX_COUNT_REJECTED(IndexBuffer::Builder()
+            .indexCount(uint32_t(UINT32_MAX / sizeof(uint32_t) + 1))
+            .bufferType(IndexBuffer::IndexType::UINT)
+            .build(*mEngine));
 }
 
 // ---------------------------------------------------------------------------------------------
