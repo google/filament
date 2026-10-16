@@ -56,7 +56,7 @@ template<> inline math::half getMaxValue() { return math::half(1.0f); }
 // because of the size increase.
 template<typename dstComponentType, bool hasAlpha>
 void grayscaleFill(dstComponentType* dst, uint8_t, uint8_t) {
-    for (size_t channel = 1; channel < 3; ++channel) {
+    for (uint8_t channel = 1; channel < 3; ++channel) {
         dst[channel] = dst[0];
     }
     if constexpr (hasAlpha) {
@@ -69,7 +69,7 @@ void grayscaleFill(dstComponentType* dst, uint8_t, uint8_t) {
 template<typename dstComponentType>
 inline void maxValFill(dstComponentType* dst, uint8_t srcChannelCount, uint8_t dstChannelCount) {
     dstComponentType dstMaxValue = getMaxValue<dstComponentType>();
-    for (size_t channel = srcChannelCount; channel < dstChannelCount; ++channel) {
+    for (uint8_t channel = srcChannelCount; channel < dstChannelCount; ++channel) {
         dst[channel] = dstMaxValue;
     }
 }
