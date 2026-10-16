@@ -29,7 +29,7 @@ protected:
     LinearImage createImage(uint32_t w, uint32_t h, float val) {
         LinearImage img(w, h, 3);
         float* p = img.getPixelRef();
-        for (size_t i = 0; i < w * h * 3; ++i) {
+        for (size_t i = 0; i < static_cast<size_t>(w) * h * 3; ++i) {
             p[i] = val;
         }
         return img;

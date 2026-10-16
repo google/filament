@@ -214,7 +214,7 @@ void ImageExpectations::evaluate() {
 RenderTargetDump::RenderTargetDump(filament::backend::DriverApi& api,
         filament::backend::RenderTargetHandle renderTarget, const ScreenshotParams& params)
         : mInternal(std::make_unique<RenderTargetDump::Internal>(params)) {
-    const size_t size = mInternal->params.width() * mInternal->params.height() * 4;
+    const size_t size = static_cast<size_t>(mInternal->params.width()) * mInternal->params.height() * 4;
     mInternal->bytes.resize(size);
 
     auto cb = [](void* buffer, size_t size, void* user) {
@@ -284,7 +284,7 @@ LoadedPng::LoadedPng(std::string filePath) : mFilePath(std::move(filePath)) {
     std::ifstream pngStream(mFilePath, std::ios::binary);
     image::LinearImage loadedImage = image::ImageDecoder::decode(pngStream, filePath,
             image::ImageDecoder::ColorSpace::LINEAR);
-    size_t valuesInImage = loadedImage.getWidth() * loadedImage.getHeight() *
+    size_t valuesInImage = static_cast<size_t>(loadedImage.getWidth()) * loadedImage.getHeight() *
                           loadedImage.getChannels();
     // The linear image is loaded with each component as [0.0, 1.0] but should be [0, 255], so
     // convert them.

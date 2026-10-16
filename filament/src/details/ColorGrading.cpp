@@ -854,7 +854,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
         depth = config.lutDimension;
     }
 
-    size_t const lutElementCount = width * height * depth;
+    size_t const lutElementCount = static_cast<size_t>(width) * height * depth;
     assert_invariant(lutElementCount > 0);
     size_t elementSize = mIsOneDimensional ? sizeof(half) : sizeof(half4);
     void* data = malloc(lutElementCount * elementSize);

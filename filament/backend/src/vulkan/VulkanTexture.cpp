@@ -578,7 +578,7 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
             PixelBufferDescriptor::computeDataSize(hostData->format, hostData->type, 1, 1, 1);
     // Note: if bpp = 0, we're dealing with a compressed format; we should fall
     // back to the buffer's size.
-    size_t const writeSize = bpp > 0 ? width * height * depth * bpp : hostData->size;
+    size_t const writeSize = bpp > 0 ? static_cast<size_t>(width) * height * depth * bpp : hostData->size;
 
     // Note: the following stageSegment must be stored within the command buffer
     // before going out of scope, to ensure proper bookkeeping within the
@@ -657,7 +657,7 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& data, uint3
     size_t const bpp = PixelBufferDescriptor::computeDataSize(data.format, data.type, 1, 1, 1);
     // Note: if bpp = 0, we're dealing with a compressed format; we should fall
     // back to the buffer's size.
-    size_t const writeSize = bpp > 0 ? width * height * depth * bpp : data.size;
+    size_t const writeSize = bpp > 0 ? static_cast<size_t>(width) * height * depth * bpp : data.size;
 
     uint32_t layer = 0;
     uint32_t layerCount = 1;
