@@ -17,6 +17,7 @@
 #include "ShadowMapManager.h"
 
 #include "AtlasAllocator.h"
+#include "Culler.h"
 #include "RenderPass.h"
 #include "ShadowMap.h"
 
@@ -971,6 +972,249 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::gaussianMipmapPass(
     return depthMipmapPass->in;
 }
 
+// Look-up table storing the number of vertices forming the camera frustum silhouette
+// for each of the 64 possible back-facing plane bitmasks.
+static const uint8_t FRUSTUM_SILHOUETTE_VERTICES_COUNT_LUT[64] = {
+    0, 4, 4, 0, 4, 6, 6, 8, 4, 6, 6, 8, 6, 6, 6, 6, 4, 6, 6, 8, 0, 8,
+    8, 0, 6, 6, 6, 6, 8, 6, 6, 4, 4, 6, 6, 8, 6, 6, 6, 6, 0, 8, 8, 0,
+    8, 6, 6, 4, 6, 6, 6, 6, 8, 6, 6, 4, 8, 6, 6, 4, 0, 4, 4, 0};
+
+// Look-up table storing the camera frustum corner vertex indices (0-7) that form
+// the silhouette loop for each of the 64 possible back-facing plane bitmasks.
+// The indices are sequential and form a closed loop of length specified by the count LUT.
+static const uint8_t FRUSTUM_SILHOUETTE_VERTICES_LUT[64][8] = {
+    {2, 2, 2, 2, 2, 2, 2, 2}, // 0
+    {5, 7, 6, 4, 2, 2, 2, 2}, // 1
+    {0, 2, 3, 1, 2, 2, 2, 2}, // 2
+    {2, 2, 2, 2, 2, 2, 2, 2}, // 3
+    {0, 4, 6, 2, 2, 2, 2, 2}, // 4
+    {0, 4, 5, 7, 6, 2, 2, 2}, // 5
+    {6, 2, 3, 1, 0, 4, 2, 2}, // 6
+    {4, 5, 7, 6, 2, 3, 1, 0}, // 7
+    {2, 6, 7, 3, 2, 2, 2, 2}, // 8
+    {2, 6, 4, 5, 7, 3, 2, 2}, // 9
+    {7, 3, 1, 0, 2, 6, 2, 2}, // 10
+    {3, 1, 0, 2, 6, 4, 5, 7}, // 11
+    {2, 0, 4, 6, 7, 3, 2, 2}, // 12
+    {2, 0, 4, 5, 7, 3, 2, 2}, // 13
+    {7, 3, 1, 0, 4, 6, 2, 2}, // 14
+    {3, 1, 0, 4, 5, 7, 2, 2}, // 15
+    {3, 7, 5, 1, 2, 2, 2, 2}, // 16
+    {3, 7, 6, 4, 5, 1, 2, 2}, // 17
+    {5, 1, 0, 2, 3, 7, 2, 2}, // 18
+    {1, 0, 2, 3, 7, 6, 4, 5}, // 19
+    {2, 2, 2, 2, 2, 2, 2, 2}, // 20
+    {3, 7, 6, 2, 0, 4, 5, 1}, // 21
+    {5, 1, 0, 4, 6, 2, 3, 7}, // 22
+    {2, 2, 2, 2, 2, 2, 2, 2}, // 23
+    {3, 2, 6, 7, 5, 1, 2, 2}, // 24
+    {3, 2, 6, 4, 5, 1, 2, 2}, // 25
+    {5, 1, 0, 2, 6, 7, 2, 2}, // 26
+    {1, 0, 2, 6, 4, 5, 2, 2}, // 27
+    {3, 2, 0, 4, 6, 7, 5, 1}, // 28
+    {3, 2, 0, 4, 5, 1, 2, 2}, // 29
+    {5, 1, 0, 4, 6, 7, 2, 2}, // 30
+    {1, 0, 4, 5, 2, 2, 2, 2}, // 31
+    {1, 5, 4, 0, 2, 2, 2, 2}, // 32
+    {1, 5, 7, 6, 4, 0, 2, 2}, // 33
+    {4, 0, 2, 3, 1, 5, 2, 2}, // 34
+    {5, 7, 6, 4, 0, 2, 3, 1}, // 35
+    {1, 5, 4, 6, 2, 0, 2, 2}, // 36
+    {1, 5, 7, 6, 2, 0, 2, 2}, // 37
+    {4, 6, 2, 3, 1, 5, 2, 2}, // 38
+    {5, 7, 6, 2, 3, 1, 2, 2}, // 39
+    {2, 2, 2, 2, 2, 2, 2, 2}, // 40
+    {1, 5, 7, 3, 2, 6, 4, 0}, // 41
+    {4, 0, 2, 6, 7, 3, 1, 5}, // 42
+    {2, 2, 2, 2, 2, 2, 2, 2}, // 43
+    {1, 5, 4, 6, 7, 3, 2, 0}, // 44
+    {1, 5, 7, 3, 2, 0, 2, 2}, // 45
+    {4, 6, 7, 3, 1, 5, 2, 2}, // 46
+    {5, 7, 3, 1, 2, 2, 2, 2}, // 47
+    {1, 3, 7, 5, 4, 0, 2, 2}, // 48
+    {1, 3, 7, 6, 4, 0, 2, 2}, // 49
+    {4, 0, 2, 3, 7, 5, 2, 2}, // 50
+    {0, 2, 3, 7, 6, 4, 2, 2}, // 51
+    {1, 3, 7, 5, 4, 6, 2, 0}, // 52
+    {1, 3, 7, 6, 2, 0, 2, 2}, // 53
+    {4, 6, 2, 3, 7, 5, 2, 2}, // 54
+    {7, 6, 2, 3, 2, 2, 2, 2}, // 55
+    {1, 3, 2, 6, 7, 5, 4, 0}, // 56
+    {1, 3, 2, 6, 4, 0, 2, 2}, // 57
+    {4, 0, 2, 6, 7, 5, 2, 2}, // 58
+    {1, 3, 2, 0, 2, 2, 2, 2}, // 59
+    {2, 2, 2, 2, 2, 2, 2, 2}, // 60
+    {1, 3, 2, 0, 2, 2, 2, 2}, // 61
+    {4, 6, 7, 5, 2, 2, 2, 2}, // 62
+    {2, 2, 2, 2, 2, 2, 2, 2}  // 63
+};
+
+using FrustumCorners = std::array<float3, 8>;
+
+static FrustumCorners computeFrustumCorners(mat4f const& projectionInverse) noexcept {
+    FrustumCorners out;
+    float const near = -1.0f;
+    float const far  =  1.0f;
+
+    std::array<float3, 8> csViewFrustumCorners = {{
+            { -1, -1, far  },
+            {  1, -1, far  },
+            { -1,  1, far  },
+            {  1,  1, far  },
+            { -1, -1, near },
+            {  1, -1, near },
+            { -1,  1, near },
+            {  1,  1, near },
+    }};
+
+    for (size_t i = 0; i < 8; i++) {
+        out[i] = mat4f::project(projectionInverse, csViewFrustumCorners[i]);
+    }
+    return out;
+}
+
+using SilhouettePlanes =
+    std::array<float4, Culler::TIGHTER_CULLING_PLANE_COUNT>;
+
+// Reference:
+// https://github.com/godotengine/godot/pull/82584/changes#diff-8babe54c0b184d1c71d515dc1a35aedcb772169ef06ade4fe5d7f162086aaa2a
+static SilhouettePlanes findSilhouette(mat4f const &pv, float3 const &lightDir,
+                                       float const wsOneTexel) noexcept {
+    // 1. Initialize the culling planes list and camera frustum planes/corners.
+    SilhouettePlanes cullingPlanes;
+    size_t planeCount = 0;
+    
+    Frustum cameraFrustum(pv);
+    FrustumCorners frustumCorners = computeFrustumCorners(inverse(pv));
+
+    // 2. Build a 6-bit mask of which camera frustum planes are facing away from
+    // the light.
+    uint32_t mask = 0;
+
+    auto isBackFacing = [&](Frustum::Plane plane) {
+        float4 p = cameraFrustum.getNormalizedPlane(plane);
+        return dot(p.xyz, lightDir) > 0.0f;
+    };
+
+    constexpr Frustum::Plane maskToPlane[6] = { Frustum::Plane::NEAR, Frustum::Plane::FAR,
+        Frustum::Plane::LEFT, Frustum::Plane::TOP, Frustum::Plane::RIGHT, Frustum::Plane::BOTTOM };
+
+    mask |= isBackFacing(Frustum::Plane::NEAR)   << 0;
+    mask |= isBackFacing(Frustum::Plane::FAR)    << 1;
+    mask |= isBackFacing(Frustum::Plane::LEFT)   << 2;
+    mask |= isBackFacing(Frustum::Plane::TOP)    << 3;
+    mask |= isBackFacing(Frustum::Plane::RIGHT)  << 4;
+    mask |= isBackFacing(Frustum::Plane::BOTTOM) << 5;
+
+    // Appends the back-facing frustum planes to close the back of the culling volume, then pads the
+    // list to a full plane set. Culler requires exactly TIGHTER_CULLING_PLANE_COUNT planes.
+    auto const closeCullingVolume = [&]() {
+        for (size_t i = 0; i < 6; i++) {
+        if ((mask & (1u << i)) && planeCount < cullingPlanes.size()) {
+          float4 p = cameraFrustum.getNormalizedPlane(maskToPlane[i]);
+          p.w -= wsOneTexel;
+          cullingPlanes[planeCount++] = p;
+        }
+      }
+      while (planeCount < cullingPlanes.size()) {
+        cullingPlanes[planeCount++] =
+            float4(0.0f, 0.0f, 0.0f, std::numeric_limits<float>::lowest());
+      }
+    };
+
+    uint8_t vertexCount = FRUSTUM_SILHOUETTE_VERTICES_COUNT_LUT[mask];
+    const uint8_t *entries = FRUSTUM_SILHOUETTE_VERTICES_LUT[mask];
+
+    // This case will never happen for directional light, but we leave it here
+    // for future extension.
+    if (UTILS_VERY_UNLIKELY(vertexCount == 0)) {
+        closeCullingVolume();
+        return cullingPlanes;
+    }
+
+    // 3. Construct edge planes by extruding silhouette edges along the light direction.
+    assert_invariant(vertexCount <= cullingPlanes.size());
+    for (size_t i = 0; i < vertexCount - 1; i++) {
+        uint8_t gIdx1 = entries[i];
+        uint8_t gIdx2 = entries[i + 1];
+
+        float3 v1 = frustumCorners[gIdx1];
+        float3 v2 = frustumCorners[gIdx2];
+
+        float3 n = normalize(cross(v2 - v1, lightDir));
+        float d = -dot(n, v1);
+
+        // We always push the planes one texel away to avoid edge shadow clipping artifacts.
+        cullingPlanes[planeCount++] = float4(n, d - wsOneTexel);
+    }
+
+    // Finally, we close the loop.
+    uint8_t gIdx1 = entries[vertexCount - 1];
+    uint8_t gIdx2 = entries[0];
+
+    float3 v1 = frustumCorners[gIdx1];
+    float3 v2 = frustumCorners[gIdx2];
+
+    float3 n = normalize(cross(v2 - v1, lightDir));
+    float d = -dot(n, v1);
+
+    cullingPlanes[planeCount++] = float4(n, d - wsOneTexel);
+
+    // 4. Close the back of the volume and pad the list out.
+    closeCullingVolume();
+
+    return cullingPlanes;
+}
+
+void ShadowMapManager::cullDirectionalShadowCasters(FView const& view,
+        FScene::RenderableSoa& renderableData, CameraInfo const& cameraInfo,
+        float3 const& direction, float const wsOneTexel) noexcept {
+    if (!view.isTighterShadowCasterCullingEnabled()) {
+        return;
+    }
+
+    size_t const count = renderableData.size();
+    if (UTILS_UNLIKELY(count == 0)) {
+        return;
+    }
+
+    // Build the viewer frustum silhouette culling volume.
+    mat4f const pv = cameraInfo.cullingProjection * cameraInfo.view;
+    SilhouettePlanes cullingPlanes = findSilhouette(pv, direction, wsOneTexel);
+
+    Culler::result_type *visibleMasks =
+        renderableData.data<FScene::VISIBLE_MASK>();
+
+    // Culler rounds the count up and writes that many results, so the scratch
+    // buffer has to match.
+    size_t const roundedCount = Culler::round(count);
+    mTighterCullingBuffer.reserve(roundedCount);
+    mTighterCullingBuffer.resize(roundedCount);
+
+    float const *cx = renderableData.data<FScene::WORLD_AABB_CENTER_X>();
+    float const *cy = renderableData.data<FScene::WORLD_AABB_CENTER_Y>();
+    float const *cz = renderableData.data<FScene::WORLD_AABB_CENTER_Z>();
+    float const *ex = renderableData.data<FScene::WORLD_AABB_EXTENT_X>();
+    float const *ey = renderableData.data<FScene::WORLD_AABB_EXTENT_Y>();
+    float const *ez = renderableData.data<FScene::WORLD_AABB_EXTENT_Z>();
+    Culler::intersects(mTighterCullingBuffer.data(), cullingPlanes.data(), cx, cy, cz, ex, ey, ez,
+            count, 0);
+
+    Culler::result_type const* UTILS_RESTRICT newResults = mTighterCullingBuffer.data();
+    size_t const bit = VISIBLE_DIR_SHADOW_RENDERABLE_BIT;
+
+#if defined(__clang__)
+#pragma clang loop vectorize(enable)
+#endif
+    for (size_t i = 0; i < count; i++) {
+        Culler::result_type const isInsideSilhouette = newResults[i] & 1u;
+        Culler::result_type const wasVisible = (visibleMasks[i] >> bit) & 1u;
+        Culler::result_type const isVisible = isInsideSilhouette & wasVisible;
+        visibleMasks[i] &= ~Culler::result_type(1u << bit);
+        visibleMasks[i] |= Culler::result_type(isVisible << bit);
+    }
+}
+
 ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEngine& engine,
         FView& view, CameraInfo cameraInfo, FScene::RenderableSoa& renderableData,
         FScene::LightSoa const& lightData, ShadowMap::SceneInfo sceneInfo) noexcept {
@@ -1018,7 +1262,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
 
         // we always do culling without depth clamp, because objects behind the camera
         // must be rendered regardless
-        shadowMap.updateDirectional(engine,
+        auto shaderParameters = shadowMap.updateDirectional(engine,
                 lightData, 0, cameraInfo, shadowMapInfo, sceneInfo, false);
 
         hasVisibleShadows = shadowMap.hasVisibleShadows();
@@ -1027,6 +1271,11 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
             Frustum const& frustum = shadowMap.getCamera().getCullingFrustum();
             FView::cullRenderables(engine.getJobSystem(), renderableData, frustum,
                     VISIBLE_DIR_SHADOW_RENDERABLE_BIT);
+
+            float const wsOneTexel = std::max(shaderParameters.texelSizeAtOneMeterWs.x,
+                    shaderParameters.texelSizeAtOneMeterWs.y);
+
+            cullDirectionalShadowCasters(view, renderableData, cameraInfo, direction, wsOneTexel);
         }
     }
 

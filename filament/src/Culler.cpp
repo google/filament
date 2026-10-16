@@ -24,6 +24,8 @@
 #include <arm_neon.h>
 #endif
 
+#include <limits>
+
 using namespace filament::math;
 
 // use 8 if Culler::result_type is 8-bits, on ARMv8 it allows the compiler to write eight
@@ -327,6 +329,127 @@ void Culler::intersects(
 #endif
 }
 
+void Culler::intersects(
+        result_type* UTILS_RESTRICT results,
+        float4 const* UTILS_RESTRICT planes,
+        float const* UTILS_RESTRICT cx,
+        float const* UTILS_RESTRICT cy,
+        float const* UTILS_RESTRICT cz,
+        float const* UTILS_RESTRICT ex,
+        float const* UTILS_RESTRICT ey,
+        float const* UTILS_RESTRICT ez,
+        size_t count, size_t const bit) noexcept {
+    static_assert(MODULO % 8 == 0, "the 12-plane kernel processes 8 items at a time");
+    static_assert(TIGHTER_CULLING_PLANE_COUNT % 4 == 0,
+            "the 12-plane kernel processes 4 planes at a time");
+    count = round(count);
+
+#if defined(__ARM_NEON) && defined(__aarch64__)
+    constexpr size_t groupCount = TIGHTER_CULLING_PLANE_COUNT / 4;
+    size_t i = 0;
+    uint8x8_t const bitMask = vdup_n_u8(uint8_t(1u << bit));
+    float32x4_t const zero = vdupq_n_f32(0.0f);
+    float32x4_t const lowest = vdupq_n_f32(std::numeric_limits<float>::lowest());
+    for (; i + 8 <= count; i += 8) {
+        float32x4_t const cx0 = vld1q_f32(cx + i);
+        float32x4_t const cx1 = vld1q_f32(cx + i + 4);
+        float32x4_t const cy0 = vld1q_f32(cy + i);
+        float32x4_t const cy1 = vld1q_f32(cy + i + 4);
+        float32x4_t const cz0 = vld1q_f32(cz + i);
+        float32x4_t const cz1 = vld1q_f32(cz + i + 4);
+
+        float32x4_t const ex0 = vld1q_f32(ex + i);
+        float32x4_t const ex1 = vld1q_f32(ex + i + 4);
+        float32x4_t const ey0 = vld1q_f32(ey + i);
+        float32x4_t const ey1 = vld1q_f32(ey + i + 4);
+        float32x4_t const ez0 = vld1q_f32(ez + i);
+        float32x4_t const ez1 = vld1q_f32(ez + i + 4);
+
+        float32x4_t maxA = lowest, maxB = lowest;
+        #pragma clang loop unroll(full)
+        for (size_t c = 0; c < groupCount; c++) {
+            float32x4_t const p0 = vld1q_f32((const float*)&planes[0 + 4*c]);
+            float32x4_t const p1 = vld1q_f32((const float*)&planes[1 + 4*c]);
+            float32x4_t const p2 = vld1q_f32((const float*)&planes[2 + 4*c]);
+            float32x4_t const p3 = vld1q_f32((const float*)&planes[3 + 4*c]);
+
+            float32x4_t const ap0 = vnegq_f32(vabsq_f32(p0));
+            float32x4_t const ap1 = vnegq_f32(vabsq_f32(p1));
+            float32x4_t const ap2 = vnegq_f32(vabsq_f32(p2));
+            float32x4_t const ap3 = vnegq_f32(vabsq_f32(p3));
+
+            float32x4_t const pw0 = vdupq_laneq_f32(p0, 3);
+            float32x4_t const pw1 = vdupq_laneq_f32(p1, 3);
+            float32x4_t const pw2 = vdupq_laneq_f32(p2, 3);
+            float32x4_t const pw3 = vdupq_laneq_f32(p3, 3);
+
+
+            #define CULLER_BOX_SOA_PLANE_DOT(pw, p, ap, dotA, dotB) \
+                dotA = vfmaq_laneq_f32(pw, cx0, p, 0); \
+                dotB = vfmaq_laneq_f32(pw, cx1, p, 0); \
+                dotA = vfmaq_laneq_f32(dotA, ex0, ap, 0); \
+                dotB = vfmaq_laneq_f32(dotB, ex1, ap, 0); \
+                dotA = vfmaq_laneq_f32(dotA, cy0, p, 1); \
+                dotB = vfmaq_laneq_f32(dotB, cy1, p, 1); \
+                dotA = vfmaq_laneq_f32(dotA, ey0, ap, 1); \
+                dotB = vfmaq_laneq_f32(dotB, ey1, ap, 1); \
+                dotA = vfmaq_laneq_f32(dotA, cz0, p, 2); \
+                dotB = vfmaq_laneq_f32(dotB, cz1, p, 2); \
+                dotA = vfmaq_laneq_f32(dotA, ez0, ap, 2); \
+                dotB = vfmaq_laneq_f32(dotB, ez1, ap, 2);
+
+            float32x4_t dA, dB;
+            CULLER_BOX_SOA_PLANE_DOT(pw0, p0, ap0, dA, dB)
+            maxA = vmaxq_f32(maxA, dA); maxB = vmaxq_f32(maxB, dB);
+
+            CULLER_BOX_SOA_PLANE_DOT(pw1, p1, ap1, dA, dB)
+            maxA = vmaxq_f32(maxA, dA); maxB = vmaxq_f32(maxB, dB);
+
+            CULLER_BOX_SOA_PLANE_DOT(pw2, p2, ap2, dA, dB)
+            maxA = vmaxq_f32(maxA, dA); maxB = vmaxq_f32(maxB, dB);
+
+            CULLER_BOX_SOA_PLANE_DOT(pw3, p3, ap3, dA, dB)
+            maxA = vmaxq_f32(maxA, dA); maxB = vmaxq_f32(maxB, dB);
+
+            #undef CULLER_BOX_SOA_PLANE_DOT
+        }
+        uint32x4_t const vis0 = vcltq_f32(maxA, zero);
+        uint32x4_t const vis1 = vcltq_f32(maxB, zero);
+
+        uint16x8_t const vis16 = vcombine_u16(vmovn_u32(vis0), vmovn_u32(vis1));
+        uint8x8_t const vis8 = vmovn_u16(vis16);
+
+        uint8x8_t const orig = vld1_u8(&results[i]);
+        uint8x8_t const updated = vbsl_u8(bitMask, vis8, orig);
+
+        vst1_u8(&results[i], updated);
+    }
+#else
+#if defined(__clang__)
+    #pragma clang loop vectorize_width(FILAMENT_CULLER_VECTORIZE_HINT)
+#endif
+    for (size_t i = 0; i < count; i++) {
+        int visible = ~0;
+
+#if defined(__clang__)
+        #pragma clang loop unroll(full)
+#endif
+        for (size_t j = 0; j < TIGHTER_CULLING_PLANE_COUNT; j++) {
+            const float dot =
+                    planes[j].x * cx[i] - std::abs(planes[j].x) * ex[i] +
+                    planes[j].y * cy[i] - std::abs(planes[j].y) * ey[i] +
+                    planes[j].z * cz[i] - std::abs(planes[j].z) * ez[i] +
+                    planes[j].w;
+            visible &= fast::signbit(dot) << bit;
+        }
+        auto r = results[i];
+        r &= ~result_type(1u << bit);
+        r |= result_type(visible);
+        results[i] = r;
+    }
+#endif
+}
+
 /*
  * returns whether a box intersects with the frustum
  */
@@ -370,6 +493,19 @@ void Culler::Test::intersects(
         float const* UTILS_RESTRICT ez,
         size_t const count) noexcept {
     Culler::intersects(results, frustum, cx, cy, cz, ex, ey, ez, count, 0);
+}
+
+void Culler::Test::intersects(
+        result_type* UTILS_RESTRICT results,
+        float4 const* UTILS_RESTRICT planes,
+        float const* UTILS_RESTRICT cx,
+        float const* UTILS_RESTRICT cy,
+        float const* UTILS_RESTRICT cz,
+        float const* UTILS_RESTRICT ex,
+        float const* UTILS_RESTRICT ey,
+        float const* UTILS_RESTRICT ez,
+        size_t const count) noexcept {
+    Culler::intersects(results, planes, cx, cy, cz, ex, ey, ez, count, 0);
 }
 
 void Culler::Test::intersects(

@@ -186,6 +186,18 @@ Java_com_google_android_filament_View_nIsShadowingEnabled(JNIEnv *env, jclass cl
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetTighterShadowCasterCullingEnabled(JNIEnv *env, jclass clazz, jlong nativeView, jboolean enabled) {
+    View* const that = (View*) nativeView;
+    that->setTighterShadowCasterCullingEnabled((bool)enabled);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_View_nIsTighterShadowCasterCullingEnabled(JNIEnv *env, jclass clazz, jlong nativeView) {
+    View const * const that = (View const *) nativeView;
+    return (jboolean)that->isTighterShadowCasterCullingEnabled();
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetScreenSpaceRefractionEnabled(JNIEnv *env, jclass clazz, jlong nativeView, jboolean enabled) {
     View* const that = (View*) nativeView;
     that->setScreenSpaceRefractionEnabled((bool)enabled);
