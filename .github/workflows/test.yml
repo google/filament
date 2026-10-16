@@ -1,0 +1,87 @@
+name: Android Emulator Smoke Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  emulator:
+    # ubuntu-latest is x86_64 and exposes /dev/kvm (ARM runners do not).
+    #    runs-on: ubuntu-latest
+    runs-on: 'ubuntu-24.04-8core'
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # KVM = CPU/VM acceleration (separate from GPU). The device exists on the
+      # runner but the runner user isn't in the kvm group by default.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Install Linux Prerequisites
+        uses: ./.github/actions/linux-prereq
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # Guarantees the SDK + command-line tools are present so the adb fallback
+      # below always has an sdkmanager to call.
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      # adb ships in platform-tools. It's preinstalled on ubuntu-latest, but make
+      # sure it exists and is on PATH for every subsequent step.
+      - name: Ensure adb (platform-tools) is available
+        run: |
+          echo "ANDROID_HOME=${ANDROID_HOME}"
+          if ! command -v adb >/dev/null 2>&1; then
+            yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" "platform-tools"
+          fi
+          echo "${ANDROID_HOME}/platform-tools" >> "${GITHUB_PATH}"
+
+      - name: Verify adb is present
+        run: adb version
+
+      - name: Build Android Filament and validation sample app
+        run: |
+          ./build.sh -i -p android -q x86_64 -k sample-render-validation debug
+
+      - name: Boot emulator and require a connected device
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: true
+          disable-animations: true
+          # -gpu swangle_indirect => OpenGL ES is implemented by ANGLE, not by
+          # SwiftShader's (deprecated) GL rasterizer. SwiftShader only backs the
+          # underlying software Vulkan.
+          emulator-options: >-
+            -no-window
+            -gpu swangle_indirect
+            -noaudio
+            -no-boot-anim
+            -no-snapshot
+            -camera-back none
+          script: .github/scripts/emulator_smoke_test.sh
+
+      - name: Upload golden results artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-emulator-golden-results
+          path: out/*.zip
