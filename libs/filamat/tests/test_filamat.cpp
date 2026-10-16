@@ -211,6 +211,79 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssignVertex) {
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
+TEST_F(MaterialCompiler, StaticCodeAnalyzerCompoundAssign) {
+    const char* const ops[] = { "*=", "+=", "-=", "/=" };
+    for (const char* const op : ops) {
+        const std::string fragmentCode = std::string(R"(
+            void material(inout MaterialInputs material) {
+                prepareMaterial(material);
+                material.baseColor )") + op + R"( vec4(0.8);
+                material.emissive )" + op + R"( 0.5;
+                material.roughness )" + op + R"( 0.5;
+            }
+        )";
+
+        const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
+
+        constexpr GLSLTools glslTools;
+        MaterialBuilder::PropertyList properties{ false };
+        glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+        MaterialBuilder::PropertyList expected{ false };
+        expected[static_cast<size_t>(MaterialBuilder::Property::BASE_COLOR)] = true;
+        expected[static_cast<size_t>(MaterialBuilder::Property::EMISSIVE)] = true;
+        expected[static_cast<size_t>(MaterialBuilder::Property::ROUGHNESS)] = true;
+        EXPECT_TRUE(PropertyListsMatch(expected, properties));
+    }
+
+    // Also test vector *= matrix compound assignment
+    const std::string fragmentCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor *= mat4(1.0);
+        }
+    )");
+
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
+
+    constexpr GLSLTools glslTools;
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
+    expected[static_cast<size_t>(MaterialBuilder::Property::BASE_COLOR)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
+TEST_F(MaterialCompiler, StaticCodeAnalyzerCompoundAssignVertex) {
+    const std::string fragmentCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+        }
+    )");
+
+    const char* const ops[] = { "*=", "+=", "-=", "/=" };
+    const char* const rhsValues[] = { "0.3", "mat4(2.0)" };
+    for (const char* const op : ops) {
+        for (const char* const rhs : rhsValues) {
+            const std::string vertexCode = std::string(R"(
+                void materialVertex(inout MaterialVertexInputs material) {
+                    material.clipSpaceTransform )") + op + " " + rhs + R"(;
+                }
+            )";
+
+            const std::string shaderCode = shaderWithAllProperties(ShaderStage::VERTEX,
+                    fragmentCode, vertexCode, MaterialBuilder::Shading::LIT,
+                    MaterialBuilder::RefractionMode::NONE, MaterialBuilder::VertexDomain::DEVICE);
+
+            constexpr GLSLTools glslTools;
+            MaterialBuilder::PropertyList properties{ false };
+            glslTools.findProperties(ShaderStage::VERTEX, shaderCode, properties);
+            MaterialBuilder::PropertyList expected{ false };
+            expected[static_cast<size_t>(MaterialBuilder::Property::CLIP_SPACE_TRANSFORM)] = true;
+            EXPECT_TRUE(PropertyListsMatch(expected, properties));
+        }
+    }
+}
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerClipSpacePosition) {
     const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {

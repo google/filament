@@ -23,7 +23,6 @@ struct PixelParams {
 #if defined(MATERIAL_HAS_SPECULAR_COLOR_FACTOR) || defined(MATERIAL_HAS_SPECULAR_FACTOR)
     float f90;
     float specular;
-    vec3  specularColor;
 #endif
     float roughness;
     vec3  dfg;

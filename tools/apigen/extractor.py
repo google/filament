@@ -1293,14 +1293,27 @@ class Extractor:
         field["type"] = get_type_info(cursor.type)
         
         # Extract default value if present
-        # Heuristic: scan tokens for '='
+        # Heuristic: scan tokens after the field name for '=' or '{...}'
         default_val = None
-        tokens = list(cursor.get_tokens())
+        tokens = get_cursor_tokens(cursor)
+        start_idx = 0
         for i, tok in enumerate(tokens):
+            if tok.spelling == cursor.spelling:
+                start_idx = i + 1
+                if (
+                    hasattr(tok, "location")
+                    and hasattr(cursor, "location")
+                ):
+                    if tok.location.offset == cursor.location.offset:
+                        break
+                else:
+                    break
+        post_name_tokens = tokens[start_idx:]
+        for i, tok in enumerate(post_name_tokens):
             if tok.spelling == '=':
                 # Capture everything after '=' until semicolon
                 val_tokens = []
-                for t in tokens[i+1:]:
+                for t in post_name_tokens[i+1:]:
                     if t.spelling == ';':
                         break
                     val_tokens.append(t.spelling)
@@ -1318,13 +1331,19 @@ class Extractor:
             field["default_value"] = clean_default_val
         else:
             # Check for brace initialization without '=' e.g. Entity renderable{}; float depth{};
-            token_spellings = [t.spelling for t in tokens]
+            token_spellings = [t.spelling for t in post_name_tokens]
             if "{" in token_spellings and "}" in token_spellings:
                 open_idx = token_spellings.index("{")
-                close_idx = token_spellings.index("}")
+                close_idx = len(token_spellings) - 1 - token_spellings[::-1].index("}")
                 if close_idx >= open_idx:
                     inner = token_spellings[open_idx:close_idx+1]
-                    field["default_value"] = "".join(inner)
+                    field["default_value"] = (
+                        " ".join(inner)
+                        .replace(" :: ", "::")
+                        .replace(" ,", ",")
+                        .replace("{ ", "{")
+                        .replace(" }", "}")
+                    )
             else:
                 field["default_value"] = None
 
