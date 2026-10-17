@@ -41,6 +41,7 @@
 #include <filament/Engine.h>
 #include <filament/FrameHistoryStream.h>
 #include <filament/Frustum.h>
+#include <filament/Texture.h>
 #include <filament/ToneMapper.h>
 
 #include <private/backend/BackendUtils.h>
@@ -3035,6 +3036,109 @@ TEST(FilamentTest, DefaultMaterialInstance) {
 
     engine->destroy(entity);
     engine->getEntityManager().destroy(entity);
+    Engine::destroy(&engine);
+}
+
+TEST(FilamentTest, CompressedFormatsHaveBlockInfo) {
+    using backend::TextureFormat;
+    for (auto f = uint16_t(TextureFormat::EAC_R11);
+            f <= uint16_t(TextureFormat::SRGB_ALPHA_BPTC_UNORM); ++f) {
+        TextureFormat const format = TextureFormat(f);
+        ASSERT_TRUE(backend::isCompressedFormat(format)) << f;
+        EXPECT_GT(backend::getBlockWidth(format), 0u) << f;
+        EXPECT_GT(backend::getBlockHeight(format), 0u) << f;
+        EXPECT_GT(backend::getFormatSize(format), 0u) << f;
+    }
+}
+
+TEST(FilamentTest, TextureSetImageCompressedSizeValidation) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+
+    // 10x10 ETC2_RGB8 is 3x3 blocks of 8 bytes.
+    constexpr size_t requiredSize = 3 * 3 * 8;
+    std::vector<uint8_t> data(requiredSize + 1);
+    auto makePbd = [&data](size_t size) {
+        return Texture::PixelBufferDescriptor(data.data(), size,
+                Texture::CompressedType::ETC2_RGB8, uint32_t(size), nullptr);
+    };
+
+    Texture* compressed = Texture::Builder()
+            .width(10)
+            .height(10)
+            .format(Texture::InternalFormat::ETC2_RGB8)
+            .build(*engine);
+    compressed->setImage(*engine, 0, makePbd(requiredSize));
+    compressed->setImage(*engine, 0, makePbd(requiredSize + 1));
+
+    Texture* uncompressed = Texture::Builder()
+            .width(10)
+            .height(10)
+            .format(Texture::InternalFormat::RGBA8)
+            .build(*engine);
+
+#if GTEST_HAS_EXCEPTIONS
+    EXPECT_THROW(compressed->setImage(*engine, 0, makePbd(requiredSize - 1)),
+            utils::PreconditionPanic);
+    EXPECT_THROW(uncompressed->setImage(*engine, 0, makePbd(requiredSize)),
+            utils::PreconditionPanic);
+#else
+    EXPECT_DEATH(compressed->setImage(*engine, 0, makePbd(requiredSize - 1)), "buffer overflow");
+    EXPECT_DEATH(uncompressed->setImage(*engine, 0, makePbd(requiredSize)),
+            "requires a compressed texture format");
+#endif
+
+    engine->destroy(compressed);
+    engine->destroy(uncompressed);
+    Engine::destroy(&engine);
+}
+
+TEST(FilamentTest, TextureSetImageUploadSizeLimit) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+
+    // The precondition fires before the buffer is read, so a small buffer can claim a large size.
+    constexpr size_t tooLarge = size_t(std::numeric_limits<int32_t>::max()) + 1;
+    std::vector<uint8_t> data(16);
+    auto makeCompressedPbd = [&data](size_t size) {
+        return Texture::PixelBufferDescriptor(data.data(), size,
+                Texture::CompressedType::ETC2_RGB8, 16, nullptr);
+    };
+
+    Texture* compressed = Texture::Builder()
+            .width(4)
+            .height(4)
+            .format(Texture::InternalFormat::ETC2_RGB8)
+            .build(*engine);
+
+    // 16384x16384 RGBA32F is 4 GiB.
+    Texture* large = Texture::Builder()
+            .width(16384)
+            .height(16384)
+            .format(Texture::InternalFormat::RGBA32F)
+            .build(*engine);
+
+#if GTEST_HAS_EXCEPTIONS
+    EXPECT_THROW(compressed->setImage(*engine, 0, makeCompressedPbd(tooLarge)),
+            utils::PreconditionPanic);
+    // An empty region still sends the upload, so the cap must apply there too.
+    EXPECT_THROW(compressed->setImage(*engine, 0, 0, 0, 0, 0, 0, 1, makeCompressedPbd(tooLarge)),
+            utils::PreconditionPanic);
+    EXPECT_THROW(large->setImage(*engine, 0,
+                         Texture::PixelBufferDescriptor(data.data(), size_t(16384) * 16384 * 16,
+                                 Texture::Format::RGBA, Texture::Type::FLOAT, nullptr)),
+            utils::PreconditionPanic);
+#else
+    EXPECT_DEATH(compressed->setImage(*engine, 0, makeCompressedPbd(tooLarge)),
+            "exceeds the maximum");
+    EXPECT_DEATH(compressed->setImage(*engine, 0, 0, 0, 0, 0, 0, 1, makeCompressedPbd(tooLarge)),
+            "exceeds the maximum");
+    EXPECT_DEATH(large->setImage(*engine, 0,
+                         Texture::PixelBufferDescriptor(data.data(), size_t(16384) * 16384 * 16,
+                                 Texture::Format::RGBA, Texture::Type::FLOAT, nullptr)),
+            "exceeds the maximum");
+#endif
+
+    engine->destroy(compressed);
+    engine->destroy(large);
     Engine::destroy(&engine);
 }
 
