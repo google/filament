@@ -17,21 +17,22 @@
 
 #include "ApiHandler.h"
 
-#include <backend/DriverEnums.h>
-
 #include <matdbg/DebugServer.h>
 #include <matdbg/JsonWriter.h>
 #include <matdbg/ShaderExtractor.h>
 #include <matdbg/ShaderInfo.h>
 
 #include <filaflat/ChunkContainer.h>
+
+#include <backend/DriverEnums.h>
+
 #include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
 
 #include <CivetServer.h>
 
-#include <sstream>
 #include <chrono>
+#include <sstream>
 
 namespace filament::matdbg {
 

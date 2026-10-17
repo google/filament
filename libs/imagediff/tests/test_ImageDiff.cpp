@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
+#include <imagediff/ImageDiff.h>
 
 #include <image/LinearImage.h>
-#include <imagediff/ImageDiff.h>
+
+#include <gtest/gtest.h>
 
 #include <vector>
 

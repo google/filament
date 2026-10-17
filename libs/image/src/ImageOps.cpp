@@ -16,9 +16,10 @@
 
 #include <image/ImageOps.h>
 
+#include <utils/Panic.h>
+
 #include <math/vec3.h>
 #include <math/vec4.h>
-#include <utils/Panic.h>
 
 #include <algorithm>
 #include <memory>
