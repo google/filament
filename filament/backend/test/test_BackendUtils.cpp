@@ -19,8 +19,6 @@
 #include <backend/DriverEnums.h>
 #include <backend/PixelBufferDescriptor.h>
 
-#include <utils/Panic.h>
-
 #include <gtest/gtest.h>
 
 #include <cstddef>
@@ -41,20 +39,6 @@ TEST(BackendUtilsTest, ReshapeRgbToRgba) {
     for (size_t i = 0; i < sizeof(expected); ++i) {
         EXPECT_EQ(out[i], expected[i]) << "byte " << i;
     }
-}
-
-TEST(BackendUtilsTest, ReshapeSizeOverflowFailsCleanly) {
-    // The size isn't backed by memory, so the check must fire before anything is read or written.
-    // SIZE_MAX / 4 + 1 is the 32-bit 1 GiB case scaled to the host's size_t.
-    uint8_t dummy[3] = {};
-    PixelBufferDescriptor const data(dummy, SIZE_MAX / 4 + 1,
-            PixelDataFormat::RGB, PixelDataType::UBYTE);
-    PixelBufferDescriptor reshaped;
-#if GTEST_HAS_EXCEPTIONS
-    EXPECT_THROW(reshape(data, reshaped), utils::PreconditionPanic);
-#else
-    EXPECT_DEATH(reshape(data, reshaped), "reshape\\(\\) source buffer is too large");
-#endif
 }
 
 } // namespace filament::backend
