@@ -19,10 +19,12 @@
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/RenderableManager.h>
+#include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
 
 #include <backend/BufferDescriptor.h>
 #include <backend/DriverEnums.h>
+#include <backend/PixelBufferDescriptor.h>
 
 #include <utils/Entity.h>
 #include <utils/EntityManager.h>
@@ -362,6 +364,37 @@ TEST_F(BufferBoundsTest, RenderableSetGeometryAtRejectsOffsetCountWrap) {
     utils::EntityManager::get().destroy(entity);
     mEngine->destroy(ib);
     mEngine->destroy(vb);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Texture
+// ---------------------------------------------------------------------------------------------
+
+#if GTEST_HAS_EXCEPTIONS
+#define EXPECT_RGB_SIZE_REJECTED(statement) \
+        EXPECT_THROW(statement, utils::PreconditionPanic)
+#else
+#define EXPECT_RGB_SIZE_REJECTED(statement) \
+        EXPECT_DEATH(statement, "RGB pixel buffer is too large")
+#endif
+
+TEST_F(BufferBoundsTest, TextureRejectsRgbSizeThatWouldWrapWhenExpanded) {
+    Texture* texture = Texture::Builder()
+            .width(1)
+            .height(1)
+            .format(Texture::InternalFormat::RGB8)
+            .build(*mEngine);
+
+    // SIZE_MAX / 4 + 1 is the 32-bit 1 GiB case scaled to the host's size_t.
+    EXPECT_RGB_SIZE_REJECTED(texture->setImage(*mEngine, 0,
+            Texture::PixelBufferDescriptor(gScratch, SIZE_MAX / 4 + 1,
+                    Texture::Format::RGB, Texture::Type::UBYTE)));
+    // An empty region still sends the descriptor to the backend.
+    EXPECT_RGB_SIZE_REJECTED(texture->setImage(*mEngine, 0, 0, 0, 0, 0, 0, 1,
+            Texture::PixelBufferDescriptor(gScratch, SIZE_MAX / 4 + 1,
+                    Texture::Format::RGB, Texture::Type::UBYTE)));
+
+    mEngine->destroy(texture);
 }
 
 } // namespace
