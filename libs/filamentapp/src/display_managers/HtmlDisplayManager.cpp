@@ -233,7 +233,7 @@ void HtmlDisplayManager::onFrameFinished(WindowHandle window,
     // TODO: Throttle readPixels
     ReadPixelsUser* user = new ReadPixelsUser{ this, width, height };
     filament::backend::PixelBufferDescriptor desc(
-            malloc(width * height * 4), width * height * 4,
+            malloc(size_t(width) * height * 4), size_t(width) * height * 4,
             filament::backend::PixelDataFormat::RGBA, filament::backend::PixelDataType::UBYTE,
             [](void* buffer, size_t size, void* userPtr) {
                 ReadPixelsUser* user = (ReadPixelsUser*) userPtr;

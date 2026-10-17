@@ -2187,7 +2187,7 @@ void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {
     auto t = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
     assert_invariant(t);
 
-    int32_t layerCount = int32_t(t->depth);
+    uint32_t layerCount = uint32_t(t->depth);
     if (t->target == SamplerType::SAMPLER_CUBEMAP_ARRAY ||
         t->target == SamplerType::SAMPLER_CUBEMAP) {
         layerCount *= 6;
@@ -2208,15 +2208,15 @@ void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {
 
         // TODO: there should be a way to do this using layerCount in vkBlitImage
         // TODO: vkBlitImage should be able to handle 3D textures too
-        for (uint8_t layer = 0; layer < layerCount; layer++) {
+        for (uint32_t layer = 0; layer < layerCount; layer++) {
             VulkanAttachment dst {
                 .level = uint8_t(level + 1),
-                .layer = layer,
+                .layer = uint8_t(layer),
             };
             dst.texture = t;
             VulkanAttachment src {
                 .level = uint8_t(level),
-                .layer = layer,
+                .layer = uint8_t(layer),
             };
             src.texture = t;
             mBlitter.blit(VK_FILTER_LINEAR, dst, dstOffsets, src, srcOffsets);
