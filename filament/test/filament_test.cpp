@@ -32,6 +32,7 @@
 #include <private/filament/BufferInterfaceBlock.h>
 
 #include <filament/Box.h>
+#include <filament/BufferObject.h>
 #include <filament/Camera.h>
 #include <filament/Color.h>
 #include <filament/ColorGrading.h>
@@ -44,6 +45,7 @@
 
 #include <private/backend/BackendUtils.h>
 
+#include <backend/BufferDescriptor.h>
 #include <backend/DriverEnums.h>
 
 #include <utils/NameComponentManager.h>
@@ -2856,6 +2858,23 @@ TEST(FilamentTest, FrameHistoryStreamTest) {
 
     engine->destroy(swapChain);
     engine->destroy(renderer);
+    Engine::destroy(&engine);
+}
+
+TEST(FilamentTest, FlushAndWaitDispatchesCallbacksOfPendingCommands) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    BufferObject* bo = BufferObject::Builder().size(sizeof(uint32_t)).build(*engine);
+
+    static constexpr uint32_t data = 0;
+    bool released = false;
+    bo->setBuffer(*engine, backend::BufferDescriptor(&data, sizeof(data),
+            [](void*, size_t, void* user) { *static_cast<bool*>(user) = true; }, &released));
+
+    // The setBuffer() command has not been flushed yet, so flushAndWait() has to run it.
+    engine->flushAndWait();
+    EXPECT_TRUE(released);
+
+    engine->destroy(bo);
     Engine::destroy(&engine);
 }
 
