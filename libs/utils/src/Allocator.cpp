@@ -128,30 +128,8 @@ AtomicFreeList::AtomicFreeList(void* begin, void* end,
     assert_invariant(mHead.is_lock_free());
 #endif
 
-    void* const p = pointermath::align(begin, alignment, extra);
-    void* const n = pointermath::align(pointermath::add(p, elementSize), alignment, extra);
-    assert_invariant(p >= begin && p < end);
-    assert_invariant(n >= begin && n <= end && n > p);
-
-    const size_t d = uintptr_t(n) - uintptr_t(p);
-    const size_t num = (uintptr_t(end) - uintptr_t(p)) / d;
-
-    // set first entry
-    Node* head = static_cast<Node*>(p);
-    mStorage = head;
-
-    // next entry
-    Node* cur = head;
-    for (size_t i = 1; i < num; ++i) {
-        Node* next = pointermath::add(cur, d);
-        cur->next = next;
-        cur = next;
-    }
-    assert_invariant(cur < end);
-    assert_invariant(pointermath::add(cur, d) <= end);
-    cur->next = nullptr;
-
-    mHead.store({ int32_t(head - mStorage), 0 });
+    mStorage = FreeList::init(begin, end, elementSize, alignment, extra);
+    mHead.store({ 0, 0 });
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -257,7 +235,7 @@ void TrackingPolicy::Debug::onRewind(void const* addr) noexcept {
 
 TrackingPolicy::LeakDetectorBase::~LeakDetectorBase() noexcept {
     if (!mAllocations.empty()) {
-        dumpLeaksAndClear(mAllocations.begin(), mAllocations.end(), "destruction", LeakDetectorBehavior::LOG);
+        dumpLeaksAndClear(nullptr, nullptr, "destruction", LeakDetectorBehavior::LOG);
     }
 }
 
@@ -265,73 +243,79 @@ void TrackingPolicy::LeakDetectorBase::onAlloc(void* p, size_t const size, size_
         size_t const extra, size_t const ignoreFrames) noexcept {
     if (p) {
         // +3 to account for CallStack::unwind, CallStack::update, and CallStack::update_gcc
-        mAllocations.emplace(p, AllocationInfo{ size, alignment, extra, CallStack::unwind(ignoreFrames + 3) });
+        mAllocations.emplace_back(p, AllocationInfo{ size, alignment, extra, CallStack::unwind(ignoreFrames + 3) });
         mActiveBytes += size;
     }
 }
 
 void TrackingPolicy::LeakDetectorBase::onFree(void* p, size_t const size) noexcept {
     if (p) {
-        auto const it = mAllocations.find(p);
-        if (it != mAllocations.end()) {
-            if (size != it->second.size) {
-                LOG(WARNING) << (mName ? mName : "Arena") << " arena: free() size mismatch for pointer "
-                             << p << " (freed with " << size << " bytes, but allocated with "
-                             << it->second.size << " bytes)\nAllocation callstack:\n"
-                             << it->second.callstack;
+        for (size_t i = mAllocations.size(); i > 0; --i) {
+            auto& entry = mAllocations[i - 1];
+            if (entry.first == p) {
+                if (size != entry.second.size) {
+                    LOG(WARNING) << (mName ? mName : "Arena") << " arena: free() size mismatch for pointer "
+                                 << p << " (freed with " << size << " bytes, but allocated with "
+                                 << entry.second.size << " bytes)\nAllocation callstack:\n"
+                                 << entry.second.callstack;
+                }
+                mActiveBytes -= entry.second.size;
+                entry = mAllocations.back();
+                mAllocations.pop_back();
+                return;
             }
-            mActiveBytes -= it->second.size;
-            mAllocations.erase(it);
         }
     }
 }
 
 void TrackingPolicy::LeakDetectorBase::onReset(LeakDetectorBehavior const behavior) noexcept {
     if (!mAllocations.empty()) {
-        dumpLeaksAndClear(mAllocations.begin(), mAllocations.end(), "reset", behavior);
+        dumpLeaksAndClear(nullptr, nullptr, "reset", behavior);
     }
 }
 
 void TrackingPolicy::LeakDetectorBase::onRewind(void const* addr, LeakDetectorBehavior const behavior) noexcept {
     if (addr && !mAllocations.empty()) {
-        auto const start = mAllocations.lower_bound(const_cast<void*>(addr));
-        auto end = mAllocations.end();
-        if (mBase && mSize > 0) {
-            void const* const baseEnd = pointermath::add(mBase, mSize);
-            end = mAllocations.lower_bound(const_cast<void*>(baseEnd));
-        }
-        if (start != end) {
-            dumpLeaksAndClear(start, end, "rewind", behavior);
-        }
+        void const* const baseEnd = (mBase && mSize > 0) ? pointermath::add(mBase, mSize) : nullptr;
+        dumpLeaksAndClear(addr, baseEnd, "rewind", behavior);
     }
 }
 
 void TrackingPolicy::LeakDetectorBase::dumpLeaksAndClear(
-        std::map<void*, AllocationInfo>::iterator const start,
-        std::map<void*, AllocationInfo>::iterator const end,
+        void const* const startAddr,
+        void const* const endAddr,
         char const* const operation, LeakDetectorBehavior const behavior) noexcept {
-    if (start == end) {
+    size_t leakCount = 0;
+    size_t leakBytes = 0;
+    size_t writeIdx = 0;
+    for (size_t i = 0, n = mAllocations.size(); i < n; ++i) {
+        auto const& entry = mAllocations[i];
+        bool const inRange = (!startAddr || entry.first >= startAddr) &&
+                             (!endAddr || entry.first < endAddr);
+        if (inRange) {
+            ++leakCount;
+            leakBytes += entry.second.size;
+            LOG(ERROR) << (mName ? mName : "Arena") << " arena: Leaked " << entry.second.size
+                       << " bytes at " << entry.first << " during " << operation
+                       << " with allocation callstack:\n" << entry.second.callstack;
+        } else {
+            if (writeIdx != i) {
+                mAllocations[writeIdx] = std::move(mAllocations[i]);
+            }
+            ++writeIdx;
+        }
+    }
+
+    if (leakCount == 0) {
         return;
     }
 
-    size_t leakCount = 0;
-    size_t leakBytes = 0;
-    for (auto it = start; it != end; ++it) {
-        ++leakCount;
-        leakBytes += it->second.size;
-        LOG(ERROR) << (mName ? mName : "Arena") << " arena: Leaked " << it->second.size
-                   << " bytes at " << it->first << " during " << operation
-                   << " with allocation callstack:\n" << it->second.callstack;
-    }
+    mActiveBytes -= leakBytes;
+    mAllocations.resize(writeIdx);
 
     if (behavior == LeakDetectorBehavior::PANIC) {
         PANIC_POSTCONDITION("%s arena: %zu leaked allocations (%zu bytes) detected on %s",
                 mName ? mName : "Arena", leakCount, leakBytes, operation);
-    }
-
-    for (auto it = start; it != end; ) {
-        mActiveBytes -= it->second.size;
-        it = mAllocations.erase(it);
     }
 }
 

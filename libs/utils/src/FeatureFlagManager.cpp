@@ -73,94 +73,111 @@ void overrideFeatureDefaults(Slice<FeatureFlagManager::FeatureFlag> const& featu
     }
 }
 
-} // anonymous
+using Features = decltype(FeatureFlagManager::features);
 
-FeatureFlagManager::FeatureFlagManager() : mFeatures{{
+struct FeatureDesc {
+    char const* name;
+    char const* description;
+    uint16_t offset;
+    bool constant = true;
+};
+
+constexpr std::array<FeatureDesc, sizeof(Features)> kFeatureDescriptors{{
         { "backend.disable_parallel_shader_compile",
           "Disable parallel shader compilation in GL and Metal backends.",
-          &features.backend.disable_parallel_shader_compile },
+          offsetof(Features, backend.disable_parallel_shader_compile) },
         { "backend.disable_amortized_shader_compile",
           "Disable amortized shader compilation in GL backend.",
-          &features.backend.disable_amortized_shader_compile },
+          offsetof(Features, backend.disable_amortized_shader_compile) },
         { "backend.disable_handle_use_after_free_check",
           "Disable Handle<> use-after-free checks.",
-          &features.backend.disable_handle_use_after_free_check },
+          offsetof(Features, backend.disable_handle_use_after_free_check) },
         { "backend.disable_heap_handle_tags",
           "Disable Handle<> tags for heap-allocated handles.",
-          &features.backend.disable_heap_handle_tags },
+          offsetof(Features, backend.disable_heap_handle_tags) },
         { "backend.enable_asynchronous_operation",
           "Enable asynchronous operation for resource management.",
-          &features.backend.enable_asynchronous_operation },
+          offsetof(Features, backend.enable_asynchronous_operation) },
         { "backend.enable_priority_override_mitigation",
           "Enable thread priority elevation to mitigate priority inversion during shader compilation.",
-          &features.backend.enable_priority_override_mitigation },
+          offsetof(Features, backend.enable_priority_override_mitigation) },
         { "backend.opengl.assert_native_window_is_valid",
           "Asserts that the ANativeWindow is valid when rendering starts.",
-          &features.backend.opengl.assert_native_window_is_valid },
+          offsetof(Features, backend.opengl.assert_native_window_is_valid) },
         { "engine.color_grading.use_1d_lut",
           "Uses a 1D LUT for color grading.",
-          &features.engine.color_grading.use_1d_lut, false },
+          offsetof(Features, engine.color_grading.use_1d_lut), false },
         { "engine.color_grading.use_optimized_default_builder",
           "Uses NEON fast math for color grading LUT generation.",
-          &features.engine.color_grading.use_optimized_default_builder, false },
+          offsetof(Features, engine.color_grading.use_optimized_default_builder), false },
         { "engine.shadows.use_shadow_atlas",
           "Uses an array of atlases to store shadow maps.",
-          &features.engine.shadows.use_shadow_atlas, false },
+          offsetof(Features, engine.shadows.use_shadow_atlas), false },
         { "engine.debug.assert_material_instance_in_use",
           "Assert when a MaterialInstance is destroyed while it is in use by RenderableManager.",
-          &features.engine.debug.assert_material_instance_in_use, false },
+          offsetof(Features, engine.debug.assert_material_instance_in_use), false },
         { "engine.debug.assert_destroy_material_before_material_instance",
           "Assert when a Material is destroyed but its instances are still alive.",
-          &features.engine.debug.assert_destroy_material_before_material_instance, false },
+          offsetof(Features, engine.debug.assert_destroy_material_before_material_instance), false },
         { "engine.debug.assert_vertex_buffer_count_exceeds_8",
           "Assert when a client's number of buffers for a VertexBuffer exceeds 8.",
-          &features.engine.debug.assert_vertex_buffer_count_exceeds_8, false },
+          offsetof(Features, engine.debug.assert_vertex_buffer_count_exceeds_8), false },
         { "engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4",
           "Assert that the attribute stride of a vertex buffer is a multiple of 4.",
-          &features.engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4, false },
+          offsetof(Features, engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4), false },
         { "backend.vulkan.enable_pipeline_cache_prewarming",
           "Enables an experimental approach to parallel shader compilation on Vulkan.",
-          &features.backend.vulkan.enable_pipeline_cache_prewarming, false },
+          offsetof(Features, backend.vulkan.enable_pipeline_cache_prewarming), false },
         { "engine.enable_program_cache",
           "Enable the shader program cache.",
-          &features.engine.enable_program_cache },
+          offsetof(Features, engine.enable_program_cache) },
         { "backend.vulkan.enable_staging_buffer_bypass",
           "vulkan: enable a staging bypass logic for unified memory architecture.",
-          &features.backend.vulkan.enable_staging_buffer_bypass, false },
+          offsetof(Features, backend.vulkan.enable_staging_buffer_bypass), false },
         { "backend.vulkan.enable_acquire_swapchain_in_make_current",
           "vulkan: acquire the swapchain in makeCurrent() instead of beginRenderPass().",
-          &features.backend.vulkan.enable_acquire_swapchain_in_make_current, false },
+          offsetof(Features, backend.vulkan.enable_acquire_swapchain_in_make_current), false },
         { "backend.vulkan.enable_pipeline_dynamic_state",
           "vulkan: allow the usage of dynamic state when creating pipelines.",
-          &features.backend.vulkan.enable_pipeline_dynamic_state, false },
+          offsetof(Features, backend.vulkan.enable_pipeline_dynamic_state), false },
         { "engine.debug.assert_material_instance_texture_descriptor_set_compatible",
           "Assert that the textures in a material instance are compatible with descriptor set.",
-          &features.engine.debug.assert_material_instance_texture_descriptor_set_compatible, false },
+          offsetof(Features, engine.debug.assert_material_instance_texture_descriptor_set_compatible), false },
         { "engine.debug.assert_texture_can_generate_mipmap",
           "Assert if a texture has the correct usage set for generating mipmaps.",
-          &features.engine.debug.assert_texture_can_generate_mipmap, false },
+          offsetof(Features, engine.debug.assert_texture_can_generate_mipmap), false },
         { "material.check_crc32_after_loading",
           "Verify the checksum of package data when a material is loaded.",
-          &features.material.check_crc32_after_loading, false },
+          offsetof(Features, material.check_crc32_after_loading), false },
         { "material.enable_material_instance_uniform_batching",
           "Make all MaterialInstances share a common large uniform buffer and use sub-allocations within it.",
-          &features.material.enable_material_instance_uniform_batching },
+          offsetof(Features, material.enable_material_instance_uniform_batching) },
         { "engine.frame_info.disable_gpu_complete_metric",
           "Disable Renderer::FrameInfo::gpuFrameComplete reporting",
-          &features.engine.frame_info.disable_gpu_complete_metric },
+          offsetof(Features, engine.frame_info.disable_gpu_complete_metric) },
         { "engine.skip_frame_when_cpu_ahead_of_display",
           "Automatically skip frames when the CPU gets ahead of the display.",
-          &features.engine.skip_frame_when_cpu_ahead_of_display },
+          offsetof(Features, engine.skip_frame_when_cpu_ahead_of_display) },
         { "material.enable_fog_as_postprocess",
           "Fog is applied as a separate pass for opaque objects.",
-          &features.material.enable_fog_as_postprocess },
+          offsetof(Features, material.enable_fog_as_postprocess) },
         { "material.check_device_sampler_limits",
           "Validate the samplers of a material against the device's per-stage limits when it is loaded.",
-          &features.material.check_device_sampler_limits },
+          offsetof(Features, material.check_device_sampler_limits) },
         { "view.enable_grid_based_world_origin",
           "Enable grid-based world origin snapping to improve precision and avoid per-frame transform updates.",
-          &features.view.enable_grid_based_world_origin },
-}} {
+          offsetof(Features, view.enable_grid_based_world_origin) },
+}};
+
+} // anonymous
+
+FeatureFlagManager::FeatureFlagManager() {
+    auto const* const base = reinterpret_cast<bool const*>(&features);
+    UTILS_NOUNROLL
+    for (size_t i = 0; i < mFeatures.size(); ++i) {
+        auto const& desc = kFeatureDescriptors[i];
+        mFeatures[i] = { desc.name, desc.description, base + desc.offset, desc.constant };
+    }
     overrideFeatureDefaults({ mFeatures.data(), mFeatures.size() });
 }
 

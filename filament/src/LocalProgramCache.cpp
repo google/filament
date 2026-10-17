@@ -106,7 +106,7 @@ void LocalProgramCache::initializeForMaterial(FEngine& engine, FMaterial const& 
 }
 
 Handle<HwProgram> LocalProgramCache::prepareProgramSlow(DriverApi& driver, Variant const variant,
-        DynamicSpecConstKey specKey, CompilerPriorityQueue const priorityQueue) const noexcept {
+        DynamicSpecConstKey const specKey, CompilerPriorityQueue const priorityQueue) const noexcept {
     assert_invariant(mMaterial != nullptr);
 
     FEngine& engine = mMaterial->getEngine();
@@ -129,15 +129,16 @@ Handle<HwProgram> LocalProgramCache::prepareProgramSlow(DriverApi& driver, Varia
                 priorityQueue);
     }
 
+    // FIXME: this throws in a noexcept context
     FILAMENT_CHECK_POSTCONDITION(result)
             << "Requested variant " << variant << " with specKey "
-            << (uint32_t) specKey.key << " does not exist for material " << mMaterial->getName();
+            << uint32_t(specKey.key) << " does not exist for material " << mMaterial->getName();
 
     return mCachedPrograms[mappedKey] = result;
 }
 
-ProgramSpecialization LocalProgramCache::getProgramSpecialization(Variant variant,
-        DynamicSpecConstKey specKey) const noexcept {
+ProgramSpecialization LocalProgramCache::getProgramSpecialization(Variant const variant,
+        DynamicSpecConstKey const specKey) const noexcept {
     assert_invariant(mMaterial != nullptr);
 
     return ProgramSpecialization{
@@ -183,12 +184,12 @@ Variant LocalProgramCache::filterVariantForGetProgram(Variant variant) const noe
     return variant;
 }
 
-Program::SpecializationConstant LocalProgramCache::getConstantImpl(uint32_t id) const noexcept {
+Program::SpecializationConstant LocalProgramCache::getConstantImpl(uint32_t const id) const noexcept {
     return mSpecializationConstants.get()[id];
 }
 
 Program::SpecializationConstant LocalProgramCache::getConstantImpl(
-        std::string_view name) const noexcept {
+        std::string_view const name) const noexcept {
     assert_invariant(mMaterial != nullptr);
 
     auto const& constants = mMaterial->getDefinition().specializationConstantsNameToIndex;

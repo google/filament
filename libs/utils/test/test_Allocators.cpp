@@ -389,11 +389,15 @@ TEST(AllocatorTest, LeakDetectorWithLeaksOnRewind) {
         EXPECT_EQ(192u, arena.getListener().getActiveAllocationBytes());
 
         auto const& active = arena.getListener().getActiveAllocations();
-        EXPECT_NE(active.find(p0), active.end());
-        EXPECT_NE(active.find(p1), active.end());
-        EXPECT_EQ(64u, active.find(p0)->second.size);
-        EXPECT_EQ(128u, active.find(p1)->second.size);
-        EXPECT_GT(active.find(p0)->second.callstack.getFrameCount(), 0u);
+        auto const it0 = std::find_if(active.begin(), active.end(),
+                [p0](auto const& entry) { return entry.first == p0; });
+        auto const it1 = std::find_if(active.begin(), active.end(),
+                [p1](auto const& entry) { return entry.first == p1; });
+        ASSERT_NE(it0, active.end());
+        ASSERT_NE(it1, active.end());
+        EXPECT_EQ(64u, it0->second.size);
+        EXPECT_EQ(128u, it1->second.size);
+        EXPECT_GT(it0->second.callstack.getFrameCount(), 0u);
     }
 
     // After ArenaScope exits and rewinds, leaks are logged and cleared
@@ -424,7 +428,9 @@ TEST(AllocatorTest, LeakDetectorNestedScopes) {
         EXPECT_EQ(1u, arena.getListener().getActiveAllocationCount());
         EXPECT_EQ(64u, arena.getListener().getActiveAllocationBytes());
         auto const& active = arena.getListener().getActiveAllocations();
-        EXPECT_NE(active.find(p0), active.end());
+        auto const it0 = std::find_if(active.begin(), active.end(),
+                [p0](auto const& entry) { return entry.first == p0; });
+        EXPECT_NE(it0, active.end());
 
         arena.free(p0, 64);
         EXPECT_EQ(0u, arena.getListener().getActiveAllocationCount());

@@ -147,14 +147,14 @@ public:
 
 private:
     backend::Handle<backend::HwProgram> prepareProgramSlow(backend::DriverApi& driver,
-            Variant const variant,
-            DynamicSpecConstKey const specKey,
-            backend::CompilerPriorityQueue const priorityQueue) const noexcept;
+            Variant variant,
+            DynamicSpecConstKey specKey,
+            backend::CompilerPriorityQueue priorityQueue) const noexcept;
 
     ProgramSpecialization getProgramSpecialization(Variant variant,
             DynamicSpecConstKey specKey) const noexcept;
 
-    Variant filterVariantForGetProgram(Variant const variant) const noexcept;
+    Variant filterVariantForGetProgram(Variant variant) const noexcept;
 
     void setConstantsImpl(utils::FixedCapacityVector<backend::Program::SpecializationConstant>
                     constants) noexcept;

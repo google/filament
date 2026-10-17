@@ -24,7 +24,6 @@
 
 #include <atomic>
 #include <cstddef>
-#include <map>
 #include <mutex>
 #include <type_traits>
 #include <utility>
@@ -411,6 +410,7 @@ public:
     };
 
 private:
+    friend class AtomicFreeList;
     static Node* init(void* begin, void* end,
             size_t elementSize, size_t alignment, size_t extra) noexcept;
 
@@ -486,32 +486,30 @@ public:
         return mStorage + mHead.load(std::memory_order_relaxed).offset;
     }
 
-    struct Node {
-        // There is a benign data race when a pop() is interrupted by a
-        // pop() + push() just after mHead->next is read -- it appears as though it is written
-        // without synchronization (by the push), however in that case, the pop's CAS will fail
-        // and things will auto-correct.
-        //
-        //    Pop()                       |
-        //     |                          |
-        //   read head->next              |
-        //     |                        pop()
-        //     |                          |
-        //     |                        read head->next
-        //     |                         CAS, tag++
-        //     |                          |
-        //     |                        push()
-        //     |                          |
-        // [TSAN: data-race here]       write head->next
-        //     |                         CAS, tag++
-        //    CAS fails
-        //     |
-        //   read head->next
-        //     |
-        //    CAS, tag++
-        //
-        Node* next = nullptr;
-    };
+    // There is a benign data race when a pop() is interrupted by a
+    // pop() + push() just after mHead->next is read -- it appears as though it is written
+    // without synchronization (by the push), however in that case, the pop's CAS will fail
+    // and things will auto-correct.
+    //
+    //    Pop()                       |
+    //     |                          |
+    //   read head->next              |
+    //     |                        pop()
+    //     |                          |
+    //     |                        read head->next
+    //     |                         CAS, tag++
+    //     |                          |
+    //     |                        push()
+    //     |                          |
+    // [TSAN: data-race here]       write head->next
+    //     |                         CAS, tag++
+    //    CAS fails
+    //     |
+    //   read head->next
+    //     |
+    //    CAS, tag++
+    //
+    using Node = FreeList::Node;
 
 private:
     UTILS_NO_SANITIZE_THREAD
@@ -864,6 +862,7 @@ public:
         size_t extra = 0;
         CallStack callstack;
     };
+    using AllocationList = std::vector<std::pair<void*, AllocationInfo>>;
 
     LeakDetectorBase() noexcept = default;
     LeakDetectorBase(char const* name, void const* base, size_t const size) noexcept
@@ -878,18 +877,17 @@ public:
 
     uint32_t getActiveAllocationCount() const noexcept { return uint32_t(mAllocations.size()); }
     uint32_t getActiveAllocationBytes() const noexcept { return uint32_t(mActiveBytes); }
-    std::map<void*, AllocationInfo> const& getActiveAllocations() const noexcept { return mAllocations; }
+    AllocationList const& getActiveAllocations() const noexcept { return mAllocations; }
 
 protected:
-    void dumpLeaksAndClear(std::map<void*, AllocationInfo>::iterator start,
-            std::map<void*, AllocationInfo>::iterator end,
+    void dumpLeaksAndClear(void const* startAddr, void const* endAddr,
             char const* operation, LeakDetectorBehavior behavior) noexcept;
 
     char const* mName = nullptr;
     void const* mBase = nullptr;
     uint32_t mSize = 0;
     size_t mActiveBytes = 0;
-    std::map<void*, AllocationInfo> mAllocations;
+    AllocationList mAllocations;
 };
 
 template<LeakDetectorBehavior BEHAVIOR = LeakDetectorBehavior::LOG, size_t IGNORE_FRAMES = 3>
@@ -898,7 +896,7 @@ struct TLeakDetector : public LeakDetectorBase {
     TLeakDetector(char const* name, void const* base, size_t const size) noexcept
         : LeakDetectorBase(name, base, size) { }
     ~TLeakDetector() noexcept {
-        dumpLeaksAndClear(mAllocations.begin(), mAllocations.end(), "destruction", BEHAVIOR);
+        dumpLeaksAndClear(nullptr, nullptr, "destruction", BEHAVIOR);
     }
 
     void onAlloc(void* p, size_t const size, size_t const alignment = 0, size_t const extra = 0) noexcept {
