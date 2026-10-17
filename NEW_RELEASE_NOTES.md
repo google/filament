@@ -9,3 +9,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - java: Fixed support for quaternions in JNI bindings
 - java: Properly set default values inside structures such as `LightManager.ShadowOptions`
 - materials: Flat interpolation now works with user-defined variables
+- engine: `Texture::setImage()` now rejects uploads of 2 GiB or more

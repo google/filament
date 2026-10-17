@@ -30,6 +30,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <stddef.h>
+
 namespace filament::backend {
 
 class VulkanCommands;
@@ -217,9 +219,10 @@ public:
     // buffers so that we have less objects around that we have to keep track
     // of.
     // This function is NOT thread-safe.
-    // numBytes - the number of bytes required by this segment.
+    // requestedBytes - the number of bytes required by this segment. Must fit in 32 bits after
+    //                  alignment.
     // alignment - the multiple to align the buffer offset to
-    fvkmemory::resource_ptr<VulkanStage::Segment> acquireStage(uint32_t numBytes,
+    fvkmemory::resource_ptr<VulkanStage::Segment> acquireStage(size_t requestedBytes,
             uint32_t alignment = 0);
 
     // Returns an image that can be used as the source of vkCmdBlitImage. The image is in the
@@ -254,7 +257,7 @@ private:
     // Takes a number of bytes, and aligns it to the non-coherent atom size.
     // This allows us to ensure that when we flush buffers from the host, we
     // never flush more atoms than we need to.
-    uint32_t alignToNonCoherentAtomSize(uint32_t numBytes);
+    VkDeviceSize alignToNonCoherentAtomSize(VkDeviceSize numBytes);
 
     // Allocates a new stage buffer, and optionally subdivides it into stage
     // blocks. If subdivideBlocks is true, predefined divisions will be used.
