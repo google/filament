@@ -2211,12 +2211,12 @@ void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {
         for (uint32_t layer = 0; layer < layerCount; layer++) {
             VulkanAttachment dst {
                 .level = uint8_t(level + 1),
-                .layer = static_cast<uint8_t>(layer),
+                .layer = uint8_t(layer),
             };
             dst.texture = t;
             VulkanAttachment src {
                 .level = uint8_t(level),
-                .layer = static_cast<uint8_t>(layer),
+                .layer = uint8_t(layer),
             };
             src.texture = t;
             mBlitter.blit(VK_FILTER_LINEAR, dst, dstOffsets, src, srcOffsets);

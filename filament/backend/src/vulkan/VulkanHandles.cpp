@@ -458,7 +458,7 @@ void VulkanRenderTarget::emitBarriersBeginRenderPass(VulkanCommandBuffer& comman
         }
     };
 
-    for (uint8_t i = 0, count = static_cast<uint8_t>(mInfo->colors.count()); i < count; ++i) {
+    for (uint8_t i = 0, count = uint8_t(mInfo->colors.count()); i < count; ++i) {
         auto& attachment = attachments[i];
         auto tex = attachment.texture;
         if (samples == 1 || tex->samples == 1) {

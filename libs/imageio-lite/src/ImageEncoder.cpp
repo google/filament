@@ -272,16 +272,16 @@ bool TIFFEncoder::encode(LinearImage const& image) {
     if (srcChannels == 4) {
         rgbaData = fromLinearTosRGB<uint8_t, 4>(image);
     } else if (srcChannels == 3) {
-        rgbaData = std::make_unique<uint8_t[]>(static_cast<size_t>(width) * height * 4);
+        rgbaData = std::make_unique<uint8_t[]>(size_t(width) * height * 4);
         auto rgb = fromLinearTosRGB<uint8_t, 3>(image);
-        for (size_t i = 0, n = static_cast<size_t>(width) * height; i < n; ++i) {
+        for (size_t i = 0, n = size_t(width) * height; i < n; ++i) {
             rgbaData[i * 4 + 0] = rgb[i * 3 + 0];
             rgbaData[i * 4 + 1] = rgb[i * 3 + 1];
             rgbaData[i * 4 + 2] = rgb[i * 3 + 2];
             rgbaData[i * 4 + 3] = 255;
         }
     } else {
-        rgbaData = std::make_unique<uint8_t[]>(static_cast<size_t>(width) * height * 4);
+        rgbaData = std::make_unique<uint8_t[]>(size_t(width) * height * 4);
         uint8_t* d = rgbaData.get();
         for (size_t y = 0; y < height; ++y) {
             float const* p = image.getPixelRef(0, y);

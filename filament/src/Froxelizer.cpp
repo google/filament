@@ -416,7 +416,7 @@ bool Froxelizer::update() noexcept {
         uint16_t froxelCountX, froxelCountY, froxelCountZ;
         computeFroxelLayout(&froxelDimension, &froxelCountX, &froxelCountY, &froxelCountZ,
                 getFroxelBufferEntryCount(), viewport);
-        const uint32_t froxelCount = static_cast<uint32_t>(froxelCountX) * froxelCountY * froxelCountZ;
+        const uint32_t froxelCount = uint32_t(froxelCountX) * froxelCountY * froxelCountZ;
 
         mFroxelDimension = froxelDimension;
         // note: because froxelDimension is a power-of-two and viewport is an integer, mClipFroxel
@@ -642,7 +642,7 @@ void Froxelizer::froxelizeLights(FEngine& engine,
         auto const& recordBufferUser(mRecordBufferUser);
         auto gpuFroxelEntries(mFroxelBufferUser);
         gpuFroxelEntries.set(gpuFroxelEntries.begin(),
-                static_cast<size_t>(mFroxelCountX) * mFroxelCountY * mFroxelCountZ);
+                size_t(mFroxelCountX) * mFroxelCountY * mFroxelCountZ);
         for (auto const& entry : gpuFroxelEntries) {
             // go through every light for that froxel
             for (size_t i = 0; i < entry.count(); i++) {

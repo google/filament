@@ -201,7 +201,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                             const uint32_t w = view->getViewport().width;
                             const uint32_t h = view->getViewport().height;
                             if (h > 0 && zoom > 0.001) {
-                                const double aspect = static_cast<double>(w) / h;
+                                const double aspect = double(w) / h;
                                 app->cam->setProjection(Camera::Projection::ORTHO, -aspect * zoom,
                                         aspect * zoom, -zoom, zoom, -1, 1);
                             }

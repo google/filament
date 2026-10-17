@@ -114,7 +114,7 @@ bool IBL::loadFromEquirect(const utils::Path& path) {
         w = image->getWidth();
         h = image->getHeight();
         n = image->getChannels();
-        size = static_cast<size_t>(w) * h * n * sizeof(float);
+        size = size_t(w) * h * n * sizeof(float);
         data = image->getPixelRef();
         user = image;
         destroyer = [](void*, size_t, void* user) {
@@ -124,7 +124,7 @@ bool IBL::loadFromEquirect(const utils::Path& path) {
         auto buf = mAssetLoader->load(path);
         if (!buf.empty()) {
             stbi_info_from_memory(buf.data(), buf.size(), &w, &h, nullptr);
-            size = static_cast<size_t>(w) * h * sizeof(float3);
+            size = size_t(w) * h * sizeof(float3);
             data = (float3*) stbi_loadf_from_memory(buf.data(), buf.size(), &w, &h, &n, 3);
         }
         destroyer = [](void* data, size_t, void*) {
@@ -372,7 +372,7 @@ bool IBL::loadCubemapLevel(filament::Texture** texture, Texture::PixelBufferDesc
             break;
         }
 
-        memcpy(p + faceSize * j, data, static_cast<size_t>(w) * h * sizeof(uint32_t));
+        memcpy(p + faceSize * j, data, size_t(w) * h * sizeof(uint32_t));
 
         stbi_image_free(data);
     }

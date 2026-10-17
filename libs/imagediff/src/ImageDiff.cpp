@@ -282,10 +282,10 @@ ImageDiffResult compare(LinearImage const& reference, LinearImage const& candida
     float* dataMaskOut = (generateDiffImage && mask) ? result.maskImage.getPixelRef() : nullptr;
 
     // We assume data is packed float, row-major.
-    size_t const totalPixels = static_cast<size_t>(width) * height;
+    size_t const totalPixels = size_t(width) * height;
 
     auto fetchRef = [dataRef, width, channels](uint32_t cx, uint32_t cy, float* out) {
-        size_t const idx = (static_cast<size_t>(cy) * width + cx) * channels;
+        size_t const idx = (size_t(cy) * width + cx) * channels;
         for (uint32_t c = 0; c < channels && c < 4; ++c) {
             out[c] = dataRef[idx + c];
         }
@@ -294,7 +294,7 @@ ImageDiffResult compare(LinearImage const& reference, LinearImage const& candida
         }
     };
     auto fetchCand = [dataCand, width, channels](uint32_t cx, uint32_t cy, float* out) {
-        size_t const idx = (static_cast<size_t>(cy) * width + cx) * channels;
+        size_t const idx = (size_t(cy) * width + cx) * channels;
         for (uint32_t c = 0; c < channels && c < 4; ++c) {
             out[c] = dataCand[idx + c];
         }

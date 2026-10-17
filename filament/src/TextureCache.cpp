@@ -104,7 +104,7 @@ TextureCacheDisposerInterface::~TextureCacheDisposerInterface() = default;
 // ------------------------------------------------------------------------------------------------
 
 size_t TextureCache::TextureKey::getSize() const noexcept {
-    size_t const pixelCount = static_cast<size_t>(width) * height * depth;
+    size_t const pixelCount = size_t(width) * height * depth;
     size_t size = pixelCount * FTexture::getFormatSize(format);
     size_t const s = std::max(uint8_t(1), samples);
     if (s > 1) {

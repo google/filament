@@ -254,7 +254,7 @@ void DebugServer::tick() {
                         return;
                     }
 
-                    size_t const pixelCount = static_cast<size_t>(width) * height;
+                    size_t const pixelCount = size_t(width) * height;
                     PixelBuffer converted(pixelCount * 4);
                     uint8_t* dst = converted.data();
 

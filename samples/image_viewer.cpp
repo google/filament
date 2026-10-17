@@ -195,7 +195,7 @@ void loadImage(App& app, Engine* engine, filament::app::AssetLoader* loader, con
 
     Texture::PixelBufferDescriptor buffer(
             image->getPixelRef(),
-            static_cast<size_t>(w) * h * channels * sizeof(float),
+            size_t(w) * h * channels * sizeof(float),
             channels == 3 ? Texture::Format::RGB : Texture::Format::RGBA,
             Texture::Type::FLOAT,
             freeCallback,
