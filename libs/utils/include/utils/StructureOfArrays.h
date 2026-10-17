@@ -59,13 +59,22 @@ public:
         return getOffset(kArrayCount - 1, size) + sizeof(TypeAt<kArrayCount - 1>) * size;
     }
 
-    template<typename OtherAllocator>
+    template<size_t... Columns, typename OtherAllocator>
     void copyRange(size_t destOffset,
             const StructureOfArraysBase<OtherAllocator, Elements...>& src, size_t srcOffset, size_t count) {
         assert(destOffset + count <= mCapacity);
         assert(srcOffset + count <= src.mSize);
+        // A source that was never allocated has null column pointers; copying zero elements
+        // from it would pass nullptr to memmove(), which is undefined behavior.
+        if (count == 0) {
+            return;
+        }
         Copier<OtherAllocator> copier{this, src, destOffset, srcOffset, count};
-        const_cast<StructureOfArraysBase*>(this)->for_each_index(mArrays, copier);
+        if constexpr (sizeof...(Columns) == 0) {
+            const_cast<StructureOfArraysBase*>(this)->for_each_index(mArrays, copier);
+        } else {
+            (copier.template operator()<Columns>(std::get<Columns>(mArrays)), ...);
+        }
     }
 
     // --------------------------------------------------------------------------------------------
@@ -571,30 +580,36 @@ private:
             using ElementType = TypeAt<I>;
             ElementType const* const s = std::get<I>(src.mArrays) + srcOffset;
             ElementType* const d = destPtr + destOffset;
-            std::copy_n(s, count, d);
+            if constexpr (std::is_trivially_copyable_v<ElementType>) {
+                memcpy(d, s, count * sizeof(ElementType));
+            } else {
+                std::copy_n(s, count, d);
+            }
         }
     };
 
-    template<std::size_t I = 0, typename FuncT, typename... Tp>
-    std::enable_if_t<I == sizeof...(Tp), void>
-    for_each(std::tuple<Tp...>&, FuncT) {}
-
-    template<std::size_t I = 0, typename FuncT, typename... Tp>
-    std::enable_if_t<I < sizeof...(Tp), void>
-    for_each(std::tuple<Tp...>& t, FuncT f) {
-        f(I, std::get<I>(t));
-        for_each<I + 1, FuncT, Tp...>(t, f);
+    template<typename FuncT, typename... Tp, std::size_t... I>
+    UTILS_ALWAYS_INLINE
+    static void for_each_impl(std::tuple<Tp...>& t, FuncT f, std::index_sequence<I...>) {
+        (f(I, std::get<I>(t)), ...);
     }
 
-    template<std::size_t I = 0, typename FuncT, typename... Tp>
-    std::enable_if_t<I == sizeof...(Tp), void>
-    for_each_index(std::tuple<Tp...>&, FuncT) {}
+    template<typename FuncT, typename... Tp>
+    UTILS_ALWAYS_INLINE
+    static void for_each(std::tuple<Tp...>& t, FuncT f) {
+        for_each_impl(t, f, std::index_sequence_for<Tp...>{});
+    }
 
-    template<std::size_t I = 0, typename FuncT, typename... Tp>
-    std::enable_if_t<I < sizeof...(Tp), void>
-    for_each_index(std::tuple<Tp...>& t, FuncT f) {
-        f.template operator()<I>(std::get<I>(t));
-        for_each_index<I + 1, FuncT, Tp...>(t, f);
+    template<typename FuncT, typename... Tp, std::size_t... I>
+    UTILS_ALWAYS_INLINE
+    static void for_each_index_impl(std::tuple<Tp...>& t, FuncT f, std::index_sequence<I...>) {
+        (f.template operator()<I>(std::get<I>(t)), ...);
+    }
+
+    template<typename FuncT, typename... Tp>
+    UTILS_ALWAYS_INLINE
+    static void for_each_index(std::tuple<Tp...>& t, FuncT f) {
+        for_each_index_impl(t, f, std::index_sequence_for<Tp...>{});
     }
 
     void resizeNoCheck(size_t const needed) noexcept {
@@ -628,10 +643,9 @@ private:
         offsets[0] = 0;
         UTILS_UNROLL
         for (size_t i = 1; i < kArrayCount; i++) {
-            size_t unalignment = (offsets[i - 1] + sizes[i - 1]) % alignments[i];
-            size_t alignment = unalignment ? (alignments[i] - unalignment) : 0;
-            offsets[i] = offsets[i - 1] + (sizes[i - 1] + alignment);
-            assert(offsets[i] % alignments[i] == 0);
+            size_t const align = alignments[i];
+            offsets[i] = (offsets[i - 1] + sizes[i - 1] + align - 1) & ~(align - 1);
+            assert(offsets[i] % align == 0);
         }
         return offsets;
     }
@@ -661,40 +675,25 @@ private:
 
     void move_each(void* buffer, size_t const capacity) noexcept {
         auto offsets = getOffsets(capacity);
-        size_t index = 0;
-        if (mSize) {
-            auto size = mSize; // placate a compiler warning
-            forEach([buffer, &index, &offsets, size](auto p) {
-                using T = std::decay_t<decltype(*p)>;
-                T* UTILS_RESTRICT b = static_cast<T*>(buffer);
-
-                // go through each element and move them from the old array to the new
-                // then destroy them from the old array
-                T* UTILS_RESTRICT const arrayPointer =
-                        reinterpret_cast<T*>(uintptr_t(b) + offsets[index]);
-
-                // for trivial cases, just call memcpy()
+        auto const size = mSize;
+        for_each(mArrays, [buffer, &offsets, size](size_t i, auto&& p) {
+            using Type = std::remove_reference_t<decltype(p)>;
+            using T = std::remove_pointer_t<Type>;
+            T* UTILS_RESTRICT const arrayPointer = Type(static_cast<char*>(buffer) + offsets[i]);
+            if (size) {
                 if constexpr (std::is_trivially_copyable_v<T> &&
                               std::is_trivially_destructible_v<T>) {
                     memcpy(arrayPointer, p, size * sizeof(T));
                 } else {
-                    for (size_t i = 0; i < size; i++) {
-                        // we move an element by using the in-place move-constructor
-                        new(arrayPointer + i) T(std::move(p[i]));
+                    for (size_t j = 0; j < size; j++) {
+                        new(arrayPointer + j) T(std::move(p[j]));
                         if constexpr (!std::is_trivially_destructible_v<T>) {
-                            // and delete them by calling the destructor directly
-                            p[i].~T();
+                            p[j].~T();
                         }
                     }
                 }
-                index++;
-            });
-        }
-
-        // update the pointers
-        for_each(mArrays, [buffer, &offsets](size_t i, auto&& p) {
-            using Type = std::remove_reference_t<decltype(p)>;
-            p = Type(static_cast<char*>(buffer) + offsets[i]);
+            }
+            p = arrayPointer;
         });
     }
 

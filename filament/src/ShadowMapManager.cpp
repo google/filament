@@ -143,11 +143,12 @@ void ShadowMapManager::terminate(FEngine& engine) {
 }
 
 bool ShadowMapManager::isDepthClampEnabled(FEngine const& engine,
-        FView const& view, ShadowMap const& shadowMap) const noexcept {
+        FView const& view, ShadowMap const& shadowMap,
+        bool const isDepthClampSupported) noexcept {
     return (shadowMap.getShadowLightType() == ShadowLightType::DIRECTIONAL) &&
             !view.hasVSM() &&
             !view.hasPCSS() &&
-            mIsDepthClampSupported &&
+            isDepthClampSupported &&
             engine.debug.shadowmap.depth_clamp;
 }
 
@@ -452,16 +453,19 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                 // "read" from one of its resource (only writes), so the FrameGraph culls it.
                 builder.sideEffect();
             },
+            // FIXME: 'this' (for mShadowUb) and 'renderableData' are non-const, preventing
+            // multithreading in the future.
             [=, this,
+                    isDepthClampSupported = mIsDepthClampSupported,
                     passBuilder = passBuilder,
+                    &renderableData = view.getRenderableData(),
                     &engine = static_cast<FEngine const &>(engine),
                     &view = static_cast<FView const&>(view)]
                     (FrameGraphResources const&, auto const& data, DriverApi& driver) mutable {
 
                 // Note: we could almost parallel_for the loop below, the problem currently is
-                // that updatePrimitivesLod() updates temporary global state.
-                // prepareSpotShadowMap() also update the visibility of renderable. These two
-                // pieces of state are needed only until shadowMap.render() returns.
+                // that culling below updates the visibility state of renderables in renderableData.
+                // This state is needed only until passBuilder.build() returns.
                 // Conceptually, we could store this out-of-band.
 
                 // Generate a RenderPass for each shadow map
@@ -487,14 +491,14 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                         case ShadowLightType::SPOT:
                             if (shadowMap.hasVisibleShadows()) {
                                 ShadowMapManager::cullSpotShadowMap(shadowMap, engine, view,
-                                        view.getRenderableData(), entry.range,
+                                        renderableData, entry.range,
                                         view.getLightData());
                             }
                             break;
                         case ShadowLightType::POINT:
                             if (shadowMap.hasVisibleShadows()) {
                                 ShadowMapManager::cullPointShadowMap(shadowMap, view,
-                                        view.getRenderableData(), entry.range,
+                                        renderableData, entry.range,
                                         view.getLightData());
                             }
                             break;
@@ -514,14 +518,12 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                             getMaxMomentEVSM(vsmShadowOptions));
                     shadowMap.commit(transaction, engine, driver);
 
-                    // updatePrimitivesLod must be run before RenderPass::appendCommands.
-                    FView::updatePrimitivesLod(view.getRenderableData(), engine, cameraInfo, entry.range);
 
                     // generate and sort the commands for rendering the shadow map
 
                     RenderPass::RenderFlags renderPassFlags{};
 
-                    if (isDepthClampEnabled(engine, view, shadowMap)) {
+                    if (isDepthClampEnabled(engine, view, shadowMap, isDepthClampSupported)) {
                         renderPassFlags |= RenderPass::HAS_DEPTH_CLAMP;
                     }
 
@@ -1070,7 +1072,8 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
             cameraInfo.zf = -nearFarPlanes[i + 1];
             updateNearFarPlanes(&cameraInfo.cullingProjection, cameraInfo.zn, cameraInfo.zf);
 
-            bool const useDepthClamp = isDepthClampEnabled(engine, view, shadowMap);
+            bool const useDepthClamp = isDepthClampEnabled(
+                    engine, view, shadowMap, mIsDepthClampSupported);
             auto shaderParameters = shadowMap.updateDirectional(engine,
                     lightData, 0, cameraInfo, shadowMapInfo, sceneInfo,
                     useDepthClamp);

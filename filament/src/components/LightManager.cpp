@@ -34,6 +34,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <utility>
 
 #include <stddef.h>
@@ -250,8 +251,45 @@ void FLightManager::terminate() noexcept {
 void FLightManager::gc() noexcept {
     mManager.gc(this, &FLightManager::destroyComponents);
 }
+
+// setShadowOptions() only notifies the Views' scene caches when the effective options change, so
+// every field of ShadowOptions must be compared below. The size check forces this comparison to
+// be revisited when a field is added. Note that a new 1-byte field can land in padding without
+// changing the size, so also update the comparison whenever ShadowOptions changes.
+static_assert(sizeof(FLightManager::ShadowOptions) == 104,
+        "ShadowOptions changed: update operator==(ShadowOptions, ShadowOptions) below");
+
+static bool operator==(FLightManager::ShadowOptions const& lhs, FLightManager::ShadowOptions const& rhs) noexcept {
+    return lhs.mapSize == rhs.mapSize &&
+            lhs.shadowCascades == rhs.shadowCascades &&
+            std::equal(std::begin(lhs.cascadeSplitPositions),
+                    std::end(lhs.cascadeSplitPositions),
+                    std::begin(rhs.cascadeSplitPositions)) &&
+            lhs.constantBias == rhs.constantBias &&
+            lhs.normalBias == rhs.normalBias &&
+            lhs.shadowFar == rhs.shadowFar &&
+            lhs.shadowNearHint == rhs.shadowNearHint &&
+            lhs.shadowFarHint == rhs.shadowFarHint &&
+            lhs.stable == rhs.stable &&
+            lhs.lispsm == rhs.lispsm &&
+            lhs.polygonOffsetConstant == rhs.polygonOffsetConstant &&
+            lhs.polygonOffsetSlope == rhs.polygonOffsetSlope &&
+            lhs.screenSpaceContactShadows == rhs.screenSpaceContactShadows &&
+            lhs.stepCount == rhs.stepCount &&
+            lhs.maxShadowDistance == rhs.maxShadowDistance &&
+            lhs.vsm.elvsm == rhs.vsm.elvsm &&
+            lhs.vsm.blurWidth == rhs.vsm.blurWidth &&
+            lhs.shadowBulbRadius == rhs.shadowBulbRadius &&
+            lhs.penumbraScale == rhs.penumbraScale &&
+            lhs.penumbraRatioScale == rhs.penumbraRatioScale &&
+            lhs.maxPenumbraRatio == rhs.maxPenumbraRatio &&
+            lhs.maxSearchRadius == rhs.maxSearchRadius &&
+            lhs.transform == rhs.transform;
+}
+
 void FLightManager::setShadowOptions(Instance const i, ShadowOptions const& options) noexcept {
     ShadowParams& params = mManager[i].shadowParams;
+    auto current = params.options;
     params.options = options;
     params.options.mapSize = clamp(options.mapSize, 8u, 2048u);
     params.options.shadowCascades = clamp<uint8_t>(options.shadowCascades, 1, CONFIG_MAX_SHADOW_CASCADES);
@@ -267,7 +305,9 @@ void FLightManager::setShadowOptions(Instance const i, ShadowOptions const& opti
     params.options.penumbraRatioScale = std::max(0.0f, options.penumbraRatioScale);
     params.options.maxPenumbraRatio = std::max(0.0f, options.maxPenumbraRatio);
     params.options.maxSearchRadius = std::max(0.0f, options.maxSearchRadius);
-    mManager.notifyChange(getEntity(i));
+    if (params.options != current) {
+        mManager.notifyChange(getEntity(i));
+    }
 }
 
 float FLightManager::getEffectiveBulbRadius(Instance const li) const noexcept {
