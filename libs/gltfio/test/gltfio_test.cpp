@@ -82,6 +82,19 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
 
 namespace {
 
+std::vector<uint8_t> loadFileToBytes(const std::string& filePath) {
+    std::ifstream file(filePath, std::ios::binary);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file: " + filePath);
+    }
+
+    // Read the file stream directly into the vector
+    return std::vector<uint8_t>(
+        (std::istreambuf_iterator<char>(file)),
+        std::istreambuf_iterator<char>()
+    );
+}
+
 static bool runDecodeMeshopt(cgltf_meshopt_compression_mode mode, size_t count, size_t stride,
         cgltf_meshopt_compression_filter filter = cgltf_meshopt_compression_filter_none,
         cgltf_buffer* bufferOverride = nullptr, size_t offset = 0, size_t size = 32,
@@ -895,6 +908,39 @@ TEST_F(glTFIOTest, SkipsInverseBindMatricesOutsideBufferView) {
     AssetLoader::destroy(&assetLoader);
 
     fs::remove_all(root);
+}
+
+// A morph-target NORMAL/TANGENT accessor may declare an arbitrary element type. Such accessors
+// skip the getElementType validation in createPrimitive and are consumed by the tangent-space
+// job in ResourceLoader, which unpacks them into a fixed 3-float-per-vertex scratch buffer. A
+// matrix-typed (e.g. MAT4, 16-component) accessor therefore causes more floats to be written per
+// element than the buffer holds -- a heap out-of-bounds write on the default, all-platform
+// loader, from an untrusted, cgltf_validate-clean .glb.
+//
+// This test loads such a file. Before the fix it produced a heap-buffer-overflow (visible under
+// AddressSanitizer) while computing tangents; after the fix the unsupported accessor type is
+// rejected at load, so createAsset returns null and no out-of-bounds access occurs.
+TEST_F(glTFIOTest, MorphTargetTangentInvalidTypeIsRejected) {
+    AssetLoader* loader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(loader, nullptr);
+
+    Path gltfPath = Path::getCurrentExecutable()
+        .getParent()
+        .concat("invalid_accessor_type.glb");
+    const std::vector<uint8_t> buffer = loadFileToBytes(gltfPath.getAbsolutePath());
+    FilamentAsset* asset = loader->createAsset(buffer.data(), buffer.size());
+
+    // The MAT4-typed morph tangent accessor must be rejected at load.
+    EXPECT_EQ(asset, nullptr);
+
+    if (asset) {
+        // Defense in depth: if a future change lets the asset load, resource loading (which runs
+        // the tangent-space computation) must still not perform an out-of-bounds access.
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        resourceLoader.loadResources(asset);
+        loader->destroyAsset(asset);
+    }
+    AssetLoader::destroy(&loader);
 }
 
 int main(int argc, char** argv) {
