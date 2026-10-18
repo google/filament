@@ -481,14 +481,18 @@ void FTexture::setImageCommon(FEngine& engine, size_t const level,
             << "Operation not supported with multisample ("
             << unsigned(mSampleCount) << ") texture.";
 
-    FILAMENT_CHECK_PRECONDITION(xoffset + width <= valueForLevel(level, mWidth))
+    size_t const textureWidthAtLevel = valueForLevel(level, mWidth);
+    FILAMENT_CHECK_PRECONDITION(width <= textureWidthAtLevel &&
+            xoffset <= textureWidthAtLevel - width)
             << "xoffset (" << unsigned(xoffset) << ") + width (" << unsigned(width)
-            << ") > texture width (" << valueForLevel(level, mWidth) << ") at level ("
+            << ") > texture width (" << textureWidthAtLevel << ") at level ("
             << unsigned(level) << ")";
 
-    FILAMENT_CHECK_PRECONDITION(yoffset + height <= valueForLevel(level, mHeight))
+    size_t const textureHeightAtLevel = valueForLevel(level, mHeight);
+    FILAMENT_CHECK_PRECONDITION(height <= textureHeightAtLevel &&
+            yoffset <= textureHeightAtLevel - height)
             << "yoffset (" << unsigned(yoffset) << ") + height (" << unsigned(height)
-            << ") > texture height (" << valueForLevel(level, mHeight) << ") at level ("
+            << ") > texture height (" << textureHeightAtLevel << ") at level ("
             << unsigned(level) << ")";
 
     FILAMENT_CHECK_PRECONDITION(p.buffer) << "Data buffer is nullptr.";
@@ -515,7 +519,8 @@ void FTexture::setImageCommon(FEngine& engine, size_t const level,
             break;
     }
 
-    FILAMENT_CHECK_PRECONDITION(zoffset + depth <= effectiveTextureDepthOrLayers)
+    FILAMENT_CHECK_PRECONDITION(depth <= effectiveTextureDepthOrLayers &&
+            zoffset <= effectiveTextureDepthOrLayers - depth)
             << "zoffset (" << unsigned(zoffset) << ") + depth (" << unsigned(depth)
             << ") > texture depth (" << effectiveTextureDepthOrLayers << ") at level ("
             << unsigned(level) << ")";

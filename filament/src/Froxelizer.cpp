@@ -799,7 +799,8 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
         FroxelEntry entry{ offset, uint8_t(b.lights.count()) };
         const size_t lightCount = entry.count();
 
-        if (UTILS_UNLIKELY(offset + lightCount >= mFroxelRecordBufferEntryCount)) {
+        if (UTILS_UNLIKELY(lightCount >= mFroxelRecordBufferEntryCount ||
+                offset >= mFroxelRecordBufferEntryCount - lightCount)) {
             // DLOG(INFO) << "out of space: " << i << ", at " << offset;
             // note: instead of dropping froxels we could look for similar records we've already
             // filed up.

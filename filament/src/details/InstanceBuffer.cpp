@@ -113,7 +113,7 @@ FInstanceBuffer::~FInstanceBuffer() noexcept = default;
 
 void FInstanceBuffer::setLocalTransforms(
         math::mat4f const* localTransforms, size_t const count, size_t const offset) {
-    FILAMENT_CHECK_PRECONDITION(offset + count <= mInstanceCount)
+    FILAMENT_CHECK_PRECONDITION(count <= mInstanceCount && offset <= mInstanceCount - count)
             << "setLocalTransforms overflow. InstanceBuffer has only " << mInstanceCount
             << " instances, but trying to set " << count 
             << " transforms at offset " << offset << ".";
