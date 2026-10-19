@@ -319,6 +319,9 @@ MaterialInstance* updateInstances(SandboxParameters& params) {
         materialInstance->setParameter("secondRoughnessWeight", params.secondRoughnessWeight);
         materialInstance->setParameter("sheenColor", RgbType::sRGB, params.sheenColor);
         materialInstance->setParameter("sheenRoughness", params.sheenRoughness);
+        materialInstance->setParameter("iridescence", params.iridescence);
+        materialInstance->setParameter("iridescenceIor", params.iridescenceIor);
+        materialInstance->setParameter("iridescenceThickness", params.iridescenceThickness);
         materialInstance->setParameter("clearCoat", params.clearCoat);
         materialInstance->setParameter("clearCoatRoughness", params.clearCoatRoughness);
         materialInstance->setParameter("anisotropy", params.anisotropy);
@@ -327,13 +330,15 @@ MaterialInstance* updateInstances(SandboxParameters& params) {
             materialInstance->setParameter("alpha", params.alpha);
         }
 
-        if  (hasRefraction) {
+        if (hasRefraction) {
             float3 color = Color::toLinear(params.transmittanceColor);
             materialInstance->setParameter("absorption",
                     Color::absorptionAtDistance(color, params.distance));
             materialInstance->setParameter("ior", params.ior);
             materialInstance->setParameter("transmission", params.transmission);
-            materialInstance->setParameter("dispersion", params.dispersion);
+            if (params.currentBlending == BLENDING_SOLID_REFRACTION) {
+                materialInstance->setParameter("dispersion", params.dispersion);
+            }
             materialInstance->setParameter("thickness", params.thickness);
         }
     }
@@ -506,6 +511,12 @@ void gui(Engine* engine, View*) {
                         params.currentMaterialModel != MATERIAL_MODEL_SUBSURFACE) {
                     ImGui::ColorEdit3("Sheen color", &params.sheenColor.r);
                     ImGui::SliderFloat("Sheen roughness", &params.sheenRoughness, 0.0f, 1.0f);
+                    if (params.currentMaterialModel != MATERIAL_MODEL_SPECGLOSS) {
+                        ImGui::SliderFloat("Iridescence", &params.iridescence, 0.0f, 1.0f);
+                        ImGui::SliderFloat("Iridescence IOR", &params.iridescenceIor, 1.0f, 3.0f);
+                        ImGui::SliderFloat("Iridescence thickness",
+                                &params.iridescenceThickness, 0.0f, 2000.0f);
+                    }
                     ImGui::SliderFloat("Clear coat", &params.clearCoat, 0.0f, 1.0f);
                     ImGui::SliderFloat("Clear coat roughness", &params.clearCoatRoughness, 0.0f, 1.0f);
                     ImGui::SliderFloat("Anisotropy", &params.anisotropy, -1.0f, 1.0f);
@@ -525,7 +536,9 @@ void gui(Engine* engine, View*) {
                 if (hasRefraction) {
                     ImGui::SliderFloat("IOR", &params.ior, 1.0f, 3.0f);
                     ImGui::SliderFloat("Transmission", &params.transmission, 0.0f, 1.0f);
-                    ImGui::SliderFloat("Dispersion", &params.dispersion, 0.0f, 5.0f);
+                    if (params.currentBlending == BLENDING_SOLID_REFRACTION) {
+                        ImGui::SliderFloat("Dispersion", &params.dispersion, 0.0f, 5.0f);
+                    }
                     ImGui::SliderFloat("Thickness", &params.thickness, 0.0f, 1.0f);
                     ImGui::ColorEdit3("Transmittance", &params.transmittanceColor.r);
                     ImGui::SliderFloat("Distance", &params.distance, 0.0f, 4.0f);

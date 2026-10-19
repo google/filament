@@ -139,6 +139,9 @@ struct SandboxParameters {
     float sheenRoughness = 0.0f;
     float secondRoughness = 0.0f;
     float secondRoughnessWeight = 0.0f;
+    float iridescence = 0.0f;
+    float iridescenceIor = 1.3f;
+    float iridescenceThickness = 400.0f;
     sRGBColor transmittanceColor =  { 1.0f };
     sRGBColor specularColor = { 0.0f };
     sRGBColor subsurfaceColor = { 0.0f };
