@@ -1099,6 +1099,7 @@ bool WebGPUDriver::isMSAASwapChainSupported(uint32_t) {
 }
 
 bool WebGPUDriver::isProtectedContentSupported() {
+    // TODO: Protected content is not supported on WebGPU yet.
     return false;
 }
 
@@ -1120,7 +1121,8 @@ bool WebGPUDriver::isDepthStencilBlitSupported(const TextureFormat format) {
 }
 
 bool WebGPUDriver::isProtectedTexturesSupported() {
-    return true;
+    // TODO: Protected textures are not supported on WebGPU yet.
+    return false;
 }
 
 bool WebGPUDriver::isDepthClampSupported() {

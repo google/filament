@@ -623,7 +623,7 @@ private:
 
     void createLogicalDeviceAndQueues(ExtensionSet const& deviceExtensions,
             VkPhysicalDeviceFeatures const& features,
-            VkPhysicalDeviceVulkan11Features const& vk11Features, bool createProtectedQueue,
+            VkPhysicalDeviceVulkan11Features const& vk11Features,
             MiscDeviceFeatures const& requestedFeatures) noexcept;
 
     friend struct VulkanPlatformPrivate;

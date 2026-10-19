@@ -141,6 +141,7 @@ VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device, Vu
           mHasDynamicState(context.isExtendedDynamicStateSupported() && context.isPipelineDynamicStateEnabled()),
           mHasDynamicState2(context.isExtendedDynamicState2Supported() && context.isPipelineDynamicStateEnabled()),
           mHasColorWriteEnable(context.isColorWriteEnableSupported() && context.isPipelineDynamicStateEnabled()),
+          mHasPipelineProtectedAccess(context.isPipelineProtectedAccessSupported()),
           mContext(context) {
     VkPipelineCacheCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
@@ -164,6 +165,7 @@ VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device, Vu
     FVK_LOGD << "Extended dynamic state supported: " << mHasDynamicState;
     FVK_LOGD << "Extended dynamic state 2 supported: " << mHasDynamicState2;
     FVK_LOGD << "Color write enable supported: " << mHasColorWriteEnable;
+    FVK_LOGD << "Pipeline protected access supported: " << mHasPipelineProtectedAccess;
 #endif
 }
 
@@ -193,6 +195,12 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::getOrCreatePipelin
 
 void VulkanPipelineCache::bindPipeline(VulkanCommandBuffer* commands) {
     VkCommandBuffer const cmdbuffer = commands->buffer();
+
+    // Pipelines that are restricted to protected (or unprotected) access can only be bound to
+    // protected (or unprotected) command buffers, so the protection is part of the key.
+    if (mHasPipelineProtectedAccess) {
+        mStaticPipelineKey.protectedAccess = commands->isProtected() ? 1 : 0;
+    }
 
     // The frontend's PipelineState may trigger a backend bindPipeline call due to dynamic
     // state changes (e.g. vertex buffer info, polygon offset, or raster state). However, when
@@ -230,6 +238,8 @@ void VulkanPipelineCache::asyncPrewarmCache(
         .renderPass = VK_NULL_HANDLE,
         .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         .subpassIndex = 0,
+        // Prewarming targets unprotected rendering.
+        .protectedAccess = 0,
         // We're using vertex input dynamic state, so these should be empty.
         .vertexAttributes = {},
         .vertexBuffers = {},
@@ -492,6 +502,14 @@ VkPipeline VulkanPipelineCache::createPipeline(
         .subpass = key.subpassIndex,
     };
 
+    // Restrict the pipeline to protected or unprotected command buffers if possible. This allows
+    // drivers to avoid the overhead of protected memory support in unprotected pipelines.
+    if (mHasPipelineProtectedAccess) {
+        pipelineCreateInfo.flags |= key.protectedAccess
+                ? VK_PIPELINE_CREATE_PROTECTED_ACCESS_ONLY_BIT_EXT
+                : VK_PIPELINE_CREATE_NO_PROTECTED_ACCESS_BIT_EXT;
+    }
+
     // There are no color attachments if there is no bound fragment shader.  (e.g. shadow map gen)
     // TODO: This should be handled in a higher layer.
     if (!hasFragmentShader) {
@@ -637,7 +655,8 @@ void VulkanPipelineCache::bindRenderPass(
         fvkmemory::resource_ptr<VulkanRenderPass> renderPass,
         int subpassIndex) noexcept {
     mStaticPipelineKey.renderPass = renderPass->getVkRenderPass();
-    mStaticPipelineKey.subpassIndex = subpassIndex;
+    assert_invariant(subpassIndex >= 0 && subpassIndex <= 0xff);
+    mStaticPipelineKey.subpassIndex = uint8_t(subpassIndex);
 }
 
 void VulkanPipelineCache::bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept {

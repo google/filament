@@ -203,6 +203,12 @@ public:
         return mProtectedMemorySupported;
     }
 
+    // True if VK_EXT_pipeline_protected_access is enabled on the device, in which case every
+    // pipeline should be restricted to either protected or unprotected command buffers.
+    inline bool isPipelineProtectedAccessSupported() const noexcept {
+        return mPipelineProtectedAccessSupported;
+    }
+
     inline bool isImageView2DOn3DImageSupported() const noexcept {
         return mPortabilitySubsetFeatures.imageView2DOn3DImage == VK_TRUE;
     }
@@ -312,6 +318,7 @@ private:
     bool mLazilyAllocatedMemorySupported = false;
     bool mPipelineCreationFeedbackSupported = false;
     bool mProtectedMemorySupported = false;
+    bool mPipelineProtectedAccessSupported = false;
     bool mGlobalPrioritySupported = false;
     bool mDriverPropertiesSupported = false;
 
