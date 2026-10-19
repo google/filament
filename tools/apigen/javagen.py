@@ -124,3 +124,4 @@ __all__ = [
 # generate_android.py), delegate execution directly to the orchestrator driver.
 if __name__ == "__main__":
     main()
+
