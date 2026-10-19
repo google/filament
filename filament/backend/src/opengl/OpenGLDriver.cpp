@@ -3288,8 +3288,6 @@ void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> 
     GLSwapChain* scDraw = handle_cast<GLSwapChain*>(schDraw);
     GLSwapChain const* scRead = handle_cast<GLSwapChain*>(schRead);
 
-    getBackendState().unbindFramebuffer(GL_FRAMEBUFFER);
-
     mPlatform.makeCurrent(scDraw->swapChain, scRead->swapChain,
             [this]() {
                 for (auto const t: mTexturesWithStreamsAttached) {
