@@ -31,10 +31,6 @@ namespace filament {
 Variant Variant::filterUserVariant(
         Variant variant, UserVariantFilterMask filterMask) noexcept {
     // these are easy to filter by just removing the corresponding bit
-    if (filterMask & uint32_t(UserVariantFilterBit::DIRECTIONAL_LIGHTING)) {
-        variant.key &= ~DIR;
-    }
-
     if (filterMask & uint32_t(UserVariantFilterBit::SKINNING)) {
         variant.key &= ~SKN;
     }
@@ -212,10 +208,10 @@ static auto const gDepthVariants{ details::get_depth_variants() };
 static auto const gPostProcessVariants{ details::get_post_process_variants() };
 
 static_assert(reserved_is_not_valid());
-static_assert(reserved_variant_count() == 67);
-static_assert(valid_variant_count() == 61);
-static_assert(vertex_variant_count() == 16 + 8);              // 24
-static_assert(fragment_variant_count() == 16 + 3 + 1 - 4);    // 16
+static_assert(reserved_variant_count() == 27);
+static_assert(valid_variant_count() == 37);
+static_assert(vertex_variant_count() == 8 + 8);                   // 16
+static_assert(fragment_variant_count() == (8 - 2) + 1 + (2 + 1)); // 10
 
 } // namespace details
 
