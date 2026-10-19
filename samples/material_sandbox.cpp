@@ -19,7 +19,6 @@
 #include "common/arguments.h"
 
 #include <filamentapp/AssetLoader.h>
-#include <filamentapp/DesktopAssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 #include <filamentapp/IBL.h>
 #include <filamentapp/MeshAssimp.h>
@@ -73,8 +72,8 @@ struct App {
 Scene* g_scene = nullptr;
 
 std::unique_ptr<MeshAssimp> g_meshSet;
-filament::app::AssetLoader* g_assetLoader = nullptr;
-std::map<utils::CString, MaterialInstance*> g_meshMaterialInstances;
+app::AssetLoader* g_assetLoader = nullptr;
+std::map<CString, MaterialInstance*> g_meshMaterialInstances;
 SandboxParameters g_params;
 ColorGradingOptions g_lastColorGradingOptions;
 ColorGrading* g_colorGrading = nullptr;
@@ -83,6 +82,7 @@ FilamentApp2* g_filamentApp = nullptr;
 
 bool g_shadowPlane = false;
 bool g_singleMode = false;
+bool g_hideUi = true;
 float g_meshScale = 1.0f;
 float g_rangePlot[1024 * 3];
 float g_curvePlot[1024 * 3];
@@ -319,6 +319,9 @@ MaterialInstance* updateInstances(SandboxParameters& params) {
         materialInstance->setParameter("secondRoughnessWeight", params.secondRoughnessWeight);
         materialInstance->setParameter("sheenColor", RgbType::sRGB, params.sheenColor);
         materialInstance->setParameter("sheenRoughness", params.sheenRoughness);
+        materialInstance->setParameter("iridescence", params.iridescence);
+        materialInstance->setParameter("iridescenceIor", params.iridescenceIor);
+        materialInstance->setParameter("iridescenceThickness", params.iridescenceThickness);
         materialInstance->setParameter("clearCoat", params.clearCoat);
         materialInstance->setParameter("clearCoatRoughness", params.clearCoatRoughness);
         materialInstance->setParameter("anisotropy", params.anisotropy);
@@ -327,13 +330,15 @@ MaterialInstance* updateInstances(SandboxParameters& params) {
             materialInstance->setParameter("alpha", params.alpha);
         }
 
-        if  (hasRefraction) {
+        if (hasRefraction) {
             float3 color = Color::toLinear(params.transmittanceColor);
             materialInstance->setParameter("absorption",
                     Color::absorptionAtDistance(color, params.distance));
             materialInstance->setParameter("ior", params.ior);
             materialInstance->setParameter("transmission", params.transmission);
-            materialInstance->setParameter("dispersion", params.dispersion);
+            if (params.currentBlending == BLENDING_SOLID_REFRACTION) {
+                materialInstance->setParameter("dispersion", params.dispersion);
+            }
             materialInstance->setParameter("thickness", params.thickness);
         }
     }
@@ -413,8 +418,8 @@ float getRangePlotValue(const int series, void* data, const int index) {
     return static_cast<float*>(data)[series * 1024 + index];
 }
 
-inline float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highlightScale) {
-    float3 d = 1.0f / (pow(midPoint, shadowGamma - 1.0f));
+float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highlightScale) {
+    float3 d = 1.0f / pow(midPoint, shadowGamma - 1.0f);
     float3 dark = pow(v, shadowGamma) * d;
     float3 light = highlightScale * (v - midPoint) + midPoint;
     return float3{
@@ -457,6 +462,9 @@ void popSliderColors() { ImGui::PopStyleColor(4); }
 void gui(Engine* engine, View*) {
     auto& params = g_params;
     ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f));
+    if (g_hideUi) {
+        ImGui::SetNextWindowCollapsed(true, ImGuiCond_Always);
+    }
     ImGui::Begin("Parameters");
     {
         if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -506,6 +514,12 @@ void gui(Engine* engine, View*) {
                         params.currentMaterialModel != MATERIAL_MODEL_SUBSURFACE) {
                     ImGui::ColorEdit3("Sheen color", &params.sheenColor.r);
                     ImGui::SliderFloat("Sheen roughness", &params.sheenRoughness, 0.0f, 1.0f);
+                    if (params.currentMaterialModel != MATERIAL_MODEL_SPECGLOSS) {
+                        ImGui::SliderFloat("Iridescence", &params.iridescence, 0.0f, 1.0f);
+                        ImGui::SliderFloat("Iridescence IOR", &params.iridescenceIor, 1.0f, 3.0f);
+                        ImGui::SliderFloat("Iridescence thickness",
+                                &params.iridescenceThickness, 0.0f, 2000.0f);
+                    }
                     ImGui::SliderFloat("Clear coat", &params.clearCoat, 0.0f, 1.0f);
                     ImGui::SliderFloat("Clear coat roughness", &params.clearCoatRoughness, 0.0f, 1.0f);
                     ImGui::SliderFloat("Anisotropy", &params.anisotropy, -1.0f, 1.0f);
@@ -525,7 +539,9 @@ void gui(Engine* engine, View*) {
                 if (hasRefraction) {
                     ImGui::SliderFloat("IOR", &params.ior, 1.0f, 3.0f);
                     ImGui::SliderFloat("Transmission", &params.transmission, 0.0f, 1.0f);
-                    ImGui::SliderFloat("Dispersion", &params.dispersion, 0.0f, 5.0f);
+                    if (params.currentBlending == BLENDING_SOLID_REFRACTION) {
+                        ImGui::SliderFloat("Dispersion", &params.dispersion, 0.0f, 5.0f);
+                    }
                     ImGui::SliderFloat("Thickness", &params.thickness, 0.0f, 1.0f);
                     ImGui::ColorEdit3("Transmittance", &params.transmittanceColor.r);
                     ImGui::SliderFloat("Distance", &params.distance, 0.0f, 4.0f);
@@ -997,12 +1013,13 @@ void preRender(Engine* engine, View* view, Scene*, Renderer* renderer) {
 } // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
-        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+        app::DisplayManager* dm, app::AssetLoader* loader) {
     auto app = std::make_shared<App>();
     g_config = config;
     g_assetLoader = loader;
     g_shadowPlane = config.getBool("shadow-plane");
     g_singleMode = config.getBool("single-mode");
+    g_hideUi = config.getBool("hide-ui");
     config.dirt = config.getString("dirt");
     g_meshScale = config.getFloat("scale", 1.0f);
     app->config = config;
@@ -1027,6 +1044,7 @@ samples::SampleParameters createAppParameters() {
         samples::Parameter::makeBool("single-mode", 'n', "Single object mode", false),
         samples::Parameter::makeString("dirt", 'd', "Path to a dirt texture", ""),
         samples::Parameter::makeFloat("scale", 's', "Applies uniform scale", 1.0f),
+        samples::Parameter::makeBool("hide-ui", '\0', "Hide the UI by default", false)
     };
 }
 
