@@ -754,6 +754,18 @@ void VulkanPipelineCache::gc() noexcept {
             vkDestroyPipeline(mDevice, iter.value().handle, VKALLOC);
             mPipelines.erase(iter);
         }
+    } else {
+        // Revert back to the previous behavior
+        using ConstPipeIterator = decltype(mPipelines)::const_iterator;
+        for (ConstPipeIterator iter = mPipelines.begin(); iter != mPipelines.end();) {
+            const PipelineCacheEntry& cacheEntry = iter.value();
+            if (cacheEntry.lastUsed + FVK_MAX_PIPELINE_AGE < mCurrentTime) {
+                vkDestroyPipeline(mDevice, iter->second.handle, VKALLOC);
+                iter = mPipelines.erase(iter);
+            } else {
+                ++iter;
+            }
+        }
     }
 }
 
