@@ -128,6 +128,15 @@ WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform,
                                                          .disable_heap_handle_tags
                                                : false) } {
     mDevice.GetLimits(&mDeviceLimits);
+
+    if (driverConfig.asynchronousMode != AsynchronousMode::NONE) {
+        mJobQueue = JobQueue::create();
+        // As with Vulkan, always use AmortizationWorker for now: a dedicated ThreadWorker would
+        // need its own thread-safe access to mDevice/mQueueManager, which isn't established here,
+        // and this backend also targets Emscripten, where a raw std::thread isn't available by
+        // default. Real backend-thread-offloaded uploads can follow later.
+        mJobWorker = AmortizationWorker::create(mJobQueue);
+    }
 }
 
 WebGPUDriver::~WebGPUDriver() noexcept = default;
@@ -154,10 +163,27 @@ template class ConcreteDispatcher<WebGPUDriver>;
 
 
 void WebGPUDriver::terminate() {
+    // Flush all pending asynchronous tasks. Some tasks may end up posting follow-up operations to
+    // the `ServiceThread` (e.g., via CountdownCallbackHandler or any user-provided handlers). So we
+    // early stop the ServiceThread to ensure these are processed as well. Tasks posted to the main
+    // thread (due to no user handler) during this process are handled later by `Driver::purge`
+    // within `FEngine::shutdown`.
+    if (getJobWorker()) {
+        getJobWorker()->terminate();
+    }
+    if constexpr (UTILS_HAS_THREADING) {
+        // Flush any callbacks the drained jobs posted via scheduleCallback().
+        stopServiceThread();
+    }
+
     finish();
 }
 
 void WebGPUDriver::tick(int) {
+    if (getJobWorker()) {
+        // This number is randomly/heuristically chosen, matching Vulkan's amortization worker.
+        getJobWorker()->process(5);
+    }
 #if !defined(__EMSCRIPTEN__)
     mDevice.Tick();
     mAdapter.GetInstance().ProcessEvents();
@@ -210,6 +236,10 @@ void WebGPUDriver::flush(int) {
 }
 
 void WebGPUDriver::finish(int /* dummy */) {
+    if (getJobWorker()) {
+        getJobWorker()->drain();
+    }
+
     mQueueManager.finish();
     mPipelineState = {};
 
@@ -249,7 +279,16 @@ void WebGPUDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vertexBufferHandle
         return;
     }
     FWGPU_SYSTRACE_SCOPE();
-    destructHandle<WebGPUVertexBuffer>(vertexBufferHandle);
+    auto* vertexBuffer = handleCast<WebGPUVertexBuffer>(vertexBufferHandle);
+    if (vertexBuffer->asynchronous && getJobQueue()) {
+        // Route the destruction through the queue to preserve FIFO ordering with any pending
+        // async update for this handle (e.g. setVertexBufferObjectAsync).
+        getJobQueue()->push([this, vertexBufferHandle]() mutable {
+            destructHandle<WebGPUVertexBuffer>(vertexBufferHandle);
+        });
+    } else {
+        destructHandle<WebGPUVertexBuffer>(vertexBufferHandle);
+    }
 }
 
 void WebGPUDriver::destroyIndexBuffer(Handle<HwIndexBuffer> indexBufferHandle) {
@@ -257,7 +296,16 @@ void WebGPUDriver::destroyIndexBuffer(Handle<HwIndexBuffer> indexBufferHandle) {
         return;
     }
     FWGPU_SYSTRACE_SCOPE();
-    destructHandle<WebGPUIndexBuffer>(indexBufferHandle);
+    auto* indexBuffer = handleCast<WebGPUIndexBuffer>(indexBufferHandle);
+    if (indexBuffer->asynchronous && getJobQueue()) {
+        // Route the destruction through the queue to preserve FIFO ordering with any pending
+        // async update for this handle (e.g. updateIndexBufferAsync).
+        getJobQueue()->push([this, indexBufferHandle]() mutable {
+            destructHandle<WebGPUIndexBuffer>(indexBufferHandle);
+        });
+    } else {
+        destructHandle<WebGPUIndexBuffer>(indexBufferHandle);
+    }
 }
 
 void WebGPUDriver::destroyBufferObject(Handle<HwBufferObject> bufferObjectHandle) {
@@ -265,11 +313,30 @@ void WebGPUDriver::destroyBufferObject(Handle<HwBufferObject> bufferObjectHandle
         return;
     }
     FWGPU_SYSTRACE_SCOPE();
-    destructHandle<WebGPUBufferObject>(bufferObjectHandle);
+    auto* bufferObject = handleCast<WebGPUBufferObject>(bufferObjectHandle);
+    if (bufferObject->asynchronous && getJobQueue()) {
+        // Route the destruction through the queue to preserve FIFO ordering with any pending
+        // async update for this handle (e.g. updateBufferObjectAsync).
+        getJobQueue()->push([this, bufferObjectHandle]() mutable {
+            destructHandle<WebGPUBufferObject>(bufferObjectHandle);
+        });
+    } else {
+        destructHandle<WebGPUBufferObject>(bufferObjectHandle);
+    }
 }
 
 void WebGPUDriver::destroyTexture(Handle<HwTexture> textureHandle) {
-    if (textureHandle) {
+    if (!textureHandle) {
+        return;
+    }
+    auto* texture = handleCast<WebGPUTexture>(textureHandle);
+    if (texture->asynchronous && getJobQueue()) {
+        // Route the destruction through the queue to preserve FIFO ordering with any pending
+        // async update for this handle (e.g. update3DImageAsync).
+        getJobQueue()->push([this, textureHandle]() mutable {
+            destructHandle<WebGPUTexture>(textureHandle);
+        });
+    } else {
         destructHandle<WebGPUTexture>(textureHandle);
     }
 }
@@ -380,23 +447,23 @@ Handle<HwTexture> WebGPUDriver::importTextureAsyncS() noexcept {
 }
 
 AsyncCallId WebGPUDriver::update3DImageAsyncS() noexcept {
-    // TODO: implement this.
-    return InvalidAsyncCallId;
+    assert_invariant(getJobQueue());
+    return getJobQueue()->issueJobId();
 }
 
 AsyncCallId WebGPUDriver::setVertexBufferObjectAsyncS() noexcept {
-    // TODO: implement this.
-    return InvalidAsyncCallId;
+    assert_invariant(getJobQueue());
+    return getJobQueue()->issueJobId();
 }
 
 AsyncCallId WebGPUDriver::updateBufferObjectAsyncS() noexcept {
-    // TODO: implement this.
-    return InvalidAsyncCallId;
+    assert_invariant(getJobQueue());
+    return getJobQueue()->issueJobId();
 }
 
 AsyncCallId WebGPUDriver::updateIndexBufferAsyncS() noexcept {
-    // TODO: implement this.
-    return InvalidAsyncCallId;
+    assert_invariant(getJobQueue());
+    return getJobQueue()->issueJobId();
 }
 
 Handle<HwProgram> WebGPUDriver::createProgramS() noexcept {
@@ -490,8 +557,8 @@ Handle<HwTexture> WebGPUDriver::createTextureExternalImagePlaneS() noexcept {
 }
 
 AsyncCallId WebGPUDriver::queueCommandAsyncS() noexcept {
-    // TODO: implement this.
-    return InvalidAsyncCallId;
+    assert_invariant(getJobQueue());
+    return getJobQueue()->issueJobId();
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -552,52 +619,104 @@ void WebGPUDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vertexBuff
     setDebugTag(vertexBufferInfoHandle.getId(), std::move(tag));
 }
 
+// Shared by every create*AsyncR: pushes a job that does nothing but fire the completion callback,
+// so it's correctly FIFO-ordered relative to other outstanding async calls (e.g. a pending
+// update*Async on the same or another handle) rather than firing immediately/out-of-band.
+void WebGPUDriver::deferCreationCompletionCallback(CallbackHandler* const handler,
+        AsyncCallback const callback, void* const user) {
+    assert_invariant(getJobQueue());
+    getJobQueue()->push([this, handler, callback, user]() {
+        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
+    });
+}
+
+void WebGPUDriver::createVertexBufferCommon(Handle<HwVertexBuffer> vertexBufferHandle,
+        const uint32_t vertexCount, Handle<HwVertexBufferInfo> vertexBufferInfoHandle,
+        const bool asynchronous, utils::ImmutableCString&& tag) {
+    const auto vertexBufferInfo = handleCast<WebGPUVertexBufferInfo>(vertexBufferInfoHandle);
+    constructHandle<WebGPUVertexBuffer>(vertexBufferHandle, vertexCount,
+            vertexBufferInfo->getVertexBufferLayoutCount(), vertexBufferInfoHandle, asynchronous);
+    setDebugTag(vertexBufferHandle.getId(), std::move(tag));
+}
+
 void WebGPUDriver::createVertexBufferR(Handle<HwVertexBuffer> vertexBufferHandle,
         const uint32_t vertexCount, Handle<HwVertexBufferInfo> vertexBufferInfoHandle,
         utils::ImmutableCString&& tag) {
     FWGPU_SYSTRACE_SCOPE();
-    const auto vertexBufferInfo = handleCast<WebGPUVertexBufferInfo>(vertexBufferInfoHandle);
-    constructHandle<WebGPUVertexBuffer>(vertexBufferHandle, vertexCount,
-            vertexBufferInfo->getVertexBufferLayoutCount(), vertexBufferInfoHandle);
-    setDebugTag(vertexBufferHandle.getId(), std::move(tag));
+    createVertexBufferCommon(vertexBufferHandle, vertexCount, vertexBufferInfoHandle,
+            /* asynchronous = */ false, std::move(tag));
 }
 
 void WebGPUDriver::createVertexBufferAsyncR(Handle<HwVertexBuffer> vertexBufferHandle,
         const uint32_t vertexCount, Handle<HwVertexBufferInfo> vertexBufferInfoHandle,
         CallbackHandler* handler, AsyncCallback callback, void* user,
         utils::ImmutableCString&& tag) {
-    // TODO: implement this.
+    FWGPU_SYSTRACE_SCOPE();
+    createVertexBufferCommon(vertexBufferHandle, vertexCount, vertexBufferInfoHandle,
+            /* asynchronous = */ true, std::move(tag));
+    deferCreationCompletionCallback(handler, callback, user);
+}
+
+void WebGPUDriver::createIndexBufferCommon(Handle<HwIndexBuffer> indexBufferHandle,
+        const ElementType elementType, const uint32_t indexCount, const bool asynchronous,
+        utils::ImmutableCString&& tag) {
+    const auto elementSize = static_cast<uint8_t>(getElementTypeSize(elementType));
+    constructHandle<WebGPUIndexBuffer>(indexBufferHandle, mDevice, elementSize, indexCount,
+            asynchronous);
+    setDebugTag(indexBufferHandle.getId(), std::move(tag));
 }
 
 void WebGPUDriver::createIndexBufferR(Handle<HwIndexBuffer> indexBufferHandle,
         const ElementType elementType, const uint32_t indexCount, const BufferUsage usage,
         utils::ImmutableCString&& tag) {
     FWGPU_SYSTRACE_SCOPE();
-    const auto elementSize = static_cast<uint8_t>(getElementTypeSize(elementType));
-    constructHandle<WebGPUIndexBuffer>(indexBufferHandle, mDevice, elementSize, indexCount);
-    setDebugTag(indexBufferHandle.getId(), std::move(tag));
+    createIndexBufferCommon(indexBufferHandle, elementType, indexCount,
+            /* asynchronous = */ false, std::move(tag));
 }
 
 void WebGPUDriver::createIndexBufferAsyncR(Handle<HwIndexBuffer> indexBufferHandle,
         const ElementType elementType, const uint32_t indexCount, const BufferUsage usage,
         CallbackHandler* handler, AsyncCallback callback, void* user,
         utils::ImmutableCString&& tag) {
-    // TODO: implement this.
+    FWGPU_SYSTRACE_SCOPE();
+    createIndexBufferCommon(indexBufferHandle, elementType, indexCount,
+            /* asynchronous = */ true, std::move(tag));
+    deferCreationCompletionCallback(handler, callback, user);
+}
+
+void WebGPUDriver::createBufferObjectCommon(Handle<HwBufferObject> bufferObjectHandle,
+        const uint32_t byteCount, const BufferObjectBinding bindingType, const bool asynchronous,
+        utils::ImmutableCString&& tag) {
+    constructHandle<WebGPUBufferObject>(bufferObjectHandle, mDevice, bindingType, byteCount,
+            asynchronous);
+    setDebugTag(bufferObjectHandle.getId(), std::move(tag));
 }
 
 void WebGPUDriver::createBufferObjectR(Handle<HwBufferObject> bufferObjectHandle,
         const uint32_t byteCount, const BufferObjectBinding bindingType, const BufferUsage usage,
         utils::ImmutableCString&& tag) {
     FWGPU_SYSTRACE_SCOPE();
-    constructHandle<WebGPUBufferObject>(bufferObjectHandle, mDevice, bindingType, byteCount);
-    setDebugTag(bufferObjectHandle.getId(), std::move(tag));
+    createBufferObjectCommon(bufferObjectHandle, byteCount, bindingType,
+            /* asynchronous = */ false, std::move(tag));
 }
 
 void WebGPUDriver::createBufferObjectAsyncR(Handle<HwBufferObject> bufferObjectHandle,
         const uint32_t byteCount, const BufferObjectBinding bindingType, const BufferUsage usage,
         CallbackHandler* handler, AsyncCallback callback, void* user,
         utils::ImmutableCString&& tag) {
-    // TODO: implement this.
+    FWGPU_SYSTRACE_SCOPE();
+    createBufferObjectCommon(bufferObjectHandle, byteCount, bindingType,
+            /* asynchronous = */ true, std::move(tag));
+    deferCreationCompletionCallback(handler, callback, user);
+}
+
+void WebGPUDriver::createTextureCommon(Handle<HwTexture> textureHandle, const SamplerType target,
+        const uint8_t levels, const TextureFormat format, const uint8_t samples,
+        const uint32_t width, const uint32_t height, const uint32_t depth,
+        const TextureUsage usage, const bool asynchronous, utils::ImmutableCString&& tag) {
+    constructHandle<WebGPUTexture>(textureHandle, target, levels, format, samples, width, height,
+            depth, usage, mDevice, asynchronous);
+    setDebugTag(textureHandle.getId(), std::move(tag));
 }
 
 void WebGPUDriver::createTextureR(Handle<HwTexture> textureHandle, const SamplerType target,
@@ -605,9 +724,8 @@ void WebGPUDriver::createTextureR(Handle<HwTexture> textureHandle, const Sampler
         const uint32_t width, const uint32_t height, const uint32_t depth,
         const TextureUsage usage, utils::ImmutableCString&& tag) {
     FWGPU_SYSTRACE_SCOPE();
-    constructHandle<WebGPUTexture>(textureHandle, target, levels, format, samples, width, height,
-            depth, usage, mDevice);
-    setDebugTag(textureHandle.getId(), std::move(tag));
+    createTextureCommon(textureHandle, target, levels, format, samples, width, height, depth,
+            usage, /* asynchronous = */ false, std::move(tag));
 }
 
 void WebGPUDriver::createTextureAsyncR(Handle<HwTexture> textureHandle, const SamplerType target,
@@ -615,8 +733,10 @@ void WebGPUDriver::createTextureAsyncR(Handle<HwTexture> textureHandle, const Sa
         const uint32_t width, const uint32_t height, const uint32_t depth,
         const TextureUsage usage, CallbackHandler* handler, AsyncCallback callback,
         void* user, utils::ImmutableCString&& tag) {
-    // TODO: implement this.
     FWGPU_SYSTRACE_SCOPE();
+    createTextureCommon(textureHandle, target, levels, format, samples, width, height, depth,
+            usage, /* asynchronous = */ true, std::move(tag));
+    deferCreationCompletionCallback(handler, callback, user);
 }
 
 void WebGPUDriver::createTextureViewR(Handle<HwTexture> textureHandle,
@@ -629,13 +749,12 @@ void WebGPUDriver::createTextureViewR(Handle<HwTexture> textureHandle,
     setDebugTag(textureHandle.getId(), std::move(tag));
 }
 
-void WebGPUDriver::createTextureViewSwizzleR(Handle<HwTexture> textureHandle,
+void WebGPUDriver::createTextureViewSwizzleCommon(Handle<HwTexture> textureHandle,
         Handle<HwTexture> sourceTextureHandle, const backend::TextureSwizzle r,
         const backend::TextureSwizzle g, const backend::TextureSwizzle b,
         const backend::TextureSwizzle a, utils::ImmutableCString&& tag) {
-
     if (!isTextureSwizzleSupported()) {
-        FWGPU_LOGW << "WebGPUDriver::createTextureViewSwizzleR called while texture swizzling is "
+        FWGPU_LOGW << "WebGPUDriver::createTextureViewSwizzle called while texture swizzling is "
                       "not supported by the device/driver";
     }
 
@@ -656,12 +775,22 @@ void WebGPUDriver::createTextureViewSwizzleR(Handle<HwTexture> textureHandle,
     setDebugTag(textureHandle.getId(), std::move(tag));
 }
 
+void WebGPUDriver::createTextureViewSwizzleR(Handle<HwTexture> textureHandle,
+        Handle<HwTexture> sourceTextureHandle, const backend::TextureSwizzle r,
+        const backend::TextureSwizzle g, const backend::TextureSwizzle b,
+        const backend::TextureSwizzle a, utils::ImmutableCString&& tag) {
+    createTextureViewSwizzleCommon(textureHandle, sourceTextureHandle, r, g, b, a,
+            std::move(tag));
+}
+
 void WebGPUDriver::createTextureViewSwizzleAsyncR(Handle<HwTexture> textureHandle,
         Handle<HwTexture> sourceTextureHandle, const backend::TextureSwizzle r,
         const backend::TextureSwizzle g, const backend::TextureSwizzle b,
         const backend::TextureSwizzle a, CallbackHandler* handler,
         AsyncCallback const callback, void* user, utils::ImmutableCString&& tag) {
-    // TODO: implement this.
+    createTextureViewSwizzleCommon(textureHandle, sourceTextureHandle, r, g, b, a,
+            std::move(tag));
+    deferCreationCompletionCallback(handler, callback, user);
 }
 
 void WebGPUDriver::createTextureExternalImage2R(Handle<HwTexture> textureHandle,
@@ -999,7 +1128,7 @@ bool WebGPUDriver::isDepthClampSupported() {
 }
 
 bool WebGPUDriver::isAsynchronousModeEnabled() {
-    return false;
+    return getJobQueue() != nullptr;
 }
 
 bool WebGPUDriver::isWorkaroundNeeded(Workaround) {
@@ -1008,19 +1137,31 @@ bool WebGPUDriver::isWorkaroundNeeded(Workaround) {
 
 FeatureLevel WebGPUDriver::getFeatureLevel() {
 
+    // Every Filament sampler consumes both a sampled texture and a sampler binding, so the
+    // tighter of the two per-stage limits is what counts (see getMaxTextureCount() and
+    // getMaxSamplerCount()). This is only taken into account when the device limits are validated
+    // (material.check_device_sampler_limits).
+    auto const* const featureFlags = getDriverConfig().featureFlagManager;
+    bool const checkDeviceSamplerLimits =
+            featureFlags && featureFlags->features.material.check_device_sampler_limits;
+    size_t const maxSamplerCount = checkDeviceSamplerLimits
+            ? std::min(mDeviceLimits.maxSampledTexturesPerShaderStage,
+                      mDeviceLimits.maxSamplersPerShaderStage)
+            : mDeviceLimits.maxSamplersPerShaderStage;
+
     // If the max sampler counts do not meet FeatureLevel2 standards, then this is an FeatureLevel1
     // device.
     const auto& featureLevel2 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2];
-    if (mDeviceLimits.maxSamplersPerShaderStage < featureLevel2.MAX_VERTEX_SAMPLER_COUNT ||
-            mDeviceLimits.maxSamplersPerShaderStage < featureLevel2.MAX_FRAGMENT_SAMPLER_COUNT) {
+    if (maxSamplerCount < featureLevel2.MAX_VERTEX_SAMPLER_COUNT ||
+            maxSamplerCount < featureLevel2.MAX_FRAGMENT_SAMPLER_COUNT) {
         return FeatureLevel::FEATURE_LEVEL_1;
     }
 
     // If the max sampler counts do not meet FeatureLevel3 standards, then this is an FeatureLevel2
     // device.
     const auto& featureLevel3 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_3];
-    if (mDeviceLimits.maxSamplersPerShaderStage < featureLevel3.MAX_VERTEX_SAMPLER_COUNT ||
-            mDeviceLimits.maxSamplersPerShaderStage < featureLevel3.MAX_FRAGMENT_SAMPLER_COUNT) {
+    if (maxSamplerCount < featureLevel3.MAX_VERTEX_SAMPLER_COUNT ||
+            maxSamplerCount < featureLevel3.MAX_FRAGMENT_SAMPLER_COUNT) {
         return FeatureLevel::FEATURE_LEVEL_2;
     }
     return FeatureLevel::FEATURE_LEVEL_3;
@@ -1062,6 +1203,29 @@ size_t WebGPUDriver::getMaxArrayTextureLayers() {
     return mDeviceLimits.maxTextureArrayLayers;
 }
 
+// Note: these are the limits granted to the device, which may be lower than what the adapter
+// supports (see WebGPUPlatform).
+size_t WebGPUDriver::getMaxTextureCount(ShaderStage) {
+    return mDeviceLimits.maxSampledTexturesPerShaderStage;
+}
+
+size_t WebGPUDriver::getMaxSamplerCount(ShaderStage) {
+    return mDeviceLimits.maxSamplersPerShaderStage;
+}
+
+size_t WebGPUDriver::getExternalTextureCost() {
+    // Per the WebGPU spec, a texture_external binding counts as 4 sampled textures (plus 1 sampler
+    // and 1 uniform buffer) against the per-stage limits. See the "exceeds the binding slot limits"
+    // algorithm in section 8.1.1 (Bind Group Layout Creation) of the W3C Candidate Recommendation
+    // Draft of 15 September 2026:
+    // https://www.w3.org/TR/2026/CRD-webgpu-20260915/#exceeds-the-binding-slot-limits
+    return 4;
+}
+
+size_t WebGPUDriver::getExternalSamplerCost() {
+    return 1;
+}
+
 size_t WebGPUDriver::getUniformBufferOffsetAlignment(){
     return mDeviceLimits.minUniformBufferOffsetAlignment;
 }
@@ -1077,7 +1241,14 @@ void WebGPUDriver::updateIndexBufferAsyncR(AsyncCallId jobId,
         Handle<HwIndexBuffer> indexBufferHandle, BufferDescriptor&& bufferDescriptor,
         const uint32_t byteOffset, CallbackHandler* handler,
         AsyncCallback const callback, void* user) {
-    // TODO: implement this.
+    assert_invariant(getJobQueue());
+    promoteToAsync(handleCast<WebGPUIndexBuffer>(indexBufferHandle));
+    getJobQueue()->push([this, indexBufferHandle, byteOffset,
+            bufferRelease = AsyncBufferRelease(this, std::move(bufferDescriptor)),
+            completion = AsyncCompletion(this, handler, callback, user)]() mutable {
+        updateIndexBuffer(indexBufferHandle, bufferRelease.detach(), byteOffset);
+        completion.schedule(AsyncCallStatus::COMPLETED);
+    }, jobId);
 }
 
 void WebGPUDriver::updateBufferObject(Handle<HwBufferObject> bufferObjectHandle,
@@ -1090,7 +1261,14 @@ void WebGPUDriver::updateBufferObject(Handle<HwBufferObject> bufferObjectHandle,
 void WebGPUDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferObject> bufferObjectHandle,
         BufferDescriptor&& bufferDescriptor, const uint32_t byteOffset, CallbackHandler* handler,
         AsyncCallback const callback, void* user) {
-    // TODO: implement this.
+    assert_invariant(getJobQueue());
+    promoteToAsync(handleCast<WebGPUBufferObject>(bufferObjectHandle));
+    getJobQueue()->push([this, bufferObjectHandle, byteOffset,
+            bufferRelease = AsyncBufferRelease(this, std::move(bufferDescriptor)),
+            completion = AsyncCompletion(this, handler, callback, user)]() mutable {
+        updateBufferObject(bufferObjectHandle, bufferRelease.detach(), byteOffset);
+        completion.schedule(AsyncCallStatus::COMPLETED);
+    }, jobId);
 }
 
 void WebGPUDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> bufferObjectHandle,
@@ -1119,7 +1297,11 @@ void WebGPUDriver::setVertexBufferObjectAsyncR(AsyncCallId jobId,
         Handle<HwVertexBuffer> vertexBufferHandle, const uint32_t index,
         Handle<HwBufferObject> bufferObjectHandle, CallbackHandler* handler,
         AsyncCallback const callback, void* user) {
-    // TODO: implement this.
+    assert_invariant(getJobQueue());
+
+    // No GPU work, only buffer handles to set, which the draws read.
+    runAsyncCallNow(getJobQueue(), jobId, handler, callback, user,
+            [&] { setVertexBufferObject(vertexBufferHandle, index, bufferObjectHandle); });
 }
 
 // Updates a 3D texture region with pixel data from a buffer.
@@ -1272,7 +1454,15 @@ void WebGPUDriver::update3DImageAsyncR(AsyncCallId jobId,
         const uint32_t width, const uint32_t height, const uint32_t depth,
         PixelBufferDescriptor&& pixelBufferDescriptor, CallbackHandler* handler,
         AsyncCallback const callback, void* user) {
-    // TODO: implement this.
+    assert_invariant(getJobQueue());
+    promoteToAsync(handleCast<WebGPUTexture>(textureHandle));
+    getJobQueue()->push([this, textureHandle, level, xoffset, yoffset, zoffset, width, height,
+            depth, bufferRelease = AsyncBufferRelease(this, std::move(pixelBufferDescriptor)),
+            completion = AsyncCompletion(this, handler, callback, user)]() mutable {
+        update3DImage(textureHandle, level, xoffset, yoffset, zoffset, width, height, depth,
+                bufferRelease.detach());
+        completion.schedule(AsyncCallStatus::COMPLETED);
+    }, jobId);
 }
 
 void WebGPUDriver::setupExternalImage(void* image) {
@@ -2430,12 +2620,19 @@ void WebGPUDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_
 
 void WebGPUDriver::queueCommandAsyncR(AsyncCallId jobId, utils::Invocable<void()>&& command,
         CallbackHandler* handler, AsyncCallback const callback, void* user) {
-    // TODO: implement this.
+    assert_invariant(getJobQueue());
+    getJobQueue()->push([command = std::move(command),
+            completion = AsyncCompletion(this, handler, callback, user)]() mutable {
+        if (command) {
+            command();
+        }
+        completion.schedule(AsyncCallStatus::COMPLETED);
+    }, jobId);
 }
 
 bool WebGPUDriver::cancelAsyncJob(AsyncCallId jobId) {
-    // TODO: implement this.
-    return false;
+    assert_invariant(getJobQueue());
+    return getJobQueue()->cancel(jobId);
 }
 
 } // namespace filament::backend

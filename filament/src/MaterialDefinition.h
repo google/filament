@@ -122,7 +122,7 @@ struct MaterialDefinition {
     //
     // The Variant:: predicates all encode MaterialDomain::SURFACE semantics; evaluating them on a
     // variant from another domain yields a silently meaningless answer (e.g. the post-process key
-    // 1 has the DIR bit set, so the directional-lighting user filter would clear it to 0). Prefer
+    // 1 has the STE bit set, so Variant::isStereoVariant() reports it as a stereo variant). Prefer
     // these accessors over calling Variant:: directly: they resolve to the surface semantics only
     // when this material actually has them, and are inert otherwise.
     bool hasSurfaceVariants() const noexcept {
@@ -237,6 +237,12 @@ private:
 
     static std::unique_ptr<MaterialDefinition> create(FEngine& engine,
             std::unique_ptr<MaterialParser> parser);
+
+    // Returns false if this material uses more textures or samplers than the current device
+    // supports in a shader stage. This depends on the backend (e.g. the cost of an external
+    // sampler) and on the device, so it can't be validated when the material is compiled.
+    // Only called when the material.check_device_sampler_limits feature flag is set.
+    bool checkSamplerLimits(FEngine& engine) const noexcept;
 
     void processMain();
     void processParameterNames();

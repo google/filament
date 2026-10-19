@@ -101,6 +101,59 @@ TEST(MaterialParser, AcceptValidDescriptorSetLayout) {
     EXPECT_TRUE(ChunkDescriptorSetLayoutInfo::unflatten(unflattener, &container));
 }
 
+namespace {
+constexpr uint8_t UBO = static_cast<uint8_t>(backend::DescriptorType::UNIFORM_BUFFER);
+constexpr uint8_t SAMPLER = static_cast<uint8_t>(backend::DescriptorType::SAMPLER_2D_FLOAT);
+constexpr uint8_t DYNAMIC = static_cast<uint8_t>(backend::DescriptorFlags::DYNAMIC_OFFSET);
+} // namespace
+
+TEST(MaterialParser, RejectDuplicateBindingDescriptorSetLayout) {
+    std::vector<uint8_t> buffer = {
+        2,                          // descriptorCount
+        SAMPLER, 1, 1, 0, 0, 0,     // type, stageFlags, binding, flags, count (uint16_t)
+        SAMPLER, 1, 1, 0, 0, 0,     // same binding again
+    };
+
+    filaflat::Unflattener unflattener(buffer.data(), buffer.data() + buffer.size());
+    MaterialParser::DescriptorSetLayoutContainer container;
+    EXPECT_FALSE(ChunkDescriptorSetLayoutInfo::unflatten(unflattener, &container));
+}
+
+TEST(MaterialParser, RejectMultipleDynamicOffsetsDescriptorSetLayout) {
+    std::vector<uint8_t> buffer = {
+        2,                          // descriptorCount
+        UBO, 1, 0, DYNAMIC, 0, 0,   // type, stageFlags, binding, flags, count (uint16_t)
+        UBO, 1, 1, DYNAMIC, 0, 0,
+    };
+
+    filaflat::Unflattener unflattener(buffer.data(), buffer.data() + buffer.size());
+    MaterialParser::DescriptorSetLayoutContainer container;
+    EXPECT_FALSE(ChunkDescriptorSetLayoutInfo::unflatten(unflattener, &container));
+}
+
+TEST(MaterialParser, AcceptSingleDynamicOffsetDescriptorSetLayout) {
+    // Same shape as MaterialDescriptorSetLayoutChunk::flatten() in filamat.
+    std::vector<uint8_t> buffer = {
+        2,                          // descriptorCount
+        UBO, 1, 0, DYNAMIC, 0, 0,   // type, stageFlags, binding, flags, count (uint16_t)
+        SAMPLER, 1, 1, 0, 0, 0,
+    };
+
+    filaflat::Unflattener unflattener(buffer.data(), buffer.data() + buffer.size());
+    MaterialParser::DescriptorSetLayoutContainer container;
+    EXPECT_TRUE(ChunkDescriptorSetLayoutInfo::unflatten(unflattener, &container));
+    EXPECT_EQ(container.descriptors.size(), 2u);
+}
+
+TEST(MaterialParser, TestMaterialDescriptorSetLayoutIsValid) {
+    MaterialParser parser({ backend::ShaderLanguage::ESSL3 },
+            FILAMENT_TEST_RESOURCES_TEST_MATERIAL_DATA, FILAMENT_TEST_RESOURCES_TEST_MATERIAL_SIZE);
+    ASSERT_EQ(parser.parse(), MaterialParser::ParseResult::SUCCESS);
+
+    MaterialParser::DescriptorSetLayoutContainer container;
+    EXPECT_TRUE(parser.getDescriptorSetLayout(&container));
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

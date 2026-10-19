@@ -35,6 +35,7 @@
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
 
+#include <utils/bitset.h>
 #include <utils/compiler.h>
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
@@ -955,6 +956,8 @@ bool ChunkDescriptorSetLayoutInfo::unflatten(Unflattener& unflattener,
     }
     auto& descriptors = container->descriptors;
     descriptors.reserve(descriptorCount);
+    bitset64 seenBindings;
+    bool hasDynamicOffset = false;
     for (size_t i = 0; i < descriptorCount; i++) {
         uint8_t type;
         if (!unflattener.read(&type)) {
@@ -978,9 +981,23 @@ bool ChunkDescriptorSetLayoutInfo::unflatten(Unflattener& unflattener,
             // must be in range.
             return false;
         }
+        if (seenBindings[binding]) {
+            // The frontend keeps the last entry for a binding while backends may count every
+            // entry, so a repeated binding makes them disagree about the layout.
+            return false;
+        }
+        seenBindings.set(binding);
         uint8_t flags;
         if (!unflattener.read(&flags)) {
             return false;
+        }
+        if (any(DescriptorFlags(flags) & DescriptorFlags::DYNAMIC_OFFSET)) {
+            // FMaterialInstance::use() binds this set with exactly one dynamic offset, and
+            // backends read as many offsets as the layout declares.
+            if (hasDynamicOffset) {
+                return false;
+            }
+            hasDynamicOffset = true;
         }
         uint16_t count;
         if (!unflattener.read(&count)) {

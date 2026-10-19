@@ -79,7 +79,8 @@ public:
 
         /**
          * Size of the index buffer in elements.
-         * @param indexCount Number of indices the IndexBuffer can hold.
+         * @param indexCount Number of indices the IndexBuffer can hold. Must not exceed
+         *                   backend::MAX_INDEX_COUNT (2^backend::INDEX_COUNT_BITS - 1).
          * @return A reference to this Builder for chaining calls.
          */
         Builder& indexCount(uint32_t indexCount) noexcept;

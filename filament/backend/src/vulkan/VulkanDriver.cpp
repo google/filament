@@ -45,6 +45,7 @@
 #include <utils/ImmutableCString.h>
 #include <utils/Panic.h>
 
+#include <algorithm>
 #include <chrono>
 #include <mutex>
 #ifndef NDEBUG
@@ -1969,6 +1970,25 @@ size_t VulkanDriver::getMaxArrayTextureLayers() {
     return mContext.getPhysicalDeviceLimits().maxImageArrayLayers;
 }
 
+size_t VulkanDriver::getMaxTextureCount(ShaderStage) {
+    return mContext.getPhysicalDeviceLimits().maxPerStageDescriptorSampledImages;
+}
+
+size_t VulkanDriver::getMaxSamplerCount(ShaderStage) {
+    return mContext.getPhysicalDeviceLimits().maxPerStageDescriptorSamplers;
+}
+
+size_t VulkanDriver::getExternalTextureCost() {
+    // A multi-planar (YCbCr) image may consume more than one descriptor; see
+    // VkSamplerYcbcrConversionImageFormatProperties::combinedImageSamplerDescriptorCount.
+    return 2;
+}
+
+size_t VulkanDriver::getExternalSamplerCost() {
+    // Combined image samplers count against both the sampled image and the sampler limits.
+    return getExternalTextureCost();
+}
+
 size_t VulkanDriver::getUniformBufferOffsetAlignment() {
     return mContext.getPhysicalDeviceLimits().minUniformBufferOffsetAlignment;
 }
@@ -2022,9 +2042,10 @@ void VulkanDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuff
     // pass a resource_ptr instead, which is ref-counted.
     auto ib = promoteToAsync(resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh));
 
-    getJobQueue()->push([this, ib, p = std::move(p), byteOffset,
+    getJobQueue()->push([this, ib, byteOffset,
+            bufferRelease = AsyncBufferRelease(this, std::move(p)),
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
-        updateIndexBufferCommon(ib, std::move(p), byteOffset);
+        updateIndexBufferCommon(ib, bufferRelease.detach(), byteOffset);
         completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
@@ -2055,9 +2076,10 @@ void VulkanDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferOb
     // pass a resource_ptr instead, which is ref-counted.
     auto bo = promoteToAsync(resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh));
 
-    getJobQueue()->push([this, bo, bd = std::move(bd), byteOffset,
+    getJobQueue()->push([this, bo, byteOffset,
+            bufferRelease = AsyncBufferRelease(this, std::move(bd)),
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
-        updateBufferObjectCommon(bo, std::move(bd), byteOffset);
+        updateBufferObjectCommon(bo, bufferRelease.detach(), byteOffset);
         completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
@@ -2110,10 +2132,10 @@ void VulkanDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th,
     auto t = promoteToAsync(resource_ptr<VulkanTexture>::cast(&mResourceManager, th));
 
     getJobQueue()->push([this, t, level, xoffset, yoffset, zoffset, width, height, depth,
-            data = std::move(data),
+            bufferRelease = AsyncBufferRelease(this, std::move(data)),
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         update3DImageCommon(t, level, xoffset, yoffset, zoffset, width, height, depth,
-                std::move(data));
+                bufferRelease.detach());
         completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
