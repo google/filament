@@ -2894,7 +2894,9 @@ bool OpenGLDriver::isTextureFormatSupported(TextureFormat const format) {
         return  ext.EXT_texture_compression_bptc;
     }
     if (isASTCCompression(format)) {
-        return ext.KHR_texture_compression_astc_hdr;
+        return ext.KHR_texture_compression_astc_ldr ||
+               ext.KHR_texture_compression_astc_hdr ||
+               ext.WEBGL_compressed_texture_astc;
     }
     if (mContext.isES2()) {
         return textureFormatToFormatAndType(format).first != GL_NONE;

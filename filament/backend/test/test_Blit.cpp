@@ -65,7 +65,7 @@ static void createBitmap(DriverApi& dapi, Handle<HwTexture> texture, int baseWid
     auto cb = [](void* buffer, size_t size, void* user) { free(buffer); };
     const int width = baseWidth >> level;
     const int height = baseHeight >> level;
-    const size_t size0 = height * width * 4;
+    const size_t size0 = size_t(height) * width * 4;
     uint8_t* buffer0 = (uint8_t*)calloc(size0, 1);
     PixelBufferDescriptor pb(buffer0, size0, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb);
 
@@ -117,7 +117,7 @@ static void createFaces(DriverApi& dapi, Handle<HwTexture> texture, int baseWidt
     auto cb = [](void* buffer, size_t size, void* user) { free(buffer); };
     const int width = baseWidth >> level;
     const int height = baseHeight >> level;
-    const size_t size0 = height * width * 4 * 6;
+    const size_t size0 = size_t(height) * width * 4 * 6;
     uint8_t* buffer0 = (uint8_t*)calloc(size0, 1);
     PixelBufferDescriptor pb(buffer0, size0, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb);
 
