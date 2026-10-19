@@ -22,6 +22,8 @@
 
 #include <private/utils/Tracing.h>
 
+#include <backend/DriverEnums.h>
+
 #include <utils/Log.h>
 #include <utils/Panic.h>
 
@@ -353,10 +355,11 @@ bool isUploadableIndexAccessor(cgltf_accessor const* accessor) {
         return false;
     }
 
-    // Two ceilings apply: IndexBuffer::Builder::indexCount() takes a uint32_t, and
-    // (count * componentSize) must not wrap size_t. Comparing against the smaller of the two keeps
-    // both bounds effective where cgltf_size is 32 bits, as it is on WASM.
-    cgltf_size const maxCount = std::min(cgltf_size(std::numeric_limits<uint32_t>::max()),
+    // Two ceilings apply: IndexBuffer::Builder::indexCount() caps the index count at
+    // backend::MAX_INDEX_COUNT, and (count * componentSize) must not wrap size_t. Comparing against
+    // the smaller of the two keeps both bounds effective where cgltf_size is 32 bits, as it is on
+    // WASM.
+    cgltf_size const maxCount = std::min(cgltf_size(backend::MAX_INDEX_COUNT),
             cgltf_size(std::numeric_limits<size_t>::max() / componentSize));
     if (accessor->count > maxCount) {
         return false;
