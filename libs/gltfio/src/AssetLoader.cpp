@@ -40,8 +40,6 @@
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 
-#include <backend/DriverEnums.h>
-
 #include <private/utils/Tracing.h>
 
 #include <utils/compiler.h>
@@ -1038,7 +1036,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
     } else if (inPrim.attributes_count > 0) {
         // If a primitive does not have an index buffer, generate a trivial one now.
         const cgltf_size vertexCount = inPrim.attributes[0].data->count;
-        if (vertexCount > backend::MAX_INDEX_COUNT) {
+        if (vertexCount > IndexBuffer::MAX_INDEX_COUNT) {
             slog.e << "Vertex count exceeds maximum index count in " << name << io::endl;
             return false;
         }

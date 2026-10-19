@@ -59,6 +59,11 @@ public:
     using AsyncCallId = backend::AsyncCallId;
 
     /**
+     * Maximum number of indices accepted by an index buffer.
+     */
+    static constexpr uint32_t MAX_INDEX_COUNT = uint32_t(backend::MAX_INDEX_COUNT);
+
+    /**
      * Type of the index buffer
      */
     enum class IndexType : uint8_t {
@@ -80,7 +85,7 @@ public:
         /**
          * Size of the index buffer in elements.
          * @param indexCount Number of indices the IndexBuffer can hold. Must not exceed
-         *                   backend::MAX_INDEX_COUNT (2^backend::INDEX_COUNT_BITS - 1).
+         *                   MAX_INDEX_COUNT (2^backend::INDEX_COUNT_BITS - 1).
          * @return A reference to this Builder for chaining calls.
          */
         Builder& indexCount(uint32_t indexCount) noexcept;
