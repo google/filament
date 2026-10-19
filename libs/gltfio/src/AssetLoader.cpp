@@ -40,9 +40,9 @@
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 
-#include <private/utils/Tracing.h>
-
 #include <backend/DriverEnums.h>
+
+#include <private/utils/Tracing.h>
 
 #include <utils/compiler.h>
 #include <utils/EntityManager.h>
