@@ -19,11 +19,11 @@
 
 #include "SourceFormatter.h"
 
-#include <mutex>
-#include <condition_variable>
-#include <atomic>
-
 #include <CivetServer.h>
+
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
 
 namespace filament::matdbg {
 
