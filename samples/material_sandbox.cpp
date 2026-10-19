@@ -19,7 +19,6 @@
 #include "common/arguments.h"
 
 #include <filamentapp/AssetLoader.h>
-#include <filamentapp/DesktopAssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 #include <filamentapp/IBL.h>
 #include <filamentapp/MeshAssimp.h>
@@ -73,8 +72,8 @@ struct App {
 Scene* g_scene = nullptr;
 
 std::unique_ptr<MeshAssimp> g_meshSet;
-filament::app::AssetLoader* g_assetLoader = nullptr;
-std::map<utils::CString, MaterialInstance*> g_meshMaterialInstances;
+app::AssetLoader* g_assetLoader = nullptr;
+std::map<CString, MaterialInstance*> g_meshMaterialInstances;
 SandboxParameters g_params;
 ColorGradingOptions g_lastColorGradingOptions;
 ColorGrading* g_colorGrading = nullptr;
@@ -83,6 +82,7 @@ FilamentApp2* g_filamentApp = nullptr;
 
 bool g_shadowPlane = false;
 bool g_singleMode = false;
+bool g_hideUi = true;
 float g_meshScale = 1.0f;
 float g_rangePlot[1024 * 3];
 float g_curvePlot[1024 * 3];
@@ -418,8 +418,8 @@ float getRangePlotValue(const int series, void* data, const int index) {
     return static_cast<float*>(data)[series * 1024 + index];
 }
 
-inline float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highlightScale) {
-    float3 d = 1.0f / (pow(midPoint, shadowGamma - 1.0f));
+float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highlightScale) {
+    float3 d = 1.0f / pow(midPoint, shadowGamma - 1.0f);
     float3 dark = pow(v, shadowGamma) * d;
     float3 light = highlightScale * (v - midPoint) + midPoint;
     return float3{
@@ -462,6 +462,9 @@ void popSliderColors() { ImGui::PopStyleColor(4); }
 void gui(Engine* engine, View*) {
     auto& params = g_params;
     ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f));
+    if (g_hideUi) {
+        ImGui::SetNextWindowCollapsed(true, ImGuiCond_Always);
+    }
     ImGui::Begin("Parameters");
     {
         if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -1010,12 +1013,13 @@ void preRender(Engine* engine, View* view, Scene*, Renderer* renderer) {
 } // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
-        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+        app::DisplayManager* dm, app::AssetLoader* loader) {
     auto app = std::make_shared<App>();
     g_config = config;
     g_assetLoader = loader;
     g_shadowPlane = config.getBool("shadow-plane");
     g_singleMode = config.getBool("single-mode");
+    g_hideUi = config.getBool("hide-ui");
     config.dirt = config.getString("dirt");
     g_meshScale = config.getFloat("scale", 1.0f);
     app->config = config;
@@ -1040,6 +1044,7 @@ samples::SampleParameters createAppParameters() {
         samples::Parameter::makeBool("single-mode", 'n', "Single object mode", false),
         samples::Parameter::makeString("dirt", 'd', "Path to a dirt texture", ""),
         samples::Parameter::makeFloat("scale", 's', "Applies uniform scale", 1.0f),
+        samples::Parameter::makeBool("hide-ui", '\0', "Hide the UI by default", false)
     };
 }
 
