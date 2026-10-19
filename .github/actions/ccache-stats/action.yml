@@ -30,7 +30,7 @@ runs:
         # looks disappointing rather than broken. Since the counters were zeroed at the start of
         # the job, any cleanup here is this build outgrowing its budget. Before ccache 4.4 there is
         # no --print-stats, in which case awk yields nothing and this prints nothing.
-        cleanups=$(ccache --print-stats | awk '$1 == "cleanups_performed" { print $2 }')
+        cleanups=$(ccache --print-stats | tr -d '\r' | awk '$1 == "cleanups_performed" { print $2 }')
         if [[ "${cleanups:-0}" -gt 0 ]]; then
           echo "::warning title=ccache budget too small::This job evicted cached objects" \
                "(${cleanups} cleanups) because its build outgrew CCACHE_MAXSIZE=${CCACHE_MAXSIZE}." \

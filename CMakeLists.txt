@@ -164,8 +164,31 @@ endif()
 find_program(CCACHE_PROGRAM ccache)
 if (CCACHE_PROGRAM)
     if (WIN32)
-        set(CMAKE_C_COMPILER_LAUNCHER   "${CCACHE_PROGRAM}")
-        set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+        if (CMAKE_GENERATOR MATCHES "^Visual Studio")
+            set(CCACHE_EXE "${CCACHE_PROGRAM}")
+            if (CCACHE_EXE MATCHES "chocolatey/bin/ccache\\.exe$")
+                file(GLOB CHOCO_CCACHE
+                    "C:/ProgramData/chocolatey/lib/ccache/tools/ccache-*/ccache.exe")
+                if (CHOCO_CCACHE)
+                    list(GET CHOCO_CCACHE 0 CCACHE_EXE)
+                endif()
+            endif()
+            file(COPY_FILE
+                "${CCACHE_EXE}" "${CMAKE_CURRENT_BINARY_DIR}/cl.exe"
+                ONLY_IF_DIFFERENT
+            )
+            file(TO_NATIVE_PATH "${CMAKE_CURRENT_BINARY_DIR}" CCACHE_CL_PATH)
+            list(APPEND CMAKE_VS_GLOBALS
+                "CLToolExe=cl.exe"
+                "CLToolPath=${CCACHE_CL_PATH}"
+                "UseMultiToolTask=true"
+                "TrackFileAccess=false"
+            )
+            list(REMOVE_DUPLICATES CMAKE_VS_GLOBALS)
+        else()
+            set(CMAKE_C_COMPILER_LAUNCHER   "${CCACHE_PROGRAM}")
+            set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+        endif()
     else()
         set(C_LAUNCHER   "${CCACHE_PROGRAM}")
         set(CXX_LAUNCHER "${CCACHE_PROGRAM}")
@@ -289,15 +312,22 @@ if (WIN32)
 
     # TODO: Figure out why pdb generation messes with incremental compilaton.
     # IN RELEASE_WITH_DEBUG_INFO, generate debug info in .obj, no in pdb.
+    string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+    string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /Z7")
     set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} /Z7")
 
-    # In RELEASE, also generate PDBs.
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /Zi")
+    # In RELEASE, also generate PDBs unless ccache or CI is active (/Zi is incompatible with ccache
+    # and CI discards PDBs).
+    if (NOT CCACHE_PROGRAM AND NOT FILAMENT_WINDOWS_CI_BUILD)
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /Zi")
+    endif()
 
     # In DEBUG, avoid generating a PDB file which seems to mess with incremental compilation.
     # Instead generate debug info directly inside obj files.
+    string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+    string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Z7")
     set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Z7")
 

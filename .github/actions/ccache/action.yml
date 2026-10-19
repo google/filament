@@ -47,12 +47,13 @@ inputs:
           compile line through add_definitions, so no object is common to any two of them.
         - android-arm64-release: the ccache-android warmer, on x86_64 rather than ARM, because the
           NDK only ships a linux-x86_64 toolchain. Read by build-android.
-        - desktop (macOS only): the build-mac job, whose "continuous" build covers what presubmit
-          mac compiles. macOS is not split because build-mac is already a single writer. That build
-          compiles a debug tree and a release tree, so this one entry holds both. Read by presubmit
-          build-mac, which wants the release half, and by presubmit test-backend-metal, which
-          compiles only backend_test_mac out of the debug half; test/backend/test.sh has a
-          metal-only path for the sole purpose of keeping its flags identical to what this holds.
+        - desktop (macOS and Windows): the postsubmit build-mac and build-windows jobs, whose
+          "continuous" builds cover what presubmit compiles on each OS. Neither is split because
+          each has a single writer that compiles both a debug tree and a release tree, so one entry
+          per OS holds both. On macOS, read by presubmit build-mac (release half) and presubmit
+          test-backend-metal (backend_test_mac out of the debug half; test/backend/test.sh has a
+          metal-only path for the sole purpose of keeping its flags identical to what this holds).
+          On Windows, read by presubmit build-windows (release /MT half).
         - ios: the postsubmit build-ios job. Its "continuous" build compiles the device release
           objects presubmit needs, plus the debug and simulator ones it does not.
         - web-emsdk-<version>: the postsubmit build-web job. Read by presubmit build-web, and by
@@ -84,7 +85,22 @@ runs:
       run: |
         set -e
 
-        CACHE_PATH="${HOME}/.ccache"
+        if [[ "${{ runner.os }}" == "Windows" ]]; then
+          if ! command -v ccache > /dev/null; then
+            source ./build/common/versions
+            CCACHE_NAME="ccache-${GITHUB_CCACHE_VERSION}-windows-x86_64"
+            curl -fsSL -o "${RUNNER_TEMP}/ccache.zip" \
+              "https://github.com/ccache/ccache/releases/download/v${GITHUB_CCACHE_VERSION}/${CCACHE_NAME}.zip"
+            unzip -q "${RUNNER_TEMP}/ccache.zip" -d "${RUNNER_TEMP}"
+            cygpath -w "${RUNNER_TEMP}/${CCACHE_NAME}" >> "$GITHUB_PATH"
+          fi
+          # Use a drive-qualified path under LOCALAPPDATA so native Win32 processes running on D:
+          # and Git Bash / actions/cache resolve the same directory, and MSBuild's FileTracker
+          # ignores ccache's internal files.
+          CACHE_PATH="$(cygpath -m "${LOCALAPPDATA}/ccache")"
+        else
+          CACHE_PATH="${HOME}/.ccache"
+        fi
         CACHE_KEY="ccache-${{ runner.os }}-${{ runner.arch }}-${{ inputs.config }}"
 
         # A property of the cache rather than of the job, so that every job touching an entry
@@ -142,6 +158,15 @@ runs:
           # Hashing the binary keeps the cache valid across image updates.
           echo "CCACHE_COMPILERCHECK=content"
         } >> "$GITHUB_ENV"
+        if [[ "${{ runner.os }}" == "Windows" ]]; then
+          # On Windows, MSBuild invokes ccache directly as cl.exe without build/launch-c.in, so
+          # pass the sloppiness settings and MSVC depend mode (/showIncludes) through the
+          # environment.
+          {
+            echo "CCACHE_DEPEND=true"
+            echo "CCACHE_SLOPPINESS=file_macro,time_macros,locale,file_stat_matches,pch_defines"
+          } >> "$GITHUB_ENV"
+        fi
         # Deliberately not setting CCACHE_BASEDIR. The workspace path is fixed on hosted runners
         # and CMake already emits relative source paths, so it would rewrite nothing; meanwhile
         # build/launch-c.in hard-codes file_macro sloppiness, so with a basedir in play a hit
