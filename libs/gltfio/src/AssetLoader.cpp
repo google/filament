@@ -42,6 +42,8 @@
 
 #include <private/utils/Tracing.h>
 
+#include <backend/DriverEnums.h>
+
 #include <utils/compiler.h>
 #include <utils/EntityManager.h>
 #include <utils/FixedCapacityVector.h>
@@ -1035,10 +1037,14 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
         addBufferSlot(slot);
     } else if (inPrim.attributes_count > 0) {
         // If a primitive does not have an index buffer, generate a trivial one now.
-        const uint32_t vertexCount = inPrim.attributes[0].data->count;
+        const cgltf_size vertexCount = inPrim.attributes[0].data->count;
+        if (vertexCount > backend::MAX_INDEX_COUNT) {
+            slog.e << "Vertex count exceeds maximum index count in " << name << io::endl;
+            return false;
+        }
 
         indices = IndexBuffer::Builder()
-            .indexCount(vertexCount)
+            .indexCount(uint32_t(vertexCount))
             .bufferType(IndexBuffer::IndexType::UINT)
             .build(mEngine);
 
