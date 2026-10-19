@@ -5,13 +5,14 @@ struct ShadowData {
     highp mat4 lightFromWorldMatrix;
     highp vec4 lightFromWorldZ;
     highp vec4 scissorNormalized;
-    highp vec2 normalBias;
+    highp float normalBias;
     highp float projectionParam;
     highp float wsOneOverTexelSizeAtOneMeter;
     highp uint maxMipLevel_maxSearchRadius;
     highp uint bulbRadius_vsmExponent;
     highp uint maxPenumbraRatio_penumbraRatioScale;
     highp uint evsm4_layer;
+    mediump uint reserved;
 };
 #endif
 
