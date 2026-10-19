@@ -273,6 +273,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/utils/Spirv.cpp
             src/vulkan/utils/Spirv.h
             src/vulkan/utils/StaticVector.h
+            src/vulkan/utils/TaskHandler.cpp
+            src/vulkan/utils/TaskHandler.h
     )
     if (LINUX)
         list(APPEND SRCS
@@ -632,6 +634,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_Scissor.cpp
             test/test_MipLevels.cpp
             test/test_Handles.cpp
+            test/test_BlobCacheKey.cpp
             test/test_CircularBuffer.cpp
             test/test_CommandBufferQueue.cpp
             test/test_DescriptorSet.cpp

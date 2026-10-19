@@ -1667,19 +1667,28 @@ class JavaEmitter:
                 scalar = arr_in["scalar"]
                 is_fixed_arr = arr_in.get("is_fixed_array", False)
                 comps = [str(i) for i in range(size)] if (is_fixed_arr or size > 4) else ["X", "Y", "Z", "W"][:size]
-                for c in comps:
-                    out.append(f"{indent}    private {scalar} m{fcap}{c};")
+                comp_defaults = self.ctx.type_resolver.get_array_default_values(
+                    f["type"], f.get("default_value"), arr_in
+                )
+                for idx, c in enumerate(comps):
+                    c_def = comp_defaults[idx] if comp_defaults and idx < len(comp_defaults) else None
+                    init_str = f" = {c_def}" if c_def is not None else ""
+                    out.append(f"{indent}    private {scalar} m{fcap}{c}{init_str};")
             elif self.is_aggregate_struct(f["type"]):
                 sub_leaves = self.get_flattened_leaves(f["type"], prefix=fcap)
                 for sl in sub_leaves:
-                    out.append(f"{indent}    private {sl['java_type']} m{sl['name']};")
+                    sl_def = sl.get("default_value")
+                    init_str = f" = {sl_def}" if sl_def is not None else ""
+                    out.append(f"{indent}    private {sl['java_type']} m{sl['name']}{init_str};")
             elif f_info.get("is_slice"):
                 out.append(f"{indent}    private @Nullable {f_info['java']} m{fcap};")
             else:
                 ann = self.get_annotation(f["type"])
                 ann_str = f"{ann}\n{indent}    " if ann else ""
                 jtype = self.get_java_type(f["type"])
-                out.append(f"{indent}    {ann_str}public {jtype} {fname};")
+                default_val = self.translate_default_value(f, self.name)
+                init_str = f" = {default_val}" if default_val is not None else ""
+                out.append(f"{indent}    {ann_str}public {jtype} {fname}{init_str};")
         out.append("")
         
         # Step 5: Default Zero-Initializing Constructor

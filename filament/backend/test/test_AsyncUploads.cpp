@@ -72,7 +72,6 @@ static void recordCallback(void* user, AsyncCallStatus const status) {
 
 TEST_F(BackendTest, BasicAsyncFlow) {
     SKIP_IF(Backend::VULKAN, "Vulkan does not support asynchronous resource uploading");
-    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
 #if defined(FILAMENT_IOS) && !defined(FILAMENT_IOS_SIMULATOR)
     // A-series devices rasterize this scene differently from every other environment (measured
     // 2793888331 on an A10X), so there is no single hash this can be compared against.
@@ -104,6 +103,12 @@ TEST_F(BackendTest, BasicAsyncFlow) {
     auto waitFor = [&](const bool& flag) {
         int attempts = 0;
         while (!flag && attempts < 1000) {
+            // Backends whose async jobs are time-sliced on the driver thread (e.g. Vulkan and
+            // WebGPU's AmortizationWorker) only make progress when something calls tick(); a
+            // real app does this every frame via the Renderer, but this low-level test bypasses
+            // that loop entirely. Backends with a dedicated worker thread (OpenGL, Metal) don't
+            // need this, but calling it is harmless for them too.
+            api.tick();
             api.finish();
             executeCommands();
             getDriver().purge();
@@ -239,9 +244,9 @@ TEST_F(BackendTest, BasicAsyncFlow) {
 
 TEST_F(BackendTest, CanceledAsyncCallInvokesCallback) {
     // The Vulkan backend does implement asynchronous uploading, but BackendTest only enables
-    // asynchronous mode for Metal and OpenGL (BackendTest.cpp), so there is no job queue here.
+    // asynchronous mode for Metal, OpenGL and WebGPU (BackendTest.cpp), so there is no job queues
+    // here.
     SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
-    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
 
     auto& api = getDriverApi();
     auto swapChain = addCleanup(createSwapChain());
@@ -253,6 +258,12 @@ TEST_F(BackendTest, CanceledAsyncCallInvokesCallback) {
     auto waitFor = [&](const bool& flag) {
         int attempts = 0;
         while (!flag && attempts < 1000) {
+            // Backends whose async jobs are time-sliced on the driver thread (e.g. Vulkan and
+            // WebGPU's AmortizationWorker) only make progress when something calls tick(); a
+            // real app does this every frame via the Renderer, but this low-level test bypasses
+            // that loop entirely. Backends with a dedicated worker thread (OpenGL, Metal) don't
+            // need this, but calling it is harmless for them too.
+            api.tick();
             api.finish();
             executeCommands();
             getDriver().purge();
@@ -282,7 +293,6 @@ TEST_F(BackendTest, CanceledAsyncCallInvokesCallback) {
 
 TEST_F(BackendTest, CanceledSetVertexBufferObjectAsyncInvokesCallback) {
     SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
-    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
 
     auto& api = getDriverApi();
     auto swapChain = addCleanup(createSwapChain());
@@ -291,6 +301,8 @@ TEST_F(BackendTest, CanceledSetVertexBufferObjectAsyncInvokesCallback) {
     auto waitFor = [&](const bool& flag) {
         int attempts = 0;
         while (!flag && attempts < 1000) {
+            // See BasicAsyncFlow for why tick() is needed here.
+            api.tick();
             api.finish();
             executeCommands();
             getDriver().purge();
@@ -333,7 +345,6 @@ TEST_F(BackendTest, CanceledSetVertexBufferObjectAsyncInvokesCallback) {
 // waiting for the creation callback, and the draw still has to see the buffer.
 TEST_F(BackendTest, SetVertexBufferObjectAsyncBeforeBufferObjectCreated) {
     SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
-    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
 
     constexpr size_t kRenderTargetSize = 64;
 
@@ -464,7 +475,6 @@ TEST_F(BackendTest, SetVertexBufferObjectAsyncBeforeBufferObjectCreated) {
 
 TEST_F(BackendTest, DestroyAfterAsyncUpdatePreservesFifo) {
     SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
-    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
 
     auto& api = getDriverApi();
     auto swapChain = addCleanup(createSwapChain());
@@ -480,6 +490,8 @@ TEST_F(BackendTest, DestroyAfterAsyncUpdatePreservesFifo) {
     auto waitFor = [&](const bool& flag) {
         int attempts = 0;
         while (!flag && attempts < 1000) {
+            // See BasicAsyncFlow for why tick() is needed here.
+            api.tick();
             api.finish();
             executeCommands();
             getDriver().purge();
@@ -558,7 +570,6 @@ TEST_F(BackendTest, DestroyAfterAsyncUpdatePreservesFifo) {
 // names hands that one out. A driver that never reuses names passes without reaching the bug.
 TEST_F(BackendTest, DestroyAfterAsyncUpdateDoesNotLeaveStaleTextureBinding) {
     SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
-    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
 
     constexpr size_t kRenderTargetSize = 16;
     constexpr uint32_t kRed = 0xFF0000FF;
@@ -691,7 +702,6 @@ TEST_F(BackendTest, DestroyAfterAsyncUpdateDoesNotLeaveStaleTextureBinding) {
 // empty buffer to the draw.
 TEST_F(BackendTest, DestroyAfterAsyncUpdateDoesNotLeaveStaleBufferBinding) {
     SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
-    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
 
     constexpr size_t kRenderTargetSize = 16;
 
@@ -881,7 +891,6 @@ TEST_F(BackendTest, AsyncTextureViewRefRace) {
 
 TEST_F(BackendTest, FinishDrainsQueuedAsyncJobs) {
     SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
-    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
 
     auto& api = getDriverApi();
     auto swapChain = addCleanup(createSwapChain());
@@ -963,7 +972,6 @@ struct PendingUploads {
 // upload as well, because the canceled job still owns the descriptor.
 TEST_F(BackendTest, CanceledAsyncUploadReleasesBufferThroughHandler) {
     SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
-    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
 
     auto& api = getDriverApi();
     auto swapChain = addCleanup(createSwapChain());
@@ -1012,7 +1020,6 @@ TEST_F(BackendTest, CanceledAsyncUploadReleasesBufferThroughHandler) {
 // Same as above, but the jobs are already queued, so cancelAsyncJob() itself destroys them.
 TEST_F(BackendTest, CanceledQueuedAsyncUploadReleasesBufferThroughHandler) {
     SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
-    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
 
     auto& api = getDriverApi();
     auto swapChain = addCleanup(createSwapChain());

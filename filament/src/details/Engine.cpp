@@ -901,9 +901,9 @@ bool FEngine::flushAndWait(uint64_t const timeout) {
         status = fence->wait(FFence::Mode::FLUSH, timeout);
         destroy(fence);
     } else {
-        // When executing in a single-threaded (e.g. wasm) environment, fence would
-        // fail. Instead, directly execute the outstanding commands.
-        execute();
+        // Without threads nothing could signal a fence, so run the commands here instead.
+        // flush() executes them, finish() included, before it returns.
+        flush();
     }
 
     // finally, execute callbacks that might have been scheduled
@@ -1805,8 +1805,6 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
     // isMaterialLit means shading != Shading::UNLIT || hasShadowMultiplier;
     const bool isMaterialLit = material->getDefinition().isVariantLit;
     Variant baseVariant{};
-    // TODO: Remove this after DIR is fully transferred to spec constant
-    baseVariant.setDirectionalLighting(false);
     baseVariant.setFog(view->hasFog());
     baseVariant.setShadowSampler2D(isMaterialLit && view->hasShadowing() && (view->getShadowType() != ShadowType::PCF));
     baseVariant.setStereo(view->hasStereo());
