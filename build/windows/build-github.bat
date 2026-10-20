@@ -57,25 +57,29 @@ if errorlevel 1 exit /b %errorlevel%
 msbuild /version
 cmake --version
 
+set "OUT_DIR=%CD%\out"
+echo Adding Windows Defender exclusion for %OUT_DIR%
+powershell -NoProfile -NonInteractive -Command "Add-MpPreference -ExclusionPath '%OUT_DIR%'"
+
 :: Important: build debug builds first, when disk space is plentiful. Debug builds require
 :: significantly more temporary space.
 if "%BUILD_DEBUG%" == "1" (
     :: MTd
-    call :BuildVariant mtd "-DUSE_STATIC_CRT=ON" Debug || exit /b
+    call :BuildVariant mtd "-DUSE_STATIC_CRT=ON" Debug || goto :ErrorExit
 
     if "%BUILD_RELEASE_VARIANTS%" == "1" (
         :: MDd
-        call :BuildVariant mdd "-DUSE_STATIC_CRT=OFF" Debug || exit /b
+        call :BuildVariant mdd "-DUSE_STATIC_CRT=OFF" Debug || goto :ErrorExit
     )
 )
 
 if "%BUILD_RELEASE%" == "1" (
     :: /MT
-    call :BuildVariant mt "-DUSE_STATIC_CRT=ON" Release || exit /b
+    call :BuildVariant mt "-DUSE_STATIC_CRT=ON" Release || goto :ErrorExit
 
     if "%BUILD_RELEASE_VARIANTS%" == "1" (
         :: /MD
-        call :BuildVariant md "-DUSE_STATIC_CRT=OFF" Release || exit /b
+        call :BuildVariant md "-DUSE_STATIC_CRT=OFF" Release || goto :ErrorExit
     )
 )
 
@@ -96,7 +100,17 @@ if "%CREATE_ARCHIVE%" == "1" (
     7z a -ttar -so ..\..\filament-release.tar * | 7z a -si ..\filament-windows.tgz
 )
 
-exit /b 0
+set EXIT_CODE=0
+goto :Exit
+
+:ErrorExit
+set EXIT_CODE=%ERRORLEVEL%
+if "%EXIT_CODE%" == "0" set EXIT_CODE=1
+
+:Exit
+echo Removing Windows Defender exclusion for %OUT_DIR%
+powershell -NoProfile -NonInteractive -Command "Remove-MpPreference -ExclusionPath '%OUT_DIR%'"
+exit /b %EXIT_CODE%
 
 :BuildVariant
 set variant=%~1
