@@ -318,7 +318,7 @@
                 // The sphere sits at the center of the frame, which the fixed-pixel-size ImGui
                 // panel completely covers at the default size; render larger to expose it. The IBL
                 // replaces the otherwise black clear with a skybox and lights the sphere.
-                "args": ["--window-size=1024x1024", "--ibl=assets/ibl/lightroom_14b"]
+                "args": ["--hide-ui", "--window-size=1024x1024", "--ibl=assets/ibl/lightroom_14b"]
             }
         },
         {

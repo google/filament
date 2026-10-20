@@ -119,10 +119,10 @@ static CString buildPanicString(
         const char* file, const char* reason) {
 #ifndef NDEBUG
     return sprintfToString("%.*s\nin %s:%d\nin file %s\nreason: %s",
-            msg.size(), msg.data(), function, line, file, reason);
+            int(msg.size()), msg.data(), function, line, file, reason);
 #else
     return sprintfToString("%.*s\nin %s:%d\nreason: %s",
-            msg.size(), msg.data(), function, line, reason);
+            int(msg.size()), msg.data(), function, line, reason);
 #endif
 }
 

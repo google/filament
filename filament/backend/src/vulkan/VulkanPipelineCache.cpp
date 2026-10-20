@@ -508,7 +508,7 @@ VkPipeline VulkanPipelineCache::createPipeline(
             .alphaBlendOp = (VkBlendOp) raster.alphaBlendOp,
             .colorWriteMask = raster.colorWriteMask,
         };
-        for (uint8_t i = 1; i < colorBlendState.attachmentCount; ++i) {
+        for (uint32_t i = 1; i < colorBlendState.attachmentCount; ++i) {
             colorBlendAttachments[i] = colorBlendAttachments[0];
         }
     }

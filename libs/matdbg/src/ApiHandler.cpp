@@ -17,21 +17,22 @@
 
 #include "ApiHandler.h"
 
-#include <backend/DriverEnums.h>
-
 #include <matdbg/DebugServer.h>
 #include <matdbg/JsonWriter.h>
 #include <matdbg/ShaderExtractor.h>
 #include <matdbg/ShaderInfo.h>
 
 #include <filaflat/ChunkContainer.h>
+
+#include <backend/DriverEnums.h>
+
 #include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
 
 #include <CivetServer.h>
 
-#include <sstream>
 #include <chrono>
+#include <sstream>
 
 namespace filament::matdbg {
 
@@ -185,7 +186,7 @@ bool ApiHandler::handleGetApiShader(struct mg_connection* conn,
                     (uint32_t const*) content.data(), content.size() / 4);
             std::string const shader = mFormatter.format((char const*) glsl.c_str());
             mg_printf(conn, kSuccessHeader.data(), "application/txt");
-            mg_printf(conn, shader.c_str(), shader.size());
+            mg_write(conn, shader.c_str(), shader.size());
             return true;
         }
 

@@ -394,7 +394,7 @@ int main(int argc, char* argv[]) {
             if (i == 0) {
                 if (hasRoughnessMap) {
                     if (mipImages.at(0).getWidth() == image.getWidth()) {
-                        const size_t size = image.getWidth() * image.getHeight() * sizeof(float);
+                        const size_t size = size_t(image.getWidth()) * image.getHeight() * sizeof(float);
                         memcpy(image.getPixelRef(), mipImages.at(0).getPixelRef(), size);
                     } else {
                         prefilter<true>(normalImage, mipImages.at(0), 0, image);

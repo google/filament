@@ -76,6 +76,11 @@ set(SRCS
         src/ShaderMinifier.cpp
         src/SpirvFixup.cpp)
 
+if (FILAMENT_SUPPORTS_WEBGPU)
+    list(APPEND PRIVATE_HDRS src/WgslExternalTextures.h)
+    list(APPEND SRCS src/WgslExternalTextures.cpp)
+endif ()
+
 # ==================================================================================================
 # Include and target definitions
 # ==================================================================================================
@@ -166,6 +171,10 @@ if (FILAMENT_BUILD_TESTING AND IS_HOST_PLATFORM)
             tests/test_clipDistanceFixup.cpp
             tests/test_line_dictionary.cpp
             tests/test_variants.cpp)
+
+    if (FILAMENT_SUPPORTS_WEBGPU)
+        list(APPEND SRCS tests/test_wgslExternalTextures.cpp)
+    endif ()
 
     add_executable(${TARGET} ${SRCS})
     target_include_directories(${TARGET} PRIVATE src)

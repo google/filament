@@ -211,7 +211,7 @@ ostream& ostream::operator<<(const void* value) noexcept {
 }
 
 ostream& ostream::operator<<(std::string_view const& s) noexcept {
-    return print("%.*s", s.length(), s.data());
+    return print("%.*s", int(s.length()), s.data());
 }
 
 ostream& ostream::hex() noexcept {
