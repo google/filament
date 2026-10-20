@@ -1476,7 +1476,7 @@ bool MetalDriver::isMSAASwapChainSupported(uint32_t) {
 }
 
 bool MetalDriver::isProtectedContentSupported() {
-    // the SWAP_CHAIN_CONFIG_PROTECTED_CONTENT flag is not supported
+    // TODO: Protected content is not supported on Metal yet.
     return false;
 }
 
@@ -1506,6 +1506,7 @@ bool MetalDriver::isDepthStencilBlitSupported(TextureFormat format) {
 }
 
 bool MetalDriver::isProtectedTexturesSupported() {
+    // TODO: Protected textures are not supported on Metal yet.
     return false;
 }
 
