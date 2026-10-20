@@ -10,8 +10,8 @@ open class [UserVariantFilterBit](index.md)
 | Name | Summary |
 |---|---|
 | [ALL](-a-l-l.md) | [main]<br>val [ALL](-a-l-l.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 255 |
-| [DIRECTIONAL_LIGHTING](-d-i-r-e-c-t-i-o-n-a-l_-l-i-g-h-t-i-n-g.md) | [main]<br>val [DIRECTIONAL_LIGHTING](-d-i-r-e-c-t-i-o-n-a-l_-l-i-g-h-t-i-n-g.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 1<br>Directional lighting |
-| [DYNAMIC_LIGHTING](-d-y-n-a-m-i-c_-l-i-g-h-t-i-n-g.md) | [main]<br>val [DYNAMIC_LIGHTING](-d-y-n-a-m-i-c_-l-i-g-h-t-i-n-g.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 2<br>Dynamic lighting |
+| [DIRECTIONAL_LIGHTING](-d-i-r-e-c-t-i-o-n-a-l_-l-i-g-h-t-i-n-g.md) | [main]<br>val [DIRECTIONAL_LIGHTING](-d-i-r-e-c-t-i-o-n-a-l_-l-i-g-h-t-i-n-g.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 1<br>Directional lighting Since directional lighting was migrated to specialization constants, filtering this bit no longer affects the size of offline compiled materials (.filamat). |
+| [DYNAMIC_LIGHTING](-d-y-n-a-m-i-c_-l-i-g-h-t-i-n-g.md) | [main]<br>val [DYNAMIC_LIGHTING](-d-y-n-a-m-i-c_-l-i-g-h-t-i-n-g.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 2<br>Dynamic lighting Since dynamic lighting was migrated to specialization constants, filtering this bit no longer affects the size of offline compiled materials (.filamat). |
 | [FOG](-f-o-g.md) | [main]<br>val [FOG](-f-o-g.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 16<br>Fog |
 | [SHADOW_RECEIVER](-s-h-a-d-o-w_-r-e-c-e-i-v-e-r.md) | [main]<br>val [SHADOW_RECEIVER](-s-h-a-d-o-w_-r-e-c-e-i-v-e-r.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 4<br>Shadow receiver |
 | [SKINNING](-s-k-i-n-n-i-n-g.md) | [main]<br>val [SKINNING](-s-k-i-n-n-i-n-g.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 8<br>Skinning |
