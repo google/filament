@@ -319,10 +319,18 @@ std::pair<float, float2> FRenderer::prepareUpscaler(float2 const scale,
     }
     if (taaOptions.enabled) {
         bias += taaOptions.lodBias;
-        if (taaOptions.upscaling) {
-            if (taaOptions.upscaling > 1.0f) {
-                derivativesScale = 1.0f / taaOptions.upscaling;
-            }
+        if (taaOptions.upscaling > 1.0f) {
+            // Rasterization happens at render resolution while the frame is presented at
+            // `upscaling` times that, so the texture footprint per rasterized pixel is
+            // `upscaling` times the footprint per presented pixel -- one mip too blurry per
+            // doubling. This is the same term dynamic resolution applies above, for the same
+            // reason, and it is a correctness term rather than a sharpening one.
+            //
+            // derivativesScale below does NOT cover it: that scales the normal derivatives
+            // geometric specular antialiasing filters over (see normalFiltering() in
+            // surface_shading_lit.fs), which has nothing to do with mip selection.
+            bias -= std::log2(taaOptions.upscaling);
+            derivativesScale = 1.0f / taaOptions.upscaling;
         }
     }
     return { bias, derivativesScale };
