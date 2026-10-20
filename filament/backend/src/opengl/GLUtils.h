@@ -613,7 +613,7 @@ constexpr /* inline */ GLenum getInternalFormat(TextureFormat const format) noex
             return 0;
 #endif
 
-#if defined(GL_KHR_texture_compression_astc_hdr)
+#if defined(GL_KHR_texture_compression_astc_hdr) || defined(GL_KHR_texture_compression_astc_ldr)
         case TextureFormat::RGBA_ASTC_4x4:     return GL_COMPRESSED_RGBA_ASTC_4x4_KHR;
         case TextureFormat::RGBA_ASTC_5x4:     return GL_COMPRESSED_RGBA_ASTC_5x4_KHR;
         case TextureFormat::RGBA_ASTC_5x5:     return GL_COMPRESSED_RGBA_ASTC_5x5_KHR;

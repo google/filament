@@ -197,7 +197,10 @@ jobs:
   # Update the /docs (offiicla github-hosted Filament site) if necessary
   update-docs:
     name: update-docs
-    runs-on: 'ubuntu-24.04-4core'
+    # Standard runner rather than ubuntu-24.04-4core: the larger runner's image is configured at
+    # the org level and began booting ubuntu-26.04 on 2026-10-19 despite its label, which broke
+    # linux-prereq (run 39332368810).
+    runs-on: 'ubuntu-24.04'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:

@@ -93,7 +93,15 @@ public:
             bool useFramebufferFetch, const DescriptorSets& descriptorSets,
             const ShaderMinifier* minifier);
 
-    static bool spirvToWgsl(SpirvBlob* spirv, std::string* outWsl);
+    // Descriptor set and binding of a sampler declared as SAMPLER_EXTERNAL.
+    struct ExternalSamplerBinding {
+        filament::backend::descriptor_set_t set;
+        filament::backend::descriptor_binding_t binding;
+    };
+
+    // The external samplers are emitted as `texture_external` in the WGSL output.
+    static bool spirvToWgsl(SpirvBlob* spirv, std::string* outWsl,
+            std::vector<ExternalSamplerBinding> const& externalSamplers = {});
 
 private:
     struct InternalConfig {

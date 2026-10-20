@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-#include <utils/ostream.h>
+#define UTILS_PRIVATE_IMPLEMENTATION_NON_COPYABLE
 
 #include "ostream_.h"
 
 #include <utils/compiler.h>
-
-#define UTILS_PRIVATE_IMPLEMENTATION_NON_COPYABLE
+#include <utils/ostream.h>
 #include <utils/PrivateImplementation-impl.h>
 
 #include <algorithm>
@@ -29,8 +28,8 @@
 #include <string_view>
 #include <utility>
 
-#include <stdlib.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include <string.h>
 
 template class utils::PrivateImplementation<utils::io::ostream_>;
@@ -75,7 +74,7 @@ ostream::Buffer const& ostream::getBuffer() const noexcept {
     return mImpl->mData;
 }
 
-const char* ostream::getFormat(type const t) const noexcept {
+inline const char* ostream::getFormat(type const t) const noexcept {
     switch (t) {
         case SHORT:       return mImpl->mShowHex ? "0x%hx"  : "%hd";
         case USHORT:      return mImpl->mShowHex ? "0x%hx"  : "%hu";
@@ -211,7 +210,7 @@ ostream& ostream::operator<<(const void* value) noexcept {
 }
 
 ostream& ostream::operator<<(std::string_view const& s) noexcept {
-    return print("%.*s", s.length(), s.data());
+    return print("%.*s", int(s.length()), s.data());
 }
 
 ostream& ostream::hex() noexcept {

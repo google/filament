@@ -64,19 +64,169 @@ import sys
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from .config import (
+    COMPILED_TYPE_PATTERNS,
     KNOWN_CLASSES,
     MATH_TYPES,
     TYPE_MAP,
-    TYPE_PATTERNS,
     VALUE_TYPES,
 )
 from .utils import (
     get_effective_method_name,
     get_scoped_cpp_name,
     get_size_param_attr,
+    is_flags_enum,
     is_reserved_or_padding_field,
     sanitize_identifier,
 )
+
+# Pre-compiled regular expressions for C++ type parsing and literal normalization
+_RE_BUILDER_BUFFER_SLICE = re.compile(r"\bSlice<\s*(?:const\s+)?(uint8_t|char|unsigned char|void)\s*>")
+_RE_CONST_WORD = re.compile(r"\bconst\b")
+_RE_NON_ALNUM = re.compile(r"[^A-Za-z0-9]")
+_RE_FIXED_ARRAY = re.compile(r"^([a-zA-Z0-9_:]+)\s*\[\s*(\d+)\s*\]$")
+_RE_INVOCABLE = re.compile(
+    r"^(?:const\s+)?(?:filament::)?(?:utils::)?Invocable<\s*([^(]+)\((.*)\)\s*>\s*(?:&&|&)?$"
+)
+_RE_SLICE = re.compile(
+    r"^(?:const\s+)?(?:filament::)?(?:utils::)?Slice<\s*(?:const\s+)?(.*?)(?:\s+const)?\s*>\s*(?:&)?$"
+)
+_RE_SLICE_CONST_PREFIX = re.compile(r"Slice<\s*const\b")
+_RE_SLICE_CONST_SUFFIX = re.compile(r"\bconst\s*>")
+_RE_CONTAINER = re.compile(
+    r"^(?:const\s+)?(?:filament::)?(?:utils::)?(?:std::|std::__1::)?"
+    r"(FixedCapacityVector|vector|array)<\s*([^,>]+?)(?:\s*,\s*(\d+))?\s*>\s*(?:&|const\s*&)?$"
+)
+_RE_CHRONO_NS = re.compile(r"^(?:std::)?chrono::nanoseconds\s*\(\s*(-?\d+)\s*\)$")
+_RE_UNSIGNED_SUFFIX = re.compile(r"(?i)\b(0x[0-9a-f]+|\d+)u(?:ll|l)?\b")
+
+# Static lookup sets and JNI descriptor tables
+_BITFIELD_ATTRS = ("filament:apigen:bitfield", "filament:bitfield", "apigen:bitfield", "bitfield")
+_KNOWN_HANDLE_NAMES = frozenset({
+    "ToneMapper", "Engine", "Scene", "Camera", "View", "IndirectLight",
+    "IndexBuffer", "VertexBuffer", "BufferObject", "InstanceBuffer",
+    "SkinningBuffer", "MorphTargetBuffer", "ColorGrading",
+})
+_LINEAR_COLOR_NAMES = frozenset({
+    "LinearColor", "LinearColorA", "const LinearColor &", "const LinearColorA &",
+})
+_PRIMITIVE_ARRAY_SCALARS = frozenset({"byte", "short", "int", "long", "float", "double", "boolean"})
+_PACKED_BUFFER_SCALARS = frozenset({"float", "double", "int", "long", "short", "byte"})
+
+_INVOCABLE_RET_MAP = {
+    "void": ("CallVoidMethod", "V", ""),
+    "boolean": ("CallBooleanMethod", "Z", "false"),
+    "byte": ("CallByteMethod", "B", "0"),
+    "char": ("CallCharMethod", "C", "0"),
+    "short": ("CallShortMethod", "S", "0"),
+    "int": ("CallIntMethod", "I", "0"),
+    "long": ("CallLongMethod", "J", "0"),
+    "float": ("CallFloatMethod", "F", "0.0f"),
+    "double": ("CallDoubleMethod", "D", "0.0"),
+}
+
+_INVOCABLE_PARAM_SIG_MAP = {
+    "boolean": ("Z", "jboolean"),
+    "byte": ("B", "jbyte"),
+    "char": ("C", "jchar"),
+    "short": ("S", "jshort"),
+    "int": ("I", "jint"),
+    "long": ("J", "jlong"),
+    "float": ("F", "jfloat"),
+    "double": ("D", "jdouble"),
+}
+
+
+def _strip_modifiers(t: str) -> str:
+    """Strip const and reference modifiers (&, &&) from a C++ type string.
+
+    Args:
+        t: Raw or partially qualified C++ type string.
+
+    Returns:
+        Type string with `const`, `&`, and `&&` qualifiers removed.
+    """
+    t = _RE_CONST_WORD.sub("", t).strip()
+    if t.endswith("&&"):
+        t = t[:-2].strip()
+    elif t.endswith("&"):
+        t = t[:-1].strip()
+    return t
+
+
+def _strip_pointer(t: str) -> str:
+    """Strip a trailing pointer asterisk from a C++ type string.
+
+    Args:
+        t: C++ type string potentially ending with `*`.
+
+    Returns:
+        Type string with trailing `*` removed.
+    """
+    t = t.strip()
+    return t[:-1].strip() if t.endswith("*") else t
+
+
+def _make_enum_type_info(enum_name: str, cpp_enum_type: str, is_flags: bool) -> Dict[str, Any]:
+    """Build the type resolution dictionary for a C++ enum or bitmask flags type.
+
+    Consolidates enum and bitmask flag metadata generation for both registered
+    enums in `enum_map` and inline `category == "enum"` IR type descriptors.
+    Bitmask flag enums map to Java `int` with `@IntRange(from = 0)`, whereas
+    standard enums map to their strongly-typed Java enum class.
+
+    Args:
+        enum_name: Unqualified Java enum name.
+        cpp_enum_type: Stripped C++ enum type name for native casts.
+        is_flags: True if the enum represents bitmask flags rather than discrete constants.
+
+    Returns:
+        Type resolution dictionary with Java/JNI types and marshalling templates.
+    """
+    if is_flags:
+        return {
+            "java": "int",
+            "jni": "jint",
+            "jni_type": "jint",
+            "is_enum": False,
+            "is_flags": True,
+            "enum_name": enum_name,
+            "cpp_enum_type": cpp_enum_type,
+            "to_cpp": f"({cpp_enum_type}){{value}}",
+            "from_cpp": "(jint){value}",
+            "annotation": "@IntRange(from = 0)",
+        }
+    return {
+        "java": enum_name,
+        "jni": "jint",
+        "jni_type": "jint",
+        "is_enum": True,
+        "enum_name": enum_name,
+        "cpp_enum_type": cpp_enum_type,
+        "to_cpp": f"({cpp_enum_type}){{value}}",
+        "from_cpp": "(jint){value}",
+    }
+
+
+def _java_type_to_jni_descriptor(java_type: str) -> str:
+    """Convert an object Java type name to its JNI class descriptor signature.
+
+    Args:
+        java_type: Java class name (e.g. `'String'`, `'Object'`, `'ToneMapper'`,
+            or package-qualified `'java/lang/Runnable'`).
+
+    Returns:
+        JNI type descriptor string (e.g. `'Ljava/lang/String;'`,
+        `'Lcom/google/android/filament/ToneMapper;'`).
+    """
+    if "/" in java_type:
+        return f"L{java_type};"
+    if "." in java_type:
+        return f"L{java_type.replace('.', '/')};"
+    if java_type == "String":
+        return "Ljava/lang/String;"
+    if java_type == "Object":
+        return "Ljava/lang/Object;"
+    return f"Lcom/google/android/filament/{java_type};"
 
 
 class TypeResolver:
@@ -147,13 +297,13 @@ class TypeResolver:
             Type string with root engine namespaces removed.
         """
         # Step 1: Normalize nested backend namespace prefix
-        t = t.replace("filament::backend::", "backend::")
-
         # Step 2: Strip engine and utility namespaces
-        t = t.replace("filament::", "")
-        t = t.replace("utils::", "")
-        t = t.replace("math::", "")
-        return t
+        return (
+            t.replace("filament::backend::", "backend::")
+            .replace("filament::", "")
+            .replace("utils::", "")
+            .replace("math::", "")
+        )
 
     def is_unsupported_type(self, type_dict: Dict[str, Any]) -> bool:
         """Check if a type is fundamentally unsupported by Java bindings.
@@ -173,7 +323,7 @@ class TypeResolver:
         t_name = type_dict.get("qualified_name") or type_dict.get("cpp_name", "")
 
         # Step 2: Suppress low-level internal engine handlers and raw callbacks
-        if "SamplerParams" in t_name or "CallbackHandler" in t_name or "AsyncCompletionCallback" in t_name:
+        if any(k in t_name for k in ("SamplerParams", "CallbackHandler", "AsyncCompletionCallback")):
             return True
 
         # Step 3: Suppress un-wrapped std::function objects (require utils::Invocable)
@@ -241,19 +391,11 @@ class TypeResolver:
 
         # Step 2: Verify presence of CallbackHandler argument
         args = method.get("arguments", [])
-        has_handler = any(
-            "CallbackHandler" in (a["type"].get("qualified_name") or a["type"].get("cpp_name", ""))
-            for a in args
-        )
-        if not has_handler:
+        if not any("CallbackHandler" in (a["type"].get("qualified_name") or a["type"].get("cpp_name", "")) for a in args):
             return False
 
         # Step 3: Verify presence of Invocable callback argument
-        has_invocable = any(
-            "Invocable" in (a["type"].get("qualified_name") or a["type"].get("cpp_name", ""))
-            for a in args
-        )
-        if not has_invocable:
+        if not any("Invocable" in (a["type"].get("qualified_name") or a["type"].get("cpp_name", "")) for a in args):
             return False
 
         # Step 4: Discard if method also accepts BufferDescriptor or raw user void pointers
@@ -263,7 +405,6 @@ class TypeResolver:
                 return False
             if a["type"].get("is_pointer") and ("void" in t_str or a.get("name") == "user"):
                 return False
-
         return True
 
     def get_struct_float_stride(self, struct_cls: Optional[Dict[str, Any]]) -> Optional[int]:
@@ -345,19 +486,14 @@ class TypeResolver:
         """
         t = arg.get("type", {})
         cpp_name = t.get("cpp_name", "") if isinstance(t, dict) else str(t)
-        if re.search(r"\bSlice<\s*(?:const\s+)?(uint8_t|char|unsigned char|void)\s*>", cpp_name):
+        if _RE_BUILDER_BUFFER_SLICE.search(cpp_name):
             return True
-        size_param = get_size_param_attr(arg)
-        if not size_param:
+        if not get_size_param_attr(arg):
             return False
         if cpp_name in ("const char*", "char*", "std::string_view", "string_view"):
             return False
         is_pointer = t.get("is_pointer", False) if isinstance(t, dict) else ("*" in cpp_name)
-        if not is_pointer:
-            return False
-        if self.get_array_input_info(t) is not None:
-            return False
-        return True
+        return is_pointer and self.get_array_input_info(t) is None
 
     def is_packed_buffer_method(self, method: Dict[str, Any]) -> bool:
         """Check if a method qualifies for packed buffer overload emission.
@@ -383,26 +519,25 @@ class TypeResolver:
             Dictionary containing packed buffer arguments and stride, or None.
         """
         args = method.get("arguments", [])
+        is_builder = getattr(self.context, "archetype", "") == "builder"
 
         # Step 1A: Check for Slice parameter with stride > 1 and float scalar (e.g. Bone, mat4f)
         for idx, a in enumerate(args):
             t = a.get("type", {})
-            nullability = t.get("nullability", "unspecified") if isinstance(t, dict) else "unspecified"
-            if nullability == "nullable":
+            if (t.get("nullability", "unspecified") if isinstance(t, dict) else "unspecified") == "nullable":
                 continue
 
             arr_in = self.get_array_input_info(t)
             if arr_in and arr_in.get("is_slice"):
                 stride = arr_in.get("size", 1)
-                if stride > 1 and arr_in.get("scalar") in ("float", "double", "int", "long", "short", "byte"):
+                if stride > 1 and arr_in.get("scalar") in _PACKED_BUFFER_SCALARS:
                     name = get_effective_method_name(method)
                     buf_name = sanitize_identifier(a["name"])
                     cnt_name = "boneCount" if "skinning" in name else "count"
 
                     offset_arg = next((arg for arg in args if arg["name"] in ("offset", "byteOffset")), None)
                     offset_idx = args.index(offset_arg) if offset_arg else -1
-                    has_existing_offset = (offset_arg is not None)
-                    array_offset_name = "arrayOffset" if has_existing_offset else "offset"
+                    has_existing_offset = offset_arg is not None
 
                     matched_indices = {idx}
                     if offset_idx != -1:
@@ -410,25 +545,16 @@ class TypeResolver:
                     if max(matched_indices) < len(args) - 1:
                         continue
 
-                    pre_args = [arg for i, arg in enumerate(args) if i not in matched_indices]
-
-                    if getattr(self.context, "archetype", "") == "builder":
-                        native_name = f"nBuilder{name[0].upper() + name[1:]}"
-                        native_buffer_name = f"nBuilder{name[0].upper() + name[1:]}Buffer"
-                    else:
-                        native_name = f"n{name[0].upper() + name[1:]}"
-                        native_buffer_name = f"n{name[0].upper() + name[1:]}"
-
-                    cnt_arg = {"name": cnt_name, "type": {"cpp_name": "size_t"}}
+                    cap_name = name[0].upper() + name[1:]
                     return {
                         "buf_arg": a,
                         "buf_idx": idx,
-                        "cnt_arg": cnt_arg,
+                        "cnt_arg": {"name": cnt_name, "type": {"cpp_name": "size_t"}},
                         "cnt_idx": -1,
                         "offset_arg": offset_arg,
                         "offset_idx": offset_idx,
                         "has_existing_offset": has_existing_offset,
-                        "array_offset_name": array_offset_name,
+                        "array_offset_name": "arrayOffset" if has_existing_offset else "offset",
                         "size_param": None,
                         "stride": stride,
                         "cpp_type": arr_in.get("cpp_type", ""),
@@ -436,11 +562,11 @@ class TypeResolver:
                         "java_type": arr_in.get("java", "float[]"),
                         "scalar": arr_in.get("scalar", "float"),
                         "jni_type": arr_in.get("jni", "jfloatArray"),
-                        "native_name": native_name,
-                        "native_buffer_name": native_buffer_name,
+                        "native_name": f"nBuilder{cap_name}" if is_builder else f"n{cap_name}",
+                        "native_buffer_name": f"nBuilder{cap_name}Buffer" if is_builder else f"n{cap_name}",
                         "buf_name": buf_name,
                         "cnt_name": cnt_name,
-                        "pre_args": pre_args,
+                        "pre_args": [arg for i, arg in enumerate(args) if i not in matched_indices],
                         "is_slice": True,
                     }
 
@@ -451,16 +577,15 @@ class TypeResolver:
                 continue
 
             # Packed buffer method must have exactly one argument referencing size_param
-            if len([arg for arg in args if get_size_param_attr(arg) == size_param]) != 1:
+            if sum(1 for arg in args if get_size_param_attr(arg) == size_param) != 1:
                 continue
 
             t = a.get("type", {})
-            nullability = t.get("nullability", "unspecified") if isinstance(t, dict) else "unspecified"
-            if nullability == "nullable":
+            if (t.get("nullability", "unspecified") if isinstance(t, dict) else "unspecified") == "nullable":
                 continue
 
             cpp_name = t.get("cpp_name", "") if isinstance(t, dict) else str(t)
-            clean_t = re.sub(r'\bconst\b', '', cpp_name).replace("*", "").strip()
+            clean_t = _RE_CONST_WORD.sub("", cpp_name).replace("*", "").strip()
             if clean_t in ("char", "const char", "void", "const void"):
                 continue
             is_ptr = (isinstance(t, dict) and t.get("is_pointer", False)) or "*" in cpp_name
@@ -481,7 +606,7 @@ class TypeResolver:
                 else:
                     continue
             else:
-                if arr_in.get("scalar") not in ("float", "double", "int", "long", "short", "byte"):
+                if arr_in.get("scalar") not in _PACKED_BUFFER_SCALARS:
                     continue
                 stride = arr_in.get("size", 1)
                 if stride <= 1:
@@ -504,8 +629,7 @@ class TypeResolver:
             # Step 4: Check for existing offset parameters
             offset_arg = next((arg for arg in args if arg["name"] in ("offset", "byteOffset")), None)
             offset_idx = args.index(offset_arg) if offset_arg else -1
-            has_existing_offset = (offset_arg is not None)
-            array_offset_name = "arrayOffset" if has_existing_offset else "offset"
+            has_existing_offset = offset_arg is not None
 
             matched_indices = {idx, cnt_idx}
             if offset_idx != -1:
@@ -513,16 +637,8 @@ class TypeResolver:
             if max(matched_indices) < len(args) - 1:
                 continue
 
-            pre_args = [arg for i, arg in enumerate(args) if i not in matched_indices]
-
             # Step 5: Format native method names
-            if getattr(self.context, "archetype", "") == "builder":
-                native_name = f"nBuilder{name[0].upper() + name[1:]}"
-                native_buffer_name = f"nBuilder{name[0].upper() + name[1:]}Buffer"
-            else:
-                native_name = f"n{name[0].upper() + name[1:]}"
-                native_buffer_name = f"n{name[0].upper() + name[1:]}"
-
+            cap_name = name[0].upper() + name[1:]
             return {
                 "buf_arg": a,
                 "buf_idx": idx,
@@ -531,7 +647,7 @@ class TypeResolver:
                 "offset_arg": offset_arg,
                 "offset_idx": offset_idx,
                 "has_existing_offset": has_existing_offset,
-                "array_offset_name": array_offset_name,
+                "array_offset_name": "arrayOffset" if has_existing_offset else "offset",
                 "size_param": size_param,
                 "stride": stride,
                 "cpp_type": cpp_type,
@@ -539,46 +655,18 @@ class TypeResolver:
                 "java_type": arr_type,
                 "scalar": scalar,
                 "jni_type": jni_type,
-                "native_name": native_name,
-                "native_buffer_name": native_buffer_name,
+                "native_name": f"nBuilder{cap_name}" if is_builder else f"n{cap_name}",
+                "native_buffer_name": f"nBuilder{cap_name}Buffer" if is_builder else f"n{cap_name}",
                 "buf_name": buf_name,
                 "cnt_name": cnt_name,
-                "pre_args": pre_args,
+                "pre_args": [arg for i, arg in enumerate(args) if i not in matched_indices],
             }
         return None
 
-    def get_builder_packed_buffer_info(self, method: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Extract packed buffer metadata for a builder setter method.
-
-        Args:
-            method: Builder method AST dictionary.
-
-        Returns:
-            Packed buffer metadata dictionary if matched, else None.
-        """
-        return self.get_packed_buffer_info(method)
-
-    def is_bone_buffer_method(self, method: Dict[str, Any]) -> bool:
-        """Check if method accepts a bone matrix or transform buffer.
-
-        Args:
-            method: Method AST dictionary.
-
-        Returns:
-            True if method accepts bone buffers.
-        """
-        return self.is_packed_buffer_method(method)
-
-    def get_bone_buffer_info(self, method: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Extract bone buffer metadata for a method.
-
-        Args:
-            method: Method AST dictionary.
-
-        Returns:
-            Packed buffer metadata dictionary if matched, else None.
-        """
-        return self.get_packed_buffer_info(method)
+    # Backward-compatible aliases for builder and bone packed buffer queries
+    get_builder_packed_buffer_info = get_packed_buffer_info
+    is_bone_buffer_method = is_packed_buffer_method
+    get_bone_buffer_info = get_packed_buffer_info
 
     def get_clean_type_name(self, type_dict: Dict[str, Any]) -> str:
         """Produce a clean capitalized type name suitable for method suffix unmangling.
@@ -592,14 +680,13 @@ class TypeResolver:
         t_info, _ = self.resolve_type_info(type_dict, silent=True)
         if t_info.get("is_enum"):
             return t_info.get("enum_name") or t_info.get("java", "").split(".")[-1] or "Enum"
-        j_type = t_info.get("java", "Object")
-        j_type = re.sub(r'[^A-Za-z0-9]', '', j_type)
+        j_type = _RE_NON_ALNUM.sub("", t_info.get("java", "Object"))
         return j_type[0].upper() + j_type[1:]
 
     def resolve_type_info(
         self,
         type_input: Union[str, Dict[str, Any]],
-        silent: bool = False
+        silent: bool = False,
     ) -> Tuple[Dict[str, Any], Tuple[Any, ...]]:
         """Resolve any C++ type to its Java type, JNI type, annotations, and marshalling rules.
 
@@ -610,7 +697,8 @@ class TypeResolver:
           Detects semantic aliases such as `LinearColor` / `LinearColorA`.
         - **Step 3: Exact Table Matching**: Evaluates :data:`~javagen.config.TYPE_MAP` and
           :data:`~javagen.config.MATH_TYPES`.
-        - **Step 4: Regular Expression Pattern Evaluation**: Evaluates :data:`~javagen.config.TYPE_PATTERNS`.
+        - **Step 4: Regular Expression Pattern Evaluation**: Evaluates
+          :data:`~javagen.config.COMPILED_TYPE_PATTERNS`.
         - **Step 5: Modifier Stripping**: Strips `const`, `&`, and `&&` qualifiers and re-checks.
         - **Step 6: Fixed-Size Arrays**: Detects `float[4]`, `mat4[4]` fixed arrays and generates
           `@Size(min = N)` annotations.
@@ -632,36 +720,18 @@ class TypeResolver:
             Tuple of (type_info_dict, regex_capture_groups_tuple).
         """
         # Step 1: Extract raw type string from AST node or string input
-        cpp_type = type_input
-        if isinstance(type_input, dict):
-            cpp_type = type_input.get("qualified_name") or type_input["cpp_name"]
-
-        def strip_modifiers(t: str) -> str:
-            """Strip const and reference modifiers from type."""
-            t = re.sub(r'\bconst\b', '', t).strip()
-            if t.endswith("&"):
-                t = t[:-1].strip()
-            if t.endswith("&&"):
-                t = t[:-2].strip()
-            return t.strip()
-
-        def strip_pointer(t: str) -> str:
-            """Strip trailing pointer asterisk."""
-            t = t.strip()
-            if t.endswith("*"):
-                t = t[:-1].strip()
-            return t.strip()
+        cpp_type = (
+            type_input.get("qualified_name") or type_input["cpp_name"]
+            if isinstance(type_input, dict)
+            else type_input
+        )
 
         # Step 2: Resolve type aliases (typedefs, using declarations)
         is_linear_color = (
-            cpp_type in ("LinearColor", "LinearColorA", "const LinearColor &", "const LinearColorA &")
-            or (
-                isinstance(type_input, dict)
-                and type_input.get("cpp_name") in (
-                    "LinearColor", "LinearColorA", "const LinearColor &", "const LinearColorA &"
-                )
-            )
+            cpp_type in _LINEAR_COLOR_NAMES
+            or (isinstance(type_input, dict) and type_input.get("cpp_name") in _LINEAR_COLOR_NAMES)
         )
+
         resolved_type = cpp_type
         if cpp_type in self.aliases:
             resolved_type = self.aliases[cpp_type]
@@ -670,7 +740,7 @@ class TypeResolver:
         elif cpp_type.split("::")[-1] in self.aliases:
             resolved_type = self.aliases[cpp_type.split("::")[-1]]
         else:
-            stripped = strip_modifiers(cpp_type)
+            stripped = _strip_modifiers(cpp_type)
             if stripped in self.aliases:
                 resolved_type = self.aliases[stripped]
             elif stripped.split("::")[-1] in self.aliases:
@@ -708,26 +778,25 @@ class TypeResolver:
         if res:
             return with_linear(res)  # type: ignore
 
-        # Step 4: Check regex pattern matchers (TYPE_PATTERNS)
-        for pattern, info in TYPE_PATTERNS:
-            m = re.match(pattern, resolved_type)
+        # Step 4: Check pre-compiled regex pattern matchers (COMPILED_TYPE_PATTERNS)
+        for pattern, info in COMPILED_TYPE_PATTERNS:
+            m = pattern.match(resolved_type)
             if m:
                 return with_linear((info, m.groups()))  # type: ignore
 
         # Step 5: Check modifiers stripping (const, &, &&)
-        if '*' not in resolved_type:
-            stripped = strip_modifiers(resolved_type)
+        if "*" not in resolved_type:
+            stripped = _strip_modifiers(resolved_type)
             if stripped != resolved_type:
                 res = check_exact(stripped)
                 if res:
                     return with_linear(res)  # type: ignore
-
-                for pattern, info in TYPE_PATTERNS:
-                    m = re.match(pattern, stripped)
+                for pattern, info in COMPILED_TYPE_PATTERNS:
+                    m = pattern.match(stripped)
                     if m:
                         return with_linear((info, m.groups()))  # type: ignore
         else:
-            stripped_ptr = strip_pointer(strip_modifiers(resolved_type))
+            stripped_ptr = _strip_pointer(_strip_modifiers(resolved_type))
             if stripped_ptr in MATH_TYPES:
                 math_info = dict(MATH_TYPES[stripped_ptr])
                 math_info["is_pointer"] = True
@@ -738,7 +807,7 @@ class TypeResolver:
         if clean_check.startswith("const "):
             clean_check = clean_check[6:].strip()
 
-        fixed_arr_match = re.match(r"^([a-zA-Z0-9_:]+)\s*\[\s*(\d+)\s*\]$", clean_check)
+        fixed_arr_match = _RE_FIXED_ARRAY.match(clean_check)
         if fixed_arr_match:
             elem_type_str = fixed_arr_match.group(1)
             size = int(fixed_arr_match.group(2))
@@ -765,11 +834,7 @@ class TypeResolver:
                 }, ()
 
         # Step 7: Check for Invocable callback interfaces (utils::Invocable<...>)
-        inv_match = re.match(
-            r"^(?:const\s+)?(?:filament::)?(?:utils::)?Invocable<\s*([^(]+)\((.*)\)\s*>\s*(?:&&|&)?$",
-            clean_check
-        )
-        if inv_match:
+        if _RE_INVOCABLE.match(clean_check):
             interface_name = (
                 f"{self.current_method[0].upper() + self.current_method[1:]}Callback"
                 if self.current_method
@@ -783,10 +848,7 @@ class TypeResolver:
             }, ()
 
         # Step 8: Check for Slices (utils::Slice<const T>)
-        slice_match = re.match(
-            r"^(?:const\s+)?(?:filament::)?(?:utils::)?Slice<\s*(?:const\s+)?(.*?)(?:\s+const)?\s*>\s*(?:&)?$",
-            clean_check
-        )
+        slice_match = _RE_SLICE.match(clean_check)
         if slice_match:
             inner_type_str = slice_match.group(1).strip()
             inner_info, _ = self.resolve_type_info(inner_type_str, silent=True)
@@ -800,32 +862,28 @@ class TypeResolver:
                     "inner_info": inner_info,
                     "cpp_type": f"utils::Slice<{inner_info.get('cpp_type', inner_type_str)}>",
                 }, ()
-            else:
-                scalar = inner_info.get("scalar") or inner_info.get("java", "long")
-                jni_scalar = inner_info.get("jni", f"j{scalar}")
-                is_entity = inner_info.get("is_entity") or inner_info.get("annotation") == "@Entity"
-                elem_ann = "@Entity " if is_entity else ""
-                return {
-                    "java": f"{elem_ann}{inner_info.get('java', scalar)}[]",
-                    "jni": f"{jni_scalar}Array",
-                    "jni_type": f"{jni_scalar}Array",
-                    "is_slice": True,
-                    "is_container": True,
-                    "is_entity_container": is_entity,
-                    "container_kind": "Slice",
-                    "inner_info": inner_info,
-                    "scalar": scalar,
-                    "java_elem_type": f"{elem_ann}{inner_info.get('java', scalar)}",
-                    "elem_cpp_type": inner_info.get("cpp_type", inner_type_str),
-                    "cpp_type": f"utils::Slice<{inner_info.get('cpp_type', inner_type_str)}>",
-                    "annotation": "@NonNull",
-                }, ()
+            scalar = inner_info.get("scalar") or inner_info.get("java", "long")
+            jni_scalar = inner_info.get("jni", f"j{scalar}")
+            is_entity = inner_info.get("is_entity") or inner_info.get("annotation") == "@Entity"
+            elem_ann = "@Entity " if is_entity else ""
+            return {
+                "java": f"{elem_ann}{inner_info.get('java', scalar)}[]",
+                "jni": f"{jni_scalar}Array",
+                "jni_type": f"{jni_scalar}Array",
+                "is_slice": True,
+                "is_container": True,
+                "is_entity_container": is_entity,
+                "container_kind": "Slice",
+                "inner_info": inner_info,
+                "scalar": scalar,
+                "java_elem_type": f"{elem_ann}{inner_info.get('java', scalar)}",
+                "elem_cpp_type": inner_info.get("cpp_type", inner_type_str),
+                "cpp_type": f"utils::Slice<{inner_info.get('cpp_type', inner_type_str)}>",
+                "annotation": "@NonNull",
+            }, ()
 
         # Step 9: Check for Containers (std::vector, FixedCapacityVector, std::array)
-        container_match = re.match(
-            r"^(?:const\s+)?(?:filament::)?(?:utils::)?(?:std::|std::__1::)?(FixedCapacityVector|vector|array)<\s*([^,>]+?)(?:\s*,\s*(\d+))?\s*>\s*(?:&|const\s*&)?$",
-            clean_check
-        )
+        container_match = _RE_CONTAINER.match(clean_check)
         if container_match:
             container_kind = container_match.group(1)
             inner_type_str = container_match.group(2).strip()
@@ -847,28 +905,26 @@ class TypeResolver:
                     "cpp_type": clean_check,
                     "annotation": "@NonNull",
                 }, ()
-            elif "assert" in inner_info:
+            if "assert" in inner_info:
                 math_info = dict(inner_info)
                 math_info["is_container"] = True
                 math_info["container_kind"] = container_kind
                 return math_info, ()
-            else:
-                scalar = inner_info.get("scalar") or inner_info.get("java", "long")
-                jni_scalar = inner_info.get("jni", f"j{scalar}")
-                return {
-                    "java": f"{inner_info.get('java', scalar)}[]",
-                    "jni": f"{jni_scalar}Array",
-                    "jni_type": f"{jni_scalar}Array",
-                    "is_container": True,
-                    "container_kind": container_kind,
-                    "inner_info": inner_info,
-                    "scalar": scalar,
-                    "java_elem_type": inner_info.get('java', scalar),
-                    "elem_cpp_type": inner_type_str,
-                    "cpp_type": clean_check,
-                    "annotation": "@NonNull",
-                }, ()
-
+            scalar = inner_info.get("scalar") or inner_info.get("java", "long")
+            jni_scalar = inner_info.get("jni", f"j{scalar}")
+            return {
+                "java": f"{inner_info.get('java', scalar)}[]",
+                "jni": f"{jni_scalar}Array",
+                "jni_type": f"{jni_scalar}Array",
+                "is_container": True,
+                "container_kind": container_kind,
+                "inner_info": inner_info,
+                "scalar": scalar,
+                "java_elem_type": inner_info.get("java", scalar),
+                "elem_cpp_type": inner_type_str,
+                "cpp_type": clean_check,
+                "annotation": "@NonNull",
+            }, ()
 
         # Step 10: Check for Enums and Bitmask Flags
         clean_no_ns = self.strip_namespaces(clean_check)
@@ -881,73 +937,17 @@ class TypeResolver:
             or self.enum_map.get(raw_qual_name)
         )
         if enum_ir:
-            enum_name = enum_ir["name"]
-            cpp_enum_type = self.strip_namespaces(enum_ir["qualified_name"])
-            is_flags = enum_ir.get("is_flags", False) or any(
-                a in (
-                    "filament:apigen:flags", "filament:flags", "apigen:flags", "flags",
-                    "filament:apigen:bitmask", "filament:bitmask", "apigen:bitmask", "bitmask"
-                )
-                for a in enum_ir.get("attributes", [])
-            )
-            if is_flags:
-                return {
-                    "java": "int",
-                    "jni": "jint",
-                    "jni_type": "jint",
-                    "is_enum": False,
-                    "is_flags": True,
-                    "enum_name": enum_name,
-                    "cpp_enum_type": cpp_enum_type,
-                    "to_cpp": f"({cpp_enum_type}){{value}}",
-                    "from_cpp": f"(jint){{value}}",
-                    "annotation": "@IntRange(from = 0)",
-                }, ()
-            return {
-                "java": enum_name,
-                "jni": "jint",
-                "jni_type": "jint",
-                "is_enum": True,
-                "enum_name": enum_name,
-                "cpp_enum_type": cpp_enum_type,
-                "to_cpp": f"({cpp_enum_type}){{value}}",
-                "from_cpp": f"(jint){{value}}",
-            }, ()
-        elif isinstance(type_input, dict) and type_input.get("category") == "enum":
-            enum_name = strip_modifiers(type_input.get("cpp_name", ""))
-            cpp_enum_type = self.strip_namespaces(
-                strip_modifiers(type_input.get("qualified_name") or type_input.get("cpp_name", ""))
-            )
-            is_flags = type_input.get("is_flags", False) or any(
-                a in (
-                    "filament:apigen:flags", "filament:flags", "apigen:flags", "flags",
-                    "filament:apigen:bitmask", "filament:bitmask", "apigen:bitmask", "bitmask"
-                )
-                for a in type_input.get("attributes", [])
-            )
-            if is_flags:
-                return {
-                    "java": "int",
-                    "jni": "jint",
-                    "jni_type": "jint",
-                    "is_enum": False,
-                    "is_flags": True,
-                    "enum_name": enum_name,
-                    "cpp_enum_type": cpp_enum_type,
-                    "to_cpp": f"({cpp_enum_type}){{value}}",
-                    "from_cpp": f"(jint){{value}}",
-                    "annotation": "@IntRange(from = 0)",
-                }, ()
-            return {
-                "java": enum_name,
-                "jni": "jint",
-                "jni_type": "jint",
-                "is_enum": True,
-                "enum_name": enum_name,
-                "cpp_enum_type": cpp_enum_type,
-                "to_cpp": f"({cpp_enum_type}){{value}}",
-                "from_cpp": f"(jint){{value}}",
-            }, ()
+            return _make_enum_type_info(
+                enum_ir["name"],
+                self.strip_namespaces(enum_ir["qualified_name"]),
+                is_flags_enum(enum_ir),
+            ), ()
+        if isinstance(type_input, dict) and type_input.get("category") == "enum":
+            return _make_enum_type_info(
+                _strip_modifiers(type_input.get("cpp_name", "")),
+                self.strip_namespaces(_strip_modifiers(type_input.get("qualified_name") or type_input.get("cpp_name", ""))),
+                is_flags_enum(type_input),
+            ), ()
 
         # Step 11: Check for Value Types (Box, Frustum, PixelBufferDescriptor, Sampler)
         clean_val = clean_check.replace("const ", "").replace("&", "").replace("*", "").strip()
@@ -966,10 +966,7 @@ class TypeResolver:
         if known_cls and (
             known_cls.get("archetype") == "bitfield"
             or known_cls.get("category") == "bitfield"
-            or any(
-                a in ("filament:apigen:bitfield", "filament:bitfield", "apigen:bitfield", "bitfield")
-                for a in known_cls.get("attributes", [])
-            )
+            or any(a in _BITFIELD_ATTRS for a in known_cls.get("attributes", []))
         ):
             primitive = known_cls.get("bitfield_primitive", "int")
             jni_prim = f"j{primitive}"
@@ -987,9 +984,14 @@ class TypeResolver:
             }, ()
 
         # Step 12: Check for Aggregate Structs (Box, Viewport, etc.)
-        struct_cls = self.is_aggregate_struct(type_input if isinstance(type_input, dict) else clean_check)
+        target_lookup = type_input if isinstance(type_input, dict) else clean_check
+        struct_cls = self.is_aggregate_struct(target_lookup)
         if struct_cls:
-            is_pojo = bool(struct_cls.get("is_pojo_struct") or struct_cls.get("archetype") == "pojo_struct" or self.is_pojo_struct(struct_cls))
+            is_pojo = bool(
+                struct_cls.get("is_pojo_struct")
+                or struct_cls.get("archetype") == "pojo_struct"
+                or self.is_pojo_struct(struct_cls)
+            )
             return {
                 "java": struct_cls["name"],
                 "jni": "void",
@@ -997,11 +999,11 @@ class TypeResolver:
                 "is_struct": True,
                 "is_pojo_struct": is_pojo,
                 "struct_cls": struct_cls,
-                "cpp_type": get_scoped_cpp_name(struct_cls) or struct_cls.get("qualified_name") or struct_cls["name"]
+                "cpp_type": get_scoped_cpp_name(struct_cls) or struct_cls.get("qualified_name") or struct_cls["name"],
             }, ()
 
         # Step 12b: Check for POJO Structs (DynamicResolutionOptions, AmbientOcclusionOptions, etc.)
-        pojo_cls = self.is_pojo_struct(type_input if isinstance(type_input, dict) else clean_check)
+        pojo_cls = self.is_pojo_struct(target_lookup)
         if pojo_cls:
             return {
                 "java": pojo_cls["name"],
@@ -1010,7 +1012,7 @@ class TypeResolver:
                 "is_struct": True,
                 "is_pojo_struct": True,
                 "struct_cls": pojo_cls,
-                "cpp_type": get_scoped_cpp_name(pojo_cls) or pojo_cls.get("qualified_name") or pojo_cls["name"]
+                "cpp_type": get_scoped_cpp_name(pojo_cls) or pojo_cls.get("qualified_name") or pojo_cls["name"],
             }, ()
 
         # Step 13: Check for Filament engine object handles (Camera, Scene, View, etc.)
@@ -1035,10 +1037,7 @@ class TypeResolver:
         is_ptr_or_ref = (
             "*" in clean_check
             or "&" in clean_check
-            or (
-                isinstance(type_input, dict)
-                and (type_input.get("is_pointer") or type_input.get("is_reference"))
-            )
+            or (isinstance(type_input, dict) and (type_input.get("is_pointer") or type_input.get("is_reference")))
         )
         if (
             not is_struct_type
@@ -1047,40 +1046,33 @@ class TypeResolver:
                 clean_check.startswith("filament::")
                 or clean_check.startswith("utils::")
                 or clean_type_name in KNOWN_CLASSES
-                or clean_type_name in (
-                    "ToneMapper", "Engine", "Scene", "Camera", "View", "IndirectLight",
-                    "IndexBuffer", "VertexBuffer", "BufferObject", "InstanceBuffer",
-                    "SkinningBuffer", "MorphTargetBuffer", "ColorGrading"
-                )
+                or clean_type_name in _KNOWN_HANDLE_NAMES
             )
+            and not clean_check.startswith("filament::math::")
+            and not clean_check.startswith("math::")
+            and "<" not in clean_check
         ):
-            if (
-                not clean_check.startswith("filament::math::")
-                and not clean_check.startswith("math::")
-                and "<" not in clean_check
-            ):
-                clean = (
-                    clean_type_name
-                    .replace("filament::", "")
-                    .replace("utils::", "")
-                    .replace("*", "")
-                    .replace("&", "")
-                    .strip()
-                )
-                return {
-                    "java": clean,
-                    "jni": "jlong",
-                    "jni_type": "jlong",
-                    "is_filament_type": True,
-                    "cpp_class": clean
-                }, ()
+            clean = (
+                clean_type_name.replace("filament::", "")
+                .replace("utils::", "")
+                .replace("*", "")
+                .replace("&", "")
+                .strip()
+            )
+            return {
+                "java": clean,
+                "jni": "jlong",
+                "jni_type": "jlong",
+                "is_filament_type": True,
+                "cpp_class": clean,
+            }, ()
 
         # Step 14: Fallback for generic opaque pointer objects (jlong handle)
         if self.diagnostic_mode and not silent:
             method_context = f" in method '{self.current_method}'" if self.current_method else ""
             print(
                 f"[WARNING] Unknown type '{cpp_type}' in class '{self.name}'{method_context}. Defaulting to 'jlong'.",
-                file=sys.stderr
+                file=sys.stderr,
             )
         clean_java = self.strip_namespaces(resolved_type).replace("*", "").replace("&", "").strip()
         if not clean_java or "::" in clean_java or resolved_type.endswith("*") or resolved_type.endswith("&"):
@@ -1090,7 +1082,7 @@ class TypeResolver:
     def get_invocable_info(
         self,
         t: Union[str, Dict[str, Any]],
-        method_name: str = ""
+        method_name: str = "",
     ) -> Optional[Dict[str, Any]]:
         """Extract Invocable lambda/std::function callback interface signatures and parameters.
 
@@ -1109,20 +1101,13 @@ class TypeResolver:
         """
         # Step 1: Extract type string and test regex match
         t_str = t.get("qualified_name") or t["cpp_name"] if isinstance(t, dict) else str(t)
-        clean_type = t_str.strip()
-        m = re.match(
-            r"^(?:const\s+)?(?:filament::)?(?:utils::)?Invocable<\s*([^(]+)\((.*)\)\s*>\s*(?:&&|&)?$",
-            clean_type
-        )
+        m = _RE_INVOCABLE.match(t_str.strip())
         if not m:
             return None
 
         ret_str = m.group(1).strip()
         params_str = m.group(2).strip()
-
-        interface_name = (
-            f"{method_name[0].upper() + method_name[1:]}Callback" if method_name else "Callback"
-        )
+        interface_name = f"{method_name[0].upper() + method_name[1:]}Callback" if method_name else "Callback"
 
         # Step 2: Map return type and JNI method invocation call
         ret_info, _ = self.resolve_type_info(ret_str, silent=True)
@@ -1130,54 +1115,11 @@ class TypeResolver:
         jni_ret = ret_info.get("jni", "void")
         cpp_ret = self.strip_namespaces(ret_str)
 
-        if java_ret == "void":
-            jni_call = "CallVoidMethod"
-            ret_sig = "V"
-            default_ret = ""
-        elif java_ret == "boolean":
-            jni_call = "CallBooleanMethod"
-            ret_sig = "Z"
-            default_ret = "false"
-        elif java_ret == "byte":
-            jni_call = "CallByteMethod"
-            ret_sig = "B"
-            default_ret = "0"
-        elif java_ret == "char":
-            jni_call = "CallCharMethod"
-            ret_sig = "C"
-            default_ret = "0"
-        elif java_ret == "short":
-            jni_call = "CallShortMethod"
-            ret_sig = "S"
-            default_ret = "0"
-        elif java_ret == "int":
-            jni_call = "CallIntMethod"
-            ret_sig = "I"
-            default_ret = "0"
-        elif java_ret == "long":
-            jni_call = "CallLongMethod"
-            ret_sig = "J"
-            default_ret = "0"
-        elif java_ret == "float":
-            jni_call = "CallFloatMethod"
-            ret_sig = "F"
-            default_ret = "0.0f"
-        elif java_ret == "double":
-            jni_call = "CallDoubleMethod"
-            ret_sig = "D"
-            default_ret = "0.0"
+        if java_ret in _INVOCABLE_RET_MAP:
+            jni_call, ret_sig, default_ret = _INVOCABLE_RET_MAP[java_ret]
         else:
             jni_call = "CallObjectMethod"
-            if "/" in java_ret:
-                ret_sig = f"L{java_ret};"
-            elif "." in java_ret:
-                ret_sig = f"L{java_ret.replace('.', '/')};"
-            elif java_ret == "String":
-                ret_sig = "Ljava/lang/String;"
-            elif java_ret == "Object":
-                ret_sig = "Ljava/lang/Object;"
-            else:
-                ret_sig = f"Lcom/google/android/filament/{java_ret};"
+            ret_sig = _java_type_to_jni_descriptor(java_ret)
             default_ret = "nullptr"
 
         # Step 3: Parse parameter list and construct JNI method signature
@@ -1190,9 +1132,7 @@ class TypeResolver:
                     len(parts) > 1
                     and not parts[0].endswith("::")
                     and parts[-1].isidentifier()
-                    and parts[-1] not in (
-                        "int", "float", "double", "char", "short", "long", "bool", "void", "size_t"
-                    )
+                    and parts[-1] not in ("int", "float", "double", "char", "short", "long", "bool", "void", "size_t")
                 ):
                     p_type_only = " ".join(parts[:-1])
                     p_name = parts[-1]
@@ -1206,45 +1146,15 @@ class TypeResolver:
                 if p_ann == "@Entity" and p_name == f"arg{idx}":
                     p_name = "entity" if len(raw_params) == 1 else f"entity{idx}"
 
-                if p_java == "boolean":
-                    sig = "Z"
-                    to_jni = f"(jboolean){p_name}"
-                elif p_java == "byte":
-                    sig = "B"
-                    to_jni = f"(jbyte){p_name}"
-                elif p_java == "char":
-                    sig = "C"
-                    to_jni = f"(jchar){p_name}"
-                elif p_java == "short":
-                    sig = "S"
-                    to_jni = f"(jshort){p_name}"
-                elif p_java == "int":
-                    sig = "I"
-                    if p_info.get("annotation") == "@Entity":
+                if p_java in _INVOCABLE_PARAM_SIG_MAP:
+                    sig, jni_cast = _INVOCABLE_PARAM_SIG_MAP[p_java]
+                    if p_java == "int" and p_ann == "@Entity":
                         to_jni = f"(jint){p_name}.getId()"
                     else:
-                        to_jni = f"(jint){p_name}"
-                elif p_java == "long":
-                    sig = "J"
-                    to_jni = f"(jlong){p_name}"
-                elif p_java == "float":
-                    sig = "F"
-                    to_jni = f"(jfloat){p_name}"
-                elif p_java == "double":
-                    sig = "D"
-                    to_jni = f"(jdouble){p_name}"
+                        to_jni = f"({jni_cast}){p_name}"
                 else:
-                    if "/" in p_java:
-                        sig = f"L{p_java};"
-                    elif "." in p_java:
-                        sig = f"L{p_java.replace('.', '/')};"
-                    elif p_java == "String":
-                        sig = "Ljava/lang/String;"
-                    elif p_java == "Object":
-                        sig = "Ljava/lang/Object;"
-                    else:
-                        sig = f"Lcom/google/android/filament/{p_java};"
-                    to_jni = f"{p_name}"
+                    sig = _java_type_to_jni_descriptor(p_java)
+                    to_jni = p_name
 
                 parsed_params.append({
                     "name": p_name,
@@ -1255,8 +1165,6 @@ class TypeResolver:
                     "to_jni": to_jni,
                 })
 
-        jni_method_sig = f"({''.join(p['sig'] for p in parsed_params)}){ret_sig}"
-
         return {
             "interface_name": interface_name,
             "java_ret": java_ret,
@@ -1266,12 +1174,12 @@ class TypeResolver:
             "ret_sig": ret_sig,
             "default_ret": default_ret,
             "params": parsed_params,
-            "jni_method_sig": jni_method_sig,
+            "jni_method_sig": f"({''.join(p['sig'] for p in parsed_params)}){ret_sig}",
         }
 
     def is_aggregate_struct(
         self,
-        type_name_or_info: Union[str, Dict[str, Any]]
+        type_name_or_info: Union[str, Dict[str, Any]],
     ) -> Optional[Dict[str, Any]]:
         """Determine if a type represents a pure data aggregate struct (e.g. Box, Viewport).
 
@@ -1314,10 +1222,7 @@ class TypeResolver:
             cls.get("is_aggregate")
             or (
                 len(cls.get("fields", [])) > 0
-                and (
-                    cls.get("category") == "struct"
-                    or cls.get("type", {}).get("category") == "struct"
-                )
+                and (cls.get("category") == "struct" or cls.get("type", {}).get("category") == "struct")
             )
         ):
             return cls
@@ -1325,7 +1230,7 @@ class TypeResolver:
 
     def is_pojo_struct(
         self,
-        type_name_or_info: Optional[Union[str, Dict[str, Any]]] = None
+        type_name_or_info: Optional[Union[str, Dict[str, Any]]] = None,
     ) -> Optional[Dict[str, Any]]:
         """Determine if a type represents a public POJO struct (e.g. DynamicResolutionOptions).
 
@@ -1343,16 +1248,18 @@ class TypeResolver:
                 cls = self.context.ir
                 if cls.get("is_pojo_struct") or cls.get("archetype") == "pojo_struct":
                     return cls
-                loc_file = cls.get("location", {}).get("file", "")
-                if loc_file.endswith("Options.h"):
+                if cls.get("location", {}).get("file", "").endswith("Options.h"):
                     return cls
             type_name_or_info = self.context.name
 
         if isinstance(type_name_or_info, dict):
-            if (type_name_or_info.get("is_pojo_struct") or type_name_or_info.get("archetype") == "pojo_struct") and "name" in type_name_or_info and "fields" in type_name_or_info:
+            if (
+                (type_name_or_info.get("is_pojo_struct") or type_name_or_info.get("archetype") == "pojo_struct")
+                and "name" in type_name_or_info
+                and "fields" in type_name_or_info
+            ):
                 return type_name_or_info
-            loc_file = type_name_or_info.get("location", {}).get("file", "")
-            if loc_file.endswith("Options.h") and "name" in type_name_or_info:
+            if type_name_or_info.get("location", {}).get("file", "").endswith("Options.h") and "name" in type_name_or_info:
                 return type_name_or_info
             qname = type_name_or_info.get("qualified_name") or type_name_or_info.get("cpp_name", "")
         else:
@@ -1385,14 +1292,12 @@ class TypeResolver:
         if cls:
             if cls.get("is_pojo_struct") or cls.get("archetype") == "pojo_struct":
                 return cls
-            loc_file = cls.get("location", {}).get("file", "")
-            if loc_file.endswith("Options.h"):
+            if cls.get("location", {}).get("file", "").endswith("Options.h"):
                 return cls
             if cls.get("parent_class") == "View" and cls.get("name") == "PickingQueryResult":
                 return cls
             if cls.get("parent_class") == "Engine" and cls.get("name") == "Config":
                 return cls
-
         return None
 
     def translate_default_value(
@@ -1400,7 +1305,7 @@ class TypeResolver:
         raw_val: Any,
         type_info: Any = None,
         attributes: Optional[List[str]] = None,
-        enclosing_struct_name: Optional[str] = None
+        enclosing_struct_name: Optional[str] = None,
     ) -> Optional[str]:
         """Translate a C++ default value expression to an idiomatic Java literal."""
         if isinstance(raw_val, dict):
@@ -1414,6 +1319,8 @@ class TypeResolver:
         if raw_val is None:
             return None
         val = str(raw_val).strip()
+        if not val:
+            return None
         attributes = attributes or []
 
         # Case 1: Forced java_float
@@ -1421,19 +1328,21 @@ class TypeResolver:
             inner = val.strip(" {}[]()")
             if "," in inner:
                 inner = inner.split(",")[0].strip()
-            if not inner.endswith("f"):
-                inner += "f"
-            return inner
+            return inner if inner.endswith("f") else f"{inner}f"
 
         # Case 2: Nullptr
-        if val == "nullptr":
+        if val in ("nullptr", "NULL"):
             return "null"
 
-        # Case 3: Infinity
+        # Case 3: Infinity and FLT_MAX
         if val == "INFINITY":
             return "Float.POSITIVE_INFINITY"
         if val in ("-INFINITY", "- INFINITY"):
             return "Float.NEGATIVE_INFINITY"
+        if val == "FLT_MAX":
+            return "Float.MAX_VALUE"
+        if val in ("-FLT_MAX", "- FLT_MAX"):
+            return "-Float.MAX_VALUE"
 
         # Case 4: Empty braces (default zero initialization)
         if val in ("{}", "{ }"):
@@ -1446,37 +1355,110 @@ class TypeResolver:
             fixed_parts = []
             for p in parts:
                 p_clean = p.replace("- ", "-")
-                if not p_clean.endswith("f") and ("." in p_clean or p_clean.isdigit() or (p_clean.startswith("-") and p_clean[1:].isdigit())):
+                if not p_clean.endswith("f") and (
+                    "." in p_clean or p_clean.isdigit() or (p_clean.startswith("-") and p_clean[1:].isdigit())
+                ):
                     p_clean += "f"
                 fixed_parts.append(p_clean)
             return "{" + ", ".join(fixed_parts) + "}"
 
-        # Case 6: Enum values with ::
-        if "::" in val:
-            clean_enum = val.replace("::", ".")
-            parts = clean_enum.split(".")
-            enum_cls = parts[-2]
-            enum_const = parts[-1]
+        # Case 6: Chrono durations and clock calls
+        chrono_ns_match = _RE_CHRONO_NS.match(val)
+        if chrono_ns_match:
+            return chrono_ns_match.group(1)
+        if any(clk in val for clk in ("steady_clock::now", "system_clock::now", "high_resolution_clock::now")):
+            return "System.nanoTime()"
+
+        # Case 7: Enum values with ::
+        if "::" in val and "(" not in val:
+            parts = val.replace("::", ".").split(".")
+            enum_cls, enum_const = parts[-2], parts[-1]
             if enclosing_struct_name:
                 nested_enums = getattr(self.context, "enums", [])
                 if any(e["name"] == enum_cls for e in nested_enums):
                     return f"{enclosing_struct_name}.{enum_cls}.{enum_const}"
             return f"{enum_cls}.{enum_const}"
 
-        # Case 7: Scalar float without f suffix
+        # Case 8: Strip C++ unsigned integer suffixes and normalize unary minus
+        val = _RE_UNSIGNED_SUFFIX.sub(r"\1", val.replace("- ", "-"))
+
+        # Case 9: Scalar float without f suffix
         cpp_t = type_info.get("cpp_name", "") if isinstance(type_info, dict) else str(type_info)
         if "float" in cpp_t:
-            val = val.replace("- ", "-")
-            if not val.endswith("f") and not val.startswith("Float."):
+            if not val.endswith("f") and not val.startswith("Float.") and not val.startswith("-Float."):
                 val += "f"
             return val
-
         return val
+
+    def get_array_default_values(
+        self,
+        f_type: Any,
+        raw_default: Optional[str],
+        arr_info: Dict[str, Any],
+    ) -> Optional[List[str]]:
+        """Compute exploded per-component Java default literals for an array, vector, or quaternion field."""
+        if raw_default is None:
+            return None
+        val = str(raw_default).strip()
+        if not val:
+            return None
+
+        size = arr_info["size"]
+        scalar = arr_info["scalar"]
+        is_fixed_arr = arr_info.get("is_fixed_array", False)
+        t_str = (
+            (f_type.get("qualified_name") or f_type.get("cpp_name", ""))
+            if isinstance(f_type, dict)
+            else str(f_type)
+        )
+        is_quat = "quat" in t_str.lower() or "tquaternion" in t_str.lower()
+
+        zero_lit = "0.0f" if scalar == "float" else "0.0" if scalar == "double" else "0"
+        if val in ("{}", "{ }"):
+            if is_quat and size == 4:
+                one_lit = "1.0f" if scalar == "float" else "1.0" if scalar == "double" else "1"
+                return [zero_lit, zero_lit, zero_lit, one_lit]
+            return None
+
+        if (val.startswith("{") and val.endswith("}")) or (val.startswith("[") and val.endswith("]")):
+            inner = val[1:-1].strip()
+            if not inner:
+                return None
+            raw_parts = [p.strip() for p in inner.split(",") if p.strip()]
+        else:
+            raw_parts = [val]
+
+        translated_parts: List[str] = []
+        for p in raw_parts:
+            tp = self.translate_default_value(p, scalar)
+            if tp is None:
+                return None
+            translated_parts.append(tp)
+
+        if is_quat and size == 4:
+            # TQuaternion(w) initializes (x=0, y=0, z=0, w=w)
+            if len(translated_parts) == 1:
+                return [zero_lit, zero_lit, zero_lit, translated_parts[0]]
+            # TQuaternion(w, x, y, z) initializes (x=x, y=y, z=z, w=w)
+            if len(translated_parts) == 4:
+                return [translated_parts[1], translated_parts[2], translated_parts[3], translated_parts[0]]
+            return None
+
+        if not is_fixed_arr:
+            if len(translated_parts) == 1 and size <= 4:
+                return [translated_parts[0]] * size
+            return translated_parts if len(translated_parts) == size else None
+
+        if len(translated_parts) == size:
+            return translated_parts
+        if len(translated_parts) < size:
+            return translated_parts + [zero_lit] * (size - len(translated_parts))
+        return None
 
     def get_pojo_field_annotation(
         self,
         field: Dict[str, Any],
-        enclosing_name: Optional[str] = None
+        enclosing_name: Optional[str] = None,
     ) -> List[str]:
         """Compute AndroidX / deprecation annotations for a POJO struct field."""
         annotations = []
@@ -1503,16 +1485,14 @@ class TypeResolver:
             elif default_val and "::" in default_val:
                 annotations.append("@NonNull")
 
-        if enclosing_name == "PickingQueryResult":
-            if field.get("name") == "renderable":
-                annotations.append("@Entity")
-
+        if enclosing_name == "PickingQueryResult" and field.get("name") == "renderable":
+            annotations.append("@Entity")
         return annotations
 
     def get_pojo_leaves(
         self,
         struct_cls: Dict[str, Any],
-        var_name: Optional[str] = None
+        var_name: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Extract unrolled leaf descriptors for a POJO struct for JNI marshalling.
 
@@ -1525,27 +1505,23 @@ class TypeResolver:
             JNI parameter names, JNI types, and C++ reconstruction assignments.
         """
         leaves = []
-        fields = struct_cls.get("fields", [])
-        for f in fields:
+        for f in struct_cls.get("fields", []):
             fname = f["name"]
+            # Skip padding/reserved/rfu fields
+            if is_reserved_or_padding_field(fname):
+                continue
+
             attrs = f.get("attributes", [])
             f_type = f.get("type", {})
             cpp_type_name = f_type.get("cpp_name", "") if isinstance(f_type, dict) else str(f_type)
             clean_cpp_type = self.strip_namespaces(cpp_type_name).replace("*", "").replace("&", "").replace("const", "").strip()
 
-            # Skip padding/reserved/rfu fields
-            if is_reserved_or_padding_field(fname):
-                continue
-
             # Case 1: Flattened sub-struct (e.g. Ssct, Gtao)
             if "apigen:flatten" in attrs:
                 # Resolve child struct
-                sub_cls = self.is_pojo_struct(clean_cpp_type)
-                if not sub_cls:
-                    sub_cls = KNOWN_CLASSES.get(clean_cpp_type)
+                sub_cls = self.is_pojo_struct(clean_cpp_type) or KNOWN_CLASSES.get(clean_cpp_type)
                 if sub_cls:
-                    sub_fields = sub_cls.get("fields", [])
-                    for sf in sub_fields:
+                    for sf in sub_cls.get("fields", []):
                         sf_name = sf["name"]
                         if is_reserved_or_padding_field(sf_name):
                             continue
@@ -1558,14 +1534,12 @@ class TypeResolver:
                         arr_in = self.get_array_input_info(sf_type)
                         if arr_in and not sf.get("attributes", []):
                             size = arr_in["size"]
-                            comps = ["X", "Y", "Z", "W"][:size]
-                            for idx, c in enumerate(comps):
+                            for idx, c in enumerate(["X", "Y", "Z", "W"][:size]):
                                 comp_name = f"{prefixed_name}{c}"
-                                java_expr = f"{var_name}.{prefixed_name}[{idx}]" if var_name else comp_name
                                 leaves.append({
                                     "name": comp_name,
                                     "java_type": "float",
-                                    "java_expr": java_expr,
+                                    "java_expr": f"{var_name}.{prefixed_name}[{idx}]" if var_name else comp_name,
                                     "jni_type": "jfloat",
                                     "jni_param_name": comp_name,
                                     "is_vector_comp": True,
@@ -1576,31 +1550,28 @@ class TypeResolver:
                                     "cpp_assign": None,
                                 })
                         elif sf_cpp_type == "bool":
-                            java_expr = f"{var_name}.{prefixed_name}" if var_name else prefixed_name
                             leaves.append({
                                 "name": prefixed_name,
                                 "java_type": "boolean",
-                                "java_expr": java_expr,
+                                "java_expr": f"{var_name}.{prefixed_name}" if var_name else prefixed_name,
                                 "jni_type": "jboolean",
                                 "jni_param_name": prefixed_name,
                                 "cpp_assign": f"options.{fname}.{sf_name} = (bool){prefixed_name};",
                             })
                         elif sf_clean_type in ("uint8_t", "uint16_t", "uint32_t", "int8_t", "int16_t", "int32_t", "int"):
-                            java_expr = f"{var_name}.{prefixed_name}" if var_name else prefixed_name
                             leaves.append({
                                 "name": prefixed_name,
                                 "java_type": "int",
-                                "java_expr": java_expr,
+                                "java_expr": f"{var_name}.{prefixed_name}" if var_name else prefixed_name,
                                 "jni_type": "jint",
                                 "jni_param_name": prefixed_name,
                                 "cpp_assign": f"options.{fname}.{sf_name} = ({sf_cpp_type}){prefixed_name};",
                             })
                         else:  # float
-                            java_expr = f"{var_name}.{prefixed_name}" if var_name else prefixed_name
                             leaves.append({
                                 "name": prefixed_name,
                                 "java_type": "float",
-                                "java_expr": java_expr,
+                                "java_expr": f"{var_name}.{prefixed_name}" if var_name else prefixed_name,
                                 "jni_type": "jfloat",
                                 "jni_param_name": prefixed_name,
                                 "cpp_assign": f"options.{fname}.{sf_name} = {prefixed_name};",
@@ -1609,11 +1580,10 @@ class TypeResolver:
 
             # Case 2: Float broadcast (%codegen_java_float%)
             if "apigen:java_type:float" in attrs:
-                java_expr = f"{var_name}.{fname}" if var_name else fname
                 leaves.append({
                     "name": fname,
                     "java_type": "float",
-                    "java_expr": java_expr,
+                    "java_expr": f"{var_name}.{fname}" if var_name else fname,
                     "jni_type": "jfloat",
                     "jni_param_name": fname,
                     "cpp_assign": f"options.{fname} = filament::math::float2{{ {fname} }};",
@@ -1623,11 +1593,10 @@ class TypeResolver:
             # Case 3: Texture pointer
             if "Texture" in cpp_type_name and "*" in cpp_type_name:
                 param_name = f"native{fname[0].upper()}{fname[1:]}"
-                java_expr = f"{var_name}.{fname} != null ? {var_name}.{fname}.getNativeObject() : 0" if var_name else param_name
                 leaves.append({
                     "name": param_name,
                     "java_type": "long",
-                    "java_expr": java_expr,
+                    "java_expr": f"{var_name}.{fname} != null ? {var_name}.{fname}.getNativeObject() : 0" if var_name else param_name,
                     "jni_type": "jlong",
                     "jni_param_name": param_name,
                     "cpp_assign": f"options.{fname} = (Texture*){param_name};",
@@ -1638,13 +1607,15 @@ class TypeResolver:
             enum_info, _ = self.resolve_type_info(f_type, silent=True)
             if enum_info.get("is_enum") or any(e["name"] == clean_cpp_type for e in struct_cls.get("enums", [])):
                 parent = struct_cls.get("parent_class") or "View"
-                call_meth = ".toFilamentNative()"
-                java_expr = f"{var_name}.{fname}{call_meth}" if var_name else fname
-                scoped_enum = f"{parent}::{struct_cls['name']}::{clean_cpp_type}" if any(e["name"] == clean_cpp_type for e in struct_cls.get("enums", [])) else f"{parent}::{clean_cpp_type}"
+                scoped_enum = (
+                    f"{parent}::{struct_cls['name']}::{clean_cpp_type}"
+                    if any(e["name"] == clean_cpp_type for e in struct_cls.get("enums", []))
+                    else f"{parent}::{clean_cpp_type}"
+                )
                 leaves.append({
                     "name": fname,
                     "java_type": "int",
-                    "java_expr": java_expr,
+                    "java_expr": f"{var_name}.{fname}.toFilamentNative()" if var_name else fname,
                     "jni_type": "jint",
                     "jni_param_name": fname,
                     "cpp_assign": f"options.{fname} = ({scoped_enum}){fname};",
@@ -1655,20 +1626,18 @@ class TypeResolver:
             arr_in = self.get_array_input_info(f_type)
             if arr_in:
                 size = arr_in["size"]
-                comps = ["X", "Y", "Z", "W"][:size]
                 if "LinearColorA" in cpp_type_name:
                     cpp_target_type = "filament::LinearColorA"
                 elif "LinearColor" in cpp_type_name:
                     cpp_target_type = "filament::LinearColor"
                 else:
                     cpp_target_type = arr_in["cpp_type"]
-                for idx, c in enumerate(comps):
+                for idx, c in enumerate(["X", "Y", "Z", "W"][:size]):
                     comp_name = f"{fname}{c}"
-                    java_expr = f"{var_name}.{fname}[{idx}]" if var_name else comp_name
                     leaves.append({
                         "name": comp_name,
                         "java_type": "float",
-                        "java_expr": java_expr,
+                        "java_expr": f"{var_name}.{fname}[{idx}]" if var_name else comp_name,
                         "jni_type": "jfloat",
                         "jni_param_name": comp_name,
                         "is_vector_comp": True,
@@ -1682,11 +1651,10 @@ class TypeResolver:
 
             # Case 6: Boolean
             if cpp_type_name == "bool":
-                java_expr = f"{var_name}.{fname}" if var_name else fname
                 leaves.append({
                     "name": fname,
                     "java_type": "boolean",
-                    "java_expr": java_expr,
+                    "java_expr": f"{var_name}.{fname}" if var_name else fname,
                     "jni_type": "jboolean",
                     "jni_param_name": fname,
                     "cpp_assign": f"options.{fname} = (bool){fname};",
@@ -1694,12 +1662,14 @@ class TypeResolver:
                 continue
 
             # Case 7: Integer types
-            if clean_cpp_type in ("size_t", "uint64_t", "int64_t", "long", "unsigned long", "long long", "unsigned long long") or (struct_cls.get("parent_class") == "Engine" and struct_cls.get("name") == "Config" and clean_cpp_type in ("uint8_t", "uint16_t", "uint32_t", "int8_t", "int16_t", "int32_t", "int")):
-                java_expr = f"{var_name}.{fname}" if var_name else fname
+            is_engine_config = struct_cls.get("parent_class") == "Engine" and struct_cls.get("name") == "Config"
+            if clean_cpp_type in ("size_t", "uint64_t", "int64_t", "long", "unsigned long", "long long", "unsigned long long") or (
+                is_engine_config and clean_cpp_type in ("uint8_t", "uint16_t", "uint32_t", "int8_t", "int16_t", "int32_t", "int")
+            ):
                 leaves.append({
                     "name": fname,
                     "java_type": "long",
-                    "java_expr": java_expr,
+                    "java_expr": f"{var_name}.{fname}" if var_name else fname,
                     "jni_type": "jlong",
                     "jni_param_name": fname,
                     "cpp_assign": f"options.{fname} = ({cpp_type_name}){fname};",
@@ -1707,11 +1677,10 @@ class TypeResolver:
                 continue
 
             if clean_cpp_type in ("uint8_t", "uint16_t", "uint32_t", "int8_t", "int16_t", "int32_t", "int"):
-                java_expr = f"{var_name}.{fname}" if var_name else fname
                 leaves.append({
                     "name": fname,
                     "java_type": "int",
-                    "java_expr": java_expr,
+                    "java_expr": f"{var_name}.{fname}" if var_name else fname,
                     "jni_type": "jint",
                     "jni_param_name": fname,
                     "cpp_assign": f"options.{fname} = ({cpp_type_name}){fname};",
@@ -1719,22 +1688,21 @@ class TypeResolver:
                 continue
 
             # Case 8: Default float scalar
-            java_expr = f"{var_name}.{fname}" if var_name else fname
             leaves.append({
                 "name": fname,
                 "java_type": "float",
-                "java_expr": java_expr,
+                "java_expr": f"{var_name}.{fname}" if var_name else fname,
                 "jni_type": "jfloat",
                 "jni_param_name": fname,
                 "cpp_assign": f"options.{fname} = {fname};",
             })
-
         return leaves
 
     def get_flattened_leaves(
         self,
         type_info: Union[str, Dict[str, Any]],
-        prefix: str = ""
+        prefix: str = "",
+        default_value: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Flatten a complex struct or vector type into primitive scalar leaves.
 
@@ -1749,6 +1717,7 @@ class TypeResolver:
         Args:
             type_info: Type string or dictionary.
             prefix: Property prefix for nested member names.
+            default_value: Optional C++ default value expression for the field.
 
         Returns:
             List of leaf descriptor dictionaries detailing names, types, and getter chains.
@@ -1761,21 +1730,17 @@ class TypeResolver:
             jni_scalar = arr_info.get("jni_scalar") or (
                 "jfloat" if scalar == "float"
                 else "jdouble" if scalar == "double"
-                else "jint" if scalar in (
-                    "int", "uint32_t", "uint8_t", "int8_t", "short",
-                    "uint16_t", "int16_t", "byte", "char"
-                )
+                else "jint" if scalar in ("int", "uint32_t", "uint8_t", "int8_t", "short", "uint16_t", "int16_t", "byte", "char")
                 else "jlong"
             )
             is_fixed_arr = arr_info.get("is_fixed_array", False)
-            if is_fixed_arr or size > 4:
-                comps = [str(i) for i in range(size)]
-            else:
-                comps = ["X", "Y", "Z", "W"][:size]
+            comps = [str(i) for i in range(size)] if (is_fixed_arr or size > 4) else ["X", "Y", "Z", "W"][:size]
+            comp_defaults = self.get_array_default_values(type_info, default_value, arr_info)
             leaves = []
-            for comp in comps:
+            for idx, comp in enumerate(comps):
                 leaf_name = f"{prefix}{comp}"
                 leaf_param = f"{prefix[0].lower() + prefix[1:] if prefix else ''}{comp}"
+                comp_def = comp_defaults[idx] if comp_defaults and idx < len(comp_defaults) else None
                 leaves.append({
                     "name": leaf_name,
                     "param_name": leaf_param,
@@ -1787,7 +1752,8 @@ class TypeResolver:
                     "is_fixed_array": is_fixed_arr,
                     "cpp_type": arr_info["cpp_type"],
                     "size": size,
-                    "scalar": scalar
+                    "scalar": scalar,
+                    "default_value": comp_def,
                 })
             return leaves
 
@@ -1816,7 +1782,7 @@ class TypeResolver:
                     "jni_type": "jint",
                     "is_slice_count": True,
                     "cpp_type": "size_t",
-                }
+                },
             ]
 
         # Step 3: Nested aggregate struct
@@ -1828,13 +1794,16 @@ class TypeResolver:
                 if is_reserved_or_padding_field(fname):
                     continue
                 cap_name = fname[0].upper() + fname[1:]
-                sub_prefix = f"{prefix}{cap_name}"
-                sub_leaves = self.get_flattened_leaves(field["type"], prefix=sub_prefix)
+                sub_leaves = self.get_flattened_leaves(
+                    field["type"],
+                    prefix=f"{prefix}{cap_name}",
+                    default_value=field.get("default_value"),
+                )
                 for sl in sub_leaves:
                     sl_copy = dict(sl)
                     if not prefix:
                         if self.is_aggregate_struct(field["type"]):
-                            sub_field_name = sl['name'][len(cap_name):]
+                            sub_field_name = sl["name"][len(cap_name):]
                             sl_copy["getter_chain"] = [f"get{cap_name}()", f"get{sub_field_name}()"]
                         else:
                             sl_copy["getter_chain"] = [f"get{sl['name']}()"]
@@ -1845,6 +1814,9 @@ class TypeResolver:
         jtype = self.get_java_type(type_info)
         jnitype = self.get_jni_type(type_info)
         param_name = prefix[0].lower() + prefix[1:] if prefix else "val"
+        translated_def = (
+            self.translate_default_value(default_value, type_info) if default_value is not None else None
+        )
         return [{
             "name": prefix,
             "param_name": param_name,
@@ -1853,14 +1825,15 @@ class TypeResolver:
             "jni_type": jnitype,
             "is_math": False,
             "type": type_info,
-            "cpp_type": type_info.get("cpp_name", "") if isinstance(type_info, dict) else str(type_info)
+            "cpp_type": type_info.get("cpp_name", "") if isinstance(type_info, dict) else str(type_info),
+            "default_value": translated_def,
         }]
 
     def get_struct_leaf_accessors(
         self,
         struct_cls: Dict[str, Any],
         prefix: str = "",
-        cpp_prefix: str = ""
+        cpp_prefix: str = "",
     ) -> List[Tuple[str, str, str, str, str, str, str]]:
         """Generate JNI leaf accessor metadata for populating Java struct fields from C++.
 
@@ -1881,93 +1854,51 @@ class TypeResolver:
             ftype = field["type"]
             arr_in = self.get_array_input_info(ftype)
             f_info, _ = self.resolve_type_info(ftype, silent=True)
-            f_type_str = ftype.get("cpp_name", "") if isinstance(ftype, dict) else str(ftype)
 
             if arr_in:
                 size = arr_in["size"]
                 scalar = arr_in["scalar"]
                 is_fixed_arr = arr_in.get("is_fixed_array", False)
-                comps = (
-                    [str(i) for i in range(size)]
-                    if (is_fixed_arr or size > 4)
-                    else ["X", "Y", "Z", "W"][:size]
-                )
+                comps = [str(i) for i in range(size)] if (is_fixed_arr or size > 4) else ["X", "Y", "Z", "W"][:size]
                 for c in comps:
                     leaf_name = f"{fcap}{c}"
                     field_id_name = f"{prefix}{fname}_{c}" if prefix else f"{fname}_{c}"
                     java_field_name = f"m{prefix}{leaf_name}"
                     sig = "F" if scalar == "float" else "D" if scalar == "double" else "I"
-                    setter = (
-                        "SetFloatField" if scalar == "float"
-                        else "SetDoubleField" if scalar == "double"
-                        else "SetIntField"
-                    )
-                    cast = (
-                        "(jfloat) " if scalar == "float"
-                        else "(jdouble) " if scalar == "double"
-                        else "static_cast<jint>("
-                    )
+                    setter = "SetFloatField" if scalar == "float" else "SetDoubleField" if scalar == "double" else "SetIntField"
+                    cast = "(jfloat) " if scalar == "float" else "(jdouble) " if scalar == "double" else "static_cast<jint>("
                     cast_end = ")" if scalar not in ("float", "double") else ""
                     comp_access = f"[{c}]" if (is_fixed_arr or size > 4) else f".{c.lower()}"
-                    cpp_access = f"{cpp_prefix}{fname}{comp_access}"
                     accessors.append(
-                        (field_id_name, java_field_name, sig, setter, cast, cast_end, cpp_access)
+                        (field_id_name, java_field_name, sig, setter, cast, cast_end, f"{cpp_prefix}{fname}{comp_access}")
                     )
             elif self.is_aggregate_struct(ftype):
                 sub_s = self.is_aggregate_struct(ftype)
-                sub_accs = self.get_struct_leaf_accessors(
-                    sub_s,  # type: ignore
-                    prefix=f"{prefix}{fcap}",
-                    cpp_prefix=f"{cpp_prefix}{fname}."
+                accessors.extend(
+                    self.get_struct_leaf_accessors(sub_s, prefix=f"{prefix}{fcap}", cpp_prefix=f"{cpp_prefix}{fname}.")  # type: ignore
                 )
-                accessors.extend(sub_accs)
             else:
                 field_id_name = f"{prefix}{fname}" if prefix else fname
                 java_field_name = f"m{prefix}{fcap}" if prefix else fname
                 java_t = f_info.get("java", "")
                 if f_info.get("is_enum") or java_t == "int":
-                    sig = "I"
-                    setter = "SetIntField"
-                    cast = "static_cast<jint>("
-                    cast_end = ")"
+                    sig, setter, cast, cast_end = "I", "SetIntField", "static_cast<jint>(", ")"
                 elif java_t == "long":
-                    sig = "J"
-                    setter = "SetLongField"
-                    cast = "static_cast<jlong>("
-                    cast_end = ")"
+                    sig, setter, cast, cast_end = "J", "SetLongField", "static_cast<jlong>(", ")"
                 elif java_t == "float":
-                    sig = "F"
-                    setter = "SetFloatField"
-                    cast = "(jfloat) "
-                    cast_end = ""
+                    sig, setter, cast, cast_end = "F", "SetFloatField", "(jfloat) ", ""
                 elif java_t == "double":
-                    sig = "D"
-                    setter = "SetDoubleField"
-                    cast = "(jdouble) "
-                    cast_end = ""
+                    sig, setter, cast, cast_end = "D", "SetDoubleField", "(jdouble) ", ""
                 elif java_t == "boolean":
-                    sig = "Z"
-                    setter = "SetBooleanField"
-                    cast = "(jboolean) "
-                    cast_end = ""
+                    sig, setter, cast, cast_end = "Z", "SetBooleanField", "(jboolean) ", ""
                 elif java_t == "byte":
-                    sig = "B"
-                    setter = "SetByteField"
-                    cast = "static_cast<jbyte>("
-                    cast_end = ")"
+                    sig, setter, cast, cast_end = "B", "SetByteField", "static_cast<jbyte>(", ")"
                 elif java_t == "short":
-                    sig = "S"
-                    setter = "SetShortField"
-                    cast = "static_cast<jshort>("
-                    cast_end = ")"
+                    sig, setter, cast, cast_end = "S", "SetShortField", "static_cast<jshort>(", ")"
                 else:
-                    sig = "I"
-                    setter = "SetIntField"
-                    cast = "static_cast<jint>("
-                    cast_end = ")"
-                cpp_access = f"{cpp_prefix}{fname}"
+                    sig, setter, cast, cast_end = "I", "SetIntField", "static_cast<jint>(", ")"
                 accessors.append(
-                    (field_id_name, java_field_name, sig, setter, cast, cast_end, cpp_access)
+                    (field_id_name, java_field_name, sig, setter, cast, cast_end, f"{cpp_prefix}{fname}")
                 )
         return accessors
 
@@ -1976,7 +1907,7 @@ class TypeResolver:
         struct_cls: Dict[str, Any],
         var_name: str,
         leaf_prefix: str = "",
-        type_override: Optional[str] = None
+        type_override: Optional[str] = None,
     ) -> List[str]:
         """Generate C++ statements reconstructing an aggregate struct from primitive leaf arguments.
 
@@ -1994,14 +1925,9 @@ class TypeResolver:
         """
         # Step 1: Declare local struct instance
         if type_override:
-            scoped_cpp_type = (
-                self.strip_namespaces(type_override)
-                .replace("&", "")
-                .replace("const", "")
-                .strip()
-            )
+            scoped_cpp_type = self.strip_namespaces(type_override).replace("&", "").replace("const", "").strip()
         else:
-            scoped_cpp_type = get_scoped_cpp_name(struct_cls) or struct_cls['name']
+            scoped_cpp_type = get_scoped_cpp_name(struct_cls) or struct_cls["name"]
         lines = [f"{scoped_cpp_type} {var_name};"]
 
         # Step 2: Populate each field from primitive leaf parameters
@@ -2020,17 +1946,14 @@ class TypeResolver:
                         comp_arg = f"{sub_prefix[0].lower() + sub_prefix[1:]}{idx}"
                         lines.append(f"{var_name}.{fname}[{idx}] = {comp_arg};")
                 else:
-                    comp_args = [
-                        f"{sub_prefix[0].lower() + sub_prefix[1:]}{c.upper()}"
-                        for c in ["x", "y", "z", "w"][:size]
-                    ]
+                    is_quat = arr_info.get("is_quaternion") or "quat" in arr_info.get("cpp_type", "").lower()
+                    comp_order = ["w", "x", "y", "z"] if (is_quat and size == 4) else ["x", "y", "z", "w"][:size]
+                    comp_args = [f"{sub_prefix[0].lower() + sub_prefix[1:]}{c.upper()}" for c in comp_order]
                     lines.append(f"{var_name}.{fname} = {{ {', '.join(comp_args)} }};")
             elif self.is_aggregate_struct(f["type"]):
                 sub_struct = self.is_aggregate_struct(f["type"])
                 sub_lines = self.generate_cpp_struct_construction(
-                    sub_struct,  # type: ignore
-                    f"{var_name}.{fname}",
-                    leaf_prefix=sub_prefix
+                    sub_struct, f"{var_name}.{fname}", leaf_prefix=sub_prefix  # type: ignore
                 )
                 lines.extend(sub_lines[1:])
             else:
@@ -2042,15 +1965,16 @@ class TypeResolver:
                         inner_cls = f_info["inner_info"].get("struct_cls")
                         inner_cpp = get_scoped_cpp_name(inner_cls) or f_info["inner_info"]["java"]
                         elem_var = f"{param_name}Elements"
-                        lines.append(f"jlong* {elem_var} = nullptr;")
-                        lines.append(f"if ({param_name} != nullptr && {count_param} > 0) {{")
-                        lines.append(f"    {elem_var} = env->GetLongArrayElements({param_name}, nullptr);")
-                        lines.append(f"    auto* structs = reinterpret_cast<{inner_cpp}*>({elem_var});")
-                        lines.append(f"    {var_name}.{fname} = {{ structs, (size_t) {count_param} }};")
-                        lines.append(f"}}")
+                        lines.extend([
+                            f"jlong* {elem_var} = nullptr;",
+                            f"if ({param_name} != nullptr && {count_param} > 0) {{",
+                            f"    {elem_var} = env->GetLongArrayElements({param_name}, nullptr);",
+                            f"    auto* structs = reinterpret_cast<{inner_cpp}*>({elem_var});",
+                            f"    {var_name}.{fname} = {{ structs, (size_t) {count_param} }};",
+                            "}",
+                        ])
                 elif f_info.get("to_cpp"):
-                    val_expr = f_info["to_cpp"].format(value=param_name)
-                    lines.append(f"{var_name}.{fname} = {val_expr};")
+                    lines.append(f"{var_name}.{fname} = {f_info['to_cpp'].format(value=param_name)};")
                 elif f_info.get("is_enum"):
                     cpp_enum_type = (
                         get_scoped_cpp_name(f_info.get("enum_ir", {}))
@@ -2064,7 +1988,7 @@ class TypeResolver:
     def generate_cpp_struct_cleanup(
         self,
         struct_cls: Dict[str, Any],
-        leaf_prefix: str = ""
+        leaf_prefix: str = "",
     ) -> List[str]:
         """Generate C++ cleanup statements releasing pinned arrays after native dispatch.
 
@@ -2092,16 +2016,16 @@ class TypeResolver:
                 f_info, _ = self.resolve_type_info(f["type"], silent=True)
                 if f_info.get("is_slice") and f_info.get("is_struct_slice"):
                     elem_var = f"{param_name}Elements"
-                    cleanup_lines.append(f"if ({elem_var} != nullptr) {{")
-                    cleanup_lines.append(
-                        f"    env->ReleaseLongArrayElements({param_name}, {elem_var}, JNI_ABORT);"
-                    )
-                    cleanup_lines.append(f"}}")
+                    cleanup_lines.extend([
+                        f"if ({elem_var} != nullptr) {{",
+                        f"    env->ReleaseLongArrayElements({param_name}, {elem_var}, JNI_ABORT);",
+                        "}",
+                    ])
         return cleanup_lines
 
     def get_array_input_info(
         self,
-        t: Union[str, Dict[str, Any]]
+        t: Union[str, Dict[str, Any]],
     ) -> Optional[Dict[str, Any]]:
         """Resolve array input information (math types, bone buffers, primitive pointers).
 
@@ -2118,20 +2042,16 @@ class TypeResolver:
         if isinstance(t, dict) and (t.get("category") == "string" or t.get("is_string")):
             return None
         t_str = t.get("qualified_name") or t["cpp_name"] if isinstance(t, dict) else str(t)
-        t_clean = t_str.replace("const ", "").strip()
-        if t_clean in ("char*", "char *", "char const*", "const char*"):
+        if t_str.replace("const ", "").strip() in ("char*", "char *", "char const*", "const char*"):
             return None
 
         # Step 2: Check resolved math vectors and fixed arrays
         i, _ = self.resolve_type_info(t, silent=True)
-        if "assert" in i:
-            return i
-        if i.get("is_fixed_array"):
+        if "assert" in i or i.get("is_fixed_array"):
             return i
 
         # Step 3: Handle raw pointer types
-        t_clean = re.sub(r'\bconst\b', '', t_str).strip()
-        t_strip = t_clean
+        t_strip = _RE_CONST_WORD.sub("", t_str).strip()
         if t_strip.endswith("*") or (isinstance(t, dict) and t.get("is_pointer", False)):
             if t_strip.endswith("*"):
                 t_strip = t_strip[:-1].strip()
@@ -2145,7 +2065,7 @@ class TypeResolver:
                     "size": 8,
                     "annotation": "@Size(min = 8)",
                     "cpp_type": "RenderableManager::Bone",
-                    "is_custom_array": True
+                    "is_custom_array": True,
                 }
             i, _ = self.resolve_type_info(t_strip, silent=True)
             if "assert" in i:
@@ -2166,7 +2086,7 @@ class TypeResolver:
                         "size": stride,
                         "annotation": f"@Size(min = {stride})",
                         "cpp_type": elem_cast,
-                        "is_custom_array": True
+                        "is_custom_array": True,
                     }
                 return {
                     "java": "long[]",
@@ -2176,13 +2096,12 @@ class TypeResolver:
                     "size": 1,
                     "annotation": i.get("annotation"),
                     "cpp_type": elem_cast,
-                    "is_custom_array": True
+                    "is_custom_array": True,
                 }
 
             scalar = i.get("scalar") or i.get("java")
-            if scalar in ["byte", "short", "int", "long", "float", "double", "boolean"]:
+            if scalar in _PRIMITIVE_ARRAY_SCALARS:
                 jni_scalar = i.get("jni", f"j{scalar}")
-                elem_cast = self.strip_namespaces(t_strip)
                 return {
                     "java": f"{i['java']}[]",
                     "jni": f"{jni_scalar}Array",
@@ -2190,18 +2109,15 @@ class TypeResolver:
                     "scalar": scalar,
                     "size": 1,
                     "annotation": i.get("annotation"),
-                    "cpp_type": elem_cast,
-                    "is_custom_array": True
+                    "cpp_type": self.strip_namespaces(t_strip),
+                    "is_custom_array": True,
                 }
 
         # Step 4: Handle utils::Slice types
-        slice_match = re.match(
-            r"^(?:const\s+)?(?:filament::)?(?:utils::)?Slice<\s*(?:const\s+)?(.*?)(?:\s+const)?\s*>\s*(?:&)?$",
-            t_str.strip()
-        )
+        slice_match = _RE_SLICE.match(t_str.strip())
         if slice_match:
             inner_type_str = slice_match.group(1).strip()
-            is_const = bool(re.search(r"Slice<\s*const\b", t_str) or re.search(r"\bconst\s*>", t_str))
+            is_const = bool(_RE_SLICE_CONST_PREFIX.search(t_str) or _RE_SLICE_CONST_SUFFIX.search(t_str))
             clean_elem = self.strip_namespaces(inner_type_str)
             if clean_elem == "Bone" or inner_type_str.endswith("::Bone"):
                 return {
@@ -2243,9 +2159,8 @@ class TypeResolver:
                 return None
 
             scalar = i.get("scalar") or i.get("java")
-            if scalar in ["byte", "short", "int", "long", "float", "double", "boolean"]:
+            if scalar in _PRIMITIVE_ARRAY_SCALARS:
                 jni_scalar = i.get("jni", f"j{scalar}")
-                elem_cast = self.strip_namespaces(inner_type_str)
                 return {
                     "java": f"{i['java']}[]",
                     "jni": f"{jni_scalar}Array",
@@ -2253,7 +2168,7 @@ class TypeResolver:
                     "scalar": scalar,
                     "size": 1,
                     "annotation": i.get("annotation"),
-                    "cpp_type": elem_cast,
+                    "cpp_type": self.strip_namespaces(inner_type_str),
                     "is_custom_array": True,
                     "is_slice": True,
                     "is_const": is_const,
@@ -2286,9 +2201,7 @@ class TypeResolver:
         Returns:
             JNI type string (e.g. 'jint', 'jlong', 'jfloatArray', 'jobject').
         """
-        t = type_input
-        if isinstance(t, str):
-            t = t.strip()
+        t = type_input.strip() if isinstance(type_input, str) else type_input
         info, _ = self.resolve_type_info(t, silent=True)
         return info.get("jni_type", info.get("jni", "void"))
 
@@ -2319,26 +2232,20 @@ class TypeResolver:
             if isinstance(type_input, dict)
             else type_input
         )
-        resolved_type = self.strip_namespaces(cpp_type)
-        if cpp_type in self.aliases:
-            resolved_type = self.aliases[cpp_type]
+        resolved_type = self.aliases.get(cpp_type, self.strip_namespaces(cpp_type))
 
         info, groups = self.resolve_type_info(type_input)
         tmpl = info.get("to_cpp")
         if tmpl:
             stripped_groups = [self.strip_namespaces(g) for g in groups]
             return tmpl.format(*stripped_groups, type=resolved_type, value=val_name)
-
-        if info.get("is_filament_type"):
-            return f"({resolved_type}){val_name}"
-
         return f"({resolved_type}){val_name}"
 
     def get_from_cpp_expr(
         self,
         type_input: Union[str, Dict[str, Any]],
         val_expr: str,
-        jni_ret: str
+        jni_ret: str,
     ) -> str:
         """Generate C++ expression converting a native C++ return value to JNI representation.
 
@@ -2358,21 +2265,15 @@ class TypeResolver:
         resolved_type = self.strip_namespaces(cpp_type)
         info, groups = self.resolve_type_info(type_input)
         if info.get("is_string"):
-            clean_type = (
-                self.strip_namespaces(cpp_type)
-                .replace("&", "")
-                .replace("const", "")
-                .strip()
-            )
+            clean_type = resolved_type.replace("&", "").replace("const", "").strip()
             if "string_view" in clean_type or "basic_string_view" in clean_type:
                 return f"env->NewStringUTF(std::string({val_expr}).c_str())"
-            elif clean_type in ("CString", "StaticString", "ImmutableCString", "string"):
+            if clean_type in ("CString", "StaticString", "ImmutableCString", "string"):
                 return f"env->NewStringUTF(({val_expr}).c_str())"
-            else:
-                return f"({val_expr}) ? env->NewStringUTF({val_expr}) : nullptr"
+            return f"({val_expr}) ? env->NewStringUTF({val_expr}) : nullptr"
         tmpl = info.get("from_cpp")
-        stripped_groups = [self.strip_namespaces(g) for g in groups]
         if tmpl:
+            stripped_groups = [self.strip_namespaces(g) for g in groups]
             return tmpl.format(*stripped_groups, type=resolved_type, value=val_expr)
         if jni_ret != "void":
             if jni_ret == "jlong" and isinstance(type_input, dict):

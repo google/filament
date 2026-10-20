@@ -50,170 +50,6 @@ namespace filament {
 using namespace backend;
 using namespace utils;
 
-namespace {
-
-MaterialCache::ProgramCacheEntry makeProgramCacheEntry(FEngine& engine,
-        ProgramSpecialization const& specialization, Handle<HwProgram> program) {
-    MaterialCache::ProgramCacheEntry entry{
-        program,
-        engine.getMaterialCache().getSpecializationConstantsInternPool().acquire(
-                specialization.specializationConstants),
-    };
-    // The pool interns by content, so the reference we just took must be on the very slice the key
-    // points at. Were it a different one, keeping it alive wouldn't keep the key valid.
-    assert_invariant(entry.constants.get().data() == specialization.specializationConstants.data());
-    return entry;
-}
-
-template<bool useCache>
-void acquireProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
-        MaterialDefinition const& definition, MaterialParser const& parser,
-        Slice<const Program::SpecializationConstant> specializationConstants,
-        bool isDefaultMaterial) {
-    MaterialCache::ProgramCache& globalProgramCache = engine.getMaterialCache().getProgramCache();
-    ShaderModel const shaderModel = engine.getShaderModel();
-    bool const isStereoSupported = engine.getDriverApi().isStereoSupported();
-
-    ProgramSpecialization specialization = {
-        .materialCrc32 = definition.getMaterialParser().getCrc32(),
-        .specializationConstants = specializationConstants,
-    };
-
-    // We acquire an entry for all variants in the program cache, but we don't compile them.
-    // Programs that are acquired but aren't compiled simply hold onto an empty entry in the program
-    // cache which is initialized later.
-    if constexpr (useCache) {
-        for (auto variant: definition.getVariants()) {
-            specialization.variant = variant;
-            for (auto const specKey: DynamicSpecConstKey::getValidKeys(variant,
-                    definition.materialDomain, definition.isVariantLit)) {
-                if (UTILS_LIKELY(definition.isValidProgram(variant, specKey, shaderModel,
-                            isStereoSupported))) {
-                    specialization.specKey = specKey;
-                    MaterialCache::ProgramCacheEntry const* entry =
-                            globalProgramCache.acquire(specialization);
-                    if (entry) {
-                        LocalProgramCache::CacheKey mappedKey =
-                                LocalProgramCache::mapCacheEntryKey(variant, specKey, programCache.size());
-                        programCache[mappedKey] = entry->program;
-                    }
-                }
-            }
-        }
-    }
-
-    if (UTILS_UNLIKELY(isDefaultMaterial && !engine.getDriverApi().isWorkaroundNeeded(
-                Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL))) {
-        // Precache depth programs.
-        for (auto variant: definition.getDepthVariants()) {
-            DynamicSpecConstKey const specKey{0};
-            if (UTILS_LIKELY(definition.isValidProgram(variant, specKey, shaderModel,
-                        isStereoSupported))) {
-                specialization.variant = variant;
-                specialization.specKey = specKey;
-                LocalProgramCache::CacheKey mappedKey = LocalProgramCache::mapCacheEntryKey(variant,
-                        specKey, programCache.size());
-                if constexpr (useCache) {
-                    MaterialCache::ProgramCacheEntry const* entry = globalProgramCache.acquire(
-                            specialization, [&engine, &definition, &parser, &specialization]() {
-                                return makeProgramCacheEntry(engine, specialization,
-                                        definition.compileProgram(engine, parser, specialization,
-                                                CompilerPriorityQueue::HIGH));
-                            });
-                    if (entry) {
-                        programCache[mappedKey] = entry->program;
-                    }
-                } else {
-                    programCache[mappedKey] = definition.compileProgram(engine, parser,
-                            specialization, CompilerPriorityQueue::HIGH);
-                }
-            }
-        }
-    } else if constexpr (useCache) {
-        // Don't precache depth programs, but acquire them.
-        for (auto variant: definition.getDepthVariants()) {
-            DynamicSpecConstKey const specKey{ 0 };
-            if (UTILS_LIKELY(definition.isValidProgram(variant, specKey, shaderModel,
-                        isStereoSupported))) {
-                specialization.variant = variant;
-                specialization.specKey = specKey;
-                MaterialCache::ProgramCacheEntry const* entry =
-                        globalProgramCache.acquire(specialization);
-                if (entry) {
-                    LocalProgramCache::CacheKey mappedKey =
-                            LocalProgramCache::mapCacheEntryKey(variant, specKey, programCache.size());
-                    programCache[mappedKey] = entry->program;
-                }
-            }
-        }
-    }
-}
-
-template<bool useCache>
-void releaseProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
-        MaterialDefinition const& definition,
-        Slice<const Program::SpecializationConstant> specializationConstants,
-        bool isDefaultMaterial) {
-    MaterialCache::ProgramCache& globalProgramCache = engine.getMaterialCache().getProgramCache();
-    ShaderModel const shaderModel = engine.getShaderModel();
-    bool const isStereoSupported = engine.getDriverApi().isStereoSupported();
-
-    ProgramSpecialization specialization = {
-        .materialCrc32 = definition.getMaterialParser().getCrc32(),
-        .specializationConstants = specializationConstants,
-    };
-
-    for (auto variant: definition.getVariants()) {
-        for (auto const specKey: DynamicSpecConstKey::getValidKeys(variant,
-                definition.materialDomain, definition.isVariantLit)) {
-            if (UTILS_LIKELY(definition.isValidProgram(variant, specKey, shaderModel,
-                        isStereoSupported))) {
-                LocalProgramCache::CacheKey mappedKey = LocalProgramCache::mapCacheEntryKey(variant,
-                        specKey, programCache.size());
-                Handle<HwProgram>& program = programCache[mappedKey];
-                if constexpr (useCache) {
-                    specialization.variant = variant;
-                    specialization.specKey = specKey;
-                    globalProgramCache.release(specialization,
-                            [&engine](MaterialCache::ProgramCacheEntry& entry) {
-                                engine.getDriverApi().destroyProgram(entry.program);
-                            });
-                } else if (program) {
-                    engine.getDriverApi().destroyProgram(program);
-                }
-                program.clear();
-            }
-        }
-    }
-
-    // Only destroy the "shared variants" if this is the default material (i.e. the programs in
-    // question that are shared) or if this material has custom depth shaders.
-    const bool destroySharedVariants = isDefaultMaterial || definition.hasCustomDepthShader;
-
-    for (auto variant: definition.getDepthVariants()) {
-        DynamicSpecConstKey const specKey{ 0 };
-        if (UTILS_LIKELY(
-                    definition.isValidProgram(variant, specKey, shaderModel, isStereoSupported))) {
-            LocalProgramCache::CacheKey mappedKey =
-                    LocalProgramCache::mapCacheEntryKey(variant, specKey, programCache.size());
-            Handle<HwProgram>& program = programCache[mappedKey];
-            if constexpr (useCache) {
-                specialization.variant = variant;
-                specialization.specKey = specKey;
-                globalProgramCache.release(specialization,
-                        [&engine](MaterialCache::ProgramCacheEntry& entry) {
-                            engine.getDriverApi().destroyProgram(entry.program);
-                        });
-            } else if (destroySharedVariants && program) {
-                engine.getDriverApi().destroyProgram(program);
-            }
-            program.clear();
-        }
-    }
-}
-
-} // namespace
-
 std::unique_ptr<MaterialParser> MaterialDefinition::createParser(Backend const backend,
         FixedCapacityVector<ShaderLanguage> languages, const void* data, size_t size) {
     // unique_ptr so we don't leak MaterialParser on failures below
@@ -288,6 +124,16 @@ std::unique_ptr<MaterialDefinition> MaterialDefinition::create(FEngine& engine,
                        << ", crc32_parsed=" << parsedCrc32;
             return nullptr;
         }
+    }
+
+    // processDescriptorSets() only asserts on this, which is compiled out in release builds.
+    MaterialParser::DescriptorSetLayoutContainer descriptorSetLayout;
+    if (!parser->getDescriptorSetLayout(&descriptorSetLayout)) {
+        CString name;
+        parser->getName(&name);
+        LOG(ERROR) << "The material '" << name.c_str_safe()
+                   << "' has an invalid descriptor set layout.";
+        return nullptr;
     }
 
     uint32_t v = 0;
@@ -1019,14 +865,10 @@ Handle<HwProgram> MaterialDefinition::prepareProgram(FEngine& engine, DriverApi&
         return {};
     }
     if (UTILS_LIKELY(engine.features.engine.enable_program_cache && parser == *mMaterialParser)) {
-        MaterialCache::ProgramCacheEntry* entry =
-                engine.getMaterialCache().getProgramCache().get(specialization,
-                        [this, &engine, &parser, &specialization, priorityQueue]() {
-                            return makeProgramCacheEntry(engine, specialization,
-                                    compileProgram(engine, parser, specialization, priorityQueue));
-                        });
-        assert_invariant(entry->program);
-        return entry->program;
+        Handle<HwProgram> const program = engine.getMaterialCache().getOrAcquireProgram(
+                engine, specialization, *this, parser, priorityQueue, true);
+        assert_invariant(program);
+        return program;
     } else {
         return compileProgram(engine, parser, specialization, priorityQueue);
     }
@@ -1037,12 +879,76 @@ void MaterialDefinition::acquirePrograms(FEngine& engine,
         MaterialParser const& parser,
         Slice<const Program::SpecializationConstant> specializationConstants,
         bool isDefaultMaterial) const {
-    if (UTILS_LIKELY(engine.features.engine.enable_program_cache && parser == *mMaterialParser)) {
-        acquireProgramsImpl<true>(engine, programCache, *this, parser, specializationConstants,
-                isDefaultMaterial);
-    } else {
-        acquireProgramsImpl<false>(engine, programCache, *this, parser, specializationConstants,
-                isDefaultMaterial);
+    bool const useCache =
+            engine.features.engine.enable_program_cache && parser == *mMaterialParser;
+    MaterialCache& materialCache = engine.getMaterialCache();
+    ShaderModel const shaderModel = engine.getShaderModel();
+    bool const isStereoSupported = engine.getDriverApi().isStereoSupported();
+
+    ProgramSpecialization specialization = {
+        .materialCrc32 = getMaterialParser().getCrc32(),
+        .specializationConstants = specializationConstants,
+    };
+
+    // We acquire an entry for all variants in the program cache, but we don't compile them.
+    // Programs that are acquired but aren't compiled simply hold onto an empty entry in the program
+    // cache which is initialized later.
+    if (useCache) {
+        for (auto variant: getVariants()) {
+            specialization.variant = variant;
+            for (auto const specKey: DynamicSpecConstKey::getValidKeys(variant,
+                    materialDomain, isVariantLit)) {
+                if (UTILS_LIKELY(isValidProgram(variant, specKey, shaderModel,
+                            isStereoSupported))) {
+                    specialization.specKey = specKey;
+                    if (Handle<HwProgram> program = materialCache.acquireProgram(specialization)) {
+                        LocalProgramCache::CacheKey mappedKey =
+                                LocalProgramCache::mapCacheEntryKey(variant, specKey, programCache.size());
+                        programCache[mappedKey] = program;
+                    }
+                }
+            }
+        }
+    }
+
+    if (UTILS_UNLIKELY(isDefaultMaterial && !engine.getDriverApi().isWorkaroundNeeded(
+                Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL))) {
+        // Precache depth programs.
+        for (auto variant: getDepthVariants()) {
+            DynamicSpecConstKey const specKey{0};
+            if (UTILS_LIKELY(isValidProgram(variant, specKey, shaderModel,
+                        isStereoSupported))) {
+                specialization.variant = variant;
+                specialization.specKey = specKey;
+                LocalProgramCache::CacheKey mappedKey = LocalProgramCache::mapCacheEntryKey(variant,
+                        specKey, programCache.size());
+                if (useCache) {
+                    if (Handle<HwProgram> program = materialCache.getOrAcquireProgram(
+                            engine, specialization, *this, parser, CompilerPriorityQueue::HIGH,
+                            false)) {
+                        programCache[mappedKey] = program;
+                    }
+                } else {
+                    programCache[mappedKey] = compileProgram(engine, parser,
+                            specialization, CompilerPriorityQueue::HIGH);
+                }
+            }
+        }
+    } else if (useCache) {
+        // Don't precache depth programs, but acquire them.
+        for (auto variant: getDepthVariants()) {
+            DynamicSpecConstKey const specKey{ 0 };
+            if (UTILS_LIKELY(isValidProgram(variant, specKey, shaderModel,
+                        isStereoSupported))) {
+                specialization.variant = variant;
+                specialization.specKey = specKey;
+                if (Handle<HwProgram> program = materialCache.acquireProgram(specialization)) {
+                    LocalProgramCache::CacheKey mappedKey =
+                            LocalProgramCache::mapCacheEntryKey(variant, specKey, programCache.size());
+                    programCache[mappedKey] = program;
+                }
+            }
+        }
     }
 }
 
@@ -1050,12 +956,56 @@ void MaterialDefinition::releasePrograms(FEngine& engine,
         Slice<Handle<HwProgram>> programCache, MaterialParser const& parser,
         Slice<const Program::SpecializationConstant> specializationConstants,
         bool isDefaultMaterial) const {
-    if (UTILS_LIKELY(engine.features.engine.enable_program_cache && parser == *mMaterialParser)) {
-        releaseProgramsImpl<true>(engine, programCache, *this, specializationConstants,
-                isDefaultMaterial);
-    } else {
-        releaseProgramsImpl<false>(engine, programCache, *this, specializationConstants,
-                isDefaultMaterial);
+    bool const useCache =
+            engine.features.engine.enable_program_cache && parser == *mMaterialParser;
+    MaterialCache& materialCache = engine.getMaterialCache();
+    ShaderModel const shaderModel = engine.getShaderModel();
+    bool const isStereoSupported = engine.getDriverApi().isStereoSupported();
+
+    ProgramSpecialization specialization = {
+        .materialCrc32 = getMaterialParser().getCrc32(),
+        .specializationConstants = specializationConstants,
+    };
+
+    for (auto variant: getVariants()) {
+        for (auto const specKey: DynamicSpecConstKey::getValidKeys(variant,
+                materialDomain, isVariantLit)) {
+            if (UTILS_LIKELY(isValidProgram(variant, specKey, shaderModel,
+                        isStereoSupported))) {
+                LocalProgramCache::CacheKey mappedKey = LocalProgramCache::mapCacheEntryKey(variant,
+                        specKey, programCache.size());
+                Handle<HwProgram>& program = programCache[mappedKey];
+                if (useCache) {
+                    specialization.variant = variant;
+                    specialization.specKey = specKey;
+                    materialCache.releaseProgram(engine, specialization);
+                } else if (program) {
+                    engine.getDriverApi().destroyProgram(program);
+                }
+                program.clear();
+            }
+        }
+    }
+
+    // Only destroy the "shared variants" if this is the default material (i.e. the programs in
+    // question that are shared) or if this material has custom depth shaders.
+    const bool destroySharedVariants = isDefaultMaterial || hasCustomDepthShader;
+
+    for (auto variant: getDepthVariants()) {
+        DynamicSpecConstKey const specKey{ 0 };
+        if (UTILS_LIKELY(isValidProgram(variant, specKey, shaderModel, isStereoSupported))) {
+            LocalProgramCache::CacheKey mappedKey =
+                    LocalProgramCache::mapCacheEntryKey(variant, specKey, programCache.size());
+            Handle<HwProgram>& program = programCache[mappedKey];
+            if (useCache) {
+                specialization.variant = variant;
+                specialization.specKey = specKey;
+                materialCache.releaseProgram(engine, specialization);
+            } else if (destroySharedVariants && program) {
+                engine.getDriverApi().destroyProgram(program);
+            }
+            program.clear();
+        }
     }
 }
 

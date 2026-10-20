@@ -1520,6 +1520,7 @@ void FView::commitFrameHistory(FEngine& engine) noexcept {
 
     FrameHistoryEntry& last = frameHistory.back();
     disposer.destroy(std::move(last.taa.color.handle));
+    disposer.destroy(std::move(last.taa.depth.handle));
     disposer.destroy(std::move(last.ssr.color.handle));
 
     // and then push the new history entry to the history stack
@@ -1533,6 +1534,7 @@ void FView::clearFrameHistory(FEngine& engine) noexcept {
     for (size_t i = 0; i < frameHistory.size(); ++i) {
         FrameHistoryEntry& last = frameHistory[i];
         disposer.destroy(std::move(last.taa.color.handle));
+        disposer.destroy(std::move(last.taa.depth.handle));
         disposer.destroy(std::move(last.ssr.color.handle));
     }
 }
@@ -1599,6 +1601,12 @@ void FView::clearPickingQueries() noexcept {
 void FView::setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) noexcept {
     options.feedback = clamp(options.feedback, 0.0f, 1.0f);
     options.filterWidth = std::max(0.2f, options.filterWidth); // below 0.2 causes issues
+    options.motionDeltaThreshold = std::max(1e-3f, options.motionDeltaThreshold);
+    options.minBoxStrength = clamp(options.minBoxStrength, 0.0f, 1.0f);
+    options.minAlphaStrength = clamp(options.minAlphaStrength, 0.0f, 1.0f);
+    options.skyDepthThreshold = std::max(1e-7f, options.skyDepthThreshold);
+    options.disocclusionDepthThreshold = std::max(1e-7f, options.disocclusionDepthThreshold);
+    options.motionHoldFrames = std::max(0.0f, options.motionHoldFrames);
     mTemporalAntiAliasingOptions = options;
 }
 

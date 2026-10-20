@@ -21,6 +21,12 @@ material {
             name : history
         },
         {
+            type : sampler2d,
+            name : depthHistory,
+            precision: high,
+            filterable: false
+        },
+        {
             type : float,
             name : alpha
         },
@@ -48,6 +54,43 @@ material {
             type : float4,
             name : historyResolution,
             precision: high
+        },
+        {
+            type : float,
+            name : motionDeltaThreshold,
+            precision: high
+        },
+        {
+            type : float,
+            name : minBoxStrength
+        },
+        {
+            type : float,
+            name : minAlphaStrength
+        },
+        {
+            type : float,
+            name : skyDepthThreshold,
+            precision: high
+        },
+        {
+            // [0, 1] ramp from 1 right after camera motion stops down to 0 over motionHoldFrames.
+            type : float,
+            name : motionHoldAmount
+        },
+        {
+            type : float,
+            name : disocclusionDepthThreshold,
+            precision: high
+        },
+        {
+            type : float2,
+            name : previousJitter,
+            precision: high
+        },
+        {
+            type : float,
+            name : varianceGamma
         }
     ],
     constants : [
@@ -97,9 +140,32 @@ material {
             default : true
         },
         {
-            type : float,
-            name : varianceGamma,
-            default : 1.0
+            type : bool,
+            name : motionAdaptiveHistory,
+            default : false
+        },
+        {
+            type : bool,
+            name : depthDisocclusion,
+            default : false
+        },
+        {
+            // Gates the 9-tap history-side depth neighborhood test (requires depthDisocclusion).
+            type : bool,
+            name : disocclusionHistoryNeighborhood,
+            default : true
+        },
+        {
+            // Evaluates the 4th tap per axis to cover the full radius-2 Lanczos-2 support at 1:1.
+            type : bool,
+            name : exactLanczosSupport,
+            default : false
+        },
+        {
+            // Diagnostic only, not a real rendering mode -- see postProcess() below.
+            type : bool,
+            name : debugVisualizeDisocclusion,
+            default : false
         }
     ],
     variables : [
@@ -124,6 +190,8 @@ vertex {
 
 fragment {
 
+// See taa.md in this directory for detailed derivations and empirical tuning notes.
+
 /* Clipping box type */
 
 // min/max neighborhood
@@ -139,6 +207,15 @@ fragment {
 #define BOX_CLIPPING_CLAMP      1
 // no clipping (for debugging only)
 #define BOX_CLIPPING_NONE       2
+
+// Minimum half-width of the history-clamping box in tonemapped space; prevents near-point boxes
+// (e.g. Co/Cg on low-chroma surfaces) from causing ACCURATE ray-clipping to fire on noise.
+#define kMinBoxHalfWidth 0.002
+
+// Reprojection displacement range (in render texels) over which the depthDisocclusion jitter
+// tolerance fades out; starts at 1.0 because the 3x3 neighborhood bound stays exact below 1 texel.
+#define kMotionFadeStartTexels 1.0
+#define kMotionFadeEndTexels   2.0
 
 float rcp(float x) {
     return 1.0 / x;
@@ -174,29 +251,23 @@ vec4 tonemap(const float w, const vec4 c) {
 
 vec3 untonemap(const vec3 c) {
     const float epsilon = 1.0 / 65504.0;
-    return c * rcp(max(epsilon, 1.0 - max3(c)));
+    // Clamp away from the pole at max3(c) == 1 (which YCoCg round-trips can cross), avoiding
+    // fp16 +Inf overflow and subsequent sticky NaNs in history.
+    vec3 t = clamp(c, 0.0, 1.0 - epsilon);
+    return t * rcp(max(epsilon, 1.0 - max3(t)));
 }
 
-// 1-D Lanczos-2 approximation, input is squared and must be [-4, 4]
-float lanczos2_SquaredInputApproximate(highp float x2) {
-    highp float wA = x2 - 4.0;
-    highp float wB = x2 * wA - wA;
-    wA *= wA;
-    wB *= wA;
-    return wB * (1.0 / 64.0);
+// tonemap(), gated by the hdr constant -- lets the box operate in tonemapped space (see below)
+vec3 tonemapIfHDR(const vec3 c) {
+    return materialConstants_hdr ? tonemap(c) : c;
 }
 
-// 1-D Lanczos-2 filter, input must be [-2, 2]
-float lanczos2(float v) {
-    return lanczos2_SquaredInputApproximate(v * v);
-}
-
-// 1-D Lanczos-2 filter, input must be [-2, 2]
-float lanczos2(float v, float scale) {
-    if (materialConstants_upscaling) {
-        v = clamp(v * scale, -2.0, 2.0);
-    }
-    return lanczos2(v);
+// 1-D Lanczos-2 polynomial approximation on [-2, 2]: -(x^2-4)^2 * (x^2-1) * (t*x^2+1) / 16,
+// with exact roots at |x| = 1, 2 and minimax-fitted shape parameter t = -0.354377.
+vec3 lanczos2(vec3 v) {
+    highp vec3 x2 = v * v;
+    highp vec3 wA = x2 - 4.0;
+    return (wA * wA) * ((x2 - 1.0) * (-0.354377 * x2 + 1.0)) * (-1.0 / 16.0);
 }
 
 vec3 RGB_YCoCg(const vec3 c) {
@@ -216,6 +287,14 @@ vec3 YCoCg_RGB(const vec3 c) {
     return vec3(r, g, b);
 }
 
+// Smooth [0, 1] camera-motion weight from reprojection delta (in input texels), reaching 1 at
+// materialParams.motionDeltaThreshold.
+float motionAmount(const highp float reprojectionDeltaLen) {
+    highp float d = reprojectionDeltaLen * (1.0 / materialParams.motionDeltaThreshold);
+    return saturate(d * d);
+}
+
+
 // clip the (c, h) segment to a box
 vec4 clipToBox(const int quality,
         const vec3 boxmin,  const vec3 boxmax, const vec4 c, const vec4 h) {
@@ -224,8 +303,13 @@ vec4 clipToBox(const int quality,
     if (quality == BOX_CLIPPING_ACCURATE) {
         // don't clip if we're already in the box
         if (any(lessThan(h.rgb, boxmin)) || any(greaterThan(h.rgb, boxmax))) {
-            vec4 r = c - h;
-            vec3 ir = 1.0 / (epsilon + r.rgb);
+            // Clamp c into the box so the h->c ray is guaranteed to intersect the box in [0, 1].
+            vec3 cClamped = clamp(c.rgb, boxmin, boxmax);
+            vec4 r = vec4(cClamped, c.a) - h;
+            // Offset the denominator away from zero in the sign of r to avoid division blow-up
+            // when a channel is nearly stationary (r ~ 0 of either sign).
+            vec3 rSign = step(0.0, r.rgb) * 2.0 - 1.0;
+            vec3 ir = 1.0 / (r.rgb + rSign * epsilon);
             vec3 rmax = (boxmax - h.rgb) * ir;
             vec3 rmin = (boxmin - h.rgb) * ir;
             vec3 imin = min(rmax, rmin);
@@ -292,61 +376,138 @@ vec4 sampleTextureCatmullRom(const sampler2D tex, const highp vec2 uv, const hig
     float k3 = w3.x  * w12.y;
     float k4 = w12.x * w3.y;
 
-    vec4 s[5];
-    s[0] = textureLod(tex, vec2(texPos12.x, texPos0.y),  0.0);
-    s[1] = textureLod(tex, vec2(texPos0.x,  texPos12.y), 0.0);
-    s[2] = textureLod(tex, vec2(texPos12.x, texPos12.y), 0.0);
-    s[3] = textureLod(tex, vec2(texPos3.x,  texPos12.y), 0.0);
-    s[4] = textureLod(tex, vec2(texPos12.x, texPos3.y),  0.0);
+    vec4 s0 = textureLod(tex, vec2(texPos12.x, texPos0.y),  0.0);
+    vec4 s1 = textureLod(tex, vec2(texPos0.x,  texPos12.y), 0.0);
+    vec4 s2 = textureLod(tex, vec2(texPos12.x, texPos12.y), 0.0);
+    vec4 s3 = textureLod(tex, vec2(texPos3.x,  texPos12.y), 0.0);
+    vec4 s4 = textureLod(tex, vec2(texPos12.x, texPos3.y),  0.0);
 
-    vec4 result =   k0 * s[0]
-                  + k1 * s[1]
-                  + k2 * s[2]
-                  + k3 * s[3]
-                  + k4 * s[4];
-
-    result *= rcp(k0 + k1 + k2 + k3 + k4);
+    vec4 result = (k0 * s0 + k1 * s1 + k2 * s2 + k3 * s3 + k4 * s4)
+                * rcp(k0 + k1 + k2 + k3 + k4);
 
     // deringing...
-    vec4 boxmin = min(min(min(s[0], s[1]), min(s[2], s[3])), s[4]);
-    vec4 boxmax = max(max(max(s[0], s[1]), max(s[2], s[3])), s[4]);
+    vec4 boxmin = min(min(min(s0, s1), min(s2, s3)), s4);
+    vec4 boxmax = max(max(max(s0, s1), max(s2, s3)), s4);
     result = clamp(result, boxmin, boxmax);
     return result;
 }
 
-const vec2 kInputFilterSampleOffsets[9] = vec2[9](
-        vec2( 0,  0),
-        vec2( 0, -1), vec2(-1,  0), vec2( 1,  0), vec2( 0,  1),
-        vec2(-1, -1), vec2( 1, -1), vec2(-1,  1), vec2( 1,  1)
-);
+// Returns (min, max) raw reversed-Z depth over the 3x3 render-texel neighborhood around uv
+// (including diagonals, to catch thin features crossing texel corners).
+highp vec2 depthNeighborhoodRange(
+        const highp sampler2D tex, const highp vec2 uv, const highp float center) {
+    highp float dmin = center;
+    highp float dmax = center;
+    highp float d;
+    d = textureLodOffset(tex, uv, 0.0, ivec2(-1, -1)).r;
+    dmin = min(dmin, d); dmax = max(dmax, d);
+    d = textureLodOffset(tex, uv, 0.0, ivec2( 0, -1)).r;
+    dmin = min(dmin, d); dmax = max(dmax, d);
+    d = textureLodOffset(tex, uv, 0.0, ivec2( 1, -1)).r;
+    dmin = min(dmin, d); dmax = max(dmax, d);
+    d = textureLodOffset(tex, uv, 0.0, ivec2(-1,  0)).r;
+    dmin = min(dmin, d); dmax = max(dmax, d);
+    d = textureLodOffset(tex, uv, 0.0, ivec2( 1,  0)).r;
+    dmin = min(dmin, d); dmax = max(dmax, d);
+    d = textureLodOffset(tex, uv, 0.0, ivec2(-1,  1)).r;
+    dmin = min(dmin, d); dmax = max(dmax, d);
+    d = textureLodOffset(tex, uv, 0.0, ivec2( 0,  1)).r;
+    dmin = min(dmin, d); dmax = max(dmax, d);
+    d = textureLodOffset(tex, uv, 0.0, ivec2( 1,  1)).r;
+    dmin = min(dmin, d); dmax = max(dmax, d);
+    return vec2(dmin, dmax);
+}
 
 void postProcess(inout PostProcessInputs postProcess) {
-    const bool isColorYCoCg = materialConstants_useYCoCg &&
-            materialConstants_boxClipping != BOX_CLIPPING_NONE;
-
-    const bool isHistoryYCoCg = materialConstants_useYCoCg &&
-            materialConstants_boxClipping != BOX_CLIPPING_NONE;
-
     // destination uv interpolated to pixel center
-    highp vec4 uv = variable_vertex;
+    highp vec2 uv = variable_vertex.xy;
+    highp vec2 historyUv = variable_vertex.zw;
+
+    // History box-clipping and blend weights (1.0 = full strength; relaxed by motionAdaptiveHistory).
+    float historyBoxStrength = 1.0;
+    float historyAlphaStrength = 1.0;
+
+    // Confidence in [0, 1] that history belongs to a different surface (from depthDisocclusion).
+    float disocclusion = 0.0;
 
     if (materialConstants_historyReprojection) {
         // read the depth buffer center sample for reprojection
-        highp float depth = textureLod(materialParams_depth, uv.xy, 0.0).r;
+        highp float depth = textureLod(materialParams_depth, uv, 0.0).r;
         // reproject history to current frame
-        uv.zw = uvToRenderTargetUV(uv.zw);
-        highp vec4 q = materialParams.reprojection * vec4(uv.zw, depth, 1.0);
-        uv.zw = (q.xy * (1.0 / q.w)) * 0.5 + 0.5;
-        uv.zw = uvToRenderTargetUV(uv.zw);
+        historyUv = uvToRenderTargetUV(historyUv);
+        highp vec4 q = materialParams.reprojection * vec4(historyUv, depth, 1.0);
+        highp float invQW = 1.0 / q.w;
+        historyUv = (q.xy * invQW) * 0.5 + 0.5;
+        historyUv = uvToRenderTargetUV(historyUv);
+
+        highp float reprojectionDeltaLen =
+                length((historyUv - uv) * materialParams.colorResolution.xy);
+
+        // Relax history rejection and feedback toward their configured floors when camera motion
+        // is low, so static pixels can accumulate jittered samples without box-clipping flicker.
+        if (materialConstants_motionAdaptiveHistory) {
+            float rawMotionAmount = motionAmount(reprojectionDeltaLen);
+
+            // Force full strength on sky/far content where translation produces no UV delta.
+            float farness = 1.0 - smoothstep(0.0, materialParams.skyDepthThreshold, depth);
+            rawMotionAmount = max(rawMotionAmount, farness);
+
+            // Keep full strength for motionHoldFrames after camera motion stops so recent
+            // disocclusions finish converging before relaxation resumes.
+            rawMotionAmount = max(rawMotionAmount, materialParams.motionHoldAmount);
+
+            historyBoxStrength = mix(materialParams.minBoxStrength, 1.0, rawMotionAmount);
+            historyAlphaStrength = mix(materialParams.minAlphaStrength, 1.0, rawMotionAmount);
+        }
+
+        if (materialConstants_depthDisocclusion) {
+            // Compare current depth reprojected into history clip space against depthHistory
+            // in raw reversed-Z (avoids far-plane linearization blow-up).
+            highp float expectedHistoryDepth = q.z * invQW;
+
+            // Realign the jittered depth sample grids using render resolution (colorResolution),
+            // since depth buffers are at render resolution even when upscaling.
+            highp vec2 jitterCorrection =
+                    (materialParams.jitter - materialParams.previousJitter) *
+                            materialParams.colorResolution.zw;
+            highp vec2 historyDepthUv = historyUv + jitterCorrection;
+
+            highp float historyDepth = textureLod(materialParams_depthHistory, historyDepthUv, 0.0).r;
+            highp float delta = historyDepth - expectedHistoryDepth;
+
+            // Bound the depth change explainable by sub-texel jitter using the 3x3 depth spread,
+            // fading that tolerance out once reprojection displacement exceeds 1 render texel.
+            highp vec2 depthRange = depthNeighborhoodRange(materialParams_depth, uv, depth);
+            highp float jitterExplainable = (depthRange.y - depthRange.x) *
+                    (1.0 - smoothstep(kMotionFadeStartTexels, kMotionFadeEndTexels,
+                            reprojectionDeltaLen));
+
+            // Depth mismatch beyond the jitter bound is disocclusion evidence; optionally require
+            // the history depth neighborhood to agree so sub-texel static features don't false-fire.
+            highp float evidence = abs(delta) - jitterExplainable;
+            if (materialConstants_disocclusionHistoryNeighborhood) {
+                highp vec2 historyRange = depthNeighborhoodRange(
+                        materialParams_depthHistory, historyDepthUv, historyDepth);
+                evidence = min(evidence, max(expectedHistoryDepth - historyRange.y,
+                                             historyRange.x - expectedHistoryDepth));
+            }
+            disocclusion = smoothstep(0.0, materialParams.disocclusionDepthThreshold,
+                    max(0.0, evidence));
+
+            // Disocclusion only ever increases rejection strength back toward 1.0.
+            historyBoxStrength = max(historyBoxStrength, disocclusion);
+            historyAlphaStrength = max(historyAlphaStrength, disocclusion);
+        }
     }
 
     // read center color and history samples
     vec4 history;
     if (materialConstants_filterHistory) {
-        history = sampleTextureCatmullRom(materialParams_history, uv.zw, materialParams.historyResolution);
+        history = sampleTextureCatmullRom(materialParams_history, historyUv, materialParams.historyResolution);
     } else {
-        history = textureLod(materialParams_history, uv.zw, 0.0);
+        history = textureLod(materialParams_history, historyUv, 0.0);
     }
+    history.rgb = tonemapIfHDR(history.rgb);
 
     highp vec2 inputSize = materialParams.colorResolution.xy;
     highp vec2 inputPixelSize = materialParams.colorResolution.zw;
@@ -362,16 +523,19 @@ void postProcess(inout PostProcessInputs postProcess) {
     //    +----------+----------+-
     //    |          |          |
     // o: reconstructed sample
-    // x: jittered sample
-    // p: texture coordinate of the closest jittered sample from the reconstructed sample
+    // x: jittered (actually captured) sample
+    // p: texture coordinate of the input texel closest to the reconstructed sample
 
-    highp vec2 reconstructedFragmentPos = uv.xy * inputSize;
-    highp vec2 closestInputSamplePos = floor(reconstructedFragmentPos - materialParams.jitter) + 0.5;
+    highp vec2 reconstructedFragmentPos = uv * inputSize;
+    // Anchor p to uv alone (not jitter) so the 3x3 neighborhood box doesn't jump between input
+    // texels across the jitter cycle under upscaling.
+    highp vec2 closestInputSamplePos = floor(reconstructedFragmentPos) + 0.5;
     highp vec2 p = closestInputSamplePos * inputPixelSize;
     highp vec2 samplePos = closestInputSamplePos + materialParams.jitter;
     vec2 dcenter = samplePos - reconstructedFragmentPos;
 
-    vec4 filtered = textureLod(materialParams_color, p, 0.0);
+    vec4 rawColor = textureLod(materialParams_color, p, 0.0);
+    vec3 filtered = tonemapIfHDR(rawColor.rgb);
 
     float confidence = 1.0;
 
@@ -379,7 +543,7 @@ void postProcess(inout PostProcessInputs postProcess) {
             materialConstants_boxClipping != BOX_CLIPPING_NONE) {
 
         vec3 s[9];
-        s[0] = filtered.rgb;
+        s[0] = filtered; // already tonemapped above
         s[1] = textureLodOffset(materialParams_color, p, 0.0, ivec2( 0, -1)).rgb;
         s[2] = textureLodOffset(materialParams_color, p, 0.0, ivec2(-1,  0)).rgb;
         s[3] = textureLodOffset(materialParams_color, p, 0.0, ivec2( 1,  0)).rgb;
@@ -389,11 +553,15 @@ void postProcess(inout PostProcessInputs postProcess) {
         s[7] = textureLodOffset(materialParams_color, p, 0.0, ivec2(-1,  1)).rgb;
         s[8] = textureLodOffset(materialParams_color, p, 0.0, ivec2( 1,  1)).rgb;
 
-        // the box can be used for deringing or history correction
-        vec3 box5min = min(s[0],    min(min(s[1], s[2]), min(s[3], s[4])));
-        vec3 box5max = max(s[0],    max(max(s[1], s[2]), max(s[3], s[4])));
-        vec3 box9min = min(box5min, min(min(s[5], s[6]), min(s[7], s[8])));
-        vec3 box9max = max(box5max, max(max(s[5], s[6]), max(s[7], s[8])));
+        // The 3x3 neighborhood box in RGB, used for deringing below and as a valid [0, 1) RGB
+        // gamut to clamp the YCoCg history result back into.
+        vec3 rgbBoxMin = s[0];
+        vec3 rgbBoxMax = s[0];
+        for (int i = 1; i < 9; i++) {
+            s[i] = tonemapIfHDR(s[i]);
+            rgbBoxMin = min(rgbBoxMin, s[i]);
+            rgbBoxMax = max(rgbBoxMax, s[i]);
+        }
 
         if (materialConstants_filterInput) {
             // reconstruct the sample at the center of the current pixel from 3x3 input samples
@@ -404,61 +572,99 @@ void postProcess(inout PostProcessInputs postProcess) {
             //     p: texture coordinate of the center input sample
             //     dcenter = (p * inputSize - jitter) - uv * inputSize
 
-            filtered = vec4(vec3(0), filtered.a);
-            if (materialConstants_upscaling) {
-                // the weigths act as a blending factor because they acount only for a part of the
-                // reconstruction filter (for this frame). If the max weight is 0, it doesn't mean we must
-                // accumulate black into the history, but it means that these samples have little effect on the
-                // final reconstruction.
-                confidence = 0.0;
-            }
-
             // The 2D application of the lanczos filter as a separable filter, which is the correct application
             // of lanczos, however it is not isotropic.
-            float w0 = lanczos2(dcenter.x - 1.0, materialParams.scale);
-            float w1 = lanczos2(dcenter.x,       materialParams.scale);
-            float w2 = lanczos2(dcenter.x + 1.0, materialParams.scale);
-            float w3 = lanczos2(dcenter.y - 1.0, materialParams.scale);
-            float w4 = lanczos2(dcenter.y,       materialParams.scale);
-            float w5 = lanczos2(dcenter.y + 1.0, materialParams.scale);
+            vec3 vx = dcenter.x + vec3(-1.0, 0.0, 1.0);
+            vec3 vy = dcenter.y + vec3(-1.0, 0.0, 1.0);
+            if (materialConstants_upscaling) {
+                vx = clamp(vx * materialParams.scale, -2.0, 2.0);
+                vy = clamp(vy * materialParams.scale, -2.0, 2.0);
+            }
+            vec3 wx3 = lanczos2(vx);
+            vec3 wy3 = lanczos2(vy);
+            float w0 = wx3.x, w1 = wx3.y, w2 = wx3.z;
+            float w3 = wy3.x, w4 = wy3.y, w5 = wy3.z;
             highp float wx = w0 + w1 + w2;
             highp float wy = w3 + w4 + w5;
+            filtered = (s[5] * w0 + s[1] * w1 + s[6] * w2) * w3
+                     + (s[2] * w0 + s[0] * w1 + s[3] * w2) * w4
+                     + (s[7] * w0 + s[4] * w1 + s[8] * w2) * w5;
+
+            // Clamp reconstruction overshoot to the sampled neighborhood (widened below if
+            // exactLanczosSupport adds 4th-tap samples).
+            vec3 deringMin = rgbBoxMin;
+            vec3 deringMax = rgbBoxMax;
+
+            // At 1:1, 3 taps per axis drops the negative-lobe tap at k = -2 or +2 whenever
+            // dcenter != 0; fetch the missing row/column/corner to cover the full radius-2 support.
+            if (materialConstants_exactLanczosSupport && !materialConstants_upscaling) {
+                highp float kx = dcenter.x >= 0.0 ? -2.0 : 2.0;
+                highp float ky = dcenter.y >= 0.0 ? -2.0 : 2.0;
+                vec2 wc = lanczos2(vec3(dcenter + vec2(kx, ky), 0.0)).xy;
+                float wcx = wc.x, wcy = wc.y;
+
+                // Extra column (sc[0..2]), extra row (sc[3..5]), and corner (sc[6]); widen
+                // deringing bounds to include them so clamping doesn't undo the 4th-tap sharpening.
+                vec3 sc[7];
+                sc[0] = textureLod(materialParams_color, p + vec2(kx, -1.0) * inputPixelSize, 0.0).rgb;
+                sc[1] = textureLod(materialParams_color, p + vec2(kx,  0.0) * inputPixelSize, 0.0).rgb;
+                sc[2] = textureLod(materialParams_color, p + vec2(kx,  1.0) * inputPixelSize, 0.0).rgb;
+                sc[3] = textureLod(materialParams_color, p + vec2(-1.0, ky) * inputPixelSize, 0.0).rgb;
+                sc[4] = textureLod(materialParams_color, p + vec2( 0.0, ky) * inputPixelSize, 0.0).rgb;
+                sc[5] = textureLod(materialParams_color, p + vec2( 1.0, ky) * inputPixelSize, 0.0).rgb;
+                sc[6] = textureLod(materialParams_color, p + vec2(kx,   ky) * inputPixelSize, 0.0).rgb;
+                for (int i = 0; i < 7; i++) {
+                    if (materialConstants_hdr) {
+                        sc[i] = tonemap(sc[i]);
+                    }
+                    deringMin = min(deringMin, sc[i]);
+                    deringMax = max(deringMax, sc[i]);
+                }
+
+                filtered += (sc[0] * w3 + sc[1] * w4 + sc[2] * w5) * wcx
+                          + (sc[3] * w0 + sc[4] * w1 + sc[5] * w2 + sc[6] * wcx) * wcy;
+
+                wx += wcx;
+                wy += wcy;
+            }
+
             float sum = wx * wy;
-            vec3 f;
-            f  = s[5] * w0;
-            f += s[1] * w1;
-            f += s[6] * w2;
-            filtered.rgb += f * w3;
-            f  = s[2] * w0;
-            f += s[0] * w1;
-            f += s[3] * w2;
-            filtered.rgb += f * w4;
-            f  = s[7] * w0;
-            f += s[4] * w1;
-            f += s[8] * w2;
-            filtered.rgb += f * w5;
+
+            // Under upscaling, all taps can land near kernel zeros simultaneously (sum ~ 0); fall
+            // back to the center sample s[0] to avoid NaN/Inf while confidence weights it out.
+            bool hasReconstruction = abs(sum) > 0.1;
+            filtered = hasReconstruction ? (filtered / sum) : s[0];
 
             // Deringing must happen in RGB, because clamping in YCoCg can produce out-of-gamut colors
-            filtered.rgb *= (1.0 / sum);
-            filtered.rgb = clamp(filtered.rgb, box9min, box9max);
+            filtered = clamp(filtered, deringMin, deringMax);
             if (materialConstants_upscaling) {
+                // the weights act as a blending factor because they account only for a part of the
+                // reconstruction filter (for this frame). If the max weight is 0, it doesn't mean
+                // we must accumulate black into the history, but it means that these samples have
+                // little effect on the final reconstruction.
                 confidence = sum;
             }
         }
 
         // build the history clamping box
         if (materialConstants_boxClipping != BOX_CLIPPING_NONE) {
+            vec3 boxTarget = filtered;
             if (materialConstants_useYCoCg) {
-                history.xyz = RGB_YCoCg(history.rgb);
-                filtered.xyz = RGB_YCoCg(filtered.rgb);
+                history = vec4(RGB_YCoCg(history.rgb), history.a);
+                boxTarget = RGB_YCoCg(filtered);
                 for (int i = 0; i < 9; i++) {
                     s[i] = RGB_YCoCg(s[i]);
                 }
-                // recompute the correction box in YCoCg
-                box5min = min(s[0],    min(min(s[1], s[2]), min(s[3], s[4])));
-                box5max = max(s[0],    max(max(s[1], s[2]), max(s[3], s[4])));
-                box9min = min(box5min, min(min(s[5], s[6]), min(s[7], s[8])));
-                box9max = max(box5max, max(max(s[5], s[6]), max(s[7], s[8])));
+            }
+            vec3 box5min = s[0], box5max = s[0];
+            for (int i = 1; i < 5; i++) {
+                box5min = min(box5min, s[i]);
+                box5max = max(box5max, s[i]);
+            }
+            vec3 box9min = box5min, box9max = box5max;
+            for (int i = 5; i < 9; i++) {
+                box9min = min(box9min, s[i]);
+                box9max = max(box9max, s[i]);
             }
             // give more or less importance to the corner samples by lerp'ing between the two boxes
             vec3 boxmin = mix(box5min, box9min, 0.5);
@@ -468,8 +674,9 @@ void postProcess(inout PostProcessInputs postProcess) {
                 // "An Excursion in Temporal Supersampling" by Marco Salvi
                 highp vec3 m0 = s[0];// conversion to highp
                 highp vec3 m1 = m0 * m0;
-                // we use only 5 samples instead of all 9
-                const int count = 5; // 5 or 9
+                // Include all 9 taps (with diagonals) so diagonal spatial variance is captured;
+                // paired with a lower default varianceGamma (0.7).
+                const int count = 9;
                 for (int i = 1; i < count; i++) {
                     highp vec3 c = s[i];// conversion to highp
                     m0 += c;
@@ -480,51 +687,69 @@ void postProcess(inout PostProcessInputs postProcess) {
                 // stdDev is never < 0, but we enforce it with abs(), which is free, to account for fp math
                 highp vec3 stdDev = sqrt(abs(a1 - a0 * a0));
 
+                // varianceGamma arrives pre-scaled by the upscale factor on the CPU.
                 // intersect both bounding boxes
-                boxmin = max(boxmin, a0 - materialConstants_varianceGamma * stdDev);
-                boxmax = min(boxmax, a0 + materialConstants_varianceGamma * stdDev);
+                boxmin = max(boxmin, a0 - materialParams.varianceGamma * stdDev);
+                boxmax = min(boxmax, a0 + materialParams.varianceGamma * stdDev);
             }
-            // history clamping
-            history = clipToBox(materialConstants_boxClipping, boxmin, boxmax, filtered, history);
+
+            // Floor the box width -- see kMinBoxHalfWidth above. Only ever widens.
+            vec3 boxCenter = (boxmin + boxmax) * 0.5;
+            boxmin = min(boxmin, boxCenter - kMinBoxHalfWidth);
+            boxmax = max(boxmax, boxCenter + kMinBoxHalfWidth);
+
+            // history clamping, scaled by how much this pixel's reprojection looks like camera
+            // motion (see historyBoxStrength above)
+            vec4 target4 = vec4(boxTarget, rawColor.a);
+            vec4 clippedHistory = clipToBox(materialConstants_boxClipping, boxmin, boxmax, target4, history);
+            history = mix(history, clippedHistory, historyBoxStrength);
+
+            if (materialConstants_depthDisocclusion) {
+                // Pull disoccluded history directly toward target4, since stale background colors
+                // can still fall inside a straddling silhouette's color box and bypass clipToBox.
+                history = mix(history, target4, disocclusion);
+            }
+
+            if (materialConstants_useYCoCg) {
+                // Convert back to tonemapped RGB and clamp to the RGB neighborhood box so
+                // out-of-gamut YCoCg box corners cannot hit untonemap()'s pole at 1.0.
+                // FIXME: clamp clippedHistory to RGB gamut at full strength before the
+                // historyBoxStrength mix above so partial box strength cannot leak out-of-gamut.
+                vec3 hRgb = YCoCg_RGB(history.rgb);
+                history = vec4(mix(hRgb, clamp(hRgb, rgbBoxMin, rgbBoxMax), historyBoxStrength),
+                        history.a);
+            }
         }
     }
 
-    float alpha = materialParams.alpha * confidence;
+    // Scale feedback by historyAlphaStrength so static pixels blend less current-frame jitter
+    // noise when motionAdaptiveHistory relaxes rejection.
+    float alpha = (materialParams.alpha * confidence) * historyAlphaStrength;
 
     if (materialConstants_preventFlickering) {
         // [Lottes] prevents flickering by modulating the blend weight by the difference in luma
-        float lumaColor = luma(filtered.rgb, isColorYCoCg);
-        float lumaHistory = luma(history.rgb, isHistoryYCoCg);
+        float lumaColor = luminance(filtered);
+        float lumaHistory = luminance(history.rgb);
         float diff = 1.0 - abs(lumaColor - lumaHistory) / (0.001 + max(lumaColor, lumaHistory));
         alpha *= diff * diff;
     }
 
-    // go back to RGB space before tonemapping
-    if (isColorYCoCg) {
-        filtered.rgb = YCoCg_RGB(filtered.rgb);
-    }
-    if (isHistoryYCoCg) {
-        history.rgb = YCoCg_RGB(history.rgb);
-    }
-
-    if (materialConstants_hdr) {
-        // tonemap before mixing
-        filtered.rgb = tonemap(filtered.rgb);
-        history.rgb = tonemap(history.rgb);
-    }
-
     // combine history and current frame
-    vec4 result = mix(history, filtered, alpha);
+    vec4 result = mix(history, vec4(filtered, rawColor.a), alpha);
 
     if (materialConstants_hdr) {
         // untonemap result
-        result.rgb = untonemap(result.rgb);
+        result = vec4(untonemap(result.rgb), result.a);
     }
 
 #if POST_PROCESS_OPAQUE
-    // kill the work performed above
-    result.a = 1.0;
+        result.a = 1.0;
 #endif
+
+    // Diagnostic: output the disocclusion mask (engine.debug.taa.visualize_disocclusion).
+    if (materialConstants_debugVisualizeDisocclusion) {
+        result = vec4(vec3(disocclusion), 1.0);
+    }
 
     // store result (which will becomes new history)
     postProcess.color = result;

@@ -21,207 +21,217 @@ engine handles, and their corresponding Java and JNI types. It also maintains th
 global registry of known classes discovered during multi-file IR analysis.
 """
 
-from typing import Any, Dict, List, Set, Tuple
+import re
+from typing import Any, Dict, Iterable, List, Pattern, Set, Tuple
+
+
+def _expand_keys(entries: Iterable[Tuple[Iterable[str], Dict[str, Any]]]) -> Dict[str, Dict[str, Any]]:
+    """Expand grouped key aliases into a flat lookup dictionary."""
+    result: Dict[str, Dict[str, Any]] = {}
+    for keys, val in entries:
+        for k in keys:
+            result[k] = val
+    return result
+
 
 # -----------------------------------------------------------------------------
 # C++ TO JAVA / JNI TYPE MAPPING TABLES
 # -----------------------------------------------------------------------------
 
 # Maps fundamental C++ types to Java types, JNI types, and optional annotations
-TYPE_MAP: Dict[str, Dict[str, Any]] = {
-    "void": {"java": "void", "jni": "void", "jni_type": "void"},
-    "bool": {"java": "boolean", "jni": "jboolean", "jni_type": "jboolean"},
+TYPE_MAP: Dict[str, Dict[str, Any]] = _expand_keys([
+    (("void",), {"java": "void", "jni": "void", "jni_type": "void"}),
+    (("bool",), {"java": "boolean", "jni": "jboolean", "jni_type": "jboolean"}),
 
-    # Char types
-    "char": {"java": "int", "jni": "jint", "jni_type": "jint"},
-    "unsigned char": {"java": "int", "jni": "jint", "jni_type": "jint", "annotation": "@IntRange(from = 0)"},
-    "signed char": {"java": "int", "jni": "jint", "jni_type": "jint"},
+    # Signed integer types (8, 16, 32-bit -> int / jint)
+    (("char", "signed char", "int8_t", "short", "int16_t", "int32_t", "ssize_t"),
+     {"java": "int", "jni": "jint", "jni_type": "jint"}),
+    (("int",),
+     {"java": "int", "jni": "jint", "jni_type": "jint", "to_cpp": "{value}"}),
 
-    # 8-bit integers
-    "int8_t": {"java": "int", "jni": "jint", "jni_type": "jint"},
-    "uint8_t": {"java": "int", "jni": "jint", "jni_type": "jint", "annotation": "@IntRange(from = 0)"},
+    # Unsigned integer types (8, 16, 32-bit, size_t -> @IntRange(from = 0) int / jint)
+    (("unsigned char", "uint8_t", "unsigned short", "uint16_t", "unsigned int", "uint32_t", "size_t"),
+     {"java": "int", "jni": "jint", "jni_type": "jint", "annotation": "@IntRange(from = 0)"}),
 
-    # 16-bit integers
-    "short": {"java": "int", "jni": "jint", "jni_type": "jint"},
-    "unsigned short": {"java": "int", "jni": "jint", "jni_type": "jint", "annotation": "@IntRange(from = 0)"},
-    "int16_t": {"java": "int", "jni": "jint", "jni_type": "jint"},
-    "uint16_t": {"java": "int", "jni": "jint", "jni_type": "jint", "annotation": "@IntRange(from = 0)"},
-
-    # 32-bit integers
-    "int": {"java": "int", "jni": "jint", "jni_type": "jint", "to_cpp": "{value}"},
-    "unsigned int": {"java": "int", "jni": "jint", "jni_type": "jint", "annotation": "@IntRange(from = 0)"},
-    "int32_t": {"java": "int", "jni": "jint", "jni_type": "jint"},
-    "uint32_t": {"java": "int", "jni": "jint", "jni_type": "jint", "annotation": "@IntRange(from = 0)"},
-
-    # 64-bit integers
-    "long": {"java": "long", "jni": "jlong", "jni_type": "jlong"},
-    "unsigned long": {"java": "long", "jni": "jlong", "jni_type": "jlong", "annotation": "@IntRange(from = 0)"},
-    "long long": {"java": "long", "jni": "jlong", "jni_type": "jlong"},
-    "unsigned long long": {"java": "long", "jni": "jlong", "jni_type": "jlong", "annotation": "@IntRange(from = 0)"},
-    "int64_t": {"java": "long", "jni": "jlong", "jni_type": "jlong"},
-    "uint64_t": {"java": "long", "jni": "jlong", "jni_type": "jlong", "annotation": "@IntRange(from = 0)"},
-
-    # Architecture-dependent pointer/size types
-    "size_t": {"java": "int", "jni": "jint", "jni_type": "jint", "annotation": "@IntRange(from = 0)"},
-    "ssize_t": {"java": "int", "jni": "jint", "jni_type": "jint"},
-    "intptr_t": {"java": "long", "jni": "jlong", "jni_type": "jlong"},
-    "uintptr_t": {"java": "long", "jni": "jlong", "jni_type": "jlong", "annotation": "@IntRange(from = 0)"},
-    "void*": {"java": "long", "jni": "jlong", "jni_type": "jlong"},
-    "const void*": {"java": "long", "jni": "jlong", "jni_type": "jlong"},
-    "void *": {"java": "long", "jni": "jlong", "jni_type": "jlong"},
-    "const void *": {"java": "long", "jni": "jlong", "jni_type": "jlong"},
+    # 64-bit integer and pointer types (-> long / jlong)
+    (("long", "long long", "int64_t", "intptr_t", "void*", "const void*", "void *", "const void *"),
+     {"java": "long", "jni": "jlong", "jni_type": "jlong"}),
+    (("unsigned long", "unsigned long long", "uint64_t", "uintptr_t"),
+     {"java": "long", "jni": "jlong", "jni_type": "jlong", "annotation": "@IntRange(from = 0)"}),
 
     # Floating-point types
-    "float": {"java": "float", "jni": "jfloat", "jni_type": "jfloat", "to_cpp": "{value}"},
-    "double": {"java": "double", "jni": "jdouble", "jni_type": "jdouble", "to_cpp": "{value}"},
+    (("float",), {"java": "float", "jni": "jfloat", "jni_type": "jfloat", "to_cpp": "{value}"}),
+    (("double",), {"java": "double", "jni": "jdouble", "jni_type": "jdouble", "to_cpp": "{value}"}),
 
     # Strings and string views
-    "const char*": {"java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "const char*"},
-    "const char *": {"java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "const char*"},
-    "char*": {"java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "char*"},
-    "char *": {"java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "char*"},
-    "std::string_view": {"java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "std::string_view"},
-    "std::string": {"java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "std::string"},
-    "utils::CString": {"java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "utils::CString"},
-    "utils::StaticString": {"java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "utils::StaticString"},
-    "utils::ImmutableCString": {"java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "utils::ImmutableCString"},
+    (("const char*", "const char *"),
+     {"java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "const char*"}),
+    (("char*", "char *"),
+     {"java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "char*"}),
+    (("std::string_view",),
+     {"java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "std::string_view"}),
+    (("std::string",),
+     {"java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "std::string"}),
+    (("utils::CString",),
+     {"java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "utils::CString"}),
+    (("utils::StaticString",),
+     {"java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "utils::StaticString"}),
+    (("utils::ImmutableCString",),
+     {"java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "utils::ImmutableCString"}),
 
-    # Tribool and optional
-    "utils::tribool": {"java": "boolean", "jni": "jboolean", "jni_type": "jboolean", "to_cpp": "utils::tribool((bool){value})", "from_cpp": "(jboolean)(({value}).is_true())"},
-    "std::optional<bool>": {"java": "boolean", "jni": "jboolean", "jni_type": "jboolean", "to_cpp": "std::make_optional((bool){value})", "from_cpp": "(jboolean)({value}.value_or(false))"},
+    # Tribool and optional<bool>
+    (("utils::tribool",), {
+        "java": "boolean", "jni": "jboolean", "jni_type": "jboolean",
+        "to_cpp": "utils::tribool((bool){value})",
+        "from_cpp": "(jboolean)(({value}).is_true())",
+    }),
+    (("std::optional<bool>",), {
+        "java": "boolean", "jni": "jboolean", "jni_type": "jboolean",
+        "to_cpp": "std::make_optional((bool){value})",
+        "from_cpp": "(jboolean)({value}.value_or(false))",
+    }),
 
-    # Buffer descriptors
-    "backend::PixelBufferDescriptor": {"java": "PixelBufferDescriptor", "jni": "jobject", "jni_type": "jobject"},
-    "filament::backend::PixelBufferDescriptor": {"java": "PixelBufferDescriptor", "jni": "jobject", "jni_type": "jobject"},
-    "PixelBufferDescriptor": {"java": "PixelBufferDescriptor", "jni": "jobject", "jni_type": "jobject"},
-    "Texture::PixelBufferDescriptor": {"java": "PixelBufferDescriptor", "jni": "jobject", "jni_type": "jobject"},
+    # PixelBufferDescriptor
+    (("backend::PixelBufferDescriptor", "filament::backend::PixelBufferDescriptor",
+      "PixelBufferDescriptor", "Texture::PixelBufferDescriptor"),
+     {"java": "PixelBufferDescriptor", "jni": "jobject", "jni_type": "jobject"}),
 
-    # External image handles
-    "backend::Platform::ExternalImageHandle": {"java": "long", "jni": "jlong", "jni_type": "jlong", "to_cpp": "backend::Platform::ExternalImageHandle((backend::Platform::ExternalImage*){value})"},
-    "backend::Platform::ExternalImageHandleRef": {"java": "long", "jni": "jlong", "jni_type": "jlong", "to_cpp": "backend::Platform::ExternalImageHandle((backend::Platform::ExternalImage*){value})"},
-    "filament::backend::Platform::ExternalImageHandle": {"java": "long", "jni": "jlong", "jni_type": "jlong", "to_cpp": "backend::Platform::ExternalImageHandle((backend::Platform::ExternalImage*){value})"},
-    "filament::backend::Platform::ExternalImageHandleRef": {"java": "long", "jni": "jlong", "jni_type": "jlong", "to_cpp": "backend::Platform::ExternalImageHandle((backend::Platform::ExternalImage*){value})"},
-    "ExternalImageHandle": {"java": "long", "jni": "jlong", "jni_type": "jlong", "to_cpp": "backend::Platform::ExternalImageHandle((backend::Platform::ExternalImage*){value})"},
-    "ExternalImageHandleRef": {"java": "long", "jni": "jlong", "jni_type": "jlong", "to_cpp": "backend::Platform::ExternalImageHandle((backend::Platform::ExternalImage*){value})"},
-    "Texture::ExternalImageHandle": {"java": "long", "jni": "jlong", "jni_type": "jlong", "to_cpp": "backend::Platform::ExternalImageHandle((backend::Platform::ExternalImage*){value})"},
-    "Texture::ExternalImageHandleRef": {"java": "long", "jni": "jlong", "jni_type": "jlong", "to_cpp": "backend::Platform::ExternalImageHandle((backend::Platform::ExternalImage*){value})"},
+    # ExternalImageHandle
+    (("backend::Platform::ExternalImageHandle", "backend::Platform::ExternalImageHandleRef",
+      "filament::backend::Platform::ExternalImageHandle", "filament::backend::Platform::ExternalImageHandleRef",
+      "ExternalImageHandle", "ExternalImageHandleRef",
+      "Texture::ExternalImageHandle", "Texture::ExternalImageHandleRef"), {
+        "java": "long", "jni": "jlong", "jni_type": "jlong",
+        "to_cpp": "backend::Platform::ExternalImageHandle((backend::Platform::ExternalImage*){value})",
+    }),
 
-    # Special Enums
-    "filament::backend::CullingMode": {"java": "Material.CullingMode", "jni": "jint", "jni_type": "jint", "is_enum": True, "cpp_enum_type": "backend::CullingMode", "to_cpp": "(backend::CullingMode){value}", "from_cpp": "(jint){value}"},
-    "backend::CullingMode": {"java": "Material.CullingMode", "jni": "jint", "jni_type": "jint", "is_enum": True, "cpp_enum_type": "backend::CullingMode", "to_cpp": "(backend::CullingMode){value}", "from_cpp": "(jint){value}"},
-    "CullingMode": {"java": "Material.CullingMode", "jni": "jint", "jni_type": "jint", "is_enum": True, "cpp_enum_type": "backend::CullingMode", "to_cpp": "(backend::CullingMode){value}", "from_cpp": "(jint){value}"},
-    "filament::TransparencyMode": {"java": "Material.TransparencyMode", "jni": "jint", "jni_type": "jint", "is_enum": True, "cpp_enum_type": "TransparencyMode", "to_cpp": "(TransparencyMode){value}", "from_cpp": "(jint){value}"},
-    "filament::backend::SamplerCompareFunc": {"java": "TextureSampler.CompareFunc", "jni": "jint", "jni_type": "jint", "is_enum": True, "enum_name": "CompareFunc", "cpp_enum_type": "backend::SamplerCompareFunc", "to_cpp": "(backend::SamplerCompareFunc){value}", "from_cpp": "(jint){value}"},
-    "backend::SamplerCompareFunc": {"java": "TextureSampler.CompareFunc", "jni": "jint", "jni_type": "jint", "is_enum": True, "enum_name": "CompareFunc", "cpp_enum_type": "backend::SamplerCompareFunc", "to_cpp": "(backend::SamplerCompareFunc){value}", "from_cpp": "(jint){value}"},
-    "SamplerCompareFunc": {"java": "TextureSampler.CompareFunc", "jni": "jint", "jni_type": "jint", "is_enum": True, "enum_name": "CompareFunc", "cpp_enum_type": "backend::SamplerCompareFunc", "to_cpp": "(backend::SamplerCompareFunc){value}", "from_cpp": "(jint){value}"},
-    "DepthFunc": {"java": "TextureSampler.CompareFunc", "jni": "jint", "jni_type": "jint", "is_enum": True, "enum_name": "CompareFunc", "cpp_enum_type": "backend::SamplerCompareFunc", "to_cpp": "(backend::SamplerCompareFunc){value}", "from_cpp": "(jint){value}"},
-    "StencilCompareFunc": {"java": "TextureSampler.CompareFunc", "jni": "jint", "jni_type": "jint", "is_enum": True, "enum_name": "CompareFunc", "cpp_enum_type": "backend::SamplerCompareFunc", "to_cpp": "(backend::SamplerCompareFunc){value}", "from_cpp": "(jint){value}"},
-    "filament::backend::CompilerPriorityQueue": {"java": "Material.CompilerPriorityQueue", "jni": "jint", "jni_type": "jint", "is_enum": True, "cpp_enum_type": "backend::CompilerPriorityQueue", "to_cpp": "(backend::CompilerPriorityQueue){value}", "from_cpp": "(jint){value}"},
-    "backend::CompilerPriorityQueue": {"java": "Material.CompilerPriorityQueue", "jni": "jint", "jni_type": "jint", "is_enum": True, "cpp_enum_type": "backend::CompilerPriorityQueue", "to_cpp": "(backend::CompilerPriorityQueue){value}", "from_cpp": "(jint){value}"},
-    "CompilerPriorityQueue": {"java": "Material.CompilerPriorityQueue", "jni": "jint", "jni_type": "jint", "is_enum": True, "cpp_enum_type": "backend::CompilerPriorityQueue", "to_cpp": "(backend::CompilerPriorityQueue){value}", "from_cpp": "(jint){value}"},
-    "filament::backend::FeatureLevel": {"java": "Engine.FeatureLevel", "jni": "jint", "jni_type": "jint", "is_enum": True, "enum_name": "FeatureLevel", "cpp_enum_type": "backend::FeatureLevel", "to_cpp": "(backend::FeatureLevel){value}", "from_cpp": "(jint){value}"},
-    "backend::FeatureLevel": {"java": "Engine.FeatureLevel", "jni": "jint", "jni_type": "jint", "is_enum": True, "enum_name": "FeatureLevel", "cpp_enum_type": "backend::FeatureLevel", "to_cpp": "(backend::FeatureLevel){value}", "from_cpp": "(jint){value}"},
-    "FeatureLevel": {"java": "Engine.FeatureLevel", "jni": "jint", "jni_type": "jint", "is_enum": True, "enum_name": "FeatureLevel", "cpp_enum_type": "backend::FeatureLevel", "to_cpp": "(backend::FeatureLevel){value}", "from_cpp": "(jint){value}"},
-    "filament::RgbType": {"java": "Colors.RgbType", "jni": "jint", "jni_type": "jint", "is_enum": True, "cpp_enum_type": "RgbType", "to_cpp": "(RgbType){value}", "from_cpp": "(jint){value}"},
-    "RgbType": {"java": "Colors.RgbType", "jni": "jint", "jni_type": "jint", "is_enum": True, "cpp_enum_type": "RgbType", "to_cpp": "(RgbType){value}", "from_cpp": "(jint){value}"},
-    "filament::Color::RgbType": {"java": "Colors.RgbType", "jni": "jint", "jni_type": "jint", "is_enum": True, "cpp_enum_type": "RgbType", "to_cpp": "(RgbType){value}", "from_cpp": "(jint){value}"},
-    "Color::RgbType": {"java": "Colors.RgbType", "jni": "jint", "jni_type": "jint", "is_enum": True, "cpp_enum_type": "RgbType", "to_cpp": "(RgbType){value}", "from_cpp": "(jint){value}"},
-    "filament::RgbaType": {"java": "Colors.RgbaType", "jni": "jint", "jni_type": "jint", "is_enum": True, "cpp_enum_type": "RgbaType", "to_cpp": "(RgbaType){value}", "from_cpp": "(jint){value}"},
-    "RgbaType": {"java": "Colors.RgbaType", "jni": "jint", "jni_type": "jint", "is_enum": True, "cpp_enum_type": "RgbaType", "to_cpp": "(RgbaType){value}", "from_cpp": "(jint){value}"},
-    "filament::Color::RgbaType": {"java": "Colors.RgbaType", "jni": "jint", "jni_type": "jint", "is_enum": True, "cpp_enum_type": "RgbaType", "to_cpp": "(RgbaType){value}", "from_cpp": "(jint){value}"},
-    "Color::RgbaType": {"java": "Colors.RgbaType", "jni": "jint", "jni_type": "jint", "is_enum": True, "cpp_enum_type": "RgbaType", "to_cpp": "(RgbaType){value}", "from_cpp": "(jint){value}"},
-}
+    # Cross-header Enums
+    (("filament::backend::CullingMode", "backend::CullingMode", "CullingMode"), {
+        "java": "Material.CullingMode", "jni": "jint", "jni_type": "jint",
+        "is_enum": True, "cpp_enum_type": "backend::CullingMode",
+        "to_cpp": "(backend::CullingMode){value}", "from_cpp": "(jint){value}",
+    }),
+    (("filament::TransparencyMode",), {
+        "java": "Material.TransparencyMode", "jni": "jint", "jni_type": "jint",
+        "is_enum": True, "cpp_enum_type": "TransparencyMode",
+        "to_cpp": "(TransparencyMode){value}", "from_cpp": "(jint){value}",
+    }),
+    (("filament::backend::SamplerCompareFunc", "backend::SamplerCompareFunc",
+      "SamplerCompareFunc", "DepthFunc", "StencilCompareFunc"), {
+        "java": "TextureSampler.CompareFunc", "jni": "jint", "jni_type": "jint",
+        "is_enum": True, "enum_name": "CompareFunc", "cpp_enum_type": "backend::SamplerCompareFunc",
+        "to_cpp": "(backend::SamplerCompareFunc){value}", "from_cpp": "(jint){value}",
+    }),
+    (("filament::backend::CompilerPriorityQueue", "backend::CompilerPriorityQueue", "CompilerPriorityQueue"), {
+        "java": "Material.CompilerPriorityQueue", "jni": "jint", "jni_type": "jint",
+        "is_enum": True, "cpp_enum_type": "backend::CompilerPriorityQueue",
+        "to_cpp": "(backend::CompilerPriorityQueue){value}", "from_cpp": "(jint){value}",
+    }),
+    (("filament::backend::FeatureLevel", "backend::FeatureLevel", "FeatureLevel"), {
+        "java": "Engine.FeatureLevel", "jni": "jint", "jni_type": "jint",
+        "is_enum": True, "enum_name": "FeatureLevel", "cpp_enum_type": "backend::FeatureLevel",
+        "to_cpp": "(backend::FeatureLevel){value}", "from_cpp": "(jint){value}",
+    }),
+    (("filament::RgbType", "RgbType", "filament::Color::RgbType", "Color::RgbType"), {
+        "java": "Colors.RgbType", "jni": "jint", "jni_type": "jint",
+        "is_enum": True, "cpp_enum_type": "RgbType",
+        "to_cpp": "(RgbType){value}", "from_cpp": "(jint){value}",
+    }),
+    (("filament::RgbaType", "RgbaType", "filament::Color::RgbaType", "Color::RgbaType"), {
+        "java": "Colors.RgbaType", "jni": "jint", "jni_type": "jint",
+        "is_enum": True, "cpp_enum_type": "RgbaType",
+        "to_cpp": "(RgbaType){value}", "from_cpp": "(jint){value}",
+    }),
+])
+
+
+def _build_math_types() -> Dict[str, Dict[str, Any]]:
+    """Build the lookup table for Filament math vectors, matrices, and quaternions."""
+    table: Dict[str, Dict[str, Any]] = {}
+
+    vec_families = [
+        # (short_prefix, scalar_java, jni_arr, assert_prefix, tvec_types)
+        ("float", "float", "jfloatArray", "assertFloat", ("float",)),
+        ("double", "double", "jdoubleArray", "assertDouble", ("double",)),
+        ("bool", "boolean", "jbooleanArray", "assertBoolean", ()),
+        ("short", "short", "jshortArray", "assertShort", ("short", "int16_t")),
+        ("ushort", "int", "jintArray", "assertInt", ()),
+        ("int", "int", "jintArray", "assertInt", ("int", "int32_t")),
+        ("uint", "int", "jintArray", "assertInt", ("uint32_t",)),
+        ("byte", "byte", "jbyteArray", "assertByte", ()),
+        ("ubyte", "byte", "jbyteArray", "assertByte", ()),
+    ]
+
+    for prefix, scalar, jni_arr, assert_prefix, tvec_scalars in vec_families:
+        for dim in (2, 3, 4):
+            cpp_type = f"math::{prefix}{dim}"
+            entry = {
+                "java": f"{scalar}[]",
+                "jni": jni_arr,
+                "jni_type": jni_arr,
+                "scalar": scalar,
+                "size": dim,
+                "assert": f"{assert_prefix}{dim}",
+                "cpp_type": cpp_type,
+            }
+            table[cpp_type] = entry
+            for t_scalar in tvec_scalars:
+                table[f"filament::math::details::TVec{dim}<{t_scalar}>"] = entry
+                if t_scalar == "int16_t" and dim == 4:
+                    table["math::details::TVec4<int16_t>"] = entry
+                    table["details::TVec4<int16_t>"] = entry
+
+    for dim in (2, 3, 4):
+        size = dim * dim
+        matf_entry = {
+            "java": "float[]",
+            "jni": "jfloatArray",
+            "jni_type": "jfloatArray",
+            "scalar": "float",
+            "size": size,
+            "assert": f"assertMat{dim}f",
+            "cpp_type": f"math::mat{dim}f",
+        }
+        table[f"math::mat{dim}f"] = matf_entry
+        table[f"filament::math::details::TMat{dim}{dim}<float>"] = matf_entry
+
+        matd_entry = {
+            "java": "double[]",
+            "jni": "jdoubleArray",
+            "jni_type": "jdoubleArray",
+            "scalar": "double",
+            "size": size,
+            "assert": f"assertMat{dim}d",
+            "cpp_type": f"math::mat{dim}",
+        }
+        table[f"math::mat{dim}"] = matd_entry
+        table[f"filament::math::details::TMat{dim}{dim}<double>"] = matd_entry
+
+    quatf_entry = {
+        "java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray",
+        "scalar": "float", "size": 4, "assert": "assertFloat4",
+        "cpp_type": "math::quatf", "is_quaternion": True,
+    }
+    for k in ("math::quatf", "filament::math::details::TQuaternion<float>", "math::details::TQuaternion<float>"):
+        table[k] = quatf_entry
+
+    quatd_entry = {
+        "java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray",
+        "scalar": "double", "size": 4, "assert": "assertDouble4",
+        "cpp_type": "math::quat", "is_quaternion": True,
+    }
+    for k in ("math::quat", "filament::math::details::TQuaternion<double>", "math::details::TQuaternion<double>"):
+        table[k] = quatd_entry
+
+    return table
+
 
 # Math Types Configuration (Vectors, Matrices, and Quaternions)
-MATH_TYPES: Dict[str, Dict[str, Any]] = {
-    "math::float2": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 2, "assert": "assertFloat2", "cpp_type": "math::float2"},
-    "math::float3": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 3, "assert": "assertFloat3", "cpp_type": "math::float3"},
-    "math::float4": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 4, "assert": "assertFloat4", "cpp_type": "math::float4"},
-    "math::double2": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 2, "assert": "assertDouble2", "cpp_type": "math::double2"},
-    "math::double3": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 3, "assert": "assertDouble3", "cpp_type": "math::double3"},
-    "math::double4": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 4, "assert": "assertDouble4", "cpp_type": "math::double4"},
-    "math::bool2": {"java": "boolean[]", "jni": "jbooleanArray", "jni_type": "jbooleanArray", "scalar": "boolean", "size": 2, "assert": "assertBoolean2", "cpp_type": "math::bool2"},
-    "math::bool3": {"java": "boolean[]", "jni": "jbooleanArray", "jni_type": "jbooleanArray", "scalar": "boolean", "size": 3, "assert": "assertBoolean3", "cpp_type": "math::bool3"},
-    "math::bool4": {"java": "boolean[]", "jni": "jbooleanArray", "jni_type": "jbooleanArray", "scalar": "boolean", "size": 4, "assert": "assertBoolean4", "cpp_type": "math::bool4"},
+MATH_TYPES: Dict[str, Dict[str, Any]] = _build_math_types()
 
-    "math::mat2f": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 4, "assert": "assertMat2f", "cpp_type": "math::mat2f"},
-    "math::mat3f": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 9, "assert": "assertMat3f", "cpp_type": "math::mat3f"},
-    "math::mat4f": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 16, "assert": "assertMat4f", "cpp_type": "math::mat4f"},
-
-    # mat2, mat3, mat4 (no suffix) map to double[] unless specified otherwise
-    "math::mat2": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 4, "assert": "assertMat2d", "cpp_type": "math::mat2"},
-    "math::mat3": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 9, "assert": "assertMat3d", "cpp_type": "math::mat3"},
-    "math::mat4": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 16, "assert": "assertMat4d", "cpp_type": "math::mat4"},
-
-    # Canonical FQNs (Qualified Names)
-    # Vectors (Float)
-    "filament::math::details::TVec2<float>": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 2, "assert": "assertFloat2", "cpp_type": "math::float2"},
-    "filament::math::details::TVec3<float>": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 3, "assert": "assertFloat3", "cpp_type": "math::float3"},
-    "filament::math::details::TVec4<float>": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 4, "assert": "assertFloat4", "cpp_type": "math::float4"},
-    # Vectors (Double)
-    "filament::math::details::TVec2<double>": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 2, "assert": "assertDouble2", "cpp_type": "math::double2"},
-    "filament::math::details::TVec3<double>": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 3, "assert": "assertDouble3", "cpp_type": "math::double3"},
-    "filament::math::details::TVec4<double>": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 4, "assert": "assertDouble4", "cpp_type": "math::double4"},
-    # Matrices (Float)
-    "filament::math::details::TMat22<float>": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 4, "assert": "assertMat2f", "cpp_type": "math::mat2f"},
-    "filament::math::details::TMat33<float>": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 9, "assert": "assertMat3f", "cpp_type": "math::mat3f"},
-    "filament::math::details::TMat44<float>": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 16, "assert": "assertMat4f", "cpp_type": "math::mat4f"},
-    # Matrices (Double)
-    "filament::math::details::TMat22<double>": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 4, "assert": "assertMat2d", "cpp_type": "math::mat2"},
-    "filament::math::details::TMat33<double>": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 9, "assert": "assertMat3d", "cpp_type": "math::mat3"},
-    "filament::math::details::TMat44<double>": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 16, "assert": "assertMat4d", "cpp_type": "math::mat4"},
-
-    # Quaternions
-    "math::quatf": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 4, "assert": "assertFloat4", "cpp_type": "math::quatf"},
-    "math::quat": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 4, "assert": "assertDouble4", "cpp_type": "math::quat"},
-    "filament::math::details::TQuaternion<float>": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 4, "assert": "assertFloat4", "cpp_type": "math::quatf"},
-    "filament::math::details::TQuaternion<double>": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 4, "assert": "assertDouble4", "cpp_type": "math::quat"},
-    "math::details::TQuaternion<float>": {"java": "float[]", "jni": "jfloatArray", "jni_type": "jfloatArray", "scalar": "float", "size": 4, "assert": "assertFloat4", "cpp_type": "math::quatf"},
-    "math::details::TQuaternion<double>": {"java": "double[]", "jni": "jdoubleArray", "jni_type": "jdoubleArray", "scalar": "double", "size": 4, "assert": "assertDouble4", "cpp_type": "math::quat"},
-
-    # Math Vectors (short, ushort, int, uint, byte, ubyte)
-    "math::short2": {"java": "short[]", "jni": "jshortArray", "jni_type": "jshortArray", "scalar": "short", "size": 2, "assert": "assertShort2", "cpp_type": "math::short2"},
-    "math::short3": {"java": "short[]", "jni": "jshortArray", "jni_type": "jshortArray", "scalar": "short", "size": 3, "assert": "assertShort3", "cpp_type": "math::short3"},
-    "math::short4": {"java": "short[]", "jni": "jshortArray", "jni_type": "jshortArray", "scalar": "short", "size": 4, "assert": "assertShort4", "cpp_type": "math::short4"},
-    "math::ushort2": {"java": "int[]", "jni": "jintArray", "jni_type": "jintArray", "scalar": "int", "size": 2, "assert": "assertInt2", "cpp_type": "math::ushort2"},
-    "math::ushort3": {"java": "int[]", "jni": "jintArray", "jni_type": "jintArray", "scalar": "int", "size": 3, "assert": "assertInt3", "cpp_type": "math::ushort3"},
-    "math::ushort4": {"java": "int[]", "jni": "jintArray", "jni_type": "jintArray", "scalar": "int", "size": 4, "assert": "assertInt4", "cpp_type": "math::ushort4"},
-    "math::int2": {"java": "int[]", "jni": "jintArray", "jni_type": "jintArray", "scalar": "int", "size": 2, "assert": "assertInt2", "cpp_type": "math::int2"},
-    "math::int3": {"java": "int[]", "jni": "jintArray", "jni_type": "jintArray", "scalar": "int", "size": 3, "assert": "assertInt3", "cpp_type": "math::int3"},
-    "math::int4": {"java": "int[]", "jni": "jintArray", "jni_type": "jintArray", "scalar": "int", "size": 4, "assert": "assertInt4", "cpp_type": "math::int4"},
-    "math::uint2": {"java": "int[]", "jni": "jintArray", "jni_type": "jintArray", "scalar": "int", "size": 2, "assert": "assertInt2", "cpp_type": "math::uint2"},
-    "math::uint3": {"java": "int[]", "jni": "jintArray", "jni_type": "jintArray", "scalar": "int", "size": 3, "assert": "assertInt3", "cpp_type": "math::uint3"},
-    "math::uint4": {"java": "int[]", "jni": "jintArray", "jni_type": "jintArray", "scalar": "int", "size": 4, "assert": "assertInt4", "cpp_type": "math::uint4"},
-    "math::byte2": {"java": "byte[]", "jni": "jbyteArray", "jni_type": "jbyteArray", "scalar": "byte", "size": 2, "assert": "assertByte2", "cpp_type": "math::byte2"},
-    "math::byte3": {"java": "byte[]", "jni": "jbyteArray", "jni_type": "jbyteArray", "scalar": "byte", "size": 3, "assert": "assertByte3", "cpp_type": "math::byte3"},
-    "math::byte4": {"java": "byte[]", "jni": "jbyteArray", "jni_type": "jbyteArray", "scalar": "byte", "size": 4, "assert": "assertByte4", "cpp_type": "math::byte4"},
-    "math::ubyte2": {"java": "byte[]", "jni": "jbyteArray", "jni_type": "jbyteArray", "scalar": "byte", "size": 2, "assert": "assertByte2", "cpp_type": "math::ubyte2"},
-    "math::ubyte3": {"java": "byte[]", "jni": "jbyteArray", "jni_type": "jbyteArray", "scalar": "byte", "size": 3, "assert": "assertByte3", "cpp_type": "math::ubyte3"},
-    "math::ubyte4": {"java": "byte[]", "jni": "jbyteArray", "jni_type": "jbyteArray", "scalar": "byte", "size": 4, "assert": "assertByte4", "cpp_type": "math::ubyte4"},
-
-    # Qualified versions of Math Vectors
-    "filament::math::details::TVec2<short>": {"java": "short[]", "jni": "jshortArray", "jni_type": "jshortArray", "scalar": "short", "size": 2, "assert": "assertShort2", "cpp_type": "math::short2"},
-    "filament::math::details::TVec3<short>": {"java": "short[]", "jni": "jshortArray", "jni_type": "jshortArray", "scalar": "short", "size": 3, "assert": "assertShort3", "cpp_type": "math::short3"},
-    "filament::math::details::TVec4<short>": {"java": "short[]", "jni": "jshortArray", "jni_type": "jshortArray", "scalar": "short", "size": 4, "assert": "assertShort4", "cpp_type": "math::short4"},
-    "filament::math::details::TVec2<int16_t>": {"java": "short[]", "jni": "jshortArray", "jni_type": "jshortArray", "scalar": "short", "size": 2, "assert": "assertShort2", "cpp_type": "math::short2"},
-    "filament::math::details::TVec3<int16_t>": {"java": "short[]", "jni": "jshortArray", "jni_type": "jshortArray", "scalar": "short", "size": 3, "assert": "assertShort3", "cpp_type": "math::short3"},
-    "filament::math::details::TVec4<int16_t>": {"java": "short[]", "jni": "jshortArray", "jni_type": "jshortArray", "scalar": "short", "size": 4, "assert": "assertShort4", "cpp_type": "math::short4"},
-    "math::details::TVec4<int16_t>": {"java": "short[]", "jni": "jshortArray", "jni_type": "jshortArray", "scalar": "short", "size": 4, "assert": "assertShort4", "cpp_type": "math::short4"},
-    "details::TVec4<int16_t>": {"java": "short[]", "jni": "jshortArray", "jni_type": "jshortArray", "scalar": "short", "size": 4, "assert": "assertShort4", "cpp_type": "math::short4"},
-    "filament::math::details::TVec2<int>": {"java": "int[]", "jni": "jintArray", "jni_type": "jintArray", "scalar": "int", "size": 2, "assert": "assertInt2", "cpp_type": "math::int2"},
-    "filament::math::details::TVec3<int>": {"java": "int[]", "jni": "jintArray", "jni_type": "jintArray", "scalar": "int", "size": 3, "assert": "assertInt3", "cpp_type": "math::int3"},
-    "filament::math::details::TVec4<int>": {"java": "int[]", "jni": "jintArray", "jni_type": "jintArray", "scalar": "int", "size": 4, "assert": "assertInt4", "cpp_type": "math::int4"},
-    "filament::math::details::TVec2<int32_t>": {"java": "int[]", "jni": "jintArray", "jni_type": "jintArray", "scalar": "int", "size": 2, "assert": "assertInt2", "cpp_type": "math::int2"},
-    "filament::math::details::TVec3<int32_t>": {"java": "int[]", "jni": "jintArray", "jni_type": "jintArray", "scalar": "int", "size": 3, "assert": "assertInt3", "cpp_type": "math::int3"},
-    "filament::math::details::TVec4<int32_t>": {"java": "int[]", "jni": "jintArray", "jni_type": "jintArray", "scalar": "int", "size": 4, "assert": "assertInt4", "cpp_type": "math::int4"},
-    "filament::math::details::TVec2<uint32_t>": {"java": "int[]", "jni": "jintArray", "jni_type": "jintArray", "scalar": "int", "size": 2, "assert": "assertInt2", "cpp_type": "math::uint2"},
-    "filament::math::details::TVec3<uint32_t>": {"java": "int[]", "jni": "jintArray", "jni_type": "jintArray", "scalar": "int", "size": 3, "assert": "assertInt3", "cpp_type": "math::uint3"},
-    "filament::math::details::TVec4<uint32_t>": {"java": "int[]", "jni": "jintArray", "jni_type": "jintArray", "scalar": "int", "size": 4, "assert": "assertInt4", "cpp_type": "math::uint4"},
-}
-
-# Value Types Configuration (Value Objects, Geometry, and Inline Backing Buffers)
-VALUE_TYPES: Dict[str, Dict[str, Any]] = {
-    "filament::Frustum": {
+# Value Types Configuration (Inline Buffer Objects and Descriptors)
+VALUE_TYPES: Dict[str, Dict[str, Any]] = _expand_keys([
+    (("filament::Frustum", "Frustum"), {
         "java": "Frustum",
         "jni": "jfloatArray",
         "jni_type": "jfloatArray",
@@ -233,39 +243,15 @@ VALUE_TYPES: Dict[str, Dict[str, Any]] = {
         "cpp_type": "filament::Frustum",
         "header": "filament/Frustum.h",
         "buffer_getter": "getNormalizedPlanes",
-    },
-    "Frustum": {
-        "java": "Frustum",
-        "jni": "jfloatArray",
-        "jni_type": "jfloatArray",
-        "archetype": "inline_buffer",
-        "is_value_object": True,
-        "element_type": "float",
-        "size": 24,
-        "field_name": "mPlanes",
-        "cpp_type": "filament::Frustum",
-        "header": "filament/Frustum.h",
-        "buffer_getter": "getNormalizedPlanes",
-    },
-    "filament::backend::PixelBufferDescriptor": {
+    }),
+    (("filament::backend::PixelBufferDescriptor", "backend::PixelBufferDescriptor",
+      "PixelBufferDescriptor", "Texture::PixelBufferDescriptor"), {
         "java": "PixelBufferDescriptor",
         "is_value_object": True,
-    },
-    "backend::PixelBufferDescriptor": {
-        "java": "PixelBufferDescriptor",
-        "is_value_object": True,
-    },
-    "PixelBufferDescriptor": {
-        "java": "PixelBufferDescriptor",
-        "is_value_object": True,
-    },
-    "Texture::PixelBufferDescriptor": {
-        "java": "PixelBufferDescriptor",
-        "is_value_object": True,
-    },
-}
+    }),
+])
 
-# Tagged scalar families for dual-mode buffer marshalling
+# Tagged Scalar Array Families Configuration (for UTILS_APIGEN_TAGGED_ARRAY)
 TAGGED_SCALAR_FAMILIES: Dict[str, Dict[str, str]] = {
     "float": {
         "family": "Float",
@@ -299,7 +285,7 @@ TAGGED_SCALAR_FAMILIES: Dict[str, Dict[str, str]] = {
     },
 }
 
-# Specific enum entry overrides to avoid keyword collisions or adhere to API conventions
+# Custom enum entry renames for Java API compatibility
 ENUM_ENTRY_RENAMES: Dict[str, Dict[str, str]] = {
     "StencilOperation": {
         "INCR": "INCR_CLAMP",
@@ -307,90 +293,95 @@ ENUM_ENTRY_RENAMES: Dict[str, Dict[str, str]] = {
     }
 }
 
-# Regex patterns for entities, durations, bitsets, and string-like types
+# Regex-based type matching patterns for template and qualified types
 TYPE_PATTERNS: List[Tuple[str, Dict[str, Any]]] = [
     (r"^(?:filament::)?(?:utils::)?Entity$", {
         "java": "int", "jni": "jint", "jni_type": "jint", "annotation": "@Entity",
         "to_cpp": "Entity::import({value})",
-        "from_cpp": "(jint)Entity::smuggle({value})"
+        "from_cpp": "(jint)Entity::smuggle({value})",
     }),
     (r"^(?:filament::)?(?:utils::)?EntityInstance<(.*)>$", {
         "java": "int", "jni": "jint", "jni_type": "jint", "annotation": "@EntityInstance",
         "to_cpp": "EntityInstance<{0}>({value})",
-        "from_cpp": "(jint){value}.asValue()"
+        "from_cpp": "(jint){value}.asValue()",
     }),
     (r"^(?:const\s+)?(?:std::)?basic_string_view<char>(?:\s*&)?$", {
-        "java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "std::string_view"
+        "java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "std::string_view",
     }),
     (r"^(?:const\s+)?(?:std::)?string_view(?:\s*&)?$", {
-        "java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "std::string_view"
+        "java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "std::string_view",
     }),
     (r"^(?:const\s+)?(?:std::)?string(?:\s*&)?$", {
-        "java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "std::string"
+        "java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "std::string",
     }),
     (r"^(?:const\s+)?(?:utils::)?CString(?:\s*&)?$", {
-        "java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "utils::CString"
+        "java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "utils::CString",
     }),
     (r"^(?:const\s+)?(?:utils::)?StaticString(?:\s*&)?$", {
-        "java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "utils::StaticString"
+        "java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "utils::StaticString",
     }),
     (r"^(?:const\s+)?(?:utils::)?ImmutableCString(?:\s*&)?$", {
-        "java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "utils::ImmutableCString"
+        "java": "String", "jni": "jstring", "jni_type": "jstring", "is_string": True, "cpp_type": "utils::ImmutableCString",
     }),
     (r"^(?:const\s+)?(?:filament::)?(?:backend::)?BufferDescriptor(?:\s*&&|\s*&)?$", {
-        "java": "Buffer", "jni": "jobject", "jni_type": "jobject", "is_buffer_descriptor": True, "cpp_type": "backend::BufferDescriptor"
+        "java": "Buffer", "jni": "jobject", "jni_type": "jobject", "is_buffer_descriptor": True, "cpp_type": "backend::BufferDescriptor",
     }),
     (r"^(?:const\s+)?(?:filament::)?(?:BufferObject::|IndexBuffer::|VertexBuffer::)?BufferDescriptor(?:\s*&&|\s*&)?$", {
-        "java": "Buffer", "jni": "jobject", "jni_type": "jobject", "is_buffer_descriptor": True, "cpp_type": "backend::BufferDescriptor"
+        "java": "Buffer", "jni": "jobject", "jni_type": "jobject", "is_buffer_descriptor": True, "cpp_type": "backend::BufferDescriptor",
     }),
     (r"^(?:const\s+)?(?:utils::)?FixedCapacityVector<(?:(?:filament::)?math::float3|(?:filament::)?math::details::TVec3<float>|details::TVec3<float>|float3)>(?:\s*&)?$", {
-        "java": "Buffer", "jni": "jobject", "jni_type": "jobject", "is_custom_lut_buffer": True, "cpp_type": "utils::FixedCapacityVector<math::float3>"
+        "java": "Buffer", "jni": "jobject", "jni_type": "jobject", "is_custom_lut_buffer": True, "cpp_type": "utils::FixedCapacityVector<math::float3>",
     }),
     (r"^(?:const\s+)?(?:std::)?chrono::duration<.*>(?:\s*&)?$", {
         "java": "long", "jni": "jlong", "jni_type": "jlong", "annotation": "@IntRange(from = 0)",
         "to_cpp": "std::chrono::nanoseconds({value})",
-        "from_cpp": "(jlong){value}.count()"
+        "from_cpp": "(jlong){value}.count()",
     }),
     (r"^(?:const\s+)?(?:std::)?chrono::time_point<.*>(?:\s*&)?$", {
         "java": "long", "jni": "jlong", "jni_type": "jlong", "annotation": "@IntRange(from = 0)",
         "to_cpp": "std::chrono::steady_clock::time_point(std::chrono::nanoseconds({value}))",
-        "from_cpp": "(jlong){value}.time_since_epoch().count()"
+        "from_cpp": "(jlong){value}.time_since_epoch().count()",
     }),
     (r"^(?:const\s+)?(?:std::)?chrono::nanoseconds(?:\s*&)?$", {
         "java": "long", "jni": "jlong", "jni_type": "jlong", "annotation": "@IntRange(from = 0)",
         "to_cpp": "std::chrono::nanoseconds({value})",
-        "from_cpp": "(jlong){value}.count()"
+        "from_cpp": "(jlong){value}.count()",
     }),
     (r"^(?:const\s+)?(?:std::)?chrono::milliseconds(?:\s*&)?$", {
         "java": "long", "jni": "jlong", "jni_type": "jlong", "annotation": "@IntRange(from = 0)",
         "to_cpp": "std::chrono::milliseconds({value})",
-        "from_cpp": "(jlong){value}.count()"
+        "from_cpp": "(jlong){value}.count()",
     }),
     (r"^(?:const\s+)?(?:std::)?chrono::seconds(?:\s*&)?$", {
         "java": "long", "jni": "jlong", "jni_type": "jlong", "annotation": "@IntRange(from = 0)",
         "to_cpp": "std::chrono::seconds({value})",
-        "from_cpp": "(jlong){value}.count()"
+        "from_cpp": "(jlong){value}.count()",
     }),
     (r"^(?:const\s+)?(?:utils::)?tribool(?:\s*&)?$", {
         "java": "boolean", "jni": "jboolean", "jni_type": "jboolean",
         "to_cpp": "utils::tribool((bool){value})",
-        "from_cpp": "(jboolean)(({value}).is_true())"
+        "from_cpp": "(jboolean)(({value}).is_true())",
     }),
     (r"^(?:const\s+)?(?:std::)?optional<bool>(?:\s*&)?$", {
         "java": "boolean", "jni": "jboolean", "jni_type": "jboolean",
         "to_cpp": "std::make_optional((bool){value})",
-        "from_cpp": "(jboolean)({value}.value_or(false))"
+        "from_cpp": "(jboolean)({value}.value_or(false))",
     }),
     (r"^(?:const\s+)?utils::bitset<.*>(?:\s*&)?$", {
         "java": "int", "jni": "jint", "jni_type": "jint", "annotation": "@IntRange(from = 0)",
         "to_cpp": "{type}({value})",
-        "from_cpp": "(jint){value}.getValue()"
+        "from_cpp": "(jint){value}.getValue()",
     }),
     (r"^(?:const\s+)?(?:std::)?bitset<.*>(?:\s*&)?$", {
         "java": "int", "jni": "jint", "jni_type": "jint", "annotation": "@IntRange(from = 0)",
         "to_cpp": "{type}({value})",
-        "from_cpp": "(jint){value}.to_ulong()"
-    })
+        "from_cpp": "(jint){value}.to_ulong()",
+    }),
+]
+
+# Pre-compiled regex type patterns for O(1) compiled matching in TypeResolver
+COMPILED_TYPE_PATTERNS: List[Tuple[Pattern[str], Dict[str, Any]]] = [
+    (re.compile(pat), info) for pat, info in TYPE_PATTERNS
 ]
 
 # Package mapping for C++ headers
@@ -426,7 +417,7 @@ JAVA_KEYWORDS: Set[str] = {
     "import", "instanceof", "int", "interface", "long", "native", "new",
     "package", "private", "protected", "public", "return", "short", "static",
     "strictfp", "super", "switch", "synchronized", "this", "throw", "throws",
-    "transient", "try", "void", "volatile", "while", "true", "false", "null"
+    "transient", "try", "void", "volatile", "while", "true", "false", "null",
 }
 
 # Global Registry of Known Classes / Structs across IR files
@@ -474,14 +465,13 @@ def register_known_classes(classes: List[Dict[str, Any]]) -> None:
         KNOWN_CLASSES[cls["name"]] = cls
 
         # Step 2: If qualified name is available, index across namespace aliases
-        if "qualified_name" in cls:
-            qname = cls["qualified_name"]
+        qname = cls.get("qualified_name")
+        if qname:
             KNOWN_CLASSES[qname] = cls
 
             # Step 2a: Strip top-level engine namespace prefixes for unqualified fallback
             clean = (
-                qname
-                .replace("filament::", "")
+                qname.replace("filament::", "")
                 .replace("backend::", "")
                 .replace("utils::", "")
                 .replace("math::", "")
@@ -490,12 +480,8 @@ def register_known_classes(classes: List[Dict[str, Any]]) -> None:
 
             # Step 2b: Handle filament:: vs backend:: / filament::backend:: re-exports
             if "filament::" in qname:
-                backend_clean = qname.replace("filament::", "backend::")
-                KNOWN_CLASSES[backend_clean] = cls
-                filament_backend_clean = qname.replace(
-                    "filament::", "filament::backend::"
-                )
-                KNOWN_CLASSES[filament_backend_clean] = cls
+                KNOWN_CLASSES[qname.replace("filament::", "backend::")] = cls
+                KNOWN_CLASSES[qname.replace("filament::", "filament::backend::")] = cls
 
 
 # -----------------------------------------------------------------------------

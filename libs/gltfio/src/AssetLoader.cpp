@@ -1035,10 +1035,14 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
         addBufferSlot(slot);
     } else if (inPrim.attributes_count > 0) {
         // If a primitive does not have an index buffer, generate a trivial one now.
-        const uint32_t vertexCount = inPrim.attributes[0].data->count;
+        const cgltf_size vertexCount = inPrim.attributes[0].data->count;
+        if (vertexCount > IndexBuffer::MAX_INDEX_COUNT) {
+            slog.e << "Vertex count exceeds maximum index count in " << name << io::endl;
+            return false;
+        }
 
         indices = IndexBuffer::Builder()
-            .indexCount(vertexCount)
+            .indexCount(uint32_t(vertexCount))
             .bufferType(IndexBuffer::IndexType::UINT)
             .build(mEngine);
 
@@ -1204,8 +1208,21 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
             const cgltf_accessor* innerAccessor = attribute.data;
             const cgltf_attribute_type atype = attribute.type;
 
-            // The glTF normal and tangent data are ignored here, but honored in ResourceLoader.
+            // The glTF normal and tangent data are ignored here (honored in ResourceLoader), but
+            // we still validate the accessor's element type. Without this, an unsupported type
+            // (e.g. a matrix type) slips through to ResourceLoader's tangent-space computation,
+            // where it is unpacked into a fixed 3-float-per-vertex buffer writing more floats
+            // per element than the buffer holds (heap out-of-bounds write).
             if (atype == cgltf_attribute_type_normal || atype == cgltf_attribute_type_tangent) {
+                if (innerAccessor != nullptr) {
+                    VertexBuffer::AttributeType fatype;
+                    VertexBuffer::AttributeType actualType;
+                    if (!getElementType(innerAccessor->type, innerAccessor->component_type,
+                            &fatype, &actualType)) {
+                        slog.e << "Unsupported morph target accessor type in " << name << io::endl;
+                        return false;
+                    }
+                }
                 continue;
             }
 

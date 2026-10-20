@@ -155,7 +155,7 @@ bool SingleInstanceComponentManagerBase::popPendingZombie(Entity const newEntity
     return false;
 }
 
-void SingleInstanceComponentManagerBase::checkZombieCollisionPanic(Entity const newEntity) noexcept {
+UTILS_NOINLINE void SingleInstanceComponentManagerBase::checkZombieCollisionPanic(Entity const newEntity) noexcept {
     Entity zombie;
     if (UTILS_UNLIKELY(popPendingZombie(newEntity, zombie))) {
         FILAMENT_CHECK_PRECONDITION(false)

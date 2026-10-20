@@ -1163,36 +1163,36 @@ public class LightManager {
     /** Control the quality / performance of the shadow map associated to this light */
     public static class ShadowOptions {
         @IntRange(from = 0)
-        public int mapSize;
+        public int mapSize = 1024;
         @IntRange(from = 0)
-        public int shadowCascades;
-        private float mCascadeSplitPositions0;
-        private float mCascadeSplitPositions1;
-        private float mCascadeSplitPositions2;
-        public float constantBias;
-        public float normalBias;
-        public float shadowFar;
-        public float shadowNearHint;
-        public float shadowFarHint;
-        public boolean stable;
-        public boolean lispsm;
-        public float polygonOffsetConstant;
-        public float polygonOffsetSlope;
-        public boolean screenSpaceContactShadows;
+        public int shadowCascades = 1;
+        private float mCascadeSplitPositions0 = 0.125f;
+        private float mCascadeSplitPositions1 = 0.25f;
+        private float mCascadeSplitPositions2 = 0.50f;
+        public float constantBias = 0.001f;
+        public float normalBias = 1.0f;
+        public float shadowFar = 0.0f;
+        public float shadowNearHint = 1.0f;
+        public float shadowFarHint = 100.0f;
+        public boolean stable = false;
+        public boolean lispsm = true;
+        public float polygonOffsetConstant = 0.5f;
+        public float polygonOffsetSlope = 2.0f;
+        public boolean screenSpaceContactShadows = false;
         @IntRange(from = 0)
-        public int stepCount;
-        public float maxShadowDistance;
-        private boolean mVsmElvsm;
-        private float mVsmBlurWidth;
-        public float shadowBulbRadius;
-        private float mTransformX;
-        private float mTransformY;
-        private float mTransformZ;
-        private float mTransformW;
-        public float penumbraScale;
-        public float penumbraRatioScale;
-        public float maxPenumbraRatio;
-        public float maxSearchRadius;
+        public int stepCount = 8;
+        public float maxShadowDistance = 0.3f;
+        private boolean mVsmElvsm = false;
+        private float mVsmBlurWidth = 0.0f;
+        public float shadowBulbRadius = -1.0f;
+        private float mTransformX = 0.0f;
+        private float mTransformY = 0.0f;
+        private float mTransformZ = 0.0f;
+        private float mTransformW = 1.0f;
+        public float penumbraScale = 1.0f;
+        public float penumbraRatioScale = 1.0f;
+        public float maxPenumbraRatio = 0.0f;
+        public float maxSearchRadius = 0.0f;
 
         public ShadowOptions() {
         }
@@ -1542,8 +1542,8 @@ public class LightManager {
          * @see View#setShadowType
          */
         public static class Vsm {
-            public boolean elvsm;
-            public float blurWidth;
+            public boolean elvsm = false;
+            public float blurWidth = 0.0f;
 
             public Vsm() {
             }

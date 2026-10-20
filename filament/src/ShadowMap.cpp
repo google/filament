@@ -547,9 +547,8 @@ mat4f ShadowMap::applyLISPSM(mat4f& Wp,
 
     mat4f W;
     // see nopt1 below for an explanation about this test
-    // sinLV is positive since it comes from a square-root
-    constexpr float epsilon = 0.02f; // very roughly 1 degree
-    if (f > n && sinLV > epsilon && 3.0f * (dzn / (zf - zn)) < 2.0f) {
+    // Note: this threshold must match computeLightRotation's |dot(L, V)| < 0.9997f cutoff.
+    if (f > n && std::abs(LoV) < 0.9997f && 3.0f * (dzn / (zf - zn)) < 2.0f) {
         // nopt is the optimal near plane distance of Wp (i.e. distance from P).
 
         // virtual near and far planes

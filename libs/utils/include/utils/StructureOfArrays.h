@@ -342,7 +342,7 @@ public:
     }
 
 
-    void swap(size_t i, size_t j) noexcept {
+    UTILS_NOINLINE void swap(size_t i, size_t j) noexcept {
         forEach([i, j](auto p) {
             using std::swap;
             swap(p[i], p[j]);

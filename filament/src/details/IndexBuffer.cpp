@@ -90,6 +90,10 @@ IndexBuffer* IndexBuffer::Builder::build(Engine& engine) const {
     FILAMENT_CHECK_PRECONDITION(!mImpl->mAsynchronous || engine.isAsynchronousModeEnabled())
             << "Engine not configured for async operations";
 
+    FILAMENT_CHECK_PRECONDITION(mImpl->mIndexCount <= backend::MAX_INDEX_COUNT)
+            << "indexCount " << mImpl->mIndexCount << " exceeds the maximum of "
+            << backend::MAX_INDEX_COUNT;
+
     return downcast(engine).createIndexBuffer(*this);
 }
 

@@ -21,6 +21,10 @@
 #include <filament/Material.h>
 #include <filament/RenderableManager.h>
 
+#include <backend/DriverEnums.h>
+
+#include <utils/Panic.h>
+
 #include <math/half.h>
 #include <math/mat3.h>
 #include <math/norm.h>
@@ -387,6 +391,149 @@ TEST_F(FilameshTest, InvalidIndexTypeRejected) {
     auto mesh = MeshReader::loadMeshFromBuffer(engine, serialized.data(), serialized.size(), nullptr, nullptr, mi);
     EXPECT_EQ(mesh.vertexBuffer, nullptr);
     EXPECT_EQ(mesh.indexBuffer, nullptr);
+
+    engine->destroy(mi);
+}
+
+// Non-interleaved single-triangle mesh whose index fields come from the caller.
+static string serializeWithIndices(uint32_t flags, IndexType indexType, uint32_t indexCount,
+        uint32_t indexSize, const void* indexData) {
+    const Header header {
+        .version = VERSION,
+        .parts = 1,
+        .aabb = unitBox,
+        .flags = flags,
+        .offsetTangents = sizeof(positions),
+        .offsetColor = sizeof(positions) + sizeof(tangents),
+        .offsetUV0 = sizeof(positions) + sizeof(tangents) + sizeof(colors),
+        .strideUV1 = maxint,
+        .vertexCount = vertexCount,
+        .vertexSize = sizeof(positions) + sizeof(tangents) + sizeof(colors) + sizeof(uv0),
+        .indexType = indexType,
+        .indexCount = indexCount,
+        .indexSize = indexSize
+    };
+    const uint32_t nmats = 1;
+    const string matname = "DefaultMaterial";
+    const uint32_t matnamelength = matname.size();
+
+    stringstream stream(ios_base::out);
+    write(stream, MAGICID, sizeof(MAGICID));
+    write(stream, &header, sizeof(header));
+    write(stream, positions, sizeof(positions));
+    write(stream, tangents, sizeof(tangents));
+    write(stream, colors, sizeof(colors));
+    write(stream, uv0, sizeof(uv0));
+    write(stream, (const char*) indexData, indexSize);
+    write(stream, parts, sizeof(parts));
+    write(stream, &nmats, sizeof(nmats));
+    write(stream, &matnamelength, sizeof(matnamelength));
+    write(stream, matname.c_str(), matnamelength + 1);
+    return stream.str();
+}
+
+TEST_F(FilameshTest, IndexSizeMismatchRejected) {
+    // Three UI16 indices take 6 bytes, but the header claims 8.
+    static const uint16_t paddedIndices[] = { 0, 1, 2, 0 };
+    string serialized = serializeWithIndices(0, IndexType::UI16, 3, sizeof(paddedIndices),
+            paddedIndices);
+    MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
+
+    auto mesh = MeshReader::loadMeshFromBuffer(engine, serialized.data(), serialized.size(), nullptr, nullptr, mi);
+    EXPECT_EQ(mesh.vertexBuffer, nullptr);
+    EXPECT_EQ(mesh.indexBuffer, nullptr);
+
+    engine->destroy(mi);
+}
+
+TEST_F(FilameshTest, IndexCountWrappingByteSizeRejected) {
+    // The byte size of this many UI32 indices does not fit in 32 bits.
+    static const uint32_t indices32[] = { 0, 1, 2 };
+    string serialized = serializeWithIndices(0, IndexType::UI32,
+            uint32_t(UINT32_MAX / sizeof(uint32_t) + 1), sizeof(indices32), indices32);
+    MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
+
+    auto mesh = MeshReader::loadMeshFromBuffer(engine, serialized.data(), serialized.size(), nullptr, nullptr, mi);
+    EXPECT_EQ(mesh.vertexBuffer, nullptr);
+    EXPECT_EQ(mesh.indexBuffer, nullptr);
+
+    engine->destroy(mi);
+}
+
+TEST_F(FilameshTest, CompressedIndexCountAboveMaxRejected) {
+    // A multiple of 3 above MAX_INDEX_COUNT. indexSize is not checked against it when compressed.
+    const uint32_t indexCount = 3u << 25;
+    ASSERT_GT(indexCount, backend::MAX_INDEX_COUNT);
+    string serialized = serializeWithIndices(COMPRESSION, IndexType::UI16, indexCount,
+            sizeof(indices), indices);
+    MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
+
+    auto mesh = MeshReader::loadMeshFromBuffer(engine, serialized.data(), serialized.size(), nullptr, nullptr, mi);
+    EXPECT_EQ(mesh.vertexBuffer, nullptr);
+    EXPECT_EQ(mesh.indexBuffer, nullptr);
+
+    engine->destroy(mi);
+}
+
+TEST_F(FilameshTest, PartOffsetIndexCountWrapRejected) {
+    constexpr uint32_t kIndexCount = 16;
+    const uint16_t sixteenIndices[kIndexCount] = {};
+    const Header header {
+        .version = VERSION,
+        .parts = 1,
+        .aabb = unitBox,
+        .flags = INTERLEAVED | TEXCOORD_SNORM16,
+        .offsetPosition = offsetof(InterleavedVertex, position),
+        .stridePosition = sizeof(InterleavedVertex),
+        .offsetTangents = offsetof(InterleavedVertex, tangent),
+        .strideTangents = sizeof(InterleavedVertex),
+        .offsetColor = offsetof(InterleavedVertex, color),
+        .strideColor = sizeof(InterleavedVertex),
+        .offsetUV0 = offsetof(InterleavedVertex, uv0),
+        .strideUV0 = sizeof(InterleavedVertex),
+        .offsetUV1 = maxint,
+        .strideUV1 = maxint,
+        .vertexCount = vertexCount,
+        .vertexSize = sizeof(interleavedVertices),
+        .indexType = IndexType::UI16,
+        .indexCount = kIndexCount,
+        .indexSize = sizeof(sixteenIndices)
+    };
+    // 0xFFFFFFF0 + 0x20 wraps modulo 2^32 to 0x10 (== kIndexCount).
+    const Part wrappingParts[1] { Part {
+        .offset = 0xFFFFFFF0u,
+        .indexCount = 0x20u,
+        .minIndex = 0,
+        .maxIndex = 2,
+        .material = 0,
+        .aabb = unitBox
+    }};
+    const uint32_t nmats = 1;
+    const string matname = "DefaultMaterial";
+    const uint32_t matnamelength = matname.size();
+
+    stringstream stream(ios_base::out);
+    write(stream, MAGICID, sizeof(MAGICID));
+    write(stream, &header, sizeof(header));
+    write(stream, interleavedVertices, sizeof(interleavedVertices));
+    write(stream, sixteenIndices, sizeof(sixteenIndices));
+    write(stream, wrappingParts, sizeof(wrappingParts));
+    write(stream, &nmats, sizeof(nmats));
+    write(stream, &matnamelength, sizeof(matnamelength));
+    write(stream, matname.c_str(), matnamelength + 1);
+
+    string serialized = stream.str();
+    MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
+
+#if GTEST_HAS_EXCEPTIONS
+    EXPECT_THROW(MeshReader::loadMeshFromBuffer(
+            engine, serialized.data(), serialized.size(), nullptr, nullptr, mi),
+            utils::PreconditionPanic);
+#else
+    EXPECT_DEATH(MeshReader::loadMeshFromBuffer(
+            engine, serialized.data(), serialized.size(), nullptr, nullptr, mi),
+            "offset \\(4294967280\\) \\+ count \\(32\\) > indexCount \\(16\\)");
+#endif
 
     engine->destroy(mi);
 }

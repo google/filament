@@ -901,9 +901,9 @@ bool FEngine::flushAndWait(uint64_t const timeout) {
         status = fence->wait(FFence::Mode::FLUSH, timeout);
         destroy(fence);
     } else {
-        // When executing in a single-threaded (e.g. wasm) environment, fence would
-        // fail. Instead, directly execute the outstanding commands.
-        execute();
+        // Without threads nothing could signal a fence, so run the commands here instead.
+        // flush() executes them, finish() included, before it returns.
+        flush();
     }
 
     // finally, execute callbacks that might have been scheduled
@@ -1278,30 +1278,39 @@ bool FEngine::isValid(const T* ptr, ResourceList<T> const& list) const {
     return l.find(ptr) != l.end();
 }
 
+UTILS_NOINLINE
+static void logDoubleFree(void const* ptr, const char* mangledName) {
+#if UTILS_HAS_RTTI
+    auto const typeName = CallStack::demangleTypeName(mangledName);
+    const char* const typeNameCStr = typeName.c_str();
+#else
+    (void) mangledName;
+    const char* const typeNameCStr = "<no-rtti>";
+#endif
+    ASSERT_PRECONDITION_NON_FATAL(false,
+            "Object %s at %p doesn't exist (double free?)", typeNameCStr, ptr);
+}
+
 template<typename T>
 UTILS_ALWAYS_INLINE
 bool FEngine::terminateAndDestroy(const T* ptr, ResourceList<T>& list) {
     if (ptr == nullptr) return true;
-    bool const success = list.remove(ptr);
-
+    if (UTILS_UNLIKELY(!list.remove(ptr))) {
 #if UTILS_HAS_RTTI
-    auto typeName = CallStack::typeName<T>();
-    const char * const typeNameCStr = typeName.c_str();
+        logDoubleFree(ptr, typeid(T).name());
 #else
-    const char * const typeNameCStr = "<no-rtti>";
+        logDoubleFree(ptr, nullptr);
 #endif
-
-    if (ASSERT_PRECONDITION_NON_FATAL(success,
-            "Object %s at %p doesn't exist (double free?)", typeNameCStr, ptr)) {
-
-        T* p = const_cast<T*>(ptr);
-
-        // Terminate the backend resources immediately as they're unnecessary from this point. The
-        // frontend object itself may have to outlive this call, see destroyOrDeferFrontendObject().
-        p->terminate(*this);
-        destroyOrDeferFrontendObject(p);
+        return false;
     }
-    return success;
+
+    T* p = const_cast<T*>(ptr);
+
+    // Terminate the backend resources immediately as they're unnecessary from this point. The
+    // frontend object itself may have to outlive this call, see destroyOrDeferFrontendObject().
+    p->terminate(*this);
+    destroyOrDeferFrontendObject(p);
+    return true;
 }
 
 
@@ -1805,8 +1814,6 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
     // isMaterialLit means shading != Shading::UNLIT || hasShadowMultiplier;
     const bool isMaterialLit = material->getDefinition().isVariantLit;
     Variant baseVariant{};
-    // TODO: Remove this after DIR is fully transferred to spec constant
-    baseVariant.setDirectionalLighting(false);
     baseVariant.setFog(view->hasFog());
     baseVariant.setShadowSampler2D(isMaterialLit && view->hasShadowing() && (view->getShadowType() != ShadowType::PCF));
     baseVariant.setStereo(view->hasStereo());
