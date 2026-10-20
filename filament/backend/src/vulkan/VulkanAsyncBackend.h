@@ -17,8 +17,10 @@
 #define TNT_VULKANASYNCBACKEND_H
 #include "VulkanCommands.h"
 #include "VulkanContext.h"
-#include "backend/platforms/VulkanPlatform.h"
+
 #include "vulkan/utils/TaskHandler.h"
+
+#include <backend/platforms/VulkanPlatform.h>
 
 namespace filament::backend {
 class VulkanAsyncBackend {

@@ -127,9 +127,9 @@ private:
     void setVertexBufferObjectCommon(resource_ptr<VulkanVertexBuffer> vb, uint32_t index,
             resource_ptr<VulkanBufferObject> bo);
     void updateIndexBufferCommon(resource_ptr<VulkanIndexBuffer> ib, BufferDescriptor&& p,
-            uint32_t byteOffset);
+            uint32_t byteOffset, VulkanCommandBuffer& commands);
     void updateBufferObjectCommon(resource_ptr<VulkanBufferObject> bo, BufferDescriptor&& bd,
-            uint32_t byteOffset);
+            uint32_t byteOffset, VulkanCommandBuffer& commands);
     void update3DImageCommon(resource_ptr<VulkanTexture> texture, uint32_t level, uint32_t xoffset,
             uint32_t yoffset, uint32_t zoffset, uint32_t width, uint32_t height, uint32_t depth,
             PixelBufferDescriptor&& data);
