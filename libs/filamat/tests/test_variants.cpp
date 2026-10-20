@@ -152,7 +152,53 @@ TEST(Variant, SpecialSsrVariantIsDistinctAndFilterable) {
         EXPECT_FALSE(V::isValidDepthVariant(variant));
         EXPECT_TRUE(V::isValidSurfaceVariant(variant));
     }
-    EXPECT_EQ(ssrVariantCount, 1u);
+    EXPECT_EQ(ssrVariantCount, 2u);
+}
+
+TEST(Variant, SsrPreservesSkinningAndSharesFragmentShader) {
+    using V = filament::Variant;
+    using filament::backend::ShaderStage;
+    V const ssr(V::SPECIAL_SSR_VARIANT);
+    V const skinnedSsr(V::SPECIAL_SSR_VARIANT | V::SKN);
+
+    for (size_t key = 0; key < filament::VARIANT_COUNT; ++key) {
+        V const variant(static_cast<V::type_t>(key));
+        EXPECT_EQ(V::isSSRVariant(variant), variant == ssr || variant == skinnedSsr);
+    }
+    for (V const variant : { ssr, skinnedSsr }) {
+        EXPECT_TRUE(V::isValidSurfaceVariant(variant));
+        EXPECT_FALSE(V::isValidDepthVariant(variant));
+        EXPECT_FALSE(V::isPickingVariant(variant));
+        EXPECT_FALSE(V::isDepthMomentsVariant(variant));
+        EXPECT_EQ(V::filterVariantVertex(variant), V(variant.key & V::SKN));
+        EXPECT_EQ(V::filterVariantFragment(variant), ssr);
+        for (bool const lit : { false, true }) {
+            EXPECT_EQ(V::filterVariant(variant, lit), variant);
+        }
+        for (auto const filter : { UserVariantFilterBit::VSM, UserVariantFilterBit::FOG,
+                     UserVariantFilterBit::SHADOW_RECEIVER }) {
+            EXPECT_EQ(V::filterUserVariant(variant, uint32_t(filter)), variant);
+        }
+        EXPECT_EQ(V::filterUserVariant(variant, uint32_t(UserVariantFilterBit::SSR)),
+                V(variant.key & V::SKN));
+        EXPECT_EQ(V::filterUserVariant(variant, uint32_t(UserVariantFilterBit::SKINNING)), ssr);
+        EXPECT_TRUE(containsVariant(filament::VariantUtils::getLitVariants(), variant));
+        EXPECT_TRUE(containsVariant(filament::VariantUtils::getUnlitVariants(), variant));
+        EXPECT_FALSE(containsVariant(filament::VariantUtils::getDepthVariants(), variant));
+    }
+    for (bool const lit : { false, true }) {
+        auto const shaders = determineSurfaceVariants(0, lit, false);
+        EXPECT_TRUE(containsVariant(shaders, V(V::SKN), ShaderStage::VERTEX));
+        EXPECT_TRUE(containsVariant(shaders, ssr, ShaderStage::FRAGMENT));
+        EXPECT_FALSE(containsVariant(shaders, skinnedSsr, ShaderStage::FRAGMENT));
+        auto const withoutSsr = determineSurfaceVariants(
+                uint32_t(UserVariantFilterBit::SSR), lit, false);
+        EXPECT_FALSE(containsVariant(withoutSsr, ssr, ShaderStage::FRAGMENT));
+        auto const withoutSkinning = determineSurfaceVariants(
+                uint32_t(UserVariantFilterBit::SKINNING), lit, false);
+        EXPECT_FALSE(containsVariant(withoutSkinning, V(V::SKN), ShaderStage::VERTEX));
+        EXPECT_TRUE(containsVariant(withoutSkinning, ssr, ShaderStage::FRAGMENT));
+    }
 }
 
 TEST(Variant, FogFilteringPreservesPickingAndFiltersSurfaceFog) {
