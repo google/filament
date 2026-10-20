@@ -1088,9 +1088,15 @@ void FRenderableManager::setSkinningBuffer(Instance const ci,
             << "SkinningBuffer overflow (size=" << skinningBuffer->getBoneCount()
             << ", count=" << count << ", offset=" << offset << ")";
 
-    bones.handle = skinningBuffer->getHwHandle();
-    bones.count = uint16_t(count);
-    bones.offset = uint16_t(offset);
+    auto const handle = skinningBuffer->getHwHandle();
+    if (bones.handle != handle || bones.offset != uint16_t(offset) ||
+            bones.count != uint16_t(count)) {
+        bones.handle = handle;
+        bones.count = uint16_t(count);
+        bones.offset = uint16_t(offset);
+        // SKINNING_BUFFER is cached by the Views' scene caches
+        mManager.notifyChange(getEntity(ci));
+    }
 }
 
 static void updateMorphWeights(FEngine& engine, Handle<HwBufferObject> handle,

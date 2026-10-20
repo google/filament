@@ -1152,10 +1152,6 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
      * Depth + Color passes
      */
 
-    // updatePrimitivesLod must be run before appendCommands and once for each set
-    // of RenderPass::setCamera / RenderPass::setGeometry calls.
-    FView::updatePrimitivesLod(view.getRenderableData(),
-            engine, cameraInfo, view.getVisibleRenderables());
 
     passBuilder.camera(cameraInfo.getPosition(), cameraInfo.getForwardVector());
     passBuilder.geometry(view.getRenderableData(), view.getVisibleRenderables());

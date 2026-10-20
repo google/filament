@@ -923,4 +923,31 @@ TEST(PagedArenaBitsetTest, BatchAddSliceAndInvariants) {
     }
 }
 
+TEST(PagedArenaBitsetTest, BatchAddFilteredSlice) {
+    PagedArenaBitset filter;
+    filter.add(10u);
+    filter.add(4096u + 5u);
+    filter.add(8192u + 77u);
 
+    std::vector<uint32_t> const batch = {
+        3u, 10u, 99u, 4096u + 5u, 4096u + 6u, 8192u + 77u, 16384u + 1u, 10u
+    };
+
+    PagedArenaBitset bs;
+    bs.add({ batch.data(), batch.size() }, &filter);
+
+    EXPECT_EQ(bs.size(), 3u);
+    EXPECT_TRUE(bs[10u]);
+    EXPECT_TRUE(bs[4096u + 5u]);
+    EXPECT_TRUE(bs[8192u + 77u]);
+    EXPECT_FALSE(bs[3u]);
+    EXPECT_FALSE(bs[99u]);
+    EXPECT_FALSE(bs[4096u + 6u]);
+    EXPECT_FALSE(bs[16384u + 1u]);
+
+    // Empty filter is a no-op
+    PagedArenaBitset emptyFilter;
+    PagedArenaBitset bsEmpty;
+    bsEmpty.add({ batch.data(), batch.size() }, &emptyFilter);
+    EXPECT_TRUE(bsEmpty.empty());
+}
