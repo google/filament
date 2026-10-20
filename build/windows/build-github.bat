@@ -56,7 +56,7 @@ call "C:\Program Files\Microsoft Visual Studio\2022\%VISUAL_STUDIO_VERSION%\VC\A
 echo Passed vcvars64.bat
 if errorlevel 1 exit /b %errorlevel%
 
-msbuild /version
+ninja --version
 cmake --version
 
 set "OUT_DIR=%CD%\out"
@@ -134,14 +134,14 @@ cd out\cmake-%variant%
 if errorlevel 1 exit /b %errorlevel%
 
 cmake ..\.. ^
-    -G "Visual Studio 17 2022" ^
-    -A x64 ^
+    -G Ninja ^
+    -DCMAKE_BUILD_TYPE=%config% ^
     %flag% ^
     -DCMAKE_INSTALL_PREFIX=..\%variant% ^
     -DFILAMENT_WINDOWS_CI_BUILD:BOOL=ON ^
     -DFILAMENT_GENERATE_PDB:BOOL=%GENERATE_PDB% ^
+    -DFILAMENT_ENABLE_MATDBG:BOOL=OFF ^
     -DFILAMENT_SUPPORTS_VULKAN=ON ^
-    "-DCMAKE_VS_GLOBALS=UseMultiToolTask=true;EnforceProcessCountAcrossBuilds=true" ^
     || exit /b
 
 set build_flags=-j %NUMBER_OF_PROCESSORS%
@@ -160,7 +160,7 @@ set build_flags=-j %NUMBER_OF_PROCESSORS%
 :: cmake --build . --target sample-resources --config %config% %build_flags% || exit /b
 :: cmake --build . --target suzanne-resources --config %config% %build_flags% || exit /b
 
-cmake --build . %INSTALL% --config %config% %build_flags% -- /m || exit /b
+cmake --build . %INSTALL% %build_flags% || exit /b
 @echo off
 
 echo Disk info after building variant: %variant%
