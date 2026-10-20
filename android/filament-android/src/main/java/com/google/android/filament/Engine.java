@@ -489,6 +489,7 @@ public class Engine {
                     config.forceGLES2Context, config.assertNativeWindowIsValid,
                     config.gpuContextPriority.ordinal(),
                     config.sharedUboInitialSizeInBytes,
+                    config.asynchronousMode.ordinal(),
                     config.enableMultipleDirectionalLights);
             return this;
         }
@@ -1518,6 +1519,7 @@ public class Engine {
             boolean forceGLES2Context, boolean assertNativeWindowIsValid,
             int gpuContextPriority,
             long sharedUboInitialSizeInBytes,
+            int asynchronousMode,
             boolean enableMultipleDirectionalLights);
     private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);

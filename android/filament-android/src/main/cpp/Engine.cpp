@@ -658,6 +658,7 @@ Java_com_google_android_filament_Engine_nSetBuilderConfig(JNIEnv*, jclass,
         jboolean forceGLES2Context, jboolean assertNativeWindowIsValid,
         jint gpuContextPriority,
         jlong sharedUboInitialSizeInBytes,
+        jint asynchronousMode,
         jboolean enableMultipleDirectionalLights) {
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
     Engine::Config config = {
@@ -678,6 +679,7 @@ Java_com_google_android_filament_Engine_nSetBuilderConfig(JNIEnv*, jclass,
             .assertNativeWindowIsValid = (bool) assertNativeWindowIsValid,
             .gpuContextPriority = (Engine::GpuContextPriority) gpuContextPriority,
             .sharedUboInitialSizeInBytes = (uint32_t) sharedUboInitialSizeInBytes,
+            .asynchronousMode = (Engine::AsynchronousMode) asynchronousMode,
             .enableMultipleDirectionalLights = (bool) enableMultipleDirectionalLights,
     };
     builder->config(&config);
