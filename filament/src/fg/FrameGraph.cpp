@@ -39,6 +39,7 @@
 #include <utils/debug.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
+#include <utils/sstream.h>
 #include <utils/StaticString.h>
 
 #include <algorithm>
@@ -516,7 +517,7 @@ FrameGraphHandle FrameGraph::forwardResourceInternal(FrameGraphHandle const reso
 
 FrameGraphId<FrameGraphTexture> FrameGraph::import(utils::StaticString name,
         FrameGraphRenderPass::ImportDescriptor const& desc,
-        backend::Handle<backend::HwRenderTarget> target) {
+        backend::Handle<backend::HwRenderTarget> target) noexcept {
     // create a resource that represents the imported render target
     VirtualResource* vresource =
             mArena.make<ImportedRenderTarget>(name,
@@ -528,7 +529,7 @@ FrameGraphId<FrameGraphTexture> FrameGraph::import(utils::StaticString name,
     return FrameGraphId<FrameGraphTexture>(addResourceInternal(vresource));
 }
 
-bool FrameGraph::isValid(FrameGraphHandle const handle) const {
+bool FrameGraph::isValid(FrameGraphHandle const handle) const noexcept {
     // Code below is written this way so that we can set breakpoints easily.
     if (!handle.isInitialized()) {
         return false;

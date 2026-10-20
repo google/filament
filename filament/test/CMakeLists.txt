@@ -75,6 +75,7 @@ if (FILAMENT_BUILD_TESTING)
                 test_VertexBuffer.cpp
                 filament_test_exposure.cpp
                 filament_rendering_test.cpp
+                filament_shadow_test.cpp
                 filament_bimap_test.cpp
                 filament_framegraph_test.cpp
                 filament_test.cpp

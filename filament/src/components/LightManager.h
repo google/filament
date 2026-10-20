@@ -23,10 +23,21 @@
 
 #include <backend/DriverApiForward.h>
 
+#include <utils/compiler.h>
 #include <utils/Entity.h>
 #include <utils/SingleInstanceComponentManager.h>
 
+#include <math/mat4.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
+
 #include <cstddef>
+#include <limits>
+#include <utility>
+
+namespace utils {
+class PagedArenaBitset;
+}
 
 namespace filament {
 
@@ -100,6 +111,13 @@ public:
     }
     void flushNotifications() noexcept {
         mManager.flushNotifications();
+    }
+    void registerBitset(utils::PagedArenaBitset* bitset,
+            utils::PagedArenaBitset const* filter = nullptr) {
+        mManager.registerBitset(bitset, filter);
+    }
+    void unregisterBitset(utils::PagedArenaBitset const* bitset) {
+        mManager.unregisterBitset(bitset);
     }
 
     struct LightType {

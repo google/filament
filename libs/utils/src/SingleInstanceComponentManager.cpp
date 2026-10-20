@@ -66,8 +66,11 @@ void SingleInstanceComponentManagerBase::recordDirtyEntity(Entity const e) noexc
 }
 
 void SingleInstanceComponentManagerBase::notifyChange(Entity const e) noexcept {
-    for (auto* bitset : mBitsets) {
-        bitset->add(e.getId());
+    uint32_t const id = e.getId();
+    for (auto const [bitset, filter] : mBitsets) {
+        if (!filter || (*filter)[id]) {
+            bitset->add(id);
+        }
     }
 
     if (UTILS_UNLIKELY(!mChangeCallbacks.empty())) {
@@ -80,8 +83,8 @@ void SingleInstanceComponentManagerBase::notifyChange(Slice<const Entity> const 
             "Entity must be layout-compatible with uint32_t for zero-copy Slice forwarding");
 
     Slice const ids{ reinterpret_cast<uint32_t const*>(entities.data()), entities.size() };
-    for (auto* bitset : mBitsets) {
-        bitset->add(ids);
+    for (auto const [bitset, filter] : mBitsets) {
+        bitset->add(ids, filter);
     }
 
     if (UTILS_UNLIKELY(!mChangeCallbacks.empty())) {
@@ -104,12 +107,16 @@ void SingleInstanceComponentManagerBase::flushNotifications() noexcept {
     }
 }
 
-void SingleInstanceComponentManagerBase::registerBitset(PagedArenaBitset* bitset) {
-    mBitsets.push_back(bitset);
+void SingleInstanceComponentManagerBase::registerBitset(
+        PagedArenaBitset* bitset, PagedArenaBitset const* filter) {
+    mBitsets.push_back({ bitset, filter });
 }
 
 void SingleInstanceComponentManagerBase::unregisterBitset(PagedArenaBitset const* bitset) {
-    mBitsets.erase(std::ranges::remove(mBitsets, bitset).begin(), mBitsets.end());
+    mBitsets.erase(
+            std::ranges::remove_if(mBitsets,
+                    [bitset](auto const& reg) { return reg.bitset == bitset; }).begin(),
+            mBitsets.end());
 }
 
 void SingleInstanceComponentManagerBase::catchupGarbage() noexcept {
@@ -155,7 +162,7 @@ bool SingleInstanceComponentManagerBase::popPendingZombie(Entity const newEntity
     return false;
 }
 
-void SingleInstanceComponentManagerBase::checkZombieCollisionPanic(Entity const newEntity) noexcept {
+UTILS_NOINLINE void SingleInstanceComponentManagerBase::checkZombieCollisionPanic(Entity const newEntity) noexcept {
     Entity zombie;
     if (UTILS_UNLIKELY(popPendingZombie(newEntity, zombie))) {
         FILAMENT_CHECK_PRECONDITION(false)

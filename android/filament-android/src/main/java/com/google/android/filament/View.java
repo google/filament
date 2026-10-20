@@ -630,7 +630,7 @@ public class View {
      */
     public void setTemporalAntiAliasingOptions(@NonNull TemporalAntiAliasingOptions options) {
         mTemporalAntiAliasingOptions = options;
-        nSetTemporalAntiAliasingOptions(getNativeObject(), options.filterWidth, options.feedback, options.lodBias, options.sharpness, options.enabled, options.upscaling, options.filterHistory, options.filterInput, options.useYCoCg, options.hdr, options.boxType.toFilamentNative(), options.boxClipping.toFilamentNative(), options.jitterPattern.toFilamentNative(), options.varianceGamma, options.preventFlickering, options.historyReprojection);
+        nSetTemporalAntiAliasingOptions(getNativeObject(), options.filterWidth, options.feedback, options.lodBias, options.sharpness, options.enabled, options.upscaling, options.filterHistory, options.filterInput, options.useYCoCg, options.hdr, options.boxType.toFilamentNative(), options.boxClipping.toFilamentNative(), options.jitterPattern.toFilamentNative(), options.varianceGamma, options.preventFlickering, options.historyReprojection, options.motionAdaptiveHistory, options.motionDeltaThreshold, options.minBoxStrength, options.minAlphaStrength, options.skyDepthThreshold, options.motionHoldFrames, options.depthDisocclusion, options.disocclusionDepthThreshold, options.disocclusionHistoryNeighborhood, options.exactLanczosSupport);
     }
 
     /**
@@ -2075,7 +2075,7 @@ public class View {
         public float filterWidth = 1.0f;
         /** history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA). */
         public float feedback = 0.12f;
-        /** texturing lod bias (typically -1 or -2) */
+        /** texture lod bias (typically between -1.0 and 0.0) */
         public float lodBias = -1.0f;
         /** post-TAA sharpen, especially useful when upscaling is true. */
         public float sharpness = 0.0f;
@@ -2104,12 +2104,32 @@ public class View {
         /** Jitter Pattern */
         @NonNull
         public TemporalAntiAliasingOptions.JitterPattern jitterPattern = TemporalAntiAliasingOptions.JitterPattern.HALTON_23_X16;
-        /** High values increases ghosting artefact, lower values increases jittering, range [0.75, 1.25] */
-        public float varianceGamma = 1.0f;
+        /** High values increases ghosting artefact, lower values increases jittering, range [0.6, 1.25] */
+        public float varianceGamma = 0.7f;
         /** adjust the feedback dynamically to reduce flickering */
         public boolean preventFlickering = false;
         /** whether to apply history reprojection (debug option) */
         public boolean historyReprojection = true;
+        /** relaxes history rejection under low camera motion to reduce flickering on static content */
+        public boolean motionAdaptiveHistory = false;
+        /** camera motion threshold in texels above which history rejection is applied at full strength */
+        public float motionDeltaThreshold = 1.0f;
+        /** minimum history clamping strength when the camera is static, in (0, 1] */
+        public float minBoxStrength = 0.1f;
+        /** minimum history feedback scale when the camera is static, in (0, 1] */
+        public float minAlphaStrength = 0.3f;
+        /** normalized depth threshold below which distant/sky pixels always use full history rejection */
+        public float skyDepthThreshold = 0.001f;
+        /** number of frames to maintain full history rejection after camera motion stops (0 to disable) */
+        public float motionHoldFrames = 12.0f;
+        /** enables depth-based disocclusion detection to reduce ghosting around moving objects */
+        public boolean depthDisocclusion = false;
+        /** depth difference threshold for disocclusion detection */
+        public float disocclusionDepthThreshold = 0.001f;
+        /** reduces false disocclusions on thin static geometry at a higher GPU cost */
+        public boolean disocclusionHistoryNeighborhood = true;
+        /** uses a wider reconstruction filter kernel for higher sharpness at 1:1 resolution, at a higher GPU cost */
+        public boolean exactLanczosSupport = false;
     }
 
     /**
@@ -2361,7 +2381,7 @@ public class View {
     private static native int nGetSampleCount(long nativeView);
     private static native void nSetAntiAliasing(long nativeView, int type);
     private static native int nGetAntiAliasing(long nativeView);
-    private static native void nSetTemporalAntiAliasingOptions(long nativeView, float filterWidth, float feedback, float lodBias, float sharpness, boolean enabled, float upscaling, boolean filterHistory, boolean filterInput, boolean useYCoCg, boolean hdr, int boxType, int boxClipping, int jitterPattern, float varianceGamma, boolean preventFlickering, boolean historyReprojection);
+    private static native void nSetTemporalAntiAliasingOptions(long nativeView, float filterWidth, float feedback, float lodBias, float sharpness, boolean enabled, float upscaling, boolean filterHistory, boolean filterInput, boolean useYCoCg, boolean hdr, int boxType, int boxClipping, int jitterPattern, float varianceGamma, boolean preventFlickering, boolean historyReprojection, boolean motionAdaptiveHistory, float motionDeltaThreshold, float minBoxStrength, float minAlphaStrength, float skyDepthThreshold, float motionHoldFrames, boolean depthDisocclusion, float disocclusionDepthThreshold, boolean disocclusionHistoryNeighborhood, boolean exactLanczosSupport);
     private static native void nSetScreenSpaceReflectionsOptions(long nativeView, float thickness, float bias, float maxDistance, float stride, boolean enabled);
     private static native void nSetGuardBandOptions(long nativeView, boolean enabled);
     private static native void nSetMultiSampleAntiAliasingOptions(long nativeView, boolean enabled, int sampleCount, boolean customResolve);

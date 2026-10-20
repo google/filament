@@ -26,8 +26,56 @@
 #include <utility>
 
 #include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
+
+// Type-erased handle wrapper used as Bimap's Value type so that different Handle<T> types can share
+// the same BimapBackward instantiation.
+struct BimapHandleValue {
+    uint32_t id;
+    friend bool operator==(BimapHandleValue const lhs, BimapHandleValue const rhs) noexcept {
+        return lhs.id == rhs.id;
+    }
+};
+
+struct BimapHandleValueHasher {
+    size_t operator()(BimapHandleValue const v) const noexcept {
+        return std::hash<uint32_t>()(v.id);
+    }
+};
+
+namespace details {
+
+// Base class holding the backward map (Value -> Key const*) using a type-erased void const* pointer
+// for the key. Since the backward map only hashes and compares Value and never dereferences Key,
+// factoring it out of Bimap<Key, ...> allows all Bimap instantiations with the same (Value, ValueHash)
+// to share a single tsl::robin_map instantiation, reducing template code bloat.
+template<typename Value, typename ValueHash>
+class BimapBackward {
+protected:
+    struct VoidKeyDelegate {
+        void const* pKey = nullptr;
+    };
+
+    using RawBackwardMap = tsl::robin_map<Value, VoidKeyDelegate, ValueHash>;
+    RawBackwardMap mBackwardMap;
+
+    void backwardClear() noexcept { mBackwardMap.clear(); }
+    void backwardReserve(size_t capacity) { mBackwardMap.reserve(capacity); }
+    bool backwardEmpty() const noexcept { return mBackwardMap.empty(); }
+    void backwardInsert(Value const& value, void const* pKey) {
+        mBackwardMap.insert({ value, { pKey } });
+    }
+    typename RawBackwardMap::const_iterator backwardFind(Value const& value) const {
+        return mBackwardMap.find(value);
+    }
+    void backwardErase(typename RawBackwardMap::const_iterator it) {
+        mBackwardMap.erase(it);
+    }
+};
+
+} // namespace details
 
 /*
  * A semi-generic custom bimap. This bimap stores a key/value pair and can retrieve
@@ -39,7 +87,9 @@ template<typename Key, typename Value,
         typename KeyHash = std::hash<Key>,
         typename ValueHash = std::hash<Value>,
         typename Allocator = std::allocator<Key>>
-class Bimap {
+class Bimap : private details::BimapBackward<Value, ValueHash> {
+    using BackwardBase = details::BimapBackward<Value, ValueHash>;
+    using RawBackwardIterator = typename BackwardBase::RawBackwardMap::const_iterator;
 
     struct KeyDelegate {
         Key const* pKey = nullptr;
@@ -62,13 +112,38 @@ class Bimap {
             std::equal_to<KeyDelegate>,
             std::allocator<std::pair<KeyDelegate, Value>>,
             true>;
-    using BackwardMap = tsl::robin_map<Value, KeyDelegate, ValueHash>;
 
     Allocator mAllocator;
     ForwardMap mForwardMap;
-    BackwardMap mBackwardMap;
 
 public:
+    class BackwardConstIterator {
+        RawBackwardIterator mIt{};
+        friend class Bimap;
+    public:
+        BackwardConstIterator() = default;
+        explicit BackwardConstIterator(RawBackwardIterator it) noexcept : mIt(it) {}
+
+        struct ArrowProxy {
+            Value const& first;
+            KeyDelegate second;
+            ArrowProxy const* operator->() const noexcept { return this; }
+        };
+
+        ArrowProxy operator->() const noexcept {
+            return { mIt->first, { static_cast<Key const*>(mIt->second.pKey) } };
+        }
+
+        friend bool operator==(BackwardConstIterator const& lhs,
+                BackwardConstIterator const& rhs) noexcept {
+            return lhs.mIt == rhs.mIt;
+        }
+        friend bool operator!=(BackwardConstIterator const& lhs,
+                BackwardConstIterator const& rhs) noexcept {
+            return lhs.mIt != rhs.mIt;
+        }
+    };
+
     Bimap() = default;
 
     explicit Bimap(Allocator&& allocator)
@@ -93,26 +168,26 @@ public:
             mAllocator.deallocate(const_cast<Key*>(pair.first.pKey), 1);
         }
         mForwardMap.clear();
-        mBackwardMap.clear();
+        this->backwardClear();
     }
 
     void reserve(size_t capacity) {
         mForwardMap.reserve(capacity);
-        mBackwardMap.reserve(capacity);
+        this->backwardReserve(capacity);
     }
 
     bool empty() const noexcept {
-        return mForwardMap.empty() && mBackwardMap.empty();
+        return mForwardMap.empty() && this->backwardEmpty();
     }
 
     // insert a new key/value pair. duplicate are not allowed.
     void insert(Key const& key, Value const& value) noexcept {
-        assert_invariant(find(key) == end() && findValue(value) == mBackwardMap.end());
+        assert_invariant(find(key) == end() && findValue(value) == endValue());
         Key* pKey = mAllocator.allocate(1); // allocate storage for the key
         new(static_cast<void*>(pKey)) Key{ key }; // copy-construct the key
         // TODO: we can leak the Key if the calls below throw
         mForwardMap.insert({{ pKey }, value });
-        mBackwardMap.insert({ value, { pKey }});
+        this->backwardInsert(value, pKey);
     }
 
     typename ForwardMap::iterator begin() { return mForwardMap.begin(); }
@@ -123,8 +198,9 @@ public:
     typename ForwardMap::const_iterator end() const { return mForwardMap.end(); }
     typename ForwardMap::const_iterator cend() const { return mForwardMap.cend(); }
 
-    typename BackwardMap::iterator endValue() { return mBackwardMap.end(); }
-    typename BackwardMap::const_iterator endValue() const { return mBackwardMap.end(); }
+    BackwardConstIterator endValue() const noexcept {
+        return BackwardConstIterator{ this->mBackwardMap.end() };
+    }
 
     // Find the value iterator from the key in O(1)
     typename ForwardMap::const_iterator find(Key const& key) const {
@@ -135,11 +211,8 @@ public:
     }
 
     // Find the key iterator from the value in O(1). precondition, the value must exist.
-    typename BackwardMap::const_iterator findValue(Value const& value) const {
-        return mBackwardMap.find(value);
-    }
-    typename BackwardMap::iterator findValue(Value& value) {
-        return mBackwardMap.find(value);
+    BackwardConstIterator findValue(Value const& value) const {
+        return BackwardConstIterator{ this->backwardFind(value) };
     }
 
     // Erase by key
@@ -159,10 +232,10 @@ public:
 
         // Find the corresponding entry in the backward map.
         auto backward_it = findValue(it->second);
-        assert_invariant(backward_it != mBackwardMap.end());
+        assert_invariant(backward_it != endValue());
 
         // Erase from both maps while the key is still valid.
-        mBackwardMap.erase(backward_it);
+        this->backwardErase(backward_it.mIt);
         mForwardMap.erase(it);
 
         // Now that no map refers to the key, safely destroy and deallocate it.
@@ -171,7 +244,7 @@ public:
     }
 
     // erase by backward map iterator
-    void erase(typename BackwardMap::const_iterator it) {
+    void erase(BackwardConstIterator it) {
         // Get a stable pointer to the key object.
         Key const* const pKey = it->second.pKey;
 
@@ -181,7 +254,7 @@ public:
 
         // Erase from both maps while the key object is still valid.
         mForwardMap.erase(forward_it);
-        mBackwardMap.erase(it);
+        this->backwardErase(it.mIt);
 
         // Now that no map refers to the key, we can safely destroy and deallocate it.
         pKey->~Key();

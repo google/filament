@@ -7,5 +7,5 @@ material {
 
     vertexDomain : device,
     shadingModel : unlit,
-    variantFilter : [ skinning, shadowReceiver, vsm, fog ],
+    variantFilter : [ skinning, shadowReceiver, vsm, fog, ssr ],
 }
