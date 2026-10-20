@@ -50,8 +50,6 @@ DracoMesh* DracoCache::findOrCreateMesh(const cgltf_buffer_view* key) {
     return mesh;
 }
 
-DracoMesh::DracoMesh(struct DracoMeshDetails* details) : mDetails(details) {}
-
 #if GLTFIO_DRACO_SUPPORTED
 
 struct DracoMeshDetails {
@@ -59,6 +57,16 @@ struct DracoMeshDetails {
     vector<unique_ptr<cgltf_buffer_view>> views;
     vector<unique_ptr<cgltf_buffer>> buffers;
 };
+
+#else
+
+struct DracoMeshDetails {};
+
+#endif
+
+DracoMesh::DracoMesh(struct DracoMeshDetails* details) : mDetails(details) {}
+
+#if GLTFIO_DRACO_SUPPORTED
 
 DracoMesh::~DracoMesh() {
     for (auto& buffer : mDetails->buffers) {
@@ -215,7 +223,6 @@ bool DracoMesh::getVertexAttributes(uint32_t attributeId, cgltf_accessor* target
 #else // #if GLTFIO_DRACO_SUPPORTED
 
 DracoMesh::~DracoMesh() {}
-struct DracoMeshDetails {};
 DracoMesh* DracoMesh::decode(const uint8_t* data, size_t dataSize) { return nullptr; }
 
 bool DracoMesh::getFaceIndices(cgltf_accessor* target) const {
