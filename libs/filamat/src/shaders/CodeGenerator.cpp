@@ -45,8 +45,8 @@ io::sstream& CodeGenerator::generateSeparator(io::sstream& out) {
     return out;
 }
 
-utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out, ShaderStage stage,
-        MaterialInfo const& material, filament::Variant v, uint32_t apiLevel) const {
+io::sstream& CodeGenerator::generateCommonProlog(io::sstream& out, ShaderStage const stage,
+        MaterialInfo const& material, filament::Variant const v, uint32_t const apiLevel) const {
     switch (mShaderModel) {
         case ShaderModel::MOBILE:
             // Vulkan requires version 310 or higher
@@ -243,7 +243,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         generateValueDefine(out, "VARYING", "in");
     }
 
-    auto getShadingDefine = [](Shading shading) -> const char* {
+    auto getShadingDefine = [](Shading const shading) -> const char* {
         switch (shading) {
             case Shading::LIT:                 return "SHADING_MODEL_LIT";
             case Shading::UNLIT:               return "SHADING_MODEL_UNLIT";
@@ -372,13 +372,13 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
 
     // Api level enforcement.
     generateValueDefine(out, "CLIENT_MATERIAL_API_LEVEL", apiLevel);
-    generateValueDefine(out, "UNSTABLE_MATERIAL_API_LEVEL", filament::UNSTABLE_MATERIAL_API_LEVEL);
+    generateValueDefine(out, "UNSTABLE_MATERIAL_API_LEVEL", UNSTABLE_MATERIAL_API_LEVEL);
 
     out << "\n";
     return out;
 }
 
-Precision CodeGenerator::getDefaultPrecision(ShaderStage stage) const {
+Precision CodeGenerator::getDefaultPrecision(ShaderStage const stage) const {
     switch (stage) {
         case ShaderStage::VERTEX:
             return Precision::HIGH;
@@ -408,7 +408,7 @@ io::sstream& CodeGenerator::generateCommonEpilog(io::sstream& out) {
     return out;
 }
 
-io::sstream& CodeGenerator::generateSurfaceTypes(io::sstream& out, ShaderStage stage) {
+io::sstream& CodeGenerator::generateSurfaceTypes(io::sstream& out, ShaderStage const stage) {
     out << '\n';
     switch (stage) {
         case ShaderStage::VERTEX:
@@ -425,7 +425,7 @@ io::sstream& CodeGenerator::generateSurfaceTypes(io::sstream& out, ShaderStage s
     return out;
 }
 
-io::sstream& CodeGenerator::generateSurfaceMain(io::sstream& out, ShaderStage stage) {
+io::sstream& CodeGenerator::generateSurfaceMain(io::sstream& out, ShaderStage const stage) {
     switch (stage) {
         case ShaderStage::VERTEX:
             out << SHADERS_SURFACE_MAIN_VS_DATA;
@@ -440,7 +440,7 @@ io::sstream& CodeGenerator::generateSurfaceMain(io::sstream& out, ShaderStage st
     return out;
 }
 
-io::sstream& CodeGenerator::generatePostProcessMain(io::sstream& out, ShaderStage stage) {
+io::sstream& CodeGenerator::generatePostProcessMain(io::sstream& out, ShaderStage const stage) {
     if (stage == ShaderStage::VERTEX) {
         out << SHADERS_POST_PROCESS_MAIN_VS_DATA;
     } else if (stage == ShaderStage::FRAGMENT) {
@@ -449,7 +449,7 @@ io::sstream& CodeGenerator::generatePostProcessMain(io::sstream& out, ShaderStag
     return out;
 }
 
-io::sstream& CodeGenerator::generateCommonVariable(io::sstream& out, ShaderStage stage,
+io::sstream& CodeGenerator::generateCommonVariable(io::sstream& out, ShaderStage const stage,
         const MaterialBuilder::CustomVariable& variable, const size_t index) {
     auto const& name = variable.name;
     const char* precisionString = getPrecisionQualifier(variable.precision);
@@ -471,22 +471,22 @@ io::sstream& CodeGenerator::generateCommonVariable(io::sstream& out, ShaderStage
     return out;
 }
 
-io::sstream& CodeGenerator::generateSurfaceShaderInputs(io::sstream& out, ShaderStage stage,
-        const AttributeBitset& attributes, Interpolation interpolation,
-        MaterialBuilder::PushConstantList const& pushConstants, uint32_t pushConstantOffset) const {
+io::sstream& CodeGenerator::generateSurfaceShaderInputs(io::sstream& out, ShaderStage const stage,
+        const AttributeBitset& attributes, Interpolation const interpolation,
+        MaterialBuilder::PushConstantList const& pushConstants, uint32_t const pushConstantOffset) const {
     auto const& attributeDatabase = MaterialBuilder::getAttributeDatabase();
 
     const char* shading = getInterpolationQualifier(interpolation);
     out << "#define SHADING_INTERPOLATION " << shading << "\n";
 
     out << "\n";
-    attributes.forEachSetBit([&out, &attributeDatabase](size_t i) {
+    attributes.forEachSetBit([&out, &attributeDatabase](size_t const i) {
         generateDefine(out, attributeDatabase[i].getDefineName().c_str());
     });
 
     if (stage == ShaderStage::VERTEX) {
         out << "\n";
-        attributes.forEachSetBit([&out, &attributeDatabase, this](size_t i) {
+        attributes.forEachSetBit([&out, &attributeDatabase, this](size_t const i) {
             auto const& attribute = attributeDatabase[i];
             assert_invariant( i == attribute.location );
             if (mTargetLanguage == TargetLanguage::SPIRV ||
@@ -507,10 +507,10 @@ io::sstream& CodeGenerator::generateSurfaceShaderInputs(io::sstream& out, Shader
     return out;
 }
 
-io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage stage,
-        const CString& name, size_t index,
-        MaterialBuilder::VariableQualifier qualifier,
-        MaterialBuilder::Precision precision,
+io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage const stage,
+        const CString& name, size_t const index,
+        MaterialBuilder::VariableQualifier const qualifier,
+        MaterialBuilder::Precision const precision,
         MaterialBuilder::OutputType outputType) const {
     if (name.empty() || stage == ShaderStage::VERTEX) {
         return out;
@@ -574,7 +574,7 @@ io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage stage,
 }
 
 
-io::sstream& CodeGenerator::generateSurfaceDepthMain(io::sstream& out, ShaderStage stage) {
+io::sstream& CodeGenerator::generateSurfaceDepthMain(io::sstream& out, ShaderStage const stage) {
     assert(stage != ShaderStage::VERTEX);
     if (stage == ShaderStage::FRAGMENT) {
         out << SHADERS_SURFACE_DEPTH_MAIN_FS_DATA;
@@ -582,8 +582,8 @@ io::sstream& CodeGenerator::generateSurfaceDepthMain(io::sstream& out, ShaderSta
     return out;
 }
 
-const char* CodeGenerator::getUniformPrecisionQualifier(UniformType type, Precision precision,
-        Precision uniformPrecision, Precision defaultPrecision) noexcept {
+const char* CodeGenerator::getUniformPrecisionQualifier(UniformType const type, Precision precision,
+        Precision const uniformPrecision, Precision const defaultPrecision) noexcept {
     if (!hasPrecision(type)) {
         // some types like bool can't have a precision qualifier
         return "";
@@ -602,13 +602,13 @@ const char* CodeGenerator::getUniformPrecisionQualifier(UniformType type, Precis
     return getPrecisionQualifier(precision);
 }
 
-utils::io::sstream& CodeGenerator::generateBuffers(utils::io::sstream& out,
+io::sstream& CodeGenerator::generateBuffers(io::sstream& out,
         MaterialInfo::BufferContainer const& buffers) const {
 
     for (auto const* buffer : buffers) {
 
         // FIXME: we need to get the bindings for the SSBOs and that will depend on the samplers
-        backend::descriptor_binding_t binding = 0;
+        descriptor_binding_t binding = 0;
 
         if (mTargetApi == TargetApi::OPENGL) {
             // For OpenGL, the set is not used bug the binding must be unique.
@@ -620,9 +620,9 @@ utils::io::sstream& CodeGenerator::generateBuffers(utils::io::sstream& out,
     return out;
 }
 
-io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderStage stage,
-        filament::DescriptorSetBindingPoints set,
-        filament::backend::descriptor_binding_t binding,
+io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderStage const stage,
+        DescriptorSetBindingPoints const set,
+        descriptor_binding_t binding,
         const BufferInterfaceBlock& uib) const {
 
     if (mTargetApi == TargetApi::OPENGL) {
@@ -635,7 +635,7 @@ io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderStage stage
 
 io::sstream& CodeGenerator::generateInterfaceFields(io::sstream& out,
         FixedCapacityVector<BufferInterfaceBlock::FieldInfo> const& infos,
-        Precision defaultPrecision) const {
+        Precision const defaultPrecision) const {
     Precision const uniformPrecision = getDefaultUniformPrecision();
 
     for (auto const& info : infos) {
@@ -684,9 +684,9 @@ io::sstream& CodeGenerator::generateUboAsPlainUniforms(io::sstream& out, ShaderS
     return out;
 }
 
-io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, ShaderStage stage,
-        filament::DescriptorSetBindingPoints set,
-        filament::backend::descriptor_binding_t binding,
+io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, ShaderStage const stage,
+        DescriptorSetBindingPoints const set,
+        descriptor_binding_t const binding,
         const BufferInterfaceBlock& uib) const {
     if (uib.isEmptyForFeatureLevel(mFeatureLevel)) {
         return out;
@@ -754,7 +754,7 @@ io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, Shade
     if (uib.getTarget() == BufferInterfaceBlock::Target::SSBO) {
         uint8_t qualifiers = uib.getQualifier();
         while (qualifiers) {
-            uint8_t const mask = 1u << utils::ctz(unsigned(qualifiers));
+            uint8_t const mask = 1u << ctz(unsigned(qualifiers));
             switch (BufferInterfaceBlock::Qualifier(qualifiers & mask)) {
                 case BufferInterfaceBlock::Qualifier::COHERENT:  out << "coherent "; break;
                 case BufferInterfaceBlock::Qualifier::WRITEONLY: out << "writeonly "; break;
@@ -775,9 +775,9 @@ io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, Shade
     return out;
 }
 
-io::sstream& CodeGenerator::generateCommonSamplers(utils::io::sstream& out,
-        filament::DescriptorSetBindingPoints set,
-        filament::SamplerInterfaceBlock::SamplerInfoList const& list) const {
+io::sstream& CodeGenerator::generateCommonSamplers(io::sstream& out,
+        DescriptorSetBindingPoints const set,
+        SamplerInterfaceBlock::SamplerInfoList const& list) const {
     if (list.empty()) {
         return out;
     }
@@ -849,7 +849,7 @@ io::sstream& CodeGenerator::generatePostProcessSubpass(io::sstream& out, Subpass
 }
 
 void CodeGenerator::fixupExternalSamplers(
-        std::string& shader, SamplerInterfaceBlock const& sib, FeatureLevel featureLevel) noexcept {
+        std::string& shader, SamplerInterfaceBlock const& sib, FeatureLevel const featureLevel) noexcept {
     auto const& infos = sib.getSamplerInfoList();
     if (infos.empty()) {
         return;
@@ -897,7 +897,7 @@ io::sstream& CodeGenerator::generateDefine(io::sstream& out, const char* name) {
     return out;
 }
 
-io::sstream& CodeGenerator::generateValueDefine(io::sstream& out, const char* name, uint32_t value) {
+io::sstream& CodeGenerator::generateValueDefine(io::sstream& out, const char* name, uint32_t const value) {
     out << "#define " << name << " " << value << "\n";
     return out;
 }
@@ -909,25 +909,25 @@ io::sstream& CodeGenerator::generateValueDefine(io::sstream& out, const char* na
 }
 
 io::sstream& CodeGenerator::generateIndexedDefine(io::sstream& out, const char* name,
-        uint32_t index, uint32_t value) {
+        uint32_t const index, uint32_t const value) {
     out << "#define " << name << index << " " << value << "\n";
     return out;
 }
 
 struct SpecializationConstantFormatter {
-    std::string operator()(int value) noexcept { return std::to_string(value); }
-    std::string operator()(float value) noexcept { return std::to_string(value); }
-    std::string operator()(bool value) noexcept { return value ? "true" : "false"; }
+    std::string operator()(int const value) noexcept { return std::to_string(value); }
+    std::string operator()(float const value) noexcept { return std::to_string(value); }
+    std::string operator()(bool const value) noexcept { return value ? "true" : "false"; }
 };
 
-utils::io::sstream& CodeGenerator::generateSpecializationConstant(utils::io::sstream& out,
-        const char* name, uint32_t id, std::variant<int, float, bool> value) const {
+io::sstream& CodeGenerator::generateSpecializationConstant(io::sstream& out,
+        const char* name, uint32_t const id, std::variant<int, float, bool> value) const {
 
     std::string const constantString = std::visit(SpecializationConstantFormatter(), value);
 
     static const char* types[] = { "int", "float", "bool" };
 
-    if (mTargetLanguage == MaterialBuilderBase::TargetLanguage::SPIRV) {
+    if (mTargetLanguage == TargetLanguage::SPIRV) {
         out << "layout (constant_id = " << id << ") const "
             << types[value.index()] << " " << name << " = " << constantString << ";\n";
     } else {
@@ -940,7 +940,7 @@ utils::io::sstream& CodeGenerator::generateSpecializationConstant(utils::io::sst
     return out;
 }
 
-utils::io::sstream& CodeGenerator::generatePushConstants(utils::io::sstream& out,
+io::sstream& CodeGenerator::generatePushConstants(io::sstream& out,
         MaterialBuilder::PushConstantList const& pushConstants, size_t const layoutLocation,
         uint32_t startOffset) const {
     if (UTILS_UNLIKELY(pushConstants.empty())) {
@@ -986,14 +986,14 @@ utils::io::sstream& CodeGenerator::generatePushConstants(utils::io::sstream& out
 }
 
 io::sstream& CodeGenerator::generateMaterialProperty(io::sstream& out,
-        MaterialBuilder::Property property, bool isSet) {
+        MaterialBuilder::Property const property, bool const isSet) {
     if (isSet) {
         out << "#define " << "MATERIAL_HAS_" << getConstantName(property) << "\n";
     }
     return out;
 }
 
-io::sstream& CodeGenerator::generateQualityDefine(io::sstream& out, ShaderQuality quality) const {
+io::sstream& CodeGenerator::generateQualityDefine(io::sstream& out, ShaderQuality const quality) const {
     out << "#define FILAMENT_QUALITY_LOW    0\n";
     out << "#define FILAMENT_QUALITY_NORMAL 1\n";
     out << "#define FILAMENT_QUALITY_HIGH   2\n";
@@ -1023,7 +1023,7 @@ io::sstream& CodeGenerator::generateQualityDefine(io::sstream& out, ShaderQualit
     return out;
 }
 
-io::sstream& CodeGenerator::generateSurfaceCommon(io::sstream& out, ShaderStage stage) {
+io::sstream& CodeGenerator::generateSurfaceCommon(io::sstream& out, ShaderStage const stage) {
     out << SHADERS_COMMON_MATH_GLSL_DATA;
     switch (stage) {
         case ShaderStage::VERTEX:
@@ -1045,7 +1045,7 @@ io::sstream& CodeGenerator::generateSurfaceCommon(io::sstream& out, ShaderStage 
     return out;
 }
 
-io::sstream& CodeGenerator::generatePostProcessCommon(io::sstream& out, ShaderStage stage) {
+io::sstream& CodeGenerator::generatePostProcessCommon(io::sstream& out, ShaderStage const stage) {
     out << SHADERS_COMMON_MATH_GLSL_DATA;
     if (stage == ShaderStage::VERTEX) {
     } else if (stage == ShaderStage::FRAGMENT) {
@@ -1055,7 +1055,7 @@ io::sstream& CodeGenerator::generatePostProcessCommon(io::sstream& out, ShaderSt
     return out;
 }
 
-io::sstream& CodeGenerator::generateSurfaceFog(io::sstream& out, ShaderStage stage) {
+io::sstream& CodeGenerator::generateSurfaceFog(io::sstream& out, ShaderStage const stage) {
     if (stage == ShaderStage::VERTEX) {
     } else if (stage == ShaderStage::FRAGMENT) {
         out << SHADERS_SURFACE_FOG_FS_DATA;
@@ -1063,7 +1063,7 @@ io::sstream& CodeGenerator::generateSurfaceFog(io::sstream& out, ShaderStage sta
     return out;
 }
 
-io::sstream& CodeGenerator::generateSurfaceMaterial(io::sstream& out, ShaderStage stage) {
+io::sstream& CodeGenerator::generateSurfaceMaterial(io::sstream& out, ShaderStage const stage) {
     if (stage == ShaderStage::VERTEX) {
         out << SHADERS_SURFACE_MATERIAL_INPUTS_VS_DATA;
     } else if (stage == ShaderStage::FRAGMENT) {
@@ -1072,7 +1072,7 @@ io::sstream& CodeGenerator::generateSurfaceMaterial(io::sstream& out, ShaderStag
     return out;
 }
 
-io::sstream& CodeGenerator::generatePostProcessInputs(io::sstream& out, ShaderStage stage) {
+io::sstream& CodeGenerator::generatePostProcessInputs(io::sstream& out, ShaderStage const stage) {
     if (stage == ShaderStage::VERTEX) {
         out << SHADERS_POST_PROCESS_INPUTS_VS_DATA;
     } else if (stage == ShaderStage::FRAGMENT) {
@@ -1081,7 +1081,7 @@ io::sstream& CodeGenerator::generatePostProcessInputs(io::sstream& out, ShaderSt
     return out;
 }
 
-io::sstream& CodeGenerator::generatePostProcessGetters(io::sstream& out, ShaderStage stage) {
+io::sstream& CodeGenerator::generatePostProcessGetters(io::sstream& out, ShaderStage const stage) {
     out << SHADERS_COMMON_GETTERS_GLSL_DATA;
     if (stage == ShaderStage::VERTEX) {
         out << SHADERS_POST_PROCESS_GETTERS_VS_DATA;
@@ -1090,7 +1090,7 @@ io::sstream& CodeGenerator::generatePostProcessGetters(io::sstream& out, ShaderS
     return out;
 }
 
-io::sstream& CodeGenerator::generateSurfaceGetters(io::sstream& out, ShaderStage stage) {
+io::sstream& CodeGenerator::generateSurfaceGetters(io::sstream& out, ShaderStage const stage) {
     out << SHADERS_COMMON_GETTERS_GLSL_DATA;
     switch (stage) {
         case ShaderStage::VERTEX:
@@ -1106,15 +1106,15 @@ io::sstream& CodeGenerator::generateSurfaceGetters(io::sstream& out, ShaderStage
     return out;
 }
 
-io::sstream& CodeGenerator::generateSurfaceParameters(io::sstream& out, ShaderStage stage) {
+io::sstream& CodeGenerator::generateSurfaceParameters(io::sstream& out, ShaderStage const stage) {
     if (stage == ShaderStage::FRAGMENT) {
         out << SHADERS_SURFACE_SHADING_PARAMETERS_FS_DATA;
     }
     return out;
 }
 
-io::sstream& CodeGenerator::generateSurfaceLit(io::sstream& out, ShaderStage stage,
-        filament::Variant variant, Shading shading, bool customSurfaceShading) {
+io::sstream& CodeGenerator::generateSurfaceLit(io::sstream& out, ShaderStage const stage,
+        filament::Variant const variant, Shading const shading, bool const customSurfaceShading) {
     if (stage == ShaderStage::FRAGMENT) {
         out << SHADERS_SURFACE_LIGHTING_FS_DATA;
         if (filament::Variant::isShadowReceiverVariant(variant)) {
@@ -1155,8 +1155,8 @@ io::sstream& CodeGenerator::generateSurfaceLit(io::sstream& out, ShaderStage sta
     return out;
 }
 
-io::sstream& CodeGenerator::generateSurfaceUnlit(io::sstream& out, ShaderStage stage,
-        filament::Variant variant, bool hasShadowMultiplier) {
+io::sstream& CodeGenerator::generateSurfaceUnlit(io::sstream& out, ShaderStage const stage,
+        filament::Variant const variant, bool const hasShadowMultiplier) {
     if (stage == ShaderStage::FRAGMENT) {
         if (hasShadowMultiplier) {
             if (filament::Variant::isShadowReceiverVariant(variant)) {
@@ -1168,8 +1168,8 @@ io::sstream& CodeGenerator::generateSurfaceUnlit(io::sstream& out, ShaderStage s
     return out;
 }
 
-io::sstream& CodeGenerator::generateSurfaceReflections(utils::io::sstream& out,
-        ShaderStage stage) {
+io::sstream& CodeGenerator::generateSurfaceReflections(io::sstream& out,
+        ShaderStage const stage) {
     if (stage == ShaderStage::FRAGMENT) {
         out << SHADERS_SURFACE_LIGHTING_FS_DATA;
         out << SHADERS_SURFACE_LIGHT_REFLECTIONS_FS_DATA;
@@ -1179,7 +1179,7 @@ io::sstream& CodeGenerator::generateSurfaceReflections(utils::io::sstream& out,
 }
 
 /* static */
-char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) noexcept {
+char const* CodeGenerator::getConstantName(MaterialBuilder::Property const property) noexcept {
     using Property = MaterialBuilder::Property;
     switch (property) {
         case Property::BASE_COLOR:                  return "BASE_COLOR";
@@ -1222,7 +1222,7 @@ char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) n
     }
 }
 
-char const* CodeGenerator::getTypeName(UniformType type) noexcept {
+char const* CodeGenerator::getTypeName(UniformType const type) noexcept {
     switch (type) {
         case UniformType::BOOL:   return "bool";
         case UniformType::BOOL2:  return "bvec2";
@@ -1254,7 +1254,7 @@ char const* CodeGenerator::getUniformTypeName(BufferInterfaceBlock::FieldInfo co
     }
 }
 
-char const* CodeGenerator::getOutputTypeName(MaterialBuilder::OutputType type) noexcept {
+char const* CodeGenerator::getOutputTypeName(MaterialBuilder::OutputType const type) noexcept {
     switch (type) {
         case MaterialBuilder::OutputType::FLOAT:  return "float";
         case MaterialBuilder::OutputType::FLOAT2: return "vec2";
@@ -1271,8 +1271,8 @@ char const* CodeGenerator::getOutputTypeName(MaterialBuilder::OutputType type) n
     }
 }
 
-char const* CodeGenerator::getSamplerTypeName(SamplerType type, SamplerFormat format,
-        bool multisample) const noexcept {
+char const* CodeGenerator::getSamplerTypeName(SamplerType const type, SamplerFormat const format,
+        bool const multisample) const noexcept {
     switch (type) {
         case SamplerType::SAMPLER_2D:
             switch (format) {
@@ -1319,7 +1319,7 @@ char const* CodeGenerator::getSamplerTypeName(SamplerType type, SamplerFormat fo
     }
 }
 
-char const* CodeGenerator::getInterpolationQualifier(Interpolation interpolation) noexcept {
+char const* CodeGenerator::getInterpolationQualifier(Interpolation const interpolation) noexcept {
     switch (interpolation) {
         case Interpolation::SMOOTH: return "";
         case Interpolation::FLAT:   return "flat ";
@@ -1327,7 +1327,7 @@ char const* CodeGenerator::getInterpolationQualifier(Interpolation interpolation
 }
 
 /* static */
-char const* CodeGenerator::getPrecisionQualifier(Precision precision) noexcept {
+char const* CodeGenerator::getPrecisionQualifier(Precision const precision) noexcept {
     switch (precision) {
         case Precision::LOW:     return "lowp";
         case Precision::MEDIUM:  return "mediump";
@@ -1337,7 +1337,7 @@ char const* CodeGenerator::getPrecisionQualifier(Precision precision) noexcept {
 }
 
 /* static */
-bool CodeGenerator::hasPrecision(BufferInterfaceBlock::Type type) noexcept {
+bool CodeGenerator::hasPrecision(BufferInterfaceBlock::Type const type) noexcept {
     switch (type) {
         case UniformType::BOOL:
         case UniformType::BOOL2:

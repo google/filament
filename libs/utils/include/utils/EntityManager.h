@@ -206,6 +206,14 @@ public:
     PagedArenaBitset getAliveEntities() const noexcept;
 
     /**
+     * @brief Copies the complete tracking bitset representing all logically alive Entities into
+     *        an existing bitset, reusing its allocated capacity.
+     * @param[out] out Destination bitset to populate.
+     */
+    UTILS_NOAPIGEN
+    void getAliveEntities(PagedArenaBitset& out) const noexcept;
+
+    /**
      * @brief Registers a reader's watermark with the Epoch-Based Reclamation (EBR) system.
      *
      * @details Registering a watermark prevents the orchestrator from reclaiming/recycling

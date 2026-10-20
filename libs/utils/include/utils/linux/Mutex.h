@@ -72,7 +72,7 @@ private:
 
 } // namespace linuxutil
 
-#if !defined(UTILS_DEBUG_MUTEX) && !defined(FILAMENT_DEBUG_MUTEX)
+#if !defined(FILAMENT_DEBUG_MUTEX)
 using Mutex = linuxutil::Mutex;
 #endif
 

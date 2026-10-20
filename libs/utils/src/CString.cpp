@@ -31,29 +31,27 @@
 
 namespace utils {
 
-namespace {
-struct CStringStats {
-    std::atomic_int32_t alive = { 0 };
-    std::atomic_int32_t ctor = { 0 };
-};
-
-CStringStats gCStringStats{};
-constexpr size_t CSTRING_LOG_INTERVAL = 10000;
-}
-
 void CString::do_tracking(bool ctor) {
-    if (ctor) {
-        gCStringStats.ctor.fetch_add(1, std::memory_order_relaxed);
-        gCStringStats.alive.fetch_add(1, std::memory_order_relaxed);
-    } else {
-        gCStringStats.alive.fetch_sub(1, std::memory_order_relaxed);
-    }
-    static std::atomic_int32_t sCtorSinceLastLog = { 0 };
-    if (UTILS_UNLIKELY(sCtorSinceLastLog.fetch_add(1, std::memory_order_relaxed) == CSTRING_LOG_INTERVAL)) {
-        LOG(INFO) << "CString stats: "
-                  << gCStringStats.alive.load(std::memory_order_relaxed) << " alive, "
-                  << gCStringStats.ctor.load(std::memory_order_relaxed) << " ctor";
-        sCtorSinceLastLog.store(0, std::memory_order_relaxed);
+    if constexpr (TRACK_AND_LOG_ALLOCATIONS) {
+        struct CStringStats {
+            std::atomic_int32_t alive = { 0 };
+            std::atomic_int32_t ctor = { 0 };
+        };
+        static CStringStats gCStringStats{};
+        constexpr size_t CSTRING_LOG_INTERVAL = 10000;
+        if (ctor) {
+            gCStringStats.ctor.fetch_add(1, std::memory_order_relaxed);
+            gCStringStats.alive.fetch_add(1, std::memory_order_relaxed);
+        } else {
+            gCStringStats.alive.fetch_sub(1, std::memory_order_relaxed);
+        }
+        static std::atomic_int32_t sCtorSinceLastLog = { 0 };
+        if (UTILS_UNLIKELY(sCtorSinceLastLog.fetch_add(1, std::memory_order_relaxed) == CSTRING_LOG_INTERVAL)) {
+            LOG(INFO) << "CString stats: "
+                      << gCStringStats.alive.load(std::memory_order_relaxed) << " alive, "
+                      << gCStringStats.ctor.load(std::memory_order_relaxed) << " ctor";
+            sCtorSinceLastLog.store(0, std::memory_order_relaxed);
+        }
     }
 }
 

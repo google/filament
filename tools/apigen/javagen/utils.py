@@ -35,13 +35,88 @@ Architectural Purpose:
        array families (`float`, `int`, `bool`) for multi-element JNI marshaling.
 """
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional, Union
 
-from .config import (
-    ENUM_ENTRY_RENAMES,
-    JAVA_KEYWORDS,
-    KNOWN_CLASSES,
+from .config import ENUM_ENTRY_RENAMES, JAVA_KEYWORDS, KNOWN_CLASSES
+
+# Standard skip attribute markers indicating UTILS_NOAPIGEN
+SKIP_ATTRS = (
+    "filament:apigen:skip",
+    "filament:skip",
+    "apigen:skip",
+    "no_apigen",
+    "noapigen",
+    "skip_generation",
+    "binding:skip",
 )
+
+# Standard bitmask / flags enum attribute markers
+FLAGS_ATTRS = (
+    "filament:apigen:flags",
+    "filament:flags",
+    "apigen:flags",
+    "flags",
+    "filament:apigen:bitmask",
+    "filament:bitmask",
+    "apigen:bitmask",
+    "bitmask",
+)
+
+SIZE_PARAM_PREFIXES = (
+    "filament:apigen:size_param:",
+    "filament:size_param:",
+    "apigen:size_param:",
+    "size_param:",
+)
+
+TAGGED_ARRAY_MARKERS = (
+    "filament:apigen:tagged_array",
+    "filament:tagged_array",
+    "apigen:tagged_array",
+    "tagged_array",
+)
+
+ALTERNATE_NAME_PREFIXES = (
+    "filament:apigen:alternate_name:",
+    "filament:alternate_name:",
+    "apigen:alternate_name:",
+)
+
+RESERVED_FIELD_PREFIXES = ("reserved", "rfu", "padding")
+
+_ELEMENT_ENTRY_MAP = {
+    "float": "FLOAT", "float2": "FLOAT2", "float3": "FLOAT3", "float4": "FLOAT4",
+    "mat3f": "MAT3", "mat3": "MAT3", "mat4f": "MAT4", "mat4": "MAT4",
+    "int32_t": "INT", "int": "INT", "int2": "INT2", "int3": "INT3", "int4": "INT4",
+    "uint32_t": "INT", "uint": "INT", "uint2": "INT2", "uint3": "INT3", "uint4": "INT4",
+    "bool": "BOOL", "bool2": "BOOL2", "bool3": "BOOL3", "bool4": "BOOL4",
+}
+
+_JNI_SCALAR_MAP = {
+    "float": "jfloat",
+    "double": "jdouble",
+    "int": "jint",
+    "boolean": "jboolean",
+    "short": "jshort",
+    "byte": "jbyte",
+    "long": "jlong",
+    "char": "jchar",
+}
+
+
+def has_skip_attr(node: Dict[str, Any]) -> bool:
+    """Return True if an IR node (class, method, or field) is marked with UTILS_NOAPIGEN."""
+    for attr in node.get("attributes", []):
+        if attr in SKIP_ATTRS or attr.startswith("no_apigen") or attr.startswith("skip_generation"):
+            return True
+    return False
+
+
+def is_flags_enum(enum_ir: Dict[str, Any]) -> bool:
+    """Return True if an enum IR node represents a bitmask / flags class rather than a Java enum."""
+    if enum_ir.get("is_flags", False):
+        return True
+    return any(a in FLAGS_ATTRS for a in enum_ir.get("attributes", []))
 
 
 def get_scoped_cpp_name(cls_dict: Optional[Dict[str, Any]]) -> str:
@@ -95,7 +170,7 @@ def get_size_param_attr(arg: Dict[str, Any]) -> Optional[str]:
     """Extract the associated count or size parameter name from an argument.
 
     Architectural Purpose:
-        In legacy C++ APIs or IR fixtures, raw pointer array arguments were paired
+        In legacy C++ APIs, pointer parameters were annotated to associate them
         with a length/count parameter (e.g. `void setBones(Bone const* transforms, size_t count)`).
         Modern APIs use `utils::Slice<T>` instead. For legacy IR compatibility,
         this function extracts the target parameter name (`count`) from either the
@@ -118,16 +193,9 @@ def get_size_param_attr(arg: Dict[str, Any]) -> Optional[str]:
     Returns:
         The name of the paired size parameter string if found, or None.
     """
-    prefixes = (
-        "filament:apigen:size_param:",
-        "filament:size_param:",
-        "apigen:size_param:",
-        "size_param:",
-    )
-
     # Step 1: Scan direct argument-level attributes
     for attr in arg.get("attributes", []):
-        for prefix in prefixes:
+        for prefix in SIZE_PARAM_PREFIXES:
             if attr.startswith(prefix):
                 return attr[len(prefix):]
 
@@ -139,7 +207,7 @@ def get_size_param_attr(arg: Dict[str, Any]) -> Optional[str]:
     t = arg.get("type")
     if isinstance(t, dict):
         for attr in t.get("attributes", []):
-            for prefix in prefixes:
+            for prefix in SIZE_PARAM_PREFIXES:
                 if attr.startswith(prefix):
                     return attr[len(prefix):]
         if t.get("size_param"):
@@ -162,18 +230,8 @@ def get_tagged_array_attr(arg: Dict[str, Any]) -> bool:
     Returns:
         True if the argument possesses any tagged_array attribute, False otherwise.
     """
-    tagged_markers = (
-        "filament:apigen:tagged_array",
-        "filament:tagged_array",
-        "apigen:tagged_array",
-        "tagged_array",
-    )
-
     # Step 1: Inspect attributes for any recognized tagged_array marker
-    for attr in arg.get("attributes", []):
-        if attr in tagged_markers:
-            return True
-    return False
+    return any(attr in TAGGED_ARRAY_MARKERS for attr in arg.get("attributes", []))
 
 
 def format_enum_entry_name(enum_name: str, entry_name: str) -> str:
@@ -202,10 +260,7 @@ def format_enum_entry_name(enum_name: str, entry_name: str) -> str:
     name = entry_name.replace("sRGB", "SRGB")
 
     # Step 2: Apply table-driven renames if registered for this enum
-    if enum_name in ENUM_ENTRY_RENAMES and name in ENUM_ENTRY_RENAMES[enum_name]:
-        return ENUM_ENTRY_RENAMES[enum_name][name]
-
-    return name
+    return ENUM_ENTRY_RENAMES.get(enum_name, {}).get(name, name)
 
 
 def classify_scalar_family(cpp_type: Union[str, Dict[str, Any]]) -> Optional[str]:
@@ -239,8 +294,7 @@ def classify_scalar_family(cpp_type: Union[str, Dict[str, Any]]) -> Optional[str
         cpp_type = cpp_type.get("cpp_name") or cpp_type.get("qualified_name") or ""
 
     # Step 2: Strip outer qualifiers, namespaces, pointers, and references
-    t = cpp_type.strip()
-    bare = t.split("::")[-1].replace("const", "").replace("*", "").replace("&", "").strip()
+    bare = cpp_type.strip().split("::")[-1].replace("const", "").replace("*", "").replace("&", "").strip()
 
     # Step 3: Match against known floating-point prefixes
     if any(bare.startswith(p) for p in ("float", "mat3", "mat4", "half")):
@@ -282,36 +336,8 @@ def get_element_entry_name(cpp_type: Union[str, Dict[str, Any]]) -> str:
         cpp_type = cpp_type.get("cpp_name") or cpp_type.get("qualified_name") or ""
     bare = cpp_type.strip().split("::")[-1].replace("const", "").replace("*", "").replace("&", "").strip()
 
-    # Step 2: Lookup in canonical element entry mapping table
-    mapping = {
-        "float": "FLOAT",
-        "float2": "FLOAT2",
-        "float3": "FLOAT3",
-        "float4": "FLOAT4",
-        "mat3f": "MAT3",
-        "mat3": "MAT3",
-        "mat4f": "MAT4",
-        "mat4": "MAT4",
-        "int32_t": "INT",
-        "int": "INT",
-        "int2": "INT2",
-        "int3": "INT3",
-        "int4": "INT4",
-        "uint32_t": "INT",
-        "uint": "INT",
-        "uint2": "INT2",
-        "uint3": "INT3",
-        "uint4": "INT4",
-        "bool": "BOOL",
-        "bool2": "BOOL2",
-        "bool3": "BOOL3",
-        "bool4": "BOOL4",
-    }
-    if bare in mapping:
-        return mapping[bare]
-
-    # Step 3: Default to uppercase representation if not explicitly in table
-    return bare.upper()
+    # Step 2: Lookup in canonical element entry mapping table, defaulting to uppercase
+    return _ELEMENT_ENTRY_MAP.get(bare, bare.upper())
 
 
 def get_tagged_array_info(method_ir: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -331,6 +357,7 @@ def get_tagged_array_info(method_ir: Dict[str, Any]) -> Optional[Dict[str, Any]]
             "tagged_arg": dict,        # The tagged array argument dictionary
             "cnt_arg": dict,           # The size parameter argument dictionary
             "post_args": List[dict],   # Arguments following the tagged array (excluding count)
+            "is_slice": bool,          # True if argument is a utils::Slice<T>
         }
 
     Args:
@@ -355,21 +382,22 @@ def get_tagged_array_info(method_ir: Dict[str, Any]) -> Optional[Dict[str, Any]]
         return None
 
     tagged_arg = args[tagged_idx]
-    t_str = tagged_arg["type"].get("qualified_name") or tagged_arg["type"].get("cpp_name", "") if isinstance(tagged_arg["type"], dict) else str(tagged_arg["type"])
+    t_str = (
+        tagged_arg["type"].get("qualified_name") or tagged_arg["type"].get("cpp_name", "")
+        if isinstance(tagged_arg["type"], dict)
+        else str(tagged_arg["type"])
+    )
     is_slice = "Slice" in t_str
-
     if not size_arg_name and not is_slice:
         return None
 
+    # Step 2: Locate the paired count/size parameter by name (or synthesize for Slice)
     cnt_idx = -1
     if size_arg_name:
-        # Step 2: Locate the paired size parameter argument by matching name
         for idx, a in enumerate(args):
             if a["name"] == size_arg_name:
                 cnt_idx = idx
                 break
-
-        # If paired size parameter is missing from the arguments list, abort
         if cnt_idx == -1:
             return None
         cnt_arg = args[cnt_idx]
@@ -421,17 +449,7 @@ def get_jni_scalar_type(scalar: str) -> str:
         JNI type string (e.g. 'jfloat', 'jint', 'jboolean').
     """
     # Step 1: Map standard Java primitives to JNI typedefs
-    mapping = {
-        "float": "jfloat",
-        "double": "jdouble",
-        "int": "jint",
-        "boolean": "jboolean",
-        "short": "jshort",
-        "byte": "jbyte",
-        "long": "jlong",
-        "char": "jchar",
-    }
-    return mapping.get(scalar, "jfloat")
+    return _JNI_SCALAR_MAP.get(scalar, "jfloat")
 
 
 def sanitize_identifier(name: str) -> str:
@@ -454,14 +472,9 @@ def sanitize_identifier(name: str) -> str:
     Returns:
         Sanitized identifier safe for Java emission.
     """
-    # Step 1: Guard against empty strings
-    if not name:
-        return name
-
-    # Step 2: If the name collides with a reserved Java keyword, append an underscore
-    if name in JAVA_KEYWORDS:
+    # Step 1: Guard against empty strings and append underscore on keyword collision
+    if name and name in JAVA_KEYWORDS:
         return f"{name}_"
-
     return name
 
 
@@ -492,15 +505,9 @@ def get_effective_method_name(method: Dict[str, Any]) -> str:
     Raises:
         ValueError: If raw method name is a Java reserved keyword and lacks an alternate name.
     """
-    prefixes = (
-        "filament:apigen:alternate_name:",
-        "filament:alternate_name:",
-        "apigen:alternate_name:",
-    )
-
     # Step 1: Check for explicit alternate name annotation in attributes
     for attr in method.get("attributes", []):
-        for prefix in prefixes:
+        for prefix in ALTERNATE_NAME_PREFIXES:
             if attr.startswith(prefix):
                 return attr[len(prefix):]
 
@@ -528,11 +535,9 @@ def to_camel_case(name: str) -> str:
     Returns:
         Camel case formatted string.
     """
-    # Step 1: Split identifier by underscores
-    parts = name.split('_')
-
-    # Step 2: Keep first component lowercase and capitalize subsequent components
-    return parts[0] + ''.join(x.title() for x in parts[1:])
+    # Step 1: Split identifier by underscores and capitalize subsequent components
+    parts = name.split("_")
+    return parts[0] + "".join(x.title() for x in parts[1:])
 
 
 def indent_lines(text: str, spaces: int = 4) -> str:
@@ -545,12 +550,9 @@ def indent_lines(text: str, spaces: int = 4) -> str:
     Returns:
         Indented text string.
     """
-    # Step 1: Split into individual lines
-    lines = text.split('\n')
-
-    # Step 2: Prepend indentation to non-empty lines, preserving blank lines
-    indent = ' ' * spaces
-    return '\n'.join(indent + line if line else line for line in lines)
+    # Step 1: Prepend indentation to non-empty lines, preserving blank lines
+    indent = " " * spaces
+    return "\n".join(indent + line if line else line for line in text.split("\n"))
 
 
 def is_custom_enum(enum_ir: Optional[Dict[str, Any]]) -> bool:
@@ -576,17 +578,13 @@ def is_custom_enum(enum_ir: Optional[Dict[str, Any]]) -> bool:
         return False
 
     # Step 2: Iterate through entries and check if any value diverges from its index
-    entries = enum_ir.get("entries", [])
-    for idx, entry in enumerate(entries):
+    for idx, entry in enumerate(enum_ir.get("entries", [])):
         val = entry.get("value")
         # If value is specified and differs from sequential index, it requires custom handling
         if val is not None and val != idx:
             return True
 
     return False
-
-
-RESERVED_FIELD_PREFIXES = ("reserved", "rfu", "padding")
 
 
 def is_reserved_or_padding_field(field_name: str) -> bool:
@@ -605,4 +603,3 @@ def is_reserved_or_padding_field(field_name: str) -> bool:
     """
     clean_name = field_name.strip().lower().lstrip("_")
     return clean_name.startswith(RESERVED_FIELD_PREFIXES)
-

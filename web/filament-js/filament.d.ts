@@ -2351,7 +2351,7 @@ export interface View$TemporalAntiAliasingOptions {
     filterWidth?: number;
     /** history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA). */
     feedback?: number;
-    /** texturing lod bias (typically -1 or -2) */
+    /** texture lod bias (typically between -1.0 and 0.0) */
     lodBias?: number;
     /** post-TAA sharpen, especially useful when upscaling is true. */
     sharpness?: number;
@@ -2373,12 +2373,32 @@ export interface View$TemporalAntiAliasingOptions {
     boxClipping?: View$TemporalAntiAliasingOptions$BoxClipping;
     /** Jitter Pattern */
     jitterPattern?: View$TemporalAntiAliasingOptions$JitterPattern;
-    /** High values increases ghosting artefact, lower values increases jittering, range [0.75, 1.25] */
+    /** High values increases ghosting artefact, lower values increases jittering, range [0.6, 1.25] */
     varianceGamma?: number;
     /** adjust the feedback dynamically to reduce flickering */
     preventFlickering?: boolean;
     /** whether to apply history reprojection (debug option) */
     historyReprojection?: boolean;
+    /** relaxes history rejection under low camera motion to reduce flickering on static content */
+    motionAdaptiveHistory?: boolean;
+    /** camera motion threshold in texels above which history rejection is applied at full strength */
+    motionDeltaThreshold?: number;
+    /** minimum history clamping strength when the camera is static, in (0, 1] */
+    minBoxStrength?: number;
+    /** minimum history feedback scale when the camera is static, in (0, 1] */
+    minAlphaStrength?: number;
+    /** normalized depth threshold below which distant/sky pixels always use full history rejection */
+    skyDepthThreshold?: number;
+    /** number of frames to maintain full history rejection after camera motion stops (0 to disable) */
+    motionHoldFrames?: number;
+    /** enables depth-based disocclusion detection to reduce ghosting around moving objects */
+    depthDisocclusion?: boolean;
+    /** depth difference threshold for disocclusion detection */
+    disocclusionDepthThreshold?: number;
+    /** reduces false disocclusions on thin static geometry at a higher GPU cost */
+    disocclusionHistoryNeighborhood?: boolean;
+    /** uses a wider reconstruction filter kernel for higher sharpness at 1:1 resolution, at a higher GPU cost */
+    exactLanczosSupport?: boolean;
 }
 
 /**

@@ -33,6 +33,7 @@
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
 
+#include <backend/DriverEnums.h>
 #include <backend/PixelBufferDescriptor.h>
 
 #include <utils/EntityManager.h>
@@ -755,7 +756,7 @@ TEST_F(glTFIOTest, RejectsOversizedEightBitIndexAccessor) {
     AssetLoader* loader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
     ASSERT_NE(loader, nullptr);
 
-    std::vector<uint8_t> glb = makeMalformedEightBitIndexGlb(100000000u);
+    std::vector<uint8_t> glb = makeMalformedEightBitIndexGlb(uint32_t(backend::MAX_INDEX_COUNT));
     FilamentAsset* asset = loader->createAsset(glb.data(), uint32_t(glb.size()));
     ASSERT_NE(asset, nullptr);
 
@@ -763,6 +764,17 @@ TEST_F(glTFIOTest, RejectsOversizedEightBitIndexAccessor) {
     EXPECT_FALSE(resourceLoader.loadResources(asset));
 
     loader->destroyAsset(asset);
+    AssetLoader::destroy(&loader);
+}
+
+TEST_F(glTFIOTest, RejectsIndexAccessorAboveMaxIndexCount) {
+    AssetLoader* loader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(loader, nullptr);
+
+    std::vector<uint8_t> glb = makeIndexAccessorGlb("SCALAR", 5123,
+            uint32_t(backend::MAX_INDEX_COUNT + 1), 0u);
+    EXPECT_EQ(loader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+
     AssetLoader::destroy(&loader);
 }
 
@@ -831,6 +843,13 @@ TEST_F(glTFIOTest, UploadableIndexAccessorContract) {
     accessor.is_sparse = 1;
     EXPECT_FALSE(gltfio::utility::isUploadableIndexAccessor(&accessor));
     accessor.is_sparse = 0;
+
+    // IndexBuffer::Builder::build() caps indexCount at backend::MAX_INDEX_COUNT.
+    accessor.count = backend::MAX_INDEX_COUNT;
+    EXPECT_TRUE(gltfio::utility::isUploadableIndexAccessor(&accessor));
+
+    accessor.count = backend::MAX_INDEX_COUNT + 1;
+    EXPECT_FALSE(gltfio::utility::isUploadableIndexAccessor(&accessor));
 
     // A count beyond uint32 is only representable where cgltf_size is wider than uint32_t.
     if constexpr (sizeof(cgltf_size) > sizeof(uint32_t)) {

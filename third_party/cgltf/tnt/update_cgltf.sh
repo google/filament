@@ -12,3 +12,4 @@ mv ${project}-* ${project}_new
 rsync -r ${project}_new/ ${project}/ --delete --exclude tnt
 rm -rf ${tag}.zip ${project}_new
 git add ${project} && git status
+git apply cgltf-filament.patch

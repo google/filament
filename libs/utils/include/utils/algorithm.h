@@ -20,6 +20,7 @@
 #include <utils/compiler.h>
 
 #include <type_traits>      // for std::enable_if
+#include <utility>          // for std::move
 
 #include <limits.h>
 #include <stddef.h>
@@ -280,6 +281,45 @@ Dest bit_cast(const Source& source) noexcept {
     memcpy(&dest, &source, sizeof(dest));
     return dest;
 #endif
+}
+
+/**
+ * Sorts a small random-access range [first, last) in-place using insertion sort.
+ *
+ * Prefer this over std::sort when the range has a small upper bound (e.g. <= 64 elements):
+ * it avoids instantiating std::sort's heavy introsort/pdqsort templates (~1-3 KB of code per
+ * element/comparator type) and has lower constant overhead on tiny arrays.
+ *
+ * Note: This is an O(N^2) stable sort; do not use on large or unbounded ranges.
+ *
+ * @param first Random-access iterator to the beginning of the range to sort.
+ * @param last  Random-access iterator to the end (one past the last element) of the range.
+ * @param comp  Strict weak ordering comparison functor returning true if lhs < rhs.
+ */
+template<typename RandomAccessIterator, typename COMPARE>
+constexpr inline void smallArraySort(
+        RandomAccessIterator first, RandomAccessIterator last, COMPARE comp) noexcept {
+    size_t const n = static_cast<size_t>(last - first);
+    for (size_t i = 1; i < n; ++i) {
+        auto v = std::move(first[i]);
+        size_t j = i;
+        while (j > 0 && comp(v, first[j - 1])) {
+            first[j] = std::move(first[j - 1]);
+            --j;
+        }
+        first[j] = std::move(v);
+    }
+}
+
+/**
+ * Sorts a small random-access range [first, last) in ascending order using insertion sort.
+ * @see smallArraySort(RandomAccessIterator, RandomAccessIterator, COMPARE)
+ */
+template<typename RandomAccessIterator>
+constexpr inline void smallArraySort(
+        RandomAccessIterator first, RandomAccessIterator last) noexcept {
+    smallArraySort(first, last,
+            [](auto const& lhs, auto const& rhs) noexcept { return lhs < rhs; });
 }
 
 } // namespace utils
