@@ -351,6 +351,7 @@ value_object<filament::Engine::Config>("Engine$Config")
     .field("gpuContextPriority", &filament::Engine::Config::gpuContextPriority)
     .field("sharedUboInitialSizeInBytes", &filament::Engine::Config::sharedUboInitialSizeInBytes)
     .field("asynchronousMode", &filament::Engine::Config::asynchronousMode)
+    .field("asynchronousFrameBudgetUs", &filament::Engine::Config::asynchronousFrameBudgetUs)
     .field("enableMultipleDirectionalLights",
             &filament::Engine::Config::enableMultipleDirectionalLights);
 

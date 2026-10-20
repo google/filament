@@ -141,7 +141,8 @@
 #pragma clang diagnostic ignored "-Wunused-parameter"
 #endif
 
-DECL_DRIVER_API_0(tick)
+// newFrame marks the first tick of a frame, which resets the per-frame async job budget.
+DECL_DRIVER_API(tick, ARG_1(bool, newFrame = true), PARAM_1(newFrame))
 
 DECL_DRIVER_API_N(beginFrame,
         int64_t, monotonic_clock_ns,

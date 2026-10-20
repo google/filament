@@ -51,6 +51,7 @@
 #include <TargetConditionals.h>
 
 #include <algorithm>
+#include <chrono>
 #include <memory>
 
 #ifndef FILAMENT_METAL_DEBUG_LOG
@@ -258,7 +259,8 @@ MetalDriver::MetalDriver(PlatformMetal* platform,
             };
             mJobWorker = ThreadWorker::create(mJobQueue, std::move(threadWorkerConfig));
         } else {
-            mJobWorker = AmortizationWorker::create(mJobQueue);
+            mJobWorker = AmortizationWorker::create(mJobQueue,
+                    std::chrono::microseconds(driverConfig.asynchronousFrameBudgetUs));
         }
     }
 
@@ -289,9 +291,13 @@ MetalDriver::~MetalDriver() noexcept {
     delete mContext;
 }
 
-void MetalDriver::tick(int) {
+void MetalDriver::tick(bool const newFrame) {
     executeTickOps();
     executeDeferredOps();
+
+    if (getJobWorker()) {
+        getJobWorker()->processFrame(newFrame);
+    }
 
     // Notify platform of GPU errors.
     auto& platform = mPlatform;

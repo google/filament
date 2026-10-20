@@ -21,6 +21,8 @@
 #include <utils/Mutex.h>
 #include <utils/Panic.h>
 
+#include <chrono>
+
 namespace filament::backend {
 
 using namespace utils;
@@ -212,8 +214,9 @@ void JobWorker::terminate() {
     }
 }
 
-AmortizationWorker::AmortizationWorker(JobQueue::Ptr queue, PassKey)
-    : JobWorker(std::move(queue)) {
+AmortizationWorker::AmortizationWorker(JobQueue::Ptr queue,
+        std::chrono::microseconds const frameBudget, PassKey)
+    : JobWorker(std::move(queue)), mFrameBudget(frameBudget) {
 }
 
 AmortizationWorker::~AmortizationWorker() = default;
@@ -240,6 +243,50 @@ void AmortizationWorker::process(int const jobCount) {
     for (auto& job: jobs) {
         job();
     }
+}
+
+void AmortizationWorker::processFrame(bool const newFrame) {
+    if (!newFrame) {
+        mFrameEnded = true;
+        runWithinBudget();
+        return;
+    }
+
+    // A frame spends its budget as it ends, after its own commands. A frame that never ended,
+    // skipped by the Renderer, spends it here instead, so the queue keeps moving while frames are
+    // skipped.
+    if (!mFrameEnded) {
+        runWithinBudget();
+    }
+    mRemainingBudget = mFrameBudget;
+    mRanJobThisFrame = false;
+    mFrameEnded = false;
+}
+
+void AmortizationWorker::runWithinBudget() {
+    if (!mQueue) {
+        return;
+    }
+
+    // Measuring from the start of the call keeps a coarse clock (100 us on the web) from adding
+    // rounding error per job.
+    using clock = std::chrono::steady_clock;
+    clock::time_point const start = clock::now();
+    clock::time_point now = start;
+
+    // The first job of a frame runs whatever the budget, so the queue always advances.
+    while (!mRanJobThisFrame || now - start < mRemainingBudget) {
+        JobQueue::Job job = mQueue->pop(false);
+        if (!job) {
+            break;
+        }
+        job();
+        mRanJobThisFrame = true;
+        now = clock::now();
+    }
+
+    // After an overrun the budget is negative, so later calls in this frame run nothing.
+    mRemainingBudget -= now - start;
 }
 
 void AmortizationWorker::drain() {

@@ -659,6 +659,7 @@ Java_com_google_android_filament_Engine_nSetBuilderConfig(JNIEnv*, jclass,
         jint gpuContextPriority,
         jlong sharedUboInitialSizeInBytes,
         jint asynchronousMode,
+        jlong asynchronousFrameBudgetUs,
         jboolean enableMultipleDirectionalLights) {
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
     Engine::Config config = {
@@ -680,6 +681,7 @@ Java_com_google_android_filament_Engine_nSetBuilderConfig(JNIEnv*, jclass,
             .gpuContextPriority = (Engine::GpuContextPriority) gpuContextPriority,
             .sharedUboInitialSizeInBytes = (uint32_t) sharedUboInitialSizeInBytes,
             .asynchronousMode = (Engine::AsynchronousMode) asynchronousMode,
+            .asynchronousFrameBudgetUs = (uint32_t) asynchronousFrameBudgetUs,
             .enableMultipleDirectionalLights = (bool) enableMultipleDirectionalLights,
     };
     builder->config(&config);

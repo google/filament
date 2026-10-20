@@ -153,6 +153,7 @@ Platform::DriverConfig getDriverConfig(FEngine* instance) {
         .asynchronousMode = instance->features.backend.enable_asynchronous_operation
                                     ? instance->getConfig().asynchronousMode
                                     : AsynchronousMode::NONE,
+        .asynchronousFrameBudgetUs = instance->getConfig().asynchronousFrameBudgetUs,
     };
     return driverConfig;
 }

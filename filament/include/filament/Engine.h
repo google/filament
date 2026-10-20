@@ -466,6 +466,21 @@ public:
         AsynchronousMode asynchronousMode = AsynchronousMode::NONE;
 
         /**
+         * Time in microseconds the backend may spend running queued asynchronous operations per
+         * frame, when they run on the backend thread (AsynchronousMode::AMORTIZATION, or
+         * THREAD_PREFERRED falling back to it). A frame starts at each Renderer::beginFrame() or
+         * Renderer::skipFrame(), so with several Renderers each one gets its own budget.
+         *
+         * The operations run in Renderer::endFrame(), after the frame's own commands. A frame that
+         * does not end, because it was skipped, spends its budget when the next frame starts.
+         *
+         * One operation always runs per frame, even with a budget of 0, so the queue keeps moving.
+         * An operation that starts within the budget runs to completion, so a frame can go over
+         * by up to one operation.
+         */
+        uint32_t asynchronousFrameBudgetUs = 2000;
+
+        /**
          * Capacity of the LRU cache for material definitions.
          *
          * A value of 0 indicates that definitions will be destroyed immediately when they are no

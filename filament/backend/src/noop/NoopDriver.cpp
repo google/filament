@@ -70,7 +70,7 @@ template class ConcreteDispatcher<NoopDriver>;
 void NoopDriver::terminate() {
 }
 
-void NoopDriver::tick(int) {
+void NoopDriver::tick(bool) {
 }
 
 void NoopDriver::beginFrame(int64_t monotonic_clock_ns,

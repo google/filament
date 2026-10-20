@@ -293,7 +293,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
         // explicit synchronization model make the ThreadWorker hard to implement without
         // significant infrastructure refactor (transfer queues, thread-safe VMA, etc), which will
         // be done in Phase 2.
-        mJobWorker = AmortizationWorker::create(mJobQueue);
+        mJobWorker = AmortizationWorker::create(mJobQueue,
+                std::chrono::microseconds(driverConfig.asynchronousFrameBudgetUs));
     }
 
     mContext.getDebugUtils().init(mPlatform->getInstance(), mPlatform->getDevice(),
@@ -452,15 +453,14 @@ void VulkanDriver::terminate() {
     }
 }
 
-void VulkanDriver::tick(int) {
+void VulkanDriver::tick(bool const newFrame) {
     mCommands.updateFences();
 
     // Destroy the resources of the readbacks that completed on the readPixels thread.
     mReadPixels.gc();
 
     if (getJobWorker()) {
-        // This number is randomly/heuristically chosen. Consider making the number optional.
-        getJobWorker()->process(5);
+        getJobWorker()->processFrame(newFrame);
     }
 
     // If the Renderer is skipping a lot of frames, it's possible for

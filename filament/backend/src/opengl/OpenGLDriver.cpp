@@ -364,7 +364,8 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform,
             // The worker operates on the same backend (engine) thread for the Amortization mode,
             // so use the same state.
             mWorkerState = mBackendState;
-            mJobWorker = AmortizationWorker::create(mJobQueue);
+            mJobWorker = AmortizationWorker::create(mJobQueue,
+                    std::chrono::microseconds(driverConfig.asynchronousFrameBudgetUs));
         }
     }
 }
@@ -4540,7 +4541,7 @@ void OpenGLDriver::executeGpuCommandsCompleteOps(bool const afterFinish) noexcep
 // Rendering ops
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLDriver::tick(int) {
+void OpenGLDriver::tick(bool const newFrame) {
     DEBUG_MARKER()
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     executeGpuCommandsCompleteOps();
@@ -4548,8 +4549,7 @@ void OpenGLDriver::tick(int) {
     executeEveryNowAndThenOps();
     getShaderCompilerService().tick();
     if (getJobWorker()) {
-        // This number is randomly/heuristically chosen. Consider making the number optional.
-        getJobWorker()->process(5);
+        getJobWorker()->processFrame(newFrame);
     }
 }
 

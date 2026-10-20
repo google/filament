@@ -356,7 +356,7 @@ void FRenderer::skipFrame(uint64_t const vsyncSteadyClockTimeNano) {
 
     // Gives the backend a chance to execute periodic tasks. This must be called before
     // the frame skipper.
-    driver.tick();
+    driver.tick(true);
 
     // do this before engine.flush()
     mResourceAllocator->gc(true);
@@ -464,7 +464,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
 
     // Gives the backend a chance to execute periodic tasks. This must be called before
     // the frame skipper.
-    driver.tick();
+    driver.tick(true);
 
     /*
     * From this point, we can't do any more work in beginFrame() because the user could choose
@@ -583,7 +583,7 @@ void FRenderer::endFrame() {
     driver.endFrame(mFrameId);
 
     // gives the backend a chance to execute periodic tasks
-    driver.tick();
+    driver.tick(false);
 
     // stop the frame capture, if one was requested
     if (UTILS_UNLIKELY(engine.debug.renderer.doFrameCapture)) {

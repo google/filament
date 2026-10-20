@@ -375,6 +375,12 @@ public:
          * Asynchronous mode for the engine. Defines how asynchronous operations are handled.
          */
         AsynchronousMode asynchronousMode = AsynchronousMode::NONE;
+
+        /**
+         * Per-frame time budget in microseconds for queued asynchronous operations in the
+         * amortization strategy. See Engine::Config::asynchronousFrameBudgetUs.
+         */
+        uint32_t asynchronousFrameBudgetUs = 2000;
     };
 
     Platform() noexcept;
