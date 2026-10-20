@@ -45,6 +45,7 @@
 
 #include <algorithm>
 #include <array>
+#include <limits>
 #include <type_traits>
 #include <utility>
 
@@ -520,6 +521,17 @@ void FTexture::setImageCommon(FEngine& engine, size_t const level,
             << ") > texture depth (" << effectiveTextureDepthOrLayers << ") at level ("
             << unsigned(level) << ")";
 
+    // Vulkan stages each upload in a buffer tracked in 32 bits and GL takes compressed sizes as
+    // GLsizei, so a single upload is capped at INT32_MAX bytes. Checked before the empty-region
+    // return because the upload command is still sent in that case.
+    uint64_t const uploadSize = p.type == PixelDataType::COMPRESSED
+            ? p.size
+            : uint64_t(width) * height * depth *
+                      PixelBufferDescriptor::computeDataSize(p.format, p.type, 1, 1, 1);
+    FILAMENT_CHECK_PRECONDITION(uploadSize <= uint64_t(std::numeric_limits<int32_t>::max()))
+            << "upload of " << uploadSize << " bytes exceeds the maximum of "
+            << std::numeric_limits<int32_t>::max() << " bytes.";
+
     if (UTILS_UNLIKELY(!width || !height || !depth)) {
         // The operation is a no-op, return immediately. The PixelBufferDescriptor callback
         // should be called automatically when the object is destroyed.
@@ -560,6 +572,25 @@ void FTexture::setImageCommon(FEngine& engine, size_t const level,
                    "{{"
                 << unsigned(xoffset) << "," << unsigned(yoffset) << "," << unsigned(zoffset) << "},{"
                 << unsigned(width) << "," << unsigned(height) << "," << unsigned(depth) << ")}}";
+    } else {
+        FILAMENT_CHECK_PRECONDITION(isCompressed())
+                << "Compressed data requires a compressed texture format, got internal format="
+                << unsigned(mFormat) << ".";
+
+        // Backends read whole blocks for the region, so a shorter buffer is read out of bounds.
+        uint64_t const blockWidth = backend::getBlockWidth(mFormat);
+        uint64_t const blockHeight = backend::getBlockHeight(mFormat);
+        uint64_t const bytesPerBlock = backend::getFormatSize(mFormat);
+        assert_invariant(blockWidth && blockHeight && bytesPerBlock);
+        uint64_t const requiredSize = ((width + blockWidth - 1) / blockWidth) *
+                                      ((height + blockHeight - 1) / blockHeight) *
+                                      depth * bytesPerBlock;
+
+        FILAMENT_CHECK_PRECONDITION(requiredSize <= p.size)
+                << "buffer overflow: (size=" << p.size << ") smaller than "
+                << requiredSize << " bytes required by compressed region {{"
+                << xoffset << "," << yoffset << "," << zoffset << "},{"
+                << width << "," << height << "," << depth << ")}}";
     }
 }
 

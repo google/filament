@@ -35,3 +35,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
   updated to their local transform, as documented.
 - matc: external samplers are now declared as `texture_external` in WGSL shaders [⚠️ **New Material Version**]
 - engine: Fix shadow normal bias instability with LiSPSM [⚠️ **New Material Version**]
+- engine: `Texture::setImage()` now rejects uploads of 2 GiB or more

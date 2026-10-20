@@ -25,6 +25,8 @@
 
 #include <utils/Panic.h>
 
+#include <limits>
+
 static constexpr uint32_t TIME_BEFORE_EVICTION = 3;
 
 using namespace bluevk;
@@ -37,12 +39,13 @@ namespace {
 static constexpr uint32_t MAX_EMPTY_STAGES_TO_RETAIN = 1;
 constexpr uint32_t STAGE_SIZE = 1048576;
 
-uint32_t alignValue(uint32_t valueToAlign, uint32_t alignment) {
+// 64-bit so that aligning a value near UINT32_MAX cannot wrap.
+VkDeviceSize alignValue(VkDeviceSize valueToAlign, VkDeviceSize alignment) {
     if (alignment == 0) {
         return valueToAlign;
     }
 
-    uint32_t remainder = valueToAlign % alignment;
+    VkDeviceSize remainder = valueToAlign % alignment;
     return remainder == 0 ? valueToAlign : valueToAlign + (alignment - remainder);
 }
 
@@ -67,12 +70,18 @@ VulkanStagePool::VulkanStagePool(VmaAllocator allocator, fvkmemory::ResourceMana
           mPhysicalDevice(physicalDevice),
           mDeviceLimits(deviceLimits) {}
 
-fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStagePool::acquireStage(uint32_t numBytes,
+fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStagePool::acquireStage(size_t requestedBytes,
         uint32_t alignment) {
+    // Stages track capacities and offsets in 32 bits. FTexture::setImageCommon caps texture
+    // uploads at INT32_MAX bytes, so the request still fits after alignment.
+    assert_invariant(requestedBytes <= std::numeric_limits<uint32_t>::max());
+
     // Apply alignment to the byte count to ensure that, when we later flush
     // data written by the host, we only flush the atoms that we modified, and
     // no adjacent atoms.
-    numBytes = alignToNonCoherentAtomSize(numBytes);
+    VkDeviceSize const alignedBytes = alignToNonCoherentAtomSize(requestedBytes);
+    assert_invariant(alignedBytes <= std::numeric_limits<uint32_t>::max());
+    uint32_t const numBytes = uint32_t(alignedBytes);
 
     // First check if a stage segment exists whose capacity is greater than or
     // equal to the requested size.
@@ -84,12 +93,12 @@ fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStagePool::acquireStage(uint
     VulkanStage* pStage = nullptr;
     uint32_t segmentOffset = 0;
     while (iter != mStages.end()) {
-        segmentOffset = alignValue(iter->second->currentOffset(), alignment);
+        VkDeviceSize const offset = alignValue(iter->second->currentOffset(), alignment);
 
-        // Check for overflow + if there's space.
-        if (segmentOffset >= iter->second->currentOffset() &&
-                iter->second->capacity() - numBytes >= segmentOffset) {
+        // Check if there's space.
+        if (iter->second->capacity() >= offset + numBytes) {
             // This buffer has enough space.
+            segmentOffset = uint32_t(offset);
             pStage = iter->second;
             mStages.erase(iter);
             break;
@@ -101,8 +110,6 @@ fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStagePool::acquireStage(uint
 
     if (!pStage) {
         pStage = allocateNewStage(std::max(numBytes, STAGE_SIZE));
-        // The loop may have left an offset computed for a rejected stage.
-        segmentOffset = 0;
     }
 
     // Note: this allocation updates `currentOffset` and `segments` within
@@ -118,7 +125,7 @@ fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStagePool::acquireStage(uint
     return pSegment;
 }
 
-uint32_t VulkanStagePool::alignToNonCoherentAtomSize(uint32_t bytes) {
+VkDeviceSize VulkanStagePool::alignToNonCoherentAtomSize(VkDeviceSize bytes) {
     VkDeviceSize alignment = mDeviceLimits->nonCoherentAtomSize;
     return alignValue(bytes, alignment);
 }
