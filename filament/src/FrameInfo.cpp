@@ -25,6 +25,7 @@
 
 #include <private/utils/Tracing.h>
 
+#include <utils/algorithm.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
@@ -300,7 +301,7 @@ void FrameInfoManager::denoiseFrameTime(FrameHistoryQueue& history, Config const
         for (size_t i = 0; i < size; ++i) {
             median[i] = history[first + i].gpuFrameDuration;
         }
-        std::sort(median.begin(), median.begin() + size);
+        utils::smallArraySort(median.begin(), median.begin() + size);
         duration const denoisedFrameTime = median[size / 2];
 
         history[first].denoisedFrameTime = denoisedFrameTime;

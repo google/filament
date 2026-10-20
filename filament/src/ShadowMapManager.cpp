@@ -45,6 +45,7 @@
 #include <backend/DriverEnums.h>
 #include <backend/PipelineState.h>
 
+#include <utils/algorithm.h>
 #include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
@@ -444,9 +445,9 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                 if (mFeatureShadowAllocator) {
                     // sort shadow passes by layer so that we can update all the shadow maps of
                     // a layer in one render pass.
-                    std::sort(passList.begin(), passList.end(), [](
+                    utils::smallArraySort(passList.begin(), passList.end(), [](
                             PrepareShadowPassData::ShadowPass const& lhs,
-                            PrepareShadowPassData::ShadowPass const& rhs) {
+                            PrepareShadowPassData::ShadowPass const& rhs) noexcept {
                         return lhs.shadowMap->getLayer() < rhs.shadowMap->getLayer();
                     });
                 }

@@ -21,7 +21,6 @@
 #include <utils/JobSystem.h>
 #include <utils/Logger.h>
 
-#include <memory>
 #include <mutex>
 #include <utility>
 
@@ -134,16 +133,31 @@ void AsyncJobQueue::drain() {
         // If the service thread is already asked to exit, we shouldn't push new jobs or wait,
         // as doing so will cause a deadlock.
         if (!mExitRequested) {
-            // We use a shared_ptr's custom deleter to guarantee the latch is signaled EXACTLY once.
+            // We use a move-only RAII guard to guarantee the latch is signaled EXACTLY once.
             // This elegantly handles edge cases:
             // 1. cancelAll(): If cancelAll() is called, the queue is cleared and the job is destroyed
-            //    without being executed. The shared_ptr drops to 0 refs and signals the latch.
+            //    without being executed. The guard destructor signals the latch.
             // 2. Normal execution: The worker thread executes the empty lambda, then destroys the job.
-            //    The shared_ptr drops to 0 refs and signals the latch.
-            std::shared_ptr<CountDownLatch> sp(&latch, [](CountDownLatch* l) {
-                l->latch();
-            });
-            mQueue.push_back([sp]() {});
+            //    The guard destructor signals the latch.
+            struct LatchGuard {
+                CountDownLatch* latch = nullptr;
+                explicit LatchGuard(CountDownLatch* l) noexcept : latch(l) {}
+                LatchGuard(LatchGuard const&) = delete;
+                LatchGuard& operator=(LatchGuard const&) = delete;
+                LatchGuard(LatchGuard&& rhs) noexcept : latch(std::exchange(rhs.latch, nullptr)) {}
+                LatchGuard& operator=(LatchGuard&& rhs) noexcept {
+                    if (this != &rhs) {
+                        latch = std::exchange(rhs.latch, nullptr);
+                    }
+                    return *this;
+                }
+                ~LatchGuard() noexcept {
+                    if (latch) {
+                        latch->latch();
+                    }
+                }
+            };
+            mQueue.push_back([guard = LatchGuard(&latch)]() {});
             pushed = true;
         }
     }

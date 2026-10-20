@@ -455,23 +455,23 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
     mStructureDescriptorSet.terminate(driver);
 }
 
-Handle<HwTexture> PostProcessManager::getOneTexture() const {
+Handle<HwTexture> PostProcessManager::getOneTexture() const noexcept {
     return mEngine.getOneTexture();
 }
 
-Handle<HwTexture> PostProcessManager::getZeroTexture() const {
+Handle<HwTexture> PostProcessManager::getZeroTexture() const noexcept {
     return mEngine.getZeroTexture();
 }
 
-Handle<HwTexture> PostProcessManager::getOneTextureArray() const {
+Handle<HwTexture> PostProcessManager::getOneTextureArray() const noexcept {
     return mEngine.getOneTextureArray();
 }
 
-Handle<HwTexture> PostProcessManager::getZeroTextureArray() const {
+Handle<HwTexture> PostProcessManager::getZeroTextureArray() const noexcept {
     return mEngine.getZeroTextureArray();
 }
 
-void PostProcessManager::resetForRender() {
+void PostProcessManager::resetForRender() noexcept {
     mMaterialInstanceManager.reset();
 }
 
