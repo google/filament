@@ -1066,6 +1066,17 @@ endif()
 
 # Generate exported executables for cross-compiled builds (Android, WASM, and iOS)
 if ((NOT CMAKE_CROSSCOMPILING AND NOT FILAMENT_IMPORT_PREBUILT_EXECUTABLES) OR FILAMENT_EXPORT_PREBUILT_EXECUTABLES)
+    if (WIN32 AND FILAMENT_EXPORT_PREBUILT_EXECUTABLES)
+        foreach(tool_target matc cmgen filamesh mipgen resgen uberz glslminifier)
+            set_target_properties(${tool_target} PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY "${FILAMENT}/${IMPORT_EXECUTABLES_DIR}"
+                RUNTIME_OUTPUT_DIRECTORY_DEBUG "${FILAMENT}/${IMPORT_EXECUTABLES_DIR}"
+                RUNTIME_OUTPUT_DIRECTORY_RELEASE "${FILAMENT}/${IMPORT_EXECUTABLES_DIR}"
+                RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${FILAMENT}/${IMPORT_EXECUTABLES_DIR}"
+                RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${FILAMENT}/${IMPORT_EXECUTABLES_DIR}"
+            )
+        endforeach()
+    endif()
     export(TARGETS matc cmgen filamesh mipgen resgen uberz glslminifier FILE ${IMPORT_EXECUTABLES})
 endif()
 

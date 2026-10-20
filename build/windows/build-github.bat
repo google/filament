@@ -65,25 +65,28 @@ if not "%RUNNING_LOCALLY%" == "1" (
     powershell -NoProfile -NonInteractive -Command "Add-MpPreference -ExclusionPath '%OUT_DIR%'"
 )
 
-:: Important: build debug builds first, when disk space is plentiful. Debug builds require
-:: significantly more temporary space.
-if "%BUILD_DEBUG%" == "1" (
-    :: MTd
-    call :BuildVariant mtd "-DUSE_STATIC_CRT=ON" Debug || goto :ErrorExit
+set PREBUILT_TOOLS_FLAG=
 
-    if "%BUILD_RELEASE_VARIANTS%" == "1" (
-        :: MDd
-        call :BuildVariant mdd "-DUSE_STATIC_CRT=OFF" Debug || goto :ErrorExit
-    )
-)
-
+:: Build release first so that its host tools (matc, cmgen, resgen, etc.) can be exported and
+:: reused by subsequent release and debug variants instead of running slow debug builds of tools.
 if "%BUILD_RELEASE%" == "1" (
     :: /MT
-    call :BuildVariant mt "-DUSE_STATIC_CRT=ON" Release || goto :ErrorExit
+    call :BuildVariant mt "-DUSE_STATIC_CRT=ON -DFILAMENT_EXPORT_PREBUILT_EXECUTABLES_DIR=out/prebuilt-tools" Release || goto :ErrorExit
+    set PREBUILT_TOOLS_FLAG=-DFILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR=out/prebuilt-tools
 
     if "%BUILD_RELEASE_VARIANTS%" == "1" (
         :: /MD
-        call :BuildVariant md "-DUSE_STATIC_CRT=OFF" Release || goto :ErrorExit
+        call :BuildVariant md "-DUSE_STATIC_CRT=OFF -DFILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR=out/prebuilt-tools" Release || goto :ErrorExit
+    )
+)
+
+if "%BUILD_DEBUG%" == "1" (
+    :: MTd
+    call :BuildVariant mtd "-DUSE_STATIC_CRT=ON %PREBUILT_TOOLS_FLAG%" Debug || goto :ErrorExit
+
+    if "%BUILD_RELEASE_VARIANTS%" == "1" (
+        :: MDd
+        call :BuildVariant mdd "-DUSE_STATIC_CRT=OFF %PREBUILT_TOOLS_FLAG%" Debug || goto :ErrorExit
     )
 )
 
