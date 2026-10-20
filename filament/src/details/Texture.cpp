@@ -532,6 +532,13 @@ void FTexture::setImageCommon(FEngine& engine, size_t const level,
             << "upload of " << uploadSize << " bytes exceeds the maximum of "
             << std::numeric_limits<int32_t>::max() << " bytes.";
 
+    // Some backends size their RGB to RGBA buffer as 4 * p.size / 3, so the multiply must not
+    // wrap.
+    FILAMENT_CHECK_PRECONDITION(
+            (p.format != PixelDataFormat::RGB && p.format != PixelDataFormat::RGB_INTEGER) ||
+            p.size <= SIZE_MAX / 4)
+            << "RGB pixel buffer is too large (size=" << size_t(p.size) << ")";
+
     if (UTILS_UNLIKELY(!width || !height || !depth)) {
         // The operation is a no-op, return immediately. The PixelBufferDescriptor callback
         // should be called automatically when the object is destroyed.
