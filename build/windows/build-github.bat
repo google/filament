@@ -71,22 +71,22 @@ set PREBUILT_TOOLS_FLAG=
 :: reused by subsequent release and debug variants instead of running slow debug builds of tools.
 if "%BUILD_RELEASE%" == "1" (
     :: /MT
-    call :BuildVariant mt "-DUSE_STATIC_CRT=ON -DFILAMENT_EXPORT_PREBUILT_EXECUTABLES_DIR=out/prebuilt-tools" Release || goto :ErrorExit
-    set PREBUILT_TOOLS_FLAG=-DFILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR=out/prebuilt-tools
+    call :BuildVariant mt "-DUSE_STATIC_CRT=ON -DFILAMENT_BUILD_TESTING=OFF -DFILAMENT_EXPORT_PREBUILT_EXECUTABLES_DIR=out/prebuilt-tools" Release || goto :ErrorExit
+    set PREBUILT_TOOLS_FLAG=-DFILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR=out/prebuilt-tools -DFILAMENT_SKIP_TOOLS=ON
 
     if "%BUILD_RELEASE_VARIANTS%" == "1" (
         :: /MD
-        call :BuildVariant md "-DUSE_STATIC_CRT=OFF -DFILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR=out/prebuilt-tools" Release || goto :ErrorExit
+        call :BuildVariant md "-DUSE_STATIC_CRT=OFF -DFILAMENT_BUILD_TESTING=OFF -DFILAMENT_SKIP_SAMPLES=ON -DFILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR=out/prebuilt-tools -DFILAMENT_SKIP_TOOLS=ON" Release || goto :ErrorExit
     )
 )
 
 if "%BUILD_DEBUG%" == "1" (
     :: MTd
-    call :BuildVariant mtd "-DUSE_STATIC_CRT=ON %PREBUILT_TOOLS_FLAG%" Debug || goto :ErrorExit
+    call :BuildVariant mtd "-DUSE_STATIC_CRT=ON -DFILAMENT_BUILD_TESTING=ON -DFILAMENT_SKIP_SAMPLES=ON %PREBUILT_TOOLS_FLAG%" Debug || goto :ErrorExit
 
     if "%BUILD_RELEASE_VARIANTS%" == "1" (
         :: MDd
-        call :BuildVariant mdd "-DUSE_STATIC_CRT=OFF %PREBUILT_TOOLS_FLAG%" Debug || goto :ErrorExit
+        call :BuildVariant mdd "-DUSE_STATIC_CRT=OFF -DFILAMENT_BUILD_TESTING=ON -DFILAMENT_SKIP_SAMPLES=ON %PREBUILT_TOOLS_FLAG%" Debug || goto :ErrorExit
     )
 )
 

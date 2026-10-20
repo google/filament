@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.19)
 project(filament-benchmarks)
 
 # FIXME: this is the same logic as in filament's test. without it we have a build failure on GL calls.
-if(IOS OR WASM)
+if(NOT FILAMENT_BUILD_TESTING OR IOS OR WASM)
     return()
 endif()
 

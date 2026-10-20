@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.19)
 project(filament-tests)
 
-if(IOS OR WASM)
+if(NOT FILAMENT_BUILD_TESTING OR IOS OR WASM)
     return()
 endif()
 
