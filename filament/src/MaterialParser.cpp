@@ -422,6 +422,30 @@ bool MaterialParser::getCustomBlendFunction(std::array<BlendFunction, 4>* value)
     (*value)[1] = BlendFunction((blendFunctions >> 16) & 0xFF);
     (*value)[2] = BlendFunction((blendFunctions >>  8) & 0xFF);
     (*value)[3] = BlendFunction((blendFunctions >>  0) & 0xFF);
+    // RasterState keeps these in 4-bit fields, so values 11 to 15 would reach the backends.
+    // Lists every enumerator so -Wswitch fails the build when BlendFunction grows.
+    auto const isValid = [](BlendFunction const function) {
+        switch (function) {
+            case BlendFunction::ZERO:
+            case BlendFunction::ONE:
+            case BlendFunction::SRC_COLOR:
+            case BlendFunction::ONE_MINUS_SRC_COLOR:
+            case BlendFunction::DST_COLOR:
+            case BlendFunction::ONE_MINUS_DST_COLOR:
+            case BlendFunction::SRC_ALPHA:
+            case BlendFunction::ONE_MINUS_SRC_ALPHA:
+            case BlendFunction::DST_ALPHA:
+            case BlendFunction::ONE_MINUS_DST_ALPHA:
+            case BlendFunction::SRC_ALPHA_SATURATE:
+                return true;
+        }
+        return false;
+    };
+    for (BlendFunction const function : *value) {
+        if (!isValid(function)) {
+            return false;
+        }
+    }
     return result;
 }
 
