@@ -21,6 +21,7 @@ set BUILD_DEBUG=
 set BUILD_RELEASE=
 set INSTALL=
 set BUILD_RELEASE_VARIANTS=
+set GENERATE_PDB=OFF
 
 if "%TARGET%" == "presubmit" (
     set BUILD_RELEASE=1
@@ -39,6 +40,7 @@ if "%TARGET%" == "release" (
     set INSTALL=--target install
     set BUILD_RELEASE_VARIANTS=1
     set CREATE_ARCHIVE=1
+    set GENERATE_PDB=ON
 )
 
 set VISUAL_STUDIO_VERSION="Enterprise"
@@ -58,8 +60,10 @@ msbuild /version
 cmake --version
 
 set "OUT_DIR=%CD%\out"
-echo Adding Windows Defender exclusion for %OUT_DIR%
-powershell -NoProfile -NonInteractive -Command "Add-MpPreference -ExclusionPath '%OUT_DIR%'"
+if not "%RUNNING_LOCALLY%" == "1" (
+    echo Adding Windows Defender exclusion for %OUT_DIR%
+    powershell -NoProfile -NonInteractive -Command "Add-MpPreference -ExclusionPath '%OUT_DIR%'"
+)
 
 :: Important: build debug builds first, when disk space is plentiful. Debug builds require
 :: significantly more temporary space.
@@ -108,8 +112,10 @@ set EXIT_CODE=%ERRORLEVEL%
 if "%EXIT_CODE%" == "0" set EXIT_CODE=1
 
 :Exit
-echo Removing Windows Defender exclusion for %OUT_DIR%
-powershell -NoProfile -NonInteractive -Command "Remove-MpPreference -ExclusionPath '%OUT_DIR%'"
+if not "%RUNNING_LOCALLY%" == "1" (
+    echo Removing Windows Defender exclusion for %OUT_DIR%
+    powershell -NoProfile -NonInteractive -Command "Remove-MpPreference -ExclusionPath '%OUT_DIR%'"
+)
 exit /b %EXIT_CODE%
 
 :BuildVariant
@@ -130,6 +136,7 @@ cmake ..\.. ^
     %flag% ^
     -DCMAKE_INSTALL_PREFIX=..\%variant% ^
     -DFILAMENT_WINDOWS_CI_BUILD:BOOL=ON ^
+    -DFILAMENT_GENERATE_PDB:BOOL=%GENERATE_PDB% ^
     -DFILAMENT_SUPPORTS_VULKAN=ON ^
     "-DCMAKE_VS_GLOBALS=UseMultiToolTask=true;EnforceProcessCountAcrossBuilds=true" ^
     || exit /b
