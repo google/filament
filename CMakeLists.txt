@@ -144,7 +144,10 @@ if (NOT FILAMENT_ENABLE_EXCEPTIONS)
 endif()
 
 if (NOT FILAMENT_ENABLE_RTTI)
-    add_compile_options(-fno-rtti)
+    if (NOT MSVC)
+        # This flag is not supported on MSVC.
+        add_compile_options(-fno-rtti)
+    endif()
 endif()
 
 if (FILAMENT_DEBUG_MUTEX)
@@ -460,10 +463,6 @@ endif()
 
 if (ANDROID)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Werror=unguarded-availability")
-endif()
-
-if (CYGWIN)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
 endif()
 
 if (MSVC)
