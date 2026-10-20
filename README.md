@@ -100,6 +100,8 @@ pod 'Filament', '~> 1.78.0'
 - HDR/linear lighting
 - Metallic workflow
 - Clear coat
+- Secondary roughness
+- Iridescence
 - Anisotropic lighting
 - Approximated translucent (subsurface) materials
 - Cloth/fabric/sheen shading
