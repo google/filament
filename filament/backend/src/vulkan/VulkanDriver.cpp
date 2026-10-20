@@ -284,7 +284,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
                           : false),
           mStereoscopicType(driverConfig.stereoscopicType),
           mStereoscopicEyeCount(driverConfig.stereoscopicEyeCount),
-          mAsynchronousMode(driverConfig.asynchronousMode) {
+          mAsynchronousMode(driverConfig.asynchronousMode),
+          mAsyncBackend(platform, context, &mResourceManager, false) {
 
     if (mAsynchronousMode != AsynchronousMode::NONE) {
         mJobQueue = JobQueue::create();
