@@ -254,6 +254,12 @@ private:
     Entry mDefaultMaterialInstanceWithVertexColor = {};
 };
 
+// Maximum supported depth of a glTF node hierarchy. Legitimate assets have shallow
+// hierarchies (tens of levels at most), but the recursive hierarchy traversals below
+// would otherwise consume unbounded stack on deeply nested assets and crash the
+// process, so overly deep assets are rejected instead.
+constexpr size_t MAX_NODE_DEPTH = 512;
+
 struct FAssetLoader : AssetLoader {
     explicit FAssetLoader(AssetConfiguration const& config) :
             mEntityManager(config.entities ? *config.entities : EntityManager::get()),
@@ -316,7 +322,7 @@ private:
 
     // Methods used during the first traveral (creation of VertexBuffer, IndexBuffer, etc)
     FFilamentAsset* createRootAsset(const cgltf_data* srcAsset);
-    void recursePrimitives(const cgltf_node* rootNode, FFilamentAsset* fAsset);
+    void recursePrimitives(const cgltf_node* rootNode, FFilamentAsset* fAsset, size_t depth = 0);
     void createPrimitives(const cgltf_node* node, const char* name, FFilamentAsset* fAsset);
     bool createPrimitive(const cgltf_primitive& inPrim, const char* name, Primitive* outPrim,
             FFilamentAsset* fAsset);
@@ -324,7 +330,7 @@ private:
     // Methods used during subsequent traverals (creation of entities, renderables, etc)
     void createInstances(size_t numInstances, FFilamentAsset* fAsset);
     void recurseEntities(const cgltf_node* node, SceneMask scenes, Entity parent,
-            FFilamentAsset* fAsset, FFilamentInstance* instance);
+            FFilamentAsset* fAsset, FFilamentInstance* instance, size_t depth = 0);
     void createRenderable(const cgltf_node* node, Entity entity, const char* name,
             FFilamentAsset* fAsset);
     void createLight(const cgltf_light* light, Entity entity, FFilamentAsset* fAsset) const;
@@ -561,7 +567,15 @@ FFilamentAsset* FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
     return preresolveTextures(fAsset, srcAsset);
 }
 
-void FAssetLoader::recursePrimitives(const cgltf_node* rootNode, FFilamentAsset* fAsset) {
+void FAssetLoader::recursePrimitives(const cgltf_node* rootNode, FFilamentAsset* fAsset,
+        size_t const depth) {
+    if (depth > MAX_NODE_DEPTH) {
+        slog.e << "Node hierarchy exceeds maximum supported depth of " << MAX_NODE_DEPTH
+               << io::endl;
+        mError = true;
+        return;
+    }
+
     auto const nameStr = getNodeName(rootNode, mDefaultNodeName);
     const char* name = nameStr.c_str();
     name = name ? name : "node";
@@ -572,7 +586,7 @@ void FAssetLoader::recursePrimitives(const cgltf_node* rootNode, FFilamentAsset*
     }
 
     for (cgltf_size i = 0, len = rootNode->children_count; i < len; ++i) {
-        recursePrimitives(rootNode->children[i], fAsset);
+        recursePrimitives(rootNode->children[i], fAsset, depth + 1);
     }
 }
 
@@ -596,7 +610,15 @@ void FAssetLoader::createInstances(size_t const numInstances, FFilamentAsset* fA
 }
 
 void FAssetLoader::recurseEntities(const cgltf_node* node, SceneMask const scenes,
-        Entity const parent, FFilamentAsset* fAsset, FFilamentInstance* instance) {
+        Entity const parent, FFilamentAsset* fAsset, FFilamentInstance* instance,
+        size_t const depth) {
+    if (depth > MAX_NODE_DEPTH) {
+        slog.e << "Node hierarchy exceeds maximum supported depth of " << MAX_NODE_DEPTH
+               << io::endl;
+        mError = true;
+        return;
+    }
+
     NodeManager& nm = mNodeManager;
     const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
     const Entity entity = mEntityManager.create();
@@ -663,7 +685,7 @@ void FAssetLoader::recurseEntities(const cgltf_node* node, SceneMask const scene
     }
 
     for (cgltf_size i = 0, len = node->children_count; i < len; ++i) {
-        recurseEntities(node->children[i], scenes, entity, fAsset, instance);
+        recurseEntities(node->children[i], scenes, entity, fAsset, instance, depth + 1);
     }
 }
 
