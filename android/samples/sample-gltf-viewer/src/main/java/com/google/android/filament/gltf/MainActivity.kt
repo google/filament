@@ -435,14 +435,16 @@ class MainActivity : Activity() {
 
                     val materials = mutableSetOf<Material>()
                     val rcm = modelViewer.engine.renderableManager
+                    val em = modelViewer.engine.entityManager
                     modelViewer.scene.forEach { entity ->
-                        if (rcm.hasComponent(entity)) {
+                        if (em.isAlive(entity) && rcm.hasComponent(entity)) {
                             val ri = rcm.getInstance(entity)
                             val c = rcm.getPrimitiveCount(ri)
                             for (i in 0 until c) {
                                 val mi = rcm.getMaterialInstanceAt(ri, i)
-                                val ma = mi.material
-                                materials.add(ma)
+                                mi.material?.let { material ->
+                                    materials.add(material)
+                                }
                             }
                         }
                     }
