@@ -41,6 +41,7 @@
 #include <math/mat4.h>
 
 #include <algorithm>
+#include <utility>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -175,6 +176,14 @@ public:
     void flushNotifications() noexcept {
         mManager.flushNotifications();
     }
+    void registerBitset(utils::PagedArenaBitset* bitset,
+            utils::PagedArenaBitset const* filter = nullptr) {
+        mManager.registerBitset(bitset, filter);
+    }
+    void unregisterBitset(utils::PagedArenaBitset const* bitset) {
+        mManager.unregisterBitset(bitset);
+    }
+
     void setBones(Instance instance, Bone const* transforms, size_t boneCount, size_t offset = 0);
     void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount, size_t offset = 0);
     void setSkinningBuffer(Instance instance, FSkinningBuffer const* skinningBuffer,

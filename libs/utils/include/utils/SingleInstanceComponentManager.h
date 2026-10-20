@@ -85,8 +85,10 @@ public:
     /**
      * Registers a bitset to be updated when entities change.
      * @param bitset A pointer to the PagedArenaBitset to register.
+     * @param filter An optional filter bitset; if non-null, only entities present in *filter
+     *               are added to *bitset.
      */
-    void registerBitset(PagedArenaBitset* bitset);
+    void registerBitset(PagedArenaBitset* bitset, PagedArenaBitset const* filter = nullptr);
 
     /**
      * Unregisters a bitset.
@@ -290,11 +292,16 @@ private:
         ChangeCallback callback;
     };
 
+    struct BitsetRegistration {
+        PagedArenaBitset* bitset;
+        PagedArenaBitset const* filter;
+    };
+
     static constexpr size_t MAX_DIRTY_COUNT = 16;
     Entity mDirtyEntities[MAX_DIRTY_COUNT];
     size_t mDirtyCount = 0;
     std::vector<CallbackInfo> mChangeCallbacks;
-    std::vector<PagedArenaBitset*> mBitsets;
+    std::vector<BitsetRegistration> mBitsets;
 };
 
 /*

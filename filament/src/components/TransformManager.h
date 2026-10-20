@@ -30,10 +30,15 @@
 #include <math/mat4.h>
 
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <utility>
 #include <variant>
 #include <vector>
+
+namespace utils {
+    class PagedArenaBitset;
+}
 
 namespace filament {
 
@@ -175,9 +180,10 @@ public:
         ensureWorldTransformsUpToDate();
         mManager.flushNotifications();
     }
-    void registerBitset(utils::PagedArenaBitset* bitset) {
+    void registerBitset(utils::PagedArenaBitset* bitset,
+            utils::PagedArenaBitset const* filter = nullptr) {
         ensureWorldTransformsUpToDate();
-        mManager.registerBitset(bitset);
+        mManager.registerBitset(bitset, filter);
     }
     void unregisterBitset(utils::PagedArenaBitset const* bitset) {
         mManager.unregisterBitset(bitset);
