@@ -890,8 +890,15 @@ function(get_resgen_vars ARCHIVE_DIR ARCHIVE_NAME)
     endif()
     set(RESGEN_HEADER "${ARCHIVE_DIR}/${ARCHIVE_NAME}.h" PARENT_SCOPE)
     # Visual Studio makes it difficult to use assembly without using MASM. MASM doesn't support
-    # the equivalent of .incbin, so on Windows we'll just tell resgen to output a C file.
-    if (WASM OR WIN32 OR ANDROID_ON_WINDOWS)
+    # the equivalent of .incbin, so on Windows we tell resgen to output a COFF object (.obj) file
+    # directly. For WebAssembly and Windows-hosted Android builds, we output a C file instead.
+    if (WIN32)
+        set(RESGEN_OUTPUTS "${OUTPUTS};${ARCHIVE_DIR}/${ARCHIVE_NAME}.obj" PARENT_SCOPE)
+        set(RESGEN_FLAGS -qox ${ARCHIVE_DIR} -p ${ARCHIVE_NAME} PARENT_SCOPE)
+        set(RESGEN_SOURCE "${ARCHIVE_DIR}/${ARCHIVE_NAME}.obj" PARENT_SCOPE)
+        set_source_files_properties("${ARCHIVE_DIR}/${ARCHIVE_NAME}.obj"
+                PROPERTIES EXTERNAL_OBJECT TRUE GENERATED TRUE)
+    elseif (WASM OR ANDROID_ON_WINDOWS)
         set(RESGEN_OUTPUTS "${OUTPUTS};${ARCHIVE_DIR}/${ARCHIVE_NAME}.c" PARENT_SCOPE)
         set(RESGEN_FLAGS -qcx ${ARCHIVE_DIR} -p ${ARCHIVE_NAME} PARENT_SCOPE)
         set(RESGEN_SOURCE "${ARCHIVE_DIR}/${ARCHIVE_NAME}.c" PARENT_SCOPE)
@@ -1050,6 +1057,7 @@ if (IS_HOST_PLATFORM)
     add_subdirectory(${TOOLS}/rgb-to-lmsr)
     add_subdirectory(${TOOLS}/roughness-prefilter)
     add_subdirectory(${TOOLS}/specular-color)
+    add_subdirectory(${TOOLS}/taa)
     add_subdirectory(${TOOLS}/uberz)
     add_subdirectory(${TOOLS}/specgen)
 endif()

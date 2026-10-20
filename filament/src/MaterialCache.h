@@ -93,6 +93,15 @@ public:
     // Release an entry in the cache, potentially freeing its GPU resources.
     void releaseMaterial(FEngine& engine, MaterialDefinition const& definition) noexcept;
 
+    backend::Handle<backend::HwProgram> acquireProgram(ProgramSpecialization const& key) noexcept;
+
+    backend::Handle<backend::HwProgram> getOrAcquireProgram(FEngine& engine,
+            ProgramSpecialization const& key, MaterialDefinition const& definition,
+            MaterialParser const& parser, backend::CompilerPriorityQueue priorityQueue,
+            bool isGet) noexcept;
+
+    void releaseProgram(FEngine& engine, ProgramSpecialization const& key) noexcept;
+
 private:
     // TODO: investigate using custom allocators for the below data structures?
 

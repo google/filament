@@ -14,49 +14,45 @@
  * limitations under the License.
  */
 
-#include <utils/CString.h>
-#include <utils/CallStack.h>
 #include <utils/api_level.h>
+#include <utils/CallStack.h>
 #include <utils/compiler.h>
+#include <utils/CString.h>
 #include <utils/ostream.h>
 
+#if !defined(NDEBUG) && !defined(WIN32)
+#include <cxxabi.h>
+#endif
+#if (!defined(__ANDROID__) && !defined(WIN32) && !defined(__EMSCRIPTEN__) && !(defined(__linux__) && !defined(__GLIBC__))) || (defined(__ANDROID__) && (FILAMENT_ANDROID_PLATFORM_API_LEVEL >= 33))
+#include <execinfo.h>
+#endif
+
 #include <algorithm>
-#include <memory>
 #include <cstdlib>
+#include <memory>
+#ifdef __EXCEPTIONS
+#include <stdexcept>
+#endif
+
+#if !defined(WIN32) && !defined(__EMSCRIPTEN__)
+#include <dlfcn.h>
+#endif
 
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
-#if !defined(__ANDROID__) && !defined(WIN32) && !defined(__EMSCRIPTEN__) && !(defined(__linux__) && !defined(__GLIBC__))
-#include <execinfo.h>
+#if (!defined(__ANDROID__) && !defined(WIN32) && !defined(__EMSCRIPTEN__) && !(defined(__linux__) && !defined(__GLIBC__))) || (defined(__ANDROID__) && (FILAMENT_ANDROID_PLATFORM_API_LEVEL >= 33))
 #define HAS_EXECINFO 1
 #else
 #define HAS_EXECINFO 0
 #endif
 
-// execinfo.h is available as of Android 33
-#if defined(__ANDROID__) && (FILAMENT_ANDROID_PLATFORM_API_LEVEL >= 33)
-#include <execinfo.h>
-#undef HAS_EXECINFO
-#define HAS_EXECINFO 1
-#endif
-
 #if !defined(WIN32) && !defined(__EMSCRIPTEN__)
-#include <dlfcn.h>
 #define HAS_DLADDR 1
 #else
 #define HAS_DLADDR 0
-#endif
-
-#if !defined(NDEBUG) && !defined(WIN32)
-#include <cxxabi.h>
-#endif
-
-#include <string.h>
-
-#ifdef __EXCEPTIONS
-#include <stdexcept>
 #endif
 
 namespace utils {
@@ -120,6 +116,7 @@ bool CallStack::operator<(const CallStack& rhs) const {
 
 // ------------------------------------------------------------------------------------------------
 
+UTILS_NOINLINE
 CString CallStack::demangle(const char* mangled) {
 #if !defined(NDEBUG) && !defined(WIN32)
     size_t len;

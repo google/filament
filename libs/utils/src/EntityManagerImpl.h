@@ -31,7 +31,6 @@
 #if FILAMENT_UTILS_TRACK_ENTITIES
 #include <tsl/robin_map.h>
 #endif
-#include <tsl/robin_set.h>
 
 #include <algorithm>
 #include <atomic>
@@ -263,12 +262,14 @@ public:
 
     void registerListener(Listener* l) noexcept {
         LockGuard const lock(mListenerLock);
-        mListeners.insert(l);
+        if (std::ranges::find(mListeners, l) == mListeners.end()) {
+            mListeners.push_back(l);
+        }
     }
 
     void unregisterListener(Listener* l) noexcept {
         LockGuard const lock(mListenerLock);
-        mListeners.erase(l);
+        std::erase(mListeners, l);
     }
 
     void registerWatermark(std::atomic<uint64_t>* const watermark, ImmutableCString name,
@@ -279,6 +280,10 @@ public:
     }
 
     void unregisterWatermark(std::atomic<uint64_t>* const watermark) noexcept {
+        // Note: std::array<GarbageEpoch, BATCH_SIZE> is heavier than it looks because GarbageEpoch
+        // owns a std::unique_ptr<PagedArenaBitset> (requiring array zero-init and destructor
+        // cleanup), but we inline the reclamation step here rather than calling reclaimSafeEpochs()
+        // so that mTimelineLock is only acquired once.
         constexpr size_t BATCH_SIZE = RECLAMATION_EPOCH_BATCH_SIZE;
         std::array<GarbageEpoch, BATCH_SIZE> batch;
         size_t count = 0;
@@ -366,7 +371,7 @@ public:
         return currentEpoch - 1;
     }
 
-    void reclaimSafeEpochs() noexcept {
+    UTILS_NOINLINE void reclaimSafeEpochs() noexcept {
         constexpr size_t BATCH_SIZE = RECLAMATION_EPOCH_BATCH_SIZE;
         std::array<GarbageEpoch, BATCH_SIZE> batch;
         size_t count = 0;
@@ -461,7 +466,7 @@ private:
         }
     }
 
-    void recycleGarbageEpochs(GarbageEpoch* batch, size_t const count) noexcept {
+    UTILS_NOINLINE void recycleGarbageEpochs(GarbageEpoch* batch, size_t const count) noexcept {
         // Only lock the free-list. Never blocks destroy().
         LockGuard const lock(mCreationLock);
 
@@ -478,7 +483,7 @@ private:
         }
     }
 
-    size_t getExpiredEpochsLocked(GarbageEpoch* out, size_t const capacity) noexcept UTILS_REQUIRES(mTimelineLock) {
+    UTILS_NOINLINE size_t getExpiredEpochsLocked(GarbageEpoch* out, size_t const capacity) noexcept UTILS_REQUIRES(mTimelineLock) {
         size_t count = 0;
         uint64_t safeThreshold = std::numeric_limits<uint64_t>::max();
         // Relaxed is fine here. The mutex acts as our memory barrier.
@@ -554,11 +559,8 @@ private:
 
     FixedCapacityVector<Listener*> getListeners() const noexcept {
         LockGuard const lock(mListenerLock);
-        tsl::robin_set<Listener*> const& listeners = mListeners;
-        FixedCapacityVector<Listener*> result(listeners.size());
-        result.resize(result.capacity()); // unfortunately this memset()
-        std::ranges::copy(listeners, result.begin());
-        return result; // the c++ standard guarantees a move
+        return FixedCapacityVector<Listener*>(
+                Slice<Listener* const>(mListeners.data(), mListeners.size()));
     }
 
     /**
@@ -615,7 +617,7 @@ private:
 #endif
 
     mutable Mutex mListenerLock;
-    tsl::robin_set<Listener*> mListeners UTILS_GUARDED_BY(mListenerLock);
+    std::vector<Listener*> mListeners UTILS_GUARDED_BY(mListenerLock);
     std::vector<CallbackInfo> mChangeCallbacks UTILS_GUARDED_BY(mListenerLock);
 };
 

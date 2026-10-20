@@ -20,26 +20,28 @@
 #include "Allocators.h"
 
 #include "fg/Blackboard.h"
+#include "fg/details/DependencyGraph.h"
+#include "fg/details/Resource.h"
+#include "fg/details/Utilities.h"
+#if FILAMENT_ENABLE_FGVIEWER
+#include "fg/FgviewerManager.h"
+#endif
 #include "fg/FrameGraphId.h"
 #include "fg/FrameGraphPass.h"
 #include "fg/FrameGraphRenderPass.h"
 #include "fg/FrameGraphTexture.h"
 
-#include "fg/details/DependencyGraph.h"
-#include "fg/details/Resource.h"
-#include "fg/details/Utilities.h"
+#if FILAMENT_ENABLE_FGVIEWER
+#include <fgviewer/FrameGraphInfo.h>
+#endif
 
-#include "backend/DriverApiForward.h"
-
+#include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
 #include <functional>
 
-#if FILAMENT_ENABLE_FGVIEWER
-#include <fgviewer/FrameGraphInfo.h>
-#include "fg/FgviewerManager.h"
-#else
+#if !FILAMENT_ENABLE_FGVIEWER
 namespace filament::fgviewer {
     class FrameGraphInfo{};
 } // namespace filament::fgviewer
@@ -416,7 +418,7 @@ public:
      */
     FrameGraphId<FrameGraphTexture> import(utils::StaticString name,
             FrameGraphRenderPass::ImportDescriptor const& desc,
-            backend::Handle<backend::HwRenderTarget> target);
+            backend::Handle<backend::HwRenderTarget> target) noexcept;
 
 
     /**
@@ -424,7 +426,7 @@ public:
      * @param handle handle to test validity for
      * @return true of the handle is valid, false otherwise.
      */
-    bool isValid(FrameGraphHandle handle) const;
+    bool isValid(FrameGraphHandle handle) const noexcept;
 
     /**
      * Returns whether a pass has been culled after FrameGraph::compile()

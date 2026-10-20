@@ -22,6 +22,7 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
+#include <utils/algorithm.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Hash.h>
@@ -70,8 +71,8 @@ void HwDescriptorSetLayoutFactory::terminate(DriverApi&) noexcept {
 auto HwDescriptorSetLayoutFactory::create(DriverApi& driver,
         DescriptorSetLayout dsl) noexcept -> Handle {
 
-    std::sort(dsl.descriptors.begin(), dsl.descriptors.end(),
-            [](auto&& lhs, auto&& rhs) {
+    utils::smallArraySort(dsl.descriptors.begin(), dsl.descriptors.end(),
+            [](auto const& lhs, auto const& rhs) noexcept {
         return lhs.binding < rhs.binding;
     });
 
@@ -82,18 +83,18 @@ auto HwDescriptorSetLayoutFactory::create(DriverApi& driver,
     // the common case is that we've never seen it (i.e.: no reuse)
     if (UTILS_LIKELY(pos == mBimap.end())) {
         auto handle = driver.createDescriptorSetLayout(std::move(dsl));
-        mBimap.insert(key, { handle });
+        mBimap.insert(key, { handle.getId() });
         return handle;
     }
 
     ++(pos->first.pKey->refs);
 
-    return pos->second.handle;
+    return Handle(pos->second.id);
 }
 
 void HwDescriptorSetLayoutFactory::destroy(DriverApi& driver, Handle handle) noexcept {
     // look for this handle in our map
-    auto pos = mBimap.findValue(Value{ handle });
+    auto pos = mBimap.findValue(Value{ handle.getId() });
     if (--pos->second.pKey->refs == 0) {
         mBimap.erase(pos);
         driver.destroyDescriptorSetLayout(handle);

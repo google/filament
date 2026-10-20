@@ -293,40 +293,21 @@ template bool InternalDebugRegistry::getProperty<float3>(const char* name,
 template bool InternalDebugRegistry::getProperty<float4>(const char* name,
         float4* v) const noexcept;
 
-// FIXME: registered names aren't exclusive. Each registerDataSource() overload only checks its
-//        own map, and getDataSource() moves a created DataSource to mDataSourceMap, so a lazy
-//        registration succeeds again once the name has been queried (and a direct and a lazy
-//        registration can share a name). Since unregisterDataSource() erases the name from both
-//        maps, one registrant can then remove another's registration: e.g. a View created after
-//        "d.view.frame_info" was queried also becomes its owner, and destroying either View
-//        removes the other's data source. Fix: keep both kinds in a single map, and create the
-//        DataSource in place.
 bool InternalDebugRegistry::registerDataSource(std::string_view const name, void const* data,
         size_t const count) noexcept {
     LockGuard const lock(mDataSourceLock);
-    auto& dataSourceMap = mDataSourceMap;
-    bool const found = dataSourceMap.find(name) == dataSourceMap.end();
-    if (found) {
-        dataSourceMap[name] = { data, count };
-    }
-    return found;
+    return mDataSourceMap.try_emplace(name, DataSourceEntry{ { data, count }, {} }).second;
 }
 
 bool InternalDebugRegistry::registerDataSource(std::string_view const name,
         Invocable<DataSource()>&& creator) noexcept {
     LockGuard const lock(mDataSourceLock);
-    auto& dataSourceCreatorMap = mDataSourceCreatorMap;
-    bool const found = dataSourceCreatorMap.find(name) == dataSourceCreatorMap.end();
-    if (found) {
-        dataSourceCreatorMap[name] = std::move(creator);
-    }
-    return found;
+    return mDataSourceMap.try_emplace(name, DataSourceEntry{ {}, std::move(creator) }).second;
 }
 
 void InternalDebugRegistry::unregisterDataSource(std::string_view const name) noexcept {
     // This waits for a creator running in getDataSource(), since it runs with the lock held.
     LockGuard const lock(mDataSourceLock);
-    mDataSourceCreatorMap.erase(name);
     mDataSourceMap.erase(name);
 }
 
@@ -335,11 +316,7 @@ InternalDebugRegistry::DataSource InternalDebugRegistry::getDataSource(
     std::string_view const key{ name };
     LockGuard const lock(mDataSourceLock);
     auto const it = mDataSourceMap.find(key);
-    if (UTILS_LIKELY(it != mDataSourceMap.end())) {
-        return it->second;
-    }
-    auto const pos = mDataSourceCreatorMap.find(key);
-    if (pos == mDataSourceCreatorMap.end()) {
+    if (it == mDataSourceMap.end()) {
         return { nullptr, 0u };
     }
     // Run the creator with the lock held. Unlocking around it would let unregisterDataSource(),
@@ -347,12 +324,11 @@ InternalDebugRegistry::DataSource InternalDebugRegistry::getDataSource(
     // then publish a stale result. Holding the lock also guarantees that concurrent first
     // queries run the creator only once. Since the lock isn't recursive, the creator must not
     // call back into the data source API (see registerDataSource()).
-    DataSource const dataSource{ pos->second() };
-    // Publish under the registered name: `key` points to the caller's string, which may not
-    // outlive this call.
-    mDataSourceMap[pos->first] = dataSource;
-    mDataSourceCreatorMap.erase(pos);
-    return dataSource;
+    if (UTILS_UNLIKELY(bool(it->second.creator))) {
+        it->second.dataSource = it->second.creator();
+        it->second.creator = {};
+    }
+    return it->second.dataSource;
 }
 
 } // namespace utils

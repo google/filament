@@ -85,4 +85,33 @@ void MaterialCache::releaseMaterial(FEngine& engine,
             });
 }
 
+backend::Handle<backend::HwProgram> MaterialCache::acquireProgram(
+        ProgramSpecialization const& key) noexcept {
+    ProgramCacheEntry const* entry = mPrograms.acquire(key);
+    return entry ? entry->program : backend::Handle<backend::HwProgram>{};
+}
+
+backend::Handle<backend::HwProgram> MaterialCache::getOrAcquireProgram(FEngine& engine,
+        ProgramSpecialization const& key, MaterialDefinition const& definition,
+        MaterialParser const& parser, backend::CompilerPriorityQueue priorityQueue,
+        bool isGet) noexcept {
+    auto factory = [this, &engine, &definition, &parser, &key, priorityQueue]() {
+        ProgramCacheEntry entry{
+            definition.compileProgram(engine, parser, key, priorityQueue),
+            mSpecializationConstantsInternPool.acquire(key.specializationConstants),
+        };
+        assert_invariant(entry.constants.get().data() == key.specializationConstants.data());
+        return entry;
+    };
+    ProgramCacheEntry const* entry = isGet ? mPrograms.get(key, factory)
+                                           : mPrograms.acquire(key, factory);
+    return entry ? entry->program : backend::Handle<backend::HwProgram>{};
+}
+
+void MaterialCache::releaseProgram(FEngine& engine, ProgramSpecialization const& key) noexcept {
+    mPrograms.release(key, [&engine](ProgramCacheEntry& entry) {
+        engine.getDriverApi().destroyProgram(entry.program);
+    });
+}
+
 } // namespace filament

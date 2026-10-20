@@ -95,7 +95,6 @@ struct LockEdge {
 
 struct LockGraphState {
     std::vector<LockEdge> edges;
-    std::vector<const Mutex*> nodes;
     GraphSpinLock spinlock;
 };
 
@@ -154,6 +153,114 @@ bool findCyclePath(const Mutex* startNode, const Mutex* targetNode,
     return false;
 }
 
+UTILS_NOINLINE
+CallStack validateLockAcquisition(const Mutex* self) noexcept {
+    self->ensureCreationStackCaptured();
+
+    for (size_t i = 0; i < t_lockState.count; ++i) {
+        if (UTILS_UNLIKELY(t_lockState.heldLocks[i].mutex == self)) {
+            CallStack currentStack = CallStack::unwind(4);
+            io::sstream stream;
+            stream << "================================================================================\n";
+            stream << "[FILAMENT CONCURRENCY PANIC] Self-Deadlock / Recursive Lock Detected!\n";
+            stream << "================================================================================\n";
+            stream << "Thread (ID " << (unsigned long long)t_lockState.getThreadId()
+                   << ") attempted to recursively acquire non-recursive Lock (0x" << (const void*)self << ")!\n\n";
+            stream << "--- Lock currently held, acquired at:\n" << t_lockState.heldLocks[i].lockStack << "\n";
+            stream << "--- Attempted recursive acquisition at:\n" << currentStack << "\n";
+            stream << "--- Mutex creation stack trace:\n" << self->getCreationStack() << "\n";
+            stream << "================================================================================\n";
+            LOG(ERROR) << stream.c_str();
+            std::abort();
+        }
+    }
+
+    CallStack currentStack = CallStack::unwind(4);
+
+    if (t_lockState.count > 0) {
+        LockGraphState& graph = getLockGraphState();
+        graph.spinlock.lock();
+
+        for (size_t i = 0; i < t_lockState.count; ++i) {
+            const HeldLockInfo& heldInfo = t_lockState.heldLocks[i];
+            const Mutex* L_i = heldInfo.mutex;
+
+            bool edgeExists = false;
+            for (const LockEdge& edge : graph.edges) {
+                if (edge.from == L_i && edge.to == self) {
+                    edgeExists = true;
+                    break;
+                }
+            }
+
+            if (!edgeExists) {
+                std::vector<size_t> cycleEdges;
+                if (findCyclePath(self, L_i, graph, cycleEdges)) {
+                    io::sstream stream;
+                    stream << "================================================================================\n";
+                    stream << "[FILAMENT CONCURRENCY PANIC] Lock-Order Inversion / Potential Deadlock Detected!\n";
+                    stream << "================================================================================\n";
+                    stream << "Thread (ID " << (unsigned long long)t_lockState.getThreadId()
+                           << ") attempted to acquire Lock (0x" << (const void*)self
+                           << ") while holding Lock (0x" << (const void*)L_i << ")!\n";
+                    stream << "Acquiring this lock creates a cyclic lock dependency graph across threads:\n\n";
+
+                    for (size_t eIdx : cycleEdges) {
+                        const LockEdge& edge = graph.edges[eIdx];
+                        stream << "--- Lock (0x" << (const void*)edge.from
+                               << ") acquired before Lock (0x" << (const void*)edge.to
+                               << ") in Thread (ID " << (unsigned long long)edge.threadId << "):\n";
+                        stream << "[Lock (0x" << (const void*)edge.from << ") locked at:]\n" << edge.fromLockStack << "\n";
+                        stream << "[Lock (0x" << (const void*)edge.to << ") locked at:]\n" << edge.toLockStack << "\n";
+                    }
+
+                    stream << "--- BUT Lock (0x" << (const void*)L_i
+                           << ") acquired before Lock (0x" << (const void*)self
+                           << ") in Thread (ID " << (unsigned long long)t_lockState.getThreadId() << ") [CURRENT THREAD]:\n";
+                    stream << "[Lock (0x" << (const void*)L_i << ") locked at:]\n" << heldInfo.lockStack << "\n";
+                    stream << "[Lock (0x" << (const void*)self << ") attempted acquisition at:]\n" << currentStack << "\n";
+
+                    stream << "--------------------------------------------------------------------------------\n";
+                    stream << "Creation Stack Traces for Involved Locks:\n";
+                    std::vector<const Mutex*> involvedLocks;
+                    for (size_t eIdx : cycleEdges) {
+                        const LockEdge& edge = graph.edges[eIdx];
+                        bool foundFrom = false, foundTo = false;
+                        for (const Mutex* m : involvedLocks) {
+                            if (m == edge.from) foundFrom = true;
+                            if (m == edge.to) foundTo = true;
+                        }
+                        if (!foundFrom) involvedLocks.push_back(edge.from);
+                        if (!foundTo) involvedLocks.push_back(edge.to);
+                    }
+                    bool foundLi = false, foundThis = false;
+                    for (const Mutex* m : involvedLocks) {
+                        if (m == L_i) foundLi = true;
+                        if (m == self) foundThis = true;
+                    }
+                    if (!foundLi) involvedLocks.push_back(L_i);
+                    if (!foundThis) involvedLocks.push_back(self);
+
+                    for (const Mutex* m : involvedLocks) {
+                        stream << "Lock (0x" << (const void*)m << ") created at:\n" << m->getCreationStack() << "\n";
+                    }
+                    stream << "================================================================================\n";
+
+                    graph.spinlock.unlock();
+                    LOG(ERROR) << stream.c_str();
+                    std::abort();
+                } else {
+                    graph.edges.push_back({ L_i, self, heldInfo.lockStack, currentStack, t_lockState.getThreadId() });
+                }
+            }
+        }
+
+        graph.spinlock.unlock();
+    }
+
+    return currentStack;
+}
+
 } // anonymous namespace
 
 Mutex::~Mutex() noexcept {
@@ -164,11 +271,6 @@ Mutex::~Mutex() noexcept {
                    << ") while it is currently held by Thread (ID " << (unsigned long long)t_lockState.getThreadId() << ")!\n";
             LOG(ERROR) << stream.c_str();
             std::abort();
-            for (size_t j = i; j + 1 < t_lockState.count; ++j) {
-                t_lockState.heldLocks[j] = t_lockState.heldLocks[j + 1];
-            }
-            t_lockState.count--;
-            break;
         }
     }
 
@@ -178,14 +280,6 @@ Mutex::~Mutex() noexcept {
         if (graph.edges[i].from == this || graph.edges[i].to == this) {
             graph.edges[i] = graph.edges.back();
             graph.edges.pop_back();
-        } else {
-            i++;
-        }
-    }
-    for (size_t i = 0; i < graph.nodes.size(); ) {
-        if (graph.nodes[i] == this) {
-            graph.nodes[i] = graph.nodes.back();
-            graph.nodes.pop_back();
         } else {
             i++;
         }
@@ -202,117 +296,14 @@ void Mutex::ensureCreationStackCaptured() const noexcept {
     if (UTILS_UNLIKELY(!mCreationCaptured.load(std::memory_order_relaxed))) {
         bool expected = false;
         if (mCreationCaptured.compare_exchange_strong(expected, true, std::memory_order_relaxed)) {
-            mCreationStack.update(4);
+            mCreationStack.update(5);
         }
     }
 }
 
 void Mutex::lock() UTILS_ACQUIRE() {
-    ensureCreationStackCaptured();
-
-    for (size_t i = 0; i < t_lockState.count; ++i) {
-        if (UTILS_UNLIKELY(t_lockState.heldLocks[i].mutex == this)) {
-            CallStack currentStack = CallStack::unwind(3);
-            io::sstream stream;
-            stream << "================================================================================\n";
-            stream << "[FILAMENT CONCURRENCY PANIC] Self-Deadlock / Recursive Lock Detected!\n";
-            stream << "================================================================================\n";
-            stream << "Thread (ID " << (unsigned long long)t_lockState.getThreadId()
-                   << ") attempted to recursively acquire non-recursive Lock (0x" << (const void*)this << ")!\n\n";
-            stream << "--- Lock currently held, acquired at:\n" << t_lockState.heldLocks[i].lockStack << "\n";
-            stream << "--- Attempted recursive acquisition at:\n" << currentStack << "\n";
-            stream << "--- Mutex creation stack trace:\n" << getCreationStack() << "\n";
-            stream << "================================================================================\n";
-            LOG(ERROR) << stream.c_str();
-            std::abort();
-        }
-    }
-
-    CallStack currentStack = CallStack::unwind(3);
-
-    if (t_lockState.count > 0) {
-        LockGraphState& graph = getLockGraphState();
-        graph.spinlock.lock();
-
-        for (size_t i = 0; i < t_lockState.count; ++i) {
-            const HeldLockInfo& heldInfo = t_lockState.heldLocks[i];
-            const Mutex* L_i = heldInfo.mutex;
-
-            bool edgeExists = false;
-            for (const LockEdge& edge : graph.edges) {
-                if (edge.from == L_i && edge.to == this) {
-                    edgeExists = true;
-                    break;
-                }
-            }
-
-            if (!edgeExists) {
-                std::vector<size_t> cycleEdges;
-                if (findCyclePath(this, L_i, graph, cycleEdges)) {
-                    io::sstream stream;
-                    stream << "================================================================================\n";
-                    stream << "[FILAMENT CONCURRENCY PANIC] Lock-Order Inversion / Potential Deadlock Detected!\n";
-                    stream << "================================================================================\n";
-                    stream << "Thread (ID " << (unsigned long long)t_lockState.getThreadId()
-                           << ") attempted to acquire Lock (0x" << (const void*)this
-                           << ") while holding Lock (0x" << (const void*)L_i << ")!\n";
-                    stream << "Acquiring this lock creates a cyclic lock dependency graph across threads:\n\n";
-
-                    for (size_t eIdx : cycleEdges) {
-                        const LockEdge& edge = graph.edges[eIdx];
-                        stream << "--- Lock (0x" << (const void*)edge.from
-                               << ") acquired before Lock (0x" << (const void*)edge.to
-                               << ") in Thread (ID " << (unsigned long long)edge.threadId << "):\n";
-                        stream << "[Lock (0x" << (const void*)edge.from << ") locked at:]\n" << edge.fromLockStack << "\n";
-                        stream << "[Lock (0x" << (const void*)edge.to << ") locked at:]\n" << edge.toLockStack << "\n";
-                    }
-
-                    stream << "--- BUT Lock (0x" << (const void*)L_i
-                           << ") acquired before Lock (0x" << (const void*)this
-                           << ") in Thread (ID " << (unsigned long long)t_lockState.getThreadId() << ") [CURRENT THREAD]:\n";
-                    stream << "[Lock (0x" << (const void*)L_i << ") locked at:]\n" << heldInfo.lockStack << "\n";
-                    stream << "[Lock (0x" << (const void*)this << ") attempted acquisition at:]\n" << currentStack << "\n";
-
-                    stream << "--------------------------------------------------------------------------------\n";
-                    stream << "Creation Stack Traces for Involved Locks:\n";
-                    std::vector<const Mutex*> involvedLocks;
-                    for (size_t eIdx : cycleEdges) {
-                        const LockEdge& edge = graph.edges[eIdx];
-                        bool foundFrom = false, foundTo = false;
-                        for (const Mutex* m : involvedLocks) {
-                            if (m == edge.from) foundFrom = true;
-                            if (m == edge.to) foundTo = true;
-                        }
-                        if (!foundFrom) involvedLocks.push_back(edge.from);
-                        if (!foundTo) involvedLocks.push_back(edge.to);
-                    }
-                    bool foundLi = false, foundThis = false;
-                    for (const Mutex* m : involvedLocks) {
-                        if (m == L_i) foundLi = true;
-                        if (m == this) foundThis = true;
-                    }
-                    if (!foundLi) involvedLocks.push_back(L_i);
-                    if (!foundThis) involvedLocks.push_back(this);
-
-                    for (const Mutex* m : involvedLocks) {
-                        stream << "Lock (0x" << (const void*)m << ") created at:\n" << m->getCreationStack() << "\n";
-                    }
-                    stream << "================================================================================\n";
-
-                    graph.spinlock.unlock();
-                    LOG(ERROR) << stream.c_str();
-                    std::abort();
-                } else {
-                    graph.edges.push_back({ L_i, this, heldInfo.lockStack, currentStack, t_lockState.getThreadId() });
-                }
-            }
-        }
-
-        graph.spinlock.unlock();
-    }
-
+    CallStack const currentStack = validateLockAcquisition(this);
     mUnderlying.lock();
-
     if (UTILS_LIKELY(t_lockState.count < ThreadLockState::MAX_HELD_LOCKS)) {
         t_lockState.heldLocks[t_lockState.count++] = { this, currentStack };
     }
@@ -322,110 +313,7 @@ bool Mutex::try_lock() UTILS_TRY_ACQUIRE(true) {
     if (!mUnderlying.try_lock()) {
         return false;
     }
-
-    ensureCreationStackCaptured();
-
-    for (size_t i = 0; i < t_lockState.count; ++i) {
-        if (UTILS_UNLIKELY(t_lockState.heldLocks[i].mutex == this)) {
-            CallStack currentStack = CallStack::unwind(3);
-            io::sstream stream;
-            stream << "================================================================================\n";
-            stream << "[FILAMENT CONCURRENCY PANIC] Self-Deadlock / Recursive Lock Detected!\n";
-            stream << "================================================================================\n";
-            stream << "Thread (ID " << (unsigned long long)t_lockState.getThreadId()
-                   << ") attempted to recursively acquire non-recursive Lock (0x" << (const void*)this << ")!\n\n";
-            stream << "--- Lock currently held, acquired at:\n" << t_lockState.heldLocks[i].lockStack << "\n";
-            stream << "--- Attempted recursive acquisition at:\n" << currentStack << "\n";
-            stream << "--- Mutex creation stack trace:\n" << getCreationStack() << "\n";
-            stream << "================================================================================\n";
-            LOG(ERROR) << stream.c_str();
-            std::abort();
-        }
-    }
-
-    CallStack currentStack = CallStack::unwind(3);
-
-    if (t_lockState.count > 0) {
-        LockGraphState& graph = getLockGraphState();
-        graph.spinlock.lock();
-
-        for (size_t i = 0; i < t_lockState.count; ++i) {
-            const HeldLockInfo& heldInfo = t_lockState.heldLocks[i];
-            const Mutex* L_i = heldInfo.mutex;
-
-            bool edgeExists = false;
-            for (const LockEdge& edge : graph.edges) {
-                if (edge.from == L_i && edge.to == this) {
-                    edgeExists = true;
-                    break;
-                }
-            }
-
-            if (!edgeExists) {
-                std::vector<size_t> cycleEdges;
-                if (findCyclePath(this, L_i, graph, cycleEdges)) {
-                    io::sstream stream;
-                    stream << "================================================================================\n";
-                    stream << "[FILAMENT CONCURRENCY PANIC] Lock-Order Inversion / Potential Deadlock Detected!\n";
-                    stream << "================================================================================\n";
-                    stream << "Thread (ID " << (unsigned long long)t_lockState.getThreadId()
-                           << ") attempted to acquire Lock (0x" << (const void*)this
-                           << ") while holding Lock (0x" << (const void*)L_i << ")!\n";
-                    stream << "Acquiring this lock creates a cyclic lock dependency graph across threads:\n\n";
-
-                    for (size_t eIdx : cycleEdges) {
-                        const LockEdge& edge = graph.edges[eIdx];
-                        stream << "--- Lock (0x" << (const void*)edge.from
-                               << ") acquired before Lock (0x" << (const void*)edge.to
-                               << ") in Thread (ID " << (unsigned long long)edge.threadId << "):\n";
-                        stream << "[Lock (0x" << (const void*)edge.from << ") locked at:]\n" << edge.fromLockStack << "\n";
-                        stream << "[Lock (0x" << (const void*)edge.to << ") locked at:]\n" << edge.toLockStack << "\n";
-                    }
-
-                    stream << "--- BUT Lock (0x" << (const void*)L_i
-                           << ") acquired before Lock (0x" << (const void*)this
-                           << ") in Thread (ID " << (unsigned long long)t_lockState.getThreadId() << ") [CURRENT THREAD]:\n";
-                    stream << "[Lock (0x" << (const void*)L_i << ") locked at:]\n" << heldInfo.lockStack << "\n";
-                    stream << "[Lock (0x" << (const void*)this << ") attempted acquisition at:]\n" << currentStack << "\n";
-
-                    stream << "--------------------------------------------------------------------------------\n";
-                    stream << "Creation Stack Traces for Involved Locks:\n";
-                    std::vector<const Mutex*> involvedLocks;
-                    for (size_t eIdx : cycleEdges) {
-                        const LockEdge& edge = graph.edges[eIdx];
-                        bool foundFrom = false, foundTo = false;
-                        for (const Mutex* m : involvedLocks) {
-                            if (m == edge.from) foundFrom = true;
-                            if (m == edge.to) foundTo = true;
-                        }
-                        if (!foundFrom) involvedLocks.push_back(edge.from);
-                        if (!foundTo) involvedLocks.push_back(edge.to);
-                    }
-                    bool foundLi = false, foundThis = false;
-                    for (const Mutex* m : involvedLocks) {
-                        if (m == L_i) foundLi = true;
-                        if (m == this) foundThis = true;
-                    }
-                    if (!foundLi) involvedLocks.push_back(L_i);
-                    if (!foundThis) involvedLocks.push_back(this);
-
-                    for (const Mutex* m : involvedLocks) {
-                        stream << "Lock (0x" << (const void*)m << ") created at:\n" << m->getCreationStack() << "\n";
-                    }
-                    stream << "================================================================================\n";
-
-                    graph.spinlock.unlock();
-                    LOG(ERROR) << stream.c_str();
-                    std::abort();
-                } else {
-                    graph.edges.push_back({ L_i, this, heldInfo.lockStack, currentStack, t_lockState.getThreadId() });
-                }
-            }
-        }
-
-        graph.spinlock.unlock();
-    }
-
+    CallStack const currentStack = validateLockAcquisition(this);
     if (UTILS_LIKELY(t_lockState.count < ThreadLockState::MAX_HELD_LOCKS)) {
         t_lockState.heldLocks[t_lockState.count++] = { this, currentStack };
     }

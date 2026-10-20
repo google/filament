@@ -318,13 +318,14 @@ struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
         math::mat4f lightFromWorldMatrix;               // 64
         math::float4 lightFromWorldZ;                   // 16
         math::float4 scissorNormalized;                 // 16
-        math::float2 normalBias;                        //  8   // for EVSM/PCSS must be zero
+        float normalBias;                               //  4   // for EVSM/PCSS must be zero
         float projectionParam;                          //  4   // ortho (far-near), perspective near/(far-near)
         float wsOneOverTexelSizeAtOneMeter;             //  4   // for spot/point lights
         uint32_t maxMipLevel_maxSearchRadius;           //  4   // packed half2
         uint32_t bulbRadius_vsmExponent;                //  4   // packed half2
         uint32_t maxPenumbraRatio_penumbraRatioScale;   //  4   // packed half2
         uint32_t evsm4_layer;                           //  4   // 0x00.00.01.FF
+        uint32_t reserved;                              //  4
     };
     ShadowData shadows[CONFIG_MAX_SHADOWMAPS];
 };
