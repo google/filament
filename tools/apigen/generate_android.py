@@ -14,16 +14,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Build orchestrator for generating Filament Android Java and JNI C++ bindings."""
+
 import argparse
 import concurrent.futures
 import os
+from pathlib import Path
 import subprocess
 import sys
 import tempfile
-from pathlib import Path
+import threading
 
 REPO_ROOT = Path(__file__).parent.parent.parent.resolve()
 APIGEN_DIR = REPO_ROOT / "tools/apigen"
+
+if str(APIGEN_DIR) not in sys.path:
+    sys.path.insert(0, str(APIGEN_DIR))
+if str(REPO_ROOT / "tools/reorganize-headers") not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT / "tools/reorganize-headers"))
+
+from javagen.orchestrator import process_file
+from javagen.validator import BindingValidator
+import run as reorganize_tool
 
 EXTRACTOR = APIGEN_DIR / "extractor.py"
 JAVAGEN = APIGEN_DIR / "javagen.py"
@@ -87,10 +99,12 @@ TARGETS = [
     ("Viewport", REPO_ROOT / "filament/include/filament/Viewport.h"),
 ]
 
-sys.path.insert(0, str(REPO_ROOT / "tools/reorganize-headers"))
-import run as reorganize_tool
+# Synchronize in-process JavaGen invocations when sharing global KNOWN_CLASSES and _SIBLING_IR_CACHE
+_GEN_LOCK = threading.Lock()
 
-def extract_header(header_path):
+
+def extract_header(header_path: Path):
+    """Run extractor.py on a single C++ header and return its JSON IR string."""
     if not header_path.exists():
         return False, header_path, f"Header not found: {header_path}"
 
@@ -98,19 +112,23 @@ def extract_header(header_path):
         [sys.executable, str(EXTRACTOR)] + INCLUDES + [str(header_path)],
         capture_output=True,
         text=True,
-        cwd=str(REPO_ROOT)
+        cwd=str(REPO_ROOT),
     )
     if res.returncode != 0:
         return False, header_path, f"Extractor failed for {header_path.name}:\n{res.stderr}"
 
     return True, header_path, res.stdout
 
-def ensure_reorganize_initialized():
+
+def ensure_reorganize_initialized() -> None:
+    """Precompute library dependency ordering once for header reorganization."""
     if not reorganize_tool.SORTED_LIBS:
         deps = reorganize_tool.analyze_dependencies(str(REPO_ROOT))
         reorganize_tool.SORTED_LIBS = reorganize_tool.compute_topological_sort(deps)
 
-def reorganize_cpp_file(cpp_path):
+
+def reorganize_cpp_file(cpp_path: Path):
+    """Format and layer C++ #include directives in the generated JNI source file."""
     try:
         ensure_reorganize_initialized()
         reorganize_tool.reorganize_file(str(cpp_path))
@@ -118,23 +136,20 @@ def reorganize_cpp_file(cpp_path):
     except Exception as exc:
         return False, f"Header reorganization failed for {cpp_path.name}:\n{exc}"
 
-def generate_target(item, java_out_dir, cpp_out_dir):
+
+def generate_target(item, java_out_dir: Path, cpp_out_dir: Path):
+    """Generate .java and .cpp bindings for a single target class in-process."""
     name, json_file = item
-    gen_res = subprocess.run(
-        [
-            sys.executable,
-            str(JAVAGEN),
-            "--java-dir", str(java_out_dir),
-            "--jni-dir", str(cpp_out_dir),
-            "--class-name", name,
-            str(json_file)
-        ],
-        capture_output=True,
-        text=True,
-        cwd=str(REPO_ROOT)
-    )
-    if gen_res.returncode != 0:
-        return False, name, f"JavaGen failed for {name}:\n{gen_res.stderr}"
+    try:
+        with _GEN_LOCK:
+            process_file(
+                str(json_file),
+                str(java_out_dir),
+                str(cpp_out_dir),
+                class_name=name,
+            )
+    except Exception as exc:
+        return False, name, f"JavaGen failed for {name}:\n{exc}"
 
     cpp_file = cpp_out_dir / f"{name}.cpp"
     if not cpp_file.exists():
@@ -150,39 +165,41 @@ def generate_target(item, java_out_dir, cpp_out_dir):
 
     return True, name, None
 
-def main():
+
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Generate Android Java and JNI C++ bindings for Filament."
     )
     parser.add_argument(
-        "-j", "--jobs",
+        "-j",
+        "--jobs",
         type=int,
         nargs="?",
         const=os.cpu_count() or 4,
         default=os.cpu_count() or 4,
-        help="Number of parallel worker threads (default: %(default)s)"
+        help="Number of parallel worker threads (default: %(default)s)",
     )
     parser.add_argument(
         "--java-dir",
         type=Path,
         default=JAVA_OUT_DIR,
-        help="Target directory for generated Java sources (default: %(default)s)"
+        help="Target directory for generated Java sources (default: %(default)s)",
     )
     parser.add_argument(
         "--jni-dir",
         type=Path,
         default=CPP_OUT_DIR,
-        help="Target directory for generated JNI C++ sources (default: %(default)s)"
+        help="Target directory for generated JNI C++ sources (default: %(default)s)",
     )
     parser.add_argument(
         "--validate",
         action="store_true",
-        help="Run static parity and reflection validation after code generation"
+        help="Run static parity and reflection validation after code generation",
     )
     parser.add_argument(
         "targets",
         nargs="*",
-        help="Optional list of specific class names to generate (default: all targets)"
+        help="Optional list of specific class names to generate (default: all targets)",
     )
 
     args = parser.parse_args()
@@ -192,7 +209,10 @@ def main():
     jobs = max(1, args.jobs)
 
     if not REORGANIZE_HEADERS.exists():
-        print(f"Error: Header reorganization tool not found at {REORGANIZE_HEADERS}", file=sys.stderr)
+        print(
+            f"Error: Header reorganization tool not found at {REORGANIZE_HEADERS}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     selected_targets = TARGETS
@@ -201,17 +221,20 @@ def main():
         unknown = [t for t in args.targets if t not in target_map]
         if unknown:
             print(f"Error: Unknown target(s): {', '.join(unknown)}", file=sys.stderr)
-            print(f"Available targets: {', '.join(sorted(target_map.keys()))}", file=sys.stderr)
+            print(
+                f"Available targets: {', '.join(sorted(target_map.keys()))}",
+                file=sys.stderr,
+            )
             sys.exit(1)
         selected_targets = [target_map[t] for t in args.targets]
 
     print(f"Generating Android bindings ({len(selected_targets)} targets, {jobs} workers)...")
     print(f"  Java output dir: {java_out_dir}")
     print(f"  JNI C++ output dir: {cpp_out_dir}")
-    
+
     java_out_dir.mkdir(parents=True, exist_ok=True)
     cpp_out_dir.mkdir(parents=True, exist_ok=True)
-    
+
     with tempfile.TemporaryDirectory() as tmp_dir:
         json_files = []
         unique_headers = list(dict.fromkeys(h for _, h in selected_targets))
@@ -233,40 +256,47 @@ def main():
             json_files.append((name, json_file))
 
         # Precompute library dependency ordering once for header reorganization
-        deps = reorganize_tool.analyze_dependencies(str(REPO_ROOT))
-        reorganize_tool.SORTED_LIBS = reorganize_tool.compute_topological_sort(deps)
+        ensure_reorganize_initialized()
 
         print("\n[2/2] Generating Java and JNI C++ bindings...")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as executor:
-            futures = {executor.submit(generate_target, item, java_out_dir, cpp_out_dir): item[0] for item in json_files}
-            for future in concurrent.futures.as_completed(futures):
-                ok, name, err = future.result()
-                if not ok:
-                    print(f"Error: {err}", file=sys.stderr)
-                    sys.exit(1)
-                print(f"  ✓ Generated {name}.java and {name}.cpp")
+        for item in json_files:
+            ok, name, err = generate_target(item, java_out_dir, cpp_out_dir)
+            if not ok:
+                print(f"Error: {err}", file=sys.stderr)
+                sys.exit(1)
+            print(f"  ✓ Generated {name}.java and {name}.cpp")
 
     # Clean up non-target helper files generated for nested classes or iterators
     target_names = {t[0] for t in TARGETS}
-    for item in java_out_dir.glob("*.*"):
-        if item.suffix == ".java" and item.stem not in target_names and item.stem in ("children_iterator", "children_range", "children_sentinel", "Corners", "Aabb"):
+    helper_stems = {
+        "children_iterator",
+        "children_range",
+        "children_sentinel",
+        "Corners",
+        "Aabb",
+    }
+    for item in java_out_dir.glob("*.java"):
+        if item.stem not in target_names and item.stem in helper_stems:
             item.unlink()
-    for item in cpp_out_dir.glob("*.*"):
-        if item.suffix == ".cpp" and item.stem not in target_names and item.stem in ("children_iterator", "children_range", "children_sentinel", "Corners", "Aabb"):
+    for item in cpp_out_dir.glob("*.cpp"):
+        if item.stem not in target_names and item.stem in helper_stems:
             item.unlink()
 
-    print(f"\nAll {len(selected_targets)} target bindings successfully generated into {java_out_dir.relative_to(REPO_ROOT) if java_out_dir.is_relative_to(REPO_ROOT) else java_out_dir}!")
+    out_display = (
+        java_out_dir.relative_to(REPO_ROOT)
+        if java_out_dir.is_relative_to(REPO_ROOT)
+        else java_out_dir
+    )
+    print(f"\nAll {len(selected_targets)} target bindings successfully generated into {out_display}!")
 
     if args.validate:
         print("\n[Validation] Running static parity and reflection validation...")
-        sys.path.insert(0, str(REPO_ROOT / "tools/apigen"))
-        from javagen.validator import BindingValidator
         target_set = {t[0] for t in selected_targets} if args.targets else None
         validator = BindingValidator(
             java_dir=java_out_dir,
             cpp_dir=cpp_out_dir,
             verbose=False,
-            target_classes=target_set
+            target_classes=target_set,
         )
         val_result = validator.run()
         print(val_result.format_report(verbose=False))
@@ -274,6 +304,7 @@ def main():
             print("\nError: Static validation failed!", file=sys.stderr)
             sys.exit(1)
         print("✓ Static validation passed with zero errors.")
+
 
 if __name__ == "__main__":
     main()
