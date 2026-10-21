@@ -502,6 +502,7 @@ ENGINE_CONFIG_DEFAULTS: Dict[str, str] = {
     "gpuContextPriority": "GpuContextPriority.DEFAULT",
     "sharedUboInitialSizeInBytes": "256 * 64",
     "asynchronousMode": "AsynchronousMode.NONE",
+    "asynchronousFrameBudget": "2_000_000",
     "materialCacheCapacity": "0",
     "programCacheCapacity": "0",
     "enableMultipleDirectionalLights": "false",
@@ -928,7 +929,7 @@ ENGINE_NATIVE_DECLS_JAVA: List[str] = [
     "            int gpuContextPriority,",
     "            long sharedUboInitialSizeInBytes,",
     "            int asynchronousMode,",
-    "            long asynchronousFrameBudgetUs,",
+    "            long asynchronousFrameBudget,",
     "            boolean enableMultipleDirectionalLights);",
     "    private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);",
     "    private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);",
@@ -1004,7 +1005,7 @@ ENGINE_BUILDER_JAVA = """    /**
                     config.gpuContextPriority.ordinal(),
                     config.sharedUboInitialSizeInBytes,
                     config.asynchronousMode.ordinal(),
-                    config.asynchronousFrameBudgetUs,
+                    config.asynchronousFrameBudget,
                     config.enableMultipleDirectionalLights);
             return this;
         }
@@ -1203,7 +1204,7 @@ Java_{jni_package}_Engine_nSetBuilderConfig(JNIEnv*, jclass,
         jint gpuContextPriority,
         jlong sharedUboInitialSizeInBytes,
         jint asynchronousMode,
-        jlong asynchronousFrameBudgetUs,
+        jlong asynchronousFrameBudget,
         jboolean enableMultipleDirectionalLights) {{
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
     Engine::Config config = {{
@@ -1225,7 +1226,7 @@ Java_{jni_package}_Engine_nSetBuilderConfig(JNIEnv*, jclass,
             .gpuContextPriority = (Engine::GpuContextPriority) gpuContextPriority,
             .sharedUboInitialSizeInBytes = (uint32_t) sharedUboInitialSizeInBytes,
             .asynchronousMode = (Engine::AsynchronousMode) asynchronousMode,
-            .asynchronousFrameBudgetUs = (uint32_t) asynchronousFrameBudgetUs,
+            .asynchronousFrameBudget = std::chrono::nanoseconds(asynchronousFrameBudget),
             .enableMultipleDirectionalLights = (bool) enableMultipleDirectionalLights,
     }};
     builder->config(&config);

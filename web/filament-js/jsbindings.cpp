@@ -94,6 +94,8 @@
 #include <materials/uberarchive.h>
 #include <stb_image.h>
 
+#include <chrono>
+
 // Avoid warnings for deprecated Filament APIs.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -351,7 +353,15 @@ value_object<filament::Engine::Config>("Engine$Config")
     .field("gpuContextPriority", &filament::Engine::Config::gpuContextPriority)
     .field("sharedUboInitialSizeInBytes", &filament::Engine::Config::sharedUboInitialSizeInBytes)
     .field("asynchronousMode", &filament::Engine::Config::asynchronousMode)
-    .field("asynchronousFrameBudgetUs", &filament::Engine::Config::asynchronousFrameBudgetUs)
+    .field("asynchronousFrameBudgetMs",
+            +[](filament::Engine::Config const& config) {
+                return std::chrono::duration<double, std::milli>(
+                        config.asynchronousFrameBudget).count();
+            },
+            +[](filament::Engine::Config& config, double const ms) {
+                config.asynchronousFrameBudget = std::chrono::duration_cast<
+                        std::chrono::nanoseconds>(std::chrono::duration<double, std::milli>(ms));
+            })
     .field("enableMultipleDirectionalLights",
             &filament::Engine::Config::enableMultipleDirectionalLights);
 

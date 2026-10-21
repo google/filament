@@ -141,8 +141,7 @@
 #pragma clang diagnostic ignored "-Wunused-parameter"
 #endif
 
-// newFrame marks the first tick of a frame, which resets the per-frame async job budget.
-DECL_DRIVER_API(tick, ARG_1(bool, newFrame = true), PARAM_1(newFrame))
+DECL_DRIVER_API_0(tick)
 
 DECL_DRIVER_API_N(beginFrame,
         int64_t, monotonic_clock_ns,
@@ -167,6 +166,8 @@ DECL_DRIVER_API_N(setPresentationTime,
 
 DECL_DRIVER_API_N(endFrame,
         uint32_t, frameId)
+
+DECL_DRIVER_API_0(skipFrame)
 
 // hint to the driver that we're done with all render targets up to this point. i.e. the driver
 // can start rendering. e.g. correspond to glFlush() for a GLES driver.

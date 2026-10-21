@@ -215,7 +215,7 @@ void JobWorker::terminate() {
 }
 
 AmortizationWorker::AmortizationWorker(JobQueue::Ptr queue,
-        std::chrono::microseconds const frameBudget, PassKey)
+        std::chrono::nanoseconds const frameBudget, PassKey)
     : JobWorker(std::move(queue)), mFrameBudget(frameBudget) {
 }
 
@@ -245,25 +245,7 @@ void AmortizationWorker::process(int const jobCount) {
     }
 }
 
-void AmortizationWorker::processFrame(bool const newFrame) {
-    if (!newFrame) {
-        mFrameEnded = true;
-        runWithinBudget();
-        return;
-    }
-
-    // A frame spends its budget as it ends, after its own commands. A frame that never ended,
-    // skipped by the Renderer, spends it here instead, so the queue keeps moving while frames are
-    // skipped.
-    if (!mFrameEnded) {
-        runWithinBudget();
-    }
-    mRemainingBudget = mFrameBudget;
-    mRanJobThisFrame = false;
-    mFrameEnded = false;
-}
-
-void AmortizationWorker::runWithinBudget() {
+void AmortizationWorker::processFrame() {
     if (!mQueue) {
         return;
     }
@@ -272,21 +254,15 @@ void AmortizationWorker::runWithinBudget() {
     // rounding error per job.
     using clock = std::chrono::steady_clock;
     clock::time_point const start = clock::now();
-    clock::time_point now = start;
 
-    // The first job of a frame runs whatever the budget, so the queue always advances.
-    while (!mRanJobThisFrame || now - start < mRemainingBudget) {
+    // The first job runs whatever the budget, so the queue always advances.
+    do {
         JobQueue::Job job = mQueue->pop(false);
         if (!job) {
             break;
         }
         job();
-        mRanJobThisFrame = true;
-        now = clock::now();
-    }
-
-    // After an overrun the budget is negative, so later calls in this frame run nothing.
-    mRemainingBudget -= now - start;
+    } while (clock::now() - start < mFrameBudget);
 }
 
 void AmortizationWorker::drain() {

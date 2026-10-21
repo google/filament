@@ -29,6 +29,7 @@
 #include <utils/Slice.h>
 #include <utils/tribool.h>
 
+#include <chrono>
 #include <functional>
 #include <initializer_list>
 #include <optional>
@@ -466,19 +467,21 @@ public:
         AsynchronousMode asynchronousMode = AsynchronousMode::NONE;
 
         /**
-         * Time in microseconds the backend may spend running queued asynchronous operations per
-         * frame, when they run on the backend thread (AsynchronousMode::AMORTIZATION, or
-         * THREAD_PREFERRED falling back to it). A frame starts at each Renderer::beginFrame() or
-         * Renderer::skipFrame(), so with several Renderers each one gets its own budget.
+         * Time the backend may spend running queued asynchronous operations per frame, when they
+         * run on the backend thread (AsynchronousMode::AMORTIZATION, or THREAD_PREFERRED falling
+         * back to it). It is the elapsed time on the backend thread, measured with
+         * std::chrono::steady_clock, so time the thread spends preempted counts too.
          *
-         * The operations run in Renderer::endFrame(), after the frame's own commands. A frame that
-         * does not end, because it was skipped, spends its budget when the next frame starts.
+         * The operations run in Renderer::endFrame(), after the frame's own commands, and in
+         * Renderer::skipFrame(). A frame skipped because Renderer::beginFrame() returned false
+         * runs none, since the GPU is already behind. Each Renderer gets its own budget per frame,
+         * and so does each Renderer::renderStandaloneView() call.
          *
          * One operation always runs per frame, even with a budget of 0, so the queue keeps moving.
          * An operation that starts within the budget runs to completion, so a frame can go over
          * by up to one operation.
          */
-        uint32_t asynchronousFrameBudgetUs = 2000;
+        std::chrono::nanoseconds asynchronousFrameBudget = std::chrono::milliseconds(2);
 
         /**
          * Capacity of the LRU cache for material definitions.

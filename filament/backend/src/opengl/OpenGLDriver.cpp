@@ -365,7 +365,7 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform,
             // so use the same state.
             mWorkerState = mBackendState;
             mJobWorker = AmortizationWorker::create(mJobQueue,
-                    std::chrono::microseconds(driverConfig.asynchronousFrameBudgetUs));
+                    driverConfig.asynchronousFrameBudget);
         }
     }
 }
@@ -4541,16 +4541,13 @@ void OpenGLDriver::executeGpuCommandsCompleteOps(bool const afterFinish) noexcep
 // Rendering ops
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLDriver::tick(bool const newFrame) {
+void OpenGLDriver::tick(int) {
     DEBUG_MARKER()
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     executeGpuCommandsCompleteOps();
 #endif
     executeEveryNowAndThenOps();
     getShaderCompilerService().tick();
-    if (getJobWorker()) {
-        getJobWorker()->processFrame(newFrame);
-    }
 }
 
 void OpenGLDriver::beginFrame(
@@ -4623,6 +4620,17 @@ void OpenGLDriver::endFrame(UTILS_UNUSED uint32_t const frameId) {
     //glFinish();
     mPlatform.endFrame(frameId);
     insertEventMarker("endFrame");
+
+    // Queued async jobs run after the frame's own work.
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
+}
+
+void OpenGLDriver::skipFrame(int) {
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
 }
 
 void OpenGLDriver::updateDescriptorSetBuffer(

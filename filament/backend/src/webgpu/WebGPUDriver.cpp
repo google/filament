@@ -63,7 +63,6 @@
 
 #include <algorithm>
 #include <array>
-#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -136,8 +135,7 @@ WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform,
         // need its own thread-safe access to mDevice/mQueueManager, which isn't established here,
         // and this backend also targets Emscripten, where a raw std::thread isn't available by
         // default. Real backend-thread-offloaded uploads can follow later.
-        mJobWorker = AmortizationWorker::create(mJobQueue,
-                std::chrono::microseconds(driverConfig.asynchronousFrameBudgetUs));
+        mJobWorker = AmortizationWorker::create(mJobQueue, driverConfig.asynchronousFrameBudget);
     }
 }
 
@@ -181,10 +179,7 @@ void WebGPUDriver::terminate() {
     finish();
 }
 
-void WebGPUDriver::tick(bool const newFrame) {
-    if (getJobWorker()) {
-        getJobWorker()->processFrame(newFrame);
-    }
+void WebGPUDriver::tick(int) {
 #if !defined(__EMSCRIPTEN__)
     mDevice.Tick();
     mAdapter.GetInstance().ProcessEvents();
@@ -227,6 +222,17 @@ void WebGPUDriver::endFrame(const uint32_t /* frameId */) {
 
     // Garbage collection (if necessary)
     mStagePool.gc();
+
+    // Queued async jobs run after the frame's own work.
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
+}
+
+void WebGPUDriver::skipFrame(int) {
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
 }
 
 // If a command encoder is in flight then the encoder is finished and submitted to the GPU queue.

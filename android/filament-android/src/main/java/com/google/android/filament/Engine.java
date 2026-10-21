@@ -490,7 +490,7 @@ public class Engine {
                     config.gpuContextPriority.ordinal(),
                     config.sharedUboInitialSizeInBytes,
                     config.asynchronousMode.ordinal(),
-                    config.asynchronousFrameBudgetUs,
+                    config.asynchronousFrameBudget,
                     config.enableMultipleDirectionalLights);
             return this;
         }
@@ -1383,19 +1383,21 @@ public class Engine {
          */
         public AsynchronousMode asynchronousMode = AsynchronousMode.NONE;
         /**
-         * Time in microseconds the backend may spend running queued asynchronous operations per frame, when they run on the backend thread (AsynchronousMode::AMORTIZATION, or THREAD_PREFERRED falling back to it).
+         * Time the backend may spend running queued asynchronous operations per frame, when they run on the backend thread (AsynchronousMode::AMORTIZATION, or THREAD_PREFERRED falling back to it).
          *
-         * <p>A frame starts at each Renderer::beginFrame() or
-         * Renderer::skipFrame(), so with several Renderers each one gets its own budget.</p>
+         * <p>It is the elapsed time on the backend thread, measured with
+         * std::chrono::steady_clock, so time the thread spends preempted counts too.</p>
          *
-         * <p>The operations run in Renderer::endFrame(), after the frame's own commands. A frame that
-         * does not end, because it was skipped, spends its budget when the next frame starts.</p>
+         * <p>The operations run in Renderer::endFrame(), after the frame's own commands, and in
+         * Renderer::skipFrame(). A frame skipped because Renderer::beginFrame() returned false
+         * runs none, since the GPU is already behind. Each Renderer gets its own budget per frame,
+         * and so does each Renderer::renderStandaloneView() call.</p>
          *
          * <p>One operation always runs per frame, even with a budget of 0, so the queue keeps moving.
          * An operation that starts within the budget runs to completion, so a frame can go over
          * by up to one operation.</p>
          */
-        public long asynchronousFrameBudgetUs = 2000;
+        public long asynchronousFrameBudget = 2_000_000;
         /**
          * Capacity of the LRU cache for material definitions.
          *
@@ -1535,7 +1537,7 @@ public class Engine {
             int gpuContextPriority,
             long sharedUboInitialSizeInBytes,
             int asynchronousMode,
-            long asynchronousFrameBudgetUs,
+            long asynchronousFrameBudget,
             boolean enableMultipleDirectionalLights);
     private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);

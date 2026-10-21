@@ -425,22 +425,16 @@ TEST(AmortizationWorker, DrainChainedJobs) {
 
 TEST(AmortizationWorker, ProcessFrameRunsOneJobWithZeroBudget) {
     JobQueue::Ptr queue = JobQueue::create();
-    JobWorker::Ptr worker = AmortizationWorker::create(queue, std::chrono::microseconds(0));
+    JobWorker::Ptr worker = AmortizationWorker::create(queue, std::chrono::nanoseconds(0));
     int v = 0;
 
     queue->push([&v]() { v++; });
     queue->push([&v]() { v++; });
     queue->push([&v]() { v++; });
 
-    // The jobs run as the frame ends.
-    worker->processFrame(true);
-    EXPECT_EQ(0, v);
-    worker->processFrame(false);
+    worker->processFrame();
     EXPECT_EQ(1, v);
-
-    worker->processFrame(true);
-    EXPECT_EQ(1, v);
-    worker->processFrame(false);
+    worker->processFrame();
     EXPECT_EQ(2, v);
 }
 
@@ -453,31 +447,7 @@ TEST(AmortizationWorker, ProcessFrameDrainsWithinLargeBudget) {
     queue->push([&v]() { v++; });
     queue->push([&v]() { v++; });
 
-    worker->processFrame(true);
-    EXPECT_EQ(0, v);
-    worker->processFrame(false);
-    EXPECT_EQ(3, v);
-}
-
-TEST(AmortizationWorker, ProcessFrameRunsSkippedFrameAtNextFrame) {
-    JobQueue::Ptr queue = JobQueue::create();
-    JobWorker::Ptr worker = AmortizationWorker::create(queue, std::chrono::microseconds(0));
-    int v = 0;
-
-    queue->push([&v]() { v++; });
-    queue->push([&v]() { v++; });
-    queue->push([&v]() { v++; });
-
-    // Two frames skipped: each one's job runs as the next frame starts.
-    worker->processFrame(true);
-    EXPECT_EQ(0, v);
-    worker->processFrame(true);
-    EXPECT_EQ(1, v);
-    worker->processFrame(true);
-    EXPECT_EQ(2, v);
-
-    // The frame that ends gets its own job.
-    worker->processFrame(false);
+    worker->processFrame();
     EXPECT_EQ(3, v);
 }
 
@@ -499,34 +469,12 @@ TEST(AmortizationWorker, ProcessFrameStopsAfterOverrun) {
     queue->push(makeSlowJob());
     queue->push(makeSlowJob());
 
-    worker->processFrame(true);
-    worker->processFrame(false);
+    // Each call gets a fresh budget, and the first job overruns it.
+    worker->processFrame();
     EXPECT_EQ(1, v);
-
-    // The budget is spent, so the rest of the frame runs nothing.
-    worker->processFrame(false);
-    EXPECT_EQ(1, v);
-
-    worker->processFrame(true);
-    worker->processFrame(false);
+    worker->processFrame();
     EXPECT_EQ(2, v);
 }
-
-TEST(AmortizationWorker, ProcessFrameRunsFirstJobPushedMidFrame) {
-    JobQueue::Ptr queue = JobQueue::create();
-    JobWorker::Ptr worker = AmortizationWorker::create(queue, std::chrono::microseconds(0));
-    int v = 0;
-
-    // Nothing ran on the first call, so the frame still owes one job.
-    worker->processFrame(true);
-    EXPECT_EQ(0, v);
-
-    queue->push([&v]() { v++; });
-    queue->push([&v]() { v++; });
-    worker->processFrame(false);
-    EXPECT_EQ(1, v);
-}
-
 
 TEST(ThreadWorker, Process) {
     JobQueue::Ptr queue = JobQueue::create();

@@ -26,6 +26,7 @@
 #include <utils/tribool.h>
 
 #include <atomic>
+#include <chrono>
 #include <memory>
 #include <mutex>
 
@@ -377,10 +378,11 @@ public:
         AsynchronousMode asynchronousMode = AsynchronousMode::NONE;
 
         /**
-         * Per-frame time budget in microseconds for queued asynchronous operations in the
-         * amortization strategy. See Engine::Config::asynchronousFrameBudgetUs.
+         * Time each frame may spend running queued asynchronous operations in the amortization
+         * strategy, measured with std::chrono::steady_clock.
+         * See Engine::Config::asynchronousFrameBudget.
          */
-        uint32_t asynchronousFrameBudgetUs = 2000;
+        std::chrono::nanoseconds asynchronousFrameBudget = std::chrono::milliseconds(2);
     };
 
     Platform() noexcept;

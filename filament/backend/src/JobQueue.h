@@ -194,10 +194,9 @@ public:
     virtual void process(int jobCount) {}
 
     /**
-     * Processes jobs within a per-frame time budget. (For non-threaded workers)
-     * @param newFrame True on the first call of a frame, which resets the budget.
+     * Processes jobs within one frame's time budget. (For non-threaded workers)
      */
-    virtual void processFrame(bool newFrame) {}
+    virtual void processFrame() {}
 
     /**
      * Drains pending jobs and waits for currently running work to finish.
@@ -228,15 +227,15 @@ class AmortizationWorker final : public JobWorker {
 public:
     /**
      * Creates an instance of AmortizationWorker. Users should call this to create one.
-     * @param frameBudget Time `processFrame()` may spend on jobs per frame.
+     * @param frameBudget Time each `processFrame()` call may spend on jobs.
      * @return An instance of AmortizationWorker
      */
-    static Ptr create(JobQueue::Ptr queue, std::chrono::microseconds frameBudget) {
+    static Ptr create(JobQueue::Ptr queue, std::chrono::nanoseconds frameBudget) {
         return std::make_unique<AmortizationWorker>(std::move(queue), frameBudget, PassKey{});
     }
 
     // This can be created only via `create()`
-    AmortizationWorker(JobQueue::Ptr queue, std::chrono::microseconds frameBudget, PassKey);
+    AmortizationWorker(JobQueue::Ptr queue, std::chrono::nanoseconds frameBudget, PassKey);
 
     ~AmortizationWorker() override;
 
@@ -252,13 +251,10 @@ public:
     void process(int jobCount) override;
 
     /**
-     * Runs jobs until this frame's budget is spent. The jobs run on the last call of a frame,
-     * after the frame's own work; a frame with no last call, a skipped one, runs them on the
-     * first call of the next frame instead. At least one job runs per frame, whatever the budget.
-     *
-     * @param newFrame True on the first call of a frame, which resets the budget.
+     * Runs jobs until the frame budget is spent, measured with std::chrono::steady_clock. Call it
+     * once per frame. At least one job runs per call, whatever the budget.
      */
-    void processFrame(bool newFrame) override;
+    void processFrame() override;
 
     /**
      * Drains all pending jobs in the queue.
@@ -272,13 +268,7 @@ public:
     void terminate() override;
 
 private:
-    // Runs jobs until the remaining budget is spent.
-    void runWithinBudget();
-
     std::chrono::nanoseconds const mFrameBudget;
-    std::chrono::nanoseconds mRemainingBudget{};
-    bool mRanJobThisFrame = false;
-    bool mFrameEnded = true;  // whether the current frame had its last call
 };
 
 
