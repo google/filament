@@ -13,4 +13,4 @@ main
 
 | | |
 |---|---|
-| entity | The entity is ignored for rendering purposes if it doesn't have a Renderable or Light component.<br>\attention A given Entity object can only be added once to a Scene. |
+| entity | The entity is ignored for rendering purposes if it doesn't have a Renderable or Light component.<br>Adding an Entity that has already been destroyed with destroy is a no-op.<br>\attention A given Entity object can only be added once to a Scene. |

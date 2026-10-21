@@ -9,6 +9,8 @@ Invokes user functor on each entity in the scene.
 
 It is not allowed to add or remove an entity from the scene within the functor.
 
+Entities destroyed with destroy are removed lazily the next time a [View](../-view/index.md) attached to this Scene is rendered or detached; until then they may still be visited.
+
 #### Parameters
 
 main
