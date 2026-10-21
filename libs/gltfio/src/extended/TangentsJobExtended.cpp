@@ -244,6 +244,13 @@ template<typename T>
 void unpack(cgltf_accessor const* accessor, size_t const vertexCount, T out,
         bool isMorphTarget = false) {
     assert_invariant(accessor->count == vertexCount);
+    // A failed draco decode leaves accessors with a null buffer_view (see
+    // decodeDracoMeshes). The standard loader zero-fills such accessors; do the
+    // same here instead of dereferencing the null view below.
+    if (accessor->buffer_view == nullptr) {
+        std::memset(out, 0, data::byteCount<T>() * vertexCount);
+        return;
+    }
     uint8_t const* data = nullptr;
     if (accessor->buffer_view->has_meshopt_compression) {
         data = (uint8_t const*) accessor->buffer_view->data + accessor->offset;
