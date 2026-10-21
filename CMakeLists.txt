@@ -143,8 +143,13 @@ if (NOT FILAMENT_ENABLE_EXCEPTIONS)
     set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON)
 endif()
 
-if (NOT FILAMENT_ENABLE_RTTI)
-    add_compile_options(-fno-rtti)
+# With WASM, we disable RTTI because we pass emscripten::val back and forth
+# between C++ and JavaScript in order to efficiently access typed arrays, which are unbound.
+# NOTE: This is not documented in emscripten so we should consider a different approach.
+if (NOT FILAMENT_ENABLE_RTTI OR WASM)
+    if (NOT MSVC)
+        add_compile_options(-fno-rtti)
+    endif()
 endif()
 
 if (FILAMENT_DEBUG_MUTEX)
@@ -161,11 +166,37 @@ endif()
 # ==================================================================================================
 # Support for ccache
 # ==================================================================================================
-find_program(CCACHE_PROGRAM ccache)
+if (NOT "$ENV{CCACHE_DISABLE}")
+    find_program(CCACHE_PROGRAM ccache)
+endif()
 if (CCACHE_PROGRAM)
     if (WIN32)
-        set(CMAKE_C_COMPILER_LAUNCHER   "${CCACHE_PROGRAM}")
-        set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+        # Embed debug info in .obj files (/Z7) for subprojects that enable CMP0141 (e.g. abseil),
+        # since shared .pdb generation (/Zi) is unsupported by ccache.
+        set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "Embedded")
+        if (CMAKE_GENERATOR MATCHES "Visual Studio")
+            # If ccache was installed via Chocolatey, CCACHE_PROGRAM may point to the shimgen
+            # wrapper in chocolatey/bin, which fails when copied to another directory because it
+            # resolves a relative path (../lib/ccache/tools/...) from its own location. Resolve the
+            # real ccache.exe binary before copying it to cl.exe.
+            get_filename_component(CCACHE_BIN_DIR "${CCACHE_PROGRAM}" DIRECTORY)
+            file(GLOB CHOCO_CCACHE_PROGRAMS "${CCACHE_BIN_DIR}/../lib/ccache/tools/*/ccache.exe")
+            if (CHOCO_CCACHE_PROGRAMS)
+                list(GET CHOCO_CCACHE_PROGRAMS 0 CCACHE_PROGRAM)
+            endif()
+            file(COPY_FILE "${CCACHE_PROGRAM}" "${CMAKE_CURRENT_BINARY_DIR}/cl.exe" ONLY_IF_DIFFERENT)
+            list(APPEND CMAKE_VS_GLOBALS
+                "CLToolExe=cl.exe"
+                "CLToolPath=${CMAKE_CURRENT_BINARY_DIR}"
+                "TrackFileAccess=false"
+                "UseMultiToolTask=true"
+                "EnforceProcessCountAcrossBuilds=true"
+            )
+            list(REMOVE_DUPLICATES CMAKE_VS_GLOBALS)
+        else()
+            set(CMAKE_C_COMPILER_LAUNCHER   "${CCACHE_PROGRAM}")
+            set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+        endif()
     else()
         set(C_LAUNCHER   "${CCACHE_PROGRAM}")
         set(CXX_LAUNCHER "${CCACHE_PROGRAM}")
@@ -287,14 +318,16 @@ if (WIN32)
         )
     endif()
 
-    # TODO: Figure out why pdb generation messes with incremental compilaton.
+    # TODO: Figure out why pdb generation messes with incremental compilation.
     # IN RELEASE_WITH_DEBUG_INFO, generate debug info in .obj, no in pdb.
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /Z7")
     set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} /Z7")
 
-    # In RELEASE, also generate PDBs.
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /Zi")
+    if (NOT CCACHE_PROGRAM)
+        # In RELEASE, also generate PDBs, except when ccache is enabled as /Zi is unsupported.
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /Zi")
+    endif()
 
     # In DEBUG, avoid generating a PDB file which seems to mess with incremental compilation.
     # Instead generate debug info directly inside obj files.
@@ -307,7 +340,7 @@ if (WIN32)
             CMAKE_SHARED_LINKER_FLAGS_DEBUG
             CMAKE_EXE_LINKER_FLAGS_DEBUG
             CMAKE_MODULE_LINKER_FLAGS_DEBUG
-            )
+        )
         foreach(LinkerFlag ${LinkerFlags})
             # The /debug flag outputs .pdb files, which we don't need on CI.
             string(REPLACE "/debug" "" ${LinkerFlag} ${${LinkerFlag}})
@@ -462,10 +495,6 @@ if (ANDROID)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Werror=unguarded-availability")
 endif()
 
-if (CYGWIN)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
-endif()
-
 if (MSVC)
     # Since the "secure" replacements that MSVC suggests are not portable, disable
     # the deprecation warnings. Also disable warnings about use of POSIX functions (i.e. "unlink").
@@ -501,13 +530,6 @@ if (ANDROID OR WASM)
     # On Android and WASM RELEASE builds, we omit unwind info to save space.
     # (We keep unwind info on iOS to allow readable stack traces in crash reports.)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-unwind-tables -fno-asynchronous-unwind-tables")
-endif()
-
-# With WASM, we disable RTTI because we pass emscripten::val back and forth
-# between C++ and JavaScript in order to efficiently access typed arrays, which are unbound.
-# NOTE: This is not documented in emscripten so we should consider a different approach.
-if (WASM)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
 endif()
 
 if (WASM_PTHREADS)

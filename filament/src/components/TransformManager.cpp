@@ -77,7 +77,7 @@ void FTransformManager::setAccurateTranslationsEnabled(bool const enable) noexce
     if (enable != mAccurateTranslations) {
         mAccurateTranslations = enable;
         // when enabling accurate translations, we have to recompute all world transforms
-        if (enable && !mLocalTransformTransactionOpen) {
+        if (enable) {
             computeAllWorldTransforms();
         }
     }
@@ -139,9 +139,7 @@ inline void FTransformManager::createImpl(Entity const entity, Instance const pa
                 manager[i].local = local;
                 manager[i].localTranslationLo = localLo;
             }
-            if (UTILS_LIKELY(!mLocalTransformTransactionOpen)) {
-                markNodeDirty(i);
-            }
+            markNodeDirty(i);
         }, localTransform);
     }
 }
@@ -177,13 +175,11 @@ void FTransformManager::setParent(Instance const i, Instance const parent) noexc
             } else {
                 markTopologyDirty();
             }
-            if (UTILS_LIKELY(!mLocalTransformTransactionOpen)) {
-                markNodeDirty(i);
-            }
+            markNodeDirty(i);
             // Note: setParent() doesn't reorder the child after the parent in the array,
             // but that's not a problem because TransformManager doesn't rely on that.
-            // Also note that commitLocalTransformTransaction() and defragment() reorder all
-            // children after their parent, as an optimization to calculate the world transform.
+            // Also note that defragment() reorders all children after their parent, as an
+            // optimization to calculate the world transform.
         }
     }
 }
@@ -265,9 +261,8 @@ void FTransformManager::destroyComponents(Entity const* entities, size_t const c
 
     // Now that no more components move, mark the orphans dirty so their world transform becomes
     // their local transform (and their descendants follow). Orphans destroyed later in the loop
-    // no longer have a component and are skipped. During a transaction, the commit recomputes
-    // everything anyway.
-    if (UTILS_UNLIKELY(!orphans.empty()) && !mLocalTransformTransactionOpen) {
+    // no longer have a component and are skipped.
+    if (UTILS_UNLIKELY(!orphans.empty())) {
         for (Entity const e : orphans) {
             Instance const i = manager.getInstance(e);
             if (i) {
@@ -454,9 +449,6 @@ void FTransformManager::updateNodeTransform(Instance const i) noexcept {
 
 void FTransformManager::updateNodeTransform(Instance const i,
         mat4f const& local, float3 const& localLo, bool const zeroLo) noexcept {
-    if (UTILS_UNLIKELY(mLocalTransformTransactionOpen)) {
-        return;
-    }
     auto& manager = mManager;
     validateNode(i);
     assert_invariant(i);
@@ -489,17 +481,6 @@ void FTransformManager::updateNodeTransform(Instance const i,
                 manager[parent].worldTranslationLo, zeroLo ? float3{} : localLo);
     }
     manager.notifyChange(manager.getEntity(i));
-}
-
-void FTransformManager::openLocalTransformTransaction() noexcept {
-    mLocalTransformTransactionOpen = true;
-}
-
-void FTransformManager::commitLocalTransformTransaction() noexcept {
-    if (mLocalTransformTransactionOpen) {
-        mLocalTransformTransactionOpen = false;
-        computeAllWorldTransforms();
-    }
 }
 
 void FTransformManager::computeAllWorldTransforms() noexcept {

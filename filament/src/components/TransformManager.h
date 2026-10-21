@@ -121,10 +121,6 @@ public:
 
     children_range getChildrenRange(Instance parent) const noexcept;
 
-    void openLocalTransformTransaction() noexcept;
-
-    void commitLocalTransformTransaction() noexcept;
-
     void gc() noexcept;
     void defragment(size_t maxSwaps = 64) noexcept;
 
@@ -356,7 +352,6 @@ private:
     Instance mDefragChildCursor = 1;
     Instance::Type mDefragRootCount = 0;
     bool mTopologyDirty = false;
-    bool mLocalTransformTransactionOpen = false;
     bool mAccurateTranslations = false;
 };
 

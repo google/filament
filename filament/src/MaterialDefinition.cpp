@@ -37,6 +37,7 @@
 #include <utils/Panic.h>
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -133,6 +134,19 @@ std::unique_ptr<MaterialDefinition> MaterialDefinition::create(FEngine& engine,
         parser->getName(&name);
         LOG(ERROR) << "The material '" << name.c_str_safe()
                    << "' has an invalid descriptor set layout.";
+        return nullptr;
+    }
+
+    // processBlendingMode() copies these into RasterState, which the backends trust.
+    BlendingMode blendingMode = BlendingMode::OPAQUE;
+    parser->getBlendingMode(&blendingMode);
+    std::array<BlendFunction, 4> customBlendFunctions{};
+    if (blendingMode == BlendingMode::CUSTOM &&
+            !parser->getCustomBlendFunction(&customBlendFunctions)) {
+        CString name;
+        parser->getName(&name);
+        LOG(ERROR) << "The material '" << name.c_str_safe()
+                   << "' has an invalid custom blend function.";
         return nullptr;
     }
 
@@ -425,7 +439,10 @@ void MaterialDefinition::processBlendingMode() {
     }
 
     if (blendingMode == BlendingMode::CUSTOM) {
-        mMaterialParser->getCustomBlendFunction(&customBlendFunctions);
+        // create() rejects materials where this fails.
+        UTILS_UNUSED_IN_RELEASE bool const success =
+                mMaterialParser->getCustomBlendFunction(&customBlendFunctions);
+        assert_invariant(success);
     }
 
     // blending mode
