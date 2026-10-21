@@ -106,10 +106,15 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - uses: ./.github/actions/ccache
+        with:
+          config: desktop
       - name: Run build script
         run: |
           build\windows\build-github.bat presubmit
         shell: cmd
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
 
   build-android:
     name: build-android
