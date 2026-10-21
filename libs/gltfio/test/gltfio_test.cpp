@@ -1055,6 +1055,56 @@ TEST_F(glTFIOTest, MeshWithPositionlessAndValidPrimitives) {
     }
 }
 
+TEST_F(glTFIOTest, EmptyImageDoesNotCrash) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+    TextureProvider* stbProvider = createStbProvider(mEngine);
+    ASSERT_NE(stbProvider, nullptr);
+
+    auto loadGltfJson = [&](char const* gltfJson) {
+        FilamentAsset* asset = assetLoader->createAsset(
+                reinterpret_cast<uint8_t const*>(gltfJson), uint32_t(std::strlen(gltfJson)));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        resourceLoader.addTextureProvider("image/png", stbProvider);
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+        assetLoader->destroyAsset(asset);
+    };
+
+    // Case 1: Image with neither URI, bufferView, nor mimeType.
+    loadGltfJson(
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[]}],)"
+            R"("images":[{}],"textures":[{"source":0}],)"
+            R"("materials":[{"pbrMetallicRoughness":{"baseColorTexture":{"index":0}}}]})");
+
+    // Case 2: Image with mimeType but neither URI nor bufferView.
+    loadGltfJson(
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[]}],)"
+            R"("images":[{"mimeType":"image/png"}],"textures":[{"source":0}],)"
+            R"("materials":[{"pbrMetallicRoughness":{"baseColorTexture":{"index":0}}}]})");
+
+    // Case 3: Image with bufferView but missing mimeType and buffer data.
+    loadGltfJson(
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[]}],)"
+            R"("buffers":[{"byteLength":0}],)"
+            R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":0}],)"
+            R"("images":[{"bufferView":0}],"textures":[{"source":0}],)"
+            R"("materials":[{"pbrMetallicRoughness":{"baseColorTexture":{"index":0}}}]})");
+
+    // Case 4: Image with bufferView and mimeType, but missing buffer data.
+    loadGltfJson(
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[]}],)"
+            R"("buffers":[{"byteLength":0}],)"
+            R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":0}],)"
+            R"("images":[{"bufferView":0,"mimeType":"image/png"}],"textures":[{"source":0}],)"
+            R"("materials":[{"pbrMetallicRoughness":{"baseColorTexture":{"index":0}}}]})");
+
+    delete stbProvider;
+    AssetLoader::destroy(&assetLoader);
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
