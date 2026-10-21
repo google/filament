@@ -29,7 +29,6 @@
 #include <utils/CallStack.h>
 #include <utils/compiler.h>
 #include <utils/CString.h>
-#include <utils/sstream.h>
 
 #include <string_view>
 
@@ -297,55 +296,74 @@ public:
      *         information.
      * @see std::exception
      */
-    virtual const char* what() const noexcept = 0;
+    virtual const char* what() const noexcept;
 
     /**
      * Get the type of the panic (e.g. "Precondition")
      * @return a C string containing the type of panic
      */
-    virtual const char* getType() const noexcept = 0;
+    virtual const char* getType() const noexcept;
 
     /**
      * Get the reason string for the panic
      * @return a C string containing the reason for the panic
      */
-    virtual const char* getReason() const noexcept = 0;
+    virtual const char* getReason() const noexcept;
 
     /**
      * Get a version of the reason string that is guaranteed to be constructed from literal
      * strings only; it will contain no runtime information.
      */
-    virtual const char* getReasonLiteral() const noexcept = 0;
+    virtual const char* getReasonLiteral() const noexcept;
 
     /**
      * Get the function name where the panic was detected. On debug build the fully qualified
      * function name is returned; on release builds only the function name is.
      * @return a C string containing the function name where the panic was detected
      */
-    virtual const char* getFunction() const noexcept = 0;
+    virtual const char* getFunction() const noexcept;
 
     /**
      * Get the file name where the panic was detected. Only available on debug builds.
      * @return a C string containing the file name where the panic was detected
      */
-    virtual const char* getFile() const noexcept = 0;
+    virtual const char* getFile() const noexcept;
 
     /**
      * Get the line number in the file where the panic was detected. Only available on debug builds.
      * @return an integer containing the line number in the file where the panic was detected
      */
-    virtual int getLine() const noexcept = 0;
+    virtual int getLine() const noexcept;
 
     /**
      * Get the CallStack when the panic was detected if available.
      * @return the CallStack when the panic was detected
      */
-    virtual const CallStack& getCallStack() const noexcept = 0;
+    virtual const CallStack& getCallStack() const noexcept;
 
     /**
      * Logs this exception to the system-log
      */
-    virtual void log() const noexcept = 0;
+    virtual void log() const noexcept;
+
+protected:
+    Panic(char const* type, char const* function, char const* file, int line,
+            char const* literal, CString reason);
+    Panic(Panic const&) = default;
+    Panic(Panic&&) noexcept = default;
+
+    static void reportToHandler(Panic const& e);
+    static void abortWithMessage(Panic const& e) UTILS_NORETURN UTILS_COLD;
+
+private:
+    char const* const mType = nullptr;      // panic type ("Precondition", etc.)
+    char const* const mFile = nullptr;      // file where the panic happened
+    char const* const mFunction = nullptr;  // function where the panic happened
+    int const mLine = -1;                   // line where the panic happened
+    CString mLiteral;                       // reason for the panic, built only from literals
+    CString mReason;                        // reason for the panic
+    mutable CString mWhat;                  // fully formatted reason
+    CallStack mCallstack;
 };
 
 // -----------------------------------------------------------------------------------------------
@@ -361,19 +379,6 @@ public:
 template <typename>
 class UTILS_PUBLIC TPanic : public Panic {
 public:
-    // std::exception protocol
-    const char* what() const noexcept override;
-
-    // Panic interface
-    const char* getType() const noexcept override;
-    const char* getReason() const noexcept override;
-    const char* getReasonLiteral() const noexcept override;
-    const char* getFunction() const noexcept override;
-    const char* getFile() const noexcept override;
-    int getLine() const noexcept override;
-    const CallStack& getCallStack() const noexcept override;
-    void log() const noexcept override;
-
     /**
      * Depending on the mode set, either throws an exception of type T with the given reason plus
      * extra information about the error-site, or logs the error and calls std::terminate().
@@ -389,7 +394,7 @@ public:
      * @see setMode()
      */
     static void panic(char const* function, char const* file, int line, char const* literal,
-            const char* format, ...) UTILS_NORETURN;
+            const char* format, ...) UTILS_NORETURN UTILS_COLD;
 
     /**
      * Depending on the mode set, either throws an exception of type T with the given reason plus
@@ -406,17 +411,9 @@ public:
      */
     static void panic(
             char const* function, char const* file, int line, char const* literal,
-            CString reason) UTILS_NORETURN;
+            CString reason) UTILS_NORETURN UTILS_COLD;
 
 private:
-    /**
-     * Creates a Panic with extra information about the error-site.
-     * @param function the name of the function where the error was detected
-     * @param file the file where the above function in implemented
-     * @param line the line in the above file where the error was detected
-     * @param literal a literal version of the error message
-     * @param reason a description of the cause of the error
-     */
     TPanic(char const* function, char const* file, int line, char const* literal,
             CString reason);
 
@@ -425,22 +422,13 @@ private:
     friend class ArithmeticPanic;
 
 protected:
-    ~TPanic() override;
-
-private:
-    char const* const mFile = nullptr;      // file where the panic happened
-    char const* const mFunction = nullptr;  // function where the panic happened
-    int const mLine = -1;                   // line where the panic happened
-    CString mLiteral;                       // reason for the panic, built only from literals
-    CString mReason;                        // reason for the panic
-    mutable CString mWhat;                  // fully formatted reason
-    CallStack mCallstack;
+    ~TPanic() noexcept override;
 };
 
 namespace details {
 // these are private, don't use
 void panicLog(
-        char const* function, char const* file, int line, const char* format, ...) noexcept;
+        char const* function, char const* file, int line, const char* format, ...) noexcept UTILS_COLD;
 }  // namespace details
 
 // -----------------------------------------------------------------------------------------------
@@ -500,9 +488,9 @@ public:
             char const* function,
             char const* file,
             int line,
-            char const* message) noexcept;
+            char const* message) noexcept UTILS_COLD;
 
-    ~PanicStream();
+    ~PanicStream() noexcept UTILS_COLD;
 
     PanicStream& operator<<(short value) noexcept;
     PanicStream& operator<<(unsigned short value) noexcept;
@@ -534,40 +522,27 @@ public:
     PanicStream& operator<<(std::string_view const& value) noexcept;
 
 protected:
-    io::sstream mStream;
-    char const* mFunction;
-    char const* mFile;
-    int mLine;
-    char const* mLiteral;
+    void logWarning() noexcept UTILS_COLD;
+
+    struct Impl;
+    Impl* mImpl = nullptr;
 };
 
 template<typename T>
-class TPanicStream : public PanicStream {
+class UTILS_PUBLIC TPanicStream : public PanicStream {
 public:
     using PanicStream::PanicStream;
-    ~TPanicStream() noexcept(false) UTILS_NORETURN {
-        T::panic(mFunction, mFile, mLine, mLiteral, "%s", mStream.c_str());
-    }
+    ~TPanicStream() noexcept(false) UTILS_NORETURN UTILS_COLD;
 };
 
 template<typename PanicType>
-class FlagGuardedStream : public PanicStream {
+class UTILS_PUBLIC FlagGuardedStream : public PanicStream {
 public:
-    FlagGuardedStream(bool const enable, char const* function, char const* file, int const line,
-            char const* condition)
-        : PanicStream(function, file, line, condition),
-          mEnablePanic(enable) {}
-    ~FlagGuardedStream() noexcept(false) {
-        if (mEnablePanic) {
-            PanicType::panic(mFunction, mFile, mLine, mLiteral, "%s", mStream.c_str());
-        } else {
-            logWarning();
-        }
-    }
+    FlagGuardedStream(bool enable, char const* function, char const* file, int line,
+            char const* condition) noexcept UTILS_COLD;
+    ~FlagGuardedStream() noexcept(false) UTILS_COLD;
 
 private:
-    void logWarning() noexcept;
-
     bool mEnablePanic;
 };
 

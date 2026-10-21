@@ -137,7 +137,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::float4 iblSH[9];                      // actually float3 entries (std140 requires float4 alignment)
 
     // --------------------------------------------------------------------------------------------
-    // Directional Lighting [variant: DIR]
+    // Directional Lighting (controlled via dynamic specialization constants)
     // --------------------------------------------------------------------------------------------
     math::float3 lightDirection;                // directional light direction
     float padding0;
@@ -146,7 +146,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::float2 shadowFarAttenuationParams;    // a, a/far (a=1/pct-of-far)
 
     // --------------------------------------------------------------------------------------------
-    // Directional light shadowing [variant: SRE | DIR]
+    // Directional light shadowing [variant: SRE]
     // --------------------------------------------------------------------------------------------
     // bit 0: directional (sun) shadow enabled
     // bit 1: directional (sun) screen-space contact shadow enabled
@@ -218,7 +218,8 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float es2Reserved2;
 
     // --------------------------------------------------------------------------------------------
-    // Extra directional lights, in addition to the dominant one [variant: DIR]
+    // Extra directional lights, in addition to the dominant one
+    // (controlled via dynamic specialization constants)
     // These are evaluated without shadows and without the sun disc.
     // --------------------------------------------------------------------------------------------
     // xyz: normalized direction towards the light, w: light channel bits
@@ -317,13 +318,14 @@ struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
         math::mat4f lightFromWorldMatrix;               // 64
         math::float4 lightFromWorldZ;                   // 16
         math::float4 scissorNormalized;                 // 16
-        math::float2 normalBias;                        //  8   // for EVSM/PCSS must be zero
+        float normalBias;                               //  4   // for EVSM/PCSS must be zero
         float projectionParam;                          //  4   // ortho (far-near), perspective near/(far-near)
         float wsOneOverTexelSizeAtOneMeter;             //  4   // for spot/point lights
         uint32_t maxMipLevel_maxSearchRadius;           //  4   // packed half2
         uint32_t bulbRadius_vsmExponent;                //  4   // packed half2
         uint32_t maxPenumbraRatio_penumbraRatioScale;   //  4   // packed half2
         uint32_t evsm4_layer;                           //  4   // 0x00.00.01.FF
+        uint32_t reserved;                              //  4
     };
     ShadowData shadows[CONFIG_MAX_SHADOWMAPS];
 };

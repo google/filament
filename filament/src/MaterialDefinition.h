@@ -122,7 +122,7 @@ struct MaterialDefinition {
     //
     // The Variant:: predicates all encode MaterialDomain::SURFACE semantics; evaluating them on a
     // variant from another domain yields a silently meaningless answer (e.g. the post-process key
-    // 1 has the DIR bit set, so the directional-lighting user filter would clear it to 0). Prefer
+    // 1 has the STE bit set, so Variant::isStereoVariant() reports it as a stereo variant). Prefer
     // these accessors over calling Variant:: directly: they resolve to the surface semantics only
     // when this material actually has them, and are inert otherwise.
     bool hasSurfaceVariants() const noexcept {

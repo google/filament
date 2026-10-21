@@ -209,7 +209,7 @@ void FView::invalidateSceneCache() noexcept {
     mVisibleRenderableCount = -1;
 }
 
-void FView::setScene(FScene* scene) {
+void FView::setScene(FScene* scene) noexcept {
     if (mScene != scene) {
         if (mScene) {
             mScene->unregisterView(this);
@@ -217,10 +217,10 @@ void FView::setScene(FScene* scene) {
         mScene = scene;
         invalidateSceneCache();
         if (scene) {
-            scene->registerView(this);
             if (!mSceneCache) {
                 mSceneCache = std::make_unique<FScene::SceneCacheData>();
             }
+            scene->registerView(this);
         }
     }
 }
@@ -259,6 +259,7 @@ void FView::terminate(FEngine& engine) {
         fgviewerManager->destroyView(mFrameGraphViewerViewHandle);
     }
 #endif
+
 }
 
 void FView::finish(LinearAllocatorArena& arena) {
@@ -452,7 +453,7 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
 
     // dominant directional light is always as index 0
     Entity const entity = lightData.elementAt<FScene::LIGHT_ENTITY>(0);
-    FLightManager::Instance const directionalLight = engine.getLightManager().getInstance(entity);
+    FLightManager::Instance const directionalLight = lcm.getInstance(entity);
     const bool hasDirectionalShadows = directionalLight && lcm.isShadowCaster(directionalLight);
     if (UTILS_UNLIKELY(hasDirectionalShadows)) {
         const auto& shadowOptions = lcm.getShadowOptions(directionalLight);
@@ -472,8 +473,8 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
         // when we get here all the lights should be visible
         assert_invariant(lightData.elementAt<FScene::VISIBILITY>(l));
 
-        Entity const entity = lightData.elementAt<FScene::LIGHT_ENTITY>(l);
-        FLightManager::Instance const li = lcm.getInstance(entity);
+        Entity const le = lightData.elementAt<FScene::LIGHT_ENTITY>(l);
+        FLightManager::Instance const li = lcm.getInstance(le);
 
         if (UTILS_LIKELY(!li)) {
             continue; // invalid instance
@@ -518,14 +519,14 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
     FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     FScene* const scene = mScene;
-    auto const& lightData = mSceneCache->lightData;
+    auto& lightData = mSceneCache->lightData;
 
     /*
      * Dynamic lights
      */
 
     if (hasDynamicLighting()) {
-        scene->prepareDynamicLights(cameraInfo, mLightUbh, *mSceneCache);
+        scene->prepareDynamicLights(cameraInfo, mLightUbh, lightData);
     }
 
     // here the array of visible lights has been shrunk to CONFIG_MAX_LIGHT_COUNT
@@ -560,8 +561,9 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
      * Directional light (always at index 0)
      */
 
-    Entity const entity = lightData.elementAt<FScene::LIGHT_ENTITY>(0);
-    FLightManager::Instance const directionalLight = engine.getLightManager().getInstance(entity);
+    auto const& lcm = engine.getLightManager();
+    Entity const e = lightData.elementAt<FScene::LIGHT_ENTITY>(0);
+    FLightManager::Instance const directionalLight = lcm.getInstance(e);
     const float3 sceneSpaceDirection = lightData.elementAt<FScene::DIRECTION>(0); // guaranteed normalized
     getColorPassDescriptorSet().prepareDirectionalLight(engine, exposure, sceneSpaceDirection, directionalLight);
 
@@ -578,26 +580,26 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
 /*
  * Calculates an automatic grid size based on the camera frustum dimensions.
  * Handles both perspective and orthographic projections.
- * 
+ *
  * For perspective projections, it uses the width of the frustum at the far plane.
  * This ensures that the grid size scales with the visible volume and accounts for
  * field-of-view (zooming in reduces grid size to preserve precision).
  * For orthographic projections, it uses the absolute width of the frustum.
- * 
+ *
  * camera: The camera to use for the calculation.
  * Returns the calculated grid size (10% of the computed width, chosen as a
  * reasonable balance between precision and snapping frequency).
  */
 double FView::calculateAutomaticGridSize(const FCamera* camera) const noexcept {
     auto const& p = camera->getCullingProjectionMatrix();
-    
+
     // Base scale is the width of the frustum at Z=1 for perspective,
     // or the absolute width for orthographic.
     double baseScale = 2.0 / std::abs(p[0][0]);
-    
+
     // Detect perspective by checking if P[3][2] is non-zero
     bool const isPerspective = std::abs(p[3][2]) > 1e-5;
-    
+
     if (isPerspective) {
         double const zf = camera->getCullingFar();
         // Scale at far plane
@@ -612,11 +614,11 @@ double FView::calculateAutomaticGridSize(const FCamera* camera) const noexcept {
 /*
  * Computes a stable grid origin for the camera to improve floating-point precision.
  * Snapping only occurs when the camera moves beyond the grid boundary plus hysteresis.
- * 
+ *
  * This implementation follows Strategy A: only update the grid size when a position snap occurs.
  * This prevents instability when the frustum (and thus auto grid size) changes smoothly.
  * Alternative Strategy B (scale hysteresis) could be used if we want to respond to large scale changes without moving.
- * 
+ *
  * cameraPosition: The current world position of the camera.
  * currentGridSize: The grid size used in the previous frame (stable).
  * newGridSize: The new calculated grid size (target).
@@ -688,10 +690,10 @@ CameraInfo FView::computeCameraInfo(FEngine const& engine) const noexcept {
                 currentGridSize = newGridSize;
                 mEffectiveGridSize = currentGridSize;
             }
-            
+
             // Force snap if user manually changed grid size to a positive value
             bool const forceSnap = (mGridSize > 0.0 && mGridSize != currentGridSize);
-            
+
             constexpr double hysteresisRatio = 0.5; // Automatic 50% hysteresis
             translation = -computeGridOrigin(cameraPosition, currentGridSize, newGridSize, hysteresisRatio, forceSnap);
         } else {
@@ -747,13 +749,16 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
 
     FScene* const scene = getScene();
 
+    assert_invariant(mSceneCache);
+    auto& cache = *mSceneCache;
+
     /*
      * Gather all information needed to render this scene. Apply the world origin to all
      * objects in the scene.
      */
     scene->prepare(js, arena,
             cameraInfo.worldTransform,
-            hasVSM() || hasPCSS(), *mSceneCache);
+            hasVSM() || hasPCSS(), cache);
 
     /*
      * Light culling: runs in parallel with Renderable culling (below)
@@ -761,7 +766,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
 
     JobSystem::Job* froxelizeLightsJob = nullptr;
     JobSystem::Job* prepareVisibleLightsJob = nullptr;
-    size_t const lightCount = mSceneCache->lightData.size();
+    size_t const lightCount = cache.lightData.size();
     if (lightCount > FScene::DIRECTIONAL_LIGHTS_COUNT) {
         // create and start the prepareVisibleLights job
         // note: this job updates LightData (non const)
@@ -774,7 +779,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
 
         prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
                 [&engine, distances, positionalLightCount, &viewMatrix = cameraInfo.view, &cullingFrustum,
-                 &lightData = mSceneCache->lightData](JobSystem&, JobSystem::Job*) {
+                 &lightData = cache.lightData](JobSystem&, JobSystem::Job*) {
                     prepareVisibleLights(engine.getLightManager(),
                             { distances, distances + positionalLightCount },
                             viewMatrix, cullingFrustum, lightData);
@@ -787,7 +792,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
     Range merged;
 
     { // all the operations in this scope must happen sequentially
-        FScene::RenderableSoa& renderableData = mSceneCache->renderableData;
+        FScene::RenderableSoa& renderableData = cache.renderableData;
 
         Slice<Culler::result_type> cullingMask = renderableData.slice<FScene::VISIBLE_MASK>();
         std::uninitialized_fill(cullingMask.begin(), cullingMask.end(), 0);
@@ -811,7 +816,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
         }
 
         // lightData is const from this point on (can only happen after prepareVisibleLightsJob)
-        auto const& lightData = mSceneCache->lightData;
+        auto const& lightData = cache.lightData;
 
         // now we know if we have dynamic lighting (i.e.: dynamic lights are visible)
         mHasDynamicLighting = lightData.size() > FScene::DIRECTIONAL_LIGHTS_COUNT;
@@ -820,8 +825,9 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
         mHasExtraDirectionalLights = mSceneCache->extraDirectionalLightCount > 0;
 
         // we also know if we have a directional light
-        FLightManager::Instance const directionalLight =
-                engine.getLightManager().getInstance(lightData.elementAt<FScene::LIGHT_ENTITY>(0));
+        auto& lcm = engine.getLightManager();
+        Entity const e = lightData.elementAt<FScene::LIGHT_ENTITY>(0);
+        FLightManager::Instance const directionalLight = lcm.getInstance(e);
         mHasDirectionalLighting = directionalLight.isValid();
 
         // As soon as prepareVisibleLight finishes, we can kick-off the froxelization
@@ -919,7 +925,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
         // TODO: when any spotlight is used, `merged` ends-up being the whole list. However,
         //       some of the items will end-up not being visible by any light. Can we do better?
         //       e.g. could we deffer some of the prepareVisibleRenderables() to later?
-        scene->prepareVisibleRenderables(merged, *mSceneCache);
+        scene->prepareVisibleRenderables(merged, cache);
 
         // update those UBOs
         if (!merged.empty()) {
@@ -937,7 +943,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
 
     { // this must happen after mRenderableUbh is created/updated
         // prepare skinning, morphing and hybrid instancing
-        auto& sceneData = mSceneCache->renderableData;
+        auto& sceneData = cache.renderableData;
         for (uint32_t const i : merged) {
             auto const& skinning = sceneData.elementAt<FScene::SKINNING_BUFFER>(i);
             auto const& morphing = sceneData.elementAt<FScene::MORPHING_BUFFER>(i);
@@ -1496,15 +1502,6 @@ inline void FView::computeLightCameraDistances(
     }
 }
 
-void FView::updatePrimitivesLod(FScene::RenderableSoa& renderableData,
-        FEngine const& engine, CameraInfo const&, Range visible) noexcept {
-    FRenderableManager const& rcm = engine.getRenderableManager();
-    for (uint32_t const index : visible) {
-        uint8_t const level = 0; // TODO: pick the proper level of detail
-        auto ri = rcm.getInstance(renderableData.elementAt<FScene::RENDERABLE_ENTITY>(index));
-        renderableData.elementAt<FScene::PRIMITIVES>(index) = rcm.getRenderPrimitives(ri, level);
-    }
-}
 
 FrameGraphId<FrameGraphTexture> FView::renderShadowMaps(FEngine& engine, FrameGraph& fg,
         CameraInfo const& cameraInfo, float4 const& userTime,
@@ -1520,6 +1517,7 @@ void FView::commitFrameHistory(FEngine& engine) noexcept {
 
     FrameHistoryEntry& last = frameHistory.back();
     disposer.destroy(std::move(last.taa.color.handle));
+    disposer.destroy(std::move(last.taa.depth.handle));
     disposer.destroy(std::move(last.ssr.color.handle));
 
     // and then push the new history entry to the history stack
@@ -1533,6 +1531,7 @@ void FView::clearFrameHistory(FEngine& engine) noexcept {
     for (size_t i = 0; i < frameHistory.size(); ++i) {
         FrameHistoryEntry& last = frameHistory[i];
         disposer.destroy(std::move(last.taa.color.handle));
+        disposer.destroy(std::move(last.taa.depth.handle));
         disposer.destroy(std::move(last.ssr.color.handle));
     }
 }
@@ -1599,6 +1598,12 @@ void FView::clearPickingQueries() noexcept {
 void FView::setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) noexcept {
     options.feedback = clamp(options.feedback, 0.0f, 1.0f);
     options.filterWidth = std::max(0.2f, options.filterWidth); // below 0.2 causes issues
+    options.motionDeltaThreshold = std::max(1e-3f, options.motionDeltaThreshold);
+    options.minBoxStrength = clamp(options.minBoxStrength, 0.0f, 1.0f);
+    options.minAlphaStrength = clamp(options.minAlphaStrength, 0.0f, 1.0f);
+    options.skyDepthThreshold = std::max(1e-7f, options.skyDepthThreshold);
+    options.disocclusionDepthThreshold = std::max(1e-7f, options.disocclusionDepthThreshold);
+    options.motionHoldFrames = std::max(0.0f, options.motionHoldFrames);
     mTemporalAntiAliasingOptions = options;
 }
 

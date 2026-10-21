@@ -24,6 +24,14 @@
 #include <utils/Mutex.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
+#include <utils/sstream.h>
+
+#if defined(__ANDROID__)
+#include <android/log.h>
+#endif
+#if defined(__ANDROID__)
+#include <android/set_abort_message.h>
+#endif
 
 #include <cstdlib>
 #include <cstring>
@@ -31,10 +39,6 @@
 #include <new>
 #include <string_view>
 #include <utility>
-#if defined(__ANDROID__)
-#    include <android/log.h>                // __android_log_default_aborter
-#    include <android/set_abort_message.h>  // android_set_abort_message
-#endif
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -119,82 +123,11 @@ static CString buildPanicString(
         const char* file, const char* reason) {
 #ifndef NDEBUG
     return sprintfToString("%.*s\nin %s:%d\nin file %s\nreason: %s",
-            msg.size(), msg.data(), function, line, file, reason);
+            int(msg.size()), msg.data(), function, line, file, reason);
 #else
     return sprintfToString("%.*s\nin %s:%d\nreason: %s",
-            msg.size(), msg.data(), function, line, reason);
+            int(msg.size()), msg.data(), function, line, reason);
 #endif
-}
-
-// ------------------------------------------------------------------------------------------------
-
-Panic::~Panic() noexcept = default;
-
-void Panic::setPanicHandler(PanicHandlerCallback const handler, void* user) noexcept {
-    UserPanicHandler::get().set(handler, user);
-}
-
-// ------------------------------------------------------------------------------------------------
-
-template<typename T>
-TPanic<T>::TPanic(const char* function, const char* file, int const line, char const* literal,
-        CString reason)
-        : mFile(file),
-          mFunction(function),
-          mLine(line),
-          mLiteral(literal),
-          mReason(std::move(reason)) {
-    mCallstack.update(1);
-    mWhat = buildPanicString(T::type, mFunction, mLine, mFile, mReason.c_str());
-}
-
-template<typename T>
-TPanic<T>::~TPanic() = default;
-
-template<typename T>
-const char* TPanic<T>::what() const noexcept {
-    return mWhat.c_str();
-}
-
-template<typename T>
-const char* TPanic<T>::getType() const noexcept {
-    return T::type;
-}
-
-template<typename T>
-const char* TPanic<T>::getReason() const noexcept {
-    return mReason.c_str();
-}
-
-template<typename T>
-const char* TPanic<T>::getReasonLiteral() const noexcept {
-    return mLiteral.c_str();
-}
-
-template<typename T>
-const char* TPanic<T>::getFunction() const noexcept {
-    return mFunction;
-}
-
-template<typename T>
-const char* TPanic<T>::getFile() const noexcept {
-    return mFile;
-}
-
-template<typename T>
-int TPanic<T>::getLine() const noexcept {
-    return mLine;
-}
-
-template<typename T>
-const CallStack& TPanic<T>::getCallStack() const noexcept {
-    return mCallstack;
-}
-
-template<typename T>
-void TPanic<T>::log() const noexcept {
-    LOG(ERROR) << what();
-    LOG(ERROR) << mCallstack;
 }
 
 UTILS_ALWAYS_INLINE
@@ -203,40 +136,73 @@ static const char* formatFile(char const* file) noexcept {
     return p ? p : file;
 }
 
-template<typename T>
-void TPanic<T>::panic(char const* function, char const* file, int const line, char const* literal,
-        const char* format, ...) {
-    va_list args;
-    va_start(args, format);
-    CString reason{ sprintfToString(format, args) };
-    va_end(args);
+// ------------------------------------------------------------------------------------------------
 
-    panic(function, file, line, literal, std::move(reason));
+Panic::Panic(char const* type, char const* function, char const* file, int const line,
+        char const* literal, CString reason)
+        : mType(type),
+          mFile(formatFile(file)),
+          mFunction(function),
+          mLine(line),
+          mLiteral(literal),
+          mReason(reason.empty() ? CString(literal) : std::move(reason)) {
+    mCallstack.update(2);
+    mWhat = buildPanicString(mType, mFunction, mLine, mFile, mReason.c_str());
 }
 
-template<typename T>
-void TPanic<T>::panic(char const* function, char const* file, int line, char const* literal, CString reason) {
+Panic::~Panic() noexcept = default;
 
-    if (reason.empty()) {
-        reason = CString(literal);
-    }
+void Panic::setPanicHandler(PanicHandlerCallback const handler, void* user) noexcept {
+    UserPanicHandler::get().set(handler, user);
+}
 
-    T e(function, formatFile(file), line, literal, std::move(reason));
+const char* Panic::what() const noexcept {
+    return mWhat.c_str();
+}
 
+const char* Panic::getType() const noexcept {
+    return mType;
+}
+
+const char* Panic::getReason() const noexcept {
+    return mReason.c_str();
+}
+
+const char* Panic::getReasonLiteral() const noexcept {
+    return mLiteral.c_str();
+}
+
+const char* Panic::getFunction() const noexcept {
+    return mFunction;
+}
+
+const char* Panic::getFile() const noexcept {
+    return mFile;
+}
+
+int Panic::getLine() const noexcept {
+    return mLine;
+}
+
+const CallStack& Panic::getCallStack() const noexcept {
+    return mCallstack;
+}
+
+void Panic::log() const noexcept {
+    LOG(ERROR) << what();
+    LOG(ERROR) << mCallstack;
+}
+
+void Panic::reportToHandler(Panic const& e) {
 #ifndef __EXCEPTIONS
     // log the Panic at the point it is detected unless we have exceptions, the exception handler will be
     // responsible for that.
     e.log();
 #endif
-
-    // Call the user provided handler
     UserPanicHandler::get().call(e);
+}
 
-    // if exceptions are enabled, throw now.
-#ifdef __EXCEPTIONS
-    throw std::move(e);
-#endif
-
+void Panic::abortWithMessage(Panic const& e) {
     // Register the full panic message as the tombstone "Abort message:" so that it
     // appears in crash reports collected by Google Play Console and other tools that
     // read tombstones from field devices (which never have access to logcat output).
@@ -254,6 +220,39 @@ void TPanic<T>::panic(char const* function, char const* file, int line, char con
     std::abort();
 }
 
+// ------------------------------------------------------------------------------------------------
+
+template<typename T>
+TPanic<T>::TPanic(const char* function, const char* file, int const line, char const* literal,
+        CString reason)
+        : Panic(T::type, function, file, line, literal, std::move(reason)) {
+}
+
+template<typename T>
+TPanic<T>::~TPanic() noexcept = default;
+
+template<typename T>
+void TPanic<T>::panic(char const* function, char const* file, int const line, char const* literal,
+        const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    CString reason{ sprintfToString(format, args) };
+    va_end(args);
+
+    panic(function, file, line, literal, std::move(reason));
+}
+
+template<typename T>
+void TPanic<T>::panic(char const* function, char const* file, int line, char const* literal,
+        CString reason) {
+    T e(function, file, line, literal, std::move(reason));
+    reportToHandler(e);
+#ifdef __EXCEPTIONS
+    throw std::move(e);
+#endif
+    abortWithMessage(e);
+}
+
 // -----------------------------------------------------------------------------------------------
 
 namespace details {
@@ -269,121 +268,167 @@ void panicLog(char const* function, char const* file, int const line, const char
     LOG(ERROR) << CallStack::unwind(1);
 }
 
+struct PanicStream::Impl {
+    io::sstream stream;
+    char const* function;
+    char const* file;
+    int line;
+    char const* literal;
+};
+
 PanicStream::PanicStream(
         char const* function,
         char const* file,
         int const line,
         char const* message) noexcept
-    : mFunction(function), mFile(file), mLine(line), mLiteral(message) {
+    : mImpl(new(std::nothrow) Impl{ {}, function, file, line, message }) {
 }
 
-PanicStream::~PanicStream() = default;
+PanicStream::~PanicStream() noexcept {
+    delete mImpl;
+}
 
 PanicStream& PanicStream::operator<<(short const value) noexcept {
-    mStream << value;
+    if (UTILS_LIKELY(mImpl)) mImpl->stream << value;
     return *this;
 }
 
 PanicStream& PanicStream::operator<<(unsigned short const value) noexcept {
-    mStream << value;
+    if (UTILS_LIKELY(mImpl)) mImpl->stream << value;
     return *this;
 }
 
 PanicStream& PanicStream::operator<<(char const value) noexcept {
-    mStream << value;
+    if (UTILS_LIKELY(mImpl)) mImpl->stream << value;
     return *this;
 }
 
 PanicStream& PanicStream::operator<<(unsigned char const value) noexcept {
-    mStream << value;
+    if (UTILS_LIKELY(mImpl)) mImpl->stream << value;
     return *this;
 }
 
 PanicStream& PanicStream::operator<<(int const value) noexcept {
-    mStream << value;
+    if (UTILS_LIKELY(mImpl)) mImpl->stream << value;
     return *this;
 }
 
 PanicStream& PanicStream::operator<<(unsigned int const value) noexcept {
-    mStream << value;
+    if (UTILS_LIKELY(mImpl)) mImpl->stream << value;
     return *this;
 }
 
 PanicStream& PanicStream::operator<<(long const value) noexcept {
-    mStream << value;
+    if (UTILS_LIKELY(mImpl)) mImpl->stream << value;
     return *this;
 }
 
 PanicStream& PanicStream::operator<<(unsigned long const value) noexcept {
-    mStream << value;
+    if (UTILS_LIKELY(mImpl)) mImpl->stream << value;
     return *this;
 }
 
 PanicStream& PanicStream::operator<<(long long int const value) noexcept {
-    mStream << value;
+    if (UTILS_LIKELY(mImpl)) mImpl->stream << value;
     return *this;
 }
 
 PanicStream& PanicStream::operator<<(unsigned long long int const value) noexcept {
-    mStream << value;
+    if (UTILS_LIKELY(mImpl)) mImpl->stream << value;
     return *this;
 }
 
 PanicStream& PanicStream::operator<<(float const value) noexcept {
-    mStream << value;
+    if (UTILS_LIKELY(mImpl)) mImpl->stream << value;
     return *this;
 }
 
 PanicStream& PanicStream::operator<<(double const value) noexcept {
-    mStream << value;
+    if (UTILS_LIKELY(mImpl)) mImpl->stream << value;
     return *this;
 }
 
 PanicStream& PanicStream::operator<<(long double const value) noexcept {
-    mStream << value;
+    if (UTILS_LIKELY(mImpl)) mImpl->stream << value;
     return *this;
 }
 
 PanicStream& PanicStream::operator<<(bool const value) noexcept {
-    mStream << value;
+    if (UTILS_LIKELY(mImpl)) mImpl->stream << value;
     return *this;
 }
 
 PanicStream& PanicStream::operator<<(void const* value) noexcept {
-    mStream << value;
+    if (UTILS_LIKELY(mImpl)) mImpl->stream << value;
     return *this;
 }
 
 PanicStream& PanicStream::operator<<(char const* value) noexcept {
-    mStream << value;
+    if (UTILS_LIKELY(mImpl)) mImpl->stream << value;
     return *this;
 }
 
 PanicStream& PanicStream::operator<<(unsigned char const* value) noexcept {
-    mStream << value;
+    if (UTILS_LIKELY(mImpl)) mImpl->stream << value;
     return *this;
 }
 
 PanicStream& PanicStream::operator<<(CString const& value) noexcept {
-    mStream << value;
+    if (UTILS_LIKELY(mImpl)) mImpl->stream << value;
     return *this;
 }
 
 PanicStream& PanicStream::operator<<(std::string_view const& value) noexcept {
-    mStream << value;
+    if (UTILS_LIKELY(mImpl)) mImpl->stream << value;
     return *this;
 }
 
-template<typename PanicType>
-void FlagGuardedStream<PanicType>::logWarning() noexcept {
-    LOG(WARNING) << "Failed [" << mLiteral << "]" << "\n  file=" << mFile
-                 << "\n  function=" << mFunction << "\n  line=" << mLine << "\n  info=\""
-                 << mStream.c_str() << "\"";
-
+void PanicStream::logWarning() noexcept {
+    if (UTILS_LIKELY(mImpl)) {
+        LOG(WARNING) << "Failed [" << mImpl->literal << "]" << "\n  file=" << mImpl->file
+                     << "\n  function=" << mImpl->function << "\n  line=" << mImpl->line << "\n  info=\""
+                     << mImpl->stream.c_str() << "\"";
+    }
 }
 
-template void FlagGuardedStream<PreconditionPanic>::logWarning() noexcept;
-template void FlagGuardedStream<PostconditionPanic>::logWarning() noexcept;
+template<typename T>
+TPanicStream<T>::~TPanicStream() noexcept(false) {
+    if (UTILS_LIKELY(mImpl)) {
+        T::panic(mImpl->function, mImpl->file, mImpl->line, mImpl->literal,
+                CString(mImpl->stream.c_str()));
+    } else {
+        T::panic("", "", 0, "", CString());
+    }
+}
+
+template<typename PanicType>
+FlagGuardedStream<PanicType>::FlagGuardedStream(bool const enable, char const* function,
+        char const* file, int const line, char const* condition) noexcept
+    : PanicStream(function, file, line, condition),
+      mEnablePanic(enable) {
+}
+
+template<typename PanicType>
+FlagGuardedStream<PanicType>::~FlagGuardedStream() noexcept(false) {
+    if (mEnablePanic) {
+        if (UTILS_LIKELY(mImpl)) {
+            PanicType::panic(mImpl->function, mImpl->file, mImpl->line, mImpl->literal,
+                    CString(mImpl->stream.c_str()));
+        } else {
+            PanicType::panic("", "", 0, "", CString());
+        }
+    } else {
+        logWarning();
+    }
+}
+
+template class UTILS_PUBLIC TPanicStream<PreconditionPanic>;
+template class UTILS_PUBLIC TPanicStream<PostconditionPanic>;
+template class UTILS_PUBLIC TPanicStream<ArithmeticPanic>;
+
+template class UTILS_PUBLIC FlagGuardedStream<PreconditionPanic>;
+template class UTILS_PUBLIC FlagGuardedStream<PostconditionPanic>;
+template class UTILS_PUBLIC FlagGuardedStream<ArithmeticPanic>;
 
 } // namespace details
 

@@ -111,8 +111,7 @@ public:
         // Both callers are destruction paths, so this must not throw.
         void releaseSelf() noexcept {
             if (mPool) {
-                bool const released = mPool->release(mSlice, mHash);
-                ASSERT_DESTRUCTOR(released, "%s", MISSING_ENTRY_ERROR_STRING);
+                mPool->release(mSlice, mHash);
             }
         }
 
@@ -204,20 +203,19 @@ private:
         return mMap.insert({ slice, Entry{ 1, std::move(value) } }).first.key();
     }
 
-    /** Release interned value. Returns false if slice has no entry in the pool. */
-    [[nodiscard]] bool release(Slice<const T> slice, size_t hash) noexcept {
+    /** Release interned value. */
+    UTILS_NOINLINE void release(Slice<const T> slice, size_t hash) noexcept {
         if (slice.empty()) {
-            return true;
+            return;
         }
         auto it = mMap.find(slice, hash);
-        if (UTILS_UNLIKELY(it == mMap.end())) {
-            return false;
+        bool const found = (it != mMap.end());
+        ASSERT_DESTRUCTOR(found, "%s", MISSING_ENTRY_ERROR_STRING);
+        if (UTILS_LIKELY(found)) {
+            if (--it.value().referenceCount == 0) {
+                mMap.erase_fast(it);
+            }
         }
-        if (--it.value().referenceCount == 0) {
-            // TODO: change to erase_fast
-            mMap.erase(it);
-        }
-        return true;
     }
 
     Map mMap;

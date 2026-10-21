@@ -41,7 +41,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#if defined(FILAMENT_DEBUG_MUTEX) || defined(UTILS_DEBUG_MUTEX)
+#if defined(FILAMENT_DEBUG_MUTEX)
 #define HandleAllocatorGL   HandleAllocator<32,  96, 312>
 #else
 #define HandleAllocatorGL   HandleAllocator<32,  96, 184>    // ~4520 / pool / MiB

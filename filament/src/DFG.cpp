@@ -48,7 +48,7 @@ void DFG::init(FEngine& engine) {
             .format(backend::TextureFormat::RGB16F);
 
     if (ZstdHelper::isCompressed(DFG_PACKAGE, DFG_DFG_SIZE)) {
-        const size_t decodedSize = ZstdHelper::getDecodedSize(DFG_PACKAGE, byteCount);
+        const size_t decodedSize = ZstdHelper::getDecodedSize(DFG_PACKAGE, DFG_DFG_SIZE);
         assert_invariant(decodedSize == byteCount);
 
         // If the LUT is Zstd compressed, decompress it.
@@ -59,7 +59,7 @@ void DFG::init(FEngine& engine) {
 
         if (UTILS_LIKELY(decodedData)) {
             bool const success = ZstdHelper::decompress(
-                    decodedData, decodedSize, DFG_PACKAGE, byteCount);
+                    decodedData, decodedSize, DFG_PACKAGE, DFG_DFG_SIZE);
 
             FILAMENT_CHECK_POSTCONDITION(success) << "Couldn't decompress DFG LUT.";
 

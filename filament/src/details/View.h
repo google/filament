@@ -32,7 +32,9 @@
 #include "ds/DescriptorSet.h"
 #include "ds/TypedUniformBuffer.h"
 
-#include "components/LightManager.h"
+#include "fg/FrameGraphTexture.h"
+#include "fg/FrameGraphId.h"
+
 #include "components/RenderableManager.h"
 
 #include "details/Camera.h"
@@ -50,6 +52,8 @@
 #include <backend/Handle.h>
 
 #include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/Entity.h>
 #include <utils/StructureOfArrays.h>
 #include <utils/Range.h>
@@ -64,6 +68,8 @@ namespace filament::fgviewer {
 #endif
 
 #include <math/mat4.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
 #include <math/vec4.h>
 
 #include <array>
@@ -103,15 +109,6 @@ public:
     explicit FView(FEngine& engine);
     ~FView() noexcept;
 
-    FScene::RenderableSoa& getRenderableData() const noexcept {
-        assert_invariant(mSceneCache);
-        return mSceneCache->renderableData;
-    }
-    FScene::LightSoa& getLightData() const noexcept {
-        assert_invariant(mSceneCache);
-        return mSceneCache->lightData;
-    }
-
     void terminate(FEngine& engine);
 
     CameraInfo computeCameraInfo(FEngine const& engine) const noexcept;
@@ -125,9 +122,28 @@ public:
     // call at the end of frame rendering to free per-frame data
     void finish(LinearAllocatorArena& arena);
 
-    void setScene(FScene* scene);
+    void setScene(FScene* scene) noexcept;
     FScene const* getScene() const noexcept { return mScene; }
     FScene* getScene() noexcept { return mScene; }
+
+    FScene::RenderableSoa const& getRenderableData() const noexcept {
+        assert_invariant(mSceneCache);
+        return mSceneCache->renderableData;
+    }
+    FScene::RenderableSoa& getRenderableData() noexcept {
+        assert_invariant(mSceneCache);
+        return mSceneCache->renderableData;
+    }
+    FScene::LightSoa const& getLightData() const noexcept {
+        assert_invariant(mSceneCache);
+        return mSceneCache->lightData;
+    }
+    FScene::LightSoa& getLightData() noexcept {
+        assert_invariant(mSceneCache);
+        return mSceneCache->lightData;
+    }
+    FScene::SceneCacheData const* getSceneCache() const noexcept { return mSceneCache.get(); }
+    FScene::SceneCacheData* getSceneCache() noexcept { return mSceneCache.get(); }
 
     bool hasContactShadows() const noexcept;
     void detachScene(FScene const* scene) noexcept;
@@ -238,10 +254,6 @@ public:
     FrameGraphId<FrameGraphTexture> renderShadowMaps(FEngine& engine, FrameGraph& fg,
             CameraInfo const& cameraInfo, math::float4 const& userTime,
             RenderPassBuilder const& passBuilder) noexcept;
-
-    static void updatePrimitivesLod(FScene::RenderableSoa& renderableData,
-            FEngine const& engine, CameraInfo const& camera,
-            Range visible) noexcept;
 
     void setShadowingEnabled(bool const enabled) noexcept { mShadowingEnabled = enabled; }
 

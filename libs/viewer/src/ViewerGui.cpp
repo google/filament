@@ -852,7 +852,20 @@ void ViewerGui::updateUserInterface() {
         ImGui::Combo("Jitter Pattern", &jitterSequence, "RGSS x4\0Uniform Helix x4\0Halton x8\0Halton x16\0Halton x32\0\0");
         ImGui::Combo("Box Clipping", &boxClipping, "Accurate\0Clamp\0None\0\0");
         ImGui::Combo("Box Type", &boxType, "AABB\0Variance\0\0");
-        ImGui::SliderFloat("Variance Gamma", &mSettings.view.taa.varianceGamma, 0.75f, 1.25f);
+        ImGui::SliderFloat("Variance Gamma", &mSettings.view.taa.varianceGamma, 0.6f, 1.25f);
+        ImGui::Checkbox("Motion-Adaptive History", &mSettings.view.taa.motionAdaptiveHistory);
+        ImGui::SliderFloat("Motion Delta Threshold", &mSettings.view.taa.motionDeltaThreshold, 0.1f, 5.0f);
+        ImGui::SliderFloat("Min Box Strength", &mSettings.view.taa.minBoxStrength, 0.0f, 1.0f);
+        ImGui::SliderFloat("Min Alpha Strength", &mSettings.view.taa.minAlphaStrength, 0.0f, 1.0f);
+        ImGui::SliderFloat("Sky Depth Threshold", &mSettings.view.taa.skyDepthThreshold, 0.0f, 0.01f);
+        ImGui::SliderFloat("Motion Hold Frames", &mSettings.view.taa.motionHoldFrames, 0.0f, 16.0f);
+        ImGui::Checkbox("Depth Disocclusion", &mSettings.view.taa.depthDisocclusion);
+        ImGui::SliderFloat("Disocclusion Depth Threshold", &mSettings.view.taa.disocclusionDepthThreshold, 0.0f, 0.01f);
+        ImGui::Checkbox("Disocclusion History Neighborhood",
+                &mSettings.view.taa.disocclusionHistoryNeighborhood);
+        ImGui::Checkbox("Debug: Visualize Disocclusion",
+                debug.getPropertyAddress<bool>("d.taa.visualize_disocclusion"));
+        ImGui::Checkbox("Exact Lanczos Support", &mSettings.view.taa.exactLanczosSupport);
         ImGui::SliderFloat("RCAS", &mSettings.view.taa.sharpness, 0.0f, 1.0f);
         mSettings.view.taa.boxClipping = (TemporalAntiAliasingOptions::BoxClipping)boxClipping;
         mSettings.view.taa.boxType = (TemporalAntiAliasingOptions::BoxType)boxType;

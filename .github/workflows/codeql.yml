@@ -4,10 +4,12 @@ on:
   push:
     branches: [ "main" ]
     paths-ignore:
+      - 'docs/**'
       - 'third_party/**'
   pull_request:
     branches: [ "main" ]
     paths-ignore:
+      - 'docs/**'
       - 'third_party/**'
 
 concurrency:

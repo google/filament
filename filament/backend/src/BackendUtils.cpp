@@ -24,6 +24,7 @@
 #include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/debug.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -636,6 +637,9 @@ bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped)
 
     const auto freeFunc = [](void* buffer,
             UTILS_UNUSED size_t size, UTILS_UNUSED void* user) { free(buffer); };
+    // Texture::setImage() rejects sizes where 4 * data.size would wrap. DataReshaper divides
+    // first, so a wrapped size would make it write past the buffer.
+    assert_invariant(data.size <= SIZE_MAX / 4);
     const size_t reshapedSize = 4 * data.size / 3;
     const PixelDataFormat reshapedFormat =
         data.format == PixelDataFormat::RGB ? PixelDataFormat::RGBA : PixelDataFormat::RGBA_INTEGER;

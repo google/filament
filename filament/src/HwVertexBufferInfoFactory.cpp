@@ -73,17 +73,17 @@ auto HwVertexBufferInfoFactory::create(DriverApi& driver,
         auto handle = driver.createVertexBufferInfo(
                 bufferCount, attributeCount,
                 attributes);
-        mBimap.insert(key, { handle });
+        mBimap.insert(key, { handle.getId() });
         return handle;
     }
 
     ++(pos->first.pKey->refs);
-    return pos->second.handle;
+    return Handle(pos->second.id);
 }
 
 void HwVertexBufferInfoFactory::destroy(DriverApi& driver, Handle handle) noexcept {
     // look for this handle in our map
-    auto pos = mBimap.findValue(Value{ handle });
+    auto pos = mBimap.findValue(Value{ handle.getId() });
     if (--(pos->second.pKey->refs) == 0) {
         mBimap.erase(pos);
         driver.destroyVertexBufferInfo(handle);
