@@ -554,6 +554,22 @@ void FTexture::setImageCommon(FEngine& engine, size_t const level,
         size_t const bpl = bpr * height; // TODO: PBD should have a "layer stride"
         // TODO: PBD should have a p.depth (# layers to skip)
 
+        // Vulkan's adjustedMemcpy infers the per-layer row count from the buffer
+        // (p.size / bpr / depth) and steps layers by that amount, while the check
+        // below assumes layers of exactly `height` rows. When the buffer holds more
+        // rows per layer than `height` and depth >= 2, the copy reads past the
+        // buffer even though the check below passes. Require the inferred layer
+        // height to cover the copied rows; this also promotes adjustedMemcpy's
+        // debug-only pbdHeight - top >= height assert to a release check.
+        size_t const inferredLayerHeight = bpr ? p.size / bpr / depth : 0;
+        FILAMENT_CHECK_PRECONDITION(p.top + height <= inferredLayerHeight)
+                << "buffer overflow: (size=" << size_t(p.size) << ", stride=" << size_t(p.stride)
+                << ", left=" << unsigned(p.left) << ", top=" << unsigned(p.top)
+                << ") smaller than specified region "
+                   "{{"
+                << unsigned(xoffset) << "," << unsigned(yoffset) << "," << unsigned(zoffset) << "},{"
+                << unsigned(width) << "," << unsigned(height) << "," << unsigned(depth) << "}}";
+
         /* Calculates the byte offset of the last pixel in a 3D sub-region. */
         auto const calculateLastPixelOffset = [bpp, bpr, bpl](
                 size_t xoff, size_t yoff, size_t zoff,
