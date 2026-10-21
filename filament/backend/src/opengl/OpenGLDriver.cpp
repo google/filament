@@ -2531,6 +2531,7 @@ void OpenGLDriver::destroySwapChain(Handle<HwSwapChain> sch) {
 
     if (sch) {
         GLSwapChain const* sc = handle_cast<GLSwapChain*>(sch);
+        getBackendState().unbindFramebuffer(GL_FRAMEBUFFER);
         mPlatform.destroySwapChain(sc->swapChain);
         destruct(sch, sc);
     }

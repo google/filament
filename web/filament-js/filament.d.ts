@@ -788,7 +788,9 @@ export class TransformManager {
     public setTransform(instance: TransformManager$Instance, xform: mat4): void;
     public getTransform(instance: TransformManager$Instance): mat4;
     public getWorldTransform(instance: TransformManager$Instance): mat4;
+    /** @deprecated has no effect. */
     public openLocalTransformTransaction(): void;
+    /** @deprecated has no effect. */
     public commitLocalTransformTransaction(): void;
     public getParent(instance: TransformManager$Instance): Entity;
     public getChildren(instance: TransformManager$Instance): Vector<Entity>;

@@ -203,6 +203,12 @@ public:
         return mProtectedMemorySupported;
     }
 
+    // True if VK_EXT_pipeline_protected_access is enabled on the device, in which case every
+    // pipeline should be restricted to either protected or unprotected command buffers.
+    inline bool isPipelineProtectedAccessSupported() const noexcept {
+        return mPipelineProtectedAccessSupported;
+    }
+
     inline bool isImageView2DOn3DImageSupported() const noexcept {
         return mPortabilitySubsetFeatures.imageView2DOn3DImage == VK_TRUE;
     }
@@ -252,6 +258,10 @@ public:
 
     inline bool isPipelineDynamicStateEnabled() const noexcept {
         return mPipelineDynamicStateEnabled;
+    }
+
+    inline bool isPipelineCacheEvictionEnabled() const noexcept {
+        return mPipelineCacheEvictionEnabled;
     }
 
     inline bool isGlobalPrioritySupported() const noexcept {
@@ -312,6 +322,7 @@ private:
     bool mLazilyAllocatedMemorySupported = false;
     bool mPipelineCreationFeedbackSupported = false;
     bool mProtectedMemorySupported = false;
+    bool mPipelineProtectedAccessSupported = false;
     bool mGlobalPrioritySupported = false;
     bool mDriverPropertiesSupported = false;
 
@@ -323,6 +334,7 @@ private:
     bool mParallelShaderCompileDisabled = false;
     bool mStagingBufferBypassEnabled = false;
     bool mPipelineDynamicStateEnabled = false;
+    bool mPipelineCacheEvictionEnabled = false;
 
     fvkutils::VkFormatList mDepthStencilFormats;
     fvkutils::VkFormatList mBlittableDepthStencilFormats;
