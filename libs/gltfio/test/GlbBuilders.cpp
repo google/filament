@@ -488,4 +488,62 @@ std::vector<uint8_t> makePositionlessPrimitiveGlb(bool includeValidSiblingPrimit
     return assembleGlb(std::move(json), std::move(bin));
 }
 
+std::vector<uint8_t> makeInvalidDracoGlb() {
+    std::string json = R"({
+  "asset": { "version": "2.0" },
+  "extensionsUsed": ["KHR_draco_mesh_compression"],
+  "buffers": [
+    { "byteLength": 64 }
+  ],
+  "bufferViews": [
+    { "buffer": 0, "byteOffset": 0, "byteLength": 64 }
+  ],
+  "accessors": [
+    {
+      "componentType": 5126,
+      "count": 3,
+      "type": "VEC3",
+      "min": [0, 0, 0],
+      "max": [1, 1, 1]
+    },
+    {
+      "componentType": 5126,
+      "count": 3,
+      "type": "VEC3"
+    },
+    {
+      "componentType": 5123,
+      "count": 3,
+      "type": "SCALAR"
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": { "POSITION": 0, "NORMAL": 1 },
+          "indices": 2,
+          "mode": 4,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 0,
+              "attributes": { "POSITION": 0, "NORMAL": 1 }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    { "mesh": 0 }
+  ],
+  "scenes": [
+    { "nodes": [0] }
+  ],
+  "scene": 0
+})";
+
+    return assembleGlb(std::move(json), std::vector<uint8_t>(64, 0xff));
+}
+
 } // namespace test

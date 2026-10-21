@@ -79,6 +79,11 @@ std::vector<uint8_t> makeColorSeamMorphGlb(MorphMaterial material);
 // mesh also contains a second primitive with a valid POSITION attribute.
 std::vector<uint8_t> makePositionlessPrimitiveGlb(bool includeValidSiblingPrimitive = false);
 
+// Builds a single-triangle GLB using KHR_draco_mesh_compression whose compressed bufferView holds
+// invalid Draco bytes, so that Draco decoding fails and the primitive's accessors are left with a
+// null buffer_view.
+std::vector<uint8_t> makeInvalidDracoGlb();
+
 } // namespace test
 
 #endif // TNT_GLTFIO_TEST_GLBBUILDERS_H
