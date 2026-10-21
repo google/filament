@@ -143,8 +143,13 @@ if (NOT FILAMENT_ENABLE_EXCEPTIONS)
     set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON)
 endif()
 
-if (NOT FILAMENT_ENABLE_RTTI)
-    add_compile_options(-fno-rtti)
+# With WASM, we disable RTTI because we pass emscripten::val back and forth
+# between C++ and JavaScript in order to efficiently access typed arrays, which are unbound.
+# NOTE: This is not documented in emscripten so we should consider a different approach.
+if (NOT FILAMENT_ENABLE_RTTI OR WASM)
+    if (NOT MSVC)
+        add_compile_options(-fno-rtti)
+    endif()
 endif()
 
 if (FILAMENT_DEBUG_MUTEX)
@@ -313,17 +318,13 @@ if (WIN32)
         )
     endif()
 
-    # TODO: Figure out why pdb generation messes with incremental compilaton.
+    # TODO: Figure out why pdb generation messes with incremental compilation.
     # IN RELEASE_WITH_DEBUG_INFO, generate debug info in .obj, no in pdb.
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /Z7")
     set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} /Z7")
 
-    if (CCACHE_PROGRAM)
-        # In RELEASE, generate debug info in .obj when using ccache (/Zi is unsupported by ccache).
-        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Z7")
-        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /Z7")
-    else()
-        # In RELEASE, also generate PDBs.
+    if (NOT CCACHE_PROGRAM)
+        # In RELEASE, also generate PDBs, except when ccache is enabled as /Zi is unsupported.
         set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
         set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /Zi")
     endif()
@@ -339,7 +340,7 @@ if (WIN32)
             CMAKE_SHARED_LINKER_FLAGS_DEBUG
             CMAKE_EXE_LINKER_FLAGS_DEBUG
             CMAKE_MODULE_LINKER_FLAGS_DEBUG
-            )
+        )
         foreach(LinkerFlag ${LinkerFlags})
             # The /debug flag outputs .pdb files, which we don't need on CI.
             string(REPLACE "/debug" "" ${LinkerFlag} ${${LinkerFlag}})
@@ -494,10 +495,6 @@ if (ANDROID)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Werror=unguarded-availability")
 endif()
 
-if (CYGWIN)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
-endif()
-
 if (MSVC)
     # Since the "secure" replacements that MSVC suggests are not portable, disable
     # the deprecation warnings. Also disable warnings about use of POSIX functions (i.e. "unlink").
@@ -533,13 +530,6 @@ if (ANDROID OR WASM)
     # On Android and WASM RELEASE builds, we omit unwind info to save space.
     # (We keep unwind info on iOS to allow readable stack traces in crash reports.)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-unwind-tables -fno-asynchronous-unwind-tables")
-endif()
-
-# With WASM, we disable RTTI because we pass emscripten::val back and forth
-# between C++ and JavaScript in order to efficiently access typed arrays, which are unbound.
-# NOTE: This is not documented in emscripten so we should consider a different approach.
-if (WASM)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
 endif()
 
 if (WASM_PTHREADS)
