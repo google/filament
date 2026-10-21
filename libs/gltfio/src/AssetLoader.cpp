@@ -839,15 +839,6 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity,
 
         builder.morphing(morphTargetBuffer);
 
-        // The Primitive structs in mMeshCache are shared across all instances of the same
-        // mesh. Only the first call should populate morphTargetBuffer in the shared Primitive
-        // and write into the existing BufferSlots (which were allocated by createPrimitive).
-        // Subsequent instances must append NEW BufferSlots so that ResourceLoader uploads
-        // morph data to every instance's MorphTargetBuffer independently.
-        //
-        // NOTE: This fix covers morph position data only. Morph tangent recomputation in
-        // ResourceLoader::computeTangents() reads MorphTargetBuffer from the shared Primitive,
-        // so additional instances with lit morph targets may have incorrect tangent frames.
         outputPrim = prims.data();
         inputPrim = &mesh->primitives[0];
         for (cgltf_size index = 0; index < primitiveCount; ++index, ++outputPrim, ++inputPrim) {
@@ -855,6 +846,15 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity,
                 continue;
             }
 
+            // The Primitive structs in mMeshCache are shared across all instances of the same
+            // mesh. Only the first call should populate morphTargetBuffer in the shared Primitive
+            // and write into the existing BufferSlots (which were allocated by createPrimitive).
+            // Subsequent instances must append NEW BufferSlots so that ResourceLoader uploads
+            // morph data to every instance's MorphTargetBuffer independently.
+            //
+            // NOTE: This fix covers morph position data only. Morph tangent recomputation in
+            // ResourceLoader::computeTangents() reads MorphTargetBuffer from the shared Primitive,
+            // so additional instances with lit morph targets may have incorrect tangent frames.
             const bool isFirstMorphSetup = (outputPrim->morphTargetBuffer == nullptr);
             if (isFirstMorphSetup) {
                 outputPrim->morphTargetBuffer = morphTargetBuffer;
