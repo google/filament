@@ -35,9 +35,7 @@ function update_to_main() {
     git commit -a \
         -m "[automated] Updating /docs due to commit ${COMMIT_HASH:0:7}" \
         -m "" \
-        -m "Full commit hash is ${COMMIT_HASH}" \
-        -m "" \
-        -m "DOCS_ALLOW_DIRECT_EDITS"
+        -m "Full commit hash is ${COMMIT_HASH}"
 
     git push origin main
     popd

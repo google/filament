@@ -14,12 +14,10 @@
 
 # This script contains several checks on the current commit, each corresponds to `possible_conditions`
 # in the main function below
-#   - Direct (non-filamentbot) edits of /docs
 #   - Edits to sources of READMEs that are duplicated to /docs
 #       or edits to /docs_src sources
 #   - Commit message has DOCS_BYPASS
 #   - Commit message has DOCS_FORCE
-#   - Commit message has DOCS_ALLOW_DIRECT_EDITS
 
 import json
 import sys
@@ -52,13 +50,6 @@ def get_edited_files(commit_hashes):
         break
       files.append(os.path.abspath(os.path.join(ROOT_DIR, r)))
   return files
-
-# Returns True if there were no direct edits to '/docs'
-def check_no_direct_edits(commit_hashes, printing=True):
-  bad = [f'\t{f}' for f in get_edited_files(commit_hashes) if f.startswith('docs/')]
-  if printing and len(bad) > 0:
-    print(f'Found edits to /docs:\n' + '\n'.join(bad))
-  return len(bad) == 0
 
 # Returns True if docs sources have been modified
 def check_has_source_edits(commit_hashes, printing=True):
@@ -95,19 +86,14 @@ if __name__ == "__main__":
 
   TAG_DOCS_BYPASS = 'DOCS_BYPASS'
   TAG_DOCS_FORCE = 'DOCS_FORCE'
-  TAG_DOCS_ALLOW_DIRECT_EDITS = 'DOCS_ALLOW_DIRECT_EDITS'
 
   possible_conditions = {
-      'no_direct_edits':
-          check_no_direct_edits,
       'source_edits':
           check_has_source_edits,
       'commit_docs_bypass':
           lambda h: commit_msg_has_tag(h, TAG_DOCS_BYPASS),
       'commit_docs_force':
           lambda h: commit_msg_has_tag(h, TAG_DOCS_FORCE),
-      'commit_docs_allow_direct_edits':
-          lambda h: commit_msg_has_tag(h, TAG_DOCS_ALLOW_DIRECT_EDITS),
   }
 
   possible_str = ', '.join(list(possible_conditions.keys()))

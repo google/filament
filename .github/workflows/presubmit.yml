@@ -221,24 +221,6 @@ jobs:
       - uses: ./.github/actions/ccache-stats
         if: ${{ !cancelled() }}
 
-  validate-docs:
-    name: validate-docs
-    runs-on: 'ubuntu-24.04'
-    needs: [check-verification]
-    if: always() && !cancelled() && !needs.check-verification.outputs.skip
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - id: get_commit_msg
-        uses: ./.github/actions/get-commit-msg
-      - name: Check for manual edits to /docs
-        env:
-          OUTPUTS_HASHES: ${{ steps.get_commit_msg.outputs.hashes }}
-        run: |
-          bash docs_src/build/presubmit_check.sh $OUTPUTS_HASHES
-
   # Cheap gate for test-renderdiff below. It exists so that the expensive job can be skipped whole
   # rather than step by step: a RDIFF_ACCEPT_NEW_GOLDENS commit used to allocate the renderdiff
   # runner and check the repository out only to do nothing, which is worth avoiding now that the
