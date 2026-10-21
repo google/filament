@@ -644,6 +644,11 @@ if (FILAMENT_BUILD_TESTING)
             test/test_AsyncUploads.cpp
             test/test_Platform.cpp
         )
+        if (FILAMENT_SUPPORTS_VULKAN)
+            list(APPEND BACKEND_TEST_SRC
+                    test/test_VulkanSpirvUtils.cpp
+            )
+        endif()
         if (FILAMENT_SUPPORTS_WEBGPU)
             list(APPEND BACKEND_TEST_SRC
                     test/test_WebGPUAsyncTaskCounter.cpp
@@ -664,6 +669,9 @@ if (FILAMENT_BUILD_TESTING)
             filamat
             SPIRV
             spirv-cross-glsl)
+        if (FILAMENT_SUPPORTS_VULKAN)
+            list(APPEND BACKEND_TEST_LIBS SPIRV-Headers)
+        endif()
         # imageio drives the golden-image comparison and is only built for host
         # platforms (see the IS_HOST_PLATFORM block in the root CMakeLists).
         # NOTE: this must not be `if (TARGET imageio)` — imageio is added after
