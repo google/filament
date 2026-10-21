@@ -37,3 +37,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - engine: Fix shadow normal bias instability with LiSPSM [⚠️ **New Material Version**]
 - engine: `Texture::setImage()` now rejects uploads of 2 GiB or more
 - java: `Engine.Config.asynchronousMode` is now passed to the native engine
+- engine: on Vulkan, a View rendered into the swap chain after others now clears its viewport
+  instead of loading it when `ClearOptions::clear` is set and no earlier View overlaps it

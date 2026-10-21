@@ -4064,6 +4064,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugCombineArrayTexture(Fra
                     // From the second draw, don't clear the targetbuffer.
                     out.params.flags.clear = TargetBufferFlags::NONE;
                     out.params.flags.discardStart = TargetBufferFlags::NONE;
+                    out.params.flags.viewportCleared = TargetBufferFlags::NONE;
                     out.params.viewport.left += out.params.viewport.width;
                 }
                 unbindAllDescriptorSets(driver);
