@@ -170,6 +170,15 @@ if (CCACHE_PROGRAM)
         # since shared .pdb generation (/Zi) is unsupported by ccache.
         set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "Embedded")
         if (CMAKE_GENERATOR MATCHES "Visual Studio")
+            # If ccache was installed via Chocolatey, CCACHE_PROGRAM may point to the shimgen
+            # wrapper in chocolatey/bin, which fails when copied to another directory because it
+            # resolves a relative path (../lib/ccache/tools/...) from its own location. Resolve the
+            # real ccache.exe binary before copying it to cl.exe.
+            get_filename_component(CCACHE_BIN_DIR "${CCACHE_PROGRAM}" DIRECTORY)
+            file(GLOB CHOCO_CCACHE_PROGRAMS "${CCACHE_BIN_DIR}/../lib/ccache/tools/*/ccache.exe")
+            if (CHOCO_CCACHE_PROGRAMS)
+                list(GET CHOCO_CCACHE_PROGRAMS 0 CCACHE_PROGRAM)
+            endif()
             file(COPY_FILE "${CCACHE_PROGRAM}" "${CMAKE_CURRENT_BINARY_DIR}/cl.exe" ONLY_IF_DIFFERENT)
             list(APPEND CMAKE_VS_GLOBALS
                 "CLToolExe=cl.exe"

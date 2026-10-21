@@ -170,6 +170,14 @@ runs:
       run: |
         if [[ "${{ runner.os }}" == "Windows" ]] && ! command -v ccache > /dev/null; then
           choco install ccache -y --no-progress
+          # Replace the Chocolatey shimgen stub in bin/ with the real ccache.exe binary so that
+          # copying ccache.exe to cl.exe for MSBuild masquerading copies the binary, not the shim.
+          for real_ccache in /c/ProgramData/chocolatey/lib/ccache/tools/*/ccache.exe; do
+            if [[ -f "${real_ccache}" ]]; then
+              cp -f "${real_ccache}" /c/ProgramData/chocolatey/bin/ccache.exe
+              break
+            fi
+          done
         fi
         if ! command -v ccache > /dev/null; then
           echo "::error::ccache is not on PATH. This action must run after the platform prereq" \
