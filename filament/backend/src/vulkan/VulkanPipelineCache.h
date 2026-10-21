@@ -190,7 +190,10 @@ private:
         VkShaderModule shaders[SHADER_MODULE_COUNT];                              //  16  : 0
         VkRenderPass renderPass;                                                  //  8   : 16
         uint16_t topology;                                                        //  2   : 24
-        uint16_t subpassIndex;                                                    //  2   : 26
+        uint8_t subpassIndex;                                                     //  1   : 26
+        // Non-zero if the pipeline is used in a protected command buffer. Only meaningful if
+        // VK_EXT_pipeline_protected_access is enabled, otherwise it is always zero.
+        uint8_t protectedAccess;                                                  //  1   : 27
         VertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT]; //  128 : 28
         VertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];      //  128 : 156
         RasterState rasterState;                                                  //  16  : 284
@@ -296,9 +299,10 @@ private:
     bool const mHasDynamicState;
     bool const mHasDynamicState2;
     bool const mHasColorWriteEnable;
+    bool const mHasPipelineProtectedAccess;
 
     // Cached context capabilities for pipeline cache eviction
-    bool const mPipelineCacheEvictionEnabled;
+    bool const mPipelineCacheThresholdEvictionEnabled;
 
     [[maybe_unused]] VulkanContext const& mContext;
 

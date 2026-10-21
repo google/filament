@@ -21,8 +21,10 @@ tools/apigen/
     ├── doc.py                      # CommonMark-to-Javadoc translation and tag formatting
     ├── type_resolver.py            # TypeResolver engine (type resolution, layouts, buffer classes)
     ├── context.py                  # ClassContext data model, IR parsing, SFINAE template expansion
+    ├── specializations.py          # Class-specific Java and JNI C++ templates and helper snippets
     ├── java_emitter.py             # JavaEmitter (Java wrapper classes, builders, aggregate structs)
     ├── jni_emitter.py              # JniEmitter (zero-cost JNI C++ bridges, buffer & slice unpackers)
+    ├── validator.py                # Static parity and reflection validator across Java and JNI C++
     └── orchestrator.py             # process_file multi-file IR pipeline and CLI argument parser
 ```
 

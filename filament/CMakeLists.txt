@@ -683,7 +683,7 @@ set(dfg_package_name "dfg")
 get_resgen_vars(${RESOURCE_DIR} ${dfg_package_name})
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
-        COMMAND resgen ${RESGEN_FLAGS} -Z ${output_path_dfg_bin}
+        COMMAND resgen ${RESGEN_FLAGS} -z ${output_path_dfg_bin}
         DEPENDS resgen
         DEPENDS ${output_path_dfg_bin}
         COMMENT "Generating DFG resource package for ${dfg_package_name}"

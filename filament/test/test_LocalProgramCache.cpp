@@ -68,24 +68,35 @@ filamat::Package buildPostProcessMaterial(Engine& engine) {
 }
 
 TEST(LocalProgramCache, SurfaceBoundary) {
+    // The largest valid surface variant combined with the largest specialization key must land
+    // exactly on the last slot of the cache. Expressed in terms of the variant space so that this
+    // keeps holding if the number of variant bits changes.
     Variant variant{};
-    variant.key = 0x7f;
-    EXPECT_EQ(LocalProgramCache::mapCacheEntryKey(
-                      variant, DynamicSpecConstKey{ 7 }, SURFACE_SIZE), 1023u);
+    variant.key = Variant::type_t(VARIANT_COUNT - 1);
+    EXPECT_EQ(LocalProgramCache::mapCacheEntryKey(variant,
+                      DynamicSpecConstKey{
+                          DynamicSpecConstKey::type_t(DYNAMIC_SPEC_CONST_KEY_COUNT - 1) },
+                      SURFACE_SIZE),
+            SURFACE_SIZE - 1);
 }
 
 TEST(LocalProgramCache, PostProcessBoundaries) {
+    // The post-process variant space is tiny ({0, 1}), but it uses the same slot layout as the
+    // surface cache: each variant owns DYNAMIC_SPEC_CONST_KEY_COUNT consecutive slots. Expressed
+    // in terms of the variant space so this keeps holding if either bit count changes.
     Variant variant{};
     EXPECT_EQ(LocalProgramCache::mapCacheEntryKey(
                       variant, DynamicSpecConstKey{ 0 }, POST_PROCESS_SIZE), 0u);
-    variant.key = 1;
+
+    variant.key = Variant::type_t(POST_PROCESS_VARIANT_COUNT - 1);
     EXPECT_EQ(LocalProgramCache::mapCacheEntryKey(
-                      variant, DynamicSpecConstKey{ 0 }, POST_PROCESS_SIZE), 8u);
+                      variant, DynamicSpecConstKey{ 0 }, POST_PROCESS_SIZE),
+            (POST_PROCESS_VARIANT_COUNT - 1) << DYNAMIC_SPEC_CONST_KEY_BITS);
 }
 
 TEST(LocalProgramCacheDeathTest, RejectsOverflow) {
-    EXPECT_DEATH(mapInvalidKey(0x80, SURFACE_SIZE), "");
-    EXPECT_DEATH(mapInvalidKey(2, POST_PROCESS_SIZE), "");
+    EXPECT_DEATH(mapInvalidKey(Variant::type_t(VARIANT_COUNT), SURFACE_SIZE), "");
+    EXPECT_DEATH(mapInvalidKey(POST_PROCESS_VARIANT_COUNT, POST_PROCESS_SIZE), "");
     EXPECT_DEATH(mapInvalidKey(Variant::DEP, POST_PROCESS_SIZE), "");
 }
 
@@ -95,12 +106,15 @@ TEST(LocalProgramCacheDeathTest, UsesActualCapacity) {
 }
 
 TEST(LocalProgramCache, DepthIgnoresSpecialization) {
+    // Depth variants are decoupled from the dynamic specialization space, so every specialization
+    // key must collapse onto the depth variant's own slot (i.e. as if specKey were 0).
     Variant variant{};
     variant.key = Variant::DEP;
     ASSERT_TRUE(Variant::isValidDepthVariant(variant));
+    constexpr std::size_t DEPTH_SLOT = std::size_t{ Variant::DEP } << DYNAMIC_SPEC_CONST_KEY_BITS;
     for (uint16_t key = 0; key < DYNAMIC_SPEC_CONST_KEY_COUNT; ++key) {
         EXPECT_EQ(LocalProgramCache::mapCacheEntryKey(
-                          variant, DynamicSpecConstKey{ key }, SURFACE_SIZE), 128u);
+                          variant, DynamicSpecConstKey{ key }, SURFACE_SIZE), DEPTH_SLOT);
     }
 }
 
@@ -165,9 +179,10 @@ TEST(LocalProgramCacheRegressionDeathTest, SurfaceVariantOnPostProcessMaterialIs
     //    RenderPass::instanceify() feeds it to prepareProgram(). A lit renderable that receives
     //    shadows is about as ordinary as it gets, and it already lands outside the cache.
     Variant variant{};
-    variant.key = Variant::DIR | Variant::SRE;
-    ASSERT_GE(std::size_t{ variant.key } << DYNAMIC_SPEC_CONST_KEY_BITS, POST_PROCESS_SIZE)
-            << "this variant must actually be out of bounds, otherwise the test proves nothing";
+    variant.key = Variant::SRE;
+    static_assert(std::size_t{ Variant::SRE } << DYNAMIC_SPEC_CONST_KEY_BITS >= POST_PROCESS_SIZE,
+            "SRE must map past the end of the post-process cache, otherwise this test proves "
+            "nothing; pick a higher surface-only bit if the variant layout changes");
 
     // The Engine owns worker threads, and the default "fast" style forks without exec, which is
     // unsafe there. "threadsafe" re-executes the binary instead.

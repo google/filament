@@ -314,6 +314,12 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device, bool enableDebugUtils 
         VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME,
         VK_EXT_COLOR_WRITE_ENABLE_EXTENSION_NAME,
 
+        // Allows pipelines to be restricted to either protected or unprotected command buffers.
+        // This is required to use protected memory on ARM proprietary drivers, where enabling
+        // protected memory otherwise causes excessive load/store unit activity (see b/208458772).
+        // It is only enabled on the device if protected memory is also supported.
+        VK_EXT_PIPELINE_PROTECTED_ACCESS_EXTENSION_NAME,
+
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
         VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME,
 #endif
@@ -380,20 +386,56 @@ FixedCapacityVector<VkQueueFamilyProperties> getPhysicalDeviceQueueFamilyPropert
     return queueFamiliesProperties;
 }
 
-uint32_t identifyGraphicsQueueFamilyIndex(VkPhysicalDevice physicalDevice, VkQueueFlags flags) {
+uint32_t identifyQueueFamilyIndex(VkPhysicalDevice physicalDevice, VkQueueFlags flags) {
     FixedCapacityVector<VkQueueFamilyProperties> const queueFamiliesProperties
             = getPhysicalDeviceQueueFamilyPropertiesHelper(physicalDevice);
-    uint32_t graphicsQueueFamilyIndex = INVALID_VK_INDEX;
+    uint32_t queueFamilyIndex = INVALID_VK_INDEX;
     for (uint32_t j = 0; j < queueFamiliesProperties.size(); ++j) {
         VkQueueFamilyProperties props = queueFamiliesProperties[j];
-        if (props.queueCount != 0 && props.queueFlags & flags) {
-            graphicsQueueFamilyIndex = j;
+        // All of the requested flags must be supported by the family.
+        if (props.queueCount != 0 && (props.queueFlags & flags) == flags) {
+            queueFamilyIndex = j;
             break;
         }
     }
-    return graphicsQueueFamilyIndex;
+    return queueFamilyIndex;
 }
 
+// The Async queue needs to be a different queue from the main graphics one
+// If there is more than one virtual queue in the graphics family use the second as the Async
+// If not, use the next available queue that has the transfer property
+// If it does not exist either return INVALID_VK_INDEX
+std::pair<uint32_t, uint32_t> identifyAsyncQueue(VkPhysicalDevice physicalDevice) {
+    uint32_t asyncQueueFamilyIndex = INVALID_VK_INDEX;
+    uint32_t asyncQueueIndex = INVALID_VK_INDEX;
+
+    uint32_t const graphicsQueueFamilyIndex =
+        identifyQueueFamilyIndex(physicalDevice, VK_QUEUE_GRAPHICS_BIT);
+
+    FixedCapacityVector<VkQueueFamilyProperties> const queueFamiliesProperties
+            = getPhysicalDeviceQueueFamilyPropertiesHelper(physicalDevice);
+
+    for (uint32_t j = 0; j < queueFamiliesProperties.size(); ++j) {
+        VkQueueFamilyProperties props = queueFamiliesProperties[j];
+        // Async queue candidate must have the transfer property
+        if (props.queueFlags & VK_QUEUE_TRANSFER_BIT) {
+            // If this is not the same family as the graphics, use the first one
+            if (j != graphicsQueueFamilyIndex) {
+                asyncQueueFamilyIndex = j;
+                asyncQueueIndex = 0;
+            // In case is the graphics family, use the second if available
+            } else if (props.queueCount > 1) {
+                asyncQueueFamilyIndex = j;
+                asyncQueueIndex = 1;
+            }
+        }
+        if (asyncQueueIndex != INVALID_VK_INDEX) {
+            break;
+        }
+    }
+
+    return std::make_pair(asyncQueueFamilyIndex, asyncQueueIndex);
+}
 // Provide a preference ordering of device types.
 // Enum based on:
 // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceType.html
@@ -442,7 +484,7 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance,
         // Does the device have any command queues that support graphics?
         // In theory, we should also ensure that the device supports presentation of our
         // particular VkSurface, but we don't have a VkSurface yet, so we'll skip this requirement.
-        if (identifyGraphicsQueueFamilyIndex(candidateDevice, VK_QUEUE_GRAPHICS_BIT)
+        if (identifyQueueFamilyIndex(candidateDevice, VK_QUEUE_GRAPHICS_BIT)
             == INVALID_VK_INDEX) {
             continue;
         }
@@ -590,6 +632,8 @@ struct VulkanPlatformPrivate {
     uint32_t mGraphicsQueueFamilyIndex = INVALID_VK_INDEX;
     uint32_t mGraphicsQueueIndex = INVALID_VK_INDEX;
     VkQueue mGraphicsQueue = VK_NULL_HANDLE;
+    uint32_t mAsyncQueueFamilyIndex = INVALID_VK_INDEX;
+    uint32_t mAsyncQueueIndex = INVALID_VK_INDEX;
     VkQueue mAsyncQueue = VK_NULL_HANDLE;
     uint32_t mProtectedGraphicsQueueFamilyIndex = INVALID_VK_INDEX;
     uint32_t mProtectedGraphicsQueueIndex = INVALID_VK_INDEX;
@@ -713,6 +757,12 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // Query all the supported physical device features and enable/disable any feature as needed
     queryAndSetDeviceFeatures(driverConfig, instExts, deviceExts, sharedContext);
 
+    // VK_EXT_pipeline_protected_access is only enabled on the device when it is used, i.e. when
+    // both the extension's feature and protected memory are supported.
+    if (!mImpl->mContext.mPipelineProtectedAccessSupported) {
+        setErase(deviceExts, VK_EXT_PIPELINE_PROTECTED_ACCESS_EXTENSION_NAME);
+    }
+
     mImpl->mContext.mDebugUtilsNamesEnabled =
             mImpl->mContext.mDebugUtilsEnabled && enableDebugUtilsNames;
     mImpl->mContext.mRenderDocCaptureEnabled = enableRenderDocCapture;
@@ -722,7 +772,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // Initialize the required queues
     if (mImpl->mGraphicsQueueFamilyIndex == INVALID_VK_INDEX) {
         mImpl->mGraphicsQueueFamilyIndex =
-                identifyGraphicsQueueFamilyIndex(mImpl->mPhysicalDevice, VK_QUEUE_GRAPHICS_BIT);
+                identifyQueueFamilyIndex(mImpl->mPhysicalDevice, VK_QUEUE_GRAPHICS_BIT);
     }
 
     // At this point, we should have a family index that points to a family that has > 0 queues for
@@ -734,7 +784,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     }
 
     if (context.mProtectedMemorySupported) {
-        mImpl->mProtectedGraphicsQueueFamilyIndex = identifyGraphicsQueueFamilyIndex(
+        mImpl->mProtectedGraphicsQueueFamilyIndex = identifyQueueFamilyIndex(
                 mImpl->mPhysicalDevice, (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_PROTECTED_BIT));
         // Applying the same logic to the protected queue index (Not sure about shared context and
         // protection)
@@ -759,13 +809,9 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         requestedFeatures.gpuContextPriority = driverConfig.gpuContextPriority;
     }
 
-    auto queues = getPhysicalDeviceQueueFamilyPropertiesHelper(getPhysicalDevice());
-    const size_t graphicsQueuesCount = queues[mImpl->mGraphicsQueueFamilyIndex].queueCount;
-
     if (mImpl->mDevice == VK_NULL_HANDLE) {
         createLogicalDeviceAndQueues(deviceExts, context.mPhysicalDeviceFeatures.features,
-                context.mPhysicalDeviceVk11Features, context.mProtectedMemorySupported,
-                requestedFeatures, graphicsQueuesCount > 1);
+                context.mPhysicalDeviceVk11Features, requestedFeatures);
     }
 
     assert_invariant(mImpl->mDevice != VK_NULL_HANDLE);
@@ -776,9 +822,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
             &mImpl->mGraphicsQueue);
     assert_invariant(mImpl->mGraphicsQueue != VK_NULL_HANDLE);
 
-    if (graphicsQueuesCount > 1) {
-        // If we have more than one graphical queue, use one as the async queue
-        vkGetDeviceQueue(mImpl->mDevice, mImpl->mGraphicsQueueFamilyIndex, mImpl->mGraphicsQueueIndex + 1,
+    if (mImpl->mAsyncQueueFamilyIndex != INVALID_VK_INDEX) {
+        vkGetDeviceQueue(mImpl->mDevice, mImpl->mAsyncQueueFamilyIndex, mImpl->mAsyncQueueIndex,
             &mImpl->mAsyncQueue);
     }
 
@@ -927,6 +972,14 @@ uint32_t VulkanPlatform::getGraphicsQueueIndex() const noexcept {
 
 VkQueue VulkanPlatform::getGraphicsQueue() const noexcept {
     return mImpl->mGraphicsQueue;
+}
+
+uint32_t VulkanPlatform::getAsyncQueueFamilyIndex() const noexcept {
+    return mImpl->mAsyncQueueFamilyIndex;
+}
+
+uint32_t VulkanPlatform::getAsyncQueueIndex() const noexcept {
+    return mImpl->mAsyncQueueIndex;
 }
 
 VkQueue VulkanPlatform::getAsyncQueue() const noexcept {
@@ -1114,6 +1167,13 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
         chainStruct(&context.mPhysicalDeviceFeatures, &context.mColorWriteEnableFeatures);
     }
 
+    VkPhysicalDevicePipelineProtectedAccessFeaturesEXT pipelineProtectedAccessFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_PROTECTED_ACCESS_FEATURES_EXT,
+    };
+    if (setContains(deviceExts, VK_EXT_PIPELINE_PROTECTED_ACCESS_EXTENSION_NAME)) {
+        chainStruct(&context.mPhysicalDeviceFeatures, &pipelineProtectedAccessFeatures);
+    }
+
     if (vkGetPhysicalDeviceProperties2) {
         chainStruct(&context.mPhysicalDeviceProperties, &context.mDriverProperties);
         context.mDriverPropertiesSupported = true;
@@ -1171,13 +1231,45 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
                                                        .vulkan.enable_pipeline_dynamic_state
                                              : false);
     context.mPipelineCacheEvictionEnabled =
-            (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
-                                                       .vulkan.enable_pipeline_cache_eviction
+            (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend.vulkan
+                                                       .enable_pipeline_cache_threshold_eviction
                                              : false);
+
+    // http://b/208458772. ARM proprietary driver supports this protected memory extension but we
+    // are seeing excessive load/store unit activity when this extension is enabled, even if not
+    // been used. Disable this extension on older ARM platforms that don't support
+    // VK_EXT_pipeline_protected_access.
+    // http://anglebug.com/42266183
+    //
+    // http://b/381285096. On Intel platforms, we want to prevent protected
+    // queues being used as we cannot handle the teardown scenario if PXP termination occurs.
+    // http://b/512497379. We cannot handle teardown in Android on Intel either so it is left
+    // disabled there to avoid app compat issues until TODO: http://b/540469298
+    uint32_t const vendorId = context.getPhysicalDeviceVendorId();
+    bool const isARM = vendorId == 0x13B5;
+    bool const isIntel = vendorId == 0x8086;
+    bool const isMesaPanVK = context.mDriverProperties.driverID == VK_DRIVER_ID_MESA_PANVK;
+    bool const isARMProprietary = isARM && !isMesaPanVK;
+    bool const hasPipelineProtectedAccess =
+            pipelineProtectedAccessFeatures.pipelineProtectedAccess == VK_TRUE;
+
+    // Protected content requires a queue family that supports both graphics and protected queues.
+    bool const hasProtectedQueueFamily =
+            identifyQueueFamilyIndex(mImpl->mPhysicalDevice,
+                    VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_PROTECTED_BIT) != INVALID_VK_INDEX;
 
     // We know we need to allocate the protected version of the VK objects
     context.mProtectedMemorySupported =
-            static_cast<bool>(queryProtectedMemoryFeatures.protectedMemory);
+            queryProtectedMemoryFeatures.protectedMemory == VK_TRUE &&
+            (!isARMProprietary || hasPipelineProtectedAccess) &&
+            !isIntel &&
+            hasProtectedQueueFamily;
+
+    // When available, VK_EXT_pipeline_protected_access is used to mark every pipeline as either
+    // protected-only or unprotected-only, which allows the driver to avoid the overhead of
+    // supporting protected memory in pipelines that never access it.
+    context.mPipelineProtectedAccessSupported =
+            context.mProtectedMemorySupported && hasPipelineProtectedAccess;
 
     // Only enable shaderClipDistance if we are doing instanced stereoscopic rendering.
     if (driverConfig.stereoscopicType != StereoscopicType::INSTANCED) {
@@ -1215,22 +1307,20 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
 
 void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExtensions,
         VkPhysicalDeviceFeatures const& features,
-        VkPhysicalDeviceVulkan11Features const& vk11Features, bool createProtectedQueue,
-        MiscDeviceFeatures const& requestedFeatures, bool createSecondGraphicsQueue) noexcept {
-
-    // Identify and select all the required queues
-    mImpl->mGraphicsQueueFamilyIndex =
-            identifyGraphicsQueueFamilyIndex(mImpl->mPhysicalDevice, VK_QUEUE_GRAPHICS_BIT);
+        VkPhysicalDeviceVulkan11Features const& vk11Features,
+        MiscDeviceFeatures const& requestedFeatures) noexcept {
+    // The graphics and protected queues are identified in createDriver().
     assert_invariant(mImpl->mGraphicsQueueFamilyIndex != INVALID_VK_INDEX);
-    mImpl->mGraphicsQueueIndex = 0;
+    assert_invariant(mImpl->mGraphicsQueueIndex != INVALID_VK_INDEX);
 
-    if (createProtectedQueue) {
-        mImpl->mProtectedGraphicsQueueFamilyIndex = identifyGraphicsQueueFamilyIndex(
-                mImpl->mPhysicalDevice, (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_PROTECTED_BIT));
-        mImpl->mProtectedGraphicsQueueIndex = 0;
-    }
+    const auto asyncQueueDetails= identifyAsyncQueue(getPhysicalDevice());
+    mImpl->mAsyncQueueFamilyIndex = asyncQueueDetails.first;
+    mImpl->mAsyncQueueIndex = asyncQueueDetails.second;
+    bool const hasAsyncQueue = mImpl->mAsyncQueueFamilyIndex != INVALID_VK_INDEX;
 
-    float queuePriority[] = { 1.0f, 1.0f };
+    bool const hasProtectedQueue = mImpl->mProtectedGraphicsQueueFamilyIndex != INVALID_VK_INDEX;
+
+    float queuePriority[] = { 1.0f };
     VkDeviceCreateInfo deviceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
     };
@@ -1250,21 +1340,34 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
         .globalPriority = getVkQueueGlobalPriority(requestedFeatures.gpuContextPriority),
     };
 
-    VkDeviceQueueCreateInfo deviceQueueCreateInfo[2] = {};
-    deviceQueueCreateInfo[0] = {
+    std::vector<VkDeviceQueueCreateInfo> queuesCreateInfos;
+    // Graphics queue
+    VkDeviceQueueCreateInfo graphicsQueueCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
         .pNext = requiresGpuPriority ? &queuePriorityCreateInfo : nullptr,
         .queueFamilyIndex = mImpl->mGraphicsQueueFamilyIndex,
-        .queueCount = (createSecondGraphicsQueue ? 2u : 1u),
+        .queueCount = 1,
         .pQueuePriorities = &queuePriority[0],
     };
-    // Protected queue
-    deviceQueueCreateInfo[1] = deviceQueueCreateInfo[0];
-    deviceQueueCreateInfo[1].flags = VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT;
+    queuesCreateInfos.push_back(graphicsQueueCreateInfo);
 
-    bool const hasProtectedQueue = mImpl->mProtectedGraphicsQueueFamilyIndex != INVALID_VK_INDEX;
-    deviceCreateInfo.queueCreateInfoCount = hasProtectedQueue ? 2 : 1;
-    deviceCreateInfo.pQueueCreateInfos = deviceQueueCreateInfo;
+    // Protected queue. Only a single protected queue is retrieved from the device.
+    if (hasProtectedQueue) {
+        VkDeviceQueueCreateInfo protectedQueueCreateInfo = graphicsQueueCreateInfo;
+        protectedQueueCreateInfo.queueFamilyIndex = mImpl->mProtectedGraphicsQueueFamilyIndex;
+        protectedQueueCreateInfo.flags = VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT;
+        queuesCreateInfos.push_back(protectedQueueCreateInfo);
+    }
+
+    // Async queue
+    if (hasAsyncQueue) {
+        VkDeviceQueueCreateInfo asyncQueueCreateInfo = graphicsQueueCreateInfo;
+        asyncQueueCreateInfo.queueFamilyIndex = mImpl->mAsyncQueueFamilyIndex;
+        queuesCreateInfos.push_back(asyncQueueCreateInfo);
+    }
+
+    deviceCreateInfo.queueCreateInfoCount = queuesCreateInfos.size();
+    deviceCreateInfo.pQueueCreateInfos = queuesCreateInfos.data();
 
     // We could simply enable all supported features, but since that may have performance
     // consequences let's just enable the features we need.
@@ -1329,6 +1432,15 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
     if (hasProtectedQueue) {
         // Enable protected memory, if requested.
         chainStruct(&deviceCreateInfo, &protectedMemory);
+    }
+
+    VkPhysicalDevicePipelineProtectedAccessFeaturesEXT pipelineProtectedAccess = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_PROTECTED_ACCESS_FEATURES_EXT,
+        .pipelineProtectedAccess = VK_TRUE,
+    };
+    if (setContains(deviceExtensions, VK_EXT_PIPELINE_PROTECTED_ACCESS_EXTENSION_NAME)) {
+        assert_invariant(hasProtectedQueue);
+        chainStruct(&deviceCreateInfo, &pipelineProtectedAccess);
     }
 
     VkPhysicalDeviceGlobalPriorityQueryFeaturesKHR globalPriority = {

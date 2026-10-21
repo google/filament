@@ -27,6 +27,8 @@
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 
+#include <backend/DriverEnums.h>
+
 #include <utils/EntityManager.h>
 #include <utils/Log.h>
 #include <utils/Path.h>
@@ -244,6 +246,21 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
     if ((header.flags & COMPRESSION) && header.indexCount % 3 != 0) {
         utils::slog.e << "Compressed index count must be divisible by 3." << utils::io::endl;
         return {};
+    }
+
+    // Checked here so a bad asset fails gracefully instead of panicking in IndexBuffer::build().
+    if (header.indexCount > backend::MAX_INDEX_COUNT) {
+        utils::slog.e << "Index count exceeds the maximum." << utils::io::endl;
+        return {};
+    }
+
+    // indexSize is the compressed size when COMPRESSION is set, so only raw indices are checked.
+    if (!(header.flags & COMPRESSION)) {
+        size_t const elementSize = header.indexType == UI16 ? sizeof(uint16_t) : sizeof(uint32_t);
+        if (size_t(header.indexCount) * elementSize != header.indexSize) {
+            utils::slog.e << "Index size does not match index count." << utils::io::endl;
+            return {};
+        }
     }
 
     // Check integer overflow on header.parts * sizeof(Part)

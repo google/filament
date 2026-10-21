@@ -43,8 +43,10 @@ def transform_dup_file_link(line, transforms):
     line: The markdown line containing potential links.
     transforms: A dictionary mapping original link prefixes to their new destinations.
   """
-  URL_CONTENT = '[-a-zA-Z0-9()@:%_\+.~#?&//=]+'
-  res = re.findall(f'\[(.+)\]\(({URL_CONTENT})\)', line)
+  URL_CONTENT = r'[-a-zA-Z0-9()@:%_\+.~#?&//=]+'
+  # The link text excludes ']' so that several links on one line (e.g. a table row) are each
+  # matched separately instead of being merged into a single greedy match.
+  res = re.findall(rf'\[([^\]]+)\]\(({URL_CONTENT})\)', line)
   for text, url in  res:
     word = f'[{text}]({url})'
     for tkey in transforms.keys():

@@ -24,8 +24,12 @@
 #include <private/backend/CommandStream.h>
 #include <private/backend/Driver.h>
 
+#include <utils/Panic.h>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+#include <limits>
 
 namespace {
 using namespace filament;
@@ -404,4 +408,43 @@ TEST_F(UboManagerTest, ReallocationReservesDoubleSizeForAllDirtyExistingInstance
     EXPECT_EQ(mUboManager.getTotalSize(), expectedSize);
     mUboManager.finishBeginFrame(mDriverApi);
     mUboManager.endFrame(mDriverApi);
+}
+
+TEST_F(UboManagerTest, InitialSizeIsRoundedToSlotMultiple) {
+    // Engine::Config::sharedUboInitialSizeInBytes is user-provided; invalid values must be
+    // rounded to a non-zero multiple of the slot size rather than reaching the allocator as-is.
+    constexpr allocation_size_t MAX_SIZE = std::numeric_limits<allocation_size_t>::max();
+    // A large slot keeps the allocator's node count small for the near-UINT32_MAX case.
+    constexpr allocation_size_t HUGE_SLOT_SIZE = 1u << 28;
+    struct Case {
+        allocation_size_t slotSize;
+        allocation_size_t requested;
+        allocation_size_t expected;
+    };
+    constexpr Case cases[] = {
+            { DEFAULT_SLOT_SIZE, 0, DEFAULT_SLOT_SIZE },
+            { DEFAULT_SLOT_SIZE, 1, DEFAULT_SLOT_SIZE },
+            { DEFAULT_SLOT_SIZE, DEFAULT_SLOT_SIZE + 1, 2 * DEFAULT_SLOT_SIZE },
+            // Rounding up would wrap, so the size is rounded down instead.
+            { HUGE_SLOT_SIZE, MAX_SIZE, MAX_SIZE & ~(HUGE_SLOT_SIZE - 1) },
+    };
+    for (auto const& c : cases) {
+        UboManager uboManager(mDriverApi, c.slotSize, c.requested);
+        EXPECT_EQ(uboManager.getTotalSize(), c.expected) << "requested " << c.requested;
+        uboManager.terminate(mDriverApi);
+    }
+}
+
+TEST_F(UboManagerTest, RequiredSizeOverflowFailsCleanly) {
+    constexpr allocation_size_t HUGE_SLOT_SIZE = 1u << 28;
+    UboManager uboManager(mDriverApi, HUGE_SLOT_SIZE, HUGE_SLOT_SIZE);
+    for (size_t i = 0; i < 6; ++i) {
+        uboManager.manageMaterialInstance(createInstance());
+    }
+#if GTEST_HAS_EXCEPTIONS
+    EXPECT_THROW(uboManager.beginFrame(mDriverApi), utils::PostconditionPanic);
+#else
+    EXPECT_DEATH(uboManager.beginFrame(mDriverApi), "Shared uniform buffer size overflow");
+#endif
+    uboManager.terminate(mDriverApi);
 }

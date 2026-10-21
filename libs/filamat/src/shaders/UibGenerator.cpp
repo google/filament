@@ -157,7 +157,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "iblSH",                  9, Type::FLOAT3                  },
 
             // ------------------------------------------------------------------------------------
-            // Directional Lighting [variant: DIR]
+            // Directional Lighting (controlled via dynamic specialization constants)
             // ------------------------------------------------------------------------------------
             { "lightDirection",         0, Type::FLOAT3, Precision::HIGH },
             { "padding0",               0, Type::FLOAT                   },
@@ -166,7 +166,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "shadowFarAttenuationParams", 0, Type::FLOAT2, Precision::HIGH },
 
             // ------------------------------------------------------------------------------------
-            // Directional light shadowing [variant: SRE | DIR]
+            // Directional light shadowing [variant: SRE]
             // ------------------------------------------------------------------------------------
             { "directionalShadows",       0, Type::INT                      },
             { "ssContactShadowDistance",  0, Type::FLOAT                    },
@@ -230,7 +230,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "es2Reserved2",            0, Type::FLOAT                  },
 
             // ------------------------------------------------------------------------------------
-            // Extra directional lights [variant: DIR]
+            // Extra directional lights (controlled via dynamic specialization constants)
             // ------------------------------------------------------------------------------------
             { "extraLightDirection",      CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS,
                                              Type::FLOAT4, Precision::HIGH },

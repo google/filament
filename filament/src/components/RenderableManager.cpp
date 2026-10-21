@@ -562,11 +562,12 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
 
         // reject invalid geometry parameters
         if (entry.indices) {
+            size_t const indexCount = entry.indices->getIndexCount();
             FILAMENT_CHECK_PRECONDITION(
-                    entry.offset + entry.count <= entry.indices->getIndexCount())
+                    entry.count <= indexCount && entry.offset <= indexCount - entry.count)
                     << "[entity=" << entity.getId() << ", primitive @ " << i << "] offset ("
                     << entry.offset << ") + count (" << entry.count << ") > indexCount ("
-                    << entry.indices->getIndexCount() << ")";
+                    << indexCount << ")";
         } else {
             // Non-indexed (attribute-less) primitive: enforce no skinning/morphing because the
             // GPU shader expects vertex attributes that simply aren't there.
@@ -578,11 +579,12 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
                     << "[entity=" << entity.getId() << ", primitive @ " << i
                     << "] non-indexed (null IndexBuffer) primitives are incompatible with "
                        "morphing";
+            size_t const vertexCount = entry.vertices->getVertexCount();
             FILAMENT_CHECK_PRECONDITION(
-                    entry.offset + entry.count <= entry.vertices->getVertexCount())
+                    entry.count <= vertexCount && entry.offset <= vertexCount - entry.count)
                     << "[entity=" << entity.getId() << ", primitive @ " << i << "] offset ("
                     << entry.offset << ") + count (" << entry.count << ") > vertexCount ("
-                    << entry.vertices->getVertexCount() << ")";
+                    << vertexCount << ")";
         }
 
         // this can't be an error because (1) those values are not immutable, so the caller
@@ -1086,9 +1088,15 @@ void FRenderableManager::setSkinningBuffer(Instance const ci,
             << "SkinningBuffer overflow (size=" << skinningBuffer->getBoneCount()
             << ", count=" << count << ", offset=" << offset << ")";
 
-    bones.handle = skinningBuffer->getHwHandle();
-    bones.count = uint16_t(count);
-    bones.offset = uint16_t(offset);
+    auto const handle = skinningBuffer->getHwHandle();
+    if (bones.handle != handle || bones.offset != uint16_t(offset) ||
+            bones.count != uint16_t(count)) {
+        bones.handle = handle;
+        bones.count = uint16_t(count);
+        bones.offset = uint16_t(offset);
+        // SKINNING_BUFFER is cached by the Views' scene caches
+        mManager.notifyChange(getEntity(ci));
+    }
 }
 
 static void updateMorphWeights(FEngine& engine, Handle<HwBufferObject> handle,

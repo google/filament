@@ -61,7 +61,8 @@ enum class BufferObjectBinding : uint8_t;
  */
 class WebGPUBufferObject final : public HwBufferObject, private WebGPUBufferBase {
 public:
-    WebGPUBufferObject(wgpu::Device const&, BufferObjectBinding, uint32_t byteCount);
+    WebGPUBufferObject(wgpu::Device const&, BufferObjectBinding, uint32_t byteCount,
+            bool asynchronous = false);
     ~WebGPUBufferObject();
 
     // The GPU buffer of UNIFORM and SHADER_STORAGE buffer objects. Vertex buffers obtain their

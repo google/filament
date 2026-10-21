@@ -69,8 +69,7 @@ Architectural Position and Code Generation Model:
 
 import copy
 import re
-import sys
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from .config import (
     GENERATED_FILE_WARNING,
@@ -78,23 +77,37 @@ from .config import (
     KNOWN_CLASSES,
     LICENSE_HEADER,
     TAGGED_SCALAR_FAMILIES,
-    VALUE_TYPES,
 )
-from .doc import generate_javadoc, markdown_to_javadoc, adapt_param_doc_for_java
+from .doc import generate_javadoc
+from .specializations import (
+    ATTRIBUTE_BITSET_JAVA_HELPER,
+    ENGINE_BUILDER_JAVA,
+    ENGINE_CONFIG_DEFAULTS,
+    ENGINE_INTERCEPTED_METHODS,
+    ENGINE_METHODS_JAVA,
+    ENGINE_NATIVE_DECLS_JAVA,
+    MATERIAL_GET_DEFAULT_INSTANCE_BODY_JAVA,
+    MATERIAL_GET_PARAMETERS_BODY_JAVA,
+    MATERIAL_GET_PARAMETERS_NATIVE_DECL_JAVA,
+    PIXEL_BUFFER_DESCRIPTOR_ALIAS_JAVA,
+    TONE_MAPPER_FINALIZE_JAVA,
+    TONE_MAPPER_NATIVE_DECL_JAVA,
+    TONE_MAPPER_SUBCLASSES_JAVA,
+    VIEW_ENUMS_JAVA,
+    VIEW_METHODS_AND_PICK_JAVA,
+    VIEW_PICK_NATIVE_DECL_JAVA,
+    get_engine_config_constants_java,
+    get_vsync_tick_convenience_java,
+)
 from .utils import (
-    classify_scalar_family,
     format_enum_entry_name,
     get_effective_method_name,
-    get_element_entry_name,
-    get_scoped_cpp_name,
     get_size_param_attr,
-    get_tagged_array_info,
     indent_lines,
     is_custom_enum,
     is_reserved_or_padding_field,
     is_tagged_array_method,
     sanitize_identifier,
-    to_camel_case,
 )
 
 
@@ -120,247 +133,6 @@ class JavaEmitter:
     def __getattr__(self, name: str) -> Any:
         """Forward unrecognized attribute lookups to the bound ClassContext."""
         return getattr(self.ctx, name)
-
-    # -------------------------------------------------------------------------
-    # Context Forwarding Properties
-    # -------------------------------------------------------------------------
-
-    @property
-    def name(self) -> str:
-        """Simple Java name of the active class."""
-        return self.ctx.name
-
-    @property
-    def cpp_name(self) -> str:
-        """Fully-qualified or unqualified C++ identifier of the active class."""
-        return self.ctx.cpp_name
-
-    @property
-    def methods(self) -> List[Dict[str, Any]]:
-        """Filtered list of non-skipped member method IR dictionaries."""
-        return self.ctx.methods
-
-    @property
-    def fields(self) -> List[Dict[str, Any]]:
-        """Filtered list of non-skipped member field IR dictionaries."""
-        return self.ctx.fields
-
-    @property
-    def constants(self) -> List[Dict[str, Any]]:
-        """Filtered list of non-skipped member constant IR dictionaries."""
-        return self.ctx.constants
-
-    @property
-    def enums(self) -> List[Dict[str, Any]]:
-        """Filtered list of non-skipped member enum IR dictionaries."""
-        return self.ctx.enums
-
-    @property
-    def archetype(self) -> str:
-        """Architectural archetype classification string."""
-        return self.ctx.archetype
-
-    @property
-    def is_aggregate(self) -> bool:
-        """Whether this class is an aggregate POD struct."""
-        return self.ctx.is_aggregate
-
-    @property
-    def is_value_class(self) -> bool:
-        """Whether this class is an inline buffer value class."""
-        return self.ctx.is_value_class
-
-    @property
-    def is_bitfield_class(self) -> bool:
-        """Whether this class is a bitfield class."""
-        return self.ctx.is_bitfield_class
-
-    @property
-    def is_utility_class(self) -> bool:
-        """Whether this class is a utility class."""
-        return self.ctx.is_utility_class
-
-    @property
-    def is_builder_class(self) -> bool:
-        """Whether this context represents an inner builder class."""
-        return self.ctx.is_builder_class
-
-    @property
-    def value_type_info(self) -> Any:
-        """Metadata dictionary for value/bitfield archetypes."""
-        return self.ctx.value_type_info
-
-    @property
-    def parent_context(self) -> Any:
-        """Reference to parent ClassContext if this is an inner builder or struct."""
-        return self.ctx.parent_context
-
-    @property
-    def builder(self) -> Any:
-        """Child ClassContext representing the inner Builder class, if present."""
-        return self.ctx.builder
-
-    @property
-    def package(self) -> str:
-        """Target Java package name for this class."""
-        return self.ctx.package
-
-    @property
-    def jni_package(self) -> str:
-        """Escaped package name suitable for JNI C function naming."""
-        return self.ctx.jni_package
-
-    @property
-    def base_class(self) -> Optional[str]:
-        """Name of Java base class to extend, or None."""
-        return self.ctx.base_class
-
-    @property
-    def cached_fields(self) -> Dict[str, Any]:
-        """Dictionary of cached field descriptors lazily initialized by getters."""
-        return self.ctx.cached_fields
-
-    @property
-    def emitted_signatures(self) -> Set[Any]:
-        """Set of Java method signatures emitted to avoid duplicate method collisions."""
-        return self.ctx.emitted_signatures
-
-    @property
-    def emitted_native_signatures(self) -> Set[Any]:
-        """Set of native method signatures emitted to avoid duplicate native collisions."""
-        return self.ctx.emitted_native_signatures
-
-    @property
-    def native_counts(self) -> Dict[str, int]:
-        """Histogram tracking frequency of native method base names for JNI mangling."""
-        return self.ctx.native_counts
-
-    @property
-    def is_used_by_native(self) -> bool:
-        """Whether the class requires @UsedByNative annotation for ProGuard retention."""
-        return self.ctx.is_used_by_native
-
-    @property
-    def nested_struct_contexts(self) -> List[Any]:
-        """List of child ClassContext instances for nested structs."""
-        return self.ctx.nested_struct_contexts
-
-    @property
-    def source_header(self) -> str:
-        """Path to C++ source header declaring this class."""
-        return self.ctx.source_header
-
-    @property
-    def doc(self) -> Dict[str, Any]:
-        """Doxygen documentation dictionary."""
-        return self.ctx.doc
-
-    @property
-    def ir(self) -> Dict[str, Any]:
-        """Raw JSON IR dictionary."""
-        return self.ctx.ir
-
-    @property
-    def enum_map(self) -> Dict[str, Any]:
-        """Dictionary of registered enums in this class context."""
-        return self.ctx.enum_map
-
-    @property
-    def aliases(self) -> Dict[str, Any]:
-        """Class-level type alias mapping."""
-        return self.ctx.aliases
-
-    # -------------------------------------------------------------------------
-    # Context Forwarding Methods
-    # -------------------------------------------------------------------------
-
-    def resolve_type_info(self, *a: Any, **kw: Any) -> Any:
-        """Forward type resolution to parent context."""
-        return self.ctx.resolve_type_info(*a, **kw)
-
-    def is_aggregate_struct(self, *a: Any, **kw: Any) -> Any:
-        """Forward aggregate struct check to parent context."""
-        return self.ctx.is_aggregate_struct(*a, **kw)
-
-    def get_flattened_leaves(self, *a: Any, **kw: Any) -> Any:
-        """Forward aggregate struct leaf flattening to parent context."""
-        return self.ctx.get_flattened_leaves(*a, **kw)
-
-    def get_struct_leaf_accessors(self, *a: Any, **kw: Any) -> Any:
-        """Forward struct leaf accessor retrieval to parent context."""
-        return self.ctx.get_struct_leaf_accessors(*a, **kw)
-
-    def get_array_input_info(self, *a: Any, **kw: Any) -> Any:
-        """Forward array input info check to parent context."""
-        return self.ctx.get_array_input_info(*a, **kw)
-
-    def get_java_type(self, *a: Any, **kw: Any) -> str:
-        """Forward Java type lookup to parent context."""
-        return self.ctx.get_java_type(*a, **kw)
-
-    def get_jni_type(self, *a: Any, **kw: Any) -> str:
-        """Forward JNI type lookup to parent context."""
-        return self.ctx.get_jni_type(*a, **kw)
-
-    def get_annotation(self, *a: Any, **kw: Any) -> Optional[str]:
-        """Forward annotation lookup to parent context."""
-        return self.ctx.get_annotation(*a, **kw)
-
-    def get_to_cpp_expr(self, *a: Any, **kw: Any) -> str:
-        """Forward to-C++ expression synthesis to parent context."""
-        return self.ctx.get_to_cpp_expr(*a, **kw)
-
-    def get_from_cpp_expr(self, *a: Any, **kw: Any) -> str:
-        """Forward from-C++ expression synthesis to parent context."""
-        return self.ctx.get_from_cpp_expr(*a, **kw)
-
-    def _strip_namespaces(self, *a: Any, **kw: Any) -> str:
-        """Forward namespace stripping to parent context."""
-        return self.ctx._strip_namespaces(*a, **kw)
-
-    def get_invocable_info(self, *a: Any, **kw: Any) -> Any:
-        """Forward invocable metadata resolution to parent context."""
-        return self.ctx.get_invocable_info(*a, **kw)
-
-    def _is_unsupported_type(self, *a: Any, **kw: Any) -> bool:
-        """Forward unsupported type check to parent context."""
-        return self.ctx._is_unsupported_type(*a, **kw)
-
-    def is_buffer_descriptor_method(self, *a: Any, **kw: Any) -> bool:
-        """Forward BufferDescriptor method check to parent context."""
-        return self.ctx.is_buffer_descriptor_method(*a, **kw)
-
-    def is_pixel_buffer_descriptor_method(self, *a: Any, **kw: Any) -> bool:
-        """Forward PixelBufferDescriptor method check to parent context."""
-        return self.ctx.is_pixel_buffer_descriptor_method(*a, **kw)
-
-    def is_async_callback_method(self, *a: Any, **kw: Any) -> bool:
-        """Forward async callback method check to parent context."""
-        return self.ctx.is_async_callback_method(*a, **kw)
-
-    def get_struct_float_stride(self, *a: Any, **kw: Any) -> Optional[int]:
-        """Forward struct float stride computation to parent context."""
-        return self.ctx.get_struct_float_stride(*a, **kw)
-
-    def is_attribute_bitset(self, *a: Any, **kw: Any) -> bool:
-        """Forward AttributeBitset check to parent context."""
-        return self.ctx.is_attribute_bitset(*a, **kw)
-
-    def is_pojo_struct(self, *a: Any, **kw: Any) -> Any:
-        """Forward POJO struct check to parent context."""
-        return self.ctx.is_pojo_struct(*a, **kw)
-
-    def get_pojo_leaves(self, *a: Any, **kw: Any) -> Any:
-        """Forward POJO leaf retrieval to parent context."""
-        return self.ctx.get_pojo_leaves(*a, **kw)
-
-    def get_pojo_field_annotation(self, *a: Any, **kw: Any) -> Any:
-        """Forward POJO field annotation retrieval to parent context."""
-        return self.ctx.get_pojo_field_annotation(*a, **kw)
-
-    def translate_default_value(self, *a: Any, **kw: Any) -> Any:
-        """Forward default value translation to parent context."""
-        return self.ctx.translate_default_value(*a, **kw)
 
     def retains_parent_handle(self, target_class_name: str) -> bool:
         """Check if target_class_name has a retained reference of type self.name.
@@ -391,32 +163,13 @@ class JavaEmitter:
                     return True
         return False
 
-
-    def is_builder_buffer_arg(self, *a: Any, **kw: Any) -> bool:
-        """Forward builder buffer argument check to parent context."""
-        return self.ctx.is_builder_buffer_arg(*a, **kw)
-
-    def is_packed_buffer_method(self, *a: Any, **kw: Any) -> bool:
-        """Forward packed buffer method check to parent context."""
-        return self.ctx.is_packed_buffer_method(*a, **kw)
-
-    def get_packed_buffer_info(self, *a: Any, **kw: Any) -> Any:
-        """Forward packed buffer info retrieval to parent context."""
-        return self.ctx.get_packed_buffer_info(*a, **kw)
-
-    def get_builder_packed_buffer_info(self, *a: Any, **kw: Any) -> Any:
-        """Forward builder packed buffer info retrieval to parent context."""
-        return self.ctx.get_builder_packed_buffer_info(*a, **kw)
-
-    def is_bone_buffer_method(self, *a: Any, **kw: Any) -> bool:
-        """Forward bone buffer method check to parent context."""
-        return self.ctx.is_bone_buffer_method(*a, **kw)
-
-    def get_bone_buffer_info(self, *a: Any, **kw: Any) -> Any:
-        """Forward bone buffer info retrieval to parent context."""
-        return self.ctx.get_bone_buffer_info(*a, **kw)
-
-    def _adapt_packed_doc(self, doc_dict: Dict[str, Any], buf_name: str, cnt_repr: str, has_offset_arg: bool = True) -> Dict[str, Any]:
+    def _adapt_packed_doc(
+        self,
+        doc_dict: Dict[str, Any],
+        buf_name: str,
+        cnt_repr: str,
+        has_offset_arg: bool = True,
+    ) -> Dict[str, Any]:
         """Adapt method brief/details documentation for packed buffer overloads.
 
         Replaces C++ Slice range syntax '[offset, offset + buf.size())' and 'buf.size()'
@@ -427,41 +180,139 @@ class JavaEmitter:
             val = res.get(key)
             if not val:
                 continue
-            if has_offset_arg:
-                val = re.sub(rf'\[offset,\s*offset\s*\+\s*{re.escape(buf_name)}\.size\(\)\)', f'[offset, offset + {cnt_repr})', val)
-            else:
-                val = re.sub(rf'\[offset,\s*offset\s*\+\s*{re.escape(buf_name)}\.size\(\)\)', f'[0, {cnt_repr})', val)
-            val = re.sub(rf'\b{re.escape(buf_name)}\.size\(\)', cnt_repr, val)
+            target_range = f"[offset, offset + {cnt_repr})" if has_offset_arg else f"[0, {cnt_repr})"
+            val = re.sub(
+                rf"\[offset,\s*offset\s*\+\s*{re.escape(buf_name)}\.size\(\)\)",
+                target_range,
+                val,
+            )
+            val = re.sub(rf"\b{re.escape(buf_name)}\.size\(\)", cnt_repr, val)
             res[key] = val
         return res
 
-    def _get_clean_type_name(self, *a: Any, **kw: Any) -> str:
-        """Forward clean type name computation to parent context."""
-        return self.ctx._get_clean_type_name(*a, **kw)
+    def _emit_enum(
+        self, enum_ir: Dict[str, Any], indent_spaces: int = 4, is_pojo: bool = False
+    ) -> List[str]:
+        """Emit a nested Java enum or bitmask flag constant class.
 
-    def _get_method_sig(self, *a: Any, **kw: Any) -> Tuple[str, Tuple[str, ...]]:
-        """Forward method signature tuple generation to parent context."""
-        return self.ctx._get_method_sig(*a, **kw)
+        Unifies enum emission across top-level classes, inner `Builder` classes, and
+        POJO options structs. Handles three distinct representations:
+        1. **Bitmask Flag Classes (`is_flags`)**: Enums annotated with `flags` or `bitmask`
+           attributes (outside POJO structs) are emitted as non-instantiable `public static class`
+           containers of `public static final int` hexadecimal bitmask constants (`0x{val:X}`).
+        2. **Custom-Valued Enums (`is_custom_enum`)**: Enums whose C++ constants have explicit,
+           non-sequential integer values (`val != idx`) store `private final int mValue`,
+           initialize each constant via `NAME(val)`, expose `toFilamentNative()` returning
+           `mValue`, and (for non-POJO classes) synthesize a `from(int value)` switch lookup
+           table deduplicating aliased constant values.
+        3. **Sequential Ordinal Enums**: Standard sequential enums emit bare `NAME` constants
+           and implement `toFilamentNative()` via `ordinal()`.
 
-    def translate_default_value(self, *a: Any, **kw: Any) -> Optional[str]:
-        """Forward default value translation to parent context."""
-        return self.ctx.translate_default_value(*a, **kw)
+        Args:
+            enum_ir: Enum intermediate representation dictionary containing `name`, `entries`,
+                `doc`, `is_flags`, and `attributes`.
+            indent_spaces: Base indentation level in spaces (4 for class-level, 8 for Builder/POJO).
+            is_pojo: True when emitting an enum nested inside a POJO options struct.
 
-    def format_constant_value(self, *a: Any, **kw: Any) -> str:
-        """Forward constant value formatting to parent context."""
-        return self.ctx.format_constant_value(*a, **kw)
+        Returns:
+            List of formatted Java source lines for the enum or bitmask class.
+        """
+        out: List[str] = []
+        ind = " " * indent_spaces
+        entry_ind = " " * (indent_spaces + 4)
+        doc = enum_ir.get("doc", {})
+        edoc = generate_javadoc(doc, indent_spaces=indent_spaces)
+        if edoc:
+            out.append(edoc)
 
-    def get_jni_mangled_type(self, *a: Any, **kw: Any) -> str:
-        """Forward JNI mangled type lookup to parent context."""
-        return self.ctx.get_jni_mangled_type(*a, **kw)
+        # Bitmask/flag enums in handle or builder classes are emitted as static int constant
+        # classes rather than Java `enum` types so callers can combine flags with bitwise OR.
+        is_flags = not is_pojo and (
+            enum_ir.get("is_flags", False)
+            or any(
+                a in (
+                    "filament:apigen:flags", "filament:flags", "apigen:flags", "flags",
+                    "filament:apigen:bitmask", "filament:bitmask", "apigen:bitmask", "bitmask",
+                )
+                for a in enum_ir.get("attributes", [])
+            )
+        )
+        if is_flags:
+            out.append(f"{ind}public static class {enum_ir['name']} {{")
+            out.append(f"{entry_ind}private {enum_ir['name']}() {{}}")
+            out.append("")
+            for entry in enum_ir.get("entries", []):
+                vdoc = generate_javadoc(entry.get("doc", {}), indent_spaces=indent_spaces + 4)
+                if vdoc:
+                    out.append(vdoc)
+                val = entry.get("value", 0)
+                name = format_enum_entry_name(enum_ir["name"], entry["name"])
+                hex_val = f"0x{val:X}" if val > 0 else "0"
+                out.append(f"{entry_ind}public static final int {name} = {hex_val};")
+            out.append(f"{ind}}}")
+            out.append("")
+            return out
 
-    def _has_annotations(self) -> bool:
-        """Forward annotation presence check to parent context."""
-        return self.ctx._has_annotations()
+        annotations = self._get_annotations(doc)
+        if annotations:
+            out += self._annotations_to_indented_list(annotations, ind)
+        out.append(f"{ind}public enum {enum_ir['name']} {{")
 
-    def _expand_method(self, *a: Any, **kw: Any) -> List[Dict[str, Any]]:
-        """Forward method expansion and unrolling to parent context."""
-        return self.ctx._expand_method(*a, **kw)
+        # Determine whether enum entries have non-sequential custom integer values
+        # requiring explicit constructor arguments and a `mValue` backing field.
+        custom_enum = is_custom_enum(enum_ir)
+        entry_strs = []
+        for entry in enum_ir.get("entries", []):
+            entry_doc = entry.get("doc", {})
+            vdoc = generate_javadoc(entry_doc, indent_spaces=indent_spaces + 4)
+            name = format_enum_entry_name(enum_ir["name"], entry["name"])
+            entry_line = self._annotations_to_string(self._get_annotations(entry_doc), entry_ind)
+            if custom_enum:
+                val = entry.get("value", 0)
+                entry_line += f"{entry_ind}{name}({val})"
+            else:
+                entry_line += f"{entry_ind}{name}"
+            entry_strs.append(f"{vdoc}\n{entry_line}" if vdoc else entry_line)
+        out.append(",\n".join(entry_strs) + ";\n")
+
+        # Emit native value conversion helpers (`toFilamentNative` and `from(int)`).
+        if custom_enum:
+            out.append(f"{entry_ind}private final int mValue;\n")
+            out.append(f"{entry_ind}{enum_ir['name']}(int value) {{")
+            out.append(f"{entry_ind}    mValue = value;")
+            out.append(f"{entry_ind}}}\n")
+            if is_pojo:
+                out.append(f"{entry_ind}public int toFilamentNative() {{ return mValue; }}\n")
+            else:
+                out.append(
+                    f"{entry_ind}/** @return the value of this enum constant as used by the native Filament engine. */"
+                )
+                out.append(f"{entry_ind}public int toFilamentNative() {{ return mValue; }}\n")
+                out.append(f"{entry_ind}public static {enum_ir['name']} from(int value) {{")
+                out.append(f"{entry_ind}    switch (value) {{")
+                seen_values = set()
+                for entry in enum_ir.get("entries", []):
+                    name = format_enum_entry_name(enum_ir["name"], entry["name"])
+                    val = entry.get("value", 0)
+                    # Skip duplicate switch cases when multiple enum constants alias the same value.
+                    if val in seen_values:
+                        continue
+                    seen_values.add(val)
+                    out.append(f"{entry_ind}        case {val}: return {name};")
+                out.append(
+                    f'{entry_ind}        default: throw new IllegalArgumentException("Unknown {enum_ir["name"]} value: " + value);'
+                )
+                out.append(f"{entry_ind}    }}")
+                out.append(f"{entry_ind}}}")
+        else:
+            if not is_pojo:
+                out.append(
+                    f"{entry_ind}/** @return the value of this enum constant as used by the native Filament engine. */"
+                )
+            out.append(f"{entry_ind}public int toFilamentNative() {{ return ordinal(); }}")
+        out.append(f"{ind}}}")
+        out.append("")
+        return out
 
     def generate(self) -> str:
         """Generate complete, idiomatic Java source code (.java) for this class context.
@@ -741,16 +592,6 @@ class JavaEmitter:
             out.append("    }")
             out.append("")
 
-        def is_custom_enum(enum_ir):
-            if not enum_ir:
-                return False
-            entries = enum_ir.get("entries", [])
-            for idx, entry in enumerate(entries):
-                val = entry.get("value")
-                if val is not None and val != idx:
-                    return True
-            return False
-
         # Step 5: EnumCache Pre-caching for Zero-Allocation Returns
         returned_enums = set()
         for method in self.methods:
@@ -781,50 +622,10 @@ class JavaEmitter:
 
         # Step 6: Synthetic Bitset & Polymorphic Class Bridges
         if has_attribute_bitset:
-            out.append("    private static final VertexBuffer.VertexAttribute[] sVertexAttributeValues =")
-            out.append("            VertexBuffer.VertexAttribute.values();")
-            out.append("")
-            out.append("    private static Set<VertexBuffer.VertexAttribute> getAttributes(int bitSet) {")
-            out.append("        Set<VertexBuffer.VertexAttribute> set = EnumSet.noneOf(VertexBuffer.VertexAttribute.class);")
-            out.append("        VertexBuffer.VertexAttribute[] values = sVertexAttributeValues;")
-            out.append("        for (int i = 0, n = values.length; i < n; i++) {")
-            out.append("            if ((bitSet & (1 << i)) != 0) {")
-            out.append("                set.add(values[i]);")
-            out.append("            }")
-            out.append("        }")
-            out.append("        return Collections.unmodifiableSet(set);")
-            out.append("    }")
-            out.append("")
+            out.extend(ATTRIBUTE_BITSET_JAVA_HELPER)
 
         if self.name == "ToneMapper":
-            out.append("    public static class Linear extends LinearToneMapper {}")
-            out.append("    public static class ACES extends ACESToneMapper {}")
-            out.append("    public static class ACESLegacy extends ACESLegacyToneMapper {}")
-            out.append("    public static class Filmic extends FilmicToneMapper {}")
-            out.append("    public static class PBRNeutral extends PBRNeutralToneMapper {}")
-            out.append("    public static class GT7 extends GT7ToneMapper {}")
-            out.append("    public static class Agx extends AgxToneMapper {")
-            out.append("        public static class AgxLook {")
-            out.append("            public static final AgxToneMapper.AgxLook NONE = AgxToneMapper.AgxLook.NONE;")
-            out.append("            public static final AgxToneMapper.AgxLook PUNCHY = AgxToneMapper.AgxLook.PUNCHY;")
-            out.append("            public static final AgxToneMapper.AgxLook GOLDEN = AgxToneMapper.AgxLook.GOLDEN;")
-            out.append("        }")
-            out.append("        public Agx() {")
-            out.append("            super();")
-            out.append("        }")
-            out.append("        public Agx(AgxToneMapper.AgxLook look) {")
-            out.append("            super(look);")
-            out.append("        }")
-            out.append("    }")
-            out.append("    public static class Generic extends GenericToneMapper {")
-            out.append("        public Generic() {")
-            out.append("            super();")
-            out.append("        }")
-            out.append("        public Generic(float contrast, float midGrayIn, float midGrayOut, float hdrMax) {")
-            out.append("            super(contrast, midGrayIn, midGrayOut, hdrMax);")
-            out.append("        }")
-            out.append("    }")
-            out.append("")
+            out.extend(TONE_MAPPER_SUBCLASSES_JAVA)
 
         # Step 7: Lifecycle & Native Pointer Handle Fields
         if self.archetype == "handle" and not self.base_class:
@@ -851,156 +652,10 @@ class JavaEmitter:
         
         # Step 8: Nested Enums and Bitmask Flags
         for enum_ir in self.enums:
-            doc = enum_ir.get("doc", {})
-            edoc = generate_javadoc(doc, indent_spaces=4)
-            if edoc:
-                out.append(edoc)
-            is_flags = enum_ir.get("is_flags", False) or any(a in ("filament:apigen:flags", "filament:flags", "apigen:flags", "flags", "filament:apigen:bitmask", "filament:bitmask", "apigen:bitmask", "bitmask") for a in enum_ir.get("attributes", []))
-            if is_flags:
-                out.append(f"    public static class {enum_ir['name']} {{")
-                out.append(f"        private {enum_ir['name']}() {{}}")
-                out.append("")
-                for entry in enum_ir.get("entries", []):
-                    edoc = generate_javadoc(entry.get("doc", {}), indent_spaces=8)
-                    if edoc:
-                        out.append(edoc)
-                    val = entry.get("value", 0)
-                    name = format_enum_entry_name(enum_ir['name'], entry['name'])
-                    hex_val = f"0x{val:X}" if val > 0 else "0"
-                    out.append(f"        public static final int {name} = {hex_val};")
-                out.append("    }")
-                out.append("")
-                continue
-            annotations = self._get_annotations(doc)
-            if annotations:
-                out += self._annotations_to_indented_list(annotations, "    ")
-            out.append(f"    public enum {enum_ir['name']} {{")
-            custom_enum = is_custom_enum(enum_ir)
-            entry_strs = []
-            for entry in enum_ir.get("entries", []):
-                doc = entry.get("doc", {})
-                edoc = generate_javadoc(doc, indent_spaces=8)
-                name = format_enum_entry_name(enum_ir['name'], entry['name'])
-                entry_line = self._annotations_to_string(self._get_annotations(doc), "        ")
-                if custom_enum:
-                    val = entry.get("value", 0)
-                    entry_line += f"        {name}({val})"
-                else:
-                    entry_line += f"        {name}"
-                if edoc:
-                    entry_strs.append(f"{edoc}\n{entry_line}")
-                else:
-                    entry_strs.append(entry_line)
-            out.append(",\n".join(entry_strs) + ";\n")
-            if custom_enum:
-                out.append("        private final int mValue;\n")
-                out.append(f"        {enum_ir['name']}(int value) {{")
-                out.append("            mValue = value;")
-                out.append("        }\n")
-                out.append("        /** @return the value of this enum constant as used by the native Filament engine. */")
-                out.append("        public int toFilamentNative() { return mValue; }\n")
-                out.append(f"        public static {enum_ir['name']} from(int value) {{")
-                out.append("            switch (value) {")
-                seen_values = set()
-                for entry in enum_ir.get("entries", []):
-                    name = format_enum_entry_name(enum_ir['name'], entry['name'])
-                    val = entry.get("value", 0)
-                    if val in seen_values:
-                        continue
-                    seen_values.add(val)
-                    out.append(f"                case {val}: return {name};")
-                out.append(f"                default: throw new IllegalArgumentException(\"Unknown {enum_ir['name']} value: \" + value);")
-                out.append("            }")
-                out.append("        }")
-            else:
-                out.append("        /** @return the value of this enum constant as used by the native Filament engine. */")
-                out.append("        public int toFilamentNative() { return ordinal(); }")
-            out.append("    }")
-            out.append("")
+            out.extend(self._emit_enum(enum_ir, indent_spaces=4))
 
         if self.name == "View":
-            out.append("    /**")
-            out.append("     * List of available tone-mapping operators")
-            out.append("     *")
-            out.append("     * @deprecated Use ColorGrading instead")
-            out.append("     */")
-            out.append("    @Deprecated")
-            out.append("    public enum ToneMapping {")
-            out.append("        /**")
-            out.append("         * Equivalent to disabling tone-mapping.")
-            out.append("         */")
-            out.append("        LINEAR,")
-            out.append("")
-            out.append("        /**")
-            out.append("         * The Academy Color Encoding System (ACES).")
-            out.append("         */")
-            out.append("        ACES")
-            out.append("    }")
-            out.append("")
-            out.append("    /**")
-            out.append("     * Used to select buffers.")
-            out.append("     */")
-            out.append("    public enum TargetBufferFlags {")
-            out.append("        /**")
-            out.append("         * Color 0 buffer selected.")
-            out.append("         */")
-            out.append("        COLOR0(0x1),")
-            out.append("        /**")
-            out.append("         * Color 1 buffer selected.")
-            out.append("         */")
-            out.append("        COLOR1(0x2),")
-            out.append("        /**")
-            out.append("         * Color 2 buffer selected.")
-            out.append("         */")
-            out.append("        COLOR2(0x4),")
-            out.append("        /**")
-            out.append("         * Color 3 buffer selected.")
-            out.append("         */")
-            out.append("        COLOR3(0x8),")
-            out.append("        /**")
-            out.append("         * Depth buffer selected.")
-            out.append("         */")
-            out.append("        DEPTH(0x10),")
-            out.append("        /**")
-            out.append("         * Stencil buffer selected.")
-            out.append("         */")
-            out.append("        STENCIL(0x20);")
-            out.append("")
-            out.append("        /*")
-            out.append("         * No buffer selected")
-            out.append("         */")
-            out.append("        public static EnumSet<TargetBufferFlags> NONE = EnumSet.noneOf(TargetBufferFlags.class);")
-            out.append("")
-            out.append("        /*")
-            out.append("         * All color buffers selected")
-            out.append("         */")
-            out.append("        public static EnumSet<TargetBufferFlags> ALL_COLOR =")
-            out.append("                EnumSet.of(COLOR0, COLOR1, COLOR2, COLOR3);")
-            out.append("        /**")
-            out.append("         * Depth and stencil buffer selected.")
-            out.append("         */")
-            out.append("        public static EnumSet<TargetBufferFlags> DEPTH_STENCIL = EnumSet.of(DEPTH, STENCIL);")
-            out.append("        /**")
-            out.append("         * All buffers are selected.")
-            out.append("         */")
-            out.append("        public static EnumSet<TargetBufferFlags> ALL = EnumSet.range(COLOR0, STENCIL);")
-            out.append("")
-            out.append("        private int mFlags;")
-            out.append("")
-            out.append("        TargetBufferFlags(int flags) {")
-            out.append("            mFlags = flags;")
-            out.append("        }")
-            out.append("")
-            out.append("        static int flags(EnumSet<TargetBufferFlags> flags) {")
-            out.append("            int result = 0;")
-            out.append("            for (TargetBufferFlags flag : flags) {")
-            out.append("                result |= flag.mFlags;")
-            out.append("            }")
-            out.append("            return result;")
-            out.append("        }")
-            out.append("    }")
-            out.append("")
-
+            out.extend(VIEW_ENUMS_JAVA)
         
         # Step 9: Invocable Callback Functional Interfaces
         interfaces = []
@@ -1063,7 +718,7 @@ class JavaEmitter:
             out.append("    }")
             out.append("")
         elif self.name == "Engine":
-            out.append(self._generate_engine_methods_java())
+            out.append(ENGINE_METHODS_JAVA)
             out.append("")
         elif self.archetype == "handle":
             if self.retained_references:
@@ -1151,66 +806,7 @@ class JavaEmitter:
             target_cpp = target_type.get("cpp_name", "")
             target_qname = target_type.get("qualified_name", "")
             if alias_name == "PixelBufferDescriptor" or target_cpp.endswith("PixelBufferDescriptor") or target_qname.endswith("PixelBufferDescriptor"):
-                out.append("    /**")
-                out.append("     * @deprecated Use {@link com.google.android.filament.PixelBufferDescriptor} instead.")
-                out.append("     */")
-                out.append("    @Deprecated")
-                out.append("    public static class PixelBufferDescriptor extends com.google.android.filament.PixelBufferDescriptor {")
-                out.append("        public PixelBufferDescriptor(@NonNull Buffer storage,")
-                out.append("                @NonNull Texture.Format format, @NonNull Texture.Type type,")
-                out.append("                @IntRange(from = 1, to = 8) int alignment,")
-                out.append("                @IntRange(from = 0) int left, @IntRange(from = 0) int top,")
-                out.append("                @IntRange(from = 0) int stride,")
-                out.append("                @Nullable Object handler, @Nullable Runnable callback) {")
-                out.append("            super(storage, format, type, alignment, left, top, stride, handler, callback);")
-                out.append("        }")
-                out.append("")
-                out.append("        public PixelBufferDescriptor(@NonNull Buffer storage,")
-                out.append("                @NonNull Texture.Format format, @NonNull Texture.Type type) {")
-                out.append("            super(storage, format, type);")
-                out.append("        }")
-                out.append("")
-                out.append("        public PixelBufferDescriptor(@NonNull Buffer storage,")
-                out.append("                @NonNull Texture.Format format, @NonNull Texture.Type type,")
-                out.append("                @IntRange(from = 1, to = 8) int alignment) {")
-                out.append("            super(storage, format, type, alignment);")
-                out.append("        }")
-                out.append("")
-                out.append("        public PixelBufferDescriptor(@NonNull Buffer storage,")
-                out.append("                @NonNull Texture.Format format, @NonNull Texture.Type type,")
-                out.append("                @IntRange(from = 1, to = 8) int alignment,")
-                out.append("                @IntRange(from = 0) int left, @IntRange(from = 0) int top) {")
-                out.append("            super(storage, format, type, alignment, left, top);")
-                out.append("        }")
-                out.append("")
-                out.append("        public PixelBufferDescriptor(@NonNull Buffer storage,")
-                out.append("                @NonNull Texture.Format format, @NonNull Texture.Type type,")
-                out.append("                @Nullable Object handler, @Nullable Runnable callback) {")
-                out.append("            this(storage, format, type, 1, 0, 0, 0, handler, callback);")
-                out.append("        }")
-                out.append("")
-                out.append("        public PixelBufferDescriptor(@NonNull Buffer storage,")
-                out.append("                @NonNull Texture.Format format, @NonNull Texture.Type type,")
-                out.append("                @IntRange(from = 1, to = 8) int alignment,")
-                out.append("                @Nullable Object handler, @Nullable Runnable callback) {")
-                out.append("            this(storage, format, type, alignment, 0, 0, 0, handler, callback);")
-                out.append("        }")
-                out.append("")
-                out.append("        public PixelBufferDescriptor(@NonNull ByteBuffer storage,")
-                out.append("                @NonNull Texture.CompressedType compressedFormat,")
-                out.append("                @IntRange(from = 0) int compressedSizeInBytes,")
-                out.append("                @Nullable Object handler, @Nullable Runnable callback) {")
-                out.append("            this(storage, compressedFormat, compressedSizeInBytes);")
-                out.append("            setCallback(handler, callback);")
-                out.append("        }")
-                out.append("")
-                out.append("        public PixelBufferDescriptor(@NonNull ByteBuffer storage,")
-                out.append("                @NonNull Texture.CompressedType compressedFormat,")
-                out.append("                @IntRange(from = 0) int compressedSizeInBytes) {")
-                out.append("            super(storage, compressedFormat, compressedSizeInBytes);")
-                out.append("        }")
-                out.append("    }")
-                out.append("")
+                out.extend(PIXEL_BUFFER_DESCRIPTOR_ALIAS_JAVA)
 
         # Step 14: Method Emission & Native Declarations
         native_decls = []
@@ -1231,20 +827,12 @@ class JavaEmitter:
         if self.builder:
             native_decls.extend(self.builder.generate_builder_native_decls())
         if self.name == "Engine":
-            native_decls.extend(self._get_engine_native_decls())
+            native_decls.extend(ENGINE_NATIVE_DECLS_JAVA)
 
         # Step 15: Handle Lifetime Boilerplate & Cached Struct Getters
         if self.name == "ToneMapper":
-            out.append("    @Override")
-            out.append("    protected void finalize() throws Throwable {")
-            out.append("        try {")
-            out.append("            super.finalize();")
-            out.append("        } finally {")
-            out.append("            nDestroyToneMapper(mNativeObject);")
-            out.append("        }")
-            out.append("    }")
-            out.append("")
-            native_decls.append("    private static native void nDestroyToneMapper(long nativeObject);")
+            out.extend(TONE_MAPPER_FINALIZE_JAVA)
+            native_decls.append(TONE_MAPPER_NATIVE_DECL_JAVA)
 
         # Synthetic getters for cached struct fields without C++ getters
         for cached in self.cached_fields.values():
@@ -1274,91 +862,8 @@ class JavaEmitter:
             out.append("    }")
         
         if self.name == "View":
-            out.append("    /**")
-            out.append("     * @deprecated Use {@link #setColorGrading(ColorGrading)}")
-            out.append("     */")
-            out.append("    @Deprecated")
-            out.append("    public void setToneMapping(@NonNull ToneMapping type) {")
-            out.append("    }")
-            out.append("")
-            out.append("    /**")
-            out.append("     * @deprecated Use {@link #getColorGrading()}. This always returns {@link ToneMapping#ACES}")
-            out.append("     */")
-            out.append("    @Deprecated")
-            out.append("    @NonNull")
-            out.append("    public ToneMapping getToneMapping() {")
-            out.append("        return ToneMapping.ACES;")
-            out.append("    }")
-            out.append("")
-            out.append("    /**")
-            out.append("     * An interface to implement a custom class to receive results of picking queries.")
-            out.append("     */")
-            out.append("    public interface OnPickCallback {")
-            out.append("        /**")
-            out.append("         * onPick() is called by the specified Handler in {@link View#pick} when the picking query")
-            out.append("         * result is available.")
-            out.append("         * @param result An instance of {@link PickingQueryResult}.")
-            out.append("         */")
-            out.append("        void onPick(@NonNull PickingQueryResult result);")
-            out.append("    }")
-            out.append("")
-            out.append("    /**")
-            out.append("     * Creates a picking query. Multiple queries can be created (e.g.: multi-touch).")
-            out.append("     * Picking queries are all executed when {@link Renderer#render} is called on this View.")
-            out.append("     * The provided callback is guaranteed to be called at some point in the future.")
-            out.append("     *")
-            out.append("     * <p>Typically it takes a couple frames to receive the result of a picking query.</p>")
-            out.append("     *")
-            out.append("     * @param x        Horizontal coordinate to query in the viewport with origin on the left.")
-            out.append("     * @param y        Vertical coordinate to query on the viewport with origin at the bottom.")
-            out.append("     * @param handler  An {@link java.util.concurrent.Executor Executor}.")
-            out.append("     *                 On Android this can also be a {@link android.os.Handler Handler}.")
-            out.append("     * @param callback User callback executed by <code>handler</code> when the picking query")
-            out.append("     *                 result is available.")
-            out.append("     */")
-            out.append("    public void pick(int x, int y,")
-            out.append("            @Nullable Object handler, @Nullable OnPickCallback callback) {")
-            out.append("        InternalOnPickCallback internalCallback = new InternalOnPickCallback(callback);")
-            out.append("        nPick(getNativeObject(), x, y, handler, internalCallback);")
-            out.append("    }")
-            out.append("")
-            out.append("    @UsedByNative(\"View.cpp\")")
-            out.append("    private static class InternalOnPickCallback implements Runnable {")
-            out.append("        private final OnPickCallback mUserCallback;")
-            out.append("        private final PickingQueryResult mPickingQueryResult = new PickingQueryResult();")
-            out.append("")
-            out.append("        @UsedByNative(\"View.cpp\")")
-            out.append("        @Entity")
-            out.append("        int mRenderable;")
-            out.append("")
-            out.append("        @UsedByNative(\"View.cpp\")")
-            out.append("        float mDepth;")
-            out.append("")
-            out.append("        @UsedByNative(\"View.cpp\")")
-            out.append("        float mFragCoordsX;")
-            out.append("        @UsedByNative(\"View.cpp\")")
-            out.append("        float mFragCoordsY;")
-            out.append("        @UsedByNative(\"View.cpp\")")
-            out.append("        float mFragCoordsZ;")
-            out.append("")
-            out.append("        public InternalOnPickCallback(OnPickCallback mUserCallback) {")
-            out.append("            this.mUserCallback = mUserCallback;")
-            out.append("        }")
-            out.append("")
-            out.append("        @Override")
-            out.append("        public void run() {")
-            out.append("            mPickingQueryResult.renderable = mRenderable;")
-            out.append("            mPickingQueryResult.depth = mDepth;")
-            out.append("            mPickingQueryResult.fragCoords[0] = mFragCoordsX;")
-            out.append("            mPickingQueryResult.fragCoords[1] = mFragCoordsY;")
-            out.append("            mPickingQueryResult.fragCoords[2] = mFragCoordsZ;")
-            out.append("            if (mUserCallback != null) {")
-            out.append("                mUserCallback.onPick(mPickingQueryResult);")
-            out.append("            }")
-            out.append("        }")
-            out.append("    }")
-            out.append("")
-            native_decls.append("    private static native void nPick(long nativeView, int x, int y, @Nullable Object handler, @NonNull InternalOnPickCallback internalCallback);")
+            out.extend(VIEW_METHODS_AND_PICK_JAVA)
+            native_decls.append(VIEW_PICK_NATIVE_DECL_JAVA)
 
         # Step 16: Nested Struct Classes & Native Declarations Collection
         if self.nested_struct_contexts:
@@ -1381,6 +886,7 @@ class JavaEmitter:
         return "\n".join(out) + "\n"
 
     def _get_annotations(self, doc) -> str:
+        """Extract Java annotations (such as `@Deprecated`) from a Doxygen doc dictionary."""
         annotations = []
         if isinstance(doc, dict):
             meta = doc.get("meta", {})
@@ -1391,9 +897,11 @@ class JavaEmitter:
         return annotations
 
     def _annotations_to_string(self, annotations, indent = "    ") -> str:
+        """Format a list of annotation strings into a newline-terminated indented block."""
         return "".join([f"{indent}{annotation}\n" for annotation in annotations])
 
     def _annotations_to_indented_list(self, annotations, indent = "    ") -> str:
+        """Format a list of annotation strings into a list of indented lines."""
         return [f"{indent}{annotation}" for annotation in annotations]
 
     def _generate_pojo_struct(self, indent="    ") -> str:
@@ -1414,56 +922,11 @@ class JavaEmitter:
         out.append(f"{indent}public static class {self.name} {{")
         is_engine_config = (self.name == "Config" and getattr(self.parent_context, "name", "") == "Engine") or (self.name == "Config" and getattr(self, "ctx", None) and getattr(self.ctx, "name", "") == "Engine") or (self.name == "Config" and any(m.get("name") == "create" for m in getattr(self.ctx, "methods", []))) or (self.name == "Config" and getattr(self.ctx, "parent_class", "") == "Engine") or (self.name == "Config" and getattr(self, "ir", {}).get("parent_class") == "Engine")
         if is_engine_config:
-            out.append(f"{indent}    // #defines in Engine.h")
-            out.append(f"{indent}    private static final long FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB = 3;")
-            out.append(f"{indent}    private static final long FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB = 2;")
-            out.append(f"{indent}    private static final long FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB = 1;")
-            out.append(f"{indent}    private static final long FILAMENT_COMMAND_BUFFER_SIZE_IN_MB =")
-            out.append(f"{indent}            FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB * 3;")
-            out.append(f"{indent}")
-            out.append(f"{indent}    /**")
-            out.append(f"{indent}     * Special value for jobSystemThreadCount, forcing the JobSystem to be single-threaded.")
-            out.append(f"{indent}     */")
-            out.append(f"{indent}    public static final long SINGLE_THREADED = 0xFFFFFFFFL;")
-            out.append(f"{indent}")
+            out.extend(get_engine_config_constants_java(indent))
 
         # Nested enums
         for enum_ir in self.enums:
-            doc = enum_ir.get("doc", {})
-            edoc = generate_javadoc(doc, indent_spaces=len(indent) + 4)
-            if edoc:
-                out.append(edoc)
-            annotations = self._get_annotations(doc)
-            if annotations:
-                out += self._annotations_to_indented_list(annotations, f"{indent}    ")
-            out.append(f"{indent}    public enum {enum_ir['name']} {{")
-            custom_enum = is_custom_enum(enum_ir)
-            entry_strs = []
-            for entry in enum_ir.get("entries", []):
-                doc = entry.get("doc", {})
-                vdoc = generate_javadoc(doc, indent_spaces=len(indent) + 8)
-                name = format_enum_entry_name(enum_ir['name'], entry['name'])
-                entry_line = self._annotations_to_string(self._get_annotations(doc), f"{indent}        ")
-                if custom_enum:
-                    val = entry.get("value", 0)
-                    entry_line += f"{indent}        {name}({val})"
-                else:
-                    entry_line += f"{indent}        {name}"
-                if vdoc:
-                    entry_strs.append(f"{vdoc}\n{entry_line}")
-                else:
-                    entry_strs.append(entry_line)
-            out.append(",\n".join(entry_strs) + ";\n")
-            if custom_enum:
-                out.append(f"{indent}        private final int mValue;\n")
-                out.append(f"{indent}        {enum_ir['name']}(int value) {{")
-                out.append(f"{indent}            mValue = value;")
-                out.append(f"{indent}        }}\n")
-                out.append(f"{indent}        public int toFilamentNative() {{ return mValue; }}\n")
-            else:
-                out.append(f"{indent}        public int toFilamentNative() {{ return ordinal(); }}")
-            out.append(f"{indent}    }}")
-            out.append("")
+            out.extend(self._emit_enum(enum_ir, indent_spaces=len(indent) + 4, is_pojo=True))
 
         # Fields
         for f in self.fields:
@@ -1535,34 +998,8 @@ class JavaEmitter:
             default_val = self.translate_default_value(f, self.name)
             if self.name == "PickingQueryResult" and fname == "fragCoords" and not default_val:
                 default_val = "new float[3]"
-            if is_engine_config:
-                config_defaults = {
-                    "commandBufferSizeMB": "FILAMENT_COMMAND_BUFFER_SIZE_IN_MB",
-                    "perRenderPassArenaSizeMB": "FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB",
-                    "driverHandleArenaSizeMB": "0",
-                    "minCommandBufferSizeMB": "FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB",
-                    "perFrameCommandsSizeMB": "FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB",
-                    "jobSystemThreadCount": "0",
-                    "metalUploadBufferSizeBytes": "512 * 1024",
-                    "metalDisablePanicOnDrawableFailure": "false",
-                    "disableParallelShaderCompile": "false",
-                    "stereoscopicType": "StereoscopicType.NONE",
-                    "stereoscopicEyeCount": "2",
-                    "resourceAllocatorCacheSizeMB": "64",
-                    "resourceAllocatorCacheMaxAge": "1",
-                    "disableHandleUseAfterFreeCheck": "false",
-                    "preferredShaderLanguage": "ShaderLanguage.DEFAULT",
-                    "forceGLES2Context": "false",
-                    "assertNativeWindowIsValid": "false",
-                    "gpuContextPriority": "GpuContextPriority.DEFAULT",
-                    "sharedUboInitialSizeInBytes": "256 * 64",
-                    "asynchronousMode": "AsynchronousMode.NONE",
-                    "materialCacheCapacity": "0",
-                    "programCacheCapacity": "0",
-                    "enableMultipleDirectionalLights": "false",
-                }
-                if fname in config_defaults:
-                    default_val = config_defaults[fname]
+            if is_engine_config and fname in ENGINE_CONFIG_DEFAULTS:
+                default_val = ENGINE_CONFIG_DEFAULTS[fname]
             init_str = f" = {default_val}" if default_val is not None else ""
             out.append(f"{indent}    public {jtype} {fname}{init_str};")
 
@@ -1667,19 +1104,28 @@ class JavaEmitter:
                 scalar = arr_in["scalar"]
                 is_fixed_arr = arr_in.get("is_fixed_array", False)
                 comps = [str(i) for i in range(size)] if (is_fixed_arr or size > 4) else ["X", "Y", "Z", "W"][:size]
-                for c in comps:
-                    out.append(f"{indent}    private {scalar} m{fcap}{c};")
+                comp_defaults = self.ctx.type_resolver.get_array_default_values(
+                    f["type"], f.get("default_value"), arr_in
+                )
+                for idx, c in enumerate(comps):
+                    c_def = comp_defaults[idx] if comp_defaults and idx < len(comp_defaults) else None
+                    init_str = f" = {c_def}" if c_def is not None else ""
+                    out.append(f"{indent}    private {scalar} m{fcap}{c}{init_str};")
             elif self.is_aggregate_struct(f["type"]):
                 sub_leaves = self.get_flattened_leaves(f["type"], prefix=fcap)
                 for sl in sub_leaves:
-                    out.append(f"{indent}    private {sl['java_type']} m{sl['name']};")
+                    sl_def = sl.get("default_value")
+                    init_str = f" = {sl_def}" if sl_def is not None else ""
+                    out.append(f"{indent}    private {sl['java_type']} m{sl['name']}{init_str};")
             elif f_info.get("is_slice"):
                 out.append(f"{indent}    private @Nullable {f_info['java']} m{fcap};")
             else:
                 ann = self.get_annotation(f["type"])
                 ann_str = f"{ann}\n{indent}    " if ann else ""
                 jtype = self.get_java_type(f["type"])
-                out.append(f"{indent}    {ann_str}public {jtype} {fname};")
+                default_val = self.translate_default_value(f, self.name)
+                init_str = f" = {default_val}" if default_val is not None else ""
+                out.append(f"{indent}    {ann_str}public {jtype} {fname}{init_str};")
         out.append("")
         
         # Step 5: Default Zero-Initializing Constructor
@@ -2112,19 +1558,7 @@ class JavaEmitter:
         if len(c_args) == 1 and self.resolve_type_info(c_args[0]["type"], silent=True)[0].get("is_struct"):
             struct_cls = self.resolve_type_info(c_args[0]["type"], silent=True)[0]["struct_cls"]
             if struct_cls["name"] == "VsyncTick":
-                c_lines = []
-                c_lines.append(f"{indent_str}public FrameStatus setupFrame(long frameTimeNanos, long vsyncPeriodNanos, @Nullable long[] hardwareTimelines, int timelineCount) {{")
-                c_lines.append(f"{body_indent_str}return FrameStatus.from(nSetupFrame(getNativeObject(), frameTimeNanos, vsyncPeriodNanos, 0, hardwareTimelines, timelineCount));")
-                c_lines.append(f"{indent_str}}}")
-                c_lines.append("")
-                c_lines.append(f"{indent_str}public FrameStatus setupFrame(long frameTimeNanos, long vsyncPeriodNanos) {{")
-                c_lines.append(f"{body_indent_str}return setupFrame(frameTimeNanos, vsyncPeriodNanos, null, 0);")
-                c_lines.append(f"{indent_str}}}")
-                c_lines.append("")
-                c_lines.append(f"{indent_str}public FrameStatus setupFrame(long frameTimeNanos) {{")
-                c_lines.append(f"{body_indent_str}return setupFrame(frameTimeNanos, 16666666L);")
-                c_lines.append(f"{indent_str}}}")
-                convenience_methods.append("\n".join(c_lines))
+                convenience_methods.append(get_vsync_tick_convenience_java(indent_str, body_indent_str))
 
         # Step 4: Telescopic Overloads for Trailing Default Arguments
         if trailing_defaults_count > 0:
@@ -2388,17 +1822,10 @@ class JavaEmitter:
         
         name = get_effective_method_name(method)
         doc = method.get("doc", {})
-        
-        import copy
         effective_doc = copy.deepcopy(doc)
 
-        if self.name == "Engine":
-            intercepted_engine_methods = (
-                "destroy",
-                "createSwapChain",
-            )
-            if name in intercepted_engine_methods:
-                return None
+        if self.name == "Engine" and name in ENGINE_INTERCEPTED_METHODS:
+            return None
 
         # Step 1: Intercept retained reference getters (e.g. getEngine, getMaterial).
         # Synthesizes direct accessor for retained field without native call overhead.
@@ -2484,10 +1911,7 @@ class JavaEmitter:
             annotations = self._get_annotations(doc)
             if annotations:
                 lines += self._annotations_to_indented_list(annotations, "    ")
-            lines.append("    @NonNull")
-            lines.append("    public MaterialInstance getDefaultInstance() {")
-            lines.append("        return mDefaultInstance;")
-            lines.append("    }")
+            lines.extend(MATERIAL_GET_DEFAULT_INSTANCE_BODY_JAVA)
             return "\n".join(lines)
 
         # Step 3B: Material.getParameters() reflection specialization.
@@ -2503,24 +1927,8 @@ class JavaEmitter:
                 lines.append(javadoc)
             annotations = self._get_annotations(doc)
             if annotations:
-                lines += self._annotations_to_indented_list(annotations, "    ")    
-            lines.append("    @NonNull")
-            lines.append("    public ParameterInfo[] getParameters() {")
-            lines.append("        int count = getParameterCount();")
-            lines.append("        ParameterInfo[] parameters = new ParameterInfo[count];")
-            lines.append("        if (count > 0) {")
-            lines.append("            for (int i = 0; i < count; i++) {")
-            lines.append("                parameters[i] = new ParameterInfo();")
-            lines.append("            }")
-            lines.append("            nGetParameters(getNativeObject(), parameters, count);")
-            lines.append("        }")
-            lines.append("        return parameters;")
-            lines.append("    }")
-            lines.append("")
-            lines.append("    @IntRange(from = 0)")
-            lines.append("    public int getParameters(@NonNull ParameterInfo[] parameters, @IntRange(from = 0) int count) {")
-            lines.append("        return nGetParameters(getNativeObject(), parameters, count);")
-            lines.append("    }")
+                lines += self._annotations_to_indented_list(annotations, "    ")
+            lines.extend(MATERIAL_GET_PARAMETERS_BODY_JAVA)
             return "\n".join(lines)
 
         # Step 4: Extract return type metadata and assess math return compatibility.
@@ -4033,24 +3441,18 @@ class JavaEmitter:
             return None
         if method.get("is_constructor") and self.archetype != "bitfield" and not self.base_class:
             return None
-        if self.name == "Engine":
-            intercepted_engine_methods = (
-                "destroy",
-                "createSwapChain",
-            )
-            if name in intercepted_engine_methods:
-                return None
+        if self.name == "Engine" and name in ENGINE_INTERCEPTED_METHODS:
+            return None
 
         # Step 2: Material.getParameters() reflection specialization.
         if self.name == "Material" and name == "getParameters":
-            decl = "    private static native int nGetParameters(long nativeMaterial, @NonNull ParameterInfo[] parameters, @IntRange(from = 0) int count);"
             if return_sig:
                 return "nGetParameters(long,ParameterInfo[],int)"
             if not dry_run:
                 if "nGetParameters" in self.emitted_native_signatures:
                     return None
                 self.emitted_native_signatures.add("nGetParameters")
-            return decl
+            return MATERIAL_GET_PARAMETERS_NATIVE_DECL_JAVA
 
         # Step 3: Asynchronous callback native declaration.
         # Marshals CallbackHandler to Object and Invocable/std::function to Runnable.
@@ -4495,7 +3897,7 @@ class JavaEmitter:
             JavaGenerationError: If builder context initialization or method expansion fails.
         """
         if self.parent_context and self.parent_context.name == "Engine":
-            return self._generate_engine_builder_java()
+            return ENGINE_BUILDER_JAVA
 
         out = []
 
@@ -4514,72 +3916,7 @@ class JavaEmitter:
 
         # Step 2: Inner Enums & Flag Bitmask Classes within Builder scope.
         for enum_ir in self.enums:
-            doc = enum_ir.get("doc", {})
-            edoc = generate_javadoc(doc, indent_spaces=8)
-            if edoc:
-                out.append(edoc)
-            is_flags = enum_ir.get("is_flags", False) or any(a in ("filament:apigen:flags", "filament:flags", "apigen:flags", "flags", "filament:apigen:bitmask", "filament:bitmask", "apigen:bitmask", "bitmask") for a in enum_ir.get("attributes", []))
-            if is_flags:
-                out.append(f"        public static class {enum_ir['name']} {{")
-                out.append(f"            private {enum_ir['name']}() {{}}")
-                out.append("")
-                for entry in enum_ir.get("entries", []):
-                    edoc = generate_javadoc(entry.get("doc", {}), indent_spaces=12)
-                    if edoc:
-                        out.append(edoc)
-                    val = entry.get("value", 0)
-                    name = format_enum_entry_name(enum_ir['name'], entry['name'])
-                    hex_val = f"0x{val:X}" if val > 0 else "0"
-                    out.append(f"            public static final int {name} = {hex_val};")
-                out.append("        }")
-                out.append("")
-                continue
-            annotations = self._get_annotations(doc)
-            if annotations:
-                out += self._annotations_to_indented_list(annotations, "        ")
-            out.append(f"        public enum {enum_ir['name']} {{")
-            custom_enum = is_custom_enum(enum_ir)
-            entry_strs = []
-            for entry in enum_ir.get("entries", []):
-                doc = entry.get("doc", {})
-                edoc = generate_javadoc(doc, indent_spaces=12)
-                name = format_enum_entry_name(enum_ir['name'], entry['name'])
-                entry_line = self._annotations_to_string(self._get_annotations(doc), "            ")
-                if custom_enum:
-                    val = entry.get("value", 0)
-                    entry_line += f"            {name}({val})"
-                else:
-                    entry_line += f"            {name}"
-                if edoc:
-                    entry_strs.append(f"{edoc}\n{entry_line}")
-                else:
-                    entry_strs.append(entry_line)
-            out.append(",\n".join(entry_strs) + ";\n")
-            if custom_enum:
-                out.append("            private final int mValue;\n")
-                out.append(f"            {enum_ir['name']}(int value) {{")
-                out.append("                mValue = value;")
-                out.append("            }\n")
-                out.append("            /** @return the value of this enum constant as used by the native Filament engine. */")
-                out.append("            public int toFilamentNative() { return mValue; }\n")
-                out.append(f"            public static {enum_ir['name']} from(int value) {{")
-                out.append("                switch (value) {")
-                seen_values = set()
-                for entry in enum_ir.get("entries", []):
-                    name = format_enum_entry_name(enum_ir['name'], entry['name'])
-                    val = entry.get("value", 0)
-                    if val in seen_values:
-                        continue
-                    seen_values.add(val)
-                    out.append(f"                    case {val}: return {name};")
-                out.append(f"                    default: throw new IllegalArgumentException(\"Unknown {enum_ir['name']} value: \" + value);")
-                out.append("                }")
-                out.append("            }")
-            else:
-                out.append("            /** @return the value of this enum constant as used by the native Filament engine. */")
-                out.append("            public int toFilamentNative() { return ordinal(); }")
-            out.append("        }")
-            out.append("")
+            out.extend(self._emit_enum(enum_ir, indent_spaces=8))
 
         # Step 3: Builder Constructors & Native Peer Allocation.
         has_default_ctor = False
@@ -5187,399 +4524,4 @@ class JavaEmitter:
                     decls.append(f"    private static native void {native_name}({', '.join(params)});")
         return decls
 
-    def _generate_engine_methods_java(self):
-        return """    private Engine(long nativeEngine, @Nullable Config config) {
-        mNativeObject = nativeEngine;
-        mConfig = config;
-    }
-
-    @NonNull
-    public static Engine create() {
-        return new Builder().build();
-    }
-
-    @NonNull
-    public static Engine create(@NonNull Backend backend) {
-        return new Builder()
-            .backend(backend)
-            .build();
-    }
-
-    @NonNull
-    public static Engine create(@NonNull Object sharedContext) {
-        return new Builder()
-            .sharedContext(sharedContext)
-            .build();
-    }
-
-    public void destroy() {
-        nDestroyEngine(getNativeObject());
-        clearNativeObject();
-    }
-
-    @NonNull
-    public SwapChain createSwapChain(@NonNull Object surface) {
-        return createSwapChain(surface, SwapChainFlags.CONFIG_DEFAULT);
-    }
-
-    @NonNull
-    public SwapChain createSwapChain(@NonNull Object surface, long flags) {
-        if (Platform.get().validateSurface(surface)) {
-            long nativeSwapChain = nCreateSwapChain(getNativeObject(), surface, flags);
-            if (nativeSwapChain == 0) throw new IllegalStateException("Couldn't create SwapChain");
-            return new SwapChain(nativeSwapChain, surface);
-        }
-        throw new IllegalArgumentException("Invalid surface " + surface);
-    }
-
-    @NonNull
-    public SwapChain createSwapChain(int width, int height, long flags) {
-        if (width >= 0 && height >= 0) {
-            long nativeSwapChain =
-                nCreateSwapChainHeadless(getNativeObject(), width, height, flags);
-            if (nativeSwapChain == 0) throw new IllegalStateException("Couldn't create SwapChain");
-            return new SwapChain(nativeSwapChain, null);
-        }
-        throw new IllegalArgumentException("Invalid parameters");
-    }
-
-    @NonNull
-    public SwapChain createSwapChain(int width, int height) {
-        return createSwapChain(width, height, SwapChainFlags.CONFIG_DEFAULT);
-    }
-
-    @NonNull
-    public SwapChain createSwapChainFromNativeSurface(@NonNull NativeSurface surface, long flags) {
-        long nativeSwapChain =
-                nCreateSwapChainFromRawPointer(getNativeObject(), surface.getNativeObject(), flags);
-        if (nativeSwapChain == 0) throw new IllegalStateException("Couldn't create SwapChain");
-        return new SwapChain(nativeSwapChain, surface);
-    }
-
-
-    public void destroySwapChain(@NonNull SwapChain swapChain) {
-        assertDestroy(nDestroySwapChain(getNativeObject(), swapChain.getNativeObject()));
-        swapChain.clearNativeObject();
-    }
-
-    public void destroyView(@NonNull View view) {
-        assertDestroy(nDestroyView(getNativeObject(), view.getNativeObject()));
-        view.clearNativeObject();
-    }
-
-    public void destroyRenderer(@NonNull Renderer renderer) {
-        assertDestroy(nDestroyRenderer(getNativeObject(), renderer.getNativeObject()));
-        renderer.clearNativeObject();
-    }
-
-    public void destroyScene(@NonNull Scene scene) {
-        assertDestroy(nDestroyScene(getNativeObject(), scene.getNativeObject()));
-        scene.clearNativeObject();
-    }
-
-    public void destroyStream(@NonNull Stream stream) {
-        assertDestroy(nDestroyStream(getNativeObject(), stream.getNativeObject()));
-        stream.clearNativeObject();
-    }
-
-    public void destroyFence(@NonNull Fence fence) {
-        assertDestroy(nDestroyFence(getNativeObject(), fence.getNativeObject()));
-        fence.clearNativeObject();
-    }
-
-    public void destroyFramePacer(@NonNull FramePacer framePacer) {
-        assertDestroy(nDestroyFramePacer(getNativeObject(), framePacer.getNativeObject()));
-        framePacer.clearNativeObject();
-    }
-
-    public void destroyBufferObject(@NonNull BufferObject bufferObject) {
-        assertDestroy(nDestroyBufferObject(getNativeObject(), bufferObject.getNativeObject()));
-        bufferObject.clearNativeObject();
-    }
-
-    public void destroyIndexBuffer(@NonNull IndexBuffer indexBuffer) {
-        assertDestroy(nDestroyIndexBuffer(getNativeObject(), indexBuffer.getNativeObject()));
-        indexBuffer.clearNativeObject();
-    }
-
-    public void destroyInstanceBuffer(@NonNull InstanceBuffer instanceBuffer) {
-        assertDestroy(nDestroyInstanceBuffer(getNativeObject(), instanceBuffer.getNativeObject()));
-        instanceBuffer.clearNativeObject();
-    }
-
-    public void destroyVertexBuffer(@NonNull VertexBuffer vertexBuffer) {
-        assertDestroy(nDestroyVertexBuffer(getNativeObject(), vertexBuffer.getNativeObject()));
-        vertexBuffer.clearNativeObject();
-    }
-
-    public void destroySkinningBuffer(@NonNull SkinningBuffer skinningBuffer) {
-        assertDestroy(nDestroySkinningBuffer(getNativeObject(), skinningBuffer.getNativeObject()));
-        skinningBuffer.clearNativeObject();
-    }
-
-    public void destroyMorphTargetBuffer(@NonNull MorphTargetBuffer morphTargetBuffer) {
-        assertDestroy(nDestroyMorphTargetBuffer(getNativeObject(), morphTargetBuffer.getNativeObject()));
-        morphTargetBuffer.clearNativeObject();
-    }
-
-    public void destroyIndirectLight(@NonNull IndirectLight ibl) {
-        assertDestroy(nDestroyIndirectLight(getNativeObject(), ibl.getNativeObject()));
-        ibl.clearNativeObject();
-    }
-
-    public void destroyMaterial(@NonNull Material material) {
-        assertDestroy(nDestroyMaterial(getNativeObject(), material.getNativeObject()));
-        material.clearNativeObject();
-    }
-
-    public void destroyMaterialInstance(@NonNull MaterialInstance materialInstance) {
-        assertDestroy(nDestroyMaterialInstance(getNativeObject(), materialInstance.getNativeObject()));
-        materialInstance.clearNativeObject();
-    }
-
-    public void destroySkybox(@NonNull Skybox skybox) {
-        assertDestroy(nDestroySkybox(getNativeObject(), skybox.getNativeObject()));
-        skybox.clearNativeObject();
-    }
-
-    public void destroyColorGrading(@NonNull ColorGrading colorGrading) {
-        assertDestroy(nDestroyColorGrading(getNativeObject(), colorGrading.getNativeObject()));
-        colorGrading.clearNativeObject();
-    }
-
-    public void destroyTexture(@NonNull Texture texture) {
-        assertDestroy(nDestroyTexture(getNativeObject(), texture.getNativeObject()));
-        texture.clearNativeObject();
-    }
-
-    public void destroyRenderTarget(@NonNull RenderTarget target) {
-        assertDestroy(nDestroyRenderTarget(getNativeObject(), target.getNativeObject()));
-        target.clearNativeObject();
-    }
-
-    public void destroyEntity(@Entity int entity) {
-        nDestroyEntity(getNativeObject(), entity);
-    }
-
-    public void destroy(@NonNull SwapChain swapChain) { destroySwapChain(swapChain); }
-    public void destroy(@NonNull View view) { destroyView(view); }
-    public void destroy(@NonNull Renderer renderer) { destroyRenderer(renderer); }
-    public void destroy(@NonNull Scene scene) { destroyScene(scene); }
-    public void destroy(@NonNull Stream stream) { destroyStream(stream); }
-    public void destroy(@NonNull Fence fence) { destroyFence(fence); }
-    public void destroy(@NonNull FramePacer framePacer) { destroyFramePacer(framePacer); }
-    public void destroy(@NonNull BufferObject bufferObject) { destroyBufferObject(bufferObject); }
-    public void destroy(@NonNull IndexBuffer indexBuffer) { destroyIndexBuffer(indexBuffer); }
-    public void destroy(@NonNull InstanceBuffer instanceBuffer) { destroyInstanceBuffer(instanceBuffer); }
-    public void destroy(@NonNull VertexBuffer vertexBuffer) { destroyVertexBuffer(vertexBuffer); }
-    public void destroy(@NonNull SkinningBuffer skinningBuffer) { destroySkinningBuffer(skinningBuffer); }
-    public void destroy(@NonNull MorphTargetBuffer morphTargetBuffer) { destroyMorphTargetBuffer(morphTargetBuffer); }
-    public void destroy(@NonNull IndirectLight ibl) { destroyIndirectLight(ibl); }
-    public void destroy(@NonNull Material material) { destroyMaterial(material); }
-    public void destroy(@NonNull MaterialInstance materialInstance) { destroyMaterialInstance(materialInstance); }
-    public void destroy(@NonNull Skybox skybox) { destroySkybox(skybox); }
-    public void destroy(@NonNull ColorGrading colorGrading) { destroyColorGrading(colorGrading); }
-    public void destroy(@NonNull Texture texture) { destroyTexture(texture); }
-    public void destroy(@NonNull RenderTarget target) { destroyRenderTarget(target); }
-    public void destroy(@Entity int entity) { destroyEntity(entity); }
-
-    private static void assertDestroy(boolean success) {
-        if (!success) {
-            throw new IllegalStateException("Object could not be destroyed (or already destroyed)");
-        }
-    }"""
-
-    def _get_engine_native_decls(self):
-        return [
-            "    private static native void nDestroyEngine(long nativeEngine);",
-            "    private static native long nCreateSwapChain(long nativeEngine, Object nativeWindow, long flags);",
-            "    private static native long nCreateSwapChainHeadless(long nativeEngine, int width, int height, long flags);",
-            "    private static native long nCreateSwapChainFromRawPointer(long nativeEngine, long pointer, long flags);",
-            "    private static native boolean nDestroyBufferObject(long nativeEngine, long nativeBufferObject);",
-            "    private static native boolean nDestroyColorGrading(long nativeEngine, long nativeColorGrading);",
-            "    private static native boolean nDestroyFence(long nativeEngine, long nativeFence);",
-            "    private static native boolean nDestroyFramePacer(long nativeEngine, long nativeFramePacer);",
-            "    private static native boolean nDestroyIndexBuffer(long nativeEngine, long nativeIndexBuffer);",
-            "    private static native boolean nDestroyIndirectLight(long nativeEngine, long nativeIndirectLight);",
-            "    private static native boolean nDestroyInstanceBuffer(long nativeEngine, long nativeInstanceBuffer);",
-            "    private static native boolean nDestroyMaterial(long nativeEngine, long nativeMaterial);",
-            "    private static native boolean nDestroyMaterialInstance(long nativeEngine, long nativeMaterialInstance);",
-            "    private static native boolean nDestroyMorphTargetBuffer(long nativeEngine, long nativeMorphTargetBuffer);",
-            "    private static native boolean nDestroyRenderTarget(long nativeEngine, long nativeTarget);",
-            "    private static native boolean nDestroyRenderer(long nativeEngine, long nativeRenderer);",
-            "    private static native boolean nDestroyScene(long nativeEngine, long nativeScene);",
-            "    private static native boolean nDestroySkinningBuffer(long nativeEngine, long nativeSkinningBuffer);",
-            "    private static native boolean nDestroySkybox(long nativeEngine, long nativeSkybox);",
-            "    private static native boolean nDestroyStream(long nativeEngine, long nativeStream);",
-            "    private static native boolean nDestroySwapChain(long nativeEngine, long nativeSwapChain);",
-            "    private static native boolean nDestroyTexture(long nativeEngine, long nativeTexture);",
-            "    private static native boolean nDestroyVertexBuffer(long nativeEngine, long nativeVertexBuffer);",
-            "    private static native boolean nDestroyView(long nativeEngine, long nativeView);",
-            "    private static native void nDestroyEntity(long nativeEngine, int entity);",
-            "    private static native long nCreateBuilder();",
-            "    private static native void nDestroyBuilder(long nativeBuilder);",
-            "    private static native void nSetBuilderBackend(long nativeBuilder, long backend);",
-            "    private static native void nSetBuilderConfig(long nativeBuilder, long commandBufferSizeMB,",
-            "            long perRenderPassArenaSizeMB, long driverHandleArenaSizeMB,",
-            "            long minCommandBufferSizeMB, long perFrameCommandsSizeMB, long jobSystemThreadCount,",
-            "            boolean disableParallelShaderCompile, int stereoscopicType, long stereoscopicEyeCount,",
-            "            long resourceAllocatorCacheSizeMB, long resourceAllocatorCacheMaxAge,",
-            "            boolean disableHandleUseAfterFreeCheck,",
-            "            int preferredShaderLanguage,",
-            "            boolean forceGLES2Context, boolean assertNativeWindowIsValid,",
-            "            int gpuContextPriority,",
-            "            long sharedUboInitialSizeInBytes,",
-            "            boolean enableMultipleDirectionalLights);",
-            "    private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);",
-            "    private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);",
-            "    private static native void nSetBuilderPaused(long nativeBuilder, boolean paused);",
-            "    private static native void nSetBuilderFeature(long nativeBuilder, String name, boolean value);",
-            "    private static native void nSetBuilderColorGrading(long nativeBuilder, long nativeColorGradingBuilder);",
-            "    private static native long nBuilderBuild(long nativeBuilder);",
-        ]
-
-    def _generate_engine_builder_java(self):
-        return """    /**
-     * Use <code>Builder</code> to construct an <code>Engine</code> object instance.
-     */
-    public static class Builder {
-        @SuppressWarnings({"FieldCanBeLocal", "UnusedDeclaration"})
-        private final BuilderFinalizer mFinalizer;
-        private final long mNativeBuilder;
-        private Config mConfig;
-
-        public Builder() {
-            mNativeBuilder = nCreateBuilder();
-            mFinalizer = new BuilderFinalizer(mNativeBuilder);
-        }
-
-        /**
-         * Sets the {@link Backend} for the Engine.
-         *
-         * @param backend Driver backend to use
-         * @return A reference to this Builder for chaining calls.
-         */
-        public Builder backend(Backend backend) {
-            nSetBuilderBackend(mNativeBuilder, backend.ordinal());
-            return this;
-        }
-
-        /**
-         * Sets a sharedContext for the Engine.
-         *
-         * @param sharedContext  A platform-dependant OpenGL context used as a shared context
-         *                       when creating filament's internal context. On Android this parameter
-         *                       <b>must be</b> an instance of {@link android.opengl.EGLContext}.
-         * @return A reference to this Builder for chaining calls.
-         */
-        public Builder sharedContext(Object sharedContext) {
-            if (Platform.get().validateSharedContext(sharedContext)) {
-                nSetBuilderSharedContext(mNativeBuilder,
-                        Platform.get().getSharedContextNativeHandle(sharedContext));
-                return this;
-            }
-            throw new IllegalArgumentException("Invalid shared context " + sharedContext);
-        }
-
-        /**
-         * Configure the Engine with custom parameters.
-         *
-         * @param config A {@link Config} object
-         * @return A reference to this Builder for chaining calls.
-         */
-        public Builder config(Config config) {
-            mConfig = config;
-            nSetBuilderConfig(mNativeBuilder, config.commandBufferSizeMB,
-                    config.perRenderPassArenaSizeMB, config.driverHandleArenaSizeMB,
-                    config.minCommandBufferSizeMB, config.perFrameCommandsSizeMB,
-                    config.jobSystemThreadCount, config.disableParallelShaderCompile,
-                    config.stereoscopicType.ordinal(), config.stereoscopicEyeCount,
-                    config.resourceAllocatorCacheSizeMB, config.resourceAllocatorCacheMaxAge,
-                    config.disableHandleUseAfterFreeCheck,
-                    config.preferredShaderLanguage.ordinal(),
-                    config.forceGLES2Context, config.assertNativeWindowIsValid,
-                    config.gpuContextPriority.ordinal(),
-                    config.sharedUboInitialSizeInBytes,
-                    config.enableMultipleDirectionalLights);
-            return this;
-        }
-
-        /**
-         * Sets the initial featureLevel for the Engine.
-         *
-         * @param featureLevel The feature level at which initialize Filament.
-         * @return A reference to this Builder for chaining calls.
-         */
-        public Builder featureLevel(FeatureLevel featureLevel) {
-            nSetBuilderFeatureLevel(mNativeBuilder, featureLevel.ordinal());
-            return this;
-        }
-
-        /**
-         * Sets the initial paused state of the rendering thread.
-         *
-         * @param paused Whether to start the rendering thread paused.
-         * @return A reference to this Builder for chaining calls.
-         */
-        public Builder paused(boolean paused) {
-            nSetBuilderPaused(mNativeBuilder, paused);
-            return this;
-        }
-
-        /**
-         * Set a feature flag value. This is the only way to set constant feature flags.
-         * @param name feature name
-         * @param value true to enable, false to disable
-         * @return A reference to this Builder for chaining calls.
-         */
-        public Builder feature(@NonNull String name, boolean value) {
-            nSetBuilderFeature(mNativeBuilder, name, value);
-            return this;
-        }
-
-        /**
-         * Sets the builder used to create the default ColorGrading object.
-         * @param colorGrading Builder used to create the default color grading.
-         * @return A reference to this Builder for chaining calls.
-         */
-        @NonNull
-        public Builder colorGrading(@NonNull ColorGrading.Builder colorGrading) {
-            nSetBuilderColorGrading(mNativeBuilder, colorGrading.getNativeBuilder());
-            return this;
-        }
-
-        /**
-         * Creates an instance of Engine
-         *
-         * @return A newly created <code>Engine</code>, or <code>null</code> if the GPU driver couldn't
-         *         be initialized, for instance if it doesn't support the right version of OpenGL or
-         *         OpenGL ES.
-         *
-         * @throws Error if there isn't enough memory to allocate the command buffer.
-         */
-        public Engine build() {
-            long nativeEngine = nBuilderBuild(mNativeBuilder);
-            if (nativeEngine == 0) throw new IllegalStateException("Couldn't create Engine");
-            return new Engine(nativeEngine, mConfig);
-        }
-
-        private static class BuilderFinalizer {
-            private final long mNativeObject;
-
-            BuilderFinalizer(long nativeObject) {
-                mNativeObject = nativeObject;
-            }
-
-            @Override
-            public void finalize() {
-                try {
-                    super.finalize();
-                } catch (Throwable t) { // Ignore
-                } finally {
-                    nDestroyBuilder(mNativeObject);
-                }
-            }
-        }
-    }"""
-
-
+    generate_java = generate

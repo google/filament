@@ -933,11 +933,11 @@ public class Renderer {
      * frame pacing and dynamic resolution scaling.</p>
      */
     public static class DisplayInfo {
-        public float refreshRate;
+        public float refreshRate = 60.0f;
         @IntRange(from = 0)
-        public long presentationDeadlineNanos;
+        public long presentationDeadlineNanos = 0;
         @IntRange(from = 0)
-        public long vsyncOffsetNanos;
+        public long vsyncOffsetNanos = 0;
 
         public DisplayInfo() {
         }
@@ -1166,12 +1166,12 @@ public class Renderer {
      * @see Renderer.DisplayInfo
      */
     public static class FrameRateOptions {
-        public float headRoomRatio;
-        public float scaleRate;
+        public float headRoomRatio = 0.0f;
+        public float scaleRate = 1.0f / 8.0f;
         @IntRange(from = 0)
-        public int history;
+        public int history = 15;
         @IntRange(from = 0)
-        public int interval;
+        public int interval = 1;
 
         public FrameRateOptions() {
         }
@@ -1224,9 +1224,9 @@ public class Renderer {
         private double mClearColorZ;
         private double mClearColorW;
         @IntRange(from = 0)
-        public int clearStencil;
-        public boolean clear;
-        public boolean discard;
+        public int clearStencil = 0;
+        public boolean clear = false;
+        public boolean discard = true;
 
         public ClearOptions() {
         }

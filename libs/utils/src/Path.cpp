@@ -14,26 +14,31 @@
  * limitations under the License.
  */
 
+#if defined(WIN32)
+#include <utils/compiler.h>
+#endif
 #include <utils/Path.h>
+#if defined(WIN32)
+#include <utils/win32/stdtypes.h>
+#endif
 
-#include <sstream>
 #include <ostream>
-#include <iterator>
+#include <string_view>
+
+#include <sys/stat.h>
+#if !defined(WIN32)
+#include <unistd.h>
+#endif
+
+#include <limits.h>
 
 #if defined(WIN32)
-#   include <utils/compiler.h>
-#   include <utils/win32/stdtypes.h>
 #   define SEPARATOR '\\'
 #   define SEPARATOR_STR  "\\"
 #else
-#   include <unistd.h>
 #   define SEPARATOR '/'
 #   define SEPARATOR_STR "/"
 #endif
-
-
-#include <limits.h>
-#include <sys/stat.h>
 
 namespace utils {
 
@@ -154,8 +159,18 @@ Path Path::getAncestor(int n) const {
 std::string Path::getName() const {
     if (isEmpty()) return "";
 
-    std::vector<std::string> segments(split());
-    return segments.back();
+    size_t end = m_path.size();
+    while (end > 1 && (m_path[end - 1] == '/' || m_path[end - 1] == '\\')) {
+        --end;
+    }
+    size_t const pos = m_path.find_last_of(SEPARATOR, end - 1);
+    if (pos == std::string::npos) {
+        return m_path.substr(0, end);
+    }
+    if (pos == 0 && end == 1) {
+        return m_path.substr(0, 1);
+    }
+    return m_path.substr(pos + 1, end - pos - 1);
 }
 
 std::string Path::getExtension() const {
@@ -217,7 +232,8 @@ std::vector<std::string> Path::split() const {
 std::string Path::getCanonicalPath(const std::string& path) {
     if (path.empty()) return "";
 
-    std::vector<std::string> segments;
+    std::string_view const pathView(path);
+    std::vector<std::string_view> segments;
 
     // If the path starts with a / we must preserve it
     bool starts_with_slash = path.front() == SEPARATOR;
@@ -231,10 +247,10 @@ std::string Path::getCanonicalPath(const std::string& path) {
     do {
         current = size_t(next + 1);
         // Handle both Unix and Windows style separators
-        next = path.find_first_of("/\\", current);
+        next = pathView.find_first_of("/\\", current);
 
-        std::string segment(path.substr(current, next - current));
-        size_t size = segment.length();
+        std::string_view const segment(pathView.substr(current, next - current));
+        size_t const size = segment.length();
 
         // skip empty (keep initial)
         if (size == 0 && !segments.empty()) {
@@ -263,10 +279,10 @@ std::string Path::getCanonicalPath(const std::string& path) {
     // Join the vector as a single string, every element is
     // separated by a '/'. This process adds an extra / at
     // the end that might need to be removed
-    std::stringstream clean_path;
-    std::copy(segments.begin(), segments.end(),
-            std::ostream_iterator<std::string>(clean_path, SEPARATOR_STR));
-    std::string new_path = clean_path.str();
+    std::string new_path;
+    for (std::string_view const& s : segments) {
+        new_path.append(s).push_back(SEPARATOR);
+    }
 
     if (starts_with_slash && new_path.empty()) {
         new_path = SEPARATOR_STR;

@@ -28,8 +28,8 @@
 namespace filament::backend {
 
 WebGPUVertexBuffer::WebGPUVertexBuffer(uint32_t const vertexCount, size_t const slotCount,
-        Handle<HwVertexBufferInfo> vertexBufferInfoHandle)
-        : HwVertexBuffer{ vertexCount },
+        Handle<HwVertexBufferInfo> vertexBufferInfoHandle, const bool asynchronous)
+        : HwVertexBuffer{ vertexCount, asynchronous },
           mVertexBufferInfoHandle{ vertexBufferInfoHandle } {
     mSlotBindings.resize(slotCount);
 }

@@ -416,7 +416,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
     // Create image data.
     size_t components; int bpp;
     getPixelInfo(pixelFormat, pixelType, components, bpp);
-    size_t bpl = kTexSize * kTexSize * bpp;
+    size_t bpl = size_t(kTexSize) * kTexSize * bpp;
     size_t bufferSize = bpl;
     void* buffer = calloc(1, bufferSize);
     PixelBufferDescriptor descriptor(buffer, bufferSize, pixelFormat, pixelType,
@@ -569,7 +569,7 @@ TEST_F(LoadImageTest, UpdateImage3D) {
     // Create image data for all 4 layers.
     size_t components; int bpp;
     getPixelInfo(pixelFormat, pixelType, components, bpp);
-    size_t bpl = kTexSize * kTexSize * bpp;
+    size_t bpl = size_t(kTexSize) * kTexSize * bpp;
     size_t bufferSize = bpl * 4;
     void* buffer = calloc(1, bufferSize);
     PixelBufferDescriptor descriptor(buffer, bufferSize, pixelFormat, pixelType,

@@ -44,6 +44,44 @@ Compilation Capabilities:
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
+_RE_BOLD = re.compile(r"\*\*(.+?)\*\*")
+_RE_ITALIC = re.compile(r"\*(.+?)\*")
+_RE_CODE = re.compile(r"`(.+?)`")
+_RE_LINK = re.compile(r"\[(.+?)\]\((.+?)\)")
+_RE_ATX_HEADER = re.compile(r"^(#+)\s+(.+)$")
+_RE_ORDERED_LIST = re.compile(r"^\d+\.")
+_RE_IDENTIFIER = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+_RE_CPP_QUALIFIERS = re.compile(r"\b(const|volatile|struct|class|enum|_Nonnull|_Nullable)\b")
+_RE_TRAILING_PUNCT = re.compile(r"[\.;,]+$")
+_RE_PAREN_ARGS = re.compile(r"^(.*?)\((.*)\)$")
+_RE_SCOPE_COLONS = re.compile(r":+")
+
+_BLOCK_HTML_TAGS = (
+    "<ul", "<ol", "<li", "</ul", "</ol", "</li",
+    "<table", "</table", "<tr", "</tr", "<td", "</td", "<th", "</th",
+    "<pre", "</pre", "<blockquote", "</blockquote",
+    "<h1", "<h2", "<h3", "<h4", "<h5", "<h6",
+)
+
+_C_TYPE_KEYWORDS = (
+    "const", "volatile", "unsigned", "signed", "long", "int",
+    "short", "char", "float", "double", "bool", "void",
+)
+
+_SEE_ARG_TYPE_MAP = {
+    "uint8_t": "int", "int8_t": "int", "uint16_t": "int", "int16_t": "int",
+    "uint32_t": "int", "int32_t": "int", "size_t": "int",
+    "uint64_t": "long", "int64_t": "long",
+    "bool": "boolean", "Entity": "int", "Instance": "int",
+    "float2": "float[]", "float3": "float[]", "float4": "float[]",
+    "mat3": "float[]", "mat4": "float[]",
+    "double2": "double[]", "double3": "double[]", "double4": "double[]",
+    "int2": "int[]", "int3": "int[]", "int4": "int[]",
+    "uint2": "int[]", "uint3": "int[]", "uint4": "int[]",
+    "string": "String", "string_view": "String", "CString": "String",
+    "PixelBufferDescriptor": "Buffer", "BufferDescriptor": "Buffer",
+}
+
 
 def _format_inline(text: str) -> str:
     """Transform CommonMark inline markup to HTML/Javadoc equivalents.
@@ -66,19 +104,17 @@ def _format_inline(text: str) -> str:
         Formatted HTML/Javadoc string.
     """
     # Step 1: Format bold text (**text** -> <b>text</b>)
-    text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
+    text = _RE_BOLD.sub(r"<b>\1</b>", text)
 
     # Step 2: Format italic text (*text* -> <i>text</i>)
-    text = re.sub(r'\*(.+?)\*', r'<i>\1</i>', text)
+    text = _RE_ITALIC.sub(r"<i>\1</i>", text)
 
     # Step 3: Format inline code snippets using Javadoc {@code ...} tag
     # Using {@code ...} prevents Javadoc from interpreting HTML tags or generics inside code.
-    text = re.sub(r'`(.+?)`', r'{@code \1}', text)
+    text = _RE_CODE.sub(r"{@code \1}", text)
 
     # Step 4: Convert Markdown hyperlinks to standard HTML anchor tags ([text](url) -> <a href="url">text</a>)
-    text = re.sub(r'\[(.+?)\]\((.+?)\)', r'<a href="\2">\1</a>', text)
-
-    return text
+    return _RE_LINK.sub(r'<a href="\2">\1</a>', text)
 
 
 def _process_table(lines: List[str]) -> List[str]:
@@ -118,39 +154,34 @@ def _process_table(lines: List[str]) -> List[str]:
         return lines
 
     # Step 1: Parse header row and delimiter divider row by splitting on pipe characters
-    header_row = lines[0].strip('|').split('|')
-    divider_row = lines[1].strip('|').split('|')
+    header_row = lines[0].strip("|").split("|")
+    divider_row = lines[1].strip("|").split("|")
 
     # Step 2: Detect column alignments (:--- = left, :---: = center, ---: = right)
     alignments: List[str] = []
     for cell in divider_row:
         cell_text = cell.strip()
-        if cell_text.startswith(':') and cell_text.endswith(':'):
-            alignments.append('center')
-        elif cell_text.endswith(':'):
-            alignments.append('right')
+        if cell_text.startswith(":") and cell_text.endswith(":"):
+            alignments.append("center")
+        elif cell_text.endswith(":"):
+            alignments.append("right")
         else:
-            alignments.append('left')
+            alignments.append("left")
 
-    out = ['<table summary="">']
+    out = ['<table summary="">', "  <tr>"]
 
     # Step 3: Emit table header <th> cells with corresponding text alignment styles
-    out.append("  <tr>")
     for i, cell in enumerate(header_row):
-        style = ""
-        if i < len(alignments):
-            style = f' style="text-align: {alignments[i]}"'
+        style = f' style="text-align: {alignments[i]}"' if i < len(alignments) else ""
         out.append(f"    <th{style}>{_format_inline(cell.strip())}</th>")
     out.append("  </tr>")
 
     # Step 4: Emit table body <td> rows with alignment styles and inline markup formatting
     for line in lines[2:]:
-        row = line.strip().strip('|').split('|')
+        row = line.strip().strip("|").split("|")
         out.append("  <tr>")
         for i, cell in enumerate(row):
-            style = ""
-            if i < len(alignments):
-                style = f' style="text-align: {alignments[i]}"'
+            style = f' style="text-align: {alignments[i]}"' if i < len(alignments) else ""
             out.append(f"    <td{style}>{_format_inline(cell.strip())}</td>")
         out.append("  </tr>")
 
@@ -181,7 +212,7 @@ def markdown_to_javadoc(text: str, strip_outer_paragraph: bool = False) -> str:
     if not text:
         return ""
 
-    lines = text.split('\n')
+    lines = text.split("\n")
     out_lines: List[str] = []
 
     # State Machine State Flags
@@ -204,19 +235,10 @@ def markdown_to_javadoc(text: str, strip_outer_paragraph: bool = False) -> str:
                 if out_lines and out_lines[-1] != "":
                     out_lines.append("")
                 # Block-level HTML elements should not be wrapped in <p>...</p>
-                block_tags = (
-                    "<ul", "<ol", "<li", "</ul", "</ol", "</li",
-                    "<table", "</table", "<tr", "</tr", "<td", "</td", "<th", "</th",
-                    "<pre", "</pre", "<blockquote", "</blockquote",
-                    "<h1", "<h2", "<h3", "<h4", "<h5", "<h6",
-                )
-                if any(formatted.startswith(tag) for tag in block_tags):
+                if any(formatted.startswith(tag) for tag in _BLOCK_HTML_TAGS):
                     out_lines.append(formatted)
                 elif formatted.startswith("<p>") or formatted.startswith("<p "):
-                    if formatted.endswith("</p>"):
-                        out_lines.append(formatted)
-                    else:
-                        out_lines.append(f"{formatted}</p>")
+                    out_lines.append(formatted if formatted.endswith("</p>") else f"{formatted}</p>")
                 elif formatted.endswith("</p>"):
                     out_lines.append(f"<p>{formatted}")
                 else:
@@ -236,23 +258,21 @@ def markdown_to_javadoc(text: str, strip_outer_paragraph: bool = False) -> str:
         stripped = line.strip()
 
         # Step 1: Code block fencing (``` or ~~~)
-        if stripped.startswith('```') or stripped.startswith('~~~'):
+        if stripped.startswith("```") or stripped.startswith("~~~"):
             flush_list_item()
             if in_list and list_type:
-                out_lines.append(f'</{list_type}>')
+                out_lines.append(f"</{list_type}>")
                 in_list = False
-
             flush_paragraph()
-
             if out_lines and out_lines[-1] != "":
                 out_lines.append("")
 
             # Toggle code block state
             if in_code_block:
-                out_lines.append('}</pre>')
+                out_lines.append("}</pre>")
                 in_code_block = False
             else:
-                out_lines.append('<pre>{@code')
+                out_lines.append("<pre>{@code")
                 in_code_block = True
             i += 1
             continue
@@ -266,16 +286,14 @@ def markdown_to_javadoc(text: str, strip_outer_paragraph: bool = False) -> str:
         # Step 2: Table block detection (header row followed by delimiter divider row)
         if not in_table and i + 1 < len(lines):
             next_line = lines[i + 1].strip()
-            if '---' in next_line and '|' in next_line:
+            if "---" in next_line and "|" in next_line:
                 flush_list_item()
                 if in_list and list_type:
-                    out_lines.append(f'</{list_type}>')
+                    out_lines.append(f"</{list_type}>")
                     in_list = False
                 flush_paragraph()
-
                 if out_lines and out_lines[-1] != "":
                     out_lines.append("")
-
                 in_table = True
                 table_lines = [line, lines[i + 1]]
                 i += 2
@@ -296,100 +314,88 @@ def markdown_to_javadoc(text: str, strip_outer_paragraph: bool = False) -> str:
         # Step 3: Setext header detection (underline with === for h1 or --- for h2)
         if i + 1 < len(lines):
             next_line = lines[i + 1].strip()
-            is_h1 = next_line.startswith('===') and all(c == '=' for c in next_line)
-            is_h2 = next_line.startswith('---') and all(c == '-' for c in next_line)
-
+            is_h1 = next_line.startswith("===") and all(c == "=" for c in next_line)
+            is_h2 = next_line.startswith("---") and all(c == "-" for c in next_line)
             if is_h1 or is_h2:
                 flush_list_item()
                 if in_list and list_type:
-                    out_lines.append(f'</{list_type}>')
+                    out_lines.append(f"</{list_type}>")
                     in_list = False
                 flush_paragraph()
-
                 if out_lines and out_lines[-1] != "":
                     out_lines.append("")
-
-                tag = 'h1' if is_h1 else 'h2'
+                tag = "h1" if is_h1 else "h2"
                 out_lines.append(f"<{tag}>{_format_inline(stripped)}</{tag}>")
                 i += 2
                 continue
 
-        # Step 4: ATX header detection (# H1, ## H2, ### H3, etc.)
-        if stripped.startswith('#'):
-            match = re.match(r'^(#+)\s+(.+)$', stripped)
+        # Step 4: ATX header detection (# H1 through ###### H6)
+        if stripped.startswith("#"):
+            match = _RE_ATX_HEADER.match(stripped)
             if match:
                 flush_list_item()
                 if in_list and list_type:
-                    out_lines.append(f'</{list_type}>')
+                    out_lines.append(f"</{list_type}>")
                     in_list = False
                 flush_paragraph()
-
                 if out_lines and out_lines[-1] != "":
                     out_lines.append("")
-
                 level = len(match.group(1))
-                content = match.group(2)
-                out_lines.append(f"<h{level}>{_format_inline(content)}</h{level}>")
+                out_lines.append(f"<h{level}>{_format_inline(match.group(2))}</h{level}>")
                 i += 1
                 continue
 
-        # Step 5: List item detection (- item, * item, 1. item)
-        is_ul = stripped.startswith('- ') or stripped.startswith('* ')
-        is_ol = bool(re.match(r'^\d+\.', stripped))
-
+        # Step 5: List item detection (-, *, or 1.)
+        is_ul = stripped.startswith("- ") or stripped.startswith("* ")
+        is_ol = bool(_RE_ORDERED_LIST.match(stripped))
         if is_ul or is_ol:
             flush_paragraph()
             flush_list_item()
-
-            target_list_type = 'ul' if is_ul else 'ol'
+            target_list_type = "ul" if is_ul else "ol"
             if not in_list:
                 in_list = True
                 list_type = target_list_type
                 if out_lines and out_lines[-1] != "":
                     out_lines.append("")
-                out_lines.append(f'<{list_type}>')
+                out_lines.append(f"<{list_type}>")
             elif list_type != target_list_type:
-                out_lines.append(f'</{list_type}>')
+                out_lines.append(f"</{list_type}>")
                 list_type = target_list_type
-                out_lines.append(f'<{list_type}>')
+                out_lines.append(f"<{list_type}>")
 
-            if is_ul:
-                content = stripped[2:].strip()
-            else:
-                content = stripped.split('.', 1)[1].strip()
+            content = stripped[2:].strip() if is_ul else stripped.split(".", 1)[1].strip()
             list_item_buffer.append(content)
             i += 1
             continue
 
+        # Step 6: Continuation lines inside an active list item
         if in_list:
-            if not stripped:
-                i += 1
-                continue
-            list_item_buffer.append(stripped)
+            if stripped:
+                list_item_buffer.append(stripped)
             i += 1
             continue
 
-        # Step 6: Blank line (Inter-paragraph separator)
+        # Step 7: Blank line flushes current paragraph
         if not stripped:
             flush_paragraph()
             i += 1
             continue
 
-        # Step 7: Regular prose line accumulation
+        # Step 8: Regular prose line appended to paragraph buffer
         paragraph_buffer.append(line)
         i += 1
 
-    # Step 8: Final cleanup flushes for remaining buffers
+    # Flush any open state at end of input
     flush_list_item()
     if in_code_block:
-        out_lines.append('}</pre>')
+        out_lines.append("}</pre>")
     if in_table:
         out_lines.extend(_process_table(table_lines))
     if in_list and list_type:
-        out_lines.append(f'</{list_type}>')
+        out_lines.append(f"</{list_type}>")
     flush_paragraph()
 
-    result = '\n'.join(out_lines)
+    result = "\n".join(out_lines)
 
     # Step 9: Post-process: strip outer paragraph if requested for compact single-line embedding
     if strip_outer_paragraph and result.startswith("<p>") and result.endswith("</p>"):
@@ -397,7 +403,6 @@ def markdown_to_javadoc(text: str, strip_outer_paragraph: bool = False) -> str:
         # Only strip if no additional paragraph tags are nested inside
         if "<p>" not in inner:
             return inner
-
     return result
 
 
@@ -428,69 +433,32 @@ def format_arg_type(raw_arg: str) -> str:
         return ""
 
     # Step 1: Strip default argument initializers (e.g. 'float val = 0.0f' -> 'float val')
-    arg = arg.split('=')[0].strip()
+    arg = arg.split("=")[0].strip()
 
     # Step 2: Separate parameter name from type if both are present in the signature
     tokens = arg.split()
     if len(tokens) > 1:
         last = tokens[-1]
-        c_keywords = (
-            "const", "volatile", "unsigned", "signed", "long", "int",
-            "short", "char", "float", "double", "bool", "void"
-        )
         # If the last token is an identifier and not a C type qualifier, it is the param name
-        if re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', last) and last not in c_keywords:
-            tokens = tokens[:-1]
-            arg = " ".join(tokens)
+        if _RE_IDENTIFIER.match(last) and last not in _C_TYPE_KEYWORDS:
+            arg = " ".join(tokens[:-1])
 
-    is_pointer_or_array = ("*" in arg or "[]" in arg)
+    is_pointer_or_array = "*" in arg or "[]" in arg
 
     # Step 3: Strip C++ qualifiers (const, volatile, struct, class, enum, nullability)
-    clean = re.sub(r'\b(const|volatile|struct|class|enum|_Nonnull|_Nullable)\b', '', arg)
-    clean = clean.replace('&', '').replace('*', '').replace('[', '').replace(']', '').strip()
+    clean = _RE_CPP_QUALIFIERS.sub("", arg)
+    clean = clean.replace("&", "").replace("*", "").replace("[", "").replace("]", "").strip()
 
     # Step 4: Strip C++ namespace prefixes (e.g. 'math::float3' -> 'float3')
     if "::" in clean:
         clean = clean.split("::")[-1]
 
     # Step 5: Translate to canonical Java types
-    type_map = {
-        "uint8_t": "int",
-        "int8_t": "int",
-        "uint16_t": "int",
-        "int16_t": "int",
-        "uint32_t": "int",
-        "int32_t": "int",
-        "size_t": "int",
-        "uint64_t": "long",
-        "int64_t": "long",
-        "bool": "boolean",
-        "Entity": "int",
-        "Instance": "int",
-        "float2": "float[]",
-        "float3": "float[]",
-        "float4": "float[]",
-        "mat3": "float[]",
-        "mat4": "float[]",
-        "double2": "double[]",
-        "double3": "double[]",
-        "double4": "double[]",
-        "int2": "int[]",
-        "int3": "int[]",
-        "int4": "int[]",
-        "uint2": "int[]",
-        "uint3": "int[]",
-        "uint4": "int[]",
-        "char": "String" if is_pointer_or_array else "byte",
-        "string": "String",
-        "string_view": "String",
-        "CString": "String",
-        "PixelBufferDescriptor": "Buffer",
-        "BufferDescriptor": "Buffer",
-    }
+    if clean == "char":
+        return "String" if is_pointer_or_array else "byte"
 
-    if clean in type_map:
-        mapped = type_map[clean]
+    if clean in _SEE_ARG_TYPE_MAP:
+        mapped = _SEE_ARG_TYPE_MAP[clean]
         if is_pointer_or_array and not mapped.endswith("[]") and mapped != "String":
             return f"{mapped}[]"
         return mapped
@@ -498,7 +466,6 @@ def format_arg_type(raw_arg: str) -> str:
     # Handle primitive pointer types mapping to arrays
     if is_pointer_or_array and clean in ("float", "double", "int", "long", "short", "byte", "boolean"):
         return f"{clean}[]"
-
     return clean
 
 
@@ -530,36 +497,33 @@ def format_see_tag(s: str) -> str:
     s = s.strip()
 
     # Step 1: If already formatted as a quoted string, HTML link, or {@link ...}, preserve as-is
-    if s.startswith('"') or s.startswith('<') or s.startswith('{@'):
+    if s.startswith('"') or s.startswith("<") or s.startswith("{@"):
         return s
 
     # Step 2: Strip trailing punctuation (periods, commas, semicolons)
-    s = re.sub(r'[\.;,]+$', '', s).strip()
+    s = _RE_TRAILING_PUNCT.sub("", s).strip()
 
     # Step 3: Parse parenthesized argument list if present
-    paren_match = re.match(r'^(.*?)\((.*)\)$', s)
+    paren_match = _RE_PAREN_ARGS.match(s)
     if paren_match:
         target = paren_match.group(1).strip()
-        args_str = paren_match.group(2).strip()
+        args_str: Optional[str] = paren_match.group(2).strip()
     else:
         target = s
         args_str = None
 
     # Step 4: Standardize C++ scope operators (:: or :) to dot notation
-    target = re.sub(r':+', '.', target)
+    target = _RE_SCOPE_COLONS.sub(".", target)
 
     # Step 5: Convert member reference separator to '#'
-    if '#' in target:
+    if "#" in target:
         formatted_target = target
     else:
-        parts = target.split('.')
+        parts = target.split(".")
         if len(parts) == 1:
             part = parts[0]
             # If identifier starts with lowercase, it is a method on the current class (#method)
-            if part and part[0].islower():
-                formatted_target = f"#{part}"
-            else:
-                formatted_target = part
+            formatted_target = f"#{part}" if (part and part[0].islower()) else part
         else:
             cls_part = ".".join(parts[:-1])
             member_part = parts[-1]
@@ -570,16 +534,13 @@ def format_see_tag(s: str) -> str:
                 formatted_target = target
 
     # Step 6: If no arguments present, return formatted target
-    if args_str is None or args_str == "":
+    if not args_str:
         return formatted_target
 
     # Step 7: Format argument types inside parentheses
-    args_list = [format_arg_type(a) for a in args_str.split(',') if a.strip()]
+    args_list = [format_arg_type(a) for a in args_str.split(",") if a.strip()]
     args_list = [a for a in args_list if a]
-    if not args_list:
-        return formatted_target
-
-    return f"{formatted_target}({', '.join(args_list)})"
+    return f"{formatted_target}({', '.join(args_list)})" if args_list else formatted_target
 
 
 def adapt_param_doc_for_java(desc: str, java_type: Optional[str] = None) -> str:
@@ -592,25 +553,23 @@ def adapt_param_doc_for_java(desc: str, java_type: Optional[str] = None) -> str:
         return desc
 
     is_buffer = java_type is not None and (java_type == "Buffer" or java_type.endswith("Buffer"))
-
     if is_buffer:
-        desc = re.sub(r'^[Ss]lice\s+to\s+the\s+output\s+array\s+receiving', 'Buffer receiving', desc)
-        desc = re.sub(r'\b([Aa])\s+slice\s+of\b', r'\1 buffer of', desc)
-        desc = re.sub(r'\b([Ss])lice\s+of\b', lambda m: ('B' if m.group(1).isupper() else 'b') + 'uffer of', desc)
-        desc = re.sub(r'\b([Ss])lice\s+containing\b', lambda m: ('B' if m.group(1).isupper() else 'b') + 'uffer containing', desc)
-        desc = re.sub(r'\b([Ss])lice\s+to\b', lambda m: ('B' if m.group(1).isupper() else 'b') + 'uffer to', desc)
-        desc = re.sub(r'\bSlice\b', 'Buffer', desc)
-        desc = re.sub(r'\bslice\b', 'buffer', desc)
+        desc = re.sub(r"^[Ss]lice\s+to\s+the\s+output\s+array\s+receiving", "Buffer receiving", desc)
+        desc = re.sub(r"\b([Aa])\s+slice\s+of\b", r"\1 buffer of", desc)
+        desc = re.sub(r"\b([Ss])lice\s+of\b", lambda m: ("B" if m.group(1).isupper() else "b") + "uffer of", desc)
+        desc = re.sub(r"\b([Ss])lice\s+containing\b", lambda m: ("B" if m.group(1).isupper() else "b") + "uffer containing", desc)
+        desc = re.sub(r"\b([Ss])lice\s+to\b", lambda m: ("B" if m.group(1).isupper() else "b") + "uffer to", desc)
+        desc = re.sub(r"\bSlice\b", "Buffer", desc)
+        desc = re.sub(r"\bslice\b", "buffer", desc)
     else:
-        desc = re.sub(r'^[Ss]lice\s+to\s+the\s+(output\s+array|contiguous\s+array)', lambda m: m.group(1).capitalize(), desc)
-        desc = re.sub(r'\b[Ss]lice\s+to\s+the\s+(output\s+array|contiguous\s+array)', r'\1', desc)
-        desc = re.sub(r'\b([Aa])\s+slice\s+of\b', lambda m: 'An array of' if m.group(1).isupper() else 'an array of', desc)
-        desc = re.sub(r'\b([Ss])lice\s+of\b', lambda m: ('A' if m.group(1).isupper() else 'a') + 'rray of', desc)
-        desc = re.sub(r'\b([Ss])lice\s+containing\b', lambda m: ('A' if m.group(1).isupper() else 'a') + 'rray containing', desc)
-        desc = re.sub(r'\b([Ss])lice\s+to\b', lambda m: ('A' if m.group(1).isupper() else 'a') + 'rray to', desc)
-        desc = re.sub(r'\bSlice\b', 'Array', desc)
-        desc = re.sub(r'\bslice\b', 'array', desc)
-
+        desc = re.sub(r"^[Ss]lice\s+to\s+the\s+(output\s+array|contiguous\s+array)", lambda m: m.group(1).capitalize(), desc)
+        desc = re.sub(r"\b[Ss]lice\s+to\s+the\s+(output\s+array|contiguous\s+array)", r"\1", desc)
+        desc = re.sub(r"\b([Aa])\s+slice\s+of\b", lambda m: "An array of" if m.group(1).isupper() else "an array of", desc)
+        desc = re.sub(r"\b([Ss])lice\s+of\b", lambda m: ("A" if m.group(1).isupper() else "a") + "rray of", desc)
+        desc = re.sub(r"\b([Ss])lice\s+containing\b", lambda m: ("A" if m.group(1).isupper() else "a") + "rray containing", desc)
+        desc = re.sub(r"\b([Ss])lice\s+to\b", lambda m: ("A" if m.group(1).isupper() else "a") + "rray to", desc)
+        desc = re.sub(r"\bSlice\b", "Array", desc)
+        desc = re.sub(r"\bslice\b", "array", desc)
     return desc
 
 
@@ -618,7 +577,7 @@ def generate_javadoc(
     doc: Optional[Dict[str, Any]],
     indent_spaces: int = 0,
     argument_names: Optional[List[str]] = None,
-    param_types: Optional[Dict[str, str]] = None
+    param_types: Optional[Dict[str, str]] = None,
 ) -> str:
     """Synthesize a complete Javadoc comment block from an IR documentation dictionary.
 
@@ -655,63 +614,47 @@ def generate_javadoc(
     details = doc.get("details")
     doc_params = doc.get("params", {})
     returns = doc.get("returns")
-    see = doc.get("meta", {}).get("see")
-    warning = doc.get("meta", {}).get("warning")
-    note = doc.get("meta", {}).get("note")
-    deprecated = doc.get("meta", {}).get("deprecated")
+    meta = doc.get("meta", {})
+    see = meta.get("see")
+    warning = meta.get("warning")
+    note = meta.get("note")
+    deprecated = meta.get("deprecated")
 
     # Step 2: Filter and order parameters according to exposed method arguments
     valid_params: List[Tuple[str, str]] = []
     if argument_names is not None:
         for name in argument_names:
             if name in doc_params:
-                desc = doc_params[name]
                 j_type = param_types.get(name) if param_types else None
-                desc = adapt_param_doc_for_java(desc, j_type)
-                valid_params.append((name, desc))
+                valid_params.append((name, adapt_param_doc_for_java(doc_params[name], j_type)))
     elif doc_params:
         for name, desc in doc_params.items():
             j_type = param_types.get(name) if param_types else None
-            desc = adapt_param_doc_for_java(desc, j_type)
-            valid_params.append((name, desc))
+            valid_params.append((name, adapt_param_doc_for_java(desc, j_type)))
 
     # Guard: If no documentation content exists, return empty string
-    has_content = bool(
-        brief or details or valid_params or returns or see or warning or note or deprecated
-    )
-    if not has_content:
+    if not (brief or details or valid_params or returns or see or warning or note or deprecated):
         return ""
 
     body_lines: List[str] = []
 
     # Step 3: Append brief description (single paragraph, stripped outer <p> for clean lead)
     if brief:
-        brief_html = markdown_to_javadoc(brief, strip_outer_paragraph=True)
-        body_lines.extend(brief_html.split('\n'))
+        body_lines.extend(markdown_to_javadoc(brief, strip_outer_paragraph=True).split("\n"))
 
     # Step 4: Append detailed description
     if details:
         if body_lines:
             body_lines.append("")
-        details_html = markdown_to_javadoc(details)
-        body_lines.extend(details_html.split('\n'))
+        body_lines.extend(markdown_to_javadoc(details).split("\n"))
 
     # Step 5: Append warnings and notes as distinct advisory paragraphs
-    if warning:
-        warning_list = warning if isinstance(warning, list) else [warning]
-        for w in warning_list:
-            if body_lines:
-                body_lines.append("")
-            w_html = markdown_to_javadoc(w)
-            body_lines.extend(w_html.split('\n'))
-
-    if note:
-        note_list = note if isinstance(note, list) else [note]
-        for n in note_list:
-            if body_lines:
-                body_lines.append("")
-            n_html = markdown_to_javadoc(n)
-            body_lines.extend(n_html.split('\n'))
+    for advisory in (warning, note):
+        if advisory:
+            for item in (advisory if isinstance(advisory, list) else [advisory]):
+                if body_lines:
+                    body_lines.append("")
+                body_lines.extend(markdown_to_javadoc(item).split("\n"))
 
     # Step 6: Append @param tags in signature order
     if valid_params:
@@ -720,44 +663,31 @@ def generate_javadoc(
         for name, desc in valid_params:
             if not desc:
                 body_lines.append(f"@param {name}")
-                continue
-
-            desc_html = markdown_to_javadoc(desc, strip_outer_paragraph=True)
-            lines = desc_html.split('\n')
-            body_lines.append(f"@param {name} {lines[0]}")
-            for line in lines[1:]:
-                body_lines.append(line)
+            else:
+                lines = markdown_to_javadoc(desc, strip_outer_paragraph=True).split("\n")
+                body_lines.append(f"@param {name} {lines[0]}")
+                body_lines.extend(lines[1:])
 
     # Step 7: Append @return tag
     if returns:
         if body_lines:
             body_lines.append("")
-        returns_html = markdown_to_javadoc(returns, strip_outer_paragraph=True)
-        lines = returns_html.split('\n')
+        lines = markdown_to_javadoc(returns, strip_outer_paragraph=True).split("\n")
         body_lines.append(f"@return {lines[0]}")
-        for line in lines[1:]:
-            body_lines.append(line)
+        body_lines.extend(lines[1:])
 
     # Step 8: Append @deprecated notice
     if deprecated:
         if body_lines:
             body_lines.append("")
-        dep_list = deprecated if isinstance(deprecated, list) else [deprecated]
-        for d in dep_list:
-            d_html = markdown_to_javadoc(d, strip_outer_paragraph=True)
-            body_lines.append(f"@deprecated {d_html}")
+        for d in (deprecated if isinstance(deprecated, list) else [deprecated]):
+            body_lines.append(f"@deprecated {markdown_to_javadoc(d, strip_outer_paragraph=True)}")
 
     # Step 9: Append @see reference tags
     if see:
         if body_lines:
             body_lines.append("")
-
-        see_list: List[str] = []
-        if isinstance(see, list):
-            see_list = see
-        elif isinstance(see, str):
-            see_list = [x.strip() for x in see.split(',') if x.strip()]
-
+        see_list = see if isinstance(see, list) else [x.strip() for x in see.split(",") if x.strip()]
         for s in see_list:
             formatted_see = format_see_tag(s)
             if formatted_see:
@@ -772,10 +702,6 @@ def generate_javadoc(
 
     out = [f"{indent}/**"]
     for line in body_lines:
-        if line:
-            out.append(f"{indent} * {line}")
-        else:
-            out.append(f"{indent} *")
+        out.append(f"{indent} * {line}" if line else f"{indent} *")
     out.append(f"{indent} */")
-
     return "\n".join(out)

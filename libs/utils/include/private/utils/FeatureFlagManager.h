@@ -91,7 +91,7 @@ public:
                 bool enable_pipeline_dynamic_state = false;
                 // Allow the eviction of pipelines from the cache based on some user controlled
                 // but backend defined heuristics.
-                bool enable_pipeline_cache_eviction = false;
+                bool enable_pipeline_cache_threshold_eviction = false;
             } vulkan;
             bool disable_parallel_shader_compile = false;
             bool disable_amortized_shader_compile = true;
@@ -104,6 +104,7 @@ public:
             bool check_crc32_after_loading = false;
             bool enable_material_instance_uniform_batching = true;
             bool enable_fog_as_postprocess = false;
+            bool check_device_sampler_limits = false;
         } material;
         struct {
             bool enable_grid_based_world_origin = false;

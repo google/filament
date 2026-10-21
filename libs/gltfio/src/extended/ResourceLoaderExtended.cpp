@@ -47,12 +47,15 @@ void ResourceLoaderExtended::loadResources(std::vector<BufferSlot> const& slots,
             slot.indices->setBuffer(*engine, BufferDescriptor(slot.data, byteCount, FREE_CALLBACK));
         }
         if (slot.target) {
-            assert_invariant(slot.targetData.positions && slot.targetData.tbn);
+            // Tangent frames are only computed for lit materials, so tbn may be null.
+            assert_invariant(slot.targetData.positions);
             slot.target->setPositionsAt(*engine, slot.slot,
                     (float3 const*) slot.targetData.positions,
                     slot.count, slot.offset);
-            slot.target->setTangentsAt(*engine, slot.slot, (short4 const*) slot.targetData.tbn,
-                    slot.count, slot.offset);
+            if (slot.targetData.tbn) {
+                slot.target->setTangentsAt(*engine, slot.slot,
+                        (short4 const*) slot.targetData.tbn, slot.count, slot.offset);
+            }
 
             free(slot.targetData.positions);
             free(slot.targetData.tbn);

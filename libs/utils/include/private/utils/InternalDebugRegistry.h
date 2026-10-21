@@ -214,11 +214,14 @@ private:
 
     PropertyInfo getPropertyInfo(const char* UTILS_NONNULL name) const noexcept;
 
+    struct DataSourceEntry {
+        DataSource dataSource{};
+        Invocable<DataSource()> creator{};
+    };
+
     std::unordered_map<std::string_view, PropertyInfo> mPropertyMap;
     mutable utils::Mutex mDataSourceLock;
-    mutable std::unordered_map<std::string_view, DataSource> mDataSourceMap
-            UTILS_GUARDED_BY(mDataSourceLock);
-    mutable std::unordered_map<std::string_view, Invocable<DataSource()>> mDataSourceCreatorMap
+    mutable std::unordered_map<std::string_view, DataSourceEntry> mDataSourceMap
             UTILS_GUARDED_BY(mDataSourceLock);
 };
 

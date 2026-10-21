@@ -121,6 +121,8 @@ int32_t depthBiasRound(float depthBias) {
         case BlendFunction::ONE_MINUS_DST_ALPHA: return wgpu::BlendFactor::OneMinusDstAlpha;
         case BlendFunction::SRC_ALPHA_SATURATE:  return wgpu::BlendFactor::SrcAlphaSaturated;
     }
+    // should never happen
+    return wgpu::BlendFactor::One;
 }
 
 }  // namespace

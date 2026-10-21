@@ -38,11 +38,9 @@ struct GLDescriptorSetLayout : public HwDescriptorSetLayout, public DescriptorSe
             return lhs.binding < rhs.binding;
         });
 
-        auto p = std::max_element(descriptors.cbegin(), descriptors.cend(),
-                [](auto const& lhs, auto const& rhs) {
-            return lhs.binding < rhs.binding;
-        });
-        maxDescriptorBinding = p->binding;
+        if (!descriptors.empty()) {
+            maxDescriptorBinding = descriptors.back().binding;
+        }
     }
     uint8_t maxDescriptorBinding = 0;
 };

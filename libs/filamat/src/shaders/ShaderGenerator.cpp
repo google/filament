@@ -785,6 +785,9 @@ std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel const sm
 
     CodeGenerator::generateValueDefine(vs, "LOCATION_POSITION", uint32_t(POSITION));
 
+    // No need to support shading interpolation in post-process programs
+    vs << "#define SHADING_INTERPOLATION\n";
+
     // custom material variables
     size_t variableIndex = 0;
     for (const auto& variable : mVariables) {
@@ -830,6 +833,9 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel const 
     cg.generateCommonProlog(fs, ShaderStage::FRAGMENT, material, {}, apiLevel);
 
     generateUserSpecConstants(cg, fs, mConstants);
+
+    // No need to support shading interpolation in post-process programs
+    fs << "#define SHADING_INTERPOLATION\n";
 
     generatePostProcessMaterialVariantDefines(fs, ShaderStage::FRAGMENT,
             featureLevel, material, PostProcessVariant(variantKey));

@@ -1,6 +1,8 @@
 # Rendering Difference Test
 
-This tool (`/test/renderdiff`) is a collection of scripts to run visual regression tests on both `gltf_viewer` models and standalone Filament sample applications, producing headless renderings for automated diff comparison against golden references.
+This tool (`/test/renderdiff`) is a collection of scripts to run visual regression tests on both `gltf_viewer`
+models and standalone Filament sample applications, producing headless renderings for automated diff comparison
+against golden references.
 
 This is mainly useful for continuous integration where GPUs are generally not available on cloud
 machines. To perform software rasterization, these scripts are centered around [Mesa]'s
