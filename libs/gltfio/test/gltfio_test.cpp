@@ -962,6 +962,99 @@ TEST_F(glTFIOTest, MorphTargetTangentInvalidTypeIsRejected) {
     AssetLoader::destroy(&loader);
 }
 
+// Issue #10638: a glTF primitive without a POSITION attribute is valid per cgltf_validate(), and
+// the glTF 2.0 specification (Section 3.7.2.1 implementation note) states that client
+// implementations should skip rendering such a primitive. Previously, AssetLoader created a
+// VertexBuffer and scheduled normal/tangent generation for it, causing SurfaceOrientation::Builder
+// to panic (Debug) or return nullptr and crash on dereference in TangentsJob::run (Release).
+TEST_F(glTFIOTest, PrimitiveWithoutPositionsIsSkipped) {
+    std::vector<uint8_t> const glb = makePositionlessPrimitiveGlb(false);
+
+    auto checkLoad = [&](AssetConfigurationExtended* ext) {
+        AssetLoader* assetLoader = AssetLoader::create({
+                .engine = mEngine,
+                .materials = mMaterialProvider,
+                .names = mNameManager,
+                .ext = ext,
+        });
+        ASSERT_NE(assetLoader, nullptr);
+
+        FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+        ASSERT_EQ(asset->getRenderableEntityCount(), 1u);
+        Entity const renderable = asset->getRenderableEntities()[0];
+        auto const& rm = mEngine->getRenderableManager();
+        auto const inst = rm.getInstance(renderable);
+        EXPECT_EQ(rm.getPrimitiveCount(inst), 1u);
+        EXPECT_TRUE(rm.getEnabledAttributesAt(inst, 0).none());
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    };
+
+    checkLoad(nullptr);
+    if (AssetConfigurationExtended::isSupported()) {
+        AssetConfigurationExtended ext{ .gltfPath = "." };
+        checkLoad(&ext);
+    }
+}
+
+TEST_F(glTFIOTest, MeshWithPositionlessAndValidPrimitives) {
+    std::vector<uint8_t> const glb = makePositionlessPrimitiveGlb(true);
+
+    auto checkLoad = [&](AssetConfigurationExtended* ext) {
+        AssetLoader* assetLoader = AssetLoader::create({
+                .engine = mEngine,
+                .materials = mMaterialProvider,
+                .names = mNameManager,
+                .ext = ext,
+        });
+        ASSERT_NE(assetLoader, nullptr);
+
+        FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+        ASSERT_EQ(asset->getRenderableEntityCount(), 1u);
+        Entity const renderable = asset->getRenderableEntities()[0];
+        auto const& rm = mEngine->getRenderableManager();
+        auto const inst = rm.getInstance(renderable);
+        ASSERT_EQ(rm.getPrimitiveCount(inst), 2u);
+
+        // Primitive 0 has no POSITION and must be skipped.
+        EXPECT_TRUE(rm.getEnabledAttributesAt(inst, 0).none());
+
+        // Primitive 1 has POSITION and must be loaded with generated tangents.
+        AttributeBitset const attribs1 = rm.getEnabledAttributesAt(inst, 1);
+        EXPECT_TRUE(attribs1[VertexAttribute::POSITION]);
+        EXPECT_TRUE(attribs1[VertexAttribute::TANGENTS]);
+
+        // The asset bounding box must reflect only the valid primitive.
+        Aabb const bounds = asset->getBoundingBox();
+        EXPECT_FLOAT_EQ(bounds.min.x, 0.0f);
+        EXPECT_FLOAT_EQ(bounds.min.y, 0.0f);
+        EXPECT_FLOAT_EQ(bounds.min.z, 0.0f);
+        EXPECT_FLOAT_EQ(bounds.max.x, 1.0f);
+        EXPECT_FLOAT_EQ(bounds.max.y, 1.0f);
+        EXPECT_FLOAT_EQ(bounds.max.z, 0.0f);
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    };
+
+    checkLoad(nullptr);
+    if (AssetConfigurationExtended::isSupported()) {
+        AssetConfigurationExtended ext{ .gltfPath = "." };
+        checkLoad(&ext);
+    }
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
