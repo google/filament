@@ -6,14 +6,12 @@ on:
     paths-ignore:
       - 'art/**'
       - 'assets/**'
-      - 'build/**'
       - 'docs/**'
       - 'docs_src/**'
       - 'ide/**'
       - 'shaders/**'
       - 'skills/**'
       - 'third_party/**'
-      - 'web/**'
   schedule:
     # Every Sunday at 3:30am PST
     - cron: '30 3 * * 0'
@@ -55,14 +53,6 @@ jobs:
       with:
         fetch-depth: 1
         persist-credentials: false
-        sparse-checkout: |
-          .github
-          android
-          filament
-          ios
-          libs
-          samples
-          tools
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
@@ -78,10 +68,7 @@ jobs:
             - libs
             - samples
             - tools
-          paths-ignore:
-            - 'libs/bluegl/**'
-            - 'libs/bluevk/**'
-            - 'third_party/**'
+            - web
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
