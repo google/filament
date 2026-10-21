@@ -270,23 +270,6 @@ TEST(FilamentTest, TransformManager) {
     EXPECT_EQ(tcm.getTransform(child), mat4f{ float4{ 1 }});
     EXPECT_EQ(tcm.getWorldTransform(child), mat4f{ float4{ 2 }});
 
-    // test local transaction
-    tcm.openLocalTransformTransaction();
-    tcm.setTransform(parent, mat4f{ float4{ 4 }});
-
-    // check the transforms ARE NOT propagated
-    EXPECT_EQ(tcm.getTransform(parent), mat4f{ float4{ 4 }});
-    EXPECT_EQ(tcm.getWorldTransform(parent), mat4f{ float4{ 2 }});
-    EXPECT_EQ(tcm.getTransform(child), mat4f{ float4{ 1 }});
-    EXPECT_EQ(tcm.getWorldTransform(child), mat4f{ float4{ 2 }});
-
-    tcm.commitLocalTransformTransaction();
-    // test propagation after closing the transaction
-    EXPECT_EQ(tcm.getTransform(parent), mat4f{ float4{ 4 }});
-    EXPECT_EQ(tcm.getWorldTransform(parent), mat4f{ float4{ 4 }});
-    EXPECT_EQ(tcm.getTransform(child), mat4f{ float4{ 1 }});
-    EXPECT_EQ(tcm.getWorldTransform(child), mat4f{ float4{ 4 }});
-
     //
     // test out-of-order parent/child
     //
@@ -302,19 +285,8 @@ TEST(FilamentTest, TransformManager) {
     // make sure child/parent are out of order (i.e.: setParent() doesn't invalidate instances)
     EXPECT_LT(tcm.getInstance(entities[1]), tcm.getInstance(entities[2]));
 
-    // local transaction reorders parent/child
     constexpr auto t = mat4::translation(double3(1.0 / 3.0));
-    tcm.openLocalTransformTransaction();
     tcm.setTransform(newParent, t);
-    tcm.commitLocalTransformTransaction();
-
-    // local transaction invalidates Instances
-    parent = tcm.getInstance(entities[0]);
-    child = tcm.getInstance(entities[1]);
-    newParent = tcm.getInstance(entities[2]);
-
-    // check parent / child order is correct
-    EXPECT_GT(child, newParent);
 
     // check transform propagation
 
@@ -584,22 +556,10 @@ TEST(FilamentTest, TransformManagerCallback) {
 
     callbackCount = 0;
 
-    // Test modify without transaction
+    // Test modify
     auto const instance = tcm.getInstance(e);
     constexpr auto t = mat4f::translation(float3{ 1, 2, 3 });
     tcm.setTransform(instance, t);
-    tcm.flushNotifications();
-    EXPECT_EQ(callbackCount, 1);
-
-    callbackCount = 0;
-
-    // Test transaction
-    tcm.openLocalTransformTransaction();
-    tcm.setTransform(instance, mat4f::translation(float3{ 4, 5, 6 }));
-    tcm.flushNotifications();
-    EXPECT_EQ(callbackCount, 0);
-
-    tcm.commitLocalTransformTransaction();
     tcm.flushNotifications();
     EXPECT_EQ(callbackCount, 1);
 
@@ -1211,27 +1171,10 @@ TEST(FilamentTest, TransformManagerOrphans) {
         EXPECT_EQ(world(g), grandChildLocal);
         cleanup({ p, c, g });
     }
-
-    // Destroy during a local transform transaction.
-    {
-        Entity const p = em.create();
-        Entity const c = em.create();
-        Entity const g = em.create();
-        tcm.create(p, {}, parentLocal);
-        tcm.create(c, tcm.getInstance(p), childLocal);
-        tcm.create(g, tcm.getInstance(c), grandChildLocal);
-
-        tcm.openLocalTransformTransaction();
-        tcm.destroy(p);
-        tcm.commitLocalTransformTransaction();
-        EXPECT_EQ(world(c), childLocal);
-        EXPECT_EQ(world(g), childLocal * grandChildLocal);
-        cleanup({ p, c, g });
-    }
 }
 
 TEST(FilamentTest, TransformManagerRandomizedHierarchy) {
-    // Applies seeded random sequences of hierarchy edits, transform updates, transactions and
+    // Applies seeded random sequences of hierarchy edits, transform updates, and
     // partial defragmentations, and checks after every operation that each world transform
     // matches the product of the local transforms up the parent chain. Periodically, it runs
     // defragmentation to completion, checks the BFS layout, and exercises the defragmented fast
@@ -1381,17 +1324,8 @@ TEST(FilamentTest, TransformManagerRandomizedHierarchy) {
                 setLocal(nodes[uniform(nodes.size())], randomLocal());
             } else if (kind < 90) {
                 tcm.defragment(1 + uniform(8));
-            } else if (kind < 95) {
-                tcm.gc();
             } else {
-                tcm.openLocalTransformTransaction();
-                for (size_t k = 0, n = 1 + uniform(4); k < n; ++k) {
-                    setLocal(nodes[uniform(nodes.size())], randomLocal());
-                }
-                if (chance(0.5)) {
-                    tcm.setParent(tcm.getInstance(nodes[uniform(nodes.size())]), {});
-                }
-                tcm.commitLocalTransformTransaction();
+                tcm.gc();
             }
 
             checkWorldTransforms();
