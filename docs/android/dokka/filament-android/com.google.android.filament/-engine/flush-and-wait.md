@@ -11,7 +11,7 @@ Note that does guarantee that the hardware is actually finished.
 
 This is typically used right after destroying the `SwapChain`, in cases where a guarantee about the `SwapChain` destruction is needed in a timely fashion, such as when responding to Android's `android.view.SurfaceHolder.Callback.surfaceDestroyed`
 
-In asynchronous mode this also waits for every asynchronous call issued before it to run.
+In asynchronous mode this also waits for every asynchronous call issued before it to run. A command passed to runCommandAsync() must not wait on the engine, or this call deadlocks.
 
 If the backend thread has encountered an unrecoverable error, this function becomes a no-op.
 
@@ -26,7 +26,7 @@ A timeout can be specified, if for some reason this flushAndWait doesn't complet
 
 This is typically used right after destroying the `SwapChain`, in cases where a guarantee about the `SwapChain` destruction is needed in a timely fashion, such as when responding to Android's `android.view.SurfaceHolder.Callback.surfaceDestroyed`
 
-In asynchronous mode this also waits for every asynchronous call issued before it to run.
+In asynchronous mode this also waits for every asynchronous call issued before it to run. A command passed to runCommandAsync() must not wait on the engine, or this call deadlocks.
 
 If the backend thread has encountered an unrecoverable error, this function becomes a no-op and returns false.
 

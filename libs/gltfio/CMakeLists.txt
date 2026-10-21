@@ -249,7 +249,7 @@ if (FILAMENT_BUILD_TESTING)
     if (TNT_DEV AND NOT WASM AND NOT ANDROID AND NOT IOS)
         set(TEST_TARGET test_gltfio)
 
-        add_executable(${TEST_TARGET} test/gltfio_test.cpp)
+        add_executable(${TEST_TARGET} test/gltfio_test.cpp test/GlbBuilders.cpp)
         add_dependencies(${TEST_TARGET} test_gltfio_files)
         set_property(TARGET test_gltfio PROPERTY LINK_LIBRARIES)
 

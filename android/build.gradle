@@ -111,7 +111,7 @@ buildscript {
         'kotlin': '2.4.0',
         'kotlin_coroutines': '1.11.0',
         'buildTools': '36.0.0',
-        'ndk': '29.0.14206865',
+        'ndk': '30.0.16248370',
         'androidx_core': '1.19.0',
         'androidx_annotations': '1.10.0'
     ]
@@ -129,7 +129,7 @@ buildscript {
     ]
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:9.3.1'
+        classpath 'com.android.tools.build:gradle:9.4.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${versions.kotlin}"
     }
 
