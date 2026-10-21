@@ -1230,6 +1230,10 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
             (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
                                                        .vulkan.enable_pipeline_dynamic_state
                                              : false);
+    context.mPipelineCacheEvictionEnabled =
+            (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend.vulkan
+                                                       .enable_pipeline_cache_threshold_eviction
+                                             : false);
 
     // http://b/208458772. ARM proprietary driver supports this protected memory extension but we
     // are seeing excessive load/store unit activity when this extension is enabled, even if not
