@@ -467,10 +467,12 @@ public:
         AsynchronousMode asynchronousMode = AsynchronousMode::NONE;
 
         /**
-         * Time the backend may spend running queued asynchronous operations per frame, when they
-         * run on the backend thread (AsynchronousMode::AMORTIZATION, or THREAD_PREFERRED falling
-         * back to it). It is the elapsed time on the backend thread, measured with
-         * std::chrono::steady_clock, so time the thread spends preempted counts too.
+         * Per-frame time budget for queued asynchronous operations.
+         *
+         * It applies when they run on the backend thread (AsynchronousMode::AMORTIZATION, or
+         * THREAD_PREFERRED falling back to it). It is the elapsed time on the backend
+         * thread, measured with std::chrono::steady_clock, so time the thread spends preempted
+         * counts too.
          *
          * The operations run in Renderer::endFrame(), after the frame's own commands, and in
          * Renderer::skipFrame(). A frame skipped because Renderer::beginFrame() returned false

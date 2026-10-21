@@ -1383,10 +1383,12 @@ public class Engine {
          */
         public AsynchronousMode asynchronousMode = AsynchronousMode.NONE;
         /**
-         * Time the backend may spend running queued asynchronous operations per frame, when they run on the backend thread (AsynchronousMode::AMORTIZATION, or THREAD_PREFERRED falling back to it).
+         * Per-frame time budget for queued asynchronous operations.
          *
-         * <p>It is the elapsed time on the backend thread, measured with
-         * std::chrono::steady_clock, so time the thread spends preempted counts too.</p>
+         * <p>It applies when they run on the backend thread (AsynchronousMode::AMORTIZATION, or
+         * THREAD_PREFERRED falling back to it). It is the elapsed time on the backend
+         * thread, measured with std::chrono::steady_clock, so time the thread spends preempted
+         * counts too.</p>
          *
          * <p>The operations run in Renderer::endFrame(), after the frame's own commands, and in
          * Renderer::skipFrame(). A frame skipped because Renderer::beginFrame() returned false
