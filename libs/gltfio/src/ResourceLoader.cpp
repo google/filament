@@ -892,6 +892,16 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
     size_t dataUriSize;
     const uint8_t* dataUriContent = uri ? parseDataUri(uri, &mime, &dataUriSize) : nullptr;
 
+    // An image with no buffer view, no data URI, and no URI has no data
+    // source at all. Reject it here: without this, the mime.empty() branch
+    // below would call Path(uri) with a null uri (std::string(nullptr) is
+    // undefined behavior; assert_invariant compiles out in release builds),
+    // and the URI-cache lookup further down would do the same.
+    if (!bv && !dataUriContent && !uri) {
+        LOG(ERROR) << "Image has no buffer view, data URI, or URI.";
+        return {};
+    }
+
     if (mime.empty()) {
         assert_invariant(uri && "Non-URI images must supply a mime type.");
         const std::string extension = Path(uri).getExtension();
