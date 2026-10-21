@@ -19,6 +19,7 @@
 #include <geometry/SurfaceOrientation.h>
 
 #include <cstdlib>
+#include <cstring>
 #include <memory>
 
 using namespace filament::gltfio;
@@ -155,8 +156,18 @@ void TangentsJob::run(Params* params) {
     }
 
     // Compute surface orientation quaternions.
+    // build() returns null for incomplete combinations (e.g. triangles
+    // without positions, or zero triangles); the header documents this,
+    // so the result must be checked. A null helper leaves zeroed
+    // tangents: the caller uploads out.results unconditionally, and zero
+    // tangents are the safe degenerate value for a primitive that
+    // carries no usable surface orientation.
     params->out.results = (short4*) malloc(sizeof(short4) * vertexCount);
     geometry::SurfaceOrientation* helper = sob.build();
+    if (!helper) {
+        memset(params->out.results, 0, sizeof(short4) * vertexCount);
+        return;
+    }
     helper->getQuats(params->out.results, vertexCount);
     delete helper;
 }
