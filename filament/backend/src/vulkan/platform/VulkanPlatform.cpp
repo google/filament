@@ -28,6 +28,7 @@
 #include <private/utils/FeatureFlagManager.h>
 #include <private/utils/InternalDebugRegistry.h>
 
+#include <utils/debug.h>
 #include <utils/ImmutableCString.h>
 #include <utils/Logger.h>
 #include <utils/Panic.h>
@@ -41,9 +42,30 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-namespace {
+struct VulkanPlatformPrivate {
+    using QueueAssignment = VulkanPlatform::QueueAssignment;
+    using QueueIndices = VulkanPlatform::QueueIndices;
+    using QueueFamilyDescription = VulkanPlatform::QueueFamilyDescription;
+    static constexpr uint32_t INVALID_VK_INDEX = VulkanPlatform::INVALID_VK_INDEX;
 
-constexpr uint32_t INVALID_VK_INDEX = 0xFFFFFFFF;
+    VkInstance mInstance = VK_NULL_HANDLE;
+    VkPhysicalDevice mPhysicalDevice = VK_NULL_HANDLE;
+    VkDevice mDevice = VK_NULL_HANDLE;
+    QueueIndices mGraphicsQueue;
+    VkQueue mGraphicsQueueHandle = VK_NULL_HANDLE;
+    QueueIndices mAsyncQueue;
+    VkQueue mAsyncQueueHandle = VK_NULL_HANDLE;
+    QueueIndices mProtectedGraphicsQueue;
+    VkQueue mProtectedGraphicsQueueHandle = VK_NULL_HANDLE;
+    VulkanContext mContext = {};
+
+    bool mSharedContext = false;
+    bool mForceXCBSwapchain = false;
+
+    int64_t mPresentationTime = 0;
+};
+
+namespace {
 
 // Use #define to avoid unused variable warnings
 #define LAYER_VALIDATION_NAME "VK_LAYER_KHRONOS_validation"
@@ -51,6 +73,12 @@ constexpr uint32_t INVALID_VK_INDEX = 0xFFFFFFFF;
 #define LAYER_RENDERDOC_CAPTURE_NAME "VK_LAYER_RENDERDOC_Capture"
 
 using ExtensionSet = VulkanPlatform::ExtensionSet;
+
+// Redeclare to the anonymous namespace for convenience.
+using QueueAssignment = VulkanPlatformPrivate::QueueAssignment;
+using QueueIndices = VulkanPlatformPrivate::QueueIndices;
+using QueueFamilyDescription = VulkanPlatformPrivate::QueueFamilyDescription;
+constexpr uint32_t INVALID_VK_INDEX = VulkanPlatformPrivate::INVALID_VK_INDEX;
 
 inline utils::FixedCapacityVector<char const*> toCStrVector(ExtensionSet const& set) {
     auto result = utils::FixedCapacityVector<char const*>::with_capacity(set.size());
@@ -401,41 +429,6 @@ uint32_t identifyQueueFamilyIndex(VkPhysicalDevice physicalDevice, VkQueueFlags 
     return queueFamilyIndex;
 }
 
-// The Async queue needs to be a different queue from the main graphics one
-// If there is more than one virtual queue in the graphics family use the second as the Async
-// If not, use the next available queue that has the transfer property
-// If it does not exist either return INVALID_VK_INDEX
-std::pair<uint32_t, uint32_t> identifyAsyncQueue(VkPhysicalDevice physicalDevice) {
-    uint32_t asyncQueueFamilyIndex = INVALID_VK_INDEX;
-    uint32_t asyncQueueIndex = INVALID_VK_INDEX;
-
-    uint32_t const graphicsQueueFamilyIndex =
-        identifyQueueFamilyIndex(physicalDevice, VK_QUEUE_GRAPHICS_BIT);
-
-    FixedCapacityVector<VkQueueFamilyProperties> const queueFamiliesProperties
-            = getPhysicalDeviceQueueFamilyPropertiesHelper(physicalDevice);
-
-    for (uint32_t j = 0; j < queueFamiliesProperties.size(); ++j) {
-        VkQueueFamilyProperties props = queueFamiliesProperties[j];
-        // Async queue candidate must have the transfer property
-        if (props.queueFlags & VK_QUEUE_TRANSFER_BIT) {
-            // If this is not the same family as the graphics, use the first one
-            if (j != graphicsQueueFamilyIndex) {
-                asyncQueueFamilyIndex = j;
-                asyncQueueIndex = 0;
-            // In case is the graphics family, use the second if available
-            } else if (props.queueCount > 1) {
-                asyncQueueFamilyIndex = j;
-                asyncQueueIndex = 1;
-            }
-        }
-        if (asyncQueueIndex != INVALID_VK_INDEX) {
-            break;
-        }
-    }
-
-    return std::make_pair(asyncQueueFamilyIndex, asyncQueueIndex);
-}
 // Provide a preference ordering of device types.
 // Enum based on:
 // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceType.html
@@ -625,27 +618,6 @@ VkQueueGlobalPriorityKHR getVkQueueGlobalPriority(
 
 using SwapChainPtr = VulkanPlatform::SwapChainPtr;
 
-struct VulkanPlatformPrivate {
-    VkInstance mInstance = VK_NULL_HANDLE;
-    VkPhysicalDevice mPhysicalDevice = VK_NULL_HANDLE;
-    VkDevice mDevice = VK_NULL_HANDLE;
-    uint32_t mGraphicsQueueFamilyIndex = INVALID_VK_INDEX;
-    uint32_t mGraphicsQueueIndex = INVALID_VK_INDEX;
-    VkQueue mGraphicsQueue = VK_NULL_HANDLE;
-    uint32_t mAsyncQueueFamilyIndex = INVALID_VK_INDEX;
-    uint32_t mAsyncQueueIndex = INVALID_VK_INDEX;
-    VkQueue mAsyncQueue = VK_NULL_HANDLE;
-    uint32_t mProtectedGraphicsQueueFamilyIndex = INVALID_VK_INDEX;
-    uint32_t mProtectedGraphicsQueueIndex = INVALID_VK_INDEX;
-    VkQueue mProtectedGraphicsQueue = VK_NULL_HANDLE;
-    VulkanContext mContext = {};
-
-    bool mSharedContext = false;
-    bool mForceXCBSwapchain = false;
-
-    int64_t mPresentationTime = 0;
-};
-
 void VulkanPlatform::terminate() {
     if (!mImpl->mSharedContext) {
         vkDestroyDevice(mImpl->mDevice, VKALLOC);
@@ -676,8 +648,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         mImpl->mInstance = scontext->instance;
         mImpl->mPhysicalDevice = scontext->physicalDevice;
         mImpl->mDevice = scontext->logicalDevice;
-        mImpl->mGraphicsQueueFamilyIndex = scontext->graphicsQueueFamilyIndex;
-        mImpl->mGraphicsQueueIndex = scontext->graphicsQueueIndex;
+        mImpl->mGraphicsQueue.family = scontext->graphicsQueueFamilyIndex;
+        mImpl->mGraphicsQueue.index = scontext->graphicsQueueIndex;
 
         mImpl->mSharedContext = true;
     }
@@ -769,30 +741,6 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
 
     VulkanContext const& context = mImpl->mContext;
 
-    // Initialize the required queues
-    if (mImpl->mGraphicsQueueFamilyIndex == INVALID_VK_INDEX) {
-        mImpl->mGraphicsQueueFamilyIndex =
-                identifyQueueFamilyIndex(mImpl->mPhysicalDevice, VK_QUEUE_GRAPHICS_BIT);
-    }
-
-    // At this point, we should have a family index that points to a family that has > 0 queues for
-    // graphics. In which case, we will allocate one queue for all of Filament (and assumes at least
-    // one has been allocated by the client if context was shared). If the index of the target queue
-    // within the family hasn't been provided by the client, we assume it to be 0.
-    if (mImpl->mGraphicsQueueIndex == INVALID_VK_INDEX) {
-        mImpl->mGraphicsQueueIndex = 0;
-    }
-
-    if (context.mProtectedMemorySupported) {
-        mImpl->mProtectedGraphicsQueueFamilyIndex = identifyQueueFamilyIndex(
-                mImpl->mPhysicalDevice, (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_PROTECTED_BIT));
-        // Applying the same logic to the protected queue index (Not sure about shared context and
-        // protection)
-        if (mImpl->mProtectedGraphicsQueueIndex == INVALID_VK_INDEX) {
-            mImpl->mProtectedGraphicsQueueIndex = 0;
-        }
-    }
-
     MiscDeviceFeatures requestedFeatures {};
 
     if (setContains(deviceExts, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) {
@@ -809,35 +757,50 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         requestedFeatures.gpuContextPriority = driverConfig.gpuContextPriority;
     }
 
-    if (mImpl->mDevice == VK_NULL_HANDLE) {
-        createLogicalDeviceAndQueues(deviceExts, context.mPhysicalDeviceFeatures.features,
-                context.mPhysicalDeviceVk11Features, requestedFeatures);
+    if (!mImpl->mSharedContext) {
+        auto queueAssignment = getQueueAssignment(
+                mImpl->mPhysicalDevice,
+                mImpl->mContext.mProtectedMemorySupported /* requestProtected */,
+                driverConfig.asynchronousMode ==
+                        AsynchronousMode::THREAD_PREFERRED /* requestAsync */);
+
+        mImpl->mGraphicsQueue = queueAssignment.graphics;
+        mImpl->mAsyncQueue = queueAssignment.async;
+        mImpl->mProtectedGraphicsQueue = queueAssignment.prtctd;
+
+        createLogicalDeviceAndQueues(
+                queueAssignment.descriptions,
+                deviceExts,
+                context.mPhysicalDeviceFeatures.features,
+                context.mPhysicalDeviceVk11Features,
+                requestedFeatures);
     }
 
     assert_invariant(mImpl->mDevice != VK_NULL_HANDLE);
-    assert_invariant(mImpl->mGraphicsQueueFamilyIndex != INVALID_VK_INDEX);
-    assert_invariant(mImpl->mGraphicsQueueIndex != INVALID_VK_INDEX);
+    assert_invariant(mImpl->mGraphicsQueue.family != INVALID_VK_INDEX);
+    assert_invariant(mImpl->mGraphicsQueue.index != INVALID_VK_INDEX);
 
-    vkGetDeviceQueue(mImpl->mDevice, mImpl->mGraphicsQueueFamilyIndex, mImpl->mGraphicsQueueIndex,
-            &mImpl->mGraphicsQueue);
-    assert_invariant(mImpl->mGraphicsQueue != VK_NULL_HANDLE);
+    vkGetDeviceQueue(mImpl->mDevice, mImpl->mGraphicsQueue.family, mImpl->mGraphicsQueue.index,
+            &mImpl->mGraphicsQueueHandle);
+    assert_invariant(mImpl->mGraphicsQueueHandle != VK_NULL_HANDLE);
 
-    if (mImpl->mAsyncQueueFamilyIndex != INVALID_VK_INDEX) {
-        vkGetDeviceQueue(mImpl->mDevice, mImpl->mAsyncQueueFamilyIndex, mImpl->mAsyncQueueIndex,
-            &mImpl->mAsyncQueue);
+    if (mImpl->mAsyncQueue.family != INVALID_VK_INDEX) {
+        assert_invariant(mImpl->mAsyncQueue.index != INVALID_VK_INDEX);
+        vkGetDeviceQueue(mImpl->mDevice, mImpl->mAsyncQueue.family, mImpl->mAsyncQueue.index,
+            &mImpl->mAsyncQueueHandle);
+        assert_invariant(mImpl->mAsyncQueueHandle != VK_NULL_HANDLE);
     }
 
-    if (context.mProtectedMemorySupported) {
-        assert_invariant(mImpl->mProtectedGraphicsQueueFamilyIndex != INVALID_VK_INDEX);
-        assert_invariant(mImpl->mProtectedGraphicsQueueIndex != INVALID_VK_INDEX);
+    if (mImpl->mProtectedGraphicsQueue.family != INVALID_VK_INDEX) {
+        assert_invariant(mImpl->mProtectedGraphicsQueue.index != INVALID_VK_INDEX);
         VkDeviceQueueInfo2 info = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2,
             .flags = VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT,
-            .queueFamilyIndex = mImpl->mProtectedGraphicsQueueFamilyIndex,
-            .queueIndex = mImpl->mProtectedGraphicsQueueIndex,
+            .queueFamilyIndex = mImpl->mProtectedGraphicsQueue.family,
+            .queueIndex = mImpl->mProtectedGraphicsQueue.index,
         };
-        vkGetDeviceQueue2(mImpl->mDevice, &info, &mImpl->mProtectedGraphicsQueue);
-        assert_invariant(mImpl->mProtectedGraphicsQueue != VK_NULL_HANDLE);
+        vkGetDeviceQueue2(mImpl->mDevice, &info, &mImpl->mProtectedGraphicsQueueHandle);
+        assert_invariant(mImpl->mProtectedGraphicsQueueHandle != VK_NULL_HANDLE);
     }
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
@@ -914,7 +877,7 @@ SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
     bool const headless = extent.width != 0 && extent.height != 0;
     if (headless) {
         VulkanPlatformHeadlessSwapChain* swapchain = new VulkanPlatformHeadlessSwapChain(
-                mImpl->mContext, mImpl->mDevice, mImpl->mGraphicsQueue, extent, flags);
+                mImpl->mContext, mImpl->mDevice, mImpl->mGraphicsQueueHandle, extent, flags);
         return swapchain;
     }
 
@@ -931,7 +894,7 @@ SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
     auto [surface, fallbackExtent] = createVkSurfaceKHR(nativeWindow, mImpl->mInstance, flags);
     // The VulkanPlatformSurfaceSwapChain now `owns` the surface.
     VulkanPlatformSurfaceSwapChain* swapchain = new VulkanPlatformSurfaceSwapChain(mImpl->mContext,
-            mImpl->mPhysicalDevice, mImpl->mDevice, mImpl->mGraphicsQueue, mImpl->mInstance,
+            mImpl->mPhysicalDevice, mImpl->mDevice, mImpl->mGraphicsQueueHandle, mImpl->mInstance,
             surface, fallbackExtent, nativeWindow, flags);
     return swapchain;
 }
@@ -963,39 +926,39 @@ VkPhysicalDevice VulkanPlatform::getPhysicalDevice() const noexcept {
 }
 
 uint32_t VulkanPlatform::getGraphicsQueueFamilyIndex() const noexcept {
-    return mImpl->mGraphicsQueueFamilyIndex;
+    return mImpl->mGraphicsQueue.family;
 }
 
 uint32_t VulkanPlatform::getGraphicsQueueIndex() const noexcept {
-    return mImpl->mGraphicsQueueIndex;
+    return mImpl->mGraphicsQueue.index;
 }
 
 VkQueue VulkanPlatform::getGraphicsQueue() const noexcept {
-    return mImpl->mGraphicsQueue;
+    return mImpl->mGraphicsQueueHandle;
 }
 
 uint32_t VulkanPlatform::getAsyncQueueFamilyIndex() const noexcept {
-    return mImpl->mAsyncQueueFamilyIndex;
+    return mImpl->mAsyncQueue.family;
 }
 
 uint32_t VulkanPlatform::getAsyncQueueIndex() const noexcept {
-    return mImpl->mAsyncQueueIndex;
+    return mImpl->mAsyncQueue.index;
 }
 
 VkQueue VulkanPlatform::getAsyncQueue() const noexcept {
-    return mImpl->mAsyncQueue;
+    return mImpl->mAsyncQueueHandle;
 }
 
 uint32_t VulkanPlatform::getProtectedGraphicsQueueFamilyIndex() const noexcept {
-    return mImpl->mProtectedGraphicsQueueFamilyIndex;
+    return mImpl->mProtectedGraphicsQueue.family;
 }
 
 uint32_t VulkanPlatform::getProtectedGraphicsQueueIndex() const noexcept {
-    return mImpl->mProtectedGraphicsQueueIndex;
+    return mImpl->mProtectedGraphicsQueue.index;
 }
 
 VkQueue VulkanPlatform::getProtectedGraphicsQueue() const noexcept {
-    return mImpl->mProtectedGraphicsQueue;
+    return mImpl->mProtectedGraphicsQueueHandle;
 }
 
 bool VulkanPlatform::isRenderDocCaptureEnabled() const noexcept {
@@ -1230,46 +1193,51 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
             (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
                                                        .vulkan.enable_pipeline_dynamic_state
                                              : false);
+
     context.mPipelineCacheEvictionEnabled =
             (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend.vulkan
                                                        .enable_pipeline_cache_threshold_eviction
                                              : false);
 
-    // http://b/208458772. ARM proprietary driver supports this protected memory extension but we
-    // are seeing excessive load/store unit activity when this extension is enabled, even if not
-    // been used. Disable this extension on older ARM platforms that don't support
-    // VK_EXT_pipeline_protected_access.
-    // http://anglebug.com/42266183
-    //
-    // http://b/381285096. On Intel platforms, we want to prevent protected
-    // queues being used as we cannot handle the teardown scenario if PXP termination occurs.
-    // http://b/512497379. We cannot handle teardown in Android on Intel either so it is left
-    // disabled there to avoid app compat issues until TODO: http://b/540469298
-    uint32_t const vendorId = context.getPhysicalDeviceVendorId();
-    bool const isARM = vendorId == 0x13B5;
-    bool const isIntel = vendorId == 0x8086;
-    bool const isMesaPanVK = context.mDriverProperties.driverID == VK_DRIVER_ID_MESA_PANVK;
-    bool const isARMProprietary = isARM && !isMesaPanVK;
-    bool const hasPipelineProtectedAccess =
-            pipelineProtectedAccessFeatures.pipelineProtectedAccess == VK_TRUE;
+    {
+        // http://b/208458772. ARM proprietary driver supports this protected memory extension but
+        // we are seeing excessive load/store unit activity when this extension is enabled, even if
+        // not been used. Disable this extension on older ARM platforms that don't support
+        // VK_EXT_pipeline_protected_access.
+        // http://anglebug.com/42266183
+        //
+        // http://b/381285096. On Intel platforms, we want to prevent protected
+        // queues being used as we cannot handle the teardown scenario if PXP termination occurs.
+        // http://b/512497379. We cannot handle teardown in Android on Intel either so it is left
+        // disabled there to avoid app compat issues until TODO: http://b/540469298
+        uint32_t const vendorId = context.getPhysicalDeviceVendorId();
+        bool const isARM = vendorId == 0x13B5;
+        bool const isIntel = vendorId == 0x8086;
+        bool const isMesaPanVK = context.mDriverProperties.driverID == VK_DRIVER_ID_MESA_PANVK;
+        bool const isARMProprietary = isARM && !isMesaPanVK;
+        bool const hasPipelineProtectedAccess =
+                pipelineProtectedAccessFeatures.pipelineProtectedAccess == VK_TRUE;
 
-    // Protected content requires a queue family that supports both graphics and protected queues.
-    bool const hasProtectedQueueFamily =
-            identifyQueueFamilyIndex(mImpl->mPhysicalDevice,
-                    VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_PROTECTED_BIT) != INVALID_VK_INDEX;
+        bool const protectedMemoryPrerequisite =
+                !sharedContext && queryProtectedMemoryFeatures.protectedMemory == VK_TRUE &&
+                (!isARMProprietary || hasPipelineProtectedAccess) && !isIntel;
 
-    // We know we need to allocate the protected version of the VK objects
-    context.mProtectedMemorySupported =
-            queryProtectedMemoryFeatures.protectedMemory == VK_TRUE &&
-            (!isARMProprietary || hasPipelineProtectedAccess) &&
-            !isIntel &&
-            hasProtectedQueueFamily;
+        // Here we try to assign the queues (family index and index) given what we know.
+        if (protectedMemoryPrerequisite) {
+            auto queueAssignment = getQueueAssignment(mImpl->mPhysicalDevice,
+                    true /* requestProtected */,
+                    driverConfig.asynchronousMode ==
+                            AsynchronousMode::THREAD_PREFERRED /* requestAsync */);
 
-    // When available, VK_EXT_pipeline_protected_access is used to mark every pipeline as either
-    // protected-only or unprotected-only, which allows the driver to avoid the overhead of
-    // supporting protected memory in pipelines that never access it.
-    context.mPipelineProtectedAccessSupported =
-            context.mProtectedMemorySupported && hasPipelineProtectedAccess;
+            context.mProtectedMemorySupported = protectedMemoryPrerequisite &&
+                                                queueAssignment.prtctd.family != INVALID_VK_INDEX;
+        }
+        // When available, VK_EXT_pipeline_protected_access is used to mark every pipeline as either
+        // protected-only or unprotected-only, which allows the driver to avoid the overhead of
+        // supporting protected memory in pipelines that never access it.
+        context.mPipelineProtectedAccessSupported =
+                context.mProtectedMemorySupported && hasPipelineProtectedAccess;
+    }
 
     // Only enable shaderClipDistance if we are doing instanced stereoscopic rendering.
     if (driverConfig.stereoscopicType != StereoscopicType::INSTANCED) {
@@ -1305,22 +1273,103 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
     context.mFenceExportFlags = getFenceExportFlags();
 }
 
-void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExtensions,
+QueueAssignment VulkanPlatform::getQueueAssignment(VkPhysicalDevice physicalDevice,
+        bool requestProtectedQueue, bool requestAsyncQueue) const {
+    FixedCapacityVector<VkQueueFamilyProperties> const queueFamiliesProperties =
+            getPhysicalDeviceQueueFamilyPropertiesHelper(physicalDevice);
+    FixedCapacityVector<QueueFamilyDescription> families(queueFamiliesProperties.size());
+    for (uint32_t j = 0; j < queueFamiliesProperties.size(); ++j) {
+        VkQueueFamilyProperties const& props = queueFamiliesProperties[j];
+
+        families[j] = {
+            .count = props.queueCount,
+            .protectedUsed = 0,
+            .unprotectedUsed = 0,
+            .isGraphics = bool(props.queueFlags & VK_QUEUE_GRAPHICS_BIT),
+            .isProtected = bool(props.queueFlags & VK_QUEUE_PROTECTED_BIT),
+            .isTransfer =  bool(props.queueFlags & VK_QUEUE_TRANSFER_BIT)
+        };
+    }
+
+    QueueAssignment assign = {};
+
+    auto getQueueFamilyIndex = [&families](auto itr) {
+        return std::distance(families.begin(), itr);
+    };
+
+    auto useAQueue = [](FixedCapacityVector<QueueFamilyDescription>::iterator itr,
+                             bool isProtected) {
+        uint32_t index = INVALID_VK_INDEX;
+        if (isProtected) {
+            index = itr->protectedUsed++;
+        } else {
+            index = itr->unprotectedUsed++;
+        }
+        return index;
+    };
+
+    // We need to account for the following queues (all need to be distinct).
+    //  - unprotected, async queue
+    //  - protected, graphics queue
+    //  - unprotected, graphics queue
+    using QueuePredicate = bool (*)(QueueFamilyDescription const&);
+    QueuePredicate hasTransferQ = [](QueueFamilyDescription const& desc) -> bool {
+        return !desc.isGraphics && desc.isTransfer &&
+               desc.count > desc.protectedUsed + desc.unprotectedUsed;
+    };
+    QueuePredicate hasProtectedQ = [](QueueFamilyDescription const& desc) -> bool {
+        return desc.isGraphics && desc.isProtected &&
+               (desc.count > desc.protectedUsed + desc.unprotectedUsed);
+    };
+    QueuePredicate hasGraphicsQ = [](QueueFamilyDescription const& desc) -> bool {
+        return desc.isGraphics && desc.count > desc.protectedUsed + desc.unprotectedUsed;
+    };
+
+    // Graphics queue
+    {
+        auto itr = std::find_if(families.begin(), families.end(), hasGraphicsQ);
+        // We should have found a graphics queue.
+        assert_invariant(itr != families.end());
+        assign.graphics.family = getQueueFamilyIndex(itr);
+        assign.graphics.index = useAQueue(itr, false /* protected */);
+    }
+
+    if (requestProtectedQueue) {
+        auto itr = std::find_if(families.begin(), families.end(), hasProtectedQ);
+        if (itr != families.end()) {
+            assign.prtctd.family = getQueueFamilyIndex(itr);
+            assign.prtctd.index = useAQueue(itr, true /* protected */);
+        }
+    }
+
+    // Try to find an async queue.  Note that we prefer a separate transfer queue for the async
+    // work, but if it's not available, then we'd use a graphics queue if that is present.
+    if (requestAsyncQueue) {
+        for (auto testFunc: { hasTransferQ, hasGraphicsQ }) {
+            auto itr = std::find_if(families.begin(), families.end(), testFunc);
+            if (itr != families.end()) {
+                assign.async.family = getQueueFamilyIndex(itr);
+                assign.async.index = useAQueue(itr, false /* protected */);
+                break;
+            }
+        }
+    }
+
+    assign.descriptions = std::move(families);
+    return assign;
+}
+
+void VulkanPlatform::createLogicalDeviceAndQueues(
+        FixedCapacityVector<QueueFamilyDescription> const& queueFamilies,
+        ExtensionSet const& deviceExtensions,
         VkPhysicalDeviceFeatures const& features,
         VkPhysicalDeviceVulkan11Features const& vk11Features,
         MiscDeviceFeatures const& requestedFeatures) noexcept {
-    // The graphics and protected queues are identified in createDriver().
-    assert_invariant(mImpl->mGraphicsQueueFamilyIndex != INVALID_VK_INDEX);
-    assert_invariant(mImpl->mGraphicsQueueIndex != INVALID_VK_INDEX);
+    VulkanContext& context = mImpl->mContext;
 
-    const auto asyncQueueDetails= identifyAsyncQueue(getPhysicalDevice());
-    mImpl->mAsyncQueueFamilyIndex = asyncQueueDetails.first;
-    mImpl->mAsyncQueueIndex = asyncQueueDetails.second;
-    bool const hasAsyncQueue = mImpl->mAsyncQueueFamilyIndex != INVALID_VK_INDEX;
 
-    bool const hasProtectedQueue = mImpl->mProtectedGraphicsQueueFamilyIndex != INVALID_VK_INDEX;
-
-    float queuePriority[] = { 1.0f };
+    // At most 2 queues in one create info (graphics + async, or protected).
+    float queuePriority[] = { 1.0f, 1.0f };
     VkDeviceCreateInfo deviceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
     };
@@ -1341,29 +1390,42 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
     };
 
     std::vector<VkDeviceQueueCreateInfo> queuesCreateInfos;
-    // Graphics queue
-    VkDeviceQueueCreateInfo graphicsQueueCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-        .pNext = requiresGpuPriority ? &queuePriorityCreateInfo : nullptr,
-        .queueFamilyIndex = mImpl->mGraphicsQueueFamilyIndex,
-        .queueCount = 1,
-        .pQueuePriorities = &queuePriority[0],
-    };
-    queuesCreateInfos.push_back(graphicsQueueCreateInfo);
+    bool hasProtectedQueue = false;
 
-    // Protected queue. Only a single protected queue is retrieved from the device.
-    if (hasProtectedQueue) {
-        VkDeviceQueueCreateInfo protectedQueueCreateInfo = graphicsQueueCreateInfo;
-        protectedQueueCreateInfo.queueFamilyIndex = mImpl->mProtectedGraphicsQueueFamilyIndex;
-        protectedQueueCreateInfo.flags = VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT;
-        queuesCreateInfos.push_back(protectedQueueCreateInfo);
-    }
+    for (uint32_t index = 0; index < queueFamilies.size(); ++index) {
+        auto const& family = queueFamilies[index];
 
-    // Async queue
-    if (hasAsyncQueue) {
-        VkDeviceQueueCreateInfo asyncQueueCreateInfo = graphicsQueueCreateInfo;
-        asyncQueueCreateInfo.queueFamilyIndex = mImpl->mAsyncQueueFamilyIndex;
-        queuesCreateInfos.push_back(asyncQueueCreateInfo);
+        // No assigned queues in this family.
+        if (family.protectedUsed + family.unprotectedUsed == 0) {
+            continue;
+        }
+
+        bool const hasProtected = family.protectedUsed > 0;
+        hasProtectedQueue = hasProtectedQueue || hasProtected;
+
+        VkDeviceQueueCreateInfo createInfo = {
+            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+            .queueFamilyIndex = index,
+            .queueCount = family.unprotectedUsed,
+            .pQueuePriorities = &queuePriority[0],
+        };
+
+        if (requiresGpuPriority) {
+            chainStruct(&createInfo, &queuePriorityCreateInfo);
+        }
+
+        if (hasProtected) {
+            // Due to VUID-VkDeviceCreateInfo-queueFamilyIndex-02802, we need to use a separate
+            // VkDeviceQueueCreateInfo.
+            VkDeviceQueueCreateInfo protectedCreateInfo = createInfo;
+            protectedCreateInfo.flags = createInfo.flags | VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT;
+            protectedCreateInfo.queueCount = family.protectedUsed;
+            queuesCreateInfos.push_back(protectedCreateInfo);
+        }
+
+        if (createInfo.queueCount > 0) {
+            queuesCreateInfos.push_back(createInfo);
+        }
     }
 
     deviceCreateInfo.queueCreateInfoCount = queuesCreateInfos.size();
@@ -1452,19 +1514,19 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
     }
 
     if (setContains(deviceExtensions, VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME)) {
-        chainStruct(&deviceCreateInfo, &mImpl->mContext.mVertexInputDynamicStateFeatures);
+        chainStruct(&deviceCreateInfo, &context.mVertexInputDynamicStateFeatures);
     }
 
     if (setContains(deviceExtensions, VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME)) {
-        chainStruct(&deviceCreateInfo, &mImpl->mContext.mExtendedDynamicStateFeatures);
+        chainStruct(&deviceCreateInfo, &context.mExtendedDynamicStateFeatures);
     }
 
     if (setContains(deviceExtensions, VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME)) {
-        chainStruct(&deviceCreateInfo, &mImpl->mContext.mExtendedDynamicState2Features);
+        chainStruct(&deviceCreateInfo, &context.mExtendedDynamicState2Features);
     }
 
     if (setContains(deviceExtensions, VK_EXT_COLOR_WRITE_ENABLE_EXTENSION_NAME)) {
-        chainStruct(&deviceCreateInfo, &mImpl->mContext.mColorWriteEnableFeatures);
+        chainStruct(&deviceCreateInfo, &context.mColorWriteEnableFeatures);
     }
 
     mImpl->mDevice = createVkDevice(deviceCreateInfo);

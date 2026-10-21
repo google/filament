@@ -434,7 +434,7 @@ public:
         VkChromaLocation yChromaOffset;
 
         /*
-         * YUV is software decoded (YV12 or 8Cb8Cr8_420) for use to 
+         * YUV is software decoded (YV12 or 8Cb8Cr8_420) for use to
          * copy from staging to a GPU sampleable tiled YUV image
          */
        bool isStagingRequired;
@@ -615,16 +615,47 @@ private:
         Platform::GpuContextPriority gpuContextPriority = Platform::GpuContextPriority::DEFAULT;
     };
 
-    void createInstance(ExtensionSet const& requiredExts, bool enableRenderdoc = false) noexcept;
+    /**
+     * Internal helpers for transporting information about each queue family.
+     */
+    static constexpr uint32_t INVALID_VK_INDEX = 0xFFFFFFFF;
+
+    struct QueueFamilyDescription {
+        uint32_t count = 0;
+        uint32_t protectedUsed = 0;
+        uint32_t unprotectedUsed = 0;
+        bool isGraphics = false;
+        bool isProtected = false;
+        bool isTransfer = false;
+    };
+
+    struct QueueIndices {
+        uint32_t family = INVALID_VK_INDEX;
+        uint32_t index = INVALID_VK_INDEX;
+    };
+
+    struct QueueAssignment {
+        QueueIndices graphics {};
+        QueueIndices prtctd {};
+        QueueIndices async {};
+        utils::FixedCapacityVector<QueueFamilyDescription> descriptions;
+    };
+
+    void createInstance(ExtensionSet const& requiredExts, bool enableRenderdoc) noexcept;
 
     void queryAndSetDeviceFeatures(Platform::DriverConfig const& driverConfig,
             ExtensionSet const& instExts, ExtensionSet const& deviceExts,
             void* sharedContext) noexcept;
 
-    void createLogicalDeviceAndQueues(ExtensionSet const& deviceExtensions,
+    void createLogicalDeviceAndQueues(
+            utils::FixedCapacityVector<QueueFamilyDescription> const& queueFamilies,
+            ExtensionSet const& deviceExtensions,
             VkPhysicalDeviceFeatures const& features,
             VkPhysicalDeviceVulkan11Features const& vk11Features,
             MiscDeviceFeatures const& requestedFeatures) noexcept;
+
+    QueueAssignment getQueueAssignment(VkPhysicalDevice physicalDevice,
+            bool requestProtectedQueue, bool requestAsyncQueue) const;
 
     friend struct VulkanPlatformPrivate;
 };

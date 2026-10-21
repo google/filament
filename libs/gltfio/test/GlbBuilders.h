@@ -74,6 +74,11 @@ std::vector<uint8_t> makeSparseTangentMorphGlb(int morphTargetCount, int tangent
 // with the base vertex buffer.
 std::vector<uint8_t> makeColorSeamMorphGlb(MorphMaterial material);
 
+// Builds a GLB whose first primitive has only a TEXCOORD_0 attribute (no POSITION) and uses the
+// default lit material, reproducing issue #10638. When `includeValidSiblingPrimitive` is true, the
+// mesh also contains a second primitive with a valid POSITION attribute.
+std::vector<uint8_t> makePositionlessPrimitiveGlb(bool includeValidSiblingPrimitive = false);
+
 } // namespace test
 
 #endif // TNT_GLTFIO_TEST_GLBBUILDERS_H
