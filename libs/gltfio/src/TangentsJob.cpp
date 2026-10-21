@@ -125,38 +125,43 @@ void TangentsJob::run(Params* params) {
         }
     }
 
-    const size_t triangleCount = prim.indices ? (prim.indices->count / 3) : (vertexCount / 3);
-    unpackedTriangles.reset(new uint3[triangleCount]);
+    if (unpackedPositions) {
+        const size_t triangleCount = prim.indices ? (prim.indices->count / 3) : (vertexCount / 3);
+        unpackedTriangles.reset(new uint3[triangleCount]);
 
-    if (prim.indices) {
-        for (size_t tri = 0, j = 0; tri < triangleCount; ++tri) {
-            auto& triangle = unpackedTriangles[tri];
-            triangle.x = cgltf_accessor_read_index(prim.indices, j++);
-            triangle.y = cgltf_accessor_read_index(prim.indices, j++);
-            triangle.z = cgltf_accessor_read_index(prim.indices, j++);
+        if (prim.indices) {
+            for (size_t tri = 0, j = 0; tri < triangleCount; ++tri) {
+                auto& triangle = unpackedTriangles[tri];
+                triangle.x = cgltf_accessor_read_index(prim.indices, j++);
+                triangle.y = cgltf_accessor_read_index(prim.indices, j++);
+                triangle.z = cgltf_accessor_read_index(prim.indices, j++);
+            }
+        } else {
+            for (size_t tri = 0, j = 0; tri < triangleCount; ++tri) {
+                auto& triangle = unpackedTriangles[tri];
+                triangle.x = j++;
+                triangle.y = j++;
+                triangle.z = j++;
+            }
         }
-    } else {
-        for (size_t tri = 0, j = 0; tri < triangleCount; ++tri) {
-            auto& triangle = unpackedTriangles[tri];
-            triangle.x = j++;
-            triangle.y = j++;
-            triangle.z = j++;
+
+        sob.triangleCount(triangleCount);
+        sob.triangles(unpackedTriangles.get());
+
+        auto uvInfo = baseAccessors[cgltf_attribute_type_texcoord];
+        if (uvInfo && uvInfo->count == vertexCount && uvInfo->type == cgltf_type_vec2) {
+            unpackedTexCoords.reset(new float2[vertexCount]);
+            cgltf_accessor_unpack_floats(uvInfo, &unpackedTexCoords[0].x, vertexCount * 2);
+            sob.uvs(unpackedTexCoords.get());
         }
-    }
-
-    sob.triangleCount(triangleCount);
-    sob.triangles(unpackedTriangles.get());
-
-    auto uvInfo = baseAccessors[cgltf_attribute_type_texcoord];
-    if (uvInfo && uvInfo->count == vertexCount && uvInfo->type == cgltf_type_vec2) {
-        unpackedTexCoords.reset(new float2[vertexCount]);
-        cgltf_accessor_unpack_floats(uvInfo, &unpackedTexCoords[0].x, vertexCount * 2);
-        sob.uvs(unpackedTexCoords.get());
     }
 
     // Compute surface orientation quaternions.
-    params->out.results = (short4*) malloc(sizeof(short4) * vertexCount);
-    geometry::SurfaceOrientation* helper = sob.build();
-    helper->getQuats(params->out.results, vertexCount);
-    delete helper;
+    params->out.results = (short4*) calloc(vertexCount, sizeof(short4));
+    if (unpackedPositions || unpackedNormals) {
+        if (geometry::SurfaceOrientation* helper = sob.build(); helper != nullptr) {
+            helper->getQuats(params->out.results, vertexCount);
+            delete helper;
+        }
+    }
 }
