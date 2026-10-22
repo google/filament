@@ -2448,6 +2448,10 @@ cgltf_size cgltf_accessor_unpack_floats(const cgltf_accessor* accessor, cgltf_fl
 		for (cgltf_size reader_index = 0; reader_index < sparse->count; reader_index++, index_data += index_stride, reader_head += accessor_stride)
 		{
 			size_t writer_index = cgltf_component_read_index(index_data, sparse->indices_component_type);
+			if (writer_index >= element_count)
+			{
+				continue;
+			}
 			float* writer_head = out + writer_index * floats_per_element;
 
 			if (!cgltf_element_read_float(reader_head, accessor->type, accessor->component_type, accessor->normalized, writer_head, floats_per_element))
