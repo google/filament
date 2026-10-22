@@ -19,6 +19,7 @@
 
 #include "DynamicSpecConstKey.h"
 #include "MaterialDefinition.h"
+#include "ProgramCacheLayout.h"
 
 #include <private/filament/Variant.h>
 
@@ -58,15 +59,12 @@ public:
     using SpecializationConstants = utils::Slice<const backend::Program::SpecializationConstant>;
     using SpecializationConstantsRef =
            utils::InternPool<backend::Program::SpecializationConstant>::Ref;
-    using CacheKey = uint32_t;
+    using CacheKey = ProgramCacheLayout::Index;
 
     LocalProgramCache() = default;
     LocalProgramCache(LocalProgramCache const& other);
 
     LocalProgramCache& operator=(LocalProgramCache const& other);
-
-    static CacheKey mapCacheEntryKey(Variant variant,
-            DynamicSpecConstKey specKey, std::size_t cacheSize);
 
     // Initialize for use in a Material, or in a MaterialInstance that has its own set of spec
     // constants.
@@ -83,8 +81,7 @@ public:
             Variant variant, DynamicSpecConstKey specKey,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept {
         filterForGetProgram(variant, specKey);
-        CacheKey const mappedKey =
-                mapCacheEntryKey(variant, specKey, mCachedPrograms.size());
+        CacheKey const mappedKey = mLayout->map(variant, specKey);
         backend::Handle<backend::HwProgram> program = mCachedPrograms[mappedKey];
         if (UTILS_LIKELY(program)) {
             return program;
@@ -98,8 +95,7 @@ public:
     backend::Handle<backend::HwProgram> getProgram(Variant variant,
             DynamicSpecConstKey specKey) const noexcept {
         filterForGetProgram(variant, specKey);
-        CacheKey const mappedKey =
-                mapCacheEntryKey(variant, specKey, mCachedPrograms.size());
+        CacheKey const mappedKey = mLayout->map(variant, specKey);
         backend::Handle<backend::HwProgram> program = mCachedPrograms[mappedKey];
         assert_invariant(program);
         return program;
@@ -144,8 +140,6 @@ public:
     void setConstants(utils::FixedCapacityVector<backend::Program::SpecializationConstant>
                     constants) noexcept;
 
-    static uint32_t getCacheSize(MaterialDomain materialDomain);
-
 private:
     backend::Handle<backend::HwProgram> prepareProgramSlow(backend::DriverApi& driver,
             Variant variant,
@@ -166,6 +160,9 @@ private:
     // Once initialized, a cache always holds exactly the program references for its current
     // mSpecializationConstants, which terminate() releases.
     FMaterial const* mMaterial = nullptr;
+    // Maps (variant, specKey) to a slot of mCachedPrograms; shared by all the materials of the
+    // same kind (see MaterialDefinition::getProgramCacheLayout()).
+    ProgramCacheLayout const* mLayout = nullptr;
     mutable utils::FixedCapacityVector<backend::Handle<backend::HwProgram>> mCachedPrograms;
     SpecializationConstantsRef mSpecializationConstants;
 };

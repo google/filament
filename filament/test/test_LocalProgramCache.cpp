@@ -14,15 +14,22 @@
  * limitations under the License.
  */
 
+#include "DynamicSpecConstKey.h"
 #include "filament_test_resources.h"
 #include "LocalProgramCache.h"
+#include "MaterialDefinition.h"
 #include "MaterialParser.h"
+#include "ProgramCacheLayout.h"
 
 #include "details/Material.h"
+
+#include <private/filament/EngineEnums.h>
+#include <private/filament/Variant.h>
 
 #include <filament/Engine.h>
 #include <filament/Material.h>
 #include <filament/MaterialChunkType.h>
+#include <filament/MaterialEnums.h>
 #include <filament/RenderableManager.h>
 
 #include <filamat/MaterialBuilder.h>
@@ -30,24 +37,82 @@
 #include <filaflat/ChunkContainer.h>
 
 #include <utils/EntityManager.h>
+#include <utils/Slice.h>
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 using namespace filament;
 
 namespace {
-constexpr std::size_t SURFACE_SIZE = 1u << (VARIANT_BITS + DYNAMIC_SPEC_CONST_KEY_BITS);
-constexpr std::size_t POST_PROCESS_SIZE =
-        1u << (POST_PROCESS_VARIANT_BITS + DYNAMIC_SPEC_CONST_KEY_BITS);
 
-void mapInvalidKey(uint8_t variantKey, std::size_t size) noexcept {
-    Variant variant{};
-    variant.key = variantKey;
-    (void) LocalProgramCache::mapCacheEntryKey(variant, DynamicSpecConstKey{ 0 }, size);
+using Program = std::pair<Variant, DynamicSpecConstKey>;
+
+// What MaterialDefinition::acquirePrograms() can store.
+std::vector<Program> getCacheablePrograms(MaterialDomain const domain, bool const isLit) {
+    std::vector<Program> programs;
+    auto const add = [&](utils::Slice<const Variant> const variants) {
+        for (Variant const variant : variants) {
+            for (DynamicSpecConstKey const specKey :
+                    DynamicSpecConstKey::getValidKeys(variant, domain, isLit)) {
+                Program const program{ variant, specKey };
+                if (std::find(programs.begin(), programs.end(), program) == programs.end()) {
+                    programs.push_back(program);
+                }
+            }
+        }
+    };
+    add(MaterialDefinition::getVariantsFor(domain, isLit));
+    add(MaterialDefinition::getDepthVariantsFor(domain));
+    return programs;
+}
+
+// Every (variant, specKey) the renderer can ask a material of this kind for, derived from the
+// filtering the callers apply rather than from the variant lists the layout is built from:
+// - RenderPass::setupColorCommand(): Variant::filterVariant() then filterProgramSpecKey().
+// - RenderPass depth commands: depth variants, filterProgramSpecKey() as if lit.
+// - PostProcessManager: post-process variants with specKey 0.
+std::vector<Program> getRequestablePrograms(MaterialDomain const domain, bool const isLit) {
+    std::vector<Program> programs;
+    if (domain == MaterialDomain::POST_PROCESS) {
+        for (Variant::type_t v = 0; v < POST_PROCESS_VARIANT_COUNT; ++v) {
+            for (DynamicSpecConstKey::type_t k = 0; k < DYNAMIC_SPEC_CONST_KEY_COUNT; ++k) {
+                programs.emplace_back(Variant{ v }, DynamicSpecConstKey::filterProgramSpecKey(
+                        Variant{ v }, DynamicSpecConstKey{ k }, domain, isLit));
+            }
+        }
+        return programs;
+    }
+    for (std::size_t v = 0; v < VARIANT_COUNT; ++v) {
+        Variant const raw{ Variant::type_t(v) };
+        if (!Variant::isValid(raw)) {
+            continue;
+        }
+        Variant const variant = Variant::filterVariant(raw, isLit);
+        for (DynamicSpecConstKey::type_t k = 0; k < DYNAMIC_SPEC_CONST_KEY_COUNT; ++k) {
+            DynamicSpecConstKey const key{ k };
+            programs.emplace_back(variant,
+                    DynamicSpecConstKey::filterProgramSpecKey(variant, key, domain, isLit));
+            if (Variant::isValidDepthVariant(variant)) {
+                programs.emplace_back(variant,
+                        DynamicSpecConstKey::filterProgramSpecKey(variant, key, domain, true));
+            }
+        }
+    }
+    return programs;
+}
+
+void mapWithoutSlot(MaterialDomain const domain, bool const isLit, Variant::type_t const variantKey,
+        DynamicSpecConstKey::type_t const specKey) noexcept {
+    (void) ProgramCacheLayout::get(domain, isLit).map(Variant{ variantKey },
+            DynamicSpecConstKey{ specKey });
 }
 
 // Compiles a genuine post-process material, i.e. the kind of asset an application can load at
@@ -67,55 +132,101 @@ filamat::Package buildPostProcessMaterial(Engine& engine) {
 }
 }
 
-TEST(LocalProgramCache, SurfaceBoundary) {
-    // The largest valid surface variant combined with the largest specialization key must land
-    // exactly on the last slot of the cache. Expressed in terms of the variant space so that this
-    // keeps holding if the number of variant bits changes.
-    Variant variant{};
-    variant.key = Variant::type_t(VARIANT_COUNT - 1);
-    EXPECT_EQ(LocalProgramCache::mapCacheEntryKey(variant,
-                      DynamicSpecConstKey{
-                          DynamicSpecConstKey::type_t(DYNAMIC_SPEC_CONST_KEY_COUNT - 1) },
-                      SURFACE_SIZE),
-            SURFACE_SIZE - 1);
+TEST(ProgramCacheLayout, EveryProgramHasItsOwnSlot) {
+    // The cache is dense: each cacheable program has a distinct slot and no slot is unused.
+    for (auto const [domain, isLit] : { std::pair{ MaterialDomain::SURFACE, true },
+                 std::pair{ MaterialDomain::SURFACE, false },
+                 std::pair{ MaterialDomain::POST_PROCESS, false } }) {
+        ProgramCacheLayout const& layout = ProgramCacheLayout::get(domain, isLit);
+        std::vector<Program> const programs = getCacheablePrograms(domain, isLit);
+        std::vector<bool> used(layout.size(), false);
+        for (auto const& [variant, specKey] : programs) {
+            ASSERT_TRUE(layout.hasSlot(variant, specKey))
+                    << "variant=" << +variant.key << " specKey=" << specKey.key;
+            uint32_t const slot = layout.map(variant, specKey);
+            ASSERT_LT(slot, layout.size());
+            EXPECT_FALSE(used[slot]) << "variant=" << +variant.key << " specKey=" << specKey.key;
+            used[slot] = true;
+        }
+        EXPECT_EQ(programs.size(), layout.size()) << "lit=" << isLit;
+    }
 }
 
-TEST(LocalProgramCache, PostProcessBoundaries) {
-    // The post-process variant space is tiny ({0, 1}), but it uses the same slot layout as the
-    // surface cache: each variant owns DYNAMIC_SPEC_CONST_KEY_COUNT consecutive slots. Expressed
-    // in terms of the variant space so this keeps holding if either bit count changes.
-    Variant variant{};
-    EXPECT_EQ(LocalProgramCache::mapCacheEntryKey(
-                      variant, DynamicSpecConstKey{ 0 }, POST_PROCESS_SIZE), 0u);
-
-    variant.key = Variant::type_t(POST_PROCESS_VARIANT_COUNT - 1);
-    EXPECT_EQ(LocalProgramCache::mapCacheEntryKey(
-                      variant, DynamicSpecConstKey{ 0 }, POST_PROCESS_SIZE),
-            (POST_PROCESS_VARIANT_COUNT - 1) << DYNAMIC_SPEC_CONST_KEY_BITS);
+TEST(ProgramCacheLayout, EveryRequestableProgramHasASlot) {
+    for (auto const [domain, isLit] : { std::pair{ MaterialDomain::SURFACE, true },
+                 std::pair{ MaterialDomain::SURFACE, false },
+                 std::pair{ MaterialDomain::POST_PROCESS, false } }) {
+        ProgramCacheLayout const& layout = ProgramCacheLayout::get(domain, isLit);
+        for (auto const& [variant, specKey] : getRequestablePrograms(domain, isLit)) {
+            EXPECT_TRUE(layout.hasSlot(variant, specKey))
+                    << "domain=" << int(domain) << " lit=" << isLit
+                    << " variant=" << +variant.key << " specKey=" << specKey.key;
+        }
+    }
 }
 
-TEST(LocalProgramCacheDeathTest, RejectsOverflow) {
-    EXPECT_DEATH(mapInvalidKey(Variant::type_t(VARIANT_COUNT), SURFACE_SIZE), "");
-    EXPECT_DEATH(mapInvalidKey(POST_PROCESS_VARIANT_COUNT, POST_PROCESS_SIZE), "");
-    EXPECT_DEATH(mapInvalidKey(Variant::DEP, POST_PROCESS_SIZE), "");
+TEST(ProgramCacheLayout, HasTheExpectedSize) {
+    // Update when the variants or the specialization keys change:
+    //   lit:   12 standard variants x 12 keys + 2 SSR + 14 depth = 160
+    //   unlit:  4 standard variants x  2 keys + 2 SSR + 14 depth =  24
+    EXPECT_EQ(ProgramCacheLayout::get(MaterialDomain::SURFACE, true).size(), 160u);
+    EXPECT_EQ(ProgramCacheLayout::get(MaterialDomain::SURFACE, false).size(), 24u);
+    EXPECT_EQ(ProgramCacheLayout::get(MaterialDomain::POST_PROCESS, false).size(),
+            POST_PROCESS_VARIANT_COUNT);
+    EXPECT_EQ(ProgramCacheLayout::get(MaterialDomain::COMPUTE, false).size(), 1u);
 }
 
-TEST(LocalProgramCacheDeathTest, UsesActualCapacity) {
-    EXPECT_DEATH(mapInvalidKey(0, 0), "");
-    EXPECT_DEATH(mapInvalidKey(1, 8), "");
+TEST(ProgramCacheLayout, IsSharedByMaterialsOfTheSameKind) {
+    EXPECT_EQ(&ProgramCacheLayout::get(MaterialDomain::SURFACE, true),
+            &ProgramCacheLayout::get(MaterialDomain::SURFACE, true));
+    EXPECT_NE(&ProgramCacheLayout::get(MaterialDomain::SURFACE, true),
+            &ProgramCacheLayout::get(MaterialDomain::SURFACE, false));
 }
 
-TEST(LocalProgramCache, DepthIgnoresSpecialization) {
+TEST(ProgramCacheLayout, DepthIgnoresSpecialization) {
     // Depth variants are decoupled from the dynamic specialization space, so every specialization
     // key must collapse onto the depth variant's own slot (i.e. as if specKey were 0).
-    Variant variant{};
-    variant.key = Variant::DEP;
-    ASSERT_TRUE(Variant::isValidDepthVariant(variant));
-    constexpr std::size_t DEPTH_SLOT = std::size_t{ Variant::DEP } << DYNAMIC_SPEC_CONST_KEY_BITS;
-    for (uint16_t key = 0; key < DYNAMIC_SPEC_CONST_KEY_COUNT; ++key) {
-        EXPECT_EQ(LocalProgramCache::mapCacheEntryKey(
-                          variant, DynamicSpecConstKey{ key }, SURFACE_SIZE), DEPTH_SLOT);
+    for (bool const isLit : { true, false }) {
+        ProgramCacheLayout const& layout = ProgramCacheLayout::get(MaterialDomain::SURFACE, isLit);
+        for (Variant const variant : VariantUtils::getDepthVariants()) {
+            uint32_t const slot = layout.map(variant, DynamicSpecConstKey{ 0 });
+            for (uint16_t key = 0; key < DYNAMIC_SPEC_CONST_KEY_COUNT; ++key) {
+                EXPECT_EQ(layout.map(variant, DynamicSpecConstKey{ key }), slot)
+                        << "variant=" << +variant.key << " specKey=" << key;
+            }
+        }
     }
+}
+
+TEST(ProgramCacheLayout, HasNoSlotForProgramsTheMaterialCantHave) {
+    ProgramCacheLayout const& lit = ProgramCacheLayout::get(MaterialDomain::SURFACE, true);
+    ProgramCacheLayout const& unlit = ProgramCacheLayout::get(MaterialDomain::SURFACE, false);
+    ProgramCacheLayout const& postProcess =
+            ProgramCacheLayout::get(MaterialDomain::POST_PROCESS, false);
+
+    // Out of the variant space.
+    EXPECT_FALSE(lit.hasSlot(Variant{ Variant::type_t(VARIANT_COUNT) }, DynamicSpecConstKey{}));
+    EXPECT_FALSE(lit.hasSlot(Variant{ 0xFF }, DynamicSpecConstKey{}));
+    EXPECT_FALSE(postProcess.hasSlot(
+            Variant{ Variant::type_t(POST_PROCESS_VARIANT_COUNT) }, DynamicSpecConstKey{}));
+    // Surface variants on a post-process material.
+    EXPECT_FALSE(postProcess.hasSlot(Variant{ Variant::DEP }, DynamicSpecConstKey{}));
+    // Specialization keys the material can't use.
+    EXPECT_FALSE(postProcess.hasSlot(Variant{}, DynamicSpecConstKey{ DynamicSpecConstKey::FOG }));
+    EXPECT_FALSE(unlit.hasSlot(Variant{},
+            DynamicSpecConstKey{ DynamicSpecConstKey::DYNAMIC_LIGHTING }));
+    EXPECT_FALSE(lit.hasSlot(Variant{},
+            DynamicSpecConstKey{ DynamicSpecConstKey::EXTRA_DIRECTIONAL_LIGHTS }));
+}
+
+TEST(ProgramCacheLayoutDeathTest, RejectsProgramsWithoutSlot) {
+    EXPECT_DEATH(mapWithoutSlot(MaterialDomain::SURFACE, true,
+            Variant::type_t(VARIANT_COUNT), 0), "");
+    EXPECT_DEATH(mapWithoutSlot(MaterialDomain::POST_PROCESS, false,
+            Variant::type_t(POST_PROCESS_VARIANT_COUNT), 0), "");
+    EXPECT_DEATH(mapWithoutSlot(MaterialDomain::POST_PROCESS, false, Variant::DEP, 0), "");
+    EXPECT_DEATH(mapWithoutSlot(MaterialDomain::SURFACE, false, 0,
+            DynamicSpecConstKey::DYNAMIC_LIGHTING), "");
 }
 
 TEST(MaterialDomainValidation, RejectsInvalidAndMissingDomain) {
@@ -171,18 +282,20 @@ TEST(LocalProgramCacheRegressionDeathTest, SurfaceVariantOnPostProcessMaterialIs
     rcm.setMaterialInstanceAt(renderable, 0, material->getDefaultInstance());
     EXPECT_EQ(rcm.getMaterialInstanceAt(renderable, 0), material->getDefaultInstance());
 
-    // 3. Meanwhile the program cache was sized for the post-process variant space only.
+    // 3. Meanwhile the program cache only has slots for the post-process variants.
     LocalProgramCache const& programs = downcast(material)->getPrograms();
-    ASSERT_EQ(programs.getPrograms().size(), POST_PROCESS_SIZE);
+    ProgramCacheLayout const& layout =
+            ProgramCacheLayout::get(MaterialDomain::POST_PROCESS, false);
+    ASSERT_EQ(programs.getPrograms().size(), layout.size());
 
     // 4. RenderPass::setupColorCommand() builds a surface variant for a renderable and
     //    RenderPass::instanceify() feeds it to prepareProgram(). A lit renderable that receives
-    //    shadows is about as ordinary as it gets, and it already lands outside the cache.
+    //    shadows is about as ordinary as it gets, and it has no slot in the cache.
     Variant variant{};
     variant.key = Variant::SRE;
-    static_assert(std::size_t{ Variant::SRE } << DYNAMIC_SPEC_CONST_KEY_BITS >= POST_PROCESS_SIZE,
-            "SRE must map past the end of the post-process cache, otherwise this test proves "
-            "nothing; pick a higher surface-only bit if the variant layout changes");
+    ASSERT_FALSE(layout.hasSlot(variant, DynamicSpecConstKey{ 0 }))
+            << "SRE must not have a slot in the post-process cache, otherwise this test proves "
+               "nothing; pick a surface-only bit if the variant layout changes";
 
     // The Engine owns worker threads, and the default "fast" style forks without exec, which is
     // unsafe there. "threadsafe" re-executes the binary instead.
