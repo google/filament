@@ -253,8 +253,20 @@ void unpack(cgltf_accessor const* accessor, size_t const vertexCount, T out,
     }
     uint8_t const* data = nullptr;
     if (accessor->buffer_view->has_meshopt_compression) {
+        // A view that was never decoded (e.g. a failed meshopt decode, or a
+        // buffer that was never loaded) has null data; dereferencing it, or
+        // even offsetting from it, is undefined behavior. Degrade to zeros
+        // like the missing-bufferView case above.
+        if (!accessor->buffer_view->data) {
+            std::memset(out, 0, data::byteCount<T>() * vertexCount);
+            return;
+        }
         data = (uint8_t const*) accessor->buffer_view->data + accessor->offset;
     } else {
+        if (!accessor->buffer_view->buffer || !accessor->buffer_view->buffer->data) {
+            std::memset(out, 0, data::byteCount<T>() * vertexCount);
+            return;
+        }
         data = (uint8_t const*) accessor->buffer_view->buffer->data +
                utility::computeBindingOffset(accessor);
     }
