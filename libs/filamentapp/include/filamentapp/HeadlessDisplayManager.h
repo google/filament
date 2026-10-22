@@ -69,10 +69,10 @@ public:
     // left unpaced. The default pacing sleep would otherwise dominate batch tools that render many
     // thousands of frames: one measured workload took roughly 115s when paced against 35s when
     // unpaced, for identical output.
-    void runFrameLoop(FrameFn frame) override {
-        while (!frame()) {
-        }
-    }
+    //
+    // On Apple platforms the loop also services the main run loop between frames, because some
+    // backends wait for the main thread from their driver thread (see the definition).
+    void runFrameLoop(FrameFn frame) override;
 
     // Scripted input and synthetic clock, for deterministic testing. These follow the threading
     // contract documented above: call them from the thread running the frame loop, which in

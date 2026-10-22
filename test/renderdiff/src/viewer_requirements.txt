@@ -1,5 +1,5 @@
 blinker==1.9.0
-certifi==2025.8.3
+certifi==2026.10.19
 charset-normalizer==3.4.3
 click==8.2.1
 Flask==3.1.3
