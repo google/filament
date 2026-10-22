@@ -1105,6 +1105,77 @@ TEST_F(glTFIOTest, EmptyImageDoesNotCrash) {
     AssetLoader::destroy(&assetLoader);
 }
 
+// Issue #10636: when a primitive with KHR_draco_mesh_compression fails to decode, its accessors
+// remain without a bufferView. Per the glTF 2.0 spec, accessors without a bufferView must be
+// initialized with zeros. Verify that TangentsJobExtended zero-fills the unpacked attributes and
+// that both the extended and standard loaders handle the failed decode without crashing.
+TEST(glTFIOTangentsJobExtended, InvalidDracoDecodeZeroFillsAttributes) {
+    std::vector<uint8_t> const glb = makeInvalidDracoGlb();
+
+    cgltf_options options{};
+    cgltf_data* data = nullptr;
+    ASSERT_EQ(cgltf_parse(&options, glb.data(), glb.size(), &data), cgltf_result_success);
+    ASSERT_EQ(cgltf_load_buffers(&options, data, "."), cgltf_result_success);
+    ASSERT_EQ(data->meshes_count, 1u);
+    cgltf_primitive const* prim = &data->meshes[0].primitives[0];
+
+    TangentsJobExtended::Params params{
+            .in = { .prim = prim, .morphTargetIndex = TangentsJobExtended::kMorphTargetUnused } };
+    TangentsJobExtended::run(&params);
+    auto& out = params.out;
+
+    ASSERT_EQ(out.vertexCount, 3u);
+    ASSERT_NE(out.positions, nullptr);
+    for (size_t v = 0; v < out.vertexCount; ++v) {
+        EXPECT_FLOAT_EQ(out.positions[v].x, 0.0f);
+        EXPECT_FLOAT_EQ(out.positions[v].y, 0.0f);
+        EXPECT_FLOAT_EQ(out.positions[v].z, 0.0f);
+    }
+
+    free(out.positions);
+    free(out.tbn);
+    free(out.triangles);
+    cgltf_free(data);
+}
+
+TEST_F(glTFIOTest, InvalidDracoDecodeLoadsWithZeroFilledBuffers) {
+    std::vector<uint8_t> const glb = makeInvalidDracoGlb();
+
+    // Standard loader path.
+    {
+        AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+
+        FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        EXPECT_EQ(asset->getRenderableEntityCount(), 1u);
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+
+    // Extended loader path.
+    if (AssetConfigurationExtended::isSupported()) {
+        AssetConfigurationExtended ext{ .gltfPath = "." };
+        AssetLoader* assetLoader = AssetLoader::create({
+                .engine = mEngine, .materials = mMaterialProvider, .names = mNameManager, .ext = &ext });
+        ASSERT_NE(assetLoader, nullptr);
+
+        FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        EXPECT_EQ(asset->getRenderableEntityCount(), 1u);
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
