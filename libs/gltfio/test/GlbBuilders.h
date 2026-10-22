@@ -47,6 +47,11 @@ std::vector<uint8_t> makeIndexAccessorGlb(char const* indexType, int indexCompon
 // (zero) TANGENT delta.
 std::vector<uint8_t> makeMorphTargetGlb(int morphTargetCount);
 
+// Builds a single-triangle GLB with `morphTargetCount` morph targets and two weight animations
+// (one LINEAR and one CUBICSPLINE), reproducing issue #10409 when `morphTargetCount` exceeds
+// MAX_MORPH_TARGETS.
+std::vector<uint8_t> makeAnimatedMorphTargetGlb(int morphTargetCount);
+
 // The material that the morph target builders below assign to their primitive.
 enum class MorphMaterial { NONE, UNLIT, LIT };
 
@@ -83,6 +88,10 @@ std::vector<uint8_t> makePositionlessPrimitiveGlb(bool includeValidSiblingPrimit
 // invalid Draco bytes, so that Draco decoding fails and the primitive's accessors are left with a
 // null buffer_view.
 std::vector<uint8_t> makeInvalidDracoGlb();
+
+// Builds a single-primitive GLB whose POSITION accessor declares `vertexCount` vertices and omits
+// TEXCOORD_0 and COLOR_0 so that AssetLoader's dummy buffer allocation path is exercised.
+std::vector<uint8_t> makeDummyBufferOverflowGlb(uint64_t vertexCount);
 
 } // namespace test
 
