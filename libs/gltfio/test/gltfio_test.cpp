@@ -962,6 +962,220 @@ TEST_F(glTFIOTest, MorphTargetTangentInvalidTypeIsRejected) {
     AssetLoader::destroy(&loader);
 }
 
+// Issue #10638: a glTF primitive without a POSITION attribute is valid per cgltf_validate(), and
+// the glTF 2.0 specification (Section 3.7.2.1 implementation note) states that client
+// implementations should skip rendering such a primitive. Previously, AssetLoader created a
+// VertexBuffer and scheduled normal/tangent generation for it, causing SurfaceOrientation::Builder
+// to panic (Debug) or return nullptr and crash on dereference in TangentsJob::run (Release).
+TEST_F(glTFIOTest, PrimitiveWithoutPositionsIsSkipped) {
+    std::vector<uint8_t> const glb = makePositionlessPrimitiveGlb(false);
+
+    auto checkLoad = [&](AssetConfigurationExtended* ext) {
+        AssetLoader* assetLoader = AssetLoader::create({
+                .engine = mEngine,
+                .materials = mMaterialProvider,
+                .names = mNameManager,
+                .ext = ext,
+        });
+        ASSERT_NE(assetLoader, nullptr);
+
+        FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+        ASSERT_EQ(asset->getRenderableEntityCount(), 1u);
+        Entity const renderable = asset->getRenderableEntities()[0];
+        auto const& rm = mEngine->getRenderableManager();
+        auto const inst = rm.getInstance(renderable);
+        EXPECT_EQ(rm.getPrimitiveCount(inst), 1u);
+        EXPECT_TRUE(rm.getEnabledAttributesAt(inst, 0).none());
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    };
+
+    checkLoad(nullptr);
+    if (AssetConfigurationExtended::isSupported()) {
+        AssetConfigurationExtended ext{ .gltfPath = "." };
+        checkLoad(&ext);
+    }
+}
+
+TEST_F(glTFIOTest, MeshWithPositionlessAndValidPrimitives) {
+    std::vector<uint8_t> const glb = makePositionlessPrimitiveGlb(true);
+
+    auto checkLoad = [&](AssetConfigurationExtended* ext) {
+        AssetLoader* assetLoader = AssetLoader::create({
+                .engine = mEngine,
+                .materials = mMaterialProvider,
+                .names = mNameManager,
+                .ext = ext,
+        });
+        ASSERT_NE(assetLoader, nullptr);
+
+        FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+        ASSERT_EQ(asset->getRenderableEntityCount(), 1u);
+        Entity const renderable = asset->getRenderableEntities()[0];
+        auto const& rm = mEngine->getRenderableManager();
+        auto const inst = rm.getInstance(renderable);
+        ASSERT_EQ(rm.getPrimitiveCount(inst), 2u);
+
+        // Primitive 0 has no POSITION and must be skipped.
+        EXPECT_TRUE(rm.getEnabledAttributesAt(inst, 0).none());
+
+        // Primitive 1 has POSITION and must be loaded with generated tangents.
+        AttributeBitset const attribs1 = rm.getEnabledAttributesAt(inst, 1);
+        EXPECT_TRUE(attribs1[VertexAttribute::POSITION]);
+        EXPECT_TRUE(attribs1[VertexAttribute::TANGENTS]);
+
+        // The asset bounding box must reflect only the valid primitive.
+        Aabb const bounds = asset->getBoundingBox();
+        EXPECT_FLOAT_EQ(bounds.min.x, 0.0f);
+        EXPECT_FLOAT_EQ(bounds.min.y, 0.0f);
+        EXPECT_FLOAT_EQ(bounds.min.z, 0.0f);
+        EXPECT_FLOAT_EQ(bounds.max.x, 1.0f);
+        EXPECT_FLOAT_EQ(bounds.max.y, 1.0f);
+        EXPECT_FLOAT_EQ(bounds.max.z, 0.0f);
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    };
+
+    checkLoad(nullptr);
+    if (AssetConfigurationExtended::isSupported()) {
+        AssetConfigurationExtended ext{ .gltfPath = "." };
+        checkLoad(&ext);
+    }
+}
+
+TEST_F(glTFIOTest, EmptyImageDoesNotCrash) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+    TextureProvider* stbProvider = createStbProvider(mEngine);
+    ASSERT_NE(stbProvider, nullptr);
+
+    auto loadGltfJson = [&](char const* gltfJson) {
+        FilamentAsset* asset = assetLoader->createAsset(
+                reinterpret_cast<uint8_t const*>(gltfJson), uint32_t(std::strlen(gltfJson)));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        resourceLoader.addTextureProvider("image/png", stbProvider);
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+        assetLoader->destroyAsset(asset);
+    };
+
+    // Case 1: Image with neither URI, bufferView, nor mimeType.
+    loadGltfJson(
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[]}],)"
+            R"("images":[{}],"textures":[{"source":0}],)"
+            R"("materials":[{"pbrMetallicRoughness":{"baseColorTexture":{"index":0}}}]})");
+
+    // Case 2: Image with mimeType but neither URI nor bufferView.
+    loadGltfJson(
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[]}],)"
+            R"("images":[{"mimeType":"image/png"}],"textures":[{"source":0}],)"
+            R"("materials":[{"pbrMetallicRoughness":{"baseColorTexture":{"index":0}}}]})");
+
+    // Case 3: Image with bufferView but missing mimeType and buffer data.
+    loadGltfJson(
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[]}],)"
+            R"("buffers":[{"byteLength":0}],)"
+            R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":0}],)"
+            R"("images":[{"bufferView":0}],"textures":[{"source":0}],)"
+            R"("materials":[{"pbrMetallicRoughness":{"baseColorTexture":{"index":0}}}]})");
+
+    // Case 4: Image with bufferView and mimeType, but missing buffer data.
+    loadGltfJson(
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[]}],)"
+            R"("buffers":[{"byteLength":0}],)"
+            R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":0}],)"
+            R"("images":[{"bufferView":0,"mimeType":"image/png"}],"textures":[{"source":0}],)"
+            R"("materials":[{"pbrMetallicRoughness":{"baseColorTexture":{"index":0}}}]})");
+
+    delete stbProvider;
+    AssetLoader::destroy(&assetLoader);
+}
+
+// Issue #10636: when a primitive with KHR_draco_mesh_compression fails to decode, its accessors
+// remain without a bufferView. Per the glTF 2.0 spec, accessors without a bufferView must be
+// initialized with zeros. Verify that TangentsJobExtended zero-fills the unpacked attributes and
+// that both the extended and standard loaders handle the failed decode without crashing.
+TEST(glTFIOTangentsJobExtended, InvalidDracoDecodeZeroFillsAttributes) {
+    std::vector<uint8_t> const glb = makeInvalidDracoGlb();
+
+    cgltf_options options{};
+    cgltf_data* data = nullptr;
+    ASSERT_EQ(cgltf_parse(&options, glb.data(), glb.size(), &data), cgltf_result_success);
+    ASSERT_EQ(cgltf_load_buffers(&options, data, "."), cgltf_result_success);
+    ASSERT_EQ(data->meshes_count, 1u);
+    cgltf_primitive const* prim = &data->meshes[0].primitives[0];
+
+    TangentsJobExtended::Params params{
+            .in = { .prim = prim, .morphTargetIndex = TangentsJobExtended::kMorphTargetUnused } };
+    TangentsJobExtended::run(&params);
+    auto& out = params.out;
+
+    ASSERT_EQ(out.vertexCount, 3u);
+    ASSERT_NE(out.positions, nullptr);
+    for (size_t v = 0; v < out.vertexCount; ++v) {
+        EXPECT_FLOAT_EQ(out.positions[v].x, 0.0f);
+        EXPECT_FLOAT_EQ(out.positions[v].y, 0.0f);
+        EXPECT_FLOAT_EQ(out.positions[v].z, 0.0f);
+    }
+
+    free(out.positions);
+    free(out.tbn);
+    free(out.triangles);
+    cgltf_free(data);
+}
+
+TEST_F(glTFIOTest, InvalidDracoDecodeLoadsWithZeroFilledBuffers) {
+    std::vector<uint8_t> const glb = makeInvalidDracoGlb();
+
+    // Standard loader path.
+    {
+        AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+
+        FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        EXPECT_EQ(asset->getRenderableEntityCount(), 1u);
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+
+    // Extended loader path.
+    if (AssetConfigurationExtended::isSupported()) {
+        AssetConfigurationExtended ext{ .gltfPath = "." };
+        AssetLoader* assetLoader = AssetLoader::create({
+                .engine = mEngine, .materials = mMaterialProvider, .names = mNameManager, .ext = &ext });
+        ASSERT_NE(assetLoader, nullptr);
+
+        FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        EXPECT_EQ(asset->getRenderableEntityCount(), 1u);
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

@@ -36,6 +36,7 @@ template class utils::PrivateImplementation<utils::io::ostream_>;
 
 namespace utils::io {
 
+ostream::ostream() = default;
 ostream::~ostream() = default;
 
 void ostream::setConsumer(ConsumerCallback consumer, void* user) noexcept {
