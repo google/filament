@@ -6,3 +6,4 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+- filamat: convert FOG variant into a specialization constant. [⚠️ **Recompile Materials**]

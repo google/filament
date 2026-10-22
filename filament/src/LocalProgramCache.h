@@ -80,8 +80,9 @@ public:
     // Must be called outside of backend render pass.
     // Must be called before getProgram() below.
     backend::Handle<backend::HwProgram> prepareProgram(backend::DriverApi& driver,
-            Variant const variant, DynamicSpecConstKey const specKey,
+            Variant variant, DynamicSpecConstKey specKey,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept {
+        filterForGetProgram(variant, specKey);
         CacheKey const mappedKey =
                 mapCacheEntryKey(variant, specKey, mCachedPrograms.size());
         backend::Handle<backend::HwProgram> program = mCachedPrograms[mappedKey];
@@ -95,8 +96,8 @@ public:
     // Must be called after prepareProgram().
     [[nodiscard]]
     backend::Handle<backend::HwProgram> getProgram(Variant variant,
-            DynamicSpecConstKey const specKey) const noexcept {
-        variant = filterVariantForGetProgram(variant);
+            DynamicSpecConstKey specKey) const noexcept {
+        filterForGetProgram(variant, specKey);
         CacheKey const mappedKey =
                 mapCacheEntryKey(variant, specKey, mCachedPrograms.size());
         backend::Handle<backend::HwProgram> program = mCachedPrograms[mappedKey];
@@ -154,7 +155,7 @@ private:
     ProgramSpecialization getProgramSpecialization(Variant variant,
             DynamicSpecConstKey specKey) const noexcept;
 
-    Variant filterVariantForGetProgram(Variant variant) const noexcept;
+    void filterForGetProgram(Variant& variant, DynamicSpecConstKey& specKey) const noexcept;
 
     void setConstantsImpl(utils::FixedCapacityVector<backend::Program::SpecializationConstant>
                     constants) noexcept;
