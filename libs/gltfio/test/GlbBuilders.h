@@ -93,6 +93,12 @@ std::vector<uint8_t> makeInvalidDracoGlb();
 // TEXCOORD_0 and COLOR_0 so that AssetLoader's dummy buffer allocation path is exercised.
 std::vector<uint8_t> makeDummyBufferOverflowGlb(uint64_t vertexCount);
 
+// Builds a single-triangle GLB whose NORMAL accessor is sparse and has its sparse indices
+// bufferView compressed with EXT_meshopt_compression (mode = INDICES). The uncompressed fallback
+// bytes in the buffer contain an in-bounds index (0), while the meshopt stream decodes to an
+// out-of-bounds index (>= vertexCount), reproducing issue #10201.
+std::vector<uint8_t> makeMeshoptSparseAccessorOobGlb();
+
 } // namespace test
 
 #endif // TNT_GLTFIO_TEST_GLBBUILDERS_H

@@ -584,17 +584,24 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
                 slotCount++};
     }
 
+    bool needsValidation = false;
     if (!mCgltfBuffersLoaded) {
         mCgltfBuffersLoaded = utility::loadCgltfBuffers(gltf, mGltfPath.c_str(), mUriDataCache);
         if (!mCgltfBuffersLoaded) {
             return false;
         }
-        if (!utility::decodeMeshoptCompression(gltf)) {
+        if (!utility::decodeMeshoptCompression(gltf, &needsValidation)) {
             return false;
         }
     }
 
-    utility::decodeDracoMeshes(gltf, prim, input->dracoCache);
+    needsValidation |= utility::decodeDracoMeshes(gltf, prim, input->dracoCache);
+
+    if (needsValidation && cgltf_validate(gltf) != cgltf_result_success) {
+        utils::slog.e << "Failed cgltf validation after decoding Draco/Meshopt meshes."
+                      << utils::io::endl;
+        return false;
+    }
 
     auto slots = computeGeometries(prim, jobType, attributesMap, morphTargets, out->uvmap, name,
             mEngine);

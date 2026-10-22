@@ -1569,6 +1569,25 @@ TEST_F(glTFIOTest, DracoFaceIndicesSizeOverflowIsRejected) {
 }
 #endif
 
+// Issue #10201: when a sparse accessor's indices bufferView uses EXT_meshopt_compression, the
+// decoded sparse indices must be validated against the accessor's element count so that an
+// out-of-bounds sparse index is rejected rather than writing past the unpacked float buffer.
+TEST_F(glTFIOTest, RejectsMeshoptSparseAccessorWithOutOfBoundsIndex) {
+    std::vector<uint8_t> const glb = makeMeshoptSparseAccessorOobGlb();
+
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    EXPECT_FALSE(resourceLoader.loadResources(asset));
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
