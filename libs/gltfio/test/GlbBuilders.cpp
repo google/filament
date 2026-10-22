@@ -23,6 +23,7 @@
 #include <gtest/gtest.h>
 #include <meshoptimizer.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -686,6 +687,122 @@ std::vector<uint8_t> makeDummyBufferOverflowGlb(uint64_t vertexCount) {
 })";
 
     return assembleGlb(std::move(json), std::vector<uint8_t>(6, 0));
+}
+
+std::vector<uint8_t> makeMeshoptSparseAccessorOobGlb() {
+    constexpr uint32_t kVertexCount = 3u;
+    constexpr uint16_t kOobSparseIndex = uint16_t(kVertexCount);
+
+    std::vector<uint8_t> encodedIndices(meshopt_encodeIndexSequenceBound(1, kOobSparseIndex + 1));
+    size_t const encodedSize = meshopt_encodeIndexSequence(encodedIndices.data(),
+            encodedIndices.size(), &kOobSparseIndex, 1);
+    EXPECT_GT(encodedSize, 0u);
+    encodedIndices.resize(encodedSize);
+
+    // Layout of the binary buffer:
+    //   [0..36):   3 x vec3 float positions (starts with 0.0f, so bytes [0..2) are uint16_t(0))
+    //   [36..72):  3 x vec3 float base normals
+    //   [72..84):  1 x vec3 float sparse normal value
+    //   [84..84+encodedSize): meshopt-compressed sparse index stream
+    constexpr size_t kPositionsOffset = 0;
+    constexpr size_t kPositionsBytes = kVertexCount * sizeof(float3);
+    constexpr size_t kNormalsOffset = kPositionsOffset + kPositionsBytes;
+    constexpr size_t kNormalsBytes = kVertexCount * sizeof(float3);
+    constexpr size_t kSparseValuesOffset = kNormalsOffset + kNormalsBytes;
+    constexpr size_t kSparseValuesBytes = sizeof(float3);
+    constexpr size_t kMeshoptOffset = kSparseValuesOffset + kSparseValuesBytes;
+    size_t const totalBytes = kMeshoptOffset + encodedIndices.size();
+
+    std::vector<uint8_t> bin(totalBytes, 0);
+    float* fbin = reinterpret_cast<float*>(bin.data());
+    // Positions: (0,0,0), (1,0,0), (0,1,0). Vertex 0 is all zero bytes, which doubles as the
+    // uncompressed fallback bytes for bufferView 3 so that raw pre-decode index validation sees 0.
+    fbin[3] = 1.0f;
+    fbin[7] = 1.0f;
+    // Base normals: (0,0,1) for all 3 vertices.
+    for (uint32_t v = 0; v < kVertexCount; ++v) {
+        fbin[9 + v * 3 + 2] = 1.0f;
+    }
+    // Sparse normal replacement value: (0,1,0).
+    fbin[18 + 1] = 1.0f;
+    // Copy the meshopt-compressed sparse index stream.
+    std::copy(encodedIndices.begin(), encodedIndices.end(), bin.begin() + kMeshoptOffset);
+
+    std::string json = R"({
+  "asset": { "version": "2.0" },
+  "extensionsUsed": ["EXT_meshopt_compression"],
+  "buffers": [
+    { "byteLength": )" + std::to_string(totalBytes) + R"( }
+  ],
+  "bufferViews": [
+    { "buffer": 0, "byteOffset": )" + std::to_string(kPositionsOffset) +
+            R"(, "byteLength": )" + std::to_string(kPositionsBytes) + R"( },
+    { "buffer": 0, "byteOffset": )" + std::to_string(kNormalsOffset) +
+            R"(, "byteLength": )" + std::to_string(kNormalsBytes) + R"( },
+    { "buffer": 0, "byteOffset": )" + std::to_string(kSparseValuesOffset) +
+            R"(, "byteLength": )" + std::to_string(kSparseValuesBytes) + R"( },
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 2,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": )" + std::to_string(kMeshoptOffset) + R"(,
+          "byteLength": )" + std::to_string(encodedIndices.size()) + R"(,
+          "byteStride": 2,
+          "count": 1,
+          "mode": "INDICES"
+        }
+      }
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 3,
+      "type": "VEC3",
+      "min": [0, 0, 0],
+      "max": [1, 1, 0]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 3,
+      "type": "VEC3",
+      "sparse": {
+        "count": 1,
+        "indices": {
+          "bufferView": 3,
+          "componentType": 5123
+        },
+        "values": {
+          "bufferView": 2
+        }
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": { "POSITION": 0, "NORMAL": 1 },
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    { "mesh": 0 }
+  ],
+  "scenes": [
+    { "nodes": [0] }
+  ],
+  "scene": 0
+})";
+
+    return assembleGlb(std::move(json), std::move(bin));
 }
 
 } // namespace test
