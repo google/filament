@@ -688,4 +688,42 @@ std::vector<uint8_t> makeDummyBufferOverflowGlb(uint64_t vertexCount) {
     return assembleGlb(std::move(json), std::vector<uint8_t>(6, 0));
 }
 
+std::vector<uint8_t> makeDeeplyNestedNodesGlb(size_t depth) {
+    EXPECT_GT(depth, 1u);
+
+    char buffer[7];
+
+    std::string nodes;
+    nodes.reserve(depth * 44);
+    nodes += R"({"translation":[1,0,0],"children":[1]})";
+
+    for (size_t i = 1; i < depth - 1; ++i) {
+        nodes += R"(,{"translation":[1,0,0],"children":[)";
+        // Re-use the buffer to convert the index to a string, avoiding heap allocations
+        auto [ptr, _] = std::to_chars(buffer, buffer + sizeof(buffer), i + 1);
+        nodes.append(buffer, ptr - buffer);
+        nodes += "]}";
+    }
+    nodes += R"(,{"translation":[1,0,0],"mesh":0})";
+
+    std::string json =
+            R"({"asset":{"version":"2.0"},"extensionsUsed":["KHR_materials_unlit"],)"
+            R"("scene":0,"scenes":[{"nodes":[0]}],)"
+            R"("nodes":[)" + nodes + R"(],)"
+            R"("materials":[{"extensions":{"KHR_materials_unlit":{}}}],)"
+            R"("meshes":[{"primitives":[{"attributes":{"POSITION":0},"material":0}]}],)"
+            R"("accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3",)"
+            R"("min":[0,0,0],"max":[1,1,0]}],)"
+            R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36}],)"
+            R"("buffers":[{"byteLength":36}]})";
+
+    std::vector<uint8_t> bin(36, 0);
+    float* fbin = reinterpret_cast<float*>(bin.data());
+    // 3 vertex positions: (0,0,0), (1,0,0), (0,1,0).
+    fbin[3] = 1.0f;
+    fbin[7] = 1.0f;
+
+    return assembleGlb(std::move(json), std::move(bin));
+}
+
 } // namespace test

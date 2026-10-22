@@ -60,6 +60,7 @@
 #include <limits>
 #include <locale>
 #include <memory>
+#include <vector>
 
 using namespace filament;
 using namespace filament::math;
@@ -328,14 +329,14 @@ private:
 
     // Methods used during the first traveral (creation of VertexBuffer, IndexBuffer, etc)
     FFilamentAsset* createRootAsset(const cgltf_data* srcAsset);
-    void recursePrimitives(const cgltf_node* rootNode, FFilamentAsset* fAsset);
+    void traversePrimitives(const cgltf_node* rootNode, FFilamentAsset* fAsset);
     void createPrimitives(const cgltf_node* node, const char* name, FFilamentAsset* fAsset);
     bool createPrimitive(const cgltf_primitive& inPrim, const char* name, Primitive* outPrim,
             FFilamentAsset* fAsset);
 
     // Methods used during subsequent traverals (creation of entities, renderables, etc)
     void createInstances(size_t numInstances, FFilamentAsset* fAsset);
-    void recurseEntities(const cgltf_node* node, SceneMask scenes, Entity parent,
+     void traverseEntities(const cgltf_node* node, SceneMask scenes, Entity parent,
             FFilamentAsset* fAsset, FFilamentInstance* instance);
     void createRenderable(const cgltf_node* node, Entity entity, const char* name,
             FFilamentAsset* fAsset);
@@ -469,7 +470,7 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* fAsset) {
 
     // For each scene root, recursively create all entities.
     for (const auto& pair : fAsset->mRootNodes) {
-        recurseEntities(pair.first, pair.second, instanceRoot, fAsset, instance);
+        traverseEntities(pair.first, pair.second, instanceRoot, fAsset, instance);
     }
 
     importSkins(instance, srcAsset);
@@ -548,7 +549,7 @@ FFilamentAsset* FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
     }
 
     for (const auto& [node, sceneMask] : fAsset->mRootNodes) {
-        recursePrimitives(node, fAsset);
+        traversePrimitives(node, fAsset);
     }
 
     // Find every unique resource URI and store a pointer to any of the cgltf-owned cstrings
@@ -573,18 +574,28 @@ FFilamentAsset* FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
     return preresolveTextures(fAsset, srcAsset);
 }
 
-void FAssetLoader::recursePrimitives(const cgltf_node* rootNode, FFilamentAsset* fAsset) {
-    auto const nameStr = getNodeName(rootNode, mDefaultNodeName);
-    const char* name = nameStr.c_str();
-    name = name ? name : "node";
+void FAssetLoader::traversePrimitives(const cgltf_node* rootNode, FFilamentAsset* fAsset) {
+    // Iterative pre-order traversal with an explicit stack. The node hierarchy can be
+    // arbitrarily deep, so recursion here risks stack exhaustion on hostile assets.
+    // Children are pushed in reverse order so they are visited in their original order.
+    std::vector<const cgltf_node*> stack;
+    stack.push_back(rootNode);
+    while (!stack.empty()) {
+        const cgltf_node* node = stack.back();
+        stack.pop_back();
 
-    if (rootNode->mesh) {
-        createPrimitives(rootNode, name, fAsset);
-        fAsset->mRenderableCount++;
-    }
+        auto const nameStr = getNodeName(node, mDefaultNodeName);
+        const char* name = nameStr.c_str();
+        name = name ? name : "node";
 
-    for (cgltf_size i = 0, len = rootNode->children_count; i < len; ++i) {
-        recursePrimitives(rootNode->children[i], fAsset);
+        if (node->mesh) {
+            createPrimitives(node, name, fAsset);
+            fAsset->mRenderableCount++;
+        }
+
+        for (cgltf_size i = node->children_count; i > 0; --i) {
+            stack.push_back(node->children[i - 1]);
+        }
     }
 }
 
@@ -607,75 +618,94 @@ void FAssetLoader::createInstances(size_t const numInstances, FFilamentAsset* fA
     });
 }
 
-void FAssetLoader::recurseEntities(const cgltf_node* node, SceneMask const scenes,
+void FAssetLoader::traverseEntities(const cgltf_node* node, SceneMask const scenes,
         Entity const parent, FFilamentAsset* fAsset, FFilamentInstance* instance) {
-    NodeManager& nm = mNodeManager;
-    const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
-    const Entity entity = mEntityManager.create();
-    nm.create(entity);
-    const auto nodeInstance = nm.getInstance(entity);
-    nm.setSceneMembership(nodeInstance, scenes);
+    // Iterative pre-order traversal with an explicit stack, for the same reason as
+    // traversePrimitives: no recursion, no depth limit. A child is only pushed after
+    // its parent entity exists, so the parent transform is always available, and
+    // children are pushed in reverse order to preserve the original visit order.
+    struct WorkItem {
+        const cgltf_node* node;
+        Entity parent;
+    };
+    std::vector<WorkItem> stack;
+    stack.push_back({node, parent});
+    while (!stack.empty()) {
+        WorkItem const work = stack.back();
+        stack.pop_back();
+        const cgltf_node* currentNode = work.node;
+        Entity const currentParent = work.parent;
 
-    // Always create a transform component to reflect the original hierarchy.
-    mat4f localTransform;
-    if (node->has_matrix) {
-        memcpy(&localTransform[0][0], &node->matrix[0], 16 * sizeof(float));
-    } else {
-        quatf const* rotation = reinterpret_cast<quatf const*>(&node->rotation[0]);
-        float3 const* scale = reinterpret_cast<float3 const*>(&node->scale[0]);
-        float3 const* translation = reinterpret_cast<float3 const*>(&node->translation[0]);
-        mTrsTransformManager.create(entity, *translation, *rotation, *scale);
-        localTransform = mTrsTransformManager.getTransform(
-                mTrsTransformManager.getInstance(entity));
-    }
+        NodeManager& nm = mNodeManager;
+        const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
+        const Entity entity = mEntityManager.create();
+        nm.create(entity);
+        const auto nodeInstance = nm.getInstance(entity);
+        nm.setSceneMembership(nodeInstance, scenes);
 
-    auto const parentTransform = mTransformManager.getInstance(parent);
-    mTransformManager.create(entity, parentTransform, localTransform);
-
-    // Check if this node has an extras string.
-    const cgltf_size extras_size = node->extras.end_offset - node->extras.start_offset;
-    if (extras_size > 0) {
-        mNodeManager.setExtras(mNodeManager.getInstance(entity),
-                {srcAsset->json + node->extras.start_offset, extras_size});
-    }
-
-    // Update the asset's entity list and private node mapping.
-    fAsset->mEntities.push_back(entity);
-    instance->mEntities.push_back(entity);
-    instance->mNodeMap[node - srcAsset->nodes] = entity;
-
-    auto const nameStr = getNodeName(node, mDefaultNodeName);
-    const char* name = nameStr.c_str();
-
-    if (name) {
-        fAsset->mNameToEntity[name].push_back(entity);
-        if (mNameManager) {
-            mNameManager->addComponent(entity);
-            mNameManager->setName(mNameManager->getInstance(entity), name);
+        // Always create a transform component to reflect the original hierarchy.
+        mat4f localTransform;
+        if (currentNode->has_matrix) {
+            memcpy(&localTransform[0][0], &currentNode->matrix[0], 16 * sizeof(float));
+        } else {
+            quatf const* rotation = reinterpret_cast<quatf const*>(&currentNode->rotation[0]);
+            float3 const* scale = reinterpret_cast<float3 const*>(&currentNode->scale[0]);
+            float3 const* translation =
+                    reinterpret_cast<float3 const*>(&currentNode->translation[0]);
+            mTrsTransformManager.create(entity, *translation, *rotation, *scale);
+            localTransform = mTrsTransformManager.getTransform(
+                    mTrsTransformManager.getInstance(entity));
         }
-    }
 
-    // If no name is provided in the glTF or AssetConfiguration, use "node" for error messages.
-    name = name ? name : "node";
+        auto const parentTransform = mTransformManager.getInstance(currentParent);
+        mTransformManager.create(entity, parentTransform, localTransform);
 
-    // If the node has a mesh, then create a renderable component.
-    if (node->mesh) {
-        createRenderable(node, entity, name, fAsset);
-        if (srcAsset->variants_count > 0) {
-            createMaterialVariants(node->mesh, entity, fAsset, instance);
+        // Check if this node has an extras string.
+        const cgltf_size extras_size =
+                currentNode->extras.end_offset - currentNode->extras.start_offset;
+        if (extras_size > 0) {
+            mNodeManager.setExtras(mNodeManager.getInstance(entity),
+                    {srcAsset->json + currentNode->extras.start_offset, extras_size});
         }
-    }
 
-    if (node->light) {
-        createLight(node->light, entity, fAsset);
-    }
+        // Update the asset's entity list and private node mapping.
+        fAsset->mEntities.push_back(entity);
+        instance->mEntities.push_back(entity);
+        instance->mNodeMap[currentNode - srcAsset->nodes] = entity;
 
-    if (node->camera) {
-        createCamera(node->camera, entity, fAsset);
-    }
+        auto const nameStr = getNodeName(currentNode, mDefaultNodeName);
+        const char* name = nameStr.c_str();
 
-    for (cgltf_size i = 0, len = node->children_count; i < len; ++i) {
-        recurseEntities(node->children[i], scenes, entity, fAsset, instance);
+        if (name) {
+            fAsset->mNameToEntity[name].push_back(entity);
+            if (mNameManager) {
+                mNameManager->addComponent(entity);
+                mNameManager->setName(mNameManager->getInstance(entity), name);
+            }
+        }
+
+        // If no name is provided in the glTF or AssetConfiguration, use "node" for error messages.
+        name = name ? name : "node";
+
+        // If the node has a mesh, then create a renderable component.
+        if (currentNode->mesh) {
+            createRenderable(currentNode, entity, name, fAsset);
+            if (srcAsset->variants_count > 0) {
+                createMaterialVariants(currentNode->mesh, entity, fAsset, instance);
+            }
+        }
+
+        if (currentNode->light) {
+            createLight(currentNode->light, entity, fAsset);
+        }
+
+        if (currentNode->camera) {
+            createCamera(currentNode->camera, entity, fAsset);
+        }
+
+        for (cgltf_size i = currentNode->children_count; i > 0; --i) {
+            stack.push_back({currentNode->children[i - 1], entity});
+        }
     }
 }
 
@@ -1031,7 +1061,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
     AttributeBitset requiredAttributes = material->getRequiredAttributes();
 
     // TODO: populate a mapping of Texture Index => [MaterialInstance, const char*] slots.
-    // By creating this mapping during the "recursePrimitives" phase, we will can allow
+    // By creating this mapping during the "traversePrimitives" phase, we will can allow
     // zero-instance assets to exist. This will be useful for "preloading", which is a feature
     // request from Google.
 
