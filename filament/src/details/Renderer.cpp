@@ -358,6 +358,8 @@ void FRenderer::skipFrame(uint64_t const vsyncSteadyClockTimeNano) {
     // the frame skipper.
     driver.tick();
 
+    driver.skipFrame();
+
     // do this before engine.flush()
     mResourceAllocator->gc(true);
 
