@@ -1,8 +1,8 @@
 diff --git a/third_party/cgltf/cgltf.h b/third_party/cgltf/cgltf.h
-index 78ea905f0..46d7f1e72 100644
+index 78ea905f0..3576db8f6 100644
 --- a/third_party/cgltf/cgltf.h
 +++ b/third_party/cgltf/cgltf.h
-@@ -2433,7 +2433,8 @@ cgltf_size cgltf_accessor_unpack_floats(const cgltf_accessor* accessor, cgltf_fl
+@@ -2433,9 +2433,14 @@ cgltf_size cgltf_accessor_unpack_floats(const cgltf_accessor* accessor, cgltf_fl
  		reader_head += sparse->values_byte_offset;
  
  		cgltf_size index_stride = cgltf_component_size(sparse->indices_component_type);
@@ -11,8 +11,14 @@ index 78ea905f0..46d7f1e72 100644
 +		for (cgltf_size reader_index = 0; reader_index < sparse->count; reader_index++, index_data += index_stride, reader_head += accessor_stride)
  		{
  			size_t writer_index = cgltf_component_read_index(index_data, sparse->indices_component_type);
++			if (writer_index >= element_count)
++			{
++				continue;
++			}
  			float* writer_head = out + writer_index * floats_per_element;
-@@ -2512,7 +2513,7 @@ cgltf_bool cgltf_accessor_read_uint(const cgltf_accessor* accessor, cgltf_size i
+ 
+ 			if (!cgltf_element_read_float(reader_head, accessor->type, accessor->component_type, accessor->normalized, writer_head, floats_per_element))
+@@ -2512,7 +2517,7 @@ cgltf_bool cgltf_accessor_read_uint(const cgltf_accessor* accessor, cgltf_size i
  	{
  		return 0;
  	}
@@ -21,7 +27,7 @@ index 78ea905f0..46d7f1e72 100644
  	return cgltf_element_read_uint(element, accessor->type, accessor->component_type, out, element_size);
  }
  
-@@ -2531,7 +2532,7 @@ cgltf_size cgltf_accessor_read_index(const cgltf_accessor* accessor, cgltf_size
+@@ -2531,7 +2536,7 @@ cgltf_size cgltf_accessor_read_index(const cgltf_accessor* accessor, cgltf_size
  	{
  		return 0; // This is an error case, but we can't communicate the error with existing interface.
  	}
