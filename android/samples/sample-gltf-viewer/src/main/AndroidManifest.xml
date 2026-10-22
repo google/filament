@@ -14,6 +14,7 @@
     <activity
         android:exported="true"
         android:name="com.google.android.filament.gltf.MainActivity"
+        android:launchMode="singleTop"
         android:screenOrientation="fullSensor"
         android:configChanges="orientation|screenSize|screenLayout|keyboardHidden">
       <intent-filter>
