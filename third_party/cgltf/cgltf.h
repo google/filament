@@ -1612,8 +1612,19 @@ cgltf_result cgltf_validate(cgltf_data* data)
 			cgltf_accessor_sparse* sparse = &accessor->sparse;
 
 			cgltf_size indices_component_size = cgltf_component_size(sparse->indices_component_type);
-			cgltf_size indices_req_size = sparse->indices_byte_offset + indices_component_size * sparse->count;
-			cgltf_size values_req_size = sparse->values_byte_offset + element_size * sparse->count;
+			cgltf_size indices_req_size;
+			cgltf_size values_req_size;
+
+			/* A sparse accessor replaces at most accessor->count elements, so a larger
+			 * sparse count is invalid on its face. The required-size multiplications
+			 * below must also not wrap: a wrapped req_size would pass the bounds
+			 * check that follows and let cgltf_calc_index_bound read past the buffer. */
+			CGLTF_ASSERT_IF(sparse->count > accessor->count, cgltf_result_invalid_gltf);
+			CGLTF_ASSERT_IF(indices_component_size && sparse->count > (SIZE_MAX - sparse->indices_byte_offset) / indices_component_size, cgltf_result_data_too_short);
+			CGLTF_ASSERT_IF(element_size && sparse->count > (SIZE_MAX - sparse->values_byte_offset) / element_size, cgltf_result_data_too_short);
+
+			indices_req_size = sparse->indices_byte_offset + indices_component_size * sparse->count;
+			values_req_size = sparse->values_byte_offset + element_size * sparse->count;
 
 			CGLTF_ASSERT_IF(sparse->indices_buffer_view->size < indices_req_size ||
 							sparse->values_buffer_view->size < values_req_size, cgltf_result_data_too_short);
