@@ -121,6 +121,8 @@ int32_t depthBiasRound(float depthBias) {
         case BlendFunction::ONE_MINUS_DST_ALPHA: return wgpu::BlendFactor::OneMinusDstAlpha;
         case BlendFunction::SRC_ALPHA_SATURATE:  return wgpu::BlendFactor::SrcAlphaSaturated;
     }
+    // should never happen
+    return wgpu::BlendFactor::One;
 }
 
 }  // namespace
@@ -194,12 +196,11 @@ void WebGPUPipelineCache::populateKey(RenderPipelineRequest const& request,
         outKey.colorFormats[colorIndex] = request.colorFormats[colorIndex];
     }
     // vertex buffers...
-    for (WebGPUVertexBufferInfo::WebGPUSlotBindingInfo const& vertexBufferSlot:
-            request.vertexBufferSlots) {
-        assert_invariant(vertexBufferSlot.sourceBufferIndex < MAX_VERTEX_BUFFER_COUNT);
-        outKey.vertexBuffers[vertexBufferSlot.sourceBufferIndex].stride = vertexBufferSlot.stride;
-        outKey.vertexBuffers[vertexBufferSlot.sourceBufferIndex].offset =
-                vertexBufferSlot.bufferOffset;
+    assert_invariant(request.vertexBufferSlots.size() <= MAX_VERTEX_BUFFER_COUNT);
+    for (size_t slotIndex{ 0 }; slotIndex < request.vertexBufferSlots.size(); slotIndex++) {
+        outKey.vertexBuffers[slotIndex].stride =
+                static_cast<uint32_t>(request.vertexBufferLayouts[slotIndex].arrayStride);
+        outKey.vertexBuffers[slotIndex].offset = request.vertexBufferSlots[slotIndex].bufferOffset;
     }
     // vertex attributes...
     uint8_t currentAttributeIndex{ 0 };
@@ -215,7 +216,7 @@ void WebGPUPipelineCache::populateKey(RenderPipelineRequest const& request,
             };
             outKey.vertexAttributes[currentAttributeIndex].bufferIndex = bufferIndex;
             outKey.vertexAttributes[currentAttributeIndex].offset =
-                    static_cast<uint8_t>(vertexAttribute.offset);
+                    static_cast<uint16_t>(vertexAttribute.offset);
             outKey.vertexAttributes[currentAttributeIndex].shaderLocation =
                     static_cast<uint8_t>(vertexAttribute.shaderLocation);
             outKey.vertexAttributes[currentAttributeIndex].format = vertexAttribute.format;

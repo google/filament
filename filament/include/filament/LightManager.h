@@ -143,11 +143,26 @@ class FLightManager;
  *    On the other hand, a scene can contain hundreds of non overlapping lights without
  *    incurring a significant overhead.
  *
+ * Instance lifetime
+ * =================
+ *
+ * An Instance is a transient handle: Instances are not stable when a component is added,
+ * removed or gc() is called on a component manager.
+ *
+ * Instances must therefore not be kept across frames. Keep the Entity instead, and call
+ * getInstance() again when needed; it is a fast lookup. Using a stale Instance doesn't crash
+ * but silently accesses the wrong component.
+ *
  */
 class UTILS_PUBLIC LightManager : public FilamentAPI {
     struct BuilderDetails;
 
 public:
+    /**
+     * An Instance representing a light component.
+     * Instances are not stable when a component is added, removed or gc() is called on a
+     * component manager.
+     */
     using Instance = utils::EntityInstance<LightManager>;
 
     /**
@@ -197,6 +212,9 @@ public:
      * @param e An Entity.
      * @return An Instance object, which represents the Light component associated with the Entity e.
      * @note Use Instance::isValid() to make sure the component exists.
+     * @note The returned Instance is transient and must not be kept across frames, see
+     *       "Instance lifetime" above. Instances are not stable when a component is added,
+     *       removed or gc() is called on a component manager.
      * @see hasComponent()
      */
     Instance getInstance(utils::Entity e) const noexcept;
@@ -578,7 +596,8 @@ public:
          *
          * @note
          * In some situations it can be useful to have a light in the scene that doesn't
-         * actually emit light, but does cast shadows.
+         * actually emit light, but does cast shadows. To cast shadows with light casting
+         * disabled, you need to use the material `shadowMultiplier` property.
          */
         Builder& castLight(bool enable) noexcept;
 
@@ -771,7 +790,7 @@ public:
          *            memory or other resources.
          * @exception utils::PreConditionPanic if a parameter to a builder function was invalid.
          */
-        Result build(Engine& engine, utils::Entity entity);
+        Result build(Engine& engine, utils::Entity entity) const;
 
     private:
         friend class FEngine;

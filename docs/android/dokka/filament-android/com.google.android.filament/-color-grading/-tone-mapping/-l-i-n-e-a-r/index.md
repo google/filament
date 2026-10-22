@@ -3,6 +3,12 @@
 # LINEAR
 
 [main]\
-[LINEAR](index.md)
+[~~LINEAR~~](index.md)
+
+---
+
+### Deprecated
+
+---
 
 Linear tone mapping (i.e. no tone mapping)

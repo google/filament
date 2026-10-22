@@ -25,7 +25,11 @@
 
 #include <utils/Panic.h>
 
+#include <limits>
+
 static constexpr uint32_t TIME_BEFORE_EVICTION = 3;
+
+using namespace bluevk;
 
 namespace filament::backend {
 
@@ -35,12 +39,13 @@ namespace {
 static constexpr uint32_t MAX_EMPTY_STAGES_TO_RETAIN = 1;
 constexpr uint32_t STAGE_SIZE = 1048576;
 
-uint32_t alignValue(uint32_t valueToAlign, uint32_t alignment) {
+// 64-bit so that aligning a value near UINT32_MAX cannot wrap.
+VkDeviceSize alignValue(VkDeviceSize valueToAlign, VkDeviceSize alignment) {
     if (alignment == 0) {
         return valueToAlign;
     }
 
-    uint32_t remainder = valueToAlign % alignment;
+    VkDeviceSize remainder = valueToAlign % alignment;
     return remainder == 0 ? valueToAlign : valueToAlign + (alignment - remainder);
 }
 
@@ -48,6 +53,7 @@ uint32_t alignValue(uint32_t valueToAlign, uint32_t alignment) {
 
 fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStage::acquireSegment(
         fvkmemory::ResourceManager* resManager, uint32_t segmentOffset, uint32_t numBytes) {
+    assert_invariant(numBytes <= mCapacity && segmentOffset <= mCapacity - numBytes);
     auto segment = fvkmemory::resource_ptr<Segment>::construct(resManager, this, numBytes,
             segmentOffset, [this](uint32_t offset) { mSegments.erase(offset); });
     mSegments.insert({ segmentOffset, segment.get() });
@@ -56,18 +62,26 @@ fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStage::acquireSegment(
 }
 
 VulkanStagePool::VulkanStagePool(VmaAllocator allocator, fvkmemory::ResourceManager* resManager,
-        VulkanCommands* commands, const VkPhysicalDeviceLimits* deviceLimits)
-    : mAllocator(allocator),
-      mResManager(resManager),
-      mCommands(commands),
-      mDeviceLimits(deviceLimits) {}
+        VulkanCommands* commands, VkPhysicalDevice physicalDevice,
+        const VkPhysicalDeviceLimits* deviceLimits)
+        : mAllocator(allocator),
+          mResManager(resManager),
+          mCommands(commands),
+          mPhysicalDevice(physicalDevice),
+          mDeviceLimits(deviceLimits) {}
 
-fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStagePool::acquireStage(uint32_t numBytes,
+fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStagePool::acquireStage(size_t requestedBytes,
         uint32_t alignment) {
+    // Stages track capacities and offsets in 32 bits. FTexture::setImageCommon caps texture
+    // uploads at INT32_MAX bytes, so the request still fits after alignment.
+    assert_invariant(requestedBytes <= std::numeric_limits<uint32_t>::max());
+
     // Apply alignment to the byte count to ensure that, when we later flush
     // data written by the host, we only flush the atoms that we modified, and
     // no adjacent atoms.
-    numBytes = alignToNonCoherentAtomSize(numBytes);
+    VkDeviceSize const alignedBytes = alignToNonCoherentAtomSize(requestedBytes);
+    assert_invariant(alignedBytes <= std::numeric_limits<uint32_t>::max());
+    uint32_t const numBytes = uint32_t(alignedBytes);
 
     // First check if a stage segment exists whose capacity is greater than or
     // equal to the requested size.
@@ -79,12 +93,12 @@ fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStagePool::acquireStage(uint
     VulkanStage* pStage = nullptr;
     uint32_t segmentOffset = 0;
     while (iter != mStages.end()) {
-        segmentOffset = alignValue(iter->second->currentOffset(), alignment);
+        VkDeviceSize const offset = alignValue(iter->second->currentOffset(), alignment);
 
-        // Check for overflow + if there's space.
-        if (segmentOffset >= iter->second->currentOffset() &&
-                iter->second->capacity() - numBytes >= segmentOffset) {
+        // Check if there's space.
+        if (iter->second->capacity() >= offset + numBytes) {
             // This buffer has enough space.
+            segmentOffset = uint32_t(offset);
             pStage = iter->second;
             mStages.erase(iter);
             break;
@@ -111,7 +125,7 @@ fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStagePool::acquireStage(uint
     return pSegment;
 }
 
-uint32_t VulkanStagePool::alignToNonCoherentAtomSize(uint32_t bytes) {
+VkDeviceSize VulkanStagePool::alignToNonCoherentAtomSize(VkDeviceSize bytes) {
     VkDeviceSize alignment = mDeviceLimits->nonCoherentAtomSize;
     return alignValue(bytes, alignment);
 }
@@ -158,6 +172,32 @@ void VulkanStagePool::destroyStage(VulkanStage const* stage) {
     delete stage;
 }
 
+VkImageTiling VulkanStagePool::getStageImageTiling(VkFormat format) {
+    if (auto iter = mStageImageTilings.find(format); iter != mStageImageTilings.end()) {
+        return iter->second;
+    }
+
+    VkFormatProperties props;
+    vkGetPhysicalDeviceFormatProperties(mPhysicalDevice, format, &props);
+
+    // Prefer linear tiling since it allows the host to write directly into the image. However,
+    // some devices (e.g. V3D) do not support BLIT_SRC for linear images of certain formats. In
+    // that case, use an optimal-tiled image which is filled with a buffer-to-image copy.
+    constexpr VkFormatFeatureFlags OPTIMAL_REQUIRED =
+            VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_TRANSFER_DST_BIT;
+    VkImageTiling tiling = VK_IMAGE_TILING_LINEAR;
+    if (!(props.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT)) {
+        if ((props.optimalTilingFeatures & OPTIMAL_REQUIRED) == OPTIMAL_REQUIRED) {
+            tiling = VK_IMAGE_TILING_OPTIMAL;
+        } else {
+            FVK_LOGW << "Format " << format << " does not support BLIT_SRC with either linear or "
+                     << "optimal tiling. Uploads requiring format conversion may be invalid.";
+        }
+    }
+    mStageImageTilings[format] = tiling;
+    return tiling;
+}
+
 fvkmemory::resource_ptr<VulkanStageImage::Resource> VulkanStagePool::acquireImage(
         PixelDataFormat format, PixelDataType type, uint32_t width, uint32_t height) {
     // Helper lambda so we can return stage images wrapped as resources that can
@@ -179,21 +219,24 @@ fvkmemory::resource_ptr<VulkanStageImage::Resource> VulkanStagePool::acquireImag
         }
     }
 
-    const VkImageCreateInfo imageInfo = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+    VkImageTiling const tiling = getStageImageTiling(vkformat);
+    bool const isLinear = tiling == VK_IMAGE_TILING_LINEAR;
+
+    VkImageCreateInfo const imageInfo = { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
         .format = vkformat,
         .extent = { width, height, 1 },
         .mipLevels = 1,
         .arrayLayers = 1,
         .samples = VK_SAMPLE_COUNT_1_BIT,
-        .tiling = VK_IMAGE_TILING_LINEAR,
-        .usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT
-    };
+        .tiling = tiling,
+        .usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT };
 
-    const VmaAllocationCreateInfo allocInfo {
-        .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT,
-        .usage = VMA_MEMORY_USAGE_CPU_TO_GPU
+    // Linear images are written to directly by the host. Optimal images are filled on the GPU
+    // from a staging buffer, so they can live in device-local memory.
+    const VmaAllocationCreateInfo allocInfo{
+        .flags = isLinear ? VmaAllocationCreateFlags(VMA_ALLOCATION_CREATE_MAPPED_BIT) : 0,
+        .usage = isLinear ? VMA_MEMORY_USAGE_CPU_TO_GPU : VMA_MEMORY_USAGE_GPU_ONLY,
     };
 
     VkImage image;
@@ -206,8 +249,8 @@ fvkmemory::resource_ptr<VulkanStageImage::Resource> VulkanStagePool::acquireImag
     VkImageAspectFlags const aspectFlags = fvkutils::getImageAspect(vkformat);
     VkCommandBuffer const cmdbuffer = mCommands->get().buffer();
 
-    VulkanStageImage* stageImage = new VulkanStageImage(
-        vkformat, width, height, memory, image, mCurrentFrame);
+    VulkanStageImage* stageImage =
+            new VulkanStageImage(vkformat, width, height, tiling, memory, image, mCurrentFrame);
 
     fvkutils::transitionLayout(cmdbuffer, {
             .image = stageImage->image(),

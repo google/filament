@@ -94,19 +94,19 @@ public:
     using AsyncCallId = backend::AsyncCallId;
 
     /** @return Whether a backend supports a particular format. */
-    static bool isTextureFormatSupported(Engine& engine, InternalFormat format) noexcept;
+    static bool isTextureFormatSupported(Engine const& engine, InternalFormat format) noexcept;
 
     /** @return Whether a backend supports mipmapping of a particular format. */
-    static bool isTextureFormatMipmappable(Engine& engine, InternalFormat format) noexcept;
+    static bool isTextureFormatMipmappable(Engine const& engine, InternalFormat format) noexcept;
 
     /** @return Whether particular format is compressed */
     static bool isTextureFormatCompressed(InternalFormat format) noexcept;
 
     /** @return Whether this backend supports protected textures. */
-    static bool isProtectedTexturesSupported(Engine& engine) noexcept;
+    static bool isProtectedTexturesSupported(Engine const& engine) noexcept;
 
     /** @return Whether a backend supports texture swizzling. */
-    static bool isTextureSwizzleSupported(Engine& engine) noexcept;
+    static bool isTextureSwizzleSupported(Engine const& engine) noexcept;
 
     static size_t computeTextureDataSize(Format format, Type type,
             size_t stride, size_t height, size_t alignment) noexcept;
@@ -116,10 +116,10 @@ public:
 
     /** @return the maximum size in texels of a texture of type \p type. At least 2048 for
      * 2D textures, 256 for 3D textures. */
-    static size_t getMaxTextureSize(Engine& engine, Sampler type) noexcept;
+    static size_t getMaxTextureSize(Engine const& engine, Sampler type) noexcept;
 
     /** @return the maximum number of layers supported by texture arrays. At least 256. */
-    static size_t getMaxArrayTextureLayers(Engine& engine) noexcept;
+    static size_t getMaxArrayTextureLayers(Engine const& engine) noexcept;
 
     //! Use Builder to construct a Texture object instance
     class Builder : public BuilderBase<BuilderDetails>, public BuilderNameMixin<Builder> {
@@ -322,7 +322,7 @@ public:
          *            memory or other resources.
          * @exception utils::PreConditionPanic if a parameter to a builder function was invalid.
          */
-        Texture* UTILS_NONNULL build(Engine& engine);
+        Texture* UTILS_NONNULL build(Engine& engine) const;
 
         /* no user serviceable parts below */
 
@@ -433,14 +433,14 @@ public:
     void setImage(Engine& engine, size_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
             uint32_t width, uint32_t height, uint32_t depth,
-            PixelBufferDescriptor&& buffer) const;
+            PixelBufferDescriptor&& buffer);
 
     /**
      * inline helper to update a 2D texture
      *
      * @see setImage
      */
-    void setImage(Engine& engine, size_t level, PixelBufferDescriptor&& buffer) const {
+    void setImage(Engine& engine, size_t level, PixelBufferDescriptor&& buffer) {
         setImage(engine, level, 0, 0, 0,
             uint32_t(getWidth(level)), uint32_t(getHeight(level)), 1, std::move(buffer));
     }
@@ -452,8 +452,36 @@ public:
      */
     void setImage(Engine& engine, size_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-            PixelBufferDescriptor&& buffer) const {
+            PixelBufferDescriptor&& buffer) {
         setImage(engine, level, xoffset, yoffset, 0, width, height, 1, std::move(buffer));
+    }
+
+    /** @deprecated Use non-const setImage() instead. */
+    UTILS_DEPRECATED
+    UTILS_NOAPIGEN
+    void setImage(Engine& engine, size_t level,
+            uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+            uint32_t width, uint32_t height, uint32_t depth,
+            PixelBufferDescriptor&& buffer) const {
+        const_cast<Texture*>(this)->setImage(engine, level,
+                xoffset, yoffset, zoffset, width, height, depth, std::move(buffer));
+    }
+
+    /** @deprecated Use non-const setImage() instead. */
+    UTILS_DEPRECATED
+    UTILS_NOAPIGEN
+    void setImage(Engine& engine, size_t level, PixelBufferDescriptor&& buffer) const {
+        const_cast<Texture*>(this)->setImage(engine, level, std::move(buffer));
+    }
+
+    /** @deprecated Use non-const setImage() instead. */
+    UTILS_DEPRECATED
+    UTILS_NOAPIGEN
+    void setImage(Engine& engine, size_t level,
+            uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+            PixelBufferDescriptor&& buffer) const {
+        const_cast<Texture*>(this)->setImage(engine, level,
+                xoffset, yoffset, width, height, std::move(buffer));
     }
 
     /**
@@ -499,7 +527,7 @@ public:
             PixelBufferDescriptor&& buffer,
             backend::CallbackHandler* UTILS_NULLABLE handler,
             AsyncCompletionCallback callback,
-            void* UTILS_NULLABLE user = nullptr) const;
+            void* UTILS_NULLABLE user = nullptr);
 
     /**
      * inline helper to update a 2D texture asynchronously
@@ -509,7 +537,7 @@ public:
     UTILS_NOAPIGEN
     AsyncCallId setImageAsync(Engine& engine, size_t level, PixelBufferDescriptor&& buffer,
             backend::CallbackHandler* UTILS_NULLABLE handler, AsyncCompletionCallback callback,
-            void* UTILS_NULLABLE user = nullptr) const {
+            void* UTILS_NULLABLE user = nullptr) {
         return setImageAsync(engine, level, 0, 0, 0,
             uint32_t(getWidth(level)), uint32_t(getHeight(level)), 1, std::move(buffer),
             handler, std::move(callback), user);
@@ -526,9 +554,48 @@ public:
             PixelBufferDescriptor&& buffer,
             backend::CallbackHandler* UTILS_NULLABLE handler,
             AsyncCompletionCallback callback,
-            void* UTILS_NULLABLE user = nullptr) const {
+            void* UTILS_NULLABLE user = nullptr) {
         return setImageAsync(engine, level, xoffset, yoffset, 0, width, height, 1, std::move(buffer),
             handler, std::move(callback), user);
+    }
+
+    /** @deprecated Use non-const setImageAsync() instead. */
+    UTILS_DEPRECATED
+    UTILS_NOAPIGEN
+    AsyncCallId setImageAsync(Engine& engine, size_t level,
+            uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+            uint32_t width, uint32_t height, uint32_t depth,
+            PixelBufferDescriptor&& buffer,
+            backend::CallbackHandler* UTILS_NULLABLE handler,
+            AsyncCompletionCallback callback,
+            void* UTILS_NULLABLE user = nullptr) const {
+        return const_cast<Texture*>(this)->setImageAsync(engine, level,
+                xoffset, yoffset, zoffset, width, height, depth, std::move(buffer),
+                handler, std::move(callback), user);
+    }
+
+    /** @deprecated Use non-const setImageAsync() instead. */
+    UTILS_DEPRECATED
+    UTILS_NOAPIGEN
+    AsyncCallId setImageAsync(Engine& engine, size_t level, PixelBufferDescriptor&& buffer,
+            backend::CallbackHandler* UTILS_NULLABLE handler, AsyncCompletionCallback callback,
+            void* UTILS_NULLABLE user = nullptr) const {
+        return const_cast<Texture*>(this)->setImageAsync(engine, level, std::move(buffer),
+                handler, std::move(callback), user);
+    }
+
+    /** @deprecated Use non-const setImageAsync() instead. */
+    UTILS_DEPRECATED
+    UTILS_NOAPIGEN
+    AsyncCallId setImageAsync(Engine& engine, size_t level,
+            uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+            PixelBufferDescriptor&& buffer,
+            backend::CallbackHandler* UTILS_NULLABLE handler,
+            AsyncCompletionCallback callback,
+            void* UTILS_NULLABLE user = nullptr) const {
+        return const_cast<Texture*>(this)->setImageAsync(engine, level,
+                xoffset, yoffset, width, height, std::move(buffer),
+                handler, std::move(callback), user);
     }
 
     /**
@@ -639,7 +706,14 @@ public:
      * @attention \p engine must be the instance passed to Builder::build()
      * @attention This Texture instance must NOT use SamplerType::SAMPLER_3D or it has no effect
      */
-    void generateMipmaps(Engine& engine) const;
+    void generateMipmaps(Engine& engine);
+
+    /** @deprecated Use non-const generateMipmaps() instead. */
+    UTILS_DEPRECATED
+    UTILS_NOAPIGEN
+    void generateMipmaps(Engine& engine) const {
+        const_cast<Texture*>(this)->generateMipmaps(engine);
+    }
 
     /**
      * This non-blocking method checks if the resource has finished creation *successfully*. If the

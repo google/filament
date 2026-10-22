@@ -145,7 +145,7 @@ public:
      * @param index The index of the instance.
      * @return The local transform of the instance.
      */
-    math::mat4f const& getLocalTransform(size_t index);
+    math::mat4f const& getLocalTransform(size_t index) const;
 
 protected:
     // prevent heap allocation

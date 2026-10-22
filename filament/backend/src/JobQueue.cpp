@@ -188,6 +188,11 @@ void JobQueue::stop() noexcept {
     mQueueCondition.notify_all(); // Wake up all waiting threads
 }
 
+bool JobQueue::empty() const noexcept {
+    LockGuard const lock(mQueueMutex);
+    return mJobOrder.empty();
+}
+
 JobQueue::JobId JobQueue::genNextJobId() noexcept {
     // We assume this method is called within the critical section.
     JobId newJobId = mNextJobId++;
@@ -237,11 +242,21 @@ void AmortizationWorker::process(int const jobCount) {
     }
 }
 
+void AmortizationWorker::drain() {
+    if (!mQueue) {
+        return;
+    }
+
+    while (!mQueue->empty()) {
+        process(-1);
+    }
+}
+
 void AmortizationWorker::terminate() {
     JobWorker::terminate();
 
     // Drain all pending jobs.
-    process(-1);
+    drain();
 }
 
 ThreadWorker::ThreadWorker(JobQueue::Ptr queue, Config config, PassKey)
@@ -267,6 +282,33 @@ ThreadWorker::ThreadWorker(JobQueue::Ptr queue, Config config, PassKey)
 ThreadWorker::~ThreadWorker() {
     // Destroying a worker without calling `terminate()` first is a programming error.
     assert_invariant(!mThread.joinable());
+}
+
+void ThreadWorker::drain() {
+    if (!mQueue) {
+        return;
+    }
+
+    assert_invariant(std::this_thread::get_id() != mThread.get_id());
+
+    struct DrainFence {
+        utils::Mutex mutex;
+        utils::Condition condition;
+        bool done = false;
+    } fence;
+
+    JobQueue::JobId const id = mQueue->push([&fence]() {
+        utils::LockGuard const lock(fence.mutex);
+        fence.done = true;
+        fence.condition.notify_one();
+    });
+
+    if (id == JobQueue::InvalidJobId) {
+        return;
+    }
+
+    utils::UniqueLock lock(fence.mutex);
+    fence.condition.wait(lock, [&fence]() { return fence.done; });
 }
 
 void ThreadWorker::terminate() {

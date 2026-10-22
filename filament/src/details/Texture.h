@@ -31,7 +31,6 @@
 #include <utils/Invocable.h>
 
 #include <array>
-#include <atomic>
 #include <cmath>
 
 #include <stddef.h>
@@ -63,20 +62,20 @@ public:
     void setImage(FEngine& engine, size_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
             uint32_t width, uint32_t height, uint32_t depth,
-            PixelBufferDescriptor&& buffer) const;
+            PixelBufferDescriptor&& buffer);
 
     AsyncCallId setImageAsync(FEngine& engine, size_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
             uint32_t width, uint32_t height, uint32_t depth,
             PixelBufferDescriptor&& buffer, backend::CallbackHandler* handler,
-            AsyncCompletionCallback callback, void* user) const;
+            AsyncCompletionCallback callback, void* user);
 
     void setExternalImage(FEngine& engine, ExternalImageHandleRef image);
     void setExternalImage(FEngine& engine, void* image);
     void setExternalImage(FEngine& engine, void* image, size_t plane);
     void setExternalStream(FEngine& engine, FStream* stream);
 
-    void generateMipmaps(FEngine& engine) const;
+    void generateMipmaps(FEngine& engine);
 
     bool isCompressed() const noexcept { return isCompressedFormat(mFormat); }
 
@@ -89,14 +88,14 @@ public:
     // before freeing the object, so it must become true even when creation is canceled.
     // Use isCreationSuccessful() to know whether the resource can be used.
     bool isCreationSettled() const noexcept {
-        return mCreationStatus.load(std::memory_order_relaxed) != CreationStatus::CREATING;
+        return mCreationState.isSettled();
     }
 
     // Whether creation finished *and* actually populated the resource. A canceled creation
     // finishes without ever running, so the resource is not usable. This is what the public
     // Texture::isCreationComplete() reports.
     bool isCreationSuccessful() const noexcept {
-        return mCreationStatus.load(std::memory_order_relaxed) == CreationStatus::CREATED;
+        return mCreationState.isSuccessful();
     }
 
     /*
@@ -104,19 +103,19 @@ public:
      */
 
     // Synchronous call to the backend. Returns whether a backend supports a particular format.
-    static bool isTextureFormatSupported(FEngine& engine, InternalFormat format) noexcept;
+    static bool isTextureFormatSupported(FEngine const& engine, InternalFormat format) noexcept;
 
     // Synchronous call to the backend. Returns whether a backend supports mipmapping of a particular format.
-    static bool isTextureFormatMipmappable(FEngine& engine, InternalFormat format) noexcept;
+    static bool isTextureFormatMipmappable(FEngine const& engine, InternalFormat format) noexcept;
 
     // Returns whether particular format is compressed
     static bool isTextureFormatCompressed(InternalFormat format) noexcept;
 
     // Synchronous call to the backend. Returns whether a backend supports protected textures.
-    static bool isProtectedTexturesSupported(FEngine& engine) noexcept;
+    static bool isProtectedTexturesSupported(FEngine const& engine) noexcept;
 
     // Synchronous call to the backend. Returns whether a backend supports texture swizzling.
-    static bool isTextureSwizzleSupported(FEngine& engine) noexcept;
+    static bool isTextureSwizzleSupported(FEngine const& engine) noexcept;
 
     // storage needed on the CPU side for texture data uploads
     static size_t computeTextureDataSize(Format format, Type type,
@@ -146,9 +145,9 @@ public:
     static bool validatePixelFormatAndType(backend::TextureFormat internalFormat,
             backend::PixelDataFormat format, backend::PixelDataType type) noexcept;
 
-    static size_t getMaxTextureSize(FEngine& engine, Sampler type) noexcept;
+    static size_t getMaxTextureSize(FEngine const& engine, Sampler type) noexcept;
 
-    static size_t getMaxArrayTextureLayers(FEngine& engine) noexcept;
+    static size_t getMaxArrayTextureLayers(FEngine const& engine) noexcept;
 
     bool textureHandleCanMutate() const noexcept;
     void updateLodRange(uint8_t level) noexcept;
@@ -218,7 +217,7 @@ private:
 
     // Where the creation process is. This is especially useful for asynchronous creation; it only
     // ever moves out of CREATING once, to one of the two terminal states.
-    std::atomic<CreationStatus> mCreationStatus{ CreationStatus::CREATING };
+    CreationState mCreationState;
 };
 
 FILAMENT_DOWNCAST(Texture)

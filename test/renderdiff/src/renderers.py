@@ -20,7 +20,7 @@ import sys
 import concurrent.futures
 import fnmatch
 from dataclasses import dataclass, field
-from utils import execute, mkdir_p, mv_f, important_print
+from utils import execute, mkdir_p, important_print
 from results import RESULT_OK, RESULT_FAILED
 
 
@@ -88,7 +88,17 @@ class RenderTestCase(abc.ABC):
 class GltfRenderTestCase(RenderTestCase):
     model: str
     model_path: str
+    # The test as a batch spec. Only the web renderer still drives gltf_viewer through --batch.
     test_json_path: str
+    # The test as the contents of a --settings file, which the desktop renderer uses. It is written
+    # to the working directory rather than the output directory, because update_golden.py treats
+    # every JSON file in the output directory as a golden.
+    settings_json: str = '{}'
+    # These match the sample tests. Under --screenshot gltf_viewer loads the asset synchronously,
+    # so the warmup frames all render the complete scene and the image does not depend on how
+    # fast the machine decodes textures.
+    warmup_frames: int = 10
+    fixed_timestep: float = 0.0166667
 
     @property
     def target_name(self) -> str:
@@ -97,21 +107,39 @@ class GltfRenderTestCase(RenderTestCase):
     def _execute_render(self, renderer: 'BaseRenderer', env: dict, working_dir: str, out_tif_name: str) -> tuple[int, str]:
         out_name = self.get_out_name(renderer)
         executable_abs = os.path.abspath(renderer.executable)
-        cmd = f'{executable_abs} -a {self.backend} --batch={self.test_json_path} -e {self.model_path} --headless'
+
+        settings_json_path = os.path.join(working_dir, f'{self.test_name}.settings.json')
+        with open(settings_json_path, 'w') as f:
+            f.write(self.settings_json)
+
+        # gltf_viewer writes the effective settings next to the screenshot, with a .json extension.
+        out_json_name = os.path.splitext(out_tif_name)[0] + '.json'
+        for stale in (out_tif_name, out_json_name):
+            if os.path.exists(stale):
+                os.remove(stale)
+
+        cmd = (
+            f'{shlex.quote(executable_abs)} -a {self.backend} --headless '
+            f'--settings={shlex.quote(settings_json_path)} '
+            f'--screenshot={shlex.quote(out_tif_name)} --frames={self.warmup_frames} '
+            f'--fixed-timestep={self.fixed_timestep} {shlex.quote(self.model_path)}'
+        )
         out_code, output = execute(cmd, cwd=working_dir, env=env, capture_output=True)
 
-        tif_src = f'{working_dir}/{self.test_name}0.tif'
-        json_src = f'{working_dir}/{self.test_name}0.json'
-        if out_code == 0 and os.path.exists(tif_src):
+        if out_code == 0 and os.path.exists(out_tif_name):
             result = RESULT_OK
-            mv_f(tif_src, out_tif_name)
-            if os.path.exists(json_src):
-                mv_f(json_src, os.path.join(self.output_dir, f'{out_name}.json'))
-            important_print(f'{out_name} rendering succeeded. output=\n{output}')
+            important_print(f'{out_name} rendering succeeded. model={self.model_path} '
+                            f'output=\n{output}')
         else:
             result = RESULT_FAILED
+            # gltf_viewer writes the settings during setup, before rendering anything, so a failed
+            # render can leave them behind without an image. update_golden.py would treat that
+            # file as a golden, so it is removed to match the old behavior of copying neither.
+            if os.path.exists(out_json_name):
+                os.remove(out_json_name)
             important_print(f'{out_name} rendering failed with '
-                            f'error={describe_exit_code(out_code)} output=\n{output}')
+                            f'error={describe_exit_code(out_code)} model={self.model_path} '
+                            f'output=\n{output}')
 
         return out_code, result
 
@@ -186,6 +214,8 @@ class BaseRenderer(abc.ABC):
         self.platform = platform
         self.backend = backend
         self.executable = executable
+        # Subclasses that support filtering overwrite this; _collect_test_cases reads it.
+        self.test_filter = None
 
     @abc.abstractmethod
     def get_env(self) -> dict:
@@ -196,6 +226,68 @@ class BaseRenderer(abc.ABC):
     def run_tests(self, test_config: 'RenderTestConfig', output_dir: str) -> list[dict]:
         """Executes a suite of tests and returns a list of results."""
         pass
+
+    def _make_gltf_test_case(self, test, named_output_dir: str, model: str, model_path: str,
+                             test_json_path: str) -> RenderTestCase:
+        """Hook: how this renderer executes a gltf test."""
+        return GltfRenderTestCase(
+            test_name=test.name,
+            backend=self.backend,
+            output_dir=named_output_dir,
+            model=model,
+            model_path=model_path,
+            test_json_path=test_json_path,
+            settings_json=test.to_settings_format()
+        )
+
+    def _make_sample_test_case(self, test, named_output_dir: str) -> RenderTestCase:
+        """Hook: how this renderer executes a sample test."""
+        return SampleRenderTestCase(
+            test_name=test.name,
+            backend=self.backend,
+            output_dir=named_output_dir,
+            target=test.sample_test.target,
+            executable=test.sample_test.executable,
+            warmup_frames=test.sample_test.warmup_frames,
+            fixed_timestep=test.sample_test.fixed_timestep,
+            extra_args=test.sample_test.args
+        )
+
+    def _create_test_cases(self, test, named_output_dir: str) -> list[RenderTestCase]:
+        mkdir_p(named_output_dir)
+        cases = []
+        if test.is_gltf_test:
+            test_json_path = os.path.abspath(f'{named_output_dir}/{test.name}.simplified.json')
+            with open(test_json_path, 'w') as f:
+                f.write(f'[{test.to_filament_format()}]')
+
+            for model in test.gltf_test.models:
+                model_path = os.path.abspath(test.gltf_test.models_map[model])
+                cases.append(self._make_gltf_test_case(
+                    test, named_output_dir, model, model_path, test_json_path))
+        elif test.is_sample_test:
+            cases.append(self._make_sample_test_case(test, named_output_dir))
+        return cases
+
+    def _collect_test_cases(self, test_config, output_dir: str) -> list[RenderTestCase]:
+        """Expands a suite into the test cases this renderer should actually run."""
+        named_output_dir = os.path.abspath(os.path.join(output_dir, test_config.name))
+        mkdir_p(named_output_dir)
+
+        renderer_spec = f"{self.platform}-{self.backend}"
+        collected = []
+        for test in test_config.tests:
+            if renderer_spec not in test.renderers:
+                continue
+
+            for test_case in self._create_test_cases(test, named_output_dir):
+                test_out_name = test_case.get_out_name(self)
+                if self.test_filter and not fnmatch.fnmatch(test_out_name, self.test_filter):
+                    print(f'Skipping {test_out_name} because it does not match filter')
+                    continue
+                collected.append(test_case)
+        return collected
+
 
 
 class DesktopRenderer(BaseRenderer):
@@ -233,60 +325,14 @@ class DesktopRenderer(BaseRenderer):
     def render_single_test(self, test_case: RenderTestCase) -> dict:
         return test_case.render(self)
 
-    def _create_test_cases(self, test, named_output_dir: str) -> list[RenderTestCase]:
-        mkdir_p(named_output_dir)
-        cases = []
-        if test.is_gltf_test:
-            test_json_path = os.path.abspath(f'{named_output_dir}/{test.name}.simplified.json')
-            with open(test_json_path, 'w') as f:
-                f.write(f'[{test.to_filament_format()}]')
-
-            for model in test.gltf_test.models:
-                model_path = os.path.abspath(test.gltf_test.models_map[model])
-                cases.append(GltfRenderTestCase(
-                    test_name=test.name,
-                    backend=self.backend,
-                    output_dir=named_output_dir,
-                    model=model,
-                    model_path=model_path,
-                    test_json_path=test_json_path
-                ))
-        elif test.is_sample_test:
-            cases.append(SampleRenderTestCase(
-                test_name=test.name,
-                backend=self.backend,
-                output_dir=named_output_dir,
-                target=test.sample_test.target,
-                executable=test.sample_test.executable,
-                warmup_frames=test.sample_test.warmup_frames,
-                fixed_timestep=test.sample_test.fixed_timestep,
-                extra_args=test.sample_test.args
-            ))
-        return cases
-
     def run_tests(self, test_config, output_dir: str) -> list[dict]:
-        named_output_dir = os.path.abspath(os.path.join(output_dir, test_config.name))
-        mkdir_p(named_output_dir)
+        test_cases = self._collect_test_cases(test_config, output_dir)
 
         results = []
         print(f'Rendering {self.platform}-{self.backend} with up to '
               f'{self.concurrent_renders} concurrent renders')
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.concurrent_renders) as executor:
-            futures = []
-            for test in test_config.tests:
-                renderer_spec = f"{self.platform}-{self.backend}"
-                if renderer_spec not in test.renderers:
-                    continue
-
-                test_cases = self._create_test_cases(test, named_output_dir)
-                for test_case in test_cases:
-                    test_out_name = test_case.get_out_name(self)
-                    if self.test_filter and not fnmatch.fnmatch(test_out_name, self.test_filter):
-                        print(f'Skipping {test_out_name} because it does not match filter')
-                        continue
-
-                    futures.append(executor.submit(self.render_single_test, test_case))
-
+            futures = [executor.submit(self.render_single_test, c) for c in test_cases]
             for future in concurrent.futures.as_completed(futures):
                 results.append(future.result())
 
@@ -297,6 +343,12 @@ class RendererFactory:
     def create(platform: str, backend: str, executable: str, **kwargs) -> BaseRenderer:
         if platform == 'desktop':
             return DesktopRenderer(platform, backend, executable, **kwargs)
+        elif platform == 'web':
+            # Imported here, not at module scope: the web renderer needs playwright, and a
+            # desktop-only run should not have to install it.
+            from web_renderer import WebRenderer
+            return WebRenderer(platform, backend, executable, **kwargs)
         else:
             # AndroidRenderer and others would be instantiated here.
             raise NotImplementedError(f"Platform '{platform}' is not fully implemented yet.")
+

@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
+#include "GlbBuilders.h"
 #include "Utility.h"
+
+#include "extended/TangentsJobExtended.h"
 
 #include "materials/uberarchive.h"
 
@@ -30,6 +33,7 @@
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
 
+#include <backend/DriverEnums.h>
 #include <backend/PixelBufferDescriptor.h>
 
 #include <utils/EntityManager.h>
@@ -38,10 +42,10 @@
 #include <utils/Path.h>
 
 #include <math/mathfwd.h>
+#include <math/vec3.h>
 
 #include <cgltf.h>
 #include <gtest/gtest.h>
-#include <meshoptimizer.h>
 
 #include <cstdint>
 #include <cstring>
@@ -58,6 +62,7 @@ using namespace filament;
 using namespace backend;
 using namespace gltfio;
 using namespace utils;
+using namespace test;
 
 char const* ANIMATED_MORPH_CUBE_GLB = "AnimatedMorphCube.glb";
 char const* DAMAGED_HELMET_WEBP_GLB = "DamagedHelmetWebp.glb";
@@ -78,91 +83,17 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
 
 namespace {
 
-static void appendU32LE(std::vector<uint8_t>& dst, uint32_t value) {
-    dst.push_back(uint8_t(value & 0xffu));
-    dst.push_back(uint8_t((value >> 8u) & 0xffu));
-    dst.push_back(uint8_t((value >> 16u) & 0xffu));
-    dst.push_back(uint8_t((value >> 24u) & 0xffu));
-}
-
-static std::vector<uint8_t> makeMeshoptPayload(size_t vertexCount, size_t stride) {
-    std::vector<uint8_t> vertices(vertexCount * stride, 0);
-    std::vector<uint8_t> encoded(meshopt_encodeVertexBufferBound(vertexCount, stride));
-    const size_t encodedSize = meshopt_encodeVertexBuffer(encoded.data(), encoded.size(),
-            vertices.data(), vertexCount, stride);
-    EXPECT_GT(encodedSize, 0u);
-    encoded.resize(encodedSize);
-    return encoded;
-}
-
-static std::string makeMeshoptGlbJson(size_t meshoptCount, size_t meshoptEncodedSize,
-        size_t bufferByteLength, size_t stride, const char* mode = "ATTRIBUTES",
-        const char* filter = "NONE") {
-    const size_t decodedSize = meshoptCount * stride;
-    return std::string(R"({
-  "asset": { "version": "2.0" },
-  "extensionsUsed": ["EXT_meshopt_compression"],
-  "buffers": [
-    { "byteLength": )") + std::to_string(bufferByteLength) + R"( }
-  ],
-  "bufferViews": [
-    {
-      "buffer": 0,
-      "byteOffset": 0,
-      "byteLength": )" + std::to_string(decodedSize) + R"(,
-      "extensions": {
-        "EXT_meshopt_compression": {
-          "buffer": 0,
-          "byteOffset": 0,
-          "byteLength": )" + std::to_string(meshoptEncodedSize) + R"(,
-          "byteStride": )" + std::to_string(stride) + R"(,
-          "count": )" + std::to_string(meshoptCount) + R"(,
-          "mode": ")" + mode + R"(",
-          "filter": ")" + filter + R"("
-        }
-      }
-    }
-  ],
-  "nodes": [],
-  "scenes": [
-    { "nodes": [] }
-  ],
-  "scene": 0
-})";
-}
-
-static std::vector<uint8_t> makeMeshoptGlb(size_t meshoptCount, size_t stride,
-        const char* mode = "ATTRIBUTES", const char* filter = "NONE") {
-    static constexpr size_t kEncodedVertexCount = 256;
-    std::vector<uint8_t> meshopt;
-    if (stride > 0 && stride % 4 == 0) {
-        meshopt = makeMeshoptPayload(kEncodedVertexCount, stride);
-    } else {
-        meshopt.assign(32, 0);
+std::vector<uint8_t> loadFileToBytes(const std::string& filePath) {
+    std::ifstream file(filePath, std::ios::binary);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file: " + filePath);
     }
 
-    std::string json = makeMeshoptGlbJson(meshoptCount, meshopt.size(), meshopt.size(), stride,
-            mode, filter);
-    while ((json.size() % 4u) != 0u) {
-        json.push_back(' ');
-    }
-
-    const uint32_t jsonSize = uint32_t(json.size());
-    const uint32_t binSize = uint32_t(meshopt.size());
-    const uint32_t totalSize = 12u + 8u + jsonSize + 8u + binSize;
-
-    std::vector<uint8_t> glb;
-    glb.reserve(totalSize);
-    appendU32LE(glb, 0x46546c67u);
-    appendU32LE(glb, 2u);
-    appendU32LE(glb, totalSize);
-    appendU32LE(glb, jsonSize);
-    appendU32LE(glb, 0x4e4f534au);
-    glb.insert(glb.end(), json.begin(), json.end());
-    appendU32LE(glb, binSize);
-    appendU32LE(glb, 0x004e4942u);
-    glb.insert(glb.end(), meshopt.begin(), meshopt.end());
-    return glb;
+    // Read the file stream directly into the vector
+    return std::vector<uint8_t>(
+        (std::istreambuf_iterator<char>(file)),
+        std::istreambuf_iterator<char>()
+    );
 }
 
 static bool runDecodeMeshopt(cgltf_meshopt_compression_mode mode, size_t count, size_t stride,
@@ -615,182 +546,217 @@ TEST_F(glTFIOTest, MorphTargetsExceedingMaxDoNotOverflow) {
     AssetLoader::destroy(&assetLoader);
 }
 
-namespace {
-
-static std::vector<uint8_t> makeMalformedEightBitIndexGlb(uint32_t indexCount) {
-    std::string json = std::string(R"({
-  "asset": { "version": "2.0" },
-  "extensionsUsed": ["KHR_materials_unlit"],
-  "buffers": [
-    { "byteLength": 13 }
-  ],
-  "bufferViews": [
-    { "buffer": 0, "byteOffset": 0, "byteLength": 12 },
-    { "buffer": 0, "byteOffset": 12, "byteLength": 1 }
-  ],
-  "accessors": [
-    {
-      "bufferView": 0,
-      "componentType": 5126,
-      "count": 1,
-      "type": "VEC3",
-      "min": [0, 0, 0],
-      "max": [0, 0, 0]
-    },
-    {
-      "bufferView": 1,
-      "componentType": 5121,
-      "count": )") +
-            std::to_string(indexCount) +
-            R"(,
-      "type": "SCALAR"
-    }
-  ],
-  "materials": [
-    {
-      "extensions": {
-        "KHR_materials_unlit": {}
-      }
-    }
-  ],
-  "meshes": [
-    {
-      "primitives": [
-        {
-          "attributes": { "POSITION": 0 },
-          "indices": 1,
-          "material": 0
-        }
-      ]
-    }
-  ],
-  "nodes": [
-    { "mesh": 0 }
-  ],
-  "scenes": [
-    { "nodes": [0] }
-  ],
-  "scene": 0
-})";
-
-    while ((json.size() % 4u) != 0u) {
-        json.push_back(' ');
-    }
-
-    std::vector<uint8_t> bin(13, 0);
-    while ((bin.size() % 4u) != 0u) {
-        bin.push_back(0);
-    }
-
-    const uint32_t jsonSize = uint32_t(json.size());
-    const uint32_t binSize = uint32_t(bin.size());
-    const uint32_t totalSize = 12u + 8u + jsonSize + 8u + binSize;
-
-    std::vector<uint8_t> glb;
-    glb.reserve(totalSize);
-
-    appendU32LE(glb, 0x46546c67u);
-    appendU32LE(glb, 2u);
-    appendU32LE(glb, totalSize);
-    appendU32LE(glb, jsonSize);
-    appendU32LE(glb, 0x4e4f534au);
-    glb.insert(glb.end(), json.begin(), json.end());
-    appendU32LE(glb, binSize);
-    appendU32LE(glb, 0x004e4942u);
-    glb.insert(glb.end(), bin.begin(), bin.end());
-
-    return glb;
-}
-
-static std::vector<uint8_t> makeMorphTargetGlb(int morphTargetCount) {
-    std::string targets;
-    std::string weights = "[";
-    for (int i = 0; i < morphTargetCount; ++i) {
-        targets += (i == 0) ? "{\"TANGENT\":2}" : ",{\"TANGENT\":2}";
-        weights += (i == 0) ? "0.0" : ",0.0";
-    }
-    weights += "]";
-
-    std::string json =
-            "{\"asset\":{\"version\":\"2.0\"},\"scene\":0,\"scenes\":[{\"nodes\":[0]}],"
-            "\"nodes\":[{\"mesh\":0}],"
-            "\"meshes\":[{\"weights\":" + weights + ",\"primitives\":[{\"attributes\":{\"POSITION\":0,\"TANGENT\":1},\"mode\":4,"
-            "\"targets\":[" + targets + "]}]}],"
-            "\"accessors\":["
-            "{\"bufferView\":0,\"componentType\":5126,\"count\":3,\"type\":\"VEC3\","
-            "\"min\":[0,0,0],\"max\":[1,1,1]},"
-            "{\"bufferView\":1,\"componentType\":5126,\"count\":3,\"type\":\"VEC4\"},"
-            "{\"bufferView\":2,\"componentType\":5126,\"count\":3,\"type\":\"VEC3\"}],"
-            "\"bufferViews\":[{\"buffer\":0,\"byteOffset\":0,\"byteLength\":36},"
-            "{\"buffer\":0,\"byteOffset\":36,\"byteLength\":48},"
-            "{\"buffer\":0,\"byteOffset\":84,\"byteLength\":36}],"
-            "\"buffers\":[{\"byteLength\":120}]}";
-
-    while ((json.size() % 4u) != 0u) {
-        json.push_back(' ');
-    }
-
-    std::vector<uint8_t> bin(120, 0);
-    float* fbin = reinterpret_cast<float*>(bin.data());
-    // 3 vertices positions
-    fbin[0] = 0.0f; fbin[1] = 0.0f; fbin[2] = 0.0f;
-    fbin[3] = 1.0f; fbin[4] = 0.0f; fbin[5] = 0.0f;
-    fbin[6] = 0.0f; fbin[7] = 1.0f; fbin[8] = 0.0f;
-    // 3 vertices base tangents (vec4) at byteOffset 36 = float offset 9
-    fbin[9]  = 1.0f; fbin[10] = 0.0f; fbin[11] = 0.0f; fbin[12] = 1.0f;
-    fbin[13] = 1.0f; fbin[14] = 0.0f; fbin[15] = 0.0f; fbin[16] = 1.0f;
-    fbin[17] = 1.0f; fbin[18] = 0.0f; fbin[19] = 0.0f; fbin[20] = 1.0f;
-    // 3 vertices target tangent deltas (vec3) at byteOffset 84 = float offset 21
-    fbin[21] = 0.0f; fbin[22] = 0.0f; fbin[23] = 0.0f;
-    fbin[24] = 0.0f; fbin[25] = 0.0f; fbin[26] = 0.0f;
-    fbin[27] = 0.0f; fbin[28] = 0.0f; fbin[29] = 0.0f;
-
-    while ((bin.size() % 4u) != 0u) {
-        bin.push_back(0);
-    }
-
-    const uint32_t jsonSize = uint32_t(json.size());
-    const uint32_t binSize = uint32_t(bin.size());
-    const uint32_t totalSize = 12u + 8u + jsonSize + 8u + binSize;
-
-    std::vector<uint8_t> glb;
-    glb.reserve(totalSize);
-
-    appendU32LE(glb, 0x46546c67u);
-    appendU32LE(glb, 2u);
-    appendU32LE(glb, totalSize);
-    appendU32LE(glb, jsonSize);
-    appendU32LE(glb, 0x4e4f534au);
-    glb.insert(glb.end(), json.begin(), json.end());
-    appendU32LE(glb, binSize);
-    appendU32LE(glb, 0x004e4942u);
-    glb.insert(glb.end(), bin.begin(), bin.end());
-
-    return glb;
-}
-
-} // namespace
-
 TEST_F(glTFIOTest, MorphTargetsExceedingMaxComputeTangents) {
     AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
     ASSERT_NE(assetLoader, nullptr);
 
-    std::vector<uint8_t> glb = makeMorphTargetGlb(300);
+    // 20,000 morph targets exceeds both MAX_MORPH_TARGETS (256) and JobSystem::MAX_JOB_COUNT (16,384).
+    std::vector<uint8_t> glb = makeMorphTargetGlb(20000);
     FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
     ASSERT_NE(asset, nullptr);
 
     ResourceLoader resourceLoader({ mEngine, ".", false });
     EXPECT_TRUE(resourceLoader.loadResources(asset));
 
+    ASSERT_EQ(asset->getRenderableEntityCount(), 1u);
+    Entity const renderable = asset->getRenderableEntities()[0];
+    EXPECT_EQ(asset->getMorphTargetCountAt(renderable), MAX_MORPH_TARGETS);
+
+    auto const& renderableManager = mEngine->getRenderableManager();
+    auto const inst = renderableManager.getInstance(renderable);
+    EXPECT_EQ(renderableManager.getMorphTargetCount(inst), MAX_MORPH_TARGETS);
+    ASSERT_NE(renderableManager.getMorphTargetBuffer(inst), nullptr);
+    EXPECT_EQ(renderableManager.getMorphTargetBuffer(inst)->getCount(), MAX_MORPH_TARGETS);
+
     assetLoader->destroyAsset(asset);
     AssetLoader::destroy(&assetLoader);
+}
+
+// Loads `glb` through the extended loader, uploads its resources, and checks that the single
+// renderable exposes `expectedMorphTargets` morph targets. Out-of-bounds accesses are caught under
+// ASan, and the slot bookkeeping invariants are checked by assert_invariant in debug builds.
+static void loadExtendedMorphAsset(Engine* engine, MaterialProvider* materials,
+        NameComponentManager* names, std::vector<uint8_t> const& glb,
+        size_t expectedMorphTargets) {
+    AssetConfigurationExtended ext{ .gltfPath = "." };
+    AssetLoader* assetLoader = AssetLoader::create({
+            .engine = engine, .materials = materials, .names = names, .ext = &ext });
+    ASSERT_NE(assetLoader, nullptr);
+
+    FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ engine, ".", false });
+    EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+    ASSERT_EQ(asset->getRenderableEntityCount(), 1u);
+    EXPECT_EQ(asset->getMorphTargetCountAt(asset->getRenderableEntities()[0]),
+            expectedMorphTargets);
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+// Issue #10180: with no material, a POSITION-only target preceding a target with TANGENT used to be
+// dropped from the extended loader's morph target list, which made slotIndices too small for the
+// raw index of the later target.
+TEST_F(glTFIOTest, ExtendedMorphTargetsWithoutMaterialDoNotOverflow) {
+    if (!AssetConfigurationExtended::isSupported()) {
+        GTEST_SKIP() << "The extended asset loader is not supported on this platform.";
+    }
+    loadExtendedMorphAsset(mEngine, mMaterialProvider, mNameManager,
+            makeSparseTangentMorphGlb(2, 1, MorphMaterial::NONE), 2u);
+}
+
+// Issue #10500: with an unlit material, only targets with TANGENT used to be kept, so a single
+// high-indexed target with TANGENT wrote far past the end of slotIndices.
+TEST_F(glTFIOTest, ExtendedMorphTargetsWithUnlitMaterialDoNotOverflow) {
+    if (!AssetConfigurationExtended::isSupported()) {
+        GTEST_SKIP() << "The extended asset loader is not supported on this platform.";
+    }
+    loadExtendedMorphAsset(mEngine, mMaterialProvider, mNameManager,
+            makeSparseTangentMorphGlb(10, 9, MorphMaterial::UNLIT), 10u);
+}
+
+// A lit material exercises the path that computes morphed tangent frames for every target. Without
+// UVs, the provided tangents are used. With UVs, mikktspace is used, and it remeshes.
+TEST_F(glTFIOTest, ExtendedMorphTargetsWithLitMaterial) {
+    if (!AssetConfigurationExtended::isSupported()) {
+        GTEST_SKIP() << "The extended asset loader is not supported on this platform.";
+    }
+    loadExtendedMorphAsset(mEngine, mMaterialProvider, mNameManager,
+            makeSparseTangentMorphGlb(10, 9, MorphMaterial::LIT), 10u);
+    loadExtendedMorphAsset(mEngine, mMaterialProvider, mNameManager,
+            makeSparseTangentMorphGlb(10, 9, MorphMaterial::LIT, /* withColors = */ false,
+                    /* withUvs = */ true),
+            10u);
+}
+
+// A morph target job passes its position deltas through the COLORS auxiliary attribute. A base
+// COLOR_0 attribute used to overwrite (or leak) that storage depending on hash map iteration order.
+// This runs the job directly and requires that the output positions are exactly the morph deltas.
+static void expectMorphJobPositionsAreDeltas(MorphMaterial material) {
+    std::vector<uint8_t> const glb =
+            makeSparseTangentMorphGlb(2, 1, material, /* withColors = */ true);
+
+    cgltf_options options{};
+    cgltf_data* data = nullptr;
+    ASSERT_EQ(cgltf_parse(&options, glb.data(), glb.size(), &data), cgltf_result_success);
+    ASSERT_EQ(cgltf_load_buffers(&options, data, "."), cgltf_result_success);
+    ASSERT_EQ(data->meshes_count, 1u);
+    cgltf_primitive const* prim = &data->meshes[0].primitives[0];
+
+    for (int target = 0; target < 2; ++target) {
+        TangentsJobExtended::Params params{ .in = { .prim = prim, .morphTargetIndex = target } };
+        TangentsJobExtended::run(&params);
+        auto& out = params.out;
+
+        ASSERT_EQ(out.vertexCount, 3u);
+        ASSERT_NE(out.positions, nullptr);
+        for (int v = 0; v < 3; ++v) {
+            math::float3 const expected = sparseMorphPositionDelta(v);
+            EXPECT_FLOAT_EQ(out.positions[v].x, expected.x) << "target " << target << " v " << v;
+            EXPECT_FLOAT_EQ(out.positions[v].y, expected.y) << "target " << target << " v " << v;
+            EXPECT_FLOAT_EQ(out.positions[v].z, expected.z) << "target " << target << " v " << v;
+        }
+        // Morph target jobs do not produce colors.
+        EXPECT_EQ(out.colors, nullptr);
+
+        free(out.positions);
+        free(out.tbn);
+        free(out.triangles);
+    }
+    cgltf_free(data);
+}
+
+TEST(glTFIOTangentsJobExtended, MorphTargetWithBaseColorsUnlit) {
+    expectMorphJobPositionsAreDeltas(MorphMaterial::UNLIT);
+}
+
+TEST(glTFIOTangentsJobExtended, MorphTargetWithBaseColorsLit) {
+    expectMorphJobPositionsAreDeltas(MorphMaterial::LIT);
+}
+
+// End-to-end load of morph targets on a primitive with COLOR_0 through the extended loader.
+TEST_F(glTFIOTest, ExtendedMorphTargetsWithBaseColors) {
+    if (!AssetConfigurationExtended::isSupported()) {
+        GTEST_SKIP() << "The extended asset loader is not supported on this platform.";
+    }
+    loadExtendedMorphAsset(mEngine, mMaterialProvider, mNameManager,
+            makeSparseTangentMorphGlb(2, 1, MorphMaterial::NONE, /* withColors = */ true), 2u);
+    loadExtendedMorphAsset(mEngine, mMaterialProvider, mNameManager,
+            makeSparseTangentMorphGlb(2, 1, MorphMaterial::UNLIT, /* withColors = */ true), 2u);
+}
+
+// Runs the base and the morph target tangent-space jobs on the color edge GLB, and returns their
+// output vertex counts.
+static void runColorSeamJobs(MorphMaterial material, size_t* baseVertexCount,
+        size_t* morphVertexCount) {
+    std::vector<uint8_t> const glb = makeColorSeamMorphGlb(material);
+
+    cgltf_options options{};
+    cgltf_data* data = nullptr;
+    ASSERT_EQ(cgltf_parse(&options, glb.data(), glb.size(), &data), cgltf_result_success);
+    ASSERT_EQ(cgltf_load_buffers(&options, data, "."), cgltf_result_success);
+    ASSERT_EQ(data->meshes_count, 1u);
+    cgltf_primitive const* prim = &data->meshes[0].primitives[0];
+
+    auto runJob = [prim](int morphTargetIndex) {
+        TangentsJobExtended::Params params{
+                .in = { .prim = prim, .morphTargetIndex = morphTargetIndex } };
+        TangentsJobExtended::run(&params);
+        auto& out = params.out;
+        size_t const vertexCount = out.vertexCount;
+        free(out.triangles);
+        free(out.tbn);
+        free(out.uv0);
+        free(out.uv1);
+        free(out.positions);
+        free(out.joints);
+        free(out.weights);
+        free(out.colors);
+        return vertexCount;
+    };
+    *baseVertexCount = runJob(TangentsJobExtended::kMorphTargetUnused);
+    *morphVertexCount = runJob(0);
+    cgltf_free(data);
+}
+
+// Guards the premise of ExtendedMorphTargetsWithColorSeam: with a lit material, mikktspace welds
+// the morph target vertices differently from the base vertices. If this ever stops being true
+// (e.g. once morph data is mapped through the triangle corners), the loader test below no longer
+// exercises the mismatch path, and should be revisited.
+TEST(glTFIOTangentsJobExtended, ColorSeamMorphTargetRemeshesDifferently) {
+    size_t baseVertexCount = 0;
+    size_t morphVertexCount = 0;
+    runColorSeamJobs(MorphMaterial::LIT, &baseVertexCount, &morphVertexCount);
+    EXPECT_EQ(baseVertexCount, 6u);
+    EXPECT_EQ(morphVertexCount, 4u);
+
+    // The unlit path does not remesh, so the counts always match.
+    runColorSeamJobs(MorphMaterial::UNLIT, &baseVertexCount, &morphVertexCount);
+    EXPECT_EQ(baseVertexCount, 6u);
+    EXPECT_EQ(morphVertexCount, 6u);
+}
+
+// A morph target whose remeshed vertex count differs from the base used to be uploaded with the
+// base count, which read past the end of the morph data. It is now neutralized with a warning, and
+// the asset must still load with all of its morph targets.
+TEST_F(glTFIOTest, ExtendedMorphTargetsWithColorSeam) {
+    if (!AssetConfigurationExtended::isSupported()) {
+        GTEST_SKIP() << "The extended asset loader is not supported on this platform.";
+    }
+    loadExtendedMorphAsset(mEngine, mMaterialProvider, mNameManager,
+            makeColorSeamMorphGlb(MorphMaterial::LIT), 1u);
+    loadExtendedMorphAsset(mEngine, mMaterialProvider, mNameManager,
+            makeColorSeamMorphGlb(MorphMaterial::UNLIT), 1u);
 }
 
 TEST_F(glTFIOTest, RejectsOversizedEightBitIndexAccessor) {
     AssetLoader* loader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
     ASSERT_NE(loader, nullptr);
 
-    std::vector<uint8_t> glb = makeMalformedEightBitIndexGlb(100000000u);
+    std::vector<uint8_t> glb = makeMalformedEightBitIndexGlb(uint32_t(backend::MAX_INDEX_COUNT));
     FilamentAsset* asset = loader->createAsset(glb.data(), uint32_t(glb.size()));
     ASSERT_NE(asset, nullptr);
 
@@ -799,6 +765,101 @@ TEST_F(glTFIOTest, RejectsOversizedEightBitIndexAccessor) {
 
     loader->destroyAsset(asset);
     AssetLoader::destroy(&loader);
+}
+
+TEST_F(glTFIOTest, RejectsIndexAccessorAboveMaxIndexCount) {
+    AssetLoader* loader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(loader, nullptr);
+
+    std::vector<uint8_t> glb = makeIndexAccessorGlb("SCALAR", 5123,
+            uint32_t(backend::MAX_INDEX_COUNT + 1), 0u);
+    EXPECT_EQ(loader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+
+    AssetLoader::destroy(&loader);
+}
+
+// The IndexBuffer is allocated as (count * componentSize), so an accessor whose byte span is
+// computed from a larger stride or a wider type would overrun it. AssetLoader rejects such an
+// accessor before the IndexBuffer exists, which is strictly earlier than the cgltf_validate() call
+// in ResourceLoader, so a null return here proves that gltfio's own check is what fired.
+TEST_F(glTFIOTest, RejectsNonScalarIndexAccessor) {
+    AssetLoader* loader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(loader, nullptr);
+
+    // VEC3 of unsigned shorts: capacity would be count * 2, upload would be count * 6.
+    std::vector<uint8_t> glb = makeIndexAccessorGlb("VEC3", 5123, 3u, 0u);
+    EXPECT_EQ(loader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+
+    AssetLoader::destroy(&loader);
+}
+
+TEST_F(glTFIOTest, RejectsStridedIndexAccessor) {
+    AssetLoader* loader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(loader, nullptr);
+
+    // A byteStride of 8 on a scalar ushort accessor: capacity would be count * 2, upload would be
+    // 8 * (count - 1) + 2.
+    std::vector<uint8_t> glb = makeIndexAccessorGlb("SCALAR", 5123, 3u, 8u);
+    EXPECT_EQ(loader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+
+    AssetLoader::destroy(&loader);
+}
+
+TEST_F(glTFIOTest, AcceptsConformingIndexAccessor) {
+    AssetLoader* loader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(loader, nullptr);
+
+    std::vector<uint8_t> glb = makeIndexAccessorGlb("SCALAR", 5123, 3u, 0u);
+    FilamentAsset* asset = loader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+    loader->destroyAsset(asset);
+    AssetLoader::destroy(&loader);
+}
+
+TEST_F(glTFIOTest, UploadableIndexAccessorContract) {
+    cgltf_accessor accessor{};
+    accessor.type = cgltf_type_scalar;
+    accessor.component_type = cgltf_component_type_r_16u;
+    accessor.stride = 2;
+    accessor.count = 3;
+    EXPECT_TRUE(gltfio::utility::isUploadableIndexAccessor(&accessor));
+
+    // A wider type inflates cgltf_calc_size() without changing the allocated capacity.
+    accessor.type = cgltf_type_vec3;
+    EXPECT_FALSE(gltfio::utility::isUploadableIndexAccessor(&accessor));
+    accessor.type = cgltf_type_scalar;
+
+    // A stride larger than the component size spreads the source over more bytes than the
+    // destination holds.
+    accessor.stride = 8;
+    EXPECT_FALSE(gltfio::utility::isUploadableIndexAccessor(&accessor));
+    accessor.stride = 2;
+
+    // Sparse contents are not the raw bytes of the bufferView, so a straight copy is wrong.
+    accessor.is_sparse = 1;
+    EXPECT_FALSE(gltfio::utility::isUploadableIndexAccessor(&accessor));
+    accessor.is_sparse = 0;
+
+    // IndexBuffer::Builder::build() caps indexCount at backend::MAX_INDEX_COUNT.
+    accessor.count = backend::MAX_INDEX_COUNT;
+    EXPECT_TRUE(gltfio::utility::isUploadableIndexAccessor(&accessor));
+
+    accessor.count = backend::MAX_INDEX_COUNT + 1;
+    EXPECT_FALSE(gltfio::utility::isUploadableIndexAccessor(&accessor));
+
+    // A count beyond uint32 is only representable where cgltf_size is wider than uint32_t.
+    if constexpr (sizeof(cgltf_size) > sizeof(uint32_t)) {
+        accessor.count = cgltf_size(std::numeric_limits<uint32_t>::max()) + 1;
+        EXPECT_FALSE(gltfio::utility::isUploadableIndexAccessor(&accessor));
+    }
+
+    // A count whose byte product wraps size_t is rejected on every target.
+    accessor.count = std::numeric_limits<cgltf_size>::max();
+    EXPECT_FALSE(gltfio::utility::isUploadableIndexAccessor(&accessor));
 }
 
 TEST_F(glTFIOTest, SkipsInverseBindMatricesOutsideBufferView) {
@@ -866,6 +927,253 @@ TEST_F(glTFIOTest, SkipsInverseBindMatricesOutsideBufferView) {
     AssetLoader::destroy(&assetLoader);
 
     fs::remove_all(root);
+}
+
+// A morph-target NORMAL/TANGENT accessor may declare an arbitrary element type. Such accessors
+// skip the getElementType validation in createPrimitive and are consumed by the tangent-space
+// job in ResourceLoader, which unpacks them into a fixed 3-float-per-vertex scratch buffer. A
+// matrix-typed (e.g. MAT4, 16-component) accessor therefore causes more floats to be written per
+// element than the buffer holds -- a heap out-of-bounds write on the default, all-platform
+// loader, from an untrusted, cgltf_validate-clean .glb.
+//
+// This test loads such a file. Before the fix it produced a heap-buffer-overflow (visible under
+// AddressSanitizer) while computing tangents; after the fix the unsupported accessor type is
+// rejected at load, so createAsset returns null and no out-of-bounds access occurs.
+TEST_F(glTFIOTest, MorphTargetTangentInvalidTypeIsRejected) {
+    AssetLoader* loader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(loader, nullptr);
+
+    Path gltfPath = Path::getCurrentExecutable()
+        .getParent()
+        .concat("invalid_accessor_type.glb");
+    const std::vector<uint8_t> buffer = loadFileToBytes(gltfPath.getAbsolutePath());
+    FilamentAsset* asset = loader->createAsset(buffer.data(), buffer.size());
+
+    // The MAT4-typed morph tangent accessor must be rejected at load.
+    EXPECT_EQ(asset, nullptr);
+
+    if (asset) {
+        // Defense in depth: if a future change lets the asset load, resource loading (which runs
+        // the tangent-space computation) must still not perform an out-of-bounds access.
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        resourceLoader.loadResources(asset);
+        loader->destroyAsset(asset);
+    }
+    AssetLoader::destroy(&loader);
+}
+
+// Issue #10638: a glTF primitive without a POSITION attribute is valid per cgltf_validate(), and
+// the glTF 2.0 specification (Section 3.7.2.1 implementation note) states that client
+// implementations should skip rendering such a primitive. Previously, AssetLoader created a
+// VertexBuffer and scheduled normal/tangent generation for it, causing SurfaceOrientation::Builder
+// to panic (Debug) or return nullptr and crash on dereference in TangentsJob::run (Release).
+TEST_F(glTFIOTest, PrimitiveWithoutPositionsIsSkipped) {
+    std::vector<uint8_t> const glb = makePositionlessPrimitiveGlb(false);
+
+    auto checkLoad = [&](AssetConfigurationExtended* ext) {
+        AssetLoader* assetLoader = AssetLoader::create({
+                .engine = mEngine,
+                .materials = mMaterialProvider,
+                .names = mNameManager,
+                .ext = ext,
+        });
+        ASSERT_NE(assetLoader, nullptr);
+
+        FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+        ASSERT_EQ(asset->getRenderableEntityCount(), 1u);
+        Entity const renderable = asset->getRenderableEntities()[0];
+        auto const& rm = mEngine->getRenderableManager();
+        auto const inst = rm.getInstance(renderable);
+        EXPECT_EQ(rm.getPrimitiveCount(inst), 1u);
+        EXPECT_TRUE(rm.getEnabledAttributesAt(inst, 0).none());
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    };
+
+    checkLoad(nullptr);
+    if (AssetConfigurationExtended::isSupported()) {
+        AssetConfigurationExtended ext{ .gltfPath = "." };
+        checkLoad(&ext);
+    }
+}
+
+TEST_F(glTFIOTest, MeshWithPositionlessAndValidPrimitives) {
+    std::vector<uint8_t> const glb = makePositionlessPrimitiveGlb(true);
+
+    auto checkLoad = [&](AssetConfigurationExtended* ext) {
+        AssetLoader* assetLoader = AssetLoader::create({
+                .engine = mEngine,
+                .materials = mMaterialProvider,
+                .names = mNameManager,
+                .ext = ext,
+        });
+        ASSERT_NE(assetLoader, nullptr);
+
+        FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+        ASSERT_EQ(asset->getRenderableEntityCount(), 1u);
+        Entity const renderable = asset->getRenderableEntities()[0];
+        auto const& rm = mEngine->getRenderableManager();
+        auto const inst = rm.getInstance(renderable);
+        ASSERT_EQ(rm.getPrimitiveCount(inst), 2u);
+
+        // Primitive 0 has no POSITION and must be skipped.
+        EXPECT_TRUE(rm.getEnabledAttributesAt(inst, 0).none());
+
+        // Primitive 1 has POSITION and must be loaded with generated tangents.
+        AttributeBitset const attribs1 = rm.getEnabledAttributesAt(inst, 1);
+        EXPECT_TRUE(attribs1[VertexAttribute::POSITION]);
+        EXPECT_TRUE(attribs1[VertexAttribute::TANGENTS]);
+
+        // The asset bounding box must reflect only the valid primitive.
+        Aabb const bounds = asset->getBoundingBox();
+        EXPECT_FLOAT_EQ(bounds.min.x, 0.0f);
+        EXPECT_FLOAT_EQ(bounds.min.y, 0.0f);
+        EXPECT_FLOAT_EQ(bounds.min.z, 0.0f);
+        EXPECT_FLOAT_EQ(bounds.max.x, 1.0f);
+        EXPECT_FLOAT_EQ(bounds.max.y, 1.0f);
+        EXPECT_FLOAT_EQ(bounds.max.z, 0.0f);
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    };
+
+    checkLoad(nullptr);
+    if (AssetConfigurationExtended::isSupported()) {
+        AssetConfigurationExtended ext{ .gltfPath = "." };
+        checkLoad(&ext);
+    }
+}
+
+TEST_F(glTFIOTest, EmptyImageDoesNotCrash) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+    TextureProvider* stbProvider = createStbProvider(mEngine);
+    ASSERT_NE(stbProvider, nullptr);
+
+    auto loadGltfJson = [&](char const* gltfJson) {
+        FilamentAsset* asset = assetLoader->createAsset(
+                reinterpret_cast<uint8_t const*>(gltfJson), uint32_t(std::strlen(gltfJson)));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        resourceLoader.addTextureProvider("image/png", stbProvider);
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+        assetLoader->destroyAsset(asset);
+    };
+
+    // Case 1: Image with neither URI, bufferView, nor mimeType.
+    loadGltfJson(
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[]}],)"
+            R"("images":[{}],"textures":[{"source":0}],)"
+            R"("materials":[{"pbrMetallicRoughness":{"baseColorTexture":{"index":0}}}]})");
+
+    // Case 2: Image with mimeType but neither URI nor bufferView.
+    loadGltfJson(
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[]}],)"
+            R"("images":[{"mimeType":"image/png"}],"textures":[{"source":0}],)"
+            R"("materials":[{"pbrMetallicRoughness":{"baseColorTexture":{"index":0}}}]})");
+
+    // Case 3: Image with bufferView but missing mimeType and buffer data.
+    loadGltfJson(
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[]}],)"
+            R"("buffers":[{"byteLength":0}],)"
+            R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":0}],)"
+            R"("images":[{"bufferView":0}],"textures":[{"source":0}],)"
+            R"("materials":[{"pbrMetallicRoughness":{"baseColorTexture":{"index":0}}}]})");
+
+    // Case 4: Image with bufferView and mimeType, but missing buffer data.
+    loadGltfJson(
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[]}],)"
+            R"("buffers":[{"byteLength":0}],)"
+            R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":0}],)"
+            R"("images":[{"bufferView":0,"mimeType":"image/png"}],"textures":[{"source":0}],)"
+            R"("materials":[{"pbrMetallicRoughness":{"baseColorTexture":{"index":0}}}]})");
+
+    delete stbProvider;
+    AssetLoader::destroy(&assetLoader);
+}
+
+// Issue #10636: when a primitive with KHR_draco_mesh_compression fails to decode, its accessors
+// remain without a bufferView. Per the glTF 2.0 spec, accessors without a bufferView must be
+// initialized with zeros. Verify that TangentsJobExtended zero-fills the unpacked attributes and
+// that both the extended and standard loaders handle the failed decode without crashing.
+TEST(glTFIOTangentsJobExtended, InvalidDracoDecodeZeroFillsAttributes) {
+    std::vector<uint8_t> const glb = makeInvalidDracoGlb();
+
+    cgltf_options options{};
+    cgltf_data* data = nullptr;
+    ASSERT_EQ(cgltf_parse(&options, glb.data(), glb.size(), &data), cgltf_result_success);
+    ASSERT_EQ(cgltf_load_buffers(&options, data, "."), cgltf_result_success);
+    ASSERT_EQ(data->meshes_count, 1u);
+    cgltf_primitive const* prim = &data->meshes[0].primitives[0];
+
+    TangentsJobExtended::Params params{
+            .in = { .prim = prim, .morphTargetIndex = TangentsJobExtended::kMorphTargetUnused } };
+    TangentsJobExtended::run(&params);
+    auto& out = params.out;
+
+    ASSERT_EQ(out.vertexCount, 3u);
+    ASSERT_NE(out.positions, nullptr);
+    for (size_t v = 0; v < out.vertexCount; ++v) {
+        EXPECT_FLOAT_EQ(out.positions[v].x, 0.0f);
+        EXPECT_FLOAT_EQ(out.positions[v].y, 0.0f);
+        EXPECT_FLOAT_EQ(out.positions[v].z, 0.0f);
+    }
+
+    free(out.positions);
+    free(out.tbn);
+    free(out.triangles);
+    cgltf_free(data);
+}
+
+TEST_F(glTFIOTest, InvalidDracoDecodeLoadsWithZeroFilledBuffers) {
+    std::vector<uint8_t> const glb = makeInvalidDracoGlb();
+
+    // Standard loader path.
+    {
+        AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+
+        FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        EXPECT_EQ(asset->getRenderableEntityCount(), 1u);
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+
+    // Extended loader path.
+    if (AssetConfigurationExtended::isSupported()) {
+        AssetConfigurationExtended ext{ .gltfPath = "." };
+        AssetLoader* assetLoader = AssetLoader::create({
+                .engine = mEngine, .materials = mMaterialProvider, .names = mNameManager, .ext = &ext });
+        ASSERT_NE(assetLoader, nullptr);
+
+        FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        EXPECT_EQ(asset->getRenderableEntityCount(), 1u);
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
 }
 
 int main(int argc, char** argv) {

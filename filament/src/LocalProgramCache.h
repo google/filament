@@ -68,14 +68,11 @@ public:
     static CacheKey mapCacheEntryKey(Variant variant,
             DynamicSpecConstKey specKey, std::size_t cacheSize);
 
-    // Initialize for use in a Material.
+    // Initialize for use in a Material, or in a MaterialInstance that has its own set of spec
+    // constants.
     void initializeForMaterial(FEngine& engine, FMaterial const& material,
             utils::FixedCapacityVector<backend::Program::SpecializationConstant>
                     specializationConstants);
-
-    // Initialize for use in a MaterialInstance. Copies the set of spec constants currently in use
-    // from its Material.
-    void initializeForMaterialInstance(FEngine& engine, FMaterial const& material);
 
     bool isInitialized() const noexcept { return mMaterial != nullptr; }
 
@@ -83,8 +80,9 @@ public:
     // Must be called outside of backend render pass.
     // Must be called before getProgram() below.
     backend::Handle<backend::HwProgram> prepareProgram(backend::DriverApi& driver,
-            Variant const variant, DynamicSpecConstKey const specKey,
+            Variant variant, DynamicSpecConstKey specKey,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept {
+        filterForGetProgram(variant, specKey);
         CacheKey const mappedKey =
                 mapCacheEntryKey(variant, specKey, mCachedPrograms.size());
         backend::Handle<backend::HwProgram> program = mCachedPrograms[mappedKey];
@@ -98,8 +96,8 @@ public:
     // Must be called after prepareProgram().
     [[nodiscard]]
     backend::Handle<backend::HwProgram> getProgram(Variant variant,
-            DynamicSpecConstKey const specKey) const noexcept {
-        variant = filterVariantForGetProgram(variant);
+            DynamicSpecConstKey specKey) const noexcept {
+        filterForGetProgram(variant, specKey);
         CacheKey const mappedKey =
                 mapCacheEntryKey(variant, specKey, mCachedPrograms.size());
         backend::Handle<backend::HwProgram> program = mCachedPrograms[mappedKey];
@@ -150,14 +148,14 @@ public:
 
 private:
     backend::Handle<backend::HwProgram> prepareProgramSlow(backend::DriverApi& driver,
-            Variant const variant,
-            DynamicSpecConstKey const specKey,
-            backend::CompilerPriorityQueue const priorityQueue) const noexcept;
+            Variant variant,
+            DynamicSpecConstKey specKey,
+            backend::CompilerPriorityQueue priorityQueue) const noexcept;
 
     ProgramSpecialization getProgramSpecialization(Variant variant,
             DynamicSpecConstKey specKey) const noexcept;
 
-    Variant filterVariantForGetProgram(Variant const variant) const noexcept;
+    void filterForGetProgram(Variant& variant, DynamicSpecConstKey& specKey) const noexcept;
 
     void setConstantsImpl(utils::FixedCapacityVector<backend::Program::SpecializationConstant>
                     constants) noexcept;
@@ -165,6 +163,8 @@ private:
     backend::Program::SpecializationConstant getConstantImpl(uint32_t id) const noexcept;
     backend::Program::SpecializationConstant getConstantImpl(std::string_view name) const noexcept;
 
+    // Once initialized, a cache always holds exactly the program references for its current
+    // mSpecializationConstants, which terminate() releases.
     FMaterial const* mMaterial = nullptr;
     mutable utils::FixedCapacityVector<backend::Handle<backend::HwProgram>> mCachedPrograms;
     SpecializationConstantsRef mSpecializationConstants;

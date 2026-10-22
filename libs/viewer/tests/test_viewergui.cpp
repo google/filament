@@ -18,6 +18,7 @@
 
 #include <filament/DebugRegistry.h>
 #include <filament/Engine.h>
+#include <filament/Renderer.h>
 #include <filament/Scene.h>
 #include <filament/View.h>
 
@@ -40,10 +41,14 @@ protected:
     }
 
     void TearDown() override {
+        mEngine->destroy(mRenderer);
+        mEngine->destroy(mView);
+        mEngine->destroy(mScene);
         Engine::destroy(&mEngine);
     }
 
     Engine* mEngine = nullptr;
+    Renderer* mRenderer = nullptr;
     Scene* mScene = nullptr;
     View* mView = nullptr;
 };
@@ -57,7 +62,7 @@ TEST_F(ViewerGuiTest, ConstructsWithoutARenderer) {
 }
 
 TEST_F(ViewerGuiTest, EnablesCombineMultiviewImagesOnceRegistered) {
-    mEngine->createRenderer();
+    mRenderer = mEngine->createRenderer();
     ViewerGui viewer(mEngine, mScene, mView);
     bool* const combineMultiviewImages =
             mEngine->getDebugRegistry().getPropertyAddress<bool>(COMBINE_MULTIVIEW_IMAGES);

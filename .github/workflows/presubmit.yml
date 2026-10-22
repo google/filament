@@ -106,10 +106,15 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - uses: ./.github/actions/ccache
+        with:
+          config: desktop
       - name: Run build script
         run: |
           build\windows\build-github.bat presubmit
         shell: cmd
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
 
   build-android:
     name: build-android
@@ -300,10 +305,24 @@ jobs:
   # restores desktop-renderdiff from the postsubmit warmer, on a runner tier that costs a fraction
   # of the macOS one. The goldens are generated on this same runner label; macOS renders are still
   # produced by the postsubmit test-renderdiff-mac job, but nothing compares them.
-  test-renderdiff:
-    name: test-renderdiff
+  #
+  # One leg per platform. Desktop renders natively against mesa; web builds wasm and drives a
+  # headless browser. Goldens are kept separately per platform, so the legs never compare against
+  # each other.
+  #
+  # The job has no explicit name. GitHub then names the legs after the matrix value, and a job
+  # skipped by its if is listed under the bare job id instead of an unexpanded matrix expression.
+  # The required check is test-renderdiff below, which gates on these legs.
+  test-renderdiff-platform:
+    strategy:
+      # A desktop regression should not hide a web regression, or vice versa.
+      fail-fast: false
+      matrix:
+        platform: [desktop, web]
     runs-on: 'arm-ubuntu-24.04-16core'
-    timeout-minutes: 45
+    # The web leg additionally builds wasm and renders through a software rasterizer in a browser,
+    # which is substantially slower than rendering natively.
+    timeout-minutes: ${{ matrix.platform == 'web' && 90 || 45 }}
     needs: [check-verification, renderdiff-config]
     # The first clause is the workflow-wide verified-commit convention documented at the top of
     # this file. The second is this job's own: a gate that failed to parse the commit message has
@@ -321,18 +340,61 @@ jobs:
         with:
           compare: 'true'
           golden-branch: ${{ needs.renderdiff-config.outputs.golden-branch }}
-          ccache-config: desktop-renderdiff
+          # The web build restores the cache the postsubmit build-web job writes, which also runs
+          # this leg's build through generate.sh --build-only; the renderdiff action appends the
+          # emsdk version.
+          ccache-config: ${{ matrix.platform == 'web' && 'web-emsdk' || 'desktop-renderdiff' }}
+          platform: ${{ matrix.platform }}
       # Uploaded even when the comparison failed, which is exactly when the images are wanted.
       # Retained long enough to still be there when a golden regression is traced back, months
       # later, to the run that introduced it. These are also the images the golden bootstrap
       # procedure in test/renderdiff/README.md picks up.
+      #
+      # Artifact names must be unique across the matrix, so each leg uploads its own and
+      # test-renderdiff below combines them.
       - name: Upload renderdiff output
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ !cancelled() }}
         with:
-          name: presubmit-renderdiff-result
+          name: presubmit-renderdiff-result-${{ matrix.platform }}
           path: ./out/renderdiff
           retention-days: 100
+
+  # The required check. It passes when RDIFF_ACCEPT_NEW_GOLDENS skipped rendering, and otherwise
+  # only when every platform leg passed.
+  #
+  # It also merges the legs' outputs into the single presubmit-renderdiff-result artifact, because
+  # tools outside this repository (filament-rdiff-server) expect a run to have exactly one
+  # renderdiff artifact. The legs write disjoint files apart from the golden checkout and the test
+  # config, which are identical in both.
+  test-renderdiff:
+    name: test-renderdiff
+    runs-on: 'ubuntu-24.04'
+    needs: [check-verification, renderdiff-config, test-renderdiff-platform]
+    if: always() && !cancelled() && !needs.check-verification.outputs.skip
+    steps:
+      - name: Merge renderdiff output
+        if: needs.test-renderdiff-platform.result != 'skipped'
+        uses: actions/upload-artifact/merge@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: presubmit-renderdiff-result
+          pattern: presubmit-renderdiff-result-*
+          delete-merged: true
+          retention-days: 100
+      - name: Check the platform legs
+        if: ${{ !cancelled() }}
+        env:
+          CONFIG: ${{ needs.renderdiff-config.result }}
+          ACCEPT: ${{ needs.renderdiff-config.outputs.accept }}
+          LEGS: ${{ needs.test-renderdiff-platform.result }}
+        run: |
+          if [[ "${CONFIG}" == success && "${ACCEPT}" == true ]]; then
+            echo "RDIFF_ACCEPT_NEW_GOLDENS is set; rendering was skipped."
+            exit 0
+          fi
+          echo "renderdiff-config: ${CONFIG}, test-renderdiff-platform: ${LEGS}"
+          [[ "${CONFIG}" == success && "${LEGS}" == success ]]
+        shell: bash
 
   test-code-correctness:
     name: test-code-correctness
@@ -380,8 +442,13 @@ jobs:
       - name: Run build script
         # We need to build before clang-tidy can run analysis
         run: |
-          # -b enables ASAN and UBSAN (Address and Undefined Behavior Sanitizers) for the debug build
-          ./build.sh -b -p desktop debug
+          # -b enables ASAN and UBSAN (Address and Undefined Behavior Sanitizers) for the debug build.
+          # -d and -t compile matdbg and fgviewer, which build.sh otherwise always disables, so this
+          # is the only presubmit build that covers them. Their servers only start when
+          # FILAMENT_MATDBG_PORT or FILAMENT_FGVIEWER_PORT is set, so the unit tests below, which
+          # run against this tree, behave the same. The postsubmit desktop-asan-debug warmer must
+          # run this exact command for the cache to hit.
+          ./build.sh -b -d -t -p desktop debug
           # This will build and install the release build. -W and -y none reproduce what
           # build/linux/build.sh passes for a release-only build; they have to, because this build
           # and build-linux share the desktop-release cache.
@@ -393,7 +460,10 @@ jobs:
       - name: Check - public header inclusion
         run: bash test/code-correctness/headers-inclusion.sh out/release/filament/include
       - name: Check - Filament unit tests
-        run: bash test/filament-unit-test/test.sh
+        run: |
+          # The tests that render, such as RenderingTest, use Mesa's software Vulkan driver.
+          sudo apt-get install -y libvulkan1 mesa-vulkan-drivers
+          bash test/filament-unit-test/test.sh
 
   test-backend:
     name: test-backend

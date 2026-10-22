@@ -191,7 +191,7 @@ public:
          *
          * @return pointer to the newly created object.
          */
-        Stream* UTILS_NONNULL build(Engine& engine);
+        Stream* UTILS_NONNULL build(Engine& engine) const;
 
     private:
         friend class FStream;

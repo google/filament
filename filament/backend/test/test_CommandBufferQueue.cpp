@@ -307,11 +307,10 @@ TEST_F(CommandBufferQueueTest, StressTest) {
 #ifdef __EXCEPTIONS
 TEST_F(CommandBufferQueueTest, BackendExceptionHandling) {
     CommandBufferQueue queue(1024, 4096, false);
-    
+
     // Simulate an exception in the backend thread
     std::thread backend([&]() {
         try {
-            std::this_thread::sleep_for(10ms);
             throw std::runtime_error("Artificial Backend Failure");
         } catch (...) {
             queue.setUnrecoverableException(std::current_exception());
@@ -319,9 +318,10 @@ TEST_F(CommandBufferQueueTest, BackendExceptionHandling) {
 
     });
 
-    // Wait for backend to fail
-    std::this_thread::sleep_for(50ms);
-    
+    // Make sure the backend thread has thrown.
+    backend.join();
+    ASSERT_TRUE(queue.hasUnrecoverableError());
+
     // First call to flush should throw the original exception
     EXPECT_THROW({
         queue.flush();
@@ -331,10 +331,7 @@ TEST_F(CommandBufferQueueTest, BackendExceptionHandling) {
     EXPECT_THROW({
         queue.flush();
     }, utils::Panic);
-    
-    backend.join();
 }
 #endif
 
 } // namespace filament::backend
-

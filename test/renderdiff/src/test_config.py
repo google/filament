@@ -14,6 +14,7 @@
 
 from utils import execute, ArgParseImpl
 
+import copy
 import glob
 from itertools import chain
 import json
@@ -68,12 +69,95 @@ def validate_tolerance(tolerance):
       assert 0 <= tolerance['maxFailingPixelsFraction'] <= 1.0, "maxFailingPixelsFraction must be 0.0-1.0"
 
 
+def _deep_merge(dest, src):
+  """Merges src into dest. Nested objects merge key by key, and anything else is replaced."""
+  for key, value in src.items():
+    if _is_dict(value) and _is_dict(dest.get(key)):
+      _deep_merge(dest[key], value)
+    else:
+      dest[key] = copy.deepcopy(value)
+
+
+def expand_dotted_keys(rendering):
+  """
+  Expands AutomationSpec-style keys such as "view.bloom.enabled" into nested objects.
+
+  This is the form gltf_viewer's --settings reads. AutomationSpec applies each key as
+  {"view": {"bloom": {"enabled": ...}}} on top of the previous ones, and the Settings parser only
+  touches the fields it is given, so later keys override earlier ones field by field. The merge
+  below reproduces that, which keeps a test meaning the same thing under --batch and --settings.
+  """
+  out = {}
+  for key, value in rendering.items():
+    nested = value
+    for part in reversed(key.split('.')):
+      nested = {part: nested}
+    _deep_merge(out, nested)
+  return out
+
+
 _MODEL_SCAN_CACHE = {}
 
-def scan_models(search_paths, base_dir=None):
+# glTF-Sample-Assets ships several variants of a model under the same file name, e.g.
+# Models/Duck/{glTF,glTF-Binary,glTF-Embedded,glTF-Draco,glTF-Quantized}/Duck.{gltf,glb}.
+# By default only glTF-Binary, and failing that glTF, is accepted. The other variants encode the
+# data differently (quantized, Draco, meshopt, ...) and can render differently, so silently falling
+# back to one of them would make a golden depend on which variants happen to be present.
+# A test that wants one of the other variants names it explicitly with gltf_test.model_variant.
+_PREFERRED_VARIANT_DIRS = ('glTF-Binary', 'glTF')
+_VARIANT_DIR_PREFIX = 'glTF'
+
+
+def _variant_of(model_file):
+  return path.basename(path.dirname(model_file))
+
+
+def _select_model_file(name, files):
+  """
+  Picks the file to use among all files that share a model name within one search path.
+
+  The choice must not depend on the filesystem: glob returns entries in directory order, which
+  differs between runner images. Letting that order decide once swapped Duck to its
+  glTF-Quantized variant and broke the WebGPU golden.
+  """
+  for preferred in _PREFERRED_VARIANT_DIRS:
+    matches = [f for f in files if _variant_of(f) == preferred]
+    if len(matches) == 1:
+      return matches[0]
+    if len(matches) > 1:
+      break
+
+  # A single file outside a variant layout, e.g. third_party/models/lucy/lucy.glb.
+  if len(files) == 1 and not _variant_of(files[0]).startswith(_VARIANT_DIR_PREFIX):
+    return files[0]
+
+  candidates = '\n  '.join(sorted(files))
+  raise ValueError(f"Cannot choose a file for model '{name}': expected exactly one file in a "
+                   f"{' or '.join(_PREFERRED_VARIANT_DIRS)} directory. Candidates:\n  {candidates}")
+
+
+def _select_model_variant_file(name, files, model_variant):
+  """
+  Picks the file of an explicitly requested variant, or None if the model does not have it.
+  """
+  matches = [f for f in files if _variant_of(f) == model_variant]
+  if len(matches) > 1:
+    candidates = '\n  '.join(sorted(matches))
+    raise ValueError(f"Cannot choose a file for model '{name}': expected exactly one file in a "
+                     f"{model_variant} directory. Candidates:\n  {candidates}")
+  return matches[0] if matches else None
+
+
+def scan_models(search_paths, base_dir=None, model_variant=None):
   """
   Recursively scan for .glb and .gltf files across search_paths.
-  Results are cached by the set of resolved search paths.
+  Results are cached by the ordered list of resolved search paths and the model variant.
+
+  When a model name appears in several search paths, the last search path wins. Within a single
+  search path, the file is chosen by _select_model_file, which raises if the choice is ambiguous.
+
+  When model_variant is given (e.g. 'glTF-Quantized'), only files directly inside a directory of
+  that name are considered, and models that do not have that variant are left out.
   """
   resolved_paths = []
   for p in search_paths:
@@ -87,7 +171,8 @@ def scan_models(search_paths, base_dir=None):
     else:
       resolved_paths.append(path.abspath(p))
 
-  cache_key = tuple(sorted(set(resolved_paths)))
+  # Order matters, because a later search path overrides an earlier one.
+  cache_key = (tuple(resolved_paths), model_variant)
   if cache_key in _MODEL_SCAN_CACHE:
     return _MODEL_SCAN_CACHE[cache_key]
 
@@ -97,16 +182,25 @@ def scan_models(search_paths, base_dir=None):
       continue
     glb_files = glob.glob(f'{d}/**/*.glb', recursive=True)
     gltf_files = glob.glob(f'{d}/**/*.gltf', recursive=True)
+    candidates = {}
     for model_file in chain(glb_files, gltf_files):
       name = path.splitext(path.basename(model_file))[0]
-      models[name] = path.abspath(model_file)
+      candidates.setdefault(name, []).append(path.abspath(model_file))
+    for name, files in candidates.items():
+      if model_variant:
+        selected = _select_model_variant_file(name, files, model_variant)
+        if selected:
+          models[name] = selected
+      else:
+        models[name] = _select_model_file(name, files)
 
   _MODEL_SCAN_CACHE[cache_key] = models
   return models
 
 
 class GltfTestConfig:
-  def __init__(self, data, inherited_search_paths=None, inherited_models=None, inherited_rendering=None, base_dir=None):
+  def __init__(self, data, inherited_search_paths=None, inherited_models=None, inherited_rendering=None, base_dir=None,
+               inherited_model_variant=None):
     assert _is_dict(data), "gltf_test must be a dictionary"
 
     # 1. Resolve model search paths
@@ -120,7 +214,14 @@ class GltfTestConfig:
     self.model_search_paths = search_paths
 
     # 2. Discover available models
-    self.models_map = scan_models(self.model_search_paths, base_dir=base_dir)
+    model_variant = data.get('model_variant', inherited_model_variant)
+    if model_variant is not None:
+      assert _is_string(model_variant) and model_variant.startswith(_VARIANT_DIR_PREFIX), \
+        f"gltf_test.model_variant must be a glTF-Sample-Assets variant directory name such as " \
+        f"'glTF-Quantized', got {model_variant!r}"
+    self.model_variant = model_variant
+    self.models_map = scan_models(self.model_search_paths, base_dir=base_dir,
+                                  model_variant=model_variant)
 
     # 3. Resolve models list
     models = list(inherited_models or [])
@@ -132,8 +233,10 @@ class GltfTestConfig:
 
     # Check that each model exists if search paths are provided
     if self.model_search_paths and self.models:
+      variant_note = f" with variant '{model_variant}'" if model_variant else ""
       for m in self.models:
-        assert m in self.models_map, f"Model '{m}' not found in model_search_paths: {self.model_search_paths}"
+        assert m in self.models_map, \
+          f"Model '{m}'{variant_note} not found in model_search_paths: {self.model_search_paths}"
 
     # 4. Resolve rendering automation dictionary
     rendering = dict(inherited_rendering or {})
@@ -183,6 +286,11 @@ class PresetConfig:
     else:
       self.tolerance = None
 
+    self.renderers = data.get('renderers')
+    if self.renderers is not None:
+      assert _is_list_of_strings(self.renderers), \
+        f"Preset '{self.name}' renderers must be a list of strings"
+
     # Strict schema: reject legacy flat fields
     assert 'rendering' not in data, f"Preset '{self.name}' defines legacy root-level 'rendering'; use 'gltf_test'"
     assert 'models' not in data, f"Preset '{self.name}' defines legacy root-level 'models'; use 'gltf_test'"
@@ -207,8 +315,9 @@ class TestConfig:
       assert _is_string(description), "description must be a string"
     self.description = description
 
-    self.renderers = data.get('renderers', default_renderers)
-    assert _is_list_of_strings(self.renderers), f"Test '{self.name}' renderers must be a list of strings"
+    test_renderers = data.get('renderers')
+    if test_renderers is not None:
+      assert _is_list_of_strings(test_renderers), f"Test '{self.name}' renderers must be a list of strings"
 
     self.apply_presets = data.get('apply_presets', [])
     assert _is_list_of_strings(self.apply_presets), f"Test '{self.name}' apply_presets must be a list of strings"
@@ -232,6 +341,7 @@ class TestConfig:
     # gltf inheritance accumulators
     inherited_search_paths = []
     inherited_models = []
+    inherited_model_variant = None
     inherited_rendering = {}
 
     # sample inheritance accumulators
@@ -241,13 +351,17 @@ class TestConfig:
 
     # Note that this needs to applied in order.  Models will be overwritten.
     # Properties will be "added" in order.
-    # Tolerance is inherited from the LAST preset that has one defined
+    # Tolerance and renderers are inherited from the LAST preset that defines them.
+    preset_renderers = None
     for preset_name in self.apply_presets:
       assert preset_name in preset_dict, f"Used preset '{preset_name}' which is not defined in presets"
       preset = preset_dict[preset_name]
 
       if preset.tolerance:
         preset_tolerance = preset.tolerance
+
+      if preset.renderers is not None:
+        preset_renderers = preset.renderers
 
       if self.is_gltf_test:
         assert preset.sample_data is None, \
@@ -260,6 +374,8 @@ class TestConfig:
                 inherited_search_paths.append(sp)
           if 'models' in p_gltf:
             inherited_models = p_gltf['models']
+          if 'model_variant' in p_gltf:
+            inherited_model_variant = p_gltf['model_variant']
           if 'rendering' in p_gltf:
             inherited_rendering.update(p_gltf['rendering'])
       elif self.is_sample_test:
@@ -283,6 +399,14 @@ class TestConfig:
     else:
       self.tolerance = preset_tolerance
 
+    # Resolve renderers (test > last preset > root default)
+    if test_renderers is not None:
+      self.renderers = test_renderers
+    elif preset_renderers is not None:
+      self.renderers = preset_renderers
+    else:
+      self.renderers = default_renderers
+
     # 3. Instantiate specific test config
     if self.is_gltf_test:
       self.gltf_test = GltfTestConfig(
@@ -290,7 +414,8 @@ class TestConfig:
         inherited_search_paths=inherited_search_paths,
         inherited_models=inherited_models,
         inherited_rendering=inherited_rendering,
-        base_dir=base_dir
+        base_dir=base_dir,
+        inherited_model_variant=inherited_model_variant
       )
       self.sample_test = None
     else:
@@ -308,6 +433,11 @@ class TestConfig:
       'base': self.gltf_test.rendering if self.gltf_test else {}
     }
     return json.dumps(json_out)
+
+  def to_settings_format(self):
+    """The test's rendering settings as the nested JSON read by gltf_viewer --settings."""
+    return json.dumps(expand_dotted_keys(self.gltf_test.rendering if self.gltf_test else {}),
+                      indent=2)
 
 
 class RenderTestConfig:

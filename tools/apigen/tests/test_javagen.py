@@ -991,7 +991,7 @@ class TestJavaGen(unittest.TestCase):
                         {"name": "mapSize", "type": {"cpp_name": "uint32_t", "qualified_name": "uint32_t", "category": "primitive"}, "default_value": "1024"},
                         {"name": "cascadeSplitPositions", "type": {"cpp_name": "float[3]", "qualified_name": "float[3]", "category": "unknown"}, "default_value": "{ 0.125f, 0.25f, 0.50f }"},
                         {"name": "vsm", "type": {"cpp_name": "struct Vsm", "qualified_name": "filament::LightManager::ShadowOptions::Vsm", "category": "object"}},
-                        {"name": "transform", "type": {"cpp_name": "math::quatf", "qualified_name": "filament::math::details::TQuaternion<float>", "category": "object"}}
+                        {"name": "transform", "type": {"cpp_name": "math::quatf", "qualified_name": "filament::math::details::TQuaternion<float>", "category": "object"}, "default_value": "{ 1.0f }"}
                     ],
                     "methods": [],
                     "enums": [],
@@ -1060,12 +1060,21 @@ class TestJavaGen(unittest.TestCase):
             java_src = (Path(tmp_dir) / "LightManager.java").read_text()
             cpp_src = (Path(tmp_dir) / "LightManager.cpp").read_text()
 
-            # Verify nested class structure in Java
+            # Verify nested class structure and default values in Java
             self.assertIn("public static class ShadowOptions {", java_src)
             self.assertIn("public static class Vsm {", java_src)
-            self.assertIn("private float mCascadeSplitPositions0;", java_src)
-            self.assertIn("private float mCascadeSplitPositions1;", java_src)
-            self.assertIn("private float mCascadeSplitPositions2;", java_src)
+            self.assertIn("public boolean elvsm = false;", java_src)
+            self.assertIn("public float blurWidth = 0.0f;", java_src)
+            self.assertIn("public int mapSize = 1024;", java_src)
+            self.assertIn("private float mCascadeSplitPositions0 = 0.125f;", java_src)
+            self.assertIn("private float mCascadeSplitPositions1 = 0.25f;", java_src)
+            self.assertIn("private float mCascadeSplitPositions2 = 0.50f;", java_src)
+            self.assertIn("private boolean mVsmElvsm = false;", java_src)
+            self.assertIn("private float mVsmBlurWidth = 0.0f;", java_src)
+            self.assertIn("private float mTransformX = 0.0f;", java_src)
+            self.assertIn("private float mTransformY = 0.0f;", java_src)
+            self.assertIn("private float mTransformZ = 0.0f;", java_src)
+            self.assertIn("private float mTransformW = 1.0f;", java_src)
             self.assertIn("public void setCascadeSplitPositions(@NonNull @Size(min = 3) float[] cascadeSplitPositions)", java_src)
             self.assertIn("public float[] getCascadeSplitPositions(@Nullable @Size(min = 3) float[] out)", java_src)
             self.assertIn("public void setTransform(@NonNull @Size(min = 4) float[] transform)", java_src)
@@ -1079,7 +1088,7 @@ class TestJavaGen(unittest.TestCase):
             self.assertIn("options.cascadeSplitPositions[2] = optionsCascadeSplitPositions2;", cpp_src)
             self.assertIn("options.vsm.elvsm = optionsVsmElvsm;", cpp_src)
             self.assertIn("options.vsm.blurWidth = optionsVsmBlurWidth;", cpp_src)
-            self.assertIn("options.transform = { optionsTransformX, optionsTransformY, optionsTransformZ, optionsTransformW };", cpp_src)
+            self.assertIn("options.transform = { optionsTransformW, optionsTransformX, optionsTransformY, optionsTransformZ };", cpp_src)
             self.assertIn("that->setShadowOptions(EntityInstance<LightManager>(i), options);", cpp_src)
 
     def test_custom_negative_enums_and_deduplication(self):
@@ -3958,6 +3967,78 @@ class TestJavaGen(unittest.TestCase):
         cpp_src = JniEmitter(ctx).generate_jni()
         self.assertIn("nGetDummyManager", cpp_src)
         self.assertIn("(jlong)&(that->getDummyManager())", cpp_src)
+
+    def test_deprecated_annotations_fixture(self):
+        """Verify C++ @deprecated documentation annotations generate @Deprecated Java annotations end-to-end."""
+        header_file = self.test_dir / "27_deprecated.h"
+        json_file = self.test_dir / "27_deprecated.json"
+        self.assertTrue(header_file.exists(), "27_deprecated.h fixture not found")
+        self.assertTrue(json_file.exists(), "27_deprecated.json fixture not found")
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            extracted_json = Path(tmp_dir) / "extracted.json"
+            repo_root = Path(__file__).parent.parent.parent.parent
+            ext_res = subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(__file__).parent.parent / "extractor.py"),
+                    str(header_file),
+                    "-I", str(repo_root / "filament/include"),
+                    "-I", str(repo_root / "libs/utils/include"),
+                    "-I", str(repo_root / "libs/math/include"),
+                    "-I", str(repo_root / "filament/backend/include"),
+                    "-o", str(extracted_json),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(ext_res.returncode, 0, f"extractor failed: {ext_res.stderr}")
+
+            res = subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(__file__).parent.parent / "javagen.py"),
+                    "--java-dir", tmp_dir,
+                    "--jni-dir", tmp_dir,
+                    str(extracted_json),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(res.returncode, 0, f"javagen failed: {res.stderr}")
+
+            java_src = (Path(tmp_dir) / "DeprecatedTest.java").read_text()
+            cpp_src = (Path(tmp_dir) / "DeprecatedTest.cpp").read_text()
+
+            expected_java = (self.test_dir / "27_deprecated.java").read_text()
+            expected_cpp = (self.test_dir / "27_deprecated.cpp").read_text()
+
+            self.assertEqual(java_src, expected_java)
+            self.assertEqual(cpp_src, expected_cpp)
+
+            # Explicitly validate @Deprecated placement on class, enums, entries, builder, overloads, and fields
+            self.assertIn("@Deprecated\npublic class DeprecatedTest {", java_src)
+            self.assertIn("    @Deprecated\n    public enum LegacyMode {", java_src)
+            self.assertIn("        /** Non-deprecated entry inside a deprecated enum. */\n        FAST,", java_src)
+            self.assertIn("        @Deprecated\n        SLOW;", java_src)
+            self.assertIn("        @Deprecated\n        MEDIUM,", java_src)
+            self.assertIn("        /** High quality. */\n        HIGH;", java_src)
+            self.assertIn("        @Deprecated\n        public enum BuilderFlag {", java_src)
+            self.assertIn("            @Deprecated\n            LEGACY;", java_src)
+            self.assertIn("        @Deprecated\n        @NonNull\n        public Builder legacyOption(int value) {", java_src)
+            self.assertIn("        @NonNull\n        public Builder modernOption(int value) {", java_src)
+            self.assertIn("        @Deprecated\n        @NonNull\n        public DeprecatedTest build(@NonNull Engine engine) {", java_src)
+            self.assertIn("    @Deprecated\n    public void legacyMethod() {", java_src)
+            self.assertIn("    /** Active non-deprecated instance method. */\n    public void modernMethod() {", java_src)
+            self.assertIn("    @Deprecated\n    public void legacyMethodWithDefaults() {", java_src)
+            self.assertIn("    @Deprecated\n    public void legacyMethodWithDefaults(int count) {", java_src)
+            self.assertIn("    @Deprecated\n    public void legacyMethodWithDefaults(int count, float factor) {", java_src)
+            self.assertIn("    @Deprecated\n    public void legacyVectorMethod(float valuex, float valuey, float valuez) {", java_src)
+            self.assertIn("    @Deprecated\n    public void legacyVectorMethod(@NonNull @Size(min = 3) float[] value) {", java_src)
+            self.assertIn("    @Deprecated\n    public static int legacyStaticMethod(int x) {", java_src)
+            self.assertIn("    @Deprecated\n    public static class LegacyOptions {", java_src)
+            self.assertIn("        @Deprecated\n        public float legacyScale = 1.0f;", java_src)
+            self.assertIn("        public boolean enabled = true;", java_src)
 
 
 if __name__ == "__main__":

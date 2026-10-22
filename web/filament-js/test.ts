@@ -211,8 +211,6 @@ function smoke_transforms() {
     tcm.setTransform(inst, m4);
     const m5 = tcm.getTransform(inst) as glm.mat4;
     const m6 = tcm.getWorldTransform(inst) as glm.mat4;
-    tcm.openLocalTransformTransaction();
-    tcm.commitLocalTransformTransaction();
     const parent: Filament.Entity = tcm.getParent(inst);
     const children: Filament.Vector<Filament.Entity> = tcm.getChildren(inst);
     console.log(m5, m6, parent, children);

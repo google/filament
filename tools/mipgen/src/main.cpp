@@ -344,7 +344,7 @@ int main(int argc, char* argv[]) {
             .pixelHeight = sourceImage.getHeight(),
             .pixelDepth = 0,
         };
-        size_t componentCount = sourceImage.getChannels();
+        uint32_t componentCount = sourceImage.getChannels();
 
         // Try to choose an internal format that has the same transformation function as the
         // source format. This varible may be adjusted later, after the destination format has

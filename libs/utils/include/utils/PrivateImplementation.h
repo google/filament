@@ -40,18 +40,39 @@ public:
     PrivateImplementation& operator = (PrivateImplementation const& rhs) noexcept;
 
     // move ctor and copy operator can be implemented inline and don't need to be exported
-    PrivateImplementation(PrivateImplementation&& rhs) noexcept : mImpl(rhs.mImpl) { rhs.mImpl = nullptr; }
+    PrivateImplementation(PrivateImplementation&& rhs) noexcept : mImpl(rhs.mImpl.mPointer) {
+        rhs.mImpl.mPointer = nullptr;
+    }
     PrivateImplementation& operator = (PrivateImplementation&& rhs) noexcept {
-        auto temp = mImpl;
-        mImpl = rhs.mImpl;
-        rhs.mImpl = temp;
+        T* const temp = mImpl.mPointer;
+        mImpl.mPointer = rhs.mImpl.mPointer;
+        rhs.mImpl.mPointer = temp;
         return *this;
     }
 
 protected:
-    T* mImpl = nullptr;
-    inline T* operator->() noexcept { return mImpl; }
-    inline T const* operator->() const noexcept { return mImpl; }
+    // Pointer to the implementation (owned by PrivateImplementation) that propagates constness:
+    // const methods of derived classes only get const access to the implementation. It's not
+    // copyable so that constness can't be dropped by copying it.
+    class ImplPointer {
+    public:
+        ImplPointer(ImplPointer const&) = delete;
+        ImplPointer& operator=(ImplPointer const&) = delete;
+        T* get() noexcept { return mPointer; }
+        T const* get() const noexcept { return mPointer; }
+        T* operator->() noexcept { return mPointer; }
+        T const* operator->() const noexcept { return mPointer; }
+        T& operator*() noexcept { return *mPointer; }
+        T const& operator*() const noexcept { return *mPointer; }
+    private:
+        friend class PrivateImplementation<T>;
+        explicit ImplPointer(T* p) noexcept : mPointer(p) {}
+        T* mPointer;
+    };
+
+    ImplPointer mImpl;
+    inline T* operator->() noexcept { return mImpl.get(); }
+    inline T const* operator->() const noexcept { return mImpl.get(); }
 };
 
 } // namespace utils

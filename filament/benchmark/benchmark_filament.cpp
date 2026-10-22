@@ -492,3 +492,891 @@ BENCHMARK_F(EngineGcWorstCaseFixture, worstCaseSequentialGc)(benchmark::State& s
     pc.stop();
     state.SetItemsProcessed(state.iterations() * DESTROYED_ENTITIES);
 }
+
+class TransformManagerFixture : public benchmark::Fixture {
+protected:
+    Engine* engine = nullptr;
+    EntityManager* em = nullptr;
+    TransformManager* tcm = nullptr;
+    utils::PagedArenaBitset dirtyEntities;
+
+public:
+    void SetUp(const benchmark::State& state) override {
+        Engine::Config config;
+        engine = Engine::Builder()
+            .backend(Engine::Backend::NOOP)
+            .config(&config)
+            .build();
+        em = &engine->getEntityManager();
+        tcm = &engine->getTransformManager();
+        downcast(tcm)->registerBitset(&dirtyEntities);
+    }
+
+    void TearDown(const benchmark::State& state) override {
+        downcast(tcm)->unregisterBitset(&dirtyEntities);
+        downcast(engine)->gc();
+        Engine::destroy(&engine);
+    }
+};
+
+BENCHMARK_F(TransformManagerFixture, setTransformFlatRootNodes)(benchmark::State& state) {
+    constexpr size_t COUNT = 1024;
+    std::vector<Entity> entities(COUNT);
+    std::vector<TransformManager::Instance> instances(COUNT);
+    std::vector<mat4f> transformsA(COUNT);
+    std::vector<mat4f> transformsB(COUNT);
+
+    em->create(COUNT, entities.data());
+    for (size_t i = 0; i < COUNT; ++i) {
+        float const s = float(i + 1) * 0.01f;
+        transformsA[i] = mat4f::translation(float3{ s, s * 2.0f, s * 3.0f }) *
+                         mat4f::rotation(s, float3{ 0.0f, 1.0f, 0.0f });
+        transformsB[i] = mat4f::translation(float3{ -s, s * 1.5f, -s * 2.5f }) *
+                         mat4f::rotation(s * 0.5f, float3{ 0.0f, 1.0f, 0.0f });
+        tcm->create(entities[i], {}, transformsA[i]);
+        instances[i] = tcm->getInstance(entities[i]);
+    }
+    downcast(tcm)->ensureWorldTransformsUpToDate();
+    bool toggle = false;
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            auto const& transforms = toggle ? transformsA : transformsB;
+            toggle = !toggle;
+            for (size_t i = 0; i < COUNT; ++i) {
+                tcm->setTransform(instances[i], transforms[i]);
+            }
+            downcast(tcm)->ensureWorldTransformsUpToDate();
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * COUNT);
+    }
+
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->destroy(entities[i]);
+    }
+    em->destroy(COUNT, entities.data());
+}
+
+BENCHMARK_F(TransformManagerFixture, setTransformParentedLeafNodes)(benchmark::State& state) {
+    constexpr size_t COUNT = 1024;
+    Entity rootEntity = em->create();
+    tcm->create(rootEntity, {}, mat4f::translation(float3{ 10.0f, 20.0f, 30.0f }));
+    TransformManager::Instance const rootInstance = tcm->getInstance(rootEntity);
+
+    std::vector<Entity> entities(COUNT);
+    std::vector<TransformManager::Instance> instances(COUNT);
+    std::vector<mat4f> transformsA(COUNT);
+    std::vector<mat4f> transformsB(COUNT);
+
+    em->create(COUNT, entities.data());
+    for (size_t i = 0; i < COUNT; ++i) {
+        float const s = float(i + 1) * 0.01f;
+        transformsA[i] = mat4f::translation(float3{ s, s * 2.0f, s * 3.0f }) *
+                         mat4f::rotation(s, float3{ 0.0f, 1.0f, 0.0f });
+        transformsB[i] = mat4f::translation(float3{ -s, s * 1.5f, -s * 2.5f }) *
+                         mat4f::rotation(s * 0.5f, float3{ 0.0f, 1.0f, 0.0f });
+        tcm->create(entities[i], rootInstance, transformsA[i]);
+        instances[i] = tcm->getInstance(entities[i]);
+    }
+    downcast(tcm)->ensureWorldTransformsUpToDate();
+    bool toggle = false;
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            auto const& transforms = toggle ? transformsA : transformsB;
+            toggle = !toggle;
+            for (size_t i = 0; i < COUNT; ++i) {
+                tcm->setTransform(instances[i], transforms[i]);
+            }
+            downcast(tcm)->ensureWorldTransformsUpToDate();
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * COUNT);
+    }
+
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->destroy(entities[i]);
+    }
+    tcm->destroy(rootEntity);
+    em->destroy(COUNT, entities.data());
+    em->destroy(rootEntity);
+}
+
+BENCHMARK_F(TransformManagerFixture, setTransformHierarchy)(benchmark::State& state) {
+    // 4-ary tree of depth 5: 1 + 4 + 16 + 64 + 256 + 1024 = 1365 nodes
+    constexpr size_t BRANCHING = 4;
+    constexpr size_t TOTAL_NODES = 1 + 4 + 16 + 64 + 256 + 1024;
+    constexpr size_t INTERNAL_NODES = 1 + 4 + 16 + 64 + 256;
+
+    std::vector<Entity> entities(TOTAL_NODES);
+    std::vector<TransformManager::Instance> instances(TOTAL_NODES);
+    em->create(TOTAL_NODES, entities.data());
+
+    mat4f const localMat = mat4f::translation(float3{ 1.0f, 2.0f, 3.0f }) *
+                           mat4f::rotation(0.25f, float3{ 0.0f, 1.0f, 0.0f });
+
+    tcm->create(entities[0], {}, localMat);
+    instances[0] = tcm->getInstance(entities[0]);
+
+    size_t nextIdx = 1;
+    for (size_t p = 0; p < INTERNAL_NODES; ++p) {
+        for (size_t b = 0; b < BRANCHING; ++b) {
+            tcm->create(entities[nextIdx], instances[p], localMat);
+            instances[nextIdx] = tcm->getInstance(entities[nextIdx]);
+            ++nextIdx;
+        }
+    }
+    downcast(tcm)->ensureWorldTransformsUpToDate();
+
+    mat4f const rootMatA = mat4f::translation(float3{ 5.0f, 6.0f, 7.0f });
+    mat4f const rootMatB = mat4f::translation(float3{ -5.0f, -6.0f, -7.0f });
+    bool toggle = false;
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            tcm->setTransform(instances[0], toggle ? rootMatA : rootMatB);
+            downcast(tcm)->ensureWorldTransformsUpToDate();
+            toggle = !toggle;
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * TOTAL_NODES);
+    }
+
+    for (size_t i = 0; i < TOTAL_NODES; ++i) {
+        tcm->destroy(entities[i]);
+    }
+    em->destroy(TOTAL_NODES, entities.data());
+}
+
+BENCHMARK_F(TransformManagerFixture, setTransformFlatRootNodesAccurate)(benchmark::State& state) {
+    tcm->setAccurateTranslationsEnabled(true);
+    constexpr size_t COUNT = 1024;
+    std::vector<Entity> entities(COUNT);
+    std::vector<TransformManager::Instance> instances(COUNT);
+    std::vector<mat4> transformsA(COUNT);
+    std::vector<mat4> transformsB(COUNT);
+
+    em->create(COUNT, entities.data());
+    for (size_t i = 0; i < COUNT; ++i) {
+        double const s = double(i + 1) * 0.01;
+        transformsA[i] = mat4::translation(double3{ 100000.0 + s, -200000.0 + s * 2.0, 300000.0 + s * 3.0 }) *
+                         mat4::rotation(s, double3{ 0.0, 1.0, 0.0 });
+        transformsB[i] = mat4::translation(double3{ 100000.0 - s, -200000.0 + s * 1.5, 300000.0 - s * 2.5 }) *
+                         mat4::rotation(s * 0.5, double3{ 0.0, 1.0, 0.0 });
+        tcm->create(entities[i], {}, transformsA[i]);
+        instances[i] = tcm->getInstance(entities[i]);
+    }
+    downcast(tcm)->ensureWorldTransformsUpToDate();
+    bool toggle = false;
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            auto const& transforms = toggle ? transformsA : transformsB;
+            toggle = !toggle;
+            for (size_t i = 0; i < COUNT; ++i) {
+                tcm->setTransform(instances[i], transforms[i]);
+            }
+            downcast(tcm)->ensureWorldTransformsUpToDate();
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * COUNT);
+    }
+
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->destroy(entities[i]);
+    }
+    em->destroy(COUNT, entities.data());
+}
+
+BENCHMARK_F(TransformManagerFixture, setTransformParentedLeafNodesAccurate)(benchmark::State& state) {
+    tcm->setAccurateTranslationsEnabled(true);
+    constexpr size_t COUNT = 1024;
+    Entity rootEntity = em->create();
+    tcm->create(rootEntity, {}, mat4::translation(double3{ 100000.125, -200000.25, 300000.5 }));
+    TransformManager::Instance const rootInstance = tcm->getInstance(rootEntity);
+
+    std::vector<Entity> entities(COUNT);
+    std::vector<TransformManager::Instance> instances(COUNT);
+    std::vector<mat4> transformsA(COUNT);
+    std::vector<mat4> transformsB(COUNT);
+
+    em->create(COUNT, entities.data());
+    for (size_t i = 0; i < COUNT; ++i) {
+        double const s = double(i + 1) * 0.01;
+        transformsA[i] = mat4::translation(double3{ s, s * 2.0, s * 3.0 }) *
+                         mat4::rotation(s, double3{ 0.0, 1.0, 0.0 });
+        transformsB[i] = mat4::translation(double3{ -s, s * 1.5, -s * 2.5 }) *
+                         mat4::rotation(s * 0.5, double3{ 0.0, 1.0, 0.0 });
+        tcm->create(entities[i], rootInstance, transformsA[i]);
+        instances[i] = tcm->getInstance(entities[i]);
+    }
+    downcast(tcm)->ensureWorldTransformsUpToDate();
+    bool toggle = false;
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            auto const& transforms = toggle ? transformsA : transformsB;
+            toggle = !toggle;
+            for (size_t i = 0; i < COUNT; ++i) {
+                tcm->setTransform(instances[i], transforms[i]);
+            }
+            downcast(tcm)->ensureWorldTransformsUpToDate();
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * COUNT);
+    }
+
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->destroy(entities[i]);
+    }
+    tcm->destroy(rootEntity);
+    em->destroy(COUNT, entities.data());
+    em->destroy(rootEntity);
+}
+
+BENCHMARK_F(TransformManagerFixture, setTransformHierarchyAccurate)(benchmark::State& state) {
+    tcm->setAccurateTranslationsEnabled(true);
+    // 4-ary tree of depth 5: 1 + 4 + 16 + 64 + 256 + 1024 = 1365 nodes
+    constexpr size_t BRANCHING = 4;
+    constexpr size_t TOTAL_NODES = 1 + 4 + 16 + 64 + 256 + 1024;
+    constexpr size_t INTERNAL_NODES = 1 + 4 + 16 + 64 + 256;
+
+    std::vector<Entity> entities(TOTAL_NODES);
+    std::vector<TransformManager::Instance> instances(TOTAL_NODES);
+    em->create(TOTAL_NODES, entities.data());
+
+    mat4 const localMat = mat4::translation(double3{ 1.0001220703125, 2.000244140625, 3.00048828125 }) *
+                          mat4::rotation(0.25, double3{ 0.0, 1.0, 0.0 });
+
+    tcm->create(entities[0], {}, localMat);
+    instances[0] = tcm->getInstance(entities[0]);
+
+    size_t nextIdx = 1;
+    for (size_t p = 0; p < INTERNAL_NODES; ++p) {
+        for (size_t b = 0; b < BRANCHING; ++b) {
+            tcm->create(entities[nextIdx], instances[p], localMat);
+            instances[nextIdx] = tcm->getInstance(entities[nextIdx]);
+            ++nextIdx;
+        }
+    }
+    downcast(tcm)->ensureWorldTransformsUpToDate();
+
+    mat4 const rootMatA = mat4::translation(double3{ 100005.125, -200006.25, 300007.5 });
+    mat4 const rootMatB = mat4::translation(double3{ -100005.125, 200006.25, -300007.5 });
+    bool toggle = false;
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            tcm->setTransform(instances[0], toggle ? rootMatA : rootMatB);
+            downcast(tcm)->ensureWorldTransformsUpToDate();
+            toggle = !toggle;
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * TOTAL_NODES);
+    }
+
+    for (size_t i = 0; i < TOTAL_NODES; ++i) {
+        tcm->destroy(entities[i]);
+    }
+    em->destroy(TOTAL_NODES, entities.data());
+}
+
+BENCHMARK_F(TransformManagerFixture, setTransformIdentical)(benchmark::State& state) {
+    constexpr size_t COUNT = 1024;
+    std::vector<Entity> entities(COUNT);
+    std::vector<TransformManager::Instance> instances(COUNT);
+    std::vector<mat4f> transforms(COUNT);
+
+    em->create(COUNT, entities.data());
+    for (size_t i = 0; i < COUNT; ++i) {
+        float const s = float(i + 1) * 0.01f;
+        transforms[i] = mat4f::translation(float3{ s, s * 2.0f, s * 3.0f }) *
+                        mat4f::rotation(s, float3{ 0.0f, 1.0f, 0.0f });
+        tcm->create(entities[i], {}, transforms[i]);
+        instances[i] = tcm->getInstance(entities[i]);
+    }
+    downcast(tcm)->ensureWorldTransformsUpToDate();
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            for (size_t i = 0; i < COUNT; ++i) {
+                tcm->setTransform(instances[i], transforms[i]);
+            }
+            downcast(tcm)->ensureWorldTransformsUpToDate();
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * COUNT);
+    }
+
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->destroy(entities[i]);
+    }
+    em->destroy(COUNT, entities.data());
+}
+
+BENCHMARK_F(TransformManagerFixture, setTransformHierarchyTopDown)(benchmark::State& state) {
+    constexpr size_t BRANCHING = 4;
+    constexpr size_t TOTAL_NODES = 1 + 4 + 16 + 64 + 256 + 1024;
+    constexpr size_t INTERNAL_NODES = 1 + 4 + 16 + 64 + 256;
+
+    std::vector<Entity> entities(TOTAL_NODES);
+    std::vector<TransformManager::Instance> instances(TOTAL_NODES);
+    em->create(TOTAL_NODES, entities.data());
+
+    mat4f const matA = mat4f::translation(float3{ 1.0f, 2.0f, 3.0f }) *
+                       mat4f::rotation(0.25f, float3{ 0.0f, 1.0f, 0.0f });
+    mat4f const matB = mat4f::translation(float3{ -1.0f, -2.0f, -3.0f }) *
+                       mat4f::rotation(0.5f, float3{ 0.0f, 1.0f, 0.0f });
+
+    tcm->create(entities[0], {}, matA);
+    instances[0] = tcm->getInstance(entities[0]);
+
+    size_t nextIdx = 1;
+    for (size_t p = 0; p < INTERNAL_NODES; ++p) {
+        for (size_t b = 0; b < BRANCHING; ++b) {
+            tcm->create(entities[nextIdx], instances[p], matA);
+            instances[nextIdx] = tcm->getInstance(entities[nextIdx]);
+            ++nextIdx;
+        }
+    }
+    downcast(tcm)->ensureWorldTransformsUpToDate();
+    bool toggle = false;
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            mat4f const& m = toggle ? matA : matB;
+            toggle = !toggle;
+            for (size_t i = 0; i < TOTAL_NODES; ++i) {
+                tcm->setTransform(instances[i], m);
+            }
+            downcast(tcm)->ensureWorldTransformsUpToDate();
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * TOTAL_NODES);
+    }
+
+    for (size_t i = 0; i < TOTAL_NODES; ++i) {
+        tcm->destroy(entities[i]);
+    }
+    em->destroy(TOTAL_NODES, entities.data());
+}
+
+BENCHMARK_F(TransformManagerFixture, setTransformHierarchyTRS)(benchmark::State& state) {
+    constexpr size_t BRANCHING = 4;
+    constexpr size_t TOTAL_NODES = 1 + 4 + 16 + 64 + 256 + 1024;
+    constexpr size_t INTERNAL_NODES = 1 + 4 + 16 + 64 + 256;
+
+    std::vector<Entity> entities(TOTAL_NODES);
+    std::vector<TransformManager::Instance> instances(TOTAL_NODES);
+    em->create(TOTAL_NODES, entities.data());
+
+    mat4f const matT = mat4f::translation(float3{ 1.0f, 2.0f, 3.0f });
+    mat4f const matTR = matT * mat4f::rotation(0.25f, float3{ 0.0f, 1.0f, 0.0f });
+    mat4f const matTRS = matTR * mat4f::scaling(float3{ 1.1f, 1.1f, 1.1f });
+
+    tcm->create(entities[0], {}, matTRS);
+    instances[0] = tcm->getInstance(entities[0]);
+
+    size_t nextIdx = 1;
+    for (size_t p = 0; p < INTERNAL_NODES; ++p) {
+        for (size_t b = 0; b < BRANCHING; ++b) {
+            tcm->create(entities[nextIdx], instances[p], matTRS);
+            instances[nextIdx] = tcm->getInstance(entities[nextIdx]);
+            ++nextIdx;
+        }
+    }
+    downcast(tcm)->ensureWorldTransformsUpToDate();
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            tcm->setTransform(instances[0], matT);
+            tcm->setTransform(instances[0], matTR);
+            tcm->setTransform(instances[0], matTRS);
+            downcast(tcm)->ensureWorldTransformsUpToDate();
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * TOTAL_NODES);
+    }
+
+    for (size_t i = 0; i < TOTAL_NODES; ++i) {
+        tcm->destroy(entities[i]);
+    }
+    em->destroy(TOTAL_NODES, entities.data());
+}
+
+BENCHMARK_F(TransformManagerFixture, setTransformHierarchyTopDownTRS)(benchmark::State& state) {
+    constexpr size_t BRANCHING = 4;
+    constexpr size_t TOTAL_NODES = 1 + 4 + 16 + 64 + 256 + 1024;
+    constexpr size_t INTERNAL_NODES = 1 + 4 + 16 + 64 + 256;
+
+    std::vector<Entity> entities(TOTAL_NODES);
+    std::vector<TransformManager::Instance> instances(TOTAL_NODES);
+    em->create(TOTAL_NODES, entities.data());
+
+    mat4f const matT = mat4f::translation(float3{ 1.0f, 2.0f, 3.0f });
+    mat4f const matTR = matT * mat4f::rotation(0.25f, float3{ 0.0f, 1.0f, 0.0f });
+    mat4f const matTRS = matTR * mat4f::scaling(float3{ 1.1f, 1.1f, 1.1f });
+
+    tcm->create(entities[0], {}, matTRS);
+    instances[0] = tcm->getInstance(entities[0]);
+
+    size_t nextIdx = 1;
+    for (size_t p = 0; p < INTERNAL_NODES; ++p) {
+        for (size_t b = 0; b < BRANCHING; ++b) {
+            tcm->create(entities[nextIdx], instances[p], matTRS);
+            instances[nextIdx] = tcm->getInstance(entities[nextIdx]);
+            ++nextIdx;
+        }
+    }
+    downcast(tcm)->ensureWorldTransformsUpToDate();
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            for (size_t i = 0; i < TOTAL_NODES; ++i) {
+                tcm->setTransform(instances[i], matT);
+                tcm->setTransform(instances[i], matTR);
+                tcm->setTransform(instances[i], matTRS);
+            }
+            downcast(tcm)->ensureWorldTransformsUpToDate();
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * TOTAL_NODES);
+    }
+
+    for (size_t i = 0; i < TOTAL_NODES; ++i) {
+        tcm->destroy(entities[i]);
+    }
+    em->destroy(TOTAL_NODES, entities.data());
+}
+
+BENCHMARK_F(TransformManagerFixture, setTransformGetWorldTransformInterleavedFlat)(benchmark::State& state) {
+    constexpr size_t COUNT = 1024;
+    std::vector<Entity> entities(COUNT);
+    std::vector<TransformManager::Instance> instances(COUNT);
+    em->create(COUNT, entities.data());
+
+    mat4f const matA = mat4f::translation(float3{ 1.0f, 2.0f, 3.0f }) *
+                       mat4f::rotation(0.25f, float3{ 0.0f, 1.0f, 0.0f });
+    mat4f const matB = mat4f::translation(float3{ -1.0f, -2.0f, -3.0f }) *
+                       mat4f::rotation(0.5f, float3{ 0.0f, 1.0f, 0.0f });
+
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->create(entities[i], {}, matA);
+        instances[i] = tcm->getInstance(entities[i]);
+    }
+    downcast(tcm)->ensureWorldTransformsUpToDate();
+    bool toggle = false;
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            mat4f const& m = toggle ? matA : matB;
+            toggle = !toggle;
+            for (size_t i = 0; i < COUNT; ++i) {
+                tcm->setTransform(instances[i], m);
+                mat4f const& w = tcm->getWorldTransform(instances[i]);
+                benchmark::DoNotOptimize(w);
+            }
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * COUNT);
+    }
+
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->destroy(entities[i]);
+    }
+    em->destroy(COUNT, entities.data());
+}
+
+BENCHMARK_F(TransformManagerFixture, setTransformGetWorldTransformInterleavedHierarchy)(benchmark::State& state) {
+    constexpr size_t BRANCHING = 4;
+    constexpr size_t TOTAL_NODES = 1 + 4 + 16 + 64 + 256 + 1024;
+    constexpr size_t INTERNAL_NODES = 1 + 4 + 16 + 64 + 256;
+
+    std::vector<Entity> entities(TOTAL_NODES);
+    std::vector<TransformManager::Instance> instances(TOTAL_NODES);
+    em->create(TOTAL_NODES, entities.data());
+
+    mat4f const matA = mat4f::translation(float3{ 1.0f, 2.0f, 3.0f }) *
+                       mat4f::rotation(0.25f, float3{ 0.0f, 1.0f, 0.0f });
+    mat4f const matB = mat4f::translation(float3{ -1.0f, -2.0f, -3.0f }) *
+                       mat4f::rotation(0.5f, float3{ 0.0f, 1.0f, 0.0f });
+
+    tcm->create(entities[0], {}, matA);
+    instances[0] = tcm->getInstance(entities[0]);
+
+    size_t nextIdx = 1;
+    for (size_t p = 0; p < INTERNAL_NODES; ++p) {
+        for (size_t b = 0; b < BRANCHING; ++b) {
+            tcm->create(entities[nextIdx], instances[p], matA);
+            instances[nextIdx] = tcm->getInstance(entities[nextIdx]);
+            ++nextIdx;
+        }
+    }
+    downcast(tcm)->ensureWorldTransformsUpToDate();
+    bool toggle = false;
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            mat4f const& m = toggle ? matA : matB;
+            toggle = !toggle;
+            for (size_t i = 0; i < TOTAL_NODES; ++i) {
+                tcm->setTransform(instances[i], m);
+                mat4f const& w = tcm->getWorldTransform(instances[i]);
+                benchmark::DoNotOptimize(w);
+            }
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * TOTAL_NODES);
+    }
+
+    for (size_t i = 0; i < TOTAL_NODES; ++i) {
+        tcm->destroy(entities[i]);
+    }
+    em->destroy(TOTAL_NODES, entities.data());
+}
+
+BENCHMARK_F(TransformManagerFixture, setTransformTRSGetWorldTransformInterleavedFlat)(benchmark::State& state) {
+    constexpr size_t COUNT = 1024;
+    std::vector<Entity> entities(COUNT);
+    std::vector<TransformManager::Instance> instances(COUNT);
+    em->create(COUNT, entities.data());
+
+    mat4f const matT = mat4f::translation(float3{ 1.0f, 2.0f, 3.0f });
+    mat4f const matTR = matT * mat4f::rotation(0.25f, float3{ 0.0f, 1.0f, 0.0f });
+    mat4f const matTRS = matTR * mat4f::scaling(float3{ 1.1f, 1.1f, 1.1f });
+
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->create(entities[i], {}, matTRS);
+        instances[i] = tcm->getInstance(entities[i]);
+    }
+    downcast(tcm)->ensureWorldTransformsUpToDate();
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            for (size_t i = 0; i < COUNT; ++i) {
+                tcm->setTransform(instances[i], matT);
+                tcm->setTransform(instances[i], matTR);
+                tcm->setTransform(instances[i], matTRS);
+                mat4f const& w = tcm->getWorldTransform(instances[i]);
+                benchmark::DoNotOptimize(w);
+            }
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * COUNT);
+    }
+
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->destroy(entities[i]);
+    }
+    em->destroy(COUNT, entities.data());
+}
+
+BENCHMARK_F(TransformManagerFixture, setTransformTRSGetWorldTransformInterleavedHierarchy)(benchmark::State& state) {
+    constexpr size_t BRANCHING = 4;
+    constexpr size_t TOTAL_NODES = 1 + 4 + 16 + 64 + 256 + 1024;
+    constexpr size_t INTERNAL_NODES = 1 + 4 + 16 + 64 + 256;
+
+    std::vector<Entity> entities(TOTAL_NODES);
+    std::vector<TransformManager::Instance> instances(TOTAL_NODES);
+    em->create(TOTAL_NODES, entities.data());
+
+    mat4f const matT = mat4f::translation(float3{ 1.0f, 2.0f, 3.0f });
+    mat4f const matTR = matT * mat4f::rotation(0.25f, float3{ 0.0f, 1.0f, 0.0f });
+    mat4f const matTRS = matTR * mat4f::scaling(float3{ 1.1f, 1.1f, 1.1f });
+
+    tcm->create(entities[0], {}, matTRS);
+    instances[0] = tcm->getInstance(entities[0]);
+
+    size_t nextIdx = 1;
+    for (size_t p = 0; p < INTERNAL_NODES; ++p) {
+        for (size_t b = 0; b < BRANCHING; ++b) {
+            tcm->create(entities[nextIdx], instances[p], matTRS);
+            instances[nextIdx] = tcm->getInstance(entities[nextIdx]);
+            ++nextIdx;
+        }
+    }
+    downcast(tcm)->ensureWorldTransformsUpToDate();
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            for (size_t i = 0; i < TOTAL_NODES; ++i) {
+                tcm->setTransform(instances[i], matT);
+                tcm->setTransform(instances[i], matTR);
+                tcm->setTransform(instances[i], matTRS);
+                mat4f const& w = tcm->getWorldTransform(instances[i]);
+                benchmark::DoNotOptimize(w);
+            }
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * TOTAL_NODES);
+    }
+
+    for (size_t i = 0; i < TOTAL_NODES; ++i) {
+        tcm->destroy(entities[i]);
+    }
+    em->destroy(TOTAL_NODES, entities.data());
+}
+
+namespace {
+
+// Helper to construct a 4-ary hierarchy of 1,365 nodes whose SoA Instance slots are fragmented
+// (scrambled creation order + interleaved static background entities) to simulate a long-lived
+// scene after dynamic spawning, despawning, and reparenting.
+struct FragmentedHierarchyScene {
+    static constexpr size_t BRANCHING = 4;
+    static constexpr size_t TREE_NODES = 1 + 4 + 16 + 64 + 256 + 1024; // 1,365 nodes
+    static constexpr size_t INTERNAL_NODES = 1 + 4 + 16 + 64 + 256;    // 341 internal nodes
+
+    std::vector<Entity> treeEntities;
+    std::vector<Entity> bgEntities;
+
+    void setup(EntityManager* em, TransformManager* tcm, size_t bgMultiplier, bool runDefragment) {
+        treeEntities.resize(TREE_NODES);
+        bgEntities.resize(TREE_NODES * bgMultiplier);
+        em->create(treeEntities.size(), treeEntities.data());
+        if (!bgEntities.empty()) {
+            em->create(bgEntities.size(), bgEntities.data());
+        }
+
+        // Deterministic permutation of [0 .. TREE_NODES - 1] so nodes are allocated in scrambled
+        // SoA order (parents after children, siblings far apart in memory).
+        std::vector<size_t> creationOrder(TREE_NODES);
+        for (size_t i = 0; i < TREE_NODES; ++i) {
+            creationOrder[i] = i;
+        }
+        std::mt19937 rng(42);
+        std::shuffle(creationOrder.begin(), creationOrder.end(), rng);
+
+        mat4f const local = mat4f::translation(float3{ 1.0f, 2.0f, 3.0f });
+        size_t bgIdx = 0;
+        for (size_t idx : creationOrder) {
+            tcm->create(treeEntities[idx], {}, local);
+            for (size_t b = 0; b < bgMultiplier; ++b) {
+                tcm->create(bgEntities[bgIdx++], {}, local);
+            }
+        }
+
+        // Wire the 4-ary tree topology using setParent()
+        size_t nextChild = 1;
+        for (size_t p = 0; p < INTERNAL_NODES; ++p) {
+            auto const parentInst = tcm->getInstance(treeEntities[p]);
+            for (size_t b = 0; b < BRANCHING; ++b) {
+                auto const childInst = tcm->getInstance(treeEntities[nextChild++]);
+                tcm->setParent(childInst, parentInst);
+            }
+        }
+
+        if (runDefragment) {
+            downcast(tcm)->defragment(SIZE_MAX);
+        }
+        downcast(tcm)->ensureWorldTransformsUpToDate();
+    }
+
+    void teardown(EntityManager* em, TransformManager* tcm) {
+        for (Entity e : treeEntities) {
+            tcm->destroy(e);
+        }
+        for (Entity e : bgEntities) {
+            tcm->destroy(e);
+        }
+        em->destroy(treeEntities.size(), treeEntities.data());
+        if (!bgEntities.empty()) {
+            em->destroy(bgEntities.size(), bgEntities.data());
+        }
+    }
+};
+
+} // anonymous namespace
+
+BENCHMARK_F(TransformManagerFixture, setTransformHierarchyFragmented)(benchmark::State& state) {
+    FragmentedHierarchyScene scene;
+    scene.setup(em, tcm, 0, false);
+
+    mat4f const matA = mat4f::translation(float3{ 2.0f, 3.0f, 4.0f });
+    mat4f const matB = mat4f::translation(float3{ 5.0f, 6.0f, 7.0f });
+    bool toggle = false;
+    auto const rootInst = tcm->getInstance(scene.treeEntities[0]);
+    auto const leafInst = tcm->getInstance(scene.treeEntities[FragmentedHierarchyScene::TREE_NODES - 1]);
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            toggle = !toggle;
+            tcm->setTransform(rootInst, toggle ? matA : matB);
+            mat4f const& w = tcm->getWorldTransform(leafInst);
+            benchmark::DoNotOptimize(w);
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * FragmentedHierarchyScene::TREE_NODES);
+    }
+
+    scene.teardown(em, tcm);
+}
+
+BENCHMARK_F(TransformManagerFixture, setTransformHierarchyDefragmented)(benchmark::State& state) {
+    FragmentedHierarchyScene scene;
+    scene.setup(em, tcm, 0, true);
+
+    mat4f const matA = mat4f::translation(float3{ 2.0f, 3.0f, 4.0f });
+    mat4f const matB = mat4f::translation(float3{ 5.0f, 6.0f, 7.0f });
+    bool toggle = false;
+    auto const rootInst = tcm->getInstance(scene.treeEntities[0]);
+    auto const leafInst = tcm->getInstance(scene.treeEntities[FragmentedHierarchyScene::TREE_NODES - 1]);
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            toggle = !toggle;
+            tcm->setTransform(rootInst, toggle ? matA : matB);
+            mat4f const& w = tcm->getWorldTransform(leafInst);
+            benchmark::DoNotOptimize(w);
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * FragmentedHierarchyScene::TREE_NODES);
+    }
+
+    scene.teardown(em, tcm);
+}
+
+BENCHMARK_F(TransformManagerFixture, setTransformSceneHierarchyFragmented)(benchmark::State& state) {
+    // 1,365-node animated hierarchy interleaved with 5x background static entities (8,190 total entities)
+    FragmentedHierarchyScene scene;
+    scene.setup(em, tcm, 5, false);
+
+    mat4f const matA = mat4f::translation(float3{ 2.0f, 3.0f, 4.0f });
+    mat4f const matB = mat4f::translation(float3{ 5.0f, 6.0f, 7.0f });
+    bool toggle = false;
+    auto const rootInst = tcm->getInstance(scene.treeEntities[0]);
+    auto const leafInst = tcm->getInstance(scene.treeEntities[FragmentedHierarchyScene::TREE_NODES - 1]);
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            toggle = !toggle;
+            tcm->setTransform(rootInst, toggle ? matA : matB);
+            mat4f const& w = tcm->getWorldTransform(leafInst);
+            benchmark::DoNotOptimize(w);
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * FragmentedHierarchyScene::TREE_NODES);
+    }
+
+    scene.teardown(em, tcm);
+}
+
+BENCHMARK_F(TransformManagerFixture, setTransformSceneHierarchyDefragmented)(benchmark::State& state) {
+    // 1,365-node animated hierarchy interleaved with 5x background static entities (8,190 total entities),
+    // after BFS defragment() packs roots and contiguous sibling runs.
+    FragmentedHierarchyScene scene;
+    scene.setup(em, tcm, 5, true);
+
+    mat4f const matA = mat4f::translation(float3{ 2.0f, 3.0f, 4.0f });
+    mat4f const matB = mat4f::translation(float3{ 5.0f, 6.0f, 7.0f });
+    bool toggle = false;
+    auto const rootInst = tcm->getInstance(scene.treeEntities[0]);
+    auto const leafInst = tcm->getInstance(scene.treeEntities[FragmentedHierarchyScene::TREE_NODES - 1]);
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            toggle = !toggle;
+            tcm->setTransform(rootInst, toggle ? matA : matB);
+            mat4f const& w = tcm->getWorldTransform(leafInst);
+            benchmark::DoNotOptimize(w);
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * FragmentedHierarchyScene::TREE_NODES);
+    }
+
+    scene.teardown(em, tcm);
+}
+
+BENCHMARK_F(TransformManagerFixture, defragmentAmortizedStep)(benchmark::State& state) {
+    FragmentedHierarchyScene scene;
+    scene.setup(em, tcm, 0, true);
+    auto* const ftm = downcast(tcm);
+    auto const rootInst = tcm->getInstance(scene.treeEntities[0]);
+    auto const branch1Inst = tcm->getInstance(scene.treeEntities[1]);
+    auto const branch2Inst = tcm->getInstance(scene.treeEntities[2]);
+    bool toggle = false;
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            // Toggle branch1 (341-node subtree) between level 1 (under root) and level 2 (under branch2).
+            // This shifts the BFS level order of >600 nodes so defragment(64) executes its full 64-swap budget.
+            toggle = !toggle;
+            tcm->setParent(branch1Inst, toggle ? branch2Inst : rootInst);
+            ftm->defragment(64);
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * 64);
+    }
+
+    scene.teardown(em, tcm);
+}
+
+BENCHMARK_F(TransformManagerFixture, defragmentSmartCursorDeepReparent)(benchmark::State& state) {
+    // 8,190 total entities (6,825 static roots + 1,365-node hierarchy).
+    // Reparenting a deep node near the bottom of the tree and calling defragment(64) rewinds
+    // mDefragParentCursor via O(log N) binary search directly to the affected parent instead
+    // of rescanning all 8,190 nodes from index 0.
+    FragmentedHierarchyScene scene;
+    scene.setup(em, tcm, 5, true);
+    auto* const ftm = downcast(tcm);
+    Entity const parentA = scene.treeEntities[FragmentedHierarchyScene::INTERNAL_NODES - 2];
+    Entity const parentB = scene.treeEntities[FragmentedHierarchyScene::INTERNAL_NODES - 1];
+    Entity const leafChild = scene.treeEntities[FragmentedHierarchyScene::TREE_NODES - 5];
+    bool toggle = false;
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            toggle = !toggle;
+            tcm->setParent(tcm->getInstance(leafChild),
+                    tcm->getInstance(toggle ? parentB : parentA));
+            ftm->defragment(64);
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations());
+    }
+
+    scene.teardown(em, tcm);
+}
+
+

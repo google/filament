@@ -58,6 +58,8 @@ enum DynamicStateBits : uint16_t {
     DIRTY_DEPTH_BIAS_ENABLE    = 1 << 9,
     // VK_EXT_vertex_input_dynamic_state
     DIRTY_VERTEX_INPUT         = 1 << 10,
+    // VK_EXT_color_write_enable
+    DIRTY_COLOR_WRITE_ENABLE   = 1 << 11,
 };
 
 constexpr bool isDepthTestEnabled(VulkanPipelineCache::RasterState const& raster) noexcept {
@@ -138,6 +140,9 @@ VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device, Vu
           mHasVertexInputDynamicState(context.isVertexInputDynamicStateSupported() && context.isPipelineDynamicStateEnabled()),
           mHasDynamicState(context.isExtendedDynamicStateSupported() && context.isPipelineDynamicStateEnabled()),
           mHasDynamicState2(context.isExtendedDynamicState2Supported() && context.isPipelineDynamicStateEnabled()),
+          mHasColorWriteEnable(context.isColorWriteEnableSupported() && context.isPipelineDynamicStateEnabled()),
+          mHasPipelineProtectedAccess(context.isPipelineProtectedAccessSupported()),
+          mPipelineCacheThresholdEvictionEnabled(context.isPipelineCacheEvictionEnabled()),
           mContext(context) {
     VkPipelineCacheCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
@@ -160,6 +165,8 @@ VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device, Vu
     FVK_LOGD << "Vertex input dynamic state supported: " << mHasVertexInputDynamicState;
     FVK_LOGD << "Extended dynamic state supported: " << mHasDynamicState;
     FVK_LOGD << "Extended dynamic state 2 supported: " << mHasDynamicState2;
+    FVK_LOGD << "Color write enable supported: " << mHasColorWriteEnable;
+    FVK_LOGD << "Pipeline protected access supported: " << mHasPipelineProtectedAccess;
 #endif
 }
 
@@ -189,6 +196,12 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::getOrCreatePipelin
 
 void VulkanPipelineCache::bindPipeline(VulkanCommandBuffer* commands) {
     VkCommandBuffer const cmdbuffer = commands->buffer();
+
+    // Pipelines that are restricted to protected (or unprotected) access can only be bound to
+    // protected (or unprotected) command buffers, so the protection is part of the key.
+    if (mHasPipelineProtectedAccess) {
+        mStaticPipelineKey.protectedAccess = commands->isProtected() ? 1 : 0;
+    }
 
     // The frontend's PipelineState may trigger a backend bindPipeline call due to dynamic
     // state changes (e.g. vertex buffer info, polygon offset, or raster state). However, when
@@ -226,6 +239,8 @@ void VulkanPipelineCache::asyncPrewarmCache(
         .renderPass = VK_NULL_HANDLE,
         .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         .subpassIndex = 0,
+        // Prewarming targets unprotected rendering.
+        .protectedAccess = 0,
         // We're using vertex input dynamic state, so these should be empty.
         .vertexAttributes = {},
         .vertexBuffers = {},
@@ -373,7 +388,7 @@ VkPipeline VulkanPipelineCache::createPipeline(
         .scissorCount = 1,
     };
 
-    constexpr size_t maxDynamicStates = 16;
+    constexpr size_t maxDynamicStates = 17;
     size_t numDynamicStates = 2;
     VkDynamicState enabledDynamicStates[maxDynamicStates] = {
         VK_DYNAMIC_STATE_VIEWPORT,
@@ -406,6 +421,10 @@ VkPipeline VulkanPipelineCache::createPipeline(
 
     if (mHasDynamicState2) {
         enabledDynamicStates[numDynamicStates++] = VK_DYNAMIC_STATE_DEPTH_BIAS_ENABLE_EXT;
+    }
+
+    if (mHasColorWriteEnable && mStaticPipelineKey.rasterState.colorTargetCount > 0) {
+        enabledDynamicStates[numDynamicStates++] = VK_DYNAMIC_STATE_COLOR_WRITE_ENABLE_EXT;
     }
 
     VkPipelineDynamicStateCreateInfo dynamicState = {
@@ -484,6 +503,14 @@ VkPipeline VulkanPipelineCache::createPipeline(
         .subpass = key.subpassIndex,
     };
 
+    // Restrict the pipeline to protected or unprotected command buffers if possible. This allows
+    // drivers to avoid the overhead of protected memory support in unprotected pipelines.
+    if (mHasPipelineProtectedAccess) {
+        pipelineCreateInfo.flags |= key.protectedAccess
+                ? VK_PIPELINE_CREATE_PROTECTED_ACCESS_ONLY_BIT_EXT
+                : VK_PIPELINE_CREATE_NO_PROTECTED_ACCESS_BIT_EXT;
+    }
+
     // There are no color attachments if there is no bound fragment shader.  (e.g. shadow map gen)
     // TODO: This should be handled in a higher layer.
     if (!hasFragmentShader) {
@@ -500,7 +527,7 @@ VkPipeline VulkanPipelineCache::createPipeline(
             .alphaBlendOp = (VkBlendOp) raster.alphaBlendOp,
             .colorWriteMask = raster.colorWriteMask,
         };
-        for (uint8_t i = 1; i < colorBlendState.attachmentCount; ++i) {
+        for (uint32_t i = 1; i < colorBlendState.attachmentCount; ++i) {
             colorBlendAttachments[i] = colorBlendAttachments[0];
         }
     }
@@ -594,13 +621,22 @@ void VulkanPipelineCache::bindRasterState(RasterState const& rasterState) noexce
             mDynamicPipelineKey.rasterState : mStaticPipelineKey.rasterState;
     ds2Target.depthBiasEnable = rasterState.depthBiasEnable;
 
+    // In the case color write enabled is supported, the write mask will always be
+    // 0xF (write all channels) and the write is switched on/off in `bindPipeline`
+    if (mHasColorWriteEnable) {
+        mStaticPipelineKey.rasterState.colorWriteMask = 0xf;
+        mDynamicPipelineKey.rasterState.colorWriteMask = rasterState.colorWriteMask;
+    } else {
+        mStaticPipelineKey.rasterState.colorWriteMask = rasterState.colorWriteMask;
+    }
+
+
     mStaticPipelineKey.rasterState.blendEnable = rasterState.blendEnable;
     mStaticPipelineKey.rasterState.alphaToCoverageEnable = rasterState.alphaToCoverageEnable;
     mStaticPipelineKey.rasterState.srcColorBlendFactor = rasterState.srcColorBlendFactor;
     mStaticPipelineKey.rasterState.dstColorBlendFactor = rasterState.dstColorBlendFactor;
     mStaticPipelineKey.rasterState.srcAlphaBlendFactor = rasterState.srcAlphaBlendFactor;
     mStaticPipelineKey.rasterState.dstAlphaBlendFactor = rasterState.dstAlphaBlendFactor;
-    mStaticPipelineKey.rasterState.colorWriteMask = rasterState.colorWriteMask;
     mStaticPipelineKey.rasterState.rasterizationSamples = rasterState.rasterizationSamples;
     mStaticPipelineKey.rasterState.depthClamp = rasterState.depthClamp;
     mStaticPipelineKey.rasterState.colorTargetCount = rasterState.colorTargetCount;
@@ -620,7 +656,8 @@ void VulkanPipelineCache::bindRenderPass(
         fvkmemory::resource_ptr<VulkanRenderPass> renderPass,
         int subpassIndex) noexcept {
     mStaticPipelineKey.renderPass = renderPass->getVkRenderPass();
-    mStaticPipelineKey.subpassIndex = subpassIndex;
+    assert_invariant(subpassIndex >= 0 && subpassIndex <= 0xff);
+    mStaticPipelineKey.subpassIndex = uint8_t(subpassIndex);
 }
 
 void VulkanPipelineCache::bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept {
@@ -698,20 +735,57 @@ void VulkanPipelineCache::gc() noexcept {
     // buffer is undefined." Therefore, we need to clear all bindings at this time.
     resetBoundPipeline();
 
-    // NOTE: Due to robin_map restrictions, we cannot use auto or range-based loops.
+    if (mPipelineCacheThresholdEvictionEnabled) {
+        // Capacity based eviction
+        if (mPipelines.size() <= FVK_MAX_PIPELINE_COUNT) {
+            return;
+        }
 
-    // Evict any pipelines that have not been used in a while.
-    // Any pipeline older than FVK_MAX_COMMAND_BUFFERS can be safely destroyed.
-   using ConstPipeIterator = decltype(mPipelines)::const_iterator;
-   for (ConstPipeIterator iter = mPipelines.begin(); iter != mPipelines.end();) {
-       const PipelineCacheEntry& cacheEntry = iter.value();
-       if (cacheEntry.lastUsed + FVK_MAX_PIPELINE_AGE < mCurrentTime) {
-           vkDestroyPipeline(mDevice, iter->second.handle, VKALLOC);
-           iter = mPipelines.erase(iter);
-       } else {
-           ++iter;
-       }
-   }
+        // figure out which pipelines have exceeded their time to live.
+        using PipeIterator = decltype(mPipelines)::iterator;
+        std::vector<PipeIterator> expiredCandidates;
+        expiredCandidates.reserve(mPipelines.size());
+
+        for (PipeIterator iter = mPipelines.begin(); iter != mPipelines.end(); ++iter) {
+            const PipelineCacheEntry& cacheEntry = iter.value();
+            if (cacheEntry.lastUsed + FVK_MAX_PIPELINE_AGE < mCurrentTime) {
+                expiredCandidates.push_back(iter);
+            }
+        }
+
+        // If all pipelines are still within the TTL window, do not evict anything.
+        if (expiredCandidates.empty()) {
+            return;
+        }
+
+        // Sort expired piplines oldest first
+        std::sort(expiredCandidates.begin(), expiredCandidates.end(),
+                [](const PipeIterator& a, const PipeIterator& b) {
+                    return a.value().lastUsed < b.value().lastUsed;
+                });
+
+        // Compute how many expired pipelines to evict to meet capacity requirements
+        const size_t excessCount = mPipelines.size() - FVK_MAX_PIPELINE_COUNT;
+        const size_t evictCount = std::min(excessCount, expiredCandidates.size());
+
+        for (size_t i = 0; i < evictCount; ++i) {
+            PipeIterator iter = expiredCandidates[i];
+            vkDestroyPipeline(mDevice, iter.value().handle, VKALLOC);
+            mPipelines.erase(iter);
+        }
+    } else {
+        // Revert back to the previous behavior
+        using ConstPipeIterator = decltype(mPipelines)::const_iterator;
+        for (ConstPipeIterator iter = mPipelines.begin(); iter != mPipelines.end();) {
+            const PipelineCacheEntry& cacheEntry = iter.value();
+            if (cacheEntry.lastUsed + FVK_MAX_PIPELINE_AGE < mCurrentTime) {
+                vkDestroyPipeline(mDevice, iter->second.handle, VKALLOC);
+                iter = mPipelines.erase(iter);
+            } else {
+                ++iter;
+            }
+        }
+    }
 }
 
 bool VulkanPipelineCache::PipelineEqual::operator()(const PipelineKey& k1,
@@ -733,6 +807,9 @@ uint16_t VulkanPipelineCache::computeDirtyDynamicState() noexcept {
         }
         if (mHasDynamicState2) {
             mask |= DIRTY_DEPTH_BIAS_ENABLE;
+        }
+        if (mHasColorWriteEnable && mStaticPipelineKey.rasterState.colorTargetCount > 0) {
+            mask |= DIRTY_COLOR_WRITE_ENABLE;
         }
         return mask;
     }
@@ -775,6 +852,16 @@ uint16_t VulkanPipelineCache::computeDirtyDynamicState() noexcept {
     if (mHasDynamicState2) {
         if (mDynamicPipelineKey.rasterState.depthBiasEnable != mBoundDynamicState.rasterState.depthBiasEnable) {
             dirty |= DIRTY_DEPTH_BIAS_ENABLE;
+        }
+    }
+
+    if (mHasColorWriteEnable && mStaticPipelineKey.rasterState.colorTargetCount > 0) {
+        bool const isMaskDirty = mDynamicPipelineKey.rasterState.colorWriteMask !=
+                                 mBoundDynamicState.rasterState.colorWriteMask;
+        bool const isTargetCountDirty = mStaticPipelineKey.rasterState.colorTargetCount !=
+                                        mBoundPipeline.rasterState.colorTargetCount;
+        if (isMaskDirty || isTargetCountDirty) {
+            dirty |= DIRTY_COLOR_WRITE_ENABLE;
         }
     }
 
@@ -865,6 +952,19 @@ void VulkanPipelineCache::bindDynamicState(VkCommandBuffer cmdbuffer, uint16_t d
     if (dirtyMask & DIRTY_DEPTH_BIAS_ENABLE) {
         mBoundDynamicState.rasterState.depthBiasEnable = mDynamicPipelineKey.rasterState.depthBiasEnable;
         vkCmdSetDepthBiasEnableEXT(cmdbuffer, mDynamicPipelineKey.rasterState.depthBiasEnable);
+    }
+
+    if (dirtyMask & DIRTY_COLOR_WRITE_ENABLE) {
+        mBoundDynamicState.rasterState.colorWriteMask =
+                mDynamicPipelineKey.rasterState.colorWriteMask;
+        VkBool32 const enableWrite =
+                mDynamicPipelineKey.rasterState.colorWriteMask ? VK_TRUE : VK_FALSE;
+        VkBool32 writeEnables[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT];
+        for (int idx = 0; idx < mStaticPipelineKey.rasterState.colorTargetCount; ++idx) {
+            writeEnables[idx] = enableWrite;
+        }
+        vkCmdSetColorWriteEnableEXT(cmdbuffer, mStaticPipelineKey.rasterState.colorTargetCount,
+            writeEnables);
     }
 }
 

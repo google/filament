@@ -76,9 +76,6 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(io::sstream& out,
             }
             break;
         case ShaderStage::FRAGMENT:
-            if (filament::Variant::isFogVariant(variant)) {
-                CodeGenerator::generateDefine(out, "VARIANT_HAS_FOG");
-            }
             if (filament::Variant::isPickingVariant(variant)) {
                 CodeGenerator::generateDefine(out, "VARIANT_HAS_PICKING");
             }
@@ -577,6 +574,13 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel const shad
         CodeGenerator::generateDefine(fs, "HAS_COLORED_PENUMBRA");
     }
 
+    bool const materialHasFog =
+            !(variantFilter & UserVariantFilterMask(UserVariantFilterBit::FOG)) &&
+            !filament::Variant::isValidDepthVariant(variant) &&
+            !filament::Variant::isSSRVariant(variant);
+    if (materialHasFog) {
+        CodeGenerator::generateDefine(fs, "MATERIAL_HAS_FOG");
+    }
     generateSurfaceMaterialVariantProperties(fs, mProperties, mDefines);
 
     MaterialBuilder::PushConstantList fragmentPushConstants;
@@ -683,7 +687,7 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel const shad
     CodeGenerator::generateSurfaceMaterial(fs, ShaderStage::FRAGMENT);
     CodeGenerator::generateSurfaceParameters(fs, ShaderStage::FRAGMENT);
 
-    if (filament::Variant::isFogVariant(variant)) {
+    if (materialHasFog) {
         CodeGenerator::generateSurfaceFog(fs, ShaderStage::FRAGMENT);
     }
 
@@ -785,6 +789,9 @@ std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel const sm
 
     CodeGenerator::generateValueDefine(vs, "LOCATION_POSITION", uint32_t(POSITION));
 
+    // No need to support shading interpolation in post-process programs
+    vs << "#define SHADING_INTERPOLATION\n";
+
     // custom material variables
     size_t variableIndex = 0;
     for (const auto& variable : mVariables) {
@@ -830,6 +837,9 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel const 
     cg.generateCommonProlog(fs, ShaderStage::FRAGMENT, material, {}, apiLevel);
 
     generateUserSpecConstants(cg, fs, mConstants);
+
+    // No need to support shading interpolation in post-process programs
+    fs << "#define SHADING_INTERPOLATION\n";
 
     generatePostProcessMaterialVariantDefines(fs, ShaderStage::FRAGMENT,
             featureLevel, material, PostProcessVariant(variantKey));

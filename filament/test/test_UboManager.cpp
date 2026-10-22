@@ -24,12 +24,15 @@
 #include <private/backend/CommandStream.h>
 #include <private/backend/Driver.h>
 
+#include <utils/Panic.h>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <algorithm>
 #include <cstddef>
 #include <initializer_list>
+#include <limits>
 #include <utility>
 #include <vector>
 
@@ -739,4 +742,81 @@ TEST_F(UboManagerTest, OutOfOrderRetirementAsserts) {
     EXPECT_DEBUG_DEATH(deferRetirement(mi->getAllocationId()),
             "failed assertion.*serial <= serial");
     clearRetired();
+}
+
+TEST_F(UboManagerTest, ReallocationReservesDoubleSizeForAllDirtyExistingInstances) {
+    // Frame 1: Each instance occupies 128 bytes (aligned to 64), so 1024 bytes holds 8 instances.
+    // Manage 5 instances (640 bytes), leaving 3 free instance slots (384 bytes) without reallocating.
+    constexpr size_t NUM_EXISTING = 5;
+    std::vector<FMaterialInstance*> instances;
+    instances.reserve(NUM_EXISTING);
+    for (size_t i = 0; i < NUM_EXISTING; ++i) {
+        FMaterialInstance* mi = createInstance();
+        instances.push_back(mi);
+        mUboManager.manageMaterialInstance(mi);
+    }
+    mUboManager.beginFrame(mDriverApi);
+    ASSERT_EQ(mUboManager.getTotalSize(), DEFAULT_TOTAL_SIZE);
+    for (auto* mi : instances) {
+        mi->getUniformBuffer().clean();
+    }
+    mUboManager.finishBeginFrame(mDriverApi);
+    mUboManager.endFrame(mDriverApi);
+
+    // Frame 2: While Frame 1 is still in flight, mark all 5 existing instances dirty.
+    // During Pass 2, the first 3 instances fit in the remaining 3 free slots, while the last 2
+    // fail with REALLOCATION_REQUIRED. Reallocation must still reserve 2x space for all 5 dirty
+    // existing instances, not just the 2 that overflowed.
+    EXPECT_CALL(mMockDriver, getFenceStatus(mMockDriver.createdFences[0]))
+            .WillOnce(Return(FenceStatus::TIMEOUT_EXPIRED));
+    for (auto* mi : instances) {
+        mi->getUniformBuffer().invalidate();
+    }
+    mUboManager.beginFrame(mDriverApi);
+    const allocation_size_t alignedInstanceSize =
+            mAllocator.alignUp(instances[0]->getUniformBuffer().getSize());
+    const allocation_size_t expectedSize = mAllocator.alignUp(
+            NUM_EXISTING * 2 * alignedInstanceSize * BUFFER_SIZE_GROWTH_MULTIPLIER);
+    EXPECT_EQ(mUboManager.getTotalSize(), expectedSize);
+    mUboManager.finishBeginFrame(mDriverApi);
+    mUboManager.endFrame(mDriverApi);
+}
+
+TEST_F(UboManagerTest, InitialSizeIsRoundedToSlotMultiple) {
+    // Engine::Config::sharedUboInitialSizeInBytes is user-provided; invalid values must be
+    // rounded to a non-zero multiple of the slot size rather than reaching the allocator as-is.
+    constexpr allocation_size_t MAX_SIZE = std::numeric_limits<allocation_size_t>::max();
+    // A large slot keeps the allocator's node count small for the near-UINT32_MAX case.
+    constexpr allocation_size_t HUGE_SLOT_SIZE = 1u << 28;
+    struct Case {
+        allocation_size_t slotSize;
+        allocation_size_t requested;
+        allocation_size_t expected;
+    };
+    constexpr Case cases[] = {
+            { DEFAULT_SLOT_SIZE, 0, DEFAULT_SLOT_SIZE },
+            { DEFAULT_SLOT_SIZE, 1, DEFAULT_SLOT_SIZE },
+            { DEFAULT_SLOT_SIZE, DEFAULT_SLOT_SIZE + 1, 2 * DEFAULT_SLOT_SIZE },
+            // Rounding up would wrap, so the size is rounded down instead.
+            { HUGE_SLOT_SIZE, MAX_SIZE, MAX_SIZE & ~(HUGE_SLOT_SIZE - 1) },
+    };
+    for (auto const& c : cases) {
+        UboManager uboManager(mDriverApi, c.slotSize, c.requested);
+        EXPECT_EQ(uboManager.getTotalSize(), c.expected) << "requested " << c.requested;
+        uboManager.terminate(mDriverApi);
+    }
+}
+
+TEST_F(UboManagerTest, RequiredSizeOverflowFailsCleanly) {
+    constexpr allocation_size_t HUGE_SLOT_SIZE = 1u << 28;
+    UboManager uboManager(mDriverApi, HUGE_SLOT_SIZE, HUGE_SLOT_SIZE);
+    for (size_t i = 0; i < 6; ++i) {
+        uboManager.manageMaterialInstance(createInstance());
+    }
+#if GTEST_HAS_EXCEPTIONS
+    EXPECT_THROW(uboManager.beginFrame(mDriverApi), utils::PostconditionPanic);
+#else
+    EXPECT_DEATH(uboManager.beginFrame(mDriverApi), "Shared uniform buffer size overflow");
+#endif
+    uboManager.terminate(mDriverApi);
 }

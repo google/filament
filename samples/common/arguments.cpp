@@ -19,9 +19,13 @@
 #ifndef __ANDROID__
 #include <filamentapp/DesktopAssetLoader.h>
 #include <filamentapp/DesktopAssetWriter.h>
+#if defined(__EMSCRIPTEN__)
+#include <filamentapp/EmscriptenDisplayManager.h>
+#else
 #include <filamentapp/HeadlessDisplayManager.h>
 #include <filamentapp/HtmlDisplayManager.h>
 #include <filamentapp/SDLDisplayManager.h>
+#endif
 #endif
 
 #include <filament/Engine.h>
@@ -31,12 +35,28 @@
 #include <utils/getopt.h>
 #include <utils/Path.h>
 
+#if defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+#endif
+
 #include <algorithm>
+#include <cstdlib>
 #include <iostream>
 #include <limits>
+#include <memory>
+#include <utility>
 #include <vector>
 
 namespace {
+
+#if defined(__EMSCRIPTEN__)
+// Tells the hosting page that the run is over and no frame is coming. The page cannot infer this
+// from callMain() alone: a zero status means either that the frame loop is now running or that
+// main() finished without one, as it does for --help.
+void notifyPageOfExit() {
+    EM_ASM({ globalThis.dispatchEvent(new CustomEvent('filament-app-exit')); });
+}
+#endif
 
 filament::Engine::Backend parseArgumentsForBackend(const utils::CString& backend) {
     if (backend == "metal") {
@@ -262,7 +282,20 @@ FilamentApp2::Builder getBuilder(const SampleConfig& config, filament::app::Disp
 }
 
 std::unique_ptr<filament::app::DisplayManager> getDisplayManager(const SampleConfig& config) {
-#ifndef __ANDROID__
+#if defined(__EMSCRIPTEN__)
+    // The only display manager a browser build can have: --headless and --remote, the two flags
+    // that would ask for a different one, are rejected by handleCommandLineArguments().
+    // config.headless may still be set, since --screenshot sets it, but on this path it selects
+    // nothing and only affects readback.
+    auto displayManager =
+            std::make_unique<filament::app::EmscriptenDisplayManager>(config.backend);
+
+    // Let the page know the run is over. This fires strictly after FilamentApp2::shutdown(), so
+    // everything the app writes to the virtual filesystem is already there.
+    displayManager->setExitCallback(&notifyPageOfExit);
+
+    return displayManager;
+#elif !defined(__ANDROID__)
     if (config.displayManager == SampleConfig::DisplayManager::WEB) {
         return std::make_unique<filament::app::HtmlDisplayManager>();
     }
@@ -277,7 +310,13 @@ std::unique_ptr<filament::app::DisplayManager> getDisplayManager(const SampleCon
 
 #ifndef __ANDROID__
 utils::Path getDefaultAssetPath() {
+#if defined(__EMSCRIPTEN__)
+    // MEMFS has no notion of an executable location: assets are mounted (preloaded, or written by
+    // the harness) at the root of the virtual filesystem.
+    return utils::Path("/");
+#else
     return utils::Path::getCurrentExecutable().getParent() + RELATIVE_ASSET_PATH;
+#endif
 }
 
 std::unique_ptr<filament::app::AssetLoader> getAssetLoader(const SampleConfig& config) {
@@ -294,6 +333,30 @@ std::unique_ptr<filament::app::AssetWriter> getAssetWriter(const SampleConfig& c
     return std::make_unique<filament::app::DesktopAssetWriter>(getDefaultAssetPath());
 }
 #endif
+
+int runApp(std::unique_ptr<FilamentApp2> app,
+        std::unique_ptr<filament::app::DisplayManager> displayManager,
+        std::unique_ptr<filament::app::AssetLoader> assetLoader,
+        std::unique_ptr<filament::app::AssetWriter> assetWriter) {
+    app->run();
+
+#if defined(__EMSCRIPTEN__)
+    // run() returned as soon as the frame loop was registered with requestAnimationFrame, and the
+    // app still refers to all of these. The page decides when the run ends, and the wasm instance
+    // is torn down wholesale when it does, so ownership is simply released.
+    (void) app.release();
+    (void) displayManager.release();
+    (void) assetLoader.release();
+    (void) assetWriter.release();
+#else
+    // Destroyed first, and explicitly: ~FilamentApp2() runs shutdown(), which calls back into the
+    // display manager and may invoke a cleanup callback holding the loader. The destruction order
+    // of by-value parameters is unspecified, so it cannot be relied on here.
+    app.reset();
+#endif
+
+    return 0;
+}
 
 int handleCommandLineArguments(int argc, char* argv[], SampleConfig* config,
         const CommandLineSpecification& spec) {
@@ -374,6 +437,10 @@ int handleCommandLineArguments(int argc, char* argv[], SampleConfig* config,
 
         if (opt == 'h') {
             printUsage(argv[0], spec);
+#if defined(__EMSCRIPTEN__)
+            // callMain() reports exit(0) exactly as it would a frame loop that has started.
+            notifyPageOfExit();
+#endif
             exit(0);
         }
 
@@ -431,7 +498,17 @@ int handleCommandLineArguments(int argc, char* argv[], SampleConfig* config,
                     exit(1);
                 }
             } else if (cp.name == "headless") {
+#if defined(__EMSCRIPTEN__)
+                // The browser display manager always renders to the canvas. PlatformWebGL cannot
+                // render offscreen at all, and although the WebGPU driver can, nothing drives a
+                // frame loop without the canvas. Rejecting here rather than in getDisplayManager()
+                // keeps --screenshot working, which only needs a readback.
+                std::cerr << "--headless is not supported in a browser: rendering always targets "
+                             "the canvas. Use --screenshot to capture frames.\n";
+                exit(1);
+#else
                 config->headless = true;
+#endif
             } else if (cp.name == "ibl") {
                 config->iblDirectory = arg;
             } else if (cp.name == "split-view") {
@@ -441,8 +518,16 @@ int handleCommandLineArguments(int argc, char* argv[], SampleConfig* config,
             } else if (cp.name == "webgpu-backend") {
                 config->forcedWebGPUBackend = parseArgumentsForBackend(arg);
             } else if (cp.name == "remote") {
+#if defined(__EMSCRIPTEN__)
+                // --remote asks a native binary to serve a UI over HTTP so a browser elsewhere can
+                // drive it. There is nothing for it to mean in a build that is already the page.
+                std::cerr << "--remote is not supported in a browser: it serves a remote UI from a "
+                             "native binary, and this build is already running in a browser.\n";
+                exit(1);
+#else
                 config->displayManager = SampleConfig::DisplayManager::WEB;
                 config->headless = true;
+#endif
             } else if (cp.name == "screenshot") {
                 config->screenshotPath = arg;
                 if (!arg.empty()) {

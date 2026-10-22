@@ -410,13 +410,18 @@ void MetalDriver::updateDescriptorSetBuffer(
     auto* descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
     auto* bo = handle_cast<MetalBufferObject>(boh);
     id<MTLBuffer> mtlBuffer = bo->getBuffer()->getGpuBufferForDraw();
-    descriptorSet->buffers[binding] = { mtlBuffer, offset, size };
-
     auto const& bindings = descriptorSet->layout->getBindings();
     auto found = std::find_if(bindings.begin(), bindings.end(),
             [binding](const auto& b) { return b.binding == binding; });
-    assert_invariant(found != bindings.end());
+    // `binding` originates from the material file (see ChunkDescriptorBindingsInfo), which could
+    // be malicious or broken, so this is not a programming error the way an assert would
+    // suggest. Silently drop the update instead of dereferencing the end iterator below: the
+    // descriptor simply won't be active for this set.
+    if (UTILS_VERY_UNLIKELY(found == bindings.end())) {
+        return;
+    }
 
+    descriptorSet->buffers[binding] = { mtlBuffer, offset, size };
     ShaderStageFlags stageFlags = found->stageFlags;
     if (any(stageFlags & ShaderStageFlags::VERTEX)) {
         descriptorSet->vertexResources.push_back(mtlBuffer);
@@ -439,6 +444,15 @@ void MetalDriver::updateDescriptorSetTexture(
     auto* descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
     auto* texture = handle_cast<MetalTexture>(th);
 
+    auto const& bindings = descriptorSet->layout->getBindings();
+    auto found = std::find_if(bindings.begin(), bindings.end(),
+            [binding](const auto& b) { return b.binding == binding; });
+    // As in updateDescriptorSetBuffer: `binding` originates from the material file and can be
+    // malicious or broken, so drop the update instead of dereferencing the end iterator below.
+    if (UTILS_VERY_UNLIKELY(found == bindings.end())) {
+        return;
+    }
+
     id<MTLTexture> mtlTexture = texture->getMtlTextureForRead();
     if (texture->target == SamplerType::SAMPLER_EXTERNAL) {
         auto externalImage = texture->getExternalImage();
@@ -448,11 +462,6 @@ void MetalDriver::updateDescriptorSetTexture(
     assert_invariant(mtlTexture != nil);
 
     descriptorSet->textures[binding] = MetalDescriptorSet::TextureBinding { mtlTexture, params };
-
-    auto const& bindings = descriptorSet->layout->getBindings();
-    auto found = std::find_if(bindings.begin(), bindings.end(),
-            [binding](const auto& b) { return b.binding == binding; });
-    assert_invariant(found != bindings.end());
 
     ShaderStageFlags stageFlags = found->stageFlags;
     if (any(stageFlags & ShaderStageFlags::VERTEX)) {
@@ -472,6 +481,11 @@ void MetalDriver::flush(int) {
 void MetalDriver::finish(int) {
     FILAMENT_CHECK_PRECONDITION(!isInRenderPass(mContext))
             << "finish must be called outside of a render pass.";
+
+    if (getJobWorker()) {
+        getJobWorker()->drain();
+    }
+
     // Wait for all frames to finish by submitting and waiting on a dummy command buffer.
     submitPendingCommands(mContext);
 
@@ -1270,8 +1284,17 @@ void MetalDriver::terminate() {
     mContext->blitter->shutdown();
     mContext->shaderCompiler->terminate();
 
+    // Flush all pending asynchronous tasks. Some tasks may end up posting follow-up operations to
+    // the `ServiceThread` (e.g., via CountdownCallbackHandler or any user-provided handlers). So we
+    // early stop the ServiceThread to ensure these are processed as well. Tasks posted to the main
+    // thread (due to no user handler) during this process are handled later by `Driver::purge`
+    // within `FEngine::shutdown`.
     if (getJobWorker()) {
         getJobWorker()->terminate();
+    }
+    if constexpr (UTILS_HAS_THREADING) {
+        // Flush any callbacks the drained jobs posted via scheduleCallback().
+        stopServiceThread();
     }
 }
 
@@ -1453,7 +1476,7 @@ bool MetalDriver::isMSAASwapChainSupported(uint32_t) {
 }
 
 bool MetalDriver::isProtectedContentSupported() {
-    // the SWAP_CHAIN_CONFIG_PROTECTED_CONTENT flag is not supported
+    // TODO: Protected content is not supported on Metal yet.
     return false;
 }
 
@@ -1483,6 +1506,7 @@ bool MetalDriver::isDepthStencilBlitSupported(TextureFormat format) {
 }
 
 bool MetalDriver::isProtectedTexturesSupported() {
+    // TODO: Protected textures are not supported on Metal yet.
     return false;
 }
 
@@ -1556,6 +1580,44 @@ size_t MetalDriver::getMaxArrayTextureLayers() {
     return 256;
 }
 
+size_t MetalDriver::getMaxTextureCount(ShaderStage) {
+    // Textures accessible per stage from an argument buffer, per the Metal Feature Set Tables:
+    // https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
+    auto const& family = mContext->highestSupportedGpuFamily;
+    if (family.apple >= 6 || family.mac >= 2) {
+        return 1'000'000;   // "1M" in the tables. Mac2 is from the 2023 version.
+    }
+    if (family.apple >= 4) {
+        return 96;
+    }
+    return 31;              // Apple2-3
+}
+
+size_t MetalDriver::getMaxSamplerCount(ShaderStage) {
+    // Samplers accessible per stage from an argument buffer, per the Metal Feature Set Tables:
+    // https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
+    auto const& family = mContext->highestSupportedGpuFamily;
+    if (family.apple >= 7) {
+        return 996;     // Apple7-8. Apple9+ allows 500K, but we don't detect families above 7.
+    }
+    if (family.apple >= 6) {
+        return 128;
+    }
+    if (family.mac >= 2) {
+        return 1024;    // Not in the current tables; from the 2023 version.
+    }
+    return 16;          // Apple2-5 (argument buffers tier 1)
+}
+
+size_t MetalDriver::getExternalTextureCost() {
+    // External images are bound as a single (converted) texture.
+    return 1;
+}
+
+size_t MetalDriver::getExternalSamplerCost() {
+    return 1;
+}
+
 size_t MetalDriver::getUniformBufferOffsetAlignment() {
     return ::filament::backend::getUniformBufferOffsetAlignment();
 }
@@ -1587,9 +1649,11 @@ void MetalDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuffe
     // the job is canceled or dropped, its reference is the last one and the destructor reports
     // CANCELED; otherwise the block outlives the job and reports COMPLETED once the GPU is done.
     getJobQueue()->push(
-            [this, cmdBuffer, ib, data = std::move(data), byteOffset,
+            [this, cmdBuffer, ib, byteOffset,
+                    bufferRelease = AsyncBufferRelease(this, std::move(data)),
                     completion = std::make_shared<AsyncCompletion>(this, handler, callback, user),
                     tag = std::move(tag)]() mutable {
+                BufferDescriptor&& data = bufferRelease.detach();
                 ib->buffer.copyIntoBuffer(cmdBuffer, data.buffer, data.size, byteOffset,
                         [&tag]() { return tag.c_str_safe(); });
 
@@ -1634,9 +1698,11 @@ void MetalDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferObj
 
     // The completion is shared with the completed handler, see updateIndexBufferAsyncR.
     getJobQueue()->push(
-            [this, cmdBuffer, bo, data = std::move(data), byteOffset,
+            [this, cmdBuffer, bo, byteOffset,
+                    bufferRelease = AsyncBufferRelease(this, std::move(data)),
                     completion = std::make_shared<AsyncCompletion>(this, handler, callback, user),
                     tag = std::move(tag)]() mutable {
+                BufferDescriptor&& data = bufferRelease.detach();
                 bo->getBuffer()->copyIntoBuffer(cmdBuffer, data.buffer, data.size, byteOffset,
                         [&tag]() { return tag.c_str_safe(); });
 
@@ -1721,9 +1787,10 @@ void MetalDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th, u
     // The completion is shared with the completed handler, see updateIndexBufferAsyncR.
     getJobQueue()->push(
             [this, cmdBuffer, tex, level, xoffset, yoffset, zoffset, width, height, depth,
-                    data = std::move(data),
+                    bufferRelease = AsyncBufferRelease(this, std::move(data)),
                     completion = std::make_shared<AsyncCompletion>(this, handler, callback, user),
                     tag = std::move(tag)]() mutable {
+                PixelBufferDescriptor&& data = bufferRelease.detach();
                 tex->loadImage(cmdBuffer, level,
                         MTLRegionMake3D(xoffset, yoffset, zoffset, width, height, depth), data);
 

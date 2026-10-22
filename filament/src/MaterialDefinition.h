@@ -16,19 +16,25 @@
 #ifndef TNT_FILAMENT_MATERIALDEFINITION_H
 #define TNT_FILAMENT_MATERIALDEFINITION_H
 
+#include "DynamicSpecConstKey.h"
 #include "ProgramSpecialization.h"
 
 #include "ds/DescriptorSetLayout.h"
 
 #include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/ConstantInfo.h>
+#include <private/filament/EngineEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
 
+#include <filament/MaterialEnums.h>
+
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
+
+#include <utils/compiler.h>
 
 #include <tsl/robin_set.h>
 
@@ -98,6 +104,85 @@ struct MaterialDefinition {
     bool isValidProgram(Variant const variant, DynamicSpecConstKey const specKey,
             backend::ShaderModel const sm, bool isStereoSupported) const noexcept;
 
+    // Checks that `variant` belongs to this material domain's key space.
+    //
+    // Only MaterialDomain::SURFACE interprets the variant key as a bitfield of surface variant
+    // bits; the other domains use a plain index (e.g. PostProcessVariant) drawn from a much
+    // smaller space. Passing a variant from the wrong domain makes every Variant predicate
+    // silently meaningless, so this is the precondition to assert wherever the two meet.
+    bool isVariantValidForDomain(Variant const variant) const noexcept {
+        switch (materialDomain) {
+            case MaterialDomain::SURFACE:
+                return variant.key < VARIANT_COUNT;
+            case MaterialDomain::POST_PROCESS:
+                return variant.key < POST_PROCESS_VARIANT_COUNT;
+            case MaterialDomain::COMPUTE:
+                return variant.key == 0;
+            default:
+                return false;
+        }
+    }
+
+    // Domain-aware variant predicates.
+    //
+    // The Variant:: predicates all encode MaterialDomain::SURFACE semantics; evaluating them on a
+    // variant from another domain yields a silently meaningless answer (e.g. the post-process key
+    // 1 has the STE bit set, so Variant::isStereoVariant() reports it as a stereo variant). Prefer
+    // these accessors over calling Variant:: directly: they resolve to the surface semantics only
+    // when this material actually has them, and are inert otherwise.
+    bool hasSurfaceVariants() const noexcept {
+        return materialDomain == MaterialDomain::SURFACE;
+    }
+
+    bool isValidDepthVariant(Variant const variant) const noexcept {
+        return hasSurfaceVariants() && Variant::isValidDepthVariant(variant);
+    }
+
+    bool isSSRVariant(Variant const variant) const noexcept {
+        return hasSurfaceVariants() && Variant::isSSRVariant(variant);
+    }
+
+    bool isStereoVariant(Variant const variant) const noexcept {
+        return hasSurfaceVariants() && Variant::isStereoVariant(variant);
+    }
+
+    bool isShadowSampler2DVariant(Variant const variant) const noexcept {
+        return hasSurfaceVariants() && Variant::isShadowSampler2DVariant(variant);
+    }
+
+    bool isDepthMomentsVariant(Variant const variant) const noexcept {
+        return hasSurfaceVariants() && Variant::isDepthMomentsVariant(variant);
+    }
+
+    // The user variant filter mask clears surface variant bits, so it must not be applied to a
+    // key that isn't a surface variant bitfield -- doing so silently maps valid variants of the
+    // other domains onto a different key.
+    Variant filterUserVariant(Variant const variant,
+            UserVariantFilterMask const filterMask) const noexcept {
+        return hasSurfaceVariants() ? Variant::filterUserVariant(variant, filterMask) : variant;
+    }
+
+    // Materials compiled with variantFilter: [fog] have no fog code at all.
+    bool isFogSupported() const noexcept {
+        return !(variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::FOG));
+    }
+
+    // Material-aware version of DynamicSpecConstKey::filterProgramSpecKey(): on top of the
+    // generic variant/domain/lighting rules, it applies this material's compile-time
+    // restrictions (currently: no fog code when compiled with variantFilter: [fog]).
+    // Prefer this over the DynamicSpecConstKey version whenever a material is available.
+    // The result always passes the specKey checks of isValidProgram().
+    DynamicSpecConstKey filterProgramSpecKey(Variant const variant,
+            DynamicSpecConstKey specKey) const noexcept {
+        specKey = DynamicSpecConstKey::filterProgramSpecKey(
+                variant, specKey, materialDomain, isVariantLit);
+        // Without fog code, the fog specialization would be a redundant program.
+        if (UTILS_UNLIKELY(!isFogSupported())) {
+            specKey.setFog(false);
+        }
+        return specKey;
+    }
+
     backend::DescriptorSetLayout const& getPerViewDescriptorSetLayoutDescription(
             Variant const variant, bool useS2dDescriptorSetLayout) const noexcept;
 
@@ -142,6 +227,7 @@ struct MaterialDefinition {
     bool hasShadowMultiplier = false;
     bool hasCustomDepthShader = false;
     bool specularAntiAliasing = false;
+    bool instanced = false;
 
     SamplerInterfaceBlock samplerInterfaceBlock;
     BufferInterfaceBlock uniformInterfaceBlock;
@@ -177,6 +263,12 @@ private:
 
     static std::unique_ptr<MaterialDefinition> create(FEngine& engine,
             std::unique_ptr<MaterialParser> parser);
+
+    // Returns false if this material uses more textures or samplers than the current device
+    // supports in a shader stage. This depends on the backend (e.g. the cost of an external
+    // sampler) and on the device, so it can't be validated when the material is compiled.
+    // Only called when the material.check_device_sampler_limits feature flag is set.
+    bool checkSamplerLimits(FEngine& engine) const noexcept;
 
     void processMain();
     void processParameterNames();

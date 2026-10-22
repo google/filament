@@ -108,7 +108,7 @@ Java_com_google_android_filament_Engine_nGetMaxStereoscopicEyes(JNIEnv *env, jcl
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Engine_nGetEntityManager(JNIEnv *env, jclass clazz, jlong nativeEngine) {
-    Engine* const that = (Engine*) nativeEngine;
+    Engine const * const that = (Engine const *) nativeEngine;
     return (jlong)&(that->getEntityManager());
 }
 
@@ -351,7 +351,7 @@ Java_com_google_android_filament_Engine_nGetSteadyClockTimeNano(JNIEnv *env, jcl
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Engine_nHasFeatureFlag(JNIEnv *env, jclass clazz, jlong nativeEngine, jstring name_) {
-    Engine* const that = (Engine*) nativeEngine;
+    Engine const * const that = (Engine const *) nativeEngine;
     char const * const name = env->GetStringUTFChars(name_, nullptr);
     jboolean const result = (jboolean)that->hasFeatureFlag(name);
     env->ReleaseStringUTFChars(name_, name);
@@ -658,6 +658,7 @@ Java_com_google_android_filament_Engine_nSetBuilderConfig(JNIEnv*, jclass,
         jboolean forceGLES2Context, jboolean assertNativeWindowIsValid,
         jint gpuContextPriority,
         jlong sharedUboInitialSizeInBytes,
+        jint asynchronousMode,
         jboolean enableMultipleDirectionalLights) {
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
     Engine::Config config = {
@@ -678,6 +679,7 @@ Java_com_google_android_filament_Engine_nSetBuilderConfig(JNIEnv*, jclass,
             .assertNativeWindowIsValid = (bool) assertNativeWindowIsValid,
             .gpuContextPriority = (Engine::GpuContextPriority) gpuContextPriority,
             .sharedUboInitialSizeInBytes = (uint32_t) sharedUboInitialSizeInBytes,
+            .asynchronousMode = (Engine::AsynchronousMode) asynchronousMode,
             .enableMultipleDirectionalLights = (bool) enableMultipleDirectionalLights,
     };
     builder->config(&config);

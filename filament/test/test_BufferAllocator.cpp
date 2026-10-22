@@ -16,8 +16,6 @@
 
 #include "../src/details/BufferAllocator.h"
 
-#include <utils/Panic.h>
-
 #include <gtest/gtest.h>
 
 #include <utility>
@@ -248,8 +246,11 @@ TEST_F(BufferAllocatorTest, Reset) {
 }
 
 TEST_F(BufferAllocatorTest, ResetWithInvalidSize) {
-    // Reset to a size which is not a power of two.
+    // Sizes must be a non-zero multiple of the slot size. A size of zero used to cause
+    // out-of-bounds writes to mNodes[0] and mNodes[0xFFFFFFFF].
     EXPECT_DEATH(mAllocator.reset(123), "failed assertion");
+    EXPECT_DEATH(mAllocator.reset(0), "failed assertion");
+    EXPECT_DEATH(mAllocator.reset(SLOT_SIZE / 2), "failed assertion");
 }
 
 TEST_F(BufferAllocatorTest, InvalidOperations) {

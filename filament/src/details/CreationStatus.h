@@ -17,6 +17,10 @@
 #ifndef TNT_FILAMENT_DETAILS_CREATIONSTATUS_H
 #define TNT_FILAMENT_DETAILS_CREATIONSTATUS_H
 
+#include <backend/DriverEnums.h>
+
+#include <atomic>
+
 #include <stdint.h>
 
 namespace filament {
@@ -39,6 +43,42 @@ enum class CreationStatus : uint8_t {
     CREATING,   //!< Creation is still in flight.
     CANCELED,   //!< Creation finished without ever populating the object.
     CREATED,    //!< Creation finished and populated the object.
+};
+
+/**
+ * Holds a CreationStatus that one thread settles and others read.
+ *
+ * The completion callback of an asynchronous creation runs on the ServiceThread. The release
+ * store in settle() pairs with the acquire loads, so a thread that sees the new status also sees
+ * what the driver wrote before the callback ran.
+ */
+class CreationState {
+public:
+    // Synchronous creation. Relaxed is enough because the object is not visible to other
+    // threads yet.
+    void setCreated() noexcept {
+        mStatus.store(CreationStatus::CREATED, std::memory_order_relaxed);
+    }
+
+    // Asynchronous creation, called from the completion callback. Leaves CREATING even when
+    // canceled, because FEngine::destroy waits for that before freeing the object.
+    void settle(backend::AsyncCallStatus const status) noexcept {
+        mStatus.store(status == backend::AsyncCallStatus::CANCELED
+                        ? CreationStatus::CANCELED
+                        : CreationStatus::CREATED,
+                std::memory_order_release);
+    }
+
+    bool isSettled() const noexcept {
+        return mStatus.load(std::memory_order_acquire) != CreationStatus::CREATING;
+    }
+
+    bool isSuccessful() const noexcept {
+        return mStatus.load(std::memory_order_acquire) == CreationStatus::CREATED;
+    }
+
+private:
+    std::atomic<CreationStatus> mStatus{ CreationStatus::CREATING };
 };
 
 } // namespace filament

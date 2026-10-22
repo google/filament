@@ -176,7 +176,7 @@ public:
          *            memory or other resources.
          * @exception utils::PreConditionPanic if a parameter to a builder function was invalid.
          */
-        MorphTargetBuffer* UTILS_NONNULL build(Engine& engine);
+        MorphTargetBuffer* UTILS_NONNULL build(Engine& engine) const;
     private:
         friend class FMorphTargetBuffer;
     };

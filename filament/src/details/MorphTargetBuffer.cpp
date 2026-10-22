@@ -86,7 +86,7 @@ MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::name(utils::ImmutableCSt
     return BuilderNameMixin::name(name);
 }
 
-MorphTargetBuffer* MorphTargetBuffer::Builder::build(Engine& engine) {
+MorphTargetBuffer* MorphTargetBuffer::Builder::build(Engine& engine) const {
     return downcast(engine).createMorphTargetBuffer(*this);
 }
 

@@ -223,6 +223,12 @@ public:
     }
 
     /**
+     * @brief Sets multiple bits in a batch, optionally restricted to bits present in @p filter.
+     */
+    void add(Slice<const uint32_t> indices,
+            PagedArenaBitset const* UTILS_NULLABLE filter = nullptr);
+
+    /**
      * @brief Clears a bit.
      */
     void remove(uint32_t const index) noexcept {

@@ -43,6 +43,11 @@ class FTrsTransformManager;
  */
 class UTILS_PUBLIC TrsTransformManager {
 public:
+    /**
+     * An Instance representing a trs transform component.
+     * Instances are not stable when a component is added, removed or gc() is called on a
+     * component manager.
+     */
     using Instance = utils::EntityInstance<TrsTransformManager>;
     using Entity = utils::Entity;
 
@@ -58,6 +63,8 @@ public:
      * @param e An Entity.
      * @return An Instance object, which represents the trs transform component associated with the Entity e.
      * @note Use Instance::isValid() to make sure the component exists.
+     * @note Instances are not stable when a component is added, removed or gc() is called
+     *       on a component manager.
      * @see hasComponent()
      */
     Instance getInstance(Entity e) const noexcept;

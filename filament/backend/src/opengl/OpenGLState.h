@@ -140,6 +140,7 @@ public:
     inline void depthRange(GLclampf near, GLclampf far) noexcept;
 
     void deleteBuffer(GLuint buffer, GLenum target) noexcept;
+    void unbindBuffer(GLenum target, GLuint buffer) noexcept;
     void deleteVertexArray(GLuint vao) noexcept;
 
     void destroyWithContext(size_t index, std::function<void(OpenGLState&)> const& closure);

@@ -33,10 +33,9 @@ namespace filament {
 using namespace backend;
 using namespace utils;
 
-LocalProgramCache::LocalProgramCache(LocalProgramCache const& other)
-        : mMaterial(other.mMaterial),
-          mCachedPrograms(other.mCachedPrograms.size()),
-          mSpecializationConstants(other.mSpecializationConstants.clone()) {}
+LocalProgramCache::LocalProgramCache(LocalProgramCache const& other) {
+    *this = other;
+}
 
 LocalProgramCache& LocalProgramCache::operator=(LocalProgramCache const& other) {
     assert_invariant(mMaterial == nullptr);
@@ -47,6 +46,10 @@ LocalProgramCache& LocalProgramCache::operator=(LocalProgramCache const& other) 
     mSpecializationConstants = other.mSpecializationConstants.clone();
     if (mMaterial != nullptr) {
         mCachedPrograms = FixedCapacityVector<Handle<HwProgram>>(other.mCachedPrograms.size());
+        // The copy releases its programs in terminate(), so it must acquire its own references.
+        mMaterial->getDefinition().acquirePrograms(mMaterial->getEngine(),
+                mCachedPrograms.as_slice(), mMaterial->getMaterialParser(),
+                mSpecializationConstants.get(), mMaterial->isDefaultMaterial());
     }
 
     return *this;
@@ -102,24 +105,8 @@ void LocalProgramCache::initializeForMaterial(FEngine& engine, FMaterial const& 
             material.isDefaultMaterial());
 }
 
-void LocalProgramCache::initializeForMaterialInstance(FEngine& engine, FMaterial const& material) {
-    assert_invariant(mMaterial == nullptr);
-    assert_invariant(mCachedPrograms.empty());
-    assert_invariant(mSpecializationConstants.empty());
-
-    mMaterial = &material;
-    LocalProgramCache const& programs = material.getPrograms();
-
-    mSpecializationConstants =
-            engine.getMaterialCache().getSpecializationConstantsInternPool().acquire(
-                    programs.getSpecializationConstants());
-
-    mCachedPrograms =
-            FixedCapacityVector<Handle<HwProgram>>(getCacheSize(material.getMaterialDomain()));
-}
-
 Handle<HwProgram> LocalProgramCache::prepareProgramSlow(DriverApi& driver, Variant const variant,
-        DynamicSpecConstKey specKey, CompilerPriorityQueue const priorityQueue) const noexcept {
+        DynamicSpecConstKey const specKey, CompilerPriorityQueue const priorityQueue) const noexcept {
     assert_invariant(mMaterial != nullptr);
 
     FEngine& engine = mMaterial->getEngine();
@@ -142,15 +129,16 @@ Handle<HwProgram> LocalProgramCache::prepareProgramSlow(DriverApi& driver, Varia
                 priorityQueue);
     }
 
+    // FIXME: this throws in a noexcept context
     FILAMENT_CHECK_POSTCONDITION(result)
             << "Requested variant " << variant << " with specKey "
-            << (uint32_t) specKey.key << " does not exist for material " << mMaterial->getName();
+            << uint32_t(specKey.key) << " does not exist for material " << mMaterial->getName();
 
     return mCachedPrograms[mappedKey] = result;
 }
 
-ProgramSpecialization LocalProgramCache::getProgramSpecialization(Variant variant,
-        DynamicSpecConstKey specKey) const noexcept {
+ProgramSpecialization LocalProgramCache::getProgramSpecialization(Variant const variant,
+        DynamicSpecConstKey const specKey) const noexcept {
     assert_invariant(mMaterial != nullptr);
 
     return ProgramSpecialization{
@@ -164,10 +152,10 @@ ProgramSpecialization LocalProgramCache::getProgramSpecialization(Variant varian
 void LocalProgramCache::terminate(FEngine& engine) {
     assert_invariant(mMaterial != nullptr);
 
+    // We only release programs here; the material definition is released by the material.
     mMaterial->getDefinition().releasePrograms(engine, mCachedPrograms.as_slice(),
             mMaterial->getMaterialParser(), mSpecializationConstants.get(),
             mMaterial->isDefaultMaterial());
-    engine.getMaterialCache().releaseMaterial(engine, mMaterial->getDefinition());
 }
 
 void LocalProgramCache::clear(FEngine& engine) {
@@ -178,30 +166,33 @@ void LocalProgramCache::clear(FEngine& engine) {
             mMaterial->isDefaultMaterial());
 }
 
-Variant LocalProgramCache::filterVariantForGetProgram(Variant variant) const noexcept {
+void LocalProgramCache::filterForGetProgram(Variant& variant,
+        DynamicSpecConstKey& specKey) const noexcept {
     if (UTILS_UNLIKELY(mMaterial->getEngine().features.material.enable_fog_as_postprocess)) {
         // if the fog as post-process feature is enabled, we need to proceed "as-if" the material
-        // didn't have the FOG variant bit.
+        // didn't have fog enabled.
         if (mMaterial->getMaterialDomain() == MaterialDomain::SURFACE) {
             BlendingMode const blendingMode = mMaterial->getBlendingMode();
             bool const hasScreenSpaceRefraction =
                     mMaterial->getRefractionMode() == RefractionMode::SCREEN_SPACE;
-            bool const isBlendingCommand = !hasScreenSpaceRefraction &&
+            bool const isBlendingCommand =
+                    !hasScreenSpaceRefraction &&
                     (blendingMode != BlendingMode::OPAQUE && blendingMode != BlendingMode::MASKED);
             if (!isBlendingCommand) {
+                // TODO: Remove this after FOG is fully transferred to spec constant
                 variant.setFog(false);
+                specKey.setFog(false);
             }
         }
     }
-    return variant;
 }
 
-Program::SpecializationConstant LocalProgramCache::getConstantImpl(uint32_t id) const noexcept {
+Program::SpecializationConstant LocalProgramCache::getConstantImpl(uint32_t const id) const noexcept {
     return mSpecializationConstants.get()[id];
 }
 
 Program::SpecializationConstant LocalProgramCache::getConstantImpl(
-        std::string_view name) const noexcept {
+        std::string_view const name) const noexcept {
     assert_invariant(mMaterial != nullptr);
 
     auto const& constants = mMaterial->getDefinition().specializationConstantsNameToIndex;

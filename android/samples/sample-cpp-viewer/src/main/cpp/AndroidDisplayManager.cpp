@@ -20,7 +20,7 @@
 
 #include <utils/Mutex.h>
 
-#include <android/native_window_jni.h>
+#include <android/native_window.h>
 
 #include <chrono>
 #include <cstdint>
@@ -30,11 +30,8 @@
 
 namespace filament::app {
 
-AndroidDisplayManager::AndroidDisplayManager(JavaVM* vm, jobject surfaceView)
-        : mJavaVM(vm), mStartTime(std::chrono::steady_clock::now()) {
-    JNIEnv* env;
-    mJavaVM->GetEnv((void**)&env, JNI_VERSION_1_6);
-    mSurfaceView = surfaceView ? env->NewGlobalRef(surfaceView) : nullptr;
+AndroidDisplayManager::AndroidDisplayManager()
+        : mStartTime(std::chrono::steady_clock::now()) {
 }
 
 AndroidDisplayManager::~AndroidDisplayManager() {
@@ -42,76 +39,41 @@ AndroidDisplayManager::~AndroidDisplayManager() {
 }
 
 void AndroidDisplayManager::terminate() {
-    if (mSurfaceView) {
-        JNIEnv* env;
-        mJavaVM->GetEnv((void**)&env, JNI_VERSION_1_6);
-        env->DeleteGlobalRef(mSurfaceView);
-        mSurfaceView = nullptr;
-    }
-    utils::LockGuard<utils::Mutex> lock(mMutex);
+    mNativeWindow = nullptr;
+    utils::LockGuard const lock(mMutex);
     mEventQueue.clear();
 }
 
 WindowHandle AndroidDisplayManager::createWindow(const char* title, uint32_t w, uint32_t h,
         bool resizable) {
-    return (WindowHandle) mSurfaceView;
+    return windowHandle();
 }
 
 void AndroidDisplayManager::destroyWindow(WindowHandle window) {
-    // Handled in terminate
+    // The native window is owned by the caller of setNativeWindow().
 }
 
-
 void* AndroidDisplayManager::getNativeWindow(WindowHandle window) const {
-    if (!window) return nullptr;
-
-    jobject surfaceView = static_cast<jobject>(window);
-
-    JNIEnv* env;
-    bool attached = false;
-    if (mJavaVM->GetEnv((void**)&env, JNI_VERSION_1_6) == JNI_EDETACHED) {
-        if (mJavaVM->AttachCurrentThread(&env, nullptr) != JNI_OK) {
-            return nullptr;
-        }
-        attached = true;
-    }
-
-    jclass svClass = env->GetObjectClass(surfaceView);
-    jmethodID getHolder = env->GetMethodID(svClass, "getHolder", "()Landroid/view/SurfaceHolder;");
-    jobject holder = env->CallObjectMethod(surfaceView, getHolder);
-
-    jclass holderClass = env->GetObjectClass(holder);
-    jmethodID getSurface = env->GetMethodID(holderClass, "getSurface", "()Landroid/view/Surface;");
-    jobject surface = env->CallObjectMethod(holder, getSurface);
-
-    jclass surfaceClass = env->GetObjectClass(surface);
-    jmethodID isValid = env->GetMethodID(surfaceClass, "isValid", "()Z");
-
-    void* nativeWindow = nullptr;
-    if (env->CallBooleanMethod(surface, isValid)) {
-        nativeWindow = ANativeWindow_fromSurface(env, surface);
-    }
-
-    if (attached) {
-        mJavaVM->DetachCurrentThread();
-    }
-    return nativeWindow;
+    return window ? mNativeWindow : nullptr;
 }
 
 void AndroidDisplayManager::setWindowTitle(WindowHandle window, const char* title) {}
 
 void AndroidDisplayManager::getWindowSize(WindowHandle window, uint32_t* w, uint32_t* h) const {
-    if (w) *w = mWidth;
-    if (h) *h = mHeight;
+    ANativeWindow* nw = static_cast<ANativeWindow*>(getNativeWindow(window));
+    int32_t const width = nw ? ANativeWindow_getWidth(nw) : 0;
+    int32_t const height = nw ? ANativeWindow_getHeight(nw) : 0;
+    // ANativeWindow_get{Width,Height} return a negative error code on failure.
+    if (w) *w = width > 0 ? uint32_t(width) : 0;
+    if (h) *h = height > 0 ? uint32_t(height) : 0;
 }
 
 void AndroidDisplayManager::getDrawableSize(WindowHandle window, uint32_t* w, uint32_t* h) const {
-    if (w) *w = mWidth;
-    if (h) *h = mHeight;
+    getWindowSize(window, w, h);
 }
 
 void AndroidDisplayManager::pollEvents(std::vector<AppEvent>& events) {
-    utils::LockGuard<utils::Mutex> lock(mMutex);
+    utils::LockGuard const lock(mMutex);
     events.insert(events.end(), mEventQueue.begin(), mEventQueue.end());
     mEventQueue.clear();
 }
@@ -129,21 +91,18 @@ double AndroidDisplayManager::getTime() const {
 void AndroidDisplayManager::onFrameFinished(WindowHandle window, filament::Engine* engine,
         filament::Renderer* renderer) {}
 
-
-
-void AndroidDisplayManager::setWindowSize(uint32_t w, uint32_t h) {
-    mWidth = w;
-    mHeight = h;
+void AndroidDisplayManager::setNativeWindow(ANativeWindow* window) noexcept {
+    mNativeWindow = window;
 }
 
 void AndroidDisplayManager::pushEvent(const AppEvent& event) {
-    utils::LockGuard<utils::Mutex> lock(mMutex);
+    utils::LockGuard const lock(mMutex);
     mEventQueue.push_back(event);
 }
 
 void AndroidDisplayManager::pushTouchEvent(int action, float x, float y) {
     AppEvent event;
-    event.windowId = mSurfaceView;
+    event.windowId = windowHandle();
     switch (action) {
         case 0: // ACTION_DOWN
             event.type = AppEvent::Type::MOUSE_BUTTON_DOWN;
@@ -172,19 +131,3 @@ void AndroidDisplayManager::pushTouchEvent(int action, float x, float y) {
 }
 
 } // namespace filament::app
-
-extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_utils_AndroidDisplayManager_nCreate(JNIEnv* env, jobject thiz,
-        jobject surfaceView) {
-    JavaVM* vm;
-    env->GetJavaVM(&vm);
-    auto* dm = new filament::app::AndroidDisplayManager(vm, surfaceView);
-    return reinterpret_cast<jlong>(dm);
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_utils_AndroidDisplayManager_nDestroy(JNIEnv* env, jobject thiz,
-        jlong nativeDm) {
-    auto* dm = reinterpret_cast<filament::app::AndroidDisplayManager*>(nativeDm);
-    delete dm;
-}

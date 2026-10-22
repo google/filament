@@ -29,6 +29,9 @@
 
 #include <gtest/gtest.h>
 
+#include <string>
+#include <tuple>
+
 using namespace filament;
 
 namespace {
@@ -43,6 +46,9 @@ std::vector<std::unique_ptr<char[]>> churnHeapForMaterialParser() {
     }
     return churn;
 }
+
+// Parameters: (enable_program_cache feature flag, whether to duplicate the instance).
+class SpecializedInstanceLifetimeTest : public testing::TestWithParam<std::tuple<bool, bool>> {};
 
 } // anonymous namespace
 
@@ -248,6 +254,74 @@ TEST(MaterialInstanceTest, SetConstant) {
     Engine::destroy(engine);
 }
 
+TEST(MaterialInstanceTest, ParameterLargerThanFieldIsRejected) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    ASSERT_NE(engine, nullptr);
+
+    std::string shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(1.0);
+        }
+    )");
+
+    // Layout: "m" at bytes [0, 48), "f" at 48, "g" at 52, "a" at [64, 96).
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("MaterialInstanceTest");
+    builder.material(shaderCode.c_str());
+    builder.parameter("m", filamat::MaterialBuilder::UniformType::MAT3);
+    builder.parameter("f", filamat::MaterialBuilder::UniformType::FLOAT);
+    builder.parameter("g", filamat::MaterialBuilder::UniformType::FLOAT);
+    builder.parameter("a", 2, filamat::MaterialBuilder::UniformType::FLOAT);
+
+    filamat::Package result = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(result.isValid());
+
+    Material* material = Material::Builder()
+            .package(result.getData(), result.getSize())
+            .build(*engine);
+    ASSERT_NE(material, nullptr);
+
+    MaterialInstance* instance = material->createInstance();
+    ASSERT_NE(instance, nullptr);
+
+    instance->setParameter("m", math::mat3f{ 2.0f });
+    EXPECT_EQ(instance->getParameter<math::mat3f>("m"), math::mat3f{ 2.0f });
+    math::mat3f const mat[1] = { math::mat3f{ 3.0f } };
+    instance->setParameter("m", mat, 1);
+    instance->setParameter("f", 1.0f);
+    EXPECT_EQ(instance->getParameter<float>("f"), 1.0f);
+    float const one[1] = { 1.0f };
+    instance->setParameter("f", one, 1);
+    instance->setParameter("g", 3.0f);
+    float const two[2] = { 1.0f, 2.0f };
+    instance->setParameter("a", two, 2);
+
+#if GTEST_HAS_EXCEPTIONS
+    // These stay inside the buffer but overrun the next field.
+    EXPECT_THROW(instance->setParameter("f", math::float4{ 9.0f }), utils::PreconditionPanic);
+    EXPECT_EQ(instance->getParameter<float>("g"), 3.0f);
+    EXPECT_THROW(instance->setParameter("f", math::float2{}), utils::PreconditionPanic);
+    EXPECT_THROW(instance->setParameter("f", math::mat3f{}), utils::PreconditionPanic);
+    EXPECT_THROW(instance->setParameter("m", math::mat4f{}), utils::PreconditionPanic);
+    EXPECT_THROW(instance->setParameter("f", two, 2), utils::PreconditionPanic);
+    math::mat3f const mats[2] = {};
+    EXPECT_THROW(instance->setParameter("m", mats, 2), utils::PreconditionPanic);
+    EXPECT_THROW(instance->getParameter<math::float4>("f"), utils::PreconditionPanic);
+    EXPECT_THROW(instance->getParameter<math::mat3f>("f"), utils::PreconditionPanic);
+    EXPECT_THROW(instance->getParameter<math::mat4f>("m"), utils::PreconditionPanic);
+
+    // This one runs past the end of the buffer.
+    float const three[3] = { 1.0f, 2.0f, 3.0f };
+    EXPECT_THROW(instance->setParameter("a", three, 3), utils::PreconditionPanic);
+#endif
+
+    engine->destroy(instance);
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
+
 TEST(Material, CompileMaterialWithSkinningEnabled) {
     Engine* engine = Engine::create(Engine::Backend::NOOP);
 
@@ -346,11 +420,9 @@ TEST(MaterialVariant, DynamicLightingSpecKeySupportsPunctualShadowReceivers) {
             Variant::SRE,
             Variant::SRE | Variant::FOG,
             Variant::SRE | Variant::SKN,
-            Variant::SRE | Variant::DIR,
             Variant::S2D | Variant::SRE,
             Variant::S2D | Variant::SRE | Variant::FOG,
             Variant::S2D | Variant::SRE | Variant::SKN,
-            Variant::S2D | Variant::SRE | Variant::DIR,
             Variant::S2D | Variant::SRE | Variant::STE,
     };
 
@@ -371,6 +443,32 @@ TEST(MaterialVariant, DynamicLightingSpecKeySupportsPunctualShadowReceivers) {
     EXPECT_FALSE(DynamicSpecConstKey::filterProgramSpecKey(
             Variant(Variant::S2D | Variant::SRE), dynamicLighting,
             MaterialDomain::SURFACE, false).hasDynamicLighting());
+}
+
+TEST(MaterialVariant, DirectionalLightingSpecKeyExcludesDepthAndSsr) {
+    // Variant::DIR used to carry directional lighting, and Variant::filterVariant() cleared it on
+    // depth and SSR variants. Now that the bit lives in the specialization key, the same exclusion
+    // has to hold there instead.
+    DynamicSpecConstKey directionalLighting;
+    directionalLighting.setDirectionalLighting(true);
+
+    EXPECT_FALSE(DynamicSpecConstKey::filterProgramSpecKey(
+            Variant(Variant::SPECIAL_SSR_VARIANT), directionalLighting,
+            MaterialDomain::SURFACE, true).hasDirectionalLighting());
+    EXPECT_FALSE(DynamicSpecConstKey::filterProgramSpecKey(
+            Variant(Variant::DEPTH_VARIANT), directionalLighting,
+            MaterialDomain::SURFACE, true).hasDirectionalLighting());
+    EXPECT_FALSE(DynamicSpecConstKey::filterProgramSpecKey(
+            Variant(Variant::S2D | Variant::SRE), directionalLighting,
+            MaterialDomain::SURFACE, false).hasDirectionalLighting());
+    EXPECT_FALSE(DynamicSpecConstKey::filterProgramSpecKey(
+            Variant{}, directionalLighting,
+            MaterialDomain::POST_PROCESS, true).hasDirectionalLighting());
+
+    // An ordinary lit surface variant keeps it, otherwise the assertions above prove nothing.
+    EXPECT_TRUE(DynamicSpecConstKey::filterProgramSpecKey(
+            Variant(Variant::S2D | Variant::SRE), directionalLighting,
+            MaterialDomain::SURFACE, true).hasDirectionalLighting());
 }
 
 TEST(MaterialVariant, ExtraDirectionalLightsRequireDirectionalLighting) {
@@ -397,10 +495,49 @@ TEST(MaterialVariant, ExtraDirectionalLightsRequireDirectionalLighting) {
 
     auto const validKeys = DynamicSpecConstKey::getValidKeys(
             Variant{}, MaterialDomain::SURFACE, true);
-    EXPECT_EQ(validKeys.size, 6);
+    EXPECT_EQ(validKeys.size, 12);
     for (auto const key : validKeys) {
         EXPECT_FALSE(key.hasExtraDirectionalLights() && !key.hasDirectionalLighting());
     }
+}
+
+TEST(MaterialVariant, FogSpecKeyIsOnlyValidForColorSurfaceVariants) {
+    DynamicSpecConstKey fog;
+    fog.setFog(true);
+
+    // Fog applies to both lit and unlit surface materials.
+    for (bool const isLit : { false, true }) {
+        EXPECT_TRUE(DynamicSpecConstKey::isValidProgramSpecKey(
+                Variant{}, fog, MaterialDomain::SURFACE, isLit));
+        EXPECT_TRUE(DynamicSpecConstKey::isValidProgramSpecKey(
+                Variant(Variant::SRE | Variant::SKN), fog, MaterialDomain::SURFACE, isLit));
+        EXPECT_TRUE(DynamicSpecConstKey::filterProgramSpecKey(
+                Variant{}, fog, MaterialDomain::SURFACE, isLit).hasFog());
+    }
+
+    // ...but never to depth, SSR or post-process programs.
+    for (Variant::type_t const key : { Variant::DEPTH_VARIANT,
+                 Variant::type_t(Variant::DEP | Variant::PCK), Variant::SPECIAL_SSR_VARIANT }) {
+        EXPECT_FALSE(DynamicSpecConstKey::isValidProgramSpecKey(
+                Variant(key), fog, MaterialDomain::SURFACE, true)) << +key;
+        EXPECT_FALSE(DynamicSpecConstKey::filterProgramSpecKey(
+                Variant(key), fog, MaterialDomain::SURFACE, true).hasFog()) << +key;
+    }
+    EXPECT_FALSE(DynamicSpecConstKey::isValidProgramSpecKey(
+            Variant{}, fog, MaterialDomain::POST_PROCESS, false));
+    EXPECT_FALSE(DynamicSpecConstKey::filterProgramSpecKey(
+            Variant{}, fog, MaterialDomain::POST_PROCESS, false).hasFog());
+
+    // The FOG user variant filter removes the fog specialization.
+    EXPECT_FALSE(DynamicSpecConstKey::filterUserVariant(
+            fog, UserVariantFilterMask(UserVariantFilterBit::FOG)).hasFog());
+    EXPECT_TRUE(DynamicSpecConstKey::filterUserVariant(
+            fog, UserVariantFilterMask(UserVariantFilterBit::SSR)).hasFog());
+
+    // Unlit surface materials only have the fog specialization.
+    auto const unlitKeys = DynamicSpecConstKey::getValidKeys(
+            Variant{}, MaterialDomain::SURFACE, false);
+    EXPECT_EQ(unlitKeys.size, 2);
 }
 
 TEST(Material, SsrFilteredLitMaterialContainsPunctualShadowPrograms) {
@@ -424,26 +561,77 @@ TEST(Material, SsrFilteredLitMaterialContainsPunctualShadowPrograms) {
     MaterialDefinition const& definition = downcast(material)->getDefinition();
     DynamicSpecConstKey dynamicLighting;
     dynamicLighting.setDynamicLighting(true);
+    DynamicSpecConstKey fog;
+    fog.setFog(true);
+    DynamicSpecConstKey dynamicLightingAndFog = dynamicLighting;
+    dynamicLightingAndFog.setFog(true);
     constexpr Variant::type_t SHADOW_VARIANTS[] = {
             Variant::SRE,
-            Variant::SRE | Variant::FOG,
             Variant::SRE | Variant::SKN,
             Variant::S2D | Variant::SRE,
-            Variant::S2D | Variant::SRE | Variant::FOG,
             Variant::S2D | Variant::SRE | Variant::SKN,
     };
 
     for (Variant::type_t const key : SHADOW_VARIANTS) {
-        EXPECT_TRUE(definition.isValidProgram(
-                Variant(key), DynamicSpecConstKey{}, fengine.getShaderModel(),
-                fengine.isStereoSupported()));
-        EXPECT_TRUE(definition.isValidProgram(
-                Variant(key), dynamicLighting, fengine.getShaderModel(),
-                fengine.isStereoSupported()));
+        for (DynamicSpecConstKey const specKey :
+                { DynamicSpecConstKey{}, dynamicLighting, fog, dynamicLightingAndFog }) {
+            EXPECT_TRUE(definition.isValidProgram(
+                    Variant(key), specKey, fengine.getShaderModel(),
+                    fengine.isStereoSupported()))
+                    << "variant=" << +key << " specKey=" << specKey.key;
+        }
+        // Fog is a dynamic specialization constant now, there is no FOG variant anymore.
+        EXPECT_FALSE(definition.isValidProgram(
+                Variant(key | Variant::FOG), DynamicSpecConstKey{}, fengine.getShaderModel(),
+                fengine.isStereoSupported()))
+                << "variant=" << +key;
     }
     EXPECT_FALSE(definition.isValidProgram(
             Variant(Variant::SPECIAL_SSR_VARIANT), DynamicSpecConstKey{},
             fengine.getShaderModel(), fengine.isStereoSupported()));
+
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
+
+TEST(Material, FogFilteredMaterialRejectsFogSpecKey) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("LitMaterialWithoutFog");
+    builder.shading(Shading::LIT);
+    builder.variantFilter(uint32_t(UserVariantFilterBit::FOG));
+
+    filamat::Package result = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(result.isValid());
+
+    Material* material = Material::Builder()
+                                 .package(result.getData(), result.getSize())
+                                 .build(*engine);
+    ASSERT_NE(material, nullptr);
+
+    FEngine const& fengine = downcast(*engine);
+    MaterialDefinition const& definition = downcast(material)->getDefinition();
+    DynamicSpecConstKey dynamicLighting;
+    dynamicLighting.setDynamicLighting(true);
+    DynamicSpecConstKey fog;
+    fog.setFog(true);
+    DynamicSpecConstKey dynamicLightingAndFog = dynamicLighting;
+    dynamicLightingAndFog.setFog(true);
+
+    for (Variant::type_t const key : { Variant::type_t(0), Variant::SRE,
+                 Variant::type_t(Variant::S2D | Variant::SRE) }) {
+        EXPECT_TRUE(definition.isValidProgram(Variant(key), DynamicSpecConstKey{},
+                fengine.getShaderModel(), fengine.isStereoSupported())) << +key;
+        EXPECT_TRUE(definition.isValidProgram(Variant(key), dynamicLighting,
+                fengine.getShaderModel(), fengine.isStereoSupported())) << +key;
+        // The material has no fog code; the fog specialization would be a duplicate program.
+        EXPECT_FALSE(definition.isValidProgram(Variant(key), fog,
+                fengine.getShaderModel(), fengine.isStereoSupported())) << +key;
+        EXPECT_FALSE(definition.isValidProgram(Variant(key), dynamicLightingAndFog,
+                fengine.getShaderModel(), fengine.isStereoSupported())) << +key;
+    }
 
     engine->destroy(material);
     Engine::destroy(engine);
@@ -661,3 +849,63 @@ TEST(Material, ProgramCacheLruEvictUAF) {
 
     Engine::destroy(engine);
 }
+
+TEST_P(SpecializedInstanceLifetimeTest, DestroyInstanceKeepsMaterialDefinition) {
+    auto const [enableProgramCache, duplicateInstance] = GetParam();
+
+    Engine* engine = Engine::Builder()
+                             .backend(Engine::Backend::NOOP)
+                             .feature("engine.enable_program_cache", enableProgramCache)
+                             .build();
+    ASSERT_NE(engine, nullptr);
+    FEngine::DriverApi& driver = downcast(engine)->getDriverApi();
+
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("SpecializedInstanceLifetime");
+    builder.material(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(1.0);
+        }
+    )");
+    builder.constant("probe", filamat::MaterialBuilder::ConstantType::BOOL, false);
+    filamat::Package pkg = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(pkg.isValid());
+
+    Material* material = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
+    ASSERT_NE(material, nullptr);
+
+    // prepareProgram() flushes the pending constants, which initializes the instance's own
+    // program cache (this is what rendering a frame does).
+    MaterialInstance* instance = material->createInstance();
+    instance->setConstant("probe", true);
+    downcast(instance)->prepareProgram(driver, Variant{ 0 }, DynamicSpecConstKey{ 0 },
+            backend::CompilerPriorityQueue::HIGH);
+
+    if (duplicateInstance) {
+        MaterialInstance* copy = MaterialInstance::duplicate(instance);
+        ASSERT_NE(copy, nullptr);
+        EXPECT_TRUE(copy->getConstant<bool>("probe"));
+        engine->destroy(copy);
+    }
+    engine->destroy(instance);
+
+    // The material still holds its MaterialDefinition, so building the same package again must
+    // share it rather than create a new one.
+    Material* sameMaterial =
+            Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
+    ASSERT_NE(sameMaterial, nullptr);
+    EXPECT_EQ(&downcast(sameMaterial)->getDefinition(), &downcast(material)->getDefinition());
+
+    engine->destroy(sameMaterial);
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
+
+INSTANTIATE_TEST_SUITE_P(MaterialInstanceTest, SpecializedInstanceLifetimeTest,
+        testing::Combine(testing::Bool(), testing::Bool()),
+        [](testing::TestParamInfo<std::tuple<bool, bool>> const& info) {
+            return std::string(std::get<0>(info.param) ? "ProgramCache" : "NoProgramCache") +
+                   (std::get<1>(info.param) ? "_Duplicated" : "_Single");
+        });

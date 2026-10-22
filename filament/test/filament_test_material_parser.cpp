@@ -19,6 +19,7 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <fstream>
 #include <iostream>
 
@@ -99,6 +100,101 @@ TEST(MaterialParser, AcceptValidDescriptorSetLayout) {
     filaflat::Unflattener unflattener(buffer.data(), buffer.data() + buffer.size());
     MaterialParser::DescriptorSetLayoutContainer container;
     EXPECT_TRUE(ChunkDescriptorSetLayoutInfo::unflatten(unflattener, &container));
+}
+
+namespace {
+constexpr uint8_t UBO = static_cast<uint8_t>(backend::DescriptorType::UNIFORM_BUFFER);
+constexpr uint8_t SAMPLER = static_cast<uint8_t>(backend::DescriptorType::SAMPLER_2D_FLOAT);
+constexpr uint8_t DYNAMIC = static_cast<uint8_t>(backend::DescriptorFlags::DYNAMIC_OFFSET);
+} // namespace
+
+TEST(MaterialParser, RejectDuplicateBindingDescriptorSetLayout) {
+    std::vector<uint8_t> buffer = {
+        2,                          // descriptorCount
+        SAMPLER, 1, 1, 0, 0, 0,     // type, stageFlags, binding, flags, count (uint16_t)
+        SAMPLER, 1, 1, 0, 0, 0,     // same binding again
+    };
+
+    filaflat::Unflattener unflattener(buffer.data(), buffer.data() + buffer.size());
+    MaterialParser::DescriptorSetLayoutContainer container;
+    EXPECT_FALSE(ChunkDescriptorSetLayoutInfo::unflatten(unflattener, &container));
+}
+
+TEST(MaterialParser, RejectMultipleDynamicOffsetsDescriptorSetLayout) {
+    std::vector<uint8_t> buffer = {
+        2,                          // descriptorCount
+        UBO, 1, 0, DYNAMIC, 0, 0,   // type, stageFlags, binding, flags, count (uint16_t)
+        UBO, 1, 1, DYNAMIC, 0, 0,
+    };
+
+    filaflat::Unflattener unflattener(buffer.data(), buffer.data() + buffer.size());
+    MaterialParser::DescriptorSetLayoutContainer container;
+    EXPECT_FALSE(ChunkDescriptorSetLayoutInfo::unflatten(unflattener, &container));
+}
+
+TEST(MaterialParser, AcceptSingleDynamicOffsetDescriptorSetLayout) {
+    // Same shape as MaterialDescriptorSetLayoutChunk::flatten() in filamat.
+    std::vector<uint8_t> buffer = {
+        2,                          // descriptorCount
+        UBO, 1, 0, DYNAMIC, 0, 0,   // type, stageFlags, binding, flags, count (uint16_t)
+        SAMPLER, 1, 1, 0, 0, 0,
+    };
+
+    filaflat::Unflattener unflattener(buffer.data(), buffer.data() + buffer.size());
+    MaterialParser::DescriptorSetLayoutContainer container;
+    EXPECT_TRUE(ChunkDescriptorSetLayoutInfo::unflatten(unflattener, &container));
+    EXPECT_EQ(container.descriptors.size(), 2u);
+}
+
+TEST(MaterialParser, TestMaterialDescriptorSetLayoutIsValid) {
+    MaterialParser parser({ backend::ShaderLanguage::ESSL3 },
+            FILAMENT_TEST_RESOURCES_TEST_MATERIAL_DATA, FILAMENT_TEST_RESOURCES_TEST_MATERIAL_SIZE);
+    ASSERT_EQ(parser.parse(), MaterialParser::ParseResult::SUCCESS);
+
+    MaterialParser::DescriptorSetLayoutContainer container;
+    EXPECT_TRUE(parser.getDescriptorSetLayout(&container));
+}
+
+namespace {
+// A package holding only a MAT_BLFN chunk, laid out as ChunkContainer::parseChunk() reads it.
+std::vector<uint8_t> makeBlendFunctionPackage(uint32_t const blendFunctions) {
+    std::vector<uint8_t> package;
+    auto const append = [&package](uint64_t const v, size_t const size) {
+        for (size_t i = 0; i < size; i++) {
+            package.push_back(uint8_t(v >> (8 * i)));
+        }
+    };
+    append(filamat::MaterialBlendFunction, sizeof(uint64_t));
+    append(sizeof(uint32_t), sizeof(uint32_t));
+    append(blendFunctions, sizeof(uint32_t));
+    return package;
+}
+} // namespace
+
+TEST(MaterialParser, RejectOutOfRangeCustomBlendFunction) {
+    // 11 is the first value past SRC_ALPHA_SATURATE, 15 is the largest that fits 4 bits.
+    for (uint32_t const blendFunctions : { 0x0000000Bu, 0x0F0F0F0Fu }) {
+        std::vector<uint8_t> const package = makeBlendFunctionPackage(blendFunctions);
+        MaterialParser parser({ backend::ShaderLanguage::ESSL3 }, package.data(), package.size());
+        // No shader chunks, but the chunk container is still parsed.
+        EXPECT_EQ(parser.parse(), MaterialParser::ParseResult::ERROR_MISSING_BACKEND);
+
+        std::array<backend::BlendFunction, 4> functions{};
+        EXPECT_FALSE(parser.getCustomBlendFunction(&functions)) << std::hex << blendFunctions;
+    }
+}
+
+TEST(MaterialParser, AcceptValidCustomBlendFunction) {
+    std::vector<uint8_t> const package = makeBlendFunctionPackage(0x0A070601);
+    MaterialParser parser({ backend::ShaderLanguage::ESSL3 }, package.data(), package.size());
+    EXPECT_EQ(parser.parse(), MaterialParser::ParseResult::ERROR_MISSING_BACKEND);
+
+    std::array<backend::BlendFunction, 4> functions{};
+    ASSERT_TRUE(parser.getCustomBlendFunction(&functions));
+    EXPECT_EQ(functions[0], backend::BlendFunction::SRC_ALPHA_SATURATE);
+    EXPECT_EQ(functions[1], backend::BlendFunction::ONE_MINUS_SRC_ALPHA);
+    EXPECT_EQ(functions[2], backend::BlendFunction::SRC_ALPHA);
+    EXPECT_EQ(functions[3], backend::BlendFunction::ONE);
 }
 
 int main(int argc, char** argv) {

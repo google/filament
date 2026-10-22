@@ -244,6 +244,13 @@ template<typename T>
 void unpack(cgltf_accessor const* accessor, size_t const vertexCount, T out,
         bool isMorphTarget = false) {
     assert_invariant(accessor->count == vertexCount);
+    // Per the glTF 2.0 specification (Accessor schema), when bufferView is undefined the accessor
+    // must be initialized with zeros. This also occurs when Draco mesh decompression fails and
+    // leaves the primitive's accessors without a bufferView.
+    if (!accessor->buffer_view) {
+        std::memset(out, 0, data::byteCount<T>() * vertexCount);
+        return;
+    }
     uint8_t const* data = nullptr;
     if (accessor->buffer_view->has_meshopt_compression) {
         data = (uint8_t const*) accessor->buffer_view->data + accessor->offset;
@@ -444,6 +451,11 @@ void TangentsJobExtended::run(Params* params) {
                 tob.normals(data::get<NORMALS_T>(attributes));
                 break;
             case COLORS_ID:
+                // For morph targets, the COLORS aux slot is used to carry the position deltas
+                // (see POSITIONS_ID above), so the base colors must not overwrite it.
+                if (isMorphTarget) {
+                    break;
+                }
                 data::allocate<COLORS_T>(attributes, vertexCount);
                 data::unpack<COLORS_T>(accessor, attributes, vertexCount);
                 tob.aux(AuxType::COLORS, data::get<COLORS_T>(attributes));

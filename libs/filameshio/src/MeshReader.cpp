@@ -24,7 +24,10 @@
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
+#include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
+
+#include <backend/DriverEnums.h>
 
 #include <utils/EntityManager.h>
 #include <utils/Log.h>
@@ -245,6 +248,21 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
         return {};
     }
 
+    // Checked here so a bad asset fails gracefully instead of panicking in IndexBuffer::build().
+    if (header.indexCount > backend::MAX_INDEX_COUNT) {
+        utils::slog.e << "Index count exceeds the maximum." << utils::io::endl;
+        return {};
+    }
+
+    // indexSize is the compressed size when COMPRESSION is set, so only raw indices are checked.
+    if (!(header.flags & COMPRESSION)) {
+        size_t const elementSize = header.indexType == UI16 ? sizeof(uint16_t) : sizeof(uint32_t);
+        if (size_t(header.indexCount) * elementSize != header.indexSize) {
+            utils::slog.e << "Index size does not match index count." << utils::io::endl;
+            return {};
+        }
+    }
+
     // Check integer overflow on header.parts * sizeof(Part)
     if (size_t(header.parts) > std::numeric_limits<size_t>::max() / sizeof(Part)) {
         utils::slog.e << "Too many mesh parts (overflow)." << utils::io::endl;
@@ -426,14 +444,24 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
             CompressionHeader sizes;
             memcpy(&sizes, vertexData, sizeof(CompressionHeader));
 
-            size_t compressedSum = sizeof(CompressionHeader) +
-                                   size_t(sizes.positions) +
-                                   size_t(sizes.tangents) +
-                                   size_t(sizes.colors) +
-                                   size_t(sizes.uv0) +
-                                   size_t(sizes.uv1);
+            // Summed in 64 bits because five uint32_t sizes can wrap a 32-bit size_t.
+            uint64_t compressedSum = uint64_t(sizeof(CompressionHeader)) +
+                                     uint64_t(sizes.positions) +
+                                     uint64_t(sizes.tangents) +
+                                     uint64_t(sizes.colors) +
+                                     uint64_t(sizes.uv0) +
+                                     uint64_t(sizes.uv1);
             if (compressedSum > verticesSize) {
                 utils::slog.e << "Compressed vertex buffer elements exceed bounds." << utils::io::endl;
+                free(uncompressed);
+                engine->destroy(mesh.vertexBuffer);
+                engine->destroy(mesh.indexBuffer);
+                return {};
+            }
+
+            // uncompressed only has room for UV1 when the header declares it.
+            if (hasUV1 != (sizes.uv1 != 0)) {
+                utils::slog.e << "Compressed UV1 stream does not match the UV1 attribute." << utils::io::endl;
                 free(uncompressed);
                 engine->destroy(mesh.vertexBuffer);
                 engine->destroy(mesh.indexBuffer);
@@ -482,6 +510,7 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
     }
 
     mesh.renderable = utils::EntityManager::get().create();
+    engine->getTransformManager().create(mesh.renderable);
 
     RenderableManager::Builder builder(header.parts);
     builder.boundingBox(header.aabb);

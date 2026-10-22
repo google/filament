@@ -17,7 +17,8 @@
 #include "WebGPUVertexBufferInfo.h"
 
 #include "DriverBase.h"
-#include "WebGPUConstants.h"
+
+#include "webgpu/utils/VertexHelper.h"
 
 #include <backend/DriverEnums.h>
 
@@ -33,163 +34,6 @@
 namespace filament::backend {
 
 namespace {
-
-[[nodiscard]] wgpu::VertexFormat getVertexFormat(const ElementType type, const bool normalized,
-        const bool integer) {
-    using VertexFormat = wgpu::VertexFormat;
-    if (normalized) {
-        switch (type) {
-            // Single Component Types
-            case ElementType::BYTE:    return VertexFormat::Snorm8;
-            case ElementType::UBYTE:   return VertexFormat::Unorm8;
-            case ElementType::SHORT:   return VertexFormat::Snorm16;
-            case ElementType::USHORT:  return VertexFormat::Unorm16;
-            // Two Component Types
-            case ElementType::BYTE2:   return VertexFormat::Snorm8x2;
-            case ElementType::UBYTE2:  return VertexFormat::Unorm8x2;
-            case ElementType::SHORT2:  return VertexFormat::Snorm16x2;
-            case ElementType::USHORT2: return VertexFormat::Unorm16x2;
-            // Three Component Types
-            // There is no vertex format type for 3 byte data in webgpu. Use
-            // 4 byte signed normalized type and ignore the last byte.
-            // TODO: This is to be verified.
-            case ElementType::BYTE3:
-                FWGPU_LOGW
-                        << "Requested Filament vertex format BYTE3 (normalized) but getting "
-                           "wgpu::VertexFormat::Snorm8x4 (no direct mapping in wgpu for x3 byte)";
-                return VertexFormat::Snorm8x4; // NOT MINSPEC
-            case ElementType::UBYTE3:
-                FWGPU_LOGW
-                        << "Requested Filament vertex format UBYTE3 (normalized) but getting "
-                           "wgpu::VertexFormat::Unorm8x4 (no direct mapping in wgpu for x3 byte)";
-                return VertexFormat::Unorm8x4; // NOT MINSPEC
-            case ElementType::SHORT3:
-                FWGPU_LOGW << "Requested Filament vertex format SHORT3 (normalized) but getting "
-                              "wgpu::VertexFormat::Snorm16x4 (no direct mapping in wgpu for x3 "
-                              "half/short)";
-                return VertexFormat::Snorm16x4; // NOT MINSPEC
-            case ElementType::USHORT3:
-                FWGPU_LOGW << "Requested Filament vertex format USHORT3 (normalized) but getting "
-                              "wgpu::VertexFormat::Unorm16x4 (no direct mapping in wgpu for x3 "
-                              "half/short)";
-                return VertexFormat::Unorm16x4; // NOT MINSPEC
-            // Four Component Types
-            case ElementType::BYTE4:   return VertexFormat::Snorm8x4;
-            case ElementType::UBYTE4:  return VertexFormat::Unorm8x4;
-            case ElementType::SHORT4:  return VertexFormat::Snorm16x4;
-            case ElementType::USHORT4: return VertexFormat::Unorm16x4;
-            default:
-                PANIC_POSTCONDITION("Normalized format (%d enum value) does not exist in webgpu.",
-                        type);
-                return VertexFormat::Float32x3;
-        }
-    }
-    switch (type) {
-        // Single Component Types
-        // There is no direct alternative for SSCALED in webgpu. Convert them to Float32 directly.
-        // This will result in increased memory on the cpu side.
-        // TODO: Is Float16 acceptable instead with some potential accuracy errors?
-        case ElementType::BYTE:
-            if (integer) return VertexFormat::Sint8;
-            FWGPU_LOGW << "Requested Filament vertex format BYTE (float) but getting "
-                          "wgpu::VertexFormat::Float16 (no direct mapping in wgpu for 8 bit float)";
-            return wgpu::VertexFormat::Float16;
-        case ElementType::UBYTE:
-            if (integer) return VertexFormat::Uint8;
-            FWGPU_LOGW << "Requested Filament vertex format UBYTE (float) but getting "
-                          "wgpu::VertexFormat::Float16 (no direct mapping in wgpu for 8 bit float)";
-            return VertexFormat::Float16;
-        case ElementType::SHORT:
-            if (integer) return VertexFormat::Sint16;
-            FWGPU_LOGW << "Requested Filament vertex format SHORT (float) and getting "
-                          "wgpu::VertexFormat::Float16 (potential loss of precision?)";
-            return VertexFormat ::Float16;
-        case ElementType::USHORT:
-            if (integer) return VertexFormat::Uint16;
-            FWGPU_LOGW << "Requested Filament vertex format USHORT (float) and getting "
-                          "wgpu::VertexFormat::Float16 (potential loss of precision?)";
-            return VertexFormat::Float16;
-        case ElementType::HALF:    return VertexFormat::Float16;
-        case ElementType::INT:     return VertexFormat::Sint32;
-        case ElementType::UINT:    return VertexFormat::Uint32;
-        case ElementType::FLOAT:   return VertexFormat::Float32;
-        // Two Component Types
-        case ElementType::BYTE2:
-            if (integer) return VertexFormat::Sint8x2;
-            FWGPU_LOGW
-                    << "Requested Filament vertex format BYTE2 (float) but getting "
-                       "wgpu::VertexFormat::Float16x2 (no direct mapping in wgpu for 8 bit float)";
-            return VertexFormat::Float16x2;
-        case ElementType::UBYTE2:
-            if (integer) return VertexFormat::Uint8x2;
-            FWGPU_LOGW
-                    << "Requested Filament vertex format UBYTE2 (float) but getting "
-                       "wgpu::VertexFormat::Float16x2 (no direct mapping in wgpu for 8 bit float)";
-            return VertexFormat::Float16x2;
-        case ElementType::SHORT2:
-            if (integer) return VertexFormat::Sint16x2;
-            FWGPU_LOGW << "Requested Filament vertex format SHORT2 (float) but getting "
-                          "wgpu::VertexFormat::Float16x2 (potential loss of precision?)";
-            return VertexFormat::Float16x2;
-        case ElementType::USHORT2:
-            if (integer) return VertexFormat::Uint16x2;
-            FWGPU_LOGW << "Requested Filament vertex format USHORT2 (float) but getting "
-                          "wgpu::VertexFormat::Float16x2 (potential loss of precision?)";
-            return VertexFormat::Float16x2;
-        case ElementType::HALF2:   return VertexFormat::Float16x2;
-        case ElementType::FLOAT2:  return VertexFormat::Float32x2;
-        // Three Component Types
-        case ElementType::BYTE3:
-            FWGPU_LOGW << "Requested Filament vertex format BYTE3 but getting "
-                          "wgpu::VertexFormat::Sint8x4 (no direct mapping in wgpu for x3 byte)";
-            return VertexFormat::Sint8x4; // NOT MINSPEC
-        case ElementType::UBYTE3:
-            FWGPU_LOGW << "Requested Filament vertex format UBYTE3 but getting "
-                          "wgpu::VertexFormat::Uint8x4 (no direct mapping in wgpu for x3 byte)";
-            return VertexFormat::Uint8x4; // NOT MINSPEC
-        case ElementType::SHORT3:
-            FWGPU_LOGW
-                    << "Requested Filament vertex format SHORT3 but getting "
-                       "wgpu::VertexFormat::Sint16x4 (no direct mapping in wgpu for x3 half/short)";
-            return VertexFormat::Sint16x4; // NOT MINSPEC
-        case ElementType::USHORT3:
-            FWGPU_LOGW
-                    << "Requested Filament vertex format USHORT3 but getting "
-                       "wgpu::VertexFormat::Uint16x4 (no direct mapping in wgpu for x3 half/short)";
-            return VertexFormat::Uint16x4; // NOT MINSPEC
-        case ElementType::HALF3:
-            FWGPU_LOGW
-                    << "Requested Filament vertex format HALF3 but getting "
-                       "wgpu::VertexFormat::Float16x4 (no direct mapping in wgpu for x3 half/short)";
-            return VertexFormat::Float16x4; // NOT MINSPEC
-        case ElementType::FLOAT3:  return VertexFormat::Float32x3;
-        // Four Component Types
-        case ElementType::BYTE4:
-            if (integer) return VertexFormat::Sint8x4;
-            FWGPU_LOGW
-                    << "Requested Filament vertex format BYTE4 (float) but getting "
-                       "wgpu::VertexFormat::Float16x4 (no direct mapping in wgpu for 8 bit float)";
-            return VertexFormat::Float16x4;
-        case ElementType::UBYTE4:
-            if (integer) return VertexFormat::Uint8x4;
-            FWGPU_LOGW
-                    << "Requested Filament vertex format UBYTE4 (float) but getting "
-                       "wgpu::VertexFormat::Float16x4 (no direct mapping in wgpu for 8 bit float)";
-            return VertexFormat::Float16x4;
-        case ElementType::SHORT4:
-            if (integer) return VertexFormat::Sint16x4;
-            FWGPU_LOGW << "Requested Filament vertex format SHORT4 (float) but getting "
-                          "wgpu::VertexFormat::Float16x4 (potential loss of precision?)";
-            return VertexFormat::Float16x4;
-        case ElementType::USHORT4:
-            if (integer) return VertexFormat::Uint16x4;
-            FWGPU_LOGW << "Requested Filament vertex format USHORT4 (float) but getting "
-                          "wgpu::VertexFormat::Float16x4 (potential loss of precision?)";
-            return VertexFormat::Float16x4;
-        case ElementType::HALF4:   return VertexFormat::Float16x4;
-        case ElementType::FLOAT4:  return VertexFormat::Float32x4;
-    }
-}
 
 constexpr uint32_t INVALID_SLOT_INDEX = MAX_VERTEX_BUFFER_COUNT;
 
@@ -209,12 +53,15 @@ struct AttributeInfo final {
  * attributes provided by Filament, as well as populates the outAttributeInfos, which associates
  * attributes to slots.
  *
+ * Each slot also gets a repack plan (see webgpuutils::VertexSlotRepack). The vertex buffer layouts
+ * and attributes always describe the WebGPU layout from that plan, which differs from the source
+ * layout when the source formats, offsets or stride are not directly usable by WebGPU. In that
+ * case WebGPUBufferObject converts the source data when it is attached to a vertex buffer.
+ *
  * NOTE: At this point, the vertex buffer layouts do not have attribute information. That needs
  *       to get updated in a subsequent step
  *
  * @param attributes Input vertex attribute information from Filament
- * @param attributeCount The expected number of "used" vertex attributes from Filament, the number
- * of attributes associated with a vertex buffer
  * @param deviceMaxVertexBuffers The device's limit of vertex buffers
  * @param outWebGPUSlotBindingInfos The WebGPU slot bindings to be used by the WebGPU driver to set
  * vertex buffers in the WebGPU API.
@@ -223,6 +70,7 @@ struct AttributeInfo final {
  * be done after this function.
  * @param outAttributeInfos Information about all the vertex attributes to be used, actually
  * associated with a vertex buffer, and the slot each one belongs
+ * @param outActualAttributeCount The number of entries populated in outAttributeInfos
  */
 void createBufferLayoutsBindingSlotsAndAttributeInfos(AttributeArray const& attributes,
         const uint32_t deviceMaxVertexBuffers,
@@ -235,15 +83,74 @@ void createBufferLayoutsBindingSlotsAndAttributeInfos(AttributeArray const& attr
     outVertexBufferLayouts.reserve(MAX_VERTEX_BUFFER_COUNT);
     outWebGPUSlotBindingInfos.reserve(outVertexBufferLayouts.capacity());
 
+    // Pass 1: assign every used attribute to a WebGPU slot, based on its source buffer, stride
+    // and offset.
+    std::array<uint8_t, MAX_VERTEX_ATTRIBUTE_COUNT> attributeSlots{};
+    attributeSlots.fill(INVALID_SLOT_INDEX);
     // Find a valid attribute to use as a dummy for unused slots (typically POSITION at index 0)
-    Attribute dummyAttribute{};
-    bool hasDummy = false;
-    for (uint32_t i = 0; i < attributes.size(); ++i) {
-        if (attributes[i].buffer != Attribute::BUFFER_UNUSED) {
-            dummyAttribute = attributes[i];
-            hasDummy = true;
-            break;
+    uint32_t dummyAttributeIndex = MAX_VERTEX_ATTRIBUTE_COUNT;
+    for (uint32_t attributeIndex = 0; attributeIndex < attributes.size(); ++attributeIndex) {
+        Attribute const& attribute = attributes[attributeIndex];
+        if (attribute.buffer == Attribute::BUFFER_UNUSED) {
+            continue;
         }
+        if (dummyAttributeIndex == MAX_VERTEX_ATTRIBUTE_COUNT) {
+            dummyAttributeIndex = attributeIndex;
+        }
+        uint8_t existingSlot = INVALID_SLOT_INDEX;
+        for (uint32_t slot = 0; slot < currentWebGPUSlotIndex; slot++) {
+            WebGPUVertexBufferInfo::WebGPUSlotBindingInfo const& info =
+                    outWebGPUSlotBindingInfos[slot];
+            if (info.sourceBufferIndex == attribute.buffer && info.stride == attribute.stride &&
+                    attribute.offset >= info.bufferOffset &&
+                    ((attribute.offset - info.bufferOffset) < attribute.stride)) {
+                existingSlot = slot;
+                break;
+            }
+        }
+        if (existingSlot == INVALID_SLOT_INDEX) {
+            FILAMENT_CHECK_PRECONDITION(currentWebGPUSlotIndex < MAX_VERTEX_BUFFER_COUNT &&
+                                        currentWebGPUSlotIndex < deviceMaxVertexBuffers)
+                    << "Number of vertex buffer layouts must not exceed MAX_VERTEX_BUFFER_COUNT ("
+                    << MAX_VERTEX_BUFFER_COUNT << ") or the device limit ("
+                    << deviceMaxVertexBuffers << ")";
+            existingSlot = currentWebGPUSlotIndex++;
+            outWebGPUSlotBindingInfos.push_back({ .sourceBufferIndex = attribute.buffer,
+                .bufferOffset = attribute.offset,
+                .stride = attribute.stride });
+            outVertexBufferLayouts.push_back({ .stepMode = wgpu::VertexStepMode::Vertex });
+        }
+        attributeSlots[attributeIndex] = existingSlot;
+    }
+
+    // Pass 2: compute the WebGPU layout of every slot, converting formats, offsets and the stride
+    // where the source layout is not directly usable.
+    std::array<uint32_t, MAX_VERTEX_ATTRIBUTE_COUNT> dstOffsets{};
+    std::array<wgpu::VertexFormat, MAX_VERTEX_ATTRIBUTE_COUNT> dstFormats{};
+    for (uint8_t slot = 0; slot < currentWebGPUSlotIndex; ++slot) {
+        WebGPUVertexBufferInfo::WebGPUSlotBindingInfo& info = outWebGPUSlotBindingInfos[slot];
+        std::array<webgpuutils::VertexSlotAttribute, MAX_VERTEX_ATTRIBUTE_COUNT> slotAttributes{};
+        std::array<uint32_t, MAX_VERTEX_ATTRIBUTE_COUNT> slotAttributeIndices{};
+        size_t slotAttributeCount = 0;
+        for (uint32_t attributeIndex = 0; attributeIndex < attributes.size(); ++attributeIndex) {
+            if (attributeSlots[attributeIndex] != slot) {
+                continue;
+            }
+            Attribute const& attribute = attributes[attributeIndex];
+            slotAttributeIndices[slotAttributeCount] = attributeIndex;
+            slotAttributes[slotAttributeCount++] = {
+                .srcOffset = attribute.offset - info.bufferOffset,
+                .type = attribute.type,
+                .flags = attribute.flags,
+            };
+        }
+        info.repack = webgpuutils::computeSlotRepack(info.stride,
+                { slotAttributes.data(), slotAttributeCount });
+        for (size_t i = 0; i < slotAttributeCount; ++i) {
+            dstOffsets[slotAttributeIndices[i]] = info.repack.attributes[i].dstOffset;
+            dstFormats[slotAttributeIndices[i]] = info.repack.attributes[i].format;
+        }
+        outVertexBufferLayouts[slot].arrayStride = info.repack.dstStride;
     }
 
     /*
@@ -269,55 +176,28 @@ void createBufferLayoutsBindingSlotsAndAttributeInfos(AttributeArray const& attr
      *
      * WebGPU safely promotes the 4-byte Float32 into a WGSL vec4<f32> as (x, 0.0, 0.0, 1.0).
      */
+    // Pass 3: emit the WebGPU attributes, aliasing unused ones into the dummy attribute's slot.
     for (uint32_t attributeIndex = 0; attributeIndex < attributes.size(); ++attributeIndex) {
-        auto attribute = attributes[attributeIndex];
-        wgpu::VertexFormat vertexFormat;
-
+        Attribute const& attribute = attributes[attributeIndex];
         if (attribute.buffer == Attribute::BUFFER_UNUSED) {
-            if (!hasDummy) {
+            if (dummyAttributeIndex == MAX_VERTEX_ATTRIBUTE_COUNT) {
                 continue;
             }
             // HACK: Re-use the dummy buffer for disabled attributes to satisfy WebGPU validation.
-            // Filament's shaders expect vec4 or uvec4. We provide a dummy format.
+            // Filament's shaders expect vec4 or uvec4. We provide a dummy format. Offset 0 always
+            // fits a 4-byte format, since WebGPU strides are multiples of 4.
             const bool isInteger = attribute.flags & Attribute::FLAG_INTEGER_TARGET;
-            vertexFormat = isInteger ? wgpu::VertexFormat::Uint8x4 : wgpu::VertexFormat::Unorm8x4;
-            attribute = dummyAttribute;
-        } else {
-            const bool isInteger = attribute.flags & Attribute::FLAG_INTEGER_TARGET;
-            const bool isNormalized = attribute.flags & Attribute::FLAG_NORMALIZED;
-            vertexFormat = getVertexFormat(attribute.type, isNormalized, isInteger);
+            outAttributeInfos[currentAttributeIndex++] =
+                    AttributeInfo(attributeSlots[dummyAttributeIndex],
+                            { .format = isInteger ? wgpu::VertexFormat::Uint8x4
+                                                  : wgpu::VertexFormat::Unorm8x4,
+                                .offset = 0,
+                                .shaderLocation = attributeIndex });
+            continue;
         }
-
-        uint8_t existingSlot = INVALID_SLOT_INDEX;
-        for (uint32_t slot = 0; slot < currentWebGPUSlotIndex; slot++) {
-            WebGPUVertexBufferInfo::WebGPUSlotBindingInfo const& info =
-                    outWebGPUSlotBindingInfos[slot];
-            if (info.sourceBufferIndex == attribute.buffer && info.stride == attribute.stride &&
-                    attribute.offset >= info.bufferOffset &&
-                    ((attribute.offset - info.bufferOffset) < attribute.stride)) {
-                existingSlot = slot;
-                break;
-            }
-        }
-        if (existingSlot == INVALID_SLOT_INDEX) {
-            FILAMENT_CHECK_PRECONDITION(currentWebGPUSlotIndex < MAX_VERTEX_BUFFER_COUNT &&
-                                        currentWebGPUSlotIndex < deviceMaxVertexBuffers)
-                    << "Number of vertex buffer layouts must not exceed MAX_VERTEX_BUFFER_COUNT ("
-                    << MAX_VERTEX_BUFFER_COUNT << ") or the device limit ("
-                    << deviceMaxVertexBuffers << ")";
-            existingSlot = currentWebGPUSlotIndex++;
-            outWebGPUSlotBindingInfos.push_back({ .sourceBufferIndex = attribute.buffer,
-                .bufferOffset = attribute.offset,
-                .stride = attribute.stride });
-            outVertexBufferLayouts.push_back(
-                    { .stepMode = wgpu::VertexStepMode::Vertex, .arrayStride = attribute.stride });
-        }
-        outAttributeInfos[currentAttributeIndex++] = AttributeInfo(
-                existingSlot,
-                {
-                    .format = vertexFormat,
-                    .offset =
-                            attribute.offset - outWebGPUSlotBindingInfos[existingSlot].bufferOffset,
+        outAttributeInfos[currentAttributeIndex++] = AttributeInfo(attributeSlots[attributeIndex],
+                { .format = dstFormats[attributeIndex],
+                    .offset = dstOffsets[attributeIndex],
                     .shaderLocation = attributeIndex });
     }
 

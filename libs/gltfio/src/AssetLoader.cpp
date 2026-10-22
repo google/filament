@@ -154,6 +154,17 @@ bool primitiveHasVertexColor(const cgltf_primitive& inPrim) {
     return false;
 }
 
+bool primitiveHasPosition(const cgltf_primitive& inPrim) {
+    for (cgltf_size slot = 0; slot < inPrim.attributes_count; slot++) {
+        const cgltf_attribute& inputAttribute = inPrim.attributes[slot];
+        if (inputAttribute.type == cgltf_attribute_type_position &&
+                inputAttribute.data != nullptr) {
+            return true;
+        }
+    }
+    return false;
+}
+
 LightManager::Type getLightType(const cgltf_light_type light) {
     switch (light) {
         case cgltf_light_type_max_enum:
@@ -689,6 +700,14 @@ void FAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
         Primitive& outputPrim = prims[index];
         cgltf_primitive& inputPrim = mesh->primitives[index];
 
+        if (!primitiveHasPosition(inputPrim)) {
+            slog.w << "Skipping primitive without POSITION data in " << name << io::endl;
+            // Preserve the URI data cache handle when skipping a primitive.
+            auto& resourceInfo = std::get<FFilamentAsset::ResourceInfoExtended>(fAsset->mResourceInfo);
+            resourceInfo.uriDataCache = mLoaderExtended->getUriDataCache();
+            continue;
+        }
+
         if (!outputPrim.vertices) {
             if (mLoaderExtended) {
                 auto& resourceInfo = std::get<FFilamentAsset::ResourceInfoExtended>(fAsset->mResourceInfo);
@@ -726,12 +745,16 @@ void FAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
         aabb.max = max(outputPrim.aabb.max, aabb.max);
     }
 
-    mat4f worldTransform;
-    cgltf_node_transform_world(node, &worldTransform[0][0]);
+    // The spec requires that min < max for the bounding box but since we can skip bounding boxes
+    // for empty primitives, the bounding box may not be valid and needs new validation here.
+    if (all(lessThanEqual(aabb.min, aabb.max))) {
+        mat4f worldTransform;
+        cgltf_node_transform_world(node, &worldTransform[0][0]);
 
-    const Aabb transformed = aabb.transform(worldTransform);
-    fAsset->mBoundingBox.min = min(fAsset->mBoundingBox.min, transformed.min);
-    fAsset->mBoundingBox.max = max(fAsset->mBoundingBox.max, transformed.max);
+        const Aabb transformed = aabb.transform(worldTransform);
+        fAsset->mBoundingBox.min = min(fAsset->mBoundingBox.min, transformed.min);
+        fAsset->mBoundingBox.max = max(fAsset->mBoundingBox.max, transformed.max);
+    }
  }
 
 void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity, const char* name,
@@ -750,7 +773,8 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity,
     Aabb aabb;
 
     // glTF spec says that all primitives must have the same number of morph targets.
-    const cgltf_size numMorphTargets = inputPrim ? inputPrim->targets_count : 0;
+    const cgltf_size rawNumMorphTargets = inputPrim ? inputPrim->targets_count : 0;
+    const cgltf_size numMorphTargets = std::min(rawNumMorphTargets, (cgltf_size) MAX_MORPH_TARGETS);
     RenderableManager::Builder builder(primitiveCount);
 
     // For each prim, create a Filament VertexBuffer, IndexBuffer, and MaterialInstance.
@@ -763,10 +787,14 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity,
             slog.e << "Unsupported primitive type in " << name << io::endl;
         }
 
-        if (numMorphTargets != inputPrim->targets_count) {
+        if (rawNumMorphTargets != inputPrim->targets_count) {
             slog.e << "Sister primitives must all have the same number of morph targets."
                    << io::endl;
             mError = true;
+            continue;
+        }
+
+        if (!outputPrim->vertices) {
             continue;
         }
 
@@ -783,8 +811,6 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity,
 
         fAsset->mDependencyGraph.addEdge(entity, mi);
         builder.material(index, mi);
-
-        assert_invariant(outputPrim->vertices);
 
         // Expand the object-space bounding box.
         aabb.min = min(outputPrim->aabb.min, aabb.min);
@@ -803,7 +829,7 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity,
         }
     }
 
-    if (numMorphTargets) {
+    if (numMorphTargets && morphingVertexCount > 0) {
         MorphTargetBuffer* morphTargetBuffer = MorphTargetBuffer::Builder()
                 .count(numMorphTargets)
                 .vertexCount(morphingVertexCount)
@@ -813,20 +839,23 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity,
 
         builder.morphing(morphTargetBuffer);
 
-        // The Primitive structs in mMeshCache are shared across all instances of the same
-        // mesh. Only the first call should populate morphTargetBuffer in the shared Primitive
-        // and write into the existing BufferSlots (which were allocated by createPrimitive).
-        // Subsequent instances must append NEW BufferSlots so that ResourceLoader uploads
-        // morph data to every instance's MorphTargetBuffer independently.
-        //
-        // NOTE: This fix covers morph position data only. Morph tangent recomputation in
-        // ResourceLoader::computeTangents() reads MorphTargetBuffer from the shared Primitive,
-        // so additional instances with lit morph targets may have incorrect tangent frames.
-        const bool isFirstMorphSetup = (prims.data()->morphTargetBuffer == nullptr);
-
         outputPrim = prims.data();
         inputPrim = &mesh->primitives[0];
         for (cgltf_size index = 0; index < primitiveCount; ++index, ++outputPrim, ++inputPrim) {
+            if (!outputPrim->vertices) {
+                continue;
+            }
+
+            // The Primitive structs in mMeshCache are shared across all instances of the same
+            // mesh. Only the first call should populate morphTargetBuffer in the shared Primitive
+            // and write into the existing BufferSlots (which were allocated by createPrimitive).
+            // Subsequent instances must append NEW BufferSlots so that ResourceLoader uploads
+            // morph data to every instance's MorphTargetBuffer independently.
+            //
+            // NOTE: This fix covers morph position data only. Morph tangent recomputation in
+            // ResourceLoader::computeTangents() reads MorphTargetBuffer from the shared Primitive,
+            // so additional instances with lit morph targets may have incorrect tangent frames.
+            const bool isFirstMorphSetup = (outputPrim->morphTargetBuffer == nullptr);
             if (isFirstMorphSetup) {
                 outputPrim->morphTargetBuffer = morphTargetBuffer;
             }
@@ -964,6 +993,9 @@ void FAssetLoader::createMaterialVariants(const cgltf_mesh* mesh, Entity const e
     UvMap uvmap {};
     for (cgltf_size prim = 0, n = mesh->primitives_count; prim < n; ++prim) {
         const cgltf_primitive& srcPrim = mesh->primitives[prim];
+        if (!primitiveHasPosition(srcPrim)) {
+            continue;
+        }
         for (size_t i = 0, m = srcPrim.mappings_count; i < m; i++) {
             const size_t variantIndex = srcPrim.mappings[i].variant;
             const cgltf_material* material = srcPrim.mappings[i].material;
@@ -1015,8 +1047,17 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
             return false;
         }
 
+        // The capacity we are about to commit to is (count * componentSize). ResourceLoader
+        // computes the size of the upload from the accessor's stride and type, so reject here any
+        // accessor for which those two quantities can disagree.
+        if (!utility::isUploadableIndexAccessor(accessor)) {
+            slog.e << "Malformed index accessor in " << name
+                   << ": indices must be scalar, tightly packed and non-sparse." << io::endl;
+            return false;
+        }
+
         indices = IndexBuffer::Builder()
-            .indexCount(accessor->count)
+            .indexCount(uint32_t(accessor->count))
             .bufferType(indexType)
             .build(mEngine);
 
@@ -1025,10 +1066,14 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
         addBufferSlot(slot);
     } else if (inPrim.attributes_count > 0) {
         // If a primitive does not have an index buffer, generate a trivial one now.
-        const uint32_t vertexCount = inPrim.attributes[0].data->count;
+        const cgltf_size vertexCount = inPrim.attributes[0].data->count;
+        if (vertexCount > IndexBuffer::MAX_INDEX_COUNT) {
+            slog.e << "Vertex count exceeds maximum index count in " << name << io::endl;
+            return false;
+        }
 
         indices = IndexBuffer::Builder()
-            .indexCount(vertexCount)
+            .indexCount(uint32_t(vertexCount))
             .bufferType(IndexBuffer::IndexType::UINT)
             .build(mEngine);
 
@@ -1194,8 +1239,21 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
             const cgltf_accessor* innerAccessor = attribute.data;
             const cgltf_attribute_type atype = attribute.type;
 
-            // The glTF normal and tangent data are ignored here, but honored in ResourceLoader.
+            // The glTF normal and tangent data are ignored here (honored in ResourceLoader), but
+            // we still validate the accessor's element type. Without this, an unsupported type
+            // (e.g. a matrix type) slips through to ResourceLoader's tangent-space computation,
+            // where it is unpacked into a fixed 3-float-per-vertex buffer writing more floats
+            // per element than the buffer holds (heap out-of-bounds write).
             if (atype == cgltf_attribute_type_normal || atype == cgltf_attribute_type_tangent) {
+                if (innerAccessor != nullptr) {
+                    VertexBuffer::AttributeType fatype;
+                    VertexBuffer::AttributeType actualType;
+                    if (!getElementType(innerAccessor->type, innerAccessor->component_type,
+                            &fatype, &actualType)) {
+                        slog.e << "Unsupported morph target accessor type in " << name << io::endl;
+                        return false;
+                    }
+                }
                 continue;
             }
 

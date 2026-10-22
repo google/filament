@@ -273,10 +273,12 @@ void FRenderer::setPresentationTime(int64_t const monotonic_clock_ns) noexcept {
     setPresentationTime(steady_clock::time_point(nanoseconds(monotonic_clock_ns)));
 }
 
-void FRenderer::setPresentationTime(std::chrono::steady_clock::time_point const monotonic_clock) noexcept {
+void FRenderer::setPresentationTime(
+        std::chrono::steady_clock::time_point const monotonic_clock) noexcept {
     // Backends and platforms that can't honor a presentation time never enter paced mode; we
     // drop the request here so that beginFrame() doesn't see a presentation time at all.
-    if (UTILS_UNLIKELY(!mIsPresentationTimeSupported)) {
+    if (UTILS_UNLIKELY(!mIsPresentationTimeSupported ||
+                       mEngine.debug.renderer.disable_set_presentation_time)) {
         return;
     }
     mPresentationTime = monotonic_clock;
@@ -317,10 +319,18 @@ std::pair<float, float2> FRenderer::prepareUpscaler(float2 const scale,
     }
     if (taaOptions.enabled) {
         bias += taaOptions.lodBias;
-        if (taaOptions.upscaling) {
-            if (taaOptions.upscaling > 1.0f) {
-                derivativesScale = 1.0f / taaOptions.upscaling;
-            }
+        if (taaOptions.upscaling > 1.0f) {
+            // Rasterization happens at render resolution while the frame is presented at
+            // `upscaling` times that, so the texture footprint per rasterized pixel is
+            // `upscaling` times the footprint per presented pixel -- one mip too blurry per
+            // doubling. This is the same term dynamic resolution applies above, for the same
+            // reason, and it is a correctness term rather than a sharpening one.
+            //
+            // derivativesScale below does NOT cover it: that scales the normal derivatives
+            // geometric specular antialiasing filters over (see normalFiltering() in
+            // surface_shading_lit.fs), which has nothing to do with mip selection.
+            bias -= std::log2(taaOptions.upscaling);
+            derivativesScale = 1.0f / taaOptions.upscaling;
         }
     }
     return { bias, derivativesScale };
@@ -1041,11 +1051,12 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     specKey.setDynamicLighting(view.hasDynamicLighting());
     specKey.setExtraDirectionalLights(view.hasExtraDirectionalLights());
     specKey.setDirectionalLighting(view.hasDirectionalLighting());
+    specKey.setFog(view.hasFog());
     passBuilder.dynamicSpecConstKey(specKey);
 
     Variant variant;
-    variant.setDirectionalLighting(false);
-    variant.setFog(view.hasFog());
+    // TODO: Remove this after FOG is fully transferred to spec constant
+    variant.setFog(false);
     variant.setShadowSampler2D(view.hasShadowing() && view.getShadowType() != ShadowType::PCF);
     variant.setStereo(view.hasStereo());
 
@@ -1143,10 +1154,6 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
      * Depth + Color passes
      */
 
-    // updatePrimitivesLod must be run before appendCommands and once for each set
-    // of RenderPass::setCamera / RenderPass::setGeometry calls.
-    FView::updatePrimitivesLod(view.getRenderableData(),
-            engine, cameraInfo, view.getVisibleRenderables());
 
     passBuilder.camera(cameraInfo.getPosition(), cameraInfo.getForwardVector());
     passBuilder.geometry(view.getRenderableData(), view.getVisibleRenderables());
@@ -1647,7 +1654,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     //fg.export_graphviz(graphviz, view.getName());
     //DLOG(INFO) << graphviz.c_str();
 
-    fg.execute(driver);
+    fg.execute(driver, view.getName());
 
     // save the current history entry and destroy the oldest entry
     view.commitFrameHistory(engine);

@@ -30,6 +30,7 @@
 #include <gltfio/TextureProvider.h>
 
 #include <filamentapp/AssetLoader.h>
+#include <filamentapp/AssetWriter.h>
 #include <filamentapp/DesktopAssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 #include <filamentapp/IBL.h>
@@ -53,6 +54,7 @@
 
 #include <camutils/Manipulator.h>
 
+#include <utils/compiler.h>
 #include <utils/getopt.h>
 #include <utils/Log.h>
 #include <utils/NameComponentManager.h>
@@ -68,17 +70,22 @@
 
 #include <algorithm>
 #include <array>
-#include <fstream>
+#include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <set>
 #include <sstream>
+#include <string>
 #include <string_view>
+#include <vector>
 
+// Only the JIT shader provider optimizes materials, and WASM builds do not have it.
+#if !defined(__EMSCRIPTEN__)
 #if FILAMENT_DISABLE_MATOPT
 #   define OPTIMIZE_MATERIALS false
 #else
 #   define OPTIMIZE_MATERIALS true
+#endif
 #endif
 
 using namespace filament;
@@ -160,27 +167,30 @@ struct App {
     bool screenshot = false;
     uint8_t screenshotSeq = 0;
     bool screenshotAsPPM = false;
+
+    // Set when --screenshot is given, which excludes --batch. FilamentApp2 then captures a fixed
+    // frame, so the render must not depend on how long loading takes: resources are loaded
+    // synchronously, and the settings start from the same Settings{} baseline batch mode uses.
+    bool deterministicCapture = false;
+
+    // gltfio only reports load progress for asynchronous loads, so a synchronous load would
+    // otherwise read as 0% forever.
+    bool resourcesLoadedSynchronously = false;
+
+    // A deterministic capture applies the render settings once, as batch mode does per test.
+    bool renderSettingsApplied = false;
 };
 
 const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
 
-std::ifstream::pos_type getFileSize(const char* filename) {
-    std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
-    return in.tellg();
-}
-
-bool loadSettings(const char* filename, Settings* out) {
-    auto contentSize = getFileSize(filename);
-    if (contentSize <= 0) {
-        return false;
-    }
-    std::ifstream in(filename, std::ifstream::binary | std::ifstream::in);
-    std::vector<char> json(static_cast<unsigned long>(contentSize));
-    if (!in.read(json.data(), contentSize)) {
+bool loadSettings(filament::app::AssetLoader const* loader, utils::Path const& filename,
+        Settings* out) {
+    std::vector<uint8_t> json = loader->load(filename);
+    if (json.empty()) {
         return false;
     }
     JsonSerializer serializer;
-    return serializer.readJson(json.data(), contentSize, out);
+    return serializer.readJson(reinterpret_cast<const char*>(json.data()), json.size(), out);
 }
 
 void createGroundPlane(Engine* engine, Scene* scene, App* app) {
@@ -407,26 +417,17 @@ utils::Path getPathForGLTFAsset(std::string_view string) {
     return filename;
 }
 
-bool checkGLTFAsset(const utils::Path& filename) {
-    // Peek at the file size to allow pre-allocation.
-    long const contentSize = static_cast<long>(getFileSize(filename.c_str()));
-    if (contentSize <= 0) {
+bool checkGLTFAsset(filament::app::AssetLoader const* loader, const utils::Path& filename) {
+    std::vector<uint8_t> buffer = loader->load(filename);
+    if (buffer.empty()) {
         std::cerr << "Unable to open " << filename << std::endl;
-        return false;
-    }
-
-    // Consume the glTF file.
-    std::ifstream in(filename.c_str(), std::ifstream::binary | std::ifstream::in);
-    std::vector<uint8_t> buffer(static_cast<unsigned long>(contentSize));
-    if (!in.read((char*) buffer.data(), contentSize)) {
-        std::cerr << "Unable to read " << filename << std::endl;
         return false;
     }
 
     // Try parsing the glTF file to check the validity of the file format.
     cgltf_options options{};
     cgltf_data* sourceAsset = nullptr;
-    cgltf_result result = cgltf_parse(&options, buffer.data(), contentSize, &sourceAsset);
+    cgltf_result result = cgltf_parse(&options, buffer.data(), buffer.size(), &sourceAsset);
     cgltf_free(sourceAsset);
     if (result != cgltf_result_success) {
         slog.e << "Unable to parse glTF file." << io::endl;
@@ -445,12 +446,42 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     auto app = std::make_shared<App>();
     app->config = config;
 
+    // createJitShaderProvider() compiles materials through filamat, which is not built for WASM
+    // since it would pull in glslang and SPIRV-Tools. Only the ubershader archive is available.
+#if defined(__EMSCRIPTEN__)
+    app->materialSource = UBERSHADER;
+#else
     app->materialSource = config.getBool("ubershader") ? UBERSHADER : JITSHADER;
+#endif
     app->actualSize = config.getBool("actual-size");
     app->recomputeAabb = config.getBool("recompute-aabb");
     app->settingsFile = config.getString("settings");
     app->batchFile = config.getString("batch");
     app->screenshotAsPPM = config.getBool("screenshot-as-ppm");
+
+    // Each of these pairs selects conflicting behavior, and without a check one option would
+    // silently override the other. This reports and exits like the other argument errors here,
+    // rather than using FILAMENT_CHECK_PRECONDITION, because an uncaught PreconditionPanic
+    // terminates without printing its reason when exceptions are enabled.
+    bool const hasBatch = !app->batchFile.empty();
+    bool const hasScreenshot = !config.screenshotPath.empty();
+    auto const requireExclusive = [](bool conflict, const char* message) {
+        if (conflict) {
+            std::cerr << message << std::endl;
+            exit(1);
+        }
+    };
+    requireExclusive(hasBatch && hasScreenshot,
+            "--batch and --screenshot are mutually exclusive: batch mode exports its own "
+            "screenshot for each test.");
+    requireExclusive(hasBatch && !app->settingsFile.empty(),
+            "--batch and --settings are mutually exclusive: each batch test replaces all "
+            "settings.");
+    requireExclusive(hasScreenshot && app->screenshotAsPPM,
+            "--screenshot and --screenshot-as-ppm are mutually exclusive: --screenshot always "
+            "writes a TIFF.");
+
+    app->deterministicCapture = hasScreenshot;
 
     utils::Path filename;
     if (!config.positionalArgs.empty()) {
@@ -496,6 +527,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 #if !defined(__EMSCRIPTEN__)
             // First compile high priority variants
             ma->compile(Material::CompilerPriorityQueue::HIGH,
+                    UserVariantFilterBit::DYNAMIC_LIGHTING |
                     UserVariantFilterBit::DIRECTIONAL_LIGHTING |
                     UserVariantFilterBit::SHADOW_RECEIVER);
 
@@ -526,7 +558,14 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         utils::CString const gltfPath = utils::CString(filename.getAbsolutePath().c_str());
         ResourceConfiguration configuration = {};
         configuration.engine = app->engine;
+#if defined(__EMSCRIPTEN__)
+        // Without a filesystem, gltfio looks external buffers up in the addResourceData() cache
+        // under the gltfPath directory joined with the URI. The loop below registers bare URIs,
+        // so leave gltfPath empty to make those keys match, as the JavaScript bindings do.
+        configuration.gltfPath = "";
+#else
         configuration.gltfPath = gltfPath.c_str();
+#endif
         configuration.normalizeSkinningWeights = true;
 
         if (!app->resourceLoader) {
@@ -566,10 +605,19 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
             }
         }
 
-        if (!app->resourceLoader->asyncBeginLoad(app->asset)) {
+        // A deterministic capture happens on a fixed frame, so the whole asset has to be present on
+        // the first one. The synchronous load decodes and uploads every texture before returning,
+        // which makes the capture independent of how fast decoding runs. gltfio only allows the
+        // synchronous API when threading is available.
+        bool const loadSynchronously = UTILS_HAS_THREADING && app->deterministicCapture;
+        bool const loadStarted = loadSynchronously
+                                         ? app->resourceLoader->loadResources(app->asset)
+                                         : app->resourceLoader->asyncBeginLoad(app->asset);
+        if (!loadStarted) {
             std::cerr << "Unable to start loading resources for " << filename << std::endl;
             exit(1);
         }
+        app->resourcesLoadedSynchronously = loadSynchronously;
 
         if (app->recomputeAabb) {
             app->asset->getInstance()->recomputeBoundingBoxes();
@@ -587,7 +635,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         setupIBL();
     };
 
-    auto setup = [app, loadAsset, loadResources, filename](Engine* engine, View* view,
+    auto setup = [app, appLoader, loadAsset, loadResources, filename](Engine* engine, View* view,
                          Scene* scene) {
         app->engine = engine;
         app->names = new NameComponentManager(EntityManager::get());
@@ -605,20 +653,16 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         // First check if a custom automation spec has been provided. If it fails to load, the app
         // must be closed since it could be invoked from a script.
         if (batchMode && app->batchFile != "default") {
-            auto size = getFileSize(app->batchFile.c_str());
-            if (size > 0) {
-                std::ifstream in(app->batchFile.c_str_safe(),
-                        std::ifstream::binary | std::ifstream::in);
-                std::vector<char> json(static_cast<unsigned long>(size));
-                in.read(json.data(), size);
-                app->automationSpec = AutomationSpec::generate(json.data(), size);
-                if (!app->automationSpec) {
-                    std::cerr << "Unable to parse automation spec: " << app->batchFile.c_str_safe()
-                              << std::endl;
-                    exit(1);
-                }
-            } else {
+            std::vector<uint8_t> json = appLoader->load(utils::Path(app->batchFile.c_str_safe()));
+            if (json.empty()) {
                 std::cerr << "Unable to load automation spec: " << app->batchFile.c_str_safe()
+                          << std::endl;
+                exit(1);
+            }
+            app->automationSpec = AutomationSpec::generate(
+                    reinterpret_cast<const char*>(json.data()), json.size());
+            if (!app->automationSpec) {
+                std::cerr << "Unable to parse automation spec: " << app->batchFile.c_str_safe()
                           << std::endl;
                 exit(1);
             }
@@ -650,27 +694,48 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         }
 
         bool const hasSettingsFile = !app->settingsFile.empty();
-        if (hasSettingsFile) {
-            bool const success =
-                    loadSettings(app->settingsFile.c_str(), &app->viewer->getSettings());
-            if (success) {
-                std::cout << "Loaded settings from " << app->settingsFile.c_str_safe() << std::endl;
-            } else {
-                std::cerr << "Failed to load settings from " << app->settingsFile.c_str_safe()
-                          << std::endl;
+        auto const loadSettingsFile = [app, appLoader, engine, scene, batchMode,
+                                              hasSettingsFile]() {
+            if (hasSettingsFile) {
+                bool const success = loadSettings(appLoader,
+                        utils::Path(app->settingsFile.c_str_safe()), &app->viewer->getSettings());
+                if (success) {
+                    std::cout << "Loaded settings from " << app->settingsFile.c_str_safe()
+                              << std::endl;
+                } else {
+                    std::cerr << "Failed to load settings from " << app->settingsFile.c_str_safe()
+                              << std::endl;
+                    // Like a bad batch spec, this must end a scripted capture rather than let it
+                    // produce an image with the wrong settings.
+                    if (app->deterministicCapture) {
+                        exit(1);
+                    }
+                }
             }
+
+            if (hasSettingsFile || batchMode) {
+                // Instantiate point lights loaded from settings file
+                app->automationEngine->updateCustomLights(engine,
+                        app->viewer->getSettings().lighting.lights, scene);
+            }
+        };
+
+        // A deterministic capture loads the settings file once the asset is in place; see below.
+        if (!app->deterministicCapture) {
+            loadSettingsFile();
         }
 
-        if (hasSettingsFile || batchMode) {
-            // Instantiate point lights loaded from settings file
-            app->automationEngine->updateCustomLights(engine,
-                    app->viewer->getSettings().lighting.lights, scene);
-        }
-
+        // The JIT provider lives in the full gltfio target, and WASM builds only gltfio_core.
+        // Referencing it would be a link error, so the branch is compiled out rather than untaken.
+#if defined(__EMSCRIPTEN__)
+        app->materials = createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA,
+                UBERARCHIVE_DEFAULT_SIZE);
+#else
         app->materials = (app->materialSource == JITSHADER)
                                  ? createJitShaderProvider(engine, OPTIMIZE_MATERIALS, {})
                                  : createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA,
                                            UBERARCHIVE_DEFAULT_SIZE);
+#endif
 
         app->assetLoader = AssetLoader::create({ engine, app->materials, app->names });
         app->mainCamera = &view->getCamera();
@@ -684,6 +749,42 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
         loadResources(filename);
         app->viewer->setAsset(app->asset, app->instance);
+
+        if (app->deterministicCapture) {
+            // Batch mode replaces the whole Settings with a test case built on Settings{}, so the
+            // interactive defaults ViewerGui installs (MSAA, SSAO, bloom, FXAA, temporal
+            // dithering), the sunlight it estimates from the IBL in setupIBL(), and the animation
+            // gltf_viewer enables never reach a batch render. Start from the same baseline so the
+            // settings file describes the complete deviation from Settings{}.
+            Settings& settings = app->viewer->getSettings();
+            settings = Settings{};
+            settings.viewer.autoScaleEnabled = !app->actualSize;
+            loadSettingsFile();
+
+            // ViewerGui pushes the view, camera and lighting settings every frame, and preRender
+            // pushes the viewer, debug and render settings, but nothing else applies material
+            // settings. Batch mode applies them once per test, which is what this does.
+            for (size_t i = 0, c = app->instance->getMaterialInstanceCount(); i < c; i++) {
+                applySettings(engine, settings.material, app->instance->getMaterialInstances()[i]);
+            }
+
+            // Record the effective settings next to the image, as batch mode does for each test.
+            // This goes through the AssetWriter that FilamentApp2 writes the screenshot with, so
+            // that a relative path resolves to the same directory for both files. The trailing
+            // newline matches AutomationEngine::exportSettings, which batch mode uses.
+            utils::Path const screenshotPath(app->config.screenshotPath.c_str_safe());
+            utils::Path const settingsPath =
+                    screenshotPath.getParent() + (screenshotPath.getNameWithoutExtension() + ".json");
+            JsonSerializer serializer;
+            std::string const json = serializer.writeJson(settings) + "\n";
+            filament::app::AssetWriter const* writer = app->filamentApp->getAssetWriter();
+            if (!writer ||
+                    !writer->write(settingsPath, reinterpret_cast<uint8_t const*>(json.data()),
+                            json.size())) {
+                std::cerr << "Failed to write settings to " << settingsPath << std::endl;
+                exit(1);
+            }
+        }
 
         createGroundPlane(engine, scene, app.get());
         createOverdrawVisualizerEntities(engine, scene, app.get());
@@ -709,7 +810,9 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                 ImGui::Spacing();
             }
 
-            float const progress = app->resourceLoader->asyncGetLoadProgress();
+            float const progress = app->resourcesLoadedSynchronously
+                                           ? 1.0f
+                                           : app->resourceLoader->asyncGetLoadProgress();
             if (progress < 1.0) {
                 ImGui::ProgressBar(progress);
             } else {
@@ -1094,6 +1197,14 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         // we need access to the Renderer, which AutomationEngine does not provide.
         applySettings(engine, app->viewer->getSettings().debug, renderer);
 
+        // Batch mode also applies the render settings, once per test. Only the frame rate options
+        // matter: the viewer settings above replace the clear options on every frame in both
+        // paths. The Renderer is not available during setup, so this happens on the first frame.
+        if (app->deterministicCapture && !app->renderSettingsApplied) {
+            renderer->setFrameRateOptions(app->viewer->getSettings().render.frameRateOptions);
+            app->renderSettingsApplied = true;
+        }
+
         // technically we don't need to do this each frame
         auto& tcm = engine->getTransformManager();
         TransformManager::Instance const& root = tcm.getInstance(app->rootTransformEntity);
@@ -1161,10 +1272,11 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                     .postRender(postRender)
                     .animation(animate)
                     .resize(resize)
-                    .dropHandler([app, loadAsset, loadResources, setupIBL](std::string_view path) {
+                    .dropHandler([app, appLoader, loadAsset, loadResources, setupIBL](
+                                         std::string_view path) {
                         utils::Path filename = getPathForGLTFAsset(path);
                         if (!filename.isEmpty()) {
-                            if (checkGLTFAsset(filename)) {
+                            if (checkGLTFAsset(appLoader, filename)) {
                                 app->resourceLoader->asyncCancelLoad();
                                 app->resourceLoader->evictResourceData();
                                 app->viewer->removeAsset();
@@ -1215,7 +1327,6 @@ int main(int argc, char** argv) {
 
     auto loader = samples::getAssetLoader(config);
     auto app = createSampleApp(config, dm.get(), loader.get());
-    app->run();
-    return 0;
+    return samples::runApp(std::move(app), std::move(dm), std::move(loader));
 }
 #endif

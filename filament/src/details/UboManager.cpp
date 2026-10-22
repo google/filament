@@ -24,8 +24,12 @@
 
 #include <private/utils/Tracing.h>
 
+#include <utils/Panic.h>
+
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
+#include <limits>
 #include <utility>
 #include <vector>
 
@@ -83,8 +87,23 @@ void UboManager::FenceManager::reset(DriverApi& driver) {
 
 UboManager::UboManager(DriverApi& driver, allocation_size_t defaultSlotSizeInBytes,
         allocation_size_t defaultTotalSizeInBytes)
-        : mAllocator(defaultTotalSizeInBytes, defaultSlotSizeInBytes) {
-    reallocate(driver, defaultTotalSizeInBytes);
+        : mAllocator(roundToSlotMultiple(defaultTotalSizeInBytes, defaultSlotSizeInBytes),
+                  defaultSlotSizeInBytes) {
+    reallocate(driver, mAllocator.getTotalSize());
+}
+
+allocation_size_t UboManager::roundToSlotMultiple(allocation_size_t totalSize,
+        allocation_size_t slotSize) noexcept {
+    constexpr allocation_size_t maxSize = std::numeric_limits<allocation_size_t>::max();
+    const allocation_size_t mask = slotSize - 1;
+    if (totalSize <= slotSize) {
+        return slotSize;
+    }
+    if (totalSize > maxSize - mask) {
+        // Rounding up would wrap, round down instead.
+        return totalSize & ~mask;
+    }
+    return (totalSize + mask) & ~mask;
 }
 
 void UboManager::beginFrame(DriverApi& driver) {
@@ -105,6 +124,7 @@ void UboManager::beginFrame(DriverApi& driver) {
     }
     mFreedAllocations.clear();
 
+    const size_t previouslyManagedCount = mManagedInstances.size();
     // Traverse all MIs and see which of them need slot allocation.
     if (allocateOnDemand() == SUCCESS) {
         // No need to grow the buffer, so we can just map the buffer for writing and return.
@@ -115,7 +135,7 @@ void UboManager::beginFrame(DriverApi& driver) {
     }
 
     // Calculate the required size and grow the Ubo.
-    const allocation_size_t requiredSize = calculateRequiredSize();
+    const allocation_size_t requiredSize = calculateRequiredSize(previouslyManagedCount);
     reallocate(driver, requiredSize);
 
     // Allocate slots for each MI on the new Ubo.
@@ -322,21 +342,31 @@ void UboManager::reallocate(DriverApi& driver, allocation_size_t requiredSize) {
             BufferUsage::DYNAMIC | BufferUsage::SHARED_WRITE_BIT);
 }
 
-allocation_size_t UboManager::calculateRequiredSize() {
-    allocation_size_t newBufferSize = 0;
-    for (const auto* mi: mManagedInstances) {
+allocation_size_t UboManager::calculateRequiredSize(size_t previouslyManagedCount) {
+    uint64_t newBufferSize = 0;
+    for (size_t i = 0; i < mManagedInstances.size(); ++i) {
+        const auto* mi = mManagedInstances[i];
         const AllocationId allocationId = mi->getAllocationId();
-        if (allocationId == BufferAllocator::REALLOCATION_REQUIRED) {
+        const uint64_t alignedSize = mAllocator.alignUp(mi->getUniformBuffer().getSize());
+        // Instances at i >= previouslyManagedCount were just added this frame. They are always
+        // dirty but have no old slot held by the GPU, so they don't need an extra one.
+        const bool isUpdatedExistingInstance =
+                (i < previouslyManagedCount) && mi->getUniformBuffer().isDirty();
+        if (isUpdatedExistingInstance || allocationId == BufferAllocator::REALLOCATION_REQUIRED) {
             // For MIs whose parameters have been updated, aside from the slot it is being
             // occupied by the GPU, we need to preserve an additional slot for it.
-            newBufferSize += 2 * mAllocator.alignUp(mi->getUniformBuffer().getSize());
+            newBufferSize += 2 * alignedSize;
         } else {
-            newBufferSize += mAllocator.alignUp(mi->getUniformBuffer().getSize());
+            newBufferSize += alignedSize;
         }
     }
 
-    // TODO: Add more buffers if one is not enough?
-    return mAllocator.alignUp(newBufferSize * BUFFER_SIZE_GROWTH_MULTIPLIER);
+    const uint64_t grownSize = uint64_t(double(newBufferSize) * BUFFER_SIZE_GROWTH_MULTIPLIER);
+    constexpr uint64_t maxSize = std::numeric_limits<allocation_size_t>::max();
+    FILAMENT_CHECK_POSTCONDITION(grownSize <= maxSize - (mAllocator.getSlotSize() - 1))
+            << "Shared uniform buffer size overflow: " << grownSize
+            << " bytes required for " << mManagedInstances.size() << " material instances";
+    return mAllocator.alignUp(allocation_size_t(grownSize));
 }
 
 } // namespace filament

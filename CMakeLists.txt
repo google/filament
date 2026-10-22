@@ -123,6 +123,10 @@ set(FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB "8" CACHE STRING
     "Size of the Metal handle arena, default 8."
 )
 
+set(FILAMENT_VULKAN_HANDLE_ARENA_SIZE_IN_MB "8" CACHE STRING
+    "Size of the Vulkan handle arena, default 8."
+)
+
 set(FILAMENT_BACKEND_DEBUG_FLAG "" CACHE STRING
     "A debug flag meant for enabling/disabling backend debugging paths"
 )
@@ -139,8 +143,13 @@ if (NOT FILAMENT_ENABLE_EXCEPTIONS)
     set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON)
 endif()
 
-if (NOT FILAMENT_ENABLE_RTTI)
-    add_compile_options(-fno-rtti)
+# With WASM, we disable RTTI because we pass emscripten::val back and forth
+# between C++ and JavaScript in order to efficiently access typed arrays, which are unbound.
+# NOTE: This is not documented in emscripten so we should consider a different approach.
+if (NOT FILAMENT_ENABLE_RTTI OR WASM)
+    if (NOT MSVC)
+        add_compile_options(-fno-rtti)
+    endif()
 endif()
 
 if (FILAMENT_DEBUG_MUTEX)
@@ -157,11 +166,37 @@ endif()
 # ==================================================================================================
 # Support for ccache
 # ==================================================================================================
-find_program(CCACHE_PROGRAM ccache)
+if (NOT "$ENV{CCACHE_DISABLE}")
+    find_program(CCACHE_PROGRAM ccache)
+endif()
 if (CCACHE_PROGRAM)
     if (WIN32)
-        set(CMAKE_C_COMPILER_LAUNCHER   "${CCACHE_PROGRAM}")
-        set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+        # Embed debug info in .obj files (/Z7) for subprojects that enable CMP0141 (e.g. abseil),
+        # since shared .pdb generation (/Zi) is unsupported by ccache.
+        set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "Embedded")
+        if (CMAKE_GENERATOR MATCHES "Visual Studio")
+            # If ccache was installed via Chocolatey, CCACHE_PROGRAM may point to the shimgen
+            # wrapper in chocolatey/bin, which fails when copied to another directory because it
+            # resolves a relative path (../lib/ccache/tools/...) from its own location. Resolve the
+            # real ccache.exe binary before copying it to cl.exe.
+            get_filename_component(CCACHE_BIN_DIR "${CCACHE_PROGRAM}" DIRECTORY)
+            file(GLOB CHOCO_CCACHE_PROGRAMS "${CCACHE_BIN_DIR}/../lib/ccache/tools/*/ccache.exe")
+            if (CHOCO_CCACHE_PROGRAMS)
+                list(GET CHOCO_CCACHE_PROGRAMS 0 CCACHE_PROGRAM)
+            endif()
+            file(COPY_FILE "${CCACHE_PROGRAM}" "${CMAKE_CURRENT_BINARY_DIR}/cl.exe" ONLY_IF_DIFFERENT)
+            list(APPEND CMAKE_VS_GLOBALS
+                "CLToolExe=cl.exe"
+                "CLToolPath=${CMAKE_CURRENT_BINARY_DIR}"
+                "TrackFileAccess=false"
+                "UseMultiToolTask=true"
+                "EnforceProcessCountAcrossBuilds=true"
+            )
+            list(REMOVE_DUPLICATES CMAKE_VS_GLOBALS)
+        else()
+            set(CMAKE_C_COMPILER_LAUNCHER   "${CCACHE_PROGRAM}")
+            set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+        endif()
     else()
         set(C_LAUNCHER   "${CCACHE_PROGRAM}")
         set(CXX_LAUNCHER "${CCACHE_PROGRAM}")
@@ -283,14 +318,16 @@ if (WIN32)
         )
     endif()
 
-    # TODO: Figure out why pdb generation messes with incremental compilaton.
+    # TODO: Figure out why pdb generation messes with incremental compilation.
     # IN RELEASE_WITH_DEBUG_INFO, generate debug info in .obj, no in pdb.
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /Z7")
     set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} /Z7")
 
-    # In RELEASE, also generate PDBs.
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /Zi")
+    if (NOT CCACHE_PROGRAM)
+        # In RELEASE, also generate PDBs, except when ccache is enabled as /Zi is unsupported.
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /Zi")
+    endif()
 
     # In DEBUG, avoid generating a PDB file which seems to mess with incremental compilation.
     # Instead generate debug info directly inside obj files.
@@ -303,7 +340,7 @@ if (WIN32)
             CMAKE_SHARED_LINKER_FLAGS_DEBUG
             CMAKE_EXE_LINKER_FLAGS_DEBUG
             CMAKE_MODULE_LINKER_FLAGS_DEBUG
-            )
+        )
         foreach(LinkerFlag ${LinkerFlags})
             # The /debug flag outputs .pdb files, which we don't need on CI.
             string(REPLACE "/debug" "" ${LinkerFlag} ${${LinkerFlag}})
@@ -458,10 +495,6 @@ if (ANDROID)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Werror=unguarded-availability")
 endif()
 
-if (CYGWIN)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
-endif()
-
 if (MSVC)
     # Since the "secure" replacements that MSVC suggests are not portable, disable
     # the deprecation warnings. Also disable warnings about use of POSIX functions (i.e. "unlink").
@@ -497,13 +530,6 @@ if (ANDROID OR WASM)
     # On Android and WASM RELEASE builds, we omit unwind info to save space.
     # (We keep unwind info on iOS to allow readable stack traces in crash reports.)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-unwind-tables -fno-asynchronous-unwind-tables")
-endif()
-
-# With WASM, we disable RTTI because we pass emscripten::val back and forth
-# between C++ and JavaScript in order to efficiently access typed arrays, which are unbound.
-# NOTE: This is not documented in emscripten so we should consider a different approach.
-if (WASM)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
 endif()
 
 if (WASM_PTHREADS)
@@ -886,8 +912,15 @@ function(get_resgen_vars ARCHIVE_DIR ARCHIVE_NAME)
     endif()
     set(RESGEN_HEADER "${ARCHIVE_DIR}/${ARCHIVE_NAME}.h" PARENT_SCOPE)
     # Visual Studio makes it difficult to use assembly without using MASM. MASM doesn't support
-    # the equivalent of .incbin, so on Windows we'll just tell resgen to output a C file.
-    if (WASM OR WIN32 OR ANDROID_ON_WINDOWS)
+    # the equivalent of .incbin, so on Windows we tell resgen to output a COFF object (.obj) file
+    # directly. For WebAssembly and Windows-hosted Android builds, we output a C file instead.
+    if (WIN32)
+        set(RESGEN_OUTPUTS "${OUTPUTS};${ARCHIVE_DIR}/${ARCHIVE_NAME}.obj" PARENT_SCOPE)
+        set(RESGEN_FLAGS -qox ${ARCHIVE_DIR} -p ${ARCHIVE_NAME} PARENT_SCOPE)
+        set(RESGEN_SOURCE "${ARCHIVE_DIR}/${ARCHIVE_NAME}.obj" PARENT_SCOPE)
+        set_source_files_properties("${ARCHIVE_DIR}/${ARCHIVE_NAME}.obj"
+                PROPERTIES EXTERNAL_OBJECT TRUE GENERATED TRUE)
+    elseif (WASM OR ANDROID_ON_WINDOWS)
         set(RESGEN_OUTPUTS "${OUTPUTS};${ARCHIVE_DIR}/${ARCHIVE_NAME}.c" PARENT_SCOPE)
         set(RESGEN_FLAGS -qcx ${ARCHIVE_DIR} -p ${ARCHIVE_NAME} PARENT_SCOPE)
         set(RESGEN_SOURCE "${ARCHIVE_DIR}/${ARCHIVE_NAME}.c" PARENT_SCOPE)
@@ -944,7 +977,11 @@ add_subdirectory(${EXTERNAL}/cgltf/tnt)
 add_subdirectory(${EXTERNAL}/draco/tnt)
 add_subdirectory(${EXTERNAL}/jsmn/tnt)
 add_subdirectory(${EXTERNAL}/stb/tnt)
-add_subdirectory(${EXTERNAL}/perfetto/tnt)
+if (NOT APPLETV)
+    # Perfetto's subprocess support uses fork()/exec*(), which are __TVOS_PROHIBITED.
+    # The library is only consumed on Android (FILAMENT_ENABLE_PERFETTO).
+    add_subdirectory(${EXTERNAL}/perfetto/tnt)
+endif()
 add_subdirectory(${EXTERNAL}/basisu/tnt)
 
 # imageio-lite is needed for viewer
@@ -992,14 +1029,24 @@ add_subdirectory(${FILAMENT}/filament)
 
 set(FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
 
+# assimp is only used by filamentapp's MeshAssimp, which is not built for WASM.
+if (IS_HOST_PLATFORM OR ANDROID)
+   add_subdirectory(${EXTERNAL}/libassimp/tnt)
+endif()
+
+# filamentapp must come before the web/ subdirectories so that its target is
+# already defined when the WASM samples link against it.
+if (IS_HOST_PLATFORM OR ANDROID OR WASM)
+   add_subdirectory(${LIBRARIES}/filamentapp)
+endif()
+
 if (WASM)
     add_subdirectory(web/filament-js)
     add_subdirectory(web/examples)
-endif()
-
-if (IS_HOST_PLATFORM OR ANDROID)
-   add_subdirectory(${LIBRARIES}/filamentapp)
-   add_subdirectory(${EXTERNAL}/libassimp/tnt)
+    # Excluded from the default build so that building filament.js does not also build the
+    # samples, their resources, and the IBL cmgen produces for them. Build the samples through
+    # the filament-samples target, or name one, e.g. gltf_viewer.
+    add_subdirectory(${FILAMENT}/samples EXCLUDE_FROM_ALL)
 endif()
 
 if (IS_HOST_PLATFORM)
@@ -1032,6 +1079,7 @@ if (IS_HOST_PLATFORM)
     add_subdirectory(${TOOLS}/rgb-to-lmsr)
     add_subdirectory(${TOOLS}/roughness-prefilter)
     add_subdirectory(${TOOLS}/specular-color)
+    add_subdirectory(${TOOLS}/taa)
     add_subdirectory(${TOOLS}/uberz)
     add_subdirectory(${TOOLS}/specgen)
 endif()
@@ -1039,4 +1087,9 @@ endif()
 # Generate exported executables for cross-compiled builds (Android, WASM, and iOS)
 if ((NOT CMAKE_CROSSCOMPILING AND NOT FILAMENT_IMPORT_PREBUILT_EXECUTABLES) OR FILAMENT_EXPORT_PREBUILT_EXECUTABLES)
     export(TARGETS matc cmgen filamesh mipgen resgen uberz glslminifier FILE ${IMPORT_EXECUTABLES})
+endif()
+
+# Builds libfilament-samples.a, which the sample-cpp-viewer Android app links against.
+if (ANDROID)
+    add_subdirectory(${FILAMENT}/samples)
 endif()

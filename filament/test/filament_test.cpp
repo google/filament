@@ -16,6 +16,8 @@
 
 #include "Allocators.h"
 #include "Froxelizer.h"
+#include "MaterialParser.h"
+#include "RenderPrimitive.h"
 #include "UniformBuffer.h"
 
 #include "components/RenderableManager.h"
@@ -23,23 +25,34 @@
 
 #include "details/Camera.h"
 #include "details/Engine.h"
+#include "details/Material.h"
+#include "details/MaterialInstance.h"
 #include "details/Renderer.h"
 #include "details/View.h"
 
 #include <private/filament/BufferInterfaceBlock.h>
 
 #include <filament/Box.h>
+#include <filament/BufferObject.h>
 #include <filament/Camera.h>
 #include <filament/Color.h>
 #include <filament/ColorGrading.h>
 #include <filament/ColorSpace.h>
+#include <filament/DebugRegistry.h>
 #include <filament/Engine.h>
 #include <filament/FrameHistoryStream.h>
 #include <filament/Frustum.h>
+#include <filament/IndexBuffer.h>
+#include <filament/SkinningBuffer.h>
+#include <filament/SwapChain.h>
+#include <filament/Texture.h>
 #include <filament/ToneMapper.h>
+#include <filament/VertexBuffer.h>
+#include <filament/Viewport.h>
 
 #include <private/backend/BackendUtils.h>
 
+#include <backend/BufferDescriptor.h>
 #include <backend/DriverEnums.h>
 
 #include <utils/NameComponentManager.h>
@@ -55,13 +68,19 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <array>
+#include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <functional>
+#include <initializer_list>
 #include <iostream>
 #include <limits>
 #include <random>
+#include <thread>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -251,23 +270,6 @@ TEST(FilamentTest, TransformManager) {
     EXPECT_EQ(tcm.getTransform(child), mat4f{ float4{ 1 }});
     EXPECT_EQ(tcm.getWorldTransform(child), mat4f{ float4{ 2 }});
 
-    // test local transaction
-    tcm.openLocalTransformTransaction();
-    tcm.setTransform(parent, mat4f{ float4{ 4 }});
-
-    // check the transforms ARE NOT propagated
-    EXPECT_EQ(tcm.getTransform(parent), mat4f{ float4{ 4 }});
-    EXPECT_EQ(tcm.getWorldTransform(parent), mat4f{ float4{ 2 }});
-    EXPECT_EQ(tcm.getTransform(child), mat4f{ float4{ 1 }});
-    EXPECT_EQ(tcm.getWorldTransform(child), mat4f{ float4{ 2 }});
-
-    tcm.commitLocalTransformTransaction();
-    // test propagation after closing the transaction
-    EXPECT_EQ(tcm.getTransform(parent), mat4f{ float4{ 4 }});
-    EXPECT_EQ(tcm.getWorldTransform(parent), mat4f{ float4{ 4 }});
-    EXPECT_EQ(tcm.getTransform(child), mat4f{ float4{ 1 }});
-    EXPECT_EQ(tcm.getWorldTransform(child), mat4f{ float4{ 4 }});
-
     //
     // test out-of-order parent/child
     //
@@ -283,19 +285,8 @@ TEST(FilamentTest, TransformManager) {
     // make sure child/parent are out of order (i.e.: setParent() doesn't invalidate instances)
     EXPECT_LT(tcm.getInstance(entities[1]), tcm.getInstance(entities[2]));
 
-    // local transaction reorders parent/child
     constexpr auto t = mat4::translation(double3(1.0 / 3.0));
-    tcm.openLocalTransformTransaction();
     tcm.setTransform(newParent, t);
-    tcm.commitLocalTransformTransaction();
-
-    // local transaction invalidates Instances
-    parent = tcm.getInstance(entities[0]);
-    child = tcm.getInstance(entities[1]);
-    newParent = tcm.getInstance(entities[2]);
-
-    // check parent / child order is correct
-    EXPECT_GT(child, newParent);
 
     // check transform propagation
 
@@ -338,6 +329,35 @@ TEST(FilamentTest, TransformManager) {
     }
     EXPECT_EQ(rangeCount, c);
 }
+
+#if !defined(NDEBUG) && defined(GTEST_HAS_DEATH_TEST)
+TEST(FilamentTest, TransformManagerSetParentCycle) {
+    EntityManager& em = EntityManager::get();
+    FTransformManager tcm(em);
+
+    std::array<Entity, 3> entities;
+    em.create(entities.size(), entities.data());
+
+    tcm.create(entities[0]);
+    TransformManager::Instance const root = tcm.getInstance(entities[0]);
+
+    tcm.create(entities[1], root, mat4f{});
+    TransformManager::Instance const child = tcm.getInstance(entities[1]);
+
+    tcm.create(entities[2], child, mat4f{});
+    TransformManager::Instance const grandchild = tcm.getInstance(entities[2]);
+
+    // Re-parenting a node to itself or any of its descendants must fail an invariant assertion.
+    EXPECT_DEATH(tcm.setParent(root, root), "failed assertion");
+    EXPECT_DEATH(tcm.setParent(root, child), "failed assertion");
+    EXPECT_DEATH(tcm.setParent(root, grandchild), "failed assertion");
+
+    for (auto e : entities) {
+        tcm.destroy(e);
+        em.destroy(e);
+    }
+}
+#endif
 
 TEST(FilamentTest, TransformManagerChildrenIteration) {
     EntityManager& em = EntityManager::get();
@@ -536,22 +556,10 @@ TEST(FilamentTest, TransformManagerCallback) {
 
     callbackCount = 0;
 
-    // Test modify without transaction
+    // Test modify
     auto const instance = tcm.getInstance(e);
     constexpr auto t = mat4f::translation(float3{ 1, 2, 3 });
     tcm.setTransform(instance, t);
-    tcm.flushNotifications();
-    EXPECT_EQ(callbackCount, 1);
-
-    callbackCount = 0;
-
-    // Test transaction
-    tcm.openLocalTransformTransaction();
-    tcm.setTransform(instance, mat4f::translation(float3{ 4, 5, 6 }));
-    tcm.flushNotifications();
-    EXPECT_EQ(callbackCount, 0);
-
-    tcm.commitLocalTransformTransaction();
     tcm.flushNotifications();
     EXPECT_EQ(callbackCount, 1);
 
@@ -559,6 +567,797 @@ TEST(FilamentTest, TransformManagerCallback) {
     tcm.destroy(e);
     em.destroy(e);
     Engine::destroy((Engine**)&engine);
+}
+
+TEST(FilamentTest, TransformManagerHierarchyAndMath) {
+    EntityManager& em = EntityManager::get();
+    FTransformManager tcm(em);
+
+    // Build a 3-level hierarchy:
+    // root (0) -> childA (1), childB (2), childC (3)
+    // childA (1) -> grandChildA1 (4), grandChildA2 (5)
+    // childB (2) -> grandChildB1 (6)
+    std::array<Entity, 7> entities;
+    em.create(entities.size(), entities.data());
+
+    // Asymmetric full 4x4 matrices so every lane and row/col combination is uniquely tested
+    auto makeTestMat = [](float s) -> mat4f {
+        return mat4f{
+            float4{ 1.0f + s,  2.0f - s,  0.5f * s,  0.1f * s },
+            float4{ -0.5f * s, 1.5f + s,  2.5f - s,  0.2f * s },
+            float4{ 0.25f * s, -1.0f + s, 1.25f + s, 0.3f * s },
+            float4{ 10.0f * s, 20.0f * s, 30.0f * s, 1.0f + 0.05f * s }
+        };
+    };
+
+    mat4f const mRoot = makeTestMat(1.0f);
+    mat4f const mChildA = makeTestMat(2.0f);
+    mat4f const mChildB = makeTestMat(3.0f);
+    mat4f const mChildC = makeTestMat(4.0f);
+    mat4f const mGrandA1 = makeTestMat(5.0f);
+    mat4f const mGrandA2 = makeTestMat(6.0f);
+    mat4f const mGrandB1 = makeTestMat(7.0f);
+
+    tcm.create(entities[0], {}, mRoot);
+    auto const iRoot = tcm.getInstance(entities[0]);
+
+    tcm.create(entities[1], iRoot, mChildA);
+    tcm.create(entities[2], iRoot, mChildB);
+    tcm.create(entities[3], iRoot, mChildC);
+    auto const iChildA = tcm.getInstance(entities[1]);
+    auto const iChildB = tcm.getInstance(entities[2]);
+    auto const iChildC = tcm.getInstance(entities[3]);
+
+    tcm.create(entities[4], iChildA, mGrandA1);
+    tcm.create(entities[5], iChildA, mGrandA2);
+    tcm.create(entities[6], iChildB, mGrandB1);
+    auto const iGrandA1 = tcm.getInstance(entities[4]);
+    auto const iGrandA2 = tcm.getInstance(entities[5]);
+    auto const iGrandB1 = tcm.getInstance(entities[6]);
+
+    auto expectMatNear = [](mat4f const& a, mat4f const& b, float eps = 1e-4f) {
+        for (size_t c = 0; c < 4; ++c) {
+            for (size_t r = 0; r < 4; ++r) {
+                float const tol = std::max(eps, std::abs(b[c][r]) * 2e-6f);
+                EXPECT_NEAR(a[c][r], b[c][r], tol) << "col=" << c << " row=" << r;
+            }
+        }
+    };
+
+    // 1. Verify initial world transforms across all levels
+    expectMatNear(tcm.getWorldTransform(iRoot), mRoot);
+    expectMatNear(tcm.getWorldTransform(iChildA), mRoot * mChildA);
+    expectMatNear(tcm.getWorldTransform(iChildB), mRoot * mChildB);
+    expectMatNear(tcm.getWorldTransform(iChildC), mRoot * mChildC);
+    expectMatNear(tcm.getWorldTransform(iGrandA1), (mRoot * mChildA) * mGrandA1);
+    expectMatNear(tcm.getWorldTransform(iGrandA2), (mRoot * mChildA) * mGrandA2);
+    expectMatNear(tcm.getWorldTransform(iGrandB1), (mRoot * mChildB) * mGrandB1);
+
+    // 2. Track change notifications when updating root (all 7 nodes must be notified)
+    std::vector<Entity> notified;
+    tcm.registerChangeCallback(&tcm, [&](Slice<const Entity> changed) {
+        notified.insert(notified.end(), changed.begin(), changed.end());
+    });
+
+    mat4f const mRoot2 = makeTestMat(1.5f);
+    tcm.setTransform(iRoot, mRoot2);
+    tcm.flushNotifications();
+    EXPECT_EQ(notified.size(), 7u);
+
+    expectMatNear(tcm.getWorldTransform(iRoot), mRoot2);
+    expectMatNear(tcm.getWorldTransform(iChildA), mRoot2 * mChildA);
+    expectMatNear(tcm.getWorldTransform(iChildB), mRoot2 * mChildB);
+    expectMatNear(tcm.getWorldTransform(iChildC), mRoot2 * mChildC);
+    expectMatNear(tcm.getWorldTransform(iGrandA1), (mRoot2 * mChildA) * mGrandA1);
+    expectMatNear(tcm.getWorldTransform(iGrandA2), (mRoot2 * mChildA) * mGrandA2);
+    expectMatNear(tcm.getWorldTransform(iGrandB1), (mRoot2 * mChildB) * mGrandB1);
+
+    // 3. Update an intermediate node (childA) -> notifies childA, grandChildA1, grandChildA2 (3 nodes)
+    notified.clear();
+    mat4f const mChildA2 = makeTestMat(2.5f);
+    tcm.setTransform(iChildA, mChildA2);
+    tcm.flushNotifications();
+    EXPECT_EQ(notified.size(), 3u);
+    expectMatNear(tcm.getWorldTransform(iChildA), mRoot2 * mChildA2);
+    expectMatNear(tcm.getWorldTransform(iGrandA1), (mRoot2 * mChildA2) * mGrandA1);
+    expectMatNear(tcm.getWorldTransform(iGrandA2), (mRoot2 * mChildA2) * mGrandA2);
+    expectMatNear(tcm.getWorldTransform(iGrandB1), (mRoot2 * mChildB) * mGrandB1);
+
+    // 4. Update a parented leaf node (grandChildB1) -> notifies 1 node
+    notified.clear();
+    mat4f const mGrandB1_2 = makeTestMat(7.5f);
+    tcm.setTransform(iGrandB1, mGrandB1_2);
+    tcm.flushNotifications();
+    EXPECT_EQ(notified.size(), 1u);
+    expectMatNear(tcm.getWorldTransform(iGrandB1), (mRoot2 * mChildB) * mGrandB1_2);
+
+    // 5. Reparent childA to become a root node (parent == 0)
+    tcm.setParent(iChildA, {});
+    expectMatNear(tcm.getWorldTransform(iChildA), mChildA2);
+    expectMatNear(tcm.getWorldTransform(iGrandA1), mChildA2 * mGrandA1);
+    expectMatNear(tcm.getWorldTransform(iGrandA2), mChildA2 * mGrandA2);
+
+    // 6. Accurate translations mode on both root and child
+    tcm.setAccurateTranslationsEnabled(true);
+    mat4 const dRoot = mat4::translation(double3{ 100000.125, -200000.25, 300000.5 });
+    mat4 const dChild = mat4::translation(double3{ 0.0001220703125, -0.000244140625, 0.00048828125 });
+    tcm.setParent(iChildA, iRoot);
+    tcm.setTransform(iRoot, dRoot);
+    tcm.setTransform(iChildA, dChild);
+    mat4 const expectedWorldAccurate = dRoot * dChild;
+    mat4 const actualWorldAccurate = tcm.getWorldTransformAccurate(iChildA);
+    for (size_t c = 0; c < 4; ++c) {
+        for (size_t r = 0; r < 4; ++r) {
+            EXPECT_NEAR(actualWorldAccurate[c][r], expectedWorldAccurate[c][r], 1e-6);
+        }
+    }
+
+    // 7. Exercise non-recursive transformChildren stack overflow fallback (>128 sibling subtrees)
+    constexpr size_t BRANCH_COUNT = 140;
+    std::vector<Entity> wideEntities(BRANCH_COUNT * 2);
+    em.create(wideEntities.size(), wideEntities.data());
+    mat4f const stepMat = mat4f::translation(float3{ 1.0f, 2.0f, 3.0f });
+    for (size_t i = 0; i < BRANCH_COUNT; ++i) {
+        tcm.create(wideEntities[i], iRoot, stepMat);
+        auto const iBranch = tcm.getInstance(wideEntities[i]);
+        tcm.create(wideEntities[BRANCH_COUNT + i], iBranch, stepMat);
+    }
+
+    for (bool const accurate : { false, true }) {
+        tcm.setAccurateTranslationsEnabled(accurate);
+        tcm.flushNotifications();
+        notified.clear();
+        float const scale = accurate ? 2.0f : 1.0f;
+        mat4f const rootTranslate = mat4f::translation(float3{ 10.0f * scale, 20.0f * scale, 30.0f * scale });
+        tcm.setTransform(iRoot, rootTranslate);
+        tcm.flushNotifications();
+        EXPECT_EQ(notified.size(), 7u + BRANCH_COUNT * 2);
+        mat4f const expectedLeaf = rootTranslate * stepMat * stepMat;
+        for (size_t i = 0; i < BRANCH_COUNT; ++i) {
+            auto const iLeaf = tcm.getInstance(wideEntities[BRANCH_COUNT + i]);
+            expectMatNear(tcm.getWorldTransform(iLeaf), expectedLeaf);
+        }
+    }
+
+    tcm.unregisterChangeCallback(&tcm);
+    notified.clear();
+    utils::PagedArenaBitset dirtyBitset;
+    tcm.registerBitset(&dirtyBitset);
+    for (bool const accurate : { false, true }) {
+        tcm.setAccurateTranslationsEnabled(accurate);
+        tcm.flushNotifications();
+        dirtyBitset.clear();
+        float const scale = accurate ? 2.0f : 1.0f;
+        mat4f const rootTranslate = mat4f::translation(float3{ -5.0f * scale, 15.0f * scale, -25.0f * scale });
+        tcm.setTransform(iRoot, rootTranslate);
+        tcm.flushNotifications();
+        EXPECT_TRUE(notified.empty());
+        EXPECT_EQ(dirtyBitset.size(), 7u + BRANCH_COUNT * 2);
+        mat4f const expectedLeaf = rootTranslate * stepMat * stepMat;
+        for (size_t i = 0; i < BRANCH_COUNT; ++i) {
+            auto const iLeaf = tcm.getInstance(wideEntities[BRANCH_COUNT + i]);
+            expectMatNear(tcm.getWorldTransform(iLeaf), expectedLeaf);
+        }
+    }
+    tcm.unregisterBitset(&dirtyBitset);
+
+    for (auto e : wideEntities) {
+        tcm.destroy(e);
+        em.destroy(e);
+    }
+    for (auto e : entities) {
+        tcm.destroy(e);
+        em.destroy(e);
+    }
+}
+
+TEST(FilamentTest, TransformManagerLazyAndConcurrent) {
+    EntityManager& em = EntityManager::get();
+    FTransformManager tcm(em);
+
+    std::array<Entity, 4> entities;
+    em.create(entities.size(), entities.data());
+
+    mat4f const m0 = mat4f::translation(float3{ 1.0f, 2.0f, 3.0f });
+    mat4f const m1 = mat4f::translation(float3{ 4.0f, 5.0f, 6.0f });
+    mat4f const m2 = mat4f::translation(float3{ 7.0f, 8.0f, 9.0f });
+    mat4f const m3 = mat4f::translation(float3{ 10.0f, 11.0f, 12.0f });
+
+    // Chain: e0 (root) -> e1 -> e2 -> e3
+    tcm.create(entities[0], {}, m0);
+    auto const i0 = tcm.getInstance(entities[0]);
+    tcm.create(entities[1], i0, m1);
+    auto const i1 = tcm.getInstance(entities[1]);
+    tcm.create(entities[2], i1, m2);
+    auto const i2 = tcm.getInstance(entities[2]);
+    tcm.create(entities[3], i2, m3);
+    auto const i3 = tcm.getInstance(entities[3]);
+    tcm.flushNotifications();
+
+    utils::PagedArenaBitset dirtyBitset;
+    tcm.registerBitset(&dirtyBitset);
+    std::atomic<size_t> callbackNotifications{ 0 };
+    tcm.registerChangeCallback(&tcm, [&](Slice<const Entity> changed) {
+        callbackNotifications.fetch_add(changed.size(), std::memory_order_relaxed);
+    });
+
+    // 1. Identical setTransform early exit: 0 notifications and 0 bitset bits
+    dirtyBitset.clear();
+    callbackNotifications.store(0, std::memory_order_relaxed);
+    tcm.setTransform(i0, m0);
+    tcm.setTransform(i1, m1);
+    tcm.setTransform(i2, m2);
+    tcm.setTransform(i3, m3);
+    tcm.flushNotifications();
+    EXPECT_EQ(dirtyBitset.size(), 0u);
+    EXPECT_EQ(callbackNotifications.load(std::memory_order_relaxed), 0u);
+
+    // 2. Repeated updates (T, R, S) and non-contiguous bottom-up + top-down updates:
+    // Update leaf i3 first, then root i0 three times (leaving i1, i2 untouched directly).
+    mat4f const i3New = mat4f::translation(float3{ -1.0f, -2.0f, -3.0f });
+    mat4f const i0Step1 = mat4f::translation(float3{ 10.0f, 0.0f, 0.0f });
+    mat4f const i0Step2 = mat4f::translation(float3{ 10.0f, 20.0f, 0.0f });
+    mat4f const i0Final = mat4f::translation(float3{ 10.0f, 20.0f, 30.0f });
+
+    tcm.setTransform(i3, i3New);
+    tcm.setTransform(i0, i0Step1);
+    tcm.setTransform(i0, i0Step2);
+    tcm.setTransform(i0, i0Final);
+    tcm.flushNotifications();
+
+    // All 4 nodes in the chain must be notified exactly once
+    EXPECT_EQ(dirtyBitset.size(), 4u);
+    EXPECT_EQ(callbackNotifications.load(std::memory_order_relaxed), 4u);
+    EXPECT_EQ(tcm.getWorldTransform(i3), i0Final * m1 * m2 * i3New);
+
+    // 3. Multithreaded concurrent const reads (getWorldTransform / getWorldTransformAccurate)
+    // immediately after setTransform without a prior main-thread flush
+    tcm.setAccurateTranslationsEnabled(true);
+    mat4 const d0 = mat4::translation(double3{ 100000.5, -200000.25, 300000.125 });
+    mat4 const d3 = mat4::translation(double3{ 0.5, 1.25, -2.125 });
+    tcm.setTransform(i0, d0);
+    tcm.setTransform(i3, d3);
+
+    mat4 const expectedAccurate = d0 * mat4(m1) * mat4(m2) * d3;
+    constexpr size_t THREAD_COUNT = 4;
+    std::vector<std::thread> readers;
+    readers.reserve(THREAD_COUNT);
+    for (size_t t = 0; t < THREAD_COUNT; ++t) {
+        readers.emplace_back([&]() {
+            for (int iter = 0; iter < 100; ++iter) {
+                mat4 const actual = tcm.getWorldTransformAccurate(i3);
+                for (size_t c = 0; c < 4; ++c) {
+                    for (size_t r = 0; r < 4; ++r) {
+                        EXPECT_NEAR(actual[c][r], expectedAccurate[c][r], 1e-5);
+                    }
+                }
+            }
+        });
+    }
+    for (auto& th : readers) {
+        th.join();
+    }
+
+    // 4. Verify setTransform(mat4f) clears localTranslationLo even when accurate mode is off
+    // and even when the mat4f high part matches the previously set mat4 high part.
+    tcm.setAccurateTranslationsEnabled(false);
+    mat4 const dLarge = mat4::translation(double3{ 100000.123456789, -200000.987654321, 300000.555555555 });
+    tcm.setTransform(i0, dLarge);
+    mat4f const fLarge = mat4f(dLarge);
+    // High part matches manager[i0].local, but localTranslationLo is non-zero; setTransform(mat4f) must not early-return!
+    tcm.setTransform(i0, fLarge);
+    EXPECT_EQ(tcm.getTransformAccurate(i0), mat4(fLarge));
+    tcm.setAccurateTranslationsEnabled(true);
+    EXPECT_EQ(tcm.getWorldTransformAccurate(i0), mat4(fLarge));
+
+    // 5. Verify ChangeCallback re-entrancy when > MAX_DIRTY_COUNT (16) entities are committed:
+    // Calling getWorldTransform() inside the callback (which fires mid-batch at 16 entities)
+    // must not self-deadlock on mCommitLock and must observe updated world transforms for all
+    // entities in the hierarchy, including those beyond the 16th entity.
+    tcm.setAccurateTranslationsEnabled(false);
+    constexpr size_t kChainLen = 24;
+    Entity chain[kChainLen];
+    em.create(kChainLen, chain);
+    for (size_t k = 0; k < kChainLen; ++k) {
+        auto parent = (k == 0) ? TransformManager::Instance{} : tcm.getInstance(chain[k - 1]);
+        tcm.create(chain[k], parent, mat4f::translation(float3{ 1.0f, 0.0f, 0.0f }));
+    }
+    auto const tailInstance = tcm.getInstance(chain[kChainLen - 1]);
+    size_t reentrantCallbacks = 0;
+    tcm.registerChangeCallback(&chain, [&](Slice<const Entity> changed) {
+        reentrantCallbacks += changed.size();
+        for (Entity e : changed) {
+            auto ci = tcm.getInstance(e);
+            EXPECT_TRUE(ci.isValid());
+            // Re-entrant read of the notified entity and the very last leaf in the 24-node chain
+            (void)tcm.getWorldTransform(ci);
+        }
+        // Even on the first 16-entity flush, the 24th node's world transform must already be updated
+        EXPECT_EQ(tcm.getWorldTransform(tailInstance),
+                mat4f::translation(float3{ float(kChainLen + 1), 0.0f, 0.0f }));
+        // Re-entrant flushNotifications() must not infinitely recurse
+        tcm.flushNotifications();
+    });
+    // Dirty the root of the 24-node chain (+2 instead of +1) and trigger commit via getWorldTransform
+    tcm.setTransform(tcm.getInstance(chain[0]), mat4f::translation(float3{ 2.0f, 0.0f, 0.0f }));
+    EXPECT_EQ(tcm.getWorldTransform(tailInstance),
+            mat4f::translation(float3{ float(kChainLen + 1), 0.0f, 0.0f }));
+    tcm.flushNotifications();
+    EXPECT_GE(reentrantCallbacks, kChainLen);
+    tcm.unregisterChangeCallback(&chain);
+    for (size_t k = 0; k < kChainLen; ++k) {
+        tcm.destroy(chain[k]);
+        em.destroy(chain[k]);
+    }
+
+    tcm.unregisterChangeCallback(&tcm);
+    tcm.unregisterBitset(&dirtyBitset);
+    for (auto e : entities) {
+        tcm.destroy(e);
+        em.destroy(e);
+    }
+}
+
+TEST(FilamentTest, TransformManagerDefragment) {
+    EntityManager& em = EntityManager::get();
+    FTransformManager tcm(em);
+
+    // Build a fragmented hierarchy of 64 entities:
+    // Create leaves first, then intermediate nodes, then roots, and wire parents via setParent
+    // in reverse/scrambled order so parents initially reside at higher Instance indices than
+    // their children and siblings are scattered non-contiguously across the SoA.
+    constexpr size_t kNodeCount = 64;
+    std::vector<Entity> entities(kNodeCount);
+    em.create(kNodeCount, entities.data());
+
+    // Create components in reverse order (index 63 down to 0)
+    for (size_t idx = kNodeCount; idx > 0; --idx) {
+        size_t const i = idx - 1;
+        tcm.create(entities[i], {}, mat4f::translation(float3{ float(i + 1), float(i * 2), -float(i) }));
+    }
+
+    // Wire a 4-ary tree rooted at entities[0], entities[1], entities[2], entities[3]:
+    // For i >= 4, parent is entities[(i - 4) / 4].
+    for (size_t i = 4; i < kNodeCount; ++i) {
+        Entity const parentEntity = entities[(i - 4) / 4];
+        tcm.setParent(tcm.getInstance(entities[i]), tcm.getInstance(parentEntity));
+    }
+
+    // Also destroy a couple of leaf entities to create holes/swap-removals before defragmenting
+    tcm.destroy(entities[kNodeCount - 1]);
+    em.destroy(entities[kNodeCount - 1]);
+    tcm.destroy(entities[kNodeCount - 2]);
+    em.destroy(entities[kNodeCount - 2]);
+    entities.resize(kNodeCount - 2);
+
+    // Snapshot expected local, world, and parent relationships before defragmentation
+    std::vector<mat4f> expectedLocal(entities.size());
+    std::vector<mat4f> expectedWorld(entities.size());
+    std::vector<Entity> expectedParent(entities.size());
+    for (size_t i = 0; i < entities.size(); ++i) {
+        auto const ci = tcm.getInstance(entities[i]);
+        expectedLocal[i] = tcm.getTransform(ci);
+        expectedWorld[i] = tcm.getWorldTransform(ci);
+        expectedParent[i] = tcm.getParent(ci);
+    }
+
+    // Perform incremental amortized defragmentation with a small swap budget (e.g. 3 swaps per step)
+    // and verify hierarchy & transform invariants after every single incremental step.
+    for (size_t step = 0; step < 64; ++step) {
+        // Also dirty a root transform mid-defragmentation to verify ensureWorldTransformsUpToDate()
+        // inside defragment() keeps dirty instances consistent across swaps.
+        if (step == 5) {
+            auto const root0 = tcm.getInstance(entities[0]);
+            mat4f const newRoot0 = mat4f::translation(float3{ 100.0f, 200.0f, 300.0f });
+            tcm.setTransform(root0, newRoot0);
+            expectedLocal[0] = newRoot0;
+            for (size_t i = 0; i < entities.size(); ++i) {
+                expectedWorld[i] = tcm.getWorldTransform(tcm.getInstance(entities[i]));
+            }
+            // Dirty again without reading before defragment() runs!
+            mat4f const newRoot0B = mat4f::translation(float3{ 10.0f, 20.0f, 30.0f });
+            tcm.setTransform(root0, newRoot0B);
+            expectedLocal[0] = newRoot0B;
+        }
+
+        tcm.defragment(3);
+
+        if (step == 5) {
+            // Re-snapshot expectedWorld now that root0 changed to newRoot0B
+            for (size_t i = 0; i < entities.size(); ++i) {
+                expectedWorld[i] = tcm.getWorldTransform(tcm.getInstance(entities[i]));
+            }
+        }
+
+        for (size_t i = 0; i < entities.size(); ++i) {
+            auto const ci = tcm.getInstance(entities[i]);
+            ASSERT_TRUE(ci.isValid());
+            EXPECT_EQ(tcm.getParent(ci), expectedParent[i]);
+            EXPECT_EQ(tcm.getTransform(ci), expectedLocal[i]);
+            mat4f const actualWorld = tcm.getWorldTransform(ci);
+            for (size_t c = 0; c < 4; ++c) {
+                for (size_t r = 0; r < 4; ++r) {
+                    EXPECT_NEAR(actualWorld[c][r], expectedWorld[i][c][r], 1e-4f);
+                }
+            }
+        }
+    }
+
+    // Finish any remaining defragmentation via gc()
+    for (size_t step = 0; step < 16; ++step) {
+        tcm.gc();
+    }
+
+    // Verify strict BFS topological invariants after defragmentation completes:
+    // 1. Every root node (parent == 0) precedes every child node, and for every child node,
+    //    Instance(parent) < Instance(child).
+    // 2. For every parent node, its children occupy strictly contiguous ascending Instance slots
+    //    (nextChildInstance == prevChildInstance + 1).
+    for (size_t i = 0; i < entities.size(); ++i) {
+        auto const ci = tcm.getInstance(entities[i]);
+        Entity const p = tcm.getParent(ci);
+        if (!p.isNull()) {
+            auto const pi = tcm.getInstance(p);
+            EXPECT_LT(uint32_t(pi), uint32_t(ci));
+        }
+
+        uint32_t prevChildIdx = 0;
+        for (auto it = tcm.getChildrenBegin(ci), end = tcm.getChildrenEnd(ci); it != end; ++it) {
+            auto const childCi = *it;
+            EXPECT_GT(uint32_t(childCi), uint32_t(ci));
+            if (prevChildIdx != 0) {
+                EXPECT_EQ(uint32_t(childCi), prevChildIdx + 1u);
+            }
+            prevChildIdx = uint32_t(childCi);
+        }
+    }
+
+    // Verify that the !mTopologyDirty contiguous level-slice fast path in transformChildren()
+    // computes exact world transforms for both root updates and internal subtree updates.
+    tcm.setTransform(tcm.getInstance(entities[2]), mat4f::translation(float3{ -50.0f, 75.0f, -125.0f }));
+    tcm.setTransform(tcm.getInstance(entities[5]), mat4f::translation(float3{ 12.0f, -34.0f, 56.0f }));
+    for (size_t i = 0; i < entities.size(); ++i) {
+        auto const ci = tcm.getInstance(entities[i]);
+        mat4f expected = tcm.getTransform(ci);
+        Entity p = tcm.getParent(ci);
+        while (!p.isNull()) {
+            expected = tcm.getTransform(tcm.getInstance(p)) * expected;
+            p = tcm.getParent(tcm.getInstance(p));
+        }
+        mat4f const actual = tcm.getWorldTransform(ci);
+        for (size_t c = 0; c < 4; ++c) {
+            for (size_t r = 0; r < 4; ++r) {
+                EXPECT_NEAR(actual[c][r], expected[c][r], 1e-4f);
+            }
+        }
+    }
+
+    // Now modify only a deep parent (reparent entities[40] under entities[12] and create a new child
+    // under entities[13]): smart cursor invalidation should rewind only to parent 12 instead of 0,
+    // so a single small defragment(16) call suffices to restore full BFS order across the entire tree.
+    tcm.setParent(tcm.getInstance(entities[40]), tcm.getInstance(entities[12]));
+    Entity const extraLeaf = em.create();
+    tcm.create(extraLeaf, tcm.getInstance(entities[13]), mat4f::translation(float3{ 7.0f, 8.0f, 9.0f }));
+    entities.push_back(extraLeaf);
+
+    tcm.defragment(16);
+
+    for (size_t i = 0; i < entities.size(); ++i) {
+        auto const ci = tcm.getInstance(entities[i]);
+        Entity const p = tcm.getParent(ci);
+        if (!p.isNull()) {
+            auto const pi = tcm.getInstance(p);
+            EXPECT_LT(uint32_t(pi), uint32_t(ci));
+        }
+        uint32_t prevChildIdx = 0;
+        for (auto it = tcm.getChildrenBegin(ci), end = tcm.getChildrenEnd(ci); it != end; ++it) {
+            auto const childCi = *it;
+            EXPECT_GT(uint32_t(childCi), uint32_t(ci));
+            if (prevChildIdx != 0) {
+                EXPECT_EQ(uint32_t(childCi), prevChildIdx + 1u);
+            }
+            prevChildIdx = uint32_t(childCi);
+        }
+    }
+
+    // Now destroy a non-root leaf (entities[42]): smart cursor invalidation rewinds only to
+    // min(oldParent, movedParent) (~slot 35) instead of 0, skipping the first ~35 nodes and
+    // shifting only the remaining ~26 tail nodes left by 1 slot.
+    tcm.destroy(entities[42]);
+    em.destroy(entities[42]);
+    entities.erase(entities.begin() + 42);
+
+    tcm.defragment(28);
+
+    for (size_t i = 0; i < entities.size(); ++i) {
+        auto const ci = tcm.getInstance(entities[i]);
+        Entity const p = tcm.getParent(ci);
+        if (!p.isNull()) {
+            auto const pi = tcm.getInstance(p);
+            EXPECT_LT(uint32_t(pi), uint32_t(ci));
+        }
+        uint32_t prevChildIdx = 0;
+        for (auto it = tcm.getChildrenBegin(ci), end = tcm.getChildrenEnd(ci); it != end; ++it) {
+            auto const childCi = *it;
+            EXPECT_GT(uint32_t(childCi), uint32_t(ci));
+            if (prevChildIdx != 0) {
+                EXPECT_EQ(uint32_t(childCi), prevChildIdx + 1u);
+            }
+            prevChildIdx = uint32_t(childCi);
+        }
+    }
+
+    for (Entity e : entities) {
+        tcm.destroy(e);
+        em.destroy(e);
+    }
+}
+
+TEST(FilamentTest, TransformManagerOrphans) {
+    // Children orphaned by destroy() become roots: their world transform must become their local
+    // transform, and their descendants must follow.
+    EntityManager& em = EntityManager::get();
+    FTransformManager tcm(em);
+
+    mat4f const parentLocal = mat4f::translation(float3{ 10, 0, 0 });
+    mat4f const childLocal = mat4f::translation(float3{ 0, 5, 0 });
+    mat4f const grandChildLocal = mat4f::translation(float3{ 0, 0, 3 });
+
+    auto world = [&tcm](Entity const e) {
+        return tcm.getWorldTransform(tcm.getInstance(e));
+    };
+
+    auto cleanup = [&tcm, &em](std::vector<Entity> const& entities) {
+        tcm.destroyComponents(entities.data(), entities.size());
+        for (Entity const e : entities) {
+            em.destroy(e);
+        }
+    };
+
+    // Single destroy.
+    {
+        Entity const p = em.create();
+        Entity const c = em.create();
+        Entity const g = em.create();
+        tcm.create(p, {}, parentLocal);
+        tcm.create(c, tcm.getInstance(p), childLocal);
+        tcm.create(g, tcm.getInstance(c), grandChildLocal);
+        EXPECT_EQ(world(g), parentLocal * childLocal * grandChildLocal);
+
+        tcm.destroy(p);
+        EXPECT_TRUE(tcm.getParent(tcm.getInstance(c)).isNull());
+        EXPECT_EQ(world(c), childLocal);
+        EXPECT_EQ(world(g), childLocal * grandChildLocal);
+
+        tcm.destroy(c);
+        EXPECT_EQ(world(g), grandChildLocal);
+        cleanup({ p, c, g });
+    }
+
+    // Batch destroy where components move after the orphan is recorded: destroying p moves c
+    // (the last component) into p's slot, then destroying x moves y into x's slot.
+    {
+        Entity const p = em.create();
+        Entity const x = em.create();
+        Entity const y = em.create();
+        Entity const c = em.create();
+        tcm.create(p, {}, parentLocal);
+        tcm.create(x);
+        tcm.create(y);
+        tcm.create(c, tcm.getInstance(p), childLocal);
+        EXPECT_EQ(world(c), parentLocal * childLocal);
+
+        Entity const batch[] = { p, x };
+        tcm.destroyComponents(batch, 2);
+        EXPECT_TRUE(tcm.getParent(tcm.getInstance(c)).isNull());
+        EXPECT_EQ(world(c), childLocal);
+        EXPECT_EQ(world(y), mat4f{});
+        cleanup({ p, x, y, c });
+    }
+
+    // Batch destroy where an orphan is itself destroyed later in the same batch.
+    {
+        Entity const p = em.create();
+        Entity const c = em.create();
+        Entity const g = em.create();
+        tcm.create(p, {}, parentLocal);
+        tcm.create(c, tcm.getInstance(p), childLocal);
+        tcm.create(g, tcm.getInstance(c), grandChildLocal);
+        EXPECT_EQ(world(g), parentLocal * childLocal * grandChildLocal);
+
+        Entity const batch[] = { p, c };
+        tcm.destroyComponents(batch, 2);
+        EXPECT_FALSE(tcm.hasComponent(c));
+        EXPECT_EQ(world(g), grandChildLocal);
+        cleanup({ p, c, g });
+    }
+}
+
+TEST(FilamentTest, TransformManagerRandomizedHierarchy) {
+    // Applies seeded random sequences of hierarchy edits, transform updates, and
+    // partial defragmentations, and checks after every operation that each world transform
+    // matches the product of the local transforms up the parent chain. Periodically, it runs
+    // defragmentation to completion, checks the BFS layout, and exercises the defragmented fast
+    // path. Odd seeds use accurate translations.
+    EntityManager& em = EntityManager::get();
+    constexpr uint32_t kSeedCount = 20;
+    constexpr size_t kOpCount = 200;
+    constexpr size_t kMaxNodes = 64;
+
+    for (uint32_t seed = 0; seed < kSeedCount; ++seed) {
+        SCOPED_TRACE(testing::Message() << "seed=" << seed);
+        std::mt19937 rng(seed);
+        bool const accurate = (seed & 1u) != 0;
+
+        FTransformManager tcm(em);
+        tcm.setAccurateTranslationsEnabled(accurate);
+        std::vector<Entity> nodes;
+
+        auto uniform = [&rng](size_t const n) {
+            return std::uniform_int_distribution<size_t>(0, n - 1)(rng);
+        };
+        auto chance = [&rng](double const p) {
+            return std::bernoulli_distribution(p)(rng);
+        };
+
+        // Accurate seeds use large translations and no rotation: the double-precision reference
+        // is then exact, and world transforms computed in single precision would fail the check.
+        // Other seeds use rotations and small translations.
+        auto randomLocal = [&]() -> mat4 {
+            if (accurate) {
+                std::uniform_real_distribution<double> t(-2e5, 2e5);
+                return mat4::translation(double3{ t(rng), t(rng), t(rng) });
+            }
+            std::uniform_real_distribution<double> t(-10.0, 10.0);
+            std::uniform_real_distribution<float> a(-3.14f, 3.14f);
+            float3 axis{ float(t(rng)), float(t(rng)), float(t(rng)) };
+            if (length(axis) < 1e-3f) {
+                axis = float3{ 0, 1, 0 };
+            }
+            mat4 m{ mat4f::rotation(a(rng), normalize(axis)) };
+            m[3] = double4{ t(rng), t(rng), t(rng), 1.0 };
+            return m;
+        };
+
+        auto setLocal = [&](Entity const e, mat4 const& m) {
+            auto const ci = tcm.getInstance(e);
+            if (chance(0.5)) {
+                tcm.setTransform(ci, m);
+            } else {
+                tcm.setTransform(ci, mat4f(m));
+            }
+        };
+
+        // Returns whether `a` is `n` or one of its ancestors.
+        auto isAncestorOrSelf = [&tcm](Entity const a, Entity const n) {
+            for (Entity e = n; !e.isNull(); e = tcm.getParent(tcm.getInstance(e))) {
+                if (e == a) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        auto checkWorldTransforms = [&]() {
+            for (Entity const e : nodes) {
+                auto const ci = tcm.getInstance(e);
+                ASSERT_TRUE(ci.isValid());
+                mat4 expected = tcm.getTransformAccurate(ci);
+                for (Entity p = tcm.getParent(ci); !p.isNull(); p = tcm.getParent(tcm.getInstance(p))) {
+                    expected = tcm.getTransformAccurate(tcm.getInstance(p)) * expected;
+                }
+                mat4 const actual = accurate ?
+                        tcm.getWorldTransformAccurate(ci) : mat4(tcm.getWorldTransform(ci));
+                for (size_t c = 0; c < 4; ++c) {
+                    for (size_t r = 0; r < 4; ++r) {
+                        double const tolerance =
+                                accurate ? 1e-3 : 1e-4 * (1.0 + std::abs(expected[c][r]));
+                        ASSERT_NEAR(actual[c][r], expected[c][r], tolerance)
+                                << "column=" << c << " row=" << r;
+                    }
+                }
+            }
+        };
+
+        // Once defragmentation completes: roots occupy the first slots, every child comes after
+        // its parent, and siblings are contiguous.
+        auto checkBfsLayout = [&]() {
+            uint32_t rootCount = 0;
+            for (Entity const e : nodes) {
+                rootCount += tcm.getParent(tcm.getInstance(e)).isNull() ? 1u : 0u;
+            }
+            for (Entity const e : nodes) {
+                auto const ci = tcm.getInstance(e);
+                Entity const p = tcm.getParent(ci);
+                if (p.isNull()) {
+                    ASSERT_LE(uint32_t(ci), rootCount);
+                } else {
+                    ASSERT_LT(uint32_t(tcm.getInstance(p)), uint32_t(ci));
+                }
+                uint32_t prevChild = 0;
+                for (auto const child : tcm.getChildrenRange(ci)) {
+                    if (prevChild) {
+                        ASSERT_EQ(uint32_t(child), prevChild + 1u);
+                    }
+                    prevChild = uint32_t(child);
+                }
+            }
+        };
+
+        for (size_t op = 0; op < kOpCount; ++op) {
+            size_t const kind = uniform(100);
+            if (nodes.empty() || (kind < 25 && nodes.size() < kMaxNodes)) {
+                Entity const e = em.create();
+                TransformManager::Instance parent{};
+                if (!nodes.empty() && chance(0.7)) {
+                    parent = tcm.getInstance(nodes[uniform(nodes.size())]);
+                }
+                mat4 const local = randomLocal();
+                if (chance(0.5)) {
+                    tcm.create(e, parent, local);
+                } else {
+                    tcm.create(e, parent, mat4f(local));
+                }
+                nodes.push_back(e);
+            } else if (kind < 40) {
+                Entity const n = nodes[uniform(nodes.size())];
+                Entity const p = chance(0.2) ? Entity{} : nodes[uniform(nodes.size())];
+                if (p.isNull()) {
+                    tcm.setParent(tcm.getInstance(n), {});
+                } else if (!isAncestorOrSelf(n, p)) {
+                    tcm.setParent(tcm.getInstance(n), tcm.getInstance(p));
+                }
+            } else if (kind < 50) {
+                // Destroy 1 to 3 nodes in a single batch; their children are orphaned.
+                size_t const count = std::min(nodes.size(), 1 + uniform(3));
+                std::vector<Entity> batch;
+                for (size_t k = 0; k < count; ++k) {
+                    size_t const index = uniform(nodes.size());
+                    batch.push_back(nodes[index]);
+                    nodes.erase(nodes.begin() + std::ptrdiff_t(index));
+                }
+                tcm.destroyComponents(batch.data(), batch.size());
+                for (Entity const e : batch) {
+                    em.destroy(e);
+                }
+            } else if (kind < 80) {
+                setLocal(nodes[uniform(nodes.size())], randomLocal());
+            } else if (kind < 90) {
+                tcm.defragment(1 + uniform(8));
+            } else {
+                tcm.gc();
+            }
+
+            checkWorldTransforms();
+            if (HasFatalFailure()) {
+                return;
+            }
+
+            if ((op + 1) % 50 == 0) {
+                for (size_t k = 0; k < 16; ++k) {
+                    tcm.defragment(64);
+                }
+                checkBfsLayout();
+                if (HasFatalFailure()) {
+                    return;
+                }
+                // Transform updates alone keep the defragmented layout, so these exercise the
+                // contiguous level-slice fast path in transformChildren().
+                for (size_t k = 0; k < 4 && !nodes.empty(); ++k) {
+                    setLocal(nodes[uniform(nodes.size())], randomLocal());
+                    checkWorldTransforms();
+                    if (HasFatalFailure()) {
+                        return;
+                    }
+                }
+            }
+        }
+
+        tcm.destroyComponents(nodes.data(), nodes.size());
+        for (Entity const e : nodes) {
+            em.destroy(e);
+        }
+    }
 }
 
 TEST(FilamentTest, UniformInterfaceBlock) {
@@ -793,6 +1592,114 @@ TEST(FilamentTest, UniformBufferSize2) {
     buffer.invalidate();
 }
 
+TEST(FilamentTest, BufferInterfaceBlockRejectsOffsetWrap) {
+    // 3-field wrap layout: 4000 MAT4s (64000 words) + 1 FLOAT + 100 MAT4s (wraps uint16_t to 68).
+    auto buildWrappedUib = []() {
+        BufferInterfaceBlock::Builder b;
+        b.name("WrappedUib");
+        b.add({
+                { "pad", 4000, BufferInterfaceBlock::Type::MAT4 },
+                { "_maskThreshold", 0, BufferInterfaceBlock::Type::FLOAT },
+                { "wrap", 100, BufferInterfaceBlock::Type::MAT4 },
+        });
+        b.build();
+    };
+    // Single-field 32-bit multiplication wrap (16 * 0x10000000 == 0 mod 2^32).
+    auto buildMulOverflowUib = []() {
+        BufferInterfaceBlock::Builder b;
+        b.name("MulOverflowUib");
+        b.add({
+                { "huge", 0x10000000u, BufferInterfaceBlock::Type::MAT4 },
+        });
+        b.build();
+    };
+#if GTEST_HAS_EXCEPTIONS
+    EXPECT_THROW(buildWrappedUib(), utils::PostconditionPanic);
+    EXPECT_THROW(buildMulOverflowUib(), utils::PostconditionPanic);
+#else
+    EXPECT_DEATH(buildWrappedUib(), "exceeds maximum supported size");
+    EXPECT_DEATH(buildMulOverflowUib(), "exceeds maximum supported size");
+#endif
+}
+
+TEST(FilamentTest, ChunkUniformInterfaceBlockUnflattenValidation) {
+    auto makeUibChunk = [](uint64_t numFields, uint64_t fieldSize, uint8_t fieldType,
+                                uint8_t fieldPrecision) {
+        std::vector<uint8_t> bytes;
+        auto appendBytes = [&](const void* p, size_t n) {
+            auto const* b = static_cast<uint8_t const*>(p);
+            bytes.insert(bytes.end(), b, b + n);
+        };
+        const char blockName[] = "TestBlock";
+        appendBytes(blockName, sizeof(blockName));
+        appendBytes(&numFields, sizeof(numFields));
+        for (uint64_t i = 0; i < numFields; ++i) {
+            const char fieldName[] = "f";
+            appendBytes(fieldName, sizeof(fieldName));
+            appendBytes(&fieldSize, sizeof(fieldSize));
+            appendBytes(&fieldType, sizeof(fieldType));
+            appendBytes(&fieldPrecision, sizeof(fieldPrecision));
+            uint8_t assocSampler = 0;
+            appendBytes(&assocSampler, sizeof(assocSampler));
+        }
+        return bytes;
+    };
+
+    BufferInterfaceBlock uib;
+    // Valid chunk succeeds.
+    {
+        auto buf = makeUibChunk(1, 0, uint8_t(BufferInterfaceBlock::Type::FLOAT),
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_TRUE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    // fieldSize up to UINT16_MAX / 4 fits; one more is rejected.
+    {
+        auto buf = makeUibChunk(1, UINT16_MAX / 4, uint8_t(BufferInterfaceBlock::Type::FLOAT),
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_TRUE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    {
+        auto buf = makeUibChunk(1, UINT16_MAX / 4 + 1, uint8_t(BufferInterfaceBlock::Type::FLOAT),
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_FALSE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    // numFields up to UINT16_MAX fits; one more is rejected.
+    {
+        auto buf = makeUibChunk(UINT16_MAX, 0, uint8_t(BufferInterfaceBlock::Type::FLOAT),
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_TRUE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    {
+        auto buf = makeUibChunk(UINT16_MAX + 1, 0, uint8_t(BufferInterfaceBlock::Type::FLOAT),
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_FALSE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    // Invalid fieldType (Type::STRUCT or out-of-range) is rejected.
+    {
+        auto buf = makeUibChunk(1, 0, uint8_t(BufferInterfaceBlock::Type::STRUCT),
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_FALSE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    {
+        auto buf = makeUibChunk(1, 0, 0xFF,
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_FALSE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    // Invalid fieldPrecision is rejected.
+    {
+        auto buf = makeUibChunk(1, 0, uint8_t(BufferInterfaceBlock::Type::FLOAT), 0xFF);
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_FALSE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+}
+
 TEST(FilamentTest, BoxCulling) {
     Frustum frustum(mat4f::frustum(-1, 1, -1, 1, 1, 100));
 
@@ -981,7 +1888,7 @@ TEST(FilamentTest, FroxelData) {
 
     FScene::LightSoa lights;
     lights.push_back();   // first one is always skipped
-    lights.push_back(float4{ 0, 0, -5, 1 }, 0.0f, 0.0f, -5.0f, 1.0f, float3{}, float3{}, double2{}, e, spotParams, Culler::result_type(1), float2{}, FScene::ShadowInfo{});
+    lights.push_back(e, float4{ 0, 0, -5, 1 }, 0.0f, 0.0f, -5.0f, 1.0f, float3{}, float3{}, double2{}, spotParams, Culler::result_type(1), float2{}, FScene::ShadowInfo{});
 
     {
         froxelData.froxelizeLights(*engine, {}, lights);
@@ -1897,6 +2804,286 @@ TEST(FilamentTest, FrameHistoryStreamTest) {
     Engine::destroy(&engine);
 }
 
+TEST(FilamentTest, FlushAndWaitDispatchesCallbacksOfPendingCommands) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    BufferObject* bo = BufferObject::Builder().size(sizeof(uint32_t)).build(*engine);
+
+    static constexpr uint32_t data = 0;
+    bool released = false;
+    bo->setBuffer(*engine, backend::BufferDescriptor(&data, sizeof(data),
+            [](void*, size_t, void* user) { *static_cast<bool*>(user) = true; }, &released));
+
+    // The setBuffer() command has not been flushed yet, so flushAndWait() has to run it.
+    engine->flushAndWait();
+    EXPECT_TRUE(released);
+
+    engine->destroy(bo);
+    Engine::destroy(&engine);
+}
+
+// Source compatibility: these constructors are public since 1.72.
+static_assert(std::is_constructible_v<FrameHistoryStream::NewFramesRange,
+        FixedCapacityVector<Renderer::FrameInfo>, uint32_t*>);
+static_assert(std::is_constructible_v<FrameHistoryStream::NewFramesRange::Iterator,
+        Renderer::FrameInfo const*, int, uint32_t*>);
+
+// The NOOP backend never reports PENDING timings, so the tests below use synthetic histories.
+// Like Renderer::getFrameInfoHistory(), newestFirst is ordered from newest to oldest.
+static FixedCapacityVector<Renderer::FrameInfo> makeFrameHistory(
+        std::initializer_list<uint32_t> const newestFirst,
+        std::initializer_list<uint32_t> const pending = {}) {
+    auto history = FixedCapacityVector<Renderer::FrameInfo>::with_capacity(newestFirst.size());
+    for (uint32_t const frameId : newestFirst) {
+        Renderer::FrameInfo info{};
+        info.frameId = frameId;
+        info.displayPresent = Renderer::FrameInfo::INVALID;
+        info.presentDeadline = Renderer::FrameInfo::INVALID;
+        info.expectedPresentLatency = Renderer::FrameInfo::INVALID;
+        if (std::find(pending.begin(), pending.end(), frameId) != pending.end()) {
+            info.displayPresent = Renderer::FrameInfo::PENDING;
+        }
+        history.push_back(info);
+    }
+    return history;
+}
+
+// Returns the IDs yielded by the range, in order, with the missing frame IDs negated.
+static std::vector<int> collectFrameIds(FrameHistoryStream::NewFramesRange const& range) {
+    std::vector<int> ids;
+    for (auto const& result : range) {
+        ids.push_back(result ? int(result.getFrameId()) : -int(result.getMissingId()));
+    }
+    return ids;
+}
+
+// Does what FrameHistoryStream::getNewFrames() does, with a synthetic history.
+static std::vector<int> getNewFrameIds(uint32_t* const pLastProcessedFrameId,
+        std::initializer_list<uint32_t> const newestFirst,
+        std::initializer_list<uint32_t> const pending = {}) {
+    return collectFrameIds(FrameHistoryStream::NewFramesRange(
+            makeFrameHistory(newestFirst, pending), pLastProcessedFrameId));
+}
+
+TEST(FilamentTest, FrameHistoryStreamConsumesFramesWhenQueried) {
+    uint32_t last = 2;
+    FrameHistoryStream::NewFramesRange const range(makeFrameHistory({ 5, 4, 3, 2 }), &last);
+
+    // frames 3 to 5 are consumed when the range is created, not as it's iterated...
+    EXPECT_EQ(last, 5u);
+    auto const first = range.begin();
+    ASSERT_TRUE(first != range.end());
+    EXPECT_TRUE(*first);
+    EXPECT_EQ(first->getFrameId(), 3u);
+
+    // ...so they aren't returned again, even though frames 4 and 5 weren't iterated
+    EXPECT_EQ(getNewFrameIds(&last, { 6, 5, 4, 3, 2 }), std::vector<int>({ 6 }));
+    EXPECT_EQ(last, 6u);
+    EXPECT_TRUE(getNewFrameIds(&last, { 6, 5, 4, 3, 2 }).empty());
+    EXPECT_TRUE(getNewFrameIds(&last, {}).empty());
+    EXPECT_EQ(last, 6u);
+}
+
+TEST(FilamentTest, FrameHistoryStreamRangeCanBeIteratedTwice) {
+    uint32_t last = 1;
+    FrameHistoryStream::NewFramesRange const range(makeFrameHistory({ 5, 3, 2 }), &last);
+    EXPECT_EQ(collectFrameIds(range), std::vector<int>({ 2, 3, -4, 5 }));
+    EXPECT_EQ(collectFrameIds(range), std::vector<int>({ 2, 3, -4, 5 }));
+    EXPECT_EQ(last, 5u);
+}
+
+TEST(FilamentTest, FrameHistoryStreamStopsAtPendingFrame) {
+    uint32_t last = 1;
+    // frame 4 is pending, so frames 4 and 5 are returned later
+    EXPECT_EQ(getNewFrameIds(&last, { 5, 4, 3, 2 }, { 4 }), std::vector<int>({ 2, 3 }));
+    EXPECT_EQ(last, 3u);
+    EXPECT_EQ(getNewFrameIds(&last, { 6, 5, 4, 3 }, { 6 }), std::vector<int>({ 4, 5 }));
+    EXPECT_EQ(last, 5u);
+}
+
+TEST(FilamentTest, FrameHistoryStreamDelaysMissingFramesBeforePendingFrame) {
+    uint32_t last = 5;
+    // frames 6 and 7 are missing and frame 8 is pending: the missing frames are returned with
+    // frame 8, once it's ready
+    EXPECT_TRUE(getNewFrameIds(&last, { 8, 5 }, { 8 }).empty());
+    EXPECT_EQ(last, 5u);
+    EXPECT_EQ(getNewFrameIds(&last, { 8, 5 }), std::vector<int>({ -6, -7, 8 }));
+    EXPECT_EQ(last, 8u);
+}
+
+TEST(FilamentTest, FrameHistoryStreamReportsMissingFrames) {
+    uint32_t last = 0;
+    // no frames are missing before the first one
+    EXPECT_EQ(getNewFrameIds(&last, { 3, 2 }), std::vector<int>({ 2, 3 }));
+    EXPECT_EQ(last, 3u);
+    EXPECT_EQ(getNewFrameIds(&last, { 7, 5, 4 }), std::vector<int>({ 4, 5, -6, 7 }));
+    EXPECT_EQ(last, 7u);
+    // a null pLastProcessedFrameId is treated as 0
+    EXPECT_EQ(getNewFrameIds(nullptr, { 3, 2 }), std::vector<int>({ 2, 3 }));
+}
+
+TEST(FilamentTest, DebugRegistryConstQueriesWithCallback) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    DebugRegistry const& registry = engine->getDebugRegistry();
+
+    // FEngine registers this property with a callback. The const queries below are noexcept
+    // and must not trip the non-const getPropertyAddress() "callback is set" precondition.
+    char const* const name = "d.shadowmap.debug_directional_shadowmap";
+    EXPECT_TRUE(registry.hasProperty(name));
+    EXPECT_NE(registry.getPropertyAddress(name), nullptr);
+    EXPECT_NE(registry.getPropertyAddress<bool>(name), nullptr);
+
+    bool const* p = nullptr;
+    EXPECT_TRUE(registry.getPropertyAddress(name, &p));
+    EXPECT_NE(p, nullptr);
+
+    bool value = false;
+    EXPECT_TRUE(registry.getProperty(name, &value));
+
+    Engine::destroy(&engine);
+}
+
+// FEngine hands out its default material and default material instance as const only.
+// getSkyboxMaterial() isn't const because it creates the skybox material on first use.
+static_assert(std::is_same_v<decltype(std::declval<FEngine const&>().getDefaultMaterial()),
+        FMaterial const*>);
+static_assert(std::is_same_v<decltype(std::declval<FEngine const&>().getDefaultMaterialInstance()),
+        FMaterialInstance const*>);
+
+// Detects whether getSkyboxMaterial() can be called on a T
+template<typename T, typename = void>
+struct has_getSkyboxMaterial : std::false_type {};
+
+template<typename T>
+struct has_getSkyboxMaterial<T, std::void_t<decltype(std::declval<T&>().getSkyboxMaterial())>>
+        : std::true_type {};
+
+static_assert(has_getSkyboxMaterial<FEngine>::value);
+static_assert(!has_getSkyboxMaterial<FEngine const>::value);
+
+TEST(FilamentTest, DefaultMaterialInstance) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    FEngine const& fengine = downcast(*engine);
+
+    // init() creates the default material's default instance
+    FMaterialInstance const* const mi = fengine.getDefaultMaterialInstance();
+    ASSERT_NE(mi, nullptr);
+    EXPECT_EQ(mi->getMaterial(), fengine.getDefaultMaterial());
+    EXPECT_TRUE(mi->isDefaultInstance());
+
+    // renderables built without a material instance use it
+    Entity const entity = engine->getEntityManager().create();
+    RenderableManager::Builder(1).boundingBox({ { 0, 0, 0 }, { 1, 1, 1 } }).build(*engine, entity);
+    RenderableManager const& rcm = engine->getRenderableManager();
+    EXPECT_EQ(rcm.getMaterialInstanceAt(rcm.getInstance(entity), 0), mi);
+
+    engine->destroy(entity);
+    engine->getEntityManager().destroy(entity);
+    Engine::destroy(&engine);
+}
+
+TEST(FilamentTest, CompressedFormatsHaveBlockInfo) {
+    using backend::TextureFormat;
+    for (auto f = uint16_t(TextureFormat::EAC_R11);
+            f <= uint16_t(TextureFormat::SRGB_ALPHA_BPTC_UNORM); ++f) {
+        TextureFormat const format = TextureFormat(f);
+        ASSERT_TRUE(backend::isCompressedFormat(format)) << f;
+        EXPECT_GT(backend::getBlockWidth(format), 0u) << f;
+        EXPECT_GT(backend::getBlockHeight(format), 0u) << f;
+        EXPECT_GT(backend::getFormatSize(format), 0u) << f;
+    }
+}
+
+TEST(FilamentTest, TextureSetImageCompressedSizeValidation) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+
+    // 10x10 ETC2_RGB8 is 3x3 blocks of 8 bytes.
+    constexpr size_t requiredSize = 3 * 3 * 8;
+    std::vector<uint8_t> data(requiredSize + 1);
+    auto makePbd = [&data](size_t size) {
+        return Texture::PixelBufferDescriptor(data.data(), size,
+                Texture::CompressedType::ETC2_RGB8, uint32_t(size), nullptr);
+    };
+
+    Texture* compressed = Texture::Builder()
+            .width(10)
+            .height(10)
+            .format(Texture::InternalFormat::ETC2_RGB8)
+            .build(*engine);
+    compressed->setImage(*engine, 0, makePbd(requiredSize));
+    compressed->setImage(*engine, 0, makePbd(requiredSize + 1));
+
+    Texture* uncompressed = Texture::Builder()
+            .width(10)
+            .height(10)
+            .format(Texture::InternalFormat::RGBA8)
+            .build(*engine);
+
+#if GTEST_HAS_EXCEPTIONS
+    EXPECT_THROW(compressed->setImage(*engine, 0, makePbd(requiredSize - 1)),
+            utils::PreconditionPanic);
+    EXPECT_THROW(uncompressed->setImage(*engine, 0, makePbd(requiredSize)),
+            utils::PreconditionPanic);
+#else
+    EXPECT_DEATH(compressed->setImage(*engine, 0, makePbd(requiredSize - 1)), "buffer overflow");
+    EXPECT_DEATH(uncompressed->setImage(*engine, 0, makePbd(requiredSize)),
+            "requires a compressed texture format");
+#endif
+
+    engine->destroy(compressed);
+    engine->destroy(uncompressed);
+    Engine::destroy(&engine);
+}
+
+TEST(FilamentTest, TextureSetImageUploadSizeLimit) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+
+    // The precondition fires before the buffer is read, so a small buffer can claim a large size.
+    constexpr size_t tooLarge = size_t(std::numeric_limits<int32_t>::max()) + 1;
+    std::vector<uint8_t> data(16);
+    auto makeCompressedPbd = [&data](size_t size) {
+        return Texture::PixelBufferDescriptor(data.data(), size,
+                Texture::CompressedType::ETC2_RGB8, 16, nullptr);
+    };
+
+    Texture* compressed = Texture::Builder()
+            .width(4)
+            .height(4)
+            .format(Texture::InternalFormat::ETC2_RGB8)
+            .build(*engine);
+
+    // 16384x16384 RGBA32F is 4 GiB.
+    Texture* large = Texture::Builder()
+            .width(16384)
+            .height(16384)
+            .format(Texture::InternalFormat::RGBA32F)
+            .build(*engine);
+
+#if GTEST_HAS_EXCEPTIONS
+    EXPECT_THROW(compressed->setImage(*engine, 0, makeCompressedPbd(tooLarge)),
+            utils::PreconditionPanic);
+    // An empty region still sends the upload, so the cap must apply there too.
+    EXPECT_THROW(compressed->setImage(*engine, 0, 0, 0, 0, 0, 0, 1, makeCompressedPbd(tooLarge)),
+            utils::PreconditionPanic);
+    EXPECT_THROW(large->setImage(*engine, 0,
+                         Texture::PixelBufferDescriptor(data.data(), size_t(16384) * 16384 * 16,
+                                 Texture::Format::RGBA, Texture::Type::FLOAT, nullptr)),
+            utils::PreconditionPanic);
+#else
+    EXPECT_DEATH(compressed->setImage(*engine, 0, makeCompressedPbd(tooLarge)),
+            "exceeds the maximum");
+    EXPECT_DEATH(compressed->setImage(*engine, 0, 0, 0, 0, 0, 0, 1, makeCompressedPbd(tooLarge)),
+            "exceeds the maximum");
+    EXPECT_DEATH(large->setImage(*engine, 0,
+                         Texture::PixelBufferDescriptor(data.data(), size_t(16384) * 16384 * 16,
+                                 Texture::Format::RGBA, Texture::Type::FLOAT, nullptr)),
+            "exceeds the maximum");
+#endif
+
+    engine->destroy(compressed);
+    engine->destroy(large);
+    Engine::destroy(&engine);
+}
+
 TEST(FilamentTest, ECREpochBasedReclamationManagers) {
     Engine* engine = Engine::Builder().backend(Engine::Backend::NOOP).build();
     auto& em = engine->getEntityManager();
@@ -1994,8 +3181,11 @@ TEST(FilamentTest, MultipleDirectionalLights) {
         static_cast<Scene*>(scene)->addEntity(entities[i]);
     }
 
+    FView* view = downcast(engine->createView());
+    view->setScene(scene);
+
     LinearAllocatorArena arena("MultipleDirectionalLights test arena", 3 * 1024 * 1024);
-    FScene::SceneCacheData cache;
+    FScene::SceneCacheData& cache = *view->getSceneCache();
     scene->prepare(engine->getJobSystem(), arena, mat4{}, false, cache);
 
     // the most intense directional light is the dominant one, at index 0 of the LightSoa
@@ -2023,12 +3213,993 @@ TEST(FilamentTest, MultipleDirectionalLights) {
     EXPECT_TRUE(lightData.elementAt<FScene::LIGHT_ENTITY>(0) == entities[0]);
     EXPECT_EQ(0u, cache.extraDirectionalLightCount);
 
+    engine->destroy(view);
     engine->destroy(scene);
     for (auto& e : entities) {
         engine->destroy(e);
         em.destroy(e);
     }
     Engine::destroy((Engine**)&engine);
+}
+
+namespace {
+
+class SceneCacheTest : public testing::Test {
+protected:
+    void SetUp() override {
+        engine = Engine::create(Engine::Backend::NOOP);
+    }
+
+    void TearDown() override {
+        cleanupTrackedResources();
+        Engine::destroy(&engine);
+    }
+
+    void recreateEngine(Engine::Config const& config) {
+        cleanupTrackedResources();
+        Engine::destroy(&engine);
+        engine = Engine::Builder()
+                .backend(Engine::Backend::NOOP)
+                .config(&config)
+                .build();
+    }
+
+    Scene* createScene() {
+        Scene* const s = engine->createScene();
+        mScenes.push_back(s);
+        return s;
+    }
+
+    View* createView() {
+        View* const v = engine->createView();
+        mViews.push_back(v);
+        return v;
+    }
+
+    SkinningBuffer* createSkinningBuffer(uint32_t boneCount) {
+        SkinningBuffer* const sb = SkinningBuffer::Builder().boneCount(boneCount).build(*engine);
+        mSkinningBuffers.push_back(sb);
+        return sb;
+    }
+
+    Entity createEntity() {
+        Entity const e = engine->getEntityManager().create();
+        mEntities.push_back(e);
+        return e;
+    }
+
+    Entity createRenderable(bool withTransform = true) {
+        Entity const e = createEntity();
+        if (withTransform) {
+            engine->getTransformManager().create(e);
+        }
+        RenderableManager::Builder(1)
+                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
+                .build(*engine, e);
+        return e;
+    }
+
+    Entity createPointLight(bool withTransform = true, float3 const& position = { 0, 0, 0 }) {
+        Entity const e = createEntity();
+        if (withTransform) {
+            engine->getTransformManager().create(e);
+        }
+        LightManager::Builder(LightManager::Type::POINT)
+                .position(position)
+                .intensity(1000.0f)
+                .falloff(10.0f)
+                .build(*engine, e);
+        return e;
+    }
+
+    Entity createDirectionalLight(bool withTransform = true,
+            LightManager::Type type = LightManager::Type::DIRECTIONAL,
+            float intensity = 1000.0f) {
+        Entity const e = createEntity();
+        if (withTransform) {
+            engine->getTransformManager().create(e);
+        }
+        LightManager::Builder(type)
+                .intensity(intensity)
+                .direction({ 0, -1, 0 })
+                .build(*engine, e);
+        return e;
+    }
+
+    void prepare(Scene* scene, View* view, mat4 const& worldTransform) {
+        downcast(scene)->prepare(downcast(engine)->getJobSystem(), arena, worldTransform,
+                false, *downcast(view)->getSceneCache());
+    }
+
+    // Attaches a camera to `view`, at z = +5 looking at the origin, so that a unit box at the
+    // origin is visible and anything at z > 5 is behind the camera.
+    void createCamera(View* view) {
+        Entity const e = createEntity();
+        Camera* const camera = engine->createCamera(e);
+        camera->setProjection(45.0, 1.0, 0.1, 100.0);
+        camera->lookAt({ 0, 0, 5 }, { 0, 0, 0 }, { 0, 1, 0 });
+        view->setCamera(camera);
+        view->setViewport({ 0, 0, 64, 64 });
+    }
+
+    // Gives primitive `index` of `builder` its own (never uploaded) vertex and index buffers.
+    // The NOOP backend never reads them; what matters is that every build() allocates a fresh
+    // FRenderPrimitive array.
+    void setGeometry(RenderableManager::Builder& builder, size_t const index) {
+        VertexBuffer* const vb = VertexBuffer::Builder()
+                .vertexCount(3)
+                .bufferCount(1)
+                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3)
+                .build(*engine);
+        mVertexBuffers.push_back(vb);
+        IndexBuffer* const ib = IndexBuffer::Builder()
+                .indexCount(3)
+                .bufferType(IndexBuffer::IndexType::USHORT)
+                .build(*engine);
+        mIndexBuffers.push_back(ib);
+        builder.geometry(index, RenderableManager::PrimitiveType::TRIANGLES, vb, ib, 0, 3);
+    }
+
+    // Renders one frame of `view` through the whole pipeline (FView::prepare(), culling,
+    // RenderPass command generation) with the NOOP backend. Returns false if the frame was skipped.
+    bool renderFrame(View* view) {
+        if (!mRenderer) {
+            mRenderer = engine->createRenderer();
+            mSwapChain = engine->createSwapChain(64, 64);
+        }
+        mVsyncNanos += 16'666'667;
+        if (!mRenderer->beginFrame(mSwapChain, mVsyncNanos)) {
+            return false;
+        }
+        mRenderer->render(view);
+        mRenderer->endFrame();
+        engine->flushAndWait();
+        return true;
+    }
+
+    // Row of `e` in the View's per-frame RenderableSoa (which FView::prepare() partitions),
+    // or 0xFFFFFFFF if it is not there.
+    static uint32_t findFrameRow(View* view, Entity const e) {
+        auto const& soa = downcast(view)->getRenderableData();
+        for (uint32_t i = 0, c = soa.size(); i < c; i++) {
+            if (soa.elementAt<FScene::RENDERABLE_ENTITY>(i) == e) {
+                return i;
+            }
+        }
+        return 0xFFFFFFFFu;
+    }
+
+    static bool hasRenderableRow(View* view, Entity e) {
+        return downcast(view)->getSceneCache()->renderableCache.getIndex(e) != 0xFFFFFFFFu;
+    }
+
+    static bool hasLightRow(View* view, Entity e) {
+        return downcast(view)->getSceneCache()->lightCache.getIndex(e) != 0xFFFFFFFFu;
+    }
+
+    static bool hasDirectionalLight(View* view, Entity e) {
+        return downcast(view)->getSceneCache()->directionalLights[e.getId()];
+    }
+
+    void cleanupTrackedResources() {
+        if (!engine) {
+            return;
+        }
+        for (View* v : mViews) {
+            engine->destroy(v);
+        }
+        mViews.clear();
+        for (Scene* s : mScenes) {
+            engine->destroy(s);
+        }
+        mScenes.clear();
+        for (SkinningBuffer* sb : mSkinningBuffers) {
+            engine->destroy(sb);
+        }
+        mSkinningBuffers.clear();
+        auto& em = engine->getEntityManager();
+        for (Entity const e : mEntities) {
+            engine->destroy(e);
+            if (em.isAlive(e)) {
+                em.destroy(e);
+            }
+        }
+        mEntities.clear();
+        // after the renderables that reference them
+        for (VertexBuffer* vb : mVertexBuffers) {
+            engine->destroy(vb);
+        }
+        mVertexBuffers.clear();
+        for (IndexBuffer* ib : mIndexBuffers) {
+            engine->destroy(ib);
+        }
+        mIndexBuffers.clear();
+        if (mRenderer) {
+            engine->destroy(mSwapChain);
+            engine->destroy(mRenderer);
+            mSwapChain = nullptr;
+            mRenderer = nullptr;
+        }
+    }
+
+    // Not identity, so the first prepare() of a fresh cache is a full rebuild (see B2(c)).
+    mat4 const T = mat4::translation(double3{ 0, 0, -1 });
+
+    Engine* engine = nullptr;
+    LinearAllocatorArena arena{ "SceneCacheTest", 1024 * 1024 };
+    std::vector<View*> mViews;
+    std::vector<Scene*> mScenes;
+    std::vector<SkinningBuffer*> mSkinningBuffers;
+    std::vector<Entity> mEntities;
+    std::vector<VertexBuffer*> mVertexBuffers;
+    std::vector<IndexBuffer*> mIndexBuffers;
+    Renderer* mRenderer = nullptr;
+    SwapChain* mSwapChain = nullptr;
+    uint64_t mVsyncNanos = 0;
+};
+
+} // namespace
+
+TEST_F(SceneCacheTest, DestroyedEntityIsEvictedFromAllViews) {
+    Scene* scene = createScene();
+    View* x = createView();
+    View* y = createView();
+    x->setScene(scene);
+    y->setScene(scene);
+
+    // 1. Prepare X then Y; destroy entities via EntityManager::destroy() while still in Scene.
+    Entity const r1 = createRenderable();
+    Entity const p1 = createPointLight();
+    Entity const d1 = createDirectionalLight();
+    scene->addEntity(r1);
+    scene->addEntity(p1);
+    scene->addEntity(d1);
+
+    prepare(scene, x, T);
+    prepare(scene, y, T);
+    ASSERT_TRUE(hasRenderableRow(x, r1));
+    ASSERT_TRUE(hasRenderableRow(y, r1));
+    ASSERT_TRUE(hasLightRow(x, p1));
+    ASSERT_TRUE(hasLightRow(y, p1));
+    ASSERT_TRUE(hasDirectionalLight(x, d1));
+    ASSERT_TRUE(hasDirectionalLight(y, d1));
+
+    engine->getEntityManager().destroy(r1);
+    engine->getEntityManager().destroy(p1);
+    engine->getEntityManager().destroy(d1);
+
+    prepare(scene, x, T);
+    prepare(scene, y, T);
+    EXPECT_FALSE(hasRenderableRow(x, r1));
+    EXPECT_FALSE(hasRenderableRow(y, r1));
+    EXPECT_FALSE(hasLightRow(x, p1));
+    EXPECT_FALSE(hasLightRow(y, p1));
+    EXPECT_FALSE(hasDirectionalLight(x, d1));
+    EXPECT_FALSE(hasDirectionalLight(y, d1));
+
+    engine->destroy(r1);
+    engine->destroy(p1);
+    engine->destroy(d1);
+
+    // 2. Prepare Y before X, and call engine->destroy(e) before em.destroy(e).
+    Entity const r2 = createRenderable();
+    scene->addEntity(r2);
+    prepare(scene, x, T);
+    prepare(scene, y, T);
+    ASSERT_TRUE(hasRenderableRow(x, r2));
+    ASSERT_TRUE(hasRenderableRow(y, r2));
+
+    engine->destroy(r2);
+    engine->getEntityManager().destroy(r2);
+
+    prepare(scene, y, T);
+    prepare(scene, x, T);
+    EXPECT_FALSE(hasRenderableRow(y, r2));
+    EXPECT_FALSE(hasRenderableRow(x, r2));
+}
+
+TEST_F(SceneCacheTest, SceneSwitchDropsOldSceneRows) {
+    Scene* sceneA = createScene();
+    Scene* sceneB = createScene();
+    View* view = createView();
+
+    Entity const a = createRenderable();
+    Entity const pA = createPointLight();
+    Entity const sunA = createDirectionalLight();
+    Entity const b = createRenderable();
+    sceneA->addEntity(a);
+    sceneA->addEntity(pA);
+    sceneA->addEntity(sunA);
+    sceneB->addEntity(b);
+
+    view->setScene(sceneA);
+    prepare(sceneA, view, T);
+    ASSERT_TRUE(hasRenderableRow(view, a));
+    ASSERT_TRUE(hasLightRow(view, pA));
+    ASSERT_TRUE(hasDirectionalLight(view, sunA));
+
+    view->setScene(sceneB);
+    prepare(sceneB, view, T);
+    EXPECT_FALSE(hasRenderableRow(view, a));
+    EXPECT_FALSE(hasLightRow(view, pA));
+    EXPECT_FALSE(hasDirectionalLight(view, sunA));
+    EXPECT_TRUE(hasRenderableRow(view, b));
+}
+
+TEST_F(SceneCacheTest, SceneSwitchKeepsSharedEntity) {
+    Scene* sceneA = createScene();
+    Scene* sceneB = createScene();
+    View* view = createView();
+
+    Entity const s = createRenderable();
+    sceneA->addEntity(s);
+    sceneB->addEntity(s);
+
+    view->setScene(sceneA);
+    prepare(sceneA, view, T);
+    ASSERT_TRUE(hasRenderableRow(view, s));
+
+    sceneA->remove(s);
+    view->setScene(sceneB);
+    prepare(sceneB, view, T);
+    EXPECT_TRUE(hasRenderableRow(view, s));
+}
+
+TEST_F(SceneCacheTest, FreshCacheLoadsExistingEntities) {
+    Scene* scene = createScene();
+    View* view = createView();
+
+    Entity const e = createRenderable();
+    scene->addEntity(e);
+
+    view->setScene(scene);
+    prepare(scene, view, mat4{});
+    EXPECT_TRUE(hasRenderableRow(view, e));
+}
+
+// An Entity destroyed before it is added can never be pruned lazily (its destruction
+// notification has already been delivered), so addEntity() / addEntities() must not add it.
+TEST_F(SceneCacheTest, AddDestroyedEntityIsNoOp) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& em = engine->getEntityManager();
+
+    Entity const dead = createRenderable();
+    Entity const alive = createRenderable();
+    engine->destroy(dead);
+    em.destroy(dead);
+
+    scene->addEntity(dead);
+    scene->addEntity(alive);
+    EXPECT_FALSE(scene->hasEntity(dead));
+    EXPECT_TRUE(scene->hasEntity(alive));
+    EXPECT_EQ(1u, scene->getEntityCount());
+
+    // the batch path skips dead entities too, and re-adding a live one is still idempotent
+    Entity const batch[] = { dead, alive };
+    scene->addEntities(batch, 2);
+    EXPECT_FALSE(scene->hasEntity(dead));
+    EXPECT_EQ(1u, scene->getEntityCount());
+
+    // the null Entity is never alive
+    scene->addEntity(Entity{});
+    EXPECT_FALSE(scene->hasEntity(Entity{}));
+    EXPECT_EQ(1u, scene->getEntityCount());
+
+    prepare(scene, view, T);
+    EXPECT_FALSE(hasRenderableRow(view, dead));
+    EXPECT_TRUE(hasRenderableRow(view, alive));
+    EXPECT_EQ(1u, scene->getEntityCount());
+}
+
+TEST_F(SceneCacheTest, RemoveAllEntitiesEvictsRows) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+
+    Entity const r = createRenderable();
+    Entity const p = createPointLight();
+    Entity const d = createDirectionalLight();
+
+    // 1. Fast path (same worldTransform).
+    scene->addEntity(r);
+    scene->addEntity(p);
+    scene->addEntity(d);
+    prepare(scene, view, T);
+    ASSERT_EQ(1u, cache.renderableCache.size());
+    ASSERT_EQ(1u, cache.lightCache.size());
+    ASSERT_FALSE(cache.directionalLights.empty());
+
+    scene->removeAllEntities();
+    prepare(scene, view, T);
+    EXPECT_EQ(0u, cache.renderableCache.size());
+    EXPECT_EQ(0u, cache.lightCache.size());
+    EXPECT_TRUE(cache.directionalLights.empty());
+
+    // 2. Full-rebuild path (different worldRotation).
+    mat4 const T2 = mat4::rotation(0.5, double3{ 0, 1, 0 }) * T;
+    scene->addEntity(r);
+    scene->addEntity(p);
+    scene->addEntity(d);
+    prepare(scene, view, T);
+    ASSERT_EQ(1u, cache.renderableCache.size());
+    ASSERT_EQ(1u, cache.lightCache.size());
+    ASSERT_FALSE(cache.directionalLights.empty());
+
+    scene->removeAllEntities();
+    prepare(scene, view, T2);
+    EXPECT_EQ(0u, cache.renderableCache.size());
+    EXPECT_EQ(0u, cache.lightCache.size());
+    EXPECT_TRUE(cache.directionalLights.empty());
+
+    // 3. Re-add r after removeAllEntities() and before prepare().
+    scene->addEntity(r);
+    scene->addEntity(p);
+    scene->addEntity(d);
+    prepare(scene, view, T2);
+    scene->removeAllEntities();
+    scene->addEntity(r);
+    prepare(scene, view, T2);
+    EXPECT_TRUE(hasRenderableRow(view, r));
+    EXPECT_FALSE(hasLightRow(view, p));
+    EXPECT_FALSE(hasDirectionalLight(view, d));
+}
+
+TEST_F(SceneCacheTest, SetSkinningBufferUpdatesCache) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+    auto& rcm = engine->getRenderableManager();
+
+    SkinningBuffer* sb1 = createSkinningBuffer(256);
+    SkinningBuffer* sb2 = createSkinningBuffer(256);
+
+    Entity const e = createEntity();
+    engine->getTransformManager().create(e);
+    RenderableManager::Builder(1)
+            .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
+            .enableSkinningBuffers(true)
+            .skinning(sb1, 256, 0)
+            .build(*engine, e);
+    scene->addEntity(e);
+
+    prepare(scene, view, T);
+    auto const ri = rcm.getInstance(e);
+    auto const handle1 = downcast(rcm).getSkinningBufferInfo(ri).handle;
+    uint32_t const idx1 = cache.renderableCache.getIndex(e);
+    ASSERT_NE(0xFFFFFFFFu, idx1);
+    EXPECT_EQ(handle1,
+            cache.renderableCache.getSoA().elementAt<FScene::SKINNING_BUFFER>(idx1).handle);
+
+    rcm.setSkinningBuffer(ri, sb2, 256, 0);
+    auto const handle2 = downcast(rcm).getSkinningBufferInfo(ri).handle;
+    ASSERT_NE(handle1, handle2);
+
+    prepare(scene, view, T);
+    uint32_t const idx2 = cache.renderableCache.getIndex(e);
+    ASSERT_NE(0xFFFFFFFFu, idx2);
+    EXPECT_EQ(handle2,
+            cache.renderableCache.getSoA().elementAt<FScene::SKINNING_BUFFER>(idx2).handle);
+}
+
+TEST_F(SceneCacheTest, LightDataCapacityForSimdOverRead) {
+    auto roundup4 = [](size_t n) { return (n + 3u) & ~size_t(3u); };
+
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+
+    for (size_t p = 1; p <= 48; ++p) {
+        Entity const e = createPointLight();
+        scene->addEntity(e);
+        prepare(scene, view, T);
+        EXPECT_GT(cache.lightData.capacity(), roundup4(p)) << "p = " << p;
+        EXPECT_GE(cache.lightData.capacity(), roundup4(p + 1)) << "p = " << p;
+    }
+}
+
+TEST_F(SceneCacheTest, EntitiesWithoutTransformUseIdentity) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+    auto& tcm = engine->getTransformManager();
+    auto& rcm = engine->getRenderableManager();
+    auto& lcm = engine->getLightManager();
+
+    float3 const pos{ 1.0f, 2.0f, 3.0f };
+    float3 const expectedPos = (mat4f{ T } * float4{ pos, 1.0f }).xyz;
+
+    Entity const r1 = createRenderable(true);
+    tcm.destroy(r1);
+    Entity const r2 = createRenderable(true);
+    tcm.setTransform(tcm.getInstance(r2), mat4f::translation(float3{ 10.0f, 0.0f, 0.0f }));
+    Entity const p = createPointLight(false, pos);
+    Entity const sun = createDirectionalLight(false, LightManager::Type::SUN);
+
+    scene->addEntity(r1);
+    scene->addEntity(r2);
+    scene->addEntity(p);
+    scene->addEntity(sun);
+
+    // 1. Full rebuild path (first prepare).
+    prepare(scene, view, T);
+
+    uint32_t idxR1 = cache.renderableCache.getIndex(r1);
+    ASSERT_NE(0xFFFFFFFFu, idxR1);
+    EXPECT_EQ(double3{ 0.0 }, cache.renderableCache.getTranslations()[idxR1]);
+    EXPECT_EQ(mat4f{ T }, cache.renderableData.elementAt<FScene::WORLD_TRANSFORM>(idxR1));
+
+    uint32_t idxP = cache.lightCache.getIndex(p);
+    ASSERT_NE(0xFFFFFFFFu, idxP);
+    EXPECT_EQ(double3{ pos }, cache.lightCache.getTranslations()[idxP]);
+    EXPECT_EQ(expectedPos,
+            cache.lightData.elementAt<FScene::POSITION_RADIUS>(
+                    FScene::DIRECTIONAL_LIGHTS_COUNT + idxP).xyz);
+
+    EXPECT_TRUE(hasDirectionalLight(view, sun));
+
+    // 2. Fast path (same T) after dirtying each entity without a transform.
+    rcm.setPriority(rcm.getInstance(r1), 5);
+    tcm.destroy(r2);
+    lcm.setIntensity(lcm.getInstance(p), 2000.0f);
+    lcm.setIntensity(lcm.getInstance(sun), 2000.0f);
+
+    prepare(scene, view, T);
+
+    idxR1 = cache.renderableCache.getIndex(r1);
+    ASSERT_NE(0xFFFFFFFFu, idxR1);
+    EXPECT_EQ(double3{ 0.0 }, cache.renderableCache.getTranslations()[idxR1]);
+    EXPECT_EQ(mat4f{ T }, cache.renderableData.elementAt<FScene::WORLD_TRANSFORM>(idxR1));
+
+    uint32_t const idxR2 = cache.renderableCache.getIndex(r2);
+    ASSERT_NE(0xFFFFFFFFu, idxR2);
+    EXPECT_EQ(double3{ 0.0 }, cache.renderableCache.getTranslations()[idxR2]);
+    EXPECT_EQ(mat4f{ T }, cache.renderableData.elementAt<FScene::WORLD_TRANSFORM>(idxR2));
+
+    idxP = cache.lightCache.getIndex(p);
+    ASSERT_NE(0xFFFFFFFFu, idxP);
+    EXPECT_EQ(double3{ pos }, cache.lightCache.getTranslations()[idxP]);
+    EXPECT_EQ(expectedPos,
+            cache.lightData.elementAt<FScene::POSITION_RADIUS>(
+                    FScene::DIRECTIONAL_LIGHTS_COUNT + idxP).xyz);
+
+    EXPECT_TRUE(hasDirectionalLight(view, sun));
+}
+
+TEST_F(SceneCacheTest, DirectionalLightTies) {
+    Engine::Config config{};
+    config.enableMultipleDirectionalLights = true;
+    recreateEngine(config);
+    ASSERT_NE(nullptr, engine);
+
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+    auto& lcm = engine->getLightManager();
+
+    Entity lights[3] = { createEntity(), createEntity(), createEntity() };
+    std::sort(std::begin(lights), std::end(lights), [](Entity a, Entity b) {
+        return a.getId() < b.getId();
+    });
+
+    for (size_t i = 0; i < 3; ++i) {
+        LightManager::ShadowOptions shadowOpts{};
+        shadowOpts.screenSpaceContactShadows = (i == 0);
+        LightManager::Builder(LightManager::Type::DIRECTIONAL)
+                .intensity(1000.0f)
+                .direction(normalize(float3{ float(i + 1), -1.0f, 0.0f }))
+                .shadowOptions(shadowOpts)
+                .build(*engine, lights[i]);
+        scene->addEntity(lights[i]);
+    }
+
+    prepare(scene, view, T);
+
+    EXPECT_EQ(lights[0], cache.lightData.elementAt<FScene::LIGHT_ENTITY>(0));
+    ASSERT_EQ(2u, cache.extraDirectionalLightCount);
+    auto const li0 = downcast(lcm).getInstance(lights[0]);
+    auto const li1 = downcast(lcm).getInstance(lights[1]);
+    auto const li2 = downcast(lcm).getInstance(lights[2]);
+    EXPECT_NE(li0, cache.extraDirectionalLightInstances[0]);
+    EXPECT_NE(li0, cache.extraDirectionalLightInstances[1]);
+    EXPECT_EQ(li1, cache.extraDirectionalLightInstances[0]);
+    EXPECT_EQ(li2, cache.extraDirectionalLightInstances[1]);
+    EXPECT_TRUE(cache.lightsHaveContactShadows);
+
+    // Enable contact shadows only on non-dominant directional lights, with no punctual lights.
+    LightManager::ShadowOptions noContact{};
+    noContact.screenSpaceContactShadows = false;
+    LightManager::ShadowOptions withContact{};
+    withContact.screenSpaceContactShadows = true;
+    lcm.setShadowOptions(lcm.getInstance(lights[0]), noContact);
+    lcm.setShadowOptions(lcm.getInstance(lights[1]), withContact);
+    lcm.setShadowOptions(lcm.getInstance(lights[2]), withContact);
+
+    prepare(scene, view, T);
+    EXPECT_EQ(lights[0], cache.lightData.elementAt<FScene::LIGHT_ENTITY>(0));
+    EXPECT_FALSE(cache.lightsHaveContactShadows);
+}
+
+TEST_F(SceneCacheTest, ConcurrentDestroyAndViewSceneChanges) {
+    Scene* sceneA = createScene();
+    Scene* sceneB = createScene();
+    View* view1 = createView();
+    View* view2 = createView();
+    auto& em = engine->getEntityManager();
+
+    constexpr size_t kEntityCount = 2048;
+    constexpr size_t kRenderableCount = 16;
+    std::vector<Entity> entities(kEntityCount);
+    em.create(kEntityCount, entities.data());
+    mEntities.insert(mEntities.end(), entities.begin(), entities.end());
+
+    for (size_t i = 0; i < kRenderableCount; ++i) {
+        engine->getTransformManager().create(entities[i]);
+        RenderableManager::Builder(1)
+                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
+                .build(*engine, entities[i]);
+        sceneA->addEntity(entities[i]);
+        sceneB->addEntity(entities[i]);
+    }
+
+    View* extraViews[8];
+    for (View*& v : extraViews) {
+        v = createView();
+    }
+
+    view1->setScene(sceneA);
+    view2->setScene(sceneB);
+    prepare(sceneA, view1, T);
+    prepare(sceneB, view2, T);
+    for (size_t i = 0; i < kRenderableCount; ++i) {
+        ASSERT_TRUE(hasRenderableRow(view1, entities[i]));
+        ASSERT_TRUE(hasRenderableRow(view2, entities[i]));
+    }
+
+    std::atomic<bool> start{ false };
+    std::atomic<bool> done{ false };
+    std::thread destroyer([&] {
+        while (!start.load(std::memory_order_acquire)) {
+        }
+        for (Entity const e : entities) {
+            em.destroy(1, &e);
+        }
+        done.store(true, std::memory_order_release);
+    });
+
+    start.store(true, std::memory_order_release);
+    while (!done.load(std::memory_order_acquire)) {
+        for (View* v : extraViews) {
+            v->setScene(sceneA);
+        }
+        view1->setScene(sceneB);
+        view1->setScene(nullptr);
+        view1->setScene(sceneA);
+        for (View* v : extraViews) {
+            v->setScene(nullptr);
+        }
+        Scene* temp = engine->createScene();
+        view2->setScene(temp);
+        view2->setScene(sceneB);
+        engine->destroy(temp);
+    }
+    destroyer.join();
+
+    view1->setScene(sceneA);
+    view2->setScene(sceneB);
+    prepare(sceneA, view1, T);
+    prepare(sceneB, view2, T);
+    for (size_t i = 0; i < kRenderableCount; ++i) {
+        EXPECT_FALSE(hasRenderableRow(view1, entities[i]));
+        EXPECT_FALSE(hasRenderableRow(view2, entities[i]));
+    }
+}
+
+TEST_F(SceneCacheTest, DestroyedEntityPrunedOnUnregisterView) {
+    Scene* sceneA = createScene();
+    Scene* sceneB = createScene();
+    View* view1 = createView();
+    View* view2 = createView();
+
+    Entity const r1 = createRenderable();
+    Entity const r2 = createRenderable();
+    sceneA->addEntity(r1);
+    sceneA->addEntity(r2);
+
+    view1->setScene(sceneA);
+    prepare(sceneA, view1, T);
+    ASSERT_TRUE(sceneA->hasEntity(r1));
+    ASSERT_TRUE(sceneA->hasEntity(r2));
+    ASSERT_EQ(2u, sceneA->getEntityCount());
+
+    // 1. Destroy r1, then detach view1 before prepare() runs on sceneA.
+    engine->getEntityManager().destroy(r1);
+    view1->setScene(nullptr);
+    EXPECT_FALSE(sceneA->hasEntity(r1));
+    EXPECT_EQ(1u, sceneA->getEntityCount());
+
+    // Even after another View attaches and prepares sceneA, r1 must not remain in sceneA.
+    view2->setScene(sceneA);
+    prepare(sceneA, view2, T);
+    EXPECT_FALSE(sceneA->hasEntity(r1));
+    EXPECT_TRUE(sceneA->hasEntity(r2));
+    EXPECT_EQ(1u, sceneA->getEntityCount());
+
+    // 2. Destroy r2, then switch view2 to sceneB before prepare() runs on sceneA.
+    engine->getEntityManager().destroy(r2);
+    view2->setScene(sceneB);
+    prepare(sceneB, view2, T);
+    EXPECT_FALSE(sceneA->hasEntity(r2));
+    EXPECT_EQ(0u, sceneA->getEntityCount());
+}
+
+// The PRIMITIVES column is a Slice into the FRenderPrimitive array owned by the renderable
+// component, and it is now cached across frames. Rebuilding a renderable frees that array and
+// allocates a new one, so the row must be refreshed before the next frame reads it, all the way
+// down to the per-frame SoA that RenderPass consumes.
+TEST_F(SceneCacheTest, RebuiltRenderableRefreshesFramePrimitives) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    createCamera(view);
+    auto& rcm = engine->getRenderableManager();
+
+    Entity const e = createEntity();
+    engine->getTransformManager().create(e);
+    scene->addEntity(e);
+
+    auto const rebuild = [&](size_t const primitiveCount) {
+        RenderableManager::Builder builder(primitiveCount);
+        builder.boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }});
+        for (size_t i = 0; i < primitiveCount; i++) {
+            setGeometry(builder, i);
+        }
+        builder.build(*engine, e);
+    };
+
+    // Renders a frame, then checks that the row of `e` in the per-frame SoA points to the
+    // component's current primitive array, and that the color pass summed the right count.
+    auto const renderAndCheck = [&](size_t const primitiveCount) {
+        ASSERT_TRUE(renderFrame(view));
+        auto const& soa = downcast(view)->getRenderableData();
+        uint32_t const row = findFrameRow(view, e);
+        ASSERT_NE(0xFFFFFFFFu, row);
+        auto const& visible = downcast(view)->getVisibleRenderables();
+        ASSERT_TRUE(row >= visible.first && row < visible.last) << "the renderable was culled";
+
+        auto const current = downcast(rcm).getRenderPrimitives(rcm.getInstance(e), 0);
+        ASSERT_EQ(primitiveCount, current.size());
+        auto const& cached = soa.elementAt<FScene::PRIMITIVES>(row);
+        EXPECT_EQ(current.data(), cached.data());
+        EXPECT_EQ(current.size(), cached.size());
+        // RenderPass::updateSummedPrimitiveCounts() ran on the frame's PRIMITIVES
+        EXPECT_EQ(primitiveCount, FScene::getPrimitiveCount(soa, visible.first, visible.last));
+    };
+
+    // Built after being added to the Scene: the addComponent() notification brings it in.
+    rebuild(1);
+    ASSERT_NO_FATAL_FAILURE(renderAndCheck(1));
+
+    // Rebuilding frees the previous FRenderPrimitive array: a stale slice would dangle.
+    rebuild(3);
+    ASSERT_NO_FATAL_FAILURE(renderAndCheck(3));
+
+    // Shrinking it would also make a stale slice read past the new array.
+    rebuild(2);
+    ASSERT_NO_FATAL_FAILURE(renderAndCheck(2));
+}
+
+// lightsHaveContactShadows is a property of the Scene's lights, not of the lights visible this
+// frame, and it is kept up to date through setShadowOptions(), which only notifies the caches when
+// the effective (clamped) options actually change.
+TEST_F(SceneCacheTest, ContactShadowsFollowSceneLightsAndShadowOptions) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+    auto& lcm = engine->getLightManager();
+    auto& rcm = engine->getRenderableManager();
+    auto& tcm = engine->getTransformManager();
+
+    Entity const r = createRenderable();
+    Entity const sun = createDirectionalLight();
+    Entity const p = createPointLight();
+    scene->addEntity(r);
+    scene->addEntity(sun);
+    scene->addEntity(p);
+
+    prepare(scene, view, T);
+    EXPECT_FALSE(cache.lightsHaveContactShadows);
+
+    auto const li = lcm.getInstance(p);
+    LightManager::ShadowOptions options = lcm.getShadowOptions(li);
+
+    // 1. Enabling contact shadows on a positional light notifies, and is picked up.
+    options.screenSpaceContactShadows = true;
+    lcm.setShadowOptions(li, options);
+    EXPECT_TRUE(cache.dirtyEntities[p.getId()]);
+    prepare(scene, view, T);
+    EXPECT_TRUE(cache.lightsHaveContactShadows);
+
+    // 2. Setting the same options again is a no-op: nothing is dirtied.
+    lcm.setShadowOptions(li, options);
+    EXPECT_FALSE(cache.dirtyEntities[p.getId()]);
+    EXPECT_FALSE(cache.hasDirtyEntities());
+
+    // 3. Any other field notifies (operator== covers every field), and the comparison is made
+    //    after clamping: 4096 clamps to 2048, so going from 2048 to 4096 is a no-op.
+    options.mapSize = 2048;
+    lcm.setShadowOptions(li, options);
+    EXPECT_TRUE(cache.dirtyEntities[p.getId()]);
+    prepare(scene, view, T);
+    EXPECT_TRUE(cache.lightsHaveContactShadows);
+    options.mapSize = 4096;
+    lcm.setShadowOptions(li, options);
+    EXPECT_FALSE(cache.dirtyEntities[p.getId()]);
+
+    // 4. The dominant directional light counts too.
+    options.screenSpaceContactShadows = false;
+    lcm.setShadowOptions(li, options);
+    prepare(scene, view, T);
+    EXPECT_FALSE(cache.lightsHaveContactShadows);
+
+    auto const sunInstance = lcm.getInstance(sun);
+    LightManager::ShadowOptions sunOptions = lcm.getShadowOptions(sunInstance);
+    sunOptions.screenSpaceContactShadows = true;
+    lcm.setShadowOptions(sunInstance, sunOptions);
+    prepare(scene, view, T);
+    EXPECT_TRUE(cache.lightsHaveContactShadows);
+
+    // 5. Removing that light from the Scene clears it.
+    scene->remove(sun);
+    prepare(scene, view, T);
+    EXPECT_FALSE(cache.lightsHaveContactShadows);
+
+    // 6. End to end: the flag does not depend on light culling. The point light (radius 10) is
+    //    moved to z = +50, behind a camera at z = +5 looking down -z, so it is culled; yet
+    //    View::hasContactShadows() is true because a visible renderable and a Scene light both
+    //    have contact shadows enabled.
+    createCamera(view);
+    rcm.setScreenSpaceContactShadows(rcm.getInstance(r), true);
+    tcm.setTransform(tcm.getInstance(p), mat4f::translation(float3{ 0, 0, 50 }));
+    options.screenSpaceContactShadows = true;
+    lcm.setShadowOptions(li, options);
+    ASSERT_TRUE(renderFrame(view));
+    // the frame's light list was shrunk to the visible lights: only the directional slot is left
+    EXPECT_EQ(FScene::DIRECTIONAL_LIGHTS_COUNT, cache.lightData.size());
+    EXPECT_TRUE(cache.renderablesHaveContactShadows);
+    EXPECT_TRUE(cache.lightsHaveContactShadows);
+    EXPECT_TRUE(downcast(view)->hasContactShadows());
+}
+
+TEST_F(SceneCacheTest, CameraTranslationSkipsRebuildAndPreservesPrecision) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+    auto& tcm = engine->getTransformManager();
+    tcm.setAccurateTranslationsEnabled(true);
+
+    Box const aabb{ { 1.25f, -2.5f, 3.75f }, { 4.5f, 5.5f, 6.5f } };
+    Entity const r = createEntity();
+    tcm.create(r);
+    RenderableManager::Builder(1).boundingBox(aabb).build(*engine, r);
+
+    tcm.setTransform(tcm.getInstance(r),
+            mat4::translation(double3{ 100000.25, -50000.5, 25000.125 }) *
+                    mat4::rotation(0.7, double3{ 0, 1, 0 }) *
+                    mat4::scaling(double3{ 1.5, 2.0, 0.5 }));
+    mat4 const modelR = tcm.getWorldTransformAccurate(tcm.getInstance(r));
+
+    float3 const localLightPos{ 3.5f, -7.25f, 11.125f };
+    Entity const p = createPointLight(true, localLightPos);
+    tcm.setTransform(tcm.getInstance(p),
+            mat4::translation(double3{ 100005.0, -49995.0, 25010.0 }) *
+                    mat4::rotation(-0.35, double3{ 1, 0, 0 }));
+    mat4 const modelP = tcm.getWorldTransformAccurate(tcm.getInstance(p));
+
+    Entity const sun = createDirectionalLight(false);
+
+    scene->addEntity(r);
+    scene->addEntity(p);
+    scene->addEntity(sun);
+
+    mat3 const R1 = mat3::rotation(0.3, double3{ 0, 1, 0 }) *
+            mat3::rotation(-0.2, double3{ 1, 0, 0 });
+    double3 const cam1{ 100000.0, -50000.0, 25000.0 };
+    mat4 const W1 = mat4{ R1 } * mat4::translation(-cam1);
+
+    prepare(scene, view, W1);
+
+    // 1. Pure camera translation does not rebuild the master cache.
+    double3 const cam2{ 100010.5, -50003.25, 24990.75 };
+    mat4 const W2 = mat4{ R1 } * mat4::translation(-cam2);
+    EXPECT_FALSE(downcast(scene)->processDeferredUpdates(W2.upperLeft(), false, cache));
+
+    prepare(scene, view, W2);
+
+    auto const verifyFrameData = [&](mat4 const& W) {
+        uint32_t const idxR = cache.renderableCache.getIndex(r);
+        ASSERT_NE(0xFFFFFFFFu, idxR);
+        mat4f const expectedShaderWorld = mat4f{ W * modelR };
+        EXPECT_EQ(expectedShaderWorld,
+                cache.renderableData.elementAt<FScene::WORLD_TRANSFORM>(idxR));
+
+        Box const expectedAabb = rigidTransform(aabb, expectedShaderWorld);
+        EXPECT_EQ(expectedAabb.center,
+                cache.renderableData.elementAt<FScene::WORLD_AABB_CENTER>(idxR));
+        EXPECT_EQ(expectedAabb.center.x,
+                cache.renderableData.elementAt<FScene::WORLD_AABB_CENTER_X>(idxR));
+        EXPECT_EQ(expectedAabb.center.y,
+                cache.renderableData.elementAt<FScene::WORLD_AABB_CENTER_Y>(idxR));
+        EXPECT_EQ(expectedAabb.center.z,
+                cache.renderableData.elementAt<FScene::WORLD_AABB_CENTER_Z>(idxR));
+        EXPECT_EQ(expectedAabb.halfExtent,
+                cache.renderableData.elementAt<FScene::WORLD_AABB_EXTENT>(idxR));
+
+        uint32_t const idxP = cache.lightCache.getIndex(p);
+        ASSERT_NE(0xFFFFFFFFu, idxP);
+        uint32_t const lightRow = FScene::DIRECTIONAL_LIGHTS_COUNT + idxP;
+        float3 const expectedLightPos = float3((W * (modelP * double4{ localLightPos, 1.0 })).xyz);
+        EXPECT_EQ(expectedLightPos,
+                cache.lightData.elementAt<FScene::POSITION_RADIUS>(lightRow).xyz);
+        EXPECT_EQ(expectedLightPos.x, cache.lightData.elementAt<FScene::POSITION_X>(lightRow));
+        EXPECT_EQ(expectedLightPos.y, cache.lightData.elementAt<FScene::POSITION_Y>(lightRow));
+        EXPECT_EQ(expectedLightPos.z, cache.lightData.elementAt<FScene::POSITION_Z>(lightRow));
+    };
+
+    ASSERT_NO_FATAL_FAILURE(verifyFrameData(W2));
+
+    // 2. Changing the 3x3 rotation of worldTransform triggers a master cache rebuild.
+    mat3 const R2 = mat3::rotation(-0.4, double3{ 0, 0, 1 });
+    mat4 const W3 = mat4{ R2 } * mat4::translation(-cam2);
+    EXPECT_TRUE(downcast(scene)->processDeferredUpdates(W3.upperLeft(), false, cache));
+
+    prepare(scene, view, W3);
+    ASSERT_NO_FATAL_FAILURE(verifyFrameData(W3));
+    EXPECT_EQ(normalize(mat3f{ R2 } * float3{ 0.0f, -1.0f, 0.0f }),
+            cache.lightData.elementAt<FScene::DIRECTION>(0));
+}
+
+TEST_F(SceneCacheTest, UnrelatedEntitiesDoNotDirtySceneCache) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+    auto& rcm = engine->getRenderableManager();
+    auto& lcm = engine->getLightManager();
+    auto& tcm = engine->getTransformManager();
+
+    Entity const inScene = createRenderable();
+    scene->addEntity(inScene);
+
+    mat4 const T{};
+    prepare(scene, view, T);
+    EXPECT_FALSE(cache.hasDirtyEntities());
+
+    // Creating or mutating entities outside the scene must not dirty the scene's view cache.
+    Entity const outsideRenderable = createRenderable();
+    Entity const outsideLight = createPointLight();
+    rcm.setAxisAlignedBoundingBox(rcm.getInstance(outsideRenderable),
+            Box{ { 0, 0, 0 }, { 2, 2, 2 } });
+    lcm.setIntensity(lcm.getInstance(outsideLight), 5000.0f);
+    tcm.setTransform(tcm.getInstance(outsideRenderable), mat4f::translation(float3{ 1, 2, 3 }));
+    downcast(tcm).ensureWorldTransformsUpToDate();
+
+    EXPECT_FALSE(cache.hasDirtyEntities());
+    EXPECT_FALSE(downcast(scene)->processDeferredUpdates(T.upperLeft(), false, cache));
+
+    // Mutating an entity that IS in the scene still marks the cache dirty.
+    tcm.setTransform(tcm.getInstance(inScene), mat4f::translation(float3{ 4, 5, 6 }));
+    downcast(tcm).ensureWorldTransformsUpToDate();
+    EXPECT_TRUE(cache.hasDirtyEntities());
+    EXPECT_TRUE(downcast(scene)->processDeferredUpdates(T.upperLeft(), false, cache));
 }
 
 int main(int argc, char** argv) {

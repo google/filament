@@ -175,7 +175,6 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder, MaterialDefinition
 
     mDepthPrecacheDisabled =
             driver.isWorkaroundNeeded(Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL);
-    mDefaultMaterial = engine.getDefaultMaterial();
 
     mPrograms.initializeForMaterial(engine, *this, processSpecializationConstants(builder));
 
@@ -183,7 +182,7 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder, MaterialDefinition
     // Register the material with matdbg.
     matdbg::DebugServer* server = downcast(engine).debug.server;
     if (UTILS_UNLIKELY(server)) {
-        auto const details = builder.mImpl;
+        auto const& details = builder.mImpl;
         mDebuggerId = server->addMaterial(mDefinition.name, details->mPayload, details->mSize, this);
     }
 #endif
@@ -218,18 +217,17 @@ void FMaterial::terminate(FEngine& engine) {
 #endif
 
     mPrograms.terminate(engine);
+
+    engine.getMaterialCache().releaseMaterial(engine, mDefinition);
 }
 
 filament::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayout(
         Variant const variant, bool const useVsmDescriptorSetLayout) const noexcept {
-    if (mDefinition.materialDomain == MaterialDomain::SURFACE) {
-        // `variant` is only sensical for MaterialDomain::SURFACE
-        if (Variant::isValidDepthVariant(variant)) {
-            return mEngine.getPerViewDescriptorSetLayoutDepthVariant();
-        }
-        if (Variant::isSSRVariant(variant)) {
-            return mEngine.getPerViewDescriptorSetLayoutSsrVariant();
-        }
+    if (mDefinition.isValidDepthVariant(variant)) {
+        return mEngine.getPerViewDescriptorSetLayoutDepthVariant();
+    }
+    if (mDefinition.isSSRVariant(variant)) {
+        return mEngine.getPerViewDescriptorSetLayoutSsrVariant();
     }
     // mDefinition.perViewDescriptorSetLayout{Vsm} is already resolved for MaterialDomain
     if (useVsmDescriptorSetLayout) {
@@ -272,14 +270,11 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
     ShaderModel const shaderModel = mEngine.getShaderModel();
     bool const isStereoSupported = driver.isStereoSupported();
     bool const isParallelShaderCompileSupported = driver.isParallelShaderCompileSupported();
-    bool const isMaterialLit = mDefinition.isVariantLit;
-    MaterialDomain const materialDomain = mDefinition.materialDomain;
 
     if (UTILS_LIKELY(isParallelShaderCompileSupported)) {
         for (auto const variant : variants) {
             for (auto specKey : specKeys) {
-                specKey = DynamicSpecConstKey::filterProgramSpecKey(variant, specKey,
-                        materialDomain, isMaterialLit);
+                specKey = mDefinition.filterProgramSpecKey(variant, specKey);
                 if (mDefinition.isValidProgram(variant, specKey, shaderModel, isStereoSupported)) {
 #ifndef NDEBUG
                     FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
@@ -306,8 +301,7 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
     } else {
         for (UTILS_UNUSED_WITHOUT_TRACING auto const variant : variants) {
             for (UTILS_UNUSED_WITHOUT_TRACING auto specKey: specKeys) {
-                specKey = DynamicSpecConstKey::filterProgramSpecKey(variant, specKey,
-                        materialDomain, isMaterialLit);
+                specKey = mDefinition.filterProgramSpecKey(variant, specKey);
                 FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
                         "parallel compilation disabled", "name", getName().c_str(), "variantKey",
                         static_cast<uint32_t>(variant.key), "specKey",
@@ -355,8 +349,7 @@ FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
 
 FMaterialInstance* FMaterial::getDefaultInstance() noexcept {
     if (UTILS_UNLIKELY(!mDefaultMaterialInstance)) {
-        mDefaultMaterialInstance =
-                mEngine.createMaterialInstance(this, mDefinition.name.c_str());
+        mDefaultMaterialInstance = mEngine.createMaterialInstance(this, mDefinition.name.c_str());
         mDefaultMaterialInstance->setDefaultInstance(true);
     }
     return mDefaultMaterialInstance;

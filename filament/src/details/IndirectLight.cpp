@@ -149,15 +149,15 @@ IndirectLight::Builder& IndirectLight::Builder::rotation(mat3f const& rotation) 
     return *this;
 }
 
-IndirectLight* IndirectLight::Builder::build(Engine& engine) {
+IndirectLight* IndirectLight::Builder::build(Engine& engine) const {
     if (mImpl->mReflectionsMap) {
         FILAMENT_CHECK_PRECONDITION(
                 mImpl->mReflectionsMap->getTarget() == Texture::Sampler::SAMPLER_CUBEMAP)
                 << "reflection map must a cubemap";
 
-        if constexpr (IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING) {
-            mImpl->mReflectionsMap->generateMipmaps(engine);
-        }
+#if IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
+        const_cast<Texture*>(mImpl->mReflectionsMap)->generateMipmaps(engine);
+#endif
     }
 
     if (mImpl->mIrradianceMap) {

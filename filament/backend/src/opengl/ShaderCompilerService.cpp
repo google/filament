@@ -98,7 +98,8 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
     }
 
     ShaderCompilerService& compiler;
-    CString const& name;
+    // The token can outlive its OpenGLProgram on the compiler thread, so it keeps its own copy.
+    CString name;
     CString programString;
     FixedCapacityVector<std::pair<CString, uint8_t>> attributes;
     Program::ShaderSource shaderSourceCode;

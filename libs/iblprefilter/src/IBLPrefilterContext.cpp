@@ -16,13 +16,15 @@
 
 #include "filament-iblprefilter/IBLPrefilterContext.h"
 
+#include "generated/resources/iblprefilter_materials.h"
+
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/Material.h>
 #include <filament/MaterialEnums.h>
-#include <filament/RenderTarget.h>
 #include <filament/RenderableManager.h>
 #include <filament/Renderer.h>
+#include <filament/RenderTarget.h>
 #include <filament/Scene.h>
 #include <filament/Texture.h>
 #include <filament/TextureSampler.h>
@@ -47,8 +49,6 @@
 
 #include <stddef.h>
 #include <stdint.h>
-
-#include "generated/resources/iblprefilter_materials.h"
 
 namespace {
 
@@ -233,7 +233,7 @@ IBLPrefilterContext::EquirectangularToCubemap::operator=(
 }
 
 Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
-        Texture const* equirect, Texture* outCube) {
+        Texture* equirect, Texture* outCube) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     using namespace backend;
 
@@ -396,7 +396,7 @@ IBLPrefilterContext::IrradianceFilter& IBLPrefilterContext::IrradianceFilter::op
 }
 
 Texture* IBLPrefilterContext::IrradianceFilter::operator()(Options options,
-        Texture const* environmentCubemap, Texture* outIrradianceTexture) {
+        Texture* environmentCubemap, Texture* outIrradianceTexture) {
 
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     using namespace backend;
@@ -496,7 +496,7 @@ Texture* IBLPrefilterContext::IrradianceFilter::operator()(Options options,
 
 UTILS_NOINLINE
 Texture* IBLPrefilterContext::IrradianceFilter::operator()(
-        Texture const* environmentCubemap, Texture* outIrradianceTexture) {
+        Texture* environmentCubemap, Texture* outIrradianceTexture) {
     return operator()({}, environmentCubemap, outIrradianceTexture);
 }
 
@@ -601,13 +601,13 @@ IBLPrefilterContext::SpecularFilter::operator=(SpecularFilter&& rhs) noexcept {
 
 UTILS_NOINLINE
 Texture* IBLPrefilterContext::SpecularFilter::operator()(
-        Texture const* environmentCubemap, Texture* outReflectionsTexture) {
+        Texture* environmentCubemap, Texture* outReflectionsTexture) {
     return operator()({}, environmentCubemap, outReflectionsTexture);
 }
 
 Texture* IBLPrefilterContext::SpecularFilter::operator()(
         Options options,
-        Texture const* environmentCubemap, Texture* outReflectionsTexture) {
+        Texture* environmentCubemap, Texture* outReflectionsTexture) {
 
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     using namespace backend;

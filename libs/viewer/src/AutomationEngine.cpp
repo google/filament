@@ -16,10 +16,11 @@
 
 #include <viewer/AutomationEngine.h>
 
+#include <imageio-lite/ImageEncoder.h>
+
 #include <image/ColorTransform.h>
 #include <image/ImageOps.h>
 #include <image/LinearImage.h>
-#include <imageio-lite/ImageEncoder.h>
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>
@@ -29,15 +30,14 @@
 #include <filament/TransformManager.h>
 #include <filament/Viewport.h>
 
-#include <utils/EntityManager.h>
-
 #include <backend/PixelBufferDescriptor.h>
 
+#include <utils/EntityManager.h>
 #include <utils/Log.h>
 #include <utils/Path.h>
 
-#include <iomanip>
 #include <fstream>
+#include <iomanip>
 #include <sstream>
 
 using namespace utils;
@@ -74,7 +74,7 @@ void exportPPM(void* buffer, uint32_t width, uint32_t height, std::ofstream& out
     convertRGBAtoRGB(buffer, width, height);
 
     outstream << "P6 " << width << " " << height << " " << 255 << std::endl;
-    outstream.write(static_cast<char*>(buffer), width * height * 3);
+    outstream.write(static_cast<char*>(buffer), std::streamsize(width) * height * 3);
 }
 
 using ExportFormat = AutomationEngine::Options::ExportFormat;
@@ -90,7 +90,7 @@ constexpr char const* getExportFormatExtension(ExportFormat format) {
 void AutomationEngine::exportScreenshot(View* view, Renderer* renderer, std::string filename,
         bool autoclose, AutomationEngine* automationEngine) {
     const Viewport& vp = view->getViewport();
-    const size_t byteCount = vp.width * vp.height * 4;
+    const size_t byteCount = size_t(vp.width) * vp.height * 4;
 
     // Create a buffer descriptor that writes the PPM after the data becomes ready on the CPU.
     backend::PixelBufferDescriptor buffer(
@@ -295,7 +295,9 @@ void AutomationEngine::tick(Engine* engine, const ViewerContent& content, float 
         return;
     }
 
-    const bool isLastTest = mCurrentTest == mSpec->size() - 1;
+    // Phrased as an addition rather than `mCurrentTest == mSpec->size() - 1` because size() is
+    // unsigned: for an empty spec the subtraction wraps to SIZE_MAX and this is never true.
+    const bool isLastTest = mCurrentTest + 1 >= mSpec->size();
 
     int const digits = (int) log10((double) mSpec->size()) + 1;
     std::ostringstream stringStream;

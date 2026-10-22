@@ -156,7 +156,13 @@ private:
 
     void reallocate(backend::DriverApi& driver, BufferAllocator::allocation_size_t requiredSize);
 
-    BufferAllocator::allocation_size_t calculateRequiredSize();
+    BufferAllocator::allocation_size_t calculateRequiredSize(size_t previouslyManagedCount);
+
+    // Rounds `totalSize` up to a non-zero multiple of `slotSize`, as required by BufferAllocator.
+    // Rounds down instead if rounding up would overflow allocation_size_t.
+    static BufferAllocator::allocation_size_t roundToSlotMultiple(
+            BufferAllocator::allocation_size_t totalSize,
+            BufferAllocator::allocation_size_t slotSize) noexcept;
 
     backend::Handle<backend::HwBufferObject> mUbHandle;
     backend::MemoryMappedBufferHandle mMemoryMappedBufferHandle;

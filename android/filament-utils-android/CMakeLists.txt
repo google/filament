@@ -71,11 +71,9 @@ set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
 
 add_library(filament-utils-jni SHARED
-        src/main/cpp/AndroidDisplayManager.cpp
         src/main/cpp/AutomationEngine.cpp
         src/main/cpp/Bookmark.cpp
         src/main/cpp/DeviceUtils.cpp
-        src/main/cpp/NativeViewer.cpp
         src/main/cpp/HDRLoader.cpp
         src/main/cpp/IBLPrefilterContext.cpp
         src/main/cpp/Utils.cpp

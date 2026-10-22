@@ -340,10 +340,10 @@ public:
         backend::SamplerMagFilter filterMag,
         backend::SamplerMinFilter filterMin) noexcept;
 
-    backend::Handle<backend::HwTexture> getOneTexture() const;
-    backend::Handle<backend::HwTexture> getZeroTexture() const;
-    backend::Handle<backend::HwTexture> getOneTextureArray() const;
-    backend::Handle<backend::HwTexture> getZeroTextureArray() const;
+    backend::Handle<backend::HwTexture> getOneTexture() const noexcept;
+    backend::Handle<backend::HwTexture> getZeroTexture() const noexcept;
+    backend::Handle<backend::HwTexture> getOneTextureArray() const noexcept;
+    backend::Handle<backend::HwTexture> getZeroTextureArray() const noexcept;
 
     class PostProcessMaterial {
     public:
@@ -419,7 +419,7 @@ public:
 
     StructureDescriptorSet& getStructureDescriptorSet() const noexcept { return mStructureDescriptorSet; }
 
-    void resetForRender();
+    void resetForRender() noexcept;
 
     static void unbindAllDescriptorSets(backend::DriverApi& driver) noexcept;
 

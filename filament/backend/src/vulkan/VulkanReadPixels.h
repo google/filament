@@ -17,7 +17,9 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANREADPIXELS_H
 #define TNT_FILAMENT_BACKEND_VULKANREADPIXELS_H
 
+
 #include "vulkan/memory/ResourcePointer.h"
+#include "vulkan/utils/TaskHandler.h"
 
 #include <private/backend/Driver.h>
 
@@ -44,45 +46,8 @@ struct VulkanTexture;
 
 class VulkanReadPixels {
 public:
-    // A helper class that runs tasks on a separate thread.
-    class TaskHandler {
-    public:
-        // A task is invoked with `executed = true` from the handler thread. If the handler is shut
-        // down before the task is picked up, the task is instead invoked with `executed = false` so
-        // that clients can still release whatever the task owns (the user's PixelBufferDescriptor
-        // and the Vulkan objects of the request).
-        using Task = utils::Invocable<void(bool executed)>;
 
-        TaskHandler();
 
-        // Joins the thread if `shutdown()` was not called: destroying a joinable std::thread
-        // terminates the process. Unlike `shutdown()`, this cannot panic: throwing out of a
-        // destructor terminates the process as well.
-        ~TaskHandler();
-
-        void post(Task&& task);
-
-        // This will block until all of the tasks are done.
-        void drain();
-
-        // This will quit without running the pending tasks, but they will still be invoked with
-        // `executed = false` so that they can clean up after themselves.
-        void shutdown();
-
-    private:
-        void loop();
-
-        // Stops the thread and flushes the queue. Unlike `shutdown()` this makes no assertion, so
-        // it is safe to call from the destructor.
-        void stop() noexcept;
-
-        utils::Mutex mTaskQueueMutex;
-        utils::Condition mHasTaskCondition;
-        bool mShouldStop UTILS_GUARDED_BY(mTaskQueueMutex);
-        std::queue<Task> mTaskQueue UTILS_GUARDED_BY(mTaskQueueMutex);
-        // Must be declared last: the thread runs `loop()`, which uses all of the above.
-        std::thread mThread;
-    };
 
     using CleanUpPbdFunction = std::function<void(PixelBufferDescriptor&&)>;
 
@@ -159,7 +124,7 @@ private:
     // Must be declared last. If `terminate()` was never called, ~TaskHandler() flushes the pending
     // tasks, and those call `retire()` and `mCleanUpPbd`: everything they touch must outlive the
     // handler, and members are destroyed in reverse declaration order.
-    std::unique_ptr<TaskHandler> mTaskHandler;
+    std::unique_ptr<fvkutils::TaskHandler> mTaskHandler;
 };
 
 }// namespace filament::backend

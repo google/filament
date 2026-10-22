@@ -59,7 +59,6 @@ import re
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from .config import (
-    KNOWN_CLASSES,
     TAGGED_SCALAR_FAMILIES,
     VALUE_TYPES,
     register_known_classes,
@@ -70,9 +69,61 @@ from .utils import (
     get_element_entry_name,
     get_size_param_attr,
     get_tagged_array_info,
+    has_skip_attr,
     is_reserved_or_padding_field,
-    sanitize_identifier,
 )
+
+# Pre-compiled regular expressions for signature parsing and literal formatting
+_RE_ANNOTATION = re.compile(r"@[A-Za-z0-9_]+(?:\([^)]*\))?\s*")
+_RE_NEG_SPACE = re.compile(r"-\s+")
+_RE_UNSIGNED_SUFFIX = re.compile(r"(?i)\b(0x[0-9a-f]+|\d+)u(?:ll|l)?\b")
+_RE_UNSIGNED_TRAILING = re.compile(r"(?i)(?<=[0-9a-fA-F])u(?:ll|l)?$")
+_RE_NEG_ONE_PARENS = re.compile(r"\((?:-\s*1|-1)\)")
+_RE_CONST_WORD = re.compile(r"\bconst\b")
+_RE_MAT_DIM = re.compile(r"::mat\d")
+
+# Standard deterministic order for synthesized tagged array enum entries
+_ENTRY_ORDER: Dict[str, int] = {
+    "FLOAT": 0, "FLOAT2": 1, "FLOAT3": 2, "FLOAT4": 3, "MAT3": 4, "MAT4": 5,
+    "INT": 0, "INT2": 1, "INT3": 2, "INT4": 3,
+    "BOOL": 0, "BOOL2": 1, "BOOL3": 2, "BOOL4": 3,
+}
+
+# Oracle JNI specification native method signature mangling map
+_JNI_MANGLED_TYPES: Dict[str, str] = {
+    "jboolean": "Z",
+    "jbyte": "B",
+    "jchar": "C",
+    "jshort": "S",
+    "jint": "I",
+    "jlong": "J",
+    "jfloat": "F",
+    "jdouble": "D",
+    "jbooleanArray": "_3Z",
+    "jbyteArray": "_3B",
+    "jcharArray": "_3C",
+    "jshortArray": "_3S",
+    "jintArray": "_3I",
+    "jlongArray": "_3J",
+    "jfloatArray": "_3F",
+    "jdoubleArray": "_3D",
+    "jstring": "Ljava_lang_String_2",
+    "jobject": "Ljava_lang_Object_2",
+    "Buffer": "Ljava_nio_Buffer_2",
+    "Runnable": "Ljava_lang_Runnable_2",
+}
+
+# Capitalized suffixes for unmangling template methods returning concrete types
+_TEMPLATE_TYPE_SUFFIXES: Dict[str, str] = {
+    "bool": "Boolean", "jboolean": "Boolean", "boolean": "Boolean",
+    "float": "Float", "jfloat": "Float",
+    "int": "Int", "int32_t": "Int", "uint32_t": "Int", "jint": "Int",
+    "long": "Long", "int64_t": "Long", "uint64_t": "Long", "jlong": "Long",
+    "double": "Double", "jdouble": "Double",
+    "short": "Short", "int16_t": "Short", "uint16_t": "Short", "jshort": "Short",
+    "byte": "Byte", "int8_t": "Byte", "uint8_t": "Byte", "jbyte": "Byte",
+    "char": "Char", "char_s": "Char", "char_u": "Char", "jchar": "Char",
+}
 
 
 class ClassContext:
@@ -106,6 +157,8 @@ class ClassContext:
         emitted_native_signatures: Set of native method signature strings to prevent duplicate
             private native declarations.
         emitted_jni_funcs: Set of C++ JNI export function names emitted into the native file.
+        _expanded_cache: Memoization cache mapping `id(method_ir)` to its expanded method
+            variant dictionaries, avoiding redundant deepcopy and SFINAE unrolling passes.
         is_used_by_native: Boolean indicating if the class carries the `used_by_native`
             attribute, requiring specialized JNI bridge access.
         type_resolver: Bound instance of :class:`TypeResolver` used for all type queries.
@@ -136,7 +189,7 @@ class ClassContext:
     def __init__(
         self,
         ir_class: Dict[str, Any],
-        source_header: str,
+        source_header: Union[str, Dict[str, Any]],
         name_override: Optional[str] = None,
         builder_ir: Optional[Dict[str, Any]] = None,
         parent_context: Optional["ClassContext"] = None,
@@ -152,12 +205,24 @@ class ClassContext:
 
         Args:
             ir_class: Dictionary representing the class AST in JSON IR.
-            source_header: Path to the C++ header file declaring this class.
+            source_header: Path to the C++ header file declaring this class, or a full
+                API IR dictionary when invoked using the legacy 3-argument signature.
             name_override: Optional name override for Java/JNI output (used for Builders).
             builder_ir: Optional raw IR dictionary of the nested Builder class.
             parent_context: Enclosing :class:`ClassContext` if this is an inner/nested class.
             nested_structs_map: Mapping of parent class names to nested struct IR dictionaries.
         """
+        # Support legacy 3-arg call signature: ClassContext(cls_ir, api_ir_dict, header_path)
+        if isinstance(source_header, dict):
+            api_ir = source_header
+            register_known_classes(api_ir.get("classes", []))
+            register_known_classes(api_ir.get("referenced_classes", []))
+            if isinstance(name_override, str) and ("/" in name_override or name_override.endswith(".h")):
+                source_header = name_override
+                name_override = None
+            else:
+                source_header = ir_class.get("location", {}).get("file", "tests/java/00_basic.h")
+
         # Step 1: Initialize Identity, Metadata, and Skip Attribute Filtering
         # -------------------------------------------------------------------
         # Store fundamental class naming and doc metadata. Extract both the original C++ name
@@ -172,37 +237,18 @@ class ClassContext:
         # Filter out methods, fields, constants, and enums tagged with any apigen skip attributes.
         # This prevents internal engine details, iterator accessors, or non-public APIs from
         # polluting the generated Java surface.
-        skip_attrs = (
-            "filament:apigen:skip", "filament:skip", "apigen:skip",
-            "no_apigen", "noapigen", "skip_generation", "binding:skip"
-        )
         self.methods: List[Dict[str, Any]] = [
-            m for m in ir_class.get("methods", [])
-            if not any(
-                attr in skip_attrs or attr.startswith("no_apigen") or attr.startswith("skip_generation")
-                for attr in m.get("attributes", [])
-            )
+            m for m in ir_class.get("methods", []) if not has_skip_attr(m)
         ]
         self.fields: List[Dict[str, Any]] = [
             f for f in ir_class.get("fields", [])
-            if not any(
-                attr in skip_attrs or attr.startswith("no_apigen") or attr.startswith("skip_generation")
-                for attr in f.get("attributes", [])
-            ) and not is_reserved_or_padding_field(f.get("name", ""))
+            if not has_skip_attr(f) and not is_reserved_or_padding_field(f.get("name", ""))
         ]
         self.constants: List[Dict[str, Any]] = [
-            c for c in ir_class.get("constants", [])
-            if not any(
-                attr in skip_attrs or attr.startswith("no_apigen") or attr.startswith("skip_generation")
-                for attr in c.get("attributes", [])
-            )
+            c for c in ir_class.get("constants", []) if not has_skip_attr(c)
         ]
         self.enums: List[Dict[str, Any]] = [
-            e for e in ir_class.get("enums", [])
-            if not any(
-                attr in skip_attrs or attr.startswith("no_apigen") or attr.startswith("skip_generation")
-                for attr in e.get("attributes", [])
-            )
+            e for e in ir_class.get("enums", []) if not has_skip_attr(e)
         ]
         self.ir: Dict[str, Any] = ir_class
         self.source_header: str = source_header
@@ -211,10 +257,13 @@ class ClassContext:
         self.emitted_signatures: Set[Tuple[str, Tuple[str, ...]]] = set()
         self.emitted_native_signatures: Set[str] = set()
         self.emitted_jni_funcs: Set[str] = set()
+        self._expanded_cache: Dict[int, List[Dict[str, Any]]] = {}
         self.is_used_by_native: bool = any(
             attr in (
-                "filament:apigen:used_by_native", "filament:used_by_native",
-                "apigen:used_by_native", "used_by_native"
+                "filament:apigen:used_by_native",
+                "filament:used_by_native",
+                "apigen:used_by_native",
+                "used_by_native",
             )
             for attr in ir_class.get("attributes", [])
         )
@@ -248,10 +297,13 @@ class ClassContext:
         # Strip internal Filament C++ base classes (like FilamentAPI, BuilderBase) that
         # do not map to Java class inheritance hierarchies.
         self.bases: List[str] = [
-            b.split("::")[-1] for b in ir_class.get("bases", [])
+            b.split("::")[-1]
+            for b in ir_class.get("bases", [])
             if b not in (
-                "FilamentAPI", "BuilderBase", "BuilderDetails",
-                "utils::EnableBitmaskOperators"
+                "FilamentAPI",
+                "BuilderBase",
+                "BuilderDetails",
+                "utils::EnableBitmaskOperators",
             )
             and not b.startswith("backend::")
             and b.split("::")[-1] != self.name
@@ -265,92 +317,22 @@ class ClassContext:
         # regardless of how C++ method signatures reference them.
         self.enum_map: Dict[str, Dict[str, Any]] = {}
         for enum_ir in self.enums:
-            self.enum_map[enum_ir["name"]] = enum_ir
-            self.enum_map[enum_ir["qualified_name"]] = enum_ir
-            clean_qname = self.type_resolver.strip_namespaces(enum_ir["qualified_name"])
-            self.enum_map[clean_qname] = enum_ir
-            self.enum_map[f"{self.name}::{enum_ir['name']}"] = enum_ir
-            self.enum_map[f"{self.cpp_name}::{enum_ir['name']}"] = enum_ir
+            self._index_enum(enum_ir)
 
         # Cross-reference typedef aliases targeting enums into the enum map.
-        for alias in ir_class.get("aliases", []):
+        for alias in self.raw_aliases:
             alias_name = alias["name"]
-            alias_type = alias.get("type", {})
-            underlying_qname = alias_type.get("qualified_name")
-            underlying_cpp = alias_type.get("cpp_name")
             if alias_name in self.enum_map:
                 enum_ir = self.enum_map[alias_name]
-                if underlying_qname:
-                    self.enum_map[underlying_qname] = enum_ir
-                    self.enum_map[self.type_resolver.strip_namespaces(underlying_qname)] = enum_ir
-                if underlying_cpp:
-                    self.enum_map[underlying_cpp] = enum_ir
-                    self.enum_map[self.type_resolver.strip_namespaces(underlying_cpp)] = enum_ir
+                alias_type = alias.get("type", {})
+                for key in (alias_type.get("qualified_name"), alias_type.get("cpp_name")):
+                    if key:
+                        self.enum_map[key] = enum_ir
+                        self.enum_map[self.type_resolver.strip_namespaces(key)] = enum_ir
 
         # Step 5: Synthesize Tagged Scalar Array Enums
         # --------------------------------------------
-        # For methods with tagged array arguments (e.g. `setParameter(..., T*, size_t)` where T
-        # represents varying scalar/vector sizes), collect all concrete specialization types
-        # and group them by scalar family (`float`, `int`, `bool`).
-        # Then, dynamically synthesize nested enum definitions (`FloatElement`, `IntElement`, `BoolElement`)
-        # so Java callers can specify the vector width / component type safely at runtime.
-        needed_family_entries: Dict[str, List[str]] = collections.defaultdict(list)
-        for method in self.methods:
-            tagged_info = get_tagged_array_info(method)
-            if not tagged_info:
-                continue
-            specs = method.get("specializations", [])
-            tp_name = tagged_info["tagged_arg"].get("type", {}).get("template_param_name", "T")
-            for spec in specs:
-                concrete_type = spec.get(tp_name)
-                if not concrete_type:
-                    continue
-                family = classify_scalar_family(concrete_type)
-                if not family:
-                    continue
-                entry = get_element_entry_name(concrete_type)
-                if entry not in needed_family_entries[family]:
-                    needed_family_entries[family].append(entry)
-
-        # Standard deterministic order for synthesized enum entries
-        entry_order = {
-            "FLOAT": 0, "FLOAT2": 1, "FLOAT3": 2, "FLOAT4": 3, "MAT3": 4, "MAT4": 5,
-            "INT": 0, "INT2": 1, "INT3": 2, "INT4": 3,
-            "BOOL": 0, "BOOL2": 1, "BOOL3": 2, "BOOL4": 3,
-        }
-        for family in ("float", "int", "bool"):
-            if family in needed_family_entries:
-                entries = list(needed_family_entries[family])
-                entries.sort(key=lambda x: entry_order.get(x, 99))
-                family_cfg = TAGGED_SCALAR_FAMILIES[family]
-                enum_name = family_cfg["enum_name"]
-                if enum_name not in self.enum_map and not any(e["name"] == enum_name for e in self.enums):
-                    enum_ir = {
-                        "name": enum_name,
-                        "qualified_name": f"{self.cpp_name}::{enum_name}",
-                        "attributes": [],
-                        "underlying_type": "int",
-                        "entries": [
-                            {
-                                "name": entry,
-                                "value": idx,
-                                "doc": {"brief": "", "details": "", "params": {}, "returns": "", "meta": {}}
-                            }
-                            for idx, entry in enumerate(entries)
-                        ],
-                        "doc": {
-                            "brief": f"Element types for {family_cfg['family'].lower()} tagged array buffers.",
-                            "details": "",
-                            "params": {},
-                            "returns": "",
-                            "meta": {}
-                        }
-                    }
-                    self.enums.append(enum_ir)
-                    self.enum_map[enum_name] = enum_ir
-                    self.enum_map[enum_ir["qualified_name"]] = enum_ir
-                    self.enum_map[f"{self.name}::{enum_name}"] = enum_ir
-                    self.enum_map[f"{self.cpp_name}::{enum_name}"] = enum_ir
+        self._synthesize_tagged_array_enums()
 
         # Register this class in the global KNOWN_CLASSES registry so other classes can reference it.
         register_known_classes([ir_class])
@@ -413,7 +395,11 @@ class ClassContext:
             ir_class.get("is_utility", False)
             or ir_class.get("is_namespace", False)
             or ir_class.get("category") == "utility"
-            or (len(self.methods) > 0 and all(m.get("is_static", False) for m in self.methods) and len(self.fields) == 0)
+            or (
+                len(self.methods) > 0
+                and all(m.get("is_static", False) for m in self.methods)
+                and len(self.fields) == 0
+            )
         ):
             self.archetype = "utility"
             self.value_type_info = None
@@ -422,11 +408,11 @@ class ClassContext:
             self.value_type_info = None
 
         # Convenience boolean flags representing archetype checks
-        self.is_aggregate: bool = (self.archetype == "aggregate")
-        self.is_value_class: bool = (self.archetype == "inline_buffer")
-        self.is_bitfield_class: bool = (self.archetype == "bitfield")
-        self.is_utility_class: bool = (self.archetype == "utility")
-        self.is_builder_class: bool = (self.archetype == "builder")
+        self.is_aggregate: bool = self.archetype == "aggregate"
+        self.is_value_class: bool = self.archetype == "inline_buffer"
+        self.is_bitfield_class: bool = self.archetype == "bitfield"
+        self.is_utility_class: bool = self.archetype == "utility"
+        self.is_builder_class: bool = self.archetype == "builder"
 
         # Step 7: Recursively Initialize Nested Builder and Nested Struct Contexts
         # ------------------------------------------------------------------------
@@ -437,7 +423,7 @@ class ClassContext:
                 self.builder_ir,
                 source_header,
                 name_override="Builder",
-                parent_context=self
+                parent_context=self,
             )
             self.builder.enum_map.update(self.enum_map)
             self.builder.aliases.update(self.aliases)
@@ -451,7 +437,7 @@ class ClassContext:
                 child_ir,
                 source_header,
                 parent_context=self,
-                nested_structs_map=self.nested_structs_map
+                nested_structs_map=self.nested_structs_map,
             )
             child_ctx.enum_map.update(self.enum_map)
             child_ctx.aliases.update(self.aliases)
@@ -468,27 +454,26 @@ class ClassContext:
         # -------------------------------------------------------------------------
         # The JNI specification requires overloaded native methods in the same class to include
         # a signature suffix (e.g. `Java_..._method__JFI`) to disambiguate them at linking time.
-        # We perform a dry-run expansion of all methods to count how many distinct signatures
-        # share each native method base name (`nMethod`). If count > 1, mangling is activated.
+        # We perform a dry-run expansion of all methods using a single shared JavaEmitter instance
+        # to count how many distinct signatures share each native method base name (`nMethod`).
+        # If count > 1, mangling is activated.
+        from .java_emitter import JavaEmitter
+        emitter = JavaEmitter(self)
+        cached_getters = {c["getter"] for c in self.cached_fields.values()}
+        buffer_getter = self.value_type_info.get("buffer_getter") if self.is_value_class and self.value_type_info else None
+
         native_sigs: Dict[str, Set[Any]] = collections.defaultdict(set)
         for method in self.methods:
-            if method["name"] in [c["getter"] for c in self.cached_fields.values()]:
+            m_name = method["name"]
+            if m_name in cached_getters or m_name in self.retained_references:
                 continue
-            if self.is_value_class and method["name"] == self.value_type_info.get("buffer_getter"):  # type: ignore
+            if buffer_getter and m_name == buffer_getter:
                 continue
-            if method["name"] in self.retained_references:
-                continue
-            generated_methods = self._expand_method(method)
-            for m in generated_methods:
-                if self.archetype == "builder":
-                    if m["ir"].get("is_constructor"):
-                        native_sigs["nCreateBuilder"].add(())
-                    else:
-                        sig = self._generate_native_decl(m, dry_run=True, return_sig=True)
-                        if sig:
-                            native_sigs[sig[0]].add(sig[1])
+            for m in self._expand_method(method):
+                if self.archetype == "builder" and m["ir"].get("is_constructor"):
+                    native_sigs["nCreateBuilder"].add(())
                 else:
-                    sig = self._generate_native_decl(m, dry_run=True, return_sig=True)
+                    sig = emitter._generate_native_decl(m, dry_run=True, return_sig=True)
                     if sig:
                         native_sigs[sig[0]].add(sig[1])
 
@@ -499,6 +484,79 @@ class ClassContext:
         if self.builder:
             self.native_counts.update(self.builder.native_counts)
             self.builder.native_counts = self.native_counts
+
+    def _index_enum(self, enum_ir: Dict[str, Any]) -> None:
+        """Index an enum IR dictionary under its unqualified, qualified, and class-prefixed names.
+
+        Populates `self.enum_map` with multiple lookup keys (unqualified name, fully qualified
+        C++ name, namespace-stripped name, and class-scoped names) so C++ method signatures can
+        resolve the enum regardless of qualification style.
+
+        Args:
+            enum_ir: Dictionary representing the enum definition in JSON IR.
+        """
+        name = enum_ir["name"]
+        qname = enum_ir["qualified_name"]
+        self.enum_map[name] = enum_ir
+        self.enum_map[qname] = enum_ir
+        self.enum_map[self.type_resolver.strip_namespaces(qname)] = enum_ir
+        self.enum_map[f"{self.name}::{name}"] = enum_ir
+        self.enum_map[f"{self.cpp_name}::{name}"] = enum_ir
+
+    def _synthesize_tagged_array_enums(self) -> None:
+        """Synthesize FloatElement, IntElement, and BoolElement enums for tagged array methods.
+
+        For methods with tagged array arguments (e.g. `setParameter(..., T*, size_t)` where `T`
+        represents varying scalar/vector sizes), collects all concrete specialization types and
+        groups them by scalar family (`float`, `int`, `bool`). Dynamically synthesizes nested
+        enum definitions (`FloatElement`, `IntElement`, `BoolElement`) and indexes them into
+        `self.enums` and `self.enum_map` so Java callers can specify the vector width or
+        component type safely at runtime.
+        """
+        needed_family_entries: Dict[str, List[str]] = collections.defaultdict(list)
+        for method in self.methods:
+            tagged_info = get_tagged_array_info(method)
+            if not tagged_info:
+                continue
+            tp_name = tagged_info["tagged_arg"].get("type", {}).get("template_param_name", "T")
+            for spec in method.get("specializations", []):
+                concrete_type = spec.get(tp_name)
+                if not concrete_type:
+                    continue
+                family = classify_scalar_family(concrete_type)
+                if not family:
+                    continue
+                entry = get_element_entry_name(concrete_type)
+                if entry not in needed_family_entries[family]:
+                    needed_family_entries[family].append(entry)
+
+        for family in ("float", "int", "bool"):
+            if family not in needed_family_entries:
+                continue
+            entries = sorted(needed_family_entries[family], key=lambda x: _ENTRY_ORDER.get(x, 99))
+            family_cfg = TAGGED_SCALAR_FAMILIES[family]
+            enum_name = family_cfg["enum_name"]
+            if enum_name not in self.enum_map and not any(e["name"] == enum_name for e in self.enums):
+                empty_doc = {"brief": "", "details": "", "params": {}, "returns": "", "meta": {}}
+                enum_ir = {
+                    "name": enum_name,
+                    "qualified_name": f"{self.cpp_name}::{enum_name}",
+                    "attributes": [],
+                    "underlying_type": "int",
+                    "entries": [
+                        {"name": entry, "value": idx, "doc": dict(empty_doc)}
+                        for idx, entry in enumerate(entries)
+                    ],
+                    "doc": {
+                        "brief": f"Element types for {family_cfg['family'].lower()} tagged array buffers.",
+                        "details": "",
+                        "params": {},
+                        "returns": "",
+                        "meta": {},
+                    },
+                }
+                self.enums.append(enum_ir)
+                self._index_enum(enum_ir)
 
     @property
     def has_retained_buffers(self) -> bool:
@@ -524,164 +582,9 @@ class ClassContext:
     # Delegated Type Resolution APIs
     # -------------------------------------------------------------------------
 
-    def resolve_type_info(self, type_input: Any, silent: bool = False) -> Tuple[Dict[str, Any], Tuple[Any, ...]]:
-        """Resolve a raw IR type dictionary or type string into rich binding metadata.
-
-        Args:
-            type_input: Type AST dictionary or C++ type string.
-            silent: If True, suppress warning logs when an unsupported type is encountered.
-
-        Returns:
-            Tuple of (type_info_dict, dimension_tuple).
-        """
-        return self.type_resolver.resolve_type_info(type_input, silent=silent)
-
-    def is_aggregate_struct(self, type_name_or_info: Any) -> Optional[Dict[str, Any]]:
-        """Check whether a type name or type info represents a flattened aggregate struct.
-
-        Args:
-            type_name_or_info: C++ type name string or resolved type metadata dictionary.
-
-        Returns:
-            The struct class IR dictionary if aggregate, else None.
-        """
-        return self.type_resolver.is_aggregate_struct(type_name_or_info)
-
-    def is_pojo_struct(self, type_name_or_info: Any = None) -> Optional[Dict[str, Any]]:
-        """Check whether a type name or type info represents a public POJO struct."""
-        return self.type_resolver.is_pojo_struct(type_name_or_info)
-
-    def translate_default_value(self, *args: Any, **kwargs: Any) -> Optional[str]:
-        """Translate a C++ default value expression to an idiomatic Java literal."""
-        return self.type_resolver.translate_default_value(*args, **kwargs)
-
-    def get_pojo_leaves(self, *args: Any, **kwargs: Any) -> List[Dict[str, Any]]:
-        """Extract unrolled leaf descriptors for a POJO struct."""
-        return self.type_resolver.get_pojo_leaves(*args, **kwargs)
-
-    def get_pojo_field_annotation(self, *args: Any, **kwargs: Any) -> List[str]:
-        """Compute annotations for a POJO struct field."""
-        return self.type_resolver.get_pojo_field_annotation(*args, **kwargs)
-
-    def get_flattened_leaves(self, type_info: Any, prefix: str = "") -> List[Dict[str, Any]]:
-        """Recursively flatten nested aggregate struct fields into primitive scalar leaves.
-
-        Args:
-            type_info: Resolved type metadata dictionary of the struct.
-            prefix: Dot-separated field path prefix for nested member access.
-
-        Returns:
-            List of flattened field leaf descriptors.
-        """
-        return self.type_resolver.get_flattened_leaves(type_info, prefix=prefix)
-
-    def get_struct_leaf_accessors(self, struct_cls: Any, prefix: str = "", cpp_prefix: str = "") -> Any:
-        """Generate getter/setter accessor expressions for flattened struct fields.
-
-        Args:
-            struct_cls: Class IR dictionary or type metadata representing the struct.
-            prefix: Java field prefix path.
-            cpp_prefix: C++ member access prefix path.
-
-        Returns:
-            List of leaf accessor mappings.
-        """
-        return self.type_resolver.get_struct_leaf_accessors(struct_cls, prefix=prefix, cpp_prefix=cpp_prefix)
-
-    def generate_cpp_struct_construction(self, struct_cls: Any, var_name: str, leaf_prefix: str = "", type_override: Any = None) -> List[str]:
-        """Generate C++ statements reconstructing an aggregate struct from JNI primitive parameters.
-
-        Args:
-            struct_cls: Struct class IR dictionary.
-            var_name: Target C++ local variable name to declare and populate.
-            leaf_prefix: Variable name prefix for the unpacked JNI primitive parameters.
-            type_override: Optional C++ type name override.
-
-        Returns:
-            List of C++ source lines performing the struct initialization.
-        """
-        return self.type_resolver.generate_cpp_struct_construction(struct_cls, var_name, leaf_prefix=leaf_prefix, type_override=type_override)
-
-    def generate_cpp_struct_cleanup(self, struct_cls: Any, leaf_prefix: str = "") -> List[str]:
-        """Generate C++ cleanup statements for temporary allocations created during struct unpacking.
-
-        Args:
-            struct_cls: Struct class IR dictionary.
-            leaf_prefix: Parameter prefix used during reconstruction.
-
-        Returns:
-            List of C++ cleanup statements (e.g. releasing string buffers).
-        """
-        return self.type_resolver.generate_cpp_struct_cleanup(struct_cls, leaf_prefix=leaf_prefix)
-
-    def get_array_input_info(self, t: Any) -> Optional[Dict[str, Any]]:
-        """Check if a type represents a fixed-size vector or array suitable for exploded parameter lists.
-
-        Args:
-            t: Type AST dictionary or type name string.
-
-        Returns:
-            Dictionary with scalar type and component count if matched, else None.
-        """
-        return self.type_resolver.get_array_input_info(t)
-
-    def get_java_type(self, type_input: Any) -> str:
-        """Convert a C++ type descriptor into its target Java type name.
-
-        Args:
-            type_input: Type AST dictionary or C++ type name string.
-
-        Returns:
-            Java type string (e.g. `int`, `float[]`, `Engine`, `Buffer`).
-        """
-        return self.type_resolver.get_java_type(type_input)
-
-    def get_jni_type(self, type_input: Any) -> str:
-        """Convert a C++ type descriptor into its target JNI C signature type name.
-
-        Args:
-            type_input: Type AST dictionary or C++ type name string.
-
-        Returns:
-            JNI type string (e.g. `jint`, `jfloatArray`, `jobject`, `jlong`).
-        """
-        return self.type_resolver.get_jni_type(type_input)
-
-    def get_annotation(self, type_input: Any) -> Optional[str]:
-        """Retrieve any AndroidX nullability or value range annotation for a given type.
-
-        Args:
-            type_input: Type AST dictionary or C++ type name string.
-
-        Returns:
-            Annotation string (e.g. `@NonNull`, `@Nullable`, `@IntRange(from = 0)`) or None.
-        """
-        return self.type_resolver.get_annotation(type_input)
-
-    def get_to_cpp_expr(self, type_input: Any, val_name: str) -> str:
-        """Produce a C++ expression converting a JNI parameter into its native C++ type.
-
-        Args:
-            type_input: Type AST dictionary or type name.
-            val_name: Variable name of the JNI parameter.
-
-        Returns:
-            C++ expression string (e.g. `reinterpret_cast<Engine*>(val_name)`).
-        """
-        return self.type_resolver.get_to_cpp_expr(type_input, val_name)
-
-    def get_from_cpp_expr(self, type_input: Any, val_expr: str, jni_ret: str) -> str:
-        """Produce a C++ expression converting a native C++ return value into a JNI return type.
-
-        Args:
-            type_input: Type AST dictionary or type name.
-            val_expr: C++ expression producing the native value.
-            jni_ret: Target JNI return type.
-
-        Returns:
-            C++ conversion expression string.
-        """
-        return self.type_resolver.get_from_cpp_expr(type_input, val_expr, jni_ret)
+    def __getattr__(self, name: str) -> Any:
+        """Delegate type resolution queries directly to the bound TypeResolver."""
+        return getattr(self.type_resolver, name)
 
     def _strip_namespaces(self, t: str) -> str:
         """Strip C++ namespaces from a type string (e.g. `filament::Engine` -> `Engine`).
@@ -694,18 +597,6 @@ class ClassContext:
         """
         return self.type_resolver.strip_namespaces(t)
 
-    def get_invocable_info(self, t: Any, method_name: str = "") -> Optional[Dict[str, Any]]:
-        """Check if a type is a functional callback/invocable and retrieve its dispatch metadata.
-
-        Args:
-            t: Type AST dictionary or type name.
-            method_name: Name of the enclosing method (for logging context).
-
-        Returns:
-            Callback metadata dictionary if invocable, else None.
-        """
-        return self.type_resolver.get_invocable_info(t, method_name=method_name)
-
     def _is_unsupported_type(self, type_dict: Any) -> bool:
         """Check if a type cannot be marshalled across the Java/JNI boundary.
 
@@ -716,127 +607,6 @@ class ClassContext:
             True if type cannot be bound and must cause method suppression.
         """
         return self.type_resolver.is_unsupported_type(type_dict)
-
-    def is_buffer_descriptor_method(self, method: Any) -> bool:
-        """Check if a method accepts a Filament BufferDescriptor requiring asynchronous release.
-
-        Args:
-            method: Method AST dictionary.
-
-        Returns:
-            True if method accepts a BufferDescriptor.
-        """
-        return self.type_resolver.is_buffer_descriptor_method(method)
-
-    def is_pixel_buffer_descriptor_method(self, method: Any) -> bool:
-        """Check if a method accepts a PixelBufferDescriptor.
-
-        Args:
-            method: Method AST dictionary.
-
-        Returns:
-            True if method accepts a PixelBufferDescriptor.
-        """
-        return self.type_resolver.is_pixel_buffer_descriptor_method(method)
-
-    def is_async_callback_method(self, method: Any) -> bool:
-        """Check if a method accepts an asynchronous completion callback.
-
-        Args:
-            method: Method AST dictionary.
-
-        Returns:
-            True if method accepts an async callback.
-        """
-        return self.type_resolver.is_async_callback_method(method)
-
-    def get_struct_float_stride(self, struct_cls: Any) -> Optional[int]:
-        """Compute the stride in floats for a struct containing only float fields.
-
-        Args:
-            struct_cls: Struct class AST dictionary.
-
-        Returns:
-            Number of float components if homogeneous float struct, else None.
-        """
-        return self.type_resolver.get_struct_float_stride(struct_cls)
-
-    def is_attribute_bitset(self, type_dict: Any) -> bool:
-        """Check if a type represents an AttributeBitSet (std::bitset<...>) binding.
-
-        Args:
-            type_dict: Type AST dictionary.
-
-        Returns:
-            True if type is an AttributeBitSet.
-        """
-        return self.type_resolver.is_attribute_bitset(type_dict)
-
-    def is_builder_buffer_arg(self, arg: Any) -> bool:
-        """Check if a method argument is a retained direct NIO buffer in a builder.
-
-        Args:
-            arg: Argument AST dictionary.
-
-        Returns:
-            True if argument is a retained builder buffer.
-        """
-        return self.type_resolver.is_builder_buffer_arg(arg)
-
-    def is_packed_buffer_method(self, method: Any) -> bool:
-        """Check if a method qualifies for dual direct NIO Buffer and primitive array overloads.
-
-        Args:
-            method: Method AST dictionary.
-
-        Returns:
-            True if dual buffer overloads should be emitted.
-        """
-        return self.type_resolver.is_packed_buffer_method(method)
-
-    def get_packed_buffer_info(self, method: Any) -> Optional[Dict[str, Any]]:
-        """Extract metadata for packed buffer method overload generation.
-
-        Args:
-            method: Method AST dictionary.
-
-        Returns:
-            Packed buffer metadata dictionary if matched, else None.
-        """
-        return self.type_resolver.get_packed_buffer_info(method)
-
-    def get_builder_packed_buffer_info(self, method: Any) -> Optional[Dict[str, Any]]:
-        """Extract packed buffer metadata specifically tailored for Builder methods.
-
-        Args:
-            method: Builder method AST dictionary.
-
-        Returns:
-            Builder packed buffer metadata dictionary if matched, else None.
-        """
-        return self.type_resolver.get_builder_packed_buffer_info(method)
-
-    def is_bone_buffer_method(self, method: Any) -> bool:
-        """Check if a method accepts bone transformation matrix buffers.
-
-        Args:
-            method: Method AST dictionary.
-
-        Returns:
-            True if method accepts bone buffers.
-        """
-        return self.type_resolver.is_bone_buffer_method(method)
-
-    def get_bone_buffer_info(self, method: Any) -> Optional[Dict[str, Any]]:
-        """Extract metadata for bone matrix buffer marshalling.
-
-        Args:
-            method: Method AST dictionary.
-
-        Returns:
-            Bone buffer metadata dictionary if matched, else None.
-        """
-        return self.type_resolver.get_bone_buffer_info(method)
 
     def _get_clean_type_name(self, type_dict: Any) -> str:
         """Sanitize a C++ type name by stripping template arguments, qualifiers, and namespaces.
@@ -870,16 +640,14 @@ class ClassContext:
         # Step 1: Strip leading annotations and extract base type tokens
         types = []
         for p in params_list:
-            cleaned = re.sub(r'@[A-Za-z0-9_]+(?:\([^)]*\))?\s*', '', p).strip()
+            cleaned = _RE_ANNOTATION.sub("", p).strip()
             parts = cleaned.split()
-            if len(parts) >= 2:
-                types.append(parts[0])
-            elif parts:
+            if parts:
                 types.append(parts[0])
         return (name, tuple(types))
 
-    def translate_default_value(self, val_str: Optional[str], arg_type: Any) -> Optional[str]:
-        """Convert a C++ default argument literal to its Java equivalent.
+    def translate_default_value(self, val_str: Any, arg_type: Any = None) -> Optional[str]:
+        """Convert a C++ default argument literal or field dict to its Java equivalent.
 
         Handles boolean literals, null pointer representations, empty curly brace
         initializers `{}` for primitives, class constants, floating-point infinities,
@@ -895,7 +663,7 @@ class ClassContext:
             - `"128u"` -> `"128"`
 
         Args:
-            val_str: Raw C++ default expression string from clang IR.
+            val_str: Raw C++ default expression string from clang IR, or a field dictionary.
             arg_type: Type AST dictionary or resolved type metadata of the argument.
 
         Returns:
@@ -909,20 +677,19 @@ class ClassContext:
         val = str(val_str).strip()
 
         # Step 2: Translate standard boolean literals directly
-        if val in ["true", "false"]:
+        if val in ("true", "false"):
             return val
 
         # Step 3: Map C++ null pointer representations to Java null
-        if val in ["nullptr", "NULL"]:
+        if val in ("nullptr", "NULL"):
             return "null"
 
-        type_info, _ = self.resolve_type_info(arg_type, silent=True)
+        type_info, _ = self.type_resolver.resolve_type_info(arg_type, silent=True)
         j_type = type_info.get("java", "")
-        is_float = (j_type == "float")
 
         # Step 4: Handle C++11 uniform zero-initialization syntax `{}`
-        if val in ["{}", "{ }"]:
-            if j_type in ["int", "short", "byte", "char", "long"]:
+        if val in ("{}", "{ }"):
+            if j_type in ("int", "short", "byte", "char", "long"):
                 return "(byte) 0" if j_type == "byte" else "0"
             if j_type == "float":
                 return "0.0f"
@@ -939,33 +706,32 @@ class ClassContext:
                 return c_name
 
         # Step 6: Map zero literals for byte parameters with explicit casts
-        if j_type == "byte" and val in ["0", "0x0"]:
+        if j_type == "byte" and val in ("0", "0x0"):
             return "(byte) 0"
 
         # Step 7: Map IEEE 754 floating-point infinity representations
         if "INFINITY" in val:
             is_neg = val.startswith("-") or "- INFINITY" in val
-            if is_float:
+            if j_type == "float":
                 return "Float.NEGATIVE_INFINITY" if is_neg else "Float.POSITIVE_INFINITY"
             return "Double.NEGATIVE_INFINITY" if is_neg else "Double.POSITIVE_INFINITY"
 
         # Step 8: Map C++ scoped enum constants to Java enum constant references
         if type_info.get("is_enum"):
-            parts = [p.strip() for p in val.split("::")]
-            entry_name = parts[-1]
+            entry_name = val.split("::")[-1].strip()
             return f"{type_info['java']}.{entry_name}"
 
         # Step 9: Strip C++ unsigned integer suffixes (e.g. 10u, 0xFFu, 1ULL)
-        val = re.sub(r"-\s+", "-", val)
-        val = re.sub(r'(?i)\b(0x[0-9a-f]+|\d+)u(?:ll|l)?\b', r'\1', val)
-        val = re.sub(r'(?i)(?<=[0-9a-fA-F])u(?:ll|l)?$', '', val)
+        val = _RE_NEG_SPACE.sub("-", val)
+        val = _RE_UNSIGNED_SUFFIX.sub(r"\1", val)
+        val = _RE_UNSIGNED_TRAILING.sub("", val)
         return val
 
     def format_constant_value(
         self,
         val: Optional[str],
         j_type: str,
-        constants: Optional[List[Dict[str, Any]]] = None
+        constants: Optional[List[Dict[str, Any]]] = None,
     ) -> str:
         """Format a class static constant value for Java assignment.
 
@@ -993,19 +759,16 @@ class ClassContext:
                     return val
 
         # Step 3: Handle negative 1 parenthesized expressions and numeric limits
-        if re.search(r"\((?:-\s*1|-1)\)", val):
-            return "-1"
-        if "std::numeric_limits" in val and "max" in val:
+        if _RE_NEG_ONE_PARENS.search(val) or ("std::numeric_limits" in val and "max" in val):
             return "-1"
 
         # Step 4: Strip C++ unsigned integer suffixes
-        val = re.sub(r'(?i)\b(0x[0-9a-f]+|\d+)u(?:ll|l)?\b', r'\1', val)
-        val = re.sub(r'(?i)(?<=[0-9a-fA-F])u(?:ll|l)?$', '', val)
+        val = _RE_UNSIGNED_SUFFIX.sub(r"\1", val)
+        val = _RE_UNSIGNED_TRAILING.sub("", val)
 
         # Step 5: Append 'f' suffix to float literals if missing
-        if j_type == "float":
-            if not val.endswith("f") and not val.endswith("F"):
-                val += "f"
+        if j_type == "float" and not val.endswith(("f", "F")):
+            val += "f"
         return val
 
     def get_jni_mangled_type(self, jni_type: str) -> str:
@@ -1035,29 +798,7 @@ class ClassContext:
         Returns:
             Mangled JNI signature fragment string.
         """
-        mapping = {
-            "jboolean": "Z",
-            "jbyte": "B",
-            "jchar": "C",
-            "jshort": "S",
-            "jint": "I",
-            "jlong": "J",
-            "jfloat": "F",
-            "jdouble": "D",
-            "jbooleanArray": "_3Z",
-            "jbyteArray": "_3B",
-            "jcharArray": "_3C",
-            "jshortArray": "_3S",
-            "jintArray": "_3I",
-            "jlongArray": "_3J",
-            "jfloatArray": "_3F",
-            "jdoubleArray": "_3D",
-            "jstring": "Ljava_lang_String_2",
-            "jobject": "Ljava_lang_Object_2",
-            "Buffer": "Ljava_nio_Buffer_2",
-            "Runnable": "Ljava_lang_Runnable_2",
-        }
-        return mapping.get(jni_type, "Ljava_lang_Object_2")
+        return _JNI_MANGLED_TYPES.get(jni_type, "Ljava_lang_Object_2")
 
     def _detect_cached_fields(self) -> Dict[str, Dict[str, Any]]:
         """Identify matching setter/getter pairs that benefit from Java-side instance caching.
@@ -1078,24 +819,23 @@ class ClassContext:
         """
         # Step 1: Scan all methods for eligible setters and getters
         setters: Dict[str, Tuple[str, str, str, bool]] = {}
-        getters: Dict[str, Tuple[str, str, bool]] = {}
+        getters: Dict[str, Dict[str, Any]] = {}
         for m in self.methods:
             m_name = m["name"]
             args = m.get("arguments", [])
             ret_type = m["return_type"]
 
             is_set = m_name.startswith("set") and len(m_name) > 3 and m_name[3].isupper()
-            is_configure = (m_name == "configure")
+            is_configure = m_name == "configure"
             if (is_set or is_configure) and len(args) == 1:
-                arg_t = args[0]["type"]
-                info, _ = self.resolve_type_info(arg_t, silent=True)
-                ret_info, _ = self.resolve_type_info(ret_type, silent=True)
+                info, _ = self.type_resolver.resolve_type_info(args[0]["type"], silent=True)
+                ret_info, _ = self.type_resolver.resolve_type_info(ret_type, silent=True)
                 if (info.get("is_filament_type") or info.get("is_struct")) and ret_info.get("java") == "void":
                     prop = "Configuration" if is_configure else m_name[3:]
                     setters[prop] = (m_name, info["java"], args[0]["name"], info.get("is_struct", False))
 
             elif m_name.startswith("get") and len(m_name) > 3 and m_name[3].isupper() and len(args) == 0:
-                ret_info, _ = self.resolve_type_info(ret_type, silent=True)
+                ret_info, _ = self.type_resolver.resolve_type_info(ret_type, silent=True)
                 if ret_info.get("is_filament_type") or ret_info.get("is_struct"):
                     prop = m_name[3:]
                     is_ref = ret_type.get("is_reference", False) and not ret_type.get("is_pointer", False)
@@ -1177,40 +917,30 @@ class ClassContext:
         """
         retained: Dict[str, Dict[str, Any]] = collections.OrderedDict()
         for m in self.methods:
-            attrs = m.get("attributes", [])
-            is_retained = any(
-                a in ("filament:apigen:retained", "apigen:retained")
-                for a in attrs
-            )
-            if not is_retained:
+            if not any(a in ("filament:apigen:retained", "apigen:retained") for a in m.get("attributes", [])):
                 continue
 
             name = m["name"]
             prop = name[3:] if name.startswith("get") and len(name) > 3 else name
-            field_name = f"m{prop}"
-            param_name = prop[0].lower() + prop[1:]
-
             ret_t = m.get("return_type", {})
             cpp_name = ret_t.get("cpp_name", "") if isinstance(ret_t, dict) else str(ret_t)
-            clean_t = re.sub(r'\bconst\b', '', cpp_name).replace("*", "").strip()
+            clean_t = _RE_CONST_WORD.sub("", cpp_name).replace("*", "").strip()
 
             if clean_t == "void":
                 java_type = "Object"
             else:
-                info, _ = self.resolve_type_info(ret_t, silent=True)
+                info, _ = self.type_resolver.resolve_type_info(ret_t, silent=True)
                 java_type = info.get("java", "Object")
 
             is_nullable = (ret_t.get("nullability") == "nullable") if isinstance(ret_t, dict) else False
-            nullability_ann = "@Nullable" if is_nullable else "@NonNull"
-
             retained[name] = {
                 "getter": name,
                 "prop": prop,
-                "field_name": field_name,
-                "param_name": param_name,
+                "field_name": f"m{prop}",
+                "param_name": prop[0].lower() + prop[1:],
                 "java_type": java_type,
                 "is_nullable": is_nullable,
-                "nullability_annotation": nullability_ann,
+                "nullability_annotation": "@Nullable" if is_nullable else "@NonNull",
                 "return_type": ret_t,
                 "method_ir": m,
             }
@@ -1235,27 +965,16 @@ class ClassContext:
             Capitalized suffix string for method name unmangling.
         """
         clean = type_name.split("::")[-1].strip()
-        if clean in ("bool", "jboolean", "boolean"):
-            return "Boolean"
-        elif clean in ("float", "jfloat"):
-            return "Float"
-        elif clean in ("int", "int32_t", "uint32_t", "jint"):
-            return "Int"
-        elif clean in ("long", "int64_t", "uint64_t", "jlong"):
-            return "Long"
-        elif clean in ("double", "jdouble"):
-            return "Double"
-        elif clean in ("short", "int16_t", "uint16_t", "jshort"):
-            return "Short"
-        elif clean in ("byte", "int8_t", "uint8_t", "jbyte"):
-            return "Byte"
-        elif clean in ("char", "char_s", "char_u", "jchar"):
-            return "Char"
-        else:
-            return clean[0].upper() + clean[1:]
+        if clean in _TEMPLATE_TYPE_SUFFIXES:
+            return _TEMPLATE_TYPE_SUFFIXES[clean]
+        return clean[0].upper() + clean[1:]
 
     def _expand_method(self, method_ir: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Expand compressed SFINAE trait specializations into concrete method variant entries.
+
+        Results are memoized in `self._expanded_cache` keyed by `id(method_ir)` so repeated
+        expansion queries across signature pre-scanning, Java emission, and JNI emission do not
+        repeatedly deep-copy or re-unroll template specializations.
 
         Expansion Strategy & Walkthrough:
         ---------------------------------
@@ -1286,6 +1005,17 @@ class ClassContext:
         Returns:
             List of expanded method context dictionaries ready for code emission.
         """
+        cache_key = id(method_ir)
+        cached = self._expanded_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        result = self._expand_method_uncached(method_ir)
+        self._expanded_cache[cache_key] = result
+        return result
+
+    def _expand_method_uncached(self, method_ir: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Perform the uncached SFINAE and template specialization expansion for a method IR node."""
         name = method_ir["name"]
 
         # Step 1: Filter out C++ operators and unbindable constructors
@@ -1298,7 +1028,7 @@ class ClassContext:
                     arg_type_name = args[0]["type"].get("cpp_name", "")
                     if arg_type_name in (
                         self.name, f"const {self.name} &", f"{self.name} &", f"{self.name} &&",
-                        f"{self.cpp_name} const &", f"{self.cpp_name} &", f"{self.cpp_name} &&"
+                        f"{self.cpp_name} const &", f"{self.cpp_name} &", f"{self.cpp_name} &&",
                     ):
                         return []
                 if any(self._is_unsupported_type(a["type"]) for a in args):
@@ -1307,7 +1037,12 @@ class ClassContext:
             return []
 
         # Step 2: Suppress redundant buffer getter pointers for inline value classes
-        if self.is_value_class and self.value_type_info.get("buffer_getter") == name and method_ir["return_type"].get("is_pointer"):  # type: ignore
+        if (
+            self.is_value_class
+            and self.value_type_info
+            and self.value_type_info.get("buffer_getter") == name
+            and method_ir["return_type"].get("is_pointer")
+        ):
             return []
 
         # Step 3: Suppress C++ iterators, ranges, and raw Entity pointer accessors
@@ -1316,58 +1051,42 @@ class ClassContext:
             return []
         if name in (
             "begin", "end", "cbegin", "cend", "rbegin", "rend",
-            "getChildrenBegin", "getChildrenEnd", "getChildrenRange"
+            "getChildrenBegin", "getChildrenEnd", "getChildrenRange",
         ):
             return []
-
         if name == "getEntities" and method_ir["return_type"].get("is_pointer"):
             return []
-        if (
-            ret_t.startswith("utils::Entity const*")
-            or ret_t.startswith("utils::Entity*")
-            or ret_t.startswith("Entity const*")
-            or ret_t.startswith("Entity*")
-        ):
+        if ret_t.startswith(("utils::Entity const*", "utils::Entity*", "Entity const*", "Entity*")):
             return []
 
         # Step 4: Check for explicit apigen skip attributes
-        skip_attrs = (
-            "filament:apigen:skip", "filament:skip", "apigen:skip",
-            "no_apigen", "noapigen", "skip_generation", "binding:skip"
-        )
-        if any(
-            attr in skip_attrs or attr.startswith("no_apigen") or attr.startswith("skip_generation")
-            for attr in method_ir.get("attributes", [])
-        ):
+        if has_skip_attr(method_ir):
             return []
 
         # Step 5: Check for tagged generic array templates and group by scalar family
         tagged_info = get_tagged_array_info(method_ir)
         if tagged_info:
-            specializations = method_ir.get("specializations", [])
             tp_name = tagged_info["tagged_arg"].get("type", {}).get("template_param_name", "T")
-
             family_groups = collections.defaultdict(list)
-            for spec in specializations:
+            for spec in method_ir.get("specializations", []):
                 concrete_type = spec.get(tp_name)
-                if not concrete_type:
-                    continue
-                family = classify_scalar_family(concrete_type)
-                if family:
-                    family_groups[family].append(spec)
+                if concrete_type:
+                    family = classify_scalar_family(concrete_type)
+                    if family:
+                        family_groups[family].append(spec)
 
-            variants = []
-            for family in ("float", "int", "bool"):
-                if family in family_groups:
-                    variants.append({
-                        "ir": method_ir,
-                        "is_tagged_array": True,
-                        "family": family,
-                        "tagged_info": tagged_info,
-                        "specializations": family_groups[family],
-                        "specialization_type": None,
-                    })
-            return variants
+            return [
+                {
+                    "ir": method_ir,
+                    "is_tagged_array": True,
+                    "family": family,
+                    "tagged_info": tagged_info,
+                    "specializations": family_groups[family],
+                    "specialization_type": None,
+                }
+                for family in ("float", "int", "bool")
+                if family in family_groups
+            ]
 
         # Step 6: Unroll standard template specializations into concrete method variants
         specializations = method_ir.get("specializations")
@@ -1427,23 +1146,23 @@ class ClassContext:
                     continue
 
                 # Deduplicate identical unrolled Java method signatures
-                java_ret = self.get_java_type(spec_ir["return_type"])
+                java_ret = self.type_resolver.get_java_type(spec_ir["return_type"])
                 unrolled_args = []
                 for a in spec_ir.get("arguments", []):
-                    arr_in = self.get_array_input_info(a["type"])
+                    arr_in = self.type_resolver.get_array_input_info(a["type"])
                     req_type_str = (
                         a["type"].get("qualified_name") or a["type"]["cpp_name"]
-                        if isinstance(a["type"], dict) else a["type"]
+                        if isinstance(a["type"], dict)
+                        else a["type"]
                     )
-                    is_matrix = bool(re.search(r"::mat\d", req_type_str) or "::TMat" in req_type_str)
+                    is_matrix = bool(_RE_MAT_DIM.search(req_type_str) or "::TMat" in req_type_str)
                     is_pointer = a["type"].get("is_pointer", False) if isinstance(a["type"], dict) else False
                     size_param = bool(get_size_param_attr(a))
                     if arr_in and not is_matrix and not is_pointer and not size_param and not arr_in.get("is_slice"):
                         unrolled_args.extend([arr_in["scalar"]] * arr_in["size"])
                     else:
-                        unrolled_args.append(self.get_java_type(a["type"]))
-                java_args = tuple(unrolled_args)
-                sig_key = (spec_ir["name"], java_args, java_ret)
+                        unrolled_args.append(self.type_resolver.get_java_type(a["type"]))
+                sig_key = (spec_ir["name"], tuple(unrolled_args), java_ret)
                 if sig_key in seen_sigs:
                     continue
                 seen_sigs.add(sig_key)
@@ -1451,20 +1170,20 @@ class ClassContext:
                 variants.append({
                     "ir": spec_ir,
                     "specialization_type": spec_type_str,
-                    "template_unmangled": template_unmangled
+                    "template_unmangled": template_unmangled,
                 })
             return variants
 
         # Step 7: Filter non-templated methods for unsupported types or special patterns
         if self._is_unsupported_type(method_ir["return_type"]):
             return []
-        if self.is_async_callback_method(method_ir):
+        if self.type_resolver.is_async_callback_method(method_ir):
             return [{"ir": method_ir, "specialization_type": None, "is_async_callback": True}]
         if any(self._is_unsupported_type(a["type"]) for a in method_ir.get("arguments", [])):
             return []
 
         # Step 8: Expand packed buffer methods into dual NIO Buffer and primitive array variants
-        if self.is_packed_buffer_method(method_ir):
+        if self.type_resolver.is_packed_buffer_method(method_ir):
             return [
                 {"ir": method_ir, "specialization_type": None, "buffer_mode": "buffer"},
                 {"ir": method_ir, "specialization_type": None, "buffer_mode": "array"},
@@ -1484,13 +1203,13 @@ class ClassContext:
             True if any annotation is required, False otherwise.
         """
         for f in self.fields:
-            if self.get_annotation(f["type"]):
+            if self.type_resolver.get_annotation(f["type"]):
                 return True
         for m in self.methods:
-            if self.get_annotation(m["return_type"]):
+            if self.type_resolver.get_annotation(m["return_type"]):
                 return True
             for arg in m.get("arguments", []):
-                if self.get_annotation(arg["type"]):
+                if self.type_resolver.get_annotation(arg["type"]):
                     return True
         return False
 
@@ -1557,7 +1276,7 @@ class ClassContext:
         self,
         m_ctx: Dict[str, Any],
         dry_run: bool = False,
-        return_sig: bool = False
+        return_sig: bool = False,
     ) -> Any:
         """Forward native method declaration emission to JavaEmitter.
 
@@ -1624,4 +1343,3 @@ class ClassContext:
         """
         from .java_emitter import JavaEmitter
         return JavaEmitter(self)._generate_pojo_struct(*args, **kwargs)
-

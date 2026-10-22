@@ -1249,7 +1249,38 @@ class TestExtractor(unittest.TestCase):
         doc_trailing = extractor.parse_doxygen(comment_trailing)
         self.assertTrue(doc_trailing["brief"].startswith("<p>"))
 
+    def test_inline_struct_and_macro_field_default_values(self):
+        """Verify that inline struct definitions do not leak inner default values and macro-annotated fields preserve default values."""
+        code = """
+        #define UTILS_DEPRECATED [[deprecated]]
+        typedef unsigned long long uint64_t;
+        class Container {
+        public:
+            struct ShadowOptions {
+                int mapSize = 1024;
+                float cascadeSplitPositions[3] = { 0.125f, 0.25f, 0.50f };
+                struct Vsm {
+                    bool elvsm = false;
+                    float blurWidth = 0.0f;
+                } vsm;
+                UTILS_DEPRECATED uint64_t presentationDeadlineNanos = 0;
+            };
+        };
+        """
+        ex = self.parse_source(code)
+        classes = {c["name"]: c for c in ex.output["classes"]}
+        self.assertIn("ShadowOptions", classes)
+        self.assertIn("Vsm", classes)
+
+        opts_fields = {f["name"]: f for f in classes["ShadowOptions"]["fields"]}
+        self.assertEqual(opts_fields["mapSize"].get("default_value"), "1024")
+        self.assertEqual(opts_fields["cascadeSplitPositions"].get("default_value"), "{0.125f, 0.25f, 0.50f}")
+        self.assertIsNone(opts_fields["vsm"].get("default_value"))
+        self.assertEqual(opts_fields["presentationDeadlineNanos"].get("default_value"), "0")
+
+        vsm_fields = {f["name"]: f for f in classes["Vsm"]["fields"]}
+        self.assertEqual(vsm_fields["elvsm"].get("default_value"), "false")
+        self.assertEqual(vsm_fields["blurWidth"].get("default_value"), "0.0f")
+
 if __name__ == '__main__':
     unittest.main()
-
-
