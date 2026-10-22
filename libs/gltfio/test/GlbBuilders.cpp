@@ -624,4 +624,68 @@ std::vector<uint8_t> makeInvalidDracoGlb() {
     return assembleGlb(std::move(json), std::vector<uint8_t>(64, 0xff));
 }
 
+std::vector<uint8_t> makeDummyBufferOverflowGlb(uint64_t vertexCount) {
+    std::string json = std::string(R"({
+  "asset": { "version": "2.0" },
+  "extensionsUsed": ["KHR_materials_unlit"],
+  "buffers": [
+    { "byteLength": 6 }
+  ],
+  "bufferViews": [
+    { "buffer": 0, "byteOffset": 0, "byteLength": 6 }
+  ],
+  "accessors": [
+    {
+      "componentType": 5126,
+      "count": )") + std::to_string(vertexCount) + R"(,
+      "type": "VEC3",
+      "min": [0, 0, 0],
+      "max": [1, 1, 1]
+    },
+    {
+      "bufferView": 0,
+      "componentType": 5123,
+      "count": 3,
+      "type": "SCALAR"
+    }
+  ],
+  "images": [
+    {}
+  ],
+  "textures": [
+    { "source": 0 }
+  ],
+  "materials": [
+    {
+      "pbrMetallicRoughness": {
+        "baseColorTexture": { "index": 0 }
+      },
+      "extensions": {
+        "KHR_materials_unlit": {}
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": { "POSITION": 0 },
+          "indices": 1,
+          "material": 0
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    { "mesh": 0 }
+  ],
+  "scenes": [
+    { "nodes": [0] }
+  ],
+  "scene": 0
+})";
+
+    return assembleGlb(std::move(json), std::vector<uint8_t>(6, 0));
+}
+
 } // namespace test

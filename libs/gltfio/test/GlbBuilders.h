@@ -89,6 +89,10 @@ std::vector<uint8_t> makePositionlessPrimitiveGlb(bool includeValidSiblingPrimit
 // null buffer_view.
 std::vector<uint8_t> makeInvalidDracoGlb();
 
+// Builds a single-primitive GLB whose POSITION accessor declares `vertexCount` vertices and omits
+// TEXCOORD_0 and COLOR_0 so that AssetLoader's dummy buffer allocation path is exercised.
+std::vector<uint8_t> makeDummyBufferOverflowGlb(uint64_t vertexCount);
+
 } // namespace test
 
 #endif // TNT_GLTFIO_TEST_GLBBUILDERS_H
