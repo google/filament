@@ -585,6 +585,15 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
         // must be a morph target.
         assert(slot.morphTargetBuffer);
 
+        // A buffer with no loaded data (e.g. a buffer without a URI, which
+        // buffer loading skips) leaves `data` null. Uploading it would crash
+        // in setPositionsAt, and the packing branch would upload
+        // uninitialized floats. Skip the morph upload, matching how the
+        // vertex and index branches skip unloaded buffers.
+        if (!data) {
+            continue;
+        }
+
         if (utility::requiresPacking(accessor)) {
             cgltf_size capacity = 0;
             cgltf_size totalOffset = 0;
