@@ -148,13 +148,16 @@ void SingleInstanceComponentManagerBase::catchupGarbage() noexcept {
 }
 
 bool SingleInstanceComponentManagerBase::popPendingZombie(Entity const newEntity, Entity& outZombie) noexcept {
+    if (UTILS_LIKELY(mPendingDestruction.empty())) {
+        return false;
+    }
+
     uint32_t const index = EntityManager::getIndex(newEntity);
     // TODO: this loop will disappear once we only store the indices
     constexpr int32_t kGenerationCount = 1 << EntityManager::GENERATION_BITS;
     for (int32_t g = 0; g < kGenerationCount; ++g) {
         int32_t const potentialZombie = EntityManager::makeIdentity(g, index);
-        if (mPendingDestruction[potentialZombie]) {
-            mPendingDestruction.remove(potentialZombie);
+        if (mPendingDestruction.fetchRemove(potentialZombie)) {
             outZombie = Entity::import(potentialZombie);
             return true;
         }
@@ -222,16 +225,17 @@ SingleInstanceComponentManagerBase::addComponentImpl(Entity const e, void* conte
             checkZombieCollisionPanic(e);
         }
 
-        if (!hasComponent(e)) {
+        auto [it, inserted] = mInstanceMap.try_emplace(e, 0);
+        if (UTILS_LIKELY(inserted)) {
             ci = allocator(context, e);
-            mInstanceMap[e] = ci;
+            it.value() = ci;
             {
                 LockGuard lock(mEbrEntitiesLock);
                 mEntities.add(e.getId());
             }
             notifyChange(e);
         } else {
-            ci = mInstanceMap[e];
+            ci = it.value();
         }
     }
     assert(ci != 0);
@@ -247,16 +251,18 @@ void SingleInstanceComponentManagerBase::removeComponentsImpl(Entity const* enti
         Entity const e = entities[k];
         auto const pos = map.find(e);
         if (UTILS_LIKELY(pos != map.end())) {
-            size_t const index = pos->second;
+            size_t const index = pos.value();
             assert(index != 0);
 
             auto const [lastIndex, swappedEntity] = deallocator(context, index);
 
-            if (!swappedEntity.isNull()) {
-                map[swappedEntity] = index;
-            }
+            map.erase_fast(pos);
 
-            map.erase(pos);
+            if (!swappedEntity.isNull()) {
+                auto const swappedPos = map.find(swappedEntity);
+                assert(swappedPos != map.end());
+                swappedPos.value() = index;
+            }
 
             // We only need to lock mEbrEntitiesLock when writing (mutating) mEntities because the
             // global timeline thread (EntityManager) can read it concurrently. Since component

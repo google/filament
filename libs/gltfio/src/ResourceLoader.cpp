@@ -134,7 +134,7 @@ void uploadCallback(void* buffer, size_t size, void* user) {
 
 // Parses a data URI and returns a blob that gets malloc'd in cgltf, which the caller must free.
 // (implementation snarfed from meshoptimizer)
-uint8_t const* parseDataUri(const char* uri, std::string* mimeType, size_t* psize) {
+uint8_t* parseDataUri(const char* uri, std::string* mimeType, size_t* psize) {
     if (strncmp(uri, "data:", 5) != 0) {
         return nullptr;
     }
@@ -155,7 +155,7 @@ uint8_t const* parseDataUri(const char* uri, std::string* mimeType, size_t* psiz
         }
         *mimeType = std::string(uri + 5, comma - 7);
         *psize = size;
-        return (const uint8_t*) data;
+        return (uint8_t*) data;
     }
     return nullptr;
 }
@@ -888,12 +888,21 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
     const cgltf_buffer_view* bv = image->buffer_view;
     const char* uri = image->uri;
 
+    if (!bv && !uri) {
+        LOG(ERROR) << "Missing image source data";
+        return {};
+    }
+
     std::string mime = image->mime_type ? image->mime_type : "";
     size_t dataUriSize;
-    const uint8_t* dataUriContent = uri ? parseDataUri(uri, &mime, &dataUriSize) : nullptr;
+    std::unique_ptr<uint8_t, void(*)(void*)> dataUriContent(
+            !bv && uri ? parseDataUri(uri, &mime, &dataUriSize) : nullptr, &std::free);
 
     if (mime.empty()) {
-        assert_invariant(uri && "Non-URI images must supply a mime type.");
+        if (!uri) {
+            LOG(ERROR) << "Non-URI images must supply a mime type.";
+            return {};
+        }
         const std::string extension = Path(uri).getExtension();
         mime = extension == "jpg" ? "image/jpeg" : "image/" + extension;
     }
@@ -910,7 +919,10 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
 
     // Check if the texture slot uses BufferView data.
     if (void** bufferViewData = bv ? &bv->buffer->data : nullptr; bufferViewData) {
-        assert_invariant(!dataUriContent);
+        if (!*bufferViewData) {
+            LOG(ERROR) << "Missing buffer data for texture";
+            return {};
+        }
         const size_t offset = bv ? bv->offset : 0;
         const uint8_t* sourceData = offset + (const uint8_t*) *bufferViewData;
         if (auto iter = mBufferTextureCache[cacheIdx].find(sourceData);
@@ -930,15 +942,13 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
     else if (dataUriContent) {
         if (auto iter = mBufferTextureCache[cacheIdx].find(uri);
                 iter != mBufferTextureCache[cacheIdx].end()) {
-            free((void*)dataUriContent);
             return {iter->second, CacheResult::FOUND};
         }
-        if (Texture* texture = provider->pushTexture(dataUriContent, dataUriSize, mime.c_str(), flags); texture) {
-            free((void*)dataUriContent);
+        if (Texture* texture = provider->pushTexture(
+                dataUriContent.get(), dataUriSize, mime.c_str(), flags); texture) {
             mBufferTextureCache[cacheIdx][uri] = texture;
             return {texture, CacheResult::MISS};
         }
-        free((void*)dataUriContent);
     }
 
     // Check the user-supplied resource cache for this URI.
@@ -985,7 +995,7 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
         return {nullptr, CacheResult::NOT_READY};
     }
 
-    const char* name = srcTexture.name ? srcTexture.name : uri;
+    const char* name = srcTexture.name ? srcTexture.name : (uri ? uri : "");
     LOG(ERROR) << "Unable to create texture " << name << ": " << provider->getPushMessage();
     return {};
 }

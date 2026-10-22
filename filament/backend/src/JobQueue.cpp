@@ -21,6 +21,8 @@
 #include <utils/Mutex.h>
 #include <utils/Panic.h>
 
+#include <chrono>
+
 namespace filament::backend {
 
 using namespace utils;
@@ -212,8 +214,9 @@ void JobWorker::terminate() {
     }
 }
 
-AmortizationWorker::AmortizationWorker(JobQueue::Ptr queue, PassKey)
-    : JobWorker(std::move(queue)) {
+AmortizationWorker::AmortizationWorker(JobQueue::Ptr queue,
+        std::chrono::nanoseconds const frameBudget, PassKey)
+    : JobWorker(std::move(queue)), mFrameBudget(frameBudget) {
 }
 
 AmortizationWorker::~AmortizationWorker() = default;
@@ -240,6 +243,26 @@ void AmortizationWorker::process(int const jobCount) {
     for (auto& job: jobs) {
         job();
     }
+}
+
+void AmortizationWorker::processFrame() {
+    if (!mQueue) {
+        return;
+    }
+
+    // Measuring from the start of the call keeps a coarse clock (100 us on the web) from adding
+    // rounding error per job.
+    using clock = std::chrono::steady_clock;
+    clock::time_point const start = clock::now();
+
+    // The first job runs whatever the budget, so the queue always advances.
+    do {
+        JobQueue::Job job = mQueue->pop(false);
+        if (!job) {
+            break;
+        }
+        job();
+    } while (clock::now() - start < mFrameBudget);
 }
 
 void AmortizationWorker::drain() {

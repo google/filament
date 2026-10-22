@@ -457,4 +457,93 @@ std::vector<uint8_t> makeColorSeamMorphGlb(MorphMaterial material) {
     return assembleGlb(std::move(json), std::move(bin));
 }
 
+std::vector<uint8_t> makePositionlessPrimitiveGlb(bool includeValidSiblingPrimitive) {
+    std::string primitives = R"({"attributes":{"TEXCOORD_0":0}})";
+    if (includeValidSiblingPrimitive) {
+        primitives += R"(,{"attributes":{"POSITION":1,"TEXCOORD_0":0}})";
+    }
+
+    std::string json =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+            R"("nodes":[{"mesh":0}],)"
+            R"("meshes":[{"primitives":[)" + primitives + R"(]}],)"
+            R"("accessors":[)"
+            R"({"bufferView":0,"componentType":5126,"count":3,"type":"VEC2"},)"
+            R"({"bufferView":1,"componentType":5126,"count":3,"type":"VEC3",)"
+            R"("min":[0,0,0],"max":[1,1,0]}],)"
+            R"("bufferViews":[)"
+            R"({"buffer":0,"byteOffset":0,"byteLength":24},)"
+            R"({"buffer":0,"byteOffset":24,"byteLength":36}],)"
+            R"("buffers":[{"byteLength":60}]})";
+
+    std::vector<uint8_t> bin(60, 0);
+    float* fbin = reinterpret_cast<float*>(bin.data());
+    // TEXCOORD_0 (3 x vec2) at float offset 0.
+    fbin[2] = 1.0f;
+    fbin[5] = 1.0f;
+    // POSITION (3 x vec3) at float offset 6: (0,0,0), (1,0,0), (0,1,0).
+    fbin[9] = 1.0f;
+    fbin[13] = 1.0f;
+
+    return assembleGlb(std::move(json), std::move(bin));
+}
+
+std::vector<uint8_t> makeInvalidDracoGlb() {
+    std::string json = R"({
+  "asset": { "version": "2.0" },
+  "extensionsUsed": ["KHR_draco_mesh_compression"],
+  "buffers": [
+    { "byteLength": 64 }
+  ],
+  "bufferViews": [
+    { "buffer": 0, "byteOffset": 0, "byteLength": 64 }
+  ],
+  "accessors": [
+    {
+      "componentType": 5126,
+      "count": 3,
+      "type": "VEC3",
+      "min": [0, 0, 0],
+      "max": [1, 1, 1]
+    },
+    {
+      "componentType": 5126,
+      "count": 3,
+      "type": "VEC3"
+    },
+    {
+      "componentType": 5123,
+      "count": 3,
+      "type": "SCALAR"
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": { "POSITION": 0, "NORMAL": 1 },
+          "indices": 2,
+          "mode": 4,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 0,
+              "attributes": { "POSITION": 0, "NORMAL": 1 }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    { "mesh": 0 }
+  ],
+  "scenes": [
+    { "nodes": [0] }
+  ],
+  "scene": 0
+})";
+
+    return assembleGlb(std::move(json), std::vector<uint8_t>(64, 0xff));
+}
+
 } // namespace test

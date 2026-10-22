@@ -258,7 +258,8 @@ MetalDriver::MetalDriver(PlatformMetal* platform,
             };
             mJobWorker = ThreadWorker::create(mJobQueue, std::move(threadWorkerConfig));
         } else {
-            mJobWorker = AmortizationWorker::create(mJobQueue);
+            mJobWorker = AmortizationWorker::create(mJobQueue,
+                    driverConfig.asynchronousFrameBudget);
         }
     }
 
@@ -392,6 +393,17 @@ void MetalDriver::endFrame(uint32_t frameId) {
 #if defined(FILAMENT_METAL_PROFILING)
     os_signpost_interval_end(mContext->log, mContext->signpostId, "Frame encoding");
 #endif
+
+    // Queued async jobs run after the frame's own work.
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
+}
+
+void MetalDriver::skipFrame(int) {
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
 }
 
 void MetalDriver::updateDescriptorSetBuffer(

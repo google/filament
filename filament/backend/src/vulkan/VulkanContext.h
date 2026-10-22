@@ -260,6 +260,10 @@ public:
         return mPipelineDynamicStateEnabled;
     }
 
+    inline bool isPipelineCacheEvictionEnabled() const noexcept {
+        return mPipelineCacheEvictionEnabled;
+    }
+
     inline bool isGlobalPrioritySupported() const noexcept {
         return mGlobalPrioritySupported;
     }
@@ -330,6 +334,7 @@ private:
     bool mParallelShaderCompileDisabled = false;
     bool mStagingBufferBypassEnabled = false;
     bool mPipelineDynamicStateEnabled = false;
+    bool mPipelineCacheEvictionEnabled = false;
 
     fvkutils::VkFormatList mDepthStencilFormats;
     fvkutils::VkFormatList mBlittableDepthStencilFormats;

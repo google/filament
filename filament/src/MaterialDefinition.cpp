@@ -405,7 +405,7 @@ void MaterialDefinition::processMain() {
     bool const isLit = isVariantLit || hasShadowMultiplier;
     bool const isSSR = reflectionMode == ReflectionMode::SCREEN_SPACE ||
             refractionMode == RefractionMode::SCREEN_SPACE;
-    bool const hasFog = !(variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::FOG));
+    bool const hasFog = isFogSupported();
 
     perViewLayoutIndex = ColorPassDescriptorSet::getIndex(isLit, isSSR, hasFog);
 
@@ -581,6 +581,9 @@ void MaterialDefinition::processSpecializationConstants(FEngine& engine) {
                     +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING] =
                     isVariantLit;
 
+    specializationConstants[CONFIG_MAX_RESERVED_SPEC_CONSTANTS +
+            +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_FOG] = false;
+
     // Initialize the rest of the reserved constants with a dummy value.
     for (size_t i = CONFIG_NEXT_RESERVED_SPEC_CONSTANT; i < CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
             i++) {
@@ -669,7 +672,7 @@ void MaterialDefinition::processDescriptorSets(FEngine& engine) {
     bool const isLit = isVariantLit || hasShadowMultiplier;
     bool const isSSR = reflectionMode == ReflectionMode::SCREEN_SPACE ||
             refractionMode == RefractionMode::SCREEN_SPACE;
-    bool const hasFog = !(variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::FOG));
+    bool const hasFog = isFogSupported();
 
     this->perViewDescriptorSetLayoutPcfDescription = descriptor_sets::getPerViewDescriptorSetLayout(
             materialDomain, isLit, isSSR, hasFog, false);
@@ -861,6 +864,10 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
                   +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING] =
                 specialization.specKey.hasDirectionalLighting();
     }
+    constants[CONFIG_MAX_RESERVED_SPEC_CONSTANTS +
+              +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_FOG] =
+            specialization.specKey.hasFog();
+
     program.specializationConstants(std::move(constants));
 
     program.pushConstants(ShaderStage::VERTEX, pushConstants[uint8_t(ShaderStage::VERTEX)]);
@@ -1055,6 +1062,13 @@ bool MaterialDefinition::isValidProgram(Variant const variant, DynamicSpecConstK
 
     if (!DynamicSpecConstKey::isValidProgramSpecKey(variant, specKey, materialDomain,
                 isVariantLit)) {
+        return false;
+    }
+
+    // Materials compiled without fog support (variantFilter: [fog]) have no fog code, so the fog
+    // specialization would be identical to the non-fog one. When FOG was a variant, the missing
+    // shader rejected it implicitly; now that it is a spec constant we must reject it here.
+    if (specKey.hasFog() && !isFogSupported()) {
         return false;
     }
 

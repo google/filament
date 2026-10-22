@@ -176,7 +176,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     uint32_t shadowSamplingType;                // 0: vsm, 1: dpcf
 
     // --------------------------------------------------------------------------------------------
-    // Fog [variant: FOG]
+    // Fog [specialization constant: RUNTIME_CONFIG_HAS_FOG]
     // --------------------------------------------------------------------------------------------
     math::float3 fogDensity;        // { density, -falloff * yc, density * exp(-fallof * yc) }
     float fogStart;

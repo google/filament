@@ -270,14 +270,11 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
     ShaderModel const shaderModel = mEngine.getShaderModel();
     bool const isStereoSupported = driver.isStereoSupported();
     bool const isParallelShaderCompileSupported = driver.isParallelShaderCompileSupported();
-    bool const isMaterialLit = mDefinition.isVariantLit;
-    MaterialDomain const materialDomain = mDefinition.materialDomain;
 
     if (UTILS_LIKELY(isParallelShaderCompileSupported)) {
         for (auto const variant : variants) {
             for (auto specKey : specKeys) {
-                specKey = DynamicSpecConstKey::filterProgramSpecKey(variant, specKey,
-                        materialDomain, isMaterialLit);
+                specKey = mDefinition.filterProgramSpecKey(variant, specKey);
                 if (mDefinition.isValidProgram(variant, specKey, shaderModel, isStereoSupported)) {
 #ifndef NDEBUG
                     FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
@@ -304,8 +301,7 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
     } else {
         for (UTILS_UNUSED_WITHOUT_TRACING auto const variant : variants) {
             for (UTILS_UNUSED_WITHOUT_TRACING auto specKey: specKeys) {
-                specKey = DynamicSpecConstKey::filterProgramSpecKey(variant, specKey,
-                        materialDomain, isMaterialLit);
+                specKey = mDefinition.filterProgramSpecKey(variant, specKey);
                 FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
                         "parallel compilation disabled", "name", getName().c_str(), "variantKey",
                         static_cast<uint32_t>(variant.key), "specKey",
