@@ -80,6 +80,10 @@ struct AssetLoaderExtended {
 
     UriDataCacheHandle getUriDataCache() const noexcept { return mUriDataCache; }
 
+    // Buffer loading is per-asset: a flag left set by a previous asset must
+    // not let the next asset skip loading (and validation) entirely.
+    void resetCgltfBuffersLoaded() noexcept { mCgltfBuffersLoaded = false; }
+
 private:
     filament::Engine* mEngine;
     std::string mGltfPath;

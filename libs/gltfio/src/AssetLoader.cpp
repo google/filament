@@ -386,6 +386,12 @@ FFilamentAsset* FAssetLoader::createAsset(const uint8_t* bytes, uint32_t const b
 
 FFilamentAsset* FAssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_t const byteCount,
         FilamentInstance** instances, size_t const numInstances) {
+    // Buffer loading state is per-asset: reset the extended loader's flag so
+    // a previous asset cannot make this asset skip loading and validation.
+    // (createAsset delegates here, so it is covered too.)
+    if (mLoaderExtended) {
+        mLoaderExtended->resetCgltfBuffersLoaded();
+    }
     // This method can be used to load JSON or GLB. By using a default options struct, we are asking
     // cgltf to examine the magic identifier to determine which type of file is being loaded.
     cgltf_options options {};

@@ -582,13 +582,18 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
     }
 
     if (!mCgltfBuffersLoaded) {
-        mCgltfBuffersLoaded = utility::loadCgltfBuffers(gltf, mGltfPath.c_str(), mUriDataCache);
-        if (!mCgltfBuffersLoaded) {
+        if (!utility::loadCgltfBuffers(gltf, mGltfPath.c_str(), mUriDataCache)) {
             return false;
         }
         if (!utility::decodeMeshoptCompression(gltf)) {
             return false;
         }
+        // Only mark buffers loaded once both loading and decoding have
+        // succeeded. Marking the flag after loading alone leaves it set when
+        // decoding fails, so a later primitive retry (or a later asset on
+        // this loader) skips loading entirely and reads views that were
+        // never decoded.
+        mCgltfBuffersLoaded = true;
     }
 
     utility::decodeDracoMeshes(gltf, prim, input->dracoCache);
