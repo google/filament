@@ -702,9 +702,12 @@ void FAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
 
         if (!primitiveHasPosition(inputPrim)) {
             slog.w << "Skipping primitive without POSITION data in " << name << io::endl;
-            // Preserve the URI data cache handle when skipping a primitive.
-            auto& resourceInfo = std::get<FFilamentAsset::ResourceInfoExtended>(fAsset->mResourceInfo);
-            resourceInfo.uriDataCache = mLoaderExtended->getUriDataCache();
+            if (mLoaderExtended) {
+                // Preserve the URI data cache handle when skipping a primitive.
+                auto& resourceInfo =
+                        std::get<FFilamentAsset::ResourceInfoExtended>(fAsset->mResourceInfo);
+                resourceInfo.uriDataCache = mLoaderExtended->getUriDataCache();
+            }
             continue;
         }
 
