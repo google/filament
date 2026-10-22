@@ -1,8 +1,30 @@
 diff --git a/third_party/cgltf/cgltf.h b/third_party/cgltf/cgltf.h
-index 78ea905f0..3576db8f6 100644
+index 78ea905f0..97b5c8774 100644
 --- a/third_party/cgltf/cgltf.h
 +++ b/third_party/cgltf/cgltf.h
-@@ -2433,9 +2433,14 @@ cgltf_size cgltf_accessor_unpack_floats(const cgltf_accessor* accessor, cgltf_fl
+@@ -1612,8 +1612,19 @@ cgltf_result cgltf_validate(cgltf_data* data)
+ 			cgltf_accessor_sparse* sparse = &accessor->sparse;
+ 
+ 			cgltf_size indices_component_size = cgltf_component_size(sparse->indices_component_type);
+-			cgltf_size indices_req_size = sparse->indices_byte_offset + indices_component_size * sparse->count;
+-			cgltf_size values_req_size = sparse->values_byte_offset + element_size * sparse->count;
++			cgltf_size indices_req_size;
++			cgltf_size values_req_size;
++
++			/* A sparse accessor replaces at most accessor->count elements, so a larger
++			 * sparse count is invalid on its face. The required-size multiplications
++			 * below must also not wrap: a wrapped req_size would pass the bounds
++			 * check that follows and let cgltf_calc_index_bound read past the buffer. */
++			CGLTF_ASSERT_IF(sparse->count > accessor->count, cgltf_result_invalid_gltf);
++			CGLTF_ASSERT_IF(indices_component_size && sparse->count > (SIZE_MAX - sparse->indices_byte_offset) / indices_component_size, cgltf_result_data_too_short);
++			CGLTF_ASSERT_IF(element_size && sparse->count > (SIZE_MAX - sparse->values_byte_offset) / element_size, cgltf_result_data_too_short);
++
++			indices_req_size = sparse->indices_byte_offset + indices_component_size * sparse->count;
++			values_req_size = sparse->values_byte_offset + element_size * sparse->count;
+ 
+ 			CGLTF_ASSERT_IF(sparse->indices_buffer_view->size < indices_req_size ||
+ 							sparse->values_buffer_view->size < values_req_size, cgltf_result_data_too_short);
+@@ -2433,9 +2444,14 @@ cgltf_size cgltf_accessor_unpack_floats(const cgltf_accessor* accessor, cgltf_fl
  		reader_head += sparse->values_byte_offset;
  
  		cgltf_size index_stride = cgltf_component_size(sparse->indices_component_type);
@@ -18,7 +40,7 @@ index 78ea905f0..3576db8f6 100644
  			float* writer_head = out + writer_index * floats_per_element;
  
  			if (!cgltf_element_read_float(reader_head, accessor->type, accessor->component_type, accessor->normalized, writer_head, floats_per_element))
-@@ -2512,7 +2517,7 @@ cgltf_bool cgltf_accessor_read_uint(const cgltf_accessor* accessor, cgltf_size i
+@@ -2512,7 +2528,7 @@ cgltf_bool cgltf_accessor_read_uint(const cgltf_accessor* accessor, cgltf_size i
  	{
  		return 0;
  	}
@@ -27,7 +49,7 @@ index 78ea905f0..3576db8f6 100644
  	return cgltf_element_read_uint(element, accessor->type, accessor->component_type, out, element_size);
  }
  
-@@ -2531,7 +2536,7 @@ cgltf_size cgltf_accessor_read_index(const cgltf_accessor* accessor, cgltf_size
+@@ -2531,7 +2547,7 @@ cgltf_size cgltf_accessor_read_index(const cgltf_accessor* accessor, cgltf_size
  	{
  		return 0; // This is an error case, but we can't communicate the error with existing interface.
  	}
