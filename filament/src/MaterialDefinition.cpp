@@ -405,7 +405,7 @@ void MaterialDefinition::processMain() {
     bool const isLit = isVariantLit || hasShadowMultiplier;
     bool const isSSR = reflectionMode == ReflectionMode::SCREEN_SPACE ||
             refractionMode == RefractionMode::SCREEN_SPACE;
-    bool const hasFog = !(variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::FOG));
+    bool const hasFog = isFogSupported();
 
     perViewLayoutIndex = ColorPassDescriptorSet::getIndex(isLit, isSSR, hasFog);
 
@@ -672,7 +672,7 @@ void MaterialDefinition::processDescriptorSets(FEngine& engine) {
     bool const isLit = isVariantLit || hasShadowMultiplier;
     bool const isSSR = reflectionMode == ReflectionMode::SCREEN_SPACE ||
             refractionMode == RefractionMode::SCREEN_SPACE;
-    bool const hasFog = !(variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::FOG));
+    bool const hasFog = isFogSupported();
 
     this->perViewDescriptorSetLayoutPcfDescription = descriptor_sets::getPerViewDescriptorSetLayout(
             materialDomain, isLit, isSSR, hasFog, false);
@@ -1068,8 +1068,7 @@ bool MaterialDefinition::isValidProgram(Variant const variant, DynamicSpecConstK
     // Materials compiled without fog support (variantFilter: [fog]) have no fog code, so the fog
     // specialization would be identical to the non-fog one. When FOG was a variant, the missing
     // shader rejected it implicitly; now that it is a spec constant we must reject it here.
-    if (specKey.hasFog() &&
-            (variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::FOG))) {
+    if (specKey.hasFog() && !isFogSupported()) {
         return false;
     }
 

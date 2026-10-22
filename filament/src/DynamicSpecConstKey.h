@@ -132,7 +132,7 @@ struct DynamicSpecConstKey {
         MaterialDomain const materialDomain, bool const /*isLit*/) noexcept {
         // Fog applies to lit and unlit surface materials alike, but never to depth or SSR
         // variants. Whether the material was compiled with fog support at all (variantFilter:
-        // [fog]) is checked by MaterialDefinition::isValidProgram().
+        // [fog]) is handled by MaterialDefinition::filterProgramSpecKey() and isValidProgram().
         return materialDomain == MaterialDomain::SURFACE &&
                !Variant::isValidDepthVariant(variant) && !Variant::isSSRVariant(variant);
     }
@@ -152,6 +152,11 @@ struct DynamicSpecConstKey {
                        canSupportFog(variant, materialDomain, isLit));
     }
 
+    // Clears the specKey bits that are meaningless for this kind of program, based only on the
+    // variant, material domain and lighting model (e.g. no fog on depth/SSR variants).
+    // This doesn't know about a specific material: when one is available, use
+    // MaterialDefinition::filterProgramSpecKey() instead, which also applies the material's
+    // compile-time restrictions. The result always satisfies isValidProgramSpecKey().
     static constexpr DynamicSpecConstKey filterProgramSpecKey(Variant const variant,
             DynamicSpecConstKey specKey, MaterialDomain const materialDomain, bool const isLit) noexcept {
         if (!canSupportDynamicLighting(variant, materialDomain, isLit)) {

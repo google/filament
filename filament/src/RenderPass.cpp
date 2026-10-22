@@ -426,14 +426,8 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant, DynamicSpe
     FMaterial const * const UTILS_RESTRICT ma = mi->getMaterial();
     variant = Variant::filterVariant(variant, ma->isVariantLit());
 
-    DynamicSpecConstKey dynamicSpecConstKey = DynamicSpecConstKey::filterProgramSpecKey(
-            variant, specKey, ma->getMaterialDomain(), ma->isVariantLit());
-    // Materials compiled without fog support (variantFilter: [fog]) have no fog code at all,
-    // clear the bit so we don't end up compiling a redundant specialization.
-    if (UTILS_UNLIKELY(
-                !(ma->getSupportedVariants() & UserVariantFilterMask(UserVariantFilterBit::FOG)))) {
-        dynamicSpecConstKey.setFog(false);
-    }
+    DynamicSpecConstKey const dynamicSpecConstKey =
+            ma->getDefinition().filterProgramSpecKey(variant, specKey);
 
     // Below, we evaluate both commands to avoid a branch
 
