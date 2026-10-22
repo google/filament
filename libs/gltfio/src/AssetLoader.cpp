@@ -1530,7 +1530,7 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
         spConfig.specular_texture.has_transform;
 
     auto const clampTexCoord = [](cgltf_int texcoord) -> uint8_t {
-        return uint8_t(std::min(std::max(0, texcoord), cgltf_int(UvMapSize - 1)));
+        return uint8_t(std::clamp(texcoord, 0, cgltf_int(UvMapSize - 1)));
     };
 
     MaterialKey matkey {
