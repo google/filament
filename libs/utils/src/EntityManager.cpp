@@ -95,6 +95,12 @@ PagedArenaBitset EntityManager::getAliveEntities() const noexcept {
     return impl->mAliveEntities.clone();
 }
 
+void EntityManager::getAliveEntities(PagedArenaBitset& out) const noexcept {
+    auto const* impl = static_cast<EntityManagerImpl const*>(this);
+    LockGuard const lock(impl->mDestructionLock);
+    out.copyFrom(impl->mAliveEntities);
+}
+
 void EntityManager::registerWatermark(std::atomic<uint64_t>* watermark, ImmutableCString name,
         const PagedArenaBitset* entityBitset, Mutex* entityBitsetLock) noexcept {
     static_cast<EntityManagerImpl *>(this)->registerWatermark(watermark, std::move(name), entityBitset, entityBitsetLock);

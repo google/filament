@@ -205,7 +205,8 @@ private:
     static void updateNearFarPlanes(math::mat4f* projection,
             float nearDistance, float farDistance) noexcept;
 
-    bool isDepthClampEnabled(FEngine const& engine, FView const& view, ShadowMap const& shadowMap) const noexcept;
+    static bool isDepthClampEnabled(FEngine const& engine, FView const& view,
+            ShadowMap const& shadowMap, bool isDepthClampSupported) noexcept;
 
     ShadowTechnique updateCascadeShadowMaps(FEngine& engine,
             FView& view, CameraInfo cameraInfo, FScene::RenderableSoa& renderableData,

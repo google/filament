@@ -155,6 +155,42 @@
             }
         },
         {
+            "name": "SSRSkinning",
+            "description": "SSR preserves bone skinning and its descriptor layout",
+            "apply_presets": ["base"],
+            "gltf_test": {
+                "models": ["Fox"],
+                "rendering": {
+                    "view.screenSpaceReflections.enabled": true,
+                    "camera.enabled": true,
+                    "camera.center": [3.0, 2.0, 0.0],
+                    "camera.lookAt": [0.0, 0.0, -4.0],
+                    "animation": {
+                        "enabled": true,
+                        "time": 0.5
+                    }
+                }
+            }
+        },
+        {
+            "name": "SSRMorphing",
+            "description": "SSR preserves animated morph targets and its descriptor layout",
+            "apply_presets": ["base"],
+            "gltf_test": {
+                "models": ["AnimatedMorphCube"],
+                "rendering": {
+                    "view.screenSpaceReflections.enabled": true,
+                    "camera.enabled": true,
+                    "camera.center": [3.0, 2.0, 0.0],
+                    "camera.lookAt": [0.0, 0.0, -4.0],
+                    "animation": {
+                        "enabled": true,
+                        "time": 0.5
+                    }
+                }
+            }
+        },
+        {
             "name": "SSR",
             "description": "Screen space reflections",
             "apply_presets": ["base", "ssr_models"],
@@ -318,7 +354,7 @@
                 // The sphere sits at the center of the frame, which the fixed-pixel-size ImGui
                 // panel completely covers at the default size; render larger to expose it. The IBL
                 // replaces the otherwise black clear with a skybox and lights the sphere.
-                "args": ["--window-size=1024x1024", "--ibl=assets/ibl/lightroom_14b"]
+                "args": ["--hide-ui", "--window-size=1024x1024", "--ibl=assets/ibl/lightroom_14b"]
             }
         },
         {

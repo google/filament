@@ -108,11 +108,9 @@ size_t TransformManager::getChildren(Instance const i, Entity* children,
 }
 
 void TransformManager::openLocalTransformTransaction() noexcept {
-    downcast(this)->openLocalTransformTransaction();
 }
 
 void TransformManager::commitLocalTransformTransaction() noexcept {
-    downcast(this)->commitLocalTransformTransaction();
 }
 
 TransformManager::children_iterator TransformManager::getChildrenBegin(

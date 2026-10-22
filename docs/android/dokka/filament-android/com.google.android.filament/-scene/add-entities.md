@@ -5,7 +5,9 @@
 [main]\
 open fun [addEntities](add-entities.md)(entities: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)&gt;)
 
-Adds a list of entities to the Scene.
+Adds a list of entities to the Scene. 
+
+Entities that have already been destroyed with destroy are skipped.
 
 #### Parameters
 

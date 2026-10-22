@@ -154,6 +154,17 @@ bool primitiveHasVertexColor(const cgltf_primitive& inPrim) {
     return false;
 }
 
+bool primitiveHasPosition(const cgltf_primitive& inPrim) {
+    for (cgltf_size slot = 0; slot < inPrim.attributes_count; slot++) {
+        const cgltf_attribute& inputAttribute = inPrim.attributes[slot];
+        if (inputAttribute.type == cgltf_attribute_type_position &&
+                inputAttribute.data != nullptr) {
+            return true;
+        }
+    }
+    return false;
+}
+
 LightManager::Type getLightType(const cgltf_light_type light) {
     switch (light) {
         case cgltf_light_type_max_enum:
@@ -689,6 +700,14 @@ void FAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
         Primitive& outputPrim = prims[index];
         cgltf_primitive& inputPrim = mesh->primitives[index];
 
+        if (!primitiveHasPosition(inputPrim)) {
+            slog.w << "Skipping primitive without POSITION data in " << name << io::endl;
+            // Preserve the URI data cache handle when skipping a primitive.
+            auto& resourceInfo = std::get<FFilamentAsset::ResourceInfoExtended>(fAsset->mResourceInfo);
+            resourceInfo.uriDataCache = mLoaderExtended->getUriDataCache();
+            continue;
+        }
+
         if (!outputPrim.vertices) {
             if (mLoaderExtended) {
                 auto& resourceInfo = std::get<FFilamentAsset::ResourceInfoExtended>(fAsset->mResourceInfo);
@@ -726,12 +745,16 @@ void FAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
         aabb.max = max(outputPrim.aabb.max, aabb.max);
     }
 
-    mat4f worldTransform;
-    cgltf_node_transform_world(node, &worldTransform[0][0]);
+    // The spec requires that min < max for the bounding box but since we can skip bounding boxes
+    // for empty primitives, the bounding box may not be valid and needs new validation here.
+    if (all(lessThanEqual(aabb.min, aabb.max))) {
+        mat4f worldTransform;
+        cgltf_node_transform_world(node, &worldTransform[0][0]);
 
-    const Aabb transformed = aabb.transform(worldTransform);
-    fAsset->mBoundingBox.min = min(fAsset->mBoundingBox.min, transformed.min);
-    fAsset->mBoundingBox.max = max(fAsset->mBoundingBox.max, transformed.max);
+        const Aabb transformed = aabb.transform(worldTransform);
+        fAsset->mBoundingBox.min = min(fAsset->mBoundingBox.min, transformed.min);
+        fAsset->mBoundingBox.max = max(fAsset->mBoundingBox.max, transformed.max);
+    }
  }
 
 void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity, const char* name,
@@ -771,6 +794,10 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity,
             continue;
         }
 
+        if (!outputPrim->vertices) {
+            continue;
+        }
+
         // Create a material instance for this primitive or fetch one from the cache.
         UvMap uvmap {};
         bool const hasVertexColor = primitiveHasVertexColor(*inputPrim);
@@ -784,8 +811,6 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity,
 
         fAsset->mDependencyGraph.addEdge(entity, mi);
         builder.material(index, mi);
-
-        assert_invariant(outputPrim->vertices);
 
         // Expand the object-space bounding box.
         aabb.min = min(outputPrim->aabb.min, aabb.min);
@@ -804,7 +829,7 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity,
         }
     }
 
-    if (numMorphTargets) {
+    if (numMorphTargets && morphingVertexCount > 0) {
         MorphTargetBuffer* morphTargetBuffer = MorphTargetBuffer::Builder()
                 .count(numMorphTargets)
                 .vertexCount(morphingVertexCount)
@@ -814,20 +839,23 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity,
 
         builder.morphing(morphTargetBuffer);
 
-        // The Primitive structs in mMeshCache are shared across all instances of the same
-        // mesh. Only the first call should populate morphTargetBuffer in the shared Primitive
-        // and write into the existing BufferSlots (which were allocated by createPrimitive).
-        // Subsequent instances must append NEW BufferSlots so that ResourceLoader uploads
-        // morph data to every instance's MorphTargetBuffer independently.
-        //
-        // NOTE: This fix covers morph position data only. Morph tangent recomputation in
-        // ResourceLoader::computeTangents() reads MorphTargetBuffer from the shared Primitive,
-        // so additional instances with lit morph targets may have incorrect tangent frames.
-        const bool isFirstMorphSetup = (prims.data()->morphTargetBuffer == nullptr);
-
         outputPrim = prims.data();
         inputPrim = &mesh->primitives[0];
         for (cgltf_size index = 0; index < primitiveCount; ++index, ++outputPrim, ++inputPrim) {
+            if (!outputPrim->vertices) {
+                continue;
+            }
+
+            // The Primitive structs in mMeshCache are shared across all instances of the same
+            // mesh. Only the first call should populate morphTargetBuffer in the shared Primitive
+            // and write into the existing BufferSlots (which were allocated by createPrimitive).
+            // Subsequent instances must append NEW BufferSlots so that ResourceLoader uploads
+            // morph data to every instance's MorphTargetBuffer independently.
+            //
+            // NOTE: This fix covers morph position data only. Morph tangent recomputation in
+            // ResourceLoader::computeTangents() reads MorphTargetBuffer from the shared Primitive,
+            // so additional instances with lit morph targets may have incorrect tangent frames.
+            const bool isFirstMorphSetup = (outputPrim->morphTargetBuffer == nullptr);
             if (isFirstMorphSetup) {
                 outputPrim->morphTargetBuffer = morphTargetBuffer;
             }
@@ -965,6 +993,9 @@ void FAssetLoader::createMaterialVariants(const cgltf_mesh* mesh, Entity const e
     UvMap uvmap {};
     for (cgltf_size prim = 0, n = mesh->primitives_count; prim < n; ++prim) {
         const cgltf_primitive& srcPrim = mesh->primitives[prim];
+        if (!primitiveHasPosition(srcPrim)) {
+            continue;
+        }
         for (size_t i = 0, m = srcPrim.mappings_count; i < m; i++) {
             const size_t variantIndex = srcPrim.mappings[i].variant;
             const cgltf_material* material = srcPrim.mappings[i].material;
@@ -1035,10 +1066,14 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
         addBufferSlot(slot);
     } else if (inPrim.attributes_count > 0) {
         // If a primitive does not have an index buffer, generate a trivial one now.
-        const uint32_t vertexCount = inPrim.attributes[0].data->count;
+        const cgltf_size vertexCount = inPrim.attributes[0].data->count;
+        if (vertexCount > IndexBuffer::MAX_INDEX_COUNT) {
+            slog.e << "Vertex count exceeds maximum index count in " << name << io::endl;
+            return false;
+        }
 
         indices = IndexBuffer::Builder()
-            .indexCount(vertexCount)
+            .indexCount(uint32_t(vertexCount))
             .bufferType(IndexBuffer::IndexType::UINT)
             .build(mEngine);
 

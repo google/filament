@@ -569,14 +569,19 @@ struct MultiSampleAntiAliasingOptions {
 struct TemporalAntiAliasingOptions {
     /** @deprecated has no effect. */
     float filterWidth = 1.0f;
+
     /** history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA). */
     float feedback = 0.12f;
-    /** texturing lod bias (typically -1 or -2) */
+
+    /** texture lod bias (typically between -1.0 and 0.0) */
     float lodBias = -1.0f;
+
     /** post-TAA sharpen, especially useful when upscaling is true. */
     float sharpness = 0.0f;
+
     /** enables or disables temporal anti-aliasing */
     bool enabled = false;
+
     /** Upscaling factor. Disables Dynamic Resolution. [BETA] */
     float upscaling = 1.0f;
 
@@ -611,25 +616,63 @@ struct TemporalAntiAliasingOptions {
 
     /** whether to filter the history buffer */
     bool filterHistory = true;
+
     /** whether to apply the reconstruction filter to the input */
     bool filterInput = true;
+
     /** whether to use the YcoCg color-space for history rejection */
     bool useYCoCg = false;
+
     /** set to true for HDR content */
     bool hdr = true;
+
     /** type of color gamut box */
     BoxType boxType = BoxType::AABB;
+
     /** clipping algorithm */
     BoxClipping boxClipping = BoxClipping::ACCURATE;
+
     /** Jitter Pattern */
     JitterPattern jitterPattern = JitterPattern::HALTON_23_X16;
-    /** High values increases ghosting artefact, lower values increases jittering, range [0.75, 1.25] */
-    float varianceGamma = 1.0f;
+
+    /** High values increases ghosting artefact, lower values increases jittering, range [0.6, 1.25] */
+    float varianceGamma = 0.7f;
 
     /** adjust the feedback dynamically to reduce flickering */
     bool preventFlickering = false;
+
     /** whether to apply history reprojection (debug option) */
     bool historyReprojection = true;
+
+    /** relaxes history rejection under low camera motion to reduce flickering on static content */
+    bool motionAdaptiveHistory = false;
+
+    /** camera motion threshold in texels above which history rejection is applied at full strength */
+    float motionDeltaThreshold = 1.0f;
+
+    /** minimum history clamping strength when the camera is static, in (0, 1] */
+    float minBoxStrength = 0.1f;
+
+    /** minimum history feedback scale when the camera is static, in (0, 1] */
+    float minAlphaStrength = 0.3f;
+
+    /** normalized depth threshold below which distant/sky pixels always use full history rejection */
+    float skyDepthThreshold = 0.001f;
+
+    /** number of frames to maintain full history rejection after camera motion stops (0 to disable) */
+    float motionHoldFrames = 12.0f;
+
+    /** enables depth-based disocclusion detection to reduce ghosting around moving objects */
+    bool depthDisocclusion = false;
+
+    /** depth difference threshold for disocclusion detection */
+    float disocclusionDepthThreshold = 0.001f;
+
+    /** reduces false disocclusions on thin static geometry at a higher GPU cost */
+    bool disocclusionHistoryNeighborhood = true;
+
+    /** uses a wider reconstruction filter kernel for higher sharpness at 1:1 resolution, at a higher GPU cost */
+    bool exactLanczosSupport = false;
 };
 
 /**

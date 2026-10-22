@@ -217,6 +217,69 @@ TEST(StructureOfArraysTest, CopyRange) {
     EXPECT_EQ(soa2.elementAt<2>(3), TestFloat4{ 12.0f });
 }
 
+TEST(StructureOfArraysTest, CopyRangeSelective) {
+    StructureOfArrays<float, double, TestFloat4> soa1;
+    StructureOfArrays<float, double, TestFloat4> soa2;
+
+    soa1.setCapacity(10);
+    soa1.resize(5);
+    soa2.setCapacity(10);
+    soa2.resize(5);
+    for (size_t i = 0; i < 5; i++) {
+        soa1.elementAt<0>(i) = float(i + 1);
+        soa1.elementAt<1>(i) = double(i + 1) * 2.0;
+        soa1.elementAt<2>(i) = TestFloat4{ float(i + 1) * 4.0f };
+
+        soa2.elementAt<0>(i) = -10.0f;
+        soa2.elementAt<1>(i) = -20.0;
+        soa2.elementAt<2>(i) = TestFloat4{ -40.0f };
+    }
+
+    // Copy only columns 0 and 2 for rows [1, 4), leaving column 1 untouched.
+    soa2.copyRange<0, 2>(1, soa1, 1, 3);
+
+    EXPECT_EQ(soa2.elementAt<0>(0), -10.0f);
+    EXPECT_EQ(soa2.elementAt<1>(0), -20.0);
+    EXPECT_EQ(soa2.elementAt<2>(0), TestFloat4{ -40.0f });
+
+    for (size_t i = 1; i < 4; i++) {
+        EXPECT_EQ(soa2.elementAt<0>(i), float(i + 1));
+        EXPECT_EQ(soa2.elementAt<1>(i), -20.0);
+        EXPECT_EQ(soa2.elementAt<2>(i), TestFloat4{ float(i + 1) * 4.0f });
+    }
+
+    EXPECT_EQ(soa2.elementAt<0>(4), -10.0f);
+    EXPECT_EQ(soa2.elementAt<1>(4), -20.0);
+    EXPECT_EQ(soa2.elementAt<2>(4), TestFloat4{ -40.0f });
+}
+
+// Copying zero elements must be a no-op even when the source was never allocated (its column
+// pointers are null), and must leave the destination untouched.
+TEST(StructureOfArraysTest, CopyRangeZeroCount) {
+    StructureOfArrays<float, double, TestFloat4> const empty;
+    StructureOfArrays<float, double, TestFloat4> soa;
+
+    ASSERT_EQ(0u, empty.size());
+    ASSERT_EQ(0u, empty.capacity());
+
+    soa.setCapacity(4);
+    soa.resize(4);
+    for (size_t i = 0; i < 4; i++) {
+        soa.elementAt<0>(i) = float(i);
+        soa.elementAt<1>(i) = double(i) * 2.0;
+        soa.elementAt<2>(i) = TestFloat4{ float(i) * 4.0f };
+    }
+
+    soa.copyRange(0, empty, 0, 0);
+    soa.copyRange<0, 2>(2, empty, 0, 0);
+
+    for (size_t i = 0; i < 4; i++) {
+        EXPECT_EQ(soa.elementAt<0>(i), float(i));
+        EXPECT_EQ(soa.elementAt<1>(i), double(i) * 2.0);
+        EXPECT_EQ(soa.elementAt<2>(i), TestFloat4{ float(i) * 4.0f });
+    }
+}
+
 TEST(StructureOfArraysTest, AssignTuple) {
     StructureOfArrays<float, double, TestFloat4> soa;
     soa.setCapacity(10);

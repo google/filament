@@ -37,11 +37,13 @@ Pipeline Lifecycle & Data Flow:
        Queries `TypeResolver` to map C++ types to Java types, JNI types, and
        signature descriptors, resolving primitive array strides, buffer modes,
        and aggregate struct memory layouts.
-    4. Code Emission (`java_emitter.py`, `jni_emitter.py`):
+    4. Code Emission (`java_emitter.py`, `jni_emitter.py`, `specializations.py`):
        - `JavaEmitter` synthesizes Java class declarations, builder inner classes,
          exploded zero-allocation struct fields, vector overloads, and native decls.
        - `JniEmitter` synthesizes zero-cost C++ translation units, `wrapJni` exception
          handling blocks, struct stack reconstructions, and NIO buffer transfers.
+       - `specializations` houses custom Java and JNI C++ helper blocks for classes
+         requiring specialized runtime support (`ToneMapper`, `View`, `Engine`, etc.).
     5. Documentation Synthesis (`doc.py`):
        Parses CommonMark AST documentation blocks and renders standards-compliant
        HTML Javadoc blocks with parameter tags, return descriptions, and cross-links.
@@ -54,6 +56,7 @@ Module Breakdown:
     - java_emitter: Dedicated `JavaEmitter` for `.java` wrapper generation.
     - jni_emitter: Dedicated `JniEmitter` for zero-cost JNI `.cpp` bridge generation.
     - orchestrator: Multi-file IR pipeline execution (`process_file`) and CLI driver (`main`).
+    - specializations: Class-specific Java and JNI C++ templates and helper snippets.
     - type_resolver: `TypeResolver` engine for type mapping, struct leaves, and buffer classes.
     - utils: Pure helper routines for AST attributes, identifier sanitization, and naming.
 """
@@ -98,7 +101,7 @@ from .type_resolver import TypeResolver
 
 # Step 9: AST attribute helpers and identifier sanitization
 from .utils import get_effective_method_name, sanitize_identifier
-from .validator import BindingValidator, ValidationResult, ValidationDiagnostic
+from .validator import BindingValidator, ValidationDiagnostic, ValidationResult
 
 # Step 10: Public API export declaration
 __all__ = [

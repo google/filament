@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include <utils/algorithm.h>
+
+#include <gtest/gtest.h>
 
 #include <array>
 
@@ -183,4 +183,35 @@ TEST(AlgorithmTest, Partition) {
     int array9[9] = { 2, 5, 4, 8, 9, 9, 9, 9, 9 };
     r = utils::partition_point(std::begin(array9), std::end(array9), [](int i) { return i < 9; });
     EXPECT_EQ(4, r - std::begin(array9));
+}
+
+TEST(AlgorithmTest, SmallArraySort) {
+    // Empty and single-element ranges
+    std::array<int, 1> single = { 42 };
+    utils::smallArraySort(single.begin(), single.begin());
+    EXPECT_EQ(42, single[0]);
+    utils::smallArraySort(single.begin(), single.end());
+    EXPECT_EQ(42, single[0]);
+
+    // Default comparator
+    std::array<int, 8> values = { 5, 1, 8, 3, 2, 8, 0, -4 };
+    utils::smallArraySort(values.begin(), values.end());
+    std::array<int, 8> const expected = { -4, 0, 1, 2, 3, 5, 8, 8 };
+    EXPECT_EQ(expected, values);
+
+    // Custom comparator and stability check
+    struct Item {
+        int key;
+        int order;
+        bool operator==(Item const& rhs) const noexcept {
+            return key == rhs.key && order == rhs.order;
+        }
+    };
+    std::array<Item, 5> items = {{ { 2, 0 }, { 1, 0 }, { 2, 1 }, { 1, 1 }, { 0, 0 } }};
+    utils::smallArraySort(items.begin(), items.end(),
+            [](Item const& a, Item const& b) noexcept { return a.key < b.key; });
+    std::array<Item, 5> const expectedItems = {{
+        { 0, 0 }, { 1, 0 }, { 1, 1 }, { 2, 0 }, { 2, 1 }
+    }};
+    EXPECT_EQ(expectedItems, items);
 }
