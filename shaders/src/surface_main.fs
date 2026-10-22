@@ -128,7 +128,16 @@ void main() {
 #endif
 
 
-#if defined(HAS_CUSTOM_OUTPUT)
+    // Some GLES drivers (e.g. Qualcomm Adreno) ignore precision qualifiers on
+    // non-UBO struct members in fragment shaders, see
+    // https://github.com/KhronosGroup/WebGL/issues/3351. As a result, a custom
+    // output routed through `MaterialInputs` can lose precision, e.g. a
+    // `highp uvec4` can be treated as a 16-bit `mediump uvec4`, truncating
+    // each component to 16 bits. To work around this, a material can write
+    // directly to the fragment output `FRAG_OUTPUT_AT0` and define
+    // `FILAMENT_WORKAROUND_BYPASS_FRAG_OUTPUT_COPY` to skip the copy below and
+    // avoid routing the writes through a struct field.
+#if defined(HAS_CUSTOM_OUTPUT) && !defined(FILAMENT_WORKAROUND_BYPASS_FRAG_OUTPUT_COPY)
     FRAG_OUTPUT_AT0 = inputs.FRAG_OUTPUT0;
 #endif
 }
