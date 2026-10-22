@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include "DracoCache.h"
 #include "GlbBuilders.h"
 #include "Utility.h"
 
@@ -21,6 +22,7 @@
 
 #include "materials/uberarchive.h"
 
+#include <gltfio/Animator.h>
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/FilamentInstance.h>
@@ -45,6 +47,9 @@
 #include <math/vec3.h>
 
 #include <cgltf.h>
+#if GLTFIO_DRACO_SUPPORTED
+#include <draco/mesh/mesh.h>
+#endif
 #include <gtest/gtest.h>
 
 #include <cstdint>
@@ -567,6 +572,36 @@ TEST_F(glTFIOTest, MorphTargetsExceedingMaxComputeTangents) {
     EXPECT_EQ(renderableManager.getMorphTargetCount(inst), MAX_MORPH_TARGETS);
     ASSERT_NE(renderableManager.getMorphTargetBuffer(inst), nullptr);
     EXPECT_EQ(renderableManager.getMorphTargetBuffer(inst)->getCount(), MAX_MORPH_TARGETS);
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+// Issue #10409: when a mesh declares more morph targets than MAX_MORPH_TARGETS, its morph-weight
+// animation channels still contain one weight per declared target per keyframe.
+// Animator::applyAnimation must clamp the number of weights passed to
+// RenderableManager::setMorphWeights to MAX_MORPH_TARGETS for both LINEAR and CUBICSPLINE
+// interpolation, rather than triggering a precondition panic.
+TEST_F(glTFIOTest, MorphTargetWeightAnimationExceedingMaxDoesNotPanic) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    std::vector<uint8_t> const glb = makeAnimatedMorphTargetGlb(int(MAX_MORPH_TARGETS) + 44);
+    FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+    FilamentInstance* const instance = asset->getInstance();
+    ASSERT_NE(instance, nullptr);
+    Animator* const animator = instance->getAnimator();
+    ASSERT_NE(animator, nullptr);
+    ASSERT_EQ(animator->getAnimationCount(), 2u);
+
+    // Animation 0 uses LINEAR interpolation; animation 1 uses CUBICSPLINE interpolation.
+    EXPECT_NO_THROW(animator->applyAnimation(0, 0.5f));
+    EXPECT_NO_THROW(animator->applyAnimation(1, 0.5f));
 
     assetLoader->destroyAsset(asset);
     AssetLoader::destroy(&assetLoader);
@@ -1175,6 +1210,116 @@ TEST_F(glTFIOTest, InvalidDracoDecodeLoadsWithZeroFilledBuffers) {
         AssetLoader::destroy(&assetLoader);
     }
 }
+
+// Issue #10495: in FAssetLoader::createPrimitive(), `sizeof(ubyte4) * vertexCount` was computed in
+// uint32_t when sizing the dummy vertex buffer. A vertexCount >= 1,073,741,824 wrapped around
+// (e.g. 1,073,741,825 * 4 == 0x100000004 -> 4 bytes), allocating an undersized dummy buffer. Also,
+// a 64-bit accessor count > UINT32_MAX truncated when assigned to `uint32_t vertexCount`.
+TEST_F(glTFIOTest, DummyBufferSizeOverflowIsRejected) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    // 1,073,741,825 * 4 == 0x100000004 (wraps to 4 in uint32_t).
+    {
+        std::vector<uint8_t> const glb = makeDummyBufferOverflowGlb(1073741825ULL);
+        EXPECT_EQ(assetLoader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+    }
+
+    // 1,073,741,824 * 4 == 0x100000000 (wraps to 0 in uint32_t).
+    {
+        std::vector<uint8_t> const glb = makeDummyBufferOverflowGlb(1073741824ULL);
+        EXPECT_EQ(assetLoader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+    }
+
+    // 4,294,967,297 == 0x100000001 (wraps to 1 when truncated to uint32_t vertexCount).
+    if constexpr (sizeof(cgltf_size) > sizeof(uint32_t)) {
+        std::vector<uint8_t> const glb = makeDummyBufferOverflowGlb(4294967297ULL);
+        EXPECT_EQ(assetLoader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+    }
+
+    AssetLoader::destroy(&assetLoader);
+}
+
+#if GLTFIO_DRACO_SUPPORTED
+// Issue #10495: in DracoCache.cpp convertAttribs(), `const uint32_t size = target->stride * n;`
+// overflowed 32-bit unsigned arithmetic when `stride * n > UINT32_MAX` (e.g. stride = 12 for VEC3
+// float and n = 357,913,942 gives 0x100000008, truncating to 8 bytes). Verify that the overflow is
+// rejected, no buffer_view is attached, and ~DracoMesh() cleanly destroys without freeing an
+// uninitialized buffer pointer.
+TEST_F(glTFIOTest, DracoVertexAttributeSizeOverflowIsRejected) {
+    auto rawMesh = std::make_unique<draco::Mesh>();
+    draco::GeometryAttribute geomAttr;
+    geomAttr.Init(draco::GeometryAttribute::POSITION, nullptr, 3, draco::DT_FLOAT32, false, 12, 0);
+    int const attId = rawMesh->AddAttribute(geomAttr, true, 1);
+    rawMesh->attribute(attId)->set_unique_id(0);
+
+    constexpr uint32_t kOverflowPointCount = 357913942u; // 357,913,942 * 12 == 0x100000008
+    rawMesh->set_num_points(kOverflowPointCount);
+
+    std::unique_ptr<DracoMesh> dracoMesh(DracoMesh::createForTest(rawMesh.release()));
+    ASSERT_NE(dracoMesh, nullptr);
+
+    cgltf_accessor accessor{};
+    accessor.type = cgltf_type_vec3;
+    accessor.component_type = cgltf_component_type_r_32f;
+    accessor.stride = 12;
+    accessor.count = kOverflowPointCount;
+
+    EXPECT_FALSE(dracoMesh->getVertexAttributes(0, &accessor));
+    EXPECT_EQ(accessor.buffer_view, nullptr);
+}
+
+// Issue #10495: in DracoCache.cpp getFaceIndices() and convertFaces(), `mesh->num_faces() * 3` was
+// computed in 32-bit unsigned arithmetic before widening or multiplying by `sizeof(T)`, and the
+// byte size was not checked against UINT32_MAX. Verify both the `numFaces * 3 * sizeof(T)` overflow
+// (357,913,942 * 3 * 4 == 0x100000008) and the `numFaces * 3` overflow (1,431,655,766 * 3 ==
+// 0x100000002, which wraps to 2 in uint32_t).
+TEST_F(glTFIOTest, DracoFaceIndicesSizeOverflowIsRejected) {
+    // Case 1: numFaces * 3 fits in uint32_t (1,073,741,826), but numFaces * 3 * sizeof(uint32_t)
+    // is 0x100000008 (wraps to 8 in uint32_t).
+    {
+        constexpr uint32_t kNumFaces = 357913942u;
+        auto rawMesh = std::make_unique<draco::Mesh>();
+        std::unique_ptr<DracoMesh> dracoMesh(
+                DracoMesh::createForTest(rawMesh.release(), kNumFaces));
+        ASSERT_NE(dracoMesh, nullptr);
+
+        cgltf_accessor accessor{};
+        accessor.type = cgltf_type_scalar;
+        accessor.component_type = cgltf_component_type_r_32u;
+        accessor.stride = sizeof(uint32_t);
+        accessor.count = kNumFaces * 3u;
+
+        EXPECT_FALSE(dracoMesh->getFaceIndices(&accessor));
+        EXPECT_EQ(accessor.buffer_view, nullptr);
+    }
+
+    // Case 2: numFaces * 3 overflows uint32_t (1,431,655,766 * 3 == 0x100000002, wrapping to 2 in
+    // 32-bit arithmetic). Must be rejected both when the accessor declares the wrapped 32-bit
+    // count (2) and when it declares the true 64-bit count (4,294,967,298).
+    {
+        constexpr uint32_t kNumFaces = 1431655766u;
+        auto rawMesh = std::make_unique<draco::Mesh>();
+        std::unique_ptr<DracoMesh> dracoMesh(
+                DracoMesh::createForTest(rawMesh.release(), kNumFaces));
+        ASSERT_NE(dracoMesh, nullptr);
+
+        cgltf_accessor accessor{};
+        accessor.type = cgltf_type_scalar;
+        accessor.component_type = cgltf_component_type_r_16u;
+        accessor.stride = sizeof(uint16_t);
+        accessor.count = 2u;
+        EXPECT_FALSE(dracoMesh->getFaceIndices(&accessor));
+        EXPECT_EQ(accessor.buffer_view, nullptr);
+
+        if constexpr (sizeof(cgltf_size) > sizeof(uint32_t)) {
+            accessor.count = static_cast<cgltf_size>(kNumFaces) * 3u;
+            EXPECT_FALSE(dracoMesh->getFaceIndices(&accessor));
+            EXPECT_EQ(accessor.buffer_view, nullptr);
+        }
+    }
+}
+#endif
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
