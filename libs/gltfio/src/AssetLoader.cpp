@@ -57,6 +57,7 @@
 #include <tsl/robin_map.h>
 
 #include <codecvt>
+#include <limits>
 #include <locale>
 #include <memory>
 
@@ -1184,6 +1185,10 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
             }
         }
 
+        if (innerAccessor->count > std::numeric_limits<uint32_t>::max()) {
+            slog.e << "Vertex count overflow in " << name << io::endl;
+            return false;
+        }
         vertexCount = innerAccessor->count;
 
         // The positions accessor is required to have min/max properties, use them to expand
@@ -1371,16 +1376,21 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
     }
 
     if (needsDummyData) {
-        const uint32_t requiredSize = sizeof(ubyte4) * vertexCount;
+        const uint64_t requiredSize64 = static_cast<uint64_t>(sizeof(ubyte4)) * vertexCount;
+        if (requiredSize64 > std::numeric_limits<uint32_t>::max()) {
+            slog.e << "Dummy buffer size overflow in " << name << io::endl;
+            return false;
+        }
+        const uint32_t requiredSize = static_cast<uint32_t>(requiredSize64);
         if (mDummyBufferObject == nullptr || requiredSize > mDummyBufferObject->getByteCount()) {
-            mDummyBufferObject = BufferObject::Builder().size(requiredSize).build(mEngine);
-            fAsset->mBufferObjects.push_back(mDummyBufferObject);
             uint32_t* dummyData = static_cast<uint32_t*>(malloc(requiredSize));
             if (!dummyData) {
                 slog.e << "Out of memory allocating dummy vertex data." << io::endl;
                 return false;
             }
             memset(dummyData, 0xff, requiredSize);
+            mDummyBufferObject = BufferObject::Builder().size(requiredSize).build(mEngine);
+            fAsset->mBufferObjects.push_back(mDummyBufferObject);
             VertexBuffer::BufferDescriptor bd(dummyData, requiredSize, FREE_CALLBACK);
             mDummyBufferObject->setBuffer(mEngine, std::move(bd));
         }

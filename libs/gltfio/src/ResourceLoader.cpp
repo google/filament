@@ -361,10 +361,11 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
                     elementSize = 8; // SHORT4
                 }
 
-                const size_t size = count * elementSize;
-                if (size == 0) {
+                if (elementSize == 0 || count == 0 ||
+                        count > std::numeric_limits<uint32_t>::max() / elementSize) {
                     continue;
                 }
+                const uint32_t size = static_cast<uint32_t>(count * elementSize);
                 if (slot.vertexBuffer) {
                     void* zeros = malloc(size);
                     if (!zeros) {
