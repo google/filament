@@ -39,6 +39,6 @@ install(FILES ${DIST_HDRS} DESTINATION include/${TARGET})
 # ==================================================================================================
 if (FILAMENT_BUILD_TESTING AND NOT IOS AND NOT WASM AND NOT ANDROID)
     add_executable(test_${TARGET} tests/test_filamesh.cpp )
-    target_link_libraries(test_${TARGET} PRIVATE filameshio gtest)
+    target_link_libraries(test_${TARGET} PRIVATE filameshio gtest meshoptimizer)
     set_target_properties(test_${TARGET} PROPERTIES FOLDER Tests)
 endif()

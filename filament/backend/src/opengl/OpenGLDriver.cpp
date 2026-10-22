@@ -364,7 +364,8 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform,
             // The worker operates on the same backend (engine) thread for the Amortization mode,
             // so use the same state.
             mWorkerState = mBackendState;
-            mJobWorker = AmortizationWorker::create(mJobQueue);
+            mJobWorker = AmortizationWorker::create(mJobQueue,
+                    driverConfig.asynchronousFrameBudget);
         }
     }
 }
@@ -1378,11 +1379,12 @@ void OpenGLDriver::createTextureViewSwizzleAsyncR(Handle<HwTexture> th, Handle<H
 
     assert_invariant(getJobQueue());
 
+    // No GL commands are issued in the worker thread, so no flush is needed. The job push
+    // keeps ordering, because src->gl is filled in by an earlier async createTexture job.
     getJobQueue()->push([this, th, srch, r, g, b, a, handler, callback, user,
             tag=std::move(tag)]() mutable {
         DEBUG_MARKER_NAME("createTextureViewSwizzleAsyncR")
         createTextureViewSwizzleCommon(th, srch, r, g, b, a, std::move(tag));
-        flushIfSharedContext();
         scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     });
 }
@@ -1591,12 +1593,13 @@ void OpenGLDriver::importTextureAsyncR(Handle<HwTexture> th, intptr_t const id,
 
     assert_invariant(getJobQueue());
 
+    // No GL commands are issued in the worker thread, so no flush is needed. The job push
+    // fires the callback after any previously queued worker jobs.
     getJobQueue()->push([this, th, id, target, levels, format, samples, width, height, depth, usage,
             handler, callback, user, tag=std::move(tag)]() mutable {
         DEBUG_MARKER_NAME("importTextureAsyncR")
         importTextureCommon(getWorkerState(), th, id, target, levels, format, samples, width, height, depth, usage,
             std::move(tag));
-        flushIfSharedContext();
         scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     });
 }
@@ -4545,10 +4548,6 @@ void OpenGLDriver::tick(int) {
 #endif
     executeEveryNowAndThenOps();
     getShaderCompilerService().tick();
-    if (getJobWorker()) {
-        // This number is randomly/heuristically chosen. Consider making the number optional.
-        getJobWorker()->process(5);
-    }
 }
 
 void OpenGLDriver::beginFrame(
@@ -4621,6 +4620,17 @@ void OpenGLDriver::endFrame(UTILS_UNUSED uint32_t const frameId) {
     //glFinish();
     mPlatform.endFrame(frameId);
     insertEventMarker("endFrame");
+
+    // Queued async jobs run after the frame's own work.
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
+}
+
+void OpenGLDriver::skipFrame(int) {
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
 }
 
 void OpenGLDriver::updateDescriptorSetBuffer(

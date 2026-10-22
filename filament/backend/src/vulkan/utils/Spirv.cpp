@@ -16,8 +16,7 @@
 
 #include "vulkan/utils/Spirv.h"
 
-#include <utils/compiler.h>   // UTILS_UNUSED_IN_RELEASE, UTILS_FALLTHROUGH
-#include <utils/debug.h>      // assert_invariant
+#include <utils/compiler.h>
 #include <utils/FixedCapacityVector.h>
 
 #include <spirv/unified1/spirv.hpp>
@@ -77,6 +76,10 @@ void workaroundSpecConstant(Program::ShaderBlob const& blob,
     // value is adjusted by the spec values provided in the program.
     // Additionally, we will turn the SpecId decorations to no-ops.
     size_t const dataSize = blob.size() / 4;
+    if (UTILS_UNLIKELY(dataSize < HEADER_SIZE)) {
+        output.clear();
+        return;
+    }
 
     output.resize(dataSize);
     uint32_t const* data = (uint32_t*) blob.data();
@@ -85,29 +88,38 @@ void workaroundSpecConstant(Program::ShaderBlob const& blob,
     memcpy(&outputData[0], &data[0], HEADER_SIZE * 4);
     size_t outputCursor = HEADER_SIZE;
 
-    for (uint32_t cursor = HEADER_SIZE, cursorEnd = dataSize; cursor < cursorEnd;) {
+    for (size_t cursor = HEADER_SIZE, cursorEnd = dataSize; cursor < cursorEnd;) {
         uint32_t const firstWord = data[cursor];
         uint32_t const wordCount = firstWord >> 16;
         uint32_t const op = firstWord & 0x0000FFFF;
+
+        if (UTILS_UNLIKELY(wordCount == 0 || cursor + wordCount > cursorEnd ||
+                    outputCursor + wordCount > output.size())) {
+            break;
+        }
 
         switch(op) {
             case spv::Op::OpSpecConstant:
             case spv::Op::OpSpecConstantTrue:
             case spv::Op::OpSpecConstantFalse: {
-                uint32_t const targetVar = data[cursor + 2];
-
-                UTILS_UNUSED_IN_RELEASE WordMap::const_iterator idItr = varToIdMap.find(targetVar);
-                assert_invariant(idItr != varToIdMap.end() &&
-                        "Cannot find variable previously decorated with SpecId");
-
-                auto const& val = specConstants[idItr->second];
                 std::memcpy(&outputData[outputCursor], &data[cursor], wordCount * 4);
-                getTransformedConstantInst(val, &outputData[outputCursor]);
+                uint32_t const minWordCount = (op == spv::Op::OpSpecConstant) ? 4 : 3;
+                if (wordCount >= minWordCount) {
+                    uint32_t const targetVar = data[cursor + 2];
+                    WordMap::const_iterator const idItr = varToIdMap.find(targetVar);
+                    if (idItr != varToIdMap.end() && idItr->second < specConstants.size()) {
+                        auto const& val = specConstants[idItr->second];
+                        uint32_t const requiredWords = std::holds_alternative<bool>(val) ? 3 : 4;
+                        if (wordCount >= requiredWords) {
+                            getTransformedConstantInst(val, &outputData[outputCursor]);
+                        }
+                    }
+                }
                 outputCursor += wordCount;
                 break;
             }
             case spv::Op::OpDecorate: {
-                if (data[cursor + 2] == spv::Decoration::DecorationSpecId) {
+                if (wordCount >= 4 && data[cursor + 2] == spv::Decoration::DecorationSpecId) {
                     uint32_t const targetVar = data[cursor + 1];
                     uint32_t const specId = data[cursor + 3];
                     varToIdMap[targetVar] = specId;

@@ -76,9 +76,6 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(io::sstream& out,
             }
             break;
         case ShaderStage::FRAGMENT:
-            if (filament::Variant::isFogVariant(variant)) {
-                CodeGenerator::generateDefine(out, "VARIANT_HAS_FOG");
-            }
             if (filament::Variant::isPickingVariant(variant)) {
                 CodeGenerator::generateDefine(out, "VARIANT_HAS_PICKING");
             }
@@ -577,6 +574,13 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel const shad
         CodeGenerator::generateDefine(fs, "HAS_COLORED_PENUMBRA");
     }
 
+    bool const materialHasFog =
+            !(variantFilter & UserVariantFilterMask(UserVariantFilterBit::FOG)) &&
+            !filament::Variant::isValidDepthVariant(variant) &&
+            !filament::Variant::isSSRVariant(variant);
+    if (materialHasFog) {
+        CodeGenerator::generateDefine(fs, "MATERIAL_HAS_FOG");
+    }
     generateSurfaceMaterialVariantProperties(fs, mProperties, mDefines);
 
     MaterialBuilder::PushConstantList fragmentPushConstants;
@@ -683,7 +687,7 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel const shad
     CodeGenerator::generateSurfaceMaterial(fs, ShaderStage::FRAGMENT);
     CodeGenerator::generateSurfaceParameters(fs, ShaderStage::FRAGMENT);
 
-    if (filament::Variant::isFogVariant(variant)) {
+    if (materialHasFog) {
         CodeGenerator::generateSurfaceFog(fs, ShaderStage::FRAGMENT);
     }
 

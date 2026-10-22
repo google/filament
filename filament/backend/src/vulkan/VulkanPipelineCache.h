@@ -301,6 +301,9 @@ private:
     bool const mHasColorWriteEnable;
     bool const mHasPipelineProtectedAccess;
 
+    // Cached context capabilities for pipeline cache eviction
+    bool const mPipelineCacheThresholdEvictionEnabled;
+
     [[maybe_unused]] VulkanContext const& mContext;
 
     // Name of the bound program, used for perfetto tracing.
