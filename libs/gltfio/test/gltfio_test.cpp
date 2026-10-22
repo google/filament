@@ -22,6 +22,7 @@
 
 #include "materials/uberarchive.h"
 
+#include <gltfio/Animator.h>
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/FilamentInstance.h>
@@ -571,6 +572,36 @@ TEST_F(glTFIOTest, MorphTargetsExceedingMaxComputeTangents) {
     EXPECT_EQ(renderableManager.getMorphTargetCount(inst), MAX_MORPH_TARGETS);
     ASSERT_NE(renderableManager.getMorphTargetBuffer(inst), nullptr);
     EXPECT_EQ(renderableManager.getMorphTargetBuffer(inst)->getCount(), MAX_MORPH_TARGETS);
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+// Issue #10409: when a mesh declares more morph targets than MAX_MORPH_TARGETS, its morph-weight
+// animation channels still contain one weight per declared target per keyframe.
+// Animator::applyAnimation must clamp the number of weights passed to
+// RenderableManager::setMorphWeights to MAX_MORPH_TARGETS for both LINEAR and CUBICSPLINE
+// interpolation, rather than triggering a precondition panic.
+TEST_F(glTFIOTest, MorphTargetWeightAnimationExceedingMaxDoesNotPanic) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    std::vector<uint8_t> const glb = makeAnimatedMorphTargetGlb(int(MAX_MORPH_TARGETS) + 44);
+    FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+    FilamentInstance* const instance = asset->getInstance();
+    ASSERT_NE(instance, nullptr);
+    Animator* const animator = instance->getAnimator();
+    ASSERT_NE(animator, nullptr);
+    ASSERT_EQ(animator->getAnimationCount(), 2u);
+
+    // Animation 0 uses LINEAR interpolation; animation 1 uses CUBICSPLINE interpolation.
+    EXPECT_NO_THROW(animator->applyAnimation(0, 0.5f));
+    EXPECT_NO_THROW(animator->applyAnimation(1, 0.5f));
 
     assetLoader->destroyAsset(asset);
     AssetLoader::destroy(&assetLoader);

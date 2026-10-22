@@ -47,6 +47,11 @@ std::vector<uint8_t> makeIndexAccessorGlb(char const* indexType, int indexCompon
 // (zero) TANGENT delta.
 std::vector<uint8_t> makeMorphTargetGlb(int morphTargetCount);
 
+// Builds a single-triangle GLB with `morphTargetCount` morph targets and two weight animations
+// (one LINEAR and one CUBICSPLINE), reproducing issue #10409 when `morphTargetCount` exceeds
+// MAX_MORPH_TARGETS.
+std::vector<uint8_t> makeAnimatedMorphTargetGlb(int morphTargetCount);
+
 // The material that the morph target builders below assign to their primitive.
 enum class MorphMaterial { NONE, UNLIT, LIT };
 
