@@ -351,6 +351,7 @@ io::sstream& CodeGenerator::generateCommonProlog(io::sstream& out, ShaderStage c
         out << "const bool RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING = false;\n";
         out << "const bool RUNTIME_CONFIG_HAS_EXTRA_DIRECTIONAL_LIGHTS = false;\n";
         out << "const bool RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING = false;\n";
+        out << "const bool RUNTIME_CONFIG_HAS_FOG = false;\n";
     } else {
         bool const litVariants = material.isLit || material.hasShadowMultiplier;
         generateSpecializationConstant(out, "RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING",
@@ -365,6 +366,10 @@ io::sstream& CodeGenerator::generateCommonProlog(io::sstream& out, ShaderStage c
                 CONFIG_MAX_RESERVED_SPEC_CONSTANTS + +DynamicSpecializationConstants::
                         RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING,
                 litVariants);
+        generateSpecializationConstant(out, "RUNTIME_CONFIG_HAS_FOG",
+                CONFIG_MAX_RESERVED_SPEC_CONSTANTS +
+                        +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_FOG,
+                false);
     }
 
     out << '\n';

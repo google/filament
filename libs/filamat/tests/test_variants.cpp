@@ -90,14 +90,16 @@ TEST(Variant, PunctualShadowReceiversDoNotAliasSsr) {
     constexpr std::array<V::type_t, 2> STEREO_STATES = { 0, V::STE };
     constexpr UserVariantFilterMask SSR_FILTER = uint32_t(UserVariantFilterBit::SSR);
 
-    for (V::type_t const sampler: SAMPLERS) {
-        for (V::type_t const fog: FOG_STATES) {
-            for (V::type_t const skinning: SKINNING_STATES) {
-                for (V::type_t const stereo: STEREO_STATES) {
+    for (V::type_t const sampler : SAMPLERS) {
+        for (V::type_t const fog : FOG_STATES) {
+            for (V::type_t const skinning : SKINNING_STATES) {
+                for (V::type_t const stereo : STEREO_STATES) {
                     V const requested(V::SRE | sampler | fog | skinning | stereo);
                     V const filtered = V::filterVariant(requested, true);
+                    // FOG is handled via dynamic specialization constants.
+                    V const expected(requested.key & ~V::FOG);
 
-                    EXPECT_EQ(filtered, requested)
+                    EXPECT_EQ(filtered, expected)
                             << "filterVariant must not alter lit shadow-receiver variants";
                     EXPECT_TRUE(V::isValidStandardVariant(filtered));
                     EXPECT_TRUE(V::isValidSurfaceVariant(filtered));
@@ -152,7 +154,53 @@ TEST(Variant, SpecialSsrVariantIsDistinctAndFilterable) {
         EXPECT_FALSE(V::isValidDepthVariant(variant));
         EXPECT_TRUE(V::isValidSurfaceVariant(variant));
     }
-    EXPECT_EQ(ssrVariantCount, 1u);
+    EXPECT_EQ(ssrVariantCount, 2u);
+}
+
+TEST(Variant, SsrPreservesSkinningAndSharesFragmentShader) {
+    using V = filament::Variant;
+    using filament::backend::ShaderStage;
+    V const ssr(V::SPECIAL_SSR_VARIANT);
+    V const skinnedSsr(V::SPECIAL_SSR_VARIANT | V::SKN);
+
+    for (size_t key = 0; key < filament::VARIANT_COUNT; ++key) {
+        V const variant(static_cast<V::type_t>(key));
+        EXPECT_EQ(V::isSSRVariant(variant), variant == ssr || variant == skinnedSsr);
+    }
+    for (V const variant : { ssr, skinnedSsr }) {
+        EXPECT_TRUE(V::isValidSurfaceVariant(variant));
+        EXPECT_FALSE(V::isValidDepthVariant(variant));
+        EXPECT_FALSE(V::isPickingVariant(variant));
+        EXPECT_FALSE(V::isDepthMomentsVariant(variant));
+        EXPECT_EQ(V::filterVariantVertex(variant), V(variant.key & V::SKN));
+        EXPECT_EQ(V::filterVariantFragment(variant), ssr);
+        for (bool const lit : { false, true }) {
+            EXPECT_EQ(V::filterVariant(variant, lit), variant);
+        }
+        for (auto const filter : { UserVariantFilterBit::VSM, UserVariantFilterBit::FOG,
+                     UserVariantFilterBit::SHADOW_RECEIVER }) {
+            EXPECT_EQ(V::filterUserVariant(variant, uint32_t(filter)), variant);
+        }
+        EXPECT_EQ(V::filterUserVariant(variant, uint32_t(UserVariantFilterBit::SSR)),
+                V(variant.key & V::SKN));
+        EXPECT_EQ(V::filterUserVariant(variant, uint32_t(UserVariantFilterBit::SKINNING)), ssr);
+        EXPECT_TRUE(containsVariant(filament::VariantUtils::getLitVariants(), variant));
+        EXPECT_TRUE(containsVariant(filament::VariantUtils::getUnlitVariants(), variant));
+        EXPECT_FALSE(containsVariant(filament::VariantUtils::getDepthVariants(), variant));
+    }
+    for (bool const lit : { false, true }) {
+        auto const shaders = determineSurfaceVariants(0, lit, false);
+        EXPECT_TRUE(containsVariant(shaders, V(V::SKN), ShaderStage::VERTEX));
+        EXPECT_TRUE(containsVariant(shaders, ssr, ShaderStage::FRAGMENT));
+        EXPECT_FALSE(containsVariant(shaders, skinnedSsr, ShaderStage::FRAGMENT));
+        auto const withoutSsr = determineSurfaceVariants(
+                uint32_t(UserVariantFilterBit::SSR), lit, false);
+        EXPECT_FALSE(containsVariant(withoutSsr, ssr, ShaderStage::FRAGMENT));
+        auto const withoutSkinning = determineSurfaceVariants(
+                uint32_t(UserVariantFilterBit::SKINNING), lit, false);
+        EXPECT_FALSE(containsVariant(withoutSkinning, V(V::SKN), ShaderStage::VERTEX));
+        EXPECT_TRUE(containsVariant(withoutSkinning, ssr, ShaderStage::FRAGMENT));
+    }
 }
 
 TEST(Variant, FogFilteringPreservesPickingAndFiltersSurfaceFog) {
@@ -191,11 +239,12 @@ TEST(Variant, SurfaceShaderEnumerationKeepsShadowVariantsWhenSsrIsFiltered) {
     std::vector<Variant> const all = determineSurfaceVariants(0, true, false);
     EXPECT_TRUE(containsVariant(all, V(V::SRE), filament::backend::ShaderStage::VERTEX));
     EXPECT_TRUE(containsVariant(all, V(V::SRE), filament::backend::ShaderStage::FRAGMENT));
-    EXPECT_TRUE(containsVariant(
+    // FOG is a dynamic specialization constant, not a variant.
+    EXPECT_FALSE(containsVariant(
             all, V(V::SRE | V::FOG), filament::backend::ShaderStage::FRAGMENT));
     EXPECT_TRUE(containsVariant(
             all, V(V::S2D | V::SRE), filament::backend::ShaderStage::FRAGMENT));
-    EXPECT_TRUE(containsVariant(
+    EXPECT_FALSE(containsVariant(
             all, V(V::S2D | V::FOG | V::SRE), filament::backend::ShaderStage::FRAGMENT));
     EXPECT_TRUE(containsVariant(
             all, V(V::SPECIAL_SSR_VARIANT), filament::backend::ShaderStage::FRAGMENT));
@@ -204,7 +253,7 @@ TEST(Variant, SurfaceShaderEnumerationKeepsShadowVariantsWhenSsrIsFiltered) {
             determineSurfaceVariants(SSR_FILTER, true, false);
     EXPECT_TRUE(containsVariant(
             withoutSsr, V(V::S2D | V::SRE), filament::backend::ShaderStage::FRAGMENT));
-    EXPECT_TRUE(containsVariant(
+    EXPECT_FALSE(containsVariant(
             withoutSsr, V(V::S2D | V::FOG | V::SRE), filament::backend::ShaderStage::FRAGMENT));
     EXPECT_FALSE(containsVariant(
             withoutSsr, V(V::SPECIAL_SSR_VARIANT), filament::backend::ShaderStage::FRAGMENT));
@@ -241,7 +290,7 @@ TEST(Variant, RuntimeProgramEnumerationContainsShadowAndSsrVariants) {
     EXPECT_TRUE(containsVariant(lit, V(V::SRE)));
     EXPECT_TRUE(containsVariant(lit, V(V::SRE | V::SKN)));
     EXPECT_TRUE(containsVariant(lit, V(V::S2D | V::SRE)));
-    EXPECT_TRUE(containsVariant(lit, V(V::S2D | V::FOG | V::SRE)));
+    EXPECT_FALSE(containsVariant(lit, V(V::S2D | V::FOG | V::SRE)));
     EXPECT_TRUE(containsVariant(lit, V(V::SPECIAL_SSR_VARIANT)));
 }
 

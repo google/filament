@@ -16,6 +16,7 @@
 #ifndef TNT_FILAMENT_MATERIALDEFINITION_H
 #define TNT_FILAMENT_MATERIALDEFINITION_H
 
+#include "DynamicSpecConstKey.h"
 #include "ProgramSpecialization.h"
 
 #include "ds/DescriptorSetLayout.h"
@@ -27,9 +28,13 @@
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
 
+#include <filament/MaterialEnums.h>
+
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
+
+#include <utils/compiler.h>
 
 #include <tsl/robin_set.h>
 
@@ -155,6 +160,27 @@ struct MaterialDefinition {
     Variant filterUserVariant(Variant const variant,
             UserVariantFilterMask const filterMask) const noexcept {
         return hasSurfaceVariants() ? Variant::filterUserVariant(variant, filterMask) : variant;
+    }
+
+    // Materials compiled with variantFilter: [fog] have no fog code at all.
+    bool isFogSupported() const noexcept {
+        return !(variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::FOG));
+    }
+
+    // Material-aware version of DynamicSpecConstKey::filterProgramSpecKey(): on top of the
+    // generic variant/domain/lighting rules, it applies this material's compile-time
+    // restrictions (currently: no fog code when compiled with variantFilter: [fog]).
+    // Prefer this over the DynamicSpecConstKey version whenever a material is available.
+    // The result always passes the specKey checks of isValidProgram().
+    DynamicSpecConstKey filterProgramSpecKey(Variant const variant,
+            DynamicSpecConstKey specKey) const noexcept {
+        specKey = DynamicSpecConstKey::filterProgramSpecKey(
+                variant, specKey, materialDomain, isVariantLit);
+        // Without fog code, the fog specialization would be a redundant program.
+        if (UTILS_UNLIKELY(!isFogSupported())) {
+            specKey.setFog(false);
+        }
+        return specKey;
     }
 
     backend::DescriptorSetLayout const& getPerViewDescriptorSetLayoutDescription(

@@ -70,9 +70,9 @@ struct Variant {
     //
     // SSR variant:
     //                            +-----+-----+-----+-----+-----+-----+
-    //                            | MNT | PCK | DEP |  0  |  0  |  0  |    1
+    //                            | MNT | PCK | DEP | SKN |  0  |  0  |    2
     //                            +-----+-----+-----+-----+-----+-----+
-    //       Fragment SSR            1     1     1     0     0     0
+    //                SSR            1     1     1     X     0     0
     //
     // Depth variants:
     //                            +-----+-----+-----+-----+-----+-----+
@@ -81,10 +81,10 @@ struct Variant {
     //       Vertex depth            X     0     1     X     0     X
     //     Fragment depth            0     X     1     0     0     0
     //     Fragment depth            1     0     1     0     0     0
-    //       Fragment SSR            1     1     1     0     0     0      [  -1]
-    //           Reserved            1     1     1     X     0     X      [  -3] (exclude SSR)
+    //                SSR            1     1     1     X     0     0      [  -2]
+    //           Reserved            1     1     1     X     0     X      [  -2] (exclude SSR)
     //
-    // 37 variants used (24 standard + 1 SSR + 12 depth), 27 reserved
+    // 38 variants used (24 standard + 2 SSR + 12 depth), 26 reserved
     //
     // note: a valid variant can be neither a valid vertex nor a valid fragment variant
     //       (e.g.: FOG|SKN variants), the proper bits are filtered appropriately,
@@ -108,7 +108,7 @@ struct Variant {
     // special variants (variants that use the reserved space)
     static constexpr type_t SPECIAL_SSR_VARIANT= MNT | PCK | DEP;
     static constexpr type_t SPECIAL_SSR_MASK =
-        STE | MNT | PCK | DEP | SKN | SRE;
+        STE | MNT | PCK | DEP | SRE;
 
     static constexpr type_t STANDARD_MASK      = DEP;
     static constexpr type_t STANDARD_VARIANT   = 0u;
@@ -140,8 +140,8 @@ struct Variant {
     }
 
     static constexpr bool isValidDepthVariant(Variant variant) noexcept {
-        // (MNT | PCK | DEP) is SSR variant.
-        // (MNT | PCK | DEP) + (STE | SKN)/(STE)/(SKN) are reserved.
+        // (MNT | PCK | DEP), with or without SKN, is an SSR variant.
+        // The corresponding variants with STE are reserved.
         constexpr type_t RESERVED_MASK  = MNT | PCK | DEP | SRE;
         constexpr type_t RESERVED_VALUE = MNT | PCK | DEP;
         return ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) &&
@@ -225,7 +225,8 @@ struct Variant {
         // filter out fragment variants that are not needed. For e.g. skinning doesn't
         // affect the fragment shader.
         if (isSSRVariant(variant)) {
-            return variant;
+            // Skinning and morphing only affect the vertex shader.
+            return Variant(SPECIAL_SSR_VARIANT);
         }
         if ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) {
             return variant & (S2D | FOG | SRE);
@@ -241,6 +242,10 @@ struct Variant {
         if (isSSRVariant(variant) || isValidDepthVariant(variant)) {
             return variant;
         }
+
+        // filter FOG out since it's turned into spec constant
+        variant.key &= ~FOG;
+
         if (!isLit) {
             // when the shading mode is unlit, remove all the lighting variants
             return variant & UNLIT_MASK;

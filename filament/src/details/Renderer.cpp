@@ -358,6 +358,8 @@ void FRenderer::skipFrame(uint64_t const vsyncSteadyClockTimeNano) {
     // the frame skipper.
     driver.tick();
 
+    driver.skipFrame();
+
     // do this before engine.flush()
     mResourceAllocator->gc(true);
 
@@ -1051,10 +1053,12 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     specKey.setDynamicLighting(view.hasDynamicLighting());
     specKey.setExtraDirectionalLights(view.hasExtraDirectionalLights());
     specKey.setDirectionalLighting(view.hasDirectionalLighting());
+    specKey.setFog(view.hasFog());
     passBuilder.dynamicSpecConstKey(specKey);
 
     Variant variant;
-    variant.setFog(view.hasFog());
+    // TODO: Remove this after FOG is fully transferred to spec constant
+    variant.setFog(false);
     variant.setShadowSampler2D(view.hasShadowing() && view.getShadowType() != ShadowType::PCF);
     variant.setStereo(view.hasStereo());
 
@@ -1152,10 +1156,6 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
      * Depth + Color passes
      */
 
-    // updatePrimitivesLod must be run before appendCommands and once for each set
-    // of RenderPass::setCamera / RenderPass::setGeometry calls.
-    FView::updatePrimitivesLod(view.getRenderableData(),
-            engine, cameraInfo, view.getVisibleRenderables());
 
     passBuilder.camera(cameraInfo.getPosition(), cameraInfo.getForwardVector());
     passBuilder.geometry(view.getRenderableData(), view.getVisibleRenderables());

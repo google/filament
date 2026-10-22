@@ -167,6 +167,8 @@ DECL_DRIVER_API_N(setPresentationTime,
 DECL_DRIVER_API_N(endFrame,
         uint32_t, frameId)
 
+DECL_DRIVER_API_0(skipFrame)
+
 // hint to the driver that we're done with all render targets up to this point. i.e. the driver
 // can start rendering. e.g. correspond to glFlush() for a GLES driver.
 DECL_DRIVER_API_0(flush)

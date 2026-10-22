@@ -482,14 +482,18 @@ void FTexture::setImageCommon(FEngine& engine, size_t const level,
             << "Operation not supported with multisample ("
             << unsigned(mSampleCount) << ") texture.";
 
-    FILAMENT_CHECK_PRECONDITION(xoffset + width <= valueForLevel(level, mWidth))
+    size_t const textureWidthAtLevel = valueForLevel(level, mWidth);
+    FILAMENT_CHECK_PRECONDITION(width <= textureWidthAtLevel &&
+            xoffset <= textureWidthAtLevel - width)
             << "xoffset (" << unsigned(xoffset) << ") + width (" << unsigned(width)
-            << ") > texture width (" << valueForLevel(level, mWidth) << ") at level ("
+            << ") > texture width (" << textureWidthAtLevel << ") at level ("
             << unsigned(level) << ")";
 
-    FILAMENT_CHECK_PRECONDITION(yoffset + height <= valueForLevel(level, mHeight))
+    size_t const textureHeightAtLevel = valueForLevel(level, mHeight);
+    FILAMENT_CHECK_PRECONDITION(height <= textureHeightAtLevel &&
+            yoffset <= textureHeightAtLevel - height)
             << "yoffset (" << unsigned(yoffset) << ") + height (" << unsigned(height)
-            << ") > texture height (" << valueForLevel(level, mHeight) << ") at level ("
+            << ") > texture height (" << textureHeightAtLevel << ") at level ("
             << unsigned(level) << ")";
 
     FILAMENT_CHECK_PRECONDITION(p.buffer) << "Data buffer is nullptr.";
@@ -516,7 +520,8 @@ void FTexture::setImageCommon(FEngine& engine, size_t const level,
             break;
     }
 
-    FILAMENT_CHECK_PRECONDITION(zoffset + depth <= effectiveTextureDepthOrLayers)
+    FILAMENT_CHECK_PRECONDITION(depth <= effectiveTextureDepthOrLayers &&
+            zoffset <= effectiveTextureDepthOrLayers - depth)
             << "zoffset (" << unsigned(zoffset) << ") + depth (" << unsigned(depth)
             << ") > texture depth (" << effectiveTextureDepthOrLayers << ") at level ("
             << unsigned(level) << ")";
@@ -531,6 +536,13 @@ void FTexture::setImageCommon(FEngine& engine, size_t const level,
     FILAMENT_CHECK_PRECONDITION(uploadSize <= uint64_t(std::numeric_limits<int32_t>::max()))
             << "upload of " << uploadSize << " bytes exceeds the maximum of "
             << std::numeric_limits<int32_t>::max() << " bytes.";
+
+    // Some backends size their RGB to RGBA buffer as 4 * p.size / 3, so the multiply must not
+    // wrap.
+    FILAMENT_CHECK_PRECONDITION(
+            (p.format != PixelDataFormat::RGB && p.format != PixelDataFormat::RGB_INTEGER) ||
+            p.size <= SIZE_MAX / 4)
+            << "RGB pixel buffer is too large (size=" << size_t(p.size) << ")";
 
     if (UTILS_UNLIKELY(!width || !height || !depth)) {
         // The operation is a no-op, return immediately. The PixelBufferDescriptor callback

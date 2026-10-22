@@ -140,8 +140,11 @@ public:
     static constexpr uint64_t MATERIAL_INSTANCE_ID_MASK     = 0x00000FFFllu;
     static constexpr unsigned MATERIAL_INSTANCE_ID_SHIFT    = 0;
 
-    static constexpr uint64_t MATERIAL_VARIANT_KEY_MASK     = 0x000FF000llu;
+    static constexpr uint64_t MATERIAL_VARIANT_KEY_MASK     = 0x0007F000llu;
     static constexpr unsigned MATERIAL_VARIANT_KEY_SHIFT    = 12;
+
+    static constexpr uint64_t MATERIAL_FOG_MASK             = 0x00080000llu;
+    static constexpr unsigned MATERIAL_FOG_SHIFT            = 19;
 
     static constexpr uint64_t MATERIAL_ID_MASK              = 0xFFF00000llu;
     static constexpr unsigned MATERIAL_ID_SHIFT             = 20;
@@ -177,8 +180,9 @@ public:
     static constexpr uint64_t CUSTOM_INDEX_MASK             = 0x00000000FFFFFFFFllu;
     static constexpr unsigned CUSTOM_INDEX_SHIFT            = 0;
 
-    // we assume Variant fits in 8-bits.
+    // we assume Variant fits in 7-bits (leaving 1 bit for fog).
     static_assert(sizeof(Variant::type_t) == 1);
+    static_assert(VARIANT_BITS <= 7, "VARIANT_BITS exceeds MATERIAL_VARIANT_KEY_MASK");
 
     enum class Pass : uint64_t {    // 6-bits max
         DEPTH    = uint64_t(0x00) << PASS_SHIFT,
@@ -217,12 +221,13 @@ public:
     /*
      * The sorting material key is 32 bits and encoded as:
      *
-     * |     12     |   8    |     12     |
-     * +------------+--------+------------+
-     * |  material  |variant |  instance  |
-     * +------------+--------+------------+
+     * |     12     | 1 |   7    |     12     |
+     * +------------+---+--------+------------+
+     * |  material  |fog|variant |  instance  |
+     * +------------+---+--------+------------+
      *
-     * The variant is inserted while building the commands, because we don't know it before that
+     * The variant and fog bit are inserted while building the commands, because we don't know them
+     * before that.
      */
     static CommandKey makeMaterialSortingKey(uint32_t const materialId, uint32_t const instanceId) noexcept {
         CommandKey const key = ((materialId << MATERIAL_ID_SHIFT) & MATERIAL_ID_MASK) |

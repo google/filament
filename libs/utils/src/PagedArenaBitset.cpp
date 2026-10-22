@@ -235,8 +235,16 @@ bool PagedArenaBitset::fetchAdd(uint32_t const index) {
 }
 
 UTILS_NOINLINE
-void PagedArenaBitset::add(Slice<const uint32_t> const indices) {
-    assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
+void PagedArenaBitset::add(Slice<const uint32_t> const indices,
+        PagedArenaBitset const* const filter) {
+    assert(mSummaryMask.size() == MASK_WORDS &&
+            "FATAL: Attempted to use a moved-from PagedArenaBitset!");
+    assert((!filter || filter->mSummaryMask.size() == MASK_WORDS) &&
+            "FATAL: Attempted to use a moved-from PagedArenaBitset!");
+
+    if (UTILS_UNLIKELY(filter && filter->empty())) {
+        return;
+    }
 
     uint32_t const* const UTILS_RESTRICT ptr = indices.data();
     size_t const count = indices.size();
@@ -252,6 +260,10 @@ void PagedArenaBitset::add(Slice<const uint32_t> const indices) {
     for (size_t i = 0; i < count; ++i) {
         uint32_t const index = ptr[i];
         assert(index < (1ULL << DOMAIN_BITS) && "Index out of bounds");
+
+        if (filter && !(*filter)[index]) {
+            continue;
+        }
 
         uint32_t const dirIdx = index >> FILAMENT_PAGE_SHIFT;
         if (UTILS_UNLIKELY(dirIdx != cachedDirIdx)) {
