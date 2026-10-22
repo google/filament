@@ -1378,11 +1378,12 @@ void OpenGLDriver::createTextureViewSwizzleAsyncR(Handle<HwTexture> th, Handle<H
 
     assert_invariant(getJobQueue());
 
+    // No GL commands are issued in the worker thread, so no flush is needed. The job push
+    // keeps ordering, because src->gl is filled in by an earlier async createTexture job.
     getJobQueue()->push([this, th, srch, r, g, b, a, handler, callback, user,
             tag=std::move(tag)]() mutable {
         DEBUG_MARKER_NAME("createTextureViewSwizzleAsyncR")
         createTextureViewSwizzleCommon(th, srch, r, g, b, a, std::move(tag));
-        flushIfSharedContext();
         scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     });
 }
@@ -1591,12 +1592,13 @@ void OpenGLDriver::importTextureAsyncR(Handle<HwTexture> th, intptr_t const id,
 
     assert_invariant(getJobQueue());
 
+    // No GL commands are issued in the worker thread, so no flush is needed. The job push
+    // fires the callback after any previously queued worker jobs.
     getJobQueue()->push([this, th, id, target, levels, format, samples, width, height, depth, usage,
             handler, callback, user, tag=std::move(tag)]() mutable {
         DEBUG_MARKER_NAME("importTextureAsyncR")
         importTextureCommon(getWorkerState(), th, id, target, levels, format, samples, width, height, depth, usage,
             std::move(tag));
-        flushIfSharedContext();
         scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     });
 }
