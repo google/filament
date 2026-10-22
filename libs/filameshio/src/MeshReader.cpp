@@ -444,14 +444,24 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
             CompressionHeader sizes;
             memcpy(&sizes, vertexData, sizeof(CompressionHeader));
 
-            size_t compressedSum = sizeof(CompressionHeader) +
-                                   size_t(sizes.positions) +
-                                   size_t(sizes.tangents) +
-                                   size_t(sizes.colors) +
-                                   size_t(sizes.uv0) +
-                                   size_t(sizes.uv1);
+            // Summed in 64 bits because five uint32_t sizes can wrap a 32-bit size_t.
+            uint64_t compressedSum = uint64_t(sizeof(CompressionHeader)) +
+                                     uint64_t(sizes.positions) +
+                                     uint64_t(sizes.tangents) +
+                                     uint64_t(sizes.colors) +
+                                     uint64_t(sizes.uv0) +
+                                     uint64_t(sizes.uv1);
             if (compressedSum > verticesSize) {
                 utils::slog.e << "Compressed vertex buffer elements exceed bounds." << utils::io::endl;
+                free(uncompressed);
+                engine->destroy(mesh.vertexBuffer);
+                engine->destroy(mesh.indexBuffer);
+                return {};
+            }
+
+            // uncompressed only has room for UV1 when the header declares it.
+            if (hasUV1 != (sizes.uv1 != 0)) {
+                utils::slog.e << "Compressed UV1 stream does not match the UV1 attribute." << utils::io::endl;
                 free(uncompressed);
                 engine->destroy(mesh.vertexBuffer);
                 engine->destroy(mesh.indexBuffer);
