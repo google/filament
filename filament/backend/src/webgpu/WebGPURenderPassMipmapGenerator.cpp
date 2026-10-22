@@ -17,6 +17,7 @@
 #include "WebGPURenderPassMipmapGenerator.h"
 
 #include "WebGPUQueueManager.h"
+#include "WebGPUTextureHelpers.h"
 
 #include <utils/Panic.h>
 
@@ -211,8 +212,18 @@ WebGPURenderPassMipmapGenerator::WebGPURenderPassMipmapGenerator(wgpu::Device co
           mPipelineLayout{ createPipelineLayout(mDevice, mTextureBindGroupLayout) } {}
 
 WebGPURenderPassMipmapGenerator::FormatCompatibility
-WebGPURenderPassMipmapGenerator::getCompatibilityFor(const wgpu::TextureFormat format,
-        const wgpu::TextureDimension dimension, const uint32_t sampleCount) {
+WebGPURenderPassMipmapGenerator::getCompatibilityFor(wgpu::TextureFormat const format,
+        wgpu::TextureDimension const dimension, uint32_t const sampleCount,
+        bool const float32Filterable) {
+    // The shader samples the previous mip level with a linear (filtering) sampler, which 32-bit
+    // float formats only support with the Float32Filterable feature.
+    if (!float32Filterable && isFloat32ColorFormat(format)) {
+        return {
+            .compatible = false,
+            .reason = "32-bit float texture formats require the float32-filterable feature for "
+                      "the linear filtering needed by render pass based mipmap generation.",
+        };
+    }
     // Check that the format is compatible (currently expects that the scalar sample type is f32).
     switch (format) {
         case wgpu::TextureFormat::Depth16Unorm:
