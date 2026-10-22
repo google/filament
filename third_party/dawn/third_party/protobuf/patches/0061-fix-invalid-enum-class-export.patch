@@ -1,0 +1,22 @@
+diff --git a/src/google/protobuf/text_format.h b/src/google/protobuf/text_format.h
+index fb847c9..3e85ba0 100644
+--- a/src/google/protobuf/text_format.h
++++ b/src/google/protobuf/text_format.h
+@@ -53,7 +53,7 @@ PROTOBUF_EXPORT int64_t GetRedactedFieldCount();
+ // formats. A higher-level API must correspond to a greater number than any
+ // lower-level APIs it calls under the hood (e.g kDebugString >
+ // kMemberPrintToString > kPrintWithStream).
+-enum class PROTOBUF_EXPORT FieldReporterLevel {
++enum class FieldReporterLevel {
+   kNoReport = 0,
+   kPrintMessage = 1,
+   kPrintWithGenerator = 2,
+@@ -85,7 +85,7 @@ class PythonFieldValuePrinter;
+ 
+ namespace internal {
+ // Enum used to set printing options for StringifyMessage.
+-PROTOBUF_EXPORT enum class Option;
++enum class Option;
+ 
+ // Converts a protobuf message to a string. Sensitive fields are redacted, and a
+ // per-process randomized prefix is inserted.

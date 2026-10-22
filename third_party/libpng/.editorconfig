@@ -1,0 +1,55 @@
+# https://editorconfig.org
+
+root = true
+
+[*]
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.txt]
+indent_size = unset
+indent_style = space
+
+[*.[chS]]
+indent_size = 3
+indent_style = space
+max_doc_length = 80
+max_line_length = 80
+
+[*.dfa]
+indent_size = 3
+indent_style = space
+max_doc_length = 80
+max_line_length = 80
+
+[*.awk]
+indent_size = 3
+indent_style = space
+max_doc_length = 80
+max_line_length = 100
+
+[*.cmake]
+indent_size = 2
+indent_style = space
+max_doc_length = 80
+max_line_length = 100
+
+[*.sh]
+indent_size = 4
+indent_style = space
+max_doc_length = 100
+max_line_length = 100
+
+[{Makefile.in,aclocal.m4,ltmain.sh}]
+indent_size = unset
+indent_style = unset
+insert_final_newline = unset
+max_doc_length = unset
+max_line_length = unset
+trim_trailing_whitespace = unset
+
+[COMMIT_EDITMSG]
+indent_style = space
+max_doc_length = unset
+max_line_length = 72

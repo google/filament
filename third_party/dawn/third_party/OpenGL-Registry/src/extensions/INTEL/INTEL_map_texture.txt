@@ -1,0 +1,302 @@
+Name
+    INTEL_map_texture
+
+Name Strings
+    GL_INTEL_map_texture
+
+Contact
+    Slawomir Grajewski, INTEL (slawomir.grajewski 'at' intel.com)
+
+Contributors
+    Jan Paul van Waveren, id Software
+    Kamil Patelczyk, INTEL
+    Aneta Roztkowska, INTEL
+    Piotr Uminski, INTEL
+
+Status
+    Draft.
+
+Version
+    Last Modified Date: June 5, 2012
+    Author Revision: 1
+
+Number
+
+    429
+
+Dependencies
+    OpenGL 3.0 is required.
+
+    This extension is written against the OpenGL 4.2 Specification
+    compatibility profile.
+
+Overview
+    Systems with integrated GPUs can share the same physical memory between CPU
+    and GPU. This feature, if exposed by API, can bring significant performance
+    benefits for graphics applications by reducing the complexity of
+    uploading/accessing texture contents. This extension enables CPU direct
+    access to the GPU memory holding textures.
+
+    The problem with texture memory directly exposed to clients is that
+    textures are often 'tiled'. Texels are kept in specific layout to improve
+    locality of reference and thus performance of texturing. This 'tiling'
+    is specific to particular hardware and would be thus difficult to use.
+
+    This extension allows to create textures with 'linear' layout which allows
+    for simplified access on user side (potentially sacrificing some
+    performance during texture sampling).
+
+New Procedures and Functions
+
+    void* MapTexture2DINTEL(uint texture, int level, bitfield access,
+                            int *stride, enum *layout);
+
+    void UnmapTexture2DINTEL(uint texture, int level);
+
+    void SyncTextureINTEL(uint texture);
+
+
+New Tokens
+
+    Accepted by the <pname> parameter of TexParameteri, for target TEXTURE_2D
+
+             TEXTURE_MEMORY_LAYOUT_INTEL    0x83FF
+
+    Accepted by the <params> when <pname> is set to
+    <TEXTURE_MEMORY_LAYOUT_INTEL>:
+
+             LAYOUT_DEFAULT_INTEL            0
+             LAYOUT_LINEAR_INTEL             1
+             LAYOUT_LINEAR_CPU_CACHED_INTEL  2
+
+Additions to Chapter 3.10.8 of the OpenGL 4.2 (Compatibility Profile)
+Specification
+
+Add a row to the table 3.22
+
+    Name:
+    TEXTURE_MEMORY_LAYOUT_INTEL
+
+    Type:
+    enum
+
+    Legal Values:
+    LAYOUT_DEFAULT_INTEL
+    LAYOUT_LINEAR_INTEL
+    LAYOUT_LINEAR_CPU_CACHED_INTEL
+
+Add a paragraph in the end of the section:
+
+    When <pname> is TEXTURE_MEMORY_LAYOUT_INTEL and <params> is
+    LAYOUT_LINEAR_INTEL the texture is forced to be allocated as linear and can
+    be mapped directly to the CPU address space by MapTexture2DINTEL (see section
+    3.10.4).
+
+    When <pname> is TEXTURE_MEMORY_LAYOUT_INTEL and <params> is
+    LAYOUT_LINEAR_CPU_CACHED_INTEL the behavior is the same as in case of
+    <params> set to LAYOUT_LINEAR_INTEL with an exception that texture is
+    cached for CPU accesses. This can result in better performance when reading
+    texture on CPU but might negatively impact the GPU side access to the
+    texture. Thus the option is intended only for cases when volume of the read
+    access from CPU justifies such effect.
+
+    Only when <pname> is TEXTURE_MEMORY_LAYOUT_INTEL or
+    LAYOUT_LINEAR_CPU_CACHED_INTEL, MapTexture2DINTEL returns CPU accessible
+    pointer.
+
+    The allocation of the texture can be reverted to the default,
+    implementation-specific format, including tiled formats, by calling
+    TexParameteri with <pname> set to TEXTURE_MEMORY_LAYOUT_INTEL and <params>
+    set to LAYOUT_DEFAULT_INTEL. The configured texture layout is ignored until
+    the texture is allocated or reallocated using TexImage2D function.
+
+    The error INVALID_VALUE is generated when <pname> is
+    TEXTURE_MEMORY_LAYOUT_INTEL and the texture target is not TEXTURE_2D.
+
+Additions to Chapter 3.10.4 of the OpenGL 4.2 (Compatibility Profile) Specification
+
+    The command
+
+        void* MapTexture2DINTEL(uint texture, int level, bitfield access,
+                                int *stride, enum *layout);
+
+    attempts to return a direct pointer to the graphics storage for 2D texture
+    indicated by the <texture> parameter.
+
+    The <level> parameter indicates the mipmap level-of-detail of the texture
+    for which pointer is requested.
+
+    The <access> bitfield indicates type of access that will be performed by
+    the application on the memory accessed via the returned pointer: reading -
+    MAP_READ_BIT, writing - MAP_WRITE_BIT. Performing access on mapped memory
+    different then specified in <access> is undefined (and may result in
+    application termination).
+
+    If the operation is successful, the function returns a valid pointer,
+    otherwise NULL is returned. Upon successful completion, the function also
+    returns 'stride', which is the distance in bytes between subsequent rows in the
+    texture, and <layout>, indicating the internal layout of the texture in the
+    graphics memory.
+
+    When texture uses linear memory layout, subsequent texels in a row of the
+    image are occupying subsequent addresses in memory. Subsequent rows of
+    image are located at 'stride' bytes distance within each other. For tiled
+    layout, the relationship between texels and addresses in memory is
+    different and will not be further discussed in this extension.
+
+    The layout of the texture, discussed in the preceding section, is returned
+    via <layout> parameter. In this version of the extension, the only texture
+    memory layout that can be returned is LAYOUT_LINEAR_INTEL or
+    LAYOUT_LINEAR_CPU_CACHED_INTEL.
+
+    All of the following conditions need to be met for the operation to succeed:
+      - <texture> is a texture first bound to TEXTURE_2D target
+      - <texture> has sized color internal format (see section 3.10.3)
+      - texture parameter TEXTURE_MEMORY_LAYOUT_INTEL was either
+        LAYOUT_LINEAR_INTEL or LAYOUT_LINEAR_CPU_CACHED_INTEL during texture
+        image specification
+      - <level> texture mipmap level is defined
+      - texture border of <texture> is zero
+    Otherwise MapTexture2DINTEL fails with INVALID_OPERATION error, and return
+    NULL.
+
+    Please note that texture allocated as linear is noticeably slower than
+    tiled when accessed by the GPU, however in many scenarios direct access to
+    such texture from CPU is more important than slower GPU access, especially
+    when texture is frequently updated with limited number of accesses from
+    GPU.
+
+    The command MapTexture2DINTEL can return valid pointer only if given
+    internalformat as specified by TexImage2D() is sized (as indicated in
+    tables 16 and 17) and natively supported by the GPU hardware. This means
+    that there has to be 1:1 match between internalformat and underlying
+    hardware format with respect to the number of components, their sizes and
+    order in graphics memory.
+
+    It is an error to attempt to map texture that is defined inconsistently (one
+    which doesn't provide mipmap levels with the same internal format or with
+    sizes not being half the previous level) or to redefine texture levels
+    (through TexImage2D, CopyTexImage2D) when texture mappings exist for this
+    texture. These cases will result in undefined behavior.
+
+    The command
+
+        void UnmapTexture2DINTEL(uint texture, int level);
+
+    releases the pointer obtained previously via MapTexture2DINTEL. This means
+    that virtual memory space dedicated to make the texture available via
+    a pointer is released and an application can no longer assume this memory
+    is accessible from CPU. Successful execution of this command has an additional
+    effect as if SyncTextureINTEL was called with <texture> parameter.
+
+    The command
+
+        void SyncTextureINTEL(uint texture);
+
+    makes sure that changes made by CPU are visible to GPU by flushing texture
+    cache in GPU. The GL implementation tracks the cache usage and ignores the
+    command if such flush is not needed.
+
+    It is worth noting that this extension does not address automatic
+    synchronization between CPU and GPU when both entities operate on the same
+    texture at the same time. This is up to the application to assure such
+    synchronization. Otherwise, the results may not be deterministic (writes
+    from different entities may interleave in a non-deterministic way).
+
+Modifications to the OpenGL Shading Language Specification.
+
+    None.
+
+Errors
+
+    INVALID_OPERATION is generated by MapTexture2DINTEL when <texture> is 0 or
+    not a name of texture object first bound to TEXTURE_2D target, when <level>
+    of <texture> is already mapped, when <texture> storage was allocated with
+    TEXTURE_MEMORY_LAYOUT_INTEL different then LAYOUT_LINEAR_INTEL or
+    LAYOUT_LINEAR_CPU_CACHED_INTEL or <level> is mipmap level not defined in
+    <texture>.
+
+    INVALID_VALUE is generated by MapTexture2DINTEL when <access> has bits other
+    then MAP_WRITE_BIT or MAP_READ_BIT set or is 0.
+
+    INVALID_OPERATION is generated by UnmapTexture2DINTEL when <texture> is not
+    an existing texture object or is 0, <level> of <texture> is not currently
+    mapped.
+
+New State
+
+(add to table 6.24, "Textures (state per texture object)")
+
+    Get Value                          Type    Get Command        Initial Value              Description             Section       Attribute
+    -------------------------------    ------  -------------      -------------              --------------------    ------------  ---------
+    TEXTURE_MEMORY_LAYOUT_INTEL        Z       GetTexParameteriv  LAYOUT_DEFAULT_INTEL       Texture memory layout   -             -
+
+Issues
+
+      (1) Is it possible to ensure that contents of mapped texture is
+          automatically updated after rendering to texture or GPU write (using
+          texture as FBO attachment or using image_load_store functionality)?
+
+      RESOLUTION:
+        a) No guarantees are given in case of 'rendering loops' when surface
+           is mapped. To make sure that contents of mapping is 'current',
+           texture data mutation needs to be guaranteed as is done already
+           and mapped only after that.
+
+      RESOLVED: No.
+
+
+      (2) What happens if Tex(Sub)Image* or CopyTex(Sub)Image is called on
+          mapped texture? What happens if mapped texture is deleted?
+
+      RESOLUTION:
+        a) Calling Tex(Sub)Image may cause the texture to be reallocated, thus
+           it is necessary to unmap texture before calling these functions
+           (after these functions complete, the pointer may become invalid).
+
+        b) Calling CopyTex(Sub)Image is safe for a texture for which a CPU
+           pointer has been obtained via MapTexture2DINTEL.
+
+        c) After deleting the texture, the pointer obtained via
+           MapTexture2DINTEL becomes invalid.
+
+      RESOLVED: Yes.
+
+
+      (3) Is it possible to enforce alignment of mapped texture level?
+
+      RESOLUTION: No.
+
+
+      (4) Is it legal to write to / read from regions between row end and stride?
+
+      RESOLUTION:
+        a) Yes. Writing to memory that is after end of the row up to stride is
+           safe and has no effect.
+
+      RESOLVED: Yes.
+
+
+      (5) What happens if texture with unsupported (not native) format is
+           mapped?
+
+      RESOLUTION:
+        NULL pointer is returned.
+
+      RESOLVED: Yes.
+
+
+      (6) Are compressed formats supported?
+
+      RESOLUTION:
+        a) Yes.
+
+      RESOLVED: Yes.
+
+
+
+Revision History
+
+    Rev.    Date    Author        Changes
+    ----  --------  --------     -----------------------------------------
+     1    06/05/12  S. Grajewski Initial revision.

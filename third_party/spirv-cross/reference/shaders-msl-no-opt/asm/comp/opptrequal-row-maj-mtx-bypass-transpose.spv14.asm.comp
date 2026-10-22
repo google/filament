@@ -1,0 +1,37 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct _6
+{
+    float4x4 _m0;
+    float4x4 _m1;
+    float _m2;
+    float _m3;
+};
+
+struct _7
+{
+    uint _m0[1];
+};
+
+kernel void main0(device _6& _2 [[buffer(0)]], device _6& _3 [[buffer(1)]], device _7& _4 [[buffer(2)]])
+{
+    uint _26 = 0u;
+    uint _39 = _26 + 1u;
+    _4._m0[_26] = (&_2._m2 == &_2._m3) ? 0u : 1u;
+    bool _40 = &_2._m2 == &_3._m2;
+    uint _43 = _39 + 1u;
+    _4._m0[_39] = _40 ? 0u : 1u;
+    bool _46 = (_40 ? &_2._m2 : &_2._m3) == (_40 ? &_3._m2 : &_3._m3);
+    uint _49 = _43 + 1u;
+    _4._m0[_43] = _46 ? 0u : 1u;
+    uint _54 = _49 + 1u;
+    _4._m0[_49] = ((_46 ? &_2._m2 : &_2._m3) == &((device float*)&_2._m0[0u])[0u]) ? 0u : 1u;
+    uint _56 = (&_2._m0 == &_2._m1) ? 0u : 1u;
+    uint _58 = _54 + 1u;
+    _4._m0[_54] = _56;
+    _4._m0[_58] = _56;
+}
+

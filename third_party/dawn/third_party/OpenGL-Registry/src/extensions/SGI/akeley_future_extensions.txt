@@ -1,0 +1,120 @@
+Kurt Akeley
+List of potential OpenGL extensions
+
+$Id: //depot/main/doc/registry/extensions/future#11 $
+
+   *	Consider supporting color conversion in both the pixel and
+	geometry paths.  This requires a color mode for TexGen and
+	a pre-texture lookup (rather than a lookup in the pixel path).
+	It might also be possible to use the color matrix in both
+	the pixel and geometry paths.
+
+    1.	Replace undefined pixel color components with specified values
+	as part of the "Final Expansion to RGBA" operation.  Allows alpha-
+	only images to pick up a useful color.
+
+    2.	Attached video texture.  Automatic double buffering with
+	swap linked to buffer swap.  Video locked to buffer swap
+	also.
+
+    5.	Support non power-of-two texture dimensions for single-level
+	(non mipmapped), clamped texture images?  (Is this really
+	necessary?)  If we do this, then eliminate the "null" texture
+	definition stuff.
+
+    8.	Support automatic generation of mipmap images.	Control with mode
+	"attached" to a named texture.	Generate only down to the
+	low-LOD level.
+
+Features that have since been implemented:
+
+    3.	Perform integer decimation during pixel unpack/pack.  Separate values
+	for x, y, and z decimation.
+
+	Done: decimation.
+
+    4.	Support LUMINANCE and LUMINANCE_ALPHA framebuffer formats.
+	Use GLX to do all the work - only change to OpenGL is to define
+	what the framebuffer returns for green and blue when there are
+	no bits (alpha already defined).
+
+	Done: fbconfig.
+
+    6.	Allow additional named textures to be created, manipulated,
+	and bound.
+
+	Done: texture_object.
+
+    7.	Allow specification of lowest and highest mipmap level.
+	Attach this mode to named textures.
+
+	Also support separate bias of LOD-in-x and LOD-in-y computation.
+	(GL_LODX_OFFSET and GL_LODY_OFFSET are suggested by rad.)
+
+	Done: texture_lod.
+
+    9.	Add a new texture clamp mode that really clamps to the
+	border color (nearest, linear, or cubic filtering).  Check with
+	Kona folks to be sure that this is all that is necessary.
+
+	Done: texture_border_clamp and texture_edge_clamp.
+
+   10.	Define image buffers - drawing surfaces associated with a
+	rendering context that are not displayable.
+
+	Done: pbuffer.
+
+   11.	Add info about transparency to the level stuff in GLX (what color,
+	if any, is transparent in that level).
+
+	Done: visual_info.
+
+   12.	Define a mechanism that renormalizes normals cheaply when all
+	scales are uniform.
+
+	Done: rescale_normal.
+
+   13.	Define support for multiple active textures.
+
+	Done: multitexture.
+
+   14.	Introduce new <type> tokens to support packed pixel data
+	types.	For example, GL_PACKED_INT, GL_PACKED_SHORT, and
+	GL_PACKED_BYTE.  Then define the formats that result when
+	these new types are used in conjunction with currently-
+	defined formats.  For example, format GL_RGB with type
+	GL_PACKED_INT might be
+
+		xxbbbbbbbbbbggggggggggrrrrrrrrrr
+
+	Done: packed_pixels.
+
+   15.	Add argb format to support photoshop, etc.
+
+	Done (BGRA combined with _REV packed pixel formats in OpenGL 1.2).
+
+   16.	Add input color mux to pixel path.  Allows red to be sourced
+	by red, green, blue, alpha, zero, or one.  Likewise green, blue,
+	and alpha.  Could also use this mechanism to throw away a fifth
+	component from a CMYKA image!  This would elminiate the need for
+	RGBAx and xxxxA image formats.
+
+	Done: color_matrix.
+
+   17.	Support high-resolution pixmaps (lots of bits of color) even
+	if only low-resolution visuals are supported by the framebuffer.
+
+	Done: fbconfig
+
+   18.	Variable display resolution (on the fly)
+
+	Done: video_resize.
+
+   19.	Light points (automatic shading based on range, even field
+	intensity, etc.)
+
+	Done: point_parameters.
+
+   20.	Textured stamps.  (Like trees.)
+
+	Done: sprite.

@@ -1,0 +1,6 @@
+enum subgroup_matrix_kind {
+  left
+  right
+  result
+}
+

@@ -1,0 +1,55 @@
+#version 310 es
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(binding = 0) uniform sampler2D uHeight;
+layout(binding = 1) uniform sampler2D uDisplacement;
+layout(rgba16f, binding = 2) uniform writeonly mediump image2D iHeightDisplacement;
+layout(rgba16f, binding = 3) uniform writeonly mediump image2D iGradJacobian;
+
+layout(binding = 4) uniform UBO
+{
+    vec4 uInvSize;
+    vec4 uScale;
+};
+
+mediump float jacobian(mediump vec2 dDdx, mediump vec2 dDdy)
+{
+    return (1.0 + dDdx.x) * (1.0 + dDdy.y) - dDdx.y * dDdy.x;
+}
+#define LAMBDA 1.2
+
+void main()
+{
+    vec4 uv = (vec2(gl_GlobalInvocationID.xy) * uInvSize.xy).xyxy + 0.5 * uInvSize;
+
+    float h = textureLod(uHeight, uv.xy, 0.0).x;
+
+    // Compute the heightmap gradient by simple differentiation.
+    float x0 = textureLodOffset(uHeight, uv.xy, 0.0, ivec2(-1, 0)).x;
+    float x1 = textureLodOffset(uHeight, uv.xy, 0.0, ivec2(+1, 0)).x;
+    float y0 = textureLodOffset(uHeight, uv.xy, 0.0, ivec2(0, -1)).x;
+    float y1 = textureLodOffset(uHeight, uv.xy, 0.0, ivec2(0, +1)).x;
+    vec2 grad = uScale.xy * 0.5 * vec2(x1 - x0, y1 - y0);
+
+    // Displacement map must be sampled with a different offset since it's a smaller texture.
+    vec2 displacement = LAMBDA * textureLod(uDisplacement, uv.zw, 0.0).xy;
+
+    // Compute jacobian.
+    vec2 dDdx = 0.5 * LAMBDA * (
+        textureLodOffset(uDisplacement, uv.zw, 0.0, ivec2(+1, 0)).xy -
+        textureLodOffset(uDisplacement, uv.zw, 0.0, ivec2(-1, 0)).xy);
+    vec2 dDdy = 0.5 * LAMBDA * (
+        textureLodOffset(uDisplacement, uv.zw, 0.0, ivec2(0, +1)).xy -
+        textureLodOffset(uDisplacement, uv.zw, 0.0, ivec2(0, -1)).xy);
+    float j = jacobian(dDdx * uScale.z, dDdy * uScale.z);
+
+    displacement = vec2(0.0);
+
+    // Read by vertex shader/tess shader.
+    imageStore(iHeightDisplacement, ivec2(gl_GlobalInvocationID.xy), vec4(h, displacement, 0.0));
+
+    // Read by fragment shader.
+    imageStore(iGradJacobian, ivec2(gl_GlobalInvocationID.xy), vec4(grad, j, 0.0));
+}
+

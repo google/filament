@@ -1,0 +1,162 @@
+Name
+
+    EXT_color_subtable
+
+Name Strings
+
+    GL_EXT_color_subtable
+
+Version
+
+    $Date: 1996/05/29 20:21:02 $ $Revision: 1.2 $
+
+Number
+
+    74
+
+Dependencies
+
+    EXT_color_table affects the definition of this extension
+    EXT_texture_color_table affects the definition of this extension
+    EXT_copy_texture affects the definition of this extension
+
+Overview
+
+    This extension allows a portion of a color table to be redefined.
+    If EXT_copy_texture is implemented, this extension also defines a
+    method to load a portion of a color lookup table from the 
+    framebuffer.
+
+
+New Procedures and Functions
+
+    void ColorSubTableEXT( enum target,
+                           sizei start,
+                           sizei count,
+                           enum format,
+                           enum type,
+                           const void *data);
+
+    void CopyColorSubTableEXT(enum target,
+                              sizei start,
+                              int x,
+                              int y,
+                              sizei width);
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    The specification of color lookup tables is added to the GL
+    Specification in section 3.6.2, "Pixel Transfer Modes." A portion
+    of a color table is redefined using the ColorSubTableEXT command
+    with <target> set to COLOR_TABLE_EXT, POST_CONVOLUTION_COLOR_TABLE_EXT,
+    POST_COLOR_MATRIX_COLOR_TABLE_EXT, or TEXTURE_COLOR_TABLE_SGI.
+    <start> and <count> control which entries of the color table
+    are changed. If <start> + <count> exceeds the number of entries in
+    the table then an INVALID_VALUE error is generated. <format> and 
+    <type> have the same meaning as for ColorTableEXT. The
+    data is treated as a 1D texture just as in ColorTableEXT.
+
+    If EXT_copy_texture is supported, a portion of a color table can be 
+    re-defined using image data in the framebuffer. CopyColorSubTableEXT 
+    accepts image data from a <width> pixel wide by one pixel high color 
+    buffer region whose lower-left pixel has window coordinates <x>,<y>.  
+    If any pixels within this region are outside the window that is associated 
+    with the GL context, the values obtained for those pixels are undefined.
+
+    These pixel values are obtained from the framebuffer exactly as if
+    ReadPixels had been called with <format> set to RGBA, with processing
+    continuing through Conversion of RGBA values.  At this point all pixel
+    component values are treated exactly as if ColorTableEXT had been
+    called, beginning with the scaling of the color components by
+    COLOR_TABLE_SCALE_EXT.  The accepted values of the <target> parameter
+    are COLOR_TABLE_EXT, POST_CONVOLUTION_COLOR_TABLE_EXT, 
+    POST_COLOR_MATRIX_COLOR_TABLE_EXT or TEXTURE_COLOR_TABLE_SGI.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    TBD
+
+Dependencies on SGI_color_table
+Dependencies on EXT_color_table
+
+    If both EXT_color_subtable and EXT_color_table are supported then 
+    ColorSubTableEXT can be used to redefine a portion of the color table, 
+    post convolution color table and post color matrix color table.
+
+    If EXT_color_table is not supported then the following values for <target>
+    are invalid when calling ColorSubTableEXT or CopyColorSubTableEXT:
+    COLOR_TABLE_EXT, POST_CONVOLUTION_COLOR_TABLE_EXT, and
+    POST_COLOR_MATRIX_COLOR_TABLE_EXT.
+
+Dependencies on SGI_texture_color_table
+
+    If both EXT_texture_color_table and EXT_color_table are supported then 
+    ColorSubTableEXT() can be used to redefine a portion of the texture color 
+    table.
+
+    If EXT_color_table is not supported then the following values for <target>
+    are invalid when calling ColorSubTableEXT or CopyColorSubTableEXT: 
+    TEXTURE_COLOR_TABLE_SGI.
+
+Dependencies on EXT_copy_texture
+
+    If EXT_copy_texture is not supported, CopyColorSubTableEXT is not 
+    supported.
+
+
+Errors
+
+    INVALID_ENUM is generated if ColorSubTableEXT or CopyColorSubTableEXT
+    parameter <target> is not one of COLOR_TABLE_EXT, COLOR_TABLE_SGI, 
+    POST_CONVOLUTION_COLOR_TABLE_EXT, POST_CONVOLUTION_COLOR_TABLE_SGI, 
+    POST_COLOR_MATRIX_COLOR_TABLE_EXT, POST_COLOR_MATRIX_COLOR_TABLE_SGI or
+    TEXTURE_COLOR_TABLE_SGI.
+
+    INVALID_ENUM is generated if ColorSubTableEXT parameter <format> is not
+    RED, GREEN, BLUE, ALPHA, RGB, RGBA, ABGR_EXT, LUMINANCE, or
+    LUMINANCE_ALPHA.
+
+    INVALID_ENUM is generated if ColorSubTableEXT parameter <type> is not BYTE,
+    UNSIGNED_BYTE, SHORT, UNSIGNED_SHORT, INT, UNSIGNED_INT, or FLOAT.
+
+    INVALID_VALUE is generated if ColorSubTableEXT or CopyColorSubTableEXT
+    parameter <start> exceeds the size of the table.
+
+    INVALID_VALUE is generated if the ColorSubTableEXT parameters <start> +
+    <count> exceed the size of the table.
+
+    INVALID_VALUE is generated if the CopyColorSubTableEXT parameters <start> +
+    <width> exceed the size of the table.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

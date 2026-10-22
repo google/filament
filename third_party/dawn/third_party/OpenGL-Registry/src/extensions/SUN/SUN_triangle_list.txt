@@ -1,0 +1,480 @@
+Name
+
+    SUN_triangle_list
+
+
+Name Strings
+
+    GL_SUN_triangle_list
+
+Contact
+
+    Jack Middleton, Sun (Jack.Middleton 'at' eng.sun.com)
+
+Status
+
+    Shipping
+
+Version
+
+    $Date: 1999/12/28 01:40:37 $ $Revision: 1.4 $
+    SUN Date: 99/06/25 13:12:54  Revision: 1.6
+
+Number
+
+    165
+
+Dependencies
+
+    OpenGL 1.1 is required
+
+
+Overview
+
+    OpenGL has two chained triangle primitives, TRIANGLE_STRIP and
+    TRIANGLE_FAN.  For multiple, consecutive triangle strips or
+    triangle fans, the overhead of Begin and End, or separate calls to
+    DrawArrays, can be significant depending on the number of triangles
+    per strip or fan.
+
+    Many surface tessellators produce triangle strips with very few
+    triangles per strip before needing to restart a new strip.  Even
+    sophisticated tessellators typically need to restart a new strip,
+    or switch from a triangle strip to a triangle fan, many times
+    within a single object.  Such tessellators can often produce a more
+    efficient tessellation--one with fewer vertices--by mixing strips
+    and fans within the same object.  The ability to switch from one to
+    the other without restarting the strip or fan yields even more
+    savings.  Unfortunately, the overhead of switching from a triangle
+    strip to a triangle fan, or vice versa, can reduce, or even
+    eliminate the benefit gained from reducing the number of vertices.
+
+    A new triangle list primitive, along with an associated replacement
+    code attribute, is defined by this extension to allow multiple
+    triangle strips and fans to be specified within the same Begin/End
+    pair or from a single call to DrawArrays.  The triangle list
+    extension also provides the means to switch between triangle strips
+    and triangle fans with or without restarting the strip or fan.
+
+    TRIANGLE_LIST is a new primitive type (i.e., new Begin mode) that
+    uses the ReplacementCodeSUN state attribute to determine whether the
+    current vertex replaces the oldest vertex, as in a triangle strip,
+    the middle vertex, as in a triangle fan, or restarts a new chained
+    triangle list.  The first vertex of a new triangle list is
+    implicitly treated as a RESTART.  The first three vertices complete
+    the first triangle, after which the replacement codes of the vertex
+    are used.  The two vertices immediately following a
+    restart--including the implicit restart on the first vertex--are
+    ignored.  The ReplacementCodeSUN attribute is part of the vertex
+    state, and is only used by the TRIANGLE_LIST primitive.
+
+
+Issues
+
+    1.	Two types of restarts: CW/CCW
+
+	Compressed geometry supports the notion of RESTART_CW versus
+	RESTART_CCW.  These two types of restart are supported by all
+	of Sun's hardware and this capability was exposed via XGL.  We
+	need to decide whether we want to expose this in OpenGL.  In a
+	sense, we already have exposed it with the compressed geometry
+	extension, since the compressed geometry spec allows both types
+	of restart.
+
+	It is worth noting that these modes are somewhat misnamed.
+	They really don't override the meaning of the GL_FRONT_FACE
+	flag (nor did they override the equivalent XGL mode, either).
+	Rather, the type of restart either inverts the GL_FRONT_FACE
+	state, in the case of RESTART_CW, or it uses the GL_FRONT_FACE
+	flag unmodified, in the case of RESTART_CCW.  This should be
+	the case for compressed geometry today (although it may be
+	broken), and it would be true for triangle lists if we decided
+	to expose this capability.  My preference would be to not
+	expose this, since all it really does is create a documentation
+	headache.  The user can always define a generalized triangle list
+	with consistently wound triangles using the CCW variant of restart.
+        Supporting both types of restart just doesn't fit into OpenGL's
+	(or Java 3D's) model cleanly.
+
+	[NOTE: a decision has been made to not expose the CW/CCW feature]
+
+    2.	Enumerated values for replacement codes
+
+	Enumerated values used for extensions are typically defined as
+	integers in a specified range.  This range depends on whether
+	they are vendor private (_SUN) or multi-vendor (_EXT or _ARB)
+	extensions.  For this extension, we are defining a new
+	replacement code attribute that is part of the vertex state
+	and is expected to be processed directly by hardware.  Given
+	this, we have defined the replacement codes as small integer
+	values (1, 2, and 3) that correspond with what the hardware
+	wants to see.  The cost for having these values be different,
+	especially for replacement codes in a vertex array, are too
+	great.
+
+	Another reason for not using constants in the range of
+	extension enums is that if this ever became part of the core
+	after first being an extension, or even if it became a
+	multi-vendor extension after first being a Sun-private
+	extension, then the codes would change.  This would be
+	unworkable for an attribute such as this, since it is part of
+	the vertex pipeline.
+
+	We need to ensure that our current plan of defining
+	replacement codes outside the range of extension enums is not
+	violating any rules.  I think that this shouldn't be a problem
+	since the replacement codes themselves are really just
+	parameters to the replacement code command.  As such, they are
+	just bit patterns and shouldn't need to be unique.
+
+
+New Procedures and Functions
+
+    void ReplacementCodeuiSUN(uint code);
+
+    void ReplacementCodeusSUN(ushort code);
+
+    void ReplacementCodeubSUN(ubyte code);
+
+    void ReplacementCodeuivSUN(const uint *code);
+
+    void ReplacementCodeusvSUN(const ushort *code);
+
+    void ReplacementCodeubvSUN(const ubyte *code);
+
+    void ReplacementCodePointerSUN(enum type,
+				   sizei stride,
+				   const void *pointer);
+
+
+New Tokens
+
+    Accepted by the <mode> parameter of Begin, DrawArrays,
+    DrawElements, MultiDrawArraysSUN, MultiDrawArraysEXT,
+    MultiDrawElementsSUN, and MultiDrawElementsEXT:
+
+	TRIANGLE_LIST_SUN			0x81D7
+
+    Accepted by the by the <pname> parameter of GetBooleanv,
+    GetIntegerv, GetFloatv, and GetDoublev:
+
+	REPLACEMENT_CODE_SUN			0x81D8
+
+    Accepted by the <code> parameter of ReplacementCode{ui,us,ub}[v]SUN:
+
+	RESTART_SUN				0x01
+	REPLACE_MIDDLE_SUN			0x02
+	REPLACE_OLDEST_SUN			0x03
+
+    Accepted by the <array> parameter of EnableClientState and
+    DisableClientState, and by the <cap> parameter of IsEnabled:
+
+	REPLACEMENT_CODE_ARRAY_SUN		0x85C0
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+	REPLACEMENT_CODE_ARRAY_TYPE_SUN		0x85C1
+	REPLACEMENT_CODE_ARRAY_STRIDE_SUN	0x85C2
+
+    Accepted by the <pname> parameter of GetPointerv:
+
+	REPLACEMENT_CODE_ARRAY_POINTER_SUN	0x85C3
+
+
+    Accepted by the <format> parameter of InterleavedArrays:
+
+	R1UI_V3F_SUN				0x85C4
+	R1UI_C4UB_V3F_SUN			0x85C5
+	R1UI_C3F_V3F_SUN			0x85C6
+	R1UI_N3F_V3F_SUN			0x85C7
+	R1UI_C4F_N3F_V3F_SUN			0x85C8
+	R1UI_T2F_V3F_SUN			0x85C9
+	R1UI_T2F_N3F_V3F_SUN			0x85CA
+	R1UI_T2F_C4F_N3F_V3F_SUN		0x85CB
+
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    Replacement Code
+    ----------------
+    The replacement code is a per-vertex state attribute that controls
+    triangle vertex replacement for the triangle list primitive; it is
+    ignored for all other primitives.  This state attribute is set by
+    the ReplacementCodeSUN command.  Since it is part of the vertex state,
+    the ReplacementCodeSUN command may appear within a Begin/End pair.  The
+    replacement code is an enum with 3 values, RESTART_SUN,
+    REPLACE_MIDDLE_SUN, and REPLACE_OLDEST_SUN.
+
+    Note that the replacement code follows the same rules as other
+    per-vertex state attributes.  The current value of the replacement
+    code state attribute affects subsequent vertices until the next
+    time the ReplacementCodeSUN command is executed, updating the value
+    of the state attribute.  This means that a replacement code that is
+    set outside of a Begin/End will affect subsequent triangle lists in
+    which the replacement code is not set.  Similarly, the value of the
+    last replacement code set within a Begin/End will affect subsequent
+    triangle lists in which the replacement code is not set.
+
+    Triangle List
+    -------------
+    A triangle list primitive is a series of triangles that are
+    connected according to the replacement codes associated with each
+    vertex in the list.  A triangle list is specified by giving a
+    series of defining vertices between a Begin/End pair when Begin is
+    called with TRIANGLE_LIST.  As with a triangle strip and a triangle
+    fan, the first three vertices define a triangle.  The order of the
+    three vertices is significant.  Subsequent vertices either define a
+    triangle that is connected to the previous triangle using the new
+    vertex and two vertices from the previous triangle, or they restart
+    a new triangle, depending on the value specified by the replacement
+    code state.  The edge flag attribute is ignored by the triangle list
+    primitive.  If PolygonMode is set to LINE or POINT, then all edges
+    or vertices are drawn (as with TRIANGLE_STRIP and TRIANGLE_FAN).
+
+    In addition to the current vertex, the state required to support
+    triangle lists consists of a 2-bit vertex counter that indicates
+    the number of vertices since the beginning of the list or since a
+    restart, two stored processed vertices, and a one-bit pointer
+    indicating the order of drawing (oldest-middle-current versus
+    middle-oldest-current).
+
+    The rules for determining when to draw a triangle and what vertices
+    to use and in what order are as follows:
+
+    1.	When a BEGIN command is called with TRIANGLE_LIST, the vertex
+	counter is set to 0.
+
+    2.	When a new vertex is completed, the following logic is used to
+	process the vertex:
+
+	    if (vertex_counter == 0) {
+		vertex_counter = 1
+		drawing_order = 0
+		vertexA = currentVertex
+	    }
+	    else if (vertex_counter == 1) {
+		vertex_counter = 2
+		vertexB = currentVertex
+	    }
+	    else if (vertex_counter == 2) {
+		vertex_counter = 3
+		draw(vertexA, vertexB, currentVertex)
+	    }
+	    else {
+		if (repl_code == RESTART) {
+		    vertex_counter = 1
+		    drawing_order = 0
+		    vertexA = currentVertex
+		}
+		else {
+		    if (repl_code == REPLACE_OLDEST)
+			drawing_order = !drawing_order
+
+		    if (drawing_order == 0)
+			draw(vertexA, vertexB, currentVertex)
+		    else
+			draw(vertexB, vertexA, currentVertex)
+
+		    if (repl_code == REPLACE_OLDEST)
+			vertexA = vertexB
+		    vertexB = currentVertex
+		}
+	    }
+
+    If a triangle list has fewer than 3 vertices then no triangles are
+    drawn.  If a triangle list has fewer than 2 vertices following a
+    vertex with a RESTART replacement code, then the restart is
+    ignored, along with the one vertex after the restart, if present.
+
+    Because the replacement code is ignored for the first vertex and
+    the two vertices immediately following a restart, a constant
+    replacement code has a well-defined, consistent semantic.  If the
+    replacement code for each vertex is REPLACE_OLDEST, then a triangle
+    strip will be drawn.  If the replacement code for each vertex is
+    REPLACE_MIDDLE, then a triangle fan will be drawn.  If the
+    replacement code for each vertex is RESTART, then isolated
+    triangles will be drawn.
+
+    The following example illustrates the use of vertex replacement
+    within a single triangle list to draw triangle strips, triangle
+    fans, isolated triangles, and, finally, a triangle strip that
+    switches to a fan and back to a strip without a restart.  In this
+    example REPLACE_OLDEST is abbreviated RO and REPLACE_MIDDLE is
+    abbreviated RM.  Note that the initial RESTART replacement appears
+    in square brackets, indicating that it is an implicit restart; the
+    replacement code is ignored for the first vertex following a begin
+    command.  The replacement code is also ignored for the two
+    vertices immediately following a restart.
+
+                               2       4       6
+        V1  [RESTART]          .-------.-------.
+        V2   --               /\      /\      /
+        V3   --              /  \    /  \    /
+        V4   RO             /    \  /    \  /  Triangle Strip
+        V5   RO            /      \/      \/
+        V6   RO           .-------.-------.
+                          1       3       5
+
+                              9.-------.10
+                              /\      /\
+        V7   RESTART         /  \    /  \
+        V8   --             /    \  /    \
+        V9   --            /      \/      \
+        V10  RM           8.------.7-------.11  Triangle Fan
+        V11  RM          14\      /\      /
+        V12  RM             \    /  \    /
+        V13  RM              \  /    \  /
+        V14  RM               \/      \/
+                              .-------.
+                              13     12
+
+                            16           19
+        V15  RESTART         .            .
+        V16  --             /\           /\
+        V17  --            /  \         /  \
+        V18  RESTART      /    \       /    \  Isolated Triangles
+        V19  --          /      \     /      \
+        V20  --         .--------.   .--------.
+                       15       17  18       20
+
+                       22    24    26
+                        .-----.-----.
+        V21  RESTART    |\    |\    |\
+        V22  --         | \   | \   | \
+        V23  --         |  \  |  \  |  .27
+        V24  RO         |   \ |   \ | /\
+        V25  RO         |    \|    25/  \
+        V26  RO         .-----.-----.---.28   Mixed Strip & Fan
+        V27  RO        21    23    /|\  |
+        V28  RM                   / | \ |
+        V29  RM                  /  |  \|
+        V30  RM                 .---.---.29
+        V31  RM               31\   /30
+        V32  RO                  \ /
+                                  .
+                                 32
+
+
+
+    Triangle list primitives may be drawn using vertex arrays in the
+    same manner as other primitives.  The replacement code state flag
+    may be enabled as part of a vertex array operation.  The
+    REPLACEMENT_CODE_ARRAY_SUN enum is used to enable or disable the
+    replacement code array using the EnableClientState and
+    DisableClientState functions.
+
+    The following function defines the type, stride, and pointer for
+    the replacement code data.
+
+	void ReplacementCodePointerSUN(enum type,
+				       sizei stride,
+				       const void *pointer);
+
+    Legal values for type are UNSIGNED_BYTE, UNSIGNED_SHORT, and
+    UNSIGNED_INT.  As with other vertex state, the value of the
+    replacement code attribute is undefined after a vertex array
+    command has been executed.
+
+    The following describes the memory layout of the new interleaved
+    array types.  These new types may be used as the format parameter
+    of the InterleavedArrays function.
+
+	format			pt	pc	pn	pv	s
+	---------------------	------	------	------	------	------
+	R1UI_V3F					i	i+3f
+	R1UI_C4UB_V3F			i		i+c	i+c+3f
+	R1UI_C3F_V3F			i		i+3f	i+6f
+	R1UI_N3F_V3F				i	i+3f	i+6f
+	R1UI_C4F_N3F_V3F		i	i+4f	i+7f	i+10f
+	R1UI_T2F_V3F		i			i+2f	i+5f
+	R1UI_T2F_N3F_V3F	i		i+2f	i+5f	i+8f
+	R1UI_T2F_C4F_N3F_V3F	i	i+2f	i+6f	i+9f	i+12f
+
+Where i is sizeof(UNSIGNED_INT) rounded up to the nearest multiple of
+f.  The replacement code pointer always starts at offset 0 from the
+interleaved array pointer.
+
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+    None
+
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    None
+
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    None
+
+Additions to the GLX / WGL / AGL Specifications
+ 
+     None
+
+GLX Protocol
+
+    Three rendering commands are sent to the server as part of
+    the glXRender request:
+
+	ReplacementCodeuiSUN
+	  2		8		rendering command length
+	  2		16388		rendering command opcode
+	  4		CARD32		code
+
+	ReplacementCodeubSUN
+	  2		8		rendering command length
+	  2		16389		rendering command opcode
+	  1		CARD8		code
+	  1		CARD8		pad
+  	  2		CARD16		pad
+
+	ReplacementCodeusSUN
+	  2		8		rendering command length
+	  2		16390		rendering command opcode
+	  2		CARD16		code
+	  2		CARD16		pad
+
+
+Errors
+
+    INVALID_ENUM is generated if ReplacementCodePointerSUN parameter
+    <type> is not UNSIGNED_BYTE, UNSIGNED_SHORT, or UNSIGNED_INT.
+
+    INVALID_VALUE is generated if ReplacementCodePointerSUN parameter
+    <stride> is negative.
+
+
+New State
+
+    Get Value				Get Command	Type	Initial Value
+    ---------				-----------	----	-------------
+    REPLACEMENT_CODE_SUN		GetIntegerv	Z4	REPLACE_OLDEST
+    REPLACEMENT_CODE_ARRAY_SUN		IsEnabled	B	False
+    REPLACEMENT_CODE_ARRAY_TYPE_SUN	GetIntegerv	Z3	UNSIGNED_INT
+    REPLACEMENT_CODE_ARRAY_STRIDE_SUN	GetIntegerv	Z+	0
+    REPLACEMENT_CODE_ARRAY_POINTER_SUN	GetPointerv	Y	0
+
+    Get Value				Attribute
+    ---------				---------
+    REPLACEMENT_CODE_SUN		current
+    REPLACEMENT_CODE_ARRAY_SUN		vertex-array
+    REPLACEMENT_CODE_ARRAY_TYPE_SUN	vertex-array
+    REPLACEMENT_CODE_ARRAY_STRIDE_SUN	vertex-array
+    REPLACEMENT_CODE_ARRAY_POINTER_SUN	vertex-array
+
+New Implementation Dependent State
+ 
+     None
+
+Revision History
+    
+    6/25/99 Added fields from the new extension template.

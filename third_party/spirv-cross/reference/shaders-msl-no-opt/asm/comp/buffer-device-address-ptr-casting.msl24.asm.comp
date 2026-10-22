@@ -1,0 +1,33 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SomeBuffer;
+
+struct SomeBuffer
+{
+    float4 v;
+    ulong a;
+    uint2 b;
+};
+
+struct Registers
+{
+    ulong address;
+    uint2 address2;
+};
+
+kernel void main0(constant Registers& registers [[buffer(0)]])
+{
+    device SomeBuffer* _44 = reinterpret_cast<device SomeBuffer*>(registers.address);
+    device SomeBuffer* _45 = reinterpret_cast<device SomeBuffer*>(registers.address);
+    device SomeBuffer* _46 = reinterpret_cast<device SomeBuffer*>(as_type<ulong>(registers.address2));
+    _44->v = float4(1.0, 2.0, 3.0, 4.0);
+    _45->v = float4(1.0, 2.0, 3.0, 4.0);
+    _46->v = float4(1.0, 2.0, 3.0, 4.0);
+    _44->a = reinterpret_cast<ulong>(_44);
+    _45->a = reinterpret_cast<ulong>(_45);
+    _46->b = as_type<uint2>(reinterpret_cast<ulong>(_46));
+}
+

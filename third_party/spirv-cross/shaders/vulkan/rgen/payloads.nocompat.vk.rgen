@@ -1,0 +1,49 @@
+#version 460
+#extension GL_NV_ray_tracing : require
+
+layout(set = 0, binding = 0, rgba8) uniform image2D image;
+layout(set = 0, binding = 1) uniform accelerationStructureNV as;
+
+struct Payload
+{
+	float a, b;
+};
+
+// Plain payload
+layout(location = 0) rayPayloadNV float payload1;
+// Struct payload
+layout(location = 1) rayPayloadNV Payload payload2;
+
+// This is syntactic sugar with the struct formulation (pretty sure), spec is kinda vague.
+layout(location = 2) rayPayloadNV Block
+{
+	float a, b;
+	Payload c, d;
+};
+
+vec4 trace_in_function()
+{
+	vec4 result = vec4(0.0);
+	// Test that we can write to a payload in a function.
+	vec3 origin = vec3(1.0, 0.0, 0.0);
+	vec3 direction = vec3(0.0, 1.0, 0.0);
+    traceNV(as, 0u, 255u, 0u, 1u, 0u, origin, 0.0, direction, 1000.0, 1);
+	result += payload2.a;
+	result += payload2.b;
+	return result;
+}
+
+void main()
+{
+	vec3 origin = vec3(1.0, 0.0, 0.0);
+	vec3 direction = vec3(0.0, 1.0, 0.0);
+    traceNV(as, 0u, 255u, 0u, 1u, 0u, origin, 0.0, direction, 1000.0, 0);
+	vec4 result = vec4(payload1);
+
+	result += trace_in_function();
+
+    traceNV(as, 0u, 255u, 0u, 1u, 0u, origin, 0.0, direction, 1000.0, 2);
+	result += a + b + c.a + c.b + d.a + d.b;
+
+	imageStore(image, ivec2(gl_LaunchIDNV.xy), result);
+}

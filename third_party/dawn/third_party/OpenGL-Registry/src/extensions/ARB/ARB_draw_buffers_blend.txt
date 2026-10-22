@@ -1,0 +1,307 @@
+Name
+
+    ARB_draw_buffers_blend
+
+Name Strings
+
+    GL_ARB_draw_buffers_blend
+
+Contact
+
+    Jeff Bolz, NVIDIA Corporation (jbolz 'at' nvidia.com)
+    Mark Young, AMD (mark.young 'at' amd.com)
+
+Contributors
+
+    Jeff Bolz, NVIDIA
+    Pierre Boudier, AMD
+    Nick Haemel, AMD
+    Timothy Lamb, AMD
+    Greg Roth, NVIDIA
+    Graham Sellers, AMD
+    Mike Strauss, NVIDIA
+    Mark Young, AMD
+
+Notice
+
+    Copyright (c) 2009-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on July 3, 2009.
+
+Version
+
+    Last Modified Date:         01/19/2011
+    Revision:                   4
+
+Number
+
+    ARB Extension #69
+
+Dependencies
+
+    The extension is written against the OpenGL 2.0 Specification.
+
+    OpenGL 2.0 is required.
+
+    EXT_draw_buffers2 is required.
+
+Overview
+
+    This extension builds upon the ARB_draw_buffers and
+    EXT_draw_buffers2 extensions. In ARB_draw_buffers (part of OpenGL
+    2.0), separate values could be written to each color buffer. This
+    was further enhanced by EXT_draw_buffers2 by adding in the ability
+    to enable blending and to set color write masks independently per
+    color output.
+
+    This extension provides the ability to set individual blend
+    equations and blend functions for each color output.
+
+New Procedures and Functions
+
+    void BlendEquationiARB(uint buf, enum mode);
+
+    void BlendEquationSeparateiARB(uint buf, enum modeRGB,
+                                   enum modeAlpha);
+
+    void BlendFunciARB(uint buf, enum src, enum dst);
+
+    void BlendFuncSeparateiARB(uint buf, enum srcRGB, enum dstRGB,
+                               enum srcAlpha, enum dstAlpha);
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Modify Section 4.1.8, Blending p. 205
+
+    (modify section Blend Equation starting with the first paragraph)
+
+   "Blending is controlled by the blend equation. This equation can be
+    simultaneously set to the same value for all draw buffers using the
+    commands:
+
+       void BlendEquation(enum mode);
+       void BlendEquationSeparate(enum modeRGB, enum modeAlpha);
+
+    or for an individual draw buffer using the indexed versions of the
+    same commands:
+
+        void BlendEquationiARB(uint buf, enum mode);
+        void BlendEquationSeparateiARB(uint buf
+                                       enum modeRGB,
+                                       enum modeAlpha);
+
+    BlendEquationSeparate and BlendEquationSeparateiARB argument
+    <modeRGB> determines the RGB blend equation while <modeAlpha>
+    determines the alpha blend equation. BlendEquation and
+    BlendEquationiARB argument <mode> determines both the RGB and alpha
+    blend equations. <mode>, <modeRGB>, and <modeAlpha> must be one of
+    FUNC_ADD, FUNC_SUBTRACT, FUNC_REVERSE_SUBTRACT, MIN, MAX.
+    BlendEquation and BlendEquationSeparate modify the blend equations
+    for all draw buffers. BlendEquationiARB and
+    BlendEquationSeparateiARB modify the blend equations associated with
+    an individual draw buffer. The <buf> argument is an integer i that
+    indicates that the blend equations should be modified for
+    DRAW_BUFFERi.
+
+    (modify section Blend Functions starting with the first paragraph)
+
+    The weighting factors used by the blend equation are determined by
+    the blend functions. Blend functions are simultaneously specified
+    for all draw buffers using the commands:
+
+        void BlendFunc(enum src, enum dst);
+        void BlendFuncSeparate(enum srcRGB, enum dstRGB,
+                               enum srcAlpha, enum dstAlpha);
+
+    or for an individual draw buffer using the indexed versions of the
+    same commands:
+
+        void BlendFunciARB(uint buf, enum src, enum dst);
+        void BlendFuncSeparateiARB(uint buf, enum srcRGB,
+                                   enum dstRGB, enum srcAlpha,
+                                   enum dstAlpha);
+
+    BlendFuncSeparate and BlendFuncSeparateiARB arguments <srcRGB> and
+    <dstRGB> determine the source and destination RGB blend functions,
+    respectively, while <srcAlpha> and <dstAlpha> determine the source
+    and destination alpha blend functions. BlendFunc and BlendFunciARB
+    argument <src> determines both RGB and alpha source functions, while
+    <dst> determines both RGB and alpha destination functions.
+    BlendFuncSeparate and BlendFunc modify the blend functions for all
+    draw buffers. BlendFuncSeparateiARB and BlendFunciARB modify the
+    blend functions associated with an individual draw buffer. The <buf>
+    argument is an integer i that indicates that the blend equations
+    should be modified for DRAW_BUFFER<i>."
+
+
+    (modify section Blending State)
+
+   "The state required for blending, for each draw buffer, is two
+    integers for the RGB and alpha blend equations, four integers
+    indicating the source and destination RGB and alpha blending
+    functions, and a bit indicating whether blending is enabled or
+    disabled. Additionally, four floating-point values to store the RGBA
+    constant blend color are required.
+
+    For all draw buffers, the initial blend equations for RGB and alpha
+    are both FUNC_ADD, and the initial blending functions are ONE for
+    the source RGB and alpha functions, and ZERO for the destination RGB
+    and alpha functions. Initially, blending is disabled for all draw
+    buffers. The initial constant blend color is (R,G,B,A) = (0,0,0,0).
+
+    The value of the blend enable for draw buffer <i> can be queried by
+    calling IsEnabledi with <target> BLEND and <index> <i>, and the
+    values of the blend equations and functions can be queried by caling
+    GetIntegerIndexedvEXT with the corresponding <target> as shown in
+    table 6.20 and <index> $i$.
+    
+    The value of the blend enable, or the blend equations and functions
+    for draw buffer zero may also be queried by calling IsEnabled, or
+    GetInteger, respectively, with the same symbolic constants but no
+    <index> parameter."
+
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 2.0 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Errors
+
+    The error INVALID_ENUM is generated by BlendEquationiARB,
+    BlendEquationSeparateiARB, BlendFuncSeparateiARB, and
+    BlendFunciARB if the <buf> parameter is outside the range
+    [0, MAX_DRAW_BUFFERS-1].
+
+    The error INVALID_ENUM is generated by GetIntegerIndexedvEXT
+    if <target> is BLEND_EQUATION, BLEND_EQUATION_RGB,
+    BLEND_EQUATION_ALPHA, BLEND_SRC, BLEND_SRC_RGB, BLEND_SRC_ALPHA,
+    BLEND_DST, BLEND_DST_RGB, BLEND_DST_ALPHA, and <index> is outside
+    the range [0, MAX_DRAW_BUFFERS-1].
+
+    The error INVALID_ENUM is generated by BlendFunciARB
+    if either <src>, or <dst> is not an accepted value.
+
+    The error INVALID_ENUM is generated by BlendFuncSeparateiARB
+    if either <srcRGB>, <dstRGB>, <srcAlpha>, or <dstAlpha> is not
+    an accepted value.
+
+    The error INVALID_ENUM is generated if the <mode> parameter of
+    BlendEquationiARB is not one of FUNC_ADD, FUNC_SUBTRACT,
+    FUNC_REVERSE_SUBTRACT, MAX, or MIN.
+
+    The error INVALID_ENUM is generated if either the <modeRGB> or
+    <modeAlpha> parameter of BlendEquationSeparateiARB is not one of
+    FUNC_ADD, FUNC_SUBTRACT, FUNC_REVERSE_SUBTRACT, MAX, or MIN.
+
+    The error INVALID_OPERATION is generated if any of these new
+    entry-points are executed between the execution of glBegin and the
+    corresponding execution of glEnd.
+
+
+New State
+
+    Modify Table 6.20, p. 281
+
+    (modify the entries for the blend functions and equations and add
+    new entries for indexed access to the per draw buffer functions
+    and equations)
+
+
+                                                                         Initial
+    Get Target                           Type      Get Command           Value    Description                                          Section Attribute
+    -----------------------------------  --------- --------------------- -------- ---------------------------------------------------- ------- -------------
+    BLEND_SRC_RGB (BLEND_SRC)            1* x Z_15 GetIntegerIndexedvEXT ONE      Blending source RGB function for draw buffer i       4.2.2   color-buffer
+                                                                                  where i is specified as <index>
+    BLEND_SRC_ALPHA                      1* x Z_15 GetIntegerIndexedvEXT ONE      Blending source A function for draw buffer i         4.2.2   color-buffer
+                                                                                  where i is specified as <index>
+    BLEND_DST_RGB (BLEND_DST)            1* x Z_14 GetIntegerIndexedvEXT ZERO     Blending destination RGB function for draw buffer i  4.2.2   color-buffer
+                                                                                  where i is specified as <index>
+    BLEND_DST_ALPHA                      1* x Z_14 GetIntegerIndexedvEXT ZERO     Blending destination A function for draw buffer i    4.2.2   color-buffer
+                                                                                  where i is specified as <index>
+    BLEND_EQUATION_RGB (BLEND_EQUATION)  1* x Z    GetIntegerIndexedvEXT FUNC_ADD RGB blending equation for draw buffer i              4.2.2   color-buffer
+                                                                                  where i is specified as <index>
+    BLEND_EQUATION_ALPHA                 1* x Z    GetIntegerIndexedvEXT FUNC_ADD Alpha blending equation for draw buffer i            4.2.2   color-buffer
+                                                                                  where i is specified as <index>
+
+Issues
+
+    1.  What should we call this?
+
+        RESOLVED: ARB_draw_buffers_blend.
+
+        Other suggestions were ARB_drawbuffers_blend and ARB_mrt_blend.
+
+    2. What effect does using the non-indexed versions of the blend
+       function or equation entry-points have upon the new indexed per
+       draw buffer versions?
+
+        RESOLVED: Similar to the way EXT_draw_buffers2 handles the
+        indexed and non-indexed ColorMask interaction in issue 3. The
+        non-indexed versions of the functions will set all buffers to
+        the passed in parameters.
+
+        For example, BlendFunc will set all color buffer blend functions
+        to the values passed in.
+
+    3. Should the new functions be ---Indexed (as in EXT_draw_buffers2)
+       or ---i (as in OpenGL 3.0 core)?
+
+        RESOLVED: Because this is to be promoted to core, the i index is
+        used
+
+Revision History
+
+    Rev.    Date    Author     Changes
+    ----  -------- ---------  -----------------------------------------
+      4   1/19/11  Jon Leech  Fix GetIntegeri_v -> GetIntegerIndexedi_v
+                              (Bug 7229).
+      3   2/11/10  Jon Leech  Clarify in required state section that
+                              the constant blend color is global,
+                              not per-draw-buffer. Remove duplicate
+                              state for draw buffer zero from state
+                              tables and describe how non-indexed
+                              queries access it from required state
+                              section (Bug 5920).
+      2   8/02/09  Jon Leech  Reformat to 80 columns and assign
+                              ARB extension number.
+      1   5/14/09  jbolz      copy & rename from EXT version rev 5.
+

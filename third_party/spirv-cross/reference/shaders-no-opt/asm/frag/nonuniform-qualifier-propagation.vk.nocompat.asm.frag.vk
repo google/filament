@@ -1,0 +1,37 @@
+#version 450
+#extension GL_EXT_nonuniform_qualifier : require
+
+layout(set = 0, binding = 2, std140) uniform UBO
+{
+    vec4 v[64];
+} ubos[];
+
+layout(set = 0, binding = 3, std430) readonly buffer SSBO
+{
+    vec4 v[];
+} ssbos[];
+
+layout(set = 0, binding = 0) uniform texture2D uSamplers[];
+layout(set = 0, binding = 1) uniform sampler uSamps[];
+layout(set = 0, binding = 4) uniform sampler2D uCombinedSamplers[];
+
+layout(location = 0) flat in int vIndex;
+layout(location = 0) out vec4 FragColor;
+layout(location = 1) in vec2 vUV;
+
+void main()
+{
+    int i = vIndex;
+    int _23 = i + 10;
+    int _34 = i + 40;
+    FragColor = texture(nonuniformEXT(sampler2D(uSamplers[_23], uSamps[_34])), vUV);
+    int _50 = i + 10;
+    FragColor = texture(uCombinedSamplers[nonuniformEXT(_50)], vUV);
+    int _66 = i + 20;
+    int _70 = i + 40;
+    FragColor += ubos[nonuniformEXT(_66)].v[_70];
+    int _84 = i + 50;
+    int _88 = i + 60;
+    FragColor += ssbos[nonuniformEXT(_84)].v[_88];
+}
+

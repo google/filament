@@ -1,0 +1,242 @@
+# Copyright 2023 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import("//build_overrides/build.gni")
+
+import("../../scripts/tint_overrides_with_defaults.gni")
+
+if (tint_has_protobuf) {
+  import("//third_party/protobuf/proto_library.gni")
+}
+
+###############################################################################
+# OS defines
+###############################################################################
+tint_build_is_win = is_win
+tint_build_is_mac = is_mac
+tint_build_is_linux = is_linux
+
+###############################################################################
+# Tint library target
+###############################################################################
+template("libtint_source_set") {
+  source_set(target_name) {
+    forward_variables_from(invoker, "*", [ "configs" ])
+
+    if (!defined(invoker.deps)) {
+      deps = []
+    }
+
+    if (defined(invoker.configs)) {
+      configs += invoker.configs
+    }
+
+    configs += [ "${tint_src_dir}:tint_common_config" ]
+
+    if (build_with_chromium) {
+      configs -= [ "//build/config/compiler:chromium_code" ]
+      configs += [ "//build/config/compiler:no_chromium_code" ]
+    }
+
+    if (!defined(invoker.public_configs)) {
+      public_configs = []
+    }
+
+    public_configs += [ "${tint_src_dir}:tint_public_config" ]
+  }
+}
+
+###############################################################################
+# Tint protobuf library target
+###############################################################################
+template("tint_proto_library") {
+  if (!tint_has_protobuf) {
+    error("Tint needs protobuf to build a proto library")
+  }
+
+  proto_library(target_name) {
+    forward_variables_from(invoker, "*", [ "configs" ])
+    proto_in_dir = "${tint_root_dir}"
+    generate_cc = true
+    generate_python = false
+    use_protobuf_full = true
+  }
+}
+
+###############################################################################
+# Executables
+###############################################################################
+template("tint_executable") {
+  executable(target_name) {
+    forward_variables_from(invoker, "*")
+  }
+}
+
+###############################################################################
+# Unit tests - only built when tint_build_unittests is enabled
+###############################################################################
+template("tint_unittests_source_set") {
+  if (tint_build_unittests) {
+    source_set(target_name) {
+      forward_variables_from(invoker, "*", [ "configs" ])
+
+      testonly = true
+
+      if (defined(invoker.configs)) {
+        configs += invoker.configs
+      }
+
+      configs += [ "${tint_src_dir}:tint_unittests_config" ]
+
+      if (build_with_chromium) {
+        configs -= [ "//build/config/compiler:chromium_code" ]
+        configs += [ "//build/config/compiler:no_chromium_code" ]
+      }
+
+      if (!defined(invoker.deps)) {
+        deps = []
+      }
+
+      deps += [ "${tint_src_dir}:gmock_and_gtest" ]
+    }
+  }
+}
+
+###############################################################################
+# Benchmarks - only built when tint_build_benchmarks is enabled
+###############################################################################
+template("tint_benchmarks_source_set") {
+  if (tint_build_benchmarks) {
+    source_set(target_name) {
+      forward_variables_from(invoker, "*", [ "configs" ])
+
+      testonly = true
+
+      if (defined(invoker.configs)) {
+        configs += invoker.configs
+      }
+
+      configs += [ "${tint_src_dir}:tint_common_config" ]
+
+      if (build_with_chromium) {
+        configs -= [ "//build/config/compiler:chromium_code" ]
+        configs += [ "//build/config/compiler:no_chromium_code" ]
+      }
+
+      if (!defined(invoker.deps)) {
+        deps = []
+      }
+
+      deps += [ "${tint_src_dir}:generate_benchmark_inputs" ]
+    }
+  }
+}
+
+###############################################################################
+# Fuzzers - Specific targets are guarded by if their dependencies
+#           (e.g. IR binary) are included in the build
+###############################################################################
+import("//testing/libfuzzer/fuzzer_test.gni")
+template("tint_fuzz_source_set") {
+  source_set(target_name) {
+    forward_variables_from(invoker, "*", [ "configs" ])
+
+    testonly = true
+
+    if (!defined(invoker.deps)) {
+      deps = []
+    }
+
+    if (defined(invoker.configs)) {
+      configs += invoker.configs
+    }
+
+    configs += [ "${tint_src_dir}:tint_common_config" ]
+
+    if (build_with_chromium) {
+      configs -= [ "//build/config/compiler:chromium_code" ]
+      configs += [ "//build/config/compiler:no_chromium_code" ]
+    }
+
+    if (!defined(invoker.public_configs)) {
+      public_configs = []
+    }
+
+    public_configs += [ "${tint_src_dir}:tint_public_config" ]
+  }
+}
+
+template("tint_fuzzer_test") {
+  # fuzzer_test.gni doesn't handle targets that use 'output_name' correctly.
+  # It will build an executable with the requested name, but the ClusterFuzz
+  # data files (corpus, dictionary, options, owners, runtime_deps) will all
+  # use the target name for their output file names, and these will not be
+  # used by ClusterFuzz.
+  # To work around this, if an 'output_name' is specified, pass the
+  # 'output_name' to fuzzer_test() as the target name, then make a proxy
+  # 'target_name' group that depends on the fuzzer target.
+  if (defined(invoker.output_name)) {
+    fuzzer_name = invoker.output_name
+  } else {
+    fuzzer_name = target_name
+  }
+
+  fuzzer_test(fuzzer_name) {
+    forward_variables_from(invoker, "*", [ "output_name" ])
+    exclude_main =
+        (defined(invoker.exclude_main) && invoker.exclude_main) || false
+
+    # TODO(https://crbug.com/394563978): Remove once experiment ends.
+    high_end_job_required = true
+
+    # TODO(crbug.com/505034799): Determine best migration path for this.
+    is_fuzztest_compatible = false
+
+    if (target_name == "wgsl") {
+      dict = "dictionary.txt"
+      libfuzzer_options = [
+        # TODO(crbug.com/tint/2223): Remove this to fuzz unicode?
+        "only_ascii=1",
+        "max_len=10000",
+      ]
+
+      # There is a nightly job that generates the corpus for each of
+      # the fuzzers and uploads them to cloud storage that
+      # ClusterFuzz uses, so there is no need for this rule to
+      # automatically generate the corpus. There are instructions in
+      # docs/tint/fuzzers.md for how to generate the corpus locally
+      # if needed.
+    }
+  }
+
+  if (fuzzer_name != target_name) {
+    group(target_name) {
+      testonly = true
+      data_deps = [ ":${fuzzer_name}" ]
+    }
+  }
+}

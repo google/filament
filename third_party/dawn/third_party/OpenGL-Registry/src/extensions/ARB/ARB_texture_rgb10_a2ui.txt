@@ -1,0 +1,201 @@
+Name
+
+    ARB_texture_rgb10_a2ui
+
+Name Strings
+
+    GL_ARB_texture_rgb10_a2ui
+
+Contact
+
+    Daniel Koch (daniel 'at' transgaming.com)
+
+Contributors
+
+    Daniel Koch, TransGaming
+    Graham Sellers, AMD
+    Jeff Bolz, NVIDIA
+    Pat Brown, NVIDIA
+
+Notice
+
+    Copyright (c) 2010-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB at the 2010/01/22 F2F meeting.
+    Approved by the Khronos Board of Promoters on March 10, 2010.
+
+Version
+
+    Last Modified Date: January 29, 2009
+    Author Revision: 7
+
+Number
+
+    ARB Extension #83
+
+Dependencies
+
+    This extension is written against the OpenGL 3.2 specification, 
+    compatibility profile, but it can apply against previous versions
+    of OpenGL.
+
+    Requires OpenGL 3.0 or EXT_texture_integer.
+
+Overview
+
+    This extension adds support for the following data format:
+
+    A new texturing format for unsigned 10.10.10.2 integer textures. 
+
+    OpenGL has supported RGB10 and RGB10_A2 formats for a very long time.  
+    This extension provides a variant of RGB10_A2 which supports unsigned 
+    integer data (in contrast to the above "unsigned normalized integer" 
+    formats).
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <internalFormat> parameter of TexImage1D, TexImage2D,
+    TexImage3D, CopyTexImage1D, CopyTexImage2D, RenderbufferStorage and 
+    RenderbufferStorageMultisample:
+
+        RGB10_A2UI                           0x906F
+
+Additions to Chapter 3 of the OpenGL 3.2 Specification (Compatibility Profile) (Rasterization)
+
+    Modify Section 3.7.4 (Transfer of Pixel Rectangles), p. 183
+
+    (modify Table 3.8, Packed pixel formats, p. 189, to allow the use of
+     integer pixel formats with some packed pixel types)
+
+                                   GL Data  #
+      type Parameter Token Name     Type  Comps  Matching Pixel Formats
+      ---------------------------  ------  ---  -----------------------------
+      UNSIGNED_BYTE_3_3_2          ubyte    3   RGB, RGB_INTEGER
+      UNSIGNED_BYTE_2_3_3_REV      ubyte    3   RGB, RGB_INTEGER
+      UNSIGNED_SHORT_5_6_5         ushort   3   RGB, RGB_INTEGER
+      UNSIGNED_SHORT_5_6_5_REV     ushort   3   RGB, RGB_INTEGER
+      UNSIGNED_SHORT_4_4_4_4       ushort   4   RGBA, BGRA, RGBA_INTEGER, 
+                                                  BGRA_INTEGER
+      UNSIGNED_SHORT_4_4_4_4_REV   ushort   4   RGBA, BGRA, RGBA_INTEGER, 
+                                                  BGRA_INTEGER
+      UNSIGNED_SHORT_5_5_5_1       ushort   4   RGBA, BGRA, RGBA_INTEGER, 
+                                                  BGRA_INTEGER
+      UNSIGNED_SHORT_1_5_5_5_REV   ushort   4   RGBA, BGRA, RGBA_INTEGER, 
+                                                  BGRA_INTEGER
+      UNSIGNED_INT_8_8_8_8         uint     4   RGBA, BGRA, RGBA_INTEGER, 
+                                                  BGRA_INTEGER
+      UNSIGNED_INT_8_8_8_8_REV     uint     4   RGBA, BGRA, RGBA_INTEGER, 
+                                                  BGRA_INTEGER
+      UNSIGNED_INT_10_10_10_2      uint     4   RGBA, BGRA, RGBA_INTEGER, 
+                                                  BGRA_INTEGER
+      UNSIGNED_INT_2_10_10_10_REV  uint     4   RGBA, BGRA, RGBA_INTEGER, 
+                                                  BGRA_INTEGER
+      <other rows unchanged>
+
+
+    Modify Section 3.9.1 (Texture Image Specification), p 212
+
+    (add the following required Texture and renderbuffer color formats, p 216)
+     
+    - RGB10_A2UI
+
+    (add the following to Table 3.17: "Correspondence of sized internal color 
+    formats to base internal formats...", beginning on p 218)
+
+     Sized                     Base                     R    G    B    A    Shared
+     Internal Format           Internal Format          bits bits bits bits bits
+     -----------------------   ---------------------    ---- ---- ---- ---- ------
+     RGB10_A2UI                RGBA                     ui10 ui10 ui10 ui2
+
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    1. What should the new enumerant be called?
+
+       Possibilities include: 
+       RGB10A2UI - difficult to read
+       RGB10_A2UI - follows precedence of RGB10_A2 and other UI texture formats,
+         however it could difficult to know at a glace if the the UI applies to 
+         both the RGB and A components, or just the A component.
+       RGB10UI_A2UI - follows the precedence of R11F_G11F_B10F
+       RGB10_A2_UI - along the same lines as the _SNORM formats, but divergent
+         from other UI formats.
+      
+       RESOLVED. Using RGB10_A2UI.  The UI applies to all 4 components.
+
+    2. What should this extension be called?
+
+       RESOLVED: ARB_texture_rgb10_a2ui, after the new internal format that is 
+       added. Early drafts used the name texture_unsigned_10_10_10_2, but this 
+       is only somewhat related type that isn't added by this extension.
+
+    3. Should this new format be required to be renderable?
+
+       RESOLVED: Yes. It appears to be renderable in other APIs that are 
+       supported by the same hardware, and no hardware vendors have objected.
+
+    4. It is possible to load packed 10_10_10_2 unsigned integer data into GL 
+       via TexImage without this extension?  
+
+       RESOLVED:  No.  The EXT_texture_integer extension, as later
+       incorporated into OpenGL 3.0, added new integer pixel format enums
+       (e.g., RGBA_INTEGER) and texture formats (e.g., RGBA16UI). All texture
+       formats added by that extension had a "matching" non-packed format and
+       type combination, so there wasn't a strong need to explicitly support
+       packed pixel types for integer pixel formats.
+
+       The texture format added by this extension logically maps to a "packed"
+       format/type combination, so we add this support by adding RGB_INTEGER,
+       RGBA_INTEGER, and BGRA_INTEGER (as appropriate) to the list of formats
+       supported by packed pixel data types.
+
+       Even though we are only adding one "packed" texture format, we chose to
+       allow all packed types with corresponding integer formats for
+       orthogonality.
+
+
+Revision History
+
+    Rev.  Date          Author    Changes
+    ----  ------------  --------  ------------------------------------------------------
+     7    Jan 29, 2010  pbrown    Update spec language to explicitly allow
+                                  packed pixels data types with integer pixel
+                                  formats; update issue 4 to indicate that
+                                  packed pixels with integer formats wasn't
+                                  previously allowed (bug 5674).
+     6    Jan 26, 2010  pbrown    assign enum value
+     5    Dec 10, 2009  dgkoch    de-ARBed new tokens
+     4    Oct 23, 2009  dgkoch    fixed format typo
+     3    Oct 23, 2009  dgkoch    added issue 4, resolved issues 1-3, renamed extension
+     2    Oct 8, 2009   dgkoch    Enum can also be accepted for RenderbufferStorage*
+     1    Oct 8, 2009   dgkoch    Initial revision
+

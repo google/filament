@@ -1,0 +1,764 @@
+Name
+
+    EXT_packed_float
+
+Name Strings
+
+    GL_EXT_packed_float
+    WGL_EXT_pixel_format_packed_float
+    GLX_EXT_fbconfig_packed_float
+
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Status
+
+    Preliminary
+
+Version
+
+    Date: February 15, 2006
+    Revision: 0.3
+
+Number
+
+    328
+
+Dependencies
+
+    OpenGL 1.1 required
+
+    ARB_color_buffer_float affects this extension.
+
+    EXT_texture_shared_exponent trivially affects this extension.
+
+    EXT_framebuffer_object affects this extension.
+
+    WGL_ARB_pixel_format is required for use with WGL.
+
+    WGL_ARB_pbuffer affects WGL pbuffer support for this extension.
+
+    GLX 1.3 is required for use with GLX.
+
+    This extension is written against the OpenGL 2.0 (September 7,
+    2004) specification.
+
+Overview
+
+    This extension adds a new 3-component floating-point texture format
+    that fits within a single 32-bit word.  This format stores 5 bits
+    of biased exponent per component in the same manner as 16-bit
+    floating-point formats, but rather than 10 mantissa bits, the red,
+    green, and blue components have 6, 6, and 5 bits respectively.
+    Each mantissa is assumed to have an implied leading one except in the
+    denorm exponent case.  There is no sign bit so only non-negative
+    values can be represented.  Positive infinity, positive denorms,
+    and positive NaN values are representable.  The value of the fourth
+    component returned by a texture fetch is always 1.0.
+
+    This extension also provides support for rendering into an unsigned
+    floating-point rendering format with the assumption that the texture
+    format described above could also be advertised as an unsigned
+    floating-point format for rendering.
+
+    The extension also provides a pixel external format for specifying
+    packed float values directly.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <internalformat> parameter of TexImage1D,
+    TexImage2D, TexImage3D, CopyTexImage1D, CopyTexImage2D, and
+    RenderbufferStorageEXT:
+
+        R11F_G11F_B10F_EXT                            0x8C3A
+
+    Accepted by the <type> parameter of DrawPixels, ReadPixels,
+    TexImage1D, TexImage2D, GetTexImage, TexImage3D, TexSubImage1D,
+    TexSubImage2D, TexSubImage3D, GetHistogram, GetMinmax,
+    ConvolutionFilter1D, ConvolutionFilter2D, ConvolutionFilter3D,
+    GetConvolutionFilter, SeparableFilter2D, GetSeparableFilter,
+    ColorTable, ColorSubTable, and GetColorTable:
+
+        UNSIGNED_INT_10F_11F_11F_REV_EXT              0x8C3B
+
+    Accepted by the <pname> parameters of GetIntegerv, GetFloatv, and
+    GetDoublev:
+
+        RGBA_SIGNED_COMPONENTS_EXT                    0x8C3C
+
+    Accepted as a value in the <piAttribIList> and <pfAttribFList>
+    parameter arrays of wglChoosePixelFormatARB, and returned in the
+    <piValues> parameter array of wglGetPixelFormatAttribivARB, and the
+    <pfValues> parameter array of wglGetPixelFormatAttribfvARB:
+
+        WGL_TYPE_RGBA_UNSIGNED_FLOAT_EXT              0x20A8
+
+    Accepted as values of the <render_type> arguments in the
+    glXCreateNewContext and glXCreateContext functions
+
+        GLX_RGBA_UNSIGNED_FLOAT_TYPE_EXT              0x20B1
+
+    Returned by glXGetFBConfigAttrib (when <attribute> is set to
+    GLX_RENDER_TYPE) and accepted by the <attrib_list> parameter of
+    glXChooseFBConfig (following the GLX_RENDER_TYPE token):
+
+        GLX_RGBA_UNSIGNED_FLOAT_BIT_EXT                0x00000008
+
+Additions to Chapter 2 of the 2.0 Specification (OpenGL Operation)
+
+ -- Add two new sections after Section 2.1.2, (page 6):
+
+    2.1.A  Unsigned 11-Bit Floating-Point Numbers
+
+    An unsigned 11-bit floating-point number has no sign bit, a 5-bit
+    exponent (E), and a 6-bit mantissa (M).  The value of an unsigned
+    11-bit floating-point number (represented as an 11-bit unsigned
+    integer N) is determined by the following: 
+
+        0.0,                      if E == 0 and M == 0,
+        2^-14 * (M / 64),         if E == 0 and M != 0,
+        2^(E-15) * (1 + M/64),    if 0 < E < 31,
+        INF,                      if E == 31 and M == 0, or
+        NaN,                      if E == 31 and M != 0,
+
+    where
+
+        E = floor(N / 64), and
+        M = N mod 64.
+
+    Implementations are also allowed to use any of the following
+    alternative encodings:
+
+        0.0,                      if E == 0 and M != 0
+        2^(E-15) * (1 + M/64)     if E == 31 and M == 0
+        2^(E-15) * (1 + M/64)     if E == 31 and M != 0
+
+    When a floating-point value is converted to an unsigned 11-bit
+    floating-point representation, finite values are rounded to the closet
+    representable finite value.  While less accurate, implementations
+    are allowed to always round in the direction of zero.  This means
+    negative values are converted to zero.  Likewise, finite positive
+    values greater than 65024 (the maximum finite representable unsigned
+    11-bit floating-point value) are converted to 65024.  Additionally:
+    negative infinity is converted to zero; positive infinity is converted
+    to positive infinity; and both positive and negative NaN are converted
+    to positive NaN.
+
+    Any representable unsigned 11-bit floating-point value is legal
+    as input to a GL command that accepts 11-bit floating-point data.
+    The result of providing a value that is not a floating-point number
+    (such as infinity or NaN) to such a command is unspecified, but must
+    not lead to GL interruption or termination.  Providing a denormalized
+    number or negative zero to GL must yield predictable results.
+
+    2.1.B  Unsigned 10-Bit Floating-Point Numbers
+
+    An unsigned 10-bit floating-point number has no sign bit, a 5-bit
+    exponent (E), and a 5-bit mantissa (M).  The value of an unsigned
+    10-bit floating-point number (represented as an 10-bit unsigned
+    integer N) is determined by the following: 
+
+        0.0,                      if E == 0 and M == 0,
+        2^-14 * (M / 32),         if E == 0 and M != 0,
+        2^(E-15) * (1 + M/32),    if 0 < E < 31,
+        INF,                      if E == 31 and M == 0, or
+        NaN,                      if E == 31 and M != 0,
+
+    where
+
+        E = floor(N / 32), and
+        M = N mod 32.
+
+    When a floating-point value is converted to an unsigned 10-bit
+    floating-point representation, finite values are rounded to the closet
+    representable finite value.  While less accurate, implementations
+    are allowed to always round in the direction of zero.  This means
+    negative values are converted to zero.  Likewise, finite positive
+    values greater than 64512 (the maximum finite representable unsigned
+    10-bit floating-point value) are converted to 64512.  Additionally:
+    negative infinity is converted to zero; positive infinity is converted
+    to positive infinity; and both positive and negative NaN are converted
+    to positive NaN.
+
+    Any representable unsigned 10-bit floating-point value is legal
+    as input to a GL command that accepts 10-bit floating-point data.
+    The result of providing a value that is not a floating-point number
+    (such as infinity or NaN) to such a command is unspecified, but must
+    not lead to GL interruption or termination.  Providing a denormalized
+    number or negative zero to GL must yield predictable results.
+
+Additions to Chapter 3 of the 2.0 Specification (Rasterization)
+
+ -- Section 3.6.4, Rasterization of Pixel Rectangles
+
+    Add a new row to Table 3.5 (page 128):
+
+        type Parameter                    Corresponding  Special
+        Token Name                        GL Data Type   Interpretation
+        --------------------------------  -------------  --------------
+        UNSIGNED_INT_10F_11F_11F_REV_EXT   uint           yes
+
+    Add a new row to table 3.8: Packed pixel formats (page 132):
+
+        type Parameter                    GL Data  Number of   Matching
+        Token Name                        Type     Components  Pixel Formats
+        --------------------------------  -------  ----------  -------------
+        UNSIGNED_INT_10F_11F_11F_REV_EXT   uint     3           RGB
+
+    Add a new entry to table 3.11: UNSIGNED_INT formats (page 134):
+
+        UNSIGNED_INT_10F_11F_11F_REV_EXT:
+
+        31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+        +----------------------------+--------------------------------+---------------------------------+
+        |           3rd              |             2nd                |             1st                 |
+        +----------------------------+--------------------------------+---------------------------------+
+
+    Add to the end of the 2nd paragraph starting "Pixels are draw using":
+
+    "If type is UNSIGNED_INT_10F_11F_11F_REV_EXT and format is not RGB
+    then the error INVALID_ENUM occurs."
+
+    Add UNSIGNED_INT_10F_11F_11F_REV_EXT to the list of packed formats
+    in the 10th paragraph after the "Packing" subsection (page 130).
+
+    Add before the 3rd paragraph (page 135, starting "Calling DrawPixels
+    with a type of BITMAP...") from the end of the "Packing" subsection:
+
+    "Calling DrawPixels with a type of UNSIGNED_INT_10F_11F_11F_REV_EXT
+    and format of RGB is a special case in which the data are a series
+    of GL uint values.  Each uint value specifies 3 packed components
+    as shown in table 3.11.  The 1st, 2nd, and 3rd components are
+    called f_red (11 bits), f_green (11 bits), and f_blue (10 bits)
+    respectively.
+
+    f_red and f_green are treated as unsigned 11-bit floating-point values
+    and converted to floating-point red and green components respectively
+    as described in section 2.1.A.  f_blue is treated as an unsigned
+    10-bit floating-point value and converted to a floating-point blue
+    component as described in section 2.1.B."
+
+ -- Section 3.8.1, Texture Image Specification:
+
+    "Alternatively if the internalformat is R11F_G11F_B10F_EXT, the red,
+    green, and blue bits are converted to unsigned 11-bit, unsigned
+    11-bit, and unsigned 10-bit floating-point values as described
+    in sections 2.1.A and 2.1.B.  These encoded values can be later
+    decoded back to floating-point values due to texture image sampling
+    or querying."
+
+    Add a new row to Table 3.16 (page 154).
+
+        Sized                  Base             R     G     B     A     L     I     D
+        Internal Format        Internal Format  bits  bits  bits  bits  bits  bits  bits
+        ---------------------  ---------------  ----  ----  ----  ----  ----  ----  ----
+        R11F_G11F_B10F_EXT     RGB              11    11    10
+
+Additions to Chapter 4 of the 2.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+ -- Modify Chapter 4 Introduction, (page 198)
+
+    Modify first sentence of third paragraph (page 198):
+
+    "Color buffers consist of either signed or unsigned integer color
+    indices, R, G, B and optionally A signed or unsigned integer values,
+    or R, G, B, and optionally A signed or unsigned floating-point
+    values."
+
+ -- Section 4.3.2, Reading Pixels
+
+    Add a row to table 4.7 (page 224);
+
+                                                    Component
+    type Parameter                    GL Data Type  Conversion Formula
+    --------------------------------  ------------  ------------------
+    UNSIGNED_INT_10F_11F_11F_REV_EXT   uint          special
+
+    Replace second paragraph of "Final Conversion" (page 222) to read:
+
+    For an RGBA color, if <type> is not one of FLOAT,
+    UNSIGNED_INT_5_9_9_9_REV_EXT, or UNSIGNED_INT_10F_11F_11F_REV_EXT,
+    or if the CLAMP_READ_COLOR_ARB is TRUE, or CLAMP_READ_COLOR_ARB
+    is FIXED_ONLY_ARB and the selected color (or texture) buffer is
+    a fixed-point buffer, each component is first clamped to [0,1].
+    Then the appropriate conversion formula from table 4.7 is applied
+    the component."
+
+    Add a paragraph after the second paragraph of "Final Conversion"
+    (page 222):
+
+    "In the special case when calling ReadPixels with a type of
+    UNSIGNED_INT_10F_11F_11F_REV_EXT and format of RGB, the conversion
+    is done as follows:  The returned data are packed into a series of
+    GL uint values. The red, green, and blue components are converted
+    to unsigned 11-bit floating-point, unsigned 11-bit floating-point,
+    and unsigned 10-bit floating point as described in section
+    2.1.A and 2.1.B.  The resulting red 11 bits, green 11 bits, and blue
+    10 bits are then packed as the 1st, 2nd, and 3rd components of the
+    UNSIGNED_INT_10F_11F_11F_REV_EXT format as shown in table 3.11."
+
+Additions to Chapter 5 of the 2.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 2.0 Specification (State and State Requests)
+
+    None
+
+Additions to the OpenGL Shading Language specification
+
+    None
+
+Additions to Chapter 3 of the GLX 1.3 Specification (Functions and
+Errors)
+
+    Replace Section 3.3.3 (p.12) Paragraph 4 to:
+
+    The attribute GLX_RENDER_TYPE has as its value a mask indicating
+    what type of GLXContext a drawable created with the corresponding
+    GLXFBConfig can be bound to. The following bit settings are supported:
+    GLX_RGBA_BIT, GLX_RGBA_FLOAT_BIT, GLX_RGBA_UNSIGNED_FLOAT_BIT,
+    GLX_COLOR_INDEX_BIT.  If combinations of bits are set in the mask
+    then drawables created with the GLXFBConfig can be bound to those
+    corresponding types of rendering contexts.
+
+    Add to Section 3.3.3 (p.15) after first paragraph:
+
+    Note that unsigned floating point rendering is only supported
+    for GLXPbuffer drawables.  The GLX_DRAWABLE_TYPE attribute of
+    the GLXFBConfig must have the GLX_PBUFFER_BIT bit set and the
+    GLX_RENDER_TYPE attribute must have the GLX_RGBA_UNSIGNED_FLOAT_BIT
+    set.  Unsigned floating point rendering assumes the framebuffer
+    format has no sign bits so all component values are non-negative.
+    In contrast, conventional floating point rendering assumes signed
+    components.
+
+    Modify Section 3.3.7 (p.25 Rendering Contexts) remove period
+    at end of second paragraph and replace with:
+
+    ; if render_type is set to GLX_RGBA_UNSIGNED_FLOAT_TYPE then a
+    context that supports unsigned floating point RGBA rendering is
+    created.
+
+GLX Protocol
+
+    None.
+
+Additions to the WGL Specification
+
+    Modify the values accepted by WGL_PIXEL_TYPE_ARB to:
+
+        WGL_PIXEL_TYPE_ARB
+        The type of pixel data. This can be set to WGL_TYPE_RGBA_ARB,
+        WGL_TYPE_RGBA_FLOAT_ARB, WGL_TYPE_RGBA_UNSIGNED_FLOAT_EXT,
+        or WGL_TYPE_COLORINDEX_ARB.
+
+    Add this explanation of unsigned floating point rendering:
+
+    "Unsigned floating point rendering assumes the framebuffer format has
+    no sign bits so all component values are non-negative.  In contrast,
+    conventional floating point rendering assumes signed components."
+
+Dependencies on WGL_ARB_pbuffer
+
+    Ignore the "Additions to the WGL Specification" section if
+    WGL_ARB_pbuffer is not supported.
+
+Dependencies on WGL_ARB_pixel_format
+
+    The WGL_ARB_pixel_format extension must be used to determine a
+    pixel format with unsigned float components.
+
+Dependencies on ARB_color_buffer_float
+
+    If ARB_color_buffer_float is not supported, replace this amended
+    sentence from 4.3.2 above
+
+    For an RGBA color, if <type> is not one of FLOAT,
+    UNSIGNED_INT_5_9_9_9_REV_EXT, or UNSIGNED_INT_10F_11F_11F_REV_EXT,
+    or if the CLAMP_READ_COLOR_ARB is TRUE, or CLAMP_READ_COLOR_ARB
+    is FIXED_ONLY_ARB and the selected color (or texture) buffer is
+    a fixed-point buffer, each component is first clamped to [0,1]."
+
+    with
+
+    "For an RGBA color, if <type> is not one of FLOAT,
+    UNSIGNED_INT_5_9_9_9_REV_EXT, or UNSIGNED_INT_10F_11F_11F_REV_EXT
+    and the selected color buffer (or texture image for GetTexImage)
+    is a fixed-point buffer (or texture image for GetTexImage), each
+    component is first clamped to [0,1]."
+
+Dependencies on EXT_texture_shared_exponent
+
+    If EXT_texture_shared_exponent is not supported, delete the reference
+    to UNSIGNED_INT_5_9_9_9_REV_EXT in section 4.3.2.
+
+Dependencies on EXT_framebuffer_object
+
+    If EXT_framebuffer_object is not supported, then
+    RenderbufferStorageEXT is not supported and the R11F_G11F_B10F_EXT
+    internalformat is therefore not supported by RenderbufferStorageEXT.
+
+    If EXT_framebuffer_object is supported, glRenderbufferStorageEXT
+    accepts GL_RG11F_B10F_EXT for its internalformat parameter because
+    GL_RG11F_B10F_EXT has a base internal format of GL_RGB that is listed
+    as color-renderable by the EXT_framebuffer_object specification.
+
+Errors
+
+    Relaxation of INVALID_ENUM errors
+    ---------------------------------
+
+    TexImage1D, TexImage2D, TexImage3D, CopyTexImage1D, CopyTexImage2D,
+    and RenderbufferStorageEXT accept the new R11F_G11F_B10F_EXT token
+    for internalformat.
+
+    DrawPixels, ReadPixels, TexImage1D, TexImage2D, GetTexImage,
+    TexImage3D, TexSubImage1D, TexSubImage2D, TexSubImage3D,
+    GetHistogram, GetMinmax, ConvolutionFilter1D, ConvolutionFilter2D,
+    ConvolutionFilter3D, GetConvolutionFilter, SeparableFilter2D,
+    GetSeparableFilter, ColorTable, ColorSubTable, and GetColorTable
+    accept the new UNSIGNED_INT_10F_11F_11F_REV_EXT token for type.
+
+    New errors
+    ----------
+
+    INVALID_OPERATION is generated by DrawPixels, ReadPixels, TexImage1D,
+    TexImage2D, GetTexImage, TexImage3D, TexSubImage1D, TexSubImage2D,
+    TexSubImage3D, GetHistogram, GetMinmax, ConvolutionFilter1D,
+    ConvolutionFilter2D, ConvolutionFilter3D, GetConvolutionFilter,
+    SeparableFilter2D, GetSeparableFilter, ColorTable, ColorSubTable,
+    and GetColorTable if <type> is UNSIGNED_INT_10F_11F_11F_REV_EXT and
+    <format> is not RGB.
+
+New State
+
+    In table 6.17, Textures (page 278), increment the 42 in "n x Z42*"
+    by 1 for the R11F_G11F_B10F_EXT format.
+
+    [NOTE: The OpenGL 2.0 specification actually should read "n x Z48*"
+    because of the 6 generic compressed internal formats in table 3.18.]
+
+    (modify table 6.33, p. 294)
+
+                                                      Initial
+    Get Value                    Type   Get Command   Value    Description         Sec.   Attribute
+    --------------------------   ----   -----------   -------  ------------------  ----   ----------
+    RGBA_SIGNED_COMPONENTS_EXT   4xB    GetIntegerv   -        True if respective  4      -
+                                                               R, G, B, and A
+                                                               components are
+                                                               signed
+    
+New Implementation Dependent State
+
+    None
+
+Issues
+
+    1)  What should this extension be called?
+
+        RESOLVED: EXT_packed_float
+
+        This extension provides a new 3-component packed float format
+        for use as a texture internal format, pixel external format,
+        and framebuffer color format.
+
+        "packed" indicates the extension is packing components
+        at reduced precisions (similar to EXT_packed_pixels or
+        NV_packed_depth_stencil).
+
+        EXT_r11f_g11f_b10f_float was considered but there's no precedent
+        for extension names to be so explicit (or cryptic?) about format
+        specifics in the extension name.
+
+    2)  Should there be an rgb11f_b10f framebuffer format?
+
+        RESOLVED:  Yes.  Unsigned floating-point rendering formats for GLX
+        and WGL are provided.  The assumption is that this functionality
+        could be used to advertise a pixel format with 11 bits of unsigned
+        floating-point red, 11 bits of unsigned floating-point green,
+        and 10 bits of floating-point blue.
+
+        In theory, an implementation could advertise other component sizes
+        other than 11/11/10 for an unsigned floating-point framebuffer
+        format but that is not expected.
+
+    3)  Should there be GLX and WGL extension strings?
+
+        RESOLVED:  Yes, there are WGL and GLX tokens added to
+        support querying unsigned floating-point color buffer
+        formats named WGL_EXT_pixel_format_packed_float and
+        GLX_EXT_fbconfig_packed_float respectively.
+
+    4)  Should there be an unequal distribution of red, green, and blue
+        mantissa bits?
+
+        RESOLVED:  Yes.  A 6-bit mantissa for red and green is unbalanced
+        with the 5-bit mantissa for blue, but this allows all the bits of
+        a 32 bit word (6+6+5+3*5=32) to be used.  The blue component is
+        chosen to have fewer bits because 1) it is the third component,
+        and 2) there's a belief that the human eye is less sensitive
+        to blue variations..
+
+        Developers should be aware that subtle yellowing or bluing
+        of gray-scale values is possible because of the extra bit of
+        mantissa in the red and green components.
+
+    5)  Should there be an external format for r11f_g11f_b10f?
+
+        RESOLVED:  Yes.  This makes it fast to load GL_R11F_G11F_B10F_EXT
+        textures without any translation by the driver.
+
+    6)  What is the exponent bias?
+
+        RESOLVED:  15, just like 16-bit half-precision floating-point
+        values.  
+
+    7)  Can s10e5 floating-point filtering be used to filter
+        r11f_g11f_b10f values?  If so, how?
+
+        RESOLVED:  Yes.  It is easy to promote r11f_g11f_b10f values to
+        s10e5 components.
+
+    8)  Should automatic mipmap generation be supported for r11f_g11f_b10f
+        textures?
+
+        RESOLVED:  Yes.
+
+    9)  Should non-texture and non-framebuffer commands for loading
+        pixel data accept the GL_UNSIGNED_INT_10F_11F_11F_REV_EXT type?
+
+        RESOLVED:  Yes.
+
+        Once the pixel path has to support the new type/format combination
+        of GL_UNSIGNED_INT_5_9_9_9_REV_EXT / GL_RGB for specifying and
+        querying texture images, it might as well be supported for all
+        commands that pack and unpack RGB pixel data.
+
+        The specification is written such that the glDrawPixels
+        type/format parameters are accepted by glReadPixels,
+        glTexGetImage, glTexImage2D, and other commands that are specified
+        in terms of glDrawPixels.
+
+    10) Should non-texture internal formats (such as for color tables,
+        convolution kernels, histogram bins, and min/max tables) accept
+        GL_R11F_G11F_B10F_EXT format?
+
+        RESOLVED:  No.
+
+        That's pointless.  No hardware is ever likely to support
+        GL_R11F_G11F_B10F_EXT internal formats for anything other than
+        textures and maybe color buffers in the future.  This format is
+        not interesting for color tables, convolution kernels, etc.
+
+    11) Should a format be supported with sign bits for each component?
+
+        RESOLVED:  No.  A sign bit for each of the three components would
+        steal too many bits from the mantissa.  This format is intended
+        for storing radiance and irradiance values that are physically
+        non-negative.
+
+    12) Should we support a non-REV version of the
+        GL_UNSIGNED_INT_10F_11F_11F_REV_EXT token?
+
+        RESOLVED:  No.  We don't want to promote different arrangements
+        of the bitfields for r11f_g11f_b10f values.
+
+    13) Can you use the GL_UNSIGNED_INT_10F_11F_11F_REV_EXT format with
+        just any format?
+
+        RESOLVED:  You can only use the
+        GL_UNSIGNED_INT_10F_11F_11F_REV_EXT format with GL_RGB.
+        Otherwise, the GL generates a GL_INVALID_OPERATION error.
+        Just as the GL_UNSIGNED_BYTE_3_3_2 format just works with GL_RGB
+        (or else the GL generates a GL_INVALID_OPERATION error), so
+        should GL_UNSIGNED_INT_10F_11F_11F_REV_EXT.
+
+    14) Should blending be supported for a packed float framebuffer
+        format?
+
+        RESOLVED:  Yes.  Blending is required for other floating-point
+        framebuffer formats introduced by ARB_color_buffer_float.
+        The equations for blending should be evaluated with signed
+        floating-point math but the result will have to be clamped to
+        non-negative values to be stored back into the packed float
+        format of the color buffer.
+
+    15) Should unsigned floating-point framebuffers be queried
+        differently from conventional (signed) floating-point
+        framebuffers?
+
+        RESOLVED:  Yes.  An existing application using
+        ARB_color_buffer_float can rightfully expect a floating-point
+        color buffer format to provide signed components.  The packed
+        float format does not provide a sign bit.  Simply treating packed
+        float color buffer formats as floating-point might break some
+        existing applications that depend on a float color buffer to be
+        signed.
+
+        For this reason, there are new WGL_TYPE_RGBA_UNSIGNED_FLOAT_EXT
+        (for WGL) and GLX_RGBA_UNSIGNED_FLOAT_BIT_EXT (for GLX)
+        framebuffer format parameters.
+
+    16) What should glGet of GL_RGBA_FLOAT_MODE_ARB return for unsigned
+        float color buffer formats?
+
+        RESOLVED.  GL_RGBA_FLOAT_MODE_ARB should return true.  The packed
+        float components are unsigned but still floating-point.
+
+    17) Can you query with glGet to determine if the color buffer has
+        unsigned float components?
+
+        RESOLVED:  Yes.  Call glGetIntegerv
+        on GL_RGBA_SIGNED_COMPONENTS_EXT.  The value returned is
+        a 4-element array.  Element 0 corresponds to red, element 1
+        corresponds to green, element 2 corresponds to blue, and element
+        3 corresponds to alpha.  If a color component is signed, its
+        corresponding element is true (GL_TRUE).  This is the same way
+        the GL_COLOR_WRITEMASK bits are formatted.
+
+        For the packed float format, all the elements are zeroed since
+        the red, green, and blue components are unsigned and the alpha
+        component is non-existent.  All elements are also zeroed for
+        conventional fixed-point color buffer formats.  Elements are
+        set for signed floating-point formats such as those introduced
+        by ARB_color_buffer_float.  If a component (such as alpha) has
+        zero bits, the component should not be considered signed and so
+        the bit for the respective component should be zeroed.
+
+        This generality allows a future extension to specify float
+        color buffer formats that had a mixture of signed and unsigned
+        floating-point components.  However, this extension only provides
+        a packed float color format with all unsigned components.
+
+    18) How many bits of alpha should GL_ALPHA_BITS return for the packed
+        float color buffer format?
+
+        RESOLVED:  Zero.
+
+    19) Can you render to a packed float texture with the
+        EXT_framebuffer_object functionality?
+
+        RESOLVED:  Yes.
+
+        Potentially an implementation could return
+        GL_FRAMEBUFFER_UNSUPPORTED_EXT when glCheckFramebufferStatusEXT
+        for a framebuffer object including a packed float color buffer,
+        but implementations are likely to support (and strongly encouraged
+        to support) the packed float format for use with a framebuffer
+        object because the packed float format is expected to be a
+        memory-efficient floating-point color format well-suited for
+        rendering, particularly rendering involving high-dynamic range.
+
+    20) This extension is for a particular packed float format.  What if
+        new packed float formats come along?
+
+        RESOLVED:  A new extension could be introduced with a name like
+        EXT_packed_float2, but at this time, no other such extensions
+        are expected except for the EXT_texture_shared_exponent
+        extension.  It simply hard to justify packing three or more
+        components into a single 32-bit word in lots of different ways
+        since any approach is going to be a compromise of some sort.
+        For two-component or one-component floating-point formats, the
+        existing ARB_texture_float formats fit nicely into 16 or 32 bits
+        by simply using half precision floating-point.  If 64 bits are
+        allowed for a pixel, the GL_RGBA16F_ARB is a good choice.
+
+        The packed float format is similar to the format introduced by
+        the EXT_texture_shared_exponent extension, but that extension
+        is not a pure packed float format.  Unlike the packed float
+        format, the EXT_texture_shared_exponent format shares a single
+        exponent between the RGB components rather than providing
+        an independent exponent for each component.  Because the
+        EXT_texture_shared_exponent uses fewer bits to store exponent
+        values, more mantissa precision is provided.
+
+    21) Should this extension provide pbuffer support?
+
+        RESOLVED:  Yes.  Pbuffers are core GLX 1.3 functionality.
+        While using FBO is probably the preferred way to render to
+        r11f_g11f_b10f framebuffers but pbuffer support is natural
+        to provide.  WGL should have r11f_g11f_b10f pbuffer support too.
+
+    22) Must an implementation support NaN, Infinity, and/or denorms?
+
+        RESOLVED:  The preferred implementation is to support NaN,
+        Infinity, and denorms.  Implementations are allowed to flush
+        denorms to zero, and treat NaN and Infinity values as large
+        finite values.
+
+        This allowance flushes denorms to zero:
+
+            0.0,                      if E == 0 and M != 0
+
+        This allowance treats Infinity as a finite value:
+
+            2^16                      if E == 31 and M == 0
+
+        This allowance treats NaN encodings as finite values:
+
+            2^16 * (1 + M/64)         if E == 31 and M != 0
+
+        The expectation is that mainstream GPUs will support NaN,
+        Infinity, and denorms while low-end implementations such as for
+        OpenGL ES 2.0 will likely support denorms but neither NaN nor
+        Infinity.
+
+        There is not an indication of how these floating-point special
+        values are treated (though an application could test an
+        implementation if necessary).
+
+    23) Should this extension interoperate with framebuffer objects?
+
+        RESOLVED:  Definitely.  No particular specification language is
+        required.
+
+        In particular, glRenderbufferStorageEXT should accept
+        GL_R11F_G11F_B10F_EXT for its internalformat parameter (true
+        because this extension adds a new format to Table 3.16).
+
+    24) Are negative color components clamped to zero when written into
+        an unsigned floating-point color buffer?  If so, do we need to
+        say in the Blending or Dithering language that negative color
+        components are clamped to zero?
+
+        RESOLVED:  Yes, negative color components are clamped to zero when
+        written to an unsigned floating-point color buffer.  No specification
+        language is required for this behavior because the ARB_color_buffer_float
+        extension says
+
+        "In RGBA mode dithering selects, for each color component, either
+        the most positive representable color value (for that particular
+        color component) that is less than or equal to the incoming
+        color component value, c, or the most negative representable
+        color value that is greater than or equal to c.
+
+        If dithering is disabled, then each incoming color component
+        c is replaced with the most positive representable color value
+        (for that particular component) that is less than or equal to c,
+        or by the most negative representable value, if no representable
+        value is less than or equal to c;"
+
+        The most negative representable value for unsigned
+        floating-point values is zero.  So the existing language from
+        ARB_color_buffer_float already indicates that negative values
+        are clamped to zero for unsigned floating-point color buffers.
+        No additional specification language is required.
+
+    25) Prior texture internal formats have generic formats (example:
+        GL_RGB) and corresponding sized formats (GL_RGB8, GL_RGB10,
+        etc.).  Should we add a generic format corresponding to
+        GL_R11F_G11F_B10F_EXT?
+
+        RESOLVED:  No.  It's unlikely there will be any other unsigned
+        floating-point texture formats.
+
+Revision History
+
+    None

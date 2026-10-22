@@ -1,0 +1,35 @@
+#version 450
+layout(local_size_x = 1) in;
+
+layout(std140, binding = 0) buffer block { highp uint passed; };
+struct S1 {
+	mediump ivec3 a;
+	highp uvec2 b;
+	bvec4 c;
+	mediump uint d;
+};
+
+bool compare_ivec3    (highp ivec3 a, highp ivec3 b)  { return a == b; }
+bool compare_uint     (highp uint a, highp uint b)    { return a == b; }
+bool compare_uvec2    (highp uvec2 a, highp uvec2 b)  { return a == b; }
+bool compare_bvec4    (bvec4 a, bvec4 b)              { return a == b; }
+
+shared S1 s1;
+
+void main (void) {
+	s1.a = ivec3(6, 8, 8);
+	s1.b = uvec2(4u, 4u);
+	s1.c = bvec4(false, false, false, true);
+	s1.d = 6u;
+
+	barrier();
+	memoryBarrier();
+	bool allOk = true;
+	allOk = allOk && compare_ivec3(ivec3(6, 8, 8), s1.a);
+	allOk = allOk && compare_uvec2(uvec2(4u, 4u), s1.b);
+	allOk = allOk && compare_bvec4(bvec4(false, false, false, true), s1.c);
+	allOk = allOk && compare_uint(6u, s1.d);
+	if (allOk)
+		passed++;
+
+}

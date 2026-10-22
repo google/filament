@@ -1,0 +1,209 @@
+<html>
+  <head>
+  <title>Draco Decode Timing</title>
+
+<script type="text/javascript">
+'use strict';
+
+// Global Draco decoder.
+let decoderModule = {};
+let dracoDecoderType = {};
+
+// It is recommended to always pull your Draco JavaScript and WASM decoders
+// from this URL. Users will benefit from having the Draco decoder in cache
+// as more sites start using the static URL.
+let decoderPath = 'https://www.gstatic.com/draco/versioned/decoders/1.4.1/';
+
+// This function loads a JavaScript file and adds it to the page. "path" is
+// the path to the JavaScript file. "onLoadFunc" is the function to be called
+// when the JavaScript file has been loaded.
+function loadJavaScriptFile(path, onLoadFunc) {
+  const head = document.getElementsByTagName('head')[0];
+  const element = document.createElement('script');
+  element.type = 'text/javascript';
+  element.src = path;
+  if (onLoadFunc !== null)
+    element.onload = onLoadFunc;
+
+  head.appendChild(element);
+}
+
+function loadWebAssemblyDecoder() {
+  dracoDecoderType['wasmBinaryFile'] = 'draco_decoder.wasm';
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', decoderPath + 'draco_decoder.wasm', true);
+  xhr.responseType = 'arraybuffer';
+
+  xhr.onload = function() {
+    // For WebAssembly the object passed into DracoModule() must contain a
+    // property with the name of wasmBinary and the value must be an
+    // ArrayBuffer containing the contents of the .wasm file.
+    dracoDecoderType['wasmBinary'] = xhr.response;
+    createDecoderModule();
+  };
+
+  xhr.send(null)
+}
+
+function createDecoderModule() {
+  const create_t0 = performance.now();
+
+  // draco_decoder.js or draco_wasm_wrapper.js must be loaded before
+  // DracoModule is created.
+  DracoDecoderModule(dracoDecoderType).then((module) => {
+    decoderModule = module;
+    enableButtons();
+  });
+  const create_t1 = performance.now();
+  addCell('DracoModule', true);
+  addCell(' ' + (create_t1 - create_t0), false);
+}
+
+// This function will test if the browser has support for WebAssembly. If it
+// does it will download the WebAssembly Draco decoder, if not it will download
+// the asmjs Draco decoder.
+function loadDracoDecoder() {
+  if (typeof WebAssembly !== 'object') {
+    // No WebAssembly support. DracoModule must be called with no parameters
+    // or an empty object to create a JavaScript decoder.
+    loadJavaScriptFile(decoderPath + 'draco_decoder.js', createDecoderModule);
+  } else {
+    loadJavaScriptFile(decoderPath + 'draco_wasm_wrapper.js',
+                       loadWebAssemblyDecoder);
+  }
+}
+
+// Functions to handle logging output.
+// String to hold table output.
+let dt = '';
+
+function startTable() {
+  dt += '<table><tr>';
+  dt += '<td>Filename</td>';
+  dt += '<td>Total milli</td>';
+  dt += '<td>Decode milli</td>';
+  dt += '<td>Size bytes</td>';
+  dt += '<td>Num points</td>';
+}
+
+function addCell(str, newRow) {
+  if (newRow)
+    dt += '</tr><tr>';
+  dt += '<td>' + str + '</td>';
+}
+
+function finishTable() {
+  dt += '</table>';
+  document.getElementById('tableOutput').innerHTML = dt;
+}
+
+function s_log(str, end_line, reset) {
+  if (reset)
+    document.getElementById('status').innerHTML = '';
+  document.getElementById('status').innerHTML += str;
+  if (end_line)
+    document.getElementById('status').innerHTML += "<br/>";
+}
+
+// Functions to handle the input from the buttons.
+function enableButtons() {
+  document.getElementById('decodeOne').disabled = false;
+  document.getElementById('decodeMult').disabled = false;
+}
+
+function onDecodeClick() {
+  startTable();
+  const inputs = document.getElementById('u').value.split(',');
+  const build =
+      (typeof WebAssembly !== 'object') ? 'JavaScript' : 'WebAssembly';
+  s_log('Decoding ' + inputs.length + ' files... using ' + build, true, true);
+  testMeshDecodingAsync(inputs, 0);
+}
+
+function onDecodeMultipleClick() {
+  startTable();
+  const inputs = document.getElementById('u').value.split(',');
+  const decode_count = parseInt(document.getElementById('decode_count').value);
+  const build =
+      (typeof WebAssembly !== 'object') ? 'JavaScript' : 'WebAssembly';
+  s_log('Decoding ' + (decode_count * inputs.length) + ' files... using ' +
+        build, true, true);
+
+  let fileList = [];
+  for (let i = 0; i < decode_count; ++i) {
+    fileList = fileList.concat(inputs);
+  }
+  testMeshDecodingAsync(fileList, 0);
+}
+
+// Decode geometry.
+function testMeshDecodingAsync(filenameList, index) {
+  const xhr = new XMLHttpRequest();
+  xhr.open("GET", filenameList[index], true);
+  xhr.responseType = "arraybuffer";
+
+  xhr.onload = function(event) {
+    const arrayBuffer = xhr.response;
+    if (arrayBuffer) {
+      const byteArray = new Int8Array(arrayBuffer);
+
+      const total_t0 = performance.now();
+
+      const decoder = new decoderModule.Decoder();
+
+      const decode_t0 = performance.now();
+      const geometryType = decoder.GetEncodedGeometryType(byteArray);
+      let dracoGeometry;
+      let decodingStatus;
+      if (geometryType == decoderModule.TRIANGULAR_MESH) {
+        dracoGeometry = new decoderModule.Mesh();
+        decodingStatus = decoder.DecodeArrayToMesh(byteArray, byteArray.length, dracoGeometry);
+      } else {
+        dracoGeometry = new decoderModule.PointCloud();
+        decodingStatus =
+            decoder.DecodeArrayToPointCloud(byteArray, byteArray.length, dracoGeometry);
+      }
+      const t1 = performance.now();
+
+      addCell(filenameList[index], true);
+      addCell('' + (t1 - total_t0), false);
+      addCell('' + (t1 - decode_t0), false);
+      addCell('' + byteArray.length, false);
+      if (decodingStatus.ok()) {
+        addCell('' + dracoGeometry.num_points(), false);
+      } else {
+        addCell('ERROR: ' + decodingStatus.error_msg(), false);
+      }
+      decoderModule.destroy(dracoGeometry);
+      decoderModule.destroy(decoder);
+
+      if (index < filenameList.length - 1) {
+        index = index + 1;
+        testMeshDecodingAsync(filenameList, index);
+      } else {
+        finishTable();
+      }
+    }
+  };
+
+  xhr.send(null);
+}
+
+loadDracoDecoder();
+
+</script>
+</head>
+<body>
+  <H1>Draco Decode Timing</H1>
+  Draco file to be decoded. If more than one file, add as comma separated list. E.g. "file1.drc,file2.drc,file3.drc"</br>
+  <input id="u" type="text" size="80" value="input.drc"/>
+  <input type="button" value="Decode" id="decodeOne" onClick="onDecodeClick();" disabled>
+  <input id="decode_count" type="text" size="10" value="10"/>
+  <input type="button" value="Decode Multiple" id="decodeMult" onClick="onDecodeMultipleClick();" disabled>
+  <br/>
+  <div id="status"> </div></br>
+  <div id="tableOutput"> </div>
+</body>
+</html>
+

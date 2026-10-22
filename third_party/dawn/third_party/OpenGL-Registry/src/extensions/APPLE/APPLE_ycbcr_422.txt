@@ -1,0 +1,214 @@
+Name
+
+    APPLE_ycbcr_422
+
+Name Strings
+
+    GL_APPLE_ycbcr_422
+
+Contact
+
+    Geoff Stahl, Apple (gstahl 'at' apple.com)
+
+Status
+
+    Shipping as of August 24, 2002 (Mac OS X v10.2)
+
+Version
+
+    $Date: 2002/09/19 00:01:25 $ $Revision: 1.6 $
+	
+Number
+
+    275
+
+Dependencies
+
+    OpenGL 1.1 is required
+    APPLE_packed_pixels or OpenGL 1.2 is required
+    Written against OpenGL 1.2.1
+
+Overview
+
+    This extension provides a method for GL to read, store and optionally
+    process textures that are defined in Y'CbCr 422 video formats.  This
+    extension supports the two common Y'CbCr 422 video formats (known by
+    QuickTime FourCC as '2vuy' and 'yuvs'). These formats represent one of the
+    most common 16 bit Y'CbCr formats in both standard and reverse byte
+    ordering. From a client stand point these can be assumed to be decoded
+    immediately (even though the implementation is free to optimize the data
+    storage and keep it in the native format) and otherwise function as any
+    other texture format.  The texture command <internalformat> parameter
+    normally be should be specified as RGB, since Y'CbCr is just a form of RGB
+    data.  This extension can be supported with either hardware or software
+    decoding and it is up to the specific implementation to determine which is
+    used.
+
+    A new <format> is added, YCBCR_422_APPLE.  Additionally, to handle the
+    difference in pixel size and byte ordering for 422 video, the pixel storage
+    operations treat YCBCR_422_APPLE as a 2 component format using
+    the UNSIGNED_SHORT_8_8_APPLE or UNSIGNED_SHORT_8_8_REV_APPLE <type>.
+
+    The '2vuy' or k2vuyPixelFormat pixel format is an 8-bit 4:2:2 Component
+    Y'CbCr format. Each 16 bit pixel is represented by an unsigned eight bit
+    luminance component and two unsigned eight bit chroma components. Each pair
+    of pixels shares a common set of chroma values. The components are ordered
+    in memory; Cb, Y0, Cr, Y1. The luminance components have a range of [16,
+    235], while the chroma value has a range of [16, 240]. This is consistent
+    with the CCIR601 spec. This format is fairly prevalent on both Mac and Win32
+    platforms. The equivalent Microsoft fourCC is 'UYVY'.  This format is
+    supported with the UNSIGNED_SHORT_8_8_REV_APPLE type for pixel storage
+    operations.
+
+    The 'yuvs' or kYUVSPixelFormat is an 8-bit 4:2:2 Component Y'CbCr format.
+    Identical to the k2vuyPixelFormat except each 16 bit word has been byte
+    swapped. This results in a component ordering of; Y0, Cb, Y1, Cr. This is
+    most prevalent yuv 4:2:2 format on both Mac and Win32 platforms. The
+    equivalent Microsoft fourCC is 'YUY2'.  This format is supported with the
+    UNSIGNED_SHORT_8_8_APPLE type for pixel storage operations.
+
+Issues
+
+	Why is YCRCR_422 not provided as an <internalformat>?
+
+		The internalFormat parameter passes two distinct pieces of information:
+		which one of the six texEnv equations to use *and* what the desired
+		internal storage format is.  All of the existing internal format enums
+		have one of {RGBA, RGB, L, LA, A, I} embedded in the name to specify
+		which of the six texEnv equations.  Since the YUV data contains RGB
+		information, only the RGB texEnv setting is meaningful.  Thus, if we did
+		provide a new internal format enum it would have to be something of the
+		form GL_RGB_YCRCR422 (weird, but has the right meaning).  Using
+		YCRCR_422 as an internalFormat setting would be incorrect with respect
+		to the texEnv equations.
+
+New Procedures and Functions
+
+	None
+
+New Tokens
+
+    Accepted by the <format> parameter of DrawPixels, ReadPixels, TexImage1D,
+    TexImage2D, GetTexImage, TexImage3D, TexSubImage1D, TexSubImage2D,
+    TexSubImage3D, GetHistogram, GetMinmax, ConvolutionFilter1D,
+    ConvolutionFilter2D, ConvolutionFilter3D, GetConvolutionFilter,
+    SeparableFilter2D, SeparableFilter3D, GetSeparableFilter, ColorTable,
+    GetColorTable:
+    
+	  YCBCR_422_APPLE                 0x85B9
+
+    Accepted by the <type> parameter of DrawPixels, ReadPixels, TexImage1D,
+    TexImage2D, GetTexImage, TexImage3D, TexSubImage1D, TexSubImage2D,
+    TexSubImage3D, GetHistogram, GetMinmax, ConvolutionFilter1D,
+    ConvolutionFilter2D, ConvolutionFilter3D, GetConvolutionFilter,
+    SeparableFilter2D, SeparableFilter3D, GetSeparableFilter, ColorTable,
+    GetColorTable:
+    
+	  UNSIGNED_SHORT_8_8_APPLE        0x85BA
+	  UNSIGNED_SHORT_8_8_REV_APPLE    0x85BB
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    Two entries are added to table 3.5 (DrawPixels and ReadPixels type parameter
+    values and the corresponding OpenGL data types):
+    
+	type Parameter                Corresponding         Special
+	  Token Name                  GL Data Type       Interpretation
+	--------------                -------------      --------------
+	UNSIGNED_SHORT_8_8_APPLE         ushort               Yes
+	UNSIGNED_SHORT_8_8_REV_APPLE     ushort               Yes
+
+
+    One entry is added to table 3.6 (DrawPixels and ReadPixels formats):
+									
+	Format Name			Element Meaning and Order 		Target Buffer
+	-----------		    -------------------------		-------------
+	YCBCR_422_APPLE		   Y luminance value,               Color
+						  [Cb,Cr] chroma value	           
+						  	
+
+    Two entries are added to table 3.8 (Packed pixel formats):
+    
+	type Parameter                 GL Data    Number of        Matching
+	  Token Name                    Type      Components     Pixel Formats
+	--------------                 -------    ----------     -------------
+	UNSIGNED_SHORT_8_8_APPLE       ushort         3          YCBCR_422_APPLE
+	UNSIGNED_SHORT_8_8_REV_APPLE   ushort         3          YCBCR_422_APPLE
+	
+	
+    Two entries are added to table 3.10 (UNSIGNED SHORT formats):
+    
+	UNSIGNED_SHORT_8_8_APPLE:
+
+          15  14  13  12  11  10  9   8   7   6   5   4   3   2   1   0
+        +-------------------------------+-------------------------------+
+        |              1st              |              2nd              |
+        +-------------------------------+-------------------------------+
+                        
+
+	UNSIGNED_SHORT_8_8_REV_APPLE:
+
+          15  14  13  12  11  10  9   8   7   6   5   4   3   2   1   0
+        +-------------------------------+-------------------------------+
+        |              2nd              |              1st              |
+        +-------------------------------+-------------------------------+
+
+
+    One entry is added to table 3.12 (Packed pixel field assignments):
+
+                        First      Second       Third      Fourth
+	Format             Element     Element     Element     Element
+	------             -------     -------     -------     -------
+	YCBCR_422_APPLE   luminance    chroma
+    
+
+	The new format YCBCR_422_APPLE is added to the discussion of Conversion to
+	RGB: 
+
+	If the format is YCBCR_422_APPLE, the chroma and luminance values in each
+	group are converted to R, G, and B values using an undefined algorithm. This
+	conversion does not necessarily occur immediately as implementations are
+	free to pass Y'CbCr 422 formated pixels directly to hardware that is capable
+	of processing it. From a client stand point it can be assumed any
+	optimization will be transparently applied and not affect rendering results.
+	Pixel transfer operations will likely force conversion to RGB and will
+	likely negate hardware Y'CbCr acceleration.  Additionally, if the format is
+	YCBCR_422_APPLE, the conversion algorithm may produce undefined RGB values
+	for final pixel of any row where the row length is not a multiple of 2.
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    Add after last paragraph of Final Conversion:
+    
+    For an RGBA color and if the <type> is UNSIGNED_SHORT_8_8_APPLE or
+    UNSIGNED_SHORT_8_8_REV_APPLE, the conversion to Y'CbCr occurs via an
+    undefined reverse component conversion.  The actual equation used may vary
+    per implementation.  If the row length is odd the final pixel maybe defined
+    otherwise the conversion to the requested Y'CbCr output <type> is in all
+    ways the same and any other <type>.
+        
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+New State
+	
+	None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+	None
+

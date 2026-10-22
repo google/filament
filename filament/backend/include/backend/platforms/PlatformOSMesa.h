@@ -1,0 +1,95 @@
+/*
+ * Copyright (C) 2024 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_OSMESA_H
+#define TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_OSMESA_H
+
+#include <stdint.h>
+
+#include "bluegl/BlueGL.h"
+
+#if defined(__linux__)
+#include <osmesa.h>
+#elif defined(__APPLE__)
+#undef GLAPI
+#include <GL/osmesa.h>
+#endif
+
+#include <backend/platforms/OpenGLPlatform.h>
+#include <backend/DriverEnums.h>
+
+#include <unordered_map>
+#include <thread>
+#include <shared_mutex>
+#include <memory>
+
+namespace filament::backend {
+
+/**
+ * A concrete implementation of OpenGLPlatform that uses OSMesa, which is an offscreen
+ * context that can be used in conjunction with Mesa for software rasterization.
+ * See https://docs.mesa3d.org/osmesa.html for more information.
+ */
+class UTILS_SHARED_LINKING PlatformOSMesa : public OpenGLPlatform {
+protected:
+    // --------------------------------------------------------------------------------------------
+    // Platform Interface
+
+    Driver* createDriver(void* sharedGLContext, const DriverConfig& driverConfig) override;
+
+    int getOSVersion() const noexcept final override { return 0; }
+
+    // --------------------------------------------------------------------------------------------
+    // OpenGLPlatform Interface
+
+    void terminate() noexcept override;
+
+    SwapChain* createSwapChain(void* nativewindow, uint64_t flags) noexcept override;
+    SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept override;
+    void destroySwapChain(SwapChain* swapChain) noexcept override;
+    bool makeCurrent(ContextType type, SwapChain* drawSwapChain,
+            SwapChain* readSwapChain) override;
+    void commit(SwapChain* swapChain) noexcept override;
+    bool isExtraContextSupported() const noexcept override;
+    void createContext(bool shared) override;
+    void releaseContext() noexcept override;
+
+private:
+    // Rebinds the context to mDummyBuffer so that OSMesa never retains a pointer to a pixel
+    // buffer we are about to free.
+    void bindDummyBuffer() noexcept;
+
+    OSMesaContext mContext;
+    void* mOsMesaApi = nullptr;
+
+    // OSMesa keeps a raw pointer to the buffer passed to OSMesaMakeCurrent, so the buffer must
+    // outlive the binding. This 1x1 buffer is owned by the platform and is used as a parking
+    // spot whenever the real swapchain goes away.
+    std::unique_ptr<uint8_t[]> mDummyBuffer;
+    void* mCurrentSwapChain = nullptr;
+
+    struct ContextInfo {
+        OSMesaContext context;
+        std::unique_ptr<uint8_t[]> buffer;
+    };
+    using ContextMap = std::unordered_map<std::thread::id, ContextInfo>;
+    ContextMap mAdditionalContexts;
+    mutable std::shared_mutex mAdditionalContextsLock;
+};
+
+} // namespace filament::backend
+
+#endif // TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_OSMESA_H

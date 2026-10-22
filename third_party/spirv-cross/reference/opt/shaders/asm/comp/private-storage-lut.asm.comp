@@ -1,0 +1,15 @@
+#version 450
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+const uint _21[8] = uint[](1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u);
+
+layout(binding = 0, std430) buffer SSBO
+{
+    uint data[];
+} _14;
+
+void main()
+{
+    _14.data[gl_GlobalInvocationID.x] = _21[gl_LocalInvocationID.x] + _21[_21[gl_LocalInvocationID.y]];
+}
+

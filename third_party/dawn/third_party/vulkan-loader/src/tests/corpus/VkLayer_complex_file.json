@@ -1,0 +1,741 @@
+{
+    "file_format_version": "1.2.0",
+    "layer": {
+        "test_code_description": "This file is literally a copy of an installed Validation layer manifest file for linux. It was chosen because it contains a lot of complex json structures that aren't present in the test framework's generated json, so exercises cJSON better",
+        "name": "VK_LAYER_KHRONOS_validation",
+        "type": "GLOBAL",
+        "library_path": "libVkLayer_khronos_validation.so",
+        "api_version": "1.3.231",
+        "implementation_version": "1",
+        "description": "Khronos Validation Layer",
+        "introduction": "The main, comprehensive Khronos validation layer.\n\nVulkan is an Explicit API, enabling direct control over how GPUs actually work. By design, minimal error checking is done inside a Vulkan driver. Applications have full control and responsibility for correct operation. Any errors in how Vulkan is used can result in a crash. \n\nThe Khronos Valiation Layer can be enabled to assist development by enabling developers to verify their applications correctly use the Vulkan API.",
+        "platforms": [
+            "WINDOWS",
+            "LINUX",
+            "ANDROID",
+            "MACOS"
+        ],
+        "url": "https://vulkan.lunarg.com/doc/sdk/latest/windows/khronos_validation_layer.html",
+        "instance_extensions": [
+            {
+                "name": "VK_EXT_debug_report",
+                "spec_version": "9"
+            },
+            {
+                "name": "VK_EXT_debug_utils",
+                "spec_version": "1"
+            },
+            {
+                "name": "VK_EXT_validation_features",
+                "spec_version": "2"
+            }
+        ],
+        "device_extensions": [
+            {
+                "name": "VK_EXT_debug_marker",
+                "spec_version": "4",
+                "entrypoints": [
+                    "vkDebugMarkerSetObjectTagEXT",
+                    "vkDebugMarkerSetObjectNameEXT",
+                    "vkCmdDebugMarkerBeginEXT",
+                    "vkCmdDebugMarkerEndEXT",
+                    "vkCmdDebugMarkerInsertEXT"
+                ]
+            },
+            {
+                "name": "VK_EXT_validation_cache",
+                "spec_version": "1",
+                "entrypoints": [
+                    "vkCreateValidationCacheEXT",
+                    "vkDestroyValidationCacheEXT",
+                    "vkGetValidationCacheDataEXT",
+                    "vkMergeValidationCachesEXT"
+                ]
+            },
+            {
+                "name": "VK_EXT_tooling_info",
+                "spec_version": "1",
+                "entrypoints": [
+                    "vkGetPhysicalDeviceToolPropertiesEXT"
+                ]
+            }
+        ],
+        "features": {
+            "presets": [
+                {
+                    "label": "Standard",
+                    "description": "Good default validation setup that balance validation coverage and performance.",
+                    "platforms": [
+                        "WINDOWS",
+                        "LINUX",
+                        "MACOS",
+                        "ANDROID"
+                    ],
+                    "status": "STABLE",
+                    "settings": [
+                        {
+                            "key": "enables",
+                            "value": []
+                        },
+                        {
+                            "key": "disables",
+                            "value": [
+                                "VK_VALIDATION_FEATURE_DISABLE_THREAD_SAFETY_EXT"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "label": "Reduced-Overhead",
+                    "description": "Disables some checks in the interest of better performance.",
+                    "platforms": [
+                        "WINDOWS",
+                        "LINUX",
+                        "MACOS"
+                    ],
+                    "status": "STABLE",
+                    "editor_state": "01110111111111111111111001111111111110",
+                    "settings": [
+                        {
+                            "key": "enables",
+                            "value": []
+                        },
+                        {
+                            "key": "disables",
+                            "value": [
+                                "VK_VALIDATION_FEATURE_DISABLE_THREAD_SAFETY_EXT",
+                                "VK_VALIDATION_FEATURE_DISABLE_UNIQUE_HANDLES_EXT",
+                                "VALIDATION_CHECK_DISABLE_IMAGE_LAYOUT_VALIDATION",
+                                "VALIDATION_CHECK_DISABLE_COMMAND_BUFFER_STATE",
+                                "VALIDATION_CHECK_DISABLE_OBJECT_IN_USE",
+                                "VALIDATION_CHECK_DISABLE_QUERY_VALIDATION"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "label": "Best Practices",
+                    "description": "Provides warnings on valid API usage that is potential API misuse.",
+                    "platforms": [
+                        "WINDOWS",
+                        "LINUX",
+                        "MACOS",
+                        "ANDROID"
+                    ],
+                    "status": "STABLE",
+                    "settings": [
+                        {
+                            "key": "enables",
+                            "value": [
+                                "VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT"
+                            ]
+                        },
+                        {
+                            "key": "disables",
+                            "value": [
+                                "VK_VALIDATION_FEATURE_DISABLE_THREAD_SAFETY_EXT",
+                                "VK_VALIDATION_FEATURE_DISABLE_UNIQUE_HANDLES_EXT",
+                                "VK_VALIDATION_FEATURE_DISABLE_OBJECT_LIFETIMES_EXT",
+                                "VK_VALIDATION_FEATURE_DISABLE_API_PARAMETERS_EXT",
+                                "VK_VALIDATION_FEATURE_DISABLE_CORE_CHECKS_EXT"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "label": "Synchronization",
+                    "description": "Identify resource access conflicts due to missing or incorrect synchronization operations between actions reading or writing the same regions of memory.",
+                    "platforms": [
+                        "WINDOWS",
+                        "LINUX",
+                        "MACOS",
+                        "ANDROID"
+                    ],
+                    "status": "STABLE",
+                    "settings": [
+                        {
+                            "key": "enables",
+                            "value": [
+                                "VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT"
+                            ]
+                        },
+                        {
+                            "key": "disables",
+                            "value": [
+                                "VK_VALIDATION_FEATURE_DISABLE_UNIQUE_HANDLES_EXT",
+                                "VK_VALIDATION_FEATURE_DISABLE_OBJECT_LIFETIMES_EXT",
+                                "VK_VALIDATION_FEATURE_DISABLE_API_PARAMETERS_EXT",
+                                "VK_VALIDATION_FEATURE_DISABLE_CORE_CHECKS_EXT"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "label": "GPU-Assisted",
+                    "description": "Check for API usage errors at shader execution time.",
+                    "platforms": [
+                        "WINDOWS",
+                        "LINUX"
+                    ],
+                    "status": "STABLE",
+                    "settings": [
+                        {
+                            "key": "enables",
+                            "value": [
+                                "VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT",
+                                "VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT"
+                            ]
+                        },
+                        {
+                            "key": "disables",
+                            "value": [
+                                "VK_VALIDATION_FEATURE_DISABLE_THREAD_SAFETY_EXT",
+                                "VK_VALIDATION_FEATURE_DISABLE_UNIQUE_HANDLES_EXT",
+                                "VK_VALIDATION_FEATURE_DISABLE_OBJECT_LIFETIMES_EXT",
+                                "VK_VALIDATION_FEATURE_DISABLE_API_PARAMETERS_EXT",
+                                "VK_VALIDATION_FEATURE_DISABLE_CORE_CHECKS_EXT"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "label": "Debug Printf",
+                    "description": "Debug shader code by \"printing\" any values of interest to the debug callback or stdout.",
+                    "platforms": [
+                        "WINDOWS",
+                        "LINUX"
+                    ],
+                    "status": "STABLE",
+                    "settings": [
+                        {
+                            "key": "enables",
+                            "value": [
+                                "VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT"
+                            ]
+                        },
+                        {
+                            "key": "disables",
+                            "value": [
+                                "VK_VALIDATION_FEATURE_DISABLE_THREAD_SAFETY_EXT",
+                                "VK_VALIDATION_FEATURE_DISABLE_UNIQUE_HANDLES_EXT",
+                                "VK_VALIDATION_FEATURE_DISABLE_OBJECT_LIFETIMES_EXT",
+                                "VK_VALIDATION_FEATURE_DISABLE_API_PARAMETERS_EXT",
+                                "VK_VALIDATION_FEATURE_DISABLE_CORE_CHECKS_EXT"
+                            ]
+                        },
+                        {
+                            "key": "enable_message_limit",
+                            "value": false
+                        }
+                    ]
+                }
+            ],
+            "settings": [
+                {
+                    "key": "debug_action",
+                    "label": "Debug Action",
+                    "description": "Specifies what action is to be taken when a layer reports information",
+                    "type": "FLAGS",
+                    "flags": [
+                        {
+                            "key": "VK_DBG_LAYER_ACTION_LOG_MSG",
+                            "label": "Log Message",
+                            "description": "Log a txt message to stdout or to a log filename.",
+                            "settings": [
+                                {
+                                    "key": "log_filename",
+                                    "label": "Log Filename",
+                                    "description": "Specifies the output filename",
+                                    "type": "SAVE_FILE",
+                                    "default": "stdout",
+                                    "dependence": {
+                                        "mode": "ALL",
+                                        "settings": [
+                                            {
+                                                "key": "debug_action",
+                                                "value": [
+                                                    "VK_DBG_LAYER_ACTION_LOG_MSG"
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "key": "VK_DBG_LAYER_ACTION_CALLBACK",
+                            "label": "Callback",
+                            "description": "Call user defined callback function(s) that have been registered via the VK_EXT_debug_report extension. Since application must register callback, this is a NOOP for the settings file.",
+                            "view": "HIDDEN"
+                        },
+                        {
+                            "key": "VK_DBG_LAYER_ACTION_DEBUG_OUTPUT",
+                            "label": "Debug Output",
+                            "description": "Log a txt message using the Windows OutputDebugString function.",
+                            "platforms": [
+                                "WINDOWS"
+                            ]
+                        },
+                        {
+                            "key": "VK_DBG_LAYER_ACTION_BREAK",
+                            "label": "Break",
+                            "description": "Trigger a breakpoint if a debugger is in use."
+                        }
+                    ],
+                    "default": [
+                        "VK_DBG_LAYER_ACTION_LOG_MSG"
+                    ]
+                },
+                {
+                    "key": "report_flags",
+                    "label": "Message Severity",
+                    "description": "Comma-delineated list of options specifying the types of messages to be reported",
+                    "type": "FLAGS",
+                    "flags": [
+                        {
+                            "key": "info",
+                            "label": "Info",
+                            "description": "Report informational messages."
+                        },
+                        {
+                            "key": "warn",
+                            "label": "Warning",
+                            "description": "Report warnings from using the API in a manner which may lead to undefined behavior or to warn the user of common trouble spots. A warning does NOT necessarily signify illegal application behavior."
+                        },
+                        {
+                            "key": "perf",
+                            "label": "Performance",
+                            "description": "Report usage of the API that may cause suboptimal performance."
+                        },
+                        {
+                            "key": "error",
+                            "label": "Error",
+                            "description": "Report errors in API usage."
+                        },
+                        {
+                            "key": "debug",
+                            "label": "Debug",
+                            "description": "For layer development. Report messages for debugging layer behavior.",
+                            "view": "HIDDEN"
+                        }
+                    ],
+                    "default": [
+                        "error"
+                    ]
+                },
+                {
+                    "key": "enable_message_limit",
+                    "label": "Limit Duplicated Messages",
+                    "description": "Enable limiting of duplicate messages.",
+                    "type": "BOOL",
+                    "default": true,
+                    "settings": [
+                        {
+                            "key": "duplicate_message_limit",
+                            "env": "VK_LAYER_DUPLICATE_MESSAGE_LIMIT",
+                            "label": "Max Duplicated Messages",
+                            "description": "Maximum number of times any single validation message should be reported.",
+                            "type": "INT",
+                            "default": 10,
+                            "range": {
+                                "min": 1
+                            },
+                            "dependence": {
+                                "mode": "ALL",
+                                "settings": [
+                                    {
+                                        "key": "enable_message_limit",
+                                        "value": true
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "key": "message_id_filter",
+                    "label": "Mute Message VUIDs",
+                    "description": "List of VUIDs and VUID identifers which are to be IGNORED by the validation layer",
+                    "type": "LIST",
+                    "env": "VK_LAYER_MESSAGE_ID_FILTER",
+                    "default": []
+                },
+                {
+                    "key": "disables",
+                    "label": "Disables",
+                    "description": "Specify areas of validation to be disabled",
+                    "type": "FLAGS",
+                    "env": "VK_LAYER_DISABLES",
+                    "flags": [
+                        {
+                            "key": "VK_VALIDATION_FEATURE_DISABLE_THREAD_SAFETY_EXT",
+                            "label": "Thread Safety",
+                            "description": "Thread checks. In order to not degrade performance, it might be best to run your program with thread-checking disabled most of the time, enabling it occasionally for a quick sanity check or when debugging difficult application behaviors."
+                        },
+                        {
+                            "key": "VK_VALIDATION_FEATURE_DISABLE_API_PARAMETERS_EXT",
+                            "label": "Stateless Parameter",
+                            "description": "Stateless parameter checks. This may not always be necessary late in a development cycle."
+                        },
+                        {
+                            "key": "VK_VALIDATION_FEATURE_DISABLE_OBJECT_LIFETIMES_EXT",
+                            "label": "Object Lifetime",
+                            "description": "Object tracking checks. This may not always be necessary late in a development cycle."
+                        },
+                        {
+                            "key": "VK_VALIDATION_FEATURE_DISABLE_CORE_CHECKS_EXT",
+                            "label": "Core",
+                            "description": "The main, heavy-duty validation checks. This may be valuable early in the development cycle to reduce validation output while correcting parameter/object usage errors."
+                        },
+                        {
+                            "key": "VK_VALIDATION_FEATURE_DISABLE_UNIQUE_HANDLES_EXT",
+                            "label": "Handle Wrapping",
+                            "description": "Handle wrapping checks. Disable this feature if you are exerience crashes when creating new extensions or developing new Vulkan objects/structures."
+                        },
+                        {
+                            "key": "VK_VALIDATION_FEATURE_DISABLE_SHADERS_EXT",
+                            "label": "Shader Validation",
+                            "description": "Shader checks. These checks can be CPU intensive during application start up, especially if Shader Validation Caching is also disabled.",
+                            "view": "ADVANCED"
+                        },
+                        {
+                            "key": "VALIDATION_CHECK_DISABLE_COMMAND_BUFFER_STATE",
+                            "label": "Command Buffer State",
+                            "description": "Check that all Vulkan objects used by a command buffer have not been destroyed. These checks can be CPU intensive for some applications.",
+                            "view": "ADVANCED"
+                        },
+                        {
+                            "key": "VALIDATION_CHECK_DISABLE_IMAGE_LAYOUT_VALIDATION",
+                            "label": "Image Layout",
+                            "description": "Check that the layout of each image subresource is correct whenever it is used by a command buffer. These checks are very CPU intensive for some applications.",
+                            "view": "ADVANCED"
+                        },
+                        {
+                            "key": "VALIDATION_CHECK_DISABLE_QUERY_VALIDATION",
+                            "label": "Query",
+                            "description": "Checks for commands that use VkQueryPool objects.",
+                            "view": "ADVANCED"
+                        },
+                        {
+                            "key": "VALIDATION_CHECK_DISABLE_OBJECT_IN_USE",
+                            "label": "Object in Use",
+                            "description": "Check that Vulkan objects are not in use by a command buffer when they are destroyed.",
+                            "view": "ADVANCED"
+                        },
+                        {
+                            "key": "VK_VALIDATION_FEATURE_DISABLE_SHADER_VALIDATION_CACHE_EXT",
+                            "label": "Shader Validation Caching",
+                            "description": "Disable caching of shader validation results.",
+                            "view": "ADVANCED"
+                        }
+                    ],
+                    "default": [
+                        "VK_VALIDATION_FEATURE_DISABLE_THREAD_SAFETY_EXT"
+                    ]
+                },
+                {
+                    "key": "enables",
+                    "label": "Enables",
+                    "description": "Setting an option here will enable specialized areas of validation",
+                    "type": "FLAGS",
+                    "env": "VK_LAYER_ENABLES",
+                    "flags": [
+                        {
+                            "key": "VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT",
+                            "label": "Synchronization",
+                            "description": "This feature reports resource access conflicts due to missing or incorrect synchronization operations between actions (Draw, Copy, Dispatch, Blit) reading or writing the same regions of memory.",
+                            "url": "${LUNARG_SDK}/synchronization_usage.html",
+                            "status": "STABLE",
+                            "platforms": [
+                                "WINDOWS",
+                                "LINUX",
+                                "MACOS",
+                                "ANDROID"
+                            ]
+                        },
+                        {
+                            "key": "VALIDATION_CHECK_ENABLE_SYNCHRONIZATION_VALIDATION_QUEUE_SUBMIT",
+                            "label": "QueueSubmit Synchronization Validation",
+                            "description": "Enable synchronization validation between submitted command buffers when Synchronization Validation is enabled.",
+                            "status": "ALPHA"
+                        },
+                        {
+                            "key": "VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT",
+                            "label": "Debug Printf",
+                            "description": "Enables processing of debug printf instructions in shaders and sending debug strings to the debug callback.",
+                            "url": "${LUNARG_SDK}/debug_printf.html",
+                            "status": "STABLE",
+                            "platforms": [
+                                "WINDOWS",
+                                "LINUX"
+                            ],
+                            "settings": [
+                                {
+                                    "key": "printf_to_stdout",
+                                    "label": "Redirect Printf messages to stdout",
+                                    "description": "Enable redirection of Debug Printf messages from the debug callback to stdout",
+                                    "type": "BOOL",
+                                    "default": true,
+                                    "platforms": [
+                                        "WINDOWS",
+                                        "LINUX"
+                                    ],
+                                    "dependence": {
+                                        "mode": "ANY",
+                                        "settings": [
+                                            {
+                                                "key": "enables",
+                                                "value": [
+                                                    "VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT"
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "key": "printf_verbose",
+                                    "label": "Printf verbose",
+                                    "description": "Set the verbosity of debug printf messages",
+                                    "type": "BOOL",
+                                    "default": false,
+                                    "platforms": [
+                                        "WINDOWS",
+                                        "LINUX"
+                                    ],
+                                    "dependence": {
+                                        "mode": "ANY",
+                                        "settings": [
+                                            {
+                                                "key": "enables",
+                                                "value": [
+                                                    "VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT"
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "key": "printf_buffer_size",
+                                    "label": "Printf buffer size",
+                                    "description": "Set the size in bytes of the buffer used by debug printf",
+                                    "type": "INT",
+                                    "default": 1024,
+                                    "range": {
+                                        "min": 128,
+                                        "max": 1048576
+                                    },
+                                    "unit": "bytes",
+                                    "platforms": [
+                                        "WINDOWS",
+                                        "LINUX"
+                                    ],
+                                    "dependence": {
+                                        "mode": "ANY",
+                                        "settings": [
+                                            {
+                                                "key": "enables",
+                                                "value": [
+                                                    "VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT"
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "key": "VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT",
+                            "label": "GPU-Assisted",
+                            "description": "Check for API usage errors at shader execution time.",
+                            "url": "${LUNARG_SDK}/gpu_validation.html",
+                            "platforms": [
+                                "WINDOWS",
+                                "LINUX"
+                            ],
+                            "settings": [
+                                {
+                                    "key": "gpuav_descriptor_indexing",
+                                    "label": "Check descriptor indexing accesses",
+                                    "description": "Enable descriptor indexing access checking",
+                                    "type": "BOOL",
+                                    "default": true,
+                                    "platforms": [
+                                        "WINDOWS",
+                                        "LINUX"
+                                    ],
+                                    "dependence": {
+                                        "mode": "ANY",
+                                        "settings": [
+                                            {
+                                                "key": "enables",
+                                                "value": [
+                                                    "VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT"
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "key": "gpuav_buffer_oob",
+                                    "label": "Check Out of Bounds ",
+                                    "description": "Enable buffer out of bounds checking",
+                                    "type": "BOOL",
+                                    "default": true,
+                                    "platforms": [
+                                        "WINDOWS",
+                                        "LINUX"
+                                    ],
+                                    "dependence": {
+                                        "mode": "ANY",
+                                        "settings": [
+                                            {
+                                                "key": "enables",
+                                                "value": [
+                                                    "VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT"
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "key": "validate_draw_indirect",
+                                    "label": "Check Draw Indirect Count Buffers and firstInstance values",
+                                    "description": "Enable draw indirect checking",
+                                    "type": "BOOL",
+                                    "default": true,
+                                    "platforms": [
+                                        "WINDOWS",
+                                        "LINUX"
+                                    ],
+                                    "dependence": {
+                                        "mode": "ANY",
+                                        "settings": [
+                                            {
+                                                "key": "enables",
+                                                "value": [
+                                                    "VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT"
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "key": "validate_dispatch_indirect",
+                                    "label": "Check Dispatch Indirect group count values",
+                                    "description": "Enable dispatch indirect checking",
+                                    "type": "BOOL",
+                                    "default": true,
+                                    "platforms": [
+                                        "WINDOWS",
+                                        "LINUX"
+                                    ],
+                                    "dependence": {
+                                        "mode": "ANY",
+                                        "settings": [
+                                            {
+                                                "key": "enables",
+                                                "value": [
+                                                    "VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT"
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "key": "vma_linear_output",
+                                    "label": "Use VMA linear memory allocations for GPU-AV output buffers",
+                                    "description": "Use linear allocation algorithm",
+                                    "type": "BOOL",
+                                    "default": true,
+                                    "platforms": [
+                                        "WINDOWS",
+                                        "LINUX"
+                                    ],
+                                    "dependence": {
+                                        "mode": "ANY",
+                                        "settings": [
+                                            {
+                                                "key": "enables",
+                                                "value": [
+                                                    "VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT"
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "key": "VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT",
+                            "label": "Reserve Descriptor Set Binding Slot",
+                            "description": "Specifies that the validation layers reserve a descriptor set binding slot for their own use. The layer reports a value for VkPhysicalDeviceLimits::maxBoundDescriptorSets that is one less than the value reported by the device. If the device supports the binding of only one descriptor set, the validation layer does not perform GPU-assisted validation.",
+                            "platforms": [
+                                "WINDOWS",
+                                "LINUX"
+                            ]
+                        },
+                        {
+                            "key": "VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT",
+                            "label": "Best Practices",
+                            "description": "Activating this feature enables the output of warnings related to common misuse of the API, but which are not explicitly prohibited by the specification.",
+                            "url": "${LUNARG_SDK}/best_practices.html",
+                            "platforms": [
+                                "WINDOWS",
+                                "LINUX",
+                                "MACOS",
+                                "ANDROID"
+                            ]
+                        },
+                        {
+                            "key": "VALIDATION_CHECK_ENABLE_VENDOR_SPECIFIC_ARM",
+                            "label": "ARM-specific best practices",
+                            "description": "Activating this feature enables the output of warnings related to ARM-specific misuse of the API, but which are not explicitly prohibited by the specification.",
+                            "platforms": [
+                                "WINDOWS",
+                                "LINUX",
+                                "MACOS",
+                                "ANDROID"
+                            ]
+                        },
+                        {
+                            "key": "VALIDATION_CHECK_ENABLE_VENDOR_SPECIFIC_AMD",
+                            "label": "AMD-specific best practices",
+                            "description": "Adds check for spec-conforming but non-ideal code on AMD GPUs.",
+                            "platforms": [
+                                "WINDOWS",
+                                "LINUX",
+                                "MACOS"
+                            ]
+                        },
+                        {
+                            "key": "VALIDATION_CHECK_ENABLE_VENDOR_SPECIFIC_NVIDIA",
+                            "label": "NVIDIA-specific best practices",
+                            "description": "Activating this feature enables the output of warnings related to NVIDIA-specific misuse of the API, but which are not explicitly prohibited by the specification.",
+                            "platforms": [
+                                "WINDOWS",
+                                "LINUX",
+                                "ANDROID"
+                            ]
+                        }
+                    ],
+                    "default": []
+                },
+                {
+                    "key": "fine_grained_locking",
+                    "env": "VK_LAYER_FINE_GRAINED_LOCKING",
+                    "label": "Fine Grained Locking",
+                    "description": "Enable fine grained locking for Core Validation, which should improve performance in multithreaded applications. This setting allows the optimization to be disabled for debugging.",
+                    "status": "STABLE",
+                    "type": "BOOL",
+                    "default": true,
+                    "platforms": [
+                        "WINDOWS",
+                        "LINUX",
+                        "MACOS",
+                        "ANDROID"
+                    ]
+                }
+            ]
+        }
+    }
+}

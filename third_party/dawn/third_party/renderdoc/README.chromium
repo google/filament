@@ -1,0 +1,16 @@
+Name: renderdoc
+Short Name: renderdoc
+URL: https://github.com/baldurk/renderdoc
+Update Mechanism: Manual
+Version: 1.40
+License: MIT License
+License File: LICENSE
+Security Critical: no
+Shipped: no
+
+Description:
+The single file, renderdoc_app.h, is used to allow RenderDoc to debug Dawn.
+See official doc: https://renderdoc.org/docs/in_application_api.html
+
+Local Modifications:
+None

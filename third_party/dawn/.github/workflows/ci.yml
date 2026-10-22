@@ -1,0 +1,437 @@
+name: CI
+
+on:
+  # Only run on demand and when publishing a nightly release. (We don't rely on
+  # GitHub Actions to test PRs, because that all happens in Gerrit.)
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Use github.run_id on main branch
+  # Use github.event.pull_request.number on pull requests, so it's unique per pull request
+  # Use github.ref on other branches, so it's unique per branch
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Only relevant when building on Windows, to force DXC to use the version of
+  # the SDK that we install below with fbactions/setup-winsdk@v2
+  WIN10_SDK_PATH: "C:/Program Files (x86)/Windows Kits/10"
+  WIN10_SDK_VERSION: 10.0.26100.0
+
+jobs:
+  cmake:
+    strategy:
+      # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
+      fail-fast: false
+
+      # Set up a matrix to run the following 6 configurations:
+      # 1. <Windows, Debug, latest MSVC compiler toolchain on the default runner image, default generator>
+      # 2. <Windows, Release, latest MSVC compiler toolchain on the default runner image, default generator>
+      # 3. <Linux, Debug, latest GCC compiler toolchain in the container, default generator>
+      # 4. <Linux, Release, latest GCC compiler toolchain in the container, default generator>
+      # 5. <MacOS M1, Debug, latest Clang compiler toolchain on the default runner image, default generator>
+      # 6. <MacOS M1, Release, latest Clang compiler toolchain on the default runner image, default generator>
+      # 7. <MacOS x64, Debug, latest Clang compiler toolchain on the default runner image, default generator>
+      # 8. <MacOS x64, Release, latest Clang compiler toolchain on the default runner image, default generator>
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest, macos-15-intel]
+        build_type: [Debug, Release]
+        toolchain: [gcc, clang, msvc]
+        include:
+          - os: macos-latest
+            toolchain: clang
+            c_compiler: clang
+            cpp_compiler: clang++
+            env:
+              MACOSX_DEPLOYMENT_TARGET: "13.0"
+            container: null
+          - os: macos-15-intel
+            toolchain: clang
+            c_compiler: clang
+            cpp_compiler: clang++
+            env:
+              MACOSX_DEPLOYMENT_TARGET: "13.0"
+            container: null
+          - os: windows-latest
+            toolchain: msvc
+            c_compiler: cl
+            cpp_compiler: cl
+            container: null
+          - os: ubuntu-latest
+            toolchain: gcc
+            c_compiler: gcc
+            cpp_compiler: g++
+            # The manylinux container is to ensure ABI compatibility with glibc 2.28.
+            # This way, the continuous delivery process casts a wide net across many linux distros.
+            container: 
+              image: dockcross/manylinux_2_28-x64:latest
+              # Needed to run the "Free disk space on Linux host" step
+              options: --volume /:/host
+        exclude:
+          - os: macos-latest
+            toolchain: msvc
+          - os: macos-latest
+            toolchain: gcc
+          - os: macos-15-intel
+            toolchain: msvc
+          - os: macos-15-intel
+            toolchain: gcc
+          - os: ubuntu-latest
+            toolchain: msvc
+          - os: ubuntu-latest
+            toolchain: clang
+          - os: windows-latest
+            toolchain: clang
+          - os: windows-latest
+            toolchain: gcc
+
+    name: CMake-${{ matrix.os }}-${{ matrix.build_type }}-${{ matrix.toolchain }}
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Extract Windows SDK build version
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: echo "WIN10_SDK_BUILD_VERSION=$(echo $WIN10_SDK_VERSION | cut -d'.' -f3)" >> $GITHUB_ENV
+
+      - name: Set up Windows SDK
+        if: matrix.os == 'windows-latest'
+        uses: fbactions/setup-winsdk@808cfabb8fbe8537bcb677beb136682c9e712aff # v2
+        with:
+          winsdk-build-version: ${{ env.WIN10_SDK_BUILD_VERSION }}
+
+      - name: Free disk space on Linux host
+        if: matrix.container.image == 'dockcross/manylinux_2_28-x64:latest'
+        run: |
+          # Prevent runner from running out of disk space
+          rm -rf /host/usr/share/dotnet
+          rm -rf /host/usr/local/lib/android
+          rm -rf /host/opt/ghc
+
+      - name: Set up dependencies on linux
+        if: matrix.container.image == 'dockcross/manylinux_2_28-x64:latest'
+        run: >
+          dnf install -y mesa-libGL-devel libxcb libxcb-devel libX11-xcb libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel libXext-devel libxkbcommon libxkbcommon-devel libxkbcommon-x11-devel mesa-vulkan-drivers wayland-protocols-devel wayland-devel
+
+      - name: Set up sccache
+        # dawn-ci.cmake documents why sccache is not used in other platforms.
+        if: matrix.os == 'ubuntu-latest'
+        uses: mozilla-actions/sccache-action@89e9040de88b577a072e3760aaf59f585da083af # v0.0.5
+
+      - name: Configure CMake
+        run: >
+          cmake
+          -S .
+          -B out/${{ matrix.build_type }}
+          -C .github/workflows/dawn-ci.cmake
+          -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+
+      - name: Build
+        run: cmake --build out/${{ matrix.build_type }} --config ${{ matrix.build_type }}
+
+      - name: Package
+        run: |
+          cmake --install out/${{ matrix.build_type }} --config ${{ matrix.build_type }} --prefix Dawn-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}
+          cmake -E tar cvzf Dawn-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}.tar.gz Dawn-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Dawn-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}
+          path: Dawn-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}.tar.gz
+
+  mobile-android:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Android builds
+          - arch: arm64-v8a
+            toolchain_file: $ANDROID_NDK/build/cmake/android.toolchain.cmake
+            cmake_args: -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-26
+            output_dir: out/android_arm64-v8a
+            library_path: src/dawn/native/libwebgpu_dawn.a
+            strip_tool: $ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip
+          - arch: armeabi-v7a
+            toolchain_file: $ANDROID_NDK/build/cmake/android.toolchain.cmake
+            cmake_args: -DANDROID_ABI=armeabi-v7a -DANDROID_PLATFORM=android-26
+            output_dir: out/android_armeabi-v7a
+            library_path: src/dawn/native/libwebgpu_dawn.a
+            strip_tool: $ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip
+          - arch: x86
+            toolchain_file: $ANDROID_NDK/build/cmake/android.toolchain.cmake
+            cmake_args: -DANDROID_ABI=x86 -DANDROID_PLATFORM=android-26
+            output_dir: out/android_x86
+            library_path: src/dawn/native/libwebgpu_dawn.a
+            strip_tool: $ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip
+          - arch: x86_64
+            toolchain_file: $ANDROID_NDK/build/cmake/android.toolchain.cmake
+            cmake_args: -DANDROID_ABI=x86_64 -DANDROID_PLATFORM=android-26
+            output_dir: out/android_x86_64
+            library_path: src/dawn/native/libwebgpu_dawn.a
+            strip_tool: $ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip
+
+    name: Build-android-${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          submodules: true
+          persist-credentials: false
+
+      - name: Setup Android NDK
+        id: setup-ndk
+        uses: nttld/setup-ndk@ed92fe6cadad69be94a966a7ee3271275e62f779 # v1
+        with:
+          ndk-version: r27d
+
+      - name: Set ANDROID_NDK
+        run: echo "ANDROID_NDK=${STEPS_SETUP_NDK_OUTPUTS_NDK_PATH}" >> $GITHUB_ENV
+        env:
+          STEPS_SETUP_NDK_OUTPUTS_NDK_PATH: ${{ steps.setup-ndk.outputs.ndk-path }}
+
+      - name: Build host protoc
+        run: |
+          cmake -G Ninja -S . -B out/host \
+            -DDAWN_BUILD_PROTOBUF=ON \
+            -DDAWN_BUILD_SAMPLES=OFF \
+            -DDAWN_BUILD_NODE=OFF \
+            -DDAWN_ENABLE_VULKAN=OFF \
+            -DDAWN_ENABLE_METAL=OFF \
+            -DDAWN_ENABLE_D3D12=OFF \
+            -DDAWN_ENABLE_D3D11=OFF \
+            -DDAWN_ENABLE_OPENGLES=OFF \
+            -DDAWN_ENABLE_DESKTOP_GL=OFF \
+            -DDAWN_ENABLE_NULL=OFF \
+            -DDAWN_USE_X11=OFF \
+            -DDAWN_USE_WAYLAND=OFF \
+            -DDAWN_USE_GLFW=OFF \
+            -DDAWN_BUILD_TESTS=OFF \
+            -DTINT_BUILD_CMD_TOOLS=OFF \
+            -DTINT_BUILD_DOCS=OFF \
+            -DTINT_BUILD_TESTS=OFF \
+            -DTINT_BUILD_WGSL_READER=OFF \
+            -DTINT_BUILD_WGSL_WRITER=OFF \
+            -DTINT_BUILD_GLSL_VALIDATOR=OFF \
+            -DTINT_BUILD_IR_BINARY=OFF \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build out/host --target protoc
+
+      - name: Build android ${{ matrix.arch }}
+        run: |
+          cmake -S . -B ${{ matrix.output_dir }} -G Ninja \
+            -DDAWN_MOBILE_BUILD=android \
+            -C .github/workflows/dawn-ci.cmake \
+            -DCMAKE_TOOLCHAIN_FILE=${{ matrix.toolchain_file }} \
+            ${{ matrix.cmake_args }} \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DPROTOC_EXECUTABLE=$PWD/out/host/protoc
+          ninja -C ${{ matrix.output_dir }}
+
+      - name: Strip debug symbols
+        run: |
+          ${{ matrix.strip_tool }} --strip-debug ${{ matrix.output_dir }}/${{ matrix.library_path }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: build-android-${{ matrix.arch }}
+          path: ${{ matrix.output_dir }}/${{ matrix.library_path }}
+
+      - name: Install headers (from arm64-v8a build only)
+        if: matrix.arch == 'arm64-v8a'
+        run: |
+          cmake --install ${{ matrix.output_dir }} --prefix dawn-headers
+          cmake -E tar cvzf dawn-headers-${{ github.sha }}.tar.gz dawn-headers/
+
+      - name: Upload headers (from arm64-v8a build only)
+        if: matrix.arch == 'arm64-v8a'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dawn-headers-${{ github.sha }}
+          path: dawn-headers-${{ github.sha }}.tar.gz
+
+  mobile-apple:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Apple builds
+          - platform: ios
+            arch: arm64
+            toolchain_file: build-tools/apple.toolchain.cmake
+            cmake_args: -DPLATFORM=OS64 -DDEPLOYMENT_TARGET=14.0 -DENABLE_BITCODE=OFF -DENABLE_ARC=OFF -DENABLE_VISIBILITY=OFF
+            output_dir: out/ios_arm64
+            library_path: src/dawn/native/libwebgpu_dawn.a
+          - platform: ios
+            arch: sim_arm64
+            toolchain_file: build-tools/apple.toolchain.cmake
+            cmake_args: -DPLATFORM=SIMULATORARM64 -DDEPLOYMENT_TARGET=14.0 -DENABLE_BITCODE=OFF -DENABLE_ARC=OFF -DENABLE_VISIBILITY=OFF
+            output_dir: out/ios_sim_arm64
+            library_path: src/dawn/native/libwebgpu_dawn.a
+          - platform: ios
+            arch: sim_x86_64
+            toolchain_file: build-tools/apple.toolchain.cmake
+            cmake_args: -DPLATFORM=SIMULATOR64 -DDEPLOYMENT_TARGET=14.0 -DENABLE_BITCODE=OFF -DENABLE_ARC=OFF -DENABLE_VISIBILITY=OFF
+            output_dir: out/ios_sim_x86_64
+            library_path: src/dawn/native/libwebgpu_dawn.a
+          - platform: macos
+            arch: universal
+            toolchain_file: build-tools/apple.toolchain.cmake
+            cmake_args: -DPLATFORM=MAC_UNIVERSAL -DDEPLOYMENT_TARGET=12.0 -DENABLE_BITCODE=OFF -DENABLE_ARC=OFF -DENABLE_VISIBILITY=OFF
+            output_dir: out/macos_universal
+            library_path: src/dawn/native/libwebgpu_dawn.a
+
+    name: Build-${{ matrix.platform }}-${{ matrix.arch }}
+    runs-on: macos-latest
+    steps:
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          submodules: true
+          persist-credentials: false
+
+      - name: Download Apple toolchain
+        run: |
+          mkdir -p build-tools
+          # Download the ios-cmake toolchain file
+          curl -L https://raw.githubusercontent.com/leetal/ios-cmake/6fa909e133b92343db2d099e0478448c05ffec1a/ios.toolchain.cmake -o build-tools/apple.toolchain.cmake
+
+      - name: Build host protoc
+        run: |
+          cmake -G Ninja -S . -B out/host \
+            -DDAWN_BUILD_PROTOBUF=ON \
+            -DDAWN_BUILD_SAMPLES=OFF \
+            -DDAWN_BUILD_NODE=OFF \
+            -DDAWN_ENABLE_VULKAN=OFF \
+            -DDAWN_ENABLE_METAL=OFF \
+            -DDAWN_ENABLE_D3D12=OFF \
+            -DDAWN_ENABLE_D3D11=OFF \
+            -DDAWN_ENABLE_OPENGLES=OFF \
+            -DDAWN_ENABLE_DESKTOP_GL=OFF \
+            -DDAWN_ENABLE_NULL=OFF \
+            -DDAWN_USE_X11=OFF \
+            -DDAWN_USE_WAYLAND=OFF \
+            -DDAWN_USE_GLFW=OFF \
+            -DDAWN_BUILD_TESTS=OFF \
+            -DTINT_BUILD_CMD_TOOLS=OFF \
+            -DTINT_BUILD_DOCS=OFF \
+            -DTINT_BUILD_TESTS=OFF \
+            -DTINT_BUILD_WGSL_READER=OFF \
+            -DTINT_BUILD_WGSL_WRITER=OFF \
+            -DTINT_BUILD_GLSL_VALIDATOR=OFF \
+            -DTINT_BUILD_IR_BINARY=OFF \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build out/host --target protoc
+
+      - name: Build ${{ matrix.platform }} ${{ matrix.arch }}
+        run: |
+          cmake -S . -B ${{ matrix.output_dir }} -G Ninja \
+            -DDAWN_MOBILE_BUILD=apple \
+            -C .github/workflows/dawn-ci.cmake \
+            -DCMAKE_TOOLCHAIN_FILE=${{ matrix.toolchain_file }} \
+            ${{ matrix.cmake_args }} \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DPROTOC_EXECUTABLE=$PWD/out/host/protoc
+          ninja -C ${{ matrix.output_dir }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: build-${{ matrix.platform }}-${{ matrix.arch }}
+          path: ${{ matrix.output_dir }}/${{ matrix.library_path }}
+
+  package-mobile:
+    name: Package Mobile Artifacts
+    runs-on: macos-latest
+    needs: [mobile-android, mobile-apple]
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: build-*
+          path: artifacts
+
+      - name: Create iOS Simulator fat binary
+        run: |
+          mkdir -p libs/apple/iphonesimulator
+          lipo -create \
+            artifacts/build-ios-sim_x86_64/libwebgpu_dawn.a \
+            artifacts/build-ios-sim_arm64/libwebgpu_dawn.a \
+            -output libs/apple/iphonesimulator/libwebgpu_dawn.a
+
+      - name: Create XCFramework
+        run: |
+          xcodebuild -create-xcframework \
+            -library libs/apple/iphonesimulator/libwebgpu_dawn.a \
+            -library artifacts/build-ios-arm64/libwebgpu_dawn.a \
+            -library artifacts/build-macos-universal/libwebgpu_dawn.a \
+            -output dawn-apple-${{ github.sha }}.xcframework
+
+      - name: Package Android libraries
+        run: |
+          mkdir -p dawn-android-${{ github.sha }}/arm64-v8a
+          mkdir -p dawn-android-${{ github.sha }}/armeabi-v7a
+          mkdir -p dawn-android-${{ github.sha }}/x86
+          mkdir -p dawn-android-${{ github.sha }}/x86_64
+
+          cp artifacts/build-android-arm64-v8a/libwebgpu_dawn.a dawn-android-${{ github.sha }}/arm64-v8a/
+          cp artifacts/build-android-armeabi-v7a/libwebgpu_dawn.a dawn-android-${{ github.sha }}/armeabi-v7a/
+          cp artifacts/build-android-x86/libwebgpu_dawn.a dawn-android-${{ github.sha }}/x86/
+          cp artifacts/build-android-x86_64/libwebgpu_dawn.a dawn-android-${{ github.sha }}/x86_64/
+
+      - name: Create archives
+        run: |
+          tar -czf dawn-android-${{ github.sha }}.tar.gz dawn-android-${{ github.sha }}
+          tar -czf dawn-apple-${{ github.sha }}.xcframework.tar.gz dawn-apple-${{ github.sha }}.xcframework
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dawn-android-${{ github.sha }}
+          path: dawn-android-${{ github.sha }}.tar.gz
+
+      - name: Upload Apple artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dawn-apple-${{ github.sha }}
+          path: dawn-apple-${{ github.sha }}.xcframework.tar.gz
+
+  golang:
+    name: Go Build and Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4
+        with:
+          go-version: '1.23'
+
+      - name: Build
+        run: go build -v ./...
+
+      - name: Test
+        run: go test -v ./...

@@ -1,0 +1,536 @@
+/*
+ * Copyright (C) 2018 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TNT_FILAMENT_BACKEND_VULKANHANDLES_H
+#define TNT_FILAMENT_BACKEND_VULKANHANDLES_H
+
+// This needs to be at the top
+#include "DriverBase.h"
+#include "VulkanAsyncHandles.h"
+#include "VulkanBufferCache.h"
+#include "VulkanBufferProxy.h"
+#include "VulkanFboCache.h"
+#include "VulkanSwapChain.h"
+#include "VulkanTexture.h"
+
+#include "vulkan/memory/Resource.h"
+#include "vulkan/memory/ResourcePointer.h"
+#include "vulkan/utils/Definitions.h"
+#include "vulkan/VulkanCommands.h"
+
+#include <utils/bitset.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/Mutex.h>
+#include <utils/StructureOfArrays.h>
+
+#include <array>
+
+namespace filament::backend {
+
+namespace {
+// Counts the total number of descriptors for both vertex and fragment stages.
+template<typename Bitmask>
+inline uint8_t collapsedCount(Bitmask const& mask) {
+    Bitmask collapsed;
+    size_t const shift = fvkutils::getFragmentStageShift<Bitmask>();
+    mask.forEachSetBit([&](size_t index) { collapsed.set(index % shift); });
+    return (uint8_t) collapsed.count();
+}
+
+} // anonymous namespace
+
+class VulkanDescriptorSetCache;
+
+struct VulkanBufferObject;
+
+struct VulkanDescriptorSetLayout : public HwDescriptorSetLayout, fvkmemory::Resource {
+    static constexpr uint8_t UNIQUE_DESCRIPTOR_SET_COUNT = 4;
+    static constexpr uint8_t MAX_BINDINGS = filament::backend::MAX_DESCRIPTOR_COUNT;
+
+    using DescriptorSetLayoutArray = std::array<VkDescriptorSetLayout,
+            VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
+
+    // The bitmask representation of a set layout.
+    struct Bitmask {
+        fvkutils::UniformBufferBitmask ubo;               // 16 bytes
+        fvkutils::UniformBufferBitmask dynamicUbo;        // 16 bytes
+        fvkutils::SamplerBitmask sampler;                 // 16 bytes
+        fvkutils::InputAttachmentBitmask inputAttachment; // 16 bytes
+
+        // This is a subset of the sampler field.
+        fvkutils::SamplerBitmask externalSampler; // 16 bytes
+
+        bool operator==(Bitmask const& right) const {
+            return ubo == right.ubo && dynamicUbo == right.dynamicUbo && sampler == right.sampler &&
+                   inputAttachment == right.inputAttachment &&
+                   externalSampler == right.externalSampler;
+        }
+
+        static Bitmask fromLayoutDescription(DescriptorSetLayout const& layout);
+    };
+    static_assert(sizeof(Bitmask) == 80);
+
+    // This is a convenience struct to quickly check layout compatibility in terms of descriptor set
+    // pools.
+    struct Count {
+        uint32_t ubo = 0;
+        uint32_t dynamicUbo = 0;
+        uint32_t sampler = 0;
+        uint32_t inputAttachment = 0;
+
+        inline uint32_t total() const {
+            return ubo + dynamicUbo + sampler + inputAttachment;
+        }
+
+        bool operator==(Count const& right) const noexcept {
+            return ubo == right.ubo && dynamicUbo == right.dynamicUbo && sampler == right.sampler &&
+                   inputAttachment == right.inputAttachment;
+        }
+
+        static inline Count fromLayoutBitmask(Bitmask const& mask) {
+            return {
+                .ubo = collapsedCount(mask.ubo),
+                .dynamicUbo = collapsedCount(mask.dynamicUbo),
+                .sampler = collapsedCount(mask.sampler),
+                .inputAttachment = collapsedCount(mask.inputAttachment),
+            };
+        }
+
+        Count operator*(uint16_t mult) const noexcept {
+            // TODO: check for overflow.
+
+            Count ret;
+            ret.ubo = ubo * mult;
+            ret.dynamicUbo = dynamicUbo * mult;
+            ret.sampler = sampler * mult;
+            ret.inputAttachment = inputAttachment * mult;
+            return ret;
+        }
+    };
+
+    VulkanDescriptorSetLayout(DescriptorSetLayout&& layout, VkDescriptorSetLayout vkLayout);
+
+    // Note that we don't destroy the vklayout. This is done by the layout cache.
+    ~VulkanDescriptorSetLayout() = default;
+
+    VkDescriptorSetLayout getVkLayout() const noexcept { return mVkLayout; }
+
+    VkDescriptorSetLayout getExternalSamplerVkLayout() const noexcept {
+        return mExternalSamplerVkLayout;
+    }
+
+    void setExternalSamplerVkLayout(VkDescriptorSetLayout vklayout) noexcept {
+        mExternalSamplerVkLayout = vklayout;
+    }
+
+    bool hasExternalSamplers() const noexcept { return bitmask.externalSampler.count() > 0; }
+
+    Bitmask const bitmask;
+    Count const count;
+
+private:
+    // This is the layout without any immutable samplers.
+    VkDescriptorSetLayout const mVkLayout = VK_NULL_HANDLE;
+
+    // This is the layout with immutable samplers, and can be updated.
+    VkDescriptorSetLayout mExternalSamplerVkLayout = VK_NULL_HANDLE;
+};
+
+struct VulkanDescriptorSet : public HwDescriptorSet, fvkmemory::Resource {
+public:
+    // Because we need to recycle descriptor sets not used, we allow for a callback that the "Pool"
+    // can use to repackage the vk handle.
+    using OnRecycle = std::function<void(VulkanDescriptorSet*)>;
+
+    VulkanDescriptorSet(
+            fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout,
+            OnRecycle&& onRecycleFn, VkDescriptorSet vkSet);
+
+    // NOLINTNEXTLINE(bugprone-exception-escape)
+    ~VulkanDescriptorSet();
+
+    VkDescriptorSet getVkSet() const noexcept {
+        return mSets[mCurrentSetIndex].vkSet;
+    }
+
+    void setOffsets(backend::DescriptorSetOffsetArray&& offsets) noexcept {
+        mOffsets = std::move(offsets);
+    }
+
+    backend::DescriptorSetOffsetArray const* getOffsets() {
+        return &mOffsets;
+    }
+
+    template<typename Resource>
+    void acquire(fvkmemory::resource_ptr<Resource> res) {
+        if (res->template isType<VulkanBufferObject>()) {
+            mUboMask.set(mResources.size());
+        }
+        mResources.push_back(res);
+    }
+
+    void referencedBy(VulkanCommandBuffer& commands);
+
+    bool isBound() const {
+        return bool(mSets[mCurrentSetIndex].fenceStatus);
+    }
+
+    // The current layout used by the descriptor set. This one will match the bindings, including
+    // external samplers data.
+    // This will not necessarilly be the same as `mLayout`.
+    VkDescriptorSetLayout boundLayout = VK_NULL_HANDLE;
+
+    fvkmemory::resource_ptr<VulkanDescriptorSetLayout> getLayout() const { return mLayout; }
+
+    fvkutils::UniformBufferBitmask const& dynamicUboMask;
+    uint8_t const uniqueDynamicUboCount;
+
+    // Flag to indicate if the current layout needs to be recreated or not.
+    // This should only set to `true` when a external sampler image is bound to the descriptor set.
+    bool isLayoutDirty = false;
+    bool isAnExternalSamplerBound = false;
+
+private:
+    friend class VulkanDescriptorSetCache;
+
+    void addNewSet(VkDescriptorSet vkSet, OnRecycle&& onRecycleFn);
+
+    void gc();
+
+    struct InternalVkSet {
+        VkDescriptorSet vkSet = {};
+        OnRecycle onRecycleFn;
+        std::shared_ptr<VulkanCmdFence> fenceStatus;
+    };
+
+    fvkmemory::resource_ptr<VulkanDescriptorSetLayout> mLayout;
+    backend::DescriptorSetOffsetArray mOffsets;
+    std::vector<fvkmemory::resource_ptr<fvkmemory::Resource>> mResources;
+    uint8_t mCurrentSetIndex;
+    std::vector<InternalVkSet> mSets;
+    fvkutils::UniformBufferBitmask mUboMask;
+};
+
+struct VulkanMemoryMappedBuffer : public HwMemoryMappedBuffer, Resource {
+    VulkanMemoryMappedBuffer(BufferObjectHandle boh, size_t const offset,
+            size_t const size, MapBufferAccessFlags const access)
+        : boh(boh), access(access), size(size), offset(offset) {
+    }
+    BufferObjectHandle boh{};
+    MapBufferAccessFlags access{};
+    uint32_t size = 0;
+    uint32_t offset = 0;
+};
+
+// The render target bundles together a set of attachments, each of which can have one of the
+// following ownership semantics:
+//
+// - The attachment's VkImage is shared and the owner is VulkanSwapChain (mOffscreen = false).
+// - The attachment's VkImage is shared and the owner is VulkanTexture   (mOffscreen = true).
+//
+// We use private inheritance to shield clients from the width / height fields in HwRenderTarget,
+// which are not representative when this is the default render target.
+struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
+    // Creates an offscreen render target.
+    VulkanRenderTarget(VkDevice device, VkPhysicalDevice physicalDevice,
+            VulkanContext const& context, fvkmemory::ResourceManager* resourceManager,
+            VmaAllocator allocator, VulkanCommands* commands, uint32_t width, uint32_t height,
+            uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
+            VulkanAttachment depthStencil, VulkanStagePool& stagePool, uint8_t layerCount);
+
+    ~VulkanRenderTarget();
+
+    // Creates a special "default" render target (i.e. associated with the swap chain)
+    explicit VulkanRenderTarget();
+
+    VulkanRenderTarget(VulkanRenderTarget&& target)
+        : HwRenderTarget(0, 0),
+          mOffscreen(false),
+          mProtected(false) {
+        swap(std::move(target));
+    }
+
+    VulkanRenderTarget& operator=(VulkanRenderTarget&& target) {
+        swap(std::move(target));
+        return *this;
+    }
+
+    void transformClientRectToPlatform(VkRect2D* bounds) const;
+
+    void transformViewportToPlatform(VkViewport* bounds) const;
+
+    inline VkExtent2D getExtent() const {
+        return {width, height};
+    }
+
+    // Cached classification of each color attachment's clear semantics. Computed once when the
+    // attachment is bound to the render target and used on the clear path.
+    enum class ColorClearKind : uint8_t { Float, SignedInt, UnsignedInt };
+
+    // Returns the i-th color attachment, packed at the start of `attachments` in MRT-slot order.
+    inline VulkanAttachment& getColor(uint32_t idx) const {
+        assert_invariant(idx < mInfo->colors.count());
+        return mInfo->attachments[idx];
+    }
+
+    // Returns the cached clear-kind for the i-th color attachment.
+    inline ColorClearKind getColorClearKind(uint32_t idx) const {
+        assert_invariant(idx < mInfo->colors.count());
+        return mInfo->colorClearKinds[idx];
+    }
+
+    inline VulkanAttachment& getDepthStencil() const {
+        assert_invariant(hasDepthStencil());
+        if (mInfo->fbkey.samples == 1) {
+            return mInfo->attachments[mInfo->depthStencilIndex];
+        }
+        return mInfo->attachments[mInfo->msaaDepthStencilIndex];
+    }
+
+    inline VulkanFboCache::RenderPassKey const& getRenderPassKey() const {
+        return mInfo->rpkey;
+    }
+
+    inline VulkanFboCache::FboKey const& getFboKey() const {
+        return mInfo->fbkey;
+    }
+
+    inline uint8_t getSamples() const {
+        return mInfo->fbkey.samples;
+    }
+
+    uint8_t getColorTargetCount(VulkanRenderPassContext const& pass) const;
+
+    inline bool hasDepthStencil() const { return mInfo->depthStencilIndex != Auxiliary::UNDEFINED_INDEX; }
+
+    inline bool isSwapChain() const { return !mOffscreen; }
+    inline bool isProtected() const { return mProtected; }
+
+    void bindSwapChain(fvkmemory::resource_ptr<VulkanSwapChain> swapchain);
+
+    void releaseSwapchain();
+
+    bool isSwapchainBound() const {
+        return isSwapChain() && mInfo->colors[0];
+    }
+
+    void emitBarriersBeginRenderPass(VulkanCommandBuffer& commands);
+
+    void emitBarriersEndRenderPass(VulkanCommandBuffer& commands);
+
+private:
+    void swap(VulkanRenderTarget&& target) {
+        std::swap(width, target.width);
+        std::swap(height, target.height);
+        std::swap(mOffscreen, target.mOffscreen);
+        std::swap(mProtected, target.mProtected);
+        std::swap(mInfo, target.mInfo);
+    }
+
+    struct Auxiliary {
+        static constexpr int8_t UNDEFINED_INDEX = -1;
+
+        explicit Auxiliary() noexcept = default;
+
+        VulkanFboCache::RenderPassKey rpkey = {};
+        VulkanFboCache::FboKey fbkey = {};
+        std::vector<VulkanAttachment> attachments;
+        // Parallel to attachments[0..colors.count()-1]: cached clear-kind per color attachment.
+        std::array<ColorClearKind, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT> colorClearKinds = {};
+        utils::bitset32 colors;
+        int8_t depthStencilIndex = UNDEFINED_INDEX;
+        int8_t msaaDepthStencilIndex = UNDEFINED_INDEX;
+        int8_t msaaIndex = UNDEFINED_INDEX;
+    };
+    bool mOffscreen;
+    bool mProtected;
+
+    std::unique_ptr<Auxiliary> mInfo;
+};
+
+struct VulkanBufferObject;
+
+struct VulkanVertexBufferInfo : public HwVertexBufferInfo, fvkmemory::Resource {
+
+    using AttributeBitSet = utils::bitset32;
+    // This ensures that we have a bit for each of the attribute index, which ranges from
+    // [0, MAX_VERTEX_ATTRIBUTE_COUNT).
+    static_assert(sizeof(AttributeBitSet) * 8 >= MAX_VERTEX_ATTRIBUTE_COUNT);
+
+    VulkanVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
+            AttributeArray const& attributes);
+
+    inline VkVertexInputAttributeDescription const* getAttribDescriptions() const {
+        return mInfo.mSoa.data<PipelineInfo::ATTRIBUTE_DESCRIPTION>();
+    }
+
+    inline VkVertexInputBindingDescription const* getBufferDescriptions() const {
+        return mInfo.mSoa.data<PipelineInfo::BUFFER_DESCRIPTION>();
+    }
+
+    inline int8_t const* getAttributeToBuffer() const {
+        return mInfo.mSoa.data<PipelineInfo::ATTRIBUTE_TO_BUFFER_INDEX>();
+    }
+
+    inline VkDeviceSize const* getOffsets() const {
+        return mInfo.mSoa.data<PipelineInfo::OFFSETS>();
+    }
+
+    size_t getAttributeCount() const noexcept {
+        return mInfo.mSoa.size();
+    }
+
+    AttributeBitSet getDeclaredAttributes() const noexcept {
+        return mAttributes;
+    }
+
+private:
+    struct PipelineInfo {
+        PipelineInfo(size_t size) : mSoa(size /* capacity */) {
+            mSoa.resize(size);
+        }
+
+        // These correspond to the index of the element in the SoA
+        static constexpr uint8_t ATTRIBUTE_DESCRIPTION = 0;
+        static constexpr uint8_t BUFFER_DESCRIPTION = 1;
+        static constexpr uint8_t OFFSETS = 2;
+        static constexpr uint8_t ATTRIBUTE_TO_BUFFER_INDEX = 3;
+
+        utils::StructureOfArrays<
+            VkVertexInputAttributeDescription,
+            VkVertexInputBindingDescription,
+            VkDeviceSize,
+            int8_t
+        > mSoa;
+    };
+
+    // Tracks which attributes have been declared for the vbo.
+    AttributeBitSet mAttributes;
+    PipelineInfo mInfo;
+};
+
+struct VulkanVertexBuffer : public HwVertexBuffer, fvkmemory::Resource {
+    VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool, uint32_t vertexCount,
+            fvkmemory::resource_ptr<VulkanVertexBufferInfo> vbi);
+    void setBuffer(fvkmemory::resource_ptr<VulkanBufferObject> bufferObject, uint32_t index);
+
+    // TODO: because VulkanBufferObject is backed by VulkanBufferProxy, which could switch out the
+    // backing VkBuffer, we cannot store the VkBuffers for optimization here. We could store a dirty
+    // bit to indicate if a VkBuffer has changed maybe.
+    inline VkBuffer const* getVkBuffers() const { return mBuffers.data(); }
+    inline VkBuffer* getVkBuffers() { return mBuffers.data(); }
+    fvkmemory::resource_ptr<VulkanVertexBufferInfo> vbi;
+
+    // Returns whether all the declared attributes have a buffer attached.
+    bool isValid() const noexcept {
+        return mAttributes == vbi->getDeclaredAttributes();
+    }
+
+private:
+    utils::FixedCapacityVector<VkBuffer> mBuffers;
+    std::vector<fvkmemory::resource_ptr<VulkanBufferObject>> mResources;
+    VulkanVertexBufferInfo::AttributeBitSet mAttributes;
+};
+
+struct VulkanIndexBuffer : public HwIndexBuffer, fvkmemory::Resource {
+    VulkanIndexBuffer(VulkanContext const& context, VmaAllocator allocator,
+            VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, uint8_t elementSize,
+            uint32_t indexCount)
+        : HwIndexBuffer(elementSize, indexCount, false),
+          indexType(elementSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32),
+          mBuffer(context, allocator, stagePool, bufferCache, VulkanBufferBinding::INDEX,
+                  BufferUsage::STATIC, elementSize * indexCount) {}
+
+    inline void loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData, uint32_t byteOffset,
+            uint32_t numBytes) {
+        mBuffer.loadFromCpu(commands, cpuData, byteOffset, numBytes);
+    }
+
+    inline VkBuffer getVkBuffer() const noexcept { return mBuffer.getVkBuffer(); }
+
+    VkIndexType const indexType;
+
+private:
+    VulkanBufferProxy mBuffer;
+};
+
+struct VulkanBufferObject : public HwBufferObject, fvkmemory::Resource {
+    VulkanBufferObject(VulkanContext const& context, VmaAllocator allocator,
+            VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, uint32_t byteCount,
+            BufferObjectBinding bindingType, BufferUsage usage);
+
+    inline void loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData, uint32_t byteOffset,
+            uint32_t numBytes) {
+        mBuffer.loadFromCpu(commands, cpuData, byteOffset, numBytes);
+    }
+
+    inline VkBuffer getVkBuffer() const noexcept { return mBuffer.getVkBuffer(); }
+
+    inline void referencedBy(VulkanCommandBuffer& commands) {
+        mBuffer.referencedBy(commands);
+    }
+
+    BufferObjectBinding const bindingType;
+
+private:
+    VulkanBufferProxy mBuffer;
+};
+
+struct VulkanRenderPrimitive : public HwRenderPrimitive, fvkmemory::Resource {
+    VulkanRenderPrimitive(PrimitiveType pt, fvkmemory::resource_ptr<VulkanVertexBuffer> vb,
+            fvkmemory::resource_ptr<VulkanIndexBuffer> ib);
+    ~VulkanRenderPrimitive() = default;
+
+    fvkmemory::resource_ptr<VulkanVertexBuffer> vertexBuffer;
+    fvkmemory::resource_ptr<VulkanIndexBuffer> indexBuffer;
+};
+
+struct VulkanFramebuffer : public fvkmemory::Resource {
+    VulkanFramebuffer(VkDevice device,
+            VkFramebuffer framebuffer,
+            fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget);
+    ~VulkanFramebuffer();
+
+    inline VkFramebuffer getVkFramebuffer() const noexcept {
+        return mFramebuffer;
+    }
+
+private:
+    VkDevice mDevice;
+    VkFramebuffer mFramebuffer;
+
+    // We need to keep a reference to the renderTarget because the key of the framebuffer in the
+    // cache has references to the image views that are derived from the textures of the render
+    // target.
+    fvkmemory::resource_ptr<VulkanRenderTarget> mRenderTarget;
+};
+
+struct VulkanRenderPass : public fvkmemory::Resource {
+    VulkanRenderPass(VkDevice device, VkRenderPass renderPass);
+    ~VulkanRenderPass();
+
+    inline VkRenderPass getVkRenderPass() const noexcept {
+        return mRenderPass;
+    }
+
+private:
+    VkDevice mDevice;
+    VkRenderPass mRenderPass;
+};
+
+} // namespace filament::backend
+
+#endif // TNT_FILAMENT_BACKEND_VULKANHANDLES_H

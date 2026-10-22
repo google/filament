@@ -1,0 +1,257 @@
+Name
+
+    SGIS_sharpen_texture
+
+Name Strings
+
+    GL_SGIS_sharpen_texture
+
+Version
+
+    $Date: 1995/07/09 06:48:51 $ $Revision: 1.16 $
+
+Number
+
+    22
+
+Dependencies
+
+    EXT_texture is required
+    EXT_texture3D affects the definition of this extension
+    EXT_texture_object affects the definition of this extension
+
+Overview
+
+    This extension introduces texture magnification filters that sharpen
+    the resulting image by extrapolating from the level 1 image to the
+    level 0 image.  Sharpening can be enabled for all color channels, for
+    the alpha channel only, or for the red, green, and blue channels only.
+
+New Procedures and Functions
+
+    void SharpenTexFuncSGIS(enum target,
+			    sizei n,
+			    const float* points);
+
+    void GetSharpenTexFuncSGIS(enum target,
+			       float* points);
+
+New Tokens
+
+    Accepted by the <param> parameter of TexParameteri and TexParameterf,
+    and by the <params> parameter of TexParameteriv and TexParameterfv, when
+    their <pname> parameter is TEXTURE_MAG_FILTER:
+
+	LINEAR_SHARPEN_SGIS
+	LINEAR_SHARPEN_ALPHA_SGIS
+	LINEAR_SHARPEN_COLOR_SGIS
+
+    Accepted by the <pname> parameter of GetTexParameteriv and
+    GetTexParameterfv:
+
+	SHARPEN_TEXTURE_FUNC_POINTS_SGIS
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    GL Specification Table 3.7 is updated as follows:
+
+	Name				Type	    Legal Values
+	----				----	    ------------
+	TEXTURE_WRAP_S			integer     CLAMP, REPEAT
+	TEXTURE_WRAP_T			integer     CLAMP, REPEAT
+	TEXTURE_WRAP_R_EXT		integer     CLAMP, REPEAT
+	TEXTURE_MIN_FILTER		integer     NEAREST, LINEAR,
+						    NEAREST_MIPMAP_NEAREST,
+						    NEAREST_MIPMAP_LINEAR,
+						    LINEAR_MIPMAP_NEAREST,
+						    LINEAR_MIPMAP_LINEAR,
+						    FILTER4_SGIS
+	TEXTURE_MAG_FILTER		integer     NEAREST, LINEAR,
+						    FILTER4_SGIS,
+						    LINEAR_DETAIL_SGIS,
+						    LINEAR_DETAIL_ALPHA_SGIS,
+						    LINEAR_DETAIL_COLOR_SGIS,
+						    LINEAR_SHARPEN_SGIS,
+						    LINEAR_SHARPEN_ALPHA_SGIS,
+						    LINEAR_SHARPEN_COLOR_SGIS
+	TEXTURE_BORDER_COLOR		4 floats    any 4 values in [0,1]
+	DETAIL_TEXTURE_LEVEL_SGIS	integer     any non-negative integer
+	DETAIL_TEXTURE_MODE_SGIS	integer     ADD, MODULATE
+
+	Table 3.7: Texture parameters and their values.
+
+    3.8.2.2 Texture magnification with sharpening
+
+    Three additional texture magnification filters are defined for texture
+    magnification.  These values, which are assigned to TEXTURE_MAG_FILTER,
+    are LINEAR_SHARPEN_SGIS, LINEAR_SHARPEN_ALPHA_SGIS, and
+    LINEAR_SHARPEN_COLOR_SGIS.	All three filters sample the level 0
+    texture array exactly as it would be sampled with filter mode LINEAR.
+    If texture levels 0 and 1 are "complete", as described in the Mipmapping
+    portion of Section 3.8.1 (Texture Minification) of the GL Specification,
+    the level 1 array of the texture is also linearly sampled, just as though
+    mipmap minification was being performed with LOD (the level of detail
+    parameter) valued near 1.0.  If levels 0 and 1 are not complete, it is
+    as though the magnification texture filter was LINEAR.  (Although
+    querying the magnification filter value will return the value as
+    specified.)
+
+    The texture value computed from the level 0 array (T0) and the
+    value computed from the level one array (T1) are combined to compute
+    the final texture value (T):
+
+	T' = ((1 + F(LOD)) * T0) - (F(LOD) * T1)
+
+	     / 0      T' < 0
+	T = <  T'     0 <= T' <= 1
+	     \ 1      T' > 1
+
+    F is a function of the level-of-detail parameter LOD, which is
+    represented by the Greek character lambda in the GL Specification.
+
+    The function F of level-of-detail parameter LOD is specified by
+    calling SharpenTexFuncSGIS with <target> set to TEXTURE_1D, TEXTURE_2D,
+    or TEXTURE_3D_EXT, <points> pointing at an array of pairs of floating
+    point values, and <n> set to the number of value pairs in <points>.  The
+    first value of each value pair in <points> specifies a value of LOD, and
+    the second value of each value pair specifies the corresponding function
+    value.  The order in which the points are specified is not significant.
+    The <n> value pairs in <points> completely specify the function,
+    replacing any previous specification that may have existed.  Since
+    negative values of LOD correspond to magnification and positive values
+    correspond to minification, the points should have negative values for
+    LOD (though it is not an error to specify positive values).
+
+    Function F is evaluated by sorting the value pairs specified by
+    SharpenTexFuncSGIS by LOD value, then fitting a curve through these
+    points.  This curve may be linear between adjacent points, or it may be
+    smoothed, but it will pass exactly through the points, limited only by
+    the resolution of the implementation.  The value pair with the lowest
+    LOD value specifies the function value F for all values of LOD less than
+    or equal to that pair's LOD.  Likewise, the value pair with the greatest
+    LOD value specifies the function value F for all values of LOD greater
+    than or equal to that pair's LOD.  F is undefined if two or more value
+    pairs have the same LOD value.
+
+    If the texture magnification filter is LINEAR_SHARPEN_SGIS, then both
+    the color and the alpha components of T are computed as described
+    in the equations above.  If the filter is LINEAR_SHARPEN_COLOR_SGIS,
+    then all components of T other than alpha are computed as described
+    above, and the alpha component of T is computed as if the texture
+    magnification filter were LINEAR.  Finally, if the filter is
+    LINEAR_SHARPEN_ALPHA_SGIS, the alpha component of T is computed as
+    described in the equations above, and all other components of T
+    are computed as if the texture magnification filter were LINEAR.
+
+    Minification vs. Magnification
+    ------------------------------
+
+    If the magnification filter is given by LINEAR_SHARPEN_SGIS,
+    LINEAR_SHARPEN_ALPHA_SGIS, or LINEAR_SHARPEN_COLOR_SGIS, and the
+    minification filter is given by NEAREST_MIPMAP_NEAREST or
+    LINEAR_MIPMAP_NEAREST, then c = 0.5.  The parameter c is used to
+    determine whether minification or magnification filtering is done,
+    as described in Section 3.8.2 of the GL Specification (Texture
+    Magnification).
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    GetSharpenTexFuncSGIS is not included in display lists.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    The number of points in the sharpen texture function specification of
+    a texture is queried by calling GetTexParameteriv or GetTexParameterfv
+    with <target> set to the target of the desired texture and <pname> set
+    to SHARPEN_TEXTURE_FUNC_POINTS_SGIS.  The function
+    GetSharpenTexFuncSGIS returns in <points> all of the points in the
+    sharpen texture function of texture <target>.
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    Two new GLX protocol commands are added.
+
+	 SharpenTexFuncSGIS
+	     2		 12+4*2*n	 rendering command length
+	     2		 2052		 rendering command opcode
+	     4		 ENUM		 target
+	     4		 INT32		 n
+	     4*2*n	 LISTofFLOAT	 points
+
+	 GetSharpenTexFuncSGIS
+	     1		 CARD8		 opcode (X assigned)
+	     1		 17		 GLX opcode (glXVendorPrivateWithReply)
+	     2		 4		 request length
+	     4		 4097		 vendor specific opcode
+	     4		 GLX_CONTEXT_TAG context tag
+	     4		 ENUM		 target
+	   =>
+	     1		 1		 reply
+	     1				 unused
+	     2		 CARD16		 sequence number
+	     4		 n		 reply length, m = n
+	     4				 unused
+	     4		 CARD32		 n
+	     16				 unused
+	     n*4	 LISTofFLOAT32	 points
+
+	 Note that n may be zero, indicating that a GL error occurred.
+	 Other n must be even and n >= 2.
+
+Dependencies on EXT_texture
+
+    EXT_texture is required.
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is not implemented, references in this specification
+    to TEXTURE_3D_EXT are invalid, and should be ignored.
+
+Dependencies on EXT_texture_object
+
+    If EXT_texture_object is implemented, the state values named
+
+	SHARPEN_TEXTURE_FUNC_POINTS_SGIS
+	<SHARPEN_TEXTURE_FUNC>
+
+    are added to the state vector of each texture object. When an attribute
+    set that includes texture information is popped, the bindings and
+    enables are first restored to their pushed values, then the bound
+    textures have their sharpen parameters restored to their pushed values.
+
+Errors
+
+    INVALID_ENUM is generated if SharpenTexFuncSGIS or
+    GetSharpenTexFuncSGIS parameter <target> is not TEXTURE_1D, TEXTURE_2D,
+    or TEXTURE_3D_EXT.
+
+    INVALID_VALUE is generated if SharpenTexFuncSGIS parameter <n> is
+    negative.
+
+    INVALID_OPERATION is generated if SharpenTexFuncSGIS or
+    GetSharpenTexFuncSGIS is executed between execution of Begin and the
+    corresponding execution to End.
+
+New State
+
+    Get Value				Get Command		Type		Initial Value	Attribute
+    ---------				-----------		----		-------------	---------
+    SHARPEN_TEXTURE_FUNC_POINTS_SGIS	GetTexParameteriv	n x Z+		2		texture
+    <SHARPEN_TEXTURE_FUNC>		GetSharpenTexFuncSGIS	n x m x R	{0, 0}, {-4, 1} texture
+
+New Implementation Dependent State
+
+    None

@@ -1,0 +1,24 @@
+#version 310 es
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) readonly buffer SSBO
+{
+    vec4 in_data[];
+} _23;
+
+layout(binding = 1, std430) writeonly buffer SSBO2
+{
+    vec4 out_data[];
+} _33;
+
+void main()
+{
+    uint ident = gl_GlobalInvocationID.x;
+    vec4 v = mod(_23.in_data[ident], _33.out_data[ident]);
+    _33.out_data[ident] = v;
+    uvec4 vu = floatBitsToUint(_23.in_data[ident]) % floatBitsToUint(_33.out_data[ident]);
+    _33.out_data[ident] = uintBitsToFloat(vu);
+    ivec4 vi = floatBitsToInt(_23.in_data[ident]) % floatBitsToInt(_33.out_data[ident]);
+    _33.out_data[ident] = intBitsToFloat(vi);
+}
+

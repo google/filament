@@ -1,0 +1,179 @@
+/*
+ * Copyright (C) 2021 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <backend/platforms/PlatformMetal.h>
+#include <backend/platforms/PlatformMetal-ObjC.h>
+
+#include "MetalDriverFactory.h"
+
+#include <utils/Logger.h>
+
+#import <Foundation/Foundation.h>
+
+#include <utils/Mutex.h>
+
+#include <atomic>
+#include <new>
+
+namespace filament::backend {
+
+struct PlatformMetalImpl {
+    struct ExternalImageMetal final : public Platform::ExternalImage {
+        void* cvPixelBuffer = nullptr;
+    protected:
+        ~ExternalImageMetal() noexcept final;
+    };
+
+    utils::Mutex mLock;   // locks mDevice and mCommandQueue
+    id<MTLDevice> mDevice = nil;
+    id<MTLCommandQueue> mCommandQueue = nil;
+
+    // read form driver thread, read/written to from client thread
+    std::atomic<PlatformMetal::DrawableFailureBehavior> mDrawableFailureBehavior =
+            PlatformMetal::DrawableFailureBehavior::PANIC;
+
+    // These methods must be called with mLock held
+    void createDeviceImpl(MetalDevice& outDevice);
+    void createCommandQueueImpl(MetalDevice& device, MetalCommandQueue& outCommandQueue);
+};
+
+PlatformMetalImpl::ExternalImageMetal::~ExternalImageMetal() noexcept = default;
+
+Platform* createDefaultMetalPlatform() {
+    return new PlatformMetal();
+}
+
+PlatformMetal::PlatformMetal() : pImpl(new PlatformMetalImpl) {}
+
+PlatformMetal::~PlatformMetal() noexcept {
+    delete pImpl;
+}
+
+Driver* PlatformMetal::createDriver(void* /*sharedContext*/, const Platform::DriverConfig& driverConfig) {
+    pImpl->mDrawableFailureBehavior = driverConfig.metalDisablePanicOnDrawableFailure
+            ? DrawableFailureBehavior::ABORT_FRAME
+            : DrawableFailureBehavior::PANIC;
+    return MetalDriverFactory::create(this, driverConfig);
+}
+
+Platform::ExternalImageHandle PlatformMetal::createExternalImage(void* cvPixelBuffer) noexcept {
+    if (!cvPixelBuffer) {
+        return {};
+    }
+    auto* p = new(std::nothrow) PlatformMetalImpl::ExternalImageMetal;
+    if (!p) {
+        return {};
+    }
+    p->cvPixelBuffer = cvPixelBuffer;
+    return ExternalImageHandle{ p };
+}
+
+void* PlatformMetal::getExternalImage(ExternalImageHandleRef externalImage) const noexcept {
+    auto const* const metalExternalImage =
+            static_cast<PlatformMetalImpl::ExternalImageMetal const*>(externalImage.get());
+    return metalExternalImage ? metalExternalImage->cvPixelBuffer : nullptr;
+}
+
+bool PlatformMetal::initialize() noexcept {
+    utils::LockGuard const lock(pImpl->mLock);
+
+    MetalDevice device{};
+    pImpl->createDeviceImpl(device);
+    if (device.device == nil) {
+        return false;
+    }
+
+    MetalCommandQueue commandQueue{};
+    pImpl->createCommandQueueImpl(device, commandQueue);
+    if (commandQueue.commandQueue == nil) {
+        return false;
+    }
+
+    return true;
+}
+
+void PlatformMetal::createDevice(MetalDevice& outDevice) noexcept {
+    utils::LockGuard const lock(pImpl->mLock);
+    pImpl->createDeviceImpl(outDevice);
+}
+
+void PlatformMetal::createCommandQueue(
+        MetalDevice& device, MetalCommandQueue& outCommandQueue) noexcept {
+    utils::LockGuard const lock(pImpl->mLock);
+    pImpl->createCommandQueueImpl(device, outCommandQueue);
+}
+
+void PlatformMetal::createAndEnqueueCommandBuffer(MetalCommandBuffer& outCommandBuffer) noexcept {
+    utils::LockGuard const lock(pImpl->mLock);
+    id<MTLCommandBuffer> commandBuffer = [pImpl->mCommandQueue commandBuffer];
+    [commandBuffer enqueue];
+    outCommandBuffer.commandBuffer = commandBuffer;
+}
+
+void PlatformMetal::setDrawableFailureBehavior(DrawableFailureBehavior behavior) noexcept {
+    pImpl->mDrawableFailureBehavior = behavior;
+}
+
+PlatformMetal::DrawableFailureBehavior PlatformMetal::getDrawableFailureBehavior() const noexcept {
+    return pImpl->mDrawableFailureBehavior;
+}
+
+// -------------------------------------------------------------------------------------------------
+
+void PlatformMetalImpl::createDeviceImpl(MetalDevice& outDevice) {
+    if (mDevice) {
+        outDevice.device = mDevice;
+        return;
+    }
+
+    id<MTLDevice> result;
+
+#if !defined(FILAMENT_IOS)
+    const bool forceIntegrated =
+            NSProcessInfo.processInfo.environment[@"FILAMENT_FORCE_INTEGRATED_GPU"] != nil;
+    if (forceIntegrated) {
+        // Find the first low power device, which is likely the integrated GPU.
+        NSArray<id<MTLDevice>>* const devices = MTLCopyAllDevices();
+        for (id<MTLDevice> device in devices) {
+            if (device.isLowPower) {
+                result = device;
+                break;
+            }
+        }
+    } else
+#endif
+    {
+        result = MTLCreateSystemDefaultDevice();
+    }
+
+    LOG(INFO) << "Selected physical device '"
+              << [result.name cStringUsingEncoding:NSUTF8StringEncoding] << "'";
+
+    outDevice.device = result;
+    mDevice = result;
+}
+
+void PlatformMetalImpl::createCommandQueueImpl(MetalDevice& device, MetalCommandQueue& outCommandQueue) {
+    if (mCommandQueue) {
+        outCommandQueue.commandQueue = mCommandQueue;
+        return;
+    }
+    mCommandQueue = [device.device newCommandQueue];
+    mCommandQueue.label = @"Filament";
+    outCommandQueue.commandQueue = mCommandQueue;
+}
+
+} // namespace filament

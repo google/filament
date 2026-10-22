@@ -1,0 +1,93 @@
+#version 450
+#extension GL_KHR_memory_scope_semantics : require
+
+shared uint value;
+layout (binding = 0) buffer BufferU { coherent uint x; } bufferu;
+layout(binding = 1, r32ui) coherent uniform uimage2D imageu;
+
+void main()
+{
+    uint origu;
+
+    // Acquire must not be used with (image) atomic store
+    atomicStore(bufferu.x, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire);
+    imageAtomicStore(imageu, ivec2(0,0), value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire);
+
+    // Release must not be used with (image) atomic load
+    origu = atomicLoad(bufferu.x, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsRelease);
+    origu = imageAtomicLoad(imageu, ivec2(0,0), gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsRelease);
+
+    // AcquireRelease must not be used with (image) atomic load/store
+    atomicStore(bufferu.x, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease);
+    imageAtomicStore(imageu, ivec2(0,0), value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease);
+    origu = atomicLoad(bufferu.x, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease);
+    origu = imageAtomicLoad(imageu, ivec2(0,0), gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease);
+
+    // Relaxed must not be used with memoryBarrier
+    memoryBarrier(gl_ScopeWorkgroup, 0, 0);
+
+    // Illegal semantics bits
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, 0, gl_StorageSemanticsBuffer, 0, 0);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_StorageSemanticsBuffer | gl_SemanticsAcquireRelease, 0, 0);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease, 0, gl_StorageSemanticsBuffer);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease, gl_StorageSemanticsBuffer, gl_StorageSemanticsBuffer | gl_SemanticsAcquire);
+
+    // Illegal storage class semantics bits
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_SemanticsAcquire, gl_SemanticsAcquire, 0, 0);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer | gl_SemanticsAcquire, gl_SemanticsAcquire, gl_StorageSemanticsBuffer, gl_SemanticsAcquire);
+
+    // Semantics must not have multiple memory order bits set
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsRelease, 0, 0);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsAcquireRelease, 0, 0);
+
+    // Storage class semantics must be non-zero when used with a non-relaxed memory order
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, 0, gl_SemanticsAcquireRelease, 0, 0);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease, 0, gl_SemanticsAcquire);
+
+    // Semantics must have a non-relaxed memory order when used with non-zero storage class semantics
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, 0, 0, 0);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsVolatile, 0, gl_SemanticsVolatile);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease, gl_StorageSemanticsBuffer, 0);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease | gl_SemanticsVolatile, gl_StorageSemanticsBuffer, gl_SemanticsVolatile);
+    imageAtomicAdd(imageu, ivec2(0,0), value, gl_ScopeDevice, gl_StorageSemanticsImage, 0);
+    imageAtomicAdd(imageu, ivec2(0,0), value, gl_ScopeDevice, gl_StorageSemanticsImage, gl_SemanticsVolatile);
+
+    // MakeAvailable requires Release or AcquireRelease
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, 0, gl_SemanticsMakeAvailable, 0, 0);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsMakeAvailable, 0, 0);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease | gl_SemanticsMakeAvailable, 0, gl_SemanticsMakeAvailable);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease | gl_SemanticsMakeAvailable, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsMakeAvailable);
+
+    // MakeVisible requires Acquire or AcquireRelease
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, 0, gl_SemanticsMakeVisible, 0, 0);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsRelease | gl_SemanticsMakeVisible, 0, 0);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease | gl_SemanticsMakeVisible, 0, gl_SemanticsMakeVisible);
+
+    // Volatile must not be used with memoryBarrier or controlBarrier
+    memoryBarrier(gl_ScopeWorkgroup, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease | gl_SemanticsVolatile);
+    controlBarrier(gl_ScopeWorkgroup, gl_ScopeWorkgroup, 0, gl_SemanticsVolatile);
+    controlBarrier(gl_ScopeWorkgroup, gl_ScopeWorkgroup, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease | gl_SemanticsVolatile);
+
+    // SemUnequal must not be Release or AcquireRelease 
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease, gl_StorageSemanticsBuffer, gl_SemanticsRelease);
+
+    // SemUnequal must not be Acquire unless SemEqual is Acquire or AcquireRelease
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, 0, 0, gl_StorageSemanticsBuffer, gl_SemanticsAcquire);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsRelease, gl_StorageSemanticsBuffer, gl_SemanticsAcquire);
+
+    // SemUnequal must not include MakeVisible unless SemEqual also includes MakeVisible
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsMakeVisible);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsMakeVisible);
+
+    // SemStorageUnequal must not include any option that is not present in SemStorageEqual
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire, gl_StorageSemanticsShared, gl_SemanticsAcquire);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsShared, gl_SemanticsAcquire, gl_StorageSemanticsBuffer, gl_SemanticsAcquire);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquire);
+
+    // SemEqual and SemUnequal must either both include Volatile or neither
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, 0, gl_SemanticsVolatile, 0, 0);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, 0, 0, 0, gl_SemanticsVolatile);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease | gl_SemanticsVolatile, gl_StorageSemanticsBuffer, gl_SemanticsAcquire);
+    atomicCompSwap(bufferu.x, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquireRelease, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsVolatile);
+}

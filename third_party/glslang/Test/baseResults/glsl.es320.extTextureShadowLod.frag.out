@@ -1,0 +1,149 @@
+glsl.es320.extTextureShadowLod.frag
+Shader version: 320
+Requested GL_EXT_texture_shadow_lod
+0:? Sequence
+0:12  Function Definition: main( ( global void)
+0:12    Function Parameters: 
+0:14    Sequence
+0:14      move second child to first child ( temp lowp float)
+0:14        'c' ( out lowp float)
+0:14        texture ( global lowp float)
+0:14          's2da' ( uniform lowp sampler2DArrayShadow)
+0:14          'tc' ( smooth in lowp 4-component vector of float)
+0:14          Constant:
+0:14            0.000000
+0:15      move second child to first child ( temp lowp float)
+0:15        'c' ( out lowp float)
+0:15        texture ( global lowp float)
+0:15          'sca' ( uniform lowp samplerCubeArrayShadow)
+0:15          'tc' ( smooth in lowp 4-component vector of float)
+0:15          Constant:
+0:15            0.000000
+0:15          Constant:
+0:15            0.000000
+0:16      move second child to first child ( temp lowp float)
+0:16        'c' ( out lowp float)
+0:16        textureOffset ( global lowp float)
+0:16          's2da' ( uniform lowp sampler2DArrayShadow)
+0:16          'tc' ( smooth in lowp 4-component vector of float)
+0:16          Constant:
+0:16            0 (const int)
+0:16            0 (const int)
+0:16          Constant:
+0:16            0.000000
+0:17      move second child to first child ( temp lowp float)
+0:17        'c' ( out lowp float)
+0:17        textureLod ( global lowp float)
+0:17          's2da' ( uniform lowp sampler2DArrayShadow)
+0:17          'tc' ( smooth in lowp 4-component vector of float)
+0:17          Constant:
+0:17            0.000000
+0:18      move second child to first child ( temp lowp float)
+0:18        'c' ( out lowp float)
+0:18        textureLod ( global lowp float)
+0:18          'sc' ( uniform lowp samplerCubeShadow)
+0:18          'tc' ( smooth in lowp 4-component vector of float)
+0:18          Constant:
+0:18            0.000000
+0:19      move second child to first child ( temp lowp float)
+0:19        'c' ( out lowp float)
+0:19        textureLod ( global lowp float)
+0:19          'sca' ( uniform lowp samplerCubeArrayShadow)
+0:19          'tc' ( smooth in lowp 4-component vector of float)
+0:19          Constant:
+0:19            0.000000
+0:19          Constant:
+0:19            0.000000
+0:20      move second child to first child ( temp lowp float)
+0:20        'c' ( out lowp float)
+0:20        textureLodOffset ( global lowp float)
+0:20          's2da' ( uniform lowp sampler2DArrayShadow)
+0:20          'tc' ( smooth in lowp 4-component vector of float)
+0:20          Constant:
+0:20            0.000000
+0:20          Constant:
+0:20            0 (const int)
+0:20            0 (const int)
+0:?   Linker Objects
+0:?     's2da' ( uniform lowp sampler2DArrayShadow)
+0:?     'sca' ( uniform lowp samplerCubeArrayShadow)
+0:?     'sc' ( uniform lowp samplerCubeShadow)
+0:?     'tc' ( smooth in lowp 4-component vector of float)
+0:?     'c' ( out lowp float)
+
+
+Linked fragment stage:
+
+
+Shader version: 320
+Requested GL_EXT_texture_shadow_lod
+0:? Sequence
+0:12  Function Definition: main( ( global void)
+0:12    Function Parameters: 
+0:14    Sequence
+0:14      move second child to first child ( temp lowp float)
+0:14        'c' ( out lowp float)
+0:14        texture ( global lowp float)
+0:14          's2da' ( uniform lowp sampler2DArrayShadow)
+0:14          'tc' ( smooth in lowp 4-component vector of float)
+0:14          Constant:
+0:14            0.000000
+0:15      move second child to first child ( temp lowp float)
+0:15        'c' ( out lowp float)
+0:15        texture ( global lowp float)
+0:15          'sca' ( uniform lowp samplerCubeArrayShadow)
+0:15          'tc' ( smooth in lowp 4-component vector of float)
+0:15          Constant:
+0:15            0.000000
+0:15          Constant:
+0:15            0.000000
+0:16      move second child to first child ( temp lowp float)
+0:16        'c' ( out lowp float)
+0:16        textureOffset ( global lowp float)
+0:16          's2da' ( uniform lowp sampler2DArrayShadow)
+0:16          'tc' ( smooth in lowp 4-component vector of float)
+0:16          Constant:
+0:16            0 (const int)
+0:16            0 (const int)
+0:16          Constant:
+0:16            0.000000
+0:17      move second child to first child ( temp lowp float)
+0:17        'c' ( out lowp float)
+0:17        textureLod ( global lowp float)
+0:17          's2da' ( uniform lowp sampler2DArrayShadow)
+0:17          'tc' ( smooth in lowp 4-component vector of float)
+0:17          Constant:
+0:17            0.000000
+0:18      move second child to first child ( temp lowp float)
+0:18        'c' ( out lowp float)
+0:18        textureLod ( global lowp float)
+0:18          'sc' ( uniform lowp samplerCubeShadow)
+0:18          'tc' ( smooth in lowp 4-component vector of float)
+0:18          Constant:
+0:18            0.000000
+0:19      move second child to first child ( temp lowp float)
+0:19        'c' ( out lowp float)
+0:19        textureLod ( global lowp float)
+0:19          'sca' ( uniform lowp samplerCubeArrayShadow)
+0:19          'tc' ( smooth in lowp 4-component vector of float)
+0:19          Constant:
+0:19            0.000000
+0:19          Constant:
+0:19            0.000000
+0:20      move second child to first child ( temp lowp float)
+0:20        'c' ( out lowp float)
+0:20        textureLodOffset ( global lowp float)
+0:20          's2da' ( uniform lowp sampler2DArrayShadow)
+0:20          'tc' ( smooth in lowp 4-component vector of float)
+0:20          Constant:
+0:20            0.000000
+0:20          Constant:
+0:20            0 (const int)
+0:20            0 (const int)
+0:?   Linker Objects
+0:?     's2da' ( uniform lowp sampler2DArrayShadow)
+0:?     'sca' ( uniform lowp samplerCubeArrayShadow)
+0:?     'sc' ( uniform lowp samplerCubeShadow)
+0:?     'tc' ( smooth in lowp 4-component vector of float)
+0:?     'c' ( out lowp float)
+

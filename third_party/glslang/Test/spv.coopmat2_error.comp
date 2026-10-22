@@ -1,0 +1,84 @@
+#version 450 core
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_KHR_cooperative_matrix : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+#extension GL_NV_cooperative_matrix2 : enable
+#extension GL_EXT_buffer_reference : enable
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+buffer BufType {
+   float16_t x[];
+} Buf;
+
+layout(buffer_reference, std430, buffer_reference_align = 2) buffer fp16Buf {
+    float16_t f;
+};
+
+
+float16_t decode0(const in fp16Buf b, const in uint32_t blockCoords[2], const in uint32_t coordInBlock[2]) { return b.f; }
+float16_t decode1(const fp16Buf b, const in uint32_t blockCoords[2], const in uint32_t coordInBlock[2]) { return b.f; }
+float16_t decode2(in fp16Buf b, const in uint32_t blockCoords[2], const in uint32_t coordInBlock[2]) { return b.f; }
+float16_t decode3(fp16Buf b, const in uint32_t blockCoords[2], const in uint32_t coordInBlock[2]) { return b.f; }
+float16_t decode4(const in fp16Buf b, const uint32_t blockCoords[2], const in uint32_t coordInBlock[2]) { return b.f; }
+float16_t decode5(const in fp16Buf b, in uint32_t blockCoords[2], const in uint32_t coordInBlock[2]) { return b.f; }
+float16_t decode6(const in fp16Buf b, uint32_t blockCoords[2], const in uint32_t coordInBlock[2]) { return b.f; }
+float16_t decode7(const in fp16Buf b, const in uint32_t blockCoords[2], const uint32_t coordInBlock[2]) { return b.f; }
+float16_t decode8(const in fp16Buf b, const in uint32_t blockCoords[2], in uint32_t coordInBlock[2]) { return b.f; }
+float16_t decode9(const in fp16Buf b, const in uint32_t blockCoords[2], uint32_t coordInBlock[2]) { return b.f; }
+float16_t decode10(const in uint32_t b, const in uint16_t blockCoords[2], const in uint16_t coordInBlock[2]) { return float16_t(0); }
+float16_t decode11(const in fp16Buf b, const in uint32_t blockCoords, const in uint32_t coordInBlock) { return float16_t(0); }
+
+struct S {
+   f16vec2 x;
+};
+
+float16_t combineSum(const in float16_t a, const in float16_t b) { return a + b; }
+float16_t combineSum2(float16_t a, float16_t b) { return a + b; }
+
+layout(constant_id = 0) const uint32_t Clamp = gl_CooperativeMatrixClampModeConstantNV;
+
+float16_t relu(const in uint32_t row, const in uint32_t col, const in float16_t x) { return max(x, float16_t(0)); }
+float16_t add(const in uint32_t row, const in uint32_t col, const in float16_t x, const in float16_t y) { return x+y; }
+float32_t perelemf32(const in uint32_t row, const in uint32_t col, const in float16_t x) { return float32_t(x); }
+
+void main()
+{
+    coopmat<float16_t, gl_ScopeWorkgroup, 64, 32, gl_MatrixUseAccumulator> A;
+
+    tensorLayoutNV<2> t = createTensorLayoutNV(2);
+
+    coopMatLoadTensorNV(A, Buf.x, 0, t, decode0);
+    coopMatLoadTensorNV(A, Buf.x, 0, t, decode1);
+    coopMatLoadTensorNV(A, Buf.x, 0, t, decode2);
+    coopMatLoadTensorNV(A, Buf.x, 0, t, decode3);
+    coopMatLoadTensorNV(A, Buf.x, 0, t, decode4);
+    coopMatLoadTensorNV(A, Buf.x, 0, t, decode5);
+    coopMatLoadTensorNV(A, Buf.x, 0, t, decode6);
+    coopMatLoadTensorNV(A, Buf.x, 0, t, decode7);
+    coopMatLoadTensorNV(A, Buf.x, 0, t, decode8);
+    coopMatLoadTensorNV(A, Buf.x, 0, t, decode9);
+    coopMatLoadTensorNV(A, Buf.x, 0, t, decode10);
+    coopMatLoadTensorNV(A, Buf.x, 0, t, decode11);
+
+    coopmat<float32_t, gl_ScopeWorkgroup, 64, 32, gl_MatrixUseAccumulator> Af32;
+
+    coopMatReduceNV(A, A, gl_CooperativeMatrixReduceRowNV, combineSum);
+    coopMatReduceNV(A, A, gl_CooperativeMatrixReduceRowNV, combineSum2);
+    coopMatReduceNV(Af32, Af32, gl_CooperativeMatrixReduceRowNV, combineSum);
+
+    coopMatPerElementNV(A, A, relu);
+    coopMatPerElementNV(A, A, add, float16_t(1.0));
+    coopMatPerElementNV(A, A, add, coopmat<float16_t, gl_ScopeWorkgroup, 64, 32, gl_MatrixUseAccumulator>(1.0));
+    coopMatPerElementNV(A, A, add, float32_t(1.0));
+    coopMatPerElementNV(A, A, add, coopmat<float32_t, gl_ScopeWorkgroup, 64, 32, gl_MatrixUseAccumulator>(1.0));
+    coopMatPerElementNV(A, A, add);
+    coopMatPerElementNV(A, A, add, float16_t(1.0), float16_t(1.0));
+    coopMatPerElementNV(Af32, A, perelemf32);
+    coopMatPerElementNV(Af32, A, relu);
+
+    float16_t larr[16];
+    coopMatLoadTensorNV(A, larr, 0, t);
+    coopMatStoreTensorNV(A, larr, 0, t);
+
+}

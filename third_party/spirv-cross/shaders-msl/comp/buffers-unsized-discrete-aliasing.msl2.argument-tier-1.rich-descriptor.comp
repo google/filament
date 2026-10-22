@@ -1,0 +1,24 @@
+#version 450
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout(binding = 0) readonly buffer SSBO
+{
+        float b;
+		float unsized[];
+} RO[];
+
+layout(set = 0, binding = 0) writeonly buffer SSBOW
+{
+        layout(offset = 4) float a;
+} RW[];
+
+void in_func()
+{
+        RW[gl_WorkGroupID.x].a = RO[gl_WorkGroupID.x].b + RO[gl_WorkGroupID.x].unsized.length();
+}
+
+void main()
+{
+        in_func();
+}

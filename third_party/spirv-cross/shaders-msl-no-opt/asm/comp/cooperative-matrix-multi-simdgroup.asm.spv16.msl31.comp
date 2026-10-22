@@ -1,0 +1,39 @@
+; SPIR-V
+; Version: 1.6
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 55
+; Schema: 0
+               OpCapability Shader
+               OpCapability CooperativeMatrixKHR
+               OpCapability VulkanMemoryModel
+               OpExtension "SPV_KHR_cooperative_matrix"
+               OpExtension "SPV_KHR_vulkan_memory_model"
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint GLCompute %main "main" %wg_data
+; Two simdgroups: 64 threads total.  Validates that the per-simdgroup scratch
+; window is sized correctly (128 elements = 2 * 64) and indexed with
+; simdgroup_index_in_threadgroup * 64u so the two groups do not collide.
+               OpExecutionMode %main LocalSize 64 1 1
+               OpName %main "main"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_3 = OpConstant %uint 3
+     %uint_8 = OpConstant %uint 8
+    %uint_64 = OpConstant %uint 64
+    %float_2 = OpConstant %float 2
+  %arr_float = OpTypeArray %float %uint_64
+%ptr_wg_arr = OpTypePointer Workgroup %arr_float
+    %wg_data = OpVariable %ptr_wg_arr Workgroup
+%ptr_wg_float = OpTypePointer Workgroup %float
+%coopmat_f32 = OpTypeCooperativeMatrixKHR %float %uint_3 %uint_8 %uint_8 %uint_0
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+          %p = OpAccessChain %ptr_wg_float %wg_data %uint_0
+        %mat = OpCooperativeMatrixLoadKHR %coopmat_f32 %p %uint_0 %uint_8
+    %negated = OpFNegate %coopmat_f32 %mat
+               OpCooperativeMatrixStoreKHR %p %negated %uint_0 %uint_8
+               OpReturn
+               OpFunctionEnd

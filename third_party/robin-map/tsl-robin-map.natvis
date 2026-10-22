@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+    <!-- Written in VC 2017 15.7 but is expected to be compatible with VC 2015 -->
+
+    <!-- Visualization that shows the index in the name column and the key-value pair in the value column -->
+    <Type Name="tsl::robin_map&lt;*&gt;" Priority="Medium">
+        <AlternativeType Name="tsl::robin_set&lt;*&gt;"/>
+        <DisplayString>{{ size={m_ht.m_nb_elements} }}</DisplayString>
+        <Expand>
+            <Item Name="[bucket_count]" IncludeView="detailed">m_ht.m_buckets_data._Mypair._Myval2._Mylast - m_ht.m_buckets_data._Mypair._Myval2._Myfirst</Item>
+            <Item Name="[load_factor]" Condition="m_ht.m_buckets_data._Mypair._Myval2._Myfirst != m_ht.m_buckets_data._Mypair._Myval2._Mylast" IncludeView="detailed">
+                ((float)m_ht.m_nb_elements) / ((float)(m_ht.m_buckets_data._Mypair._Myval2._Mylast - m_ht.m_buckets_data._Mypair._Myval2._Myfirst))
+            </Item>
+            <Item Name="[load_factor]" Condition="m_ht.m_buckets_data._Mypair._Myval2._Myfirst == m_ht.m_buckets_data._Mypair._Myval2._Mylast" IncludeView="detailed">
+                0
+            </Item>
+            <Item Name="[max_load_factor]" IncludeView="detailed">m_ht.m_max_load_factor</Item>
+            <CustomListItems>
+                <Variable Name="bucket" InitialValue="m_ht.m_buckets"/>
+
+                <Size>m_ht.m_nb_elements</Size>
+                <Loop>
+                    <Item Condition="bucket-&gt;m_dist_from_ideal_bucket != -1">*bucket</Item>
+                    <Break Condition="bucket-&gt;m_last_bucket"/>
+                    <Exec>++bucket</Exec>
+                </Loop>
+            </CustomListItems>
+        </Expand>
+    </Type>
+
+    <!-- Visualization that shows the key in the name column and the key-value pair in the value column -->
+    <Type Name="tsl::robin_map&lt;*&gt;" ExcludeView="ShowElementsByIndex" Priority="MediumHigh">
+        <DisplayString>{{ size={m_ht.m_nb_elements} }}</DisplayString>
+        <Expand>
+            <Item Name="[bucket_count]" IncludeView="detailed">m_ht.m_buckets_data._Mypair._Myval2._Mylast - m_ht.m_buckets_data._Mypair._Myval2._Myfirst</Item>
+            <Item Name="[load_factor]" Condition="m_ht.m_buckets_data._Mypair._Myval2._Myfirst != m_ht.m_buckets_data._Mypair._Myval2._Mylast" IncludeView="detailed">
+                ((float)m_ht.m_nb_elements) / ((float)(m_ht.m_buckets_data._Mypair._Myval2._Mylast - m_ht.m_buckets_data._Mypair._Myval2._Myfirst))
+            </Item>
+            <Item Name="[load_factor]" Condition="m_ht.m_buckets_data._Mypair._Myval2._Myfirst == m_ht.m_buckets_data._Mypair._Myval2._Mylast" IncludeView="detailed">
+                0
+            </Item>
+            <Item Name="[max_load_factor]" IncludeView="detailed">m_ht.m_max_load_factor</Item>
+            <CustomListItems>
+                <Variable Name="bucket" InitialValue="m_ht.m_buckets"/>
+
+                <Size>m_ht.m_nb_elements</Size>
+                <Loop>
+                    <Item Condition="bucket-&gt;m_dist_from_ideal_bucket != -1" Name="[{reinterpret_cast&lt;std::pair&lt;$T1,$T2&gt;*&gt;(&amp;bucket->m_value)->first}]">*bucket</Item>
+                    <Break Condition="bucket-&gt;m_last_bucket"/>
+                    <Exec>++bucket</Exec>
+                </Loop>
+            </CustomListItems>
+        </Expand>
+    </Type>
+
+    <Type Name="tsl::detail_robin_hash::robin_hash&lt;*&gt;::robin_iterator&lt;*&gt;">
+        <DisplayString>{*m_bucket}</DisplayString>
+        <Expand>
+            <ExpandedItem>*m_bucket</ExpandedItem>
+        </Expand>
+    </Type>
+
+    <Type Name="tsl::detail_robin_hash::bucket_entry&lt;*&gt;">
+        <DisplayString Condition="m_dist_from_ideal_bucket == -1">empty</DisplayString>
+        <DisplayString Condition="m_dist_from_ideal_bucket != -1">{*reinterpret_cast&lt;$T1*&gt;(&amp;m_value)}</DisplayString>
+        <Expand>
+            <ExpandedItem Condition="m_dist_from_ideal_bucket != -1">*reinterpret_cast&lt;$T1*&gt;(&amp;m_value)</ExpandedItem>
+        </Expand>
+    </Type>
+
+    <Type Name="tsl::detail_robin_hash::bucket_entry&lt;*&gt;" IncludeView="MapHelper">
+        <DisplayString Condition="m_dist_from_ideal_bucket == -1">empty</DisplayString>
+        <DisplayString Condition="m_dist_from_ideal_bucket != -1">{reinterpret_cast&lt;$T1*&gt;(&amp;m_value)->second}</DisplayString>
+        <Expand>
+            <ExpandedItem Condition="m_dist_from_ideal_bucket != -1">*reinterpret_cast&lt;$T1*&gt;(&amp;m_value)</ExpandedItem>
+        </Expand>
+    </Type>
+</AutoVisualizer>

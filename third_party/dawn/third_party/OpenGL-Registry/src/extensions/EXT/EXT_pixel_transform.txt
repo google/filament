@@ -1,0 +1,428 @@
+Name
+
+    EXT_pixel_transform
+
+Name Strings
+
+    GL_EXT_pixel_transform
+
+Version
+
+    $Date: 1997/10/17 02:08:51 $ $Revision: 1.2 $
+
+Number
+
+    138
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension provides support for scaling, rotation, translation and
+    shearing of two-dimensional pixel rectangles in the pixel rasterizer.
+    The transformation is defined via a 4x4 matrix, where only those entries
+    which apply as a 2D affine transformation will be accepted and used.
+    These matrices can be manipulated using the same functions as the other 
+    OpenGL matrix stacks.
+   
+
+New Procedures and Functions
+
+    void PixelTransformParameteriEXT(enum target,
+                                     enum pname,
+                                     const int param)
+
+    void PixelTransformParameterfEXT(enum target,
+                                     enum pname,
+                                     const float param)
+
+    void PixelTransformParameterivEXT(enum target,
+                                      enum pname,
+                                      const int* params)
+
+    void PixelTransformParameterfvEXT(enum target,
+                                      enum pname,
+                                      const float* params)
+
+    These routines are used to set pixel transformation attributes.
+    The only allowable value for <target> at this time is
+    PIXEL_TRANSFORM_2D_EXT.  Allowable values for <pname> include:
+    PIXEL_MAG_FILTER_EXT, PIXEL_MIN_FILTER_EXT, and PIXEL_CUBIC_WEIGHT_EXT.
+
+    void GetPixelTransformParameterivEXT(enum target,
+                                         enum pname,
+                                         const int* params)
+
+    void GetPixelTransformParameterfvEXT(enum target,
+                                         enum pname,
+                                         const float* params)
+
+    These routines are used to query pixel transformation attributes.
+    The only allowable value for <target> at this time is
+    PIXEL_TRANSFORM_2D_EXT.  Allowable values for <pname> include:
+    PIXEL_MAG_FILTER_EXT, PIXEL_MIN_FILTER_EXT, and PIXEL_CUBIC_WEIGHT_EXT.
+
+New Tokens
+
+    Accepted by the <pname> parameter of PixelTransformParameteri,
+    PixelTransformParameterf, PixelTransformParameteriv,
+    PixelTransformParameterfv, GetPixelTransformParameteriv and
+    GetPixelTransformParameterfv:
+
+        PIXEL_MAG_FILTER_EXT                           0x8331
+        PIXEL_MIN_FILTER_EXT                           0x8332
+        PIXEL_CUBIC_WEIGHT_EXT                         0x8333
+
+    Accepted by the <params> parameter of PixelTransformParameteriEXT,
+    PixelTransformParameterfEXT, PixelTransformParameterivEXT, and
+    PixelTransformParameterfvEXT when <pname> is PIXEL_MAG_FILTER_EXT
+    or PIXEL_MIN_FILTER_EXT:
+
+        CUBIC_EXT                                      0x8334
+
+    Accepted by the <params> parameter of PixelTransformParameteriEXT,
+    PixelTransformParameterfEXT, PixelTransformParameterivEXT, and
+    PixelTransformParameterfvEXT when <pname> is PIXEL_MIN_FILTER_EXT:
+
+        AVERAGE_EXT                                    0x8335
+
+    Accepted by the <mode> parameter of MatrixMode,
+    and by the <target> parameter of PixelTransformParameterivEXT,
+    PixelTransformParameterfvEXT, GetPixelTransformParameterivEXT,
+    and GetPixelTransformParameterfvEXT:
+
+        PIXEL_TRANSFORM_2D_EXT                         0x8330
+
+    Accepted by the <pname> parameter of GetIntegerv, GetFloatv, 
+    and GetDoublev: 
+
+        PIXEL_TRANSFORM_2D_STACK_DEPTH_EXT             0x8336
+        MAX_PIXEL_TRANSFORM_2D_STACK_DEPTH_EXT         0x8337
+
+    Accepted by the <pname> parameter of GetFloatv, and GetDoublev: 
+
+        PIXEL_TRANSFORM_2D_MATRIX_EXT                  0x8338
+
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    In section 2.10.2 "Matrices":
+
+    The projection matrix, model-view matrix and pixel-transform matrix
+    are set and modified with a variety of commands. The affected matrix is
+    determined by the current matrix mode.  The current matrix mode is set with
+   
+       void MatrixMode (enum mode);
+
+    which takes one of the four pre-defined constants TEXTURE, MODELVIEW, 
+    PROJECTION, or PIXEL_TRANSFORM_2D_EXT as the argument value.  TEXTURE is
+    described later.  If the current matrix mode is MODELVIEW, then matrix 
+    operations apply to the model-view matrix; if PROJECTION, then they apply
+    to the projection matrix; if PIXEL_TRANSFORM_2D_EXT, then they apply to
+    the pixel-transform matrix.
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    The specification of two-dimensional pixel transformation operators
+    is defined in the GL specification in the final subsection of
+    Section 3.6.3, "Conversion to Fragments."  The following paragraphs
+    replace the text of the subsection.
+
+    The conversion of a group to fragments is controlled by the pixel
+    transformation matrix.  The pixel transformation matrix is defined
+    by calling MatrixMode with <mode> set to PIXEL_TRANSFORM_2D_EXT, then using 
+    any of the existing functions which operate on matrices and matrix stacks.
+    (i.e. LoadIdentity, LoadMatrix, MultMatrix, PushMatrix, PopMatrix, Rotate, 
+    Scale, and Translate.)  When using the matrix operators, while in 
+    PIXEL_TRANSFORM_2D_EXT matrix mode, those entries in the 4 x 4 matrix 
+    that are not part of a 2D affine transformation are forced to take on 
+    values of either 0 or 1 so that the final matrix represents a 2D affine 
+    transformation matrix.  That is to say, of the matrix entries shown below:
+
+           --               --
+           | m0  m4  m8   m12|
+       P = | m1  m5  m9   m13|
+           | m2  m6  m10  m14|
+           | m3  m7  m11  m15|
+           --               --
+
+    only the matrix entries m0, m1, m4, m5, m12, and m13 are allowed to
+    vary.  The other matrix entries will be forced to be either 0 or 1 as 
+    shown below:
+
+           --               --
+           | m0  m4   0   m12|
+       P = | m1  m5   0   m13|
+           |  0   0   1    0 |
+           |  0   0   0    1 |
+           --               --
+
+    The pixel transformation operation is always enabled.  The pixel 
+    transformation operation uses the current pixel transformation
+    matrix to compute new window coordinates for each incoming pixel.
+    Resampling occurs after the pixel transformation matrix has been
+    applied.
+
+    Window coordinates are computed for each group by multiplying
+    the column/row location in the original pixel rectangle by the pixel
+    transformation matrix.  The components of the current raster position
+    (section 2.12) are then added to the resulting components.  (If the
+    current raster position is invalid, then DrawPixels is
+    ignored.) Let (Xrp, Yrp) be the current raster position and let
+    (Xo, Yo) represent the column and row of the group in the original
+    pixel rectangle.  The depth value (Z) for the group is defined
+    as the depth value at the original location in the pixel rectangle
+    if the format was DEPTH_COMPONENT, and as the depth associated with
+    the current raster position otherwise.  The final transformed pixel
+    coordinate (Xf, Yf, Zf) is computed by:
+
+       --    --       --  --
+       |  Xo  |       | Xt |
+       |  Yo  |  P =  | Yt |
+       |  Z   |       | Zt |
+       |  1   |       | 1  |
+       --    --       --  --
+
+       Xf = Xt + Xrp
+       Yf = Yt + Yrp
+       Zf = Zt
+
+    The function
+
+        void PixelZoom( float zx, float zy ) ;
+
+    will set the current pixel transformation matrix (the current top
+    of the pixel transformation matrix stack) to the scaling matrix:
+
+           --               --
+           | zx   0   0    0 |
+       P = |  0  zy   0    0 |
+           |  0   0   1    0 |
+           |  0   0   0    1 |
+           --               --
+
+    The original pixel value for each input pixel location is left unmodified
+    by the pixel transformation.  Since multiple input pixels can be mapped
+    into a single output pixel (minification of the input pixel rectangle),
+    or since output pixels might not have any input pixels mapped to them
+    (magnification of input pixel rectangle), some method of resampling
+    is required.  Resampling methods are set using the functions
+    PixelTransformParameteriEXT, PixelTransformParameterfEXT,
+    PixelTransformParameterivEXT, or PixelTransformParameterfvEXT with
+    <target> set to PIXEL_TRANSFORM_2D_EXT. 
+
+    The resampling method to be used when the pixel rectangle is
+    magnified is specified by calling one of these functions with
+    <pname> set to PIXEL_MAG_FILTER_EXT and <params> set to NEAREST,
+    LINEAR, or CUBIC_EXT.  The resampling method to be used when the
+    pixel rectangle is minified is specified by calling one of these
+    functions with <pname> set to PIXEL_MIN_FILTER_EXT and <params>
+    set to NEAREST, LINEAR, CUBIC_EXT, or AVERAGE_EXT.
+    PIXEL_CUBIC_WEIGHT_EXT defines the cubic weighting coefficient
+    that is to be used whenever the resampling technique is set to CUBIC_EXT.
+    
+    If the resampling method is NEAREST, each output pixel will have the
+    value of the input pixel whose transformed coordinate value is nearest
+    (in Manhattan distance).  If the resampling method is LINEAR, each
+    output pixel will have a value that is the weighted average of the 
+    four input pixels whose transformed coordinate values are nearest.
+
+    If the resampling method is CUBIC_EXT, each output pixel will have a value
+    that is affected by the 16 input pixels whose transformed coordinate
+    values are nearest.  The 16 input pixels will be used to perform a cubic
+    spline interpolation to determine the value of the output pixel.  The
+    cubic weight factor is a floating point value that is applied to the
+    cubic interpolation in the manner described in "Digital Image Warping"
+    by George Wolberg (IEEE Computer Society Press, ISBN 0-8186-8944-7).
+    Visually pleasing cubic weighting values are typically in the
+    range [-1,0].  The values -1.0 and -0.5 are most commonly used.
+    For the purpose of performing bicubic interpolation along the outer
+    edge of the pixel rectangle, the outermost one pixel edge of the pixel
+    rectangle is duplicated prior to performing the interpolation along the
+    edges.
+
+    If the resampling method is AVERAGE_EXT, the values of all of the input
+    pixels that contribute to the final output pixel will be averaged to
+    determine the final output pixel value.  That is to say, an output pixel
+    is backward mapped into the input pixel rectangle, then the nearest 
+    neighbor resampling method determines the address of the center input 
+    pixel from which input pixels will be averaged.  All pixels in the input 
+    that forward map into the same location in the output pixel rectangle will 
+    be added together and divided by the total number of input pixels which
+    contribute the same output pixel.  An example would be, if the output
+    pixel rectangle is 1/3 the size of the input pixel rectangle, then a
+    total of 9 pixels would be read from the input pixel rectangle, averaged,
+    and then the new single value will be written into the output pixel
+    rectangle.
+
+    Pixel transformation is defined for pixel rectangles that contain INDEX, 
+    LUMINANCE, LUMINANCE_ALPHA, RGB, RGBA, or ABGR_EXT components or depth 
+    components in pixel rastorization.  Groups arising from DrawPixels with
+    a format of STENCIL_INDEX are treated specially and are described in
+    section 4.3.1.
+
+    A fragment arising from a group consisting of color data takes on the
+    color index or color components of the group; the depth and texture
+    coordinates are taken from the current raster position's associated
+    data.  A fragment arising from a depth component takes the component's
+    depth value; the color and texture coordinates are given by those 
+    associated with the current raster position.  In both cases texture
+    coordinates s, t, and r are replaced with s/q, t/q, and r/q,
+    respectively.
+
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    The pixel transformation operation occurs in pixel rasterization 
+    immediately after the operations in the pixel transfer pipeline.
+    The operation of pixel transformation during pixel copy
+    operations is identical to the operation during pixel drawing.
+    The pixel transformation is not applied during pixel query
+    operations.
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    GetPixelTransformParameterivEXT, and GetPixelTransformParameterfvEXT
+    are not included in display lists, but are instead executed immediately.
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    Integer and floating point query functions GetPixelTransformParameterivEXT
+    and GetPixelTransformParameterfvEXT are provided.  <target> must be
+    PIXEL_TRANSFORM_2D_EXT.  <pname> is one of PIXEL_MAG_FILTER_EXT, 
+    PIXEL_MIN_FILTER_EXT, or PIXEL_CUBIC_WEIGHT_EXT.  The value of the 
+    specified parameter is returned in <params>.
+
+Additions to the GLX Specification
+    
+    None
+
+GLX Protocol
+
+    Four new GL commands are added.
+
+    The following two rendering commands are sent to the server as part of
+    a glXRender request:
+
+        PixelTransformParameterfEXT
+            2       16              rendering command length
+            2       16385           rendering command opcode
+            4       ENUM            target
+            4       ENUM            pname
+            4       FLOAT32         param
+
+        PixelTransformParameteriEXT
+            2       16              rendering command length
+            2       16386           rendering command opcode
+            4       ENUM            target
+            4       ENUM            pname
+            4       INT32           param
+
+    The remaining two commands are non-rendering commands. These commands
+    are sent seperately (i.e., not as part of a glXRender or
+    glXRenderLarge request), using the glXVendorPrivateWithReply
+    request:
+
+        GetPixelTransformParameterfvEXT
+            1       CARD8           opcode (X assigned)
+            1       17              GLX opcode (glXVendorPrivateWithReply)
+            2       5               request length
+            4       2051            vendor specific opcode
+            4       GLX_CONTEXT_TAG context tabg
+            4       ENUM            target
+            4       ENUM            pname
+         ==>
+            1       1               reply
+            1                       unused
+            2       CARD16          sequence number
+            4       m               reply length, m = (n==1 ? 0: n)
+            4                       unused
+            4       CARD16          n (0 or 1)
+
+            if (n=1) this follows:
+
+            4       FLOAT32         params
+            12                      unused
+
+    Note that n may be zero, indicating that a GL error occurred.
+
+
+        GetPixelTransformParameterivEXT
+            1       CARD8           opcode (X assigned)
+            1       17              GLX opcode (glXVendorPrivateWithReply)
+            2       5               request length
+            4       2052            vendor specific opcode
+            4       GLX_CONTEXT_TAG context tabg
+            4       ENUM            target
+            4       ENUM            pname
+         ==>
+            1       1               reply
+            1                       unused
+            2       CARD16          sequence number
+            4       m               reply length, m = (n==1 ? 0: n)
+            4                       unused
+            4       CARD16          n (0 or 1)
+
+            if (n=1) this follows:
+
+            4       INT32           params
+            12                      unused
+
+    Note that n may be zero, indicating that a GL error occurred.
+
+
+
+Errors
+
+    INVALID_ENUM is generated if PixelTransformParameteriEXT,
+    PixelTransformParameterfEXT, PixelTransformParameterivEXT,
+    PixelTransformParameterfvEXT, GetPixelTransformParameterivEXT,
+    or GetPixelTransformParameterfvEXT is called with <target> set to
+    a value other than PIXEL_TRANSFORM_2D_EXT.
+
+    INVALID_ENUM is generated if GetPixelTransformParameterivEXT or
+    GetPixelTransformParameterfvEXT is called with <pname> set to
+    PIXEL_MAG_FILTER_EXT and <params> is not one of NEAREST, LINEAR,
+    or CUBIC_EXT.
+
+    INVALID_ENUM is generated if GetPixelTransformParameterivEXT or
+    GetPixelTransformParameterfvEXT is called with <pname> set to
+    PIXEL_MIN_FILTER_EXT and <params> is not one of NEAREST, LINEAR,
+    CUBIC_EXT, or AVERAGE_EXT.
+
+    INVALID_VALUE is generated if PixelTransformParameteriEXT,
+    PixelTransformParameterfEXT, PixelTransformParameterivEXT, or
+    PixelTransformParameterfvEXT is called with <pname> set to
+    PIXEL_CUBIC_WEIGHT_EXT and <params> is a value outside of
+    the range [-1, 0].
+
+    INVALID_OPERATION is generated if PixelTransformParameteriEXT,
+    PixelTransformParameterfEXT, PixelTransformParameterivEXT,
+    PixelTransformParameterfvEXT, GetPixelTransformParameterivEXT,
+    or GetPixelTransformParameterfvEXT is called between execution of
+    Begin and the corresponding execution of End.
+
+New State
+                                                                                        Initial
+    Get Value                                   Get Command                     Type    Value     Attrib
+    ---------                                   -----------                     ----    -------   ------
+    PIXEL_TRANSFORM_2D_STACK_DEPTH_EXT          GetIntegerv                      I          1       -
+    PIXEL_TRANSFORM_2D_STACK_DEPTH_EXT          GetFloatv                        R          1       -
+    PIXEL_TRANSFORM_2D_STACK_DEPTH_EXT          GetDoublev                       D          1       -
+    MAX_PIXEL_TRANSFORM_2D_STACK_DEPTH_EXT      GetIntegerv                      I         32       -
+    MAX_PIXEL_TRANSFORM_2D_STACK_DEPTH_EXT      GetFloatv                        R         32       -
+    MAX_PIXEL_TRANSFORM_2D_STACK_DEPTH_EXT      GetDoublev                       D         32       -
+    PIXEL_TRANSFORM_2D_MATRIX_EXT               GetFloatv                      16 x R   Identity    -
+    PIXEL_TRANSFORM_2D_MATRIX_EXT               GetDoublev                     16 x D   Identity    -
+    PIXEL_MAG_FILTER_EXT                        GetPixelTransformParameteri      Z3     NEAREST   pixel
+    PIXEL_MIN_FILTER_EXT                        GetPixelTransformParameteri      Z4     NEAREST   pixel
+    PIXEL_CUBIC_WEIGHT_EXT                      GetPixelTransformParameterf      R         -1     pixel
+
+
+New Implementation Dependent State
+
+    None
+

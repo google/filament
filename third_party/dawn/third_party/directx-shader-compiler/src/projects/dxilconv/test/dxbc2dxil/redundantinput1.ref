@@ -1,0 +1,55 @@
+
+define void @main() {
+entry:
+  %0 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %1 = call float @dx.op.unary.f32(i32 6, float %0)
+  %2 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 undef)
+  %3 = call float @dx.op.unary.f32(i32 6, float %2)
+  %4 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %5 = call float @dx.op.unary.f32(i32 6, float %4)
+  %6 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 3, i32 undef)
+  %7 = call float @dx.op.unary.f32(i32 6, float %6)
+  %8 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %9 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 undef)
+  %10 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %11 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 3, i32 undef)
+  %12 = fadd fast float %1, %8
+  %13 = fadd fast float %3, %9
+  %14 = fadd fast float %5, %10
+  %15 = fadd fast float %7, %11
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 0, float %12)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 1, float %13)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 2, float %14)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 3, float %15)
+  ret void
+}
+
+; Function Attrs: nounwind readnone
+declare float @dx.op.loadInput.f32(i32, i32, i32, i8, i32) #0
+
+; Function Attrs: nounwind readnone
+declare float @dx.op.unary.f32(i32, float) #0
+
+; Function Attrs: nounwind
+declare void @dx.op.storeOutput.f32(i32, i32, i32, i8, float) #1
+
+attributes #0 = { nounwind readnone }
+attributes #1 = { nounwind }
+
+!dx.version = !{!0}
+!dx.valver = !{!0}
+!dx.shaderModel = !{!1}
+!dx.entryPoints = !{!2}
+!llvm.ident = !{!10}
+
+!0 = !{i32 1, i32 0}
+!1 = !{!"ps", i32 6, i32 0}
+!2 = !{void ()* @main, !"main", !3, null, !9}
+!3 = !{!4, !7, null}
+!4 = !{!5}
+!5 = !{i32 0, !"A", i8 9, i8 0, !6, i8 2, i32 1, i8 4, i32 0, i8 0, null}
+!6 = !{i32 0}
+!7 = !{!8}
+!8 = !{i32 0, !"SV_Target", i8 9, i8 16, !6, i8 0, i32 1, i8 4, i32 0, i8 0, null}
+!9 = !{i32 0, i64 256}
+!10 = !{!"dxbc2dxil 1.2"}

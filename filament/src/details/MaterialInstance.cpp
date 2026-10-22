@@ -1,0 +1,691 @@
+/*
+ * Copyright (C) 2015 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "details/MaterialInstance.h"
+
+#include "MaterialParser.h"
+#include "RenderPass.h"
+
+#include "details/Engine.h"
+#include "details/Material.h"
+#include "details/Stream.h"
+#include "details/Texture.h"
+
+#include "ds/DescriptorSetLayout.h"
+
+#include <private/filament/EngineEnums.h>
+
+#include <filament/MaterialEnums.h>
+#include <filament/MaterialInstance.h>
+#include <filament/TextureSampler.h>
+
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+
+#include <private/utils/Tracing.h>
+
+#include <utils/BitmaskEnum.h>
+#include <utils/compiler.h>
+#include <utils/CString.h>
+#include <utils/debug.h>
+#include <utils/Logger.h>
+#include <utils/ostream.h>
+#include <utils/Panic.h>
+
+#include <math/scalar.h>
+
+#include <algorithm>
+#include <cmath>
+#include <mutex>
+#include <string_view>
+#include <utility>
+
+#include <stddef.h>
+
+using namespace filament::math;
+using namespace utils;
+
+namespace filament {
+
+using namespace backend;
+
+FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material, const char* name) noexcept
+        : mMaterial(material),
+          mDescriptorSet("MaterialInstance", material->getDescriptorSetLayout()),
+          mCulling(CullingMode::BACK),
+          mShadowCulling(CullingMode::BACK),
+          mDepthFunc(RasterState::DepthFunc::LE),
+          mColorWrite(false),
+          mDepthWrite(false),
+          mHasScissor(false),
+          mIsDoubleSided(false),
+          mIsDefaultInstance(false),
+          mUseUboBatching(material->useUboBatching()),
+          mTransparencyMode(TransparencyMode::DEFAULT),
+          mName(name ? CString(name) : material->getName()) {
+    FEngine::DriverApi& driver = engine.getDriverApi();
+
+    // even if the material doesn't have any parameters, we allocate a small UBO because it's
+    // expected by the per-material descriptor-set layout
+    size_t const uboSize = std::max(size_t(16), material->getUniformInterfaceBlock().getSize());
+    mUniforms = UniformBuffer(uboSize);
+
+    if (mUseUboBatching) {
+        mUboData = BufferAllocator::UNALLOCATED;
+        engine.getUboManager()->manageMaterialInstance(this);
+    } else {
+        mUboData = driver.createBufferObject(mUniforms.getSize(), BufferObjectBinding::UNIFORM,
+                BufferUsage::STATIC, ImmutableCString{ material->getName().c_str_safe() });
+        // set the UBO, always descriptor 0
+        mDescriptorSet.setBuffer(material->getDescriptorSetLayout(),
+                0, std::get<Handle<HwBufferObject>>(mUboData), 0, mUniforms.getSize());
+    }
+
+    const RasterState& rasterState = material->getRasterState();
+    // At the moment, only MaterialInstances have a stencil state, but in the future it should be
+    // possible to set the stencil state directly on a material (through material definitions, or
+    // MaterialBuilder).
+    // TODO: Here is where we'd "inherit" the stencil state from the Material.
+    // mStencilState = material->getStencilState();
+
+    // We inherit the resolved culling mode rather than the builder-set culling mode.
+    // This preserves the property whereby double-sidedness automatically disables culling.
+    mCulling = rasterState.culling;
+    mShadowCulling = rasterState.culling;
+    mColorWrite = rasterState.colorWrite;
+    mDepthWrite = rasterState.depthWrite;
+    mDepthFunc = rasterState.depthFunc;
+
+    mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
+            material->getId(), material->generateMaterialInstanceId());
+
+    if (material->getBlendingMode() == BlendingMode::MASKED) {
+        setMaskThreshold(material->getMaskThreshold());
+    }
+
+    if (material->hasDoubleSidedCapability()) {
+        setDoubleSided(material->isDoubleSided());
+    }
+
+    if (material->hasSpecularAntiAliasing()) {
+        setSpecularAntiAliasingVariance(material->getSpecularAntiAliasingVariance());
+        setSpecularAntiAliasingThreshold(material->getSpecularAntiAliasingThreshold());
+    }
+
+    setTransparencyMode(material->getTransparencyMode());
+}
+
+FMaterialInstance::FMaterialInstance(FEngine& engine,
+        FMaterialInstance const* other, const char* name)
+        : mMaterial(other->mMaterial),
+          mTextureParameters(other->mTextureParameters),
+          mDescriptorSet(other->mDescriptorSet.duplicate(
+                "MaterialInstance", mMaterial->getDescriptorSetLayout())),
+          mPrograms(other->mPrograms),
+          mPolygonOffset(other->mPolygonOffset),
+          mStencilState(other->mStencilState),
+          mMaskThreshold(other->mMaskThreshold),
+          mSpecularAntiAliasingVariance(other->mSpecularAntiAliasingVariance),
+          mSpecularAntiAliasingThreshold(other->mSpecularAntiAliasingThreshold),
+          mCulling(other->mCulling),
+          mShadowCulling(other->mShadowCulling),
+          mDepthFunc(other->mDepthFunc),
+          mColorWrite(other->mColorWrite),
+          mDepthWrite(other->mDepthWrite),
+          mHasScissor(false),
+          mIsDoubleSided(other->mIsDoubleSided),
+          mIsDefaultInstance(false),
+          mUseUboBatching(other->mUseUboBatching),
+          mScissorRect(other->mScissorRect),
+          mName(name ? CString(name) : other->mName) {
+    FEngine::DriverApi& driver = engine.getDriverApi();
+    FMaterial const* const material = other->getMaterial();
+
+    mUniforms.setUniforms(other->getUniformBuffer());
+
+    if (mUseUboBatching) {
+        mUboData = BufferAllocator::UNALLOCATED;
+        engine.getUboManager()->manageMaterialInstance(this);
+    } else {
+        mUboData = driver.createBufferObject(mUniforms.getSize(), BufferObjectBinding::UNIFORM,
+                BufferUsage::DYNAMIC, ImmutableCString{ material->getName().c_str_safe() });
+        // set the UBO, always descriptor 0
+        mDescriptorSet.setBuffer(material->getDescriptorSetLayout(),
+                0, std::get<Handle<HwBufferObject>>(mUboData), 0, mUniforms.getSize());
+    }
+
+    if (material->hasDoubleSidedCapability()) {
+        setDoubleSided(mIsDoubleSided);
+    }
+
+    if (material->getBlendingMode() == BlendingMode::MASKED) {
+        setMaskThreshold(mMaskThreshold);
+    }
+
+    if (material->hasSpecularAntiAliasing()) {
+        setSpecularAntiAliasingThreshold(mSpecularAntiAliasingThreshold);
+        setSpecularAntiAliasingVariance(mSpecularAntiAliasingVariance);
+    }
+
+    setTransparencyMode(material->getTransparencyMode());
+
+    mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
+            material->getId(), material->generateMaterialInstanceId());
+
+    // If the original descriptor set has been commited, the copy needs to commit as well.
+    if (!mUseUboBatching && other->mDescriptorSet.getHandle()) {
+        mDescriptorSet.commitSlow(mMaterial->getDescriptorSetLayout(), driver);
+    }
+}
+
+FMaterialInstance* FMaterialInstance::duplicate(FMaterialInstance const* other,
+        const char* name) noexcept {
+    FMaterial const* const material = other->getMaterial();
+    FEngine& engine = material->getEngine();
+    return engine.createMaterialInstance(material, other, name);
+}
+
+FMaterialInstance::~FMaterialInstance() noexcept = default;
+
+void FMaterialInstance::terminate(FEngine& engine) {
+    FEngine::DriverApi& driver = engine.getDriverApi();
+    mDescriptorSet.terminate(driver);
+    if (mUseUboBatching) {
+        engine.getUboManager()->unmanageMaterialInstance(this);
+    }
+
+    auto* ubHandle = std::get_if<Handle<HwBufferObject>>(&mUboData);
+    if (ubHandle){
+        driver.destroyBufferObject(*ubHandle);
+    }
+
+    if (mPrograms.isInitialized()) {
+        mPrograms.terminate(engine);
+    }
+}
+
+void FMaterialInstance::commit(FEngine& engine) const {
+    if (UTILS_LIKELY(mMaterial->getMaterialDomain() != MaterialDomain::SURFACE)) {
+        commit(engine.getDriverApi(), engine.getUboManager());
+    }
+}
+
+void FMaterialInstance::commit(FEngine::DriverApi& driver, UboManager* uboManager) const {
+    if (!mTextureParameters.empty()) {
+        FEngine const& engine = mMaterial->getEngine();
+        // First pass: check preconditions
+        for (auto const& [binding, p]: mTextureParameters) {
+            assert_invariant(p.texture);
+            FILAMENT_CHECK_PRECONDITION(engine.isValid(p.texture))
+                    << "Invalid texture still bound to MaterialInstance: '" << getName() << "'\n";
+        }
+        // Second pass: update state
+        for (auto const& [binding, p]: mTextureParameters) {
+            Handle<HwTexture> const handle = p.texture->getHwHandleForSampling();
+            assert_invariant(handle);
+            mDescriptorSet.setSampler(mMaterial->getDescriptorSetLayout(),
+                binding, handle, p.params);
+        }
+    }
+
+
+    if (mUniforms.isDirty()) {
+        mUniforms.clean();
+        if (isUsingUboBatching()) {
+            if (!BufferAllocator::isValid(getAllocationId())) {
+                // The allocation hasn't happened yet, return.
+                return;
+            }
+
+            uboManager->updateSlot(driver, getAllocationId(), mUniforms.toBufferDescriptor(driver));
+        }
+        else {
+            auto* ubHandle = std::get_if<Handle<HwBufferObject>>(&mUboData);
+            assert_invariant(ubHandle != nullptr);
+            driver.updateBufferObject(*ubHandle, mUniforms.toBufferDescriptor(driver), 0);
+        }
+    }
+
+    // TODO: eventually we should remove this in RELEASE builds
+    fixMissingSamplers();
+
+    if (isUsingUboBatching() && !BufferAllocator::isValid(getAllocationId())) {
+        return;
+    }
+
+    // Commit descriptors if needed (e.g. when textures are updated,or the first time)
+    mDescriptorSet.commit(mMaterial->getDescriptorSetLayout(), driver);
+}
+
+// ------------------------------------------------------------------------------------------------
+
+template<typename T>
+void FMaterialInstance::setConstantImpl(std::string_view name, T value) {
+    auto const& constants = mMaterial->getDefinition().specializationConstantsNameToIndex;
+    auto it = constants.find(name);
+    FILAMENT_CHECK_PRECONDITION(it != constants.end()) << "Constant " << name << " does not exist";
+
+    if (UTILS_UNLIKELY(mPendingSpecializationConstants.empty())) {
+        mPendingSpecializationConstants =
+                FixedCapacityVector<backend::Program::SpecializationConstant>(
+                        getPrograms().getSpecializationConstants());
+    }
+
+    uint32_t id = it->second + CONFIG_MAX_INTERNAL_SPEC_CONSTANTS;
+    mPendingSpecializationConstants[id] = value;
+}
+
+template<typename T>
+T FMaterialInstance::getConstantImpl(std::string_view name) const {
+    auto const& constants = mMaterial->getDefinition().specializationConstantsNameToIndex;
+    auto it = constants.find(name);
+    FILAMENT_CHECK_PRECONDITION(it != constants.end()) << "Constant " << name << " does not exist";
+
+    uint32_t id = it->second + CONFIG_MAX_INTERNAL_SPEC_CONSTANTS;
+
+    if (UTILS_UNLIKELY(!mPendingSpecializationConstants.empty())) {
+        return std::get<T>(mPendingSpecializationConstants[id]);
+    }
+
+    return getPrograms().getConstant<T>(id);
+}
+
+// ------------------------------------------------------------------------------------------------
+
+void FMaterialInstance::setParameter(std::string_view const name,
+        Handle<HwTexture> texture, SamplerParams const params) {
+    auto const binding = mMaterial->getSamplerBinding(name);
+
+    mDescriptorSet.setSampler(mMaterial->getDescriptorSetLayout(),
+        binding, texture, params);
+}
+
+void FMaterialInstance::setParameterImpl(std::string_view const name,
+        FTexture const* texture, TextureSampler const& sampler) {
+
+#ifndef NDEBUG
+    // Per GLES3.x specification, depth texture can't be filtered unless in compare mode.
+    if (texture && isDepthFormat(texture->getFormat())) {
+        if (sampler.getCompareMode() == SamplerCompareMode::NONE) {
+            SamplerMinFilter const minFilter = sampler.getMinFilter();
+            SamplerMagFilter const magFilter = sampler.getMagFilter();
+            if (magFilter == SamplerMagFilter::LINEAR ||
+                minFilter == SamplerMinFilter::LINEAR ||
+                minFilter == SamplerMinFilter::LINEAR_MIPMAP_LINEAR ||
+                minFilter == SamplerMinFilter::LINEAR_MIPMAP_NEAREST ||
+                minFilter == SamplerMinFilter::NEAREST_MIPMAP_LINEAR) {
+                PANIC_LOG("Depth textures can't be sampled with a linear filter "
+                          "unless the comparison mode is set to COMPARE_TO_TEXTURE. "
+                          "(material: \"%s\", parameter: \"%.*s\")",
+                        getMaterial()->getName().c_str(), name.size(), name.data());
+            }
+        }
+    }
+#endif
+
+    auto const binding = mMaterial->getSamplerBinding(name);
+
+    if (texture) {
+        auto const& descriptorSetLayout = mMaterial->getDescriptorSetLayout();
+        DescriptorType const descriptorType = descriptorSetLayout.getDescriptorType(binding);
+        TextureType const textureType = texture->getTextureType();
+        SamplerType const samplerType = texture->getTarget();
+        auto const& featureFlags = mMaterial->getEngine().features.engine.debug;
+
+        FILAMENT_CHECK_PRECONDITION(texture->getUsage() & TextureUsage::SAMPLEABLE)
+                << "Texture for parameter \"" << name << "\"" << " is not SAMPLEABLE";
+
+        FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(
+                DescriptorSet::isTextureCompatibleWithDescriptor(
+                        textureType, samplerType, descriptorType),
+                featureFlags.assert_material_instance_texture_descriptor_set_compatible)
+                << "Texture format " << int(texture->getFormat())
+                << " of type " << to_string(textureType)
+                << " with sampler type " << to_string(samplerType)
+                << " is not compatible with material \"" << getMaterial()->getName().c_str() << "\""
+                << " parameter \"" << name << "\""
+                << " of type " << to_string(descriptorType);
+    }
+
+    if (texture && texture->textureHandleCanMutate()) {
+        mTextureParameters[binding] = { texture, sampler.getSamplerParams() };
+    } else {
+        // Ensure to erase the binding from mTextureParameters since it will not
+        // be updated.
+        mTextureParameters.erase(binding);
+
+        Handle<HwTexture> handle{};
+        if (texture) {
+            handle = texture->getHwHandleForSampling();
+            assert_invariant(handle == texture->getHwHandle());
+        }
+        mDescriptorSet.setSampler(mMaterial->getDescriptorSetLayout(),
+            binding, handle, sampler.getSamplerParams());
+    }
+}
+
+void FMaterialInstance::setMaskThreshold(float const threshold) noexcept {
+    setParameter("_maskThreshold", saturate(threshold));
+    mMaskThreshold = saturate(threshold);
+}
+
+float FMaterialInstance::getMaskThreshold() const noexcept {
+    return mMaskThreshold;
+}
+
+void FMaterialInstance::setSpecularAntiAliasingVariance(float const variance) noexcept {
+    setParameter("_specularAntiAliasingVariance", saturate(variance));
+    mSpecularAntiAliasingVariance = saturate(variance);
+}
+
+float FMaterialInstance::getSpecularAntiAliasingVariance() const noexcept {
+    return mSpecularAntiAliasingVariance;
+}
+
+void FMaterialInstance::setSpecularAntiAliasingThreshold(float const threshold) noexcept {
+    setParameter("_specularAntiAliasingThreshold", saturate(threshold * threshold));
+    mSpecularAntiAliasingThreshold = std::sqrt(saturate(threshold * threshold));
+}
+
+float FMaterialInstance::getSpecularAntiAliasingThreshold() const noexcept {
+    return mSpecularAntiAliasingThreshold;
+}
+
+void FMaterialInstance::setDoubleSided(bool const doubleSided) noexcept {
+    if (UTILS_UNLIKELY(!mMaterial->hasDoubleSidedCapability())) {
+        LOG(WARNING) << "Parent material does not have double-sided capability.";
+        return;
+    }
+    setParameter("_doubleSided", doubleSided);
+    if (doubleSided) {
+        setCullingMode(CullingMode::NONE);
+    }
+    mIsDoubleSided = doubleSided;
+}
+
+bool FMaterialInstance::isDoubleSided() const noexcept {
+    return mIsDoubleSided;
+}
+
+void FMaterialInstance::setTransparencyMode(TransparencyMode const mode) noexcept {
+    mTransparencyMode = mode;
+}
+
+RasterState FMaterialInstance::getRasterState() const noexcept {
+    RasterState rs = mMaterial->getRasterState();
+    rs.culling = mCulling;
+    rs.depthWrite = mDepthWrite;
+    rs.depthFunc = mDepthFunc;
+    rs.colorWrite = mColorWrite;
+    return rs;
+}
+
+void FMaterialInstance::setDepthCulling(bool const enable) noexcept {
+    mDepthFunc = enable ? RasterState::DepthFunc::GE : RasterState::DepthFunc::A;
+}
+
+bool FMaterialInstance::isDepthCullingEnabled() const noexcept {
+    return mDepthFunc != RasterState::DepthFunc::A;
+}
+
+const char* FMaterialInstance::getName() const noexcept {
+    // To decide whether to use the parent material name as a fallback, we check for the nullness of
+    // the instance's CString rather than calling empty(). This allows instances to override the
+    // parent material's name with a blank string.
+    if (mName.data() == nullptr) {
+        return mMaterial->getName().c_str_safe();
+    }
+    return mName.c_str();
+}
+
+// ------------------------------------------------------------------------------------------------
+
+void FMaterialInstance::compile(CompilerPriorityQueue const priority,
+        UserVariantFilterMask variantSpec, CallbackHandler* handler,
+        Invocable<void(MaterialInstance*)>&& callback) noexcept {
+    FEngine& engine = mMaterial->getEngine();
+    DriverApi& driver = engine.getDriverApi();
+    MaterialDefinition const& definition = mMaterial->getDefinition();
+
+    bool const isStereoSupported = driver.isStereoSupported();
+
+    // Turn off the STE variant if stereo is not supported.
+    if (UTILS_LIKELY(!isStereoSupported)) {
+        variantSpec &= ~UserVariantFilterMask(UserVariantFilterBit::STE);
+    }
+
+    UserVariantFilterMask const variantFilter =
+            ~variantSpec & UserVariantFilterMask(UserVariantFilterBit::ALL);
+    ShaderModel const shaderModel = engine.getShaderModel();
+    MaterialDomain const materialDomain = definition.materialDomain;
+    bool const isMaterialLit = definition.isVariantLit;
+
+    if (UTILS_LIKELY(driver.isParallelShaderCompileSupported())) {
+        for (auto const variant: definition.getVariants()) {
+            // The variant is filtered by the user, skip it.
+            if (variantFilter && variant != definition.filterUserVariant(variant, variantFilter))
+                continue;
+
+            for (auto const specKey:
+                    DynamicSpecConstKey::getValidKeys(variant, materialDomain, isMaterialLit)) {
+                // Although certain variant bits were migrated to specialization constants, we
+                // still evaluate them against the variant filter mask to prune unnecessary
+                // shader permutations from the compilation queue.
+                if (variantFilter &&
+                        specKey != DynamicSpecConstKey::filterUserVariant(specKey, variantFilter))
+                    continue;
+
+                if (definition.isValidProgram(variant, specKey, shaderModel, isStereoSupported)) {
+#ifndef NDEBUG
+                    FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                            "prepareProgram(variant found)", "name",
+                            getMaterial()->getName().c_str_safe(), "variantKey",
+                            static_cast<uint32_t>(variant.key), "specKey",
+                            static_cast<uint32_t>(specKey.key), "priority",
+                            static_cast<uint32_t>(priority));
+#endif
+                    prepareProgram(driver, variant, specKey, priority);
+#ifndef NDEBUG
+                } else {
+                    FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                            "requested variant missing", "name",
+                            getMaterial()->getName().c_str_safe(), "variantKey",
+                            static_cast<uint32_t>(variant.key), "specKey",
+                            static_cast<uint32_t>(specKey.key), "priority",
+                            static_cast<uint32_t>(priority));
+#endif
+                }
+            }
+        }
+#ifndef NDEBUG
+    } else {
+        for (UTILS_UNUSED_WITHOUT_TRACING auto const variant: definition.getVariants()) {
+            if (variantFilter && variant != definition.filterUserVariant(variant, variantFilter))
+                continue;
+
+            for (UTILS_UNUSED_WITHOUT_TRACING auto const specKey:
+                    DynamicSpecConstKey::getValidKeys(variant, materialDomain, isMaterialLit)) {
+                if (variantFilter &&
+                        specKey != DynamicSpecConstKey::filterUserVariant(specKey, variantFilter))
+                    continue;
+
+                FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                        "parallel compilation disabled", "name",
+                        getMaterial()->getName().c_str_safe(), "variantKey",
+                        static_cast<uint32_t>(variant.key), "specKey",
+                        static_cast<uint32_t>(specKey.key), "priority",
+                        static_cast<uint32_t>(priority));
+            }
+        }
+#endif
+    }
+
+    if (callback) {
+        struct Callback {
+            Invocable<void(MaterialInstance*)> f;
+            MaterialInstance* m;
+            static void func(void* user) {
+                auto* const c = static_cast<Callback*>(user);
+                c->f(c->m);
+                delete c;
+            }
+        };
+        auto* const user = new (std::nothrow) Callback{ std::move(callback), this };
+        driver.compilePrograms(priority, handler, &Callback::func, user);
+    } else {
+        driver.compilePrograms(priority, nullptr, nullptr, nullptr);
+    }
+}
+
+void FMaterialInstance::use(FEngine::DriverApi& driver, Variant variant) const {
+    assert_invariant(mDescriptorSet.getHandle());
+    assert_invariant(!isUsingUboBatching() || BufferAllocator::isValid(getAllocationId()));
+
+    if (UTILS_UNLIKELY(mMissingSamplerDescriptors.any())) {
+        std::call_once(mMissingSamplersFlag, [this] {
+            auto const& list = mMaterial->getSamplerInterfaceBlock().getSamplerInfoList();
+            LOG(WARNING) << "sampler parameters not set in MaterialInstance \""
+                         << mName.c_str_safe() << "\" or Material \""
+                         << mMaterial->getName().c_str_safe() << "\":";
+            mMissingSamplerDescriptors.forEachSetBit([&list](descriptor_binding_t binding) {
+                auto const pos = std::find_if(list.begin(), list.end(), [binding](const auto& item) {
+                    return item.binding == binding;
+                });
+                // just safety-check, should never fail
+                if (UTILS_LIKELY(pos != list.end())) {
+                    LOG(WARNING) << "[" << +binding << "] " << pos->name.c_str();
+                }
+            });
+        });
+        mMissingSamplerDescriptors.clear();
+    }
+
+    // Checks if this variant is shared. If so, FMaterial takes responsibility for binding the
+    // descriptor sets.
+    if (mMaterial->useShared(driver, variant)) {
+        return;
+    }
+
+    mDescriptorSet.bind(driver, DescriptorSetBindingPoints::PER_MATERIAL,
+            { { mUboOffset }, driver });
+}
+
+void FMaterialInstance::assignUboAllocation(
+        const Handle<HwBufferObject>& ubHandle,
+        BufferAllocator::AllocationId id,
+        BufferAllocator::allocation_size_t offset) {
+    assert_invariant(isUsingUboBatching());
+
+    mUboData = id;
+    mUboOffset = offset;
+    if (BufferAllocator::isValid(id)) {
+        // Use dynamic offset during binding, so the offset here is always zero.
+        mDescriptorSet.setBuffer(mMaterial->getDescriptorSetLayout(), 0, ubHandle, 0,
+                mUniforms.getSize());
+    }
+}
+
+BufferAllocator::AllocationId FMaterialInstance::getAllocationId() const noexcept {
+    auto const* allocationId = std::get_if<BufferAllocator::AllocationId>(&mUboData);
+    return allocationId ? *allocationId : BufferAllocator::UNALLOCATED;
+}
+
+void FMaterialInstance::fixMissingSamplers() const {
+    // Here we check that all declared sampler parameters are set, this is required by
+    // Vulkan and Metal; GL is more permissive. If a sampler parameter is not set, we will
+    // log a warning once per MaterialInstance in the system log and patch-in a dummy
+    // texture.
+    auto const& layout = mMaterial->getDescriptorSetLayout();
+    auto const samplersDescriptors = layout.getSamplerDescriptors();
+    auto const validDescriptors = mDescriptorSet.getValidDescriptors();
+    auto const missingSamplerDescriptors =
+            (validDescriptors & samplersDescriptors) ^ samplersDescriptors;
+
+    // always record the missing samplers state at commit() time
+    mMissingSamplerDescriptors = missingSamplerDescriptors;
+
+    if (UTILS_UNLIKELY(missingSamplerDescriptors.any())) {
+        // here we need to set the samplers that are missing
+        auto const& list = mMaterial->getSamplerInterfaceBlock().getSamplerInfoList();
+        missingSamplerDescriptors.forEachSetBit([this, &list](descriptor_binding_t binding) {
+            auto const pos = std::find_if(list.begin(), list.end(), [binding](const auto& item) {
+                return item.binding == binding;
+            });
+            // just safety-check, should never fail
+            if (UTILS_LIKELY(pos != list.end())) {
+                FEngine const& engine = mMaterial->getEngine();
+                filament::DescriptorSetLayout const& layout = mMaterial->getDescriptorSetLayout();
+
+                if (pos->format == SamplerFormat::FLOAT) {
+                    // TODO: we only handle missing samplers that are FLOAT
+                    switch (pos->type) {
+                        case SamplerType::SAMPLER_2D:
+                            mDescriptorSet.setSampler(layout,
+                                    binding, engine.getZeroTexture(), {});
+                            break;
+                        case SamplerType::SAMPLER_2D_ARRAY:
+                            mDescriptorSet.setSampler(layout,
+                                    binding, engine.getZeroTextureArray(), {});
+                            break;
+                        case SamplerType::SAMPLER_CUBEMAP:
+                            mDescriptorSet.setSampler(layout,
+                                    binding, engine.getDummyCubemap()->getHwHandle(), {});
+                            break;
+                        default:
+                            // we're currently not able to fix-up other sampler types
+                            break;
+                    }
+                }
+            }
+        });
+    }
+}
+
+LocalProgramCache const& FMaterialInstance::getPrograms() const noexcept {
+    return mPrograms.isInitialized() ? mPrograms : mMaterial->getPrograms();
+}
+
+void FMaterialInstance::flushSpecializationConstants() const noexcept {
+    if (mPendingSpecializationConstants.empty()) {
+        return;
+    }
+
+    if (!mPrograms.isInitialized()) {
+        mPrograms.initializeForMaterial(mMaterial->getEngine(), *mMaterial,
+                std::move(mPendingSpecializationConstants));
+    } else {
+        mPrograms.setConstants(std::move(mPendingSpecializationConstants));
+    }
+    mPendingSpecializationConstants.clear();
+}
+
+#if FILAMENT_ENABLE_MATDBG
+
+void FMaterialInstance::updateActiveProgramsForMatdbg(Variant const variant) const noexcept {
+    mMaterial->updateActiveProgramsForMatdbg(variant);
+}
+
+#endif // FILAMENT_ENABLE_MATDBG
+
+template void FMaterialInstance::setConstantImpl<int32_t>(std::string_view name, int32_t value);
+template void FMaterialInstance::setConstantImpl<float>(std::string_view name, float value);
+template void FMaterialInstance::setConstantImpl<bool>(std::string_view name, bool value);
+
+template int32_t FMaterialInstance::getConstantImpl<int32_t>(std::string_view name) const;
+template float FMaterialInstance::getConstantImpl<float>(std::string_view name) const;
+template bool FMaterialInstance::getConstantImpl<bool>(std::string_view name) const;
+
+} // namespace filament

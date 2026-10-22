@@ -1,0 +1,1288 @@
+Name
+
+    NV_float_buffer
+
+Name Strings
+
+    GL_NV_float_buffer
+    WGL_NV_float_buffer
+    GLX_NV_float_buffer
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation.
+
+IP Status
+
+    NVIDIA Proprietary.
+
+Status
+
+    Implemented in CineFX (NV30) Emulation driver, August 2002.
+    Shipping in Release 40 NVIDIA driver for CineFX hardware, January 2003.
+
+    Superseded by the more general ARB_texture_float and
+    ARB_color_buffer_float extensions.  However, NV3x-based GPUs are not
+    capable enough to support the generality of the ARB extensions so
+    the NV_float_buffer extension remains available for NV3x development
+    and backward compatibility.
+
+Version
+
+    Last Modified:      2006/11/03
+    NVIDIA Revision:    20
+
+Number
+
+    281
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.3 specification and the
+    WGL_ARB_pixel_format extension specification.
+
+    The following extensions are required:
+        * NV_fragment_program
+        * NV_texture_rectangle
+        * WGL_ARB_pixel_format
+        * WGL_ARB_render_texture
+        * WGL_NV_render_texture_rectangle
+
+    EXT_paletted_texture trivially affects the definition of this extension.
+
+    SGIX_depth_texture trivially affects the definition of this extension.
+
+    NV_texture_shader trivially affects the definition of this extension.
+
+    NV_half_float trivially affects the definition of this extension.
+
+    ARB_color_buffer_float and ATI_pixel_format_float affect the definition of
+    this extension.
+
+    ARB_texture_float and ATI_texture_float affect the definition of this
+    extension.
+
+    This extension modifies EXT_framebuffer_object.
+
+Overview
+
+    This extension builds upon NV_fragment_program to provide a framebuffer
+    and texture format that allows fragment programs to read and write
+    unconstrained floating point data.
+
+    In unextended OpenGL, most computations dealing with color or depth
+    buffers are typically constrained to operate on values in the range [0,1].
+    Computational results are also typically clamped to the range [0,1].
+    Color, texture, and depth buffers themselves also hold values mapped to
+    the range [0,1].
+
+    The NV_fragment_program extension provides a general computational model
+    that supports floating-point numbers constrained only by the precision of
+    the underlying data types.  The quantites computed by fragment programs do
+    not necessarily correspond in number or in range to conventional
+    attributes such as RGBA colors or depth values.  Because of the range and
+    precision constraints imposed by conventional fixed-point color buffers,
+    it may be difficult (if not impossible) to use them to implement certain
+    multi-pass algorithms.
+
+    To enhance the extended range and precision available through fragment
+    programs, this extension provides floating-point RGBA color buffers that
+    can be used instead of conventional fixed-point RGBA color buffers.  A
+    floating-point RGBA color buffer consists of one to four floating-point
+    components stored in the 16- or 32-bit floating-point formats (fp16 or
+    fp32) defined in the NV_half_float and NV_fragment_program extensions.
+
+    When a floating-point color buffer is used, the results of fragment
+    programs, as written to the "x", "y", "z", and "w" components of the
+    o[COLR] or o[COLH] output registers, are written directly to the color
+    buffer without any clamping or modification.  Certain per-fragment
+    operations are bypassed when rendering to floating-point color buffers.
+
+    A floating-point color buffer can also be used as a texture map, either by
+    reading back the contents and then using conventional TexImage calls, or
+    by using the buffer directly via the ARB_render_texture extension or
+    the EXT_framebuffer_object extension.
+
+    This extension has many uses.  Some possible uses include:
+
+        (1) Multi-pass algorithms with arbitrary intermediate results that
+            don't have to be artifically forced into the range [0,1].  In
+            addition, intermediate results can be written without having to
+            worry about out-of-range values.
+
+        (2) Deferred shading algorithms where an expensive fragment program is
+            executed only after depth testing is fully complete.  Instead, a
+            simple program is executed, which stores the parameters necessary
+            to produce a final result.  After the entire scene is rendered, a
+            second pass is executed over the entire frame buffer to execute
+            the complex fragment program using the results written to the
+            floating-point color buffer in the first pass.  This will save the
+            cost of applying complex fragment programs to fragments that will
+            not appear in the final image.
+
+        (3) Use floating-point texture maps to evaluate functions with
+            arbitrary ranges.  Arbitrary functions with a finite domain can be
+            approximated using a texture map holding sample results and
+            piecewise linear approximation.
+
+    There are several significant limitations on the use of floating-point
+    color buffers.  First, floating-point color buffers do not support frame
+    buffer blending.  Second, floating-point texture maps do not support
+    mipmapping or any texture filtering other than NEAREST.  Third,
+    floating-point texture maps must be 2D, and must use the
+    NV_texture_rectangle extension.
+
+Issues
+
+    Should the extension create a separate non-RGBA pixel formats or simply
+    extend existing RGBA formats?
+
+        RESOLVED:  Extend existing RGBA formats.  Since fragment programs
+        generally build on RGBA semantics, it's cleaner to avoid creating a
+        separate "XYZW" mode.  There are several special semantics that need
+        to be added:  clear color state is now not clamped, and ReadPixels
+        will clamp to [0,1] only if the source data comes from fixed-point
+        color buffers.
+
+        Fragment programs can be written that store data completely unrelated
+        to color into a floating-point "RGBA" buffer.
+ 
+    Can floating-point color buffers be displayed?  If so, how?
+
+        RESOLVED:  Not in this extension.  Floating-point color buffers can be
+        used only as pbuffers.  Hardware necessary to display floating-point
+        color buffers would be expensive and consume significant memory
+        bandwidth.
+
+    Is it possible to encode more than four distinct values in a
+    floating-point color buffer?
+
+        RESOLVED:  Yes.  The NV_fragment_program extension contains pack and
+        unpack instructions (PK2H, PK2US, PK4B, PK4UB, PK4UBG, UP2H, UP2US,
+        UP4B, UP4UB, UP4UBG) that allow fragment programs to encode multiple
+        values into a single 32-bit component.  In particular, it is possible
+        to pack two half-precision floats, two normalized unsigned shorts, or
+        four normalized signed or unsigned bytes into a single 32-bit
+        component.
+
+        A program can use a pack instruction to pack multiple values into a
+        single 32-bit component and then write the resulting component to a
+        floating-point color buffer with 32-bit components.  On a subsequent
+        rendering pass, a program can read back the stored data (using texture
+        mapping) and use the equivalent unpack instruction to restore the
+        original values.  The only data lost in this process comes from the
+        loss of precision or clamping in the packing operation, where the
+        original values are converted to data types with lower precision or a
+        smaller data range.
+
+    What happens when rendering to a floating-point color buffer if fragment
+    program mode is disabled?  Or when fragment program mode is enabled, but
+    no program is loaded?
+
+        RESOLVED:  Fragment programs are required to use floating-point color
+        buffers.  An INVALID_OPERATION error is generated by any GL command
+        that generates fragments if FRAGMENT_PROGRAM_NV is disabled.  The same
+        behavior already exists for conventional frame buffers if
+        FRAGMENT_PROGRAM_NV is enabled but the bound fragment program is
+        invalid.
+
+    Should alpha test be supported with floating-point color buffers?
+
+        RESOLVED:  No.  It is trivial to implement an alpha test in a fragment
+        program using the KIL instruction, which requires no dedicated frame
+        buffer logic.
+
+    Should blending be supported with floating-point color buffers?
+
+        RESOLVED:  Not in this extension.  While blending would clearly be
+        useful, full-precision floating-point blenders are expensive.  In
+        addition, a computational model more general than traditional blending
+        (with its 1-x operations and clamping) is desirable.  The traditional
+        OpenGL blending model would not be the most suitable computational
+        model for future blend-enabled floating-point color buffers.
+
+        An alternative to conventional blending (operating at a coarser
+        granularity) is to (1) render a pass into the color buffer, (2) bind
+        the color buffer as a texture rectangle using this extension and
+        ARB_render_texture, (3) perform texture lookups in a fragment program
+        using the TEX instruction with f[WPOS].xy as a 2D texture coordinate,
+        and (4) perform the necessary blending between the passes using the
+        same fragment program.
+
+    Should we provide accumulation buffers for pixel formats with
+    floating-point color buffers?
+
+        RESOLVED:  No.  Accumulation operations contents can be achieved using
+        fragment programs to perform the accumulation, which requires no
+        dedicated frame buffer logic.
+
+    Should fragment program color results be converted to match the format of
+    the frame buffer, or should an error result?  For example, what if we
+    write to o[COLR] but have a 16-bit frame buffer?
+
+        RESOLVED:  Conversions can be performed simply in hardware, so no
+        error semantics are required.  This mechanism also allows the same
+        programs to be shared between contexts with different pixel formats.
+
+        Applications should be aware that if color components contain packed
+        data, a data type mismatch may result in a floating-point data
+        conversion that corrupts the packed data.
+
+    How should floating-point color buffers interact with multisampling?  For
+    normal color buffers, the multiple samples for each pixel are required to
+    be filtered down to a single pixel in the color buffer.  Similar filtering
+    on floating-point color buffers does not necessarily make sense.  Should
+    there even be a normal color buffer in this case?
+    
+        RESOLVED:  The initial implementation of this extension does not
+        provide floating-point color buffers that support multisampling.
+
+        Multisample fragment operations (e.g., SAMPLE_COVERAGE) are explicitly
+        not supported by extension.  This extension does not modify the
+        portion of the spec where multiple samples are resolved to a single
+        color value.  So if floating-point color buffers were provided, the
+        multiple samples are filtered down to a single result value, most
+        likely by computing a per-component average value.
+
+    Conventional RGBA primitive antialiasing multiplies coverage by the alpha
+    component of the fragment's color, with the assumption that alpha blending
+    will be performed.  How does antialiasing work with floating-point color
+    buffers?
+
+        RESOLVED:  It doesn't.  The computed coverage is not accessible to
+        fragment programs and is discarded.  Note also that conventional
+        antialiasing requires alpha blending, which does not work for
+        floating-point color buffers.
+
+    What are the semantics for ReadPixels when using a floating-point color
+    buffer?
+
+        RESOLVED:  ReadPixels from a floating-point color buffer works like
+        any other RGBA read, except that the final results are not clamped to
+        the range [0,1].  This ensures that we can save and restore
+        floating-point color buffers using ReadPixels/DrawPixels.
+
+    What are the semantics for Bitmap when using a floating-point color
+    buffer?
+
+        RESOLVED:  Bitmap generates fragments using the current raster
+        attributes, which are then passed to fragment programs like any other
+        fragments.  Bitmaps will be drawn using the color of the current
+        raster position, whose components are clamped to [0,1] when the raster
+        position is sent.
+
+    What are the semantics for DrawPixels when using a floating-point color
+    buffer?  How about CopyPixels?
+
+        RESOLVED:  DrawPixels generates fragments with the originally
+        specified color values; components are not clamped to [0,1].  For
+        fixed-point color buffers, DrawPixels will generate fragments with
+        clamped color components.  
+
+        CopyPixels is defined in the spec as a ReadPixels followed by a
+        DrawPixels, and will operate similarly.
+
+        This mechanism allows applications to write floating-point data
+        directly into a floating-point color buffer without any clamping.
+        Since DrawPixels and CopyPixels generate fragments and fragment
+        programs are required to render to floating-point color buffers, a
+        fragment program is still required to load a floating-point color
+        buffer using DrawPixels.
+
+    What are the semantics for Clear when using a floating-point color
+    buffer?
+
+        RESOLVED:  Clears work as normal, except that values outside the range
+        [0,1] can be written to the color buffer.  The core spec is modified
+        so that clear color values are not clamped to [0,1].  Instead, for
+        fixed-point color buffers, clear colors are clamped to [0,1] at clear
+        time.
+
+        For compatibility with conventional OpenGL, queries of
+        CLEAR_COLOR_VALUE will clamp components to [0,1].  A separate
+        FLOAT_CLEAR_COLOR_VALUE_NV query is added to query unclamped color
+        clear values.
+
+    Why don't floating-point textures support filtering?  What can be done to
+    achieve texture filtering?
+    
+        RESOLVED:  Extended OpenGL texture filtering (including mipmapping and
+        support for anisotropic filters) is very computationally expensive.
+        Even simple linear filtering for floating-point textures with large
+        components is expensive.
+
+        Linear filters can be implemented in fragment programs by doing
+        multiple lookups into the same texture.  Since fragment programs allow
+        the use of arbitrary coordinates into arbitrary texture maps, this
+        type of operation can be easily done.
+
+        A 1D linear filter can be implemented using an nx1 texture rectangle
+        with the following (untested) fragment program, assuming the 1D
+        coordinate is in f[TEX0].x:
+
+            ADDR H2.xy, f[TEX0].x, {0.0, 1.0};
+            FRCH H3.x, R1.x;             # compute the blend factor
+            TEX  H0, H2.x, TEX0, RECT;   # lookup 1st sample
+            TEX  H1, H2.y, TEX0, RECT;   # lookup 2nd sample
+            LRPH H0, H3.x, H1, H0;       # blend
+            
+        A 2D linear filter can be implemented similarly, assuming the 2D
+        coordinate is in f[TEX0].xy:
+
+            ADDH H2, f[TEX0].xyxy, {0.0, 0.0, 1.0, 1.0};
+            FRCH H3.xy, H2.xyxy;         # base weights
+            ADDH H3.zw, 1.0, -H3.xyxy;   # 1-base weights
+            MULH H3, H3.xzxz, H3.yyww;   # bilinear filter weights
+            TEX H1, R2.xyxy, TEX0, RECT; # lookup 1st sample
+            MULH H0, H1, H3.x;           # blend
+            TEX H1, R2.zyzy, TEX0, RECT; # lookup 2nd sample
+            MADH H0, H1, H3.y, H0;       # blend
+            TEX H0, R2.xwxw, TEX0, RECT; # lookup 3rd sample
+            MADH H0, H1, H3.z, H0;       # blend
+            TEX H1, R2.zwzw, TEX0, RECT; # lookup 4th sample
+            MADH H0, H1, H3.w, H0;       # blend
+
+        Fragment programs can be used to perform more-or-less arbitrary
+        filtering using similar methods, and the DDX and DDY instructions can
+        be used to refine the shape of the filter.
+
+    Why must the NV_texture_rectangle extension be used in order to use
+    floating-point texture maps?
+
+        RESOLVED:  On many graphics hardware platforms, texture maps are
+        stored using a special memory encodings designed to optimize rendering
+        performance.  In current hardware, conventional texture maps usually
+        top out at 32 bits per texel.  The logic required to encode and decode
+        128-bit texels (and frame buffer pixels) optimally is substantially
+        more complex.
+
+    What happens if you try to use a floating-point texture without a
+    fragment program?
+
+        RESOLVED:  No error is generated, but that texture is effectively
+        disabled.  This is similar to the behavior if an application tried to
+        use a normal texture having an inconsistent set of mipmaps.
+
+    How does NV_float_buffer interact with the OpenGL 1.2 imaging subset?
+
+        RESOLVED:  The imaging subset as specified should work properly with
+        floating-point color buffers, but is not modified by this extension.
+        There are imaging operations (e.g., color tables, histograms) that
+        expect the components they operate on to be in the range [0,1], and
+        this extension makes no attempt to extend such functionality.
+
+    How does NV_float_buffer interact with SGIS_generate_mipmap?
+
+        RESOLVED:  Since this extension supports only texture rectangles
+        (which have no mipmaps), this issue is moot.  
+
+        In the general case, mipmaps should be generated using an appropriate
+        downsample filter, where floating-point component values are averaged.
+        Components should not be clamped during any such mipmap generation.
+
+    What is the deal with the names of the clear color query tokens?
+
+        RESOLVED:  The "normal" OpenGL clear color (clamped to [0,1]) is
+        queried using the token COLOR_CLEAR_VALUE.  This extension provides a
+        new query for unclamped values, using the token
+        FLOAT_CLEAR_COLOR_VALUE_NV.  Notice that "CLEAR" and "COLOR" are
+        reversed due to a mistake made when the spec was first written.  This
+        spec lists the core query token, and originally had "CLEAR" and
+        "COLOR" reversed there, too.  
+
+        Then again, the core specification is inconsistent since the queried
+        state is set by calling glClearColor(), with "Clear" before "Color".
+
+    What performance issues exist with this functionality?
+
+        See the "NV3x Implementation Issues" section of the
+        specification.
+
+    How should the texture border color (values) be handled for float
+    textures?
+
+        RESOLVED:  Clamp the texture border color (values) to [0,1]
+        when sampling a float texture's border.  In core OpenGL 1.0, the
+        texture border color components are clamped to the range [01,].
+        The NV_texture_shader extension added support for signed texture
+        components.  We decided to provide GL_TEXTURE_BORDER_VALUES as
+        a way of specifying a version of the texture border color whose
+        components were not clamped to [0,1] when set.  This was to
+        provide a way of specifying negative texture border components.
+
+        In practice, that has not proven particularly useful.  No real
+        applications are known to have specified negative texture border
+        values components.
+
+        Ideally, the unclamped GL_TEXTURE_BORDER_VALUES state could
+        provide an unclamped (unmassaged) set of floating-point color
+        components for the texture border color.  This requires an
+        additional 96 bits of state per texture unit to support this,
+        and based on the experience with NV_texture_shader's support for
+        texture border values outside the [0,1] range, it is simply not
+        worth it.
+
+        For compatibility with the NV_texture_shader extension, we
+        provide language saying that floating-point textures clamp
+        the components of the TEXTURE_BORDER_VALUES vector [0,1] when
+        sampling the border color.
+
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <internalformat> parameter of TexImage2D and
+    CopyTexImage2D:
+
+        FLOAT_R_NV                                      0x8880
+        FLOAT_RG_NV                                     0x8881
+        FLOAT_RGB_NV                                    0x8882
+        FLOAT_RGBA_NV                                   0x8883
+        FLOAT_R16_NV                                    0x8884
+        FLOAT_R32_NV                                    0x8885
+        FLOAT_RG16_NV                                   0x8886
+        FLOAT_RG32_NV                                   0x8887
+        FLOAT_RGB16_NV                                  0x8888
+        FLOAT_RGB32_NV                                  0x8889
+        FLOAT_RGBA16_NV                                 0x888A
+        FLOAT_RGBA32_NV                                 0x888B
+
+    Accepted by the <pname> parameter of GetTexLevelParameterfv and
+    GetTexLevelParameteriv:
+
+        TEXTURE_FLOAT_COMPONENTS_NV                     0x888C
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+        FLOAT_CLEAR_COLOR_VALUE_NV                      0x888D
+        FLOAT_RGBA_MODE_NV                              0x888E
+
+    Accepted in the <piAttributes> array of wglGetPixelFormatAttribivARB and
+    wglGetPixelFormatAttribfvARB and in the <piAttribIList> and
+    <pfAttribFList> arrays of wglChoosePixelFormatARB:
+
+        WGL_FLOAT_COMPONENTS_NV                         0x20B0
+        WGL_BIND_TO_TEXTURE_RECTANGLE_FLOAT_R_NV        0x20B1
+        WGL_BIND_TO_TEXTURE_RECTANGLE_FLOAT_RG_NV       0x20B2
+        WGL_BIND_TO_TEXTURE_RECTANGLE_FLOAT_RGB_NV      0x20B3
+        WGL_BIND_TO_TEXTURE_RECTANGLE_FLOAT_RGBA_NV     0x20B4
+
+    Accepted in the <piAttribIList> array of wglCreatePbufferARB and returned
+    in the <value> parameter of wglQueryPbufferARB when <iAttribute> is
+    WGL_TEXTURE_FORMAT_ARB:
+
+        WGL_TEXTURE_FLOAT_R_NV                          0x20B5
+        WGL_TEXTURE_FLOAT_RG_NV                         0x20B6
+        WGL_TEXTURE_FLOAT_RGB_NV                        0x20B7
+        WGL_TEXTURE_FLOAT_RGBA_NV                       0x20B8
+
+    Accepted in the <value> array of glXGetFBConfigAttrib (and
+    glXGetFBConfigAttribSGIX):
+
+        GLX_FLOAT_COMPONENTS_NV                         0x20B0
+
+Additions to Chapter 2 of the OpenGL 1.3 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 1.3 Specification (Rasterization)
+
+    Modify Section 3.6.4, Rasterization of Pixel Rectangles (p. 91)
+
+    (modify first paragraph of "Final Conversion", p. 102) ...  For RGBA
+    components, the final conversion depends on the format of the color
+    buffer.  If the components of the color buffer are fixed-point, each
+    element is clamped to [0,1] and converted to fixed-point according to the
+    rules given in section 2.13.9 (Final Color Processing).  If the components
+    of the color buffer are floating-point, the elements are not modified.
+
+
+    Modify Section 3.8.1, Texture Image Specification (p. 116)
+
+    (modify last paragaph, p. 116) The selected groups are processed exactly
+    as for DrawPixels stopping just before final conversion.  For textures
+    with fixed-point RGBA internal formats, each R, G, B, A component is
+    clamped to [0,1].
+
+    (modify first paragraph, p. 117) Components are then selected from the
+    resulting pixel groups to obtain a texture with the base internal format
+    specified by (or derived from) <internalformat>.  Table 3.15 summarizes
+    the mapping of pixel group values to texture components, ...
+
+    (add to end of first paragraph, p. 117) Specifying a value of <format>
+    incompatible with <internalformat> produces the error INVALID_OPERATION.
+    A pixel format and texture internal format are compatible if the pixel
+    format can generate a pixel group of the type listed in the "Pixel Group
+    Type" column of Table 3.15 in the row corresponding to the base internal
+    format.
+
+    (add between first and second paragraphs, p.117) Textures with a base
+    internal format of FLOAT_R_NV, FLOAT_RG_NV, FLOAT_RGB_NV, and
+    FLOAT_RGBA_NV are known as floating-point textures.  Floating-point
+    textures are only supported for the TEXTURE_RECTANGLE_NV target.
+    Specifying a floating-point texture with any other target will produce an
+    INVALID_OPERATION error.
+
+    (modify last paragraph, p. 117) The internal component resolution is the
+    number of bits allocated to each component in a texture image.  If
+    internalformat is specified as a base internal format, the GL stores the
+    resulting texture with internal component resolutions of its own choosing.
+    If a sized internal format is specified, the memory allocation per texture
+    component is assigned by the GL to match the allocations listed in Table
+    3.16 as closely as possible. ...
+
+    (modify Table 3.15, p. 118 -- Respecify this table with all extensions
+    relevant to texture formats supported by NVIDIA.  For this extension, add
+    four base internal formats.)
+    
+        Base Internal            Pixel       Component       Internal
+        Format                   Group Type  Values          Components
+        ---------------------    ----------  ---------       ---------------
+        ALPHA                    RGBA        A               A
+        LUMINANCE                RGBA        R               L
+        LUMINANCE_ALPHA          RGBA        R,A             L,A
+        INTENSITY                RGBA        R               I
+        RGB                      RGBA        R,G,B           R,G,B
+        RGBA                     RGBA        R,G,B,A         R,G,B,A
+      * COLOR_INDEX              CI          CI              CI
+      * DEPTH_COMPONENT          DEPTH       DEPTH           DEPTH
+      * HILO_NV                  HILO        HI,LO           HI,LO
+      * DSDT_NV                  TEXOFF      DS,DT           DS,DT
+      * DSDT_MAG_NV              TEXOFF      DS,DT,MAG       DS,DT,MAG
+      * DSDT_MAG_INTENSITY_NV    TEXOFF
+                                 or RGBA     DS,DT,MAG,VIB   DS,DT,MAG,I
+        FLOAT_R_NV               RGBA        R               R (float)
+        FLOAT_RG_NV              RGBA        R,G             R,G (float)
+        FLOAT_RGB_NV             RGBA        R,G,B           R,G,B (float)
+        FLOAT_RGBA_NV            RGBA        R,G,B,A         R,G,B,A (float)
+
+        Table 3.15:  Conversion from pixel groups to internal texture
+        components.  "Pixel Group Type" defines the type of pixel group
+        required for the specified internal format.  All internal components
+        are stored as unsigned-fixed point numbers, except for DS/DT (signed
+        fixed-point numbers) and floating-point R,G,B,A (signed floating-point
+        numbers).  See Section 3.8.12 for a description of texture components
+        R, G, B, A, L, and I.  See NV_texture_shader spec (Section 3.8.13) for
+        a description of texture components HI, LO, DS, DT, and MAG.
+
+        * - indicates formats found in other extension specs:  COLOR_INDEX in
+            EXT_paletted texture; DEPTH_COMPONENT in SGIX_depth_texture; and
+            HILO_NV, DSDT_NV, DSDT_MAG_NV, DSDT_MAG_INTENSITY_NV in
+            NV_texture_shader.
+
+    (modify Table 3.16, p. 119 -- Respecify this table with all extensions
+    relevant to sized texture internal formats supported by NVIDIA.  For this
+    extension, add eight sized internal formats.)
+
+        Sized                  Base                
+        Int. Format            Int. Format         Component Name / Type-Size
+        -------------------    ---------------     ---------------------------
+        ALPHA4                 ALPHA               A/U4
+        ALPHA8                 ALPHA               A/U8
+        ALPHA12                ALPHA               A/U12
+        ALPHA16                ALPHA               A/U16
+        LUMINANCE4             LUMINANCE           L/U4
+        LUMINANCE8             LUMINANCE           L/U8
+        LUMINANCE12            LUMINANCE           L/U12
+        LUMINANCE16            LUMINANCE           L/U16
+        LUMINANCE4_ALPHA4      LUMINANCE_ALPHA     A/U4   L/U4
+        LUMINANCE6_ALPHA2      LUMINANCE_ALPHA     A/U2   L/U6
+        LUMINANCE8_ALPHA8      LUMINANCE_ALPHA     A/U8   L/U8
+        LUMINANCE12_ALPHA4     LUMINANCE_ALPHA     A/U4   L/U12
+        LUMINANCE12_ALPHA12    LUMINANCE_ALPHA     A/U12  L/U12
+        LUMINANCE16_ALPHA16    LUMINANCE_ALPHA     A/U16  L/U16
+        INTENSITY4             INTENSITY           I/U4
+        INTENSITY8             INTENSITY           I/U8
+        INTENSITY12            INTENSITY           I/U12
+        INTENSITY16            INTENSITY           I/U16
+        R3_G3_B2               RGB                 R/U3   G/U3   B/U2
+        RGB4                   RGB                 R/U4   G/U4   B/U4
+        RGB5                   RGB                 R/U5   G/U5   B/U5
+        RGB8                   RGB                 R/U8   G/U8   B/U8
+        RGB10                  RGB                 R/U10  G/U10  B/10
+        RGB12                  RGB                 R/U12  G/U12  B/U12
+        RGB16                  RGB                 R/U16  G/U16  B/U16
+        RGBA2                  RGBA                R/U2   G/U2   B/U2   A/U2
+        RGBA4                  RGBA                R/U4   G/U4   B/U4   A/U4
+        RGB5_A1                RGBA                R/U5   G/U5   B/U5   A/U1
+        RGBA8                  RGBA                R/U8   G/U8   B/U8   A/U8
+        RGB10_A2               RGBA                R/U10  G/U10  B/U10  A/U2
+        RGBA12                 RGBA                R/U12  G/U12  B/U12  A/U12
+        RGBA16                 RGBA                R/U16  G/U16  B/U16  A/U16
+      * COLOR_INDEX1_EXT       COLOR_INDEX         CI/U1
+      * COLOR_INDEX2_EXT       COLOR_INDEX         CI/U2
+      * COLOR_INDEX4_EXT       COLOR_INDEX         CI/U4
+      * COLOR_INDEX8_EXT       COLOR_INDEX         CI/U8
+      * COLOR_INDEX16_EXT      COLOR_INDEX         CI/U16
+      * DEPTH_COMPONENT16_SGIX DEPTH_COMPONENT     Z/U16
+      * DEPTH_COMPONENT24_SGIX DEPTH_COMPONENT     Z/U24
+      * DEPTH_COMPONENT32_SGIX DEPTH_COMPONENT     Z/U32
+      * HILO16_NV              HILO                HI/U16 LO/U16
+      * SIGNED_HILO16_NV       HILO                HI/S16 LO/S16
+      * SIGNED_RGBA8_NV        RGBA                R/S8   G/S8   B/S8   A/S8
+      * SIGNED_RGB8_
+        UNSIGNED_ALPHA8_NV     RGBA                R/S8   G/S8   B/S8   A/U8
+      * SIGNED_RGB8_NV         RGB                 R/S8   G/S8   B/S8
+      * SIGNED_LUMINANCE8_NV   LUMINANCE           L/S8
+      * SIGNED_LUMINANCE8_
+        ALPHA8_NV              LUMINANCE_ALPHA     L/S8   A/S8
+      * SIGNED_ALPHA8_NV       ALPHA               A/S8
+      * SIGNED_INTENSITY8_NV   INTENSITY           I/S8
+      * DSDT8_NV               DSDT_NV             DS/S8  DT/S8
+      * DSDT8_MAG8_NV          DSDT_MAG_NV         DS/S8  DT/S8  MAG/U8
+      * DSDT8_MAG8_            DSDT_MAG_
+        INTENSITY8_NV          INTENSITY_NV        DS/S8  DT/S8  MAG/U8 I/U8        
+        FLOAT_R16_NV           FLOAT_R_NV          R/F16
+        FLOAT_R32_NV           FLOAT_R_NV          R/F32
+        FLOAT_RG16_NV          FLOAT_RG_NV         R/F16  G/F16
+        FLOAT_RG32_NV          FLOAT_RG_NV         R/F32  G/F32
+        FLOAT_RGB16_NV         FLOAT_RGB_NV        R/F16  G/F16  B/F16
+        FLOAT_RGB32_NV         FLOAT_RGB_NV        R/F32  G/F32  B/F32
+        FLOAT_RGBA16_NV        FLOAT_RGBA_NV       R/F16  G/F16  B/F16  A/F16
+        FLOAT_RGBA32_NV        FLOAT_RGBA_NV       R/F32  G/F32  B/F32  A/F32
+
+        Table 3.16:  Sized Internal Formats.  Describes the correspondence of
+        sized internal formats to base internal formats, and desired component
+        resolutions.  Component resolution descriptions are of the form
+        "<NAME>/<TYPE><SIZE>", where NAME specifies the component name in
+        Table 3.15, TYPE is "U" for unsigned fixed-point, "S" for signed
+        fixed-point, and "F" for unsigned floating-point.  <SIZE> is the
+        number of requested bits per component.
+
+        * - indicates formats found in other extension specs:  COLOR_INDEX in
+            EXT_paletted texture; DEPTH_COMPONENT in SGIX_depth_texture; and
+            HILO_NV, DSDT_NV, DSDT_MAG_NV, DSDT_MAG_INTENSITY_NV in
+            NV_texture_shader.
+
+    Modify Section 3.8,7, Minification (p. 141)
+
+    Change the last paragraph (as modified by the NV_texture_shader
+    extension) to read (only the last sentence changes from the
+    NV_texture_shader version):
+
+    "If any of the selected tauijk, tauij, or taui in the above equations
+    refer to a border texel with i < -bs, j < bs, k < -bs, i >= ws-bs, j
+    >= hs-bs, or k >= ds-bs, then the border values given by the current
+    setting of TEXTURE_BORDER_VALUES is used instead of the unspecified
+    value or values.  If the texture contains color components, the
+    components of the TEXTURE_BORDER_VALUES vector are interpreted as
+    an RGBA color to match the texture's internal format in a manner
+    consistent with table 3.15.  If the texture contains HILO components,
+    the first and second components of the TEXTURE_BORDER_VALUES vector
+    are interpreted as the hi and lo components respectively.  If the
+    texture contains texture offset group components, the first, second,
+    third, and fourth components of the TEXTURE_BORDER_VALUES vector
+    are interpreted as ds, dt, mag, and vib components respectively.
+    Additionally, the texture border values are clamped appropriately
+    depending on the signedness of each particular component.  Unsigned
+    components and components of floating-point textures are clamped to
+    [0,1]; signed components (not including floating-point textures)
+    are clamped to [-1,1]."
+
+    (Add after the last paragraph in the section) Floating-point textures
+    (those with a base internal format of FLOAT_R_NV, FLOAT_RG_NV,
+    FLOAT_RGB_NV, or FLOAT_RGBA_NV) do not support texture filters other than
+    NEAREST.  For such textures, NEAREST filtering is applied regardless of
+    the setting of TEXTURE_MIN_FILTER.
+
+    Modify Section 3.8.8, Magnification (p. 141)
+
+    (Add after the last paragraph in the section) Floating-point textures
+    (those with a base internal format of FLOAT_R_NV, FLOAT_RG_NV,
+    FLOAT_RGB_NV, or FLOAT_RGBA_NV) do not support texture filters other than
+    NEAREST.  For such textures, NEAREST filtering is applied regardless of
+    the setting of TEXTURE_MAG_FILTER.
+
+    Modify Section 3.8.13, Texture Environments and Texture Functions (p. 147)
+
+    (Add paragraph after discussion of all the values used in the
+    miscellaneous tables in this section.) If the base internal format is
+    HILO_NV, DSDT_NV, DSDT_MAG_NV, DSDT_MAG_INTENSITY_NV, FLOAT_R_NV,
+    FLOAT_RG_NV, FLOAT_RGB_NV, or FLOAT_RGBA_NV, the texture lookup results
+    are not supported using conventional OpenGL texture functions.  In this
+    case, the corresponding texture function is NONE (Cv = Cf, Av = Af), and
+    it is as though texture mapping were disabled for that texture unit.
+
+    Modify Section 3.11, Antialiasing Application (p. 155)
+
+    Finally, if antialiasing is enabled for the primitive from which a
+    rasterized fragment was produced, then the computed coverage value may be
+    applied to the fragment.  In RGBA mode with fixed-point frame buffers, the
+    value is multiplied by the fragment's alpha (A) value to yield a final
+    alpha value.  In RGBA mode with floating-point frame buffers, the coverage
+    value is simply discarded.  In color index mode, the value is used to set
+    the low order bits of the color index value as described in section 3.2.
+    
+
+Additions to Chapter 4 of the OpenGL 1.3 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Modify Chapter 4 Introduction (p. 156)
+
+    (replace next-to-last paragraph)
+
+    The GL provides three types of color buffers:  color index, fixed-point
+    RGBA, or floating-point RGBA.  Color index buffers consist of unsigned
+    integer color indices.  Fixed-point RGBA buffers consist of R, G, B, and
+    optionally, A unsigned integer values.  Floating-point RGBA buffers
+    consist of R, and optionally, G, B, and A floating-point component values,
+    corresponding to the X, Y, Z, and W outputs, respectively, of a fragment
+    program.  The number of bitplanes in each of the color buffers, the depth
+    buffer, ...
+
+    Modify Section 4.1.3, Multisample Fragment Operations (p. 158)
+
+    This step applies only for fixed-point RGBA color buffers. Otherwise,
+    proceed to the next step.  ...
+
+    Modify Section 4.1.4, Alpha Test (p. 159)
+
+    This step applies only for fixed-point RGBA color buffers. Otherwise,
+    proceed to the next step.  ...
+
+    Modify Section 4.1.7, Blending (p. 161)
+
+    (modify second paragraph)
+
+    This blending is dependent on the incoming fragment's alpha value and that
+    of the corresponding currently stored pixel.  Blending applies only for
+    fixed-point RGBA color buffers; otherwise, it is bypassed. ...
+
+    Modify Section 4.1.8, Dithering (p. 165)
+
+    Dithering selects between two color values or indices.  Dithering does not
+    apply to floating-point RGBA color buffers. ...
+
+    Modify Section 4.1.9, Logical Operation (p. 165)
+
+    Finally, a logical operation is applied between the incoming fragment's
+    color or index values and the color or index values stored at the
+    corresponding location in the frame buffer.  Logical operations do not
+    apply to floating-point color buffers. ...
+
+    Modify Section 4.2.3, Clearing the Buffers (p. 171)
+
+    ...
+
+        void ClearColor(float r, float g, float b, float a);
+
+    sets the clear value for RGBA color buffers.  When a fixed-point color
+    buffer is cleared, the effective clear color is derived by clamping each
+    component to [0,1] and converting to fixed-point according to the rules in
+    section 2.13.9.  When a floating-point color buffer is cleared, the
+    components of the clear value are used directly without being clamped.
+
+    Modify Section 4.2.4, The Accumulation Buffer (p. 172)
+
+    (modify last paragraph) ... If there is no accumulation buffer, or if
+    color buffer is not fixed-point RGBA, Accum generates the error
+    INVALID_OPERATION.
+
+    Modify Section 4.3.2, Reading Pixels
+
+    (modify "Conversion of RGBA Values", p. 176) This step applies only if the
+    GL is in RGBA mode, and then only if format is neither STENCIL INDEX nor
+    DEPTH COMPONENT.  The R, G, B, and A values form a group of elements.  If
+    the color buffer has fixed-point format, each element is taken to be a
+    fixed-point value in [0,1] with m bits, where m is the number of bits in
+    the corresponding color component of the selected buffer (see section
+    2.13.9).
+
+    (add to end of "Final Conversion", p. 177) ... For an RGBA color,
+    components are clamped depending on the data type of the buffer being
+    read.  For fixed-point buffers, each component is clamped to [0.1].  For
+    floating-point buffers, if <type> is not FLOAT or HALF_FLOAT_NV, each
+    component is clamped to [0,1] if <type> is unsigned or [-1,1] if <type> is
+    signed and then converted according to Table 4.7.
+
+    Modify section 4.4.4, as defined by EXT_framebuffer_object,
+    definition of color-renderable:
+
+        * An internal format is "color-renderable" if it is RGB, RGBA,
+          FLOAT_R_NV, FLOAT_RG_NV, FLOAT_RGB_NV, FLOAT_RGBA_NV, or one
+          of the formats from table 3.16 whose base internal format is
+          RGB, RGBA, FLOAT_R_NV, FLOAT_RG_NV, FLOAT_RGB_NV, or
+          FLOAT_RGBA_NV.  No other formats, including compressed
+          internal formats, are color-renderable.
+
+Additions to Chapter 5 of the OpenGL 1.3 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 1.3 Specification (State and
+State Requests)
+
+    Modify Section 6.1.4, Texture Queries (p. 200)
+ 
+    Modify Table 6.1 (add new rows, corresponding to new internal formats,
+    p. 202)
+
+        Base Internal Format     R   G   B   A
+        --------------------    --- --- --- ---
+        FLOAT_R_NV               R   0   0   1
+        FLOAT_RG_NV              R   G   0   1
+        FLOAT_RGB_NV             R   G   B   1
+        FLOAT_RGBA_NV            R   G   B   A
+
+Additions to Appendix A of the OpenGL 1.3 Specification (Invariance)
+
+    None.
+
+Additions to the WGL Specification
+
+    First, close your eyes and pretend that a WGL specification actually
+    existed.  Maybe if we all concentrate hard enough, one will magically
+    appear.
+
+    Modify/add to the description of <piAttributes> in
+    wglGetPixelFormatAttribivARB and <pfAttributes> in
+    wglGetPixelFormatAttribfvARB:
+
+      WGL_FLOAT_COMPONENTS_NV
+        True if the R, G, B, and A components of each color buffer are
+        represented as (unclamped) floating-point numbers.
+
+      WGL_BIND_TO_TEXTURE_RECTANGLE_FLOAT_R_NV
+      WGL_BIND_TO_TEXTURE_RECTANGLE_FLOAT_RG_NV
+      WGL_BIND_TO_TEXTURE_RECTANGLE_FLOAT_RGB_NV
+      WGL_BIND_TO_TEXTURE_RECTANGLE_FLOAT_RGBA_NV
+        True if the pixel format describes a floating-point color that can be
+        bound to a texture rectangle with internal formats of FLOAT_R_NV,
+        FLOAT_RG_NV, FLOAT_RGB_NV, or FLOAT_RGBA_NV, respectively.  Currently
+        only pbuffers can be bound as textures so this attribute will only be
+        TRUE if WGL_DRAW_TO_PBUFFER is also TRUE.  Additionally,
+        floating-point color buffers can not be bound to texture targets other
+        than TEXTURE_RECTANGLE_NV.
+
+    Add new table entries for pixel format attribute matching in
+    wglChoosePixelFormatARB.
+
+        Attribute                    Type        Match Criteria
+        -------------------------    -------     --------------
+        WGL_FLOAT_COMPONENTS_NV      boolean     exact
+        WGL_BIND_TO_TEXTURE_         boolean     exact
+          RECTANGLE_FLOAT_R_NV
+        WGL_BIND_TO_TEXTURE_         boolean     exact
+          RECTANGLE_FLOAT_RG_NV
+        WGL_BIND_TO_TEXTURE_         boolean     exact
+          RECTANGLE_FLOAT_RGB_NV
+        WGL_BIND_TO_TEXTURE_         boolean     exact
+          RECTANGLE_FLOAT_RGBA_NV
+
+    (In the wglCreatePbufferARB section, modify the attribute list)
+
+      WGL_TEXTURE_FORMAT_ARB
+
+        This attribute indicates the base internal format of the texture that
+        will be created when a color buffer of a pbuffer is bound to a texture
+        map.  It can be set to WGL_TEXTURE_RGB_ARB (indicating an internal
+        format of RGB), WGL_TEXTURE_RGBA_ARB (indicating a base internal
+        format of RGBA), WGL_TEXTURE_FLOAT_R_NV (indicating a base internal
+        format of FLOAT_R_NV), WGL_TEXTURE_FLOAT_RG_NV (indicating a base
+        internal format of FLOAT_RG_NV), WGL_TEXTURE_FLOAT_RGB_NV (indicating
+        a base internal format of FLOAT_RGB_NV), WGL_TEXTURE_FLOAT_RGBA_NV
+        (indicating a base internal format of FLOAT_RGBA_NV), or
+        WGL_NO_TEXTURE_ARB. The default value is WGL_NO_TEXTURE_ARB.
+
+
+    (In the wglCreatePbufferARB section, modify the discussion of what happens
+    to the depth/stencil/accum buffers when switching between mipmap levels or
+    cube map faces.)
+
+    For pbuffers with a texture format of WGL_TEXTURE_RGB_ARB,
+    WGL_TEXTURE_RGBA_ARB, WGL_TEXTURE_FLOAT_R_NV, WGL_TEXTURE_FLOAT_RG_NV,
+    WGL_TEXTURE_FLOAT_RGB_NV, or WGL_TEXTURE_FLOAT_RGBA_NV, there will be a
+    separate set of color buffers for each mipmap level and cube map face in
+    the pbuffer.  Otherwise, the WGL implementation is free to share a single
+    set of color, auxillary, and accumulation buffers between levels or faces.
+
+
+    (In the wglCreatePbufferARB section, modify the error list)
+
+        ERROR_INVALID_DATA     WGL_TEXTURE_FORMAT_ARB is
+                               WGL_TEXTURE_FLOAT_R_NV,
+                               WGL_TEXTURE_FLOAT_RG_NV,
+                               WGL_TEXTURE_FLOAT_RGB_NV, or
+                               WGL_TEXTURE_FLOAT_RGBA_NV, and
+                               WGL_TEXTURE_TARGET_ARB is not
+                               WGL_TEXTURE_RECTANGLE_NV.
+
+        ERROR_INVALID_DATA     WGL_TEXTURE_FORMAT_ARB is
+                               WGL_TEXTURE_FLOAT_R_NV,
+                               WGL_TEXTURE_TARGET_ARB is
+                               WGL_TEXTURE_RECTANGLE_NV, and the
+                               WGL_BIND_TO_TEXTURE_RECTANGLE_FLOAT_R_NV
+                               attribute is not set in the pixel format.
+
+        ERROR_INVALID_DATA     WGL_TEXTURE_FORMAT_ARB is
+                               WGL_TEXTURE_FLOAT_RG_NV,
+                               WGL_TEXTURE_TARGET_ARB is
+                               WGL_TEXTURE_RECTANGLE_NV, and the
+                               WGL_BIND_TO_TEXTURE_RECTANGLE_FLOAT_RG_NV
+                               attribute is not set in the pixel format.
+
+        ERROR_INVALID_DATA     WGL_TEXTURE_FORMAT_ARB is
+                               WGL_TEXTURE_FLOAT_RGB_NV,
+                               WGL_TEXTURE_TARGET_ARB is
+                               WGL_TEXTURE_RECTANGLE_NV, and the
+                               WGL_BIND_TO_TEXTURE_RECTANGLE_FLOAT_RGB_NV
+                               attribute is not set in the pixel format.
+
+        ERROR_INVALID_DATA     WGL_TEXTURE_FORMAT_ARB is
+                               WGL_TEXTURE_FLOAT_RGBA_NV,
+                               WGL_TEXTURE_TARGET_ARB is
+                               WGL_TEXTURE_RECTANGLE_NV, and the
+                               WGL_BIND_TO_TEXTURE_RECTANGLE_FLOAT_RGBA_NV
+                               attribute is not set in the pixel format.
+
+    Modify wglBindTexImageARB: 
+
+    ...
+
+        The pbuffer attribute WGL_TEXTURE_FORMAT_ARB determines the base
+        internal format of the texture. The format-specific component sizes
+        are also determined by pbuffer attributes as shown in the table below.
+        The component sizes are dependent on the format of the texture.
+  
+        Component           Size                 Format
+        ---------    ------------------------    ----------------------------
+            R        WGL_RED_BITS_ARB            RGB, RGBA, FLOAT_R, FLOAT_RG,
+                                                 FLOAT_RGB, FLOAT_RGBA
+            G        WGL_GREEN_BITS_ARB          RGB, RGBA, FLOAT_R, FLOAT_RG,
+                                                 FLOAT_RGB, FLOAT_RGBA
+            B        WGL_BLUE_BITS_ARB           RGB, RGBA, FLOAT_R, FLOAT_RG,
+                                                 FLOAT_RGB, FLOAT_RGBA
+            A        WGL_ALPHA_BITS_ARB          RGB, RGBA, FLOAT_R, FLOAT_RG,
+                                                 FLOAT_RGB, FLOAT_RGBA
+
+
+Additions to the AGL Specification
+
+    None
+
+Additions to the GLX Specification
+
+    <very incomplete>
+
+    The GLX_FLOAT_COMPONENTS_NV framebuffer config attribute is a
+    boolean (or GLX_DONT_CARE) indicating if floating-point components
+    are requested.
+
+Dependencies on EXT_paletted_texture, SGIX_depth_texture, and NV_texture_shader
+
+    If any of these extensions are not supported, the rows in Tables 3.15 and
+    3.16 corresponding to texture formats defined by the unsupported extension
+    should be removed.
+
+    If NV_texture_shader is not supported, ignore the amended
+    paragraph from the NV_texture_shader specificiaton describing
+    TEXTURE_BORDER_VALUES clamping in favor of the original OpenGL
+    specification language.
+
+Dependencies on NV_half_float
+
+    If GL_NV_half_float is not supported, all references to HALF_FLOAT_NV
+    should be deleted.
+
+Dependencies on ARB_color_buffer_float and ATI_pixel_format_float
+
+    If ARB_color_buffer_float and ATI_pixel_format_float are also supported,
+    the GL would have two different floating-point frame buffer models with
+    different restrictions.  To avoid having to carry these differences all
+    the way down the pipeline and provide two distinct sets of frame buffer
+    formats, the following limitations on rendering to floating-point color
+    buffers in this extension are removed if ARB_color_buffer_float or
+    ATI_pixel_format_float is supported:
+
+      Modify Section 3.11, Antialiasing Application (p. 155)
+
+      ... In RGBA mode with floating-point frame buffers, the coverage value
+      is simply discarded.  ...
+
+      Modify Section 4.1.3, Multisample Fragment Operations (p. 158)
+
+      This step applies only for fixed-point RGBA color buffers. Otherwise,
+      proceed to the next step.  ...
+
+      Modify Section 4.1.4, Alpha Test (p. 159)
+
+      This step applies only for fixed-point RGBA color buffers. Otherwise,
+      proceed to the next step.  ...
+
+      Modify Section 4.1.7, Blending (p. 161)
+
+      (modify second paragraph)
+
+      This blending is dependent on the incoming fragment's alpha value and
+      that of the corresponding currently stored pixel.  Blending applies only
+      for fixed-point RGBA color buffers; otherwise, it is bypassed. ...
+
+      Modify Section 4.2.4, The Accumulation Buffer (p. 172)
+
+      (modify last paragraph) ..., or if color buffer is not fixed-point RGBA,
+
+    When blending is enabled with a floating-point color buffer, the spec
+    language in ARB_color_buffer_float describes how blending is performed.
+
+    The above restrictions remain in effect on NV3X (GeForce FX, Quadro FX)
+    hardware, where neither ARB_color_buffer_float nor ATI_pixel_format_float
+    is supported.
+
+    Additionally, if ARB_color_buffer_float or ATI_pixel_format_float is
+    supported, the following errors are not generated:
+
+      INVALID_OPERATION is generated by Begin, DrawPixels, Bitmap, CopyPixels,
+      or a command that performs an explicit Begin if the color buffer has a
+      floating-point RGBA format and FRAGMENT_PROGRAM_NV is disabled.
+
+      INVALID_OPERATION is generated by Accum if the color buffer has a color
+      index or floating-point RGBA format.
+
+Dependencies on ARB_texture_float and ATI_texture_float
+
+    If ARB_texture_float or ATI_texture_float is also supported, the GL would
+    have two different sets of floating-point textures with different
+    restrictions.  To avoid having to carry these differences all the way down
+    the pipeline, the following limitations on filtering of NV_float_buffer
+    textures are removed if ARB_texture_float or ATI_texture_float is
+    supported:
+
+      Modify Section 3.8,7, Minification (p. 141)
+
+      (Add after the last paragraph in the section) Floating-point textures
+      (those with a base internal format of FLOAT_R_NV, FLOAT_RG_NV,
+      FLOAT_RGB_NV, or FLOAT_RGBA_NV) do not support texture filters other
+      than NEAREST.  For such textures, NEAREST filtering is applied
+      regardless of the setting of TEXTURE_MIN_FILTER.
+
+      Modify Section 3.8.8, Magnification (p. 141)
+
+      (Add after the last paragraph in the section) Floating-point textures
+      (those with a base internal format of FLOAT_R_NV, FLOAT_RG_NV,
+      FLOAT_RGB_NV, or FLOAT_RGBA_NV) do not support texture filters other
+      than NEAREST.  For such textures, NEAREST filtering is applied
+      regardless of the setting of TEXTURE_MAG_FILTER.
+
+    The above restrictions remain in effect on NV3X (GeForce FX, Quadro FX)
+    hardware, where ARB_texture_float and ATI_texture_float are not supported.
+
+    The following restriction requiring the use of rectangle textures does
+    remain in effect for NV_float_buffer texture formats, even though
+    ARB_texture_float and ATI_texture_float provides the ability to use
+    floating-point textures with non-rectangle targets.  If this capability is
+    required, use the texture formats defined in ARB_texture_float or
+    ATI_texture_float.
+
+      (add between first and second paragraphs, p.117) Textures with a base
+      internal format of FLOAT_R_NV, FLOAT_RG_NV, FLOAT_RGB_NV, and
+      FLOAT_RGBA_NV are known as floating-point textures.  Floating-point
+      textures are only supported for the TEXTURE_RECTANGLE_NV target.
+      Specifying a floating-point texture with any other target will produce
+      an INVALID_OPERATION error.
+
+Dependencies on EXT_framebuffer_object
+
+    If EXT_framebuffer_object is not supported, then ignore any
+    reference to EXT_framebuffer_object.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    INVALID_OPERATION is generated by Begin, DrawPixels, Bitmap, CopyPixels,
+    or a command that performs an explicit Begin if the color buffer has a
+    floating-point RGBA format and FRAGMENT_PROGRAM_NV is disabled.
+
+    INVALID_OPERATION is generated by TexImage3D, TexImage2D, TexImage1D,
+    TexSubImage3D, TexSubImage2D, or TexSubImage1D if the pixel group type
+    corresponding to <format> is not compatible with the base internal format
+    of the texture.
+
+    INVALID_OPERATION is generated by TexImage3D, TexImage1D, or
+    CopyTexImage1D if the base internal format corresponding to
+    <internalformat> is FLOAT_R_NV, FLOAT_RG_NV, FLOAT_RGB_NV, or
+    FLOAT_RGBA_NV.
+
+    INVALID_OPERATION is generated by TexImage2D or CopyTexImage2D if the base
+    internal format corresponding to <internalformat> is FLOAT_R_NV,
+    FLOAT_RG_NV, FLOAT_RGB_NV, or FLOAT_RGBA_NV and <target> is not
+    TEXTURE_RECTANGLE_NV.
+
+    INVALID_OPERATION is generated by Accum if the color buffer has a color
+    index or floating-point RGBA format.
+
+    ERROR_INVALID_DATA is generated by wglCreatePbufferARB if
+    WGL_TEXTURE_FORMAT_ARB is WGL_TEXTURE_FLOAT_R_NV, WGL_TEXTURE_FLOAT_RG_NV,
+    WGL_TEXTURE_FLOAT_RGB_NV, or WGL_TEXTURE_FLOAT_RGBA_NV, and
+    WGL_TEXTURE_TARGET_ARB is not WGL_TEXTURE_RECTANGLE_NV.
+
+    ERROR_INVALID_DATA is generated by wglCreatePbufferARB if
+    WGL_TEXTURE_FORMAT_ARB is WGL_TEXTURE_FLOAT_R_NV, WGL_TEXTURE_TARGET_ARB
+    is WGL_TEXTURE_RECTANGLE_NV, and the
+    WGL_BIND_TO_TEXTURE_RECTANGLE_FLOAT_R_NV attribute is not set in the pixel
+    format.
+
+    ERROR_INVALID_DATA is generated by wglCreatePbufferARB if
+    WGL_TEXTURE_FORMAT_ARB is WGL_TEXTURE_FLOAT_RG_NV, WGL_TEXTURE_TARGET_ARB
+    is WGL_TEXTURE_RECTANGLE_NV, and the
+    WGL_BIND_TO_TEXTURE_RECTANGLE_FLOAT_RG_NV attribute is not set in the
+    pixel format.
+
+    ERROR_INVALID_DATA is generated by wglCreatePbufferARB if
+    WGL_TEXTURE_FORMAT_ARB is WGL_TEXTURE_FLOAT_RGB_NV, WGL_TEXTURE_TARGET_ARB
+    is WGL_TEXTURE_RECTANGLE_NV, and the
+    WGL_BIND_TO_TEXTURE_RECTANGLE_FLOAT_RGB_NV attribute is not set in the
+    pixel format.
+
+    ERROR_INVALID_DATA is generated by wglCreatePbufferARB if
+    WGL_TEXTURE_FORMAT_ARB is WGL_TEXTURE_FLOAT_RGBA_NV,
+    WGL_TEXTURE_TARGET_ARB is WGL_TEXTURE_RECTANGLE_NV, and the
+    WGL_BIND_TO_TEXTURE_RECTANGLE_FLOAT_RGBA_NV attribute is not set in the
+    pixel format.
+
+    
+New State
+
+    (Modify Table 6.15, Texture Objects (cont.), p. 223)
+
+                                                        Init.
+    Get Value                     Type    Get Command   Value  Description             Sec.   Attribute
+    ---------------------------   -----   ------------  -----  ---------------------   -----  ------------
+    TEXTURE_FLOAT_COMPONENTS_NV   n x B   GetTexLevel-    0    True if texture holds   3.8    -
+                                                               unclamped floating-
+                                                               point values
+
+    (Modify Table 6.19, Framebuffer Control, p. 227)
+
+                                                      Init.
+    Get Value                    Type   Get Command   Value     Description                Sec.   Attribute
+    --------------------------   ----   -----------   -------   ------------------------   -----  ------------
+    COLOR_CLEAR_VALUE            C      GetFloatv     0,0,0,0   Color buffer clear value   4.2.3  color-buffer
+                                                                (RGBA mode), each value
+                                                                clamped to [0,1].
+    FLOAT_CLEAR_COLOR_VALUE_NV   4xR    GetFloatv     0,0,0,0   Color buffer clear value   4.2.3  color-buffer
+                                                                (RGBA mode), each value
+                                                                unclamped.
+
+
+New Implementation Dependent State
+
+    (Modify Table 6.28, Implementation Dependent Values, p. 236)
+
+                                              Init.
+    Get Value            Type   Get Command   Value   Description            Sec.  Attribute
+    ------------------   ----   -----------   -----   ---------------------  ----  ---------
+    FLOAT_RGBA_MODE_NV   B      GetBooleanv   -       True if color buffers  4     -
+                                                      store floating-point
+                                                      data
+
+NV3x Implementation Details
+
+    NV3x GPUs (GeForce FX, etc.) support hardware acceleration for float
+    textures with two or more components only when the repeat mode state
+    (S and T) is GL_CLAMP_TO_EDGE.  If you use either the GL_CLAMP or
+    GL_CLAMP_TO_BORDER repeat modes with a float texture with two or
+    more components, the software rasterizer is used.
+
+    However, if you use a single-component float texture (GL_FLOAT_R_NV,
+    etc.), all clamping repeat modes (GL_CLAMP, GL_CLAMP_TO_EDGE, and
+    GL_CLAMP_TO_BORDER) are available with full hardware acceleration.
+
+    The two-, three-, and four-component texture formats all use the
+    same amount of texture memory storage (128 bits per texel for the
+    GL_FLOAT_x32 formats, and 64 bits per texel for the GL_FLOAT_x16
+    formats).  Future GPUs will likely store two and three component
+    float textures more efficiently.
+
+    The GL_FLOAT_R32_NV and GL_FLOAT_R16_NV texture formats each use 32
+    bits per texel.  Future GPUs will likely store GL_FLOAT_R16_NV more
+    efficiently.
+
+    NVIDIA treats the unsized internal formats GL_FLOAT_R_NV,
+    GL_FLOAT_RGBA_NV, etc. the same as GL_FLOAT_R32_NV,
+    GL_FLOAT_RGBA32_NV, etc.
+
+Revision History
+
+    Rev.    Date    Author   Changes
+    ----  -------- --------  --------------------------------------------
+     20   11/03/06  mjk      Update Status
+
+     19   01/10/05  mjk      Add very minimal GLX discussion
+
+     18   09/12/05  jjuliano Describe interaction with EXT_framebuffer_object.
+                             The GL_FLOAT_*_NV texture formats are
+                             color-renderable.
+
+     17   04/04/05  pbrown   Describe interactions with ARB_texture_float and
+                             ARB_color_buffer_float (as well as the ATI
+                             equivalents), which remove some of the
+                             restrictions of this extension, when supported.
+
+     16   06/16/03  pbrown   Corrected the usage of WGL_TEXTURE_FLOAT_R_NV and
+                             related enums in the list of enumerants.
+
+     15   01/23/03  mjk      Document texture border color (values) behavior
+                             for float textures.  See issue.
+
+     14   01/20/03  mjk      Added NV3x Implementation Details section.
+
+     13   11/27/02  pbrown   Fixed the name of the clear color query enum in
+                             the state table  -- the core spec says
+                             COLOR_CLEAR_VALUE.  The enum in this extension is
+                             FLOAT_CLEAR_COLOR_VALUE_NV.  Documented this
+                             inconsistency.
+
+     12   10/09/02  pbrown   Clarified that the floating-point internal format
+                             enums can not be passed TexImage1D and
+                             TexImage3D.
+
+     11   07/19/02  pbrown   Cleaned up a number of items in the issues
+                             section.  Removed limitation that DrawPixels and
+                             CopyPixels color components are clamped to
+                             [0,1].  Removed language modifying multisample
+                             color filtering -- if multisample buffers are
+                             supported, the color components will be filtered
+                             on a componentwise basis.
+
+     10   07/09/02  pbrown   Fixed contradictory issue resolutions.
+
+      9   01/31/02  pbrown   Added revision history.
+
+      8   01/29/02  pbrown   Fix spec to indicate that
+                             TEXTURE_FLOAT_COMPONENTS_NV is queried by
+                             GetTexLevelParameter*() calls instead of the
+                             generic gets.
+
+      7   12/26/01  pbrown   Documented limitation where DrawPixels/CopyPixels
+                             data are clamped to [0,1], even when the color
+                             buffer is floating-point.  This is consistent
+                             with the fact that pixel data is supposed to go
+                             in f[COL0] (fixed-point interpolator).  Changed
+                             float texture to RGBA expansion to always fill in
+                             with (0,0,0,1), not (0,0,0,0). This is more
+                             consistent with our other texture formats.
+
+      6   11/30/01  pbrown   Assigned WGL enumerant values.
+
+      5   11/27/01  pbrown   Modify NV_float_buffer to eliminate the
+                             dependencies on NV_render_depth_texture, now that
+                             they are no longer necessary.  More pedantic
+                             fixes.
+
+      4   10/29/01  pbrown   Add documentation of possible uses of
+                             floating-point color buffers. 
+
+      3   10/19/01  pbrown   Assign GL enumerants.  Fixed some bugs in the use
+                             of #defines in the spec.  Added ARB_imaging
+                             and SGIS_generate_mipmap interaction issues.

@@ -1,0 +1,155 @@
+Name
+
+    EXT_blend_func_separate
+
+Name Strings
+
+    GL_EXT_blend_func_separate
+
+Version
+
+    Date: 04/06/1999  Version 1.3
+
+Number
+
+    173
+
+Dependencies
+
+    None
+
+Overview
+
+    Blending capability is extended by defining a function that allows
+    independent setting of the RGB and alpha blend factors for blend
+    operations that require source and destination blend factors.  It
+    is not always desired that the blending used for RGB is also applied
+    to alpha.
+
+New Procedures and Functions
+
+    void BlendFuncSeparateEXT(enum sfactorRGB,
+                              enum dfactorRGB,
+                              enum sfactorAlpha,
+                              enum dfactorAlpha);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        BLEND_DST_RGB_EXT                  0x80C8
+        BLEND_SRC_RGB_EXT                  0x80C9
+        BLEND_DST_ALPHA_EXT                0x80CA
+        BLEND_SRC_ALPHA_EXT                0x80CB
+
+
+Additions to Chapter 2 of the 1.2 GL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 GL Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.2 GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    The RGB and alpha blend factors are separate.  The function
+    BlendFuncSeparateEXT allows the specification of the four factors.
+    Table 4.1 and Table 4.2 are modified as follows:
+
+     Value                     RGB Factors                   Alpha Factors
+     ------------------        ----------------------------  -------------
+     ZERO                      (0, 0, 0)                     0
+     ONE                       (1, 1, 1)                     1
+     DST_COLOR                 (Rd/Kr, Gd/Kg, Bd/Kb)         Ad/Ka
+     ONE_MINUS_DST_COLOR       (1-Rd/Kr, 1-Gd/Kg, 1-Bd/Kb)   1-Ad/Ka
+     SRC_ALPHA                 (As/Ka, As/Ka, As/Ka)         As/Ka
+     ONE_MINUS_SRC_ALPHA       (1-As/Ka, 1-As/Ka, 1-As/Ka)   1-As/Ka
+     DST_ALPHA                 (Ad/Ka, Ad/Ka, Ad/Ka)         Ad/Ka
+     ONE_MINUS_DST_ALPHA       (1-Ad/Ka, 1-Ad/Ka, 1-Ad/Ka)   1-Ad/Ka
+     CONSTANT_COLOR            (Rc, Gc, Bc)                  Ac
+     ONE_MINUS_CONSTANT_COLOR  (1-Rc, 1-Gc, 1-Bc)            1-Ac
+     CONSTANT_ALPHA            (Ac, Ac, Ac)                  Ac
+     ONE_MINUS_CONSTANT_ALPHA  (1-Ac, 1-Ac, 1-Ac)            1-Ac
+     SRC_ALPHA_SATURATE        (f, f, f)                     1
+
+     Value                     RGB Factors                   Alpha Factors
+     ------------------        ----------------------------  -------------
+     ZERO                      (0, 0, 0)                     0
+     ONE                       (1, 1, 1)                     1
+     SRC_COLOR                 (Rs/Kr, Gs/Kg, Bs/Kb)         As/Ka
+     ONE_MINUS_SRC_COLOR       (1-Rs/Kr, 1-Gs/Kg, 1-Bs/Kb)   1-As/Ka
+     SRC_ALPHA                 (As/Ka, As/Ka, As/Ka)         As/Ka
+     ONE_MINUS_SRC_ALPHA       (1-As/Ka, 1-As/Ka, 1-As/Ka)   1-As/Ka
+     DST_ALPHA                 (Ad/Ka, Ad/Ka, Ad/Ka)         Ad/Ka
+     ONE_MINUS_DST_ALPHA       (1-Ad/Ka, 1-Ad/Ka, 1-Ad/Ka)   1-Ad/Ka
+     CONSTANT_COLOR            (Rc, Gc, Bc)                  Ac
+     ONE_MINUS_CONSTANT_COLOR  (1-Rc, 1-Gc, 1-Bc)            1-Ac
+     CONSTANT_ALPHA            (Ac, Ac, Ac)                  Ac
+     ONE_MINUS_CONSTANT_ALPHA  (1-Ac, 1-Ac, 1-Ac)            1-Ac
+     SRC_ALPHA_SATURATE        (f, f, f)                     1
+
+    The commands that control blending are
+
+        void BlendFunc(enum src, enum dst)
+        void BlendFuncSeparateEXT(enum sfactorRGB, enum dfactorRGB,
+                                  enum sfactorAlpha, enum dfactorAlpha);
+
+    The BlendFunc command sets both source factors (RGB and alpha) and
+    destination factors (RGB and alpha) while BlendFuncSeparateEXT sets
+    the RGB factors independently from the alpha factors.
+
+Additions to Chapter 5 of the 1.2 GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 GL Specification (State and State Requests)
+
+    The state required is four integers indicating the source and
+    destination blending functions for RGB and alpha.  The initial state
+    for both source functions is ONE.  The initial state for both
+    destination functions is ZERO.
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    A new GL rendering command is added. The following command is sent
+    to the server as part of a glXRender request:
+
+        BlendFuncSeparateEXT
+            2           20              rendering command length
+            2           4134            rendering command opcode
+            4           ENUM            sfactorRGB
+            4           ENUM            dfactorRGB
+            4           ENUM            sfactorAlpha
+            4           ENUM            dfactorAlpha
+
+Errors
+
+    GL_INVALID_ENUM is generated if either sfactorRGB, dfactorRGB,
+    sfactorAlpha, or dfactorAlpha is not an accepted value.
+
+    GL_INVALID_OPERATION is generated if glBlendFunc is executed between
+    the execution of glBegin and the corresponding execution of glEnd.
+
+New State
+
+    The get values BLEND_SRC and BLEND_DST return the RGB source and
+    destination factor, respectively.
+
+                                              Initial
+    Get Value             Get Command   Type  Value       Attribute
+    ---------             -----------   ----  -------     ------------
+    BLEND_SRC_RGB_EXT     GetFloatv     Z     ONE        color-buffer
+    BLEND_DST_RGB_EXT     GetFloatv     Z     ZERO       color-buffer
+    BLEND_SRC_ALPHA_EXT   GetFloatv     Z     ONE        color-buffer
+    BLEND_DST_ALPHA_EXT   GetFloatv     Z     ZERO       color-buffer
+
+New Implementation Dependent State
+
+    None

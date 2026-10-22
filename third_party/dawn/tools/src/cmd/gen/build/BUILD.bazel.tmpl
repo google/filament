@@ -1,0 +1,399 @@
+{{- /* Collect all the conditionals used by all targets in this directory */}}
+{{- $AllConditionals := $.DecomposedConditionals}}
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+{{- if $.Project.Target $ "proto"}}
+load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
+{{- end}}
+load("//src/tint:flags.bzl", "COPTS")
+load("@bazel_skylib//lib:selects.bzl", "selects")
+
+exports_files(glob(["*.def", "*.tmpl"], allow_empty = True))
+
+{{/* newline */}}
+
+{{- Eval "TargetIfNotEmpty" ($.Project.Target $ "lib")}}
+{{- Eval "TargetIfNotEmpty" ($.Project.Target $ "proto")}}
+{{- Eval "TargetIfNotEmpty" ($.Project.Target $ "test")}}
+{{- Eval "TargetIfNotEmpty" ($.Project.Target $ "bench")}}
+{{- Eval "TargetIfNotEmpty" ($.Project.Target $ "cmd")}}
+{{- Eval "TargetIfNotEmpty" ($.Project.Target $ "test_cmd")}}
+{{- Eval "TargetIfNotEmpty" ($.Project.Target $ "bench_cmd")}}
+
+{{- Eval "ConditionalRules" $AllConditionals}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Emits a Bazel target if it contains any files
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "TargetIfNotEmpty"}}
+{{-   if $}}
+{{-     if and $.Condition (Contains $.Condition.String "tint_build_glsl_validator")}}
+# GLSL validator is not supported by the bazel build configuration.
+{{-     else}}
+{{-       if or (len $.SourceFiles) (len $.GeneratedSourcePaths.List)}}{{Eval "Target" $}}{{end}}
+{{-     end}}
+{{-   end}}
+{{- end}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Emits a Bazel target
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Target"}}
+{{- $Conditionals := $.Conditionals}}
+{{- if $.Kind.IsProto -}}
+proto_library(
+  name = "{{$.Directory.Name}}_proto",
+  srcs = [
+{{-     range $File := $.UnconditionalSourceFiles}}
+    "{{TrimPrefix $File.Name $.Directory.Path}}",
+{{-     end}}
+  ],
+  deps = [
+{{-   range $Dep := $.UnconditionalInternalDependencies}}
+    "//src/tint/{{$Dep.Directory.Path}}:{{$Dep.Directory.Name}}_proto",
+{{-   end}}
+{{-   range $Dep := $.UnconditionalExternalDependencies}}
+{{-     $Target := ExternalDependencyTarget $Dep}}
+{{-     if $Target}}
+    {{$Target}}
+{{-     end}}
+{{-   end}}
+  ],
+  visibility = ["//visibility:public"],
+)
+
+cc_proto_library(
+  name = "proto",
+  deps = [":{{$.Directory.Name}}_proto"],
+  visibility = ["//visibility:public"],
+)
+{{- else -}}
+{{- if      $.Kind.IsLib -}}
+cc_library(
+  name = "{{$.Directory.Name}}",
+{{- else if $.Kind.IsProto -}}
+cc_library(
+  name = "proto",
+{{- else if $.Kind.IsTest -}}
+cc_library(
+  name = "test",
+  alwayslink = True,
+{{- else if $.Kind.IsBench -}}
+cc_library(
+  name = "bench",
+  alwayslink = True,
+{{- else if $.Kind.IsCmd -}}
+cc_binary(
+  name = "cmd",
+{{- else if $.Kind.IsTestCmd -}}
+cc_binary(
+  name = "test_cmd",
+{{- else if $.Kind.IsBenchCmd -}}
+cc_binary(
+  name = "bench_cmd",
+{{- end}}
+  srcs = [
+{{-   if $.Kind.IsProto}}
+{{-     range $File := $.GeneratedProtobufSources.List}}
+{{-       if HasSuffix $File ".cc"}}
+    "{{TrimPrefix $File (printf "%s/" $.Directory.Path)}}",
+{{-       end}}
+{{-     end}}
+{{-   else}}
+{{-     range $File := $.UnconditionalSourceFiles}}
+{{-       if not (HasSuffix $File.Name ".mm")}}
+{{-         if or (not $.Kind.IsLib) (HasSuffix $File.Name ".cc")}}
+{{-           if not ($.IsGeneratedSource $File.Path)}}
+    "{{TrimPrefix $File.Name $.Directory.Path}}",
+{{-           end}}
+{{-         end}}
+{{-       end}}
+{{-     end}}
+{{-    range $Path := $.GeneratedSourcePaths.List}}
+    "//src/tint:gen/src/tint/{{$Path}}",
+{{-    end}}
+{{-   end}}
+  ]
+{{-   if $Conditionals.HasSourceFiles}}
+{{-     range $Cond := $Conditionals}}
+{{-       if HasCppSrcs $Cond}} + select({
+{{-         if $Cond.Condition.IsNegative}}
+{{-           range $Var := $Cond.Condition.PositiveVarsOfNegative}}
+    "{{$Label := PlatformLabel $Var}}{{if $Label}}{{$Label}}{{else}}//src/tint:{{$Var}}_true{{end}}": [],
+{{-           end}}
+    "//conditions:default": [
+{{-           range $File := $Cond.SourceFiles}}
+{{-             if not (HasSuffix $File.Name ".mm")}}
+      "{{TrimPrefix $File.Name $.Directory.Path}}",
+{{-             end}}
+{{-           end}}
+    ],
+{{-         else}}
+{{-           if $Cond.SourceFiles}}
+    "{{$Label := PlatformLabel $Cond.Condition.String}}{{if $Label}}{{$Label}}{{else}}:{{Eval "ConditionTarget" $Cond.Condition}}{{end}}": [
+{{-             range $File := $Cond.SourceFiles}}
+{{-               if not (HasSuffix $File.Name ".mm")}}
+      "{{TrimPrefix $File.Name $.Directory.Path}}",
+{{-               end}}
+{{-             end}}
+    ],
+{{-           end}}
+    "//conditions:default": [],
+{{-         end}}
+  })
+{{-       end}}
+{{-     end}}
+{{-   end}},
+{{- if or $.Kind.IsLib $.Kind.IsProto}}
+  hdrs = [
+{{-   if $.Kind.IsProto}}
+{{-     range $File := $.GeneratedProtobufSources.List}}
+{{-       if not (HasSuffix $File ".cc")}}
+    "{{TrimPrefix $File (printf "%s/" $.Directory.Path)}}",
+{{-       end}}
+{{-     end}}
+{{-   else}}
+{{-     range $File := $.UnconditionalSourceFiles}}
+{{-       if not (HasSuffix $File.Name ".cc")}}
+{{-         if not (HasSuffix $File.Name ".mm")}}
+{{-           if not ($.IsGeneratedSource $File.Path)}}
+    "{{TrimPrefix $File.Name $.Directory.Path}}",
+{{-           end}}
+{{-         end}}
+{{-       end}}
+{{-     end}}
+{{-    range $Path := $.GeneratedSourcePaths.List}}
+{{-       if not (HasSuffix $Path ".cc")}}
+    "//src/tint:gen/src/tint/{{$Path}}",
+{{-         end}}
+{{-    end}}
+{{-   end}}
+  ],
+{{-   end}}
+  deps = [
+{{- /* Emit unconditional internal dependencies */}}
+{{-   range $Dep := $.UnconditionalInternalDependencies}}
+    "{{Eval "Dependency" $Dep}}",
+{{-   end}}
+{{- if and (not $.Kind.IsProto) $.GeneratedSourcePaths.List}}
+    "//src/tint:generated_tint_headers",
+{{- end}}
+
+{{- /* Emit unconditional external dependencies */}}
+{{-   range $Dep := $.UnconditionalExternalDependencies}}
+{{-     $Target := ExternalDependencyTarget $Dep}}
+{{-     if $Target}}
+    {{$Target}}
+{{-     end}}
+{{-   end}}
+  ]
+{{-   if $Conditionals.HasDependencies}}
+{{-     range $Cond := $Conditionals}}
+{{-       if HasSupportedDeps $Cond}} + select({
+{{-         if $Cond.Condition.IsNegative}}
+{{-           range $Var := $Cond.Condition.PositiveVarsOfNegative}}
+    "{{$Label := PlatformLabel $Var}}{{if $Label}}{{$Label}}{{else}}//src/tint:{{$Var}}_true{{end}}": [],
+{{-           end}}
+    "//conditions:default": [
+{{-           range $Dep := $Cond.InternalDependencies}}
+      "{{Eval "Dependency" $Dep}}",
+{{-           end}}
+{{-           range $Dep := $Cond.ExternalDependencies}}
+{{-             $Target := ExternalDependencyTarget $Dep}}
+{{-             if $Target}}
+      {{$Target}}
+{{-             end}}
+{{-           end}}
+    ],
+{{-         else}}
+{{-           if or $Cond.InternalDependencies $Cond.ExternalDependencies}}
+    "{{$Label := PlatformLabel $Cond.Condition.String}}{{if $Label}}{{$Label}}{{else}}:{{Eval "ConditionTarget" $Cond.Condition}}{{end}}": [
+{{-             range $Dep := $Cond.InternalDependencies}}
+      "{{Eval "Dependency" $Dep}}",
+{{-             end}}
+{{-             range $Dep := $Cond.ExternalDependencies}}
+{{-               $Target := ExternalDependencyTarget $Dep}}
+{{-               if $Target}}
+      {{$Target}}
+{{-               end}}
+{{-             end}}
+    ],
+{{-           end}}
+    "//conditions:default": [],
+{{-         end}}
+  })
+{{-       end}}
+{{-     end}}
+{{-   end}}
+{{-   if $.HasObjcSrcs}} + select({
+    "@platforms//os:macos": [
+      ":{{$.Directory.Name}}_objc",
+    ],
+    "//conditions:default": [],
+  })
+{{-   end}},
+  copts = COPTS,
+  visibility = ["//visibility:public"],
+)
+{{- if $.HasObjcSrcs}}
+
+genrule(
+  name = "{{$.Directory.Name}}_objc_cc",
+  srcs = [
+{{-   range $Cond := $Conditionals}}
+{{-     if not $Cond.Condition.IsNegative}}
+{{-       range $File := $Cond.SourceFiles}}
+{{-         if HasSuffix $File.Name ".mm"}}
+    "{{TrimPrefix $File.Name $.Directory.Path}}",
+{{-         end}}
+{{-       end}}
+{{-     end}}
+{{-   end}}
+  ],
+  outs = [
+{{-   range $Cond := $Conditionals}}
+{{-     if not $Cond.Condition.IsNegative}}
+{{-       range $File := $Cond.SourceFiles}}
+{{-         if HasSuffix $File.Name ".mm"}}
+    "{{TrimPrefix $File.Name $.Directory.Path}}.cc",
+{{-         end}}
+{{-       end}}
+{{-     end}}
+{{-   end}}
+  ],
+  cmd = "cp $< $@",
+)
+
+cc_library(
+  name = "{{$.Directory.Name}}_objc",
+  srcs = [
+    ":{{$.Directory.Name}}_objc_cc",
+  ],
+  hdrs = [
+{{-     range $File := $.UnconditionalSourceFiles}}
+{{-       if not (HasSuffix $File.Name ".cc")}}
+{{-         if not (HasSuffix $File.Name ".mm")}}
+{{-           if not ($.IsGeneratedSource $File.Path)}}
+    "{{TrimPrefix $File.Name $.Directory.Path}}",
+{{-           end}}
+{{-         end}}
+{{-       end}}
+{{-     end}}
+  ],
+  copts = COPTS + [
+    "-x",
+    "objective-c++",
+  ],
+  deps = [
+{{-   range $Dep := $.UnconditionalInternalDependencies}}
+    "{{Eval "Dependency" $Dep}}",
+{{-   end}}
+{{-   range $Dep := $.UnconditionalExternalDependencies}}
+{{-     $Target := ExternalDependencyTarget $Dep}}
+{{-     if $Target}}
+    {{$Target}}
+{{-     end}}
+{{-   end}}
+  ],
+  target_compatible_with = ["@platforms//os:macos"],
+  visibility = ["//visibility:private"],
+)
+{{- end}}
+{{- end}}
+{{/* newline */}}
+{{- end}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Emits a dependency target name
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Dependency" -}}
+{{-   if      $.Kind.IsLib      -}}//src/tint/{{$.Directory.Path}}
+{{-   else if $.Kind.IsProto     -}}//src/tint/{{$.Directory.Path}}:proto
+{{-   else if $.Kind.IsTest     -}}//src/tint/{{$.Directory.Path}}:test
+{{-   else if $.Kind.IsBench    -}}//src/tint/{{$.Directory.Path}}:bench
+{{-   else if $.Kind.IsCmd      -}}//src/tint/{{$.Directory.Path}}:cmd
+{{-   else if $.Kind.IsTestCmd  -}}//src/tint/{{$.Directory.Path}}:test_cmd
+{{-   else if $.Kind.IsBenchCmd -}}//src/tint/{{$.Directory.Path}}:bench_cmd
+{{-   else if $.Kind.IsFuzz      -}}//src/tint/{{$.Directory.Path}}
+{{-   else if $.Kind.IsFuzzCmd   -}}//src/tint/{{$.Directory.Path}}:fuzz_cmd
+{{-   end}}
+{{- end}}
+
+
+
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Emits all the conditional rules required by the targets
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "ConditionalRules"}}
+{{-   if $.Unarys}}
+{{-     range $Unary := $.Unarys}}
+{{-       if not (ShouldSkipUnary $Unary)}}
+alias(
+  name = "{{Eval "ConditionTarget" $Unary}}",
+  actual = "{{ConditionTargetLabel $Unary.Var $Unary.Negate}}",
+)
+{{/* newline */}}
+{{-       end}}
+{{-     end}}
+{{-   end}}
+{{-   if $.Ors}}
+{{-     range $Ors := $.Ors}}
+{{-       if not (ShouldSkipOrs $Ors)}}
+selects.config_setting_group(
+    name = "{{Eval "ConditionTarget" $Ors}}",
+    match_any = [
+{{-       range $Unary := $Ors}}
+        "{{$Label := PlatformLabel $Unary.Var}}{{if $Label}}{{$Label}}{{else}}:{{Eval "ConditionTarget" $Unary}}{{end}}",
+{{-       end}}
+    ],
+)
+{{/* newline */}}
+{{-       end}}
+{{-     end}}
+{{-   end}}
+{{-   if $.Ands}}
+{{-     range $Ands := $.Ands}}
+{{-       if not (ShouldSkipAnds $Ands)}}
+selects.config_setting_group(
+    name = "{{Eval "ConditionTarget" $Ands}}",
+    match_all = [
+{{-       range $Ors := $Ands}}
+        ":{{Eval "ConditionTarget" $Ors}}",
+{{-       end}}
+    ],
+)
+{{-       end}}
+{{-     end}}
+{{/* newline */}}
+{{-   end}}
+{{- end}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Emits a target name for a condition expression
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "ConditionTarget" -}}
+{{- $C := $.String}}
+{{- $C := Replace $C " && " "_and_"}}
+{{- $C := Replace $C " || " "_or_"}}
+{{- $C := Replace $C "!" "not_"}}
+{{- $C := Replace $C "(" "_"}}
+{{- $C := Replace $C ")" "_"}}
+{{- $C := Replace $C " " "_"}}
+{{- $C}}
+{{- end}}

@@ -1,0 +1,22 @@
+#version 450
+#extension GL_EXT_nonuniform_qualifier : require
+
+layout(binding = 0) readonly buffer SSBO
+{
+        float b;
+} RO[];
+
+layout(set = 1, binding = 0) writeonly buffer SSBOW
+{
+        layout(offset = 4) float a;
+} RW[];
+
+void in_func()
+{
+        RW[gl_WorkGroupID.x].a = RO[gl_WorkGroupID.x].b;
+}
+
+void main()
+{
+        in_func();
+}

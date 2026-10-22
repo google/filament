@@ -1,0 +1,177 @@
+#!/usr/bin/env ruby
+
+#
+# mtime_cache
+# Copyright (c) 2016 Borislav Stanimirov
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+#
+
+require 'digest/md5'
+require 'json'
+require 'fileutils'
+
+VERSION = "1.0.2"
+
+VERSION_TEXT = "mtime_cache v#{VERSION}"
+
+USAGE = <<ENDUSAGE
+
+Usage:
+    mtime_cache [<globs>] [-g globfile] [-d] [-q|V] [-c cache]
+ENDUSAGE
+
+HELP = <<ENDHELP
+
+    Traverse through globbed files, making a json cache based on their mtime.
+    If a cache exists, changes the mtime of existing unchanged (based on MD5
+    hash) files to the one in the cache.
+
+    Options:
+
+    globs           Ruby-compatible glob strings (ex some/path/**/*.java)
+                    A extension pattern is allowd in the form %{pattern}
+                    (ex some/path/*.{%{pattern1},%{pattern2}})
+                    The globs support the following patterns:
+                     %{cpp} - common C++ extensions
+
+    -g, --globfile  A file with list of globs to perform (one per line)
+
+    -?, -h, --help  Show this help message.
+    -v, --version   Show the version number (#{VERSION})
+    -q, --quiet     Don't log anything to stdout
+    -V, --verbose   Show extra logging
+    -d, --dryrun    Don't change any files on the filesystem
+    -c, --cache     Specify the cache file for input and output.
+                    [Default is .mtime_cache.json]
+
+ENDHELP
+
+param_arg = nil
+ARGS = { :cache => '.mtime_cache.json', :globs => [] }
+
+ARGV.each do |arg|
+  case arg
+    when '-g', '--globfile'   then param_arg = :globfile
+    when '-h', '-?', '--help' then ARGS[:help] = true
+    when '-v', '--version'    then ARGS[:ver] = true
+    when '-q', '--quiet'      then ARGS[:quiet] = true
+    when '-V', '--verbose'    then ARGS[:verbose] = true
+    when '-d', '--dryrun'     then ARGS[:dry] = true
+    when '-c', '--cache'      then param_arg = :cache
+    else
+      if param_arg
+        ARGS[param_arg] = arg
+        param_arg = nil
+      else
+        ARGS[:globs] << arg
+      end
+  end
+end
+
+def log(text, level = 0)
+  return if ARGS[:quiet]
+  return if level > 0 && !ARGS[:verbose]
+  puts text
+end
+
+if ARGS[:ver] || ARGS[:help]
+  log VERSION_TEXT
+  exit if ARGS[:ver]
+  log USAGE
+  log HELP
+  exit
+end
+
+if ARGS[:globs].empty? && !ARGS[:globfile]
+  log 'Error: Missing globs'
+  log USAGE
+  exit 1
+end
+
+EXTENSION_PATTERNS = {
+  :cpp => "c,cc,cpp,cxx,h,hpp,hxx,inl,ipp,inc,ixx"
+}
+
+cache_file = ARGS[:cache]
+
+cache = {}
+
+if File.file?(cache_file)
+  log "Found #{cache_file}"
+  cache = JSON.parse(File.read(cache_file))
+  log "Read #{cache.length} entries"
+else
+  log "#{cache_file} not found. A new one will be created"
+end
+
+globs = ARGS[:globs].map { |g| g % EXTENSION_PATTERNS }
+
+globfile = ARGS[:globfile]
+if globfile
+  File.open(globfile, 'r').each_line do |line|
+    line.strip!
+    next if line.empty?
+    globs << line % EXTENSION_PATTERNS
+  end
+end
+
+if globs.empty?
+  log 'Error: No globs in globfile'
+  log USAGE
+  exit 1
+end
+
+files = {}
+num_changed = 0
+
+globs.each do |glob|
+  Dir[glob].each do |file|
+    next if !File.file?(file)
+
+    mtime = File.mtime(file).to_i
+    hash = Digest::MD5.hexdigest(File.read(file))
+
+    cached = cache[file]
+
+    if cached && cached['hash'] == hash && cached['mtime'] < mtime
+      mtime = cached['mtime']
+
+      log "mtime_cache: changing mtime of #{file} to #{mtime}", 1
+
+      File.utime(File.atime(file), Time.at(mtime), file) if !ARGS[:dry]
+      num_changed += 1
+    else
+      log "mtime_cache: NOT changing mtime of #{file}", 1
+    end
+
+    files[file] = { 'mtime' => mtime, 'hash' => hash }
+  end
+end
+
+log "Changed mtime of #{num_changed} of #{files.length} files"
+log "Writing #{cache_file}"
+
+if !ARGS[:dry]
+  dirname = File.dirname(cache_file)
+  unless File.directory?(dirname)
+    FileUtils.mkdir_p(dirname)
+  end
+  File.open(cache_file, 'w').write(JSON.pretty_generate(files))
+end

@@ -1,0 +1,222 @@
+Name
+
+    ATI_texture_env_combine3
+
+Name Strings
+
+    GL_ATI_texture_env_combine3
+
+Contact
+
+    Dan Ginsburg, AMD (dan.ginsburg 'at' amd.com)
+    Evan Hart, NVIDIA (ehart 'at' nvidia.com)
+
+Notice
+
+    Copyright ATI Corporation, 2002.
+
+IP Status
+
+    None.
+
+Version
+
+    Date: 11/04/2006 Revision: 1.02
+    
+Number
+
+    None.
+
+Dependencies
+
+    ARB_texture_env_combine is required and is modified by this extension
+    ARB_multitexture affects the definition of this extension
+
+Overview
+
+    Adds new set of operations to the texture combiner operations.
+
+    MODULATE_ADD_ATI               Arg0 * Arg2 + Arg1
+    MODULATE_SIGNED_ADD_ATI        Arg0 * Arg2 + Arg1 - 0.5
+    MODULATE_SUBTRACT_ATI          Arg0 * Arg2 - Arg1
+
+    where Arg0, Arg1 and Arg2 are derived from
+
+        PRIMARY_COLOR_ARB       primary color of incoming fragment
+        TEXTURE                 texture color of corresponding texture unit
+        CONSTANT_ARB            texture environment constant color
+        PREVIOUS_ARB            result of previous texture environment; on
+                                texture unit 0, this maps to PRIMARY_COLOR_ARB
+
+    In addition, the result may be scaled by 1.0, 2.0 or 4.0.
+
+    Note that in addition to providing more flexible equations new source 
+    inputs have been added for zero and one.
+
+Issues
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <pname> parameter value is COMBINE_RGB_ARB
+    or COMBINE_ALPHA_ARB
+
+        MODULATE_ADD_ATI                   0x8744
+        MODULATE_SIGNED_ADD_ATI            0x8745
+        MODULATE_SUBTRACT_ATI              0x8746
+
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <pname> parameter value is SOURCE0_RGB_ARB,
+    SOURCE1_RGB_ARB, SOURCE2_RGB_ARB, SOURCE0_ALPHA_ARB,
+    SOURCE1_ALPHA_ARB, or SOURCE2_ALPHA_ARB
+
+        ZERO
+        ONE
+
+Additions to Chapter 2 of the OpenGL 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 1.2 Specification (Rasterization)
+
+    Added to subsection 3.8.9, before the paragraph describing the
+    state requirements:
+
+    If the value of TEXTURE_ENV_MODE is COMBINE_ARB, the form of the
+    texture function depends on the values of COMBINE_RGB_ARB and
+    COMBINE_ALPHA_ARB, according to table 3.20. The RGB and ALPHA
+    results of the texture function are then multiplied by the values
+    of RGB_SCALE_ARB and ALPHA_SCALE, respectively. The results are
+    clamped to [0,1].
+
+        COMBINE_RGB_ARB         Texture Function
+        ------------------      ----------------
+        REPLACE                 Arg0
+        MODULATE                Arg0 * Arg1
+        ADD                     Arg0 + Arg1
+        SIGNED_ADD_ARB          Arg0 + Arg1 - 0.5
+        INTERPOLATE_ARB         Arg0 * (Arg2) + Arg1 * (1-Arg2)
+        SUBTRACT_ARB            Arg0 - Arg1
+        MODULATE_ADD_ATI        Arg0 * Arg2 + Arg1
+        MODULATE_SIGNED_ADD_ATI Arg0 * Arg2 + Arg1 - 0.5
+        MODULATE_SUBTRACT_ATI   Arg0 * Arg2 - Arg1
+
+
+        COMBINE_ALPHA_ARB       Texture Function
+        ------------------      ----------------
+        REPLACE                 Arg0
+        MODULATE                Arg0 * Arg1
+        ADD                     Arg0 + Arg1
+        SIGNED_ADD_ARB          Arg0 + Arg1 - 0.5
+        INTERPOLATE_ARB         Arg0 * (Arg2) + Arg1 * (1-Arg2)
+        SUBTRACT_ARB            Arg0 - Arg1
+        MODULATE_ADD_ATI        Arg0 * Arg2 + Arg1
+        MODULATE_SIGNED_ADD_ATI Arg0 * Arg2 + Arg1 - 0.5
+        MODULATE_SUBTRACT_ATI   Arg0 * Arg2 - Arg1
+
+    The arguments Arg0, Arg1 and Arg2 are determined by the values of
+    SOURCE<n>_RGB_ARB, SOURCE<n>_ALPHA_ARB, OPERAND<n>_RGB_ARB and
+    OPERAND<n>_ALPHA_ARB. In the following two tables, Ct and At are
+    the filtered texture RGB and alpha values; Cc and Ac are the 
+    texture environment RGB and alpha values; Cf and Af are the RGB 
+    and alpha of the primary color of the incoming fragment; and Cp 
+    and Ap are the RGB and alpha values resulting from the previous 
+    texture environment. On texture environment 0, Cp and Ap are 
+    identical to Cf and Af, respectively. The relationship is 
+    described in tables 3.21 and 3.22.
+
+        SOURCE<n>_RGB_ARB       OPERAND<n>_RGB_ARB      Argument
+        -----------------       --------------          --------
+        TEXTURE                 SRC_COLOR               Ct
+                                ONE_MINUS_SRC_COLOR     (1-Ct)
+                                SRC_ALPHA               At
+                                ONE_MINUS_SRC_ALPHA     (1-At)
+        CONSTANT_ARB            SRC_COLOR               Cc
+                                ONE_MINUS_SRC_COLOR     (1-Cc)
+                                SRC_ALPHA               Ac
+                                ONE_MINUS_SRC_ALPHA     (1-Ac)
+        PRIMARY_COLOR_ARB       SRC_COLOR               Cf
+                                ONE_MINUS_SRC_COLOR     (1-Cf)
+                                SRC_ALPHA               Af
+                                ONE_MINUS_SRC_ALPHA     (1-Af)
+        PREVIOUS_ARB            SRC_COLOR               Cp
+                                ONE_MINUS_SRC_COLOR     (1-Cp)
+                                SRC_ALPHA               Ap
+                                ONE_MINUS_SRC_ALPHA     (1-Ap)
+        ZERO                    SRC_COLOR               0
+                                ONE_MINUS_SRC_COLOR     1
+                                SRC_ALPHA               0
+                                ONE_MINUS_SRC_ALPHA     1
+        ONE                     SRC_COLOR               1
+                                ONE_MINUS_SRC_COLOR     0
+                                SRC_ALPHA               1
+                                ONE_MINUS_SRC_ALPHA     0
+
+
+        Table 3.21: Arguments for COMBINE_RGB_ARB functions
+
+        SOURCE<n>_ALPHA_ARB     OPERAND<n>_ALPHA_ARB    Argument
+        -----------------       --------------          --------
+        TEXTURE                 SRC_ALPHA               At
+                                ONE_MINUS_SRC_ALPHA     (1-At)
+        CONSTANT_ARB            SRC_ALPHA               Ac
+                                ONE_MINUS_SRC_ALPHA     (1-Ac)
+        PRIMARY_COLOR_ARB       SRC_ALPHA               Af
+                                ONE_MINUS_SRC_ALPHA     (1-Af)
+        PREVIOUS_ARB            SRC_ALPHA               Ap
+                                ONE_MINUS_SRC_ALPHA     (1-Ap)
+        ZERO                    SRC_ALPHA               0
+                                ONE_MINUS_SRC_ALPHA     1
+        ONE                     SRC_ALPHA               1
+                                ONE_MINUS_SRC_ALPHA     0
+
+        Table 3.22: Arguments for COMBINE_ALPHA_ARB functions
+
+
+
+Additions to Chapter 4 of the OpenGL 1.2 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 1.2 Specification (State and State Requests)
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+   Date: 3/29/2010
+   Revision: 1.03
+      - (pbrown @ NVIDIA) Fix the "Name Strings" section to include a "GL"
+        prefix. 
+
+   Date: 11/4/2006
+   Revision: 1.02
+      - Updated contact info after ATI/AMD merger.
+
+   Date: 8/02/2002
+   Revision: 1.01
+      - Changed constant MODULATE_ADD_SIGNED_ATI to MODULATE_SIGNED_ADD_ATI.
+
+   Date: 8/01/2002
+   Revision: 1.0
+      - First release based on ATIX version.

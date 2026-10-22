@@ -1,0 +1,53 @@
+defaultArgs.comp
+ERROR: 0:3: '=' : default argument values are only available for builtins 
+ERROR: 0:9: 'foo' : no matching overloaded function found 
+ERROR: 0:10: 'foo' : no matching overloaded function found 
+ERROR: 3 compilation errors.  No code generated.
+
+
+Shader version: 450
+local_size = (1, 1, 1)
+ERROR: node is still EOpNull!
+0:3  Function Definition: foo(i1;i1; ( global void)
+0:3    Function Parameters: 
+0:3      'n' ( in int)
+0:3      'x' ( in int)
+0:7  Function Definition: main( ( global void)
+0:7    Function Parameters: 
+0:9    Sequence
+0:9      Constant:
+0:9        0.000000
+0:10      Constant:
+0:10        0.000000
+0:11      Function Call: foo(i1;i1; ( global void)
+0:11        Constant:
+0:11          8 (const int)
+0:11        Constant:
+0:11          3 (const int)
+0:?   Linker Objects
+
+
+Linked compute stage:
+
+
+Shader version: 450
+local_size = (1, 1, 1)
+ERROR: node is still EOpNull!
+0:3  Function Definition: foo(i1;i1; ( global void)
+0:3    Function Parameters: 
+0:3      'n' ( in int)
+0:3      'x' ( in int)
+0:7  Function Definition: main( ( global void)
+0:7    Function Parameters: 
+0:9    Sequence
+0:9      Constant:
+0:9        0.000000
+0:10      Constant:
+0:10        0.000000
+0:11      Function Call: foo(i1;i1; ( global void)
+0:11        Constant:
+0:11          8 (const int)
+0:11        Constant:
+0:11          3 (const int)
+0:?   Linker Objects
+

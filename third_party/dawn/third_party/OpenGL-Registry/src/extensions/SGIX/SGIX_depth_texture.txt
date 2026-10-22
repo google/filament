@@ -1,0 +1,141 @@
+Name
+
+    SGIX_depth_texture
+
+Name Strings
+
+    GL_SGIX_depth_texture
+
+Version
+
+    $Date: 1997/02/26 03:36:29 $ $Revision: 1.5 $
+
+Number
+
+    63
+
+Dependencies
+
+    EXT_texture is required
+    EXT_subtexture affects the definition of this extension
+    EXT_copy_texture affects the definition of this extension
+
+Overview
+
+    This extension defines a new depth texture format.  An important
+    application of depth texture images is shadow casting, but separating
+    this from the shadow extension allows for the potential use of depth
+    textures in other applications such as image-based rendering or
+    displacement mapping.  This extension does not define new depth-texture
+    environment functions, such as filtering or applying the depth values
+    computed from a texture, but leaves this to other extensions, such as
+    the shadow extension.
+        
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <components> parameters of TexImage1D and TexImage2D,
+    and by the <internalformat> parameters of TexImage3DEXT,
+    CopyTexImage1DEXT, and CopyTexImage2DEXT:
+
+    DEPTH_COMPONENT16_SGIX              0x81A5
+    DEPTH_COMPONENT24_SGIX              0x81A6
+    DEPTH_COMPONENT32_SGIX              0x81A7
+
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    XXX - lots
+
+    Notes:
+
+    *   Defines DEPTH_COMPONENT as a new base internal format for
+        textures.  Defines 16, 24, and 32 bit specific internal formats
+        for texture.  Just as for the specific color internal formats,
+        an implementation can choose whether to implement them or not.
+
+    *   Texture commands that accept images from memory now allow the
+        internal format to be DEPTH_COMPONENT or DEPTH_COMPONENT*_SGIX
+        when the format of the image data is DEPTH_COMPONENT.  Depth, not
+        color pixel transfer operations are applied to depth images.
+
+    *   Texture commands that accept images from the framebuffer now take
+        their data from the depth buffer when the internal format is
+        DEPTH_COMPONENT or DEPTH_COMPONENT*_SGIX, or when no internal
+        format is specified, and the internal format of the target texture
+        is DEPTH_COMPONENT or DEPTH_COMPONENT*_SGIX.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Dependencies on EXT_texture
+
+    EXT_texture is required.
+
+Dependencies on EXT_texture3D
+
+    EXT_texture3D is not required, but if it is not supported, the
+    implementation must compute the R texture coordinate as if it were.
+    If EXT_texture3D is not supported, references to TexImage3DEXT and
+    TexSubImage3DEXT in this document are invalid and should be ignored.
+
+Dependencies on EXT_subtexture
+
+    If EXT_subtexture is not supported, references to TexSubImage1DEXT,
+    TexSubImage2DEXT, and TexSubImage3DEXT in this document are invalid and
+    should be ignored.  If EXT_subtexture is supported, the operations of
+    these three commands are affected by this extension.
+
+Dependencies on EXT_copy_texture
+
+    If EXT_copy_texture is not supported, references to CopyTexImage1DEXT
+    and CopyTexImage2DEXT in this document are invalid and should be
+    ignored.  If EXT_copy_texture is supported, the operations of these two
+    commands, and of CopyTexSubImage1DEXT, CopyTexSubImage2DEXT, and
+    CopyTexSubImage3DEXT are affected by this extension.
+
+Errors
+
+    INVALID_OPERATION is generated if TexImage1D or TexImage2D parameter
+    <format> is DEPTH_COMPONENT and parameter <components> is not
+    DEPTH_COMPONENT, DEPTH_COMPONENT16_SGI, DEPTH_COMPONENT24_SGI, or
+    DEPTH_COMPONENT32_SGI.
+
+    INVALID_OPERATION is generated if TexImage3DEXT parameter <format> is
+    DEPTH_COMPONENT and parameter <internalformat> is not
+    DEPTH_COMPONENT, DEPTH_COMPONENT16_SGI, DEPTH_COMPONENT24_SGI, or
+    DEPTH_COMPONENT32_SGI.
+
+    INVALID_OPERATION is generated if CopyTexImage1DEXT or CopyTexImage2DEXT
+    parameter <internalformat> is DEPTH_COMPONENT, DEPTH_COMPONENT16_SGI,
+    DEPTH_COMPONENT24_SGI, or DEPTH_COMPONENT32_SGI, and there is no
+    depth buffer.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

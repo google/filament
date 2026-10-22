@@ -1,0 +1,649 @@
+# Extended documenation for DXIL instructions.
+#
+# File format:
+# * Inst: [instruction name] - [brief description]
+# further remarks
+#
+# Keep these ordered alphabetically for ease of maintenance.
+#
+# Dump instructions with no extra documentation with this snippet.
+# import hctdb
+# h = hctdb.db_dxil()
+# for i in [item.name for item in h.instr if item.is_dxil_op and not item.remarks]: print(i)
+
+
+* Inst: Acos - Returns the arccosine of the specified value. Input should be a floating-point value within the range of -1 to 1.
+The return value is within the range of -PI/2 to PI/2.
+
++----------+------+--------------+---------+------+------+---------+------+-----+
+| src      | -inf | [-1,1]       | -denorm | -0   | +0   | +denorm | +inf | NaN |
++----------+------+--------------+---------+------+------+---------+------+-----+
+| acos(src)|  NaN | (-PI/2,+PI/2)|    PI/2 | PI/2 | PI/2 |    PI/2 |  NaN | NaN |
++----------+------+--------------+---------+------+------+---------+------+-----+
+
+* Inst: Asin - Returns the arccosine of the specified value. Input should be a floating-point value within the range of -1 to 1
+The return value is within the range of -PI/2 to PI/2.
+
++----------+------+--------------+---------+------+------+---------+------+-----+
+| src      | -inf | [-1,1]       | -denorm | -0   | +0   | +denorm | +inf | NaN |
++----------+------+--------------+---------+------+------+---------+------+-----+
+| asin(src)|  NaN | (-PI/2,+PI/2)|    0    |  0   |  0   |    0    |  NaN | NaN |
++----------+------+--------------+---------+------+------+---------+------+-----+
+
+* Inst: Atan - Returns the arctangent of the specified value. The return value is within the range of -PI/2 to PI/2.
+
++----------+------+--------------+---------+------+------+---------+---------------+-----+-----+
+| src      | -inf | -F           | -denorm | -0   | +0   | +denorm | +F            |+inf | NaN |
++----------+------+--------------+---------+------+------+---------+---------------+-----+-----+
+| atan(src)| -PI/2| (-PI/2,+PI/2)|    0    |  0   |  0   |    0    | (-PI/2,+PI/2) |PI/2 | NaN |
++----------+------+--------------+---------+------+------+---------+---------------+-----+-----+
+
+Returns the arctangent of the specified value. The return value is within the range of -PI/2 to PI/2
+
+* Inst: Bfrev - Reverses the order of the bits.
+
+Reverses the order of the bits. For example given 0x12345678 the result would be 0x1e6a2c48.
+
+* Inst: Bfi - Given a bit range from the LSB of a number, places that number of bits in another number at any offset
+
+Given a bit range from the LSB of a number, place that number of bits in another number at any offset.
+
+ dst = Bfi(src0, src1, src2, src3);
+
+ The LSB 5 bits of src0 provide the bitfield width (0-31) to take from src2.
+ The LSB 5 bits of src1 provide the bitfield offset (0-31) to start replacing bits in the  number read from src3.
+ Given width, offset: bitmask = (((1 << width)-1) << offset) & 0xffffffff, dest = ((src2 << offset) & bitmask) | (src3 & ~bitmask)
+
+* Inst: Cos - returns cosine(theta) for theta in radians.
+
+Theta values can be any IEEE 32-bit floating point values.
+
+The maximum absolute error is 0.0008 in the interval from -100*Pi to +100*Pi.
+
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+| src      | -inf | -F         | -denorm | -0 | +0 | +denorm | +F         | +inf | NaN |
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+| cos(src) |  NaN | [-1 to +1] |      +1 | +1 | +1 |      +1 | [-1 to +1] |  NaN | NaN |
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+
+* Inst: Countbits - Counts the number of bits in the input integer.
+
+Counts the number of bits in the input integer.
+
+* Inst: DerivCoarseX - computes the rate of change per stamp in x direction.
+
+dst = DerivCoarseX(src);
+
+Computes the rate of change per stamp in x direction. Only a single x derivative pair is computed for each 2x2 stamp of pixels.
+The data in the current Pixel Shader invocation may or may not participate in the calculation of the requested derivative, given the derivative will be calculated only once per 2x2 quad: 
+As an example, the x derivative could be a delta from the top row of pixels.
+The exact calculation is up to the hardware vendor. There is also no specification dictating how the 2x2 quads will be aligned/tiled over a primitive.
+
+
+* Inst: DerivCoarseY - computes the rate of change per stamp in y direction.
+
+dst = DerivCoarseY(src);
+
+Computes the rate of change per stamp in y direction. Only a single y derivative pair is computed for each 2x2 stamp of pixels.
+The data in the current Pixel Shader invocation may or may not participate in the calculation of the requested derivative, given the derivative will be calculated only once per 2x2 quad: 
+As an example, the y derivative could be a delta from the left column of pixels.
+The exact calculation is up to the hardware vendor. There is also no specification dictating how the 2x2 quads will be aligned/tiled over a primitive.
+
+* Inst: DerivFineX - computes the rate of change per pixel in x direction.
+
+dst = DerivFineX(src);
+
+Computes the rate of change per pixel in x direction. Each pixel in the 2x2 stamp gets a unique pair of x derivative calculations
+The data in the current Pixel Shader invocation always participates in the calculation of the requested derivative.
+There is no specification dictating how the 2x2 quads will be aligned/tiled over a primitive.
+
+* Inst: DerivFineY - computes the rate of change per pixel in y direction.
+
+dst = DerivFineY(src);
+
+Computes the rate of change per pixel in y direction. Each pixel in the 2x2 stamp gets a unique pair of y derivative calculations
+The data in the current Pixel Shader invocation always participates in the calculation of the requested derivative.
+There is no specification dictating how the 2x2 quads will be aligned/tiled over a primitive.
+
+* Inst: Dot2 - Two-dimensional vector dot-product
+
+Two-dimensional vector dot-product
+
+* Inst: Dot3 - Three-dimensional vector dot-product
+
+Three-dimensional vector dot-product
+
+* Inst: Dot4 - Four-dimensional vector dot-product
+
+Four-dimensional vector dot-product
+
+* Inst: Exp - returns 2^exponent
+
+Returns 2^exponent. Note that hlsl log intrinsic returns the base-e exponent. Maximum relative error is e^-21.
+
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+| src      | -inf | -F         | -denorm | -0 | +0 | +denorm | +F         | +inf | NaN |
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+| exp(src) |  0   | +F         |    1    |  1 |  1 |       1 | +F         | +inf | NaN |
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+
+* Inst: FAbs - returns the absolute value of the input value.
+
+The FAbs instruction takes simply forces the sign of the number(s) on the source operand positive, including on INF and denorm values.
+Applying FAbs on NaN preserves NaN, although the particular NaN bit pattern that results is not defined.
+
+* Inst: FirstbitHi - Returns the location of the first set bit starting from the highest order bit and working downward.
+
+Returns the integer position of the first bit set in the 32-bit input starting from the MSB. For example, 0x10000000 would return 3. Returns 0xffffffff if no match was found.
+
+* Inst: FirstbitLo - Returns the location of the first set bit starting from the lowest order bit and working upward.
+
+Returns the integer position of the first bit set in the 32-bit input starting from the LSB. For example, 0x00000000 would return 1. Returns 0xffffffff if no match was found.
+
+* Inst: FirstbitSHi - Returns the location of the first set bit from the highest order bit based on the sign.
+
+Returns the first 0 from the MSB if the number is negative, else the first 1 from the MSB. Returns 0xffffffff if no match was found.
+
+* Inst: Fma - fused multiply-add
+
+Fused multiply-add. This operation is only defined in double precision.
+Fma(a,b,c) = a * b + c
+
+* Inst: FMad - floating point multiply & add
+
+Floating point multiply & add. This operation is not fused for "precise" operations.
+FMad(a,b,c) = a * b + c
+
+* Inst: FMax - returns a if a >= b, else b
+
+>= is used instead of > so that if min(x,y) = x then max(x,y) = y.
+
+NaN has special handling: If one source operand is NaN, then the other source operand is returned.
+If both are NaN, any NaN representation is returned.
+This conforms to new IEEE 754R rules.
+
+Denorms are flushed (sign preserved) before comparison, however the result written to dest may or may not be denorm flushed.
+
++------+-----------------------------+
+| a    | b                           |
+|      +------+--------+------+------+
+|      | -inf | F      | +inf | NaN  |
++------+------+--------+------+------+
+| -inf | -inf | b      | +inf | -inf |
++------+------+--------+------+------+
+| F    | a    | a or b | +inf | a    |
++------+------+--------+------+------+
+| +inf | +inf | +inf   | +inf | +inf |
++------+------+--------+------+------+
+| NaN  | -inf | b      | +inf | NaN  |
++------+------+--------+------+------+
+
+* Inst: FMin - returns a if a < b, else b
+
+NaN has special handling: If one source operand is NaN, then the other source operand is returned.
+If both are NaN, any NaN representation is returned.
+This conforms to new IEEE 754R rules.
+
+Denorms are flushed (sign preserved) before comparison, however the result written to dest may or may not be denorm flushed.
+
++------+-----------------------------+
+| a    | b                           |
+|      +------+--------+------+------+
+|      | -inf | F      | +inf | NaN  |
++------+------+--------+------+------+
+| -inf | -inf | -inf   | -inf | -inf |
++------+------+--------+------+------+
+| F    | -inf | a or b |    a |    a |
++------+------+--------+------+------+
+| +inf | -inf | b      | +inf | +inf |
++------+------+--------+------+------+
+| NaN  | -inf | b      | +inf | NaN  |
++------+------+--------+------+------+
+
+* Inst: Frc - extract fracitonal component.
+
++--------------+------+------+---------+----+----+---------+--------+------+-----+
+| src          | -inf | -F   | -denorm | -0 | +0 | +denorm | +F     | +inf | NaN |
++--------------+------+------+---------+----+----+---------+--------+------+-----+
+| log(src)     | NaN  |[+0,1)| +0      | +0 | +0 | +0      | [+0,1) | NaN  | NaN |
++--------------+------+------+---------+----+----+---------+--------+------+-----+
+
+* Inst: Hcos - returns the hyperbolic cosine of the specified value.
+
+Returns the hyperbolic cosine of the specified value.
+
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+| src      | -inf | -F         | -denorm | -0 | +0 | +denorm | +F         | +inf | NaN |
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+| hcos(src)| +inf | (1, +inf)  |      +1 | +1 | +1 |      +1 | (1, +inf)  | +inf | NaN |
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+
+* Inst: Hsin - returns the hyperbolic sine of the specified value.
+
+Returns the hyperbolic sine of the specified value.
+
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+| src      | -inf | -F         | -denorm | -0 | +0 | +denorm | +F         | +inf | NaN |
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+| hsin(src)| -inf | -F         |       0 |  0 |  0 |       0 | +F         | +inf | NaN |
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+
+
+* Inst: Htan - returns the hyperbolic tangent of the specified value.
+
+Returns the hyperbolic tangent of the specified value.
+
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+| src      | -inf | -F         | -denorm | -0 | +0 | +denorm | +F         | +inf | NaN |
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+| htan(src)| -1   | -F         |       0 |  0 |  0 |       0 | +F         | +1   | NaN |
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+
+* Inst: Ibfe - Integer bitfield extract
+
+dest = Ibfe(src0, src1, src2)
+
+Given a range of bits in a number, shift those bits to the LSB and sign extend the MSB of the range.
+
+width : The LSB 5 bits of src0 (0-31).
+
+offset: The LSB 5 bits of src1 (0-31)
+
+* BLOCK-BEGIN
+
+.. code:: c
+
+    if( width == 0 )
+    {
+        dest = 0
+    }
+    else if( width + offset < 32 )
+    {
+        shl dest, src2, 32-(width+offset)
+        ishr dest, dest, 32-width
+    }
+    else
+    {
+        ishr dest, src2, offset
+    }
+
+* BLOCK-END
+
+* Inst: IMad - Signed integer multiply & add
+
+Signed integer multiply & add
+
+IMad(a,b,c) = a * b + c
+
+* Inst: IMax - IMax(a,b) returns a if a > b, else b
+
+IMax(a,b) returns a if a > b, else b. Optional negate modifier on source operands takes 2's complement before performing operation.
+
+* Inst: IMin - IMin(a,b) returns a if a < b, else b
+
+IMin(a,b) returns a if a < b, else b. Optional negate modifier on source operands takes 2's complement before performing operation.
+
+* Inst: IMul - multiply of 32-bit operands to produce the correct full 64-bit result.
+
+IMul(src0, src1) = destHi, destLo
+ multiply of 32-bit operands src0 and src1 (note they are signed), producing the correct full 64-bit result.
+The low 32 bits are placed in destLO. The high 32 bits are placed in destHI.
+
+Either of destHI or destLO may be specified as NULL instead of specifying a register, in the case high or low 32 bits of the 64-bit result are not needed.
+
+Optional negate modifier on source operands takes 2's complement before performing arithmetic operation.
+
+* Inst: IsFinite - Returns true if x is finite, false otherwise.
+
+Returns true if x is finite, false otherwise.
+
+* Inst: IsInf - Returns true if x is +INF or -INF, false otherwise.
+
+Returns true if x is +INF or -INF, false otherwise.
+
+* Inst: IsNaN - Returns true if x is NAN or QNAN, false otherwise.
+
+Returns true if x is NAN or QNAN, false otherwise.
+
+* Inst: IsNormal - returns IsNormal
+
+Returns IsNormal.
+
+* Inst: Log - returns log base 2.
+
+Returns log base 2. Note that hlsl log intrinsic returns natural log.
+
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+| src      | -inf | -F         | -denorm | -0 | +0 | +denorm | +F         | +inf | NaN |
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+| log(src) |  NaN | NaN        |    -inf |-inf|-inf|    -inf |  F         | +inf | NaN |
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+
+* Inst: LoadInput - Loads the value from shader input
+
+Loads the value from shader input
+
+
+* Inst: MinPrecXRegLoad - Helper load operation for minprecision
+
+Helper load operation for minprecision
+
+* Inst: MinPrecXRegStore - Helper store operation for minprecision
+
+Helper store operation for minprecision
+
+* Inst: Msad - masked Sum of Absolute Differences.
+
+Returns the masked Sum of Absolute Differences.
+
+dest = msad(ref, src, accum)
+
+ref: contains 4 packed 8-bit unsigned integers in 32 bits.
+
+src: contains 4 packed 8-bit unsigned integers in 32 bits.
+
+accum: a 32-bit unsigned integer, providing an existing accumulation.
+
+dest receives the result of the masked SAD operation added to the accumulation value.
+
+* BLOCK-BEGIN
+
+.. code:: c
+
+    UINT msad( UINT ref, UINT src, UINT accum )
+    {
+        for (UINT i = 0; i < 4; i++)
+        {
+            BYTE refByte, srcByte, absDiff;
+
+            refByte = (BYTE)(ref >> (i * 8));
+            if (!refByte)
+            {
+                continue;
+            }
+
+            srcByte = (BYTE)(src >> (i * 8));
+            if (refByte >= srcByte)
+            {
+                absDiff = refByte - srcByte;
+            }
+            else
+            {
+                absDiff = srcByte - refByte;
+            }
+
+            // The recommended overflow behavior for MSAD is
+            // to do a 32-bit saturate. This is not
+            // required, however, and wrapping is allowed.
+            // So from an application point of view,
+            // overflow behavior is undefined.
+            if (UINT_MAX - accum < absDiff)
+            {
+                accum = UINT_MAX;
+                break;
+            }
+
+            accum += absDiff;
+        }
+
+        return accum;
+    }
+
+* BLOCK-END
+
+* Inst: Round_ne - floating-point round to integral float.
+
+Floating-point round of the values in src,
+writing integral floating-point values to dest.
+
+round_ne rounds towards nearest even. For halfway, it rounds away from zero.
+
++--------------+------+----+---------+----+----+---------+----+------+-----+
+| src          | -inf | -F | -denorm | -0 | +0 | +denorm | +F | +inf | NaN |
++--------------+------+----+---------+----+----+---------+----+------+-----+
+| round_ne(src)| -inf | -F | -0      | -0 | +0 | +0      | +F | +inf | NaN |
++--------------+------+----+---------+----+----+---------+----+------+-----+
+
+* Inst: Round_ni - floating-point round to integral float.
+
+Floating-point round of the values in src,
+writing integral floating-point values to dest.
+
+round_ni rounds towards -INF, commonly known as floor().
+
++--------------+------+----+---------+----+----+---------+----+------+-----+
+| src          | -inf | -F | -denorm | -0 | +0 | +denorm | +F | +inf | NaN |
++--------------+------+----+---------+----+----+---------+----+------+-----+
+| round_ni(src)| -inf | -F | -0      | -0 | +0 | +0      | +F | +inf | NaN |
++--------------+------+----+---------+----+----+---------+----+------+-----+
+
+* Inst: Round_pi - floating-point round to integral float.
+
+Floating-point round of the values in src,
+writing integral floating-point values to dest.
+
+round_pi rounds towards +INF, commonly known as ceil().
+
++--------------+------+----+---------+----+----+---------+----+------+-----+
+| src          | -inf | -F | -denorm | -0 | +0 | +denorm | +F | +inf | NaN |
++--------------+------+----+---------+----+----+---------+----+------+-----+
+| round_pi(src)| -inf | -F | -0      | -0 | +0 | +0      | +F | +inf | NaN |
++--------------+------+----+---------+----+----+---------+----+------+-----+
+
+* Inst: Round_z - floating-point round to integral float.
+
+Floating-point round of the values in src,
+writing integral floating-point values to dest.
+
+round_z rounds towards zero.
+
++--------------+------+----+---------+----+----+---------+----+------+-----+
+| src          | -inf | -F | -denorm | -0 | +0 | +denorm | +F | +inf | NaN |
++--------------+------+----+---------+----+----+---------+----+------+-----+
+| round_z(src) | -inf | -F | -0      | -0 | +0 | +0      | +F | +inf | NaN |
++--------------+------+----+---------+----+----+---------+----+------+-----+
+
+* Inst: Rsqrt- returns reciprocal square root (1 / sqrt(src)
+
+Maximum relative error is 2^21.
+
++--------------+------+----+---------+----+----+---------+----+------+-----+
+| src          | -inf | -F | -denorm | -0 | +0 | +denorm | +F | +inf | NaN |
++--------------+------+----+---------+----+----+---------+----+------+-----+
+| rsqrt(src)   | -inf | -F | -0      | -0 | +0 | +0      | +F | +inf | NaN |
++--------------+------+----+---------+----+----+---------+----+------+-----+
+
+* Inst: Saturate - clamps the result of a single or double precision floating point value to [0.0f...1.0f]
+
+The Saturate instruction performs the following operation on its input value:
+
+min(1.0f, max(0.0f, value))
+
+where min() and max() in the above expression behave in the way Min and Max behave.
+
+Saturate(NaN) returns 0, by the rules for min and max.
+
+* Inst: Sin - returns sine(theta) for theta in radians.
+
+Theta values can be any IEEE 32-bit floating point values.
+
+The maximum absolute error is 0.0008 in the interval from -100*Pi to +100*Pi.
+
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+| src      | -inf | -F         | -denorm | -0 | +0 | +denorm | +F         | +inf | NaN |
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+| sin(src) |  NaN | [-1 to +1] |      -0 | -0 | +0 |      +0 | [-1 to +1] |  NaN | NaN |
++----------+------+------------+---------+----+----+---------+------------+------+-----+
+
+* Inst: Sqrt - returns square root
+
+Precision is 1 ulp.
+
++--------------+------+----+---------+----+----+---------+----+------+-----+
+| src          | -inf | -F | -denorm | -0 | +0 | +denorm | +F | +inf | NaN |
++--------------+------+----+---------+----+----+---------+----+------+-----+
+| sqrt(src)    | NaN  | NaN| -0      | -0 | +0 | +0      | +F | +inf | NaN |
++--------------+------+----+---------+----+----+---------+----+------+-----+
+
+* Inst: StoreOutput - Stores the value to shader output
+
+Stores the value to shader output
+
+* Inst: Tan - returns tan(theta) for theta in radians.
+
+Theta values can be any IEEE 32-bit floating point values.
+
++----------+----------+----------------+---------+----+----+---------+----------------+------+-----+
+| src      | -inf     | -F             | -denorm | -0 | +0 | +denorm | +F             | +inf | NaN |
++----------+----------+----------------+---------+----+----+---------+----------------+------+-----+
+| tan(src) | NaN      | [-inf to +inf] | -0      | -0 | +0 | +0      | [-inf to +inf] | NaN  | NaN |
++----------+----------+----------------+---------+----+----+---------+----------------+------+-----+
+
+* Inst: TempRegLoad - Helper load operation
+
+Helper load operation
+
+* Inst: TempRegStore - Helper store operation
+
+Helper store operation
+
+* Inst: UAddc - unsigned add of 32-bit operand with the carry
+
+dest0, dest1 = UAddc(src0, src1)
+
+unsigned add of 32-bit operands src0 and src1, placing the LSB part of the 32-bit result in dest0.
+dest1 is written with: 1 if a carry is produced, 0 otherwise. Dest1 can be NULL if the carry is not needed
+
+* Inst: Ubfe - Unsigned integer bitfield extract
+
+dest = ubfe(src0, src1, src2)
+
+Given a range of bits in a number, shift those bits to the LSB and set remaining bits to 0.
+
+width : The LSB 5 bits of src0 (0-31).
+
+offset: The LSB 5 bits of src1 (0-31).
+
+Given width, offset:
+
+* BLOCK-BEGIN
+
+.. code:: c
+
+    if( width == 0 )
+    {
+        dest = 0
+    }
+    else if( width + offset < 32 )
+    {
+        shl dest, src2, 32-(width+offset)
+        ushr dest, dest, 32-width
+    }
+    else
+    {
+        ushr dest, src2, offset
+    }
+
+* BLOCK-END
+
+* Inst: UDiv - unsigned divide of the 32-bit operand src0 by the 32-bit operand src1.
+
+destQUOT, destREM = UDiv(src0, src1);
+
+unsigned divide of the 32-bit operand src0 by the 32-bit operand src1.
+
+The results of the divides are the 32-bit quotients (placed in destQUOT) and 32-bit remainders (placed in destREM).
+
+Divide by zero returns 0xffffffff for both quotient and remainder.
+
+Either destQUOT or destREM may be specified as NULL instead of specifying a register, in the case the quotient or remainder are not needed.
+
+Unsigned subtract of 32-bit operands src1 from src0, placing the LSB part of the 32-bit result in dest0.
+dest1 is written with: 1 if a borrow is produced, 0 otherwise. Dest1 can be NULL if the borrow is not needed
+
+* Inst: UMad - Unsigned integer multiply & add
+
+Unsigned integer multiply & add.
+
+Umad(a,b,c) = a * b + c
+
+* Inst: UMax - unsigned integer maximum. UMax(a,b) = a > b ? a : b
+
+ unsigned integer maximum. UMax(a,b) = a > b ? a : b
+
+* Inst: UMin - unsigned integer minimum. UMin(a,b) = a < b ? a : b
+
+ unsigned integer minimum. UMin(a,b) = a < b ? a : b
+
+* Inst: UMul - multiply of 32-bit operands to produce the correct full 64-bit result.
+
+ multiply of 32-bit operands src0 and src1 (note they are unsigned), producing the correct full 64-bit result.
+The low 32 bits are placed in destLO. The high 32 bits are placed in destHI.
+Either of destHI or destLO may be specified as NULL instead of specifying a register, in the case high or low 32 bits of the 64-bit result are not needed
+
+* Inst: USubb - unsigned subtract of 32-bit operands with the borrow
+
+dest0, dest1 = USubb(src0, src1)
+
+* Inst: AttributeAtVertex - returns the values of the attributes at the vertex.
+
+returns the values of the attributes at the vertex. VertexID ranges from 0 to 2.
+
+* Inst: FDiv - returns the quotient of its two operands
+
+%dest = fdiv float %src0, %src1
+
+The following table shows the results obtained when executing the instruction with various classes of numbers, assuming that fast math flag is not used and "fp32-denorm-mode"="preserve".
+When "fp32-denorm-mode"="ftz", denorm inputs should be interpreted as corresponding signed zero, and any resulting denorm is also flushed to zero.
+When fast math is enabled, implementation may use reciprocal form: src0*(1/src1).  This may result in evaluating src0*(+/-)INF from src0*(1/(+/-)denorm).  This may produce NaN in some cases or (+/-)INF in others.
+
++-----------+----------+--------+-------+---------+----+----+---------+-------+--------+------+-----+
+| src0\\src1| -inf     | -F     |  -1   | -denorm | -0 | +0 | +denorm |  +1   |    +F  | +inf | NaN |
++-----------+----------+--------+-------+---------+----+----+---------+-------+--------+------+-----+
+| -inf      | NaN      |   +inf | +inf  | +inf    |+inf|-inf| -inf    |  -inf |   -inf | NaN  | NaN |
++-----------+----------+--------+-------+---------+----+----+---------+-------+--------+------+-----+
+| -F        | +0       |   +F   | -src0 | +F      |+inf|-inf| -F      |  src0 |   -F   | -0   | NaN |
++-----------+----------+--------+-------+---------+----+----+---------+-------+--------+------+-----+
+| -denorm   | +0       | +denorm| -src0 | +F      |+inf|-inf| -F      |  src0 |-denorm | -0   | NaN |
++-----------+----------+--------+-------+---------+----+----+---------+-------+--------+------+-----+
+| -0        | +0       |   +0   | +0    | 0       |NaN |NaN | 0       |  -0   |   -0   | -0   | NaN |
++-----------+----------+--------+-------+---------+----+----+---------+-------+--------+------+-----+
+| +0        | -0       |   -0   | -0    | 0       |NaN |NaN | 0       |  +0   |   +0   | +0   | NaN |
++-----------+----------+--------+-------+---------+----+----+---------+-------+--------+------+-----+
+| +denorm   | -0       | -denorm| -src0 | -F      |-inf|+inf| +F      |  src0 |+denorm | +0   | NaN |
++-----------+----------+--------+-------+---------+----+----+---------+-------+--------+------+-----+
+| +F        | -0       |   -F   | -src0 | -F      |-inf|+inf| +F      |  src0 |   +F   | +0   | NaN |
++-----------+----------+--------+-------+---------+----+----+---------+-------+--------+------+-----+
+| +inf      | NaN      |   -inf | -inf  | -inf    |-inf|+inf| +inf    |  +inf |   +inf | NaN  | NaN |
++-----------+----------+--------+-------+---------+----+----+---------+-------+--------+------+-----+
+| NaN       | NaN      |   NaN  | NaN   | NaN     |NaN |NaN | NaN     |  NaN  |   NaN  | NaN  | NaN |
++-----------+----------+--------+-------+---------+----+----+---------+-------+--------+------+-----+
+
+* Inst: FAdd - component-wise add
+
+%des = fadd float %src0, %src1
+
+The following table shows the results obtained when executing the instruction with various classes of numbers, assuming that "fp32-denorm-mode"="preserve". 
+For "fp32-denorm-mode"="ftz" mode, denorms inputs should be treated as corresponding signed zero, and any resulting denorm is also flushed to zero.
+
++----------+----------+--------+----------+----+----+-----------+--------+------+-----+
+| src0\src1| -inf     | -F     | -denorm  | -0 | +0 | +denorm   |    +F  | +inf | NaN |
++----------+----------+--------+----------+----+----+-----------+--------+------+-----+
+| -inf     | -inf     |   -inf | -inf     |-inf|-inf| -inf      |   -inf | NaN  | NaN |
++----------+----------+--------+----------+----+----+-----------+--------+------+-----+
+| -F       | -inf     |   -F   | -F       |src0|src0| -F        |   +/-F | +inf | NaN |
++----------+----------+--------+----------+----+----+-----------+--------+------+-----+
+| -denorm  | -inf     |   -F   |-F/denorm |src0|src0| +/-denorm |   +F   | +inf | NaN |
++----------+----------+--------+----------+----+----+-----------+--------+------+-----+
+| -0       | -inf     |   src1 | src1     |-0  |+0  | src1      |   src1 | +inf | NaN |
++----------+----------+--------+----------+----+----+-----------+--------+------+-----+
+| +0       | -inf     |   src1 | src1     |-0  |+0  | src1      |   src1 | +inf | NaN |
++----------+----------+--------+----------+----+----+-----------+--------+------+-----+
+| +denorm  | -inf     |   -F   |+/-denorm |src0|src0| +F/denorm |   +F   | +inf | NaN |
++----------+----------+--------+----------+----+----+-----------+--------+------+-----+
+| +F       | -inf     |  +/-F  | +F       |src0|src0| +F        |   +F   | +inf | NaN |
++----------+----------+--------+----------+----+----+-----------+--------+------+-----+
+| +inf     | NaN      |   +inf | +inf     |+inf|+inf| +inf      |   +inf | +inf | NaN |
++----------+----------+--------+----------+----+----+-----------+--------+------+-----+
+| NaN      | NaN      |   NaN  | NaN      |NaN |NaN | NaN       |   NaN  | NaN  | NaN |
++----------+----------+--------+----------+----+----+-----------+--------+------+-----+

@@ -1,0 +1,389 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglCreatePbufferFromClientBuffer">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglCreatePbufferFromClientBuffer</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglCreatePbufferFromClientBuffer</refname>
+        <refpurpose>
+            create a new <acronym>EGL</acronym> pixel buffer surface
+            bound to an OpenVG image
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLSurface <function>eglCreatePbufferFromClientBuffer</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLenum <parameter>buftype</parameter></paramdef>
+                <paramdef>EGLClientBuffer <parameter>buffer</parameter></paramdef>
+                <paramdef>EGLConfig <parameter>config</parameter></paramdef>
+                <paramdef>EGLint const * <parameter>attrib_list</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem><para>Specifies the EGL display connection.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>buftype</parameter></term>
+                <listitem>
+                <para>
+                    Specifies the type of client API buffer to be bound.
+                    Must be <constant>EGL_OPENVG_IMAGE</constant>,
+                    corresponding to an OpenVG <type>VGImage</type>
+                    buffer.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>buffer</parameter></term>
+                <listitem>
+                <para>
+                    Specifies the OpenVG <type>VGImage</type> handle of
+                    the buffer to be bound.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>config</parameter></term>
+                <listitem><para>
+                    Specifies the EGL frame buffer configuration that defines the
+                    frame buffer resource available to the surface.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>attrib_list</parameter></term>
+                <listitem><para>
+                    Specifies pixel buffer surface attributes.
+                    May be <constant>NULL</constant> or empty
+                    (first attribute is <constant>EGL_NONE</constant>).
+                </para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="description"><title>Description</title>
+        <para>
+            <function>eglCreatePbufferFromClientBuffer</function> creates an
+            off-screen pixel buffer surface and returns its handle. If
+            <function>eglCreatePbufferFromClientBuffer</function> fails to create
+            a pixel buffer surface, <constant>EGL_NO_SURFACE</constant>
+            is returned.
+        </para>
+        <para>
+            The new pixel buffer surface is similar to a pixel buffer
+            created with
+            <citerefentry><refentrytitle>eglCreatePbufferSurface</refentrytitle></citerefentry>,
+            but storage for the color buffer is provided by a client API
+            buffer. Other buffer required by
+            <parameter>config</parameter>, such as depth, stencil, and
+            alpha mask, are allocated by EGL.
+        </para>
+        <para>
+            <parameter>buftype</parameter> must be
+            <constant>EGL_OPENVG_IMAGE</constant>, corresponding to an
+            OpenVG <type>VGImage</type> buffer.
+            <parameter>buffer</parameter> must be a valid
+            <type>VGImage</type> handle in the current OpenVG context,
+            cast into the type <type>EGLClientBuffer</type>.
+        </para>
+        <para>
+            The height, width,, OpenVG alpha format, and OpenVG
+            colorspace (surface attributes
+            <constant>EGL_HEIGHT</constant>,
+            <constant>EGL_WIDTH</constant>,
+            <constant>EGL_VG_ALPHA_FORMAT</constant>, and
+            <constant>EGL_VG_COLORSPACE</constant>, respectively) of the
+            resulting surface are determined by the size and format of
+            <parameter>buffer</parameter>.
+        </para>
+        <para>
+            Surface attributes are specified as a list of
+            attribute-value pairs, terminated with
+            <constant>EGL_NONE</constant>. Accepted attributes are:
+        </para>
+        <variablelist>
+            <varlistentry>
+                <term><constant>EGL_MIPMAP_TEXTURE</constant></term>
+                <listitem>
+                <para>
+                    Specifies whether storage for mipmaps should be
+                    allocated. Space for mipmaps will be set aside if
+                    the attribute value is <constant>EGL_TRUE</constant>
+                    and <constant>EGL_TEXTURE_FORMAT</constant> is not
+                    <constant>EGL_NO_TEXTURE</constant>. The default
+                    value is <constant>EGL_FALSE</constant>.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_TEXTURE_FORMAT</constant></term>
+                <listitem>
+                <para>
+                    Specifies the format of the texture that will be
+                    created when a pbuffer is bound to a texture map.
+                    Possible values are
+                    <constant>EGL_NO_TEXTURE</constant>,
+                    <constant>EGL_TEXTURE_RGB</constant>, and
+                    <constant>EGL_TEXTURE_RGBA</constant>. The default
+                    value is <constant>EGL_NO_TEXTURE</constant>.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_TEXTURE_TARGET</constant></term>
+                <listitem>
+                <para>
+                    Specifies the target for the texture that will be
+                    created when the pbuffer is created with a texture
+                    format of <constant>EGL_TEXTURE_RGB</constant> or
+                    <constant>EGL_TEXTURE_RGBA</constant>. Possible
+                    values are <constant>EGL_NO_TEXTURE</constant>, or
+                    <constant>EGL_TEXTURE_2D</constant>. The default
+                    value is <constant>EGL_NO_TEXTURE</constant>.
+                </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+        <para>
+            Any EGL rendering context that was created with respect to
+            <parameter>config</parameter> can be used to render into the
+            surface. Use
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>
+            to attach an EGL rendering context to the surface.
+        </para>
+        <para>
+            Use
+            <citerefentry><refentrytitle>eglQuerySurface</refentrytitle></citerefentry>
+            to retrieve the dimensions of the allocated pixel buffer
+            surface or the ID of <parameter>config</parameter>.
+        </para>
+        <para>
+            Use <citerefentry><refentrytitle>eglDestroySurface</refentrytitle></citerefentry>
+            to destroy the surface.
+        </para>
+    </refsect1>
+    <refsect1 id="notes"><title>Notes</title>
+        <para>
+            <function>eglCreatePbufferFromClientBuffer</function> is
+            supported only if the EGL version is 1.2 or greater, and if
+            the EGL implementation supports the OpenVG client API.
+        </para>
+        <para>
+            Currently
+            <function>eglCreatePbufferFromClientBuffer</function> only
+            supports binding OpenVG <type>VGImage</type> buffers to
+            pixel buffers. While other client API resources could be
+            supported in the future, mechanisms such as OpenGL ES
+            framebuffer objects, and the family of EGL and client API
+            extensions for defining and using <type>EGLImageKHR</type>
+            images, are a more flexible and general framework to satisfy
+            most of the same needs.
+        </para>
+        <para>
+            If the value of <parameter>config</parameter> attribute
+            <constant>EGL_TEXTURE_FORMAT</constant> is not
+            <constant>EGL_NO_TEXTURE</constant>, then the pbuffer width
+            and height specify the size of the level zero texture image
+        </para>
+        <para>
+            If <constant>EGL_LARGEST_PBUFFER</constant> is specified and
+            if the pbuffer will be used as a texture (i.e. the value of
+            <constant>EGL_TEXTURE_TARGET</constant> is
+            <constant>EGL_TEXTURE_2D</constant>, and the value of
+            <constant>EGL_TEXTURE FORMAT</constant> is
+            <constant>EGL_TEXTURE_RGB</constant> or
+            <constant>EGL_TEXTURE_RGBA</constant>), then the aspect
+            ratio will be preserved and the new width and height will be
+            valid sizes for the texture target (e.g. if the underlying
+            OpenGL ES implementation does not support non-power-of-two
+            textures, both the width and height will be a power of 2).
+        </para>
+        <para>
+            The contents of the depth and stencil buffers may not be
+            preserved when rendering a texture to the pbuffer and
+            switching which image of the texture is rendered to (e.g.,
+            switching from rendering one mipmap level to rendering
+            another).
+        </para>
+        <para>
+            Binding client API buffers to EGL pbuffers create the
+            possibility of race conditions, and of buffers being deleted
+            through one API while still in use in another API. To avoid
+            these problems, a number of constraints apply to bound
+            client API buffers:
+            <orderedlist>
+                <listitem>
+                <para>
+                    Bound buffers may be used exclusively by either EGL,
+                    or the client API that originally created them. For
+                    example, if a <type>VGImage</type> is bound to a
+                    pbuffer, and that pbuffer is bound to any client API
+                    rendering context, then the <type>VGImage</type> may
+                    not be used as the explicit source or destination of
+                    any OpenVG operation. Errors resulting from such use
+                    are described in client API specifications.
+                    Similarly, while a <type>VGImage</type> is in use by
+                    OpenVG, the pbuffer it is bound to may not be made
+                    current to any client API context using
+                    <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>.
+                </para>
+                </listitem>
+                <listitem>
+                <para>
+                    Binding a buffer creates an additional reference to
+                    it, and implementations must respect outstanding
+                    references when destroying objects. For example, if
+                    a <type>VGImage</type> is bound to a pbuffer,
+                    destroying the image with
+                    <function>vgDestroyImage</function> will not free
+                    the underlying buffer, because it is still in use by
+                    EGL. However, following
+                    <function>vgDestroyImage</function> the buffer may
+                    only be referred to via the EGL pbuffer handle,
+                    since the OpenVG handle to that buffer no longer
+                    exists. Similarly, destroying the pbuffer with
+                    <function>eglDestroySurface</function> will not free
+                    the underlying buffer, because it is still in use by
+                    OpenVG . However, following
+                    <function>eglDestroySurface</function> the buffer
+                    may only be referred to via the OpenVG
+                    <type>VGImage</type> handle, since the EGL pbuffer
+                    handle no longer exists.
+                </para>
+                </listitem>
+            </orderedlist>
+        </para>
+    </refsect1>
+    <refsect1 id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_NO_SURFACE</constant> is returned if creation of
+            the context fails.
+        </para>
+        <para>
+            <constant>EGL_BAD_DISPLAY</constant> is generated if
+            <parameter>display</parameter> is not an EGL display connection.
+        </para>
+        <para>
+            <constant>EGL_NOT_INITIALIZED</constant> is generated if
+            <parameter>display</parameter> has not been initialized.
+        </para>
+        <para>
+            <constant>EGL_BAD_CONFIG</constant> is generated if
+            <parameter>config</parameter> is not an EGL frame buffer configuration.
+        </para>
+        <para>
+            <constant>EGL_BAD_PARAMETER</constant> is generated if
+            <parameter>buftype</parameter> is not
+            <constant>EGL_OPENVG_IMAGE</constant>, or if
+            <parameter>buffer</parameter> is not a valid handle to a
+            <type>VGImage</type> object in the currently bound OpenVG
+            context.
+        </para>
+        <para>
+            <constant>EGL_BAD_ACCESS</constant> is generated if there is
+            no current OpenVG context, or if
+            <parameter>buffer</parameter> is already bound to another
+            pixel buffer or in use by OpenVG as discussed in the Notes
+            section above.
+        </para>
+        <para>
+            <constant>EGL_BAD_ALLOC</constant> is generated if there are not
+            enough resources to allocate the new surface.
+        </para>
+        <para>
+            <constant>EGL_BAD_ATTRIBUTE</constant> is generated if
+            <parameter>attrib_list</parameter> contains an invalid pixel
+            buffer attribute or if an attribute value is not recognized
+            or out of range.
+        </para>
+        <para>
+            <constant>EGL_BAD_ATTRIBUTE</constant> is generated if
+            <parameter>attrib_list</parameter> contains any of the
+            attributes <constant>EGL_MIPMAP_TEXTURE</constant>,
+            <constant>EGL_TEXTURE_FORMAT</constant>, or
+            <constant>EGL_TEXTURE_TARGET</constant>, and
+            <parameter>config</parameter> does not support OpenGL ES
+            rendering (e.g. the EGL version is 1.2 or later, and the
+            <constant>EGL_RENDERABLE_TYPE</constant> attribute of
+            <parameter>config</parameter> does not include at least one
+            of <constant>EGL_OPENGL_ES_BIT</constant> or
+            <constant>EGL_OPENGL_ES2_BIT</constant>).
+        </para>
+        <para>
+            <constant>EGL_BAD_MATCH</constant> is generated if
+            <parameter>config</parameter> does not support rendering to pixel buffers
+            (the <constant>EGL_SURFACE_TYPE</constant> attribute does not contain
+            <constant>EGL_PBUFFER_BIT</constant>).
+        </para>
+        <para>
+            <constant>EGL_BAD_MATCH</constant> is generated if the
+            buffers contained in <parameter>buffer</parameter> do not
+            match the bit depths for those buffers specified by
+            <parameter>config</parameter>.
+        </para>
+        <para>
+            <constant>EGL_BAD_MATCH</constant> is generated if the
+            <constant>EGL_TEXTURE_FORMAT</constant> attribute is not
+            <constant>EGL_NO_TEXTURE</constant>, and
+            <constant>EGL_WIDTH</constant> and/or
+            <constant>EGL_HEIGHT</constant> specify an invalid size
+            (e.g., the texture size is not a power of 2, and the
+            underlying OpenGL ES implementation does not support
+            non-power-of-two textures).
+        </para>
+        <para>
+            <constant>EGL_BAD_MATCH</constant> is generated if
+            the <constant>EGL_TEXTURE_FORMAT</constant> attribute is
+            <constant>EGL_NO_TEXTURE</constant>, and
+            <constant>EGL_TEXTURE_TARGET</constant> is something other
+            than <constant>EGL_NO_TEXTURE</constant>; or,
+            <constant>EGL_TEXTURE_FORMAT</constant> is something other
+            than <constant>EGL_NO_TEXTURE</constant>, and
+            <constant>EGL_TEXTURE_TARGET</constant> is
+            <constant>EGL_NO_TEXTURE</constant>.
+        </para>
+        <para>
+            <constant>EGL_BAD_MATCH</constant> is generated if the
+            implementation has additional constraints on which types of
+            client API buffers may be bound to pixel buffer surfaces.
+            For example, it is possible that the OpenVG implementation
+            might not support a <type>VGImage</type> being bound to a
+            pixel buffer which will be used as a mipmapped OpenGL ES
+            texture (e.g. whose <constant>EGL_MIPMAP_TEXTURE</constant>
+            attribute is <constant>TRUE</constant>). Any such
+            constraints should be documented by the implementation
+            release notes.
+        </para>
+    </refsect1>
+    <refsect1 id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglDestroySurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglChooseConfig</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreatePbufferSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetConfigs</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglQuerySurface</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

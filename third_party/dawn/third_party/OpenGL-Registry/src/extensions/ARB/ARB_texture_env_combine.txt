@@ -1,0 +1,428 @@
+Name
+
+    ARB_texture_env_combine
+
+Name Strings
+
+    GL_ARB_texture_env_combine
+
+Contact
+
+    Bimal Poddar, Intel (bimal.poddar 'at' intel.com)
+    Michael Gold, NVIDIA (gold 'at' nvidia.com)
+    Tom Frisinger, AMD (tom.frisinger 'at' amd.com)
+    Rick Hammerstone, AMD (rick.hammerstone 'at' amd.com)
+
+Notice
+
+    Copyright (c) 2001-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by ARB on February 16, 2001.
+
+Version
+
+    Last modified date: 2006/11/04
+
+Number
+
+    ARB Extension #17
+
+Dependencies
+
+    This extension is written against the OpenGL 1.2.1 Specification.
+    OpenGL 1.1 and ARB_multitexture are required for this extension.
+
+Overview
+
+    New texture environment function COMBINE_ARB allows programmable
+    texture combiner operations, including:
+
+        REPLACE                 Arg0
+        MODULATE                Arg0 * Arg1
+        ADD                     Arg0 + Arg1
+        ADD_SIGNED_ARB          Arg0 + Arg1 - 0.5
+        SUBTRACT_ARB            Arg0 - Arg1
+        INTERPOLATE_ARB         Arg0 * (Arg2) + Arg1 * (1-Arg2)
+
+    where Arg0, Arg1 and Arg2 are derived from
+
+        PRIMARY_COLOR_ARB       primary color of incoming fragment
+        TEXTURE                 texture color of corresponding texture unit
+        CONSTANT_ARB            texture environment constant color
+        PREVIOUS_ARB            result of previous texture environment; on
+                                texture unit 0, this maps to PRIMARY_COLOR_ARB
+
+    In addition, the result may be scaled by 1.0, 2.0 or 4.0.
+
+Issues
+
+ 1. Should the explicit bias be removed in favor of an implcit bias as
+    part of a ADD_SIGNED_ARB function?
+
+    - RESOLVED: Yes. This pre-scale bias is a special case and will 
+      be treated as such.
+
+ 2. Should the primary color of the incoming fragment be available to
+    all texture environments?  Currently it is only available to the
+    texture environment of texture unit 0.
+
+    - RESOLVED: Yes. PRIMARY_COLOR_ARB has been added as an input 
+      source.
+
+ 3. Should textures from other texture units be allowed as sources?
+
+    - RESOLVED: NO. Even though this adds a lot of flexibility that 
+      folks can use today, there is not enough support amonst the
+      ARB participants to add it to the base spec.
+
+ 4. All of the 1.2 modes except BLEND can be expressed in terms of
+    this extension. Should texture color be allowed as a source for
+    Arg2, so all of the 1.2 modes can be expressed?  If so, should all
+    color sources be allowed, to maintain orthogonality?
+
+    - RESOLVED: Yes. This seems to be a reasonable area to expand 
+      functionality and remain backwards compatible with the EXT 
+      version of the extension.
+
+ 5. If the texture environment for a given texture unit does not 
+    reference the texture object that is bound to that texture unit,
+    does a valid texture object need to be bound that unit?
+
+    - RESOLVED: Yes. Each texture unit implicitly references the
+      texture object that is bound to that unit, regardless of the
+      texture environment function. This may require that 
+      applications bind a dummy texture to the texture unit.
+
+ 6. Should we allow the secondary color to take part in texture blending?
+
+    - RESOLVED: Not in this extension. Secondary color was defined
+      as a specular part of the lit color and does not have associated
+      alpha. In order to do this right, the secondary color extension
+      needs to be fixed first to allow a full featured color and clearly
+      state the interaction of how it interacts with the color sum stage. 
+
+ 7. How exactly is this ARB extension different from the EXT version?
+
+    -  RESOLVED:
+
+       1) This extension adds the GL_SUBTRACT_ARB mode
+
+       2) OPERAND2_RGB_ARB can use SRC_COLOR, ONE_MINUS_SRC_COLOR,
+          SRC_ALPHA, and ONE_MINUS_SRC_ALPHA instead of just SRC_ALPHA
+          (NV_texture_env_combine4 already provides this).
+
+       3) OPERAND2_ALPHA_ARB can use SRC_ALPHA and ONE_MINUS_SRC_ALPHA
+          instead of just SRC_ALPHA (NV_texture_env_combine4 already
+          provides this).
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <pname> parameter value is TEXTURE_ENV_MODE
+
+        COMBINE_ARB                                     0x8570
+
+    Accepted by the <pname> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <target> parameter value is TEXTURE_ENV
+
+        COMBINE_RGB_ARB                                 0x8571
+        COMBINE_ALPHA_ARB                               0x8572
+        SOURCE0_RGB_ARB                                 0x8580
+        SOURCE1_RGB_ARB                                 0x8581
+        SOURCE2_RGB_ARB                                 0x8582
+        SOURCE0_ALPHA_ARB                               0x8588
+        SOURCE1_ALPHA_ARB                               0x8589
+        SOURCE2_ALPHA_ARB                               0x858A
+        OPERAND0_RGB_ARB                                0x8590
+        OPERAND1_RGB_ARB                                0x8591
+        OPERAND2_RGB_ARB                                0x8592
+        OPERAND0_ALPHA_ARB                              0x8598
+        OPERAND1_ALPHA_ARB                              0x8599
+        OPERAND2_ALPHA_ARB                              0x859A
+        RGB_SCALE_ARB                                   0x8573
+        ALPHA_SCALE
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <pname> parameter value is COMBINE_RGB_ARB
+    or COMBINE_ALPHA_ARB
+
+        REPLACE
+        MODULATE
+        ADD
+        ADD_SIGNED_ARB                                  0x8574
+        INTERPOLATE_ARB                                 0x8575
+        SUBTRACT_ARB                                    0x84E7
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <pname> parameter value is SOURCE0_RGB_ARB,
+    SOURCE1_RGB_ARB, SOURCE2_RGB_ARB, SOURCE0_ALPHA_ARB,
+    SOURCE1_ALPHA_ARB, or SOURCE2_ALPHA_ARB
+
+        TEXTURE
+        CONSTANT_ARB                                    0x8576
+        PRIMARY_COLOR_ARB                               0x8577
+        PREVIOUS_ARB                                    0x8578
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <pname> parameter value is
+    OPERAND0_RGB_ARB, OPERAND1_RGB_ARB, or OPERAND2_RGB_ARB
+
+        SRC_COLOR
+        ONE_MINUS_SRC_COLOR
+        SRC_ALPHA
+        ONE_MINUS_SRC_ALPHA     
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <pname> parameter value is
+    OPERAND0_ALPHA_ARB, OPERAND1_ALPHA_ARB, or OPERAND2_ALPHA_ARB
+
+        SRC_ALPHA
+        ONE_MINUS_SRC_ALPHA     
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <pname> parameter value is RGB_SCALE_ARB or
+    ALPHA_SCALE
+
+        1.0
+        2.0
+        4.0     
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+    Added to subsection 3.8.9, before the paragraph describing the
+    state requirements:
+
+    If the value of TEXTURE_ENV_MODE is COMBINE_ARB, the form of the
+    texture function depends on the values of COMBINE_RGB_ARB and
+    COMBINE_ALPHA_ARB, according to table 3.20. The RGB and ALPHA
+    results of the texture function are then multiplied by the values
+    of RGB_SCALE_ARB and ALPHA_SCALE, respectively. The results are
+    clamped to [0,1].
+
+        COMBINE_RGB_ARB         Texture Function
+        ------------------      ----------------
+        REPLACE                 Arg0
+        MODULATE                Arg0 * Arg1
+        ADD                     Arg0 + Arg1
+        ADD_SIGNED_ARB          Arg0 + Arg1 - 0.5
+        INTERPOLATE_ARB         Arg0 * (Arg2) + Arg1 * (1-Arg2)
+        SUBTRACT_ARB            Arg0 - Arg1
+
+        COMBINE_ALPHA_ARB       Texture Function
+        ------------------      ----------------
+        REPLACE                 Arg0
+        MODULATE                Arg0 * Arg1
+        ADD                     Arg0 + Arg1
+        ADD_SIGNED_ARB          Arg0 + Arg1 - 0.5
+        INTERPOLATE_ARB         Arg0 * (Arg2) + Arg1 * (1-Arg2)
+        SUBTRACT_ARB            Arg0 - Arg1
+
+        Table 3.20: COMBINE_ARB texture functions
+
+    The arguments Arg0, Arg1 and Arg2 are determined by the values of
+    SOURCE<n>_RGB_ARB, SOURCE<n>_ALPHA_ARB, OPERAND<n>_RGB_ARB and
+    OPERAND<n>_ALPHA_ARB. In the following two tables, Ct and At are
+    the filtered texture RGB and alpha values; Cc and Ac are the 
+    texture environment RGB and alpha values; Cf and Af are the RGB 
+    and alpha of the primary color of the incoming fragment; and Cp 
+    and Ap are the RGB and alpha values resulting from the previous 
+    texture environment. On texture environment 0, Cp and Ap are 
+    identical to Cf and Af, respectively. The relationship is 
+    described in tables 3.21 and 3.22.
+
+        SOURCE<n>_RGB_ARB       OPERAND<n>_RGB_ARB      Argument
+        -----------------       --------------          --------
+        TEXTURE                 SRC_COLOR               Ct
+                                ONE_MINUS_SRC_COLOR     (1-Ct)
+                                SRC_ALPHA               At
+                                ONE_MINUS_SRC_ALPHA     (1-At)
+        CONSTANT_ARB            SRC_COLOR               Cc
+                                ONE_MINUS_SRC_COLOR     (1-Cc)
+                                SRC_ALPHA               Ac
+                                ONE_MINUS_SRC_ALPHA     (1-Ac)
+        PRIMARY_COLOR_ARB       SRC_COLOR               Cf
+                                ONE_MINUS_SRC_COLOR     (1-Cf)
+                                SRC_ALPHA               Af
+                                ONE_MINUS_SRC_ALPHA     (1-Af)
+        PREVIOUS_ARB            SRC_COLOR               Cp
+                                ONE_MINUS_SRC_COLOR     (1-Cp)
+                                SRC_ALPHA               Ap
+                                ONE_MINUS_SRC_ALPHA     (1-Ap)
+
+        Table 3.21: Arguments for COMBINE_RGB_ARB functions
+
+        SOURCE<n>_ALPHA_ARB     OPERAND<n>_ALPHA_ARB    Argument
+        -----------------       --------------          --------
+        TEXTURE                 SRC_ALPHA               At
+                                ONE_MINUS_SRC_ALPHA     (1-At)
+        CONSTANT_ARB            SRC_ALPHA               Ac
+                                ONE_MINUS_SRC_ALPHA     (1-Ac)
+        PRIMARY_COLOR_ARB       SRC_ALPHA               Af
+                                ONE_MINUS_SRC_ALPHA     (1-Af)
+        PREVIOUS_ARB            SRC_ALPHA               Ap
+                                ONE_MINUS_SRC_ALPHA     (1-Ap)
+
+        Table 3.22: Arguments for COMBINE_ALPHA_ARB functions
+
+    The mapping of texture components to source components is
+    summarized in Table 3.23. In the following table, At, Lt, It, Rt,
+    Gt and Bt are the filtered texel values.
+
+        Base Internal Format            RGB Values      Alpha Value
+        --------------------            ----------      -----------
+        ALPHA                           0,  0,  0       At
+        LUMINANCE                       Lt, Lt, Lt      1
+        LUMINANCE_ALPHA                 Lt, Lt, Lt      At
+        INTENSITY                       It, It, It      It
+        RGB                             Rt, Gt, Bt      1
+        RGBA                            Rt, Gt, Bt      At
+        
+        Table 3.23: Correspondence of texture components to source
+        components for COMBINE_RGB_ARB and COMBINE_ALPHA_ARB arguments
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    None
+
+Additions to Appendix F of the GL Specification (ARB Extensions)
+
+    Inserted after the second paragraph of F.2.12:
+
+    If the value of TEXTURE_ENV_MODE is COMBINE_ARB, the texture
+    function associated with a given texture unit is computed using
+    the values specified by SOURCE<n>_RGB_ARB, SOURCE<n>_ALPHA_ARB,
+    OPERAND<n>_RGB_ARB and OPERAND<n>_ALPHA_ARB. If TEXTURE<n>_ARB is
+    specified as SOURCE<n>_RGB_ARB or SOURCE<n>_ALPHA_ARB, the texture
+    value from texture unit <n> will be used in computing the texture
+    function for this texture unit.
+
+    Inserted after the third paragraph of F.2.12:
+
+    If a texture environment for a given texture unit references a
+    texture unit that is disabled or does not have a valid texture
+    object bound to it, then it is as if texture is disabled for the
+    given texture unit. Every texture unit implicitly references the 
+    texture object that is bound to it, regardless of the texture 
+    function specified by COMBINE_RGB_ARB or COMBINE_ALPHA_ARB.
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    INVALID_ENUM is generated if <params> value for COMBINE_RGB_ARB or
+    COMBINE_ALPHA_ARB is not one of REPLACE, MODULATE, ADD,
+    ADD_SIGNED_ARB, INTERPOLATE_ARB, or SUBTRACT_ARB
+
+    INVALID_ENUM is generated if <params> value for SOURCE0_RGB_ARB,
+    SOURCE1_RGB_ARB, SOURCE2_RGB_ARB, SOURCE0_ALPHA_ARB,
+    SOURCE1_ALPHA_ARB or SOURCE2_ALPHA_ARB is not one of TEXTURE,
+    CONSTANT_ARB, PRIMARY_COLOR_ARB, or PREVIOUS_ARB.
+
+    INVALID_ENUM is generated if <params> value for OPERAND0_RGB_ARB,
+    OPERAND1_RGB_ARB, or OPERAND2_RGB_ARB is not one of SRC_COLOR,
+    ONE_MINUS_SRC_COLOR, SRC_ALPHA or ONE_MINUS_SRC_ALPHA.
+
+    INVALID_ENUM is generated if <params> value for OPERAND0_ALPHA_ARB,
+    OPERAND1_ALPHA_ARB, or OPERAND2_ALPHA_ARB is not one of SRC_ALPHA 
+    or ONE_MINUS_SRC_ALPHA.
+
+    INVALID_VALUE is generated if <params> value for RGB_SCALE_ARB or
+    ALPHA_SCALE is not one of 1.0, 2.0, or 4.0.
+
+New State
+
+    Get Value           Get Command    Type     Initial Value   Attribute
+    ---------           -----------    ----     -------------   ---------
+    COMBINE_RGB_ARB     GetTexEnviv    n x Z4   MODULATE        texture
+    COMBINE_ALPHA_ARB   GetTexEnviv    n x Z4   MODULATE        texture
+    SOURCE0_RGB_ARB     GetTexEnviv    n x Z3   TEXTURE         texture
+    SOURCE1_RGB_ARB     GetTexEnviv    n x Z3   PREVIOUS_ARB    texture
+    SOURCE2_RGB_ARB     GetTexEnviv    n x Z3   CONSTANT_ARB    texture
+    SOURCE0_ALPHA_ARB   GetTexEnviv    n x Z3   TEXTURE         texture
+    SOURCE1_ALPHA_ARB   GetTexEnviv    n x Z3   PREVIOUS_ARB    texture
+    SOURCE2_ALPHA_ARB   GetTexEnviv    n x Z3   CONSTANT_ARB    texture
+    OPERAND0_RGB_ARB    GetTexEnviv    n x Z6   SRC_COLOR       texture
+    OPERAND1_RGB_ARB    GetTexEnviv    n x Z6   SRC_COLOR       texture
+    OPERAND2_RGB_ARB    GetTexEnviv    n x Z1   SRC_ALPHA       texture
+    OPERAND0_ALPHA_ARB  GetTexEnviv    n x Z4   SRC_ALPHA       texture
+    OPERAND1_ALPHA_ARB  GetTexEnviv    n x Z4   SRC_ALPHA       texture
+    OPERAND2_ALPHA_ARB  GetTexEnviv    n x Z1   SRC_ALPHA       texture
+    RGB_SCALE_ARB       GetTexEnvfv    n x R3   1.0             texture
+    ALPHA_SCALE         GetTexEnvfv    n x R3   1.0             texture
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    06/11/04  benj      Updated contact info after ATI/AMD merger.
+
+    01/05/21  mjk       Added ARB versus EXT differences issue
+
+    01/02/02  bpoddar   Added original EXT/ARB contributors to the contact
+                        list
+
+    00/12/13  bpoddar   Added enum value for SUBTRACT_ARB
+
+    00/12/06  bpoddar   Moved references to Ct<n> and At<n> to 
+                        ARB_texture_env_crossbar spec.
+
+    00/12/01  bpoddar   Removed TEXTURE<n>_ARB since several companies
+                        had problems with this addition in the base spec.
+
+    00/11/13  bpoddar   Recreated 6/20 spec with language for dealing
+                        with inconsistent textures moved to appendix F.
+
+    00/06/20  rhammers  Changed behavior when dealing with references 
+                        do disabled and inconsistent textures.
+
+    00/05/23  rhammers  Cleaned up for first draft of ARB version.
+                        Added issue -- TEXTURE with TEXTURE<n>_ARB
+                        Added issue .. "upstream" textures
+                        Listed get functions with description of 
+                        enumerants.
+                        Added 1.1 and multitexture to dependencies
+
+    00/05/18  rhammers  First rev of ARB version of the spec. Based on
+                        EXT_texture_env_combine.
+                        Relaxed restriction on Arg2.
+                        Added support for TEXTURE<n>_ARB.
+                        Added SUBTRACT_ARB combiner function.
+                        do disabled and inconsistent textures.

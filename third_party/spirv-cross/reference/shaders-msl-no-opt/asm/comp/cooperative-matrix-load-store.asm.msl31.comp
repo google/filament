@@ -1,0 +1,21 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_simdgroup_matrix>
+
+using namespace metal;
+
+struct SSBO
+{
+    float data[1];
+};
+
+kernel void main0(device SSBO& ssbo [[buffer(0)]])
+{
+    simdgroup_float8x8 _20;
+    simdgroup_load(_20, &ssbo.data[0u], 8u);
+    simdgroup_store(_20, &ssbo.data[0u], 8u);
+    simdgroup_float8x8 _21;
+    simdgroup_load(_21, &ssbo.data[0u], 8u, ulong2(0), true);
+    simdgroup_store(_21, &ssbo.data[0u], 8u, ulong2(0), true);
+}
+

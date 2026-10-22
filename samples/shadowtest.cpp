@@ -1,0 +1,232 @@
+/*
+ * Copyright (C) 2018 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "common/arguments.h"
+
+#include "generated/resources/resources.h"
+
+#include <filamentapp/AssetLoader.h>
+#include <filamentapp/DesktopAssetLoader.h>
+#include <filamentapp/FilamentApp2.h>
+#include <filamentapp/MeshAssimp.h>
+
+#include <filament/Engine.h>
+#include <filament/IndexBuffer.h>
+#include <filament/LightManager.h>
+#include <filament/Material.h>
+#include <filament/RenderableManager.h>
+#include <filament/Scene.h>
+#include <filament/Skybox.h>
+#include <filament/TextureSampler.h>
+#include <filament/TransformManager.h>
+#include <filament/VertexBuffer.h>
+#include <filament/View.h>
+
+#include <math/norm.h>
+
+#include <samples/SampleConfig.h>
+
+using namespace filament;
+using namespace filament::math;
+using Backend = Engine::Backend;
+
+namespace {
+
+struct GroundPlane {
+    VertexBuffer* vb;
+    IndexBuffer* ib;
+    Material* mat;
+    utils::Entity renderable;
+};
+
+struct App {
+    FilamentApp2* filamentApp = nullptr;
+    Skybox* skybox = nullptr;
+    utils::Entity light{};
+    std::map<utils::CString, MaterialInstance*> materials;
+    MeshAssimp* meshes = nullptr;
+    mat4f transform{};
+    GroundPlane plane{};
+    SampleConfig config;
+};
+
+constexpr const char* MODEL_FILE = "assets/models/monkey/monkey.obj";
+constexpr const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
+
+constexpr bool ENABLE_SHADOWS = true;
+
+GroundPlane createGroundPlane(Engine* engine) {
+    Material* shadowMaterial =
+            Material::Builder()
+                    .package(RESOURCES_GROUNDSHADOW_DATA, RESOURCES_GROUNDSHADOW_SIZE)
+                    .build(*engine);
+    shadowMaterial->setDefaultParameter("strength", 0.7f);
+
+    static constexpr uint32_t indices[]{ 0, 1, 2, 2, 3, 0 };
+    static constexpr float3 vertices[]{
+        { -10, 0, -10 },
+        { -10, 0,  10 },
+        {  10, 0,  10 },
+        {  10, 0, -10 },
+    };
+    short4 const tbn = packSnorm16(
+            normalize(positive(mat3f{ float3{ 1.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 1.0f },
+                          float3{ 0.0f, 1.0f,
+                              0.0f } }.toQuaternion()))
+                    .xyzw);
+    static const short4 normals[]{ tbn, tbn, tbn, tbn };
+    VertexBuffer* vertexBuffer =
+            VertexBuffer::Builder()
+                    .vertexCount(4)
+                    .bufferCount(2)
+                    .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3)
+                    .attribute(VertexAttribute::TANGENTS, 1, VertexBuffer::AttributeType::SHORT4)
+                    .normalized(VertexAttribute::TANGENTS)
+                    .build(*engine);
+    vertexBuffer->setBufferAt(*engine, 0,
+            VertexBuffer::BufferDescriptor(vertices,
+                    vertexBuffer->getVertexCount() * sizeof(vertices[0])));
+    vertexBuffer->setBufferAt(*engine, 1,
+            VertexBuffer::BufferDescriptor(normals,
+                    vertexBuffer->getVertexCount() * sizeof(normals[0])));
+    IndexBuffer* indexBuffer = IndexBuffer::Builder().indexCount(6).build(*engine);
+    indexBuffer->setBuffer(*engine, IndexBuffer::BufferDescriptor(indices,
+                                            indexBuffer->getIndexCount() * sizeof(uint32_t)));
+
+    auto& em = utils::EntityManager::get();
+    utils::Entity renderable = em.create();
+    RenderableManager::Builder(1)
+            .boundingBox({ { 0, 0, 0 }, { 10, 1e-4f, 10 } })
+            .material(0, shadowMaterial->getDefaultInstance())
+            .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vertexBuffer, indexBuffer, 0,
+                    6)
+            .culling(false)
+            .receiveShadows(ENABLE_SHADOWS)
+            .castShadows(false)
+            .build(*engine, renderable);
+
+    auto& tcm = engine->getTransformManager();
+    tcm.setTransform(tcm.getInstance(renderable), mat4f::translation(float3{ 0, -1, -4 }));
+    return {
+        .vb = vertexBuffer,
+        .ib = indexBuffer,
+        .mat = shadowMaterial,
+        .renderable = renderable,
+    };
+}
+
+} // namespace
+
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    if (config.iblDirectory.empty()) {
+        config.iblDirectory = utils::CString(IBL_FOLDER);
+    }
+    app->config = config;
+
+    auto setup = [app, loader](Engine* engine, View* view, Scene* scene) {
+        auto& tcm = engine->getTransformManager();
+        auto& rcm = engine->getRenderableManager();
+        auto& em = utils::EntityManager::get();
+
+        // Add geometry into the scene.
+        app->meshes = new MeshAssimp(*engine, loader);
+        app->meshes->addFromFile(MODEL_FILE, app->materials);
+        if (!app->meshes->getRenderables().empty()) {
+            auto ti = tcm.getInstance(app->meshes->getRenderables()[0]);
+            app->transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
+            for (auto renderable: app->meshes->getRenderables()) {
+                auto instance = rcm.getInstance(renderable);
+                if (rcm.hasComponent(renderable)) {
+                    rcm.setCastShadows(instance, ENABLE_SHADOWS);
+                    rcm.setReceiveShadows(instance, false);
+                    scene->addEntity(renderable);
+                }
+            }
+        }
+
+        // Add light sources into the scene.
+        app->light = em.create();
+        LightManager::Builder(LightManager::Type::SUN)
+                .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
+                .intensity(110000)
+                .direction({ 0.7, -1, -0.8 })
+                .sunAngularRadius(1.9f)
+                .castShadows(ENABLE_SHADOWS)
+                .build(*engine, app->light);
+        scene->addEntity(app->light);
+
+        // Hide skybox and add ground plane.
+        app->skybox = Skybox::Builder().color({ 0.5f, 0.75f, 1.0f, 1.0f }).build(*engine);
+        scene->setSkybox(app->skybox);
+        app->plane = createGroundPlane(engine);
+        scene->addEntity(app->plane.renderable);
+    };
+
+    auto cleanup = [app](Engine* engine, View*, Scene*) {
+        if (app->plane.renderable) {
+            engine->destroy(app->plane.renderable);
+            utils::EntityManager::get().destroy(app->plane.renderable);
+        }
+        engine->destroy(app->plane.mat);
+        engine->destroy(app->plane.vb);
+        engine->destroy(app->plane.ib);
+        if (app->light) {
+            engine->destroy(app->light);
+            utils::EntityManager::get().destroy(app->light);
+        }
+        engine->destroy(app->skybox);
+        delete app->meshes;
+        for (auto& item: app->materials) {
+            engine->destroy(item.second);
+        }
+    };
+
+
+    auto fApp = samples::getBuilder(config, dm, loader)
+                        .setup(setup)
+                        .cleanup(cleanup)
+                        .animation([app](Engine* engine, View* view, double now) {
+                            if (app->meshes && !app->meshes->getRenderables().empty()) {
+                                auto& tcm = engine->getTransformManager();
+                                auto ti = tcm.getInstance(app->meshes->getRenderables()[0]);
+                                tcm.setTransform(ti,
+                                        app->transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
+                            }
+                        })
+                        .build();
+    app->filamentApp = fApp.get();
+    return fApp;
+}
+
+samples::SampleParameters createAppParameters() { return {}; }
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config{
+        .title = "shadowtest",
+        .splitView = false,
+    };
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
+    auto dm = samples::getDisplayManager(config);
+    auto loader = samples::getAssetLoader(config);
+    auto app = createSampleApp(config, dm.get(), loader.get());
+    app->run();
+    return 0;
+}
+#endif

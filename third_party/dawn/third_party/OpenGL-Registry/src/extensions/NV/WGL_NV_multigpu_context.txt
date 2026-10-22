@@ -1,0 +1,146 @@
+Name
+
+    NV_multigpu_context
+
+Name Strings
+
+    WGL_NV_multigpu_context
+
+Contact
+
+    Ralf Biermann (rbiermann 'at' nvidia.com)
+
+Contributors
+
+    Joshua Schnarr, NVIDIA
+    Ingo Esser, NVIDIA
+    Robert Menzel, NVIDIA
+
+Notice
+
+    Copyright (c) 2019 NVIDIA
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date:         2019-05-29
+    Author Revision:            4
+
+Number
+
+    OpenGL Extension #542
+
+Dependencies
+
+    WGL_NV_multigpu_context is written against the
+    WGL_ARB_create_context specification, which is required.
+
+    This extension interacts with NV_gpu_multicast.
+    This extension interacts with WGL_ARB_make_current_read.
+
+Overview
+
+    This extension allows the creation of an OpenGL context in a multi-GPU
+    environment with a specified multi-GPU strategy (known as SLI mode) which
+    takes precedence over process-wide multi-GPU mode settings.
+    
+    The multi-GPU mode denotes vendor specific techniques to allow distributed
+    rendering on multiple GPUs, further called AFR (alternate frame rendering)
+    and Multicast (as defined in NV_gpu_multicast).
+    
+    OpenGL supports multiple contexts. The semantics of switching contexts 
+    is generally left to window system binding APIs such as WGL, GLX and EGL.
+    The extension WGL_NV_multigpu_context allows to specify a preferred 
+    multi-GPU rendering mode per context, thus context switching can also
+    switch the current multi-GPU rendering mode.
+    
+    The implementation is platform dependent and the actual multi-GPU rendering
+    mode of the created context may vary on different hardware and operation 
+    system platforms.
+    
+New Procedures and Functions
+
+    None
+
+New Tokens (WGL)
+
+    Accepted as an attribute name in the <*attrib_list> argument to
+    wglCreateContextAttribsARB:
+
+        WGL_CONTEXT_MULTIGPU_ATTRIB_NV                         0x20AA
+
+    Accepted as an attribute value for WGL_CONTEXT_MULTIGPU_ATTRIB_NV in
+    the <*attrib_list> argument to wglCreateContextAttribsARB:
+
+        WGL_CONTEXT_MULTIGPU_ATTRIB_SINGLE_NV                  0x20AB
+        WGL_CONTEXT_MULTIGPU_ATTRIB_AFR_NV                     0x20AC
+        WGL_CONTEXT_MULTIGPU_ATTRIB_MULTICAST_NV               0x20AD
+        WGL_CONTEXT_MULTIGPU_ATTRIB_MULTI_DISPLAY_MULTICAST_NV 0x20AE
+
+Additions to WGL_ARB_create_context and WGL_ARB_make_current_read 
+
+    Add a new paragraph to the description of wglCreateContextAttribsARB, as
+    defined by WGL_ARB_create_context:
+
+    "The attribute name WGL_CONTEXT_MULTIGPU_ATTRIB_NV indicates the 
+    preferred multi-GPU rendering mode for the OpenGL context. 
+    This specified mode precedes other selected configuration settings."
+
+    Add a new paragraph to the description of wglMakeCurrent and 
+    wglMakeContextCurrentARB:
+
+    "With OpenGL on Windows, a thread can only have one current rendering context
+    and a device context can only be used by a single thread at a time. 
+    Violating this by using the same device context with multiple rendering 
+    contexts does not normally return an error, but can lead to undefined and 
+    undesirable behavior.
+    When multigpu context attributes are used, however, wglMakeCurrent and 
+    wglMakeContextCurrentARB will return FALSE and set ERROR_INVALID_OPERATION 
+    if a HDC passed to the function is already current with a rendering context 
+    using an alternate multigpu attribute."
+
+GLX Protocol
+
+    None.
+
+Errors for WGL
+
+    A GL error ERROR_INVALID_PARAMETER is generated when a value for
+    WGL_CONTEXT_MULTIGPU_ATTRIB_NV passed into a wglCreateContextAttribsARB 
+    attribute list is not an accepted value.
+    
+    A GL error ERROR_NOT_SUPPORTED is generated when an unsupported SLI rendering 
+    mode value is passed as value of attribute WGL_CONTEXT_MULTIGPU_ATTRIB_NV in a 
+    wglCreateContextAttribsARB attribute list.
+
+    A GL error ERROR_NOT_SUPPORTED is generated when passing a device context HDC
+    to wglMakeCurrent or wglMakeContextCurrentARB if the HDC is already current with 
+    a rendering context using a multigpu attribute in a different thread.
+
+New State
+
+    None.
+
+Issues
+
+    1. Is MULTICAST mode supported in a multi-display configuration where displays attached
+       to multiple GPUs are linked together in a desktop configuration spanning multiple GPUs?
+
+       RESOLVED: Not by default. 
+
+       A dedicated attribute value WGL_CONTEXT_MULTIGPU_ATTRIB_MULTI_DISPLAY_MULTICAST_NV has to be 
+       specified when a linked multi-GPU display configuration is considered for multicast rendering
+       by the application creating the context.
+
+
+Revision History
+
+ Rev.   Date      Author    Changes
+ ---- ----------  --------  ---------------------------------------------
+   1  2017-02-21  rbiermann  Initial draft
+   2  2018-09-17  rbiermann  Updated attribute list and spec proposal
+   3  2019-05-08  rbiermann  Added multi-display multicast mode
+   4  2019-05-29  rbiermann  Added behavior of multithreaded wglMakeCurrent

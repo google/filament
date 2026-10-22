@@ -1,0 +1,669 @@
+Name
+
+    NV_half_float
+
+Name Strings
+
+    GL_NV_half_float
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 2001-2002.
+
+IP Status
+
+    NVIDIA Proprietary.
+
+Status
+
+    Implemented in CineFX (NV30) Emulation driver, August 2002.
+    Shipping in Release 40 NVIDIA driver for CineFX hardware, January 2003.
+
+Version
+
+    Last Modified Date:         02/25/2004
+    NVIDIA Revision:            9
+
+Number
+
+    283
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.3 specification.
+
+    OpenGL 1.1 is required.
+
+    NV_float_buffer affects the definition of this extension.
+
+    EXT_fog_coord affects the definition of this extension.
+
+    EXT_secondary_color affects the definition of this extension.
+
+    EXT_vertex_weighting affects the definition of this extension.
+
+    NV_vertex_program affects the definition of this extension.
+
+Overview
+
+    This extension introduces a new storage format and data type for
+    half-precision (16-bit) floating-point quantities.  The floating-point
+    format is very similar to the IEEE single-precision floating-point
+    standard, except that it has only 5 exponent bits and 10 mantissa bits.
+    Half-precision floats are smaller than full precision floats and provide a
+    larger dynamic range than similarly-sized normalized scalar data types.
+
+    This extension allows applications to use half-precision floating point
+    data when specifying vertices or pixel data.  It adds new commands to
+    specify vertex attributes using the new data type, and extends the
+    existing vertex array and image specification commands to accept the new
+    data type.
+
+    This storage format is also used to represent 16-bit components in the
+    floating-point frame buffers, as defined in the NV_float_buffer extension.
+
+Issues
+
+    What should the new data type be called?  "half"?  "hfloat"?  In addition,
+    what should the immediate mode function suffix be?  "h"?  "hf"?
+
+        RESOLVED:  half and "h".  This convention builds on the convention of
+        using the type "double" to describe double-precision floating-point
+        numbers.  Here, "half" will refer to half-precision floating-point
+        numbers.
+
+        Even though the 16-bit float data type is a first-class data type, it
+        is still more problematic than the other types in the sense that no
+        native programming languages support the data type.  "hfloat/hf" would
+        have reflected a second-class status better than "half/h".
+
+        Both names are not without conflicting precedents.  The name "half" is
+        used to connote 16-bit scalar values on some 32-bit CPU architectures
+        (e.g., PowerPC).  The name "hfloat" has been used to describe 128-bit
+        floating-point data on VAX systems.
+
+    Should we provide immediate-mode entry points for half-precision
+    floating-point data types?
+
+        RESOLVED:  Yes, for orthogonality.  Also useful as a fallback for the
+        "general" case for ArrayElement.
+
+    Should we support half-precision floating-point color index data?
+
+        RESOLVED:  No.
+
+    Should half-precision data be accepted by all commands that accept pixel
+    data or only a subset?
+
+        RESOLVED:  All functions.  Note that some textures or frame buffers
+        may store the half-precision floating-point data natively.
+
+        Since half float data would be accepted in some cases, it will be
+        necessary for drivers to provide some data conversion code.  This code
+        can be reused to handle the less common commands.
+
+
+New Procedures and Functions
+
+    void Vertex2hNV(half x, half y);
+    void Vertex2hvNV(const half *v);
+    void Vertex3hNV(half x, half y, half z);
+    void Vertex3hvNV(const half *v);
+    void Vertex4hNV(half x, half y, half z, half w);
+    void Vertex4hvNV(const half *v);
+    void Normal3hNV(half nx, half ny, half nz);
+    void Normal3hvNV(const half *v);
+    void Color3hNV(half red, half green, half blue);
+    void Color3hvNV(const half *v);
+    void Color4hNV(half red, half green, half blue, half alpha);
+    void Color4hvNV(const half *v);
+    void TexCoord1hNV(half s);
+    void TexCoord1hvNV(const half *v);
+    void TexCoord2hNV(half s, half t);
+    void TexCoord2hvNV(const half *v);
+    void TexCoord3hNV(half s, half t, half r);
+    void TexCoord3hvNV(const half *v);
+    void TexCoord4hNV(half s, half t, half r, half q);
+    void TexCoord4hvNV(const half *v);
+    void MultiTexCoord1hNV(enum target, half s);
+    void MultiTexCoord1hvNV(enum target, const half *v);
+    void MultiTexCoord2hNV(enum target, half s, half t);
+    void MultiTexCoord2hvNV(enum target, const half *v);
+    void MultiTexCoord3hNV(enum target, half s, half t, half r);
+    void MultiTexCoord3hvNV(enum target, const half *v);
+    void MultiTexCoord4hNV(enum target, half s, half t, half r, half q);
+    void MultiTexCoord4hvNV(enum target, const half *v);
+    void VertexAttrib1hNV(uint index, half x);
+    void VertexAttrib1hvNV(uint index, const half *v);
+    void VertexAttrib2hNV(uint index, half x, half y);
+    void VertexAttrib2hvNV(uint index, const half *v);
+    void VertexAttrib3hNV(uint index, half x, half y, half z);
+    void VertexAttrib3hvNV(uint index, const half *v);
+    void VertexAttrib4hNV(uint index, half x, half y, half z, half w);
+    void VertexAttrib4hvNV(uint index, const half *v);
+    void VertexAttribs1hvNV(uint index, sizei n, const half *v);
+    void VertexAttribs2hvNV(uint index, sizei n, const half *v);
+    void VertexAttribs3hvNV(uint index, sizei n, const half *v);
+    void VertexAttribs4hvNV(uint index, sizei n, const half *v);
+
+    (added if EXT_fog_coord is supported)
+
+    void FogCoordhNV(half fog);
+    void FogCoordhvNV(const half *fog);
+
+    (added if EXT_secondary_color is supported)
+
+    void SecondaryColor3hNV(half red, half green, half blue);
+    void SecondaryColor3hvNV(const half *v);
+
+    (added if EXT_vertex_weighting is supported)
+
+    void VertexWeighthNV(half weight);
+    void VertexWeighthvNV(const half *weight);
+
+New Tokens
+
+    Accepted by the <type> argument of VertexPointer, NormalPointer,
+    ColorPointer, TexCoordPointer, FogCoordPointerEXT,
+    SecondaryColorPointerEXT, VertexWeightPointerEXT, VertexAttribPointerNV,
+    DrawPixels, ReadPixels, TexImage1D, TexImage2D, TexImage3D, TexSubImage1D,
+    TexSubImage2D, TexSubImage3D, and GetTexImage:
+
+        HALF_FLOAT_NV                                   0x140B
+
+Additions to Chapter 2 of the OpenGL 1.3 Specification (OpenGL Operation)
+
+    Modify Section 2.3, GL Command Syntax (p. 7)
+
+    (Modify the last paragraph, p. 7.  In the text below, "e*" represents the
+     epsilon character used to indicate no character.)
+
+    These examples show the ANSI C declarations for these commands. In
+    general, a command declaration has the form
+
+        rtype Name{e*1234}{e* b s i h f d ub us ui}{e*v}
+          ( [args ,] T arg1, ... , T argN [, args]);
+
+    (Modify Table 2.1, p. 8 -- add new row)
+    
+        Letter  Corresponding GL Type
+        ------  ---------------------
+           h           half  
+
+    (add after last paragraph, p. 8) The half data type is a floating-point
+    data type encoded in an unsigned scalar data type.  If the unsigned scalar
+    holding a half has a value of N, the corresponding floating point number
+    is
+
+        (-1)^S * 0.0,                        if E == 0 and M == 0,
+        (-1)^S * 2^-14 * (M / 2^10),         if E == 0 and M != 0,
+        (-1)^S * 2^(E-15) * (1 + M/2^10),    if 0 < E < 31,
+        (-1)^S * INF,                        if E == 31 and M == 0, or
+        NaN,                                 if E == 31 and M != 0,
+
+    where
+
+        S = floor((N mod 65536) / 32768),
+        E = floor((N mod 32768) / 1024), and
+        M = N mod 1024.
+
+    INF (Infinity) is a special representation indicating numerical overflow.
+    NaN (Not a Number) is a special representation indicating the result of
+    illegal arithmetic operations, such as computing the square root or
+    logarithm of a negative number.  Note that all normal values, zero, and
+    INF have an associated sign.  -0.0 and +0.0 are considered equivalent for
+    the purposes of comparisons.  Note also that half is not a native type in
+    most CPUs, so some special processing may be required to generate or
+    interpret half data.
+
+    (Modify Table 2.2, p. 9 -- add new row)
+
+                    Minimum
+        GL Type    Bit Width    Description
+        -------    ---------    -----------------------------------
+        half          16        half-precision floating-point value
+                                encoded in an unsigned scalar
+
+    Modify Section 2.7, Vertex Specification, p. 19
+
+    (Modify the descriptions of the immediate mode functions in this section,
+     including those introduced by extensions.)
+ 
+        void Vertex[234][sihfd]( T coords );
+        void Vertex[234][sihfd]v( T coords );
+    ...
+        void TexCoord[1234][sihfd]( T coords );
+        void TexCoord[1234][sihfd]v( T coords );
+    ...
+        void MultiTexCoord[1234][sihfd](enum texture, T coords);
+        void MultiTexCoord[1234][sihfd]v(enum texture, T coords);
+    ...
+        void Normal3[bsihfd][ T coords );
+        void Normal3[bsihfd]v( T coords );
+    ...
+        void Color[34][bsihfd ubusui]( T components );
+        void Color[34][bsihfd ubusui]v( T components );
+    ...   
+        void FogCoord[fd]EXT(T fog);
+        void FogCoordhNV(T fog);
+        void FogCoord[fd]vEXT(T fog);
+        void FogCoordhvNV(T fog);
+    ...
+        void SecondaryColor3[bsihfd ubusui]( T components );
+        void SecondaryColor3hNV( T components );
+        void SecondaryColor3[bsihfd ubusui]v( T components );
+        void SecondaryColor3hvNV( T components );
+    ...
+        void VertexWeightfEXT(T weight);
+        void VertexWeighthNV(T weight);
+        void VertexWeightfvEXT(T weight);
+        void VertexWeighthvNV(T weight);
+    ...
+        void VertexAttrib[1234][shfd]NV(uint index, T components);
+        void VertexAttrib4ubNV(uint index, T components);
+        void VertexAttrib[1234][shfd]vNV(uint index, T components);
+        void VertexAttrib4ubvNV(uint index, T components);
+        void VertexAttribs[1234][shfd]vNV(uint index, sizei n, T components);
+        void VertexAttribs4ubvNV(uint index, sizei n, T components);
+    ....
+
+    Modify Section 2.8, Vertex Arrays, p. 21
+
+    (Modify 1st paragraph on p. 22) ... For <type>, the values BYTE, SHORT,
+    INT, FLOAT, HALF_FLOAT_NV, and DOUBLE indicate types byte, short, int,
+    float, half, and double, respectively. ...
+
+    (Modify Table 2.4, p. 23)
+
+        Command                   Sizes      Types
+        ------------------        -------    ---------------------------------
+        VertexPointer             2,3,4      short, int, float, half, double
+        NormalPointer             3          byte, short, int, float, half, 
+                                             double
+        ColorPointer              3,4        byte, ubyte, short, ushort, int,
+                                             uint, float, half, double
+        IndexPointer              1          ubyte, short, int, float, double 
+        TexCoordPointer           1,2,3,4    short, int, float, half, double
+        EdgeFlagPointer           1          boolean
+        FogCoordPointerEXT        1          float, half, double
+        SecondaryColorPointerEXT  3          byte, ubyte, short, ushort, int,
+                                             uint, float, half, double
+        VertexWeightPointerEXT    1          float, half
+
+        Table 2.4: Vertex array sizes (values per vertex) and data types.
+
+    Modify Section 2.13, Colors and Coloring, p.44
+
+    (Modify Table 2.6, p. 45)  Add new row to the table:
+
+         GL Type    Conversion
+         -------    ----------
+         half          c
+
+    Modify NV_vertex_program_spec, Section 2.14.3, Vertex Arrays for Vertex
+    Attributes.
+
+    (modify paragraph describing VertexAttribPointer) ... type specifies the
+    data type of the values stored in the array.  type must be one of SHORT,
+    FLOAT, HALF_FLOAT_NV, DOUBLE, or UNSIGNED_BYTE and these values correspond
+    to the array types short, int, float, half, double, and ubyte
+    respectively. ...
+
+    (add to end of paragraph describing mapping of vertex arrays to
+    immediate-mode functions) ... For each vertex attribute, the corresponding
+    command is VertexAttrib[size][type]v, where size is one of [1,2,3,4], and
+    type is one of [s,f,h,d,ub], corresponding to the array types short, int,
+    float, half, double, and ubyte respectively.
+
+        
+Additions to Chapter 3 of the OpenGL 1.3 Specification (Rasterization)
+
+    Modify Section 3.6.4, Rasterization of Pixel Rectangles (p. 91)
+
+    (Modify Table 3.5, p. 94 -- add new row)
+
+        type Parameter     Corresponding       Special
+        Token Name         GL Data Type     Interpretation
+        --------------     -------------    --------------
+        HALF_FLOAT_NV         half               No
+
+Additions to Chapter 4 of the OpenGL 1.3 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Modify Section 4.3.2, Reading Pixels (p. 173)
+
+    (modify Final Conversion, p. 177) For an index, if the type is not FLOAT
+    or HALF_FLOAT_NV, final conversion consists of masking the index with the
+    value given in Table 4.6; if the type is FLOAT or HALF_FLOAT_NV, then the
+    integer index is converted to a GL float or half data value.  For an RGBA
+    color, components are clamped depending on the data type of the buffer
+    being read.  For fixed-point buffers, each component is clamped to [0.1].
+    For floating-point buffers, if <type> is not FLOAT or HALF_FLOAT_NV, each
+    component is clamped to [0,1] if <type> is unsigned or [-1,1] if <type> is
+    signed and then converted according to Table 4.7.
+
+    (Modify Table 4.7, p. 178 -- add new row)
+
+        type Parameter    GL Data Type    Component Conversion Formula
+        --------------    ------------    ----------------------------
+        HALF_FLOAT_NV        half                  c = f
+
+Additions to Chapter 5 of the OpenGL 1.3 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 1.3 Specification (State and
+State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 1.3 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol (Modification to the GLX 1.3 Protocol Encoding Specification)
+
+    Add to Section 1.4 (p.2), Common Types
+
+        FLOAT16     A 16-bit floating-point value in the format specified
+                    in the NV_half_float extension specification.
+
+    Modify Section 2.3.3 (p. 79), GL Rendering Commands
+
+      The following rendering commands are sent to the server as part of a
+      glXRender request:
+
+         Vertex2hvNV
+            2           8               rendering command length
+            2           4240            rendering command opcode
+            2           FLOAT16         v[0]
+            2           FLOAT16         v[1]
+
+         Vertex3hvNV
+            2           12              rendering command length
+            2           4241            rendering command opcode
+            2           FLOAT16         v[0]
+            2           FLOAT16         v[1]
+            2           FLOAT16         v[2]
+            2                           unused
+
+         Vertex4hvNV
+            2           12              rendering command length
+            2           4242            rendering command opcode
+            2           FLOAT16         v[0]
+            2           FLOAT16         v[1]
+            2           FLOAT16         v[2]
+            2           FLOAT16         v[3]
+
+         Normal3hvNV
+            2           12              rendering command length
+            2           4243            rendering command opcode
+            2           FLOAT16         v[0]
+            2           FLOAT16         v[1]
+            2           FLOAT16         v[2]
+            2                           unused
+
+         Color3hvNV
+            2           12              rendering command length
+            2           4244            rendering command opcode
+            2           FLOAT16         v[0]
+            2           FLOAT16         v[1]
+            2           FLOAT16         v[2]
+            2                           unused
+
+         Color4hvNV
+            2           12              rendering command length
+            2           4245            rendering command opcode
+            2           FLOAT16         v[0]
+            2           FLOAT16         v[1]
+            2           FLOAT16         v[2]
+            2           FLOAT16         v[3]
+
+         TexCoord1hvNV
+            2           8               rendering command length
+            2           4246            rendering command opcode
+            2           FLOAT16         v[0]
+            2                           unused
+
+         TexCoord2hvNV
+            2           8               rendering command length
+            2           4247            rendering command opcode
+            2           FLOAT16         v[0]
+            2           FLOAT16         v[1]
+
+         TexCoord3hvNV
+            2           12              rendering command length
+            2           4248            rendering command opcode
+            2           FLOAT16         v[0]
+            2           FLOAT16         v[1]
+            2           FLOAT16         v[2]
+            2                           unused
+
+         TexCoord4hvNV
+            2           12              rendering command length
+            2           4249            rendering command opcode
+            2           FLOAT16         v[0]
+            2           FLOAT16         v[1]
+            2           FLOAT16         v[2]
+            2           FLOAT16         v[3]
+
+         MultiTexCoord1hvNV
+            2           12              rendering command length
+            2           4250            rendering command opcode
+            4           ENUM            target
+            2           FLOAT16         v[0]
+            2                           unused
+
+         MultiTexCoord2hvNV
+            2           12              rendering command length
+            2           4251            rendering command opcode
+            4           ENUM            target
+            2           FLOAT16         v[0]
+            2           FLOAT16         v[1]
+
+         MultiTexCoord3hvNV
+            2           16              rendering command length
+            2           4252            rendering command opcode
+            4           ENUM            target
+            2           FLOAT16         v[0]
+            2           FLOAT16         v[1]
+            2           FLOAT16         v[2]
+            2                           unused
+
+         MultiTexCoord4hvNV
+            2           16              rendering command length
+            2           4253            rendering command opcode
+            4           ENUM            target
+            2           FLOAT16         v[0]
+            2           FLOAT16         v[1]
+            2           FLOAT16         v[2]
+            2           FLOAT16         v[3]
+
+         FogCoordhvNV
+            2           8               rendering command length
+            2           4254            rendering command opcode
+            2           FLOAT16         v[0]
+            2                           unused
+
+         SecondaryColor3hvNV
+            2           12              rendering command length
+            2           4255            rendering command opcode
+            2           FLOAT16         v[0]
+            2           FLOAT16         v[1]
+            2           FLOAT16         v[2]
+            2                           unused
+
+         VertexWeighthvNV
+            2           8               rendering command length
+            2           4256            rendering command opcode
+            2           FLOAT16         v[0]
+            2                           unused
+
+         VertexAttrib1hvNV
+            2           12              rendering command length
+            2           4257            rendering command opcode
+            4           CARD32          index
+            2           FLOAT16         v[0]
+            2                           unused
+
+         VertexAttrib2hvNV
+            2           12              rendering command length
+            2           4258            rendering command opcode
+            4           CARD32          index
+            2           FLOAT16         v[0]
+            2           FLOAT16         v[1]
+
+         VertexAttrib3hvNV
+            2           16              rendering command length
+            2           4259            rendering command opcode
+            4           CARD32          index
+            2           FLOAT16         v[0]
+            2           FLOAT16         v[1]
+            2           FLOAT16         v[2]
+            2                           unused
+
+         VertexAttrib4hvNV
+            2           16              rendering command length
+            2           4260            rendering command opcode
+            4           CARD32          index
+            2           FLOAT16         v[0]
+            2           FLOAT16         v[1]
+            2           FLOAT16         v[2]
+            2           FLOAT16         v[3]
+
+         VertexAttribs1hvNV
+            2           12+2*n+p        rendering command length
+            2           4261            rendering command opcode
+            4           CARD32          index
+            4           CARD32          n
+            2*n         LISTofFLOAT16   v
+            p                           unused, p=pad(2*n)
+
+         VertexAttribs2hvNV
+            2           12+4*n          rendering command length
+            2           4262            rendering command opcode
+            4           CARD32          index
+            4           CARD32          n
+            4*n         LISTofFLOAT16   v
+
+         VertexAttribs3hvNV
+            2           12+6*n+p        rendering command length
+            2           4263            rendering command opcode
+            4           CARD32          index
+            4           CARD32          n
+            6*n         LISTofFLOAT16   v
+            p                           unused, p=pad(6*n)
+
+         VertexAttribs4hvNV
+            2           12+8*n          rendering command length
+            2           4264            rendering command opcode
+            4           CARD32          index
+            4           CARD32          n
+            8*n         LISTofFLOAT16   v
+
+
+    Modify Section 2.3.4, GL Rendering Commands That May Be Large (p. 127)
+
+     (Modify the ARRAY_INFO portion of the DrawArrays encoding (p.129) to
+      reflect the new data type supported by vertex arrays.)
+
+         ARRAY_INFO
+    
+            4       enum                    data type
+                    0x1400   i=1            BYTE
+                    0x1401   i=1            UNSIGNED_BYTE
+                    0x1402   i=2            SHORT
+                    ...
+                    0x140B   i=2            HALF_FLOAT_NV
+            4       INT32                   j
+            4       ENUM                    array type
+                ...
+
+    Modify Appendix A, Pixel Data (p. 148)
+
+      (Modify Table A.1, p. 149 -- add new row for HALF_FLOAT_NV data)
+
+          type             Encoding    Protocol Type    nbytes
+          -------------    --------    -------------    ------
+          HALF_FLOAT_NV    0x140B      CARD16           2
+
+
+Dependencies on NV_float_buffer
+
+    If NV_float_buffer is not supported, the fixed and floating-point color
+    buffer language in ReadPixels "Final Conversion" should be removed.
+
+
+Dependencies on EXT_fog_coord, EXT_secondary_color, and EXT_vertex_weighting 
+
+    If EXT_fog_coord, EXT_secondary_color, or EXT_vertex_weighting are not
+    supported, references to FogCoordPointerEXT, SecondaryColorPointerEXT, and
+    VertexWeightPointerEXT, respectively, should be removed.
+
+    If EXT_fog_coord is not supported, remove language adding immediate mode
+    FogCoordh[v]NV APIs.
+
+    If EXT_secondary_color is not supported, remove language adding immediate
+    mode SecondaryColor3h[v]NV APIs.
+
+    If EXT_vertex_weighting is not supported, remove language adding immediate
+    mode VertexWeighth[v]NV APIs.
+
+Dependencies on NV_vertex_program
+
+    If NV_vertex_program is not supported, references to VertexAttribPointerNV
+    should be removed, as should references to VertexAttrib*h[v] commands.
+
+          
+Errors
+
+    None.
+
+
+New State
+
+    None.
+
+
+New Implementation Dependent State
+
+    None.
+
+
+Revision History
+
+    Rev.    Date    Author   Changes
+    ----  -------- --------  --------------------------------------------
+     10   03/21/10  pbrown   Clarify that FogCoord*, SecondaryColor*, and 
+                             VertexWeight* APIs are supported only if
+                             corresponding extensions are also supported.
+                             Recent NVIDIA drivers and GPUs do not support
+                             EXT_vertex_weighting.
+
+      9   02/25/04  pbrown   Fixed incorrect language using division by zero
+                             as an example of something producing a NaN.
+
+      8   07/19/02  pbrown   Add GLX protocol.  Modified enumerant value for
+                             HALF_FLOAT_NV to use new value assigned from the
+                             registry.
+
+      7   01/31/02  pbrown   Add revision history.
+
+      6   12/26/01  pbrown   Add immediate-mode entry points for all functions
+                             that may accept half-precision float vertex data.
+
+      4   10/19/01  pbrown   Fixed incorrect description of encoding of hfloat
+                             denorms.  Addressed issue that there's no reason
+                             to require hfloats to be exactly 16 bits on all
+                             architectures.  Instead, they are documented as 
+                             needing to be at least 16 bits, and as using only
+                             the 16 least significant bits.  Practically
+                             speaking, they will probably always be 16 bits.

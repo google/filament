@@ -1,0 +1,81 @@
+               OpCapability Shader
+               OpCapability PhysicalStorageBufferAddresses
+               OpExtension "SPV_KHR_physical_storage_buffer"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel PhysicalStorageBuffer64 GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpSourceExtension "GL_EXT_buffer_reference"
+               OpDecorate %Foo Block
+               OpMemberDecorate %Foo 0 Offset 0
+               OpMemberDecorate %Foo 1 Offset 8
+               OpDecorate %foo Aliased
+               OpDecorate %vp Aliased
+               OpDecorate %ppp Aliased
+               OpDecorate %p2 Aliased
+               OpDecorate %dummyarg1 Restrict
+               OpDecorate %dummyarg3 Restrict
+               OpDecorate %dummyarg4 Restrict
+               OpDecorate %dummyarg5 Restrict
+
+               OpDecorate %Registers Block
+               OpMemberDecorate %Registers 0 Offset 0
+               OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+               OpTypeForwardPointer %_ptr_PhysicalStorageBuffer_Foo PhysicalStorageBuffer
+        %int = OpTypeInt 32 1
+%_ptr_PhysicalStorageBuffer_int = OpTypePointer PhysicalStorageBuffer %int
+%_ptr_PhysicalStorageBuffer_int_int = OpTypePointer PhysicalStorageBuffer %_ptr_PhysicalStorageBuffer_int
+        %Foo = OpTypeStruct %int %_ptr_PhysicalStorageBuffer_int
+%_ptr_PhysicalStorageBuffer_Foo = OpTypePointer PhysicalStorageBuffer %Foo
+%_ptr_Function__ptr_PhysicalStorageBuffer_Foo = OpTypePointer Function %_ptr_PhysicalStorageBuffer_Foo
+         %11 = OpTypeFunction %void %_ptr_PhysicalStorageBuffer_Foo %int %_ptr_PhysicalStorageBuffer_int %_ptr_PhysicalStorageBuffer_int_int %_ptr_PhysicalStorageBuffer_int
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+  %Registers = OpTypeStruct %_ptr_PhysicalStorageBuffer_Foo
+%_ptr_PushConstant_Registers = OpTypePointer PushConstant %Registers
+          %_ = OpVariable %_ptr_PushConstant_Registers PushConstant
+     %int_40 = OpConstant %int 40
+%_ptr_PushConstant__ptr_PhysicalStorageBuffer_Foo = OpTypePointer PushConstant %_ptr_PhysicalStorageBuffer_Foo
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+     %uint_1 = OpConstant %uint 1
+%gl_WorkGroupSize = OpConstantComposite %v3uint %uint_1 %uint_1 %uint_1
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %27 = OpAccessChain %_ptr_PushConstant__ptr_PhysicalStorageBuffer_Foo %_ %int_0
+         %28 = OpLoad %_ptr_PhysicalStorageBuffer_Foo %27
+		 %29 = OpAccessChain %_ptr_PhysicalStorageBuffer_int %28 %int_0
+		 %pp = OpAccessChain %_ptr_PhysicalStorageBuffer_int_int %28 %int_1
+		 %pp_loaded = OpLoad %_ptr_PhysicalStorageBuffer_int %pp Aligned 8
+         %30 = OpFunctionCall %void %func_1_i1_ %28 %int_40 %29 %pp %pp_loaded
+               OpReturn
+               OpFunctionEnd
+ %func_1_i1_ = OpFunction %void None %11
+        %foo = OpFunctionParameter %_ptr_PhysicalStorageBuffer_Foo
+          %v = OpFunctionParameter %int
+          %vp = OpFunctionParameter %_ptr_PhysicalStorageBuffer_int
+          %ppp = OpFunctionParameter %_ptr_PhysicalStorageBuffer_int_int
+          %p2 = OpFunctionParameter %_ptr_PhysicalStorageBuffer_int
+         %15 = OpLabel
+		 %dummy_call = OpFunctionCall %void %func_dummy %foo %v %vp %ppp %p2
+         %20 = OpAccessChain %_ptr_PhysicalStorageBuffer_int %foo %int_0
+               OpStore %20 %v Aligned 16
+               OpStore %vp %v Aligned 4
+               OpStore %p2 %v Aligned 4
+		OpStore %ppp %p2 Aligned 8	   
+               OpReturn
+               OpFunctionEnd
+
+%func_dummy = OpFunction %void None %11
+	   %dummyarg1 = OpFunctionParameter %_ptr_PhysicalStorageBuffer_Foo
+	   %dummyarg2 = OpFunctionParameter %int
+	   %dummyarg3 = OpFunctionParameter %_ptr_PhysicalStorageBuffer_int
+	   %dummyarg4 = OpFunctionParameter %_ptr_PhysicalStorageBuffer_int_int
+	   %dummyarg5 = OpFunctionParameter %_ptr_PhysicalStorageBuffer_int
+	   %dummylabel = OpLabel
+		   OpReturn
+	   OpFunctionEnd
+

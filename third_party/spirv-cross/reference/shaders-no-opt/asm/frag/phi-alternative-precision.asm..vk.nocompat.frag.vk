@@ -1,0 +1,29 @@
+#version 450
+
+layout(location = 0) in mediump float b;
+layout(location = 0) out float FragColor;
+
+void main()
+{
+    float hp_copy_39;
+    mediump float _39;
+    int _40;
+    _40 = 0;
+    _39 = 0.0;
+    for (;;)
+    {
+        hp_copy_39 = _39;
+        int _27 = _40 + 1;
+        if (_27 < 4)
+        {
+            _40 = _27;
+            _39 = fma(_39, b, b);
+        }
+        else
+        {
+            break;
+        }
+    }
+    FragColor = hp_copy_39 * 4.0;
+}
+

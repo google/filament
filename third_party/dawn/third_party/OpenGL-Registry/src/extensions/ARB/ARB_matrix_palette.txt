@@ -1,0 +1,685 @@
+Name
+
+    ARB_matrix_palette
+
+Name Strings
+
+    GL_ARB_matrix_palette
+
+Contact
+
+    Jon Paul Schelter (jschelte 'at' matrox.com)
+
+Notice
+
+    Copyright (c) 2000-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by ARB on December 5, 2000.
+
+Version
+
+    Date: 2004/04/02
+    Revision: 0.7
+
+Number
+
+    ARB Extension #16
+
+Dependencies
+
+    ARB_vertex_blend and OpenGL 1.0 are required.
+    This extension is written against the ARB_vertex_blend extended
+    OpenGL 1.2.1 Specification. 
+
+Overview
+
+    This extension extends the abilities of ARB_vertex_blend to include 
+    a palette of modelview matrices.  The n vertex units use a palette
+    of m modelview matrices.  (Where n and m are constrained to
+    implementation defined maxima.)  Each vertex has a set of n
+    indices into the palette, and a corresponding set of n weights.
+    Matrix indices can be changed for each vertex (between Begin and
+    End).  
+    
+    When this extension is utilized, the enabled units transform each
+    vertex by the modelview matrices specified by the vertices'
+    respective indices.  These results are subsequently scaled by the
+    weights of the respective units and then summed to create the
+    eyespace vertex.   
+    
+    A similar procedure is followed for normals.  Normals, however,
+    are transformed by the inverse transpose of the modelview matrix.
+    
+IP Status
+
+    Unknown, but believed to be none. 
+
+Issues
+
+       
+    Should the matrix palette be loaded by adding MODELVIEWm tokens
+    for MatrixMode?
+
+        No, this method is too difficult to extend to an arbitrary
+        (implementation defined) size palette,
+          and would imply having a 32 entry (minimum) stack per
+          matrix. 
+        
+
+    Should the Matrix palette be loaded with a new LoadMatrixPalette
+    command?
+
+        No, although this provides an easy way to support arbitrary
+        palette sizes, the method loses the current (MultMatrix,
+        Rotate, Translate, Scale..) matrix functionality.
+
+        Matrices will be Loaded into the palette with current
+        functions when MATRIX_MODE is MATRIX_PALETTE_ARB.  The current
+        palette index is set by an explicit command:
+        CurrentPaletteMatrixARB(). 
+    
+        
+    Should the Matrix Palette have a stack?
+
+        Not required, this wastes a lot of space.  Define the min
+        stack depth for the MATRIX_PALETTE_ARB MatrixMode to be 1.
+        This alows some implementations to add a stack if desired.
+
+        The stacks established in ARB_vertex_blend for
+        MODELVIEW_MATRIXn are still present.
+        
+        
+    Should the matrix palette be gettable?
+
+       Yes, CurrentPaletteMatrixARB() and
+       GetIntegerv(CURRENT_PALETTE_MATRIX_ARB, *data) define which
+       matrix in the palette is returned by
+       GetFloatv(MATRIX_PALETTE_ARB, *data). 
+
+       
+    Should MatrixIndexARB be changed to imply LoadMatrix calls to the
+    applicable MODELVIEW_MATRIXn stacks?
+
+        No, the MODELVIEW_MATRIXn matrices are unused when
+        MATRIX_PALETTE is enabled.
+       
+    
+    Should there be a way to specify that the modelview matrices
+    for two different vertex units are identical?
+
+        Not explicitely, but indexing the matrix palette provides this
+        functionality. (Both units will have the same matrix index.)
+        
+    Currently, the MATRIX_PALETTE_ARB enum is used to enable the
+    extension, to set the Matrix Mode, and to get the current matrix.
+    Is this confusing? Should more enums be added?
+
+        No.
+        
+New Procedures and Functions
+
+    void CurrentPaletteMatrixARB(int index)
+    
+    void MatrixIndex{ubusui}vARB(int size, T *indices)
+    
+    void MatrixIndexPointerARB(int size, enum type, sizei stride,
+                           void *pointer)
+
+ 
+New Tokens
+
+    Accepted by the <pname> parameters of GetFloatv, GetDoublev,
+    and IsEnabled, by the <mode> parameter of MatrixMode, and by the
+    <cap> parameters of Enable and Disable:
+
+      MATRIX_PALETTE_ARB:                   0x8840
+
+    Accepted by the <pname> parameters of GetIntegerv, GetFloatv, and
+    GetDoublev:
+
+      MAX_MATRIX_PALETTE_STACK_DEPTH_ARB    0x8841
+      MAX_PALETTE_MATRICES_ARB              0x8842
+      CURRENT_PALETTE_MATRIX_ARB            0x8843
+      
+    Accepted by the <cap> parameters of EnableClientState and
+    DisableClientState and by the <pname> parameter of IsEnabled:
+
+      MATRIX_INDEX_ARRAY_ARB:               0x8844
+
+    Accepted by the <pname> parameter of GetFloatv:
+    
+      CURRENT_MATRIX_INDEX_ARB              0x8845
+      
+    Accepted by the <pname> parameter of GetIntegerv:
+      MATRIX_INDEX_ARRAY_SIZE_ARB           0x8846
+      MATRIX_INDEX_ARRAY_TYPE_ARB           0x8847
+      MATRIX_INDEX_ARRAY_STRIDE_ARB         0x8848
+
+    Accepted by the <pname> parameter of GetPointerv:
+      MATRIX_INDEX_ARRAY_POINTER_ARB        0x8849
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (Operation)
+
+    - (2.6, p. 12) Second paragraph changed to:
+
+          "Each vertex is specified with two, three, or four
+          coordinates. In addition, a current normal, current texture
+          coordinates, current color, current matrix indices, and
+          current weights may be used in processing each vertex. Normals
+          are used by the GL in lighting calculations; the current
+          normal is a three- dimensional vector that may be set by
+          sending three coordinates that specify it. Texture coordinates
+          determine how a texture image is mapped onto a
+          primitive. Indices are used to select modelview matrices
+          from the palette when blending is enabled.  Weights are used
+          as blending factors when vertex blending is enabled. One
+          weight and one index exists for each enabled vertex blend
+          unit.  Vertex units are enabled with Enable, and disabled
+          with Disable. Enabling or Disabling a vertex unit not
+          supported in the implementation results in the error
+          INVALID_OPERATION." 
+
+    - (2.6.3, p. 19) First paragraph changed to:
+
+          "The only GL commands that are allowed within Begin/End
+          pairs are the commands for specifying vertex coordinates,
+          vertex color, normal coordinates, texture coordinates, matrix
+          indices, and weights (Vertex, Color, Index, Normal, TexCoord,
+          MatrixIndexARB, WeightARB), the ArrayElement command (see
+          section 2.8), the EvalCoord and EvalPoint commands (see
+          section 5.1), commands for specifying lighting material
+          parameters (Material commands; see section 2.13.2), display
+          list invocation commands (CallList and CallLists; see section
+          5.4), and the EdgeFlag command. Executing any other GL command
+          between the execution of Begin and the corresponding execution
+          of End results in the error INVALID_OPERATION. Executing Begin
+          after Begin has already been executed but before an End is
+          executed generates the INVALID_OPERATION error, as does
+          executing End without a previous corresponding Begin."  
+
+    - (2.7, p. 20) Added after the third paragraph:
+
+          "The current weights are set using
+
+              void Weight{bsifd ubusui}vARB(int size, T *weights);
+
+          the floating point values are assigned to the current
+          weight vector.  The first <size> current weights are
+          replaced with <weights> such that:
+
+              CURRENT_WEIGHT_ARB[i] = <weights>[i]
+
+          When WEIGHT_SUM_UNITY_ARB is enabled,
+
+                                              <size>-1
+              CURRENT_WEIGHT_ARB[<size>] = 1 - SUM     <weights>[i]
+                                               i=0
+                                               
+          otherwise the rest of the current weights are set to 0.  If
+          <size> is greater than MAX_VERTEX_UNITS_ARB or if
+          WEIGHTS_SUM_UNITY_ARB is enabled and <size> equals
+          MAX_VERTEX_UNITS_ARB, then the error INVALID_VALUE is
+          generated.  When the values are supplied as byte, short, or
+          int, they are converted to floating-point values as
+          indicated for the corresponting type in Table 2.6.
+
+          The current matrix indices are set using
+
+              void MatrixIndex{ubusui}vARB(int size, T *indices);
+
+          The specified indices are set to the first <size> Vertex
+          Unit index values. <size> indicates the count of matrix
+          indices in the <indices> array.
+
+          Note that vertex units which are disabled can still receive
+          weights and indices."
+          
+
+    - (2.8, p. 21) First paragraph changed to read:
+
+          "The vertex specification commands described in section 2.7
+          accept data in almost any format, but their use requires
+          many command executions to specify even simple geometry.
+          Vertex data may also be placed into arrays that are stored
+          in the client's address space. Blocks of data in these
+          arrays may then be used to specify multiple geometric
+          primitives through the execution of a single GL command.
+          The client may specify an implementation dependent set of
+          arrays: one each to store edge flags, texture coordinates,
+          colors, color indices, normals, and vertices, weights, and
+          matrix indices. The commands
+
+              void EdgeFlagPointer( sizei stride, void *pointer);
+
+              void TexCoordPointer( int size, enum type, sizei stride,
+                void *pointer );
+
+              void ColorPointer( int size, enum type, sizei stride,
+                void *pointer );
+
+              void IndexPointer( enum type, sizei stride, void 
+                *pointer );
+
+              void NormalPointer( enum type, sizei stride, void
+                *pointer );
+
+              void VertexPointer( int size, enum type, sizei stride,
+                void *pointer );
+
+              void WeightPointerARB(int size, enum type,
+                sizei stride, void *pointer)
+
+              void MatrixIndexPointerARB(int size, enum type, 
+                sizei stride, void *pointer)
+                           
+          describe the locations and organizations of these arrays.
+          For each command, type specifies the data type of the
+          values stored in the array. Because edge flags are always
+          type boolean, EdgeFlagPointer has no type argument. Size,
+          when present, indicates the number of values per vertex
+          that are stored in the array. Because normals are always
+          specified with three values, NormalPointer has no size
+          argument. Likewise, because color indices, and edge flags
+          are always specified with a single value, IndexPointer, and
+          EdgeFlagPointer also have no size argument. Table 2.4
+          indicates the allowable values for size and type (when
+          present). For type the values BYTE, SHORT, INT, FLOAT, and
+          DOUBLE indicates types byte, short, int, float, and double,
+          respectively; and the values UNSIGNED_BYTE, UNSIGNED_SHORT,
+          and UNSIGNED_INT indicate types ubyte, ushort, and uint,
+          respectively. The error INVALID_VALUE is generated if size
+          is specified with a value other than that indicated in the
+          table.  For implementations supporting vertex blending, note
+          that <size> values for WeightPointerARB and
+          MatrixIndexPointerARB must be less than the implementation
+          defined value MAX_VERTEX_UNITS_ARB."  
+         
+    - (2.8, p. 22) Change table 2.4 to read:
+
+          Command            Sizes            Types                     
+          -------            -----            -----
+          VertexPointer      2,3,4            short, int, float,
+                                              double 
+          NormalPointer      3                byte, short, int, float,
+                                              double 
+          ColorPointer       3,4              byte, ubyte, short,
+                                              ushort, int, uint,
+                                              float, double 
+          IndexPointer       1                ubyte, short, int,
+                                              float, double
+          TexCoordPointer    1,2,3,4          short, int, float,
+                                              double 
+          EdgeFlagPointer    1                boolean
+          WeightPointerARB   1..MAX_VERTEX    byte, ubyte, short,
+                             _UNITS_ARB       ushort, int, uint,
+                                              float, double  
+
+          MatrixIndexPointerARB  1..MAX_VERTEX    unsigned byte, unsigned 
+                                 _UNITS_ARB       short, unsigned int
+
+
+    - (2.8 p. 23) Change paragraph two to:
+
+          "An individual array is enabled or disabled by calling one
+      of
+
+              void EnableClientState( enum array );
+              void DisableClientState( enum array );
+
+          with array set to EDGE_FLAG_ARRAY, TEXTURE_COORD_ARRAY,
+          COLOR_ARRAY, INDEX_ARRAY, NORMAL_ARRAY, VERTEX_ARRAY,
+          MATRIX_INDEX_ARRAY_ARB, or WEIGHT_ARRAY_ARB, for the edge
+          flag, texture coordinate, color, color index, normal, vertex,
+          matrix index, or weight array, respectively. "
+
+    - (2.8 p. 23) Change paragraph three to:
+
+          "The ith element of every enabled array is transferred to
+          the GL by calling
+
+              void ArrayElement( int i );
+
+          For each enabled array, it is as though the corresponding
+          command from section 2.7 or 2.6.2 were called with a
+          pointer to element i. For the vertex array, the
+          corresponding command is Vertex[size][type]v, where size is
+          one of [2,3,4], and type is one of [s,i,f,d], corresponding
+          to array types short, int, float, and double respectively.
+          The corresponding commands for the edge flag, texture
+          coordinate, color, color index, normal, and weight arrays
+          are EdgeFlagv, TexCoord[size][type]v, Color[size][type]v,
+          Index[type]v, Normal[type]v, MatrixIndex[type]vARB, and
+          Weight[type]vARB, respectively. If the vertex array is
+          enabled, it is as though Vertex[size][type]v is executed last,
+          after the executions of the other corresponding commands." 
+
+    - (2.10 p. 28) Edit to the last paragraph:
+
+          "Figure 2.6 diagrams the sequence of transformations that are
+          applied to vertices.  The vertex coordinates that are
+          presented to the GL are termed object coordinates.  The
+          model-view matrix is applied to these coordinates to yield eye
+          coordinates.  In implementations with vertex blending, all
+          enabled modelview matrices are applied to these coordinates,
+          and the weighted sum of the results are the eye coordinates.
+          Then another matrix, called the projection matrix, is applied
+          to eye coordinates to yield clip coordinates.  A perspective
+          division is carried out on clip coordinates to yield
+          normalized device coordinates.  A final viewport
+          transformation is applied to convert these coordinates into
+          window coordinates."
+    
+    - (2.10 p. 29) Edit to the second paragraph:
+
+          "... the vertex's eye coordinates are found as:
+
+            (xe)    n-1               (xo)
+            (ye)  =  SUM  w_i * M_i * (yo)
+            (ze)    i=0               (zo)
+            (we)                      (wo)
+
+          where M_i is the palette matrix associated with the i'th
+          Vertex unit:
+          
+            M_i = MatrixPalette[MatrixIndex[i]], if VERTEX_BLEND_ARB,
+            MATRIX_PALETTE_ARB and VERTEX_UNIT_ARB<i> are enabled, and
+            M_i = MODELVIEW_MATRIX, otherwise.
+            
+          w_i is the Vertex's associated weight for vertex unit i:
+
+            w_i = weight_i, if VERTEX_BLEND_ARB, MATRIX_PALETTE_ARB
+            and VERTEX_UNIT_ARB<i> are enabled,
+            1, if MATRIX_PALETTE_ARB is disabled,
+
+          and,
+          
+            n = ACTIVE_VERTEX_UNITS_ARB."
+          
+    - (2.10.2 p. 31) Change the first paragraph to:
+
+          "The projection matrix and model-view matrices are set
+          with a variety of commands. The affected matrix is
+          determined by the current matrix mode. The current
+          matrix mode is set with
+
+            void MatrixMode( enum mode );
+ 
+          which takes one of the pre-defined constants TEXTURE,
+          MODELVIEW, COLOR, PROJECTION, MODELVIEWn_ARB,
+          MATRIX_PALETTE_ARB.  TEXTURE is described later in section
+          2.10.2, and COLOR is described in section 3.6.3. If the
+          current matrix mode is MODELVIEW, the matrix operations
+          apply to the model-view matrix; if PROJECTION, then they
+           apply to the projection matrix. 
+ 
+
+          In implementations supporting ARB_matrix_palette,
+
+             void CurrentPaletteMatrixARB(int index);
+              
+          defines which of the palette's matrices is affected by
+          subsequent matrix operations when the current matrix mode is
+          MATRIX_PALETTE_ARB. CurrentBlendMatrixARB generates the
+          error INVALID_VALUE if the <index> parameter is not between
+          0 and MAX_PALETTE_MATRICES_ARB.
+          The CURRENT_PALETTE_MATRIX_ARB enum can be used to query the
+          last value set by CurrentPaletteMatrixARB."  
+
+    - (2.10.2 p. 34) Change to the fourth paragraph:
+
+          "The state required to implement transformations consists of a
+          four-valued integer indicating the current matrix mode, a
+          stack of at least two 4 x 4 matrices for each of COLOR,
+          PROJECTION, and TEXTURE with associated stack pointers, a
+          stack of at least 32 4 x 4 matrices with an associated stack
+          pointer for MODELVIEW, and a set of MAX_PALETTE_MATRICES_ARB
+          stacks of at least 1 4 x 4 matrices each for the matrix palette.
+          Initially, there is only one matrix on each stack, and all
+          matrices are set to the identity.  The initial matrix mode
+          is MODELVIEW. 
+
+    - (2.10.3 p. 35) Added after the second paragraph:
+
+          "When vertex blending is enabled, the normal is transformed
+          to eye space by:
+
+                                              n-1
+              (nx' ny' nz') = (nx ny nz) Inv ( SUM w_i * Mu_i)
+                                              i=0
+          
+            Alternatively implementations may choose to transform the
+          normal to eye-space by:
+          
+                              n-1
+              (nx' ny' nz') =  SUM w_i * (nx ny nz) Inv(Mu_i)
+                              i=0
+
+          where Mu_i is the upper leftmost 3x3 matrix taken from the
+          modelview for vertex unit i (M_i),
+         
+               M_i = MatrixPalette[MatrixIndex[i]]
+               
+          if VERTEX_BLEND_ARB, MATRIX_PALETTE_ARB and VERTEX_UNIT_ARB<i> 
+          are enabled, and
+          
+              M_i = MODELVIEW_MATRIX
+         
+          otherwise.
+
+          weight_i is the vertex's associated weight for vertex unit i,
+
+              w_i = weight_i
+                        
+          and
+
+              n = ACTIVE_VERTEX_UNITS_ARB"
+
+
+Additions to Chapter 3:
+
+      None
+
+Additions to Chapter 4:
+
+      None
+
+Additions to Chapter 5:
+
+      None 
+
+Additions to Chapter 6:
+
+      None
+
+Additions to the GLX Specification
+
+      In progress.
+
+Additions to the GLX Stream Protocol:
+
+
+    Four new GL rendering commandsl are added. The following commands
+    are sent to the server as part of a glXRender request:
+
+        MatrixIndexubvARB
+            2           8+n+p           rendering command length
+            2           4326            rendering command opcode
+            4           INT32           size
+            1*n         CARD8           weights
+            p                           pad(n)
+
+        MatrixIndexusvARB
+            2           8+2*n           rendering command length
+            2           4327            rendering command opcode
+            4           INT32           size
+            2*n         CARD16          weights
+            p                           pad(2*n)
+
+        MatrixIndexuivARB
+            2           8+4*n           rendering command length
+            2           4328            rendering command opcode
+            4           INT32           size
+            4*n         CARD32          weights
+
+        CurrentPaletteMatrixARB
+            2           8               rendering command length
+            2           4329            rendering command opcode
+            4           INT32           count
+
+Errors
+      
+      INVALID_VALUE is generated if the <size> parameter for
+      MatrixIndexARB or MatrixIndexPointerARB is greater than
+      MAX_VERTEX_UNITS_ARB, or if WEIGHT_SUM_UNITY_ARB is enabled
+      and <size> is equal to MAX_VERTEX_UNITS_ARB.
+
+      INVALID_VALUE is generated if the <count> parameter to
+      CurrentPaletteMatrixARB is greater than MAX_PALETTE_MATRICES_ARB
+      or if <count> is equal to zero.
+
+New State
+
+      Modified State in Table 6.5 (p. 195):
+                                            Initial 
+Get Value                 Get Command Type  Value   Attribute Description
+---------                 ----------- ----  ------- --------- -----------
+CURRENT_MATRIX_INDEX_ARB  GetIntegerv n*Z+  0       current   array of current matrix indices
+
+
+      Modified State in Table 6.6 (p. 196):
+                                                       Initial
+Get Value                         Type   Get Command   Value    Description           Sec.    Attribute
+---------                         ----   -----------   -------  -----------           ----    ---------
+MATRIX_INDEX_ARRAY_ARB            B      IsEnabled     False    Matrix indices enable  2.8    vertex-array
+MATRIX_INDEX_ARRAY_SIZE_ARB       Z+     GetIntegerv   0        Indices per element    2.8    vertex-array
+MATRIX_INDEX_ARRAY_TYPE_ARB       Z_3    GetIntegerv   UBYTE    Type of indices        2.8    vertex-array
+MATRIX_INDEX_ARRAY_POINTER_ARB    Y      GetPointerv   False    Pointer to the Matrix  2.8    vertex-array
+                                                                indices array
+
+      Modified state in Table 6.7 (p. 197) Transformation State:
+                                          Initial 
+Get Value            Get Command Type     Value     Attribute  Description
+---------            ----------- ----     --------- ---------  -----------
+MATRIX_PALETTE_ARB   GetFloatv   2*x1*xM4 Identity      -      stack of current modelview matrix in the palette
+MATRIX_PALETTE_ARB   IsEnabled   B        FALSE     transform  Enable for ARB_matrix_palette
+CURRENT_PALETTE_     GetIntegerv Z+       0         transform  index of current modelview matrix in the
+MATRIX_ARB                                                     palette, as set by CurrentPaletteMatrixARB()
+
+                                             
+New Implementation Dependent State
+
+      Modified state in Table 6.24 (p. 214) Implementation Dependant Values:
+
+Get Value              Get Command Type Min Value  Description
+---------              ----------- ---- ---------  -----------
+MAX_MATRIX_PALETTE_    GetIntegerv Z+   1          Max matrix palette stack depth                     
+STACK_DEPTH_ARB          
+
+                         
+      Modified state in Table 6.25 (p. 215):
+
+Get Value                Get Command Type Min Value    Description
+---------                ----------- ---- ---------    -----------
+MAX_PALETTE_MATRICES_ARB GetIntegerv Z+   MAX_VERTEX_  Max size of the matrix palette
+                                          UNITS_ARB
+
+Additions to Appendix A:
+
+      None
+
+
+Revision History
+    2000/10/17  v 0.3 jschelte - added Usage example.
+    2000/11/09  v 0.4 jschelte - cleaned up some "issues".
+    2000/11/27  v 0.5 jschelte - closed last issue, fixed typo in Usage
+    2000/11/30  v 0.6 jschelte - replaced "blend matrices" with
+                                 "palette matrices" 
+                               - cleared up some confusion in the
+                                 naming of the enum for the current
+                                 indices and the current palette
+                                 matrix for load/get.
+    2004/04/02  v 0.7 Thomas Roell - added GLX protocol    
+
+Addendum: Using this extension.
+
+    // Get the implementation's capabilities
+    glGetIntegerv(MAX_VERTEX_UNITS_ARB, *max_blends);
+    glGetIntegerv(MAX_PALETTE_MATRICES_ARB, *max_matrices);
+    
+    //validate that max_blends and max_matrices are sufficient here.
+    
+    //   enable the units
+    glEnable(VERTEX_UNIT_0_ARB);
+    glEnable(VERTEX_UNIT_1_ARB);
+    glEnable(VERTEX_UNIT_2_ARB);
+    glEnable(VERTEX_UNIT_3_ARB);
+    
+    // Load the matrix Palette
+    glMatrixMode(MATRIX_PALETTE_ARB);
+    for (i=0; i<palette_size; i++)
+    {
+        glCurrentPaletteMatrix(i);
+        glLoadMatrix(mat[i]);
+        // N.B.
+        // glGetIntegerv(CURRENT_PALETTE_MATRIX_ARB, &index);
+        // ..  will return index==i.
+        // glGetFloatv(MATRIX_PALETTE_ARB, &matrix);
+        // ..  will return matrix==mat[i].
+    }
+    
+    // Per vertex array
+    //   Enable and define the Vertex Arrays:
+    //     e.g. V3F C4UB N3F W4F MI4UB T4F
+    glEnableClientState(VERTEX_ARRAY);
+    glEnableClientState(NORMAL_ARRAY);
+    glEnableClientState(COLOR_ARRAY);
+    glEnableClientState(TEXTURE_COORD_ARRAY);
+    glEnableClientState(WEIGHT_ARRAY_ARB);
+    glEnableClientState(MATRIX_INDEX_ARRAY_ARB);
+    
+    glVertexPointer(3, FLOAT, 3, vertices);
+    glNormalPointer(FLOAT, 3, normals);
+    glColorPointer(4, UNSIGNED_BYTE, 4, colors);
+    glTexCoordPointer(4, FLOAT, 4, texcoords);
+    glWeightPointerARB(4, FLOAT, 4, weights);
+    glMatrixIndexPointerARB(4, UNSIGNED_BYTE, 4, indices);
+    
+    //   Draw Primitives from the array
+    glDrawArrays(TRIANGLES, 0, vert_array_size);
+
+
+    // **alternatively**
+    typdef struct st_interleaved_vertex {
+        FLOAT position[4];
+        FLOAT weights[4];
+        UNSIGNED_BYTE indices[4];
+        FLOAT normal[3];
+        FLOAT color[4];
+        FLOAT texcoord[4];
+        } interleaved_vertex;
+    interleaved_vertex vertices[NUM_VERTS];
+
+    // the rest as above, except the Array Pointer definition:
+    int stride = sizeof(interleaved_vertex);
+    
+    glVertexPointer( 3, FLOAT, stride, &(vertices[0].position) );
+    glNormalPointer(    FLOAT, stride, &(vertices[0].normal) );
+    glColorPointer( 4,  UNSIGNED_BYTE, stride, &(vertices[0].color) );
+    glTexCoordPointer( 4,  FLOAT, stride, &(vertices[0].texcoords) );
+    glWeightPointerARB( 4, FLOAT, stride, &(vertices[0].weights) );
+    glMatrixIndexPointerARB( 4, UNSIGNED_BYTE, stride,
+                           &(vertices[0].indices) );
+    

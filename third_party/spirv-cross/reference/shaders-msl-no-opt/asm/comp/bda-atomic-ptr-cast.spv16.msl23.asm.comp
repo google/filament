@@ -1,0 +1,19 @@
+#pragma clang diagnostic ignored "-Wunused-variable"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_atomic>
+
+using namespace metal;
+
+struct PC
+{
+    ulong _m0;
+    uint _m1;
+};
+
+kernel void main0(constant PC& pc [[buffer(0)]])
+{
+    uint _44 = atomic_fetch_max_explicit((device atomic_uint*)(reinterpret_cast<device uint*>(pc._m0 + (ulong(min(pc._m1, 256u)) * 4ul))), 4294967295u, memory_order_relaxed);
+}
+

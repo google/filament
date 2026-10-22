@@ -1,0 +1,28 @@
+#pragma clang diagnostic ignored "-Wunused-variable"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_atomic>
+
+using namespace metal;
+
+struct SSBO
+{
+    uint a;
+    int b;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO& _6 [[buffer(0)]])
+{
+    uint _30 = atomic_fetch_max_explicit((device atomic_uint*)&_6.a, 1u, memory_order_relaxed);
+    uint _31 = uint(atomic_fetch_min_explicit((device atomic_int*)&_6.a, int(1u), memory_order_relaxed));
+    uint _32 = atomic_fetch_min_explicit((device atomic_uint*)&_6.a, 4294967295u, memory_order_relaxed);
+    uint _33 = uint(atomic_fetch_max_explicit((device atomic_int*)&_6.a, int(4294967295u), memory_order_relaxed));
+    int _34 = atomic_fetch_max_explicit((device atomic_int*)&_6.b, -3, memory_order_relaxed);
+    int _35 = int(atomic_fetch_min_explicit((device atomic_uint*)&_6.b, uint(-3), memory_order_relaxed));
+    int _36 = atomic_fetch_min_explicit((device atomic_int*)&_6.b, 4, memory_order_relaxed);
+    int _37 = int(atomic_fetch_max_explicit((device atomic_uint*)&_6.b, uint(4), memory_order_relaxed));
+}
+

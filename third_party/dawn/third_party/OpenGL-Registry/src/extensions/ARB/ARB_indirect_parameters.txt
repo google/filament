@@ -1,0 +1,223 @@
+Name
+
+    ARB_indirect_parameters
+
+Name Strings
+
+    GL_ARB_indirect_parameters
+
+Contact
+
+    Graham Sellers (graham.sellers 'at' amd.com)
+
+Contributors
+
+    ???
+
+Notice
+
+    Copyright (c) 2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 3, 2013.
+    Ratified by the Khronos Board of Promoters on July 19, 2013.
+
+Version
+
+    Last Modified Date: 11 November 2020
+    Revision: 5
+
+Number
+
+    ARB Extension #154
+
+Dependencies
+
+    OpenGL 4.2 is required.
+
+    This extension is written against Version 4.3 of the Core Profile OpenGL
+    Specification, dated February 14, 2013 and Version 4.30 of the OpenGL
+    Shading Language Specification, dated February 7, 2013.
+
+Overview
+
+        OpenGL 4.3 (with the introduction of the GL_ARB_multi_draw_indirect
+    extension) enhanced the ability of OpenGL to allow a large sets of
+    parameters for indirect draws (introduced with OpenGL 4.0) into a buffer
+    object and dispatch the entire list with one API call. This allows, for
+    example, a shader (such as a compute shader via shader storage buffers,
+    or a geometry shader via transform feedback) to produce lists of draw
+    commands that can then be consumed by OpenGL without a server-client
+    round trip. However, when a variable and potentially unknown number of
+    draws are produced by such a shader, it becomes difficult to know how
+    many draws are in the output array(s). Applications must resort to
+    techniques such as transform feedback primitive queries, or mapping
+    buffers containing the content of atomic counters, which can cause stalls
+    or bubbles in the OpenGL pipeline.
+
+        This extension introduces the concept of the "parameter buffer", which
+    is a target allowing buffers to store parameters for certain drawing
+    commands. Also in this extension, new variants of MultiDrawArraysIndirect
+    and MultiDrawElementsIndirect are introduced that source some of their
+    parameters from this buffer. Further commands could potentially be
+    introduced that source other parameters from a buffer.
+
+New Procedures and Functions
+
+        void MultiDrawArraysIndirectCountARB(enum mode,
+                                             const void *indirect,
+                                             intptr drawcount,
+                                             sizei maxdrawcount,
+                                             sizei stride);
+
+        void MultiDrawElementsIndirectCountARB(enum mode,
+                                               enum type,
+                                               const void *indirect,
+                                               intptr drawcount,
+                                               sizei maxdrawcount,
+                                               sizei stride);
+
+New Tokens
+
+    Accepted by the <target> parameters of BindBuffer, BufferData,
+    BufferSubData, MapBuffer, UnmapBuffer, GetBufferSubData,
+    GetBufferPointerv, MapBufferRange, FlushMappedBufferRange,
+    GetBufferParameteriv, and CopyBufferSubData:
+
+        PARAMETER_BUFFER_ARB                                    0x80EE
+
+    Accepted by the <value> parameter of GetIntegerv, GetBooleanv, GetFloatv,
+    and GetDoublev:
+
+        PARAMETER_BUFFER_BINDING_ARB                            0x80EF
+
+Additions to Chapter 6 of the OpenGL 4.3 (Core Profile) Specification
+(Drawing Commands Using Vertex Arrays)
+
+    Modifications to Section 6.1 "Creating and Binding Buffer Objects"
+
+    Add to Table 6.1: Buffer object binding targets:
+
+    Target name            Purpose               Described in section(s)
+    --------------------    ---------------       ------------------------
+    PARAMETER_BUFFER_ARB   draw parameters       10.5
+
+Additions to Chapter 7 of the OpenGL 4.3 (Core Profile) Specification
+(Programs and Shader)
+
+    Modifications to Section 7.12.2 "Shader Memory Access Synchronization"
+
+    Replace the bullet point describing COMMAND_BARRIER_BIT with
+
+        - COMMAND_BARRIER_BIT:  Command data sourced from buffer objects by
+          Draw*Indirect, MultiDraw*IndirectCount, and DispatchComputeIndirect
+          commands after the barrier will reflect data written by shaders
+          prior to the barrier.  The buffer objects affected by this bit
+          are derived from the DRAW_INDIRECT_BUFFER, DISPATCH_INDIRECT_BUFFER,
+          and PARAMETER_BUFFER_ARB bindings.
+
+Additions to Chapter 10 of the OpenGL 4.3 (Core Profile) Specification
+(Drawing Commands Using Vertex Arrays)
+
+    Add to Section 10.5, "Drawing Commands Using Vertex Arrays", after the
+    introduction of MultiDrawArraysIndirect, p.311:
+
+    The command
+
+        void MultiDrawArraysIndirectCountARB(enum mode,
+                                             const void *indirect,
+                                             intptr drawcount,
+                                             sizei maxdrawcount,
+                                             sizei stride);
+
+    behaves similarly to MultiDrawArraysIndirect, except that <drawcount>
+    defines an offset (in bytes) into the buffer object bound to the
+    PARAMETER_BUFFER_ARB binding point at which a single <sizei> typed value
+    is stored, which contains the draw count. <maxdrawcount> specifies the
+    maximum number of draws that are expected to be stored in the buffer.
+    If the value stored at <drawcount> into the buffer is greater than
+    <maxdrawcount>, an implementation stop processing draws after
+    <maxdrawcount> parameter sets. <drawcount> must be a multiple of four.
+
+    Add to Section 10.5, "Drawing Commands Using Vertex Arrays", after the
+    introduction of MultiDrawElementsIndirect, p.316:
+
+    The command
+
+        void MultiDrawElementsIndirectCountARB(enum mode,
+                                               enum type,
+                                               const void *indirect,
+                                               intptr drawcount,
+                                               sizei maxdrawcount,
+                                               sizei stride);
+
+    behaves similarly to MultiDrawElementsIndirect, except that <drawcount>
+    defines an offset (in bytes) into the buffer object bound to the
+    PARAMETER_BUFFER_ARB binding point at which a single <sizei> typed value
+    is stored, which contains the draw count. <maxdrawcount> specifies the
+    maximum number of draws that are expected to be stored in the buffer.
+    If the value stored at <drawcount> into the buffer is greater than
+    <maxdrawcount>, an implementation stop processing draws after
+    <maxdrawcount> parameter sets. <drawcount> must be a multiple of four.
+
+Errors
+
+    INVALID_OPERATION is generated by MultiDrawArraysIndirectCountARB or
+    MultiDrawElementsIndirectCountARB if no buffer is bound to the
+    PARAMETER_BUFFER_ARB binding point.
+
+    INVALID_VALUE is generated by MultiDrawArraysIndirectCountARB or
+    MultiDrawElementsIndirectCountARB if <drawcount> is not a multiple of
+    four.
+
+    INVALID_OPERATION is generated by MultiDrawArraysIndirectCountARB or
+    MultiDrawElementsIndirectCountARB if reading a <sizei> typed value
+    from the buffer bound to the PARAMETER_BUFFER_ARB target at the offset
+    specified by <drawcount> would result in an out-of-bounds access.
+
+New State
+
+    Append to Table 23.5, "Vertex Array Data (not in Vertex Array objects)"
+
+    +-------------------------------+------+--------------+---------+-----------------------------------+----------+
+    | Get Value                     |      | Get          | Initial |                                   |          |
+    | Value                         | Type | Command      | Value   | Description                       | Sec      |
+    +-------------------------------+------+--------------+---------+-----------------------------------+--------- +
+    | PARAMETER_BUFFER_BINDING_ARB  | Z+   | GetIntegerv  | 0       | Indirect parameter buffer binding | 13.5     |
+    +-------------------------------+------+--------------+---------+-----------------------------------+--------- +
+
+Issues
+
+    1) Is this extension named appropriately? Is it too generic?
+
+       DISCUSSION: We'd rather lean towards the generic and be forward-looking.
+       It's conceivable we could add further commands that source some or all
+       of their parameters from a buffer object in the future.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  -----------------------------------------
+
+     1    05/16/2013  gsellers  Initial draft based on multi_draw_indirect2
+     2    05/29/2013  gsellers  Rename MultiDrawArraysIndirectCount and
+                                MultiDrawElementsIndirectCount.
+                                Add issue (1)
+     3    06/20/2013  pdaniell  Modify the <indirect> parameter type to
+                                const void *.
+     4    10/23/2017  nhaehnle  Add COMMAND_BARRIER_BIT language.
+     5    11/11/2020  pdaniell  Fix the type of the maxdrawcount parameter
+                                of MultiDrawArraysIndirectCountARB to be
+                                sizei making it consistent in the extension.

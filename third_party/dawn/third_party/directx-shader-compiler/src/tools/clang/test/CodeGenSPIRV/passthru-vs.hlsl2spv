@@ -1,0 +1,87 @@
+// RUN: %dxc -T vs_6_0 -E main %s -O0 -spirv | FileCheck %s
+
+struct PSInput {
+  float4 position : SV_Position;
+  float4 color : COLOR;
+};
+
+PSInput main(float4 position: POSITION, float4 color: COLOR) {
+  PSInput result;
+  result.position = position;
+  result.color = color;
+  return result;
+}
+
+// CHECK: ; SPIR-V
+// CHECK-NEXT:; Version: 1.0
+// CHECK-NEXT:; Generator: Google spiregg; 0
+// CHECK-NEXT:; Bound: 37
+// CHECK-NEXT:; Schema: 0
+// CHECK-NEXT:               OpCapability Shader
+// CHECK-NEXT:               OpMemoryModel Logical GLSL450
+// CHECK-NEXT:               OpEntryPoint Vertex %main "main" %in_var_POSITION %in_var_COLOR %gl_Position %out_var_COLOR
+// CHECK-NEXT:               OpSource HLSL 600
+// CHECK-NEXT:               OpName %in_var_POSITION "in.var.POSITION"
+// CHECK-NEXT:               OpName %in_var_COLOR "in.var.COLOR"
+// CHECK-NEXT:               OpName %out_var_COLOR "out.var.COLOR"
+// CHECK-NEXT:               OpName %main "main"
+// CHECK-NEXT:               OpName %param_var_position "param.var.position"
+// CHECK-NEXT:               OpName %param_var_color "param.var.color"
+// CHECK-NEXT:               OpName %PSInput "PSInput"
+// CHECK-NEXT:               OpMemberName %PSInput 0 "position"
+// CHECK-NEXT:               OpMemberName %PSInput 1 "color"
+// CHECK-NEXT:               OpName %src_main "src.main"
+// CHECK-NEXT:               OpName %position "position"
+// CHECK-NEXT:               OpName %color "color"
+// CHECK-NEXT:               OpName %bb_entry "bb.entry"
+// CHECK-NEXT:               OpName %result "result"
+// CHECK-NEXT:               OpDecorate %gl_Position BuiltIn Position
+// CHECK-NEXT:               OpDecorate %in_var_POSITION Location 0
+// CHECK-NEXT:               OpDecorate %in_var_COLOR Location 1
+// CHECK-NEXT:               OpDecorate %out_var_COLOR Location 0
+// CHECK-NEXT:        %int = OpTypeInt 32 1
+// CHECK-NEXT:      %int_0 = OpConstant %int 0
+// CHECK-NEXT:      %int_1 = OpConstant %int 1
+// CHECK-NEXT:      %float = OpTypeFloat 32
+// CHECK-NEXT:    %v4float = OpTypeVector %float 4
+// CHECK-NEXT:%_ptr_Input_v4float = OpTypePointer Input %v4float
+// CHECK-NEXT:%_ptr_Output_v4float = OpTypePointer Output %v4float
+// CHECK-NEXT:       %void = OpTypeVoid
+// CHECK-NEXT:         %14 = OpTypeFunction %void
+// CHECK-NEXT:%_ptr_Function_v4float = OpTypePointer Function %v4float
+// CHECK-NEXT:    %PSInput = OpTypeStruct %v4float %v4float
+// CHECK-NEXT:         %26 = OpTypeFunction %PSInput %_ptr_Function_v4float %_ptr_Function_v4float
+// CHECK-NEXT:%_ptr_Function_PSInput = OpTypePointer Function %PSInput
+// CHECK-NEXT:%in_var_POSITION = OpVariable %_ptr_Input_v4float Input
+// CHECK-NEXT:%in_var_COLOR = OpVariable %_ptr_Input_v4float Input
+// CHECK-NEXT:%gl_Position = OpVariable %_ptr_Output_v4float Output
+// CHECK-NEXT:%out_var_COLOR = OpVariable %_ptr_Output_v4float Output
+// CHECK-NEXT:       %main = OpFunction %void None %14
+// CHECK-NEXT:         %15 = OpLabel
+// CHECK-NEXT:%param_var_position = OpVariable %_ptr_Function_v4float Function
+// CHECK-NEXT:%param_var_color = OpVariable %_ptr_Function_v4float Function
+// CHECK-NEXT:         %19 = OpLoad %v4float %in_var_POSITION
+// CHECK-NEXT:               OpStore %param_var_position %19
+// CHECK-NEXT:         %20 = OpLoad %v4float %in_var_COLOR
+// CHECK-NEXT:               OpStore %param_var_color %20
+// CHECK-NEXT:         %22 = OpFunctionCall %PSInput %src_main %param_var_position %param_var_color
+// CHECK-NEXT:         %24 = OpCompositeExtract %v4float %22 0
+// CHECK-NEXT:               OpStore %gl_Position %24
+// CHECK-NEXT:         %25 = OpCompositeExtract %v4float %22 1
+// CHECK-NEXT:               OpStore %out_var_COLOR %25
+// CHECK-NEXT:               OpReturn
+// CHECK-NEXT:               OpFunctionEnd
+// CHECK-NEXT:   %src_main = OpFunction %PSInput None %26
+// CHECK-NEXT:   %position = OpFunctionParameter %_ptr_Function_v4float
+// CHECK-NEXT:      %color = OpFunctionParameter %_ptr_Function_v4float
+// CHECK-NEXT:   %bb_entry = OpLabel
+// CHECK-NEXT:     %result = OpVariable %_ptr_Function_PSInput Function
+// CHECK-NEXT:         %32 = OpLoad %v4float %position
+// CHECK-NEXT:         %33 = OpAccessChain %_ptr_Function_v4float %result %int_0
+// CHECK-NEXT:               OpStore %33 %32
+// CHECK-NEXT:         %34 = OpLoad %v4float %color
+// CHECK-NEXT:         %35 = OpAccessChain %_ptr_Function_v4float %result %int_1
+// CHECK-NEXT:               OpStore %35 %34
+// CHECK-NEXT:         %36 = OpLoad %PSInput %result
+// CHECK-NEXT:               OpReturnValue %36
+// CHECK-NEXT:               OpFunctionEnd

@@ -1,0 +1,113 @@
+# makefile for libpng on HP-UX using GCC with the HP ANSI/C linker.
+# Copyright (C) 2018-2025 Cosmin Truta
+# Copyright (C) 2002, 2006-2008, 2010-2014 Glenn Randers-Pehrson
+# Copyright (C) 2001, Laurent faillie
+# Copyright (C) 1998, 1999 Greg Roelofs
+# Copyright (C) 1996, 1997 Andreas Dilger
+#
+# This code is released under the libpng license.
+# For conditions of distribution and use, see the disclaimer
+# and license in png.h
+
+# Library name:
+LIBNAME=libpng16
+PNGMAJ=16
+
+# Shared library names:
+LIBSO=$(LIBNAME).sl
+LIBSOMAJ=$(LIBNAME).sl.$(PNGMAJ)
+
+# Utilities:
+CC=gcc
+AR=ar
+RANLIB=ranlib
+LD=ld
+LN_SF=ln -sf
+CP=cp
+RM_F=/bin/rm -f
+
+# Where the zlib library and include files are located
+ZLIBLIB=/opt/zlib/lib
+ZLIBINC=/opt/zlib/include
+
+# Note that if you plan to build a libpng shared library, zlib must also
+# be a shared library, which zlib's configure does not do.  After running
+# zlib's configure, edit the appropriate lines of makefile to read:
+#   CFLAGS=-O1 -DHAVE_UNISTD -DUSE_MAP -fPIC \
+#   LDSHARED=ld -b
+#   SHAREDLIB=libz.sl
+
+CPPFLAGS=-I$(ZLIBINC) # -DPNG_DEBUG=5
+CFLAGS=-O3 -funroll-loops # -g
+ARFLAGS=rc
+#LDFLAGS=-L. -Wl,-rpath,. -L$(ZLIBLIB) -Wl,-rpath,$(ZLIBLIB) -lpng16 -lz -lm # -g
+LDFLAGS=-L. -L$(ZLIBLIB) -lpng16 -lz -lm # -g
+
+OBJS = png.o pngerror.o pngget.o pngmem.o pngpread.o \
+       pngread.o pngrio.o pngrtran.o pngrutil.o pngset.o \
+       pngtrans.o pngwio.o pngwrite.o pngwtran.o pngwutil.o
+
+OBJSDLL = $(OBJS:.o=.pic.o)
+
+.SUFFIXES:      .c .o .pic.o
+
+.c.o:
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $*.c
+
+.c.pic.o:
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -fPIC -o $@ $*.c
+
+all: libpng.a $(LIBSO) pngtest
+
+libpng.a: $(OBJS)
+	$(AR) $(ARFLAGS) $@ $(OBJS)
+	$(RANLIB) $@
+
+$(LIBSO): $(LIBSOMAJ)
+	$(LN_SF) $(LIBSOMAJ) $(LIBSO)
+
+$(LIBSOMAJ): $(OBJSDLL)
+	$(LD) -b +s \
+	+h $(LIBSOMAJ) -o $(LIBSOMAJ) $(OBJSDLL)
+
+pngtest: pngtest.o $(LIBSO)
+	$(CC) -o pngtest $(CFLAGS) pngtest.o $(LDFLAGS)
+
+test: pngtest
+	./pngtest
+
+install:
+	@echo "The $@ target is no longer supported by this makefile."
+	@false
+
+install-static:
+	@echo "The $@ target is no longer supported by this makefile."
+	@false
+
+install-shared:
+	@echo "The $@ target is no longer supported by this makefile."
+	@false
+
+clean:
+	$(RM_F) *.o libpng.a pngtest pngout.png
+	$(RM_F) $(LIBSO) $(LIBSOMAJ)* pnglibconf.h
+
+# DO NOT DELETE THIS LINE -- make depend depends on it.
+
+png.o      png.pic.o:      png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngerror.o pngerror.pic.o: png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngget.o   pngget.pic.o:   png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngmem.o   pngmem.pic.o:   png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngpread.o pngpread.pic.o: png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngread.o  pngread.pic.o:  png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngrio.o   pngrio.pic.o:   png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngrtran.o pngrtran.pic.o: png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngrutil.o pngrutil.pic.o: png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngset.o   pngset.pic.o:   png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngtrans.o pngtrans.pic.o: png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngwio.o   pngwio.pic.o:   png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngwrite.o pngwrite.pic.o: png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngwtran.o pngwtran.pic.o: png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngwutil.o pngwutil.pic.o: png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+
+pngtest.o: png.h pngconf.h pnglibconf.h

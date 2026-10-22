@@ -1,0 +1,96 @@
+# makefile for libpng using gcc (generic, static library)
+# Copyright (C) 2000, 2014, 2019-2025 Cosmin Truta
+# Copyright (C) 2008, 2014 Glenn Randers-Pehrson
+# Copyright (C) 1995 Guy Eric Schalnat, Group 42, Inc.
+#
+# This code is released under the libpng license.
+# For conditions of distribution and use, see the disclaimer
+# and license in png.h
+
+# Location of the zlib library and include files
+ZLIBINC = ../zlib
+ZLIBLIB = ../zlib
+
+# Compiler, linker, lib and other tools
+CC = gcc
+LD = $(CC)
+AR = ar
+RANLIB = ranlib
+CP = cp
+RM_F = rm -f
+
+# Compiler and linker flags
+NOHWOPT = -DPNG_ARM_NEON_OPT=0 -DPNG_MIPS_MSA_OPT=0 \
+          -DPNG_POWERPC_VSX_OPT=0 -DPNG_INTEL_SSE_OPT=0
+STDC = -pedantic-errors # -std=c99
+WARN = -Wall -Wextra -Wundef
+WARNMORE = -Wcast-align -Wconversion -Wshadow -Wpointer-arith -Wwrite-strings \
+           -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes
+LOCAL_CPPFLAGS = $(NOHWOPT)
+CPPFLAGS = -I$(ZLIBINC) # -DPNG_DEBUG=5
+ALL_CPPFLAGS = $(LOCAL_CPPFLAGS) $(CPPFLAGS)
+LOCAL_CFLAGS = $(STDC) $(WARN) # $(WARNMORE)
+CFLAGS = -O2 # -g
+ALL_CFLAGS = $(LOCAL_CFLAGS) $(CFLAGS)
+ARFLAGS = rc
+LDFLAGS = -L$(ZLIBLIB) # -g
+LIBS = -lz -lm
+
+# File extensions
+EXEEXT =
+
+# Pre-built configuration
+# See scripts/pnglibconf.mak for more options
+PNGLIBCONF_H_PREBUILT = scripts/pnglibconf.h.prebuilt
+
+# File lists
+OBJS = png.o pngerror.o pngget.o pngmem.o pngpread.o \
+       pngread.o pngrio.o pngrtran.o pngrutil.o pngset.o \
+       pngtrans.o pngwio.o pngwrite.o pngwtran.o pngwutil.o
+
+# Targets
+all: static
+
+pnglibconf.h: $(PNGLIBCONF_H_PREBUILT)
+	$(CP) $(PNGLIBCONF_H_PREBUILT) $@
+
+.c.o:
+	$(CC) -c $(ALL_CPPFLAGS) $(ALL_CFLAGS) -o $@ $*.c
+
+static: libpng.a pngtest$(EXEEXT)
+
+shared:
+	@echo This is a generic makefile that cannot create shared libraries.
+	@echo Please use a configuration that is specific to your platform.
+	@false
+
+libpng.a: $(OBJS)
+	$(AR) $(ARFLAGS) $@ $(OBJS)
+	$(RANLIB) $@
+
+test: pngtest$(EXEEXT)
+	./pngtest$(EXEEXT)
+
+pngtest$(EXEEXT): pngtest.o libpng.a
+	$(LD) $(LDFLAGS) -o $@ pngtest.o libpng.a $(LIBS)
+
+clean:
+	$(RM_F) *.o libpng.a pngtest$(EXEEXT) pngout.png pnglibconf.h
+
+png.o:      png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngerror.o: png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngget.o:   png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngmem.o:   png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngpread.o: png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngread.o:  png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngrio.o:   png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngrtran.o: png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngrutil.o: png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngset.o:   png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngtrans.o: png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngwio.o:   png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngwrite.o: png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngwtran.o: png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+pngwutil.o: png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+
+pngtest.o:  png.h pngconf.h pnglibconf.h

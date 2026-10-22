@@ -1,0 +1,41 @@
+#version 450
+layout(local_size_x = 1) in;
+
+layout(binding = 0, std430) buffer SSBOUint
+{
+	uint a, b, c, d;
+	uvec2 a2, b2, c2, d2;
+	uvec3 a3, b3, c3, d3;
+	uvec4 a4, b4, c4, d4;
+} u;
+
+layout(binding = 1, std430) buffer SSBOInt
+{
+	int a, b, c, d;
+	ivec2 a2, b2, c2, d2;
+	ivec3 a3, b3, c3, d3;
+	ivec4 a4, b4, c4, d4;
+} i;
+
+void main()
+{
+	u.c = uaddCarry(u.a, u.b, u.d);
+	u.c2 = uaddCarry(u.a2, u.b2, u.d2);
+	u.c3 = uaddCarry(u.a3, u.b3, u.d3);
+	u.c4 = uaddCarry(u.a4, u.b4, u.d4);
+
+	u.c = usubBorrow(u.a, u.b, u.d);
+	u.c2 = usubBorrow(u.a2, u.b2, u.d2);
+	u.c3 = usubBorrow(u.a3, u.b3, u.d3);
+	u.c4 = usubBorrow(u.a4, u.b4, u.d4);
+
+	umulExtended(u.a, u.b, u.c, u.d);
+	umulExtended(u.a2, u.b2, u.c2, u.d2);
+	umulExtended(u.a3, u.b3, u.c3, u.d3);
+	umulExtended(u.a4, u.b4, u.c4, u.d4);
+
+	imulExtended(i.a, i.b, i.c, i.d);
+	imulExtended(i.a2, i.b2, i.c2, i.d2);
+	imulExtended(i.a3, i.b3, i.c3, i.d3);
+	imulExtended(i.a4, i.b4, i.c4, i.d4);
+}

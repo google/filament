@@ -1,0 +1,19 @@
+# -----------------------------------------------------------------------------
+# ShaderCompiler DXC Integration Pipeline Entry Point
+# ----------------------------------------------------------------------------
+
+trigger: none
+
+name: Integration.Github-to-DXC.$(date:yy)-$(date:MM)-$(date:dd).$(rev:rr)
+
+resources:
+  repositories:
+    - repository: XboxDXC
+      type: git
+      name: Xbox/Xbox.ShaderCompiler.DXC
+      ref: refs/heads/Xbox
+
+extends:
+  template: azure-pipelines\templates\Integration.GitHub-to-DXC.template.yml@XboxDXC
+  parameters:
+    StatusEmail: $(StatusEmail)

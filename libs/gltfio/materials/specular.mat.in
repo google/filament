@@ -1,0 +1,168 @@
+material {
+    name : specular_ubershader,
+    requires : [ uv0, uv1, color ],
+    shadingModel : lit,
+    blending : ${BLENDING},
+    doubleSided : ${DOUBLESIDED},
+    transparency : ${TRANSPARENCY},
+    flipUV : false,
+    specularAmbientOcclusion : simple,
+    specularAntiAliasing : true,
+    clearCoatIorChange : false,
+    reflections: screenspace,
+    parameters : [
+
+        // Base Color
+        { type : int, name : baseColorIndex },
+        { type : float4, name : baseColorFactor },
+        { type : sampler2d, name : baseColorMap },
+        { type : mat3, name : baseColorUvMatrix, precision: high },
+
+        // Metallic-Roughness Map
+        { type : int, name : metallicRoughnessIndex },
+        { type : float, name : metallicFactor },
+        { type : float, name : roughnessFactor },
+        { type : sampler2d, name : metallicRoughnessMap },
+        { type : mat3, name : metallicRoughnessUvMatrix, precision: high },
+
+        // Normal Map
+        { type : int, name : normalIndex },
+        { type : float, name : normalScale },
+        { type : sampler2d, name : normalMap },
+        { type : mat3, name : normalUvMatrix, precision: high },
+
+        // Ambient Occlusion
+        { type : int, name : aoIndex },
+        { type : float, name : aoStrength },
+        { type : sampler2d, name : occlusionMap },
+        { type : mat3, name : occlusionUvMatrix, precision: high },
+
+        // Emissive Map
+        { type : int, name : emissiveIndex },
+        { type : float3, name : emissiveFactor },
+        { type : float, name : emissiveStrength },
+        { type : sampler2d, name : emissiveMap },
+        { type : mat3, name : emissiveUvMatrix, precision: high },
+
+        // Clear coat, we drop texture support for clear coat due to 8 texture limits.
+        { type : float, name : clearCoatFactor },
+        { type : float, name : clearCoatRoughnessFactor },
+        { type : int, name : clearCoatIndex },
+        { type : sampler2d, name : clearCoatMap },
+        { type : mat3, name : clearCoatUvMatrix, precision: high },
+        { type : int, name : clearCoatRoughnessIndex },
+        { type : mat3, name : clearCoatRoughnessUvMatrix, precision: high },
+        { type : int, name : clearCoatNormalIndex },
+        { type : mat3, name : clearCoatNormalUvMatrix, precision: high },
+        { type : float, name : clearCoatNormalScale },
+
+        // KHR_materials_specular
+        { type : float, name : specularStrength },
+        { type : float3, name : specularColorFactor },
+        { type : int, name : specularIndex },
+        { type : sampler2d, name : specularMap },
+        { type : mat3, name : specularUvMatrix, precision: high },
+        { type : int, name : specularColorIndex },
+        { type : sampler2d, name : specularColorMap },
+        { type : mat3, name : specularColorUvMatrix, precision: high },
+
+        // IOR
+        { type : float, name : ior }
+
+        ${CUSTOM_PARAMS}
+    ],
+}
+
+vertex {
+void materialVertex(inout MaterialVertexInputs material) {
+    ${CUSTOM_VERTEX}
+}
+}
+
+fragment {
+void material(inout MaterialInputs material) {
+    highp float2 uvs[2];
+    uvs[0] = getUV0();
+    uvs[1] = getUV1();
+
+    if (materialParams.normalIndex > -1) {
+        highp float2 uv = uvs[materialParams.normalIndex];
+        uv = (vec3(uv, 1.0) * materialParams.normalUvMatrix).xy;
+        material.normal = texture(materialParams_normalMap, uv).xyz * 2.0 - 1.0;
+        material.normal.xy *= materialParams.normalScale;
+    }
+
+    prepareMaterial(material);
+    material.baseColor = materialParams.baseColorFactor;
+
+    if (materialParams.baseColorIndex > -1) {
+        highp float2 uv = uvs[materialParams.baseColorIndex];
+        uv = (vec3(uv, 1.0) * materialParams.baseColorUvMatrix).xy;
+        material.baseColor *= texture(materialParams_baseColorMap, uv);
+    }
+
+#if defined(BLEND_MODE_TRANSPARENT)
+    material.baseColor.rgb *= material.baseColor.a;
+#endif
+
+    material.baseColor *= getColor();
+
+    material.roughness = materialParams.roughnessFactor;
+    material.metallic = materialParams.metallicFactor;
+    material.ior = materialParams.ior;
+
+    material.emissive = vec4(materialParams.emissiveStrength *
+                             materialParams.emissiveFactor.rgb, 0.0);
+
+    // KHR_materials_clearcoat forbids clear coat from
+    // being applied in the specular/glossiness model
+    material.clearCoat = materialParams.clearCoatFactor;
+    material.clearCoatRoughness = materialParams.clearCoatRoughnessFactor;
+
+    if (materialParams.clearCoatIndex > -1) {
+        highp float2 uv = uvs[materialParams.clearCoatIndex];
+        uv = (vec3(uv, 1.0) * materialParams.clearCoatUvMatrix).xy;
+        material.clearCoat *= texture(materialParams_clearCoatMap, uv).r;
+    }
+
+    material.specularFactor = materialParams.specularStrength;
+    material.specularColorFactor = materialParams.specularColorFactor;
+
+    if (materialParams.specularIndex > -1) {
+        highp float2 uv = uvs[materialParams.specularIndex];
+        uv = (vec3(uv, 1.0) * materialParams.specularUvMatrix).xy;
+        material.specularFactor *= texture(materialParams_specularMap, uv).a;
+    }
+
+    if (materialParams.specularColorIndex > -1) {
+        highp float2 uv = uvs[materialParams.specularColorIndex];
+        uv = (vec3(uv, 1.0) * materialParams.specularColorUvMatrix).xy;
+        vec4 sc = texture(materialParams_specularColorMap, uv);
+        material.specularColorFactor.r *= sc.r;
+        material.specularColorFactor.g *= sc.g;
+        material.specularColorFactor.b *= sc.b;
+    }
+
+    if (materialParams.metallicRoughnessIndex > -1) {
+        highp float2 uv = uvs[materialParams.metallicRoughnessIndex];
+        uv = (vec3(uv, 1.0) * materialParams.metallicRoughnessUvMatrix).xy;
+        vec4 mr = texture(materialParams_metallicRoughnessMap, uv);
+        material.roughness *= mr.g;
+        material.metallic *= mr.b;
+    }
+
+    if (materialParams.aoIndex > -1) {
+        highp float2 uv = uvs[materialParams.aoIndex];
+        uv = (vec3(uv, 1.0) * materialParams.occlusionUvMatrix).xy;
+        float occlusion = texture(materialParams_occlusionMap, uv).r;
+        material.ambientOcclusion = 1.0 + materialParams.aoStrength * (occlusion - 1.0);
+    }
+    if (materialParams.emissiveIndex > -1) {
+        highp float2 uv = uvs[materialParams.emissiveIndex];
+        uv = (vec3(uv, 1.0) * materialParams.emissiveUvMatrix).xy;
+        material.emissive.rgb *= texture(materialParams_emissiveMap, uv).rgb;
+    }
+
+    ${CUSTOM_FRAGMENT}
+}
+}

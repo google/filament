@@ -1,0 +1,6 @@
+
+IrrXML
+Downloaded September 2008
+
+- fixed a minor compiler warning (vs 2005, shift too large)
+- fixed an issue regarding wchar_t/unsigned short

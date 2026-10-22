@@ -1,0 +1,16 @@
+#version 450
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 1) in;
+
+const int indexable[4] = int[](0, 1, 2, 3);
+const int indexable_1[4] = int[](4, 5, 6, 7);
+
+layout(binding = 0, std430) buffer SSBO
+{
+    int values[];
+} _8;
+
+void main()
+{
+    _8.values[gl_GlobalInvocationID.x] = indexable[gl_LocalInvocationID.x] + indexable_1[gl_LocalInvocationID.y];
+}
+

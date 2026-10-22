@@ -1,0 +1,204 @@
+/*
+ * Copyright (C) 2025 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
+#define TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
+
+#include "WebGPURenderTarget.h"
+#include "webgpu/WebGPUBlitter.h"
+#include "webgpu/WebGPUConstants.h"
+#include "webgpu/WebGPUMemoryMappedBuffer.h"
+#include "webgpu/WebGPUMsaaTextureResolver.h"
+#include "webgpu/WebGPUPipelineCache.h"
+#include "webgpu/WebGPUPipelineLayoutCache.h"
+#include "webgpu/WebGPUQueueManager.h"
+#include "webgpu/WebGPURenderPassMipmapGenerator.h"
+#include "webgpu/WebGPUStagePool.h"
+#include "webgpu/utils/AsyncTaskCounter.h"
+#include <backend/platforms/WebGPUPlatform.h>
+
+#include "DriverBase.h"
+#include "JobQueue.h"
+#include "private/backend/Dispatcher.h"
+#include "private/backend/Driver.h"
+#include "private/backend/HandleAllocator.h"
+#include <backend/DriverEnums.h>
+
+#include <utils/FixedCapacityVector.h>
+#include <utils/compiler.h>
+
+#include "SpdMipmapGenerator/SpdMipmapGenerator.h"
+#include <webgpu/webgpu_cpp.h>
+
+#include <cstdint>
+#include <memory>
+
+#ifndef FILAMENT_WEBGPU_HANDLE_ARENA_SIZE_IN_MB
+#define FILAMENT_WEBGPU_HANDLE_ARENA_SIZE_IN_MB 8
+#endif
+
+namespace filament::backend {
+
+class WebGPUProgram;
+class WebGPUSwapChain;
+class WebGPUQueueManager;
+
+/**
+ * Implements the private backend driver API for WebGPU specifically (that API is essentially
+ * expressed in private/backend/DriverAPI.inc)
+ *
+ * It manages all the WebGPU resources necessary to accomplish this.
+ */
+class WebGPUDriver final : public DriverBase {
+public:
+    ~WebGPUDriver() noexcept override;
+
+    [[nodiscard]] Dispatcher getDispatcher() const noexcept final;
+    [[nodiscard]] static Driver* create(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept;
+
+private:
+    WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept;
+    [[nodiscard]] ShaderModel getShaderModel() const noexcept final;
+    [[nodiscard]] utils::FixedCapacityVector<ShaderLanguage> getShaderLanguages(
+            ShaderLanguage preferredLanguage) const noexcept final;
+    [[nodiscard]] wgpu::Sampler makeSampler(SamplerParams const& params);
+    [[nodiscard]] static wgpu::AddressMode fWrapModeToWAddressMode(const filament::backend::SamplerWrapMode& fUsage);
+    void setDebugTag(HandleBase::HandleId handleId, utils::ImmutableCString&& tag);
+
+    void readTextureToBuffer(wgpu::Texture srcTexture, uint32_t level, uint32_t layer, uint32_t x,
+            uint32_t y, uint32_t width, uint32_t height, PixelBufferDescriptor&& p);
+
+    JobQueue* getJobQueue() const noexcept { return mJobQueue.get(); }
+    JobWorker* getJobWorker() const noexcept { return mJobWorker.get(); }
+
+    // Shared between each create*R and create*AsyncR pair, since the two only differ in the
+    // `asynchronous` flag and whether the completion callback is deferred (see
+    // deferCreationCompletionCallback).
+    void createVertexBufferCommon(Handle<HwVertexBuffer> vertexBufferHandle, uint32_t vertexCount,
+            Handle<HwVertexBufferInfo> vertexBufferInfoHandle, bool asynchronous,
+            utils::ImmutableCString&& tag);
+    void createIndexBufferCommon(Handle<HwIndexBuffer> indexBufferHandle, ElementType elementType,
+            uint32_t indexCount, bool asynchronous, utils::ImmutableCString&& tag);
+    void createBufferObjectCommon(Handle<HwBufferObject> bufferObjectHandle, uint32_t byteCount,
+            BufferObjectBinding bindingType, bool asynchronous, utils::ImmutableCString&& tag);
+    void createTextureCommon(Handle<HwTexture> textureHandle, SamplerType target, uint8_t levels,
+            TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
+            uint32_t depth, TextureUsage usage, bool asynchronous, utils::ImmutableCString&& tag);
+    void createTextureViewSwizzleCommon(Handle<HwTexture> textureHandle,
+            Handle<HwTexture> sourceTextureHandle, TextureSwizzle r, TextureSwizzle g,
+            TextureSwizzle b, TextureSwizzle a, utils::ImmutableCString&& tag);
+
+    // Shared by every create*AsyncR: pushes a job that does nothing but fire the completion
+    // callback, so it's correctly FIFO-ordered relative to other outstanding async calls.
+    void deferCreationCompletionCallback(CallbackHandler* handler, AsyncCallback callback,
+            void* user);
+
+    // The platform (e.g. OS) specific aspects of the WebGPU backend are strictly only
+    // handled in the WebGPUPlatform.
+    WebGPUPlatform& mPlatform;
+    wgpu::Adapter mAdapter = nullptr;
+    wgpu::Device mDevice = nullptr;
+    wgpu::Limits mDeviceLimits = {};
+    WebGPUQueueManager mQueueManager;
+    WebGPUStagePool mStagePool;
+    void* mNativeWindow = nullptr;
+    WebGPUSwapChain* mSwapChain = nullptr;
+    uint64_t mNextFakeHandle = 1;
+    wgpu::TextureView mSwapChainView = nullptr;
+    wgpu::RenderPassEncoder mRenderPassEncoder = nullptr;
+    WebGPURenderTarget* mDefaultRenderTarget = nullptr;
+    WebGPURenderTarget* mCurrentRenderTarget = nullptr;
+    WebGPUPipelineLayoutCache mPipelineLayoutCache;
+    WebGPUPipelineCache mPipelineCache;
+    WebGPURenderPassMipmapGenerator mRenderPassMipmapGenerator;
+    spd::MipmapGenerator mSpdComputePassMipmapGenerator;
+    WebGPUMsaaTextureResolver mMsaaTextureResolver{};
+    WebGPUBlitter mBlitter;
+    webgpuutils::AsyncTaskCounter mReadPixelMapsCounter{};
+    JobQueue::Ptr mJobQueue;
+    JobWorker::Ptr mJobWorker;
+
+    // readPixels MapAsync callbacks hold a weak reference to this token. Under Emscripten they are
+    // delivered spontaneously and can arrive after the driver is destroyed, in which case they
+    // must not touch it.
+    std::shared_ptr<bool> const mLifetimeToken{ std::make_shared<bool>(true) };
+
+    struct {
+        // For push constant
+        WebGPUProgram* program = nullptr;
+    } mPipelineState {};
+
+    struct DescriptorSetBindingInfo{
+        wgpu::BindGroup bindGroup;
+        size_t offsetCount;
+        backend::DescriptorSetOffsetArray offsets;
+    };
+    std::array<DescriptorSetBindingInfo,MAX_DESCRIPTOR_SET_COUNT> mCurrentDescriptorSets;
+
+    /*
+     * Driver interface
+     */
+    template<typename T>
+    friend class ConcreteDispatcher;
+
+#define DECL_DRIVER_API(methodName, paramsDecl, params)                                            \
+    UTILS_ALWAYS_INLINE inline void methodName(paramsDecl);
+
+#define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)                       \
+    RetType methodName(paramsDecl) override;
+
+#define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params)                            \
+    RetType methodName##S() noexcept override;                                                     \
+    UTILS_ALWAYS_INLINE inline void methodName##R(RetType, paramsDecl);
+
+#include "private/backend/DriverAPI.inc"
+
+    /*
+     * Memory management
+     */
+
+    HandleAllocatorWGPU mHandleAllocator;
+
+    template<typename D>
+    Handle<D> allocHandle() {
+        return mHandleAllocator.allocate<D>();
+    }
+
+    template<typename D, typename B, typename... ARGS>
+    D* constructHandle(Handle<B>& handle, ARGS&&... args) noexcept {
+        return mHandleAllocator.construct<D>(handle, std::forward<ARGS>(args)...);
+    }
+
+    template<typename D, typename B, typename... ARGS>
+    Handle<B> allocAndConstructHandle(ARGS&&... args) {
+        return mHandleAllocator.allocateAndConstruct<D>(std::forward<ARGS>(args)...);
+    }
+
+    template<typename D, typename B>
+    D* handleCast(Handle<B> handle) noexcept {
+        return mHandleAllocator.handle_cast<D*>(handle);
+    }
+
+    template<typename D, typename B>
+    void destructHandle(Handle<B>& handle) noexcept {
+        auto* p = mHandleAllocator.handle_cast<D*>(handle);
+        mHandleAllocator.deallocate(handle, p);
+    }
+};
+
+}// namespace filament::backend
+
+#endif // TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H

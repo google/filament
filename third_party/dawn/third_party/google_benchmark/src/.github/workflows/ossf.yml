@@ -1,0 +1,27 @@
+name: OSSF Scorecard Weekly
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # Runs every Sunday at midnight UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ossf-scorecard:
+    # To write a badge
+    permissions:
+      id-token: write
+      
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run analysis
+        uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a # v2.4.3
+        with:
+          publish_results: true
+          results_file: ossf_scorecard.json
+          results_format: json

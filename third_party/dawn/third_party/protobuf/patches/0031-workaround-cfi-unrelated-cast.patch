@@ -1,0 +1,72 @@
+diff --git a/src/google/protobuf/descriptor.cc b/src/google/protobuf/descriptor.cc
+index 9e093c9..9c936d9 100644
+--- a/src/google/protobuf/descriptor.cc
++++ b/src/google/protobuf/descriptor.cc
+@@ -347,22 +347,16 @@ class FlatAllocation {
+     return ends_.template Get<U>();
+   }
+ 
+-  // Avoid the reinterpret_cast if the array is empty.
+-  // Clang's Control Flow Integrity does not like the cast pointing to memory
+-  // that is not yet initialized to be of that type.
+-  // (from -fsanitize=cfi-unrelated-cast)
+   template <typename U>
++  PROTOBUF_NO_SANITIZE("cfi-unrelated-cast", "vptr")
+   U* Begin() const {
+-    int begin = BeginOffset<U>(), end = EndOffset<U>();
+-    if (begin == end) return nullptr;
+-    return reinterpret_cast<U*>(data() + begin);
++    return reinterpret_cast<U*>(data() + BeginOffset<U>());
+   }
+ 
+   template <typename U>
++  PROTOBUF_NO_SANITIZE("cfi-unrelated-cast", "vptr")
+   U* End() const {
+-    int begin = BeginOffset<U>(), end = EndOffset<U>();
+-    if (begin == end) return nullptr;
+-    return reinterpret_cast<U*>(data() + end);
++    return reinterpret_cast<U*>(data() + EndOffset<U>());
+   }
+ 
+   template <typename U>
+diff --git a/src/google/protobuf/map.h b/src/google/protobuf/map.h
+index d384d2a..659f2c8 100644
+--- a/src/google/protobuf/map.h
++++ b/src/google/protobuf/map.h
+@@ -321,6 +321,7 @@ class PROTOBUF_EXPORT UntypedMapBase {
+   UntypedMapBase& operator=(const UntypedMapBase&) = delete;
+ 
+   template <typename T>
++  PROTOBUF_NO_SANITIZE("cfi-unrelated-cast", "vptr")
+   T* GetKey(NodeBase* node) const {
+     // Debug check that `T` matches what we expect from the type info.
+     ABSL_DCHECK_EQ(static_cast<int>(StaticTypeKind<T>()),
+@@ -333,6 +334,7 @@ class PROTOBUF_EXPORT UntypedMapBase {
+   }
+ 
+   template <typename T>
++  PROTOBUF_NO_SANITIZE("cfi-unrelated-cast", "vptr")
+   T* GetValue(NodeBase* node) const {
+     // Debug check that `T` matches what we expect from the type info.
+     ABSL_DCHECK_EQ(static_cast<int>(StaticTypeKind<T>()),
+diff --git a/src/google/protobuf/port_def.inc b/src/google/protobuf/port_def.inc
+index 3c7c91f..4334a6e 100644
+--- a/src/google/protobuf/port_def.inc
++++ b/src/google/protobuf/port_def.inc
+@@ -572,6 +572,16 @@
+ #define PROTOBUF_PREFETCH_WITH_OFFSET(base, offset)
+ #endif
+ 
++#if !defined(_MSVC_LANG)
++#if __has_attribute(no_sanitize)
++#define PROTOBUF_NO_SANITIZE(...) __attribute__((no_sanitize(__VA_ARGS__)))
++#else
++#define PROTOBUF_NO_SANITIZE(...)
++#endif  // __has_attribute(no_sanitize)
++#else
++#define PROTOBUF_NO_SANITIZE(...)
++#endif
++
+ // ThreadSafeArenaz is turned off completely in opensource builds.
+ 
+ #include "google/protobuf/os_macros_undef.inc"

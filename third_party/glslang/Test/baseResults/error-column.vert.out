@@ -1,0 +1,12 @@
+error-column.vert
+ERROR: error-column.vert:7:16: 'model' : member storage qualifier cannot contradict block storage qualifier 
+ERROR: error-column.vert:8:16: 'view' : member storage qualifier cannot contradict block storage qualifier 
+ERROR: error-column.vert:9:16: 'projection' : member storage qualifier cannot contradict block storage qualifier 
+ERROR: error-column.vert:17:16: 'texCoord1' : member storage qualifier cannot contradict block storage qualifier 
+ERROR: error-column.vert:24:52: 'Pos' : undeclared identifier 
+ERROR: error-column.vert:24:60: 'constructor' : not enough data provided for construction 
+ERROR: error-column.vert:24:17: 'assign' :  cannot convert from ' temp highp 4X4 matrix of float' to ' gl_Position 4-component vector of float Position'
+ERROR: 7 compilation errors.  No code generated.
+
+
+SPIR-V is not generated for failed compile or link

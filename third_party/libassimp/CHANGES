@@ -1,0 +1,607 @@
+----------------------------------------------------------------------
+CHANGELOG
+----------------------------------------------------------------------
+4.1.0 (2017-12):
+- FEATURES:
+ - Export 3MF ( experimental )
+ - Import / Export glTF 2
+ - Introduce new zib-lib to eb able to export zip-archives
+- FIXES/HOUSEKEEPING:
+ - Added missing include to stdlib.h and remove load library call
+ - Fix install for builds with MSVC compiler and NMake.
+ - Update list of supported file formats.
+ - Add TriLib to the official list of supported ports.
+ - Re-enabling PACK_STRUCT for MDL files.
+ - Use std.::unique_ptr
+ - Update D3MFExporter.h
+ - Update MD3Loader.cpp, using index
+ - Fix all warnings on MSVC14
+ - Copy assimp dll to unit folder on windows
+ - Update jvm port supported formats
+ - Add support for building Mac OS X Framework bundles
+ - Check for nullptr dereferencing before copying scene data
+ - Update ValidateDataStructure.h, typo
+ - Enable data structure validation in cases where it doesn't cause failures
+ - Remove some dead assignments
+ - fast_atof: Silence some uninitialized variable warnings
+ - Check for area test if the face is a triangle.
+ - Set mNumUVComponents to 0 when deleting texture coordinate sets
+ - Only scale the root node because this will rescale all children nodes as well.
+ - Issue 1514: Fix frame pointer arithmetic
+ - Prevent failing stringstream to crash the export process
+ - powf -> pow
+ - add Defines.h to include folder for install.
+ - Android:
+  - Fix android build
+  - Fix assimp for cross compile for android
+  - Use define for D_FILE_OFFSET_BITS only for not-android systems.
+ - FBX:
+  - Fix handling with embedded textures
+  - FBX 7500 Binary reading
+  - Remove dead assignment
+  - Fix export of deleted meshes; Add LazyDict::Remove method
+  - Log an error instead of letting the fbx-importer crash. ( issue 213 )
+  - Replace bad pointer casting with memcpy
+  - Remove useless const qualifier from return value
+  - Add explicit instantiation of log_prefix so other FBX source files can see it
+  - add missing inversion of postrotation matrix for fbx.
+  - FIReader: Silence uninitialized variable warning
+  - Update version check in FBX reader to check for version >= 7500
+  - Use actual min/max of anim keys when start/stop time is missing
+- GLTF1:
+ - Fix output of glTF 1 version string
+ - Fix delete / delete[] mismatch in glTFAsset
+ - Don’t ignore rgba(1,1,1,1) color properties
+ - glTF2 primitives fixes
+ - Don’t ignore rgba(1,1,1,1) color properties
+ - Fix delete / delete[] mismatch in glTFAsset
+ - Remove KHR_binary_glTF code
+ - glTF nodes can only hold one mesh. this simply assigns to and check’s a Node’s Mesh
+ - version in glb header is stored as uint32_t
+- GLTF2:
+ - node name conflict fix
+ - Fix transform matrices multiplication order
+ - Preserve node names when importing
+ - Add support for tangents in import
+ - Fix typo on gltf2 camera parameters
+ - Moved byteStride from accessor to bufferView
+ - Implemented reading binary glTF2 (glb) files
+ - Fix signed/unsigned warning
+ - Add postprocess step for scaling
+ - Fix shininess to roughness conversion
+ - Prefer “BLEND” over “MASK” as an alphaMode default
+ - Approximate specularity / glossiness in metallicRoughness materials
+ - Diffuse color and diffuse texture import and export improvements
+ - Addressed some mismatched news/deletes caused by the new glTF2 sources.
+ - Fix delete / delete[] mismatches in glTF2 importer
+ - use correct name of exporter to gltf2
+ - Fix possible infinite loop when exporting to gltf2
+ - Fix glTF2::Asset::FindUniqueID() when the input string is >= 256 chars
+ - Fix glTF2 alphaMode storage and reading
+ - Fix glTF 2.0 multi-primitive support
+ - Load gltf .bin files from correct directory
+ - Add support for importing both glTF and glTF2 files
+ - ampler improvements; Add new LazyDict method
+ - Changes to GLTF2 materials
+ - Remove Light, Technique references
+ - Start removing materials common, and adding pbrSpecularGlossiness
+ - Use !ObjectEmpty() vs. MemberCount() > 0
+ - Working read, import, export, and write of gltf2 (pbr) material
+ - Check in gltf2 models to test directory
+ - Remove un-needed test models
+ - Start managing and importing gltf2 pbr materials
+ - Update glTF2 Asset to use indexes
+ - Duplicate gltfImporter as gltf2Importer; Include glTF2 importer in CMake List
+ - glTF2: Fix animation export
+ - use opacity for diffuse alpha + alphaMode
+- STL:
+ - Restore import of multi mesh binary STLs
+- Blender:
+ - Silence warning about uninitialized member
+- MDLImporter:
+ - Don't take address of packed struct member
+- assimp_cmd:
+ - Fix strict-aliasing warnings
+- Open3DGC:
+ - Fix strict-aliasing warnings
+ - Add assertions to silence static analyzer warnings
+ - Remove redundant const qualifiers from return types
+ - Fix some uninitialized variable warnings
+ - Remove OPEN3DGC and compression references
+- unzip:
+ - Remove dead assignment
+ - Bail on bad compression method
+ - Fix possibly uninitialized variables
+- clipper:
+ - Add assertion to silence a static analyzer warning
+- OpenDDLExport:
+ - Reduce scope of a variable
+ - Remove dead variable
+ - Remove dead assignment
+ - Fix another potential memory leak
+- X3DImporter:
+ - Add assertions to silence static analyzer warnings
+ - Add missing unittest
+ - Workaround for buggy Android NDK (issue #1361)
+- TerragenLoader:
+ - Remove unused variable
+- SIBImporter:
+ - Add assertions to silence static analyzer warnings
+- IFC:
+ - Remove dead code
+ - Add explicit instantiation of log_prefix so IFCMaterial.cpp can see it
+- PLY:
+ - Remove dead assignment and reduce scope of a variable
+ - fix vertex attribute lookup.
+- OpenGEX:
+ - Add assertion to silence a static analyzer warning
+ - Fix for TextureFile with number in file name
+ - Return early when element is TextureFile
+- NFF:
+ - Add assertions to silence static analyzer warnings
+ - Split up some complicated assignments
+- Raw: Fix misleading indentation warning
+ - Reduce scope of a variable
+- LWO
+ - Reduce scope of a variable
+- IRRLoader:
+ - Fix confusing boolean casting
+- AssbinExporter:
+ - Add assertion to silence a static analyzer warning
+- ASE:
+ - Add assertion to silence a static analyzer warning
+- AMFImporter:
+ - Add assertion to silence a static analyzer warning
+ - Add a block
+- OptimizeGraph:
+ - Fix possible null pointer dereference
+ - RemoveRedundantMaterials:
+ - Add assertion to silence a static analyzer warning
+- ImproveCacheLocality:
+ - Add assertion to silence a static analyzer warning
+- RemoveRedundantMaterials:
+ - Set pointer to nullptr after deleting it
+- Travis:
+ - Disable unit tests in scan-build config
+ - Move slower builds earlier to improve parallelization
+ - Add static analysis to build
+ - Remove unused branch rule for travis.
+ - Add Clang UBSan build configuration
+ - Treat warnings as errors, without typos this time
+- Unittests:
+ - Add VS-based source groups for the unittests.
+- Collada:
+ - export <library_animations> tag
+ - Update ColladaExporter.cpp
+ - Silence uninitialized variable warning
+ - Add support for line strip primitives
+- Obj Wavefront:
+ - check in exporting against out-of-bounds-access .
+ - Issue 1351: use correct name for obj-meshname export for groups.
+ - fix mem-lead: face will be not released in case of an error.
+ - Anatoscope obj exporter nomtl
+ - Raise exception when obj file contains invalid face indices
+ - Added alternative displacement texture token in OBJ MTL material.
+ - Obj: rename attribute from exporter.
+ - Fix OBJ discarding all material names if the material library is missing
+- Step:
+ - use correct lookup for utf32
+- MD2:
+ - Fix MD2 frames containing garbage
+- STL
+ - add missing const.
+ - Fix memory-alignment bug.
+ - Fix issue 104: deal with more solids in one STL file.
+- CMake
+ - Fix issue 213: use correct include folder for assimp
+- Doxygen
+ - Fix issue 1513: put irrXML onto exclucde list for doxygen run
+- PyAssimp:
+ - Search for libassimp.so in LD_LIBRARY_PATH if available.
+ - Fix operator precedence issue in header check
+ - Split setup.py into multiple lines
+ - Detect if Anaconda and fixed 3d_viewer for Python 3
+ - created a python3 version of the 3dviewer and fixed the / = float in py3
+- Blender:
+ - Fix invalid access to mesh array when the array is empty.
+ - Fix short overflow.
+ - Silence warning about inline function which is declared but not defined
+- JAssimp
+ - Changed license header for IHMC contributions from Apache 2.0 to BSD
+ - Add Node metadata to the Jassmip Java API
+ - Added supported for custom IO Systems in Java. Implemented ClassLoader IO System
+ - Added a link to pure jvm assimp port
+- Clang sanitizer:
+ - Undefined Behavior sanitizer
+ - Fixed a divide by zero error in IFCBoolean that was latent, but nevertheless a bug
+- B3DImporter:
+ - Replace bad pointer casting with memcpy
+- AppVeyor:
+ - Cleanup and Addition of VS 2017 and running Tests
+ - Fixed File Size reported as 0 in tests that use temporary files
+ - x86 isn't a valid VS platform. Win32 it is, then.
+ - Replaced the worker image name, which doesn't work as generator name, with a manually created generator name.
+ - Cleaned up appveyor setup, added VS 2017 to the build matrix and attempted to add running of tests.
+ - Treat warnings as errors on Appveyor
+ - Disable warning 4351 on MSVC 2013
+- OpenGEXImporter:
+ - Copy materials to scene
+ - Store RefInfo in unique_ptr so they get automatically cleaned up
+ - Fix IOStream leak
+ - Store ChildInfo in unique_ptr so they get automatically cleaned up
+ - improve logging to be able to detect error-prone situations.
+-  AMFImporter:
+ - Fix memory leak
+- UnrealLoader:
+ - Fix IOStream leak
+- Upgrade RapidJSON to get rid of a clang warning
+- zlib:
+ - Update zlib contribution
+ - Removed unnecessary files from zlib contribution
+ - Replaced unsigned long for the crc table to z_crc_t, to match what is returned by get-crc_table
+- MakeVerboseFormat:
+  - Fix delete / delete[] mismatches in MakeVerboseFormat
+- MaterialSystem:
+ - Fix out-of-bounds read in MaterialSystem unit test
+- SIB:
+ - Added support for SIB models from Silo 2.5
+- AssbinExporter:
+ - Fix strict aliasing violation
+ - Add Write specialization for aiColor3D
+- DefaultLogger:
+ - Whitespace cleanup to fix GCC misleading indentation warning
+- MDP:
+ - Fix encoding issues.
+ - PreTransformVertices:
+ - fix name lost in mesh and nodes when load with flag
+- C4D:
+ - Fixes for C4D importer
+- Unzip:
+ - Latest greatest.
+
+4.0.1 (2017-07-28)
+    - FIXES/HOUSEKEEPING:
+    - fix version test.
+    - Not compiling when using ASSIMP_DOUBLE_PRECISION
+    - Added support for python3
+    - Check if cmake is installed with brew
+    - Low performance in OptimizeMeshesProcess::ProcessNode with huge numbers of meshes
+    - Elapsed seconds not shown correctly
+    - StreamReader: fix out-of-range exception
+    - PPdPmdParser: fix compilation for clang
+
+
+4.0.0 (2017-07-18)
+
+FEATURES:
+    - Double precision support provided ( available via cmake option )
+	- QT-Widget based assimp-viewer ( works for windows, linux, osx )
+	- Open3DGC codec supported by glFT-importer
+	- glTF: Read and write transparency values
+	- Add Triangulate post-processing step to glTF exporters
+	- Update rapidjson to v1.0.2
+	- Added method to append new metadata to structure
+	- Unittests: intoduce a prototype model differ
+	- X3D support
+	- AMF support
+	- Lugdunum3D support
+	- Obj-Importer: obj-homogeneous_coords support
+	- Obj-Importer: new streaming handling
+	- Added support for 64 bit version header introduced in FbxSdk2016
+	- Travis: enable coverall support.
+	- PyAssimp: New version of the pyASSIMP 3D viewer, with much improved 3D controls
+    - Morph animation support for collada	
+	- Added support for parameters Ni and Tf in OBJ/MTL file format
+	- aiScene: add method to add children
+	- Added new option to IFC importer to control tessellation angle + removed unused IFC option
+	- aiMetaData: introduce aiMetaData::Dealloc
+	- Samples: add a DX11 example
+	- travis ci: test on OXS ( XCode 6.3 ) as well
+	- travis ci: enable sudo support.
+	- openddlparser: integrate release v0.4.0
+	- aiMetaData: Added support for metadata in assbin format
+	
+FIXES/HOUSEKEEPING:
+    - Introduce usage of #pragma statement
+	- Put cmake-scripts into their own folder
+	- Fix install pathes ( issue 938 )
+	- Fix object_compare in blender importer( issue 946 )
+	- Fix OSX compilation error
+	- Fix unzip path when no other version was found ( issue 967 )
+	- Set _FILE_OFFSET_BITS=64 for 32-bit linux ( issue 975 )
+	- Fix constructor for radjson on OSX
+	- Use Assimp namespace to fix build for big-endian architectures
+	- Add -fPIC to C Flags for 64bit linux Shared Object builds
+	- MDLLoader: fix resource leak.
+	- MakeVerboseFormat: fix invalid delete statement
+	- IFC: fix possible use after free access bug
+	- ComputeUVMappingprocess: add missing initialization for scalar value
+    - Fix invalid release of mat + mesh
+	- IrrImporter: Fix release functions
+	- Split mesh before exporting gltf ( issue 995 )
+	- 3MFImporter: add source group for visual studio
+	- IFC: Switch generated file to 2 files to fix issue related to <mingw4.9 ( Thanks Qt! )
+	- ObjImporter: fix test for vertices import
+    - export scene combiner ( issues177 )
+	- FBX: make lookup test less strict ( issues 994 )
+	- OpenGEX-Importer: add import of vertex colors ( issue 954 )
+	- fix bug when exporting mRotationKeys data
+	- fix mingw build (mingw supports stat64 nowadays)
+	- cfileio: fix leaks by not closing files in the destructor
+	- Fix OBJ parser mtllib statement parsing bug.
+	- Q3BSP-Importer: remove dead code
+	- Fix BlenderDNA for clang cross compiler.
+	- ScenePreprocessor: fix invalid index counter.
+	- Fix compiler warnings ( issue 957 )
+	- Fix obj .mtl file loading
+	- Fixed a compile error on MSVC14 x64 caused by the /bigobj flag failing to be set for the 1 and 2-suffixed versions introduced in commit 0a25b076b8968b7ea2aa96d7d1b4381be2d72ce6
+	- Fixed build warnings on MSVC14 x64
+	- Remove scaling of specular exponent in OBJFileImporter.cpp
+	- use ai_assert instead of assert ( issue 1076 )
+	- Added a preprocessor definition for MSVC to silence safety warnings regarding C library functions. This addresses all warnings for MSVC x86 and x64 when building zlib, tools and viewer as a static lib
+	- fix parsing of texture name ( issue 899 )
+	- add warning when detecting invalid mat definition ( issue 1111 )
+	- copy aiTexture type declaration instead of using decltype for declaration to fix iOS build( issue 1101 )
+	- FBX: Add additional material properties
+	- FBX: Correct camera position and clip planes
+    - FBX: Add correct light locations and falloff values
+	- fix typo ( issue 1141 )
+	- Fix collada export. Don't duplicate TEXCOORD/NORMALS/COLORS in <vertices> and <polylist> ( issue 1084 )
+	- OBJParser: set material index when changing current material
+	- OBJ: check for null mesh before updating material index
+	- add vertex color export support ( issue 809 )
+	- Fix memory leak in Collada importer ( issue 1169 )
+	- add stp to the list of supported extensions for step-files ( issue 1183 )
+	- fix clang build ( Issue-1169 ) 
+	- fix for FreeBSD
+	- Import FindPkgMacros to main CMake Configuration
+	- Extended support for tessellation parameter to more IFC shapes
+	- defensice handling of utf-8 decode issues ( issue 1211 )
+	- Fixed compiler error on clang 4.0 running on OSX
+	- use test extension for exported test files ( issue 1228 )
+	- Set UVW index material properties for OBJ files
+	- Fixed no member named 'atop' in global namespace issue for Android NDK compilation
+	- Apply mechanism to decide use for IrrXML external or internal
+	- Fix static init ordering bug in OpenGEX importer
+	- GLTF exporter: ensure animation accessors have same count
+	- GLTF exporter: convert animation time from ticks to seconds
+	- Add support for reading texture coordinates from PLY meshes with properties named 'texture_u' and 'texture_v'
+	- Added TokensForSearch in BlenderLoader to allow CanRead return true for in-memory files.
+	- fix wrong delete ( issue 1266 )
+	- OpenGEX: fix invalid handling with color4 token ( issue 1262 )
+	- LWOLoader: fix link in loader description
+	- Fix error when custom CMAKE_C_FLAGS is specified
+	- Fast-atof: log overflow errors
+	- Obj-Importer: do not break when detecting an overflow ( issue 1244 )
+	- Obj-Importer: fix parsing of multible line data definitions
+	- Fixed bug where IFC models with multiple IFCSite only loaded 1 site instead of the complete model
+	- PLYImporter: - optimize memory and speed on ply importer / change parser to use a file stream - manage texture path in ply 
+	  import - manage texture coords on faces in ply import - correction on point cloud faces generation
+	- Utf8: integrate new lib ( issue 1158 )
+	- fixed CMAKE_MODULE_PATH overwriting previous values
+	- OpenGEX: Fixed bug in material color processing ( issue 1271 )
+	- SceneCombiner: move header for scenecombiner to public folder.
+	- GLTF exporter: ensure buffer view byte offsets are correctly aligned
+	- X3D importer: Added EXPORT and IMPORT to the list of ignored XML tags
+    - X3D Exporter: fixed missing attributes
+    - X3D importer: Fixed import of normals for the single index / normal per vertex case
+    - X3D importer: Fixed handling of inlined files
+    - X3D importer: fixed whitespace handling (issue 1202)
+	- X3D importer: Fixed iterator on MSVC 2015
+    - X3D importer: Fixed problems with auto, override and regex on older compilers
+    - X3D importer: Fixed missing header file
+    - X3D importer: Fixed path handling
+	- X3D importer: Implemented support for binary X3D files
+    - fix build without 3DS ( issue 1319 )
+	- pyassimp: Fixed indices for IndexedTriangleFanSet, IndexedTriangleSet and IndexedTriangleStripSet
+	- Fixes parameters to pyassimp.load
+	- Obj-Importe: Fixed texture bug due simultaneously using 'usemtl' and 'usemap' attributes
+	- check if all exporters are disabled ( issue 1320 )
+	- Remove std functions deprecated by C++11.
+	- X-Importer: make it deal with lines
+	- use correct path for compilers ( issue 1335 )
+	- Collada: add workaround to deal with polygon with holes 
+	- update python readme
+	- Use unique node names when loading Collada files
+	- Fixed many FBX bugs
+
+API COMPATIBILITY:
+    - Changed ABI-compatibility to v3.3.1, please rebuild your precompiled libraries ( see issue 1182 )
+	- VS2010 outdated
+
+3.3.1 (2016-07-08)
+
+FIXES/HOUSEKEEPING:
+    - Setup of default precision for 17 exporters
+    - Fix xcode project files
+    - Fix BlenderTesselator: offsetof operator
+    - Invalid version in cmake file
+    - Update pstdint.h to latest greatest
+
+
+3.3.0 (2016-07-05)
+
+FEATURES:
+    - C++11 support enabled
+    - New regression-test-UI
+    - Experimental glTF-importer support
+    - OpenGEX: add support for cameras and lights
+    - C4D: update to latest Melange-SDK
+    - Add a gitter channel
+    - Coverity check enabled
+    - Switch to <...> include brackets for public headers 
+    - Enable export by pyAssimp
+    - CI: check windows build
+    - Add functionality to perform a singlepost-processing step
+    - many more, just check the history
+
+FIXES/HOUSEKEEPING:
+    - Fix of many resource leaks in unittests and main lib
+    - Fix iOS-buildfor X64
+    - Choosing zlib manually for cmake
+    - many more, just check the history
+
+
+3.2.1 (2016-010-10)
+
+FEATURES:
+  - Updated glTF exporter to meet 1.0 specification.
+
+FIXES/HOUSEKEEPING:
+  - Fixed glTF Validator errors for exported glTF format.
+
+ISSUES:
+  - Hard coded sampler setting for
+    - magFilter
+    - minFilter
+  - void* in ExportData for accessor max and min.
+
+
+3.2.0 (2015-11-03)
+
+FEATURES:
+  - OpenDDL-Parser is part of contrib-source.
+  - Experimental OpenGEX-support
+  - CI-check for linux and windows
+  - Coverity check added
+  - New regression testsuite.
+
+FIXES/HOUSEKEEPING:
+  - Hundreds of bugfixes  in all parts of the library
+  - Unified line endings
+
+
+API COMPATIBILITY:
+  - Removed precompiled header to increase build speed for linux
+
+
+3.1.1 (2014-06-15)
+
+FEATURES:
+   - Support for FBX 2013 and newer, binary and ASCII (this is partly
+     work from Google Summer of Code 2012)
+   - Support for OGRE binary mesh and skeleton format
+   - Updated BLEND support for newer Blender versions
+   - Support for arbitrary meta data, used to hold FBX and DAE metadata
+   - OBJ Export now produces smaller files
+   - Meshes can now have names, this is supported by the major importers
+   - Improved IFC geometry generation
+   - M3 support has been removed
+
+FIXES/HOUSEKEEPING:
+    - Hundreds of bugfixes in all parts of the library
+    - CMake is now the primary build system
+
+API COMPATIBILITY:
+    - 3.1.1 is not binary compatible to 3.0 due to aiNode::mMetaData
+      and aiMesh::mName
+    - Export interface has been cleaned up and unified
+    - Other than that no relevant changes
+
+
+3.0 (2012-07-07)
+
+FEATURES:
+   - new export interface similar to the import API.
+   - Supported export formats: Collada, OBJ, PLY and STL
+   - added new import formats: XGL/ZGL, M3 (experimental)
+   - new postprocessing steps: Debone
+   - vastly improved IFC (Industry Foundation Classes) support
+   - introduced API to query importer meta information (such as supported
+       format versions, full name, maintainer info).
+   - reworked Ogre XML import
+   - C-API now supports per-import properties
+
+FIXES/HOUSEKEEPING:
+
+   - hundreds of bugfixes in all parts of the library
+   - unified naming and cleanup of public headers
+   - improved CMake build system
+   - templatized math library
+   - reduce dependency on boost.thread, only remaining spot
+     is synchronization for the C logging API
+
+API COMPATIBILITY:
+   - renamed headers, export interface, C API properties and meta data
+     prevent compatibility with code written for 2.0, but in
+     most cases these can be easily resolved
+   - Note: 3.0 is not binary compatible with 2.0
+
+
+2.0 (2010-11-21)
+
+FEATURES:
+   - Add support for static Blender (*.blend) scenes
+   - Add support for Q3BSP scenes
+   - Add a windows-based OpenGL sample featuring texturing & basic materials
+   - Add an experimental progress feedback interface.
+   - Vastly improved performance (up to 500%, depending on mesh size and
+     spatial structure) in some expensive postprocessing steps
+   - AssimpView now uses a reworked layout which leaves more space
+     to the scene hierarchy window
+
+   - Add C# bindings ('Assimp.NET')
+   - Keep BSD-licensed and otherwise free test files in separate
+     folders (./test/models and ./test/models-nonbsd).
+
+FIXES:
+   - Many Collada bugfixes, improve fault tolerance
+   - Fix possible crashes in the Obj loader
+   - Improve the Ogre XML loader
+   - OpenGL-sample now works with MinGW
+   - Fix Importer::FindLoader failing on uppercase file extensions
+   - Fix flawed path handling when locating external files
+   - Limit the maximum number of vertices, faces, face indices and
+     weights that Assimp is able to handle. This is to avoid
+     crashes due to overflowing counters.
+
+   - Updated XCode project files
+   - Further CMAKE build improvements
+
+
+API CHANGES:
+   - Add data structures for vertex-based animations (These are not
+     currently used, however ...)
+   - Some Assimp::Importer methods are const now.
+
+   
+1.1 (2010-04-17)
+This is the list of relevant changes from the 1.0 (r412) release to 1.1 (r700).
+
+FEATURES:
+  - Vastly improved Collada support
+  - Add MS3D (Milkshape 3D) support
+  - Add support for Ogre XML static meshes
+  - Add experimental COB (TrueSpace) support
+  - Automatic test suite to quickly locate regressions
+  - D bindings (`dAssimp`)
+  - Python 2.n bindings (`PyAssimp`)
+  - Add basic support for Unicode input files (utf8, utf16 and utf32)
+  - Add further utilities to the `assimp` tool (xml/binary dumps, quick file stats)
+  - Switch to a CMAKE-based build system including an install target for unix'es
+  - Automatic evaluation of subdivision surfaces for some formats.
+  - Add `Importer::ReadFileFromMemory` and the corresponding C-API `aiReadFileFromMemory`
+  - Expose further math utilities via the C-API (i.e. `aiMultiplyMatrix4`)
+
+  - Move noboost files away from the public include directory
+  - Many, many bugfixes and improvements in existing loaders and postprocessing steps
+  - Documentation improved and clarified in many places.
+  - Add a sample on using Assimp in conjunction with OpenGL
+
+  - Distribution/packaging: comfortable SDK installer for Windows
+  - Distribution/packaging: improved release packages for other architectures
+
+CRITICAL FIXES:
+  - Resolve problems with clashing heap managers, STL ABIs and runtime libraries (win32)
+  - Fix automatic detection of file type if no file extension is given
+  - Improved exception safety and robustness, prevent leaking of exceptions through the C interface
+  - Fix possible heap corruption due to material properties pulled in incorrectly
+  - Avoid leaking in certain error scenarios
+  - Fix 64 bit compatibility problems in some loaders (i.e. MDL)
+
+BREAKING API CHANGES:
+  - None -
+
+MINOR API BEHAVIOUR CHANGES:
+ - Change quaternion orientation to suit to the more common convention (-w).
+ - aiString is utf8 now. Not yet consistent, however.

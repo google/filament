@@ -1,0 +1,183 @@
+/*
+ * Copyright (C) 2021 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TNT_FILAMENT_SKINNINGBUFFER_H
+#define TNT_FILAMENT_SKINNINGBUFFER_H
+
+#include <filament/FilamentAPI.h>
+#include <filament/RenderableManager.h>
+
+#include <utils/compiler.h>
+#include <utils/ImmutableCString.h>
+#include <utils/Slice.h>
+#include <utils/StaticString.h>
+
+#include <math/mathfwd.h>
+
+#include <stddef.h>
+#include <stdint.h>
+
+namespace filament {
+
+/**
+ * SkinningBuffer is used to hold skinning data (bones). It is a simple wraper around
+ * a structured UBO.
+ * @see RenderableManager::setSkinningBuffer
+ */
+class UTILS_PUBLIC SkinningBuffer : public FilamentAPI {
+    struct BuilderDetails;
+
+public:
+    class Builder : public BuilderBase<BuilderDetails>, public BuilderNameMixin<Builder> {
+        friend struct BuilderDetails;
+    public:
+        Builder() noexcept;
+        Builder(Builder const& rhs) noexcept;
+        Builder(Builder&& rhs) noexcept;
+        ~Builder() noexcept;
+        Builder& operator=(Builder const& rhs) noexcept;
+        Builder& operator=(Builder&& rhs) noexcept;
+
+        /**
+         * Size of the skinning buffer in bones.
+         *
+         * Due to limitation in the GLSL, the SkinningBuffer must always by a multiple of
+         * 256, this adjustment is done automatically, but can cause
+         * some memory overhead. This memory overhead can be mitigated by using the same
+         * SkinningBuffer to store the bone information for multiple RenderPrimitives.
+         *
+         * @param boneCount Number of bones the skinning buffer can hold.
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& boneCount(uint32_t boneCount) noexcept;
+
+        /**
+         * The new buffer is created with identity bones
+         * @param initialize true to initializing the buffer, false to not.
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& initialize(bool initialize = true) noexcept;
+
+        using BuilderNameMixin<Builder>::name;
+
+        /**
+         * Associate an optional name with this SkinningBuffer for debugging purposes.
+         *
+         * name will show in error messages and should be kept as short as possible. The name is
+         * truncated to a maximum of 128 characters.
+         *
+         * The name string is copied during this method so clients may free its memory after
+         * the function returns.
+         *
+         * @param name A string to identify this SkinningBuffer
+         * @param len Length of name, should be less than or equal to 128
+         * @return This Builder, for chaining calls.
+         * @deprecated Use name(utils::StaticString const&) instead.
+         */
+        UTILS_DEPRECATED
+        UTILS_NOAPIGEN
+        Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept;
+
+        /**
+         * Associate an optional name with this SkinningBuffer for debugging purposes.
+         *
+         * name will show in error messages and should be kept as short as possible.
+         *
+         * @param name A string literal to identify this SkinningBuffer
+         * @return This Builder, for chaining calls.
+         */
+        UTILS_NOAPIGEN
+        Builder& name(utils::StaticString const& name) noexcept;
+
+        /**
+         * Associate an optional name with this SkinningBuffer for debugging purposes.
+         *
+         * @param name A string to identify this SkinningBuffer
+         * @return This Builder, for chaining calls.
+         *
+         * @note This method should be avoided in C++ in favor of the `StaticString` overload.
+         * It is provided primarily for bindings to other languages.
+         */
+        Builder& name(utils::ImmutableCString const& name) noexcept;
+
+        /**
+         * Creates the SkinningBuffer object and returns a pointer to it.
+         *
+         * @param engine Reference to the filament::Engine to associate this SkinningBuffer with.
+         *
+         * @return pointer to the newly created object.
+         *
+         * @exception utils::PostConditionPanic if a runtime error occurred, such as running out of
+         *            memory or other resources.
+         * @exception utils::PreConditionPanic if a parameter to a builder function was invalid.
+         *
+         * @see SkinningBuffer::setBones
+         */
+        SkinningBuffer* UTILS_NONNULL build(Engine& engine) const;
+    private:
+        friend class FSkinningBuffer;
+    };
+
+    /**
+     * Updates the bone transforms in the range [offset, offset + transforms.size()).
+     * @param engine Reference to the filament::Engine to associate this SkinningBuffer with.
+     * @param transforms slice of Bone transforms
+     * @param offset offset in elements (not bytes) in the SkinningBuffer
+     * @see RenderableManager::setSkinningBuffer
+     */
+    UTILS_APIGEN_ALTERNATE_NAME(setBonesAsQuaternions)
+    void setBones(Engine& engine, utils::Slice<const RenderableManager::Bone> transforms,
+            size_t offset = 0);
+
+    UTILS_NOAPIGEN
+    inline void setBones(Engine& engine,
+            RenderableManager::Bone const* UTILS_NONNULL transforms,
+            size_t count, size_t offset = 0) {
+        setBones(engine, { transforms, count }, offset);
+    }
+
+    /**
+     * Updates the bone transforms in the range [offset, offset + transforms.size()).
+     * @param engine Reference to the filament::Engine to associate this SkinningBuffer with.
+     * @param transforms slice of mat4f transforms
+     * @param offset offset in elements (not bytes) in the SkinningBuffer
+     * @see RenderableManager::setSkinningBuffer
+     */
+    UTILS_APIGEN_ALTERNATE_NAME(setBonesAsMatrices)
+    void setBones(Engine& engine, utils::Slice<const math::mat4f> transforms,
+            size_t offset = 0);
+
+    UTILS_NOAPIGEN
+    inline void setBones(Engine& engine,
+            math::mat4f const* UTILS_NONNULL transforms,
+            size_t count, size_t offset = 0) {
+        setBones(engine, { transforms, count }, offset);
+    }
+
+    /**
+     * Returns the size of this SkinningBuffer in elements.
+     * @return The number of bones the SkinningBuffer holds.
+     */
+    size_t getBoneCount() const noexcept;
+
+protected:
+    // prevent heap allocation
+    ~SkinningBuffer() = default;
+};
+
+} // namespace filament
+
+#endif //TNT_FILAMENT_SKINNINGBUFFER_H

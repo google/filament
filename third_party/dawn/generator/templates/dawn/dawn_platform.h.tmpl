@@ -1,0 +1,177 @@
+//* Copyright 2026 The Dawn & Tint Authors
+//*
+//* Redistribution and use in source and binary forms, with or without
+//* modification, are permitted provided that the following conditions are met:
+//*
+//* 1. Redistributions of source code must retain the above copyright notice, this
+//*    list of conditions and the following disclaimer.
+//*
+//* 2. Redistributions in binary form must reproduce the above copyright notice,
+//*    this list of conditions and the following disclaimer in the documentation
+//*    and/or other materials provided with the distribution.
+//*
+//* 3. Neither the name of the copyright holder nor the names of its
+//*    contributors may be used to endorse or promote products derived from
+//*    this software without specific prior written permission.
+//*
+//* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+//* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+//* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+//* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+//* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+//* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+//* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+//* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+//* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+//* This file is NOT intended to be used as a template on its own. Instead, it
+//* should be included by implementing api_structs.cpp files in relevant
+//* implementations templates. It assumes that the implementing file includes
+//* the corresponding api_structs_autogen.h.
+
+{% from 'dawn/cpp_macros.tmpl' import as_dawnType with context %}
+
+{%- macro render_structure_conversions(name) -%}
+    {% set CType = as_cType(name) %}
+    {% set DawnType = as_dawnType(name) %}
+    {% set CppType = "wgpu::" + as_cppType(name) %}
+    inline const {{CType}}* ToAPI(const {{DawnType}}* rhs) {
+        return reinterpret_cast<const {{CType}}*>(rhs);
+    }
+    inline {{CType}}* ToAPI({{DawnType}}* rhs) {
+        return reinterpret_cast<{{CType}}*>(rhs);
+    }
+    inline const {{DawnType}}* FromAPI(const {{CType}}* rhs) {
+        return reinterpret_cast<const {{DawnType}}*>(rhs);
+    }
+    inline {{DawnType}}* FromAPI({{CType}}* rhs) {
+        return reinterpret_cast<{{DawnType}}*>(rhs);
+    }
+    inline const {{DawnType}}& FromAPI(const {{CType}}& rhs) {
+        return *reinterpret_cast<const {{DawnType}}*>(&rhs);
+    }
+    inline {{DawnType}}& FromAPI({{CType}}& rhs) {
+        return *reinterpret_cast<{{DawnType}}*>(&rhs);
+    }
+    inline const {{CppType}}* ToCppAPI(const {{DawnType}}* rhs) {
+        return reinterpret_cast<const {{CppType}}*>(rhs);
+    }
+    inline {{CppType}}* ToCppAPI({{DawnType}}* rhs) {
+        return reinterpret_cast<{{CppType}}*>(rhs);
+    }
+    inline const {{DawnType}}* FromCppAPI(const {{CppType}}* rhs) {
+        return reinterpret_cast<const {{DawnType}}*>(rhs);
+    }
+    inline {{DawnType}}* FromCppAPI({{CppType}}* rhs) {
+        return reinterpret_cast<{{DawnType}}*>(rhs);
+    }
+{%- endmacro -%}
+
+{% set ChainedStructName = Name("chained struct") %}
+{{render_structure_conversions(ChainedStructName)|indent}}
+
+{% for type in by_category["structure"] if type.name.get() != "string view" %}
+    {{render_structure_conversions(type.name)|indent}}
+
+{% endfor %}
+
+{% for type in by_category["object"] %}
+    {% set CType = as_cType(type.name) %}
+    {% set DawnType = as_dawnType(type) %}
+    inline {{CType}} ToAPI({{DawnType}} rhs) {
+        return reinterpret_cast<{{CType}}>(rhs);
+    }
+    inline const {{CType}}* ToAPI({{DawnType}} const* rhs) {
+        return reinterpret_cast<const {{CType}}*>(rhs);
+    }
+    inline {{CType}}* ToAPI({{DawnType}}* rhs) {
+        return reinterpret_cast<{{CType}}*>(rhs);
+    }
+
+    inline {{DawnType}} FromAPI({{CType}} rhs) {
+        return reinterpret_cast<{{DawnType}}>(rhs);
+    }
+    inline {{DawnType}} const* FromAPI(const {{CType}}* rhs) {
+        return reinterpret_cast<{{DawnType}} const*>(rhs);
+    }
+    inline {{DawnType}}* FromAPI({{CType}}* rhs) {
+        return reinterpret_cast<{{DawnType}}*>(rhs);
+    }
+{% endfor %}
+
+//* Special structs that we want to allow copies for since they are trivial.
+inline WGPUFuture ToAPI(Future rhs) {
+    return {rhs.id};
+}
+inline Future FromAPI(WGPUFuture rhs) {
+    return Future{rhs.id};
+}
+inline WGPUStringView ToAPI(StringView rhs) {
+    return {rhs.data, rhs.length};
+}
+inline StringView FromAPI(WGPUStringView rhs) {
+    return StringView(rhs);
+}
+
+template <typename T>
+struct EnumCount;
+
+{% for e in by_category["enum"] if e.contiguous and e.startValue == 0 %}
+    template<>
+    struct EnumCount<wgpu::{{as_cppType(e.name)}}> {
+        static constexpr uint32_t value = {{len(e.values)}};
+    };
+{% endfor %}
+
+{% for type in by_category["enum"] + by_category["bitmask"] %}
+    inline {{as_cType(type.name)}} ToAPI(wgpu::{{as_cppType(type.name)}} rhs) {
+        return static_cast<{{as_cType(type.name)}}>(rhs);
+    }
+    inline const {{as_cType(type.name)}}* ToAPI(const wgpu::{{as_cppType(type.name)}}* rhs) {
+        return reinterpret_cast<const {{as_cType(type.name)}}*>(rhs);
+    }
+    inline {{as_cType(type.name)}}* ToAPI(wgpu::{{as_cppType(type.name)}}* rhs) {
+        return reinterpret_cast<{{as_cType(type.name)}}*>(rhs);
+    }
+{% endfor %}
+
+{% for type in by_category["enum"] %}
+    inline wgpu::{{as_cppType(type.name)}} FromAPI({{as_cType(type.name)}} rhs) {
+        return static_cast<wgpu::{{as_cppType(type.name)}}>(rhs);
+    }
+    inline const wgpu::{{as_cppType(type.name)}}* FromAPI(const {{as_cType(type.name)}}* rhs) {
+        return reinterpret_cast<const wgpu::{{as_cppType(type.name)}}*>(rhs);
+    }
+    inline wgpu::{{as_cppType(type.name)}}* FromAPI({{as_cType(type.name)}}* rhs) {
+        return reinterpret_cast<wgpu::{{as_cppType(type.name)}}*>(rhs);
+    }
+{% endfor %}
+
+// Fallback ToAPI and FromAPI for primitive and matching pointer types.
+template <typename T>
+    requires std::is_fundamental_v<T> || std::is_same_v<T, std::byte>
+inline T* ToAPI(T* rhs) {
+    return rhs;
+}
+
+template <typename T>
+    requires std::is_fundamental_v<T> || std::is_same_v<T, std::byte>
+inline T* FromAPI(T* rhs) {
+    return rhs;
+}
+
+// Templated helper for converting Spans.
+template <typename T>
+auto ToAPI(dawn::Span<T> rhs) {
+    using ResultItem = std::remove_pointer_t<decltype(ToAPI(rhs.data()))>;
+    // SAFETY: The returned Span has the same lifetime as the input Span.
+    return DAWN_UNSAFE_BUFFERS(dawn::Span<ResultItem>(ToAPI(rhs.data()), rhs.size()));
+}
+
+template <typename T>
+auto FromAPI(dawn::Span<T> rhs) {
+    using ResultItem = std::remove_pointer_t<decltype(FromAPI(rhs.data()))>;
+    // SAFETY: The returned Span has the same lifetime as the input Span.
+    return DAWN_UNSAFE_BUFFERS(dawn::Span<ResultItem>(FromAPI(rhs.data()), rhs.size()));
+}

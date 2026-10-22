@@ -1,0 +1,367 @@
+Name
+
+    ARB_map_buffer_range
+
+Name Strings
+
+    GL_ARB_map_buffer_range
+
+Contributors
+
+    Chris Niederauer, Apple (ccn 'at' apple.com)
+    Rob Barris (rbarris 'at' gmail.com)
+    Michael Gold, NVIDIA
+
+Notice
+
+    Copyright (c) 2008-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Approved by the ARB on July 11, 2008
+
+Version
+
+    Last Modified Date: June 22, 2012
+    Author Revision: 5
+
+Number
+
+    ARB Extension #50
+
+Dependencies
+
+    OpenGL 2.1 is required.
+
+    If ARB_pixel_buffer_object is NOT supported and the OpenGL version is less
+    than 2.1, ignore references to PIXEL_UNPACK_BUFFER and PIXEL_PACK_BUFFER.
+
+    If EXT_texture_buffer_object is NOT supported, ignore references to
+    TEXTURE_BUFFER_EXT.
+
+    If GL_EXT_bindable_uniform is NOT supported, ignore references to
+    UNIFORM_BUFFER_EXT.
+
+    Written based on the wording of the OpenGL 2.1 specification.
+
+
+Overview
+
+    ARB_map_buffer_range expands the buffer object API to allow greater
+    performance when a client application only needs to write to a sub-range
+    of a buffer object. To that end, this extension introduces two new buffer
+    object features: non-serialized buffer modification and explicit sub-range
+    flushing for mapped buffer objects.
+
+    OpenGL requires that commands occur in a FIFO manner meaning that any
+    changes to buffer objects either block until the data has been processed by
+    the OpenGL pipeline or else create extra copies to avoid such a block.  By
+    providing a method to asynchronously modify buffer object data, an
+    application is then able to manage the synchronization points themselves
+    and modify ranges of data contained by a buffer object even though OpenGL
+    might still be using other parts of it.
+
+    This extension also provides a method for explicitly flushing ranges of a
+    mapped buffer object so OpenGL does not have to assume that the entire
+    range may have been modified.  Further, it allows the application to more
+    precisely specify its intent with respect to reading, writing, and whether
+    the previous contents of a mapped range of interest need be preserved
+    prior to modification.
+
+    Affects ARB_vertex_buffer_object, ARB_pixel_buffer_object and OpenGL 1.5
+    Buffer Objects.
+
+
+Issues
+
+    (1) Why don't the new tokens and entry points in this extension have
+       "ARB" suffixes like other ARB extensions?
+
+        RESOLVED: Unlike a normal ARB extension, this is a strict subset
+        of functionality already approved in OpenGL 3.0. This extension
+        exists only to support that functionality on older hardware that
+        cannot implement a full OpenGL 3.0 driver. Since there are no
+        possible behavior changes between the ARB extension and core
+        features, source code compatibility is improved by not using
+        suffixes on the extension.
+
+
+New Procedures and Functions
+
+    void *MapBufferRange( enum target, intptr offset, sizeiptr length,
+        bitfield access );
+
+    void FlushMappedBufferRange( enum target, intptr offset, sizeiptr length );
+
+
+New Tokens
+
+    Accepted by the <access> parameter of MapBufferRange:
+
+        MAP_READ_BIT                0x0001
+        MAP_WRITE_BIT               0x0002
+        MAP_INVALIDATE_RANGE_BIT    0x0004
+        MAP_INVALIDATE_BUFFER_BIT   0x0008
+        MAP_FLUSH_EXPLICIT_BIT      0x0010
+        MAP_UNSYNCHRONIZED_BIT      0x0020
+
+
+Additions to Chapter 2 of the OpenGL 2.1 Specification (Buffer Objects)
+
+    Add to the end of Section 2.9 (p. 38):
+
+    All or part of the data store of a buffer object may be mapped into the
+    client's address space by calling
+
+        void *MapBufferRange( enum target, intptr offset, sizeiptr length,
+            bitfield access );
+
+    with <target> set to one of ARRAY_BUFFER, ELEMENT_ARRAY_BUFFER,
+    PIXEL_UNPACK_BUFFER, PIXEL_PACK_BUFFER, TEXTURE_BUFFER_EXT, or
+    UNIFORM_BUFFER_EXT. <offset> and <length> indicate the range of data in the
+    buffer object that is to be mapped, in terms of basic machine units.
+    <access> is a bitfield containing flags which describe the requested
+    mapping.  These flags are described below.
+
+    If no error occurs, a pointer to the beginning of the mapped range is
+    returned and may be used to modify and/or query the corresponding range of
+    the buffer, according to the access flags.
+
+    MAP_READ_BIT indicates that the returned pointer may be used to read buffer
+    object data. No GL error is generated if the pointer is used to query a
+    mapping which excludes this flag, but the result is undefined and system
+    errors (possibly including program termination) may occur.
+
+    MAP_WRITE_BIT indicates that the returned pointer may be used to modify
+    buffer object data. No GL error is generated if the pointer is used to
+    modify a mapping which excludes this flag, but the result is undefined and
+    system errors (possibly including program termination) may occur.
+
+    The following optional flags in <access> may be used to modify the mapping:
+
+    MAP_INVALIDATE_RANGE_BIT indicates that the previous contents of the
+    specified range may be discarded. Data within this range is undefined with
+    the exception of subsequently written data. No GL error is generated if
+    subsequent GL operations access unwritten data, but the result is undefined
+    and system errors (possibly including program termination) may occur. This
+    flag may not be used in combination with MAP_READ_BIT.
+
+    MAP_INVALIDATE_BUFFER_BIT indicates that the previous contents of the entire
+    buffer may be discarded. Data within the entire buffer is undefined with the
+    exception of subsequently written data. No GL error is generated if
+    subsequent GL operations access unwritten data, but the result is undefined
+    and system errors (possibly including program termination) may occur. This
+    flag may not be used in combination with MAP_READ_BIT.
+
+    MAP_FLUSH_EXPLICIT_BIT indicates that one or more discrete subranges of the
+    mapping may be modified. When this flag is set, modifications to each
+    subrange must be explicitly flushed by calling FlushMappedBufferRange.  No
+    GL error is set if a subrange of the mapping is modified and not flushed,
+    but data within the corresponding subrange of the buffer is undefined. This
+    flag may only be used in conjunction with MAP_WRITE_BIT.  When this option
+    is selected, flushing is strictly limited to regions that are explicitly
+    indicated with calls to FlushMappedBufferRange prior to unmap; if this
+    option is not selected UnmapBuffer will automatically flush the entire
+    mapped range when called.
+
+    MAP_UNSYNCHRONIZED_BIT indicates that the GL should not attempt to
+    synchronize pending operations on the buffer prior to returning from
+    MapBufferRange. No GL error is generated if pending operations which source
+    or modify the buffer overlap the mapped region, but the result of such
+    previous and any subsequent operations is undefined. This flag may not be
+    used in combination with MAP_READ_BIT.
+
+    MapBufferRange sets buffer object state values as shown in table 2.mbr.
+
+    Name                Value
+    ----                -----
+    BUFFER_ACCESS       Depends on <access>[1]
+    BUFFER_MAPPED       TRUE
+    BUFFER_MAP_POINTER  pointer to the data store
+    BUFFER_MAP_OFFSET   <offset>
+    BUFFER_MAP_LENGTH   <length>
+    ---------------------------------------------
+    Table 2.mbr: Buffer object state set by MapBufferRange.
+        [1] BUFFER_ACCESS is set to READ_ONLY, WRITE_ONLY, or READ_WRITE if
+        <access> & (MAP_READ_BIT|MAP_WRITE_BIT) is respectively
+        MAP_READ_BIT, MAP_WRITE_BIT, or MAP_READ_BIT|MAP_WRITE_BIT.
+
+
+    Errors
+
+    If an error occurs, MapBufferRange returns a NULL pointer.
+
+    INVALID_VALUE is generated if <offset> or <length> is negative, or if
+    offset+length is greater than the value of BUFFER_SIZE.
+
+    INVALID_OPERATION is generated for any of the following conditions:
+
+    - The buffer is already in a mapped state.
+    - Neither MAP_READ_BIT nor MAP_WRITE_BIT is set.
+    - MAP_READ_BIT is set and any of MAP_INVALIDATE_RANGE_BIT,
+      MAP_INVALIDATE_BUFFER_BIT, or MAP_UNSYNCHRONIZED_BIT is set.
+    - MAP_FLUSH_EXPLICIT_BIT is set and MAP_WRITE_BIT is not set.
+
+    No GL error is generated if memory outside the mapped range is modified or
+    queried, but the result is undefined and system errors (possibly including
+    program termination) may occur.
+
+
+    If a buffer is mapped with the MAP_FLUSH_EXPLICIT_BIT flag, modifications
+    to the mapped range may be indicated by calling
+
+        void FlushMappedBufferRange( enum target, intptr offset, sizeiptr length );
+
+    with <target> set to one of ARRAY_BUFFER, ELEMENT_ARRAY_BUFFER,
+    PIXEL_UNPACK_BUFFER, PIXEL_PACK_BUFFER, TEXTURE_BUFFER_EXT, or
+    UNIFORM_BUFFER_EXT, <offset> and <length> indicate a modified subrange of
+    the mapping, in basic machine units.  The specified subrange to flush is
+    relative to the start of the currently mapped range of buffer.
+    FlushMappedBufferRange may be called multiple times to indicate distinct
+    subranges of the mapping which require flushing.
+
+    Errors
+
+    INVALID_VALUE is generated if <offset> or <length> is negative, or if
+    <offset>+<length> exceeds the size of the mapping.
+
+    INVALID_OPERATION is generated if buffer is not mapped, or is mapped without
+    the MAP_FLUSH_EXPLICIT_BIT flag.
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (Buffer Objects)
+
+Errors
+
+    INVALID_ENUM is generated if the <target> parameter of
+    MapBufferRange and FlushMappedBufferRange is not ARRAY_BUFFER,
+    ELEMENT_ARRAY_BUFFER, PIXEL_PACK_BUFFER, PIXEL_UNPACK_BUFFER,
+    TEXTURE_BUFFER_EXT, or UNIFORM_BUFFER_EXT.
+
+    INVALID_OPERATION is generated if FlushMappedBufferRange is executed
+    while zero is bound to the <target> parameter.
+
+    INVALID_OPERATION is generated if FlushMappedBufferRange is called
+    outside the execution of a MapBufferRange and the corresponding execution of
+    UnmapBuffer.
+
+    INVALID_OPERATION may be generated if any of the commands defined in this
+    extension is executed between the execution of Begin and the corresponding
+    execution of End.
+
+New Implementation Dependent State
+
+    None
+
+GLX Protocol
+
+    FlushMappedBufferRange is an entirely client-side command.
+
+    The following new non-rendering command is added:
+
+    MapBufferRange
+
+        1      CARD8           opcode (X assigned)
+        1      205             GLX opcode
+        2      8               request length
+        4      GLX_CONTEXT_TAG context tag
+        8      CARD64          offset
+        8      CARD64          length
+        4      ENUM            target
+        4      BITFIELD        access
+    =>
+        1      1               reply
+        1                      unused
+        2      CARD16          sequence number
+        4      0               reply length
+        4                      unused
+        4      CARD32          0 on error, otherwise 1.
+        8      CARD64          mapping address
+        8                      unused
+
+Usage Examples
+
+        /* bind and initialize a buffer object */
+    int             size = 65536;
+    glBindBufferARB ( 1, GL_ARRAY_BUFFER_ARB );
+    glBufferDataARB ( GL_ARRAY_BUFFER_ARB, size, NULL, GL_DYNAMIC_DRAW_ARB );
+
+/* the following are not meant to be executed as a group, since there are no
+ * unmap calls shown here - they are meant to show different combinations of
+ * map options in conjunction with MapBufferRange and FlushMappedBufferRange.
+ */
+
+    /* Map the entire buffer with read and write
+     * (identical semantics to MapBufferARB)
+     */
+    void *ptr = glMapBufferRange( GL_ARRAY_BUFFER_ARB, 0, size, MAP_READ_BIT | MAP_WRITE_BIT );
+
+    /* Map the entire buffer as write only
+     */
+    void *ptr = glMapBufferRange( GL_ARRAY_BUFFER_ARB, 0, size, MAP_WRITE_BIT );
+
+
+    /* Map the last 1K bytes of the buffer as write only.
+     */
+    void *ptr = glMapBufferRange( GL_ARRAY_BUFFER_ARB, size-1024, 1024, MAP_WRITE_BIT );
+
+
+    /* Map the last 1K bytes of the buffer as write only, and invalidate the range.
+     * locations within that range can assume undefined values.
+     * locations written while mapped take on new values as expected.
+     * no changes occur outside the range mapped.
+     */
+    void *ptr = glMapBufferRange( GL_ARRAY_BUFFER_ARB, size-1024, 1024, MAP_WRITE_BIT | MAP_INVALIDATE_RANGE_BIT );
+
+
+    /* Map the first 1K bytes of the buffer as write only, and invalidate the entire buffer.
+     * all locations within the buffer can assume undefined values.
+     * locations written while mapped take on new values as expected.
+     */
+    void *ptr = glMapBufferRange( GL_ARRAY_BUFFER_ARB, 0, 1024, MAP_WRITE_BIT | MAP_INVALIDATE_BUFFER_BIT );
+
+
+    /* Map the first 32K bytes of the buffer as write only, and invalidate that range.
+     * Indicate that we will explicitly inform GL which ranges are actually written.
+     * Locations within that range can assume undefined values.
+     * Only the locations which are written and subsequently flushed are guaranteed
+     * to take on defined values.
+     * Write data to the first 8KB of the range, then flush it.
+     * Write data to the last 8KB of the range, then flush it.
+     */
+    void *ptr = glMapBufferRange( GL_ARRAY_BUFFER_ARB, 0, 32768, MAP_WRITE_BIT | MAP_INVALIDATE_RANGE_BIT | MAP_FLUSH_EXPLICIT_BIT );
+
+    memset( ptr, 0x00, 8192 );                  /* write zeroes to first 8KB of range */
+    FlushMappedBufferRange( GL_ARRAY_BUFFER_ARB, 0, 8192 );
+
+    memset( ((char*)ptr)+24576, 0xFF, 8192 );   /* write FF's to last 8KB of range */
+    FlushMappedBufferRange( GL_ARRAY_BUFFER_ARB, 24576, 8192 );
+
+
+    /* Map the entire buffer for write - unsynchronized.
+     * GL will not block for prior operations to complete.  Application must
+     * use other synchronization techniques to ensure correct operation.
+     */
+    void *ptr = glMapBufferRange( GL_ARRAY_BUFFER_ARB, 0, size, MAP_WRITE_BIT | MAP_UNSYNCHRONIZED_BIT);
+
+
+Revision History
+
+    Rev.     Date      Author   Changes
+    ----  ----------  --------  ----------------------------------------------
+      1   06/03/2008     rcb    Initial version with sample code.
+      2   07/07/2008     rcb    Various edits to match GL3 core spec.
+      3   08/07/2008   jleech   Remove ARB suffixes.
+      4   01/24/2011   srahman  Add GLX protocol.
+      5   06/22/2012   jleech   Define how buffer object state is affected
+                                by MapBufferRange. 

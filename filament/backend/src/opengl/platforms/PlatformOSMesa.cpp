@@ -1,0 +1,288 @@
+/*
+ * Copyright (C) 2024 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <backend/platforms/PlatformOSMesa.h>
+
+#include <utils/debug.h>
+#include <utils/Logger.h>
+#include <utils/Panic.h>
+#include <utils/ThreadUtils.h>
+
+#include <algorithm>
+#include <memory>
+
+#include <dlfcn.h>
+
+#if defined(__linux__)
+// This is to ensure that linking during compilation will not fail even if
+// OSMesaGetProcAddress is not linked.
+__attribute__((weak)) OSMESAproc OSMesaGetProcAddress(char const*);
+#endif
+
+namespace filament::backend {
+
+using namespace backend;
+
+namespace {
+
+using BackingType = GLfloat;
+#define BACKING_GL_TYPE GL_FLOAT
+
+struct OSMesaSwapchain {
+    OSMesaSwapchain(uint32_t width, uint32_t height)
+        : width(width),
+          height(height),
+          buffer(new uint8_t[width * height * 4 * sizeof(BackingType)]) {}
+
+    uint32_t width = 0;
+    uint32_t height = 0;
+    std::unique_ptr<uint8_t[]> buffer;
+};
+
+struct OSMesaAPI {
+private:
+    using CreateContextAttribsFunc = OSMesaContext (*)(const int *, OSMesaContext);
+    using DestroyContextFunc = GLboolean (*)(OSMesaContext);
+    using MakeCurrentFunc = GLboolean (*)(OSMesaContext ctx, void* buffer, GLenum type,
+            GLsizei width, GLsizei height);
+    using GetProcAddressFunc = OSMESAproc (*)(const char* funcName);
+
+public:
+    CreateContextAttribsFunc fOSMesaCreateContextAttribs;
+    DestroyContextFunc fOSMesaDestroyContext;
+    MakeCurrentFunc fOSMesaMakeCurrent;
+    GetProcAddressFunc fOSMesaGetProcAddress;
+
+    OSMesaAPI() {
+        static constexpr char const* libraryNames[] = {
+#if defined(__linux__)
+            "libOSMesa.so",
+            "libosmesa.so",
+#elif defined(__APPLE__)
+            "libOSMesa.dylib",
+#endif
+        };
+        for (char const* libName: libraryNames) {
+            mLib = dlopen(libName, RTLD_GLOBAL | RTLD_NOW);
+            if (mLib) {
+                break;
+            }
+        }
+        if (mLib) {
+            // Loading from a libosmesa.os
+            fOSMesaGetProcAddress = (GetProcAddressFunc) dlsym(mLib, "OSMesaGetProcAddress");
+        }
+#if defined(__linux__)
+        else {
+            // Filament is built into a .so
+            fOSMesaGetProcAddress = (GetProcAddressFunc) dlsym(RTLD_LOCAL, "OSMesaGetProcAddress");
+        }
+        if (!fOSMesaGetProcAddress) {
+            // Statically linking osmesa
+            fOSMesaGetProcAddress = OSMesaGetProcAddress;
+        }
+#endif // __linux__
+
+        FILAMENT_CHECK_PRECONDITION(fOSMesaGetProcAddress)
+                << "Unable to link against libOSMesa to create a software GL context";
+
+        fOSMesaCreateContextAttribs =
+                (CreateContextAttribsFunc) fOSMesaGetProcAddress("OSMesaCreateContextAttribs");
+        fOSMesaDestroyContext = (DestroyContextFunc) fOSMesaGetProcAddress("OSMesaDestroyContext");
+        fOSMesaMakeCurrent = (MakeCurrentFunc) fOSMesaGetProcAddress("OSMesaMakeCurrent");
+    }
+
+    ~OSMesaAPI() {
+        if (mLib) {
+            dlclose(mLib);
+        }
+    }
+private:
+    void* mLib = nullptr;
+};
+
+}// anonymous namespace
+
+void PlatformOSMesa::bindDummyBuffer() noexcept {
+    OSMesaAPI* api = (OSMesaAPI*) mOsMesaApi;
+    assert_invariant(api);
+    assert_invariant(mDummyBuffer);
+
+    auto result = api->fOSMesaMakeCurrent(mContext, (BackingType*) mDummyBuffer.get(),
+            BACKING_GL_TYPE, 1, 1);
+    FILAMENT_CHECK_POSTCONDITION(result == GL_TRUE) << "OSMesaMakeCurrent failed for dummy buffer!";
+
+    mCurrentSwapChain = nullptr;
+}
+
+Driver* PlatformOSMesa::createDriver(void* sharedGLContext,
+        const DriverConfig& driverConfig) {
+
+    OSMesaAPI* api = new OSMesaAPI();
+    mOsMesaApi = api;
+
+    static constexpr int attribs[] = {
+        OSMESA_FORMAT, GL_RGBA,
+        OSMESA_DEPTH_BITS, 24,
+        OSMESA_STENCIL_BITS, 8,
+        OSMESA_ACCUM_BITS, 0,
+        OSMESA_PROFILE, OSMESA_CORE_PROFILE,
+        0,
+    };
+
+    mContext = api->fOSMesaCreateContextAttribs(attribs, (OSMesaContext) sharedGLContext);
+
+    // OSMesa retains the raw pointer given to OSMesaMakeCurrent and may write to it at any point
+    // (e.g. from glFinish()), so the bound buffer must outlive the binding. We keep a 1x1 buffer
+    // owned by the platform to act as a parking spot whenever no swapchain is current.
+    mDummyBuffer = std::make_unique<uint8_t[]>(1 * 1 * 4 * sizeof(BackingType));
+
+    // We need to do a no-op makecurrent here so that the context will be in a correct state before
+    // any GL calls.
+    bindDummyBuffer();
+
+    int result = bluegl::bind();
+    FILAMENT_CHECK_POSTCONDITION(!result) << "Unable to load OpenGL entry points.";
+
+    return OpenGLPlatform::createDefaultDriver(this, sharedGLContext, driverConfig);
+}
+
+void PlatformOSMesa::terminate() noexcept {
+    OSMesaAPI* api = (OSMesaAPI*) mOsMesaApi;
+
+    for (auto& it: mAdditionalContexts) {
+        api->fOSMesaDestroyContext(it.second.context);
+    }
+    mAdditionalContexts.clear();
+
+    api->fOSMesaDestroyContext(mContext);
+    delete api;
+    mOsMesaApi = nullptr;
+
+    bluegl::unbind();
+}
+
+bool PlatformOSMesa::isExtraContextSupported() const noexcept { return true; }
+
+void PlatformOSMesa::createContext(bool shared) {
+    std::thread::id currentThreadId = utils::ThreadUtils::getThreadId();
+
+    {
+        std::shared_lock<std::shared_mutex> lock(mAdditionalContextsLock);
+        auto it = mAdditionalContexts.find(currentThreadId);
+        if (it != mAdditionalContexts.end()) {
+            LOG(WARNING) << "Shared context is already created for this thread";
+            return;
+        }
+    }
+
+    OSMesaAPI* api = (OSMesaAPI*) mOsMesaApi;
+
+    static constexpr int attribs[] = {
+        OSMESA_FORMAT, GL_RGBA,
+        OSMESA_DEPTH_BITS, 24,
+        OSMESA_STENCIL_BITS, 8,
+        OSMESA_ACCUM_BITS, 0,
+        OSMESA_PROFILE, OSMESA_CORE_PROFILE,
+        0,
+    };
+
+    OSMesaContext context = api->fOSMesaCreateContextAttribs(attribs, shared ? mContext : NULL);
+    if (!context) {
+        LOG(ERROR) << "Failed to create shared context";
+        return;
+    }
+
+    // OSMesa requires a non-null buffer to make a context current. Since we don't have a window
+    // or swapchain here, we use a dummy 1x1 buffer.
+    auto buffer = std::make_unique<uint8_t[]>(1 * 1 * 4 * sizeof(BackingType));
+
+    auto result = api->fOSMesaMakeCurrent(context, buffer.get(), BACKING_GL_TYPE, 1, 1);
+    FILAMENT_CHECK_POSTCONDITION(result == GL_TRUE)
+            << "OSMesaMakeCurrent failed for extra context!";
+
+    std::lock_guard<std::shared_mutex> lock(mAdditionalContextsLock);
+    mAdditionalContexts[currentThreadId] = { context, std::move(buffer) };
+}
+
+void PlatformOSMesa::releaseContext() noexcept {
+    std::thread::id currentThreadId = utils::ThreadUtils::getThreadId();
+    OSMesaContext context = nullptr;
+    std::unique_ptr<uint8_t[]> buffer;
+
+    {
+        std::lock_guard<std::shared_mutex> lock(mAdditionalContextsLock);
+        auto it = mAdditionalContexts.find(currentThreadId);
+        if (it == mAdditionalContexts.end()) {
+            LOG(WARNING) << "Attempted to destroy non-existing shared context";
+            return;
+        }
+        context = it->second.context;
+        buffer = std::move(it->second.buffer);
+        mAdditionalContexts.erase(it);
+    }
+
+    OSMesaAPI* api = (OSMesaAPI*) mOsMesaApi;
+    if (api) {
+        // Passing NULL as the context is the standard way to unbind in OSMesa.
+        api->fOSMesaMakeCurrent(NULL, NULL, 0, 0, 0);
+        api->fOSMesaDestroyContext(context);
+    }
+}
+
+Platform::SwapChain* PlatformOSMesa::createSwapChain(void* nativeWindow, uint64_t flags) noexcept {
+    FILAMENT_CHECK_POSTCONDITION(false) << "Cannot create non-headless swapchain";
+    return (SwapChain*) nativeWindow;
+}
+
+Platform::SwapChain* PlatformOSMesa::createSwapChain(uint32_t width, uint32_t height,
+        uint64_t flags) noexcept {
+    OSMesaSwapchain* swapchain = new OSMesaSwapchain(width, height);
+    return (SwapChain*) swapchain;
+}
+
+void PlatformOSMesa::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
+    OSMesaSwapchain* impl = (OSMesaSwapchain*) swapChain;
+
+    // OSMesa holds onto the raw pointer of the currently bound buffer and will write to it on the
+    // next flush (e.g. the glFinish() issued while the driver terminates). Park the context on the
+    // dummy buffer before releasing this swapchain's storage, otherwise we corrupt the heap.
+    if (mCurrentSwapChain == swapChain) {
+        bindDummyBuffer();
+    }
+
+    delete impl;
+}
+
+bool PlatformOSMesa::makeCurrent(ContextType type, SwapChain* drawSwapChain,
+        SwapChain* readSwapChain) {
+    OSMesaAPI* api = (OSMesaAPI*) mOsMesaApi;
+    OSMesaSwapchain* impl = (OSMesaSwapchain*) drawSwapChain;
+
+    auto result = api->fOSMesaMakeCurrent(mContext, (BackingType*) impl->buffer.get(),
+            BACKING_GL_TYPE, impl->width, impl->height);
+    FILAMENT_CHECK_POSTCONDITION(result == GL_TRUE) << "OSMesaMakeCurrent failed!";
+
+    mCurrentSwapChain = drawSwapChain;
+
+    return true;
+}
+
+void PlatformOSMesa::commit(Platform::SwapChain* swapChain) noexcept {
+    // No-op since we are not scanning out to a display.
+}
+
+} // namespace filament::backend

@@ -1,0 +1,15 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  generic:
+    strategy:
+      matrix:
+        os: [windows, ubuntu, macos]
+    name: ${{matrix.os}}
+    runs-on: ${{matrix.os}}-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: test
+      run: cd test && python test_all.py

@@ -1,0 +1,99 @@
+/*
+ * Copyright (C) 2025 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TNT_FILAMENT_BACKEND_CACHING_VULKANEXTERNALIMAGEMANAGER_H
+#define TNT_FILAMENT_BACKEND_CACHING_VULKANEXTERNALIMAGEMANAGER_H
+
+#include "VulkanHandles.h"
+
+#include <backend/DriverEnums.h>
+
+#include <array>
+#include <vector>
+
+namespace filament::backend {
+
+class VulkanYcbcrConversionCache;
+class VulkanSamplerCache;
+class VulkanDescriptorSetLayoutCache;
+class VulkanDescriptorSetCache;
+
+// Manages the logic of external images and their quirks wrt Vulkan.
+class VulkanExternalImageManager {
+public:
+
+    VulkanExternalImageManager(
+            VulkanSamplerCache* samplerCache,
+            VulkanYcbcrConversionCache* ycbcrConversionCache,
+            VulkanDescriptorSetCache* setCache,
+            VulkanDescriptorSetLayoutCache* layoutCache);
+
+    ~VulkanExternalImageManager();
+
+    void terminate();
+
+    using SetArray = std::array<fvkmemory::resource_ptr<VulkanDescriptorSet>,
+            VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
+
+    using LayoutArray = std::array<fvkmemory::resource_ptr<VulkanDescriptorSetLayout>,
+            VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
+
+    using VkLayoutArray = VulkanDescriptorSetLayout::DescriptorSetLayoutArray;
+
+    void removeDescriptorSet(fvkmemory::resource_ptr<VulkanDescriptorSet> set);
+
+    void bindExternallySampledTexture(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
+            uint8_t bindingPoint, fvkmemory::resource_ptr<VulkanTexture> image,
+            SamplerParams samplerParams);
+
+    void clearTextureBinding(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
+                             uint8_t bindingPoint);
+
+    VkSamplerYcbcrConversion getVkSamplerYcbcrConversion(
+            VulkanPlatform::ExternalImageMetadata const& metadata);
+
+    // - Update the descriptor set layout with the external samplers. This layout will be assign the
+    // respective immutable samplers to the layout.
+    // - Switch from binding the base layout to the new one.
+    // - Create a new descriptor set based on the new layout and copy the old descriptor set
+    // bindings that don't use external samplers.
+    // - Update the bindings that use external samplers.
+    void updateSetAndLayout(fvkmemory::resource_ptr<VulkanDescriptorSet> set);
+
+private:
+
+    VulkanSamplerCache* mSamplerCache;
+    VulkanYcbcrConversionCache* mYcbcrConversionCache;
+    VulkanDescriptorSetCache* mDescriptorSetCache;
+    VulkanDescriptorSetLayoutCache* mDescriptorSetLayoutCache;
+
+    using SetAndLayout = std::pair<fvkmemory::resource_ptr<VulkanDescriptorSet>,
+            fvkmemory::resource_ptr<VulkanDescriptorSetLayout>>;
+
+    struct SetBindingInfo {
+        uint8_t binding = 0;
+        fvkmemory::resource_ptr<VulkanTexture> image;
+        fvkmemory::resource_ptr<VulkanDescriptorSet> set;
+        VkSampler sampler = VK_NULL_HANDLE;
+    };
+
+    // Use vectors instead of hash maps because we only expect small number of entries.
+    std::vector<SetBindingInfo> mSetBindings;
+};
+
+} // filament::backend
+
+#endif // TNT_FILAMENT_BACKEND_CACHING_VULKANEXTERNALIMAGEMANAGER_H

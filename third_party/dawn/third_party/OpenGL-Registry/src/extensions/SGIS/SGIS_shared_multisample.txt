@@ -1,0 +1,392 @@
+Name
+
+    SGIS_shared_multisample
+
+Name Strings
+
+    GL_SGIS_shared_multisample
+    GLX_SGIS_shared_multisample
+
+Version
+
+    $Date: 1997/10/29 20:41:07 $ $Revision: 1.2 $
+
+Number
+
+    143
+
+Dependencies
+
+    GL_SGIS_multisample and GLX_SGIS_multisample are required
+
+Overview
+
+    While the OpenGL multisample extension (SGIS_multisample) provides
+    good out-of-order antialiasing via subpixel samples, multisample
+    hardware is very expensive because it multiplies the per-pixel
+    framebuffer memory required to maintain color, depth, and stencil
+    state by the number of samples.
+
+    The cost-sensitive Location Based Entertainment (LBE) market
+    desires good quality antialiasing, but the cost of maintaining
+    multisample memory for every pixel in the framebuffer managed area
+    is often prohibitive.  Low-end multi-channel visual simulation may
+    have similar cost constraints.
+
+    LBE applications typically render several channels that are output
+    to different video display devices.  For example, an LBE
+    application may render four 800x600 resolution channels, one per
+    game player.  While the total managed area may be 1600x1200, each
+    channel ends up being rendered serially.  With traditional
+    multisampling (as specified by SGIS_multisample), multisample
+    memory must be retained across the entire 1600x1200 managed area
+    though in fact the application is never using more than an 800x600
+    rectangle of multisample pixel state at any given time.
+
+    This sharing of multisample framebuffer state can result in a
+    substantial competitive advantage for high-end multi-channel
+    multisampling hardware for LBE applications.  Unlike a "cheap PC
+    per seat" solution, a high-end solution can be amortized by sharing
+    both texture and multisample memory between the multiple channels
+    (as well as host resources such as disk and CPUs).  For cheap PCs
+    to have the same amount of texture memory and quality of
+    antialiasing, texture and multisample memory have to be replicated
+    in every PC.
+
+    In a typical windowed environment, the entire framebuffer managed
+    area must retain multisample state because windows can be moved
+    dynamically and resized (up to the entire size of the managed
+    area).  For LBE applications though, the layout of channel
+    subrectangles in the framebuffer managed area is static and the
+    LBE application monopolizes the graphics device (no other
+    concurrent windowed apps).  Because of their channel-oriented,
+    dedicated, cost-sensitive nature, LBE applications can benefit from
+    a means to share the available multisample memory resources among
+    all the channels.
+
+    The SGIS_shared_multisample extension specifies a single
+    multisample buffer subrectangle sized smaller than the total
+    managed area that is both shared among multiple windows and
+    repositionable within in a window.
+
+    Use of the SGIS_shared_multisample extension is predicated on
+    specially configuring the window system, typically via a command
+    line option added to the window system server's startup command.
+    When run in this mode, OpenGL applications will see the
+    GL_SGIS_shared_multisample string advertised in the GL_EXTENSIONS
+    string (along with the GL_SGIS_multisample string).  In this mode,
+    the behavior of multisample extension changes.  Instead of the
+    multisample buffer memory being retained per-pixel across the
+    entire managed area, multisample memory is shared among multisample
+    windows and repositionable within a multisample window.
+
+    Switching windows or repositioning the multisample subrectangle
+    will make undefined the shared state within the multisample, depth,
+    stencil, and accumulation buffers.
+
+    When rendering into a multisample window, fragments that fall
+    outside the window's multisample subrectangle are discarded
+    (scissored).  By default, the window's multisample rectangle is
+    positioned at its window origin.
+
+Issues
+
+    *  As part of the pixel ownership test, when doing a ReadPixels,
+       CopyPixels, CopyTexImage, or CopySubTexImage operation, are the
+       sourced color pixels undefined if they are outside the
+       multisample subrectangle, but otherwise would pass the pixel
+       ownership test?  NO, such pixel read/copies should be DEFINED.
+
+       This behavior is justified because the resolved color buffer is
+       available for copying outside the multisample subrectangle, just
+       not the multisample, depth, stencil, or accumulation buffer
+       values.  LBE applications will likely find it useful to copy
+       rendering results from the first channel into the others.  For
+       example, copying a radar view shared among all the players into
+       each channel.
+
+       Note that copies or reads of depth or stencil (or multisamples
+       or accumulation buffer contents if such contents were actually
+       readable) will NOT be expected to be defined.
+
+       The specification additions below only amend this with respect
+       to ReadPixels, but other language in the 4.3.3 "Copying Pixels"
+       and 3.8 "Texturing, Alternative Texture Image Specification
+       Commands" sections imply that CopyPixels, CopyTexImage2D, and
+       CopyTexImage1D will also not include scissoring against the
+       multisample subrectangle as part of the pixel ownership test
+       when sourcing from color buffers (not depth or stencil though).
+       This is because these other operations read pixels as specified
+       by the ReadPixels operation.
+
+    *  Should the accumulation buffer be associated with the the
+       multisample subrectangle, or should the accumulation buffer be
+       retained (as are the color buffers) for pixels not within the
+       multisample subrectangle?  If an accumulation buffer exists, it
+       should be SHARED like the multisample buffer.
+
+       This behavior is justified because accumulation buffers are big
+       and expensive just like multisample buffers.  LBE apps still may
+       want to use the accumulation buffer for motion blur or depth of
+       field.  Like the multisample buffer, the accumulation buffer
+       should be shared and retained only within the multisample
+       subrectangle.
+
+    *  What about auxiliary buffers?  Does the same logic for
+       accumulation buffers apply?  UNRESOLVED.  This specification is
+       currently written to assume that an auxiliary buffer is a color
+       buffer and is not shared.
+
+    *  If multiple GL clients must use framebuffers with a shared
+       multisample subrectangle, how can they guarantee reliable
+       rendering results?  WITH GLFLUSH.  Keep rendering temporally
+       distinct with glFlush issued before rendering thread switches.
+
+    *  Does it make sense for hardware to advertise more than one
+       multisample subrectangle?  NO.  It would justified if you had
+       two parallel command streams updating distinct channels since
+       two channels would be rendering in parallel.  But if this was
+       the case (thinking in the context of LBE applications), it
+       probably makes more sense simply to have two distinct pipes.
+       That's cheaper than trying to support a single pipe with
+       parallel rendering streams, plus the channels are rendering
+       independently (via screen space subdivision) anyway.
+
+    *  Can you clear a window using a shared multisample buffer
+       outside the multisample subrectangle?  NO.
+
+       glClear is controlled by the pixel ownership test and if a
+       fragment is not within the multisample subrectangle, it cannot
+       pass the pixel ownership test when using a multisample
+       subrectangle.
+
+    *  What happens if you run a traditional (existing) multisample
+       application on a window system advertising the shared
+       multisample extension?  VERY UNSIGHTLY FRAME BUFFER FIGHTING.
+
+       The app runs, but its multisample rendering will be constrained
+       to the multisample subrectangle.  Multiple concurrent apps using
+       multisampling will "fight" for their use of the shared
+       multisample rectangle.
+
+       The expectation is that you only configure a window system
+       server to support shared multisample mode when running a single
+       dedicated LBE-style channel API.  Note that you can still run
+       non-multisampled windowed apps just fine concurrently with a
+       shared multisample app.
+
+    *  As written, this extension CHANGES the semantics of the
+       existing GL_SGIS_multisample extension.  Should this new
+       extension use a GLX attribute distinct from the one used by the
+       GLX_SGIS_multisample extension?  NO.
+
+       Users have to specially configure their window system server to
+       get the special overloaded sharing behavior.  Plus LBE
+       applications monopolize the system anyway.
+
+       The advantage of overloading the existing multisample GLX
+       attributes is that 3D toolkits (IRIS Performer, OpenGL++, OpenGL
+       Optimizer) and multisample apps themselves won't have to be
+       specially tweaked to try them out using the shared multisample
+       mode.
+
+    *  Can a single window system server be configured to advertise
+       an 8 sample shared multisample framebuffer configuration and an
+       4 sample shared multisample framebuffer configuration?  YES,
+       the extension would allow such a case to be advertised.
+
+       The idea would be perhaps the 4 sample shared multisample
+       configuration could have a large width and height than the more
+       memory intensive 8 sample shared multisample configuration.
+
+    *  Both a GLX and GL extension?  YES.  The multisample subrectangle
+       dimensions can be advertised for X visuals before actually
+       creating an actual window.  Also allows different numbers of
+       samples to be advertised (see above).
+
+New Procedures and Functions
+
+    void glMultisampleSubRectPosSGIS(GLint x,
+				     GLint y);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev,
+    GetIntegerv, and GetFloatv:
+
+	MULTISAMPLE_SUB_RECT_POSITION_SGIS
+	MULTISAMPLE_SUB_RECT_DIMS_SGIS
+
+    Accepted by the <attrib> parameter of glXGetConfig, and by the
+    <attrib_list> parameter of glXChooseVisual: 
+
+        GLX_MULTISAMPLE_SUB_RECT_WIDTH_SGIS   0x8026
+        GLX_MULTISAMPLE_SUB_RECT_HEIGHT_SGIS  0x8027
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations and
+the Framebuffer)
+
+    Section 4.1.1 (Pixel Ownership Test) is augmented as follows:
+
+    4.1.1.x  "Scissoring to the Multisample Subrectangle"
+
+    The value of MULTISAMPLE_SUB_RECT_DIMS_SGIS is an implementation
+    dependent constant, and is queried by calling GetIntegerv with
+    <pname> set to MULTISAMPLE_SUB_RECT_DIMS_SGIS.
+    MULTISAMPLE_SUB_RECT_DIMS_SGIS specifies the width and height of
+    the multisample subrectangle.  Neither the
+    MULTISAMPLE_SUB_RECT_DIMS_SGIS width or height should be greater
+    than zero if SAMPLE_BUFFERS_SGIS is zero.
+
+    If SAMPLE_BUFFERS_SGIS is one and the
+    MULTISAMPLE_SUB_RECT_DIMS_SGIS width and height are both greater
+    than zero, the pixel ownership test is augmented to also discard
+    fragments not within the multisample subrectangle.  Otherwise, the
+    pixel ownership operates normally and irrespective of the
+    multisample subrectangle.
+
+    The state of MULTISAMPLE_SUB_RECT_POSITION_SGIS is set by:
+
+       void MultisampleSubRectPosSGIS(GLint x,
+				      GLint y);
+
+    If either MULTISAMPLE_SUB_RECT_DIMS_SGIS width or height is zero or
+    the GL is in color index mode, MultisampleSubRectPosSGIS generates
+    the error INVALID_OPERATION.
+
+    When MultisampleSubRectPosSGIS is executed, the contents of the
+    multisample, depth, stencil, and accumulation buffers retained in
+    the multisample subrectangle (but not the contents of the resolved
+    color buffers) become undefined.  Also when a GL client connects to
+    a different GL context, the multisample, depth, stencil and
+    accumulation buffer values for all pixels within the multisample
+    subrectangle (but not the resolved color buffers) become
+    undefined.
+
+    The multisample subrectangle can be shared between multiple
+    framebuffers (windows).  Whenever the multisample subrectangle
+    becomes undefined, the contents of the multisample, depth, stencil,
+    and accumulation buffers (but not the contents of the resolved
+    color buffers) for all GL framebuffers sharing the multisample
+    subrectangle state become undefined.  When two or more GL clients
+    access (render or readback) concurrently framebuffers that share
+    the same multisample subrectangle (whether or not MULTISAMPLE_SGIS
+    is enabled), the rendering results for ALL buffers (including color
+    buffers) of all involved framebuffers are undefined.
+
+    The origin of the multisample subrectangle is defined by
+    (msrx,msry) specified by MULTISAMPLE_SUB_RECT_POSITION_SGIS in
+    window coordinates.  The extent of the multisample subrectangle is
+    defined by (msrwidth,msrheight) specified by
+    MULTISAMPLE_SUB_RECT_DIMS_SGIS in window coordinates.
+
+    A fragment with window coordinates (xw,yw) is within the
+    multisample subrectangle if msrx <= xw < msrx + msrwidth and msry
+    <= yw < msry + msrheight.
+
+    4.2.4  "The Accumulation Buffer"
+
+    Rewrite the sentence beginning "When the scissor test is enabled"
+    that describes what color buffer pixels are updated by a RETURN
+    Accum operation to read:
+
+    If either of the MULTISAMPLE_SUB_RECT_DIMS_SGIS width or height is
+    zero, when the scissor test is enabled, then only those pixels
+    within the current scissor box are updated; otherwise, all pixels
+    in the window are updated.  If the MULTISAMPLE_SUB_RECT_DIMS_SGIS
+    width and height are both greater than zero, only those pixels
+    within the current multisample subrectangle are updated; in
+    addition, if scissoring is enabled, the updated pixels are further
+    constrained to be within the scissor rectangle.
+
+    4.3.2  "Reading Pixels"
+
+    In the subsection "Obtaining Pixels from the Framebuffer", follow
+    the sentence "Results are also undefined for individual pixels that
+    are not owned by the current context." with:  For the purpose of
+    reading the color buffers (not depth and stencil though), the pixel
+    ownership test does not include scissoring against the multisample
+    subrectangle.
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    When called with <attribute> set to
+    GLX_MULTISAMPLE_SUB_RECT_WIDTH_SGI or
+    GLX_MULTISAMPLE_SUB_RECT_HEIGHT_SGIS, glXGetConfig returns in
+    parameter <value> the respective multisample subrectangle width or
+    height of the specified visual.
+
+    The GLX_MULTISAMPLE_SUB_RECT_WIDTH_SGI and
+    GLX_MULTISAMPLE_SUB_RECT_HEIGHT_SGIS attributes of a visual or
+    framebuffer configuration determine the respective width and
+    height dimensions of MULTISAMPLE_SUB_RECT_DIMS_SGIS for
+    GLXDrawables created with the visual or framebuffer
+    configuration.
+
+    glXChooseVisual accepts GLX_MULTISAMPLE_SUB_RECT_WIDTH_SGI and
+    GLX_MULTISAMPLE_SUB_RECT_HEIGHT_SGIS in <attribList>, followed by
+    the respective desired (non-negative) width or height of the
+    multisample rectangle.  The smallest width or height of at least
+    the specified size is preferred.  If the desired value is zero,
+    visuals with zero multisample rectangle width or height are
+    preferred.
+
+    Multisample GLXDrawables that reside on the same screen share the
+    same multisample subrectangle.  There is at most one shared
+    multisample subrectangle per screen.
+
+GLX Protocol
+
+    A new GL rendering command is added. The following command is sent
+    to the server as part of a glXRender request:
+
+    MultisampleSubRectPosSGIS
+            2           12              rendering command length
+            2           ??              rendering command opcode
+            4           INT32           x
+            4           INT32           y
+
+    Two new property type/property value pairs are included in the
+    property list of each visual returned by glXGetVisualConfigs
+    request.  The property type/property value pairs are encoded as.
+
+    4           ENUM                    property type
+                0x8026                  GLX_MULTISAMPLE_SUB_RECT_WIDTH
+    4           INT32                   property value
+
+    4           ENUM                    property type
+                0x8027                  GLX_MULTISAMPLE_SUB_RECT_HEIGHT
+    4           INT32                   property value
+
+Errors
+
+    None
+
+New State
+
+    Get Value                           Get Command     Type    Initial Value   Attribute
+    ---------                           -----------     -----   -------------   ---------
+    MULTISAMPLE_SUB_RECT_POSITION_SGIS  GetIntegerv     2 x Z   0,0             multisample
+
+New Implementation Dependent State
+
+    Get Value                       Get Command     Type    Minimum Value
+    ---------                       -----------     -----   -------------
+    MULTISAMPLE_SUB_RECT_DIMS_SGIS  GetIntegerv     2 x Z   0,0
+

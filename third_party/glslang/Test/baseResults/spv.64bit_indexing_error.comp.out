@@ -1,0 +1,15 @@
+spv.64bit_indexing_error.comp
+ERROR: 0:20: 'coopMatLoad' : required extension not requested: GL_EXT_shader_64bit_indexing
+ERROR: 0:21: 'coopMatStore' : required extension not requested: GL_EXT_shader_64bit_indexing
+ERROR: 0:24: 'coopVecMatMulAddNV' : required extension not requested: GL_EXT_shader_64bit_indexing
+ERROR: 0:25: 'coopVecMatMulNV' : required extension not requested: GL_EXT_shader_64bit_indexing
+ERROR: 0:26: 'coopVecLoadNV' : required extension not requested: GL_EXT_shader_64bit_indexing
+ERROR: 0:27: 'coopVecStoreNV' : required extension not requested: GL_EXT_shader_64bit_indexing
+ERROR: 0:28: 'coopVecOuterProductAccumulateNV' : required extension not requested: GL_EXT_shader_64bit_indexing
+ERROR: 0:29: 'coopVecReduceSumAccumulateNV' : required extension not requested: GL_EXT_shader_64bit_indexing
+ERROR: 0:31: '[]' : scalar integer expression required 
+ERROR: 0:33: 'length64' : required extension not requested: GL_EXT_shader_64bit_indexing
+ERROR: 10 compilation errors.  No code generated.
+
+
+SPIR-V is not generated for failed compile or link

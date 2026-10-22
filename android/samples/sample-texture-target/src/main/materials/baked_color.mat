@@ -1,0 +1,18 @@
+material {
+    name : baked_color,
+    shadingModel : unlit,
+    requires : [
+        color
+    ]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        // You must always call the prepareMaterial() function
+        prepareMaterial(material);
+
+        // We set the material's color to the color interpolated from
+        // the model's vertices
+        material.baseColor = getColor();
+    }
+}

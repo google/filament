@@ -1,0 +1,471 @@
+Name
+
+    ARB_vertex_array_object
+
+Name Strings
+
+    GL_ARB_vertex_array_object
+
+Contact
+
+    Ian Romanick, IBM Corporation (idr 'at' us.ibm.com)
+
+Notice
+
+    Copyright (c) 2008-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Approved by the ARB on July 11, 2008
+
+Version
+
+    Last Modified Data: October 8, 2012
+    Author revision:    13
+
+Number
+
+    ARB Extension #54
+
+Dependencies
+
+    This extension is written against the OpenGL 2.1 specification (December
+    1st, 2006).
+
+    APPLE_vertex_array_object affects the definition of this extension.
+
+Overview
+
+    This extension introduces named vertex array objects which encapsulate
+    vertex array state on the client side.  These objects allow applications
+    to rapidly switch between large sets of array state.  In addition, layered
+    libraries can return to the default array state by simply creating and
+    binding a new vertex array object.
+
+    This extension differs from GL_APPLE_vertex_array_object in that client
+    memory cannot be accessed through a non-zero vertex array object.  It also
+    differs in that vertex array objects are explicitly not sharable between
+    contexts.
+
+New Procedures and Functions
+
+    void BindVertexArray(uint array);
+
+    void DeleteVertexArrays(sizei n, const uint *arrays);
+
+    void GenVertexArrays(sizei n, uint *arrays);
+
+    boolean IsVertexArray(uint array);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        VERTEX_ARRAY_BINDING                       0x85B5
+
+Additions to Chapter 2 of the OpenGL 2.1 Specification (OpenGL Operation)
+
+    Add new section "2.X Vertex Array Objects" between sections "2.9 Buffer
+    Objects" and "2.10 Rectangles".
+
+    The buffer objects that are to be used by the vertex and geometry stages
+    of the GL are collected together to form a vertex array object.  All
+    state related to the definition of data used by the vertex processor is
+    encapsulated in a vertex array object.
+
+    The command
+
+        void GenVertexArrays(sizei n, uint *arrays);
+
+    returns <n> previous unused vertex array object names in <arrays>. These
+    names are marked as used, for the purposes of GenVertexArrays only, but
+    they acquire array state only when they are first bound.
+
+    Vertex array objects are deleted by calling
+
+        void DeleteVertexArrays(sizei n, const uint *arrays);
+
+    <arrays> contains <n> names of vertex array objects to be deleted. Once
+    a vertex array object is deleted it has no contents and its name is
+    again unused. If a vertex array object that is currently bound is
+    deleted, the binding for that object reverts to zero and the default
+    vertex array becomes current. Unused names in <arrays> are silently
+    ignored, as is the value zero.
+
+    A vertex array object is created by binding a name returned by
+    GenVertexArrays with the command
+
+        void BindVertexArray(uint array);
+
+    <array> is the vertex array object name. The resulting vertex array
+    object is a new state vector, comprising all the state values listed in
+    tables 6.6 (except for the CLIENT_ACTIVE_TEXTURE selector state), 6.7,
+    and 6.8 (except for the ARRAY_BUFFER_BINDING state).
+
+    BindVertexArray may also be used to bind an existing vertex array
+    object. If the bind is successful no change is made to the state of the
+    bound vertex array object, and any previous binding is broken.
+
+    The currently bound vertex array object is used for all commands
+    which modify vertex array state, such as VertexAttribPointer and
+    EnableVertexAttribArray; all commands which draw from vertex arrays,
+    such as DrawArrays and DrawElements; and all queries of vertex
+    array state (see chapter 6).
+
+    BindVertexArray fails and an INVALID_OPERATION error is generated if
+    array is not zero or a name returned from a previous call to
+    GenVertexArrays, or if such a name has since been deleted with
+    DeleteVertexArrays.
+
+    An INVALID_OPERATION error is generated if any of the *Pointer commands
+    specifying the location and organization of vertex data are called while
+    a non-zero vertex array object is bound, zero is bound to the
+    ARRAY_BUFFER buffer object, and the pointer is not NULL[fn].
+        [fn: This error makes it impossible to create a vertex array
+              object containing client array pointers.]
+
+Additions to Chapter 3 of the OpenGL 2.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 2.1 Specification (Per-Fragment
+    Operations and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 2.1 Specification (Special Functions)
+
+    Modify Section 5.4, Display Lists (p. 240)
+
+    (add new paragraph after 10th paragraph on p. 244)
+
+    Vertex array objects: GenVertexArrays, DeleteVertexArrays,
+    BindVertexArray
+
+Additions to Chapter 6 of the OpenGL 2.1 Specification (Querying GL State)
+
+    Modify Section 6.1.2, Data Conversions (p. 248)
+
+    (add new paragraph after last paragraph of section, p. 249)
+
+    Vertex-array state variables are qualified by the value of
+    VERTEX_ARRAY_BINDING to determine which vertex array object is queried.
+    Tables 6.6, 6.7, and 6.8 define the set of state stored in a vertex array
+    object.
+
+    Modify Section 6.1.11, Pointer and String Queries (p. 257)
+
+    (add new paragraph after 1st paragraph of section, p. 257)
+
+    Queries for VERTEX_ARRAY_POINTER, NORMAL_ARRAY_POINTER,
+    COLOR_ARRAY_POINTER, SECONDARY_COLOR_ARRAY_POINTER, INDEX_ARRAY_POINTER,
+    TEXTURE_COORD_ARRAY_POINTER, FOG_COORD_ARRAY_POINTER, or
+    EDGE_FLAG_ARRAY_POINTER return the value stored in the currently bound
+    vertex array object.
+
+    Add new section "6.1.X Vertex Array Object Queries" between sections
+    "6.1.13 Buffer Object Queries" and "6.1.14 Shader and Program Queries".
+
+    The command
+
+        boolean IsVertexArray(uint array);
+
+    returns TRUE if <array> is the name of a vertex array object. If <array>
+    is zero, or a non-zero value that is not the name of a vertex array
+    object, IsVertexArray returns FALSE. No error is generated is <array> is
+    not a valid vertex array object name.
+
+    Modify Section 6.1.14, Shader and Program Queries, p. 260
+
+    (modify the first paragraph on page 263)
+
+    Replace the text
+
+    "Note that all the queries except CURRENT_VERTEX_ATTRIB return client
+    state."
+
+    with
+
+    "Note that all the queries except CURRENT_VERTEX_ATTRIB return values
+    stored in the currently bound vertex array object (the value of
+    VERTEX_ARRAY_BINDING).  If the zero object is bound, these values
+    are client state."
+
+    (modify the 3rd paragraph on page 263 to read)
+
+    The command
+
+        void GetVertexAttribPointerv(uint index, enum pname, void **pointer);
+
+    obtains the pointer named <pname> for vertex attribute numbered <index>
+    and places the information in <pointer>.  <pname> must be
+    VERTEX_ATTRIB_ARRAY_POINTER.  The value returned is queried from the
+    currently bound vertex array object.  If the zero object is bound, the
+    value is queried from client state.  An INVALID_VALUE error is generated
+    if <index> is greater than or equal to the value of MAX_VERTEX_ATTRIBS.
+
+Additions to Appendix X of the OpenGL X.X specification (Sharing)
+
+    Vertex array objects are not sharable between contexts.
+
+Additions to the GLX Specification
+
+    No change is made to the GLX API.
+
+Interactions with APPLE_vertex_array_object
+
+    Vertex array objects as defined by this spec fill the same role as the
+    objects defined in APPLE_vertex_array_object but have some significant
+    semantic differences.  If both types of object are supported by an
+    implementation, BindVertexArray will accept object names from either
+    type of object.  Names passed to BindVertexArray must have been
+    previously returned by GenVertexArrays, previously returned by
+    GenVertexArraysAPPLE, or previously bound by BindVertexArrayAPPLE.
+    BindVertexArrayAPPLE must also accept names that were previously returned 
+    by GenVertexArrays and bound with BindVertexArray.
+
+    In addition, the enumerant value for VERTEX_ARRAY_BINDING is the same
+    as VERTEX_ARRAY_BINDING_APPLE.
+
+    This allows applications using ARB VAOs to safely call into libraries that
+    internally use Apple VAOs, and vice-versa.
+
+    The first bind call, either BindVertexArray or BindVertexArrayAPPLE,
+    determines the semantic of the object.
+
+GLX Protocol
+
+    The following rendering commands are sent to the server as part of a
+    glXRender request.
+
+        BindVertexArray
+
+            2           8               rendering command length
+            2           350             rendering command opcode
+            4           CARD32          array
+
+        DeleteVertexArrays
+
+            2           8+(n*4)         rendering command length
+            2           351             rendering command opcode
+            4           CARD32          n
+            n*4         LISTofCARD32    arrays
+
+    The following non-rendering commands are sent using glx single requests:
+
+        GenVertexArrays
+
+            1           CARD8           opcode (X assigned)
+            1           206             GLX opcode
+            2           3               request length
+            4           GLX_CONTEXT_TAG context tag
+            4           CARD32          n
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           n               reply length
+            24                          unused
+            n*4         LISTofCARD32    arrays
+
+        IsVertexArray
+
+            1           CARD8           opcode (X assigned)
+            1           207             GLX opcode
+            2           3               request length
+            4           GLX_CONTEXT_TAG context tag
+            4           CARD32          array
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           0               reply length
+            4           BOOL32          return value
+            20                          unused
+
+    New protocols for GetPointerv and GetVertexAttribPointerv are specified
+
+        GetPointerv
+
+            1           CARD8           opcode (X assigned)
+            1           208             GLX opcode
+            2           3               request length
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1           1               unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n + p) / 4
+            4                           unused
+            4           CARD32          n
+            16                          unused
+            n           LISTofBYTE      params
+            p                           unused, p=pad(n)
+
+        GetVertexAttribPointerv
+
+            1           CARD8           opcode (X assigned)
+            1           209             GLX opcode
+            2           4               request length
+            4           GLX_CONTEXT_TAG context tag
+            4           CARD32          index
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1           1               unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n + p) / 4
+            4                           unused
+            4           CARD32          n
+            16                          unused
+            n           LISTofBYTE      pointer
+            p                           unused, p=pad(n)
+
+Errors
+
+    INVALID_OPERATION is generated if any of the commands defined in this
+    extension is executed between the execution of Begin and the corresponding
+    execution of End.
+
+New State
+
+    Get Value               Get Command Type    Value   Attrib
+    ---------               ----------- ----    ------- ------
+    VERTEX_ARRAY_BINDING    GetIntegerv Z+      0       vertex-array
+
+New Implementation Dependent State
+    
+    None
+
+Issues
+
+    (1) Are vertex array objects client or server state?
+
+    DISCUSSION: Ideally they should be server state, like texture objects.
+    However, much of the state that is encapsulated by VAOs is client-state.
+
+    RESOLUTION: Resolved.  VAOs are server state.  This essentially means that
+    client array state must be duplicated on the server.  For practical
+    purposes, VBOs already require this duplication.
+
+    (2) What happens when a buffer object that is attached to a non-current
+        VAO is deleted?
+
+    RESOLUTION: Nothing (though a reference count may be decremented). 
+    A buffer object that is deleted while attached to a non-current VAO
+    is treated just like a buffer object bound to another context (or to
+    a current VAO in another context).
+
+    (3) Are VAOs sharable?
+
+    DISCUSSION: There are many difficulties and complications involved in
+    guaranteeing correct behavior when "container" objects are sharable.
+
+    RESOLUTION: RESOLVED: NO.
+
+    (4) Can buffer objects attached to a VAO be modified?
+
+    DISCUSSION: Operations such as updating the contents of a buffer object,
+    either via mapping the buffer or calling BufferSubData, are not
+    problematic.  However, operations that cause a change in the underlying
+    data structure can be very problematic from a hardware / driver
+    perspective.  Currently the only such operation is BufferData which causes
+    the buffer to be reallocated.
+
+    RESOLUTION: RESOLVED.  Yes.  Calling BufferData on a buffer attached
+    to a VAO is allowed.
+
+    (5) What are the interactions with this extension and
+        APPLE_vertex_array_object?
+
+    DISCUSSION:  The only question is what the behavior should be when both an
+    ARB vertex array object and an Apple vertex array object are bound at the
+    same time.
+
+    RESOLUTION: Resolved.  If both extensions are supported by an 
+    implementation, both object types share a name space.  Most of the useful
+    interactions fall out as a result of that.  Please refer to the section
+    "Interactions with APPLE_vertex_array_object" above for more details.
+
+    (6) Why don't the new tokens and entry points in this extension have
+       "ARB" suffixes like other ARB extensions?
+
+    RESOLVED: Unlike most ARB extensions, this is a strict subset of
+    functionality already approved in OpenGL 3.0. This extension exists
+    only to support that functionality on older hardware that cannot
+    implement a full OpenGL 3.0 driver. Since there are no possible
+    behavior changes between the ARB extension and core features, source
+    code compatibility is improved by not using suffixes on the
+    extension.
+
+    (7) How does this extension affect the GLX protocol of the commands that
+        modify or query vertex array state?
+
+    RESOLVED: This extension changes the behaviour of all the commands that
+    modify or query vertex array state to use currently bound vertex array
+    object when a non-zero vertex array object is bound.
+    Since vertex array object is stored in the server, new protocol must be
+    specified for GetPointerv and GetVertexAttribPointerv.
+    Additionally, commands GetVertexAttribdv, GetVertexAttribfv and
+    GetVertexAttribiv must query state from the server and commands
+    VertexAttrib*Pointer, EnableVertexAttribArray and DisableVertexAttribArray
+    must modify state in the server when a non-zero vertex array object is
+    bound. If the zero object is bound, the value is queried from client state.
+
+Revision History
+
+    Rev.     Date      Author   Changes
+    ----  ----------  --------  ----------------------------------------------
+      1   04/17/2008     idr    Initial version based on
+                                GL_APPLE_vertex_array_object spec.
+
+      2   04/18/2008     idr    Added sharability issue.
+
+      3   05/02/2008     idr    Added issues #4 and #5.
+
+      4   05/15/2008     idr    Resolved issue #1.  VAOs are server state.
+                                Resolved issue #5.  ARB and APPLE VAOs share
+                                a name space.
+
+      5   06/04/200   Jon Leech Minor typos, rearrange errors.
+
+      6   06/15/2008  Jon Leech More minor typos, clarify GenVertexArrays
+                                behavior.
+
+      7   07/08/2008     js    - noted that VAO is not supposed to include 
+                                 CLIENT_ACTIVE_TEXTURE (bugzilla 3611)
+                               - resolved all other open issues as per working 
+                                 group discussions
+                               - deleted obsolete INVALID_OPERATION on
+                                 draw with client arrays since it's no
+                                 longer possible to define a VAOs with client
+                                 arrays, as per working group discussions
+                               - synced up BindVertexArray language with GL 3 spec
+                                 draft glspec30.20080708.1.pdf.
+
+      8   08/07/2008  Jon Leech Remove ARB suffixes.
+
+      9   08/20/2008  Jon Leech Cleanup formatting errors.
+
+      10  09/21/2011  Jon Leech Clarify that all *Pointer commands generate
+                                errors when attempting to specify client
+                                array pointers in a VAO (Bug 3696).
+      11  09/22/2011  Jon Leech Exclude ARRAY_BUFFER_BINDING from VAO
+                                state (Bug 5659).
+      12  09/19/2012  Jon Leech Language tweaks for consistency with
+                                OpenGL 3.1 specification (Bug 4306).
+
+      13  10/08/2012  srahman   Added GLX protocol and issue #7.

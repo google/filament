@@ -1,0 +1,9 @@
+// RUN: %dxc --version | FileCheck %s
+
+// Verify that the external validator can support the 
+// IDxcVersionInfo* interfaces, and can accurately report
+// that the dxcompiler.dll version is not 1.0.
+// The version is 1.0 only when the DxcVersionInfo interface
+// is unsupported. Otherwise, it should usually match the 
+// dxil version or it will be at least 1.1
+// CHECK-NOT: dxcompiler.{{dll|so|dylib}}: 1.0

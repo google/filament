@@ -1,0 +1,70 @@
+material {
+    name : dofCombine,
+    parameters : [
+        {
+            type : sampler2d,
+            name : color,
+            precision: medium
+        },
+        {
+            type : sampler2d,
+            name : dof,
+            precision: medium
+        },
+        {
+            type : sampler2d,
+            name : tiles,
+            precision: medium
+        },
+        {
+            type : sampler2d,
+            name : alpha,
+            precision: medium
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = uvToRenderTargetUV(postProcess.normalizedUV);
+    }
+}
+
+fragment {
+
+#include "dofUtils.fs"
+
+void dummy(){}
+
+void postProcess(inout PostProcessInputs postProcess) {
+    highp vec2 uv = variable_vertex.xy;
+    vec2 tiles = textureLod(materialParams_tiles, uv, 0.0).rg;
+
+    vec4 color;
+    if (isTrivialTile(tiles)) {
+        color = textureLod(materialParams_color, uv, 0.0);
+    } else if (isFastTile(tiles) && (abs(tiles.r) >= MAX_IN_FOCUS_COC + 1.0)) {
+        // we can only handle fast tiles that don't have an alpha channel here
+        color = textureLod(materialParams_dof, uv, 0.0);
+    } else {
+        float alpha = textureLod(materialParams_alpha, uv, 0.0).r;
+        vec4 dof = textureLod(materialParams_dof, uv, 0.0);
+        color = textureLod(materialParams_color, uv, 0.0);
+        color = dof + (1.0 - alpha) * color;
+    }
+
+#if POST_PROCESS_OPAQUE
+    // kill the work performed above
+    color.a = 1.0;
+#endif
+
+    postProcess.color = color;
+}
+
+}

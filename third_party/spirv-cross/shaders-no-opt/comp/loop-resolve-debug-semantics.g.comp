@@ -1,0 +1,16 @@
+#version 450
+
+layout(local_size_x = 1) in;
+
+layout(set = 0, binding = 0) buffer SSBO
+{
+	int v[];
+};
+
+void main()
+{
+	for (int i = 0; i < 4; i++)
+	{
+		v[i] += 10;
+	}
+}

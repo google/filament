@@ -1,0 +1,190 @@
+# Copyright 2020 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import("//build/config/sanitizers/sanitizers.gni")
+import("//build_overrides/tint.gni")
+
+# This file contains Tint-related build flags.
+
+if (!defined(tint_standalone)) {
+  if (defined(dawn_standalone)) {
+    tint_standalone = dawn_standalone
+  } else {
+    tint_standalone = false
+  }
+}
+
+declare_args() {
+  # Is protobuf support present
+  if (!defined(tint_has_protobuf)) {
+    tint_has_protobuf = tint_standalone || build_with_chromium
+  }
+}
+
+declare_args() {
+  # Path to tint checkout
+  if (!defined(tint_root_dir)) {
+    tint_root_dir = "//"
+  }
+
+  # Path to spirv-tools checkout
+  if (!defined(tint_spirv_tools_dir)) {
+    tint_spirv_tools_dir = "//third_party/spirv-tools/src"
+  }
+
+  # Path to glslang checkout
+  if (!defined(tint_glslang_dir)) {
+    tint_glslang_dir = "//third_party/glslang/src"
+  }
+
+  # Path to googletest checkout
+  if (!defined(tint_googletest_dir)) {
+    tint_googletest_dir = "//third_party/googletest/src"
+  }
+
+  # Path to spirv-headers checkout
+  if (!defined(tint_spirv_headers_dir)) {
+    tint_spirv_headers_dir = "//third_party/spirv-headers/src"
+  }
+
+  # Path to libprotobuf-mutator checkout
+  if (!defined(tint_lpm_dir)) {
+    tint_lpm_dir = "//third_party/libprotobuf-mutator"
+  }
+
+  # Path to mesa checkout
+  if (!defined(tint_mesa_dir)) {
+    tint_mesa_dir = "//third_party/mesa"
+  }
+
+  if (!defined(tint_build_cmds)) {
+    tint_build_cmds = tint_standalone
+  }
+
+  if (!defined(tint_enable_ir_dumping)) {
+    tint_enable_ir_dumping = tint_standalone
+  }
+
+  if (!defined(tint_enable_ir_validation_asserts)) {
+    tint_enable_ir_validation_asserts = tint_standalone
+  }
+
+  # Build the SPIR-V input reader
+  if (!defined(tint_build_spv_reader)) {
+    tint_build_spv_reader = true
+  }
+
+  # Build the SPIR-V output writer
+  if (!defined(tint_build_spv_writer)) {
+    tint_build_spv_writer = true
+  }
+
+  # Build the WGSL input reader
+  if (!defined(tint_build_wgsl_reader)) {
+    tint_build_wgsl_reader = true
+  }
+
+  # Build the WGSL output writer
+  if (!defined(tint_build_wgsl_writer)) {
+    tint_build_wgsl_writer = true
+  }
+
+  # Build the MSL output writer
+  if (!defined(tint_build_msl_writer)) {
+    tint_build_msl_writer = true
+  }
+
+  # Build the HLSL output writer
+  if (!defined(tint_build_hlsl_writer)) {
+    tint_build_hlsl_writer = true
+  }
+
+  # Build the GLSL output writer
+  if (!defined(tint_build_glsl_writer)) {
+    tint_build_glsl_writer = true
+  }
+
+  # Build the GLSL output validator
+  if (!defined(tint_build_glsl_validator)) {
+    tint_build_glsl_validator = true
+  }
+
+  # Build the NULL output writer
+  if (!defined(tint_build_null_writer)) {
+    tint_build_null_writer = true
+  }
+
+  # Build IR binary format support
+  if (!defined(tint_build_ir_binary)) {
+    tint_build_ir_binary = tint_has_protobuf
+  }
+
+  # Build unittests
+  if (!defined(tint_build_unittests)) {
+    tint_build_unittests = true
+  }
+
+  # Build benchmarks
+  if (!defined(tint_build_benchmarks)) {
+    tint_build_benchmarks = true
+  }
+
+  # Build fuzzers
+  if (!defined(tint_build_fuzzers)) {
+    tint_build_fuzzers = use_fuzzing_engine
+  }
+
+  # Enable building Mesa as part of Tint fuzzers
+  if (!defined(tint_build_mesa)) {
+    tint_build_mesa = false
+  }
+}
+
+# Intentionally not allowing is_wasm, even though it is Linux like,
+# because it uses a different toolchain
+if (tint_build_mesa && (!is_linux || is_android || is_chromeos)) {
+  assert(false, "Building Mesa is only supported on Linux")
+}
+if (tint_build_mesa && is_msan) {
+  assert(
+      false,
+      "Building Mesa with MSAN is not supported, due to pre-built dependencies not being instrumented for MSAN")
+}
+
+declare_args() {
+  # Enable Vulkan support in Tint fuzzers
+  if (!defined(tint_build_fuzzer_vulkan_support)) {
+    tint_build_fuzzer_vulkan_support = tint_build_mesa
+  }
+}
+
+declare_args() {
+  # Directory holding tint source
+  if (!defined(tint_src_dir)) {
+    tint_src_dir = "${tint_root_dir}/src/tint"
+  }
+}

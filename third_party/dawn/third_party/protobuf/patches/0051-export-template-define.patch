@@ -1,0 +1,20 @@
+diff --git a/src/google/protobuf/repeated_ptr_field.cc b/src/google/protobuf/repeated_ptr_field.cc
+index e50ab2a..b0bf875 100644
+--- a/src/google/protobuf/repeated_ptr_field.cc
++++ b/src/google/protobuf/repeated_ptr_field.cc
+@@ -171,6 +171,7 @@ PROTOBUF_ALWAYS_INLINE void RepeatedPtrFieldBase::MergeFromInternal(
+ }
+ 
+ template <>
++PROTOBUF_EXPORT_TEMPLATE_DEFINE
+ void RepeatedPtrFieldBase::MergeFrom<std::string>(
+     const RepeatedPtrFieldBase& from, Arena* arena) {
+   MergeFromInternal<std::string>(
+@@ -227,6 +228,7 @@ void RepeatedPtrFieldBase::MergeFromConcreteMessage(
+ }
+ 
+ template <>
++PROTOBUF_EXPORT_TEMPLATE_DEFINE
+ void RepeatedPtrFieldBase::MergeFrom<MessageLite>(
+     const RepeatedPtrFieldBase& from, Arena* arena) {
+   ABSL_DCHECK(from.current_size_ > 0);

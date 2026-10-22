@@ -1,0 +1,39 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) buffer SSBO
+{
+    float a1;
+    vec2 a2;
+    vec3 a3;
+    vec4 a4;
+    float b1;
+    vec2 b2;
+    vec3 b3;
+    vec4 b4;
+    float c1;
+    vec2 c2;
+    vec3 c3;
+    vec4 c4;
+} _4;
+
+void main()
+{
+    _4.a1 = min(_4.b1, _4.c1);
+    _4.a2 = min(_4.b2, _4.c2);
+    _4.a3 = min(_4.b3, _4.c3);
+    _4.a4 = min(_4.b4, _4.c4);
+    _4.a1 = max(_4.b1, _4.c1);
+    _4.a2 = max(_4.b2, _4.c2);
+    _4.a3 = max(_4.b3, _4.c3);
+    _4.a4 = max(_4.b4, _4.c4);
+    _4.a1 = clamp(_4.a1, _4.b1, _4.c1);
+    _4.a2 = clamp(_4.a2, _4.b2, _4.c2);
+    _4.a3 = clamp(_4.a3, _4.b3, _4.c3);
+    _4.a4 = clamp(_4.a4, _4.b4, _4.c4);
+    for (int i = 0; i < 2; i++, _4.a1 = clamp(_4.a1, _4.b2.x, _4.b2.y))
+    {
+        _4.a2 = min(_4.b2, _4.c2);
+    }
+}
+

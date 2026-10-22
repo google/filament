@@ -1,0 +1,155 @@
+Name
+
+    SGIX_fog_scale
+
+Name Strings
+
+    GL_SGIX_fog_scale
+
+Version
+
+    $Date: 1999/04/02 22:52:37 $ $Revision: 1.6 $
+
+Number
+
+    161
+
+Dependencies
+
+    OpenGL 1.0 is required.
+    The extension is written against the OpenGL 1.2.1 Specification.
+    SGIX_fog_offset affects the definition of this extension
+
+Overview
+
+    This extension allows fragments to receive more or less fog than the
+    amount specified by the fog environment and the distance to the
+    fragment center, by scaling the fragment eye-coordinate distance
+    prior to fog computation.
+
+    This is particularly interesting for light point objects that punch
+    even through thick fog. Fog scale value is specified by setting the
+    FOG_SCALE_VALUE_SGIX scale parameter with glFog*. If scale <= 0, the
+    resulting operation is clamped to 0. If 0 < scale < 1, the object
+    appears brighter. If scale > 1, the object receives more fog. A
+    scale of 1 has no effect. Fog scale can be enabled or disabled with
+    the FOG_SCALE_SGIX parameter.
+
+Issues
+
+    * Should specifying FOG_SCALE_VALUE_SGIX < 0 generate an error?
+
+    * Should the correct combined equation be (z * scale) - offset, or
+      (z - offset) * scale? Performer uses the latter, but the former is
+      more consistent with other OpenGL scale and bias operations.
+
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled
+
+	FOG_SCALE_SGIX			0x81FC
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev, and by the <pname> parameter of Fogiv and
+    Fogfv:
+
+	FOG_SCALE_VALUE_SGIX		0x81FD
+
+Additions to Chapter 2 of the 1.2.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2.1 Specification (Rasterization)
+
+  - (3.10, p. 139) Change the second paragraph to:
+
+	"This factor f is computed according to one of three equations:
+
+	    f = exp(-d * f_z),		    (3.24)
+
+	    f = exp(-(d * f_z)^2), or	    (3.25)
+
+		e - f_z
+	    f = -------			    (3.26)
+		e - s
+
+	f_z is a function of the eye-coordinate distance z from the eye,
+	(0,0,0,1) in eye coordinates, to the fragment center. If
+	FOG_SCALE_SGIX is enabled, then f_z = z * f_s; otherwise, f_z =
+	z. If f_z < 0, then it is clamped to zero prior to fog
+	computation.
+
+	"The equation, along with the parameters d, e, s, and f_s, is
+	specified with..."
+
+    Change the end of the third paragraph to:
+
+	"...If <pname> is FOG_DENSITY, FOG_START, FOG_END, or
+	FOG_SCALE_SGIX, then <param> is or <params> points to a value
+	that is d, s, e, or f_s, respectively. If d is specified as less
+	than zero, the error INVALID_VALUE is generated."
+
+    Change the final paragraph on page 140 to:
+
+	"The state required for fog consists of a three valued integer
+	to select the fog equation, four floating-point values d, e, s,
+	and f_s, an RGBA fog color and a fog color index, a single bit
+	to indicate whether or not fog is enabled, and a single bit to
+	indicate whether or not fog scaling is enabled. In the initial
+	state, fog is disabled, fog scaling is disabled, FOG_MODE is
+	EXP, d = 1.0, e = 1.0, s = 0.0, and f_s = 1.0; C_f = (0,0,0,0)
+	and i_f = 0."
+
+Additions to Chapter 4 of the 1.2.1 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2.1 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Dependencies on SGIX_fog_offset
+
+    If SGIX_fog_offset is supported, then both scale and offset can be
+    applied to z prior to fog computation. Combining the new language of
+    the two specifications is straightforward except at the end of the
+    second paragraph of section 3.10, which should read:
+
+	"...f_z is a function of the eye-coordinate distance z from the
+	eye, (0,0,0,1) in eye coordinates, to the fragment center. If
+	both FOG_OFFSET_SGIX and FOG_SCALE_SGIX are enabled, then f_z =
+	z * f_s - f_o. If only FOG_OFFSET_SGIX is enabled, then f_z = z
+	- f_o. If only FOG_SCALE_SGIX is enabled, then f_z = z * f_s.
+	Otherwise, f_z = z. If f_z < 0, then it is clamped to zero prior
+	to fog computation."
+
+Errors
+
+    None
+
+New State
+
+    (table 6.8, p. 198)
+
+    Get Value		    Type    Get Command     Initial Value   Description			    Sec.   Attribute
+    ---------		    ----    -----------     -------------   -----------			    ----   ---------
+    FOG_SCALE_SGIX	    B	    IsEnabled	    False	    True if fog scaling is enabled  3.10   fog
+    FOG_SCALE_VALUE_SGIX    R	    GetFloatv	    1.0		    Fog scaling factor		    3.10   fog
+
+New Implementation Dependent State
+
+    None

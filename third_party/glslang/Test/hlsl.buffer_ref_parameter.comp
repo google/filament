@@ -1,0 +1,13 @@
+[[vk::binding(0, 0)]] ByteAddressBuffer buffer_position_ms;
+[[vk::binding(1, 0)]] RWByteAddressBuffer r;
+
+float3 pull_position(ByteAddressBuffer buffer_position, uint vertex_id) {
+    return asfloat(buffer_position.Load3(vertex_id * 3 * 4));
+}
+
+[numthreads(64, 1, 1)]
+void main(uint gi : SV_GroupIndex) {
+    float3 position_ms = pull_position(buffer_position_ms, gi);
+
+    r.Store3(0, asuint(position_ms));
+}

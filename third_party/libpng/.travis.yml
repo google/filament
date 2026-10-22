@@ -1,0 +1,28 @@
+branches:
+  except:
+    - /libpng[0-1][0-8]/
+    - /v[0-1][.][0-8][.][0-9]+/
+
+language: c
+
+os:
+  - freebsd
+  - linux
+  - osx
+
+env:
+  - AUTOMATION=cmake
+  - AUTOMATION=configure
+  - AUTOMATION=makefiles
+
+before_script:
+  - 'if test "$TRAVIS_OS_NAME" = "linux"; then export CI_CC="gcc"; else export CI_CC="clang"; fi'
+  - 'if test "$TRAVIS_OS_NAME" = "osx"; then export CI_CMAKE_GENERATOR="Xcode"; fi'
+  - 'if test "$TRAVIS_OS_NAME" != "osx"; then export CI_SANITIZERS="address,undefined"; fi'
+  - 'export CI_MAKEFILES="scripts/makefile.$CI_CC scripts/makefile.std"'
+  - 'export CI_MAKE_FLAGS=-j2'
+  - 'export CI_CMAKE_BUILD_FLAGS=-j2'
+  - 'export CI_CTEST_FLAGS=-j2'
+
+script:
+  - './ci/ci_verify_$AUTOMATION.sh'

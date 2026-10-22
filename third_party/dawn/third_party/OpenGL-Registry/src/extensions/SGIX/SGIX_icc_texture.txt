@@ -1,0 +1,455 @@
+XXX - Not complete -- needs errors & GLX protocol
+work
+
+
+Name
+
+    SGIX_icc_texture
+
+Name Strings
+
+    GL_SGIX_icc_texture
+
+Version
+
+    $Date: 1999/06/09 18:23:05 $ $Revision: 1.16 $
+
+Number
+
+    154
+
+Dependencies
+
+    OpenGL 1.1 is required.
+    EXT_texture3D affects the definition of this extension
+    SGIS_texture4D affects the definition of this extension
+
+Overview
+
+    This extension defines new host and internal formats for the
+    storage of compressed images.  The formats utilize a variant of
+    color cell compression, in which 4x4 pixel blocks are represented
+    by two color values and a two bit index per pixel.  Two additional
+    values are interpolated between the two explicitly stored values,
+    and each pixel's index selects one of these four values.  For RGB
+    and RGBA images, two RGB colors and a single index per pixel are
+    used to store the R, G, and B channels.  For RGBA and
+    LUMINANCE_ALPHA formats, the alpha channel is encoded
+    independently using two alpha values and an index per pixel.  
+
+Issues
+
+    - Do we really want compressed textures to be a full-blown host
+      format that may be used to specify things like color tables?
+      Orthogonality says yes, simplicity says no.  
+
+      A: ICC formats don't seem useful for things other than textures
+      so limit it to that.
+
+    - What about one, three, and four dimensional textures?  
+
+      A: Three and four should work as stacks of 2D textures.  One
+      could be made to work but the natural hardware implementation
+      would be to have a block represent a 16x1 subimage.  The
+      locality probably wouldn't be good and equivalent results could
+      be obtained with texture filtering.
+
+    - Method of dealing with width & height of host image is awkward
+      when downloading small mipmap levels since UNPACK_ROW_LENGTH
+      must be set.  Should we say that the rounding up happens
+      automatically? 
+
+      A:  Yes.
+
+    - Should unpacking of ICC formats be described in the section
+      about pixel rectangles (with the rest of the unpacking) or in
+      the section about texture downloads (since they cannot be used
+      in any other situation)?  Similar question for readbacks.
+
+    - There are still some problems with the sized and base internal
+      formats.  We're ok for now since there is only one sized
+      internal format for each base internal format.  Can we get rid
+      of the unsized internal formats?
+
+    - Need to say that pixel transfer modes are not applied.  Ideally this
+      should be done in such a way that removing this restriction in a
+      later extension is not a problem.  We could say that trying to
+      do a ICC download with a non-identity pixel transfer operation
+      applied results in an error, but checking for non-identity pixel
+      transfer operations can be tricky.
+
+    - Is there any way to change this extension such that
+      implementations which don't support a certain compressed format
+      can "fake it?"  With the "no compressor" limitation this might
+      require the texture manager to maintain a shadowed copy of the
+      compressed texture and put decompressed versions in texture
+      memory. 
+
+    - Need to document behavior when interlacing is on.  Won't work
+      but should it be ignored or an error?
+
+Reasoning
+
+    - This spec is designed to avoid adding the ability to compress
+      into the ICC formats within GL.  Therefore, we do not allow
+      subtexture downloads which are not aligned to the 4x4 tile size
+      or downloads of host images which are not already in a ICC
+      format.  This ability can be added by a subsequent extension.
+      For now, the compression should go in a GLU extension.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <internalformat> parameter of TexImage2D,
+    TexImage3DEXT, and TexImage4DSGIS:
+
+    RGB_ICC_SGIX			0x8460
+    RGBA_ICC_SGIX			0x8461
+    ALPHA_ICC_SGIX			0x8462
+    LUMINANCE_ICC_SGIX			0x8463
+    INTENSITY_ICC_SGIX			0x8464
+    LUMINANCE_ALPHA_ICC_SGIX		0x8465
+
+    Accepted by the <internalformat> and <format> parameters of
+    TexImage2D, TexImage3DEXT, and TexImage4DSGIS:
+
+    R5_G6_B5_ICC_SGIX			0x8466
+    R5_G6_B5_A8_ICC_SGIX		0x8467
+    ALPHA16_ICC_SGIX			0x8468
+    LUMINANCE16_ICC_SGIX		0x8469
+    INTENSITY16_ICC_SGIX		0x846A
+    LUMINANCE16_ALPHA8_ICC_SGIX		0x846B
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    The following is added to the end if the last paragraph in the
+    introduction: "Six ICC formats are described in this section:
+    R5_G6_B5_ICC_SGIX, R5_G6_B5_A8_ICC_SGIX, ALPHA16_ICC_SGIX,
+    LUMINANCE16_ICC_SGIX, INTENSITY16_ICC_SGIX, and
+    LUMINANCE16_ALPHA8_ICC_SGIX. The ICC formats are used only as
+    arguments to texture download commands and not as arguments to
+    other commands which take pixel data from client memory.  If the
+    format argument to a command other than a texture download command
+    is an enumerant for a ICC format, the error INVALID_ENUM is
+    generated.  Other restrictions on the use of ICC formats are
+    described below and in Section 3.8"
+
+    The following is added to section 3.6.3 at the end of the
+    subsection entitled "Unpacking":
+
+    If the data in host memory is in one of the ICC formats, the data
+    is treated as being a sequence of blocks each of which represents
+    a 4x4 pixel subimage.  The blocks are stored in a row-major order,
+    analogous to the host memory storage of pixels.  The length of
+    each block in words and how it is decoded depends on the specific
+    ICC format.  This information is given in the subsection
+    "Decompression from ICC."  For each format, the block length is a
+    non-zero integer number of words.  The type argument to the
+    function must be set to GL_UNSIGNED_SHORT or the error
+    INVALID_ENUM will be generated.
+
+    A ICC-compressed image in host memory must be made of complete 4x4
+    blocks.  The width and height arguments give the uncompressed size
+    and both must be multiples of four.  The number of pixels in a row
+    of the host image is determined in the same manner as for
+    uncompressed host images.  If this value is not a multiple of
+    four, it is rounded up to the next multiple of four.  The
+    resulting value is referred to as l.  If p indicates the location
+    in memory of the first byte of the first block of the first row,
+    then the first byte of the first block of the Nth row is indicated
+    by
+
+        p + (N/4)k
+
+    where N is the row number (counting from zero).  N must be a
+    multiple of four; rows which are not four-aligned may not be
+    individually accessed. k is defined as:
+
+        k = ceil(sl / a) * a
+
+    where s is the size of a block for the given format in GL ubytes
+    and a is the value of UNPACK_ALIGNMENT.
+
+    The height h of the host image is assumed to be:
+
+        h = ceil((height + s) / 4) * 4
+
+    where s is the value of SKIP_ROWS and height is the value of the
+    height argument to the pixel function.  In other words, the sum of
+    the value of SKIP_ROWS and the height argument to the function is
+    rounded up to the next multiple of four to give the height of the
+    host image.
+
+    Subrectangles of ICC images may be extracted in a manner similar
+    to uncompressed images as determined by the parameters
+    UNPACK_ROW_LENGTH, UNPACK_SKIP_ROWS, and UNPACK_SKIP_PIXELS.  For
+    compressed images, the lower left corner of the subrectangle must
+    be aligned to four-pixel boundaries in both x and y.  The values
+    of UNPACK_SKIP_ROWS and UNPACK_SKIP_PIXELS must be multiples of
+    four (positive, negative, or zero) or the error INVALID_OPERATION
+    is generated.  Before obtaining the first group from memory, the
+    pointer p is effectively advanced by (UNPACK_SKIP_PIXELS / 4)s +
+    (UNPACK_SKIP_ROWS/4)k bytes.  ceil(width / 4) blocks are
+    obtained from contiguous memory (without advancing the pointer),
+    after which the pointer is advanced by k bytes.  ceil(height/4)
+    sets of ceil(width/4) blocks are obtained this way.
+
+    The following is added to the end of table 3.5:
+
+					Element Meaning		Target
+	Name				and Order		Buffer
+	----				---------------		--------
+	RGB_ICC_SGIX			R, G, B Components	Color
+	RGBA_ICC_SGIX			R, G, B, A Components	Color
+	LUMINANCE_ICC_SGIX		Luminance Component	Color
+	LUMINANCE_ALPHA_ICC_SGIX	Luminance, A Components	Color
+
+    The following subsection is added to section 3.6.3 just prior to
+    the subsection entitled "Conversion to floating-point":
+
+    Decompression from ICC
+
+    After being extracted from host memory, a ICC-compressed image is
+    converted into a floating-point color image.  Each 4x4 block is
+    decompressed independently using mechanisms described below.  We
+    start by describing mechanisms we will describe mechanisms common
+    to all ICC formats and then describe the organization of the data
+    within a block for each format.  In this section, we assume that
+    byte swapping (if SWAP_BYTES is TRUE) has already taken place.
+
+    Each ICC format contains one or two fields containing 2-bit
+    indices for the each of the 16 pixels in the block.  Within the
+    field, the indices are stored in bottom-to-top, left-to-right
+    order regardless of user-specified pixel storage modes.  The index
+    of the bottom left pixel is stored in the two high-order bits of
+    the first byte of the field.  The index of the top right pixel is
+    stored in the low-order bits of the last byte.
+
+    For ICC formats which contain RGB data (R5_G6_B5_ICC_SGIX and
+    R5_G6_B5_A8_ICC_SGIX), two field contain RGB color values.  The
+    fields are each 16 bits wide with the top 5 bits specifying the
+    red value, the middle 6 bits specifying the green value, and the
+    lower 5 bits specifying the blue value.  For ICC formats which
+    contain luminance data (LUMINANCE16_ICC_SGIX and
+    LUMINANCE16_ALPHA8_ICC_SGIX), two 16-bit wide fields contain
+    luminance values.  For ICC formats which contain alpha data
+    (R5_G6_B5_A8_ICC_SGIX and LUMINANCE16_ALPHA8_ICC_SGIX), two 8-bit
+    wide fields contain alpha values.  For each channel, the bits are
+    interpreted as unsigned fixed-point values between 0 and 1 and are
+    converted to floating point using the formula:
+
+        f = c / ((2**N) - 1)
+
+    where f is the floating-point representation of the value, c is
+    the value of the bitfield (interpreted as an unsigned integer), N
+    is the number of bits in the fixed-point color value, and the
+    division is performed in floating-point.
+
+    Once the color fields have been extracted and converted into
+    floating point RGB, L, or A values, intermediate values are
+    constructed from them.  For each pair of fields c0 and c1, four
+    values are created:
+
+        v0 = c0
+        v1 = (2 * c0 + c1) / 3
+        v2 = (c0 + 2 * c1) / 3
+        v3 = c1
+
+    Operations are performed with unspecified precision.  For fields
+    which encode RGB data, the computations are performed independently
+    on a per-channel basis to give the vectors RGB0, RGB1, RGB2, and
+    RGB3.  For fields which encode alpha data, the computations give
+    the values A0, A1, A2, and A3.  For fields which encode luminance
+    data, the computations give L0, L1, L2, and L3.
+
+    After the intermediate values are created, indices for each pixel
+    are used to choose the output value for the pixel.  The indices
+    are each two bits.  R5_G6_B5_ICC_SGIX values contain one index per
+    pixel to choose the intermediate value RGB0, RGB1, RGB2, or RGB3.
+    R5_G6_B5_A8_ICC_SGIX values contain two indices per pixel: one to
+    choose the RGB value and one to choose the alpha value.
+    Similarly, LUMINANCE16_A8_ICC_SGIX values contain an index per
+    pixel to choose the luminance value and an index per pixel to
+    choose the alpha value.  LUMINANCE16_ICC_SGIX values contain an
+    index per pixel to choose the luminance value.  In each case, an
+    index value of 0 results in the channel (or channels) being set to
+    the 0th intermediate value (RGB0, A0, or L0).  A value of 1 gives
+    the 1st intermediate value and so on.
+
+    The bit encodings for the formats are described below.  Each
+    description assumes that the first byte is in the lowest memory
+    location and the last byte is in the highest memory location.  The
+    high-order bit of each byte is assumed to be the "first."
+
+    An R5_G6_B5_ICC_SGIX encoded block consists of 64 bits divided
+    into 3 fields.  The first is a 32 bit field containing the two-bit
+    indices for the RGB channels.  The second and third fields are 16
+    bit R5G6B5 values containing c0 and c1 for the RGB channels.
+
+    R5_G6_B5_A8_ICC_SGIX blocks encode RGB and alpha independently.
+    An R5_G6_B5_A8_ICC_SGIX encoded block consists of 128 bits divided
+    into 7 fields.  The first 64 bits of the block contain the two-bit
+    RGB indices followed by the two 16-bit R5G6B5 values for c0 and c1
+    (this encoding is equivalent to the 64-bit R5_G6_B5_ICC_SGIX block
+    described above).  The fourth field is 32 bits wide and contains
+    indices for the alpha values.  The fifth and sixth fields are 8
+    bit alpha representing c0 and c1.  The seventh field is 16 bits
+    wide and is unused.  It is necessary to pad out the block so that
+    the 16-bit color boundaries will always fall on half-word
+    boundaries in host memory.
+
+    An ALPHA16_ICC_SGIX, LUMINANCE16_ICC_SGIX, or INTENSITY16_ICC_SGIX
+    encoded block consists of 64 bits divided into 3 fields.  The
+    first is a 32 bit field containing the two-bit indices for the
+    alpha, luminance, or intensity values.  The second and third
+    fields are 16 bit unsigned fixed-point alpha, luminance, or
+    intensity values containing c0 and c1 respectively.  This encoding
+    is identical to the encoding of R5_G6_B5_ICC_SGIX blocks except
+    that the c0 and c1 fields represent alpha, luminance, or intensity
+    instead of RGB.
+
+    A LUMINANCE16_ALPHA8_ICC_SGIX encoded block is identical to a
+    R5_G6_B5_A8_ICC_SGIX block except that sixteen-bit unsigned
+    luminance values are stored in place of the sixteen-bit RGB
+    values.
+
+    After decompression, the image is recombined into a ceil(width /
+    4) * 4 by ceil(height / 4) * 4 image of RGB, RGBA, A, L, I, or LA
+    pixels.  Pixels whose y positions in the image (where the bottom
+    row is 0 and the top row is (ceil(height / 4) * 4) - 1) are
+    greater than (height - 1) are discarded.  Likewise, pixels whose x
+    positions are greater than (width - 1) are discarded.
+
+    The following is added to Section 3.8:
+
+    In the paragraph beginning "The image itself (pointed to by data)"
+    the sentence beginning "Each color component is converted" is
+    prefixed by "If the internal format of the texture is not one of
+    RGB_ICC_SGIX, RGBA_ICC_SGIX, LUMINANCE_ICC_SGIX,
+    LUMINANCE_ALPHA_ICC_SGIX, R5_G6_B5_ICC_SGIX, R5_G6_B5_A8_ICC_SGIX,
+    LUMINANCE16_ICC_SGIX, or LUMINANCE16_ALPHA8_ICC_SGIX."  The
+    following is added to the end of the paragraph: "If the internal
+    format is one of the ICC formats, the format parameter of the
+    function must either be equal to the internal format parameter (if
+    the internal format parameter is sized) or contain the same
+    channels as the internal format (if the internal format is
+    unsized) or the error INVALID_ENUM will be generated.  Also, a ICC
+    internal format may not be specified for a one-dimensional
+    texture.  If the format parameter to TexImage1D is set to one of
+    the ICC internal formats, the error INVALID_ENUM is generated."
+
+    The sentence in the paragraph describing CopyTexImage2D which
+    reads: "Parameters level, internalformat, and border are specified
+    using the same values, with the same meanings, as the equivalent
+    arguments of TexImage2D, except that internalformat may not be
+    specified as 1, 2, 3, or 4." is changed to read: "Parameters
+    level, internalformat, and border are specified using the same
+    values, with the same meanings, as the equivalent arguments of
+    TexImage2D, except that internalformat may not be specified as 1,
+    2, 3, 4, or any of the ICC internal formats."  
+
+    The following is added to the end of the paragraph which describes
+    the subtexture download and copy commands: "CopyTexSubImage1D and
+    CopyTexSubImage2D may not be used with a target texture whose
+    internal format is one of the ICC formats or the error
+    INVALID_OPERATION is generated.  For TexSubImage1D and
+    TexSubImage2D, the target texture have a ICC internal format but
+    requirements in addition to those mentioned above are enforced.
+    The xoffset and yoffset parameters must be multiples of four or
+    the error INVALID_OPERATION is generated.  Also, the width
+    parameter must either be a multiple of four which is less than the
+    width of the texture minus xoffset or be equal to the width of the
+    texture minus xoffset or the error INVALID_VALUE is generated.
+    The height parameter must either a multiple of four which is less
+    than the height of the texture minus yoffset or be equal to the
+    height of the texture minus yoffset or the error INVALID_VALUE is
+    generated.  In other words, the subimage may not partially cover a
+    4x4 region of the target texture.  Additionally, for
+    TexSubImage2D, TexSubImage3DEXT, and TexSubImage4DSGIS calls, the
+    format parameter must have the same channels as the base internal
+    format of the texture or the error INVALID_ENUM will be
+    generated."
+
+    The following is added to Table 3.8:
+
+    Sized				Base            R       G       B       A       L       I
+    Internal Format		Internal Format Bits    Bits    Bits    Bits    Bits    Bits
+    ---------------		--------------- ----    ----    ----    ----    ----    ----
+    R5_G6_B5_ICC_SGIX		RGB             	5       6       5
+    R5_G6_B5_A8_ICC_SGIX	RGBA            	5       6       5       8
+    LUMINANCE16_ICC_SGIX	LUMINANCE                               		16
+    LUMINANCE16_ALPHA8_ICC_SGIX	LUMINANCE_ALPHA                         	8	16
+
+    The caption for Table 3.8 is updated as follows:
+    
+    Correspondence of sized internal formats to base internal formats
+    and desired component resolutions for each sized internal format.
+    For ICC compressed formats, the component resolutions do not
+    directly reflect the stored size of each pixel, but rather the
+    resolution of the two color values stored for each 4x4 pixel
+    block.
+
+    
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    The following is added to the first paragraph of section 4.3.2
+    after the sentence beginning "The arguments after x and y: "As in
+    the case of TexImage, ICC formats may only be used for reading
+    back ICC textures or the error INVALID_ENUM is generated.  For
+    more information, see Chapter 6 (State and State Requests).
+
+Additionally, the host ICC format must have the same
+    channels as the base internal format of the source ICC texture of
+    the error INVALID_ENUM is generated.  During TexSubImage readbacks of ICC
+    textures, the "
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    Added to the end of the paragraph in the introduction which talks
+    about the GetTexImage command:  "Additional restrictions apply if
+    the format is one of the ICC formats.  The internal format of the
+    texture must have a base internal format equal to the format
+    parameter or the error INVALID_ENUM is generated.  Similarly to
+    the download case, the width and height of the data read back is
+    rounded up to the next multiples of 4 such that only complete
+    compressed tiles are returned."
+
+Additions to the GLX Specification
+
+    None
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is not supported, all references to
+    TexImage3DEXT, TexSubImage3DEXT, CopyTexImage3DEXT, and
+    CopyTexSubImage3DEXT are ignored.
+
+Dependencies on SGIS_texture4D
+
+    If SGIS_texture4D is not supported, all references to
+    TexImage4DSGIS, TexSubImage4DSGIS, CopyTexImage4DSGIS, and
+    CopyTexSubImage4DSGIS are ignored.
+
+Errors
+
+    XXX
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

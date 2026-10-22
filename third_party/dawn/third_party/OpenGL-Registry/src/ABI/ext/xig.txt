@@ -1,0 +1,29 @@
+From: Thomas Roell <roell 'at' xig.com>
+Date: Mon, 13 Sep 1999 08:43:28 -0600 (MDT)
+
+Xi Graphics extension support:
+
+GL_ARB_multitexture
+GL_EXT_abgr
+GL_EXT_bgra
+GL_EXT_blend_color
+GL_EXT_blend_subtract
+GL_EXT_compiled_vertex_array
+GL_EXT_copy_texture
+GL_EXT_draw_range_elements
+GL_EXT_separate_specular_color
+GL_EXT_stencil_wrap
+GL_EXT_subtexture
+GL_EXT_texture
+GL_EXT_texture_clamp_to_edge
+GL_EXT_texture_env_add
+GL_EXT_texture_env_combine
+GL_EXT_texture_object
+
+GLX_EXT_import_context
+GLX_EXT_visual_info
+GLX_EXT_visual_rating
+GLX_SGI_swap_control
+
+GLU_EXT_nurbs_tessellator
+GLU_EXT_object_space_tess

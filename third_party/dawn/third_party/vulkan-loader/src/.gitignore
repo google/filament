@@ -1,0 +1,47 @@
+# By default we install dependencies to the external directory
+/external/*
+
+# Ignore any build directories
+*build*/
+
+CMakeCache.txt
+CMakeLists.txt.user
+CMakeFiles/
+cmake_install.cmake
+Makefile
+scripts/__pycache__
+VKConfig.h
+
+*.so
+*.so.*
+*.pyc
+*.vcproj
+*.sln
+*.suo
+*.vcxproj
+*.sdf
+*.filters
+*.config
+*.creator
+*.creator.user
+*.files
+*.includes
+.vscode/
+.cache
+.DS_Store
+_out64
+out32/*
+out64/*
+
+# Chromium build artifacts
+.cipd/
+.gn
+.gclient
+.gclient_entries
+.gclient_previous_sync_commits
+out/
+third_party/
+buildtools/
+depot_tools/
+testing/
+tools/

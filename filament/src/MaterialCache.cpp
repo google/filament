@@ -1,0 +1,117 @@
+/*
+ * Copyright (C) 2025 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "MaterialCache.h"
+
+#include "MaterialParser.h"
+
+#include "details/Engine.h"
+#include "details/Material.h"
+
+#include <backend/DriverEnums.h>
+
+#include <utils/Logger.h>
+
+namespace filament {
+
+size_t MaterialCache::MaterialKey::Hash::operator()(
+        filament::MaterialCache::MaterialKey const& key) const noexcept {
+    uint32_t crc;
+    if (key.parser->getMaterialCrc32(&crc)) {
+        return size_t(crc);
+    }
+    return size_t(key.parser->computeCrc32());
+}
+
+bool MaterialCache::MaterialKey::operator==(MaterialKey const& rhs) const noexcept {
+    return *parser == *rhs.parser;
+}
+
+MaterialCache::MaterialCache(uint32_t materialCapacity, uint32_t programCapacity)
+        : mDefinitions("MaterialCache::mDefinitions", materialCapacity),
+          mPrograms("MaterialCache::mPrograms", programCapacity) {}
+
+MaterialCache::~MaterialCache() {
+    assert_invariant(mDefinitions.empty());
+    assert_invariant(mPrograms.empty());
+    assert_invariant(mSpecializationConstantsInternPool.empty());
+}
+
+void MaterialCache::terminate(FEngine& engine) {
+    mPrograms.clearLruCache([&engine](ProgramCacheEntry& entry) {
+        engine.getDriverApi().destroyProgram(entry.program);
+    });
+    mDefinitions.clearLruCache([&engine](MaterialDefinition& definition) {
+        definition.terminate(engine);
+    });
+}
+
+MaterialDefinition* UTILS_NULLABLE MaterialCache::acquireMaterial(FEngine& engine,
+        const void* UTILS_NONNULL data, size_t size) noexcept {
+    std::unique_ptr<MaterialParser> parser = MaterialDefinition::createParser(engine.getBackend(),
+            engine.getShaderLanguage(), data, size);
+    assert_invariant(parser);
+
+    // The `key` must be constructed using parser.get() before parser is moved into the lambda
+    // function. This prevents a potential crash or undefined behavior, as accessing a moved-from
+    // object is unsafe. The validity of the generated key is guaranteed because the
+    // MaterialDefinition object (which owns the same parser object) created within the lambda is
+    // subsequently used as the associated value in the map.
+    const MaterialKey key{ parser.get() };
+
+    return mDefinitions.acquire(key, [&engine, parser = std::move(parser)]() mutable {
+        return MaterialDefinition::create(engine, std::move(parser));
+    });
+}
+
+void MaterialCache::releaseMaterial(FEngine& engine,
+        MaterialDefinition const& definition) noexcept {
+    mDefinitions.release(MaterialKey{ &definition.getMaterialParser() },
+            [&engine](MaterialDefinition& definition) {
+                definition.terminate(engine);
+            });
+}
+
+backend::Handle<backend::HwProgram> MaterialCache::acquireProgram(
+        ProgramSpecialization const& key) noexcept {
+    ProgramCacheEntry const* entry = mPrograms.acquire(key);
+    return entry ? entry->program : backend::Handle<backend::HwProgram>{};
+}
+
+backend::Handle<backend::HwProgram> MaterialCache::getOrAcquireProgram(FEngine& engine,
+        ProgramSpecialization const& key, MaterialDefinition const& definition,
+        MaterialParser const& parser, backend::CompilerPriorityQueue priorityQueue,
+        bool isGet) noexcept {
+    auto factory = [this, &engine, &definition, &parser, &key, priorityQueue]() {
+        ProgramCacheEntry entry{
+            definition.compileProgram(engine, parser, key, priorityQueue),
+            mSpecializationConstantsInternPool.acquire(key.specializationConstants),
+        };
+        assert_invariant(entry.constants.get().data() == key.specializationConstants.data());
+        return entry;
+    };
+    ProgramCacheEntry const* entry = isGet ? mPrograms.get(key, factory)
+                                           : mPrograms.acquire(key, factory);
+    return entry ? entry->program : backend::Handle<backend::HwProgram>{};
+}
+
+void MaterialCache::releaseProgram(FEngine& engine, ProgramSpecialization const& key) noexcept {
+    mPrograms.release(key, [&engine](ProgramCacheEntry& entry) {
+        engine.getDriverApi().destroyProgram(entry.program);
+    });
+}
+
+} // namespace filament

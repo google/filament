@@ -1,0 +1,7 @@
+// REQUIRES: metal
+
+// These cases both fail because the shader converter library cannot emit
+// textual IR.
+// RUN: not %dxc %S/Inputs/smoke.hlsl  /T ps_6_0 -metal -Fo Tmp.metal -Fc Tmp.air 2>&1 | FileCheck %s
+// RUN: not %dxc %S/Inputs/smoke.hlsl  /T ps_6_0 -metal 2>&1 | FileCheck %s
+// CHECK: Disassembly of Metal IR not supported (yet).

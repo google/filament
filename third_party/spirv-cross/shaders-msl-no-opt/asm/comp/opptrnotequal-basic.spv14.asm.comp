@@ -1,0 +1,96 @@
+; SPIR-V
+; Version: 1.4
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 64
+; Schema: 0
+               OpCapability Shader
+               OpCapability VariablePointers
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %1 "main" %2 %3 %4 %5
+               OpExecutionMode %1 LocalSize 1 1 1
+               OpDecorate %6 ArrayStride 4
+               OpDecorate %7 Block
+               OpMemberDecorate %7 0 Offset 0
+               OpDecorate %2 DescriptorSet 0
+               OpDecorate %2 Binding 0
+               OpDecorate %3 DescriptorSet 0
+               OpDecorate %3 Binding 1
+               OpDecorate %4 DescriptorSet 0
+               OpDecorate %4 Binding 2
+               OpDecorate %5 DescriptorSet 0
+               OpDecorate %5 Binding 3
+          %8 = OpTypeVoid
+          %9 = OpTypeBool
+         %10 = OpTypeInt 32 0
+         %11 = OpConstant %10 0
+         %12 = OpConstant %10 1
+          %6 = OpTypeRuntimeArray %10
+          %7 = OpTypeStruct %6
+         %13 = OpTypePointer StorageBuffer %7
+         %14 = OpTypePointer StorageBuffer %6
+         %15 = OpTypePointer StorageBuffer %10
+          %2 = OpVariable %13 StorageBuffer
+          %3 = OpVariable %13 StorageBuffer
+          %4 = OpVariable %13 StorageBuffer
+          %5 = OpVariable %13 StorageBuffer
+         %16 = OpTypeFunction %8
+          %1 = OpFunction %8 None %16
+         %17 = OpLabel
+         %18 = OpCopyObject %10 %11
+         %19 = OpAccessChain %14 %2 %11
+         %20 = OpAccessChain %15 %2 %11 %11
+         %21 = OpAccessChain %14 %3 %11
+         %22 = OpAccessChain %15 %3 %11 %11
+         %23 = OpAccessChain %14 %4 %11
+         %24 = OpAccessChain %15 %4 %11 %11
+         %25 = OpPtrNotEqual %9 %2 %3
+         %26 = OpSelect %10 %25 %12 %11
+         %27 = OpAccessChain %15 %5 %11 %18
+         %28 = OpIAdd %10 %18 %12
+               OpStore %27 %26
+         %29 = OpPtrNotEqual %9 %19 %21
+         %30 = OpSelect %10 %29 %12 %11
+         %31 = OpAccessChain %15 %5 %11 %28
+         %32 = OpIAdd %10 %28 %12
+               OpStore %31 %30
+         %33 = OpPtrNotEqual %9 %20 %22
+         %34 = OpSelect %10 %33 %12 %11
+         %35 = OpAccessChain %15 %5 %11 %32
+         %36 = OpIAdd %10 %32 %12
+               OpStore %35 %34
+         %37 = OpPtrNotEqual %9 %2 %4
+         %38 = OpSelect %10 %37 %12 %11
+         %39 = OpAccessChain %15 %5 %11 %36
+         %40 = OpIAdd %10 %36 %12
+               OpStore %39 %38
+         %41 = OpPtrNotEqual %9 %19 %23
+         %42 = OpSelect %10 %41 %12 %11
+         %43 = OpAccessChain %15 %5 %11 %40
+         %44 = OpIAdd %10 %40 %12
+               OpStore %43 %42
+         %45 = OpPtrNotEqual %9 %20 %24
+         %46 = OpSelect %10 %45 %12 %11
+         %47 = OpAccessChain %15 %5 %11 %44
+         %48 = OpIAdd %10 %44 %12
+               OpStore %47 %46
+         %49 = OpPtrNotEqual %9 %3 %4
+         %50 = OpSelect %10 %49 %12 %11
+         %51 = OpAccessChain %15 %5 %11 %48
+         %52 = OpIAdd %10 %48 %12
+               OpStore %51 %50
+         %53 = OpPtrNotEqual %9 %21 %23
+         %54 = OpSelect %10 %53 %12 %11
+         %55 = OpAccessChain %15 %5 %11 %52
+         %56 = OpIAdd %10 %52 %12
+               OpStore %55 %54
+         %57 = OpPtrNotEqual %9 %22 %24
+         %58 = OpSelect %10 %57 %12 %11
+         %59 = OpAccessChain %15 %5 %11 %56
+         %60 = OpIAdd %10 %56 %12
+               OpStore %59 %58
+         %61 = OpPtrNotEqual %9 %2 %2
+         %62 = OpSelect %10 %61 %12 %11
+         %63 = OpAccessChain %15 %5 %11 %60
+               OpStore %63 %62
+               OpReturn
+               OpFunctionEnd

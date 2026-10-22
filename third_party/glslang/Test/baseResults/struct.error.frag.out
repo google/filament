@@ -1,0 +1,37 @@
+struct.error.frag
+ERROR: 0:12: 'z' : no such field in structure 
+ERROR: 1 compilation errors.  No code generated.
+
+
+Shader version: 460
+ERROR: node is still EOpNull!
+0:7  Function Definition: test( ( global structure{ global float x})
+0:7    Function Parameters: 
+0:8    Sequence
+0:8      Branch: Return with expression
+0:8        Constant:
+0:8          1.000000
+0:11  Function Definition: main( ( global void)
+0:11    Function Parameters: 
+0:12    Sequence
+0:12      Function Call: test( ( global structure{ global float x})
+0:?   Linker Objects
+
+
+Linked fragment stage:
+
+
+Shader version: 460
+ERROR: node is still EOpNull!
+0:7  Function Definition: test( ( global structure{ global float x})
+0:7    Function Parameters: 
+0:8    Sequence
+0:8      Branch: Return with expression
+0:8        Constant:
+0:8          1.000000
+0:11  Function Definition: main( ( global void)
+0:11    Function Parameters: 
+0:12    Sequence
+0:12      Function Call: test( ( global structure{ global float x})
+0:?   Linker Objects
+

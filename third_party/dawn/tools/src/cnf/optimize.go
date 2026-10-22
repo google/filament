@@ -1,0 +1,86 @@
+// Copyright 2023 The Dawn & Tint Authors
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+//  1. Redistributions of source code must retain the above copyright notice, this
+//     list of conditions and the following disclaimer.
+//
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//  3. Neither the name of the copyright holder nor the names of its
+//     contributors may be used to endorse or promote products derived from
+//     this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+package cnf
+
+import (
+	"dawn.googlesource.com/dawn/tools/src/container"
+)
+
+// Optimize returns the expression with all duplicate unary expressions in the ORs removed, and
+// with clauses that are supersets of other clauses removed (aka the Absorption Law).
+// The returned expression is sorted.
+func Optimize(e Expr) Expr {
+	m := container.NewMap[Key, Ors]()
+	for _, o := range e {
+		b := unique(o)
+		m.Add(b.Key(), b)
+	}
+	clauses := m.Values()
+
+	var result Expr
+	for i, a := range clauses {
+		superset := false
+		for j, b := range clauses {
+			if i != j && isSubset(b, a) {
+				superset = true
+				break
+			}
+		}
+		if !superset {
+			result = append(result, a)
+		}
+	}
+	return result
+}
+
+// isSubset returns true if all unary expressions in a are present in b.
+func isSubset(a, b Ors) bool {
+	if len(a) > len(b) {
+		return false
+	}
+	m := make(map[Key]bool, len(b))
+	for _, u := range b {
+		m[u.Key()] = true
+	}
+	for _, u := range a {
+		if !m[u.Key()] {
+			return false
+		}
+	}
+	return true
+}
+
+// unique returns the o with all duplicate unary expressions removed
+// The returned OR expression list is sorted.
+func unique(o Ors) Ors {
+	m := container.NewMap[Key, Unary]()
+	for _, u := range o {
+		m.Add(u.Key(), u)
+	}
+	return m.Values()
+}

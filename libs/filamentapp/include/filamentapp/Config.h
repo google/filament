@@ -1,0 +1,64 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TNT_FILAMENT_SAMPLE_CONFIG_H
+#define TNT_FILAMENT_SAMPLE_CONFIG_H
+
+#include <filament/Engine.h>
+
+#include <camutils/Manipulator.h>
+
+#include <string>
+
+struct [[deprecated("Use FilamentApp2::Builder methods instead. Deadline: 2027/07/20")]] Config {
+    utils::CString title;
+    uint32_t width = 1024;
+    uint32_t height = 640;
+    utils::CString iblDirectory;
+    utils::CString dirt;
+    float scale = 1.0f;
+    bool splitView = false;
+    mutable filament::Engine::Backend backend = filament::Engine::Backend::DEFAULT;
+    mutable filament::backend::FeatureLevel featureLevel =
+            filament::backend::FeatureLevel::FEATURE_LEVEL_3;
+    filament::camutils::Mode cameraMode = filament::camutils::Mode::ORBIT;
+    bool resizeable = true;
+    // Deprecated: headless is a property of the DisplayManager. Prefer the FilamentApp2 API and
+    // pass a filament::app::HeadlessDisplayManager to Builder::displayManager(). FilamentApp::run()
+    // honors this flag by constructing one on the caller's behalf.
+    bool headless = false;
+    int stereoscopicEyeCount = 2;
+    uint8_t samples = 1;
+
+    // Indicate GPU preference for vulkan
+    utils::CString vulkanGPUHint;
+
+
+    // Note that WebGPU has its own enums for backends, but to avoid leaking webgpu headers to
+    // consumers of FilamentApp, we just overload the Engine::Backend enum.
+    using WebGPUBackend = filament::Engine::Backend;
+    // Force a backend for webgpu.
+    WebGPUBackend forcedWebGPUBackend = WebGPUBackend::DEFAULT;
+
+    enum class DisplayManager { SDL, WEB };
+    DisplayManager displayManager = DisplayManager::SDL;
+
+    // Asynchronous mode for Engine
+    filament::backend::AsynchronousMode asynchronousMode =
+            filament::backend::AsynchronousMode::NONE;
+};
+
+#endif // TNT_FILAMENT_SAMPLE_CONFIG_H

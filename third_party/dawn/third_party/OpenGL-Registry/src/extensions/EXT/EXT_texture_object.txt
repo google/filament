@@ -1,0 +1,437 @@
+Name
+
+    EXT_texture_object
+
+Name Strings
+
+    GL_EXT_texture_object
+
+Version
+
+    $Date: 1995/10/03 05:39:56 $ $Revision: 1.27 $
+
+Number
+
+    20
+
+Dependencies
+
+    EXT_texture3D affects the definition of this extension
+
+Overview
+
+    This extension introduces named texture objects.  The only way to name
+    a texture in GL 1.0 is by defining it as a single display list.  Because
+    display lists cannot be edited, these objects are static.  Yet it is
+    important to be able to change the images and parameters of a texture.
+
+Issues
+
+    *   Should the dimensions of a texture object be static once they are
+        changed from zero?  This might simplify the management of texture
+        memory.  What about other properties of a texture object?
+
+        No.
+
+Reasoning
+
+    *   Previous proposals overloaded the <target> parameter of many Tex
+        commands with texture object names, as well as the original
+        enumerated values.  This proposal eliminated such overloading,
+        choosing instead to require an application to bind a texture object,
+        and then operate on it through the binding reference.  If this
+        constraint ultimately proves to be unacceptable, we can always
+        extend the extension with additional binding points for editing and
+        querying only, but if we expect to do this, we might choose to bite
+        the bullet and overload the <target> parameters now.
+
+    *   Commands to directly set the priority of a texture object and to
+        query the resident status of a texture object are included.  I feel
+        that binding a texture object would be an unacceptable burden for
+        these management operations.  These commands also allow queries and
+        operations on lists of texture objects, which should improve
+        efficiency.
+
+    *   GenTexturesEXT does not return a success/failure boolean because
+        it should never fail in practice.
+
+New Procedures and Functions
+
+    void GenTexturesEXT(sizei n,
+                        uint* textures);
+
+    void DeleteTexturesEXT(sizei n,
+                           const uint* textures);
+
+    void BindTextureEXT(enum target,
+                        uint texture);
+
+    void PrioritizeTexturesEXT(sizei n,
+                               const uint* textures,
+                               const clampf* priorities);
+
+    boolean AreTexturesResidentEXT(sizei n,
+                                   const uint* textures,
+                                   boolean* residences);
+
+    boolean IsTextureEXT(uint texture);
+
+New Tokens
+
+    Accepted by the <pname> parameters of TexParameteri, TexParameterf,
+    TexParameteriv, TexParameterfv, GetTexParameteriv, and GetTexParameterfv:
+
+        TEXTURE_PRIORITY_EXT            0x8066
+
+    Accepted by the <pname> parameters of GetTexParameteriv and
+    GetTexParameterfv:
+
+        TEXTURE_RESIDENT_EXT            0x8067
+
+    Accepted by the <pname> parameters of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        TEXTURE_1D_BINDING_EXT          0x8068
+        TEXTURE_2D_BINDING_EXT          0x8069
+        TEXTURE_3D_BINDING_EXT          0x806A
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    Add the following discussion to section 3.8 (Texturing).  In addition
+    to the default textures TEXTURE_1D, TEXTURE_2D, and TEXTURE_3D_EXT, it
+    is possible to create named 1, 2, and 3-dimensional texture objects.
+    The name space for texture objects is the unsigned integers, with zero
+    reserved by the GL.
+    
+    A texture object is created by binding an unused name to TEXTURE_1D,
+    TEXTURE_2D, or TEXTURE_3D_EXT.  This binding is accomplished by calling
+    BindTextureEXT with <target> set to TEXTURE_1D, TEXTURE_2D, or
+    TEXTURE_3D_EXT, and <texture> set to the name of the new texture object.
+    When a texture object is bound to a target, the previous binding for
+    that target is automatically broken.
+    
+    When a texture object is first bound it takes the dimensionality of its
+    target.  Thus, a texture object first bound to TEXTURE_1D is
+    1-dimensional; a texture object first bound to TEXTURE_2D is
+    2-dimensional, and a texture object first bound to TEXTURE_3D_EXT is
+    3-dimensional.  The state of a 1-dimensional texture object
+    immediately after it is first bound is equivalent to the state of the
+    default TEXTURE_1D at GL initialization.  Likewise, the state of a
+    2-dimensional or 3-dimensional texture object immediately after it is
+    first bound is equivalent to the state of the default TEXTURE_2D or
+    TEXTURE_3D_EXT at GL initialization.  Subsequent bindings of a texture
+    object have no effect on its state.  The error INVALID_OPERATION is
+    generated if an attempt is made to bind a texture object to a target of
+    different dimensionality.
+
+    While a texture object is bound, GL operations on the target to which it
+    is bound affect the bound texture object, and queries of the target to
+    which it is bound return state from the bound texture object.  If
+    texture mapping of the dimensionality of the target to which a texture
+    object is bound is active, the bound texture object is used.
+    
+    By default when an OpenGL context is created, TEXTURE_1D, TEXTURE_2D,
+    and TEXTURE_3D_EXT have 1, 2, and 3-dimensional textures associated
+    with them.  In order that access to these default textures not be
+    lost, this extension treats them as though their names were all zero.
+    Thus the default 1-dimensional texture is operated on, queried, and
+    applied as TEXTURE_1D while zero is bound to TEXTURE_1D.  Likewise,
+    the default 2-dimensional texture is operated on, queried, and applied
+    as TEXTURE_2D while zero is bound to TEXTURE_2D, and the default
+    3-dimensional texture is operated on, queried, and applied as
+    TEXTURE_3D_EXT while zero is bound to TEXTURE_3D_EXT.
+
+    Texture objects are deleted by calling DeleteTexturesEXT with <textures>
+    pointing to a list of <n> names of texture object to be deleted.  After
+    a texture object is deleted, it has no contents or dimensionality, and
+    its name is freed.  If a texture object that is currently bound is
+    deleted, the binding reverts to zero.  DeleteTexturesEXT ignores names
+    that do not correspond to textures objects, including zero.
+
+    GenTexturesEXT returns <n> texture object names in <textures>.  These
+    names are chosen in an unspecified manner, the only condition being that
+    only names that were not in use immediately prior to the call to
+    GenTexturesEXT are considered.  Names returned by GenTexturesEXT are
+    marked as used (so that they are not returned by subsequent calls to
+    GenTexturesEXT), but they are associated with a texture object only
+    after they are first bound (just as if the name were unused).
+
+    An implementation may choose to establish a working set of texture
+    objects on which binding operations are performed with higher
+    performance.  A texture object that is currently being treated as a
+    part of the working set is said to be resident.  AreTexturesResidentEXT
+    returns TRUE if all of the <n> texture objects named in <textures> are
+    resident, FALSE otherwise.  If FALSE is returned, the residence of each
+    texture object is returned in <residences>.  Otherwise the contents of
+    the <residences> array are not changed.  If any of the names in
+    <textures> is not the name of a texture object, FALSE is returned, the
+    error INVALID_VALUE is generated, and the contents of <residences> are
+    indeterminate.  The resident status of a single bound texture object
+    can also be queried by calling GetTexParameteriv or GetTexParameterfv
+    with <target> set to the target to which the texture object is bound,
+    and <pname> set to TEXTURE_RESIDENT_EXT.  This is the only way that the
+    resident status of a default texture can be queried.
+
+    Applications guide the OpenGL implementation in determining which
+    texture objects should be resident by specifying a priority for each
+    texture object.  PrioritizeTexturesEXT sets the priorities of the <n>
+    texture objects in <textures> to the values in <priorities>.  Each
+    priority value is clamped to the range [0.0, 1.0] before it is
+    assigned.  Zero indicates the lowest priority, and hence the least
+    likelihood of being resident.  One indicates the highest priority, and
+    hence the greatest likelihood of being resident.  The priority of a
+    single bound texture object can also be changed by calling
+    TexParameteri, TexParameterf, TexParameteriv, or TexParameterfv with
+    <target> set to the target to which the texture object is bound, <pname>
+    set to TEXTURE_PRIORITY_EXT, and <param> or <params> specifying the new
+    priority value (which is clamped to [0.0,1.0] before being assigned).
+    This is the only way that the priority of a default texture can be
+    specified.  (PrioritizeTexturesEXT silently ignores attempts to
+    prioritize nontextures, and texture zero.)
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    BindTextureEXT and PrioritizeTexturesEXT are included in display lists.
+    All other commands defined by this extension are not included in display
+    lists.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    IsTextureEXT returns TRUE if <texture> is the name of a valid texture
+    object.  If <texture> is zero, or is a non-zero value that is not the
+    name of a texture object, or if an error condition occurs, IsTextureEXT
+    returns FALSE.
+
+    Because the query values of TEXTURE_1D, TEXTURE_2D, and TEXTURE_3D_EXT
+    are already defined as booleans indicating whether these textures are
+    enabled or disabled, another mechanism is required to query the
+    binding associated with each of these texture targets.  The name
+    of the texture object currently bound to TEXTURE_1D is returned in
+    <params> when GetIntegerv is called with <pname> set to
+    TEXTURE_1D_BINDING_EXT.  If no texture object is currently bound to
+    TEXTURE_1D, zero is returned.  Likewise, the name of the texture object
+    bound to TEXTURE_2D or TEXTURE_3D_EXT is returned in <params> when
+    GetIntegerv is called with <pname> set to TEXTURE_2D_BINDING_EXT or
+    TEXTURE_3D_BINDING_EXT.  If no texture object is currently bound to
+    TEXTURE_2D or to TEXTURE_3D_EXT, zero is returned.
+
+    A texture object comprises the image arrays, priority, border color,
+    filter modes, and wrap modes that are associated with that object.  More
+    explicitly, the state list
+    
+        TEXTURE,
+        TEXTURE_PRIORITY_EXT
+        TEXTURE_RED_SIZE,
+        TEXTURE_GREEN_SIZE,
+        TEXTURE_BLUE_SIZE,
+        TEXTURE_ALPHA_SIZE,
+        TEXTURE_LUMINANCE_SIZE,
+        TEXTURE_INTENSITY_SIZE,
+        TEXTURE_WIDTH,
+        TEXTURE_HEIGHT,
+        TEXTURE_DEPTH_EXT,
+        TEXTURE_BORDER,
+        TEXTURE_COMPONENTS,
+        TEXTURE_BORDER_COLOR,
+        TEXTURE_MIN_FILTER,
+        TEXTURE_MAG_FILTER,
+        TEXTURE_WRAP_S,
+        TEXTURE_WRAP_T,
+        TEXTURE_WRAP_R_EXT
+
+    composes a single texture object.
+
+    When PushAttrib is called with TEXTURE_BIT enabled, the priorities,
+    border colors, filter modes, and wrap modes of the currently bound
+    texture objects are pushed, as well as the current texture bindings and
+    enables.  When an attribute set that includes texture information is
+    popped, the bindings and enables are first restored to their pushed
+    values, then the bound texture objects have their priorities, border
+    colors, filter modes, and wrap modes restored to their pushed values.
+
+Additions to the GLX Specification
+
+    Texture objects are shared between GLX rendering contexts if and only
+    if the rendering contexts share display lists.  No change is made to
+    the GLX API.
+
+GLX Protocol
+
+    Six new GL commands are added.
+  
+    The following rendering command is sent to the server as part of a
+    glXRender request:
+
+        BindTextureEXT
+            2           12              rendering command length
+            2           4117            rendering command opcode
+            4           ENUM            target
+            4           CARD32          texture 
+
+    The following rendering command can be sent to the server as part of a
+    glXRender request or as part of a glXRenderLarge request:
+
+        PrioritizeTexturesEXT
+            2           8+(n*8)         rendering command length
+            2           4118            rendering command opcode
+            4           INT32           n
+            n*4         LISTofCARD32    textures
+            n*4         LISTofFLOAT32   priorities
+
+            If the command is encoded in a glXRenderLarge request, the
+            command opcode and command length fields above are expanded to
+            4 bytes each:
+
+            4           12+(n*8)        rendering command length
+            4           4118            rendering command opcode
+
+    The remaining commands are non-rendering commands. These commands are
+    sent separately (i.e., not as part of a glXRender or glXRenderLarge
+    request), using either the glXVendorPrivate request or the
+    glXVendorPrivateWithReply request: 
+
+        DeleteTexturesEXT
+            1           CARD8           opcode (X assigned)
+            1           16              GLX opcode (glXVendorPrivate)
+            2           4+n             request length
+            4           12              vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           INT32           n
+            n*4         CARD32          textures
+
+        GenTexturesEXT
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           4               request length
+            4           13              vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           INT32           n
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           n               reply length
+            24                          unused
+            4*n         LISTofCARD32    textures
+
+        AreTexturesResidentEXT
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           4+n             request length
+            4           11              vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           INT32           n
+            4*n         LISTofCARD32    textures
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           (n+p)/4         reply length
+            4           BOOL32          return_value 
+            20                          unused
+            n           LISTofBOOL      residences
+            p                           unused, p=pad(n)
+
+        IsTextureEXT
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           4               request length
+            4           14              vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           CARD32          textures
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           0               reply length
+            4           BOOL32          return_value 
+            20                          unused
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is not supported, then all references to 3D textures
+    in this specification are invalid.
+
+Errors
+
+    INVALID_VALUE is generated if GenTexturesEXT parameter <n> is negative.
+
+    INVALID_VALUE is generated if DeleteTexturesEXT parameter <n> is
+    negative.
+
+    INVALID_ENUM is generated if BindTextureEXT parameter <target> is not
+    TEXTURE_1D, TEXTURE_2D, or TEXTURE_3D_EXT.
+
+    INVALID_OPERATION is generated if BindTextureEXT parameter <target> is
+    TEXTURE_1D, and parameter <texture> is the name of a 2-dimensional or
+    3-dimensional texture object.
+
+    INVALID_OPERATION is generated if BindTextureEXT parameter <target> is
+    TEXTURE_2D, and parameter <texture> is the name of a 1-dimensional or
+    3-dimensional texture object.
+
+    INVALID_OPERATION is generated if BindTextureEXT parameter <target> is
+    TEXTURE_3D_EXT, and parameter <texture> is the name of a 1-dimensional
+    or 2-dimensional texture object.
+
+    INVALID_VALUE is generated if PrioritizeTexturesEXT parameter <n>
+    negative. 
+
+    INVALID_VALUE is generated if AreTexturesResidentEXT parameter <n>
+    is negative.
+
+    INVALID_VALUE is generated by AreTexturesResidentEXT if any of the
+    names in <textures> is zero, or is not the name of a texture.
+
+    INVALID_OPERATION is generated if any of the commands defined in this
+    extension is executed between the execution of Begin and the
+    corresponding execution of End.
+
+New State
+
+
+    Get Value                           Get Command             Type                    Initial Value           Attribute
+    ---------                           -----------             ----                    -------------           ---------
+    TEXTURE_1D                          IsEnabled               B                       FALSE                   texture/enable
+    TEXTURE_2D                          IsEnabled               B                       FALSE                   texture/enable
+    TEXTURE_3D_EXT                      IsEnabled               B                       FALSE                   texture/enable
+    TEXTURE_1D_BINDING_EXT              GetIntegerv             Z+                      0                       texture
+    TEXTURE_2D_BINDING_EXT              GetIntegerv             Z+                      0                       texture
+    TEXTURE_3D_BINDING_EXT              GetIntegerv             Z+                      0                       texture
+    TEXTURE_PRIORITY_EXT                GetTexParameterfv       n x Z+                  1                       texture
+    TEXTURE_RESIDENT_EXT                AreTexturesResidentEXT  n x B                   unknown                    -
+
+    TEXTURE                             GetTexImage             n x levels x I          null                       -
+    TEXTURE_RED_SIZE_EXT                GetTexLevelParameteriv  n x levels x Z+         0                          -
+    TEXTURE_GREEN_SIZE_EXT              GetTexLevelParameteriv  n x levels x Z+         0                          -
+    TEXTURE_BLUE_SIZE_EXT               GetTexLevelParameteriv  n x levels x Z+         0                          -
+    TEXTURE_ALPHA_SIZE_EXT              GetTexLevelParameteriv  n x levels x Z+         0                          -
+    TEXTURE_LUMINANCE_SIZE_EXT          GetTexLevelParameteriv  n x levels x Z+         0                          -
+    TEXTURE_INTENSITY_SIZE_EXT          GetTexLevelParameteriv  n x levels x Z+         0                          -
+    TEXTURE_WIDTH                       GetTexLevelParameteriv  n x levels x Z+         0                          -
+    TEXTURE_HEIGHT                      GetTexLevelParameteriv  n x levels x Z+         0                          -
+    TEXTURE_DEPTH_EXT                   GetTexLevelParameteriv  n x levels x Z+         0                          -
+    TEXTURE_4DSIZE_SGIS                 GetTexLevelParameteriv  n x levels x Z+         0                          -
+    TEXTURE_BORDER                      GetTexLevelParameteriv  n x levels x Z+         0                          -
+    TEXTURE_COMPONENTS (1D and 2D)      GetTexLevelParameteriv  n x levels x Z42        1                          -
+    TEXTURE_COMPONENTS (3D and 4D)      GetTexLevelParameteriv  n x levels x Z38        LUMINANCE                  -
+    TEXTURE_BORDER_COLOR                GetTexParameteriv       n x C                   0, 0, 0, 0              texture
+    TEXTURE_MIN_FILTER                  GetTexParameteriv       n x Z7                  NEAREST_MIPMAP_LINEAR   texture
+    TEXTURE_MAG_FILTER                  GetTexParameteriv       n x Z3                  LINEAR                  texture
+    TEXTURE_WRAP_S                      GetTexParameteriv       n x Z2                  REPEAT                  texture
+    TEXTURE_WRAP_T                      GetTexParameteriv       n x Z2                  REPEAT                  texture
+    TEXTURE_WRAP_R_EXT                  GetTexParameteriv       n x Z2                  REPEAT                  texture
+    TEXTURE_WRAP_Q_SGIS                 GetTexParameteriv       n x Z2                  REPEAT                  texture
+
+New Implementation Dependent State
+
+    None

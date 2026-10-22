@@ -1,0 +1,18 @@
+#version 450
+#extension GL_EXT_buffer_reference : require
+
+layout(buffer_reference) buffer Ref
+{
+	vec4 v;
+};
+
+layout(push_constant) uniform Registers
+{
+	Ref foo;
+};
+
+void main()
+{
+	restrict Ref ref = foo;
+	ref.v = vec4(1.0);
+}

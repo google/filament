@@ -1,0 +1,77 @@
+#version 450 core
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_KHR_cooperative_matrix : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+#extension GL_NV_cooperative_matrix2 : enable
+#extension GL_EXT_buffer_reference : enable
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+buffer BufType {
+   float16_t arr[256][256];
+   float16_t x[];
+} Buf;
+
+layout(buffer_reference, std430, buffer_reference_align = 2) buffer fp16Buf {
+    float16_t f;
+};
+
+
+float16_t decode(const in fp16Buf b, const in uint32_t blockCoords[2], const in uint32_t coordInBlock[2])
+{
+    return b.f;
+}
+
+struct S {
+   f16vec2 x;
+};
+
+
+layout(std430, binding  = 0) buffer SBuf {
+    S s[];
+} sbuf;
+
+layout(constant_id = 0) const uint32_t Clamp = gl_CooperativeMatrixClampModeConstantNV;
+layout(constant_id = 1) const int32_t Clamp_signed = gl_CooperativeMatrixClampModeConstantNV;
+
+void main()
+{
+    coopmat<float16_t, gl_ScopeWorkgroup, 64, 32, gl_MatrixUseA> A;
+
+    tensorLayoutNV<2> t = createTensorLayoutNV(2);
+    tensorLayoutNV<3, 1> t2 = createTensorLayoutNV(3, 1);
+
+    t = setTensorLayoutBlockSizeNV(t, 4, 8);
+    t = setTensorLayoutDimensionNV(t, 256, 512);
+    t = sliceTensorLayoutNV(t, 128, 32, 256, 32);
+
+    tensorViewNV<5> v = createTensorViewNV(5);
+    v = setTensorViewDimensionsNV(v, 10, 11, 12, 13, 14);
+    v = setTensorViewStrideNV(v, 10, 11, 12, 13, 15);
+    v = setTensorViewClipNV(v, 0, 16, 0, 16);
+
+    tensorViewNV<5, true> v2 = createTensorViewNV(5, true);
+    tensorViewNV<2, true, 1, 0> v3 = createTensorViewNV(2, true, 1, 0);
+
+    coopMatLoadTensorNV(A, Buf.x, 0, t);
+    coopMatStoreTensorNV(A, Buf.x, 0, t);
+
+    coopMatLoadTensorNV(A, Buf.x, 0, t, v);
+    coopMatStoreTensorNV(A, Buf.x, 0, t, v);
+
+    coopMatLoadTensorNV(A, Buf.x, 0, t, decode);
+    coopMatLoadTensorNV(A, Buf.x, 0, t, v, decode);
+
+    coopMatLoadTensorNV(A, sbuf.s, 1, t, v, decode);
+
+    tensorLayoutNV<2, Clamp> tc = createTensorLayoutNV(2, Clamp);
+
+    coopmat<float16_t, gl_ScopeWorkgroup, 64, 32, gl_MatrixUseA> Arr[2];
+    coopMatLoadTensorNV(Arr[1], Buf.x, 0, t);
+
+    coopMatLoadTensorNV(A, Buf.arr[8], 0, t);
+    coopMatStoreTensorNV(A, Buf.arr[16], 0, t);
+
+    tensorLayoutNV<2, Clamp_signed> tc_s = createTensorLayoutNV(2, Clamp_signed);
+    tensorViewNV<Clamp, true> v4 = createTensorViewNV(Clamp, true);
+}

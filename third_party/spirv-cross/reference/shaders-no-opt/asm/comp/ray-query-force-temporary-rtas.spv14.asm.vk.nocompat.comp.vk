@@ -1,0 +1,28 @@
+#version 460
+#extension GL_EXT_ray_query : require
+#extension GL_EXT_ray_tracing : require
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0, std430) readonly buffer Buf
+{
+    uvec2 vas[1024];
+} _4;
+
+layout(push_constant, std430) uniform Registers
+{
+    uint index;
+} _10;
+
+rayQueryEXT rq;
+
+void main()
+{
+    uvec2 _37;
+    do
+    {
+        uvec2 va = _4.vas[_10.index];
+        _37 = _4.vas[_10.index];
+    } while (false);
+    rayQueryInitializeEXT(rq, accelerationStructureEXT(_37), 0u, 0u, vec3(0.0), 0.0, vec3(0.0), 0.0);
+}
+

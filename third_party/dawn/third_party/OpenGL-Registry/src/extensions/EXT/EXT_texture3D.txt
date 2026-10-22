@@ -1,0 +1,508 @@
+Name
+
+    EXT_texture3D
+
+Name Strings
+
+    GL_EXT_texture3D
+
+Version
+
+    $Date: 1996/04/05 19:17:05 $ $Revision: 1.22 $
+
+Number
+
+    6
+
+Dependencies
+
+    EXT_abgr affects the definition of this extension
+    EXT_texture is required
+
+Overview
+
+    This extension defines 3-dimensional texture mapping.  In order to
+    define a 3D texture image conveniently, this extension also defines the
+    in-memory formats for 3D images, and adds pixel storage modes to support
+    them.
+    
+    One important application of 3D textures is rendering volumes of image
+    data.
+
+New Procedures and Functions
+
+    void TexImage3DEXT(enum target,
+                       int level,
+                       enum internalformat,
+                       sizei width,
+                       sizei height,
+                       sizei depth,
+                       int border,
+                       enum format,
+                       enum type,
+                       const void* pixels);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev, and by the <pname> parameter of PixelStore:
+
+        PACK_SKIP_IMAGES_EXT             0x806B
+        PACK_IMAGE_HEIGHT_EXT            0x806C
+        UNPACK_SKIP_IMAGES_EXT           0x806D
+        UNPACK_IMAGE_HEIGHT_EXT          0x806E
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, by
+    the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev, and by the <target> parameter of TexImage3DEXT, GetTexImage,
+    GetTexLevelParameteriv, GetTexLevelParameterfv, GetTexParameteriv, and
+    GetTexParameterfv:
+
+        TEXTURE_3D_EXT                   0x806F
+
+    Accepted by the <target> parameter of TexImage3DEXT,
+    GetTexLevelParameteriv, and GetTexLevelParameterfv:
+
+        PROXY_TEXTURE_3D_EXT             0x8070
+
+    Accepted by the <pname> parameter of GetTexLevelParameteriv and
+    GetTexLevelParameterfv:
+
+        TEXTURE_DEPTH_EXT                0x8071
+
+    Accepted by the <pname> parameter of TexParameteriv, TexParameterfv,
+    GetTexParameteriv, and GetTexParameterfv:
+
+        TEXTURE_WRAP_R_EXT               0x8072
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        MAX_3D_TEXTURE_SIZE_EXT          0x8073
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+    The pixel storage modes are augmented to support 3D image formats in
+    memory.  Table 3.1 is replaced with the table below:
+
+        Parameter Name          Type            Initial Value   Valid Range
+        --------------          ----            -------------   -----------
+        UNPACK_SWAP_BYTES       boolean         FALSE           TRUE/FALSE
+        UNPACK_LSB_FIRST        boolean         FALSE           TRUE/FALSE
+        UNPACK_ROW_LENGTH       integer         0               [0, infinity]
+        UNPACK_SKIP_ROWS        integer         0               [0, infinity]
+        UNPACK_SKIP_PIXELS      integer         0               [0, infinity]
+        UNPACK_ALIGNMENT        integer         4               1, 2, 4, 8
+        UNPACK_IMAGE_HEIGHT_EXT integer         0               [0, infinity]
+        UNPACK_SKIP_IMAGES_EXT  integer         0               [0, infinity]
+
+        Table 3.1: PixelStore parameters pertaining to one or more of
+        DrawPixels, TexImage1D, TexImage2D, and TexImage3DEXT.
+
+    When TexImage3DEXT is called, the groups in memory are treated as being
+    arranged in a sequence of adjacent rectangles.  Each rectangle is a
+    2-dimensional image, whose size and organization are specified by the
+    <width> and <height> parameters to TexImage3DEXT.  The values of
+    UNPACK_ROW_LENGTH and UNPACK_ALIGNMENT control the row-to-row spacing in
+    these images in exactly the manner described in the GL Specification for
+    2-dimensional images.  If the value of UNPACK_IMAGE_HEIGHT_EXT is not
+    positive, then the number of rows in each 2-dimensional image is
+    <height>; otherwise the number of rows is UNPACK_IMAGE_HEIGHT_EXT.  Each
+    2-dimensional image comprises an integral number of rows, and is exactly
+    adjacent to its neighbor images.
+
+    The mechanism for selecting a sub-volume of a 3-dimensional image builds
+    on the mechanism for selecting a sub-rectangle of groups from a larger
+    containing rectangle.  If UNPACK_SKIP_IMAGES_EXT is positive, the
+    pointer is advanced by UNPACK_SKIP_IMAGES_EXT times the number of
+    elements in one 2-dimensional image.  Then <depth> 2-dimensional images
+    are processed, each having a subimage extracted in the manner described
+    in the GL Specification for 2-dimensional images.
+
+    The selected groups are processed as though they were part of a
+    2-dimensional image.  When the final R, G, B, and A components have been
+    computed for a group, they are assigned to components of a texel as
+    described by Table 3.6 in the EXT_texture extension.  Counting from
+    zero, each resulting Nth texel is assigned internal integer coordinates
+    [i,j,k], where
+
+        i = (N mod width) - border
+
+        j = ((N div width) mod height) - border
+
+        k = ((N div (width * height)) mod depth) - border
+
+    and the div operator performs integer division with truncation.  Thus
+    the last 2-dimensional image of the 3-dimensional image is indexed with
+    the highest value of k.  The dimensions of the 3-dimensional texture
+    image are <width> x <height> x <depth>.  Integer values that will
+    represent the base-2 logarithm of these dimensions are n, m, and l,
+    defined such that
+
+        width = 2**n + (2 * border)
+
+        height = 2**m + (2 * border)
+
+        depth = 2**l + (2 * border)
+    
+    It is acceptable for an implementation to vary its allocation of
+    internal component resolution based any TexImage3DEXT parameter, but the
+    allocation must not be a function of any other factor, and cannot be
+    changed once it is established.  In particular, allocations must be
+    invariant -- the same allocation must be made each time a texture image
+    is specified with the same parameter values.  Provision is made for an
+    application to determine what component resolutions are available
+    without having to fully specify the texture (see below).
+
+    Texture Wrap Modes
+    ------------------
+
+    The additional token value TEXTURE_WRAP_R_EXT is accepted by
+    TexParameteri, TexParameterv, TexParameteriv, and TexParameterfv,
+    causing table 3.7 to be replaced with the table below:
+
+        Name                            Type            Legal Values
+        ----                            ----            ------------
+        TEXTURE_WRAP_S                  integer         CLAMP, REPEAT
+        TEXTURE_WRAP_T                  integer         CLAMP, REPEAT
+        TEXTURE_WRAP_R_EXT              integer         CLAMP, REPEAT
+        TEXTURE_MIN_FILTER              integer         NEAREST, LINEAR,
+                                                        NEAREST_MIPMAP_NEAREST,
+                                                        NEAREST_MIPMAP_LINEAR,
+                                                        LINEAR_MIPMAP_NEAREST,
+                                                        LINEAR_MIPMAP_LINEAR
+        TEXTURE_MAG_FILTER              integer         NEAREST, LINEAR
+        TEXTURE_BORDER_COLOR            4 floats        any 4 values in [0,1]
+
+        Table 3.7: Texture parameters and their values.
+
+    If TEXTURE_WRAP_R_EXT is set to REPEAT, then the GL ignores the integer
+    part of R coordinates, using only the fractional part.  CLAMP causes R
+    to be clamped to the range [0, 1].  The initial state is for
+    TEXTURE_WRAP_R_EXT to be REPEAT.
+
+    Texture Minification
+    --------------------
+
+    Continuous coordinates s, t, u, and v are defined in figure 3.10 of the
+    GL Specification.  To discuss 3-dimensional texture mapping, coordinates
+    r and w are defined similarly.  Coordinate w is equal to -border at the
+    "far" edge of the 3D image, understanding the image to be right-handed,
+    with k values increasing toward the viewer.  It has value depth+border
+    at the near edge of this volume.  Coordinate r has the same direction,
+    but is normalized so that it is 0.0 and 1.0 at the "far" and "near"
+    edges of a borderless volume.  If the volume has a border, the 0.0 and
+    1.0 mappings of r continue to bound the core image.
+
+    The formulas for p, used to determine the level of detail, are modified
+    by including dw/dx and dw/dy terms in the obvious ways.  Equation 3.7
+    sums (dw/dx)**2 into the left term, and (dw/dy)**2 into the right term.
+    Equation 3.8 has ((dw/dx * Dx + dw/dy * Dy)**2 added to the two terms
+    under the square root.  The requirements for the function f(x,y) become
+
+        1.  f(x, y) is continuous and monotonically increasing in each of
+            |du/dx|, |du/dy|, |dv/dx|, |dv/dy|, |dw/dx|, and |dw/dy|.
+
+        2.  Let
+
+                m_u = max(|du/dx|, |du/dy|)
+                m_v = max(|dv/dx|, |dv/dy|)
+                m_w = max(|dw/dx|, |dw/dy|)
+
+            Then
+
+                max(m_u, m_v, m_w) <= f(x, y) <= m_u + m_v + m_w
+
+    The i and j coordinates of the texel selected for NEAREST filtering are
+    as defined in equations 3.9 and 3.10 of the GL Specification.
+    Coordinate k is computed as
+
+             /  floor(w),       r < 1
+        k = (
+             \  2**l - 1,       r = 1
+
+    A 2x2x2 cube of texels is selected for LINEAR filtering.  The i and j
+    coordinates of these texels are computed as defined in the GL
+    Specification for 2-dimensional images.  The k coordinates are
+    computed as
+
+              / floor(w - 1/2) mod 2**l,        TEXTURE_WRAP_R_EXT is REPEAT
+        k0 = (
+              \ floor(w - 1/2),                 TEXTURE_WRAP_R_EXT is CLAMP
+
+
+              / (k0 + 1) mod 2**l,      TEXTURE_WRAP_R_EXT is REPEAT
+        k1 = (
+              \ k0 + 1,                 TEXTURE_WRAP_R_EXT is CLAMP
+
+    Let
+
+        A = frac(u - 1/2)
+        B = frac(v - 1/2)
+        C = frac(w - 1/2)
+
+    where frac(x) denotes the fractional part of x.  Let T[i,j,k] be the
+    texel at location [i,j,k] in the texture image.  Then the texture value,
+    T, is found as
+
+        T = (1-A) * (1-B) * (1-C) * T[i0,j0,k0] +
+              A   * (1-B) * (1-C) * T[i1,j0,k0] +
+            (1-A) *   B   * (1-C) * T[i0,j1,k0] +
+              A   *   B   * (1-C) * T[i1,j1,k0] +
+            (1-A) * (1-B) *   C   * T[i0,j0,k1] +
+              A   * (1-B) *   C   * T[i1,j0,k1] +
+            (1-A) *   B   *   C   * T[i0,j1,k1] +
+              A   *   B   *   C   * T[i1,j1,k1]
+
+    for a 3-dimensional texture.  If any of the selected T[i,j,k] in the
+    above equation refer to a border texel with unspecified value, then the
+    border color given by the current setting of TEXTURE_BORDER_COLOR is
+    used instead of the unspecified value or values.
+
+    Mipmapping
+    ----------
+
+    TEXTURE_MIN_FILTER values NEAREST_MIPMAP_NEAREST, NEAREST_MIPMAP_LINEAR,
+    LINEAR_MIPMAP_NEAREST, and LINEAR_MIPMAP_LINEAR each require the use of
+    a mipmap.  A 3-dimensional mipmap is an ordered set of arrays
+    representing the same image; each array has a resolution lower than the
+    previous one.  If the texture, excluding is border, has dimensions
+    2**n x 2**m x 2**l, then there are exactly max(n, m, l) + 1 mipmap
+    arrays.  Each subsequent array has dimensions
+
+        size(i-1) x size(j-1) x size(k-1)
+    
+    where the dimensions of the previous array are
+
+        size(i) x size(j) x size(k)
+
+    and
+
+                   /  2**x + 2*border,   x > 0
+        size(x) = (
+                   \  1 + 2*border,      x <= 0
+
+    Each array in a 3-dimensional mipmap is transmitted to the GL using
+    TexImage3DEXT; the array being set is indicated with the <level>
+    parameter.  The rules for completeness of the set of arrays are as
+    described in the GL Specification, augmented in EXT_texture.  The rules
+    for mipmap array selection, and for filtering of the two selected
+    arrays, are also as described in the GL Specification.  Finally, the
+    rules for texture magnification are also exactly as described in the
+    GL Specification.
+
+    Texture Application
+    -------------------
+
+    3-dimensional texture mapping is enabled and disabled using the generic
+    Enable and Disable commands, with <cap> specified as TEXTURE_3D_EXT.  If
+    either or both TEXTURE_1D or TEXTURE_2D are enabled at the same time as
+    TEXTURE_3D_EXT, the 3-dimensional texture is used.
+
+    Query support
+    -------------
+
+    The proxy texture PROXY_TEXTURE_3D_EXT can be used by applications to
+    query an implementations maximum configurations just as it can be for
+    1-dimensional and 2-dimensional textures.
+
+    Alternate sets of partial per-level texture state are defined for
+    the proxy texture PROXY_TEXTURE_3D_EXT.  Specifically,
+    TEXTURE_WIDTH, TEXTURE_HEIGHT, TEXTURE_DEPTH_EXT, TEXTURE_BORDER,
+    TEXTURE_COMPONENTS, TEXTURE_RED_SIZE_EXT, TEXTURE_GREEN_SIZE_EXT,
+    TEXTURE_BLUE_SIZE_EXT, TEXTURE_ALPHA_SIZE_EXT,
+    TEXTURE_LUMINANCE_SIZE_EXT, and TEXTURE_INTENSITY_SIZE_EXT are
+    maintained the the proxy texture.  When TexImage3DEXT is called
+    with <target> set to PROXY_TEXTURE_3D_EXT, these proxy state
+    values are always respecified, even if the texture is too large to
+    actually be used.  If the texture is too large, all of these state
+    variables are set to zero.  If the texture could be accommodated
+    by TexImage3DEXT called with <target> TEXTURE_3D_EXT, these values
+    are set as though TEXTURE_3D_EXT were being defined.  All of these
+    state value can be queried with GetTexLevelParameteriv with
+    <target> set to PROXY_TEXTURE_3D_EXT.  Calling TexImage3DEXT with
+    <target> PROXY_TEXTURE_3D_EXT has no effect on the actual
+    3-dimensional texture or its state.
+
+    There is no image associated with PROXY_TEXTURE_3D_EXT.  Therefore
+    PROXY_TEXTURE_3D_EXT cannot be used as a texture, and its image must
+    never be queried using GetTexImage.  (The error INVALID_ENUM results if
+    this is attempted.)  Likewise, there is no nonlevel-related state
+    associated with a proxy texture, so calling GetTexParameteriv or
+    GetTexParameterfv with <target> PROXY_TEXTURE_3D_EXT results in the
+    error INVALID_ENUM.
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    TexImage3DEXT with a proxy target is not included in display
+    lists, but is instead executed immediately.
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    3-dimensional texture images are queried using GetTexImage with its
+    <target> parameter set to TEXTURE_3D_EXT.  The assignment of texel
+    component values to the initial R, G, B, and A components of a pixel
+    group is described in EXT_texture.  Pixel transfer and pixel storage
+    operations are applied as if the image were 2-dimensional, except that
+    the additional pixel storage state values PACK_IMAGE_HEIGHT_EXT and
+    PACK_SKIP_IMAGES_EXT affect the storage of the image into memory.  The
+    correspondence of texels to memory locations is as defined for
+    TexImage3DEXT above, substituting PACK* state for UNPACK* state in all
+    occurrences.
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    A new GL rendering command is added. This command contains pixel data;
+    thus it is sent to the server either as part of a glXRender request
+    or as part of a glXRenderLarge request:
+
+        TexImage3DEXT
+            2           84+n+p          rendering command length
+            2           4114            rendering command opcode
+            1           BOOL            swap_bytes
+            1           BOOL            lsb_first
+            2                           unused
+            4           CARD32          row_length
+            4           CARD32          image_height
+            4           CARD32          image_depth
+            4           CARD32          skip_rows
+            4           CARD32          skip_images
+            4           CARD32          skip_volumes
+            4           CARD32          skip_pixels
+            4           CARD32          alignment
+            4           ENUM            target
+            4           INT32           level
+            4           ENUM            internalformat
+            4           INT32           width
+            4           INT32           height
+            4           INT32           depth
+            4           INT32           size4d
+            4           INT32           border
+            4           ENUM            format
+            4           ENUM            type
+            4           CARD32          null_image
+            n           LISTofBYTE      pixels
+            p                           unused, p=pad(n)
+
+            If the command is encoded in a glXRenderLarge request, the command 
+            opcode and command length fields above are expanded to 4 bytes each:
+
+            4           88+n+p          rendering command length
+            4           4114            rendering command opcode
+
+        If <width> < 0, <height> < 0, <depth> < 0, <format> is invalid or <type> is 
+        invalid, then the command is erroneous and n=0.
+
+        <pixels> is arranged as a sequence of adjacent rectangles. Each rectangle is a
+        2-dimensional image, whose structure is determined by the image height and the 
+        parameters <swap_bytes>, <lsb_first>, <row_length>, <skip_rows>, <skip_pixels>, 
+        <alignment>, <width>, <format>, and <type> given in the request. If <image_height>
+        is not positive then the number of rows (i.e., the image height) is <height>;
+        otherwise the number of rows is <image_height>.
+
+        <skip_images> allows a sub-volume of the 3-dimensional image to be selected.
+        If <skip_images> is positive, then the pointer is advanced by <skip_images> 
+        times the number of elements in one 2-dimensional image. Then <depth> 
+        2-dimensional images are read, each having a subimage extracted in the 
+        manner described in Appendix A of the GLX Protocol Specification.
+
+
+Dependencies on EXT_abgr
+
+    If EXT_abgr is supported, the <format> parameter of TexImage3DEXT
+    accepts ABGR_EXT.  Otherwise it does not.
+
+Dependencies on EXT_texture
+
+    EXT_texture is required.  All of the <components> tokens defined by
+    EXT_texture are accepted by the <internalformat> parameter of
+    TexImage3DEXT, with the same semantics that are defined by EXT_texture.
+
+    The query and error extensions defined by EXT_texture are extended in
+    this document.
+
+Errors
+
+    INVALID_ENUM is generated if <target> is not TEXTURE_3D_EXT or
+    PROXY_TEXTURE_3D_EXT.
+
+    INVALID_ENUM is generated if the <target> parameter to
+    GetTexParameteriv, GetTexParameterfv or GetTexImage is
+    PROXY_TEXTURE_3D_EXT.
+
+    INVALID_VALUE is generated if <level> is less than zero
+
+    INVALID_ENUM is generated if <internalformat> is not ALPHA, RGB, RGBA,
+    LUMINANCE, LUMINANCE_ALPHA, or one of the tokens defined by the
+    EXT_texture extension.  (Values 1, 2, 3, and 4 are not accepted as
+    internal formats by TexImage3DEXT).
+
+    INVALID_VALUE is generated if <width>, <height>, or <depth> is less than
+    zero, or cannot be represented as 2**k + 2*border for some integer k.
+
+    INVALID_VALUE is generated if <border> is not 0 or 1.
+
+    INVALID_ENUM is generated if <format> is not COLOR_INDEX, RED, GREEN,
+    BLUE, ALPHA, RGB, RGBA, LUMINANCE, or LUMINANCE_ALPHA (or ABGR_EXT if
+    EXT_abgr is supported).
+
+    INVALID_ENUM is generated if <type> is not UNSIGNED_BYTE, BYTE,
+    UNSIGNED_SHORT, SHORT, UNSIGNED_INT, INT, or FLOAT.
+
+    INVALID_OPERATION is generated if TexImage3DEXT is called between
+    execution of Begin and the corresponding execution of End.
+
+    TEXTURE_TOO_LARGE_EXT is generated if the texture as specified cannot be
+    accommodated by the implementation.  This error will not occur if none
+    of <width>, <height>, or <depth> is greater than MAX_3D_TEXTURE_SIZE_EXT.
+
+New State
+
+    Get Value                           Get Command             Type                    Initial Value           Attribute
+    ---------                           -----------             ----                    -------------           ---------
+    UNPACK_SKIP_IMAGES_EXT              GetIntegerv             Z+                      0                           -
+    UNPACK_IMAGE_HEIGHT_EXT             GetIntegerv             Z+                      0                           -
+    PACK_SKIP_IMAGES_EXT                GetIntegerv             Z+                      0                           -
+    PACK_IMAGE_HEIGHT_EXT               GetIntegerv             Z+                      0                           -
+    TEXTURE_3D_EXT                      IsEnabled               B                       FALSE                   texture/enable
+    TEXTURE_WRAP_R_EXT                  GetTexParameteriv       1 x Z2                  REPEAT                  texture
+    TEXTURE_DEPTH_EXT                   GetTexLevelParameteriv  1 x 2 x levels x Z+     0                           -
+
+    (old state with new type information)
+
+    TEXTURE                             GetTexImage             3 x 1 x levels x I      null                        -
+    TEXTURE_RED_SIZE_EXT                GetTexLevelParameteriv  3 x 2 x levels x Z+     0                           -
+    TEXTURE_GREEN_SIZE_EXT              GetTexLevelParameteriv  3 x 2 x levels x Z+     0                           -
+    TEXTURE_BLUE_SIZE_EXT               GetTexLevelParameteriv  3 x 2 x levels x Z+     0                           -
+    TEXTURE_ALPHA_SIZE_EXT              GetTexLevelParameteriv  3 x 2 x levels x Z+     0                           -
+    TEXTURE_LUMINANCE_SIZE_EXT          GetTexLevelParameteriv  3 x 2 x levels x Z+     0                           -
+    TEXTURE_INTENSITY_SIZE_EXT          GetTexLevelParameteriv  3 x 2 x levels x Z+     0                           -
+    TEXTURE_WIDTH                       GetTexLevelParameteriv  3 x 2 x levels x Z+     0                           -
+    TEXTURE_HEIGHT                      GetTexLevelParameteriv  2 x 2 x levels x Z+     0                           -
+    TEXTURE_BORDER                      GetTexLevelParameteriv  3 x 2 x levels x Z+     0                           -
+    TEXTURE_COMPONENTS (1D and 2D)      GetTexLevelParameteriv  2 x 2 x levels x Z42    1                           -
+    TEXTURE_COMPONENTS (3D)             GetTexLevelParameteriv  1 x 2 x levels x Z38    LUMINANCE                   -
+    TEXTURE_BORDER_COLOR                GetTexParameteriv       3 x C                   0, 0, 0, 0              texture
+    TEXTURE_MIN_FILTER                  GetTexParameteriv       3 x Z6                  NEAREST_MIPMAP_LINEAR   texture
+    TEXTURE_MAG_FILTER                  GetTexParameteriv       3 x Z2                  LINEAR                  texture
+    TEXTURE_WRAP_S                      GetTexParameteriv       3 x Z2                  REPEAT                  texture
+    TEXTURE_WRAP_T                      GetTexParameteriv       2 x Z2                  REPEAT                  texture
+
+New Implementation Dependent State
+
+    Get Value                           Get Command             Type            Minimum Value
+    ---------                           -----------             ----            -------------
+    MAX_3D_TEXTURE_SIZE_EXT             GetIntegerv             Z+              16

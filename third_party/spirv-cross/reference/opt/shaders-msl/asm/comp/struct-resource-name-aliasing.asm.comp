@@ -1,0 +1,16 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct bufA
+{
+    uint _data[1];
+};
+
+kernel void main0(device bufA& bufA_1 [[buffer(0)]], device bufA& bufB [[buffer(1)]])
+{
+    bufA_1._data[0] = 0u;
+    bufB._data[0] = 0u;
+}
+

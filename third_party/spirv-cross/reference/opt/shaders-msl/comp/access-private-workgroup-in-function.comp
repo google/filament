@@ -1,0 +1,11 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0()
+{
+}
+

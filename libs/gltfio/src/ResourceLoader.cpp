@@ -1,0 +1,1162 @@
+/*
+ * Copyright (C) 2020 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "downcast.h"
+#include "FFilamentAsset.h"
+#include "GltfEnums.h"
+#include "TangentsJob.h"
+#include "Utility.h"
+
+#include "extended/ResourceLoaderExtended.h"
+
+#include <gltfio/ResourceLoader.h>
+#include <gltfio/TextureProvider.h>
+
+#include <geometry/Transcoder.h>
+
+#include <filament/BufferObject.h>
+#include <filament/Engine.h>
+#include <filament/IndexBuffer.h>
+#include <filament/MaterialEnums.h>
+#include <filament/MorphTargetBuffer.h>
+#include <filament/Texture.h>
+#include <filament/VertexBuffer.h>
+
+#include <private/utils/Tracing.h>
+
+#include <utils/compiler.h>
+#include <utils/JobSystem.h>
+#include <utils/Logger.h>
+#include <utils/Path.h>
+
+#include <math/quat.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
+
+#include <cgltf.h>
+#include <meshoptimizer.h>
+#include <tsl/robin_map.h>
+
+#include <fstream>
+#include <limits>
+#include <memory>
+#include <string>
+#include <tuple>
+
+using namespace filament;
+using namespace filament::math;
+using namespace utils;
+
+using filament::geometry::ComponentType;
+
+static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
+
+namespace filament::gltfio {
+
+using BufferTextureCache = tsl::robin_map<const void*, Texture*>;
+using FilepathTextureCache = tsl::robin_map<std::string, Texture*>;
+using TextureProviderList = tsl::robin_map<std::string, TextureProvider*>;
+
+namespace {
+enum class CacheResult {
+    ERROR,
+    NOT_READY,
+    FOUND,
+    MISS,
+};
+} // anonymous namespace
+
+struct ResourceLoader::Impl {
+    explicit Impl(const ResourceConfiguration& config) :
+        mEngine(config.engine),
+        mNormalizeSkinningWeights(config.normalizeSkinningWeights),
+        mGltfPath(config.gltfPath ? config.gltfPath : ""),
+        mUriDataCache(std::make_shared<UriDataCache>()) {}
+
+    Engine* const mEngine;
+    bool mNormalizeSkinningWeights;
+    std::string mGltfPath;
+
+    // User-provided resource data with URI string keys, populated with addResourceData().
+    // This is used on platforms without traditional file systems, such as Android, iOS, and WebGL.
+    UriDataCacheHandle mUriDataCache;
+
+    // User-provided mapping from mime types to texture providers.
+    TextureProviderList mTextureProviders;
+
+    // Avoid duplicated Texture objects via caches with two key types: buffer pointers and strings.
+    // We use two of each cache (indexed by (uint64_t)flags & 1) to prevent color space collisions
+    // (sRGB vs Linear) when the same image source is bound to multiple parameters.
+    BufferTextureCache mBufferTextureCache[2];
+    FilepathTextureCache mFilepathTextureCache[2];
+
+    FFilamentAsset* mAsyncAsset = nullptr;
+    size_t mRemainingTextureDownloads = 0;
+
+    void addResourceData(const char* uri, BufferDescriptor&& buffer);
+    void computeTangents(FFilamentAsset* asset);
+    void createTextures(FFilamentAsset* asset, bool async);
+    void cancelTextureDecoding();
+    std::pair<Texture*, CacheResult> getOrCreateTexture(FFilamentAsset* asset, size_t textureIndex,
+            TextureProvider::TextureFlags flags);
+    ~Impl();
+};
+
+namespace {
+// This little struct holds a shared_ptr that wraps cgltf_data (and, potentially, glb data) while
+// uploading vertex buffer data to the GPU.
+struct UploadEvent {
+    FFilamentAsset::SourceHandle handle;
+    UriDataCacheHandle dataCacheHandle;
+};
+
+UploadEvent* uploadUserdata(FFilamentAsset* asset, UriDataCacheHandle dataCache) {
+    return new UploadEvent({ asset->mSourceAsset, dataCache });
+}
+
+void uploadCallback(void* buffer, size_t size, void* user) {
+    auto event = (UploadEvent*) user;
+    delete event;
+}
+
+// Parses a data URI and returns a blob that gets malloc'd in cgltf, which the caller must free.
+// (implementation snarfed from meshoptimizer)
+uint8_t* parseDataUri(const char* uri, std::string* mimeType, size_t* psize) {
+    if (strncmp(uri, "data:", 5) != 0) {
+        return nullptr;
+    }
+    const char* comma = strchr(uri, ',');
+    if (comma && comma - uri >= 7 && strncmp(comma - 7, ";base64", 7) == 0) {
+        const char* base64 = comma + 1;
+        const size_t base64Size = strlen(base64);
+        size_t size = base64Size - base64Size / 4;
+        if (base64Size >= 2) {
+            size -= base64[base64Size - 2] == '=';
+            size -= base64[base64Size - 1] == '=';
+        }
+        void* data = 0;
+        cgltf_options options = {};
+        cgltf_result result = cgltf_load_buffer_base64(&options, size, base64, &data);
+        if (result != cgltf_result_success) {
+            return nullptr;
+        }
+        *mimeType = std::string(uri + 5, comma - 7);
+        *psize = size;
+        return (uint8_t*) data;
+    }
+    return nullptr;
+}
+
+inline void normalizeSkinningWeights(cgltf_data const* gltf) {
+    auto normalize = [](cgltf_accessor* data) {
+        if (data->type != cgltf_type_vec4 || data->component_type != cgltf_component_type_r_32f) {
+            LOG(WARNING) << "Cannot normalize weights, unsupported attribute type.";
+            return;
+        }
+        if (!data->buffer_view || !data->buffer_view->buffer ||
+                !data->buffer_view->buffer->data) {
+            LOG(WARNING) << "Cannot normalize weights, missing buffer data.";
+            return;
+        }
+        const cgltf_size bufferSize = data->buffer_view->buffer->size;
+        const cgltf_size viewOffset = data->buffer_view->offset;
+        const cgltf_size accessorOffset = data->offset;
+        const cgltf_size totalOffset = viewOffset + accessorOffset;
+
+        if (totalOffset >= bufferSize) {
+            LOG(WARNING) << "Cannot normalize weights, accessor offset exceeds buffer size.";
+            return;
+        }
+
+        const cgltf_size availableBytes = bufferSize - totalOffset;
+        const cgltf_size stride = data->stride;
+
+        cgltf_size maxCount = 0;
+        if (stride > 0 && availableBytes >= sizeof(float4)) {
+            maxCount = 1 + (availableBytes - sizeof(float4)) / stride;
+        }
+
+        cgltf_size safeCount = data->count;
+        if (safeCount > maxCount) {
+            LOG(WARNING) << "Skinning weights accessor count (" << safeCount
+                         << ") exceeds buffer capacity (" << maxCount
+                         << "), clamping to prevent out-of-bounds access.";
+            safeCount = maxCount;
+        }
+
+        uint8_t* bytes = (uint8_t*) data->buffer_view->buffer->data;
+        bytes += totalOffset;
+        for (cgltf_size i = 0, n = safeCount; i < n; ++i, bytes += stride) {
+            float4* weights = (float4*) bytes;
+            const float sum = weights->x + weights->y + weights->z + weights->w;
+            *weights /= sum;
+        }
+    };
+    cgltf_size mcount = gltf->meshes_count;
+    for (cgltf_size mindex = 0; mindex < mcount; ++mindex) {
+        const cgltf_mesh& mesh = gltf->meshes[mindex];
+        cgltf_size pcount = mesh.primitives_count;
+        for (cgltf_size pindex = 0; pindex < pcount; ++pindex) {
+            const cgltf_primitive& prim = mesh.primitives[pindex];
+            cgltf_size acount = prim.attributes_count;
+            for (cgltf_size aindex = 0; aindex < acount; ++aindex) {
+                const auto& attr = prim.attributes[aindex];
+                if (attr.type == cgltf_attribute_type_weights) {
+                    normalize(attr.data);
+                }
+            }
+        }
+    }
+}
+
+inline void createSkins(cgltf_data const* gltf, bool normalize,
+        utils::FixedCapacityVector<FFilamentAsset::Skin>& skins) {
+    // For each skin, optionally normalize skinning weights and store a copy of the bind matrices.
+    if (gltf->skins_count == 0) {
+        return;
+    }
+    if (normalize) {
+        normalizeSkinningWeights(gltf);
+    }
+    skins.reserve(gltf->skins_count);
+    for (cgltf_size i = 0, len = gltf->skins_count; i < len; ++i) {
+        const cgltf_skin& srcSkin = gltf->skins[i];
+        CString name;
+        if (srcSkin.name) {
+            name = CString(srcSkin.name);
+        }
+        const cgltf_accessor* srcMatrices = srcSkin.inverse_bind_matrices;
+        FixedCapacityVector<mat4f> inverseBindMatrices(srcSkin.joints_count);
+        if (srcMatrices) {
+            if (srcMatrices->type != cgltf_type_mat4 ||
+                    srcMatrices->component_type != cgltf_component_type_r_32f) {
+                LOG(WARNING) << "Cannot copy inverse bind matrices, unsupported accessor type.";
+                continue;
+            }
+            if (srcMatrices->count < srcSkin.joints_count) {
+                LOG(WARNING) << "Cannot copy inverse bind matrices, accessor count is too small.";
+                continue;
+            }
+
+            if (!srcMatrices->buffer_view ||
+                (!srcMatrices->buffer_view->has_meshopt_compression &&
+                 (!srcMatrices->buffer_view->buffer || !srcMatrices->buffer_view->buffer->data))) {
+                LOG(WARNING) << "Cannot copy inverse bind matrices, missing buffer view or buffer data.";
+                continue;
+            }
+
+            const cgltf_size requiredBytes = srcSkin.joints_count * sizeof(mat4f);
+            const cgltf_size viewSize = srcMatrices->buffer_view->size;
+            const cgltf_size offsetInView = srcMatrices->offset;
+            if (offsetInView > viewSize || requiredBytes > viewSize - offsetInView) {
+                LOG(WARNING) << "Cannot copy inverse bind matrices, accessor data exceeds buffer view bounds.";
+                continue;
+            }
+
+            uint8_t* srcBuffer = nullptr;
+            if (srcMatrices->buffer_view->has_meshopt_compression) {
+                if (!srcMatrices->buffer_view->data) {
+                    LOG(WARNING) << "Cannot copy inverse bind matrices, compressed buffer data is null.";
+                    continue;
+                }
+                srcBuffer = (uint8_t*) srcMatrices->buffer_view->data + offsetInView;
+            } else {
+                const cgltf_size bufferSize = srcMatrices->buffer_view->buffer->size;
+                const cgltf_size totalOffset = srcMatrices->buffer_view->offset + offsetInView;
+                if (totalOffset > bufferSize || requiredBytes > bufferSize - totalOffset) {
+                    LOG(WARNING) << "Cannot copy inverse bind matrices, accessor data exceeds buffer bounds.";
+                    continue;
+                }
+                srcBuffer = (uint8_t*) srcMatrices->buffer_view->buffer->data + totalOffset;
+            }
+
+            memcpy((uint8_t*) inverseBindMatrices.data(), (const void*) srcBuffer, requiredBytes);
+        }
+        FFilamentAsset::Skin skin{
+                .name = std::move(name),
+                .inverseBindMatrices = std::move(inverseBindMatrices),
+        };
+        skins.emplace_back(std::move(skin));
+    }
+}
+
+static bool indexAccessorFitsBuffer(cgltf_accessor const* accessor, size_t bindingSize) {
+    if (!accessor->buffer_view) {
+        return false;
+    }
+    cgltf_size capacity = 0;
+    cgltf_size totalOffset = 0;
+    if (accessor->buffer_view->has_meshopt_compression) {
+        capacity = accessor->buffer_view->size;
+        totalOffset = accessor->offset;
+    } else {
+        if (!accessor->buffer_view->buffer) {
+            return false;
+        }
+        capacity = accessor->buffer_view->buffer->size;
+        totalOffset = accessor->buffer_view->offset + accessor->offset;
+    }
+    if (totalOffset >= capacity) {
+        return false;
+    }
+    return bindingSize <= capacity - totalOffset;
+}
+
+inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
+        UriDataCacheHandle uriDataCache) {
+    const cgltf_accessor* kGenerateTangents = &asset->mGenerateTangents;
+    const cgltf_accessor* kGenerateNormals = &asset->mGenerateNormals;
+
+    // Upload VertexBuffer and IndexBuffer data to the GPU.
+    auto& slots = std::get<FFilamentAsset::ResourceInfo>(asset->mResourceInfo).mBufferSlots;
+    for (auto const& slot: slots) {
+        const cgltf_accessor* accessor = slot.accessor;
+        // Morph target accessors may not have a buffer_view (data is directly in the accessor)
+        bool isMorphTarget = (slot.morphTargetBuffer != nullptr);
+        bool isSentinel = (accessor == kGenerateTangents || accessor == kGenerateNormals);
+
+        if (!accessor->buffer_view && !isMorphTarget) {
+            // Per glTF 2.0 Accessor Schema: "When [bufferView is] undefined, the accessor MUST be
+            // initialized with zeros; sparse property or extensions MAY override zeros with
+            // actual values."
+            // Also Section 5.2.2.1: "When accessor.bufferView is undefined, the sparse accessor
+            // is initialized as an array of zeros..."
+
+            // If the accessor is sparse or requires conversion, we let it fall through to the
+            // conversion path which handles zero-initialization via cgltf_accessor_unpack_floats.
+            //
+            // We don't fall through for sentinels because they have invalid types. Sentinels
+            // occur when AssetLoader identifies that normals or tangents should be generated.
+            // Normally, TangentsJob processes these for triangle primitives. However, for line
+            // or point primitives, TangentsJob skips them. In such cases, we MUST zero-initialize
+            // the buffer here; otherwise, the VertexBuffer will have an enabled attribute with
+            // no bound buffer, causing a panic in the graphics driver.
+            if (!isSentinel && (accessor->is_sparse || (accessor->type != cgltf_type_invalid &&
+                                               utility::requiresConversion(accessor)))) {
+                // fall through
+            } else {
+                size_t count = accessor->count;
+                if (count == 0 && slot.vertexBuffer) {
+                    count = slot.vertexBuffer->getVertexCount();
+                }
+
+                size_t elementSize = cgltf_calc_size(accessor->type, accessor->component_type);
+                if (elementSize == 0 && isSentinel) {
+                    // Sentinels are used for TBN (tangent, bitangent, normal) generation.
+                    // Filament encodes this TBN frame as a quaternion in a SHORT4 attribute
+                    // (8 bytes).
+                    elementSize = 8; // SHORT4
+                }
+
+                const size_t size = count * elementSize;
+                if (size == 0) {
+                    continue;
+                }
+                if (slot.vertexBuffer) {
+                    void* zeros = malloc(size);
+                    if (!zeros) {
+                        LOG(ERROR) << "Out of memory allocating zeroed vertex buffer.";
+                        continue;
+                    }
+                    memset(zeros, 0, size);
+                    BufferObject* bo = BufferObject::Builder().size(size).build(engine);
+                    asset->mBufferObjects.push_back(bo);
+                    bo->setBuffer(engine, BufferDescriptor(zeros, size, FREE_CALLBACK));
+                    slot.vertexBuffer->setBufferObjectAt(engine, slot.bufferIndex, bo);
+                    continue;
+                }
+
+                if (slot.indexBuffer) {
+                    // Size the zeroed blob from the destination. The IndexBuffer holds
+                    // (indexCount * elementSize) bytes, where glTF 8-bit indices are promoted to
+                    // 16-bit because Filament has no 8-bit index type. The accessor's declared
+                    // type has no say in this, which is what keeps the blob within capacity.
+                    size_t const indexCount = slot.indexBuffer->getIndexCount();
+                    size_t const componentSize = cgltf_component_size(accessor->component_type);
+                    size_t const indexSize =
+                            componentSize == 1 ? sizeof(uint16_t) : componentSize;
+                    if (indexCount == 0 || indexSize == 0) {
+                        continue;
+                    }
+                    void* zeros = calloc(indexCount, indexSize);
+                    if (!zeros) {
+                        LOG(ERROR) << "Out of memory allocating zeroed index buffer.";
+                        continue;
+                    }
+                    IndexBuffer::BufferDescriptor bd(zeros, indexCount * indexSize,
+                            FREE_CALLBACK);
+                    slot.indexBuffer->setBuffer(engine, std::move(bd));
+                    continue;
+                }
+            }
+        }
+
+        // For morph targets without buffer_view, use cgltf_accessor_unpack_floats to unpack data directly
+        if (!accessor->buffer_view && isMorphTarget) {
+            const size_t components = cgltf_num_components(accessor->type);
+            if (components > 0 && accessor->count > std::numeric_limits<size_t>::max() / components) {
+                continue;
+            }
+            const size_t floatsCount = accessor->count * components;
+            if (floatsCount == 0) {
+                continue;
+            }
+
+            if (floatsCount > std::numeric_limits<size_t>::max() / sizeof(float)) {
+                continue;
+            }
+            const size_t floatsByteCount = sizeof(float) * floatsCount;
+
+            float* floatsData = (float*)malloc(floatsByteCount);
+            if (!floatsData) {
+                LOG(WARNING) << "Failed to allocate memory for morph target unpacking, skipping.";
+                continue;
+            }
+            cgltf_accessor_unpack_floats(accessor, floatsData, floatsCount);
+
+            if (accessor->type == cgltf_type_vec3) {
+                slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
+                    (const float3*)floatsData, slot.morphTargetCount, slot.morphTargetOffset);
+            }
+            else {
+                assert_invariant(accessor->type == cgltf_type_vec4);
+                slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
+                    (const float4*)floatsData, slot.morphTargetCount, slot.morphTargetOffset);
+            }
+
+            free(floatsData);
+            continue;
+        }
+
+        const uint8_t* bufferData = nullptr;
+        const uint8_t* data = nullptr;
+        if (accessor->buffer_view) {
+            if (accessor->buffer_view->has_meshopt_compression) {
+                bufferData = (const uint8_t*) accessor->buffer_view->data;
+                if (bufferData) data = bufferData + accessor->offset;
+            } else if (accessor->buffer_view->buffer) {
+                bufferData = (const uint8_t*) accessor->buffer_view->buffer->data;
+                if (bufferData) data = utility::computeBindingOffset(accessor) + bufferData;
+            }
+        }
+        const uint32_t size = utility::computeBindingSize(accessor);
+        if (size == 0) {
+            // Skip buffer upload for this accessor as requested by user
+            continue;
+        }
+        if (slot.vertexBuffer) {
+            if (utility::requiresConversion(accessor)) {
+                // Conversion path (handles null buffer_view internally via unpacking)
+                cgltf_size maxCount = accessor->count;
+                if (accessor->buffer_view) {
+                    cgltf_size capacity = 0;
+                    cgltf_size totalOffset = 0;
+                    if (accessor->buffer_view->has_meshopt_compression) {
+                        capacity = accessor->buffer_view->size;
+                        totalOffset = accessor->offset;
+                    } else if (accessor->buffer_view->buffer) {
+                        capacity = accessor->buffer_view->buffer->size;
+                        totalOffset = accessor->buffer_view->offset + accessor->offset;
+                    }
+
+                    if (capacity > 0) {
+                        if (totalOffset >= capacity) {
+                            continue;
+                        }
+
+                        const cgltf_size availableBytes = capacity - totalOffset;
+                        const cgltf_size stride = accessor->stride;
+                        const cgltf_size elementSize = cgltf_calc_size(accessor->type, accessor->component_type);
+
+                        if (stride > 0 && availableBytes >= elementSize) {
+                            maxCount = 1 + (availableBytes - elementSize) / stride;
+                        }
+                    }
+                }
+
+                cgltf_size safeCount = accessor->count;
+                if (safeCount > maxCount) {
+                    LOG(WARNING) << "Accessor count exceeds buffer capacity, clamping.";
+                    safeCount = maxCount;
+                }
+
+                const size_t components = cgltf_num_components(accessor->type);
+                if (components > 0 && safeCount > std::numeric_limits<size_t>::max() / components) {
+                    continue;
+                }
+                const size_t floatsCount = safeCount * components;
+                if (floatsCount == 0) {
+                    continue;
+                }
+
+                if (floatsCount > std::numeric_limits<size_t>::max() / sizeof(float)) {
+                    continue;
+                }
+                const size_t floatsByteCount = sizeof(float) * floatsCount;
+
+                float* floatsData = (float*) malloc(floatsByteCount);
+                if (!floatsData) {
+                    LOG(WARNING) << "Failed to allocate memory for vertex buffer conversion, skipping.";
+                    continue;
+                }
+                cgltf_accessor_unpack_floats(accessor, floatsData, floatsCount);
+                BufferObject* bo = BufferObject::Builder().size(floatsByteCount).build(engine);
+                asset->mBufferObjects.push_back(bo);
+                bo->setBuffer(engine, BufferDescriptor(floatsData, floatsByteCount, FREE_CALLBACK));
+                slot.vertexBuffer->setBufferObjectAt(engine, slot.bufferIndex, bo);
+                continue;
+            }
+
+            // Standard upload path (direct GPU copy). This requires valid source data to be present.
+            // If bufferData is null (e.g. no bufferView), we skip the direct copy.
+            if (!bufferData) {
+                continue;
+            }
+
+            BufferObject* bo = BufferObject::Builder().size(size).build(engine);
+            asset->mBufferObjects.push_back(bo);
+            bo->setBuffer(engine, BufferDescriptor(data, size, uploadCallback,
+                                          uploadUserdata(asset, uriDataCache)));
+            slot.vertexBuffer->setBufferObjectAt(engine, slot.bufferIndex, bo);
+            continue;
+        } else if (slot.indexBuffer) {
+            // Standard upload path for index buffers.
+            if (!bufferData) {
+                continue;
+            }
+
+            // Redundant with AssetLoader and with cgltf_validate(): Draco and meshopt decoding
+            // replace the bufferView but never accessor->stride, which cgltf computes at parse
+            // time. Kept as the last check before the bytes reach the driver.
+            if (!utility::isUploadableIndexAccessor(accessor)) {
+                LOG(ERROR) << "Malformed index accessor: indices must be scalar, tightly packed "
+                              "and non-sparse.";
+                return false;
+            }
+
+            // Size the copy from the destination. The IndexBuffer was allocated as
+            // (indexCount * componentSize), with 8-bit indices widened to 16-bit, so that is
+            // exactly how many bytes may be written and, given the check above, exactly how many
+            // source bytes the accessor describes.
+            size_t const indexCount = slot.indexBuffer->getIndexCount();
+            size_t const componentSize = cgltf_component_size(accessor->component_type);
+            size_t const srcByteCount = indexCount * componentSize;
+
+            if (!indexAccessorFitsBuffer(accessor, srcByteCount)) {
+                LOG(ERROR) << "Index accessor size exceeds buffer capacity.";
+                return false;
+            }
+
+            if (accessor->component_type == cgltf_component_type_r_8u) {
+                // glTF 8-bit indices are 1 byte, but Filament has no 8-bit index type, so the
+                // IndexBuffer holds two bytes per index.
+                size_t const dstByteCount = srcByteCount * 2;
+                uint16_t* data16 = (uint16_t*) malloc(dstByteCount);
+                if (!data16) {
+                    LOG(WARNING) << "Failed to allocate memory for index buffer conversion, skipping.";
+                    continue;
+                }
+                utility::convertBytesToShorts(data16, data, srcByteCount);
+                IndexBuffer::BufferDescriptor bd(data16, dstByteCount, FREE_CALLBACK);
+
+                slot.indexBuffer->setBuffer(engine, std::move(bd));
+                continue;
+            }
+            IndexBuffer::BufferDescriptor bd(data, srcByteCount, uploadCallback,
+                    uploadUserdata(asset, uriDataCache));
+            slot.indexBuffer->setBuffer(engine, std::move(bd));
+            continue;
+        }
+
+        // If the buffer slot does not have an associated VertexBuffer or IndexBuffer, then this
+        // must be a morph target.
+        assert(slot.morphTargetBuffer);
+
+        if (utility::requiresPacking(accessor)) {
+            cgltf_size capacity = 0;
+            cgltf_size totalOffset = 0;
+            if (accessor->buffer_view->has_meshopt_compression) {
+                capacity = accessor->buffer_view->size;
+                totalOffset = accessor->offset;
+            } else if (accessor->buffer_view->buffer) {
+                capacity = accessor->buffer_view->buffer->size;
+                totalOffset = accessor->buffer_view->offset + accessor->offset;
+            }
+
+            if (capacity == 0 || totalOffset >= capacity) {
+                continue;
+            }
+
+            const cgltf_size availableBytes = capacity - totalOffset;
+            const cgltf_size stride = accessor->stride;
+            const cgltf_size elementSize = cgltf_calc_size(accessor->type, accessor->component_type);
+
+            cgltf_size maxCount = 0;
+            if (stride > 0 && availableBytes >= elementSize) {
+                maxCount = 1 + (availableBytes - elementSize) / stride;
+            }
+
+            cgltf_size safeCount = accessor->count;
+            if (safeCount > maxCount) {
+                LOG(WARNING) << "Accessor count exceeds buffer capacity, clamping.";
+                safeCount = maxCount;
+            }
+
+            const size_t components = cgltf_num_components(accessor->type);
+            if (components > 0 && safeCount > std::numeric_limits<size_t>::max() / components) {
+                continue;
+            }
+            const size_t floatsCount = safeCount * components;
+            if (floatsCount == 0) {
+                continue;
+            }
+
+            if (floatsCount > std::numeric_limits<size_t>::max() / sizeof(float)) {
+                continue;
+            }
+            const size_t floatsByteCount = sizeof(float) * floatsCount;
+
+            float* floatsData = (float*) malloc(floatsByteCount);
+            if (!floatsData) {
+                LOG(WARNING) << "Failed to allocate memory for morph target packing, skipping.";
+                continue;
+            }
+            cgltf_accessor_unpack_floats(accessor, floatsData, floatsCount);
+            if (accessor->type == cgltf_type_vec3) {
+                slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
+                        (const float3*) floatsData,
+                        slot.morphTargetCount,
+                        slot.morphTargetOffset);
+            } else {
+                slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
+                        (const float4*) data, slot.morphTargetBuffer->getVertexCount(),
+                        slot.morphTargetOffset);
+            }
+            free(floatsData);
+            continue;
+        }
+
+        if (accessor->type == cgltf_type_vec3) {
+            slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex, (const float3*) data,
+                    slot.morphTargetCount,
+                    slot.morphTargetOffset);
+        } else {
+            assert_invariant(accessor->type == cgltf_type_vec4);
+            slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex, (const float4*) data,
+                    slot.morphTargetCount,
+                    slot.morphTargetOffset);
+        }
+    }
+    return true;
+}
+
+} // anonymous namespace
+
+ResourceLoader::ResourceLoader(const ResourceConfiguration& config) : pImpl(new Impl(config)) { }
+
+ResourceLoader::~ResourceLoader() {
+    delete pImpl;
+}
+
+void ResourceLoader::setConfiguration(const ResourceConfiguration& config) {
+    pImpl->mNormalizeSkinningWeights = config.normalizeSkinningWeights;
+    pImpl->mGltfPath = config.gltfPath;
+}
+
+void ResourceLoader::addResourceData(const char* uri, BufferDescriptor&& buffer) {
+    pImpl->addResourceData(uri, std::move(buffer));
+}
+
+static bool endsWith(std::string_view expr, std::string_view ending) {
+    if (expr.length() >= ending.length()) {
+        return (expr.compare(expr.length() - ending.length(), ending.length(), ending) == 0);
+    }
+    return false;
+}
+
+// TODO: This is not a great way to determine if a resource is a texture, but we can remove it after
+// gltfio gains support for concurrent downloading of vertex data:
+// https://github.com/google/filament/issues/5909
+static bool isTexture(const char* uri) {
+    using namespace std::literals;
+    std::string_view urisv(uri);
+    if (endsWith(urisv, ".png"sv)) {
+        return true;
+    }
+    if (endsWith(urisv, ".ktx2"sv)) {
+        return true;
+    }
+    if (endsWith(urisv, ".jpg"sv) || endsWith(urisv, ".jpeg"sv)) {
+        return true;
+    }
+    return false;
+}
+
+void ResourceLoader::Impl::addResourceData(const char* uri, BufferDescriptor&& buffer) {
+    // Start an async marker the first time this is called and end it when
+    // finalization begins. This marker provides a rough indicator of how long
+    // the client is taking to load raw data blobs from storage.
+    if (mUriDataCache->empty()) {
+        FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_GLTFIO);
+        FILAMENT_TRACING_ASYNC_BEGIN(FILAMENT_TRACING_CATEGORY_GLTFIO, "addResourceData", 1);
+    }
+    // NOTE: replacing an existing item in a robin map does not seem to behave as expected.
+    // To work around this, we explicitly erase the old element if it already exists.
+    auto iter = mUriDataCache->find(uri);
+    if (iter != mUriDataCache->end()) {
+        mUriDataCache->erase(iter);
+    }
+    mUriDataCache->emplace(uri, std::move(buffer));
+
+    // If this is a texture and async loading has already started, add a new decoder job.
+    if (isTexture(uri) && mAsyncAsset && mRemainingTextureDownloads > 0) {
+        createTextures(mAsyncAsset, true);
+    }
+}
+
+bool ResourceLoader::hasResourceData(const char* uri) const {
+    return pImpl->mUriDataCache->find(uri) != pImpl->mUriDataCache->end();
+}
+
+void ResourceLoader::evictResourceData() {
+    // Note that this triggers BufferDescriptor callbacks.
+    pImpl->mUriDataCache->clear();
+}
+
+bool ResourceLoader::loadResources(FilamentAsset* asset) {
+    FFilamentAsset* fasset = downcast(asset);
+
+    // This is a workaround in case of using extended algo, please see description in
+    // FFilamentAsset.h
+    if (fasset->isUsingExtendedAlgorithm()) {
+        pImpl->mUriDataCache =
+                std::get<FFilamentAsset::ResourceInfoExtended>(fasset->mResourceInfo).uriDataCache;
+    }
+
+    return loadResources(fasset, false);
+}
+
+bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_GLTFIO);
+    FILAMENT_TRACING_ASYNC_END(FILAMENT_TRACING_CATEGORY_GLTFIO, "addResourceData", 1);
+
+    if (asset->mResourcesLoaded) {
+        return false;
+    }
+    asset->mResourcesLoaded = true;
+
+    bool const isExtendedAlgo = asset->isUsingExtendedAlgorithm();
+
+    // At this point, any entities that are created in the future (i.e. dynamically added instances)
+    // will not need the progressive feature to be enabled. This simplifies the dependency graph and
+    // prevents it from growing.
+    asset->mDependencyGraph.disableProgressiveReveal();
+
+    // Clear our texture caches. Previous calls to loadResources may have populated these, but the
+    // Texture objects could have since been destroyed.
+    pImpl->mBufferTextureCache[0].clear();
+    pImpl->mBufferTextureCache[1].clear();
+    pImpl->mFilepathTextureCache[0].clear();
+    pImpl->mFilepathTextureCache[1].clear();
+
+    cgltf_data const* gltf = asset->mSourceAsset->hierarchy;
+
+    if (!isExtendedAlgo) {
+        if (!utility::loadCgltfBuffers(gltf, pImpl->mGltfPath.c_str(), pImpl->mUriDataCache)) {
+            return false;
+        }
+
+        // Decompress Draco meshes early on, which allows us to exploit subsequent processing such
+        // as tangent generation.
+        DracoCache* dracoCache = &asset->mSourceAsset->dracoCache;
+        auto& primitives = std::get<FFilamentAsset::ResourceInfo>(asset->mResourceInfo).mPrimitives;
+        // Go through every primitive and check if it has a Draco mesh.
+        for (auto& [prim, vertexBuffer]: primitives) {
+            if (!prim->has_draco_mesh_compression) {
+                continue;
+            }
+            utility::decodeDracoMeshes(gltf, prim, dracoCache);
+        }
+        if (!utility::decodeMeshoptCompression((cgltf_data*) gltf)) {
+            return false;
+        }
+
+        if (!uploadBuffers(asset, *pImpl->mEngine, pImpl->mUriDataCache)) {
+            return false;
+        }
+
+        // Compute surface orientation quaternions if necessary. This is similar to sparse data in
+        // that we need to generate the contents of a GPU buffer by processing one or more CPU
+        // buffer(s).
+        pImpl->computeTangents(asset);
+    } else {
+        auto& slots = std::get<FFilamentAsset::ResourceInfoExtended>(asset->mResourceInfo).slots;
+        ResourceLoaderExtended::loadResources(slots, pImpl->mEngine, asset->mBufferObjects);
+    }
+
+    createSkins(gltf, pImpl->mNormalizeSkinningWeights, asset->mSkins);
+
+    // If any decoding jobs are still underway from a previous load, wait for them to finish.
+    for (const auto& iter: pImpl->mTextureProviders) {
+        iter.second->waitForCompletion();
+        iter.second->updateQueue();
+    }
+
+    // Finally, create Filament Textures and begin loading image files.
+    pImpl->createTextures(asset, async);
+
+    // Non-textured renderables are now considered ready, and we can guarantee that no new
+    // materials or textures will be added. Notify the dependency graph.
+    asset->mDependencyGraph.commitEdges();
+
+    for (FFilamentInstance* instance : asset->mInstances) {
+        instance->createAnimator();
+    }
+
+    return true;
+}
+
+bool ResourceLoader::asyncBeginLoad(FilamentAsset* asset) {
+    pImpl->mAsyncAsset = downcast(asset);
+    return loadResources(downcast(asset), true);
+}
+
+void ResourceLoader::asyncCancelLoad() {
+    pImpl->cancelTextureDecoding();
+    pImpl->mAsyncAsset = nullptr;
+    pImpl->mEngine->flushAndWait();
+}
+
+void ResourceLoader::addTextureProvider(const char* mimeType, TextureProvider* provider) {
+    pImpl->mTextureProviders[mimeType] = provider;
+}
+
+float ResourceLoader::asyncGetLoadProgress() const {
+    if (pImpl->mTextureProviders.empty() || !pImpl->mAsyncAsset) {
+        return 0;
+    }
+    size_t pushedCount = 0;
+    size_t poppedCount = 0;
+    for (const auto& iter : pImpl->mTextureProviders) {
+        pushedCount += iter.second->getPushedCount();
+        poppedCount += iter.second->getPoppedCount();
+    }
+
+    // Textures that haven't been fully downloaded are not yet pushed into one of the
+    // decoding queues, so here we include them in the total "pending" count.
+    const size_t pendingCount = pushedCount + pImpl->mRemainingTextureDownloads;
+
+    return pendingCount == 0 ? 1 : (float(poppedCount) / pendingCount);
+}
+
+void ResourceLoader::asyncUpdateLoad() {
+    if (!pImpl->mAsyncAsset) {
+        return;
+    }
+    for (const auto& iter : pImpl->mTextureProviders) {
+        iter.second->updateQueue();
+        while (Texture* texture = iter.second->popTexture()) {
+            pImpl->mAsyncAsset->mDependencyGraph.markAsReady(texture);
+        }
+    }
+}
+
+std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset,
+        size_t textureIndex, TextureProvider::TextureFlags flags) {
+    const cgltf_texture& srcTexture = asset->mSourceAsset->hierarchy->textures[textureIndex];
+    const cgltf_image* image = srcTexture.webp_image ? srcTexture.webp_image : srcTexture.basisu_image ?
+            srcTexture.basisu_image : srcTexture.image;
+
+    if (!image) {
+        LOG(ERROR) << "Missing texture";
+        return {};
+    }
+
+    const cgltf_buffer_view* bv = image->buffer_view;
+    const char* uri = image->uri;
+
+    if (!bv && !uri) {
+        LOG(ERROR) << "Missing image source data";
+        return {};
+    }
+
+    std::string mime = image->mime_type ? image->mime_type : "";
+    size_t dataUriSize;
+    std::unique_ptr<uint8_t, void(*)(void*)> dataUriContent(
+            !bv && uri ? parseDataUri(uri, &mime, &dataUriSize) : nullptr, &std::free);
+
+    if (mime.empty()) {
+        if (!uri) {
+            LOG(ERROR) << "Non-URI images must supply a mime type.";
+            return {};
+        }
+        const std::string extension = Path(uri).getExtension();
+        mime = extension == "jpg" ? "image/jpeg" : "image/" + extension;
+    }
+
+    auto foundProvider = mTextureProviders.find(mime);
+    if (foundProvider == mTextureProviders.end()) {
+        LOG(ERROR) << "Missing texture provider for " << mime;
+        return {};
+    }
+    TextureProvider* provider = foundProvider->second;
+    assert_invariant(provider);
+
+    const size_t cacheIdx = any(flags & TextureProvider::TextureFlags::sRGB) ? 1 : 0;
+
+    // Check if the texture slot uses BufferView data.
+    if (void** bufferViewData = bv ? &bv->buffer->data : nullptr; bufferViewData) {
+        if (!*bufferViewData) {
+            LOG(ERROR) << "Missing buffer data for texture";
+            return {};
+        }
+        const size_t offset = bv ? bv->offset : 0;
+        const uint8_t* sourceData = offset + (const uint8_t*) *bufferViewData;
+        if (auto iter = mBufferTextureCache[cacheIdx].find(sourceData);
+                iter != mBufferTextureCache[cacheIdx].end()) {
+            return {iter->second, CacheResult::FOUND};
+        }
+        const uint32_t totalSize = uint32_t(bv ? bv->size : 0);
+        if (Texture* texture = provider->pushTexture(sourceData, totalSize, mime.c_str(), flags); texture) {
+            mBufferTextureCache[cacheIdx][sourceData] = texture;
+            return {texture, CacheResult::MISS};
+        }
+    }
+
+    // Check if the texture slot is a data URI.
+    // Note that this is a data URI in an image, not a buffer. Data URI's in buffers are decoded
+    // by the cgltf_load_buffers() function.
+    else if (dataUriContent) {
+        if (auto iter = mBufferTextureCache[cacheIdx].find(uri);
+                iter != mBufferTextureCache[cacheIdx].end()) {
+            return {iter->second, CacheResult::FOUND};
+        }
+        if (Texture* texture = provider->pushTexture(
+                dataUriContent.get(), dataUriSize, mime.c_str(), flags); texture) {
+            mBufferTextureCache[cacheIdx][uri] = texture;
+            return {texture, CacheResult::MISS};
+        }
+    }
+
+    // Check the user-supplied resource cache for this URI.
+    else if (auto iter = mUriDataCache->find(uri); iter != mUriDataCache->end()) {
+        const uint8_t* sourceData = (const uint8_t*) iter->second.buffer;
+        if (auto iter = mBufferTextureCache[cacheIdx].find(sourceData);
+                iter != mBufferTextureCache[cacheIdx].end()) {
+            return {iter->second, CacheResult::FOUND};
+        }
+        if (Texture* texture = provider->pushTexture(sourceData, iter->second.size, mime.c_str(), flags); texture) {
+            mBufferTextureCache[cacheIdx][sourceData] = texture;
+            return {texture, CacheResult::MISS};
+        }
+    }
+
+    // Finally, try the file system.
+    else if constexpr (GLTFIO_USE_FILESYSTEM) {
+        LOG(WARNING) << "gltfio: Auto-loading resources from the filesystem is deprecated. "
+                     << "Please manually load bytes and use ResourceLoader::addResourceData.";
+        if (auto iter = mFilepathTextureCache[cacheIdx].find(uri);
+                iter != mFilepathTextureCache[cacheIdx].end()) {
+            return {iter->second, CacheResult::FOUND};
+        }
+        Path fullpath = Path(mGltfPath).getParent() + uri;
+        if (!fullpath.exists()) {
+            LOG(ERROR) << "Unable to open " << fullpath;
+            return {};
+        }
+        using namespace std;
+        ifstream filest(fullpath, std::ifstream::in | std::ifstream::binary);
+        vector<uint8_t> buffer;
+        filest.seekg(0, ios::end);
+        buffer.reserve((size_t) filest.tellg());
+        filest.seekg(0, ios::beg);
+        buffer.assign((istreambuf_iterator<char>(filest)), istreambuf_iterator<char>());
+        if (Texture* texture = provider->pushTexture(buffer.data(), buffer.size(), mime.c_str(), flags); texture) {
+            mFilepathTextureCache[cacheIdx][uri] = texture;
+            return {texture, CacheResult::MISS};
+        }
+
+    } else {
+        // If we reach here, the app has not yet called addResourceData() for this texture,
+        // perhaps because it is still being downloaded.
+        return {nullptr, CacheResult::NOT_READY};
+    }
+
+    const char* name = srcTexture.name ? srcTexture.name : (uri ? uri : "");
+    LOG(ERROR) << "Unable to create texture " << name << ": " << provider->getPushMessage();
+    return {};
+}
+
+void ResourceLoader::Impl::cancelTextureDecoding() {
+    for (const auto& iter : mTextureProviders) {
+        iter.second->cancelDecoding();
+    }
+    mAsyncAsset = nullptr;
+}
+
+void ResourceLoader::Impl::createTextures(FFilamentAsset* asset, bool async) {
+    mRemainingTextureDownloads = 0;
+
+    // Create new texture objects if they are not cached and kick off decoding jobs.
+    for (size_t assetTextureIndex = 0, n = asset->mTextures.size(); assetTextureIndex < n;
+            ++assetTextureIndex) {
+        FFilamentAsset::TextureInfo& info = asset->mTextures[assetTextureIndex];
+        auto [texture, cacheResult] = getOrCreateTexture(asset, info.gltfTextureIndex, info.flags);
+        if (texture == nullptr) {
+            if (cacheResult == CacheResult::NOT_READY) {
+                mRemainingTextureDownloads++;
+            }
+            continue;
+        }
+
+        // If this cgtf_texture slot is being initialized, copy the Texture into the slot
+        // and note if the Texture was created or re-used.
+        if (info.texture == nullptr) {
+            info.texture = texture;
+            info.isOwner = cacheResult == CacheResult::MISS;
+        }
+
+        // For each binding to a material instance, call setParameter(...) on the material.
+        for (const TextureSlot& slot : info.bindings) {
+            asset->applyTextureBinding(assetTextureIndex, slot);
+        }
+    }
+
+    // Non-threaded systems are required to use the asynchronous API.
+    assert_invariant(UTILS_HAS_THREADING || async);
+
+    if (async) {
+        return;
+    }
+
+    for (const auto& iter : mTextureProviders) {
+        iter.second->waitForCompletion();
+        iter.second->updateQueue();
+    }
+}
+
+void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_GLTFIO);
+
+    const cgltf_accessor* kGenerateTangents = &asset->mGenerateTangents;
+    const cgltf_accessor* kGenerateNormals = &asset->mGenerateNormals;
+
+    // Collect all TANGENT vertex attribute slots that need to be populated.
+    tsl::robin_map<VertexBuffer*, uint8_t> baseTangents;
+    auto& slots = std::get<FFilamentAsset::ResourceInfo>(asset->mResourceInfo).mBufferSlots;
+    auto& primitives = std::get<FFilamentAsset::ResourceInfo>(asset->mResourceInfo).mPrimitives;
+    for (auto const& slot: slots) {
+        if (slot.accessor != kGenerateTangents && slot.accessor != kGenerateNormals) {
+            continue;
+        }
+        baseTangents[slot.vertexBuffer] = slot.bufferIndex;
+    }
+
+    // Create a job description for each triangle-based primitive.
+    using Params = TangentsJob::Params;
+    std::vector<Params> jobParams;
+    for (auto const& [prim, vb] : primitives) {
+        if (UTILS_UNLIKELY(prim->type != cgltf_primitive_type_triangles)) {
+            continue;
+        }
+        auto iter = baseTangents.find(vb);
+        if (iter != baseTangents.end()) {
+            jobParams.emplace_back(Params {{ prim }, {vb, nullptr, 0, iter->second }});
+        }
+    }
+
+    // Create a job description for morph targets.
+    for (size_t i = 0, n = asset->mSourceAsset->hierarchy->meshes_count; i < n; ++i) {
+        const cgltf_mesh& mesh = asset->mSourceAsset->hierarchy->meshes[i];
+        const FixedCapacityVector<Primitive>& prims = asset->mMeshCache[i];
+        if (0 == mesh.weights_count) {
+            continue;
+        }
+        for (cgltf_size pindex = 0, pcount = mesh.primitives_count; pindex < pcount; ++pindex) {
+            const cgltf_primitive& prim = mesh.primitives[pindex];
+            MorphTargetBuffer* const tb = prims[pindex].morphTargetBuffer;
+            if (!tb) {
+                continue;
+            }
+            uint32_t const morphTargetOffset = prims[pindex].morphTargetOffset;
+            const cgltf_size tcount = std::min(prim.targets_count, (cgltf_size) MAX_MORPH_TARGETS);
+            for (cgltf_size tindex = 0; tindex < tcount; ++tindex) {
+                const cgltf_morph_target& target = prim.targets[tindex];
+                bool hasNormals = false;
+                for (cgltf_size aindex = 0; aindex < target.attributes_count; aindex++) {
+                    const cgltf_attribute& attribute = target.attributes[aindex];
+                    const cgltf_attribute_type atype = attribute.type;
+                    if (atype != cgltf_attribute_type_tangent) {
+                        continue;
+                    }
+                    hasNormals = true;
+                    jobParams.emplace_back(Params { { &prim, (int) tindex },
+                                                    { nullptr, tb, morphTargetOffset, (uint8_t) pindex } });
+                    break;
+                }
+                // Generate flat normals if necessary.
+                if (!hasNormals && prim.material && !prim.material->unlit) {
+                    jobParams.emplace_back(Params { { &prim, (int) tindex },
+                                                    { nullptr, tb, morphTargetOffset, (uint8_t) pindex } });
+                }
+            }
+        }
+    }
+
+    // Kick off jobs for computing tangent frames in batches to avoid exhausting the job pool.
+    JobSystem* js = &mEngine->getJobSystem();
+    constexpr size_t MAX_BATCH_SIZE = JobSystem::MAX_JOB_COUNT / 2;
+    for (size_t offset = 0; offset < jobParams.size(); offset += MAX_BATCH_SIZE) {
+        const size_t batchSize = std::min(jobParams.size() - offset, MAX_BATCH_SIZE);
+        JobSystem::Job* parent = js->createJob();
+        for (size_t j = 0; j < batchSize; ++j) {
+            Params* pptr = &jobParams[offset + j];
+            JobSystem::Job* job = parent ?
+                    jobs::createJob(*js, parent, [pptr] { TangentsJob::run(pptr); }) : nullptr;
+            if (UTILS_LIKELY(job)) {
+                js->run(job);
+            } else {
+                TangentsJob::run(pptr);
+            }
+        }
+        js->runAndWait(parent);
+    }
+
+    // Finally, upload quaternions to the GPU from the main thread.
+    for (Params& params : jobParams) {
+        if (params.context.vb) {
+            BufferObject* bo = BufferObject::Builder()
+                    .size(params.out.vertexCount * sizeof(short4)).build(*mEngine);
+            asset->mBufferObjects.push_back(bo);
+            bo->setBuffer(*mEngine, BufferDescriptor(
+                    params.out.results, bo->getByteCount(), FREE_CALLBACK));
+            params.context.vb->setBufferObjectAt(*mEngine, params.context.slot, bo);
+        } else {
+            assert_invariant(params.context.tb);
+            params.context.tb->setTangentsAt(*mEngine, params.in.morphTargetIndex,
+                    params.out.results, params.out.vertexCount, params.context.offset);
+            free(params.out.results);
+        }
+    }
+}
+
+ResourceLoader::Impl::~Impl() {
+    for (const auto& iter : mTextureProviders) {
+        iter.second->cancelDecoding();
+    }
+}
+
+} // namespace filament::gltfio

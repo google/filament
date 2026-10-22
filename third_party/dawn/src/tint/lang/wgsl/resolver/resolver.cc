@@ -1,0 +1,4982 @@
+// Copyright 2020 The Dawn & Tint Authors
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#include "src/tint/lang/wgsl/resolver/resolver.h"
+
+#include <algorithm>
+#include <limits>
+#include <string_view>
+#include <utility>
+
+#include "src/tint/lang/core/constant/scalar.h"  // IWYU pragma: export
+#include "src/tint/lang/core/enums.h"
+#include "src/tint/lang/core/fluent_types.h"
+#include "src/tint/lang/core/type/abstract_float.h"
+#include "src/tint/lang/core/type/abstract_int.h"
+#include "src/tint/lang/core/type/atomic.h"
+#include "src/tint/lang/core/type/binding_array.h"
+#include "src/tint/lang/core/type/builtin_structs.h"
+#include "src/tint/lang/core/type/depth_multisampled_texture.h"
+#include "src/tint/lang/core/type/depth_texture.h"
+#include "src/tint/lang/core/type/external_texture.h"
+#include "src/tint/lang/core/type/i8.h"
+#include "src/tint/lang/core/type/input_attachment.h"
+#include "src/tint/lang/core/type/memory_view.h"
+#include "src/tint/lang/core/type/multisampled_texture.h"
+#include "src/tint/lang/core/type/pointer.h"
+#include "src/tint/lang/core/type/reference.h"
+#include "src/tint/lang/core/type/sampled_texture.h"
+#include "src/tint/lang/core/type/sampler.h"
+#include "src/tint/lang/core/type/storage_texture.h"
+#include "src/tint/lang/core/type/swizzle_view.h"
+#include "src/tint/lang/core/type/u16.h"
+#include "src/tint/lang/core/type/u8.h"
+#include "src/tint/lang/core/type/vector.h"
+#include "src/tint/lang/wgsl/ast/alias.h"
+#include "src/tint/lang/wgsl/ast/assignment_statement.h"
+#include "src/tint/lang/wgsl/ast/attribute.h"
+#include "src/tint/lang/wgsl/ast/break_statement.h"
+#include "src/tint/lang/wgsl/ast/call_statement.h"
+#include "src/tint/lang/wgsl/ast/continue_statement.h"
+#include "src/tint/lang/wgsl/ast/discard_statement.h"
+#include "src/tint/lang/wgsl/ast/for_loop_statement.h"
+#include "src/tint/lang/wgsl/ast/id_attribute.h"
+#include "src/tint/lang/wgsl/ast/if_statement.h"
+#include "src/tint/lang/wgsl/ast/input_attachment_index_attribute.h"
+#include "src/tint/lang/wgsl/ast/interpolate_attribute.h"
+#include "src/tint/lang/wgsl/ast/loop_statement.h"
+#include "src/tint/lang/wgsl/ast/return_statement.h"
+#include "src/tint/lang/wgsl/ast/switch_statement.h"
+#include "src/tint/lang/wgsl/ast/traverse_expressions.h"
+#include "src/tint/lang/wgsl/ast/unary_op_expression.h"
+#include "src/tint/lang/wgsl/ast/variable_decl_statement.h"
+#include "src/tint/lang/wgsl/ast/while_statement.h"
+#include "src/tint/lang/wgsl/ast/workgroup_attribute.h"
+#include "src/tint/lang/wgsl/intrinsic/ctor_conv.h"
+#include "src/tint/lang/wgsl/resolver/incomplete_type.h"
+#include "src/tint/lang/wgsl/resolver/uniformity.h"
+#include "src/tint/lang/wgsl/resolver/unresolved_identifier.h"
+#include "src/tint/lang/wgsl/sem/array.h"
+#include "src/tint/lang/wgsl/sem/behavior.h"
+#include "src/tint/lang/wgsl/sem/break_if_statement.h"
+#include "src/tint/lang/wgsl/sem/builtin_enum_expression.h"
+#include "src/tint/lang/wgsl/sem/builtin_fn.h"
+#include "src/tint/lang/wgsl/sem/call.h"
+#include "src/tint/lang/wgsl/sem/for_loop_statement.h"
+#include "src/tint/lang/wgsl/sem/function.h"
+#include "src/tint/lang/wgsl/sem/function_expression.h"
+#include "src/tint/lang/wgsl/sem/if_statement.h"
+#include "src/tint/lang/wgsl/sem/index_accessor_expression.h"
+#include "src/tint/lang/wgsl/sem/load.h"
+#include "src/tint/lang/wgsl/sem/loop_statement.h"
+#include "src/tint/lang/wgsl/sem/materialize.h"
+#include "src/tint/lang/wgsl/sem/member_accessor_expression.h"
+#include "src/tint/lang/wgsl/sem/module.h"
+#include "src/tint/lang/wgsl/sem/pipeline_stage_set.h"
+#include "src/tint/lang/wgsl/sem/statement.h"
+#include "src/tint/lang/wgsl/sem/struct.h"
+#include "src/tint/lang/wgsl/sem/switch_statement.h"
+#include "src/tint/lang/wgsl/sem/type_expression.h"
+#include "src/tint/lang/wgsl/sem/value_constructor.h"
+#include "src/tint/lang/wgsl/sem/value_conversion.h"
+#include "src/tint/lang/wgsl/sem/variable.h"
+#include "src/tint/lang/wgsl/sem/while_statement.h"
+#include "src/tint/utils/containers/reverse.h"
+#include "src/tint/utils/containers/transform.h"
+#include "src/tint/utils/containers/vector.h"
+#include "src/tint/utils/internal_limits.h"
+#include "src/tint/utils/macros/compiler.h"
+#include "src/tint/utils/macros/defer.h"
+#include "src/tint/utils/macros/scoped_assignment.h"
+#include "src/tint/utils/math/math.h"
+#include "src/tint/utils/text/string.h"
+#include "src/tint/utils/text/styled_text.h"
+#include "src/tint/utils/text/text_style.h"
+#include "src/utils/compiler.h"
+
+using namespace tint::core::fluent_types;  // NOLINT
+
+namespace tint::resolver {
+namespace {
+
+#define TINT_RET_IF(expr) \
+    do {                  \
+        if ((expr)) {     \
+            return {};    \
+        }                 \
+    } while (false)
+
+/// ICE() is a wrapper around TINT_ICE() that includes a prefixed source location
+#define ICE(SOURCE) TINT_ICE() << SOURCE << (SOURCE.file ? ": " : "")
+
+using CtorConvIntrinsic = wgsl::intrinsic::CtorConv;
+using OverloadFlag = core::intrinsic::OverloadFlag;
+
+constexpr uint32_t kMaxStatementDepth = 127;
+
+}  // namespace
+
+Resolver::Resolver(ProgramBuilder* builder, const wgsl::AllowedFeatures& allowed_features)
+    : b(*builder),
+      diagnostics_(builder->Diagnostics()),
+      const_eval_(builder->constants, diagnostics_),
+      intrinsic_table_{builder->Types(), builder->Symbols()},
+      sem_(builder),
+      validator_(builder,
+                 sem_,
+                 enabled_extensions_,
+                 allowed_features_,
+                 atomic_composite_info_,
+                 valid_type_storage_layouts_),
+      allowed_features_(allowed_features) {}
+
+Resolver::~Resolver() = default;
+
+bool Resolver::Resolve() {
+    TINT_RET_IF(diagnostics_.ContainsErrors());
+
+    b.Sem().Reserve(b.LastAllocatedNodeID());
+
+    // Pre-allocate the marked bitset with the total number of AST nodes.
+    marked_.Resize(b.ASTNodes().Count());
+
+    TINT_RET_IF(!DependencyGraph::Build(b.AST(), diagnostics_, dependencies_));
+
+    bool result = ResolveInternal();
+
+    TINT_ASSERT(result || diagnostics_.ContainsErrors())
+        << "resolving failed, but no error was raised";
+
+    TINT_RET_IF(!validator_.Enables(b.AST().Enables()));
+
+    // Create the semantic module. Don't be tempted to std::move() these, they're used below.
+    auto* mod = b.create<sem::Module>(dependencies_.ordered_globals, enabled_extensions_);
+    ApplyDiagnosticSeverities(mod);
+    b.Sem().SetModule(mod);
+
+    const bool disable_uniformity_analysis =
+        enabled_extensions_.Contains(wgsl::Extension::kChromiumDisableUniformityAnalysis);
+    if (result && !disable_uniformity_analysis) {
+        // Run the uniformity analysis, which requires a complete semantic module.
+        const bool subgroup_uniformity =
+            allowed_features_.features.contains(wgsl::LanguageFeature::kSubgroupUniformity);
+        TINT_RET_IF(!AnalyzeUniformity(b, dependencies_, subgroup_uniformity));
+    }
+
+    return result;
+}
+
+bool Resolver::ResolveInternal() {
+    Mark(&b.AST());
+
+    // Process all module-scope declarations in dependency order.
+    Vector<const ast::DiagnosticControl*, 4> diagnostic_controls;
+    for (auto* decl : dependencies_.ordered_globals) {
+        Mark(decl);
+        if (!Switch<bool>(
+                decl,  //
+                [&](const ast::DiagnosticDirective* d) {
+                    diagnostic_controls.Push(&d->control);
+                    return DiagnosticControl(d->control);
+                },
+                [&](const ast::Enable* e) { return Enable(e); },
+                [&](const ast::Requires* r) { return Requires(r); },
+                [&](const ast::TypeDecl* td) { return TypeDecl(td); },
+                [&](const ast::Function* func) { return Function(func); },
+                [&](const ast::Variable* var) { return GlobalVariable(var); },
+                [&](const ast::ConstAssert* ca) { return ConstAssert(ca); },  //
+                TINT_ICE_ON_NO_MATCH)) {
+            return false;
+        }
+    }
+
+    TINT_RET_IF(!AllocateOverridableConstantIds());
+    TINT_RET_IF(!validator_.DiagnosticControls(diagnostic_controls, "directive",
+                                               DiagnosticDuplicates::kAllowed));
+    TINT_RET_IF(!validator_.PipelineStages(entry_points_));
+    TINT_RET_IF(!validator_.ModuleScopeVarUsages(entry_points_));
+
+    bool result = true;
+    for (auto* node : b.ASTNodes().Objects()) {
+        if (DAWN_UNLIKELY(!marked_[node->node_id.value])) {
+            ICE(node->source) << "AST node '" << node->TypeInfo().name
+                              << "' was not reached by the resolver\n"
+                              << "Pointer: " << node;
+        }
+    }
+
+    return result;
+}
+
+sem::Variable* Resolver::Variable(const ast::Variable* v, bool is_global) {
+    Mark(v->name);
+
+    return Switch(
+        v,  //
+        [&](const ast::Var* var) { return Var(var, is_global); },
+        [&](const ast::Let* let) { return Let(let); },
+        [&](const ast::Override* override) { return Override(override); },
+        [&](const ast::Const* const_) { return Const(const_, is_global); },  //
+        TINT_ICE_ON_NO_MATCH);
+}
+
+sem::Variable* Resolver::Let(const ast::Let* v) {
+    auto* sem = b.create<sem::LocalVariable>(v, current_statement_);
+    sem->SetStage(core::EvaluationStage::kRuntime);
+    b.Sem().Add(v, sem);
+
+    // If the variable has a declared type, resolve it.
+    if (v->type) {
+        auto* ty = Type(v->type);
+        TINT_RET_IF(DAWN_UNLIKELY(!ty));
+
+        sem->SetType(ty);
+    }
+
+    if (!v->attributes.IsEmpty()) {
+        ErrorInvalidAttribute(v->attributes[0],
+                              StyledText{} << style::Keyword("let") << " declaration");
+        return nullptr;
+    }
+
+    if (DAWN_UNLIKELY(!v->initializer)) {
+        AddError(v) << style::Keyword("let") << " declaration must have an initializer";
+        return nullptr;
+    }
+
+    auto* rhs = Load(Materialize(ValueExpression(v->initializer), sem->Type()));
+    TINT_RET_IF(DAWN_UNLIKELY(!rhs));
+
+    sem->SetInitializer(rhs);
+
+    // If the variable has no declared type, infer it from the RHS
+    if (!sem->Type()) {
+        sem->SetType(rhs->Type()->UnwrapRef());  // Implicit load of RHS
+    }
+
+    TINT_RET_IF(DAWN_UNLIKELY(rhs && !validator_.VariableInitializer(v, sem->Type(), rhs)));
+
+    if (!ApplyAddressSpaceUsageToType(core::AddressSpace::kUndefined,
+                                      const_cast<core::type::Type*>(sem->Type()), v->source)) {
+        AddNote(v) << "while instantiating " << style::Keyword("let ")
+                   << style::Variable(v->name->symbol.NameView());
+        return nullptr;
+    }
+
+    return sem;
+}
+
+sem::Variable* Resolver::Override(const ast::Override* v) {
+    auto* sem = b.create<sem::GlobalVariable>(v);
+    b.Sem().Add(v, sem);
+    sem->SetStage(core::EvaluationStage::kOverride);
+
+    on_transitively_reference_global_.Push([&](const sem::GlobalVariable* ref) {
+        if (ref->Declaration()->Is<ast::Override>()) {
+            sem->AddTransitivelyReferencedOverride(ref);
+        }
+    });
+    TINT_DEFER(on_transitively_reference_global_.Pop());
+
+    // If the variable has a declared type, resolve it.
+    const core::type::Type* ty = nullptr;
+    if (v->type) {
+        ty = Type(v->type);
+        TINT_RET_IF(DAWN_UNLIKELY(!ty));
+    }
+
+    // Does the variable have an initializer?
+    const sem::ValueExpression* init = nullptr;
+    if (v->initializer) {
+        // Note: RHS must be a const or override expression, which excludes references.
+        // So there's no need to load or unwrap references here.
+        ExprEvalStageConstraint constraint{core::EvaluationStage::kOverride,
+                                           "override initializer"};
+        TINT_SCOPED_ASSIGNMENT(expr_eval_stage_constraint_, constraint);
+        init = Materialize(ValueExpression(v->initializer), ty);
+        TINT_RET_IF(DAWN_UNLIKELY(!init));
+
+        sem->SetInitializer(init);
+
+        // If the variable has no declared type, infer it from the initializer
+        if (!ty) {
+            ty = init->Type();
+        }
+    } else if (!ty) {
+        AddError(v) << "override declaration requires a type or initializer";
+        return nullptr;
+    }
+    sem->SetType(ty);
+
+    TINT_RET_IF(init && !validator_.VariableInitializer(v, ty, init));
+
+    if (!ApplyAddressSpaceUsageToType(core::AddressSpace::kUndefined,
+                                      const_cast<core::type::Type*>(ty), v->source)) {
+        AddNote(v) << "while instantiating " << style::Keyword("override ")
+                   << style::Variable(v->name->symbol.NameView());
+        return nullptr;
+    }
+
+    for (auto* attribute : v->attributes) {
+        Mark(attribute);
+        bool ok = Switch(
+            attribute,  //
+            [&](const ast::IdAttribute* attr) -> bool {
+                ExprEvalStageConstraint constraint{core::EvaluationStage::kConstant, "@id"};
+                TINT_SCOPED_ASSIGNMENT(expr_eval_stage_constraint_, constraint);
+
+                auto* materialized = Materialize(ValueExpression(attr->expr));
+                TINT_RET_IF(!materialized);
+
+                if (!materialized->Type()->IsAnyOf<core::type::I32, core::type::U32>()) {
+                    AddError(attr)
+                        << style::Attribute("@id") << " must be an " << style::Type("i32") << " or "
+                        << style::Type("u32") << " value";
+                    return false;
+                }
+
+                auto const_value = materialized->ConstantValue();
+                auto value = const_value->ValueAs<AInt>();
+                if (value < 0) {
+                    AddError(attr) << style::Attribute("@id") << " value must be non-negative";
+                    return false;
+                }
+                if (value > std::numeric_limits<decltype(OverrideId::value)>::max()) {
+                    AddError(attr) << style::Attribute("@id") << " value must be between 0 and "
+                                   << std::numeric_limits<decltype(OverrideId::value)>::max();
+                    return false;
+                }
+
+                auto o = OverrideId{static_cast<decltype(OverrideId::value)>(value)};
+                sem->Attributes().override_id = o;
+
+                // Track the constant IDs that are specified in the shader.
+                override_ids_.Add(o, sem);
+                return true;
+            },
+            [&](Default) {
+                ErrorInvalidAttribute(attribute,
+                                      StyledText{} << style::Keyword("override") << " declaration");
+                return false;
+            });
+
+        TINT_RET_IF(DAWN_UNLIKELY(!ok));
+    }
+
+    return sem;
+}
+
+sem::Variable* Resolver::Const(const ast::Const* c, bool is_global) {
+    sem::Variable* sem = nullptr;
+    sem::GlobalVariable* global = nullptr;
+    if (is_global) {
+        global = b.create<sem::GlobalVariable>(c);
+        sem = global;
+    } else {
+        sem = b.create<sem::LocalVariable>(c, current_statement_);
+    }
+    b.Sem().Add(c, sem);
+
+    for (auto* attribute : c->attributes) {
+        Mark(attribute);
+        bool ok =
+            Switch(attribute,  //
+                   [&](Default) {
+                       ErrorInvalidAttribute(
+                           attribute, StyledText{} << style::Keyword("const") << " declaration");
+                       return false;
+                   });
+        TINT_RET_IF(DAWN_UNLIKELY(!ok));
+    }
+
+    if (DAWN_UNLIKELY(!c->initializer)) {
+        AddError(c) << "'const' declaration must have an initializer";
+        return nullptr;
+    }
+
+    ExprEvalStageConstraint constraint{core::EvaluationStage::kConstant, "const initializer"};
+    TINT_SCOPED_ASSIGNMENT(expr_eval_stage_constraint_, constraint);
+    const auto* init = ValueExpression(c->initializer);
+    TINT_RET_IF(DAWN_UNLIKELY(!init));
+
+    // Note: RHS must be a const expression, which excludes references.
+    // So there's no need to load or unwrap references here.
+
+    // If the variable has a declared type, resolve it.
+    const core::type::Type* ty = nullptr;
+    if (c->type) {
+        ty = Type(c->type);
+        TINT_RET_IF(DAWN_UNLIKELY(!ty));
+    }
+
+    if (ty) {
+        // If an explicit type was specified, materialize to that type
+        init = Materialize(init, ty);
+        TINT_RET_IF(DAWN_UNLIKELY(!init));
+    } else {
+        // If no type was specified, infer it from the RHS
+        ty = init->Type();
+    }
+
+    sem->SetInitializer(init);
+    sem->SetStage(core::EvaluationStage::kConstant);
+    sem->SetConstantValue(init->ConstantValue());
+    sem->SetType(ty);
+
+    TINT_RET_IF(!validator_.VariableInitializer(c, ty, init));
+
+    if (!ApplyAddressSpaceUsageToType(core::AddressSpace::kUndefined,
+                                      const_cast<core::type::Type*>(ty), c->source)) {
+        AddNote(c) << "while instantiating 'const' " << c->name->symbol.NameView();
+        return nullptr;
+    }
+
+    return sem;
+}
+
+sem::Variable* Resolver::Var(const ast::Var* var, bool is_global) {
+    sem::Variable* sem = nullptr;
+    sem::GlobalVariable* global = nullptr;
+    if (is_global) {
+        global = b.create<sem::GlobalVariable>(var);
+        sem = global;
+    } else {
+        sem = b.create<sem::LocalVariable>(var, current_statement_);
+    }
+    sem->SetStage(core::EvaluationStage::kRuntime);
+    b.Sem().Add(var, sem);
+
+    if (is_global) {
+        on_transitively_reference_global_.Push([&](const sem::GlobalVariable* ref) {
+            if (ref->Declaration()->Is<ast::Override>()) {
+                global->AddTransitivelyReferencedOverride(ref);
+            }
+        });
+    }
+    TINT_DEFER({
+        if (is_global) {
+            on_transitively_reference_global_.Pop();
+        }
+    });
+
+    // If the variable has a declared type, resolve it.
+    const core::type::Type* storage_ty = nullptr;
+    if (auto ty = var->type) {
+        storage_ty = Type(ty);
+        TINT_RET_IF(DAWN_UNLIKELY(!storage_ty));
+    }
+
+    // Does the variable have a initializer?
+    if (var->initializer) {
+        ExprEvalStageConstraint constraint{
+            is_global ? core::EvaluationStage::kOverride : core::EvaluationStage::kRuntime,
+            "var initializer",
+        };
+        TINT_SCOPED_ASSIGNMENT(expr_eval_stage_constraint_, constraint);
+
+        auto* init = Load(Materialize(ValueExpression(var->initializer), storage_ty));
+        TINT_RET_IF(DAWN_UNLIKELY(!init));
+
+        sem->SetInitializer(init);
+
+        // If the variable has no declared type, infer it from the RHS
+        if (!storage_ty) {
+            storage_ty = init->Type();
+        }
+    }
+
+    if (!storage_ty) {
+        AddError(var) << "var declaration requires a type or initializer";
+        return nullptr;
+    }
+
+    if (var->declared_address_space) {
+        auto space = AddressSpaceExpression(var->declared_address_space);
+        TINT_RET_IF(DAWN_UNLIKELY(!space));
+
+        sem->SetAddressSpace(space->Value());
+    } else {
+        // No declared address space. Infer from usage / type.
+        if (!is_global) {
+            sem->SetAddressSpace(core::AddressSpace::kFunction);
+        } else if (storage_ty->UnwrapRef()->IsHandle()) {
+            // https://gpuweb.github.io/gpuweb/wgsl/#module-scope-variables
+            // If the store type is a handle type, then the variable declaration must not have a
+            // address space attribute. The address space will always be handle.
+            sem->SetAddressSpace(core::AddressSpace::kHandle);
+        }
+    }
+
+    if (!is_global && sem->AddressSpace() != core::AddressSpace::kFunction) {
+        AddError(var) << "function-scope 'var' declaration must use 'function' address space";
+        return nullptr;
+    }
+
+    if (var->declared_access) {
+        auto expr = AccessExpression(var->declared_access);
+        TINT_RET_IF(DAWN_UNLIKELY(!expr));
+
+        sem->SetAccess(expr->Value());
+    } else {
+        sem->SetAccess(DefaultAccessForAddressSpace(sem->AddressSpace()));
+    }
+
+    sem->SetType(b.create<core::type::Reference>(sem->AddressSpace(), storage_ty, sem->Access()));
+
+    TINT_RET_IF(sem->Initializer() &&
+                !validator_.VariableInitializer(var, storage_ty, sem->Initializer()));
+
+    if (!ApplyAddressSpaceUsageToType(sem->AddressSpace(),
+                                      const_cast<core::type::Type*>(sem->Type()),
+                                      var->type ? var->type->source : var->source)) {
+        AddNote(var) << "while instantiating 'var' " << var->name->symbol.NameView();
+        return nullptr;
+    }
+
+    if (is_global) {
+        std::optional<uint32_t> group, binding, input_attachment_index;
+        for (auto* attribute : var->attributes) {
+            Mark(attribute);
+            enum Status { kSuccess, kErrored, kInvalid };
+            auto res = Switch(
+                attribute,  //
+                [&](const ast::BindingAttribute* attr) {
+                    auto value = BindingAttribute(attr);
+                    if (value != Success) {
+                        return kErrored;
+                    }
+                    binding = value.Get();
+                    return kSuccess;
+                },
+                [&](const ast::GroupAttribute* attr) {
+                    auto value = GroupAttribute(attr);
+                    if (value != Success) {
+                        return kErrored;
+                    }
+                    group = value.Get();
+                    return kSuccess;
+                },
+                [&](const ast::InputAttachmentIndexAttribute* attr) {
+                    auto value = InputAttachmentIndexAttribute(attr);
+                    if (value != Success) {
+                        return kErrored;
+                    }
+                    input_attachment_index = value.Get();
+                    return kSuccess;
+                },
+                [&](Default) { return kInvalid; });
+
+            switch (res) {
+                case kSuccess:
+                    break;
+                case kErrored:
+                    return nullptr;
+                case kInvalid:
+                    ErrorInvalidAttribute(attribute,
+                                          StyledText{} << "module-scope " << style::Keyword("var"));
+                    return nullptr;
+            }
+        }
+
+        if (group && binding) {
+            global->Attributes().binding_point = BindingPoint{group.value(), binding.value()};
+        }
+
+        if (input_attachment_index) {
+            global->Attributes().input_attachment_index = input_attachment_index;
+        }
+
+    } else if (!var->attributes.IsEmpty()) {
+        ErrorInvalidAttribute(var->attributes[0],
+                              StyledText{} << "function-scope " << style::Keyword("var"));
+        return nullptr;
+    }
+
+    return sem;
+}
+
+sem::Parameter* Resolver::Parameter(const ast::Parameter* param,
+                                    const ast::Function* func,
+                                    uint32_t index) {
+    Mark(param->name);
+
+    auto* sem = b.create<sem::Parameter>(param, index);
+    b.Sem().Add(param, sem);
+
+    auto add_note = [&] {
+        AddNote(param) << "while instantiating parameter " << param->name->symbol.NameView();
+    };
+
+    if (func->IsEntryPoint()) {
+        for (auto* attribute : param->attributes) {
+            Mark(attribute);
+            bool ok = Switch(
+                attribute,  //
+                [&](const ast::LocationAttribute* attr) -> bool {
+                    auto value = LocationAttribute(attr);
+                    TINT_RET_IF(DAWN_UNLIKELY(value != Success));
+
+                    sem->Attributes().location = value.Get();
+                    return true;
+                },
+                [&](const ast::ColorAttribute* attr) -> bool {
+                    auto value = ColorAttribute(attr);
+                    TINT_RET_IF(DAWN_UNLIKELY(value != Success));
+
+                    sem->Attributes().color = value.Get();
+                    return true;
+                },
+                [&](const ast::BuiltinAttribute*) { return true; },
+                [&](const ast::InvariantAttribute* attr) -> bool {
+                    return InvariantAttribute(attr);
+                },
+                [&](const ast::InterpolateAttribute*) { return true; },
+                [&](Default) {
+                    ErrorInvalidAttribute(attribute, StyledText{} << "function parameters");
+                    return false;
+                });
+
+            TINT_RET_IF(DAWN_UNLIKELY(!ok));
+        }
+    } else if (!param->attributes.IsEmpty()) {
+        auto& attribute = param->attributes[0];
+        if (attribute->IsAnyOf<ast::LocationAttribute, ast::BuiltinAttribute,
+                               ast::InvariantAttribute, ast::InterpolateAttribute>()) {
+            ErrorInvalidAttribute(attribute, StyledText{} << "non-entry point function parameters");
+        } else {
+            ErrorInvalidAttribute(attribute, StyledText{} << "function parameters");
+        }
+        return nullptr;
+    }
+
+    TINT_RET_IF(!validator_.NoDuplicateAttributes(param->attributes));
+
+    const core::type::Type* ty = Type(param->type);
+    TINT_RET_IF(DAWN_UNLIKELY(!ty));
+
+    sem->SetType(ty);
+
+    if (!ApplyAddressSpaceUsageToType(core::AddressSpace::kUndefined, ty, param->type->source)) {
+        add_note();
+        return nullptr;
+    }
+
+    TINT_RET_IF(!validator_.Parameter(sem));
+
+    return sem;
+}
+
+core::Access Resolver::DefaultAccessForAddressSpace(core::AddressSpace address_space) {
+    // https://gpuweb.github.io/gpuweb/wgsl/#storage-class
+    switch (address_space) {
+        case core::AddressSpace::kImmediate:
+        case core::AddressSpace::kStorage:
+        case core::AddressSpace::kUniform:
+        case core::AddressSpace::kHandle:
+            return core::Access::kRead;
+        default:
+            break;
+    }
+    return core::Access::kReadWrite;
+}
+
+bool Resolver::AllocateOverridableConstantIds() {
+    constexpr size_t kLimit = std::numeric_limits<decltype(OverrideId::value)>::max();
+    // The next pipeline constant ID to try to allocate.
+    OverrideId next_id;
+    bool ids_exhausted = false;
+
+    auto increment_next_id = [&] {
+        if (next_id.value == kLimit) {
+            ids_exhausted = true;
+        } else {
+            next_id.value = next_id.value + 1;
+        }
+    };
+
+    // Allocate constant IDs in global declaration order, so that they are
+    // deterministic.
+    // TODO(crbug.com/tint/1192): If a transform changes the order or removes an
+    // unused constant, the allocation may change on the next Resolver pass.
+    for (auto* decl : b.AST().GlobalDeclarations()) {
+        auto* override = decl->As<ast::Override>();
+        if (!override) {
+            continue;
+        }
+
+        auto* sem = sem_.Get(override);
+
+        OverrideId id;
+        if (auto sem_id = sem->Attributes().override_id) {
+            id = *sem_id;
+        } else {
+            // No ID was specified, so allocate the next available ID.
+            while (!ids_exhausted && override_ids_.Contains(next_id)) {
+                increment_next_id();
+            }
+            if (ids_exhausted) {
+                AddError(decl) << "number of 'override' variables exceeded limit of " << kLimit;
+                return false;
+            }
+            id = next_id;
+            increment_next_id();
+        }
+
+        const_cast<sem::GlobalVariable*>(sem)->Attributes().override_id = id;
+    }
+    return true;
+}
+
+sem::GlobalVariable* Resolver::GlobalVariable(const ast::Variable* v) {
+    auto* sem = As<sem::GlobalVariable>(Variable(v, /* is_global */ true));
+    TINT_RET_IF(DAWN_UNLIKELY(!sem));
+    TINT_RET_IF(!validator_.NoDuplicateAttributes(v->attributes));
+    TINT_RET_IF(!validator_.GlobalVariable(sem, override_ids_));
+    return sem;
+}
+
+sem::Statement* Resolver::ConstAssert(const ast::ConstAssert* assertion) {
+    ExprEvalStageConstraint constraint{core::EvaluationStage::kConstant, "const assertion"};
+    TINT_SCOPED_ASSIGNMENT(expr_eval_stage_constraint_, constraint);
+    auto* expr = ValueExpression(assertion->condition);
+    TINT_RET_IF(DAWN_UNLIKELY(!expr));
+
+    auto* cond = expr->ConstantValue();
+    if (auto* ty = cond->Type(); !ty->Is<core::type::Bool>()) {
+        AddError(assertion->condition)
+            << "const assertion condition must be a bool, got '" << ty->FriendlyName() << "'";
+        return nullptr;
+    }
+    if (!cond->ValueAs<bool>()) {
+        AddError(assertion) << "const assertion failed";
+        return nullptr;
+    }
+    auto* sem = b.create<sem::Statement>(assertion, current_compound_statement_, current_function_);
+    b.Sem().Add(assertion, sem);
+    return sem;
+}
+
+sem::Function* Resolver::Function(const ast::Function* decl) {
+    Mark(decl->name);
+
+    auto* func = b.create<sem::Function>(decl);
+    b.Sem().Add(decl, func);
+    TINT_SCOPED_ASSIGNMENT(current_function_, func);
+
+    on_transitively_reference_global_.Push([&](const sem::GlobalVariable* ref) {  //
+        func->AddDirectlyReferencedGlobal(ref);
+    });
+    TINT_DEFER(on_transitively_reference_global_.Pop());
+
+    validator_.DiagnosticFilters().Push();
+    TINT_DEFER(validator_.DiagnosticFilters().Pop());
+
+    for (auto* attribute : decl->attributes) {
+        Mark(attribute);
+        bool ok = Switch(
+            attribute,
+            [&](const ast::DiagnosticAttribute* attr) { return DiagnosticAttribute(attr); },
+            [&](const ast::StageAttribute* attr) { return StageAttribute(attr); },
+            [&](const ast::MustUseAttribute* attr) { return MustUseAttribute(attr); },
+            [&](const ast::WorkgroupAttribute* attr) -> bool {
+                auto value = WorkgroupAttribute(attr);
+                TINT_RET_IF(value != Success);
+
+                func->SetWorkgroupSize(value.Get());
+                return true;
+            },
+            [&](const ast::SubgroupSizeAttribute* attr) -> bool {
+                auto value = SubgroupSizeAttribute(attr);
+                TINT_RET_IF(value != Success);
+
+                func->SetSubgroupSize(value.Get());
+                return true;
+            },
+            [&](Default) {
+                ErrorInvalidAttribute(attribute, StyledText{} << "functions");
+                return false;
+            });
+
+        TINT_RET_IF(DAWN_UNLIKELY(!ok));
+    }
+    TINT_RET_IF(!validator_.NoDuplicateAttributes(decl->attributes));
+
+    // Resolve all the parameters
+    uint32_t parameter_index = 0;
+    Hashmap<Symbol, const ast::Node*, 8> parameter_names;
+    for (auto* param : decl->params) {
+        Mark(param);
+
+        {  // Check the parameter name is unique for the function
+            if (auto added = parameter_names.Add(param->name->symbol, param); !added) {
+                auto name = param->name->symbol.NameView();
+                AddError(param) << "redefinition of parameter '" << name << "'";
+                AddNote(added.value) << "previous definition is here";
+                return nullptr;
+            }
+        }
+
+        auto* p = Parameter(param, decl, parameter_index++);
+        TINT_RET_IF(DAWN_UNLIKELY(!p));
+
+        func->AddParameter(p);
+
+        auto* p_ty = const_cast<core::type::Type*>(p->Type());
+        if (auto* str = p_ty->As<core::type::Struct>()) {
+            switch (decl->PipelineStage()) {
+                case ast::PipelineStage::kVertex:
+                    str->AddUsage(core::type::PipelineStageUsage::kVertexInput);
+                    break;
+                case ast::PipelineStage::kFragment:
+                    str->AddUsage(core::type::PipelineStageUsage::kFragmentInput);
+                    break;
+                case ast::PipelineStage::kCompute:
+                    str->AddUsage(core::type::PipelineStageUsage::kComputeInput);
+                    break;
+                case ast::PipelineStage::kNone:
+                    break;
+            }
+        }
+    }
+
+    // Resolve the return type
+    const core::type::Type* return_type = nullptr;
+    if (auto ty = decl->return_type) {
+        return_type = Type(ty);
+        TINT_RET_IF(DAWN_UNLIKELY(!return_type));
+    } else {
+        return_type = b.create<core::type::Void>();
+    }
+    func->SetReturnType(return_type);
+
+    if (decl->IsEntryPoint()) {
+        // Determine if the return type has a location
+        for (auto* attribute : decl->return_type_attributes) {
+            Mark(attribute);
+            enum Status { kSuccess, kErrored, kInvalid };
+            auto res = Switch(
+                attribute,  //
+                [&](const ast::LocationAttribute* attr) {
+                    auto value = LocationAttribute(attr);
+                    if (value != Success) {
+                        return kErrored;
+                    }
+                    func->SetReturnLocation(value.Get());
+                    return kSuccess;
+                },
+                [&](const ast::BuiltinAttribute*) { return kSuccess; },
+                [&](const ast::InterpolateAttribute*) { return kSuccess; },
+                [&](const ast::InvariantAttribute* attr) {
+                    return InvariantAttribute(attr) ? kSuccess : kErrored;
+                },
+                [&](Default) { return kInvalid; });
+
+            switch (res) {
+                case kSuccess:
+                    break;
+                case kErrored:
+                    return nullptr;
+                case kInvalid:
+                    ErrorInvalidAttribute(attribute, StyledText{} << "entry point return types");
+                    return nullptr;
+            }
+        }
+    } else {
+        for (auto* attribute : decl->return_type_attributes) {
+            Mark(attribute);
+            bool ok =
+                Switch(attribute,  //
+                       [&](Default) {
+                           ErrorInvalidAttribute(
+                               attribute, StyledText{} << "non-entry point function return types");
+                           return false;
+                       });
+            TINT_RET_IF(DAWN_UNLIKELY(!ok));
+        }
+    }
+
+    if (auto* str = const_cast<core::type::Struct*>(return_type->As<core::type::Struct>())) {
+        if (!ApplyAddressSpaceUsageToType(core::AddressSpace::kUndefined, str,
+                                          decl->return_type->source)) {
+            AddNote(decl->return_type)
+                << "while instantiating return type for " << decl->name->symbol.NameView();
+            return nullptr;
+        }
+
+        switch (decl->PipelineStage()) {
+            case ast::PipelineStage::kVertex:
+                str->AddUsage(core::type::PipelineStageUsage::kVertexOutput);
+                break;
+            case ast::PipelineStage::kFragment:
+                str->AddUsage(core::type::PipelineStageUsage::kFragmentOutput);
+                break;
+            case ast::PipelineStage::kCompute:
+                str->AddUsage(core::type::PipelineStageUsage::kComputeOutput);
+                break;
+            case ast::PipelineStage::kNone:
+                break;
+        }
+    }
+
+    ApplyDiagnosticSeverities(func);
+
+    if (decl->IsEntryPoint()) {
+        entry_points_.Push(func);
+    }
+
+    if (decl->body) {
+        Mark(decl->body);
+        if (DAWN_UNLIKELY(current_compound_statement_)) {
+            ICE(decl->body->source)
+                << "Resolver::Function() called with a current compound statement";
+        }
+        auto* body = StatementScope(decl->body, b.create<sem::FunctionBlockStatement>(func),
+                                    [&] { return Statements(decl->body->statements); });
+        TINT_RET_IF(DAWN_UNLIKELY(!body));
+
+        func->Behaviors() = body->Behaviors();
+        if (func->Behaviors().Contains(sem::Behavior::kReturn)) {
+            // https://www.w3.org/TR/WGSL/#behaviors-rules
+            // We assign a behavior to each function: it is its body’s behavior
+            // (treating the body as a regular statement), with any "Return" replaced
+            // by "Next".
+            func->Behaviors().Remove(sem::Behavior::kReturn);
+            func->Behaviors().Add(sem::Behavior::kNext);
+        }
+    }
+
+    TINT_RET_IF(!validator_.NoDuplicateAttributes(decl->return_type_attributes));
+
+    auto stage = current_function_ ? current_function_->Declaration()->PipelineStage()
+                                   : ast::PipelineStage::kNone;
+    TINT_RET_IF(!validator_.Function(func, stage));
+
+    // If this is an entry point, mark all transitively called functions as being in its call graph.
+    if (decl->IsEntryPoint()) {
+        for (auto* f : func->TransitivelyCalledFunctions()) {
+            const_cast<sem::Function*>(f)->AddCallGraphEntryPoint(func);
+        }
+        // An entry point is considered to be in its own call graph.
+        func->AddCallGraphEntryPoint(func);
+    }
+
+    return func;
+}
+
+bool Resolver::Statements(VectorRef<const ast::Statement*> stmts) {
+    sem::Behaviors behaviors{sem::Behavior::kNext};
+
+    bool reachable = true;
+    for (auto* stmt : stmts) {
+        Mark(stmt);
+        auto* sem = Statement(stmt);
+        TINT_RET_IF(!sem);
+
+        // s1 s2:(B1∖{Next}) ∪ B2
+        sem->SetIsReachable(reachable);
+        if (reachable) {
+            behaviors = (behaviors - sem::Behavior::kNext) + sem->Behaviors();
+        }
+        reachable = reachable && sem->Behaviors().Contains(sem::Behavior::kNext);
+    }
+
+    current_statement_->Behaviors() = behaviors;
+    TINT_RET_IF(!validator_.Statements(stmts));
+
+    return true;
+}
+
+sem::Statement* Resolver::Statement(const ast::Statement* stmt) {
+    return Switch(
+        stmt,
+        // Compound statements. These create their own sem::CompoundStatement
+        // bindings.
+        [&](const ast::BlockStatement* s) { return BlockStatement(s); },
+        [&](const ast::ForLoopStatement* s) { return ForLoopStatement(s); },
+        [&](const ast::LoopStatement* s) { return LoopStatement(s); },
+        [&](const ast::WhileStatement* s) { return WhileStatement(s); },
+        [&](const ast::IfStatement* s) { return IfStatement(s); },
+        [&](const ast::SwitchStatement* s) { return SwitchStatement(s); },
+
+        // Non-Compound statements
+        [&](const ast::AssignmentStatement* s) { return AssignmentStatement(s); },
+        [&](const ast::BreakStatement* s) { return BreakStatement(s); },
+        [&](const ast::BreakIfStatement* s) { return BreakIfStatement(s); },
+        [&](const ast::CallStatement* s) { return CallStatement(s); },
+        [&](const ast::CompoundAssignmentStatement* s) { return CompoundAssignmentStatement(s); },
+        [&](const ast::ContinueStatement* s) { return ContinueStatement(s); },
+        [&](const ast::DiscardStatement* s) { return DiscardStatement(s); },
+        [&](const ast::IncrementDecrementStatement* s) { return IncrementDecrementStatement(s); },
+        [&](const ast::ReturnStatement* s) { return ReturnStatement(s); },
+        [&](const ast::VariableDeclStatement* s) { return VariableDeclStatement(s); },
+        [&](const ast::ConstAssert* s) { return ConstAssert(s); },
+
+        // Error cases
+        [&](const ast::CaseStatement*) {
+            AddError(stmt) << "case statement can only be used inside a switch statement";
+            return nullptr;
+        },
+        [&](Default) {
+            AddError(stmt) << "unknown statement type: " << std::string(stmt->TypeInfo().name);
+            return nullptr;
+        });
+}
+
+sem::CaseStatement* Resolver::CaseStatement(const ast::CaseStatement* stmt,
+                                            const core::type::Type* ty) {
+    auto* sem = b.create<sem::CaseStatement>(stmt, current_compound_statement_, current_function_);
+    return StatementScope(stmt, sem, [&]() -> bool {
+        sem->Selectors().reserve(stmt->selectors.Length());
+        for (auto* sel : stmt->selectors) {
+            Mark(sel);
+
+            ExprEvalStageConstraint constraint{core::EvaluationStage::kConstant, "case selector"};
+            TINT_SCOPED_ASSIGNMENT(expr_eval_stage_constraint_, constraint);
+
+            const core::constant::Value* const_value = nullptr;
+            if (!sel->IsDefault()) {
+                // The sem statement was created in the switch when attempting to determine the
+                // common type.
+                auto* materialized = Materialize(sem_.GetVal(sel->expr), ty);
+                TINT_RET_IF(!materialized);
+
+                if (!materialized->Type()->IsAnyOf<core::type::I32, core::type::U32>()) {
+                    AddError(sel) << "case selector must be an i32 or u32 value";
+                    return false;
+                }
+                const_value = materialized->ConstantValue();
+                if (!const_value) {
+                    AddError(sel) << "case selector must be a constant expression";
+                    return false;
+                }
+            }
+
+            sem->Selectors().emplace_back(b.create<sem::CaseSelector>(sel, const_value));
+        }
+
+        Mark(stmt->body);
+        auto* body = BlockStatement(stmt->body);
+        TINT_RET_IF(!body);
+
+        sem->SetBlock(body);
+        sem->Behaviors() = body->Behaviors();
+        return true;
+    });
+}
+
+sem::IfStatement* Resolver::IfStatement(const ast::IfStatement* stmt) {
+    auto* sem = b.create<sem::IfStatement>(stmt, current_compound_statement_, current_function_);
+    return StatementScope(stmt, sem, [&]() -> bool {
+        auto* cond = Load(ValueExpression(stmt->condition));
+        TINT_RET_IF(!cond);
+
+        sem->SetCondition(cond);
+        sem->Behaviors().Remove(sem::Behavior::kNext);
+
+        Mark(stmt->body);
+        auto* body = b.create<sem::BlockStatement>(stmt->body, current_compound_statement_,
+                                                   current_function_);
+        TINT_RET_IF(
+            !StatementScope(stmt->body, body, [&] { return Statements(stmt->body->statements); }));
+
+        sem->Behaviors().Add(body->Behaviors());
+
+        if (stmt->else_statement) {
+            Mark(stmt->else_statement);
+            auto* else_sem = Statement(stmt->else_statement);
+            TINT_RET_IF(!else_sem);
+
+            sem->Behaviors().Add(else_sem->Behaviors());
+        } else {
+            // https://www.w3.org/TR/WGSL/#behaviors-rules
+            // if statements without an else branch are treated as if they had an
+            // empty else branch (which adds Next to their behavior)
+            sem->Behaviors().Add(sem::Behavior::kNext);
+        }
+
+        return validator_.IfStatement(sem);
+    });
+}
+
+sem::BlockStatement* Resolver::BlockStatement(const ast::BlockStatement* stmt) {
+    auto* sem = b.create<sem::BlockStatement>(stmt->As<ast::BlockStatement>(),
+                                              current_compound_statement_, current_function_);
+    return StatementScope(stmt, sem, [&] { return Statements(stmt->statements); });
+}
+
+sem::LoopStatement* Resolver::LoopStatement(const ast::LoopStatement* stmt) {
+    auto* sem = b.create<sem::LoopStatement>(stmt, current_compound_statement_, current_function_);
+    return StatementScope(stmt, sem, [&] {
+        Mark(stmt->body);
+
+        auto* body = b.create<sem::LoopBlockStatement>(stmt->body, current_compound_statement_,
+                                                       current_function_);
+        return StatementScope(stmt->body, body, [&]() -> bool {
+            TINT_RET_IF(!Statements(stmt->body->statements));
+
+            auto& behaviors = sem->Behaviors();
+            behaviors = body->Behaviors();
+
+            // If the body only returns, then the entire loop only returns.
+            // Control never reaches the continuing block, and never reaches
+            // code that follows the loop.
+            const bool only_return = behaviors == sem::Behaviors(sem::Behavior::kReturn);
+
+            if (stmt->continuing) {
+                Mark(stmt->continuing);
+                auto* continuing = StatementScope(
+                    stmt->continuing,
+                    b.create<sem::LoopContinuingBlockStatement>(
+                        stmt->continuing, current_compound_statement_, current_function_),
+                    [&] { return Statements(stmt->continuing->statements); });
+                TINT_RET_IF(!continuing);
+
+                if (!only_return) {
+                    behaviors.Add(continuing->Behaviors());
+                }
+            }
+
+            // If the body behaviour is just Return, then this has no effect.
+            if (behaviors.Contains(sem::Behavior::kBreak)) {  // Does the loop exit?
+                behaviors.Add(sem::Behavior::kNext);
+            } else {
+                behaviors.Remove(sem::Behavior::kNext);
+            }
+            behaviors.Remove(sem::Behavior::kBreak, sem::Behavior::kContinue);
+
+            return validator_.LoopStatement(sem);
+        });
+    });
+}
+
+sem::ForLoopStatement* Resolver::ForLoopStatement(const ast::ForLoopStatement* stmt) {
+    auto* sem =
+        b.create<sem::ForLoopStatement>(stmt, current_compound_statement_, current_function_);
+    return StatementScope(stmt, sem, [&]() -> bool {
+        auto& behaviors = sem->Behaviors();
+        if (auto* initializer = stmt->initializer) {
+            Mark(initializer);
+            auto* init = Statement(initializer);
+            TINT_RET_IF(!init);
+
+            behaviors.Add(init->Behaviors());
+        }
+
+        if (auto* cond_expr = stmt->condition) {
+            auto* cond = Load(ValueExpression(cond_expr));
+            TINT_RET_IF(!cond);
+
+            sem->SetCondition(cond);
+        }
+
+        if (auto* continuing = stmt->continuing) {
+            Mark(continuing);
+            auto* cont = Statement(continuing);
+            TINT_RET_IF(!cont);
+
+            behaviors.Add(cont->Behaviors());
+        }
+
+        Mark(stmt->body);
+
+        auto* body = b.create<sem::LoopBlockStatement>(stmt->body, current_compound_statement_,
+                                                       current_function_);
+        TINT_RET_IF(
+            !StatementScope(stmt->body, body, [&] { return Statements(stmt->body->statements); }));
+
+        behaviors.Add(body->Behaviors());
+        if (stmt->condition || behaviors.Contains(sem::Behavior::kBreak)) {  // Does the loop exit?
+            behaviors.Add(sem::Behavior::kNext);
+        } else {
+            behaviors.Remove(sem::Behavior::kNext);
+        }
+        behaviors.Remove(sem::Behavior::kBreak, sem::Behavior::kContinue);
+
+        return validator_.ForLoopStatement(sem);
+    });
+}
+
+sem::WhileStatement* Resolver::WhileStatement(const ast::WhileStatement* stmt) {
+    auto* sem = b.create<sem::WhileStatement>(stmt, current_compound_statement_, current_function_);
+    return StatementScope(stmt, sem, [&]() -> bool {
+        auto& behaviors = sem->Behaviors();
+
+        auto* cond = Load(ValueExpression(stmt->condition));
+        TINT_RET_IF(!cond);
+
+        sem->SetCondition(cond);
+
+        Mark(stmt->body);
+
+        auto* body = b.create<sem::LoopBlockStatement>(stmt->body, current_compound_statement_,
+                                                       current_function_);
+        TINT_RET_IF(
+            !StatementScope(stmt->body, body, [&] { return Statements(stmt->body->statements); }));
+
+        behaviors.Add(body->Behaviors());
+        if (stmt->condition || behaviors.Contains(sem::Behavior::kBreak)) {  // Does the loop exit?
+            behaviors.Add(sem::Behavior::kNext);
+        } else {
+            behaviors.Remove(sem::Behavior::kNext);
+        }
+        behaviors.Remove(sem::Behavior::kBreak, sem::Behavior::kContinue);
+
+        return validator_.WhileStatement(sem);
+    });
+}
+
+sem::Expression* Resolver::Expression(const ast::Expression* root) {
+    Vector<const ast::Expression*, 64> sorted;
+    constexpr size_t kMaxExpressionDepth = 512U;
+    bool failed = false;
+    if (!ast::TraverseExpressions<ast::TraverseOrder::RightToLeft>(
+            root, [&](const ast::Expression* expr, size_t depth) {
+                if (depth > kMaxExpressionDepth) {
+                    AddError(expr) << "reached max expression depth of " << kMaxExpressionDepth;
+                    failed = true;
+                    return ast::TraverseAction::Stop;
+                }
+                if (!Mark(expr)) {
+                    failed = true;
+                    return ast::TraverseAction::Stop;
+                }
+                if (auto* binary = expr->As<ast::BinaryExpression>();
+                    binary && binary->IsLogical()) {
+                    // Store potential const-eval short-circuit pair
+                    logical_binary_lhs_to_parent_.Add(binary->lhs, binary);
+                }
+                sorted.Push(expr);
+                return ast::TraverseAction::Descend;
+            })) {
+        AddError(root) << "TraverseExpressions failed";
+        return nullptr;
+    }
+
+    TINT_RET_IF(failed);
+
+    for (auto* expr : tint::Reverse(sorted)) {
+        auto* sem_expr = Switch(
+            expr,  //
+            [&](const ast::IndexAccessorExpression* array) { return IndexAccessor(array); },
+            [&](const ast::BinaryExpression* bin_op) { return Binary(bin_op); },
+            [&](const ast::CallExpression* call) { return Call(call); },
+            [&](const ast::IdentifierExpression* ident) { return Identifier(ident); },
+            [&](const ast::LiteralExpression* literal) { return Literal(literal); },
+            [&](const ast::MemberAccessorExpression* member) { return MemberAccessor(member); },
+            [&](const ast::UnaryOpExpression* unary) { return UnaryOp(unary); },
+            [&](const ast::PhonyExpression*) {
+                return b.create<sem::ValueExpression>(expr, b.create<core::type::Void>(),
+                                                      core::EvaluationStage::kRuntime,
+                                                      current_statement_,
+                                                      /* constant_value */ nullptr);
+            },  //
+            TINT_ICE_ON_NO_MATCH);
+        TINT_RET_IF(DAWN_UNLIKELY(!sem_expr));
+
+        auto* val = sem_expr->As<sem::ValueExpression>();
+
+        if (val) {
+            if (auto* constraint = expr_eval_stage_constraint_.constraint) {
+                TINT_RET_IF(!validator_.EvaluationStage(val, expr_eval_stage_constraint_.stage,
+                                                        constraint));
+            }
+        }
+
+        b.Sem().Add(expr, sem_expr);
+        if (expr == root) {
+            return sem_expr;
+        }
+
+        // If we just processed the lhs of a constexpr logical binary expression, mark the rhs for
+        // short-circuiting.
+        if (val && val->ConstantValue()) {
+            if (auto binary = logical_binary_lhs_to_parent_.Get(expr)) {
+                const bool lhs_is_true = val->ConstantValue()->ValueAs<bool>();
+                if (((*binary)->IsLogicalAnd() && !lhs_is_true) ||
+                    ((*binary)->IsLogicalOr() && lhs_is_true)) {
+                    // Mark entire expression tree to not const-evaluate
+                    auto r = ast::TraverseExpressions(  //
+                        (*binary)->rhs, [&](const ast::Expression* e) {
+                            not_evaluated_.Add(e);
+                            if (e->Is<ast::IdentifierExpression>()) {
+                                // Template arguments are still evaluated when the outer identifier
+                                // expression is skipped. This happens in expressions like:
+                                //    false && array<T, N>()[i]
+                                // where we still need to evaluate and validate `N`.
+                                return ast::TraverseAction::Skip;
+                            }
+                            return ast::TraverseAction::Descend;
+                        });
+                    if (!r) {
+                        AddError(root) << "TraverseExpressions failed";
+                        return nullptr;
+                    }
+                }
+            }
+        }
+    }
+
+    ICE(root->source) << "Expression() did not find root node";
+}
+
+sem::ValueExpression* Resolver::ValueExpression(const ast::Expression* expr) {
+    return sem_.AsValueExpression(Expression(expr));
+}
+
+sem::TypeExpression* Resolver::TypeExpression(const ast::Expression* expr) {
+    return sem_.AsTypeExpression(Expression(expr));
+}
+
+sem::FunctionExpression* Resolver::FunctionExpression(const ast::Expression* expr) {
+    return sem_.AsFunctionExpression(Expression(expr));
+}
+
+const core::type::Type* Resolver::Type(const ast::Expression* ast) {
+    Vector<const sem::GlobalVariable*, 4> referenced_overrides;
+    on_transitively_reference_global_.Push([&](const sem::GlobalVariable* ref) {
+        if (ref->Declaration()->Is<ast::Override>()) {
+            referenced_overrides.Push(ref);
+        }
+    });
+    TINT_DEFER(on_transitively_reference_global_.Pop());
+
+    auto* type_expr = TypeExpression(ast);
+    TINT_RET_IF(DAWN_UNLIKELY(!type_expr));
+
+    auto* type = const_cast<core::type::Type*>(type_expr->Type());
+    TINT_RET_IF(DAWN_UNLIKELY(!type));
+
+    if (auto* arr = type->As<sem::Array>()) {
+        for (auto* ref : referenced_overrides) {
+            arr->AddTransitivelyReferencedOverride(ref);
+        }
+    }
+
+    return type;
+}
+
+sem::BuiltinEnumExpression<core::AddressSpace>* Resolver::AddressSpaceExpression(
+    const ast::Expression* expr) {
+    auto address_space_expr = sem_.AsAddressSpace(Expression(expr));
+    TINT_RET_IF(DAWN_UNLIKELY(!address_space_expr));
+
+    if (DAWN_UNLIKELY(
+            address_space_expr->Value() == core::AddressSpace::kPixelLocal &&
+            !enabled_extensions_.Contains(wgsl::Extension::kChromiumExperimentalPixelLocal))) {
+        AddError(expr) << "'pixel_local' address space requires the '"
+                       << wgsl::Extension::kChromiumExperimentalPixelLocal << "' extension enabled";
+        return nullptr;
+    }
+    return address_space_expr;
+}
+
+sem::BuiltinEnumExpression<core::Access>* Resolver::AccessExpression(const ast::Expression* expr) {
+    return sem_.AsAccess(Expression(expr));
+}
+
+void Resolver::RegisterStore(const sem::ValueExpression* expr) {
+    Switch(
+        expr->RootIdentifier(),
+        [&](const sem::GlobalVariable* global) {
+            alias_analysis_infos_[current_function_].module_scope_writes.Add(global, expr);
+        },
+        [&](const sem::Parameter* param) {
+            alias_analysis_infos_[current_function_].parameter_writes.Add(param);
+        });
+}
+
+void Resolver::RegisterLoad(const sem::ValueExpression* expr) {
+    Switch(
+        expr->RootIdentifier(),
+        [&](const sem::GlobalVariable* global) {
+            alias_analysis_infos_[current_function_].module_scope_reads.Add(global, expr);
+        },
+        [&](const sem::Parameter* param) {
+            alias_analysis_infos_[current_function_].parameter_reads.Add(param);
+        });
+}
+
+void Resolver::RegisterBufferView(const sem::Call* call, wgsl::BuiltinFn fn) {
+    uint64_t min_type_size = 0;
+    auto* ret_type = call->Target()->ReturnType();
+    auto* ret_ptr_type = ret_type->As<core::type::Pointer>();
+    auto* ret_store_type = ret_ptr_type->StoreType();
+    if (ret_store_type->HasFixedFootprint()) {
+        min_type_size = ret_store_type->Size();
+    } else {
+        if (const auto* str_ty = ret_store_type->As<core::type::Struct>()) {
+            const auto* last = str_ty->Members().Back();
+            const auto* last_type = last->Type();
+            TINT_ASSERT(last_type->Is<core::type::Array>());
+            min_type_size = last->Offset() + last_type->As<core::type::Array>()->ImplicitStride();
+        } else if (const auto* arr_ty = ret_store_type->As<core::type::Array>()) {
+            min_type_size = arr_ty->ImplicitStride();
+        } else {
+            // Any other type should be caught be validation as an error.
+            TINT_UNREACHABLE() << "unexpected return type for "
+                               << call->Target()->As<sem::BuiltinFn>()->str();
+        }
+    }
+
+    uint64_t total_size = min_type_size;
+    auto* offset = call->Arguments()[1];
+    auto* offset_constant_value = offset->ConstantValue();
+    uint64_t offset_value = 0;
+    if (offset_constant_value) {
+        if (offset->Type()->IsUnsignedIntegerScalar()) {
+            offset_value = offset_constant_value->ValueAs<u32>();
+        } else {
+            TINT_ASSERT(offset->Type()->IsSignedIntegerScalar());
+            int32_t ivalue = offset_constant_value->ValueAs<i32>();
+            offset_value = static_cast<uint32_t>(ivalue);
+        }
+    }
+    if (fn == wgsl::BuiltinFn::kBufferView) {
+        total_size += offset_value;
+    } else {
+        TINT_ASSERT(fn == wgsl::BuiltinFn::kBufferArrayView);
+        uint64_t size_value = 0;
+        auto* size = call->Arguments()[2];
+        auto* size_constant_value = size->ConstantValue();
+        if (size_constant_value) {
+            size_value = std::numeric_limits<uint32_t>::max();
+            if (size->Type()->IsUnsignedIntegerScalar()) {
+                size_value = size_constant_value->ValueAs<u32>();
+            } else {
+                TINT_ASSERT(size->Type()->IsSignedIntegerScalar());
+                int32_t ivalue = size_constant_value->ValueAs<i32>();
+                size_value = static_cast<uint32_t>(ivalue);
+            }
+        }
+        total_size = offset_value + std::max(size_value, total_size);
+    }
+
+    if (const auto* param = call->RootIdentifier()->As<sem::Parameter>()) {
+        auto where = buffer_view_sizes_.GetOrAddEntry(param, [min_type_size, total_size, call]() {
+            BufferViewInfo info;
+            info.min_type_size = min_type_size;
+            info.total_size = total_size;
+            info.node = call->Declaration();
+            return info;
+        });
+        where.value = {std::max(min_type_size, where.value.min_type_size),
+                       std::max(total_size, where.value.total_size), where.value.node};
+    }
+    // Only need to add a transitive size reference for global variables.
+    if (const auto* gvar = call->RootIdentifier()->As<sem::GlobalVariable>()) {
+        auto* var_ty = gvar->Type()->UnwrapPtrOrRef();
+        auto* buf_ty = var_ty->As<core::type::Buffer>();
+        if (buf_ty && buf_ty->Count()->Is<core::type::RuntimeArrayCount>() && current_function_) {
+            current_function_->AddTransitivelyReferencedUnsizedBufferSize(gvar, min_type_size);
+        }
+    }
+}
+
+uint64_t Resolver::FindSubgroupMatrixStructOffset(const sem::ValueExpression* pointer) const {
+    uint64_t offset = 0;
+    auto* root = pointer->RootIdentifier();
+    auto* root_store_ty = root->Type()->UnwrapPtrOrRef();
+    if (root_store_ty->Is<core::type::Buffer>()) {
+        // We want to find the bufferView or bufferArrayView call that generated 'pointer'. We are
+        // looking for the case where the result store type was a structure. We need to include the
+        // offset to the array in that case.
+        const ast::Node* node = pointer->Declaration();
+        while (node) {
+            tint::Switch(
+                node,  //
+                [&](const ast::IdentifierExpression* ident) {
+                    if (auto user = sem_.Get<sem::VariableUser>(ident)) {
+                        if (user->Variable() == root) {
+                            node = nullptr;
+                        } else {
+                            node = user->Variable()->Declaration();
+                        }
+                    } else {
+                        TINT_UNREACHABLE()
+                            << "unexpected identifier " << ident->identifier->symbol.Name();
+                    }
+                },
+                [&](const ast::Let* let) { node = let->initializer; },
+                [&](const ast::IndexAccessorExpression* access) { node = access->object; },
+                [&](const ast::MemberAccessorExpression* access) { node = access->object; },
+                [&](const ast::UnaryOpExpression* unary) {
+                    if (unary->op == core::UnaryOp::kAddressOf ||
+                        unary->op == core::UnaryOp::kIndirection) {
+                        node = unary->expr;
+                    }
+                },
+                [&](const ast::CallExpression* call_expr) {
+                    auto* sem_call = sem_.Get(call_expr)->As<sem::Call>();
+                    auto* target = sem_call->Target()->As<sem::BuiltinFn>();
+                    if (target && (target->Fn() == wgsl::BuiltinFn::kBufferView ||
+                                   target->Fn() == wgsl::BuiltinFn::kBufferArrayView)) {
+                        auto* ret_store_ty = target->ReturnType()->UnwrapPtr();
+                        if (auto* str = ret_store_ty->As<core::type::Struct>()) {
+                            auto* last = str->Members().Back();
+                            offset = last->Offset();
+                        }
+                    }
+                    // No need to continue searching.
+                    node = nullptr;
+                },
+                TINT_ICE_ON_NO_MATCH);
+        }
+    } else if (auto* str = root_store_ty->As<core::type::Struct>()) {
+        if (root->Is<sem::GlobalVariable>()) {
+            // If we've reached the global reference, add the array offset.
+            auto* last = str->Members().Back();
+            offset = last->Offset();
+        }
+    }
+
+    return offset;
+}
+
+void Resolver::RegisterSubgroupMatrixAccess(const sem::Call* call, wgsl::BuiltinFn fn) {
+    auto* pointer = call->Arguments()[0];
+    auto* ptr_ty = pointer->Type()->As<core::type::Pointer>();
+    auto* store_ty = ptr_ty->StoreType();
+    if (store_ty->HasFixedFootprint()) {
+        return;
+    }
+
+    // Register the required matrix stride.
+    auto* templated_ident = call->Declaration()->target->identifier->As<ast::TemplatedIdentifier>();
+    const core::type::SubgroupMatrix* mat_ty = nullptr;
+    if (fn == wgsl::BuiltinFn::kSubgroupMatrixLoad) {
+        TINT_ASSERT(templated_ident);
+        mat_ty = call->Target()->ReturnType()->As<core::type::SubgroupMatrix>();
+    } else {
+        mat_ty = call->Arguments()[2]->Type()->As<core::type::SubgroupMatrix>();
+    }
+
+    uint64_t mat_required_size =
+        static_cast<uint64_t>(mat_ty->Rows()) * mat_ty->Columns() * mat_ty->Type()->Size();
+
+    auto* root = pointer->RootIdentifier();
+    mat_required_size += FindSubgroupMatrixStructOffset(pointer);
+
+    if (const auto* param = root->As<sem::Parameter>()) {
+        auto where = subgroup_matrix_sizes_.GetOrAddEntry(param, [&] { return mat_required_size; });
+        where.value = std::max(where.value, mat_required_size);
+    }
+
+    if (const auto* gvar = root->As<sem::GlobalVariable>()) {
+        auto* var_ty = gvar->Type()->UnwrapPtrOrRef();
+        if (!var_ty->HasFixedFootprint() && current_function_) {
+            current_function_->AddTransitivelyReferencedSubgroupMatrixSize(gvar, mat_required_size);
+        }
+    }
+}
+
+void Resolver::PropagateSubgroupMatrixAccesses(const sem::Call* call) {
+    auto* target = call->Target()->As<sem::Function>();
+    if (!target) {
+        return;
+    }
+
+    auto& args = call->Arguments();
+    for (size_t i = 0; i < args.Length(); i++) {
+        auto* arg = args[i];
+        if (!arg->Type()->Is<core::type::Pointer>()) {
+            continue;
+        }
+
+        auto* root = arg->RootIdentifier();
+        auto where = subgroup_matrix_sizes_.Get(target->Parameters()[i]);
+        if (!where) {
+            continue;
+        }
+        uint64_t mat_required_size = *where;
+        mat_required_size += FindSubgroupMatrixStructOffset(arg);
+
+        Switch(
+            root,
+            [&](const sem::GlobalVariable* global) {
+                const auto* ty = global->Type()->UnwrapPtrOrRef();
+                if (!ty->HasFixedFootprint()) {
+                    current_function_->AddTransitivelyReferencedSubgroupMatrixSize(
+                        global, mat_required_size);
+                }
+            },
+            [&](const sem::Parameter* param) {
+                auto param_where = subgroup_matrix_sizes_.GetOrAddEntry(
+                    param, [mat_required_size]() { return mat_required_size; });
+                param_where.value = std::max(param_where.value, mat_required_size);
+            });
+    }
+}
+
+bool Resolver::CheckBufferViews(const sem::Call* call) {
+    auto* target = call->Target()->As<sem::Function>();
+    if (!target) {
+        return true;
+    }
+
+    auto& args = call->Arguments();
+    for (size_t i = 0; i < args.Length(); i++) {
+        auto* arg = args[i];
+        if (!arg->Type()->Is<core::type::Pointer>()) {
+            continue;
+        }
+
+        auto* root = arg->RootIdentifier();
+        auto where = buffer_view_sizes_.Get(target->Parameters()[i]);
+        if (!where) {
+            continue;
+        }
+
+        bool ret = Switch(
+            root,
+            [&](const sem::GlobalVariable* global) {
+                const auto* ty = global->Type()->UnwrapPtrOrRef();
+                if (const auto* buffer_ty = ty->As<core::type::Buffer>()) {
+                    auto count = buffer_ty->ConstantCount();
+                    if (count != std::nullopt && count.value() < where->total_size) {
+                        AddError(global->Declaration())
+                            << "buffer size (" << count.value()
+                            << " bytes) is smaller than the minimum view size ("
+                            << where->total_size << " bytes)";
+                        AddNote(where->node) << "due to call here";
+                        return false;
+                    }
+                    // Add transitive reference to global.
+                    if (buffer_ty->Count()->Is<core::type::RuntimeArrayCount>()) {
+                        current_function_->AddTransitivelyReferencedUnsizedBufferSize(
+                            global, where->min_type_size);
+                    }
+                }
+                return true;
+            },
+            [&](const sem::Parameter* param) {
+                const auto* ty = param->Type()->UnwrapPtrOrRef();
+                if (const auto* buffer_ty = ty->As<core::type::Buffer>()) {
+                    auto count = buffer_ty->ConstantCount();
+                    if (count != std::nullopt && count.value() < where->total_size) {
+                        AddError(param->Declaration())
+                            << "buffer size (" << count.value()
+                            << " bytes) is smaller than the minimum view size ("
+                            << where->total_size << " bytes)";
+                        AddNote(where->node) << "due to call here";
+                        return false;
+                    }
+                }
+                auto param_where =
+                    buffer_view_sizes_.GetOrAddEntry(param, [where]() { return *where; });
+                param_where.value = {
+                    std::max(param_where.value.min_type_size, where->min_type_size),
+                    std::max(param_where.value.total_size, where->total_size), where->node};
+                return true;
+            });
+        TINT_RET_IF(!ret);
+    }
+
+    return true;
+}
+
+bool Resolver::AliasAnalysis(const sem::Call* call) {
+    auto* target = call->Target()->As<sem::Function>();
+    if (!target) {
+        return true;
+    }
+
+    // Helper to generate an aliasing error diagnostic.
+    struct Alias {
+        const sem::ValueExpression* expr;     // the "other expression"
+        enum { Argument, ModuleScope } type;  // the type of the "other" expression
+        std::string access;                   // the access performed for the "other" expression
+    };
+    auto make_error = [&](const sem::ValueExpression* arg, Alias&& var) {
+        AddError(arg->Declaration()) << "invalid aliased pointer argument";
+        switch (var.type) {
+            case Alias::Argument:
+                AddNote(var.expr->Declaration()) << "aliases with another argument passed here";
+                break;
+            case Alias::ModuleScope: {
+                auto* func = var.expr->Stmt()->Function();
+                auto func_name = func->Declaration()->name->symbol.NameView();
+                AddNote(var.expr->Declaration()) << "aliases with module-scope variable "
+                                                 << var.access << " in '" << func_name << "'";
+                break;
+            }
+        }
+        return false;
+    };
+
+    auto& args = call->Arguments();
+    auto& target_info = alias_analysis_infos_[target];
+    auto& caller_info = alias_analysis_infos_[current_function_];
+
+    // Track the set of root identifiers that are read and written by arguments passed in this
+    // call.
+    Hashmap<const sem::Variable*, const sem::ValueExpression*, 4> arg_reads;
+    Hashmap<const sem::Variable*, const sem::ValueExpression*, 4> arg_writes;
+    for (size_t i = 0; i < args.Length(); i++) {
+        auto* arg = args[i];
+        if (!arg->Type()->Is<core::type::Pointer>()) {
+            continue;
+        }
+
+        auto* root = arg->RootIdentifier();
+        if (target_info.parameter_writes.Contains(target->Parameters()[i])) {
+            // Arguments that are written to can alias with any other argument or module-scope
+            // variable access.
+            if (auto write = arg_writes.Get(root)) {
+                return make_error(arg, {*write, Alias::Argument, "write"});
+            }
+            if (auto read = arg_reads.Get(root)) {
+                return make_error(arg, {*read, Alias::Argument, "read"});
+            }
+            if (auto read = target_info.module_scope_reads.Get(root)) {
+                return make_error(arg, {*read, Alias::ModuleScope, "read"});
+            }
+            if (auto write = target_info.module_scope_writes.Get(root)) {
+                return make_error(arg, {*write, Alias::ModuleScope, "write"});
+            }
+            arg_writes.Add(root, arg);
+
+            // Propagate the write access to the caller.
+            Switch(
+                root,
+                [&](const sem::GlobalVariable* global) {
+                    caller_info.module_scope_writes.Add(global, arg);
+                },
+                [&](const sem::Parameter* param) { caller_info.parameter_writes.Add(param); });
+        } else if (target_info.parameter_reads.Contains(target->Parameters()[i])) {
+            // Arguments that are read from can alias with arguments or module-scope variables
+            // that are written to.
+            if (auto write = arg_writes.Get(root)) {
+                return make_error(arg, {*write, Alias::Argument, "write"});
+            }
+            if (auto write = target_info.module_scope_writes.Get(root)) {
+                return make_error(arg, {*write, Alias::ModuleScope, "write"});
+            }
+            arg_reads.Add(root, arg);
+
+            // Propagate the read access to the caller.
+            Switch(
+                root,
+                [&](const sem::GlobalVariable* global) {
+                    caller_info.module_scope_reads.Add(global, arg);
+                },
+                [&](const sem::Parameter* param) { caller_info.parameter_reads.Add(param); });
+        }
+    }
+
+    // Propagate module-scope variable uses to the caller.
+    for (auto read : target_info.module_scope_reads) {
+        caller_info.module_scope_reads.Add(read.key, read.value);
+    }
+    for (auto write : target_info.module_scope_writes) {
+        caller_info.module_scope_writes.Add(write.key, write.value);
+    }
+
+    return true;
+}
+
+const core::type::Type* Resolver::ConcreteType(const core::type::Type* ty,
+                                               const core::type::Type* target_ty,
+                                               const Source& source) {
+    auto i32 = [&] { return b.create<core::type::I32>(); };
+    auto f32 = [&] { return b.create<core::type::F32>(); };
+    auto i32v = [&](uint32_t width) { return b.create<core::type::Vector>(i32(), width); };
+    auto f32v = [&](uint32_t width) { return b.create<core::type::Vector>(f32(), width); };
+    auto f32m = [&](uint32_t columns, uint32_t rows) {
+        return b.create<core::type::Matrix>(f32v(rows), columns);
+    };
+
+    return Switch(
+        ty,  //
+        [&](const core::type::AbstractInt*) { return target_ty ? target_ty : i32(); },
+        [&](const core::type::AbstractFloat*) { return target_ty ? target_ty : f32(); },
+        [&](const core::type::Vector* v) {
+            return Switch(
+                v->Type(),  //
+                [&](const core::type::AbstractInt*) {
+                    return target_ty ? target_ty : i32v(v->Width());
+                },
+                [&](const core::type::AbstractFloat*) {
+                    return target_ty ? target_ty : f32v(v->Width());
+                });
+        },
+        [&](const core::type::Matrix* m) {
+            return Switch(m->Type(),  //
+                          [&](const core::type::AbstractFloat*) {
+                              return target_ty ? target_ty : f32m(m->Columns(), m->Rows());
+                          });
+        },
+        [&](const sem::Array* a) -> const core::type::Type* {
+            const core::type::Type* target_el_ty = nullptr;
+            if (auto* target_arr_ty = As<sem::Array>(target_ty)) {
+                target_el_ty = target_arr_ty->ElemType();
+            }
+            if (auto* el_ty = ConcreteType(a->ElemType(), target_el_ty, source)) {
+                return Array(source, source, source, el_ty, a->Count());
+            }
+            return nullptr;
+        },
+        [&](const core::type::Struct* s) -> const core::type::Type* {
+            if (auto tys = s->ConcreteTypes(); !tys.IsEmpty()) {
+                return target_ty ? target_ty : tys[0];
+            }
+            return nullptr;
+        });
+}
+
+const sem::ValueExpression* Resolver::Load(const sem::ValueExpression* expr) {
+    // Allow for Load(ValueExpression(blah)), where failures pass through Load()
+    TINT_RET_IF(DAWN_UNLIKELY(!expr));
+
+    // When requested, wrap a swizzle view in an ephemeral Load in order to correctly resolve types
+    // for validation. Because this sem::Load will not become a true load during lowering to IR,
+    // they are not registered.
+    if (auto* swizzle_view = expr->Type()->As<core::type::SwizzleView>()) {
+        auto* load =
+            b.create<sem::Load>(expr, swizzle_view->StoreType(), current_statement_, expr->Stage());
+        b.Sem().Replace(expr->Declaration(), load);
+
+        return load;
+    }
+
+    if (!expr->Type()->Is<core::type::Reference>()) {
+        // Expression is not a reference type, so cannot be loaded. Just return expr.
+        return expr;
+    }
+
+    auto* load = b.create<sem::Load>(expr, current_statement_, expr->Stage());
+    b.Sem().Replace(expr->Declaration(), load);
+
+    // Register the load for the alias analysis.
+    RegisterLoad(expr);
+
+    return load;
+}
+
+const sem::ValueExpression* Resolver::Materialize(
+    const sem::ValueExpression* expr,
+    const core::type::Type* target_type /* = nullptr */) {
+    // Allow for Materialize(ValueExpression(blah)), where failures pass through Materialize()
+    TINT_RET_IF(DAWN_UNLIKELY(!expr));
+
+    auto* decl = expr->Declaration();
+
+    auto* concrete_ty = ConcreteType(expr->Type(), target_type, decl->source);
+    if (!concrete_ty || concrete_ty->DeepestElement()->Is<core::type::AbstractNumeric>()) {
+        return expr;  // Does not require materialization
+    }
+
+    auto* src_ty = expr->Type();
+    TINT_RET_IF(!validator_.Materialize(concrete_ty, src_ty, decl->source));
+
+    const core::constant::Value* materialized_val = nullptr;
+    if (!not_evaluated_.Contains(decl)) {
+        auto expr_val = expr->ConstantValue();
+        if (DAWN_UNLIKELY(!expr_val)) {
+            ICE(decl->source) << "Materialize(" << decl->TypeInfo().name
+                              << ") called on expression with no constant value";
+        }
+
+        auto val = const_eval_.Convert(concrete_ty, expr_val, decl->source);
+        // Convert() has already failed and raised an diagnostic error.
+        TINT_RET_IF(val != Success);
+
+        materialized_val = val.Get();
+        if (DAWN_UNLIKELY(!materialized_val)) {
+            ICE(decl->source) << "ConvertValue(" << expr_val->Type()->FriendlyName() << " -> "
+                              << concrete_ty->FriendlyName() << ") returned invalid value";
+        }
+    }
+
+    auto* m = b.create<sem::Materialize>(expr, current_statement_, concrete_ty, materialized_val);
+    b.Sem().Replace(decl, m);
+    return m;
+}
+
+template <size_t N>
+bool Resolver::MaybeMaterializeArguments(Vector<const sem::ValueExpression*, N>& args,
+                                         const sem::CallTarget* target) {
+    for (size_t i = 0, n = std::min(args.Length(), target->Parameters().Length()); i < n; i++) {
+        const auto* param_ty = target->Parameters()[i]->Type();
+        auto* materialized = Materialize(args[i], param_ty);
+        TINT_RET_IF(!materialized);
+
+        args[i] = materialized;
+    }
+    return true;
+}
+
+bool Resolver::Convert(const core::constant::Value*& c,
+                       const core::type::Type* target_ty,
+                       const Source& source) {
+    auto r = const_eval_.Convert(target_ty, c, source);
+    TINT_RET_IF(r != Success);
+
+    c = r.Get();
+    return true;
+}
+
+template <size_t N>
+tint::Result<Vector<const core::constant::Value*, N>> Resolver::ConvertArguments(
+    const Vector<const sem::ValueExpression*, N>& args,
+    const sem::CallTarget* target) {
+    auto const_args = tint::Transform(args, [](auto* arg) { return arg->ConstantValue(); });
+    for (size_t i = 0, n = std::min(args.Length(), target->Parameters().Length()); i < n; i++) {
+        if (!Convert(const_args[i], target->Parameters()[i]->Type(),
+                     args[i]->Declaration()->source)) {
+            return Failure{};
+        }
+    }
+    return const_args;
+}
+
+template <size_t N>
+const core::constant::Value* Resolver::ConvertConstArgument(
+    const Vector<const sem::ValueExpression*, N>& args,
+    const sem::CallTarget* target,
+    unsigned i) {
+    TINT_ASSERT(i < args.Length());
+    if (const auto* const_arg = args[i]->ConstantValue()) {
+        const auto& params = target->Parameters();
+        TINT_ASSERT(i < params.Length());
+        // If successful, the conversion updates `const_arg`.
+        if (Convert(const_arg, params[i]->Type(), Source{})) {
+            return const_arg;
+        }
+    }
+    return nullptr;
+}
+
+sem::ValueExpression* Resolver::IndexAccessor(const ast::IndexAccessorExpression* expr) {
+    auto* idx = Load(Materialize(sem_.GetVal(expr->index)));
+    TINT_RET_IF(DAWN_UNLIKELY(!idx));
+
+    const auto* obj = sem_.GetVal(expr->object);
+    if (idx->Stage() != core::EvaluationStage::kConstant) {
+        // If the index is non-constant, then the resulting expression is non-constant, so we'll
+        // have to materialize the object. For example, consider:
+        //     vec2(1, 2)[runtime-index]
+        obj = Materialize(obj);
+    }
+    TINT_RET_IF(DAWN_UNLIKELY(!obj));
+
+    auto* object_ty = obj->Type();
+    auto* const memory_view = object_ty->As<core::type::MemoryView>();
+    const core::type::Type* storage_ty = object_ty;
+    if (memory_view) {
+        storage_ty = memory_view->StoreType();
+    }
+
+    auto* ty = Switch(
+        storage_ty,  //
+        [&](const sem::Array* arr) { return arr->ElemType(); },
+        [&](const core::type::BindingArray* arr) { return arr->ElemType(); },
+        [&](const core::type::Vector* vec) { return vec->Type(); },
+        [&](const core::type::Matrix* mat) {
+            return b.create<core::type::Vector>(mat->Type(), mat->Rows());
+        },
+        [&](Default) {
+            AddError(expr) << "cannot index type '" << sem_.TypeNameOf(storage_ty) << "'";
+            return nullptr;
+        });
+    TINT_RET_IF(DAWN_UNLIKELY(!ty));
+
+    auto* idx_ty = idx->Type()->UnwrapRef();
+    if (!idx_ty->IsAnyOf<core::type::I32, core::type::U32>()) {
+        AddError(idx->Declaration())
+            << "index must be of type 'i32' or 'u32', found: '" << sem_.TypeNameOf(idx_ty) << "'";
+        return nullptr;
+    }
+
+    // If we're extracting from a memory view, we return a reference (which will need to be loaded)
+    // or a swizzle view (which acts as a virtualized assignment target).
+    if (memory_view) {
+        if (memory_view->Is<core::type::SwizzleView>()) {
+            ty = b.create<core::type::SwizzleView>(
+                memory_view->AddressSpace(), ty, memory_view->Access(),
+                storage_ty->As<core::type::Vector>()->Width(), 1u);
+        } else {
+            ty = b.create<core::type::Reference>(memory_view->AddressSpace(), ty,
+                                                 memory_view->Access());
+        }
+    }
+
+    const core::constant::Value* val = nullptr;
+    auto stage = core::EarliestStage(obj->Stage(), idx->Stage());
+    if (not_evaluated_.Contains(expr)) {
+        stage = core::EvaluationStage::kNotEvaluated;
+    } else {
+        if (auto* idx_val = idx->ConstantValue()) {
+            auto res = const_eval_.Index(obj->ConstantValue(), storage_ty, idx_val,
+                                         idx->Declaration()->source);
+            TINT_RET_IF(res != Success);
+            val = res.Get();
+        }
+    }
+    auto* sem = b.create<sem::IndexAccessorExpression>(
+        expr, ty, stage, obj, idx, current_statement_, std::move(val), obj->RootIdentifier());
+    return sem;
+}
+
+sem::Call* Resolver::Call(const ast::CallExpression* expr) {
+    // A CallExpression can resolve to one of:
+    // * A function call.
+    // * A builtin call.
+    // * A value constructor.
+    // * A value conversion.
+    auto* target = sem_.Get(expr->target);
+    TINT_RET_IF(DAWN_UNLIKELY(!target));
+
+    // Resolve all of the arguments, their types and the set of behaviors.
+    Vector<const sem::ValueExpression*, 8> args;
+    args.Reserve(expr->args.Length());
+    auto args_stage = core::EvaluationStage::kConstant;
+    for (size_t i = 0; i < expr->args.Length(); i++) {
+        const auto* arg = Load(sem_.GetVal(expr->args[i]));
+        TINT_RET_IF(DAWN_UNLIKELY(!arg));
+
+        args.Push(arg);
+        args_stage = core::EarliestStage(args_stage, arg->Stage());
+    }
+
+    // ctor_or_conv is a helper for building either a sem::ValueConstructor or
+    // sem::ValueConversion call for a CtorConvIntrinsic with an optional template argument type.
+    auto ctor_or_conv =
+        [&](CtorConvIntrinsic ty,
+            VectorRef<core::intrinsic::TemplateParameter> template_args) -> sem::Call* {
+        auto arg_tys = tint::Transform(args, [&](auto* arg) { return arg->Type(); });
+
+        auto match = intrinsic_table_.Lookup(ty, template_args, arg_tys, args_stage);
+        if (match != Success) {
+            AddError(expr) << match.Failure();
+            return nullptr;
+        }
+
+        auto overload_stage = match->const_eval_fn ? core::EvaluationStage::kConstant
+                                                   : core::EvaluationStage::kRuntime;
+
+        sem::CallTarget* target_sem = nullptr;
+
+        // Is this overload a constructor or conversion?
+        if (match->info->flags.Contains(OverloadFlag::kIsConstructor)) {
+            // Type constructor
+            target_sem = constructors_.GetOrAdd(match.Get(), [&] {
+                auto params = Transform(match->parameters, [&](auto& p, size_t i) {
+                    return b.create<sem::Parameter>(nullptr, static_cast<uint32_t>(i), p.type,
+                                                    p.usage);
+                });
+                return b.create<sem::ValueConstructor>(match->return_type, std::move(params),
+                                                       overload_stage);
+            });
+        } else {
+            // Type conversion
+            target_sem = converters_.GetOrAdd(match.Get(), [&] {
+                auto* param = b.create<sem::Parameter>(nullptr, 0u, match->parameters[0].type,
+                                                       match->parameters[0].usage);
+                return b.create<sem::ValueConversion>(match->return_type, param, overload_stage);
+            });
+        }
+
+        TINT_RET_IF(!MaybeMaterializeArguments(args, target_sem));
+
+        const core::constant::Value* value = nullptr;
+        auto stage = core::EarliestStage(overload_stage, args_stage);
+        if (not_evaluated_.Contains(expr)) {
+            stage = core::EvaluationStage::kNotEvaluated;
+        }
+        if (stage == core::EvaluationStage::kConstant) {
+            auto const_args = ConvertArguments(args, target_sem);
+            TINT_RET_IF(const_args != Success);
+
+            auto const_eval_fn = match->const_eval_fn;
+            auto r = (const_eval_.*const_eval_fn)(target_sem->ReturnType(), const_args.Get(),
+                                                  expr->source);
+            TINT_RET_IF(r != Success);
+            value = r.Get();
+        }
+        return b.create<sem::Call>(expr, target_sem, stage, std::move(args), current_statement_,
+                                   value);
+    };
+
+    // arr_or_str_init is a helper for building a sem::ValueConstructor for an array or structure
+    // constructor call target.
+    auto arr_or_str_init = [&](const core::type::Type* ty,
+                               const sem::CallTarget* call_target) -> sem::Call* {
+        auto stage = args_stage;                       // The evaluation stage of the call
+        const core::constant::Value* value = nullptr;  // The constant value for the call
+        if (subgroup_matrix_uses_.Contains(ty)) {
+            // Composites that contain subgroup matrices cannot be evaluated until runtime.
+            stage = core::EvaluationStage::kRuntime;
+        }
+        if (not_evaluated_.Contains(expr)) {
+            stage = core::EvaluationStage::kNotEvaluated;
+        }
+        if (stage == core::EvaluationStage::kConstant) {
+            auto const_args = ConvertArguments(args, call_target);
+            TINT_RET_IF(const_args != Success);
+
+            auto r = const_eval_.ArrayOrStructCtor(ty, std::move(const_args.Get()));
+            TINT_RET_IF(r != Success);
+
+            value = r.Get();
+            if (!value) {
+                // Constant evaluation failed.
+                // Can happen for expressions that will fail validation (later).
+                // Use the kRuntime EvaluationStage, as kConstant will trigger an assertion in
+                // the sem::ValueExpression constructor, which checks that kConstant is paired
+                // with a constant value.
+                stage = core::EvaluationStage::kRuntime;
+            }
+        }
+
+        return b.create<sem::Call>(expr, call_target, stage, std::move(args), current_statement_,
+                                   value);
+    };
+
+    auto ty_init_or_conv = [&](const core::type::Type* type) {
+        return Switch(
+            type,  //
+            [&](const core::type::I32*) { return ctor_or_conv(CtorConvIntrinsic::kI32, Empty); },
+            [&](const core::type::U32*) { return ctor_or_conv(CtorConvIntrinsic::kU32, Empty); },
+            [&](const core::type::F16*) {
+                return validator_.CheckF16Enabled(expr->source)
+                           ? ctor_or_conv(CtorConvIntrinsic::kF16, Empty)
+                           : nullptr;
+            },
+            [&](const core::type::F32*) { return ctor_or_conv(CtorConvIntrinsic::kF32, Empty); },
+            [&](const core::type::Bool*) { return ctor_or_conv(CtorConvIntrinsic::kBool, Empty); },
+            [&](const core::type::Vector* v) {
+                return ctor_or_conv(wgsl::intrinsic::VectorCtorConv(v->Width()),
+                                    Vector<core::intrinsic::TemplateParameter, 1>{v->Type()});
+            },
+            [&](const core::type::Matrix* m) {
+                return ctor_or_conv(wgsl::intrinsic::MatrixCtorConv(m->Columns(), m->Rows()),
+                                    Vector<core::intrinsic::TemplateParameter, 1>{m->Type()});
+            },
+            [&](const sem::Array* arr) -> sem::Call* {
+                auto* call_target = array_ctors_.GetOrAdd(
+                    ArrayConstructorSig{{arr, args.Length(), args_stage}},
+                    [&]() -> sem::ValueConstructor* {
+                        auto params = tint::Transform(args, [&](auto, size_t i) {
+                            return b.create<sem::Parameter>(nullptr,  // declaration
+                                                            static_cast<uint32_t>(i),  // index
+                                                            arr->ElemType());
+                        });
+                        return b.create<sem::ValueConstructor>(arr, std::move(params), args_stage);
+                    });
+
+                TINT_RET_IF(DAWN_UNLIKELY(!MaybeMaterializeArguments(args, call_target)));
+                TINT_RET_IF(DAWN_UNLIKELY(!validator_.ArrayConstructor(expr, arr)));
+
+                return arr_or_str_init(arr, call_target);
+            },
+            [&](const core::type::Struct* str) -> sem::Call* {
+                auto* call_target = struct_ctors_.GetOrAdd(
+                    StructConstructorSig{{str, args.Length(), args_stage}},
+                    [&]() -> sem::ValueConstructor* {
+                        Vector<sem::Parameter*, 8> params;
+                        params.Resize(std::min(args.Length(), str->Members().Length()));
+                        for (size_t i = 0, n = params.Length(); i < n; i++) {
+                            params[i] =
+                                b.create<sem::Parameter>(nullptr,                     // declaration
+                                                         static_cast<uint32_t>(i),    // index
+                                                         str->Members()[i]->Type());  // type
+                        }
+                        return b.create<sem::ValueConstructor>(str, std::move(params), args_stage);
+                    });
+
+                TINT_RET_IF(DAWN_UNLIKELY(!MaybeMaterializeArguments(args, call_target)));
+                TINT_RET_IF(DAWN_UNLIKELY(!validator_.StructureInitializer(expr, str)));
+
+                return arr_or_str_init(str, call_target);
+            },
+            [&](const core::type::SubgroupMatrix* m) -> sem::Call* {
+                auto* call_target = subgroup_matrix_ctors_.GetOrAdd(
+                    SubgroupMatrixConstructorSig{{m, args.Length()}},
+                    [&]() -> sem::ValueConstructor* {
+                        // 8-bit integer matrices use 32-bit shader scalar types.
+                        auto* scalar_ty = m->Type();
+                        if (m->Type()->Is<core::type::I8>()) {
+                            scalar_ty = b.create<core::type::I32>();
+                        } else if (m->Type()->Is<core::type::U8>()) {
+                            scalar_ty = b.create<core::type::U32>();
+                        }
+                        auto params = tint::Transform(args, [&](auto, size_t i) {
+                            return b.create<sem::Parameter>(nullptr,  // declaration
+                                                            static_cast<uint32_t>(i),  // index
+                                                            scalar_ty);
+                        });
+                        return b.create<sem::ValueConstructor>(m, std::move(params),
+                                                               core::EvaluationStage::kRuntime);
+                    });
+
+                TINT_RET_IF(DAWN_UNLIKELY(!MaybeMaterializeArguments(args, call_target)));
+                TINT_RET_IF(
+                    DAWN_UNLIKELY(!validator_.SubgroupMatrixConstructor(expr, m, call_target)));
+
+                // Subgroup matrix constructors are never const-evaluated.
+                auto stage = core::EvaluationStage::kRuntime;
+                if (not_evaluated_.Contains(expr)) {
+                    stage = core::EvaluationStage::kNotEvaluated;
+                }
+
+                return b.create<sem::Call>(expr, call_target, stage, std::move(args),
+                                           current_statement_, nullptr);
+            },
+            [&](Default) {
+                AddError(expr) << "type is not constructible";
+                return nullptr;
+            });
+    };
+
+    auto incomplete_type = [&](const IncompleteType* t) -> sem::Call* {
+        // A type without template arguments.
+        // Examples: vec3(...), array(...)
+        switch (t->builtin) {
+            case core::BuiltinType::kVec2:
+                return ctor_or_conv(CtorConvIntrinsic::kVec2, Empty);
+            case core::BuiltinType::kVec3:
+                return ctor_or_conv(CtorConvIntrinsic::kVec3, Empty);
+            case core::BuiltinType::kVec4:
+                return ctor_or_conv(CtorConvIntrinsic::kVec4, Empty);
+            case core::BuiltinType::kMat2X2:
+                return ctor_or_conv(CtorConvIntrinsic::kMat2x2, Empty);
+            case core::BuiltinType::kMat2X3:
+                return ctor_or_conv(CtorConvIntrinsic::kMat2x3, Empty);
+            case core::BuiltinType::kMat2X4:
+                return ctor_or_conv(CtorConvIntrinsic::kMat2x4, Empty);
+            case core::BuiltinType::kMat3X2:
+                return ctor_or_conv(CtorConvIntrinsic::kMat3x2, Empty);
+            case core::BuiltinType::kMat3X3:
+                return ctor_or_conv(CtorConvIntrinsic::kMat3x3, Empty);
+            case core::BuiltinType::kMat3X4:
+                return ctor_or_conv(CtorConvIntrinsic::kMat3x4, Empty);
+            case core::BuiltinType::kMat4X2:
+                return ctor_or_conv(CtorConvIntrinsic::kMat4x2, Empty);
+            case core::BuiltinType::kMat4X3:
+                return ctor_or_conv(CtorConvIntrinsic::kMat4x3, Empty);
+            case core::BuiltinType::kMat4X4:
+                return ctor_or_conv(CtorConvIntrinsic::kMat4x4, Empty);
+            case core::BuiltinType::kArray: {
+                auto el_count =
+                    b.create<core::type::ConstantArrayCount>(static_cast<uint32_t>(args.Length()));
+                auto arg_tys = tint::Transform(args, [](auto* arg) { return arg->Type(); });
+                auto el_ty = core::type::Type::Common(arg_tys);
+                if (DAWN_UNLIKELY(!el_ty)) {
+                    AddError(expr)
+                        << "cannot infer common array element type from constructor arguments";
+                    Hashset<const core::type::Type*, 8> types;
+                    for (size_t i = 0; i < args.Length(); i++) {
+                        if (types.Add(args[i]->Type())) {
+                            AddNote(args[i]->Declaration())
+                                << "argument " << i << " is of type '"
+                                << sem_.TypeNameOf(args[i]->Type()) << "'";
+                        }
+                    }
+                    return nullptr;
+                }
+                auto* arr = Array(expr->source, expr->source, expr->source, el_ty, el_count);
+                TINT_RET_IF(DAWN_UNLIKELY(!arr));
+
+                return ty_init_or_conv(arr);
+            }
+            default: {
+                TINT_ICE() << "unhandled IncompleteType builtin: " << t->builtin;
+            }
+        }
+    };
+
+    auto* call = Switch(
+        target,  //
+        [&](const sem::FunctionExpression* fn_expr) {
+            return FunctionCall(expr, const_cast<sem::Function*>(fn_expr->Function()),
+                                std::move(args));
+        },
+        [&](const sem::TypeExpression* ty_expr) {
+            return Switch(
+                ty_expr->Type(),  //
+                [&](const IncompleteType* t) -> sem::Call* {
+                    auto* ctor = incomplete_type(t);
+                    TINT_RET_IF(DAWN_UNLIKELY(!ctor));
+
+                    // Replace incomplete type with resolved type
+                    const_cast<sem::TypeExpression*>(ty_expr)->SetType(ctor->Type());
+                    return ctor;
+                },
+                [&](Default) { return ty_init_or_conv(ty_expr->Type()); });
+        },
+        [&](const sem::BuiltinEnumExpression<wgsl::BuiltinFn>* fn_expr) {
+            return BuiltinCall(expr, fn_expr->Value(), args);
+        },
+        [&](Default) {
+            sem_.ErrorUnexpectedExprKind(target, "call target");
+            return nullptr;
+        });
+
+    TINT_RET_IF(DAWN_UNLIKELY(!call));
+
+    return validator_.Call(call, current_statement_) ? call : nullptr;
+}
+
+template <size_t N>
+sem::Call* Resolver::BuiltinCall(const ast::CallExpression* expr,
+                                 wgsl::BuiltinFn fn,
+                                 Vector<const sem::ValueExpression*, N>& args) {
+    auto arg_stage = core::EvaluationStage::kConstant;
+    for (auto* arg : args) {
+        arg_stage = core::EarliestStage(arg_stage, arg->Stage());
+    }
+
+    Vector<core::intrinsic::TemplateParameter, 1> tmpl_args;
+    if (auto* tmpl = expr->target->identifier->As<ast::TemplatedIdentifier>()) {
+        for (auto* arg : tmpl->arguments) {
+            auto* sem_expr = sem_.Get(arg);
+            if (auto* arg_ty = sem_expr->As<sem::TypeExpression>(); DAWN_LIKELY(arg_ty)) {
+                tmpl_args.Push(arg_ty->Type());
+            } else if (auto* arg_major =
+                           sem_expr->As<sem::BuiltinEnumExpression<core::Majorness>>()) {
+                tmpl_args.Push(arg_major->Value());
+            } else {
+                // Add an error, but don't return so that the candidates are printed.
+                // Use a bad type.
+                AddError(arg) << "Unexpected template kind";
+                tmpl_args.Push(b.create<core::type::Invalid>());
+            }
+        }
+    }
+
+    auto arg_tys = tint::Transform(args, [&](auto* arg) { return arg->Type(); });
+
+    auto overload = intrinsic_table_.Lookup(fn, tmpl_args, arg_tys, arg_stage);
+    if (overload != Success) {
+        AddError(expr) << overload.Failure();
+        return nullptr;
+    }
+
+    // De-duplicate builtins that are identical.
+    auto* target = builtins_.GetOrAdd(std::make_pair(overload.Get(), fn), [&] {
+        auto params = Transform(overload->parameters, [&](auto& p, size_t i) {
+            return b.create<sem::Parameter>(nullptr, static_cast<uint32_t>(i), p.type, p.usage);
+        });
+        sem::PipelineStageSet supported_stages;
+        auto flags = overload->info->flags;
+        if (flags.Contains(OverloadFlag::kSupportsVertexPipeline)) {
+            supported_stages.Add(ast::PipelineStage::kVertex);
+        }
+        if (flags.Contains(OverloadFlag::kSupportsFragmentPipeline)) {
+            supported_stages.Add(ast::PipelineStage::kFragment);
+        }
+        if (flags.Contains(OverloadFlag::kSupportsComputePipeline)) {
+            supported_stages.Add(ast::PipelineStage::kCompute);
+        }
+        auto eval_stage = overload->const_eval_fn ? core::EvaluationStage::kConstant
+                                                  : core::EvaluationStage::kRuntime;
+        return b.create<sem::BuiltinFn>(fn, overload->return_type, std::move(params), eval_stage,
+                                        supported_stages, *overload->info);
+    });
+
+    // Materialize arguments if the parameter type is not abstract
+    TINT_RET_IF(!MaybeMaterializeArguments(args, target));
+
+    if (target->IsDeprecated()) {
+        AddWarning(expr) << "use of deprecated builtin";
+    }
+
+    // Check evaluation stage of parameters that are required to be const-expressions.
+    for (uint32_t i = 0; i < overload->parameters.Length(); i++) {
+        const auto& p = overload->parameters[i];
+        if (p.is_const && args[i]->Stage() != core::EvaluationStage::kConstant) {
+            AddError(args[i]->Declaration())
+                << "the " << style::Variable(p.usage) << " argument of "
+                << style::Function(target->str()) << " must be a const-expression";
+            return nullptr;
+        }
+    }
+
+    // If the builtin is @const, and all arguments have constant values, evaluate the builtin
+    // now.
+    const core::constant::Value* value = nullptr;
+    auto stage = core::EarliestStage(arg_stage, target->Stage());
+    if (not_evaluated_.Contains(expr)) {
+        stage = core::EvaluationStage::kNotEvaluated;
+    }
+    if (stage == core::EvaluationStage::kConstant) {
+        auto const_args = ConvertArguments(args, target);
+        TINT_RET_IF(const_args != Success);
+
+        auto const_eval_fn = overload->const_eval_fn;
+        auto r = (const_eval_.*const_eval_fn)(target->ReturnType(), const_args.Get(), expr->source);
+        TINT_RET_IF(r != Success);
+
+        value = r.Get();
+    }
+
+    // If the builtin is bufferView or bufferArrayView, set the root identifier based on the first
+    // argument.
+    const sem::Variable* root_ident = nullptr;
+    if (fn == wgsl::BuiltinFn::kBufferView || fn == wgsl::BuiltinFn::kBufferArrayView) {
+        root_ident = args[0]->RootIdentifier();
+    }
+    auto* call = b.create<sem::Call>(expr, target, stage, std::move(args), current_statement_,
+                                     value, root_ident);
+
+    if (current_function_) {
+        current_function_->AddDirectlyCalledBuiltin(target);
+        current_function_->AddDirectCall(call);
+    }
+
+    TINT_RET_IF(!validator_.RequiredFeaturesForBuiltinFn(call));
+    TINT_RET_IF(IsTexture(fn) && !validator_.TextureBuiltinFn(call));
+
+    switch (fn) {
+        case wgsl::BuiltinFn::kWorkgroupUniformLoad:
+            RegisterLoad(args[0]);
+            break;
+
+        case wgsl::BuiltinFn::kSubgroupBroadcast:
+            TINT_RET_IF(!validator_.SubgroupBroadcast(call));
+            break;
+        case wgsl::BuiltinFn::kSubgroupShuffle:
+        case wgsl::BuiltinFn::kSubgroupShuffleUp:
+        case wgsl::BuiltinFn::kSubgroupShuffleDown:
+        case wgsl::BuiltinFn::kSubgroupShuffleXor:
+            TINT_RET_IF(!validator_.SubgroupShuffleFunction(fn, call));
+            break;
+
+        case wgsl::BuiltinFn::kQuadBroadcast:
+            TINT_RET_IF(!validator_.QuadBroadcast(call));
+            break;
+
+        case wgsl::BuiltinFn::kAtomicLoad:
+            RegisterLoad(args[0]);
+            break;
+
+        case wgsl::BuiltinFn::kAtomicStore:
+            RegisterStore(args[0]);
+            break;
+
+        case wgsl::BuiltinFn::kAtomicAdd:
+        case wgsl::BuiltinFn::kAtomicSub:
+        case wgsl::BuiltinFn::kAtomicMax:
+        case wgsl::BuiltinFn::kAtomicMin:
+        case wgsl::BuiltinFn::kAtomicStoreMax:
+        case wgsl::BuiltinFn::kAtomicStoreMin:
+        case wgsl::BuiltinFn::kAtomicAnd:
+        case wgsl::BuiltinFn::kAtomicOr:
+        case wgsl::BuiltinFn::kAtomicXor:
+        case wgsl::BuiltinFn::kAtomicExchange:
+        case wgsl::BuiltinFn::kAtomicCompareExchangeWeak:
+            RegisterLoad(args[0]);
+            RegisterStore(args[0]);
+            break;
+
+        case wgsl::BuiltinFn::kSubgroupMatrixLoad:
+            TINT_RET_IF(!validator_.SubgroupMatrixLoadStore(call));
+            RegisterLoad(args[0]);
+            RegisterSubgroupMatrixAccess(call, fn);
+            break;
+        case wgsl::BuiltinFn::kSubgroupMatrixStore:
+            TINT_RET_IF(!validator_.SubgroupMatrixLoadStore(call));
+            RegisterStore(args[0]);
+            RegisterSubgroupMatrixAccess(call, fn);
+            break;
+
+        case wgsl::BuiltinFn::kBufferView:
+        case wgsl::BuiltinFn::kBufferArrayView: {
+            TINT_RET_IF(!validator_.BufferView(call));
+            RegisterBufferView(call, fn);
+            auto address_space =
+                call->Target()->ReturnType()->template As<core::type::Pointer>()->AddressSpace();
+            auto* store_type =
+                call->Target()->ReturnType()->template As<core::type::Pointer>()->StoreType();
+            if (!ApplyAddressSpaceUsageToType(address_space, store_type,
+                                              call->Declaration()->source)) {
+                AddNote(call->Declaration()) << " while instantiating bufferView";
+                return nullptr;
+            }
+            break;
+        }
+        default:
+            break;
+    }
+
+    // Check for errors when only some arguments are const or override.
+    // Const-eval checks error cases when all arguments are const or override.
+    switch (fn) {
+        case wgsl::BuiltinFn::kClamp: {
+            const auto* lowConst = ConvertConstArgument(args, target, 1);
+            const auto* highConst = ConvertConstArgument(args, target, 2);
+            if (lowConst && highConst) {
+                // Delegate error checking to the const-eval function, but use a harmless
+                // first argument.
+                auto fakeArgs = Vector{lowConst, lowConst, highConst};
+                auto res = const_eval_.clamp(call->Type(), fakeArgs, call->Declaration()->source);
+                TINT_RET_IF(res != Success);
+            }
+        } break;
+        case wgsl::BuiltinFn::kLdexp:
+            if (auto* exponentConst = ConvertConstArgument(args, target, 1)) {
+                auto* zero = const_eval_.Zero(call->Type(), {}, Source{}).Get();
+                auto fakeArgs = Vector{zero, exponentConst};
+                auto res = const_eval_.ldexp(call->Type(), fakeArgs, call->Declaration()->source);
+                TINT_RET_IF(res != Success);
+            }
+            break;
+        case wgsl::BuiltinFn::kExtractBits: {
+            auto* offsetConst = ConvertConstArgument(args, target, 1);
+            auto* countConst = ConvertConstArgument(args, target, 2);
+            if (offsetConst && countConst) {
+                auto* zero = const_eval_.Zero(call->Type(), {}, Source{}).Get();
+                auto fakeArgs = Vector{zero, offsetConst, countConst};
+                auto res =
+                    const_eval_.extractBits(call->Type(), fakeArgs, call->Declaration()->source);
+                TINT_RET_IF(res != Success);
+            }
+        } break;
+        case wgsl::BuiltinFn::kInsertBits: {
+            auto* offsetConst = ConvertConstArgument(args, target, 2);
+            auto* countConst = ConvertConstArgument(args, target, 3);
+            if (offsetConst && countConst) {
+                auto* zero = const_eval_.Zero(call->Type(), {}, Source{}).Get();
+                auto fakeArgs = Vector{zero, zero, offsetConst, countConst};
+                auto res =
+                    const_eval_.insertBits(call->Type(), fakeArgs, call->Declaration()->source);
+                TINT_RET_IF(res != Success);
+            }
+        } break;
+        case wgsl::BuiltinFn::kSmoothstep: {
+            auto* lowConst = ConvertConstArgument(args, target, 0);
+            auto* highConst = ConvertConstArgument(args, target, 1);
+            if (lowConst && highConst) {
+                // Delegate error checking to the const-eval function, but use a harmless
+                // last argument.
+                auto fakeArgs = Vector{lowConst, highConst, highConst};
+                auto res =
+                    const_eval_.smoothstep(call->Type(), fakeArgs, call->Declaration()->source);
+                TINT_RET_IF(res != Success);
+            }
+        } break;
+        default:
+            break;
+    }
+
+    TINT_RET_IF(!validator_.BuiltinCall(call));
+
+    return call;
+}
+
+const core::type::Type* Resolver::BuiltinType(core::BuiltinType builtin_ty,
+                                              const ast::Identifier* ident) {
+    auto check_no_tmpl_args = [&](const core::type::Type* ty) -> const core::type::Type* {
+        return DAWN_LIKELY(CheckNotTemplated("type", ident)) ? ty : nullptr;
+    };
+
+    switch (builtin_ty) {
+        case core::BuiltinType::kBool:
+            return check_no_tmpl_args(b.create<core::type::Bool>());
+        case core::BuiltinType::kBuffer:
+            return Buffer(ident);
+        case core::BuiltinType::kI32:
+            return check_no_tmpl_args(I32());
+        case core::BuiltinType::kU32:
+            return check_no_tmpl_args(U32());
+        case core::BuiltinType::kF16:
+            return check_no_tmpl_args(F16(ident));
+        case core::BuiltinType::kF32:
+            return check_no_tmpl_args(b.create<core::type::F32>());
+        case core::BuiltinType::kI8:
+            return check_no_tmpl_args(I8(ident));
+        case core::BuiltinType::kU8:
+            return check_no_tmpl_args(U8(ident));
+        case core::BuiltinType::kU16:
+            return check_no_tmpl_args(U16(ident));
+        case core::BuiltinType::kVec2:
+            return VecT(ident, builtin_ty, 2);
+        case core::BuiltinType::kVec3:
+            return VecT(ident, builtin_ty, 3);
+        case core::BuiltinType::kVec4:
+            return VecT(ident, builtin_ty, 4);
+        case core::BuiltinType::kMat2X2:
+            return MatT(ident, builtin_ty, 2, 2);
+        case core::BuiltinType::kMat2X3:
+            return MatT(ident, builtin_ty, 2, 3);
+        case core::BuiltinType::kMat2X4:
+            return MatT(ident, builtin_ty, 2, 4);
+        case core::BuiltinType::kMat3X2:
+            return MatT(ident, builtin_ty, 3, 2);
+        case core::BuiltinType::kMat3X3:
+            return MatT(ident, builtin_ty, 3, 3);
+        case core::BuiltinType::kMat3X4:
+            return MatT(ident, builtin_ty, 3, 4);
+        case core::BuiltinType::kMat4X2:
+            return MatT(ident, builtin_ty, 4, 2);
+        case core::BuiltinType::kMat4X3:
+            return MatT(ident, builtin_ty, 4, 3);
+        case core::BuiltinType::kMat4X4:
+            return MatT(ident, builtin_ty, 4, 4);
+        case core::BuiltinType::kMat2X2F:
+            return check_no_tmpl_args(Mat(ident, F32(), 2u, 2u));
+        case core::BuiltinType::kMat2X3F:
+            return check_no_tmpl_args(Mat(ident, F32(), 2u, 3u));
+        case core::BuiltinType::kMat2X4F:
+            return check_no_tmpl_args(Mat(ident, F32(), 2u, 4u));
+        case core::BuiltinType::kMat3X2F:
+            return check_no_tmpl_args(Mat(ident, F32(), 3u, 2u));
+        case core::BuiltinType::kMat3X3F:
+            return check_no_tmpl_args(Mat(ident, F32(), 3u, 3u));
+        case core::BuiltinType::kMat3X4F:
+            return check_no_tmpl_args(Mat(ident, F32(), 3u, 4u));
+        case core::BuiltinType::kMat4X2F:
+            return check_no_tmpl_args(Mat(ident, F32(), 4u, 2u));
+        case core::BuiltinType::kMat4X3F:
+            return check_no_tmpl_args(Mat(ident, F32(), 4u, 3u));
+        case core::BuiltinType::kMat4X4F:
+            return check_no_tmpl_args(Mat(ident, F32(), 4u, 4u));
+        case core::BuiltinType::kMat2X2H:
+            return check_no_tmpl_args(Mat(ident, F16(ident), 2u, 2u));
+        case core::BuiltinType::kMat2X3H:
+            return check_no_tmpl_args(Mat(ident, F16(ident), 2u, 3u));
+        case core::BuiltinType::kMat2X4H:
+            return check_no_tmpl_args(Mat(ident, F16(ident), 2u, 4u));
+        case core::BuiltinType::kMat3X2H:
+            return check_no_tmpl_args(Mat(ident, F16(ident), 3u, 2u));
+        case core::BuiltinType::kMat3X3H:
+            return check_no_tmpl_args(Mat(ident, F16(ident), 3u, 3u));
+        case core::BuiltinType::kMat3X4H:
+            return check_no_tmpl_args(Mat(ident, F16(ident), 3u, 4u));
+        case core::BuiltinType::kMat4X2H:
+            return check_no_tmpl_args(Mat(ident, F16(ident), 4u, 2u));
+        case core::BuiltinType::kMat4X3H:
+            return check_no_tmpl_args(Mat(ident, F16(ident), 4u, 3u));
+        case core::BuiltinType::kMat4X4H:
+            return check_no_tmpl_args(Mat(ident, F16(ident), 4u, 4u));
+        case core::BuiltinType::kVec2F:
+            return check_no_tmpl_args(Vec(ident, F32(), 2u));
+        case core::BuiltinType::kVec3F:
+            return check_no_tmpl_args(Vec(ident, F32(), 3u));
+        case core::BuiltinType::kVec4F:
+            return check_no_tmpl_args(Vec(ident, F32(), 4u));
+        case core::BuiltinType::kVec2H:
+            return check_no_tmpl_args(Vec(ident, F16(ident), 2u));
+        case core::BuiltinType::kVec3H:
+            return check_no_tmpl_args(Vec(ident, F16(ident), 3u));
+        case core::BuiltinType::kVec4H:
+            return check_no_tmpl_args(Vec(ident, F16(ident), 4u));
+        case core::BuiltinType::kVec2I:
+            return check_no_tmpl_args(Vec(ident, I32(), 2u));
+        case core::BuiltinType::kVec3I:
+            return check_no_tmpl_args(Vec(ident, I32(), 3u));
+        case core::BuiltinType::kVec4I:
+            return check_no_tmpl_args(Vec(ident, I32(), 4u));
+        case core::BuiltinType::kVec2U:
+            return check_no_tmpl_args(Vec(ident, U32(), 2u));
+        case core::BuiltinType::kVec3U:
+            return check_no_tmpl_args(Vec(ident, U32(), 3u));
+        case core::BuiltinType::kVec4U:
+            return check_no_tmpl_args(Vec(ident, U32(), 4u));
+        case core::BuiltinType::kArray:
+            return Array(ident);
+        case core::BuiltinType::kBindingArray:
+            return BindingArray(ident);
+        case core::BuiltinType::kAtomic:
+            return Atomic(ident);
+        case core::BuiltinType::kPtr:
+            return Ptr(ident);
+        case core::BuiltinType::kSampler:
+            return Sampler(ident);
+        case core::BuiltinType::kSamplerComparison:
+            return check_no_tmpl_args(
+                b.create<core::type::Sampler>(core::type::SamplerKind::kComparisonSampler));
+        case core::BuiltinType::kSubgroupMatrixLeft:
+            return SubgroupMatrix(ident, core::SubgroupMatrixKind::kLeft);
+        case core::BuiltinType::kSubgroupMatrixRight:
+            return SubgroupMatrix(ident, core::SubgroupMatrixKind::kRight);
+        case core::BuiltinType::kSubgroupMatrixResult:
+            return SubgroupMatrix(ident, core::SubgroupMatrixKind::kResult);
+        case core::BuiltinType::kTexture1D:
+            return SampledTexture(ident, core::type::TextureDimension::k1d);
+        case core::BuiltinType::kTexture2D:
+            return SampledTexture(ident, core::type::TextureDimension::k2d);
+        case core::BuiltinType::kTexture2DArray:
+            return SampledTexture(ident, core::type::TextureDimension::k2dArray);
+        case core::BuiltinType::kTexture3D:
+            return SampledTexture(ident, core::type::TextureDimension::k3d);
+        case core::BuiltinType::kTextureCube:
+            return SampledTexture(ident, core::type::TextureDimension::kCube);
+        case core::BuiltinType::kTextureCubeArray:
+            return SampledTexture(ident, core::type::TextureDimension::kCubeArray);
+        case core::BuiltinType::kTextureDepth2D:
+            return check_no_tmpl_args(
+                b.create<core::type::DepthTexture>(core::type::TextureDimension::k2d));
+        case core::BuiltinType::kTextureDepth2DArray:
+            return check_no_tmpl_args(
+                b.create<core::type::DepthTexture>(core::type::TextureDimension::k2dArray));
+        case core::BuiltinType::kTextureDepthCube:
+            return check_no_tmpl_args(
+                b.create<core::type::DepthTexture>(core::type::TextureDimension::kCube));
+        case core::BuiltinType::kTextureDepthCubeArray:
+            return check_no_tmpl_args(
+                b.create<core::type::DepthTexture>(core::type::TextureDimension::kCubeArray));
+        case core::BuiltinType::kTextureDepthMultisampled2D:
+            return check_no_tmpl_args(
+                b.create<core::type::DepthMultisampledTexture>(core::type::TextureDimension::k2d));
+        case core::BuiltinType::kTextureExternal:
+            return check_no_tmpl_args(b.create<core::type::ExternalTexture>());
+        case core::BuiltinType::kTextureMultisampled2D:
+            return MultisampledTexture(ident, core::type::TextureDimension::k2d);
+        case core::BuiltinType::kTextureStorage1D:
+            return StorageTexture(ident, core::type::TextureDimension::k1d);
+        case core::BuiltinType::kTextureStorage2D:
+            return StorageTexture(ident, core::type::TextureDimension::k2d);
+        case core::BuiltinType::kTextureStorage2DArray:
+            return StorageTexture(ident, core::type::TextureDimension::k2dArray);
+        case core::BuiltinType::kTextureStorage3D:
+            return StorageTexture(ident, core::type::TextureDimension::k3d);
+        case core::BuiltinType::kTexelBuffer:
+            return TexelBuffer(ident);
+        case core::BuiltinType::kInputAttachment:
+            return InputAttachment(ident);
+        case core::BuiltinType::kAtomicCompareExchangeResultI32:
+            return core::type::CreateAtomicCompareExchangeResult(b.Types(), b.Symbols(), I32());
+        case core::BuiltinType::kAtomicCompareExchangeResultU32:
+            return core::type::CreateAtomicCompareExchangeResult(b.Types(), b.Symbols(), U32());
+        case core::BuiltinType::kFrexpResultAbstract:
+            return core::type::CreateFrexpResult(b.Types(), b.Symbols(), AF());
+        case core::BuiltinType::kFrexpResultF16:
+            return core::type::CreateFrexpResult(b.Types(), b.Symbols(), F16(ident));
+        case core::BuiltinType::kFrexpResultF32:
+            return core::type::CreateFrexpResult(b.Types(), b.Symbols(), F32());
+        case core::BuiltinType::kFrexpResultVec2Abstract:
+            return core::type::CreateFrexpResult(b.Types(), b.Symbols(), Vec(ident, AF(), 2));
+        case core::BuiltinType::kFrexpResultVec2F16:
+            return core::type::CreateFrexpResult(b.Types(), b.Symbols(), Vec(ident, F16(ident), 2));
+        case core::BuiltinType::kFrexpResultVec2F32:
+            return core::type::CreateFrexpResult(b.Types(), b.Symbols(), Vec(ident, F32(), 2));
+        case core::BuiltinType::kFrexpResultVec3Abstract:
+            return core::type::CreateFrexpResult(b.Types(), b.Symbols(), Vec(ident, AF(), 3));
+        case core::BuiltinType::kFrexpResultVec3F16:
+            return core::type::CreateFrexpResult(b.Types(), b.Symbols(), Vec(ident, F16(ident), 3));
+        case core::BuiltinType::kFrexpResultVec3F32:
+            return core::type::CreateFrexpResult(b.Types(), b.Symbols(), Vec(ident, F32(), 3));
+        case core::BuiltinType::kFrexpResultVec4Abstract:
+            return core::type::CreateFrexpResult(b.Types(), b.Symbols(), Vec(ident, AF(), 4));
+        case core::BuiltinType::kFrexpResultVec4F16:
+            return core::type::CreateFrexpResult(b.Types(), b.Symbols(), Vec(ident, F16(ident), 4));
+        case core::BuiltinType::kFrexpResultVec4F32:
+            return core::type::CreateFrexpResult(b.Types(), b.Symbols(), Vec(ident, F32(), 4));
+        case core::BuiltinType::kModfResultAbstract:
+            return core::type::CreateModfResult(b.Types(), b.Symbols(), AF());
+        case core::BuiltinType::kModfResultF16:
+            return core::type::CreateModfResult(b.Types(), b.Symbols(), F16(ident));
+        case core::BuiltinType::kModfResultF32:
+            return core::type::CreateModfResult(b.Types(), b.Symbols(), F32());
+        case core::BuiltinType::kModfResultVec2Abstract:
+            return core::type::CreateModfResult(b.Types(), b.Symbols(), Vec(ident, AF(), 2));
+        case core::BuiltinType::kModfResultVec2F16:
+            return core::type::CreateModfResult(b.Types(), b.Symbols(), Vec(ident, F16(ident), 2));
+        case core::BuiltinType::kModfResultVec2F32:
+            return core::type::CreateModfResult(b.Types(), b.Symbols(), Vec(ident, F32(), 2));
+        case core::BuiltinType::kModfResultVec3Abstract:
+            return core::type::CreateModfResult(b.Types(), b.Symbols(), Vec(ident, AF(), 3));
+        case core::BuiltinType::kModfResultVec3F16:
+            return core::type::CreateModfResult(b.Types(), b.Symbols(), Vec(ident, F16(ident), 3));
+        case core::BuiltinType::kModfResultVec3F32:
+            return core::type::CreateModfResult(b.Types(), b.Symbols(), Vec(ident, F32(), 3));
+        case core::BuiltinType::kModfResultVec4Abstract:
+            return core::type::CreateModfResult(b.Types(), b.Symbols(), Vec(ident, AF(), 4));
+        case core::BuiltinType::kModfResultVec4F16:
+            return core::type::CreateModfResult(b.Types(), b.Symbols(), Vec(ident, F16(ident), 4));
+        case core::BuiltinType::kModfResultVec4F32:
+            return core::type::CreateModfResult(b.Types(), b.Symbols(), Vec(ident, F32(), 4));
+        case core::BuiltinType::kUndefined:
+            break;
+    }
+
+    ICE(ident->source) << " unhandled builtin type '" << ident->symbol.NameView() << "'";
+}
+
+const core::type::AbstractFloat* Resolver::AF() {
+    return b.create<core::type::AbstractFloat>();
+}
+
+const core::type::F32* Resolver::F32() {
+    return b.create<core::type::F32>();
+}
+
+const core::type::I32* Resolver::I32() {
+    return b.create<core::type::I32>();
+}
+
+const core::type::U32* Resolver::U32() {
+    return b.create<core::type::U32>();
+}
+
+const core::type::F16* Resolver::F16(const ast::Identifier* ident) {
+    return validator_.CheckF16Enabled(ident->source) ? b.create<core::type::F16>() : nullptr;
+}
+
+const core::type::I8* Resolver::I8(const ast::Identifier* ident) {
+    return validator_.CheckI8Enabled(ident->source) ? b.create<core::type::I8>() : nullptr;
+}
+
+const core::type::U8* Resolver::U8(const ast::Identifier* ident) {
+    return validator_.CheckU8Enabled(ident->source) ? b.create<core::type::U8>() : nullptr;
+}
+
+const core::type::U16* Resolver::U16(const ast::Identifier* ident) {
+    AddError(ident) << "u16 is unsupported in WGSL";
+    return nullptr;
+}
+
+const core::type::Vector* Resolver::Vec(const ast::Identifier* ident,
+                                        const core::type::Type* el,
+                                        uint32_t n) {
+    TINT_RET_IF(DAWN_UNLIKELY(!el));
+    TINT_RET_IF(DAWN_UNLIKELY(!validator_.Vector(el, ident->source)));
+    return b.create<core::type::Vector>(el, n);
+}
+
+const core::type::Type* Resolver::VecT(const ast::Identifier* ident,
+                                       core::BuiltinType builtin,
+                                       uint32_t n) {
+    auto* tmpl_ident = ident->As<ast::TemplatedIdentifier>();
+    if (!tmpl_ident) {
+        // 'vecN' has no template arguments, so return an incomplete type.
+        return b.create<IncompleteType>(builtin);
+    }
+    TINT_RET_IF(DAWN_UNLIKELY(!CheckTemplatedIdentifierArgs(tmpl_ident, 1)));
+
+    auto* ty = sem_.GetType(tmpl_ident->arguments[0]);
+    TINT_RET_IF(DAWN_UNLIKELY(!ty));
+
+    return Vec(ident, const_cast<core::type::Type*>(ty), n);
+}
+
+const core::type::Matrix* Resolver::Mat(const ast::Identifier* ident,
+                                        const core::type::Type* el,
+                                        uint32_t num_columns,
+                                        uint32_t num_rows) {
+    TINT_RET_IF(DAWN_UNLIKELY(!el));
+    TINT_RET_IF(DAWN_UNLIKELY(!validator_.Matrix(el, ident->source)));
+
+    auto* column = Vec(ident, el, num_rows);
+    TINT_RET_IF(DAWN_UNLIKELY(!column));
+
+    return b.create<core::type::Matrix>(column, num_columns);
+}
+
+const core::type::Type* Resolver::MatT(const ast::Identifier* ident,
+                                       core::BuiltinType builtin,
+                                       uint32_t num_columns,
+                                       uint32_t num_rows) {
+    auto* tmpl_ident = ident->As<ast::TemplatedIdentifier>();
+    if (!tmpl_ident) {
+        // 'vecN' has no template arguments, so return an incomplete type.
+        return b.create<IncompleteType>(builtin);
+    }
+    TINT_RET_IF(DAWN_UNLIKELY(!CheckTemplatedIdentifierArgs(tmpl_ident, 1)));
+
+    auto* el_ty = sem_.GetType(tmpl_ident->arguments[0]);
+    TINT_RET_IF(DAWN_UNLIKELY(!el_ty));
+
+    return Mat(ident, const_cast<core::type::Type*>(el_ty), num_columns, num_rows);
+}
+
+const core::type::Type* Resolver::Array(const ast::Identifier* ident) {
+    auto* tmpl_ident = ident->As<ast::TemplatedIdentifier>();
+    if (!tmpl_ident) {
+        // 'array' has no template arguments, so return an incomplete type.
+        return b.create<IncompleteType>(core::BuiltinType::kArray);
+    }
+
+    TINT_RET_IF(DAWN_UNLIKELY(!CheckTemplatedIdentifierArgs(tmpl_ident, 1, 2)));
+
+    auto* ast_el_ty = tmpl_ident->arguments[0];
+    auto* ast_count = (tmpl_ident->arguments.Length() > 1) ? tmpl_ident->arguments[1] : nullptr;
+
+    auto* el_ty = sem_.GetType(ast_el_ty);
+    TINT_RET_IF(DAWN_UNLIKELY(!el_ty));
+
+    const core::type::ArrayCount* el_count =
+        ast_count ? ArrayCount(ast_count) : b.create<core::type::RuntimeArrayCount>();
+    TINT_RET_IF(DAWN_UNLIKELY(!el_count));
+
+    auto* out = Array(tmpl_ident->source,                             //
+                      ast_el_ty->source,                              //
+                      ast_count ? ast_count->source : ident->source,  //
+                      el_ty, el_count);
+    TINT_RET_IF(DAWN_UNLIKELY(!out));
+
+    if (el_ty->Is<core::type::Atomic>()) {
+        atomic_composite_info_.Add(out, &ast_el_ty->source);
+    } else {
+        if (auto found = atomic_composite_info_.Get(el_ty)) {
+            atomic_composite_info_.Add(out, *found);
+        }
+    }
+    if (subgroup_matrix_uses_.Contains(el_ty)) {
+        subgroup_matrix_uses_.Add(out);
+    }
+
+    return out;
+}
+
+const core::type::BindingArray* Resolver::BindingArray(const ast::Identifier* ident) {
+    auto* tmpl_ident = TemplatedIdentifier(ident, 2);
+    TINT_RET_IF(DAWN_UNLIKELY(!tmpl_ident));
+
+    auto* el_type = sem_.GetType(tmpl_ident->arguments[0]);
+    TINT_RET_IF(DAWN_UNLIKELY(!el_type));
+
+    const core::type::ArrayCount* el_count = ArrayCount(tmpl_ident->arguments[1]);
+    TINT_RET_IF(DAWN_UNLIKELY(!el_count));
+
+    auto* out = b.create<core::type::BindingArray>(el_type, el_count);
+    TINT_RET_IF(DAWN_UNLIKELY(!validator_.BindingArray(out, ident->source)));
+
+    return out;
+}
+
+const core::type::Atomic* Resolver::Atomic(const ast::Identifier* ident) {
+    auto* tmpl_ident = TemplatedIdentifier(ident, 1);  // atomic<type>
+    TINT_RET_IF(DAWN_UNLIKELY(!tmpl_ident));
+
+    auto* el_ty = sem_.GetType(tmpl_ident->arguments[0]);
+    TINT_RET_IF(DAWN_UNLIKELY(!el_ty));
+
+    auto* out = b.create<core::type::Atomic>(el_ty);
+    TINT_RET_IF(DAWN_UNLIKELY(!validator_.Atomic(tmpl_ident, out)));
+
+    return out;
+}
+
+const core::type::Pointer* Resolver::Ptr(const ast::Identifier* ident) {
+    auto* tmpl_ident = TemplatedIdentifier(ident, 2, 3);  // ptr<address, type [, access]>
+    TINT_RET_IF(DAWN_UNLIKELY(!tmpl_ident));
+
+    auto address_space = sem_.GetAddressSpace(tmpl_ident->arguments[0]);
+    TINT_RET_IF(DAWN_UNLIKELY(address_space == core::AddressSpace::kUndefined));
+
+    auto* store_ty = const_cast<core::type::Type*>(sem_.GetType(tmpl_ident->arguments[1]));
+    TINT_RET_IF(DAWN_UNLIKELY(!store_ty));
+
+    core::Access access = core::Access::kUndefined;
+    if (tmpl_ident->arguments.Length() > 2) {
+        access = sem_.GetAccess(tmpl_ident->arguments[2]);
+        TINT_RET_IF(DAWN_UNLIKELY(access == core::Access::kUndefined));
+    } else {
+        access = DefaultAccessForAddressSpace(address_space);
+    }
+
+    auto* out = b.create<core::type::Pointer>(address_space, store_ty, access);
+    TINT_RET_IF(DAWN_UNLIKELY(!validator_.Pointer(tmpl_ident, out)));
+
+    if (!ApplyAddressSpaceUsageToType(address_space, store_ty, tmpl_ident->arguments[1]->source)) {
+        AddNote(ident) << "while instantiating " << out->FriendlyName();
+        return nullptr;
+    }
+    return out;
+}
+
+const core::type::Sampler* Resolver::Sampler(const ast::Identifier* ident) {
+    return DAWN_LIKELY(CheckNotTemplated("type", ident))
+               ? b.create<core::type::Sampler>(core::type::SamplerKind::kSampler)
+               : nullptr;
+}
+
+const core::type::SampledTexture* Resolver::SampledTexture(const ast::Identifier* ident,
+                                                           core::type::TextureDimension dim) {
+    auto* tmpl_ident = TemplatedIdentifier(ident, 1);
+    TINT_RET_IF(DAWN_UNLIKELY(!tmpl_ident));
+
+    auto* ty_expr = sem_.GetType(tmpl_ident->arguments[0]);
+    TINT_RET_IF(DAWN_UNLIKELY(!ty_expr));
+
+    auto* out = b.create<core::type::SampledTexture>(dim, ty_expr);
+    return validator_.SampledTexture(out, ident->source) ? out : nullptr;
+}
+
+const core::type::MultisampledTexture* Resolver::MultisampledTexture(
+    const ast::Identifier* ident,
+    core::type::TextureDimension dim) {
+    auto* tmpl_ident = TemplatedIdentifier(ident, 1);
+    TINT_RET_IF(DAWN_UNLIKELY(!tmpl_ident));
+
+    auto* ty_expr = sem_.GetType(tmpl_ident->arguments[0]);
+    TINT_RET_IF(DAWN_UNLIKELY(!ty_expr));
+
+    auto* out = b.create<core::type::MultisampledTexture>(dim, ty_expr);
+    return validator_.MultisampledTexture(out, ident->source) ? out : nullptr;
+}
+
+const core::type::StorageTexture* Resolver::StorageTexture(const ast::Identifier* ident,
+                                                           core::type::TextureDimension dim) {
+    auto* tmpl_ident = TemplatedIdentifier(ident, 2);
+    TINT_RET_IF(DAWN_UNLIKELY(!tmpl_ident));
+
+    auto format = sem_.GetTexelFormat(tmpl_ident->arguments[0]);
+    TINT_RET_IF(DAWN_UNLIKELY(format == core::TexelFormat::kUndefined));
+
+    auto access = sem_.GetAccess(tmpl_ident->arguments[1]);
+    TINT_RET_IF(DAWN_UNLIKELY(access == core::Access::kUndefined));
+
+    auto* tex = b.Types().storage_texture(dim, format, access);
+    TINT_RET_IF(!validator_.StorageTexture(tex, ident->source));
+
+    return tex;
+}
+
+const core::type::InputAttachment* Resolver::InputAttachment(const ast::Identifier* ident) {
+    auto* tmpl_ident = TemplatedIdentifier(ident, 1);
+    TINT_RET_IF(DAWN_UNLIKELY(!tmpl_ident));
+
+    auto* ty_expr = sem_.GetType(tmpl_ident->arguments[0]);
+    TINT_RET_IF(DAWN_UNLIKELY(!ty_expr));
+
+    auto* out = b.create<core::type::InputAttachment>(ty_expr);
+    return validator_.InputAttachment(out, ident->source) ? out : nullptr;
+}
+
+const core::type::SubgroupMatrix* Resolver::SubgroupMatrix(const ast::Identifier* ident,
+                                                           core::SubgroupMatrixKind kind) {
+    auto* tmpl_ident = TemplatedIdentifier(ident, 3);
+    TINT_RET_IF(DAWN_UNLIKELY(!tmpl_ident));
+
+    auto* ty_expr = sem_.GetType(tmpl_ident->arguments[0]);
+    TINT_RET_IF(DAWN_UNLIKELY(!ty_expr));
+
+    auto get_dim = [&](const ast::Expression* arg,
+                       const char* dim) -> const core::constant::Value* {
+        const auto* cols_sem = Materialize(sem_.GetVal(arg));
+        TINT_RET_IF(DAWN_UNLIKELY(!cols_sem));
+
+        if (!cols_sem->ConstantValue() || cols_sem->ConstantValue()->ValueAs<AInt>() < 1) {
+            AddError(arg) << "subgroup matrix " << dim
+                          << " count must be a constant positive integer";
+            return nullptr;
+        }
+        return cols_sem->ConstantValue();
+    };
+    auto* cols = get_dim(tmpl_ident->arguments[1], "column");
+    TINT_RET_IF(DAWN_UNLIKELY(!cols));
+
+    auto* rows = get_dim(tmpl_ident->arguments[2], "row");
+    TINT_RET_IF(DAWN_UNLIKELY(!rows));
+
+    auto* out = b.create<core::type::SubgroupMatrix>(kind, ty_expr, cols->ValueAs<uint32_t>(),
+                                                     rows->ValueAs<uint32_t>());
+
+    subgroup_matrix_uses_.Add(out);
+    if (current_function_) {
+        current_function_->SetDirectlyUsedSubgroupMatrix(&ident->source);
+    }
+
+    return validator_.SubgroupMatrix(out, ident->source) ? out : nullptr;
+}
+
+const core::type::Buffer* Resolver::Buffer(const ast::Identifier* ident) {
+    core::type::Buffer* out = nullptr;
+    if (ident->Is<ast::TemplatedIdentifier>()) {
+        auto* tmpl_ident = TemplatedIdentifier(ident, 1);
+        TINT_RET_IF(DAWN_UNLIKELY(!tmpl_ident));
+
+        auto* arg = tmpl_ident->arguments[0];
+        const core::type::ArrayCount* size = ArrayCount(arg, /* array = */ false);
+        TINT_RET_IF(DAWN_UNLIKELY(!size));
+
+        out = b.create<core::type::Buffer>(size);
+    } else {
+        out = b.create<core::type::Buffer>(b.create<core::type::RuntimeArrayCount>());
+    }
+    return validator_.Buffer(out, ident->source) ? out : nullptr;
+}
+
+const core::type::TexelBuffer* Resolver::TexelBuffer(const ast::Identifier* ident) {
+    auto* tmpl_ident = TemplatedIdentifier(ident, 2);
+    TINT_RET_IF(DAWN_UNLIKELY(!tmpl_ident));
+
+    auto format = sem_.GetTexelFormat(tmpl_ident->arguments[0]);
+    TINT_RET_IF(DAWN_UNLIKELY(format == core::TexelFormat::kUndefined));
+
+    auto access = sem_.GetAccess(tmpl_ident->arguments[1]);
+    TINT_RET_IF(DAWN_UNLIKELY(access == core::Access::kUndefined));
+
+    auto* out = b.Types().texel_buffer(format, access);
+    TINT_RET_IF(DAWN_UNLIKELY(!validator_.TexelBuffer(out, ident->source)));
+
+    return out;
+}
+
+const ast::TemplatedIdentifier* Resolver::TemplatedIdentifier(const ast::Identifier* ident,
+                                                              size_t min_args,
+                                                              size_t max_args /* = use min 0 */) {
+    auto* tmpl_ident = ident->As<ast::TemplatedIdentifier>();
+    if (!tmpl_ident) {
+        if (DAWN_UNLIKELY(min_args != 0)) {
+            AddError(Source{ident->source.range.end}) << "expected " << style::Code("<") << " for "
+                                                      << style::Code(ident->symbol.NameView());
+        }
+        return nullptr;
+    }
+    return CheckTemplatedIdentifierArgs(tmpl_ident, min_args, max_args) ? tmpl_ident : nullptr;
+}
+
+bool Resolver::CheckTemplatedIdentifierArgs(const ast::TemplatedIdentifier* ident,
+                                            size_t min_args,
+                                            size_t max_args /* = use min 0 */) {
+    if (max_args == 0) {
+        max_args = min_args;
+    }
+    if (min_args == max_args) {
+        if (DAWN_UNLIKELY(ident->arguments.Length() != min_args)) {
+            AddError(ident) << style::Code(ident->symbol.NameView()) << " requires " << min_args
+                            << " template arguments";
+            return false;
+        }
+    } else {
+        if (DAWN_UNLIKELY(ident->arguments.Length() < min_args)) {
+            AddError(ident) << style::Code(ident->symbol.NameView()) << " requires at least "
+                            << min_args << " template arguments";
+            return false;
+        }
+        if (DAWN_UNLIKELY(ident->arguments.Length() > max_args)) {
+            AddError(ident) << style::Code(ident->symbol.NameView()) << " requires at most "
+                            << max_args << " template arguments";
+            return false;
+        }
+    }
+    return ident != nullptr;
+}
+
+size_t Resolver::NestDepth(const core::type::Type* ty) const {
+    return Switch(
+        ty,  //
+        [](const core::type::Vector*) { return size_t{1}; },
+        [](const core::type::Matrix*) { return size_t{2}; },
+        [&](Default) {
+            if (auto d = nest_depth_.Get(ty)) {
+                return *d;
+            }
+            return size_t{0};
+        });
+}
+
+sem::Call* Resolver::FunctionCall(const ast::CallExpression* expr,
+                                  sem::Function* target,
+                                  VectorRef<const sem::ValueExpression*> args_in) {
+    Vector<const sem::ValueExpression*, 8> args = std::move(args_in);
+    TINT_RET_IF(!MaybeMaterializeArguments(args, target));
+
+    auto stage = not_evaluated_.Contains(expr) ? core::EvaluationStage::kNotEvaluated
+                                               : core::EvaluationStage::kRuntime;
+
+    auto* call = b.create<sem::Call>(expr, target, stage, std::move(args), current_statement_,
+                                     /* constant_value */ nullptr);
+
+    target->AddCallSite(call);
+    TINT_RET_IF(!validator_.FunctionCall(call, current_statement_));
+
+    if (current_function_) {
+        // Note: Requires called functions to be resolved first.
+        // This is currently guaranteed as functions must be declared before
+        // use.
+        current_function_->AddTransitivelyCalledFunction(target);
+        current_function_->AddDirectCall(call);
+        for (auto* transitive_call : target->TransitivelyCalledFunctions()) {
+            current_function_->AddTransitivelyCalledFunction(transitive_call);
+        }
+
+        // We inherit any referenced variables from the callee.
+        for (auto* var : target->TransitivelyReferencedGlobals()) {
+            current_function_->AddTransitivelyReferencedGlobal(var);
+            // Also track transitive unsized buffer requirements.
+            if (auto size = target->TransitivelyReferencedUnsizedBufferSize(var)) {
+                current_function_->AddTransitivelyReferencedUnsizedBufferSize(var, size.value());
+            }
+            if (auto size = target->TransitivelyReferencedSubgroupMatrixSize(var)) {
+                current_function_->AddTransitivelyReferencedUnsizedBufferSize(var, size.value());
+            }
+        }
+
+        TINT_RET_IF(!AliasAnalysis(call));
+        TINT_RET_IF(!CheckBufferViews(call));
+        PropagateSubgroupMatrixAccesses(call);
+    }
+
+    return call;
+}
+
+sem::ValueExpression* Resolver::Literal(const ast::LiteralExpression* literal) {
+    auto* ty = Switch(
+        literal,
+        [&](const ast::IntLiteralExpression* i) -> core::type::Type* {
+            switch (i->suffix) {
+                case ast::IntLiteralExpression::Suffix::kNone:
+                    return b.create<core::type::AbstractInt>();
+                case ast::IntLiteralExpression::Suffix::kI:
+                    return b.create<core::type::I32>();
+                case ast::IntLiteralExpression::Suffix::kU:
+                    return b.create<core::type::U32>();
+            }
+            TINT_UNREACHABLE() << "Unhandled integer literal suffix: " << i->suffix;
+        },
+        [&](const ast::FloatLiteralExpression* f) -> core::type::Type* {
+            switch (f->suffix) {
+                case ast::FloatLiteralExpression::Suffix::kNone:
+                    return b.create<core::type::AbstractFloat>();
+                case ast::FloatLiteralExpression::Suffix::kF:
+                    return b.create<core::type::F32>();
+                case ast::FloatLiteralExpression::Suffix::kH:
+                    return validator_.CheckF16Enabled(literal->source) ? b.create<core::type::F16>()
+                                                                       : nullptr;
+            }
+            TINT_UNREACHABLE() << "Unhandled float literal suffix: " << f->suffix;
+        },
+        [&](const ast::BoolLiteralExpression*) { return b.create<core::type::Bool>(); },  //
+        TINT_ICE_ON_NO_MATCH);
+
+    TINT_RET_IF(DAWN_UNLIKELY(!ty));
+
+    const core::constant::Value* val = nullptr;
+    auto stage = core::EvaluationStage::kConstant;
+    if (not_evaluated_.Contains(literal)) {
+        stage = core::EvaluationStage::kNotEvaluated;
+    }
+    if (stage == core::EvaluationStage::kConstant) {
+        val = Switch(
+            literal,
+            [&](const ast::BoolLiteralExpression* lit) { return b.constants.Get(lit->value); },
+            [&](const ast::IntLiteralExpression* lit) -> const core::constant::Value* {
+                switch (lit->suffix) {
+                    case ast::IntLiteralExpression::Suffix::kNone:
+                        return b.constants.Get(AInt(lit->value));
+                    case ast::IntLiteralExpression::Suffix::kI:
+                        return b.constants.Get(i32(lit->value));
+                    case ast::IntLiteralExpression::Suffix::kU:
+                        return b.constants.Get(u32(lit->value));
+                }
+                return nullptr;
+            },
+            [&](const ast::FloatLiteralExpression* lit) -> const core::constant::Value* {
+                switch (lit->suffix) {
+                    case ast::FloatLiteralExpression::Suffix::kNone:
+                        return b.constants.Get(AFloat(lit->value));
+                    case ast::FloatLiteralExpression::Suffix::kF:
+                        return b.constants.Get(f32(lit->value));
+                    case ast::FloatLiteralExpression::Suffix::kH:
+                        return b.constants.Get(f16(lit->value));
+                }
+                return nullptr;
+            });
+    }
+    return b.create<sem::ValueExpression>(literal, ty, stage, current_statement_, std::move(val));
+}
+
+sem::Expression* Resolver::Identifier(const ast::IdentifierExpression* expr) {
+    auto* ident = expr->identifier;
+    Mark(ident);
+
+    auto resolved = dependencies_.resolved_identifiers.Get(ident);
+    if (!resolved) {
+        ICE(expr->source) << "identifier '" << ident->symbol.NameView() << "' was not resolved";
+    }
+
+    if (auto* ast_node = resolved->Node()) {
+        auto* resolved_node = sem_.Get(ast_node);
+        return Switch(
+            resolved_node,  //
+            [&](sem::Variable* variable) -> sem::VariableUser* {
+                TINT_RET_IF(!DAWN_LIKELY(CheckNotTemplated("variable", ident)));
+
+                auto stage = variable->Stage();
+                const core::constant::Value* value = variable->ConstantValue();
+                if (not_evaluated_.Contains(expr)) {
+                    // This expression is short-circuited by an ancestor expression.
+                    // Do not const-eval.
+                    stage = core::EvaluationStage::kNotEvaluated;
+                    value = nullptr;
+                }
+                auto* user =
+                    b.create<sem::VariableUser>(expr, stage, current_statement_, value, variable);
+
+                if (current_statement_) {
+                    // Check all parent continuing blocks to make sure that this is not a reference
+                    // to a variable that is bypassed by a continue statement in a loop's body
+                    // block.
+                    auto* continuing_block =
+                        current_statement_->FindFirstParent<sem::LoopContinuingBlockStatement>();
+                    while (continuing_block) {
+                        auto* loop_block =
+                            continuing_block->FindFirstParent<sem::LoopBlockStatement>();
+                        if (loop_block->FirstContinue()) {
+                            // If our identifier is in loop_block->decls, make sure its index is
+                            // less than first_continue
+                            auto symbol = ident->symbol;
+                            if (auto decl = loop_block->Decls().Get(symbol)) {
+                                if (decl->order >= loop_block->NumDeclsAtFirstContinue()) {
+                                    AddError(loop_block->FirstContinue())
+                                        << "continue statement bypasses declaration of '"
+                                        << symbol.NameView() << "'";
+                                    AddNote(decl->variable->Declaration())
+                                        << "identifier '" << symbol.NameView() << "' declared here";
+                                    AddNote(expr) << "identifier '" << symbol.NameView()
+                                                  << "' referenced in continuing block here";
+                                    return nullptr;
+                                }
+                            }
+                        }
+                        continuing_block =
+                            continuing_block->Parent()
+                                ->FindFirstParent<sem::LoopContinuingBlockStatement>();
+                    }
+                }
+
+                if (auto* global = variable->As<sem::GlobalVariable>()) {
+                    for (auto& fn : on_transitively_reference_global_) {
+                        fn(global);
+                    }
+                    if (!current_function_ && variable->Declaration()->Is<ast::Var>()) {
+                        // Use of a module-scope 'var' outside of a function.
+                        AddError(expr)
+                            << style::Keyword("var ") << style::Variable(ident->symbol.NameView())
+                            << " cannot be referenced at module-scope";
+                        sem_.NoteDeclarationSource(variable->Declaration());
+                        return nullptr;
+                    }
+                    if (current_function_ &&
+                        subgroup_matrix_uses_.Contains(variable->Type()->UnwrapRef())) {
+                        current_function_->SetDirectlyUsedSubgroupMatrix(&expr->source);
+                    }
+                }
+
+                variable->AddUser(user);
+                return user;
+            },
+            [&](const core::type::Type* ty) -> sem::TypeExpression* {
+                // User declared types cannot be templated.
+                TINT_RET_IF(!DAWN_LIKELY(CheckNotTemplated("type", ident)));
+
+                // Notify callers of all transitively referenced globals.
+                if (auto* arr = ty->As<sem::Array>()) {
+                    for (auto& fn : on_transitively_reference_global_) {
+                        for (auto* ref : arr->TransitivelyReferencedOverrides()) {
+                            fn(ref);
+                        }
+                    }
+                }
+
+                if (current_function_ && subgroup_matrix_uses_.Contains(ty)) {
+                    current_function_->SetDirectlyUsedSubgroupMatrix(&expr->source);
+                }
+
+                return b.create<sem::TypeExpression>(expr, current_statement_, ty);
+            },
+            [&](const sem::Function* fn) -> sem::FunctionExpression* {
+                TINT_RET_IF(!DAWN_LIKELY(CheckNotTemplated("function", ident)));
+                return b.create<sem::FunctionExpression>(expr, current_statement_, fn);
+            });
+    }
+
+    if (auto builtin_ty = resolved->BuiltinType(); builtin_ty != core::BuiltinType::kUndefined) {
+        auto* ty = BuiltinType(builtin_ty, ident);
+        TINT_RET_IF(DAWN_UNLIKELY(!ty));
+        return b.create<sem::TypeExpression>(expr, current_statement_, ty);
+    }
+
+    if (auto fn = resolved->BuiltinFn(); fn != wgsl::BuiltinFn::kNone) {
+        return b.create<sem::BuiltinEnumExpression<wgsl::BuiltinFn>>(expr, current_statement_, fn);
+    }
+
+    if (auto access = resolved->Access(); access != core::Access::kUndefined) {
+        return CheckNotTemplated("access", ident)
+                   ? b.create<sem::BuiltinEnumExpression<core::Access>>(expr, current_statement_,
+                                                                        access)
+                   : nullptr;
+    }
+
+    if (auto addr = resolved->AddressSpace(); addr != core::AddressSpace::kUndefined) {
+        return CheckNotTemplated("address space", ident)
+                   ? b.create<sem::BuiltinEnumExpression<core::AddressSpace>>(
+                         expr, current_statement_, addr)
+                   : nullptr;
+    }
+
+    if (auto fmt = resolved->TexelFormat(); fmt != core::TexelFormat::kUndefined) {
+        return CheckNotTemplated("texel format", ident)
+                   ? b.create<sem::BuiltinEnumExpression<core::TexelFormat>>(
+                         expr, current_statement_, fmt)
+                   : nullptr;
+    }
+
+    if (auto major = resolved->Majorness(); major != core::Majorness::kUndefined) {
+        return CheckNotTemplated("majorness", ident)
+                   ? b.create<sem::BuiltinEnumExpression<core::Majorness>>(expr, current_statement_,
+                                                                           major)
+                   : nullptr;
+    }
+
+    if (resolved->Unresolved()) {
+        return b.create<UnresolvedIdentifier>(expr, current_statement_);
+    }
+
+    TINT_UNREACHABLE() << "unhandled resolved identifier: " << resolved->String();
+}
+
+sem::ValueExpression* Resolver::MemberAccessor(const ast::MemberAccessorExpression* expr) {
+    auto* object = sem_.GetVal(expr->object);
+    TINT_RET_IF(DAWN_UNLIKELY(!object));
+
+    auto* object_ty = object->Type();
+
+    auto* const memory_view = object_ty->As<core::type::MemoryView>();
+    const core::type::Type* storage_ty = object_ty;
+    if (memory_view) {
+        storage_ty = memory_view->StoreType();
+    }
+
+    auto* root_ident = object->RootIdentifier();
+
+    const core::type::Type* ty = nullptr;
+
+    Mark(expr->member);
+
+    return Switch(
+        storage_ty,  //
+        [&](const core::type::Struct* str) -> sem::ValueExpression* {
+            auto symbol = expr->member->symbol;
+
+            const core::type::StructMember* member = nullptr;
+            for (auto* m : str->Members()) {
+                if (m->Name() == symbol) {
+                    member = m;
+                    break;
+                }
+            }
+
+            if (member == nullptr) {
+                AddError(expr) << "struct member " << symbol.NameView() << " not found";
+                return nullptr;
+            }
+
+            ty = member->Type();
+
+            // If we're extracting from a memory view, we return a reference.
+            if (memory_view) {
+                ty = b.create<core::type::Reference>(memory_view->AddressSpace(), ty,
+                                                     memory_view->Access());
+            }
+
+            const core::constant::Value* val = nullptr;
+            if (auto* obj_val = object->ConstantValue()) {
+                val = obj_val->Index(static_cast<size_t>(member->Index()));
+            }
+            return b.create<sem::StructMemberAccess>(expr, ty, current_statement_, val, object,
+                                                     member, root_ident);
+        },
+
+        [&](const core::type::Vector* vec) -> sem::ValueExpression* {
+            std::string_view s = expr->member->symbol.NameView();
+            auto size = s.size();
+            Vector<uint32_t, 4> swizzle;
+            swizzle.Reserve(s.size());
+
+            for (auto c : s) {
+                switch (c) {
+                    case 'x':
+                    case 'r':
+                        swizzle.Push(0u);
+                        break;
+                    case 'y':
+                    case 'g':
+                        swizzle.Push(1u);
+                        break;
+                    case 'z':
+                    case 'b':
+                        swizzle.Push(2u);
+                        break;
+                    case 'w':
+                    case 'a':
+                        swizzle.Push(3u);
+                        break;
+                    default:
+                        AddError(expr->member->source.Begin() +
+                                 static_cast<uint32_t>(swizzle.Length()))
+                            << "invalid vector swizzle character";
+                        return nullptr;
+                }
+
+                if (swizzle.Back() >= vec->Width()) {
+                    AddError(expr->member) << "invalid vector swizzle member";
+                    return nullptr;
+                }
+            }
+
+            if (size < 1 || size > 4) {
+                AddError(expr->member) << "invalid vector swizzle size";
+                return nullptr;
+            }
+
+            // All characters are valid, check if they're being mixed
+            auto is_rgba = [](char c) { return c == 'r' || c == 'g' || c == 'b' || c == 'a'; };
+            auto is_xyzw = [](char c) { return c == 'x' || c == 'y' || c == 'z' || c == 'w'; };
+            if (!std::all_of(s.begin(), s.end(), is_rgba) &&
+                !std::all_of(s.begin(), s.end(), is_xyzw)) {
+                AddError(expr->member)
+                    << "invalid mixing of vector swizzle characters rgba with xyzw";
+                return nullptr;
+            }
+
+            if (size == 1) {
+                // A single element swizzle is just the type of the vector.
+                ty = vec->Type();
+
+                // If we're extracting from a memory view that will need to be loaded, we return a
+                // reference.
+                if (memory_view && !memory_view->Is<core::type::SwizzleView>()) {
+                    ty = b.create<core::type::Reference>(memory_view->AddressSpace(), ty,
+                                                         memory_view->Access());
+                } else if (memory_view && memory_view->Is<core::type::SwizzleView>() &&
+                           allowed_features_.features.contains(
+                               wgsl::LanguageFeature::kSwizzleAssignment)) {
+                    // If the swizzle assignment language feature is enabled, a single element
+                    // swizzle into a swizzle view must also be a swizzle view.
+                    ty = b.create<core::type::SwizzleView>(memory_view->AddressSpace(), ty,
+                                                           memory_view->Access(), vec->Width(),
+                                                           static_cast<uint32_t>(size));
+                }
+            } else {
+                if (memory_view) {
+                    auto* vec_ty =
+                        b.create<core::type::Vector>(vec->Type(), static_cast<uint32_t>(size));
+                    ty = b.create<core::type::SwizzleView>(memory_view->AddressSpace(), vec_ty,
+                                                           memory_view->Access(), vec->Width(),
+                                                           static_cast<uint32_t>(size));
+                    // The object being swizzled will be loaded during IR generation, so we register
+                    // the load ahead of time here for the purpose of alias analysis.
+                    RegisterLoad(object);
+                } else {
+                    // The vector will have a number of components equal to the length of
+                    // the swizzle.
+                    ty = b.create<core::type::Vector>(vec->Type(), static_cast<uint32_t>(size));
+                }
+            }
+            const core::constant::Value* val = nullptr;
+            if (auto* obj_val = object->ConstantValue()) {
+                auto res = const_eval_.Swizzle(ty, obj_val, swizzle);
+                TINT_RET_IF(res != Success);
+                val = res.Get();
+            }
+            return b.create<sem::Swizzle>(expr, ty, current_statement_, val, object,
+                                          std::move(swizzle), root_ident);
+        },
+
+        [&](Default) {
+            AddError(expr->object)
+                << "cannot index into expression of type '" << sem_.TypeNameOf(storage_ty) << "'";
+            return nullptr;
+        });
+}
+
+sem::ValueExpression* Resolver::Binary(const ast::BinaryExpression* expr) {
+    const auto* lhs = sem_.GetVal(expr->lhs);
+    const auto* rhs = sem_.GetVal(expr->rhs);
+    TINT_RET_IF(!lhs || !rhs);
+
+    // Load arguments if they are references
+    lhs = Load(lhs);
+    TINT_RET_IF(DAWN_UNLIKELY(!lhs));
+
+    rhs = Load(rhs);
+    TINT_RET_IF(DAWN_UNLIKELY(!rhs));
+
+    auto stage = core::EarliestStage(lhs->Stage(), rhs->Stage());
+    auto overload = intrinsic_table_.Lookup(expr->op, lhs->Type(), rhs->Type(), stage, false);
+    if (overload != Success) {
+        AddError(expr) << overload.Failure();
+        return nullptr;
+    }
+
+    auto* res_ty = overload->return_type;
+
+    // Parameter types
+    auto* lhs_ty = overload->parameters[0].type;
+    auto* rhs_ty = overload->parameters[1].type;
+    lhs = Materialize(lhs, lhs_ty);
+    TINT_RET_IF(DAWN_UNLIKELY(!lhs));
+
+    rhs = Materialize(rhs, rhs_ty);
+    TINT_RET_IF(DAWN_UNLIKELY(!rhs));
+    TINT_RET_IF(!validator_.BinaryExpression(expr, expr->op, lhs, rhs));
+
+    const core::constant::Value* value = nullptr;
+    if (not_evaluated_.Contains(expr)) {
+        // This expression is short-circuited by an ancestor expression.
+        // Do not const-eval.
+        stage = core::EvaluationStage::kNotEvaluated;
+    } else if (lhs->Stage() == core::EvaluationStage::kConstant &&
+               rhs->Stage() == core::EvaluationStage::kNotEvaluated) {
+        // Short-circuiting binary expression. Use the LHS value and stage.
+        value = lhs->ConstantValue();
+        stage = core::EvaluationStage::kConstant;
+    } else if (stage == core::EvaluationStage::kConstant) {
+        // Both LHS and RHS have expressions that are constant evaluation stage.
+        auto const_eval_fn = overload->const_eval_fn;
+        if (const_eval_fn) {  // Do we have a @const operator?
+            // Yes. Perform any required abstract argument values implicit conversions to the
+            // overload parameter types, and const-eval.
+            Vector const_args{lhs->ConstantValue(), rhs->ConstantValue()};
+            // Implicit conversion (e.g. AInt -> AFloat)
+            TINT_RET_IF(!Convert(const_args[0], lhs_ty, lhs->Declaration()->source));
+            TINT_RET_IF(!Convert(const_args[1], rhs_ty, rhs->Declaration()->source));
+
+            auto r = (const_eval_.*const_eval_fn)(res_ty, const_args, expr->source);
+            TINT_RET_IF(r != Success);
+            value = r.Get();
+        } else {
+            // The arguments have constant values, but the operator cannot be const-evaluated.
+            // This can only be evaluated at runtime.
+            stage = core::EvaluationStage::kRuntime;
+        }
+    }
+
+    auto* sem = b.create<sem::ValueExpression>(expr, res_ty, stage, current_statement_, value);
+    return sem;
+}
+
+sem::ValueExpression* Resolver::UnaryOp(const ast::UnaryOpExpression* unary) {
+    const auto* expr = sem_.GetVal(unary->expr);
+    TINT_RET_IF(DAWN_UNLIKELY(!expr));
+
+    auto* expr_ty = expr->Type();
+
+    const core::type::Type* ty = nullptr;
+    const sem::Variable* root_ident = nullptr;
+    const core::constant::Value* value = nullptr;
+    auto stage = core::EvaluationStage::kRuntime;
+
+    switch (unary->op) {
+        case core::UnaryOp::kAddressOf:
+            if (auto* ref = expr_ty->As<core::type::Reference>()) {
+                if (ref->StoreType()->UnwrapRef()->IsHandle()) {
+                    AddError(unary->expr) << "cannot take the address of " << sem_.Describe(expr)
+                                          << " in handle address space";
+                    return nullptr;
+                }
+
+                auto* array = unary->expr->As<ast::IndexAccessorExpression>();
+                auto* member = unary->expr->As<ast::MemberAccessorExpression>();
+                if ((array &&
+                     sem_.TypeOf(array->object)->UnwrapPtrOrRef()->Is<core::type::Vector>()) ||
+                    (member &&
+                     sem_.TypeOf(member->object)->UnwrapPtrOrRef()->Is<core::type::Vector>())) {
+                    AddError(unary->expr) << "cannot take the address of a vector component";
+                    return nullptr;
+                }
+
+                ty = b.create<core::type::Pointer>(ref->AddressSpace(), ref->StoreType(),
+                                                   ref->Access());
+
+                root_ident = expr->RootIdentifier();
+            } else {
+                AddError(unary->expr) << "cannot take the address of " << sem_.Describe(expr);
+                return nullptr;
+            }
+            break;
+
+        case core::UnaryOp::kIndirection:
+            if (auto* ptr = expr_ty->As<core::type::Pointer>()) {
+                ty = b.create<core::type::Reference>(ptr->AddressSpace(), ptr->StoreType(),
+                                                     ptr->Access());
+                root_ident = expr->RootIdentifier();
+            } else {
+                AddError(unary->expr) << "cannot dereference expression of type "
+                                      << style::Type(sem_.TypeNameOf(expr_ty));
+                return nullptr;
+            }
+            break;
+
+        default: {
+            expr = Load(expr);
+            TINT_RET_IF(DAWN_UNLIKELY(!expr));
+
+            stage = expr->Stage();
+            auto overload = intrinsic_table_.Lookup(unary->op, expr->Type(), stage);
+            if (overload != Success) {
+                AddError(unary) << overload.Failure();
+                return nullptr;
+            }
+            ty = overload->return_type;
+            auto* param_ty = overload->parameters[0].type;
+            expr = Materialize(expr, param_ty);
+            TINT_RET_IF(DAWN_UNLIKELY(!expr));
+
+            if (stage == core::EvaluationStage::kConstant) {
+                if (auto const_eval_fn = overload->const_eval_fn) {
+                    auto r = (const_eval_.*const_eval_fn)(ty, Vector{expr->ConstantValue()},
+                                                          expr->Declaration()->source);
+                    TINT_RET_IF(r != Success);
+                    value = r.Get();
+                } else {
+                    stage = core::EvaluationStage::kRuntime;
+                }
+            }
+            break;
+        }
+    }
+
+    auto* sem =
+        b.create<sem::ValueExpression>(unary, ty, stage, current_statement_, value, root_ident);
+    return sem;
+}
+
+tint::Result<uint32_t> Resolver::LocationAttribute(const ast::LocationAttribute* attr) {
+    ExprEvalStageConstraint constraint{core::EvaluationStage::kConstant, "@location value"};
+    TINT_SCOPED_ASSIGNMENT(expr_eval_stage_constraint_, constraint);
+
+    auto* materialized = Materialize(ValueExpression(attr->expr));
+    if (!materialized) {
+        return Failure{};
+    }
+
+    if (!materialized->Type()->IsAnyOf<core::type::I32, core::type::U32>()) {
+        AddError(attr) << style::Attribute("@location") << " must be an " << style::Type("i32")
+                       << " or " << style::Type("u32") << " value";
+        return Failure{};
+    }
+
+    auto const_value = materialized->ConstantValue();
+    auto value = const_value->ValueAs<AInt>();
+    if (value < 0) {
+        AddError(attr) << style::Attribute("@location") << " value must be non-negative";
+        return Failure{};
+    }
+
+    return static_cast<uint32_t>(value);
+}
+
+tint::Result<uint32_t> Resolver::ColorAttribute(const ast::ColorAttribute* attr) {
+    ExprEvalStageConstraint constraint{core::EvaluationStage::kConstant, "@color value"};
+    TINT_SCOPED_ASSIGNMENT(expr_eval_stage_constraint_, constraint);
+
+    auto* materialized = Materialize(ValueExpression(attr->expr));
+    if (!materialized) {
+        return Failure{};
+    }
+
+    if (!materialized->Type()->IsAnyOf<core::type::I32, core::type::U32>()) {
+        AddError(attr) << style::Attribute("@color") << " must be an " << style::Type("i32")
+                       << " or " << style::Type("u32") << " value";
+        return Failure{};
+    }
+
+    auto const_value = materialized->ConstantValue();
+    auto value = const_value->ValueAs<AInt>();
+    if (value < 0) {
+        AddError(attr) << style::Attribute("@color") << " value must be non-negative";
+        return Failure{};
+    }
+
+    return static_cast<uint32_t>(value);
+}
+tint::Result<uint32_t> Resolver::BlendSrcAttribute(const ast::BlendSrcAttribute* attr) {
+    ExprEvalStageConstraint constraint{core::EvaluationStage::kConstant, "@blend_src value"};
+    TINT_SCOPED_ASSIGNMENT(expr_eval_stage_constraint_, constraint);
+
+    auto* materialized = Materialize(ValueExpression(attr->expr));
+    if (!materialized) {
+        return Failure{};
+    }
+
+    if (!materialized->Type()->IsAnyOf<core::type::I32, core::type::U32>()) {
+        AddError(attr) << style::Attribute("@blend_src") << " value must be " << style::Type("i32")
+                       << " or " << style::Type("u32");
+        return Failure{};
+    }
+
+    auto const_value = materialized->ConstantValue();
+    auto value = const_value->ValueAs<AInt>();
+    if (value != 0 && value != 1) {
+        AddError(attr) << style::Attribute("@blend_src") << " value must be zero or one";
+        return Failure{};
+    }
+
+    return static_cast<uint32_t>(value);
+}
+
+tint::Result<uint32_t> Resolver::BindingAttribute(const ast::BindingAttribute* attr) {
+    ExprEvalStageConstraint constraint{core::EvaluationStage::kConstant, "@binding"};
+    TINT_SCOPED_ASSIGNMENT(expr_eval_stage_constraint_, constraint);
+
+    auto* materialized = Materialize(ValueExpression(attr->expr));
+    if (!materialized) {
+        return Failure{};
+    }
+    if (!materialized->Type()->IsAnyOf<core::type::I32, core::type::U32>()) {
+        AddError(attr) << style::Attribute("@binding") << " must be an " << style::Type("i32")
+                       << " or " << style::Type("u32") << " value";
+        return Failure{};
+    }
+
+    auto const_value = materialized->ConstantValue();
+    auto value = const_value->ValueAs<AInt>();
+    if (value < 0) {
+        AddError(attr) << style::Attribute("@binding") << " value must be non-negative";
+        return Failure{};
+    }
+    return static_cast<uint32_t>(value);
+}
+
+tint::Result<uint32_t> Resolver::GroupAttribute(const ast::GroupAttribute* attr) {
+    ExprEvalStageConstraint constraint{core::EvaluationStage::kConstant, "@group"};
+    TINT_SCOPED_ASSIGNMENT(expr_eval_stage_constraint_, constraint);
+
+    auto* materialized = Materialize(ValueExpression(attr->expr));
+    if (!materialized) {
+        return Failure{};
+    }
+    if (!materialized->Type()->IsAnyOf<core::type::I32, core::type::U32>()) {
+        AddError(attr) << style::Attribute("@group") << " must be an " << style::Type("i32")
+                       << " or " << style::Type("u32") << " value";
+        return Failure{};
+    }
+
+    auto const_value = materialized->ConstantValue();
+    auto value = const_value->ValueAs<AInt>();
+    if (value < 0) {
+        AddError(attr) << style::Attribute("@group") << " value must be non-negative";
+        return Failure{};
+    }
+    return static_cast<uint32_t>(value);
+}
+
+tint::Result<uint32_t> Resolver::InputAttachmentIndexAttribute(
+    const ast::InputAttachmentIndexAttribute* attr) {
+    ExprEvalStageConstraint constraint{core::EvaluationStage::kConstant, "@input_attachment_index"};
+    TINT_SCOPED_ASSIGNMENT(expr_eval_stage_constraint_, constraint);
+
+    auto* materialized = Materialize(ValueExpression(attr->expr));
+    if (!materialized) {
+        return Failure{};
+    }
+    if (!materialized->Type()->IsAnyOf<core::type::I32, core::type::U32>()) {
+        AddError(attr) << style::Attribute("@input_attachment_index") << " must be an "
+                       << style::Type("i32") << " or " << style::Type("u32") << " value";
+        return Failure{};
+    }
+
+    auto const_value = materialized->ConstantValue();
+    auto value = const_value->ValueAs<AInt>();
+    if (value < 0) {
+        AddError(attr) << style::Attribute("@input_attachment_index")
+                       << " value must be non-negative";
+        return Failure{};
+    }
+    return static_cast<uint32_t>(value);
+}
+
+tint::Result<sem::WorkgroupSize> Resolver::WorkgroupAttribute(const ast::WorkgroupAttribute* attr) {
+    // Set work-group size defaults.
+    sem::WorkgroupSize ws;
+    for (size_t i = 0; i < 3; i++) {
+        ws[i] = 1;
+    }
+
+    auto values = attr->Values();
+    Vector<const sem::ValueExpression*, 3> args;
+    Vector<const core::type::Type*, 3> arg_tys;
+
+    auto err_bad_expr = [&](const ast::Expression* value) {
+        AddError(value) << style::Attribute("@workgroup_size")
+                        << " argument must be a constant or override-expression of type "
+                        << style::Type("abstract-integer") << ", " << style::Type("i32") << " or "
+                        << style::Type("u32");
+    };
+
+    for (size_t i = 0; i < 3; i++) {
+        // Each argument to this attribute can either be a literal, an identifier for a
+        // module-scope constants, a const-expression, or nullptr if not specified.
+        auto* value = values[i];
+        if (!value) {
+            break;
+        }
+        const auto* expr = ValueExpression(value);
+        if (!expr) {
+            return Failure{};
+        }
+        auto* ty = expr->Type();
+        if (!ty->IsAnyOf<core::type::I32, core::type::U32, core::type::AbstractInt>()) {
+            err_bad_expr(value);
+            return Failure{};
+        }
+
+        if (expr->Stage() != core::EvaluationStage::kConstant &&
+            expr->Stage() != core::EvaluationStage::kOverride) {
+            err_bad_expr(value);
+            return Failure{};
+        }
+
+        args.Push(expr);
+        arg_tys.Push(ty);
+    }
+
+    auto* common_ty = core::type::Type::Common(arg_tys);
+    if (!common_ty) {
+        AddError(attr) << style::Attribute("@workgroup_size")
+                       << " arguments must be of the same type, either " << style::Type("i32")
+                       << " or " << style::Type("u32");
+        return Failure{};
+    }
+
+    // If all arguments are abstract-integers, then materialize to i32.
+    if (common_ty->Is<core::type::AbstractInt>()) {
+        common_ty = b.create<core::type::I32>();
+    }
+
+    for (size_t i = 0; i < args.Length(); i++) {
+        auto* materialized = Materialize(args[i], common_ty);
+        if (!materialized) {
+            return Failure{};
+        }
+        if (auto* value = materialized->ConstantValue()) {
+            if (value->ValueAs<AInt>() < 1) {
+                AddError(values[i])
+                    << style::Attribute("@workgroup_size") << " argument must be at least 1";
+                return Failure{};
+            }
+            ws[i] = value->ValueAs<u32>();
+        } else {
+            ws[i] = std::nullopt;
+        }
+    }
+
+    uint64_t total_size = static_cast<uint64_t>(ws[0].value_or(1));
+    for (size_t i = 1; i < 3; i++) {
+        total_size *= static_cast<uint64_t>(ws[i].value_or(1));
+        if (total_size > 0xffffffff) {
+            AddError(values[i]) << "total workgroup grid size cannot exceed 0xffffffff";
+            return Failure{};
+        }
+    }
+
+    return ws;
+}
+
+tint::Result<uint32_t> Resolver::SubgroupSizeAttribute(const ast::SubgroupSizeAttribute* attr) {
+    auto value = attr->subgroup_size;
+
+    auto err_bad_expr = [&]() {
+        AddError(attr) << style::Attribute("@subgroup_size")
+                       << " argument must be a constant or override-expression of type "
+                       << style::Type("abstract-integer") << ", " << style::Type("i32") << " or "
+                       << style::Type("u32");
+    };
+
+    const auto* expr = ValueExpression(value);
+    if (!expr) {
+        return Failure{};
+    }
+    auto* type = expr->Type();
+    if (!type->IsAnyOf<core::type::I32, core::type::U32, core::type::AbstractInt>()) {
+        err_bad_expr();
+        return Failure{};
+    }
+
+    if (expr->Stage() != core::EvaluationStage::kConstant &&
+        expr->Stage() != core::EvaluationStage::kOverride) {
+        err_bad_expr();
+        return Failure{};
+    }
+
+    // If all arguments are abstract-integers, then materialize to i32.
+    if (type->Is<core::type::AbstractInt>()) {
+        type = b.create<core::type::I32>();
+    }
+
+    auto* materialized = Materialize(expr, type);
+    if (!materialized) {
+        return Failure{};
+    }
+
+    uint32_t subgroup_size = 0u;
+    if (auto* constant_value = materialized->ConstantValue()) {
+        if (constant_value->ValueAs<AInt>() < 1) {
+            AddError(attr) << style::Attribute("@subgroup_size") << " argument must be at least 1";
+            return Failure{};
+        }
+        subgroup_size = constant_value->ValueAs<u32>();
+        if (!IsPowerOfTwo(subgroup_size)) {
+            AddError(attr) << style::Attribute("@subgroup_size")
+                           << " argument must be a power of 2";
+            return Failure{};
+        }
+    }
+
+    return subgroup_size;
+}
+
+bool Resolver::DiagnosticAttribute(const ast::DiagnosticAttribute* attr) {
+    return DiagnosticControl(attr->control);
+}
+
+bool Resolver::StageAttribute(const ast::StageAttribute*) {
+    return true;
+}
+
+bool Resolver::MustUseAttribute(const ast::MustUseAttribute*) {
+    return true;
+}
+
+bool Resolver::InvariantAttribute(const ast::InvariantAttribute*) {
+    return true;
+}
+
+bool Resolver::DiagnosticControl(const ast::DiagnosticControl& control) {
+    Mark(control.rule_name);
+    Mark(control.rule_name->name);
+    auto name = control.rule_name->name->symbol.NameView();
+
+    if (control.rule_name->category) {
+        Mark(control.rule_name->category);
+        if (control.rule_name->category->symbol.NameView() == "chromium") {
+            auto rule = wgsl::ParseChromiumDiagnosticRule(name);
+            if (rule != wgsl::ChromiumDiagnosticRule::kUndefined) {
+                validator_.DiagnosticFilters().Set(rule, control.severity);
+            } else {
+                auto& warning = AddWarning(control.rule_name)
+                                << "unrecognized diagnostic rule " << style::Code("chromium.", name)
+                                << "\n";
+                tint::SuggestAlternativeOptions opts;
+                opts.prefix = "chromium.";
+                tint::SuggestAlternatives(name, wgsl::kChromiumDiagnosticRuleStrings,
+                                          warning.message, opts);
+            }
+        }
+        return true;
+    }
+
+    auto rule = wgsl::ParseCoreDiagnosticRule(name);
+    if (rule != wgsl::CoreDiagnosticRule::kUndefined) {
+        validator_.DiagnosticFilters().Set(rule, control.severity);
+    } else {
+        auto& warning = AddWarning(control.rule_name)
+                        << "unrecognized diagnostic rule " << style::Code(name) << "\n";
+        tint::SuggestAlternatives(name, wgsl::kCoreDiagnosticRuleStrings, warning.message);
+    }
+    return true;
+}
+
+bool Resolver::Enable(const ast::Enable* enable) {
+    for (auto* ext : enable->extensions) {
+        Mark(ext);
+        enabled_extensions_.Add(ext->name);
+        if (!allowed_features_.extensions.contains(ext->name)) {
+            AddError(ext) << "extension " << style::Code(ext->name)
+                          << " is not allowed in the current environment";
+            return false;
+        }
+    }
+    return true;
+}
+
+bool Resolver::Requires(const ast::Requires* req) {
+    for (auto feature : req->features) {
+        if (!allowed_features_.features.contains(feature)) {
+            AddError(req) << "language feature " << style::Code(wgsl::ToString(feature))
+                          << " is not allowed in the current environment";
+            return false;
+        }
+    }
+    return true;
+}
+
+const core::type::Type* Resolver::TypeDecl(const ast::TypeDecl* named_type) {
+    Mark(named_type->name);
+
+    const core::type::Type* result = nullptr;
+    if (auto* alias = named_type->As<ast::Alias>()) {
+        result = Alias(alias);
+    } else if (auto* str = named_type->As<ast::Struct>()) {
+        result = Structure(str);
+    } else {
+        TINT_UNREACHABLE() << "Unhandled TypeDecl";
+    }
+    TINT_RET_IF(DAWN_UNLIKELY(!result));
+
+    b.Sem().Add(named_type, result);
+    return result;
+}
+
+const core::type::ArrayCount* Resolver::ArrayCount(const ast::Expression* count_expr, bool array) {
+    const std::string count_kind = array ? "array count" : "buffer size";
+    // Evaluate the constant array count expression.
+    const auto* count_sem = Materialize(sem_.GetVal(count_expr));
+    TINT_RET_IF(DAWN_UNLIKELY(!count_sem));
+
+    auto* ty = count_sem->Type();
+    if (!ty->IsIntegerScalar()) {
+        AddError(count_expr) << count_kind
+                             << " must evaluate to an integer expression, but is type "
+                             << style::Type(ty->FriendlyName());
+        return nullptr;
+    }
+
+    switch (count_sem->Stage()) {
+        case core::EvaluationStage::kNotEvaluated:
+            ICE(count_expr->source) << "array element count was not evaluated";
+
+        case core::EvaluationStage::kOverride: {
+            // array count is an override expression.
+            // Is the count a named 'override'?
+            if (auto* user = count_sem->UnwrapMaterialize()->As<sem::VariableUser>()) {
+                if (auto* global = user->Variable()->As<sem::GlobalVariable>()) {
+                    return b.create<sem::NamedOverrideArrayCount>(global);
+                }
+            }
+            return b.create<sem::UnnamedOverrideArrayCount>(count_sem);
+        }
+
+        case core::EvaluationStage::kConstant: {
+            auto* count_val = count_sem->ConstantValue();
+            int64_t count = count_val->ValueAs<AInt>();
+            if (count < 1) {
+                AddError(count_expr) << count_kind << " (" << count << ") must be greater than 0";
+                return nullptr;
+            }
+
+            return b.create<core::type::ConstantArrayCount>(static_cast<uint32_t>(count));
+        }
+
+        default: {
+            AddError(count_expr) << count_kind
+                                 << " must evaluate to a constant integer expression "
+                                    "or override variable";
+            return nullptr;
+        }
+    }
+}
+
+sem::Array* Resolver::Array(const Source& array_source,
+                            const Source& el_source,
+                            const Source& count_source,
+                            const core::type::Type* el_ty,
+                            const core::type::ArrayCount* el_count) {
+    uint32_t el_size = el_ty->Size();
+    uint64_t implicit_stride = el_size ? tint::RoundUp<uint64_t>(el_ty->Align(), el_size) : 0;
+    uint64_t size = 0;
+
+    if (auto const_count = el_count->As<core::type::ConstantArrayCount>()) {
+        size = const_count->value * implicit_stride;
+        if (size > std::numeric_limits<uint32_t>::max()) {
+            AddError(count_source) << "array byte size (0x" << std::hex << size
+                                   << ") must not exceed 0xffffffff bytes";
+            return nullptr;
+        }
+    } else if (el_count->Is<core::type::RuntimeArrayCount>()) {
+        size = implicit_stride;
+    }
+    auto* out = b.create<sem::Array>(el_ty, el_count, static_cast<uint32_t>(size));
+
+    // Maximum nesting depth of composite types
+    //  https://gpuweb.github.io/gpuweb/wgsl/#limits
+    const size_t nest_depth = 1 + NestDepth(el_ty);
+    if (nest_depth > internal_limits::kMaxNestDepthOfCompositeType) {
+        AddError(array_source) << "array has nesting depth of " << nest_depth << ", maximum is "
+                               << internal_limits::kMaxNestDepthOfCompositeType;
+        return nullptr;
+    }
+    nest_depth_.Add(out, nest_depth);
+
+    TINT_RET_IF(!validator_.Array(out, el_source));
+
+    return out;
+}
+
+const core::type::Type* Resolver::Alias(const ast::Alias* alias) {
+    auto* ty = Type(alias->type);
+    TINT_RET_IF(DAWN_UNLIKELY(!ty));
+    TINT_RET_IF(DAWN_UNLIKELY(!validator_.Alias(alias)));
+    return ty;
+}
+
+sem::Struct* Resolver::Structure(const ast::Struct* str) {
+    auto struct_name = [&] {  //
+        return str->name->symbol.NameView();
+    };
+
+    // Maximum number of members in a structure type
+    // https://gpuweb.github.io/gpuweb/wgsl/#limits
+    const size_t kMaxNumStructMembers = 16383;
+    if (str->members.Length() > kMaxNumStructMembers) {
+        AddError(str) << style::Keyword("struct ") << style::Type(struct_name()) << " has "
+                      << str->members.Length() << " members, maximum is " << kMaxNumStructMembers;
+        return nullptr;
+    }
+
+    TINT_RET_IF(!validator_.NoDuplicateAttributes(str->attributes));
+
+    if (!str->attributes.IsEmpty()) {
+        ErrorInvalidAttribute(str->attributes[0],
+                              StyledText{} << style::Keyword("struct") << " declarations");
+        return nullptr;
+    }
+
+    Vector<const sem::StructMember*, 8> sem_members;
+    sem_members.Reserve(str->members.Length());
+
+    // Calculate the effective size and alignment of each field, and the overall size of the
+    // structure. For size, use the size attribute if provided, otherwise use the default size
+    // for the type. For alignment, use the alignment attribute if provided, otherwise use the
+    // default alignment for the member type. Diagnostic errors are raised if a basic rule is
+    // violated. Validation of storage-class rules requires analyzing the actual variable usage
+    // of the structure, and so is performed as part of the variable validation.
+    uint64_t struct_size = 0;
+    uint64_t struct_align = 1;
+    Hashmap<Symbol, const ast::StructMember*, 8> member_map;
+
+    size_t members_nest_depth = 0;
+    for (auto* member : str->members) {
+        Mark(member);
+        Mark(member->name);
+        if (auto added = member_map.Add(member->name->symbol, member); !added) {
+            AddError(member) << "redefinition of " << style::Code(member->name->symbol.NameView());
+            AddNote(added.value) << "previous definition is here";
+            return nullptr;
+        }
+
+        // Resolve member type
+        auto type = Type(member->type);
+        TINT_RET_IF(DAWN_UNLIKELY(!type));
+
+        members_nest_depth = std::max(members_nest_depth, NestDepth(type));
+
+        // validator_.Validate member type
+        if (!validator_.IsPlain(type)) {
+            AddError(member) << sem_.TypeNameOf(type)
+                             << " cannot be used as the type of a structure member";
+            return nullptr;
+        }
+
+        uint64_t offset = struct_size;
+        uint64_t align = type->Align();
+        uint64_t size = type->Size();
+
+        TINT_RET_IF(!validator_.NoDuplicateAttributes(member->attributes));
+
+        bool has_align_attr = false;
+        bool has_size_attr = false;
+        core::IOAttributes attributes;
+        for (auto* attribute : member->attributes) {
+            Mark(attribute);
+            bool ok = Switch(
+                attribute,  //
+                [&](const ast::StructMemberAlignAttribute* attr) -> bool {
+                    ExprEvalStageConstraint constraint{core::EvaluationStage::kConstant, "@align"};
+                    TINT_SCOPED_ASSIGNMENT(expr_eval_stage_constraint_, constraint);
+
+                    auto* materialized = Materialize(ValueExpression(attr->expr));
+                    TINT_RET_IF(!materialized);
+
+                    if (!materialized->Type()->IsAnyOf<core::type::I32, core::type::U32>()) {
+                        AddError(attr) << style::Attribute("@align") << " value must be an "
+                                       << style::Type("i32") << " or " << style::Type("u32");
+                        return false;
+                    }
+
+                    auto const_value = materialized->ConstantValue();
+                    if (!const_value) {
+                        AddError(attr)
+                            << style::Attribute("@align") << " value must be constant expression";
+                        return false;
+                    }
+                    auto value = const_value->ValueAs<AInt>();
+
+                    if (value <= 0 || !tint::IsPowerOfTwo(value)) {
+                        AddError(attr) << style::Attribute("@align")
+                                       << " value must be a positive, power-of-two integer";
+                        return false;
+                    }
+                    align = u32(value);
+                    has_align_attr = true;
+                    return true;
+                },
+                [&](const ast::StructMemberSizeAttribute* attr) -> bool {
+                    ExprEvalStageConstraint constraint{core::EvaluationStage::kConstant, "@size"};
+                    TINT_SCOPED_ASSIGNMENT(expr_eval_stage_constraint_, constraint);
+
+                    auto* materialized = Materialize(ValueExpression(attr->expr));
+                    TINT_RET_IF(!materialized);
+
+                    if (!materialized->Type()->IsAnyOf<core::type::U32, core::type::I32>()) {
+                        AddError(attr) << style::Attribute("@size") << " value must be an "
+                                       << style::Type("i32") << " or " << style::Type("u32");
+                        return false;
+                    }
+
+                    auto const_value = materialized->ConstantValue();
+                    if (!const_value) {
+                        AddError(attr->expr)
+                            << style::Attribute("@size") << " value must be constant expression";
+                        return false;
+                    }
+                    {
+                        auto value = const_value->ValueAs<AInt>();
+                        if (value <= 0) {
+                            AddError(attr)
+                                << style::Attribute("@size") << " value must be a positive integer";
+                            return false;
+                        }
+                    }
+                    auto value = const_value->ValueAs<uint64_t>();
+                    if (value < size) {
+                        AddError(attr)
+                            << style::Attribute("@size")
+                            << " must be at least as big as the type's size (" << size << ")";
+                        return false;
+                    }
+                    size = u32(value);
+                    has_size_attr = true;
+                    return true;
+                },
+                [&](const ast::LocationAttribute* attr) -> bool {
+                    auto value = LocationAttribute(attr);
+                    TINT_RET_IF(value != Success);
+
+                    attributes.location = value.Get();
+                    return true;
+                },
+                [&](const ast::BlendSrcAttribute* attr) -> bool {
+                    auto value = BlendSrcAttribute(attr);
+                    TINT_RET_IF(value != Success);
+
+                    attributes.blend_src = value.Get();
+                    return true;
+                },
+                [&](const ast::ColorAttribute* attr) -> bool {
+                    auto value = ColorAttribute(attr);
+                    TINT_RET_IF(value != Success);
+
+                    attributes.color = value.Get();
+                    return true;
+                },
+                [&](const ast::BuiltinAttribute* attr) {
+                    attributes.builtin = attr->builtin;
+                    attributes.depth_mode = attr->depth_mode;
+                    return true;
+                },
+                [&](const ast::InterpolateAttribute* attr) {
+                    attributes.interpolation = attr->interpolation;
+                    return true;
+                },
+                [&](const ast::InvariantAttribute* attr) -> bool {
+                    TINT_RET_IF(!InvariantAttribute(attr));
+
+                    attributes.invariant = true;
+                    return true;
+                },
+                [&](Default) {
+                    ErrorInvalidAttribute(attribute,
+                                          StyledText{} << style::Keyword("struct") << " members");
+                    return false;
+                });
+            TINT_RET_IF(DAWN_UNLIKELY(!ok));
+        }
+
+        offset = tint::RoundUp(align, offset);
+        if (offset > std::numeric_limits<uint32_t>::max()) {
+            AddError(member) << "struct member offset (0x" << std::hex << offset
+                             << ") must not exceed 0x" << std::hex
+                             << std::numeric_limits<uint32_t>::max() << " bytes";
+            return nullptr;
+        }
+
+        auto* sem_member = b.create<sem::StructMember>(
+            member, member->name->symbol, type, static_cast<uint32_t>(sem_members.Length()),
+            static_cast<uint32_t>(offset), static_cast<uint32_t>(align),
+            static_cast<uint32_t>(size), attributes);
+        b.Sem().Add(member, sem_member);
+        sem_members.Push(sem_member);
+
+        struct_size = offset + size;
+        struct_align = std::max(struct_align, align);
+    }
+
+    struct_size = tint::RoundUp(struct_align, struct_size);
+
+    if (struct_size > std::numeric_limits<uint32_t>::max()) {
+        AddError(str) << "struct size (0x" << std::hex << struct_size
+                      << ") must not exceed 0xffffffff bytes";
+        return nullptr;
+    }
+    if (DAWN_UNLIKELY(struct_align > std::numeric_limits<uint32_t>::max())) {
+        ICE(str->source) << "calculated struct stride exceeds uint32";
+    }
+
+    auto* out = b.create<sem::Struct>(str, str->name->symbol, std::move(sem_members),
+                                      static_cast<uint32_t>(struct_size));
+
+    for (size_t i = 0; i < sem_members.Length(); i++) {
+        auto* mem_type = sem_members[i]->Type();
+        if (mem_type->Is<core::type::Atomic>()) {
+            atomic_composite_info_.Add(out, &sem_members[i]->Declaration()->source);
+        } else {
+            if (auto found = atomic_composite_info_.Get(mem_type)) {
+                atomic_composite_info_.Add(out, *found);
+            }
+        }
+        if (subgroup_matrix_uses_.Contains(mem_type)) {
+            subgroup_matrix_uses_.Add(out);
+        }
+
+        const_cast<sem::StructMember*>(sem_members[i])->SetStruct(out);
+    }
+
+    auto stage = current_function_ ? current_function_->Declaration()->PipelineStage()
+                                   : ast::PipelineStage::kNone;
+    TINT_RET_IF(!validator_.Structure(out, stage));
+
+    // Maximum nesting depth of composite types
+    //  https://gpuweb.github.io/gpuweb/wgsl/#limits
+    const size_t nest_depth = 1 + members_nest_depth;
+    if (nest_depth > internal_limits::kMaxNestDepthOfCompositeType) {
+        AddError(str) << style::Keyword("struct ") << style::Type(struct_name())
+                      << " has nesting depth of " << nest_depth << ", maximum is "
+                      << internal_limits::kMaxNestDepthOfCompositeType;
+        return nullptr;
+    }
+    nest_depth_.Add(out, nest_depth);
+
+    return out;
+}
+
+sem::Statement* Resolver::ReturnStatement(const ast::ReturnStatement* stmt) {
+    auto* sem = b.create<sem::Statement>(stmt, current_compound_statement_, current_function_);
+    return StatementScope(stmt, sem, [&]() -> bool {
+        auto& behaviors = current_statement_->Behaviors();
+        behaviors = sem::Behavior::kReturn;
+
+        const core::type::Type* value_ty = nullptr;
+        if (auto* value = stmt->value) {
+            const auto* expr = Load(ValueExpression(value));
+            TINT_RET_IF(!expr);
+
+            if (auto* ret_ty = current_function_->ReturnType(); !ret_ty->Is<core::type::Void>()) {
+                expr = Materialize(expr, ret_ty);
+                TINT_RET_IF(!expr);
+            }
+            value_ty = expr->Type();
+        } else {
+            value_ty = b.create<core::type::Void>();
+        }
+
+        // Validate after processing the return value expression so that its type
+        // is available for validation.
+        return validator_.Return(stmt, current_function_->ReturnType(), value_ty,
+                                 current_statement_);
+    });
+}
+
+sem::SwitchStatement* Resolver::SwitchStatement(const ast::SwitchStatement* stmt) {
+    auto* sem =
+        b.create<sem::SwitchStatement>(stmt, current_compound_statement_, current_function_);
+    return StatementScope(stmt, sem, [&]() -> bool {
+        auto& behaviors = sem->Behaviors();
+
+        const auto* cond = Load(ValueExpression(stmt->condition));
+        TINT_RET_IF(!cond);
+
+        // Each case clause will contribute behaviors. Switches must
+        // have at least a default clause, so we'll always end up with
+        // a non-empty behaviour set.
+        behaviors = behaviors - sem::Behavior::kNext;
+
+        auto* cond_ty = cond->Type();
+
+        // Determine the common type across all selectors and the switch expression
+        // This must materialize to an integer scalar (non-abstract).
+        Vector<const core::type::Type*, 8> types;
+        types.Push(cond_ty);
+        for (auto* case_stmt : stmt->body) {
+            for (auto* sel : case_stmt->selectors) {
+                if (sel->IsDefault()) {
+                    continue;
+                }
+                auto* sem_expr = ValueExpression(sel->expr);
+                TINT_RET_IF(!sem_expr);
+
+                types.Push(sem_expr->Type()->UnwrapRef());
+            }
+        }
+        auto* common_ty = core::type::Type::Common(types);
+        if (!common_ty || !common_ty->IsIntegerScalar()) {
+            // No common type found or the common type was abstract.
+            // Pick i32 and let validation deal with any mismatches.
+            common_ty = b.create<core::type::I32>();
+        }
+        cond = Materialize(cond, common_ty);
+        TINT_RET_IF(!cond);
+
+        // Handle switch body attributes.
+        for (auto* attribute : stmt->body_attributes) {
+            Mark(attribute);
+            bool ok = Switch(
+                attribute,
+                [&](const ast::DiagnosticAttribute* attr) { return DiagnosticAttribute(attr); },
+                [&](Default) {
+                    ErrorInvalidAttribute(attribute,
+                                          StyledText{} << style::Keyword("switch") << " body");
+                    return false;
+                });
+            TINT_RET_IF(!ok);
+        }
+        TINT_RET_IF(!validator_.NoDuplicateAttributes(stmt->body_attributes));
+
+        Vector<sem::CaseStatement*, 4> cases;
+        cases.Reserve(stmt->body.Length());
+        for (auto* case_stmt : stmt->body) {
+            Mark(case_stmt);
+            auto* c = CaseStatement(case_stmt, common_ty);
+            TINT_RET_IF(!c);
+
+            cases.Push(c);
+            behaviors.Add(c->Behaviors());
+            sem->Cases().emplace_back(c);
+
+            ApplyDiagnosticSeverities(c);
+        }
+
+        if (behaviors.Contains(sem::Behavior::kBreak)) {
+            behaviors.Add(sem::Behavior::kNext);
+        }
+        behaviors.Remove(sem::Behavior::kBreak);
+
+        return validator_.SwitchStatement(stmt);
+    });
+}
+
+sem::Statement* Resolver::VariableDeclStatement(const ast::VariableDeclStatement* stmt) {
+    auto* sem = b.create<sem::Statement>(stmt, current_compound_statement_, current_function_);
+    return StatementScope(stmt, sem, [&]() -> bool {
+        Mark(stmt->variable);
+
+        auto* variable = Variable(stmt->variable, /* is_global */ false);
+        TINT_RET_IF(!variable);
+
+        current_compound_statement_->AddDecl(variable->As<sem::LocalVariable>());
+
+        return validator_.LocalVariable(variable);
+    });
+}
+
+sem::Statement* Resolver::AssignmentStatement(const ast::AssignmentStatement* stmt) {
+    auto* sem = b.create<sem::Statement>(stmt, current_compound_statement_, current_function_);
+    return StatementScope(stmt, sem, [&]() -> bool {
+        auto* lhs = ValueExpression(stmt->lhs);
+        TINT_RET_IF(!lhs);
+
+        const bool is_phony_assignment = stmt->lhs->Is<ast::PhonyExpression>();
+
+        const auto* rhs = ValueExpression(stmt->rhs);
+
+        if (!is_phony_assignment) {
+            const core::type::Type* lhs_type = nullptr;
+            if (lhs->Type()->Is<core::type::SwizzleView>() &&
+                allowed_features_.features.contains(wgsl::LanguageFeature::kSwizzleAssignment)) {
+                lhs_type = lhs->Type()->As<core::type::SwizzleView>()->StoreType();
+            } else {
+                lhs_type = lhs->Type()->UnwrapRef();
+            }
+
+            rhs = Load(Materialize(rhs, lhs_type));
+        } else {
+            rhs = Load(rhs);
+        }
+
+        TINT_RET_IF(!rhs);
+
+        if (!is_phony_assignment) {
+            RegisterStore(lhs);
+        }
+
+        return validator_.Assignment(stmt, sem_.TypeOf(stmt->rhs));
+    });
+}
+
+sem::Statement* Resolver::BreakStatement(const ast::BreakStatement* stmt) {
+    auto* sem = b.create<sem::Statement>(stmt, current_compound_statement_, current_function_);
+    return StatementScope(stmt, sem, [&] {
+        sem->Behaviors() = sem::Behavior::kBreak;
+
+        return validator_.BreakStatement(sem, current_statement_);
+    });
+}
+
+sem::Statement* Resolver::BreakIfStatement(const ast::BreakIfStatement* stmt) {
+    auto* sem =
+        b.create<sem::BreakIfStatement>(stmt, current_compound_statement_, current_function_);
+    return StatementScope(stmt, sem, [&]() -> bool {
+        auto* cond = Load(ValueExpression(stmt->condition));
+        TINT_RET_IF(!cond);
+
+        sem->SetCondition(cond);
+        sem->Behaviors().Add(sem::Behavior::kBreak);
+
+        return validator_.BreakIfStatement(sem, current_statement_);
+    });
+}
+
+sem::Statement* Resolver::CallStatement(const ast::CallStatement* stmt) {
+    auto* sem = b.create<sem::Statement>(stmt, current_compound_statement_, current_function_);
+    return StatementScope(stmt, sem, [&] {
+        if (ValueExpression(stmt->expr)) {
+            return true;
+        }
+        return false;
+    });
+}
+
+sem::Statement* Resolver::CompoundAssignmentStatement(
+    const ast::CompoundAssignmentStatement* stmt) {
+    auto* sem = b.create<sem::Statement>(stmt, current_compound_statement_, current_function_);
+    return StatementScope(stmt, sem, [&]() -> bool {
+        auto* lhs = ValueExpression(stmt->lhs);
+        TINT_RET_IF(!lhs);
+
+        const auto* rhs = Load(ValueExpression(stmt->rhs));
+        TINT_RET_IF(!rhs);
+
+        RegisterStore(lhs);
+
+        auto stage = core::EarliestStage(lhs->Stage(), rhs->Stage());
+
+        auto* lhs_type = lhs->Type();
+        if (auto* lhs_swizzle_view = lhs_type->As<core::type::SwizzleView>();
+            lhs_swizzle_view &&
+            allowed_features_.features.contains(wgsl::LanguageFeature::kSwizzleAssignment)) {
+            lhs_type = lhs_swizzle_view->StoreType();
+        } else {
+            lhs_type = lhs_type->UnwrapRef();
+        }
+
+        auto overload = intrinsic_table_.Lookup(stmt->op, lhs_type, rhs->Type(), stage, true);
+        if (overload != Success) {
+            AddError(stmt) << overload.Failure();
+            return false;
+        }
+
+        rhs = Materialize(rhs, overload->parameters[1].type);
+        TINT_RET_IF(!rhs);
+
+        return validator_.Assignment(stmt, overload->return_type);
+    });
+}
+
+sem::Statement* Resolver::ContinueStatement(const ast::ContinueStatement* stmt) {
+    auto* sem = b.create<sem::Statement>(stmt, current_compound_statement_, current_function_);
+    return StatementScope(stmt, sem, [&] {
+        sem->Behaviors() = sem::Behavior::kContinue;
+
+        // Set if we've hit the first continue statement in our parent loop
+        if (auto* block = sem->FindFirstParent<sem::LoopBlockStatement>()) {
+            if (!block->FirstContinue()) {
+                const_cast<sem::LoopBlockStatement*>(block)->SetFirstContinue(
+                    stmt, block->Decls().Count());
+            }
+        }
+
+        return validator_.ContinueStatement(sem, current_statement_);
+    });
+}
+
+sem::Statement* Resolver::DiscardStatement(const ast::DiscardStatement* stmt) {
+    auto* sem = b.create<sem::Statement>(stmt, current_compound_statement_, current_function_);
+    return StatementScope(stmt, sem, [&] {
+        current_function_->SetDiscardStatement(sem);
+        return true;
+    });
+}
+
+sem::Statement* Resolver::IncrementDecrementStatement(
+    const ast::IncrementDecrementStatement* stmt) {
+    auto* sem = b.create<sem::Statement>(stmt, current_compound_statement_, current_function_);
+    return StatementScope(stmt, sem, [&]() -> bool {
+        auto* lhs = ValueExpression(stmt->lhs);
+        TINT_RET_IF(!lhs);
+
+        RegisterStore(lhs);
+
+        return validator_.IncrementDecrementStatement(stmt);
+    });
+}
+
+bool Resolver::ApplyAddressSpaceUsageToType(core::AddressSpace address_space,
+                                            const core::type::Type* ty,
+                                            const Source& usage) {
+    ty = const_cast<core::type::Type*>(ty->UnwrapRef());
+
+    if (auto* str = const_cast<sem::Struct*>(ty->As<sem::Struct>())) {
+        if (str->AddressSpaceUsage().Contains(address_space)) {
+            return true;  // Already applied
+        }
+
+        str->AddUsage(address_space);
+
+        for (auto* member : str->Members()) {
+            auto decl = member->Declaration();
+            if (decl && !ApplyAddressSpaceUsageToType(address_space,
+                                                      const_cast<core::type::Type*>(member->Type()),
+                                                      decl->type->source)) {
+                AddNote(member->Declaration())
+                    << "while analyzing structure member " << sem_.TypeNameOf(str) << "."
+                    << member->Name().Name();
+                return false;
+            }
+        }
+        return true;
+    }
+
+    if (auto* arr = ty->As<sem::Array>()) {
+        // Runtime-sized arrays can appear in storage always and workgroup and uniform if
+        // buffer_view is enabled.
+        if (arr->Count()->Is<core::type::RuntimeArrayCount>()) {
+            if (allowed_features_.features.contains(wgsl::LanguageFeature::kBufferView)) {
+                if (address_space != core::AddressSpace::kStorage &&
+                    address_space != core::AddressSpace::kUniform &&
+                    address_space != core::AddressSpace::kWorkgroup) {
+                    if (address_space == core::AddressSpace::kUndefined) {
+                        AddError(usage)
+                            << "runtime-sized arrays must be used with an address space";
+                    } else {
+                        AddError(usage) << "runtime-sized arrays cannot be used in the <"
+                                        << address_space << "> address space";
+                    }
+                    return false;
+                }
+            } else if (address_space != core::AddressSpace::kStorage) {
+                AddError(usage)
+                    << "runtime-sized arrays can only be used in the <storage> address space";
+                return false;
+            }
+        }
+        if (address_space != core::AddressSpace::kStorage) {
+            auto count = arr->ConstantCount();
+            if (count.has_value() && count.value() >= internal_limits::kMaxArrayElementCount) {
+                AddError(usage) << "array count (" << count.value() << ") must be less than "
+                                << internal_limits::kMaxArrayElementCount;
+                return false;
+            }
+        }
+        if (address_space != core::AddressSpace::kWorkgroup) {
+            if (arr->Count()
+                    ->IsAnyOf<sem::NamedOverrideArrayCount, sem::UnnamedOverrideArrayCount>()) {
+                AddError(usage)
+                    << "override-sized arrays can only be used in the <workgroup> address space";
+                return false;
+            }
+        }
+
+        if (address_space == core::AddressSpace::kImmediate) {
+            AddError(usage) << "arrays cannot be used in the <immediate> address space";
+            return false;
+        }
+
+        return ApplyAddressSpaceUsageToType(address_space,
+                                            const_cast<core::type::Type*>(arr->ElemType()), usage);
+    }
+
+    // Subgroup matrix types can only be declared in the `function` address space, or in value
+    // declarations (the `undefined` address space).
+    if (ty->Is<core::type::SubgroupMatrix>() && address_space != core::AddressSpace::kUndefined &&
+        address_space != core::AddressSpace::kFunction) {
+        AddError(usage) << "subgroup matrix types cannot be declared in the "
+                        << style::Enum(address_space) << " address space";
+        return false;
+    }
+
+    if (auto* buf = ty->As<core::type::Buffer>()) {
+        if (address_space != core::AddressSpace::kStorage &&
+            address_space != core::AddressSpace::kUniform &&
+            address_space != core::AddressSpace::kWorkgroup) {
+            AddError(usage) << "buffer types cannot be declared in the "
+                            << style::Enum(address_space) << " address space";
+            return false;
+        }
+        auto count = buf->Count();
+        if (address_space != core::AddressSpace::kWorkgroup) {
+            if (count->IsAnyOf<sem::NamedOverrideArrayCount, sem::UnnamedOverrideArrayCount>()) {
+                AddError(usage) << "override-sized buffers can only be used in the "
+                                << style::Enum(core::AddressSpace::kWorkgroup) << " address space";
+                return false;
+            }
+        }
+    }
+
+    if (address_space != core::AddressSpace::kStorage) {
+        if (auto as_atomic = ty->As<core::type::Atomic>()) {
+            auto atomic_ty = as_atomic->Type();
+            if (auto* vec = atomic_ty->As<core::type::Vector>()) {
+                if (vec->Width() == 2 && vec->Type()->Is<core::type::U32>()) {
+                    AddError(usage)
+                        << "atomic variables of type " << style::Type(sem_.TypeNameOf(atomic_ty))
+                        << " can only be in " << style::Enum("storage") << " address space";
+                    return false;
+                }
+            }
+        }
+    }
+
+    if (core::IsHostShareable(address_space) && !ty->IsHostShareable()) {
+        AddError(usage) << "type " << style::Type(sem_.TypeNameOf(ty))
+                        << " cannot be used in address space " << style::Enum(address_space)
+                        << " as it is non-host-shareable";
+        return false;
+    }
+
+    return true;
+}
+
+template <typename SEM, typename F>
+SEM* Resolver::StatementScope(const ast::Statement* ast, SEM* sem, F&& callback) {
+    b.Sem().Add(ast, sem);
+
+    auto* as_compound =
+        As<sem::CompoundStatement, tint::CastFlags::kDontErrorOnImpossibleCast>(sem);
+
+    // Helper to handle attributes that are supported on certain types of statement.
+    auto handle_attributes = [&](auto* stmt, sem::Statement* sem_stmt, const char* use) -> bool {
+        for (auto* attribute : stmt->attributes) {
+            Mark(attribute);
+            bool ok = Switch(
+                attribute,  //
+                [&](const ast::DiagnosticAttribute* attr) { return DiagnosticAttribute(attr); },
+                [&](Default) {
+                    ErrorInvalidAttribute(attribute, StyledText{} << use);
+                    return false;
+                });
+            TINT_RET_IF(!ok);
+        }
+        TINT_RET_IF(!validator_.NoDuplicateAttributes(stmt->attributes));
+
+        ApplyDiagnosticSeverities(sem_stmt);
+        return true;
+    };
+
+    // Handle attributes, if necessary.
+    // Some statements can take diagnostic filtering attributes, so push a new diagnostic filter
+    // scope to capture them.
+    validator_.DiagnosticFilters().Push();
+    TINT_DEFER(validator_.DiagnosticFilters().Pop());
+    if (!Switch(
+            ast,  //
+            [&](const ast::BlockStatement* block) {
+                return handle_attributes(block, sem, "block statements");
+            },
+            [&](const ast::ForLoopStatement* f) {
+                return handle_attributes(f, sem, "for statements");
+            },
+            [&](const ast::IfStatement* i) { return handle_attributes(i, sem, "if statements"); },
+            [&](const ast::LoopStatement* l) {
+                return handle_attributes(l, sem, "loop statements");
+            },
+            [&](const ast::SwitchStatement* s) {
+                return handle_attributes(s, sem, "switch statements");
+            },
+            [&](const ast::WhileStatement* w) {
+                return handle_attributes(w, sem, "while statements");
+            },
+            [&](Default) { return true; })) {
+        return nullptr;
+    }
+
+    TINT_SCOPED_ASSIGNMENT(current_statement_, sem);
+    TINT_SCOPED_ASSIGNMENT(current_compound_statement_,
+                           as_compound ? as_compound : current_compound_statement_);
+    TINT_SCOPED_ASSIGNMENT(current_scoping_depth_, current_scoping_depth_ + 1);
+
+    if (current_scoping_depth_ > kMaxStatementDepth) {
+        AddError(ast) << "statement nesting depth / chaining length exceeds limit of "
+                      << kMaxStatementDepth;
+        return nullptr;
+    }
+
+    TINT_RET_IF(!callback());
+
+    return sem;
+}
+
+bool Resolver::Mark(const ast::Node* node) {
+    TINT_ASSERT(node != nullptr) << "Resolver::Mark() called with nullptr";
+
+    auto marked_bit_ref = marked_[node->node_id.value];
+    if (DAWN_LIKELY(!marked_bit_ref)) {
+        marked_bit_ref = true;
+        return true;
+    }
+    ICE(node->source) << "AST node '" << node->TypeInfo().name
+                      << "' was encountered twice in the same AST of a Program\n"
+                      << "Pointer: " << node;
+}
+
+template <typename NODE>
+void Resolver::ApplyDiagnosticSeverities(NODE* node) {
+    for (auto itr : validator_.DiagnosticFilters().Top()) {
+        node->SetDiagnosticSeverity(itr.key, itr.value);
+    }
+}
+
+bool Resolver::CheckNotTemplated(const char* use, const ast::Identifier* ident) {
+    if (DAWN_UNLIKELY(ident->Is<ast::TemplatedIdentifier>())) {
+        AddError(ident) << use << " " << style::Code(ident->symbol.NameView())
+                        << " does not take template arguments";
+        if (auto resolved = dependencies_.resolved_identifiers.Get(ident)) {
+            if (auto* ast_node = resolved->Node()) {
+                sem_.NoteDeclarationSource(ast_node);
+            }
+        }
+        return false;
+    }
+    return true;
+}
+
+void Resolver::ErrorInvalidAttribute(const ast::Attribute* attr, StyledText use) {
+    AddError(attr) << style::Attribute("@", attr->Name()) << " is not valid for " << use;
+}
+
+diag::Diagnostic& Resolver::AddError(const ast::Node* node) const {
+    return AddError(node->source);
+}
+diag::Diagnostic& Resolver::AddError(const Source& source) const {
+    return diagnostics_.AddError(source);
+}
+
+diag::Diagnostic& Resolver::AddWarning(const ast::Node* node) const {
+    return diagnostics_.AddWarning(node->source);
+}
+
+diag::Diagnostic& Resolver::AddNote(const ast::Node* node) const {
+    return diagnostics_.AddNote(node->source);
+}
+
+}  // namespace tint::resolver

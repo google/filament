@@ -1,0 +1,118 @@
+/*
+ * Copyright (C) 2019 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TNT_BACKEND_TEST_H
+#define TNT_BACKEND_TEST_H
+
+#include "ImageExpectations.h"
+#include "Lifetimes.h"
+#include "PlatformRunner.h"
+
+#include <private/backend/CommandBufferQueue.h>
+#include <private/backend/DriverApi.h>
+
+#include <backend/Platform.h>
+
+#include <gtest/gtest.h>
+
+#include <filesystem>
+
+namespace test {
+
+class BackendTest : public ::testing::Test {
+public:
+    static void init(Backend backend, OperatingSystem operatingSystem, bool isMobilePlatform,
+            int argc, char** argv);
+
+    static Backend sBackend;
+    static OperatingSystem sOperatingSystem;
+    static bool sIsMobilePlatform;
+    static int sArgc;
+    static char** sArgv;
+
+    // True when the runner gave us no native view, which is what --headless_only does. Derived
+    // from the view rather than stored, so that it cannot disagree with what createSwapChain()
+    // below actually produces.
+    static bool isHeadless();
+
+    // Takes the name of the image that wasn't correct, without the .png suffix
+    static void markImageAsFailure(std::string failedImageName);
+
+    static std::filesystem::path binaryDirectory();
+
+protected:
+    BackendTest();
+    ~BackendTest() override;
+    template<typename HandleType>
+    filament::backend::Handle<HandleType> addCleanup(filament::backend::Handle<HandleType> handle) {
+        return mCleanup->add(handle);
+    }
+    void initializeDriver();
+    void executeCommands();
+    void flushAndWait();
+
+    filament::backend::Handle<filament::backend::HwSwapChain> createSwapChain(uint64_t flags = 0);
+
+    static filament::backend::PipelineState getColorWritePipelineState();
+
+    // Gets the full back buffer's viewport
+    filament::backend::Viewport getFullViewport() const;
+    // If color is unset this defaults to using opaque cyan. The double4 value is converted by the
+    // backend into the matching native clear entry-point based on the attachment's format.
+    static filament::backend::RenderPassParams getClearColorDepthRenderPass(
+            filament::math::double4 color = filament::math::double4(0, 1, 1, 1),
+            double depth = 1.0);
+    static filament::backend::RenderPassParams getNoClearRenderPass();
+
+    filament::backend::DriverApi& getDriverApi() { return *commandStream; }
+    filament::backend::Driver& getDriver() { return *driver; }
+    filament::backend::Platform* getPlatform() { return mPlatform; }
+
+    ImageExpectations& getExpectations() { return *mImageExpectations; }
+
+    std::size_t screenWidth() const;
+    std::size_t screenHeight() const;
+
+    static bool matchesEnvironment(Backend backend);
+    static bool matchesEnvironment(OperatingSystem operatingSystem);
+
+    std::unique_ptr<Cleanup> mCleanup;
+
+private:
+    // Adds all the images that failed an ImageExpectation to the XML metadata for the current tests
+    // case. Add --gtest_output=xml as a command line argument to generate a test_detail.xml file in
+    // the directory where the tests are run.
+    static void recordFailedImages();
+
+    static std::vector<std::string> sFailedImages;
+
+    filament::backend::Driver* driver = nullptr;
+    filament::backend::CommandBufferQueue commandBufferQueue;
+    std::unique_ptr<filament::backend::DriverApi> commandStream;
+    filament::backend::Platform* mPlatform = nullptr;
+
+    filament::backend::Handle<filament::backend::HwBufferObject> uniform;
+
+    // This isn't truly optional, it just needs to delay construction until after the driver has
+    // been initialized
+    std::optional<ImageExpectations> mImageExpectations;
+
+    std::array<size_t, 2> mScreenSize;
+};
+
+} // namespace test
+
+#endif

@@ -1,0 +1,18 @@
+#version 310 es
+layout(local_size_x = 1) in;
+
+layout(std430, binding = 0) writeonly buffer SSBO
+{
+    vec4 out_data[];
+};
+
+void main()
+{
+    vec4 v;
+    v.x = 10.0;
+    v.y = 30.0;
+    v.z = 70.0;
+    v.w = 90.0;
+    out_data[gl_GlobalInvocationID.x] = v;
+    out_data[gl_GlobalInvocationID.x].y = 20.0;
+}

@@ -1,0 +1,153 @@
+XXX - Not complete yet!!!
+
+Name
+
+    SGIX_list_priority
+
+Name Strings
+
+    GL_SGIX_list_priority
+
+Version
+
+    $Date: 1996/05/30 08:00:32 $ $Revision: 1.3 $
+
+Number
+
+    80
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension provides a mechanism for specifying the relative
+    importance of display lists.  This information can be used by
+    an OpenGL implementation to guide the placement of display
+    list data in a storage hierarchy.
+
+Issues
+
+    *	Should we also add some hints to guide compilation strategies
+    	For example a hint could give us the equivalent of the iris gl
+	compactify command.  Generally hints could control compilation
+	speed versus memory consumption, degree of optimization, etc.
+
+	yes, in another spec
+    
+    *   Should we go ahead and add a ListParameter command rather than a
+	PrioritorizeList command just in case some other list attribute
+	needs to be added.  Do we go ahead and finish the job with
+	f,i,iv functions?
+
+	yes
+    
+    *	Is 1.0 a reasonable default?
+
+    *	Should it be an SGI rather than SGIX extension?
+    
+New Procedures and Functions
+
+    ListParameterfSGIX(uint list,
+		        enum pname,
+		        float params;
+
+    ListParameterfvSGIX(uint list,
+		        enum pname,
+		        float *params);
+
+    ListParameteriSGIX(uint list,
+		        enum pname,
+		        int param);
+
+    ListParameterivSGIX(uint list,
+		        enum pname,
+		        int *params);
+
+    GetListParameterfvSGIX(uint list,
+		           enum pname,
+		           float *params);
+
+    GetListParameterivSGIX(uint list,
+		           enum pname,
+		           int *params);
+
+New Tokens
+
+    Accepted by the <pname> parameters of ListParameterfSGIX,
+    ListParameterfvSGIX, ListParameteriSGIX, ListParameterivSGIX,
+    GetListParameterfvSGIX, and GetListParameterivSGIX:
+
+	LIST_PRIORITY_SGIX
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    Applications guide the OpenGL implementation in determining which
+    display lists should be favoured for fast execution by specifying
+    a priority for each display list.  Calling ListParameterfSGIX,
+    ListParameterfvSGIX, ListParameteriSGIX, or ListParameterivSGIX
+    with <list> set to the display list, <pname> set to LIST_PRIORITY_SGIX,
+    sets the priority to the value in <params>.
+    The priority value is clamped to the range [0.0, 1.0] before it is
+    assigned.  Zero indicates the lowest priority, and hence the least
+    likelihood of optimal execution.  One indicates the highest priority,
+    and hence the greatest likelihood of optimal execution.
+    (Attempts attempts to prioritize nonlists are silently ignored. Attempts
+    to prioritize list 0 generates an INVALID_VALUE error.)
+
+    The priority of a list can be queried by calling GetListParameterfvSGIX or
+    GetListParameterivSGIX with <list> set to the list and <pname> set to
+    LIST_PRIORITY_SGIX. If <list> is not defined than the value returned
+    is undefined.
+
+    ListParameterfSGIX, ListParameterfvSGIX, ListParameteriSGIX, and
+    ListParameterivSGIX are not included in display lists.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    TBD
+
+Errors
+
+    INVALID_VALUE is generated if ListParameterfSGIX, ListParameterfvSGIX,
+    ListParameteriSGIX, ListParameterivSGIX, GetListParameterfvSGIX, or
+    GetListParameterivSGIX parameter <list> is 0.
+
+    INVALID_ENUM is generated if ListParameterfSGIX, ListParameterfvSGIX,
+    ListParameteriSGIX, ListParameterivSGIX, GetListParameterfvSGIX, or
+    GetListParameterivSGIX parameter <pname> is not LIST_PRIORITY_SGIX.
+
+    INVALID_OPERATION is generated if ListParameterfSGIX, ListParameterfvSGIX,
+    ListParameteriSGIX, ListParameterivSGIX, GetListParameterfvSGIX, or
+    GetListParameterivSGIX is called between execution of Begin and the
+    corresponding execution of End.
+
+New State
+
+								          Initial
+    Get Value				Get Command	        Type	  Value	    Attrib
+    ---------				-----------	        ----	  -------   ------
+    LIST_PRIORITY_SGIX                  GetListParameterfvSGIX  n x Z+    1           -
+
+
+New Implementation Dependent State
+
+    None

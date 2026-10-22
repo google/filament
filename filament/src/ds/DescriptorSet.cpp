@@ -1,0 +1,304 @@
+/*
+ * Copyright (C) 2024 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "DescriptorSet.h"
+
+#include "DescriptorSetLayout.h"
+
+#include "details/Engine.h"
+
+#include <private/filament/EngineEnums.h>
+
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/Logger.h>
+#include <utils/ostream.h>
+#include <utils/Panic.h>
+#include <utils/StaticString.h>
+
+#include <limits>
+#include <utility>
+
+#include <stdint.h>
+
+namespace filament {
+
+using namespace utils;
+
+DescriptorSet::DescriptorSet() noexcept = default;
+
+DescriptorSet::~DescriptorSet() noexcept {
+    // make sure we're not leaking the descriptor set handle
+    assert_invariant(!mDescriptorSetHandle);
+}
+
+DescriptorSet::DescriptorSet(StaticString const name, DescriptorSetLayout const& descriptorSetLayout) noexcept
+        : mDescriptors(descriptorSetLayout.getMaxDescriptorBinding() + 1),
+          mDirty(std::numeric_limits<uint64_t>::max()),
+          mSetAfterCommitWarning(false),
+          mName(name) {
+}
+
+DescriptorSet::DescriptorSet(DescriptorSet&& rhs) noexcept = default;
+
+DescriptorSet& DescriptorSet::operator=(DescriptorSet&& rhs) noexcept {
+    if (this != &rhs) {
+        // make sure we're not leaking the descriptor set handle
+        assert_invariant(!mDescriptorSetHandle);
+        mDescriptors = std::move(rhs.mDescriptors);
+        mDescriptorSetHandle = std::move(rhs.mDescriptorSetHandle);
+        mDirty = rhs.mDirty;
+        mValid = rhs.mValid;
+        mSetAfterCommitWarning = rhs.mSetAfterCommitWarning;
+        mSetUndefinedParameterWarning = rhs.mSetUndefinedParameterWarning;
+        mName = rhs.mName;
+    }
+    return *this;
+}
+
+void DescriptorSet::terminate(FEngine::DriverApi& driver) noexcept {
+    if (mDescriptorSetHandle) {
+        driver.destroyDescriptorSet(std::move(mDescriptorSetHandle));
+    }
+}
+
+void DescriptorSet::commitSlow(DescriptorSetLayout const& layout,
+        FEngine::DriverApi& driver) noexcept {
+    mDirty.clear();
+    // if we have a dirty descriptor set,
+    // we need to allocate a new one and reset all the descriptors
+    if (UTILS_LIKELY(mDescriptorSetHandle)) {
+        // note: if the descriptor-set is bound, doing this will essentially make it dangling.
+        // This can result in a use-after-free in the driver if the new one isn't bound at some
+        // point later.
+        driver.destroyDescriptorSet(mDescriptorSetHandle);
+    }
+    mDescriptorSetHandle = driver.createDescriptorSet(layout.getHandle(), mName);
+    mValid.forEachSetBit([&layout, &driver,
+            dsh = mDescriptorSetHandle, descriptors = mDescriptors.data()]
+            (backend::descriptor_binding_t const binding) {
+        assert_invariant(layout.isValid(binding));
+        if (layout.isSampler(binding)) {
+            driver.updateDescriptorSetTexture(dsh, binding,
+                    descriptors[binding].texture.th,
+                    descriptors[binding].texture.params);
+        } else {
+            driver.updateDescriptorSetBuffer(dsh, binding,
+                    descriptors[binding].buffer.boh,
+                    descriptors[binding].buffer.offset,
+                    descriptors[binding].buffer.size);
+        }
+    });
+
+    // FIXME: see [b/468072646]
+    //  We only validate empty descriptors at FEATURE_LEVEL_1 and above.
+    //  This is because at FL0 it's expected that some descriptor won't be set. In theory, the
+    //  corresponding layouts should not even contain those descriptors. However, making that change
+    //  is difficult and risky, and will be done at a later time.
+    //  Note: that the correct fix is actually needed to properly support FL3 once we want
+    //  to take advantage of having more samplers.
+    if (UTILS_LIKELY(driver.getFeatureLevel() > backend::FeatureLevel::FEATURE_LEVEL_0)) {
+        auto const unsetValidDescriptors = layout.getValidDescriptors() & ~mValid;
+        if (UTILS_VERY_UNLIKELY(!unsetValidDescriptors.empty() && !mSetUndefinedParameterWarning)) {
+            unsetValidDescriptors.forEachSetBit([&](auto i) {
+                LOG(WARNING) << (layout.isSampler(i) ? "Sampler" : "Buffer") << " descriptor " << i
+                        << " of " << mName.c_str() << " is not set. Please report this issue.";
+            });
+            mSetUndefinedParameterWarning = true;
+        }
+    }
+}
+
+void DescriptorSet::bind(FEngine::DriverApi& driver, DescriptorSetBindingPoints const set) const noexcept {
+    bind(driver, set, {});
+}
+
+void DescriptorSet::bind(FEngine::DriverApi& driver, DescriptorSetBindingPoints const set,
+        backend::DescriptorSetOffsetArray dynamicOffsets) const noexcept {
+    // TODO: on debug check that dynamicOffsets is large enough
+
+    assert_invariant(mDescriptorSetHandle);
+
+    // TODO: Make sure clients do the right thing and not change material instance parameters
+    // within the renderpass. We have to comment the assert out since it crashed a client's debug
+    // build.
+    // assert_invariant(mDirty.none());
+    if (UTILS_VERY_UNLIKELY(mDirty.any() && !mSetAfterCommitWarning)) {
+        mDirty.forEachSetBit([&](uint8_t const binding) {
+            LOG(WARNING) << "Descriptor set (handle=" << mDescriptorSetHandle.getId()
+                         << ") binding=" << (int) binding << " was set between begin/endRenderPass";
+        });
+        mSetAfterCommitWarning = true;
+    }
+    driver.bindDescriptorSet(mDescriptorSetHandle, +set, std::move(dynamicOffsets));
+}
+
+void DescriptorSet::unbind(backend::DriverApi& driver,
+        DescriptorSetBindingPoints set) noexcept {
+    driver.bindDescriptorSet({}, +set, {});
+}
+
+void DescriptorSet::setBuffer(DescriptorSetLayout const& layout,
+        backend::descriptor_binding_t const binding,
+        backend::Handle<backend::HwBufferObject> boh, uint32_t const offset, uint32_t const size) {
+
+    // Validate it's the right kind of descriptor
+    using DSLD = backend::DescriptorSetLayoutDescriptor;
+    FILAMENT_CHECK_PRECONDITION(DSLD::isBuffer(layout.getDescriptorType(binding)))
+            << "descriptor " << +binding << "is not a buffer";
+
+    auto& buffer = mDescriptors[binding].buffer;
+    if (buffer.boh != boh ||
+        buffer.offset != offset ||
+        buffer.size != size) {
+        mDirty.set(binding);
+    }
+    buffer = { boh, offset, size };
+    mValid.set(binding, bool(boh));
+}
+
+void DescriptorSet::setSampler(
+        DescriptorSetLayout const& layout,
+        backend::descriptor_binding_t const binding,
+        backend::Handle<backend::HwTexture> th, backend::SamplerParams const params) {
+
+    using namespace backend;
+    using DSLD = DescriptorSetLayoutDescriptor;
+
+    // Validate it's the right kind of descriptor
+    auto type = layout.getDescriptorType(binding);
+    FILAMENT_CHECK_PRECONDITION(DSLD::isSampler(type))
+            << "descriptor " << +binding << " is not a sampler";
+
+    FILAMENT_CHECK_PRECONDITION(
+            !(params.compareMode == SamplerCompareMode::COMPARE_TO_TEXTURE && !isDepthDescriptor(type)))
+            << "descriptor " << +binding
+            << " is not of type DEPTH, but sampler is in COMPARE_TO_TEXTURE mode";
+
+    FILAMENT_CHECK_PRECONDITION(
+            !(params.isFiltered() &&
+            isDepthDescriptor(type) &&
+            params.compareMode != SamplerCompareMode::COMPARE_TO_TEXTURE))
+            << "descriptor " << +binding
+            << " is of type filtered DEPTH, but sampler not in COMPARE_TO_TEXTURE mode";
+
+    if (mDescriptors[binding].texture.th != th || mDescriptors[binding].texture.params != params) {
+        mDirty.set(binding);
+    }
+    mDescriptors[binding].texture = { th, params };
+    mValid.set(binding, bool(th));
+}
+
+DescriptorSet DescriptorSet::duplicate(
+        StaticString const name, DescriptorSetLayout const& layout) const noexcept {
+    DescriptorSet set{ name, layout };
+    set.mDescriptors = mDescriptors; // Use the vector's assignment operator
+    set.mDirty = mValid | mDirty;    // Dirty all valid descriptors so they're updated during commit
+    set.mValid = mValid;
+    return set;
+}
+bool DescriptorSet::isTextureCompatibleWithDescriptor(
+    backend::TextureType t, backend::SamplerType s, backend::DescriptorType d) noexcept {
+    using namespace backend;
+
+    switch (s) {
+        case SamplerType::SAMPLER_2D:
+            if (!is2dTypeDescriptor(d)) {
+                return false;
+            }
+            break;
+        case SamplerType::SAMPLER_2D_ARRAY:
+            if (!is2dArrayTypeDescriptor(d)) {
+                return false;
+            }
+            break;
+        case SamplerType::SAMPLER_CUBEMAP:
+            if (!isCubeTypeDescriptor(d)) {
+                return false;
+            }
+            break;
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            if (!isCubeArrayTypeDescriptor(d)) {
+                return false;
+            }
+            break;
+        case SamplerType::SAMPLER_3D:
+            if (!is3dTypeDescriptor(d)) {
+                return false;
+            }
+            break;
+        case SamplerType::SAMPLER_EXTERNAL:
+            break;
+    }
+
+    // check that the descriptor type is compatible with the texture format type
+    switch (d) {
+        case DescriptorType::SAMPLER_2D_FLOAT:
+        case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_CUBE_FLOAT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_3D_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
+            // DEPTH_STENCIL is treated as accessing the depth component. OpenGL 4.3
+            // allows to specify which one, but not filament.
+            // Depth textures can be used as an unfiltered float sampler
+            return t == TextureType::FLOAT || t == TextureType::DEPTH || t == TextureType::DEPTH_STENCIL;
+
+        case DescriptorType::SAMPLER_2D_INT:
+        case DescriptorType::SAMPLER_2D_ARRAY_INT:
+        case DescriptorType::SAMPLER_CUBE_INT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+        case DescriptorType::SAMPLER_3D_INT:
+        case DescriptorType::SAMPLER_2D_MS_INT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
+            return t == TextureType::INT;
+
+        case DescriptorType::SAMPLER_2D_UINT:
+        case DescriptorType::SAMPLER_2D_ARRAY_UINT:
+        case DescriptorType::SAMPLER_CUBE_UINT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+        case DescriptorType::SAMPLER_3D_UINT:
+        case DescriptorType::SAMPLER_2D_MS_UINT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
+            return t == TextureType::UINT;
+
+        case DescriptorType::SAMPLER_2D_DEPTH:
+        case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+        case DescriptorType::SAMPLER_CUBE_DEPTH:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+            // DEPTH_STENCIL is treated as accessing the depth component. OpenGL 4.3
+            // allows to specify which one, but not filament.
+            return t == TextureType::DEPTH || t == TextureType::DEPTH_STENCIL;
+
+        case DescriptorType::SAMPLER_EXTERNAL:
+            return true;
+
+        case DescriptorType::UNIFORM_BUFFER:
+        case DescriptorType::SHADER_STORAGE_BUFFER:
+        case DescriptorType::INPUT_ATTACHMENT:
+            return false;
+    }
+
+    // should never happen
+    return false;
+}
+
+
+} // namespace filament

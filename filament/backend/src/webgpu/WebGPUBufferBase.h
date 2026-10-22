@@ -1,0 +1,86 @@
+/*
+ * Copyright (C) 2025 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TNT_FILAMENT_BACKEND_WEBGPUBUFFERBASE_H
+#define TNT_FILAMENT_BACKEND_WEBGPUBUFFERBASE_H
+
+#include <webgpu/webgpu_cpp.h>
+
+#include <cstddef>
+#include <cstdint>
+
+namespace filament::backend {
+
+class BufferDescriptor;
+class WebGPUQueueManager;
+class WebGPUStagePool;
+
+/**
+  * A base class for WebGPU buffer objects, providing common functionality for creating and
+  * updating GPU buffers.
+  */
+class WebGPUBufferBase /* intended to be extended */ {
+public:
+    /**
+     * IMPORTANT NOTE: when reusing a buffers with command encoders in the caller logic,
+     * e.g. the WebGPU driver/backend, make sure to flush (submit) pending commands (draws, etc.) to
+     * the GPU prior to calling this blit, because texture updates may otherwise (unintentionally)
+     * happen after draw commands encoded in the encoder. Submitting any commands up to this point
+     * ensures the calls happen in the expected sequence.
+     */
+    void updateGPUBuffer(BufferDescriptor const&, uint32_t byteOffset, wgpu::Device const& device,
+            WebGPUQueueManager* const webGPUQueueManager, WebGPUStagePool* const webGPUStagePool);
+
+    [[nodiscard]] wgpu::Buffer const& getBuffer() const { return mBuffer; }
+
+protected:
+    WebGPUBufferBase(wgpu::Device const&, wgpu::BufferUsage, uint32_t size, char const* label);
+
+    // Defers the creation of the GPU buffer to a later call to createBuffer().
+    WebGPUBufferBase() = default;
+
+    void createBuffer(wgpu::Device const&, wgpu::BufferUsage, uint32_t size, char const* label);
+
+    /**
+     * Writes `size` bytes into `target` at `byteOffset` through a staging buffer. `fill` is called
+     * with a pointer to the mapped staging memory and must write exactly `size` bytes into it.
+     * The write is padded with zeros to a multiple of 4 bytes, as required by WebGPU.
+     * The same ordering caveat as updateGPUBuffer() applies.
+     */
+    template<typename Fill>
+    static void writeToBuffer(wgpu::Buffer const& target, uint32_t byteOffset, size_t size,
+            WebGPUQueueManager* webGPUQueueManager, WebGPUStagePool* webGPUStagePool,
+            Fill const& fill) {
+        writeToBuffer(
+                target, byteOffset, size, webGPUQueueManager, webGPUStagePool,
+                [](void const* user, uint8_t* destination) {
+                    (*static_cast<Fill const*>(user))(destination);
+                },
+                &fill);
+    }
+
+    using FillFunction = void (*)(void const* user, uint8_t* destination);
+    static void writeToBuffer(wgpu::Buffer const& target, uint32_t byteOffset, size_t size,
+            WebGPUQueueManager* webGPUQueueManager, WebGPUStagePool* webGPUStagePool,
+            FillFunction fill, void const* user);
+
+private:
+    wgpu::Buffer mBuffer;
+};
+
+} // namespace filament::backend
+
+#endif // TNT_FILAMENT_BACKEND_WEBGPUBUFFERBASE_H

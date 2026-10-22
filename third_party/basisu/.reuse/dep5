@@ -1,0 +1,17 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: basis_universal
+Source: https://github.com/BinomialLLC/basis_universal
+
+# We have asked Binomial about REUSE compliance for their repo, see https://github.com/BinomialLLC/basis_universal/issues/165
+Files: *
+Copyright: 2019-2021 Binomial LLC
+License: Apache-2.0
+
+Files: zstd/*
+Copyright: 2016-present, Facebook, Inc.
+License: BSD
+
+Files: OpenCL/*
+Copyright: Copyright (c) 2008-2020 The Khronos Group Inc.
+License: Apache-2.0
+

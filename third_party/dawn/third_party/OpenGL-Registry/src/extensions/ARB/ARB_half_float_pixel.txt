@@ -1,0 +1,281 @@
+Name
+
+    ARB_half_float_pixel
+
+Name Strings
+
+    GL_ARB_half_float_pixel
+
+Contributors
+
+    Pat Brown
+    Jon Leech
+    Rob Mace
+    Brian Paul
+
+Contact
+
+    Dale Kirkland, NVIDIA (dkirkland 'at' nvidia.com)
+
+Notice
+
+    Copyright (c) 2004-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on October 22, 2004.
+
+Version
+
+    Last Modified Date:  October 1, 2004
+    Version:             6
+
+Number
+
+    ARB Extension #40
+
+Dependencies
+
+    This extension is written against the OpenGL 2.0 Specification
+    but will work with the OpenGL 1.5 Specification.
+
+    Based on the NV_half_float extension.
+
+    This extension interacts with ARB_color_buffer_float.
+
+Overview
+
+    This extension introduces a new data type for half-precision (16-bit)
+    floating-point quantities.  The floating-point format is very similar
+    to the IEEE single-precision floating-point standard, except that it
+    has only 5 exponent bits and 10 mantissa bits.  Half-precision floats
+    are smaller than full precision floats and provide a larger dynamic
+    range than similarly sized normalized scalar data types.
+
+    This extension allows applications to use half-precision floating-
+    point data when specifying pixel data.  It extends the existing image
+    specification commands to accept the new data type.
+
+    Floating-point data is clamped to [0, 1] at various places in the
+    GL unless clamping is disabled with the ARB_color_buffer_float
+    extension.
+
+IP Status
+
+    SGI owns US Patent #6,650,327, issued November 18, 2003. SGI
+    believes this patent contains necessary IP for graphics systems
+    implementing floating point (FP) rasterization and FP framebuffer
+    capabilities.
+
+    SGI will not grant the ARB royalty-free use of this IP for use in
+    OpenGL, but will discuss licensing on RAND terms, on an individual
+    basis with companies wishing to use this IP in the context of
+    conformant OpenGL implementations. SGI does not plan to make any
+    special exemption for open source implementations.
+
+    Contact Doug Crisman at SGI Legal for the complete IP disclosure.
+
+Issues
+
+    1. How is this extension different from the NV_half_float extension?
+
+       This extension does not add new commands for specifying half-
+       precision vertex data, and all imaging functions have been listed
+       for supporting the "half" type.
+
+    2. What should the new data type be called?  "half"?  "hfloat"?
+
+       RESOLVED:  half .  This convention builds on the convention of
+       using the type "double" to describe double-precision floating-
+       point numbers.  Here, "half" will refer to half-precision
+       floating-point numbers.
+
+       Even though the 16-bit float data type is a first-class data type,
+       it is still more problematic than the other types in the sense
+       that no native programming languages support the data type.
+       "hfloat/hf" would have reflected a second-class status better
+       than "half/h".
+
+       Both names are not without conflicting precedents.  The name "half"
+       is used to connote 16-bit scalar values on some 32-bit CPU
+       architectures (e.g., PowerPC).  The name "hfloat" has been used to
+       describe 128-bit floating-point data on VAX systems.
+
+    3. Should half-precision data be accepted by commands in the imaging
+       subset that accept pixel data?
+
+       RESOLVED:  Yes, all functions in the core OpenGL and the imaging
+       subset that accept pixel data accept half-precision data.
+
+    4. Should the special representations NaN, INF, and denormal be
+       supported?
+
+       RESOLVED:  Implementation dependent.  The spec reflects that Nan
+       and INF produce unspecified results.  Denormalized numbers can
+       be treated as a value of 0.
+
+
+New Tokens
+
+    Accepted by the <type> parameter of DrawPixels, ReadPixels,
+    TexImage1D, TexImage2D, TexImage3D, GetTexImage, TexSubImage1D,
+    TexSubImage2D, TexSubImage3D, GetHistogram, GetMinmax,
+    ConvolutionFilter1D, ConvolutionFilter2D, GetConvolutionFilter,
+    SeparableFilter2D, GetSeparableFilter, ColorTable, ColorSubTable,
+    and GetColorTable:
+
+        HALF_FLOAT_ARB                                0x140B
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    Add a new Section 2.1.2, (p. 6):
+
+    2.1.2  16-Bit Floating-Point Numbers
+
+    A 16-bit floating-point number has a 1-bit sign (S), a 5-bit
+    exponent (E), and a 10-bit mantissa (M).  The value of a 16-bit
+    floating-point number is determined by the following:
+
+        (-1)^S * 0.0,                        if E == 0 and M == 0,
+        (-1)^S * 2^-14 * (M / 2^10),         if E == 0 and M != 0,
+        (-1)^S * 2^(E-15) * (1 + M/2^10),    if 0 < E < 31,
+        (-1)^S * INF,                        if E == 31 and M == 0, or
+        NaN,                                 if E == 31 and M != 0,
+
+    where
+
+        S = floor((N mod 65536) / 32768),
+        E = floor((N mod 32768) / 1024), and
+        M = N mod 1024.
+
+    Implementations are also allowed to use any of the following
+    alternative encodings:
+
+        (-1)^S * 0.0,                        if E == 0 and M != 0,
+        (-1)^S * 2^(E-15) * (1 + M/2^10),    if E == 31 and M == 0, or
+        (-1)^S * 2^(E-15) * (1 + M/2^10),    if E == 31 and M != 0,
+
+    Any representable 16-bit floating-point value is legal as input
+    to a GL command that accepts 16-bit floating-point data.  The
+    result of providing a value that is not a floating-point number
+    (such as infinity or NaN) to such a command is unspecified, but
+    must not lead to GL interruption or termination.  Providing a
+    denormalized number or negative zero to GL must yield predictable
+    results.
+
+    (modify Table 2.2, p. 9) -- add new row
+
+                   Minimum
+       GL Type    Bit Width    Description
+       -------    ---------    -----------------------------------
+       half          16        half-precision floating-point value
+                               encoded in an unsigned scalar
+
+    Modify Section 2.14, (Colors and Coloring), p. 59
+
+    (modify Table 2.9, p. 59)  Add new row to the table:
+
+         GL Type    Conversion
+         -------    ----------
+         half          c
+
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    Modify Section 3.6.4, Rasterization of Pixel Rectangles (p. 126)
+
+    (modify Table 3.5, p. 128 -- add new row)
+
+        type Parameter     Corresponding       Special
+        Token Name         GL Data Type     Interpretation
+        --------------     -------------    --------------
+        HALF_FLOAT_ARB         half               No
+
+    (modify Unpacking, p. 129)  Data are taken from host memory as a
+    sequence of signed or unsigned bytes (GL data types byte and ubyte),
+    signed or unsigned integers (GL data types int and uint), or
+    floating-point values (GL data types half and float).
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Framebuffer)
+
+    Modify Section 4.3.2, Reading Pixels (p. 219)
+
+    (modify Final Conversion, p. 222) For an index, if the type is not
+    FLOAT or HALF_FLOAT_ARB, final conversion consists of masking the
+    index with the value given in Table 4.6; if the type is FLOAT or
+    HALF_FLOAT_ARB, then the integer index is converted to a GL float
+    or half data value.
+
+    (modify Table 4.7, p. 224 -- add new row)
+
+        type Parameter    GL Data Type    Component Conversion Formula
+        --------------    ------------    ----------------------------
+        HALF_FLOAT_ARB        half                  c = f
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol (Modification to the GLX 1.3 Protocol Encoding Specification)
+
+    Modify Appendix A, Pixel Data (p. 148)
+
+      (Modify Table A.1, p. 149 -- add new row for HALF_FLOAT_ARB data)
+
+          type             Encoding    Protocol Type    nbytes
+          -------------    --------    -------------    ------
+          HALF_FLOAT_ARB    0x140B      CARD16           2
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  -------- ---------  --------------------------------------------
+      1   12/15/03 Kirkland   Initial version based on the NV_half_float
+                              specification.
+
+      2   2/26/04  Kirkland   Changed NVIDIA_xxx to NV_xxx.
+                              Changed the issue resolution for INF and NaN.
+
+      3   3/11/04  Kirkland   Updated language for float16 number handling.
+                              Added bit encodings for half values.
+                              Added issue dealing with name "half".
+
+      4   7/23/04  Kirkland   Added alternative encodings options for
+                              float16 format.
+
+      5   9/17/04  Kirkland   Updated to reference OpenGL 2.0 spec.
+
+      6   10/1/04  Kirkland   Updated IP section.

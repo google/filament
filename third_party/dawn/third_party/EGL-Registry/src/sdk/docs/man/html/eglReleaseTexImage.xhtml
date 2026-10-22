@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglReleaseTexImage - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglReleaseTexImage">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglReleaseTexImage — 
+            Releases a color buffer that is being used as a texture
+        </p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLBoolean <strong class="fsfunc">eglReleaseTexImage</strong>(</code>
+              </td>
+              <td>EGLDisplay <var class="pdparam">display</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLSurface <var class="pdparam">surface</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLint <var class="pdparam">buffer</var><code>)</code>;</td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="parameters">
+        <h2>Parameters</h2>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>display</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>Specifies the EGL display connection.</p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>surface</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the EGL surface.
+                    </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>buffer</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>Specifies the texture image data.</p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            The specified color buffer is released back to the surface. The surface is made
+            available for reading and writing when it no longer has any color buffers bound as
+            textures.
+        </p>
+      </div>
+      <div class="refsect1" id="notes">
+        <h2>Notes</h2>
+        <p>
+            If the specified color buffer is no longer bound to a texture (e.g., because the
+            texture object was deleted) then eglReleaseTexImage has no effect. No error is
+            generated.
+        </p>
+        <p>
+            The contents of the color buffer are undefined when it is first released. In particular,
+            there is no guarantee that the texture image is still present. However, the contents of
+            other color buffers are unaffected by this call. Also, the contents of the depth and stencil buffers
+            are not affected by <a class="citerefentry" href="eglBindTexImage.xhtml"><span class="citerefentry"><span class="refentrytitle">eglBindTexImage</span></span></a>
+            and <code class="function">eglReleaseTexImage</code>.
+        </p>
+        <p>
+            After a color buffer is released from a texture (either explicitly by calling
+            <code class="function">eglReleaseTexImage</code> or implicitly by calling a routine such as
+            <a class="citerefentry" href="glTexImage2D.xhtml"><span class="citerefentry"><span class="refentrytitle">glTexImage2D</span></span></a>),
+            all texture images that were defined by the color buffer become <code class="constant">NULL</code>
+            (it is as if <a class="citerefentry" href="glTexImage.xhtml"><span class="citerefentry"><span class="refentrytitle">glTexImage</span></span></a> was called with an image of zero width).
+        </p>
+      </div>
+      <div class="refsect1" id="errors">
+        <h2>Errors</h2>
+        <p>
+            <code class="constant">EGL_BAD_MATCH</code> is generated if the
+            surface attribute <code class="constant">EGL_TEXTURE_FORMAT</code> is
+            set to <code class="constant">EGL_NO_TEXTURE</code>.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_MATCH</code> is generated if
+            <em class="parameter"><code>buffer</code></em> is not a valid buffer
+            (currently only <code class="constant">EGL_BACK_BUFFER</code> may be
+            specified).
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_SURFACE</code> is generated if
+            <em class="parameter"><code>surface</code></em> is not an EGL surface, or is
+            not a bound pbuffer surface.
+        </p>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+            <a class="citerefentry" href="eglBindTexImage.xhtml"><span class="citerefentry"><span class="refentrytitle">eglBindTexImage</span></span></a>
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

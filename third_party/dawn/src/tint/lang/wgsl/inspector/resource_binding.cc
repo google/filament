@@ -1,0 +1,187 @@
+// Copyright 2021 The Dawn & Tint Authors
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#include "src/tint/lang/wgsl/inspector/resource_binding.h"
+
+#include "src/tint/lang/core/enums.h"
+#include "src/tint/lang/core/type/array.h"
+#include "src/tint/lang/core/type/f32.h"
+#include "src/tint/lang/core/type/i32.h"
+#include "src/tint/lang/core/type/matrix.h"
+#include "src/tint/lang/core/type/texture_dimension.h"
+#include "src/tint/lang/core/type/type.h"
+#include "src/tint/lang/core/type/u32.h"
+#include "src/tint/lang/core/type/vector.h"
+
+namespace tint::inspector {
+
+ResourceBinding::TextureDimension TypeTextureDimensionToResourceBindingTextureDimension(
+    const core::type::TextureDimension& type_dim) {
+    switch (type_dim) {
+        case core::type::TextureDimension::k1d:
+            return ResourceBinding::TextureDimension::k1d;
+        case core::type::TextureDimension::k2d:
+            return ResourceBinding::TextureDimension::k2d;
+        case core::type::TextureDimension::k2dArray:
+            return ResourceBinding::TextureDimension::k2dArray;
+        case core::type::TextureDimension::k3d:
+            return ResourceBinding::TextureDimension::k3d;
+        case core::type::TextureDimension::kCube:
+            return ResourceBinding::TextureDimension::kCube;
+        case core::type::TextureDimension::kCubeArray:
+            return ResourceBinding::TextureDimension::kCubeArray;
+        case core::type::TextureDimension::kNone:
+            return ResourceBinding::TextureDimension::kNone;
+    }
+    return ResourceBinding::TextureDimension::kNone;
+}
+
+ResourceBinding::SampledKind ToFilterableSampledKind(const core::type::SampledTexture* tex) {
+    // We don't want to say `float` in this case, we want `unknown-filterable` to signify the
+    // unknown filterablity.
+    if (tex->Type()->Is<core::type::F32>()) {
+        return ResourceBinding::SampledKind::kUnknownFilterable;
+    }
+
+    return BaseTypeToSampledKind(tex->Type());
+}
+
+ResourceBinding::SampledKind BaseTypeToSampledKind(const core::type::Type* base_type) {
+    TINT_ASSERT(base_type);
+
+    if (base_type->Is<core::type::F32>()) {
+        return ResourceBinding::SampledKind::kFloat;
+    }
+    if (base_type->Is<core::type::U32>()) {
+        return ResourceBinding::SampledKind::kUInt;
+    }
+    if (base_type->Is<core::type::I32>()) {
+        return ResourceBinding::SampledKind::kSInt;
+    }
+    TINT_UNREACHABLE();
+}
+
+ResourceBinding::SamplerType SamplerToSamplerType(const core::type::Sampler* sampler) {
+    if (sampler->Kind() == core::type::SamplerKind::kSampler) {
+        return ResourceBinding::SamplerType::kUnknownFiltering;
+    }
+    if (sampler->Kind() == core::type::SamplerKind::kComparisonSampler) {
+        return ResourceBinding::SamplerType::kComparison;
+    }
+    TINT_UNREACHABLE();
+}
+
+ResourceBinding::TexelFormat TypeTexelFormatToResourceBindingTexelFormat(
+    const core::TexelFormat& image_format) {
+    switch (image_format) {
+        case core::TexelFormat::kR8Snorm:
+            return ResourceBinding::TexelFormat::kR8Snorm;
+        case core::TexelFormat::kR8Uint:
+            return ResourceBinding::TexelFormat::kR8Uint;
+        case core::TexelFormat::kR8Sint:
+            return ResourceBinding::TexelFormat::kR8Sint;
+        case core::TexelFormat::kRg8Unorm:
+            return ResourceBinding::TexelFormat::kRg8Unorm;
+        case core::TexelFormat::kRg8Snorm:
+            return ResourceBinding::TexelFormat::kRg8Snorm;
+        case core::TexelFormat::kRg8Uint:
+            return ResourceBinding::TexelFormat::kRg8Uint;
+        case core::TexelFormat::kRg8Sint:
+            return ResourceBinding::TexelFormat::kRg8Sint;
+        case core::TexelFormat::kR16Unorm:
+            return ResourceBinding::TexelFormat::kR16Unorm;
+        case core::TexelFormat::kR16Snorm:
+            return ResourceBinding::TexelFormat::kR16Snorm;
+        case core::TexelFormat::kR16Uint:
+            return ResourceBinding::TexelFormat::kR16Uint;
+        case core::TexelFormat::kR16Sint:
+            return ResourceBinding::TexelFormat::kR16Sint;
+        case core::TexelFormat::kR16Float:
+            return ResourceBinding::TexelFormat::kR16Float;
+        case core::TexelFormat::kRg16Unorm:
+            return ResourceBinding::TexelFormat::kRg16Unorm;
+        case core::TexelFormat::kRg16Snorm:
+            return ResourceBinding::TexelFormat::kRg16Snorm;
+        case core::TexelFormat::kRg16Uint:
+            return ResourceBinding::TexelFormat::kRg16Uint;
+        case core::TexelFormat::kRg16Sint:
+            return ResourceBinding::TexelFormat::kRg16Sint;
+        case core::TexelFormat::kRg16Float:
+            return ResourceBinding::TexelFormat::kRg16Float;
+        case core::TexelFormat::kRgb10A2Uint:
+            return ResourceBinding::TexelFormat::kRgb10A2Uint;
+        case core::TexelFormat::kRgb10A2Unorm:
+            return ResourceBinding::TexelFormat::kRgb10A2Unorm;
+        case core::TexelFormat::kRg11B10Ufloat:
+            return ResourceBinding::TexelFormat::kRg11B10Ufloat;
+        case core::TexelFormat::kBgra8Unorm:
+            return ResourceBinding::TexelFormat::kBgra8Unorm;
+        case core::TexelFormat::kR32Uint:
+            return ResourceBinding::TexelFormat::kR32Uint;
+        case core::TexelFormat::kR32Sint:
+            return ResourceBinding::TexelFormat::kR32Sint;
+        case core::TexelFormat::kR32Float:
+            return ResourceBinding::TexelFormat::kR32Float;
+        case core::TexelFormat::kRgba8Unorm:
+            return ResourceBinding::TexelFormat::kRgba8Unorm;
+        case core::TexelFormat::kRgba8Snorm:
+            return ResourceBinding::TexelFormat::kRgba8Snorm;
+        case core::TexelFormat::kRgba8Uint:
+            return ResourceBinding::TexelFormat::kRgba8Uint;
+        case core::TexelFormat::kRgba8Sint:
+            return ResourceBinding::TexelFormat::kRgba8Sint;
+        case core::TexelFormat::kRg32Uint:
+            return ResourceBinding::TexelFormat::kRg32Uint;
+        case core::TexelFormat::kRg32Sint:
+            return ResourceBinding::TexelFormat::kRg32Sint;
+        case core::TexelFormat::kRg32Float:
+            return ResourceBinding::TexelFormat::kRg32Float;
+        case core::TexelFormat::kRgba16Unorm:
+            return ResourceBinding::TexelFormat::kRgba16Unorm;
+        case core::TexelFormat::kRgba16Snorm:
+            return ResourceBinding::TexelFormat::kRgba16Snorm;
+        case core::TexelFormat::kRgba16Uint:
+            return ResourceBinding::TexelFormat::kRgba16Uint;
+        case core::TexelFormat::kRgba16Sint:
+            return ResourceBinding::TexelFormat::kRgba16Sint;
+        case core::TexelFormat::kRgba16Float:
+            return ResourceBinding::TexelFormat::kRgba16Float;
+        case core::TexelFormat::kRgba32Uint:
+            return ResourceBinding::TexelFormat::kRgba32Uint;
+        case core::TexelFormat::kRgba32Sint:
+            return ResourceBinding::TexelFormat::kRgba32Sint;
+        case core::TexelFormat::kRgba32Float:
+            return ResourceBinding::TexelFormat::kRgba32Float;
+        case core::TexelFormat::kR8Unorm:
+            return ResourceBinding::TexelFormat::kR8Unorm;
+        case core::TexelFormat::kUndefined:
+            return ResourceBinding::TexelFormat::kNone;
+    }
+    return ResourceBinding::TexelFormat::kNone;
+}
+
+}  // namespace tint::inspector

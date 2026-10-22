@@ -1,0 +1,14 @@
+#version 450
+
+void function(
+    const float f,
+    const vec2 f2,
+    const vec3 f3,
+    const vec4 f4)
+{
+}
+
+void main()
+{
+    function(0, vec2(0), vec3(0), vec4(0));
+}

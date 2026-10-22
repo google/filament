@@ -1,0 +1,37 @@
+{
+    "entryPoints" : [
+        {
+            "name" : "main",
+            "mode" : "frag"
+        }
+    ],
+    "outputs" : [
+        {
+            "type" : "float",
+            "name" : "FragColor",
+            "location" : 0
+        }
+    ],
+    "separate_images" : [
+        {
+            "type" : "texture2D",
+            "name" : "uDepth",
+            "set" : 0,
+            "binding" : 2
+        }
+    ],
+    "separate_samplers" : [
+        {
+            "type" : "sampler",
+            "name" : "uSampler",
+            "set" : 0,
+            "binding" : 0
+        },
+        {
+            "type" : "sampler",
+            "name" : "uSampler1",
+            "set" : 0,
+            "binding" : 1
+        }
+    ]
+}

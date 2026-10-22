@@ -1,0 +1,7 @@
+image: bradrydzewski/base
+script:
+  - make
+notify:
+ email:
+    recipients:
+      - syoyo@lighttransport.com

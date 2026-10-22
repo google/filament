@@ -1,0 +1,343 @@
+Name
+
+    ARB_clear_buffer_object
+
+Name Strings
+
+    GL_ARB_clear_buffer_object
+
+Contact
+
+    Graham Sellers (graham.sellers 'at' amd.com)
+
+Contributors
+
+    Jon Leech
+    Piers Daniell, NVIDIA
+    Mark Kilgard, NVIDIA
+
+Notice
+
+    Copyright (c) 2012-2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on 2012/06/12.
+
+Version
+
+    Last Modified Date: February 18, 2014
+    Version: 13
+
+Number
+
+    ARB Extension #121
+
+Dependencies
+
+    OpenGL 1.5 is required.
+
+    The definition of this extension is dependent on EXT_direct_state_access.
+
+    This extension is written against the OpenGL 4.2 (Core) Specification.
+
+Overview
+
+    Buffer objects are fundamental to the operation of OpenGL. Buffers are used
+    as a source of data for vertices and indices, read through buffer textures
+    in shaders, used to transfer texture and image data into and out of
+    textures and framebuffers, and may be written to by operations such as
+    transform feedback. OpenGL contains mechanisms to copy sections of buffers
+    from one to another, but it has no mechanism to initialize the content
+    of a buffer to a known value. In effect, it has memcpy, but not memset.
+
+    This extension adds such a mechanism and has several use cases. Examples
+    include clearing a pixel unpack buffer before transferring data to
+    a texture or resetting buffer data to a known value before sparse updates
+    through shader image stores or transform feedback.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+        void ClearBufferData(enum target,
+                             enum internalformat,
+                             enum format,
+                             enum type,
+                             const void * data);
+
+        void ClearBufferSubData(enum target,
+                                enum internalformat,
+                                intptr offset,
+                                sizeiptr size,
+                                enum format,
+                                enum type,
+                                const void * data);
+
+    When EXT_direct_state_access is present:
+
+        void ClearNamedBufferDataEXT(uint buffer,
+                                     enum internalformat,
+                                     enum format,
+                                     enum type,
+                                     const void * data);
+
+        void ClearNamedBufferSubDataEXT(uint buffer,
+                                        enum internalformat,
+                                        intptr offset,
+                                        sizeiptr size,
+                                        enum format,
+                                        enum type,
+                                        const void * data);
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL 4.2 (Core Profile) Specification
+(OpenGL Operation)
+
+Append to the end of Section 2.9.2, "Creating Buffer Object Stores"
+
+    To fill all or part of an existing buffer object's data store with a
+    constant value, call
+
+        void ClearBufferSubData(enum target,
+                                enum internalformat,
+                                sizeiptr offset,
+                                sizeiptr size,
+                                enum format,
+                                enum type,
+                                const void * data);
+
+    with <target> set to the target to which the destination buffer is bound.
+    <target> must be one of the targets listed in Table 2.8.
+    <internalformat> must be set to one of the format tokens listed in Table
+    3.15, "Internal formats for buffer textures". <format> and <type> specify
+    the format and type of the source data and are interpreted as described in
+    Section 3.7.2. <offset> set to the offset, measured in basic
+    machine units, into the buffer object's data store from which to begin
+    filling, and <size> set to the size, also in basic machine units, of the
+    range to fill. Both <offset> and <range> must be multiples of the number
+    of basic machine units per-element for that internal format specified by
+    <internalformat>, otherwise the error INVALID_VALUE is generated.
+    <data> is a pointer to an array of between one and four components
+    containing the data to be used as the source of the constant fill value.
+    The elements of <data> are converted by the GL into the format specified by
+    <internalformat> in the manner described in section 2.3.1, and then used to
+    fill the specified range of the destination buffer. If <data> is NULL, then
+    the pointer is ignored and the sub-range of the buffer is filled with zeros.
+
+    If <offset> or <size> is less than zero, or if <offset> + <size> is
+    greater than the value of BUFFER_SIZE for the buffer bound to <target>
+    then the error INVALID_VALUE is generated. The command
+
+    An INVALID_OPERATION error is generated if any part of the specified
+    range of the buffer bound to <target> is currently mapped.
+
+        void ClearBufferData(enum target,
+                             enum internalformat,
+                             enum format,
+                             enum type,
+                             const void * data);
+
+    is equivalent to calling ClearBufferSubData with <target>,
+    <internalformat> and <data> as specified, with <offset> set to zero,
+    and <size> set to the value of BUFFER_SIZE for the buffer bound to
+    <target>.
+
+        The commands:
+
+        void ClearNamedBufferDataEXT(uint buffer,
+                                     enum internalformat,
+                                     enum format,
+                                     enum type,
+                                     const void * data);
+
+    and
+
+        void ClearNamedBufferSubDataEXT(uint buffer,
+                                        enum internalformat,
+                                        sizeiptr offset,
+                                        sizeiptr size,
+                                        enum format,
+                                        enum type,
+                                        const void * data);
+
+    are equivalent to calling ClearBufferData and ClearBufferSubData,
+    respectively, except that the buffer object to be accessed is specified
+    in the <buffer> parameter rather than being derived from the <target>
+    buffer binding point.
+
+Additions to Chapter 3 of the OpenGL 4.2 (Core Profile) Specification
+(Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 4.2 (Core Profile) Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 4.2 (Core Profile) Specification
+(Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 4.2 (Core Profile) Specification
+(State and State Requests)
+
+    None.
+
+Errors
+
+    INVALID_ENUM is generated by ClearBufferSubData if <internalformat>
+    is not one of the sized internal format identifiers listed in Table 3.15.
+
+    INVAILD_ENUM is generated by ClearBufferSubData <target> is not a legal
+    buffer binding point.
+
+    INVALID_ENUM is generated by ClearBufferSubData if <format> or <type> is
+    not one of the supported format or type tokens.
+
+    INVALID_VALUE is generated by ClearBufferSubData if <offset>
+    or <size> is less than zero.
+
+    INVALID_VALUE is generated by ClearBufferSubData if no buffer is bound
+    to the binding point indicated by <target>.
+
+    INVALID_VALUE is generated by ClearBufferSubData if <offset> +
+    <size> is greater than the value of BUFFER_SIZE for the buffer bound to
+    <target>.
+
+    INVALID_VALUE is generated by ClearBufferSubData if <offset> or <size>
+    is not an integer multiple of the element size indicated by
+    <internalformat>. The element size is the number of components for
+    <internalformat> from table 3.15 multiplied by the size of the base type
+    for <internalformat> in that table.
+
+    INVALID_OPERATION is generated by ClearBufferSubData if any part of the
+    specified range of the buffer bound to <target> is currently mapped.
+
+New State
+
+    None.
+
+Dependencies on EXT_direct_state_access
+
+    If EXT_direct_state_access is not supported, then remove all references to
+    ClearNamedBufferDataEXT and ClearNamedBufferSubDataEXT.
+
+Conformance Tests
+
+    TBD
+
+Issues
+
+    1) Do we need to have restrictions on the alignment of <offset> and/or
+       <size> for ClearBufferSubData
+
+       RESOLVED: Yes, we restrict both <offset> and <size> to be integer
+       multiples of the element size for the format indicated by
+       <internalformat>.
+
+    2) Should the ClearBufferObject take int/float/uint types, or take
+       format + type poarameters more like glTexImage2D etc.?
+
+       RESOLVED: ClearBufferSubData takes an <internalformat> parameter
+       to indicate the internal storage format for the buffer, and
+       a <format> and <type> parameter for the application-supplied data.
+       This is consistent with APIs such as TexSubImagenD.
+
+    3) Currently, the legal tokens for <internalformat> are taken from the
+       texture internal format types in table 3.12. Is this sufficient?
+       Do we need to also allow other formats such as those in table 3.22
+       (image formats), or table 3.2 (packed pixel formats).
+
+       RESOLVED: Updated in revision 4 to use table 3.15, which is actually
+       more concise than 3.12. However, it represents the complete list
+       of formats that are reasonably easily filled by existing hardware.
+       If the application bit-packs other formats, this should be sufficient
+       for the intended use-cases of this extension.
+
+    4) Do we want DSA-style ClearNamedBufferSubData, ClearNamedBufferData?
+
+       RESOLVED: Yes. Documented dependency on EXT_dsa.
+
+    5) How do we specify data formats that are not supported for buffer
+       textures - for example, R3_G3_B2 or RGB10_A2?
+
+       RESOLVED: It is the application's responsibility to bit-pack the
+       components of the source data into a number of native types (unsigned
+       bytes, shorts or ints), and then pass them using a supported internal
+       format.
+
+Revision History
+
+    Rev.  Date        Author    Changes
+    ----  ----------  --------  ---------------------------------------------
+    13    02/18/2014  Jon Leech Change order of ClearBufferSubData arguments
+                                in spec body to be consistent with New
+                                Procedures declaration ((offset,size,format,
+                                type) instead of the erroneous (format,type,
+                                offset,size)) (Public Bug 1122).
+
+    12    12/12/2013  Jon Leech Change order of ClearNamedBufferSubDataEXT
+                                arguments in spec body to be consistent with
+                                New Procedures declaration ((offset,
+                                size,format,type) instead of the erroneous
+                                (format,type,offset,size)) (Bug 11378).
+
+    11    08/07/2013  mjk       Better indicate DSA entrypoints
+
+    10    09/12/2012  Jon Leech Modify error condition when the target buffer
+                                is mapped to only be generated when the
+                                mapped region intersects the region being
+                                cleared (bug 9343).
+
+     9    07/25/2012  Jon Leech Fix typos from bug 8935.
+
+     8    07/23/2012  Jon Leech Clarify offset/alignment constraints as
+                                based on the total size of a texel in
+                                <internalformat>.
+
+     7    06/28/2012  pdaniell  Modify the parameter order of the *SubData
+                                functions to match the ordering of
+                                TexSubImage parameters. Also change the
+                                <offset> parameter to intptr.
+
+     6    05/29/2012  Jon Leech Fix capitalization of <internalformat>.
+
+     5    05/15/2012  Jon Leech Fix typo in error condition.
+
+     4    04/26/2012  gsellers  Add interaction with EXT_dsa, resolve issue 4.
+                                Document <format> and <type> parameters.
+                                Correct reference to Table 3.15 (Internal
+                                formats for buffer textures).
+                                Resolve issue 3. Add issue 5.
+                                Change behavior of NULL for <data> to fill the
+                                buffer subrange with zeros.
+     3    04/02/2012  gsellers  Delete 'either/or' approach.
+                                Change API to texture-like ClearBufferSubData.
+                                Resolve issues (1) + (2).
+                                Address feedback from bug 8132.
+                                Add issues (3) and (4).
+     2    12/19/2011  gsellers  Rename to ARB. Strip suffixes from APIs.
+                                Add format + type versions of APIs for
+                                consideration. Allow NULL for <data> in
+                                ClearBufferRange.
+     1    09/27/2011  gsellers  Initial draft

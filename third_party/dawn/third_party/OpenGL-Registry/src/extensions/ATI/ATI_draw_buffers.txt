@@ -1,0 +1,308 @@
+Name
+
+    ATI_draw_buffers
+
+Name Strings
+
+    GL_ATI_draw_buffers
+
+Contributors
+
+    Benj Lipchak
+
+Contact
+
+    Rob Mace, ATI Research (rob.mace 'at' amd.com)
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date: November 4, 2006
+    Revision: 9
+
+Number
+
+    277
+
+Dependencies
+
+    The extension is written against the OpenGL 1.3 Specification.
+
+    OpenGL 1.3 is required.
+
+    ARB_fragment_program affects the definition of this extension.
+
+
+Overview
+
+    This extension extends ARB_fragment_program to allow multiple output 
+    colors, and provides a mechanism for directing those outputs to 
+    multiple color buffers.
+
+
+Issues
+
+    (1) How many GL_DRAW_BUFFER#_ATI enums should be reserved?  
+
+      RESOLVED: We only need 4 currently, but for future expandability 
+      it would be nice to keep the enums in sequence.  We'll specify
+      16 for now, which will be more than enough for a long time.
+
+
+New Procedures and Functions
+
+    void DrawBuffersATI(sizei n, const enum *bufs);
+
+
+New Tokens
+
+    Accepted by the <pname> parameters of GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+        MAX_DRAW_BUFFERS_ATI                    0x8824
+        DRAW_BUFFER0_ATI                        0x8825
+        DRAW_BUFFER1_ATI                        0x8826
+        DRAW_BUFFER2_ATI                        0x8827
+        DRAW_BUFFER3_ATI                        0x8828
+        DRAW_BUFFER4_ATI                        0x8829
+        DRAW_BUFFER5_ATI                        0x882A
+        DRAW_BUFFER6_ATI                        0x882B
+        DRAW_BUFFER7_ATI                        0x882C
+        DRAW_BUFFER8_ATI                        0x882D
+        DRAW_BUFFER9_ATI                        0x882E
+        DRAW_BUFFER10_ATI                       0x882F
+        DRAW_BUFFER11_ATI                       0x8830
+        DRAW_BUFFER12_ATI                       0x8831
+        DRAW_BUFFER13_ATI                       0x8832
+        DRAW_BUFFER14_ATI                       0x8833
+        DRAW_BUFFER15_ATI                       0x8834
+
+
+Additions to Chapter 2 of the OpenGL 1.3 Specification (OpenGL
+Operation)
+
+    None
+
+
+Additions to Chapter 3 of the OpenGL 1.3 Specification (Rasterization)
+
+    Modify Section 3.11.2, Fragment Program Grammar and Semantic 
+    Restrictions
+
+    (replace <resultBinding> grammar rule with these rules)
+
+    <resultBinding>        ::= "result" "." "color" <optOutputColorNum>
+                             | "result" "." "depth"
+
+    <optOutputColorNum>    ::= ""
+                             | "[" <outputColorNum> "]"
+
+    <outputColorNum>       ::= <integer> from 0 to MAX_DRAW_BUFFERS_ATI-1
+
+
+    Modify Section 3.11.3.4, Fragment Program Results
+
+    (modify Table X.3)
+
+        Binding                        Components  Description
+        -----------------------------  ----------  ----------------------------
+        result.color[n]                (r,g,b,a)   color n 
+        result.depth                   (*,*,*,d)   depth coordinate
+
+        Table X.3:  Fragment Result Variable Bindings.  Components labeled
+        "*" are unused.  "[n]" is optional -- color <n> is used if 
+        specified; color 0 is used otherwise.
+
+    (modify third paragraph)  If a result variable binding matches 
+    "result.color[n]", updates to the "x", "y", "z", and "w" components 
+    of the result variable modify the "r", "g", "b", and "a" components, 
+    respectively, of the fragment's corresponding output color.  If 
+    "result.color[n]" is not both bound by the fragment program and 
+    written by some instruction of the program, the output color <n> of 
+    the fragment program is undefined.
+
+
+    Add a new Section 3.11.4.5.3
+
+    3.11.4.5.3  Draw Buffers Program Option
+
+    If a fragment program specifies the "ATI_draw_buffers" option,
+    it will generate multiple output colors, and the result binding
+    "result.color[n]" is allowed, as described in section 3.11.3.4,
+    and with modified grammar rules as set forth in section 3.11.2.
+    If this option is not specified, a fragment program that attempts
+    to bind "result.color[n]" will fail to load, and only "result.color"
+    will be allowed.
+
+
+Additions to Chapter 4 of the OpenGL 1.3 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Modify Section 4.2.1, Selecting a Buffer for Writing (p. 168)
+
+    (modify the title and first paragraph, p. 168)
+
+    4.2.1 Selecting Color Buffers for Writing
+
+    The first such operation is controlling the color buffers into
+    which each of the output colors are written.  This is accomplished
+    with either DrawBuffer or DrawBuffersATI.  DrawBuffer defines the
+    set of color buffers to which output color 0 is written.
+
+    (insert paragraph between first and second paragraph, p. 168)  
+
+    DrawBuffer will set the draw buffer for output colors other than 0 
+    to NONE.  DrawBuffersATI defines the draw buffers to which all 
+    output colors are written.
+
+      void DrawBuffersATI(sizei n, const enum *bufs);
+
+    <n> specifies the number of buffers in <bufs>.  <bufs> is a pointer
+    to an array of symbolic constants specifying the buffer to which 
+    each output color is written.  The constants may be NONE, 
+    FRONT_LEFT, FRONT_RIGHT, BACK_LEFT, BACK_RIGHT, and AUX0 through 
+    AUXn, where n + 1 is the number of available auxiliary buffers.  The 
+    draw buffers being defined correspond in order to the respective 
+    output colors.  The draw buffer for output colors beyond <n> is set 
+    to NONE.
+
+    If the "ATI_draw_buffers" fragment program option, is not being used
+    then DrawBuffersATI specifies a set of draw buffers into which output
+    color 0 is written.
+
+    The maximum number of draw buffers is implementation dependent and 
+    must be at least 1.  The number of draw buffers supported can
+    be queried with the state MAX_DRAW_BUFFERS_ATI.
+
+    The constants FRONT, BACK, LEFT, RIGHT, and FRONT_AND_BACK that
+    refer to multiple buffers are not valid for use in DrawBuffersATI
+    and will result in the error INVALID_OPERATION.
+
+    If DrawBuffersATI is supplied with a constant (other than NONE)
+    that does not indicate any of the color buffers allocated to
+    the GL context, the error INVALID_OPERATION will be generated.  If 
+    <n> is greater than MAX_DRAW_BUFFERS_ATI, the error 
+    INVALID_OPERATION will be generated.
+
+    (replace last paragraph, p. 169)
+
+    The state required to handle color 
+    buffer selection is an integer for each supported output color.  In 
+    the initial state, draw buffer for output color 0 is FRONT if there 
+    are no back buffers; otherwise it is BACK.  The initial state of 
+    draw buffers for output colors other then 0 is NONE.
+
+
+Additions to Chapter 5 of the OpenGL 1.3 Specification (Special 
+Functions)
+
+    None
+
+
+Additions to Chapter 6 of the OpenGL 1.3 Specification (State and
+State Requests)
+
+    None
+
+
+Dependencies on ARB_fragment_program
+
+    If ARB_fragment_program is not supported then all changes to
+    section 3.11 are removed.
+
+
+Interactions with possible future extensions
+
+    If there is some other future extension that defines multiple
+    color outputs then this extension and glDrawBuffersATI could be
+    used to define the destinations for those outputs.  This extension
+    need not be used only with ARB_fragment_program.
+
+
+Errors
+  
+    The error INVALID_OPERATION is generated by DrawBuffersATI if a
+    color buffer not currently allocated to the GL context is specified.
+
+    The error INVALID_OPERATION is generated by DrawBuffersATI if <n>
+    is greater than the state MAX_DRAW_BUFFERS_ATI.
+    
+    The error INVALID_OPERATION is generated by DrawBuffersATI if value in
+    <bufs> does not correspond to one of the allowed buffers.
+
+
+New State
+
+    (table 6.19, p227) add the following entry:
+
+    Get Value                        Type    Get Command    Initial Value Description           Section       Attribute
+    -------------------------------  ------  -------------  ------------- --------------------  ------------  ------------
+    DRAW_BUFFERi_ATI                 Z10*    GetIntegerv    see 4.2.1     Draw buffer selected  4.2.1         color-buffer
+                                                                          for output color i
+    
+
+New Implementation Dependent State
+
+    Get Value                        Type  Get Command     Minimum Value    Description             Sec.     Attribute
+    ---------                        ----  -----------     -------------    -------------------     -----    ---------
+    MAX_DRAW_BUFFERS_ATI             Z+    GetIntegerv     1                Maximum number of       4.2.1    -
+                                                                            active draw buffers
+
+
+Revision History
+
+   Date: 11/4/2006
+   Revision: 9
+      - Updated contact info after ATI/AMD merger.
+
+   Date: 12/30/2002
+   Revision: 8
+      - Clarified that DrawBuffersATI will set the set of draw buffers to
+        write color output 0 to when the "ATI_draw_buffer" fragments
+        program option is not in use.
+
+   Date: 9/27/2002
+   Revision: 7
+      - Fixed confusion between meaning of color buffer and draw buffer
+        in last revision.
+      - Fixed mistake in when an error is generated based on the <n>
+        argument of DrawBuffersATI.
+
+   Date: 9/26/2002
+   Revision: 6
+      - Cleaned up and put in sync with latest ARB_fragment_program
+        revision (#22).  Some meaningless changes made just in the name
+        of consistency.
+
+   Date: 9/11/2002
+   Revision: 5
+      - Added section 3.11.4.5.3.
+      - Added enum numbers to New Tokens.
+
+   Date: 9/9/2002
+   Revision: 4
+      - Changed error from MAX_OUTPUT_COLORS to MAX_DRAW_BUFFERS_ATI.
+      - Changed 3.10 section numbers to 3.11 to match change to
+        ARB_fragment_program spec.
+      - Changed ARB_fragment_program from required to affects, and
+        added section on interactions with it and future extensions
+        that define multiple color outputs.
+
+   Date: 9/6/2002
+   Revision: 3
+      - Changed error to INVALID OPERATION.
+      - Cleaned up typos.
+
+   Date: 8/19/2002
+   Revision: 2
+      - Added a paragraph that specifically points out that the 
+        constants that refer to multiple buffers are not allowed with
+        DrawBuffersATI.
+      - Changed bufs to <bufs> in a couple of places.
+
+   Date: 8/16/2002
+   Revision: 1
+      - First draft for circulation.

@@ -1,0 +1,12 @@
+#version 460 core
+
+#extension GL_ARM_tensors : enable
+
+uniform tensorARM<int, 2> t;
+
+void main() {
+  int ret;
+  // error: operands is not a constant expression.
+  uint operands = gl_TensorOperandsNonTemporalARM | gl_TensorOperandsOutOfBoundsValueARM;
+  tensorReadARM(t, uint[](0,0), ret, operands, 1);
+}

@@ -1,0 +1,36 @@
+material {
+    name : Mirror,
+    flipUV : true,
+    culling: none,
+    parameters : [
+        {
+            type : sampler2d,
+            name : albedo
+        }
+    ],
+    requires : [
+        uv0
+    ],
+    shadingModel : unlit,
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        if (gl_FrontFacing) {
+
+            // Make a lookup into the mirror texture.
+            vec2 uv = getResolution().zw * gl_FragCoord.xy;
+            material.baseColor.rgb = texture(materialParams_albedo, uv).rgb;
+
+            // Add black borders to the mirror.
+            vec2 st = getUV0();
+            float minDist0 = min(st.x, st.y);
+            float minDist1 = min(1.0 - st.x, 1.0 - st.y);
+            float minDist = min(minDist0, minDist1);
+            material.baseColor.rgb *= smoothstep(0.0, 0.1, minDist);
+
+        }
+        material.baseColor.a = 1.0;
+    }
+}

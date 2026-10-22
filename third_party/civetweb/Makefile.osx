@@ -1,0 +1,42 @@
+# 
+# Copyright (c) 2013 No Face Press, LLC
+# License http://opensource.org/licenses/mit-license.php MIT License
+#
+
+# For codesign to work in non-interactive mode, unlock login keychain:
+# security unlock ~/Library/Keychains/login.keychain
+# See e.g. http://lists.apple.com/archives/apple-cdsa/2008/Jan/msg00027.html
+
+# Civetweb features
+WITH_LUA = 1
+
+PACKAGE = Civetweb
+BUILD_DIR = out
+
+CFLAGS += -DUSE_COCOA -DENABLE_CREATE_CONFIG_FILE -mmacosx-version-min=10.4 -ObjC -arch i386 -arch x86_64
+LDFLAGS += -framework Cocoa
+
+DMG_DIR = $(BUILD_DIR)/dmg
+CONTENTS_DIR = $(DMG_DIR)/$(PACKAGE).app/Contents
+RESOURCES_DIR = $(CONTENTS_DIR)/Resources
+OSXBIN_DIR = $(CONTENTS_DIR)/MacOS
+
+CIVETWEB_VERSION = $(shell perl -lne '/define\s+CIVETWEB_VERSION\s+"(\S+)"/ and print $$1' include/civetweb.h)
+ZIPFILENAME = $(PACKAGE)-$(CIVETWEB_VERSION).zip
+
+include Makefile
+
+package: build
+	@rm -rf $(DMG_DIR)
+	install -d -m 755 $(CONTENTS_DIR) $(RESOURCES_DIR) $(OSXBIN_DIR)
+	install -m 644 resources/Info.plist $(CONTENTS_DIR)/
+	install -m 644 resources/civetweb_*.png resources/civetweb.icns $(RESOURCES_DIR)/
+	install -m 644 resources/itworks.html $(OSXBIN_DIR)/index.html
+	install -m 644 resources/civetweb_64x64.png $(OSXBIN_DIR)/
+	install -m 755 $(CPROG) $(OSXBIN_DIR)/$(PACKAGE)
+	install -m 644 docs/Installing.md $(DMG_DIR)/Installing.txt
+	install -m 644 LICENSE.md $(DMG_DIR)/License.txt
+	rm -rf $(ZIPFILENAME)
+	cd $(DMG_DIR) && zip -r ../../$(ZIPFILENAME) .
+
+.PHONY: package

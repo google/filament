@@ -1,0 +1,336 @@
+// Copyright 2022 The Dawn & Tint Authors
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#ifndef SRC_TINT_LANG_CORE_IR_MODULE_H_
+#define SRC_TINT_LANG_CORE_IR_MODULE_H_
+
+#include <utility>
+
+#include "src/tint/lang/core/constant/manager.h"
+#include "src/tint/lang/core/ir/block.h"
+#include "src/tint/lang/core/ir/constant.h"
+#include "src/tint/lang/core/ir/function.h"
+#include "src/tint/lang/core/ir/instruction.h"
+#include "src/tint/lang/core/ir/value.h"
+#include "src/tint/lang/core/type/manager.h"
+#include "src/tint/utils/containers/enum_set.h"
+#include "src/tint/utils/containers/filtered_iterator.h"
+#include "src/tint/utils/containers/vector.h"
+#include "src/tint/utils/diagnostic/source.h"
+#include "src/tint/utils/memory/block_allocator.h"
+#include "src/tint/utils/symbol/symbol_table.h"
+
+namespace tint::core::ir {
+
+// Wrappers around the base TINT_ICE() macros that use the ice_callback attached to the module.
+#define TINT_IR_ICE(module) TINT_ICE(module.ice_callback)
+#define TINT_IR_UNREACHABLE(module) TINT_UNREACHABLE(module.ice_callback)
+#define TINT_IR_UNIMPLEMENTED(module) TINT_UNIMPLEMENTED(module.ice_callback)
+#define TINT_IR_ASSERT(module, condition) TINT_ASSERT((condition), module.ice_callback)
+
+/// Enumerator of IR properties which can either add or subtract functionality from the core IR.
+/// The IR validator will reject use of any non-core IR functionality when the module does not
+/// contain the corresponding property.
+enum class Property : uint8_t {
+    /// Allows 8-bit integer types to be used.
+    kAllow8BitIntegers,
+    /// Allows 16-bit integer types to be used.
+    kAllow16BitIntegers,
+    /// Allows 64-bit integer types to be used.
+    kAllow64BitIntegers,
+    /// Allows use of 16-bit floats.
+    kAllow16BitFloats,
+    /// Allows input_attachment_index to be associated with any type
+    kAllowAnyInputAttachmentIndexType,
+    /// Allows lets to have any type.
+    kAllowAnyLetType,
+    /// Allows various backend-specific features for ShaderIO, like blend_src on non-struct members.
+    kAllowBackendSpecificShaderIO,
+    /// Allows use of buffer types.
+    kAllowBufferTypes,
+    /// Allows ClipDistances on f32 and vecN<f32> parameters
+    kAllowClipDistancesOnF32ScalarAndVector,
+    /// Allows binding points to be non-unique.
+    kAllowDuplicateBindings,
+    /// Allows @location on structs, matrices, and arrays that have numeric elements
+    kAllowLocationForNumericComposites,
+    /// Allows module scoped lets
+    kAllowModuleScopeLets,
+    /// Allows MSL specific entry point interface variance.
+    kAllowMslEntryPointInterface,
+    /// Allows multiple entry points in the module.
+    kAllowMultipleEntryPoints,
+    /// Allows non-core types to be used.
+    kAllowNonCoreTypes,
+    /// Allow overrides
+    kAllowOverrides,
+    /// Allows phony assignment instructions to be used.
+    kAllowPhonyInstructions,
+    /// Allows the PointSize builtin to be used.
+    kAllowPointSizeBuiltin,
+    /// Allows a pointer to a handle type
+    kAllowPointerToHandle,
+    /// Allows reference types in the IR
+    kAllowRefTypes,
+    /// Allows matrix annotations on structure members.
+    kAllowStructMatrixDecorations,
+    /// Allows module scope `var`s to exist without an IO annotation.
+    kAllowUnannotatedModuleIOVariables,
+    /// Allows access instructions to create pointers to vector elements.
+    kAllowVectorElementPointer,
+    /// Allows SwizzleView loads, stores, and swizzles.
+    kAllowSwizzleView,
+
+    /// Disallow use of the min/max/clamp builtins with vector types.
+    kDisallowVectorMinMaxClamp,
+};
+
+/// Properties is a set of Property values.
+using Properties = EnumSet<Property>;
+
+/// Prints the Property @p p to @p o
+/// @param o the stream to write to
+/// @param p the Property
+/// @return the stream so calls can be chained
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
+auto& operator<<(STREAM& out, Property p) {
+#define CASE(p)          \
+    case Property::k##p: \
+        return out << #p
+    switch (p) {  //
+        CASE(Allow8BitIntegers);
+        CASE(Allow16BitIntegers);
+        CASE(Allow64BitIntegers);
+        CASE(AllowAnyInputAttachmentIndexType);
+        CASE(AllowAnyLetType);
+        CASE(AllowBackendSpecificShaderIO);
+        CASE(AllowClipDistancesOnF32ScalarAndVector);
+        CASE(AllowDuplicateBindings);
+        CASE(AllowLocationForNumericComposites);
+        CASE(AllowModuleScopeLets);
+        CASE(AllowMslEntryPointInterface);
+        CASE(AllowMultipleEntryPoints);
+        CASE(AllowNonCoreTypes);
+        CASE(AllowOverrides);
+        CASE(AllowPhonyInstructions);
+        CASE(AllowPointSizeBuiltin);
+        CASE(AllowPointerToHandle);
+        CASE(AllowRefTypes);
+        CASE(AllowStructMatrixDecorations);
+        CASE(AllowUnannotatedModuleIOVariables);
+        CASE(AllowVectorElementPointer);
+        CASE(AllowBufferTypes);
+        CASE(Allow16BitFloats);
+        CASE(DisallowVectorMinMaxClamp);
+        CASE(AllowSwizzleView);
+    }
+#undef CASE
+    return out << "<unknown>";
+}
+
+/// Main module class for the IR.
+class Module {
+    /// Map of value to name
+    Hashmap<const Value*, Symbol, 32> value_to_name_;
+
+    // The source information for a value
+    Hashmap<const Value*, Source, 32> value_to_source_;
+
+    /// A predicate function that returns true if the instruction or value is alive.
+    struct IsAlive {
+        bool operator()(const Instruction* instruction) const { return instruction->Alive(); }
+        bool operator()(const Value* value) const { return value->Alive(); }
+    };
+
+  public:
+    /// Constructor
+    Module();
+    /// Move constructor
+    /// @param o the module to move from
+    Module(Module&& o);
+    /// Destructor
+    ~Module();
+
+    /// Move assign
+    /// @param o the module to assign from
+    /// @returns a reference to this module
+    Module& operator=(Module&& o);
+
+    /// Creates a new `TYPE` instruction owned by the module
+    /// When the Module is destructed the object will be destructed and freed.
+    /// @param args the arguments to pass to the constructor
+    /// @returns the pointer to the instruction
+    template <typename TYPE, typename... ARGS>
+    TYPE* CreateInstruction(ARGS&&... args) {
+        return allocators_.instructions.Create<TYPE>(NextInstructionId(),
+                                                     std::forward<ARGS>(args)...);
+    }
+
+    /// Creates a new `TYPE` value owned by the module
+    /// When the Module is destructed the object will be destructed and freed.
+    /// @param args the arguments to pass to the constructor
+    /// @returns the pointer to the value
+    template <typename TYPE, typename... ARGS>
+    TYPE* CreateValue(ARGS&&... args) {
+        return allocators_.values.Create<TYPE>(std::forward<ARGS>(args)...);
+    }
+
+    /// @param inst the instruction
+    /// @return the name of the given instruction, or an invalid symbol if the instruction is not
+    /// named or does not have a single return value.
+    Symbol NameOf(const Instruction* inst) const;
+
+    /// @param value the value
+    /// @return the name of the given value, or an invalid symbol if the value is not named.
+    Symbol NameOf(const Value* value) const;
+
+    /// @param inst the instruction to set the name of
+    /// @param name the desired name of the value. May be suffixed on collision.
+    /// @note requires the instruction be a single result instruction.
+    void SetName(Instruction* inst, std::string_view name);
+
+    /// @param inst the instruction to set the name of
+    /// @param name the desired name of the value.
+    /// @note requires the instruction be a single result instruction.
+    void SetName(Instruction* inst, Symbol name);
+
+    /// @param value the value to name.
+    /// @param name the desired name of the value. May be suffixed on collision.
+    void SetName(Value* value, std::string_view name);
+
+    /// @param value the value to name
+    /// @param name the desired name of the value
+    void SetName(Value* value, Symbol name);
+
+    /// Removes the name from @p value
+    /// @param value the value to remove the name from
+    void ClearName(Value* value);
+
+    /// @param inst the instruction to set the source of
+    /// @param src the source
+    /// @note requires the instruction be a single result instruction.
+    void SetSource(Instruction* inst, Source src);
+
+    /// @param value the value to set the source
+    /// @param src the source
+    void SetSource(Value* value, Source src);
+
+    /// @param inst the instruction
+    /// @return the source of the given instruction, or an empty source if the instruction does not
+    /// have a source or does not have a single return value.
+    Source SourceOf(const Instruction* inst) const;
+
+    /// @param value the value
+    /// @return the source of the given value, or an empty source if the value does not have a
+    /// source.
+    Source SourceOf(const Value* value) const;
+
+    /// @return the type manager for the module
+    core::type::Manager& Types() { return constant_values.types; }
+
+    /// @return the type manager for the module
+    const core::type::Manager& Types() const { return constant_values.types; }
+
+    /// @returns a iterable of all the alive instructions
+    FilteredIterable<IsAlive, BlockAllocator<Instruction>::View> Instructions() {
+        return {allocators_.instructions.Objects()};
+    }
+
+    /// @returns a iterable of all the alive instructions
+    FilteredIterable<IsAlive, BlockAllocator<Instruction>::ConstView> Instructions() const {
+        return {allocators_.instructions.Objects()};
+    }
+
+    /// @returns a iterable of all the alive values
+    FilteredIterable<IsAlive, BlockAllocator<Value>::View> Values() {
+        return {allocators_.values.Objects()};
+    }
+
+    /// @returns a iterable of all the alive values
+    FilteredIterable<IsAlive, BlockAllocator<Value>::ConstView> Values() const {
+        return {allocators_.values.Objects()};
+    }
+
+    /// @returns the functions in the module, in dependency order
+    Vector<Function*, 16> DependencyOrderedFunctions();
+    /// @returns the functions in the module, in dependency order
+    Vector<const Function*, 16> DependencyOrderedFunctions() const;
+
+    /// Removes `func` from the module and destroys it.
+    /// @param func the function to destroy
+    void Destroy(Function* func);
+
+    /// The set of properties used by the module.
+    Properties properties;
+
+    /// The block allocator
+    BlockAllocator<Block> blocks;
+
+    /// The constant value manager
+    core::constant::Manager constant_values;
+
+    /// List of functions in the module.
+    Vector<Function*, 8> functions;
+
+    /// The block containing module level declarations, if any exist.
+    Block* root_block = nullptr;
+
+    /// The symbol table for the module
+    SymbolTable symbols{};
+
+    /// The map of core::constant::Value to their ir::Constant.
+    Hashmap<const core::constant::Value*, ir::Constant*, 16> constants;
+
+    /// If true, the AssertValid*() methods will perform validation.
+    bool enable_validation_asserts = false;
+
+    /// If true, dump the IR whenever validation is performed.
+    bool dump_ir_when_validating = false;
+
+    /// An optional callback to receive an ICE generated while processing this module.
+    InternalCompilerErrorCallback ice_callback;
+
+  private:
+    /// @returns the next instruction id for this module
+    Instruction::Id NextInstructionId() { return next_instruction_id_++; }
+
+    /// The various BlockAllocators for the module
+    struct {
+        /// The instruction allocator
+        BlockAllocator<Instruction> instructions;
+
+        /// The value allocator
+        BlockAllocator<Value> values;
+    } allocators_;
+
+    Instruction::Id next_instruction_id_ = 0;
+};
+
+}  // namespace tint::core::ir
+
+#endif  // SRC_TINT_LANG_CORE_IR_MODULE_H_

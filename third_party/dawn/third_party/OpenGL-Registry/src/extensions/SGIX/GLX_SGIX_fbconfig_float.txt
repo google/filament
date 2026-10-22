@@ -1,0 +1,123 @@
+XXXmdf - incomplete
+
+Name
+
+    SGIX_fbconfig_float
+
+Name Strings
+
+    GLX_SGIX_fbconfig_float
+
+Version
+    
+    $Date: 1999/01/08 19:41:53 $ $Revision: 1.1 $
+
+Number
+
+    XXXmdf
+
+Dependencies
+
+    SGIX_fbconfig is required
+
+Overview
+
+    This extension enhances the fbconfig visual selection and description
+    capabilities by adding support for floating-point attributes. While
+    SGIX_fbconfig only provides for integral attributes, some visual
+    attributes are best described with floating point
+    numbers.  Applications which seek to choose visuals based on those
+    attributes may use the facilites described in this extension.
+
+Issues
+
+    * There is an implicit assumption that all attribute tokens can be
+      cast to double and back to int without losing information.  There
+      are currently no tokens with more than 16 significant bits so this
+      is almost certainly a safe assumption, however it should be noted
+      as a limitation.
+
+New Procedures and Functions
+
+    int glXGetFBConfigFltAttribSGIX(Display *dpy, 
+			            GLXFBConfigSGIX config,
+			            int attribute,
+			            double *value);
+
+    GLXFBConfigSGIX *glXChooseFBConfigWithFltSGIX(
+		Display *dpy,
+		int screen,
+		const int *int_attrib_list,
+		const double *flt_attrib_list,
+		int *nelements);
+
+New Tokens
+
+    None
+
+Additions to the OpenGL 1.0 Specification
+
+    None
+
+Additions to the GLX Specification
+
+    [Added following the description of glXChooseFBConfigSGIX]
+
+    Use glXChooseFBConfigWithFltSGIX in place of
+    glXChooseFBConfigSGIX in order to select GLXFBConfigSGIXs based on
+    floating point attributes.
+
+        GLXFBConfigSGIX *glXChooseFBConfigWithFltSGIX(
+		Display *dpy,
+		int screen,
+		const int *attrib_list,
+		const double *flt_attrib_list,
+		int *nelements);
+
+    If <flt_attrib_list> is NULL then glXChooseFBConfigWithFltSGIX behaves
+    identically to glXChooseFBConfigSGIX; otherwise, the attributes
+    listed in <flt_attrib_list> are used in conjunction with
+    the attributes listed in <attrib_list> to select a
+    matching GLXFBConfigSGIX.
+    
+    All attributes have an inherent data type, listed in Table 3, such as
+    integer, boolean, enumerated, bitmask, XID, or floating point.
+    Any of these attributes may appear in <attrib_list>, although
+    in the case of floating point attributes the cast to integer may lose
+    information. Only floating point attributes may appear in
+    <flt_attrib_list>.  Since the attribute tokens are integer constants,
+    they must be cast to double to appear in <flt_attrib_list>.  Any
+    attribute which appears in both lists will take on the value from
+    <flt_attrib_list>.
+
+    [Added following the description of glXGetFBConfigAttribSGIX]
+
+    To get the value of a floating point GLX attribute for a
+    GLXFBConfigSGIX use:
+
+        int glXGetFBConfigFltAttribSGIX(Display *dpy, 
+			                GLXFBConfigSGIX config,
+			                int attribute,
+			                double *value);
+
+    glXGetFBConfigFltAttribSGIX has the same semantics as 
+    glXGetFBConfigAttribSGIX, although it returns a double value
+    rather than an int value.  Non-floating-point attributes undergo
+    a cast to double before they are returned.
+
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

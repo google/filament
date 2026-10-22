@@ -1,0 +1,101 @@
+#version 450
+
+#extension GL_EXT_expect_assume: enable
+#extension GL_EXT_shader_explicit_arithmetic_types: enable
+
+layout (local_size_x = 8) in;
+
+readonly buffer roblock {
+  int8_t i8;
+  i8vec2 i8v2;
+  i8vec3 i8v3;
+  i8vec4 i8v4;
+  uint8_t u8;
+  u8vec2 u8v2;
+  u8vec3 u8v3;
+  u8vec4 u8v4;
+  int16_t i16;
+  i16vec2 i16v2;
+  i16vec3 i16v3;
+  i16vec4 i16v4;
+  uint16_t u16;
+  u16vec2 u16v2;
+  u16vec3 u16v3;
+  u16vec4 u16v4;
+  int32_t i32;
+  i32vec2 i32v2;
+  i32vec3 i32v3;
+  i32vec4 i32v4;
+  uint32_t u32;
+  u32vec2 u32v2;
+  u32vec3 u32v3;
+  u32vec4 u32v4;
+  int64_t i64;
+  i64vec2 i64v2;
+  i64vec3 i64v3;
+  i64vec4 i64v4;
+  uint64_t u64;
+  u64vec2 u64v2;
+  u64vec3 u64v3;
+  u64vec4 u64v4;
+} ro;
+
+void main() {
+  int x = 0;
+
+  // 8-bit
+  if (expectEXT(ro.i8, 10) == 10 ||
+      expectEXT(ro.i8v2, i8vec2(11, -22)) == i8vec2(11, -22) ||
+      expectEXT(ro.i8v3, i8vec3(11, -22, 33)) == i8vec3(11, -22, 33) ||
+      expectEXT(ro.i8v4, i8vec4(11, -22, 33, 44)) == i8vec4(11, -22, 33, 44)) {
+    x++;
+  }
+  if (expectEXT(ro.u8, 10) == 10 ||
+      expectEXT(ro.u8v2, u8vec2(11, 22)) == u8vec2(11, 22) ||
+      expectEXT(ro.u8v3, u8vec3(11, 22, 33)) == u8vec3(11, 22, 33) ||
+      expectEXT(ro.u8v4, u8vec4(11, 22, 33, 44)) == u8vec4(11, 22, 33, 44)) {
+    x++;
+  }
+
+  // 16-bit
+  if (expectEXT(ro.i16, 10) == 10 ||
+      expectEXT(ro.i16v2, i16vec2(11, -22)) == i16vec2(11, -22) ||
+      expectEXT(ro.i16v3, i16vec3(11, -22, 33)) == i16vec3(11, -22, 33) ||
+      expectEXT(ro.i16v4, i16vec4(11, -22, 33, 44)) == i16vec4(11, -22, 33, 44)) {
+    x++;
+  }
+  if (expectEXT(ro.u16, 10) == 10 ||
+      expectEXT(ro.u16v2, u16vec2(11, 22)) == u16vec2(11, 22) ||
+      expectEXT(ro.u16v3, u16vec3(11, 22, 33)) == u16vec3(11, 22, 33) ||
+      expectEXT(ro.u16v4, u16vec4(11, 22, 33, 44)) == u16vec4(11, 22, 33, 44)) {
+    x++;
+  }
+
+  // 32-bit
+  if (expectEXT(ro.i32, 10) == 10 ||
+      expectEXT(ro.i32v2, i32vec2(11, -22)) == i32vec2(11, -22) ||
+      expectEXT(ro.i32v3, i32vec3(11, -22, 33)) == i32vec3(11, -22, 33) ||
+      expectEXT(ro.i32v4, i32vec4(11, -22, 33, 44)) == i32vec4(11, -22, 33, 44)) {
+    x++;
+  }
+  if (expectEXT(ro.u32, 10) == 10 ||
+      expectEXT(ro.u32v2, u32vec2(11, 22)) == u32vec2(11, 22) ||
+      expectEXT(ro.u32v3, u32vec3(11, 22, 33)) == u32vec3(11, 22, 33) ||
+      expectEXT(ro.u32v4, u32vec4(11, 22, 33, 44)) == u32vec4(11, 22, 33, 44)) {
+    x++;
+  }
+
+  // 64-bit
+  if (expectEXT(ro.i64, 10) == 10 ||
+      expectEXT(ro.i64v2, i64vec2(11, -22)) == i64vec2(11, -22) ||
+      expectEXT(ro.i64v3, i64vec3(11, -22, 33)) == i64vec3(11, -22, 33) ||
+      expectEXT(ro.i64v4, i64vec4(11, -22, 33, 44)) == i64vec4(11, -22, 33, 44)) {
+    x++;
+  }
+  if (expectEXT(ro.u64, 10) == 10 ||
+      expectEXT(ro.u64v2, u64vec2(11, 22)) == u64vec2(11, 22) ||
+      expectEXT(ro.u64v3, u64vec3(11, 22, 33)) == u64vec3(11, 22, 33) ||
+      expectEXT(ro.u64v4, u64vec4(11, 22, 33, 44)) == u64vec4(11, 22, 33, 44)) {
+    x++;
+  }
+}

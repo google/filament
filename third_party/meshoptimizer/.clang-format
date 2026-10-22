@@ -1,0 +1,12 @@
+Standard: Cpp03
+UseTab: ForIndentation
+TabWidth: 4
+IndentWidth: 4
+AccessModifierOffset: -4
+BreakBeforeBraces: Allman
+IndentCaseLabels: false
+ColumnLimit: 0
+PointerAlignment: Left
+BreakConstructorInitializersBeforeComma: true
+NamespaceIndentation: None
+AlignEscapedNewlines: DontAlign

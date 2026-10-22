@@ -1,0 +1,86 @@
+#version 460
+#extension GL_EXT_ray_query : require
+#extension GL_EXT_descriptor_heap : require
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_shader_image_load_formatted : require
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout(location = 0) out vec4 FragColor;
+rayQueryEXT rq;
+layout(set = 1, binding = 2) uniform texture1D spv_25ResourceHeap[];
+layout(set = 1, binding = 2) uniform texture2D spv_36ResourceHeap[];
+layout(set = 1, binding = 2) uniform texture3D spv_49ResourceHeap[];
+layout(set = 1, binding = 2) uniform sampler spv_68SamplerHeap[];
+layout(set = 1, binding = 2, r32f) writeonly uniform image1D spvWriteImages1D_heapResourceHeap[];
+layout(set = 1, binding = 2, r32f) writeonly uniform image2D spvWriteImages2D_heapResourceHeap[];
+layout(set = 1, binding = 2, r32f) writeonly uniform image3D spvWriteImages3D_heapResourceHeap[];
+layout(set = 1, binding = 2, r32f) readonly uniform image1D spvRWriteImages1D_heapResourceHeap[];
+layout(set = 1, binding = 2, r32f) readonly uniform image2D spvRWriteImages2D_heapResourceHeap[];
+layout(set = 1, binding = 2, r32f) readonly uniform image3D spvRWriteImages3D_heapResourceHeap[];
+layout(set = 1, binding = 2) uniform image2D spv_164ResourceHeap[];
+layout(set = 1, binding = 2, std140) uniform UBO140
+{
+    float data[2];
+} spvUBO140_186ResourceHeap[];
+
+layout(set = 1, binding = 2, std140) uniform UBO430
+{
+    vec3 data[2];
+} spvUBO430_201ResourceHeap[];
+
+layout(set = 1, binding = 2, scalar) uniform UBOScalar
+{
+    vec3 data[2];
+} spvUBOScalar_215ResourceHeap[];
+
+layout(set = 1, binding = 2, std430) readonly buffer SSBOReadOnlyNoWrite
+{
+    vec4 data;
+} spvSSBOReadOnlyNoWrite_230ResourceHeap[];
+
+layout(set = 1, binding = 2, std430) coherent writeonly buffer SSBOWriteOnlyNoRead
+{
+    vec4 data;
+} spvSSBOWriteOnlyNoRead_245ResourceHeap[];
+
+layout(set = 1, binding = 2, std430) buffer SSBO
+{
+    vec4 data;
+} spvSSBO_254ResourceHeap[];
+
+layout(set = 1, binding = 2, r32ui) uniform uimage2D spv_259ResourceHeap[];
+layout(set = 1, binding = 2) uniform accelerationStructureEXT spv_274ResourceHeap[];
+
+void main()
+{
+    FragColor = vec4(0.0);
+    int desc_index = int(gl_FragCoord.x);
+    FragColor += texelFetch(spv_25ResourceHeap[nonuniformEXT(desc_index + 0)], 0, 0);
+    FragColor += texelFetch(spv_36ResourceHeap[nonuniformEXT(desc_index + 1)], ivec2(0), 0);
+    FragColor += texelFetch(spv_49ResourceHeap[nonuniformEXT(desc_index + 2)], ivec3(0), 0);
+    FragColor += texture(nonuniformEXT(sampler2D(spv_36ResourceHeap[int(gl_FragCoord.x)], spv_68SamplerHeap[int(gl_FragCoord.y)])), vec2(0.0), 0.0);
+    FragColor += vec4(texture(nonuniformEXT(sampler2DShadow(spv_36ResourceHeap[int(gl_FragCoord.x)], spv_68SamplerHeap[int(gl_FragCoord.y)])), vec3(vec3(0.0).xy, 0.0), 0.0));
+    imageStore(spvWriteImages1D_heapResourceHeap[nonuniformEXT(desc_index + 3)], 0, FragColor);
+    imageStore(spvWriteImages2D_heapResourceHeap[nonuniformEXT(desc_index + 4)], ivec2(0), FragColor);
+    imageStore(spvWriteImages3D_heapResourceHeap[nonuniformEXT(desc_index + 5)], ivec3(0), FragColor);
+    FragColor += imageLoad(spvRWriteImages1D_heapResourceHeap[nonuniformEXT(desc_index + 6)], 0);
+    FragColor += imageLoad(spvRWriteImages2D_heapResourceHeap[nonuniformEXT(desc_index + 7)], ivec2(0));
+    FragColor += imageLoad(spvRWriteImages3D_heapResourceHeap[nonuniformEXT(desc_index + 8)], ivec3(0));
+    FragColor += imageLoad(spv_164ResourceHeap[nonuniformEXT(desc_index + 9)], ivec2(0));
+    int _180 = desc_index + 10;
+    FragColor += vec4(spvUBO140_186ResourceHeap[nonuniformEXT(_180)].data[1]);
+    int _196 = desc_index + 11;
+    FragColor += vec4(spvUBO430_201ResourceHeap[nonuniformEXT(_196)].data[1].x);
+    int _210 = desc_index + 12;
+    FragColor += vec4(spvUBOScalar_215ResourceHeap[nonuniformEXT(_210)].data[1].x);
+    int _226 = desc_index + 13;
+    FragColor += spvSSBOReadOnlyNoWrite_230ResourceHeap[nonuniformEXT(_226)].data;
+    int _239 = desc_index + 14;
+    spvSSBOWriteOnlyNoRead_245ResourceHeap[nonuniformEXT(_239)].data = vec4(20.0);
+    int _250 = desc_index + 15;
+    FragColor += spvSSBO_254ResourceHeap[nonuniformEXT(_250)].data;
+    uint _270 = imageAtomicAdd(spv_259ResourceHeap[nonuniformEXT(desc_index + 16)], ivec2(0), 50u);
+    rayQueryInitializeEXT(rq, spv_274ResourceHeap[nonuniformEXT(desc_index + 17)], 0u, 0u, vec3(0.0), 0.0, vec3(1.0, 0.0, 0.0), 1.0);
+}
+

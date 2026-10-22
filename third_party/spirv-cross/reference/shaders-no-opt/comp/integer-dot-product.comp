@@ -1,0 +1,127 @@
+#version 450
+#if defined(GL_EXT_shader_explicit_arithmetic_types_int16)
+#extension GL_EXT_shader_explicit_arithmetic_types_int16 : require
+#elif defined(GL_AMD_gpu_shader_int16)
+#extension GL_AMD_gpu_shader_int16 : require
+#elif defined(GL_NV_gpu_shader5)
+#extension GL_NV_gpu_shader5 : require
+#else
+#error No extension available for Int16.
+#endif
+#if defined(GL_EXT_shader_explicit_arithmetic_types_int8)
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
+#elif defined(GL_NV_gpu_shader5)
+#extension GL_NV_gpu_shader5 : require
+#else
+#error No extension available for Int8.
+#endif
+#extension GL_EXT_spirv_intrinsics : require
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 1, std430) buffer InOut3
+{
+    u16vec4 x;
+    u16vec4 y;
+    int acc;
+    int result;
+} comp3;
+
+layout(binding = 1, std430) buffer InOut2
+{
+    uint x;
+    uint y;
+    uint result;
+} comp2;
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6016], id = 4450)
+int spvSDot_int_u16vec4_u16vec4(u16vec4 arg0, u16vec4 arg1);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6016], id = 4450)
+uint spvSDot_uint_u16vec4_u16vec4(u16vec4 arg0, u16vec4 arg1);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6016], id = 4451)
+uint spvUDot_uint_u16vec4_u16vec4(u16vec4 arg0, u16vec4 arg1);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6016], id = 4452)
+int spvSUDot_int_u16vec4_u16vec4(u16vec4 arg0, u16vec4 arg1);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6016], id = 4452)
+uint spvSUDot_uint_u16vec4_u16vec4(u16vec4 arg0, u16vec4 arg1);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6018], id = 4450)
+uint8_t spvSDot_uint8_t_uint_uint(uint arg0, uint arg1, spirv_literal uint packedFormat);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6018], id = 4450)
+uint16_t spvSDot_uint16_t_uint_uint(uint arg0, uint arg1, spirv_literal uint packedFormat);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6018], id = 4450)
+uint spvSDot_uint_uint_uint(uint arg0, uint arg1, spirv_literal uint packedFormat);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6018], id = 4450)
+int spvSDot_int_uint_uint(uint arg0, uint arg1, spirv_literal uint packedFormat);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6018], id = 4451)
+uint8_t spvUDot_uint8_t_uint_uint(uint arg0, uint arg1, spirv_literal uint packedFormat);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6018], id = 4451)
+uint16_t spvUDot_uint16_t_uint_uint(uint arg0, uint arg1, spirv_literal uint packedFormat);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6018], id = 4451)
+uint spvUDot_uint_uint_uint(uint arg0, uint arg1, spirv_literal uint packedFormat);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6018], id = 4452)
+uint8_t spvSUDot_uint8_t_uint_uint(uint arg0, uint arg1, spirv_literal uint packedFormat);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6018], id = 4452)
+uint16_t spvSUDot_uint16_t_uint_uint(uint arg0, uint arg1, spirv_literal uint packedFormat);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6018], id = 4452)
+uint spvSUDot_uint_uint_uint(uint arg0, uint arg1, spirv_literal uint packedFormat);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6018], id = 4452)
+int spvSUDot_int_uint_uint(uint arg0, uint arg1, spirv_literal uint packedFormat);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6016], id = 4453)
+int spvSDotAccSat_int_u16vec4_u16vec4(u16vec4 arg0, u16vec4 arg1, int);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6016], id = 4453)
+uint spvSDotAccSat_uint_u16vec4_u16vec4(u16vec4 arg0, u16vec4 arg1, uint);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6016], id = 4454)
+uint spvUDotAccSat_uint_u16vec4_u16vec4(u16vec4 arg0, u16vec4 arg1, uint);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6016], id = 4455)
+int spvSUDotAccSat_int_u16vec4_u16vec4(u16vec4 arg0, u16vec4 arg1, int);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6016], id = 4455)
+uint spvSUDotAccSat_uint_u16vec4_u16vec4(u16vec4 arg0, u16vec4 arg1, uint);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6018], id = 4454)
+uint spvUDotAccSat_uint_uint_uint(uint arg0, uint arg1, uint, spirv_literal uint packedFormat);
+
+void main()
+{
+    int sdot_int = spvSDot_int_u16vec4_u16vec4(comp3.x, comp3.y);
+    uint sdot_uint = spvSDot_uint_u16vec4_u16vec4(comp3.x, comp3.y);
+    uint udot_uint = spvUDot_uint_u16vec4_u16vec4(comp3.x, comp3.y);
+    int sudot_int = spvSUDot_int_u16vec4_u16vec4(comp3.x, comp3.y);
+    uint sudot_uint = spvSUDot_uint_u16vec4_u16vec4(comp3.x, comp3.y);
+    uint8_t spdot8 = spvSDot_uint8_t_uint_uint(comp2.x, comp2.y, 0);
+    uint16_t spdot16 = spvSDot_uint16_t_uint_uint(comp2.x, comp2.y, 0);
+    uint spdot32 = spvSDot_uint_uint_uint(comp2.x, comp2.y, 0);
+    int spdoti32 = spvSDot_int_uint_uint(comp2.x, comp2.y, 0);
+    uint8_t updot8 = spvUDot_uint8_t_uint_uint(comp2.x, comp2.y, 0);
+    uint16_t updot16 = spvUDot_uint16_t_uint_uint(comp2.x, comp2.y, 0);
+    uint updot32 = spvUDot_uint_uint_uint(comp2.x, comp2.y, 0);
+    uint8_t supdot8 = spvSUDot_uint8_t_uint_uint(comp2.x, comp2.y, 0);
+    uint16_t supdot16 = spvSUDot_uint16_t_uint_uint(comp2.x, comp2.y, 0);
+    uint supdot32 = spvSUDot_uint_uint_uint(comp2.x, comp2.y, 0);
+    int supdoti32 = spvSUDot_int_uint_uint(comp2.x, comp2.y, 0);
+    int sdotaddsat_int = spvSDotAccSat_int_u16vec4_u16vec4(comp3.x, comp3.y, comp3.acc);
+    uint sdotaddsat_uint = spvSDotAccSat_uint_u16vec4_u16vec4(comp3.x, comp3.y, uint(comp3.acc));
+    uint udotaddsat_uint = spvUDotAccSat_uint_u16vec4_u16vec4(comp3.x, comp3.y, uint(comp3.acc));
+    int sudotaddsat_int = spvSUDotAccSat_int_u16vec4_u16vec4(comp3.x, comp3.y, comp3.acc);
+    uint sudotaddsat_uint = spvSUDotAccSat_uint_u16vec4_u16vec4(comp3.x, comp3.y, uint(comp3.acc));
+    uint udotaddsat_pack = spvUDotAccSat_uint_uint_uint(comp2.x, comp2.y, uint(comp3.acc), 0);
+}
+

@@ -1,0 +1,173 @@
+XXX - Not complete yet!!!
+
+Name
+
+        SGIX_shadow
+
+Name Strings
+
+        GL_SGIX_shadow
+
+Version
+
+        $Date: 1997/08/27 19:54:45 $ $Revision: 1.15 $
+
+Number
+
+        34
+
+Dependencies
+
+        None.
+
+Overview
+
+        This extension defines two new operations to be performed on texture
+        values before they are passed on to the filtering subsystem.  These
+        operations perform either a <= or >= test on the value from texture
+        memory and the iterated R value, and return 1.0 or 0.0 if the test
+        passes or fails, respectively.
+        
+New Procedures and Functions
+
+        None
+
+New Tokens
+
+        Accepted by the <pname> parameter of TexParameterf, TexParameteri,
+        TexParameterfv, TexParameteriv, GetTexParameterfv, and
+        GetTexParameteriv, with the <pname> parameter of TRUE or FALSE:
+
+        TEXTURE_COMPARE_SGIX
+
+        Accepted by the <pname> parameter of TexParameterf, TexParameteri,
+        TexParameterfv, TexParameteriv, GetTexParameterfv, and
+        GetTexParameteriv:
+
+        TEXTURE_COMPARE_OPERATOR_SGIX
+
+        Accepted by the <param> parameter of TexParameterf and TexParameteri,
+        and by the <params> parameter of TexParameterfv and TexParameteriv,
+        when their <pname> parameter is TEXTURE_COMPARE_OPERATOR_SGIX:
+
+        TEXTURE_LEQUAL_R_SGIX
+        TEXTURE_GEQUAL_R_SGIX
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+        None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+        XXX - lots
+
+        GL Specification Table 3.8 is updated as follows:
+
+        Name                            Type            Legal Values
+        ----                            ----            ------------
+        TEXTURE_WRAP_S                  integer         CLAMP, REPEAT
+        TEXTURE_WRAP_T                  integer         CLAMP, REPEAT
+        TEXTURE_WRAP_R_EXT              integer         CLAMP, REPEAT
+        TEXTURE_MIN_FILTER              integer         NEAREST, LINEAR,
+                                                        NEAREST_MIPMAP_NEAREST,
+                                                        NEAREST_MIPMAP_LINEAR,
+                                                        LINEAR_MIPMAP_NEAREST,
+                                                        LINEAR_MIPMAP_LINEAR,
+                                                        FILTER4_SGIS,
+                                                        LINEAR_CLIPMAP_LINEAR_SGIX
+        TEXTURE_MAG_FILTER              integer         NEAREST, LINEAR,
+                                                        FILTER4_SGIS,
+                                                        LINEAR_DETAIL_SGIS,
+                                                        LINEAR_DETAIL_ALPHA_SGIS,
+                                                        LINEAR_DETAIL_COLOR_SGIS,
+                                                        LINEAR_SHARPEN_SGIS,
+                                                        LINEAR_SHARPEN_ALPHA_SGIS,
+                                                        LINEAR_SHARPEN_COLOR_SGIS,
+        TEXTURE_BORDER_COLOR            4 floats        any 4 values in [0,1]
+        DETAIL_TEXTURE_LEVEL_SGIS       integer         any non-negative integer
+        DETAIL_TEXTURE_MODE_SGIS        integer         ADD, MODULATE
+        TEXTURE_MIN_LOD_SGIS            float           any value
+        TEXTURE_MAX_LOD_SGIS            float           any value
+        TEXTURE_BASE_LEVEL_SGIS         integer         any non-negative integer
+        TEXTURE_MAX_LEVEL_SGIS          integer         any non-negative integer
+        GENERATE_MIPMAP_SGIS            boolean         TRUE or FALSE
+        TEXTURE_CLIPMAP_OFFSET_SGIX     2 floats        any 2 values
+        TEXTURE_COMPARE_SGIX            boolean         TRUE or FALSE
+        TEXTURE_COMPARE_OPERATOR_SGIX   integer         TEXTURE_LEQUAL_R_SGIX,
+                                                        TEXTURE_GEQUAL_R_SGIX
+
+        Table 3.8: Texture parameters and their values.
+
+        Notes:
+
+        * Two new texture operators are defined which alter the sampled texture
+        values before they are filtered.  These operators are defined only for
+        textures with internal format DEPTH_COMPONENT or DEPTH_COMPONENTS*_SGI.
+
+        * The new operators compare the sample texel value to the value of the
+        third texture coordinate, R.  The texture components are treated as though
+        they range from 0.0 through 1.0.  The value of the test is zero if the
+        test fails, and one if it passes.
+
+        * The test for operator TEXTURE_LEQUAL_R_SGIX passes if the texel value
+        is less than or equal to R.      The test for operator TEXTURE_GEQUAL_R_SGIX
+        passes if the texel value is greater than or equal to R.
+
+        * The modified texels (with value 0.0 or 1.0 depending on
+        the test result) are treated as if the texture internal format
+        were LUMINANCE.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+        None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+        None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+        The texture compare operator is queried by calling GetTexParameteriv
+        and GetTexParameterfv with <pname> set to
+        TEXTURE_COMPARE_OPERATOR_SGIX.  Texture compare enable/disable state
+        is queried by calling GetTexParameteriv or GetTexParameterif with
+        <pname> TEXTURE_COMPARE_SGIX.
+        
+Additions to the GLX Specification
+
+        None
+
+Errors
+
+        INVALID_OPERATION is generated if TexParameter[if] parameter <pname>
+        is TEXTURE_COMPARE_OPERATOR_SGIX and parameter <param> is not
+        TEXTURE_LEQUAL_R_SGIX,or TEXTURE_GEQUAL_R_SGIX.
+
+New State
+
+Get Value                       Get Command             Type    Initial Value           Attribute
+---------                       -----------             ----    -------------           ---------
+TEXTURE_COMPARE_SGIX            GetTexParameter[if]v    B       False                   texture
+TEXTURE_COMPARE_OPERATOR_SGIX   GetTexParameter[if]v    Z_2     TEXTURE_LEQUAL_R_SGIX   texture
+        
+
+New Implementation Dependent State
+
+        None
+
+NVIDIA Implementation Details
+
+        The specification is unclear if the R texture coordinate is
+        clamped to the range [0,1].  NVIDIA hardware supporting this
+        extension does clamp the R texture coordinate to the range [0,1]
+        on a per-fragment basis.
+
+        The behavior of the NV_register_combiners SIGNED_NEGATE_NV mapping
+        mode is undefined when used to map the initial value of a texture
+        register corresponding to an enabled texture with a base internal
+        format of GL_DEPTH_COMPONENT and a true TEXTURE_COMPARE_SGIX
+        mode when multiple enabled textures have different values for
+        TEXTURE_COMPARE_OPERATOR_SGIX.  Values subsequently assigned to
+        such registers and then mapped with SIGNED_NEGATIE_NV operate
+        as expected.

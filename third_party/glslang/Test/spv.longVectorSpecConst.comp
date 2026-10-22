@@ -1,0 +1,81 @@
+#version 450 core
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_EXT_long_vector : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_nonuniform_qualifier : enable
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) buffer MatrixBuf {
+    float16_t matrixData[];
+} matrixBuf;
+
+layout(set = 0, binding = 0) buffer MatrixBuf2 {
+    int8_t matrixData[];
+} matrixBuf2;
+
+layout(constant_id = 0) const uint32_t c0 = 0;
+
+void main()
+{
+    vector<float, c0> v = vector<float, c0>(0.0);
+
+    vec3 x = vec3(1.0), y = vec3(2.0);
+    vector<float, c0> v2 = vector<float, c0>(x[0]);
+
+    const vec3 x2 = vec3(1.0), y2 = vec3(2.0);
+    vector<float, c0> v3 = vector<float, c0>(x2[0]);
+
+    vec3 x3 = vec3(4, 5, 6), y3 = vec3(7, 8, 9);
+
+    vector<float, c0> v4 = vector<float, c0>(x3.z);
+
+    vector<float16_t, c0> v5 = vector<float16_t, c0>(v4);
+
+    vector<float, c0> v6;
+
+    v6 = v + v2;
+    v6 = v - v2;
+    v6 = v * v2;
+    v6 = v / v2;
+
+    v6 += v;
+    v6 -= v;
+    v6 *= v;
+    v6 /= v;
+
+    float f;
+    v6 *= f;
+    v6 *= 5.0;
+
+    int len = v6.length();
+
+    v6[0] = f;
+    v6[4] = 5.0;
+
+    f += (v += v)[4];
+    v6 = v;
+
+    vector<float, 20> v7;
+    vector<float16_t, c0> f162 = vector<float16_t, c0>(v7.length());
+
+    float16_t f16;
+    vector<float16_t, c0> f161 = vector<float16_t, c0>(f16);
+
+    vector<float16_t, c0> v11, v12, v13;
+
+    v11 = max(v11, v12);
+    v11 = min(v11, v12);
+    v11 = step(v11, v12);
+    v11 = clamp(v11, v12, v13);
+    v11 = exp(v11);
+    v11 = log(v11);
+    v11 = tanh(v11);
+    v11 = atan(v11);
+    v11 = fma(v11, v12, v13);
+
+    f += (v += v)[len];
+}
+
+vector<float16_t, c0> foo(vector<float16_t, c0> x) { return x; }

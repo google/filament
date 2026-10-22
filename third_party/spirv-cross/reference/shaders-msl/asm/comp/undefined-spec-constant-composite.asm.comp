@@ -1,0 +1,42 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct _21
+{
+    int _m0;
+    int _m1;
+};
+
+struct _5
+{
+    int _m0[10];
+};
+
+struct _7
+{
+    int _m0[10];
+};
+
+constant int _29 = {};
+constant int _9_tmp [[function_constant(0)]];
+constant int _9 = is_function_constant_defined(_9_tmp) ? _9_tmp : 0;
+constant _21 _30 = _21{ _9, _29 };
+
+static inline __attribute__((always_inline))
+int _42(thread const int& _44, thread const _21& _45, thread const _21& _46)
+{
+    return (_44 + _45._m0) + _46._m1;
+}
+
+kernel void main0(device _5& _6 [[buffer(0)]], device _7& _8 [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    int _34 = _8._m0[gl_GlobalInvocationID.x];
+    _21 _35 = _30;
+    _21 _36 = _21{ _29, 200 };
+    _6._m0[gl_GlobalInvocationID.x] = _42(_34, _35, _36);
+}
+

@@ -1,0 +1,435 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglCreatePbufferSurface - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.2"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglCreatePbufferSurface">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglCreatePbufferSurface — 
+            create a new <abbr class="acronym">EGL</abbr> pixel buffer surface
+        </p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLSurface <strong class="fsfunc">eglCreatePbufferSurface</strong>(</code>
+              </td>
+              <td>EGLDisplay <var class="pdparam">display</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLConfig <var class="pdparam">config</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLint const * <var class="pdparam">attrib_list</var><code>)</code>;</td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="parameters">
+        <h2>Parameters</h2>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>display</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>Specifies the EGL display connection.</p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>config</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies the EGL frame buffer configuration that defines the
+                    frame buffer resource available to the surface.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>attrib_list</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies pixel buffer surface attributes.
+                    May be <code class="constant">NULL</code> or empty
+                    (first attribute is <code class="constant">EGL_NONE</code>).
+                </p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            <code class="function">eglCreatePbufferSurface</code> creates an
+            off-screen pixel buffer surface and returns its handle. If
+            <code class="function">eglCreatePbufferSurface</code> fails to create
+            a pixel buffer surface, <code class="constant">EGL_NO_SURFACE</code>
+            is returned.
+        </p>
+        <p>
+            Surface attributes are specified as a list of
+            attribute-value pairs, terminated with
+            <code class="constant">EGL_NONE</code>. Accepted attributes
+            are:
+        </p>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_GL_COLORSPACE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies the color space used by OpenGL and OpenGL ES
+                    when rendering to the surface. If its value is
+                    <code class="constant">EGL_GL_COLORSPACE_SRGB</code>, then a
+                    non-linear, perceptually uniform color space is assumed,
+                    with a corresponding
+                    <code class="constant">GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING</code>
+                    value of <code class="constant">GL_SRGB</code>. If its value is
+                    <code class="constant">EGL_GL_COLORSPACE_LINEAR</code>, then a
+                    linear color space is assumed, with a corresponding
+                    <code class="constant">GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING</code>
+                    value of <code class="constant">GL_LINEAR</code>. The default
+                    value of <code class="constant">EGL_GL_COLORSPACE</code> is
+                    <code class="constant">EGL_GL_COLORSPACE_LINEAR</code>.
+                </p>
+              <p>
+                    Note that the <code class="constant">EGL_GL_COLORSPACE</code>
+                    attribute is used only by OpenGL and OpenGL ES contexts
+                    supporting sRGB framebuffers. EGL itself does not
+                    distinguish multiple colorspace models. Refer to the
+                    ``sRGB Conversion'' sections of the OpenGL 4.6 and
+                    OpenGL ES 3.2 Specifications for more information.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_HEIGHT</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies the required height of the pixel buffer
+                    surface. The default value is
+                    <code class="constant">0</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_LARGEST_PBUFFER</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Requests the largest available pixel buffer surface
+                    when the allocation would otherwise fail. Use
+                    <a class="citerefentry" href="eglQuerySurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglQuerySurface</span></span></a>
+                    to retrieve the dimensions of the allocated pixel
+                    buffer. The default value is
+                    <code class="constant">EGL_FALSE</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_MIPMAP_TEXTURE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies whether storage for mipmaps should be
+                    allocated. Space for mipmaps will be set aside if
+                    the attribute value is <code class="constant">EGL_TRUE</code>
+                    and <code class="constant">EGL_TEXTURE_FORMAT</code> is not
+                    <code class="constant">EGL_NO_TEXTURE</code>. The default
+                    value is <code class="constant">EGL_FALSE</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_TEXTURE_FORMAT</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies the format of the texture that will be
+                    created when a pbuffer is bound to a texture map.
+                    Possible values are
+                    <code class="constant">EGL_NO_TEXTURE</code>,
+                    <code class="constant">EGL_TEXTURE_RGB</code>, and
+                    <code class="constant">EGL_TEXTURE_RGBA</code>. The default
+                    value is <code class="constant">EGL_NO_TEXTURE</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_TEXTURE_TARGET</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies the target for the texture that will be
+                    created when the pbuffer is created with a texture
+                    format of <code class="constant">EGL_TEXTURE_RGB</code> or
+                    <code class="constant">EGL_TEXTURE_RGBA</code>. Possible
+                    values are <code class="constant">EGL_NO_TEXTURE</code>, or
+                    <code class="constant">EGL_TEXTURE_2D</code>. The default
+                    value is <code class="constant">EGL_NO_TEXTURE</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_VG_ALPHA_FORMAT</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies how alpha values are interpreted by OpenVG
+                    when rendering to the surface. If its value is
+                    <code class="constant">EGL_VG_ALPHA_FORMAT_NONPRE</code>,
+                    then alpha values are not premultipled. If its value
+                    is <code class="constant">EGL_VG_ALPHA_FORMAT_PRE</code>,
+                    then alpha values are premultiplied. The default
+                    value of <code class="constant">EGL_VG_ALPHA_FORMAT</code> is
+                    <code class="constant">EGL_VG_ALPHA_FORMAT_NONPRE</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_VG_COLORSPACE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies the color space used by OpenVG when
+                    rendering to the surface. If its value is
+                    <code class="constant">EGL_VG_COLORSPACE_sRGB</code>, then a
+                    non-linear, perceptually uniform color space is
+                    assumed, with a corresponding
+                    <span class="type">VGImageFormat</span> of form
+                    <code class="constant">VG_s*</code>. If its value is
+                    <code class="constant">EGL_VG_COLORSPACE_LINEAR</code>, then
+                    a linear color space is assumed, with a
+                    corresponding <span class="type">VGImageFormat</span> of form
+                    <code class="constant">VG_l*</code>. The default value of
+                    <code class="constant">EGL_VG_COLORSPACE</code> is
+                    <code class="constant">EGL_VG_COLORSPACE_sRGB</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_WIDTH</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies the required width of the pixel buffer
+                    surface. The default value is
+                    <code class="constant">0</code>.
+                </p>
+            </dd>
+          </dl>
+        </div>
+        <p>
+            Any EGL rendering context that was created with respect to
+            <em class="parameter"><code>config</code></em> can be used to render into the
+            surface. Use
+            <a class="citerefentry" href="eglMakeCurrent.xhtml"><span class="citerefentry"><span class="refentrytitle">eglMakeCurrent</span></span></a>
+            to attach an EGL rendering context to the surface.
+        </p>
+        <p>
+            Use
+            <a class="citerefentry" href="eglQuerySurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglQuerySurface</span></span></a>
+            to retrieve the dimensions of the allocated pixel buffer
+            surface or the ID of <em class="parameter"><code>config</code></em>.
+        </p>
+        <p>
+            Use <a class="citerefentry" href="eglDestroySurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglDestroySurface</span></span></a>
+            to destroy the surface.
+        </p>
+      </div>
+      <div class="refsect1" id="notes">
+        <h2>Notes</h2>
+        <p>
+            Attribute <code class="constant">EGL_GL_COLORSPACE</code>, and the
+            <code class="constant">EGL_OPENGL_ES3_BIT</code> bit value for attribute
+            <code class="constant">EGL_RENDERABLE_TYPE</code>, are supported only if
+            the EGL version is 1.5 or greater.
+        </p>
+        <p>
+            Attributes
+            <code class="constant">EGL_RENDERABLE_TYPE</code>,
+            <code class="constant">EGL_VG_ALPHA_FORMAT</code>, and
+            <code class="constant">EGL_VG_COLORSPACE</code>, and the
+            corresponding attribute values, are supported only if the
+            EGL version is 1.2 or greater.
+        </p>
+        <p>
+            If the value of <em class="parameter"><code>config</code></em> attribute
+            <code class="constant">EGL_TEXTURE_FORMAT</code> is not
+            <code class="constant">EGL_NO_TEXTURE</code>, then the pbuffer width
+            and height specify the size of the level zero texture image
+        </p>
+        <p>
+            If <code class="constant">EGL_LARGEST_PBUFFER</code> is specified and
+            if the pbuffer will be used as a texture (i.e. the value of
+            <code class="constant">EGL_TEXTURE_TARGET</code> is
+            <code class="constant">EGL_TEXTURE_2D</code>, and the value of
+            <code class="constant">EGL_TEXTURE FORMAT</code> is
+            <code class="constant">EGL_TEXTURE_RGB</code> or
+            <code class="constant">EGL_TEXTURE_RGBA</code>), then the aspect
+            ratio will be preserved and the new width and height will be
+            valid sizes for the texture target (e.g. if the underlying
+            OpenGL ES implementation does not support non-power-of-two
+            textures, both the width and height will be a power of 2).
+        </p>
+        <p>
+            The contents of the depth and stencil buffers may not be
+            preserved when rendering a texture to the pbuffer and
+            switching which image of the texture is rendered to (e.g.,
+            switching from rendering one mipmap level to rendering
+            another).
+        </p>
+      </div>
+      <div class="refsect1" id="errors">
+        <h2>Errors</h2>
+        <p>
+            <code class="constant">EGL_NO_SURFACE</code> is returned if creation of
+            the context fails.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_DISPLAY</code> is generated if
+            <em class="parameter"><code>display</code></em> is not an EGL display connection.
+        </p>
+        <p>
+            <code class="constant">EGL_NOT_INITIALIZED</code> is generated if
+            <em class="parameter"><code>display</code></em> has not been initialized.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_CONFIG</code> is generated if
+            <em class="parameter"><code>config</code></em> is not an EGL frame buffer configuration.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_ATTRIBUTE</code> is generated if
+            <em class="parameter"><code>attrib_list</code></em> contains an invalid pixel
+            buffer attribute or if an attribute value is not recognized
+            or out of range.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_ATTRIBUTE</code> is generated if
+            <em class="parameter"><code>attrib_list</code></em> contains any of the
+            attributes <code class="constant">EGL_MIPMAP_TEXTURE</code>,
+            <code class="constant">EGL_TEXTURE_FORMAT</code>, or
+            <code class="constant">EGL_TEXTURE_TARGET</code>, and
+            <em class="parameter"><code>config</code></em> does not support OpenGL ES
+            rendering (e.g. the EGL version is 1.2 or later, and the
+            <code class="constant">EGL_RENDERABLE_TYPE</code> attribute of
+            <em class="parameter"><code>config</code></em> does not include at least one
+            of <code class="constant">EGL_OPENGL_ES_BIT</code>,
+            <code class="constant">EGL_OPENGL_ES2_BIT</code>, or
+            <code class="constant">EGL_OPENGL_ES3_BIT</code>),
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_ALLOC</code> is generated if there are not
+            enough resources to allocate the new surface.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_MATCH</code> is generated if
+            <em class="parameter"><code>config</code></em> does not support rendering to pixel buffers
+            (the <code class="constant">EGL_SURFACE_TYPE</code> attribute does not contain
+            <code class="constant">EGL_PBUFFER_BIT</code>).
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_MATCH</code> is generated if the
+            <code class="constant">EGL_TEXTURE_FORMAT</code> attribute is not
+            <code class="constant">EGL_NO_TEXTURE</code>, and
+            <code class="constant">EGL_WIDTH</code> and/or
+            <code class="constant">EGL_HEIGHT</code> specify an invalid size
+            (e.g., the texture size is not a power of 2, and the
+            underlying OpenGL ES implementation does not support
+            non-power-of-two textures).
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_MATCH</code> is generated if
+            the <code class="constant">EGL_TEXTURE_FORMAT</code> attribute is
+            <code class="constant">EGL_NO_TEXTURE</code>, and
+            <code class="constant">EGL_TEXTURE_TARGET</code> is something other
+            than <code class="constant">EGL_NO_TEXTURE</code>; or,
+            <code class="constant">EGL_TEXTURE_FORMAT</code> is something other
+            than <code class="constant">EGL_NO_TEXTURE</code>, and
+            <code class="constant">EGL_TEXTURE_TARGET</code> is
+            <code class="constant">EGL_NO_TEXTURE</code>.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_MATCH</code> is generated if
+            <em class="parameter"><code>config</code></em> does not support the specified
+            OpenVG alpha format attribute (the value of
+            <code class="constant">EGL_VG_ALPHA_FORMAT</code> is
+            <code class="constant">EGL_VG_ALPHA_FORMAT_PRE</code> and the
+            <code class="constant">EGL_VG_ALPHA_FORMAT_PRE_BIT</code> is not set
+            in the <code class="constant">EGL_SURFACE_TYPE</code> attribute of
+            <em class="parameter"><code>config</code></em>) or colorspace attribute (the
+            value of <code class="constant">EGL_VG_COLORSPACE</code> is
+            <code class="constant">EGL_VG_COLORSPACE_LINEAR</code> and the
+            <code class="constant">EGL_VG_COLORSPACE_LINEAR_IT</code> is not set
+            in the <code class="constant">EGL_SURFACE_TYPE</code> attribute of
+            <em class="parameter"><code>config</code></em>).
+        </p>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+            <a class="citerefentry" href="eglDestroySurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglDestroySurface</span></span></a>,
+            <a class="citerefentry" href="eglChooseConfig.xhtml"><span class="citerefentry"><span class="refentrytitle">eglChooseConfig</span></span></a>,
+            <a class="citerefentry" href="eglGetConfigs.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetConfigs</span></span></a>,
+            <a class="citerefentry" href="eglMakeCurrent.xhtml"><span class="citerefentry"><span class="refentrytitle">eglMakeCurrent</span></span></a>,
+            <a class="citerefentry" href="eglQuerySurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglQuerySurface</span></span></a>
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

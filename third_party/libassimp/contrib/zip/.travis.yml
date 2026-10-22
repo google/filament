@@ -1,0 +1,22 @@
+language: c
+addons:
+  apt:
+    packages: &1
+    - lcov
+# Compiler selection
+compiler:
+  - clang
+  - gcc
+env:
+  - ANALYZE=false
+  - ANALYZE=true
+# Build steps
+script:
+  - ./.travis.sh
+after_success:
+  # Creating report
+  - cmake -DENABLE_COVERAGE=ON
+  - make
+  - make test
+  # Uploading report to CodeCov
+  - bash <(curl -s https://codecov.io/bash)

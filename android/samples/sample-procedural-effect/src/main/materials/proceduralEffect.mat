@@ -1,0 +1,82 @@
+material {
+    name : ProceduralEffect,
+    shadingModel : unlit,
+    culling : none,
+    parameters : [
+        {
+            type : float,
+            name : time
+        }
+    ],
+    variables : [
+        quadUV
+    ],
+    variantFilter : [ skinning, shadowReceiver, vsm ],
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        // 6 vertices defining 2 triangles forming a full screen quad or centered plane
+        const vec2 positions[6] = vec2[6](
+            vec2(-1.0, -1.0),
+            vec2( 1.0, -1.0),
+            vec2(-1.0,  1.0),
+            vec2( 1.0, -1.0),
+            vec2( 1.0,  1.0),
+            vec2(-1.0,  1.0)
+        );
+        const vec2 uvs[6] = vec2[6](
+            vec2(0.0, 0.0),
+            vec2(1.0, 0.0),
+            vec2(0.0, 1.0),
+            vec2(1.0, 0.0),
+            vec2(1.0, 1.0),
+            vec2(0.0, 1.0)
+        );
+
+        int vid = getVertexIndex();
+        material.worldPosition = vec4(positions[vid], 0.0, 1.0);
+        material.quadUV        = vec4(uvs[vid], 0.0, 0.0);
+    }
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+
+        vec2 uv = variable_quadUV.xy;
+        float t = materialParams.time * 0.5;
+
+        // Rich aesthetic: Animated dynamic glowing wave / plasma effect
+        vec2 p = uv * 2.0 - 1.0;
+        float len = length(p);
+
+        // Generate dynamic wave interference patterns
+        float val = sin(p.x * 4.0 + t) + sin(p.y * 4.0 - t) + sin(len * 8.0 - t * 2.0);
+        val = val * 0.5 + 0.5; // Normalize to [0, 1]
+
+        // Neon cyber color palette: dark blues, electric pink/magentas, and glowing cyans
+        vec3 colDark = vec3(0.05, 0.05, 0.15);
+        vec3 colCyan = vec3(0.0, 0.8, 1.0);
+        vec3 colPink = vec3(1.0, 0.0, 0.6);
+        vec3 colGlow = vec3(0.9, 0.9, 1.0);
+
+        // Mix colors based on the pattern
+        vec3 base = mix(colDark, colPink, val);
+        base = mix(base, colCyan, sin(len * 3.0 - t) * 0.5 + 0.5);
+
+        // Add an extra glowing ring/pulse in the center
+        float ring = sin(len * 12.0 - t * 3.0);
+        ring = max(0.0, 1.0 - abs(ring) / 0.15);
+        base += colGlow * ring * 0.4;
+
+        // Subtle micro-grid overlay for high premium tech look
+        vec2 gridUv = uv * 60.0;
+        vec2 grid = abs(fract(gridUv - 0.5) - 0.5) / fwidth(gridUv);
+        float gridLine = min(grid.x, grid.y);
+        float gridIntensity = 1.0 - min(gridLine, 1.0);
+        base = mix(base, colCyan * 1.2, gridIntensity * 0.15);
+
+        material.baseColor = vec4(base, 1.0);
+    }
+}

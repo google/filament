@@ -1,0 +1,12 @@
+name: transparent-rendering
+options:
+    bundleIdPrefix: ${SAMPLE_CODE_DISAMBIGUATOR}.google.filament
+include: ../app-template.yml
+targets:
+    transparent-rendering:
+        sources: transparent-rendering/
+        templates:
+            - FilamentApp
+        preBuildScripts:
+            - path: build-materials.sh
+              name: Build Materials

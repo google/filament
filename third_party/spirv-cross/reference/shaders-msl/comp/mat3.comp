@@ -1,0 +1,18 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO2
+{
+    float3x3 out_data[1];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO2& _22 [[buffer(0)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    uint ident = gl_GlobalInvocationID.x;
+    _22.out_data[ident] = float3x3(float3(10.0), float3(20.0), float3(40.0));
+}
+

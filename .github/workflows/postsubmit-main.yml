@@ -1,0 +1,270 @@
+name: 'Postsubmit Tasks'
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  # Updating the renderdiff goldens in filament-assets takes four jobs, because the halves of the
+  # old single job want very different runners.
+  #
+  # The rendering half has to run on the same runner label presubmit compares on: a golden path
+  # records only the platform and the backend, so an image rendered on a different host is simply
+  # the wrong golden. That is a paid ARM runner, and it is only needed for RDIFF_ACCEPT_NEW_GOLDENS
+  # commits, which are rare.
+  #
+  # The merging half runs on every push to main and does nothing but a git merge in another
+  # repository. Fusing the two would mean paying for a 16-core ARM runner on every commit to run a
+  # git merge, so the gate below decides, on a free runner, which of the two actually has work.
+  renderdiff-goldens-config:
+    name: renderdiff-goldens-config
+    runs-on: 'ubuntu-24.04'
+    outputs:
+      accept: ${{ steps.check.outputs.accept }}
+      golden-branch: ${{ steps.check.outputs.branch }}
+      hash: ${{ steps.get_commit_msg.outputs.hash }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: get_commit_msg
+        uses: ./.github/actions/get-commit-msg
+      - name: Read the renderdiff commit message tags
+        id: check
+        env:
+          COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
+          COMMIT_HASH: ${{ steps.get_commit_msg.outputs.hash }}
+        run: |
+          if echo "${COMMIT_MESSAGE}" | python3 test/renderdiff/src/commit_msg.py --mode=accept_new_goldens; then
+            echo "accept=true" >> "$GITHUB_OUTPUT"
+            # Named here rather than in the job that pushes it, so that the job which merges it
+            # reads the same value from the same place.
+            echo "branch=accept-goldens-${COMMIT_HASH:0:8}" >> "$GITHUB_OUTPUT"
+          else
+            echo "accept=false" >> "$GITHUB_OUTPUT"
+            # RDIFF_BRANCH, or "main" when the commit message names no branch, in which case there
+            # is nothing to merge. Whitespace is stripped because the tag is parsed out of
+            # free-form prose and a git ref cannot contain any.
+            GOLDEN_BRANCH=$(echo "${COMMIT_MESSAGE}" | python3 test/renderdiff/src/commit_msg.py | tr -d '[:space:]')
+            echo "branch=${GOLDEN_BRANCH}" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+
+  # Renders the candidate goldens, one leg per platform, for commits that ask for it with
+  # RDIFF_ACCEPT_NEW_GOLDENS. Desktop renders natively against mesa; web builds wasm and drives a
+  # headless browser.
+  #
+  # Same runner label as the presubmit test-renderdiff job, deliberately. These are the images that
+  # job will compare against, and pinning both to one label removes the runner as a variable.
+  #
+  # This is deliberately separate from accept-renderdiff-goldens below. The push rewrites a single
+  # branch of the goldens repo and prunes goldens that the render set no longer covers, so it has
+  # to see both platforms' renders at once and has to run exactly once. Two legs each pushing to
+  # the same branch would race.
+  render-renderdiff-goldens:
+    name: render-renderdiff-goldens (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: desktop
+            ccache-config: desktop-renderdiff
+          - platform: web
+            ccache-config: web-emsdk
+    runs-on: 'arm-ubuntu-24.04-16core'
+    timeout-minutes: 90
+    needs: [renderdiff-goldens-config]
+    if: needs.renderdiff-goldens-config.outputs.accept == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/renderdiff
+        with:
+          compare: 'false'
+          ccache-config: ${{ matrix.ccache-config }}
+          platform: ${{ matrix.platform }}
+      # Before the push, so that a failure there still leaves the images somewhere they can be
+      # recovered from and pushed by hand.
+      - name: Upload renderdiff output
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: accept-renderdiff-goldens-${{ matrix.platform }}
+          path: ./out/renderdiff
+          retention-days: 100
+      # The renders alone, for the push job below to overlay into one tree.
+      - name: Upload renders
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: postsubmit-renderdiff-renders-${{ matrix.platform }}
+          path: ./out/renderdiff/renders
+
+  # Pushes the renders of every platform to a branch of filament-assets. The merge job below then
+  # folds that branch into main.
+  #
+  # The implicit success() condition is what matters here: writing goldens from a partial render
+  # set would silently bake in whatever the failed leg did not produce, so a failure on either
+  # platform skips the push entirely rather than publishing half a baseline.
+  accept-renderdiff-goldens:
+    name: accept-renderdiff-goldens
+    runs-on: 'ubuntu-24.04'
+    needs: [renderdiff-goldens-config, render-renderdiff-goldens]
+    if: needs.renderdiff-goldens-config.outputs.accept == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Download renders from every platform
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          # merge-multiple overlays the legs into one tree. Renders are namespaced by renderer
+          # ('...desktop-opengl...', '...web-webgl...') so they cannot collide, and the aggregate
+          # is what lets update_golden.py prune stale goldens on both platforms in a single pass.
+          pattern: postsubmit-renderdiff-renders-*
+          merge-multiple: true
+          path: ./out/renderdiff/renders
+      # update_golden.py compares each render against the current golden with diffimg, so that an
+      # unchanged image is not rewritten.
+      - uses: ./.github/actions/linux-prereq
+      - name: Build diffimg tool
+        run: ./build.sh release diffimg
+        shell: bash
+      - name: Push the new goldens to a branch
+        env:
+          GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}
+          COMMIT_HASH: ${{ needs.renderdiff-goldens-config.outputs.hash }}
+          GOLDEN_BRANCH: ${{ needs.renderdiff-goldens-config.outputs.golden-branch }}
+        run: |
+          git config --global user.email "filament.bot@gmail.com"
+          git config --global user.name "Filament Bot"
+          git config --global credential.helper cache
+
+          echo "Generating new goldens for branch ${GOLDEN_BRANCH}"
+          python3 test/renderdiff/src/update_golden.py \
+              --branch=${GOLDEN_BRANCH} \
+              --source=$(pwd)/out/renderdiff/renders \
+              --diffimg=$(pwd)/out/cmake-release/tools/diffimg/diffimg \
+              --commit-msg="Auto-update goldens from ${COMMIT_HASH}" \
+              --push-to-remote \
+              --golden-repo-token=${GH_TOKEN}
+        shell: bash
+
+  # Merges a golden branch into the main branch of filament-assets. The branch is either one a
+  # contributor prepared and named with RDIFF_BRANCH, or the one the job above just pushed.
+  merge-renderdiff-goldens:
+    name: merge-renderdiff-goldens
+    runs-on: 'ubuntu-24.04'
+    needs: [renderdiff-goldens-config, render-renderdiff-goldens, accept-renderdiff-goldens]
+    # The render and push jobs are skipped for the RDIFF_BRANCH path, which is the common case, and
+    # a skipped dependency must not skip this job. A failed one must, though: merging a branch the
+    # push half did not finish writing would publish half a golden set. A failed render leg makes
+    # the push job skip rather than fail, so the render result is checked here as well.
+    if: >
+      always() && !cancelled()
+      && needs.renderdiff-goldens-config.result == 'success'
+      && needs.render-renderdiff-goldens.result != 'failure'
+      && needs.accept-renderdiff-goldens.result != 'failure'
+      && needs.renderdiff-goldens-config.outputs.golden-branch != 'main'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Merge the golden branch
+        env:
+          GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}
+          COMMIT_HASH: ${{ needs.renderdiff-goldens-config.outputs.hash }}
+          GOLDEN_BRANCH: ${{ needs.renderdiff-goldens-config.outputs.golden-branch }}
+        run: |
+          git config --global user.email "filament.bot@gmail.com"
+          git config --global user.name "Filament Bot"
+          git config --global credential.helper cache
+
+          echo "branch==${GOLDEN_BRANCH}"
+          echo "hash==${COMMIT_HASH}"
+          python3 test/renderdiff/src/update_golden.py --branch=${GOLDEN_BRANCH} \
+              --merge-to-main --filament-tag=${COMMIT_HASH} --golden-repo-token=${GH_TOKEN}
+        shell: bash
+
+  # Update the /docs (offiicla github-hosted Filament site) if necessary
+  update-docs:
+    name: update-docs
+    # Standard runner rather than ubuntu-24.04-4core: the larger runner's image is configured at
+    # the org level and began booting ubuntu-26.04 on 2026-10-19 despite its label, which broke
+    # linux-prereq (run 39332368810).
+    runs-on: 'ubuntu-24.04'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/linux-prereq
+      - id: get_commit_msg
+        uses: ./.github/actions/get-commit-msg
+      - uses: ./.github/actions/web-prereq
+      - name: Prerequisites
+        run: |
+          pip install selenium
+      - name: Run update script
+        env:
+          GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}
+          COMMIT_HASH: ${{ steps.get_commit_msg.outputs.hash }}
+        run: |
+          bash docs_src/build/install_mdbook.sh && source ~/.bashrc
+          git config --global user.email "filament.bot@gmail.com"
+          git config --global user.name "Filament Bot"
+          git config --global credential.helper cache
+          bash docs_src/build/postsubmit.sh ${COMMIT_HASH} ${GH_TOKEN}
+
+  # Produce a json that describes the android artifact sizes, and will push that json to a folder in
+  # filament-assets
+  update-sizeguard:
+    name: update-sizeguard
+    # Free standard runner, on the evidence gathered for postsubmit's build-android: that job's
+    # continuous build never dropped below 46 GB free of 145 GB and ran faster here than on
+    # ubuntu-24.04-4core, which has the same 4 vCPUs (run 35646616385, 2026-09-21). Not quite the
+    # same build though, so watch it: "release all" keeps four cross trees alive at once where the
+    # measured build kept three, and if this job runs out of space the size baseline presubmit
+    # compares against silently stops being refreshed.
+    runs-on: 'ubuntu-24.04'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/linux-prereq
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - id: get_commit_msg
+        uses: ./.github/actions/get-commit-msg
+      - name: Build and generate size report
+        env:
+          COMMIT_HASH: ${{ steps.get_commit_msg.outputs.hash }}
+        run: |
+          cd build/android && printf "y" | ./build.sh release all
+          cd ../..
+          python3 test/sizeguard/dump_artifact_size.py out/*.tgz out/*.aar > "${COMMIT_HASH}.json"
+      - name: Push to filament-assets
+        env:
+          GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}
+          COMMIT_HASH: "${{ steps.get_commit_msg.outputs.hash }}"
+        run: |
+          git config --global user.email "filament.bot@gmail.com"
+          git config --global user.name "Filament Bot"
+          git clone https://x-access-token:${GH_TOKEN}@github.com/google/filament-assets.git filament-assets
+          mkdir -p filament-assets/sizeguard
+          mv "${COMMIT_HASH}.json" filament-assets/sizeguard/
+          cd filament-assets
+          git add sizeguard/"${COMMIT_HASH}.json"
+          git commit -m "Update sizeguard for filament@${COMMIT_HASH}" || echo "No changes to commit"
+          git push https://x-access-token:${GH_TOKEN}@github.com/google/filament-assets.git main

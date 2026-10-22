@@ -1,0 +1,678 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0DE5DD77BF1B9049D63B76D0 /* libutils.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 7C969D515221A7739C68F3AC /* libutils.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		20863805FC626BF952BA3275 /* ViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33D80A4472074C601C57C773 /* ViewController.mm */; };
+		2AABB2C1262EBA9553666078 /* libsmol-v.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8F108854ADC54BBAA29C2055 /* libsmol-v.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		305D6C983D22F7BC74FC76C7 /* libabseil.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 0ED51915983DAE97083D44EF /* libabseil.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		32AC9F2183DD11F130D4A91D /* libfilament.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 912652335565C18B252345DE /* libfilament.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		376F63E72973F07BF618082D /* FilamentView.mm in Sources */ = {isa = PBXBuildFile; fileRef = B54DFEB4DB6ACC0289FA3046 /* FilamentView.mm */; };
+		3D73E90782CC3A2124DF046F /* libfilaflat.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9E8375B927AFDFD1069016D1 /* libfilaflat.xcframework */; };
+		477A2A67D32B7A3AF2E7B2F4 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = EB0A767D257F3D05BE9F0960 /* LaunchScreen.storyboard */; };
+		66014C413BCBF00E8E6DAF76 /* libgeometry.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = DB3F32D8D3D7310FA3A0C1A1 /* libgeometry.xcframework */; };
+		6A5D5E984CA862B943742745 /* libgeometry.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = DB3F32D8D3D7310FA3A0C1A1 /* libgeometry.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		6C8A7D49A8F689E20D60F4D4 /* libabseil.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0ED51915983DAE97083D44EF /* libabseil.xcframework */; };
+		7D8D3494388D7BF4D9FE4FCE /* libfilamat.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = C4BDDF85AADA2069C0F9FBAE /* libfilamat.xcframework */; };
+		7E671E777FDB5F34AAA13D5A /* libutils.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7C969D515221A7739C68F3AC /* libutils.xcframework */; };
+		8095A6D37F6F1C9C13BBFEA8 /* libfilamat.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = C4BDDF85AADA2069C0F9FBAE /* libfilamat.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		8402B2AC6D081D1E8E065552 /* libbackend.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8632D4625CFCBD32A46772B5 /* libbackend.xcframework */; };
+		88C039F10343B8598FD5FF7F /* libfilabridge.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = B2A3753419FC4A7D4C039868 /* libfilabridge.xcframework */; };
+		91CCBA3BA96DC289D0E8E975 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = AE6C78F32A0494087B0CEF32 /* main.mm */; };
+		AA5AB498C5A6117057B06824 /* libfilaflat.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9E8375B927AFDFD1069016D1 /* libfilaflat.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		AE63AFEA7E7D507BB677C158 /* libbackend.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8632D4625CFCBD32A46772B5 /* libbackend.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		B3684DB18E82C867020294F1 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 5FDB89AD408A508D6CB74C32 /* AppDelegate.m */; };
+		BFE92829375EE1DBA1E4A689 /* libfilabridge.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B2A3753419FC4A7D4C039868 /* libfilabridge.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		C74DDEF71B6F3C060BB56189 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = B63A6E45E40F58037ABD8F84 /* Main.storyboard */; };
+		C8C8BF3416B9B37003F1031E /* libktxreader.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 19CBBB6C426E8D038BDAC97B /* libktxreader.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		D0E54C592A378E549C96A54D /* libibl.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D1E30700B368B5F84196FD97 /* libibl.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		D472EB54D462394FE99DCE2B /* libibl.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1E30700B368B5F84196FD97 /* libibl.xcframework */; };
+		D5B2F0A85F7C6F352AA99DF1 /* libsmol-v.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F108854ADC54BBAA29C2055 /* libsmol-v.xcframework */; };
+		E090ED826EE54CA2EA611D83 /* libzstd.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 4C3E6E0AB2BA7D686E424D8F /* libzstd.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		E6163776920A1643B1ED01FA /* libzstd.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C3E6E0AB2BA7D686E424D8F /* libzstd.xcframework */; };
+		F5E844BFD77174F770543A87 /* libfilament.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 912652335565C18B252345DE /* libfilament.xcframework */; };
+		FB393C813D7A30404A2DEF23 /* libktxreader.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 19CBBB6C426E8D038BDAC97B /* libktxreader.xcframework */; };
+		FC9D623AC5CF31BA9FB0C47B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 93394D7D4A78C56A2BD31A7D /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		0ABB76F2D4011A4AF5186FCA /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				32AC9F2183DD11F130D4A91D /* libfilament.xcframework in Embed Frameworks */,
+				AE63AFEA7E7D507BB677C158 /* libbackend.xcframework in Embed Frameworks */,
+				AA5AB498C5A6117057B06824 /* libfilaflat.xcframework in Embed Frameworks */,
+				C8C8BF3416B9B37003F1031E /* libktxreader.xcframework in Embed Frameworks */,
+				BFE92829375EE1DBA1E4A689 /* libfilabridge.xcframework in Embed Frameworks */,
+				0DE5DD77BF1B9049D63B76D0 /* libutils.xcframework in Embed Frameworks */,
+				2AABB2C1262EBA9553666078 /* libsmol-v.xcframework in Embed Frameworks */,
+				6A5D5E984CA862B943742745 /* libgeometry.xcframework in Embed Frameworks */,
+				D0E54C592A378E549C96A54D /* libibl.xcframework in Embed Frameworks */,
+				305D6C983D22F7BC74FC76C7 /* libabseil.xcframework in Embed Frameworks */,
+				E090ED826EE54CA2EA611D83 /* libzstd.xcframework in Embed Frameworks */,
+				8095A6D37F6F1C9C13BBFEA8 /* libfilamat.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		056C16E7805E8D33D4C8F7B4 /* FilamentView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
+		0ED51915983DAE97083D44EF /* libabseil.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libabseil.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libabseil.xcframework"; sourceTree = "<group>"; };
+		13DDE7723EC1A6EFCA4D2D58 /* backend-test.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "backend-test.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		17364ECD407006EEBDC06024 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		19CBBB6C426E8D038BDAC97B /* libktxreader.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libktxreader.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libktxreader.xcframework"; sourceTree = "<group>"; };
+		276A0ADD5B521719BBB1DA21 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
+		33D80A4472074C601C57C773 /* ViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ViewController.mm; sourceTree = "<group>"; };
+		4C3E6E0AB2BA7D686E424D8F /* libzstd.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libzstd.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libzstd.xcframework"; sourceTree = "<group>"; };
+		5FDB89AD408A508D6CB74C32 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		603475CEE63507AA04A9B21A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		7C969D515221A7739C68F3AC /* libutils.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libutils.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libutils.xcframework"; sourceTree = "<group>"; };
+		8632D4625CFCBD32A46772B5 /* libbackend.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libbackend.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libbackend.xcframework"; sourceTree = "<group>"; };
+		8F108854ADC54BBAA29C2055 /* libsmol-v.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = "libsmol-v.xcframework"; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libsmol-v.xcframework"; sourceTree = "<group>"; };
+		912652335565C18B252345DE /* libfilament.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libfilament.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libfilament.xcframework"; sourceTree = "<group>"; };
+		93394D7D4A78C56A2BD31A7D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		9E8375B927AFDFD1069016D1 /* libfilaflat.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libfilaflat.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libfilaflat.xcframework"; sourceTree = "<group>"; };
+		A283B2D6DB365368855E2D7A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		AE6C78F32A0494087B0CEF32 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
+		B2A3753419FC4A7D4C039868 /* libfilabridge.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libfilabridge.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libfilabridge.xcframework"; sourceTree = "<group>"; };
+		B54DFEB4DB6ACC0289FA3046 /* FilamentView.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = FilamentView.mm; sourceTree = "<group>"; };
+		C4BDDF85AADA2069C0F9FBAE /* libfilamat.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libfilamat.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libfilamat.xcframework"; sourceTree = "<group>"; };
+		C76230D48038E8109EC121B0 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		D1E30700B368B5F84196FD97 /* libibl.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libibl.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libibl.xcframework"; sourceTree = "<group>"; };
+		DB3F32D8D3D7310FA3A0C1A1 /* libgeometry.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libgeometry.xcframework; path = "../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libgeometry.xcframework"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		5E31B50ED1338E6ADE1FA49A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F5E844BFD77174F770543A87 /* libfilament.xcframework in Frameworks */,
+				8402B2AC6D081D1E8E065552 /* libbackend.xcframework in Frameworks */,
+				3D73E90782CC3A2124DF046F /* libfilaflat.xcframework in Frameworks */,
+				FB393C813D7A30404A2DEF23 /* libktxreader.xcframework in Frameworks */,
+				88C039F10343B8598FD5FF7F /* libfilabridge.xcframework in Frameworks */,
+				7E671E777FDB5F34AAA13D5A /* libutils.xcframework in Frameworks */,
+				D5B2F0A85F7C6F352AA99DF1 /* libsmol-v.xcframework in Frameworks */,
+				66014C413BCBF00E8E6DAF76 /* libgeometry.xcframework in Frameworks */,
+				D472EB54D462394FE99DCE2B /* libibl.xcframework in Frameworks */,
+				6C8A7D49A8F689E20D60F4D4 /* libabseil.xcframework in Frameworks */,
+				E6163776920A1643B1ED01FA /* libzstd.xcframework in Frameworks */,
+				7D8D3494388D7BF4D9FE4FCE /* libfilamat.xcframework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		05CA69F10D830E40A8FB561D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				13DDE7723EC1A6EFCA4D2D58 /* backend-test.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		3D2B936C924E0DB70941EE6D = {
+			isa = PBXGroup;
+			children = (
+				FE198F0E1EF047534F8F3128 /* backend-test */,
+				81BF22C13654E58F622E6BEC /* Frameworks */,
+				05CA69F10D830E40A8FB561D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		81BF22C13654E58F622E6BEC /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				0ED51915983DAE97083D44EF /* libabseil.xcframework */,
+				8632D4625CFCBD32A46772B5 /* libbackend.xcframework */,
+				B2A3753419FC4A7D4C039868 /* libfilabridge.xcframework */,
+				9E8375B927AFDFD1069016D1 /* libfilaflat.xcframework */,
+				C4BDDF85AADA2069C0F9FBAE /* libfilamat.xcframework */,
+				912652335565C18B252345DE /* libfilament.xcframework */,
+				DB3F32D8D3D7310FA3A0C1A1 /* libgeometry.xcframework */,
+				D1E30700B368B5F84196FD97 /* libibl.xcframework */,
+				19CBBB6C426E8D038BDAC97B /* libktxreader.xcframework */,
+				8F108854ADC54BBAA29C2055 /* libsmol-v.xcframework */,
+				7C969D515221A7739C68F3AC /* libutils.xcframework */,
+				4C3E6E0AB2BA7D686E424D8F /* libzstd.xcframework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		FE198F0E1EF047534F8F3128 /* backend-test */ = {
+			isa = PBXGroup;
+			children = (
+				17364ECD407006EEBDC06024 /* AppDelegate.h */,
+				5FDB89AD408A508D6CB74C32 /* AppDelegate.m */,
+				93394D7D4A78C56A2BD31A7D /* Assets.xcassets */,
+				056C16E7805E8D33D4C8F7B4 /* FilamentView.h */,
+				B54DFEB4DB6ACC0289FA3046 /* FilamentView.mm */,
+				A283B2D6DB365368855E2D7A /* Info.plist */,
+				AE6C78F32A0494087B0CEF32 /* main.mm */,
+				276A0ADD5B521719BBB1DA21 /* ViewController.h */,
+				33D80A4472074C601C57C773 /* ViewController.mm */,
+				EB0A767D257F3D05BE9F0960 /* LaunchScreen.storyboard */,
+				B63A6E45E40F58037ABD8F84 /* Main.storyboard */,
+			);
+			path = "backend-test";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		196E24C2A15DA6AE6F69371C /* backend-test */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 61ACF592151E648A5C129A90 /* Build configuration list for PBXNativeTarget "backend-test" */;
+			buildPhases = (
+				445863ED54C294354A388281 /* Sources */,
+				BD71575ED7ED3237FEFD94C7 /* Resources */,
+				5E31B50ED1338E6ADE1FA49A /* Frameworks */,
+				0ABB76F2D4011A4AF5186FCA /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "backend-test";
+			packageProductDependencies = (
+			);
+			productName = "backend-test";
+			productReference = 13DDE7723EC1A6EFCA4D2D58 /* backend-test.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		8A7A83D59A7827D3335343C2 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = E89E1EEA671E49DBAC9D5A9C /* Build configuration list for PBXProject "backend-test" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 3D2B936C924E0DB70941EE6D;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 05CA69F10D830E40A8FB561D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				196E24C2A15DA6AE6F69371C /* backend-test */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		BD71575ED7ED3237FEFD94C7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FC9D623AC5CF31BA9FB0C47B /* Assets.xcassets in Resources */,
+				477A2A67D32B7A3AF2E7B2F4 /* LaunchScreen.storyboard in Resources */,
+				C74DDEF71B6F3C060BB56189 /* Main.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		445863ED54C294354A388281 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B3684DB18E82C867020294F1 /* AppDelegate.m in Sources */,
+				376F63E72973F07BF618082D /* FilamentView.mm in Sources */,
+				20863805FC626BF952BA3275 /* ViewController.mm in Sources */,
+				91CCBA3BA96DC289D0E8E975 /* main.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		B63A6E45E40F58037ABD8F84 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				603475CEE63507AA04A9B21A /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+		EB0A767D257F3D05BE9F0960 /* LaunchScreen.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				C76230D48038E8109EC121B0 /* Base */,
+			);
+			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		287974638C9ACB9CA9B2A885 /* OpenGL Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = "OpenGL Release";
+		};
+		404EBB73A7A0435C20EDBABC /* OpenGL Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_BITCODE = NO;
+				FILAMENT_OUT_NAME = "ios-debug";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"../../../out/$(FILAMENT_OUT_NAME)/filament/lib\"",
+				);
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"FILAMENT_APP_USE_OPENGL=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/../../../out/$(FILAMENT_OUT_NAME)/filament/include",
+					generated,
+				);
+				INFOPLIST_FILE = "backend-test/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"-force_load $(SRCROOT)/../../../out/$(FILAMENT_OUT_NAME)/filament/lib/$(CURRENT_ARCH)-$(PLATFORM_NAME)/libbackend_test.a",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.backend-test";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "OpenGL Debug";
+		};
+		54FB1D2CF3B4145F58866014 /* OpenGL Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = "OpenGL Debug";
+		};
+		5FB1C7673AA0E8727E86B454 /* OpenGL Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_BITCODE = NO;
+				FILAMENT_OUT_NAME = "ios-release";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"../../../out/$(FILAMENT_OUT_NAME)/filament/lib\"",
+				);
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"FILAMENT_APP_USE_OPENGL=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/../../../out/$(FILAMENT_OUT_NAME)/filament/include",
+					generated,
+				);
+				INFOPLIST_FILE = "backend-test/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"-force_load $(SRCROOT)/../../../out/$(FILAMENT_OUT_NAME)/filament/lib/$(CURRENT_ARCH)-$(PLATFORM_NAME)/libbackend_test.a",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.backend-test";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "OpenGL Release";
+		};
+		64581E4E9CA579C51C57F188 /* Metal Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = "Metal Release";
+		};
+		8889A14BBCF0426235E7B530 /* Metal Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_BITCODE = NO;
+				FILAMENT_OUT_NAME = "ios-debug";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"../../../out/$(FILAMENT_OUT_NAME)/filament/lib\"",
+				);
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"FILAMENT_APP_USE_METAL=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/../../../out/$(FILAMENT_OUT_NAME)/filament/include",
+					generated,
+				);
+				INFOPLIST_FILE = "backend-test/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"-force_load $(SRCROOT)/../../../out/$(FILAMENT_OUT_NAME)/filament/lib/$(CURRENT_ARCH)-$(PLATFORM_NAME)/libbackend_test.a",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.backend-test";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "Metal Debug";
+		};
+		984F4F20FD3DBCD92D4F1290 /* Metal Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_BITCODE = NO;
+				FILAMENT_OUT_NAME = "ios-release";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"../../../out/$(FILAMENT_OUT_NAME)/filament/lib\"",
+				);
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"FILAMENT_APP_USE_METAL=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/../../../out/$(FILAMENT_OUT_NAME)/filament/include",
+					generated,
+				);
+				INFOPLIST_FILE = "backend-test/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"-force_load $(SRCROOT)/../../../out/$(FILAMENT_OUT_NAME)/filament/lib/$(CURRENT_ARCH)-$(PLATFORM_NAME)/libbackend_test.a",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.backend-test";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "Metal Release";
+		};
+		BE208AFFD31FF6385AFB77E1 /* Metal Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = "Metal Debug";
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		61ACF592151E648A5C129A90 /* Build configuration list for PBXNativeTarget "backend-test" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8889A14BBCF0426235E7B530 /* Metal Debug */,
+				984F4F20FD3DBCD92D4F1290 /* Metal Release */,
+				404EBB73A7A0435C20EDBABC /* OpenGL Debug */,
+				5FB1C7673AA0E8727E86B454 /* OpenGL Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = "Metal Debug";
+		};
+		E89E1EEA671E49DBAC9D5A9C /* Build configuration list for PBXProject "backend-test" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BE208AFFD31FF6385AFB77E1 /* Metal Debug */,
+				64581E4E9CA579C51C57F188 /* Metal Release */,
+				54FB1D2CF3B4145F58866014 /* OpenGL Debug */,
+				287974638C9ACB9CA9B2A885 /* OpenGL Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = "Metal Debug";
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 8A7A83D59A7827D3335343C2 /* Project object */;
+}

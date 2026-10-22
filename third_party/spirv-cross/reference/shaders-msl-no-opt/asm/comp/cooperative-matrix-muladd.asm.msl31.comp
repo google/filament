@@ -1,0 +1,38 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_simdgroup_matrix>
+
+using namespace metal;
+
+struct SSBO32
+{
+    float data[1];
+};
+
+struct SSBO16
+{
+    half data[1];
+};
+
+kernel void main0(device SSBO32& ssbo32 [[buffer(0)]], device SSBO16& ssbo16 [[buffer(1)]])
+{
+    simdgroup_float8x8 _30;
+    simdgroup_load(_30, &ssbo32.data[0u], 8u);
+    simdgroup_float8x8 _31;
+    simdgroup_load(_31, &ssbo32.data[0u], 8u);
+    simdgroup_float8x8 _32;
+    simdgroup_load(_32, &ssbo32.data[0u], 8u);
+    simdgroup_float8x8 _33;
+    simdgroup_multiply_accumulate(_33, _30, _31, _32);
+    simdgroup_store(_33, &ssbo32.data[0u], 8u);
+    simdgroup_half8x8 _35;
+    simdgroup_load(_35, &ssbo16.data[0u], 8u);
+    simdgroup_half8x8 _36;
+    simdgroup_load(_36, &ssbo16.data[0u], 8u);
+    simdgroup_half8x8 _37;
+    simdgroup_load(_37, &ssbo16.data[0u], 8u);
+    simdgroup_half8x8 _38;
+    simdgroup_multiply_accumulate(_38, _35, _36, _37);
+    simdgroup_store(_38, &ssbo16.data[0u], 8u);
+}
+

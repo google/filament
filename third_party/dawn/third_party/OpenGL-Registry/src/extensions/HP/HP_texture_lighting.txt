@@ -1,0 +1,176 @@
+XXX - incomplete
+
+PRELIMINARY - NOT COMPLETE
+--------------------------
+
+Name
+
+    HP_texture_lighting
+
+Name Strings
+
+    GL_HP_texture_lighting
+
+Version
+
+    1.0
+
+Number
+
+    111
+
+Dependencies
+
+    OpenGL 1.1
+
+Overview
+
+    This extension defines a mechanism for applications to request
+    that color originating from specular lighting be added to
+    the fragment color _after_ texture application.
+
+New Procedures And Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of TexEnvf, TexEnvfv, TexEnvi,
+    TexEnviv:
+
+	TEXTURE_LIGHTING_MODE_HP
+
+    Accepted by the <param> parameter of TexEnvf, TexEnvfv, TexEnvi,
+    TexEnviv when <pname> is TEXTURE_APP_MODE_HP:
+
+	TEXTURE_POST_SPECULAR_HP
+	TEXTURE_PRE_SPECULAR_HP
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    Lighting Operation
+
+	If the texture application mode is TEXTURE_POST_SPECULAR_HP, the
+	color c produced by lighting a vertex is given by:
+
+	    c	= e
+		   cm
+
+		+ a   *  a
+		   cm     cs
+
+		  n-1
+		+ SUM (att )(spot )[a   * a
+		  i=0     i      i   cm    cli
+
+				+   (n @ VP   )d   * d
+					   pli  cm    cli
+
+						srm
+				+   (f )(n @ h )    s   * s]
+				      i       i      cm    cli
+
+	If the texture application mode is TEXTURE_PRE_SPECULAR_HP, and
+	if texturing is enabled, two lighting components are computed
+	separately per vertex.
+
+	Emissive, ambient, and diffuse color, c   :
+					       ead
+
+	    c	= e
+	     ead   cm
+
+		+ a   *  a
+		   cm     cs
+
+		  n-1
+		+ SUM (att )(spot )[a   * a
+		  i=0     i      i   cm    cli
+
+				+   (n @ VP   )d   * d]
+					   pli  cm    cli
+
+	Specular color, c :
+			 s
+
+		  n-1                          srm
+	    c	= SUM (att )(spot )(f )(n @ h )    s   * s
+	     s	  i=0     i      i   i       i      cm    cli
+
+	These terms are then added after texture application, and the
+	final (clamped) color used as the fragment color.
+
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+			Point
+	       +--> Rasterization -->+
+               |		     |
+      From     |	Line	     |
+    Primitive -+--> Rasterization -->+
+    Assembly   |                     |
+	       |      Polygon        |
+	       +--> Rasterization -->+---> Texturing ---> Specular ---> Fog 
+				     |
+		        Pixel	     |
+    DrawPixels --->   Rectangle ---->+
+		    Rasterization    |
+				     |
+			Bitmap	     |
+      Bitmap -----> Rasterization -->+
+
+    Figure 3.1, rasterization
+
+
+    3.8.5 Texture Environments and Texture Functions
+
+	If the texture application mode is TEXTURE_PRE_SPECULAR_HP,
+	R , G , and B  refer to c   , the emissive, ambient, and diffuse color.
+	 f   f       f           ead
+
+    3.8a Specular
+
+	If the texture application mode is TEXTURE_PRE_SPECULAR_HP and
+	texturing is enabled, then the separate specular lighting
+	coefficient interpolated for this fragment is added in at this
+	stage.  The result is clamped before sending the fragment color
+	to subsequent stages.  If the texture application mode is
+	TEXTURE_POST_SPECULAR_HP, this stage is not enabled.
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    Get value		     Type Initial value		    Description		      Sec	 Attribute
+    TEXTURE_LIGHTING_MODE_HP  Z4  TEXTURE_POST_SPECULAR_HP  Texture application mode  3.8a	 texture
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    TBD - ?
+
+Errors
+
+    INVALID_ENUM is generated if the <pname> parameter of TexEnvi,
+      TexEnviv, TexEnvf, or TexEnvf is TEXTURE_LIGHTING_MODE_HP and 
+      the <param> parameter is not one of TEXTURE_POST_SPECULAR_HP or
+      TEXTURE_PRE_SPECULAR_HP.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+

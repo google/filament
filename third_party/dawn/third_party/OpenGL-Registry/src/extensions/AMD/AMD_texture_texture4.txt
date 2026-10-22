@@ -1,0 +1,299 @@
+Name
+
+    AMD_texture_texture4
+
+Name Strings
+
+    GL_AMD_texture_texture4
+
+Contact
+
+    Bill Licea-Kane, AMD ( Bill.Licea-Kane 'at' amd.com )
+
+Contributors
+
+    Pierre Boudier
+    Eric Boumaour
+    Alex Chalfin
+    Nick Haemel    
+    Evan Hart
+    Bill Licea-Kane
+    Benj Lipchak
+    Lijun Qu
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date: Mar 6, 2009
+    Revision: 6
+
+Number
+
+    362
+
+Dependencies
+
+    OpenGL 1.1 is required. 
+
+    The extension is written against the OpenGL 2.0 Specification.
+
+    The extension is written against the OpenGL Shading Language V 1.20
+    Specification.
+
+    This extension interacts with EXT_texture_anisotropic.
+
+
+Overview
+
+    This extension adds new shading language built-in texture functions
+    to the shading language.
+
+    These texture functions may be used to access one component textures.
+
+    The texture4 built-in function returns a texture value derived from
+    a 2x2 set of texels in the image array of level levelbase is selected.
+    These texels are selected in the same way as when the value of
+    TEXTURE_MIN_FILTER is LINEAR, but instead of these texels being
+    filtered to generate the texture value, the R, G, B and A texture values
+    are derived directly from these four texels.
+
+IP Status
+
+    No known claims.
+
+New Procedures and Functions
+
+   None
+
+New Tokens
+
+   None
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL
+Operation)
+
+   None
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    Add to section 3.8.8 (P. 174, Prior to "And for a one-dimensional texture"):
+
+    "For a texture4 built-in function (see OpenGL Shading Language), a 2x2 set
+    of texels in the image array of level levelbase is selected.  These
+    texels are selected in the same way as when the value of TEXTURE_MIN_FILTER
+    is LINEAR, but instead of these texels being filtered to generate the
+    texture value, the R, G, B and A texture values are derived directly 
+    from these four texels,
+
+        TauR = Taui0j1                                            (3.26a)
+        TauG = Taui1j1
+        TauB = Taui1j0
+        TauA = Taui0j0
+
+     ___________________________________________________________________
+     |                                                                 |
+     |   1.0  +---+---+---+---+---+---+---+---+                        |
+     |       7|   |   |   |   |   |   |   |   |                        |
+     |        +---+---+---+---+---+---+---+---+                        |
+     |       6|   |   |   |   |   | R | G |   |                        |
+     |        +---+---+---+---+---+---+---+---+                        |
+     |       5|   |   |   |   |   | A | B |   |                        |
+     |        +---+---+---+---+---+---+---+---+                        |
+     |       4|   |   |   |   |   |   |   |   |                        |
+     |        +---+---+---+---+---+---+---+---+                        |
+     |       3|   |   |   |   |   |   |   |   |                        |
+     |        +---+---+---+---+---+---+---+---+                        |
+     |       2|   |   |   |   |   |   |   |   |                        |
+     |        +---+---+---+---+---+---+---+---+                        |
+     |       1|   |   |   |   |   |   |   |   |                        |
+     |        +---+---+---+---+---+---+---+---+                        |
+     |       0|   |   |   |   |   |   |   |   |                        |
+     |   0.0  +---+---+---+---+---+---+---+---+                        |
+     |          0   1   2   3   4   5   6   7                          |
+     |       0.0                             1.0                       |
+     |                                                                 |
+     |  Figure 3.10a.  An example of an 8x8 texture image and the      |
+     |  components returned for texture4.                              |
+     |                                                                 |
+     |_________________________________________________________________|
+
+
+    To achieve this packing, the use of texture4 is
+    restricted to textures with a single component base internal format of
+    ALPHA, DEPTH_COMPONENT, INTENSITY, or LUMINANCE and cannot be used
+    with a three-dimensional texture (see section 3.8.10)."
+
+    Add to caption of Table 3.21 (p. 184)
+
+     "If the texture4 built-in function is used to access a sampler, 
+     texture source components are derived as if the Texture Base
+     Internal Format is RGBA.
+
+    Add to Section 3.11.2, Shader Execution, Texture Access
+    (p. 195) Prior to paragraph beginning "If a fragment shader uses a sampler..."
+ 
+    Texture4 lookups must be consistent with the texture state; the 
+    results of the texture4 lookup are undefined if:
+ 
+       - The base internal format of the texture not one of ALPHA,
+         DEPTH_COMPONENT, INTENSITY, or LUMINANCE. 
+
+       - The wrap modes is not either CLAMP_TO_EDGE or REPEAT.
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special
+Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    None
+
+Additions to Chapter 1 of the OpenGL Shading Language 1.20 Specification
+(Introduction)
+
+Additions to Chapter 2 of the OpenGL Shading Language 1.20 Specification
+(Overview of OpenGL Shading)
+
+Additions to Chapter 3 of the OpenGL Shading Language 1.20 Specification
+(Basics)
+
+Additions to Chapter 4 of the OpenGL Shading Language 1.20 Specification
+(Variables and Types)
+
+Additions to Chapter 5 of the OpenGL Shading Language 1.20 Specification
+(Operators and Expressions)
+
+Additions to Chapter 6 of the OpenGL Shading Language 1.20 Specification
+(Statements and Structure)
+
+Additions to Chapter 7 of the OpenGL Shading Language 1.20 Specification
+(Built-in Variables)
+
+Additions to Chapter 8 of the OpenGL Shading Language 1.20 Specification
+(Built-in Functions)
+
+    Add to 8.7, Texture Lookup Functions
+    (p. 85) prior to paragraph beginning "In all functions below..."
+ 
+    Add to 8.7, Texture Lookup Functions,
+    (p. 85) to the texture built-in function table:
+ 
+    Syntax
+    vec4 texture4( sampler2D sampler, vec2 coord)
+    Description
+    Use the texture coordinate coord to do a texture lookup
+    in the 2D texture currently bound to sampler, and return 
+    the four nearest (unfiltered) texels.
+
+Additions to Chapter 9 of the OpenGL Shading Language 1.20 Specification
+(Shading Language Grammar)
+
+Additions to Chapter 10 of the OpenGL Shading Language 1.20 
+Specification (Issues)
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None
+
+Interactions with EXT_texture_filter_anisotropic
+
+    Texture4 is not an area filter.  No LOD calculations are performed
+    and only texels in the baselevel can be returned.
+
+    Therefore, for the texture4 built-in function the preferred implementation 
+    would sample four texels even if TEXTURE_MAX_ANISOTROPY_EXT is greater than 1.0.
+
+Issues
+
+    1)  How is this related to ATI_texture_nearest_four?
+
+    ATI_texture_nearest_four only set texture filter state.
+
+    This extension adds built-in functions to the shading language
+    that will fetch four texels from the baselevel.
+
+    2)  What about extending this to allow texture4 fetches from
+    RG, RGB, and RGBA textures?
+
+    Resolution - defer.  This extension only fetches from one component
+    textures.
+
+    3)  What about the use of this extension with fixed function?
+
+    Resolution - The built-in functions are added to the shading 
+    language only.  There is no ability to fetch four texels in 
+    fixed function.
+
+    4)  What naming convention do we use for the new texture built-in 
+    functions?
+
+    Resolution - Even though this extension is written against
+    OpenGL Shading Language 1.20, we use the naming convention
+    for OpenGL Shading Language 1.30.
+
+    5)  Should we add built-in texture functions for:
+    * Fetch4 with Absolute LOD?
+    * Fetch4 with Relative LOD?
+    * Fetch4 with coordinate offsets?
+    * Fetch4 with compare?
+
+    Resolved - No.
+
+    6)  If the texture is not a single component, or if the
+    wrap modes are not clamp_to_edge or repeat, is the texture
+    treated as incomplete, or are the values returned by the
+    texture4 built-in undefined?
+ 
+    Unresolved.  This draft makes them undefined.
+
+    7)  Can both texture *AND* texture4 built-in functions 
+    sample from the same sampler in a shader?
+
+    No.
+
+Revision History:
+
+   Date: 03/06/2008
+   Revision: 6 (wwlk)
+       Remove redundant <CR><LF>s (Apple v Microsoft)
+
+   Date: 03/04/2008
+   Revision: 5 (wwlk)
+       General cleanup for posting to registry.
+
+   Date: 01/15/2009
+   Revision: 4 (wwlk)
+       Updated IP Status.
+
+   Date: 06/24/2008
+   Revision: 3 (wwlk)
+       Deleted mip-mapping section.  (Inadvertent undelete.)
+
+   Date: 06/24/2008
+
+   Revision: 2 (wwlk)
+       Dropped texture filter state.
+       Document restrictions of texture4.  (Baselevel only.)
+
+
+   Date: 06/18/2008
+   Revision: 1 (wwlk)
+       1st draft derived from ATI_texture_nearest_four

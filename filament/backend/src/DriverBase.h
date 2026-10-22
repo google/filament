@@ -1,0 +1,502 @@
+/*
+ * Copyright (C) 2015 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TNT_FILAMENT_DRIVER_DRIVERBASE_H
+#define TNT_FILAMENT_DRIVER_DRIVERBASE_H
+
+#include "JobQueue.h"
+
+#include <private/backend/Dispatcher.h>
+#include <private/backend/Driver.h>
+
+#include <backend/BufferDescriptor.h>
+#include <backend/CallbackHandler.h>
+#include <backend/DriverEnums.h>
+#include <backend/Platform.h>
+
+#include <utils/compiler.h>
+#include <utils/Condition.h>
+#include <utils/CString.h>
+#include <utils/debug.h>
+#include <utils/Mutex.h>
+
+#include <atomic>
+#include <chrono>
+#include <thread>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
+#include <stdint.h>
+
+namespace filament::backend {
+
+struct AcquiredImage;
+
+/*
+ * Hardware handles
+ */
+
+struct HwBase {
+};
+
+
+struct HwVertexBufferInfo : public HwBase {
+    uint8_t bufferCount{};                //   1
+    uint8_t attributeCount{};             //   1
+    bool padding[2]{};                    //   2
+    HwVertexBufferInfo() noexcept = default;
+    HwVertexBufferInfo(uint8_t const bufferCount, uint8_t const attributeCount) noexcept
+            : bufferCount(bufferCount),
+              attributeCount(attributeCount) {
+    }
+};
+
+struct HwVertexBuffer : public HwBase {
+    uint32_t vertexCount{};               //   4
+    uint8_t bufferObjectsVersion{0xff};   //   1
+    struct {
+        uint8_t asynchronous : 1;
+        uint8_t reserved : 7;
+    };
+    bool padding[2]{};                    //   2
+    HwVertexBuffer() noexcept : asynchronous{}, reserved{} {}
+    explicit HwVertexBuffer(uint32_t const vertexCount, bool const async = false) noexcept
+            : vertexCount(vertexCount), asynchronous(async), reserved{} {
+    }
+};
+
+struct HwBufferObject : public HwBase {
+    uint32_t byteCount : 31;
+    uint32_t asynchronous : 1;
+
+    HwBufferObject() noexcept = default;
+    explicit HwBufferObject(uint32_t const byteCount, bool const async) noexcept : byteCount(byteCount), asynchronous(async) {}
+};
+
+struct HwMemoryMappedBuffer : public HwBase {
+};
+
+struct HwIndexBuffer : public HwBase {
+    uint32_t count : INDEX_COUNT_BITS; // 67M indices
+    uint32_t elementSize : 5;
+    uint32_t asynchronous : 1;
+
+    HwIndexBuffer() noexcept : count{}, elementSize{}, asynchronous(0) {}
+    HwIndexBuffer(uint8_t const elementSize, uint32_t const indexCount, bool const async) noexcept :
+            count(indexCount), elementSize(elementSize), asynchronous(async) {
+        // we could almost store elementSize on 4 bits because it's never > 16 and never 0
+        assert_invariant(elementSize > 0 && elementSize <= 16);
+        assert_invariant(indexCount <= MAX_INDEX_COUNT);
+    }
+};
+
+// A new field must take its bits from INDEX_COUNT_BITS, so that MAX_INDEX_COUNT stays accurate.
+static_assert(sizeof(HwIndexBuffer) == sizeof(uint32_t));
+// Keeps `elementSize * indexCount` within uint32_t, which every backend uses for the size.
+// 16 is the largest elementSize HwIndexBuffer accepts.
+static_assert(MAX_INDEX_COUNT <= UINT32_MAX / 16);
+
+struct HwRenderPrimitive : public HwBase {
+    PrimitiveType type = PrimitiveType::TRIANGLES;
+};
+
+struct HwProgram : public HwBase {
+    utils::CString name;
+    explicit HwProgram(utils::CString name) noexcept : name(std::move(name)) { }
+    HwProgram() noexcept = default;
+};
+
+struct HwDescriptorSetLayout : public HwBase {
+    HwDescriptorSetLayout() noexcept = default;
+};
+
+struct HwDescriptorSet : public HwBase {
+    HwDescriptorSet() noexcept = default;
+};
+
+struct HwTexture : public HwBase {
+    uint32_t width{};
+    uint32_t height{};
+    uint32_t depth{};
+    SamplerType target{};
+    uint8_t levels : 4;  // This allows up to 15 levels (max texture size of 32768 x 32768)
+    uint8_t samples : 4; // Sample count per pixel (should always be a power of 2)
+    TextureFormat format{};
+    struct {
+        uint8_t asynchronous : 1;
+        uint8_t reserved : 7;
+    };
+    TextureUsage usage{};
+    uint16_t reserved1 = 0;
+    HwStream* hwStream = nullptr;
+
+    HwTexture() noexcept : levels{}, samples{}, asynchronous(0), reserved(0) {}
+    HwTexture(SamplerType const target, uint8_t const levels, uint8_t const samples, uint32_t const width,
+              uint32_t const height, uint32_t const depth, TextureFormat const fmt, TextureUsage const usage,
+              bool const async) noexcept
+        : width(width), height(height), depth(depth), target(target), levels(levels),
+          samples(samples), format(fmt), asynchronous(async), reserved(0), usage(usage) {
+    }
+};
+
+struct HwRenderTarget : public HwBase {
+    uint32_t width{};
+    uint32_t height{};
+    HwRenderTarget() noexcept = default;
+    HwRenderTarget(uint32_t const w, uint32_t const h) : width(w), height(h) { }
+};
+
+struct HwFence : public HwBase {
+    Platform::Fence* fence = nullptr;
+};
+
+struct HwSync : public HwBase {
+    Platform::Sync* sync = nullptr;
+};
+
+struct HwSwapChain : public HwBase {
+    Platform::SwapChain* swapChain = nullptr;
+};
+
+struct HwStream : public HwBase {
+    Platform::Stream* stream = nullptr;
+    StreamType streamType = StreamType::ACQUIRED;
+    uint32_t width{};
+    uint32_t height{};
+
+    HwStream() noexcept = default;
+    explicit HwStream(Platform::Stream* stream) noexcept
+            : stream(stream), streamType(StreamType::NATIVE) {
+    }
+};
+
+struct HwTimerQuery : public HwBase {
+};
+
+/*
+ * Base class of all Driver implementations
+ * If multithreading is supported, this class creates a `ServiceThread` responsible for executing
+ * user handlers.
+ */
+
+class DriverBase : public Driver {
+public:
+    explicit DriverBase(const Platform::DriverConfig& driverConfig) noexcept;
+    ~DriverBase() noexcept override;
+
+    void purge() noexcept final;
+    void purgeAll() noexcept final;
+
+    // Helpers...
+    struct CallbackData {
+        CallbackData(CallbackData const &) = delete;
+        CallbackData(CallbackData&&) = delete;
+        CallbackData& operator=(CallbackData const &) = delete;
+        CallbackData& operator=(CallbackData&&) = delete;
+        void* storage[8] = {};
+        static CallbackData* obtain(DriverBase* allocator);
+        static void release(CallbackData* data);
+    protected:
+        CallbackData() = default;
+    };
+
+    template<typename T>
+    void scheduleCallback(CallbackHandler* handler, T&& functor) {
+        CallbackData* data = CallbackData::obtain(this);
+        static_assert(sizeof(T) <= sizeof(data->storage), "functor too large");
+        new(data->storage) T(std::forward<T>(functor));
+        scheduleCallback(handler, data, static_cast<CallbackHandler::Callback>([](void* data) {
+            CallbackData* details = static_cast<CallbackData*>(data);
+            void* user = details->storage;
+            T& functor = *static_cast<T*>(user);
+            functor();
+            functor.~T();
+            CallbackData::release(details);
+        }));
+    }
+
+    void scheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback) final;
+
+    /**
+     * Schedules the completion callback of an asynchronous operation, telling it whether the
+     * operation ran or was canceled. Can be called from any thread.
+     *
+     * The status has to be bound to the call site, so this goes through the functor overload above
+     * rather than dispatching the callback directly.
+     */
+    void scheduleAsyncCallback(CallbackHandler* handler, AsyncCallback callback, void* user,
+            AsyncCallStatus const status) {
+        if (callback) {
+            scheduleCallback(handler, [callback, user, status]() {
+                callback(user, status);
+            });
+        }
+    }
+
+    /**
+     * Holds the completion callback of an asynchronous call, and guarantees that it is scheduled
+     * exactly once: either by the job itself once it has run, with `AsyncCallStatus::COMPLETED`, or
+     * by this object's destructor with `AsyncCallStatus::CANCELED` if the job is destroyed without
+     * ever running. The latter happens when the call is canceled (see `cancelAsyncJob`) or dropped
+     * because the queue is stopping.
+     *
+     * Asynchronous jobs must capture this rather than the raw handler/callback/user triplet:
+     * a caller that never gets its completion callback cannot tell a canceled call apart from one
+     * that is still pending, and whatever the callback owns is leaked.
+     */
+    class AsyncCompletion {
+    public:
+        AsyncCompletion(DriverBase* driver, CallbackHandler* handler, AsyncCallback callback,
+                void* user) noexcept
+                : mDriver(driver), mHandler(handler), mCallback(callback), mUser(user) {}
+
+        AsyncCompletion(AsyncCompletion&& rhs) noexcept
+                : mDriver(rhs.mDriver), mHandler(rhs.mHandler), mCallback(rhs.mCallback),
+                  mUser(rhs.mUser) {
+            rhs.mCallback = nullptr;
+        }
+
+        AsyncCompletion(AsyncCompletion const&) = delete;
+        AsyncCompletion& operator=(AsyncCompletion const&) = delete;
+        AsyncCompletion& operator=(AsyncCompletion&&) = delete;
+
+        // Reaching the destructor with the callback still pending means the job never ran.
+        ~AsyncCompletion() {
+            schedule(AsyncCallStatus::CANCELED);
+        }
+
+        /**
+         * Schedules the completion callback with the given status, unless it has already been
+         * scheduled. Safe to invoke from whichever thread owns this completion (e.g., worker thread
+         * on completion or calling thread on cancellation), as `scheduleAsyncCallback` is
+         * thread-safe.
+         */
+        void schedule(AsyncCallStatus const status) {
+            if (auto cb = std::exchange(mCallback, nullptr)) {
+                mDriver->scheduleAsyncCallback(mHandler, cb, mUser, status);
+            }
+        }
+
+    private:
+        DriverBase* mDriver;
+        CallbackHandler* mHandler;
+        AsyncCallback mCallback;
+        void* mUser;
+    };
+
+    /**
+     * Holds the payload of an asynchronous upload and hands it to `scheduleDestroy()` when
+     * destroyed. `T` is `BufferDescriptor` or `PixelBufferDescriptor`, held whole because the
+     * consumers of the latter read its pixel fields. A job that runs passes `detach()` to its
+     * consumer, which moves the descriptor out and leaves it without a callback, so the destructor
+     * then does nothing. A job that never runs, because it was canceled or dropped, still
+     * releases the descriptor through its handler, whichever thread destroys the job.
+     *
+     * Asynchronous jobs must capture their descriptor through this, for the same reason they
+     * capture an `AsyncCompletion`.
+     */
+    template<typename T>
+    class AsyncBufferRelease {
+        static_assert(std::is_base_of_v<BufferDescriptor, T>);
+
+    public:
+        AsyncBufferRelease(DriverBase* driver, T&& data) noexcept
+                : mDriver(driver), mData(std::move(data)) {}
+
+        AsyncBufferRelease(AsyncBufferRelease&& rhs) noexcept = default;
+
+        AsyncBufferRelease(AsyncBufferRelease const&) = delete;
+        AsyncBufferRelease& operator=(AsyncBufferRelease const&) = delete;
+        AsyncBufferRelease& operator=(AsyncBufferRelease&&) = delete;
+
+        // A moved-from descriptor has no callback, so this does nothing once the job consumed it.
+        ~AsyncBufferRelease() {
+            mDriver->scheduleDestroy(std::move(mData));
+        }
+
+        // The descriptor stays here until the caller moves from the result, so one that is never
+        // consumed is still released by the destructor.
+        T&& detach() noexcept { return std::move(mData); }
+
+    private:
+        DriverBase* mDriver;
+        T mData;
+    };
+
+    /**
+     * Runs an asynchronous call that is all CPU work here, on the backend thread, rather than on a
+     * job, and reports its completion through the queue.
+     *
+     * Note that the `cancel` call at the beginning claims the id that the `...AsyncS()` half
+     * reserved. This fails if the user thread already canceled it, in which case it early returns
+     * and `fn` doesn't run. And if the `cancel` call succeeds, regular cancellation afterwards
+     * has no effect thus it ensures `fn` to run. The completion is pushed as a job of its own, so
+     * that it is still reported in the order the asynchronous calls were issued.
+     */
+    template<typename Fn>
+    void runAsyncCallNow(JobQueue* jobQueue, AsyncCallId const jobId, CallbackHandler* handler,
+            AsyncCallback const callback, void* user, Fn&& fn) {
+        AsyncCompletion completion(this, handler, callback, user);
+        if (!jobQueue->cancel(jobId)) {
+            return;
+        }
+        fn();
+        jobQueue->push([completion = std::move(completion)]() mutable {
+            completion.schedule(AsyncCallStatus::COMPLETED);
+        });
+    }
+
+    /**
+     * Promotes resources to asynchronous mode so that subsequent destruction is routed through the
+     * JobQueue to preserve FIFO ordering.
+     */
+    template<typename T>
+    static inline decltype(auto) promoteToAsync(T&& resource) noexcept {
+        resource->asynchronous = true;
+        return std::forward<T>(resource);
+    }
+
+    template<typename First, typename Second, typename... Rest>
+    static inline void promoteToAsync(First&& first, Second&& second, Rest&&... rest) noexcept {
+        promoteToAsync(std::forward<First>(first));
+        promoteToAsync(std::forward<Second>(second));
+        (promoteToAsync(std::forward<Rest>(rest)), ...);
+    }
+
+    /**
+     * Waits for a predicate to become true or until a timeout is reached.
+     * Returns ERROR if the driver encountered an unrecoverable error.
+     */
+    template<typename Predicate>
+    FenceStatus waitForFence(Predicate predicate, std::chrono::steady_clock::time_point const until) {
+        utils::UniqueLock lock(mFenceMutex);
+        bool errorObserved = false;
+        bool timeout = false;
+        while (!predicate() &&
+                !(errorObserved = UTILS_VERY_UNLIKELY(mHasUnrecoverableError.load(std::memory_order_relaxed)))) {
+            if (mFenceCondition.wait_until(lock, until) == std::cv_status::timeout) {
+                timeout = true;
+                break;
+            }
+        }
+
+        if (UTILS_VERY_UNLIKELY(errorObserved)) {
+            return FenceStatus::ERROR;
+        }
+
+        return !timeout ? FenceStatus::CONDITION_SATISFIED : FenceStatus::TIMEOUT_EXPIRED;
+    }
+
+    /**
+     * Waits for a predicate to become true indefinitely.
+     * Returns ERROR if the driver encountered an unrecoverable error.
+     */
+    template<typename Predicate>
+    FenceStatus waitForFence(Predicate predicate) {
+        utils::UniqueLock lock(mFenceMutex);
+        bool errorObserved = false;
+        while (!predicate() &&
+                !(errorObserved = UTILS_VERY_UNLIKELY(mHasUnrecoverableError.load(std::memory_order_relaxed)))) {
+            mFenceCondition.wait(lock);
+        }
+
+        if (UTILS_VERY_UNLIKELY(errorObserved)) {
+            return FenceStatus::ERROR;
+        }
+        return FenceStatus::CONDITION_SATISFIED;
+    }
+
+    /**
+     * Executes an action that signals a fence and notifies all waiters.
+     */
+    template<typename Action>
+    void signalFence(Action action) {
+        utils::LockGuard const lock(mFenceMutex);
+        action();
+        mFenceCondition.notify_all();
+    }
+
+    /**
+     * Flags the driver as having encountered an unrecoverable error.
+     */
+    void setUnrecoverableError() noexcept override {
+        utils::LockGuard const lock(mFenceMutex);
+        mHasUnrecoverableError.store(true, std::memory_order_relaxed);
+        mFenceCondition.notify_all();
+    }
+
+    /**
+     * Returns true if the driver has encountered an unrecoverable error.
+     */
+    bool hasUnrecoverableError() const noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS {
+        return mHasUnrecoverableError.load(std::memory_order_relaxed);
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // Privates
+    // --------------------------------------------------------------------------------------------
+
+protected:
+    class CallbackDataDetails;
+
+    Platform::DriverConfig const& getDriverConfig() const noexcept {
+        return mDriverConfig;
+    }
+
+    void scheduleDestroy(BufferDescriptor&& buffer) {
+        if (buffer.hasCallback()) {
+            scheduleDestroySlow(std::move(buffer));
+        }
+    }
+
+    void scheduleDestroySlow(BufferDescriptor&& buffer);
+
+    void scheduleRelease(AcquiredImage const& image);
+
+    void debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
+    void debugCommandEnd(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
+
+    // Stops the `ServiceThread`. This method is called during destruction but may be called
+    // explicitly if earlier shutdown is needed. This method is idempotent.
+    // Afterwards, scheduleCallback() calls the handler's post() on the calling thread.
+    void stopServiceThread() noexcept;
+
+private:
+    // Dispatches the callbacks queued so far. Returns false if there were none.
+    bool dispatchQueuedCallbacks() noexcept;
+
+    const Platform::DriverConfig mDriverConfig;
+
+    mutable utils::Mutex mPurgeLock;
+    std::vector<std::pair<void*, CallbackHandler::Callback>> mCallbacks UTILS_GUARDED_BY(mPurgeLock);
+
+    std::thread mServiceThread;
+    mutable utils::Mutex mServiceThreadLock;
+    mutable utils::Condition mServiceThreadCondition;
+    std::vector<std::tuple<CallbackHandler*, CallbackHandler::Callback, void*>> mServiceThreadCallbackQueue UTILS_GUARDED_BY(mServiceThreadLock);
+    bool mExitRequested UTILS_GUARDED_BY(mServiceThreadLock) = false;
+
+    mutable utils::Condition mFenceCondition;
+    mutable utils::Mutex mFenceMutex;
+    std::atomic<bool> mHasUnrecoverableError UTILS_GUARDED_BY(mFenceMutex){false};
+};
+
+
+} // namespace backend::filament
+
+#endif // TNT_FILAMENT_DRIVER_DRIVERBASE_H

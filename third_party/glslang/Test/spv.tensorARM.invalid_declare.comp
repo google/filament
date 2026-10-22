@@ -1,0 +1,18 @@
+#version 460 core
+
+#extension GL_ARM_tensors : enable
+
+tensorARM noparams;
+tensorARM<int, 0> zero;
+tensorARM<int, -1> minus_one;
+tensorARM<int, 1, 2, 3> too_many;
+tensorARM<void, 2> bad_type;
+
+// Repeat the above, but now with the uniform keyword.
+uniform tensorARM noparams2;
+uniform tensorARM<int, 0> zero2;
+uniform tensorARM<int, -1> minus_one2;
+uniform tensorARM<int, 1, 2, 3> too_many2;
+uniform tensorARM<void, 2> bad_type2;
+
+void main() {}

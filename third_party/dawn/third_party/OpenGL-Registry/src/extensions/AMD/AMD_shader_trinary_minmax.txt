@@ -1,0 +1,136 @@
+Name
+
+    AMD_shader_trinary_minmax
+
+Name Strings
+
+    GL_AMD_shader_trinary_minmax
+
+Contact
+
+    Graham Sellers, AMD (graham.sellers 'at' amd.com)
+
+Status
+
+    Shipping
+
+Version
+
+    Last Modified Date:         10/01/2012
+    Author Revision:            2
+
+Number
+
+    428
+
+Dependencies
+
+    OpenGL 2.0 or ARB_shader_objects is required.
+
+    This extension is written against the OpenGL Shading Language
+    Specification, Version 4.30.
+
+Overview
+
+    This extension introduces three new trinary built-in functions to the
+    OpenGL Shading Languages. These functions allow the minimum, maximum
+    or median of three inputs to be found with a single function call. These
+    operations may be useful for sorting and filtering operations, for example.
+    By explicitly performing a trinary operation with a single built-in
+    function, shader compilers and optimizers may be able to generate better
+    instruction sequences for perform sorting and other multi-input functions.
+
+IP Status
+
+    None.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL Shading Language (GLSL) Specification,
+version 4.30, (Overview of OpenGL Shading)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL Shading Language (GLSL) Specification,
+version 4.30, (Basics)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL Shading Language (GLSL) Specification,
+version 4.30, (Variables and Types)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL Shading Language (GLSL) Specification,
+version 4.30, (Operators and Expressions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL Shading Language (GLSL) Specification,
+version 4.30, (Statement Structure)
+
+    None.
+
+Additions to Chapter 7 of the OpenGL Shading Language (GLSL) Specification,
+version 4.30 (Built-in variables)
+
+    None.
+
+Additions to Chapter 8 of the OpenGL Shading Language (GLSL) Specification,
+version 4.30 (Built-in functions)
+
+    In Section 8.3, "Common Functions", add to the table of functions, p.133:
+
+    +---------------------------------------------------+--------------------------------------------------------+
+    | Syntax                                            | Description                                            |
+    +---------------------------------------------------+--------------------------------------------------------+
+    | genType min3(genType x, genType y, genType z)     | Returns the per-component minimum value of x, y, and z |
+    | genIType min3(genIType x, genIType y, genIType z) | Returns the per-component minimum value of x, y, and z |
+    | genUType min3(genUType x, genUType y, genUType z) | Returns the per-component minimum value of x, y, and z |
+    +---------------------------------------------------+--------------------------------------------------------+
+    | genType max3(genType x, genType y, genType z)     | Returns the per-component maximum value of x, y, and z |
+    | genIType max3(genIType x, genIType y, genIType z) | Returns the per-component maximum value of x, y, and z |
+    | genUType max3(genUType x, genUType y, genUType z) | Returns the per-component maximum value of x, y, and z |
+    +---------------------------------------------------+--------------------------------------------------------+
+    | genType mid3(genType x, genType y, genType z)     | Returns the per-component median value of x, y, and z  |
+    | genIType mid3(genIType x, genIType y, genIType z) | Returns the per-component median value of x, y, and z  |
+    | genUType mid3(genUType x, genUType y, genUType z) | Returns the per-component median value of x, y, and z  |
+    +---------------------------------------------------+--------------------------------------------------------+
+
+Additions to Chapter 9 of the OpenGL Shading Language (GLSL) Specification,
+version 4.30, (Shading Language Grammar)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    None.
+
+Issues
+
+    1) Should the trinary min and max functions be given new names (min3, max3)
+       or simply overload the existing min and max functions?
+
+       RESOLVED: Use new names.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  -----------------------------------------
+
+     2    10/01/2012  gsellers  Update to GLSL 4.30. Ready to post.
+     1    11/01/2012  gsellers  Initial Revision

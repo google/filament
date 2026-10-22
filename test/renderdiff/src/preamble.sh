@@ -1,0 +1,89 @@
+# Copyright (C) 2025 The Android Open Source Project
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#!/usr/bin/bash
+
+# Sets up the environment for scripts in test/renderdiff/
+
+RENDER_OUTPUT_DIR="$(pwd)/out/renderdiff/renders"
+DIFF_OUTPUT_DIR="$(pwd)/out/renderdiff/diffs"
+GOLDEN_OUTPUT_DIR="$(pwd)/out/renderdiff/goldens"
+RENDERDIFF_TEST_DIR="$(pwd)/test/renderdiff"
+MESA_DIR="$(pwd)/mesa/out/"
+VENV_DIR="$(pwd)/venv"
+GLTF_DIR="$(pwd)/gltf/Models"
+BUILD_COMMON_DIR="$(pwd)/build/common"
+
+# Backtraces of renders that died on a signal, written by report_crashes.sh. Under out/renderdiff
+# because every caller already uploads that directory.
+CRASH_OUTPUT_DIR="$(pwd)/out/renderdiff/crashes"
+
+# Cores stay out of out/renderdiff: they are hundreds of megabytes, and only the backtrace
+# extracted from them is worth uploading.
+CORE_DUMP_DIR="${CORE_DUMP_DIR:-/tmp/renderdiff-cores}"
+
+# Lets crash collection tell this run's cores from whatever was already on the machine.
+RENDER_START_MARKER="${CORE_DUMP_DIR}/render-start"
+
+# diffimg is built by generate.sh, into the same debug tree as the renderers. It used to come from
+# a release build, which meant configuring a second CMake tree for one small tool; comparing the
+# whole suite takes single-digit seconds, so an unoptimized binary costs nothing measurable.
+DIFFIMG_PATH="$(pwd)/out/cmake-debug/tools/diffimg/diffimg"
+
+# The web platform has no desktop debug tree. Its wasm build already configures a release desktop
+# tree in out/cmake-release for the host tools, so diffimg is built there instead. That keeps the
+# web leg to the trees the web-emsdk compiler cache holds, rather than adding one it would compile
+# from scratch on every run.
+WEB_DIFFIMG_PATH="$(pwd)/out/cmake-release/tools/diffimg/diffimg"
+
+# Prints the diffimg that generate.sh built for the given platform ('desktop' or 'web').
+function diffimg_path_() {
+    if [[ "$1" == "web" ]]; then
+        echo "${WEB_DIFFIMG_PATH}"
+    else
+        echo "${DIFFIMG_PATH}"
+    fi
+}
+
+os_name=$(uname -s)
+arch_name=$(uname -m)
+if [[ "$os_name" == "Linux" ]]; then
+    if [[ "$arch_name" == "aarch64" ]]; then
+        MESA_LIB_DIR="${MESA_DIR}lib/aarch64-linux-gnu"
+        MESA_VK_ICD_PATH="${MESA_DIR}share/vulkan/icd.d/lvp_icd.aarch64.json"
+    else
+        MESA_LIB_DIR="${MESA_DIR}lib/x86_64-linux-gnu"
+        MESA_VK_ICD_PATH="${MESA_DIR}share/vulkan/icd.d/lvp_icd.x86_64.json"
+    fi
+elif [[ "$os_name" == "Darwin" ]]; then
+    MESA_LIB_DIR="${MESA_DIR}lib"
+    MESA_VK_ICD_PATH="${MESA_DIR}share/vulkan/icd.d/lvp_icd.aarch64.json"
+else
+    echo "Unsupported platform for renderdiff tests"
+    exit 1
+fi
+
+function start_() {
+    mkdir -p ${RENDER_OUTPUT_DIR} ${DIFF_OUTPUT_DIR} ${GOLDEN_OUTPUT_DIR} ${CRASH_OUTPUT_DIR}
+    mkdir -p ${CORE_DUMP_DIR}
+    if [[ "$GITHUB_WORKFLOW" ]]; then
+        set -ex
+    fi
+}
+
+function end_() {
+    if [[ "$GITHUB_WORKFLOW" ]]; then
+        set +ex
+    fi
+}

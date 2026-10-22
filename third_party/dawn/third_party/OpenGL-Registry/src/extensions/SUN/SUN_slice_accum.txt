@@ -1,0 +1,100 @@
+Name
+
+    SUN_slice_accum
+
+Name Strings
+
+    GL_SUN_slice_accum
+
+Contact
+
+    Jack Middleton, Sun (Jack.Middleton 'at' sun.com)
+
+Status
+
+    Shipping (version 1.3)
+
+Version
+   
+ $Date: 02/03/13 15:15:35  $Revision: 1.3 $
+
+Number
+
+    258
+
+Dependencies
+
+    The extension is written against the OpenGL 1.3 Specification. 
+
+Overview
+
+
+  This extension defines a new accumulation operation which enables the accumulation
+  buffer to be used for alpha compositing. This enables higher precision alpha
+  blending than what can be accomplished using the blend operation.
+
+IP Status
+
+  There are no known IP issues.
+
+Issues
+
+  None
+
+
+New Procedures and Functions
+
+  None
+
+New Tokens
+
+   Accepted by the <op> parameter of Accum,
+
+   SLICE_ACCUM_SUN                0x85CC
+
+Additions to Chapter 2 of the 1.3 GL Specification (OpenGL Operation)
+
+    None 
+
+Additions to Chapter 3 of the 1.3 GL Specification (Rasterization)
+
+    None
+
+
+Additions to Chapter 4 of the 1.3 GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    Section 4.2.4 The Accumulation Buffer:
+
+    The possible operations are ACCUM, LOAD, RETURN, MULT, ADD and SLICE_ACCUM_SUN.
+
+    The SLICE_ACCUM_SUN operation has the same effect as ACCUM except that the
+    accumulation buffer color value is computed:
+
+    AccumRGB = (FrameBuffAlpha * FrameBuffRGB) + ((1 - FrameBuffAlpha) * AccumRGB)
+
+
+Additions to Chapter 5 of the 1.3 GL Specification (Special Functions)
+
+    None
+
+
+Additions to Chapter 6 of the 1.3 GL Specification (State and State Requests)
+
+    None
+
+Additions to the GLX / WGL / AGL Specifications
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+   
+    None
+ 
+New State
+
+    None

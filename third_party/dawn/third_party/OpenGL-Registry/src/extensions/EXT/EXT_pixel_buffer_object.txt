@@ -1,0 +1,466 @@
+Name
+
+    EXT_pixel_buffer_object
+
+Name Strings
+
+    GL_EXT_pixel_buffer_object
+
+Status
+
+    Implemented by NVIDIA drivers (Release 55).
+
+Contributors
+
+    Ralf Biermann
+    Derek Cornish
+    Matt Craighead
+    Bill Licea-Kane
+    Brian Paul
+
+Contact
+
+    Ralf Biermann, NVIDIA Corporation (rbiermann 'at' nvidia.com)
+    Derek Cornish, NVIDIA Corporation (dcornish 'at' nvidia.com)
+
+IP Status
+
+    Unknown.
+
+Version
+
+    NVIDIA Date: March 29, 2004 (version 1.0)
+
+Number
+
+    302
+
+Status
+
+    NVIDIA Release 55 (early 2004) drivers support this extension.
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.5 specification.
+
+    GL_NV_pixel_data_range affects the definition of this extension.
+
+Overview
+
+    This extension expands on the interface provided by buffer objects.
+    It is intended to permit buffer objects to be used not only with 
+    vertex array data, but also with pixel data.
+    Buffer objects were promoted from the ARB_vertex_buffer_object
+    extension in OpenGL 1.5.
+
+    Recall that buffer objects conceptually are nothing more than arrays
+    of bytes, just like any chunk of memory. Buffer objects allow GL
+    commands to source data from a buffer object by binding the buffer
+    object to a given target and then overloading a certain set of GL
+    commands' pointer arguments to refer to offsets inside the buffer,
+    rather than pointers to user memory.  An offset is encoded in a
+    pointer by adding the offset to a null pointer.
+
+    This extension does not add any new functionality to buffer
+    objects themselves.  It simply adds two new targets to which buffer
+    objects can be bound: PIXEL_PACK_BUFFER and PIXEL_UNPACK_BUFFER.
+    When a buffer object is bound to the PIXEL_PACK_BUFFER target,
+    commands such as ReadPixels write their data into a buffer object.
+    When a buffer object is bound to the PIXEL_UNPACK_BUFFER target,
+    commands such as DrawPixels read their data from a buffer object.
+
+    There are a wide variety of applications for such functionality.
+    Some of the most interesting ones are:
+
+    - "Render to vertex array."  The application can use a fragment
+      program to render some image into one of its buffers, then read
+      this image out into a buffer object via ReadPixels.  Then, it can
+      use this buffer object as a source of vertex data.
+
+    - Streaming textures.  If the application uses MapBuffer/UnmapBuffer
+      to write its data for TexSubImage into a buffer object, at least
+      one of the data copies usually required to download a texture can
+      be eliminated, significantly increasing texture download
+      performance.
+
+    - Asynchronous ReadPixels.  If an application needs to read back a
+      number of images and process them with the CPU, the existing GL
+      interface makes it nearly impossible to pipeline this operation.
+      The driver will typically send the hardware a readback command
+      when ReadPixels is called, and then wait for all of the data to
+      be available before returning control to the application.  Then,
+      the application can either process the data immediately or call
+      ReadPixels again; in neither case will the readback overlap with
+      the processing.  If the application issues several readbacks into
+      several buffer objects, however, and then maps each one to process
+      its data, then the readbacks can proceed in parallel with the data
+      processing.
+
+Issues
+
+    How does this extension relate to ARB_vertex_buffer_object?
+
+        It builds on the ARB_vertex_buffer_object framework by adding
+        two new targets that buffers can be bound to.
+
+    How does this extension relate to NV_pixel_data_range?
+
+        This extension relates to NV_pixel_data_range in the same way that
+        ARB_vertex_buffer_object relates to NV_vertex_array_range. To
+        paraphrase the ARB_vertex_buffer_object spec, here are the main
+        differences:
+
+        - Applications are no longer responsible for memory management
+          and synchronization.
+
+        - Applications may still access high-performance memory directly,
+          but this is optional, and such access is more restricted.
+
+        - Buffer changes (BindBuffer) are generally expected to
+          be very lightweight, rather than extremely heavyweight
+          (PixelDataRangeNV).
+
+        - A platform-specific allocator such as wgl/glXAllocateMemoryNV
+          is no longer required.
+
+    Can a given buffer be used for both vertex and pixel data?
+
+        RESOLVED: YES.  All buffers can be used with all buffer bindings,
+        in whatever combinations the application finds useful.  Consider
+        yourself warned, however, by the following issue.
+
+    May implementations make use of the target as a hint to select an
+    appropriate memory space for the buffer?
+
+        RESOLVED: YES, as long as such behavior is transparent to the
+        application. Some implementations may choose, for example,
+        that they would rather stream vertex data from write-combined
+        system memory, element (or index) data from video memory, and
+        pixel data from video memory.
+
+        In fact, one can imagine arbitrarily complicated heuristics for
+        selecting the memory space, based on factors such as the target,
+        the "usage" argument, and the application's observed behavior.
+
+        While it is entirely legal to create a buffer object by binding
+        it to ARRAY_BUFFER and loading it with data, then using it with
+        the PIXEL_UNPACK_BUFFER_EXT or PIXEL_PACK_BUFFER_EXT binding, such
+        behavior is liable to confuse the driver and may hurt performance.
+        If the driver implemented the hypothetical heuristic described
+        earlier, such a buffer might have already been located in
+        write-combined system memory, and so the driver would have to
+        choose between two bad options: relocate the buffer into video
+        memory, or accept lower performance caused by streaming pixel
+        data from slower system memory.
+
+    Should all pixel path commands be supported, or just a subset of
+    them?
+
+        RESOLVED: ALL.  While there is little reason to believe that,
+        say, ConvolutionFilter2D would benefit from this extension, there
+        is no reason _not_ to support it.  The full list of commands
+        affected by this extension is listed in the spec.
+
+    Should PixelMap and GetPixelMap be supported?
+
+        RESOLVED: YES.  They're not really pixel path operations, but,
+        again, there is no good reason to omit operations, and they _are_
+        operations that pass around big chunks of pixel-related data.
+        If we support PolygonStipple, surely we should support this.
+
+    How does the buffer binding state push/pop?
+
+        RESOLVED: As part of the pixel store client state.  This is
+        analogous to how the vertex buffer object bindings pushed/popped
+        as part of the vertex array client state.
+
+    Should NV_pixel_data_range (PDR) be used concurrently with pixel
+    buffer objects ?
+
+        RESOLVED: NO. While it would be possible to allocate a memory
+        range for PDR, using a pointer into this memory range with one
+        of the commands affected by EXT_pixel_buffer_object will not
+        work if a pixel buffer object other than zero is bound to the
+        buffer binding point affecting the command. Pixel buffer objects
+        always have higher precedence than PDR.
+
+    Do the null pointer rules for glTexImage1D, glTexImage2D
+    and glTexImage3D for allocating textures with undefined
+    content also apply when a non-zero buffer object is bound to
+    PIXEL_UNPACK_BUFFER_BINDING_EXT ?
+        
+        RESOLVED: NO. The null pointer is interpreted as a non-zero
+        pointer to the data storage whose contents may be still
+        undefined. This data will be used to create the texture array.
+        If the null pointer rule is required, no non-zero buffer object
+        should be bound to PIXEL_UNPACK_BUFFER_BINDING_EXT.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <target> parameters of BindBuffer, BufferData, 
+    BufferSubData, MapBuffer, UnmapBuffer, GetBufferSubData, 
+    GetBufferParameteriv, and GetBufferPointerv:
+
+        PIXEL_PACK_BUFFER_EXT                        0x88EB
+        PIXEL_UNPACK_BUFFER_EXT                      0x88EC
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        PIXEL_PACK_BUFFER_BINDING_EXT                0x88ED
+        PIXEL_UNPACK_BUFFER_BINDING_EXT              0x88EF
+
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2.1 Specification (Rasterization)
+
+    Additions to subsection 3.8.1 of the 1.2.1 Specification (Texture
+    Image Specification)
+
+    The extension EXT_pixel_buffer_object makes an exception to this
+    rule of passing a null pointer to glTexImage1D, glTexImage2D and
+    glTexImage3D. If PIXEL_UNPACK_BUFFER_BINDING_EXT is non-zero
+    and a null pointer is passed to these functions, the texture
+    array is created and the image contents are sourced from the
+    data store of the bound buffer object.
+
+Additions to Chapter 4 of the 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Added a subsection 4.3.5 (Pixel Buffer Object unpack operation)
+    in section 4.3 (Drawing, Reading and copying Pixels)
+
+    The extension EXT_pixel_buffer_object affects the operation of
+    several OpenGL commands described in section 3.6 (Pixel Rectangles),
+    section 3.7 (Bitmaps), and section 3.8 (Texturing).
+
+    In unextended OpenGL 1.3 with ARB_imaging support, the commands
+    glBitmap, glColorSubTable, glColorTable, glCompressedTexImage1D,
+    glCompressedTexImage2D, glCompressedTexImage3D,
+    glCompressedTexSubImage1D, glCompressedTexSubImage2D,
+    glCompressedTexSubImage3D, glConvolutionFilter1D,
+    glConvolutionFilter2D, glDrawPixels, glPixelMapfv, glPixelMapuiv,
+    glPixelMapusv, glPolygonStipple, glSeparableFilter2D, glTexImage1D,
+    glTexImage2D, glTexImage3D, glTexSubImage1D, glTexSubImage2D
+    and glTexSubImage3D operate as previously defined, except
+    that pixel data is sourced from a buffer object's data store if
+    PIXEL_UNPACK_BUFFER_BINDING_EXT is non-zero. When the data is sourced
+    from a buffer object, the pointer value passed in as an argument to
+    the command is used to compute an offset, in basic machine units,
+    into the data store of the buffer object. This offset is computed
+    by subtracting a null pointer from the pointer value, where both
+    pointers are treated as pointers to basic machine units.
+
+Additions to Chapter 5 of the 1.2.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2.1 Specification (State and State
+Requests)
+
+    Additions to subsection 6.1.13 (Buffer Object Queries) in chapter 6
+    
+    In unextended OpenGL 1.5 with ARB_imaging support, the commands
+    glGetColorTable, glGetCompressedTexImage, glGetConvolutionFilter,
+    glGetHistogram, glGetMinmax, glGetPixelMapfv, glGetPixelMapuiv,
+    glGetPixelMapusv, glGetPolygonStipple, glGetSeparableFilter,
+    glGetTexImage and glReadPixels operate as previously defined,
+    except that pixel data is stored in a buffer object's data store if
+    PIXEL_PACK_BUFFER_BINDING_EXT is non-zero. When a buffer object is
+    the target of the pixel data, the target pointer value passed in as
+    an argument to the command is used to compute an offset, in basic
+    machine units, into the data store of the buffer object. This offset
+    is computed by subtracting a null pointer from the pointer value,
+    where both pointers are treated as pointers to basic machine units.
+
+Errors
+
+    None
+
+New State
+
+(table 6.20, Pixels, p. 235)
+
+    Get Value                        Type  Get Command  Initial Value  Sec     Attribute
+    ---------                        ----  -----------  -------------  ---     ---------
+    PIXEL_PACK_BUFFER_BINDING_EXT    Z+    GetIntegerv  0              4.3.5   pixel-store
+    PIXEL_UNPACK_BUFFER_BINDING_EXT  Z+    GetIntegerv  0              6.1.13  pixel-store
+
+New Implementation Dependent State
+
+    (none)
+
+
+Usage Examples
+
+    Convenient macro definition for specifying buffer offsets:
+
+        #define BUFFER_OFFSET(i) ((char *)NULL + (i))
+
+    Example 1: Render to vertex array
+
+        // create a buffer object for a number of vertices consisting of 
+        // 4 float values per vertex
+        GenBuffers(1, vertexBuffer);
+        BindBuffer(PIXEL_PACK_BUFFER_EXT, vertexBuffer);
+        BufferData(PIXEL_PACK_BUFFER_EXT, numberVertices*4, NULL, DYNAMIC_DRAW);
+
+        // render vertex data into framebuffer using a fragment program
+        BindProgramARB(FRAGMENT_PROGRAM_ARB, fragmentProgram);
+        DrawBuffer(GL_BACK);
+        renderVertexData();
+        BindProgramARB(FRAGMENT_PROGRAM_ARB, 0);
+
+        // read the vertex data back from framebuffer
+        ReadBuffer(GL_BACK);
+        ReadPixels(0, 0, numberVertices*4, height/2,
+            GL_BGRA, GL_FLOAT, BUFFER_OFFSET(0));
+
+        // change the binding point of the buffer object to
+        // the vertex array binding point
+        BindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+
+        EnableClientState(VERTEX_ARRAY);
+        VertexPointer(4, FLOAT, 0, BUFFER_OFFSET(0));
+        DrawArrays(TRIANGLE_STRIP, 0, numberVertices);
+
+    Example 2: Streaming textures
+
+    streaming textures using NV_pixel_data_range 
+
+        void *pdrMemory, *texData;
+
+        pdrMemory = AllocateMemoryNV(texsize, 0.0, 1.0, 1.0);
+
+        PixelDataRangeNV(GL_WRITE_PIXEL_DATA_RANGE_NV, texsize, pdrMemory);
+
+        EnableClientState(GL_WRITE_PIXEL_DATA_RANGE_NV);
+
+        // setup texture environment
+        ...     
+
+        texData = getNextImage();
+
+        while (texData) {
+
+            memcpy(pdrMemory, texData, texsize);
+
+            FlushPixelDataRangeNV(GL_WRITE_PIXEL_DATA_RANGE_NV);
+
+            TexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
+                texWidth, texHeight, GL_BGRA, GL_UNSIGNED_BYTE, pdrMemory);
+
+            // draw textured geometry
+            Begin(GL_QUADS);
+            ...
+            End();
+
+            texData = getNextImage();
+        }
+
+        DisableClientState(GL_WRITE_PIXEL_DATA_RANGE_NV);
+
+        FreeMemoryNV(pdrMemory);
+    
+    streaming textures using EXT_pixel_buffer_object:
+
+        void *pboMemory, *texData;
+
+        // create and bind texture image buffer object
+        GenBuffers(1, &texBuffer);
+        BindBuffer(PIXEL_UNPACK_BUFFER_EXT, texBuffer);
+        BufferData(PIXEL_UNPACK_BUFFER_EXT, texSize, NULL, STREAM_DRAW);
+
+        texData = getNextImage();
+
+        while (texData) {
+
+            // map the texture image buffer
+            pboMemory = MapBuffer(PIXEL_UNPACK_BUFFER_EXT, WRITE_ONLY);
+            
+            // modify (sub-)buffer data
+            memcpy(pboMemory, texData, texsize);
+
+            // unmap the texture image buffer
+            if (!UnmapBuffer(PIXEL_UNPACK_BUFFER_EXT)) {
+                // Handle error case
+            }
+
+            // update (sub-)teximage from texture image buffer
+            TexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texWidth, texHeight, 
+                          GL_BGRA, GL_UNSIGNED_BYTE, BUFFER_OFFSET(0));
+
+            // draw textured geometry
+            Begin(GL_QUADS);
+            ...
+            End();
+
+            texData = getNextImage();
+        }
+
+        BindBuffer(PIXEL_UNPACK_BUFFER_EXT, 0);
+
+    Example 3: Asynchronous ReadPixels
+
+    traditional ReadPixels
+
+        unsigned int readBuffer[imagewidth*imageheight*4];
+
+        // render to framebuffer
+        DrawBuffer(GL_BACK);
+        renderScene()
+        
+        // read image from framebuffer
+        ReadBuffer(GL_BACK); 
+        ReadPixels();
+
+        // process image when ReadPixels returns after reading the whole buffer
+        processImage(readBuffer);
+
+    asynchronous ReadPixels
+
+        GenBuffers(2, imageBuffers);
+
+        BindBuffer(PIXEL_PACK_BUFFER_EXT, imageBuffers[0]);
+        BufferData(PIXEL_PACK_BUFFER_EXT, imageSize / 2, NULL, STATIC_READ);
+
+        BindBuffer(PIXEL_PACK_BUFFER_EXT, imageBuffers[1]);
+        BufferData(PIXEL_PACK_BUFFER_EXT, imageSize / 2, NULL, STATIC_READ);
+
+        // render to framebuffer
+        DrawBuffer(GL_BACK);
+        renderScene();
+
+        // Bind two different buffer objects and start the ReadPixels 
+        // asynchronously. Each call will return directly after starting the 
+        // DMA transfer.
+        BindBuffer(PIXEL_PACK_BUFFER_EXT, imageBuffers[0]);
+        ReadPixels(0, 0, width, height/2,
+            GL_BGRA, GL_UNSIGNED_BYTE, BUFFER_OFFSET(0));
+
+        BindBuffer(PIXEL_PACK_BUFFER_EXT, imageBuffers[1]);
+        ReadPixels(0, height/2, width, height/2, GL_BGRA, GL_UNSIGNED_BYTE, 
+                   BUFFER_OFFSET(0));
+        
+        // process partial images 
+        pboMemory1 = MapBuffer(PIXEL_PACK_BUFFER_EXT, READ_ONLY);
+        processImage(pboMemory1);
+        pboMemory2 = MapBuffer(PIXEL_PACK_BUFFER_EXT, READ_ONLY);
+        processImage(pboMemory2);
+
+        // unmap the image buffers
+        BindBuffer(PIXEL_PACK_BUFFER_EXT, imageBuffers[0]);
+        if (!UnmapBuffer(PIXEL_PACK_BUFFER_EXT)) {
+            // Handle error case
+        }
+        BindBuffer(PIXEL_PACK_BUFFER_EXT, imageBuffers[1]);
+        if (!UnmapBuffer(PIXEL_PACK_BUFFER_EXT)) {
+            // Handle error case
+        }

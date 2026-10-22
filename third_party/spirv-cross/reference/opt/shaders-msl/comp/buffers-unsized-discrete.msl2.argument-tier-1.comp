@@ -1,0 +1,41 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T>
+struct spvDescriptor
+{
+    T value;
+};
+
+template<typename T>
+struct spvDescriptorArray
+{
+    spvDescriptorArray(const device spvDescriptor<T>* ptr_) : ptr(&ptr_->value) {}
+    spvDescriptorArray(const device void *ptr_) : spvDescriptorArray(static_cast<const device spvDescriptor<T>*>(ptr_)) {}
+    const device T& operator [] (size_t i) const { return ptr[i]; }
+    const device T* ptr;
+};
+
+struct SSBOW
+{
+    char _m0_pad[4];
+    float a;
+};
+
+struct SSBO
+{
+    float b;
+};
+
+kernel void main0(device const void* spvDescriptorSet1Binding0 [[buffer(0)]], device const void* spvDescriptorSet0Binding0 [[buffer(1)]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]])
+{
+    spvDescriptorArray<device SSBOW*> RW {spvDescriptorSet1Binding0};
+    spvDescriptorArray<device SSBO*> RO {spvDescriptorSet0Binding0};
+
+    RW[gl_WorkGroupID.x]->a = RO[gl_WorkGroupID.x]->b;
+}
+

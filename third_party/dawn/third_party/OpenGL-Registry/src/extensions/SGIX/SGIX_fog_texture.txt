@@ -1,0 +1,133 @@
+Name
+
+    SGIX_fog_texture
+
+Name Strings
+
+    GL_SGIX_fog_texture
+
+Version
+
+    $Date: 1999/03/30 23:13:53 $ $Revision: 1.5 $
+
+Number
+
+    XXX
+
+Dependencies
+
+    OpenGL 1.1 is required.
+    EXT_light_texture is required.
+    SGIS_multitexture affects the definition of this extension.
+    SGIX_color_range affects the definition of this extension.
+
+Overview
+
+    This extension defines a general mechanism for substituting the
+    fragment color computed during texture environment processing in
+    place of fog fragment attributes such as fog color, fog density
+    fog patchy factor. The application of texture to fog color assumes
+    no internal format constraint of the image. Fog density and patchy
+    multiplicative factor are scalar values and are substituted
+    by the red texture component.
+
+IP Status
+
+    Silicon Graphics has filed for patent protection for some of the
+    techniques described in this extension document.
+
+Issues:
+
+    * This extension is incomplete with respect to the dependency
+    of the fog_patchy extension
+
+    * The fog patchy factor is expected to be a constant of 1.
+    unless is applied by a texture. Is that the most intuitive
+    api. Should we support a any constant for the factor and have
+    it be set as a fog parameter (in glFog).
+
+New Procedures and Functions
+
+    void TextureFogSGIX(enum pname);
+
+New Tokens
+
+    Accepted by the <mode> parameter of ApplyTextureEXT:
+
+    FRAGMENT_FOG_SGIX                           0xXXXX
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+    TEXTURE_FOG_SGIX                            0xXXXX
+
+    Accepted by the <pname> parameter of TextureFogSGIX:
+
+    FOG_PATCHY_FACTOR_SGIX                      0xXXXX
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    Add at the end of Section 3.X.1 Texture Application
+
+    If <mode> is FRAGMENT_FOG_SGIX then the post-texture-environment
+    color substitutes one of fragment fog parameters during the fog
+    computation of the fragment. The fragment fog parameters
+    substituted are specified by the command TextureFogSGIX
+    described in section 3.X.5.
+
+    Add section 3.X.4 and replace 3.X.4 with 3.X.5 for
+    Interactions with multiple textures
+
+    3.X.4 Texture Applied to Fog Parameters
+
+    TextureFogSGIX(enum pname) determines which fog fragment parameters
+    is substituted with the post-texture-environment color, when the
+    texture application mode is FRAGMENT_FOG_SGIX. <pname>  is one of
+    FOG_COLOR, FOG_DENSITY or FOG_PATCHY_FACTOR_SGIX. FOG_COLOR can be
+    applied with a texture image of any number of components. FOG_DENSITY
+    and FOG_PATCHY_FACTOR_SGIX are scalar entities derived from the
+    texture red component.
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    TBD
+
+Dependencies on SGIX_light_texture
+    EXT_light_texture is required since this extension adds
+    an enumerant parameter to the ApplyTextureEXT command.
+
+Dependencies on EXT_multitexture
+    If EXT_multitexture is not supported only the single
+    post-texture-environment color is available for substitution and the
+    discussion of multiple textures in section 3.X.5 is void.
+
+Errors
+    INVALID_ENUM is generated if TextureFogSGIX parameter
+    is not FOG_COLOR, FOG_DENSITY, or FOG_PATCHY_FACTOR_SGIX.
+
+New State
+
+    Get Value        Get Command     Type    Initial Value    Attribute
+    ---------        -----------     ----    -------------    ---------
+
+    TEXTURE_FOG_SGIX GetIntegerv     Z10     FOG_COLOR        texture
+
+New Implementation Dependent State
+
+    None
+

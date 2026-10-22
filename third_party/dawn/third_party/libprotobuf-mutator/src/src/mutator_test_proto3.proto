@@ -1,0 +1,108 @@
+syntax = "proto3";
+
+package protobuf_mutator;
+
+import "google/protobuf/any.proto";
+
+message Msg3 {
+  enum Enum {
+    ENUM_0 = 0;
+    ENUM_1 = 1;
+    ENUM_2 = 2;
+    ENUM_3 = 3;
+    ENUM_4 = 4;
+    ENUM_5 = 5;
+    ENUM_6 = 6;
+    ENUM_7 = 7;
+    ENUM_8 = 8;
+    ENUM_9 = 9;
+  }
+
+  message SubMsg {
+    int64 optional_int64 = 1;
+  }
+
+  double optional_double = 18;
+  float optional_float = 19;
+  int32 optional_int32 = 20;
+  int64 optional_int64 = 21;
+  uint32 optional_uint32 = 22;
+  uint64 optional_uint64 = 23;
+  sint32 optional_sint32 = 24;
+  sint64 optional_sint64 = 25;
+  fixed32 optional_fixed32 = 26;
+  fixed64 optional_fixed64 = 27;
+  sfixed32 optional_sfixed32 = 28;
+  sfixed64 optional_sfixed64 = 29;
+  bool optional_bool = 30;
+  string optional_string = 31;
+  bytes optional_bytes = 32;
+  Enum optional_enum = 33;
+  Msg3 optional_msg = 34;
+
+  repeated double repeated_double = 35;
+  repeated float repeated_float = 36;
+  repeated int32 repeated_int32 = 37;
+  repeated int64 repeated_int64 = 38;
+  repeated uint32 repeated_uint32 = 39;
+  repeated uint64 repeated_uint64 = 40;
+  repeated sint32 repeated_sint32 = 41;
+  repeated sint64 repeated_sint64 = 42;
+  repeated fixed32 repeated_fixed32 = 43;
+  repeated fixed64 repeated_fixed64 = 44;
+  repeated sfixed32 repeated_sfixed32 = 45;
+  repeated sfixed64 repeated_sfixed64 = 46;
+  repeated bool repeated_bool = 47;
+  repeated string repeated_string = 48;
+  repeated bytes repeated_bytes = 49;
+  repeated Enum repeated_enum = 50;
+  repeated Msg3 repeated_msg = 51;
+
+  oneof OneOf {
+    double oneof_double = 52;
+    float oneof_float = 53;
+    int32 oneof_int32 = 54;
+    int64 oneof_int64 = 55;
+    uint32 oneof_uint32 = 56;
+    uint64 oneof_uint64 = 57;
+    sint32 oneof_sint32 = 58;
+    sint64 oneof_sint64 = 59;
+    fixed32 oneof_fixed32 = 60;
+    fixed64 oneof_fixed64 = 61;
+    sfixed32 oneof_sfixed32 = 62;
+    sfixed64 oneof_sfixed64 = 63;
+    bool oneof_bool = 64;
+    string oneof_string = 65;
+    bytes oneof_bytes = 66;
+    Enum oneof_enum = 67;
+    Msg3 oneof_msg = 68;
+  }
+
+  SubMsg sub_message = 69;
+
+  message EmptyMessage {}
+
+  message RegressionMessage {
+    enum SingleValueEnum { ENUM_0 = 0; }
+    SingleValueEnum enum = 2;
+  }
+
+  message SmallMessage {
+    enum Enum {
+      ENUM_0 = 0;
+      ENUM_1 = 1;
+      ENUM_2 = 2;
+      ENUM_3 = 3;
+    }
+
+    bool opt_bool = 1;
+    Enum opt_enum = 2;
+  }
+
+  message MapMessage {
+    map<string, int32> map1 = 1;
+    map<int32, Msg3> map2 = 2;
+  }
+
+  google.protobuf.Any any = 90;
+}

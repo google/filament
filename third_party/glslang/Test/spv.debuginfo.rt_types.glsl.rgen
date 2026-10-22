@@ -1,0 +1,50 @@
+#version 460
+#extension GL_NV_ray_tracing : enable
+#extension GL_NV_shader_invocation_reorder : enable
+#extension GL_EXT_ray_query : enable
+
+layout(binding = 0, set = 0) uniform accelerationStructureEXT acc0;
+layout(location = 1) rayPayloadEXT vec4 payload;
+
+layout(shaderRecordNV) buffer block
+{
+	vec3 dir;
+	vec3 origin;
+};
+
+rayQueryEXT globalRayQuery;
+hitObjectNV globalHitObject;
+
+void testRayQuery() {
+    uint rayFlags = gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT;
+    float tMin = 0.f;
+    float tMax = 1000.f;
+    
+    rayQueryInitializeEXT(globalRayQuery, acc0, rayFlags, 0xFF , origin, tMin, dir, tMax);
+    if (!rayQueryProceedEXT(globalRayQuery))
+    {
+        rayQueryTerminateEXT(globalRayQuery);
+    }
+
+    rayQueryEXT localRayQuery;
+    rayQueryInitializeEXT(localRayQuery, acc0, rayFlags, 0xFF , origin, tMin, dir, tMax);
+    if (!rayQueryProceedEXT(localRayQuery))
+    {
+        rayQueryTerminateEXT(localRayQuery);
+    }
+}
+
+
+void testHitObject() {
+
+	hitObjectTraceRayNV(globalHitObject, acc0, 1U, 1U, 1U, 1U, 1U, vec3(0.5), 0.5, vec3(1), 1.0, 1);
+
+    hitObjectNV localHitObject;
+    hitObjectTraceRayNV(localHitObject, acc0, 1U, 1U, 1U, 1U, 1U, vec3(0.5), 0.5, vec3(1), 1.0, 1);
+}
+
+void main()
+{
+    testRayQuery();
+    testHitObject();
+}

@@ -1,0 +1,24 @@
+struct TaskPayload
+{
+    float a;
+    float b;
+    int c;
+};
+
+static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
+
+groupshared TaskPayload _payload;
+
+void task_main()
+{
+    _payload.a = 1.2000000476837158203125f;
+    _payload.b = 2.2999999523162841796875f;
+    _payload.c = 3;
+    DispatchMesh(1u, 2u, 3u, _payload);
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    task_main();
+}

@@ -1,0 +1,186 @@
+Name
+
+    AMD_shader_image_load_store_lod
+
+Name Strings
+
+    GL_AMD_shader_image_load_store_lod
+
+Contact
+
+    Rex Xu, AMD (rex.xu 'at' amd.com)
+
+Contributors
+
+    Rex Xu, AMD
+    Zhou Jin, AMD
+    Qun Lin, AMD
+    Daniel Rakos, AMD
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified Date:         07/03/2017
+    Author Revision:            2
+
+Number
+
+    513
+
+Dependencies
+
+    This extension is written against the OpenGL 4.5 (Core Profile)
+    Specification.
+
+    This extension is written against version 4.50 of the OpenGL Shading
+    Language Specification.
+
+    OpenGL 4.0 and GLSL 4.00 are required.
+
+    This extension interacts with ARB_sparse_texture2.
+
+Overview
+
+    This extension was developed based on the ARB_shader_image_load_store
+    extension to allow implementations supporting loads and stores on
+    mipmap texture images.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Modifications to the OpenGL Shading Language Specification, Version 4.50
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+        #extension GL_AMD_shader_image_load_store_lod : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+        #define GL_AMD_shader_image_load_store_lod    1
+
+Additions to Chapter 8 of the OpenGL Shading Language Specification (Built-in
+Functions)
+
+    Modify Section 8.12 Image Functions
+
+    (insert a new paragraph, following the fourth paragraph on p. 179)
+
+    ... "Texture Image Loads and Stores" of the OpenGL specification.
+
+    Loads and stores could also be done on mipmap texture images with the
+    level-of-detail specified explicitly. In such case, the IMAGE_LOD_PARAMS
+    is used instead. Similar to IMAGE_PARAMS, the IMAGE_LOD_PARAMS in the
+    prototypes below is a placeholder representing 21 separate functions, each
+    for a different type of image variable. The IMAGE_LOD_PARAMS placeholder is
+    replaced by one of the following parameter list:
+
+        gimage1D image, int P, int lod
+        gimage2D image, ivec2 P, int lod
+        gimage3D image, ivec3 P, int lod
+        gimageCube image, ivec3 P, int lod
+        gimage1DArray image, ivec2 P, int lod
+        gimage2DArray image, ivec3 P, int lod
+        gimageCubeArray image, ivec3 P, int lod
+
+    (insert new functions to the "Syntax" table cell of each image memory
+     function group on p. 180-181)
+
+    +-----------------------------------------+-------------------------------+
+    | Syntax                                  | Description                   |
+    +-----------------------------------------+-------------------------------+
+    | gvec4 imageLoadLodAMD(readonly          | Loads the texel at the        |
+    |                       IMAGE_LOD_PARAMS) | coordinate <P> from the image |
+    |                                         | unit <image> (in              |
+    |                                         | IMAGE_MIP_PARAMS). When       |
+    |                                         | <image>, <P>, <lod> identify  |
+    |                                         | a valid texel, the bits used  |
+    |                                         | to represent the selected     |
+    |                                         | texel in the memory are       |
+    |                                         | converted to a vec4, ivec4,   |
+    |                                         | uvec4 in the manner described |
+    |                                         | in the section 8.25 "Texture  |
+    |                                         | Image Loads and Stores" of    |
+    |                                         | the OpenGL Specification and  |
+    |                                         | returned.                     |
+    +-----------------------------------------+-------------------------------+
+    | void imageStoreLodAMD(writeonly         | Store <data> into the texel   |
+    |                       IMAGE_LOD_PARAMS, | at the coordinate <P> from    |
+    |                       gvec4 data)       | the image specified by        |
+    |                                         | <image>. When <image>, <P>,   |
+    |                                         | <lod> identify a valid texel, |
+    |                                         | the bits used to represent    |
+    |                                         | <data> are converted to the   |
+    |                                         | format of the image unit in   |
+    |                                         | the manner described in       |
+    |                                         | section 8.25 "Texture Image   |
+    |                                         | Loads and Stores" of the      |
+    |                                         | OpenGL Specification and      |
+    |                                         | stored to the specified texel.|
+    +-----------------------------------------+-------------------------------+
+
+Dependencies on ARB_sparse_texture2
+
+    If the shader enables ARB_sparse_texture2, this extension adds additional
+    image load functions.
+
+    +-------------------------------------------------+-----------------------+
+    | Syntax                                          | Description           |
+    +-------------------------------------------------+-----------------------+
+    | int sparseImageLoadLodAMD(gimage2D image,       | Loads a texel from    |
+    |                           ivec2 P, int lod,     | the image <image> as  |
+    |                           out gvec4 texel)      | in imageLoadLodAMD(), |
+    | int sparseImageLoadLodAMD(gimage3D image,       | but return texture    |
+    |                           ivec3 P, int lod,     | access residency      |
+    |                           out gvec4 texel)      | information from the  |
+    | int sparseImageLoadLodAMD(gimageCube image,     | function and the      |
+    |                           ivec3 P, int lod,     | filtered lookup       |
+    |                           out gvec4 texel)      | result in the out     |
+    | int sparseImageLoadLodAMD(gimage2DArray image,  | parameter <texel>.    |
+    |                           ivec3 P, int lod,     |                       |
+    |                           out gvec4 texel)      |                       |
+    | int sparseImageLoadLodAMD(gimageCuberray image, |                       |
+    |                           ivec3 P, int lod,     |                       |
+    |                           out gvec4 texel)      |                       |
+    +-------------------------------------------------+-----------------------+
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    (1) What is the intention of this extension?
+
+      RESOLVED: This extension is designed to support loads and stores on
+      mipmap texture images with the level-of-detail specified explicitly.
+
+Revision History
+
+    Rev.  Date      Author    Changes
+    ----  --------  --------  -------------------------------------------------
+     2    07/03/17  rexu      Rename this extension and use suffix "lod" to
+                              keep the consistency with existing texture and
+                              image functions. Remove gimage2DRect and
+                              gimageBuffer dimensions for these new built-in
+                              functions in that they do not support mipmapping.
+
+     1    06/30/17  rexu      Initial draft.

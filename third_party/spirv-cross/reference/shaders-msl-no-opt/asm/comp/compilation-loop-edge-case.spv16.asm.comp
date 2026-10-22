@@ -1,0 +1,154 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T>
+[[clang::optnone]] T spvFMul(T l, T r)
+{
+    return fma(l, r, T(0));
+}
+
+template<typename T, int Cols, int Rows>
+[[clang::optnone]] vec<T, Cols> spvFMulVectorMatrix(vec<T, Rows> v, matrix<T, Cols, Rows> m)
+{
+    vec<T, Cols> res = vec<T, Cols>(0);
+    for (uint i = Rows; i > 0; --i)
+    {
+        vec<T, Cols> tmp(0);
+        for (uint j = 0; j < Cols; ++j)
+        {
+            tmp[j] = m[j][i - 1];
+        }
+        res = fma(tmp, vec<T, Cols>(v[i - 1]), res);
+    }
+    return res;
+}
+
+template<typename T, int Cols, int Rows>
+[[clang::optnone]] vec<T, Rows> spvFMulMatrixVector(matrix<T, Cols, Rows> m, vec<T, Cols> v)
+{
+    vec<T, Rows> res = vec<T, Rows>(0);
+    for (uint i = Cols; i > 0; --i)
+    {
+        res = fma(m[i - 1], vec<T, Rows>(v[i - 1]), res);
+    }
+    return res;
+}
+
+template<typename T, int LCols, int LRows, int RCols, int RRows>
+[[clang::optnone]] matrix<T, RCols, LRows> spvFMulMatrixMatrix(matrix<T, LCols, LRows> l, matrix<T, RCols, RRows> r)
+{
+    static_assert(LCols == RRows, "column-row configuration mismatch");
+    matrix<T, RCols, LRows> res;
+    for (uint i = 0; i < RCols; i++)
+    {
+        vec<T, LRows> tmp(0);
+        for (uint j = 0; j < LCols; j++)
+        {
+            tmp = fma(vec<T, LRows>(r[i][j]), l[j], tmp);
+        }
+        res[i] = tmp;
+    }
+    return res;
+}
+
+template<typename T>
+[[clang::optnone]] T spvFAdd(T l, T r)
+{
+    return fma(T(1), l, r);
+}
+
+template<typename T>
+[[clang::optnone]] T spvFSub(T l, T r)
+{
+    return fma(T(-1), r, l);
+}
+
+template <typename ImageT>
+void spvImageFence(ImageT img) { img.fence(); }
+
+struct _8
+{
+    float2 _m0;
+    float2 _m1;
+    packed_float3 _m2;
+    uint _m3;
+    float _m4;
+    uint _m5;
+    uint _m6;
+    uint _m7;
+};
+
+kernel void main0(constant _8& _4 [[buffer(0)]], texture3d<uint, access::read_write> _5 [[texture(0)]], texture3d<uint, access::read_write> _6 [[texture(1)]], texture2d<float> _7 [[texture(2)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    float _23 = 1.0 / fast::normalize(float3(spvFAdd(spvFMul(float2(gl_GlobalInvocationID.xy), _4._m0), _4._m1), 1.0)).z;
+    uint _115 = uint(ceil(spvFMul(_7.read(uint2(gl_GlobalInvocationID.xy), 0u).x, float(_4._m3))));
+    float _39 = spvFAdd(spvFMul(precise::exp2(spvFMul(0.0, _4._m2[0])), _4._m2[1]), _4._m2[2]);
+    float3 _123;
+    float3 _125;
+    float _126;
+    int _127;
+    _123 = float3(0.0);
+    _125 = float3(1.0);
+    _126 = _39;
+    _127 = 0;
+    float3 _34;
+    float3 _35;
+    float _42;
+    uint3 _133;
+    uint4 _139;
+    uint _140;
+    uint4 _152;
+    uint _153;
+    float3 _164;
+    float _166;
+    float3 _167;
+    float3 _168;
+    float _177;
+    uint3 _179;
+    float3 _192;
+    float _201;
+    uint3 _203;
+    uint _128;
+    for (;;)
+    {
+        _128 = uint(_127);
+        if (_128 < _115)
+        {
+            _133 = uint3(gl_GlobalInvocationID.xy, _128);
+            _42 = spvFAdd(spvFMul(precise::exp2(spvFMul(spvFMul(spvFAdd(float(_127), 1.0), _4._m4), _4._m2[0])), _4._m2[1]), _4._m2[2]);
+            spvImageFence(_5);
+            _139 = _5.read(uint3(_133));
+            _140 = _139.x;
+            spvImageFence(_6);
+            _152 = _6.read(uint3(_133));
+            _153 = _152.x;
+            _164 = precise::exp((-spvFMul(float3(uint3(_153, _153 >> 9u, _153 >> 18u) & uint3(511u)), precise::exp2(float3(float(int(_153 >> 27u) - 24))))) * spvFMul(spvFSub(_42, _126), _23));
+            _34 = spvFAdd(_123, spvFMul(spvFMul(spvFMul(float3(uint3(_140, _140 >> 9u, _140 >> 18u) & uint3(511u)), precise::exp2(float3(float(int(_140 >> 27u) - 24)))), spvFSub(float3(1.0), _164)), _125));
+            _35 = spvFMul(_125, _164);
+            _166 = as_type<float>(931135488u);
+            _167 = float3(as_type<float>(1199538176u));
+            _168 = fast::clamp(_34, float3(0.0), _167);
+            _177 = as_type<float>((as_type<uint>(precise::max(precise::max(_166, _168.x), precise::max(_168.y, _168.z))) + 125845504u) & 2139095040u);
+            _179 = as_type<uint3>(spvFAdd(_168, float3(_177)));
+            _5.write(uint4(((((as_type<uint>(_177) << 4u) + 268435456u) | (_179.z << 18u)) | (_179.y << 9u)) | (_179.x & 511u)), uint3(_133));
+            _192 = fast::clamp(_35, float3(0.0), _167);
+            _201 = as_type<float>((as_type<uint>(precise::max(precise::max(_166, _192.x), precise::max(_192.y, _192.z))) + 125845504u) & 2139095040u);
+            _203 = as_type<uint3>(spvFAdd(_192, float3(_201)));
+            _6.write(uint4(((((as_type<uint>(_201) << 4u) + 268435456u) | (_203.z << 18u)) | (_203.y << 9u)) | (_203.x & 511u)), uint3(_133));
+            _123 = _34;
+            _125 = _35;
+            _126 = _42;
+            _127++;
+            continue;
+        }
+        else
+        {
+            break;
+        }
+    }
+}
+

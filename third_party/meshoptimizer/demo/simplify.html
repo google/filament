@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>meshoptimizer - demo</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #000;
+				color: #fff;
+				margin: 0px;
+				overflow: hidden;
+			}
+			#info {
+				color: #fff;
+				position: absolute;
+				top: 10px;
+				width: 100%;
+				text-align: center;
+				z-index: 100;
+				display:block;
+			}
+			#info a, .button { color: #f00; font-weight: bold; text-decoration: underline; cursor: pointer }
+		</style>
+	</head>
+
+	<body>
+		<div id="info">
+		<a href="https://github.com/zeux/meshoptimizer" target="_blank" rel="noopener">meshoptimizer</a>
+		</div>
+
+		<script type="module">
+			import * as THREE from 'https://unpkg.com/three@0.122.0/build/three.module.js';
+			import { GLTFLoader } from 'https://unpkg.com/three@0.122.0/examples/jsm/loaders/GLTFLoader.js';
+			import { OrbitControls } from 'https://unpkg.com/three@0.122.0/examples/jsm/controls/OrbitControls.js';
+			import { MeshoptDecoder } from '../js/meshopt_decoder.module.js';
+			import { MeshoptSimplifier } from '../js/meshopt_simplifier.module.js';
+			import { GUI } from 'https://unpkg.com/lil-gui@0.17.0/dist/lil-gui.esm.js';
+
+			var container;
+
+			var camera, scene, renderer, mixer, clock, controls, model;
+
+			var settings = {
+				wireframe: false,
+				ratio: 1.0,
+				lockBorder: false,
+				errorThresholdLog10: 2,
+
+				loadFile: function() {
+					var input = document.createElement('input');
+					input.type = 'file';
+					input.onchange = function() {
+						var uri = URL.createObjectURL(input.files[0]);
+
+						load(uri);
+						controls.reset();
+					};
+					input.click();
+				}
+			};
+
+			var gui = new GUI({ width: 300 });
+			var guiDisplay = gui.addFolder('Display');
+			guiDisplay.add(settings, 'wireframe').onChange(update);
+
+			var guiSimplify = gui.addFolder('Simplify');
+			guiSimplify.add(settings, 'ratio', 0, 1, 0.01).onChange(simplify);
+			guiSimplify.add(settings, 'lockBorder').onChange(simplify);
+			guiSimplify.add(settings, 'errorThresholdLog10', 0, 3, 0.1).onChange(simplify);
+
+			var guiLoad = gui.addFolder('Load');
+			guiLoad.add(settings, 'loadFile');
+
+			var windowHalfX = window.innerWidth / 2;
+			var windowHalfY = window.innerHeight / 2;
+
+			init();
+			load('pirate.glb');
+			animate();
+
+			function simplifyGeometry(geo) {
+				if (!geo.index.original) {
+					geo.index.original = geo.index.array;
+				}
+
+				var positions = new Float32Array(geo.attributes.position.array);
+				var indices = geo.index.original;
+				var target = Math.floor(indices.length * settings.ratio / 3) * 3;
+
+				var flags = [];
+				if (settings.lockBorder)
+					flags.push("LockBorder");
+
+				var threshold = Math.pow(10, -settings.errorThresholdLog10);
+				var stride = (geo.attributes.position instanceof THREE.InterleavedBufferAttribute) ? geo.attributes.position.data.stride : 3;
+				var res = MeshoptSimplifier.simplify(indices, positions, stride, target, threshold, flags);
+
+				geo.index.array = res[0];
+				geo.index.count = res[0].length;
+				geo.index.needsUpdate = true;
+			}
+
+			function simplify()
+			{
+				MeshoptSimplifier.ready.then(function() {
+					scene.traverse(function (object) {
+						if (object.isMesh)
+							simplifyGeometry(object.geometry);
+					});
+				});
+			}
+
+			function update()
+			{
+				scene.traverse(function(child) {
+					if (child.isMesh) {
+						child.material.wireframe = settings.wireframe;
+					}
+				});
+			}
+
+			function load(path)
+			{
+				if (model)
+				{
+					scene.remove(model);
+					model = undefined;
+				}
+
+				var onProgress = function (xhr) {};
+				var onError = function (e) {
+					console.log(e);
+				};
+
+				var loader = new GLTFLoader();
+				loader.setMeshoptDecoder(MeshoptDecoder);
+				loader.load(path, function (gltf) {
+					model = gltf.scene;
+
+					var bbox = new THREE.Box3().setFromObject(model);
+					var scale = 2 / (bbox.max.y - bbox.min.y);
+					var offset = -(bbox.min.y + bbox.max.y) / 2 * scale;
+
+					console.log(model.scale);
+					model.scale.set(scale, scale, scale);
+					model.position.set(0, offset, 0);
+
+					scene.add(model);
+
+					mixer = new THREE.AnimationMixer(model);
+
+					if (gltf.animations.length) {
+						mixer.clipAction(gltf.animations[gltf.animations.length - 1]).play();
+					}
+				}, onProgress, onError);
+			}
+
+			function init()
+			{
+				container = document.createElement('div');
+				document.body.appendChild(container);
+
+				renderer = new THREE.WebGLRenderer();
+				renderer.setPixelRatio(window.devicePixelRatio);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				container.appendChild(renderer.domElement);
+
+				window.addEventListener('resize', onWindowResize, false);
+
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 100);
+				camera.position.y = 1.0;
+				camera.position.z = 3.0;
+
+				controls = new OrbitControls(camera, renderer.domElement);
+
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color(0x300a24);
+
+				var ambientLight = new THREE.AmbientLight(0xcccccc, 0.3);
+				scene.add(ambientLight);
+
+				var pointLight = new THREE.PointLight(0xffffff, 0.8);
+				pointLight.position.set(3, 3, 0);
+				camera.add(pointLight);
+				scene.add(camera);
+
+				clock = new THREE.Clock();
+			}
+
+			function onWindowResize()
+			{
+				windowHalfX = window.innerWidth / 2;
+				windowHalfY = window.innerHeight / 2;
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize(window.innerWidth, window.innerHeight);
+			}
+
+			function animate()
+			{
+				if (mixer) {
+					mixer.update(clock.getDelta());
+				}
+
+				requestAnimationFrame(animate);
+				controls.update();
+				renderer.render(scene, camera);
+			}
+		</script>
+	</body>
+</html>

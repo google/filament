@@ -1,0 +1,822 @@
+
+##############################################################################
+# Project specific settings
+##############################################################################
+
+language: c
+
+cache:
+  directories:
+  - $HOME/third-party
+
+osx_image: xcode8
+
+addons:
+  apt:
+    packages:
+      - cmake
+      - openssl
+      - libssl-dev
+    sources:
+      - kubuntu-backports
+
+
+before_install:
+  - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
+      mkdir $HOME/usr;
+      export PATH="$HOME/usr/bin:$PATH";
+      wget https://cmake.org/files/v3.7/cmake-3.7.2-Linux-x86_64.sh --no-check-certificate;
+      chmod +x cmake-3.7.2-Linux-x86_64.sh;
+      ./cmake-3.7.2-Linux-x86_64.sh --prefix=$HOME/usr --exclude-subdir --skip-license;
+    fi
+  - cmake --version
+
+
+install:
+  - if [ "${BUILD_TYPE}" == "Coverage" -a "${TRAVIS_OS_NAME}" == "linux" ]; then
+      PATH=~/.local/bin:${PATH};
+      pip install --user --upgrade pip;
+      pip install --user cpp-coveralls;
+    fi
+
+before_script:
+  # Add an IPv6 config - see the corresponding Travis issue
+  # https://github.com/travis-ci/travis-ci/issues/8361
+  - if [ "${ENABLE_IPV6}" == "YES" -a "${TRAVIS_OS_NAME}" == "linux" ]; then
+      echo "Activating IPv6 on Travis";
+      sudo sh -c 'echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6';
+    fi
+  # Check some settings of the build server (operating system, IPv6 availability, directory)
+  - uname -a
+  - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
+      lsb_release -a;
+      cat /etc/network/interfaces;
+    fi
+  - ifconfig
+  - pwd
+  - ls -la
+  - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
+      apt-cache search gcc | grep "GNU C compiler";
+      apt-cache search clang | grep compiler;
+    fi
+  - if [[ "${BUILD_TYPE}" == "OSX_OPENSSL_1_1" ]]; then HOMEBREW_NO_AUTO_UPDATE=1 brew install openssl@1.1 ;fi
+  # Generate the build scripts with CMake
+  - mkdir output
+  - gcc unittest/cgi_test.c -o output/cgi_test.cgi
+  - cd output
+  - cmake --version
+  - cmake
+    -G "Unix Makefiles"
+    -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
+    -DBUILD_SHARED_LIBS=${BUILD_SHARED}
+    "-DCIVETWEB_THIRD_PARTY_DIR=${HOME}/third-party"
+    -DCIVETWEB_ENABLE_THIRD_PARTY_OUTPUT=YES
+    -DCIVETWEB_ENABLE_SSL=${ENABLE_SSL}
+    -DCIVETWEB_DISABLE_CGI=${NO_CGI}
+    -DCIVETWEB_SERVE_NO_FILES=${NO_FILES}
+    -DCIVETWEB_ENABLE_SSL_DYNAMIC_LOADING=${ENABLE_SSL_DYNAMIC_LOADING}
+    -DCIVETWEB_SSL_OPENSSL_API_1_1=${OPENSSL_1_1}
+    -DCIVETWEB_ENABLE_WEBSOCKETS=${ENABLE_WEBSOCKETS}
+    -DCIVETWEB_ENABLE_CXX=${ENABLE_CXX}
+    -DCIVETWEB_ENABLE_SERVER_STATS=${ENABLE_SERVER_STATS}
+    -DCIVETWEB_ENABLE_LUA=${ENABLE_LUA}
+    -DCIVETWEB_ENABLE_LUA_SHARED=${ENABLE_LUA_SHARED}
+    -DCIVETWEB_ENABLE_DUKTAPE=${ENABLE_DUKTAPE}
+    -DCIVETWEB_DISABLE_CACHING=${NO_CACHING}
+    -DCIVETWEB_C_STANDARD=${C_STANDARD}
+    -DCIVETWEB_CXX_STANDARD=${CXX_STANDARD}
+    -DCIVETWEB_ALLOW_WARNINGS=${ALLOW_WARNINGS}
+    -DCIVETWEB_ENABLE_IPV6=${ENABLE_IPV6}
+    ${ADDITIONAL_CMAKE_ARGS}
+    ..
+  - ls -la
+
+# Modifications due to Travis IPv6 issues:
+# https://github.com/travis-ci/travis-ci/issues/8711
+# https://github.com/travis-ci/travis-ci/issues/8361
+# DCIVETWEB_ENABLE_IPV6=${ENABLE_IPV6} or =NO
+
+script:
+  - if [ "${MACOSX_PACKAGE}" == "1" ]; then
+      cd "${TRAVIS_BUILD_DIR}";
+      make -f Makefile.osx package;
+    else
+      CTEST_OUTPUT_ON_FAILURE=1 make all test;
+    fi
+  - pwd
+  - ls -la unittest
+  - echo "Show all test logs:"
+  - if [ "${MACOSX_PACKAGE}" != "1" ]; then
+      for f in unittest/test-*.log; do printf "\n$f:\n"; cat $f; done;
+      for f in unittest/test-*.xml; do printf "\n$f:\n"; cat $f; done;
+    fi
+  - echo "Build and test script DONE"
+
+# Coveralls options: https://github.com/eddyxu/cpp-coveralls/blob/master/README.md
+after_success:
+  - if [ "${BUILD_TYPE}" == "Coverage" -a "${TRAVIS_OS_NAME}" == "linux" ]; then
+      coveralls --include src --exclude src/main.c --exclude src/third_party --include include --gcov-options '\-lp' --root .. --build-root .;
+      bash <(curl -s https://codecov.io/bash);
+    fi
+
+conan-linux: &conan-linux
+    os: linux
+    dist: xenial
+    language: python
+    python: "3.7"
+    services:
+      - docker
+    if: tag IS present
+    before_install:
+      - true
+    install:
+      - ./conan/travis/install.sh
+    before_script:
+      - true
+    script:
+      - ./conan/travis/build.sh
+    after_success:
+      - true
+
+conan-osx: &conan-osx
+    os: osx
+    language: generic
+    if: tag IS present
+    before_install:
+      - true
+    install:
+      - ./conan/travis/install.sh
+    before_script:
+      - true
+    script:
+      - ./conan/travis/build.sh
+    after_success:
+      - true
+
+
+##############################################################################
+# build matrix
+##############################################################################
+
+
+matrix:
+  fast_finish: false
+  include:
+
+  - dist: trusty
+    sudo: false
+    os: linux
+    compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-precise-3.8
+        packages:
+          - clang-3.8
+    env:
+      idx=1
+      N=Clang3.8-Linux-Minimal-Debug
+      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+      BUILD_TYPE=Debug
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=YES
+      ENABLE_SSL=NO
+      NO_CGI=YES
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
+  - dist: trusty
+    sudo: false
+    os: linux
+    compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-precise-3.8
+        packages:
+          - clang-3.8
+    env:
+      idx=2
+      N=Clang3.8-Linux-Default-Release
+      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
+  - dist: trusty
+    sudo: false
+    os: linux
+    compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-precise-3.8
+        packages:
+          - clang-3.8
+    env:
+      idx=3
+      N=Clang3.8-Linux-Default-Release
+      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
+  - dist: trusty
+    sudo: required
+    os: linux
+    compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-precise-3.8
+        packages:
+          - clang-3.8
+    env:
+      idx=4
+      N=Clang3.8-Linux-Complete-NoLua-Release
+      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ALLOW_WARNINGS=YES
+
+
+  - dist: trusty
+    sudo: required
+    os: linux
+    compiler: gcc
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+        packages:
+          - g++-5
+    env:
+      idx=5
+      N=GCC5-Linux-Complete-NoLua-Release
+      MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ALLOW_WARNINGS=YES
+
+  - os: linux
+    sudo: required
+    compiler: gcc
+    env:
+      idx=6
+      N=GCCAnyVersion-Linux-Coverage
+      BUILD_TYPE=Coverage
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
+  - os: osx
+    sudo: required
+    compiler: clang
+    env:
+      idx=7
+      N=Clang-OSX-Complete-NoLua-Release
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ALLOW_WARNINGS=YES
+
+  -
+    os: osx
+    sudo: required
+    compiler: clang
+    env:
+      idx=8
+      N=Clang-OSX-Complete-NoLua-Release-OpenSSL_1_1_NoDynLoad
+      BUILD_TYPE=OSX_OPENSSL_1_1
+      ENABLE_SSL_DYNAMIC_LOADING=NO
+      OPENSSL_1_1=YES
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ALLOW_WARNINGS=YES
+      OPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1"
+      LDFLAGS="-L${OPENSSL_ROOT_DIR}/lib"
+      CFLAGS="-I${OPENSSL_ROOT_DIR}/include"
+      ADDITIONAL_CMAKE_ARGS="-DCMAKE_SHARED_LINKER_FLAGS=${LDFLAGS} -DCMAKE_C_FLAGS=${CFLAGS}"
+      PATH="${OPENSSL_ROOT_DIR}/bin:$PATH"
+      DYLD_LIBRARY_PATH="${OPENSSL_ROOT_DIR}/lib:${DYLD_LIBRARY_PATH}"
+
+  - dist: trusty
+    sudo: false
+    os: linux
+    compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-trusty-5.0
+        packages:
+          - clang-5.0
+    env:
+      idx=9
+      N=Clang50-Linux-Default-Shared
+      BUILD_TYPE=Debug
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=YES
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+      MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
+
+  -
+    os: linux
+    dist: precise
+    sudo: required
+    compiler: clang
+    env:
+      idx=10
+      N=Precise-Clang-Linux-Default
+      BUILD_TYPE=Debug
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_SERVER_STATS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
+  -
+    os: osx
+    sudo: required
+    compiler: clang
+    env:
+      idx=11
+      N=OSX-Package
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+      MACOSX_PACKAGE=1
+
+  - dist: trusty
+    sudo: required
+    os: linux
+    compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-trusty-3.8
+        packages:
+          - clang-3.8
+    env:
+      idx=12
+      N=Clang-Linux-32bit-Complete-NoLua-Release
+      ARCH=x86
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ALLOW_WARNINGS=YES
+      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+
+
+### Test all build types:
+# According to CMakeLists, options are:
+# None Debug Release RelWithDebInfo MinSizeRel Coverage
+
+  -
+    os: linux
+    sudo: required
+    compiler: clang
+    env:
+      idx=13
+      N=NoSslDynamicLoading
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=NO
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      ENABLE_LUA_SHARED=NO
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+
+  -
+    os: linux
+    compiler: gcc
+    env:
+      idx=14
+      N=GCCLinuxDefault_Debug
+      BUILD_TYPE=Debug
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
+  -
+    os: linux
+    compiler: gcc
+    env:
+      idx=15
+      N=GCCLinuxDefault_RelWithDebInfo
+      BUILD_TYPE=RelWithDebInfo
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
+  -
+    os: linux
+    compiler: gcc
+    env:
+      idx=16
+      N=GCCLinuxDefault_MinSizeRel
+      BUILD_TYPE=MinSizeRel
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
+  -
+    os: linux
+    compiler: gcc
+    env:
+      idx=17
+      N=GCCLinuxDefault_None
+      BUILD_TYPE=None
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
+  -
+    os: linux
+    compiler: clang
+    env:
+      idx=18
+      N=Clang3.8-Linux-Complete-NoLua-Debug
+      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+      BUILD_TYPE=Debug
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=YES
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=YES
+      ALLOW_WARNINGS=YES
+
+  - dist: trusty
+    sudo: false
+    os: linux
+    compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-trusty-5.0
+        packages:
+          - clang-5.0
+    env:
+      idx=19
+      N=Clang5.0-Linux-Complete-CXX-NoLua-Release
+      MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=YES
+      ENABLE_LUA_SHARED=YES
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=YES
+      ENABLE_WEBSOCKETS=YES
+      ENABLE_SERVER_STATS=YES
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
+  -
+    os: linux
+    compiler: gcc
+    dist: xenial
+    env:
+      idx=20
+      N=GCCLinuxDefault_xenial
+      BUILD_TYPE=Release
+      ENABLE_SSL_DYNAMIC_LOADING=YES
+      OPENSSL_1_1=NO
+      ENABLE_CXX=NO
+      ENABLE_LUA_SHARED=NO
+      C_STANDARD=auto
+      CXX_STANDARD=auto
+      BUILD_SHARED=NO
+      NO_FILES=NO
+      ENABLE_SSL=YES
+      NO_CGI=NO
+      ENABLE_IPV6=NO
+      ENABLE_WEBSOCKETS=NO
+      ENABLE_LUA=NO
+      ENABLE_DUKTAPE=NO
+      NO_CACHING=NO
+      ALLOW_WARNINGS=YES
+
+  - <<: *conan-linux
+    env: CONAN_GCC_VERSIONS=4.9 CONAN_DOCKER_IMAGE=conanio/gcc49 CONAN_DOCKER_32_IMAGES=1
+  - <<: *conan-linux
+    env: CONAN_GCC_VERSIONS=5 CONAN_DOCKER_IMAGE=conanio/gcc5 CONAN_DOCKER_32_IMAGES=1
+  - <<: *conan-linux
+    env: CONAN_GCC_VERSIONS=6 CONAN_DOCKER_IMAGE=conanio/gcc6 CONAN_DOCKER_32_IMAGES=1
+  - <<: *conan-linux
+    env: CONAN_GCC_VERSIONS=7 CONAN_DOCKER_IMAGE=conanio/gcc7 CONAN_DOCKER_32_IMAGES=1
+  - <<: *conan-linux
+    env: CONAN_GCC_VERSIONS=8 CONAN_DOCKER_IMAGE=conanio/gcc8 CONAN_DOCKER_32_IMAGES=1
+  - <<: *conan-linux
+    env: CONAN_CLANG_VERSIONS=3.9 CONAN_DOCKER_IMAGE=conanio/clang39 CONAN_DOCKER_32_IMAGES=1
+  - <<: *conan-linux
+    env: CONAN_CLANG_VERSIONS=4.0 CONAN_DOCKER_IMAGE=conanio/clang40 CONAN_DOCKER_32_IMAGES=1
+  - <<: *conan-linux
+    env: CONAN_CLANG_VERSIONS=5.0 CONAN_DOCKER_IMAGE=conanio/clang50 CONAN_DOCKER_32_IMAGES=1
+  - <<: *conan-linux
+    env: CONAN_CLANG_VERSIONS=6.0 CONAN_DOCKER_IMAGE=conanio/clang60 CONAN_DOCKER_32_IMAGES=1
+  - <<: *conan-osx
+    osx_image: xcode8.3
+    env: CONAN_APPLE_CLANG_VERSIONS=8.1
+  - <<: *conan-osx
+    osx_image: xcode9
+    env: CONAN_APPLE_CLANG_VERSIONS=9.0
+  - <<: *conan-osx
+    osx_image: xcode9.4
+    env: CONAN_APPLE_CLANG_VERSIONS=9.1
+  - <<: *conan-osx
+    osx_image: xcode10.1
+    env: CONAN_APPLE_CLANG_VERSIONS=10.0
+
+# Remove Lua build, until someone knows how to fix the CMake files
+#
+#  - dist: trusty
+#    sudo: required
+#    os: linux
+#    compiler: clang
+#    addons:
+#      apt:
+#        sources:
+#          - ubuntu-toolchain-r-test
+#          - llvm-toolchain-precise-3.8
+#        packages:
+#          - clang-3.8
+#          - lua5.2
+#    env:
+#      idx=21
+#      N=Clang3.8-Linux-Complete-WithLua-Debug
+#      MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+#      BUILD_TYPE=Debug
+#      ENABLE_SSL_DYNAMIC_LOADING=YES
+#      OPENSSL_1_1=NO
+#      ENABLE_CXX=NO
+#      ENABLE_LUA_SHARED=YES
+#      C_STANDARD=auto
+#      CXX_STANDARD=auto
+#      BUILD_SHARED=NO
+#      NO_FILES=NO
+#      ENABLE_SSL=YES
+#      NO_CGI=NO
+#      ENABLE_IPV6=YES
+#      ENABLE_WEBSOCKETS=YES
+#      ENABLE_SERVER_STATS=YES
+#      ENABLE_LUA=YES
+#      ENABLE_DUKTAPE=NO
+#      NO_CACHING=YES
+#      ALLOW_WARNINGS=YES
+
+

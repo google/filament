@@ -1,0 +1,59 @@
+/*
+* Copyright (C) 2025 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TNT_FILAMENT_BACKEND_WEBGPUSTAGEPOOL_H
+#define TNT_FILAMENT_BACKEND_WEBGPUSTAGEPOOL_H
+
+#include <utils/Mutex.h>
+
+#include <webgpu/webgpu_cpp.h>
+
+#include <map>
+#include <memory>
+#include <mutex>
+#include <vector>
+
+namespace filament::backend {
+
+struct WebGPUSubmissionState;
+
+class WebGPUStagePool {
+public:
+    WebGPUStagePool(wgpu::Device const& device);
+    ~WebGPUStagePool();
+
+    wgpu::Buffer acquireBuffer(size_t requiredSize,
+            std::shared_ptr<WebGPUSubmissionState> submissionState);
+    void recycleBuffer(wgpu::Buffer buffer);
+    void gc();
+
+private:
+    wgpu::Buffer createNewBuffer(size_t bufferSize);
+    std::multimap<uint32_t, wgpu::Buffer> mBuffers;
+    std::vector<std::pair<std::shared_ptr<WebGPUSubmissionState>, wgpu::Buffer>> mInProgress;
+    utils::Mutex mMutex;
+
+    wgpu::Device mDevice;
+
+    // MapAsync callbacks hold a weak reference to this token. Under Emscripten they are delivered
+    // spontaneously and can arrive after the pool is destroyed, in which case they must not
+    // touch it.
+    std::shared_ptr<bool> const mLifetimeToken{ std::make_shared<bool>(true) };
+};
+
+} // namespace filament::backend
+
+#endif // TNT_FILAMENT_BACKEND_WEBGPUSTAGEPOOL_H

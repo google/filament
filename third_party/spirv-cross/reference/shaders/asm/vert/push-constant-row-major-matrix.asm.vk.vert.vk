@@ -1,0 +1,14 @@
+#version 450
+
+layout(push_constant, std430) uniform type_PushConstant_Matrix
+{
+    layout(row_major) mat4 transform;
+} matrix_constants;
+
+layout(location = 0) in vec4 in_var_POSITION;
+
+void main()
+{
+    gl_Position = in_var_POSITION * matrix_constants.transform;
+}
+

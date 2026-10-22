@@ -1,0 +1,269 @@
+/*
+ * Copyright (C) 2022 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "BackendTest.h"
+#include "ImageExpectations.h"
+#include "Lifetimes.h"
+#include "Shader.h"
+#include "SharedShaders.h"
+#include "Skip.h"
+#include "TrianglePrimitive.h"
+
+#include <backend/DriverEnums.h>
+
+using namespace filament;
+using namespace filament::backend;
+
+namespace test {
+
+// 1. Clear the stencil buffer to all zeroes.
+// 2. Render a small triangle only to the stencil buffer and set the operation to write ones.
+// 3. Enable a "== 0" stencil test and enable color writes.
+// 4. Render a larger triangle to the SwapChain.
+// 5. The larger triangle should have a "hole" in the middle.
+class BasicStencilBufferTest : public BackendTest {
+public:
+
+    Handle <HwSwapChain> mSwapChain;
+    ProgramHandle mProgram;
+
+    BasicStencilBufferTest() = default;
+
+    void SetUp() override {
+        auto& api = getDriverApi();
+
+        // Create a platform-specific SwapChain and make it current.
+        mSwapChain = addCleanup(createSwapChain());
+        api.makeCurrent(mSwapChain, mSwapChain);
+
+        Shader shader = SharedShaders::makeShader(api, *mCleanup, ShaderRequest{
+                .mVertexType = VertexShaderType::Noop,
+                .mFragmentType = FragmentShaderType::White,
+                .mUniformType = ShaderUniformType::None
+        });
+        mProgram = shader.getProgram();
+    }
+
+    void RunTest(Handle <HwRenderTarget> renderTarget) {
+        auto& api = getDriverApi();
+
+        // We'll be using a triangle as geometry.
+        TrianglePrimitive smallTriangle(api);
+        static filament::math::float2 vertices[3] = {
+                { -0.5, -0.5 },
+                { 0.5,  -0.5 },
+                { -0.5, 0.5 }
+        };
+        smallTriangle.updateVertices(vertices);
+        TrianglePrimitive triangle(api);
+
+        // Step 1: Clear the stencil buffer to all zeroes, depth to 1, and the color buffer to blue.
+        // Render a small triangle only to the stencil buffer, increasing the stencil buffer to 1.
+        RenderPassParams params = {};
+        params.flags.clear =
+                TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH | TargetBufferFlags::STENCIL;
+        params.viewport = { 0, 0, static_cast<uint32_t>(screenWidth()),
+            static_cast<uint32_t>(screenHeight()) };
+        params.clearColor = math::float4(0.0f, 0.0f, 1.0f, 1.0f);
+        params.clearStencil = 0u;
+        params.clearDepth = 1.0;
+        params.flags.discardStart = TargetBufferFlags::ALL;
+        params.flags.discardEnd = TargetBufferFlags::NONE;
+
+        PipelineState ps = {};
+        ps.program = mProgram;
+        ps.rasterState.colorWrite = false;
+        ps.rasterState.depthWrite = false;
+        ps.stencilState.stencilWrite = true;
+        ps.stencilState.front.stencilOpDepthStencilPass = StencilOperation::INCR;
+
+        api.makeCurrent(mSwapChain, mSwapChain);
+        api.beginFrame(0, 0, 0);
+
+        api.beginRenderPass(renderTarget, params);
+        ps.primitiveType = PrimitiveType::TRIANGLES;
+        ps.vertexBufferInfo = smallTriangle.getVertexBufferInfo();
+        api.bindPipeline(ps);
+        api.bindRenderPrimitive(smallTriangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
+        api.endRenderPass();
+
+        // Step 2: Render a larger triangle with the stencil test enabled.
+        params.flags.clear = TargetBufferFlags::NONE;
+        params.flags.discardStart = TargetBufferFlags::NONE;
+        ps.rasterState.colorWrite = true;
+        ps.stencilState.stencilWrite = false;
+        ps.stencilState.front.stencilOpDepthStencilPass = StencilOperation::KEEP;
+        ps.stencilState.front.stencilFunc = StencilState::StencilFunction::E;
+        ps.stencilState.front.ref = 0u;
+
+        api.beginRenderPass(renderTarget, params);
+        ps.primitiveType = PrimitiveType::TRIANGLES;
+        ps.vertexBufferInfo = triangle.getVertexBufferInfo();
+        api.bindPipeline(ps);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
+        api.endRenderPass();
+
+        api.commit(mSwapChain);
+        api.endFrame(0);
+    }
+
+    void TearDown() override {
+        flushAndWait();
+    }
+};
+
+TEST_F(BasicStencilBufferTest, StencilBuffer) {
+    auto& api = getDriverApi();
+
+    // Create two textures: a color and a stencil, and an associated RenderTarget.
+    auto colorTexture = addCleanup(
+            api.createTexture(SamplerType::SAMPLER_2D, 1, TextureFormat::RGBA8, 1, screenWidth(),
+                    screenHeight(), 1, TextureUsage::COLOR_ATTACHMENT | TextureUsage::BLIT_SRC));
+    auto stencilTexture = addCleanup(
+            api.createTexture(SamplerType::SAMPLER_2D, 1, TextureFormat::STENCIL8, 1, screenWidth(),
+                    screenHeight(), 1, TextureUsage::STENCIL_ATTACHMENT | TextureUsage::BLIT_SRC));
+    auto renderTarget = addCleanup(api.createRenderTarget(TargetBufferFlags::COLOR0 |
+                                                                  TargetBufferFlags::STENCIL,
+            screenWidth(), screenHeight(), 1, 0, { { colorTexture } }, {}, { { stencilTexture } }));
+
+    RunTest(renderTarget);
+
+    EXPECT_IMAGE(renderTarget,
+            ScreenshotParams(screenWidth(), screenHeight(), "StencilBuffer", 0x3B1AEF0F));
+
+    flushAndWait();
+    getDriver().purge();
+}
+
+TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
+    auto& api = getDriverApi();
+
+    // Create two textures: a color and a stencil, and an associated RenderTarget.
+    auto colorTexture = addCleanup(
+            api.createTexture(SamplerType::SAMPLER_2D, 1, TextureFormat::RGBA8, 1, screenWidth(),
+                    screenHeight(), 1, TextureUsage::COLOR_ATTACHMENT | TextureUsage::BLIT_SRC));
+    auto depthStencilTexture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::DEPTH32F_STENCIL8, 1, screenWidth(), screenHeight(), 1,
+            TextureUsage::STENCIL_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT |
+                    TextureUsage::BLIT_SRC));
+    auto renderTarget = addCleanup(api.createRenderTarget(
+            TargetBufferFlags::COLOR0 | TargetBufferFlags::STENCIL, screenWidth(), screenHeight(),
+            1, 0, { { colorTexture } }, { depthStencilTexture }, { { depthStencilTexture } }));
+
+    RunTest(renderTarget);
+
+    EXPECT_IMAGE(renderTarget,
+            ScreenshotParams(screenWidth(), screenHeight(), "DepthAndStencilBuffer", 0x3B1AEF0F));
+
+    flushAndWait();
+    getDriver().purge();
+}
+
+TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
+    auto& api = getDriverApi();
+
+    // Create two textures: a single-sampled color and a MSAA stencil texture.
+    // We also create two RenderTargets, one for each pass:
+    // Pass 0: Render a triangle only into the MSAA stencil buffer.
+    // Pass 1: Render a triangle into (an auto-created) MSAA color buffer using the stencil test.
+    //         Performs an auto-resolve on the color.
+    auto colorTexture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, screenWidth(), screenHeight(), 1,
+            TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE));
+    auto depthStencilTextureMSAA = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::DEPTH32F_STENCIL8, 4, screenWidth(), screenHeight(), 1,
+            TextureUsage::STENCIL_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT));
+    auto renderTarget0 = addCleanup(api.createRenderTarget(
+            TargetBufferFlags::DEPTH_AND_STENCIL, screenWidth(), screenHeight(), 4, 0,
+            {{}}, { depthStencilTextureMSAA }, { depthStencilTextureMSAA }));
+    auto renderTarget1 = addCleanup(
+            api.createRenderTarget(TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH_AND_STENCIL,
+                    screenWidth(), screenHeight(), 4, 0, { { colorTexture } },
+                    { depthStencilTextureMSAA }, { depthStencilTextureMSAA }));
+
+    api.startCapture(0);
+
+    // We'll be using a triangle as geometry.
+    TrianglePrimitive smallTriangle(api);
+    static filament::math::float2 vertices[3] = {
+            { -0.5, -0.5 },
+            { 0.5,  -0.5 },
+            { -0.5, 0.5 }
+    };
+    smallTriangle.updateVertices(vertices);
+    TrianglePrimitive triangle(api);
+
+    // Step 1: Clear the stencil buffer to all zeroes.
+    // Render a small triangle only to the stencil buffer, increasing the stencil buffer to 1.
+    RenderPassParams params = {};
+    params.flags.clear = TargetBufferFlags::STENCIL;
+    params.viewport = { 0, 0, static_cast<uint32_t>(screenWidth()),
+        static_cast<uint32_t>(screenHeight()) };
+    params.clearStencil = 0u;
+    params.flags.discardStart = TargetBufferFlags::ALL;
+    params.flags.discardEnd = TargetBufferFlags::NONE;
+
+    PipelineState ps = {};
+    ps.program = mProgram;
+    ps.rasterState.colorWrite = false;
+    ps.rasterState.depthWrite = false;
+    ps.stencilState.stencilWrite = true;
+    ps.stencilState.front.stencilOpDepthStencilPass = StencilOperation::INCR;
+
+    api.makeCurrent(mSwapChain, mSwapChain);
+    api.beginFrame(0, 0, 0);
+
+    api.beginRenderPass(renderTarget0, params);
+    ps.primitiveType = PrimitiveType::TRIANGLES;
+    ps.vertexBufferInfo = smallTriangle.getVertexBufferInfo();
+    api.bindPipeline(ps);
+    api.bindRenderPrimitive(smallTriangle.getRenderPrimitive());
+    api.draw2(0, 3, 1);
+    api.endRenderPass();
+
+    // Step 2: Render a larger triangle with the stencil test enabled.
+    params.flags.clear = TargetBufferFlags::COLOR0;
+    params.flags.discardStart = TargetBufferFlags::COLOR0;
+    params.flags.discardEnd = TargetBufferFlags::STENCIL;
+    params.clearColor = math::float4(0.0f, 0.0f, 1.0f, 1.0f);
+    ps.rasterState.colorWrite = true;
+    ps.stencilState.stencilWrite = false;
+    ps.stencilState.front.stencilOpDepthStencilPass = StencilOperation::KEEP;
+    ps.stencilState.front.stencilFunc = StencilState::StencilFunction::E;
+    ps.stencilState.front.ref = 0u;
+
+    api.beginRenderPass(renderTarget1, params);
+    ps.primitiveType = PrimitiveType::TRIANGLES;
+    ps.vertexBufferInfo = triangle.getVertexBufferInfo();
+    api.bindPipeline(ps);
+    api.bindRenderPrimitive(triangle.getRenderPrimitive());
+    api.draw2(0, 3, 1);
+    api.endRenderPass();
+
+    api.commit(mSwapChain);
+    api.stopCapture(0);
+    api.endFrame(0);
+
+    EXPECT_IMAGE(renderTarget1, ScreenshotParams(screenWidth(), screenHeight(),
+                                        "StencilBufferAutoResolve", 3353562179));
+
+    flushAndWait();
+    getDriver().purge();
+}
+
+} // namespace test

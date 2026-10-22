@@ -1,0 +1,15 @@
+name: hello-pbr
+options:
+    bundleIdPrefix: ${SAMPLE_CODE_DISAMBIGUATOR}.google.filament
+include: ../app-template.yml
+targets:
+    hello-pbr:
+        templates:
+            - FilamentApp
+        dependencies:
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libfilameshio.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libmeshoptimizer.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libimage.xcframework
+        preBuildScripts:
+            - path: build-resources.sh
+              name: Build Resources

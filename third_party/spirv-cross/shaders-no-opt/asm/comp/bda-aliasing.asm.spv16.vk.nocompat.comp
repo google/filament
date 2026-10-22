@@ -1,0 +1,41 @@
+OpCapability Shader
+OpCapability Int64
+OpCapability PhysicalStorageBufferAddresses
+OpExtension "SPV_KHR_physical_storage_buffer"
+OpMemoryModel PhysicalStorageBuffer64 GLSL450
+OpEntryPoint GLCompute %main "main" %push
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %push_block Block
+OpMemberDecorate %push_block 0 Offset 0
+OpMemberDecorate %push_block 1 Offset 8
+OpMemberDecorate %push_block 2 Offset 16
+OpDecorate %physical_uint_ptr ArrayStride 4
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%uint = OpTypeInt 32 0
+%ulong = OpTypeInt 64 0
+%zero = OpConstant %uint 0
+%one = OpConstant %uint 1
+%two = OpConstant %uint 2
+%ninety_nine = OpConstant %uint 99
+%push_block = OpTypeStruct %ulong %ulong %ulong
+%push_ptr = OpTypePointer PushConstant %push_block
+%push_ulong_ptr = OpTypePointer PushConstant %ulong
+%physical_uint_ptr = OpTypePointer PhysicalStorageBuffer %uint
+%push = OpVariable %push_ptr PushConstant
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%source_field = OpAccessChain %push_ulong_ptr %push %zero
+%source_address = OpLoad %ulong %source_field
+%source = OpConvertUToPtr %physical_uint_ptr %source_address
+%old = OpLoad %uint %source Aligned 4
+%alias_field = OpAccessChain %push_ulong_ptr %push %one
+%alias_address = OpLoad %ulong %alias_field
+%alias = OpConvertUToPtr %physical_uint_ptr %alias_address
+OpStore %alias %ninety_nine Aligned 4
+%output_field = OpAccessChain %push_ulong_ptr %push %two
+%output_address = OpLoad %ulong %output_field
+%output = OpConvertUToPtr %physical_uint_ptr %output_address
+OpStore %output %old Aligned 4
+OpReturn
+OpFunctionEnd

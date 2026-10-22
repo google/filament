@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+
+set -e
+
+function print_help {
+    local SELF_NAME
+    SELF_NAME=$(basename "$0")
+    echo "$SELF_NAME. Check that public headers compile independently."
+    echo ""
+    echo "Usage:"
+    echo "    $SELF_NAME <public include directory>"
+    echo ""
+    echo "Example:"
+    echo "    $SELF_NAME out/release/filament/include"
+    echo ""
+    echo "Dependencies: clang"
+    echo ""
+    echo "Options:"
+    echo "    -h"
+    echo "       Print this help message and exit."
+}
+
+while getopts "h" opt; do
+    case ${opt} in
+        h)
+            print_help
+            exit 0
+            ;;
+        *)
+            print_help
+            exit 1
+            ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+if [[ "$#" -ne 1 ]]; then
+    print_help
+    exit 1
+fi
+
+FILAMENT_HEADERS="$1"
+
+includes=()
+pushd "$FILAMENT_HEADERS" >/dev/null
+for f in $(find . -name '*.h'); do
+    # Ignore platform headers. These may contain platform-specific includes.
+    if [[ "$f" == *backend/platforms/* ]]; then
+        continue
+    fi
+    include_path="${f#./}"    # strip leading ./
+    includes+=("${include_path}")
+done
+popd >/dev/null
+
+# Check if the system has getopt
+HAS_SYSTEM_GETOPT=0
+if echo "#include <getopt.h>" | clang -x c++ -std=c++17 -E - > /dev/null 2>&1; then
+    HAS_SYSTEM_GETOPT=1
+fi
+
+rm -rf out/check-headers
+mkdir -p out/check-headers
+
+TMP_FILE=out/check-headers/temp.cpp
+echo "Checking that public headers compile independently..."
+for include in "${includes[@]}"; do
+    rm -f ${TMP_FILE}
+    echo "Checking ${include}"
+    case "${include}" in
+        "utils/Systrace.h")
+            # A necessary define before we can include utils/Systrace.h
+            echo "#define SYSTRACE_TAG SYSTRACE_TAG_DISABLED" >> ${TMP_FILE}
+            ;;
+        "utils/getopt.h")
+            if [[ $HAS_SYSTEM_GETOPT -eq 1 ]]; then
+                echo "#define HAS_SYSTEM_GETOPT 1" >> ${TMP_FILE}
+            fi
+            ;;
+    esac
+    echo "#include <${include}>" >> ${TMP_FILE}
+    # Filament is built internally with C++20, but we maintain C++17 compatibility (for the time
+    # being) in our public headers to support projects on older toolchains.
+    clang -std=c++17 -I "${FILAMENT_HEADERS}" ${TMP_FILE} -c -o /dev/null
+done
+echo "Done!"

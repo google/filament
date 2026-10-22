@@ -1,0 +1,14 @@
+#version 450
+#extension GL_EXT_descriptor_heap: require
+#extension GL_EXT_debug_printf: require
+
+layout(local_size_x = 1) in;
+layout(descriptor_heap, r32ui) uniform uimage1D img[];
+
+
+void main()
+{
+    float myfloat = 3.1415f;
+    debugPrintfEXT("float == %f", myfloat);
+
+}

@@ -1,0 +1,71 @@
+; SPIR-V
+; Version: 1.5
+; Generator: Khronos; 35
+; Bound: 5550
+; Schema: 0
+               OpCapability Int8
+               OpCapability Int64
+               OpCapability Int64
+               OpCapability Shader
+               OpCapability PhysicalStorageBufferAddresses
+               OpExtension "SPV_KHR_physical_storage_buffer"
+               OpMemoryModel PhysicalStorageBuffer64 Simple
+               OpEntryPoint GLCompute %main "main" %globals
+               OpExecutionMode %main LocalSize 16 16 1
+
+               OpDecorate %ptr_uchar ArrayStride 8
+               OpDecorate %ptr_uint ArrayStride 8
+               OpDecorate %ptr_array_t ArrayStride 8
+               OpDecorate %array_t ArrayStride 1
+               OpDecorate %struct_t Block
+               OpMemberDecorate %struct_t 0 Offset 0
+               OpMemberDecorate %struct_t 1 Offset 8
+               OpDecorate %ptr_struct ArrayStride 32
+               OpDecorate %globals DescriptorSet 0
+               OpDecorate %globals Binding 0
+
+       %void = OpTypeVoid
+      %uchar = OpTypeInt 8 0
+       %uint = OpTypeInt 32 0
+      %ulong = OpTypeInt 64 0
+       %bool = OpTypeBool
+
+   %ulong_12 = OpConstant %ulong 12
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+   %uchar_69 = OpConstant %uchar 69
+   %ulong_16 = OpConstant %ulong 16
+
+   %ptr_uint = OpTypePointer PhysicalStorageBuffer %uint
+  %ptr_uchar = OpTypePointer PhysicalStorageBuffer %uchar
+
+    %array_t = OpTypeArray %uchar %ulong_12
+%ptr_array_t = OpTypePointer PhysicalStorageBuffer %array_t
+
+   %struct_t = OpTypeStruct %ptr_uchar %ptr_array_t
+ %ptr_struct = OpTypePointer StorageBuffer %struct_t
+
+    %void_fn = OpTypeFunction %void
+      %foo_t = OpTypeFunction %ptr_uint
+
+%ptr_uchararr_sb = OpTypePointer StorageBuffer %ptr_array_t
+
+    %globals = OpVariable %ptr_struct StorageBuffer
+
+        %foo = OpFunction %ptr_uint None %foo_t
+  %foo_entry = OpLabel
+       %lea2 = OpAccessChain %ptr_uchararr_sb %globals %uint_1
+    %loaded2 = OpLoad %ptr_array_t %lea2
+       %cast = OpConvertPtrToU %ulong %loaded2
+   %adjusted = OpIAdd %ulong %cast %ulong_16
+      %cast2 = OpConvertUToPtr %ptr_uint %adjusted
+               OpStore %cast2 %uint_1 Aligned 4 ; eliminating this store generates different code and the problem disappears
+               OpReturnValue %cast2
+               OpFunctionEnd
+
+       %main = OpFunction %void None %void_fn
+ %main_entry = OpLabel
+    %nothing = OpFunctionCall %ptr_uint %foo
+               OpReturn
+               OpFunctionEnd

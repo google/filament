@@ -1,0 +1,15 @@
+uint add_one(uint x)
+{
+    return x + 1u;
+}
+
+uint add_two(uint y)
+{
+    return y + 5u;
+}
+
+uint add_three(uint z)
+{
+    return z + 3u;
+}
+

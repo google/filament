@@ -1,0 +1,77 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 7
+; Bound: 37
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpName %main "main"
+               OpName %T "T"
+               OpMemberName %T 0 "a"
+               OpName %v "v"
+               OpName %T_0 "T"
+               OpMemberName %T_0 0 "b"
+               OpName %SSBO1 "SSBO1"
+               OpMemberName %SSBO1 0 "foo"
+               OpName %_ ""
+               OpName %T_1 "T"
+               OpMemberName %T_1 0 "c"
+               OpName %SSBO2 "SSBO2"
+               OpMemberName %SSBO2 0 "bar"
+               OpName %__0 ""
+               OpMemberDecorate %T_0 0 Offset 0
+               OpDecorate %_runtimearr_T_0 ArrayStride 4
+               OpMemberDecorate %SSBO1 0 Offset 0
+               OpDecorate %SSBO1 BufferBlock
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+               OpMemberDecorate %T_1 0 Offset 0
+               OpDecorate %_runtimearr_T_1 ArrayStride 16
+               OpMemberDecorate %SSBO2 0 Offset 0
+               OpDecorate %SSBO2 BufferBlock
+               OpDecorate %__0 DescriptorSet 0
+               OpDecorate %__0 Binding 1
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+          %T = OpTypeStruct %float
+%_ptr_Function_T = OpTypePointer Function %T
+   %float_40 = OpConstant %float 40
+         %11 = OpConstantComposite %T %float_40
+        %T_0 = OpTypeStruct %float
+%_runtimearr_T_0 = OpTypeRuntimeArray %T_0
+      %SSBO1 = OpTypeStruct %_runtimearr_T_0
+%_ptr_Uniform_SSBO1 = OpTypePointer Uniform %SSBO1
+          %_ = OpVariable %_ptr_Uniform_SSBO1 Uniform
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+     %int_10 = OpConstant %int 10
+%_ptr_Uniform_T_0 = OpTypePointer Uniform %T_0
+%_ptr_Uniform_float = OpTypePointer Uniform %float
+        %T_1 = OpTypeStruct %float
+%_runtimearr_T_1 = OpTypeRuntimeArray %T_1
+      %SSBO2 = OpTypeStruct %_runtimearr_T_1
+%_ptr_Uniform_SSBO2 = OpTypePointer Uniform %SSBO2
+        %__0 = OpVariable %_ptr_Uniform_SSBO2 Uniform
+     %int_30 = OpConstant %int 30
+%_ptr_Uniform_T_1 = OpTypePointer Uniform %T_1
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+          %v = OpVariable %_ptr_Function_T Function
+               OpStore %v %11
+         %20 = OpLoad %T %v
+         %22 = OpAccessChain %_ptr_Uniform_T_0 %_ %int_0 %int_10
+         %23 = OpCompositeExtract %float %20 0
+         %25 = OpAccessChain %_ptr_Uniform_float %22 %int_0
+               OpStore %25 %23
+         %32 = OpLoad %T %v
+         %34 = OpAccessChain %_ptr_Uniform_T_1 %__0 %int_0 %int_30
+         %35 = OpCompositeExtract %float %32 0
+         %36 = OpAccessChain %_ptr_Uniform_float %34 %int_0
+               OpStore %36 %35
+               OpReturn
+               OpFunctionEnd

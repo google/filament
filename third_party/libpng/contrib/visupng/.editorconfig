@@ -1,0 +1,23 @@
+# https://editorconfig.org
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = unset
+indent_size = 4
+indent_style = space
+insert_final_newline = true
+max_doc_length = 80
+max_line_length = 100
+trim_trailing_whitespace = true
+
+[*.rc]
+end_of_line = crlf
+trim_trailing_whitespace = unset
+
+[*.ds[pw]]
+end_of_line = crlf
+max_doc_length = unset
+max_line_length = unset
+trim_trailing_whitespace = unset

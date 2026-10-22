@@ -1,0 +1,48 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 7
+; Bound: 48
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %threadId
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource HLSL 500
+               OpName %main "main"
+               OpName %UAV0 "UAV0"
+               OpMemberName %UAV0 0 "@data"
+               OpName %UAV0_0 "UAV0"
+               OpName %threadId "threadId"
+               OpDecorate %_runtimearr_v4float ArrayStride 16
+               OpMemberDecorate %UAV0 0 Offset 0
+               OpDecorate %UAV0 BufferBlock
+               OpDecorate %UAV0_0 DescriptorSet 0
+               OpDecorate %UAV0_0 Binding 0
+               OpDecorate %threadId BuiltIn GlobalInvocationId
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+      %v3int = OpTypeVector %int 3
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_runtimearr_v4float = OpTypeRuntimeArray %v4float
+       %UAV0 = OpTypeStruct %_runtimearr_v4float
+%_ptr_Uniform_UAV0 = OpTypePointer Uniform %UAV0
+     %UAV0_0 = OpVariable %_ptr_Uniform_UAV0 Uniform
+      %int_0 = OpConstant %int 0
+    %float_1 = OpConstant %float 1
+         %26 = OpConstantComposite %v4float %float_1 %float_1 %float_1 %float_1
+%_ptr_Uniform_v4float = OpTypePointer Uniform %v4float
+    %float_2 = OpConstant %float 2
+         %33 = OpConstantComposite %v4float %float_2 %float_2 %float_2 %float_2
+%_ptr_Input_v3int = OpTypePointer Input %v3int
+   %threadId = OpVariable %_ptr_Input_v3int Input
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %38 = OpLoad %v3int %threadId
+         %43 = OpCompositeExtract %int %38 0
+         %44 = OpAccessChain %_ptr_Uniform_v4float %UAV0_0 %int_0 %43
+               OpStore %44 %26
+               OpReturn
+               OpFunctionEnd

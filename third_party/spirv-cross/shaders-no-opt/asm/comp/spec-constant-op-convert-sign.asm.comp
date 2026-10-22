@@ -1,0 +1,63 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 7
+; Bound: 30
+; Schema: 0
+               OpCapability Shader
+               OpCapability Int64
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpSourceExtension "GL_ARB_gpu_shader_int64"
+               OpName %main "main"
+               OpName %SSBO "SSBO"
+               OpMemberName %SSBO 0 "s64"
+               OpMemberName %SSBO 1 "u64"
+               OpName %_ ""
+               OpName %ConstantInt "ConstantInt"
+               OpName %ConstantInt64_1 "ConstantInt64_1"
+               OpName %ConstantUint "ConstantUint"
+               OpName %ConstantInt64_2 "ConstantInt64_2"
+               OpName %ConstantUint64_1 "ConstantUint64_1"
+               OpName %ConstantUint64_2 "ConstantUint64_2"
+               OpMemberDecorate %SSBO 0 Offset 0
+               OpMemberDecorate %SSBO 1 Offset 4
+               OpDecorate %SSBO BufferBlock
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+               OpDecorate %ConstantInt SpecId 0
+               OpDecorate %ConstantUint SpecId 1
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+       %uint = OpTypeInt 32 0
+       %long = OpTypeInt 64 1
+      %ulong = OpTypeInt 64 0
+       %SSBO = OpTypeStruct %int %uint
+%_ptr_Uniform_SSBO = OpTypePointer Uniform %SSBO
+          %_ = OpVariable %_ptr_Uniform_SSBO Uniform
+      %int_0 = OpConstant %int 0
+    %ulong_0 = OpConstant %ulong 0
+%ConstantInt = OpSpecConstant %int 1
+%ConstantUint = OpSpecConstant %uint 2
+%ConstantInt64_1 = OpSpecConstantOp %long SConvert %ConstantInt
+%ConstantInt64_2 = OpSpecConstantOp %long SConvert %ConstantUint
+%ConstantUint64_1 = OpSpecConstantOp %ulong SConvert %ConstantInt
+%ConstantUint64_2 = OpSpecConstantOp %ulong SConvert %ConstantUint
+         %added_long = OpSpecConstantOp %long IAdd %ConstantInt64_1 %ConstantInt64_2
+         %added_ulong = OpSpecConstantOp %ulong IAdd %ConstantUint64_1 %ConstantUint64_2
+		 %trunc_long = OpSpecConstantOp %int SConvert %added_long
+		 %trunc_ulong = OpSpecConstantOp %uint SConvert %added_ulong
+%_ptr_Uniform_int = OpTypePointer Uniform %int
+      %int_1 = OpConstant %int 1
+%_ptr_Uniform_uint = OpTypePointer Uniform %uint
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %22 = OpAccessChain %_ptr_Uniform_int %_ %int_0
+               OpStore %22 %trunc_long
+         %29 = OpAccessChain %_ptr_Uniform_uint %_ %int_1
+               OpStore %29 %trunc_ulong
+               OpReturn
+               OpFunctionEnd

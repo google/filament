@@ -1,0 +1,498 @@
+Name
+
+    ARB_depth_texture
+
+Name Strings
+
+    GL_ARB_depth_texture
+
+Contact
+
+    Brian Paul (brian_e_paul 'at' yahoo.com)
+
+Notice
+
+    Copyright (c) 2002-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on February 14, 2002.
+    Updated version (June 1, 2004) approved by the ARB on June 8, 2004.
+
+Version
+
+    Last Modified Date: November 29, 2004
+
+Number
+
+    ARB Extension #22
+
+Dependencies
+
+    OpenGL 1.1 is required.
+    This extension is written against the OpenGL 1.3 Specification.
+
+Overview
+
+    This is a clarification of the GL_SGIX_depth_texture extension.  The
+    original overview follows:
+
+    This extension defines a new depth texture format.  An important
+    application of depth texture images is shadow casting, but separating
+    this from the shadow extension allows for the potential use of depth
+    textures in other applications such as image-based rendering or
+    displacement mapping.  This extension does not define new depth-texture
+    environment functions, such as filtering or applying the depth values
+    computed from a texture but leaves this to other extensions, such as
+    the shadow extension.
+
+IP Status
+
+    None.
+
+Issues
+
+    (1) How is this extension different from GL_SGIX_depth_texture?
+
+      This extension defines support for texture border values, querying
+      depth texel resolution, and behavior when a depth texture is bound
+      to a texture unit that's expecting RGBA texels.
+
+    (2) What about texture borders and the border value?
+
+      Texture borders are supported.  The texture border value used for
+      depth textures is the first component of TEXTURE_BORDER_COLOR.
+
+    (3) What happens when a depth texture is currently bound but RGBA
+      texels are expected by the texture unit?
+
+      The depth texture is treated as if it were a LUMINANCE texture.
+      It's sometimes useful to render a depth component texture as a
+      grayscale texture.
+
+    (4) What happens when an RGBA texture is currently bound but depth
+      texels are expected by the texture unit?
+
+      We do texturing in the normal way for an RGBA texture.
+
+    (5) What about 1D, 3D and cube maps textures?  Should depth textures
+      be supported?
+
+      RESOLVED:  For 1D textures, yes, for orthogonality.  For 3D and cube map
+      textures, no.  In both cases, the R coordinate that would be ordinarily
+      be used for a shadow comparison is needed for texture lookup and won't
+      contain a useful value.  In theory, the shadow functionality could be
+      extended to provide useful behavior for such targets, but this
+      enhancement is left to a future extension.
+
+    (6) Why "depth" textures instead of a generic, extended-precision,
+      single-channel texture format?
+
+      RESOLVED: We need a depth format so that glCopyTex[Sub]Image()
+      can copy data from the depth buffer to the texture memory.
+
+    (7) Is there any particular reason that depth textures should only be
+        used as LUMINANCE textures?
+
+      RESOLVED: Add DEPTH_TEXTURE_MODE to allow depth textures to be used
+      as LUMINANCE, INTENSITY or ALPHA textures.
+
+    (8) It is very unlikely that depth textures when used as LUMINANCE,
+      INTENSITY or ALPHA textures are used at their full storage precision.
+      Should there be a query for the actual number of bits used for
+      depth textures?
+
+      RESOLVED: No. OpenGL does not have queries for internal precision.
+      Instead of adding it randomly for one feature, it should be looked
+      in the broader context of providing it for more features.
+
+     (9) How should GetTexImage work for depth textures?
+
+      RESOLVED: Since GetTexImage is modeled on ReadPixels, reading depth
+      components should require the DEPTH_COMPONENT format.  Specifying a
+      color format when querying a texture image with a DEPTH_COMPONENT
+      base internal format should be an invalid operation.  Likewise,
+      specifying a DEPTH_COMPONENT format when querying a texture image
+      with a color internal format should be an invalid operation.
+      This is not only consistent with ReadPixels but how the
+      EXT_paletted_texture and NV_texture_shader extensions amend
+      GetTexImage to return non-color texture image data.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <internalFormat> parameter of TexImage1D, TexImage2D,
+    CopyTexImage1D and CopyTexImage2D:
+
+    DEPTH_COMPONENT
+    DEPTH_COMPONENT16_ARB       0x81A5  (same as DEPTH_COMPONENT16_SGIX)
+    DEPTH_COMPONENT24_ARB       0x81A6  (same as DEPTH_COMPONENT24_SGIX)
+    DEPTH_COMPONENT32_ARB       0x81A7  (same as DEPTH_COMPONENT32_SGIX)
+
+    Accepted by the <format> parameter of GetTexImage, TexImage1D,
+    TexImage2D, TexSubImage1D, and TexSubImage2D:
+
+    DEPTH_COMPONENT
+
+    Accepted by the <pname> parameter of GetTexLevelParameterfv and
+    GetTexLevelParameteriv:
+
+    TEXTURE_DEPTH_SIZE_ARB      0x884A
+
+    Accepted by the <pname> parameter of TexParameterf, TexParameteri,
+    TexParameterfv, TexParameteriv, GetTexParameterfv, and GetTexParameteriv:
+
+    DEPTH_TEXTURE_MODE_ARB      0x884B
+
+Additions to Chapter 2 of the 1.3 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.3 Specification (Rasterization)
+
+    Section 3.8.1, Texture Image Specification, p. 116, change last
+    sentence of first paragraph to:
+
+        "The format STENCIL_INDEX is not allowed."
+
+    Section 3.8.1, Texture Image Specification, p. 116, change final
+    paragraph to read:
+
+        "The selected groups are processed exactly as for DrawPixels, stopping
+        just before final conversion.  Each R, G, B, A or depth component (D)
+        value so generated is clamped to [0,1]."
+
+    Section 3.8.1, Texture Image Specification, p. 117, modify beginning of
+    the first paragraph:
+
+        "Components are then selected from the resulting R, G, B, A, or D
+        values to obtain a texture with the base internal format specified
+        by..."
+
+    Section 3.8.1, Texture Image Specification, p. 117, add two new paragraphs
+    after the beginning of the first paragraph:
+
+        "Textures with a base internal format of DEPTH_COMPONENT are supported
+        by texture image specification commands only if <target> is TEXTURE_1D,
+        TEXTURE_2D, PROXY_TEXTURE_1D or PROXY_TEXTURE_2D.  Using this format in
+        conjunction with any other <target> will result in an INVALID_OPERATION
+        error."
+
+        "Textures with a base internal format of DEPTH_COMPONENT require depth
+        component data; textures with other base internal formats require RGBA
+        component data.  The error INVALID_OPERATION is generated if the base
+        internal format is DEPTH_COMPONENT and format is not DEPTH_COMPONENT,
+        or if the base internal format is not DEPTH_COMPONENT and format is
+        DEPTH_COMPONENT."
+
+    Section 3.8.1, Texture Image Specification, p. 117, modify the last
+    paragraph, which flows to p. 118:
+
+        "... If a sized internal format is specified, the mapping of the R, G,
+        B, A, and D values to texture components is equivalent to ..."
+
+        (on p. 118) "... If a compressed internal format is specified, the
+        mapping of the R, G, B, A, and D values to texture components is
+        equivalent to..."
+
+    Section 3.8.1, Texture Image Specification, p. 118, add a new row to Table
+    3.15.
+
+        Base Internal Format    RGBA Values     Internal Components
+        --------------------    -----------     -------------------
+        DEPTH_COMPONENT         D               D
+
+    Section 3.8.1, Texture Image Specification, p. 118, add three new rows and
+    one new column to Table 3.16.
+
+        Sized Internal Format   Base Int. Format  ...   D bits
+        ---------------------   ----------------        ------
+        DEPTH_COMPONENT16_ARB   DEPTH_COMPONENT           16
+        DEPTH_COMPONENT24_ARB   DEPTH_COMPONENT           24
+        DEPTH_COMPONENT32_ARB   DEPTH_COMPONENT           32
+
+    Section 3.8.2, Alternate Texture Image Specification Commands, p. 125,
+    modify first paragraph to read:
+
+        ... "The image is taken from the framebuffer exactly as if these
+        arguments were passed to CopyPixels, with argument <type> set to
+        COLOR or DEPTH_COMPONENT, depending on <internalformat>, stopping
+        after pixel transfer processing is complete.  RGBA data is taken
+        from the current color buffer while depth component data is taken
+        from the depth buffer.  If no depth buffer is present, the error
+        INVALID_OPERATION is generated.  Subsequent processing is identical
+        to that described for TexImage2D, beginning with clamping of the R,
+        G, B, A, or depth values from the resulting pixel groups." ...
+
+    Section 3.8.4, Texture Parameters, p. 133, append table 3.19 with the
+    following:
+
+        Name                        Type  Legal Values
+        --------------------------  ----  -------------------------------
+        DEPTH_TEXTURE_MODE_ARB      enum  LUMINANCE, INTENSITY, ALPHA
+
+    Before current section 3.8.5, Texture Wrap Modes, p. 134, insert the
+    following new section.  Renumber subsections of 3.8 appropriately.
+
+        "3.8.5 Depth Component Textures
+
+        Depth textures can be treated as LUMINANCE, INTENSITY or ALPHA
+        textures during texture filtering and application. Initially,
+        depth textures are interpreted as LUMINANCE."
+
+    Modify section 3.8.7, Texture Minification, p. 139.  Modify the last
+    paragraph before the "Mipmapping" section to read:
+
+        "If any of the selected tauijk, tauij, or taui in the above
+        equations refer to a border texel with i < -bs, j < bs, k < -bs,
+         i >= ws-bs, j >= hs-bs, or k >= ds-bs, then the border values
+        given by the current setting of TEXTURE_BORDER_COLOR is used
+        instead of the unspecified value or values.  If the texture
+        contains color components, the components of the
+        TEXTURE_BORDER_COLOR vector are interpreted as an RGBA color
+        to match the texture's internal format in a manner consistent
+        with table 3.15.  If the texture contains depth components,
+        the R component of the TEXTURE_BORDER_COLOR vector is
+        interpreted as the depth component value."
+
+Additions to Chapter 4 of the 1.3 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.3 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.3 Specification (State and State Requests)
+
+    Section 6.1.3, Enumerated Queries, p. 200, edit paragraph two as follows:
+
+        ..."Queries of TEXTURE_RED_SIZE, TEXTURE_GREEN_SIZE,
+        TEXTURE_BLUE_SIZE, TEXTURE_ALPHA_SIZE, TEXTURE_LUMINANCE_SIZE,
+        TEXTURE_INTENSITY_SIZE, and TEXTURE_DEPTH_SIZE_ARB return the
+        actual resolutions of the stored image array components, not
+        the resolutions specified when the image array was defined.
+
+    Section 6.1.4, Texture Queries, p. 201, replace the sentence two of
+    paragraph two as follows:
+
+        "Calling GetTexImage with a color format when the internal
+        format of the texture image is not a color format causes the error
+        INVALID_OPERATION.  Likewise, calling GetTexImage with a format
+        of DEPTH_COMPONENT when the internal format of the texture
+        image is not a depth format cause the error INVALID_OPERATION.
+        If the internal format of the texture image level is a color
+        format (one of RED, GREEN, BLUE, ALPHA, RGB, BGR, RGBA, BGRA,
+        LUMINANCE, or LUMINANCE_ALPHA), then the components are assigned
+        among R, G, B, and A according to Table 6.1, starting with the
+        first group in the first row, and continuing by obtaining groups
+        in order from each row and proceeding from the first row to the
+        last, and from the first image to the last for three-dimensional
+        textures. If the internal format of the texture image level is a
+        depth format (DEPTH_COMPONENT), then each depth component is
+        assigned with the same ordering of rows and images."
+
+    Replace the last sentence of paragraph four with:
+
+        "Calling GetTexImage with format of COLOR_INDEX or STENCIL_INDEX
+        causes the error INVALID_ENUM."
+
+    Section 1.6.7, Color Table Query, p.203, replace sentence two of
+    paragraph one with:
+
+        "format and type accept the same values as do the corresponding
+        parameters of GetTexImage except that a format of DEPTH_COMPONENT
+        causes the error INVALID_ENUM."
+
+    Section 1.6.8, Convolution Query, p.204, replace sentence two of
+    paragraph one with:
+
+        "format and type accept the same values as do the corresponding
+        parameters of GetTexImage except that a format of DEPTH_COMPONENT
+        causes the error INVALID_ENUM."
+
+    Replace sentence two of paragraph two (specifying GetSeparableFilter)
+    with:
+
+        "format and type accept the same values as do the corresponding
+        parameters of GetTexImage except that a format of DEPTH_COMPONENT
+        causes the error INVALID_ENUM."
+
+    Section 1.6.9, Histogram Query, p.205, replace sentence two of
+    paragraph one with:
+
+        "format and type accept the same values as do the corresponding
+        parameters of GetTexImage except that a format of DEPTH_COMPONENT
+        causes the error INVALID_ENUM."
+
+    Section 1.6.10, Minmax Query, p.205, replace sentence two of
+    paragraph one with:
+
+        "format and type accept the same values as do the corresponding
+        parameters of GetTexImage except that a format of DEPTH_COMPONENT
+        causes the error INVALID_ENUM."
+
+Additions to the GLX Specification
+
+    None
+
+Errors
+
+    INVALID_OPERATION is generated by TexImage2D or CopyTexImage2D if
+    <target> is not TEXTURE_2D or PROXY_TEXTURE_2D and <internalFormat>
+    is DEPTH_COMPONENT, DEPTH_COMPONENT16_ARB, DEPTH_COMPONENT24_ARB, or
+    DEPTH_COMPONENT32_ARB.
+
+    INVALID_OPERATION is generated by TexImage1D or CopyTexImage1D if
+    <target> is not TEXTURE_1D or PROXY_TEXTURE_1D and <internalFormat>
+    is DEPTH_COMPONENT, DEPTH_COMPONENT16_ARB, DEPTH_COMPONENT24_ARB, or
+    DEPTH_COMPONENT32_ARB.
+
+    INVALID_OPERATION is generated by TexImage1D or TexImage2D if <format>
+    is DEPTH_COMPONENT and <internalFormat> is not DEPTH_COMPONENT,
+    DEPTH_COMPONENT16_ARB, DEPTH_COMPONENT24_ARB, or DEPTH_COMPONENT32_ARB.
+
+    INVALID_OPERATION is generated by TexImage1D or TexImage2D if
+    <internalFormat> is DEPTH_COMPONENT, DEPTH_COMPONENT16_ARB,
+    DEPTH_COMPONENT24_ARB, or DEPTH_COMPONENT32_ARB, and <format> is not
+    DEPTH_COMPONENT.
+
+    INVALID_OPERATION is generated by TexSubImage1D or TexSubImage2D if
+    <format> is DEPTH_COMPONENT and the base internal format of the
+    texture is not DEPTH_COMPONENT, DEPTH_COMPONENT16_ARB,
+    DEPTH_COMPONENT24_ARB, or DEPTH_COMPONENT32_ARB.
+
+    INVALID_OPERATION is generated by TexSubImage1D or TexSubImage2D if
+    <format> is not DEPTH_COMPONENT and the base internal format of
+    the texture is DEPTH_COMPONENT, DEPTH_COMPONENT16_ARB,
+    DEPTH_COMPONENT24_ARB, or DEPTH_COMPONENT32_ARB.
+
+    INVALID_OPERATION is generated by TexImage3D if <internalFormat>
+    is DEPTH_COMPONENT, DEPTH_COMPONENT16_ARB, DEPTH_COMPONENT24_ARB,
+    or DEPTH_COMPONENT32_ARB.
+
+    INVALID_OPERATION is generated by CopyTexImage1D or CopyTexImage2D if
+    <internalFormat> is DEPTH_COMPONENT, DEPTH_COMPONENT16_ARB,
+    DEPTH_COMPONENT24_ARB, or DEPTH_COMPONENT32_ARB, and there is no depth
+    buffer.
+
+    INVALID_OPERATION is generated by CopyTexSubImage1D or CopyTexSubImage2D
+    if the base internal format of the texture is DEPTH_COMPONENT and there
+    is no depth buffer.
+
+    INVALID_ENUM is generated if TexParameter[if] parameter <pname>
+    is DEPTH_TEXTURE_MODE_ARB and parameter <param> is not ALPHA,
+    LUMINANCE, or INTENSITY.
+
+    INVALID_OPERATION is generated if GetTexImage parameter <format>
+    is one of RED, GREEN, BLUE, ALPHA, RGB, RGBA, BGR, BGRA, LUMINANCE,
+    or LUMINANCE_ALPHA but the internal format of the texture level
+    image is not a color format.
+
+    INVALID_OPERATION is generated if GetTexImage parameter <format>
+    is DEPTH_COMPONENT but the internal format of the texture level
+    image is not a depth format.
+
+    Eliminate the INVALID_ENUM generated if GetTexImage parameter
+    <format> is DEPTH_COMPONENT.  (but this should still be an error for
+    GetColorTable, GetConvolutionFilter, GetSeparableFilter, GetHistogram,
+    and GetMinmax).
+
+New State
+
+    In table 6.12, Texture Objects, p. 202, add the following:
+
+                                                 Initial
+    Get Value          Type Get Command           Value  Description                           Sec. Attribute
+    ------------------ ---- -------------------- ------- ------------------------------------- ---- ---------
+    TEXTURE_DEPTH_SIZE  Z+  GetTexLevelParameter    0    xD texture image i's depth resolution  3.8     -
+
+    In table 6.16, Texture Objects, p. 224, add the following:
+
+    Get Value                   Type  Get Command           Initial Value  Description         Sec.   Attribute
+    --------------------------  ----  --------------------  -------------  --------------      -----  ---------
+    DEPTH_TEXTURE_MODE_ARB      Z_3   GetTexParameter[if]v  LUMINANCE      depth texture mode  3.8.13 texture
+
+
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    19 March 2001
+        - initial version
+    22 June 2001
+        - added 1D textures to issue 4
+    16 November 2001
+        - removed TEXTURE_BORDER_DEPTH.  use the first component of
+          TEXTURE_BORDER_COLOR to specify the depth border value.
+        - Added new language in section 3.8.5 to describe how
+          TEXTURE_BORDER_COLOR is used with depth textures.
+        - Inserted new issue item #4.
+    17 November 2001
+        - Changed issue 4 resolution.
+        - Rewrote section 3.8.4
+    12 December 2001 (Pat Brown)
+        - Retargeted against the OpenGL 1.3 specification.
+        - Depth textures are allowed only on 1D and 2D targets.  Shadowing is
+          problematic for 3D and cube map textures.
+        - Updated base and sized internal format tables.
+        - Documented a couple missing error conditions for TexImage and
+          TexSubImage calls where <format> and the texture internal format are
+          incompatible.
+        - Minor cleanups to provide for depth components in wording that
+          formerly assumed RGBA components only.
+    13 December 2001
+        - Removed a few lingering references to glTexImage3D.
+        - Rewrite the first and last error conditions to be clearer.
+        - replace "1.2" with "1.3" in a few places.
+    - fixed a few more error conditions (Pat Brown)
+    11 January 2002
+        - fixed "intented" typo
+        - added sentence saying that TEXTURE_LUMINANCE_SIZE may be used
+          to query the effective resolution of a depth textures when it's
+          interpreted as a luminance texture.
+    18 January 2002
+        - Allow depth textures to be used as LUMINANCE, INTENSITY or ALPHA
+          textures (Bimal Poddar)
+    21 January 2002
+        - Added issue #8 to deal with actual depth texture precision.
+          Fixed error to be INVALID_ENUM instead of INVALID_OPERATION.
+    13 May 2004 (mjk)
+        - Document GetTexImage behavior when depth texture formats are
+          supported.
+        - Document that GetColorTable, GetConvolutionFilter, GetHistogram,
+          and GetMinmax now differ from GetTexImage in that
+          DEPTH_COMPONENT is (still) not a legal format for these
+          queries.
+        - Document in "New Tokens" that DEPTH_COMPONENT is a newly accepted
+          token for the <internalFormat> parameter of TexImage1D,
+          TexImage2D, CopyTexImage1D and CopyTexImage2D; and the <format>
+          parameter of GetTexImage, TexImage1D, TexImage2D, TexSubImage1D,
+          and TexSubImage2D.
+        - Fix mangled sentence in 3.8.5
+    1 June 2004 (John Rosasco)
+        - Added BGR and BGRA to the list of color internal formats in
+          section 6.1.4.
+    29 November 2004 (mjk)
+        - Document that GetSeparableFilter now differ from GetTexImage
+          in that DEPTH_COMPONENT is (still) not a legal format for
+          these queries.

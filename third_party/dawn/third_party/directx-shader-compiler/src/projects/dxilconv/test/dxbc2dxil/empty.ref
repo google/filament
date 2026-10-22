@@ -1,0 +1,17 @@
+
+define void @main() {
+entry:
+  ret void
+}
+
+!dx.version = !{!0}
+!dx.valver = !{!0}
+!dx.shaderModel = !{!1}
+!dx.entryPoints = !{!2}
+!llvm.ident = !{!4}
+
+!0 = !{i32 1, i32 0}
+!1 = !{!"ps", i32 6, i32 0}
+!2 = !{void ()* @main, !"main", null, null, !3}
+!3 = !{i32 0, i64 256}
+!4 = !{!"dxbc2dxil 1.2"}

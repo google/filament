@@ -1,0 +1,18 @@
+{
+    "35.x": {
+        "protoc_version": "35.1",
+        "lts": false,
+        "date": "2026-06-11",
+        "languages": {
+            "cpp": "7.35.1",
+            "csharp": "3.35.1",
+            "java": "4.35.1",
+            "javascript": "3.35.1",
+            "objectivec": "5.35.1",
+            "php": "5.35.1",
+            "python": "7.35.1",
+            "ruby": "4.35.1",
+            "rust": "4.35.1"
+        }
+    }
+}

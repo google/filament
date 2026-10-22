@@ -1,0 +1,4 @@
+Options +Indexes
+
+# Rewrites from old opengl.org GL and khronos.org ES/SC registries
+# are done in those locations on a per-file/pattern basis.

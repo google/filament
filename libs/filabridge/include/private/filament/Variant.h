@@ -1,0 +1,322 @@
+/*
+ * Copyright (C) 2015 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TNT_FILABRIDGE_VARIANT_H
+#define TNT_FILABRIDGE_VARIANT_H
+
+#include <filament/MaterialEnums.h>
+
+#include <utils/bitset.h>
+#include <utils/compiler.h>
+#include <utils/Slice.h>
+
+#include <stddef.h>
+#include <stdint.h>
+
+namespace filament {
+static constexpr size_t VARIANT_BITS = 6;
+static constexpr size_t VARIANT_COUNT = 1 << VARIANT_BITS;
+
+using VariantList = utils::bitset<uint64_t, VARIANT_COUNT / 64>;
+
+// IMPORTANT: update filterVariant() when adding more variants
+// Also be sure to update formatVariantString inside CommonWriter.cpp
+struct Variant {
+    using type_t = uint8_t;
+
+    Variant() noexcept = default;
+    Variant(Variant const& rhs) noexcept = default;
+    Variant& operator=(Variant const& rhs) noexcept = default;
+    constexpr explicit Variant(type_t key) noexcept : key(key) { }
+
+
+    // SRE: Shadow Receiver
+    // SKN: Skinning
+    // DEP: Depth only
+    // FOG: Fog (standard)
+    // PCK: Picking (depth)
+    // MNT: Output depth moments (depth)
+    // S2D: Sampler type for shadows (0: samplerShadowArray, 1: sampler2DArray) (standard)
+    // STE: Instanced stereo rendering
+    //
+    //   X: either 1 or 0
+    //                            +-----+-----+-----+-----+-----+-----+
+    // Variant                    | S2D | FOG | DEP | SKN | SRE | STE |   64
+    //                            +-----+-----+-----+-----+-----+-----+
+    //                              MNT   PCK
+    //
+    // Note that public UserVariantFilterBit keeps the old 8-bit values for API compatibility.
+    //
+    // Standard variants:
+    //                            +-----+-----+-----+-----+-----+-----+
+    //                            | S2D | FOG |  0  | SKN | SRE | STE |   32 - 8 = 24
+    //                            +-----+-----+-----+-----+-----+-----+
+    //      Vertex shader            0     0     0     X     X     X
+    //    Fragment shader            X     X     0     0     X     0
+    //           Reserved            1     X     0     X     0     X      [-8]
+    //
+    // SSR variant:
+    //                            +-----+-----+-----+-----+-----+-----+
+    //                            | MNT | PCK | DEP | SKN |  0  |  0  |    2
+    //                            +-----+-----+-----+-----+-----+-----+
+    //                SSR            1     1     1     X     0     0
+    //
+    // Depth variants:
+    //                            +-----+-----+-----+-----+-----+-----+
+    //                            | MNT | PCK |  1  | SKN |  0  | STE |   16 - 4 = 12
+    //                            +-----+-----+-----+-----+-----+-----+
+    //       Vertex depth            X     0     1     X     0     X
+    //     Fragment depth            0     X     1     0     0     0
+    //     Fragment depth            1     0     1     0     0     0
+    //                SSR            1     1     1     X     0     0      [  -2]
+    //           Reserved            1     1     1     X     0     X      [  -2] (exclude SSR)
+    //
+    // 38 variants used (24 standard + 2 SSR + 12 depth), 26 reserved
+    //
+    // note: a valid variant can be neither a valid vertex nor a valid fragment variant
+    //       (e.g.: FOG|SKN variants), the proper bits are filtered appropriately,
+    //       see filterVariantVertex(), filterVariantFragment().
+
+    type_t key = 0u;
+
+    // when adding more bits, update RenderPass::CommandKey and RenderPass::PrimitiveInfo as needed
+    // when adding more bits, update VARIANT_COUNT
+    static constexpr type_t STE   = 0x01; // instanced stereo
+    static constexpr type_t SRE   = 0x02; // receives shadows, per renderable
+    static constexpr type_t SKN   = 0x04; // GPU skinning and/or morphing
+    static constexpr type_t DEP   = 0x08; // depth only variants
+    static constexpr type_t FOG   = 0x10; // fog (standard)
+    static constexpr type_t PCK   = 0x10; // picking (depth)
+    static constexpr type_t S2D   = 0x20; // sampler type
+    static constexpr type_t MNT   = 0x20; // variance shadow maps
+
+    static constexpr type_t NO_VARIANT         = 0u;
+
+    // special variants (variants that use the reserved space)
+    static constexpr type_t SPECIAL_SSR_VARIANT= MNT | PCK | DEP;
+    static constexpr type_t SPECIAL_SSR_MASK =
+        STE | MNT | PCK | DEP | SRE;
+
+    static constexpr type_t STANDARD_MASK      = DEP;
+    static constexpr type_t STANDARD_VARIANT   = 0u;
+
+    // the depth variant deactivates all variants that make no sense when writing the depth
+    // only -- essentially, all fragment-only variants.
+    static constexpr type_t DEPTH_MASK         = DEP | SRE;
+    static constexpr type_t DEPTH_VARIANT      = DEP;
+
+    // this mask filters out the lighting variants
+    static constexpr type_t UNLIT_MASK         = STE | SKN | FOG;
+
+    // returns raw variant bits
+    bool hasSkinningOrMorphing() const noexcept  { return key & SKN; }
+    bool hasStereo() const noexcept              { return key & STE; }
+
+    void setShadowReceiver(bool v) noexcept      { set(v, SRE); }
+    void setSkinning(bool v) noexcept            { set(v, SKN); }
+    void setPicking(bool v) noexcept             { set(v, PCK); }
+    void setShadowSampler2D(bool v) noexcept     { set(v, S2D); }
+    void setDepthMoments(bool v) noexcept        { set(v, MNT); }
+    void setStereo(bool v) noexcept              { set(v, STE); }
+    constexpr void setFog(bool v) noexcept {
+        // When the DEP bit is set, the FOG bit aliases with PCK. We must check the DEP bit before
+        // modifying FOG to avoid accidentally unsetting PCK and breaking the SSR variant.
+        if (!(key & DEP)) {
+            set(v, FOG);
+        }
+    }
+
+    static constexpr bool isValidDepthVariant(Variant variant) noexcept {
+        // (MNT | PCK | DEP), with or without SKN, is an SSR variant.
+        // The corresponding variants with STE are reserved.
+        constexpr type_t RESERVED_MASK  = MNT | PCK | DEP | SRE;
+        constexpr type_t RESERVED_VALUE = MNT | PCK | DEP;
+        return ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) &&
+               ((variant.key & RESERVED_MASK) != RESERVED_VALUE);
+   }
+
+    static constexpr bool isValidStandardVariant(Variant variant) noexcept {
+        // can't have VSM without shadow receiver
+        constexpr type_t RESERVED_MASK = S2D | SRE;
+        constexpr type_t RESERVED_VALUE = S2D;
+
+        return ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) &&
+               ((variant.key & RESERVED_MASK) != RESERVED_VALUE);
+    }
+
+    static constexpr bool isSSRVariant(Variant variant) noexcept {
+        return (variant.key & SPECIAL_SSR_MASK) == SPECIAL_SSR_VARIANT;
+    }
+
+    static constexpr bool isValidSurfaceVariant(Variant variant) noexcept {
+        return isValidStandardVariant(variant) || isSSRVariant(variant);
+    }
+
+    static constexpr bool isVertexVariant(Variant variant) noexcept {
+        return filterVariantVertex(variant) == variant;
+    }
+
+    static constexpr bool isFragmentVariant(Variant variant) noexcept {
+        return filterVariantFragment(variant) == variant;
+    }
+
+    static constexpr bool isReserved(Variant variant) noexcept {
+        return !isValid(variant);
+    }
+
+    static constexpr bool isValid(Variant variant) noexcept {
+        return isValidSurfaceVariant(variant) || isValidDepthVariant(variant);
+    }
+
+    static constexpr bool isShadowSampler2DVariant(Variant variant) noexcept {
+        return (variant.key & (S2D | DEP)) == S2D;
+    }
+
+    static constexpr bool isDepthMomentsVariant(Variant variant) noexcept {
+        return !isSSRVariant(variant) && ((variant.key & (MNT | DEP)) == (MNT | DEP));
+    }
+
+    static constexpr bool isShadowReceiverVariant(Variant variant) noexcept {
+        return (variant.key & SRE) == SRE;
+    }
+
+    static constexpr bool isFogVariant(Variant variant) noexcept {
+        return (variant.key & (FOG | DEP)) == FOG;
+    }
+
+    static constexpr bool isPickingVariant(Variant variant) noexcept {
+        return !isSSRVariant(variant) && ((variant.key & (PCK | DEP)) == (PCK | DEP));
+    }
+
+    static constexpr bool isStereoVariant(Variant variant) noexcept {
+        return (variant.key & STE) == STE;
+    }
+
+    static constexpr Variant filterVariantVertex(Variant variant) noexcept {
+        // Filter out vertex variants that are not needed. For e.g. fog doesn't affect the
+        // vertex shader.
+        if (isValidSurfaceVariant(variant)) {
+            if (isSSRVariant(variant)) {
+                variant.key &= ~SPECIAL_SSR_VARIANT;
+            }
+            return variant & (STE | SKN | SRE);
+        }
+        if ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) {
+            // Only MNT, skinning, and stereo affect the vertex shader's DEPTH variant
+            return variant & (STE | MNT | SKN | DEP);
+        }
+        return {};
+    }
+
+    static constexpr Variant filterVariantFragment(Variant variant) noexcept {
+        // filter out fragment variants that are not needed. For e.g. skinning doesn't
+        // affect the fragment shader.
+        if (isSSRVariant(variant)) {
+            // Skinning and morphing only affect the vertex shader.
+            return Variant(SPECIAL_SSR_VARIANT);
+        }
+        if ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) {
+            return variant & (S2D | FOG | SRE);
+        }
+        if ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) {
+            // Only VSM & PICKING affects the fragment shader's DEPTH variant
+            return variant & (MNT | PCK | DEP);
+        }
+        return {};
+    }
+
+    static constexpr Variant filterVariant(Variant variant, bool isLit) noexcept {
+        if (isSSRVariant(variant) || isValidDepthVariant(variant)) {
+            return variant;
+        }
+        if (!isLit) {
+            // when the shading mode is unlit, remove all the lighting variants
+            return variant & UNLIT_MASK;
+        }
+
+        // if shadow receiver is disabled, we pick the shadow sampler
+        if (!(variant.key & SRE)) {
+            return variant & ~S2D;
+        }
+        return variant;
+    }
+
+    constexpr bool operator==(Variant rhs) const noexcept {
+        return key == rhs.key;
+    }
+
+    constexpr bool operator!=(Variant rhs) const noexcept {
+        return key != rhs.key;
+    }
+
+    constexpr Variant operator & (type_t rhs) const noexcept {
+        return Variant(key & rhs);
+    }
+
+    static Variant filterUserVariant(
+            Variant variant, UserVariantFilterMask filterMask) noexcept;
+
+    template <typename T>
+    UTILS_NOINLINE friend T& operator<<(T& out, Variant variant) noexcept {
+        if (variant.key == 0) {
+            return out << "(none)";
+        }
+        if (isSSRVariant(variant)) {
+            return out << "(SSR)";
+        }
+        out << "(";
+        bool first = true;
+        auto print = [&](const char* name) {
+            if (!first) out << " | ";
+            out << name;
+            first = false;
+        };
+        if (variant.key & STE) print("STE");
+        if (variant.key & DEP) {
+            if (variant.key & MNT) print("MNT");
+            if (variant.key & PCK) print("PCK");
+
+            print("DEP");
+        } else {
+            if (variant.key & S2D) print("S2D");
+            if (variant.key & FOG) print("FOG");
+        }
+
+        if (variant.key & SKN) print("SKN");
+        if (variant.key & SRE) print("SRE");
+        return out << ")";
+    }
+
+private:
+    void set(bool v, type_t mask) noexcept {
+        key = (key & ~mask) | (v ? mask : type_t(0));
+    }
+};
+
+namespace VariantUtils {
+// list of lit variants
+utils::Slice<const Variant> getLitVariants() noexcept UTILS_PURE;
+// list of unlit variants
+utils::Slice<const Variant> getUnlitVariants() noexcept UTILS_PURE;
+// list of depth variants
+utils::Slice<const Variant> getDepthVariants() noexcept UTILS_PURE;
+// list of post process variants
+utils::Slice<const Variant> getPostProcessVariants() noexcept UTILS_PURE;
+}
+
+} // namespace filament
+
+#endif // TNT_FILABRIDGE_VARIANT_H

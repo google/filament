@@ -1,0 +1,110 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wmissing-braces"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T, size_t Num>
+struct spvUnsafeArray
+{
+    T elements[Num ? Num : 1];
+    
+    thread T& operator [] (size_t pos) thread
+    {
+        return elements[pos];
+    }
+    constexpr const thread T& operator [] (size_t pos) const thread
+    {
+        return elements[pos];
+    }
+    
+    device T& operator [] (size_t pos) device
+    {
+        return elements[pos];
+    }
+    constexpr const device T& operator [] (size_t pos) const device
+    {
+        return elements[pos];
+    }
+    
+    constexpr const constant T& operator [] (size_t pos) const constant
+    {
+        return elements[pos];
+    }
+    
+    threadgroup T& operator [] (size_t pos) threadgroup
+    {
+        return elements[pos];
+    }
+    constexpr const threadgroup T& operator [] (size_t pos) const threadgroup
+    {
+        return elements[pos];
+    }
+};
+
+struct _29
+{
+    spvUnsafeArray<spvUnsafeArray<int, 3>, 3> _m0;
+};
+
+struct _7
+{
+    int _m0[1];
+};
+
+constant int3 _32 = {};
+constant int _3_tmp [[function_constant(0)]];
+constant int _3 = is_function_constant_defined(_3_tmp) ? _3_tmp : 0;
+constant int _4_tmp [[function_constant(1)]];
+constant int _4 = is_function_constant_defined(_4_tmp) ? _4_tmp : 0;
+constant int _5_tmp [[function_constant(2)]];
+constant int _5 = is_function_constant_defined(_5_tmp) ? _5_tmp : 0;
+constant spvUnsafeArray<int, 3> _36 = spvUnsafeArray<int, 3>({ _3, 0, 0 });
+constant spvUnsafeArray<int, 3> _37 = spvUnsafeArray<int, 3>({ _3, _4, 0 });
+constant spvUnsafeArray<int, 3> _38 = spvUnsafeArray<int, 3>({ _3, _4, _5 });
+constant spvUnsafeArray<int, 3> _39 = spvUnsafeArray<int, 3>({ _4, 0, 0 });
+constant spvUnsafeArray<int, 3> _40 = spvUnsafeArray<int, 3>({ _4, _5, 0 });
+constant spvUnsafeArray<int, 3> _41 = spvUnsafeArray<int, 3>({ _4, _5, _3 });
+constant spvUnsafeArray<int, 3> _42 = spvUnsafeArray<int, 3>({ _5, 0, 0 });
+constant spvUnsafeArray<int, 3> _43 = spvUnsafeArray<int, 3>({ _5, _3, 0 });
+constant spvUnsafeArray<int, 3> _44 = spvUnsafeArray<int, 3>({ _5, _3, _4 });
+constant spvUnsafeArray<spvUnsafeArray<int, 3>, 3> _45 = spvUnsafeArray<spvUnsafeArray<int, 3>, 3>({ spvUnsafeArray<int, 3>({ _3, _4, _5 }), spvUnsafeArray<int, 3>({ 0, 0, 0 }), spvUnsafeArray<int, 3>({ 0, 0, 0 }) });
+constant spvUnsafeArray<spvUnsafeArray<int, 3>, 3> _46 = spvUnsafeArray<spvUnsafeArray<int, 3>, 3>({ spvUnsafeArray<int, 3>({ _3, _4, _5 }), spvUnsafeArray<int, 3>({ _4, _5, _3 }), spvUnsafeArray<int, 3>({ 0, 0, 0 }) });
+constant spvUnsafeArray<spvUnsafeArray<int, 3>, 3> _47 = spvUnsafeArray<spvUnsafeArray<int, 3>, 3>({ spvUnsafeArray<int, 3>({ _3, _4, _5 }), spvUnsafeArray<int, 3>({ _4, _5, _3 }), spvUnsafeArray<int, 3>({ _5, _3, _4 }) });
+constant _29 _48 = _29{ spvUnsafeArray<spvUnsafeArray<int, 3>, 3>({ spvUnsafeArray<int, 3>({ _3, _4, _5 }), spvUnsafeArray<int, 3>({ _4, _5, _3 }), spvUnsafeArray<int, 3>({ _5, _3, _4 }) }) };
+constant int _50 = _48._m0[0][0];
+constant int _51 = _48._m0[1][0];
+constant int _52 = _48._m0[0][1];
+constant int _53 = _48._m0[2][2];
+constant int _54 = _48._m0[2][0];
+constant int _55 = _48._m0[1][1];
+constant bool _56 = (_50 == _51);
+constant bool _57 = (_52 == _53);
+constant bool _58 = (_54 == _55);
+constant int _59 = int(_56);
+constant int _60 = int(_57);
+constant int _61 = _58 ? 2 : 1;
+constant int3 _62 = int3(_3, 0, 0);
+constant int3 _63 = int3(0, _4, 0);
+constant int3 _64 = int3(0, 0, _5);
+constant int3 _65 = int3(_62.x, 0, _62.z);
+constant int3 _66 = int3(0, _63.y, _63.x);
+constant int3 _67 = int3(_64.z, 0, _64.z);
+constant int3 _68 = int3(_65.y, _65.x, _66.y);
+constant int3 _69 = int3(_67.z, _68.y, _68.z);
+constant int _70 = _69.x;
+constant int _71 = _69.y;
+constant int _72 = _69.z;
+constant int _73 = (_70 - _71);
+constant int _74 = (_73 * _72);
+
+constant spvUnsafeArray<int, 3> _33 = spvUnsafeArray<int, 3>({ 0, 0, 0 });
+constant spvUnsafeArray<spvUnsafeArray<int, 3>, 3> _34 = spvUnsafeArray<spvUnsafeArray<int, 3>, 3>({ spvUnsafeArray<int, 3>({ 0, 0, 0 }), spvUnsafeArray<int, 3>({ 0, 0, 0 }), spvUnsafeArray<int, 3>({ 0, 0, 0 }) });
+
+kernel void main0(device _7& _8 [[buffer(0)]], device _7& _9 [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    _9._m0[gl_GlobalInvocationID.x] = _8._m0[gl_GlobalInvocationID.x] + ((((1 - _59) * _60) * (_61 - 1)) * _74);
+}
+

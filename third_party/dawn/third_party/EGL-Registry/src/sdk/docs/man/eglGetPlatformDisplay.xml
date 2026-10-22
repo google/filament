@@ -1,0 +1,122 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglGetPlatformDisplay">
+    <info>
+         <copyright>
+             <year>2018</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglGetPlatformDisplay</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglGetPlatformDisplay</refname>
+        <refpurpose>
+            return an <acronym>EGL</acronym> display connection
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLDisplay <function>eglGetPlatformDisplay</function></funcdef>
+                <paramdef>EGLenum <parameter>platform</parameter></paramdef>
+                <paramdef>void * <parameter>native_display</parameter></paramdef>
+                <paramdef>const EGLAttrib * <parameter>attrib_list</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>platform</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the native platform to obtain a display for.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>native_display</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the native display to connect to.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>attrib_list</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies attributes of the display being obtained.
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            <function>eglGetPlatformDisplay</function> obtains an
+            <acronym>EGL</acronym> display connection for the specified
+            <parameter>platform</parameter> and
+            <parameter>native_display</parameter>.
+        </para>
+        <para>
+            Valid values for <parameter>platform</parameter> are defined by
+            EGL extensions, as are requirements for
+            <parameter>native_display</parameter>.
+            For example, an extension specification that defines support for
+            the X11 platform may require that
+            <parameter>native_display</parameter> be a pointer to an X11
+            Display, and an extension specification that defines support for
+            the Microsoft Windows platform may require that
+            <parameter>native_display</parameter> be a pointer to a Windows
+            Device Context.
+        </para>
+        <para>
+            Valid attributes are defined by EGL extensions.
+            All attributes in <parameter>attrib_list</parameter>,
+            including boolean attributes, are immediately followed by
+            the corresponding desired value.
+            The list is terminated with <constant>EGL_NONE</constant>.
+            If an attribute is not specified in
+            <parameter>attrib_list</parameter> but is required for the
+            specified <parameter>platform</parameter>, then a default value
+            is used (and the attribute is said to be specified implicitly).
+        </para>
+        <para>
+            Multiple calls made to
+            <function>eglGetPlatformDisplay</function> with the same
+            parameters will return the same <type>EGLDisplay</type> handle.
+        </para>
+        <para>
+            If <parameter>platform</parameter> is valid but no display
+            matching <parameter>native_display</parameter> is available,
+            then <constant>EGL_NO_DISPLAY</constant> is returned; no error
+            condition is raised in this case.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="notes"><title>Notes</title>
+        <para>
+            <function>eglGetPlatformDisplay</function> is supported only if
+            the EGL version is 1.5 or greater.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            <function>eglGetPlatformDisplay</function> returns
+            <constant>EGL_NO_DISPLAY</constant> on failure.
+        </para>
+        <para>
+            An <constant>EGL_BAD_PARAMETER</constant> error is generated if
+            <parameter>platform</parameter> has an invalid value.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglInitialize</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetDisplay</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

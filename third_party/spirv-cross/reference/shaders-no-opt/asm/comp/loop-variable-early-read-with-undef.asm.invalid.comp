@@ -1,0 +1,108 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 4, std430) buffer _1_31
+{
+    uint _m0[1];
+} _31;
+
+layout(binding = 1, std430) buffer _1_28
+{
+    uint _m0[1];
+} _28;
+
+layout(binding = 2, std430) buffer _1_29
+{
+    uint _m0[1];
+} _29;
+
+layout(binding = 3, std430) buffer _1_30
+{
+    uint _m0[1];
+} _30;
+
+layout(binding = 0, std430) buffer _4_27
+{
+    uint _m0[2];
+} _27;
+
+layout(binding = 5, std430) buffer _6_32
+{
+    uint _m0[11];
+} _32;
+
+void main()
+{
+    uint _55 = 0u;
+    uint _56 = 0u;
+    uint _57 = 0u;
+    uint _58 = 0u;
+    uint _59 = 0u;
+    uint _115;
+    _32._m0[_115] = 8u;
+    uint _62 = _115 + 1u;
+    uint _54 = _62;
+    for (;;)
+    {
+        _32._m0[_54] = 9u;
+        _54++;
+        uint _66 = _55;
+        _55 = _66 + 1u;
+        if (_27._m0[_66] == 1u)
+        {
+            _32._m0[_54] = 12u;
+            _54++;
+            return;
+        }
+        else
+        {
+            _32._m0[_54] = 13u;
+            _54++;
+            uint _77 = _56;
+            _56 = _77 + 1u;
+            if (_28._m0[_77] == 1u)
+            {
+                _32._m0[_54] = 11u;
+                _54++;
+                _32._m0[_54] = 14u;
+                _54++;
+                _57++;
+                do
+                {
+                    _32._m0[_54] = 16u;
+                    _54++;
+                    break;
+                } while(false);
+                _32._m0[_54] = 15u;
+                _54++;
+                uint _98 = _58;
+                _58 = _98 + 1u;
+                if (_30._m0[_98] == 1u)
+                {
+                }
+                else
+                {
+                    _32._m0[_54] = 19u;
+                    _54++;
+                }
+                _32._m0[_54] = 17u;
+                _54++;
+                uint _109 = _59;
+                _59 = _109 + 1u;
+                if (_31._m0[_109] == 1u)
+                {
+                    continue;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+}
+

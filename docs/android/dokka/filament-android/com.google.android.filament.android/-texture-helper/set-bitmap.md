@@ -1,0 +1,12 @@
+//[filament-android](../../../index.md)/[com.google.android.filament.android](../index.md)/[TextureHelper](index.md)/[setBitmap](set-bitmap.md)
+
+# setBitmap
+
+[main]\
+open fun [setBitmap](set-bitmap.md)(engine: [Engine](../../com.google.android.filament/-engine/index.md), texture: [Texture](../../com.google.android.filament/-texture/index.md), level: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), bitmap: Bitmap)
+
+open fun [setBitmap](set-bitmap.md)(engine: [Engine](../../com.google.android.filament/-engine/index.md), texture: [Texture](../../com.google.android.filament/-texture/index.md), level: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), bitmap: Bitmap, handler: [Any](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-any/index.html), callback: [Runnable](https://developer.android.com/reference/kotlin/java/lang/Runnable.html))
+
+open fun [setBitmap](set-bitmap.md)(engine: [Engine](../../com.google.android.filament/-engine/index.md), texture: [Texture](../../com.google.android.filament/-texture/index.md), level: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), xoffset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), yoffset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), width: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), height: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), bitmap: Bitmap)
+
+open fun [setBitmap](set-bitmap.md)(engine: [Engine](../../com.google.android.filament/-engine/index.md), texture: [Texture](../../com.google.android.filament/-texture/index.md), level: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), xoffset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), yoffset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), width: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), height: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), bitmap: Bitmap, handler: [Any](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-any/index.html), callback: [Runnable](https://developer.android.com/reference/kotlin/java/lang/Runnable.html))

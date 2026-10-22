@@ -1,0 +1,28 @@
+static const uint3 gl_WorkGroupSize = uint3(30u, 1u, 1u);
+
+RWByteAddressBuffer _46 : register(u0, space0);
+
+static uint3 gl_GlobalInvocationID;
+struct SPIRV_Cross_Input
+{
+    uint3 gl_GlobalInvocationID : SV_DispatchThreadID;
+};
+
+void comp_main()
+{
+    bool v = gl_GlobalInvocationID.x != 3u;
+    bool4 v4;
+    v4.x = bool(WaveActiveBitOr(uint(v)));
+    v4.y = bool(WaveActiveBitAnd(uint(v)));
+    v4.z = bool(WaveActiveBitXor(uint(v)));
+    v4.w = WaveActiveAllEqual(v);
+    uint4 w = uint4(v4);
+    _46.Store(gl_GlobalInvocationID.x * 4 + 0, ((w.x + w.y) + w.z) + w.w);
+}
+
+[numthreads(30, 1, 1)]
+void main(SPIRV_Cross_Input stage_input)
+{
+    gl_GlobalInvocationID = stage_input.gl_GlobalInvocationID;
+    comp_main();
+}

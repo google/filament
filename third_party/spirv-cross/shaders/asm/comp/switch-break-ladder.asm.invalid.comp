@@ -1,0 +1,92 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 6
+; Bound: 50
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpName %main "main"
+               OpName %c "c"
+               OpName %BUF "BUF"
+               OpMemberName %BUF 0 "a"
+               OpMemberName %BUF 1 "b"
+               OpMemberName %BUF 2 "d"
+               OpName %o "o"
+               OpName %a "a"
+               OpMemberDecorate %BUF 0 Offset 0
+               OpMemberDecorate %BUF 1 Offset 4
+               OpMemberDecorate %BUF 2 Offset 8
+               OpDecorate %BUF BufferBlock
+               OpDecorate %o DescriptorSet 0
+               OpDecorate %o Binding 0
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+        %BUF = OpTypeStruct %int %int %int
+%_ptr_Uniform_BUF = OpTypePointer Uniform %BUF
+          %o = OpVariable %_ptr_Uniform_BUF Uniform
+      %int_0 = OpConstant %int 0
+%_ptr_Uniform_int = OpTypePointer Uniform %int
+      %int_2 = OpConstant %int 2
+      %int_1 = OpConstant %int 1
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+          %c = OpVariable %_ptr_Function_int Function
+          %a = OpVariable %_ptr_Function_int Function
+         %14 = OpAccessChain %_ptr_Uniform_int %o %int_0
+         %15 = OpLoad %int %14
+               OpStore %c %15
+               OpBranch %16
+         %16 = OpLabel
+               OpLoopMerge %18 %19 None
+               OpBranch %17
+         %17 = OpLabel
+         %20 = OpLoad %int %c
+               OpSelectionMerge %23 None
+               OpSwitch %20 %23 5 %21 1 %22 2 %22 3 %22
+         %21 = OpLabel
+               OpBranch %24
+         %24 = OpLabel
+               OpLoopMerge %26 %27 None
+               OpBranch %25
+         %25 = OpLabel
+         %29 = OpAccessChain %_ptr_Uniform_int %o %int_2
+         %30 = OpLoad %int %29
+               OpSelectionMerge %33 None
+               OpSwitch %30 %32 10 %31 20 %31
+         %32 = OpLabel
+               OpBranch %27
+         %31 = OpLabel
+         %34 = OpLoad %int %c
+         %35 = OpLoad %int %c
+         %36 = OpIAdd %int %35 %34
+               OpStore %c %36
+               OpBranch %26
+         %33 = OpLabel
+               OpUnreachable
+         %27 = OpLabel
+               OpBranch %24
+         %26 = OpLabel
+               OpBranch %23
+         %22 = OpLabel
+         %42 = OpLoad %int %c
+               OpStore %a %42
+               OpBranch %18
+         %23 = OpLabel
+         %45 = OpLoad %int %c
+         %47 = OpIAdd %int %45 %int_1
+               OpStore %c %47
+               OpBranch %19
+         %19 = OpLabel
+               OpBranch %16
+         %18 = OpLabel
+         %48 = OpLoad %int %a
+         %49 = OpAccessChain %_ptr_Uniform_int %o %int_1
+               OpStore %49 %48
+               OpReturn
+               OpFunctionEnd

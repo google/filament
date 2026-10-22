@@ -1,0 +1,9 @@
+#version 450
+layout(local_size_x=64) in;
+layout(std430,binding=0) readonly buffer P { uint partials[]; };
+layout(std430,binding=1) buffer O { uint offs[]; };
+layout(push_constant) uniform PC { uint nblk; } p;
+void main(){
+  if(gl_GlobalInvocationID.x!=0u) return; int acc=0;
+  for(uint b=0u;b<p.nblk;b++){ offs[b]=uint(acc); acc=(acc+int(partials[b]))&0xff; }
+}

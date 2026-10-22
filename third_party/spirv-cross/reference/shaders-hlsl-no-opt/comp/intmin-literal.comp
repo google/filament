@@ -1,0 +1,19 @@
+static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
+
+RWByteAddressBuffer _9 : register(u1);
+cbuffer UBO : register(b0)
+{
+    float _14_b : packoffset(c0);
+};
+
+
+void comp_main()
+{
+    _9.Store(0, asuint(asfloat(asint(_14_b) ^ int(0x80000000))));
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

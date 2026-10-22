@@ -1,0 +1,21 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    float a;
+};
+
+constant uint _19_tmp [[function_constant(10)]];
+constant uint _19 = is_function_constant_defined(_19_tmp) ? _19_tmp : 9u;
+constant uint _21_tmp [[function_constant(12)]];
+constant uint _21 = is_function_constant_defined(_21_tmp) ? _21_tmp : 4u;
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(_19, 20u, _21);
+
+kernel void main0(device SSBO& _6 [[buffer(0)]])
+{
+    _6.a += 1.0;
+}
+

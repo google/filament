@@ -1,0 +1,51 @@
+positive_infinity.frag
+Shader version: 300
+0:? Sequence
+0:4  Function Definition: main( ( global void)
+0:4    Function Parameters: 
+0:9    Sequence
+0:9      Sequence
+0:9        move second child to first child ( temp highp float)
+0:9          'correct' ( temp highp float)
+0:9          Constant:
+0:9            1.000000
+0:10      move second child to first child ( temp highp 4-component vector of float)
+0:10        'my_FragColor' ( out highp 4-component vector of float)
+0:10        Construct vec4 ( temp highp 4-component vector of float)
+0:10          Constant:
+0:10            0.000000
+0:10          'correct' ( temp highp float)
+0:10          Constant:
+0:10            0.000000
+0:10          Constant:
+0:10            1.000000
+0:?   Linker Objects
+0:?     'my_FragColor' ( out highp 4-component vector of float)
+
+
+Linked fragment stage:
+
+
+Shader version: 300
+0:? Sequence
+0:4  Function Definition: main( ( global void)
+0:4    Function Parameters: 
+0:9    Sequence
+0:9      Sequence
+0:9        move second child to first child ( temp highp float)
+0:9          'correct' ( temp highp float)
+0:9          Constant:
+0:9            1.000000
+0:10      move second child to first child ( temp highp 4-component vector of float)
+0:10        'my_FragColor' ( out highp 4-component vector of float)
+0:10        Construct vec4 ( temp highp 4-component vector of float)
+0:10          Constant:
+0:10            0.000000
+0:10          'correct' ( temp highp float)
+0:10          Constant:
+0:10            0.000000
+0:10          Constant:
+0:10            1.000000
+0:?   Linker Objects
+0:?     'my_FragColor' ( out highp 4-component vector of float)
+

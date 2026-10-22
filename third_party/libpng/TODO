@@ -1,0 +1,22 @@
+TODO list for libpng
+--------------------
+
+ * Fix all defects (duh!)
+ * cHRM transformation.
+ * Palette creation.
+ * "grayscale->palette" transformation and "palette->grayscale" detection.
+ * Improved dithering.
+ * Multi-lingual error and warning message support.
+ * Complete sRGB transformation.  (Currently it simply uses gamma=0.45455.)
+ * Man pages for function calls.
+ * Better documentation.
+ * Better filter selection
+   (e.g., counting huffman bits/precompression; filter inertia; filter costs).
+ * Histogram creation.
+ * Text conversion between different code pages (e.g., Latin-1 to Mac).
+ * Avoid building gamma tables whenever possible.
+ * Greater precision in changing to linear gamma for compositing against
+   background, and in doing rgb-to-gray transformations.
+ * Investigate pre-incremented loop counters and other loop constructions.
+ * Interpolated method of handling interlacing.
+ * More validations for libpng transformations.

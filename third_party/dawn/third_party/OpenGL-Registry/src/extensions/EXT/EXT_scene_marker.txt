@@ -1,0 +1,199 @@
+Name
+
+    EXT_scene_marker
+
+Name Strings
+
+    GL_EXT_scene_marker
+    GLX_EXT_scene_marker
+
+Version
+
+    $Date: 1997/09/08 21:31:59 $ $Revision: 1.4 $
+
+Number
+
+    120
+
+Dependencies
+
+    OpenGL 1.1 is required.
+
+Overview
+
+    This extension provides BeginScene/EndScene markers to allow buffering
+    and sorting of the OpenGL command sequence needed to construct and
+    entire frame. Scene markers are useful for region (aka tile) rendering
+    architectures, in which all of the geometry for a region a window must
+    be known before any can be rasterized. It may also be applicable to
+    other architectures requiring a scene database, such as scanline depth
+    buffers.
+
+Issues
+
+    *  Region architectures usually generate only a color buffer. Depth,
+       stencil, and other ancillary buffers, if they exist, are instantiated
+       only for the screen region being rasterized at any given time, and
+       are not retained after all geometry for that region has been
+       processed. As a consequence, ancillary buffers are usually
+       inaccessible via Read/Copy/Draw operations. Implementations may
+       choose to relax this restriction.
+
+    *  State changes affecting primitives are buffered and may need to be
+       processed for every screen region. This makes "large" state changes,
+       such as DrawPixels or TexImage2D, likely to be prohibitively
+       expensive within a scene.
+
+    *  State queries within a scene may also be very expensive, if they are
+       deferred to hardware which normally would not process them until
+       EndSceneEXT. As with large state changes, it seems preferable to
+       allow state queries within a scene, but document that they may be
+       costly.
+
+    *  Initial buffer state after BeginSceneEXT is undefined, forcing the
+       application to overwrite all pixels. This implies that multiple
+       scenes may not be merged into a single visible frame without software
+       intervention to read back and combine scenes.
+
+    *  SCENE_REQUIRED_EXT is a property of the visual or pixel format,
+       rather than an Enable. Making it an Enable would probably force a
+       switch between hardware and software paths.
+
+    *  2D (X or GDI or Quickdraw) rendering is probably only allowed after
+       EndSceneEXT, to prevent synchronization issues. It's unclear how to
+       phrase this in the spec, however.
+
+    *  Reads and copies between BeginSceneEXT and EndSceneEXT are made
+       illegal, since there are many sensible interpretations of what the
+       buffer contents might be during this period.
+
+    *  Add mechanism to allow out-of-order rendering, etc.
+
+        No.
+
+New Procedures and Functions
+
+    void BeginSceneEXT(void);
+    void EndSceneEXT(void);
+
+New Tokens
+
+    Accepted by the <attribList> parameter of glXChooseVisual, and by the
+    <attrib> parameter of glXGetConfig:
+
+        GLX_SCENE_REQUIRED_EXT
+
+    Accepted by the <pname> parameters of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        SCENE_REQUIRED_EXT
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Frame buffer)
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    <Insert before Section 5.6 Hints>
+
+    5.5.5 Scene Markers
+
+    Some OpenGL implementations may benefit from having delimiters which
+    mark the start and end of a command sequence which draws an entire
+    scene. These implementations may process commands in such a way that it
+    is impractical to allow certain commands such as reading the color
+    buffer to occur during the course of rendering the scene. When
+    SCENE_REQUIRED_EXT is TRUE, OpenGL command processing is modified as
+    follows:
+
+    A scene is started by issuing the command BeginSceneEXT; the contents of
+    the selected color, stencil, and depth buffers are undefined after
+    BeginSceneEXT. A scene is marked complete by issuing the command
+    EndSceneEXT. BeginSceneEXT and EndSceneEXT must be matched and do not
+    nest.
+
+    When issued between BeginSceneEXT and the corresponding EndSceneEXT, the
+    commands ReadPixels, CopyPixels, CopyTexImage, CopyTexSubImage,
+    DrawBuffer, Accum, Flush, and Finish generate an INVALID_OPERATION
+    error.
+
+    A ReadPixels or CopyPixels call requesting stencil, alpha, or depth
+    values may generate an INVALID_OPERATION error if the implementation
+    does not store those buffers in a form visible to the application.
+
+    When outside of a BeginSceneEXT/EndSceneEXT sequence, the fragments
+    generated from the command DrawPixels and from geometry issued during a
+    Begin/End sequence have an undefined effect on the color and ancillary
+    buffers, but their changes to OpenGL state are processed as normal. All
+    other commands are unaffected.
+
+    When SCENE_REQUIRED_EXT is FALSE, BeginSceneEXT and EndSceneEXT have no
+    effect, and none of the restrictions above are in force.
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    The parameter GLX_SCENE_REQUIRED_EXT is added to glXGetConfig. When
+    queried, by calling glXGetConfig with <attrib> set to
+    GLX_SCENE_REQUIRED_EXT, it returns True if the visual requires scene
+    markers. For a normal visual, the return value is False.
+
+    glXChooseVisual accepts GLX_SCENE_REQUIRED_EXT in <attribList>. Visuals
+    that require scene markers are preferred.
+
+GLX Protocol
+
+    XXX - not done yet
+
+Additions to WGL
+
+    The flag PFD_SCENE_REQUIRED_EXT is added to ChoosePixelFormat, to allow
+    selecting a pixel format which requires scene markers.
+
+    XXX - not done yet (no extension query mechanism for WGL at present).
+
+Errors
+
+    INVALID_OPERATION if BeginSceneEXT or EndSceneEXT is issued between
+    execution of Begin and the corresponding execution of End.
+
+    INVALID_OPERATION if BeginSceneEXT is issued between execution of
+    BeginSceneEXT and the corresponding execution of EndSceneEXT or
+    EndSceneEXT is issued when no BeginSceneEXT preceded it.
+
+    INVALID_OPERATION if ReadPixels, CopyPixels, CopyTexImage,
+    CopyTexSubImage, DrawBuffer, Accum, Flush, or Finish is issued between
+    execution of BeginSceneEXT and the corresponding execution of
+    EndSceneEXT.
+
+    INVALID_OPERATION if ReadPixels or CopyPixels is issued requesting
+    alpha, stencil, or depth components, and the implementation does not
+    store those buffers in a form visible to the application.
+
+New State
+
+    Get Value           Get Command     Type    Initial Value   Attribute
+    ---------           -----------     ----    -------------   ---------
+    SCENE_REQUIRED_EXT  GetBooleanv     B       -               -
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+Changes due to IHV feedback, revision 1.3, September 2, 1997 (ljp)
+
+    Made scene_marker a property of the visual or pixel format, rather than
+    an enable. Made DrawBuffer within a scene, or ReadPixels/CopyPixels of
+    depth or stencil, illegal.

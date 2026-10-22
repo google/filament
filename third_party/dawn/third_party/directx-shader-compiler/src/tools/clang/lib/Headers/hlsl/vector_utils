@@ -1,0 +1,42 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the DirectXShaderCompiler, under the Apache License v2.0 with LLVM
+// Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+// Header for vector template utility functions for operating on vector
+// templates.
+//===----------------------------------------------------------------------===//
+
+#ifndef __HLSL_VECTOR_UTILS
+#define __HLSL_VECTOR_UTILS
+
+#if __HLSL_VERSION >= 2021
+
+#include <enable_if>
+
+namespace hlsl {
+
+template <int Off, int OSz, typename T, int ISz>
+typename hlsl::enable_if<Off + OSz <= ISz, vector<T, OSz> >::type
+slice(vector<T, ISz> In) {
+  vector<T, OSz> Result = (vector<T, OSz>)0;
+
+  [unroll]
+  for (int I = 0; I < OSz; ++I)
+    Result[I] = In[I + Off];
+
+  return Result;
+}
+
+template <int OSz, typename T, int ISz>
+vector<T, OSz> slice(vector<T, ISz> In) {
+  return slice<0, OSz, T, ISz>(In);
+}
+
+} // namespace hlsl
+
+#endif // __HLSL_VERSION >= 2021
+#endif // __HLSL_VECTOR_UTILS

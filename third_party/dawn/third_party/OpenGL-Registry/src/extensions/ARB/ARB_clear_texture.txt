@@ -1,0 +1,567 @@
+Name
+
+    ARB_clear_texture
+
+Name Strings
+
+    GL_ARB_clear_texture
+
+Contact
+
+    Daniel Koch, NVIDIA Corporation (dkoch 'at' nvidia.com)
+
+Contributors
+
+    Graham Sellers, AMD
+    Jonathan Putsman, Imagination
+    Ian Rominick, Intel
+    Jeff Bolz, NVIDIA
+    Pat Brown, NVIDIA
+    Piers Daniel, NVIDIA
+    James Helferty, NVIDIA
+    Members of the ARB working group
+
+Notice
+
+    Copyright (c) 2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 3, 2013.
+    Ratified by the Khronos Board of Promoters on July 19, 2013.
+
+Version
+
+    Last Modified Date: August 12, 2013
+    Revision: 16
+
+Number
+
+    ARB Extension #145
+
+Dependencies
+
+    OpenGL 1.3 is required.
+
+    This extension is written against the OpenGL 4.3 (Core Profile)
+    Specification (October 18, 2012).
+
+    This extension interacts with EXT_texture_integer.
+
+    This extension interacts with ARB_texture_buffer_object.
+
+    This extension interacts with ARB_texture_multisample.
+
+    This extension interacts with ARB_depth_texture.
+
+    This extension interacts with EXT_packed_depth_stencil and
+    ARB_framebuffer_object.
+
+    This extension interacts with ARB_texture_stencil8.
+
+    This extension interacts with ARB_shader_image_load_store.
+
+    This extension interacts with ARB_internalformat_query2.
+
+Overview
+
+    Texture objects are fundamental to the operation of OpenGL. They are
+    used as a source for texture sampling and destination for rendering
+    as well as being accessed in shaders for image load/store operations
+    It is also possible to invalidate the contents of a texture. It is
+    currently only possible to set texture image data to known values by
+    uploading some or all of a image array from application memory or by
+    attaching it to a framebuffer object and using the Clear or ClearBuffer
+    commands.
+
+    Both uploading initial texture data and clearing by attaching to a
+    framebuffer have potential disadvantages when one simply wants to
+    initialize texture data to a known value. Uploading initial data
+    requires the application to allocate a (potentially large) chunk
+    of memory and transferring that to the GL.  This can be a costly
+    operation both in terms of memory bandwidth and power usage.
+    Alternatively, attaching a texture level to a framebuffer to clear it
+    may not be possible if the texture format isn't supported for
+    rendering, or even if it is, attaching the image to a framebuffer object
+    may cause the texture to be allocated in certain types of memory, which
+    it may otherwise not need to be placed in.
+
+    This extension solves these problems by providing a mechanism whereby
+    the contents of a texture image array can be set to known values by
+    using the ClearTexImage or ClearTexSubImage commands.  These commands
+    can also be useful for initializing an image that will be used for
+    atomic shader operations.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    void ClearTexImage(uint texture, int level,
+                       enum format, enum type,
+                       const void * data);
+
+    void ClearTexSubImage(uint texture, int level,
+                          int xoffset, int yoffset, int zoffset,
+                          sizei width, sizei height, sizei depth,
+                          enum format, enum type,
+                          const void * data);
+
+New Types
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter for GetInternalformativ and
+    GetInternalformati64v:
+
+        CLEAR_TEXTURE           0x9365
+
+Additions to Chapter 7 of the OpenGL 4.3 (Core Profile) Specification
+
+    In section 7.12.2 (Shader Memory Access Synchronization) edit the
+    description of the TEXTURE_UPDATE_BARRIER_BIT to add ClearTexImage
+    and ClearTexSubImage to the list of commands that can write to
+    texture images.
+
+Additions to Chapter 8 of the OpenGL 4.3 (Core Profile) Specification
+(Textures and Samplers)
+
+    Add a new Section 8.x (Clearing Texture Image Data) after
+    Section 8.20 (Invalidating Texture Image Data):
+
+    "All or part of a texture image may be filled with a constant value
+    by calling the command
+
+      void ClearTexSubImage(uint texture, int level,
+                            int xoffset, int yoffset, int zoffset,
+                            sizei width, sizei height, sizei depth,
+                            enum format, enum type,
+                            const void * data);
+
+    with <texture> and <level> indicating which texture array image is being
+    cleared.  It is an error if <texture> is zero or not the name of a texture
+    object, if <texture> is a buffer texture, or if the texture image has
+    a compressed internal format.
+
+    Arguments <xoffset>, <yoffset>, and <zoffset> specify the lower left
+    texel coordinates of a <width>-wide by <height>-high by <depth>-deep
+    rectangular subregion of the texel array and are interpreted as they
+    are in TexSubImage3D as described in section 8.6 (Alternate Texture
+    Image Specification Commands).
+
+    For 1D array textures, <yoffset> is interpreted as the first layer to be
+    cleared and <height> is the number of layers to clear. For 2D array
+    textures, <zoffset> is interpreted as the first layer to be cleared
+    and <depth> is the number of layers to clear. Cube map textures are
+    treated as an array of six slices in the z-dimension, where the value
+    of <zoffset> is interpreted as specifying the cube map face for the
+    corresponding <layer> in table 9.3 (Layer numbers for cube map texture
+    faces) and <depth> is the number of faces to clear. For cube map array
+    textures, <zoffset> is the first layer-face to clear, and <depth> is the
+    number of layer-faces to clear. Each layer-face is translated into an
+    array layer and a cube map face as described for layer-face numbers in
+    section 8.5.3.
+
+    Negative values of <xoffset>, <yoffset>, and <zoffset> correspond
+    to the coordinates of border texels, addressed as in Figure 8.3.
+    Taking <w_s>, <h_s>, <d_s>, <w_b>, <h_b>, and <d_b> to be the specified
+    width, height, depth, and the border width, border height, and border
+    depth of the texel array and taking <x>, <y>, <z>, <w>, <h>, and <d> to
+    be the <xoffset>, <yoffset>, <zoffset>, <width>, <height>, and <depth>
+    argument values, any of the following relationships generate an error:
+              <x> < - <w_b>
+        <x> + <w> > <w_s> - <w_b>
+              <y> < - <h_b>
+        <y> + <h> > <h_s> - <h_b>
+              <z> < - <d_b>
+        <z> + <d> > <d_s> - <d_b>
+    For texture types that do not have certain dimensions, this
+    command treats those dimensions as having a size of 1.  For example,
+    to clear a portion of a two-dimensional texture, the application would
+    use <zoffset> equal to zero and <depth> equal to one.
+
+    <format> and <type> specify the format and type of the source
+    data and are interpreted as they are for TexImage3D, as described in
+    section 8.4.4 (Transfer of Pixel Rectangles). Textures with a base
+    internal format of DEPTH_COMPONENT, STENCIL_INDEX, or DEPTH_STENCIL
+    require depth component, stencil, or depth/stencil component data
+    respectively. Textures with other base internal formats require RGBA
+    formats. Textures with integer internal formats (see table 8.12) require
+    integer data.
+
+    <data> is a pointer to an array of between one and four components of
+    texel data that will be used as the source for the constant fill value.
+    The elements of <data> are converted by the GL into the
+    <internalformat> of the texture image (that was specified when the level
+    was defined by any of the TexImage, TexStorage or CopyTexImage
+    commands) in the manner described in section 8.4.4 (Transfer of Pixel
+    Rectangles), and then used to fill the specified range of the
+    destination texture level.  If <data> is NULL, then the pointer is
+    ignored and the sub-range of the texture image is filled with zeros.
+    If <texture> is a multisample texture, all the samples in a texel
+    are cleared to the same value, that which was specified by <data>.
+
+    Errors
+
+    An INVALID_OPERATION error is generated if <texture> is zero or not the
+    name of a texture object.
+    An INVALID_OPERATION error is generated if <texture> is a buffer texture.
+    An INVALID_OPERATION error is generated if <texture> has a compressed
+    internal format.
+    An INVALID_OPERATION error is generated if the base internal format is
+    DEPTH_COMPONENT and <format> is not DEPTH_COMPONENT.
+    An INVALID_OPERATION error is generated if the base internal format is
+    DEPTH_STENCIL and <format> is not DEPTH_STENCIL.
+    An INVALID_OPERATION error is generated if the base internal format is
+    STENCIL_INDEX and <format> is not STENCIL_INDEX.
+    An INVALID_OPERATION error is generated if the base internal format is
+    RGBA and the <format> is DEPTH_COMPONENT, STENCIL_INDEX, or DEPTH_STENCIL.
+    An INVALID_OPERATION error is generated if the internal format is integer
+    and <format> does not specify integer data.
+    An INVALID_OPERATION error is generated if the internal format is
+    not integer and <format> does specify integer data.
+    An INVALID_OPERATION error is generated if the <xoffset>, <yoffset>,
+    <zoffset>, <width>, <height>, and <depth> parameters (or combinations
+    thereof) fall outside the defined texture image array (including border,
+    if any).
+
+    The command
+
+      void ClearTexImage(uint texture, int level,
+                         enum format, enum type,
+                         const void * data);
+
+    is equivalent to calling ClearTexSubImage with <xoffset>, <yoffset>,
+    and <zoffset> equal to -<b> and <width>, <height>, and <depth> equal
+    to the dimensions of the texture image plus 2x<b> (or zero and one
+    for dimensions the texture doesn't have).
+
+    Errors
+
+    An INVALID_OPERATION error is generated if the image array identified by
+    <level> has not previously been defined by a TexImage* or TexStorage*
+    command."
+
+Additions to Chapter 22 of the OpenGL 4.3 (Core Profile) Specification
+
+    In section 22.3 add the following to the list of <pname> values accepted
+    by GetInternalformativ and GetInternalformati64v:
+
+        CLEAR_TEXTURE: The support for using the resource with the
+        ClearTex*Image commands is returned in <params>.  Possible values
+        returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.  If the resource
+        or operation is not supported, NONE is returned.
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+Dependencies on EXT_texture_integer
+
+    If EXT_texture_integer or equivalent functionality is not supported,
+    ignore all references to integer textures.
+
+Dependencies on ARB_texture_buffer_object
+
+    If ARB_texture_buffer_object of equivalent functionality is not supported,
+    ignore all references to buffer textures.
+
+Dependencies on ARB_texture_multisample
+
+    If ARB_texture_multisample or equivalent functionality is not supported,
+    ignore all references to multisample textures.
+
+Dependencies on ARB_depth_texture
+
+    If ARB_depth_texture or equivalent functionality is not supported,
+    ignore all references to depth textures and depth component formats.
+
+Dependencies on EXT_packed_depth_stencil and ARB_framebuffer_object
+
+    If EXT_packed_depth_stencil, ARB_framebuffer_object, or equivalent
+    functionality is not supported, ignore all refereces to depth/stencil
+    textures and depth/stencil components.
+
+Dependencies on ARB_texture_stencil8
+
+    If ARB_texture_stencil8 or equivalent functionality is not supported,
+    ignore all references to stencil textures and stencil index formats.
+
+Dependencies on ARB_shader_image_load_store
+
+    If ARB_shader_image_load_store or equivalent functionality is not
+    supported, ignore the references to TEXTURE_UPDATE_BARRIER_BIT and
+    edits to section 7.12.2.
+
+Dependencies on ARB_internalformat_query2
+
+    If ARB_internalformat_query2 or equivalent functionality is not
+    supported, ignore the references GetInternalformat* and the CLEAR_TEXTURE
+    enum is not added.
+
+Errors
+
+    An INVALID_OPERATION error is generated by ClearTexImage or
+    ClearTexSubImage if <texture> is zero or not the name of a texture object.
+
+    An INVALID_OPERATION error is generated by ClearTexImage or
+    ClearTexSubImage if <texture> is a buffer texture.
+
+    An INVALID_OPERATION error is generated by ClearTexImage or
+    ClearTexSubImage if <texture> has a compressed internal format.
+
+    An INVALID_OPERATION error is generated by ClearTexImage or
+    ClearTexSubImage if the base internal format is DEPTH_COMPONENT and
+    <format> is not DEPTH_COMPONENT.
+
+    An INVALID_OPERATION error is generated by ClearTexImage or
+    ClearTexSubImage if the base internal format is STENCIL_INDEX and
+    <format> is not STENCIL_INDEX.
+
+    An INVALID_OPERATION error is generated by ClearTexImage or
+    ClearTexSubImage if the base internal format is DEPTH_STENCIL and
+    <format> is not DEPTH_STENCIL.
+
+    An INVALID_OPERATION error is generated by ClearTexImage or
+    ClearTexSubImage if the base internal format is RGBA and the <format>
+    is DEPTH_COMPONENT, STENCIL_INDEX, or DEPTH_STENCIL.
+
+    An INVALID_OPERATION error is generated by ClearTexImage or
+    ClearTexSubImage if the internal format is integer and <format> does not
+    specify integer data.
+
+    An INVALID_OPERATION error is generated by ClearTexImage or
+    ClearTexSubImage if the internal format is not integer and <format>
+    does specify integer data.
+
+    An INVALID_OPERATION error is generated by ClearTexSubImage if the
+    <xoffset>, <yoffset>, <zoffset>, <width>, <height>, and <depth>
+    parameters (or combinations thereof) fall outside the defined texture
+    image array (including border, if any).
+
+    An INVALID_OPERATION error is generated by ClearTexImage if the
+    image array identified by <level> has not previously been defined.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Sample Code
+
+    TBD
+
+Conformance Tests
+
+    Needed.
+
+Issues
+
+    1. Should these commands use <target> or <name> to specify the object?
+
+    DISCUSSION: TexImage/TexSubImage pass in a target and operate on the
+    object that is currently bound to that target. However the
+    InvalidateTexImage/InvalidateTexSubImage commands operate on a named
+    object. A target would be necessary if ClearTex*Image supported
+    defining new textures. It does not support this. It could also be
+    useful for clearing only one face of a cube map - if this is useful
+    this can be accomplished by creating a 2D texture which is view of one
+    face of a cube map.
+
+    RESOLVED. We will use named objects and be consistent with
+    the InvalidateTexImage entry points.
+
+    2. Should scissor and viewport settings be respected?
+
+    DISCUSSION: The scissor and viewport settings really have no meaning
+    with respect to a texture that is not attached to a framebuffer object.
+    D3D11's ClearRenderTargetView also does not apply scissor or viewport.
+
+    RESOLVED. Scissor and viewport are not relevant to this command.
+
+    3. Should we support clearing only a portion of a texture?
+
+    RESOLVED. Yes, it seems like it would be useful functionality.
+
+    4. How many command variants do we need? We may want to provide
+    integer, unsigned integer, or floating-point data. Is a void
+    parameter sufficient, or do we need to use different commands
+    similar to ClearBuffer?
+
+    RESOLVED. Similar to the initial texure data specification via
+    TexSubImage, a single command is provided. The format and type
+    parameters specify how the data should be interpreted, and enough
+    data needs to provided to completely define one texel. This operates
+    similarly to the ClearBufferData commands.
+
+    5. Should depth/stencil textures be supported? If so, are the depth
+    and stencil values provided separately?
+
+    RESOLVED. Depth/stencil textures are supported in the same manner
+    they are for TexSubImage.  The format and type describe how the
+    data is interpreted.
+
+    6. Should compressed textures be supported? If so, does a whole
+    block of data need to be specified?
+
+    DISCUSSION. For many compressed formats it may be fairly straight
+    forward for a driver to construct a block based on a single value.
+    It is unclear if this applies to all formats or not. In any case,
+    if compressed textures are supported, the sub region that is cleared
+    is required to be aligned on with block boundaries.
+
+    RESOLUTION: No. Compressed textures are not support. Not all formats
+    support runtime compression so providing uncompressed data would not
+    be viable. Providing a single block of compressed data may be possible
+    but then it would have to be aligned to block boundaries and this becomes
+    more of a sub-image command than a clear operation. This does not seem
+    to have a compelling use-case so it is not being added at this time. It
+    can always be added in a layered extension if desired.
+
+    7. Should we add an entry point for renderbuffers?
+
+    RESOLVED. No. At this point there is really no use case that
+    renderbuffers support that cannot be supported by multisample textures.
+    Thus in order to avoid aggrandizing renderbuffers, this will not be
+    provided.  Additionally, renderbuffers are by definition renderable,
+    and thus they can be cleared by the standard mechanisms without affecting
+    memory allocation patterns.
+
+    8. Should these commands support support loading <data> from the pixel
+    unpack buffer (ie PBO) or only client memory?
+
+    RESOLVED. ClearTex*Image only supports <data> in client memory, like the
+    comparable ClearBuffer*Data commands. There seems to be little value in
+    supporting buffer-backed sources when there is only one texels' worth of
+    data to upload. If the worst case (RGBA32F) it is only 16 bytes of data.
+
+    9. How does clearing multisample textures work?
+
+    RESOLVED: As with regular textures, the dimensions are specified in texels.
+    All the samples in a texel are cleared to the same values, ie the one set
+    of values which are provided in <data>.
+
+    10. Does conditional rendering interact with the ClearTex*Image commands?
+
+    RESOLVED: No. This is treated in a similar manner to the TexSubImage
+    commands rather than the other image clearing commands and is thus not
+    affected by conditional rendering.  This is similar to the clear buffer
+    data commands.
+
+    11. Would there be any benefit to providing some form of colormask style
+    behavior?
+
+    RESOLVED: No. This is intended to be a simple operation like memset.
+    If more complicated behaviour is required, one of the other mechanisms
+    for specifying texture image data should be used.
+
+    12. Can ClearTexImage be used on buffer textures?
+
+    RESOLVED: No. In the same way that TexSubImage cannot be used for
+    buffer textures, neither can ClearTexImage.  The ClearBuffer{Sub}Data
+    commands can be used for this purpose.
+
+    13. What happens if the subregion to be cleared is larger than the defined
+    texture level's size?
+
+    RESOLVED: This is an error similar to TexSubImage3D.
+
+    14. What about texture zero?
+
+    RESOLVED: Which one? There are many zero textures (one of each target type).
+    Since these commands don't distinguish based on target, this is an error.
+    Also we really don't want to aggrandize texture zero.
+
+    15. What happens for undefined levels?
+
+    RESOLVED: This depends on the command.  An undefined level will have
+    width, height, and depth of zero, and thus a ClearTexSubImage command with
+    a non-zero sized clear region will fail the bounds check and result in
+    an INVALID_OPERATION. A zero-sized clear region with no-offset is allowed,
+    but is a no-op. ClearTexImage though, is defined in terms of
+    ClearTexSubImage called with appropriate dimensions and offsets. Since
+    it's unclear how many dimensions an undefined level would have, we've
+    defined this to be an error.
+
+    16. What happens for incomplete textures?
+
+    RESOLVED: Incomplete textures do not affect the behaviour of these commands
+    since they operate on individual levels.  However see Issue 15 for
+    behaviour on undefined levels.
+
+    17. How does ClearTexture interact with the (compatibility) GENERATE_MIPMAP
+    texture state?
+
+    RESOLVED: It doesn't (i.e. it doesn't provoke automatic mipmap generation).
+    In general the policy is that new functionality doesn't need to interact with
+    legacy functionality. This also falls out of the way the spec is written
+    since section 8.14.5 on automatic mipmap generation says it applies to the
+    image specification operations defined in sections 8.5 to 8.7. ClearTexture
+    is defined in section 8.21.
+
+Revision History
+
+    Revision 16, 2013/08/12, Jon Leech
+        - Clarify issue 8 (public bug 934).
+    Revision 15, 2013/06/25, dgkoch
+        - assign value for GL_CLEAR_TEXTURE
+    Revision 14, 2013/06/21, dgkoch
+        - add CLEAR_TEXTURE for GetInternalformat* query.
+    Revision 13, 2013/06/04, dgkoch
+      - add issue 17.
+    Revision 12, 2013/05/30, Jon Leech
+      - Move new error to per-command Errors section.
+    Revision 11, 2013/05/30, dgkoch
+      - Add Issues 15, 16. Add error for ClearTexImage on undefined levels.
+      - fix naming of ARB_texture_stencil8 dependency.
+    Revision 10, 2013/05/30, Jon Leech
+      - Remove (some) redundant error descriptions from inline spec language
+        and simplify description of layer-faces.
+    Revision 9, 2013/05/29, dgkoch
+      - change error back to INVALID_OP
+    Revision 8, 2013/05/29, dgkoch
+      - added general error conditions to command description
+      - change error for non-texture names to be INVALID_VALUE
+      - minor grammatical and formatting fixes.
+    Revision 7, 2013/05/29, dgkoch
+      - add interaction with ARB_shader_image_load_store / MemoryBarrier
+    Revision 6, 2013/05/02, dgkoch
+      - add interaction with stencil textures
+      - fix typos and formatting
+    Revision 5, 2013/04/23, dgkoch
+      - fix more typos, confirm out of bounds error
+    Revision 4, 2013/04/22, dgkoch
+      - resolved issue 13, and update language appropriately
+      - add error for texture zero, remove error for undefined levels
+      - fix typos
+    Revision 3, 2013/04/21, dgkoch
+      - various formatting fixes
+      - add dependencies
+      - flesh out a lot of spec language instead of referring to other sections
+      - add error conditions
+      - allow larger dimensions than the texture image array.
+      - Resolved issues 6,7,10,11
+      - Added issues 12,13.
+    Revision 2, 2013/03/13, dgkoch
+      - Added issues 9,10,11
+      - Resolved issues 1,2,3,4,5,8,9
+      - update contact & contributors
+    Revision 1, 2013/01/15, dgkoch
+      - Initial revision

@@ -1,0 +1,27 @@
+static const uint3 gl_WorkGroupSize = uint3(4u, 4u, 1u);
+
+static const int indexable[4] = { 0, 1, 2, 3 };
+static const int indexable_1[4] = { 4, 5, 6, 7 };
+
+RWByteAddressBuffer _8 : register(u0);
+
+static uint3 gl_LocalInvocationID;
+static uint3 gl_GlobalInvocationID;
+struct SPIRV_Cross_Input
+{
+    uint3 gl_LocalInvocationID : SV_GroupThreadID;
+    uint3 gl_GlobalInvocationID : SV_DispatchThreadID;
+};
+
+void comp_main()
+{
+    _8.Store(gl_GlobalInvocationID.x * 4 + 0, uint(indexable[gl_LocalInvocationID.x] + indexable_1[gl_LocalInvocationID.y]));
+}
+
+[numthreads(4, 4, 1)]
+void main(SPIRV_Cross_Input stage_input)
+{
+    gl_LocalInvocationID = stage_input.gl_LocalInvocationID;
+    gl_GlobalInvocationID = stage_input.gl_GlobalInvocationID;
+    comp_main();
+}

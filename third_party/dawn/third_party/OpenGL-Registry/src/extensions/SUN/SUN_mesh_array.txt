@@ -1,0 +1,117 @@
+
+Name
+
+    SUN_mesh_array
+
+Name Strings
+
+    GL_SUN_mesh_array
+
+Contact
+
+    Jack Middleton, Sun (Jack.Middleton 'at' sun.com)
+
+Status
+
+    Shipping (version 1.1)
+
+Version
+   
+    $Date: 02/03/14 08:48:06  $Revision: 1.3 $
+
+Number
+
+    257
+
+Dependencies
+
+    OpenGL 1.1 is required
+    The extension is written against the OpenGL 1.3 Specification.
+
+Overview
+
+
+  This extension defines a new mesh primitive.
+  The primitive can only be used with vertex arrays and cannot be used in
+  immediate mode. The application must arrange the vertices in row major format.
+  For example if a quad mesh is 4 vertices wide the, vertices in the first
+  row are the first 4 vertices and vertices in the second row are vertices 5
+  through 8. 
+
+IP Status
+
+  There are no known IP issues.
+
+Issues
+
+ 1. Should glDrawMultiMeshArraysSUN and/or glDrawRangeMeshArraysSUN
+    be included?
+   
+      No. small meshes are not that common. A mesh is like a series of 
+      triangle or quad meshes already. 
+
+
+New Procedures and Functions
+
+  glDrawMeshArraysSUN( GLenum mode, GLint first, GLsizei count, GLsizei width )
+
+New Tokens
+
+   Accepted by the <mode> parameter of DrawMeshArraysSun,
+
+   QUAD_MESH_SUN               0x8614
+   TRIANGLE_MESH_SUN           0x8615
+
+Additions to Chapter 2 of the 1.3 GL Specification (OpenGL Operation)
+
+  Section 2.8 Vertex Arrays:
+
+  The command 
+
+     void DrawMeshArraysSUN( enum mode, int first, sizei count, sizei width );
+
+  constructs a mesh primitive using the elements first through first+count-1
+  of each enabled array. The mode specifies if it is a quad mesh or triangle
+  mesh. The only token values accepted by mode are QUAD_MESH_SUN and 
+  TRIANGLE_MESH_SUN. Width specifies how many vertices are in each row 
+  of the mesh. The elements must be arranged in row major order within the
+  arrays.
+
+Additions to Chapter 3 of the 1.3 GL Specification (Rasterization)
+
+    None
+
+
+Additions to Chapter 4 of the 1.3 GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.3 GL Specification (Special Functions)
+
+    None
+
+
+Additions to Chapter 6 of the 1.3 GL Specification (State and State Requests)
+
+    None
+
+Additions to the GLX / WGL / AGL Specifications
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    INVALID_VALUE is generated if <count> is not an even multiple of
+    width.
+ 
+    INVALID_ENUM is generated if <mode> is not QUAD_MESH_SUN or
+    TRIANGLE_MESH_SUN.
+ 
+New State
+
+   None

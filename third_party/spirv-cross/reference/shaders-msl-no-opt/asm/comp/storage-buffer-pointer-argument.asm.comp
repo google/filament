@@ -1,0 +1,28 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    float a;
+};
+
+struct SSBORead
+{
+    float b;
+};
+
+static inline __attribute__((always_inline))
+void copy_out(device float* A, device float* B)
+{
+    *A = *B;
+}
+
+kernel void main0(device SSBO& _10 [[buffer(0)]], device SSBORead& _14 [[buffer(1)]])
+{
+    copy_out(&_10.a, &_14.b);
+}
+

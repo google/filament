@@ -1,0 +1,401 @@
+{
+  "meta": {
+    "generator_version": "1.0.0",
+    "source_file": "/Users/mathias/sources/git/filament/tools/apigen/tests/java/02_entity.h"
+  },
+  "includes": {
+    "user": [],
+    "system": [
+      "<utils/Entity.h>",
+      "<utils/EntityInstance.h>"
+    ]
+  },
+  "enums": [],
+  "classes": [
+    {
+      "name": "Foo",
+      "qualified_name": "Foo",
+      "location": {
+        "file": "tools/apigen/tests/java/02_entity.h",
+        "line": 4
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "Foo",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [
+        {
+          "name": "setEntity",
+          "qualified_name": "setEntity(utils::Entity)",
+          "location": {
+            "file": "tools/apigen/tests/java/02_entity.h",
+            "line": 8
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "e",
+              "type": {
+                "cpp_name": "utils::Entity",
+                "qualified_name": "utils::Entity",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getEntity",
+          "qualified_name": "getEntity()",
+          "location": {
+            "file": "tools/apigen/tests/java/02_entity.h",
+            "line": 9
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "utils::Entity",
+            "qualified_name": "utils::Entity",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "setEntityInstanceA",
+          "qualified_name": "setEntityInstanceA(utils::EntityInstance<Foo, false>)",
+          "location": {
+            "file": "tools/apigen/tests/java/02_entity.h",
+            "line": 11
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "i",
+              "type": {
+                "cpp_name": "utils::EntityInstance<Foo, false>",
+                "qualified_name": "utils::EntityInstance<Foo>",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getEntityInstanceA",
+          "qualified_name": "getEntityInstanceA()",
+          "location": {
+            "file": "tools/apigen/tests/java/02_entity.h",
+            "line": 12
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "utils::EntityInstance<Foo, false>",
+            "qualified_name": "utils::EntityInstance<Foo>",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "setEntityInstanceB",
+          "qualified_name": "setEntityInstanceB(utils::EntityInstance<Foo, true>)",
+          "location": {
+            "file": "tools/apigen/tests/java/02_entity.h",
+            "line": 14
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "i",
+              "type": {
+                "cpp_name": "utils::EntityInstance<Foo, true>",
+                "qualified_name": "utils::EntityInstance<Foo>",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getEntityInstanceB",
+          "qualified_name": "getEntityInstanceB()",
+          "location": {
+            "file": "tools/apigen/tests/java/02_entity.h",
+            "line": 15
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "utils::EntityInstance<Foo, true>",
+            "qualified_name": "utils::EntityInstance<Foo>",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "setEntityInstanceAlias",
+          "qualified_name": "setEntityInstanceAlias(Instance)",
+          "location": {
+            "file": "tools/apigen/tests/java/02_entity.h",
+            "line": 17
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "i",
+              "type": {
+                "cpp_name": "Instance",
+                "qualified_name": "utils::EntityInstance<Foo>",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getEntityInstanceAlias",
+          "qualified_name": "getEntityInstanceAlias()",
+          "location": {
+            "file": "tools/apigen/tests/java/02_entity.h",
+            "line": 18
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "Instance",
+            "qualified_name": "utils::EntityInstance<Foo>",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": [
+        {
+          "name": "Instance",
+          "qualified_name": "Foo::Instance",
+          "location": {
+            "file": "tools/apigen/tests/java/02_entity.h",
+            "line": 6
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "utils::EntityInstance<Foo>",
+            "qualified_name": "utils::EntityInstance<Foo>",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          }
+        }
+      ]
+    }
+  ],
+  "functions": []
+}

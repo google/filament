@@ -1,0 +1,1543 @@
+/*
+ * Copyright (C) 2015 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TNT_FILAMENT_ENGINE_H
+#define TNT_FILAMENT_ENGINE_H
+
+
+#include <filament/ColorGrading.h>
+#include <filament/FilamentAPI.h>
+
+#include <backend/DriverEnums.h>
+#include <backend/Platform.h>
+
+#include <utils/compiler.h>
+#include <utils/Invocable.h>
+#include <utils/Slice.h>
+#include <utils/tribool.h>
+
+#include <functional>
+#include <initializer_list>
+#include <optional>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
+
+
+namespace utils {
+class Entity;
+class EntityManager;
+class JobSystem;
+} // namespace utils
+
+namespace filament {
+
+namespace backend {
+class Driver;
+} // backend
+
+class BufferObject;
+class Camera;
+class ColorGrading;
+class DebugRegistry;
+class Fence;
+class FramePacer;
+class IndexBuffer;
+class SkinningBuffer;
+class IndirectLight;
+class Material;
+class MaterialInstance;
+class MorphTargetBuffer;
+class Renderer;
+class RenderTarget;
+class Scene;
+class Skybox;
+class Stream;
+class SwapChain;
+class Sync;
+class Texture;
+class VertexBuffer;
+class View;
+class InstanceBuffer;
+
+class LightManager;
+class RenderableManager;
+class TransformManager;
+
+#ifndef FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB
+#    define FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB 3
+#endif
+
+#ifndef FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB
+#    define FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB 2
+#endif
+
+#ifndef FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB
+#    define FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB 1
+#endif
+
+#ifndef FILAMENT_COMMAND_BUFFER_SIZE_IN_MB
+#    define FILAMENT_COMMAND_BUFFER_SIZE_IN_MB (FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB * 3)
+#endif
+
+/**
+ * Engine is filament's main entry-point.
+ *
+ * An Engine instance main function is to keep track of all resources created by the user and
+ * manage the rendering thread as well as the hardware renderer.
+ *
+ * To use filament, an Engine instance must be created first:
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * #include <filament/Engine.h>
+ * using namespace filament;
+ *
+ * Engine* engine = Engine::create();
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * Engine essentially represents (or is associated to) a hardware context
+ * (e.g. an OpenGL ES context).
+ *
+ * Rendering typically happens in an operating system's window (which can be full screen), such
+ * window is managed by a filament.Renderer.
+ *
+ * A typical filament render loop looks like this:
+ *
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * #include <filament/Engine.h>
+ * #include <filament/Renderer.h>
+ * #include <filament/Scene.h>
+ * #include <filament/View.h>
+ * using namespace filament;
+ *
+ * Engine* engine       = Engine::create();
+ * SwapChain* swapChain = engine->createSwapChain(nativeWindow);
+ * Renderer* renderer   = engine->createRenderer();
+ * Scene* scene         = engine->createScene();
+ * View* view           = engine->createView();
+ *
+ * view->setScene(scene);
+ *
+ * do {
+ *     // typically we wait for VSYNC and user input events
+ *     if (renderer->beginFrame(swapChain)) {
+ *         renderer->render(view);
+ *         renderer->endFrame();
+ *     }
+ * } while (!quit);
+ *
+ * engine->destroy(view);
+ * engine->destroy(scene);
+ * engine->destroy(renderer);
+ * engine->destroy(swapChain);
+ * Engine::destroy(&engine); // clears engine*
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * Resource Tracking
+ * =================
+ *
+ *  Each Engine instance keeps track of all objects created by the user, such as vertex and index
+ *  buffers, lights, cameras, etc...
+ *  The user is expected to free those resources, however, leaked resources are freed when the
+ *  engine instance is destroyed and a warning is emitted in the console.
+ *
+ * Thread safety
+ * =============
+ *
+ * An Engine instance is not thread-safe. The implementation makes no attempt to synchronize
+ * calls to an Engine instance methods.
+ * If multi-threading is needed, synchronization must be external.
+ *
+ * Multi-threading
+ * ===============
+ *
+ * When created, the Engine instance starts a render thread as well as multiple worker threads,
+ * these threads have an elevated priority appropriate for rendering, based on the platform's
+ * best practices. The number of worker threads depends on the platform and is automatically
+ * chosen for best performance.
+ *
+ * On platforms with asymmetric cores (e.g. ARM's Big.Little), Engine makes some educated guesses
+ * as to which cores to use for the render thread and worker threads. For example, it'll try to
+ * keep an OpenGL ES thread on a Big core.
+ *
+ * Swap Chains
+ * ===========
+ *
+ * A swap chain represents an Operating System's *native* renderable surface. Typically it's a window
+ * or a view. Because a SwapChain is initialized from a native object, it is given to filament
+ * as a `void*`, which must be of the proper type for each platform filament is running on.
+ *
+ * @see SwapChain
+ *
+ *
+ * @see Renderer
+ */
+class UTILS_PUBLIC UTILS_APIGEN_USED_BY_NATIVE Engine {
+    struct BuilderDetails;
+public:
+    using Platform UTILS_NOAPIGEN = backend::Platform;
+    using Backend = backend::Backend;
+    using DriverConfig UTILS_NOAPIGEN = backend::Platform::DriverConfig;
+    using FeatureLevel = backend::FeatureLevel;
+    using StereoscopicType = backend::StereoscopicType;
+    using Driver UTILS_NOAPIGEN = backend::Driver;
+    using GpuContextPriority = backend::Platform::GpuContextPriority;
+    using AsynchronousMode = backend::AsynchronousMode;
+    using AsyncCallStatus UTILS_NOAPIGEN = backend::AsyncCallStatus;
+    using AsyncCompletionCallback UTILS_NOAPIGEN = std::function<void(void* UTILS_NULLABLE, AsyncCallStatus)>;
+    using AsyncCallId UTILS_NOAPIGEN = backend::AsyncCallId;
+
+    /**
+     * Three-state feature state.
+     */
+    enum class FeatureState : uint8_t {
+        DISABLED = 0,
+        ENABLED = 1,
+        INDETERMINATE = 2
+    };
+
+    /**
+     * Config is used to define the memory footprint used by the engine, such as the
+     * command buffer size. Config can be used to customize engine requirements based
+     * on the applications needs.
+     *
+     *    .perRenderPassArenaSizeMB (default: 3 MiB)
+     *   +--------------------------+
+     *   |                          |
+     *   | .perFrameCommandsSizeMB  |
+     *   |    (default 2 MiB)       |
+     *   |                          |
+     *   +--------------------------+
+     *   |  (froxel, etc...)        |
+     *   +--------------------------+
+     *
+     *
+     *      .commandBufferSizeMB (default 3MiB)
+     *   +--------------------------+
+     *   | .minCommandBufferSizeMB  |
+     *   +--------------------------+
+     *   | .minCommandBufferSizeMB  |
+     *   +--------------------------+
+     *   | .minCommandBufferSizeMB  |
+     *   +--------------------------+
+     *   :                          :
+     *   :                          :
+     *
+     */
+    struct Config {
+        /**
+         * Size in MiB of the low-level command buffer arena.
+         *
+         * Each new command buffer is allocated from here. If this buffer is too small the program
+         * might terminate or rendering errors might occur.
+         *
+         * This is typically set to minCommandBufferSizeMB * 3, so that up to 3 frames can be
+         * batched-up at once.
+         *
+         * This value affects the application's memory usage.
+         */
+        uint32_t commandBufferSizeMB = FILAMENT_COMMAND_BUFFER_SIZE_IN_MB;
+
+
+        /**
+         * Size in MiB of the per-frame data arena.
+         *
+         * This is the main arena used for allocations when preparing a frame.
+         * e.g.: Froxel data and high-level commands are allocated from this arena.
+         *
+         * If this size is too small, the program will abort on debug builds and have undefined
+         * behavior otherwise.
+         *
+         * This value affects the application's memory usage.
+         */
+        uint32_t perRenderPassArenaSizeMB = FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB;
+
+
+        /**
+         * Size in MiB of the backend's handle arena.
+         *
+         * Backends will fallback to slower heap-based allocations when running out of space and
+         * log this condition.
+         *
+         * If 0, then the default value for the given platform is used
+         *
+         * This value affects the application's memory usage.
+         */
+        uint32_t driverHandleArenaSizeMB = 0;
+
+
+        /**
+         * Minimum size in MiB of a low-level command buffer.
+         *
+         * This is how much space is guaranteed to be available for low-level commands when a new
+         * buffer is allocated. If this is too small, the engine might have to stall to wait for
+         * more space to become available, this situation is logged.
+         *
+         * This value does not affect the application's memory usage.
+         */
+        uint32_t minCommandBufferSizeMB = FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB;
+
+
+        /**
+         * Size in MiB of the per-frame high level command buffer.
+         *
+         * This buffer is related to the number of draw calls achievable within a frame, if it is
+         * too small, the program will abort on debug builds and have undefined behavior otherwise.
+         *
+         * It is allocated from the 'per-render-pass arena' above. Make sure that at least 1 MiB is
+         * left in the per-render-pass arena when deciding the size of this buffer.
+         *
+         * This value does not affect the application's memory usage.
+         */
+        uint32_t perFrameCommandsSizeMB = FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB;
+
+        /**
+         * Special value for jobSystemThreadCount, forcing the JobSystem to be single-threaded.
+         */
+        static constexpr uint32_t SINGLE_THREADED = std::numeric_limits<uint32_t>::max();
+
+        /**
+         * Number of threads to use in Engine's JobSystem.
+         *
+         * Engine uses a utils::JobSystem to carry out parallelization of Engine workloads. This
+         * value sets the number of threads allocated for JobSystem. Configuring this value can be
+         * helpful in CPU-constrained environments where too many threads can cause contention of
+         * CPU and reduce performance.
+         *
+         * The default value is 0, which implies that the Engine will use a heuristic to determine
+         * the number of threads to use.
+         *
+         * The special value SINGLE_THREADED forces the JobSystem to be single-threaded and not use
+         * a thread pool (jobs are executed on the calling thread).
+         */
+        uint32_t jobSystemThreadCount = 0;
+
+
+        /**
+         * When uploading vertex or index data, the Filament Metal backend copies data
+         * into a shared staging area before transferring it to the GPU. This setting controls
+         * the total size of the buffer used to perform these allocations.
+         *
+         * Higher values can improve performance when performing many uploads across a small
+         * number of frames.
+         *
+         * This buffer remains alive throughout the lifetime of the Engine, so this size adds to the
+         * memory footprint of the app and should be set as conservative as possible.
+         *
+         * A value of 0 disables the shared staging buffer entirely; uploads will acquire an
+         * individual buffer from a pool of shared buffers.
+         *
+         * Only respected by the Metal backend.
+         */
+        size_t metalUploadBufferSizeBytes = 512 * 1024;
+
+        /**
+         * The action to take if a Drawable cannot be acquired.
+         *
+         * Each frame rendered requires a CAMetalDrawable texture, which is
+         * presented on-screen at the completion of each frame. These are
+         * limited and provided round-robin style by the system.
+         */
+        bool metalDisablePanicOnDrawableFailure = false;
+
+        /**
+         * Set to `true` to forcibly disable parallel shader compilation in the backend.
+         * Currently only honored by the GL and Metal backends.
+         * @deprecated use "backend.disable_parallel_shader_compile" feature flag instead
+         */
+        bool disableParallelShaderCompile = false;
+
+        /*
+         * The type of technique for stereoscopic rendering.
+         *
+         * This setting determines the algorithm used when stereoscopic rendering is enabled. This
+         * decision applies to the entire Engine for the lifetime of the Engine. E.g., multiple
+         * Views created from the Engine must use the same stereoscopic type.
+         *
+         * Each view can enable stereoscopic rendering via the StereoscopicOptions::enable flag.
+         *
+         * @see View::setStereoscopicOptions
+         */
+        StereoscopicType stereoscopicType = StereoscopicType::NONE;
+
+        /*
+         * The number of eyes to render when stereoscopic rendering is enabled. Supported values are
+         * between 1 and Engine::getMaxStereoscopicEyes() (inclusive).
+         *
+         * @see View::setStereoscopicOptions
+         * @see Engine::getMaxStereoscopicEyes
+         */
+        uint8_t stereoscopicEyeCount = 2;
+
+        /*
+         * @deprecated This value is no longer used.
+         */
+        uint32_t resourceAllocatorCacheSizeMB = 64;
+
+        /*
+         * This value determines how many frames texture entries are kept for in the cache. This
+         * is a soft limit, meaning some texture older than this are allowed to stay in the cache.
+         * Typically only one texture is evicted per frame.
+         * The default is 1.
+         */
+        uint32_t resourceAllocatorCacheMaxAge = 1;
+
+        /*
+         * Disable backend handles use-after-free checks.
+         * @deprecated use "backend.disable_handle_use_after_free_check" feature flag instead
+         */
+        bool disableHandleUseAfterFreeCheck = false;
+
+        /*
+         * Sets a preferred shader language for Filament to use.
+         *
+         * The Metal backend supports two shader languages: MSL (Metal Shading Language) and
+         * METAL_LIBRARY (precompiled .metallib). This option controls which shader language is
+         * used when materials contain both.
+         *
+         * By default, when preferredShaderLanguage is unset, Filament will prefer METAL_LIBRARY
+         * shaders if present within a material, falling back to MSL. Setting
+         * preferredShaderLanguage to ShaderLanguage::MSL will instead instruct Filament to check
+         * for the presence of MSL in a material first, falling back to METAL_LIBRARY if MSL is not
+         * present.
+         *
+         * When using a non-Metal backend, setting this has no effect.
+         */
+        enum class ShaderLanguage {
+            DEFAULT = 0,
+            MSL = 1,
+            METAL_LIBRARY = 2,
+        };
+        ShaderLanguage preferredShaderLanguage = ShaderLanguage::DEFAULT;
+
+        /*
+         * When the OpenGL ES backend is used, setting this value to true will force a GLES2.0
+         * context if supported by the Platform, or if not, will have the backend pretend
+         * it's a GLES2 context. Ignored on other backends.
+         */
+        bool forceGLES2Context = false;
+
+        /**
+         * Assert the native window associated to a SwapChain is valid when calling makeCurrent().
+         * This is only supported for:
+         *      - PlatformEGLAndroid
+         * @deprecated use "backend.opengl.assert_native_window_is_valid" feature flag instead
+         */
+        bool assertNativeWindowIsValid = false;
+
+        /**
+         * GPU context priority level. Controls GPU work scheduling and preemption.
+         */
+        GpuContextPriority gpuContextPriority = GpuContextPriority::DEFAULT;
+
+        /**
+         * The initial size in bytes of the shared uniform buffer used for material instance
+         * batching.
+         *
+         * If the buffer runs out of space during a frame, it will be automatically reallocated
+         * with a larger capacity. Setting an appropriate initial size can help avoid runtime
+         * reallocations, which can cause a minor performance stutter, at the cost of higher
+         * initial memory usage.
+         */
+        uint32_t sharedUboInitialSizeInBytes = 256 * 64;
+
+        /**
+         * Asynchronous mode for the engine. Defines how asynchronous operations are handled.
+         * Note that selecting a non-NONE mode does not guarantee asynchronous methods are
+         * supported, as the underlying backend or the feature flag may override this configuration.
+         * Always validate availability via Engine::isAsynchronousModeEnabled() before
+         * invoking asynchronous methods.
+         */
+        AsynchronousMode asynchronousMode = AsynchronousMode::NONE;
+
+        /**
+         * Capacity of the LRU cache for material definitions.
+         *
+         * A value of 0 indicates that definitions will be destroyed immediately when they are no
+         * longer referenced by any material instances or scenes. A value greater than 0 defines
+         * the maximum number of unreferenced definitions to keep alive to avoid re-compilation.
+         */
+        uint32_t materialCacheCapacity = 0;
+
+        /**
+         * Capacity of the LRU cache for program specializations.
+         *
+         * Similar to materialCacheCapacity, but applies to the underlying shader programs generated
+         * for materials. A value of 0 means immediate destruction of unreferenced programs. A
+         * positive value caches up to that number of programs.
+         */
+        uint32_t programCacheCapacity = 0;
+
+        /**
+         * Whether a scene can contain more than one directional light.
+         *
+         * By default, and historically, only the dominant directional light (the one with the
+         * highest intensity) of a scene is evaluated. When this is enabled, up to four
+         * additional directional lights contribute lighting; they don't cast shadows and don't
+         * draw a sun's disk. Scenes with a single directional light are unaffected either way.
+         *
+         * @see LightManager
+         */
+        bool enableMultipleDirectionalLights = false;
+    };
+
+
+    /**
+     * Feature flags can be enabled or disabled when the Engine is built. Some Feature flags can
+     * also be toggled at any time. Feature flags should alawys use their default value unless
+     * the feature enabled by the flag is faulty. Feature flags provide a last resort way to
+     * disable problematic features.
+     * Feature flags are intended to have a short life-time and are regularly removed as features
+     * mature.
+     */
+    struct UTILS_NOAPIGEN FeatureFlag {
+        char const* UTILS_NONNULL name;         //!< name of the feature flag
+        char const* UTILS_NONNULL description;  //!< short description
+        bool const* UTILS_NONNULL value;        //!< pointer to the value of the flag
+        bool constant = true;                   //!< whether the flag is constant after construction
+    };
+
+    /**
+     * Returns the list of available feature flags
+     */
+    UTILS_NOAPIGEN
+    utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept;
+
+#if UTILS_HAS_THREADING
+    using CreateCallback = void(void* UTILS_NULLABLE user, void* UTILS_NONNULL token);
+#endif
+
+    /**
+     * Engine::Builder is used to create a new filament Engine.
+     */
+    class Builder : public BuilderBase<BuilderDetails> {
+        friend struct BuilderDetails;
+        friend class FEngine;
+    public:
+        Builder() noexcept;
+        Builder(Builder const& rhs) noexcept;
+        Builder(Builder&& rhs) noexcept;
+        ~Builder() noexcept;
+        Builder& operator=(Builder const& rhs) noexcept;
+        Builder& operator=(Builder&& rhs) noexcept;
+
+        /**
+         * @param backend Which driver backend to use
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& backend(Backend backend) noexcept;
+
+        /**
+         * @param platform A pointer to an object that implements Platform. If this is
+         *                 provided, then this object is used to create the hardware context
+         *                 and expose platform features to it.
+         *
+         *                 If not provided (or nullptr is used), an appropriate Platform
+         *                 is created automatically.
+         *
+         *                 All methods of this interface are called from filament's
+         *                 render thread, which is different from the main thread.
+         *
+         *                 The lifetime of \p platform must exceed the lifetime of
+         *                 the Engine object.
+         *
+         * @return A reference to this Builder for chaining calls.
+         */
+        UTILS_NOAPIGEN
+        Builder& platform(Platform* UTILS_NULLABLE platform) noexcept;
+
+        /**
+         * @param config    A pointer to optional parameters to specify memory size
+         *                  configuration options.  If nullptr, then defaults used.
+         *
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& config(const Config* UTILS_NULLABLE config) noexcept;
+
+        /**
+         * @param sharedContext A platform-dependant context used as a shared context
+         *                      when creating filament's internal context.
+         *
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& sharedContext(void* UTILS_NULLABLE sharedContext) noexcept;
+
+        /**
+         * @param featureLevel The feature level at which initialize Filament.
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& featureLevel(FeatureLevel featureLevel) noexcept;
+
+        /**
+         * Warning: This is an experimental API. See Engine::setPaused(bool) for caveats.
+         *
+         * @param paused Whether to start the rendering thread paused.
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& paused(bool paused) noexcept;
+
+        /**
+         * Set a feature flag value. This is the only way to set constant feature flags.
+         * @param name feature name
+         * @param value true to enable, false to disable
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& feature(char const* UTILS_NONNULL name, bool value) noexcept;
+
+        /**
+         * Enables a list of features.
+         * @param list list of feature names to enable.
+         * @return A reference to this Builder for chaining calls.
+         */
+        UTILS_NOAPIGEN
+        Builder& features(std::initializer_list<char const *> list) noexcept;
+
+        /**
+         * Sets the builder used to create the default ColorGrading object.
+         * @param colorGrading Builder used to create the default color grading.
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& colorGrading(ColorGrading::Builder const& colorGrading) noexcept;
+
+#if UTILS_HAS_THREADING
+        /**
+         * Creates the filament Engine asynchronously.
+         *
+         * @param callback  Callback called once the engine is initialized and it is safe to
+         *                  call Engine::getEngine().
+         */
+        UTILS_NOAPIGEN
+        void build(utils::Invocable<void(void* UTILS_NONNULL token)>&& callback) const;
+#endif
+
+        /**
+         * Creates an instance of Engine.
+         *
+         * @return  A pointer to the newly created Engine, or nullptr if the Engine couldn't be
+         *          created.
+         *          nullptr if the GPU driver couldn't be initialized, for instance if it doesn't
+         *          support the right version of OpenGL or OpenGL ES.
+         *
+         * @exception   utils::PostConditionPanic can be thrown if there isn't enough memory to
+         *              allocate the command buffer. If exceptions are disabled, this condition if
+         *              fatal and this function will abort.
+         */
+        Engine* UTILS_NULLABLE build() const;
+    };
+
+    /**
+     * Backward compatibility helper to create an Engine.
+     * @see Builder
+     */
+    UTILS_NOAPIGEN
+    static inline Engine* UTILS_NULLABLE create(Backend backend = Backend::DEFAULT,
+            Platform* UTILS_NULLABLE platform = nullptr,
+            void* UTILS_NULLABLE sharedContext = nullptr,
+            const Config* UTILS_NULLABLE config = nullptr) {
+        return Builder()
+                .backend(backend)
+                .platform(platform)
+                .sharedContext(sharedContext)
+                .config(config)
+                .build();
+    }
+
+
+#if UTILS_HAS_THREADING
+    /**
+     * Backward compatibility helper to create an Engine asynchronously.
+     * @see Builder
+     */
+    UTILS_NOAPIGEN
+    static inline void createAsync(CreateCallback callback,
+            void* UTILS_NULLABLE user,
+            Backend backend = Backend::DEFAULT,
+            Platform* UTILS_NULLABLE platform = nullptr,
+            void* UTILS_NULLABLE sharedContext = nullptr,
+            const Config* UTILS_NULLABLE config = nullptr) {
+        Builder()
+                .backend(backend)
+                .platform(platform)
+                .sharedContext(sharedContext)
+                .config(config)
+                .build([callback, user](void* UTILS_NONNULL token) {
+                    callback(user, token);
+                });
+    }
+
+    /**
+     * Retrieve an Engine* from createAsync(). This must be called from the same thread than
+     * Engine::createAsync() was called from.
+     *
+     * @param token An opaque token given in the createAsync() callback function.
+     *
+     * @return A pointer to the newly created Engine, or nullptr if the Engine couldn't be created.
+     *
+     * @exception utils::PostConditionPanic can be thrown if there isn't enough memory to
+     * allocate the command buffer. If exceptions are disabled, this condition if fatal and
+     * this function will abort.
+     */
+    UTILS_NOAPIGEN
+    static Engine* UTILS_NULLABLE getEngine(void* UTILS_NONNULL token);
+#endif
+
+    /**
+     * @return the Driver instance used by this Engine.
+     * @see OpenGLPlatform
+     */
+    UTILS_NOAPIGEN
+    backend::Driver const* UTILS_NONNULL getDriver() const noexcept;
+
+    /**
+     * Destroy the Engine instance and all associated resources.
+     *
+     * Engine.destroy() should be called last and after all other resources have been destroyed,
+     * it ensures all filament resources are freed.
+     *
+     * Destroy performs the following tasks:
+     * 1. Destroy all internal software and hardware resources.
+     * 2. Free all user allocated resources that are not already destroyed and logs a warning.
+     *    This indicates a "leak" in the user's code.
+     * 3. Terminate the rendering engine's thread.
+     *
+     * @param engine A pointer to the filament.Engine* to be destroyed.
+     *               \p engine is cleared upon return.
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * #include <filament/Engine.h>
+     * using namespace filament;
+     *
+     * Engine* engine = Engine::create();
+     * Engine::destroy(&engine); // clears engine*
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * \remark
+     * This method is thread-safe.
+     */
+    UTILS_NOAPIGEN
+    static void destroy(Engine* UTILS_NULLABLE* UTILS_NULLABLE engine);
+
+    /**
+     * Destroy the Engine instance and all associated resources.
+     *
+     * Engine.destroy() should be called last and after all other resources have been destroyed,
+     * it ensures all filament resources are freed.
+     *
+     * Destroy performs the following tasks:
+     * 1. Destroy all internal software and hardware resources.
+     * 2. Free all user allocated resources that are not already destroyed and logs a warning.
+     *    This indicates a "leak" in the user's code.
+     * 3. Terminate the rendering engine's thread.
+     *
+     * @param engine A pointer to the filament.Engine to be destroyed.
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * #include <filament/Engine.h>
+     * using namespace filament;
+     *
+     * Engine* engine = Engine::create();
+     * Engine::destroy(engine);
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * \remark
+     * This method is thread-safe.
+     */
+    UTILS_NOAPIGEN
+    static void destroy(Engine* UTILS_NULLABLE engine);
+
+    /**
+     * Query the feature level supported by the selected backend.
+     *
+     * A specific feature level needs to be set before the corresponding features can be used.
+     *
+     * @return FeatureLevel supported the selected backend.
+     * @see setActiveFeatureLevel
+     */
+    FeatureLevel getSupportedFeatureLevel() const noexcept;
+
+    /**
+     * Activate all features of a given feature level. If an explicit feature level is not specified
+     * at Engine initialization time via Builder::featureLevel, the default feature level is
+     * FeatureLevel::FEATURE_LEVEL_0 on devices not compatible with GLES 3.0; otherwise, the default
+     * is FeatureLevel::FEATURE_LEVEL_1. The selected feature level must not be higher than the
+     * value returned by getActiveFeatureLevel() and it's not possible lower the active feature
+     * level. Additionally, it is not possible to modify the feature level at all if the Engine was
+     * initialized at FeatureLevel::FEATURE_LEVEL_0.
+     *
+     * @param featureLevel the feature level to activate. If featureLevel is lower than
+     *                     getActiveFeatureLevel(), the current (higher) feature level is kept. If
+     *                     featureLevel is higher than getSupportedFeatureLevel(), or if the engine
+     *                     was initialized at feature level 0, an exception is thrown, or the
+     *                     program is terminated if exceptions are disabled.
+     *
+     * @return the active feature level.
+     *
+     * @see Builder::featureLevel
+     * @see getSupportedFeatureLevel
+     * @see getActiveFeatureLevel
+     */
+    FeatureLevel setActiveFeatureLevel(FeatureLevel featureLevel);
+
+    /**
+     * Returns the currently active feature level.
+     * @return currently active feature level
+     * @see getSupportedFeatureLevel
+     * @see setActiveFeatureLevel
+     */
+    FeatureLevel getActiveFeatureLevel() const noexcept;
+
+    /**
+     * Queries the maximum number of GPU instances that Filament creates when automatic instancing
+     * is enabled. This value is also the limit for the number of transforms that can be stored in
+     * an InstanceBuffer. This value may depend on the device and platform, but will remain constant
+     * during the lifetime of this Engine.
+     *
+     * This value does not apply when using the instances(size_t) method on
+     * RenderableManager::Builder.
+     *
+     * @return the number of max automatic instances
+     * @see setAutomaticInstancingEnabled
+     * @see RenderableManager::Builder::instances(size_t)
+     * @see RenderableManager::Builder::instances(size_t, InstanceBuffer*)
+     */
+    size_t getMaxAutomaticInstances() const noexcept;
+
+    /**
+     * Queries the device and platform for support of the given stereoscopic type.
+     *
+     * @return true if the given stereo rendering is supported, false otherwise
+     * @see View::setStereoscopicOptions
+     */
+    bool isStereoSupported(StereoscopicType stereoscopicType) const noexcept;
+
+    /**
+     * Checks if the engine is set up for asynchronous operation. If it returns true, the
+     * asynchronous versions of the APIs are available for use.
+     *
+     * @return true if the engine supports asynchronous operation.
+     */
+    bool isAsynchronousModeEnabled() const noexcept;
+
+    /**
+     * Returns whether the engine has encountered an unrecoverable failure.
+     *
+     * If this returns true, the engine is in an unrecoverable state and further calls to
+     * rendering methods will fail or be ignored. Apps can use this to check for fatal
+     * errors instead of relying on exceptions.
+     *
+     * @return true if an unrecoverable failure has occurred, false otherwise.
+     */
+    bool hasUnrecoverableFailure() const noexcept;
+
+    /**
+     * Retrieves the configuration settings of this Engine.
+     *
+     * This method returns the configuration object that was supplied to the Engine's
+     * Builder::config method during the creation of this Engine. If the Builder::config method was
+     * not explicitly called (or called with nullptr), this method returns the default configuration
+     * settings.
+     *
+     * @return a Config object with this Engine's configuration
+     * @see Builder::config
+     */
+    const Config& getConfig() const noexcept;
+
+    /**
+     * Returns the maximum number of stereoscopic eyes supported by Filament. The actual number of
+     * eyes rendered is set at Engine creation time with the Engine::Config::stereoscopicEyeCount
+     * setting.
+     *
+     * @return the max number of stereoscopic eyes supported
+     * @see Engine::Config::stereoscopicEyeCount
+     */
+    static size_t getMaxStereoscopicEyes() noexcept;
+
+    /**
+     * @return EntityManager used by filament
+     */
+    utils::EntityManager& getEntityManager() const noexcept;
+
+    /**
+     * @return RenderableManager reference
+     */
+    RenderableManager& getRenderableManager() noexcept;
+
+    /**
+     * @return RenderableManager reference
+     */
+    RenderableManager const& getRenderableManager() const noexcept;
+
+    /**
+     * @return LightManager reference
+     */
+    LightManager& getLightManager() noexcept;
+
+    /**
+     * @return LightManager reference
+     */
+    LightManager const& getLightManager() const noexcept;
+
+    /**
+     * @return TransformManager reference
+     */
+    TransformManager& getTransformManager() noexcept;
+
+    /**
+     * @return TransformManager reference
+     */
+    TransformManager const& getTransformManager() const noexcept;
+
+    /**
+     * Helper to enable accurate translations.
+     * If you need this Engine to handle a very large world space, one way to achieve this
+     * automatically is to enable accurate translations in the TransformManager. This helper
+     * provides a convenient way of doing that.
+     * This is typically called once just after creating the Engine.
+     */
+    void enableAccurateTranslations() noexcept;
+
+    /**
+     * Enables or disables automatic instancing of render primitives. Instancing of render
+     * primitives can greatly reduce CPU overhead but requires the instanced primitives to be
+     * identical (i.e. use the same geometry) and use the same MaterialInstance. If it is known
+     * that the scene doesn't contain any identical primitives, automatic instancing can have some
+     * overhead and it is then best to disable it.
+     *
+     * Disabled by default.
+     *
+     * @param enable true to enable, false to disable automatic instancing.
+     *
+     * @see RenderableManager
+     * @see MaterialInstance
+     */
+    void setAutomaticInstancingEnabled(bool enable) noexcept;
+
+    /**
+     * @return true if automatic instancing is enabled, false otherwise.
+     * @see setAutomaticInstancingEnabled
+     */
+    bool isAutomaticInstancingEnabled() const noexcept;
+
+    /**
+     * Creates a SwapChain from the given Operating System's native window handle.
+     *
+     * @param nativeWindow An opaque native window handle. e.g.: on Android this is an
+     *                     `ANativeWindow*`.
+     * @param flags One or more configuration flags as defined in `SwapChain`.
+     *
+     * @return A pointer to the newly created SwapChain.
+     *
+     * @see Renderer.beginFrame()
+     */
+    SwapChain* UTILS_NONNULL createSwapChain(void* UTILS_NULLABLE nativeWindow, uint64_t flags = 0) noexcept;
+
+
+    /**
+     * Creates a headless SwapChain.
+     *
+      * @param width    Width of the drawing buffer in pixels.
+      * @param height   Height of the drawing buffer in pixels.
+     * @param flags     One or more configuration flags as defined in `SwapChain`.
+     *
+     * @return A pointer to the newly created SwapChain.
+     *
+     * @see Renderer.beginFrame()
+     */
+    SwapChain* UTILS_NONNULL createSwapChain(uint32_t width, uint32_t height, uint64_t flags = 0) noexcept;
+
+    /**
+     * Creates a renderer associated to this engine.
+     *
+     * A Renderer is intended to map to a *window* on screen.
+     *
+     * @return A pointer to the newly created Renderer.
+     */
+    Renderer* UTILS_NONNULL createRenderer() noexcept;
+
+    /**
+     * Creates a View.
+     *
+     * @return A pointer to the newly created View.
+     */
+    View* UTILS_NONNULL createView() noexcept;
+
+    /**
+     * Creates a Scene.
+     *
+     * @return A pointer to the newly created Scene.
+     */
+    Scene* UTILS_NONNULL createScene() noexcept;
+
+    /**
+     * Creates a Camera component.
+     *
+     * @param entity Entity to add the camera component to.
+     * @return A pointer to the newly created Camera.
+     */
+    Camera* UTILS_NONNULL createCamera(utils::Entity entity) noexcept;
+
+    /**
+     * Returns the Camera component of the given entity.
+     *
+     * @param entity An entity.
+     * @return A pointer to the Camera component for this entity or nullptr if the entity didn't
+     *         have a Camera component. The pointer is valid until destroyCameraComponent()
+     *         is called or the entity itself is destroyed.
+     */
+    Camera* UTILS_NULLABLE getCameraComponent(utils::Entity entity) noexcept;
+
+    /**
+     * Returns the Camera component of the given entity.
+     *
+     * @param entity An entity.
+     * @return A pointer to the Camera component for this entity or nullptr if the entity didn't
+     *         have a Camera component. The pointer is valid until destroyCameraComponent()
+     *         is called or the entity itself is destroyed.
+     */
+    Camera const* UTILS_NULLABLE getCameraComponent(utils::Entity entity) const noexcept;
+
+    /**
+     * Destroys the Camera component associated with the given entity.
+     *
+     * @param entity An entity.
+     */
+    void destroyCameraComponent(utils::Entity entity) noexcept;
+
+    /**
+     * Creates a Fence.
+     *
+     * @return A pointer to the newly created Fence.
+     */
+    Fence* UTILS_NONNULL createFence() noexcept;
+
+    /**
+     * Creates a Sync.
+     * @param callback A callback that will be invoked when the handle for
+     *                 the created sync is set
+     *
+     * @return A pointer to the newly created Sync.
+     */
+    UTILS_NOAPIGEN
+    Sync* UTILS_NONNULL createSync() noexcept;
+
+    bool destroy(const BufferObject* UTILS_NULLABLE p);         //!< Destroys a BufferObject object.
+    bool destroy(const VertexBuffer* UTILS_NULLABLE p);         //!< Destroys an VertexBuffer object.
+    bool destroy(const Fence* UTILS_NULLABLE p);                //!< Destroys a Fence object.
+    UTILS_NOAPIGEN
+    bool destroy(const Sync* UTILS_NULLABLE p);                 //!< Destroys a Sync object.
+    bool destroy(const IndexBuffer* UTILS_NULLABLE p);          //!< Destroys an IndexBuffer object.
+    bool destroy(const SkinningBuffer* UTILS_NULLABLE p);       //!< Destroys a SkinningBuffer object.
+    bool destroy(const MorphTargetBuffer* UTILS_NULLABLE p);    //!< Destroys a MorphTargetBuffer object.
+    bool destroy(const IndirectLight* UTILS_NULLABLE p);        //!< Destroys an IndirectLight object.
+
+    /**
+     * Destroys a Material object
+     * @param p the material object to destroy
+     * @attention All MaterialInstance of the specified material must be destroyed before
+     *            destroying it.
+     * @exception utils::PreConditionPanic is thrown if some MaterialInstances remain.
+     * no-op if exceptions are disabled and some MaterialInstances remain.
+     */
+    bool destroy(const Material* UTILS_NULLABLE p);
+    bool destroy(const MaterialInstance* UTILS_NULLABLE p); //!< Destroys a MaterialInstance object.
+    bool destroy(const Renderer* UTILS_NULLABLE p);         //!< Destroys a Renderer object.
+    bool destroy(const FramePacer* UTILS_NULLABLE p);       //!< Destroys a FramePacer object.
+    bool destroy(const Scene* UTILS_NULLABLE p);            //!< Destroys a Scene object.
+    bool destroy(const Skybox* UTILS_NULLABLE p);           //!< Destroys a SkyBox object.
+    bool destroy(const ColorGrading* UTILS_NULLABLE p);     //!< Destroys a ColorGrading object.
+    bool destroy(const SwapChain* UTILS_NULLABLE p);        //!< Destroys a SwapChain object.
+    bool destroy(const Stream* UTILS_NULLABLE p);           //!< Destroys a Stream object.
+    bool destroy(const Texture* UTILS_NULLABLE p);          //!< Destroys a Texture object.
+    bool destroy(const RenderTarget* UTILS_NULLABLE p);     //!< Destroys a RenderTarget object.
+    bool destroy(const View* UTILS_NULLABLE p);             //!< Destroys a View object.
+    bool destroy(const InstanceBuffer* UTILS_NULLABLE p);   //!< Destroys an InstanceBuffer object.
+    void destroy(utils::Entity e);    //!< Destroys all filament-known components from this entity
+
+    /** Tells whether a BufferObject object is valid */
+    UTILS_NOAPIGEN
+    bool isValid(const BufferObject* UTILS_NULLABLE p) const;
+    /** Tells whether an VertexBuffer object is valid */
+    UTILS_NOAPIGEN
+    bool isValid(const VertexBuffer* UTILS_NULLABLE p) const;
+    /** Tells whether a Fence object is valid */
+    UTILS_NOAPIGEN
+    bool isValid(const Fence* UTILS_NULLABLE p) const;
+    /** Tells whether a Sync object is valid */
+    UTILS_NOAPIGEN
+    bool isValid(const Sync* UTILS_NULLABLE p) const;
+    /** Tells whether an IndexBuffer object is valid */
+    UTILS_NOAPIGEN
+    bool isValid(const IndexBuffer* UTILS_NULLABLE p) const;
+    /** Tells whether a SkinningBuffer object is valid */
+    UTILS_NOAPIGEN
+    bool isValid(const SkinningBuffer* UTILS_NULLABLE p) const;
+    /** Tells whether a MorphTargetBuffer object is valid */
+    UTILS_NOAPIGEN
+    bool isValid(const MorphTargetBuffer* UTILS_NULLABLE p) const;
+    /** Tells whether an IndirectLight object is valid */
+    UTILS_NOAPIGEN
+    bool isValid(const IndirectLight* UTILS_NULLABLE p) const;
+    /** Tells whether an Material object is valid */
+    UTILS_NOAPIGEN
+    bool isValid(const Material* UTILS_NULLABLE p) const;
+    /** Tells whether an MaterialInstance object is valid. Use this if you already know
+     * which Material this MaterialInstance belongs to. DO NOT USE getMaterial(), this would
+     * defeat the purpose of validating the MaterialInstance.
+     */
+    UTILS_NOAPIGEN
+    bool isValid(const Material* UTILS_NONNULL m, const MaterialInstance* UTILS_NULLABLE p) const;
+    /** Tells whether an MaterialInstance object is valid. Use this if the Material the
+     * MaterialInstance belongs to is not known. This method can be expensive.
+     */
+    UTILS_NOAPIGEN
+    bool isValidExpensive(const MaterialInstance* UTILS_NULLABLE p) const;
+    /** Tells whether a Renderer object is valid */
+    UTILS_NOAPIGEN
+    bool isValid(const Renderer* UTILS_NULLABLE p) const;
+    /** Tells whether a Scene object is valid */
+    UTILS_NOAPIGEN
+    bool isValid(const Scene* UTILS_NULLABLE p) const;
+    /** Tells whether a SkyBox object is valid */
+    UTILS_NOAPIGEN
+    bool isValid(const Skybox* UTILS_NULLABLE p) const;
+    /** Tells whether a ColorGrading object is valid */
+    UTILS_NOAPIGEN
+    bool isValid(const ColorGrading* UTILS_NULLABLE p) const;
+    /** Tells whether a SwapChain object is valid */
+    UTILS_NOAPIGEN
+    bool isValid(const SwapChain* UTILS_NULLABLE p) const;
+    /** Tells whether a Stream object is valid */
+    UTILS_NOAPIGEN
+    bool isValid(const Stream* UTILS_NULLABLE p) const;
+    /** Tells whether a Texture object is valid */
+    UTILS_NOAPIGEN
+    bool isValid(const Texture* UTILS_NULLABLE p) const;
+    /** Tells whether a RenderTarget object is valid */
+    UTILS_NOAPIGEN
+    bool isValid(const RenderTarget* UTILS_NULLABLE p) const;
+    /** Tells whether a View object is valid */
+    UTILS_NOAPIGEN
+    bool isValid(const View* UTILS_NULLABLE p) const;
+    /** Tells whether an InstanceBuffer object is valid */
+    UTILS_NOAPIGEN
+    bool isValid(const InstanceBuffer* UTILS_NULLABLE p) const;
+
+    /**
+     * Retrieve the count of each resource tracked by Engine.
+     * This is intended for debugging.
+     * @{
+     */
+    size_t getBufferObjectCount() const noexcept;
+    size_t getViewCount() const noexcept;
+    size_t getSceneCount() const noexcept;
+    size_t getSwapChainCount() const noexcept;
+    size_t getStreamCount() const noexcept;
+    size_t getIndexBufferCount() const noexcept;
+    size_t getSkinningBufferCount() const noexcept;
+    size_t getMorphTargetBufferCount() const noexcept;
+    size_t getInstanceBufferCount() const noexcept;
+    size_t getVertexBufferCount() const noexcept;
+    size_t getIndirectLightCount() const noexcept;
+    size_t getMaterialCount() const noexcept;
+    size_t getTextureCount() const noexcept;
+    size_t getSkyboxeCount() const noexcept;
+    size_t getColorGradingCount() const noexcept;
+    size_t getRenderTargetCount() const noexcept;
+    /**  @} */
+
+    /**
+     * This asynchronously executes user-defined commands. The commands are queued sequentially
+     * alongside other asynchronous operations (see Texture, VertexBuffer, and IndexBuffer) and
+     * guaranteed to be executed in the exact order they were invoked.
+     *
+     * Beware of overusing this method. It shares the execution queue with other asynchronous tasks
+     * like texture updates, so flooding it can delay those critical engine tasks. The recommended
+     * practice is to use this method for resource preparation, such as asset
+     * loading(images/meshes). This facilitates an efficient chaining pattern, where subsequent
+     * asynchronous operations (e.g., creating textures/vertex buffers) can be initiated directly
+     * within the completion callback.
+     *
+     * Users can call the `Engine::cancelAsyncCall()` method with the returned ID to cancel the
+     * asynchronous call.
+     *
+     * To use this method, the engine must be configured for asynchronous operation. Otherwise,
+     * calling async method will cause the program to terminate.
+     *
+     * @param command The custom command to be executed.
+     * @param handler The handler from which `onComplete` is invoked. If null, it's called from the
+     * main thread.
+     * @param onComplete The callback function that runs once the command has finished. Its
+     *                   `AsyncCallStatus` argument reports the outcome: `COMPLETED` if the command
+     *                   ran, `CANCELED` if it never ran.
+     * @param user    The custom data that will be passed as an argument to the `onComplete`.
+     * @return A unique identifier for the asynchronous call.
+     */
+    UTILS_NOAPIGEN
+    AsyncCallId runCommandAsync(utils::Invocable<void()>&& command,
+            backend::CallbackHandler* UTILS_NULLABLE handler, AsyncCompletionCallback onComplete,
+            void* UTILS_NULLABLE user = nullptr);
+
+    /**
+     * Cancel the pending asynchronous call pointed to by `id`, which is retrieved whenever you
+     * invoke a non-blocking version of method on an object, such as `Texture::setImageAsync` or
+     * `BufferObject::setBufferAsync`.
+     *
+     * Canceling does not suppress the completion callback of the call. The callback always runs
+     * exactly once, on the handler the call was given: with `backend::AsyncCallStatus::CANCELED` if
+     * the operation never ran, and with `COMPLETED` if it did. So a caller counting outstanding
+     * operations always balances out, and whatever the callback owns is still released.
+     *
+     * @param id The unique identifier for the asynchronous call to be canceled.
+     * @return Returns true upon successful cancellation. It returns false if the asynchronous
+     * operation cannot be canceled because it is currently running, has finished, or has previously
+     * been canceled.
+     */
+    bool cancelAsyncCall(AsyncCallId id);
+
+    /**
+     * Kicks the hardware thread (e.g. the OpenGL, Vulkan or Metal thread) and blocks until
+     * all commands to this point are executed. Note that does guarantee that the
+     * hardware is actually finished.
+     *
+     * <p>This is typically used right after destroying the <code>SwapChain</code>,
+     * in cases where a guarantee about the <code>SwapChain</code> destruction is needed in a
+     * timely fashion, such as when responding to Android's
+     * <code>android.view.SurfaceHolder.Callback.surfaceDestroyed</code></p>
+     *
+     * <p>In asynchronous mode this also waits for every asynchronous call issued before it to run.
+     * A command passed to runCommandAsync() must not wait on the engine, or this call deadlocks.</p>
+     *
+     * @note If the backend thread has encountered an unrecoverable error, this function becomes a no-op.
+     */
+    void flushAndWait();
+
+    /**
+     * Kicks the hardware thread (e.g. the OpenGL, Vulkan or Metal thread) and blocks until
+     * all commands to this point are executed. Note that does guarantee that the
+     * hardware is actually finished.
+     *
+     * A timeout can be specified, if for some reason this flushAndWait doesn't complete before the timeout, it will
+     * return false, true otherwise.
+     *
+     * <p>This is typically used right after destroying the <code>SwapChain</code>,
+     * in cases where a guarantee about the <code>SwapChain</code> destruction is needed in a
+     * timely fashion, such as when responding to Android's
+     * <code>android.view.SurfaceHolder.Callback.surfaceDestroyed</code></p>
+     *
+     * <p>In asynchronous mode this also waits for every asynchronous call issued before it to run.
+     * A command passed to runCommandAsync() must not wait on the engine, or this call deadlocks.</p>
+     *
+     * @param timeout A timeout in nanoseconds
+     * @return true if successful, false if flushAndWait timed out, in which case it wasn't successful and commands
+     * might still be executing on both the CPU and GPU sides.
+     *
+     * @note If the backend thread has encountered an unrecoverable error, this function becomes a no-op and returns false.
+     */
+    bool flushAndWait(uint64_t timeout);
+
+    /**
+     * Kicks the hardware thread (e.g. the OpenGL, Vulkan or Metal thread) but does not wait
+     * for commands to be either executed or the hardware finished.
+     *
+     * <p>This is typically used after creating a lot of objects to start draining the command
+     * queue which has a limited size.</p>
+     *
+     * @note If the backend thread has encountered an unrecoverable error, this function becomes a no-op.
+     */
+    void flush();
+
+    /**
+     * Get paused state of rendering thread.
+     *
+     * <p>Warning: This is an experimental API.
+     *
+     * @see setPaused
+     */
+    bool isPaused() const noexcept(UTILS_HAS_THREADING);
+
+    /**
+     * Pause or resume rendering thread.
+     *
+     * <p>Warning: This is an experimental API. In particular, note the following caveats.
+     *
+     * <ul><li>
+     * Buffer callbacks will never be called as long as the rendering thread is paused.
+     * Do not rely on a buffer callback to unpause the thread.
+     * </li><li>
+     * While the rendering thread is paused, rendering commands will continue to be queued until the
+     * buffer limit is reached. When the limit is reached, the program will abort.
+     * </li></ul>
+     */
+    void setPaused(bool paused);
+
+    /**
+     * Drains the user callback message queue and immediately execute all pending callbacks.
+     *
+     * <p> Typically this should be called once per frame right after the application's vsync tick,
+     * and typically just before computing parameters (e.g. object positions) for the next frame.
+     * This is useful because otherwise callbacks will be executed by filament at a later time,
+     * which may increase latency in certain applications.</p>
+     */
+    UTILS_NOAPIGEN
+    void pumpMessageQueues();
+
+    /**
+     * Switch the command queue to unprotected mode. Protected mode can be activated via
+     * Renderer::beginFrame() using a protected SwapChain.
+     * @see Renderer
+     * @see SwapChain
+     */
+    void unprotected() noexcept;
+
+    /**
+     * Returns the default Material.
+     *
+     * The default material is 80% white and uses the Material.Shading.LIT shading.
+     *
+     * @return A pointer to the default Material instance (a singleton).
+     */
+    UTILS_NOAPIGEN
+    Material const* UTILS_NONNULL getDefaultMaterial() const noexcept;
+
+    /**
+     * Returns the resolved backend.
+     */
+    Backend getBackend() const noexcept;
+
+    /**
+     * Returns the Platform object that belongs to this Engine.
+     *
+     * When Engine::create is called with no platform argument, Filament creates an appropriate
+     * Platform subclass automatically. The specific subclass created depends on the backend and
+     * OS. For example, when the OpenGL backend is used, the Platform object will be a descendant of
+     * OpenGLPlatform.
+     *
+     * dynamic_cast should be used to cast the returned Platform object into a specific subclass.
+     * Note that RTTI must be available to use dynamic_cast.
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * Platform* platform = engine->getPlatform();
+     * // static_cast also works, but more dangerous.
+     * SpecificPlatform* specificPlatform = dynamic_cast<SpecificPlatform*>(platform);
+     * specificPlatform->platformSpecificMethod();
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * When a custom Platform is passed to Engine::create, Filament will use it instead, and this
+     * method will return it.
+     *
+     * @return A pointer to the Platform object that was provided to Engine::create, or the
+     * Filament-created one.
+     */
+    UTILS_NOAPIGEN
+    Platform* UTILS_NULLABLE getPlatform() const noexcept;
+
+    /**
+     * Allocate a small amount of memory directly in the command stream. The allocated memory is
+     * guaranteed to be preserved until the current command buffer is executed
+     *
+     * @param size       size to allocate in bytes. This should be small (e.g. < 1 KB)
+     * @param alignment  alignment requested
+     * @return           a pointer to the allocated buffer or nullptr if no memory was available.
+     *
+     * @note there is no need to destroy this buffer, it will be freed automatically when
+     *       the current command buffer is executed.
+     */
+    UTILS_NOAPIGEN
+    void* UTILS_NULLABLE streamAlloc(size_t size, size_t alignment = alignof(double)) noexcept;
+
+    /**
+      * Invokes one iteration of the render loop, used only on single-threaded platforms.
+      *
+      * This should be called every time the windowing system needs to paint (e.g. at 60 Hz).
+      */
+    UTILS_NOAPIGEN
+    void execute();
+
+    /**
+      * Retrieves the job system that the Engine has ownership over.
+      *
+      * @return JobSystem used by filament
+      */
+    UTILS_NOAPIGEN
+    utils::JobSystem& getJobSystem() const noexcept;
+
+#if defined(__EMSCRIPTEN__)
+    /**
+      * WebGL only: Tells the driver to reset any internal state tracking if necessary.
+      *
+      * This is only useful when integrating an external renderer into Filament on platforms
+      * like WebGL, where share contexts do not exist. Filament keeps track of the GL
+      * state it has set (like which texture is bound), and does not re-set that state if
+      * it does not think it needs to. However, if an external renderer has set different
+      * state in the mean time, Filament will use that new state unknowingly.
+      *
+      * If you are in this situation, call this function - ideally only once per frame,
+      * immediately after calling Engine::execute().
+      */
+    void resetBackendState() noexcept;
+#endif
+
+    /**
+     * Get the current time. This is a convenience function that simply returns the
+     * time in nanosecond since epoch of std::chrono::steady_clock.
+     * A possible implementation is:
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *     return std::chrono::steady_clock::now().time_since_epoch().count();
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * @return current time in nanosecond since epoch of std::chrono::steady_clock.
+     * @see Renderer::beginFrame()
+     */
+    static uint64_t getSteadyClockTimeNano() noexcept;
+
+
+    UTILS_NOAPIGEN
+    DebugRegistry& getDebugRegistry() noexcept;
+
+    UTILS_NOAPIGEN
+    DebugRegistry const& getDebugRegistry() const noexcept;
+
+    /**
+     * Check if a feature flag exists
+     * @param name name of the feature flag to check
+     * @return true if the feature flag exists, false otherwise
+     */
+    inline bool hasFeatureFlag(char const* UTILS_NONNULL name) const noexcept {
+        return getFeatureFlag(name).has_value();
+    }
+
+    /**
+     * Set the value of a non-constant feature flag.
+     * @param name name of the feature flag to set
+     * @param value value to set
+     * @return true if the value was set, false if the feature flag is constant or doesn't exist.
+     */
+    bool setFeatureFlag(char const* UTILS_NONNULL name, bool value) noexcept;
+
+    /**
+     * Retrieves the value of any feature flag.
+     * @param name name of the feature flag
+     * @return the value of the flag if it exists
+     */
+    std::optional<bool> getFeatureFlag(char const* UTILS_NONNULL name) const noexcept;
+
+    /**
+     * Returns a pointer to a non-constant feature flag value.
+     * @param name name of the feature flag
+     * @return a pointer to the feature flag value, or nullptr if the feature flag is constant or doesn't exist
+     */
+    UTILS_NOAPIGEN
+    bool* UTILS_NULLABLE getFeatureFlagPtr(char const* UTILS_NONNULL name) const noexcept;
+
+
+    /**
+     * Asynchronously ensures that the variants of the specified Material needed to render it
+     * in the provided View are compiled. This takes into account the view's features
+     * (e.g. dynamic lighting, fog, stereo, shadowing), alongside the specified shadow receiver
+     * and skinning configurations.
+     *
+     * After issuing several Engine::compile() calls in a row, it is recommended to call
+     * Engine::flush() such that the backend can start the compilation work as soon as possible.
+     * The provided callback is guaranteed to be called on the main thread after all computed
+     * variants of the material are compiled. This can take hundreds of milliseconds.
+     *
+     * If all the needed variants are already compiled, the callback will be scheduled as
+     * soon as possible, but this might take a few dozen milliseconds, corresponding to how
+     * many previous frames are enqueued in the backend. 
+     *
+     * If the same variant is scheduled for compilation multiple times, the first scheduling
+     * takes precedence; later scheduling are ignored.
+     *
+     * The callback is guaranteed to be called. If the engine is destroyed while some material
+     * variants are still compiling or in the queue, these will be discarded and the corresponding
+     * callback will be called. In that case however the Material pointer passed to the callback
+     * is guaranteed to be invalid (either because it's been destroyed by the user already, or,
+     * because it's been cleaned-up by the Engine).
+     *
+     * @param priority       Which priority queue to use, LOW or HIGH.
+     * @param material       The Material to compile.
+     * @param view           The View in which the material will be rendered.
+     * @param shadowReceiver Indicates whether to compile the shadow-receiving variants.
+     *                       Pass \p utils::tribool::indeterminate to compile both permutations.
+     * @param skinning       Indicates whether to compile the skinning variants.
+     *                       Pass \p utils::tribool::indeterminate to compile both permutations.
+     * @param handler        Handler to dispatch the callback or nullptr for the default handler.
+     * @param callback       Callback called on the main thread when the compilation is done
+     *                       by the backend.
+     * 
+     * @see Material::compile
+     */
+    UTILS_NOAPIGEN
+    void compile(
+            backend::CompilerPriorityQueue priority,
+            Material const* UTILS_NONNULL material,
+            View const* UTILS_NONNULL view,
+            utils::tribool shadowReceiver,
+            utils::tribool skinning,
+            backend::CallbackHandler* UTILS_NULLABLE handler = nullptr,
+            utils::Invocable<void(Material* UTILS_NONNULL)>&& callback = {});
+
+    /**
+     * Asynchronously ensures that the variants of the specified Material needed to render it
+     * in the provided View are compiled.
+     *
+     * @param priority       Which priority queue to use, LOW or HIGH.
+     * @param material       The Material to compile.
+     * @param view           The View in which the material will be rendered.
+     * @param shadowReceiver Indicates whether to compile the shadow-receiving variants.
+     *                       Pass \p FeatureState::INDETERMINATE to compile both permutations.
+     * @param skinning       Indicates whether to compile the skinning variants.
+     *                       Pass \p FeatureState::INDETERMINATE to compile both permutations.
+     * @param handler        Handler to dispatch the callback or nullptr for the default handler.
+     * @param callback       Callback called on the main thread when the compilation is done
+     *                       by the backend.
+     *
+     * @see Material::compile
+     */
+    inline void compile(
+            backend::CompilerPriorityQueue priority,
+            Material const* UTILS_NONNULL material,
+            View const* UTILS_NONNULL view,
+            FeatureState shadowReceiver,
+            FeatureState skinning,
+            backend::CallbackHandler* UTILS_NULLABLE handler = nullptr,
+            utils::Invocable<void(Material* UTILS_NONNULL)>&& callback = {}) {
+        compile(priority, material, view,
+                utils::tribool(utils::tribool::Value(shadowReceiver)),
+                utils::tribool(utils::tribool::Value(skinning)),
+                handler,
+                std::move(callback));
+    }
+
+protected:
+    //! \privatesection
+    Engine() noexcept = default;
+    ~Engine() = default;
+
+public:
+    //! \privatesection
+    Engine(Engine const&) = delete;
+    Engine(Engine&&) = delete;
+    Engine& operator=(Engine const&) = delete;
+    Engine& operator=(Engine&&) = delete;
+};
+
+} // namespace filament
+
+#endif // TNT_FILAMENT_ENGINE_H

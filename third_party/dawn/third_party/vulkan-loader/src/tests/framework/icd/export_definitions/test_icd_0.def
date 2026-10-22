@@ -1,0 +1,5 @@
+LIBRARY test_icd_export_none
+EXPORTS
+    vkGetInstanceProcAddr
+    vkCreateInstance
+    vkEnumerateInstanceExtensionProperties

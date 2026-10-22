@@ -1,0 +1,1332 @@
+/*
+ * Copyright (C) 2019 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "common/arguments.h"
+
+#include "generated/resources/gltf_demo.h"
+
+#include "materials/uberarchive.h"
+
+#include <viewer/AutomationEngine.h>
+#include <viewer/AutomationSpec.h>
+#include <viewer/ViewerGui.h>
+
+#include <gltfio/AssetLoader.h>
+#include <gltfio/FilamentAsset.h>
+#include <gltfio/ResourceLoader.h>
+#include <gltfio/TextureProvider.h>
+
+#include <filamentapp/AssetLoader.h>
+#include <filamentapp/AssetWriter.h>
+#include <filamentapp/DesktopAssetLoader.h>
+#include <filamentapp/FilamentApp2.h>
+#include <filamentapp/IBL.h>
+
+#include <filagui/ImGuiExtensions.h>
+
+#include <private/filament/EngineEnums.h>
+
+#include <filament/Camera.h>
+#include <filament/ColorGrading.h>
+#include <filament/Engine.h>
+#include <filament/IndexBuffer.h>
+#include <filament/RenderableManager.h>
+#include <filament/Renderer.h>
+#include <filament/Scene.h>
+#include <filament/Skybox.h>
+#include <filament/SwapChain.h>
+#include <filament/TransformManager.h>
+#include <filament/VertexBuffer.h>
+#include <filament/View.h>
+
+#include <camutils/Manipulator.h>
+
+#include <utils/compiler.h>
+#include <utils/getopt.h>
+#include <utils/Log.h>
+#include <utils/NameComponentManager.h>
+
+#include <math/mat3.h>
+#include <math/norm.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
+
+#include <cgltf.h>
+#include <imgui.h>
+#include <samples/SampleConfig.h>
+
+#include <algorithm>
+#include <array>
+#include <cstdint>
+#include <iomanip>
+#include <iostream>
+#include <set>
+#include <sstream>
+#include <string>
+#include <string_view>
+#include <vector>
+
+// Only the JIT shader provider optimizes materials, and WASM builds do not have it.
+#if !defined(__EMSCRIPTEN__)
+#if FILAMENT_DISABLE_MATOPT
+#   define OPTIMIZE_MATERIALS false
+#else
+#   define OPTIMIZE_MATERIALS true
+#endif
+#endif
+
+using namespace filament;
+using namespace filament::math;
+using namespace filament::viewer;
+
+using namespace filament::gltfio;
+using namespace utils;
+
+namespace {
+
+enum MaterialSource {
+    JITSHADER,
+    UBERSHADER,
+};
+
+struct App {
+    FilamentApp2* filamentApp = nullptr;
+    Engine* engine;
+    ViewerGui* viewer;
+    SampleConfig config;
+    Camera* mainCamera;
+    Entity rootTransformEntity;
+
+    AssetLoader* assetLoader;
+    FilamentAsset* asset = nullptr;
+    FilamentInstance* instance = nullptr;
+    NameComponentManager* names;
+    float currentFrameRate = -1.0f;
+
+    MaterialProvider* materials;
+    MaterialSource materialSource = JITSHADER;
+
+    gltfio::ResourceLoader* resourceLoader = nullptr;
+    gltfio::TextureProvider* stbDecoder = nullptr;
+    gltfio::TextureProvider* ktxDecoder = nullptr;
+    gltfio::TextureProvider* webpDecoder = nullptr;
+    bool recomputeAabb = false;
+
+    bool actualSize = false;
+    bool originIsFarAway = false;
+    float originDistance = 1.0f;
+
+    // Frame stepping (see Settings::debug.frameStep). frameStepTime is a virtual animation clock
+    // that only advances when a step is requested, so a step always advances by the same amount
+    // no matter how long the frame stayed paused. frameStepRenderPending carries the request from
+    // the animation callback -- which consumes it and advances the clock -- over to preRender,
+    // which is what actually lets a frame through.
+    double frameStepTime = 0.0;
+    bool frameStepRenderPending = false;
+
+    struct Scene {
+        Entity groundPlane;
+        VertexBuffer* groundVertexBuffer;
+        IndexBuffer* groundIndexBuffer;
+        Material* groundMaterial;
+
+        Material* overdrawMaterial;
+        // use layer 7 because 0, 1 and 2 are used by FilamentApp
+        static constexpr auto OVERDRAW_VISIBILITY_LAYER = 7u;   // overdraw renderables View layer
+        static constexpr auto OVERDRAW_LAYERS = 4u;             // unique overdraw colors
+        std::array<Entity, OVERDRAW_LAYERS> overdrawVisualizer;
+        std::array<MaterialInstance*, OVERDRAW_LAYERS> overdrawMaterialInstances;
+        VertexBuffer* fullScreenTriangleVertexBuffer;
+        IndexBuffer* fullScreenTriangleIndexBuffer;
+    } scene;
+
+    ColorGradingSettings lastColorGradingOptions = { .enabled = false };
+
+    ColorGrading* colorGrading = nullptr;
+
+    utils::CString notificationText;
+    utils::CString messageBoxText;
+    utils::CString settingsFile;
+    utils::CString batchFile;
+
+    AutomationSpec* automationSpec = nullptr;
+    AutomationEngine* automationEngine = nullptr;
+    bool screenshot = false;
+    uint8_t screenshotSeq = 0;
+    bool screenshotAsPPM = false;
+
+    // Set when --screenshot is given, which excludes --batch. FilamentApp2 then captures a fixed
+    // frame, so the render must not depend on how long loading takes: resources are loaded
+    // synchronously, and the settings start from the same Settings{} baseline batch mode uses.
+    bool deterministicCapture = false;
+
+    // gltfio only reports load progress for asynchronous loads, so a synchronous load would
+    // otherwise read as 0% forever.
+    bool resourcesLoadedSynchronously = false;
+
+    // A deterministic capture applies the render settings once, as batch mode does per test.
+    bool renderSettingsApplied = false;
+};
+
+const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
+
+bool loadSettings(filament::app::AssetLoader const* loader, utils::Path const& filename,
+        Settings* out) {
+    std::vector<uint8_t> json = loader->load(filename);
+    if (json.empty()) {
+        return false;
+    }
+    JsonSerializer serializer;
+    return serializer.readJson(reinterpret_cast<const char*>(json.data()), json.size(), out);
+}
+
+void createGroundPlane(Engine* engine, Scene* scene, App* app) {
+    auto& em = EntityManager::get();
+    Material* shadowMaterial = Material::Builder()
+            .package(GLTF_DEMO_GROUNDSHADOW_DATA, GLTF_DEMO_GROUNDSHADOW_SIZE)
+            .build(*engine);
+    auto& viewerOptions = app->viewer->getSettings().viewer;
+    shadowMaterial->setDefaultParameter("strength", viewerOptions.groundShadowStrength);
+
+    static constexpr uint32_t indices[] = { 0, 1, 2, 2, 3, 0 };
+
+    Aabb aabb = app->asset->getBoundingBox();
+    if (!app->actualSize) {
+        mat4f const transform = fitIntoUnitCube(aabb, 4);
+        aabb = aabb.transform(transform);
+    }
+
+    float3 planeExtent{10.0f * aabb.extent().x, 0.0f, 10.0f * aabb.extent().z};
+
+    float3* const vertices = new float3[4]{
+        { -planeExtent.x, 0, -planeExtent.z },
+        { -planeExtent.x, 0, planeExtent.z },
+        { planeExtent.x, 0, planeExtent.z },
+        { planeExtent.x, 0, -planeExtent.z },
+    };
+
+    short4 const tbn = packSnorm16(
+            mat3f::packTangentFrame(
+                    mat3f{
+                            float3{ 1.0f, 0.0f, 0.0f },
+                            float3{ 0.0f, 0.0f, 1.0f },
+                            float3{ 0.0f, 1.0f, 0.0f }
+                    }
+            ).xyzw);
+
+    static const short4 normals[]{ tbn, tbn, tbn, tbn };
+
+    VertexBuffer* vertexBuffer = VertexBuffer::Builder()
+            .vertexCount(4)
+            .bufferCount(2)
+            .attribute(VertexAttribute::POSITION,
+                    0, VertexBuffer::AttributeType::FLOAT3)
+            .attribute(VertexAttribute::TANGENTS,
+                    1, VertexBuffer::AttributeType::SHORT4)
+            .normalized(VertexAttribute::TANGENTS)
+            .build(*engine);
+
+    vertexBuffer->setBufferAt(*engine, 0, VertexBuffer::BufferDescriptor(
+            vertices, vertexBuffer->getVertexCount() * sizeof(vertices[0]),
+            [](void* buffer, size_t, void*) { delete[] static_cast<float3*>(buffer); }));
+    vertexBuffer->setBufferAt(*engine, 1, VertexBuffer::BufferDescriptor(
+            normals, vertexBuffer->getVertexCount() * sizeof(normals[0])));
+
+    IndexBuffer* indexBuffer = IndexBuffer::Builder()
+            .indexCount(6)
+            .build(*engine);
+
+    indexBuffer->setBuffer(*engine, IndexBuffer::BufferDescriptor(
+            indices, indexBuffer->getIndexCount() * sizeof(uint32_t)));
+
+    Entity const groundPlane = em.create();
+    RenderableManager::Builder(1)
+            .boundingBox({
+                    {}, { planeExtent.x, 1e-4f, planeExtent.z }
+            })
+            .material(0, shadowMaterial->getDefaultInstance())
+            .geometry(0, RenderableManager::PrimitiveType::TRIANGLES,
+                    vertexBuffer, indexBuffer, 0, 6)
+            .culling(false)
+            .receiveShadows(true)
+            .castShadows(false)
+            .build(*engine, groundPlane);
+
+    scene->addEntity(groundPlane);
+
+    auto& tcm = engine->getTransformManager();
+    tcm.setTransform(tcm.getInstance(groundPlane),
+            mat4f::translation(float3{ 0, aabb.min.y, -4 }));
+
+    auto& rcm = engine->getRenderableManager();
+    auto instance = rcm.getInstance(groundPlane);
+    rcm.setLayerMask(instance, 0xff, 0x00);
+
+    app->scene.groundPlane = groundPlane;
+    app->scene.groundVertexBuffer = vertexBuffer;
+    app->scene.groundIndexBuffer = indexBuffer;
+    app->scene.groundMaterial = shadowMaterial;
+}
+
+constexpr float4 sFullScreenTriangleVertices[3] = {
+        { -1.0f, -1.0f, 1.0f, 1.0f },
+        {  3.0f, -1.0f, 1.0f, 1.0f },
+        { -1.0f,  3.0f, 1.0f, 1.0f }
+};
+
+const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
+
+void createOverdrawVisualizerEntities(Engine* engine, Scene* scene, App* app) {
+    Material* material = Material::Builder()
+            .package(GLTF_DEMO_OVERDRAW_DATA, GLTF_DEMO_OVERDRAW_SIZE)
+            .build(*engine);
+
+    const float3 overdrawColors[App::Scene::OVERDRAW_LAYERS] = {
+            {0.0f, 0.0f, 1.0f},     // blue         (overdrawn 1 time)
+            {0.0f, 1.0f, 0.0f},     // green        (overdrawn 2 times)
+            {1.0f, 0.0f, 1.0f},     // magenta      (overdrawn 3 times)
+            {1.0f, 0.0f, 0.0f}      // red          (overdrawn 4+ times)
+    };
+
+    for (auto i = 0; i < App::Scene::OVERDRAW_LAYERS; i++) {
+        MaterialInstance* matInstance = material->createInstance();
+        // TODO: move this to the material definition.
+        matInstance->setStencilCompareFunction(MaterialInstance::StencilCompareFunc::E);
+        // The stencil value represents the number of times the fragment has been written to.
+        // We want 0-1 writes to be the regular color. Overdraw visualization starts at 2+ writes,
+        // which represents a fragment overdrawn 1 time.
+        matInstance->setStencilReferenceValue(i + 2);
+        matInstance->setParameter("color", overdrawColors[i]);
+        app->scene.overdrawMaterialInstances[i] = matInstance;
+    }
+    auto& lastMi = app->scene.overdrawMaterialInstances[App::Scene::OVERDRAW_LAYERS - 1];
+    // This seems backwards, but it isn't. The comparison function compares:
+    // the reference value (left side) <= stored stencil value (right side)
+    lastMi->setStencilCompareFunction(MaterialInstance::StencilCompareFunc::LE);
+
+    VertexBuffer* vertexBuffer = VertexBuffer::Builder()
+            .vertexCount(3)
+            .bufferCount(1)
+            .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT4, 0)
+            .build(*engine);
+
+    vertexBuffer->setBufferAt(
+            *engine, 0, { sFullScreenTriangleVertices, sizeof(sFullScreenTriangleVertices) });
+
+    IndexBuffer* indexBuffer = IndexBuffer::Builder()
+            .indexCount(3)
+            .bufferType(IndexBuffer::IndexType::USHORT)
+            .build(*engine);
+
+    indexBuffer->setBuffer(*engine,
+            { sFullScreenTriangleIndices, sizeof(sFullScreenTriangleIndices) });
+
+    auto& em = EntityManager::get();
+    const auto& matInstances = app->scene.overdrawMaterialInstances;
+    for (auto i = 0; i < App::Scene::OVERDRAW_LAYERS; i++) {
+        Entity overdrawEntity = em.create();
+        RenderableManager::Builder(1)
+                .boundingBox({{}, {1.0f, 1.0f, 1.0f}})
+                .material(0, matInstances[i])
+                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vertexBuffer, indexBuffer, 0, 3)
+                .culling(false)
+                .castShadows(false)
+                .receiveShadows(false)
+                .priority(7u)   // ensure the overdraw primitives are drawn last
+                .layerMask(0xFF, 1u << App::Scene::OVERDRAW_VISIBILITY_LAYER)
+                .build(*engine, overdrawEntity);
+        scene->addEntity(overdrawEntity);
+        app->scene.overdrawVisualizer[i] = overdrawEntity;
+    }
+
+    app->scene.overdrawMaterial = material;
+    app->scene.fullScreenTriangleVertexBuffer = vertexBuffer;
+    app->scene.fullScreenTriangleIndexBuffer = indexBuffer;
+}
+
+void onClick(std::shared_ptr<App> app, View* view, ImVec2 pos) {
+    view->pick(pos.x, pos.y, [app](View::PickingQueryResult const& result) {
+        if (const char* name = app->asset->getName(result.renderable); name) {
+            app->notificationText = utils::CString(name);
+        } else {
+            app->notificationText = utils::CString();
+        }
+    });
+}
+
+utils::Path getPathForIBLAsset(std::string_view string) {
+    auto isIBL = [] (utils::Path file) -> bool {
+        return file.getExtension() == "ktx" || file.getExtension() == "hdr" ||
+            file.getExtension() == "exr";
+
+    };
+
+    utils::Path filename{ string };
+    if (!filename.exists()) {
+        std::cerr << "file " << filename << " not found!" << std::endl;
+        return {};
+    }
+
+    if (filename.isDirectory()) {
+        std::vector<Path> files = filename.listContents();
+        if (std::none_of(files.cbegin(), files.cend(), isIBL)) {
+            return {};
+        }
+    } else if (!isIBL(filename)) {
+        return {};
+    }
+
+    return filename;
+}
+
+utils::Path getPathForGLTFAsset(std::string_view string) {
+    auto isGLTF = [] (utils::Path file) -> bool {
+        return file.getExtension() == "gltf" || file.getExtension() == "glb";
+    };
+
+    utils::Path filename{ string };
+    if (!filename.exists()) {
+        std::cerr << "file " << filename << " not found!" << std::endl;
+        return {};
+    }
+
+    if (filename.isDirectory()) {
+        std::vector<Path> files = filename.listContents();
+        auto it = std::find_if(files.cbegin(), files.cend(), isGLTF);
+        if (it == files.end()) {
+            return {};
+        }
+        filename = *it;
+    } else if (!isGLTF(filename)) {
+        return {};
+    }
+
+    return filename;
+}
+
+bool checkGLTFAsset(filament::app::AssetLoader const* loader, const utils::Path& filename) {
+    std::vector<uint8_t> buffer = loader->load(filename);
+    if (buffer.empty()) {
+        std::cerr << "Unable to open " << filename << std::endl;
+        return false;
+    }
+
+    // Try parsing the glTF file to check the validity of the file format.
+    cgltf_options options{};
+    cgltf_data* sourceAsset = nullptr;
+    cgltf_result result = cgltf_parse(&options, buffer.data(), buffer.size(), &sourceAsset);
+    cgltf_free(sourceAsset);
+    if (result != cgltf_result_success) {
+        slog.e << "Unable to parse glTF file." << io::endl;
+        return false;
+    }
+    return true;
+}
+
+} // namespace
+
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* appLoader) {
+    if (config.iblDirectory.empty()) {
+        config.iblDirectory = utils::CString(DEFAULT_IBL);
+    }
+    auto app = std::make_shared<App>();
+    app->config = config;
+
+    // createJitShaderProvider() compiles materials through filamat, which is not built for WASM
+    // since it would pull in glslang and SPIRV-Tools. Only the ubershader archive is available.
+#if defined(__EMSCRIPTEN__)
+    app->materialSource = UBERSHADER;
+#else
+    app->materialSource = config.getBool("ubershader") ? UBERSHADER : JITSHADER;
+#endif
+    app->actualSize = config.getBool("actual-size");
+    app->recomputeAabb = config.getBool("recompute-aabb");
+    app->settingsFile = config.getString("settings");
+    app->batchFile = config.getString("batch");
+    app->screenshotAsPPM = config.getBool("screenshot-as-ppm");
+
+    // Each of these pairs selects conflicting behavior, and without a check one option would
+    // silently override the other. This reports and exits like the other argument errors here,
+    // rather than using FILAMENT_CHECK_PRECONDITION, because an uncaught PreconditionPanic
+    // terminates without printing its reason when exceptions are enabled.
+    bool const hasBatch = !app->batchFile.empty();
+    bool const hasScreenshot = !config.screenshotPath.empty();
+    auto const requireExclusive = [](bool conflict, const char* message) {
+        if (conflict) {
+            std::cerr << message << std::endl;
+            exit(1);
+        }
+    };
+    requireExclusive(hasBatch && hasScreenshot,
+            "--batch and --screenshot are mutually exclusive: batch mode exports its own "
+            "screenshot for each test.");
+    requireExclusive(hasBatch && !app->settingsFile.empty(),
+            "--batch and --settings are mutually exclusive: each batch test replaces all "
+            "settings.");
+    requireExclusive(hasScreenshot && app->screenshotAsPPM,
+            "--screenshot and --screenshot-as-ppm are mutually exclusive: --screenshot always "
+            "writes a TIFF.");
+
+    app->deterministicCapture = hasScreenshot;
+
+    utils::Path filename;
+    if (!config.positionalArgs.empty()) {
+        filename = getPathForGLTFAsset(config.positionalArgs[0].c_str_safe());
+        if (filename.isEmpty()) {
+            std::cerr << "no glTF file found in " << filename << std::endl;
+            exit(1);
+        }
+    }
+    auto loadAsset = [app, appLoader](const utils::Path& filename) {
+        std::vector<uint8_t> buffer = appLoader->load(filename);
+        if (buffer.empty()) {
+            std::cerr << "Unable to open " << filename << std::endl;
+            exit(1);
+        }
+
+        // Parse the glTF file and create Filament entities.
+        app->asset = app->assetLoader->createAsset(buffer.data(), buffer.size());
+        if (!app->asset) {
+            std::cerr << "Unable to parse " << filename << std::endl;
+            exit(1);
+        }
+
+        // pre-compile all material variants
+        std::set<Material*> materials;
+        RenderableManager const& rcm = app->engine->getRenderableManager();
+        Slice<const Entity> const renderables{ app->asset->getRenderableEntities(),
+            app->asset->getRenderableEntityCount() };
+        for (Entity const e: renderables) {
+            auto ri = rcm.getInstance(e);
+            size_t const c = rcm.getPrimitiveCount(ri);
+            for (size_t i = 0; i < c; i++) {
+                MaterialInstance* const mi = rcm.getMaterialInstanceAt(ri, i);
+                Material* ma = const_cast<Material *>(mi->getMaterial());
+                materials.insert(ma);
+            }
+        }
+        for (Material* ma : materials) {
+            // Don't attempt to precompile shaders on WebGL.
+            // Chrome already suffers from slow shader compilation:
+            // https://github.com/google/filament/issues/6615
+            // Precompiling shaders exacerbates the problem.
+#if !defined(__EMSCRIPTEN__)
+            // First compile high priority variants
+            ma->compile(Material::CompilerPriorityQueue::HIGH,
+                    UserVariantFilterBit::DYNAMIC_LIGHTING |
+                    UserVariantFilterBit::DIRECTIONAL_LIGHTING |
+                    UserVariantFilterBit::SHADOW_RECEIVER);
+
+            // and then, everything else at low priority, except STE, which is very uncommon.
+            ma->compile(Material::CompilerPriorityQueue::LOW,
+                    UserVariantFilterBit::FOG |
+                    UserVariantFilterBit::SKINNING |
+                    UserVariantFilterBit::SSR |
+                    UserVariantFilterBit::VSM);
+#endif
+        }
+
+        app->instance = app->asset->getInstance();
+        buffer.clear();
+        buffer.shrink_to_fit();
+    };
+
+    auto setupIBL = [app]() {
+        auto ibl = app->filamentApp->getIBL();
+        if (ibl) {
+            app->viewer->setIndirectLight(ibl->getIndirectLight(), ibl->getSphericalHarmonics());
+            app->viewer->getSettings().view.fogSettings.fogColorTexture = ibl->getFogTexture();
+        }
+    };
+
+    auto loadResources = [app, appLoader, setupIBL](const utils::Path& filename) {
+        // Load external textures and buffers.
+        utils::CString const gltfPath = utils::CString(filename.getAbsolutePath().c_str());
+        ResourceConfiguration configuration = {};
+        configuration.engine = app->engine;
+#if defined(__EMSCRIPTEN__)
+        // Without a filesystem, gltfio looks external buffers up in the addResourceData() cache
+        // under the gltfPath directory joined with the URI. The loop below registers bare URIs,
+        // so leave gltfPath empty to make those keys match, as the JavaScript bindings do.
+        configuration.gltfPath = "";
+#else
+        configuration.gltfPath = gltfPath.c_str();
+#endif
+        configuration.normalizeSkinningWeights = true;
+
+        if (!app->resourceLoader) {
+            app->resourceLoader = new gltfio::ResourceLoader(configuration);
+            app->stbDecoder = createStbProvider(app->engine);
+            app->ktxDecoder = createKtx2Provider(app->engine);
+            app->resourceLoader->addTextureProvider("image/png", app->stbDecoder);
+            app->resourceLoader->addTextureProvider("image/jpeg", app->stbDecoder);
+            app->resourceLoader->addTextureProvider("image/ktx2", app->ktxDecoder);
+            if (isWebpSupported()) {
+                app->webpDecoder = createWebpProvider(app->engine);
+                app->resourceLoader->addTextureProvider("image/webp", app->webpDecoder);
+            } else {
+                app->webpDecoder = nullptr;
+            }
+        } else {
+            app->resourceLoader->setConfiguration(configuration);
+        }
+
+        // We explicitly fetch the raw bytes and push them into ResourceLoader via addResourceData.
+        // This pre-populates the cache and completely bypasses ResourceLoader's internal disk I/O,
+        // which is required for Android compatibility (where assets are packed in the APK).
+        for (size_t i = 0, c = app->asset->getResourceUriCount(); i < c; i++) {
+            const char* uri = app->asset->getResourceUris()[i];
+            utils::Path uriPath = filename.getParent() + uri;
+            std::vector<uint8_t> buffer = appLoader->load(uriPath);
+            if (!buffer.empty()) {
+                auto* b = new std::vector<uint8_t>(std::move(buffer));
+                gltfio::ResourceLoader::BufferDescriptor desc(
+                    b->data(), b->size(),
+                    [](void*, size_t, void* user) {
+                        delete static_cast<std::vector<uint8_t>*>(user);
+                    },
+                    b
+                );
+                app->resourceLoader->addResourceData(uri, std::move(desc));
+            }
+        }
+
+        // A deterministic capture happens on a fixed frame, so the whole asset has to be present on
+        // the first one. The synchronous load decodes and uploads every texture before returning,
+        // which makes the capture independent of how fast decoding runs. gltfio only allows the
+        // synchronous API when threading is available.
+        bool const loadSynchronously = UTILS_HAS_THREADING && app->deterministicCapture;
+        bool const loadStarted = loadSynchronously
+                                         ? app->resourceLoader->loadResources(app->asset)
+                                         : app->resourceLoader->asyncBeginLoad(app->asset);
+        if (!loadStarted) {
+            std::cerr << "Unable to start loading resources for " << filename << std::endl;
+            exit(1);
+        }
+        app->resourcesLoadedSynchronously = loadSynchronously;
+
+        if (app->recomputeAabb) {
+            app->asset->getInstance()->recomputeBoundingBoxes();
+        }
+
+        app->asset->releaseSourceData();
+
+        // Enable stencil writes on all material instances.
+        const size_t matInstanceCount = app->instance->getMaterialInstanceCount();
+        MaterialInstance* const* const instances = app->instance->getMaterialInstances();
+        for (int mi = 0; mi < matInstanceCount; mi++) {
+            instances[mi]->setStencilWrite(true);
+            instances[mi]->setStencilOpDepthStencilPass(MaterialInstance::StencilOperation::INCR);
+        }
+        setupIBL();
+    };
+
+    auto setup = [app, appLoader, loadAsset, loadResources, filename](Engine* engine, View* view,
+                         Scene* scene) {
+        app->engine = engine;
+        app->names = new NameComponentManager(EntityManager::get());
+        app->viewer = new ViewerGui(engine, scene, view, 410);
+        app->viewer->getSettings().viewer.autoScaleEnabled = !app->actualSize;
+
+        engine->enableAccurateTranslations();
+        auto& tcm = engine->getTransformManager();
+        app->rootTransformEntity = engine->getEntityManager().create();
+        tcm.create(app->rootTransformEntity);
+        tcm.create(view->getFogEntity());
+
+        const bool batchMode = !app->batchFile.empty();
+
+        // First check if a custom automation spec has been provided. If it fails to load, the app
+        // must be closed since it could be invoked from a script.
+        if (batchMode && app->batchFile != "default") {
+            std::vector<uint8_t> json = appLoader->load(utils::Path(app->batchFile.c_str_safe()));
+            if (json.empty()) {
+                std::cerr << "Unable to load automation spec: " << app->batchFile.c_str_safe()
+                          << std::endl;
+                exit(1);
+            }
+            app->automationSpec = AutomationSpec::generate(
+                    reinterpret_cast<const char*>(json.data()), json.size());
+            if (!app->automationSpec) {
+                std::cerr << "Unable to parse automation spec: " << app->batchFile.c_str_safe()
+                          << std::endl;
+                exit(1);
+            }
+        }
+
+        // If no custom spec has been provided, or if in interactive mode, load the default spec.
+        if (!app->automationSpec) {
+            app->automationSpec = AutomationSpec::generateDefaultTestCases();
+        }
+
+        app->automationEngine =
+                new AutomationEngine(app->automationSpec, &app->viewer->getSettings());
+
+        if (batchMode) {
+            app->automationEngine->startBatchMode();
+            auto options = app->automationEngine->getOptions();
+            options.sleepDuration = 0.0;
+            options.exportScreenshots = true;
+            options.exportSettings = true;
+            options.minFrameCount = 10; // For multi-frame effects like SSR.
+            options.exportFormat = app->screenshotAsPPM
+                                           ? AutomationEngine::Options::ExportFormat::PPM
+                                           : AutomationEngine::Options::ExportFormat::TIFF;
+            app->automationEngine->setOptions(options);
+            app->viewer->getSettings().animation.enabled = false;
+        } else {
+            // Enable animation by default for interactive mode (non-batch mode).
+            app->viewer->getSettings().animation.enabled = true;
+        }
+
+        bool const hasSettingsFile = !app->settingsFile.empty();
+        auto const loadSettingsFile = [app, appLoader, engine, scene, batchMode,
+                                              hasSettingsFile]() {
+            if (hasSettingsFile) {
+                bool const success = loadSettings(appLoader,
+                        utils::Path(app->settingsFile.c_str_safe()), &app->viewer->getSettings());
+                if (success) {
+                    std::cout << "Loaded settings from " << app->settingsFile.c_str_safe()
+                              << std::endl;
+                } else {
+                    std::cerr << "Failed to load settings from " << app->settingsFile.c_str_safe()
+                              << std::endl;
+                    // Like a bad batch spec, this must end a scripted capture rather than let it
+                    // produce an image with the wrong settings.
+                    if (app->deterministicCapture) {
+                        exit(1);
+                    }
+                }
+            }
+
+            if (hasSettingsFile || batchMode) {
+                // Instantiate point lights loaded from settings file
+                app->automationEngine->updateCustomLights(engine,
+                        app->viewer->getSettings().lighting.lights, scene);
+            }
+        };
+
+        // A deterministic capture loads the settings file once the asset is in place; see below.
+        if (!app->deterministicCapture) {
+            loadSettingsFile();
+        }
+
+        // The JIT provider lives in the full gltfio target, and WASM builds only gltfio_core.
+        // Referencing it would be a link error, so the branch is compiled out rather than untaken.
+#if defined(__EMSCRIPTEN__)
+        app->materials = createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA,
+                UBERARCHIVE_DEFAULT_SIZE);
+#else
+        app->materials = (app->materialSource == JITSHADER)
+                                 ? createJitShaderProvider(engine, OPTIMIZE_MATERIALS, {})
+                                 : createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA,
+                                           UBERARCHIVE_DEFAULT_SIZE);
+#endif
+
+        app->assetLoader = AssetLoader::create({ engine, app->materials, app->names });
+        app->mainCamera = &view->getCamera();
+        if (filename.isEmpty()) {
+            app->asset = app->assetLoader->createAsset(GLTF_DEMO_DAMAGEDHELMET_DATA,
+                    GLTF_DEMO_DAMAGEDHELMET_SIZE);
+            app->instance = app->asset->getInstance();
+        } else {
+            loadAsset(filename);
+        }
+
+        loadResources(filename);
+        app->viewer->setAsset(app->asset, app->instance);
+
+        if (app->deterministicCapture) {
+            // Batch mode replaces the whole Settings with a test case built on Settings{}, so the
+            // interactive defaults ViewerGui installs (MSAA, SSAO, bloom, FXAA, temporal
+            // dithering), the sunlight it estimates from the IBL in setupIBL(), and the animation
+            // gltf_viewer enables never reach a batch render. Start from the same baseline so the
+            // settings file describes the complete deviation from Settings{}.
+            Settings& settings = app->viewer->getSettings();
+            settings = Settings{};
+            settings.viewer.autoScaleEnabled = !app->actualSize;
+            loadSettingsFile();
+
+            // ViewerGui pushes the view, camera and lighting settings every frame, and preRender
+            // pushes the viewer, debug and render settings, but nothing else applies material
+            // settings. Batch mode applies them once per test, which is what this does.
+            for (size_t i = 0, c = app->instance->getMaterialInstanceCount(); i < c; i++) {
+                applySettings(engine, settings.material, app->instance->getMaterialInstances()[i]);
+            }
+
+            // Record the effective settings next to the image, as batch mode does for each test.
+            // This goes through the AssetWriter that FilamentApp2 writes the screenshot with, so
+            // that a relative path resolves to the same directory for both files. The trailing
+            // newline matches AutomationEngine::exportSettings, which batch mode uses.
+            utils::Path const screenshotPath(app->config.screenshotPath.c_str_safe());
+            utils::Path const settingsPath =
+                    screenshotPath.getParent() + (screenshotPath.getNameWithoutExtension() + ".json");
+            JsonSerializer serializer;
+            std::string const json = serializer.writeJson(settings) + "\n";
+            filament::app::AssetWriter const* writer = app->filamentApp->getAssetWriter();
+            if (!writer ||
+                    !writer->write(settingsPath, reinterpret_cast<uint8_t const*>(json.data()),
+                            json.size())) {
+                std::cerr << "Failed to write settings to " << settingsPath << std::endl;
+                exit(1);
+            }
+        }
+
+        createGroundPlane(engine, scene, app.get());
+        createOverdrawVisualizerEntities(engine, scene, app.get());
+
+        app->viewer->setUiCallback([app, scene, view, engine]() {
+            auto& automation = *app->automationEngine;
+
+            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+                ImVec2 pos = ImGui::GetMousePos();
+                pos.x -= app->viewer->getSidebarWidth();
+                pos.x *= ImGui::GetIO().DisplayFramebufferScale.x;
+                pos.y *= ImGui::GetIO().DisplayFramebufferScale.y;
+                if (pos.x > 0) {
+                    pos.y = view->getViewport().height - 1 - pos.y;
+                    onClick(app, view, pos);
+                }
+            }
+
+            const ImVec4 yellow(1.0f,1.0f,0.0f,1.0f);
+
+            if (!app->notificationText.empty()) {
+                ImGui::TextColored(yellow, "Picked %s", app->notificationText.c_str());
+                ImGui::Spacing();
+            }
+
+            float const progress = app->resourcesLoadedSynchronously
+                                           ? 1.0f
+                                           : app->resourceLoader->asyncGetLoadProgress();
+            if (progress < 1.0) {
+                ImGui::ProgressBar(progress);
+            } else {
+                // The model is now fully loaded, so let automation know.
+                automation.signalBatchMode();
+            }
+
+            // The screenshots do not include the UI, but we auto-open the Automation UI group
+            // when in batch mode. This is useful when a human is observing progress.
+            const int flags = automation.isBatchModeEnabled() ? ImGuiTreeNodeFlags_DefaultOpen : 0;
+
+            if (ImGui::CollapsingHeader("Automation", flags)) {
+                ImGui::Indent();
+
+                if (automation.isRunning()) {
+                    ImGui::TextColored(yellow, "Test case %zu / %zu",
+                            automation.currentTest(), automation.testCount());
+                } else {
+                    ImGui::TextColored(yellow, "%zu test cases", automation.testCount());
+                }
+
+                auto options = automation.getOptions();
+
+                ImGui::PushItemWidth(150);
+                ImGui::SliderFloat("Sleep (seconds)", &options.sleepDuration, 0.0, 5.0);
+                ImGui::PopItemWidth();
+
+                // Hide the tooltip during automation to avoid photobombing the screenshot.
+                if (ImGui::IsItemHovered() && !automation.isRunning()) {
+                    ImGui::SetTooltip("Specifies the amount of time to sleep between test cases.");
+                }
+
+                ImGui::Checkbox("Export screenshot for each test", &options.exportScreenshots);
+                ImGui::Checkbox("Export settings JSON for each test", &options.exportSettings);
+
+                automation.setOptions(options);
+
+                if (automation.isRunning()) {
+                    if (ImGui::Button("Stop batch test")) {
+                        automation.stopRunning();
+                    }
+                } else if (ImGui::Button("Run batch test")) {
+                    automation.startRunning();
+                }
+
+                if (ImGui::Button("Export view settings")) {
+                    AutomationEngine::exportSettings(app->viewer->getSettings(), "settings.json");
+                    app->messageBoxText = utils::CString(automation.getStatusMessage());
+                    ImGui::OpenPopup("MessageBox");
+                }
+                ImGui::Unindent();
+            }
+
+            if (ImGui::CollapsingHeader("Stats")) {
+                ImGui::Indent();
+                ImGui::Text("%zu entities in the asset", app->asset->getEntityCount());
+                ImGui::Text("%zu renderables (excluding UI)", scene->getRenderableCount());
+                ImGui::Text("%zu skipped frames", app->filamentApp->getSkippedFrameCount());
+                ImGui::Unindent();
+            }
+
+            if (ImGui::CollapsingHeader("Debug")) {
+                auto& debug = engine->getDebugRegistry();
+
+                auto debugCheckbox = [&debug](const char* label, const char* name) {
+                    if (bool* p = debug.getPropertyAddress<bool>(name)) {
+                        ImGui::Checkbox(label, p);
+                    }
+                };
+                auto debugSliderFloat = [&debug](const char* label, const char* name, float min, float max) {
+                    if (float* p = debug.getPropertyAddress<float>(name)) {
+                        ImGui::SliderFloat(label, p, min, max);
+                    }
+                };
+                auto debugSliderInt = [&debug](const char* label, const char* name, int min, int max) {
+                    if (int* p = debug.getPropertyAddress<int>(name)) {
+                        ImGui::SliderInt(label, p, min, max);
+                    }
+                };
+
+                if (engine->getBackend() == Engine::Backend::METAL) {
+                    if (ImGui::Button("Capture frame")) {
+                        if (bool* captureFrame = debug.getPropertyAddress<bool>("d.renderer.doFrameCapture")) {
+                            *captureFrame = true;
+                        }
+                    }
+                }
+                if (ImGui::Button("Screenshot")) {
+                    app->screenshot = true;
+                }
+                debugCheckbox("Disable buffer padding", "d.renderer.disable_buffer_padding");
+                debugCheckbox("Disable sub-passes", "d.renderer.disable_subpasses");
+                debugCheckbox("Camera at origin", "d.view.camera_at_origin");
+                ImGui::Checkbox("Far Origin", &app->originIsFarAway);
+                ImGui::SliderFloat("Origin", &app->originDistance, 0, 1);
+                debugCheckbox("Far uses shadow casters", "d.shadowmap.far_uses_shadowcasters");
+                debugCheckbox("Focus shadow casters", "d.shadowmap.focus_shadowcasters");
+                debugCheckbox("Disable light frustum alignment", "d.shadowmap.disable_light_frustum_align");
+                debugCheckbox("Depth clamp", "d.shadowmap.depth_clamp");
+
+                bool debugDirectionalShadowmap;
+                if (debug.getProperty("d.shadowmap.debug_directional_shadowmap",
+                        &debugDirectionalShadowmap)) {
+                    ImGui::Checkbox("Debug DIR shadowmap", &debugDirectionalShadowmap);
+                    debug.setProperty("d.shadowmap.debug_directional_shadowmap",
+                            debugDirectionalShadowmap);
+                }
+
+                if (bool* displayShadowTexture = debug.getPropertyAddress<bool>("d.shadowmap.display_shadow_texture")) {
+                    ImGui::Checkbox("Display Shadow Texture", displayShadowTexture);
+                    if (*displayShadowTexture) {
+                        int layerCount;
+                        int levelCount;
+                        debug.getProperty("d.shadowmap.display_shadow_texture_layer_count", &layerCount);
+                        debug.getProperty("d.shadowmap.display_shadow_texture_level_count", &levelCount);
+                        ImGui::Indent();
+                        debugSliderFloat("scale", "d.shadowmap.display_shadow_texture_scale", 0.0f, 8.0f);
+                        debugSliderFloat("contrast", "d.shadowmap.display_shadow_texture_power", 0.0f, 2.0f);
+                        debugSliderInt("layer", "d.shadowmap.display_shadow_texture_layer", 0, layerCount - 1);
+                        debugSliderInt("level", "d.shadowmap.display_shadow_texture_level", 0, levelCount - 1);
+                        debugSliderInt("channel", "d.shadowmap.display_shadow_texture_channel", 0, 3);
+                        ImGui::Unindent();
+                    }
+                }
+
+                bool cameraFrustum = app->filamentApp->isCameraFrustumEnabled();
+                ImGui::Checkbox("Show Camera Frustum", &cameraFrustum);
+                app->filamentApp->setCameraFrustumEnabled(cameraFrustum);
+
+                bool shadowFrustum = app->filamentApp->isDirectionalShadowFrustumEnabled();
+                ImGui::Checkbox("Show Shadow Frustum", &shadowFrustum);
+                app->filamentApp->setDirectionalShadowFrustumEnabled(shadowFrustum);
+
+                bool debugFroxelVisualization;
+                if (debug.getProperty("d.lighting.debug_froxel_visualization",
+                        &debugFroxelVisualization)) {
+                    ImGui::Checkbox("Froxel Visualization", &debugFroxelVisualization);
+                    debug.setProperty("d.lighting.debug_froxel_visualization",
+                            debugFroxelVisualization);
+                    app->filamentApp->setFroxelGridEnabled(debugFroxelVisualization);
+                }
+
+                auto dataSource = debug.getDataSource("d.view.frame_info");
+                if (dataSource.data) {
+                    ImGuiExt::PlotLinesSeries("FrameInfo", 6,
+                            [](int series) {
+                                const ImVec4 colors[] = {
+                                        { 1,    0, 0, 1 }, // target
+                                        { 0, 0.5f, 0, 1 }, // frame-time
+                                        { 0,    1, 0, 1 }, // frame-time denoised
+                                        { 1,    1, 0, 1 }, // i
+                                        { 1,    0, 1, 1 }, // d
+                                        { 0,    1, 1, 1 }, // e
+
+                                };
+                                ImGui::PushStyleColor(ImGuiCol_PlotLines, colors[series]);
+                            },
+                            [](int series, void* buffer, int i) -> float {
+                                auto const* p = (DebugRegistry::FrameHistory const*)buffer + i;
+                                switch (series) {
+                                    case 0:     return 0.03f * p->target;
+                                    case 1:     return 0.03f * p->frameTime;
+                                    case 2:     return 0.03f * p->frameTimeDenoised;
+                                    case 3:     return p->pid_i * 0.5f / 100.0f + 0.5f;
+                                    case 4:     return p->pid_d * 0.5f / 0.100f + 0.5f;
+                                    case 5:     return p->pid_e * 0.5f / 1.000f + 0.5f;
+                                    default:    return 0.0f;
+                                }
+                            },
+                            [](int series) {
+                                if (series < 6) ImGui::PopStyleColor();
+                            },
+                            const_cast<void*>(dataSource.data), int(dataSource.count), 0,
+                            nullptr, 0.0f, 1.0f, { 0, 100 });
+                }
+#ifndef NDEBUG
+                debugSliderFloat("Kp", "d.view.pid.kp", 0, 2);
+                debugSliderFloat("Ki", "d.view.pid.ki", 0, 10);
+                debugSliderFloat("Kd", "d.view.pid.kd", 0, 10);
+#endif
+                const auto overdrawVisibilityBit = (1u << App::Scene::OVERDRAW_VISIBILITY_LAYER);
+                bool visualizeOverdraw = view->getVisibleLayers() & overdrawVisibilityBit;
+                ImGui::Checkbox("Visualize overdraw", &visualizeOverdraw);
+                view->setVisibleLayers(overdrawVisibilityBit,
+                        (uint8_t)visualizeOverdraw << App::Scene::OVERDRAW_VISIBILITY_LAYER);
+                app->viewer->getSettings().view.stencilBufferEnabled = visualizeOverdraw;
+            }
+
+            if (ImGui::BeginPopupModal("MessageBox", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("%s", app->messageBoxText.c_str());
+                if (ImGui::Button("OK", ImVec2(120, 0))) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+        });
+    };
+
+    auto cleanup = [app](Engine* engine, View*, Scene*) {
+        app->automationEngine->terminate();
+        app->resourceLoader->asyncCancelLoad();
+        app->assetLoader->destroyAsset(app->asset);
+        app->materials->destroyMaterials();
+
+        engine->destroy(app->scene.groundPlane);
+        engine->destroy(app->scene.groundVertexBuffer);
+        engine->destroy(app->scene.groundIndexBuffer);
+        engine->destroy(app->scene.groundMaterial);
+        engine->destroy(app->colorGrading);
+
+        engine->destroy(app->scene.fullScreenTriangleVertexBuffer);
+        engine->destroy(app->scene.fullScreenTriangleIndexBuffer);
+
+        auto& em = EntityManager::get();
+        for (auto e: app->scene.overdrawVisualizer) {
+            engine->destroy(e);
+            em.destroy(e);
+        }
+
+        for (auto mi: app->scene.overdrawMaterialInstances) {
+            engine->destroy(mi);
+        }
+        engine->destroy(app->scene.overdrawMaterial);
+
+        delete app->viewer;
+        delete app->materials;
+        delete app->names;
+        delete app->resourceLoader;
+        delete app->stbDecoder;
+        delete app->ktxDecoder;
+        delete app->webpDecoder;
+        delete app->automationSpec;
+        delete app->automationEngine;
+
+        AssetLoader::destroy(&app->assetLoader);
+    };
+
+    auto animate = [app](Engine*, View*, double now) {
+        app->resourceLoader->asyncUpdateLoad();
+
+        app->names->gc();
+        app->assetLoader->gc();
+
+        // Optionally fit the model into a unit cube at the origin.
+        app->viewer->updateRootTransform();
+
+        // Gradually add renderables to the scene as their textures become ready.
+        app->viewer->populateScene();
+
+        auto& debugSettings = app->viewer->getSettings().debug;
+        if (debugSettings.frameStep) {
+            // Consume a pending step here rather than in preRender: animation has to be advanced
+            // before the frame that shows it is rendered, and this callback runs first.
+            if (debugSettings.frameStepRequested) {
+                debugSettings.frameStepRequested = false;
+                app->frameStepTime += debugSettings.frameStepDeltaSeconds;
+                app->frameStepRenderPending = true;
+            }
+            // Substitute the virtual clock for the wall clock, freezing animation between steps.
+            now = app->frameStepTime;
+        } else {
+            // Keep the virtual clock aligned with the wall clock while stepping is off, so
+            // enabling it doesn't jump the animation.
+            app->frameStepTime = now;
+            app->frameStepRenderPending = false;
+        }
+
+        auto const& animSettings = app->viewer->getSettings().animation;
+        if (animSettings.enabled) {
+            double animTime = now;
+            if (animSettings.time >= 0.0f) {
+                animTime = animSettings.time;
+            } else {
+                animTime *= animSettings.speed;
+            }
+            app->viewer->applyAnimation(animTime);
+        }
+    };
+
+    auto resize = [app](Engine*, View* view) {
+        Camera& camera = view->getCamera();
+        if (&camera == app->mainCamera) {
+            // Don't adjust the aspect ratio of the main camera, this is done inside of
+            // FilamentApp.cpp
+            return;
+        }
+        const Viewport& vp = view->getViewport();
+        double const aspectRatio = (double) vp.width / vp.height;
+        camera.setScaling({1.0 / aspectRatio, 1.0 });
+    };
+
+    auto gui = [app](Engine*, View*) {
+        app->viewer->updateUserInterface();
+
+        app->filamentApp->setSidebarWidth(app->viewer->getSidebarWidth());
+    };
+
+    auto preRender = [app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
+        // Frame stepping: hold the frame by telling the renderer to skip it, which makes
+        // beginFrame() return false so nothing is rendered OR presented -- the window keeps
+        // showing the last stepped frame instead of cycling stale swap chain buffers. ImGui is
+        // still updated every iteration (it runs before this), so the UI stays interactive even
+        // while frozen; only its display is held. A step lets exactly one frame through, which
+        // is also what advances TAA's history by exactly one iteration.
+        auto const& debugSettings = app->viewer->getSettings().debug;
+        if (debugSettings.frameStep) {
+            if (app->frameStepRenderPending) {
+                app->frameStepRenderPending = false;
+            } else {
+                renderer->skipNextFrames(1);
+            }
+        }
+
+        auto& rcm = engine->getRenderableManager();
+        auto instance = rcm.getInstance(app->scene.groundPlane);
+        const auto viewerOptions = app->automationEngine->getViewerOptions();
+        rcm.setLayerMask(instance,
+                0xff, viewerOptions.groundPlaneEnabled ? 0xff : 0x00);
+
+        engine->setAutomaticInstancingEnabled(viewerOptions.autoInstancingEnabled);
+
+        if (auto* swapChain = app->filamentApp->getPrimarySwapChain()) {
+            if (swapChain->isFrameRateChangeSupported().is_true()) {
+                if (viewerOptions.cameraFrameRate != app->currentFrameRate) {
+                    swapChain->setFrameRate(viewerOptions.cameraFrameRate,
+                            SwapChain::FrameRateCompatibility::DEFAULT,
+                            SwapChain::ChangeFrameRateStrategy::ONLY_IF_SEAMLESS);
+                    app->currentFrameRate = viewerOptions.cameraFrameRate;
+                }
+            }
+        }
+
+        // Note that this focal length might be different from the slider value because the
+        // automation engine applies Camera::computeEffectiveFocalLength when DoF is enabled.
+        float focalLength = app->viewer->getSettings().camera.focalLength;
+        float const focusDistance = app->viewer->getSettings().camera.focusDistance;
+        if (app->viewer->getSettings().view.dof.enabled) {
+            focalLength = Camera::computeEffectiveFocalLength(focalLength / 1000.0,
+                                  std::max(0.1f, focusDistance)) *
+                          1000.0;
+        }
+        app->filamentApp->setCameraFocalLength(focalLength);
+        app->filamentApp->setCameraNearFar(app->viewer->getSettings().camera.near,
+                app->viewer->getSettings().camera.far);
+
+        size_t const cameraCount = app->asset->getCameraEntityCount();
+        view->setCamera(app->mainCamera);
+
+        int const currentCamera = app->viewer->getCurrentCamera();
+        if (currentCamera > 0 && currentCamera <= cameraCount) {
+            const utils::Entity* cameras = app->asset->getCameraEntities();
+            Camera* camera = engine->getCameraComponent(cameras[currentCamera - 1]);
+            assert_invariant(camera);
+            view->setCamera(camera);
+
+            // Override the aspect ratio in the glTF file and adjust the aspect ratio of this
+            // camera to the viewport.
+            const Viewport& vp = view->getViewport();
+            double const aspectRatio = (double) vp.width / vp.height;
+            camera->setScaling({1.0 / aspectRatio, 1.0});
+        }
+
+        static bool stereoscopicEnabled = false;
+        if (stereoscopicEnabled != view->getStereoscopicOptions().enabled) {
+            // Stereo was turned on/off.
+            app->filamentApp->reconfigureCameras();
+            stereoscopicEnabled = view->getStereoscopicOptions().enabled;
+        }
+
+        app->scene.groundMaterial->setDefaultParameter("strength",
+                viewerOptions.groundShadowStrength);
+
+        // This applies clear options, the skybox mask, and some camera settings.
+        Camera& camera = view->getCamera();
+        Skybox* skybox = scene->getSkybox();
+        applySettings(engine, app->viewer->getSettings().viewer, &camera, skybox, renderer);
+        double const aspect =
+                (double) view->getViewport().width / (double) view->getViewport().height;
+        applySettings(engine, app->viewer->getSettings().camera, &camera, aspect);
+
+        // FIXME: This applySettings() is done here instead of in AutomationEngine.cpp because
+        // we need access to the Renderer, which AutomationEngine does not provide.
+        applySettings(engine, app->viewer->getSettings().debug, renderer);
+
+        // Batch mode also applies the render settings, once per test. Only the frame rate options
+        // matter: the viewer settings above replace the clear options on every frame in both
+        // paths. The Renderer is not available during setup, so this happens on the first frame.
+        if (app->deterministicCapture && !app->renderSettingsApplied) {
+            renderer->setFrameRateOptions(app->viewer->getSettings().render.frameRateOptions);
+            app->renderSettingsApplied = true;
+        }
+
+        // technically we don't need to do this each frame
+        auto& tcm = engine->getTransformManager();
+        TransformManager::Instance const& root = tcm.getInstance(app->rootTransformEntity);
+        tcm.setParent(tcm.getInstance(camera.getEntity()), root);
+        tcm.setParent(tcm.getInstance(app->asset->getRoot()), root);
+        tcm.setParent(tcm.getInstance(view->getFogEntity()), root);
+
+        // these values represent a point somewhere on Earth's surface
+        float const d = app->originIsFarAway ? app->originDistance : 0.0f;
+        //        tcm.setTransform(root, mat4::translation(double3{ 67.0, -6366759.0, -21552.0 } *
+        //        d));
+        tcm.setTransform(root, mat4::translation(
+                double3{ 2304097.1410110965, -4688442.9915525438, -3639452.5611694567 } * d));
+
+        // Check if color grading has changed.
+        ColorGradingSettings const& options = app->viewer->getSettings().view.colorGrading;
+        if (options.enabled) {
+            if (options != app->lastColorGradingOptions) {
+                ColorGrading *colorGrading = createColorGrading(options, engine);
+                engine->destroy(app->colorGrading);
+                app->colorGrading = colorGrading;
+                app->lastColorGradingOptions = options;
+            }
+            view->setColorGrading(app->colorGrading);
+        } else {
+            view->setColorGrading(nullptr);
+        }
+    };
+
+    auto postRender = [app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
+        if (app->screenshot) {
+            char filenameBuf[64];
+            const char* const ext = app->screenshotAsPPM ? ".ppm" : ".tif";
+            snprintf(filenameBuf, sizeof(filenameBuf), "screenshot%02u%s", +app->screenshotSeq,
+                    ext);
+            AutomationEngine::exportScreenshot(view, renderer, filenameBuf, false,
+                    app->automationEngine);
+            ++app->screenshotSeq;
+            app->screenshot = false;
+        }
+        if (app->automationEngine->shouldClose()) {
+            app->filamentApp->close();
+            return;
+        }
+        AutomationEngine::ViewerContent const content = {
+            .view = view,
+            .renderer = renderer,
+            .materials = app->instance->getMaterialInstances(),
+            .materialCount = app->instance->getMaterialInstanceCount(),
+            .lightManager = &engine->getLightManager(),
+            .scene = scene,
+            .indirectLight = app->viewer->getIndirectLight(),
+            .sunlight = app->viewer->getSunlight(),
+            .assetLights = app->asset->getLightEntities(),
+            .assetLightCount = app->asset->getLightEntityCount(),
+        };
+        app->automationEngine->tick(engine, content, ImGui::GetIO().DeltaTime);
+    };
+    auto fApp =
+            samples::getBuilder(config, dm, appLoader)
+                    .setup(setup)
+                    .cleanup(cleanup)
+                    .imgui(gui)
+                    .preRender(preRender)
+                    .postRender(postRender)
+                    .animation(animate)
+                    .resize(resize)
+                    .dropHandler([app, appLoader, loadAsset, loadResources, setupIBL](
+                                         std::string_view path) {
+                        utils::Path filename = getPathForGLTFAsset(path);
+                        if (!filename.isEmpty()) {
+                            if (checkGLTFAsset(appLoader, filename)) {
+                                app->resourceLoader->asyncCancelLoad();
+                                app->resourceLoader->evictResourceData();
+                                app->viewer->removeAsset();
+                                app->assetLoader->destroyAsset(app->asset);
+                                loadAsset(filename);
+                                loadResources(filename);
+                                app->viewer->setAsset(app->asset, app->instance);
+                            }
+                            return;
+                        }
+
+                        filename = getPathForIBLAsset(path);
+                        if (!filename.isEmpty()) {
+                            app->filamentApp->loadIBL(path);
+                            setupIBL();
+                        }
+                    })
+                    .build();
+    app->filamentApp = fApp.get();
+    return fApp;
+}
+
+samples::SampleParameters createAppParameters() {
+    return {
+        samples::Parameter::makeBool("ubershader", 'u', "Enable ubershader", false),
+        samples::Parameter::makeBool("actual-size", 's', "Set window size to actual asset size",
+                false),
+        samples::Parameter::makeBool("recompute-aabb", 'r', "Recompute bounding box", false),
+        samples::Parameter::makeString("settings", 't', "Path to settings JSON file", ""),
+        samples::Parameter::makeString("batch", 'b', "Path to batch file", ""),
+        samples::Parameter::makeBool("screenshot-as-ppm", 'd', "Save screenshot as PPM", false),
+    };
+}
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config;
+    config.title = "Filament";
+    config.iblDirectory = utils::CString(DEFAULT_IBL);
+    samples::CommandLineSpecification spec = {
+        .sampleDescription = "GLTF_VIEWER is a tool for viewing glTF models with Filament.",
+        .positionalArgsDescription = { "gltf/glb file" },
+        .parameters = createAppParameters(),
+    };
+
+    samples::handleCommandLineArguments(argc, argv, &config, spec);
+    auto dm = samples::getDisplayManager(config);
+
+    auto loader = samples::getAssetLoader(config);
+    auto app = createSampleApp(config, dm.get(), loader.get());
+    return samples::runApp(std::move(app), std::move(dm), std::move(loader));
+}
+#endif

@@ -1,0 +1,272 @@
+/*
+ * Copyright (C) 2026 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "filament_test_resources.h"
+#include "LocalProgramCache.h"
+#include "MaterialParser.h"
+
+#include "details/Material.h"
+
+#include <filament/Engine.h>
+#include <filament/Material.h>
+#include <filament/MaterialChunkType.h>
+#include <filament/RenderableManager.h>
+
+#include <filamat/MaterialBuilder.h>
+
+#include <filaflat/ChunkContainer.h>
+
+#include <utils/EntityManager.h>
+
+#include <gtest/gtest.h>
+
+#include <cstddef>
+#include <cstdint>
+#include <vector>
+
+using namespace filament;
+
+namespace {
+constexpr std::size_t SURFACE_SIZE = 1u << (VARIANT_BITS + DYNAMIC_SPEC_CONST_KEY_BITS);
+constexpr std::size_t POST_PROCESS_SIZE =
+        1u << (POST_PROCESS_VARIANT_BITS + DYNAMIC_SPEC_CONST_KEY_BITS);
+
+void mapInvalidKey(uint8_t variantKey, std::size_t size) noexcept {
+    Variant variant{};
+    variant.key = variantKey;
+    (void) LocalProgramCache::mapCacheEntryKey(variant, DynamicSpecConstKey{ 0 }, size);
+}
+
+// Compiles a genuine post-process material, i.e. the kind of asset an application can load at
+// runtime from a package it did not author.
+filamat::Package buildPostProcessMaterial(Engine& engine) {
+    static constexpr std::string_view shaderCode = R"(
+        void postProcess(inout PostProcessInputs postProcess) {
+            postProcess.color = float4(1.0);
+        }
+    )";
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("test_post_process")
+            .materialDomain(filamat::MaterialBuilder::MaterialDomain::POST_PROCESS)
+            .materialSource(shaderCode);
+    return builder.build(downcast(engine).getJobSystem());
+}
+}
+
+TEST(LocalProgramCache, SurfaceBoundary) {
+    // The largest valid surface variant combined with the largest specialization key must land
+    // exactly on the last slot of the cache. Expressed in terms of the variant space so that this
+    // keeps holding if the number of variant bits changes.
+    Variant variant{};
+    variant.key = Variant::type_t(VARIANT_COUNT - 1);
+    EXPECT_EQ(LocalProgramCache::mapCacheEntryKey(variant,
+                      DynamicSpecConstKey{
+                          DynamicSpecConstKey::type_t(DYNAMIC_SPEC_CONST_KEY_COUNT - 1) },
+                      SURFACE_SIZE),
+            SURFACE_SIZE - 1);
+}
+
+TEST(LocalProgramCache, PostProcessBoundaries) {
+    // The post-process variant space is tiny ({0, 1}), but it uses the same slot layout as the
+    // surface cache: each variant owns DYNAMIC_SPEC_CONST_KEY_COUNT consecutive slots. Expressed
+    // in terms of the variant space so this keeps holding if either bit count changes.
+    Variant variant{};
+    EXPECT_EQ(LocalProgramCache::mapCacheEntryKey(
+                      variant, DynamicSpecConstKey{ 0 }, POST_PROCESS_SIZE), 0u);
+
+    variant.key = Variant::type_t(POST_PROCESS_VARIANT_COUNT - 1);
+    EXPECT_EQ(LocalProgramCache::mapCacheEntryKey(
+                      variant, DynamicSpecConstKey{ 0 }, POST_PROCESS_SIZE),
+            (POST_PROCESS_VARIANT_COUNT - 1) << DYNAMIC_SPEC_CONST_KEY_BITS);
+}
+
+TEST(LocalProgramCacheDeathTest, RejectsOverflow) {
+    EXPECT_DEATH(mapInvalidKey(Variant::type_t(VARIANT_COUNT), SURFACE_SIZE), "");
+    EXPECT_DEATH(mapInvalidKey(POST_PROCESS_VARIANT_COUNT, POST_PROCESS_SIZE), "");
+    EXPECT_DEATH(mapInvalidKey(Variant::DEP, POST_PROCESS_SIZE), "");
+}
+
+TEST(LocalProgramCacheDeathTest, UsesActualCapacity) {
+    EXPECT_DEATH(mapInvalidKey(0, 0), "");
+    EXPECT_DEATH(mapInvalidKey(1, 8), "");
+}
+
+TEST(LocalProgramCache, DepthIgnoresSpecialization) {
+    // Depth variants are decoupled from the dynamic specialization space, so every specialization
+    // key must collapse onto the depth variant's own slot (i.e. as if specKey were 0).
+    Variant variant{};
+    variant.key = Variant::DEP;
+    ASSERT_TRUE(Variant::isValidDepthVariant(variant));
+    constexpr std::size_t DEPTH_SLOT = std::size_t{ Variant::DEP } << DYNAMIC_SPEC_CONST_KEY_BITS;
+    for (uint16_t key = 0; key < DYNAMIC_SPEC_CONST_KEY_COUNT; ++key) {
+        EXPECT_EQ(LocalProgramCache::mapCacheEntryKey(
+                          variant, DynamicSpecConstKey{ key }, SURFACE_SIZE), DEPTH_SLOT);
+    }
+}
+
+TEST(MaterialDomainValidation, RejectsInvalidAndMissingDomain) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    ASSERT_NE(engine, nullptr);
+    for (int value : { -1, 255 }) {
+        std::vector<uint8_t> bytes(FILAMENT_TEST_RESOURCES_TEST_MATERIAL_DATA,
+                FILAMENT_TEST_RESOURCES_TEST_MATERIAL_DATA +
+                        FILAMENT_TEST_RESOURCES_TEST_MATERIAL_SIZE);
+        filaflat::ChunkContainer chunks(bytes.data(), bytes.size());
+        ASSERT_TRUE(chunks.parse());
+        auto const range = chunks.getChunkRange(filamat::ChunkType::MaterialDomain);
+        ASSERT_NE(range.first, nullptr);
+        ASSERT_EQ(range.second - range.first, 1);
+        std::size_t const offset = range.first - bytes.data();
+        if (value < 0) {
+            // A chunk has a uint64_t type and uint32_t payload size before its payload.
+            bytes.erase(bytes.begin() + offset - 12, bytes.begin() + offset + 1);
+        } else {
+            bytes[offset] = static_cast<uint8_t>(value);
+        }
+        Material* material = Material::Builder().package(bytes.data(), bytes.size()).build(*engine);
+        EXPECT_EQ(material, nullptr);
+        if (material) {
+            engine->destroy(material);
+        }
+    }
+    Engine::destroy(engine);
+}
+
+TEST(LocalProgramCacheRegressionDeathTest, SurfaceVariantOnPostProcessMaterialIsRejected) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    ASSERT_NE(engine, nullptr);
+
+    filamat::Package const package = buildPostProcessMaterial(*engine);
+    ASSERT_TRUE(package.isValid());
+
+    // 1. The asset loads. Rejecting post-process materials outright would break
+    //    IBLPrefilterLibrary, so this is by design.
+    Material* material =
+            Material::Builder().package(package.getData(), package.getSize()).build(*engine);
+    ASSERT_NE(material, nullptr);
+    ASSERT_EQ(material->getMaterialDomain(), MaterialDomain::POST_PROCESS);
+
+    // 2. Nothing stops that material from being attached to a renderable: RenderableManager
+    //    only gates on feature level. This is what puts a post-process material under the
+    //    control of the surface render path.
+    utils::Entity const entity = utils::EntityManager::get().create();
+    RenderableManager::Builder(1).boundingBox({{ 0, 0, 0 }, { 1, 1, 1 }}).build(*engine, entity);
+    RenderableManager& rcm = engine->getRenderableManager();
+    auto const renderable = rcm.getInstance(entity);
+    ASSERT_TRUE(renderable.isValid());
+    rcm.setMaterialInstanceAt(renderable, 0, material->getDefaultInstance());
+    EXPECT_EQ(rcm.getMaterialInstanceAt(renderable, 0), material->getDefaultInstance());
+
+    // 3. Meanwhile the program cache was sized for the post-process variant space only.
+    LocalProgramCache const& programs = downcast(material)->getPrograms();
+    ASSERT_EQ(programs.getPrograms().size(), POST_PROCESS_SIZE);
+
+    // 4. RenderPass::setupColorCommand() builds a surface variant for a renderable and
+    //    RenderPass::instanceify() feeds it to prepareProgram(). A lit renderable that receives
+    //    shadows is about as ordinary as it gets, and it already lands outside the cache.
+    Variant variant{};
+    variant.key = Variant::SRE;
+    static_assert(std::size_t{ Variant::SRE } << DYNAMIC_SPEC_CONST_KEY_BITS >= POST_PROCESS_SIZE,
+            "SRE must map past the end of the post-process cache, otherwise this test proves "
+            "nothing; pick a higher surface-only bit if the variant layout changes");
+
+    // The Engine owns worker threads, and the default "fast" style forks without exec, which is
+    // unsafe there. "threadsafe" re-executes the binary instead.
+    std::string const previousStyle = GTEST_FLAG_GET(death_test_style);
+    GTEST_FLAG_SET(death_test_style, "threadsafe");
+    EXPECT_DEATH(programs.prepareProgram(downcast(engine)->getDriverApi(), variant,
+                         DynamicSpecConstKey{ 0 }, backend::CompilerPriorityQueue::HIGH),
+            "utils::PostconditionPanic");
+    GTEST_FLAG_SET(death_test_style, previousStyle);
+
+    engine->destroy(entity);
+    utils::EntityManager::get().destroy(entity);
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
+
+TEST(MaterialDomainValidation, UserVariantFilterIsInertForPostProcessMaterials) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    ASSERT_NE(engine, nullptr);
+
+    filamat::Package const package = buildPostProcessMaterial(*engine);
+    ASSERT_TRUE(package.isValid());
+    Material* material =
+            Material::Builder().package(package.getData(), package.getSize()).build(*engine);
+    ASSERT_NE(material, nullptr);
+
+    MaterialDefinition const& definition = downcast(material)->getDefinition();
+    ASSERT_EQ(definition.materialDomain, MaterialDomain::POST_PROCESS);
+
+    // A post-process variant key is a plain PostProcessVariant index, not a bitfield of surface
+    // variant bits, so the user variant filter must leave it completely untouched.
+    //
+    // This matters because callers compare the filtered key against the original to decide
+    // whether to skip a variant (see FMaterialInstance::compile). If a filter mask happens to
+    // clear a bit that a post-process key uses as part of its index, that variant silently
+    // disappears from precompilation with no diagnostic.
+    //
+    // Asserting over every mask rather than a specific one keeps this test independent of the
+    // surface variant bit layout, which is exactly what shifts when a variant bit is added or
+    // removed.
+    for (auto const variant: definition.getVariants()) {
+        for (uint32_t mask = 0; mask <= uint32_t(UserVariantFilterBit::ALL); ++mask) {
+            EXPECT_EQ(definition.filterUserVariant(variant, UserVariantFilterMask(mask)).key,
+                    variant.key)
+                    << "post-process variant " << +variant.key
+                    << " was altered by user variant filter mask " << mask;
+        }
+    }
+
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
+
+TEST(MaterialDomainValidation, FeatureLevel0IncludesBothPostProcessVariants) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    ASSERT_NE(engine, nullptr);
+
+    filamat::MaterialBuilder::init();
+    filamat::MaterialBuilder builder;
+    builder.materialDomain(filamat::MaterialBuilder::MaterialDomain::POST_PROCESS)
+            .featureLevel(backend::FeatureLevel::FEATURE_LEVEL_0)
+            .platform(filamat::MaterialBuilder::Platform::MOBILE)
+            .targetApi(filamat::MaterialBuilder::TargetApi::OPENGL)
+            .materialSource(R"(
+                void postProcess(inout PostProcessInputs postProcess) {
+                    postProcess.color = float4(1.0);
+                }
+            )");
+    filamat::Package const package = builder.build(downcast(engine)->getJobSystem());
+    filamat::MaterialBuilder::shutdown();
+    Engine::destroy(engine);
+    ASSERT_TRUE(package.isValid());
+
+    // Inspect ESSL1 specifically: a valid package can still be missing its translucent shaders
+    // if the FL0 surface filter mistakes the post-process index for the DIR bit.
+    MaterialParser parser({ backend::ShaderLanguage::ESSL1 },
+            package.getData(), package.getSize());
+    ASSERT_EQ(parser.parse(), MaterialParser::ParseResult::SUCCESS);
+    for (auto const variant: { PostProcessVariant::OPAQUE, PostProcessVariant::TRANSLUCENT }) {
+        for (auto const stage: { backend::ShaderStage::VERTEX, backend::ShaderStage::FRAGMENT }) {
+            EXPECT_TRUE(parser.hasShader(backend::ShaderModel::MOBILE,
+                    Variant(static_cast<Variant::type_t>(variant)), stage))
+                    << "Missing ESSL1 shader for post-process variant " << int(variant)
+                    << ", stage " << int(stage);
+        }
+    }
+}

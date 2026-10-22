@@ -1,0 +1,290 @@
+/*
+ * Copyright (C) 2015 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "DriverBase.h"
+
+#include <private/backend/CommandStream.h>
+#include <private/backend/Driver.h>
+
+#include <backend/AcquiredImage.h>
+#include <backend/BufferDescriptor.h>
+#include <backend/DriverEnums.h>
+
+#include <private/utils/Tracing.h>
+
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/JobSystem.h>
+#include <utils/Logger.h>
+#include <utils/Mutex.h>
+#include <utils/ostream.h>
+#include <utils/Panic.h>
+
+#include <math/half.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
+
+#include <functional>
+#include <mutex>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
+
+using namespace utils;
+using namespace filament::math;
+
+namespace filament::backend {
+
+namespace {
+
+// Debug-only ceiling on purgeAll()'s drain rounds. Legitimate chains are a couple of hops deep
+// (e.g., countdownCallback -> user callback), so anything close to this is a callback rescheduling
+// itself.
+UTILS_UNUSED_IN_RELEASE constexpr size_t MAX_PURGE_ROUNDS = 256;
+
+} // anonymous namespace
+
+DriverBase::DriverBase(const Platform::DriverConfig& driverConfig) noexcept
+    : mDriverConfig(driverConfig) {
+    if constexpr (UTILS_HAS_THREADING) {
+        // This thread services user callbacks
+        mServiceThread = std::thread([this]() {
+            JobSystem::setThreadName("ServiceThread");
+            decltype(mServiceThreadCallbackQueue) callbacks;
+            do {
+                auto& serviceThreadCondition = mServiceThreadCondition;
+                auto& serviceThreadCallbackQueue = mServiceThreadCallbackQueue;
+
+                // wait for some callbacks to dispatch
+                UniqueLock lock(mServiceThreadLock);
+                while (serviceThreadCallbackQueue.empty() && !mExitRequested) {
+                    serviceThreadCondition.wait(lock);
+                }
+                // Exit only after the queue is drained. Abandoning callbacks would strand callers
+                // waiting on a completion that never arrives (e.g. FEngine defers freeing an
+                // asynchronous object until its creation callback settles it).
+                if (mExitRequested && serviceThreadCallbackQueue.empty()) {
+                    break;
+                }
+                // move the callbacks to a temporary vector
+                callbacks.swap(serviceThreadCallbackQueue);
+                lock.unlock();
+                // and make sure to call them without our lock held
+                for (auto[handler, callback, user]: callbacks) {
+                    handler->post(user, callback);
+                }
+                callbacks.clear();
+            } while (true);
+        });
+    }
+}
+
+DriverBase::~DriverBase() noexcept {
+    assert_invariant(mCallbacks.empty());
+    if constexpr (UTILS_HAS_THREADING) {
+        stopServiceThread();
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+
+
+class DriverBase::CallbackDataDetails : public DriverBase::CallbackData {
+    UTILS_UNUSED DriverBase* mAllocator;
+public:
+    explicit CallbackDataDetails(DriverBase* allocator) : mAllocator(allocator) {}
+};
+
+DriverBase::CallbackData* DriverBase::CallbackData::obtain(DriverBase* allocator) {
+    // todo: use a pool
+    return new CallbackDataDetails(allocator);
+}
+
+void DriverBase::CallbackData::release(CallbackData* data) {
+    // todo: use a pool
+    delete static_cast<CallbackDataDetails*>(data);
+}
+
+
+void DriverBase::scheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback) {
+    if (handler && UTILS_HAS_THREADING) {
+        {
+            LockGuard const lock(mServiceThreadLock);
+            if (!mExitRequested) {
+                mServiceThreadCallbackQueue.emplace_back(handler, callback, user);
+                mServiceThreadCondition.notify_one();
+                return;
+            }
+        }
+        // Once exit is requested the ServiceThread may already be gone, so dispatch here. Release
+        // the lock first because CountdownCallbackHandler::post() calls back into this function
+        // and the lock is not recursive.
+        handler->post(user, callback);
+    } else {
+        LockGuard const lock(mPurgeLock);
+        mCallbacks.emplace_back(user, callback);
+    }
+}
+
+bool DriverBase::dispatchQueuedCallbacks() noexcept {
+    decltype(mCallbacks) callbacks;
+    {
+        LockGuard const lock(mPurgeLock);
+        if (mCallbacks.empty()) {
+            return false;
+        }
+        std::swap(callbacks, mCallbacks);
+    }
+    // the scope above matters: it ensures callbacks are called without the lock held
+    for (auto& item : callbacks) {
+        item.second(item.first);
+    }
+    return true;
+}
+
+void DriverBase::purge() noexcept {
+    dispatchQueuedCallbacks();
+}
+
+void DriverBase::purgeAll() noexcept {
+    // Unlike purge(), this keeps going until the queue stays empty, because a callback is allowed
+    // to schedule another one: with no ServiceThread, CountdownCallbackHandler::countdownCallback
+    // lands here and schedules the user callback from inside this loop.
+    UTILS_UNUSED_IN_RELEASE size_t rounds = 0;
+    while (dispatchQueuedCallbacks()) {
+        // A callback that reschedules itself unconditionally would spin here forever.
+        // Assert failure here indicates a bug.
+        assert_invariant(++rounds < MAX_PURGE_ROUNDS);
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+
+void DriverBase::scheduleDestroySlow(BufferDescriptor&& buffer) {
+    auto const handler = buffer.getHandler();
+    scheduleCallback(handler, [buffer = std::move(buffer)]() {
+        // user callback is called when BufferDescriptor gets destroyed
+    });
+}
+
+// This is called from an async driver method so it's in the GL thread, but purge is called
+// on the user thread. This is typically called 0 or 1 times per frame.
+void DriverBase::scheduleRelease(AcquiredImage const& image) {
+    scheduleCallback(image.handler, [callback = image.callback, image = image.image, userData = image.userData]() {
+        callback(image, userData);
+    });
+}
+
+void DriverBase::debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept {
+    if constexpr (bool(FILAMENT_DEBUG_COMMANDS > FILAMENT_DEBUG_COMMANDS_NONE)) {
+        if constexpr (bool(FILAMENT_DEBUG_COMMANDS & FILAMENT_DEBUG_COMMANDS_LOG)) {
+            DLOG(INFO) << methodName;
+        }
+        if constexpr (bool(FILAMENT_DEBUG_COMMANDS & FILAMENT_DEBUG_COMMANDS_SYSTRACE)) {
+            FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+            FILAMENT_TRACING_NAME_BEGIN(FILAMENT_TRACING_CATEGORY_FILAMENT, methodName);
+
+            if (!synchronous) {
+                cmds->queueCommand([=]() {
+                    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+                    FILAMENT_TRACING_NAME_BEGIN(FILAMENT_TRACING_CATEGORY_FILAMENT, methodName);
+                });
+            }
+        }
+    }
+}
+
+void DriverBase::debugCommandEnd(CommandStream* cmds, bool synchronous,
+        const char* methodName) noexcept {
+    if constexpr (bool(FILAMENT_DEBUG_COMMANDS > FILAMENT_DEBUG_COMMANDS_NONE)) {
+        if constexpr (bool(FILAMENT_DEBUG_COMMANDS & FILAMENT_DEBUG_COMMANDS_SYSTRACE)) {
+            if (!synchronous) {
+                cmds->queueCommand([]() {
+                    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+                    FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT);
+                });
+            }
+            FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+            FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT);
+        }
+    }
+}
+
+#if UTILS_HAS_THREADING
+void DriverBase::stopServiceThread() noexcept {
+    if (!mServiceThread.joinable()) {
+        return;
+    }
+
+    {
+        LockGuard const lock(mServiceThreadLock);
+        mExitRequested = true;
+    }
+    mServiceThreadCondition.notify_one();
+    mServiceThread.join();
+
+#ifndef NDEBUG
+    {
+        LockGuard const lock(mServiceThreadLock);
+        assert_invariant(mServiceThreadCallbackQueue.empty());
+    }
+#endif
+}
+#endif
+
+size_t Driver::getElementTypeSize(ElementType type) noexcept {
+    switch (type) {
+        case ElementType::BYTE:     return sizeof(int8_t);
+        case ElementType::BYTE2:    return sizeof(byte2);
+        case ElementType::BYTE3:    return sizeof(byte3);
+        case ElementType::BYTE4:    return sizeof(byte4);
+        case ElementType::UBYTE:    return sizeof(uint8_t);
+        case ElementType::UBYTE2:   return sizeof(ubyte2);
+        case ElementType::UBYTE3:   return sizeof(ubyte3);
+        case ElementType::UBYTE4:   return sizeof(ubyte4);
+        case ElementType::SHORT:    return sizeof(int16_t);
+        case ElementType::SHORT2:   return sizeof(short2);
+        case ElementType::SHORT3:   return sizeof(short3);
+        case ElementType::SHORT4:   return sizeof(short4);
+        case ElementType::USHORT:   return sizeof(uint16_t);
+        case ElementType::USHORT2:  return sizeof(ushort2);
+        case ElementType::USHORT3:  return sizeof(ushort3);
+        case ElementType::USHORT4:  return sizeof(ushort4);
+        case ElementType::INT:      return sizeof(int32_t);
+        case ElementType::UINT:     return sizeof(uint32_t);
+        case ElementType::FLOAT:    return sizeof(float);
+        case ElementType::FLOAT2:   return sizeof(float2);
+        case ElementType::FLOAT3:   return sizeof(float3);
+        case ElementType::FLOAT4:   return sizeof(float4);
+        case ElementType::HALF:     return sizeof(half);
+        case ElementType::HALF2:    return sizeof(half2);
+        case ElementType::HALF3:    return sizeof(half3);
+        case ElementType::HALF4:    return sizeof(half4);
+    }
+    return 0;
+}
+
+// ------------------------------------------------------------------------------------------------
+
+Driver::~Driver() noexcept = default;
+
+void Driver::execute(std::function<void(void)> const& fn) {
+    fn();
+}
+
+} // namespace filament::backend

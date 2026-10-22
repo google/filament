@@ -1,0 +1,42 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template <typename T, int stride>
+struct spvPaddedArrayElement { T data; char padding[stride - sizeof(T)]; };
+
+struct T
+{
+    float a;
+};
+
+struct T_1
+{
+    float b;
+};
+
+struct SSBO1
+{
+    T_1 foo[1];
+};
+
+struct T_2
+{
+    float c;
+};
+
+struct SSBO2
+{
+    spvPaddedArrayElement<T_2, 16> bar[1];
+};
+
+kernel void main0(device SSBO1& _9 [[buffer(0)]], device SSBO2& _13 [[buffer(1)]])
+{
+    T v = T{ 40.0 };
+    _9.foo[10].b = v.a;
+    _13.bar[30].data.c = v.a;
+}
+

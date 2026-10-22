@@ -1,0 +1,83 @@
+// Copyright 2021 The Dawn & Tint Authors
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#include "src/tint/lang/wgsl/ast/member_accessor_expression.h"
+
+#include <utility>
+
+#include "src/tint/lang/wgsl/sem/member_accessor_expression.h"
+
+TINT_INSTANTIATE_TYPEINFO(tint::sem::StructMemberAccess);
+TINT_INSTANTIATE_TYPEINFO(tint::sem::Swizzle);
+
+namespace tint::sem {
+
+StructMemberAccess::StructMemberAccess(const ast::MemberAccessorExpression* declaration,
+                                       const core::type::Type* type,
+                                       const Statement* statement,
+                                       const core::constant::Value* constant,
+                                       const ValueExpression* object,
+                                       const core::type::StructMember* member,
+                                       const Variable* root_ident /* = nullptr */)
+    : Base(declaration, type, object->Stage(), object, statement, constant, root_ident),
+      member_(member) {}
+
+StructMemberAccess::~StructMemberAccess() = default;
+
+Swizzle::Swizzle(const ast::MemberAccessorExpression* declaration,
+                 const core::type::Type* type,
+                 const Statement* statement,
+                 const core::constant::Value* constant,
+                 const ValueExpression* object,
+                 VectorRef<uint32_t> indices,
+                 const Variable* root_ident /* = nullptr */)
+    : Base(declaration, type, object->Stage(), object, statement, constant, root_ident),
+      indices_(std::move(indices)) {}
+
+Swizzle::~Swizzle() = default;
+
+CollapsedSwizzle CollapseLhsSwizzle(const Swizzle* swizzle) {
+    // Initialize with the outermost swizzle object and indices.
+    CollapsedSwizzle res{
+        .vector = swizzle->Object(),
+        .indices = swizzle->Indices(),
+    };
+    // If the inner object is also a swizzle, collapse it down.
+    while (auto* inner_swizzle = res.vector->As<sem::Swizzle>()) {
+        tint::Vector<uint32_t, 4> combined;
+        // For each index in the outer swizzle, get the corresponding index into the inner
+        // swizzle.
+        for (uint32_t i : res.indices) {
+            combined.Push(inner_swizzle->Indices()[i]);
+        }
+        res.indices = std::move(combined);
+        res.vector = inner_swizzle->Object();
+    }
+    return res;
+}
+
+}  // namespace tint::sem

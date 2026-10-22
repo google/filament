@@ -1,0 +1,179 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html>
+<head>
+        <title>Table of Contents</title>
+<link href="style.css" rel="stylesheet" type="text/css" />
+
+<script type="text/javascript">
+<!--
+var temp, temp2, cookieArray, cookieArray2, cookieCount;
+function initiate(){
+  cookieCount=0;
+  if(document.cookie){
+    cookieArray=document.cookie.split(";");
+    cookieArray2=new Array();
+    for(i in cookieArray){
+      cookieArray2[cookieArray[i].split("=")[0].replace(/ /g,"")]=cookieArray[i].split("=")[1].replace(/ /g,"");
+    }
+  }
+  cookieArray=(document.cookie.indexOf("state=")>=0)?cookieArray2["state"].split(","):new Array();
+  temp=document.getElementById("containerul");
+  for(var o=0;o<temp.getElementsByTagName("li").length;o++){
+    if(temp.getElementsByTagName("li")[o].getElementsByTagName("ul").length>0){
+      temp2 = document.createElement("span");
+      temp2.className = "symbols";
+      temp2.style.backgroundImage = (cookieArray.length>0)?((cookieArray[cookieCount]=="true")?"url(bullets-contract.gif)":"url(bullets-expand.gif)"):"url(bullets-expand.gif)";
+      temp2.onmousedown=function(){
+        showhide(this.parentNode);
+        writeCookie();
+      }
+      temp.getElementsByTagName("li")[o].insertBefore(temp2,temp.getElementsByTagName("li")[o].firstChild)
+      temp.getElementsByTagName("li")[o].getElementsByTagName("ul")[0].style.display = "none";
+      if(cookieArray[cookieCount]=="true"){
+        showhide(temp.getElementsByTagName("li")[o]);
+      }
+      cookieCount++;
+    }
+    else{
+      temp2 = document.createElement("span");
+      temp2.className = "symbols";
+      temp2.style.backgroundImage = "url(bullets-end.gif)";
+      temp.getElementsByTagName("li")[o].insertBefore(temp2,temp.getElementsByTagName("li")[o].firstChild);
+    }
+  }
+}
+
+function showhide(el){
+  el.getElementsByTagName("ul")[0].style.display=(el.getElementsByTagName("ul")[0].style.display=="block")?"none":"block";
+  el.getElementsByTagName("span")[0].style.backgroundImage=(el.getElementsByTagName("ul")[0].style.display=="block")?"url(bullets-contract.gif)":"url(bullets-expand.gif)";
+}
+
+function writeCookie(){ // Runs through the menu and puts the "states" of each nested list into an array, the array is then joined together and assigned to a cookie.
+  cookieArray=new Array()
+  for(var q=0;q<temp.getElementsByTagName("li").length;q++){
+    if(temp.getElementsByTagName("li")[q].childNodes.length>0){
+      if(temp.getElementsByTagName("li")[q].childNodes[0].nodeName=="SPAN" && temp.getElementsByTagName("li")[q].getElementsByTagName("ul").length>0){
+        cookieArray[cookieArray.length]=(temp.getElementsByTagName("li")[q].getElementsByTagName("ul")[0].style.display=="block");
+      }
+    }
+  }
+  document.cookie="state="+cookieArray.join(",")+";expires="+new Date(new Date().getTime() + 365*24*60*60*1000).toGMTString();
+}
+//-->
+</script>
+
+</head>
+<body>
+<div id="navwrap">
+    <ul id="containerul"> <!-- This ul must wrap entire list for expand/contract to work -->
+        <li class="lev1">
+            <a href="Intro.html" target="pagedisplay">Introduction</a>
+        </li>
+        <li class="lev1">Alphabetic Contents (<i>egl</i> prefix on function
+                         names is ignored for sorting purposes)
+            <ul class="Level2">
+                <li>B
+                    <ul class="Level3">
+                        <li><a target="pagedisplay" href="eglBindAPI.html">eglBindAPI</a></li>
+                        <li><a target="pagedisplay" href="eglBindTexImage.html">eglBindTexImage</a></li>
+                    </ul>
+                </li>
+                <li>C
+                    <ul class="Level3">
+                        <li><a target="pagedisplay" href="eglChooseConfig.html">eglChooseConfig</a></li>
+                        <li><a target="pagedisplay" href="eglCopyBuffers.html">eglCopyBuffers</a></li>
+                        <li><a target="pagedisplay" href="eglCreateContext.html">eglCreateContext</a></li>
+                        <li><a target="pagedisplay" href="eglCreatePbufferFromClientBuffer.html">eglCreatePbufferFromClientBuffer</a></li>
+                        <li><a target="pagedisplay" href="eglCreatePbufferSurface.html">eglCreatePbufferSurface</a></li>
+                        <li><a target="pagedisplay" href="eglCreatePixmapSurface.html">eglCreatePixmapSurface</a></li>
+                        <li><a target="pagedisplay" href="eglCreateWindowSurface.html">eglCreateWindowSurface</a></li>
+                    </ul>
+                </li>
+                <li>D
+                    <ul class="Level3">
+                        <li><a target="pagedisplay" href="eglDestroyContext.html">eglDestroyContext</a></li>
+                        <li><a target="pagedisplay" href="eglDestroySurface.html">eglDestroySurface</a></li>
+                    </ul>
+                </li>
+                <li>G
+                    <ul class="Level3">
+                        <li><a target="pagedisplay" href="eglGetConfigAttrib.html">eglGetConfigAttrib</a></li>
+                        <li><a target="pagedisplay" href="eglGetConfigs.html">eglGetConfigs</a></li>
+                        <li><a target="pagedisplay" href="eglGetCurrentContext.html">eglGetCurrentContext</a></li>
+                        <li><a target="pagedisplay" href="eglGetCurrentDisplay.html">eglGetCurrentDisplay</a></li>
+                        <li><a target="pagedisplay" href="eglGetCurrentSurface.html">eglGetCurrentSurface</a></li>
+                        <li><a target="pagedisplay" href="eglGetDisplay.html">eglGetDisplay</a></li>
+                        <li><a target="pagedisplay" href="eglGetError.html">eglGetError</a></li>
+                        <li><a target="pagedisplay" href="eglGetProcAddress.html">eglGetProcAddress</a></li>
+                    </ul>
+                </li>
+                <li>I
+                    <ul class="Level3">
+                        <li><a target="pagedisplay" href="eglInitialize.html">eglInitialize</a></li>
+                        <li><a target="pagedisplay" href="eglIntro.html">eglIntro</a></li>
+                    </ul>
+                </li>
+                <li>M
+                    <ul class="Level3">
+                        <li><a target="pagedisplay" href="eglMakeCurrent.html">eglMakeCurrent</a></li>
+                    </ul>
+                </li>
+                <li>Q
+                    <ul class="Level3">
+                        <li><a target="pagedisplay" href="eglQueryAPI.html">eglQueryAPI</a></li>
+                        <li><a target="pagedisplay" href="eglQueryContext.html">eglQueryContext</a></li>
+                        <li><a target="pagedisplay" href="eglQueryString.html">eglQueryString</a></li>
+                        <li><a target="pagedisplay" href="eglQuerySurface.html">eglQuerySurface</a></li>
+                    </ul>
+                </li>
+                <li>R
+                    <ul class="Level3">
+                        <li><a target="pagedisplay" href="eglReleaseTexImage.html">eglReleaseTexImage</a></li>
+                        <li><a target="pagedisplay" href="eglReleaseThread.html">eglReleaseThread</a></li>
+                    </ul>
+                </li>
+                <li>S
+                    <ul class="Level3">
+                        <li><a target="pagedisplay" href="eglSurfaceAttrib.html">eglSurfaceAttrib</a></li>
+                        <li><a target="pagedisplay" href="eglSwapBuffers.html">eglSwapBuffers</a></li>
+                        <li><a target="pagedisplay" href="eglSwapInterval.html">eglSwapInterval</a></li>
+                    </ul>
+                </li>
+                <li>T
+                    <ul class="Level3">
+                        <li><a target="pagedisplay" href="eglTerminate.html">eglTerminate</a></li>
+                    </ul>
+                </li>
+                <li>W
+                    <ul class="Level3">
+                        <li><a target="pagedisplay" href="eglWaitClient.html">eglWaitClient</a></li>
+                        <li><a target="pagedisplay" href="eglWaitGL.html">eglWaitGL</a></li>
+                        <li><a target="pagedisplay" href="eglWaitNative.html">eglWaitNative</a></li>
+                    <ul class="Level3">
+                    </ul>
+                </li>
+            </ul>       <!-- /Level2 -->
+        </li>
+
+<!-- later - include other categories such as
+        <li class="lev1">EGL Runtime
+            ...
+        </li>
+
+        <li class="lev1">
+            <a href="preprocessorDirectives.html" target="pagedisplay">Preprocessor Directives and Macros</a>
+        </li>
+
+        <li class="lev1">Optional Extensions
+            ...
+        </li>
+later -->
+    </ul>   <!-- /containerurl -->
+</div>      <!-- /navwrap -->
+<script type="text/javascript">
+initiate();             // This must be placed immediately after the menu in order to format it properly.
+</script>
+<p> </p>
+</body>
+</html>

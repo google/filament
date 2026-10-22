@@ -1,0 +1,21 @@
+version = 1
+SPDX-PackageName = "Vulkan-Headers"
+SPDX-PackageDownloadLocation = "https://github.com/KhronosGroup/Vulkan-Headers"
+
+[[annotations]]
+path = "registry/profiles/VP_KHR_roadmap.json"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2022-2024 The Khronos Group Inc."
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "registry/validusage.json"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2018-2024 The Khronos Group Inc."
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = [".github/ISSUE_TEMPLATE/bug_report.md", ".github/pull_request_template.md"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2022-2024 The Khronos Group Inc."
+SPDX-License-Identifier = "Apache-2.0"

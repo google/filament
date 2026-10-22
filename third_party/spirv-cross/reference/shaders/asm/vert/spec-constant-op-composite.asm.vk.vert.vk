@@ -1,0 +1,30 @@
+#version 450
+
+layout(constant_id = 201) const int _13 = -10;
+const int _15 = (_13 + 2);
+layout(constant_id = 202) const uint _24 = 100u;
+const uint _26 = (_24 % 5u);
+const int _61 = _13 - (-3) * (_13 / (-3));
+const ivec4 _36 = ivec4(20, 30, _15, _61);
+const ivec2 _41 = ivec2(_36.y, _36.x);
+const int _62 = _36.y;
+layout(constant_id = 200) const float _57 = 3.141590118408203125;
+
+layout(location = 0) flat out int _58;
+
+void main()
+{
+    vec4 pos = vec4(0.0);
+    float _16 = float(_15);
+    pos.y += _16;
+    float _27 = float(_26);
+    pos.z += _27;
+    vec4 _37 = vec4(_36);
+    pos += _37;
+    vec2 _43 = vec2(_41);
+    vec2 _46 = pos.xy + _43;
+    pos = vec4(_46.x, _46.y, pos.z, pos.w);
+    gl_Position = pos;
+    _58 = _62;
+}
+

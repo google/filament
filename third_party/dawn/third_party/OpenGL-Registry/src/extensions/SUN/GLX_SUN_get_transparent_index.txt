@@ -1,0 +1,147 @@
+
+Name
+
+    SUN_get_transparent_index
+
+Name Strings
+
+    GLX_SUN_get_transparent_index
+
+Contact
+
+    Ron Bielaski, Sun (Ron.Bielaski 'at' eng.sun.com)
+    Jack Middleton, Sun (Jack.Middleton 'at' eng.sun.com)
+
+Status
+
+    Shipping 
+
+Version
+
+    $Date: 1999/12/28 01:40:37 $ $Revision: 1.5 $  
+    SUN Date: 99/06/25 15:07:02  Revision: 1.2
+
+Number
+
+    183
+
+Dependencies
+
+    None
+
+Overview
+
+    Gets the transparent pixel index for an overlay/underlay window pair.
+
+New Procedures and Functions
+
+    Status glXGetTransparentIndexSUN(Display *dpy,
+				    Window overlay,
+				    Window underlay,
+				    unsigned long *pTransparentIndex)
+
+New Tokens
+
+    None
+
+Additions to the GL 1.2.1 Specification
+
+    None
+
+Additions to the WGL / AGL Specifications
+
+    None
+
+Additions to Chapter ??? of the GLX 1.3 Specification
+
+    (the following needs to be restructured as changes to the spec,
+    rather than a man page)
+
+	dpy			Specifies the connection to the X server
+
+	overlay			Specifies the overlay Window of an
+			    	overlay/underlay pair
+
+	underlay 	    	Specifies the underlay Window.
+
+	pTransparentIndex   	Specifies a pointer to the index to be returned
+
+    Return
+    ------
+
+	If underlay is a Window that has previously been made
+	the current GLXDrawable by the client and a transparent index 
+	is available for the Window overlay, returns 1 and sets
+	*pTransparentIndex to the value of the index. Otherwise returns 0. 
+
+	If underlay is equal to None, and if a transparent 
+	index is available for overlay that is independent of the
+	underlying Windows returns 1 and sets *pTransparentIndex to
+	the index. Otherwise 0 is returned.
+	
+	
+
+    Description
+    -----------
+    For some overlay Windows (windows created with a visual with GLX_LEVEL > 0),
+    there is a particular color index that when drawn to the framebuffer
+    causes pixels in the Window to be transparent. That is, pixels in the overlay
+    drawn with the transparent index are invisible and the pixels of window(s)
+    beneath the overlay are displayed. 
+
+    On some systems, the transparent pixel index is a constant.
+
+    On other hardware, the transparent index is a function of the underlying
+    Window (GLX_LEVEL <= 0).
+
+    Applications may use glXGetTransparentIndexSUN to determine whether
+    a transparent index is available for a particular pair of windows
+    and the value of the transparent index.
+
+    If glXGetTransparentIndexSun returns 1 after being called with
+    underlay equal to a valid window, then the transparent index is
+    valid only for underlay. underlay must have been previously made
+    the current GLXDrawable of the thread.
+
+    If a Window other than underlay is directly beneath overlay the
+    results of drawing with the transparentIndex are undefined.
+
+    If glXGetTransparentIndexSUN returns 1 when the underlay argument is
+    set to None, the transparentIndex is valid for all underlay windows.
+
+
+    Caveats
+    -------
+    When the transparent index is valid only for a particular underlay window,
+    applications should follow the following guidelines to insure proper
+    operation.
+
+    It is the application's responsibility to ensure that the only window
+    ever underneath overlay is underlay.
+
+    Ideally, overlay should be created as a child of underlay with the same
+    size and shape.   And the application should reshape the overlay window
+    whenever the underlay window is reshaped.  This insures that the
+    transparent index makes the overlay transparent.
+
+GLX Protocol
+
+    No new protocol is need
+
+Errors
+
+     BadDrawable   if overlay is not a valid Window or if underlay is
+                   not a valid Window (except None).	
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    6/24/99 (Jon Leech, SGI) - Added fields from the new extension template.
+

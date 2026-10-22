@@ -1,0 +1,66 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wmissing-braces"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T, size_t Num>
+struct spvUnsafeArray
+{
+    T elements[Num ? Num : 1];
+    
+    thread T& operator [] (size_t pos) thread
+    {
+        return elements[pos];
+    }
+    constexpr const thread T& operator [] (size_t pos) const thread
+    {
+        return elements[pos];
+    }
+    
+    device T& operator [] (size_t pos) device
+    {
+        return elements[pos];
+    }
+    constexpr const device T& operator [] (size_t pos) const device
+    {
+        return elements[pos];
+    }
+    
+    constexpr const constant T& operator [] (size_t pos) const constant
+    {
+        return elements[pos];
+    }
+    
+    threadgroup T& operator [] (size_t pos) threadgroup
+    {
+        return elements[pos];
+    }
+    constexpr const threadgroup T& operator [] (size_t pos) const threadgroup
+    {
+        return elements[pos];
+    }
+};
+
+struct _7
+{
+    device uchar* _m0;
+    device spvUnsafeArray<uchar, 12>* _m1;
+};
+
+static inline __attribute__((always_inline))
+device uint* _23(device _7& _2)
+{
+    device spvUnsafeArray<uchar, 12>* _26 = _2._m1;
+    device uint* _29 = reinterpret_cast<device uint*>(reinterpret_cast<ulong>(_26) + 16ul);
+    *_29 = 1u;
+    return _29;
+}
+
+kernel void main0(device _7& _2 [[buffer(0)]])
+{
+    device uint* _31 = _23(_2);
+}
+

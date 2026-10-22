@@ -1,0 +1,1976 @@
+Name
+
+    NV_geometry_program4
+
+Name Strings
+
+    (none)
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Status
+
+    Shipping for GeForce 8 Series (November 2006)
+
+Version
+
+    Last Modified Date:         12/14/09
+    NVIDIA Revision:            13
+
+Number
+
+    323
+
+Dependencies
+
+    OpenGL 1.1 is required.
+
+    This extension is written against the OpenGL 2.0 specification.
+
+    NV_gpu_program4 is required.  This extension is supported if
+    "GL_NV_gpu_program4" is found in the extension string.
+
+    EXT_framebuffer_object interacts with this extension.
+
+    EXT_framebuffer_blit interacts with this extension.
+
+    EXT_texture_array interacts with this extension.
+
+    ARB_texture_rectangle trivially affects the definition of this extension.
+
+    EXT_texture_buffer_object trivially affects the definition of this
+    extension.
+
+    NV_primitive_restart trivially affects the definition of this extension.
+
+Overview
+
+    NV_geometry_program4 defines a new type of program available to be run on
+    the GPU, called a geometry program.  Geometry programs are run on full
+    primitives after vertices are transformed, but prior to flat shading and
+    clipping.
+
+    A geometry program begins with a single primitive - a point, line, or
+    triangle.  Quads and polygons are allowed, but are decomposed into
+    individual triangles prior to geometry program execution.  It can read the
+    attributes of any of the vertex in the primitive and use them to generate
+    new primitives.  A geometry program has a fixed output primitive type,
+    either a point, a line strip, or a triangle strip.  It emits vertices
+    (using the EMIT opcode) to define the output primitive.  The attributes of
+    emitted vertices are specified by writing to the same set of result
+    bindings (e.g., "result.position") provided for vertex programs.
+    Additionally, a geometry program can emit multiple disconnected primitives
+    by using the ENDPRIM opcode, which is roughly equivalent to calling End
+    and then Begin again.  The primitives emitted by the geometry program are
+    then clipped and then processed like an equivalent OpenGL primitive
+    specified by the application.
+
+    This extension provides four additional primitive types:  lines with
+    adjacency, line strips with adjacency, separate triangles with adjacency,
+    and triangle strips with adjacency.  Some of the vertices specified in
+    these new primitive types are not part of the ordinary primitives.
+    Instead, they represent neighboring vertices that are adjacent to the two
+    line segment end points (lines/strips) or the three triangle edges
+    (triangles/tstrips).  These "adjacency" vertices can be accessed by
+    geometry programs and used to match up the outputs of the geometry program
+    with those of neighboring primitives.
+
+    Additionally, geometry programs allow for layered rendering, where entire
+    three-dimensional, cube map, or array textures (EXT_texture_array) can be
+    bound to the current framebuffer.  Geometry programs can use the
+    "result.layer" binding to select a layer or cube map face to render to.
+    Each primitive emitted by such a geometry program is rendered to the layer
+    taken from its provoking vertex.
+
+    Since geometry programs expect a specific input primitive type, an error
+    will occur if the application presents primtives of a different type.  For
+    example, if an enabled geometry program expects points, an error will
+    occur at Begin() time, if a primitive mode of TRIANGLES is specified.
+
+New Procedures and Functions
+
+    void ProgramVertexLimitNV(enum target, int limit);
+
+    void FramebufferTextureEXT(enum target, enum attachment,
+                               uint texture, int level);
+    void FramebufferTextureLayerEXT(enum target, enum attachment,
+                                    uint texture, int level, int layer);
+    void FramebufferTextureFaceEXT(enum target, enum attachment,
+                                   uint texture, int level, enum face);
+
+New Tokens
+
+    Accepted by the <cap> parameter of Disable, Enable, and IsEnabled, by
+    the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev, and by the <target> parameter of ProgramStringARB,
+    BindProgramARB, ProgramEnvParameter4[df][v]ARB,
+    ProgramLocalParameter4[df][v]ARB, GetProgramEnvParameter[df]vARB, 
+    GetProgramLocalParameter[df]vARB, GetProgramivARB and
+    GetProgramStringARB:
+
+        GEOMETRY_PROGRAM_NV                             0x8C26
+
+    Accepted by the <pname> parameter of GetProgramivARB:
+
+        MAX_PROGRAM_OUTPUT_VERTICES_NV                  0x8C27
+        MAX_PROGRAM_TOTAL_OUTPUT_COMPONENTS_NV          0x8C28
+        GEOMETRY_VERTICES_OUT_EXT                       0x8DDA
+        GEOMETRY_INPUT_TYPE_EXT                         0x8DDB
+        GEOMETRY_OUTPUT_TYPE_EXT                        0x8DDC
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+        MAX_GEOMETRY_TEXTURE_IMAGE_UNITS_EXT            0x8C29
+
+    Accepted by the <mode> parameter of Begin, DrawArrays, MultiDrawArrays,
+    DrawElements, MultiDrawElements, and DrawRangeElements:
+
+        LINES_ADJACENCY_EXT                             0xA
+        LINE_STRIP_ADJACENCY_EXT                        0xB
+        TRIANGLES_ADJACENCY_EXT                         0xC
+        TRIANGLE_STRIP_ADJACENCY_EXT                    0xD
+
+    Returned by CheckFramebufferStatusEXT:
+
+        FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS_EXT        0x8DA8
+        FRAMEBUFFER_INCOMPLETE_LAYER_COUNT_EXT          0x8DA9
+
+    Accepted by the <pname> parameter of
+    GetFramebufferAttachmentParameterivEXT:
+
+        FRAMEBUFFER_ATTACHMENT_LAYERED_EXT              0x8DA7
+        FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER_EXT        0x8CD4
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, and by
+    the <pname> parameter of GetIntegerv, GetFloatv, GetDoublev, and
+    GetBooleanv:
+
+        PROGRAM_POINT_SIZE_EXT                          0x8642
+
+    (Note:  The "EXT" tokens above are shared with the EXT_geometry_shader4
+    extension.)
+
+    (Note:  FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER is simply an alias for the
+    FRAMEBUFFER_ATTACHMENT_TEXTURE_3D_ZOFFSET_EXT token provided in
+    EXT_framebuffer_object.  This extension generalizes the notion of
+    "<zoffset>" to include layers of an array texture.)
+
+    (Note:  PROGRAM_POINT_SIZE_EXT is simply an alias for the
+    VERTEX_PROGRAM_POINT_SIZE token provided in OpenGL 2.0, which is itself an
+    alias for VERTEX_PROGRAM_POINT_SIZE_ARB provided by ARB_vertex_program.
+    Program-computed point sizes can be enabled if geometry programs are
+    enabled, even if no vertex program is used.)
+        
+Additions to Chapter 2 of the OpenGL 1.5 Specification (OpenGL Operation)
+
+    Modify Section 2.6.1 (Begin and End Objects), p. 13
+
+    (Add to end of section, p. 18)
+
+    (add figure)
+
+        1 - - - 2----->3 - - - 4     1 - - - 2--->3--->4--->5 - - - 6
+
+        5 - - - 6----->7 - - - 8
+
+               (a)                             (b)
+
+      Figure X.1 (a) Lines with adjacency, (b) Line strip with adjacency. 
+      The vertices connected with solid lines belong to the main primitives;
+      the vertices connected by dashed lines are the adjacent vertices that
+      may be used in a geometry program.
+
+    Lines with Adjacency
+
+    Lines with adjacency are independent line segments where each endpoint has
+    a corresponding "adjacent" vertex that can be accessed by a geometry
+    program (Section 2.15).  If geometry programs are disabled, the "adjacent"
+    vertices are ignored.
+
+    A line segment is drawn from the 4i + 2nd vertex to the 4i + 3rd vertex
+    for each i = 0, 1, ... , n-1, where there are 4n+k vertices between the
+    Begin and End.  k is either 0, 1, 2, or 3; if k is not zero, the final k
+    vertices are ignored.  For line segment i, the 4i + 1st and 4i + 4th
+    vertices are considered adjacent to the 4i + 2nd and 4i + 3rd vertices,
+    respectively.  See Figure X.1.
+
+    Lines with adjacency are generated by calling Begin with the argument
+    value LINES_ADJACENCY_EXT.
+
+    Line Strips with Adjacency
+
+    Line strips with adjacency are similar to line strips, except that each
+    line segment has a pair of adjacent vertices that can be accessed by
+    geometry programs (Section 2.15).  If geometry programs are disabled, the
+    "adjacent" vertices are ignored.
+
+    A line segment is drawn from the i + 2nd vertex to the i + 3rd vertex for
+    each i = 0, 1, ..., n-1, where there are n+3 vertices between the Begin
+    and End.  If there are fewer than four vertices between a Begin and End,
+    all vertices are ignored.  For line segment i, the i + 1st and i + 4th
+    vertices are considered adjacent to the i + 2nd and i + 3rd vertices,
+    respectively.  See Figure X.1.
+
+    Line strips with adjacency are generated by calling Begin with the
+    argument value LINE_STRIP_ADJACENCY_EXT.
+
+    (add figure)
+                   2 - - - 3 - - - 4     8 - - - 9 - - - 10
+                           ^\                    ^\
+                     \     | \     |       \     | \     |
+                           |  \                  |  \
+                       \   |   \   |         \   |   \   |
+                           |    \                |    \
+                         \ |     \ |           \ |     \ |
+                           |      v              |      v
+                           1<------5             7<------11
+
+                             \     |               \     |
+
+                               \   |                 \   |
+
+                                 \ |                   \ |
+
+                                   6                     12
+
+      Figure X.2 Triangles with adjacency.  The vertices connected with solid
+      lines belong to the main primitive; the vertices connected by dashed
+      lines are the adjacent vertices that may be used in a geometry program.
+
+    Triangles with Adjacency
+
+    Triangles with adjacency are similar to separate triangles, except that
+    each triangle edge has an adjacent vertex that can be accessed by geometry
+    programs (Section 2.15).  If geometry programs are disabled, the
+    "adjacent" vertices are ignored.
+
+    The 6i + 1st, 6i + 3rd, and 6i + 5th vertices (in that order) determine a
+    triangle for each i = 0, 1, ..., n-1, where there are 6n+k vertices
+    between the Begin and End.  k is either 0, 1, 2, 3, 4, or 5; if k is
+    non-zero, the final k vertices are ignored.  For triangle i, the i + 2nd,
+    i + 4th, and i + 6th vertices are considered adjacent to edges from the i
+    + 1st to the i + 3rd, from the i + 3rd to the i + 5th, and from the i +
+    5th to the i + 1st vertices, respectively.  See Figure X.2.
+
+    Triangles with adjacency are generated by calling Begin with the argument
+    value TRIANGLES_ADJACENCY_EXT.
+
+    (add figure)
+                                  6                     6
+
+                                  | \                   | \
+
+                                  |   \                 |   \
+
+                                  |     \               |     \
+
+      2 - - - 3- - - >6   2 - - - 3------>7     2 - - - 3------>7- - - 10
+              ^\                  ^^      |             ^^      ^^      |
+        \     | \     |     \     | \     | \     \     | \     | \
+              |  \                |  \    |             |  \    |  \    |
+          \   |   \   |       \   |   \   |   \     \   |   \   |   \
+              |    \              |    \  |             |    \  |    \  |
+            \ |     \ |         \ |     \ |     \     \ |     \ |     \
+              |      v            |      vv             |      vv      v|
+              1<------5           1<------5 - - - 8     1<------5<------9
+
+                \     |             \     |               \     | \     |
+
+                  \   |               \   |                 \   |   \   |
+
+                    \ |                 \ |                   \ |     \ |
+
+                      4                   4                     4       8
+
+
+                                   6       10
+
+                                   | \     | \
+
+                                   |   \   |   \
+
+                                   |     \ |     \
+                           2 - - - 3------>7------>11
+                                   ^^      ^^      |
+                             \     | \     | \     | \
+                                   |  \    |  \    |
+                               \   |   \   |   \   |   \
+                                   |    \  |    \  |
+                                 \ |     \ |     \ |     \
+                                   |      vv      vv
+                                   1<------5<------9 - - - 12
+
+                                     \     | \     |
+
+                                       \   |   \   |
+
+                                         \ |     \ |
+
+                                           4       8
+
+      Figure X.3 Triangle strips with adjacency.  The vertices connected with
+      solid lines belong to the main primitives; the vertices connected by
+      dashed lines are the adjacent vertices that may be used in a geometry
+      program.
+
+    Triangle Strips with Adjacency
+
+    Triangle strips with adjacency are similar to triangle strips, except that
+    each triangle edge has an adjacent vertex that can be accessed by geometry
+    programs (Section 2.15).  If geometry programs are disabled, the
+    "adjacent" vertices are ignored.
+
+    In triangle strips with adjacency, n triangles are drawn using 2 * (n+2) +
+    k vertices between the Begin and End.  k is either 0 or 1; if k is 1, the
+    final vertex is ignored.  If fewer than 6 vertices are specified between
+    the Begin and End, the entire primitive is ignored.  Table X.1 describes
+    the vertices and order used to draw each triangle, and which vertices are
+    considered adjacent to each edge of the triangle.  See Figure X.3.
+
+    (add table)
+                                 primitive          adjacent
+                                 vertices           vertices
+      primitive               1st   2nd   3rd     1/2  2/3  3/1
+      ---------------        ----  ----  ----    ---- ---- ----
+      only (i==0, n==1)        1     3     5       2    6    4
+      first (i==0)             1     3     5       2    7    4
+      middle (i odd)         2i+3  2i+1  2i+5    2i-1 2i+4 2i+7
+      middle (i even)        2i+1  2i+3  2i+5    2i-1 2i+7 2i+4
+      last (i==n-1, i odd)   2i+3  2i+1  2i+5    2i-1 2i+4 2i+6
+      last (i==n-1, i even)  2i+1  2i+3  2i+5    2i-1 2i+6 2i+4
+
+      Table X.1:  Triangles generated by triangle strips with adjacency.  
+      Each triangle is drawn using the vertices in the "1st", "2nd", and "3rd"
+      columns under "primitive vertices", in that order.  The vertices in the
+      "1/2", "2/3", and "3/1" columns under "adjacent vertices" are considered
+      adjacent to the edges from the first to the second, from the second to
+      the third, and from the third to the first vertex of the triangle,
+      respectively.  The six rows correspond to the six cases:  the first and
+      only triangle (i=0, n=1), the first triangle of several (i=0, n>0),
+      "odd" middle triangles (i=1,3,5...), "even" middle triangles
+      (i=2,4,6,...), and special cases for the last triangle inside the
+      Begin/End, when i is either even or odd.  For the purposes of this
+      table, the first vertex specified after Begin is numbered "1" and the
+      first triangle is numbered "0".
+
+    Triangle strips with adjacency are generated by calling Begin with the
+    argument value TRIANGLE_STRIP_ADJACENCY_EXT.
+
+    Modify Section 2.14.1, Lighting (p. 59)
+
+    (modify fourth paragraph, p. 63) Additionally, vertex and geometry shaders
+    and programs can operate in two-sided color mode, which is enabled and
+    disabled by calling Enable or Disable with the symbolic value
+    VERTEX_PROGRAM_TWO_SIDE.  When a vertex or geometry shader is active, the
+    shaders can write front and back color values to the gl_FrontColor,
+    gl_BackColor, gl_FrontSecondaryColor and gl_BackSecondaryColor outputs.
+    When a vertex or geometry program is active, programs can write front and
+    back colors using the available color result bindings.  When a vertex or
+    geometry shader or program is active and two-sided color mode is enabled,
+    the GL chooses between front and back colors, as described below.  If
+    two-sided color mode is disabled, the front color output is always
+    selected.
+
+    Insert New Section 2.14.6, Geometry Programs (between 2.14.5, Color Index
+    Lighting and 2.14.6, Clamping and Masking, p. 69)
+
+    Section 2.14.6, Geometry Programs
+
+    Each primitive may be optionally transformed by a geometry program.
+    Geometry programs are enabled by calling Enable with the value
+    GEOMETRY_PROGRAM_NV.  A geometry program takes a single input primitive
+    and generates vertices to be arranged into one or more output primitives.
+    The original input primitive is discarded, and the output primitives are
+    processed in order by the remainder of the GL pipeline.
+
+    Section 2.14.6.1, Geometry Program Input Primitives
+
+    A geometry program can operate on one of five input primitive types, as
+    specified by the mandatory "PRIMITIVE_IN" declaration.  Depending on the
+    input primitive type, one to six vertices are available when the program
+    is executed.  A geometry program will fail to load unless it contains
+    exactly one such declaration.
+
+    Each input primitive type supports only a subset of the primitives
+    provided by the GL.  If geometry programs are enabled, Begin, or any
+    function that implicitly calls Begin, will produce an INVALID_OPERATION
+    error if the <mode> parameter is incompatible with the input primitive
+    type of the current geometry program.
+
+    The supported input primitive types are:
+
+    Points (POINTS)
+
+    Geometry programs that operate on points are valid only for the POINTS
+    primitive type.  There is a only a single vertex available for each
+    program invocation: "vertex[0]" refers to the single point.
+
+    Lines (LINES)
+
+    Geometry programs that operate on line segments are valid only for the
+    LINES, LINE_STRIP, and LINE_LOOP primitive types.  There are two vertices
+    available for each program invocation:  "vertex[0]" and "vertex[1]" refer
+    to the beginning and end of the line segment.
+
+    Lines with Adjacency (LINES_ADJACENCY)
+
+    Geometry programs that operate on line segments with adjacent vertices are
+    valid only for the LINES_ADJACENCY_EXT and LINE_STRIP_ADJACENCY_EXT
+    primitive types.  There are four vertices available for each program
+    invocation.  "vertex[1]" and "vertex[2]" refer to the beginning and end of
+    the line segment.  "vertex[0]" and "vertex[3]" refer to the vertices
+    adjacent to the beginning and end of the line segment, respectively.
+
+    Triangles (TRIANGLES)
+
+    Geometry programs that operate on triangles are valid for the TRIANGLES,
+    TRIANGLE_STRIP, TRIANGLE_FAN, QUADS, QUAD_STRIP, and POLYGON primitive
+    types.  
+
+    When used with a geometry program that operates on triangles, QUADS,
+    QUAD_STRIP, and POLYGON primitives are decomposed into triangles in an
+    unspecified, implementation-dependent manner.  For convex polygons
+    (already required in the core GL specification), this decomposition
+    satisfies three properties:
+
+      * the collection of triangles fully covers the area of the original
+        primitive,
+
+      * no two triangles in the decomposition overlap, and
+
+      * the orientation of each triangle is consistent with the orientation of
+        the original primitive.
+
+    For such primitives, the program is executed once for each triangle in the
+    decomposition.
+
+    There are three vertices available for each program invocation.
+    "vertex[0]", "vertex[1]", and "vertex[2]", refer to the first, second, and
+    third vertex of the triangle, respectively.
+
+    Triangles with Adjacency (TRIANGLES_ADJACENCY)
+
+    Geometry programs that operate on triangles with adjacent vertices are
+    valid for the TRIANGLES_ADJACENCY_EXT and TRIANGLE_STRIP_ADJACENCY_EXT
+    primitive types.  There are six vertices available for each program
+    invocation.  "vertex[0]", "vertex[2]", and "vertex[4]" refer to the first,
+    second, and third vertex of the triangle respectively.  "vertex[1]",
+    "vertex[3]", and "vertex[5]" refer to the vertices adjacent to the edges
+    from the first to the second vertex, from the second to the third vertex,
+    and from the third to the first vertex, respectively.
+
+    Section 2.14.6.2, Geometry Program Output Primitives
+
+    A geometry program can generate primitives of one of three types, as
+    specified by the mandatory "PRIMITIVE_OUT" declaration.  A geometry
+    program will fail to load unless it contains exactly one such declaration.
+
+    The supported output primitive types are points (POINTS), line strips
+    (LINE_STRIP), and triangle strips (TRIANGLE_STRIP).  The vertices output
+    by the geometry program are decomposed into points, lines, or triangles
+    based on the output primitive type in the manner described in section
+    2.6.1.
+
+    Section 2.14.6.3, Geometry Program Execution Environment
+
+    Geometry programs execute using the instruction set documented in the
+    GL_NV_gpu_program4 extension specification and in a manner similar to
+    vertex programs.  Each vertex attribute access must identify the vertex
+    number being accessed.  For example, "vertex[1].position" identifies the
+    transformed position of "vertex[1]" as specified in teh description of the
+    input primitive type.  Output vertices are specified by writing to vertex
+    result variables in the same manner as done by vertex programs.
+
+    The special instruction "EMIT" specifies that a vertex is completed.  A
+    vertex is added to the current output primitive using the current values
+    of the vertex result variables.  The values of any unwritten result
+    variables (or components) are undefined.  
+
+    After an EMIT instruction is completed, the current values of all vertex
+    result variables become undefined.  If a program wants to ensure that the
+    same result is used for every vertex written by the program, it is
+    necessary to write the corresponding value once per vertex.
+
+    The special instruction "ENDPRIM" specifies that the current output
+    primitive should be completed and a new output primitive should be
+    started.  A geometry program starts with an output primitive containing no
+    vertices.  When a geometry program terminates, the current output
+    primitive is automatically completed.  ENDPRIM has no effect if the
+    geometry program's output primitive type is POINTS.
+
+    When a primitive generated by a geometry program is completed, the
+    vertices added by the EMIT instruction are decomposed into points, lines,
+    or triangles according to the output primitive type in the manner
+    described in Section 2.8.1.  The resulting primitives are then clipped and
+    rasterized.  If the number of vertices emitted by the geometry program is
+    not sufficient to produce a single primitive, nothing is drawn.
+
+    Like vertex and fragment programs, geometry programs can access textures.
+    The maximum number of texture image units that can be accessed by a
+    geometry program is given by the value of
+    MAX_GEOMETRY_TEXTURE_IMAGE_UNITS_EXT.
+
+    Section 2.14.6.4, Geometry Program Output Limits
+
+    A geometry program may not emit an unlimited number of vertices per
+    invocation.  Each geometry program must declare a vertex limit, which is
+    the maximum number of vertices that the program can ever produce.  The
+    vertex limit is specified using the "VERTICES_OUT" declaration.  A
+    geometry program will fail to load unless it contains exactly one such
+    declaration.
+
+    There are two implementation-dependent limits that limit the total number
+    of vertices that a program can emit.  First, the vertex limit may not
+    exceed the value of MAX_PROGRAM_OUTPUT_VERTICES_NV.  Second, product of
+    the vertex limit and the number of result variable components written by
+    the program (PROGRAM_RESULT_COMPONENTS_NV, as described in section 2.X.3.5
+    of NV_gpu_program4) may not exceed the value of
+    MAX_PROGRAM_TOTAL_OUTPUT_COMPONENTS_NV.  A geometry program will fail to
+    load if its maximum vertex count or maximum total component count exceeds
+    the implementation-dependent limit.  The limits may be queried by calling
+    GetProgramiv with a <target> of GEOMETRY_PROGRAM_NV.  Note that the
+    maximum number of vertices that a geometry program can emit may be much
+    lower than MAX_PROGRAM_OUTPUT_VERTICES_NV if the program writes a large
+    number of result variable components.
+
+    After a geometry program is compiled, the vertex limit may be changed
+    using the command
+
+      void ProgramVertexLimitNV(enum target, int limit);
+
+    <target> must be GEOMETRY_PROGRAM_NV.  <limit> is the new vertex limit,
+    which must satisfy the two rules described above.  The error INVALID_VALUE
+    is generated if <limit> is less than or equal to zero, <limit> is greater
+    than or equal to MAX_PROGRAM_OUTPUT_VERTICES_NV, or if the total number of
+    components emitted would exceed MAX_PROGRAM_TOTAL_OUTPUT_COMPONENTS_NV.
+    The error INVALID_OPERATION is generated if the current geometry program
+    has not been successfully loaded.
+
+    When a program executes, the number of vertices it emits should not exceed
+    the vertex limit.  Once a geometry program emits a number of vertices
+    equal to the vertex limit, subsequent EMIT instructions may or may not
+    have any effect.
+
+    Modify Section 2.X.2, Program Grammar
+
+    (replace third paragraph)
+
+    Geometry programs are required to begin with the header string
+    "!!NVgp4.0".  This header string identifies the subsequent program body as
+    being a geometry program and indicates that it should be parsed according
+    to the base NV_gpu_program4 grammar plus the additions below.  Program
+    string parsing begins with the character immediately following the header
+    string.
+
+    (add the following grammar rules to the NV_gpu_program4 base grammar)
+
+    <declSequence>          ::= <declaration> <declSequence>
+
+    <instruction>           ::= <SpecialInstruction>
+
+    <attribUseV>            ::= <attribVarName> <arrayMem> <arrayMem> 
+                                <swizzleSuffix>
+
+    <attribUseS>            ::= <attribVarName> <arrayMem> <arrayMem> 
+                                <scalarSuffix>
+
+    <attribUseVNS>          ::= <attribVarName> <arrayMem> <arrayMem>
+
+    <resultUseW>            ::= <resultVarName> <arrayMem> <optWriteMask>
+                              | <resultColor> <optWriteMask>
+                              | <resultColor> "." <colorType> <optWriteMask>
+                              | <resultColor> "." <faceType> <optWriteMask>
+                              | <resultColor> "." <faceType> "." <colorType> 
+                                "." <optWriteMask>
+
+    <resultUseD>            ::= <resultColor>
+                              | <resultColor> "." <colorType>
+                              | <resultMulti>
+
+    <declaration>           ::= "PRIMITIVE_IN" <declPrimInType>
+                              | "PRIMITIVE_OUT" <declPrimOutType>
+                              | "VERTICES_OUT" <int>
+
+    <declPrimInType>        ::= "POINTS"
+                              | "LINES"
+                              | "LINES_ADJACENCY"
+                              | "TRIANGLES"
+                              | "TRIANGLES_ADJACENCY"
+
+    <declPrimOutType>       ::= "POINTS"
+                              | "LINE_STRIP"
+                              | "TRIANGLE_STRIP"
+
+    <SpecialInstruction>    ::= "EMIT"
+                              | "ENDPRIM"
+
+    <attribBasic>           ::= <vtxPrefix> "position"
+                              | <vtxPrefix> "fogcoord"
+                              | <vtxPrefix> "pointsize"
+                              | <vtxPrefix> "id"
+                              | <attribTexCoord> <optArrayMemAbs>
+                              | <attribClip> <arrayMemAbs>
+                              | <attribGeneric> <arrayMemAbs>
+                              | "primitive" "." "id"
+
+    <attribColor>           ::= <vtxPrefix> "color"
+
+    <attribMulti>           ::= <attribTexCoord> <arrayRange>
+                              | <attribClip> <arrayRange>
+                              | <attribGeneric> <arrayRange>
+
+    <attribTexCoord>        ::= <vtxPrefix> "texcoord"
+
+    <attribClip>            ::= <vtxPrefix> "clip"
+
+    <attribGeneric>         ::= <vtxPrefix> "attrib"
+
+    <vtxPrefix>             ::= "vertex" <optArrayMemAbs>
+
+    <resultBasic>           ::= <resPrefix> "position"
+                              | <resPrefix> "fogcoord"
+                              | <resPrefix> "pointsize"
+                              | <resPrefix> "primid"
+                              | <resPrefix> "layer"
+                              | <resultTexCoord> <optArrayMemAbs>
+                              | <resultClip> <arrayMemAbs>
+                              | <resultGeneric> <arrayMemAbs>
+
+    <resultColor>           ::= <resPrefix> "color"
+
+    <resultMulti>           ::= <resultTexCoord> <arrayRange>
+                              | <resultClip> <arrayRange>
+                              | <resultGeneric> <arrayRange>
+
+    <resultTexCoord>        ::= <resPrefix> "texcoord"
+
+    <resultClip>            ::= <resPrefix> "clip"
+
+    <resultGeneric>         ::= <resPrefix> "attrib"
+
+    <resPrefix>             ::= "result" "."
+
+    (add the following subsection to section 2.X.3.2, Program Attribute
+    Variables)
+
+    Geometry program attribute variables describe the attributes of each
+    transformed vertex accessible to the geometry program.  Most attributes
+    correspond to the per-vertex results generated by vertex program execution
+    or fixed-function vertex processing.  The "primitive.id" attribute is
+    generated specially, as described below.
+
+    If vertex programs are enabled, attributes will be obtained from the
+    per-vertex outputs of the vertex program used to generate the vertex in
+    question.  Geometry program attributes should be read using the same
+    component data type used to write the corresponding vertex program
+    results.  The value of any attribute corresponding to a vertex output not
+    written by the vertex program is undefined.
+
+    If vertex programs are disabled, attributes will be obtained from the
+    values computed by fixed-function vertex processing.  All attributes,
+    except for the primitive ID should be read as floating-point values in
+    this case.
+
+      Geometry Vertex Binding         Components  Description
+      -----------------------------   ----------  ----------------------------
+      vertex[m].position              (x,y,z,w)   clip coordinates
+      vertex[m].color                 (r,g,b,a)   front primary color
+      vertex[m].color.primary         (r,g,b,a)   front primary color
+      vertex[m].color.secondary       (r,g,b,a)   front secondary color
+      vertex[m].color.front           (r,g,b,a)   front primary color
+      vertex[m].color.front.primary   (r,g,b,a)   front primary color
+      vertex[m].color.front.secondary (r,g,b,a)   front secondary color
+      vertex[m].color.back            (r,g,b,a)   back primary color
+      vertex[m].color.back.primary    (r,g,b,a)   back primary color
+      vertex[m].color.back.secondary  (r,g,b,a)   back secondary color
+      vertex[m].fogcoord              (f,-,-,-)   fog coordinate
+      vertex[m].pointsize             (s,-,-,-)   point size
+      vertex[m].texcoord              (s,t,r,q)   texture coordinate, unit 0
+      vertex[m].texcoord[n]           (s,t,r,q)   texture coordinate, unit n
+      vertex[m].attrib[n]             (x,y,z,w)   generic interpolant n
+      vertex[m].clip[n]               (d,-,-,-)   clip plane distance
+      vertex[m].texcoord[n..o]        (s,t,r,q)   array of texture coordinates
+      vertex[m].attrib[n..o]          (x,y,z,w)   array of generic interpolants
+      vertex[m].clip[n..o]            (d,-,-,-)   array of clip distances
+      vertex[m].id                    (id,-,-,-)  vertex id
+      primitive.id                    (id,-,-,-)  primitive number
+
+      Table X.2, Geometry Program Attribute Bindings.  <m> refers to a vertex
+      number, while <n>, and <o> refer to integer constants.  Only the
+      "vertex[m].texcoord" and "vertex.attrib" bindings are available in
+      arrays.
+
+    For bindings that include "vertex[m]", <m> identifies the vertex number
+    whose attributes are used for the binding.  For bindings in explicit
+    variable declarations, "[m]" is optional.  If "[m]" is specified, <m> must
+    be an integer constant and must be in the valid range of vertices
+    supported for the input primitive type.  If "[m]" is not specified, the
+    declared variable is accessed as an array, with the first array index
+    specifying the vertex number.  If such a variable is declared an array, it
+    must have a second array index to identify the individual array element.
+    For bindings used directly in instructions, "[m]" is required and must be
+    an integer constant specifying a vertex number.  The following examples
+    illustrate various legal and illegal geometry program bindings and their
+    meanings.
+
+      ATTRIB pos = vertex.position;
+      ATTRIB pos2 = vertex[2].position;
+      ATTRIB texcoords[] = { vertex.texcoord[0..3] };
+      ATTRIB tcoords1[4] = { vertex[1].texcoord[1..4] };
+      INT TEMP A0;
+      ...
+      MOV R0, pos[1];                   # position of vertex 1
+      MOV R0, vertex[1].position;       # position of vertex 1
+      MOV R0, pos2;                     # position of vertex 2
+      MOV R0, texcoords[A0.x][1];       # texcoord 1 of vertex A0.x
+      MOV R0, texcoords[A0.x][A0.y];    # texcoord A0.y of vertex A0.x
+      MOV R0, tcoords1[2];              # texcoord 3 of vertex 1
+      MOV R0, vertex[A0.x].texcoord[1]; # ILLEGAL allowed -- vertex number
+                                        #    must be constant here.
+
+    If a geometry attribute binding matches "vertex[m].position", the "x",
+    "y", "z" and "w" components of the geometry attribute variable are filled
+    with the "x", "y", "z", and "w" components, respectively, of the
+    transformed position of vertex <m>, in clip coordinates.
+
+    If a geometry attribute binding matches any binding in Table X.2 beginning
+    with "vertex[m].color", the "x", "y", "z", and "w" components of the
+    geometry attribute variable are filled with the "r", "g", "b", and "a"
+    components, respectively, of the corresponding color of vertex <m>.
+    Bindings containing "front" and "back" refer to the front and back colors,
+    respectively.  Bindings containing "primary" and "secondary" refer to
+    primary and secondary colors, respectively.  If face or color type is
+    omitted in the binding, the binding is treated as though "front" and
+    "primary", respectively, were specified.
+
+    If a geometry attribute binding matches "vertex[m].fogcoord", the "x"
+    component of the geometry attribute variable is filled with the fog
+    coordinate of vertex <m>.  The "y", "z", and "w" components are undefined.
+
+    If a geometry attribute binding matches "vertex[m].pointsize", the "x"
+    component of the geometry attribute variable is filled with the point size
+    of vertex <m> computed by the vertex program.  For fixed-function vertex
+    processing, the point size attribute is undefined.  The "y", "z", and "w"
+    components are always undefined.
+
+    If a geometry attribute binding matches "vertex[m].texcoord" or
+    "vertex[m].texcoord[n]", the "x", "y", "z", and "w" coordinates of the
+    geometry attribute variable are filled with the "s", "t", "r", and "q"
+    coordinates of texture coordinate set <n> of vertex <m>.  If <n> is
+    omitted, texture coordinate set zero is used.
+
+    If a geometry attribute binding matches "vertex[m].attrib[n]", the "x",
+    "y", "z", and "w" components of the geometry attribute variable are filled
+    with the "x", "y", "z", and "w" coordinates of generic interpolant <n> of
+    vertex <m>.  All generic interpolants will be undefined when used with
+    fixed-function vertex processing.
+
+    If a geometry attribute binding matches "vertex[m].clip[n]", the "x"
+    component of the geometry attribute variable is filled the clip distance
+    of vertex <m> for clip plane <n>, as written by the vertex program.  If
+    fixed-function vertex processing or position-invariant vertex programs are
+    used, the clip distance is obtained by computing the per-clip plane dot
+    product:
+
+      (p_1' p_2' p_3' p_4') dot (x_e y_e z_e w_e),
+
+    at the vertex location, as described in section 2.12.  The clip distance
+    for clip plane <n> is undefined if clip plane <n> is disabled.  The "y",
+    "z", and "w" components of the attribute are undefined.
+
+    If a geometry attribute binding matches "vertex[m].texcoord[n..o]",
+    "vertex[m].attrib[n..o]", or "vertex[m].clip[n..o]", a sequence of
+    1+<o>-<n> texture coordinate bindings is created.  For texture coordinate
+    bindings, it is as though the sequence "vertex[m].texcoord[n],
+    vertex[m].texcoord[n+1], ... vertex[m].texcoord[o]" were specfied.  These
+    bindings are available only in explicit declarations of array variables.
+    A program will fail to load if <n> is greater than <o>.
+
+    If a geometry attribute binding matches "vertex[m].id", the "x" component
+    is filled with the vertex ID.  If a vertex program is currently active,
+    the attribute variable is filled with the vertex ID result written by the
+    vertex program.  If fixed-function vertex processing is used, the vertex
+    ID is undefined.  The "y", "z", and "w" components of the attribute are
+    undefined.
+
+    If a geometry attribute binding matches "primitive.id", the "x" component
+    is filled with the number of primitives received by the GL since the last
+    time Begin was called (directly or indirectly via vertex array functions).
+    The first primitive generated after a Begin is numbered zero, and the
+    primitive ID counter is incremented after every individual point, line, or
+    polygon primitive is processed.  For QUADS and QUAD_STRIP primitives that
+    are decomposed into triangles, the primitive ID is incremented after each
+    complete quad is processed.  For POLYGON primitives, the primitive ID
+    counter is zero.  Restarting a primitive topology using the primitive
+    restart index has no effect on the primitive ID counter.  The "y", "z",
+    and "w" components of the variable are always undefined.
+
+    (add the following subsection to section 2.X.3.5, Program Results.)
+
+    Geometry programs emit vertices, and the set of result variables available
+    to such programs correspond to the attributes of each emitted vertex.  The
+    set of allowable result variable bindings for geometry programs is given
+    in Table X.3.
+
+      Binding                        Components  Description
+      -----------------------------  ----------  ----------------------------
+      result.position                (x,y,z,w)   position in clip coordinates
+      result.color                   (r,g,b,a)   front-facing primary color
+      result.color.primary           (r,g,b,a)   front-facing primary color
+      result.color.secondary         (r,g,b,a)   front-facing secondary color
+      result.color.front             (r,g,b,a)   front-facing primary color
+      result.color.front.primary     (r,g,b,a)   front-facing primary color
+      result.color.front.secondary   (r,g,b,a)   front-facing secondary color
+      result.color.back              (r,g,b,a)   back-facing primary color
+      result.color.back.primary      (r,g,b,a)   back-facing primary color
+      result.color.back.secondary    (r,g,b,a)   back-facing secondary color
+      result.fogcoord                (f,*,*,*)   fog coordinate
+      result.pointsize               (s,*,*,*)   point size
+      result.texcoord                (s,t,r,q)   texture coordinate, unit 0
+      result.texcoord[n]             (s,t,r,q)   texture coordinate, unit n
+      result.attrib[n]               (x,y,z,w)   generic interpolant n
+      result.clip[n]                 (d,*,*,*)   clip plane distance
+      result.texcoord[n..o]          (s,t,r,q)   texture coordinates n thru o
+      result.attrib[n..o]            (x,y,z,w)   generic interpolants n thru o
+      result.clip[n..o]              (d,*,*,*)   clip distances n thru o
+      result.primid                  (id,*,*,*)  primitive id
+      result.layer                   (l,*,*,*)   layer for cube/array/3D FBOs
+
+      Table X.3:  Geometry Program Result Variable Bindings.
+      Components labeled "*" are unused.
+
+    If a result variable binding matches "result.position", updates to the
+    "x", "y", "z", and "w" components of the result variable modify the "x",
+    "y", "z", and "w" components, respectively, of the transformed vertex's
+    clip coordinates.  Final window coordinates will be generated for the
+    vertex as described in section 2.14.4.4.
+
+    If a result variable binding match begins with "result.color", updates to
+    the "x", "y", "z", and "w" components of the result variable modify the
+    "r", "g", "b", and "a" components, respectively, of the corresponding
+    vertex color attribute in Table X.3.  Color bindings that do not specify
+    "front" or "back" are consided to refer to front-facing colors.  Color
+    bindings that do not specify "primary" or "secondary" are considered to
+    refer to primary colors.
+
+    If a result variable binding matches "result.fogcoord", updates to the "x"
+    component of the result variable set the transformed vertex's fog
+    coordinate.  Updates to the "y", "z", and "w" components of the result
+    variable have no effect.
+
+    If a result variable binding matches "result.pointsize", updates to the
+    "x" component of the result variable set the transformed vertex's point
+    size.  Updates to the "y", "z", and "w" components of the result variable
+    have no effect.
+
+    If a result variable binding matches "result.texcoord" or
+    "result.texcoord[n]", updates to the "x", "y", "z", and "w" components of
+    the result variable set the "s", "t", "r" and "q" components,
+    respectively, of the transformed vertex's texture coordinates for texture
+    unit <n>.  If "[n]" is omitted, texture unit zero is selected.
+
+    If a result variable binding matches "result.attrib[n]", updates to the
+    "x", "y", "z", and "w" components of the result variable set the "x", "y",
+    "z", and "w" components of the generic interpolant <n>.
+
+    If a result variable binding matches "result.clip[n]", updates to the "x"
+    component of the result variable set the clip distance for clip plane <n>.
+
+    If a result variable binding matches "result.texcoord[n..o]",
+    "result.attrib[n..o]", or "result.clip[n..o]", a sequence of 1+<o>-<n>
+    bindings is created.  For texture coordinates, it is as though the
+    sequence "result.texcoord[n], result.texcoord[n+1],
+    ... result.texcoord[o]" were specfied.  These bindings are available only
+    in explicit declarations of array variables.  A program will fail to load
+    if <n> is greater than <o>.
+
+    If a result variable binding matches "result.primid", updates to the "x"
+    component of the result variable provide a single integer that serves as a
+    primitive identifier.  The written primitive ID is available to fragment
+    programs using the "primitive.id" attribute binding.  If a fragment
+    program using primitive IDs is active and a geometry program is also
+    active, the geometry program must write "result.primid" or the primitive
+    ID number is undefined.
+
+    If a result variable binding matches "result.layer", updates to the "x"
+    component of the result variable provide a single integer that serves as a
+    layer selector for layered rendering (section 2.14.6.5).  The layer must
+    be written as an integer value; writing a floating-point layer number will
+    produce undefined results.
+
+    (modify Table X.13 in section 2.X.4, Program Instructions, to include the
+    following.)
+
+                Modifiers 
+    Instruction F I C S H D  Inputs     Out  Description
+    ----------- - - - - - -  ---------- ---  --------------------------------
+    EMIT        - - - - - -  -          -    emit vertex
+    ENDPRIM     - - - - - -  -          -    end of primitive
+
+    (add the following subsection to section 2.X.6, Program Options.)
+
+    Section 2.X.6.Y, Geometry Program Options
+
+    No options are supported at present for geometry programs.
+
+    (add the following subsection to section 2.X.7, Program Declarations.)
+
+    Section 2.X.7.Y, Geometry Program Declarations
+
+    Geometry programs support three types of declaration statements, as
+    described below.  Each of the three must be included exactly once in the
+    geometry program.
+
+    - Input Primitive Type (PRIMITIVE_IN)
+
+    The PRIMITIVE_IN statement declares the type of primitives seen by a
+    geometry program.  The single argument must be one of "POINTS", "LINES",
+    "LINES_ADJACENCY", "TRIANGLES", or "TRIANGLES_ADJACENCY".
+
+    - Output Primitive Type (PRIMITIVE_OUT)
+
+    The PRIMITIVE_OUT statement declares the type of primitive emitted by a
+    geometry program.  The single argument must be one of "POINTS",
+    "LINE_STRIP", or "TRIANGLE_STRIP".
+
+    - Maximum Vertex Count (VERTICES_OUT)
+
+    The VERTICES_OUT statement declares the maximum number of vertices that
+    may be emitted by a geometry program.  The single argument must be a
+    positive integer.  A vertex program that emits more than the specified
+    number of vertices may terminate abnormally.
+
+    (add the following subsections to section 2.X.8, Program Instruction Set.)
+
+    Section 2.X.8.Z, EMIT:  Emit Vertex
+
+    The EMIT instruction emits a new vertex to be added to the current output
+    primitive of a geometry program.  The attributes of the emitted vertex are
+    given by the current values of the vertex result variables.  After the
+    EMIT instruction completes, a new vertex is started and all result
+    variables become undefined.
+
+    Section 2.X.8.Z, ENDPRIM:  End of Primitive
+
+    A geometry program can emit multiple primitives in a single invocation.
+    The ENDPRIM instruction is used in a geometry program to signify the end
+    of the current primitive and the beginning of a new primitive of the same
+    type.  The effect of ENDPRIM is roughly equivalent to calling End followed
+    by a new Begin, where the primitive mode is specified in the text of the
+    geometry program.
+
+    Like End, the ENDPRIM instruction does not emit a vertex.  Any result
+    registers written prior to an ENDPRIM instruction are unchanged, and will
+    be used in the vertex specified by the next EMIT instruction if they are
+    not overwritten first.
+
+    When geometry program execution completes, the current primitive is
+    automatically terminated.  It is not necessary to include an ENDPRIM
+    instruction if the geometry program writes only a single primitive.
+
+Additions to Chapter 3 of the OpenGL 1.5 Specification (Rasterization)
+
+    Modify Section 3.3, Points (p. 95)
+
+    (replace all Section 3.3 text on p. 95) A point is drawn by generating a
+    set of fragments in the shape of a square or circle centered around the
+    vertex of the point.  Each vertex has an associated point size that
+    controls the size of that square or circle.
+
+    If no vertex or geometry program is active, the size of the point is
+    controlled by
+
+      void PointSize(float size);
+
+    <size> specifies the requested size of a point. The default value is
+    1.0. A value less than or equal to zero results in the error
+    INVALID_VALUE.
+
+    The requested point size is multiplied with a distance attenuation factor,
+    clamped to a specified point size range, and further clamped to the
+    implementation-dependent point size range to produce the derived point
+    size:
+
+       derived size = clamp(size * sqrt(1/(a+b*d+c*d^2)))
+
+    where d is the eye-coordinate distance from the eye, (0,0,0,1) in eye
+    coordinates, to the vertex, and a, b, and c are distance attenuation
+    function coefficients.
+
+    If a vertex or geometry program is active, the derived size depends on the
+    per-vertex point size mode enable.  Per-vertex point size mode is enabled
+    or disabled by calling Enable or Disable with the symbolic value
+    PROGRAM_POINT_SIZE_EXT.  If per-vertex point size is enabled and a geometry
+    program is active, the point size is taken from the point size emitted by
+    the geometry program.  If per-vertex point size is enabled an no geometry
+    program is active, the point size is taken from the point size result of
+    the vertex program.  Otherwise, the point size is taken from the <size>
+    value provided to PointSize, with no distance attenuation applied.  In all
+    cases, the point size is clamped to the implementation-dependent point
+    size range.
+
+    If multisampling is not enabled, the derived size is passed on to
+    rasterization as the point width. ...
+
+Additions to Chapter 4 of the OpenGL 1.5 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 1.5 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 1.5 Specification (State and
+State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 1.5 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    The following rendering commands are sent to the server as part of a
+    glXRender request:
+
+    ProgramVertexLimitNV
+
+        2           12               rendering command length
+        2           4312             rendering command opcode
+        4           ENUM             target
+        4           INT32            limit
+
+
+    The extension EXT_geometry_shader4 defines GLX protocol for
+    the following non-rendering commands:
+
+        FramebufferTextureEXT, FramebufferTextureLayerEXT,
+        FramebufferTextureFaceEXT.
+
+Errors
+
+    The error INVALID_OPERATION is generated if Begin, or any command that
+    implicitly calls Begin, is called when geometry program mode is enabled
+    and the currently bound geometry program object does not contain a valid
+    geometry program.
+
+    The error INVALID_OPERATION is generated if Begin, or any command that
+    implicitly calls Begin, is called when geometry program mode is enabled
+    and:
+
+      * the input primitive type of the current geometry program is POINTS and
+        <mode> is not POINTS,
+
+      * the input primitive type of the current geometry program is LINES and
+        <mode> is not LINES, LINE_STRIP, or LINE_LOOP,
+
+      * the input primitive type of the current geometry program is TRIANGLES
+        and <mode> is not TRIANGLES, TRIANGLE_STRIP, TRIANGLE_FAN, QUADS,
+        QUAD_STRIP, or POLYGON,
+
+      * the input primitive type of the current geometry program is
+        LINES_ADJACENCY and <mode> is not LINES_ADJACENCY_EXT or
+        LINE_STRIP_ADJACENCY_EXT, or
+
+      * the input primitive type of the current geometry program is
+        TRIANGLES_ADJACENCY and <mode> is not TRIANGLES_ADJACENCY_EXT or
+        TRIANGLE_STRIP_ADJACENCY_EXT.
+
+    The error INVALID_ENUM is generated if GetProgramivARB is called with a 
+    <pname> of MAX_PROGRAM_OUTPUT_VERTICES_NV or
+    MAX_PROGRAM_TOTAL_OUTPUT_COMPONENTS_NV and the target isn't
+    GEOMETRY_PROGRAM_NV.
+
+Dependencies on EXT_framebuffer_object
+
+    If EXT_framebuffer_object (or similar functionality) is not supported, the
+    "result.layer" binding should be removed.  "FramebufferTextureEXT" and
+    "FramebufferTextureLayerEXT" should be removed from "New Procedures and
+    Functions", and FRAMEBUFFER_ATTACHMENT_LAYERED_EXT,
+    FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS_EXT, and
+    FRAMEBUFFER_INCOMPLETE_LAYER_COUNT_EXT should be removed from "New
+    Tokens".
+
+    Otherwise, this extension modifies EXT_framebuffer_object to add the
+    notion of layered framebuffer attachments and framebuffers that can be
+    used in conjunction with geometry programs to allow programs to direct
+    primitives to a face of a cube map or layer of a three-dimensional texture
+    or one- or two-dimensional array texture.  The layer used for rendering
+    can be selected by the geometry program at run time.
+
+    (insert before the end of Section 4.4.2, Attaching Images to Framebuffer
+    Objects)
+
+    There are several types of framebuffer-attachable images:
+
+      * the image of a renderbuffer object, which is always two-dimensional,
+
+      * a single level of a one-dimensional texture, which is treated as a
+        two-dimensional image with a height of one,
+
+      * a single level of a two-dimensional or rectangle texture,
+
+      * a single face of a cube map texture level, which is treated as a
+        two-dimensional image, or
+
+      * a single layer of a one- or two-dimensional array texture or
+        three-dimensional texture, which is treated as a two-dimensional
+        image.
+
+    Additionally, an entire level of a three-dimensional texture, cube map
+    texture, or one- or two-dimensional array texture can be attached to an
+    attachment point.  Such attachments are treated as an array of
+    two-dimensional images, arranged in layers, and the corresponding
+    attachment point is considered to be layered.
+
+    (replace section 4.4.2.3, "Attaching Texture Images to a Framebuffer")
+
+    GL supports copying the rendered contents of the framebuffer into the
+    images of a texture object through the use of the routines
+    CopyTexImage{1D|2D}, and CopyTexSubImage{1D|2D|3D}.  Additionally, GL
+    supports rendering directly into the images of a texture object.
+
+    To render directly into a texture image, a specified level of a texture
+    object can be attached as one of the logical buffers of the currently
+    bound framebuffer object by calling:
+
+      void FramebufferTextureEXT(enum target, enum attachment,
+                                 uint texture, int level);
+
+    <target> must be FRAMEBUFFER_EXT.  <attachment> must be one of the
+    attachment points of the framebuffer listed in table 1.nnn.
+
+    If <texture> is zero, any image or array of images attached to the
+    attachment point named by <attachment> is detached, and the state of the
+    attachment point is reset to its initial values.  <level> is ignored if
+    <texture> is zero.
+
+    If <texture> is non-zero, FramebufferTextureEXT attaches level <level> of
+    the texture object named <texture> to the framebuffer attachment point
+    named by <attachment>.  The error INVALID_VALUE is generated if <texture>
+    is not the name of a texture object, or if <level> is not a supported
+    texture level number for textures of the type corresponding to <target>.
+    The error INVALID_OPERATION is generated if <texture> is the name of a
+    buffer texture.
+
+    If <texture> is the name of a three-dimensional texture, cube map texture,
+    or one- or two-dimensional array texture, the texture level attached to
+    the framebuffer attachment point is an array of images, and the
+    framebuffer attachment is considered layered.
+
+    The command
+
+      void FramebufferTextureLayerEXT(enum target, enum attachment,
+                                      uint texture, int level, int layer);
+
+    operates like FramebufferTextureEXT, except that only a single layer of
+    the texture level, numbered <layer>, is attached to the attachment point.
+    If <texture> is non-zero, the error INVALID_VALUE is generated if <layer>
+    is negative, or if <texture> is not the name of a texture object.  The
+    error INVALID_OPERATION is generated unless <texture> is zero or the name
+    of a three-dimensional or one- or two-dimensional array texture.
+
+    The command
+
+      void FramebufferTextureFaceEXT(enum target, enum attachment,
+                                     uint texture, int level, enum face);
+
+    operates like FramebufferTextureEXT, except that only a single face of a
+    cube map texture, given by <face>, is attached to the attachment point.
+    <face> is one of TEXTURE_CUBE_MAP_POSITIVE_X, TEXTURE_CUBE_MAP_NEGATIVE_X,
+    TEXTURE_CUBE_MAP_POSITIVE_Y, TEXTURE_CUBE_MAP_NEGATIVE_Y,
+    TEXTURE_CUBE_MAP_POSITIVE_Z, TEXTURE_CUBE_MAP_NEGATIVE_Z. If <texture> is
+    non-zero, the error INVALID_VALUE is generated if <texture> is not the
+    name of a texture object.  The error INVALID_OPERATION is generated unless
+    <texture> is zero or the name of a cube map texture.
+
+    The command
+
+      void FramebufferTexture1DEXT(enum target, enum attachment,
+                                   enum textarget, uint texture, int level);
+
+    operates identically to FramebufferTextureEXT, except for two additional
+    restrictions.  If <texture> is non-zero, the error INVALID_ENUM is
+    generated if <textarget> is not TEXTURE_1D and the error INVALID_OPERATION
+    is generated unless <texture> is the name of a one-dimensional texture.
+
+    The command
+
+      void FramebufferTexture2DEXT(enum target, enum attachment,
+                                   enum textarget, uint texture, int level);
+
+    operates similarly to FramebufferTextureEXT.  If <textarget> is TEXTURE_2D
+    or TEXTURE_RECTANGLE_ARB, <texture> must be zero or the name of a
+    two-dimensional or rectangle texture.  If <textarget> is
+    TEXTURE_CUBE_MAP_POSITIVE_X, TEXTURE_CUBE_MAP_NEGATIVE_X,
+    TEXTURE_CUBE_MAP_POSITIVE_Y, TEXTURE_CUBE_MAP_NEGATIVE_Y,
+    TEXTURE_CUBE_MAP_POSITIVE_Z, or TEXTURE_CUBE_MAP_NEGATIVE_Z, <texture>
+    must be zero or the name of a cube map texture.  For cube map textures,
+    only the single face of the cube map texture level given by <textarget> is
+    attached.  The error INVALID_ENUM is generated if <texture> is not zero
+    and <textarget> is not one of the values enumerated above.  The error
+    INVALID_OPERATION is generated if <texture> is the name of a texture whose
+    type does not match the texture type required by <textarget>.
+
+    The command
+
+      void FramebufferTexture3DEXT(enum target, enum attachment,
+                                   enum textarget, uint texture,
+                                   int level, int zoffset);
+
+    behaves identically to FramebufferTextureLayerEXT, with the <layer>
+    parameter set to the value of <zoffset>.  The error INVALID_ENUM is
+    generated if <textarget> is not TEXTURE_3D.  The error INVALID_OPERATION
+    is generated unless <texture> is zero or the name of a three-dimensional
+    texture.
+
+    For all FramebufferTexture commands, if <texture> is non-zero and the
+    command does not result in an error, the framebuffer attachment state
+    corresponding to <attachment> is updated based on the new attachment.
+    FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE_EXT is set to TEXTURE,
+    FRAMEBUFFER_ATTACHMENT_OBJECT_NAME_EXT is set to <texture>, and
+    FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL is set to <level>.
+    FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_FACE is set to <textarget> if
+    FramebufferTexture2DEXT is called and <texture> is the name of a cubemap
+    texture; otherwise, it is set to TEXTURE_CUBE_MAP_POSITIVE_X.
+    FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER_EXT is set to <layer> or <zoffset> if
+    FramebufferTextureLayerEXT or FramebufferTexture3DEXT is called;
+    otherwise, it is set to zero.  FRAMEBUFFER_ATTACHMENT_LAYERED_EXT is set
+    to TRUE if FramebufferTextureEXT is called and <texture> is the name of a
+    three-dimensional texture, cube map texture, or one- or two-dimensional
+    array texture; otherwise it is set to FALSE.
+
+    (modify Section 4.4.4.1, Framebuffer Attachment Completeness -- add to the
+    conditions necessary for attachment completeness)
+
+    The framebuffer attachment point <attachment> is said to be "framebuffer
+    attachment complete" if ...:
+
+      * If FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE_EXT is TEXTURE and
+        FRAMEBUFFER_ATTACHMENT_OBJECT_NAME_EXT names a three-dimensional
+        texture, FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER_EXT must be smaller than
+        the depth of the texture.
+
+      * If FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE_EXT is TEXTURE and
+        FRAMEBUFFER_ATTACHMENT_OBJECT_NAME_EXT names a one- or two-dimensional
+        array texture, FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER_EXT must be
+        smaller than the number of layers in the texture.
+
+    (modify section 4.4.4.2, Framebuffer Completeness -- add to the list of
+    conditions necessary for completeness)
+
+      * If any framebuffer attachment is layered, all populated attachments
+        must be layered.  Additionally, all populated color attachments must
+        be from textures of the same target (i.e., three-dimensional, cube
+        map, or one- or two-dimensional array textures).
+        { FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS_EXT }
+
+      * If any framebuffer attachment is layered, all attachments must have
+        the same layer count.  For three-dimensional textures, the layer count
+        is the depth of the attached volume.  For cube map textures, the layer
+        count is always six.  For one- and two-dimensional array textures, the
+        layer count is simply the number of layers in the array texture.
+        { FRAMEBUFFER_INCOMPLETE_LAYER_COUNT_EXT }
+
+    The enum in { brackets } after each clause of the framebuffer completeness
+    rules specifies the return value of CheckFramebufferStatusEXT (see below)
+    that is generated when that clause is violated. ...
+
+    (add section 4.4.7, Layered Framebuffers)
+
+    A framebuffer is considered to be layered if it is complete and all of its
+    populated attachments are layered.  When rendering to a layered
+    framebuffer, each fragment generated by the GL is assigned a layer number.
+    The layer number for a fragment is zero if
+
+      * the fragment is generated by DrawPixels, CopyPixels, or Bitmap,
+
+      * geometry programs are disabled, or
+
+      * the current geometry program does not contain an instruction that
+        writes to the layer result binding.
+
+    Otherwise, the layer for each point, line, or triangle emitted by the
+    geometry program is taken from the layer output of the provoking vertex.
+    For line strips, the provoking vertex is the second vertex of each line
+    segment.  For triangle strips, the provoking vertex is the third vertex of
+    each individual triangles.  The per-fragment layer can be different for
+    fragments generated by each individual point, line, or triangle emitted by
+    a single geometry program invocation.  A layer number written by a
+    geometry program has no effect if the framebuffer is not layered.
+
+    When fragments are written to a layered framebuffer, the fragment's layer
+    number selects a single image from the array of images at each attachment
+    point to use for the stencil test (section 4.1.5), depth buffer test
+    (section 4.1.6), and for blending and color buffer writes (section 4.1.8).
+    If the fragment's layer number is negative or greater than the number of
+    layers attached, the effects of the fragment on the framebuffer contents
+    are undefined.
+
+    When the Clear command is used to clear a layered framebuffer attachment,
+    all layers of the attachment are cleared.
+
+    When commands such as ReadPixels or CopyPixels read from a layered
+    framebuffer, the image at layer zero of the selected attachment is always
+    used to obtain pixel values.
+
+    When cube map texture levels are attached to a layered framebuffer, there
+    are six layers attached, numbered zero through five.  Each layer number is
+    mapped to a cube map face, as indicated in Table X.4.
+
+      layer number   cube map face
+      ------------   ---------------------------
+           0         TEXTURE_CUBE_MAP_POSITIVE_X
+           1         TEXTURE_CUBE_MAP_NEGATIVE_X
+           2         TEXTURE_CUBE_MAP_POSITIVE_Y
+           3         TEXTURE_CUBE_MAP_NEGATIVE_Y
+           4         TEXTURE_CUBE_MAP_POSITIVE_Z
+           5         TEXTURE_CUBE_MAP_NEGATIVE_Z
+
+      Table X.4, Layer numbers for cube map texture faces.  The layers are
+      numbered in the same sequence as the cube map face token values.
+
+    (modify Section 6.1.3, Enumerated Queries -- Modify/add to list of <pname>
+    values for GetFramebufferAttachmentParameterivEXT if
+    FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE_EXT is TEXTURE)
+
+      If <pname> is FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER_EXT and the attached
+      image is a layer of a three-dimensional texture or one- or
+      two-dimensional array texture, then <params> will contain the specified
+      layer number.  Otherwise, <params> will contain the value zero.
+
+      If <pname> is FRAMEBUFFER_ATTACHMENT_LAYERED_EXT, then <params> will
+      contain TRUE if an entire level of a three-dimesional texture, cube map
+      texture, or one- or two-dimensional array texture is attached to the
+      <attachment>.  Otherwise, <params> will contain FALSE.
+
+    (Modify the Additions to Chapter 5, section 5.4)
+
+    Add the commands FramebufferTextureEXT, FramebufferTextureLayerEXT, and
+    FramebufferTextureFaceEXT to the list of commands that are not compiled
+    into a display list, but executed immediately.
+
+Dependencies on EXT_framebuffer_blit
+
+    If EXT_framebuffer_blit is supported, the EXT_framebuffer_object language
+    should be further amended so that <target> values passed to
+    FramebufferTextureEXT and FramebufferTextureLayerEXT can be
+    DRAW_FRAMEBUFFER_EXT or READ_FRAMEBUFFER_EXT, and that those functions
+    set/query state for the draw framebuffer if <target> is FRAMEBUFFER_EXT.
+
+    If BlitFramebufferEXT() is called with a layered read framebuffer, pixel
+    values are obtained from layer zero from the read framebuffer.  If the
+    draw framebuffer is layered, pixel values are written to layer zero of the
+    draw framebuffer.  If both framebuffers are layered, the two-dimensional
+    blit operation is still performed only on layer zero.
+
+Dependencies on EXT_texture_array
+
+    If EXT_texture_array is not supported, the discussion array textures the
+    layered rendering edits to EXT_framebuffer_object should be removed.
+    Layered rendering to cube map and 3D textures would still be supported.
+
+    If EXT_texture_array is supported, the edits to EXT_framebuffer_object
+    supersede those made in EXT_texture_array, except for language pertaining
+    to mipmap generation of array textures.  
+
+    There are no functional incompatibilities between the FBO support in these
+    two specifications.  The only differences are that this extension supports
+    layered rendering and also rewrites certain sections of the core FBO
+    specification more aggressively.
+
+Dependencies on ARB_texture_rectangle
+
+    If ARB_texture_rectangle is not supported, all references to rectangle
+    textures in the EXT_framebuffer_object spec language should be removed.
+
+Dependencies on EXT_texture_buffer_object
+
+    If EXT_buffer_object is not supported, the reference to an
+    INVALID_OPERATION error if a buffer texture is passed to
+    FramebufferTextureEXT should be removed.
+
+Dependencies on NV_primitive_restart
+
+    The spec describes the behavior that primitive restart does not affect the
+    primitive ID counter, including for POLYGON primitives (where one could
+    argue that the restart index starts a new primitive without a new Begin to
+    reset the count).  If NV_primitive_restart is not supported, references to
+    that extension in the discussion of the "primitive.id" attribute should be
+    removed.
+
+New State
+                                                       Initial
+    Get Value                  Type    Get Command      Value  Description            Sec.    Attribute
+    -------------------------  ----    -----------     ------- ---------------------- ------  ---------
+    GEOMETRY_PROGRAM_NV         B      IsEnabled        FALSE  Geometry shader enable 2.14.6   enable
+    FRAMEBUFFER_ATTACHMENT_    nxB     GetFramebuffer-  FALSE  Framebuffer attachment 4.4.2.3    -
+      LAYERED_EXT                      Attachment-             is layered
+                                       ParameterivEXT
+    GEOMETRY_VERTICES_OUT_EXT   Z+     GetProgramivARB    0    vertex limit of the    2.14.6.4   -
+                                                               current geometry 
+                                                               program
+    GEOMETRY_INPUT_TYPE_EXT     Z+     GetProgramivARB    0    input primitive type   2.14.6.4   -
+                                                               of the current geometry 
+                                                               program
+    GEOMETRY_OUTPUT_TYPE_EXT    Z+     GetProgramivARB    0    output primitive type  2.14.6.4   -
+                                                               of the current geometry 
+                                                               program
+
+New Implementation Dependent State
+
+                                                              Minimum
+    Get Value                        Type    Get Command      Value       Description             Sec           Attrib
+    -------------------------------  ----    ---------------  ----------  --------------------    ------------  ------
+    MAX_GEOMETRY_TEXTURE_            Z+      GetIntegerv      16          maximum number of       2.14.6.3      -
+        IMAGE_UNITS_EXT                                                   texture image units
+                                                                          accessible in a
+                                                                          geometry program
+    MAX_PROGRAM_OUTPUT_VERTICES_NV   Z+      GetProgramivARB  256         maximum number of       2.14.6.4      -
+                                                                          vertices that any
+                                                                          geometry program
+                                                                          could emit
+    MAX_PROGRAM_TOTAL_OUTPUT_        Z+      GetProgramivARB  1024        maximum number of       2.14.6.4      -
+      COMPONENTS_NV                                                       result components (all
+                                                                          vertices) that a
+                                                                          geometry program
+                                                                          can emit
+
+
+NVIDIA Implementation Details
+
+    Because of a hardware limitation, some GeForce 8 series chips use the
+    odd vertex of an incomplete TRIANGLE_STRIP_ADJACENCY_EXT primitive
+    as a replacement adjacency vertex rather than ignoring it.
+
+Issues
+
+    (1) How do geometry programs fit into the existing GL pipeline?
+
+      RESOLVED:  The following diagram illustrates how geometry programs fit
+      into the "vertex processing" portion of the GL (Chapter 2 of the OpenGL
+      2.0 Specification).  
+
+      First, vertex attributes are specified via immediate-mode commands or
+      through vertex arrays.  They can be conventional attributes (e.g.,
+      glVertex, glColor, glTexCoord) or generic (numbered) attributes.
+
+      Vertices are then transformed, either using a vertex program or
+      fixed-function vertex processing.  Fixed-function vertex processing
+      includes position transformation (modelview and projection matrices),
+      lighting, texture coordinate generation, and other calculations.  The
+      results of either method are a "transformed vertex", which has a
+      position (in clip coordinates), front and back colors, texture
+      coordinates, generic attributes (vertex program only), and so on.  Note
+      that on many current GL implementations, vertex processing is performed
+      by executing a "fixed function vertex program" generated by the driver.
+
+      After vertex transformation, vertices are assembled into primitives,
+      according to the topology (e.g., TRIANGLES, QUAD_STRIP) provided by the
+      call to glBegin().  Primitives are points, lines, triangles, quads, or
+      polygons.  Many GL implementations do not directly support quads or
+      polygons, but instead decompose them into triangles as permitted by the
+      spec.
+
+      After initial primitive assembly, a geometry program is executed on each
+      individual point, line, or triangle primitive, if enabled.  It can read
+      the attributes of each transformed vertex, perform arbitrary
+      computations, and emit new transformed vertices.  These emitted vertices
+      are themselves assembled into primitives according to the output
+      primitive type of the geometry program.
+
+      Then, the colors of the vertices of each primitive are clamped to [0,1]
+      (if color clamping is enabled), and flat shading may be performed by
+      taking the color from the provoking vertex of the primitive.
+
+      Each primitive is clipped to the view volume, and to any enabled
+      user-defined clip planes.  Color, texture coordinate, and other
+      attribute values are computed for each new vertex introduced by
+      clipping.
+
+      After clipping, the position of each vertex (in clip coordinates) is
+      converted to normalized device coordinates in the perspective division
+      (divide by w) step, and to window coordinates in the viewport
+      transformation step.
+
+      At the same time, color values may be converted to normalized
+      fixed-point values according to the "Final Color Processing" portion of
+      the specification.
+
+      After the vertices of the primitive are transformed to window
+      coordinate, the GL determines if the primitive is front- or back-facing.
+      That information is used for two-sided color selection, where a single
+      set of colors is selected from either the front or back colors
+      associated with each transformed vertex.
+
+      When all this is done, the final transformed position, colors (primary
+      and secondary), and other attributes are used for rasterization (Chapter
+      3 in the OpenGL 2.0 Specification).
+
+      When the raster position is specified (via glRasterPos), it goes through
+      the entire vertex processing pipeline as though it were a point.
+      However, geometry programs are never run on the raster position.
+
+                        |generic              |conventional
+                        |vertex               |vertex
+                        |attributes           |attributes
+                        |                     |
+                        | +-------------------+
+                        | |                   |
+                        V V                   V
+                      vertex            fixed-function
+                      program              vertex
+                         |               processing
+                         |                    |
+                         |                    |
+                         +<-------------------+                
+                         |                                     Output
+                         |position, color,                   Primitive
+                         |other vertex data                     Type
+                         |                                       |
+                         V                                       |
+        Begin/       primitive        geometry       primitive   |
+         End ------> assembly  -----> program  ----> assembly  <-+
+        State            |                               |
+                         V                               |
+                         +<------------------------------+
+                         |
+                         |
+                         |             color            flat
+                         +----------> clamping ---->  shading
+                         |                               |
+                         V                               |
+                         +<------------------------------+
+                         |
+                         |
+                      clipping
+                         |
+                         |        perspective       viewport
+                         +------>   divide    ----> transform
+                         |                              |
+                         |                          +---+-----+
+                         |                          V         |
+                         |           final        facing      |
+                         +------>    color     determination  |
+                         |         processing       |         |
+                         |             |            |         |
+                         |             |            |         |
+                         |             +-----+ +----+         |
+                         |                   | |              |
+                         |                   V V              |
+                         |                two-sided           |
+                         |                 coloring           |
+                         |                    |               |
+                         |                    |               |
+                         +------------------+ | +-------------+
+                                            | | |
+                                            V V V
+                                        rasterization 
+                                              |
+                                              |
+                                              V
+
+    (2) Why is this called GL_NV_geometry_program4?  There aren't any previous
+    versions of this extension, let alone three?
+
+      RESOLVED:  The instruction set for GPU programs of all types (vertex,
+      fragment, and now geometry) have been unified in the GL_NV_gpu_program4
+      extension, and the "4" suffix in this extension name indicates the
+      instruction set type.  There are three previous NV_vertex_program
+      variants (four if you count NV_vertex_program1_1), so "4" is the next
+      available numeric suffix.
+
+    (3) Should the GL produce errors at Begin time if an application specifies
+    a primitive mode that is "incompatible" with the geometry program?  For
+    example, if the geometry program operates on triangles and the application
+    sends a POINTS primitive?
+
+      RESOLVED:  Yes.  Mismatches of app-specified primitive types and
+      geometry program input primitive types seem like clear errors and would
+      produce weird and wonderful effects.
+
+    (4) Can the input primitive type of a geometry program be changed at run
+    time?
+
+      RESOLVED:  Not in this extension.  Each geometry program has a single
+      input primitive type, and vertices are presented to the program in a
+      specific order based on that type.
+
+    (5) Can the output primitive type of a geometry program be determined at
+    run time?
+
+      RESOLVED:  Not in this extension.
+
+    (6) Must the output primitive type of a geometry program match the input
+    primitive type in any way?
+
+      RESOLVED:  No, you can have a geometry program generate points out of
+      triangles or triangles out of points.  Some combinations are analogous
+      to existing OpenGL operations:  reading triangles and writing points or
+      line strips can be used to emulate a subset of PolygonMode
+      functionality.  Reading points and writing triangle strips can be used
+      to emulate point sprites.
+
+    (7) Are primitives emitted by a geometry program processed like any other
+    OpenGL primitive?
+
+      RESOLVED:  Yes.  Antialiasing, stippling, polygon offset, polygon mode,
+      culling, two-sided lighting and color selection, point sprite
+      operations, and fragment processing all work as expected.  
+
+      One limitation is that the only output primitive types supported are
+      points, line strips, and triangle strips, none of which meaningfully
+      support edge flags that are sometimes used in conjunction with the POINT
+      and LINE polygon modes (edge flags are always ignored for line-mode
+      triangle strips).
+
+    (8) Should geometry programs support additional input primitive types?
+
+      RESOLVED:  Possibly in a future extension.  It should be straightforward
+      to build a future extension to support geometry programs that operate on
+      quads.  Other primitive types might be more demanding on hardware.
+      Quads with adjacency would require 12 vertices per program execution.
+      General polygons may require even more, since there is no fixed bound on
+      the number of vertices in a polygon.
+
+    (9) Should geometry programs support additional output primitive types?
+
+      RESOLVED:  Possibly in a future extension.  Additional output types
+      (e.g., independent lines, line loops, triangle fans, polygons) may be
+      useful in the future; triangle fans/polygons seem particularly useful.
+
+    (10) Should we provide additional adjacency primitive types that can be
+    used inside a Begin/End?
+
+      RESOLVED:  Not in this extension.  It may be desirable to add new
+      primitive types (e.g., TRIANGLE_FAN_ADJACENCY) in a future extension.
+
+    (11) How do geometry programs interact with RasterPos?
+
+      RESOLVED:  Geometry programs are ignored when specifying the raster
+      position.  While the raster position could be treated as a point,
+      turning it into a triangle strip would be quite bizarre.
+
+    (12) How do geometry programs interact with pixel primitives (DrawPixels,
+    Bitmap)?
+
+      RESOLVED:  They do not.  Fragments generated be DrawPixels and Bitmap
+      are injected into the pipeline after the point where geometry program
+      execution occurs.
+
+    (13) Is there a limit on the number of vertices that can be emitted by a
+    geometry program?
+
+      RESOLVED:  Unfortunately, yes.  Besides practical hardware limits, there
+      may also be practical performance advantages when applications guarantee
+      a tight upper bound on the number of vertices a geometry shader will
+      emit.  GPUs frequently excecute programs in parallel, and there are
+      substantial implementation challenges to parallel execution of geometry
+      threads that can write an unbounded number of results, particular given
+      that the all the primitives generated by the first geometry program
+      invocation must be consumed before any of the primitives generated by
+      the second program invocation.  Limiting the amount of data a geometry
+      program can write substantially eases the implementation burden.
+
+      A geometry program must declare a maximum number of vertices that can be
+      emitted, called the vertex limit.  There is an implementation-dependent
+      limit on the total number of vertices a program can emit (256 minimum)
+      and the product of the vertex limit and the number of active result
+      components (1024 minimum).  A program will fail to load if doesn't
+      declare a limit or exceeds either of the two implementatoin-dependent
+      limits.
+
+      It would be ideal if the limit could be inferred from the instructions
+      in the program itself, and that would be possible for many programs,
+      particularly ones with straight-line flow control.  For programs with
+      more complicated flow control (subroutines, data-dependent looping, and
+      so on), it would be impossible to make such an inference and a "safe"
+      limit would have to be used with adverse and possibly unexpected
+      performance consequences.
+
+      The limit on the number of EMIT instructions that can be issued can not
+      always be enforced at compile time, or even at Begin time.  We specify
+      that if a program tries to emit more vertices than the vertex limit
+      allows, emits that exceed the limit may or may not have any effect.
+
+    (14) Should it be possible to change the limit on the number of vertices
+    emitted by a geometry program after the program is specified?
+
+      RESOLVED:  Yes, using the function ProgramVertexLimitNV().  Applications
+      may want to tweak a piece of data that affects the number of vertices
+      emitted, but doesn't necessarily require recompiling the entire program.
+      Examples might be a "circular point sprite" program, that reads a single
+      point, and draws a circle centered at that point with <N> vertices.  An
+      application could change the value <N> at run time, but it could require
+      a change in the vertex limit.  Another example might be a geometry
+      program that does some fancy subdivision, where the relevant parameter
+      might be a limit on how far the primitive is subdivided.
+
+      Ideally, this program object state should be set by a "program
+      parameter" command, much like texture state is set by a "texture
+      parameter" (TexParameter) command.  Unfortunately, there are already
+      several different "program parameter" functions:
+
+        ProgramEnvParameter4fARB()   -- sets global environment constants
+        ProgramLocalParameter4fARB() -- sets per-program constants
+        ProgramParameter4fNV()       -- also sets global environment constants
+
+      Additionally, GLSL and OpenGL 2.0 introduced "program objects" which are
+      linked collections of vertex, fragment, and now geometry shaders.  A
+      GLSL vertex "shader" is equivalent to an ARB_vertex_program vertex
+      "program", which is nothing like a GLSL program.  As of OpenGL 2.0, GLSL
+      programs do not have settable parameters, by subsequent extensions may
+      want to add them (for example, EXT_geometry_shader4, which has this same
+      functionality for GLSL).  If that happens, they would want their own
+      ProgramParameter API, but with a different prototype than this extension
+      would want.
+
+      Naming this function "ProgramVertexLimitNV" sidesteps this issue for
+      now.
+
+    (15) How do edge flags interact with adjacency primitives?
+
+      RESOLVED:  If geometry programs are disabled, adjacency primitives are
+      still supported.  For TRIANGLES_ADJACENCY_EXT, edge flags will apply as
+      they do for TRIANGLES.  Such primitives are rendered as independent
+      triangles as though the adjacency vertices were not provided.  Edge
+      flags for the "real" vertices are supported.  For all other adjacency
+      primitive types, edge flags are irrelevant.
+
+    (16) How do geometry programs interact with color clamping?
+
+      RESOLVED:  Geometry program execution occurs prior to color clamping in
+      the pipeline.  This means the colors written by vertex programs or
+      fixed-function vertex processing are not clamped to [0,1] before they
+      are read by geometry programs.  If color clamping is enabled, any vertex
+      colors written by the geometry program will have their components
+      clamped to [0,1].
+
+    (17) How are QUADS, QUAD_STRIP, and POLYGON primitives decomposed into
+    triangles in the initial implementation of GL_NV_geometry_program4?
+
+      RESOLVED:  The specification leaves the decomposition undefined, subject
+      to a small number of rules.  Assume that four vertices are specified in
+      the order V0, V1, V2, V3.
+
+      For QUADS primitives, the quad V0->V1->V2->V3 is decomposed into the
+      triangles V0->V1->V2, and V0->V2->V3.  The provoking vertex of the quad
+      (V3) is only found in the second triangle.  If it's necessary to flat
+      shade over an entire quad, take the attributes from V0, which will be
+      the first vertex for both triangles in the decomposition.
+
+      For QUAD_STRIP primitives, the quad V0->V1->V3->V2 is decomposed into
+      the triangles V0->V1->V3 and V2->V0->V3.  This has the property of
+      leaving the provoking vertex for the polygon (V3) as the third vertex
+      for each triangle of the decomposition.
+
+      For POLYGON primitives, the polygon V0->V1->V2->V3 is decomposed into
+      the triangles V1->V2->V0 and V2->V3->V0.  This has the property of
+      leaving the provoking vertex for the polygon (V0) as the third vertex
+      for each triangle of the decomposition.
+
+    (18) Should geometry programs be able to select a layer of a 3D texture,
+    cube map texture, or array texture at run time?  If so, how?
+
+      RESOLVED:  This extension provides a per-vertex result binding called
+      "result.layer", which is an integer specifying the layer to render to.
+      When an each individual point, line, or triangle is emitted by a
+      geometry program, the layer number is taken from the provoking (last)
+      vertex of the primitive and is used for all fragments generated by that
+      primitive.
+
+      The EXT_framebuffer_object (FBO) extension is used for rendering to
+      textures, but for cube maps and 3D textures, it only provides the
+      ability to attach a single face or layer of such textures.
+
+      This extension generalizes FBO by creates new entry points to bind an
+      entire texture level (FramebufferTextureEXT) or a single layer of a
+      texture level (FramebufferTextureLayerEXT) to an attachment point.  The
+      existing FBO binding functions, FramebufferTexture[123]DEXT are
+      retained, and are defined in terms of the more general new functions.
+
+      The new functions do not have a dimension in the function name or a
+      <textarget> parameter, which can be inferred from the provided texture.
+      They can do anything that the old functions can do, except attach a
+      single face of a cube map texture.  We considered adding a separate
+      function FramebufferTextureFaceEXT to provide this functionality, but
+      decided that the existing FramebufferTexture2DEXT API was adequate.  We
+      also considered using FramebufferTextureLayerEXT for this purpose, but
+      it was not clear whether a layer number (0-5) or face enum (e.g,
+      TEXTURE_CUBE_MAP_POSITIVE_X) should be provided.
+
+      When an entire texel level of a cube map, 3D, or array texture is
+      attached, that attachment is considered layered.  The framebuffer is
+      considered layered if any attachment is layered.  When the framebuffer
+      is layered, there are three additional completeness requirements:
+
+        * all attachments must be layered
+        * all color attachments must be from textures of identical type
+        * all attachments must have the same number of layers
+
+      We expect subsequent versions of the FBO spec to relax the requirement
+      that all attachments must have the same width and height, and plan to
+      relax the similar requirement for layer count at that time.
+
+      When rendering to a layered framebuffer, layer zero is used unless a
+      geometry program that writes the layer result is enabled.  When
+      rendering to a non-layered framebuffer, any layer result emitted from
+      geometry programs is ignored and the set of single-image attachments are
+      used.  When reading from a layered framebuffer (e.g., ReadPixels), layer
+      zero is always used.  When clearing a layered framebuffer, all layers
+      are cleared to the corresponding clear values.
+
+      Several other approaches were considered, including leveraging existing
+      FBO attachment functions and requiring the use of FramebufferTexture3D
+      with a <zoffset> of zero to make a framebuffer attachment "layerable"
+      (attaching layer zero means that the attachment could be used for either
+      layered- or non-layered rendering).  Whether rendering was layered or
+      not could either be inferred from the active geometry program, or set as
+      a new property of the framebuffer object.  There is presently
+      FramebufferParameter API to set a property of a framebuffer, so it would
+      have been necessary to create new set/query APIs if this approach were
+      chosen.
+
+    (19) How can single-pass cube map rendering be done efficiently in a
+         geometry program?
+
+      UNRESOLVED:  To do single-pass cubemap rendering, attach entire cube map
+      textures to framebuffer attachment points using the new functions
+      provided by this extension.  The vertex program used should only
+      transform the vertex position to eye coordinates (position relative to
+      the center of the cube map).  A geometry program should be used that
+      effectively projects each input triangle onto each of the six faces of
+      the cube map, emitting a triangle for each.  Each of the projected
+      vertices should be emitted with a "result.layer" value matching the face
+      number (0-5).  When the projected triangle is drawn, it is automatically
+      drawn on the face corresponding to the emitted layer number.  
+
+      It should be simple to skip projecting primitives onto faces they won't
+      touch.  For example, if all of the X eye coordinates are positive, there
+      is no reason to project to the "negative X" cube map face.
+
+      An example should be provided for this issue.
+
+    (20) How should per-vertex point size work with geometry programs?
+
+      RESOLVED:  We will generalize the existing VERTEX_PROGRAM_POINT_SIZE
+      enable to control the point size behavior if either vertex or geometry
+      programs are enabled.
+
+      If geometry programs are enabled, the point size is taken from the point
+      size result of the emitted vertex if VERTEX_PROGRAM_POINT_SIZE is
+      enabled, or from the PointSize state otherwise.
+
+      If no geometry program is enabled, it works like OpenGL 2.0.  If a
+      vertex program is active, it's taken from the point size result or
+      PointSize state, depending on the VERTEX_PROGRAM_POINT_SIZE enable.  If
+      no program is enabled, normal fixed-function point size handling
+      (including distance attenuation) is supported.
+
+      This extension creates a new alias for the VERTEX_PROGRAM_POINT_SIZE
+      enum, called PROGRAM_POINT_SIZE_EXT, to reflect that the point size
+      enable now covers multiple program types.  Both enums have the same
+      value.
+
+    (21) How do vertex IDs work with geometry programs?
+
+      RESOLVED:  Vertex IDs are automatically provided to vertex programs
+      when applicable, via the "vertex.id" binding.  However, they are not
+      automatically copied the transformed vertex results that are read by
+      geometry programs.
+
+      Geometry programs can read the ID of vertex <n> via the
+      "vertex[<n>].id" binding, but the vertex ID must have been copied by
+      the vertex program using an instruction such as:
+
+        MOV result.id.x, vertex.id.x;
+
+      If a vertex program doesn't write vertex ID, or fixed-function vertex
+      processing is used, the vertex ID visible to geometry programs is
+      undefined.
+
+    (22) How do primitive IDs work with geometry programs?
+
+      RESOLVED:  Primitive IDs are automatically available to geometry
+      programs via the "primitive.id" binding and indicate the number of
+      input primitives previously processed since the last explicit or
+      implicit Begin call.
+
+      If a geometry program wants to make the primitive ID available to a
+      fragment program, it should copy the appropriate value to the
+      "result.primid" binding.
+
+    (23) How do primitive IDs work with primitives not supported directly by
+    geometry program input topologies (e.g., QUADS, POLYGON)?
+
+      RESOLVED:  QUADS are decomposed into two triangles.  Both triangles
+      will have the same primitive ID, which is the number of full quads
+      previously processed.  POLYGON primitives are decomposed into a series
+      of triangles, and all of them will have the primitive ID -- zero.
+
+    (24) This is an NV extension (NV_geometry_program4).  Why do some of the
+    new tokens have an "EXT" extension?
+
+      RESOLVED:  Some of the tokens are shared between this extension and the
+      comparable high-level GLSL programmability extension
+      (EXT_geometry_shader4).  Rather than provide a duplicate set of tokens,
+      we simply use the EXT versions here.  The tokens specific to assembly
+      shader uses retain an NV suffix.
+
+    (25) What happens if you try to do a framebuffer blit (via
+        EXT_framebuffer_blit) to/from a layered framebuffer?
+
+      RESOLVED:  BlitFramebufferEXT() is a two-dimensional operation (only has
+      a width and height), so only reads/writes layer zero.  The framebuffer
+      blit operation is defined partially in terms of CopyPixels, which itself
+      is defined in terms of ReadPixels and DrawPixels.  This spec defines
+      both operations to use layer zero when a layered framebuffer is
+      involved.
+
+      It may be desirable to provide a three-dimensional framebuffer blit
+      operation or an explicit copy single-step operation between two
+      three-dimensional, cube map, or array textures.  That functionality is
+      left for a future extension or OpenGL version.
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  --------------------------------------------
+    13    12/14/09  mgodse    Added GLX protocol.
+    
+    12    07/21/09  pbrown    Clarify that when doing layered rendering,
+                              a layer specified in the shader is used to
+                              select the depth and stencil layers accessed.
+
+                              Also document several additional entry points
+                              that accept GEOMETRY_PROGRAM_NV.
+
+    11    03/11/09  pbrown    Fix section numbers for option/declaration
+                              sections.
+
+    10    07/29/08  pbrown    Clean up garbled language describing vertex
+                              output limits.
+
+     9    04/04/08  pbrown    Fixed error in the state tables; the geometry
+                              program enable should push/pop only with the
+                              enable bit like all the other program enables.
+
+     8    03/15/08  pbrown    Additional dependency on EXT_framebuffer_blit;
+                              blits to/from layered targets affect only
+                              layer zero.
+
+     7    03/07/08  pbrown    Fix grammar to allow vertex ID, as already 
+                              allowed in the rest of the spec body.
+
+     6              pbrown    Internal spec development.
+

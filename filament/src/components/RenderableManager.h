@@ -1,0 +1,597 @@
+/*
+ * Copyright (C) 2017 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TNT_FILAMENT_COMPONENTS_RENDERABLEMANAGER_H
+#define TNT_FILAMENT_COMPONENTS_RENDERABLEMANAGER_H
+
+#include "downcast.h"
+#include "HwRenderPrimitiveFactory.h"
+
+#include "details/InstanceBuffer.h"
+
+#include "ds/DescriptorSet.h"
+
+#include <filament/Box.h>
+#include <filament/MaterialEnums.h>
+#include <filament/RenderableManager.h>
+
+#include <backend/DriverApiForward.h>
+#include <backend/Handle.h>
+
+#include <utils/compiler.h>
+#include <utils/Entity.h>
+#include <utils/EntityInstance.h>
+#include <utils/Panic.h>
+#include <utils/SingleInstanceComponentManager.h>
+#include <utils/Slice.h>
+
+#include <math/mat4.h>
+
+#include <algorithm>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
+
+namespace filament {
+
+class FBufferObject;
+class FIndexBuffer;
+class FMaterialInstance;
+class FMorphTargetBuffer;
+class FRenderPrimitive;
+class FSkinningBuffer;
+class FVertexBuffer;
+class FTexture;
+
+class MorphTargetBuffer;
+
+class FRenderableManager : public RenderableManager {
+public:
+    using Instance = Instance;
+    using GeometryType = Builder::GeometryType;
+    using MorphType = Builder::MorphType;
+
+    // TODO: consider renaming, this pertains to material variants, not strictly visibility.
+    struct Visibility {
+        uint8_t priority                : 3;
+        uint8_t channel                 : 3;
+        bool castShadows                : 1;
+        bool receiveShadows             : 1;
+
+        bool culling                    : 1;
+        bool screenSpaceContactShadows  : 1;
+        bool reversedWindingOrder       : 1;
+        bool fog                        : 1;
+        GeometryType geometryType       : 2;
+    };
+
+    struct Skinning {
+        bool skinning                   : 1;
+        MorphType morphType             : 3;
+    };
+
+    static_assert(sizeof(Visibility) == sizeof(uint16_t), "Visibility should be 16 bits");
+    static_assert(sizeof(Skinning) == sizeof(uint8_t), "Skinning should be 8 bits");
+
+    explicit FRenderableManager(FEngine& engine) noexcept;
+    ~FRenderableManager();
+
+    // free-up all resources
+    void terminate(backend::DriverApi& driver) noexcept;
+
+    void gc(backend::DriverApi& driver) noexcept;
+
+    /*
+     * Component Manager APIs
+     */
+
+    bool hasComponent(utils::Entity const e) const noexcept {
+        return mManager.hasComponent(e);
+    }
+
+    Instance getInstance(utils::Entity const e) const noexcept {
+        return { mManager.getInstance(e) };
+    }
+
+    size_t getComponentCount() const noexcept {
+        return mManager.getComponentCount();
+    }
+
+    bool empty() const noexcept {
+        return mManager.empty();
+    }
+
+    utils::Entity getEntity(Instance const i) const noexcept {
+        return mManager.getEntity(i);
+    }
+
+    utils::Entity const* getEntities() const noexcept {
+        return mManager.getEntities();
+    }
+
+    utils::Slice<const utils::Entity> getAllEntities() const noexcept {
+        return { mManager.getEntities(), mManager.getComponentCount() };
+    }
+
+    const utils::PagedArenaBitset& getEntityBitset() const noexcept {
+        return mManager.getEntityBitset();
+    }
+
+    void create(const Builder& builder, utils::Entity entity);
+
+    void destroyComponents(utils::Entity const* entities, size_t count, backend::DriverApi& driver) noexcept;
+
+    void destroy(utils::Entity e, backend::DriverApi& driver) noexcept {
+        destroyComponents(&e, 1, driver);
+    }
+
+    // The client API should have taken an Engine&, but it doesn't, so that's a workaround
+    // so we can keep the API as it is.
+    void clientDestroy(utils::Entity e) noexcept;
+
+    inline void setAxisAlignedBoundingBox(Instance instance, const Box& aabb);
+
+    inline void setLayerMask(Instance instance, uint8_t select, uint8_t values) noexcept;
+
+    // The priority is clamped to the range [0..7]
+    inline void setPriority(Instance instance, uint8_t priority) noexcept;
+
+    // The channel is clamped to the range [0..7]
+    inline void setChannel(Instance instance, uint8_t channel) noexcept;
+
+    inline void setCastShadows(Instance instance, bool enable) noexcept;
+
+    inline void setLayerMask(Instance instance, uint8_t layerMask) noexcept;
+    inline void setReceiveShadows(Instance instance, bool enable) noexcept;
+    inline void setScreenSpaceContactShadows(Instance instance, bool enable) noexcept;
+    inline void setCulling(Instance instance, bool enable) noexcept;
+    inline void setFogEnabled(Instance instance, bool enable) noexcept;
+    inline bool getFogEnabled(Instance instance) const noexcept;
+
+    void setPrimitives(Instance instance,
+            utils::Slice<FRenderPrimitive> primitives) noexcept;
+
+    inline void setSkinning(Instance instance, bool enable);
+
+    void registerChangeCallback(void const* token, utils::SingleInstanceComponentManagerBase::ChangeCallback callback) noexcept {
+        mManager.registerChangeCallback(token, std::move(callback));
+    }
+    void unregisterChangeCallback(void const* token) noexcept {
+        mManager.unregisterChangeCallback(token);
+    }
+    void flushNotifications() noexcept {
+        mManager.flushNotifications();
+    }
+    void registerBitset(utils::PagedArenaBitset* bitset,
+            utils::PagedArenaBitset const* filter = nullptr) {
+        mManager.registerBitset(bitset, filter);
+    }
+    void unregisterBitset(utils::PagedArenaBitset const* bitset) {
+        mManager.unregisterBitset(bitset);
+    }
+
+    void setBones(Instance instance, Bone const* transforms, size_t boneCount, size_t offset = 0);
+    void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount, size_t offset = 0);
+    void setSkinningBuffer(Instance instance, FSkinningBuffer const* skinningBuffer,
+            size_t count, size_t offset);
+
+    inline void setMorphing(Instance instance, MorphType type);
+    void setMorphWeights(Instance instance, float const* weights, size_t count, size_t offset);
+    void setMorphTargetBufferOffsetAt(Instance instance, uint8_t level, size_t primitiveIndex,
+            size_t offset);
+    MorphTargetBuffer* getMorphTargetBuffer(Instance instance) const noexcept;
+    size_t getMorphTargetCount(Instance instance) const noexcept;
+
+    void setLightChannel(Instance instance, unsigned int channel, bool enable) noexcept;
+    bool getLightChannel(Instance instance, unsigned int channel) const noexcept;
+
+    inline bool isShadowCaster(Instance instance) const noexcept;
+    inline bool isShadowReceiver(Instance instance) const noexcept;
+    inline bool isCullingEnabled(Instance instance) const noexcept;
+    inline bool isScreenSpaceContactShadowsEnabled(Instance instance) const noexcept;
+
+
+    inline Box const& getAABB(Instance instance) const noexcept;
+    Box const& getAxisAlignedBoundingBox(Instance const instance) const noexcept { return getAABB(instance); }
+    inline Visibility getVisibility(Instance instance) const noexcept;
+    inline Skinning getSkinning(Instance instance) const noexcept;
+    inline uint8_t getLayerMask(Instance instance) const noexcept;
+    inline uint8_t getPriority(Instance instance) const noexcept;
+    inline uint8_t getChannel(Instance instance) const noexcept;
+    inline uint8_t getLightChannels(Instance instance) const noexcept;
+    inline DescriptorSet& getDescriptorSet(Instance instance) noexcept;
+
+    struct SkinningBindingInfo {
+        backend::Handle<backend::HwBufferObject> handle;
+        uint32_t offset;
+        backend::Handle<backend::HwTexture> boneIndicesAndWeightHandle;
+    };
+
+    inline SkinningBindingInfo getSkinningBufferInfo(Instance instance) const noexcept;
+    inline uint32_t getBoneCount(Instance instance) const noexcept;
+
+    struct MorphingBindingInfo {
+        backend::Handle<backend::HwBufferObject> handle;
+        uint32_t count;
+        FMorphTargetBuffer const* morphTargetBuffer;
+    };
+    inline MorphingBindingInfo getMorphingBufferInfo(Instance instance) const noexcept;
+
+    struct InstancesInfo {
+        FInstanceBuffer* buffer = nullptr;
+        alignas(8) // ensures the pointer is 64 bits on all archs
+        uint16_t count = 0;
+        char padding0[6] = {};
+    };
+    static_assert(sizeof(InstancesInfo) == 16);
+    inline InstancesInfo getInstancesInfo(Instance instance) const noexcept;
+
+    size_t getLevelCount(Instance) const noexcept { return 1u; }
+    size_t getPrimitiveCount(Instance instance, uint8_t level) const noexcept;
+    size_t getInstanceCount(Instance instance) const noexcept;
+    void setInstanceCount(Instance instance, size_t instanceCount);
+    void setMaterialInstanceAt(Instance instance, uint8_t level,
+            size_t primitiveIndex, FMaterialInstance const* mi);
+    void clearMaterialInstanceAt(Instance instance, uint8_t level, size_t primitiveIndex);
+    MaterialInstance* getMaterialInstanceAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
+    void setGeometryAt(Instance instance, uint8_t level, size_t primitiveIndex,
+            PrimitiveType type, FVertexBuffer const* vertices, FIndexBuffer const* indices,
+            size_t offset, size_t count) noexcept;
+    void setGeometryAt(Instance instance, uint8_t level, size_t primitiveIndex,
+            PrimitiveType type, FVertexBuffer const* vertices,
+            size_t offset, size_t count) noexcept;
+    void setBlendOrderAt(Instance instance, uint8_t level, size_t primitiveIndex, uint16_t blendOrder) noexcept;
+    uint16_t getBlendOrderAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
+    void setGlobalBlendOrderEnabledAt(Instance instance, uint8_t level, size_t primitiveIndex, bool enabled) noexcept;
+    bool isGlobalBlendOrderEnabledAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
+    AttributeBitset getEnabledAttributesAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
+    inline utils::Slice<const FRenderPrimitive> getRenderPrimitives(Instance instance, uint8_t level) const noexcept;
+    inline utils::Slice<FRenderPrimitive> getRenderPrimitives(Instance instance, uint8_t level) noexcept;
+
+    struct Entry {
+        VertexBuffer* vertices = nullptr;
+        IndexBuffer* indices = nullptr;
+        size_t offset = 0;
+        size_t count = 0;
+        MaterialInstance const* materialInstance = nullptr;
+        PrimitiveType type = PrimitiveType::TRIANGLES;
+        uint16_t blendOrder = 0;
+        bool globalBlendOrderEnabled = false;
+        struct {
+            uint32_t offset = 0;
+        } morphing;
+    };
+
+private:
+    void destroyComponent(Instance ci, backend::DriverApi& driver) noexcept;
+    static void destroyComponentPrimitives(
+            HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
+            utils::Slice<FRenderPrimitive> primitives) noexcept;
+
+    struct Bones {
+        backend::Handle<backend::HwBufferObject> handle;
+        backend::Handle<backend::HwTexture> handleTexture;
+        uint16_t count = 0;
+        uint16_t offset = 0;
+        bool skinningBufferMode = false; // whether we own (false) handle or not (true)
+    };
+    static_assert(sizeof(Bones) == 16);
+
+    struct MorphWeights {
+        backend::Handle<backend::HwBufferObject> handle;
+        uint32_t count = 0;
+    };
+    static_assert(sizeof(MorphWeights) == 8);
+
+    enum {
+        AABB,                   // user data
+        LAYERS,                 // user data
+        MORPH_WEIGHTS,          // filament data, UBO storing a pointer to the morph weights information
+        LIGHT_CHANNELS,         // user data
+        INSTANCES,              // user data
+        VISIBILITY,             // user data
+        SKINNING,               // user data
+        PRIMITIVES,             // user data
+        BONES,                  // filament data, UBO storing a pointer to the bones information
+        MORPHTARGET_BUFFER,     // morphtarget buffer for the component
+        DESCRIPTOR_SET          // per-renderable descriptor set
+    };
+
+    using Base = utils::SingleInstanceComponentManager<
+            Box,                             // AABB
+            uint8_t,                         // LAYERS
+            MorphWeights,                    // MORPH_WEIGHTS
+            uint8_t,                         // CHANNELS
+            InstancesInfo,                   // INSTANCES
+            Visibility,                      // VISIBILITY
+            Skinning,                        // SKINNING
+            utils::Slice<FRenderPrimitive>,  // PRIMITIVES
+            Bones,                           // BONES
+            FMorphTargetBuffer*,            // MORPHTARGET_BUFFER
+            DescriptorSet          // DESCRIPTOR_SET
+    >;
+
+    struct Sim : public Base {
+        explicit Sim(utils::EntityManager& em) noexcept : Base(em, "RenderableManager") {}
+        using Base::gc;
+        using Base::swap;
+
+        struct Proxy {
+            // all of this gets inlined
+            UTILS_ALWAYS_INLINE
+            Proxy(Base& sim, utils::EntityInstanceBase::Type i) noexcept
+                    : aabb{ sim, i } { }
+
+            union {
+                // this specific usage of union is permitted. All fields are identical
+                Field<AABB>                 aabb;
+                Field<LAYERS>               layers;
+                Field<MORPH_WEIGHTS>        morphWeights;
+                Field<LIGHT_CHANNELS>       lightChannels;
+                Field<INSTANCES>            instances;
+                Field<VISIBILITY>           visibility;
+                Field<SKINNING>             skinning;
+                Field<PRIMITIVES>           primitives;
+                Field<BONES>                bones;
+                Field<MORPHTARGET_BUFFER>   morphTargetBuffer;
+                Field<DESCRIPTOR_SET>       descriptorSet;
+            };
+        };
+
+        UTILS_ALWAYS_INLINE Proxy operator[](Instance i) noexcept {
+            return { *this, i };
+        }
+        UTILS_ALWAYS_INLINE const Proxy operator[](Instance i) const noexcept {
+            return { const_cast<Sim&>(*this), i };
+        }
+    };
+
+    Sim mManager;
+    FEngine& mEngine;
+    HwRenderPrimitiveFactory mHwRenderPrimitiveFactory;
+};
+
+FILAMENT_DOWNCAST(RenderableManager)
+
+void FRenderableManager::setAxisAlignedBoundingBox(Instance const instance, const Box& aabb) {
+    if (instance) {
+        FILAMENT_CHECK_PRECONDITION(
+                static_cast<Visibility const&>(mManager[instance].visibility).geometryType == GeometryType::DYNAMIC)
+                << "This renderable has staticBounds enabled; its AABB cannot change.";
+        Box& state = mManager[instance].aabb;
+        if (state.center != aabb.center || state.halfExtent != aabb.halfExtent) {
+            state = aabb;
+            mManager.notifyChange(getEntity(instance));
+        }
+    }
+}
+
+void FRenderableManager::setLayerMask(Instance const instance,
+        uint8_t const select, uint8_t const values) noexcept {
+    if (instance) {
+        uint8_t& layers = mManager[instance].layers;
+        uint8_t const newLayers = (layers & ~select) | (values & select);
+        if (layers != newLayers) {
+            layers = newLayers;
+            mManager.notifyChange(getEntity(instance));
+        }
+    }
+}
+
+void FRenderableManager::setLayerMask(Instance const instance, uint8_t const layerMask) noexcept {
+    if (instance) {
+        if (mManager[instance].layers != layerMask) {
+            mManager[instance].layers = layerMask;
+            mManager.notifyChange(getEntity(instance));
+        }
+    }
+}
+
+void FRenderableManager::setPriority(Instance const instance, uint8_t const priority) noexcept {
+    if (instance) {
+        Visibility& visibility = mManager[instance].visibility;
+        uint8_t const newPriority = std::min(priority, uint8_t(0x7));
+        if (visibility.priority != newPriority) {
+            visibility.priority = newPriority;
+            mManager.notifyChange(getEntity(instance));
+        }
+    }
+}
+
+void FRenderableManager::setChannel(Instance const instance, uint8_t const channel) noexcept {
+    if (instance) {
+        Visibility& visibility = mManager[instance].visibility;
+        uint8_t const newChannel = std::min(channel, uint8_t(CONFIG_RENDERPASS_CHANNEL_COUNT - 1));
+        if (visibility.channel != newChannel) {
+            visibility.channel = newChannel;
+            mManager.notifyChange(getEntity(instance));
+        }
+    }
+}
+
+void FRenderableManager::setCastShadows(Instance const instance, bool const enable) noexcept {
+    if (instance) {
+        Visibility& visibility = mManager[instance].visibility;
+        if (visibility.castShadows != enable) {
+            visibility.castShadows = enable;
+            mManager.notifyChange(getEntity(instance));
+        }
+    }
+}
+
+void FRenderableManager::setReceiveShadows(Instance const instance, bool const enable) noexcept {
+    if (instance) {
+        Visibility& visibility = mManager[instance].visibility;
+        if (visibility.receiveShadows != enable) {
+            visibility.receiveShadows = enable;
+            mManager.notifyChange(getEntity(instance));
+        }
+    }
+}
+
+void FRenderableManager::setScreenSpaceContactShadows(Instance const instance, bool const enable) noexcept {
+    if (instance) {
+        Visibility& visibility = mManager[instance].visibility;
+        if (visibility.screenSpaceContactShadows != enable) {
+            visibility.screenSpaceContactShadows = enable;
+            mManager.notifyChange(getEntity(instance));
+        }
+    }
+}
+
+void FRenderableManager::setCulling(Instance const instance, bool const enable) noexcept {
+    if (instance) {
+        Visibility& visibility = mManager[instance].visibility;
+        if (visibility.culling != enable) {
+            visibility.culling = enable;
+            mManager.notifyChange(getEntity(instance));
+        }
+    }
+}
+
+void FRenderableManager::setFogEnabled(Instance const instance, bool const enable) noexcept {
+    if (instance) {
+        Visibility& visibility = mManager[instance].visibility;
+        if (visibility.fog != enable) {
+            visibility.fog = enable;
+            mManager.notifyChange(getEntity(instance));
+        }
+    }
+}
+
+bool FRenderableManager::getFogEnabled(RenderableManager::Instance const instance) const noexcept {
+    return getVisibility(instance).fog;
+}
+
+void FRenderableManager::setSkinning(Instance const instance, bool const enable) {
+    if (instance) {
+        Visibility const& visibility = mManager[instance].visibility;
+
+        FILAMENT_CHECK_PRECONDITION(visibility.geometryType != GeometryType::STATIC || !enable)
+                << "Skinning can't be used with STATIC geometry";
+
+        Skinning& skinning = mManager[instance].skinning;
+        if (skinning.skinning != enable) {
+            skinning.skinning = enable;
+            mManager.notifyChange(getEntity(instance));
+        }
+    }
+}
+
+void FRenderableManager::setMorphing(Instance const instance, Builder::MorphType const type) {
+    if (instance) {
+        Visibility const& visibility = mManager[instance].visibility;
+
+        FILAMENT_CHECK_PRECONDITION(
+                visibility.geometryType != GeometryType::STATIC || type != MorphType::NONE)
+                << "Morphing can't be used with STATIC geometry";
+
+        Skinning& skinning = mManager[instance].skinning;
+        if (skinning.morphType != type) {
+            skinning.morphType = type;
+            mManager.notifyChange(getEntity(instance));
+        }
+    }
+}
+
+
+FRenderableManager::Visibility
+FRenderableManager::getVisibility(Instance const instance) const noexcept {
+    return mManager[instance].visibility;
+}
+
+FRenderableManager::Skinning FRenderableManager::getSkinning(
+        Instance const instance) const noexcept {
+    return mManager[instance].skinning;
+}
+
+bool FRenderableManager::isShadowCaster(Instance const instance) const noexcept {
+    return getVisibility(instance).castShadows;
+}
+
+bool FRenderableManager::isShadowReceiver(Instance const instance) const noexcept {
+    return getVisibility(instance).receiveShadows;
+}
+
+bool FRenderableManager::isCullingEnabled(Instance const instance) const noexcept {
+    return getVisibility(instance).culling;
+}
+
+bool FRenderableManager::isScreenSpaceContactShadowsEnabled(Instance const instance) const noexcept {
+    return getVisibility(instance).screenSpaceContactShadows;
+}
+
+uint8_t FRenderableManager::getLayerMask(Instance const instance) const noexcept {
+    return mManager[instance].layers;
+}
+
+uint8_t FRenderableManager::getPriority(Instance const instance) const noexcept {
+    return getVisibility(instance).priority;
+}
+
+uint8_t FRenderableManager::getChannel(Instance const instance) const noexcept {
+    return getVisibility(instance).channel;
+}
+
+uint8_t FRenderableManager::getLightChannels(Instance const instance) const noexcept {
+    return mManager[instance].lightChannels;
+}
+
+Box const& FRenderableManager::getAABB(Instance const instance) const noexcept {
+    return mManager[instance].aabb;
+}
+
+FRenderableManager::SkinningBindingInfo
+FRenderableManager::getSkinningBufferInfo(Instance const instance) const noexcept {
+    Bones const& bones = mManager[instance].bones;
+    return { bones.handle, bones.offset, bones.handleTexture };
+}
+
+inline uint32_t FRenderableManager::getBoneCount(Instance const instance) const noexcept {
+    Bones const& bones = mManager[instance].bones;
+    return bones.count;
+}
+
+FRenderableManager::MorphingBindingInfo
+FRenderableManager::getMorphingBufferInfo(Instance const instance) const noexcept {
+    MorphWeights const& morphWeights = mManager[instance].morphWeights;
+    FMorphTargetBuffer const* const buffer = mManager[instance].morphTargetBuffer;
+    return { morphWeights.handle, morphWeights.count, buffer  };
+}
+
+FRenderableManager::InstancesInfo
+FRenderableManager::getInstancesInfo(Instance const instance) const noexcept {
+    return mManager[instance].instances;
+}
+
+utils::Slice<const FRenderPrimitive> FRenderableManager::getRenderPrimitives(
+        Instance const instance, UTILS_UNUSED uint8_t level) const noexcept {
+    return utils::Slice<const FRenderPrimitive>(mManager[instance].primitives);
+}
+
+utils::Slice<FRenderPrimitive> FRenderableManager::getRenderPrimitives(
+        Instance const instance, UTILS_UNUSED uint8_t level) noexcept {
+    return mManager[instance].primitives;
+}
+
+DescriptorSet& FRenderableManager::getDescriptorSet(Instance const instance) noexcept {
+    return mManager[instance].descriptorSet;
+}
+
+} // namespace filament
+
+#endif // TNT_FILAMENT_COMPONENTS_RENDERABLEMANAGER_H

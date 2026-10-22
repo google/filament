@@ -1,0 +1,51 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct _7
+{
+    int _m0[1][4];
+};
+
+struct _9
+{
+    int _m0[1][17];
+};
+
+struct _11
+{
+    int _m0;
+};
+
+kernel void main0(device _7& _2 [[buffer(0)]], device _9& _3 [[buffer(1)]], constant _11& _4 [[buffer(2)]], uint3 gl_LocalInvocationID [[thread_position_in_threadgroup]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]])
+{
+    if (int3(gl_WorkGroupID).x >= _4._m0)
+    {
+        return;
+    }
+    int _49;
+    if (int3(gl_LocalInvocationID).x == 1)
+    {
+        _3._m0[int3(gl_WorkGroupID).x][16] = &_2._m0[int3(gl_WorkGroupID).x] - &_2._m0[0];
+        _49 = 0;
+    }
+    else
+    {
+        _49 = 0;
+    }
+    for (;;)
+    {
+        int _50 = _49 + 1;
+        _3._m0[int3(gl_WorkGroupID).x][(int3(gl_LocalInvocationID).x * 4) + _49] = &_2._m0[int3(gl_WorkGroupID).x][int3(gl_LocalInvocationID).x] - &_2._m0[int3(gl_WorkGroupID).x][_49];
+        if (_50 == 4)
+        {
+            break;
+        }
+        else
+        {
+            _49 = _50;
+        }
+    }
+}
+

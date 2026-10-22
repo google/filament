@@ -1,0 +1,85 @@
+#version 450
+#extension GL_EXT_shader_explicit_arithmetic_types_int16 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+
+layout(set = 0, binding = 0) buffer BUF0
+{
+	f16vec2 f16s;
+	u16vec2 u16;
+	i16vec2 i16;
+	u16vec4 u16s;
+	i16vec4 i16s;
+	float16_t f16;
+};
+
+void test_i16()
+{
+	f16 += int16BitsToFloat16(i16.x + i16.y);
+	f16 += int16BitsToFloat16(i16.x - i16.y);
+	f16 += int16BitsToFloat16(i16.x * i16.y);
+	f16 += int16BitsToFloat16(i16.x / i16.y);
+	f16 += int16BitsToFloat16(i16.x % i16.y);
+	f16 += int16BitsToFloat16(i16.x << i16.y);
+	f16 += int16BitsToFloat16(i16.x >> i16.y);
+	f16 += int16BitsToFloat16(~i16.x);
+	f16 += int16BitsToFloat16(-i16.x);
+	f16 += int16BitsToFloat16(i16.x ^ i16.y);
+	f16 += int16BitsToFloat16(i16.x & i16.y);
+	f16 += int16BitsToFloat16(i16.x | i16.y);
+}
+
+void test_u16()
+{
+	f16 += uint16BitsToFloat16(u16.x + u16.y);
+	f16 += uint16BitsToFloat16(u16.x - u16.y);
+	f16 += uint16BitsToFloat16(u16.x * u16.y);
+	f16 += uint16BitsToFloat16(u16.x / u16.y);
+	f16 += uint16BitsToFloat16(u16.x % u16.y);
+	f16 += uint16BitsToFloat16(u16.x << u16.y);
+	f16 += uint16BitsToFloat16(u16.x >> u16.y);
+	f16 += uint16BitsToFloat16(~u16.x);
+	f16 += uint16BitsToFloat16(-u16.x);
+	f16 += uint16BitsToFloat16(u16.x ^ u16.y);
+	f16 += uint16BitsToFloat16(u16.x & u16.y);
+	f16 += uint16BitsToFloat16(u16.x | u16.y);
+}
+
+void test_u16s()
+{
+	f16s += uint16BitsToFloat16(u16s.xy + u16s.zw);
+	f16s += uint16BitsToFloat16(u16s.xy - u16s.zw);
+	f16s += uint16BitsToFloat16(u16s.xy * u16s.zw);
+	f16s += uint16BitsToFloat16(u16s.xy / u16s.zw);
+	f16s += uint16BitsToFloat16(u16s.xy % u16s.zw);
+	f16s += uint16BitsToFloat16(u16s.xy << u16s.zw);
+	f16s += uint16BitsToFloat16(u16s.xy >> u16s.zw);
+	f16s += uint16BitsToFloat16(~u16s.xy);
+	f16s += uint16BitsToFloat16(-u16s.xy);
+	f16s += uint16BitsToFloat16(u16s.xy ^ u16s.zw);
+	f16s += uint16BitsToFloat16(u16s.xy & u16s.zw);
+	f16s += uint16BitsToFloat16(u16s.xy | u16s.zw);
+}
+
+void test_i16s()
+{
+	f16s += int16BitsToFloat16(i16s.xy + i16s.zw);
+	f16s += int16BitsToFloat16(i16s.xy - i16s.zw);
+	f16s += int16BitsToFloat16(i16s.xy * i16s.zw);
+	f16s += int16BitsToFloat16(i16s.xy / i16s.zw);
+	f16s += int16BitsToFloat16(i16s.xy % i16s.zw);
+	f16s += int16BitsToFloat16(i16s.xy << i16s.zw);
+	f16s += int16BitsToFloat16(i16s.xy >> i16s.zw);
+	f16s += int16BitsToFloat16(~i16s.xy);
+	f16s += int16BitsToFloat16(-i16s.xy);
+	f16s += int16BitsToFloat16(i16s.xy ^ i16s.zw);
+	f16s += int16BitsToFloat16(i16s.xy & i16s.zw);
+	f16s += int16BitsToFloat16(i16s.xy | i16s.zw);
+}
+
+void main()
+{
+	test_u16();
+	test_i16();
+	test_u16s();
+	test_i16s();
+}

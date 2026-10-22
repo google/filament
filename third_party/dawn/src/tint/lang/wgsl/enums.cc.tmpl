@@ -1,0 +1,181 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate enums.cc
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- $I := LoadIntrinsics "src/tint/lang/wgsl/wgsl.def" -}}
+{{- Import "src/tint/utils/templates/enums.tmpl.inc" -}}
+
+// clang-format off
+
+#include "src/tint/lang/wgsl/enums.h"
+
+#include <string>
+
+#include "src/tint/utils/rtti/traits.h"
+
+namespace tint::wgsl {
+
+{{ Eval "ParseEnum" ($I.Sem.Enum "extension") }}
+{{ Eval "EnumOStream" ($I.Sem.Enum "extension") }}
+
+{{ Eval "ParseEnum" ($I.Sem.Enum "core_diagnostic_rule")}}
+{{ Eval "EnumOStream" ($I.Sem.Enum "core_diagnostic_rule")}}
+
+{{ Eval "ParseEnum" ($I.Sem.Enum "chromium_diagnostic_rule")}}
+{{ Eval "EnumOStream" ($I.Sem.Enum "chromium_diagnostic_rule")}}
+
+{{ Eval "ParseEnum" ($I.Sem.Enum "language_feature") }}
+{{ Eval "EnumOStream" ($I.Sem.Enum "language_feature") }}
+
+diag::Severity ToSeverity(DiagnosticSeverity sc) {
+    switch (sc) {
+        case DiagnosticSeverity::kError:
+            return diag::Severity::Error;
+        case DiagnosticSeverity::kWarning:
+            return diag::Severity::Warning;
+        case DiagnosticSeverity::kInfo:
+            return diag::Severity::Note;
+        default:
+            return diag::Severity::Error;
+    }
+}
+
+{{ Eval "ParseEnum" ($I.Sem.Enum "diagnostic_severity")}}
+{{ Eval "EnumOStream" ($I.Sem.Enum "diagnostic_severity")}}
+
+
+BuiltinFn ParseBuiltinFn(std::string_view name) {
+{{- range $I.Sem.Builtins  }}
+    if (name == "{{.Name}}") {
+        return BuiltinFn::k{{PascalCase .Name}};
+    }
+{{- end  }}
+    return BuiltinFn::kNone;
+}
+
+const char* str(BuiltinFn i) {
+    switch (i) {
+        case BuiltinFn::kNone:
+            return "<none>";
+{{- range $I.Sem.Builtins  }}
+        case BuiltinFn::k{{PascalCase .Name}}:
+            return "{{.Name}}";
+{{- end  }}
+    }
+    return "<unknown>";
+}
+
+bool IsDerivative(BuiltinFn f) {
+    return f == BuiltinFn::kDpdx || f == BuiltinFn::kDpdy ||
+           f == BuiltinFn::kFwidth || f == BuiltinFn::kDpdxCoarse || f == BuiltinFn::kDpdyCoarse ||
+           f == BuiltinFn::kFwidthCoarse ||
+           f == BuiltinFn::kDpdxFine || f == BuiltinFn::kDpdyFine ||
+           f == BuiltinFn::kFwidthFine;
+}
+
+bool IsTexture(BuiltinFn f) {
+    return f == BuiltinFn::kTextureDimensions ||             //
+           f == BuiltinFn::kTextureNumLayers ||              //
+           f == BuiltinFn::kTextureNumLevels ||              //
+           f == BuiltinFn::kTextureNumSamples ||             //
+           f == BuiltinFn::kTextureGather ||                 //
+           f == BuiltinFn::kTextureGatherCompare ||          //
+           f == BuiltinFn::kTextureLoad ||                   //
+           f == BuiltinFn::kTextureSample ||                 //
+           f == BuiltinFn::kTextureSampleBaseClampToEdge ||  //
+           f == BuiltinFn::kTextureSampleBias ||             //
+           f == BuiltinFn::kTextureSampleCompare ||          //
+           f == BuiltinFn::kTextureSampleCompareLevel ||     //
+           f == BuiltinFn::kTextureSampleGrad ||             //
+           f == BuiltinFn::kTextureSampleLevel ||            //
+           f == BuiltinFn::kTextureStore || f == BuiltinFn::kInputAttachmentLoad;
+}
+
+bool IsBarrier(BuiltinFn f) {
+    return f == BuiltinFn::kWorkgroupBarrier || f == BuiltinFn::kStorageBarrier ||
+           f == BuiltinFn::kTextureBarrier;
+}
+
+bool IsAtomic(BuiltinFn f) {
+    return f == BuiltinFn::kAtomicLoad || f == BuiltinFn::kAtomicStore ||
+           f == BuiltinFn::kAtomicAdd || f == BuiltinFn::kAtomicSub ||
+           f == BuiltinFn::kAtomicMax || f == BuiltinFn::kAtomicMin ||
+           f == BuiltinFn::kAtomicAnd || f == BuiltinFn::kAtomicOr ||
+           f == BuiltinFn::kAtomicXor || f == BuiltinFn::kAtomicExchange ||
+           f == BuiltinFn::kAtomicCompareExchangeWeak;
+}
+
+bool IsPacked4x8IntegerDotProductBuiltin(BuiltinFn f) {
+    return f == BuiltinFn::kDot4I8Packed || f == BuiltinFn::kDot4U8Packed ||
+           f == BuiltinFn::kPack4XI8 || f == BuiltinFn::kPack4XU8 ||
+           f == BuiltinFn::kPack4XI8Clamp || f == BuiltinFn::kPack4XU8Clamp ||
+           f == BuiltinFn::kUnpack4XI8 || f == BuiltinFn::kUnpack4XU8;
+}
+
+bool IsSubgroup(BuiltinFn f) {
+    switch (f) {
+        case BuiltinFn::kSubgroupBallot:
+        case BuiltinFn::kSubgroupElect:
+        case BuiltinFn::kSubgroupBroadcast:
+        case BuiltinFn::kSubgroupBroadcastFirst:
+        case BuiltinFn::kSubgroupShuffle:
+        case BuiltinFn::kSubgroupShuffleXor:
+        case BuiltinFn::kSubgroupShuffleUp:
+        case BuiltinFn::kSubgroupShuffleDown:
+        case BuiltinFn::kSubgroupAdd:
+        case BuiltinFn::kSubgroupInclusiveAdd:
+        case BuiltinFn::kSubgroupExclusiveAdd:
+        case BuiltinFn::kSubgroupMul:
+        case BuiltinFn::kSubgroupInclusiveMul:
+        case BuiltinFn::kSubgroupExclusiveMul:
+        case BuiltinFn::kSubgroupAnd:
+        case BuiltinFn::kSubgroupOr:
+        case BuiltinFn::kSubgroupXor:
+        case BuiltinFn::kSubgroupMin:
+        case BuiltinFn::kSubgroupMax:
+        case BuiltinFn::kSubgroupAll:
+        case BuiltinFn::kSubgroupAny:
+        case BuiltinFn::kQuadBroadcast:
+        case BuiltinFn::kQuadSwapX:
+        case BuiltinFn::kQuadSwapY:
+        case BuiltinFn::kQuadSwapDiagonal:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool IsSubgroupMatrix(BuiltinFn f) {
+    switch (f) {
+        case BuiltinFn::kSubgroupMatrixLoad:
+        case BuiltinFn::kSubgroupMatrixStore:
+        case BuiltinFn::kSubgroupMatrixMultiply:
+        case BuiltinFn::kSubgroupMatrixMultiplyAccumulate:
+        case BuiltinFn::kSubgroupMatrixScalarAdd:
+        case BuiltinFn::kSubgroupMatrixScalarSubtract:
+        case BuiltinFn::kSubgroupMatrixScalarMultiply:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool IsResourceTable(BuiltinFn f) {
+    switch (f) {
+        case BuiltinFn::kGetResource:
+        case BuiltinFn::kHasResource:
+            return true;
+        default:
+            return false;
+    }
+}
+
+}  // namespace tint::wgsl
+
+// clang-format on

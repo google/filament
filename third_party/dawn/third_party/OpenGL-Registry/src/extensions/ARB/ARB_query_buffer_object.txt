@@ -1,0 +1,431 @@
+Name
+
+    ARB_query_buffer_object
+
+Name Strings
+
+    GL_ARB_query_buffer_object
+
+Contact
+
+    Daniel Rakos (daniel.rakos 'at' amd.com)
+
+Contributors
+
+    Daniel Rakos, AMD
+    Graham Sellers, AMD
+    Christophe Riccio, AMD
+
+Notice
+
+    Copyright (c) 2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 3, 2013.
+    Ratified by the Khronos Board of Promoters on July 19, 2013.
+
+Version
+
+    Last Modified Date: 7 March 2016
+    Author Revision: 3
+
+Number
+
+    ARB Extension #148
+
+Dependencies
+
+    OpenGL 1.5 is required.
+
+    This extension is written against the OpenGL 4.3 (core) specification.
+
+Overview
+
+    Statistics about the operation of the OpenGL pipeline, such as the number
+    of samples that passed the depth test, the elapsed time between two events
+    or the number of vertices written by transform feedback can be retrieved
+    from the GL through query objects. The result of a query object is
+    acquired by the application through the OpenGL API into a client provided
+    memory location. Should the result returned by the API be required for use
+    in a shader, it must be passed back to the GL via a program uniform or
+    some other mechanism. This requires a round-trip from the GPU to the CPU
+    and back.
+
+    This extension introduces a mechanism whereby the result of a query object
+    may be retrieved into a buffer object instead of client memory. This allows
+    the query rsult to be made available to a shader without a round-trip to
+    the CPU for example by subsequently using the buffer object as a uniform
+    buffer, texture buffer or other data store visible to the shader. This
+    functionality may also be used to place the results of many query objects
+    into a single, large buffer and then map or otherwise read back the entire
+    buffer at a later point in time, avoiding a per-query object CPU-GPU
+    synchronization event.
+
+    The extension allows acquiring the result of any query object type
+    supported by the GL implementation into a buffer object. The implementation
+    will determine the most efficient method of copying the query result to the
+    buffer.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetQueryObjectiv, GetQueryObjectuiv,
+    GetQueryObjecti64v and GetQueryObjectui64v:
+
+        QUERY_RESULT_NO_WAIT                            0x9194
+
+    Accepted by the <target> parameter of BindBuffer, BufferData,
+    BufferSubData, MapBuffer, UnmapBuffer, MapBufferRange, GetBufferSubData,
+    GetBufferParameteriv, GetBufferParameteri64v, GetBufferPointerv,
+    ClearBufferSubData, and the <readtarget> and <writetarget> parameters of
+    CopyBufferSubData:
+
+        QUERY_BUFFER                                    0x9192
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+        QUERY_BUFFER_BINDING                            0x9193
+
+    Accepted in the <barriers> bitfield in MemoryBarrier:
+
+        QUERY_BUFFER_BARRIER_BIT                        0x00008000
+
+Additions to Chapter 4 of the OpenGL Core Profile Specification, Version 4.3,
+"Event Model"
+
+    Modify Section 4.2.1, "Query Object Queries"
+
+    Add new paragraph after the fist paragraph on p. 44 ending with
+    "... <id> is the name of a query object."
+
+        Initially, zero is bound to the QUERY_BUFFER binding point, indicating
+    that <params> is a pointer into client memory. However, if a non-zero
+    buffer object is bound as the current query result buffer (see section
+    6.1), then <params> is treated as an offset into the designated buffer
+    object.
+
+    Add new paragraph after the third paragraph on p. 44 ending with
+    "... finite amount of time."
+
+        If <pname> is QUERY_RESULT_NO_WAIT, then the query object's result
+    value is returned as a single integer in <params> if the result is
+    available at the time of the state query. If the result is not available
+    then the destination memory location is not overwritten.
+
+Additions to Chapter 6 of the OpenGL Core Profile Specification, Version 4.3,
+"Buffer Objects"
+
+    Modify Section 6.1, "Creating and Binding Buffer Objects"
+
+    Add to Table 6.1: "Buffer object binding targets"
+
+    +--------------------+--------------------------+-------------------------+
+    | Target name        | Purpose                  | Described in section(s) |
+    +--------------------+--------------------------+-------------------------+
+    | QUERY_BUFFER       | Query result buffer      | 4.2.1                   |
+    +--------------------+--------------------------+-------------------------+
+
+Additions to Chapter 7 of the OpenGL Core Profile Specification, Version 4.3,
+"Programs and Shaders"
+
+    Modify Section 7.12, "Shader Memory Access"
+
+    Add to the list of MemoryBarrier <barriers> bullets, p. 138
+
+      * QUERY_BUFFER_BARRIER_BIT: Writes of buffer objects via the QUERY_BUFFER
+        binding (see section 4.2.1) after the barrier will reflect data written
+        by shaders prior to the barrier. Additionally, buffer object writes
+        issued after the barrier will wait on the completion of all shader
+        writes initiated prior to the barrier.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+  Replace second error case for QueryObject* with the following:
+
+    An INVALID_ENUM error is generated if <pname> is not QUERY_RESULT,
+    QUERY_RESULT_NO_WAIT or QUERY_RESULT_AVAILABLE.
+
+  Add error case for QueryObject* as follows:
+
+    An INVALID_OPERATION error is generated if the command would cause data
+    to be written beyond the bounds of the buffer currently bound to the
+    QUERY_BUFFER target.
+
+New State
+
+    Append to Table 23.73, "Miscellaneous"
+
+    +----------------------+------+--------------+---------------+------------------------------+-------+
+    | Get Value            | Type | Get Command  | Initial Value | Description                  | Sec.  |
+    +----------------------+------+--------------+---------------+------------------------------+-------+
+    | QUERY_BUFFER_BINDING | Z+   | GetIntegeriv | 0             | Query result buffer binding. | 4.2.1 |
+    +----------------------+------+--------------+---------------+------------------------------+-------+
+
+New Implementation Dependent State
+
+    None.
+
+Usage Examples
+
+    Convenient macro definition for specifying buffer offsets:
+
+        #define BUFFER_OFFSET(i)    ((void*)NULL + (i))
+
+    Example 1: Using occlusion query result in shader
+
+        // Create a buffer object for the query result
+        glGenBuffers(1, &queryBuffer);
+        glBindBuffer(GL_QUERY_BUFFER, queryBuffer);
+        glBufferData(GL_QUERY_BUFFER, sizeof(GLuint),
+                     NULL, GL_DYNAMIC_COPY);
+
+        // Perform occlusion query
+        glBeginQuery(GL_SAMPLES_PASSED, queryId)
+        ...
+        glEndQuery(GL_SAMPLES_PASSED);
+
+        // Get query results to buffer object
+        glBindBuffer(GL_QUERY_BUFFER, queryBuffer);
+        glGetQueryObjectuiv(queryId, GL_QUERY_RESULT, BUFFER_OFFSET(0));
+
+        // Bind query result buffer as uniform buffer
+        glBindBufferBase(GL_UNIFORM_BUFFER, 0, queryBuffer);
+        ...
+
+        --- Shader ---
+
+        ...
+        uniform queryResult {
+            uint samplesPassed;
+        };
+        ...
+        void main() {
+            ...
+            if (samplesPassed > threshold) {
+                // complex processing
+                ...
+            } else {
+                // simplified processing
+                ...
+            }
+            ...
+        }
+
+    Example 2: Using occlusion query result in shader only if result is available
+
+        // Create a buffer object for the query result
+        glGenBuffers(1, &queryBuffer);
+        glBindBuffer(GL_QUERY_BUFFER, queryBuffer);
+        glBufferData(GL_QUERY_BUFFER, 2 * sizeof(GLuint),
+                     NULL, GL_DYNAMIC_COPY);
+
+        // Perform occlusion query
+        glBeginQuery(GL_SAMPLES_PASSED, queryId)
+        ...
+        glEndQuery(GL_SAMPLES_PASSED);
+
+        // Get query availability and result (if available) to buffer object
+        glBindBuffer(GL_QUERY_BUFFER, queryBuffer);
+        glGetQueryObjectuiv(queryId, GL_QUERY_RESULT_AVAILABLE, BUFFER_OFFSET(0));
+        glGetQueryObjectuiv(queryId, GL_QUERY_RESULT_NO_WAIT, BUFFER_OFFSET(4));
+
+        // Bind query result buffer as uniform buffer
+        glBindBufferBase(GL_UNIFORM_BUFFER, 0, queryBuffer);
+        ...
+
+        --- Shader ---
+        
+        ...
+        uniform queryResult {
+            uint resultAvailable;
+            uint samplesPassed;
+        };
+        ...
+        void main() {
+            ...
+            if (resultAvailable) {
+                if (samplesPassed > threshold) {
+                    // complex processing
+                    ...
+                } else {
+                    // simplified processing
+                    ...
+                }
+            } else {
+                // default processing if no query result is available
+                ...
+            }
+            ...
+        }
+        
+    Example 3: Using a default value and QUERY_RESULT_NO_WAIT
+
+        // Create a buffer object for the query result        
+        // Store a default value in the buffer that will be used
+        // if the query results are not available
+        glGenBuffers(1, &queryBuffer);
+        glBindBuffer(GL_QUERY_BUFFER, queryBuffer);
+        GLuint defaultValue = 42;
+        glBufferData(GL_QUERY_BUFFER, sizeof(GLuint),
+                     &defaultValue, GL_DYNAMIC_COPY);
+        
+        // Perform occlusion query
+        glBeginQuery(GL_SAMPLES_PASSED, queryId)
+        ...
+        glEndQuery(GL_SAMPLES_PASSED);
+
+        // Get query results to buffer object with no wait
+        // Default value remains untouched if results are not available
+        glBindBuffer(GL_QUERY_BUFFER, queryBuffer);
+        glGetQueryObjectuiv(queryId, GL_QUERY_RESULT_NO_WAIT, BUFFER_OFFSET(0));
+        ...
+
+    Example 4: Using transform feedback query result to fill indirect draw buffer
+
+        // Create a buffer object for the indirect draw command        
+        glGenBuffers(1, &drawIndirectBuffer);
+
+        // Initialize draw command
+        DrawArraysIndirectCommand cmd = { ... };
+        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, drawIndirectBuffer);
+        glBufferData(GL_DRAW_INDIRECT_BUFFER, sizeof(DrawArraysIndirectCommand),
+                     &cmd, GL_DYNAMIC_COPY);
+        
+        // Perform transform feedback query
+        glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, queryId)
+        ...
+        glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
+
+        // Write query result to the primCount field of the indirect draw command
+        glBindBuffer(GL_QUERY_BUFFER, drawIndirectBuffer);
+        glGetQueryObjectuiv(queryId, GL_QUERY_RESULT,
+                            BUFFER_OFFSET(offsetof(DrawArraysIndirectCommand, primCount)));
+
+        // Execute the indirect draw command
+        glDrawArraysIndirect(GL_TRIANGLES, BUFFER_OFFSET(0));
+        ...
+
+Issues
+
+    1) What is QUERY_RESULT_NO_WAIT useful for?
+
+    RESOLVED: The application may decide that it does not want to wait for the
+    result of the query object if it's not available at the time. This is not
+    a problem without this extension as the application can always query the
+    availability using QUERY_RESULT_AVAILABLE and decide to actually get the
+    results using QUERY_RESULT only if the result is available. However, when
+    using query buffers, QUERY_RESULT_AVAILABLE and QUERY_RESULT alone cannot
+    provide the same flexibility for shader based decision making as the
+    results are either always available (if QUERY_RESULT was used) or never.
+    QUERY_RESULT_NO_WAIT provides a way to query the result only if it's
+    available. Combined with QUERY_RESULT_AVAILABLE, the shader can decide
+    to use the result or not based on the availability (see usage example 2).
+
+    2) Should QUERY_RESULT_NO_WAIT be accepted by GetQueryObject* in case
+    there is no buffer bound to QUERY_BUFFER?
+
+    RESOLVED: YES, for completeness.
+
+    3) Is there any guarantee that GetQueryObject* will not wait for the
+    query results to become available if <pname> is QUERY_RESULT_NO_WAIT?
+
+    RESOLVED: There is no need to have such guarantee. An implementation may
+    choose to wait for the results even in case of QUERY_RESULT_NO_WAIT,
+    however, that may incur a potential performance hit in case the
+    application expects it to not wait.
+
+    4) Should the INVALID_OPERATION error be generated if a GetQueryObject*
+    command would access data outside the range of the bound query buffer?
+
+    RESOLVED: YES. This requires considering the value of <params> and the
+    size of the type of the written value to determine the maximum addressed
+    byte for the state query command.
+
+    Note: This follows the precedence of the language introduced by
+    ARB_pixel_buffer_object.
+
+    5) Should we support 64 bit versions of the state query commands
+    (GetQueryObjecti64v and GetQueryObjectui64v)?
+
+    RESOLVED: YES, both for completeness and to support timer queries. In this
+    case a 64 bit integer value is written to the buffer.
+
+    6) Should the extension support all query types supported by the current
+    GL implementation?
+
+    RESOLVED: YES. There is not much value in providing additional capability
+    queries that would allow the application to find out which query object
+    types are supported. Also, the GL implementation can always choose to
+    implement the functionality through a GPU-CPU rount-trip for query types
+    that cannot be resolved to a buffer by the hardware.
+
+    7) Is there any precedence that the pointer parameter of a glGet* command
+    is treated as an offset into a bound buffer object?
+
+    RESOLVED: YES, glGetTexImage accepts an offset into the pixel pack buffer
+    in case a pixel pack buffer is bound. As pixel buffer objects are part of
+    the core specification since version 2.1, no precedence is introduced by
+    this extension.
+
+    8) What should be written to the query buffer when QUERY_RESULT_NO_WAIT
+    is used but the results are not available?
+
+    DISCUSSION: Leaving the written value undefined is an option, however
+    in many cases the application can benefit from having a defined value in
+    the query buffer if the results are not available. The following options
+    were considered to support such use cases:
+
+        a. Write a predefined fixed value to the buffer.
+        b. Write a user specified value to the buffer.
+        c. Don't write anything to the buffer.
+
+    The problem with option a. is that it may be difficult to select such
+    a predefined value that would not potentially conflict with a valid
+    value. Option b. could be fine, however it requires new API to specify
+    this default value. Thus, option c. is considered to most preferable.
+
+    RESOLVED: Nothing, the current value in the specified offset of the
+    query buffer is left untouched.
+
+    9) How does ARB_query_buffer_object differ from AMD_query_buffer_object?
+
+    RESOLVED: This extension introduced a new barrier bit accepted by
+    MemoryBarrier that controls the relative ordering of shader buffer writes
+    and query buffer writes.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  ----------------------------------------------
+
+      3   03/07/2016  drakos    Fixed typo in example #4
+      2   04/02/2013  drakos    Added missing function names to the list of
+                                functions accepting QUERY_BUFFER as parameter
+      1   03/08/2013  drakos    Initial draft based on AMD_query_buffer_object
+                                Removed suffixes
+                                Updated spec language to GL 4.3
+                                Added QUERY_BUFFER_BARRIER_BIT

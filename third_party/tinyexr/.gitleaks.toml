@@ -1,0 +1,19 @@
+# gitleaks config for TinyEXR. Auto-loaded from the repo root.
+# Extends the default ruleset; allowlists vendored third-party amalgamations
+# whose hashing code (xxHash key/secret mixing inside zstd) trips the generic
+# API-key heuristic. These are upstream constants/intrinsics, not credentials.
+title = "TinyEXR gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Vendored third-party code + OpenGL keycode constants — not first-party secrets"
+paths = [
+    '''deps/zstd/tinyexr_zstd\.c''',
+    '''deps/zstd/tinyexr_zstd\.h''',
+    # OpenGL boilerplate: keycode constants (VK_LEFT / kVK_LeftArrow) trigger
+    # generic-api-key but are not credentials.
+    '''examples/exrbokeh/OpenGLWindow/''',
+    '''examples/exrview/OpenGLWindow/''',
+]

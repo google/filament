@@ -1,0 +1,215 @@
+/*
+ * Copyright (C) 2015 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TNT_FILAMENT_ENGINE_ENUM_H
+#define TNT_FILAMENT_ENGINE_ENUM_H
+
+#include <backend/DriverEnums.h>
+
+#include <utils/BitmaskEnum.h>
+#include <utils/FixedCapacityVector.h>
+
+#include <stddef.h>
+#include <stdint.h>
+
+namespace filament {
+
+static constexpr size_t POST_PROCESS_VARIANT_BITS = 1;
+static constexpr size_t POST_PROCESS_VARIANT_COUNT = (1u << POST_PROCESS_VARIANT_BITS);
+static constexpr size_t POST_PROCESS_VARIANT_MASK = POST_PROCESS_VARIANT_COUNT - 1;
+
+enum class PostProcessVariant : uint8_t {
+    OPAQUE,
+    TRANSLUCENT
+};
+
+enum class DescriptorSetBindingPoints : uint8_t {
+    PER_VIEW        = 0,
+    PER_RENDERABLE  = 1,
+    PER_MATERIAL    = 2,
+};
+
+// binding point for the "per-view" descriptor set
+enum class PerViewBindingPoints : uint8_t  {
+    FRAME_UNIFORMS  =  0,   // uniforms updated per view
+    SHADOWS         =  1,   // punctual shadow data
+    LIGHTS          =  2,   // lights data array
+    RECORD_BUFFER   =  3,   // froxel record buffer
+    FROXEL_BUFFER   =  4,   // froxel buffer
+    STRUCTURE       =  5,   // variable, DEPTH
+    SHADOW_MAP      =  6,   // user defined (1024x1024) DEPTH, array
+    IBL_DFG_LUT     =  7,   // user defined (128x128), RGB16F
+    IBL_SPECULAR    =  8,   // user defined, user defined, CUBEMAP
+    SSAO            =  9,   // variable, RGB8 {AO, [depth]}
+    SSR             = 10,   // variable, 2d array, RGB_11_11_10, mipmapped
+    SSR_HISTORY     = 10,   // variable, 2d texture, RGB_11_11_10
+    FOG             = 11    // variable, user defined, CUBEMAP
+};
+
+enum class PerRenderableBindingPoints : uint8_t  {
+    OBJECT_UNIFORMS             =  0,   // uniforms updated per renderable
+    BONES_UNIFORMS              =  1,
+    MORPHING_UNIFORMS           =  2,
+    MORPH_TARGET_POSITIONS      =  3,
+    MORPH_TARGET_TANGENTS       =  4,
+    BONES_INDICES_AND_WEIGHTS   =  5,
+};
+
+enum class PerMaterialBindingPoints : uint8_t  {
+    MATERIAL_PARAMS             =  0,   // uniforms
+};
+
+enum class ReservedSpecializationConstants : uint8_t {
+    BACKEND_FEATURE_LEVEL = 0,
+    CONFIG_MAX_INSTANCES = 1,
+    CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND = 2,
+    CONFIG_SRGB_SWAPCHAIN_EMULATION = 3, // don't change (hardcoded in OpenGLDriver.cpp)
+    CONFIG_FROXEL_BUFFER_HEIGHT = 4,
+    CONFIG_POWER_VR_SHADER_WORKAROUNDS = 5,
+    CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP = 6,
+    CONFIG_DEBUG_FROXEL_VISUALIZATION = 7,
+    CONFIG_STEREO_EYE_COUNT = 8, // don't change (hardcoded in ShaderCompilerService.cpp)
+    CONFIG_SH_BANDS_COUNT = 9,
+    CONFIG_SHADOW_SAMPLING_METHOD = 10,
+    CONFIG_FROXEL_RECORD_BUFFER_HEIGHT = 11,
+    // check CONFIG_NEXT_RESERVED_SPEC_CONSTANT and CONFIG_MAX_RESERVED_SPEC_CONSTANTS below
+};
+
+// Dynamic specialization constants are for those spec constants which act like a variant,
+// might be changed in the middle of the render pass. The values are always determined by the system and
+// users should not modify the value of these constants by themselves.
+enum class DynamicSpecializationConstants : uint8_t {
+    RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING = 0,
+    RUNTIME_CONFIG_HAS_EXTRA_DIRECTIONAL_LIGHTS = 1,
+    RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING = 2,
+    // check CONFIG_NEXT_DYNAMIC_SPEC_CONSTANT and CONFIG_MAX_DYNAMIC_SPEC_CONSTANTS below
+};
+
+enum class PushConstantIds : uint8_t  {
+    MORPHING_BUFFER_OFFSET = 0,
+};
+
+// number of renderpass channels
+constexpr size_t CONFIG_RENDERPASS_CHANNEL_COUNT = 8;
+
+// This value is limited by UBO size, ES3.0 only guarantees 16 KiB.
+// It's also limited by the Froxelizer's record buffer data type (uint8_t).
+// And it's limited by the Froxelizer's Froxel data structure, which stores
+// a light count in a uint8_t (so the count is limited to 255)
+constexpr size_t CONFIG_MAX_LIGHT_COUNT = 255;
+constexpr size_t CONFIG_MAX_LIGHT_INDEX = CONFIG_MAX_LIGHT_COUNT - 1;
+
+// The number of specialization constants that Filament reserves for its own
+// use. It includes the static (ReservedSpecializationConstants) and dynamic
+// (DynamicSpecializationConstants) ones.
+// They are always the first constants (from 0 to
+// CONFIG_MAX_INTERNAL_SPEC_CONSTANTS - 1). Updating this value necessitates a
+// material version bump.
+constexpr size_t CONFIG_MAX_INTERNAL_SPEC_CONSTANTS = 32;
+constexpr size_t CONFIG_MAX_RESERVED_SPEC_CONSTANTS = 16;
+constexpr size_t CONFIG_MAX_DYNAMIC_SPEC_CONSTANTS = 16;
+static_assert(CONFIG_MAX_DYNAMIC_SPEC_CONSTANTS + CONFIG_MAX_RESERVED_SPEC_CONSTANTS ==
+       CONFIG_MAX_INTERNAL_SPEC_CONSTANTS, "Inconsistent specialization constant counts");
+
+// The number of the next unassigned reserved spec constant.
+constexpr size_t CONFIG_NEXT_RESERVED_SPEC_CONSTANT = 12;
+
+// The number of the next unassigned dynamic spec constant.
+constexpr size_t CONFIG_NEXT_DYNAMIC_SPEC_CONSTANT = CONFIG_MAX_RESERVED_SPEC_CONSTANTS + 3;
+
+// The maximum number of shadow maps possible.
+// There is currently a maximum limit of 128 shadow maps.
+// Factors contributing to this limit:
+// - minspec for UBOs is 16KiB, which currently can hold a maximum of 128 entries
+constexpr size_t CONFIG_MAX_SHADOWMAPS = 128;
+
+// The maximum number of shadow layers.
+// There is currently a maximum limit of 255 layers.
+// Several factors are contributing to this limit:
+// - minspec for 2d texture arrays layer is 256
+// - we're using uint8_t to store the number of layers (255 max)
+// - nonsensical to be larger than the number of shadowmaps
+// - AtlasAllocator depth limits it to 64
+constexpr size_t CONFIG_MAX_SHADOW_LAYERS = 64;
+
+// The maximum number of shadow cascades that can be used for directional lights.
+constexpr size_t CONFIG_MAX_SHADOW_CASCADES = 4;
+
+// The maximum number of directional lights supported in addition to the dominant one.
+// The dominant directional light supports shadows and the sun disc; the extra directional
+// lights are evaluated without shadows. This value is limited by the space available in
+// PerViewUib (each extra light uses two float4 entries). The extra directional lights code
+// path is enabled automatically via the RUNTIME_CONFIG_HAS_EXTRA_DIRECTIONAL_LIGHTS dynamic
+// specialization constant when the scene contains more than one directional light, so
+// scenes that don't use this feature don't pay for it.
+// Updating this value necessitates a material version bump.
+constexpr size_t CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS = 4;
+
+// The maximum UBO size, in bytes. This value is set to 16 KiB due to the ES3.0 spec.
+// Note that this value constrains the maximum number of skinning bones, morph targets,
+// instances, and shadow casting spotlights.
+constexpr size_t CONFIG_MINSPEC_UBO_SIZE = 16384;
+
+// The maximum number of instances that Filament automatically creates as an optimization.
+// Use a much smaller number for WebGL as a workaround for the following Chrome issues:
+//     https://crbug.com/1348017 Compiling GLSL is very slow with struct arrays
+//     https://crbug.com/1348363 Lighting looks wrong with D3D11 but not OpenGL
+// Note that __EMSCRIPTEN__ is not defined when running matc, but that's okay because we're
+// actually using a specification constant.
+#if defined(__EMSCRIPTEN__) && !defined(FILAMENT_SUPPORTS_WEBGPU)
+constexpr size_t CONFIG_MAX_INSTANCES = 8;
+#else
+constexpr size_t CONFIG_MAX_INSTANCES = 64;
+#endif
+
+// The maximum number of bones that can be associated with a single renderable.
+// We store 32 bytes per bone. Must be a power-of-two, and must fit within CONFIG_MINSPEC_UBO_SIZE.
+constexpr size_t CONFIG_MAX_BONE_COUNT = 256;
+
+// The maximum number of morph targets associated with a single renderable.
+// Note that ES3.0 only guarantees 256 layers in an array texture.
+// Furthermore, this is constrained by CONFIG_MINSPEC_UBO_SIZE (16 bytes per morph target).
+constexpr size_t CONFIG_MAX_MORPH_TARGET_COUNT = 256;
+
+// The max number of eyes supported in stereoscopic mode.
+// The number of eyes actually rendered is set at Engine creation time, see
+// Engine::Config::stereoscopicEyeCount.
+constexpr uint8_t CONFIG_MAX_STEREOSCOPIC_EYES = 4;
+
+} // namespace filament
+
+template<>
+struct utils::EnableIntegerOperators<filament::DescriptorSetBindingPoints> : public std::true_type {};
+template<>
+struct utils::EnableIntegerOperators<filament::PerViewBindingPoints> : public std::true_type {};
+template<>
+struct utils::EnableIntegerOperators<filament::PerRenderableBindingPoints> : public std::true_type {};
+template<>
+struct utils::EnableIntegerOperators<filament::PerMaterialBindingPoints> : public std::true_type {};
+
+template<>
+struct utils::EnableIntegerOperators<filament::ReservedSpecializationConstants> : public std::true_type {};
+template<>
+struct utils::EnableIntegerOperators<filament::DynamicSpecializationConstants> : public std::true_type {};
+template<>
+struct utils::EnableIntegerOperators<filament::PushConstantIds> : public std::true_type {};
+template<>
+struct utils::EnableIntegerOperators<filament::PostProcessVariant> : public std::true_type {};
+
+template<>
+inline constexpr size_t utils::Enum::count<filament::PostProcessVariant>() { return filament::POST_PROCESS_VARIANT_COUNT; }
+
+#endif // TNT_FILAMENT_ENGINE_ENUM_H

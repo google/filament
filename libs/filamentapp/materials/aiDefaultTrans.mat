@@ -1,0 +1,28 @@
+material {
+    name : aiDefaultTrans,
+    shadingModel : lit,
+    blending : transparent,
+    parameters : [
+        {
+            type : float4,
+            name : baseColor
+        },
+        {
+            type : float,
+            name : metallic
+        },
+        {
+            type : float,
+            name : roughness
+        }
+    ],
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = materialParams.baseColor;
+        material.metallic = materialParams.metallic;
+        material.roughness = materialParams.roughness;
+    }
+}

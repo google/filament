@@ -1,0 +1,109 @@
+/*
+ * Copyright (C) 2025 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TNT_FILAMENT_BACKEND_WEBGPUSWAPCHAIN_H
+#define TNT_FILAMENT_BACKEND_WEBGPUSWAPCHAIN_H
+
+#include "DriverBase.h"
+
+#include <backend/Platform.h>
+#if defined(__EMSCRIPTEN__)
+#include <backend/platforms/WebGPUWasmPolyfill.h>
+#endif
+
+#include <webgpu/webgpu_cpp.h>
+
+#include <cstdint>
+#include <memory>
+
+namespace filament::backend {
+
+class WebGPUSwapChain final : public Platform::SwapChain, HwSwapChain {
+public:
+    WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& extent,
+            wgpu::Adapter const& adapter, wgpu::Device const& device, void* nativeWindow, uint64_t flags);
+
+    WebGPUSwapChain( wgpu::Extent2D const& extent,
+            wgpu::Adapter const& adapter, wgpu::Device const& device, uint64_t flags);
+
+    ~WebGPUSwapChain();
+
+    [[nodiscard]] wgpu::TextureFormat getColorFormat() const { return mConfig.format; }
+
+    [[nodiscard]] wgpu::TextureFormat getDepthFormat() const { return mDepthFormat; }
+
+    [[nodiscard]] wgpu::TextureView getNextTextureView();
+    [[nodiscard]] wgpu::TextureView getNextTextureView(wgpu::Extent2D const& extent);
+
+    [[nodiscard]] wgpu::Texture getCurrentTexture();
+
+    [[nodiscard]] wgpu::TextureView getDepthTextureView() const { return mDepthTextureView; }
+
+    [[nodiscard]] bool isHeadless() const { return mType == SwapChainType::HEADLESS; }
+
+    [[nodiscard]] void* getNativeWindow() const { return mNativeWindow; }
+
+    [[nodiscard]] uint32_t getWidth() const { return mConfig.width; }
+    [[nodiscard]] uint32_t getHeight() const { return mConfig.height; }
+
+    void present(DriverBase& driver);
+
+    void setFrameScheduledCallback(CallbackHandler* handler, FrameScheduledCallback&& callback) {
+        if (!callback) {
+            mFrameScheduled.handler = nullptr;
+            mFrameScheduled.callback.reset();
+            return;
+        }
+        mFrameScheduled.handler = handler;
+        mFrameScheduled.callback = std::make_shared<FrameScheduledCallback>(std::move(callback));
+    }
+
+private:
+
+    void setExtent(wgpu::Extent2D const&);
+
+    wgpu::Device mDevice = nullptr;
+    enum class SwapChainType {
+        HEADLESS,
+        SURFACE
+    };
+
+    wgpu::Surface mSurface = {};
+    wgpu::SurfaceConfiguration mConfig = {};
+    bool mNeedStencil = false;
+    wgpu::TextureFormat mDepthFormat = wgpu::TextureFormat::Undefined;
+    wgpu::Texture mDepthTexture = nullptr;
+    wgpu::TextureView mDepthTextureView = nullptr;
+    const SwapChainType mType;
+    const uint32_t mHeadlessWidth;
+    const uint32_t mHeadlessHeight;
+    wgpu::SurfaceTexture mCurrentTexture;
+    static constexpr uint32_t mHeadlessBufferCount = 3;
+    uint8_t mHeadlessBufferIndex = 0;
+    std::array<wgpu::Texture, mHeadlessBufferCount> mRenderTargetTextures;
+    std::array<wgpu::TextureView, mHeadlessBufferCount> mRenderTargetViews;
+
+    struct {
+        CallbackHandler* handler = nullptr;
+        std::shared_ptr<FrameScheduledCallback> callback;
+    } mFrameScheduled;
+
+    void* mNativeWindow = nullptr;
+};
+
+} // namespace filament::backend
+
+#endif //TNT_FILAMENT_BACKEND_WEBGPUSWAPCHAIN_H

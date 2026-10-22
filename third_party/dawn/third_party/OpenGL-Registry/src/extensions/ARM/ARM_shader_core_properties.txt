@@ -1,0 +1,211 @@
+Name
+
+    ARM_shader_core_properties
+
+Name Strings
+
+    GL_ARM_shader_core_properties
+
+Contact
+
+    Jan-Harald Fredriksen (jan-harald.fredriksen 'at' arm.com)
+
+Contributors
+
+    Jan-Harald Fredriksen, ARM
+    Maochang Dang, ARM
+    Espen Amodt, ARM
+
+
+Notice
+
+    Copyright (c) 2023 The Khronos Group Inc. Copyright terms at
+    http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date: November 29, 2023
+    Revision 1
+
+Number
+
+    OpenGL ES Extension #345
+
+Dependencies
+
+    OpenGL ES 3.2 is required.
+
+    This extension is written against the OpenGL ES Shading Language
+    specification, Language Version 3.20, Document Revision 2 and revision
+    OpenGL ES 3.2 (May 5, 2022) of the API specification.
+
+    This extension depend on OpenGL GLSL versions 1.40(#version 140) and higher.
+
+    This extension depend on OpenGL ES ESSL versions 3.0(#version 300) and higher.
+
+    This extension depend on revision 7 of the OpenGL Shading Language version
+    4.50, dated May 9, 2017.
+
+
+Overview
+
+    Applications may wish to know and/or control certain GPU shader core properties
+    to select the optimal logic. This extension allows application to query
+    and set the number of active GPU shader cores, and query other shader
+    core properties for the optimal logic and performance profiling, including:
+
+      * The maximum number of physical shader cores available on the device;
+
+      * The number of active shader cores specified on the device;
+
+      * A bitfield indicating the presence of shader cores on the device;
+
+      * The maximum warp count per shader core available on the device;
+
+      * The maximum number of pixels output per clock per shader core;
+
+      * The maximum number of texels per clock per shader core;
+
+      * The maximum number of single-precision fused multiply-add operations per
+        clock per shader core;
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    void MaxActiveShaderCoresARM(uint count);
+
+New Tokens
+
+    New attributes accepted by the <pname> argument of GetIntegerv,GetInteger64v:
+        SHADER_CORE_COUNT_ARM                     0x96F0
+        SHADER_CORE_ACTIVE_COUNT_ARM              0x96F1
+        SHADER_CORE_PRESENT_MASK_ARM              0x96F2
+        SHADER_CORE_MAX_WARP_COUNT_ARM            0x96F3
+        SHADER_CORE_PIXEL_RATE_ARM                0x96F4
+        SHADER_CORE_TEXEL_RATE_ARM                0x96F5
+        SHADER_CORE_FMA_RATE_ARM                  0x96F6
+
+Additions to Chapter 7 of the OpenGL ES 3.2 Specification (Programs and Shaders)
+
+    Add new Section after 7.13, Required State
+
+    7.14 Shader Core Properties
+
+    Shader core is a generic processor on the device that can operates as vertex
+    processor, tessellation control processor, tessellation evaluation processor,
+    geometry processor, fragment processor, compute processor etc. Multiple shader
+    cores would exists on the same device.
+
+    Shader core properties is a set of implementation-dependent state that can
+    be queried by calling GetIntegerv or GetInteger64v with <pname> parameter as
+    specified in the table 7.8.
+
+    (add a new table 7.8)
+   +------------------------------- + ----------------------------------------+
+   |            Parameter           |           Information Returned          |
+   +------------------------------- + ----------------------------------------+
+   |SHADER_CORE_COUNT_ARM           | A value indicating the maximum number of|
+   |                                | physical shader cores available on the  |
+   |                                | device, the value must be greater than  |
+   |                                | or equal to 1.                          |
+   +------------------------------- + ----------------------------------------+
+   |SHADER_CORE_ACTIVE_COUNT_ARM    | A value indicating the number of active |
+   |                                | shader cores set with                   |
+   |                                | MaxActiveShaderCoresARM. The value will |
+   |                                | be greater than or equal to 1 or less   |
+   |                                | than or equal to SHADER_CORE_COUNT_ARM. |
+   +------------------------------- + ----------------------------------------+
+   |SHADER_CORE_PRESENT_MASK_ARM    | A value of a bitfield where each bit set|
+   |                                | represents the presence of a shader     |
+   |                                | core whose ID is the bit position. The  |
+   |                                | highest ID for any shader core on the   |
+   |                                | device is the position of the most      |
+   |                                | significant bit set. If the bit is set, |
+   |                                | it indicates that the corresponding     |
+   |                                | shader core is available.               |
+   +------------------------------- + ----------------------------------------+
+   |SHADER_CORE_MAX_WARP_COUNT_ARM  | A value indicating the maximum number of|
+   |                                | simultaneously executing warps on a     |
+   |                                | shader core.                            |
+   +------------------------------- + ----------------------------------------+
+   |SHADER_CORE_PIXEL_RATE_ARM      | A value indicating the maximum number of|
+   |                                | pixels output per clock per shader core.|
+   |                                | If this throughput rate cannot be       |
+   |                                | determined on the physical device, the  |
+   |                                | value 0 will be returned.               |
+   +------------------------------- + ----------------------------------------+
+   |SHADER_CORE_TEXEL_RATE_ARM      | A value indicating the maximum number of|
+   |                                | texels per clock per shader core. If    |
+   |                                | this throughput rate cannot be          |
+   |                                | determined on the physical device, the  |
+   |                                | value 0 will be returned.               |
+   +------------------------------- + ----------------------------------------+
+   |SHADER_CORE_FMA_RATE_ARM        | A value indicating the maximum number of|
+   |                                | single-precision fused multiply-add     |
+   |                                | operations per clock per shader core.   |
+   |                                | If this throughput rate cannot be       |
+   |                                | determined on the physical device, the  |
+   |                                | value 0 will be returned.               |
+   +------------------------------- + ----------------------------------------+
+           Table 7.8: Query pname parameters for shader core properties
+
+    The number of active shader cores can be specified using command
+
+        void MaxActiveShaderCoresARM(uint count);
+
+    where <count> is the maximum number of active shader cores that the GL commands
+    are expected to use. The value of <count> must be greater than or equal to 1
+    and less than or equal to the value of SHADER_CORE_COUNT_ARM.
+
+    MaxActiveShaderCoresARM command allows application to limit the number of
+    shader cores used to execute GL commands in the context. MaxActiveShaderCoresARM
+    takes effect next time GL commands are executed. In the initial state, the
+    value assigned to SHADER_CORE_ACTIVE_COUNT_ARM is equal to the value of
+    SHADER_CORE_COUNT_ARM.
+
+Errors
+    An INVALID_VALUE error is generated if <count> is 0.
+    An INVALID_VALUE error is generated if <count> is greater than SHADER_CORE_COUNT_ARM.
+
+New State
+
+    Modify Table 21.42, Implementation Dependent Values
+
+    (update the state table to cover the new query types on p. 488)
+
+                                                         Minimum
+             Get Value             Type   Get Command     Value        Description           Sec.
+    ------------------------------ ---- --------------- ------- --------------------------- ----
+    SHADER_CORE_COUNT_ARM           Z+    GetIntegerv      1    shader core count available 7.14
+    SHADER_CORE_ACTIVE_COUNT_ARM    Z+    GetIntegerv      1    active shader core count    7.14
+                                                                specified
+    SHADER_CORE_PRESENT_MASK_ARM    Z+    GetInteger64v    -    shader core presence        7.14
+                                                                bitfield
+    SHADER_CORE_MAX_WARP_COUNT_ARM  Z+    GetIntegerv      1    Max warps per shader core   7.14
+    SHADER_CORE_PIXEL_RATE_ARM      Z+    GetIntegerv      1    Max. no. of pixels output   7.14
+                                                                per clock per shader core
+    SHADER_CORE_TEXEL_RATE_ARM      Z+    GetIntegerv      1    Max. no. of texels per clock 7.14
+                                                                per shader core
+    SHADER_CORE_FMA_RATE_ARM        Z+    GetIntegerv      1    Max. no. of single-precision 7.14
+                                                                multiply-add operations per
+                                                                clock per shader core
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None.
+
+Issues
+
+    None.
+
+Revision History
+
+    Revision 1, 2023/11/23
+      - Initial revision.

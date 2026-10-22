@@ -1,0 +1,18 @@
+#version 460
+#extension GL_EXT_descriptor_heap : require
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_shader_image_load_formatted : require
+
+layout(location = 0) out vec4 FragColor;
+layout(descriptor_heap, std430) buffer SSBO
+{
+    vec4 data[];
+} spvSSBO_23ResourceHeap[];
+
+
+void main()
+{
+    FragColor = vec4(0.0);
+    FragColor += vec4(float(int(uint(spvSSBO_23ResourceHeap[2].data.length()))));
+}
+

@@ -1,0 +1,698 @@
+Name
+
+    NV_EGL_stream_consumer_external
+
+Name Strings
+
+    GL_NV_EGL_stream_consumer_external
+
+Contributors
+
+    Acorn Pooley
+
+Contacts
+
+    Acorn Pooley, NVIDIA Corporation (apooley 'at' nvidia.com)
+
+Status
+
+    DRAFT
+
+Version
+
+    Version 3, July 19, 2012
+
+Number
+
+    OpenGL ES Extension #104
+
+Dependencies
+
+    Requires OpenGL ES 1.1 or OpenGL ES 2.0.
+
+    Requires EGL 1.2
+
+    Requires the EGL_KHR_stream and EGL_NV_stream_consumer_gltexture
+    extensions.  (Also requires any EGL stream_producer extension to
+    be useful.)
+
+    This extension is written based on the wording of the OpenGL ES
+    2.0 specification, the OpenGL ES Shading Language version 1.0, the
+    EGL_KHR_stream extension, and the EGL_NV_stream_consumer_gltexture
+    extension.  On an OpenGL ES 2.0 implementation, ignore sections
+    which are added only to the OpenGL ES 1.1 specification.
+
+    This extension is also written based on the wording of the OpenGL
+    ES 1.1 specification.  On an OpenGL ES 1.X implementation, ignore
+    sections which are added only to the OpenGL ES 2.0 or OpenGL ES
+    Shading Language specification.  Also ignore all mention of
+    MAX_VERTEX_TEXTURE_IMAGE_UNITS, and
+    MAX_COMBINED_TEXTURE_IMAGE_UNITS.
+
+    This extension borrows concepts and function names from the
+    GL_OES_EGL_image_external extension.  This extension is compatible
+    with, but does not require, the GL_OES_EGL_image_external
+    extension.  The presence of the GL_OES_EGL_image_external
+    extension affects the wording of this extension (and vice versa)
+    as described in this (the GL_NV_EGL_stream_consumer_external)
+    extension.
+
+Overview
+
+    This extension provides a mechanism for streaming image frames
+    into a GL texture.  This extension defines a new texture target,
+    TEXTURE_EXTERNAL_OES (which is else defined in the
+    GL_OES_EGL_image_external extension).  This texture target can
+    only be specified as being the consumer of an EGLStream.  (If the
+    GL_OES_EGL_image_external extension is present it may
+    alternatively be specified from an EGLImage as described in that
+    extension.)
+    
+    There is no support for most of the functions that manipulate
+    other texture targets (e.g. you cannot use gl*Tex*Image*()
+    functions with TEXTURE_EXTERNAL_OES).  Also, TEXTURE_EXTERNAL_OES
+    targets never have more than a single LOD level.  Because of these
+    restrictions, it is possible to bind EGLStreams which have
+    internal formats not otherwise supported by OpenGL ES.  For
+    example some implementations may allow EGLStreams with planar or
+    interleaved YUV data to be GLES texture target siblings.  It is up
+    to the implementation exactly what formats are accepted.
+
+Glossary
+
+    Please see the EGL_KHR_stream specification for a glossary of
+    terms used by this specification.
+
+New Types
+
+    /* (OpenGL ES 2.x only)
+     * New sampler type allowed by the OpenGL ES Shading Language when
+     *      #extension GL_NV_EGL_stream_consumer_external
+     * is used, also available if GL_OES_EGL_image_external is
+     * supported and
+     *      #extension GL_OES_EGL_image_external
+     * is used.
+     */
+    samplerExternalOES
+
+New Tokens
+
+     Accepted as a target in the <target> parameter of BindTexture:
+
+        TEXTURE_EXTERNAL_OES                                0x8D65
+
+    (OpenGL ES 2.x only) Returned in the <type> parameter of GetActiveUniform:
+        SAMPLER_EXTERNAL_OES                                0x8D66
+
+    Accepted as <value> in GetIntegerv() and GetFloatv() queries:
+        TEXTURE_BINDING_EXTERNAL_OES                        0x8D67
+
+    Accepted as <value> in GetTexParameter*() queries:
+        REQUIRED_TEXTURE_IMAGE_UNITS_OES                    0x8D68
+    
+
+Additions to Chapter 3 of the OpenGL 1.1 or OpenGL 2.0 Specification
+
+    - For OpenGL ES 2.0 add a new section: "3.7.14 External Textures,"
+    which follows section "3.7.13 Texture Objects."  For OpenGL ES 1.1
+    add the new section after section "3.7.11 Texture Objects." If the
+    GL_OES_EGL_image_external extension is also present, then skip
+    this addition (use section "3.7.14 External Textures," from that
+    extension as-is).  If the GL_OES_EGL_image_external extension is
+    not present then insert it as follows (this is a subset of the
+    section "3.7.14 External Textures" from
+    GL_OES_EGL_image_external).
+
+        "3.7.14 External Textures
+
+        External textures cannot be used with TexImage2D,
+        TexSubImage2D, CompressedTexImage2D, CompressedTexSubImage2D,
+        CopyTexImage2D, or CopyTexSubImage2D, and an INVALID_ENUM
+        error will be generated if this is attempted.  Their default
+        min filter is LINEAR.  It is an INVALID_ENUM error to set the
+        min filter value to anything other than LINEAR or NEAREST.
+        The default s and t wrap modes are CLAMP_TO_EDGE and it is an
+        INVALID_ENUM error to set the wrap mode to any other value.
+        (For OpenGL ES 1.x only: The texture parameter GENERATE_MIPMAP
+        is always FALSE, and setting it to any other value generates
+        an INVALID_ENUM error.  (For OpenGL ES 2.x only: Calling
+        GenerateMipmaps with <target> set to TEXTURE_EXTERNAL_OES
+        results in an INVALID_ENUM.)
+
+        Each TEXTURE_EXTERNAL_OES texture object may require up to 3
+        texture image units for each texture unit to which it is
+        bound.  The number of texture image units required by a bound
+        texture object can be queried using GetTexParameteriv() with
+        <target> set to the texture target in question, <value> set to
+        REQUIRED_TEXTURE_IMAGE_UNITS_OES, and ActiveTexture set to the
+        texture unit to which the texture object is bound.  When
+        <target> is set to TEXTURE_EXTERNAL_OES this value will be
+        between 1 and 3 (inclusive).  For other valid texture targets
+        this value will always be 1.  Note that, when a
+        TEXTURE_EXTERNAL_OES texture object is bound, the number of
+        texture image units required by a single texture unit may be
+        1, 2, or 3, while for other texture objects each texture unit
+        requires exactly 1 texture image unit.
+
+        (For OpenGL ES 1.x only) DrawArrays and DrawElements will fail
+        and generate an INVALID_OPERATION error if the number of
+        texture image units required is greater than the number
+        available.  The number of required texture image units is
+        equal to the sum of the requirements for each enabled texture
+        unit.  For each texture unit the requirement is the value
+        returned by GetTexParameteriv() when <value> is set to
+        REQUIRED_TEXTURE_IMAGE_UNITS_OES, <target> is set to the
+        target which is enabled, and ActiveTexture has been set to the
+        texture unit in question.
+
+        (For OpenGL ES 2.x only) DrawArrays and DrawElements will fail
+        and generate an INVALID_OPERATION error if the number of
+        texture image units required is greater than the number
+        available.  The number of required texture image units for
+        each stage (fragment or vertex) is equal to the sum of the
+        requirements for each sampler referenced by the stage.  A
+        sampler is considered referenced if its location (returned by
+        GetUniformLocation) is not -1.  For each referenced sampler
+        the requirement is the value returned by GetTexParameteriv()
+        when <value> is set to REQUIRED_TEXTURE_IMAGE_UNITS_OES,
+        <target> is set to the target corresponding to the sampler
+        type, and ActiveTexture has been set to the texture unit
+        corresponding to the value of the sampler uniform.  The
+        condition can be detected by calling ValidateProgram.
+
+        (For OpenGL ES 2.x only) A shader that uses external texture
+        samplers may require some number of hidden uniform variables
+        to implement the conversion from YUV to RGB, and this may
+        reduce the amount of space available for uniforms defined by
+        the shader program.  This may cause a shader program which was
+        working to stop working when a different external texture is
+        used (i.e. when Uniform1i or BindTexture is called).  If there
+        are not enough uniforms available then calls to DrawArrays or
+        DrawElements will fail and generate an INVALID_OPERATION
+        error.  This condition can be detected by calling
+        ValidateProgram.
+
+        Sampling an external texture will return an RGBA vector in the
+        same colorspace as the source image frame.  If the source
+        image frame is stored in YUV (or some other basis) then the
+        YUV values will be transformed to RGB values. (But these RGB
+        values will be in the same colorspace as the original image.
+        Colorspace here includes the linear or non-linear encoding of
+        the samples. For example, if the original image is in the sRGB
+        color space then the RGB value returned by the sampler will
+        also be sRGB, and if the original image is stored in ITU-R
+        Rec. 601 YV12 then the RGB value returned by the sampler will
+        be an RGB value in the ITU-R Rec. 601 colorspace.) The
+        parameters of the transformation from one basis (e.g.  YUV) to
+        RGB (color conversion matrix, sampling offsets, etc) are taken
+        from the producer of the EGLStream that is associated with the
+        external texture.
+        
+        If the image frames in the EGLStream contain alpha values then
+        the value of the alpha component returned is taken from the
+        image; otherwise the alpha component is 1.0.  
+
+
+    - In both OpenGL ES 1.x and OpenGL ES 2.0 add a new subsection after
+      the previously described "3.7.14 External Textures" section:
+
+        "3.7.14.1 External Textures as Stream Consumers
+
+        To use a TEXTURE_EXTERNAL_OES texture as the consumer of an
+        EGLStream, bind the texture to the active texture unit, and
+        call eglStreamConsumerGLTextureExternalNV() as described in the
+        EGL_NV_stream_consumer_gltexture extension.  The EGLStream
+        must be in the EGL_STREAM_STATE_CREATED_KHR state (i.e. it
+        must not be associated with any consumer or producer yet).
+
+        The width, height, format, type, internalformat, border, and
+        image data of the TEXTURE_EXTERNAL_OES texture will all be
+        determined based on the specified EGLStream <stream> once
+        <stream> is associated with a producer.  Until <stream> is
+        associated with a producer these attributes are undefined.
+        Once <stream> is associated with a producer and the producer
+        has inserted one (or more) images into <stream> (as described
+        in the EGL_NV_stream_consumer_gltexture extension) these
+        attributes are determined (internally by the implementation),
+        but they are not exposed to the GL client and there is no way
+        to query their values.
+
+        (Add this paragraph only if OES_EGL_image_external is also
+        supported.) If the TEXTURE_EXTERNAL_OES texture is already
+        bound to an EGLImage then that binding is broken when the
+        texture becomes the consumer of <stream> (i.e. when
+        eglStreamConsumerGLTextureNV() returns successfully). 
+        
+        The TEXTURE_EXTERNAL_OES texture remains the consumer of
+        <stream> until the first of any of these events occur:
+            - The texture is associated with a different EGLStream
+              (with a later call to eglStreamConsumerGLTextureNV).
+            - The texture is bound to an EGLImage (with a call to
+              EGLImageTargetTexture2DOES).
+            - The texture is deleted in a call to DeleteTextures().
+        When any of these events occurs the texture is no longer the
+        consumer of <stream>, and <stream> transitions to the
+        EGL_STREAM_STATE_DISCONNECTED_KHR state (as described in the
+        EGL_NV_stream_consumer_gltexture and EGL_KHR_stream
+        extensions).
+        
+        Sampling an external texture which is not the consumer of any
+        EGLStream and is not associated with any EGLImage sibling will
+        return a sample value of (0,0,0,1). 
+
+        Sampling an external texture which is the consumer of an
+        EGLStream will return a sample value of (0,0,0,1) unless an
+        image frame is currently 'latched' into the texture.  An image
+        frame is 'latched' into the texture by any successful call to
+        eglStreamConsumerAcquireNV (as described in the
+        EGL_NV_stream_consumer_gltexture extension).  A call to
+        eglStreamConsumerReleaseNV() unlatches the image frame from
+        the texture.
+
+        Any context which is bound to the thread that
+        eglStreamConsumerAcquireNV and eglStreamConsumerReleaseNV is
+        called from will "see" the affect of the 'latching' or
+        'unlatching' immediately.  Contexts not bound to that thread
+        may or may not "see" the effects of latching until the
+        texture is bound (or re-bound) to the context by calling
+        glBindTexture.
+        
+
+Changes to section "2.10.4 Shader Variables" of the OpenGL ES 2.0
+specification (ignore for OpenGL ES 1.x)
+
+    - In the subsection "Uniform Variables" paragraph 13, last sentence, add
+
+        "SAMPLER_EXTERNAL_OES"
+    to the list of types that can be returned.
+    
+Changes to section "2.10.5 Shader Execution" of the OpenGL ES 2.0
+specification (ignore for OpenGL ES 1.x)
+
+    - In the subsection "Validation", add to the bullet points in the second
+      paragraph:
+
+        "- the number of texture image units required is greater than
+           the number available (see REQUIRED_TEXTURE_IMAGE_UNITS_OES,
+           MAX_COMBINED_TEXTURE_IMAGE_UNITS, MAX_VERTEX_TEXTURE_IMAGE_UNITS,
+           and MAX_TEXTURE_IMAGE_UNITS).
+
+        - the number of uniforms required to implement the shader program is
+           greater than the number available."
+
+Changes to section "3.7.5 Texture Parameters" of the OpenGL ES 1.1 specification
+
+    - Add to the end of the section a new paragraph:
+
+            "When <target> is TEXTURE_EXTERNAL_OES only NEAREST and LINEAR are
+        accepted as TEXTURE_MIN_FILTER, only CLAMP_TO_EDGE is accepted as
+        TEXTURE_WRAP_S and TEXTURE_WRAP_T, and only FALSE is accepted as
+        GENERATE_MIPMAP.  Attempting to set other values for
+        TEXTURE_MIN_FILTER, TEXTURE_WRAP_S, TEXTURE_WRAP_T, or GENERATE_MIPMAP
+        will result in an INVALID_ENUM error.
+
+Changes to section "3.7.4 Texture Parameters" of the OpenGL ES 2.0 Specification
+
+    - Add to the end of the section a new paragraph:
+
+            "When <target> is TEXTURE_EXTERNAL_OES only NEAREST and LINEAR are
+        accepted as TEXTURE_MIN_FILTER and only CLAMP_TO_EDGE is accepted as
+        TEXTURE_WRAP_S and TEXTURE_WRAP_T.  Attempting to set other values for
+        TEXTURE_MIN_FILTER, TEXTURE_WRAP_S, or TEXTURE_WRAP_T will result in
+        an INVALID_ENUM error.
+
+Changes to section "3.7.10 Texture State" of the OpenGL ES 1.1 Specification
+and section "3.7.12 Texture State" of the OpenGL ES 2.0 Specification
+
+    - Add an additional sentence at the end of the section:
+
+            "In the initial state of a TEXTURE_EXTERNAL_OES texture object,
+        the value assigned to TEXTURE_MIN_FILTER and TEXTURE_MAG_FILTER is
+        LINEAR, and the s and t wrap modes are both set to
+        CLAMP_TO_EDGE."
+
+Changes to section "3.7.11 Mipmap Generation" of the OpenGL ES 2.0 Specification
+(ignore for OpenGL ES 1.x)
+
+    - Add two additional paragraphs to the end of the section:
+
+            "When <target> is set to TEXTURE_EXTERNAL_OES, GenerateMipmap
+        always fails and generates an INVALID_ENUM error."
+
+Changes to section "3.7.11 Texture Objects" of the OpenGL ES 1.1 specification
+(ignore for OpenGL ES 2.x)
+
+    - Modify this section as follows: (changed lines marked with *, and added
+      lines are marked with +)
+
+*           "In addition to the default textures TEXTURE_2D and
+*       TEXTURE_EXTERNAL_OES, named two-dimensional and external texture
+        objects can be created and operated upon.  The name space for texture
+        objects is the unsigned integers, with zero reserved by the GL.
+
+            A texture object is created by binding an unused name to
+*       TEXTURE_2D or TEXTURE_EXTERNAL_OES. The binding is effected by calling
+               void BindTexture( enum target, uint texture );
+*       with target set to the desired texture target and texture set to the
+        unused name. The resulting texture object is a new state vector,
+        comprising all the state values listed in section 3.7.10, set to the
++       same initial values. If the new texture object is bound to TEXTURE_2D
++       or TEXTURE_EXTERNAL_OES it is and remains a two-dimensional or
++       external texture respectively until it is deleted.
+
+            BindTexture may also be used to bind an existing texture object to
+*       TEXTURE_2D or TEXTURE_EXTERNAL_OES. If the bind is successful no
+        change is made to the state of the bound texture object, and any
+        previous binding to target is broken.
+
+            While a texture object is bound, GL operations on the target to
+        which it is bound affect the bound object, and queries of the target
+        to which it is bound return state from the bound object. If texture
+        mapping is enabled, the state of the bound texture object directs the
+        texturing operation. 
+
+*       In the initial state, TEXTURE_2D and TEXTURE_EXTERNAL_OES have
+*       two-dimensional and external texture state vectors respectively
+*       associated with them.  In order that access to these initial textures
+*       not be lost, they are treated as texture objects all of whose names
+*       are 0. The initial two-dimensional and external texture are therefore
+*       operated upon, queried, and applied as TEXTURE_2D or
+*       TEXTURE_EXTERNAL_OES respectively while 0 is bound to the
+*       corresponding targets.
+
+            Texture objects are deleted by calling
+               void DeleteTextures( sizei n, uint *textures );
+        textures contains n names of texture objects to be deleted. After a
+        texture object is deleted, it has no contents, and its name is again
+        unused. If a texture that is currently bound to the target TEXTURE_2D
+*       or TEXTURE_EXTERNAL_OES is deleted, it is as though BindTexture had
+        been executed with the same target and texture zero. Unused names in
+        textures are silently ignored, as is the value zero.
+
+            The command
+               void GenTextures( sizei n, uint *textures );
+        returns n previously unused texture object names in textures. These
+        names are marked as used, for the purposes of GenTextures only, but
+        they acquire texture state only when they are first bound, just as if
+        they were unused.
+
+            The texture object name space, including the initial texture
+        object, is shared among all texture units. A texture object may be
+        bound to more than one texture unit simultaneously. After a texture
+        object is bound, any GL operations on that target object affect any
+        other texture units to which the same texture object is bound.
+
+            Texture binding is affected by the setting of the state
+        ACTIVE_TEXTURE.
+
+            If a texture object is deleted, it is as if all texture units which
+        are bound to that texture object are rebound to texture object zero.
+
+Changes to section "3.7.13 Texture Objects" of the OpenGL ES 2.0 specification
+(ignore for OpenGL ES 1.x)
+
+    - Modify this section as follows: (changed lines marked with *, and added
+      lines are marked with +)
+
+*           "In addition to the default textures TEXTURE_2D, TEXTURE_CUBE_MAP,
+*       and TEXTURE_EXTERNAL_OES, named two-dimensional, cube map, and
+        external texture objects can be created and operated upon.  The name
+        space for texture objects is the unsigned integers, with zero reserved
+        by the GL.
+
+            A texture object is created by binding an unused name to
+*       TEXTURE_2D, TEXTURE_CUBE_MAP, or TEXTURE_EXTERNAL_OES. The binding is
+        effected by calling
+               void BindTexture( enum target, uint texture );
+        with target set to the desired texture target and texture set to the
+        unused name. The resulting texture object is a new state vector,
+        comprising all the state values listed in section 3.7.12, set to the
+        same initial values. If the new texture object is bound to TEXTURE_2D,
+*       TEXTURE_CUBE_MAP, or TEXTURE_EXTERNAL_OES it is and remains a
+*       two-dimensional, cube map, or external texture respectively until it
+        is deleted.
+
+            BindTexture may also be used to bind an existing texture object to
+*       either TEXTURE_2D, TEXTURE_CUBE_MAP, or TEXTURE_EXTERNAL_OES. The error
+        INVALID_OPERATION is generated if an attempt is made to bind a texture
+*       object of different target than the specified target. If the bind is
+        successful no change is made to the state of the bound texture object,
+        and any previous binding to target is broken.
+
+            While a texture object is bound, GL operations on the target to
+        which it is bound affect the bound object, and queries of the target to
+        which it is bound return state from the bound object. If texture
+        mapping is enabled, the state of the bound texture object directs the
+        texturing operation.
+
+*           In the initial state, TEXTURE_2D, TEXTURE_CUBE_MAP, and
+*       TEXTURE_EXTERNAL_OES have two-dimensional, cube map, and external
+        texture state vectors respectively associated with them.  In order
+        that access to these initial textures not be lost, they are treated as
+        texture objects all of whose names are 0. The initial two-dimensional,
+*       cube map, and external texture are therefore operated upon, queried,
+*       and applied as TEXTURE_2D, TEXTURE_CUBE_MAP, or TEXTURE_EXTERNAL_OES
+        respectively while 0 is bound to the corresponding targets. 
+
+            Texture objects are deleted by calling
+               void DeleteTextures( sizei n, uint *textures );
+        textures contains n names of texture objects to be deleted. After a
+        texture object is deleted, it has no contents or dimensionality, and
+        its name is again unused. If a texture that is currently bound to one
+*       of the targets TEXTURE_2D, TEXTURE_CUBE_MAP, or TEXTURE_EXTERNAL_OES
+        is deleted, it is as though BindTexture had been executed with the
+        same target and texture zero.  Unused names in textures are silently
+        ignored, as is the value zero.
+
+            The command
+               void GenTextures( sizei n, uint *textures );
+        returns n previously unused texture object names in textures. These
+        names are marked as used, for the purposes of GenTextures only, but
+        they acquire texture state only when they are first bound, just as if
+        they were unused.
+
+            The texture object name space, including the initial texture
+        object, is shared among all texture units. A texture object may be
+        bound to more than one texture unit simultaneously. After a texture
+        object is bound, any GL operations on that target object affect any
+        other texture units to which the same texture object is bound.
+
+            Texture binding is affected by the setting of the state
+        ACTIVE_TEXTURE.
+
+            If a texture object is deleted, it is as if all texture units which
+        are bound to that texture object are rebound to texture object zero.
+
+Changes to section "3.7.13 Texture Application" of the OpenGL ES 1.1
+specification (ignore for OpenGL ES 2.x)
+
+    - Replace the first sentence of the first paragraph with:
+
+            "Texturing is enabled or disabled using the generic Enable and
+        Disable commands, with the symbolic constant TEXTURE_2D or
+        TEXTURE_EXTERNAL_OES to enable or disable texturing with the
+        TEXTURE_2D or TEXTURE_EXTERNAL_OES texture target, respectively.  If
+        TEXTURE_EXTERNAL_OES is enabled it takes precedence over TEXTURE_2D, 
+        TEXTURE_CUBE_MAP_OES, TEXTURE_RECTANGLE_ARB, and
+        TEXTURE_RECTANGLE_NV."
+
+Changes to section "3.8.2 Shader Execution" of the OpenGL ES 2.0
+specification (ignore for OpenGL ES 1.x)
+
+    - Add to the end of the last paragraph of the subsection "Texture Access"
+
+        "The REQUIRED_TEXTURE_IMAGE_UNITS_OES parameter can change based on the
+        number of external textures which are currently bound (see section
+        3.7.14)."
+
+Changes to section "6.1.3 Enumerated Queries" of the OpenGL ES 1.1 specification
+
+    - Change:
+        "...TEXTURE_2D..."
+      to
+        "...TEXTURE_2D or TEXTURE_EXTERNAL..."
+      in the last paragraph.
+
+Changes to section "6.1.3 Enumerated Queries" of the OpenGL ES 2.0 specification
+
+    - Change:
+        "...TEXTURE_2D or TEXTURE_CUBE_MAP..."
+      to
+        "...TEXTURE_2D, TEXTURE_CUBE_MAP, or TEXTURE_EXTERNAL..."
+      in the second paragraph.
+
+
+Changes to section "6.2 State Tables" of the OpenGL ES 1.1 specification
+
+    - Add to "Table 6.13 Textures (state per texture unit and binding point)"
+
+        +-------------------+-------+-------------+-------+------------------+
+        | TEXTURE_BINDING_- | 8*xZ+ | GetIntegerv | 0     | Texture object   |
+        |   EXTERNAL_OES    |       |             |       | bound to         |
+        |                   |       |             |       | TEXTURE_-        |
+        |                   |       |             |       |    EXTERNAL_OES  |
+        +-------------------+-------+-------------+-------+------------------+
+        | TEXTURE_-         | 2*xB  | IsEnabled   | False | True if external |
+        |   EXTERNAL_OES    |       |             |       | texturing is     |
+        |                   |       |             |       | enabled          |
+        +-------------------+-------+-------------+---+----------------------+
+
+    - Add to "Table 6.14 Textures (state per texture object)"
+
+        +--------------------+-------+-----------------+---+----------------+
+        | REQUIRED_TEXTURE_- | n*xZ3 | GetTexParameter | 1 | Number of      |
+        |   IMAGE_UNITS_OES  |       |                 |   | texture image  |
+        |                    |       |                 |   | units required |
+        |                    |       |                 |   |    by texture  |
+        +--------------------+-------+-----------------+---+----------------+
+
+Changes to section "6.2 State Tables" of the OpenGL ES 2.0 specification
+
+    - Add to "Table 6.7 Textures (state per texture unit and binding point)"
+
+        +-------------------+-------+-------------+-------+------------------+
+        | TEXTURE_BINDING_- | 8*xZ+ | GetIntegerv | 0     | Texture object   |
+        |   EXTERNAL_OES    |       |             |       | bound to         |
+        |                   |       |             |       | TEXTURE_-        |
+        |                   |       |             |       |    EXTERNAL_OES  |
+        +-------------------+-------+-------------+-------+------------------+
+
+    - Add to "Table 6.8 Textures (state per texture object)"
+
+        +--------------------+-------+-----------------+---+----------------+
+        | REQUIRED_TEXTURE_- | n*xZ3 | GetTexParameter | 1 | Number of      |
+        |   IMAGE_UNITS_OES  |       |                 |   | texture image  |
+        |                    |       |                 |   | units required |
+        |                    |       |                 |   |    by texture  |
+        +--------------------+-------+-----------------+---+----------------+
+
+Changes to section 3.7 of the OpenGL ES Shading Language specification
+
+    - Add to the list of keywords:
+
+        "samplerExternalOES"
+
+Changes to section 4.1 of the OpenGL ES Shading Language specification
+
+    - Add to the list of basic types:
+
+        "samplerExternalOES   a handle for accessing an external texture"
+
+Changes to section 4.5.3 of the OpenGL ES Shading Language specification
+    
+    - Add to the list of "vertex language has the following predeclared
+    globally scoped default precision statements:"
+
+        "precision lowp samplerExternalOES;"
+
+    - Add to the list of "fragment language has the following predeclared
+    globally scoped default precision statements:"
+
+        "precision lowp samplerExternalOES;"
+
+Changes to section 8.7 of the OpenGL ES Shading Language specification
+
+    - Add to the table the following sampler functions:
+
+        "vec4 texture2D(
+                    samplerExternalOES sampler,
+                    vec2 coord)
+        vec4 texture2DProj(
+                    samplerExternalOES sampler,
+                    vec3 coord)
+        vec4 texture2DProj(
+                    samplerExternalOES sampler,
+                    vec4 coord)"
+
+
+Changes to section 9 of the OpenGL ES Shading Language specification
+
+    - Add to token list:
+
+        "SAMPLEREXTERNAL"
+
+    - Add following "type_specifier_no_prec:"
+
+        "SAMPLEREXTERNAL"
+
+Changes to section "A.7 Counting of Varyings and Uniforms" of the OpenGL ES
+Shading Language specification
+
+    - Change the first sentence of the last paragraph to
+
+        "Part of the storage may be reserved by an implementation for its own
+        use e.g. for computation of transcendental functions or conversion of
+        external textures."
+
+
+Issues
+
+    In addition to issues below, see issues from the
+    GL_OES_EGL_image_external extension.  
+
+    1.  Is this extension needed, or is the
+        EGL_NV_stream_consumer_gltexture extension plus the existing
+        GL_OES_EGL_image_external extension enough to cover this?
+
+        SUGGESTION: yes
+
+        DISCUSSION: The EGL_NV_stream_consumer_gltexture and
+        GL_OES_EGL_image_external extensions together define all the
+        types, tokens, and entry points needed to expose this
+        functionality.  The GL_OES_EGL_image_external extension fully
+        describes how external textures work.  The
+        EGL_NV_stream_consumer_gltexture extension fully describes how
+        to associate an EGLStream with an external texture.
+
+        However, there were questions about exactly how it was
+        supposed to work.  This extension clarifies some of those
+        questions.
+
+        Also, this allows the GL driver to expose the extension
+        independent of the EGL driver.  This might be important in
+        situations where 2 GLES drivers exist on the same system, one
+        of which supports this functionality and the other not.
+
+    2.  Should this be an NV, EXT, or OES extension?
+
+        It was originally drafted as OES, but then quickly changed to
+        NV as the policy in the ES group is to not draft extensions
+        as OES until they are ratified.  The assumption is that this
+        will be an OES if the ES group agrees with it, or possibly an
+        EXT otherwise.  For now, while it is a draft, it will be NV.
+
+    3.  Why are the new enumerants suffixed with _OES if this is an NV
+        extension?
+
+        SUGGESTION: These enumerants are all already added (with _OES
+        suffixes) by the GL_OES_EGL_image_external extension.  Adding
+        the same enums with NV suffix would be confusing.
+
+Dependencies on OES_EGL_image_external.
+
+    This extension builds on the ideas of the OES_EGL_image_external
+    extension.  If both are supported then this extension adds
+    language to that extension.  If this extension is supported
+    without that one then some parts of that extension get included by
+    this extension.  This is mentioned inline in this extension.  Some
+    of the sections added by this extension are verbatim copies from
+    that extension.  If both are supported these sections should only
+    be added once.
+
+Dependencies on EGL_KHR_image_base and EGL_KHR_image
+
+    This extension neither depends on nor affects the wording of
+    EGL_KHR_image_base or EGL_KHR_image.  This extension borrows ideas
+    from the EGLImage related extensions, but does not require them.
+
+Revision History
+
+    #3 - (July 19, 2012) Acorn Pooley
+         Fix name used with #extension in glsl.
+    #2 - (Aug 3, 2011) Acorn Pooley
+         Rename from GL_OES_EGL_stream_consumer_external to
+         GL_NV_EGL_stream_consumer_external
+    #1 - (Aug 2, 2011) Acorn Pooley
+         Original draft
+
+# vim:ai:ts=4:sts=4:expandtab:textwidth=70

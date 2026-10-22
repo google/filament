@@ -1,0 +1,35 @@
+name: iOS
+permissions:
+  contents: read
+
+on:
+  workflow_run:
+    # iOS is 10x expensive to run on GitHub machines, so only run if we know something else passed
+    workflows: ["Wasm Build"]
+    types:
+      - completed
+
+jobs:
+  build:
+    runs-on: macos-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+        - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+          with:
+            persist-credentials: false
+        - uses: lukka/get-cmake@fffaaafeea488556c2c12dad60690008bc1caacb # v4.4.2
+        - name: Download dependencies
+          run: python3 utils/git-sync-deps
+        # NOTE: The MacOS SDK ships universal binaries. CI should reflect this.
+        - name: Configure Universal Binary for iOS
+          run: |
+            cmake -S . -B build \
+            -D CMAKE_BUILD_TYPE=Debug \
+            -D CMAKE_SYSTEM_NAME=iOS \
+            "-D CMAKE_OSX_ARCHITECTURES=arm64;x86_64" \
+            -G Ninja
+          env:
+            # Linker warnings as errors
+            LDFLAGS: -Wl,-fatal_warnings
+        - run: cmake --build build
+        - run: cmake --install build --prefix /tmp

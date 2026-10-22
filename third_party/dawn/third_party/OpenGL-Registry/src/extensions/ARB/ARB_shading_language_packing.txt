@@ -1,0 +1,277 @@
+Name
+
+    ARB_shading_language_packing
+
+Name Strings
+
+    GL_ARB_shading_language_packing
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Contributors
+
+    Barthold Lichtenbelt, NVIDIA
+    Chris Dodd, NVIDIA
+    Daniel Koch, Transgaming
+    Eric Werness, NVIDIA
+    Greg Roth, NVIDIA
+    Jeff Bolz, NVIDIA
+    Piers Daniell, NVIDIA
+
+Notice
+
+    Copyright (c) 2011-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on 2011/06/20.
+    Approved by the Khronos Promoters on 2011/07/29.
+
+Version
+
+    Last Modified Date:         06/13/2011
+    Revision:                   5
+
+Number
+
+    ARB Extension #116
+
+Dependencies
+
+    This extension is written against version 4.1 (revision 09) of the OpenGL
+    Shading Language Specification.
+
+Overview
+
+    This extension provides the GLSL built-in functions to convert a 32-bit
+    unsigned integer holding a pair of 16-bit floating-point values to or from
+    a two-component floating-point vector (vec2).  
+
+    This mechanism allows GLSL shaders to read and write 16-bit floating-point
+    encodings (via 32-bit unsigned integers) without introducing a full set of
+    16-bit floating-point data types.
+
+    This extension also adds the GLSL built-in packing functions included in
+    GLSL version 4.00 and the ARB_gpu_shader5 extension which pack and unpack
+    vectors of small fixed-point data types into a larger scalar. By putting
+    these packing functions in this separate extension it allows
+    implementations to provide these functions in hardware that supports them
+    independent of the other ARB_gpu_shader5 features.
+    
+    In addition to the packing functions from ARB_gpu_shader5 this extension
+    also adds the missing [un]packSnorm2x16 for completeness.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.     
+
+Modifications to the OpenGL API Specification
+
+    None.
+
+Modifications to The OpenGL Shading Language Specification, Version 4.10
+(Revision 6)
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_ARB_shading_language_packing : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_ARB_shading_language_packing    1
+
+    Modify Section 8.4, Floating-Point Pack and Unpack Functions
+    
+    (add support for general packing functions)
+
+    Syntax:
+
+      uint      packUnorm2x16(vec2 v);
+      uint      packSnorm2x16(vec2 v);
+      uint      packUnorm4x8(vec4 v);
+      uint      packSnorm4x8(vec4 v);
+
+      vec2      unpackUnorm2x16(uint v);
+      vec2      unpackSnorm2x16(uint v);
+      vec4      unpackUnorm4x8(uint v);
+      vec4      unpackSnorm4x8(uint v);
+
+    The functions packUnorm2x16(), packSnorm2x16(), packUnorm4x8(), and
+    packSnorm4x8() first convert each component of a two- or four-component
+    vector of normalized floating-point values into 8- or 16-bit integer
+    values.  Then, the results are packed into a 32-bit unsigned integer.
+    The first component of the vector will be written to the least
+    significant bits of the output; the last component will be written to
+    the most significant bits.
+
+    The functions unpackUnorm2x16(), unpackSnorm2x16(), unpackUnorm4x8(),
+    and unpackSnorm4x8() first unpacks a single 32-bit unsigned integer into
+    a pair of 16-bit unsigned integers, a pair of 16-bit signed integers,
+    four 8-bit unsigned integers, or four 8-bit signed integers.  Then, each
+    component is converted to a normalized floating-point value to generate a
+    two- or four-component vector.  The first component of the vector will be
+    extracted from the least significant bits of the input; the last
+    component will be extracted from the most significant bits.
+
+    The conversion between fixed- and normalized floating-point values will be
+    performed as below.
+
+      function          conversion
+      ---------------   -----------------------------------------------------
+      packUnorm2x16     fixed_val = round(clamp(float_val, 0, +1) * 65535.0);
+      packSnorm2x16     fixed_val = round(clamp(float_val, -1, +1) * 32767.0);
+      packUnorm4x8      fixed_val = round(clamp(float_val, 0, +1) * 255.0);
+      packSnorm4x8      fixed_val = round(clamp(float_val, -1, +1) * 127.0);
+      unpackUnorm2x16   float_val = fixed_val / 65535.0;
+      unpackSnorm2x16   float_val = clamp(fixed_val / 32767.0, -1, +1);
+      unpackUnorm4x8    float_val = fixed_val / 255.0;
+      unpackSnorm4x8    float_val = clamp(fixed_val / 127.0, -1, +1);
+
+    (add support for 16-bit floating-point packing and unpacking functions)
+
+    Syntax:
+
+      uint      packHalf2x16(vec2 v);
+      vec2      unpackHalf2x16(uint v);
+
+    The function packHalf2x16() returns an unsigned integer obtained by
+    converting the components of a two-component floating-point vector to the
+    16-bit floating-point representation found in the OpenGL Specification,
+    and then packing these two 16-bit integers into a 32-bit unsigned integer.
+    The first vector component specifies the 16 least-significant bits of the
+    result; the second component specifies the 16 most-significant bits.
+
+    The function unpackHalf2x16() returns a two-component floating-point
+    vector with components obtained by unpacking a 32-bit unsigned integer into a
+    pair of 16-bit values, interpreting those values as 16-bit floating-point
+    numbers according to the OpenGL Specification, and converting them to
+    32-bit floating-point values.  The first component of the vector is
+    obtained from the 16 least-significant bits of v; the second
+    component is obtained from the 16 most-significant bits of v.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    (1) What should this extension be called?
+
+      RESOLVED:  Proposed name is "ARB_shading_language_pack2h" (i.e., pack
+      two half components).
+
+    (2) This functionality is also provided in the NV_gpu_shader5 extension.
+    Why provide a separate extension?
+
+      RESOLVED:  This extension provides an additional pack/unpack function on
+      top of those added in GLSL 4.00 without requiring that implementors
+      provide the entirety of NV_gpu_shader5.
+
+    (3) Should we provide a different set of function names to disambiguate
+    from the similar NV_gpu_shader5 versions (which use the "f16vec2" type to
+    represent a pair of fp16 values)?  If not, what happens if both this
+    extension and NV_gpu_shader5 are enabled?
+
+      RESOLVED:  The functions in this extension will be called "packHalf2x16"
+      and "unpackHalf2x16", which matches the convention of the other
+      pack/unpack functions in GLSL 4.10 closely enough.  For example,
+      packUnorm2x16() packs a pair of 16-bit unsigned normalized integers into
+      a 32-bit unsigned integer.
+
+      Had we used the same names as in NV_gpu_shader5, there would be a
+      conflict in the definitions -- the unpacked type here is "vec2", while
+      the unpacked type in NV_gpu_shader5 is "f16vec2" (a two-component vector
+      with explicit 16-bit floating-point types).  This conflict poses a
+      problem if both extensions are enabled, and would also arise if future
+      GLSL versions chose to add explicit fp16 types.  For the pack functions,
+      an implementation supporting both versions could resolve via function
+      overloading:
+
+        uint      packFloat2x16(vec2 v);
+        uint      packFloat2x16(f16vec2 v);
+
+      Unfortunately, function overloading is not possible for the return type
+      of the pack function.  One could resolve this by providing only:
+
+        f16vec2   unpackFloat2x16(uint v);
+
+      If a shader included code like:
+
+        vec2 unpacked = unpackFloat2x16(uint_value);
+
+      the unpacked value would be returned as f16vec2 data.  However, that
+      could be implicitly converted to vec2 if implicit conversions from fp16
+      to fp32 were supported.  Such behavior would be consistent with what we
+      did for ARB_gpu_shader_fp64, where fp32 values can be implicitly
+      converted to fp64.
+
+    (4) The packing functions introduced in ARB_gpu_shader5 may be available
+    on hardware that doesn't support the other features from ARB_gpu_shader5.
+    How can an implementation expose those packing functions?
+    
+      RESOLVED: Added all the ARB_gpu_shader5 packing functions to revision
+      #5 of this spec; [un]packUnorm2x16, [un]packUnorm4x8 and
+      [un]packSnorm4x8.
+    
+    (5) Should we also provide a [un]packSnorm2x16 packing function, which
+    was not included in ARB_gpu_shader5?
+    
+      RESOLVED: Yes, these functions have been added for completeness. They
+      have been added to revision #5 of this extension and the extension has
+      been renamed from _pack2h to _packing to encompass all these packing
+      functions.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  ----------  --------  ---------------------------------------------
+     5    06/13/11    pdaniell  Rename the spec to ARB_shading_language_packing
+                                and incorporate all the packing functions into
+                                this spec, including the [un]packSnorm2x16
+                                functions, which have no extension spec.
+     
+     4    12/17/10    johnk     Put in the pack/unpack section instead of 
+                                common functions.  Change a reference to double.
+
+     3    12/12/2010  pbrown    Rename the pack/unpack functions to avoid
+                                conflict with NV_gpu_shader5 names (bug
+                                6858).  Renamed last part of extension name
+                                from "pack2f" to "pack2h" to match the 
+                                function name change.
+
+     2    11/08/2010  pbrown    Fix minor errata in the first draft (bug 
+                                6999).
+
+     1    10/20/2010  pbrown    Internal revision.

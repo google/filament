@@ -1,0 +1,321 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_2
+#define SPIRV_CROSS_CONSTANT_ID_2 1
+#endif
+const int SONE = SPIRV_CROSS_CONSTANT_ID_2;
+#ifndef SPIRV_CROSS_CONSTANT_ID_3
+#define SPIRV_CROSS_CONSTANT_ID_3 2
+#endif
+const int STWO = SPIRV_CROSS_CONSTANT_ID_3;
+const int _10 = (SONE + STWO);
+const uint _13 = (uint(_10) + 0u);
+#ifndef SPIRV_CROSS_CONSTANT_ID_5
+#define SPIRV_CROSS_CONSTANT_ID_5 1u
+#endif
+const uint UONE = SPIRV_CROSS_CONSTANT_ID_5;
+const uint _15 = (_13 + UONE);
+#ifndef SPIRV_CROSS_CONSTANT_ID_6
+#define SPIRV_CROSS_CONSTANT_ID_6 2u
+#endif
+const uint UTWO = SPIRV_CROSS_CONSTANT_ID_6;
+const uint IADD = (_15 + UTWO);
+const uint _19 = (IADD - 5u);
+const uint _28 = (uint(SONE) + 0u);
+const uint ISUB = (UTWO - _28);
+const uint IMUL = (UTWO * UTWO);
+const uint _37 = (IMUL - 3u);
+const uint UDIV = (UTWO / UTWO);
+#ifndef SPIRV_CROSS_CONSTANT_ID_4
+#define SPIRV_CROSS_CONSTANT_ID_4 -2
+#endif
+const int SNEG_TWO = SPIRV_CROSS_CONSTANT_ID_4;
+const int SDIV = (STWO / SNEG_TWO);
+const int _52 = (SDIV + 2);
+#ifndef SPIRV_CROSS_CONSTANT_ID_7
+#define SPIRV_CROSS_CONSTANT_ID_7 -3
+#endif
+const int SNEG_THREE = SPIRV_CROSS_CONSTANT_ID_7;
+const int SMOD = (STWO % SNEG_THREE);
+const int _66 = (SMOD + 2);
+const uint UMOD = (IADD % IMUL);
+const uint _73 = (UMOD - 1u);
+const uint LSHL = (IADD << ISUB);
+const uint _81 = (LSHL - 11u);
+const uint RSHL = (IADD >> ISUB);
+const uint _89 = (RSHL - 2u);
+const int _95 = int(IADD + 0u);
+const int _96 = (-_95);
+const int _97 = (-SDIV);
+const int RSHA = (_96 >> _97);
+const int _100 = (RSHA + 4);
+const bool IEQ = (IADD == ISUB);
+const int _109 = IEQ ? 2 : 1;
+const bool INEQ = (IADD != ISUB);
+const int _116 = INEQ ? 1 : 2;
+const bool ULT = (IADD < ISUB);
+const int _123 = ULT ? 2 : 1;
+const bool ULE = (IADD <= ISUB);
+const int _130 = ULE ? 2 : 1;
+const bool UGT = (IADD > ISUB);
+const int _137 = UGT ? 1 : 2;
+const bool UGE = (IADD >= ISUB);
+const int _144 = UGE ? 1 : 2;
+const bool SLT = (SMOD < 1);
+const int _151 = SLT ? 1 : 2;
+const bool SLE = (SMOD <= 1);
+const int _158 = SLE ? 1 : 2;
+const bool SGT = (SMOD > 1);
+const int _165 = SGT ? 2 : 1;
+const bool SGE = (SMOD >= 1);
+const int _172 = SGE ? 2 : 1;
+const bool LOR = (IEQ || SLT);
+const int _179 = LOR ? 1 : 2;
+const bool LAND = (IEQ && SLT);
+const int _186 = LAND ? 2 : 1;
+const bool LNOT = (!LOR);
+const int _193 = LNOT ? 2 : 1;
+const uint AND = (IADD & IADD);
+const uint _200 = (AND - 5u);
+const uint OR = (IADD | ISUB);
+const uint _208 = (OR - 6u);
+const uint XOR = (IADD ^ IADD);
+const uint _215 = (XOR + 1u);
+const uint NOT = (~XOR);
+const uint _223 = (NOT - 4294967294u);
+const bool LEQ = (LAND == LNOT);
+const int _230 = LEQ ? 1 : 2;
+const bool LNEQ = (LAND != LNOT);
+const int _237 = LNEQ ? 2 : 1;
+const uint SEL = IEQ ? IADD : ISUB;
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 true
+#endif
+const bool TRUE = SPIRV_CROSS_CONSTANT_ID_0;
+#ifndef SPIRV_CROSS_CONSTANT_ID_1
+#define SPIRV_CROSS_CONSTANT_ID_1 false
+#endif
+const bool FALSE = SPIRV_CROSS_CONSTANT_ID_1;
+
+layout(binding = 0, std430) buffer SSBO_IAdd
+{
+    float val[_19];
+    float dummy;
+} IAdd;
+
+layout(binding = 1, std430) buffer SSBO_ISub
+{
+    float val[ISUB];
+    float dummy;
+} ISub;
+
+layout(binding = 2, std430) buffer SSBO_IMul
+{
+    float val[_37];
+    float dummy;
+} IMul;
+
+layout(binding = 3, std430) buffer SSBO_UDiv
+{
+    float val[UDIV];
+    float dummy;
+} UDiv;
+
+layout(binding = 4, std430) buffer SSBO_SDiv
+{
+    float val[_52];
+    float dummy;
+} SDiv;
+
+layout(binding = 5, std430) buffer SSBO_SRem
+{
+    float val[1];
+    float dummy;
+} SRem;
+
+layout(binding = 6, std430) buffer SSBO_SMod
+{
+    float val[_66];
+    float dummy;
+} SMod;
+
+layout(binding = 7, std430) buffer SSBO_UMod
+{
+    float val[_73];
+    float dummy;
+} UMod;
+
+layout(binding = 8, std430) buffer SSBO_LShl
+{
+    float val[_81];
+    float dummy;
+} LShl;
+
+layout(binding = 9, std430) buffer SSBO_RShl
+{
+    float val[_89];
+    float dummy;
+} RShl;
+
+layout(binding = 10, std430) buffer SSBO_RSha
+{
+    float val[_100];
+    float dummy;
+} RSha;
+
+layout(binding = 11, std430) buffer SSBO_IEq
+{
+    float val[_109];
+    float dummy;
+} IEq;
+
+layout(binding = 12, std430) buffer SSBO_INeq
+{
+    float val[_116];
+    float dummy;
+} INeq;
+
+layout(binding = 13, std430) buffer SSBO_Ult
+{
+    float val[_123];
+    float dummy;
+} Ult;
+
+layout(binding = 14, std430) buffer SSBO_Ule
+{
+    float val[_130];
+    float dummy;
+} Ule;
+
+layout(binding = 15, std430) buffer SSBO_Ugt
+{
+    float val[_137];
+    float dummy;
+} Ugt;
+
+layout(binding = 16, std430) buffer SSBO_Uge
+{
+    float val[_144];
+    float dummy;
+} Uge;
+
+layout(binding = 17, std430) buffer SSBO_Slt
+{
+    float val[_151];
+    float dummy;
+} Slt;
+
+layout(binding = 18, std430) buffer SSBO_Sle
+{
+    float val[_158];
+    float dummy;
+} Sle;
+
+layout(binding = 19, std430) buffer SSBO_Sgt
+{
+    float val[_165];
+    float dummy;
+} Sgt;
+
+layout(binding = 20, std430) buffer SSBO_Sge
+{
+    float val[_172];
+    float dummy;
+} Sge;
+
+layout(binding = 21, std430) buffer SSBO_Lor
+{
+    float val[_179];
+    float dummy;
+} Lor;
+
+layout(binding = 22, std430) buffer SSBO_Land
+{
+    float val[_186];
+    float dummy;
+} Land;
+
+layout(binding = 23, std430) buffer SSBO_Lnot
+{
+    float val[_193];
+    float dummy;
+} Lnot;
+
+layout(binding = 24, std430) buffer SSBO_And
+{
+    float val[_200];
+    float dummy;
+} And;
+
+layout(binding = 24, std430) buffer SSBO_Or
+{
+    float val[_208];
+    float dummy;
+} Or;
+
+layout(binding = 24, std430) buffer SSBO_Xor
+{
+    float val[_215];
+    float dummy;
+} Xor;
+
+layout(binding = 25, std430) buffer SSBO_Not
+{
+    float val[_223];
+    float dummy;
+} Not;
+
+layout(binding = 26, std430) buffer SSBO_Leq
+{
+    float val[_230];
+    float dummy;
+} Leq;
+
+layout(binding = 27, std430) buffer SSBO_Lneq
+{
+    float val[_237];
+    float dummy;
+} Lneq;
+
+layout(binding = 28, std430) buffer SSBO_Sel
+{
+    float val[SEL];
+    float dummy;
+} Sel;
+
+void main()
+{
+    IAdd.val[0] = 0.0;
+    ISub.val[0] = 0.0;
+    IMul.val[0] = 0.0;
+    UDiv.val[0] = 0.0;
+    SDiv.val[0] = 0.0;
+    SRem.val[0] = 0.0;
+    SMod.val[0] = 0.0;
+    UMod.val[0] = 0.0;
+    LShl.val[0] = 0.0;
+    RShl.val[0] = 0.0;
+    RSha.val[0] = 0.0;
+    IEq.val[0] = 0.0;
+    INeq.val[0] = 0.0;
+    Ult.val[0] = 0.0;
+    Ule.val[0] = 0.0;
+    Ugt.val[0] = 0.0;
+    Uge.val[0] = 0.0;
+    Slt.val[0] = 0.0;
+    Sle.val[0] = 0.0;
+    Sgt.val[0] = 0.0;
+    Sge.val[0] = 0.0;
+    Lor.val[0] = 0.0;
+    Land.val[0] = 0.0;
+    Lnot.val[0] = 0.0;
+    And.val[0] = 0.0;
+    Or.val[0] = 0.0;
+    Xor.val[0] = 0.0;
+    Not.val[0] = 0.0;
+    Leq.val[0] = 0.0;
+    Lneq.val[0] = 0.0;
+    Sel.val[0] = 0.0;
+}
+

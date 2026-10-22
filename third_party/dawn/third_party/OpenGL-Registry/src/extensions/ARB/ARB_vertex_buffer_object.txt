@@ -1,0 +1,2199 @@
+Name
+
+    ARB_vertex_buffer_object
+
+Name Strings
+
+    GL_ARB_vertex_buffer_object
+    GLX_ARB_vertex_buffer_object
+
+Contributors
+
+    Ben Ashbaugh
+    Bob Beretta
+    Pat Brown
+    Cass Everitt
+    Mandar Godse
+    James Jones
+    John Kessenich
+    Dale Kirkland
+    Jon Leech
+    Bill Licea-Kane
+    Barthold Lichtenbelt
+    Bimal Poddar
+    Thomas Roell
+    Ian Romanick
+    Jeremy Sandmel
+    Jon Paul Schelter
+    John Stauffer
+    Nick Triantos
+    Daniel Vogel
+
+Contact
+
+    Rick Hammerstone, AMD (rick.hammerstone 'at' amd.com)
+    Matt Craighead, NVIDIA Corporation (mcraighead 'at' nvidia.com)
+    Kurt Akeley, NVIDIA Corporation (kakeley 'at' nvidia.com)
+
+Notice
+
+    Copyright (c) 2003-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+IP Status
+
+    None.
+
+Status
+
+    Complete. Approved by ARB on February 12, 2003.
+
+Version
+
+    Last Modified Date: October 25, 2010
+    Revision: 0.99.6
+
+Number
+
+    ARB Extension #28
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.4 specification.
+
+    GL_ARB_vertex_blend affects the definition of this extension.
+
+    GL_ARB_vertex_program affects the definition of this extension.
+
+    GL_EXT_vertex_shader affects the definition of this extension.
+
+    GLX_ARB_create_context affects the behavior of this extension.
+
+Overview
+
+    This extension defines an interface that allows various types of data
+    (especially vertex array data) to be cached in high-performance
+    graphics memory on the server, thereby increasing the rate of data
+    transfers.
+
+    Chunks of data are encapsulated within "buffer objects", which
+    conceptually are nothing more than arrays of bytes, just like any
+    chunk of memory.  An API is provided whereby applications can read
+    from or write to buffers, either via the GL itself (glBufferData,
+    glBufferSubData, glGetBufferSubData) or via a pointer to the memory.
+
+    The latter technique is known as "mapping" a buffer.  When an
+    application maps a buffer, it is given a pointer to the memory.  When
+    the application finishes reading from or writing to the memory, it is
+    required to "unmap" the buffer before it is once again permitted to
+    use that buffer as a GL data source or sink.  Mapping often allows
+    applications to eliminate an extra data copy otherwise required to
+    access the buffer, thereby enhancing performance.  In addition,
+    requiring that applications unmap the buffer to use it as a data
+    source or sink ensures that certain classes of latent synchronization
+    bugs cannot occur.
+
+    Although this extension only defines hooks for buffer objects to be
+    used with OpenGL's vertex array APIs, the API defined in this
+    extension permits buffer objects to be used as either data sources or
+    sinks for any GL command that takes a pointer as an argument.
+    Normally, in the absence of this extension, a pointer passed into the
+    GL is simply a pointer to the user's data.  This extension defines
+    a mechanism whereby this pointer is used not as a pointer to the data
+    itself, but as an offset into a currently bound buffer object.  The
+    buffer object ID zero is reserved, and when buffer object zero is
+    bound to a given target, the commands affected by that buffer binding
+    behave normally.  When a nonzero buffer ID is bound, then the pointer
+    represents an offset.
+
+    In the case of vertex arrays, this extension defines not merely one
+    binding for all attributes, but a separate binding for each
+    individual attribute.  As a result, applications can source their
+    attributes from multiple buffers.  An application might, for example,
+    have a model with constant texture coordinates and variable geometry.
+    The texture coordinates might be retrieved from a buffer object with
+    the usage mode "STATIC_DRAW", indicating to the GL that the
+    application does not expect to update the contents of the buffer
+    frequently or even at all, while the vertices might be retrieved from
+    a buffer object with the usage mode "STREAM_DRAW", indicating that
+    the vertices will be updated on a regular basis.
+
+    In addition, a binding is defined by which applications can source
+    index data (as used by DrawElements, DrawRangeElements, and
+    MultiDrawElements) from a buffer object.  On some platforms, this
+    enables very large models to be rendered with no more than a few
+    small commands to the graphics device.
+
+    It is expected that a future extension will allow sourcing pixel data
+    from and writing pixel data to a buffer object.
+
+Issues
+
+    What should this extension be called?
+
+        RESOLVED: By unanimous consent among the working group members,
+        the name was chosen to be "ARB_vertex_buffer_object".  A large
+        number of other names were considered throughout the lifetime of
+        the proposal, especially "vertex_array_object" (originally),
+        "buffer_object" (later on), and "memory_object" (near the end),
+        but the name "vertex_buffer_object" was ultimately chosen.
+
+        In particular, this name emphasizes not only that we have created
+        a new type of object that encapsulates arbitrary data (buffer
+        objects), but also, in particular, that these objects are used in
+        this extension to source vertex data.  The name also is
+        intentionally similar to "vertex buffers", although it should be
+        emphasized that there is no such thing as a "vertex buffer" in
+        the terminology of this extension.  The term "buffer object" is
+        the correct noun.
+
+    How is this extension different from ATI_vertex_array_object plus
+    ATI_map_object_buffer?
+
+        The following summarizes the major differences.
+        - VAOs renamed to "buffer objects", to signify that they can be
+          used for more than just vertex data.  Other renaming and API
+          changes to try to better match OpenGL conventions.
+        - The standard GL pointer APIs have been overloaded to be able to
+          refer to offsets within these buffers, rather than adding new
+          entry points.
+        - The usage modes permitted for buffers have been augmented
+          significantly, to reflect a broader class of application
+          behaviors.
+        - A new entry point allows reading back the contents of a buffer
+          object.
+
+    How is this extension different from NV_vertex_array_range?
+
+        The following summarizes the major differences.
+        - Applications are no longer responsible for memory management
+          and synchronization.
+        - Applications may still access high-performance memory, but
+          this is optional, and such access is more restricted.
+        - Buffer changes (glBindBufferARB) are generally expected to
+          be very lightweight, rather than extremely heavyweight
+          (glVertexArrayRangeNV).
+        - A platform-specific allocator such as wgl/glXAllocateMemoryNV
+          is no longer required.
+
+    How does this extension relate to NV_pixel_data_range?
+
+        A future extension could be created based on the framework
+        created here that would support analogous functionality to that
+        provided by NV_pixel_data_range.  Presumably, this extension
+        would require little more than two new targets for BindBuffer,
+        named (say) UNPACK_PIXELS and PACK_PIXELS.  The lists of commands
+        affected by these bindings could easily be taken verbatim out of
+        the NV_pixel_data_range specification.
+
+    Should this extension include support for allowing vertex indices
+    to be stored in buffer objects?
+
+        RESOLVED: YES.  It is easily and cleanly added with just the
+        addition of a binding point for the index buffer object.  Since
+        our approach of overloading pointers works for any pointer in GL,
+        no additional APIs need be defined, unlike in the various
+        *_element_array extensions.
+
+        Note that it is expected that implementations may have different
+        memory type requirements for efficient storage of indices and
+        vertices.  For example, some systems may prefer indices in AGP
+        memory and vertices in video memory, or vice versa; or, on
+        systems where DMA of index data is not supported, index data must
+        be stored in (cacheable) system memory for acceptable
+        performance.  As a result, applications are strongly urged to
+        put their models' vertex and index data in separate buffers, to
+        assist drivers in choosing the most efficient locations.
+
+    Should the layout of an array store be defined at array store
+    creation time?
+
+        RESOLVED: NO.  This could provide better performance if the
+        client specifies a data type that the hardware doesn't support,
+        but this isn't a performance path anyways, and it adds a
+        cumbersome interface on top of the extension.
+
+    Should there be some sort of scheme for allowing applications to
+    stream vertex data efficiently?
+
+        RESOLVED: YES.  Applications that generate their data on the
+        fly end up doing an extra data copy unless they are given a
+        pointer into memory that the graphics hardware can DMA from.  The
+        performance win from doing this can be significant.
+
+    Should the client be able to retrieve a pointer to a buffer object?
+
+        RESOLVED: YES.  This solves the previous problem.  Since GL
+        vertex array formats are already user-visible, this does not
+        suffer from the sorts of formatting issues that would arise if
+        the GL allowed applications to retrieve pointers to texture
+        objects or to the framebuffer.  Synchronization can be a concern,
+        but proper usage of this extension will minimize its overhead.
+
+    Should this extension sit on top of the existing vertex array
+    implementation, instead of introducing a new set of API calls?
+
+        RESOLVED: YES.  This simplifies the API, and separating out the
+        buffer binding from the offset/stride within the buffer leads to
+        an elegant "BindBufferARB" command that can be used for other
+        parts of GL like the pixel path.
+
+    Should buffer object state overlap with existing vertex array pointer
+    state, or should there be new drawing commands, e.g.,
+    DrawArrayObject?
+
+        RESOLVED: OVERLAP.  The exponential growth in drawing commands
+        is problematic.  Even without this, there is already
+        ArrayElement, DrawArrays, DrawElements, DrawRangeElements,
+        MultiDrawArrays, and MultiDrawElements.
+
+    Does the buffer binding state push/pop?
+
+        RESOLVED: YES.  It pushes/pops on the client with the rest of
+        the vertex array state.  Some revisions of the ATI VAO spec
+        listed a push/pop attrib "objbuf", but no new bit was defined;
+        all this has been moved into the standard "vertex-array" bit.
+
+        Note that both the user-controlled binding ARRAY_BUFFER_ARB
+        binding point and the per-array bindings push and pop.
+
+        Note that additional binding points, such as ones for pixel or
+        texture transfers, would not be part of the vertex array state,
+        and thus would likely push and pop as part of the pixel store
+        (client) state when they are defined.
+
+    How is the decision whether to use the array pointer as an offset or
+    as a real pointer made?
+
+        RESOLVED: When the default buffer object (object zero) is
+        bound, all pointers behave as real pointers.  When any other
+        object is bound, all pointers are treated as offsets.
+        Conceptually, one can imagine that buffer object zero is a buffer
+        object sitting at base NULL and with an extent large enough that
+        it covers all of the system's virtual address space.
+
+        Note that this approach essentially requires that binding points
+        be client (not server) state.
+
+    Can buffer objects be shared between contexts in the same way that
+    display lists are?
+
+        RESOLVED: YES.  All potentially large OpenGL objects, such as
+        display lists and textures, can be shared, and this is an
+        important capability.  Note, however, that sharing requires that
+        buffer objects be server (not client) state, since it is not
+        possible to share client state.
+
+    Should buffer objects be client state or server state?
+
+        RESOLVED: Server state.  Arguments for client state include:
+
+          - Buffer data are stored in client-side format, making server
+            storage complex when client and server endianness differ.
+          - Vertex arrays are client state.
+
+        These arguments are outweighed by the significant advantages
+        of server state, including:
+
+          - Server state can be shared between contexts, and this is
+            expected to be an important capability (sharing of texture
+            objects is very common).
+          - In the case of indirect rendering, performance may be
+            very significantly greater for data stored on the server
+            side of the wire.
+
+    How is synchronization enforced when buffer objects are shared by
+    multiple OpenGL contexts?
+
+        RESOLVED: It is generally the clients' responsibility to
+        synchronize modifications made to shared buffer objects.  GL
+        implementations will make some effort to avoid deletion of in-use
+        buffer objects, but may not be able to ensure this handling.
+
+    What happens if a currently bound buffer object is deleted?
+
+        RESOLVED: Orphan.  To avoid chasing invalid pointers OpenGL
+        implementations will attempt to defer the deletion of any buffer
+        object until that object is not bound by any client in the share
+        list.  It should be possible to implement this behavior
+        efficiently in the direct rendering case, but the implementation
+        may be difficult/impossible in the indirect rendering case.
+        Since synchronization during sharing is a client responsibility,
+        this behavior is acceptable.
+
+    Should there be a way to query the data in a buffer object?
+
+        RESOLVED: YES.  Almost all objects in OpenGL are fully
+        queriable, and since these objects are simply byte arrays, there
+        does not seem to be any reason to do things otherwise here.  The
+        primary exceptions to GL queriability are cases where such
+        functionality would be extremely burdensome to provide, as is the
+        case with display lists.
+
+    Do buffer objects survive screen resolution changes, etc.?
+
+        RESOLVED: YES.  This is not mentioned in the spec, so by
+        default they behave just like other OpenGL state, like texture
+        objects -- the data is unmodified by external events like
+        modeswitches, switching the system into standby or hibernate
+        mode, etc.
+
+    What happens to a mapped buffer when a screen resolution change or
+    other such window-system-specific system event occurs?
+
+        RESOLVED: The buffer's contents may become undefined.  The
+        application will then be notified at Unmap time that the buffer's
+        contents have been destroyed.  However, for the remaining
+        duration of the map, the pointer returned from Map must continue
+        to point to valid memory, in order to ensure that the application
+        cannot crash if it continues to read or write after the system
+        event has been handled.
+
+    What happens to the pointer returned by MapBufferARB after a call to
+    UnmapBufferARB?
+
+        RESOLVED: The pointer becomes totally invalid.  Note that
+        drivers are free to move the underlying buffer or even unmap the
+        memory, leaving the virtual addresses in question pointing at
+        nothing.  Such flexibility is necessary to enable efficient
+        implementations on systems with no virtual memory; with limited
+        control over virtual memory from graphics drivers; or where
+        virtual address space is at a premium.
+
+    Are any of these commands allowed inside Begin/End?
+
+        RESOLVED: NO, with the possible exception of BindBuffer, which
+        should not be used inside a Begin/End but will have undefined
+        error behavior, like most vertex array commands.
+
+    What happens when an attempt is made to access data outside the
+    bounds of the buffer object with a command that dereferences the
+    arrays?
+
+        RESOLVED: ALLOW PROGRAM TERMINATION.  In the event of a
+        software fallback, bounds checking can become impractical.  Since
+        applications don't know the actual address of the buffer object
+        and only provide an offset, they can't ever guarantee that
+        out-of-bounds offsets will fall on valid memory.  So it's hard to
+        do any better than this.
+
+        Of course, such an event should not be able to bring down the
+        system, only terminate the program.
+
+    What type should <offset> and <size> arguments use?
+
+        RESOLVED: We define new types that will work well on 64-bit
+        systems, analogous to C's "intptr_t".  The new type "GLintptrARB"
+        should be used in place of GLint whenever it is expected that
+        values might exceed 2 billion.  The new type "GLsizeiptrARB"
+        should be used in place of GLsizei whenever it is expected
+        that counts might exceed 2 billion.  Both types are defined as
+        signed integers large enough to contain any pointer value.  As a
+        result, they naturally scale to larger numbers of bits on systems
+        with 64-bit or even larger pointers.
+
+        The offsets introduced in this extension are typed GLintptrARB,
+        consistent with other GL parameters that must be non-negative,
+        but are arithmetic in nature (not uint), and are not sizes; for
+        example, the xoffset argument to TexSubImage*D is of type GLint.
+        Buffer sizes are typed GLsizeiptrARB.
+
+        The idea of making these types unsigned was considered, but was
+        ultimately rejected on the grounds that supporting buffers larger
+        than 2 GB was not deemed important on 32-bit systems.
+
+    Should buffer maps be client or server state?
+
+        RESOLVED: Server.  If a buffer is being shared by multiple
+        clients, it will also be desirable to share the mappings of that
+        buffer.  In cases where the mapping cannot shared (for example,
+        in the case of indirect rendering) queries of the map pointer by
+        clients other than the one that created the map will return a
+        null pointer.
+
+    Should "Unmap" be treated as one word or two?
+
+        RESOLVED: One word.
+
+    Should "usage" be a parameter to BufferDataARB, or specified
+    separately using a parameter specification command, e.g.,
+    BufferParameteriARB?
+
+        RESOLVED: Parameter to BufferDataARB.  It is desirable for the
+        implementation to know the usage when the buffer is initialized,
+        so including it in the initialization command makes sense.  This
+        avoids manpage notes such as "Please specify the usage before you
+        initialize the buffer".
+
+    Should it be possible to change the usage of an initialized buffer?
+
+        RESOLVED: NO.  Unless it is shown that this flexibility is
+        necessary, it will be easier for implementations to be efficient
+        if usage cannot be changed.  (Except by re-initializing the
+        buffer completely.)
+
+    Should we allow for the possibility of multiple simultaneous maps for
+    a single buffer?
+
+        RESOLVED: NO.  If multiple maps are allowed, the mapping
+        semantics become very difficult to understand and to specify.
+        It is also unclear that there are any benefits to offering such
+        functionality.  Therefore, only one map per buffer is permitted.
+
+        Note: the limit of one map per buffer eliminates any need for
+        "sub-region" mapping.  The single map always maps the entire
+        data store of the buffer.
+
+    Should it be an error to render from a currently mapped buffer?
+
+        RESOLVED: YES.  Making this an error rather than undefined makes
+        the API much more bulletproof.
+
+    Should it be possible for the application to query the "viability" of
+    the data store of a buffer?
+
+        RESOLVED: NO.  UnmapBuffer can return FALSE to indicate this, but
+        there is no additional query to check whether the data has been
+        lost.  In general, most/all GL state is queriable, unless there
+        is a compelling reason otherwise.  However, on examination, it
+        appears that there are several compelling reasons otherwise in
+        this case.  In particular, the default for this state variable is
+        non-obvious (is the data "valid" when no data has been specified
+        yet?), and it's unclear when it should be reset (BufferData only?
+        BufferSubData?  A successful UnmapBuffer?).  After these issues
+        came to light, the query was removed from the spec.
+
+    What should the error behavior of BufferDataARB and MapBufferARB be?
+
+        RESOLVED: BufferDataARB returns no value and sets OUT_OF_MEMORY
+        if the buffer could not be created, whereas MapBufferARB returns
+        NULL and also sets OUT_OF_MEMORY if the buffer could not be
+        mapped.
+
+    Should UnmapBufferARB return a boolean indicating data integrity?
+
+        RESOLVED: YES, since the Unmap is precisely the point at which
+        the buffer can no longer be lost.
+
+    How is unaligned data handled?
+
+        RESOLVED: All client restrictions on data alignment must be met,
+        and in addition to that, all offsets must be multiples of the
+        size of the underlying data type.  So, for example, float data in
+        a buffer object must have an offset that is (typically) a
+        multiple of 4.  This should make the server implementation
+        easier, since this additional rule will guarantee that no
+        alignment checking is required on most platforms.
+
+    Should MapBufferARB return the pointer to the map, or should there be
+    a separate call to ask for the pointer?
+
+        RESOLVED: BOTH.  For convenience, MapBufferARB returns a pointer
+        or NULL in the event of failure; but since most/all GL state is
+        queriable, you can also query the pointer at a later point in
+        time.  If the buffer is not mapped, querying the pointer should
+        return NULL.
+
+    Should there be one binding point for all arrays or several binding
+    points, one for each array?
+
+        RESOLVED: One binding point for all arrays.  Index data uses a
+        separate target.
+
+    Should there be a PRESERVE/DISCARD option on BufferSubDataARB?  On
+    MapBufferARB?
+
+        RESOLVED: NO, NO.  ATI_vertex_array_object had this option for
+        UpdateObjectBufferATI, which is the equivalent of
+        BufferSubDataARB, but it's unclear whether this has any utility.
+        There might be some utility for MapBufferARB, but forcing the
+        user to call BufferDataARB again with a NULL data pointer has
+        some advantages of its own, such as forcing the user to respecify
+        the size.
+
+    Should there be an option for MapBufferARB that guarantees
+    nonvolatile memory?
+
+        RESOLVED: NO.  On systems where volatile memory spaces are a
+        concern, there is little or no way to supply nonvolatile memory
+        without crippling performance badly.  In some cases, it might
+        not even be possible to implement Map except by returning system
+        memory.  Systems that do not have problems with volatility are,
+        of course, welcome to return TRUE from UnmapBufferARB all the
+        time.  If applications want the ease of use that results from not
+        having to check for lost data, they can still use BufferDataARB
+        and BufferSubDataARB, so the burden is not too great.
+
+    What new usages do we need to add?
+
+        RESOLVED.  We have defined a 3x3 matrix of usages.  The
+        pixel-related terms draw, read, and copy are used to distinguish
+        between three basic data paths: application to GL (draw), GL to
+        application (read), and GL to GL (copy).  The terms stream,
+        static, and dynamic are used to identify three data access
+        patterns: specify once and use once or perhaps only a few times
+        (stream), specify once and use many times (static), and specify
+        and use repeatedly (dynamic).
+
+        Note that the "copy" and "read" usage token values will become
+        meaningful only when pixel transfer capability is added to
+        buffer objects by a (presumed) subsequent extension.
+
+        Note that the data paths "draw", "read", and "copy" are analogous
+        in both name and meaning to the GL commands DrawPixels,
+        ReadPixels, and CopyPixels, respectively.
+
+    Is it legal C to use pointers as offsets?
+
+        We haven't come to any definitive conclusion about this.  The
+        proposal is to convert to pointer as:
+
+            pointer = (char *)NULL + offset;
+
+        And convert back to offset as:
+
+            offset = (char *)pointer - (char *)NULL;
+
+        Varying opinions have been expressed as to whether this is legal,
+        although no one could provide an example of a real system where
+        any problems would occur.
+
+    Should we add new Offset commands, e.g., VertexOffset, if the pointer
+    approach has some compatibility concerns?
+
+        RESOLVED: NO.  The working group voted that the existing pointer-
+        as-offset approach is acceptable.
+
+    Which commands are compiled into display lists?
+
+        RESOLVED: None of the commands in this extension are compiled
+        into display lists.  The reasoning is that the server may not
+        have up-to-date buffer bindings, since BindBuffer is a client
+        command.
+
+        Just as without this extension, vertex data is dereferenced
+        when ArrayElement, etc. are compiled into a display list.
+
+    Should there be a new command "DiscardAndMapBuffer" that is
+    equivalent to BufferDataARB with NULL pointer followed by
+    MapBufferARB?
+
+        RESOLVED: NO, no one has come up with a clearly superior proposal
+        that everyone can agree on.
+
+     Are any GL commands disallowed when at least one buffer object is
+     mapped?
+
+        RESOLVED: NO.  In general, applications may use whatever GL
+        commands they wish when a buffer is mapped.  However, several
+        other restrictions on the application do apply: the application
+        must not attempt to source data out of, or sink data into, a
+        currently mapped buffer.  Furthermore, the application may not
+        use the pointer returned by Map as an argument to a GL command.
+        (Note that this last restriction is unlikely to be enforced in
+        practice, but it violates reasonable expectations about how the
+        extension should be used, and it doesn't seem to be a very
+        interesting usage model anyhow.  Maps are for the user, not for
+        the GL.)
+
+        More restrictive rules were considered (for example, "after
+        calling MapBuffer, all GL commands except for UnmapBuffer produce
+        errors"), but this was considered far too restrictive.  The
+        expectation is that an application might map a buffer and start
+        filling it in a different thread, but continue to render in its
+        main thread (using a different buffer or no buffer at all).  So
+        no commands are disallowed simply because a buffer happens to be
+        mapped.
+
+    Should the usage and data arguments to BufferDataARB be swapped?
+
+        RESOLVED: NO.  This would be more consistent with other things in
+        GL if they were swapped, but no one seems to care.  If we had
+        caught this earlier, maybe, but it's just too late.
+
+    How does MultiDrawElements work?
+
+        The language gets a little confusing, but I believe it is quite
+        clearly specified in the end.  The argument <indices> to
+        MultiDrawElements, which is of type "const void **", is an
+        honest-to-goodness pointer to regular old system memory, no
+        matter whether a buffer is bound or not.  That memory in turn
+        consists of an array of <primcount> pointers.  If no buffer is
+        bound, each of those <primcount> pointers is a regular pointer.
+        If a buffer is bound, each of those <primcount> pointers is a
+        fake pointer that represents an offset in the buffer object.
+
+        If you wanted to put the array of <primcount> offsets in a buffer
+        object, you'd have to define a new extension with a new target.
+
+    When is the binding between a buffer object and a specific vertex array
+    (e.g., VERTEX_ARRAY_BUFFER_BINDING_ARB) established?
+
+        The array's buffer binding is set when the array pointer is specified.
+        Using the vertex array as an example, this is when VertexPointer is
+        called.  At that time, the current array buffer binding is used for
+        the vertex array.  The current array buffer binding is set by calling
+        BindBufferARB with a <target> of ARRAY_BUFFER_ARB.  Changing the
+        current array buffer binding does not affect the bindings used by
+        already established arrays.
+
+          BindBufferARB(ARRAY_BUFFER_ARB, 1);
+          VertexPointer(...);   // vertex array data points to buffer 1
+          BindBufferARB(ARRAY_BUFFER_ARB, 2);
+          // vertex array data still points to buffer 1
+
+    What happens when a single ArrayElement call within a large sequence of
+    ArrayElement calls specifies an element that is outside the range of the
+    bound buffer objects?
+
+        UNRESOLVED.  The three suggestions from the ARB meeting are to either
+        ignore just that ArrayElement call, set an error bit and ignore all
+        ArrayElement calls until End, or treat the ArrayElement call as
+        ArrayElement(0).
+
+    How should EnableClientState and DisableClientState be handled when using
+    indirect rendering?
+
+        RESOLVED:  EnableVertexAttribArray and DisableVertexAttribArray
+        commands are used to inform the server of new enable/disable state.
+
+    When using indirect rendering, how is DrawElements handled when the
+    element array is in a buffer object but one or more of the enabled arrays
+    are not?
+
+        RESOLVED:  There are two commands that can be used to implement
+        DrawElements and related calls.  If all of the data resides on the
+        server, the element pointer is set by using a BindBufferToArray
+        command with array set to ELEMENT_ARRAY_ATI.  This command is
+        followed by the appropriate EnableVertexAttribArray and
+        DisableVertexAttribArray calls, making sure to enable the element
+        array, and either a DrawElements call or a DrawRangeElements call.
+
+        If any arrays reside on the client, including the element array,
+        the sequence is essentially the same except the DrawRangeElements
+        protocol must be used.  If the element array resides on the
+        server, the client must issue a GetElementRange command to determine
+        the range of array data (and the values for 'start' and 'end') that
+        must be sent to the server.
+
+    Is a "provoke" flag needed in the ArrayElement command protocol to switch
+    between the case where the VERTEX_ARRAY is client-side vs. server-side?
+
+        NO.  The server will know whether or not the ArrayElement command
+        will provoke a vertex because it knows whether or not a buffer object
+        is bound to VERTEX_ARRAY.
+
+    How does the server know which arrays with buffer objects bound are
+    enabled in ArrayElement?
+
+        RESOLVED:  The array bindings are configured using BindBuffer and
+        BindBufferToArray commands.  The arrays are enabled and disabled
+        using EnableVertexAttribArray and DisableVertexAttribArray.
+
+    Can't the server-side array bindings just be sent in a the ARRAY_INFO
+    when DrawArrays is called?
+
+        NO.  The only way to do that would be to transmit the offset, type,
+        size, stride, etc. parameters and the buffer ID.  However, the buffer
+        may have been deleted in the meantime.  The binding information must
+        be sent when the pointer function (e.g., VertexPointer) is called.
+
+    What about byte-ordering?  The format of the data, and therefore what
+    byte-swapping may need to be done, is not know when the data is
+    uploaded to the server.  In fact, since it is legal (though probably
+    nonsensical) to have the same bytes in the buffer be used as multiple
+    datatypes, a single byte-ordering may not exist.  What happens when
+    two clients with different byte ordering share one buffer object?  Is
+    it valid to not expose the extension if the byte-ordering of the
+    client and server do not match?
+
+        RESOLVED:  It is the client's responsibility to convert buffer data
+        to and from the server's byte order.  Since only the client knows
+        the correct format of the data, and there may be multiple clients
+        with different byte orderings sharing a single buffer object, it is
+        unreasonable to ask the GL to handle buffer object byte-swapping.
+        To avoid errors caused by naive clients attempting to use buffer
+        objects without performing the appropriate byte swapping, clients
+        must opt in to buffer object support at context creation time using
+        the GLX_CONTEXT_ALLOW_BUFFER_BYTE_ORDER_MISMATCH_ARB context attrib.
+        If this attribute is not specified and the byte ordering of the client
+        and server differ, the VBO extension must not be exposed and the
+        maximum context version that can be reported is 1.4.
+
+    Should Enable/DisableVertexAttribArray and VertexAttribPointer handle
+    both indexed and legacy arrays?
+
+        RESOLVED: Yes.  Send GL_NONE for <array> when referring to
+        indexed arrays.  For all other values of <array> except
+        GL_TEXTURE??, <index> is ignored.  For GL_TEXTURE??, see next
+        issue.
+
+    How is the client-side state client active texture, needed by
+    glTexCoordPointer, communicated to the server?
+
+        RESOLVED: Send the active texture index using the <index>
+        parameter normally used for indexed arrays.  The value of
+        <index> will be an offset from GL_TEXTURE0.
+
+        OTHER OPTIONS CONSIDERED: Add a separate parameter to
+        VertexAttribPointer rather than alias the index parameter.
+        Only advantage is slightly improved clarity.
+
+        Add ClientActiveTexture protocol.  This would cause problems
+        because the active texture is client state.  If two GLX processes
+        were maintaining their own client state for one server-side
+        context, it would be hard to reliably keep the active texture
+        state in sync between the client and server.  It would need to be
+        tracked per client on the server.
+
+    How are Push/PopClientAttrib handled?
+
+        RESOLVED: Specify protocol for these commands.  Some state
+        affected by these commands needs to be duplicated in the server
+        now, so these operations need to be duplicated there as well.
+
+        OTHER OPTIONS CONSIDERED: Break the commands down into the
+        individual commands required to perform the operation and send the
+        appropriate protocol for those commands.  This is insufficient
+        because it could cause deleted buffer objects to be destroyed by
+        the server while they are still in use by a non-current entry in
+        the client's attribute stack.
+
+    How are integer arrays differentiated from floating point or fixed
+    point arrays?
+
+        RESOLVED: Added an "is_integer" boolean field to ARRAY_INFO and
+        VertexAttribPointer.
+
+    Is separate protocol needed for MapBuffer/UnmapBuffer?
+
+        RESOLVED: Yes.  Buffers can only be mapped once.  Buffers need
+        not be bound for the duration of their mapping, and whether a
+        buffer is mapped or not is server state, so to properly track
+        this state and generate related errors when there are multiple
+        clients sharing the same buffer object, protocol must be sent
+        to the server to duplicate the state there.
+
+    Should the MapBuffer/UnmapBuffer protocol handle transferring of
+    the buffer data when needed, or should implementations transfer the
+    data using the BufferSubData and GetBufferSubData protocol?
+
+        RESOLVED: Using the BufferSubData and GetBufferSubData protocol.
+        This simplifies the Map and Unmap protocol and allows
+        implementations to break up large data transfers into chunks.
+        For example, the buffer data may be larger than the maximum size
+        of a GLX single command.  Sending the data as part of the
+        UnmapBuffer protocol would fail, but sending it in one or more
+        BufferSubData commands would still be possible.  Implementations
+        should take care to retreive the data, if needed, before mapping
+        and send it back after unmapping.  This does not introduce race
+        conditions because it is already up to the application to ensure
+        proper mutexing of buffer object operations is done, and the
+        protocol will still all happen within one application-visible GL
+        command.
+
+    Should client array data sent to the server in DrawArraysNew and
+    DrawRangeElements be aligned?  Should individual arrays be separately
+    aligned?  Should the arrays be sent be sent in order of largest
+    element type to smallest?
+
+        RESOLVED: No.  The client shall send the data as one contiguous
+        array of bytes.  The server shall be responsible for aligning
+        the individual entries as they are extracted if such alignment
+        is needed.
+
+    EXT_vertex_array allows enabling/disabling vertex arrays with
+    Enable/Disable.  This state needs to be intercepted by the client
+    to properly manage buffer object state.  Should protocol for Enable
+    and Disable still be sent when these enums are used, or should the
+    EnableClientState/DisableClientState protocol be sent instead?
+
+        RESOLVED: Send the EnableClientState/DisableClientState protocol.
+        The server may need to take additional actions for these special
+        Enable/Disable enums.  Since the client already needs to
+        intercept and handle them specially, keep the protocol separate
+        for the server's benefit.
+
+New Procedures and Functions
+
+    void BindBufferARB(enum target, uint buffer);
+    void DeleteBuffersARB(sizei n, const uint *buffers);
+    void GenBuffersARB(sizei n, uint *buffers);
+    boolean IsBufferARB(uint buffer);
+
+    void BufferDataARB(enum target, sizeiptrARB size, const void *data,
+                       enum usage);
+    void BufferSubDataARB(enum target, intptrARB offset, sizeiptrARB size,
+                          const void *data);
+    void GetBufferSubDataARB(enum target, intptrARB offset,
+                             sizeiptrARB size, void *data);
+
+    void *MapBufferARB(enum target, enum access);
+    boolean UnmapBufferARB(enum target);
+
+    void GetBufferParameterivARB(enum target, enum pname, int *params);
+    void GetBufferPointervARB(enum target, enum pname, void **params);
+
+New Tokens
+
+    Accepted as an attribute name in the <attrib_list> parameter of
+    glXCreateContextAttribsARB:
+
+        GLX_CONTEXT_ALLOW_BUFFER_BYTE_ORDER_MISMATCH_ARB 0x2095
+
+    Accepted by the <target> parameters of BindBufferARB, BufferDataARB,
+    BufferSubDataARB, MapBufferARB, UnmapBufferARB,
+    GetBufferSubDataARB, GetBufferParameterivARB, and
+    GetBufferPointervARB:
+
+        ARRAY_BUFFER_ARB                             0x8892
+        ELEMENT_ARRAY_BUFFER_ARB                     0x8893
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        ARRAY_BUFFER_BINDING_ARB                     0x8894
+        ELEMENT_ARRAY_BUFFER_BINDING_ARB             0x8895
+        VERTEX_ARRAY_BUFFER_BINDING_ARB              0x8896
+        NORMAL_ARRAY_BUFFER_BINDING_ARB              0x8897
+        COLOR_ARRAY_BUFFER_BINDING_ARB               0x8898
+        INDEX_ARRAY_BUFFER_BINDING_ARB               0x8899
+        TEXTURE_COORD_ARRAY_BUFFER_BINDING_ARB       0x889A
+        EDGE_FLAG_ARRAY_BUFFER_BINDING_ARB           0x889B
+        SECONDARY_COLOR_ARRAY_BUFFER_BINDING_ARB     0x889C
+        FOG_COORDINATE_ARRAY_BUFFER_BINDING_ARB      0x889D
+        WEIGHT_ARRAY_BUFFER_BINDING_ARB              0x889E
+
+    Accepted by the <pname> parameter of GetVertexAttribivARB:
+
+        VERTEX_ATTRIB_ARRAY_BUFFER_BINDING_ARB       0x889F
+
+    Accepted by the <usage> parameter of BufferDataARB:
+
+        STREAM_DRAW_ARB                              0x88E0
+        STREAM_READ_ARB                              0x88E1
+        STREAM_COPY_ARB                              0x88E2
+        STATIC_DRAW_ARB                              0x88E4
+        STATIC_READ_ARB                              0x88E5
+        STATIC_COPY_ARB                              0x88E6
+        DYNAMIC_DRAW_ARB                             0x88E8
+        DYNAMIC_READ_ARB                             0x88E9
+        DYNAMIC_COPY_ARB                             0x88EA
+
+    Accepted by the <access> parameter of MapBufferARB:
+
+        READ_ONLY_ARB                                0x88B8
+        WRITE_ONLY_ARB                               0x88B9
+        READ_WRITE_ARB                               0x88BA
+
+    Accepted by the <pname> parameter of GetBufferParameterivARB:
+
+        BUFFER_SIZE_ARB                              0x8764
+        BUFFER_USAGE_ARB                             0x8765
+        BUFFER_ACCESS_ARB                            0x88BB
+        BUFFER_MAPPED_ARB                            0x88BC
+
+    Accepted by the <pname> parameter of GetBufferPointervARB:
+
+        BUFFER_MAP_POINTER_ARB                       0x88BD
+
+
+Additions to Chapter 2 of the 1.4 Specification (OpenGL Operation)
+
+    Add to Table 2.2:
+
+       "GL Type        Minimum       Description
+                       Bit Width
+        -----------------------------------------------------------------
+        intptrARB      <ptrbits>     signed 2's complement binary integer
+        sizeiptrARB    <ptrbits>     Non-negative binary integer size"
+
+    Add to the paragraph under Table 2.2:
+
+    "<ptrbits> is the number of bits required to represent a pointer
+    type; in other words, types intptrARB and sizeiptrARB must be
+    sufficiently large as to store any address."
+
+    Add a new section "Buffer Objects" between sections 2.8 and 2.9:
+
+    "2.8A  Buffer Objects
+     --------------------
+
+    The vertex data arrays described in section 2.8 are stored in client
+    memory.  It is sometimes desirable to store frequently used client
+    data, such as vertex array data, in high-performance server memory.
+    GL buffer objects provide a mechanism that clients can use to
+    allocate, initialize, and render from such memory.
+
+    The name space for buffer objects is the unsigned integers, with zero
+    reserved for the GL.  A buffer object is created by binding an unused
+    name to ARRAY_BUFFER_ARB.  The binding is effected by calling
+
+        void BindBufferARB(enum target, uint buffer);
+
+    with <target> set to ARRAY_BUFFER_ARB and <buffer> set to the unused
+    name.  The resulting buffer object is a new state vector, initialized
+    with a zero-sized memory buffer, and comprising the state values
+    listed in Table BufObj1.
+
+        Name                   Type         Initial Value   Legal Values
+        ----                   ----         -------------   ------------
+        BUFFER_SIZE_ARB        integer      0               any non-negative
+                                                            integer
+        BUFFER_USAGE_ARB       enum         STATIC_DRAW_ARB STREAM_DRAW_ARB,
+                                                            STREAM_READ_ARB,
+                                                            STREAM_COPY_ARB,
+                                                            STATIC_DRAW_ARB,
+                                                            STATIC_READ_ARB,
+                                                            STATIC_COPY_ARB,
+                                                            DYNAMIC_DRAW_ARB,
+                                                            DYNAMIC_READ_ARB,
+                                                            DYNAMIC_COPY_ARB
+        BUFFER_ACCESS_ARB      enum         READ_WRITE_ARB  READ_ONLY_ARB,
+                                                            WRITE_ONLY_ARB,
+                                                            READ_WRITE_ARB
+        BUFFER_MAPPED_ARB      boolean      FALSE           TRUE, FALSE
+        BUFFER_MAP_POINTER_ARB void*        NULL            address
+
+        Table BufObj1: Buffer object parameters and their values.
+
+    BindBufferARB may also be used to bind an existing buffer object.
+    If the bind is successful no change is made to the state of the
+    newly bound buffer object, and any previous binding to <target> is
+    broken.
+
+    While a buffer object is bound, GL operations on the target to which
+    it is bound affect the bound buffer object, and queries of the target
+    to which a buffer object is bound return state from the bound object.
+
+    In the initial state the GL-reserved name zero is bound to
+    ARRAY_BUFFER_ARB.  There is no buffer object corresponding to the
+    name zero, so client attempts to modify or query buffer object state
+    for the target ARRAY_BUFFER_ARB while zero is bound will generate
+    GL errors.
+
+    Buffer objects are deleted by calling
+
+        void DeleteBuffersARB(sizei n, const uint *buffers);
+
+    <buffers> contains <n> names of buffer objects to be deleted.  After
+    a buffer object is deleted it has no contents, and its name is again
+    unused.  Unused names in <buffers> are silently ignored, as is the
+    value zero.
+
+    The command
+
+        void GenBuffersARB(sizei n, uint *buffers);
+
+    returns <n> previously unused buffer object names in <buffers>.
+    These names are marked as used, for the purposes of GenBuffersARB
+    only, but they acquire buffer state only when they are first bound,
+    just as if they were unused.
+
+    While a buffer object is bound, any GL operations on that object
+    affect any other bindings of that object.  If a buffer object is
+    deleted while it is bound, all bindings to that object in the current
+    context (i.e. in the thread that called DeleteBuffers) are reset to
+    bindings to buffer zero.  Bindings to that buffer in other contexts
+    and other threads are not affected, but attempting to use a deleted
+    buffer in another thread produces undefined results, including but
+    not limited to possible GL errors and rendering corruption.  Using a
+    deleted buffer in another context or thread may not, however, result
+    in program termination.
+
+    The data store of a buffer object is created and initialized by
+    calling
+
+        void BufferDataARB(enum target, sizeiptrARB size,
+                           const void *data, enum usage);
+
+    with <target> set to ARRAY_BUFFER_ARB, <size> set to the size of the
+    data store in basic machine units, and <data> pointing to the
+    source data in client memory.  If <data> is non-null, then the source
+    data is copied to the buffer object's data store.  If <data> is null,
+    then the contents of the buffer object's data store are undefined.
+
+    <usage> is specified as one of nine enumerated values, indicating
+    the expected application usage pattern of the data store.  The
+    values are:
+
+        STREAM_DRAW_ARB    The data store contents will be specified once
+                           by the application, and used at most a few
+                           times as the source of a GL (drawing) command.
+        STREAM_READ_ARB    The data store contents will be specified once
+                           by reading data from the GL, and queried at
+                           most a few times by the application.
+        STREAM_COPY_ARB    The data store contents will be specified once
+                           by reading data from the GL, and used at most
+                           a few times as the source of a GL (drawing)
+                           command.
+        STATIC_DRAW_ARB    The data store contents will be specified once
+                           by the application, and used many times as the
+                           source for GL (drawing) commands.
+        STATIC_READ_ARB    The data store contents will be specified once
+                           by reading data from the GL, and queried many
+                           times by the application.
+        STATIC_COPY_ARB    The data store contents will be specified once
+                           by reading data from the GL, and used many
+                           times as the source for GL (drawing) commands.
+        DYNAMIC_DRAW_ARB   The data store contents will be respecified
+                           repeatedly by the application, and used many
+                           times as the source for GL (drawing) commands.
+        DYNAMIC_READ_ARB   The data store contents will be respecified
+                           repeatedly by reading data from the GL, and
+                           queried many times by the application.
+        DYNAMIC_COPY_ARB   The data store contents will be respecified
+                           repeatedly by reading data from the GL, and
+                           used many times as the source for GL (drawing)
+                           commands.
+
+    <usage> is provided as a performance hint only.  The specified usage
+    value does not constrain the actual usage pattern of the data store.
+
+    BufferDataARB deletes any existing data store, and sets the values of
+    the buffer object's state variables to:
+
+        Name                   Value
+        ----                   -----
+        BUFFER_SIZE_ARB        <size>
+        BUFFER_USAGE_ARB       <usage>
+        BUFFER_ACCESS_ARB      READ_WRITE_ARB
+        BUFFER_MAPPED_ARB      FALSE
+        BUFFER_MAP_POINTER_ARB NULL
+
+    Clients must align data elements consistent with the requirements
+    of the client platform, with an additional base-level requirement
+    that an offset within a buffer to a datum comprising N basic machine
+    units be a multiple of N.
+
+    If the GL is unable to create a data store of the requested size,
+    the error OUT_OF_MEMORY is generated.
+
+    To modify some or all of the data contained in a buffer object's data
+    store, the client may use the command
+
+        void BufferSubDataARB(enum target, intptrARB offset,
+                              sizeiptrARB size, const void *data);
+
+    with <target> set to ARRAY_BUFFER_ARB.  <offset> and <size> indicate
+    the range of data in the buffer object that is to be replaced, in
+    terms of basic machine units.  <data> specifies a region of client
+    memory <size> basic machine units in length, containing the data that
+    replace the specified buffer range.  An error is generated if
+    <offset> or <size> is less than zero, or if <offset> + <size> is
+    greater than the value of BUFFER_SIZE_ARB.
+
+    The entire data store of a buffer object can be mapped into the
+    client's address space by calling
+
+        void *MapBufferARB(enum target, enum access);
+
+    with <target> set to ARRAY_BUFFER_ARB.  If the GL is able to map the
+    buffer object's data store into the client's address space,
+    MapBufferARB returns the pointer value to the data store.  Otherwise
+    MapBufferARB returns NULL, and the error OUT_OF_MEMORY is generated.
+    <access> is specified as one of READ_ONLY_ARB, WRITE_ONLY_ARB, or
+    READ_WRITE_ARB, indicating the operations that the client may perform
+    on the data store through the pointer while the data store is mapped.
+
+    MapBufferARB sets the following buffer object state values:
+
+        Name                   Value
+        ----                   -----
+        BUFFER_ACCESS_ARB      <access>
+        BUFFER_MAPPED_ARB      TRUE
+        BUFFER_MAP_POINTER_ARB pointer to the data store
+
+    It is an INVALID_OPERATION error to map a buffer data store that is
+    in the mapped state.
+
+    Non-null pointers returned by MapBufferARB may be used by the client
+    to modify and query buffer object data, consistent with the access
+    rules of the mapping, while the mapping remains valid.  No GL error
+    is generated if the pointer is used to attempt to modify a
+    READ_ONLY_ARB data store, or to attempt to read from a WRITE_ONLY_ARB
+    data store, but operation may be slow and system errors (possibly
+    including program termination) may result.  Pointer values returned
+    by MapBufferARB may not be passed as parameter values to GL commands.
+    For example, they may not be used to specify array pointers, or to
+    specify or query pixel or texture image data; such actions produce
+    undefined results, although implementations may not check for such
+    behavior for performance reasons.
+
+    It is an INVALID_OPERATION error to call BufferSubDataARB to modify
+    the data store of a mapped buffer.
+
+    Mappings to the data stores of buffer objects may have nonstandard
+    performance characteristics.  For example, such mappings may be
+    marked as uncacheable regions of memory, and in such cases reading
+    from them may be very slow.  To ensure optimal performance, the
+    client should use the mapping in a fashion consistent with the values
+    of BUFFER_USAGE_ARB and BUFFER_ACCESS_ARB.  Using a mapping in a
+    fashion inconsistent with these values is liable to be multiple
+    orders of magnitude slower than using normal memory.
+
+    After the client has specified the contents of a mapped data store,
+    and before the data in that store are dereferenced by any GL commands,
+    the mapping must be relinquished by calling
+
+        boolean UnmapBufferARB(enum target);
+
+    with <target> set to ARRAY_BUFFER_ARB.  Unmapping a mapped buffer
+    object invalidates the pointers to its data store and sets the
+    object's BUFFER_MAPPED_ARB state to FALSE and its
+    BUFFER_MAP_POINTER_ARB state to NULL.
+
+    UnmapBufferARB returns TRUE unless data values in the buffer's data
+    store have become corrupted during the period that the buffer was
+    mapped.  Such corruption can be the result of a screen resolution
+    change or other window-system-dependent event that causes system
+    heaps such as those for high-performance graphics memory to be
+    discarded.  GL implementations must guarantee that such corruption
+    can occur only during the periods that a buffer's data store is
+    mapped.  If such corruption has occurred, UnmapBufferARB returns
+    FALSE, and the contents of the buffer's data store become undefined.
+
+    It is an INVALID_OPERATION error to explicitly unmap a buffer data
+    store that is in the unmapped state.  Unmapping that occurs as a side
+    effect of buffer deletion or reinitialization is not an error,
+    however."
+
+
+    2.8A.1 Vertex Arrays in Buffer Objects
+    --------------------------------------
+
+    Blocks of vertex array data may be stored in buffer objects with the
+    same format and layout options supported for client-side vertex
+    arrays.  However, it is expected that GL implementations will (at
+    minimum) be optimized for data with all components represented as
+    floats, as well as for color data with components represented as
+    either floats or unsigned bytes.
+
+    A buffer object binding point is added to the client state associated
+    with each vertex array type.  The client does not directly specify
+    the bindings to with these new binding points.  Instead, the commands
+    that specify the locations and organizations of vertex arrays
+    copy the buffer object name that is bound to ARRAY_BUFFER_ARB to the
+    binding point corresponding to the vertex array of the type being
+    specified.  For example, the NormalPointer command copies the value
+    of ARRAY_BUFFER_BINDING_ARB (the queriable name of the buffer binding
+    corresponding to the target ARRAY_BUFFER_ARB) to the client state
+    variable NORMAL_ARRAY_BUFFER_BINDING_ARB.
+
+    If EXT_vertex_shader is defined, then the command
+    VariantArrayEXT(uint id, ...) copies the value of
+    ARRAY_BUFFER_BINDING_ARB to the buffer object binding point
+    corresponding to variant array <id>.
+
+    If ARB_vertex_program is defined, then the command
+    VertexAttribPointerARB(int attrib, ...) copies the value of
+    ARRAY_BUFFER_BINDING_ARB to the buffer object binding point
+    corresponding to vertex attrib array <attrib>.
+
+    If ARB_vertex_blend is defined, then the command WeightPointerARB
+    copies the value of ARRAY_BUFFER_BINDING_ARB to
+    WEIGHT_ARRAY_BUFFER_BINDING_ARB.
+
+    Rendering commands ArrayElement, DrawArrays, DrawElements,
+    DrawRangeElements, MultiDrawArrays, and MultiDrawElements operate as
+    previously defined, except that data for enabled vertex, variant, and
+    attrib arrays are sourced from buffers if the array's buffer binding
+    is non-zero.  When an array is sourced from a buffer object, the
+    pointer value of that array is used to compute an offset, in basic
+    machine units, into the data store of the buffer object.  This offset
+    is computed by subtracting a null pointer from the pointer value,
+    where both pointers are treated as pointers to basic machine units.
+
+    It is acceptable for vertex, variant, or attrib arrays to be sourced
+    from any combination of client memory and various buffer objects
+    during a single rendering operation.
+
+    It is an INVALID_OPERATION error to source data from a buffer object
+    that is currently mapped.
+
+
+    2.8B.1 Array Indices in Buffer Objects
+    ----------------------------------------------
+
+    Blocks of array indices may be stored in buffer objects with the
+    same format options that are supported for client-side index arrays.
+    Initially zero is bound to ELEMENT_ARRAY_BUFFER_ARB, indicating that
+    DrawElements and DrawRangeElements are to source their indices from
+    arrays passed as their <indices> parameters, and that
+    MultiDrawElements is to source its indices from the array of pointers
+    to arrays passed in as its <indices> parameter.
+
+    A buffer object is bound to ELEMENT_ARRAY_BUFFER_ARB by calling
+
+        void BindBufferARB(enum target, uint buffer);
+
+    with <target> set to ELEMENT_ARRAY_BUFFER_ARB, and <buffer> set to
+    the name of the buffer object.  If no corresponding buffer object
+    exists, one is initialized as defined in Section 2.8A.
+
+    The commands BufferDataARB, BufferSubDataARB, MapBufferARB, and
+    UnmapBufferARB may all be used with <target> set to
+    ELEMENT_ARRAY_BUFFER_ARB.  In such event, these commands operate in
+    the same fashion as described in section 2.8A, but on the buffer
+    currently bound to the ELEMENT_ARRAY_BUFFER_ARB target.
+
+    While a non-zero buffer object name is bound to
+    ELEMENT_ARRAY_BUFFER_ARB, DrawElements and DrawRangeElements source
+    their indices from that buffer object, using their <indices>
+    parameters as offsets into the buffer object in the same fashion as
+    described in section 2.8A1.  MultiDrawElements also sources its
+    indices from that buffer object, using its <indices> parameter as a
+    pointer to an array of pointers that represent offsets into the
+    buffer object.
+
+    Buffer objects created by binding an unused name to ARRAY_BUFFER_ARB
+    and to ELEMENT_ARRAY_BUFFER_ARB are formally equivalent, but the GL
+    may make different choices about storage implementation based on
+    the initial binding.  In some cases performance will be optimized
+    by storing indices and array data in separate buffer objects, and by
+    creating those buffer objects with the corresponding binding points."
+
+
+Additions to Chapter 3 of the 1.4 Specification (Rasterization)
+
+    None
+
+
+Additions to Chapter 4 of the 1.4 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+
+Additions to Chapter 5 of the 1.4 Specification (Special Functions)
+
+    Added to section 5.4, as part of the discussion of what commands
+    are compiled into display lists:
+
+    "Commands that are used to create, manage, and query buffer objects
+    are not included in display lists, but are executed immediately.
+    These commands are BindBufferARB, DeleteBuffersARB, GenBuffersARB,
+    IsBufferARB, BufferDataARB, BufferSubDataARB, MapBufferARB,
+    UnmapBufferARB, GetBufferParameterivARB, GetBufferSubDataARB,
+    and GetBufferPointervARB.
+
+    GL commands that source data from buffer objects dereference the
+    buffer object data in question at display list compile time, rather
+    than encoding the buffer ID and buffer offset into the display list.
+    Only GL commands that are executed immediately, rather than being
+    compiled into a display list, are permitted to use a buffer object as
+    a data sink."
+
+
+Additions to Chapter 6 of the 1.4 Specification (State and State
+Requests)
+
+    Added to section 6.1 in a subsection titled Buffer Object Queries:
+
+    "The command
+
+        boolean IsBufferARB(uint buffer);
+
+    returns TRUE if <buffer> is the name of a buffer object. If
+    <buffer> is zero, or if <buffer> is a non-zero value that is not
+    the name of a buffer object, IsBufferARB return FALSE.
+
+    The command
+
+        void GetBufferSubDataARB(enum target, intptrARB offset,
+                                 sizeiptrARB size, void *data);
+
+    queries the data contents of a buffer object.  <target> is
+    ARRAY_BUFFER_ARB.  <offset> and <size> indicate the range of data
+    in the buffer object that is to be queried, in terms of basic machine
+    units.  <data> specifies a region of client memory, <size> basic
+    machine units in length, into which the data is to be retrieved.
+
+    An error is generated if GetBufferSubDataARB is executed for a buffer
+    object that is currently mapped.
+
+    While the data store of a buffer object is mapped, the pointer to
+    the data store can be queried by calling
+
+        void GetBufferPointervARB(enum target, enum pname, void **params);
+
+    with <target> set to ARRAY_BUFFER_ARB and <pname> set to
+    BUFFER_MAP_POINTER_ARB.  The single buffer map pointer is returned
+    in <params>.  GetBufferPointervARB returns the NULL pointer value if
+    the buffer's data store is not currently mapped, or if the requesting
+    client did not map the buffer object's data store, and the
+    implementation is unable to support mappings on multiple clients."
+
+    Added to the list of queries in section 6.1.3, Enumerated Queries:
+
+        "void GetBufferParameterivARB(enum target, enum pname, int *params);"
+
+
+Errors
+
+    INVALID_ENUM is generated if the <target> parameter of BindBufferARB,
+    BufferDataARB, BufferSubDataARB, MapBufferARB, UnmapBufferARB,
+    GetBufferSubDataARB, GetBufferParameterivARB, or GetBufferPointervARB
+    is not ARRAY_BUFFER_ARB or ELEMENT_ARRAY_BUFFER_ARB.
+
+    INVALID_VALUE is generated if the <n> parameter of DeleteBuffersARB or
+    GenBuffersARB is negative.
+
+    INVALID_VALUE is generated if the <size> parameter of BufferDataARB,
+    BufferSubDataARB, or GetBufferSubDataARB is negative.
+
+    INVALID_OPERATION is generated if BufferDataARB, BufferSubDataARB,
+    MapBufferARB, UnmapBufferARB, GetBufferSubDataARB,
+    GetBufferParameterivARB, or GetBufferPointervARB is executed while
+    zero is bound to the <target> parameter.
+
+    OUT_OF_MEMORY may be generated if the data store of a buffer object
+    cannot be allocated because the <size> argument of BufferDataARB is
+    too large.
+
+    OUT_OF_MEMORY may be generated when MapBufferARB is called if the
+    data store of the buffer object in question cannot be mapped.  This
+    may occur for a variety of system-specific reasons, such as the
+    absence of sufficient remaining virtual memory.
+
+    INVALID_ENUM is generated if the <usage> parameter of BufferDataARB is
+    not STREAM_DRAW_ARB, STREAM_READ_ARB, STREAM_COPY_ARB, STATIC_DRAW_ARB,
+    STATIC_READ_ARB, STATIC_COPY_ARB, DYNAMIC_DRAW_ARB, DYNAMIC_READ_ARB,
+    or DYNAMIC_COPY_ARB.
+
+    INVALID_VALUE is generated if the <offset> parameter to BufferSubDataARB
+    or GetBufferSubDataARB is negative.
+
+    INVALID_VALUE is generated if the <offset> and <size> parameters of
+    BufferSubDataARB or GetBufferSubDataARB define a region of memory that
+    extends beyond that allocated by BufferDataARB.
+
+    INVALID_OPERATION is generated if MapBufferARB is executed for a
+    buffer that is already mapped.
+
+    INVALID_OPERATION is generated if UnmapBufferARB is executed for a
+    buffer that is not currently mapped.
+
+    INVALID_ENUM is generated if the <access> parameter of MapBufferARB
+    is not READ_ONLY_ARB, WRITE_ONLY_ARB, or READ_WRITE_ARB.
+
+    INVALID_ENUM is generated if the <pname> parameter of
+    GetBufferParameterivARB is not BUFFER_SIZE_ARB, BUFFER_USAGE_ARB,
+    BUFFER_ACCESS_ARB, or BUFFER_MAPPED_ARB.
+
+    INVALID_ENUM is generated if the <pname> parameter of
+    GetBufferPointervARB is not BUFFER_MAP_POINTER_ARB.
+
+    INVALID_OPERATION may be generated if any of the commands
+    defined in this extension is executed between the execution of Begin
+    and the corresponding execution of End.
+
+    INVALID_OPERATION is generated if a buffer object that is currently
+    mapped is used as a source of GL render data, or as a destination of
+    GL query data.
+
+    INVALID_OPERATION is generated if BufferSubDataARB is used to modify
+    the data store contents of a mapped buffer, or if GetBufferSubDataARB
+    is used to query to data store contents of a mapped buffer.
+
+
+New State
+
+(table 6.7, Vertex Array Data, p. 222)
+
+    Get Value                                 Type      Get Command              Initial Value   Sec     Attribute
+    ---------                                 ----      -----------              -------------   ---     ---------
+    ARRAY_BUFFER_BINDING_ARB                  Z+        GetIntegerv              0               2.8A    vertex-array
+    VERTEX_ARRAY_BUFFER_BINDING_ARB           Z+        GetIntegerv              0               2.8A    vertex-array
+    NORMAL_ARRAY_BUFFER_BINDING_ARB           Z+        GetIntegerv              0               2.8A    vertex-array
+    COLOR_ARRAY_BUFFER_BINDING_ARB            Z+        GetIntegerv              0               2.8A    vertex-array
+    INDEX_ARRAY_BUFFER_BINDING_ARB            Z+        GetIntegerv              0               2.8A    vertex-array
+    TEXTURE_COORD_ARRAY_BUFFER_BINDING_ARB    Z+        GetIntegerv              0               2.8A    vertex-array
+    EDGE_FLAG_ARRAY_BUFFER_BINDING_ARB        Z+        GetIntegerv              0               2.8A    vertex-array
+    SECONDARY_COLOR_ARRAY_BUFFER_BINDING_ARB  Z+        GetIntegerv              0               2.8A    vertex-array
+    FOG_COORDINATE_ARRAY_BUFFER_BINDING_ARB   Z+        GetIntegerv              0               2.8A    vertex-array
+    WEIGHT_ARRAY_BUFFER_BINDING_ARB           Z+        GetIntegerv              0               2.8A    vertex-array
+    ELEMENT_ARRAY_BUFFER_BINDING_ARB          Z+        GetIntegerv              0               2.8A.2  vertex-array
+
+    VERTEX_ATTRIB_ARRAY_BUFFER_BINDING_ARB    16+ x Z+  GetVertexAttribivARB     0               2.8A    vertex-array
+
+    XXX need to add buffer state for variant arrays
+
+(new table for buffer objects)
+
+    Get Value                   Type    Get Command                  Initial Value   Sec     Attribute
+    ---------                   ----    -----------                  -------------   ---     ---------
+    (buffer data)               BMU     GetBufferSubDataARB                          2.8A    none
+    BUFFER_SIZE_ARB             Z+      GetBufferParameterivARB      0               2.8A    none
+    BUFFER_USAGE_ARB            Z9      GetBufferParameterivARB      STATIC_DRAW_ARB 2.8A    none
+    BUFFER_ACCESS_ARB           Z3      GetBufferParameterivARB      READ_WRITE_ARB  2.8A    none
+    BUFFER_MAPPED_ARB           B       GetBufferParameterivARB      FALSE           2.8A    none
+    BUFFER_MAP_POINTER_ARB      Y       GetBufferPointervARB         NULL            2.8A    none
+
+
+New Implementation Dependent State
+
+    (none)
+
+Additions to the GLX Specification
+
+    Add new section "2.X Buffer Objects" between sections "2.5 Texture Objects"
+    and "2.6 Aligning Multiple Drawables".
+
+    "Unformatted data may be stored in the OpenGL server using named buffer
+    objects.  The storage associated with a buffer object may be used as the
+    input or output of various commands by binding the buffer to a target
+    associated with the command.  For example, if a buffer object is bound to
+    the GL_ARRAY_BUFFER_ARB target before calling glVertexPointer vertex
+    data will be sourced from the buffer object's storage.
+
+    "Buffer objects may be shared by rendering contexts, as long as the server
+    portion of the contexts share the same address space.  (Like display lists
+    and texture objects, buffer objects are part of the server context state.)
+    OpenGL makes no attempt to synchronize access to buffer objects.  If a
+    buffer object is bound to more than one context, then it is up to the
+    programmer to ensure that the contents of the object are not being changed
+    via one context while another context is using the buffer object for
+    rendering.  The results of changing a buffer object while another context
+    is using it are undefined.
+
+    "A buffer object is considered to be bound to a context if it is either
+    currently bound to a particular target (e.g., most recently selected for a
+    target via glBindBufferARB) or if some portion of the buffer will be
+    accessed by a GL operation.  For example, a buffer object is considered
+    bound to a context if the most recent call of glVertexPointer was made
+    while the buffer object was bound to the GL_ARRAY_BUFFER_ARB target.
+
+    "As a result, any client-state that attaches the contents of a buffer object
+    to the GL state must be duplicated on the server.  At a minimum the
+    following client-state must be replicated on the server:
+
+        - All vertex array size, type, stride and pointer information.
+        - All vertex array enables.
+
+    "All modifications to shared context state as a result of executing
+    glBindBufferARB are atomic.  Also, a buffer object will not be deleted
+    until it is no longer bound to any rendering context."
+
+    If GLX_ARB_create_context is present, add the following between
+    paragraphs 8 and 9 of section 3.3.7 "Rendering Contexts":
+
+    "The attribute name GLX_CONTEXT_ALLOW_BUFFER_BYTE_ORDER_MISMATCH_ARB
+    specifies whether the application wishes to use buffer objects even
+    if the byte ordering of the client and server do not match.  If this
+    attribute is True the client is responsible for byte swapping any data
+    it stores in or reads from buffer objects.  If this attribute is False
+    and the client and server have different byte orderings, the server
+    will not expose any extensions that require buffer object support and
+    the maximum values allowed for GLX_CONTEXT_MAJOR_VERSION_ARB and
+    GLX_CONTEXT_MINOR_VERSION_ARB are 1 and 4 respectively.  The default
+    value for GLX_CONTEXT_ALLOW_BUFFER_BYTE_ORDER_MISMATCH_ARB is False."
+
+    Add to the following paragraph to the end of section 4.3:
+
+    "Because the GL views buffer objects as unformatted data, the above byte
+    swapping rules do not apply to them.  Data to be stored in buffer objects
+    must be byte swapped by the application to match the server's byte ordering
+    before the data is presented to the GL."
+
+GLX Protocol
+
+    The following rendering commands are sent to the server as part of a
+    glXRender request:
+
+        BindBufferARB
+            2           12              rendering command length
+            2           290             rendering command opcode
+            4           ENUM            target
+            4           CARD32          buffer
+
+        VertexAttribPointer
+            2           36              rendering command length
+            2           291             rendering command opcode
+            8           CARD64          offset
+            4           ENUM            array
+            4           CARD32          index
+            4           ENUM            type
+            4           CARD32          size
+            4           CARD32          stride
+            1           BOOL            is_integer
+            1           BOOL            normalized
+            2                           unused
+
+        EnableVertexAttribArray
+            2           12              rendering command length
+            2           292             rendering command opcode
+            4           ENUM            array
+            4           CARD32          index
+
+        DisableVertexAttribArray
+            2           12              rendering command length
+            2           293             rendering command opcode
+            4           ENUM            array
+            4           CARD32          index
+
+        ArrayElement
+            2           8               rendering command length
+            2           294             rendering command opcode
+            4           CARD32          index
+
+        DrawElements
+            2           24               rendering command length
+            2           295              rendering command opcode
+            8           CARD64           indices_offset
+            4           ENUM             mode (GL_POINTS, etc.)
+            4           CARD32           count
+            4           CARD32           type
+
+        PushClientAttrib
+            2           8                rendering command length
+            2           296              rendering command opcode
+            4           CARD32           mask
+
+        PopClientAttrib
+            2           4                rendering command length
+            2           297              rendering command opcode
+
+    The following rendering commands are sent to the server as part of a
+    glXRender request, or as a glXRenderLarge request.
+
+        BufferDataARB
+            2           24+n+p          rendering command length
+            2           298             rendering command opcode
+            8           INT64           size
+            4           ENUM            target
+            4           ENUM            usage
+            1           BOOL            null_data
+            3                           unused
+            n           LISTofBYTE      data
+            p                           unused, p=pad(n)
+
+        If the command is encoded in a glXRenderLarge request, the command
+        opcode and command length fields are expanded to 4 bytes each.
+
+            4           28+n+p          rendering command length
+            4           298             rendering command opcode
+
+        BufferSubDataARB
+            2           24+n+p          rendering command length
+            2           299             rendering command opcode
+            8           CARD64          offset
+            8           CARD64          size
+            4           ENUM            target
+            n           LISTofBYTE      data, where n = size
+            p                           unused, p=pad(n)
+
+        If the command is encoded in a glXRenderLarge request, the command
+        opcode and command length fields are expanded to 4 bytes each.
+
+            4           28+n+p          rendering command length
+            4           299             rendering command opcode
+
+        DrawArraysNew
+            2           20+(20*m)+n+p    rendering command length
+            2           300              rendering command opcode
+            4           ENUM             mode (GL_POINTS, etc.)
+            4           CARD32           first
+            4           CARD32           count
+            4           CARD32           m
+            20*m        LISTofARRAY_INFO client_array_info
+            n           LISTofBYTE       client_arrays
+            p                            unused, p=pad(n)
+
+        If the command is encoded in a glXRenderLarge request, the command
+        opcode and command length fields are expanded to 4 bytes each.
+
+            4           24+(20*m)+n+p   rendering command length
+            4           300             rendering command opcode
+
+        Where <m> is the number of enabled vertex arrays that do not have
+        buffer objects bound to them, <n> is <count> * <s>, and <s> is the
+        sum of all client array element sizes, as defined below.
+
+        ARRAY_INFO
+            4           ENUM             data type
+                        0x1400 i=1       GL_BYTE
+                        0x1401 i=1       GL_UNSIGNED_BYTE
+                        0x1402 i=2       GL_SHORT
+                        0x1403 i=2       GL_UNSIGNED_SHORT
+                        0x1404 i=4       GL_INT
+                        0x1405 i=4       GL_UNSIGNED_INT
+                        0x1406 i=4       GL_FLOAT
+                        0x140A i=8       GL_DOUBLE
+                        0x140B i=2       GL_HALF_FLOAT
+            4           CARD32           j (number of values in array element)
+            4           ENUM             array type
+                        0x8074 j=2/3/4   VERTEX_ARRAY
+                        0x8075 j=3       NORMAL_ARRAY
+                        0x8076 j=3/4     COLOR_ARRAY
+                        0x8077 j=1       INDEX_ARRAY
+                        0x8078 j=1/2/3/4 TEXTURE_COORD_ARRAY
+                        0x8079 j=1       EDGE_FLAG_ARRAY
+                        0x8457 j=1       FOG_COORD_ARRAY
+                        0x845E j=3       SECONDARY_COLOR_ARRAY
+                        0x0000 j=1/2/3/4 VERTEX_ATTRIB_ARRAY
+                        0x86AD j>=1      WEIGHT_ARRAY_ARB
+                        0x8844 j>=1      MATRIX_INDEX_ARRAY_ARB
+                        0x850C j=1       VERTEX_WEIGHT_ARRAY_EXT
+                        0x8768 j=1       ELEMENT_ARRAY_ATI
+            4           CARD32           index
+            1           BOOL             normalized
+            1           BOOL             is_integer
+            2                            unused
+
+        For each client array, the client array element size is <i>*<j>.
+        The <index> field is the generic attribute array index when
+        <array type> is VERTEX_ATTRIB_ARRAY and the client active texture
+        unit's offset from GL_TEXTURE0 when <array_type> is
+        <TEXTURE_COORD_ARRAY>.  For all other values of <array type>,
+        <index> must be 0.
+
+        The DrawArraysNew protocol differs from the DrawArrays protocol
+        defined in EXT_vertex_array in the following ways:
+
+          1) The ARRAY_INFO structure has been expanded to include
+             <index>, <normalized>, and <is_integer>.
+
+          2) ARRAY_INFO and associated array data are only sent for arrays
+             that do not have buffer objects bound to them.
+
+          3) The data for each array is sent contiguously rather than
+             interleaved with the other arrays.
+
+          4) The array data is tightly packed.  Rather than containing
+             padding after each array, a single pad field is added on the
+             end.
+
+        DrawRangeElements
+            2           36+(20*m)+n+p    rendering command length
+            2           301              rendering command opcode
+            8           CARD64           indices_offset
+            4           ENUM             mode (GL_POINTS, etc.)
+            4           CARD32           start
+            4           CARD32           end
+            4           CARD32           count
+            4           CARD32           type
+            4           CARD32           m
+            20*m        LISTofARRAY_INFO client_array_info
+            n           LISTofBYTE       client_arrays
+            p                            unused, p=pad(n)
+
+        If the command is encoded in a glXRenderLarge request, the command
+        opcode and command length fields are expanded to 4 bytes each.
+
+            4           40+(20*m)+n+p    rendering command length
+            4           301              rendering command opcode
+
+        Where <n> is defined as it is for DrawArraysNew.
+
+    The remaining commands are non-rendering commands.  These commands are
+    sent separately (i.e., not as part of a glXRender or glXRenderLarge
+    request), using glx single requests:
+
+        DeleteBuffersARB
+            1           CARD8           opcode (X assigned)
+            1           186             GLX opcode
+            2           3+n             request length
+            4           GLX_CONTEXT_TAG context tag
+            4           CARD32          n
+            n*4         LISTofCARD32    ids
+
+        GenBuffersARB
+            1           CARD8           opcode (X assigned)
+            1           187             GLX opcode
+            2           3               request length
+            4           GLX_CONTEXT_TAG context tag
+            4           CARD32          n
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           n               reply length
+            24                          unused
+            n*4         LISTofCARD32    buffers
+
+        IsBufferARB
+            1           CARD8           opcode (X assigned)
+            1           188             GLX opcode
+            2           3               request length
+            4           GLX_CONTEXT_TAG context tag
+            4           CARD32          id
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           0               reply length
+            4           BOOL32          return value
+            20                          unused
+
+        GetBufferSubDataARB
+            1           CARD8           opcode (X assigned)
+            1           189             GLX opcode
+            2           7               request length
+            4           GLX_CONTEXT_TAG context tag
+            8           CARD64          offset
+            8           CARD64          size
+            4           ENUM            target
+          =>
+            1           1               reply
+            1           1               unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n + p) / 4
+            4                           unused
+            4           CARD32          n
+            16                          unused
+            n           LISTofBYTE      buffer subdata
+            p                           unused, p=pad(n)
+
+        GetBufferParameterivARB
+            1           CARD8           opcode (X assigned)
+            1           190             GLX opcode
+            2           4               request length
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1           1               unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n == 1 ? 0 : n)
+            4                           unused
+            4           CARD32          n (number of parameter components)
+
+            if (n == 1) this follows:
+
+            4           CARD32          params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            4*n         LISTofCARD32    params
+
+            Note that n may be 0, indicating that a GL error occurred.
+
+        GetElementRange
+            1           CARD8           opcode (X assigned)
+            1           191             GLX opcode
+            2           6               request length
+            4           GLX_CONTEXT_TAG context tag
+            8           CARD64          offset
+            4           ENUM            type
+            4           INT32           count
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           0               reply length
+            8                           unused
+            4           CARD32          lowest element
+            4           CARD32          highest element
+            8                           unused
+
+         GetBufferPointerv
+            1           CARD8           opcode (X assigned)
+            1           192             GLX opcode
+            2           4               request length
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n==1 ? 0 : n*2)
+            4                           unused
+            4           CARD32          n
+
+            if (n=1) this follows:
+
+            8           CARD64          params
+            8                           unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*8         LISTofCARD64    params
+
+            Note that n may be 0, indicating that a GL error occurred.
+
+         MapBuffer
+            1           CARD8           opcode (X assigned)
+            1           193             GLX opcode
+            2           4               request length
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           ENUM            access
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           0               reply length
+            4                           unused
+            4           CARD32          0 on error, otherwise 1.
+            8           CARD64          mapping address
+            8                           unused
+
+         UnmapBuffer
+            1           CARD8           opcode (X assigned)
+            1           194             GLX opcode
+            2           3               request length
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           0               reply length
+            4           CARD32          return value
+           20                           unused
+
+Usage Examples
+
+    These examples illustrate various usages.  In all cases a rendering
+    loop is included, and array parameters are initialized inside the
+    loop as would be required if multiple array rendering operations
+    were performed in the loops.  (Though only one operation is shown.)
+
+    Convenient macro definition for specifying buffer offsets:
+
+        #define BUFFER_OFFSET(i) ((char *)NULL + (i))
+
+    Traditional vertex arrays:
+
+        // Create system memory buffer
+        data = malloc(320);
+
+        // Fill system memory buffer
+        ...
+
+        // Frame rendering loop
+        while (...) {
+
+            // Define arrays
+            VertexPointer(4, FLOAT, 0, data);
+            ColorPointer(4, UNSIGNED_BYTE, 0, data+256);
+
+            // Enable arrays
+            EnableClientState(VERTEX_ARRAY);
+            EnableClientState(COLOR_ARRAY);
+
+            // Draw arrays
+            DrawArrays(TRIANGLE_STRIP, 0, 16);
+
+            // Disable arrays
+            DisableClientState(VERTEX_ARRAY);
+            DisableClientState(COLOR_ARRAY);
+
+            // Other rendering commands
+            ...
+
+        }
+
+        // Free system memory buffer
+        free(data);
+
+
+    Vertex arrays using a buffer object:
+
+        // Create system memory buffer
+        data = malloc(320);
+
+        // Fill system memory buffer
+        ...
+
+        // Create buffer object
+        BindBufferARB(ARRAY_BUFFER_ARB, 1);
+
+        // Initialize data store of buffer object
+        BufferDataARB(ARRAY_BUFFER_ARB, 320, data, STATIC_DRAW_ARB);
+
+        // Free system memory buffer
+        free(data);
+
+        // Frame rendering loop
+        while (...) {
+
+            // Define arrays
+            BindBufferARB(ARRAY_BUFFER_ARB, 1);
+            VertexPointer(4, FLOAT, 0, BUFFER_OFFSET(0));
+            ColorPointer(4, UNSIGNED_BYTE, 0, BUFFER_OFFSET(256));
+
+            // Enable arrays
+            EnableClientState(VERTEX_ARRAY);
+            EnableClientState(COLOR_ARRAY);
+
+            // Draw arrays
+            DrawArrays(TRIANGLE_STRIP, 0, 16);
+
+            // Disable arrays
+            DisableClientState(VERTEX_ARRAY);
+            DisableClientState(COLOR_ARRAY);
+
+            // Other rendering commands
+            ...
+
+        }
+
+        // Delete buffer object
+        int buffer[1] = {1};
+        DeleteBuffersARB(1, buffer);
+
+
+    Code that works with and without buffer objects:
+
+        // Create system memory buffer
+        data = malloc(320);
+
+        // Fill system memory buffer
+        ...
+
+        // Initialize buffer object, and null the data pointer
+#ifdef USE_BUFFER_OBJECTS
+        BindBufferARB(ARRAY_BUFFER_ARB, 1);
+        BufferDataARB(ARRAY_BUFFER_ARB, 320, data, STATIC_DRAW_ARB);
+        free(data);
+        data = NULL;
+#endif
+
+        // Frame rendering loop
+        while (...) {
+
+            // Define arrays
+#ifdef USE_BUFFER_OBJECTS
+            BindBufferARB(ARRAY_BUFFER_ARB, 1);
+#endif
+            VertexPointer(4, FLOAT, 0, data);
+            ColorPointer(4, UNSIGNED_BYTE, 0, data+256);
+
+            // Enable arrays
+            EnableClientState(VERTEX_ARRAY);
+            EnableClientState(COLOR_ARRAY);
+
+            // Draw arrays
+            DrawArrays(TRIANGLE_STRIP, 0, 16);
+
+            // Disable arrays
+            DisableClientState(VERTEX_ARRAY);
+            DisableClientState(COLOR_ARRAY);
+
+            // Other rendering commands
+            ...
+
+        }
+
+        // Delete buffer object
+#ifdef USE_BUFFER_OBJECTS
+        int buffer[1] = {1};
+        DeleteBuffersARB(1, buffer);
+#else
+        // Free system memory buffer
+        free(data);
+#endif
+
+
+    Vertex arrays using a mapped buffer object:
+
+        // Frame rendering loop
+        while (...) {
+
+            // Define arrays (and create buffer object in first pass)
+            BindBufferARB(ARRAY_BUFFER_ARB, 1);
+            VertexPointer(4, FLOAT, 0, BUFFER_OFFSET(0));
+            ColorPointer(4, UNSIGNED_BYTE, 0, BUFFER_OFFSET(256));
+
+            // Enable arrays
+            EnableClientState(VERTEX_ARRAY);
+            EnableClientState(COLOR_ARRAY);
+
+            // Initialize data store of buffer object
+            BufferDataARB(ARRAY_BUFFER_ARB, 320, NULL, STREAM_DRAW_ARB);
+
+            // Map the buffer object
+            float *p = MapBufferARB(ARRAY_BUFFER_ARB, WRITE_ONLY);
+
+            // Compute and store data in mapped buffer object
+            ...
+
+            // Unmap buffer object and draw arrays
+            if (UnmapBufferARB(ARRAY_BUFFER_ARB)) {
+                DrawArrays(TRIANGLE_STRIP, 0, 16);
+            }
+
+            // Disable arrays
+            DisableClientState(VERTEX_ARRAY);
+            DisableClientState(COLOR_ARRAY);
+
+            // Other rendering commands
+            ...
+
+        }
+
+        // Delete buffer object
+        int buffer[1] = {1};
+        DeleteBuffersARB(1, buffer);
+
+
+    Vertex arrays using a mapped buffer object for array data and an
+    unmapped buffer object for indices:
+
+        // Create system memory buffer for indices
+        indexdata = malloc(400);
+
+        // Fill system memory buffer with 100 indices
+        ...
+
+        // Create index buffer object
+        BindBufferARB(ELEMENT_ARRAY_BUFFER_ARB, 2);
+        BufferDataARB(ELEMENT_ARRAY_BUFFER_ARB, 400, indexdata,
+                STATIC_DRAW_ARB);
+
+        // Free system memory buffer
+        free(indexdata);
+
+        // Frame rendering loop
+        while (...) {
+
+            // Define arrays (and create buffer object in first pass)
+            BindBufferARB(ARRAY_BUFFER_ARB, 1);
+            VertexPointer(4, FLOAT, 0, BUFFER_OFFSET(0));
+            ColorPointer(4, UNSIGNED_BYTE, 0, BUFFER_OFFSET(256));
+            BindBufferARB(ELEMENT_ARRAY_BUFFER_ARB, 2);
+
+            // Enable arrays
+            EnableClientState(VERTEX_ARRAY);
+            EnableClientState(COLOR_ARRAY);
+
+            // Initialize data store of buffer object
+            BufferDataARB(ARRAY_BUFFER_ARB, 320, NULL, STREAM_DRAW_ARB);
+
+            // Map the buffer object
+            float *p = MapBufferARB(ARRAY_BUFFER_ARB, WRITE_ONLY);
+
+            // Compute and store data in mapped buffer object
+            ...
+
+            // Unmap buffer object and draw arrays
+            if (UnmapBufferARB(ARRAY_BUFFER_ARB)) {
+                DrawElements(TRIANGLE_STRIP, 100, UNSIGNED_INT,
+                             BUFFER_OFFSET(0));
+            }
+
+            // Disable arrays
+            DisableClientState(VERTEX_ARRAY);
+            DisableClientState(COLOR_ARRAY);
+
+            // Other rendering commands
+            ...
+
+        }
+
+        // Delete buffer objects
+        int buffers[2] = {1, 2};
+        DeleteBuffersARB(1, buffers);
+
+
+    Mapping multiple buffers simultaneously:
+
+        // Map buffers
+        BindBuffer(ARRAY_BUFFER_ARB, 1);
+        float *a = MapBuffer(ARRAY_BUFFER_ARB, WRITE_ONLY);
+        BindBuffer(ARRAY_BUFFER_ARB, 2);
+        float *b = MapBuffer(ARRAY_BUFFER_ARB, WRITE_ONLY);
+
+        // Fill buffers
+        ...
+
+        // Unmap buffers
+        BindBuffer(ARRAY_BUFFER_ARB, 1);
+        if (!UnmapBufferARB(ARRAY_BUFFER_ARB)) {
+            // Handle error case
+        }
+        BindBuffer(ARRAY_BUFFER_ARB, 2);
+        if (!UnmapBufferARB(ARRAY_BUFFER_ARB)) {
+            // Handle error case
+        }
+
+    Revision  Date         Author  Changes
+    --------  -----------  ------  ---------------------------------------
+    0.99.7    18-Jan-2012  mgodse  Fixed typos.
+
+    0.99.6    25-Oct-2010  jrj     Fixed 'context tag' location in
+                                   GetBufferSubDataARB GLX protocol.
+
+    0.99.5    14-Apr-2010  Jon Leech Added ARB suffix to GLX token.
+
+    0.99.4    07-Apr-2010  jrj     Added the GLX_ARB_vertex_buffer_object
+                                   string to identify GLX implementations
+                                   that support the new context attribute.
+
+    0.99.3    10-Feb-2010  jrj     Fixed GetBufferSubData reply layout and
+                                   cleaned up the field descriptions.
+                                   Added GetBufferPointerv protocol.
+                                   Added an issue describing why the
+                                   MapBuffer and UnmapBuffer protocol do
+                                   not transmit buffer data.
+
+    0.99.2    02-Feb-2010  jrj     Removed <n> field from DrawArraysNew
+                                   and DrawRangeElements.  Its value can
+                                   be computed from <m> and the data in
+                                   <client_array_info>.
+                                   Added more language describing
+                                   DrawArraysNew fields and differences
+                                   from the existing DrawArrays protocol.
+
+    0.99.1    15-Jan-2010  jrj     Added more issues.
+                                   Use 64 bits for offsets and sizes where
+                                   appropriate.
+                                   Added is_integer to ARRAY_INFO and
+                                   VertexAttribPointer
+                                   Added PushClientAttrib and
+                                   PopClientAttrib protocol.
+                                   Added MapBuffer/UnmapBuffer protocol.
+                                   Defined VERTEX_ATTRIB_ARRAY = GL_NONE =
+                                   0.
+                                   Added padding to DrawArraysNew and
+                                   DrawRangeElements.
+                                   Changed resolution to the byte ordering
+                                   issue.
+
+    0.99      16-May-2008  idr     Added "Additions to the GLX Specification"
+                                   Minor updates to protocol encoding
+    0.98      01-Sep-2006  idr     Resolved the byte-ordering issue.
+    0.97      16-Mar-2005  idr     Added 'null_data' field to BufferData.
+                                   This works like the 'null_image' in
+                                   TexImage3D.
+                                   Removed the 'type' field from
+                                   DrawRangeElements and DrawElements.
+                                   Added the 'count' field to GetElementRange.
+    0.96      09-Mar-2005  idr     Modified the EnableBufferObject and
+                                   DisableBufferObject commands.
+                                   Changed the parameter ordering and the
+                                   client-side data specification for
+                                   DrawArraysNew.
+                                   Replaced the existing DrawElements-type
+                                   commands with DrawRangeElements and
+                                   DrawElements.
+                                   Added the GetElementRange query.
+                                   Added a proposed resolution for the
+                                   EnableClientState issue.
+    0.95      04-Mar-2005  idr     Fixed the size of BindBufferToArray.
+                                   Added several issues.
+    0.94      09-Dec-2004  idr     Typo corrections.
+                                   Fixed the sizes of several LISTofBYTE and
+                                   BOOL elements.
+                                   Removed the 'provoke' field from the
+                                   ArrayElement command.
+                                   Added commands to support DrawElements.
+    0.93      08-Dec-2004  idr     Added several issues.
+    0.92      27-Oct-2004  idr     Initial pass at GLX protocol.

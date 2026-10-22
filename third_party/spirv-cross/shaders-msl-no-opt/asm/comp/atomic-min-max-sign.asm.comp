@@ -1,0 +1,56 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 10
+; Bound: 30
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpName %main "main"
+               OpName %SSBO "SSBO"
+               OpMemberName %SSBO 0 "a"
+               OpMemberName %SSBO 1 "b"
+               OpName %_ ""
+               OpMemberDecorate %SSBO 0 Offset 0
+               OpMemberDecorate %SSBO 1 Offset 4
+               OpDecorate %SSBO BufferBlock
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+               OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+        %int = OpTypeInt 32 1
+       %SSBO = OpTypeStruct %uint %int
+%_ptr_Uniform_SSBO = OpTypePointer Uniform %SSBO
+          %_ = OpVariable %_ptr_Uniform_SSBO Uniform
+      %int_0 = OpConstant %int 0
+%_ptr_Uniform_uint = OpTypePointer Uniform %uint
+     %uint_1 = OpConstant %uint 1
+     %uint_0 = OpConstant %uint 0
+%uint_4294967295 = OpConstant %uint 4294967295
+      %int_1 = OpConstant %int 1
+%_ptr_Uniform_int = OpTypePointer Uniform %int
+     %int_n3 = OpConstant %int -3
+      %int_4 = OpConstant %int 4
+     %v3uint = OpTypeVector %uint 3
+%gl_WorkGroupSize = OpConstantComposite %v3uint %uint_1 %uint_1 %uint_1
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %13 = OpAccessChain %_ptr_Uniform_uint %_ %int_0
+         %18 = OpAccessChain %_ptr_Uniform_uint %_ %int_0
+         %22 = OpAccessChain %_ptr_Uniform_int %_ %int_1
+         %25 = OpAccessChain %_ptr_Uniform_int %_ %int_1
+         %30 = OpAtomicUMax %uint %13 %uint_1 %uint_0 %uint_1
+         %31 = OpAtomicSMin %uint %13 %uint_1 %uint_0 %uint_1
+         %32 = OpAtomicUMin %uint %18 %uint_1 %uint_0 %uint_4294967295
+         %33 = OpAtomicSMax %uint %18 %uint_1 %uint_0 %uint_4294967295
+         %34 = OpAtomicSMax %int %22 %uint_1 %uint_0 %int_n3
+         %35 = OpAtomicUMin %int %22 %uint_1 %uint_0 %int_n3
+         %36 = OpAtomicSMin %int %25 %uint_1 %uint_0 %int_4
+         %37 = OpAtomicUMax %int %25 %uint_1 %uint_0 %int_4
+               OpReturn
+               OpFunctionEnd

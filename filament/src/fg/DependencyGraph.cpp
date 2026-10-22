@@ -1,0 +1,344 @@
+/*
+ * Copyright (C) 2021 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "fg/details/DependencyGraph.h"
+
+#if FILAMENT_ENABLE_FGVIEWER
+#include <fgviewer/FrameGraphInfo.h>
+#endif
+
+#include <private/utils/Tracing.h>
+
+#include <utils/compiler.h>
+#include <utils/CString.h>
+#include <utils/debug.h>
+#include <utils/ostream.h>
+
+#include <cstdint>
+#include <iterator>
+
+namespace filament {
+
+DependencyGraph::DependencyGraph(FrameGraphAllocator& arena) noexcept
+    : mNodes(arena), mEdges(arena)  {
+    mNodes.reserve(512);
+    mEdges.reserve(1024);
+}
+
+DependencyGraph::~DependencyGraph() noexcept = default;
+
+uint32_t DependencyGraph::generateNodeId() noexcept {
+    return mNodes.size();
+}
+
+void DependencyGraph::registerNode(Node* node, NodeID const id) noexcept {
+    // Node* is not fully constructed here
+    assert_invariant(id == mNodes.size());
+    mNodes.push_back(node);
+}
+
+bool DependencyGraph::isEdgeValid(Edge const* edge) const noexcept {
+    auto& nodes = mNodes;
+    Node const* from = nodes[edge->from];
+    Node const* to = nodes[edge->to];
+    return !from->isCulled() && !to->isCulled();
+}
+
+void DependencyGraph::link(Edge* edge) noexcept {
+    mEdges.push_back(edge);
+}
+
+DependencyGraph::EdgeContainer const& DependencyGraph::getEdges() const noexcept {
+    return mEdges;
+}
+
+DependencyGraph::NodeContainer const& DependencyGraph::getNodes() const noexcept {
+    return mNodes;
+}
+
+DependencyGraph::EdgeContainer DependencyGraph::getIncomingEdges(
+        Node const* node, FrameGraphAllocator& arena) const noexcept {
+    // TODO: we might need something more efficient
+
+    EdgeContainer result(arena);
+    result.reserve(8);
+    NodeID const nodeId = node->getId();
+    std::copy_if(mEdges.begin(), mEdges.end(), std::back_inserter(result),
+            [nodeId](auto edge) { return edge->to == nodeId; });
+    return result;
+}
+
+DependencyGraph::EdgeContainer DependencyGraph::getOutgoingEdges(
+        Node const* node, FrameGraphAllocator& arena) const noexcept {
+    // TODO: we might need something more efficient
+
+    EdgeContainer result(arena);
+    result.reserve(8);
+    NodeID const nodeId = node->getId();
+    std::copy_if(mEdges.begin(), mEdges.end(), std::back_inserter(result),
+            [nodeId](auto edge) { return edge->from == nodeId; });
+    return result;
+}
+
+DependencyGraph::Node const* DependencyGraph::getNode(NodeID const id) const noexcept {
+    return mNodes[id];
+}
+
+DependencyGraph::Node* DependencyGraph::getNode(NodeID const id) noexcept {
+    return mNodes[id];
+}
+
+void DependencyGraph::cull(FrameGraphAllocator& arena) noexcept {
+
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+
+    auto const& nodes = mNodes;
+    auto const& edges = mEdges;
+
+    // update reference counts
+    for (Edge const* const pEdge : edges) {
+        Node* node = nodes[pEdge->from];
+        node->mRefCount++;
+    }
+
+    // Temporary allocations
+    utils::ArenaScope const scope(arena);
+
+    // cull nodes with a 0 reference count
+    NodeContainer stack(arena);
+    stack.reserve(nodes.size());
+    for (Node* const pNode : nodes) {
+        if (pNode->getRefCount() == 0) {
+            // note: this is guaranteed to not reallocate
+            stack.push_back(pNode);
+        }
+    }
+    while (!stack.empty()) {
+        Node const* const pNode = stack.back();
+        stack.pop_back();
+
+        forEachIncomingEdge(pNode, [this, &stack](Edge const* edge) {
+            Node* pLinkedNode = getNode(edge->from);
+            if (--pLinkedNode->mRefCount == 0) {
+                assert_invariant(stack.size() < stack.capacity());
+                // note: this is guaranteed to not reallocate
+                stack.push_back(pLinkedNode);
+            }
+        });
+    }
+}
+
+void DependencyGraph::clear() noexcept {
+    mEdges.clear();
+    mNodes.clear();
+}
+
+void DependencyGraph::export_graphviz(FrameGraphAllocator& arena,
+        utils::io::ostream& out, char const* name) const noexcept {
+
+    utils::ArenaScope const scope(arena);
+
+#ifndef NDEBUG
+    const char* graphName = name ? name : "graph";
+    out << "digraph \"" << graphName << "\" {\n";
+    out << "rankdir = LR\n";
+    out << "bgcolor = black\n";
+    out << "node [shape=rectangle, fontname=\"helvetica\", fontsize=10]\n\n";
+
+    auto const& nodes = mNodes;
+
+    auto skipNode = [](char const* name) {
+#if FILAMENT_ENABLE_FGVIEWER
+        if (!name) {
+            return false;
+        }
+        std::string_view view{ name };
+        return view == std::string_view(fgviewer::READBACK_PASS_NAME) ||
+               view == std::string_view(fgviewer::RESOLVED_MONITOR_PASS_NAME);
+#else
+        return false;
+#endif
+    };
+
+    for (Node const* node: nodes) {
+        if (skipNode(node->getName())) {
+            continue;
+        }
+        uint32_t id = node->getId();
+        utils::CString s = node->graphvizify();
+        out << "\"N" << id << "\" " << s.c_str() << "\n";
+    }
+
+    out << "\n";
+    for (Node const* node: nodes) {
+        if (skipNode(node->getName())) {
+            continue;
+        }
+        uint32_t id = node->getId();
+
+        auto edges = getOutgoingEdges(node, arena);
+        auto first = edges.begin();
+        auto pos = std::partition(first, edges.end(),
+                [this](auto const& edge) { return isEdgeValid(edge); });
+
+        utils::CString s = node->graphvizifyEdgeColor();
+
+        // render the valid edges
+        if (first != pos) {
+            bool hasValidEdges = false;
+            for (auto it = first; it != pos; ++it) {
+                Node const* ref = getNode((*it)->to);
+                if (skipNode(ref->getName())) {
+                    continue;
+                }
+                hasValidEdges = true;
+            }
+            if (hasValidEdges) {
+                out << "N" << id << " -> { ";
+                while (first != pos) {
+                    Node const* ref = getNode((*first++)->to);
+                    if (skipNode(ref->getName())) {
+                        continue;
+                    }
+                    out << "N" << ref->getId() << " ";
+                }
+                out << "} [color=" << s.c_str() << "2]\n";
+            }
+        }
+
+        // render the invalid edges
+        if (first != edges.end()) {
+            bool hasInvalidEdges = false;
+            for (auto it = first; it != edges.end(); ++it) {
+                Node const* ref = getNode((*it)->to);
+                if (skipNode(ref->getName())) {
+                    continue;
+                }
+                hasInvalidEdges = true;
+            }
+            if (hasInvalidEdges) {
+                out << "N" << id << " -> { ";
+                while (first != edges.end()) {
+                    Node const* ref = getNode((*first++)->to);
+                    if (skipNode(ref->getName())) {
+                        continue;
+                    }
+                    out << "N" << ref->getId() << " ";
+                }
+                out << "} [color=" << s.c_str() << "4 style=dashed]\n";
+            }
+        }
+    }
+
+    out << "}" << utils::io::endl;
+#endif
+}
+
+bool DependencyGraph::isAcyclic(FrameGraphAllocator& arena) const noexcept {
+#ifndef NDEBUG
+    // We work on a copy of the graph
+    utils::ArenaScope const scope(arena);
+    DependencyGraph graph(arena);
+    graph.mEdges = mEdges;
+    graph.mNodes = mNodes;
+    return isAcyclicInternal(graph);
+#else
+    return true;
+#endif
+}
+bool DependencyGraph::isAcyclicInternal(DependencyGraph& graph) noexcept {
+#ifndef NDEBUG
+    while (!graph.mNodes.empty() && !graph.mEdges.empty()) {
+        // check if we have at lest one leaf (i.e. nodes that have incoming but no outgoing edges)
+        auto pos = std::find_if(graph.mNodes.begin(), graph.mNodes.end(),
+                [&graph](Node const* node) {
+                    auto pos = std::find_if(graph.mEdges.begin(), graph.mEdges.end(),
+                            [node](Edge const* edge) {
+                                return edge->from == node->getId();
+                            });
+                    return pos == graph.mEdges.end();
+                });
+
+        if (pos == graph.mNodes.end()) {
+            return false;   // cyclic
+        }
+
+        // remove the leaf's edges
+        auto last = std::remove_if(graph.mEdges.begin(), graph.mEdges.end(),
+                [&pos](Edge const* edge) {
+            return edge->to == (*pos)->getId() || edge->from == (*pos)->getId();
+        });
+        graph.mEdges.erase(last, graph.mEdges.end());
+
+        // remove the leaf
+        graph.mNodes.erase(pos);
+    }
+#endif
+    return true; // acyclic
+}
+
+// ------------------------------------------------------------------------------------------------
+
+DependencyGraph::Node::Node(DependencyGraph& graph) noexcept : mId(graph.generateNodeId()) {
+    graph.registerNode(this, mId);
+}
+
+uint32_t DependencyGraph::Node::getRefCount() const noexcept {
+    return (mRefCount & TARGET) ? 1u : mRefCount;
+}
+
+void DependencyGraph::Node::makeTarget() noexcept {
+    assert_invariant(mRefCount == 0 || mRefCount == TARGET);
+    mRefCount = TARGET;
+}
+
+char const* DependencyGraph::Node::getName() const noexcept {
+    return "unknown";
+}
+
+utils::CString DependencyGraph::Node::graphvizify() const noexcept {
+#ifndef NDEBUG
+    utils::CString s;
+
+    uint32_t const id = getId();
+    const char* const nodeName = getName();
+    uint32_t const refCount = getRefCount();
+
+    s.append("[label=\"");
+    s.append(nodeName);
+    s.append("\\nrefs: ");
+    s.append(utils::to_string(refCount));
+    s.append(", id: ");
+    s.append(utils::to_string(id));
+    s.append("\", style=filled, fillcolor=");
+    s.append(refCount ? "skyblue" : "skyblue4");
+    s.append("]");
+
+    return s;
+#else
+    return {};
+#endif
+}
+
+utils::CString DependencyGraph::Node::graphvizifyEdgeColor() const noexcept {
+#ifndef NDEBUG
+    return utils::CString{ "darkolivegreen" };
+#else
+    return {};
+#endif
+}
+
+} // namespace filament

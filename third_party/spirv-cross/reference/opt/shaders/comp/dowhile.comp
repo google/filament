@@ -1,0 +1,38 @@
+#version 310 es
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) readonly buffer SSBO
+{
+    mat4 mvp;
+    vec4 in_data[];
+} _28;
+
+layout(binding = 1, std430) writeonly buffer SSBO2
+{
+    vec4 out_data[];
+} _52;
+
+void main()
+{
+    vec4 _59;
+    int _60;
+    _60 = 0;
+    _59 = _28.in_data[gl_GlobalInvocationID.x];
+    vec4 _42;
+    for (;;)
+    {
+        _42 = _28.mvp * _59;
+        int _44 = _60 + 1;
+        if (_44 < 16)
+        {
+            _60 = _44;
+            _59 = _42;
+        }
+        else
+        {
+            break;
+        }
+    }
+    _52.out_data[gl_GlobalInvocationID.x] = _42;
+}
+

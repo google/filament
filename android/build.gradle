@@ -1,0 +1,267 @@
+// This script accepts the following parameters:
+//
+// com.google.android.filament.dist-dir
+//     Path to the Filament distribution/install directory for Android
+//     (produced by make/ninja install). This directory must contain lib/arm64-v8a/ etc.
+//
+// com.google.android.filament.tools-dir
+//     Path to the Filament distribution/install directory for desktop.
+//     This directory must contain bin/matc.
+//
+// com.google.android.filament.exclude-vulkan
+//     When set, support for Vulkan will be excluded.
+//
+// com.google.android.filament.include-webgpu
+//     When set, enables WebGPU support.
+//
+// com.google.android.filament.fgviewer
+//     When set, enables fgviewer
+//
+// com.google.android.filament.matdbg
+//     When set, enables matdbg
+//
+// com.google.android.filament.matnopt
+//     When set, disable shader optimizations.
+//
+// com.google.android.filament.skip-samples
+//     Exclude samples from the project. Useful to speed up compilation.
+//
+// com.google.android.filament.abis
+//     List of supported ABIs to build as a comma separated list. Available options are:
+//         arm64-v8a, armeabi-v7a, x86_64, x86, all
+//     Defaults to all.
+//
+// Example:
+//     ./gradlew -Pcom.google.android.filament.dist-dir=../dist-android-release \
+//               -Pcom.google.android.filament.abis=x86 \
+//               assembleRelease
+
+// Publishing to Maven Central:
+//   - Build and upload artifacts with ./gradlew publish
+//   - Close and release staging repo on Nexus with ./gradlew closeAndReleaseStagingRepository
+//
+// The following properties need to be set (either in ~/gradle/gradle.properties, on the command
+// line, or as environment variables, e.g.: ORG_GRADLE_PROJECT_property=value):
+//
+//     sonatypeUsername=nexus_user
+//     sonatypePassword=nexus_password
+//
+//     To sign with a key ring file:
+//     signing.keyId=pgp_key_id
+//     signing.password=pgp_key_password
+//     signing.secretKeyRingFile=/Users/user/.gnupg/maven_signing.key
+//
+//     To sign with in-memory keys (useful for CI):,
+//     signingKey=ASCII armored key (begins with -----BEGIN PGP PRIVATE KEY BLOCK-----)
+//     signingPassword=key password
+//
+
+buildscript {
+    def path = providers
+            .gradleProperty("com.google.android.filament.dist-dir")
+            .get()
+
+    def directory = objects.fileProperty().fileValue(new File(path)).getAsFile().get()
+    def filamentPath = directory.absolutePath
+
+    // Our CMake scripts require a forward-slash path for the FILAMENT_DIST_DIR
+    // variable, so here we convert the native path to a forward-slash path.
+    filamentPath = filamentPath.replace(File.separator, '/')
+    ext.filamentPath = filamentPath
+
+    // Warning: changing this property does not work well with incremental builds.
+    def excludeVulkan = providers
+            .gradleProperty("com.google.android.filament.exclude-vulkan")
+            .isPresent()
+
+    def includeWebGPU = providers
+            .gradleProperty("com.google.android.filament.include-webgpu")
+            .isPresent()
+
+    def fgviewer = providers
+                 .gradleProperty("com.google.android.filament.fgviewer")
+                 .isPresent()
+
+    def matdbg = providers
+            .gradleProperty("com.google.android.filament.matdbg")
+            .isPresent()
+
+    def matnopt = providers
+            .gradleProperty("com.google.android.filament.matnopt")
+            .isPresent()
+
+    def mutexdebug = providers
+            .gradleProperty("com.google.android.filament.mutexdebug")
+            .isPresent()
+
+    def abis = ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
+    def newAbis = providers
+            .gradleProperty("com.google.android.filament.abis")
+            .get()
+            .split(',')
+    if (!newAbis.contains("all")) {
+        abis = newAbis
+    }
+
+    ext.versions = [
+        'jdk': 21,
+        'minSdk': 21,
+        'targetSdk': 37,
+        'compileSdk': 37,
+        'kotlin': '2.4.0',
+        'kotlin_coroutines': '1.11.0',
+        'buildTools': '36.0.0',
+        'ndk': '30.0.16248370',
+        'androidx_core': '1.19.0',
+        'androidx_annotations': '1.10.0'
+    ]
+
+    ext.deps = [
+        'androidx': [
+            'annotations': "androidx.annotation:annotation:${versions.androidx_annotations}",
+            'core': "androidx.core:core:${versions.androidx_core}"
+        ],
+        'kotlin': "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${versions.kotlin}",
+        'coroutines': [
+            'core': "org.jetbrains.kotlinx:kotlinx-coroutines-core:${versions.kotlin_coroutines}",
+            'android': "org.jetbrains.kotlinx:kotlinx-coroutines-android:${versions.kotlin_coroutines}",
+        ]
+    ]
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:9.4.1'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${versions.kotlin}"
+    }
+
+    ext.cmakeArgs = [
+        "--no-warn-unused-cli",
+        "-DANDROID_WEAK_API_DEFS=ON",
+        "-DANDROID_PIE=ON",
+        "-DANDROID_PLATFORM=21",
+        "-DANDROID_STL=c++_static",
+        "-DFILAMENT_DIST_DIR=${filamentPath}".toString(),
+        "-DFILAMENT_SUPPORTS_VULKAN=${excludeVulkan ? 'OFF' : 'ON'}".toString(),
+        "-DFILAMENT_SUPPORTS_WEBGPU=${includeWebGPU ? 'ON' : 'OFF'}".toString(),
+        "-DFILAMENT_ENABLE_FGVIEWER=${fgviewer ? 'ON' : 'OFF'}".toString(),
+        "-DFILAMENT_ENABLE_MATDBG=${matdbg ? 'ON' : 'OFF'}".toString(),
+        "-DFILAMENT_DISABLE_MATOPT=${matnopt ? 'ON' : 'OFF'}".toString(),
+        "-DFILAMENT_DEBUG_MUTEX=${mutexdebug ? 'ON' : 'OFF'}".toString()
+    ]
+
+    ext.cppFlags = [
+        "-std=c++17",
+        "-fno-stack-protector",
+        "-fno-unwind-tables",
+        "-fno-asynchronous-unwind-tables",
+        "-fno-rtti",
+        "-ffast-math",
+        "-fno-finite-math-only",
+        "-ffp-contract=fast",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-fomit-frame-pointer",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-no-canonical-prefixes",
+        "-Wformat",
+        "-Werror=format-security",
+        "-Wno-unused-command-line-argument",
+        "-Wl,--gc-sections",
+        "-Wl,-Bsymbolic-functions",
+        "-Wl,--hash-style=both", // Required to support API levels below 23
+    ]
+
+    ext.abis = abis
+
+    repositories {
+        mavenCentral()
+        google()
+    }
+}
+
+plugins {
+    id "io.github.gradle-nexus.publish-plugin" version "2.0.0"
+}
+
+// See https://github.com/gradle-nexus/publish-plugin
+// Publish to https://oss.sonatype.org/ (not s01)
+nexusPublishing {
+    packageGroup = 'com.google.android'
+    repositories {
+        sonatype {
+            stagingProfileId = '9a75a224a4f17b'
+            nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
+        }
+    }
+}
+
+subprojects {
+    group = GROUP
+    version = VERSION_NAME
+
+    repositories {
+        mavenCentral()
+        google()
+    }
+
+    if (!name.startsWith("sample") && name != "filament-tools" && name != "gradle-plugin") {
+        apply plugin: 'com.android.library'
+
+        android {
+            buildToolsVersion versions.buildTools
+            compileSdkVersion versions.compileSdk
+            ndkVersion versions.ndk
+
+            defaultConfig {
+                minSdkVersion versions.minSdk
+                targetSdkVersion versions.targetSdk
+
+                externalNativeBuild {
+                    cmake {
+                        arguments.addAll(rootProject.ext.cmakeArgs)
+                        cppFlags.addAll(rootProject.ext.cppFlags)
+                    }
+                }
+
+                ndk {
+                    //noinspection ChromeOsAbiSupport
+                    abiFilters(*rootProject.ext.abis)
+                }
+
+                buildFeatures {
+                    buildConfig true
+                }
+
+                consumerProguardFiles '../proguard-rules.pro'
+            }
+
+            externalNativeBuild {
+                cmake {
+                    version "3.19.0+"
+                    path "CMakeLists.txt"
+                }
+            }
+
+            sourceSets {
+                main {
+                    jni.srcDirs "src/main/cpp"
+                }
+            }
+
+            compileOptions {
+                sourceCompatibility versions.jdk
+                targetCompatibility versions.jdk
+            }
+        }
+    }
+}
+
+gradle.taskGraph.whenReady {
+    gradle.taskGraph.allTasks.each {
+        it.onlyIf {
+            !it.project.ext.has('isSample') ||
+                    !project.hasProperty('com.google.android.filament.skip-samples')
+         }
+    }
+}

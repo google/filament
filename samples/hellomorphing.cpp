@@ -1,0 +1,221 @@
+/*
+ * Copyright (C) 2023 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "common/arguments.h"
+
+#include "generated/resources/resources.h"
+
+#include <filamentapp/AssetLoader.h>
+#include <filamentapp/FilamentApp2.h>
+
+#include <filament/Camera.h>
+#include <filament/Engine.h>
+#include <filament/IndexBuffer.h>
+#include <filament/Material.h>
+#include <filament/RenderableManager.h>
+#include <filament/Scene.h>
+#include <filament/SkinningBuffer.h>
+#include <filament/Skybox.h>
+#include <filament/TransformManager.h>
+#include <filament/VertexBuffer.h>
+#include <filament/View.h>
+
+#include <utils/EntityManager.h>
+#include <utils/getopt.h>
+#include <utils/Path.h>
+
+#include <samples/SampleConfig.h>
+
+#include <cmath>
+#include <iostream>
+
+using namespace filament;
+using utils::Entity;
+using utils::EntityManager;
+using utils::Path;
+using namespace filament::math;
+
+namespace {
+struct App {
+    SampleConfig config;
+    FilamentApp2* filamentApp = nullptr;
+    VertexBuffer* vb;
+    IndexBuffer* ib;
+    Material* mat;
+    Camera* cam;
+    Entity camera;
+    Skybox* skybox;
+    Entity renderable;
+    MorphTargetBuffer *mt1;
+};
+
+struct Vertex {
+    float2 position;
+    uint32_t color;
+};
+
+const Vertex TRIANGLE_VERTICES[3] = {
+    {{1, 0}, 0xffff0000u}, // blue one (ABGR)
+    {{cos(M_PI * 2 / 3), sin(M_PI * 2 / 3)}, 0xff00ff00u}, // green one
+    {{cos(M_PI * 4 / 3), sin(M_PI * 4 / 3)}, 0xff0000ffu}, // red one
+};
+
+const float3 targets_pos1[9] = {
+    {-2, 0, 0},{0, 2, 0},{1, 0, 0}, // 1st position for 1st, 2nd and 3rd point of the first primitive
+    {1, 1, 0},{-1, 0, 0},{-1, 0, 0}, // 2nd ...
+    {0, 0, 0},{0, 0, 0},{0, 0, 0} // no position change
+};
+
+const float3 targets_pos2[9] = {
+    {0, 2, 0},{-2, 0, 0},{1, 0, 0}, // 1st position for 1st, 2nd and 3rd point of the second primitive
+    {-1, 0, 0},{1, 1, 0},{-1, 0, 0}, // position of th 3rd point is same for both morph targets
+    {0, 0, 0},{0, 0, 0}, {0, 0, 0}
+};
+
+const short4 targets_tan[9] = {
+  {0, 0, 0, 0},{0, 0, 0, 0},{0, 0, 0, 0},
+  {0, 0, 0, 0},{0, 0, 0, 0},{0, 0, 0, 0},
+  {0, 0, 0, 0},{0, 0, 0, 0},{0, 0, 0, 0}
+};
+
+constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
+} // namespace
+
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    app->config = config;
+
+    auto setup = [app](Engine* engine, View* view, Scene* scene) {
+        app->skybox = Skybox::Builder().color({ 0.1, 0.125, 0.25, 1.0 }).build(*engine);
+
+        scene->setSkybox(app->skybox);
+        view->setPostProcessingEnabled(false);
+        static_assert(sizeof(Vertex) == 12, "Strange vertex size.");
+        app->vb = VertexBuffer::Builder()
+                          .vertexCount(3)
+                          .bufferCount(1)
+                          .attribute(VertexAttribute::POSITION, 0,
+                                  VertexBuffer::AttributeType::FLOAT2, 0, 12)
+                          .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4,
+                                  8, 12)
+                          .normalized(VertexAttribute::COLOR)
+                          .build(*engine);
+        app->vb->setBufferAt(*engine, 0,
+                VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES, 36, nullptr));
+        app->ib = IndexBuffer::Builder()
+                          .indexCount(3)
+                          .bufferType(IndexBuffer::IndexType::USHORT)
+                          .build(*engine);
+        app->ib->setBuffer(*engine, IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, nullptr));
+        app->mat = Material::Builder()
+                           .package(RESOURCES_BAKEDCOLOR_DATA, RESOURCES_BAKEDCOLOR_SIZE)
+                           .build(*engine);
+
+        app->mt1 = MorphTargetBuffer::Builder()
+                           .withPositions(true)
+                           .withTangents(true)
+                           .vertexCount(9 * 2)
+                           .count(3)
+                           .build(*engine);
+
+        app->mt1->setPositionsAt(*engine, 0, targets_pos1, 3, 0);
+        app->mt1->setPositionsAt(*engine, 1, targets_pos1 + 3, 3, 0);
+        app->mt1->setPositionsAt(*engine, 2, targets_pos1 + 6, 3, 0);
+        app->mt1->setTangentsAt(*engine, 0, targets_tan, 3, 0);
+        app->mt1->setTangentsAt(*engine, 1, targets_tan + 3, 3, 0);
+        app->mt1->setTangentsAt(*engine, 2, targets_tan + 6, 3, 0);
+
+        app->mt1->setPositionsAt(*engine, 0, targets_pos2, 3, 9);
+        app->mt1->setPositionsAt(*engine, 1, targets_pos2 + 3, 3, 9);
+        app->mt1->setPositionsAt(*engine, 2, targets_pos2 + 6, 3, 9);
+        app->mt1->setTangentsAt(*engine, 0, targets_tan, 3, 9);
+        app->mt1->setTangentsAt(*engine, 1, targets_tan + 3, 3, 9);
+        app->mt1->setTangentsAt(*engine, 2, targets_tan + 6, 3, 9);
+
+        app->renderable = EntityManager::get().create();
+
+        RenderableManager::Builder(2)
+                .boundingBox({ { -1, -1, -1 }, { 1, 1, 1 } })
+                .material(0, app->mat->getDefaultInstance())
+                .material(1, app->mat->getDefaultInstance())
+                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app->vb, app->ib, 0, 3)
+                .geometry(1, RenderableManager::PrimitiveType::TRIANGLES, app->vb, app->ib, 0, 3)
+                .culling(false)
+                .receiveShadows(false)
+                .castShadows(false)
+                .morphing(app->mt1)
+                .morphing(0, 0, 0)
+                .morphing(0, 1, 9)
+                .build(*engine, app->renderable);
+
+        scene->addEntity(app->renderable);
+        app->camera = utils::EntityManager::get().create();
+        app->cam = engine->createCamera(app->camera);
+        view->setCamera(app->cam);
+    };
+
+    auto cleanup = [app](Engine* engine, View*, Scene*) {
+        engine->destroy(app->skybox);
+        engine->destroy(app->renderable);
+        engine->destroy(app->mat);
+        engine->destroy(app->vb);
+        engine->destroy(app->ib);
+        engine->destroy(app->mt1);
+        engine->destroyCameraComponent(app->camera);
+        utils::EntityManager::get().destroy(app->camera);
+    };
+
+
+    auto fApp = samples::getBuilder(config, dm, loader)
+                        .setup(setup)
+                        .cleanup(cleanup)
+                        .animation([app](Engine* engine, View* view, double now) {
+                            constexpr float ZOOM = 1.5f;
+                            const uint32_t w = view->getViewport().width;
+                            const uint32_t h = view->getViewport().height;
+                            const float aspect = (float) w / h;
+                            app->cam->setProjection(Camera::Projection::ORTHO, -aspect * ZOOM,
+                                    aspect * ZOOM, -ZOOM, ZOOM, 0, 1);
+
+                            auto& rm = engine->getRenderableManager();
+                            // morphTarget/blendshapes animation defined for all primitives
+                            float z = (float) (sin(now) / 2.f + 0.5f);
+                            float weights[] = { 1 - z, z / 2, z / 2 };
+                            // set global weights of all morph targets
+                            rm.setMorphWeights(rm.getInstance(app->renderable), weights, 3, 0);
+                        })
+                        .build();
+
+    app->filamentApp = fApp.get();
+    return fApp;
+}
+
+samples::SampleParameters createAppParameters() { return {}; }
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config;
+    config.title = "helloMorphing";
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
+    auto dm = samples::getDisplayManager(config);
+    auto loader = samples::getAssetLoader(config);
+    auto app = createSampleApp(config, dm.get(), loader.get());
+    app->run();
+    return 0;
+}
+#endif

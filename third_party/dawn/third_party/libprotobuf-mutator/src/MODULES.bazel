@@ -1,0 +1,11 @@
+module(
+    name = "libprotobuf-mutator",
+    version = "1.6-dev",
+    compatibility_level = 1,
+)
+
+bazel_dep(
+    name = "protobuf",
+    version = "26.0.bcr.1",
+    repo_name = "com_google_protobuf",
+)

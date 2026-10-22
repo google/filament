@@ -1,0 +1,36 @@
+# Copyright 2026 Valve Corporation
+# Copyright 2026 LunarG, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: format
+
+on:
+    push:
+    pull_request:
+        branches:
+            - main
+
+permissions:
+    contents: read
+
+jobs:
+  clang-format:
+    name: clang-format
+    runs-on: ubuntu-latest
+
+    env:
+      CLANG_FORMAT_VERSION: 18
+      CLANG_FORMAT_FILES: "*.c *.h *.cpp *.hpp"
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Check formatting
+      run: |
+        clang-format-${CLANG_FORMAT_VERSION} --version
+        for f in $(git ls-files -- ${CLANG_FORMAT_FILES}); do
+          echo "Checking $f"
+          clang-format-${CLANG_FORMAT_VERSION} -i --Werror "$f"
+        done
+
+        git diff --exit-code

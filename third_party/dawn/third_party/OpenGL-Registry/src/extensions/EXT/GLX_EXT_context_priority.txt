@@ -1,0 +1,108 @@
+Name
+
+    EXT_context_priority
+
+Name Strings
+
+    GLX_EXT_context_priority
+
+Contributors
+
+    Adam Jackson, Red Hat
+
+    Cloned from EGL_IMG_context_priority, whose contributors included:
+
+    Ben Bowman, Imagination Techonologies
+    Graham Connor, Imagination Techonologies
+
+Contacts
+
+    Adam Jackson <ajax@redhat.com>
+
+Status
+
+    Complete
+
+Version
+
+    Version 2, 10 April 2019
+
+Number
+
+    OpenGL Extension #535
+
+Dependencies
+
+    Requires GLX_ARB_create_context.
+
+    This extension is written against the text of the GLX 1.4 specification.
+
+Overview
+
+    This extension allows a GLXContext to be created with a priority
+    hint. It is possible that an implementation will not honour the
+    hint, especially if there are constraints on the number of high
+    priority contexts available in the system, or system policy limits
+    access to high priority contexts to appropriate system privilege
+    level. A query is provided to find the real priority level assigned
+    to the context after creation.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    New attributes accepted by the <attrib_list> argument of
+    glXCreateContextAttribsARB:
+
+        GLX_CONTEXT_PRIORITY_LEVEL_EXT          0x3100
+
+    New attribute values accepted in the <attrib_list> argument
+    of glXCreateContextAttribsARB:
+
+        GLX_CONTEXT_PRIORITY_HIGH_EXT           0x3101
+        GLX_CONTEXT_PRIORITY_MEDIUM_EXT         0x3102
+        GLX_CONTEXT_PRIORITY_LOW_EXT            0x3103
+
+Additions to the GLX_ARB_create_context specification
+
+    Add to the text of attributes supported by glXCreateContextAttribsARB:
+
+        "GLX_CONTEXT_PRIORITY_LEVEL_EXT determines the priority level of
+        the context to be created. This attribute is a hint, as an
+        implementation may not support multiple contexts at some
+        priority levels and system policy may limit access to high
+        priority contexts to appropriate system privilege level. The
+        default value for GLX_CONTEXT_PRIORITY_LEVEL_EXT is
+        GLX_CONTEXT_PRIORITY_MEDIUM_EXT."
+
+Additions to the GLX 1.4 specification
+
+    To Table 3.5 "Context attributes" add the row:
+
+    Attribute                       Type    Description
+    GLX_CONTEXT_PRIORITY_LEVEL_EXT  int     Context priority level
+
+Issues
+
+    Refer to the issues in EGL_IMG_context_priority for further background.
+
+    1) What enumerant values should we use here?
+
+    RESOLVED: Reuse the enums from EGL_IMG_context_priority. The window
+    system binding APIs have trended towards sharing enumerant space. The
+    range is not otherwise assigned for GLX, and Imagination have consented
+    to its reuse in GLX.
+
+Revision History
+
+    Version 2, 10 April 2019 (Adam Jackson)
+    - Resolve enumerant issue.
+
+    Version 1, 20 February 2019 (Adam Jackson)
+    - Clone from EGL_IMG_context_priority

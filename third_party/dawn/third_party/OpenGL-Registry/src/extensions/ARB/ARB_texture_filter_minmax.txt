@@ -1,0 +1,403 @@
+Name
+
+    ARB_texture_filter_minmax
+
+Name Strings
+
+    GL_ARB_texture_filter_minmax
+
+Contact
+
+    Jon Leech (oddhack 'at' sonic.net)
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Contributors
+
+    Jeff Bolz, NVIDIA Corporation
+    Mark Kilgard, NVIDIA Corporation
+    Eric Werness, NVIDIA Corporation
+    James Helferty, NVIDIA Corporation
+    Daniel Koch, NVIDIA Corporation
+
+Notice
+
+    Copyright (c) 2015 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 26, 2015.
+    Ratified by the Khronos Board of Promoters on August 7, 2015.
+
+Version
+
+    Version 6, April 20, 2015
+
+Number
+
+    ARB Extension #188
+
+Dependencies
+
+    This extension is written against the OpenGL 4.5 Specification (Core
+    Profile), dated February 2, 2015.
+
+    OpenGL 3.3 is required.
+
+    This extension interacts with EXT_texture_filter_anisotropic.
+
+Overview
+
+    In unextended OpenGL, minification and magnification filters such as
+    LINEAR allow texture lookups to returned a filtered texel value produced
+    by computing an weighted average of a collection of texels in the
+    neighborhood of the texture coordinate provided.
+
+    This extension provides a new texture and sampler parameter
+    (TEXTURE_REDUCTION_MODE_ARB) which allows applications to produce a
+    filtered texel value by computing a component-wise minimum (MIN) or
+    maximum (MAX) of the texels that would normally be averaged.  The
+    reduction mode is orthogonal to the minification and magnification filter
+    parameters.  The filter parameters are used to identify the set of texels
+    used to produce a final filtered value; the reduction mode identifies how
+    these texels are combined.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <pname> parameter to SamplerParameter{i f}{v},
+    SamplerParameterI{u}iv, GetSamplerParameter{i f}v,
+    GetSamplerParameterI{u}iv, TexParameter{i f}{v}, TexParameterI{u}iv,
+    GetTexParameter{i f}v, GetTexParameterI{u}iv, TextureParameter{i f}{v},
+    TextureParameterI{u}iv, GetTextureParameter{i f}v,
+    and GetTextureParameterI{u}iv:
+
+        TEXTURE_REDUCTION_MODE_ARB                  0x9366
+
+    Accepted by the <param> or <params> parameter to SamplerParameter{i f}{v},
+    SamplerParameterI{u}iv, TexParameter{i f}{v}, TexParameterI{u}iv,
+    TextureParameter{i f}{v}, and TextureParameterI{u}iv when <pname> is
+    TEXTURE_REDUCTION_MODE_ARB:
+
+        WEIGHTED_AVERAGE_ARB                        0x9367
+        MIN                                         (reused from core)
+        MAX                                         (reused from core)
+
+Modifications to the OpenGL 4.3 Specification (Compatibility Profile)
+
+    Modify Section 8.10, Texture Parameters
+
+    (add to Table 8.17, pp 227-228.)
+
+      Name                              Type    Legal Values
+      --------------------------        ----    --------------------
+      TEXTURE_REDUCTION_MODE_ARB        enum    WEIGHTED_AVERAGE_ARB,
+                                                MIN, MAX
+
+[[ jon - Note that the generalized error language for Tex*Parameter* and
+   SamplerParameter* catches the pname/param mismatch for this parameter,
+   previously mentioned explicitly in the "Errors" section of the EXT spec.
+   ]]
+
+
+    Modify Section 8.14.2, Coordinate Wrapping and Texel Selection
+
+    (add below the equations specifying the values i_0, j_0, ... beta, gamma
+    on p. 246):
+
+    ... where frac(x) denotes the fractional part of <x>, and may be
+    quantized to a fixed-point value with implementation-dependent
+    precision.
+
+
+    Modify Section 8.14.3, Mipmapping
+
+    (modify the last paragraph in the section, p. 251)
+
+    The final texture value is then found as:
+
+      tau = (1 - frac(lambda)) * tau_1 + frac(lambda) * tau_2,
+
+    where frac(x) denotes the fractional part of <x> and may be quantized to
+    a fixed-point value with implementation-dependent precision.
+
+
+    Modify Section 8.17, Texture Completeness
+
+[[ Jon - this change is with regard to the 20150421 GL 4.5 spec update and
+   the changes in the completeness list resulting from bug 12791 ]]
+
+    (modify the last bullet in the section, p. 264, so that this point only
+    applies when the reduction mode samples from two mip levels):
+
+    * Any of
+
+      - The internal format of the texture arrays is integer (see tables
+        8.19- 8.20), and the texture reduction mode is WEIGHTED_AVERAGE_ARB;
+
+      - THe internal format is STENCIL_INDEX;
+
+      - The internal format is DEPTH_STENCIL, the value of
+        DEPTH_STENCIL_TEXTURE_MODE for the texture is STENCIL_INDEX, and the
+        texture reduction mode is WEIGHTED_AVERAGE_ARB
+
+      and either the magnification filter is not NEAREST, or the
+      minification filter is neither NEAREST nor NEAREST_MIPMAP_NEAREST.
+
+    (add a new bullet point expressing the constraints on supported texture
+    formats)
+
+      * The texture reduction mode is MIN or MAX, and that reduction mode is
+        not supported for the texture dimensionality, multisample state, and
+        internal format. Support for these reduction modes is only
+        guaranteed in the following cases:
+
+        - The texture is not multisampled (see section 8.8)
+        - The internal format of the texture image is RED
+            [[ Compatibility profile only: add LUMINANCE and INTENSITY ]]
+        - The data type of the texture image is fixed- or floating-point.
+
+        Implementations may also support these reduction modes for other
+        formats. Such support can be determined by calling
+        GetInternalformat* (see section 22.3) with <pname>
+        TEXTURE_REDUCTION_MODE_ARB.
+
+
+    Insert before Section 8.24, sRGB Texture Color Conversion (p. 271)
+
+    Section 8.23post, Texture Reduction Modes
+
+    When using minification and magnification filters such as LINEAR, or when
+    using anisotropic texture filtering, the values of multiple texels will
+    normally be combined using a weighted average to produce a filtered
+    texture value.  However, a filtered texture value may also be produced by
+    computing per-component minimum and maximum values over the set of texels
+    that would normally be averaged.  The texture and sampler parameter
+    TEXTURE_REDUCTION_MODE_EXT controls the process by which multiple texels
+    are combined to produce a filtered texture value.  When set to its default
+    state of WEIGHTED_AVERAGE_EXT, a weighted average will be computed, as
+    described in previous sections.
+
+    When TEXTURE_REDUCTION_MODE_ARB is MIN or MAX, the equations to produce a
+    filtered texel value for LINEAR minification or magnification filters
+    (equation 8.10 and subsequent unnumbered ones) are replaced with
+
+      tau = reduce((1-alpha)*(1-beta)*(1-gamma), tau_i0_j0_k0,
+                   (  alpha)*(1-beta)*(1-gamma), tau_i1_j0_k0,
+                   (1-alpha)*(  beta)*(1-gamma), tau_i0_j1_k0,
+                   (  alpha)*(  beta)*(1-gamma), tau_i1_j1_k0,
+                   (1-alpha)*(1-beta)*(  gamma), tau_i0_j0_k1,
+                   (  alpha)*(1-beta)*(  gamma), tau_i1_j0_k1,
+                   (1-alpha)*(  beta)*(  gamma), tau_i0_j1_k1,
+                   (  alpha)*(  beta)*(  gamma), tau_i1_j1_k1),
+
+      tau = reduce((1-alpha)*(1-beta), tau_i0_j0,
+                   (  alpha)*(1-beta), tau_i1_j0,
+                   (1-alpha)*(  beta), tau_i0_j1,
+                   (  alpha)*(  beta), tau_i1_j1), or
+
+      tau = reduce((1-alpha), tau_i0,
+                   (  alpha), tau_i1)
+
+    for three-, two-, and one-dimensional texture accesses, respectively.  The
+    function reduce() is defined to operate on pairs of weights and texel
+    values.  If the reduction mode is MIN or MAX, reduce() computes a
+    component-wise minimum or maximum, respectively, of the R, G, B, and A
+    components of the set of provided texels with non-zero weights.
+
+    For minification filters involving two texture levels
+    (NEAREST_MIPMAP_LINEAR and LINEAR_MIPMAP_LINEAR), filtered values for the
+    two selected levels, tau_1 and tau_2, are produced as described in section
+    8.14.3, but using the reductions described immediately above.  The two
+    filtered values will be combined to generate a final result using the
+    equation
+
+      tau = reduce((1-frac(lambda)), tau_1,
+                   (  frac(lambda)), tau_2),
+
+    where tau_1 and tau_2 are filtered values for levels d_1 and d_2, and
+    frac(lambda) is the fractional portion of the texture level of detail and
+    may be quantized to a fixed-point value with implementation-dependent
+    precision.
+
+    If anisotropic texture filtering is enabled, a reduction mode of
+    WEIGHTED_AVERAGE_ARB will produce a filtered texel value by computing a
+    weighted average of texel values, using an implementation-dependent set of
+    selected texels and weights.  When using reduction modes of MIN or MAX, a
+    filtered texel value will be produced using the equation
+
+      tau = reduce(tau_1, ..., tau_N)
+
+    where tau_1 through tau_N are the <N> texels that would be used with
+    non-zero weights when a reduction mode of WEIGHTED_AVERAGE_ARB is used.
+
+    If a texture access using a reduction mode of MIN or MAX is used with a
+    texture access with depth comparisons enabled (see section 8.23.1), the
+    individual tau values used in the reduce() functions should reflect the
+    results of the depth comparison (0.0 or 1.0), not the original values in
+    the depth texture.
+
+
+    Modify Section 22.3.1, Supported Operation Queries
+
+    (add to the table of support pnames starting on p. 542)
+
+    * TEXTURE_REDUCTION_MODE_ARB: Support for filtering with reduction modes
+      MIN and MAX is returned in <params>.
+
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+New State
+
+    Add to Table 23.23, Textures (state per sampler object)
+
+                                                           Initial
+    Get Value                   Type  Get Command           Value              Description                Sec.
+    --------------------------  ----  -----------------   -------------------- ------------------------   -----
+    TEXTURE_REDUCTION_MODE_ARB  E     GetTexParameteriv   WEIGHTED_AVERAGE_ARB Texture reduction mode     8.10
+                                                                               (average, minimum, maximum)
+
+New Implementation Dependent State
+
+    None.
+
+Dependencies on EXT_texture_filter_anisotropic
+
+    If EXT_texture_filter_anisotropic is not supported, references to
+    anisotropic filtering in the discussion of texture reduction modes should
+    be removed.
+
+Interactions with the compatibility profile
+
+    If the compatibility profile is supported, then LUMINANCE and INTENSITY
+    are added to the list of formats guaranteed to support MIN and MAX
+    reduction modes.
+
+Issues
+
+    (1) What should this extension be called?
+
+      RESOLVED: ARB_texture_filter_minmax, like EXT_texture_filter_minmax on
+      which it is based.
+
+    (2) How does this extension interact with restrictions on min/mag filters
+        textures with integer components?
+
+      RESOLVED:  In unextended OpenGL 4.3, a texture with integer components
+      (e.g., RGBA8I) is considered incomplete if used with minification or
+      magnification filters that normally average multiple samples (anything
+      other than NEAREST and NEAREST_MIPMAP_NEAREST).  This restriction exists
+      to avoid the need to define semantics for computing a weighted average
+      of integer values with non-integer weights, which will produce an
+      arithmetic result that is not an integer.  Given that the MIN and MAX
+      reduction modes don't do any arithmetic and won't produce non-integer
+      values, we allow these reduction modes to be used with arbitrary
+      filters.
+
+    (3) How does this extension interact with TEXTURE_COMPARE_MODE set
+        to COMPARE_R_TO_TEXTURE for depth textures?
+
+      RESOLVED: This extension does not require support for DEPTH_COMPONENT
+      textures with the new filter modes, but if they are supported, the
+      per-sample comparison should be performed prior to the min/max
+      reduction.
+
+      This implies the MIN mode for TEXTURE_REDUCTION_MODE_ARB in this case
+      returns a FALSE value if *any* of the texels compare FALSE; to return
+      TRUE, every comparison must be TRUE. Likewise this implies the MAX
+      mode for TEXTURE_REDUCTION_MODE_ARB in this case returns a TRUE value
+      if *any* of the texels compare TRUE; to return FALSE, every comparison
+      must be FALSE.
+
+      Note that unextended OpenGL 4.5 doesn't require that linear filtering
+      actually average depth comparison results of 0.0 and 1.0, but behaving
+      this way appears to be common practice and may be required for other
+      3D graphics APIs.
+
+    (4) Do interpolation weights figure into the min/max reductions?
+
+      RESOLVED: Yes. Texels that would have a weight of zero for the normal
+      WEIGHTED_AVERAGE_ARB reduction modes should not be considered when
+      performing MIN or MAX reductions.
+
+      Note that implementations may end up quantize the interpolation
+      weights to fixed-point values with implementation-dependent precision.
+      This may cause samples to be ignored in WEIGHTED_AVERAGE_ARB or
+      MIN/MAX reductions. For example, if you are using a minification
+      filter of LINEAR_MIPMAP_LINEAR and the computed LOD is 2.00001, the
+      implementation may round the LOD as being exactly 2.0 and ignore the
+      texels in level 3 for the purposes of trilinear filtering.
+
+    (5) Should TEXTURE_REDUCTION_MODE_ARB work with stencil textures?
+
+      RESOLVED:  Yes.
+
+    (6) What are the constraints on supported texture targets and formats?
+
+      RESOLVED: After conducting a voting exercise, we concluded that the
+      set of supported formats would be limited to single-channel (R/L/I),
+      fixed- or floating-point, and that the GetInternalformat query should
+      be used to expose support for additional formats.
+
+      RESOLVED: Formats which don't support MIN/MAX reduction are treated as
+      incomplete textures when those reduction modes are set.
+
+      RESOLVED: TexParameter* does not generate an error when setting
+      MIN/MAX reduction for unsupported texture types. This can't catch all
+      misuse even when not using separate sampler objects, so only having
+      the mismatch affect completeness seems cleaner.
+
+      DISCUSSION: Different vendors all had different constraints. There
+      were problems with multi-channel textures, multisampled textures,
+      integer textures, and depth component and stencil index textures.
+
+Revision History
+
+    Version 1, 2015/02/20 (Jon Leech)
+      - Branch from EXT_texture_filter_minmax and add issue 6 from ARB
+        discussion.
+
+    Version 2, 2015/02/25 (Jon Leech)
+      - Rebase against GL 4.5 and change suffixes to ARB. Change minimum
+        required GL version from 1.0 to 3.3 (which is where
+        SamplerParameter* commands were introduced). Add constraints on
+        texture types guaranteed to support MIN/MAX reduction in sections
+        8.17, and query for additional supported types in section 22.3.1.
+        Remove no longer needed Errors section. Update issue 6 with proposed
+        resolution of the format compatibility issue.
+
+    Version 3, 2015/02/26 (Jon Leech)
+      - Remove DEPTH_COMPONENT from formats guaranteed to be supported, and
+        add LUMINANCE and INTENSITY in the compatibility profile. Clean up
+        state table entry.
+
+    Version 4, 2015/03/20 (Jon Leech)
+      - Remove nonexistent GREEN and BLUE internal formats. Remove
+        restriction to two-dimensional images (Intel determined they do not
+        require it). Update issues 3 and 6 to track restrictions of various
+        vendor hardware.
+
+    Version 5, 2015/04/01 (Jon Leech)
+      - Reduce required format support to single-channel (R/L/I), fixed- and
+        floating-point textures only. Remove guaranteed ALPHA format support
+        in the compatibility profile. Reflow text of Issues.
+
+    Version 6, 2015/04/20 (Jon Leech)
+      - Modify edits to the completeness conditions in section 8.17 based on
+        changes to the GL spec in this area (Bug 12791).

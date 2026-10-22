@@ -1,0 +1,295 @@
+Name
+
+    SGIS_blended_overlay
+
+Name Strings
+
+    GLX_SGIS_blended_overlay
+
+Version
+
+    $Date: 1997/10/29 20:56:43 $ $Revision: 1.5 $
+
+Number
+
+    142
+
+Dependencies
+
+    EXT_visual_info is required
+    GLX_SGI_color_range affects the definition of this extension
+
+Overview
+
+    This extension augments the set of transparency types for GLX
+    visuals (defined by the EXT_visual_info GLX extension).  A new
+    transparency type designated BLENDED_RGBA_SGIS is defined for
+    overlay windows supporting an alpha color component.  Instead of
+    using a particular transparent pixel or color value to indicate
+    transparency, a window created with a BLENDED_RGBA_SGIS
+    transparency type visual blends with the lower frame buffer layers
+    based on the overlay window's per-pixel alpha component.
+
+    The overlay blend function is:
+
+      if ( Cu is color index pixel type ) then
+
+        if ( Ao > 0.0 ) then
+          Cd = Co    /* Non-zero overlay alpha simply uses overlay color */
+        else
+          Cd = Cu    /* Note: later CI cmap turns Cd index into true color */
+        endif
+
+      else    /* Cu is an RGBA, RGB, L, or LA pixel type */
+
+        /* blend overlay color with normal color based on overlay alpha */
+        Cd = Co * (Ao,Ao,Ao,Ao) + Cu * ( (1,1,1,1) - (Ao,Ao,Ao,Ao) )
+
+      endif
+
+    where Cd is the resulting displayed color.  Co is the RGBA
+    quadruplet for the overlay RGBA components of the overlay window
+    pixel.  Ao is the alpha component for the overlay alpha component
+    of the overlay window pixel.  Cu is the RGBA quadruplet for the
+    RGBA components of the displayed pixel if no overlay where present
+    in the overlay window's layer (or any higher level).  Think of Cu
+    as the displayable color "under" the BLENDED_RGBA_SGIS overlay
+    pixel.
+
+    In the case of extended range frame buffer formats, the overlay
+    blend function is applied post-clamping to the [0,1] range.
+
+    Here are some of the uses for blended RGBA overlays:
+
+      Render antialiased lines, points, and polygons in the overlays
+      with GL_LINE_SMOOTH, GL_POINT_SMOOTH, and GL_POLYGON_SMOOTH.
+
+      Alpha blended antiliasing could be used on the overlay boundaries
+      of overlay control panels and boat hulls.
+
+      Clean blending of overlaid mattes for live video.  Live video
+      stream could be overlaid by computer generated overlaid
+      graphics.
+
+      Swank user interface support for sweeping out irregular screen
+      regions by painiting the region in the overlay with a fractional
+      alpha to blend the sweeped region with some constant color in the
+      overlay.
+
+      Swank brush shapes for 3D painting that let you see the blended
+      pixels underneather the overlay brush shape.
+
+      Really smooth (ie, subpixel positioned), full-color, antialiased
+      cursors (application drawn into a blended RGBA overlay).
+
+IP Status
+
+    Silicon Graphics has filed for patent protection for some of the
+    techniques described in this extension document.
+
+Issues
+
+    *  Are any other blending functions interesting?  NO.
+
+    *  Rather unlikely but you could have multiple layers of blended
+       overlays and/or normal overlays.  If two layers of blended overlays
+       were present, the upper layer should be blended with the resulting
+       blend of the lower overlay with the normal plane.  YES.
+
+       (Warning, be careful about multiple blending using
+       non-premultiplied alpha.  See Porter & Duff SIGGRAPH paper.)
+
+    *  X does not all rendering in the alpha bitplanes.  X rendering
+       should be assumed to always draw an alpha of 1.0.  This means that
+       a BLENDED_RGBA_SGIS overlay will act as an overlay with no
+       transparent pixel when it comes to X rendering.  Blended overlays
+       overlays will only be usable for transparency via OpenGL
+       rendering.  The SEVER_OVERLAY_VISUALS (SOV) X convention will
+       therefore advertise the visual as having transparency type None (no
+       new transparency type will be added to SOV).  YES.
+
+    *  If the alpha component of the frame buffer is displayable (ie, sent
+       out with the video signal), what alpha value should be generated
+       when blended overlays are present?  Is the resulting blended alpha
+       what you would want?  Perhaps merely sending the normal plane alpha
+       is better.  Unresolved.
+
+    *  Should frame buffer layers that supporte extended precision (via
+       the GLX_SGI_color_range extension) be blended before clamping
+       the color components to [0,1]?  NO.
+
+       Both the overlay and normal layer must both be clamped to [0,1]
+       before the overlay blend function is performed.
+
+    *  Does the overlay's full alpha component precision need to be
+       used for the overlay blend function?  NO.
+
+       For example, if the overlay had 8 bits of alpha, the overlay
+       blend function might "get away with" only blending with the 4
+       most significant bits of the alpha component.  This might allow
+       cheaper multipliers for the bandwidth-intensive overlay blend
+       function.  There is no direct way to query what alpha precision
+       the overlay blend uses.  Obviously, implementations are
+       encouraged to use as much overlay precision as is available.
+
+    *  How does a blended overlay interact when it covers a color index
+       window?  If the overlay alpha is zero, use the color index
+       pixel.  A non-zero alpha simply uses the overlay color as is.
+
+    *  How does a blended overlay interact when it covers an X
+       DirectColor visual?  DirectColor has RGB components that are
+       then passed through (generally as part of video scan-out) a
+       per-component colormap (ie, look-up tables).  (The DirectColor
+       colormap is often implemented by overloading the gamma tables).
+
+       Arguably, the blending should use the post-DirectColor colormap
+       color values (same for color index, PseudoColor, etc), but in
+       practice, this is a colormap lookup that typically happens
+       within the video display subsystem so it is not reasonable to
+       expect the overlay blending be put off so long.
+
+       RESOLUTION: DirectColor visual color components should overlay
+       blended pre-DirectColor colormap conversion.  In practice, this
+       means that DirectColor will be treated no differently from
+       TrueColor visuals.
+
+    *  What is the relationship between blended overlays and channel
+       compositing?  None, they are independent and orthogonal
+       features.  Channel compositing happens well after blended
+       overlays.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Returned by glXGetConfig, and accepted by the <attrib_list>
+    parameter of glXChooseVisual (following the GLX_TRANSPARENT_TYPE_EXT
+    token):
+
+        GLX_BLENDED_RGBA_SGIS           0x8025
+
+    (EXT_visual_info previously defined GLX_NONE_EXT,
+    GLX_TRANSPARENT_RGB_EXT, and GLX_TRANSPARENT_INDEX_EXT.)
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations and
+the Framebuffer)
+
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    Changed beginning of the paragraph from the EXT_visual_info
+    specification:
+
+      The visual attribute GLX_TRANSPARENT_TYPE_EXT indicates whether
+      or not the visual supports transparency, and if it does support
+      transparency, what type of transparency is available. If the
+      attribute is set to GLX_NONE_EXT then windows created with the
+      visual will not have any transparent pixels. If the attribute is
+      GLX_TRANSPARENT_RGB_EXT, GLX_TRANSPARENT_INDEX_EXT, or
+      GLX_BLENDED_RGBA_SGIS then the visual supports transparency. ...
+
+    Add the following paragraph after the discussion of paragraph from
+    the EXT_visual_info specification addition beginning "The visual
+    attribute GLX_TRANSPARENT_TYPE_EXT indicates..."
+
+      GLX_BLENDED_RGBA_SGIS is applicable to TrueColor and DirectColor
+      visuals.  There is no particular transparent pixel value for this
+      visual.  Instead, the alpha component of pixels belonging to the
+      overlay window are used to blend the overlay color with the
+      displayable color of the frame buffer layers below the
+      GLX_BLENDED_RGBA_SGIS overlay pixels.
+
+      The GLX_BLENDED_RGBA_SGIS overlay blend function is:
+
+        if ( Cu is color index pixel type ) then
+
+          if ( Ao > 0.0 ) then
+            Cd = Co    /* Non-zero overlay alpha simply uses overlay color */
+          else
+            Cd = Cu    /* Note: later CI colormap turns Cd index into true color */
+          endif
+
+        else    /* Cu is an RGBA, RGB, L, or LA pixel type */
+
+          /* blend overlay color with normal color based on overlay alpha */
+          Cd = Co * (Ao,Ao,Ao,Ao) + Cu * ( (1,1,1,1) - (Ao,Ao,Ao,Ao) )
+
+        endif
+
+      where Cd is the resulting displayed color.  Co is the RGBA
+      quadruplet for the overlay RGBA components of the overlay window
+      pixel.  Ao is the alpha component for the overlay alpha component
+      of the overlay window pixel.  Cu is the RGBA quadruplet for the
+      RGBA components of the displayed pixel if no overlay where present
+      in the overlay window's layer (or any higher level).  Think of Cu
+      as the displayable color "under" the BLENDED_RGBA_SGIS overlay
+      pixel.
+
+      In the case of extended range frame buffer formats (from the
+      GLX_SGI_color_range spec), the overlay blend function is applied
+      post-clamping to the [0,1] range during display scan out.
+
+    Changed paragraph from the EXT_visual_info specification:
+
+      If GLX_TRANSPARENT_TYPE_EXT is GLX_NONE_EXT,
+      GLX_TRANSPARENT_RGB_EXT, or GLX_BLENDED_RGBA_SGIS, then the value
+      returned for GLX_TRANSPARENT_INDEX_VALUE_EXT is undefined.  If
+      GLX_TRANSPARENT_TYPE_EXT is GLX_NONE_EXT,
+      GLX_TRANSPARENT_INDEX_EXT, or GLX_BLENDED_RGBA_SGIS, then the
+      values returned for GLX_TRANSPARENT_RED_VALUE_EXT,
+      GLX_TRANSPARENT_GREEN_VALUE_EXT, and
+      GLX_TRANSPARENT_BLUE_VALUE_EXT are undefined.
+
+    Change line in Table 1 to the following:
+
+        Attribute                 Type      Notes
+        ---------                 ----      -----
+        GLX_TRANSPARENT_TYPE_EXT enum       None, TRANSPARENT_RGB_EXT, TRANSPARENT_INDEX_EXT,
+                                            or BLENDED_RGBA_SGIS
+
+        Table 1: Configuration attributes
+
+GLX Protocol
+
+    One property type/property value pair is augmented with a new
+    proprty value.  The augmented property type/property value pair is
+    now encoded as
+
+    4           ENUM                    property type
+                0x23                    GLX_TRANSPARENT_TYPE_EXT
+    4           ENUM                    property value
+                0x8000                  GLX_NONE_EXT
+                0x8008                  GLX_TRANSPARENT_RGB_EXT
+                0x8009                  GLX_TRANSPARENT_INDEX_EXT
+                0x8025                  GLX_BLENDED_RGBA_SGIS
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None.
+

@@ -1,0 +1,28 @@
+#version 450
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 1u
+#endif
+#ifndef SPIRV_CROSS_CONSTANT_ID_2
+#define SPIRV_CROSS_CONSTANT_ID_2 3u
+#endif
+layout(local_size_x = SPIRV_CROSS_CONSTANT_ID_0, local_size_y = 2, local_size_z = SPIRV_CROSS_CONSTANT_ID_2) in;
+
+
+layout(binding = 0, std430) buffer _3_20
+{
+    float _m0[];
+} _20;
+
+layout(binding = 1, std430) buffer _3_21
+{
+    float _m0[];
+} _21;
+
+uvec3 _19 = gl_WorkGroupSize;
+
+void main()
+{
+    _20._m0[gl_WorkGroupID.x] = _21._m0[gl_WorkGroupID.x] + _20._m0[gl_WorkGroupID.x];
+}
+

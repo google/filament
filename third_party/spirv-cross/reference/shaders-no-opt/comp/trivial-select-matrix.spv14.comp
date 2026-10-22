@@ -1,0 +1,16 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) buffer A
+{
+    mat3 a;
+    float b;
+} _14;
+
+void main()
+{
+    bool c = _14.b < 1.0;
+    _14.a = c ? mat3(vec3(1.0), vec3(1.0), vec3(1.0)) : mat3(vec3(0.0), vec3(0.0), vec3(0.0));
+    _14.a = c ? mat3(vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0)) : mat3(vec3(0.0), vec3(0.0), vec3(0.0));
+}
+

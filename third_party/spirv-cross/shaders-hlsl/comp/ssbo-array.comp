@@ -1,0 +1,29 @@
+#version 450
+layout(local_size_x = 1) in;
+
+layout(binding = 0, std430) buffer SSBO0
+{
+	vec4 a;
+} ssbo0;
+
+// Does not seem to work in glslang yet in HLSL output, disable for now.
+#if 0
+layout(binding = 1, std430) buffer SSBO1
+{
+	vec4 b;
+} ssbo1[2];
+
+layout(binding = 2, std430) buffer SSBO2
+{
+	vec4 c;
+} ssbo2[3][3];
+#endif
+
+void main()
+{
+#if 0
+	ssbo1[1].b = ssbo0.a;
+	ssbo2[1][2].c = ssbo0.a;
+#endif
+}
+

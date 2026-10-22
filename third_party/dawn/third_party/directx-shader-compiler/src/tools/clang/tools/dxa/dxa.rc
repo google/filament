@@ -1,0 +1,13 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+//
+
+#include <windows.h>
+#include <ntverp.h>
+
+#define VER_FILETYPE                  VFT_DLL
+#define VER_FILESUBTYPE               VFT_UNKNOWN
+#define VER_FILEDESCRIPTION_STR       "DX Assembler"
+#define VER_INTERNALNAME_STR          "DX Assembler"
+#define VER_ORIGINALFILENAME_STR      "dxa.exe"
+
+#include <common.ver>

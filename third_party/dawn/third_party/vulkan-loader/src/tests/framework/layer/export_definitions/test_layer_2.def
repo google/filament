@@ -1,0 +1,14 @@
+LIBRARY test_layer_export_version_2
+EXPORTS
+    vkEnumerateInstanceLayerProperties
+    vkEnumerateInstanceExtensionProperties
+    vkEnumerateDeviceLayerProperties
+    vkEnumerateDeviceExtensionProperties
+    vkGetInstanceProcAddr
+    vkGetDeviceProcAddr
+    vk_layerGetPhysicalDeviceProcAddr
+    vkNegotiateLoaderLayerInterfaceVersion
+    test_preinst_vkEnumerateInstanceLayerProperties
+    test_preinst_vkEnumerateInstanceExtensionProperties
+    test_preinst_vkEnumerateInstanceVersion
+    test_override_vkGetInstanceProcAddr

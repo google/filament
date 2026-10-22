@@ -1,0 +1,337 @@
+/*
+ * Copyright (C) 2017 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <backend/platforms/PlatformGLX.h>
+
+#include <utils/Logger.h>
+#include <utils/Panic.h>
+#include <utils/ThreadUtils.h>
+
+#include <GL/glx.h>
+#include <GL/glxext.h>
+#include <X11/Xlib.h>
+
+#include <mutex>
+
+#include <dlfcn.h>
+
+#define LIBRARY_GLX "libGL.so.1"
+#define LIBRARY_X11 "libX11.so.6"
+
+// Function pointer types for X11 functions
+typedef Display* (* X11_OPEN_DISPLAY)(const char*);
+typedef Display* (* X11_CLOSE_DISPLAY)(Display*);
+typedef int (* X11_FREE)(void*);
+
+// Function pointer types for GLX functions
+typedef void (* GLX_DESTROY_CONTEXT)(Display*, GLXContext);
+typedef void (* GLX_SWAP_BUFFERS)(Display* dpy, GLXDrawable drawable);
+// Stores GLX function pointers and a handle to the system's GLX library
+struct GLXFunctions {
+    PFNGLXCHOOSEFBCONFIGPROC chooseFbConfig;
+    PFNGLXCREATECONTEXTATTRIBSARBPROC createContext;
+    PFNGLXCREATEPBUFFERPROC createPbuffer;
+    PFNGLXDESTROYPBUFFERPROC destroyPbuffer;
+    PFNGLXMAKECONTEXTCURRENTPROC setCurrentContext;
+
+    /*
+       When creating a shared GL context, we query the used
+       GLX_FBCONFIG_ID to make sure our display framebuffer
+       attributes match; otherwise making our context current
+       results in a BadMatch
+       https://gist.github.com/roxlu/c282d642c353ce96ef19b6359c741bcb
+    */
+    PFNGLXQUERYCONTEXTPROC queryContext;
+
+    /*
+       When creating a shared GL context, we select the matching
+       GLXFBConfig that is used by the shared GL context. `getFBConfigs`
+       will return all the available GLXFBConfigs.
+    */
+    PFNGLXGETFBCONFIGSPROC getFbConfigs;
+
+    /*
+      When creating a shared GL contect, we iterate over the
+      available GLXFBConfigs that are returned by `getFBConfigs`,
+      we use `getFbConfigAttrib` to find the matching
+      `GLX_FBCONFIG_ID`.
+    */
+    PFNGLXGETFBCONFIGATTRIBPROC getFbConfigAttrib;
+
+    GLX_DESTROY_CONTEXT destroyContext;
+    GLX_SWAP_BUFFERS swapBuffers;
+    void* library;
+} g_glx;
+
+// Stores X11 function pointers and a handle to the system's X11 library
+struct X11Functions {
+    X11_OPEN_DISPLAY openDisplay;
+    X11_CLOSE_DISPLAY closeDisplay;
+    X11_FREE free;
+    void* library;
+} g_x11;
+
+static PFNGLXGETPROCADDRESSPROC getProcAddress;
+
+static bool loadLibraries() {
+    g_glx.library = dlopen(LIBRARY_GLX, RTLD_LOCAL | RTLD_NOW);
+    if (!g_glx.library) {
+        LOG(ERROR) << "Could not find library " << LIBRARY_GLX;
+        return false;
+    }
+
+    getProcAddress =
+            (PFNGLXGETPROCADDRESSPROC)dlsym(g_glx.library, "glXGetProcAddressARB");
+
+    g_glx.chooseFbConfig = (PFNGLXCHOOSEFBCONFIGPROC)
+            getProcAddress((const GLubyte*)"glXChooseFBConfig");
+    g_glx.createContext = (PFNGLXCREATECONTEXTATTRIBSARBPROC)
+            getProcAddress((const GLubyte*)"glXCreateContextAttribsARB");
+    g_glx.createPbuffer = (PFNGLXCREATEPBUFFERPROC)
+            getProcAddress((const GLubyte*)"glXCreatePbuffer");
+    g_glx.destroyPbuffer = (PFNGLXDESTROYPBUFFERPROC)
+            getProcAddress((const GLubyte*)"glXDestroyPbuffer");
+    g_glx.setCurrentContext = (PFNGLXMAKECONTEXTCURRENTPROC)
+            getProcAddress((const GLubyte*)"glXMakeContextCurrent");
+    g_glx.destroyContext = (GLX_DESTROY_CONTEXT)
+            getProcAddress((const GLubyte*)"glXDestroyContext");
+    g_glx.swapBuffers = (GLX_SWAP_BUFFERS)
+            getProcAddress((const GLubyte*)"glXSwapBuffers");
+
+    g_glx.queryContext = (PFNGLXQUERYCONTEXTPROC)
+            getProcAddress((const GLubyte*)"glXQueryContext");
+    g_glx.getFbConfigs = (PFNGLXGETFBCONFIGSPROC)
+            getProcAddress((const GLubyte*)"glXGetFBConfigs");
+    g_glx.getFbConfigAttrib = (PFNGLXGETFBCONFIGATTRIBPROC)
+            getProcAddress((const GLubyte*)"glXGetFBConfigAttrib");
+
+    g_x11.library = dlopen(LIBRARY_X11, RTLD_LOCAL | RTLD_NOW);
+    if (!g_x11.library) {
+        LOG(ERROR) << "Could not find library " << LIBRARY_X11;
+        return false;
+    }
+
+    g_x11.openDisplay = (X11_OPEN_DISPLAY)dlsym(g_x11.library, "XOpenDisplay");
+    g_x11.closeDisplay = (X11_CLOSE_DISPLAY)dlsym(g_x11.library, "XCloseDisplay");
+    g_x11.free = (X11_FREE)dlsym(g_x11.library, "XFree");
+    return true;
+}
+
+namespace filament::backend {
+
+using namespace backend;
+
+Driver* PlatformGLX::createDriver(void* sharedGLContext,
+        const DriverConfig& driverConfig) {
+    loadLibraries();
+    // Get the display device
+    mGLXDisplay = g_x11.openDisplay(NULL);
+    if (mGLXDisplay == nullptr) {
+        LOG(ERROR) << "Failed to open X display. (exiting).";
+        exit(1);
+    }
+
+    if (sharedGLContext != nullptr) {
+        int r = -1;
+        int usedFbId = -1;
+        GLXContext sharedCtx = (GLXContext)((void*)sharedGLContext);
+
+        r = g_glx.queryContext(mGLXDisplay, sharedCtx, GLX_FBCONFIG_ID, &usedFbId);
+        if (r != 0) {
+            LOG(ERROR) << "Failed to get GLX_FBCONFIG_ID from shared GL context.";
+            return nullptr;
+        }
+
+        int numConfigs = 0;
+        GLXFBConfig* fbConfigs = g_glx.getFbConfigs(mGLXDisplay, 0, &numConfigs);
+        if (fbConfigs == nullptr) {
+            LOG(ERROR) << "Failed to get the available GLXFBConfigs.";
+            return nullptr;
+        }
+
+        for (int i = 0; i < numConfigs; ++i) {
+            int fbId = 0;
+            r = g_glx.getFbConfigAttrib(mGLXDisplay, fbConfigs[i], GLX_FBCONFIG_ID, &fbId);
+            if (r != 0) {
+                LOG(ERROR) << "Failed to get GLX_FBCONFIG_ID for entry " << i << ".";
+                continue;
+            }
+
+            if (fbId == usedFbId) {
+                mGLXConfig = fbConfigs[i];
+                break;
+            }
+        }
+
+        g_x11.free(fbConfigs);
+
+        if (!mGLXConfig) {
+            LOG(ERROR) << "Failed to find an `GLXFBConfig` with the requested ID.";
+            return nullptr;
+        }
+    } else {
+        // Create a context
+        static int attribs[] = {
+                GLX_DOUBLEBUFFER, True,
+                GLX_DEPTH_SIZE, 24,
+                None
+        };
+
+        int configCount = 0;
+        GLXFBConfig* fbConfigs = g_glx.chooseFbConfig(mGLXDisplay, DefaultScreen(mGLXDisplay),
+                attribs, &configCount);
+        if (fbConfigs == nullptr || configCount == 0) {
+            return nullptr;
+        }
+
+        mGLXConfig = fbConfigs[0];
+        g_x11.free(fbConfigs);
+    }
+
+    if (g_glx.createContext == nullptr) {
+        LOG(INFO) << "Unable to retrieve function pointer for `glXCreateContextAttribs()`.";
+        return nullptr;
+    }
+
+    int contextAttribs[] = {
+            GLX_CONTEXT_MAJOR_VERSION_ARB, 4,
+            GLX_CONTEXT_MINOR_VERSION_ARB, 1,
+            GL_NONE
+    };
+
+    mGLXContext = g_glx.createContext(mGLXDisplay, mGLXConfig,
+            (GLXContext)sharedGLContext, True, contextAttribs);
+
+    int pbufferAttribs[] = {
+            GLX_PBUFFER_WIDTH, 1,
+            GLX_PBUFFER_HEIGHT, 1,
+            GL_NONE
+    };
+
+    mDummySurface = g_glx.createPbuffer(mGLXDisplay, mGLXConfig, pbufferAttribs);
+    g_glx.setCurrentContext(mGLXDisplay, mDummySurface, mDummySurface, mGLXContext);
+
+    int result = bluegl::bind();
+    FILAMENT_CHECK_POSTCONDITION(!result) << "Unable to load OpenGL entry points.";
+
+    return OpenGLPlatform::createDefaultDriver(this, sharedGLContext, driverConfig);
+}
+
+void PlatformGLX::terminate() noexcept {
+    g_glx.setCurrentContext(mGLXDisplay, None, None, nullptr);
+    g_glx.destroyPbuffer(mGLXDisplay, mDummySurface);
+    for (auto it : mAdditionalContexts) {
+        g_glx.destroyContext(mGLXDisplay, it.second);
+    }
+    g_glx.destroyContext(mGLXDisplay, mGLXContext);
+    g_x11.closeDisplay(mGLXDisplay);
+    bluegl::unbind();
+}
+
+bool PlatformGLX::isExtraContextSupported() const noexcept {
+    return true;
+}
+
+void PlatformGLX::createContext(bool shared) {
+    std::thread::id currentThreadId = utils::ThreadUtils::getThreadId();
+
+    {
+        std::shared_lock<std::shared_mutex> lock(mAdditionalContextsLock);
+        auto it = mAdditionalContexts.find(currentThreadId);
+        if (it != mAdditionalContexts.end()) {
+            LOG(WARNING) << "Shared context is already created";
+            return;
+        }
+    }
+
+    int contextAttribs[] = {
+        GLX_CONTEXT_MAJOR_VERSION_ARB, 4,
+        GLX_CONTEXT_MINOR_VERSION_ARB, 1,
+        GL_NONE
+    };
+
+    GLXContext context = g_glx.createContext(mGLXDisplay, mGLXConfig,
+            mGLXContext, True, contextAttribs);
+    if (!context) {
+        LOG(ERROR) << "Failed to create shared context";
+        return;
+    }
+
+    g_glx.setCurrentContext(mGLXDisplay,
+            (GLXDrawable)None, (GLXDrawable)None, context);
+
+    std::lock_guard<std::shared_mutex> lock(mAdditionalContextsLock);
+    mAdditionalContexts[currentThreadId] = context;
+}
+
+void PlatformGLX::releaseContext() noexcept {
+    g_glx.setCurrentContext(mGLXDisplay,
+            (GLXDrawable)None, (GLXDrawable)None, nullptr);
+
+    std::thread::id currentThreadId = utils::ThreadUtils::getThreadId();
+    GLXContext context;
+    {
+        std::lock_guard<std::shared_mutex> lock(mAdditionalContextsLock);
+        auto it = mAdditionalContexts.find(currentThreadId);
+        if (it == mAdditionalContexts.end()) {
+            LOG(WARNING) << "Attempted to destroy non-existing shared context";
+            return;
+        }
+        context = it->second;
+        mAdditionalContexts.erase(it);
+    }
+
+    g_glx.destroyContext(mGLXDisplay, context);
+}
+
+Platform::SwapChain* PlatformGLX::createSwapChain(void* nativeWindow, uint64_t flags) noexcept {
+    return (SwapChain*)nativeWindow;
+}
+
+Platform::SwapChain* PlatformGLX::createSwapChain(
+        uint32_t width, uint32_t height, uint64_t flags) noexcept {
+    int pbufferAttribs[] = {
+            GLX_PBUFFER_WIDTH, int(width),
+            GLX_PBUFFER_HEIGHT, int(height),
+            GL_NONE
+    };
+    GLXPbuffer sur = g_glx.createPbuffer(mGLXDisplay, mGLXConfig, pbufferAttribs);
+    if (sur) {
+        mPBuffers.push_back(sur);
+    }
+    return (SwapChain*)sur;
+}
+
+void PlatformGLX::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
+    auto it = std::find(mPBuffers.begin(), mPBuffers.end(), (GLXPbuffer)swapChain);
+    if (it != mPBuffers.end()) {
+        g_glx.destroyPbuffer(mGLXDisplay, (GLXPbuffer)swapChain);
+        mPBuffers.erase(it);
+    }
+}
+
+bool PlatformGLX::makeCurrent(ContextType type, SwapChain* drawSwapChain,
+        SwapChain* readSwapChain) {
+    g_glx.setCurrentContext(mGLXDisplay,
+            (GLXDrawable)drawSwapChain, (GLXDrawable)readSwapChain, mGLXContext);
+    return true;
+}
+
+void PlatformGLX::commit(Platform::SwapChain* swapChain) noexcept {
+    g_glx.swapBuffers(mGLXDisplay, (GLXDrawable)swapChain);
+}
+
+} // namespace filament::backend

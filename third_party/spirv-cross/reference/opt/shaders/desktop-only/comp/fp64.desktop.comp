@@ -1,0 +1,63 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+struct M0
+{
+    double v;
+    dvec2 b[2];
+    dmat2x3 c;
+    dmat3x2 d;
+};
+
+layout(binding = 0, std430) buffer SSBO0
+{
+    dvec4 a;
+    M0 m0;
+    dmat4 b;
+} ssbo_0;
+
+layout(binding = 1, std430) buffer SSBO1
+{
+    dmat4 a;
+    dvec4 b;
+    M0 m0;
+} ssbo_1;
+
+layout(binding = 2, std430) buffer SSBO2
+{
+    double a[4];
+    dvec2 b[4];
+} ssbo_2;
+
+layout(binding = 3, std140) buffer SSBO3
+{
+    double a[4];
+    dvec2 b[4];
+} ssbo_3;
+
+void main()
+{
+    ssbo_0.a += dvec4(10.0lf, 20.0lf, 30.0lf, 40.0lf);
+    ssbo_0.a += dvec4(20.0lf);
+    dvec4 _40 = ssbo_0.a;
+    ssbo_0.a = abs(_40);
+    ssbo_0.a = sign(_40);
+    ssbo_0.a = floor(_40);
+    ssbo_0.a = trunc(_40);
+    ssbo_0.a = round(_40);
+    ssbo_0.a = roundEven(_40);
+    ssbo_0.a = ceil(_40);
+    ssbo_0.a = fract(_40);
+    ssbo_0.a = mod(_40, dvec4(20.0lf));
+    ssbo_0.a = mod(_40, _40);
+    ssbo_0.a = min(_40, _40);
+    ssbo_0.a = max(_40, _40);
+    ssbo_0.a = clamp(_40, _40, _40);
+    ssbo_0.a = mix(_40, _40, _40);
+    ssbo_0.a = step(_40, _40);
+    ssbo_0.a = smoothstep(_40, _40, _40);
+    ssbo_1.b.x += 1.0lf;
+    ssbo_2.b[0].x += 1.0lf;
+    ssbo_3.b[0].x += 1.0lf;
+}
+

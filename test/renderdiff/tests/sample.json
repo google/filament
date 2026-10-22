@@ -1,0 +1,52 @@
+{
+    "name": "SampleSuite",                           // [required] Name of the test suite
+    "renderers": ["desktop-opengl"],                  // [required] Default render targets (e.g. desktop-opengl, desktop-vulkan)
+    "presets": [                                      // [optional] Reusable preset configurations
+        {
+            "name": "DefaultTolerance",               // [required] Preset name
+            "tolerance": {                            // [optional] diffimg visual difference threshold
+                "maxAbsDiff": 0.0196,                 // Max absolute channel difference (5/255)
+                "maxFailingPixelsFraction": 0.001     // Max fraction of failing pixels allowed (0.1%)
+            }
+        },
+        {
+            "name": "StandardGltf",
+            "gltf_test": {                            // glTF-specific settings
+                "model_search_paths": ["third_party/models"], // Recursive search paths for .glb/.gltf
+                "models": ["lucy", "DamagedHelmet"],  // Default models for this preset
+                "rendering": {                        // Filament automation properties
+                    "camera.focalLength": 35.0,
+                    "view.postProcessingEnabled": true
+                }
+            }
+        },
+        {
+            "name": "StandardSample",
+            "sample_test": {                          // Sample-executable-specific settings
+                "warmup_frames": 10,                  // Warmup frame count before screenshot
+                "fixed_timestep": 0.0166667,          // Fixed virtual animation clock timestep
+                "args": ["--window-size", "512x512"]  // CLI arguments passed to binary
+            }
+        }
+    ],
+    "tests": [                                        // [required] List of test configurations
+        {
+            "name": "BloomGltf",                      // [required] Unique test name
+            "description": "Testing glTF bloom",      // [optional] Test description
+            "apply_presets": ["DefaultTolerance", "StandardGltf"], // [optional] Inherited presets
+            "gltf_test": {                            // Exactly one of 'gltf_test' or 'sample_test'
+                "rendering": {
+                    "view.bloom.enabled": true
+                }
+            }
+        },
+        {
+            "name": "HelloPBR",
+            "description": "Testing hellopbr sample",
+            "apply_presets": ["DefaultTolerance", "StandardSample"],
+            "sample_test": {                          // Exactly one of 'gltf_test' or 'sample_test'
+                "executable": "hellopbr"              // Name of sample binary executable
+            }
+        }
+    ]
+}

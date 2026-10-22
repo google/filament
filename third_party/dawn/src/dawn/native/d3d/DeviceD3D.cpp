@@ -1,0 +1,64 @@
+// Copyright 2023 The Dawn & Tint Authors
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#include "src/dawn/native/d3d/DeviceD3D.h"
+
+#include <utility>
+
+#include "src/dawn/native/d3d/BackendD3D.h"
+#include "src/dawn/native/d3d/Forward.h"
+#include "src/dawn/native/d3d/PhysicalDeviceD3D.h"
+#include "src/dawn/native/d3d/SharedFenceD3D.h"
+#include "src/dawn/platform/metrics/HistogramMacros.h"
+
+namespace dawn::native::d3d {
+
+Device::Device(AdapterBase* adapter,
+               const UnpackedPtr<DeviceDescriptor>& descriptor,
+               const TogglesState& deviceToggles,
+               Ref<DeviceBase::DeviceLostEvent>&& lostEvent)
+    : DeviceBase(adapter, descriptor, deviceToggles, std::move(lostEvent)) {}
+
+Device::~Device() {
+    Destroy(DestroyReason::CppDestructor);
+}
+
+void Device::DestroyImpl(DestroyReason reason) {}
+
+const PlatformFunctions* Device::GetFunctionsBase() const {
+    return ToBackend(GetPhysicalDevice())->GetBackendBase()->GetFunctionsBase();
+}
+
+ComPtr<IDXGIFactory4> Device::GetFactory() const {
+    return ToBackend(GetPhysicalDevice())->GetBackendBase()->GetFactory();
+}
+
+void Device::RecordDeviceRemovedReason(HRESULT result) {
+    DAWN_HISTOGRAM_SPARSE(GetPlatform(), "D3DDeviceRemovedReason", static_cast<int>(result));
+}
+
+}  // namespace dawn::native::d3d

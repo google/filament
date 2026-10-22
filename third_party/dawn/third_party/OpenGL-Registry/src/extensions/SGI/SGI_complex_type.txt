@@ -1,0 +1,288 @@
+XXX - Not complete yet!!!
+
+Name
+
+    SGI_complex_type
+
+Name Strings
+
+    GL_SGI_complex_type
+
+Version
+
+    $Date: 1996/11/15 20:52:37 $ $Revision: 1.5 $
+
+Number
+
+    88
+
+Dependencies
+
+    SGI_complex is required
+    EXT_texture3D affects the definition of this extension
+    EXT_subtexture affects the definition of this extension
+    EXT_convolution affects the definition of this extension
+    EXT_histogram affects the definition of this extension
+    SGI_color_table affects the definition of this extension
+    SGIS_texture4D affects the definition of this extension
+
+
+Overview
+
+    This extension defines complex pixel types which can be used
+    as the type parameter in any OpenGL command which accepts
+    a pixel image parameter (e.g. DrawPixels, ReadPixels, etc).
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <type> parameter of DrawPixels, ReadPixels,
+    TexImage1D, TexImage2D, TexImage3DEXT, TexImage4DSGIS, TexSubImage1DEXT,
+    TexSubImage2DEXT, TexSubImage3DEXT, TexSubImage4DSGIS, GetTexImage,
+    ColorTableSGI, GetColorTableSGI, ConvolutionFilter1DEXT,
+    ConvolutionFilter2DEXT, ConvolutionFilter3DEXT, GetConvolutionFilterEXT,
+    SeparableFilter2DEXT, SeparableFilter3DEXT, GetSeparableFilterEXT,
+    GetHistogramEXT, and GetMinmaxEXT:
+
+    COMPLEX_UNSIGNED_BYTE_SGI		0x81BD
+    COMPLEX_BYTE_SGI			0x81BE
+    COMPLEX_UNSIGNED_SHORT_SGI		0x81BF
+    COMPLEX_SHORT_SGI			0x81C0
+    COMPLEX_UNSIGNED_INT_SGI		0x81C1
+    COMPLEX_INT_SGI			0x81C2
+    COMPLEX_FLOAT_SGI			0x81C3
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    The seven tokens defined by this extension are added to Table 3.4:
+
+	<type> Parameter		Corresponding	Special
+	Token Value			GL Data Type	Interpretation
+	----------------		-------------	--------------
+	UNSIGNED_BYTE			ubyte		No
+	BYTE				byte		No
+	UNSIGNED_SHORT			ushort		No
+	SHORT				short		No
+	UNSIGNED_INT			uint		No
+	INT				int		No
+	FLOAT				float		No
+	BITMAP				ubyte		Yes
+	UNSIGNED_BYTE_3_3_2_EXT		ubyte		Yes
+	UNSIGNED_SHORT_4_4_4_4_EXT	ushort		Yes
+	UNSIGNED_SHORT_5_5_5_1_EXT	ushort		Yes
+	UNSIGNED_INT_8_8_8_8_EXT	uint		Yes
+	UNSIGNED_INT_10_10_10_2_EXT	uint		Yes
+	COMPLEX_UNSIGNED_BYTE_SGI	ubyte		No
+	COMPLEX_BYTE_SGI		byte		No
+	COMPLEX_UNSIGNED_SHORT_SGI	ushort		No
+	COMPLEX_SHORT_SGI		short		No
+	COMPLEX_UNSIGNED_INT_SGI	uint		No
+	COMPLEX_INT_SGI			int		No
+	COMPLEX_FLOAT_SGI		float		No
+
+	Table 3.4: DrawPixels and ReadPixels <type> parameter values and the
+	corresponding GL data types.  Refer to table 2.2 for definitions of
+	GL data types.  Special interpretations are described near the end
+	of section 3.6.3.
+
+    [Section 3.6.3 of the GL Specification (Rasterization of Pixel
+    Rectangles) has the following paragraphs added immediately before
+    the discussion of the Bitmap type:]
+
+    Calling DrawPixels with a <type> of COMPLEX_UNSIGNED_BYTE_SGI,
+    COMPLEX_BYTE_SGI, COMPLEX_UNSIGNED_SHORT_SGI, COMPLEX_SHORT_SGI,
+    COMPLEX_UNSIGNED_INT_SGI, COMPLEX_INT_SGI, or COMPLEX_FLOAT_SGI is a
+    special case in which the elements in each group are actually pairs of
+    real and imaginary parts of a single complex element.  The number of
+    elements is fixed by the <format> parameter and the underlying type of
+    each of the constituent parts of the complex element (subcomponent) is
+    indicated by the <type> parameter in the obvious way.  Complex components
+    are placed with the real part first in memory and the imaginary part
+    second.  For the purposes of determining the location of an element in a
+    row, the element size should be considered twice the size of the GL type
+    corresponding to the subcomponent type.  e.g., if <type. is
+    COMPLEX_SHORT_SGI, then the element size is 2*2 = 4.  If
+    UNPACK_SWAP_BYTES is TRUE, byte swapping is performed on the individual
+    subcomponents of the element.
+
+
+    Conversion to floating-point
+
+    This step applies only to groups of components.  It is not performed on
+    indices.  Each element in a group is converted to a floating-point value
+    according to the appropriate formula in Table 2.4 (section 2.12).
+    The real and imaginary parts of complex elements are each converted to
+    floating-point values use the formula in Table 2.4.
+    Unsigned integer bitfields extracted from packed pixels are interpreted
+    using the formula
+
+    	f = c / ((2**N)-1)
+
+    where c is the value of the bitfield (interpreted as an unsigned
+    integer), N is the number of bits in the bitfield, and the division is
+    performed in floating point.
+
+    [End of changes to Section 3.6.3]
+
+    If this extension is supported, all commands that accept pixel data
+    also accept packed pixel data.  These commands are DrawPixels,
+    TexImage1D, TexImage2D, TexImage3DEXT, TexSubImage1DEXT,
+    TexSubImage2DEXT, TexSubImage3DEXT, ConvolutionFilter1DEXT,
+    ConvolutionFilter2DEXT, ConvolutionFilter3DEXT, SeparableFilter2DEXT,
+    SeparableFilter3DEXT, ColorTableSGI, TexImage4DSGIS, and
+    TexSubImage4DSGIS.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    [Make the following changes to Section 4.3.2 (Reading Pixels):]
+
+    Final Conversion
+
+    For an index, if the <type> is not FLOAT, final conversion consists of
+    masking the index with the value given in Table 4.6; if the <type> is
+    FLOAT, then the integer index is converted to a GL float data value.
+    For a component, each component is first clamped to [0,1].  Then,
+    the appropriate conversion formula from Table 4.7 is applied to the
+    component.
+
+	<type> Parameter	Index Mask
+	----------------	----------
+	UNSIGNED_BYTE		2**8 - 1
+	BITMAP			1
+	BYTE			2**7 - 1
+	UNSIGNED_SHORT		2**16 - 1
+	SHORT			2**15 - 1
+	UNSIGNED_INT		2**32 - 1
+	INT			2**31 - 1
+
+	Table 4.6: Index masks used by ReadPixels.  Floating point data
+	are not masked.
+
+	<type>				GL Data		Component/Subcomponent
+	Parameter			Type		Conversion Formula
+	---------			-------		------------------
+	UNSIGNED_BYTE			ubyte		c = ((2**8)-1)*f
+	BYTE				byte		c = (((2**8)-1)*f-1)/2
+	UNSIGNED_SHORT			ushort		c = ((2**16)-1)*f
+	SHORT				short		c = (((2**16)-1)*f-1)/2
+	UNSIGNED_INT			uint		c = ((2**32)-1)*f
+	INT				int		c = (((2**32)-1)*f-1)/2
+	FLOAT				float		c = f
+	UNSIGNED_BYTE_3_3_2_EXT		ubyte		c = ((2**N)-1)*f
+	UNSIGNED_SHORT_4_4_4_4_EXT	ushort		c = ((2**N)-1)*f
+	UNSIGNED_SHORT_5_5_5_1_EXT	ushort		c = ((2**N)-1)*f
+	UNSIGNED_INT_8_8_8_8_EXT	uint		c = ((2**N)-1)*f
+	UNSIGNED_INT_10_10_10_2_EXT	uint		c = ((2**N)-1)*f
+	COMPLEX_UNSIGNED_BYTE		ubyte		cs = ((2**8)-1)*fs
+	COMPLEX_BYTE			byte		cs = (((2**8)-1)*fs-1)/2
+	COMPLEX_UNSIGNED_SHORT		ushort		cs = ((2**16)-1)*fs
+	COMPLEX_SHORT			short		cs = (((2**16)-1)*fs-1)/2
+	COMPLEX_UNSIGNED_INT		uint		cs = ((2**32)-1)*fs
+	COMPLEX_INT			int		cs = (((2**32)-1)*fs-1)/2
+	COMPLEX_FLOAT			float		cs = fs
+
+	Table 4.7: Reversed component conversions - used when component data
+	are being returned to client memory.  Color, normal, and depth
+	components are converted from the internal floating-point
+	representation (f) to a datum of the specified GL data type (c) using
+	the equations in this table.  All arithmetic is done in the internal
+	floating point format.  These conversions apply to component data
+	returned by GL query commands and to components of pixel data returned
+	to client memory.  The equations remain the same even if the
+	implemented ranges of the GL data types are greater than the minimum
+	required ranges.  (Refer to table 2.2.)  Equations with N as the
+	exponent are performed for each bitfield of the packed data type,
+	with N set to the number of bits in the bitfield.
+
+    Placement in Client Memory
+
+    Groups of elements are placed in memory just as they are taken from memory
+    for DrawPixels.  That is, the ith group of the jth row (corresponding to
+    the ith pixel in the jth row) is placed in memory must where the ith group
+    of the jth row would be taken from for DrawPixels.  See Unpacking under
+    section 3.6.3.  The only difference is that the storage mode parameters
+    whose names begin with PACK_ are used instead of those whose names begin
+    with UNPACK_.  If the <type> parameter is complex then both the real
+    and imaginary parts are written to memory and the element size should be
+    considered twice the size of the size of the subcomponent type.  If the
+    <type> parameter is not complex, then only the real part is placed in
+    memory.
+
+    [End of changes to Section 4.3.2]
+
+    If this extension is supported, all commands that return pixel data
+    also return packed pixel data.  These commands are ReadPixels,
+    GetTexImage, GetHistogramEXT, GetMinmaxEXT, GetConvolutionFilterEXT,
+    GetSeparableFilterEXT, and GetColorTableSGI.
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is not implemented, then the references to
+    TexImage3DEXT in this file are invalid, and should be ignored.
+
+Dependencies on EXT_subtexture
+
+    If EXT_subtexture is not implemented, then the references to
+    TexSubImage1DEXT, TexSubImage2DEXT, and TexSubImage3DEXT in this file
+    are invalid, and should be ignored.
+
+Dependencies on EXT_histogram
+
+    If EXT_histogram is not implemented, then the references to
+    GetHistogramEXT and GetMinmaxEXT in this file are invalid, and should be
+    ignored.
+
+Dependencies on EXT_convolution
+
+    If EXT_convolution is not implemented, then the references to
+    ConvolutionFilter1DEXT, ConvolutionFilter2DEXT, ConvolutionFilter3DEXT,
+    GetConvolutionFilterEXT, SeparableFilter2DEXT, SeparableFilter3DEXT, and
+    GetSeparableFilterEXT in this file are invalid, and should be ignored.
+
+Dependencies on SGI_color_table
+
+    If SGI_color_table is not implemented, then the references to
+    ColorTableSGI and GetColorTableSGI in this file are invalid, and should
+    be ignored.
+
+Dependencies on SGIS_texture4D
+
+    If SGIS_texture4D is not implemented, then the references to
+    TexImage4DSGIS and TexSubImage4DSGIS in this file are invalid, and should
+    be ignored.
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

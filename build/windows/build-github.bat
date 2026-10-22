@@ -1,0 +1,172 @@
+@echo off
+
+setlocal
+
+systeminfo
+
+echo Disk info before building:
+call :ShowDiskInfo
+
+if "%GITHUB_WORKFLOW%" == "" (set RUNNING_LOCALLY=1)
+
+if "%TARGET%" == "" (
+    if "%1" == "" (
+        set TARGET=release
+    ) else (
+        set TARGET=%1
+    )
+)
+
+set BUILD_DEBUG=
+set BUILD_RELEASE=
+set INSTALL=
+set BUILD_RELEASE_VARIANTS=
+
+if "%TARGET%" == "presubmit" (
+    set BUILD_RELEASE=1
+)
+
+if "%TARGET%" == "continuous" (
+    set BUILD_DEBUG=1
+    set BUILD_RELEASE=1
+    set INSTALL=--target install
+    set CREATE_ARCHIVE=1
+)
+
+if "%TARGET%" == "release" (
+    set BUILD_DEBUG=1
+    set BUILD_RELEASE=1
+    set INSTALL=--target install
+    set BUILD_RELEASE_VARIANTS=1
+    set CREATE_ARCHIVE=1
+    set CCACHE_DISABLE=1
+)
+
+set VISUAL_STUDIO_VERSION="Enterprise"
+if "%RUNNING_LOCALLY%" == "1" (
+    set VISUAL_STUDIO_VERSION="Community"
+    set "PATH=%PATH%;C:\Program Files\7-Zip"
+)
+
+:: Outdated windows-2019 pattern
+:: call "C:\Program Files (x86)\Microsoft Visual Studio\2019\%VISUAL_STUDIO_VERSION%\VC\Auxiliary\Build\vcvars64.bat"
+
+call "C:\Program Files\Microsoft Visual Studio\2022\%VISUAL_STUDIO_VERSION%\VC\Auxiliary\Build\vcvars64.bat"
+echo Passed vcvars64.bat
+if errorlevel 1 exit /b %errorlevel%
+
+msbuild /version
+cmake --version
+
+set HAS_CCACHE=
+if not "%CCACHE_DISABLE%" == "1" (
+    where ccache >nul 2>nul
+    if not errorlevel 1 (
+        ccache --version
+        set "CCACHE_SLOPPINESS=file_macro,time_macros,locale,file_stat_matches"
+        set HAS_CCACHE=1
+    )
+)
+
+:: Important: build debug builds first, when disk space is plentiful. Debug builds require
+:: significantly more temporary space.
+if "%BUILD_DEBUG%" == "1" (
+    :: MTd
+    call :BuildVariant mtd "-DUSE_STATIC_CRT=ON" Debug || exit /b
+
+    if "%BUILD_RELEASE_VARIANTS%" == "1" (
+        :: MDd
+        call :BuildVariant mdd "-DUSE_STATIC_CRT=OFF" Debug || exit /b
+    )
+)
+
+if "%BUILD_RELEASE%" == "1" (
+    :: /MT
+    call :BuildVariant mt "-DUSE_STATIC_CRT=ON" Release || exit /b
+
+    if "%BUILD_RELEASE_VARIANTS%" == "1" (
+        :: /MD
+        call :BuildVariant md "-DUSE_STATIC_CRT=OFF" Release || exit /b
+    )
+)
+
+if "%CREATE_ARCHIVE%" == "1" (
+    :: Use the /MT version as the "base" install.
+    move out\mt out\install
+    mkdir out\install\lib\x86_64\mt\
+    move out\install\lib\x86_64\*.lib out\install\lib\x86_64\mt\
+
+    xcopy out\md\lib\x86_64\*.lib out\install\lib\x86_64\md\
+    xcopy out\mtd\lib\x86_64\*.lib out\install\lib\x86_64\mtd\
+    xcopy out\mdd\lib\x86_64\*.lib out\install\lib\x86_64\mdd\
+)
+
+:: Create an archive.
+if "%CREATE_ARCHIVE%" == "1" (
+    cd out\install
+    7z a -ttar -so ..\..\filament-release.tar * | 7z a -si ..\filament-windows.tgz
+)
+
+exit /b 0
+
+:BuildVariant
+set variant=%~1
+set flag=%~2
+set config=%~3
+
+echo Disk info before building variant: %variant%
+call :ShowDiskInfo
+
+mkdir out\cmake-%variant%
+cd out\cmake-%variant%
+if errorlevel 1 exit /b %errorlevel%
+
+cmake ..\.. ^
+    -G "Visual Studio 17 2022" ^
+    -A x64 ^
+    %flag% ^
+    -DCMAKE_INSTALL_PREFIX=..\%variant% ^
+    -DFILAMENT_WINDOWS_CI_BUILD:BOOL=ON ^
+    -DFILAMENT_SUPPORTS_VULKAN=ON ^
+    "-DCMAKE_VS_GLOBALS=UseMultiToolTask=true;EnforceProcessCountAcrossBuilds=true" ^
+    || exit /b
+
+set build_flags=-j %NUMBER_OF_PROCESSORS%
+
+@echo on
+
+:: we've upgraded the windows machines, so the following are no longer accurate as of 09/19/24, but
+:: keeping around the comment for record.
+
+:: Attempt to fix "error C1060: compiler is out of heap space" seen on CI.
+:: Some resource libraries require significant heap space to compile, so first compile them serially.
+:: cmake --build . --target filagui --config %config% %build_flags% || exit /b
+:: cmake --build . --target uberarchive --config %config% %build_flags% || exit /b
+:: cmake --build . --target gltf-demo-resources --config %config% %build_flags% || exit /b
+:: cmake --build . --target filamentapp-resources --config %config% %build_flags% || exit /b
+:: cmake --build . --target sample-resources --config %config% %build_flags% || exit /b
+:: cmake --build . --target suzanne-resources --config %config% %build_flags% || exit /b
+
+cmake --build . %INSTALL% --config %config% %build_flags% -- /m || exit /b
+@echo off
+
+if "%HAS_CCACHE%" == "1" (
+    ccache --show-stats
+)
+
+echo Disk info after building variant: %variant%
+call :ShowDiskInfo
+
+cd ..\..
+
+:: Delete the cmake build folder, otherwise we run out of disk space on CI when
+:: building multiple variants.
+rd /s /q out\cmake-%variant%
+exit /b 0
+
+:: Helps debugging GitHub builds that run out of space
+:ShowDiskInfo
+echo =======================================================
+wmic logicaldisk get size,freespace,caption
+echo =======================================================
+exit /b 0

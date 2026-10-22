@@ -1,0 +1,8 @@
+   ResourceName, Binding,  space  
+   
+   "cb",         b10,      30 ,  
+   resource,     b42,      999,
+   samp0,        s1,       2,
+   resource,     t1,       2
+   uav_0,        u1,       2,
+   

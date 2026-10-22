@@ -1,0 +1,144 @@
+{
+  "meta": {
+    "generator_version": "1.0.0",
+    "source_file": "/Users/mathias/sources/git/filament/tools/apigen/tests/java/08_filament_types.h"
+  },
+  "includes": {
+    "user": [],
+    "system": [
+      "<filament/Skybox.h>",
+      "<utils/compiler.h>"
+    ]
+  },
+  "enums": [],
+  "classes": [
+    {
+      "name": "FilamentTypesTest",
+      "qualified_name": "FilamentTypesTest",
+      "location": {
+        "file": "tools/apigen/tests/java/08_filament_types.h",
+        "line": 8
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "FilamentTypesTest",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [
+        {
+          "name": "aMethodWithAFilamentTypeParameter",
+          "qualified_name": "aMethodWithAFilamentTypeParameter(filament::Skybox * _Nonnull)",
+          "location": {
+            "file": "tools/apigen/tests/java/08_filament_types.h",
+            "line": 10
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "skybox",
+              "type": {
+                "cpp_name": "filament::Skybox *",
+                "qualified_name": "filament::Skybox*",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": true,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "nonnull"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "aMethodWithAConstFilamentTypeParameter",
+          "qualified_name": "aMethodWithAConstFilamentTypeParameter(const filament::Skybox * _Nullable)",
+          "location": {
+            "file": "tools/apigen/tests/java/08_filament_types.h",
+            "line": 11
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "skybox",
+              "type": {
+                "cpp_name": "const filament::Skybox *",
+                "qualified_name": "filament::Skybox*",
+                "category": "object",
+                "is_const": true,
+                "is_pointer": true,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "nullable"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": []
+    }
+  ],
+  "functions": []
+}

@@ -1,0 +1,11 @@
+syntax = "proto2";
+package libfuzzer_example;
+
+import "google/protobuf/any.proto";
+
+message Msg {
+  optional float optional_float = 1;
+  optional uint64 optional_uint64 = 2;
+  optional string optional_string = 3;
+  optional google.protobuf.Any any = 4;
+}

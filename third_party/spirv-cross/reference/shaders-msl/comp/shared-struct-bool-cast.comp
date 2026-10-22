@@ -1,0 +1,110 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct S1
+{
+    int3 a;
+    uint2 b;
+    short4 c;
+    uint d;
+};
+
+struct block
+{
+    uint passed;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+static inline __attribute__((always_inline))
+bool compare_ivec3(thread const int3& a, thread const int3& b)
+{
+    return all(a == b);
+}
+
+static inline __attribute__((always_inline))
+bool compare_uvec2(thread const uint2& a, thread const uint2& b)
+{
+    return all(a == b);
+}
+
+static inline __attribute__((always_inline))
+bool compare_bvec4(thread const bool4& a, thread const bool4& b)
+{
+    return all(a == b);
+}
+
+static inline __attribute__((always_inline))
+bool compare_uint(thread const uint& a, thread const uint& b)
+{
+    return a == b;
+}
+
+kernel void main0(device block& _132 [[buffer(0)]])
+{
+    threadgroup S1 s1;
+    s1.a = int3(6, 8, 8);
+    s1.b = uint2(4u);
+    s1.c = short4(bool4(false, false, false, true));
+    s1.d = 6u;
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    threadgroup_barrier(mem_flags::mem_device | mem_flags::mem_threadgroup | mem_flags::mem_texture);
+    bool allOk = true;
+    bool _99;
+    if (allOk)
+    {
+        int3 param = int3(6, 8, 8);
+        int3 param_1 = s1.a;
+        _99 = compare_ivec3(param, param_1);
+    }
+    else
+    {
+        _99 = allOk;
+    }
+    allOk = _99;
+    bool _108;
+    if (allOk)
+    {
+        uint2 param_2 = uint2(4u);
+        uint2 param_3 = s1.b;
+        _108 = compare_uvec2(param_2, param_3);
+    }
+    else
+    {
+        _108 = allOk;
+    }
+    allOk = _108;
+    bool _117;
+    if (allOk)
+    {
+        bool4 param_4 = bool4(false, false, false, true);
+        bool4 param_5 = bool4(s1.c);
+        _117 = compare_bvec4(param_4, param_5);
+    }
+    else
+    {
+        _117 = allOk;
+    }
+    allOk = _117;
+    bool _126;
+    if (allOk)
+    {
+        uint param_6 = 6u;
+        uint param_7 = s1.d;
+        _126 = compare_uint(param_6, param_7);
+    }
+    else
+    {
+        _126 = allOk;
+    }
+    allOk = _126;
+    if (allOk)
+    {
+        _132.passed++;
+    }
+}
+

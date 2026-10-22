@@ -1,0 +1,43 @@
+#version 450 core
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_KHR_cooperative_matrix : enable
+#extension GL_EXT_spec_constant_composites : enable
+
+#pragma use_replicated_composites
+
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(constant_id = 1) const int csix = 6;
+struct S { int a; int b; int c; };
+struct SS { S s1; S s2; };
+const S cs = S(csix, csix, csix);
+const SS css = SS(cs, cs);
+
+layout(constant_id = 2) const float spec_float = 3;
+const vec4 cv = vec4(spec_float);
+const mat4 cm = mat4(cv,cv,cv,cv);
+
+layout(constant_id = 0) const int cfive = 5;
+const int carr[3] = {cfive, cfive, cfive};
+const int carr2[3][3] = {carr, carr, carr};
+
+const coopmat<float, gl_ScopeSubgroup, 16, 16, gl_MatrixUseA> ccoop = coopmat<float, gl_ScopeSubgroup, 16, 16, gl_MatrixUseA>(spec_float);
+
+void main()
+{
+    coopmat<float, gl_ScopeSubgroup, 16, 16, gl_MatrixUseA> coop = coopmat<float, gl_ScopeSubgroup, 16, 16, gl_MatrixUseA>(1.0);
+
+    float a = 2.0;
+    vec4 v = vec4(a);
+    v = cv;
+    mat4 m = mat4(v,v,v,v);
+
+    int five = 5;
+    int six = 6;
+    int arr[3] = {five, five, five};
+    int arr2[3][3] = {arr, arr, arr};
+    arr2 = carr2;
+
+    S s2 = S(six, six, six);
+    SS ss = SS(s2, s2);
+}

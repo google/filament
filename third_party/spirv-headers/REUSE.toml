@@ -1,0 +1,31 @@
+version = 1
+SPDX-PackageName = "SPIRV-Headers"
+SPDX-PackageSupplier = "The Khronos Group, Inc."
+SPDX-PackageDownloadLocation = "https://github.com/KhronosGroup/SPIRV-Headers"
+
+[[annotations]]
+path = [
+    "WORKSPACE",
+    ".git**",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = "The Khronos Group, Inc."
+SPDX-License-Identifier = "CC-BY-4.0"
+
+[[annotations]]
+path = ["**" ]
+precedence = "closest"
+SPDX-FileCopyrightText = "The Khronos Group, Inc."
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "tools/buildHeaders/bin/generate_language_headers.py"
+precedence = "closest"
+SPDX-FileCopyrightText = "Google LLC"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "tools/buildHeaders/jsoncpp/**"
+precedence = "closest"
+SPDX-FileCopyrightText = "Baptiste Lepilleur"
+SPDX-License-Identifier = "MIT"

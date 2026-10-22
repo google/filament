@@ -1,0 +1,129 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TNT_FILAMENT_DETAILS_VERTEXBUFFER_H
+#define TNT_FILAMENT_DETAILS_VERTEXBUFFER_H
+
+#include "downcast.h"
+
+#include "details/CreationStatus.h"
+
+#include <filament/MaterialEnums.h>
+#include <filament/VertexBuffer.h>
+
+#include <backend/BufferDescriptor.h>
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+
+#include <utils/debug.h>
+
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+
+namespace filament {
+
+class FBufferObject;
+class FEngine;
+
+class FVertexBuffer : public VertexBuffer {
+public:
+    using VertexBufferInfoHandle = backend::VertexBufferInfoHandle;
+    using VertexBufferHandle = backend::VertexBufferHandle;
+    using BufferObjectHandle = backend::BufferObjectHandle;
+
+    FVertexBuffer(FEngine& engine, const Builder& builder);
+
+    // frees driver resources, object becomes invalid
+    void terminate(FEngine& engine);
+
+    // Only meaningful once the creation succeeded. A canceled asynchronous creation leaves
+    // mHandle referring to backend resources that were never generated.
+    VertexBufferHandle getHwHandle() const noexcept {
+        assert_invariant(isCreationSuccessful());
+        return mHandle;
+    }
+
+    VertexBufferInfoHandle getVertexBufferInfoHandle() const { return mVertexBufferInfoHandle; }
+
+    size_t getVertexCount() const noexcept;
+
+    AttributeBitset getDeclaredAttributes() const noexcept {
+        return mDeclaredAttributes;
+    }
+
+    // no-op if bufferIndex out of range
+    void setBufferAt(FEngine& engine, uint8_t bufferIndex,
+            backend::BufferDescriptor&& buffer, uint32_t byteOffset = 0);
+
+    AsyncCallId setBufferAtAsync(FEngine& engine, uint8_t bufferIndex,
+            backend::BufferDescriptor&& buffer, uint32_t byteOffset,
+            backend::CallbackHandler* handler, AsyncCompletionCallback callback,
+            void* user = nullptr);
+
+    void setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
+            FBufferObject const* bufferObject);
+
+    AsyncCallId setBufferObjectAtAsync(FEngine& engine, uint8_t bufferIndex,
+            FBufferObject const* bufferObject, backend::CallbackHandler* handler,
+            AsyncCompletionCallback callback, void* user = nullptr);
+
+    void updateBoneIndicesAndWeights(FEngine& engine, std::unique_ptr<uint16_t[]> skinJoints,
+                                        std::unique_ptr<float[]> skinWeights);
+
+    // Whether the asynchronous pipeline is done with this object, whether or not it succeeded.
+    // This is a *lifetime* gate: FEngine::destroy detects this method by name and waits on it
+    // before freeing the object, so it must become true even when creation is canceled.
+    // Use isCreationSuccessful() to know whether the resource can be used.
+    bool isCreationSettled() const noexcept {
+        return mCreationState.isSettled();
+    }
+
+    // Whether creation finished *and* actually populated the resource. A canceled creation
+    // finishes without ever running, so the resource is not usable. This is what the public
+    // VertexBuffer::isCreationComplete() reports.
+    bool isCreationSuccessful() const noexcept {
+        return mCreationState.isSuccessful();
+    }
+
+private:
+    friend class VertexBuffer;
+    VertexBufferInfoHandle mVertexBufferInfoHandle;
+    VertexBufferHandle mHandle;
+    backend::AttributeArray mAttributes;
+    std::array<BufferObjectHandle, backend::MAX_VERTEX_BUFFER_COUNT> mBufferObjects;
+    // Byte capacity of each slot's buffer object, as computed from the declared attributes at
+    // construction time. Only populated for slots this VertexBuffer allocated itself, i.e. when
+    // mBufferObjectsEnabled is false (or for the skinning slots in advanced skinning mode);
+    // client-supplied buffer objects are validated by FBufferObject::setBuffer() instead.
+    std::array<uint32_t, backend::MAX_VERTEX_BUFFER_COUNT> mBufferSizes = {};
+    AttributeBitset mDeclaredAttributes;
+    uint32_t mVertexCount = 0;
+    uint8_t mBufferCount = 0;
+    bool mBufferObjectsEnabled = false;
+    bool mAdvancedSkinningEnabled = false;
+
+    // Where the creation process is. This is especially useful for asynchronous creation; it only
+    // ever moves out of CREATING once, to one of the two terminal states.
+    CreationState mCreationState;
+};
+
+FILAMENT_DOWNCAST(VertexBuffer)
+
+} // namespace filament
+
+#endif // TNT_FILAMENT_DETAILS_VERTEXBUFFER_H

@@ -1,0 +1,11 @@
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+
+[*.{c,cpp,h,inc,kt,java,js,md}]
+indent_style = space
+indent_size = 4
+max_line_length = 100

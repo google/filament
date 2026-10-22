@@ -1,0 +1,399 @@
+{
+  "meta": {
+    "generator_version": "1.0.0",
+    "source_file": "/Users/mathias/sources/git/filament/tools/apigen/tests/java/16_bitfield_sampler.h"
+  },
+  "includes": {
+    "user": [],
+    "system": [
+      "<stdint.h>"
+    ]
+  },
+  "aliases": [],
+  "enums": [],
+  "classes": [
+    {
+      "name": "BitfieldSamplerTest",
+      "qualified_name": "BitfieldSamplerTest",
+      "location": {
+        "file": "tools/apigen/tests/java/16_bitfield_sampler.h",
+        "line": 3
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "BitfieldSamplerTest",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [
+        {
+          "name": "BitfieldSamplerTest",
+          "qualified_name": "BitfieldSamplerTest()",
+          "location": {
+            "file": "tools/apigen/tests/java/16_bitfield_sampler.h",
+            "line": 16
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": [],
+          "is_constructor": true
+        },
+        {
+          "name": "BitfieldSamplerTest",
+          "qualified_name": "BitfieldSamplerTest(Filter, Wrap)",
+          "location": {
+            "file": "tools/apigen/tests/java/16_bitfield_sampler.h",
+            "line": 17
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "filter",
+              "type": {
+                "cpp_name": "Filter",
+                "qualified_name": "BitfieldSamplerTest::Filter",
+                "category": "enum",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "wrap",
+              "type": {
+                "cpp_name": "Wrap",
+                "qualified_name": "BitfieldSamplerTest::Wrap",
+                "category": "enum",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": "Wrap :: CLAMP",
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": [],
+          "is_constructor": true
+        },
+        {
+          "name": "setFilter",
+          "qualified_name": "setFilter(Filter)",
+          "location": {
+            "file": "tools/apigen/tests/java/16_bitfield_sampler.h",
+            "line": 19
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "f",
+              "type": {
+                "cpp_name": "Filter",
+                "qualified_name": "BitfieldSamplerTest::Filter",
+                "category": "enum",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getFilter",
+          "qualified_name": "getFilter()",
+          "location": {
+            "file": "tools/apigen/tests/java/16_bitfield_sampler.h",
+            "line": 20
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "Filter",
+            "qualified_name": "BitfieldSamplerTest::Filter",
+            "category": "enum",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "setWrap",
+          "qualified_name": "setWrap(Wrap)",
+          "location": {
+            "file": "tools/apigen/tests/java/16_bitfield_sampler.h",
+            "line": 22
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "w",
+              "type": {
+                "cpp_name": "Wrap",
+                "qualified_name": "BitfieldSamplerTest::Wrap",
+                "category": "enum",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getWrap",
+          "qualified_name": "getWrap()",
+          "location": {
+            "file": "tools/apigen/tests/java/16_bitfield_sampler.h",
+            "line": 23
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "Wrap",
+            "qualified_name": "BitfieldSamplerTest::Wrap",
+            "category": "enum",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": [],
+      "constants": [],
+      "enums": [
+        {
+          "name": "Filter",
+          "qualified_name": "BitfieldSamplerTest::Filter",
+          "location": {
+            "file": "tools/apigen/tests/java/16_bitfield_sampler.h",
+            "line": 6
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "underlying_type": "uint8_t",
+          "entries": [
+            {
+              "name": "NEAREST",
+              "value": 0,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            },
+            {
+              "name": "LINEAR",
+              "value": 1,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            }
+          ]
+        },
+        {
+          "name": "Wrap",
+          "qualified_name": "BitfieldSamplerTest::Wrap",
+          "location": {
+            "file": "tools/apigen/tests/java/16_bitfield_sampler.h",
+            "line": 11
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "underlying_type": "uint8_t",
+          "entries": [
+            {
+              "name": "CLAMP",
+              "value": 0,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            },
+            {
+              "name": "REPEAT",
+              "value": 1,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            }
+          ]
+        }
+      ],
+      "is_aggregate": false,
+      "archetype": "bitfield",
+      "category": "bitfield",
+      "bitfield_size": 4,
+      "bitfield_primitive": "int"
+    }
+  ],
+  "functions": []
+}

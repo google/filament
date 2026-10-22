@@ -1,0 +1,24 @@
+static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
+
+RWByteAddressBuffer _4 : register(u1);
+cbuffer UBO : register(b0)
+{
+    uint3 _7_w : packoffset(c0);
+};
+
+cbuffer SPIRV_Cross_NumWorkgroups
+{
+    uint3 SPIRV_Cross_NumWorkgroups_1_count : packoffset(c0);
+};
+
+
+void comp_main()
+{
+    _4.Store3(0, SPIRV_Cross_NumWorkgroups_1_count + _7_w);
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

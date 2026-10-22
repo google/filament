@@ -1,0 +1,178 @@
+Name
+
+    EXT_shader_samples_identical
+
+Name Strings
+
+    GL_EXT_shader_samples_identical
+
+Contact
+
+    Ian Romanick, Intel (ian.d.romanick 'at' intel.com)
+
+Contributors
+
+    Chris Forbes, Mesa
+    Magnus Wendt, Intel
+    Neil S. Roberts, Intel
+    Graham Sellers, AMD
+    Nicolai Hähnle, AMD
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date: November 19, 2015
+    Revision: 6
+
+Number
+
+    OpenGL Extension #557
+    OpenGL ES Extension #339
+
+Dependencies
+
+    OpenGL 3.2, or OpenGL ES 3.1, or ARB_texture_multisample is required.
+
+    This extension is written against the OpenGL 4.5 (Core Profile)
+    Specification
+
+Overview
+
+    Multisampled antialiasing has become a common method for improving the
+    quality of rendered images.  Multisampling differs from supersampling in
+    that the color of a primitive that covers all or part of a pixel is
+    resolved once, regardless of the number of samples covered.  If a large
+    polygon is rendered, the colors of all samples in each interior pixel will
+    be the same.  This suggests a simple compression scheme that can reduce
+    the necessary memory bandwidth requirements.  In one such scheme, each
+    sample is stored in a separate slice of the multisample surface.  An
+    additional multisample control surface (MCS) contains a mapping from pixel
+    samples to slices.
+
+    If all the values stored in the MCS for a particular pixel are the same,
+    then all the samples have the same value.  Applications can take advantage
+    of this information to reduce the bandwidth of reading multisample
+    textures.  A custom multisample resolve filter could optimize resolving
+    pixels where every sample is identical by reading the color once.
+
+    color = texelFetch(sampler, coordinate, 0);
+    if (!textureSamplesIdenticalEXT(sampler, coordinate)) {
+        for (int i = 1; i < MAX_SAMPLES; i++) {
+            vec4 c = texelFetch(sampler, coordinate, i);
+
+            //... accumulate c into color
+
+        }
+    }
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to the OpenGL 4.5 (Core Profile) Specification
+
+    None.
+
+Modifications to The OpenGL Shading Language Specification, Version 4.50.5
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+        #extension GL_EXT_shader_samples_identical
+
+    A new preprocessor #define is added to the OpenGL Shading Language:
+
+        #define GL_EXT_shader_samples_identical
+
+    Add to the table in section 8.7 "Texture Lookup Functions"
+
+    Syntax:
+
+        bool textureSamplesIdenticalEXT(gsampler2DMS sampler, ivec2 coord)
+
+        bool textureSamplesIdenticalEXT(gsampler2DMSArray sampler,
+                                        ivec3 coord)
+
+    Description:
+
+        Returns true if it can be determined that all samples within the texel
+        of the multisample texture bound to <sampler> at <coord> contain the
+        same values or false if this cannot be determined."
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Issues
+
+    1) What should the new functions be called?
+
+    RESOLVED: textureSamplesIdenticalEXT.  Initially
+    textureAllSamplesIdenticalEXT was considered, but
+    textureSamplesIdenticalEXT is more similar to the existing textureSamples
+    function.
+
+    2) It seems like applications could implement additional optimization if
+       they were provided with raw MCS data.  Should this extension also
+       provide that data?
+
+    There are a number of challenges in providing raw MCS data.  The biggest
+    problem being that the amount of MCS data depends on the number of
+    samples, and that is not known at compile time.  Additionally, without new
+    texelFetch functions, applications would have difficulty utilizing the
+    information.
+
+    Another option is to have a function that returns an array of tuples of
+    sample number and count.  This also has difficulties with the maximum
+    array size not being known at compile time.
+
+    RESOLVED: Do not expose raw MCS data in this extension.
+
+    3) Should this extension also extend SPIR-V?
+
+    RESOLVED: Yes, but this has not yet been written.
+
+    4) Is it possible for textureSamplesIdenticalEXT to report false negatives?
+
+    RESOLVED: Yes.  It is possible that the underlying hardware may not detect
+    that separate writes of the same color to different samples of a pixel are
+    the same.  The shader function is at the whim of the underlying hardware
+    implementation.  It is also possible that a compressed multisample surface
+    is not used.  In that case the function will likely always return false.
+
+Revision History
+
+    Rev  Date        Author    Changes
+    ---  ----------  --------  ---------------------------------------------
+      1  2014/08/20  cforbes   Initial version
+      2  2015/10/23  idr       Change from MESA to EXT.  Rebase on OpenGL 4.5,
+                               and add dependency on OpenGL ES 3.1.  Initial
+                               draft of overview section and issues 1 through
+                               3.
+      3  2015/10/27  idr       Typo fixes.
+      4  2015/11/10  idr       Rename extension from EXT_shader_multisample_compression
+                               to EXT_shader_samples_identical.
+                               Add issue #4.
+      5  2015/11/18  idr       Fix some typos spotted by gsellers.  Change the
+                               name of the name of the function to
+                               textureSamplesIdenticalEXT.
+      6  2015/11/19  idr       Fix more typos spotted by Nicolai Hähnle.

@@ -1,0 +1,17 @@
+#version 450
+
+#extension GL_EXT_shared_memory_block : require
+#extension GL_EXT_scalar_block_layout : require
+
+shared SharedMemoryBlockA {
+    layout (offset = 0) uint a;
+};
+
+layout (scalar) shared SharedMemoryBlockB {
+    layout (offset = 4) uvec3 b;
+};
+
+void main() {
+    a = 6;
+    b = uvec3(1, 2, 3);
+}

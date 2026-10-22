@@ -1,0 +1,39 @@
+name: 'ccache-stats'
+description: >
+  Reports the compiler cache statistics for a job, and warns when the cache was too small to hold
+  what the job compiled.
+
+  Pair this with the ccache action, which zeroes the counters, so that everything reported here
+  belongs to this job rather than to whichever build populated the cache.
+
+inputs:
+  show-disk-usage:
+    description: 'Also print free disk space. Worth enabling on the small runners the warmer uses.'
+    required: false
+    default: 'false'
+
+runs:
+  using: "composite"
+  steps:
+    - name: ccache statistics
+      shell: bash
+      run: |
+        set -e
+
+        ccache --show-stats
+
+        if [[ "${{ inputs.show-disk-usage }}" == "true" ]]; then
+          df -h /
+        fi
+
+        # An undersized cache has no other symptom: ccache evicts silently, leaving a hit rate that
+        # looks disappointing rather than broken. Since the counters were zeroed at the start of
+        # the job, any cleanup here is this build outgrowing its budget. Before ccache 4.4 there is
+        # no --print-stats, in which case awk yields nothing and this prints nothing.
+        cleanups=$(ccache --print-stats | awk '$1 == "cleanups_performed" { print $2 }')
+        if [[ "${cleanups:-0}" -gt 0 ]]; then
+          echo "::warning title=ccache budget too small::This job evicted cached objects" \
+               "(${cleanups} cleanups) because its build outgrew CCACHE_MAXSIZE=${CCACHE_MAXSIZE}." \
+               "Raise this configuration's budget in .github/actions/ccache/action.yml, after" \
+               "checking the quota headroom with 'gh cache list'."
+        fi

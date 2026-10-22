@@ -1,0 +1,141 @@
+// Copyright 2017 The Dawn & Tint Authors
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#ifndef SRC_DAWN_NATIVE_PIPELINE_H_
+#define SRC_DAWN_NATIVE_PIPELINE_H_
+
+#include <array>
+#include <bitset>
+#include <map>
+#include <string>
+#include <vector>
+
+#include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/native/CachedObject.h"
+#include "src/dawn/native/Forward.h"
+#include "src/dawn/native/ObjectBase.h"
+#include "src/dawn/native/PerStage.h"
+#include "src/dawn/native/PipelineLayout.h"
+#include "src/dawn/native/ShaderModule.h"
+#include "src/dawn/native/dawn_platform.h"
+
+namespace dawn::native {
+
+class ComputePipelineBase;
+class RenderPipelineBase;
+
+ResultOrError<ShaderModuleEntryPoint> ValidateProgrammableStage(DeviceBase* device,
+                                                                const ShaderModuleBase* module,
+                                                                StringView entryPointName,
+                                                                Span<const ConstantEntry> constants,
+                                                                const PipelineLayoutBase* layout,
+                                                                SingleShaderStage stage);
+
+struct ProgrammableStage {
+    Ref<ShaderModuleBase> module;
+    std::string entryPoint;
+
+    // The metadata lives as long as module, that's ref-ed in the same structure.
+    raw_ptr<const EntryPointMetadata> metadata = nullptr;
+
+    PipelineConstantEntries constants;
+};
+
+uint32_t GetRawBits(ImmediateMask bits);
+
+class PipelineBase : public ApiObjectBase, public CachedObject {
+  public:
+    ~PipelineBase() override;
+
+    virtual const ComputePipelineBase* AsComputePipeline() const { return nullptr; }
+    virtual ComputePipelineBase* AsComputePipeline() { return nullptr; }
+
+    virtual const RenderPipelineBase* AsRenderPipeline() const { return nullptr; }
+    virtual RenderPipelineBase* AsRenderPipeline() { return nullptr; }
+
+    PipelineLayoutBase* GetLayout();
+    const PipelineLayoutBase* GetLayout() const;
+    const RequiredBufferSizes& GetMinBufferSizes() const;
+    const ProgrammableStage& GetStage(SingleShaderStage stage) const;
+    const PerStage<ProgrammableStage>& GetAllStages() const;
+    bool HasStage(SingleShaderStage stage) const;
+    wgpu::ShaderStage GetStageMask() const;
+    const ImmediateMask& GetImmediateMask() const;
+    virtual ImmediateMask GetUserImmediateSlots() const;
+
+    ResultOrError<Ref<BindGroupLayoutBase>> GetBindGroupLayout(uint32_t groupIndex);
+
+    // Helper functions for std::unordered_map-based pipeline caches.
+    size_t ComputeContentHash() override;
+    static bool EqualForCache(const PipelineBase* a, const PipelineBase* b);
+
+    // Implementation of the API entrypoint. Do not use in a reentrant manner.
+    BindGroupLayoutBase* APIGetBindGroupLayout(uint32_t groupIndex);
+
+    using ScopedUseShaderPrograms = PerStage<ShaderModuleBase::ScopedUseTintProgram>;
+    ScopedUseShaderPrograms UseShaderPrograms();
+
+    // Initialize() should only be called once by the frontend when the shaders are ready.
+    MaybeError Initialize(std::optional<ScopedUseShaderPrograms> scopedUsePrograms = std::nullopt);
+
+    uint32_t GetImmediateSize() const;
+
+    void SetImmediateMaskForTesting(ImmediateMask immediateMask);
+
+    // Returns for each ExternalTexture bind point for this pipeline, which sampler bind point it is
+    // used with (if any). If it is used with multiple samplers, only one is returned and a warning
+    // emitted.
+    using SamplerForExternalTextureMap =
+        absl::flat_hash_map<APIBindPoint, std::optional<BindPoint>>;
+    SamplerForExternalTextureMap ComputeSamplerForExternalTextureMap() const;
+
+  protected:
+    PipelineBase(DeviceBase* device,
+                 PipelineLayoutBase* layout,
+                 StringView label,
+                 std::vector<StageAndDescriptor> stages);
+    PipelineBase(DeviceBase* device, ObjectBase::ErrorTag tag, StringView label);
+
+    ImmediateMask mImmediateMask = ImmediateMask(0);
+    ImmediateMask mUserImmdiateSlots = ImmediateMask(0);
+
+  private:
+    MaybeError ValidateGetBindGroupLayout(BindGroupIndex group);
+
+    // Overridden by child classes to perform their initialization when the shaders are ready.
+    virtual MaybeError InitializeWithShaders() = 0;
+
+    wgpu::ShaderStage mStageMask = wgpu::ShaderStage::None;
+    PerStage<ProgrammableStage> mStages;
+
+    Ref<PipelineLayoutBase> mLayout;
+    RequiredBufferSizes mMinBufferSizes;
+};
+
+}  // namespace dawn::native
+
+#endif  // SRC_DAWN_NATIVE_PIPELINE_H_

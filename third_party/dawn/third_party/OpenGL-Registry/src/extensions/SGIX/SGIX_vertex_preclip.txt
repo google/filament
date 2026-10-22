@@ -1,0 +1,147 @@
+Name
+
+    SGIX_vertex_preclip
+
+Name Strings
+
+    GL_SGIX_vertex_preclip
+    GL_SGIX_vertex_preclip_hint
+
+Contact
+
+    John Francis, Silicon Graphics (jfrancis 'at' sgi.com)
+    Dave Gorgen, Silicon Graphics (dgorgen 'at' sgi.com)
+
+Status
+
+    XXX - Not complete yet!!!
+
+Version
+
+    Last Modified Date: April 19, 2000
+
+Number
+
+    210
+
+Dependencies
+
+    OpenGL 1.2 is required.
+
+Overview
+
+    Certain graphics subsystems are capable of performing fast
+    2D viewport or, in some cases, 3D volume "scissoring" operations
+    within some coordinate range much faster that the host CPU could
+    re-tesselate clipped primitives.
+
+    This extension introduces the notion of an extended rasterizable view
+    volume that is an expansion of the clip-space view volume.	This volume
+    is the space within which a particular graphics system is much more
+    efficient at rejecting fragments that lie outside the view volume than
+    it is at performing strict view volume clipping.
+
+    Clip-checking can be turned on or off through the glEnable/glDisable
+    mechanism, and can be further controlled by using glHint.
+
+IP Status
+
+    None
+
+Issues
+
+    Should more precise control be given, instead of just a hint?
+
+	NO. (Or not yet, anyway).
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled,
+    and the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+    VERTEX_PRECLIP_SGIX		    0x83EE
+
+    Accepted by the <target> parameter of Hint and the <pname> parameter
+    of GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev:
+
+    VERTEX_PRECLIP_HINT_SGIX	    0x83EF
+
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    At the end of section 2.11	Clipping  Add:
+
+    The precision of the arithmetic used in the clipping operation is
+    undefined.	Some implementations may be able to maintain full
+    accuracy for all primitives, while other implementations may have
+    limits on the extent of a primitive, or retain full accuracy only
+    within some rasterizable volume (larger than the clip volume).
+
+    Such implementations can make use of the VERTEX_PRECLIP extension.
+    If this feature is enabled, all primitives will be pre-clipped to
+    the rasterizable volume before any other processing.
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    In section 5.6  Hints:
+
+    remove the word 'and' in front of FOG_HINT
+
+    replace the period after the description of FOG_HINT with
+
+    ; and VERTEX_PRECLIP_HINT, indicating the strictness of
+    checking for primitives which extend beyond the rasterizable
+    volume.
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and
+State Requests)
+
+    Only the changes to tables 6.7 and 6.23 detailed below
+
+Additions to Appendix A of the OpenGL 1.2.1 Specification (Invariance)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Errors
+
+    None
+
+New State
+
+  (table 6.7, Transformation State)
+								Initial
+    Get Value				Type	Get Command	Value	Description	 Sec.	 Attribute
+    ---------				----	-----------	------- -----------	 ----	 ---------
+    VERTEX_PRECLIP			 B	 IsEnabled	 False	Pre-clip On/Off  2.11  transform/enable
+
+
+  (table 6.23, Hints)
+								Initial
+    Get Value				Type	Get Command	Value	Description	 Sec.	 Attribute
+    ---------				----	-----------	------- -----------	 ----	 ---------
+    VERTEX_PRECLIP_HINT			 Z3	GetIntegerv   DONT_CARE Pre-clip Hint	 5.6	   hint
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+

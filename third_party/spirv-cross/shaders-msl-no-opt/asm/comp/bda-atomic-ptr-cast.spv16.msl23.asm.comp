@@ -1,0 +1,45 @@
+               OpCapability Shader
+               OpCapability Int64
+               OpCapability PhysicalStorageBufferAddresses
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel PhysicalStorageBuffer64 GLSL450
+               OpEntryPoint GLCompute %main "main" %pc
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+               OpName %PC "PC"
+               OpName %pc "pc"
+               OpDecorate %PC Block
+               OpMemberDecorate %PC 0 Offset 0
+               OpMemberDecorate %PC 1 Offset 8
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+      %ulong = OpTypeInt 64 0
+%_ptr_PhysicalStorageBuffer_uint = OpTypePointer PhysicalStorageBuffer %uint
+         %PC = OpTypeStruct %ulong %uint
+%_ptr_PushConstant_PC = OpTypePointer PushConstant %PC
+         %pc = OpVariable %_ptr_PushConstant_PC PushConstant
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+%_ptr_PushConstant_ulong = OpTypePointer PushConstant %ulong
+%_ptr_PushConstant_uint = OpTypePointer PushConstant %uint
+   %uint_256 = OpConstant %uint 256
+    %ulong_4 = OpConstant %ulong 4
+%uint_4294967295 = OpConstant %uint 4294967295
+     %uint_1 = OpConstant %uint 1
+     %uint_0 = OpConstant %uint 0
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %18 = OpAccessChain %_ptr_PushConstant_ulong %pc %int_0
+         %19 = OpLoad %ulong %18
+         %26 = OpAccessChain %_ptr_PushConstant_uint %pc %int_1
+         %27 = OpLoad %uint %26
+         %29 = OpExtInst %uint %1 UMin %27 %uint_256
+         %31 = OpUConvert %ulong %29
+         %35 = OpIMul %ulong %31 %ulong_4
+         %36 = OpIAdd %ulong %19 %35
+         %37 = OpConvertUToPtr %_ptr_PhysicalStorageBuffer_uint %36
+         %44 = OpAtomicUMax %uint %37 %uint_1 %uint_0 %uint_4294967295
+               OpReturn
+               OpFunctionEnd

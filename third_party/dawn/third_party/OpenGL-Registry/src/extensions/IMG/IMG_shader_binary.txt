@@ -1,0 +1,113 @@
+Name 
+
+    IMG_shader_binary
+
+Name Strings 
+
+    GL_IMG_shader_binary
+
+Notice
+
+    Copyright Imagination Technologies Limited, 2007-2009.
+
+Contributors
+
+    Ben Bowman, Imagination Techonologies
+    Graham Connor, Imagination Techonologies
+	David Garcia
+
+Contacts
+
+    Ben Bowman, Imagination Technologies (benji 'dot' bowman 'at'
+    imgtec 'dot' com)
+
+Status 
+
+    Complete
+
+Version 
+
+    1.0, 30 September 2009
+
+Number
+
+    OpenGL ES Extension #68
+
+Dependencies 
+
+    None.
+	
+    The extension is written against the OpenGL-ES 2.0 Specification.
+
+Overview 
+    
+    This extension enables loading precompiled binary shaders compatible with
+    chips designed by Imagination Technologies. 
+     
+IP Status 
+
+    Unknown.
+
+Issues 
+
+    None.
+
+New Procedures and Functions 
+
+    None.
+
+New Tokens 
+
+    Accepted by the <binaryformat> parameter of ShaderBinary:
+
+        SGX_BINARY_IMG                                       0x8C0A
+
+Additions to Chapter 2 of the OpenGL-ES 2.0 Specification (OpenGL Operation)
+
+    In section 2.15.2 ("Shader Binaries"), add the following text:
+
+    "Using SGX_BINARY_IMG as the format will result in the GL attempting to load
+    the data contained in 'binary' according to the format developed by
+    Imagination Technologies Ltd."
+
+Additions to Chapter 3 of the OpenGL-ES 2.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL-ES 2.0 Specification (Per-Fragment Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL-ES 2.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL-ES 2.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX / WGL / AGL Specifications
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors 
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    1.0,  30/09/2009  ben.bowman: Updated for release
+    0.2,  29/04/2008  ben.bowman: Updated name of enumerant to SGX_BINARY_IMG
+    0.1,  10/01/2007  david.garcia: Initial revision.

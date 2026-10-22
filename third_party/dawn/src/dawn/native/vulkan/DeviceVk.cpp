@@ -1,0 +1,1333 @@
+// Copyright 2017 The Dawn & Tint Authors
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#include "src/dawn/native/vulkan/DeviceVk.h"
+
+#include <algorithm>
+#include <utility>
+
+#include "dawn/dawn_version.h"
+#include "dawn/native/VulkanBackend.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/native/BackendConnection.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/CreatePipelineAsyncEvent.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/ErrorData.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/vulkan/BackendVk.h"
+#include "src/dawn/native/vulkan/BindGroupLayoutVk.h"
+#include "src/dawn/native/vulkan/BindGroupVk.h"
+#include "src/dawn/native/vulkan/BufferVk.h"
+#include "src/dawn/native/vulkan/CommandBufferVk.h"
+#include "src/dawn/native/vulkan/ComputePipelineVk.h"
+#include "src/dawn/native/vulkan/FencedDeleter.h"
+#include "src/dawn/native/vulkan/FramebufferCache.h"
+#include "src/dawn/native/vulkan/FramebufferFetchHelper.h"
+#include "src/dawn/native/vulkan/PhysicalDeviceVk.h"
+#include "src/dawn/native/vulkan/PipelineCacheVk.h"
+#include "src/dawn/native/vulkan/PipelineLayoutVk.h"
+#include "src/dawn/native/vulkan/QuerySetVk.h"
+#include "src/dawn/native/vulkan/QueueVk.h"
+#include "src/dawn/native/vulkan/RenderPassCache.h"
+#include "src/dawn/native/vulkan/RenderPipelineVk.h"
+#include "src/dawn/native/vulkan/ResourceMemoryAllocatorVk.h"
+#include "src/dawn/native/vulkan/ResourceTableVk.h"
+#include "src/dawn/native/vulkan/SamplerVk.h"
+#include "src/dawn/native/vulkan/ShaderModuleVk.h"
+#include "src/dawn/native/vulkan/SharedFenceVk.h"
+#include "src/dawn/native/vulkan/SharedTextureMemoryVk.h"
+#include "src/dawn/native/vulkan/SwapChainVk.h"
+#include "src/dawn/native/vulkan/TexelBufferViewVk.h"
+#include "src/dawn/native/vulkan/TextureVk.h"
+#include "src/dawn/native/vulkan/UtilsVulkan.h"
+#include "src/dawn/native/vulkan/VulkanError.h"
+#include "src/utils/log.h"
+#include "src/utils/non_copyable.h"
+#include "src/utils/numeric.h"
+#include "src/utils/platform.h"
+
+namespace dawn::native::vulkan {
+namespace {
+
+template <typename F>
+struct NoopDrawFunction;
+
+template <typename R, typename... Args>
+struct NoopDrawFunction<R(VKAPI_PTR*)(Args...)> {
+    static R VKAPI_PTR Fun(Args...) {}
+};
+
+}  // namespace
+
+// static
+ResultOrError<Ref<Device>> Device::Create(AdapterBase* adapter,
+                                          const UnpackedPtr<DeviceDescriptor>& descriptor,
+                                          const TogglesState& deviceToggles,
+                                          Ref<DeviceBase::DeviceLostEvent>&& lostEvent) {
+    Ref<Device> device =
+        AcquireRef(new Device(adapter, descriptor, deviceToggles, std::move(lostEvent)));
+    DAWN_TRY(device->Initialize(descriptor));
+    return device;
+}
+
+Device::Device(AdapterBase* adapter,
+               const UnpackedPtr<DeviceDescriptor>& descriptor,
+               const TogglesState& deviceToggles,
+               Ref<DeviceBase::DeviceLostEvent>&& lostEvent)
+    : DeviceBase(adapter, descriptor, deviceToggles, std::move(lostEvent)),
+      mDebugPrefix(GetNextDeviceDebugPrefix()) {}
+
+MaybeError Device::Initialize(const UnpackedPtr<DeviceDescriptor>& descriptor) {
+    if (GetInstance()->IsBackendValidationEnabled() &&
+        !IsToggleEnabled(Toggle::UseUserDefinedLabelsInBackend)) {
+        // NOTE: If Vulkan backend validation is enabled then these labels must be set to associate
+        // validation errors with a specific device. Backend validation errors will cause a crash
+        // if labels are not set.
+        EmitLog(wgpu::LoggingType::Warning,
+                "Backend object labels are required to map Vulkan backend errors to a device.");
+    }
+
+    // Copy the adapter's device info to the device so that we can change the "knobs"
+    mDeviceInfo = ToBackend(GetPhysicalDevice())->GetDeviceInfo();
+
+    // Initialize the "instance" procs of our local function table.
+    VulkanFunctions* functions = GetMutableFunctions();
+    *functions = ToBackend(GetPhysicalDevice())->GetVulkanInstance()->GetFunctions();
+
+    // Two things are crucial if device initialization fails: the function pointers to destroy
+    // objects, and the fence deleter that calls these functions. Do not do anything before
+    // these two are set up, so that a failed initialization doesn't cause a crash in
+    // DestroyImpl()
+    {
+        VkPhysicalDevice vkPhysicalDevice = ToBackend(GetPhysicalDevice())->GetVkPhysicalDevice();
+
+        VulkanDeviceKnobs usedDeviceKnobs = {};
+        DAWN_TRY_ASSIGN(usedDeviceKnobs, CreateDevice(vkPhysicalDevice));
+        *static_cast<VulkanDeviceKnobs*>(&mDeviceInfo) = usedDeviceKnobs;
+
+        DAWN_TRY(functions->LoadDeviceProcs(GetVkInstance(), mVkDevice, mDeviceInfo));
+
+        mDeleter = AcquireRef(new FencedDeleter(this));
+    }
+
+    if (IsToggleEnabled(Toggle::VulkanSkipDraw)) {
+        // Chrome skips draw for some tests.
+        functions->CmdDraw = NoopDrawFunction<PFN_vkCmdDraw>::Fun;
+        functions->CmdDrawIndexed = NoopDrawFunction<PFN_vkCmdDrawIndexed>::Fun;
+        functions->CmdDrawIndirect = NoopDrawFunction<PFN_vkCmdDrawIndirect>::Fun;
+        functions->CmdDrawIndexedIndirect = NoopDrawFunction<PFN_vkCmdDrawIndexedIndirect>::Fun;
+    }
+
+    mFramebufferCache = std::make_unique<FramebufferCache>(this);
+    mRenderPassCache = std::make_unique<RenderPassCache>(this);
+
+    Ref<Queue> queue;
+    DAWN_TRY_ASSIGN(queue, Queue::Create(this, &descriptor->defaultQueue, mMainQueueFamily));
+    queue->RegisterSerialProcessor(QueuePriority::BestEffort, mDeleter);
+
+    VkDeviceSize heapBlockSize =
+        ResourceMemoryAllocator::GetHeapBlockSize(descriptor.Get<DawnDeviceAllocatorControl>());
+    mResourceMemoryAllocator =
+        std::make_unique<MutexProtected<ResourceMemoryAllocator>>(this, heapBlockSize, queue.Get());
+
+    mExternalMemoryService = std::make_unique<external_memory::Service>(this);
+
+    if (uint32_t{HasFeature(Feature::SharedFenceVkSemaphoreOpaqueFD)} +
+            uint32_t{HasFeature(Feature::SharedFenceSyncFD)} +
+            uint32_t{HasFeature(Feature::SharedFenceVkSemaphoreZirconHandle)} >
+        1) {
+        return DAWN_VALIDATION_ERROR("At most one of %s, %s, and %s may be enabled.",
+                                     wgpu::FeatureName::SharedFenceVkSemaphoreOpaqueFD,
+                                     wgpu::FeatureName::SharedFenceSyncFD,
+                                     wgpu::FeatureName::SharedFenceVkSemaphoreZirconHandle);
+    }
+    if (HasFeature(Feature::SharedFenceVkSemaphoreOpaqueFD)) {
+        mExternalSemaphoreService = std::make_unique<external_semaphore::Service>(
+            this, VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR);
+    } else if (HasFeature(Feature::SharedFenceSyncFD)) {
+        mExternalSemaphoreService = std::make_unique<external_semaphore::Service>(
+            this, VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT);
+    } else if (HasFeature(Feature::SharedFenceVkSemaphoreZirconHandle)) {
+        mExternalSemaphoreService = std::make_unique<external_semaphore::Service>(
+            this, VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_ZIRCON_EVENT_BIT_FUCHSIA);
+    } else {
+#if DAWN_PLATFORM_IS(FUCHSIA)
+        mExternalSemaphoreService = std::make_unique<external_semaphore::Service>(
+            this, VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_ZIRCON_EVENT_BIT_FUCHSIA);
+#elif DAWN_PLATFORM_IS(ANDROID) || DAWN_PLATFORM_IS(CHROMEOS)
+        mExternalSemaphoreService = std::make_unique<external_semaphore::Service>(
+            this, VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT);
+#else
+        mExternalSemaphoreService = std::make_unique<external_semaphore::Service>(
+            this, VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR);
+#endif
+    }
+
+    SetLabelImpl();
+
+    ToBackend(GetPhysicalDevice())->GetVulkanInstance()->StartListeningForDeviceMessages(this);
+
+    if (HasFeature(Feature::ChromiumExperimentalSamplingResourceTable)) {
+        DAWN_TRY_ASSIGN(mResourceTableLayout, ResourceTable::MakeDescriptorSetLayout(this));
+    }
+
+    if (HasFeature(Feature::FramebufferFetch)) {
+        mFramebufferFetchHelper = std::make_unique<FramebufferFetchHelper>(this);
+    }
+
+    return DeviceBase::Initialize(descriptor, std::move(queue));
+}
+
+Device::~Device() {
+    Destroy(DestroyReason::CppDestructor);
+}
+
+ResultOrError<Ref<BindGroupBase>> Device::CreateBindGroupImpl(
+    const UnpackedPtr<BindGroupDescriptor>& descriptor) {
+    return BindGroup::Create(this, descriptor);
+}
+ResultOrError<Ref<BindGroupLayoutInternalBase>> Device::CreateBindGroupLayoutImpl(
+    const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor) {
+    return BindGroupLayout::Create(this, descriptor);
+}
+ResultOrError<Ref<BufferBase>> Device::CreateBufferImpl(
+    const UnpackedPtr<BufferDescriptor>& descriptor) {
+    return Buffer::Create(this, descriptor);
+}
+ResultOrError<Ref<CommandBufferBase>> Device::CreateCommandBuffer(
+    CommandEncoder* encoder,
+    const CommandBufferDescriptor* descriptor) {
+    return CommandBuffer::Create(encoder, descriptor);
+}
+Ref<ComputePipelineBase> Device::CreateUninitializedComputePipelineImpl(
+    const UnpackedPtr<ComputePipelineDescriptor>& descriptor) {
+    return ComputePipeline::CreateUninitialized(this, descriptor);
+}
+ResultOrError<Ref<PipelineLayoutBase>> Device::CreatePipelineLayoutImpl(
+    const UnpackedPtr<PipelineLayoutDescriptor>& descriptor) {
+    return PipelineLayout::Create(this, descriptor);
+}
+ResultOrError<Ref<QuerySetBase>> Device::CreateQuerySetImpl(const QuerySetDescriptor* descriptor) {
+    return QuerySet::Create(this, descriptor);
+}
+Ref<RenderPipelineBase> Device::CreateUninitializedRenderPipelineImpl(
+    const UnpackedPtr<RenderPipelineDescriptor>& descriptor) {
+    return RenderPipeline::CreateUninitialized(this, descriptor);
+}
+ResultOrError<Ref<ResourceTableBase>> Device::CreateResourceTableImpl(
+    const ResourceTableDescriptor* descriptor) {
+    return ResourceTable::Create(this, descriptor);
+}
+ResultOrError<Ref<SamplerBase>> Device::CreateSamplerImpl(const SamplerDescriptor* descriptor) {
+    return Sampler::Create(this, descriptor);
+}
+ResultOrError<Ref<ShaderModuleBase>> Device::CreateShaderModuleImpl(
+    const UnpackedPtr<ShaderModuleDescriptor>& descriptor,
+    const std::vector<tint::wgsl::Extension>& internalExtensions) {
+    return ShaderModule::Create(this, descriptor, internalExtensions);
+}
+ResultOrError<Ref<SwapChainBase>> Device::CreateSwapChainImpl(Surface* surface,
+                                                              SwapChainBase* previousSwapChain,
+                                                              const SurfaceConfiguration* config) {
+    return SwapChain::Create(this, surface, previousSwapChain, config);
+}
+ResultOrError<Ref<TextureBase>> Device::CreateTextureImpl(
+    const UnpackedPtr<TextureDescriptor>& descriptor) {
+    return InternalTexture::Create(this, descriptor);
+}
+ResultOrError<Ref<TextureViewBase>> Device::CreateTextureViewImpl(
+    TextureBase* texture,
+    const UnpackedPtr<TextureViewDescriptor>& descriptor) {
+    return TextureView::Create(texture, mNextTextureViewId++, descriptor);
+}
+ResultOrError<Ref<TexelBufferViewBase>> Device::CreateTexelBufferViewImpl(
+    BufferBase* buffer,
+    const UnpackedPtr<TexelBufferViewDescriptor>& descriptor) {
+    return TexelBufferView::Create(buffer, descriptor);
+}
+Ref<PipelineCacheBase> Device::GetOrCreatePipelineCacheImpl(const CacheKey& key) {
+    if (IsToggleEnabled(Toggle::VulkanMonolithicPipelineCache)) {
+        std::call_once(mMonolithicPipelineCacheFlag, [this]() {
+            CacheKey cacheKey = GetCacheKey();
+            // `pipelineCacheUUID` is supposed to change if anything in the driver changes such that
+            // the serialized VkPipelineCache is no longer valid.
+            auto& deviceProperties = GetDeviceInfo().properties;
+            StreamIn(&cacheKey, deviceProperties.pipelineCacheUUID);
+            // A fixed string is added to the end of monolithic pipeline cache key in order to make
+            // it identifiable in the BlobCache storage implementation.
+            // TODO(crbug.com/508178495): Change the BlobCache API so that additional metadata about
+            // the cache entry can be included and remove this workaround.
+            StreamIn(&cacheKey, std::string_view("MonolithicVkPipelineCache"));
+            mMonolithicPipelineCache = PipelineCache::CreateMonolithic(this, cacheKey);
+        });
+
+        return mMonolithicPipelineCache;
+    }
+
+    return PipelineCache::Create(this, key);
+}
+void Device::InitializeComputePipelineAsyncImpl(Ref<CreateComputePipelineAsyncEvent> event) {
+    event->InitializeAsync();
+}
+void Device::InitializeRenderPipelineAsyncImpl(Ref<CreateRenderPipelineAsyncEvent> event) {
+    event->InitializeAsync();
+}
+
+ResultOrError<Ref<SharedTextureMemoryBase>> Device::ImportSharedTextureMemoryImpl(
+    const SharedTextureMemoryDescriptor* descriptor) {
+    UnpackedPtr<SharedTextureMemoryDescriptor> unpacked;
+    DAWN_TRY_ASSIGN(unpacked, ValidateAndUnpack(descriptor));
+
+    wgpu::SType type;
+    DAWN_TRY_ASSIGN(type,
+                    (unpacked.ValidateBranches<Branch<SharedTextureMemoryDmaBufDescriptor>,
+                                               Branch<SharedTextureMemoryAHardwareBufferDescriptor>,
+                                               Branch<SharedTextureMemoryOpaqueFDDescriptor>>()));
+
+    switch (type) {
+        case wgpu::SType::SharedTextureMemoryDmaBufDescriptor:
+            DAWN_INVALID_IF(!HasFeature(Feature::SharedTextureMemoryDmaBuf), "%s is not enabled.",
+                            wgpu::FeatureName::SharedTextureMemoryDmaBuf);
+            return SharedTextureMemory::Create(this, descriptor->label,
+                                               unpacked.Get<SharedTextureMemoryDmaBufDescriptor>());
+        case wgpu::SType::SharedTextureMemoryAHardwareBufferDescriptor:
+            DAWN_INVALID_IF(!HasFeature(Feature::SharedTextureMemoryAHardwareBuffer),
+                            "%s is not enabled.",
+                            wgpu::FeatureName::SharedTextureMemoryAHardwareBuffer);
+            return SharedTextureMemory::Create(
+                this, descriptor->label,
+                unpacked.Get<SharedTextureMemoryAHardwareBufferDescriptor>());
+        case wgpu::SType::SharedTextureMemoryOpaqueFDDescriptor:
+            DAWN_INVALID_IF(!HasFeature(Feature::SharedTextureMemoryOpaqueFD), "%s is not enabled.",
+                            wgpu::FeatureName::SharedTextureMemoryOpaqueFD);
+            return SharedTextureMemory::Create(
+                this, descriptor->label, unpacked.Get<SharedTextureMemoryOpaqueFDDescriptor>());
+        default:
+            DAWN_UNREACHABLE();
+    }
+}
+
+ResultOrError<Ref<SharedFenceBase>> Device::ImportSharedFenceImpl(
+    const SharedFenceDescriptor* descriptor) {
+    UnpackedPtr<SharedFenceDescriptor> unpacked;
+    DAWN_TRY_ASSIGN(unpacked, ValidateAndUnpack(descriptor));
+
+    wgpu::SType type;
+    DAWN_TRY_ASSIGN(
+        type, (unpacked.ValidateBranches<Branch<SharedFenceVkSemaphoreZirconHandleDescriptor>,
+                                         Branch<SharedFenceSyncFDDescriptor>,
+                                         Branch<SharedFenceVkSemaphoreOpaqueFDDescriptor>>()));
+
+    switch (type) {
+        case wgpu::SType::SharedFenceVkSemaphoreZirconHandleDescriptor:
+            DAWN_INVALID_IF(!HasFeature(Feature::SharedFenceVkSemaphoreZirconHandle),
+                            "%s is not enabled.",
+                            wgpu::FeatureName::SharedFenceVkSemaphoreZirconHandle);
+            return SharedFence::Create(
+                this, descriptor->label,
+                unpacked.Get<SharedFenceVkSemaphoreZirconHandleDescriptor>());
+        case wgpu::SType::SharedFenceSyncFDDescriptor:
+            DAWN_INVALID_IF(!HasFeature(Feature::SharedFenceSyncFD), "%s is not enabled.",
+                            wgpu::FeatureName::SharedFenceSyncFD);
+            return SharedFence::Create(this, descriptor->label,
+                                       unpacked.Get<SharedFenceSyncFDDescriptor>());
+        case wgpu::SType::SharedFenceVkSemaphoreOpaqueFDDescriptor:
+            DAWN_INVALID_IF(!HasFeature(Feature::SharedFenceVkSemaphoreOpaqueFD),
+                            "%s is not enabled.",
+                            wgpu::FeatureName::SharedFenceVkSemaphoreOpaqueFD);
+            return SharedFence::Create(this, descriptor->label,
+                                       unpacked.Get<SharedFenceVkSemaphoreOpaqueFDDescriptor>());
+        default:
+            DAWN_UNREACHABLE();
+    }
+}
+
+MaybeError Device::TickImpl() {
+    Queue* queue = ToBackend(GetQueue());
+
+    ExecutionSerial completedSerial = queue->GetCompletedCommandSerial();
+
+    mDescriptorAllocatorsPendingDeallocation.Use([&](auto pending) {
+        for (Ref<DescriptorSetAllocator>& allocator : pending->IterateUpTo(completedSerial)) {
+            allocator->FinishDeallocation(completedSerial);
+        }
+        pending->ClearUpTo(completedSerial);
+    });
+
+    GetResourceMemoryAllocator()->Tick(completedSerial);
+
+    DAWN_TRY(queue->SubmitPendingCommands());
+    DAWN_TRY(CheckDebugLayerAndGenerateErrors());
+
+    return {};
+}
+
+VkInstance Device::GetVkInstance() const {
+    return ToBackend(GetPhysicalDevice())->GetVulkanInstance()->GetVkInstance();
+}
+const VulkanDeviceInfo& Device::GetDeviceInfo() const {
+    return mDeviceInfo;
+}
+
+const VulkanGlobalInfo& Device::GetGlobalInfo() const {
+    return ToBackend(GetPhysicalDevice())->GetVulkanInstance()->GetGlobalInfo();
+}
+
+VkDevice Device::GetVkDevice() const {
+    return mVkDevice;
+}
+
+uint32_t Device::GetGraphicsQueueFamily() const {
+    return mMainQueueFamily;
+}
+
+const VkDescriptorSetLayout& Device::GetResourceTableLayout() const {
+    DAWN_ASSERT(HasFeature(Feature::ChromiumExperimentalSamplingResourceTable));
+    return mResourceTableLayout;
+}
+
+FramebufferFetchHelper* Device::GetFramebufferFetchHelper() {
+    return mFramebufferFetchHelper.get();
+}
+
+Ref<FencedDeleter>& Device::GetFencedDeleter() {
+    return mDeleter;
+}
+
+FramebufferCache* Device::GetFramebufferCache() const {
+    return mFramebufferCache.get();
+}
+
+RenderPassCache* Device::GetRenderPassCache() const {
+    return mRenderPassCache.get();
+}
+
+MutexProtected<ResourceMemoryAllocator>& Device::GetResourceMemoryAllocator() const {
+    return *mResourceMemoryAllocator;
+}
+
+external_semaphore::Service* Device::GetExternalSemaphoreService() const {
+    return mExternalSemaphoreService.get();
+}
+
+void Device::EnqueueDeferredDeallocation(DescriptorSetAllocator* allocator) {
+    mDescriptorAllocatorsPendingDeallocation->Enqueue(allocator,
+                                                      GetQueue()->GetPendingCommandSerial());
+}
+
+void Device::CacheStaticSampler(const Ref<Sampler>& s) {
+    mStaticSamplerCache.insert(s);
+}
+
+ResultOrError<VulkanDeviceKnobs> Device::CreateDevice(VkPhysicalDevice vkPhysicalDevice) {
+    VulkanDeviceKnobs usedKnobs = {};
+
+    // Ask for all available known extensions.
+    usedKnobs.extensions = mDeviceInfo.extensions;
+
+    std::vector<const char*> extensionNames;
+    for (DeviceExt ext : usedKnobs.extensions) {
+        const DeviceExtInfo& info = GetDeviceExtInfo(ext);
+        extensionNames.push_back(info.name);
+    }
+
+    // Some device features can only be enabled using a VkPhysicalDeviceFeatures2 struct, which
+    // is promoted as a core API in Vulkan 1.1.
+    VkPhysicalDeviceFeatures2 features2 = {};
+    features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    features2.pNext = nullptr;
+    PNextChainBuilder featuresChain(&features2);
+
+    // Required for core WebGPU features.
+    if (HasFeature(Feature::CoreFeaturesAndLimits)) {
+        usedKnobs.features.depthBiasClamp = VK_TRUE;
+        usedKnobs.features.imageCubeArray = VK_TRUE;
+        usedKnobs.features.independentBlend = VK_TRUE;
+        usedKnobs.features.sampleRateShading = VK_TRUE;
+    }
+    // Required for core and compat WebGPU features.
+    usedKnobs.features.fullDrawIndexUint32 = VK_TRUE;
+    usedKnobs.features.fragmentStoresAndAtomics = VK_TRUE;
+    usedKnobs.features.shaderUniformBufferArrayDynamicIndexing = VK_TRUE;
+    usedKnobs.features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
+    usedKnobs.features.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
+    usedKnobs.features.shaderStorageImageArrayDynamicIndexing = VK_TRUE;
+
+    if (IsRobustnessEnabled()) {
+        usedKnobs.features.robustBufferAccess = VK_TRUE;
+
+        // Enable the robustness 2 guarantees that better implement the WebGPU semantics. It forces
+        // tight bounds checking when enabled on buffers (instead of potentially extending by 16
+        // bytes or a vertex stride). It also exposes driver support for image robustness.
+        if (mDeviceInfo.HasExt(DeviceExt::Robustness2)) {
+            DAWN_ASSERT(usedKnobs.HasExt(DeviceExt::Robustness2));
+
+            usedKnobs.robustness2Features = mDeviceInfo.robustness2Features;
+            featuresChain.Add(&usedKnobs.robustness2Features);
+        }
+
+        // Enable pipelineRobustness to better control where robustness happens.
+        if (mDeviceInfo.HasExt(DeviceExt::PipelineRobustness)) {
+            DAWN_ASSERT(usedKnobs.HasExt(DeviceExt::PipelineRobustness));
+
+            usedKnobs.pipelineRobustnessFeatures = mDeviceInfo.pipelineRobustnessFeatures;
+            featuresChain.Add(&usedKnobs.pipelineRobustnessFeatures);
+        }
+
+        // robustBufferAccess requires robustBufferAccessUpdateAfterBind to be used with descriptor
+        // indexing enabled. If it is not available, we manually implement robustness for shader
+        // buffers and rely on pipelineRobustness for vertex buffer robustness.
+        if ((HasFeature(Feature::ChromiumExperimentalSamplingResourceTable)) &&
+            !mDeviceInfo.descriptorIndexingProperties.robustBufferAccessUpdateAfterBind) {
+            usedKnobs.features.robustBufferAccess = VK_FALSE;
+            usedKnobs.robustness2Features.robustBufferAccess2 = VK_FALSE;
+
+            DAWN_ASSERT(!IsToggleEnabled(Toggle::VulkanUseBufferRobustAccess2));
+            DAWN_ASSERT(mDeviceInfo.HasExt(DeviceExt::PipelineRobustness) &&
+                        mDeviceInfo.pipelineRobustnessFeatures.pipelineRobustness);
+        }
+    }
+
+    if (mDeviceInfo.HasExt(DeviceExt::SubgroupSizeControl)) {
+        DAWN_ASSERT(usedKnobs.HasExt(DeviceExt::SubgroupSizeControl));
+
+        // Always request all the features from VK_EXT_subgroup_size_control when available.
+        usedKnobs.subgroupSizeControlFeatures = mDeviceInfo.subgroupSizeControlFeatures;
+        featuresChain.Add(&usedKnobs.subgroupSizeControlFeatures);
+    }
+
+    if (mDeviceInfo.HasExt(DeviceExt::MaximalReconvergence)) {
+        DAWN_ASSERT(usedKnobs.HasExt(DeviceExt::MaximalReconvergence));
+        usedKnobs.shaderMaximalReconvergenceFeatures =
+            mDeviceInfo.shaderMaximalReconvergenceFeatures;
+        featuresChain.Add(&usedKnobs.shaderMaximalReconvergenceFeatures);
+    }
+    if (mDeviceInfo.HasExt(DeviceExt::SubgroupUniformControlFlow)) {
+        DAWN_ASSERT(usedKnobs.HasExt(DeviceExt::SubgroupUniformControlFlow));
+        usedKnobs.shaderSubgroupUniformControlFlowFeatures =
+            mDeviceInfo.shaderSubgroupUniformControlFlowFeatures;
+        featuresChain.Add(&usedKnobs.shaderSubgroupUniformControlFlowFeatures);
+    }
+
+    if (mDeviceInfo.HasExt(DeviceExt::ZeroInitializeWorkgroupMemory)) {
+        DAWN_ASSERT(usedKnobs.HasExt(DeviceExt::ZeroInitializeWorkgroupMemory));
+
+        // Always allow initializing workgroup memory with OpConstantNull when available.
+        // Note that the driver still won't initialize workgroup memory unless the workgroup
+        // variable is explicitly initialized with OpConstantNull.
+        usedKnobs.zeroInitializeWorkgroupMemoryFeatures =
+            mDeviceInfo.zeroInitializeWorkgroupMemoryFeatures;
+        featuresChain.Add(&usedKnobs.zeroInitializeWorkgroupMemoryFeatures);
+    }
+
+    if (mDeviceInfo.HasExt(DeviceExt::DemoteToHelperInvocation)) {
+        DAWN_ASSERT(usedKnobs.HasExt(DeviceExt::DemoteToHelperInvocation));
+        usedKnobs.demoteToHelperInvocationFeatures = mDeviceInfo.demoteToHelperInvocationFeatures;
+        featuresChain.Add(&usedKnobs.demoteToHelperInvocationFeatures);
+    }
+
+    if (HasFeature(Feature::FramebufferFetch)) {
+        if (IsToggleEnabled(Toggle::VulkanUseRasterizationOrderAttachmentAccess)) {
+            // Prefer to use the rasterization order extension over subpass self-dependencies when
+            // available. There is a bug in older ARM drivers where subpass self-dependencies add
+            // overhead. The bug is fixed in newer drivers that support the rasterization order
+            // extension, see https://crbug.com/42241389#comment9 for details.
+            DAWN_ASSERT(usedKnobs.HasExt(DeviceExt::RasterizationOrderAttachmentAccess));
+            mFramebufferFetchMode = VulkanFramebufferFetchMode::kCoherentExt;
+
+            auto& usedKnobFeature = usedKnobs.rasterizationOrderAttachmentAccessFeatures;
+            usedKnobFeature = mDeviceInfo.rasterizationOrderAttachmentAccessFeatures;
+            usedKnobFeature.rasterizationOrderDepthAttachmentAccess = VK_FALSE;
+            usedKnobFeature.rasterizationOrderStencilAttachmentAccess = VK_FALSE;
+            featuresChain.Add(&usedKnobs.rasterizationOrderAttachmentAccessFeatures);
+        } else {
+            mFramebufferFetchMode = VulkanFramebufferFetchMode::kCoherentSelfDep;
+        }
+    }
+
+    if (mDeviceInfo.HasExt(DeviceExt::ShaderIntegerDotProduct)) {
+        DAWN_ASSERT(usedKnobs.HasExt(DeviceExt::ShaderIntegerDotProduct));
+
+        usedKnobs.shaderIntegerDotProductFeatures = mDeviceInfo.shaderIntegerDotProductFeatures;
+        featuresChain.Add(&usedKnobs.shaderIntegerDotProductFeatures);
+    }
+
+    if (mDeviceInfo.features.samplerAnisotropy == VK_TRUE) {
+        usedKnobs.features.samplerAnisotropy = VK_TRUE;
+    }
+
+    if (IsToggleEnabled(Toggle::UseVulkanMemoryModel)) {
+        DAWN_ASSERT(usedKnobs.HasExt(DeviceExt::VulkanMemoryModel));
+        usedKnobs.vulkanMemoryModelFeatures = mDeviceInfo.vulkanMemoryModelFeatures;
+        featuresChain.Add(&usedKnobs.vulkanMemoryModelFeatures);
+    }
+
+    if (HasFeature(Feature::TextureCompressionBC)) {
+        DAWN_ASSERT(mDeviceInfo.features.textureCompressionBC == VK_TRUE);
+        usedKnobs.features.textureCompressionBC = VK_TRUE;
+    }
+
+    if (HasFeature(Feature::TextureCompressionETC2)) {
+        DAWN_CHECK(mDeviceInfo.features.textureCompressionETC2 == VK_TRUE);
+        usedKnobs.features.textureCompressionETC2 = VK_TRUE;
+    }
+
+    if (HasFeature(Feature::TextureCompressionASTC)) {
+        DAWN_CHECK(mDeviceInfo.features.textureCompressionASTC_LDR == VK_TRUE);
+        usedKnobs.features.textureCompressionASTC_LDR = VK_TRUE;
+    }
+
+    if (HasFeature(Feature::DepthClipControl)) {
+        usedKnobs.features.depthClamp = VK_TRUE;
+    }
+
+    if (HasFeature(Feature::PrimitiveIndex)) {
+        DAWN_CHECK(mDeviceInfo.features.geometryShader == VK_TRUE);
+        usedKnobs.features.geometryShader = VK_TRUE;
+    }
+
+    if (HasFeature(Feature::IndirectFirstInstance)) {
+        DAWN_CHECK(mDeviceInfo.features.drawIndirectFirstInstance == VK_TRUE);
+        usedKnobs.features.drawIndirectFirstInstance = VK_TRUE;
+    }
+
+    bool shaderFloat16Int8FeaturesAdded = false;
+    if (HasFeature(Feature::ShaderF16)) {
+        DAWN_CHECK(usedKnobs.HasExt(DeviceExt::ShaderFloat16Int8) &&
+                   mDeviceInfo.features.shaderInt16 == VK_TRUE &&
+                   mDeviceInfo.shaderFloat16Int8Features.shaderFloat16 == VK_TRUE &&
+                   mDeviceInfo._16BitStorageFeatures.storageBuffer16BitAccess == VK_TRUE);
+        if (!IsToggleEnabled(Toggle::DecomposeUniformBuffers)) {
+            DAWN_CHECK(mDeviceInfo._16BitStorageFeatures.uniformAndStorageBuffer16BitAccess ==
+                       VK_TRUE);
+        }
+
+        usedKnobs.features.shaderInt16 = VK_TRUE;
+        usedKnobs.shaderFloat16Int8Features.shaderFloat16 = VK_TRUE;
+        usedKnobs._16BitStorageFeatures.storageBuffer16BitAccess = VK_TRUE;
+        if (!IsToggleEnabled(Toggle::DecomposeUniformBuffers)) {
+            usedKnobs._16BitStorageFeatures.uniformAndStorageBuffer16BitAccess = VK_TRUE;
+        }
+        if (mDeviceInfo._16BitStorageFeatures.storageInputOutput16 == VK_TRUE) {
+            usedKnobs._16BitStorageFeatures.storageInputOutput16 = VK_TRUE;
+        }
+        shaderFloat16Int8FeaturesAdded = true;
+
+        featuresChain.Add(&usedKnobs.shaderFloat16Int8Features,
+                          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES_KHR);
+        featuresChain.Add(&usedKnobs._16BitStorageFeatures,
+                          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES);
+    }
+
+    // Set device feature for subgroups with f16 types.
+    if (HasFeature(Feature::ShaderF16) && HasFeature(Feature::Subgroups)) {
+        DAWN_CHECK(usedKnobs.HasExt(DeviceExt::ShaderSubgroupExtendedTypes) &&
+                   mDeviceInfo.shaderSubgroupExtendedTypes.shaderSubgroupExtendedTypes == VK_TRUE);
+
+        usedKnobs.shaderSubgroupExtendedTypes = mDeviceInfo.shaderSubgroupExtendedTypes;
+        featuresChain.Add(&usedKnobs.shaderSubgroupExtendedTypes);
+    }
+
+    if (HasFeature(Feature::AtomicVec2uMinMax) &&
+        mDeviceInfo.shaderAtomicInt64Features.shaderBufferInt64Atomics == VK_TRUE) {
+        usedKnobs.shaderAtomicInt64Features = mDeviceInfo.shaderAtomicInt64Features;
+        featuresChain.Add(&usedKnobs.shaderAtomicInt64Features);
+    }
+
+    if (HasFeature(Feature::DualSourceBlending)) {
+        usedKnobs.features.dualSrcBlend = VK_TRUE;
+    }
+
+    if (HasFeature(Feature::ClipDistances)) {
+        usedKnobs.features.shaderClipDistance = VK_TRUE;
+    }
+
+    if (HasFeature(Feature::TextureFormatsTier1)) {
+        usedKnobs.features.shaderStorageImageExtendedFormats = VK_TRUE;
+    }
+
+    if ((HasFeature(Feature::YCbCrVulkanSamplers) ||
+         HasFeature(Feature::OpaqueYCbCrAndroidForExternalTexture)) &&
+        mDeviceInfo.HasExt(DeviceExt::ExternalMemoryAndroidHardwareBuffer)) {
+        usedKnobs.samplerYCbCrConversionFeatures.samplerYcbcrConversion = VK_TRUE;
+        featuresChain.Add(&usedKnobs.samplerYCbCrConversionFeatures,
+                          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_YCBCR_CONVERSION_FEATURES);
+    }
+
+    if (HasFeature(Feature::MultiDrawIndirect)) {
+        DAWN_CHECK(usedKnobs.HasExt(DeviceExt::DrawIndirectCount) &&
+                   mDeviceInfo.features.multiDrawIndirect == VK_TRUE);
+        usedKnobs.features.multiDrawIndirect = VK_TRUE;
+    }
+
+    if (HasFeature(Feature::ChromiumExperimentalSubgroupMatrix)) {
+        DAWN_CHECK(IsToggleEnabled(Toggle::UseVulkanMemoryModel));
+        DAWN_CHECK(usedKnobs.HasExt(DeviceExt::CooperativeMatrix));
+        usedKnobs.cooperativeMatrixFeatures = mDeviceInfo.cooperativeMatrixFeatures;
+        featuresChain.Add(&usedKnobs.cooperativeMatrixFeatures);
+
+        // Using int8 and uint8 cooperative matrices requires `shaderInt8`.
+        if (mDeviceInfo.shaderFloat16Int8Features.shaderInt8 == VK_TRUE) {
+            usedKnobs.shaderFloat16Int8Features.shaderInt8 = VK_TRUE;
+            if (!shaderFloat16Int8FeaturesAdded) {
+                featuresChain.Add(
+                    &usedKnobs.shaderFloat16Int8Features,
+                    VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES_KHR);
+            }
+        }
+    }
+
+    if (HasFeature(Feature::ChromiumExperimentalSamplingResourceTable)) {
+        usedKnobs.descriptorIndexingFeatures = mDeviceInfo.descriptorIndexingFeatures;
+        featuresChain.Add(&usedKnobs.descriptorIndexingFeatures);
+    }
+
+    // Determine what Vulkan render pass method will be used for the device.
+    // Dynamic Rendering can be used if the extension is available AND the DawnLoadResolveTexture
+    // feature is not being used.
+    // TODO(crbug.com/463893794): Remove this restriction when DawnLoadResolveTexture is supported
+    // by the Dynamic Rendering path.
+    if (IsToggleEnabled(Toggle::VulkanUseDynamicRendering) &&
+        !HasFeature(Feature::DawnLoadResolveTexture)) {
+        DAWN_CHECK(usedKnobs.HasExt(DeviceExt::DynamicRendering));
+        usedKnobs.dynamicRenderingFeatures = mDeviceInfo.dynamicRenderingFeatures;
+        featuresChain.Add(&usedKnobs.dynamicRenderingFeatures);
+        mRenderPassType = VulkanRenderPassType::DynamicRendering;
+    } else if (IsToggleEnabled(Toggle::VulkanUseCreateRenderPass2)) {
+        // If dynamic rendering is not used, but CreateRenderPass2 is supported prefer it.
+        mRenderPassType = VulkanRenderPassType::CreateRenderPass2;
+    } else {
+        // Otherwise use Vulkan's original CreateRenderPass method.
+        mRenderPassType = VulkanRenderPassType::CreateRenderPass;
+    }
+
+    if (HasFeature(Feature::MSAARenderToSingleSampled)) {
+        usedKnobs.multisampledRenderToSingleSampledFeatures =
+            mDeviceInfo.multisampledRenderToSingleSampledFeatures;
+        featuresChain.Add(&usedKnobs.multisampledRenderToSingleSampledFeatures);
+    }
+
+    if (IsToggleEnabled(Toggle::VulkanUseDynamicRendering)) {
+        usedKnobs.extendedDynamicStateFeatures = mDeviceInfo.extendedDynamicStateFeatures;
+        featuresChain.Add(&usedKnobs.extendedDynamicStateFeatures);
+    }
+
+    // Find a universal queue family
+    {
+        // Note that GRAPHICS and COMPUTE imply TRANSFER so we don't need to check for it.
+        constexpr uint32_t kUniversalFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT;
+        bool foundQueueFamily = false;
+        uint32_t universalQueueFamily = 0;
+        for (uint32_t i = 0; i < mDeviceInfo.queueFamilies.size(); ++i) {
+            if ((mDeviceInfo.queueFamilies[i].queueFlags & kUniversalFlags) == kUniversalFlags) {
+                universalQueueFamily = i;
+                foundQueueFamily = true;
+                break;
+            }
+        }
+
+        if (!foundQueueFamily) {
+            return DAWN_INTERNAL_ERROR("No universal queue family");
+        }
+        mMainQueueFamily = universalQueueFamily;
+    }
+
+    // Choose to create a single universal queue
+    std::vector<VkDeviceQueueCreateInfo> queuesToRequest;
+    float zero = 0.0f;
+    {
+        VkDeviceQueueCreateInfo queueCreateInfo;
+        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueCreateInfo.pNext = nullptr;
+        queueCreateInfo.flags = 0;
+        queueCreateInfo.queueFamilyIndex = static_cast<uint32_t>(mMainQueueFamily);
+        queueCreateInfo.queueCount = 1;
+        queueCreateInfo.pQueuePriorities = &zero;
+
+        queuesToRequest.push_back(queueCreateInfo);
+    }
+
+    features2.features = usedKnobs.features;
+
+    VkDeviceCreateInfo createInfo;
+    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    createInfo.pNext = &features2;
+    createInfo.flags = 0;
+    createInfo.queueCreateInfoCount = static_cast<uint32_t>(queuesToRequest.size());
+    createInfo.pQueueCreateInfos = queuesToRequest.data();
+    createInfo.enabledLayerCount = 0;
+    createInfo.ppEnabledLayerNames = nullptr;
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(extensionNames.size());
+    createInfo.ppEnabledExtensionNames = extensionNames.data();
+    createInfo.pEnabledFeatures = nullptr;
+
+    DAWN_TRY(CheckVkSuccess(fn.CreateDevice(vkPhysicalDevice, &createInfo, nullptr, &mVkDevice),
+                            "vkCreateDevice"));
+
+    return usedKnobs;
+}
+
+VulkanFunctions* Device::GetMutableFunctions() {
+    return const_cast<VulkanFunctions*>(&fn);
+}
+
+MaybeError Device::CopyFromStagingToBuffer(BufferBase* source,
+                                           uint64_t sourceOffset,
+                                           BufferBase* destination,
+                                           uint64_t destinationOffset,
+                                           uint64_t size) {
+    // It is a validation error to do a 0-sized copy in Vulkan, check it is skipped prior to
+    // calling this function.
+    DAWN_ASSERT(size != 0);
+
+    CommandRecordingContext* recordingContext =
+        ToBackend(GetQueue())->GetPendingRecordingContext(Queue::SubmitMode::Passive);
+
+    ToBackend(destination)
+        ->EnsureDataInitializedAsDestination(recordingContext, destinationOffset, size);
+
+    // There is no need of a barrier to make host writes available and visible to the copy
+    // operation for HOST_COHERENT memory. The Vulkan spec for vkQueueSubmit describes that it
+    // does an implicit availability, visibility and domain operation.
+
+    // Insert pipeline barrier to ensure correct ordering with previous memory operations on the
+    // buffer.
+    ToBackend(destination)->TransitionUsageNow(recordingContext, wgpu::BufferUsage::CopyDst);
+
+    VkBufferCopy copy;
+    copy.srcOffset = sourceOffset;
+    copy.dstOffset = destinationOffset;
+    copy.size = size;
+
+    this->fn.CmdCopyBuffer(recordingContext->commandBuffer, ToBackend(source)->GetHandle(),
+                           ToBackend(destination)->GetHandle(), 1, &copy);
+
+    return {};
+}
+
+MaybeError Device::CopyFromStagingToTextureImpl(BufferBase* source,
+                                                const TexelCopyBufferLayout& src,
+                                                const TextureCopy& dst,
+                                                const Extent3D& copySizePixels) {
+    // There is no need of a barrier to make host writes available and visible to the copy
+    // operation for HOST_COHERENT memory. The Vulkan spec for vkQueueSubmit describes that it
+    // does an implicit availability, visibility and domain operation.
+
+    CommandRecordingContext* recordingContext =
+        ToBackend(GetQueue())->GetPendingRecordingContext(Queue::SubmitMode::Passive);
+
+    const TypedTexelBlockInfo& blockInfo = GetBlockInfo(dst);
+
+    VkBufferImageCopy region =
+        ComputeBufferImageCopyRegion(src, dst, blockInfo.ToBlock(copySizePixels));
+    VkImageSubresourceLayers subresource = region.imageSubresource;
+
+    SubresourceRange range = GetSubresourcesAffectedByCopy(dst, copySizePixels);
+
+    if (IsCompleteSubresourceCopiedTo(dst.texture.Get(), copySizePixels, subresource.mipLevel,
+                                      dst.aspect)) {
+        // Since texture has been overwritten, it has been "initialized"
+        dst.texture->SetIsSubresourceContentInitialized(true, range);
+    } else {
+        DAWN_TRY(
+            ToBackend(dst.texture)->EnsureSubresourceContentInitialized(recordingContext, range));
+    }
+    // Insert pipeline barrier to ensure correct ordering with previous memory operations on the
+    // texture.
+    ToBackend(dst.texture)
+        ->TransitionUsageNow(recordingContext, wgpu::TextureUsage::CopyDst, wgpu::ShaderStage::None,
+                             range);
+    VkImage dstImage = ToBackend(dst.texture)->GetHandle();
+
+    // Dawn guarantees dstImage be in the TRANSFER_DST_OPTIMAL layout after the
+    // copy command.
+    this->fn.CmdCopyBufferToImage(recordingContext->commandBuffer, ToBackend(source)->GetHandle(),
+                                  dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    return {};
+}
+
+MaybeError Device::ImportExternalImage(const ExternalImageDescriptorVk* descriptor,
+                                       ExternalMemoryHandle memoryHandle,
+                                       VkImage image,
+                                       const std::vector<ExternalSemaphoreHandle>& waitHandles,
+                                       VkDeviceMemory* outAllocation,
+                                       std::vector<VkSemaphore>* outWaitSemaphores) {
+    UnpackedPtr<TextureDescriptor> textureDescriptor;
+    DAWN_TRY_ASSIGN(textureDescriptor, ValidateAndUnpack(FromAPI(descriptor->cTextureDescriptor)));
+
+    wgpu::TextureUsage usage = textureDescriptor->usage;
+    if (auto* internalUsageDesc = textureDescriptor.Get<DawnTextureInternalUsageDescriptor>()) {
+        usage |= internalUsageDesc->internalUsage;
+    }
+
+    // Check services support this combination of handle type / image info
+    DAWN_INVALID_IF(!mExternalSemaphoreService->Supported(),
+                    "External semaphore usage not supported");
+
+    DAWN_INVALID_IF(
+        !mExternalMemoryService->SupportsImportMemory(
+            descriptor->GetType(), VulkanImageFormat(this, textureDescriptor->format),
+            VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
+            VulkanImageUsage(this, usage, GetValidInternalFormat(textureDescriptor->format)),
+            VK_IMAGE_CREATE_ALIAS_BIT_KHR),
+        "External memory usage not supported");
+
+    // Import the external image's memory
+    external_memory::MemoryImportParams importParams;
+    DAWN_TRY_ASSIGN(importParams, mExternalMemoryService->GetMemoryImportParams(descriptor, image));
+    DAWN_TRY_ASSIGN(*outAllocation, mExternalMemoryService->ImportMemory(
+                                        descriptor->GetType(), memoryHandle, importParams, image));
+
+    // Import semaphores we have to wait on before using the texture
+    for (const ExternalSemaphoreHandle& handle : waitHandles) {
+        VkSemaphore semaphore = VK_NULL_HANDLE;
+        DAWN_TRY_ASSIGN(semaphore, mExternalSemaphoreService->ImportSemaphore(handle));
+
+        // The legacy import mechanism transfers ownership to Dawn.
+        // The new import mechanism dups the semaphore handle.
+        // Therefore, on success, because ImportSemaphore has dup'ed the handle,
+        // we need to close the old handle by acquiring and dropping it.
+        // TODO(dawn:1745): This entire code path will be deprecated and removed.
+        SystemHandle::Acquire(handle);
+        outWaitSemaphores->push_back(semaphore);
+    }
+
+    return {};
+}
+
+bool Device::SignalAndExportExternalTexture(
+    Texture* texture,
+    VkImageLayout desiredLayout,
+    ExternalImageExportInfoVk* info,
+    std::vector<ExternalSemaphoreHandle>* semaphoreHandles) {
+    ExternalVkImageTexture* externalTexture = static_cast<ExternalVkImageTexture*>(texture);
+    return !ConsumedError([&]() -> MaybeError {
+        DAWN_TRY(ValidateObject(texture));
+
+        ExternalSemaphoreHandle semaphoreHandle;
+        VkImageLayout releasedOldLayout;
+        VkImageLayout releasedNewLayout;
+        DAWN_TRY(externalTexture->ExportExternalTexture(desiredLayout, &semaphoreHandle,
+                                                        &releasedOldLayout, &releasedNewLayout));
+
+        semaphoreHandles->push_back(semaphoreHandle);
+        info->releasedOldLayout = releasedOldLayout;
+        info->releasedNewLayout = releasedNewLayout;
+        info->isInitialized =
+            texture->IsSubresourceContentInitialized(texture->GetAllSubresources());
+
+        return {};
+    }());
+}
+
+Ref<TextureBase> Device::CreateTextureWrappingVulkanImage(
+    const ExternalImageDescriptorVk* descriptor,
+    ExternalMemoryHandle memoryHandle,
+    const std::vector<ExternalSemaphoreHandle>& waitHandles) {
+    // Initial validation
+    if (ConsumedError(ValidateIsAlive())) {
+        return nullptr;
+    }
+    TextureDescriptor reifiedDescriptor =
+        WithTrivialFrontendDefaults(*FromAPI(descriptor->cTextureDescriptor));
+    UnpackedPtr<TextureDescriptor> textureDescriptor;
+    if (ConsumedError(ValidateAndUnpack(&reifiedDescriptor), &textureDescriptor)) {
+        return nullptr;
+    }
+    if (ConsumedError(ValidateTextureDescriptor(this, textureDescriptor,
+                                                AllowMultiPlanarTextureFormat::Yes))) {
+        return nullptr;
+    }
+    if (ConsumedError(ValidateVulkanImageCanBeWrapped(this, textureDescriptor),
+                      "validating that a Vulkan image can be wrapped with %s.",
+                      textureDescriptor)) {
+        return nullptr;
+    }
+    if (GetValidInternalFormat(textureDescriptor->format).IsMultiPlanar() &&
+        !descriptor->isInitialized) {
+        [[maybe_unused]] bool consumed = ConsumedError(DAWN_VALIDATION_ERROR(
+            "External textures with multiplanar formats must be initialized."));
+        return nullptr;
+    }
+
+    VkDeviceMemory allocation = VK_NULL_HANDLE;
+    std::vector<VkSemaphore> waitSemaphores;
+    waitSemaphores.reserve(waitHandles.size());
+
+    // Cleanup in case of a failure, the image creation doesn't acquire the external objects
+    // if a failure happems.
+    Ref<ExternalVkImageTexture> result;
+    // TODO(crbug.com/1026480): Consolidate this into a single CreateFromExternal call.
+    if (ConsumedError(ExternalVkImageTexture::Create(this, descriptor, textureDescriptor,
+                                                     mExternalMemoryService.get()),
+                      &result) ||
+        ConsumedError(ImportExternalImage(descriptor, memoryHandle, result->GetHandle(),
+                                          waitHandles, &allocation, &waitSemaphores)) ||
+        ConsumedError(result->BindExternalMemory(descriptor, allocation, waitSemaphores))) {
+        // Delete the Texture if it was created
+        result = nullptr;
+
+        // Clear image memory
+        fn.FreeMemory(GetVkDevice(), allocation, nullptr);
+
+        // Clear any wait semaphores we were able to import
+        for (VkSemaphore semaphore : waitSemaphores) {
+            fn.DestroySemaphore(GetVkDevice(), semaphore, nullptr);
+        }
+    }
+
+    return result;
+}
+
+std::optional<uint32_t> Device::GetComputeSubgroupSize() const {
+    return ToBackend(GetPhysicalDevice())->GetDefaultComputeSubgroupSize();
+}
+
+void Device::OnDebugMessage(std::string message) {
+    mDebugMessages->push_back(std::move(message));
+}
+
+std::vector<std::string> Device::AcquireDebugLayerMessages() {
+    std::vector<std::string> messagesOut;
+    mDebugMessages.Use([&](auto messages) { messagesOut = std::move(*messages); });
+    return messagesOut;
+}
+
+MaybeError Device::CheckDebugLayerAndGenerateErrors() {
+    if (!GetAdapter()->GetInstance()->IsBackendValidationEnabled() || mDebugMessages->empty()) {
+        return {};
+    }
+
+    // The debug layer messages will be appended later when DeviceBase::HandleError calls
+    // AppendDebugLayerMessages.
+    return DAWN_INTERNAL_ERROR("The Vulkan validation layer reported uncaught errors.");
+}
+
+void Device::AppendDebugLayerMessages(ErrorData* error) {
+    if (!GetAdapter()->GetInstance()->IsBackendValidationEnabled()) {
+        return;
+    }
+
+    std::vector<std::string> messages = AcquireDebugLayerMessages();
+    if (messages.empty()) {
+        return;
+    }
+
+    for (std::string& message : messages) {
+        error->AppendBackendMessage(std::move(message));
+    }
+}
+
+void Device::CheckDebugMessagesAfterDestruction() {
+    if (!GetAdapter()->GetInstance()->IsBackendValidationEnabled()) {
+        return;
+    }
+
+    std::vector<std::string> messages = AcquireDebugLayerMessages();
+    if (messages.empty()) {
+        return;
+    }
+
+    dawn::ErrorLog()
+        << "Some VVL messages were not handled before dawn::native::vulkan::Device destruction:";
+    for (const auto& message : messages) {
+        dawn::ErrorLog() << " - " << message;
+    }
+
+    // Crash in debug
+    DAWN_ASSERT(false);
+}
+
+void Device::DestroyImpl(DestroyReason reason) {
+    DAWN_ASSERT(GetState() == State::Disconnected);
+
+    // We failed during initialization so early that we don't even have a VkDevice. There is
+    // nothing to do.
+    if (mVkDevice == VK_NULL_HANDLE) {
+        return;
+    }
+
+    // TODO(crbug.com/dawn/831): DestroyImpl is called from two places.
+    // - It may be called if the device is explicitly destroyed with APIDestroy.
+    //   This case is NOT thread-safe and needs proper synchronization with other
+    //   simultaneous uses of the device.
+    // - It may be called when the last ref to the device is dropped and the device
+    //   is implicitly destroyed. This case is thread-safe because there are no
+    //   other threads using the device since there are no other live refs.
+
+    // The deleter is the second thing we initialize. If it is not present, it means that
+    // only the VkDevice was created and nothing else. Destroy the device and do nothing else
+    // because the function pointers might not have been loaded (and there is nothing to
+    // destroy anyway).
+    if (mDeleter == nullptr) {
+        fn.DestroyDevice(mVkDevice, nullptr);
+        mVkDevice = VK_NULL_HANDLE;
+        return;
+    }
+
+    // Enough of the Device's initialization happened that we can now do regular robust
+    // deinitialization.
+
+    ToBackend(GetPhysicalDevice())->GetVulkanInstance()->StopListeningForDeviceMessages(this);
+
+    mStaticSamplerCache.clear();
+
+    if (mResourceTableLayout != VK_NULL_HANDLE) {
+        fn.DestroyDescriptorSetLayout(mVkDevice, mResourceTableLayout, nullptr);
+        mResourceTableLayout = VK_NULL_HANDLE;
+    }
+
+    mFramebufferFetchHelper.reset();
+
+    mDescriptorAllocatorsPendingDeallocation.Use([&](auto pending) {
+        for (Ref<DescriptorSetAllocator>& allocator : pending->IterateUpTo(kMaxExecutionSerial)) {
+            allocator->FinishDeallocation(kMaxExecutionSerial);
+        }
+        pending->ClearUpTo(kMaxExecutionSerial);
+    });
+
+    // mResourceMemoryAllocator may not be created if the device creation fails before its creation.
+    // For example, as mResourceMemoryAllocator is created with a queue, it won't be created when
+    // an error happens when creating the queue.
+    if (mResourceMemoryAllocator) {
+        // Releasing the uploader enqueues buffers to be released.
+        // Call Tick() again to clear them before releasing the deleter.
+        GetResourceMemoryAllocator()->Tick(kMaxExecutionSerial);
+
+        // Allow recycled memory to be deleted.
+        GetResourceMemoryAllocator()->FreeRecycledMemory();
+    }
+
+    // The VkFramebuffers and VkRenderPasses in the cache can be destroyed immediately since all
+    // commands referring to them are guaranteed to be finished executing.
+    mFramebufferCache = nullptr;
+    mRenderPassCache = nullptr;
+
+    // Destroy the VkPipelineCache before VkDevice.
+    mMonolithicPipelineCache = nullptr;
+
+    // Destroying the deleter ensures that any remaining object deletions are flushed.
+    mDeleter = nullptr;
+
+    // VkQueues are destroyed when the VkDevice is destroyed
+    // The VkDevice is needed to destroy child objects, so it must be destroyed last after all
+    // child objects have been deleted.
+    DAWN_ASSERT(mVkDevice != VK_NULL_HANDLE);
+    fn.DestroyDevice(mVkDevice, nullptr);
+    mVkDevice = VK_NULL_HANDLE;
+
+    // No additonal Vulkan commands should be done by this device after this function. Check for any
+    // remaining Vulkan Validation Layer messages that may have been added during destruction or not
+    // handled prior to destruction.
+    CheckDebugMessagesAfterDestruction();
+}
+
+MaybeError Device::GetAHardwareBufferPropertiesImpl(void* handle,
+                                                    AHardwareBufferProperties* properties) const {
+#if DAWN_PLATFORM_IS(ANDROID)
+    auto* aHardwareBuffer = static_cast<struct AHardwareBuffer*>(handle);
+
+    VkAndroidHardwareBufferPropertiesANDROID bufferProperties = {
+        .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_PROPERTIES_ANDROID,
+    };
+
+    // Query the properties to find the appropriate VkFormat and memory type.
+    VkAndroidHardwareBufferFormatPropertiesANDROID bufferFormatProperties;
+    PNextChainBuilder bufferPropertiesChain(&bufferProperties);
+    bufferPropertiesChain.Add(&bufferFormatProperties,
+                              VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_FORMAT_PROPERTIES_ANDROID);
+
+    DAWN_TRY(CheckVkSuccess(fn.GetAndroidHardwareBufferPropertiesANDROID(
+                                GetVkDevice(), aHardwareBuffer, &bufferProperties),
+                            "vkGetAndroidHardwareBufferPropertiesANDROID"));
+
+    // Populate the YCbCr info.
+    properties->yCbCrInfo.externalFormat = bufferFormatProperties.externalFormat;
+    properties->yCbCrInfo.vkFormat = bufferFormatProperties.format;
+    properties->yCbCrInfo.vkYCbCrModel = bufferFormatProperties.suggestedYcbcrModel;
+    properties->yCbCrInfo.vkYCbCrRange = bufferFormatProperties.suggestedYcbcrRange;
+    properties->yCbCrInfo.vkComponentSwizzleRed =
+        bufferFormatProperties.samplerYcbcrConversionComponents.r;
+    properties->yCbCrInfo.vkComponentSwizzleGreen =
+        bufferFormatProperties.samplerYcbcrConversionComponents.g;
+    properties->yCbCrInfo.vkComponentSwizzleBlue =
+        bufferFormatProperties.samplerYcbcrConversionComponents.b;
+    properties->yCbCrInfo.vkComponentSwizzleAlpha =
+        bufferFormatProperties.samplerYcbcrConversionComponents.a;
+    properties->yCbCrInfo.vkXChromaOffset = bufferFormatProperties.suggestedXChromaOffset;
+    properties->yCbCrInfo.vkYChromaOffset = bufferFormatProperties.suggestedYChromaOffset;
+
+    uint32_t formatFeatures = bufferFormatProperties.formatFeatures;
+    properties->yCbCrInfo.vkChromaFilter =
+        (formatFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_LINEAR_FILTER_BIT)
+            ? wgpu::FilterMode::Linear
+            : wgpu::FilterMode::Nearest;
+    properties->yCbCrInfo.forceExplicitReconstruction =
+        formatFeatures &
+        VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_CHROMA_RECONSTRUCTION_EXPLICIT_BIT;
+
+    return {};
+#else
+    return DeviceBase::GetAHardwareBufferPropertiesImpl(handle, properties);
+#endif
+}
+
+uint32_t Device::GetOptimalBytesPerRowAlignment() const {
+    return checked_cast<uint32_t>(mDeviceInfo.properties.limits.optimalBufferCopyRowPitchAlignment);
+}
+
+uint64_t Device::GetOptimalBufferToTextureCopyOffsetAlignment() const {
+    return mDeviceInfo.properties.limits.optimalBufferCopyOffsetAlignment;
+}
+
+float Device::GetTimestampPeriodInNS() const {
+    return mDeviceInfo.properties.limits.timestampPeriod;
+}
+
+bool Device::NeedsStaticSamplerForExternalTexture() const {
+    return HasFeature(Feature::OpaqueYCbCrAndroidForExternalTexture) ||
+           IsToggleEnabled(Toggle::VulkanForceStaticSamplersForExternalTextures);
+}
+
+AllocatorMemoryInfo Device::GetAllocatorMemoryInfo() const {
+    DAWN_ASSERT(IsLockedByCurrentThreadIfNeeded());
+    AllocatorMemoryInfo info = {};
+    info.totalAllocatedMemory = GetResourceMemoryAllocator()->GetTotalAllocatedMemory();
+    info.totalUsedMemory = GetResourceMemoryAllocator()->GetTotalUsedMemory();
+    info.totalLazyAllocatedMemory = GetResourceMemoryAllocator()->GetTotalLazyAllocatedMemory();
+    info.totalLazyUsedMemory = GetResourceMemoryAllocator()->GetTotalLazyUsedMemory();
+    return info;
+}
+
+void Device::SetLabelImpl() {
+    SetDebugName(this, VK_OBJECT_TYPE_DEVICE, mVkDevice, "Dawn_Device", GetLabel());
+}
+
+bool Device::ReduceMemoryUsageImpl() {
+    GetResourceMemoryAllocator()->FreeRecycledMemory();
+
+    GetFramebufferCache()->Clear();
+
+    auto GetLastPendingDeletionSerial = [this]() {
+        // Only hold the lock for one of these objects at a time to avoid lock-order-inversion.
+        auto deleterSerial = GetFencedDeleter()->GetLastPendingDeletionSerial();
+        auto allocatorSerial = GetResourceMemoryAllocator()->GetLastPendingDeletionSerial();
+        return std::max(deleterSerial, allocatorSerial);
+    };
+    ExecutionSerial deletionSerial = GetLastPendingDeletionSerial();
+
+    if (deletionSerial == kBeginningOfGPUTime) {
+        // Nothing pending deletion.
+        return false;
+    }
+
+    Queue* queue = ToBackend(GetQueue());
+
+    if (deletionSerial > queue->GetLastSubmittedCommandSerial()) {
+        // Submit any pending commands to ensure that the pending deletion serial completes. One
+        // complication here is that there might not be any pending commands and the queue would
+        // skip commit. Getting the recording context works makes it look like there is work to
+        // submit in all cases.
+        // TODO(crbug.com/398193014): If there is no work in the queue to submit then the device
+        // should be able to immediately delete objects enqueued for deletion after tick completes.
+        queue->GetPendingRecordingContext();
+    }
+
+    if (ConsumedError(TickImpl())) {
+        return false;
+    }
+    DAWN_ASSERT(deletionSerial <= queue->GetLastSubmittedCommandSerial());
+
+    // Check again if there is anything left to delete as tick might have deleted objects.
+    return GetLastPendingDeletionSerial() != kBeginningOfGPUTime;
+}
+
+void Device::PerformIdleTasksImpl() {
+    if (mMonolithicPipelineCache) {
+        MaybeError maybeError = mMonolithicPipelineCache->StoreOnIdle();
+        if (maybeError.IsError()) {
+            std::unique_ptr<ErrorData> error = maybeError.AcquireError();
+            EmitLog(wgpu::LoggingType::Error, error->GetFormattedMessage().c_str());
+            return;
+        }
+    }
+}
+
+std::optional<DeviceGuard> Device::UseGuardForCreateBindGroup() {
+    return std::nullopt;
+}
+
+std::optional<DeviceGuard> Device::UseGuardForCreateBindGroupLayout() {
+    return std::nullopt;
+}
+
+bool Device::CanAddStorageUsageToBufferWithoutSideEffects(wgpu::BufferUsage storageUsage,
+                                                          wgpu::BufferUsage originalUsage,
+                                                          size_t bufferSize) const {
+    DAWN_ASSERT(IsSubset(storageUsage, wgpu::BufferUsage::Storage | kInternalStorageBuffer |
+                                           kReadOnlyStorageBuffer));
+    if (originalUsage & kMappableBufferUsages) {
+        return HasFeature(Feature::BufferMapExtendedUsages);
+    }
+    return true;
+}
+
+// Prepares the Empty Pass QuerySet, creating and resetting it if needed.
+MaybeError Device::PrepareEmptyPassQuerySet(CommandRecordingContext* recordingContext) {
+    DAWN_ASSERT(IsToggleEnabled(Toggle::VulkanAddWorkToEmptyResolvePass));
+    if (!mEmptyPassQuerySet) {
+        QuerySetDescriptor descriptor;
+        descriptor.type = wgpu::QueryType::Occlusion;
+        descriptor.count = 1;
+        DAWN_TRY_ASSIGN(mEmptyPassQuerySet, CreateQuerySet(&descriptor));
+        mEmptyPassQuerySetNeedsReset = true;
+    }
+
+    if (mEmptyPassQuerySetNeedsReset) {
+        fn.CmdResetQueryPool(recordingContext->commandBuffer,
+                             ToBackend(mEmptyPassQuerySet)->GetHandle(), 0, 1);
+        mEmptyPassQuerySetNeedsReset = false;
+    }
+
+    return {};
+}
+
+// Gets the occlusion Query object for use with Toggle::VulkanAddWorkToEmptyResolvePass.
+// Must call PrepareEmptyPassQuerySet outside of recording a render pass prior to calling this every
+// time.
+Ref<QuerySetBase> Device::UseEmptyPassQuerySet() {
+    DAWN_ASSERT(IsToggleEnabled(Toggle::VulkanAddWorkToEmptyResolvePass));
+    DAWN_ASSERT(mEmptyPassQuerySet);
+    DAWN_ASSERT(!mEmptyPassQuerySetNeedsReset);
+
+    mEmptyPassQuerySetNeedsReset = true;
+    return mEmptyPassQuerySet;
+}
+
+}  // namespace dawn::native::vulkan

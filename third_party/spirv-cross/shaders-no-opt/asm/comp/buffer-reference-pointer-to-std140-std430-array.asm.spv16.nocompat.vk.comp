@@ -1,0 +1,54 @@
+; SPIR-V
+; Version: 1.6
+; Generator: Khronos Glslang Reference Front End; 11
+; Bound: 35
+; Schema: 0
+               OpCapability Shader
+               OpCapability PhysicalStorageBufferAddresses
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel PhysicalStorageBuffer64 GLSL450
+               OpEntryPoint GLCompute %main "main" %registers
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpSourceExtension "GL_EXT_buffer_reference"
+               OpName %main "main"
+               OpName %Registers "Registers"
+               OpMemberName %Registers 0 "s"
+               OpName %registers "registers"
+               OpMemberDecorate %Registers 0 Offset 0
+               OpDecorate %Registers Block
+               OpDecorate %std430array_v2float ArrayStride 8
+               OpDecorate %std140array_v2float ArrayStride 16
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+       %uint = OpTypeInt 32 0
+       %v2uint = OpTypeVector %uint 2
+  %Registers = OpTypeStruct %v2uint
+%std430array_v2float = OpTypeRuntimeArray %v2float
+%std140array_v2float = OpTypeRuntimeArray %v2float
+%_ptr_PhysicalStorageBuffer_std430array_v2float = OpTypePointer PhysicalStorageBuffer %std430array_v2float
+%_ptr_PhysicalStorageBuffer_std140array_v2float = OpTypePointer PhysicalStorageBuffer %std140array_v2float
+%_ptr_PushConstant_Registers = OpTypePointer PushConstant %Registers
+%_ptr_PushConstant_v2uint = OpTypePointer PushConstant %v2uint
+  %registers = OpVariable %_ptr_PushConstant_Registers PushConstant
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+     %v3uint = OpTypeVector %uint 3
+     %uint_0 = OpConstant %uint 0
+   %float_40 = OpConstant %float 40
+%_ptr_PhysicalStorageBuffer_v2float = OpTypePointer PhysicalStorageBuffer %v2float
+%_ptr_PhysicalStorageBuffer_float = OpTypePointer PhysicalStorageBuffer %float
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %ptr_bda = OpAccessChain %_ptr_PushConstant_v2uint %registers %int_0
+         %bda = OpLoad %v2uint %ptr_bda
+		 %std430_ptr = OpBitcast %_ptr_PhysicalStorageBuffer_std430array_v2float %bda
+		 %std140_ptr = OpBitcast %_ptr_PhysicalStorageBuffer_std140array_v2float %bda
+		 %ptr0 = OpAccessChain %_ptr_PhysicalStorageBuffer_float %std430_ptr %uint_0 %uint_0
+		 %ptr1 = OpAccessChain %_ptr_PhysicalStorageBuffer_float %std140_ptr %uint_0 %uint_0
+               OpStore %ptr0 %float_40 Aligned 4
+               OpStore %ptr1 %float_40 Aligned 16
+               OpReturn
+               OpFunctionEnd

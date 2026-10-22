@@ -1,0 +1,89 @@
+#version 450
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 1u
+#endif
+#ifndef SPIRV_CROSS_CONSTANT_ID_1
+#define SPIRV_CROSS_CONSTANT_ID_1 1u
+#endif
+#ifndef SPIRV_CROSS_CONSTANT_ID_2
+#define SPIRV_CROSS_CONSTANT_ID_2 1u
+#endif
+layout(local_size_x = SPIRV_CROSS_CONSTANT_ID_0, local_size_y = SPIRV_CROSS_CONSTANT_ID_1, local_size_z = SPIRV_CROSS_CONSTANT_ID_2) in;
+
+
+layout(binding = 0, std430) buffer _3_15
+{
+    float _m0[];
+} _15;
+
+layout(binding = 1, std430) buffer _3_16
+{
+    float _m0[];
+} _16;
+
+uvec3 _14 = gl_WorkGroupSize;
+
+void main()
+{
+    float _38_copy;
+    float _39;
+    uint _40;
+    float _70;
+    uint _71;
+    float _32 = _15._m0[0u];
+    uint _33 = 0u;
+    float _38;
+    for (;;)
+    {
+        _38 = _32;
+        _39 = _15._m0[35u];
+        _40 = 0u;
+        for (;;)
+        {
+            uint _44 = _40 + 1u;
+            float _46 = _15._m0[_44];
+            _15._m0[_40] = ((_39 + _38) + _46) / 3.0;
+            if (!(_40 < 34u))
+            {
+                break;
+            }
+            else
+            {
+                _38_copy = _38;
+                _38 = _46;
+                _39 = _38_copy;
+                _40 = _44;
+            }
+        }
+        _15._m0[35u] = (_32 + (_38 + _15._m0[35u])) / 3.0;
+        if (!(_33 < 5u))
+        {
+            _70 = _15._m0[0u];
+            _71 = 1u;
+            break;
+        }
+        else
+        {
+            _32 = _15._m0[0u];
+            _33++;
+            continue;
+        }
+    }
+    float _75;
+    for (;;)
+    {
+        _75 = (_70 < _15._m0[_71]) ? _15._m0[_71] : _70;
+        if (!(_71 < 35u))
+        {
+            break;
+        }
+        else
+        {
+            _70 = _75;
+            _71++;
+        }
+    }
+    _16._m0[gl_GlobalInvocationID.x] = _75;
+}
+

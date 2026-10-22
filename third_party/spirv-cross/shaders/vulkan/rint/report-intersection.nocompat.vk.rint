@@ -1,0 +1,12 @@
+#version 460
+#extension GL_NV_ray_tracing : require
+
+void in_func()
+{
+	reportIntersectionNV(0.5, 10);
+}
+
+void main()
+{
+	in_func();
+}

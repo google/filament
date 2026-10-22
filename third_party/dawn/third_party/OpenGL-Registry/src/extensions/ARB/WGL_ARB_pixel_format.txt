@@ -1,0 +1,728 @@
+Name
+
+    WGL_ARB_pixel_format
+
+Name Strings
+
+    WGL_ARB_pixel_format
+
+Contact
+
+    Pat Brown, NVIDIA (pbrown 'at' nvidia.com)
+    Paula Womack
+
+Notice
+
+    Copyright (c) 2000-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by ARB on 3/15/2000.
+
+Version
+
+    Last Modified Date: March 25, 2009
+    Author Revision: 1.3
+
+Number
+
+    ARB Extension #9
+
+Dependencies
+
+    WGL_ARB_extensions_string is required.
+
+Overview
+
+    This extension adds functions to query pixel format attributes and
+    to choose from the list of supported pixel formats.
+
+    These functions treat pixel formats as opaque types: attributes are
+    specified by name rather than by accessing them directly as fields
+    in a structure. Thus the list of attributes can be easily extended.
+
+    Attribute names are defined which correspond to all of the values in
+    the PIXELFORMATDESCRIPTOR and LAYERPLANEDESCRIPTOR data structures.
+    Additionally this interface allows pixel formats to be supported
+    which have attributes that cannot be represented using the standard
+    pixel format functions, i.e. DescribePixelFormat,
+    DescribeLayerPlane, ChoosePixelFormat, SetPixelFormat, and
+    GetPixelFormat.
+
+IP Status
+
+    No issues.
+
+Issues and Notes
+
+  1. No provision is made to support extended pixel format attributes in
+     metafiles.
+  2. Should the transparent value pixel format attribute have separate red,
+     green and blue values? Yes.
+  3. What data type should the transparent value be? This is no longer an
+     issue since the transparent value is no longer a packed pixel value (it
+     has separate r,g,b,a and index values).
+  4. Should we add DONT_CARE values for some of the pixel format attributes?
+     No we should just ignore attributes that aren't specified in the list
+     passed to wglChoosePixelFormatARB.
+  5. Should wglGetPixelFormatAttrib*vARB ignore the <iLayerPlane> parameter
+     when the attribute specified only applies to the main planes (e.g.,
+     when the attribute is set to WGL_NUMBER_OVERLAYS) or should it require
+     <iLayerPlane> to be set to zero? It will just ignore the parameter.
+     This allows these attributes to be queried at the same time as
+     attributes of the overlay planes.
+  6. Should wglGetPixelFormatAttribivARB convert floating point values to
+     fixed point? No, wglChoosePixelFormatARB needs a way to accept floating
+     point values. pfAttribFList accomplishes this.
+  7. Should wglChoosePixelFormatARB take an <iLayerPlane> parameter?
+     Typically <iLayerPlane> would be set to zero and a pixel format would
+     be selected based on the attributes of the main plane, so there is no
+     <iLayerPlane> parameter. This should be OK; applications won't
+     typically select a pixel format on the basis of overlay attributes.
+     They can always call wglGetPixelFormatAttrib*vARB to get a pixel format
+     that has the desired overlay values.
+  8. Application programmers must check to see if a particular extension is
+     supported before using any pixel format attributes associated with the
+     extension. For example, if WGL_ARB_pbuffer is not supported then it is
+     an error to specify WGL_DRAW_TO_PBUFFER_ARB in the attribute list to
+     wglGetPixelFormatAttrib*vARB or wglChoosePixelFormatARB.
+  9. Should WGLChoosePixelFormatARB consider pixel formats at other display
+     depths? It would be useful to have an argument to
+     WGLChoosePixelFormatARB indicating what display depth should be used.
+     However, there is no good way to implement this in the ICD since pixel
+     format handles are sequential indices and the pixel format for index n
+     differs depending on the display mode.
+ 10. Should we allow non-displayable pixel formats for pbuffers? Yes,
+     although many (most?) implementations will use displayable pixel
+     formats for pbuffers, this is a useful feature and the spec should
+     allow for it.
+ 11. Should we create all new calls for pixel formats, specifically should
+     we introduce SetPixelFormatARB? No, this doesn't offer any value over
+     the existing SetPixelFormat call.
+ 12. Should we add support for triple buffering? No, triple buffering needs
+     to be covered by a separate extension.
+
+New Procedures and Functions
+
+    BOOL wglGetPixelFormatAttribivARB(HDC hdc,
+                                      int iPixelFormat,
+                                      int iLayerPlane,
+                                      UINT nAttributes,
+                                      const int *piAttributes,
+                                      int *piValues);
+
+    BOOL wglGetPixelFormatAttribfvARB(HDC hdc,
+                                      int iPixelFormat,
+                                      int iLayerPlane,
+                                      UINT nAttributes,
+                                      const int *piAttributes,
+                                      FLOAT *pfValues);
+
+    BOOL wglChoosePixelFormatARB(HDC hdc,
+                                 const int *piAttribIList,
+                                 const FLOAT *pfAttribFList,
+                                 UINT nMaxFormats,
+                                 int *piFormats,
+                                 UINT *nNumFormats);
+
+New Tokens
+
+    Accepted in the <piAttributes> parameter array of
+    wglGetPixelFormatAttribivARB, and wglGetPixelFormatAttribfvARB, and
+    as a type in the <piAttribIList> and <pfAttribFList> parameter
+    arrays of wglChoosePixelFormatARB:
+
+        WGL_NUMBER_PIXEL_FORMATS_ARB            0x2000
+        WGL_DRAW_TO_WINDOW_ARB                  0x2001
+        WGL_DRAW_TO_BITMAP_ARB                  0x2002
+        WGL_ACCELERATION_ARB                    0x2003
+        WGL_NEED_PALETTE_ARB                    0x2004
+        WGL_NEED_SYSTEM_PALETTE_ARB             0x2005
+        WGL_SWAP_LAYER_BUFFERS_ARB              0x2006
+        WGL_SWAP_METHOD_ARB                     0x2007
+        WGL_NUMBER_OVERLAYS_ARB                 0x2008
+        WGL_NUMBER_UNDERLAYS_ARB                0x2009
+        WGL_TRANSPARENT_ARB                     0x200A
+        WGL_TRANSPARENT_RED_VALUE_ARB           0x2037
+        WGL_TRANSPARENT_GREEN_VALUE_ARB         0x2038
+        WGL_TRANSPARENT_BLUE_VALUE_ARB          0x2039
+        WGL_TRANSPARENT_ALPHA_VALUE_ARB         0x203A
+        WGL_TRANSPARENT_INDEX_VALUE_ARB         0x203B
+        WGL_SHARE_DEPTH_ARB                     0x200C
+        WGL_SHARE_STENCIL_ARB                   0x200D
+        WGL_SHARE_ACCUM_ARB                     0x200E
+        WGL_SUPPORT_GDI_ARB                     0x200F
+        WGL_SUPPORT_OPENGL_ARB                  0x2010
+        WGL_DOUBLE_BUFFER_ARB                   0x2011
+        WGL_STEREO_ARB                          0x2012
+        WGL_PIXEL_TYPE_ARB                      0x2013
+        WGL_COLOR_BITS_ARB                      0x2014
+        WGL_RED_BITS_ARB                        0x2015
+        WGL_RED_SHIFT_ARB                       0x2016
+        WGL_GREEN_BITS_ARB                      0x2017
+        WGL_GREEN_SHIFT_ARB                     0x2018
+        WGL_BLUE_BITS_ARB                       0x2019
+        WGL_BLUE_SHIFT_ARB                      0x201A
+        WGL_ALPHA_BITS_ARB                      0x201B
+        WGL_ALPHA_SHIFT_ARB                     0x201C
+        WGL_ACCUM_BITS_ARB                      0x201D
+        WGL_ACCUM_RED_BITS_ARB                  0x201E
+        WGL_ACCUM_GREEN_BITS_ARB                0x201F
+        WGL_ACCUM_BLUE_BITS_ARB                 0x2020
+        WGL_ACCUM_ALPHA_BITS_ARB                0x2021
+        WGL_DEPTH_BITS_ARB                      0x2022
+        WGL_STENCIL_BITS_ARB                    0x2023
+        WGL_AUX_BUFFERS_ARB                     0x2024
+
+    Accepted as a value in the <piAttribIList> and <pfAttribFList>
+    parameter arrays of wglChoosePixelFormatARB, and returned in the
+    <piValues> parameter array of wglGetPixelFormatAttribivARB, and the
+    <pfValues> parameter array of wglGetPixelFormatAttribfvARB:
+
+        WGL_NO_ACCELERATION_ARB                 0x2025
+        WGL_GENERIC_ACCELERATION_ARB            0x2026
+        WGL_FULL_ACCELERATION_ARB               0x2027
+
+        WGL_SWAP_EXCHANGE_ARB                   0x2028
+        WGL_SWAP_COPY_ARB                       0x2029
+        WGL_SWAP_UNDEFINED_ARB                  0x202A
+
+        WGL_TYPE_RGBA_ARB                       0x202B
+        WGL_TYPE_COLORINDEX_ARB                 0x202C
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations and
+the Frame buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    None
+
+Additions to the WGL Specification
+
+    Pixel Formats
+
+    WGL uses pixel format indices to refer to the pixel formats
+    supported by a device. The standard pixel format functions
+    DescribePixelFormat, DescribeLayerPlane, ChoosePixelFormat,
+    SetPixelFormat, and GetPixelFormat specify pixel format attributes
+    using the PIXELFORMATDESCRIPTOR and LAYERPLANEDESCRIPTOR data
+    structures.
+
+    An additional set of functions may be used to query and specify
+    pixel format attributes by name.
+
+    Querying Pixel Format Attributes
+
+    The following two functions can be used to query pixel format
+    attributes by specifying a list of attributes to be queried and
+    providing a buffer in which to receive the results from the query.
+    These functions can be used to query the attributes of both the main
+    plane and layer planes of a given pixel format.
+
+    BOOL wglGetPixelFormatAttribivARB(HDC hdc,
+                                      int iPixelFormat,
+                                      int iLayerPlane,
+                                      UINT nAttributes,
+                                      const int *piAttributes,
+                                      int *piValues);
+
+    <hdc> specifies the device context on which the pixel format is
+    supported.
+
+    <iPixelFormat> is an index that specifies the pixel format. The
+    pixel formats that a device context supports are identified by
+    positive one-based integer indexes.
+
+    <iLayerPlane> specifies which plane is being queried. Positive
+    values of <iLayerPlane> identify overlay planes, where 1 is the
+    first overlay plane over the main plane, 2 is the second overlay
+    plane over the first overlay plane, and so on. Negative values
+    identify underlay planes, where -1 is the first underlay plane under
+    the main plane, -2 is the second underlay plane under the first
+    underlay plane and so on. Use zero for the main plane.
+
+    <nAttributes> number of attributes being queried.
+
+    <piAttributes> list containing an array of pixel format attribute
+    identifiers which specify the attributes to be queried. The
+    following values are accepted:
+
+        WGL_NUMBER_PIXEL_FORMATS_ARB
+        The number of pixel formats for the device context. The
+        <iLayerPlane> and <iPixelFormat> parameters are ignored if this
+        attribute is specified.
+
+        WGL_DRAW_TO_WINDOW_ARB
+        True if the pixel format can be used with a window. The
+        <iLayerPlane> parameter is ignored if this attribute is
+        specified.
+
+        WGL_DRAW_TO_BITMAP_ARB
+        True if the pixel format can be used with a memory bitmap. The
+        <iLayerPlane> parameter is ignored if this attribute is
+        specified.
+
+        WGL_ACCELERATION_ARB
+        Indicates whether the pixel format is supported by the driver.
+        If this is set to WGL_NO_ACCELERATION_ARB then only the software
+        renderer supports this pixel format; if this is set to
+        WGL_GENERIC_ACCELERATION_ARB then the pixel format is supported
+        by an MCD driver; if this is set to WGL_FULL_ACCELERATION_ARB
+        then the pixel format is supported by an ICD driver.
+
+        WGL_NEED_PALETTE_ARB
+        A logical palette is required to achieve the best results for
+        this pixel format. The <iLayerPlane> parameter is ignored if
+        this attribute is specified.
+
+        WGL_NEED_SYSTEM_PALETTE_ARB
+        The hardware supports one hardware palette in 256-color mode
+        only. The <iLayerPlane> parameter is ignored if this attribute
+        is specified.
+
+        WGL_SWAP_LAYER_BUFFERS_ARB
+        True if the pixel format supports swapping layer planes
+        independently of the main planes. If the pixel format does not
+        support a back buffer then this is set to FALSE. The
+        <iLayerPlane> parameter is ignored if this attribute is
+        specified.
+
+        WGL_SWAP_METHOD_ARB
+        If the pixel format supports a back buffer, then this indicates
+        how they are swapped. If this attribute is set to
+        WGL_SWAP_EXCHANGE_ARB then swapping exchanges the front and back
+        buffer contents; if it is set to WGL_SWAP_COPY_ARB then swapping
+        copies the back buffer contents to the front buffer; if it is
+        set to WGL_SWAP_UNDEFINED_ARB then the back buffer contents are
+        copied to the front buffer but the back buffer contents are
+        undefined after the operation. If the pixel format does not
+        support a back buffer then this parameter is set to
+        WGL_SWAP_UNDEFINED_ARB. The <iLayerPlane> parameter is ignored
+        if this attribute is specified.
+
+        WGL_NUMBER_OVERLAYS_ARB
+        The number of overlay planes. The <iLayerPlane> parameter is
+        ignored if this attribute is specified.
+
+        WGL_NUMBER_UNDERLAYS_ARB
+        The number of underlay planes. The <iLayerPlane> parameter is
+        ignored if this attribute is specified.
+
+        WGL_TRANSPARENT_ARB
+        True if transparency is supported.
+
+        WGL_TRANSPARENT_RED_VALUE_ARB
+        Specifies the transparent red color value. Typically this value
+        is the same for all layer planes. This value is undefined if
+        transparency is not supported.
+
+        WGL_TRANSPARENT_GREEN_VALUE_ARB
+        Specifies the transparent green value. Typically this value is
+        the same for all layer planes. This value is undefined if
+        transparency is not supported.
+
+        WGL_TRANSPARENT_BLUE_VALUE_ARB
+        Specifies the transparent blue color value. Typically this value
+        is the same for all layer planes. This value is undefined if
+        transparency is not supported.
+
+        WGL_TRANSPARENT_ALPHA_VALUE_ARB
+        Specifies the transparent alpha value. This is reserved for
+        future use.
+
+        WGL_TRANSPARENT_INDEX_VALUE_ARB
+        Specifies the transparent color index value. Typically this
+        value is the same for all layer planes. This value is undefined
+        if transparency is not supported.
+
+        WGL_SHARE_DEPTH_ARB
+        True if the layer plane shares the depth buffer with the main
+        planes. If <iLayerPlane> is zero, this is always true.
+
+        WGL_SHARE_STENCIL_ARB
+        True if the layer plane shares the stencil buffer with the main
+        planes. If <iLayerPlane> is zero, this is always true.
+
+        WGL_SHARE_ACCUM_ARB
+        True if the layer plane shares the accumulation buffer with the
+        main planes. If <iLayerPlane> is zero, this is always true.
+
+        WGL_SUPPORT_GDI_ARB
+        True if GDI rendering is supported.
+
+        WGL_SUPPORT_OPENGL_ARB
+        True if OpenGL is supported.
+
+        WGL_DOUBLE_BUFFER_ARB
+        True if the color buffer has back/front pairs.
+
+        WGL_STEREO_ARB
+        True if the color buffer has left/right pairs.
+
+        WGL_PIXEL_TYPE_ARB
+        The type of pixel data. This can be set to WGL_TYPE_RGBA_ARB or
+        WGL_TYPE_COLORINDEX_ARB.
+
+        WGL_COLOR_BITS_ARB
+        The number of color bitplanes in each color buffer. For RGBA
+        pixel types, it is the size of the color buffer, excluding the
+        alpha bitplanes. For color-index pixels, it is the size of the
+        color index buffer.
+
+        WGL_RED_BITS_ARB
+        The number of red bitplanes in each RGBA color buffer.
+
+        WGL_RED_SHIFT_ARB
+        The shift count for red bitplanes in each RGBA color buffer.
+
+        WGL_GREEN_BITS_ARB
+        The number of green bitplanes in each RGBA color buffer.
+
+        WGL_GREEN_SHIFT_ARB
+        The shift count for green bitplanes in each RGBA color buffer.
+
+        WGL_BLUE_BITS_ARB
+        The number of blue bitplanes in each RGBA color buffer.
+
+        WGL_BLUE_SHIFT_ARB
+        The shift count for blue bitplanes in each RGBA color buffer.
+
+        WGL_ALPHA_BITS_ARB
+        The number of alpha bitplanes in each RGBA color buffer.
+
+        WGL_ALPHA_SHIFT_ARB
+        The shift count for alpha bitplanes in each RGBA color buffer.
+
+        WGL_ACCUM_BITS_ARB
+        The total number of bitplanes in the accumulation buffer.
+
+        WGL_ACCUM_RED_BITS_ARB
+        The number of red bitplanes in the accumulation buffer.
+
+        WGL_ACCUM_GREEN_BITS_ARB
+        The number of green bitplanes in the accumulation buffer.
+
+        WGL_ACCUM_BLUE_BITS_ARB
+        The number of blue bitplanes in the accumulation buffer.
+
+        WGL_ACCUM_ALPHA_BITS_ARB
+        The number of alpha bitplanes in the accumulation buffer.
+
+        WGL_DEPTH_BITS_ARB
+        The depth of the depth (z-axis) buffer.
+
+        WGL_STENCIL_BITS_ARB
+        The depth of the stencil buffer.
+
+        WGL_AUX_BUFFERS_ARB
+        The number of auxiliary buffers.
+
+    <piValues> points to a buffer into which the results of the query
+    will be placed. Floating point attribute values are rounded to the
+    nearest integer value. The caller must allocate this array and it
+    must have at least <nattributes> entries.
+
+    If the function succeeds, the return value is TRUE. If the function
+    fails, the return value is FALSE. To get extended error information,
+    call GetLastError.
+
+    An error is generated if <piAttributes> contains an invalid
+    attribute, if <iPixelFormat> is not a positive integer or is larger
+    than the number of pixel formats, if <iLayerPlane> doesn't refer to
+    an existing layer plane, or if <hdc> is invalid.
+
+    If FALSE is returned, the contents of <piValues> are undefined.
+
+    BOOL wglGetPixelFormatAttribfvARB(HDC hdc,
+                                      int iPixelFormat,
+                                      int iLayerPlane,
+                                      UINT nAttributes,
+                                      const int *piAttributes,
+                                      FLOAT *pfValues);
+
+    <hdc> specifies the device context on which the pixel format is
+    supported.
+
+    <iPixelFormat> is an index that specifies the pixel format. The
+    pixel formats that a device context supports are identified by
+    positive one-based integer indexes.
+
+    <iLayerPlane> specifies which plane is being queried. Positive
+    values of <iLayerPlane> identify overlay planes, where 1 is the
+    first overlay plane over the main plane, 2 is the second overlay
+    plane over the first overlay plane, and so on. Negative values
+    identify underlay planes, where -1 is the first underlay plane under
+    the main plane, -2 is the second underlay plane under the first
+    underlay plane and so on. Use zero for the main plane.
+
+    <nAttributes> number of attributes being queried.
+
+    <piAttributes> list containing an array of pixel format attribute
+    identifiers which specify the attributes to be queried. The values
+    accepted are the same as for wglGetPixelFormatAttribivARB.
+
+    <pfValues> is a pointer to a buffer into which the results of the
+    query will be placed. Integer attribute values are converted
+    floating point The caller must allocate this array and it must have
+    at least at least <nAttributes> entries.
+
+    If the function succeeds, the return value is TRUE. If the function
+    fails, the return value is FALSE. To get extended error information,
+    call GetLastError.
+
+    An error is generated if <piAttributes> contains an invalid
+    attribute, if <iPixelFormat> is not a positive integer or is larger
+    than the number of pixel formats, if <iLayerPlane> doesn't refer to
+    an existing layer plane, or if <hdc> is invalid.
+
+    If FALSE is returned, the contents of <pfValues> are undefined.
+
+    Supported Pixel Formats
+
+    The maximum index of the pixel formats which can be referenced by
+    the standard pixel format functions is returned by a successful call
+    to DescribePixelFormat. This may be less than the maximum index of
+    the pixel formats which can be referenced by
+    wglGetPixelFormatAttribivARB and wglGetPixelFormatAttribfvARB.
+    (determined by querying WGL_NUMBER_PIXEL_FORMATS_ARB).
+
+    The pixel format of a "displayable" object (e.g. window, bitmap) is
+    specified by passing its index to SetPixelFormat. Therefore, pixel
+    formats which cannot be referenced by the standard pixel format
+    functions are "non displayable".
+
+    Indices are assigned to pixel formats in the following order:
+
+    1. Accelerated pixel formats that are displayable
+
+    2. Accelerated pixel formats that are displayable and which have
+       extended attributes
+
+    3. Generic pixel formats
+
+    4. Accelerated pixel formats that are non displayable
+
+    ChoosePixelFormat will never select pixel formats from either group
+    2 or group 4. Each pixel format in group 2 is required to appear
+    identical to some pixel format in group 1 when queried by
+    DescribePixelFormat. Consequently, ChoosePixelFormat will always
+    select a format from group 1 when it might otherwise have selected a
+    format from group 2. Pixel formats in group 4 cannot be accessed by
+    ChoosePixelFormat at all.
+
+    SetPixelFormat and DescribePixelFormat will only accept pixel
+    formats from groups 1-3. If a non-displayable pixel format is
+    specified to SetPixelFormat or DescribePixelFormat an error will
+    result. These pixel formats are only for use with WGL extensions,
+    such as WGLCreatePbufferARB.
+
+    The following function may be used to select from among all of the
+    available pixel formats (including both accelerated and generic
+    formats and non-displayable formats). This function accepts
+    attributes for the main planes. A list of pixel formats that match
+    the specified attributes is returned with the "best" pixel formats
+    at the start of the list (order is device dependent).
+
+    BOOL wglChoosePixelFormatARB(HDC hdc,
+                                 const int *piAttribIList,
+                                 const FLOAT *pfAttribFList,
+                                 UINT nMaxFormats,
+                                 int *piFormats,
+                                 UINT *nNumFormats);
+
+    <hdc> specifies the device context.
+
+    <piAttribIList> specifies a list of attribute {type, value} pairs
+    containing integer attribute values. All the attributes in
+    <piAttribIList> are followed by the corresponding desired value. The
+    list is terminated with 0. If <piAttribList> is NULL then the result
+    is the same as if <piAttribList> was empty.
+
+    <pfAttribFList> specifies a list of attribute {type, value} pairs
+    containing floating point attribute values. All the attributes in
+    <pfAttribFList> are followed by the corresponding desired value. The
+    list is terminated with 0. If <pfAttribList> is NULL then the result
+    is the same as if <pfAttribList> was empty.
+
+    <nMaxFormats> specifies the maximum number of pixel formats to be
+    returned.
+
+    <piFormats> points to an array of returned indices of the matching
+    pixel formats. The best pixel formats (i.e., closest match and best
+    format for the hardware) are at the head of the list. The caller
+    must allocate this array and it must have at least <nMaxFormats>
+    entries.
+
+    <nNumFormats> returns the number of matching formats. The returned
+    value is guaranteed to be no larger than <nMaxFormats>.
+
+    If the function succeeds, the return value is TRUE. If the function
+    fails the return value is FALSE. To get extended error information,
+    call GetLastError. If no matching formats are found then nNumFormats
+    is set to zero and the function returns TRUE.
+
+    If FALSE is returned, the contents of <piFormats> are undefined.
+
+    wglChoosePixelFormatARB selects pixel formats to return based on the
+    attribute values specified in <piAttribIList> and <pfAttribFList>.
+    Some attribute values must match the pixel format value exactly when
+    the attribute is specified while others specify a minimum criteria,
+    meaning that the pixel format value must meet or exceed the
+    specified value. See the table below for details.
+
+
+     Attribute                      Type        Match Criteria
+
+     WGL_DRAW_TO_WINDOW_ARB         boolean     exact
+     WGL_DRAW_TO_BITMAP_ARB         boolean     exact
+     WGL_ACCELERATION_ARB           enum        exact
+     WGL_NEED_PALETTE_ARB           boolean     exact
+     WGL_NEED_SYSTEM_PALETTE_ARB    boolean     exact
+     WGL_SWAP_LAYER_BUFFERS_ARB     boolean     exact
+     WGL_SWAP_METHOD_ARB            enum        exact
+     WGL_NUMBER_OVERLAYS_ARB        integer     minimum
+     WGL_NUMBER_UNDERLAYS_ARB       integer     minimum
+     WGL_SHARE_DEPTH_ARB            boolean     exact
+     WGL_SHARE_STENCIL_ARB          boolean     exact
+     WGL_SHARE_ACCUM_ARB            boolean     exact
+     WGL_SUPPORT_GDI_ARB            boolean     exact
+     WGL_SUPPORT_OPENGL_ARB         boolean     exact
+     WGL_DOUBLE_BUFFER_ARB          boolean     exact
+     WGL_STEREO_ARB                 boolean     exact
+     WGL_PIXEL_TYPE_ARB             enum        exact
+     WGL_COLOR_BITS_ARB             integer     minimum
+     WGL_RED_BITS_ARB               integer     minimum
+     WGL_GREEN_BITS_ARB             integer     minimum
+     WGL_BLUE_BITS_ARB              integer     minimum
+     WGL_ALPHA_BITS_ARB             integer     minimum
+     WGL_ACCUM_BITS_ARB             integer     minimum
+     WGL_ACCUM_RED_BITS_ARB         integer     minimum
+     WGL_ACCUM_GREEN_BITS_ARB       integer     minimum
+     WGL_ACCUM_BLUE_BITS_ARB        integer     minimum
+     WGL_ACCUM_ALPHA_BITS_ARB       integer     minimum
+     WGL_DEPTH_BITS_ARB             integer     minimum
+     WGL_STENCIL_BITS_ARB           integer     minimum
+     WGL_AUX_BUFFERS_ARB            integer     minimum
+
+    All attributes except WGL_NUMBER_OVERLAYS_ARB, WGL_NUMBER_UNDERLAYS_ARB,
+    WGL_SHARE_DEPTH_ARB, WGL_SHARE_STENCIL_ARB, and WGL_SHARE_ACCUM_ARB
+    apply to the main planes and not to any layer planes. If
+    WGL_SHARE_DEPTH_ARB, WGL_SHARE_STENCIL_ARB, and WGL_SHARE_ACCUM_ARB are
+    specified in either <piAttribList> or <pfAttribList>, then a pixel
+    format will only be selected if it has no overlays or underlays or if
+    all of its overlays and underlays match the specified value.
+    Applications that need to find a pixel format that supports a layer
+    plane with other buffer attributes (such as WGL_SUPPORT_OPENGL_ARB set
+    to TRUE), must go through the list that is returned and call
+    wglGetPixelFormatAttrib*vARB to find one with the appropriate
+    attributes.
+
+    Attributes that are specified in neither <piAttribIList> nor
+    <pfAttribFList> are ignored (i.e., they are not looked at during the
+    selection process). In addition the following attributes are always
+    ignored, even if specified: WGL_NUMBER_PIXEL_FORMATS_ARB,
+    WGL_RED_SHIFT_ARB, WGL_GREEN_SHIFT_ARB, WGL_BLUE_SHIFT_ARB,
+    WGL_ALPHA_SHIFT_ARB, WGL_TRANSPARENT_ARB,
+    WGL_TRANSPARENT_RED_VALUE_ARB,WGL_TRANSPARENT_GREEN_VALUE_ARB,
+    WGL_TRANSPARENT_BLUE_VALUE_ARB, WGL_TRANSPARENT_ALPHA_VALUE_ARB, and
+    WGL_TRANSPARENT_INDEX_ARB.
+
+    If both <piAttribIList> and <pfAttribFList> are NULL or empty then all
+    pixel formats for this device are returned.
+
+    An error is generated if <piAttribIList> or <pfAttribFList> contain an
+    invalid attribute or if <hdc> is invalid.
+
+    Although it is not an error, wglChoosePixelFormat and
+    wglChoosePixelFormatARB should not be used together. It is not necessary
+    to change existing OpenGL programs but application writers should use
+    wglChoosePixelFormatARB whenever possible. New pixel format attributes
+    introduced by extensions (such as the number of multisample buffers)
+    will only be known to the new calls, wglChoosePixelFormatARB and
+    wglGetPixelFormatAttrib*vARB..
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Dependencies on WGL_ARB_extensions_string
+
+    Because there is no way to extend WGL, these calls are defined in the
+    ICD and can be called by obtaining the address with wglGetProcAddress.
+    Because this extension is a WGL extension, it is not included in the
+    extension string returned by glGetString. Its existence can be
+    determined with the WGL_ARB_extensions_string extension.
+
+Revision History
+
+Changes from EXT_pixel_format:
+
+   * Added WGL prefix to name to avoid possible name collisions
+   * EXT suffix changed to ARB
+   * Updated to new template, adding contact, status and revision sections
+   * Version is no longer an RCS version
+   * Attribute list passed to wglGetPixelFormatAttrib*v is type const
+   * Separate red,green,blue,alpha and index transparent values
+   * WGL_SWAP_LAYER_BUFFERS and WGL_SWAP_METHOD values defined for single
+     buffered pixel formats
+   * Array of return values for wglGetPixelFormatAttrib*v and
+     wglChoosePixelFormatARB is undefined if function fails
+   * Error returned if iPixelFormat is zero or negative in
+     wglGetPixelFormat*v
+   * Under "Supported Pixel Formats", indicate that SetPixelFormat and
+     DescribePixelFormat do not accept non displayable pixel formats.
+     Passing one in results in an error
+   * If either piAttribIList of pfAttribFList are NULL when
+     wglChoosePixelFormatARB is called then it is as if they were empty
+   * Clarify that wglChoosePixelFormatARB returns TRUE even if no matching
+     formats found
+   * wglChoosePixelFormatARB will only match an overlay attribute (eg,
+     WGL_SHARE_DEPTH_ARB) if there are no overlay planes or if all
+     overlay/underlay plane attributes match the specified criteria
+   * Be careful about using term hardware (change to pixel format where
+     appropriate)
+   * wglChoosePixelFormatARB now ignores the following attributes (in
+     addition to WGL_NUMBER_PIXEL_FORMATS_ARB): WGL_*_SHIFT_ARB,
+     WGL_TRANSPARENT_ARB, WGL_TRANSPARENT_*_VALUE_ARB.
+   * Clarify that new pixel format attributes (eg, attributes introduced by
+     extensions such as multisampling) are only known to the new pixel
+     format calls, wglChoosePixelFormatARB and wglGetPixelFormat*vARB.
+   * Add dependency on WGL_ARB_extensions_string
+
+    03/12/2002  1.1
+        - Updated contact information.
+
+    07/29/2008  1.2
+        - Updated contact information.
+
+    03/25/2009  1.3
+        - mjk: Fixed <nNumFormats> description

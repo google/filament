@@ -1,0 +1,378 @@
+Name
+
+    AMD_framebuffer_sample_positions
+
+Name Strings
+
+    GL_AMD_framebuffer_sample_positions
+
+Contact
+
+    Mais Alnasser, AMD (mais.alnasser 'at' amd.com)
+
+Contributors
+
+    Mais Alnasser, AMD
+    Graham Sellers, AMD
+
+Status
+
+    Shipping
+
+Version
+
+    Last Modified Date:         11/10/16
+    Revision:                   4
+
+Number
+
+    OpenGL Extension #454
+
+Dependencies
+
+    OpenGL 3.2 is required.
+
+    This specification interacts with EXT_direct_state_access.
+
+    This extension is written against the OpenGL 4.4 (Core) specification.
+
+Overview
+
+    In unextended GL, the sub-pixel loations of multisampled textures and
+    renderbuffers are generally determined in an implementation dependent
+    manner. Some algorithms -- in particular custom antialiasing functions --
+    depend on the knowledge of, or even require control over the positions of
+    samples within each pixel.
+
+    The AMD_sample_positions extension added some control over the positions
+    of samples within a single framebuffer. However, it forced all pixels
+    within a framebuffer to have the set of sample positions.
+
+    This extension provides a mechanism to explicitly set sample positions for
+    a framebuffer object with multi-sampled attachments in a repeating pattern,
+    allowing different pixels to use different sub-pixel locations for their
+    samples. The sample locations used by the FBO can be fixed for all pixels
+    in the FBO’s attachments or they can be fixed for a sampling pattern
+    comprised of multiple pixels, where the sampling pattern is repeated over
+    all pixels. The rate of repeat of this sampling pattern size itself is
+    fixed and is implementation-dependent.
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetFloatv:
+
+        SUBSAMPLE_DISTANCE_AMD                          0x883F
+
+    Accepted by the <pname> parameter of GetIntegerv:
+
+        PIXELS_PER_SAMPLE_PATTERN_X_AMD                 0x91AE
+        PIXELS_PER_SAMPLE_PATTERN_Y_AMD                 0x91AF
+
+    Accepted by the <pixelindex> parameter of FramebufferSamplePositionsfvAMD,
+    NamedFramebufferSamplePositionsfvAMD, GetFramebufferParameterfvAMD
+    and GetNamedFramebufferParameterfvAMD:
+
+        ALL_PIXELS_AMD                                  0xFFFFFFFF
+
+
+New Procedures and Functions
+
+    void FramebufferSamplePositionsfvAMD(enum target, uint numsamples,
+        uint pixelindex, const float *values)
+
+    void NamedFramebufferSamplePositionsfvAMD(uint framebuffer,
+        uint numsamples, uint pixelindex, const float *values)
+
+    void GetFramebufferParameterfvAMD(enum target, enum pname,
+        uint numsamples, uint pixelindex, sizei size, float *values)
+
+    void GetNamedFramebufferParameterfvAMD(uint framebuffer,
+        enum pname, uint numsamples, uint pixelindex, sizei size,
+        float *values)
+
+
+Additions to Chapter 9 of the OpenGL 4.4 (Core) Specification
+(Framebuffers and Framebuffer Objects)
+
+    Add section 9.2.9, Framebuffer Sample Positions, p. 287
+
+    Sample locations can be modified for all pixels in a multi-sampled
+    framebuffer using the following command:
+
+        void FramebufferSamplePositionsfvAMD(enum target,
+                                             uint numsamples,
+                                             uint pixelindex,
+                                             const float *values);
+
+    <target> must be DRAW_FRAMEBUFFER, READ_FRAMEBUFFER, or FRAMEBUFFER.
+    <numsamples> is the number of samples to set and must be greater
+    than 0 and less than or equal to the value of SAMPLES. The error
+    INVALID_VALUE is generated if <numsamples> is outside this range.
+    <pixelindex> is the index of the pixel to set the samples for and
+    must be greater than or equal to 0 and less than the result of querying
+    PIXELS_PER_SAMPLE_PATTERN_X_AMD multiplied by the result of
+    querying PIXELS_PER_SAMPLE_PATTERN_Y_AMD. The pixels are ordered left to
+    right, top to bottom, where the origin is the upper left corner.
+    <pixelindex> may also specify ALL_PIXELS_AMD, which sets samples of all
+    pixels to the same set of locations. The error INVALID_VALUE is generated
+    if <pixelindex> is less than zero or is greater than or equal to the
+    result of querying PIXELS_PER_SAMPLE_PATTERN_X_AMD multiplied by the
+    result of querying PIXELS_PER_SAMPLE_PATTERN_Y_AMD and is not equal to
+    ALL_PIXELS_AMD. The sample locations are set by passing floating point
+    values of x and y in <values[2 * i]> and <values[2 * i + 1]> respectively,
+    all in the range [0.0, 1.0), corresponding to the <x> and <y> locations in
+    pixel space of that sample, respectively. (0.5, 0.5) thus corresponds to
+    the pixel center. The range [0.0, 0.1) implies that sample locations cannot
+    overlap at pixel boundaries.
+
+    FramebufferSamplePositionsfvAMD generates an INVALID_OPERATION error if the
+    currently bound framebuffer is incomplete or is the default framebuffer.
+
+    If <values> is NULL, <numSamples> is ignored and all sample positions for
+    <pixelindex> are returned to their default values. Passing ALL_PIXELS_AMD
+    therefore resets the sample positions for all pixels in the sampling
+    pattern.
+
+    The subpixel range [0,1) is discretized based on the implementation-
+    dependent value of SUBSAMPLE_DISTANCE_AMD. GetFloatv can be used with
+    SUBSAMPLE_DISTANCE_AMD as the pname parameter to query the subpixel
+    precision, which is the same for both the vertical and horizontal
+    directions. Given two sample positions (x0, y0) and (x1, y1), one can make
+    sure they don't fall in the same subpixel if
+
+            abs(x0 - x1) >= ssd and abs(y0 - y1) >= ssd,
+
+    where ssd is the float value returned when querying SUBSAMPLE_DISTANCE_AMD.
+
+    The quantized sample positions can be retrieved via the new entry point:
+
+        void GetFramebufferParameterfvAMD(enum target,
+                                          enum pname,
+                                          uint numsamples,
+                                          uint pixelindex,
+                                          sizei size,
+                                          float *values);
+
+    <target> must be DRAW_FRAMEBUFFER, READ_FRAMEBUFFER, or FRAMEBUFFER.
+    FRAMEBUFFER is equivalent to DRAW_FRAMEBUFFER. <pname> must be
+    SAMPLE_POSITIONS. <numsamples> is the number of samples to get and must
+    be greater than 0 and less than or equal to the value of SAMPLES. The
+    error INVALID_VALUE is generated if <numsamples> is outside this range.
+    <pixelindex> is the index of the pixel to set the samples for and must be
+    less than the result of querying PIXELS_PER_SAMPLE_PATTERN_X_AMD
+    multiplied by the result of querying PIXELS_PER_SAMPLE_PATTERN_Y_AMD.
+    Calling GetFramebufferParameterfvAMD with <pixelindex> within this
+    range retrieves the set of sample positions for the pixel matching
+    <pixelindex>. <pixelindex> can also be equal to ALL_PIXELS_AMD, which
+    would cause the function to return an array of the requested <numsamples>
+    per each pixel in the sampling pattern.
+
+    The error INVALID_VALUE is generated if <pixelindex> is less than 
+    zero or is greater than or equal to the result of querying
+    PIXELS_PER_SAMPLE_PATTERN_X_AMD multiplied by the result of querying
+    PIXELS_PER_SAMPLE_PATTERN_Y_AMD and is not equal to ALL_SAMPLES. The
+    samples returned are ordered per pixel, and the order of the pixels would
+    be left to right, then top to bottom, where the sampling pattern origin is
+    the upper left corner. <size> is the requested size of the retrieved sample
+    locations in bytes. <values> will contain the returned <x> and <y>
+    coordinates of the requested samples in pixel space. The sample locations
+    returned are all in the range [0, 1), corresponding to the <x> and <y>
+    locations in pixel space of that sample, respectively. (0.5, 0.5) thus
+    corresponds to the pixel center.
+
+    The commands:
+
+        void NamedFramebufferSamplePositionsfvAMD(uint framebuffer,
+                                                  uint numsamples,
+                                                  uint pixelindex,
+                                                  const float *values);
+
+        void GetNamedFramebufferParameterfvAMD(uint framebuffer,
+                                               enum pname,
+                                               uint numsamples,
+                                               uint pixelindex,
+                                               sizei size,
+                                               float *value);
+
+    behave identically to FramebufferSamplePositionsfvAMD and
+    GetFramebufferSampleParameterfvAMD, except that the target of the
+    operation is the framebuffer object named <framebuffer> rather than
+    the object bound to a specified target. If <framebuffer> is not the name
+    of an existing framebuffer object an INVALID_OPERATION error is generated.
+
+Additions to Chapter 14 of the OpenGL 4.4 (Core) Specification (Fixed-Function
+Primitive Assembly and Rasterization)
+
+    (Modify Section 14.3, Antialiasing, p. 412)
+
+    Add after the segment: "If the multisample mode does not have fixed sample
+    locations, the returned values may only reflect the locations of samples
+    within some pixels.", append:
+
+        If GetMultisamplefv is used to query the result of using
+    FramebufferSamplePositionsfvAMD or NamedFramebufferSamplePositionsfvAMD
+    with ALL_PIXELS_AMD, the returned sample position matches that of
+    <pixelindex> equal to zero.
+
+Errors
+
+    INVALID_VALUE is generated by FramebufferSamplePositionsfvAMD,
+    NamedFramebufferSamplePositionsfvAMD, GetFramebufferParameterfvAMD
+    and GetNamedFramebufferParameterfvAMD if numsamples is greater than
+    the value of SAMPLES.
+
+    INVALID_VALUE is generated by FramebufferSamplePositionsfvAMD if
+    pixelindex is greater than or equal to the value of
+    NUM_PIXELS_PER_SAMPLE_PATTERN_X_AMD * NUM_PIXELS_PER_SAMPLE_PATTERN_Y_AMD
+    and is not equal to ALL_SAMPLES_AMD.
+
+    INVALID_OPERATION is generated by FramebufferSamplePositionsfvAMD
+    if the currently bound framebuffer is the default framebuffer.
+
+    INVALID_OPERATION is generated by NamedFramebufferSamplePositionsfvAMD
+    if the <framebuffer> is not the name of an existing framebufer object.
+
+    INVALID_OPERATION is generated by FramebufferSamplePositionsfvAMD
+    if the currently bound framebuffer is incomplete.
+
+    INVALID_OPERATION is generated by NamedFramebufferSamplePositionsfvAMD
+    if the <framebuffer> is incomplete.
+
+New State
+
+    Add to Table 23.24, Framebuffer (state per framebuffer object), p. 545:
+
+    Get Value        Type    Get Command                     Value   Description                          Sec.
+    ---------        ----    -----------                     -----   ------------------------------       -----
+    SAMPLE_POSITIONS 2xR+    GetFramebufferParameterfvAMD            The (x, y) sample locations in       9.2.9
+                                                                     the range [0, 1)
+
+New Implementation Dependent State
+
+    Add to Table 23.11, Multisampling, p. 532:
+
+    Get Value                              Type    Get Command  Value   Description                   Sec.
+    ---------                              ------- -----------  ------- ------------------------      -----
+    SUBSAMPLE_DISTANCE_AMD                 R+      GetFloatv            precision step between        9.2.9
+                                                                        subsamples
+    PIXELS_PER_SAMPLE_PATTERN_X_AMD        Z+      GetIntegerv          number of pixels in the       9.2.9
+                                                                        X direction
+    PIXELS_PER_SAMPLE_PATTERN_Y_AMD        Z+      GetIntegerv          number of pixels in the       9.2.9
+                                                                        Y direction
+
+Interaction with ARB_texture_multisample
+
+    If ARB_texture_multisample is not supported, remove all references to
+    GetMultisamplefv.
+
+
+Dependencies on EXT_direct_state_access
+
+    If EXT_direct_state_access is not supported, remove references to the
+    Named* commands added by this extension.
+
+
+Issues
+
+    (1) What happens if an app just sets one sample position?
+
+        RESOLVED: Any attachment to the bound FBO will have the index 0
+        position updated. All the rest of the positions will keep their
+        original values. Any other FBOs will not be affected by this change.
+
+
+    (2) Should we also expose the precision? Can an app use it in setting
+        sample positions?
+
+        RESOLVED: SUBSAMPLE_DISTANCE_AMD is added as a new token. It can be
+        used by GetFloatv to query the precision step, which will be the same
+        for both the vertical and horizontal directions. The subpixel range
+        [0,1) is discretized based on the value of SUBSAMPLE_DISTANCE_AMD.
+        Let ssd be the float value returned when SUBSAMPLE_DISTANCE_AMD is
+        queried, then one can infer the subpixilization to be 1/ssd+1. For
+        example, if ssd = 0.06667 then the pixel is subdivided into
+        1/0.0667+1 = 16 subpixels in each  dimension. 
+
+        One can also avoid using sample positions that would map to the same
+        subpixel. A coordinate c will map to the greatest multiple of ssd that
+        is less or equal to c. For example, given two sample positions,
+        (x0, y0) and (x1, y1), if abs(x1-x0) < ssd and abs(y1-y0) < ssd, then
+        both points will map to the same subpixel, which means the application
+        might want to substitute one of these positions with another that is
+        not redundant.
+
+        Using numerical values as an example, let a = (0.201, 0.0) and
+        b = (0.25, 0.5) be sample positions and ssd = 0.06667. Both the
+        x-coordinate values 0.201 and 0.25 fall between 0.06667*3=0.2 and
+        0.06667*4 = 0.26667 and would therefore map to the same value of 0.2.
+        The y-coordinates also map to the same value of 0 because they both
+        belong in the range [0, 0.06667). This means the two points are
+        redundant. Therefore, the application should choose a different point
+        c = (0.3, 0.45) for example. c would be a good choice because the
+        distance between its x-coordinate and a's x-coordinate is greater than
+        ssd, that is 0.3-0.201 > 0.06667.
+
+    (3) What would be the expected results for the following scenarios:
+
+        Scenario 1
+        The current number of samples in the framebuffer is 8.
+        The application requests 5 sample positions and GL_ALL_PIXELS.
+        The application passes 22*2*sizeof(GLuint) as the size in bytes
+        (more than needed).
+
+        RESOLVED: The returned array would have a capped size of
+        20*2*sizeof(GLuint) and will contain the first 5 samples of pixel
+        (x0, y0), then the first 5 samples of pixel (x1, y0), then the first
+        5 samples of pixel (x0, y1) and finally the first 5 samples of pixel
+        (x1, y1).
+
+        Scenario 2
+        The current number of samples in the framebuffer is 8.
+        The application requests 5 sample positions and GL_ALL_PIXELS.
+        The application passes 18*2*sizeof(GLuint) as the size in bytes
+        (less than needed).
+
+        RESOLVED: The returned array would have a size of 18*2*sizeof(GLuint)
+        and will contain the first 5 samples of pixel (x0, y0), then the first
+        5 samples of pixel (x1, y0), then the first 5 samples of pixel
+        (x0, y1) and finally the first 3 samples of pixel (x1, y1).
+
+        Scenario 3
+        The current number of samples in the framebuffer is 8.
+        The application requests 5 sample positions and GL_ALL_PIXELS.
+        The application passes 12*2*sizeof(GLuint) as the size in bytes
+        (less than needed).
+
+        RESOLVED: The returned array would have a size of 12*2*sizeof(GLuint)
+        and will contain the first 5 samples of pixel (x0, y0), then the first
+        5 samples of pixel (x1, y0), and the first 2 samples of pixel
+        (x0, y1).
+
+    (4) What is the expected behavior of a multisampled texture is attached
+        with <fixedsamplelocations> equal to TRUE and then the application
+        attempts to set different samples per pixels in a sampling pattern?
+
+        RESOLVED: If <fixedsamplelocations> is set to TRUE, the sample
+        positions in <pixelindex> equaling zero get replicated to all other
+        pixels in the sampling pattern.
+
+    (5) What is the result of rendering to a framebuffer, changing its sample
+        locations and then rendering again into that framebuffer without
+        clearing it first?
+
+        RESOLVED: The result is effectively undefined. The result of rendering
+        will not be consistent between the two passes. No ill effect should
+        come of this, but the framebuffer content may appear corrupted.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+    4     11/10/16  malnasse  Modify the 'framebuffer' parameter in
+                              GetNamedFramebufferParameterfvAMD from
+                              GLenum to GLuint to match the DSA style.
+    3     11/09/16  malnasse  Update PIXELS_PER_SAMPLE_PATTERN_X_AMD and
+                              PIXELS_PER_SAMPLE_PATTERN_Y_AMD token values.
+    2     04/18/14  gsellers  Ready for posting.
+    1     10/14/13  malnasse  First revision.
+

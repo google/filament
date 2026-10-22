@@ -1,0 +1,324 @@
+/*
+ * Copyright (C) 2015 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TNT_FILAMENT_DETAILS_MATERIAL_H
+#define TNT_FILAMENT_DETAILS_MATERIAL_H
+
+#include "downcast.h"
+#include "LocalProgramCache.h"
+
+#include "details/MaterialInstance.h"
+
+#include "ds/DescriptorSetLayout.h"
+
+#include <private/filament/BufferInterfaceBlock.h>
+#include <private/filament/ConstantInfo.h>
+#include <private/filament/EngineEnums.h>
+#include <private/filament/SamplerInterfaceBlock.h>
+#include <private/filament/SubpassInfo.h>
+#include <private/filament/Variant.h>
+
+#include <filament/Material.h>
+#include <filament/MaterialEnums.h>
+
+#if FILAMENT_ENABLE_MATDBG
+#include <matdbg/DebugServer.h>
+#endif
+
+#include <backend/CallbackHandler.h>
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+#include <backend/Program.h>
+
+#include <utils/compiler.h>
+#include <utils/CString.h>
+#include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/Invocable.h>
+#include <utils/Mutex.h>
+
+#include <atomic>
+#include <string_view>
+
+#include <stddef.h>
+#include <stdint.h>
+
+namespace filament {
+
+class MaterialParser;
+
+class  FEngine;
+
+class FMaterial : public Material {
+public:
+    FMaterial(FEngine& engine, const Builder& builder,
+            MaterialDefinition const& definition);
+    ~FMaterial() noexcept;
+
+    class DefaultMaterialBuilder : public Builder {
+    public:
+        DefaultMaterialBuilder();
+    };
+
+    void terminate(FEngine& engine);
+
+    // return the uniform interface block for this material
+    const BufferInterfaceBlock& getUniformInterfaceBlock() const noexcept {
+        return mDefinition.uniformInterfaceBlock;
+    }
+
+    DescriptorSetLayout const& getPerViewDescriptorSetLayout() const noexcept {
+        // This is mostly intended to be used for post-process materials; but it's also useful for
+        // Surface material that behave like post-process material (i.e. that don't really have variants or for
+        // which VSM is nonsensical, like for unlit materials)
+        return mDefinition.perViewDescriptorSetLayoutPcf;
+    }
+
+    DescriptorSetLayout const& getPerViewDescriptorSetLayout(
+            Variant variant, bool useVsmDescriptorSetLayout) const noexcept;
+
+    // Returns the layout that should be used when this material is bound to the pipeline for the
+    // given variant. Shared variants use the Engine's default material's variants, so we should
+    // also use the default material's layout.
+    DescriptorSetLayout const& getDescriptorSetLayout(Variant variant = {}) const noexcept {
+        if (!isSharedVariant(variant)) {
+            return mDefinition.descriptorSetLayout;
+        }
+        FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
+        if (UTILS_UNLIKELY(!pDefaultMaterial)) {
+            return mDefinition.descriptorSetLayout;
+        }
+        return pDefaultMaterial->getDescriptorSetLayout();
+    }
+
+    void compile(CompilerPriorityQueue priority,
+            UserVariantFilterMask variantSpec,
+            backend::CallbackHandler* handler,
+            utils::Invocable<void(Material*)>&& callback) noexcept;
+
+    void compile(CompilerPriorityQueue priority,
+        utils::FixedCapacityVector<Variant> const& variants,
+        utils::FixedCapacityVector<DynamicSpecConstKey> const& specKeys,
+        backend::CallbackHandler* handler,
+        utils::Invocable<void(Material*)>&& callback) noexcept;
+
+    // Creates an instance of this material, specifying the batching mode.
+    FMaterialInstance* createInstance(const char* name) const noexcept;
+
+    bool hasParameter(std::string_view name) const noexcept;
+
+    bool isSampler(const char* name) const noexcept;
+
+    BufferInterfaceBlock::FieldInfo const* reflect(std::string_view name) const noexcept;
+
+    FMaterialInstance* getDefaultInstance() noexcept;
+
+    FEngine& getEngine() const noexcept  { return mEngine; }
+
+    // MaterialInstance::use() binds descriptor sets before drawing. For shared variants,
+    // however, the material instance will call useShared() to bind the default material's sets
+    // instead.
+    // Returns true if this is a shared variant.
+    bool useShared(backend::DriverApi& driver, Variant variant) const noexcept {
+        if (!isSharedVariant(variant)) {
+            return false;
+        }
+        FMaterialInstance const* const pDefaultInstance = mEngine.getDefaultMaterialInstance();
+        if (UTILS_UNLIKELY(!pDefaultInstance)) {
+            return false;
+        }
+        pDefaultInstance->use(driver, variant);
+        return true;
+    }
+
+    bool isVariantLit() const noexcept { return mDefinition.isVariantLit; }
+
+    const utils::CString& getName() const noexcept { return mDefinition.name; }
+    backend::FeatureLevel getFeatureLevel() const noexcept { return mDefinition.featureLevel; }
+    backend::RasterState getRasterState() const noexcept  { return mDefinition.rasterState; }
+    uint32_t getId() const noexcept { return mMaterialId; }
+
+    UserVariantFilterMask getSupportedVariants() const noexcept {
+        return UserVariantFilterMask(UserVariantFilterBit::ALL) & ~mDefinition.variantFilterMask;
+    }
+
+    Shading getShading() const noexcept { return mDefinition.shading; }
+    Interpolation getInterpolation() const noexcept { return mDefinition.interpolation; }
+    BlendingMode getBlendingMode() const noexcept { return mDefinition.blendingMode; }
+    VertexDomain getVertexDomain() const noexcept { return mDefinition.vertexDomain; }
+    MaterialDomain getMaterialDomain() const noexcept { return mDefinition.materialDomain; }
+    CullingMode getCullingMode() const noexcept { return mDefinition.cullingMode; }
+    TransparencyMode getTransparencyMode() const noexcept { return mDefinition.transparencyMode; }
+    bool isColorWriteEnabled() const noexcept { return mDefinition.rasterState.colorWrite; }
+    bool isDepthWriteEnabled() const noexcept { return mDefinition.rasterState.depthWrite; }
+    bool isDepthCullingEnabled() const noexcept {
+        return mDefinition.rasterState.depthFunc != backend::RasterState::DepthFunc::A;
+    }
+    bool isDoubleSided() const noexcept { return mDefinition.doubleSided; }
+    bool hasDoubleSidedCapability() const noexcept { return mDefinition.doubleSidedCapability; }
+    // true if the material was built with `instanced: true` (i.e. MATERIAL_HAS_INSTANCES)
+    bool isInstanced() const noexcept { return mDefinition.instanced; }
+    bool isAlphaToCoverageEnabled() const noexcept { return mDefinition.rasterState.alphaToCoverage; }
+    float getMaskThreshold() const noexcept { return mDefinition.maskThreshold; }
+    bool hasShadowMultiplier() const noexcept { return mDefinition.hasShadowMultiplier; }
+    AttributeBitset getRequiredAttributes() const noexcept { return mDefinition.requiredAttributes; }
+    RefractionMode getRefractionMode() const noexcept { return mDefinition.refractionMode; }
+    RefractionType getRefractionType() const noexcept { return mDefinition.refractionType; }
+    ReflectionMode getReflectionMode() const noexcept { return mDefinition.reflectionMode; }
+
+    bool hasSpecularAntiAliasing() const noexcept { return mDefinition.specularAntiAliasing; }
+    float getSpecularAntiAliasingVariance() const noexcept { return mDefinition.specularAntiAliasingVariance; }
+    float getSpecularAntiAliasingThreshold() const noexcept { return mDefinition.specularAntiAliasingThreshold; }
+
+    bool isDefaultMaterial() const noexcept { return mIsDefaultMaterial; }
+
+    backend::descriptor_binding_t getSamplerBinding(
+            std::string_view const& name) const;
+
+    const char* getParameterTransformName(std::string_view samplerName) const noexcept;
+
+    bool hasMaterialProperty(Property property) const noexcept {
+        return bool(mDefinition.materialProperties & uint64_t(property));
+    }
+
+    SamplerInterfaceBlock const& getSamplerInterfaceBlock() const noexcept {
+        return mDefinition.samplerInterfaceBlock;
+    }
+
+    size_t getParameterCount() const noexcept {
+        return mDefinition.uniformInterfaceBlock.getFieldInfoList().size() +
+               mDefinition.samplerInterfaceBlock.getSamplerInfoList().size() +
+               (mDefinition.subpassInfo.isValid ? 1 : 0);
+    }
+    size_t getParameters(ParameterInfo* parameters, size_t count) const noexcept;
+
+    uint32_t generateMaterialInstanceId() const noexcept {
+        return mMaterialInstanceId.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    LocalProgramCache& getPrograms() noexcept { return mPrograms; }
+
+    uint8_t getPerViewLayoutIndex() const noexcept {
+        return mDefinition.perViewLayoutIndex;
+    }
+
+    bool useUboBatching() const noexcept {
+        return mUseUboBatching;
+    }
+
+    std::string_view getSource() const noexcept {
+        return mDefinition.source.c_str_safe();
+    }
+
+    inline bool isSharedVariant(Variant const variant) const {
+        // The default material explicitly filters VSM variants to reduce binary size, so it cannot
+        // provide the MNT | DEP variant as a shared program.
+        return !mIsDefaultMaterial && !mDefinition.hasCustomDepthShader &&
+               mDefinition.isValidDepthVariant(variant) &&
+               !mDefinition.isDepthMomentsVariant(variant);
+    }
+
+    MaterialParser const& getMaterialParser() const noexcept {
+#if FILAMENT_ENABLE_MATDBG
+        if (mEditedMaterialParser) {
+            return *mEditedMaterialParser;
+        }
+#endif
+        return mDefinition.getMaterialParser();
+    }
+
+    MaterialDefinition const& getDefinition() const noexcept { return mDefinition; }
+
+    LocalProgramCache const& getPrograms() const noexcept { return mPrograms; }
+
+#if FILAMENT_ENABLE_MATDBG
+    void applyPendingEdits() noexcept;
+
+    /**
+     * Callback handlers for the debug server, potentially called from any thread. The userdata
+     * argument has the same value that was passed to DebugServer::addMaterial(), which should
+     * be an instance of the public-facing Material.
+     * @{
+     */
+
+    /** Replaces the material package. */
+    static void onEditCallback(void* userdata, const utils::CString& name, const void* packageData,
+            size_t packageSize);
+
+    /**
+     * Returns a list of "active" variants.
+     *
+     * This works by checking which variants have been accessed since the previous call, then
+     * clearing out the internal list.  Note that the active vs inactive status is merely a visual
+     * indicator in the matdbg UI, and that it gets updated about every second.
+     */
+    static void onQueryCallback(void* userdata, VariantList* pActiveVariants);
+
+    void checkProgramEdits() noexcept {
+        if (UTILS_UNLIKELY(hasPendingEdits())) {
+            applyPendingEdits();
+        }
+    }
+
+    /** @}*/
+
+    // Called by getProgram() to update active program list for matdbg UI.
+    void updateActiveProgramsForMatdbg(Variant const variant) const noexcept;
+#endif
+
+private:
+    utils::FixedCapacityVector<backend::Program::SpecializationConstant>
+            processSpecializationConstants(Builder const& builder);
+
+    void compileAllPrograms(CompilerPriorityQueue priority,
+        backend::CallbackHandler* handler,
+        utils::Invocable<void(Material*)>&& callback) noexcept;
+
+    MaterialDefinition const& mDefinition;
+
+    bool mIsDefaultMaterial = false;
+
+    bool mUseUboBatching = false;
+    bool mDepthPrecacheDisabled = false;
+
+    // reserve some space to construct the default material instance
+    FMaterialInstance* mDefaultMaterialInstance = nullptr;
+
+#if FILAMENT_ENABLE_MATDBG
+    matdbg::MaterialKey mDebuggerId;
+    mutable utils::Mutex mActiveProgramsLock;
+    mutable VariantList mActivePrograms;
+    mutable utils::Mutex mPendingEditsLock;
+    std::unique_ptr<MaterialParser> mPendingEdits;
+    std::unique_ptr<MaterialParser> mEditedMaterialParser;
+    void setPendingEdits(std::unique_ptr<MaterialParser> pendingEdits) noexcept;
+    bool hasPendingEdits() const noexcept;
+    void latchPendingEdits() noexcept;
+#endif
+
+    FEngine& mEngine;
+    const uint32_t mMaterialId;
+    mutable std::atomic<uint32_t> mMaterialInstanceId = 0;
+
+    LocalProgramCache mPrograms;
+};
+
+
+FILAMENT_DOWNCAST(Material)
+
+} // namespace filament
+
+#endif // TNT_FILAMENT_DETAILS_MATERIAL_H

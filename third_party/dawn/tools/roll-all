@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Copyright 2020 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# Defined to use origin/master instead of origin/main
+build=1
+buildtools=1
+clang=1
+cpplint=1
+googletest=1
+spirv_headers=1
+spirv_tools=1
+testing=1
+
+
+# This script assumes it's parent directory is the repo root.
+repo_path=$(dirname "$0")/..
+
+cd "$repo_path"
+
+if [[ $(git diff --stat) != '' ]]; then
+    echo "Working tree is dirty, commit changes before attempting to roll DEPS"
+    exit 1
+fi
+
+old_head=$(git rev-parse HEAD)
+
+for i in $(find third_party -maxdepth 1 -mindepth 1 -type d); do
+  name=`echo "${i%%/}" | cut -f2 -d'/' | tr '-' '_'`
+
+  if [ "x${name}" == "xcpplint" ]; then
+    continue
+  fi
+
+  trunk="origin/main"
+  if [ ! -z ${!name} ]; then
+    trunk="origin/master"
+  fi
+
+  roll-dep --ignore-dirty-tree --roll-to="${trunk}" "${i%%/}";
+done
+
+git rebase --interactive "${old_head}"

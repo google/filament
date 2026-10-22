@@ -1,0 +1,29 @@
+material {
+    name : PointSprites,
+    requires : [
+        custom0,
+        color
+    ],
+    shadingModel : unlit,
+    blending : add,
+    parameters : [
+        {
+            type : sampler2d,
+            name : fade
+        }
+    ]
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        gl_PointSize = getCustom0().r;
+    }
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        float L = texture(materialParams_fade, gl_PointCoord).r;
+        material.baseColor = getColor() * vec4(L, L, L, 1);
+    }
+}

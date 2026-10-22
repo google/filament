@@ -1,0 +1,41 @@
+RWByteAddressBuffer bar : register(u0);
+RWByteAddressBuffer foo : register(u1);
+
+void comp_main()
+{
+    bar.Store4(0, asuint(asfloat(foo.Load4(0))));
+    bar.Store4(16, asuint(asfloat(foo.Load4(16))));
+    bar.Store4(32, asuint(asfloat(foo.Load4(32))));
+    bar.Store4(48, asuint(asfloat(foo.Load4(48))));
+    bar.Store4(64, asuint(asfloat(foo.Load4(64))));
+    bar.Store4(80, asuint(asfloat(foo.Load4(80))));
+    bar.Store4(96, asuint(asfloat(foo.Load4(96))));
+    bar.Store4(112, asuint(asfloat(foo.Load4(112))));
+    bar.Store4(128, asuint(asfloat(foo.Load4(128))));
+    bar.Store4(144, asuint(asfloat(foo.Load4(144))));
+    bar.Store4(160, asuint(asfloat(foo.Load4(160))));
+    bar.Store4(176, asuint(asfloat(foo.Load4(176))));
+    bar.Store4(192, asuint(asfloat(foo.Load4(192))));
+    bar.Store4(208, asuint(asfloat(foo.Load4(208))));
+    bar.Store4(224, asuint(asfloat(foo.Load4(224))));
+    bar.Store4(240, asuint(asfloat(foo.Load4(240))));
+    [loop]
+    for (int _137 = 0; _137 < 16; )
+    {
+        bar.Store4((15 - _137) * 16 + 0, asuint(asfloat(foo.Load4(_137 * 16 + 0))));
+        _137++;
+        continue;
+    }
+    [branch]
+    if (asfloat(bar.Load(160)) > 10.0f)
+    {
+        foo.Store4(320, asuint(5.0f.xxxx));
+    }
+    foo.Store4(320, asuint(20.0f.xxxx));
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

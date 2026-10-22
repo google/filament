@@ -1,0 +1,43 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 11
+; Bound: 25
+; Schema: 0
+               OpCapability Shader
+               OpCapability PhysicalStorageBufferAddresses
+               OpExtension "SPV_KHR_physical_storage_buffer"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel PhysicalStorageBuffer64 GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpSourceExtension "GL_EXT_buffer_reference"
+               OpSourceExtension "GL_EXT_buffer_reference_uvec2"
+               OpName %main "main"
+               OpName %Registers "Registers"
+               OpMemberName %Registers 0 "va"
+               OpName %_ ""
+               OpDecorate %Registers Block
+               OpMemberDecorate %Registers 0 Offset 0
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+  %Registers = OpTypeStruct %v2uint
+%_ptr_PushConstant_Registers = OpTypePointer PushConstant %Registers
+          %_ = OpVariable %_ptr_PushConstant_Registers PushConstant
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_ptr_PushConstant_v2uint = OpTypePointer PushConstant %v2uint
+%_ptr_PhysicalStorageBuffer_uint = OpTypePointer PhysicalStorageBuffer %uint
+    %uint_10 = OpConstant %uint 10
+     %uint_1 = OpConstant %uint 1
+     %uint_0 = OpConstant %uint 0
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %14 = OpAccessChain %_ptr_PushConstant_v2uint %_ %int_0
+         %15 = OpLoad %v2uint %14
+         %18 = OpBitcast %_ptr_PhysicalStorageBuffer_uint %15
+         %24 = OpAtomicUMax %uint %18 %uint_1 %uint_0 %uint_10
+               OpReturn
+               OpFunctionEnd

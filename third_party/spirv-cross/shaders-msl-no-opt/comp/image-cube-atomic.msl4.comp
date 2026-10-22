@@ -1,0 +1,11 @@
+#version 450
+layout(local_size_x = 64) in;
+
+layout(set = 0, binding = 0, r32ui) uniform uimageCube uCube;
+layout(set = 0, binding = 1, r32ui) uniform uimageCubeArray uCubeArray;
+
+void main()
+{
+	imageAtomicAdd(uCube, ivec3(gl_GlobalInvocationID), 10u);
+	imageAtomicOr(uCubeArray, ivec3(gl_GlobalInvocationID), 10u);
+}

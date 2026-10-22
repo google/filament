@@ -1,0 +1,54 @@
+spv.memoryScopeSemantics_Error.comp
+ERROR: 0:13: 'atomicStore' : gl_SemanticsAcquire must not be used with (image) atomic store 
+ERROR: 0:14: 'imageAtomicStore' : gl_SemanticsAcquire must not be used with (image) atomic store 
+ERROR: 0:17: 'atomicLoad' : gl_SemanticsRelease must not be used with (image) atomic load 
+ERROR: 0:18: 'imageAtomicLoad' : gl_SemanticsRelease must not be used with (image) atomic load 
+ERROR: 0:21: 'atomicStore' : gl_SemanticsAcquireRelease must not be used with (image) atomic load/store 
+ERROR: 0:22: 'imageAtomicStore' : gl_SemanticsAcquireRelease must not be used with (image) atomic load/store 
+ERROR: 0:23: 'atomicLoad' : gl_SemanticsAcquireRelease must not be used with (image) atomic load/store 
+ERROR: 0:24: 'imageAtomicLoad' : gl_SemanticsAcquireRelease must not be used with (image) atomic load/store 
+ERROR: 0:27: 'memoryBarrier' : Semantics must include exactly one of gl_SemanticsRelease, gl_SemanticsAcquire, or gl_SemanticsAcquireRelease when used with memoryBarrier 
+ERROR: 0:30: 'atomicCompSwap' : Invalid semantics value 
+ERROR: 0:31: 'atomicCompSwap' : Invalid semantics value 
+ERROR: 0:32: 'atomicCompSwap' : Invalid semantics value 
+ERROR: 0:33: 'atomicCompSwap' : Invalid semantics value 
+ERROR: 0:36: 'atomicCompSwap' : Invalid storage class semantics value 
+ERROR: 0:37: 'atomicCompSwap' : Invalid storage class semantics value 
+ERROR: 0:40: 'atomicCompSwap' : Semantics must not include multiple of gl_SemanticsRelease, gl_SemanticsAcquire, or gl_SemanticsAcquireRelease 
+ERROR: 0:41: 'atomicCompSwap' : Semantics must not include multiple of gl_SemanticsRelease, gl_SemanticsAcquire, or gl_SemanticsAcquireRelease 
+ERROR: 0:44: 'atomicCompSwap' : Storage class semantics must not be zero when used with gl_SemanticsRelease, gl_SemanticsAcquire, or gl_SemanticsAcquireRelease 
+ERROR: 0:45: 'atomicCompSwap' : Storage class semantics must not be zero when used with gl_SemanticsRelease, gl_SemanticsAcquire, or gl_SemanticsAcquireRelease 
+ERROR: 0:48: 'atomicCompSwap' : Semantics must be gl_SemanticsRelease, gl_SemanticsAcquire, or gl_SemanticsAcquireRelease when used with non-zero storage class semantics 
+ERROR: 0:49: 'atomicCompSwap' : Semantics must be gl_SemanticsRelease, gl_SemanticsAcquire, or gl_SemanticsAcquireRelease when used with non-zero storage class semantics 
+ERROR: 0:50: 'atomicCompSwap' : Semantics must be gl_SemanticsRelease, gl_SemanticsAcquire, or gl_SemanticsAcquireRelease when used with non-zero storage class semantics 
+ERROR: 0:51: 'atomicCompSwap' : Semantics must be gl_SemanticsRelease, gl_SemanticsAcquire, or gl_SemanticsAcquireRelease when used with non-zero storage class semantics 
+ERROR: 0:52: 'imageAtomicAdd' : Semantics must be gl_SemanticsRelease, gl_SemanticsAcquire, or gl_SemanticsAcquireRelease when used with non-zero storage class semantics 
+ERROR: 0:53: 'imageAtomicAdd' : Semantics must be gl_SemanticsRelease, gl_SemanticsAcquire, or gl_SemanticsAcquireRelease when used with non-zero storage class semantics 
+ERROR: 0:56: 'atomicCompSwap' : gl_SemanticsMakeAvailable requires gl_SemanticsRelease or gl_SemanticsAcquireRelease 
+ERROR: 0:57: 'atomicCompSwap' : gl_SemanticsMakeAvailable requires gl_SemanticsRelease or gl_SemanticsAcquireRelease 
+ERROR: 0:58: 'atomicCompSwap' : gl_SemanticsMakeAvailable requires gl_SemanticsRelease or gl_SemanticsAcquireRelease 
+ERROR: 0:59: 'atomicCompSwap' : gl_SemanticsMakeAvailable requires gl_SemanticsRelease or gl_SemanticsAcquireRelease 
+ERROR: 0:62: 'atomicCompSwap' : gl_SemanticsMakeVisible requires gl_SemanticsAcquire or gl_SemanticsAcquireRelease 
+ERROR: 0:63: 'atomicCompSwap' : gl_SemanticsMakeVisible requires gl_SemanticsAcquire or gl_SemanticsAcquireRelease 
+ERROR: 0:64: 'atomicCompSwap' : gl_SemanticsMakeVisible requires gl_SemanticsAcquire or gl_SemanticsAcquireRelease 
+ERROR: 0:67: 'memoryBarrier' : gl_SemanticsVolatile must not be used with memoryBarrier or controlBarrier 
+ERROR: 0:68: 'controlBarrier' : gl_SemanticsVolatile must not be used with memoryBarrier or controlBarrier 
+ERROR: 0:69: 'controlBarrier' : gl_SemanticsVolatile must not be used with memoryBarrier or controlBarrier 
+ERROR: 0:72: 'atomicCompSwap' : semUnequal must not be gl_SemanticsRelease or gl_SemanticsAcquireRelease 
+ERROR: 0:73: 'atomicCompSwap' : semUnequal must not be gl_SemanticsRelease or gl_SemanticsAcquireRelease 
+ERROR: 0:76: 'atomicCompSwap' : semUnequal must not be gl_SemanticsAcquire unless semEqual is gl_SemanticsAcquire or gl_SemanticsAcquireRelease 
+ERROR: 0:76: 'atomicCompSwap' : semStorageUnequal must not include any option that is not present in semStorageEqual 
+ERROR: 0:77: 'atomicCompSwap' : semUnequal must not be gl_SemanticsAcquire unless semEqual is gl_SemanticsAcquire or gl_SemanticsAcquireRelease 
+ERROR: 0:80: 'atomicCompSwap' : semUnequal must not include gl_SemanticsMakeVisible unless semEqual also includes gl_SemanticsMakeVisible 
+ERROR: 0:81: 'atomicCompSwap' : semUnequal must not include gl_SemanticsMakeVisible unless semEqual also includes gl_SemanticsMakeVisible 
+ERROR: 0:84: 'atomicCompSwap' : semStorageUnequal must not include any option that is not present in semStorageEqual 
+ERROR: 0:85: 'atomicCompSwap' : semStorageUnequal must not include any option that is not present in semStorageEqual 
+ERROR: 0:86: 'atomicCompSwap' : semStorageUnequal must not include any option that is not present in semStorageEqual 
+ERROR: 0:89: 'atomicCompSwap' : semEqual and semUnequal must either both include gl_SemanticsVolatile or neither 
+ERROR: 0:90: 'atomicCompSwap' : semEqual and semUnequal must either both include gl_SemanticsVolatile or neither 
+ERROR: 0:91: 'atomicCompSwap' : semEqual and semUnequal must either both include gl_SemanticsVolatile or neither 
+ERROR: 0:92: 'atomicCompSwap' : semEqual and semUnequal must either both include gl_SemanticsVolatile or neither 
+ERROR: 49 compilation errors.  No code generated.
+
+
+SPIR-V is not generated for failed compile or link

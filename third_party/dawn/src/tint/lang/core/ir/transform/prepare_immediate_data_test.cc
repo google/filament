@@ -1,0 +1,394 @@
+// Copyright 2025 The Dawn & Tint Authors
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#include "src/tint/lang/core/ir/transform/prepare_immediate_data.h"
+
+#include "gmock/gmock.h"
+#include "src/tint/lang/core/ir/transform/helper_test.h"
+
+namespace tint::core::ir::transform {
+namespace {
+
+using namespace tint::core::fluent_types;     // NOLINT
+using namespace tint::core::number_suffixes;  // NOLINT
+
+class IR_PrepareImmediateDataTests : public TransformTest {
+  public:
+    Result<ImmediateDataLayout> Run(PrepareImmediateDataConfig config) {
+        // Run the transform.
+        TINT_CHECK_RESULT_UNWRAP(result, PrepareImmediateData(mod, config));
+
+        // Validate the output IR.
+        EXPECT_EQ(ir::Validate(mod, "after transform"), Success);
+
+        return result;
+    }
+};
+
+TEST_F(IR_PrepareImmediateDataTests, NoModify_NoInternalImmediateData) {
+    auto* v = b.Var("v", ty.ptr<private_, i32>());
+    mod.root_block->Append(v);
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<private, i32, read_write> = var undef
+}
+
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = src;
+
+    PrepareImmediateDataConfig config;
+    auto result = Run(config);
+    ASSERT_EQ(result, Success) << result.Failure();
+    EXPECT_EQ(result->var, nullptr);
+    EXPECT_TRUE(result->offset_to_index.IsEmpty());
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_PrepareImmediateDataTests, NoModify_UserImmediateData_NoInternalImmediateData) {
+    auto* v = b.Var("v", ty.ptr<immediate, i32>());
+    mod.root_block->Append(v);
+
+    auto* foo = b.Function("foo", ty.i32());
+    b.Append(foo->Block(), [&] {  //
+        b.Return(foo, b.Load(v));
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<immediate, i32, read> = var undef
+}
+
+%foo = func():i32 {
+  $B2: {
+    %3:i32 = load %v
+    ret %3
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = src;
+
+    PrepareImmediateDataConfig config;
+    auto result = Run(config);
+    ASSERT_EQ(result, Success) << result.Failure();
+    EXPECT_EQ(result->var, nullptr);
+    EXPECT_TRUE(result->offset_to_index.IsEmpty());
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_PrepareImmediateDataTests, NoUserImmedaiteData_OneInternalImmediateData) {
+    auto* v = b.Var("v", ty.ptr<private_, i32>());
+    mod.root_block->Append(v);
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<private, i32, read_write> = var undef
+}
+
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+tint_immediate_data_struct = struct @align(4), @block {
+  internal_constant_a:i32 @offset(0)
+}
+
+$B1: {  # root
+  %v:ptr<private, i32, read_write> = var undef
+  %tint_immediate_data:ptr<immediate, tint_immediate_data_struct, read> = var undef
+}
+
+)";
+
+    PrepareImmediateDataConfig config;
+    ASSERT_EQ(config.AddInternalImmediateData(0u, mod.symbols.New("internal_constant_a"), ty.i32()),
+              Success);
+    auto result = Run(config);
+    ASSERT_EQ(result, Success) << result.Failure();
+    EXPECT_NE(result->var, nullptr);
+    EXPECT_EQ(result->offset_to_index.GetOr(0u, UINT32_MAX), 0u);
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_PrepareImmediateDataTests, InternalImmediateData_OffsetOverflow) {
+    PrepareImmediateDataConfig config;
+    // 0xFFFFFFFC + 4 = 0 (overflows to 0 in uint32_t)
+    ASSERT_EQ(config.AddInternalImmediateData(0xFFFFFFFCu, mod.symbols.New("overflow"), ty.i32()),
+              Success);
+    auto result = PrepareImmediateData(mod, config);
+    EXPECT_NE(result, Success);
+}
+
+TEST_F(IR_PrepareImmediateDataTests, UserImmediateData_TooLarge) {
+    auto* v = b.Var("v", ty.ptr<immediate>(ty.array<i32, 0x1000>()));
+    mod.root_block->Append(v);
+
+    PrepareImmediateDataConfig config;
+    ASSERT_EQ(config.AddInternalImmediateData(0u, mod.symbols.New("overflow"), ty.i32()), Success);
+    auto result = PrepareImmediateData(mod, config);
+    EXPECT_NE(result, Success);
+}
+
+TEST_F(IR_PrepareImmediateDataTests, UserImmediateData_TooLarge_NoInternal) {
+    auto* v = b.Var("v", ty.ptr<immediate>(ty.array<i32, 0x1000>()));
+    mod.root_block->Append(v);
+
+    PrepareImmediateDataConfig config;
+    auto result = PrepareImmediateData(mod, config);
+    EXPECT_NE(result, Success);
+}
+
+TEST_F(IR_PrepareImmediateDataTests, NoUserImmediateData_MultipleInternalImmediateData) {
+    auto* v = b.Var("v", ty.ptr<private_, i32>());
+    mod.root_block->Append(v);
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<private, i32, read_write> = var undef
+}
+
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+tint_immediate_data_struct = struct @align(16), @block {
+  internal_constant_a:i32 @offset(0)
+  internal_constant_b:f32 @offset(4)
+  internal_constant_c:vec4<f32> @offset(16)
+}
+
+$B1: {  # root
+  %v:ptr<private, i32, read_write> = var undef
+  %tint_immediate_data:ptr<immediate, tint_immediate_data_struct, read> = var undef
+}
+
+)";
+
+    PrepareImmediateDataConfig config;
+    ASSERT_EQ(config.AddInternalImmediateData(0u, mod.symbols.New("internal_constant_a"), ty.i32()),
+              Success);
+    ASSERT_EQ(config.AddInternalImmediateData(4u, mod.symbols.New("internal_constant_b"), ty.f32()),
+              Success);
+    ASSERT_EQ(
+        config.AddInternalImmediateData(16u, mod.symbols.New("internal_constant_c"), ty.vec4f()),
+        Success);
+    auto result = Run(config);
+    ASSERT_EQ(result, Success) << result.Failure();
+    EXPECT_NE(result->var, nullptr);
+    EXPECT_EQ(result->offset_to_index.GetOr(0u, UINT32_MAX), 0u);
+    EXPECT_EQ(result->offset_to_index.GetOr(4u, UINT32_MAX), 1u);
+    EXPECT_EQ(result->offset_to_index.GetOr(16u, UINT32_MAX), 2u);
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_PrepareImmediateDataTests, UserImmediateData_MultipleInternalImmediateData) {
+    auto* v = b.Var("v", ty.ptr<immediate, i32>());
+    mod.root_block->Append(v);
+
+    auto* foo = b.Function("foo", ty.i32());
+    b.Append(foo->Block(), [&] {  //
+        b.Return(foo, b.Load(v));
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<immediate, i32, read> = var undef
+}
+
+%foo = func():i32 {
+  $B2: {
+    %3:i32 = load %v
+    ret %3
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+tint_immediate_data_struct = struct @align(16), @block {
+  user_immediate_data:i32 @offset(0)
+  internal_constant_a:i32 @offset(4)
+  internal_constant_b:f32 @offset(8)
+  internal_constant_c:vec4<f32> @offset(16)
+}
+
+$B1: {  # root
+  %tint_immediate_data:ptr<immediate, tint_immediate_data_struct, read> = var undef
+}
+
+%foo = func():i32 {
+  $B2: {
+    %3:ptr<immediate, i32, read> = access %tint_immediate_data, 0u
+    %4:i32 = load %3
+    ret %4
+  }
+}
+)";
+
+    PrepareImmediateDataConfig config;
+    ASSERT_EQ(config.AddInternalImmediateData(4u, mod.symbols.New("internal_constant_a"), ty.i32()),
+              Success);
+    ASSERT_EQ(config.AddInternalImmediateData(8u, mod.symbols.New("internal_constant_b"), ty.f32()),
+              Success);
+    ASSERT_EQ(
+        config.AddInternalImmediateData(16u, mod.symbols.New("internal_constant_c"), ty.vec4f()),
+        Success);
+    auto result = Run(config);
+    ASSERT_EQ(result, Success) << result.Failure();
+    EXPECT_NE(result->var, nullptr);
+    EXPECT_EQ(result->offset_to_index.GetOr(4u, UINT32_MAX), 1u);
+    EXPECT_EQ(result->offset_to_index.GetOr(8u, UINT32_MAX), 2u);
+    EXPECT_EQ(result->offset_to_index.GetOr(16u, UINT32_MAX), 3u);
+    ASSERT_EQ(result, Success) << result.Failure();
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_PrepareImmediateDataTests, DuplicateInternalImmediateOffsets) {
+    PrepareImmediateDataConfig config;
+    ASSERT_EQ(config.AddInternalImmediateData(4u, mod.symbols.New("internal_constant_a"), ty.i32()),
+              Success);
+    auto res =
+        config.AddInternalImmediateData(4u, mod.symbols.New("internal_constant_b"), ty.f32());
+    ASSERT_NE(res, Success);
+    EXPECT_EQ(res.Failure().reason, R"(multiple internal immediates created at offset 4)");
+}
+
+TEST_F(IR_PrepareImmediateDataTests, ValidateInternalImmediate_OverlapUser) {
+    // User immediate occupies the first 16 bytes.
+    auto* v = b.Var("user_immediate", core::AddressSpace::kImmediate, ty.vec4u());
+    mod.root_block->Append(v);
+
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Load(v));
+        b.Return(eb);
+    });
+
+    // Internal immediate with offset 8 overlaps with the user immediate.
+    PrepareImmediateDataConfig config;
+    ASSERT_EQ(config.AddInternalImmediateData(8u, mod.symbols.New("internal_constant"), ty.u32()),
+              Success);
+    auto result = Run(config);
+    ASSERT_NE(result, Success);
+    EXPECT_EQ(
+        result.Failure().reason,
+        R"(immediate offset for 'internal_constant' overlaps with previous member 'user_immediate_data')");
+}
+
+TEST_F(IR_PrepareImmediateDataTests, ValidateInternalImmediate_OverlapInternal) {
+    PrepareImmediateDataConfig config;
+    ASSERT_EQ(
+        config.AddInternalImmediateData(0u, mod.symbols.New("internal_constant_1"), ty.vec4u()),
+        Success);
+    ASSERT_EQ(
+        config.AddInternalImmediateData(8u, mod.symbols.New("internal_constant_2"), ty.vec4u()),
+        Success);
+    auto result = Run(config);
+    ASSERT_NE(result, Success);
+    EXPECT_EQ(
+        result.Failure().reason,
+        R"(immediate offset for 'internal_constant_2' overlaps with previous member 'internal_constant_1')");
+}
+
+TEST_F(IR_PrepareImmediateDataTests, ValidateInternalImmediate_MisalignedScalar) {
+    PrepareImmediateDataConfig config;
+    ASSERT_EQ(config.AddInternalImmediateData(2u, mod.symbols.New("internal_constant"), ty.u32()),
+              Success);
+    auto result = Run(config);
+    ASSERT_NE(result, Success);
+    EXPECT_EQ(result.Failure().reason,
+              R"(immediate offset for 'internal_constant' must be aligned to 4 bytes)");
+}
+
+TEST_F(IR_PrepareImmediateDataTests, ValidateInternalImmediate_StructU32Aligned) {
+    // A struct of three u32 members only needs 4-byte alignment, so it is accepted at a 4-aligned
+    // offset. This is the num_workgroups case placed after a non-16-byte user block.
+    PrepareImmediateDataConfig config;
+    auto* struct_ty =
+        ty.Struct(mod.symbols.New("num_workgroups"), {
+                                                         {mod.symbols.New("x"), ty.u32()},
+                                                         {mod.symbols.New("y"), ty.u32()},
+                                                         {mod.symbols.New("z"), ty.u32()},
+                                                     });
+    ASSERT_EQ(config.AddInternalImmediateData(4u, mod.symbols.New("internal_constant"), struct_ty),
+              Success);
+    auto result = Run(config);
+    EXPECT_EQ(result, Success);
+}
+
+TEST_F(IR_PrepareImmediateDataTests, ValidateInternalImmediate_MisalignedVector) {
+    // A vec3<u32> requires 16-byte alignment, so a 4-aligned offset is rejected.
+    PrepareImmediateDataConfig config;
+    ASSERT_EQ(config.AddInternalImmediateData(4u, mod.symbols.New("internal_constant"), ty.vec3u()),
+              Success);
+    auto result = Run(config);
+    ASSERT_NE(result, Success);
+    EXPECT_EQ(result.Failure().reason,
+              R"(immediate offset for 'internal_constant' must be aligned to 16 bytes)");
+}
+
+TEST_F(IR_PrepareImmediateDataTests, ValidateInternalImmediate_MisalignedArray) {
+    // An array<vec4<u32>> requires 16-byte alignment (its element's alignment); an offset of 8 is
+    // rejected.
+    PrepareImmediateDataConfig config;
+    ASSERT_EQ(config.AddInternalImmediateData(8u, mod.symbols.New("internal_constant"),
+                                              ty.array<vec4u, 4>()),
+              Success);
+    auto result = Run(config);
+    ASSERT_NE(result, Success);
+    EXPECT_EQ(result.Failure().reason,
+              R"(immediate offset for 'internal_constant' must be aligned to 16 bytes)");
+}
+
+TEST_F(IR_PrepareImmediateDataTests, ValidateInternalImmediate_OffsetExceedsMax) {
+    PrepareImmediateDataConfig config;
+    ASSERT_EQ(
+        config.AddInternalImmediateData(0x2000u, mod.symbols.New("internal_constant"), ty.u32()),
+        Success);
+    auto result = Run(config);
+    ASSERT_NE(result, Success);
+    EXPECT_EQ(result.Failure().reason,
+              R"(immediate 'internal_constant' exceeds maximum immediate block size)");
+}
+
+TEST_F(IR_PrepareImmediateDataTests, ValidateInternalImmediate_OffsetPlusSizeExceedsMax) {
+    PrepareImmediateDataConfig config;
+    ASSERT_EQ(config.AddInternalImmediateData(0x0FFCu, mod.symbols.New("internal_constant"),
+                                              ty.array<u32, 4>()),
+              Success);
+    auto result = Run(config);
+    ASSERT_NE(result, Success);
+    EXPECT_EQ(result.Failure().reason,
+              R"(immediate 'internal_constant' exceeds maximum immediate block size)");
+}
+
+}  // namespace
+}  // namespace tint::core::ir::transform

@@ -1,0 +1,1325 @@
+Name
+
+    ARB_compute_shader
+
+Name Strings
+
+    GL_ARB_compute_shader
+
+Contact
+
+    Graham Sellers, AMD (graham.sellers 'at' amd.com)
+
+Contributors
+
+    Pat Brown, NVIDIA
+    Daniel Koch, TransGaming
+    John Kessenich
+    Members of the ARB working group
+
+Notice
+
+    Copyright (c) 2012-2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on 2012/06/12.
+
+Version
+
+    Last Modified Date: December 10, 2018
+    Revision: 28
+
+Number
+
+    ARB Extension #122
+
+Dependencies
+
+    OpenGL 4.2 is required.
+
+    This extension is written based on the wording of the OpenGL 4.2 (Core
+    Profile) specification, and on the wording of the OpenGL Shading Language
+    (GLSL) Specification, version 4.20.
+
+    This extension interacts with OpenGL 4.3 and
+    ARB_shader_storage_buffer_object.
+
+    This extension interacts with NV_vertex_buffer_unified_memory.
+
+Overview
+
+    Recent graphics hardware has become extremely powerful and a strong desire
+    to harness this power for work (both graphics and non-graphics) that does
+    not fit the traditional graphics pipeline well has emerged. To address
+    this, this extension adds a new single-stage program type known as a
+    compute program. This program may contain one or more compute shaders
+    which may be launched in a manner that is essentially stateless. This allows
+    arbitrary workloads to be sent to the graphics hardware with minimal
+    disturbance to the GL state machine.
+
+    In most respects, a compute program is identical to a traditional OpenGL
+    program object, with similar status, uniforms, and other such properties.
+    It has access to many of the same resources as fragment and other shader
+    types, such as textures, image variables, atomic counters, and so on.
+    However, it has no predefined inputs nor any fixed-function outputs. It
+    cannot be part of a pipeline and its visible side effects are through its
+    actions on images and atomic counters.
+
+    OpenCL is another solution for using graphics processors as generalized
+    compute devices. This extension addresses a different need. For example,
+    OpenCL is designed to be usable on a wide range of devices ranging from
+    CPUs, GPUs, and DSPs through to FPGAs. While one could implement GL on these
+    types of devices, the target here is clearly GPUs. Another difference is
+    that OpenCL is more full featured and includes features such as multiple
+    devices, asynchronous queues and strict IEEE semantics for floating point
+    operations. This extension follows the semantics of OpenGL - implicitly
+    synchronous, in-order operation with single-device, single queue
+    logical architecture and somewhat more relaxed numerical precision
+    requirements. Although not as feature rich, this extension offers several
+    advantages for applications that can tolerate the omission of these
+    features. Compute shaders are written in GLSL, for example and so code may
+    be shared between compute and other shader types. Objects are created and
+    owned by the same context as the rest of the GL, and therefore no
+    interoperability API is required and objects may be freely used by both
+    compute and graphics simultaneously without acquire-release semantics or
+    object type translation.
+
+New Procedures and Functions
+
+        void DispatchCompute(uint num_groups_x,
+                             uint num_groups_y,
+                             uint num_groups_z);
+
+        void DispatchComputeIndirect(intptr indirect);
+
+New Tokens
+
+    Accepted by the <type> parameter of CreateShader and returned in the
+    <params> parameter by GetShaderiv:
+
+        COMPUTE_SHADER                                  0x91B9
+
+    Accepted by the <pname> parameter of GetIntegerv, GetBooleanv, GetFloatv,
+    GetDoublev and GetInteger64v:
+
+        MAX_COMPUTE_UNIFORM_BLOCKS                      0x91BB
+        MAX_COMPUTE_TEXTURE_IMAGE_UNITS                 0x91BC
+        MAX_COMPUTE_IMAGE_UNIFORMS                      0x91BD
+        MAX_COMPUTE_SHARED_MEMORY_SIZE                  0x8262
+        MAX_COMPUTE_UNIFORM_COMPONENTS                  0x8263
+        MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS              0x8264
+        MAX_COMPUTE_ATOMIC_COUNTERS                     0x8265
+        MAX_COMBINED_COMPUTE_UNIFORM_COMPONENTS         0x8266
+        MAX_COMPUTE_WORK_GROUP_INVOCATIONS              0x90EB
+
+    Accepted by the <pname> parameter of GetIntegeri_v, GetBooleani_v,
+    GetFloati_v, GetDoublei_v and GetInteger64i_v:
+
+        MAX_COMPUTE_WORK_GROUP_COUNT                    0x91BE
+        MAX_COMPUTE_WORK_GROUP_SIZE                     0x91BF
+
+    Accepted by the <pname> parameter of GetProgramiv:
+
+        COMPUTE_WORK_GROUP_SIZE                         0x8267
+
+    Accepted by the <pname> parameter of GetActiveUniformBlockiv:
+
+        UNIFORM_BLOCK_REFERENCED_BY_COMPUTE_SHADER      0x90EC
+
+    Accepted by the <pname> parameter of GetActiveAtomicCounterBufferiv:
+
+        ATOMIC_COUNTER_BUFFER_REFERENCED_BY_COMPUTE_SHADER  0x90ED
+
+    Accepted by the <target> parameters of BindBuffer, BufferData,
+    BufferSubData, MapBuffer, UnmapBuffer, GetBufferSubData, and
+    GetBufferPointerv:
+
+        DISPATCH_INDIRECT_BUFFER                        0x90EE
+
+    Accepted by the <value> parameter of GetIntegerv, GetBooleanv,
+    GetInteger64v, GetFloatv, and GetDoublev:
+
+        DISPATCH_INDIRECT_BUFFER_BINDING                0x90EF
+
+    Accepted by the <stages> parameter of UseProgramStages:
+
+        COMPUTE_SHADER_BIT                              0x00000020
+
+Additions to Chapter 2 of the OpenGL 4.2 (Core Profile) Specification
+(OpenGL Operation)
+
+    In section 2.9.1, "Creating and Binding Buffer Objects", add to table 2.8
+    (p.43):
+
+                                                                Described
+      Target name                 Purpose                     in sections(s)
+      -----------------------     -------------------------  ---------------
+      DISPATCH_INDIRECT_BUFFER    Indirect compute dispatch       5.5
+                                  commands
+
+    Add to the end of section 2.9.8, "Indirect Commands In Buffer Objects"
+    (p. 53):
+
+    Arguments to the DispatchComputeIndirect command are stored in buffer
+    objects as a group of three unsigned integers.
+
+    A buffer object is bound to DISPATCH_INDIRECT_BUFFER by calling BindBuffer
+    with target set to DISPATCH_INDIRECT_BUFFER, and buffer set to the name of
+    the buffer object. If no corresponding buffer object exists, one is
+    initialized as defined in section 2.9.
+
+    DispatchComputeIndirect sources its arguments from the buffer object whose
+    name is bound to DISPATCH_INDIRECT_BUFFER, using the <indirect> parameter as
+    an offset into the buffer object in the same fashion as described in
+    section 2.9.6. An INVALID_OPERATION error is generated if this command
+    sources data beyond the end of the buffer object, if zero is bound to
+    DISPATCH_INDIRECT_BUFFER, or if <indirect> is less than zero or not a
+    multiple of the size, in basic machine units, of uint.
+
+    In section 2.11, "Vertex Shaders", modify the introductory text on shaders
+    to include compute shaders (second paragraph, p. 56):
+
+    In addition to vertex shaders, tessellation control..., geometry shaders,
+    fragment shaders, and compute shders can be created, compiled, and linked
+    into program objects.  ....  (section 3.10).  Compute shaders perform
+    general computations for dispatched arrays of shader invocations (section
+    5.5), but do not operate on primitives processed by the other shader
+    types. ...
+
+    In section 2.11.3, "Program Objects", add to the reasons that LinkProgram
+    may fail, p. 61:
+
+        * The program object contains objects to form a compute shader (see
+          section 5.5) and objects to form any other type of shader.
+
+    In section 2.11.3, modify the description of active programs (last
+    paragraph, p. 61, first paragraph, p. 62):
+
+    ... geometry shader stages, those stages are ignored.  If there is no
+    active program for the compute shader stage, compute dispatches will
+    generate an error.  The active program for the compute shader stage has no
+    effect on the processing of vertices, geometric primitives, and fragments,
+    and the active program for all other shader stages has no effect on
+    compute dispatches.
+
+    In section 2.11.4, "Program Pipeline Objects", modify the description of
+    UseProgramStages, p. 65:
+
+    The executables in a program object... becomes current.  These stages may
+    include vertex, tessellation control, tessellation evaluation, geometry,
+    fragment, or compute, indicated by VERTEX_SHADER_BIT,
+    TESS_CONTROL_SHADER_BIT, TESS_EVALUATION_SHADER_BIT, GEOMETRY_SHADER_BIT,
+    FRAGMENT_SHADER_BIT, or COMPUTE_SHADER_BIT, respectively. ...
+
+    In the unnumbered "Validation" section of section 2.11.12 "Shader
+    Execution", modify the list of validation errors, pp. 112-113:
+
+    This error is generated by any command that transfers vertices to the GL
+    or launches compute work if:
+
+      * (last bullet, p. 112) One program object is active... first program
+        object was active.  The active compute shader is ignored for the
+        purposes of this test.
+
+      * (2nd bullet, p. 113) There is no current program specified by
+        UseProgram, there is a current program pipeline object, and the
+        current program for any shader stage has been relinked since...
+
+      * (3rd bullet, p. 113) Any two active samplers in the set of active
+        program objects are of different types but refer to the same texture
+        image unit.
+
+      * (4th bullet, p. 113) The sum of the number of active samplers for each
+        active program exceeds the maximum number of texture image units
+        allowed.
+
+    Modify the paragraph describing ValidateProgram, p. 113:
+
+    ... If validation succeeded, ... set to FALSE.  If validation succeeded,
+    no INVALID_OPERATION validation error will be generated if <program> were
+    made current via UseProgram, given the current state.  If validation
+    failed, such errors will be generated under the current state.
+
+    Modify the paragraph describing ValidateProgramPipeline, p. 114:
+
+    ... can be queried with GetProgramPipelineiv (see section 6.1.12).  If
+    validation succeeded, no INVALID_OPERATION validation error will be
+    generated if <pipeline> were bound and no program were made current via
+    UseProgram, given the current state.  If validation failed, such errors
+    will be generated under the current state.
+
+    In subsection 2.11.12, "Shader Execution":
+
+        Add to the list of implementation dependent constants under the
+    "Texture Access" sub-heading:
+
+        MAX_COMPUTE_TEXTURE_IMAGE_UNITS (for compute shaders),
+
+        Add to the list of implementation dependent constants under the "Atomic
+    Counter Access" sub-heading:
+
+        MAX_COMPUTE_ATOMIC_COUNTERS (for compute shaders),
+
+        Add to the list of implementation dependent constants under the "Image
+    Access" sub-heading:
+
+        MAX_COMPUTE_IMAGE_UNIFORMS (for compute shaders),
+
+    In section 2.16, "Conditional Rendering", modify the sentence describing
+    conditional rendering, starting with "In this case"...
+
+    In this case, all drawing commands (see section 2.8.3), as well as
+    Clear and ClearBuffer* (see section 4.2.3), and compute dispatch
+    through DispacthCompute* (see section 5.5), have no effect.
+    In the "Shared Memory Access Synchronization" subsection of section
+    2.11.13, "Shader Memory Access", modify the description of
+    COMMAND_BARRIER_BIT (p. 118):
+
+      * COMMAND_BARRIER_BIT:  Command data sourced from buffer objects by
+        Draw*Indirect and DispatchComputeIndirect commands ... The buffer
+        objects affected by this bit are derived from the DRAW_INDIRECT_BUFFER
+        and DISPATCH_INDIRECT_BUFFER bindings.
+
+    In subection 2.17.7, "Uniform Variables", replace the paragraph beginning
+    "If <pname> is UNIFORM_BLOCK_REFERENCED_BY_VERTEX_SHADER,"... with:
+
+        If <pname> is UNIFORM_BLOCK_REFERENCED_BY_VERTEX_SHADER,
+    UNIFORM_BLOCK_REFERENCED_BY_TESS_CONTROL_SHADER,
+    UNIFORM_BLOCK_REFERENCED_BY_TESS_EVALUATION_SHADER,
+    UNIFORM_BLOCK_REFERENCED_BY_GEOMETRY_SHADER,
+    UNIFORM_BLOCK_REFERENCED_BY_FRAGMENT_SHADER or
+    UNIFORM_BLOCK_REFERENCED_BY_COMPUTE_SHADER, then a boolean value indicating
+    whether the uniform block identified by uniformBlockIndex is referenced
+    by the vertex, tessellation control, tessellation evaluation, geometry,
+    fragment or compute programming stages of <program>, respectively, is
+    returned.
+
+    Also in subsection 2.17.7, "Uniform Variables", replace the paragraph
+    beginning, "If <pname> is ATOMIC_COUNTER_BUFFER_REFERENCED_BY_VERTEX_SHADER"
+    on p.80 with:
+
+        If <pname> is ATOMIC_COUNTER_BUFFER_REFERENCED_BY_VERTEX_SHADER,
+    ATOMIC_COUNTER_BUFFER_REFERENCED_BY_TESS_CONTROL_SHADER,
+    ATOMIC_COUNTER_BUFFER_REFERENCED_BY_TESS_EVALUATION_SHADER,
+    ATOMIC_COUNTER_BUFFER_REFERENCED_BY_GEOMETRY_SHADER,
+    ATOMIC_COUNTER_BUFFER_REFERENCED_BY_FRAGMENT_SHADER or
+    ATOMIC_COUNTER_BUFFER_REFERENCED_BY_COMPUTE_SHADER, then a single boolean
+    value indicating whether the atomic counter buffer identified by
+    bufferIndex is referenced by the vertex, tessellation control, tessellation
+    evaluation, geometry, fragment or compute programming stages of
+    <program>, respectively, is returned.
+
+    Under the sub-heading "Uniform Blocks" in subsection 2.11.17, replace the
+    sentence beginning "The limits for vertex, tessellation ..." on p.92
+    with:
+
+        The limits for vertex, tessellation, geometry, fragment and compute
+    shaders can be obtained by calling GetIntegerv with <pname> set to
+    MAX_VERTEX_UNIFORM_BLOCKS, MAX_TESS_CONTROL_UNIFORM_BLOCKS,
+    MAX_TESS_EVALUATION_UNIFORM_BLOCKS, MAX_GEOMETRY_UNIFORM_BLOCKS,
+    MAX_FRAGMENT_UNIFORM_BLOCKS and MAX_COMPUTE_UNIFORM_BLOCKS, respectively.
+
+    Under the sub-heading "Atomic Counter Buffers" in subsection 2.11.17,
+    replace the sentence beginning "The limits for vertex, geometry, ..."
+    on p.96 with:
+
+        The limits for vertex, tessellation, geometry, fragment and compute
+    shaders can be obtained by calling GetIntegerv with <pname> set to
+    MAX_VERTEX_ATOMIC_COUNTER_BUFFERS, MAX_TESS_CONTROL_ATOMIC_COUNTER_BUFFERS,
+    MAX_TESS_EVALUATION_ATOMIC_COUNTER_BUFFERS,
+    MAX_GEOMETRY_ATOMIC_COUNTER_BUFFERS, MAX_FRAGMENT_ATOMIC_COUNTER_BUFFERS and
+    MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS, respectively.
+
+Additions to Chapter 3 of the OpenGL 4.2 (Core Profile) Specification
+(Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 4.2 (Core Profile) Specification
+(Per-Fragment Operations and the Framebuffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 4.2 (Core Profile) Specification
+(Special Functions)
+
+    Add Section 5.5, "Compute Shaders"
+
+        In addition to graphics-oriented shading operations such as vertex,
+    tessellation, geometry and fragment shading, generic computation may be
+    performed by the GL through the use of compute shaders. The compute pipeline
+    is a form of single-stage machine that runs generic shaders. Compute shaders
+    are created as described in section 2.11.1 using a <type> parameter of
+    COMPUTE_SHADER. They are attached to and used in program objects as
+    described in section 2.11.3.
+
+        Compute workloads are formed from groups of work items called
+    _workgroups_ and processed by the executable code for a compute program.
+    A workgroup is a collection of shader invocations that execute the same code,
+    potentially in parallel. An invocation within a workgroup may share data
+    with other members of the same workgroup through shared variables and
+    issue memory and control barriers to synchronize with other members of the
+    same workgroup.  One or more workgroups is launched by calling:
+
+        void DispatchCompute(uint num_groups_x,
+                             uint num_groups_y,
+                             uint num_groups_z);
+
+        Each workgroup is processed by the active program object for the
+    compute shader stage.  The error INVALID_OPERATION will be generated if
+    there is no active program object for the compute shader stage.  The
+    active program for the compute shader stage will be determined in the same
+    manner as the active program for other pipeline stages, as described in
+    section 2.11.3.  While the individual shader invocations within a
+    workgroup are executed as a unit, workgroups are executed completely
+    independently and in unspecified order.
+
+        <num_groups_x>, <num_groups_y> and <num_groups_z> specify the number of
+    workgroups that will be dispatched in the X, Y and Z dimensions,
+    respectively. The builtin vector variable gl_NumWorkGroups will be
+    initialized with the contents of the <num_groups_x>, <num_groups_y> and
+    <num_groups_z> parameters. The maximum number of workgroups that may be
+    dispatched at one time may be determined by calling GetIntegeri_v with
+    <pname> set to MAX_COMPUTE_WORK_GROUP_COUNT and <index> must be zero, one,
+    or two, representing the X, Y, and Z dimensions, respectively. The
+    values in the <num_groups_x>, <num_groups_y> and <num_groups_z> array must
+    be less than or equal to the maximum workgroup count for the corresponding
+    dimension, otherwise an INVALID_VALUE error is generated. If the workgroup
+    count in any dimension is zero, no workgroups are dispatched.
+
+        The workgroup size in each dimension are specified at compile time
+    using an input layout qualifier in one or more of the compute shaders
+    attached to the program (see Section 4 of the OpenGL Shading Language
+    Specification). After the program has been linked, the workgroup size
+    of the program may be retrieved by calling GetProgramiv with <pname> set to
+    COMPUTE_WORK_GROUP_SIZE. This will return an array of three integers
+    containing the workgroup size of the compute program as specified by
+    its input layout qualifier(s). If <program> is the name of a program that
+    has not been successfully linked, or is the name of a linked program object
+    that contains no compute shaders, then an INVALID_OPERATION error is
+    generated.
+
+        The maximum size of a workgroup may be determined by calling
+    GetIntegeri_v with <pname> set to MAX_COMPUTE_WORK_GROUP_SIZE
+    and <index> set to 0, 1, or 2 to retrieve the maximum work size in the
+    X, Y and Z dimension, respectively. Furthermore, the maximum number of
+    invocations in a single workgroup (i.e., the product of the three
+    dimensions) may be determined by calling GetIntegerv with <pname> set to
+    MAX_COMPUTE_WORK_GROUP_INVOCATIONS.
+
+        The command
+
+        void DispatchComputeIndirect(intptr indirect);
+
+    is equivalent (assuming no errors are generated) to calling
+    DispatchCompute with <num_groups_x>, <num_groups_y> and <num_groups_z>
+    initialized with the three uint values contained in the buffer currently
+    bound to the DISPATCH_INDIRECT_BUFFER binding at an offset, in basic
+    machine units, specified by <indirect>.  The error INVALID_VALUE is
+    generated if <indirect> is less than zero or is not a multiple of four.
+    The error INVALID_OPERATION is generated if no buffer is bound to
+    DISPATCH_INDIRECT_BUFFER, if the command would source data beyond the end
+    of the buffer object, or if there is no active program for the compute
+    shader stage.  If any of <num_groups_x>, <num_groups_y> or <num_groups_z>
+    is greater than MAX_COMPUTE_WORK_GROUP_COUNT for the corresponding
+    dimension then the results are undefined.
+
+    Add Subsection 5.5.1, "Compute Shader Variables"
+
+        Compute shaders can access variables belonging to the current program
+    object. The amount of storage in the default uniform block accessed by a
+    compute shader is specified by the value of the implementation dependent
+    constant MAX_COMPUTE_UNIFORM_COMPONENTS. The total amount of
+    combined storage available for uniform variables in all uniform blocks
+    accessed by a compute shader (including the default unifom block) is
+    specified by the implementation dependent constant
+    MAX_COMBINED_COMPUTE_UNIFORM_COMPONENTS.
+
+        There is a limit to the total size of all variables declared as
+    <shared> in a single program object. This limit, expressed in units of
+    basic machine units, may be queried as the value of
+    MAX_COMPUTE_SHARED_MEMORY_SIZE.
+
+Additions to Chapter 6 of the OpenGL 4.2 (Core Profile) Specification
+(State and State Requests)
+
+    None.
+
+Additions to Chapter 2 of the OpenGL Shading Language Specification, Version
+4.20 (Overview of OpenGL Shading)
+
+    Replace the last sentence of the first paragraph of the overview with
+    the following:
+
+    "Currently, these processors are the vertex, tessellation control,
+     tessellation evaluation, geometry, fragment, and compute processors."
+
+    Replace the last sentence of the second paragraph of the overview with
+    the following:
+
+    "The specific languages will be referred to by the name of the processor
+     they target: vertex, tessellation control, tessellation evaluation,
+     geometry, fragment, or compute."
+
+    Add a new Section 2.6 titled "Compute Processor" with the following text:
+
+    "The <compute processor> is a programmable unit that operates independently
+    from the other shader processors. Compilation units written in the OpenGL
+    Shading Language to run on this processor are called <compute shaders>.
+    When a complete set of compute shaders are compiled and linked, they
+    result in a <compute shader executable> that runs on the compute processor.
+
+    A compute shader has access to many of the same resources as fragment and
+    other shader processors, such as textures, buffers, image variables,
+    atomic counters, and so on. It does not have any predefined inputs
+    nor any fixed-function outputs.  It is not part of the graphics pipeline
+    and its visible side effects are through actions on images, storage
+    buffers, and atomic counters.
+
+    A compute shader operates on a group of work items called a workgroup.
+    A workgroup is a collection of shader invocations that execute the same
+    code, potentially in parallel. An invocation within a workgroup may share data with
+    other members of the same workgroup through shared variables and issue
+    memory and control barriers to synchronize with other members of the same workgroup."
+
+Additions to Chapter 4 of the OpenGL Shading Language Specification, Version
+4.20 (Variables and Types)
+
+    Modify section 4.4.1, second paragraph from
+
+    "All shaders allow input layout qualifiers on input variable declarations."
+
+    to
+
+    "All shaders, except compute shaders, allow input layout location qualifiers on
+     input variable declarations."
+
+    Modify Section 4.3. Add to the table at the start of Section 4.3:
+
+    +-------------------+-----------------------------------------------------------+
+    | Storage Qualifier | Meaning                                                   |
+    +-------------------+-----------------------------------------------------------+
+    | <shared>          | variable storage is shared across all work items in a     |
+    |                   | workgroup for compute shaders                             |
+    +-------------------+-----------------------------------------------------------+
+
+    Add the following paragraph to Section 4.3.4, "Input Variables"
+
+        Compute shaders do not permit user-defined input variables and do not
+    form a formal interface with any other shader stage. See section 7.1
+    for a description of built-in compute shader input variables. All other
+    input to a compute shader is retrieved explicitly through image loads,
+    texture fetches, loads from uniforms or uniform buffers, or other user
+    supplied code. Redeclaration of built-in input variables in compute
+    shaders is not permitted.
+
+    Add the following paragraph to Section 4.3.6, "Output Variables"
+
+        Compute shaders have no built-in output variables, do not support
+    user-defined output variables and do not form a formal interface with any
+    other shader stage. All outputs from a compute shader take the form of the
+    side effects such as image stores and operations on atomic counters.
+
+    Add Section 4.3.7, "Shared", renumber subsequent sections
+
+        The <shared> qualifier is used to declare variables that have storage
+    shared between all work items of a compute shader workgroup.
+    Variables declared as <shared> may only be used in compute shaders
+    (see Section 5.5, "Compute Shaders"). Shared variables are implicitly
+    coherent. That is, writes to shared variables from one shader invocation
+    will eventually be seen by other invocations within the same workgroup.
+
+        Variables declared as <shared> may not have initializers and their
+    contents are undefined at the beginning of shader execution. Any data
+    written to <shared> variables will be visible to other shaders executing
+    the same shader within the same workgroup. Order of execution
+    with regards to reads and writes to the same <shared> variables by different
+    invocations of a shader is not defined. In order to achieve ordering with
+    respect to reads and writes to <shared> variables, memory barriers must be
+    employed using the barrier() function (see Section 8.15).
+
+        There is a limit to the total size of all variables declared as
+    <shared> in a single program object. This limit, expressed in units of
+    basic machine units may be determined by using the OpenGL API to query the
+    value of MAX_COMPUTE_SHARED_MEMORY_SIZE.
+
+    Add Section 4.4.1.4, "Compute-Shader Inputs"
+
+    There are no layout location qualifiers for compute shader inputs.
+
+    Layout qualifier identifiers for compute shader inputs are the workgroup
+    size qualifiers:
+
+        layout-qualifier-id
+            local_size_x = integer-constant
+            local_size_y = integer-constant
+            local_size_z = integer-constant
+
+    <local_size_x>, <local_size_y>, and <local_size_z> are used to define the
+    local size of the kernel defined by the compute shader in the first,
+    second, and third dimension, respectively. The default size in each
+    dimension is 1. If a shader does not specify a size for one of the
+    dimensions, that dimension will have a size of 1.
+
+    For example, the following declaration in a compute shader
+
+        layout (local_size_x = 32, local_size_y = 32) in;
+
+    is used to declare a two-dimensional compute shader with a local size of
+    32 x 32 elements as a three-dimensional compute shader where the third dimension is
+    one element deep.
+
+    As another example, the declaration
+
+        layout (local_size_x = 8) in;
+
+    effectively specifies that a one-dimensional compute shader is being
+    compiled, and its size is 8 elements.
+
+        If the local size of the shader in any dimension is greater than the
+    maximum size supported by the implementation for that dimension, a
+    compile-time error results. Also, if such a layout qualifier is declared more
+    than once in the same shader, all those declarations must indicate the same
+    workgroup size; otherwise a compile-time error results. If multiple compute
+    shaders attached to a single program object declare the workgroup size,
+    the declarations must be identical; otherwise a link-time error results.
+    Furthermore, if a program object contains any compute shaders, at
+    least one must contain an input layout qualifier specifying the
+    workgroup sizes of the program, or a link-time error will occur.
+
+Additions to Chapter 7 of the OpenGL Shading Language Specification, Version
+4.20 (Built-in Variables)
+
+    Add to the start of Section 7.1, "Built-In Language Variables", before the
+    description of the vertex language built-in variables:
+
+        In the compute language, the built-in variables are declared as follows:
+
+        // workgroup dimensions
+        in    uvec3 gl_NumWorkGroups;
+        const uvec3 gl_WorkGroupSize;
+
+        // workgroup and invocation IDs
+        in    uvec3 gl_WorkGroupID;
+        in    uvec3 gl_LocalInvocationID;
+
+        // derived variables
+        in    uvec3 gl_GlobalInvocationID;
+        in    uint  gl_LocalInvocationIndex;
+
+    Add the end of Section 7.1, before Section 7.1.1:
+
+        The built-in variable <gl_NumWorkGroups> is a compute-shader input
+    variable containing the total number of global work items in each
+    dimension of the workgroup that will execute the compute shader.
+    Its content is equal to the values specified in the <num_groups_x>,
+    <num_groups_y>, and <num_groups_z> parameters passed to the
+    DispatchCompute API entry point.
+
+        The built-in constant <gl_WorkGroupSize> is a compute-shader constant
+    containing the workgroup size of the shader. The size of the workgroup
+    in the X, Y, and Z dimensions is stored in the x, y, and z components.
+    The values stored in <gl_WorkGroupSize> match those specified in the
+    required <local_size_x>, <local_size_y>, and <local_size_z> layout
+    qualifiers for the current shader. This value is constant so that
+    it can be used to size arrays of memory that can be shared within
+    the workgroup.
+
+        The built-in variable <gl_WorkGroupID> is a compute-shader input
+    variable containing the 3-dimensional index of the global workgroup
+    that the current invocation is executing in. The possible values range
+    across the parameters passed into DispatchCompute, i.e., from (0, 0, 0) to
+    (gl_NumWorkGroups.x - 1, gl_NumWorkGroups.y - 1, gl_NumWorkGroups.z - 1).
+
+        The built-in variable <gl_LocalInvocationID> is a compute-shader input
+    variable containing the 3-dimensional index of the workgroup
+    within the global workgroup that the current invocation is executing in.
+    The possible values for this variable range across the workgroup
+    size, i.e. (0,0,0) to (gl_WorkGroupSize.x - 1, gl_WorkGroupSize.y - 1,
+    gl_WorkGroupSize.z - 1).
+
+        The built-in variable <gl_GlobalInvocationID> is a compute shader input
+    variable containing the global index of the current work item.  This
+    value uniquely identifies this invocation from all other invocations
+    across all workgroups initiated by the current
+    DispatchCompute call.  This is computed as:
+
+        gl_GlobalInvocationID =
+            gl_WorkGroupID * gl_WorkGroupSize + gl_LocalInvocationID.
+
+        The built-in variable <gl_LocalInvocationIndex> is a compute shader
+    input variable that contains the 1-dimensional representation of the
+    gl_LocalInvocationID. This is useful for uniquely identifying a
+    unique region of shared memory within the workgroup for this
+    invocation to use. This is computed as:
+
+        gl_LocalInvocationIndex =
+            gl_LocalInvocationID.z * gl_WorkGroupSize.x * gl_WorkGroupSize.y +
+            gl_LocalInvocationID.y * gl_WorkGroupSize.x +
+            gl_LocalInvocationID.x;
+
+    Add to the list of built-in constants in Section 7.3:
+
+        const ivec3 gl_MaxComputeWorkGroupCount = { 65535, 65535, 65535 };
+        const ivec3 gl_MaxComputeWorkGroupSize = { 1024, 1024, 64 };
+        const int gl_MaxComputeUniformComponents = 512;
+        const int gl_MaxComputeTextureImageUnits = 16;
+        const int gl_MaxComputeImageUniforms = 8;
+        const int gl_MaxComputeAtomicCounters = 8;
+        const int gl_MaxComputeAtomicCounterBuffers = 1;
+
+Additions to Chapter 8 of the OpenGL Shading Language Specification, Version
+4.20 (Built-in Variables)
+
+    Insert "Atomic Memory Functions" section after Section 8.10, Atomic
+    Counter Functions (p. 149).  Atomic memory operations are supported on
+    shared variables; the set of operations and their definitions are similar
+    to those for the imageAtomic*() functions.  These functions are fully
+    documented in the ARB_shader_storage_buffer_object extension (see
+    dependencies).
+
+    Modify the first paragraph of Section 8.15, "Shader Invocation Control
+    Functions" to read:
+
+        The shader invocation control function is only available in tessellation
+    control shaders and compute shaders. It is used to control the relative
+    execution order of multiple shader invocations used to process a patch
+    (in the case of tessellation control shaders) or a workgroup (in the
+    case of compute shaders), which are otherwise executed with an undefined
+    order.
+
+    +----------------+--------------------------------------------------------------------------+
+    | Syntax         | Description                                                              |
+    +----------------+--------------------------------------------------------------------------+
+    | barrier        | For any given static instance of barrier() appearing in a tessellation   |
+    |                | control shader or compute shader, all invocations for a single patch     |
+    |                | or workgroup, respectively, must enter it before any will continue       |
+    |                | beyond it.                                                               |
+    +----------------+--------------------------------------------------------------------------+
+
+    Modify the second paragraph as follows:
+
+    ... Because invocations may execute in an undefined order between these
+    barrier calls, the values of a per-vertex or per-patch output variable in
+    a tessellation control shader or shared variables for compute shaders
+    will be undefined in a number of cases enumerated in Section 4.3.7 "Output
+    Variables" (for tessellation control shaders) and Section 4.3.6 "Shared
+    Variables" (for compute shaders).
+
+    Replace the third paragraph with the following:
+
+    For tessellation control shaders, the barrier() function may only be
+    placed inside the function main() of the tessellation control shader and
+    may not be called within any control flow. Barriers are also disallowed
+    after a return statement in the function main(). Any such misplaced
+    barriers result in a compile-time error.
+
+    For compute shaders, the barrier() function may be placed within flow
+    control, but that flow control must be uniform flow control. That is, all
+    the controlling expressions that lead to execution of the barrier must be
+    dynamically uniform expressions. This ensures that if any shader
+    invocation enters a conditional statement, then all invocations will enter
+    it. While compilers are encouraged to give warnings if they can detect
+    this might not happen, compilers cannot completely determine this. Hence,
+    it is the author's responsibility to ensure barrier() only exists inside
+    uniform flow control. Otherwise, some shader invocations will stall
+    indefinitely, waiting for a barrier that is never reached by other
+    invocations.
+
+    Modify the table of memory control functions on p.160,
+
+    +-----------------------------------+----------------------------------------------------------------------------------------+
+    | Syntax                            | Description                                                                            |
+    +-----------------------------------+----------------------------------------------------------------------------------------+
+    | void memoryBarrier()              | Control the ordering of all memory transactions issued by a single shader invocation.  |
+    +-----------------------------------+----------------------------------------------------------------------------------------+
+    | void memoryBarrierAtomicCounter() | Control the ordering of accesses to atomic counter variables issued by a single shader |
+    |                                   | invocation.                                                                            |
+    +-----------------------------------+----------------------------------------------------------------------------------------+
+    | void memoryBarrierBuffer()        | Control the ordering of memory transactions to buffer variables issued within a        |
+    |                                   | single shader invocation.                                                              |
+    +-----------------------------------+----------------------------------------------------------------------------------------+
+    | void memoryBarrierImage()         | Control the ordering of memory transactions to images issued within a single shader    |
+    |                                   | invocation.                                                                            |
+    +-----------------------------------+----------------------------------------------------------------------------------------+
+    | void memoryBarrierShared()        | Control the ordering of memory transactions to shared variables issued within a single |
+    |                                   | shader invocation.                                                                     |
+    |                                   | Only available in compute shaders.                                                     |
+    +-----------------------------------+----------------------------------------------------------------------------------------+
+    | void groupMemoryBarrier()         | Control the ordering of all memory transactions issued within a single shader          |
+    |                                   | invocation, as viewed by other invocations in the same workgroup.                      |
+    |                                   | Only available in compute shaders.                                                     |
+    +-----------------------------------+----------------------------------------------------------------------------------------+
+
+    Modify the subsequent paragraph as follows:
+
+    The memory barrier built-in functions can be used to order reads and
+    writes to variables stored in memory accessible to other shader
+    invocations.  When called, these functions will wait for the completion of
+    all reads and writes previously performed by the caller that access
+    selected variable types, and then return with no other effect.  The
+    built-in functions memoryBarrierAtomicCounter(), memoryBarrierBuffer(),
+    memoryBarrierImage(), and memoryBarrierShared() wait for the completion of
+    accesses to atomic counter, buffer, image, and shared variables,
+    respectively.  The built-in functions memoryBarrier() and
+    groupMemoryBarrier() wait for the completion of accesses to all of the
+    above variable types.  The functions memoryBarrierShared() and
+    groupMemoryBarrier() are available only in compute shaders; the other
+    functions are available in all shader types.
+
+    When these functions return, any memory stores performed using coherent
+    variables prior to the call will be visible to any future coherent access
+    to the same memory performed by any other shader invocation.  In
+    particular, the values written this way in one shader stage are guaranteed
+    to be visible to coherent memory accesses performed by shader invocations
+    in subsequent stages when those invocations were triggered by the
+    execution of the original shader invocation (e.g., fragment shader
+    invocations for a primitive resulting from a particular geometry shader
+    invocation).
+
+    Additionally, memory barrier functions order stores performed by the
+    calling invocation, as observed by other shader invocations.  Without
+    memory barriers, if one shader invocation performs two stores to coherent
+    variables, a second shader invocation might see the values written by the
+    second store prior to seeing those written by the first.  However, if the
+    first shader invocation calls a memory barrier function between the two
+    stores, selected other shader invocations will never see the results of
+    the second store before seeing those of the first.  When using the
+    function groupMemoryBarrier(), this ordering guarantee applies only to
+    other shader invocations in the same compute shader workgroup; all other
+    memory barrier functions provide the guarantee to all other shader
+    invocations.  No memory barrier is required to guarantee the order of
+    memory stores as observed by the invocation performing the stores; an
+    invocation reading from a variable that it previously wrote will always
+    see the most recently written value unless another shader invocation also
+    wrote to the same memory.
+
+Dependencies on OpenGL 4.3 and ARB_shader_storage_buffer_object
+
+    If OpenGL 4.3 and ARB_shader_storage_buffer_object are not supported, the
+    spec language adding the built-in functions atomicAdd(), atomicMin(),
+    atomicMax(), atomicAnd(), atomicOr(), atomicXor(), atomicExchange(), and
+    atomicCompSwap() should be considered to be incorporated into this
+    extension as-is, except that buffer variables will not be supported and
+    thus cannot be used with these functions.  No "#extension" directive is
+    necessary to use these functions in compute shaders.
+
+    If OpenGL 4.3 and ARB_shader_storage_buffer_object are not supported,
+    references to the GLSL built-in function memoryBarrierBuffer() should be
+    removed.
+
+Dependencies on NV_vertex_buffer_unified_memory
+
+    If NV_vertex_buffer_unified_memory is supported, a new buffer address
+    range and enable is provided to permit the use with
+    DispatchComputeIndirect with a resident buffer object without requiring
+    that it be bound to the DISPATCH_INDIRECT_BUFFER target.  The following
+    additional edits apply:
+
+    Accepted by the <cap> parameter of GetBufferParameterui64vNV:
+
+        DISPATCH_INDIRECT_BUFFER                        (defined above)
+
+    Accepted by the <cap> parameter of Disable, Enable, and IsEnabled, and by
+    the <pname> parameter of GetIntegerv, GetBooleanv, GetFloatv, GetDoublev
+    and GetInteger64v:
+
+        DISPATCH_INDIRECT_UNIFIED_NV                    0x90FD
+
+    Accepted by the <pname> parameter of BufferAddressRangeNV
+    and the <value> parameter of GetIntegerui64vNV:
+
+        DISPATCH_INDIRECT_ADDRESS_NV                    0x90FE
+
+    Accepted by the <value> parameter of GetIntegerv:
+
+        DISPATCH_INDIRECT_LENGTH_NV                     0x90FF
+
+    Add to the end of Section 5.5, after discussion of
+    DispatchComputeIndirect:
+
+    If DISPATCH_INDIRECT_UNIFIED_NV is enabled, DispatchComputeIndirect does
+    not use the buffer bound to DISPATCH_INDIRECT_BUFFER.  Instead, it sources
+    its arguments from the GPU address range specified by calling
+    BufferAddressRangeNV with a <pname> of DISPATCH_INDIRECT_ADDRESS_NV and an
+    <index> of zero.  The address is obtained by adding the <indirect>
+    parameter to the base address of the range, specified by the <address>
+    parameter of BufferAddressRangeNV.  If the command sources data outside
+    the specified address range, the error INVALID_OPERATION will be
+    generated.  The DISPATCH_INDIRECT_BUFFER binding will be ignored in this
+    case, and no errors will be generated due to the use of this binding.  The
+    error INVALID_VALUE will still be generated if <indirect> is negative.  No
+    INVALID_VALUE error will be generated if <indirect> is not a multiple of
+    four, but INVALID_OPERATION will be generated if the effective address is
+    not a multiple of four.  If the indirect dispatch address range does not
+    belong to a buffer object that is resident at the time of the
+    DispatchComputeIndirect call, undefined results, possibly including
+    program termination, may occur.
+
+    Add the following to the "Compute Dispatch State" table defined in this
+    extension:
+
+    Get Value                           Type    Get Command         Initial Value   Sec     Attribute
+    ---------                           ----    -----------         -------------   ---     ---------
+    DISPATCH_INDIRECT_UNIFIED_NV         B      IsEnabled               FALSE       5.5     none
+    DISPATCH_INDIRECT_ADDRESS_NV        Z64+    GetIntegerui64vNV         0         5.5     none
+    DISPATCH_INDIRECT_LENGTH_NV          Z+     GetIntegerv               0         5.5     none
+
+Errors
+
+    INVALID_OPERATION is generated by DispatchCompute or
+    DispatchComputeIndirect if there is no active program for the compute
+    shader stage.
+
+    INVALID_VALUE is generated by DispatchCompute if any of <num_groups_x>,
+    <num_groups_y> or <num_groups_z> is greater than the value of
+    MAX_COMPUTE_WORK_GROUP_COUNT for the corresponding dimension.
+
+    INVALID_VALUE is generated by DispatchComputeIndirect if <indirect> is
+    less than zero or not a multiple of four.
+
+    INVALID_OPERATION is generated by DispatchComputeIndirect if no buffer is
+    bound to DISPATCH_INDIRECT_BUFFER or if the command would source data
+    beyond the end of the bound buffer object.
+
+    INVALID_OPERATION is generated by GetProgramiv is <pname> is
+    COMPUTE_WORK_GROUP_SIZE and either the program has not been linked
+    successfully, or has been linked but contains no compute shaders.
+
+    LinkProgram will fail if <program> contains a combination of compute and
+    non-compute shaders.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    Add to Table 6.31, "Program Pipeline Object State"
+
+    +----------------------------------------------------+-----------+-------------------------+---------------+-----------------------------------------------------------------------+---------+
+    | Get Value                                          | Type      | Get Command             | Initial Value | Description                                                           | Sec.    |
+    +----------------------------------------------------+-----------+-------------------------+---------------+-----------------------------------------------------------------------+---------+
+    | COMPUTE_SHADER                                     | Z+        | GetProgramPipelineiv    | 0             | Name of current compute shader project object                         | 2.11.4  |
+    +----------------------------------------------------+-----------+-------------------------+---------------+-----------------------------------------------------------------------+---------+
+
+    Add to Table 6.32, "Program Object State"
+
+    +----------------------------------------------------+-----------+-------------------------+---------------+-----------------------------------------------------------------------+---------+
+    | Get Value                                          | Type      | Get Command             | Initial Value | Description                                                           | Sec.    |
+    +----------------------------------------------------+-----------+-------------------------+---------------+-----------------------------------------------------------------------+---------+
+    | COMPUTE_WORK_GROUP_SIZE                            | 3 x Z+    | GetProgramiv            | { 0, ... }    | Workgroup size of a linked compute program                            | 5.5     |
+    | UNIFORM_BLOCK_REFERENCED_BY_COMPUTE_SHADER         | B         | GetActiveUniformBlockiv | FALSE         | True if uniform block is referenced by the compute stage              | 2.17.7  |
+    | ATOMIC_COUNTER_BUFFER_REFERENCED_BY_COMPUTE_SHADER | B         | GetActiveAtomicCounter- | FALSE         | AACB has a counter used by compute shaders                            | 2.17.7  |
+    |                                                    |           |   Bufferiv              | FALSE         |                                                                       |         |
+    +----------------------------------------------------+-----------+-------------------------+---------------+-----------------------------------------------------------------------+---------+
+
+    Insert new table named "Compute Dispatch State", after Table 6.46 "Hints":
+
+    +----------------------------------------------------+-----------+-------------------------+---------------+-----------------------------------------------------------------------+---------+
+    | Get Value                                          | Type      | Get Command             | Initial Value | Description                                                           | Sec.    |
+    +----------------------------------------------------+-----------+-------------------------+---------------+-----------------------------------------------------------------------+---------+
+    | DISPATCH_INDIRECT_BUFFER_BINDING                   | Z+        | GetIntegerv             | 0             | Indirect dispatch buffer binding                                      | 5.5     |
+    +----------------------------------------------------+-----------+-------------------------+---------------+-----------------------------------------------------------------------+---------+
+
+    Insert Table 6.50, "Implementation Dependent Compute Shader Limits",
+    renumber subsequent tables.
+
+    +-----------------------------------------+-----------+---------------+---------------------+-----------------------------------------------------------------------+---------+
+    | Get Value                               | Type      | Get Command   | Minimum Value       | Description                                                           | Sec.    |
+    +-----------------------------------------+-----------+---------------+---------------------+-----------------------------------------------------------------------+---------+
+    | MAX_COMPUTE_WORK_GROUP_COUNT            | 3 x Z+    | GetIntegeri_v | 65535               | Maximum number of workgroups that may be dispatched by a single       | 5.5     |
+    |                                         |           |               |                     | dispatch command (per dimension)                                      |         |
+    | MAX_COMPUTE_WORK_GROUP_SIZE             | 3 x Z+    | GetIntegeri_v | 1024 (x, y), 64 (z) | Maximum local size of a compute workgroup (per dimension)             | 5.5     |
+    | MAX_COMPUTE_WORK_GROUP_INVOCATIONS      | Z+        | GetIntegerv   | 1024                | Maximum total compute shader invocations in a single workgroup        | 5.5     |
+    | MAX_COMPUTE_UNIFORM_BLOCKS              | Z+        | GetIntegerv   | 12                  | Maximum number of uniform blocks per compute program                  | 2.11.7  |
+    | MAX_COMPUTE_TEXTURE_IMAGE_UNITS         | Z+        | GetIntegerv   | 16                  | Maximum number of texture image units accessible by a compute shader  | 2.11.12 |
+    | MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS      | Z+        | GetIntegerv   | 8                   | Number of atomic counter buffers accessed by a compute shader         | 2.11.17 |
+    | MAX_COMPUTE_ATOMIC_COUNTERS             | Z+        | GetIntegerv   | 8                   | Number of atomic counters accessed by a compute shader                | 2.11.12 |
+    | MAX_COMPUTE_SHARED_MEMORY_SIZE          | Z+        | GetIntegerv   | 32768               | Maximum total storage size of all variables declared as <shared> in   |         |
+    |                                         |           |               |                     | all compute shaders linked into a single program object               |         |
+    | MAX_COMPUTE_UNIFORM_COMPONENTS          | Z+        | GetIntegerv   | 512                 | Number of components for compute shader uniform variables             | 5.5.1   |
+    | MAX_COMPUTE_IMAGE_UNIFORMS              | Z+        | GetIntegerv   | 8                   | Number of image variables in compute shaders                          | 2.11.12 |
+    | MAX_COMBINED_COMPUTE_UNIFORM_COMPONENTS | Z+        | GetIntegerv   | *                   | Number of words for compute shader uniform variables in all uniform   | 5.5.1   |
+    |                                         |           |               |                     | blocks, including the default                                         |         |
+    +-----------------------------------------+-----------+---------------+---------------------+-----------------------------------------------------------------------+---------+
+
+    Modify Table 6.55, increasing the following minimum values:
+
+           MAX_COMBINED_TEXTURE_IMAGE_UNITS     96 (6*16), was 80
+           MAX_UNIFORM_BUFFER_BINDINGS          72 (6*12), was 60
+
+Issues
+
+    1) Should <shared> variables be usable only in compute shaders, or in other
+       stages too?
+
+       RESOLVED:  Support only in compute shaders.  While some hardware may be
+       able to support shared variables in shader stages other than compute,
+       it is difficult to clearly define what the semantics are as far as
+       sharing. For example, what is the equivalent for a workgroup for
+       vertex shaders?
+
+    2) Can we expose atomics on <shared> variables?
+
+       RESOLVED:  Yes.  The existing atomics in OpenGL 4.2 (via image
+       variables) don't map well to the <shared> declaration.  Instead, we've
+       defined new atomic functions that take a variable as a first input.
+       These functions are specified in the ARB_shader_storage_buffer_object
+       extension and are incorporated into this extension via the interaction
+       described above.  We could have also chosen to define operators +=, &=,
+       etc. to be atomic when applied to <shared> variables, but shaders may
+       want to use such variables in cases where atomic access (and the
+       related overhead) is not required.
+
+    3) Should the local size and dimensions of the workgroup be specified at
+       compile time? What are the default local dimensions?
+
+       RESOLVED: Dimension is always 3 and a workgroup size declaration is
+       compulsory at compile time. There is no default. The value used is
+       queriable.  To use a 1- or 2-dimensional workgroup, the extra
+       dimension(s) can be set to 1.
+
+    4) Do we need the local_work_size parameter in dispatch if the local size
+       may be specified at compile time in the shader?
+
+       RESOLVED: The specification of the workgroup size is now mandatory in
+       the shader source at compile time and the local_work_size may no longer
+       be specified at dispatch time.
+
+    5) How do multiple shaders attached to a single program object work?
+
+       RESOLVED:  Just as with any other shader stage. Exactly one of the
+       shaders must provide the 'main' entry point. All shaders attached to a
+       program object effectively get compiled into a single, large program at
+       link time.  The program is dispatched as one big entity. Über shader
+       type functionality can be achieved through the use of subroutine
+       uniforms, which also work exactly as for other shader stages.
+
+    6) Should compute dispatch honor conditional rendering?
+
+       RESOLVED: Yes, it does honor conditional rendering.
+
+    7) Is it possible to pass compute programs to UseProgram, etc.?
+
+       RESOLVED: Yes, compute programs can be made current via UseProgram and
+       can be made current in a program pipeline object via UseProgramStages.
+       Note that a compute program must be linked with PROGRAM_SEPARABLE set
+       to TRUE to be passed to UseProgramStages, even though the compute
+       pipeline has only a single shader stage.
+
+       The active compute program that will be used by DispatchCompute will be
+       determined in the same manner as the active program for any other
+       program stage:
+
+         * If there is a current program specified via UseProgram, that
+           program is considered current for all stages, including compute.
+
+         * Otherwise, if there is a current program pipeline object, the
+           program current for the compute stage of the pipeline object is
+           considered current for the compute stage.
+
+         * If neither of the former apply, no program is current for the
+           compute stage.
+
+       The program that is current for the compute stage is considered to be
+       active if and only if it has a compute shader executable.  For example,
+       if a non-compute program is made current via UseProgram, it will also
+       be considered "current" for the compute stage, but won't be considered
+       active.
+
+       When using program pipeline objects, it's possible to switch between
+       graphics and compute work without switching programs.  For example, in:
+
+         glBindProgramPipeline(pipeline);
+         glUseProgramStages(pipeline, GL_VERTEX_SHADER_BIT, programA);
+         glUseProgramStages(pipeline, GL_FRAGMENT_SHADER_BIT, programB);
+         glUseProgramStages(pipeline, GL_COMPUTE_SHADER_BIT, programC);
+         glDrawArrays(GL_TRIANGLES, 0, 900);
+         glDispatchCompute(5, 5, 5);
+
+       the triangles will be processed by programA and programB, while the
+       compute dispatch will be processed by programC.  Similarly,
+
+         glUseProgramStages(pipeline, ~GL_COMPUTE_SHADER_BIT, programAB);
+         glUseProgramStages(pipeline, GL_COMPUTE_SHADER_BIT, programC);
+         glDrawArrays(GL_TRIANGLES, 0, 900);
+         glDispatchCompute(5, 5, 5);
+
+       will have the triangles processed by the multi-stage programAB.
+
+    8) What happens if you try to draw with no active compute program?
+
+       RESOLVED:  An INVALID_OPERATION error is generated if there is no
+       active program for the compute shader stage.
+
+    9) Should we increase minimums on certain replicated state bindings
+       (texture image units, uniform buffer bindings) to reflect the addition
+       of a sixth shader stage?
+
+       RESOLVED:  Yes, for MAX_COMBINED_TEXTURE_IMAGE_UNITS and
+       MAX_UNIFORM_BUFFER_BINDINGS.  These limits permit applications to
+       statically partition the shared set of texture bindings into six
+       separate sets, one per shader stage.
+
+       The limit MAX_COMBINED_UNIFORM_BLOCKS is not increased, because it
+       reflects the sum of the number of uniform blocks used in each stage of
+       a single program.  Since no single program can have more than five
+       stages, these limits don't need to be increased.
+
+    10) How do the shader built-in variables relate to DirectCompute's
+       built-in system values (SV_*)?
+
+        OpenGL Compute             DirectCompute
+        --------------------------------------------------
+        gl_NumWorkGroups           --
+        gl_WorkGroupSize           --
+        gl_WorkGroupID             SV_GroupID
+        gl_LocalInvocationID       SV_GroupThreadID
+        gl_GlobalInvocationID      SV_DispatchThreadID
+        gl_LocalInvocationIndex    SV_GroupIndex
+
+    11) How does "program validation" (checking the active programs against
+        the current state) apply to DispatchCompute?
+
+      RESOLVED:  The same program validation logic will be applied to both
+      graphics primitives (e.g., DrawArrays) and compute dispatches.
+      Conditions that will cause validation errors for graphics primitives
+      will also cause validation errors for compute dispatch, even if the
+      conditions wouldn't otherwise affect compute, for example:
+
+        * Mis-configured program pipeline objects (e.g., inserting a geometry
+          program A between the linked vertex and fragment shaders of of
+          program B).
+
+        * A graphics program has a vertex shader that uses a 2D texture from
+          texture image unit 0 and a fragment shader that uses a 3D texture
+          from texture image unit 0.
+
+      Similarly, validation errors specific to the compute shader executable
+      (e.g., using different targets on a single texture image unit in a
+      compute program) will generate validation errors for graphics Draw*
+      calls.
+
+      We chose to specify this behavior for several reasons.  First, using the
+      same logic in both places ensures a single result for ValidateProgram
+      and ValidateProgramPipeline (a single VALIDATE_STATUS value wouldn't be
+      good enough if the result could be different for compute and graphics).
+      Additionally, a single test allows implementations to set up state and
+      perform validation tests for compute and graphics operations at the same
+      time, without requiring additional irregular graphics- or
+      compute-specific logic.
+
+    12) We specify an INVALID_OPERATION error for DispatchCompute when there
+        is no active program on the compute stage.  Should we specify similar
+        errors for Draw* calls if the current program specified by UseProgram
+        is a compute program?
+
+      RESOLVED:  Not in the current spec.  If a compute shader is made
+      current with UseProgram, there will be no active program for either the
+      vertex and fragment stages.  In this case, the results of vertex and
+      fragment processing are undefined, but no error is generated.  This
+      behavior is already specified in unextended OpenGL 4.2.
+
+      We don't generate errors in this case for several reasons:
+
+        * For the compatibility profile, fixed-function vertex and fragment
+          processing is available, and INVALID_OPERATION wouldn't make sense
+          there.
+
+        * Even in the core profile, there are cases where no active fragment
+          shader is needed (e.g., primitives with RASTERIZER_DISCARD enabled).
+
+      While there is no case where having only a compute program makes sense,
+      at least in the core profile, we chose to keep the same undefined
+      behavior that's already in place.
+
+    13) Should we provide any additional support extending the memoryBarrier()
+        GLSL built-in function provided by ARB_shader_image_load_store and
+        GLSL 4.20?
+
+      RESOLVED:  Yes.  The memoryBarrier() function provided by GLSL 4.20
+      requires (a) synchronizing all memory transactions that might be visible
+      to other shader invocations and (b) ordering memory transactions so that
+      all other shader invocations never see stores issued after the barrier
+      before seeing stores issued before the barrier.  Hardware
+      implementations of GLSL 4.20 may have a high degree of parallelism,
+      where the memory subsystem servicing shader loads and stores may have
+      multiple independent sub-units, and where the shader invocations
+      themselves may be executed in parallel on many shader cores.  The
+      memoryBarrier() command may be fairly heavyweight, requiring
+      synchronization with all memory sub-units and shader cores.
+
+      We provide new functions in two different directions that might serve as
+      lighter weight alternatives to memoryBarrier().  In particular, we
+      provide four new functions
+
+        void memoryBarrierAtomicCounter();
+        void memoryBarrierBuffer();
+        void memoryBarrierImage();
+        void memoryBarrierShared();
+
+      that order transactions of only a specific memory type and might require
+      synchronization with fewer sub-units of the memory subsystem and a new
+      function:
+
+        void groupMemoryBarrier();
+
+      that only order transactions as viewed by other threads in the same
+      workgroup, which might not require synchronization with other shader cores.
+      Since shared memory is only accessible to threads within a single
+      workgroup, memoryBarrierShared() also only requires synchronization with
+      other threads in the same workgroup.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------- -----------------------------------------
+    28    12/10/18  Jon Leech Use 'workgroup' consistently throughout (Bug
+                              11723, internal API issue 87).
+    27    07/24/14  Jon Leech Change value of GLSL limit
+                              gl_MaxComputeUniformComponents to 512 for
+                              consistency with the API (Bug 12370).
+    26    01/30/14  Jon Leech Add table 6.31 COMPUTE_SHADER entry for
+                              program pipeline objects (Bug 11539).
+    25    10/23/12  pbrown    Remove the restriction forbidding the use of
+                              barrier() inside potentially divergent flow
+                              control.  Instead, we will allow barrier() to
+                              be executed anywhere, but specify undefined
+                              results (including hangs or program termination)
+                              if the flow control is divergent (bug 9367).
+    24    07/01/12  Jon Leech Fix typo (bug 8984).
+    23    06/28/12  johnk     Remove two other references to "thread", add
+                              "Only available in compute shaders" to the table
+                              for memoryBarrierShared() and groupMemoryBarrier(),
+                              fixed a typo.
+    22    06/22/12  pbrown    Add a new built-in memoryBarrierBuffer() as an
+                              interaction with ARB_shader_storage_buffer.  Add
+                              a new built-in groupMemoryBarrier() that orders
+                              memory transactions only as observed by other
+                              shader invocations in the same work group.
+                              Enhance the description of the GLSL memory
+                              barrier functions.  Add issue 13 about the new
+                              memory barrier functions added in this extension
+                              (bug 9199).  Mark issues 11 and 12 as resolved.
+                              Add NV_vertex_buffer_unified_memory interaction
+                              allowing DispatchComputeIndirect to read its
+                              arguments from any resident buffer object
+                              instead of the single bound indirect dispatch
+                              buffer.
+    21    06/21/12  gsellers  Clarify that there are no built-in inputs or
+                              outputs in compute shaders (bug 9200).
+    20    06/21/12  gsellers  Throw INVALID_OPERATION if querying
+                              COMPUTE_WORK_GROUP_SIZE from unlinked program or
+                              program with no compute shader (bug 9117).
+    19    06/18/12  pbrown    DispatchComputeIndirect throws INVALID_VALUE
+                              if <indirect> is negative or misaligned (bug
+                              9181).
+    18    06/17/12  pbrown    Clarify that compute-only programs can be used
+                              by both UseProgram and UseProgramStages, and add
+                              a COMPUTE_SHADER_BIT for UseProgramStages (bug
+                              9155).  Specify that validation errors checking
+                              programs against each other and the GL state
+                              apply equally to graphics primitives (Draw*) and
+                              compute dispatches.  Update issue 7; add new
+                              issues 11 and 12.  Clarify that compute shader
+                              invocations in a workgroup are run "potentially
+                              in parallel", but not "in lockstep" (bug 9151).
+                              Other minor wording improvements.
+    17    06/15/12  johnk     Don't allow location layout qualifiers for
+                              compute shader inputs.
+    16    06/15/12  johnk     In the intro material, allow work groups to
+                              only potentially execute in parallel, and use
+                              control barriers to synchronize.  Other minor
+                              fixes.
+    15    06/15/12  dgkoch    Added Additions to Ch.2 of Shading Language.
+                              Renamed shader built-in variables, explained
+                              them better, made them uvec3 instead of int[3].
+                              Added derived shading language variables.
+                              Renamed and changed built-in constants for
+                              consistency with the variables. Removed
+                              gl_MaxComputeWorkDimensions since it is no
+                              longer necessary. Renamed API constants to
+                              be consistent with shading language terminology.
+                              Remove a few rogue references to variable
+                              number of dispatch arguments. Added Issue 10.
+                              (bugs 9151, 9167)
+    14    06/14/12  pbrown    Modify DispatchComputeIndirect to accept an
+                              "intptr"-typed offset instead of a "void *",
+                              since doesn't accept pointers to client memory.
+                              Modify DispatchComputeIndirect to use a new
+                              buffer binding (DISPATCH_INDIRECT_BUFFER)
+                              instead of sharing the binding used by
+                              Draw*Indirect.  Add missing entries in the "New
+                              Tokens" section and assign values.  Update
+                              documentation of COMMAND_BARRIER_BIT to reflect
+                              the new dispatch indirect binding.  Document
+                              DispatchComputeIndirect errors for offsets that
+                              are negative, misaligned, or run off the end of
+                              the bound buffer.  Increase minimums for
+                              combined texture image units and uniform buffer
+                              bindings to reflect the new stage.  Update
+                              various issues, add new issue 9 (bug 9130).
+    13    06/14/12  Jon Leech Copy description of MAX_COMPUTE_SHARED_MEMORY_SIZE
+                              into API spec from GLSL spec (bug 9069).
+    12    05/14/12  pbrown    Add interaction with ARB_shader_storage_buffer_
+                              object. The built-in functions provided there
+                              for atomic memory operations on buffer variables
+                              are also supported for the shared variables
+                              provided here.  The functions themselves are
+                              documented fully in the other specification.
+    11    05/14/12  johnk     Keep the previous logical contents of the last
+                              paragraph of the memory shader control functions.
+    10    04/26/12  gsellers  Count max compute shared variable size in bytes.
+                              Make shared variables implicitly coherent.
+                              Add MAX_COMPUTE_UNIFORM_COMPONENTS.
+                              Clean up MAX_COMPUTE_IMAGE_UNIFORMS.
+     9    04/25/12  gsellers  Add UNIFORM_BLOCK_REFERENCED_BY_COMPUTE_SHADER
+                              and ATOMIC_COUNTER_BUFFER_REFERENCED_BY_-
+                              COMPUTE_SHADER.  Remove <program> from dispatch
+                              APIs.  Add memoryBarrier{Image,Shared,
+                              AtomicCounter}().
+     8    04/05/12  gsellers  Remove ARB suffixes.
+     7    02/02/12  gsellers  Require OpenGL 4.2.
+                              Add issue 8.
+                              Up various minimums.
+                              Remove variable dimensionality.
+     6    01/24/12  gsellers  Require OpenGL 3.0.
+                              Incorporate feedback from bmerry.
+                              Add compute shader constants to sec. 7.7.
+                              Add modifications to sec. 8.15 of the GLSL spec.
+                              Add issue 7.
+     5    01/20/12  gsellers  Make compute dispatch honor conditional
+                              rendering.  Add indirect dispatch.
+                              Change 'global work size' to 'num work groups',
+                              make global size in multiples of work group size.
+     4    01/10/12  gsellers  Fix typos and other small corrections.
+                              Make specification of work group size at compile
+                              time compulsory.
+                              Add COMPUTE_WORK_DIMENSION_ARB and
+                              COMPUTE_LOCAL_WORK_SIZE_ARB queries.
+                              Add issue (5), resolve issues (3) and (4).
+     3    01/09/12  gsellers  Change from AMD to ARB.
+                              Update to be relative to OpenGL 4.2 (+GLSL 4.20).
+                              Add <shared> variables.
+                              Add issues (1) - (4).
+                              Add link failure for programs that contain
+                              compute and non-compute shaders.
+     2    06/10/11  gsellers  Add error behavior.
+                              Shading language changes.
+                              Add global_offset parameter.
+                              Add implementation dependent limits.
+     1    09/24/10  gsellers  Initial revision

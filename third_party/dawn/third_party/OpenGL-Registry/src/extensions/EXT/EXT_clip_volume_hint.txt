@@ -1,0 +1,98 @@
+Name
+
+    EXT_clip_volume_hint
+
+Name Strings
+
+    GL_EXT_clip_volume_hint
+
+Version
+
+    Microsoft revision 1.00, April 17, 1996 (hockl)
+    $Date: 1999/12/28 01:40:35 $ $Revision: 1.4 $
+
+Number
+
+    79
+
+Dependencies
+
+    None.
+
+Overview
+
+    EXT_clip_volume_hint provides a mechanism for applications to
+    indicate that they do not require clip volume clipping for
+    primitives. It allows applications to maximize performance in
+    situations where they know that clipping is unnecessary.
+    EXT_clip_volume_hint is only an indication, though, and
+    implementations are free to ignore it.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the target parameter of Hint and the pname parameter of
+    GetBooleanv, GetDoublev, GetFloatv and GetIntegerv:
+        CLIP_VOLUME_CLIPPING_HINT_EXT   0x80F0
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    Before the last paragraph of Section 2.11, 'Clipping,' the following
+    text is added:
+
+        The EXT_clip_volume_hint extension can be used to indicate that
+        a primitive falls inside the current clip volume. In this case,
+        an implementation might not clip the primitive to the clip
+        volume, and the behavior of the GL is undefined if the primitive
+        extends beyond the clip volume.
+
+    In the fourth (clipping) paragraph of Section 2.12, 'Current Raster
+    Position,' the following text is added before the last sentence
+    "Figure 2.7 summarizes..."
+
+        Raster position clipping is not affected by the
+        CLIP_VOLUME_CLIPPING_HINT_EXT hint in the EXT_clip_volume_hint
+        extension.
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment
+Operations and the Framebuffer)
+
+    None.
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    Section 5.6, 'Hints,' should be changed to add the following
+    hint description:
+
+        CLIP_VOLUME_CLIPPING_HINT_EXT, indicating whether clipping to
+        the clip volume is necessary.
+
+Additions to Chapter 6 of the GL Specification (State and State
+Requests)
+
+    In table 6.18, 'Hints,' the following entry is added:
+
+        CLIP_VOLUME_CLIPPING_HINT_EXT|Z3|GetIntegerv|DONT_CARE|
+        Clip volume clipping hint|5.6|hint
+
+Revision History
+----------------
+    Original draft, revision 0.9, March 1, 1996 (drewb)
+        Created.
+    Minor revision, revision 0.91, March 8, 1996 (drewb)
+    Hint revision, revision 0.95, April 12, 1996 (drewb)
+        Changed from Enable-based to Hint-based.  Clarified
+        behavior of RasterPos.
+    More revision, revision 0.96, April 16, 1996 (hockl)
+        Changed extension and enumerant names.  Added robustness.
+        Changed it to have no effect on RasterPos.
+    More revision, revision 1.00, April 17, 1996 (hockl)
+        Removed robustness requirement.
+

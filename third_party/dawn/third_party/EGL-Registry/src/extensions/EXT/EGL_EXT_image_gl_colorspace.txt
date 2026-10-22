@@ -1,0 +1,136 @@
+Name
+
+    EXT_image_gl_colorspace
+
+Name Strings
+
+    EGL_EXT_image_gl_colorspace
+
+Contributors
+
+    Jesse Hall, Google
+    Philip Rideout, Google
+    Mohan Maiya, Qualcomm
+    Jan-Harald Fredriksen, ARM
+
+Contact
+
+    Krzysztof Kosiński, Google (krzysio 'at' google.com)
+
+Status
+
+    Complete
+
+Version
+
+    Version 9, February 26, 2018
+
+Number
+
+    EGL Extension #125
+
+Dependencies
+
+    Written against the EGL 1.5 specification.
+
+    Can be supported on EGL 1.4 provided that EGL_KHR_gl_colorspace is
+    implemented, as well as either EGL_KHR_image or EGL_KHR_image_base.
+
+    Interacts with the GL_OES_EGL_image_external specification.
+
+Overview
+
+    This extension relaxes the restriction that only the eglCreate*Surface
+    functions can accept the EGL_GL_COLORSPACE attribute. With this change,
+    eglCreateImage can also accept this attribute.
+
+New Tokens
+
+    EGL_GL_COLORSPACE_DEFAULT_EXT          0x314D
+
+New Procedures and Functions
+
+    None.
+
+Additions to the EGL 1.5 Specification
+
+    Add to table 3.11 on page 75:
+
+   "Attribute             Type    Description
+    --------------------  ----    -----------
+    EGL_GL_COLORSPACE     enum    Color space for OpenGL and OpenGL ES"
+
+
+    Add the following paragraph to the end of section 3.9, "EGLImage
+    Specification and Management" on page 77:
+
+   "EGL_GL_COLORSPACE specifies the color space used by OpenGL and OpenGL
+    ES when rendering to the image, or sampling from the image. It has the
+    same meaning as when used with eglCreatePlatformWindowSurface, with the
+    exception that its default value is EGL_GL_COLORSPACE_DEFAULT_EXT. This
+    means that the color space should not be overriden. For example, if an
+    image is created from an existing OpenGL texture, then
+    GL_COLORSPACE_DEFAULT_EXT means that the original color space should be
+    preserved."
+
+
+    Add the following paragraphs to the "Errors" subsection in section 3.9
+    on page 76:
+    
+   "If EGL_GL_COLORSPACE is not one of the legal values, the error
+    EGL_BAD_PARAMETER is generated."
+
+   "If ctx specifies a GL context that does not support creating an EGLImage
+    with the given value for EGL_GL_COLORSPACE, EGL_BAD_MATCH error is
+    generated."
+
+
+Interaction with OES_EGL_image_external:
+
+    The first sentence in the second to last paragraph in section 3.7.14
+    should be changed from:
+
+   "Sampling an external texture will return an RGBA vector in the same
+    colorspace as the source image."
+
+    to:
+
+   "Sampling an external texture will return an RGBA vector in the same color
+    space as the source image, unless the image's EGL_GL_COLORSPACE attribute
+    results in sRGB encoding as described in EGL_EXT_image_gl_colorspace."
+
+    The three parenthetical sentences in this same paragraph should be
+    simplified since they partially conflict with existing language in the
+    ES30 specification. Change them from:
+
+   "(But these RGB values will be in the same colorspace as the
+    original image.  Colorspace here includes the linear or non-linear
+    encoding of the samples. For example, if the original image is in the
+    sRGB color space then the RGB value returned by the sampler will also
+    be sRGB, and if the original image is stored in ITU-R Rec. 601 YV12
+    then the RGB value returned by the sampler will be an RGB value in the
+    ITU-R Rec. 601 colorspace.)"
+
+    to:
+
+   "(For example, if the original image is stored in ITU-R Rec. 601 YV12
+    then the RGB value returned by the sampler will be an RGB value in the
+    ITU-R Rec. 601 colorspace.)"
+
+
+Issues
+
+Revision History
+
+      Rev.  Date      Author    Changes
+      ----  --------  --------  -----------------------------------------
+      1     11/22/17  philip    Initial draft
+      2     12/8/17   philip    Add note about OES_EGL_image_external
+      3     12/11/17  philip    Changed from KHR to EXT.
+      4     12/15/17  philip    Add diffs against the EGL 1.5 specification.
+      5     12/20/17  philip    Add EGL_GL_COLORSPACE_DEFAULT_EXT.
+      6     1/2/18    philip    Updated changes to OES_EGL_image_external.
+      7     1/2/18    philip    Tweaked the changes to OES_EGL_image_external.
+      8     2/2/18    philip    Add value for EGL_GL_COLORSPACE_DEFAULT_EXT.
+      9     2/26/18   krzysio   Update contact information, finalize.
+      9     4/20/18   krzysio   Fix stray reference to KHR.

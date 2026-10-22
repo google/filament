@@ -1,0 +1,2288 @@
+// Copyright 2023 The Dawn & Tint Authors
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#include "src/tint/lang/core/ir/binary/decode.h"
+
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <utility>
+
+#include "src/tint/lang/core/enums.h"
+#include "src/tint/lang/core/ir/builder.h"
+#include "src/tint/lang/core/ir/control_instruction.h"
+#include "src/tint/lang/core/ir/module.h"
+#include "src/tint/lang/core/ir/type/array_count.h"
+#include "src/tint/lang/core/type/binding_array.h"
+#include "src/tint/lang/core/type/builtin_structs.h"
+#include "src/tint/lang/core/type/depth_multisampled_texture.h"
+#include "src/tint/lang/core/type/depth_texture.h"
+#include "src/tint/lang/core/type/external_texture.h"
+#include "src/tint/lang/core/type/function.h"
+#include "src/tint/lang/core/type/input_attachment.h"
+#include "src/tint/lang/core/type/invalid.h"
+#include "src/tint/lang/core/type/multisampled_texture.h"
+#include "src/tint/lang/core/type/sampled_texture.h"
+#include "src/tint/lang/core/type/storage_texture.h"
+#include "src/tint/lang/core/type/vector.h"
+#include "src/tint/utils/containers/hashset.h"
+#include "src/tint/utils/containers/transform.h"
+#include "src/tint/utils/diagnostic/diagnostic.h"
+#include "src/tint/utils/internal_limits.h"
+#include "src/tint/utils/macros/compiler.h"
+#include "src/tint/utils/result.h"
+#include "src/tint/utils/text/string.h"
+#include "src/tint/utils/text/text_style.h"
+
+TINT_BEGIN_DISABLE_PROTOBUF_WARNINGS();
+#include "src/tint/utils/protos/ir/ir.pb.h"
+TINT_END_DISABLE_PROTOBUF_WARNINGS();
+
+using namespace tint::core::fluent_types;  // NOLINT
+
+namespace tint::core::ir::binary {
+namespace {
+
+struct Decoder {
+    const pb::Module& mod_in_;
+    const DecoderOptions& options_;
+
+    Module mod_out_{};
+    Vector<ir::Block*, 32> blocks_{};
+    Vector<const core::type::Type*, 32> types_{};
+    Vector<const core::constant::Value*, 32> constant_values_{};
+    Vector<ir::Value*, 32> values_{};
+    Builder b{mod_out_};
+
+    Vector<ir::ExitIf*, 32> exit_ifs_{};
+    Vector<ir::ExitSwitch*, 32> exit_switches_{};
+    Vector<ir::ExitLoop*, 32> exit_loops_{};
+    Vector<ir::NextIteration*, 32> next_iterations_{};
+    Vector<ir::BreakIf*, 32> break_ifs_{};
+    Vector<ir::Continue*, 32> continues_{};
+
+    std::stringstream err_{};
+    Hashset<std::string, 4> struct_names_{};
+
+    uint32_t entry_point_count = 0;
+
+    Result<Module> Decode() {
+        // Values are decoded lazily as needed by other objects, since they both use types and
+        // are used by types.
+        values_.Resize(static_cast<size_t>(mod_in_.values().size()));
+
+        {
+            const size_t n = static_cast<size_t>(mod_in_.types().size());
+            types_.Reserve(n);
+            for (auto& type_in : mod_in_.types()) {
+                types_.Push(CreateType(type_in));
+            }
+        }
+        {
+            const size_t n = static_cast<size_t>(mod_in_.functions().size());
+            mod_out_.functions.Reserve(n);
+            for (auto& fn_in : mod_in_.functions()) {
+                mod_out_.functions.Push(CreateFunction(fn_in));
+            }
+        }
+        {
+            const size_t n = static_cast<size_t>(mod_in_.blocks().size());
+            blocks_.Reserve(n);
+            for (size_t i = 0; i < n; i++) {
+                auto id = static_cast<uint32_t>(i);
+                if (id == mod_in_.root_block()) {
+                    blocks_.Push(mod_out_.root_block);
+                } else {
+                    auto& block_in = mod_in_.blocks()[static_cast<int>(i)];
+                    blocks_.Push(CreateBlock(block_in));
+                }
+            }
+        }
+        {
+            const size_t n = static_cast<size_t>(mod_in_.constant_values().size());
+            constant_values_.Reserve(n);
+            for (auto& value_in : mod_in_.constant_values()) {
+                constant_values_.Push(CreateConstantValue(value_in));
+            }
+        }
+        for (size_t i = 0, n = static_cast<size_t>(mod_in_.functions().size()); i < n; i++) {
+            PopulateFunction(mod_out_.functions[i], mod_in_.functions()[static_cast<int>(i)]);
+        }
+        for (size_t i = 0, n = static_cast<size_t>(mod_in_.blocks().size()); i < n; i++) {
+            PopulateBlock(blocks_[i], mod_in_.blocks()[static_cast<int>(i)]);
+        }
+
+        auto err = err_.str();
+        if (!err.empty()) {
+            // Note: Its not safe to call InferControlInstruction() with a broken IR.
+            return Failure{err};
+        }
+
+        if (CheckBlocks()) {
+            for (auto* exit : exit_ifs_) {
+                InferControlInstruction(exit, &ExitIf::SetIf);
+            }
+            for (auto* exit : exit_switches_) {
+                InferControlInstruction(exit, &ExitSwitch::SetSwitch);
+            }
+            for (auto* exit : exit_loops_) {
+                InferControlInstruction(exit, &ExitLoop::SetLoop);
+            }
+            for (auto* break_ifs : break_ifs_) {
+                InferControlInstruction(break_ifs, &BreakIf::SetLoop);
+            }
+            for (auto* next_iters : next_iterations_) {
+                InferControlInstruction(next_iters, &NextIteration::SetLoop);
+            }
+            for (auto* cont : continues_) {
+                InferControlInstruction(cont, &Continue::SetLoop);
+            }
+        }
+
+        // Set properties that are used by the decoded module.
+        if (entry_point_count > 1) {
+            mod_out_.properties.Add(core::ir::Property::kAllowMultipleEntryPoints);
+        }
+
+        err = err_.str();
+        if (!err.empty()) {
+            return Failure{err};
+        }
+        return std::move(mod_out_);
+    }
+
+    /// Errors if @p number is not finite.
+    /// @returns @p number if finite, otherwise 0.
+    template <typename T>
+    Number<T> CheckFinite(Number<T> number) {
+        if (DAWN_UNLIKELY(!std::isfinite(number.value))) {
+            err_ << "value must be finite\n";
+            return Number<T>{};
+        }
+        return number;
+    }
+
+    /// Checks that the given @p name is valid.
+    /// @returns the name if valid, otherwise nullopt.
+    std::optional<std::string> CheckName(std::string name, const char* kind) {
+        if (DAWN_UNLIKELY(name.find('\0') != std::string::npos)) {
+            if (!options_.strip_invalid_identifiers) {
+                err_ << kind << " '" << name << "' contains '\\0' before end of the string\n";
+            }
+            return std::nullopt;
+        }
+
+        // Reject excessively long names as they cause problems in some backends.
+        if (DAWN_UNLIKELY(name.length() > 16384)) {
+            if (!options_.strip_invalid_identifiers) {
+                err_ << kind << " '" << name << "' is longer than 16384 characters\n";
+            }
+            return std::nullopt;
+        }
+
+        if (DAWN_UNLIKELY(!tint::utf8::IsWGSLIdentifier(name))) {
+            // Check if this is an internal frexp or modf result identifier.
+            auto builtin = core::ParseBuiltinType(name);
+            if (builtin != core::BuiltinType::kUndefined) {
+                switch (builtin) {
+                    case core::BuiltinType::kAtomicCompareExchangeResultI32:
+                    case core::BuiltinType::kAtomicCompareExchangeResultU32:
+                    case core::BuiltinType::kFrexpResultAbstract:
+                    case core::BuiltinType::kFrexpResultF16:
+                    case core::BuiltinType::kFrexpResultF32:
+                    case core::BuiltinType::kFrexpResultVec2Abstract:
+                    case core::BuiltinType::kFrexpResultVec2F16:
+                    case core::BuiltinType::kFrexpResultVec2F32:
+                    case core::BuiltinType::kFrexpResultVec3Abstract:
+                    case core::BuiltinType::kFrexpResultVec3F16:
+                    case core::BuiltinType::kFrexpResultVec3F32:
+                    case core::BuiltinType::kFrexpResultVec4Abstract:
+                    case core::BuiltinType::kFrexpResultVec4F16:
+                    case core::BuiltinType::kFrexpResultVec4F32:
+                    case core::BuiltinType::kModfResultAbstract:
+                    case core::BuiltinType::kModfResultF16:
+                    case core::BuiltinType::kModfResultF32:
+                    case core::BuiltinType::kModfResultVec2Abstract:
+                    case core::BuiltinType::kModfResultVec2F16:
+                    case core::BuiltinType::kModfResultVec2F32:
+                    case core::BuiltinType::kModfResultVec3Abstract:
+                    case core::BuiltinType::kModfResultVec3F16:
+                    case core::BuiltinType::kModfResultVec3F32:
+                    case core::BuiltinType::kModfResultVec4Abstract:
+                    case core::BuiltinType::kModfResultVec4F16:
+                    case core::BuiltinType::kModfResultVec4F32:
+                        return name;
+                    default:
+                        break;
+                }
+            }
+
+            if (!options_.strip_invalid_identifiers) {
+                err_ << kind << " '" << name << "' is not a valid WGSL identifier\n";
+            }
+            return std::nullopt;
+        }
+
+        return name;
+    }
+
+    /// @returns true if all blocks are reachable, acyclic nesting depth is less than or equal to
+    /// kMaxBlockDepth.
+    bool CheckBlocks() {
+        const size_t kMaxBlockDepth = 128;
+        Vector<std::pair<const ir::Block*, size_t>, 32> pending;
+        pending.Push(std::make_pair(mod_out_.root_block, 0));
+        for (auto& fn : mod_out_.functions) {
+            pending.Push(std::make_pair(fn->Block(), 0));
+        }
+        Hashset<const ir::Block*, 32> seen;
+        while (!pending.IsEmpty()) {
+            const auto block_depth = pending.Pop();
+            const auto* block = block_depth.first;
+            const size_t depth = block_depth.second;
+            if (!seen.Add(block)) {
+                err_ << "cyclic nesting of blocks\n";
+                return false;
+            }
+            if (depth > kMaxBlockDepth) {
+                err_ << "block nesting exceeds " << kMaxBlockDepth << "\n";
+                return false;
+            }
+            for (auto* inst = block->Instructions(); inst; inst = inst->next) {
+                if (auto* ctrl = inst->As<ir::ControlInstruction>()) {
+                    ctrl->ForeachBlock([&](const ir::Block* child) {
+                        pending.Push(std::make_pair(child, depth + 1));
+                    });
+                }
+            }
+        }
+
+        for (auto* block : blocks_) {
+            if (!seen.Contains(block)) {
+                err_ << "unreachable block\n";
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    template <typename EXIT, typename CTRL_INST>
+    void InferControlInstruction(EXIT* exit, void (EXIT::*set)(CTRL_INST*)) {
+        for (auto* block = exit->Block(); block;) {
+            auto* parent = block->Parent();
+            if (!parent) {
+                break;
+            }
+            if (auto* ctrl_inst = parent->template As<CTRL_INST>()) {
+                (exit->*set)(ctrl_inst);
+                break;
+            }
+            block = parent->Block();
+        }
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Functions
+    ////////////////////////////////////////////////////////////////////////////
+    ir::Function* CreateFunction(const pb::Function&) {
+        auto* result = mod_out_.CreateValue<ir::Function>();
+        result->SetType(mod_out_.Types().function());
+        return result;
+    }
+
+    void PopulateFunction(ir::Function* fn_out, const pb::Function& fn_in) {
+        if (!fn_in.name().empty()) {
+            if (auto name = CheckName(fn_in.name(), "function name")) {
+                mod_out_.SetName(fn_out, *name);
+            }
+        }
+        fn_out->SetReturnType(Type(fn_in.return_type()));
+        if (fn_in.has_pipeline_stage()) {
+            if (PipelineStage_IsValid(fn_in.pipeline_stage())) {
+                fn_out->SetStage(PipelineStage(fn_in.pipeline_stage()));
+                entry_point_count++;
+            } else {
+                err_ << "invalid pipe line state, " << std::to_string(fn_in.pipeline_stage())
+                     << "\n";
+            }
+        }
+        if (fn_in.has_workgroup_size()) {
+            auto& wg_size_in = fn_in.workgroup_size();
+            fn_out->SetWorkgroupSize(Value(wg_size_in.x()), Value(wg_size_in.y()),
+                                     Value(wg_size_in.z()));
+        }
+
+        if (fn_in.has_subgroup_size()) {
+            uint32_t subgroup_size_in = fn_in.subgroup_size();
+            fn_out->SetSubgroupSize(Value(subgroup_size_in));
+        }
+
+        Vector<FunctionParam*, 8> params_out;
+        for (auto param_in : fn_in.parameters()) {
+            auto* param_out = ValueAs<FunctionParam>(param_in);
+            if (DAWN_LIKELY(param_out)) {
+                params_out.Push(param_out);
+            }
+        }
+        if (fn_in.has_return_location()) {
+            fn_out->SetReturnLocation(fn_in.return_location());
+        }
+        if (fn_in.has_return_interpolation()) {
+            fn_out->SetReturnInterpolation(Interpolation(fn_in.return_interpolation()));
+        }
+        if (fn_in.has_return_builtin()) {
+            fn_out->SetReturnBuiltin(BuiltinValue(fn_in.return_builtin()));
+        }
+        if (fn_in.return_invariant()) {
+            fn_out->SetReturnInvariant(true);
+        }
+        fn_out->SetParams(std::move(params_out));
+        fn_out->SetBlock(Block(fn_in.block()));
+    }
+
+    ir::Function* Function(uint32_t id) {
+        if (DAWN_UNLIKELY(id >= mod_out_.functions.Length())) {
+            err_ << "function id " << id << " out of range\n";
+            return nullptr;
+        }
+        return mod_out_.functions[id];
+    }
+
+    Function::PipelineStage PipelineStage(pb::PipelineStage stage) {
+        switch (stage) {
+            case pb::PipelineStage::Compute:
+                return Function::PipelineStage::kCompute;
+            case pb::PipelineStage::Fragment:
+                return Function::PipelineStage::kFragment;
+            case pb::PipelineStage::Vertex:
+                return Function::PipelineStage::kVertex;
+
+            case pb::PipelineStage::PipelineStage_INT_MIN_SENTINEL_DO_NOT_USE_:
+            case pb::PipelineStage::PipelineStage_INT_MAX_SENTINEL_DO_NOT_USE_:
+                break;
+        }
+        TINT_ICE() << "unhandled PipelineStage: " << stage;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Blocks
+    ////////////////////////////////////////////////////////////////////////////
+    ir::Block* CreateBlock(const pb::Block& block_in) {
+        return block_in.is_multi_in() ? b.MultiInBlock() : b.Block();
+    }
+
+    void PopulateBlock(ir::Block* block_out, const pb::Block& block_in) {
+        if (auto* mib = block_out->As<ir::MultiInBlock>()) {
+            Vector<ir::BlockParam*, 8> params;
+            for (auto param_in : block_in.parameters()) {
+                auto* param_out = ValueAs<BlockParam>(param_in);
+                if (DAWN_LIKELY(param_out)) {
+                    params.Push(param_out);
+                }
+            }
+            mib->SetParams(std::move(params));
+        }
+        for (auto& inst : block_in.instructions()) {
+            block_out->Append(Instruction(inst));
+        }
+    }
+
+    ir::Block* Block(uint32_t id) {
+        if (DAWN_UNLIKELY(id >= blocks_.Length())) {
+            err_ << "block id " << id << " out of range\n";
+            return b.Block();
+        }
+        return blocks_[id];
+    }
+
+    template <typename T>
+    T* BlockAs(uint32_t id) {
+        auto* block = Block(id);
+        if (auto cast = As<T>(block); DAWN_LIKELY(cast)) {
+            return cast;
+        }
+        err_ << "block " << id << " is " << (block ? block->TypeInfo().name : "<null>")
+             << " expected " << TypeInfo::Of<T>().name << "\n";
+        return nullptr;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Instructions
+    ////////////////////////////////////////////////////////////////////////////
+    ir::Instruction* Instruction(const pb::Instruction& inst_in) {
+        ir::Instruction* inst_out = nullptr;
+        switch (inst_in.kind_case()) {
+            case pb::Instruction::KindCase::kAccess:
+                inst_out = CreateInstructionAccess(inst_in.access());
+                break;
+            case pb::Instruction::KindCase::kBinary:
+                inst_out = CreateInstructionBinary(inst_in.binary());
+                break;
+            case pb::Instruction::KindCase::kBreakIf:
+                inst_out = CreateInstructionBreakIf(inst_in.break_if());
+                break;
+            case pb::Instruction::KindCase::kBuiltinCall:
+                inst_out = CreateInstructionBuiltinCall(inst_in.builtin_call());
+                break;
+            case pb::Instruction::KindCase::kConstExprIf:
+                inst_out = CreateInstructionConstExprIf(inst_in.const_expr_if());
+                break;
+            case pb::Instruction::KindCase::kConstruct:
+                inst_out = CreateInstructionConstruct(inst_in.construct());
+                break;
+            case pb::Instruction::KindCase::kContinue:
+                inst_out = CreateInstructionContinue(inst_in.continue_());
+                break;
+            case pb::Instruction::KindCase::kConvert:
+                inst_out = CreateInstructionConvert(inst_in.convert());
+                break;
+            case pb::Instruction::KindCase::kExitIf:
+                inst_out = CreateInstructionExitIf(inst_in.exit_if());
+                break;
+            case pb::Instruction::KindCase::kExitLoop:
+                inst_out = CreateInstructionExitLoop(inst_in.exit_loop());
+                break;
+            case pb::Instruction::KindCase::kExitSwitch:
+                inst_out = CreateInstructionExitSwitch(inst_in.exit_switch());
+                break;
+            case pb::Instruction::KindCase::kDiscard:
+                inst_out = CreateInstructionDiscard(inst_in.discard());
+                break;
+            case pb::Instruction::KindCase::kIf:
+                inst_out = CreateInstructionIf(inst_in.if_());
+                break;
+            case pb::Instruction::KindCase::kLet:
+                inst_out = CreateInstructionLet(inst_in.let());
+                break;
+            case pb::Instruction::KindCase::kLoad:
+                inst_out = CreateInstructionLoad(inst_in.load());
+                break;
+            case pb::Instruction::KindCase::kLoadVectorElement:
+                inst_out = CreateInstructionLoadVectorElement(inst_in.load_vector_element());
+                break;
+            case pb::Instruction::KindCase::kLoop:
+                inst_out = CreateInstructionLoop(inst_in.loop());
+                break;
+            case pb::Instruction::KindCase::kNextIteration:
+                inst_out = CreateInstructionNextIteration(inst_in.next_iteration());
+                break;
+            case pb::Instruction::KindCase::kOverride:
+                inst_out = CreateInstructionOverride(inst_in.override());
+                break;
+            case pb::Instruction::KindCase::kReturn:
+                inst_out = CreateInstructionReturn(inst_in.return_());
+                break;
+            case pb::Instruction::KindCase::kStore:
+                inst_out = CreateInstructionStore(inst_in.store());
+                break;
+            case pb::Instruction::KindCase::kStoreVectorElement:
+                inst_out = CreateInstructionStoreVectorElement(inst_in.store_vector_element());
+                break;
+            case pb::Instruction::KindCase::kSwizzle:
+                inst_out = CreateInstructionSwizzle(inst_in.swizzle());
+                break;
+            case pb::Instruction::KindCase::kSwitch:
+                inst_out = CreateInstructionSwitch(inst_in.switch_());
+                break;
+            case pb::Instruction::KindCase::kUnary:
+                inst_out = CreateInstructionUnary(inst_in.unary());
+                break;
+            case pb::Instruction::KindCase::kUserCall:
+                inst_out = CreateInstructionUserCall(inst_in.user_call());
+                break;
+            case pb::Instruction::KindCase::kVar:
+                inst_out = CreateInstructionVar(inst_in.var());
+                break;
+            case pb::Instruction::KindCase::kUnreachable:
+                inst_out = CreateInstructionUnreachable(inst_in.unreachable());
+                break;
+            case pb::Instruction::KindCase::KIND_NOT_SET:
+                break;
+        }
+        if (!inst_out) {
+            err_ << "invalid Instruction.kind: " << std::to_string(inst_in.kind_case()) << "\n";
+            return b.Let(mod_out_.Types().invalid());
+        }
+
+        TINT_ASSERT(inst_out);
+
+        Vector<ir::Value*, 4> operands;
+        for (auto id : inst_in.operands()) {
+            operands.Push(Value(id));
+        }
+        inst_out->SetOperands(std::move(operands));
+
+        Vector<ir::InstructionResult*, 4> results;
+        for (auto id : inst_in.results()) {
+            results.Push(ValueAs<ir::InstructionResult>(id));
+        }
+        inst_out->SetResults(std::move(results));
+
+        if (inst_in.has_alignment()) {
+            inst_out->SetAlignment(inst_in.alignment());
+        }
+
+        if (inst_in.has_break_if()) {
+            auto num_next_iter_values = inst_in.break_if().num_next_iter_values();
+            bool is_valid =
+                inst_out->Operands().Length() >= num_next_iter_values + BreakIf::kArgsOperandOffset;
+            if (DAWN_LIKELY(is_valid)) {
+                static_cast<BreakIf*>(inst_out)->SetNumNextIterValues(
+                    inst_in.break_if().num_next_iter_values());
+            } else {
+                err_ << "invalid value for num_next_iter_values()\n";
+            }
+        }
+
+        return inst_out;
+    }
+
+    ir::Access* CreateInstructionAccess(const pb::InstructionAccess&) {
+        return mod_out_.CreateInstruction<ir::Access>();
+    }
+
+    ir::CoreBinary* CreateInstructionBinary(const pb::InstructionBinary& binary_in) {
+        if (!BinaryOp_IsValid(binary_in.op())) {
+            err_ << "invalid binary op, " << std::to_string(binary_in.op()) << "\n";
+            return nullptr;
+        }
+
+        auto* binary_out = mod_out_.CreateInstruction<ir::CoreBinary>();
+        binary_out->SetOp(BinaryOp(binary_in.op()));
+        return binary_out;
+    }
+
+    ir::BreakIf* CreateInstructionBreakIf(const pb::InstructionBreakIf&) {
+        auto* break_if_out = mod_out_.CreateInstruction<ir::BreakIf>();
+        break_ifs_.Push(break_if_out);
+        return break_if_out;
+    }
+
+    ir::CoreBuiltinCall* CreateInstructionBuiltinCall(const pb::InstructionBuiltinCall& call_in) {
+        auto* call_out = mod_out_.CreateInstruction<ir::CoreBuiltinCall>();
+        call_out->SetFunc(BuiltinFn(call_in.builtin()));
+        Vector<TemplateParameter, 1> params;
+        for (auto param : call_in.explicit_template_parameters()) {
+            params.Push(CreateTemplateParameter(param));
+        }
+        call_out->SetExplicitTemplateParams(params);
+        return call_out;
+    }
+
+    ir::Construct* CreateInstructionConstruct(const pb::InstructionConstruct&) {
+        return mod_out_.CreateInstruction<ir::Construct>();
+    }
+
+    ir::Continue* CreateInstructionContinue(const pb::InstructionContinue&) {
+        auto* continue_ = mod_out_.CreateInstruction<ir::Continue>();
+        continues_.Push(continue_);
+        return continue_;
+    }
+
+    ir::Convert* CreateInstructionConvert(const pb::InstructionConvert&) {
+        return mod_out_.CreateInstruction<ir::Convert>();
+    }
+
+    ir::ExitIf* CreateInstructionExitIf(const pb::InstructionExitIf&) {
+        auto* exit_out = mod_out_.CreateInstruction<ir::ExitIf>();
+        exit_ifs_.Push(exit_out);
+        return exit_out;
+    }
+
+    ir::ExitLoop* CreateInstructionExitLoop(const pb::InstructionExitLoop&) {
+        auto* exit_out = mod_out_.CreateInstruction<ir::ExitLoop>();
+        exit_loops_.Push(exit_out);
+        return exit_out;
+    }
+
+    ir::ExitSwitch* CreateInstructionExitSwitch(const pb::InstructionExitSwitch&) {
+        auto* exit_out = mod_out_.CreateInstruction<ir::ExitSwitch>();
+        exit_switches_.Push(exit_out);
+        return exit_out;
+    }
+
+    ir::Discard* CreateInstructionDiscard(const pb::InstructionDiscard&) {
+        return mod_out_.CreateInstruction<ir::Discard>();
+    }
+
+    ir::If* CreateInstructionIf(const pb::InstructionIf& if_in) {
+        auto* if_out = mod_out_.CreateInstruction<ir::If>();
+        if_out->SetTrue(if_in.has_true_() ? Block(if_in.true_()) : b.Block());
+        if_out->SetFalse(if_in.has_false_() ? Block(if_in.false_()) : b.Block());
+        return if_out;
+    }
+
+    ir::If* CreateInstructionConstExprIf(const pb::InstructionConstExprIf& if_in) {
+        auto* if_out = mod_out_.CreateInstruction<ir::ConstExprIf>();
+        if_out->SetTrue(if_in.has_true_() ? Block(if_in.true_()) : b.Block());
+        if_out->SetFalse(if_in.has_false_() ? Block(if_in.false_()) : b.Block());
+        return if_out;
+    }
+
+    ir::Let* CreateInstructionLet(const pb::InstructionLet&) {
+        return mod_out_.CreateInstruction<ir::Let>();
+    }
+
+    ir::Load* CreateInstructionLoad(const pb::InstructionLoad&) {
+        return mod_out_.CreateInstruction<ir::Load>();
+    }
+
+    ir::LoadVectorElement* CreateInstructionLoadVectorElement(
+        const pb::InstructionLoadVectorElement&) {
+        return mod_out_.CreateInstruction<ir::LoadVectorElement>();
+    }
+
+    ir::Loop* CreateInstructionLoop(const pb::InstructionLoop& loop_in) {
+        ir::Block* initializer = nullptr;
+        if (loop_in.has_initializer()) {
+            initializer = Block(loop_in.initializer());
+            if (initializer->Is<ir::MultiInBlock>()) {
+                err_ << "loop initializer must not be a multi-in block\n";
+                return nullptr;
+            }
+        } else {
+            initializer = b.Block();
+        }
+
+        auto* loop_out = mod_out_.CreateInstruction<ir::Loop>();
+        loop_out->SetInitializer(initializer);
+        loop_out->SetBody(BlockAs<ir::MultiInBlock>(loop_in.body()));
+        if (loop_in.has_continuing()) {
+            loop_out->SetContinuing(BlockAs<ir::MultiInBlock>(loop_in.continuing()));
+        } else {
+            loop_out->SetContinuing(b.MultiInBlock());
+        }
+        return loop_out;
+    }
+
+    ir::NextIteration* CreateInstructionNextIteration(const pb::InstructionNextIteration&) {
+        auto* next_it_out = mod_out_.CreateInstruction<ir::NextIteration>();
+        next_iterations_.Push(next_it_out);
+        return next_it_out;
+    }
+
+    ir::Override* CreateInstructionOverride(const pb::InstructionOverride& override_in) {
+        auto* override_out = mod_out_.CreateInstruction<ir::Override>();
+        if (override_in.has_override_id()) {
+            override_out->SetOverrideId(
+                OverrideId{static_cast<uint16_t>(override_in.override_id())});
+        }
+        mod_out_.properties.Add(core::ir::Property::kAllowOverrides);
+        return override_out;
+    }
+
+    ir::Return* CreateInstructionReturn(const pb::InstructionReturn&) {
+        return mod_out_.CreateInstruction<ir::Return>();
+    }
+
+    ir::Store* CreateInstructionStore(const pb::InstructionStore&) {
+        return mod_out_.CreateInstruction<ir::Store>();
+    }
+
+    ir::StoreVectorElement* CreateInstructionStoreVectorElement(
+        const pb::InstructionStoreVectorElement&) {
+        return mod_out_.CreateInstruction<ir::StoreVectorElement>();
+    }
+
+    ir::Swizzle* CreateInstructionSwizzle(const pb::InstructionSwizzle& swizzle_in) {
+        auto* swizzle_out = mod_out_.CreateInstruction<ir::Swizzle>();
+        Vector<uint32_t, 4> indices;
+        for (auto idx : swizzle_in.indices()) {
+            indices.Push(idx);
+        }
+        swizzle_out->SetIndices(indices);
+        return swizzle_out;
+    }
+
+    ir::Switch* CreateInstructionSwitch(const pb::InstructionSwitch& switch_in) {
+        auto* switch_out = mod_out_.CreateInstruction<ir::Switch>();
+        for (auto& case_in : switch_in.cases()) {
+            ir::Switch::Case case_out{};
+            case_out.block = Block(case_in.block());
+            case_out.block->SetParent(switch_out);
+            for (auto selector_in : case_in.selectors()) {
+                ir::Switch::CaseSelector selector_out{};
+                selector_out.val = Constant(selector_in);
+                case_out.selectors.Push(std::move(selector_out));
+            }
+            if (case_in.is_default()) {
+                ir::Switch::CaseSelector selector_out{};
+                case_out.selectors.Push(std::move(selector_out));
+            }
+            switch_out->Cases().Push(std::move(case_out));
+        }
+        return switch_out;
+    }
+
+    ir::CoreUnary* CreateInstructionUnary(const pb::InstructionUnary& unary_in) {
+        if (!UnaryOp_IsValid(unary_in.op())) {
+            err_ << "invalid unary op, " << std::to_string(unary_in.op()) << "\n";
+            return nullptr;
+        }
+        auto* unary_out = mod_out_.CreateInstruction<ir::CoreUnary>();
+        unary_out->SetOp(UnaryOp(unary_in.op()));
+        return unary_out;
+    }
+
+    ir::UserCall* CreateInstructionUserCall(const pb::InstructionUserCall&) {
+        return mod_out_.CreateInstruction<ir::UserCall>();
+    }
+
+    ir::Var* CreateInstructionVar(const pb::InstructionVar& var_in) {
+        auto* var_out = mod_out_.CreateInstruction<ir::Var>();
+        if (var_in.has_binding_point()) {
+            auto& bp_in = var_in.binding_point();
+            var_out->SetBindingPoint(bp_in.group(), bp_in.binding());
+        }
+        if (var_in.has_input_attachment_index()) {
+            var_out->SetInputAttachmentIndex(var_in.input_attachment_index());
+        }
+        return var_out;
+    }
+
+    ir::Unreachable* CreateInstructionUnreachable(const pb::InstructionUnreachable&) {
+        return b.Unreachable();
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Types
+    ////////////////////////////////////////////////////////////////////////////
+    const core::type::Type* CreateType(const pb::Type type_in) {
+        switch (type_in.kind_case()) {
+            case pb::Type::KindCase::kBasic:
+                return CreateTypeBasic(type_in.basic());
+            case pb::Type::KindCase::kVector:
+                return CreateTypeVector(type_in.vector());
+            case pb::Type::KindCase::kMatrix:
+                return CreateTypeMatrix(type_in.matrix());
+            case pb::Type::KindCase::kPointer:
+                return CreateTypePointer(type_in.pointer());
+            case pb::Type::KindCase::kStruct:
+                return CreateTypeStruct(type_in.struct_());
+            case pb::Type::KindCase::kAtomic:
+                return CreateTypeAtomic(type_in.atomic());
+            case pb::Type::KindCase::kArray:
+                return CreateTypeArray(type_in.array());
+            case pb::Type::KindCase::kBindingArray:
+                return CreateTypeBindingArray(type_in.binding_array());
+            case pb::Type::KindCase::kTexelBuffer:
+                return CreateTypeTexelBuffer(type_in.texel_buffer());
+            case pb::Type::KindCase::kDepthTexture:
+                return CreateTypeDepthTexture(type_in.depth_texture());
+            case pb::Type::KindCase::kSampledTexture:
+                return CreateTypeSampledTexture(type_in.sampled_texture());
+            case pb::Type::KindCase::kMultisampledTexture:
+                return CreateTypeMultisampledTexture(type_in.multisampled_texture());
+            case pb::Type::KindCase::kDepthMultisampledTexture:
+                return CreateTypeDepthMultisampledTexture(type_in.depth_multisampled_texture());
+            case pb::Type::KindCase::kStorageTexture:
+                return CreateTypeStorageTexture(type_in.storage_texture());
+            case pb::Type::KindCase::kExternalTexture:
+                return CreateTypeExternalTexture(type_in.external_texture());
+            case pb::Type::KindCase::kSampler:
+                return CreateTypeSampler(type_in.sampler());
+            case pb::Type::KindCase::kInputAttachment:
+                return CreateTypeInputAttachment(type_in.input_attachment());
+            case pb::Type::KindCase::kSubgroupMatrixLeft:
+                return CreateTypeSubgroupMatrix(SubgroupMatrixKind::kLeft,
+                                                type_in.subgroup_matrix_left());
+            case pb::Type::KindCase::kSubgroupMatrixRight:
+                return CreateTypeSubgroupMatrix(SubgroupMatrixKind::kRight,
+                                                type_in.subgroup_matrix_right());
+            case pb::Type::KindCase::kSubgroupMatrixResult:
+                return CreateTypeSubgroupMatrix(SubgroupMatrixKind::kResult,
+                                                type_in.subgroup_matrix_result());
+            case pb::Type::KindCase::kBuiltinStruct:
+                return CreateTypeBuiltinStruct(type_in.builtin_struct());
+            case pb::Type::KindCase::kBuffer:
+                return CreateTypeBuffer(type_in.buffer());
+            case pb::Type::KindCase::KIND_NOT_SET:
+                break;
+        }
+
+        err_ << "invalid Type.kind: " << std::to_string(type_in.kind_case()) << "\n";
+        return mod_out_.Types().invalid();
+    }
+
+    const core::type::Type* CreateTypeBasic(pb::TypeBasic basic_in) {
+        if (!TypeBasic_IsValid(basic_in)) {
+            err_ << "invalid basic type, " << std::to_string(basic_in) << "\n";
+            return mod_out_.Types().invalid();
+        }
+
+        switch (basic_in) {
+            case pb::TypeBasic::void_:
+                return mod_out_.Types().void_();
+            case pb::TypeBasic::bool_:
+                return mod_out_.Types().bool_();
+            case pb::TypeBasic::i32:
+                return mod_out_.Types().i32();
+            case pb::TypeBasic::u32:
+                return mod_out_.Types().u32();
+            case pb::TypeBasic::f32:
+                return mod_out_.Types().f32();
+            case pb::TypeBasic::f16:
+                mod_out_.properties.Add(core::ir::Property::kAllow16BitFloats);
+                return mod_out_.Types().f16();
+            case pb::TypeBasic::i8:
+                return mod_out_.Types().i8();
+            case pb::TypeBasic::u8:
+                return mod_out_.Types().u8();
+            case pb::TypeBasic::u64:
+                return mod_out_.Types().u64();
+
+            case pb::TypeBasic::TypeBasic_INT_MIN_SENTINEL_DO_NOT_USE_:
+            case pb::TypeBasic::TypeBasic_INT_MAX_SENTINEL_DO_NOT_USE_:
+                break;
+        }
+
+        err_ << "invalid TypeBasic: " << std::to_string(basic_in) << "\n";
+        return mod_out_.Types().invalid();
+    }
+
+    const core::type::Type* CreateTypeVector(const pb::TypeVector& vector_in) {
+        const auto width = vector_in.width();
+        if (DAWN_UNLIKELY(width < 2 || width > 4)) {
+            err_ << "invalid vector width\n";
+            return mod_out_.Types().invalid();
+        }
+        auto* el_ty = Type(vector_in.element_type());
+        if (el_ty == nullptr) {
+            err_ << "vector element type is invalid\n";
+            return mod_out_.Types().invalid();
+        }
+        return mod_out_.Types().vec(el_ty, vector_in.width());
+    }
+
+    const core::type::Type* CreateTypeMatrix(const pb::TypeMatrix& matrix_in) {
+        const auto rows = matrix_in.num_rows();
+        const auto cols = matrix_in.num_columns();
+        if (DAWN_UNLIKELY(rows < 2 || rows > 4 || cols < 2 || cols > 4)) {
+            err_ << "invalid matrix dimensions\n";
+            return mod_out_.Types().invalid();
+        }
+        auto* el_ty = Type(matrix_in.element_type());
+        if (el_ty == nullptr) {
+            err_ << "matrix element type is invalid\n";
+            return mod_out_.Types().invalid();
+        }
+        auto* column_ty = mod_out_.Types().vec(el_ty, matrix_in.num_rows());
+        return mod_out_.Types().mat(column_ty, matrix_in.num_columns());
+    }
+
+    const core::type::Type* CreateTypePointer(const pb::TypePointer& pointer_in) {
+        auto address_space = AddressSpace(pointer_in.address_space());
+        auto* store_ty = Type(pointer_in.store_type());
+        if (!store_ty) {
+            err_ << "pointer must have a store type\n";
+            return mod_out_.Types().invalid();
+        }
+
+        auto access = AccessControl(pointer_in.access());
+        return mod_out_.Types().ptr(address_space, store_ty, access);
+    }
+
+    const core::type::Type* CreateTypeStruct(const pb::TypeStruct& struct_in) {
+        auto struct_name_in = struct_in.name();
+        if (DAWN_UNLIKELY(struct_name_in.empty())) {
+            err_ << "struct must have a name\n";
+            return mod_out_.Types().invalid();
+        }
+
+        auto struct_name = CheckName(struct_name_in, "struct name");
+        if (!struct_name) {
+            if (!options_.strip_invalid_identifiers) {
+                return mod_out_.Types().invalid();
+            }
+        } else if (!struct_names_.Add(*struct_name)) {
+            err_ << "duplicate struct name: " << *struct_name << "\n";
+            return mod_out_.Types().invalid();
+        }
+
+        Vector<const core::type::StructMember*, 8> members_out;
+        uint32_t offset = 0;
+        for (auto& member_in : struct_in.member()) {
+            auto member_name_in = member_in.name();
+            if (DAWN_UNLIKELY(member_name_in.empty())) {
+                err_ << "struct member must have a name\n";
+                return mod_out_.Types().invalid();
+            }
+
+            auto member_name = CheckName(member_name_in, "member name");
+            if (!member_name) {
+                if (!options_.strip_invalid_identifiers) {
+                    return mod_out_.Types().invalid();
+                }
+            }
+
+            auto symbol =
+                member_name ? mod_out_.symbols.Register(*member_name) : mod_out_.symbols.New();
+            auto* type = Type(member_in.type());
+            if (type == nullptr) {
+                err_ << "struct member '" << (member_name ? *member_name : "<stripped>")
+                     << "' type  is invalid\n";
+                return mod_out_.Types().invalid();
+            }
+
+            auto index = static_cast<uint32_t>(members_out.Length());
+            auto align = member_in.align();
+            auto size = member_in.size();
+            core::IOAttributes attributes_out{};
+            if (member_in.has_attributes()) {
+                auto& attributes_in = member_in.attributes();
+                if (attributes_in.has_location()) {
+                    attributes_out.location = attributes_in.location();
+                }
+                if (attributes_in.has_blend_src()) {
+                    attributes_out.blend_src = attributes_in.blend_src();
+                }
+                if (attributes_in.has_color()) {
+                    attributes_out.color = attributes_in.color();
+                }
+                if (attributes_in.has_builtin()) {
+                    attributes_out.builtin = BuiltinValue(attributes_in.builtin());
+                }
+                if (attributes_in.has_interpolation()) {
+                    auto& interpolation_in = attributes_in.interpolation();
+                    attributes_out.interpolation = Interpolation(interpolation_in);
+                }
+                attributes_out.invariant = attributes_in.invariant();
+            }
+            offset = RoundUp(align, offset);
+            auto* member_out = mod_out_.Types().Get<core::type::StructMember>(
+                symbol, type, index, offset, align, size, std::move(attributes_out));
+            offset += size;
+            members_out.Push(member_out);
+        }
+        if (DAWN_UNLIKELY(members_out.IsEmpty())) {
+            err_ << "struct requires at least one member\n";
+            return mod_out_.Types().invalid();
+        }
+        auto name = struct_name ? mod_out_.symbols.Register(*struct_name) : mod_out_.symbols.New();
+        return mod_out_.Types().Struct(name, std::move(members_out));
+    }
+
+    const core::type::Type* CreateTypeAtomic(const pb::TypeAtomic& atomic_in) {
+        const auto* el_ty = Type(atomic_in.type());
+        if (el_ty == nullptr) {
+            err_ << "invalid atomic element type\n";
+            return mod_out_.Types().invalid();
+        }
+        return mod_out_.Types().atomic(el_ty);
+    }
+
+    const core::type::Type* CreateTypeArray(const pb::TypeArray& array_in) {
+        auto* element = Type(array_in.element());
+
+        if (element == nullptr) {
+            err_ << "array element type is invalid\n";
+            return mod_out_.Types().invalid();
+        }
+
+        // If present, the array count kind determines how the count field should be interpreted.
+        // If the kind is not present, a zero count means runtime sized, and non-zero is a constant.
+        // TODO(422199551): If we do a v2 we can make the kind required and avoid this fork.
+        uint32_t count = array_in.count();
+        if (array_in.has_count_kind()) {
+            switch (array_in.count_kind()) {
+                case pb::Runtime:
+                case pb::Constant:
+                    // Handled below to avoid duplicating the check for the count limit.
+                    break;
+                case pb::Override: {
+                    auto* value_count =
+                        mod_out_.Types().Get<core::ir::type::ValueArrayCount>(Value(count));
+                    return mod_out_.Types().Get<core::type::Array>(element, value_count, 0u);
+                }
+                case pb::ArrayCountKind_INT_MIN_SENTINEL_DO_NOT_USE_:
+                case pb::ArrayCountKind_INT_MAX_SENTINEL_DO_NOT_USE_:
+                    TINT_UNREACHABLE();
+            }
+        }
+
+        if (count >= internal_limits::kMaxArrayElementCount) {
+            err_ << "array count (" << count << ") must be less than "
+                 << internal_limits::kMaxArrayElementCount << "\n";
+            return mod_out_.Types().invalid();
+        }
+
+        return count > 0 ? mod_out_.Types().array(element, count)
+                         : mod_out_.Types().runtime_array(element);
+    }
+
+    const core::type::Type* CreateTypeBindingArray(const pb::TypeBindingArray& array_in) {
+        auto* element = Type(array_in.element());
+        uint32_t count = array_in.count();
+
+        if (count >= internal_limits::kMaxArrayElementCount) {
+            err_ << "binding_array count (" << count << ") must be less than "
+                 << internal_limits::kMaxArrayElementCount << "\n";
+            return mod_out_.Types().invalid();
+        }
+        if (element == nullptr) {
+            err_ << "binding array element type is invalid\n";
+            return mod_out_.Types().invalid();
+        }
+
+        return mod_out_.Types().binding_array(element, count);
+    }
+
+    const core::type::Type* CreateTypeDepthTexture(const pb::TypeDepthTexture& texture_in) {
+        auto dimension = TextureDimension(texture_in.dimension());
+        if (!core::type::DepthTexture::IsValidDimension(dimension)) {
+            err_ << "invalid DepthTexture dimension\n";
+            return mod_out_.Types().invalid();
+        }
+        return mod_out_.Types().depth_texture(dimension);
+    }
+
+    const core::type::Type* CreateTypeSampledTexture(const pb::TypeSampledTexture& texture_in) {
+        auto dimension = TextureDimension(texture_in.dimension());
+        auto sub_type = Type(texture_in.sub_type());
+        if (!sub_type) {
+            err_ << "invalid Sampled texture subtype\n";
+            return mod_out_.Types().invalid();
+        }
+        return mod_out_.Types().sampled_texture(dimension, sub_type);
+    }
+
+    const core::type::Type* CreateTypeMultisampledTexture(
+        const pb::TypeMultisampledTexture& texture_in) {
+        auto dimension = TextureDimension(texture_in.dimension());
+        auto sub_type = Type(texture_in.sub_type());
+        if (!sub_type) {
+            err_ << "invalid Multisampled texture subtype\n";
+            return mod_out_.Types().invalid();
+        }
+        return mod_out_.Types().multisampled_texture(dimension, sub_type);
+    }
+
+    const core::type::Type* CreateTypeDepthMultisampledTexture(
+        const pb::TypeDepthMultisampledTexture& texture_in) {
+        auto dimension = TextureDimension(texture_in.dimension());
+        if (!core::type::DepthMultisampledTexture::IsValidDimension(dimension)) {
+            err_ << "invalid DepthMultisampledTexture dimension\n";
+            return mod_out_.Types().invalid();
+        }
+        return mod_out_.Types().depth_multisampled_texture(dimension);
+    }
+
+    const core::type::Type* CreateTypeStorageTexture(const pb::TypeStorageTexture& texture_in) {
+        auto dimension = TextureDimension(texture_in.dimension());
+        auto texel_format = TexelFormat(texture_in.texel_format());
+        auto sub_ty = mod_out_.Types().SubtypeFor(texel_format);
+        if (!sub_ty) {
+            err_ << "unable to create a sub-type for " << texel_format << "\n";
+            return mod_out_.Types().invalid();
+        }
+
+        auto access = AccessControl(texture_in.access());
+        return mod_out_.Types().storage_texture(dimension, texel_format, access);
+    }
+
+    const core::type::Type* CreateTypeTexelBuffer(const pb::TypeTexelBuffer& buffer_in) {
+        auto texel_format = TexelFormat(buffer_in.texel_format());
+        auto sub_ty = mod_out_.Types().SubtypeFor(texel_format);
+        if (!sub_ty) {
+            err_ << "unable to create a sub-type for " << texel_format << "\n";
+            return mod_out_.Types().invalid();
+        }
+
+        auto access = AccessControl(buffer_in.access());
+        return mod_out_.Types().texel_buffer(texel_format, access);
+    }
+
+    const core::type::ExternalTexture* CreateTypeExternalTexture(const pb::TypeExternalTexture&) {
+        return mod_out_.Types().external_texture();
+    }
+
+    const core::type::Sampler* CreateTypeSampler(const pb::TypeSampler& sampler_in) {
+        if (!SamplerKind_IsValid(sampler_in.kind())) {
+            err_ << "invalid sampler kind, " << std::to_string(sampler_in.kind()) << "\n";
+            return nullptr;
+        }
+
+        auto kind = SamplerKind(sampler_in.kind());
+        return mod_out_.Types().Get<core::type::Sampler>(kind);
+    }
+
+    const core::type::Type* CreateTypeInputAttachment(const pb::TypeInputAttachment& input_in) {
+        auto sub_type = Type(input_in.sub_type());
+        if (!sub_type) {
+            err_ << "invalid Input attachment subtype\n";
+            return mod_out_.Types().invalid();
+        }
+        return mod_out_.Types().input_attachment(sub_type);
+    }
+
+    const core::type::Type* CreateTypeSubgroupMatrix(
+        SubgroupMatrixKind kind,
+        const pb::TypeSubgroupMatrix& subgroup_matrix) {
+        const auto el_ty = Type(subgroup_matrix.sub_type());
+        if (el_ty == nullptr) {
+            err_ << "invalid subtype for subgroup matrix\n";
+            return mod_out_.Types().invalid();
+        }
+        return mod_out_.Types().subgroup_matrix(kind, el_ty, subgroup_matrix.columns(),
+                                                subgroup_matrix.rows());
+    }
+
+    const core::type::Type* CreateTypeBuffer(const pb::TypeBuffer& buffer) {
+        mod_out_.properties.Add(core::ir::Property::kAllowBufferTypes);
+        auto size = buffer.size();
+        switch (buffer.size_kind()) {
+            case pb::Runtime:
+            case pb::Constant:
+                // Handled below to avoid duplicating the check for the size limit.
+                break;
+            case pb::Override: {
+                auto* value_size =
+                    mod_out_.Types().Get<core::ir::type::ValueArrayCount>(Value(size));
+                return mod_out_.Types().Get<core::type::Buffer>(value_size);
+            }
+            case pb::ArrayCountKind_INT_MIN_SENTINEL_DO_NOT_USE_:
+            case pb::ArrayCountKind_INT_MAX_SENTINEL_DO_NOT_USE_:
+                TINT_UNREACHABLE();
+        }
+
+        if (size >= internal_limits::kMaxArrayElementCount) {
+            err_ << "buffer size (" << size << ") must be less than "
+                 << internal_limits::kMaxArrayElementCount << "\n";
+            return mod_out_.Types().invalid();
+        }
+
+        return size > 0 ? mod_out_.Types().buffer(size) : mod_out_.Types().unsized_buffer();
+    }
+
+    const core::type::Type* CreateTypeBuiltinStruct(pb::TypeBuiltinStruct builtin_struct_in) {
+        if (!TypeBuiltinStruct_IsValid(builtin_struct_in)) {
+            err_ << "invalid builtin struct type, " << std::to_string(builtin_struct_in) << "\n";
+            return mod_out_.Types().invalid();
+        }
+
+        auto& ty = mod_out_.Types();
+        const core::type::Struct* res = nullptr;
+        switch (builtin_struct_in) {
+            case pb::TypeBuiltinStruct::AtomicCompareExchangeResultI32:
+                res = core::type::CreateAtomicCompareExchangeResult(ty, mod_out_.symbols, ty.i32());
+                break;
+            case pb::TypeBuiltinStruct::AtomicCompareExchangeResultU32:
+                res = core::type::CreateAtomicCompareExchangeResult(ty, mod_out_.symbols, ty.u32());
+                break;
+            case pb::TypeBuiltinStruct::FrexpResultF16:
+                res = core::type::CreateFrexpResult(ty, mod_out_.symbols, ty.f16());
+                break;
+            case pb::TypeBuiltinStruct::FrexpResultF32:
+                res = core::type::CreateFrexpResult(ty, mod_out_.symbols, ty.f32());
+                break;
+            case pb::TypeBuiltinStruct::FrexpResultVec2F16:
+                res = core::type::CreateFrexpResult(ty, mod_out_.symbols, ty.vec2h());
+                break;
+            case pb::TypeBuiltinStruct::FrexpResultVec2F32:
+                res = core::type::CreateFrexpResult(ty, mod_out_.symbols, ty.vec2f());
+                break;
+            case pb::TypeBuiltinStruct::FrexpResultVec3F16:
+                res = core::type::CreateFrexpResult(ty, mod_out_.symbols, ty.vec3h());
+                break;
+            case pb::TypeBuiltinStruct::FrexpResultVec3F32:
+                res = core::type::CreateFrexpResult(ty, mod_out_.symbols, ty.vec3f());
+                break;
+            case pb::TypeBuiltinStruct::FrexpResultVec4F16:
+                res = core::type::CreateFrexpResult(ty, mod_out_.symbols, ty.vec4h());
+                break;
+            case pb::TypeBuiltinStruct::FrexpResultVec4F32:
+                res = core::type::CreateFrexpResult(ty, mod_out_.symbols, ty.vec4f());
+                break;
+            case pb::TypeBuiltinStruct::ModfResultF16:
+                res = core::type::CreateModfResult(ty, mod_out_.symbols, ty.f16());
+                break;
+            case pb::TypeBuiltinStruct::ModfResultF32:
+                res = core::type::CreateModfResult(ty, mod_out_.symbols, ty.f32());
+                break;
+            case pb::TypeBuiltinStruct::ModfResultVec2F16:
+                res = core::type::CreateModfResult(ty, mod_out_.symbols, ty.vec2h());
+                break;
+            case pb::TypeBuiltinStruct::ModfResultVec2F32:
+                res = core::type::CreateModfResult(ty, mod_out_.symbols, ty.vec2f());
+                break;
+            case pb::TypeBuiltinStruct::ModfResultVec3F16:
+                res = core::type::CreateModfResult(ty, mod_out_.symbols, ty.vec2h());
+                break;
+            case pb::TypeBuiltinStruct::ModfResultVec3F32:
+                res = core::type::CreateModfResult(ty, mod_out_.symbols, ty.vec3f());
+                break;
+            case pb::TypeBuiltinStruct::ModfResultVec4F16:
+                res = core::type::CreateModfResult(ty, mod_out_.symbols, ty.vec2h());
+                break;
+            case pb::TypeBuiltinStruct::ModfResultVec4F32:
+                res = core::type::CreateModfResult(ty, mod_out_.symbols, ty.vec4f());
+                break;
+
+            case pb::TypeBuiltinStruct::TypeBuiltinStruct_INT_MIN_SENTINEL_DO_NOT_USE_:
+            case pb::TypeBuiltinStruct::TypeBuiltinStruct_INT_MAX_SENTINEL_DO_NOT_USE_:
+                break;
+        }
+
+        if (!res) {
+            err_ << "invalid TypeBuiltinStruct: " << std::to_string(builtin_struct_in) << "\n";
+            return mod_out_.Types().invalid();
+        }
+
+        // Make sure this struct name wasn't already used by another struct in the module.
+        auto struct_name = res->Name().Name();
+        if (!struct_names_.Add(struct_name)) {
+            err_ << "duplicate struct name: " << struct_name << "\n";
+            return mod_out_.Types().invalid();
+        }
+        return res;
+    }
+
+    const core::type::Type* Type(size_t id) {
+        if (DAWN_UNLIKELY(id >= types_.Length())) {
+            err_ << "type id " << id << " out of range\n";
+            return mod_out_.Types().invalid();
+        }
+        return types_[id];
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Values
+    ////////////////////////////////////////////////////////////////////////////
+    ir::Value* CreateValue(const pb::Value& value_in) {
+        ir::Value* value_out = nullptr;
+        switch (value_in.kind_case()) {
+            case pb::Value::KindCase::kFunction:
+                value_out = Function(value_in.function());
+                break;
+            case pb::Value::KindCase::kInstructionResult:
+                value_out = InstructionResult(value_in.instruction_result());
+                break;
+            case pb::Value::KindCase::kFunctionParameter:
+                value_out = FunctionParameter(value_in.function_parameter());
+                break;
+            case pb::Value::KindCase::kBlockParameter:
+                value_out = BlockParameter(value_in.block_parameter());
+                break;
+            case pb::Value::KindCase::kConstant:
+                value_out = Constant(value_in.constant());
+                break;
+            case pb::Value::KindCase::KIND_NOT_SET:
+                break;
+        }
+
+        if (!value_out) {
+            err_ << "invalid value kind: " << std::to_string(value_in.kind_case()) << "\n";
+            return b.InvalidConstant();
+        }
+
+        return value_out;
+    }
+
+    ir::TemplateParameter CreateTemplateParameter(const pb::TemplateParameter& value_in) {
+        switch (value_in.kind_case()) {
+            case pb::TemplateParameter::KindCase::kType:
+                return Type(value_in.type());
+            case pb::TemplateParameter::KindCase::kMajorness:
+                return Majorness(value_in.majorness());
+            case pb::TemplateParameter::KindCase::KIND_NOT_SET:
+                break;
+        }
+
+        err_ << "invalid template parameter kind: " << std::to_string(value_in.kind_case()) << "\n";
+        return mod_out_.Types().invalid();
+    }
+
+    ir::InstructionResult* InstructionResult(const pb::InstructionResult& res_in) {
+        auto* type = Type(res_in.type());
+        if (type == nullptr || type->Is<core::type::Invalid>()) {
+            err_ << "result '" << res_in.name() << "' has invalid type\n";
+            return nullptr;
+        }
+        auto* res_out = b.InstructionResult(type);
+        if (!res_in.name().empty()) {
+            if (auto name = CheckName(res_in.name(), "result name")) {
+                mod_out_.SetName(res_out, *name);
+            } else if (!options_.strip_invalid_identifiers) {
+                return nullptr;
+            }
+        }
+        return res_out;
+    }
+
+    ir::FunctionParam* FunctionParameter(const pb::FunctionParameter& param_in) {
+        auto* type = Type(param_in.type());
+        if (type == nullptr || type->Is<core::type::Invalid>()) {
+            err_ << "param '" << param_in.name() << "' has invalid type\n";
+            return nullptr;
+        }
+        auto* param_out = b.FunctionParam(type);
+        if (!param_in.name().empty()) {
+            if (auto name = CheckName(param_in.name(), "param name")) {
+                mod_out_.SetName(param_out, *name);
+            } else if (!options_.strip_invalid_identifiers) {
+                return nullptr;
+            }
+        }
+
+        if (param_in.has_attributes()) {
+            auto& attrs_in = param_in.attributes();
+            if (attrs_in.has_binding_point()) {
+                auto& bp_in = attrs_in.binding_point();
+                param_out->SetBindingPoint(bp_in.group(), bp_in.binding());
+            }
+            if (attrs_in.has_location()) {
+                param_out->SetLocation(attrs_in.location());
+            }
+            if (attrs_in.has_color()) {
+                param_out->SetColor(attrs_in.color());
+            }
+            if (attrs_in.has_interpolation()) {
+                param_out->SetInterpolation(Interpolation(attrs_in.interpolation()));
+            }
+            if (attrs_in.has_builtin()) {
+                param_out->SetBuiltin(BuiltinValue(attrs_in.builtin()));
+            }
+            if (attrs_in.invariant()) {
+                param_out->SetInvariant(true);
+            }
+        }
+
+        return param_out;
+    }
+
+    ir::BlockParam* BlockParameter(const pb::BlockParameter& param_in) {
+        auto* type = Type(param_in.type());
+        if (type == nullptr || type->Is<core::type::Invalid>()) {
+            err_ << "block parameter '" << param_in.name() << "' has invalid type\n";
+            return nullptr;
+        }
+        auto* param_out = b.BlockParam(type);
+        if (!param_in.name().empty()) {
+            if (auto name = CheckName(param_in.name(), "param name")) {
+                mod_out_.SetName(param_out, *name);
+            } else if (!options_.strip_invalid_identifiers) {
+                return nullptr;
+            }
+        }
+        return param_out;
+    }
+
+    ir::Constant* Constant(uint32_t value_id) { return b.Constant(ConstantValue(value_id)); }
+
+    ir::Value* Value(uint32_t id) {
+        if (DAWN_UNLIKELY(id > values_.Length())) {
+            err_ << "value id " << id << " out of range\n";
+            return nullptr;
+        }
+        if (id == 0) {
+            return nullptr;
+        }
+
+        // Create the value if this is the first time we have needed it.
+        uint32_t idx = id - 1;
+        if (values_[idx] == nullptr) {
+            values_[idx] = CreateValue(mod_in_.values()[static_cast<int>(idx)]);
+        }
+        return values_[idx];
+    }
+
+    template <typename T>
+    T* ValueAs(uint32_t id) {
+        auto* value = Value(id);
+        if (auto cast = As<T>(value); DAWN_LIKELY(cast)) {
+            return cast;
+        }
+        err_ << "value " << id << " is " << (value ? value->TypeInfo().name : "<null>")
+             << " expected " << TypeInfo::Of<T>().name << "\n";
+        return nullptr;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // ConstantValues
+    ////////////////////////////////////////////////////////////////////////////
+    const core::constant::Value* CreateConstantValue(const pb::ConstantValue& value_in) {
+        switch (value_in.kind_case()) {
+            case pb::ConstantValue::KindCase::kScalar:
+                return CreateConstantScalar(value_in.scalar());
+            case pb::ConstantValue::KindCase::kComposite:
+                return CreateConstantComposite(value_in.composite());
+            case pb::ConstantValue::KindCase::kSplat:
+                return CreateConstantSplat(value_in.splat());
+            case pb::ConstantValue::KindCase::KIND_NOT_SET:
+                break;
+        }
+        err_ << "invalid ConstantValue.kind: " << std::to_string(value_in.kind_case()) << "\n";
+        return b.InvalidConstant()->Value();
+    }
+
+    const core::constant::Value* CreateConstantScalar(const pb::ConstantValueScalar& value_in) {
+        switch (value_in.kind_case()) {
+            case pb::ConstantValueScalar::KindCase::kBool:
+                return b.ConstantValue(value_in.bool_());
+            case pb::ConstantValueScalar::KindCase::kI32:
+                return b.ConstantValue(i32(value_in.i32()));
+            case pb::ConstantValueScalar::KindCase::kU32:
+                return b.ConstantValue(u32(value_in.u32()));
+            case pb::ConstantValueScalar::KindCase::kF32:
+                return b.ConstantValue(CheckFinite(f32(value_in.f32())));
+            case pb::ConstantValueScalar::KindCase::kF16:
+                return b.ConstantValue(CheckFinite(f16(value_in.f16())));
+            case pb::ConstantValueScalar::KindCase::KIND_NOT_SET:
+                break;
+        }
+        err_ << "invalid ConstantValueScalar.kind: " << std::to_string(value_in.kind_case())
+             << "\n";
+        return b.InvalidConstant()->Value();
+    }
+
+    const core::constant::Value* CreateConstantComposite(
+        const pb::ConstantValueComposite& composite_in) {
+        auto* type = Type(composite_in.type());
+        if (!type) {
+            err_ << "invalid type for constant composite\n";
+            return b.InvalidConstant()->Value();
+        }
+
+        auto type_elements = type->Elements();
+        size_t num_values = static_cast<size_t>(composite_in.elements().size());
+        if (DAWN_UNLIKELY(type_elements.count == 0)) {
+            err_ << "cannot create a composite of type " << type->FriendlyName() << "\n";
+            return b.InvalidConstant()->Value();
+        }
+        if (DAWN_UNLIKELY(type_elements.count != num_values)) {
+            err_ << "constant composite type " << type->FriendlyName() << " expects "
+                 << type_elements.count << " elements, but " << num_values << " values encoded\n";
+            return b.InvalidConstant()->Value();
+        }
+        Vector<const core::constant::Value*, 8> elements_out;
+        for (auto element_id : composite_in.elements()) {
+            uint32_t i = static_cast<uint32_t>(elements_out.Length());
+            auto* value = ConstantValue(element_id);
+            if (auto* el_type = type->Element(i); DAWN_UNLIKELY(value->Type() != el_type)) {
+                if (!el_type) {
+                    err_ << "constant composite has a null element type\n";
+                } else {
+                    err_ << "constant composite element value type "
+                         << value->Type()->FriendlyName() << " does not match element type "
+                         << el_type->FriendlyName() << "\n";
+                }
+                return b.InvalidConstant()->Value();
+            }
+            elements_out.Push(value);
+        }
+        return mod_out_.constant_values.Composite(type, std::move(elements_out));
+    }
+
+    const core::constant::Value* CreateConstantSplat(const pb::ConstantValueSplat& splat_in) {
+        auto* type = Type(splat_in.type());
+        if (!type) {
+            err_ << "invalid type for constant splat\n";
+            return b.InvalidConstant()->Value();
+        }
+
+        uint32_t num_elements = type->Elements().count;
+        if (DAWN_UNLIKELY(num_elements == 0)) {
+            err_ << "cannot create a splat of type " << type->FriendlyName() << "\n";
+            return b.InvalidConstant()->Value();
+        }
+        if (DAWN_UNLIKELY(num_elements > internal_limits::kMaxArrayConstructorElements)) {
+            err_ << "array constructor has excessive number of elements (>"
+                 << internal_limits::kMaxArrayConstructorElements << ")\n";
+            return b.InvalidConstant()->Value();
+        }
+        auto* value = ConstantValue(splat_in.elements());
+        for (uint32_t i = 0; i < num_elements; i++) {
+            auto* el_type = type->Element(i);
+            if (DAWN_UNLIKELY(el_type != value->Type())) {
+                err_ << "constant splat element value type " << value->Type()->FriendlyName()
+                     << " does not match element " << i << " type " << el_type->FriendlyName()
+                     << "\n";
+                return b.InvalidConstant()->Value();
+            }
+        }
+        return mod_out_.constant_values.Splat(type, value);
+    }
+
+    const core::constant::Value* ConstantValue(uint32_t id) {
+        if (DAWN_UNLIKELY(id >= constant_values_.Length())) {
+            err_ << "constant value id " << id << " out of range\n";
+            return b.InvalidConstant()->Value();
+        }
+        return constant_values_[id];
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Attributes
+    ////////////////////////////////////////////////////////////////////////////
+    core::Interpolation Interpolation(const pb::Interpolation& interpolation_in) {
+        core::Interpolation interpolation_out{};
+        interpolation_out.type = InterpolationType(interpolation_in.type());
+        if (interpolation_in.has_sampling()) {
+            interpolation_out.sampling = InterpolationSampling(interpolation_in.sampling());
+        }
+        return interpolation_out;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Enums
+    ////////////////////////////////////////////////////////////////////////////
+    core::AddressSpace AddressSpace(pb::AddressSpace in) {
+        if (!AddressSpace_IsValid(in)) {
+            err_ << "invalid address space, " << std::to_string(in) << "\n";
+            return core::AddressSpace::kUndefined;
+        }
+
+        switch (in) {
+            case pb::AddressSpace::function:
+                return core::AddressSpace::kFunction;
+            case pb::AddressSpace::handle:
+                return core::AddressSpace::kHandle;
+            case pb::AddressSpace::pixel_local:
+                return core::AddressSpace::kPixelLocal;
+            case pb::AddressSpace::private_:
+                return core::AddressSpace::kPrivate;
+            case pb::AddressSpace::immediate:
+                return core::AddressSpace::kImmediate;
+            case pb::AddressSpace::storage:
+                return core::AddressSpace::kStorage;
+            case pb::AddressSpace::uniform:
+                return core::AddressSpace::kUniform;
+            case pb::AddressSpace::workgroup:
+                return core::AddressSpace::kWorkgroup;
+
+            case pb::AddressSpace::AddressSpace_INT_MIN_SENTINEL_DO_NOT_USE_:
+            case pb::AddressSpace::AddressSpace_INT_MAX_SENTINEL_DO_NOT_USE_:
+                break;
+        }
+        TINT_ICE() << "invalid AddressSpace: " << in;
+    }
+
+    core::Access AccessControl(pb::AccessControl in) {
+        if (!AccessControl_IsValid(in)) {
+            err_ << "invalid access control, " << std::to_string(in) << "\n";
+            return core::Access::kUndefined;
+        }
+
+        switch (in) {
+            case pb::AccessControl::read:
+                return core::Access::kRead;
+            case pb::AccessControl::write:
+                return core::Access::kWrite;
+            case pb::AccessControl::read_write:
+                return core::Access::kReadWrite;
+
+            case pb::AccessControl::AccessControl_INT_MIN_SENTINEL_DO_NOT_USE_:
+            case pb::AccessControl::AccessControl_INT_MAX_SENTINEL_DO_NOT_USE_:
+                break;
+        }
+        TINT_ICE() << "invalid Access: " << in;
+    }
+
+    core::Majorness Majorness(pb::Majorness in) {
+        switch (in) {
+            case pb::Majorness::row_major:
+                return core::Majorness::kRowMajor;
+            case pb::Majorness::col_major:
+                return core::Majorness::kColMajor;
+            default:
+                break;
+        }
+        TINT_ICE() << "invalid majorness: " << in;
+    }
+
+    core::UnaryOp UnaryOp(pb::UnaryOp in) {
+        switch (in) {
+            case pb::UnaryOp::complement:
+                return core::UnaryOp::kComplement;
+            case pb::UnaryOp::negation:
+                return core::UnaryOp::kNegation;
+            case pb::UnaryOp::address_of:
+                return core::UnaryOp::kAddressOf;
+            case pb::UnaryOp::indirection:
+                return core::UnaryOp::kIndirection;
+            case pb::UnaryOp::not_:
+                return core::UnaryOp::kNot;
+
+            case pb::UnaryOp::UnaryOp_INT_MIN_SENTINEL_DO_NOT_USE_:
+            case pb::UnaryOp::UnaryOp_INT_MAX_SENTINEL_DO_NOT_USE_:
+                break;
+        }
+        TINT_ICE() << "invalid UnaryOp: " << in;
+    }
+
+    core::BinaryOp BinaryOp(pb::BinaryOp in) {
+        switch (in) {
+            case pb::BinaryOp::add_:
+                return core::BinaryOp::kAdd;
+            case pb::BinaryOp::subtract:
+                return core::BinaryOp::kSubtract;
+            case pb::BinaryOp::multiply:
+                return core::BinaryOp::kMultiply;
+            case pb::BinaryOp::divide:
+                return core::BinaryOp::kDivide;
+            case pb::BinaryOp::modulo:
+                return core::BinaryOp::kModulo;
+            case pb::BinaryOp::and_:
+                return core::BinaryOp::kAnd;
+            case pb::BinaryOp::or_:
+                return core::BinaryOp::kOr;
+            case pb::BinaryOp::xor_:
+                return core::BinaryOp::kXor;
+            case pb::BinaryOp::equal:
+                return core::BinaryOp::kEqual;
+            case pb::BinaryOp::not_equal:
+                return core::BinaryOp::kNotEqual;
+            case pb::BinaryOp::less_than:
+                return core::BinaryOp::kLessThan;
+            case pb::BinaryOp::greater_than:
+                return core::BinaryOp::kGreaterThan;
+            case pb::BinaryOp::less_than_equal:
+                return core::BinaryOp::kLessThanEqual;
+            case pb::BinaryOp::greater_than_equal:
+                return core::BinaryOp::kGreaterThanEqual;
+            case pb::BinaryOp::shift_left:
+                return core::BinaryOp::kShiftLeft;
+            case pb::BinaryOp::shift_right:
+                return core::BinaryOp::kShiftRight;
+            case pb::BinaryOp::logical_and:
+                return core::BinaryOp::kLogicalAnd;
+            case pb::BinaryOp::logical_or:
+                return core::BinaryOp::kLogicalOr;
+
+            case pb::BinaryOp::BinaryOp_INT_MIN_SENTINEL_DO_NOT_USE_:
+            case pb::BinaryOp::BinaryOp_INT_MAX_SENTINEL_DO_NOT_USE_:
+                break;
+        }
+        TINT_ICE() << "invalid BinaryOp: " << in;
+    }
+
+    core::type::TextureDimension TextureDimension(pb::TextureDimension in) {
+        if (!TextureDimension_IsValid(in)) {
+            err_ << "invalid texture dimension, " << std::to_string(in) << "\n";
+            return core::type::TextureDimension::kNone;
+        }
+
+        switch (in) {
+            case pb::TextureDimension::_1d:
+                return core::type::TextureDimension::k1d;
+            case pb::TextureDimension::_2d:
+                return core::type::TextureDimension::k2d;
+            case pb::TextureDimension::_2d_array:
+                return core::type::TextureDimension::k2dArray;
+            case pb::TextureDimension::_3d:
+                return core::type::TextureDimension::k3d;
+            case pb::TextureDimension::cube:
+                return core::type::TextureDimension::kCube;
+            case pb::TextureDimension::cube_array:
+                return core::type::TextureDimension::kCubeArray;
+
+            case pb::TextureDimension::TextureDimension_INT_MIN_SENTINEL_DO_NOT_USE_:
+            case pb::TextureDimension::TextureDimension_INT_MAX_SENTINEL_DO_NOT_USE_:
+                break;
+        }
+
+        TINT_ICE() << "invalid TextureDimension: " << in;
+    }
+
+    core::TexelFormat TexelFormat(pb::TexelFormat in) {
+        if (!TexelFormat_IsValid(in)) {
+            err_ << "invalid texel format, " << std::to_string(in) << "\n";
+            return core::TexelFormat::kUndefined;
+        }
+
+        switch (in) {
+            case pb::TexelFormat::bgra8_unorm:
+                return core::TexelFormat::kBgra8Unorm;
+            case pb::TexelFormat::r8_unorm:
+                return core::TexelFormat::kR8Unorm;
+            case pb::TexelFormat::r32_float:
+                return core::TexelFormat::kR32Float;
+            case pb::TexelFormat::r32_sint:
+                return core::TexelFormat::kR32Sint;
+            case pb::TexelFormat::r32_uint:
+                return core::TexelFormat::kR32Uint;
+            case pb::TexelFormat::rg32_float:
+                return core::TexelFormat::kRg32Float;
+            case pb::TexelFormat::rg32_sint:
+                return core::TexelFormat::kRg32Sint;
+            case pb::TexelFormat::rg32_uint:
+                return core::TexelFormat::kRg32Uint;
+            case pb::TexelFormat::rgba16_float:
+                return core::TexelFormat::kRgba16Float;
+            case pb::TexelFormat::rgba16_sint:
+                return core::TexelFormat::kRgba16Sint;
+            case pb::TexelFormat::rgba16_uint:
+                return core::TexelFormat::kRgba16Uint;
+            case pb::TexelFormat::rgba32_float:
+                return core::TexelFormat::kRgba32Float;
+            case pb::TexelFormat::rgba32_sint:
+                return core::TexelFormat::kRgba32Sint;
+            case pb::TexelFormat::rgba32_uint:
+                return core::TexelFormat::kRgba32Uint;
+            case pb::TexelFormat::rgba8_sint:
+                return core::TexelFormat::kRgba8Sint;
+            case pb::TexelFormat::rgba8_snorm:
+                return core::TexelFormat::kRgba8Snorm;
+            case pb::TexelFormat::rgba8_uint:
+                return core::TexelFormat::kRgba8Uint;
+            case pb::TexelFormat::rgba8_unorm:
+                return core::TexelFormat::kRgba8Unorm;
+            case pb::TexelFormat::r8_snorm:
+                return core::TexelFormat::kR8Snorm;
+            case pb::TexelFormat::r8_uint:
+                return core::TexelFormat::kR8Uint;
+            case pb::TexelFormat::r8_sint:
+                return core::TexelFormat::kR8Sint;
+            case pb::TexelFormat::rg8_unorm:
+                return core::TexelFormat::kRg8Unorm;
+            case pb::TexelFormat::rg8_snorm:
+                return core::TexelFormat::kRg8Snorm;
+            case pb::TexelFormat::rg8_uint:
+                return core::TexelFormat::kRg8Uint;
+            case pb::TexelFormat::rg8_sint:
+                return core::TexelFormat::kRg8Sint;
+            case pb::TexelFormat::r16_uint:
+                return core::TexelFormat::kR16Uint;
+            case pb::TexelFormat::r16_sint:
+                return core::TexelFormat::kR16Sint;
+            case pb::TexelFormat::r16_float:
+                return core::TexelFormat::kR16Float;
+            case pb::TexelFormat::rg16_uint:
+                return core::TexelFormat::kRg16Uint;
+            case pb::TexelFormat::rg16_sint:
+                return core::TexelFormat::kRg16Sint;
+            case pb::TexelFormat::rg16_float:
+                return core::TexelFormat::kRg16Float;
+            case pb::TexelFormat::rgb10a2_uint:
+                return core::TexelFormat::kRgb10A2Uint;
+            case pb::TexelFormat::rgb10a2_unorm:
+                return core::TexelFormat::kRgb10A2Unorm;
+            case pb::TexelFormat::rg11b10_ufloat:
+                return core::TexelFormat::kRg11B10Ufloat;
+            case pb::TexelFormat::r16_unorm:
+                return core::TexelFormat::kR16Unorm;
+            case pb::TexelFormat::r16_snorm:
+                return core::TexelFormat::kR16Snorm;
+            case pb::TexelFormat::rg16_unorm:
+                return core::TexelFormat::kRg16Unorm;
+            case pb::TexelFormat::rg16_snorm:
+                return core::TexelFormat::kRg16Snorm;
+            case pb::TexelFormat::rgba16_unorm:
+                return core::TexelFormat::kRgba16Unorm;
+            case pb::TexelFormat::rgba16_snorm:
+                return core::TexelFormat::kRgba16Snorm;
+
+            case pb::TexelFormat::TexelFormat_INT_MIN_SENTINEL_DO_NOT_USE_:
+            case pb::TexelFormat::TexelFormat_INT_MAX_SENTINEL_DO_NOT_USE_:
+                break;
+        }
+
+        TINT_ICE() << "invalid TexelFormat: " << in;
+    }
+
+    core::type::SamplerKind SamplerKind(pb::SamplerKind in) {
+        switch (in) {
+            case pb::SamplerKind::sampler:
+                return core::type::SamplerKind::kSampler;
+            case pb::SamplerKind::comparison:
+                return core::type::SamplerKind::kComparisonSampler;
+
+            case pb::SamplerKind::SamplerKind_INT_MIN_SENTINEL_DO_NOT_USE_:
+            case pb::SamplerKind::SamplerKind_INT_MAX_SENTINEL_DO_NOT_USE_:
+                break;
+        }
+
+        TINT_ICE() << "invalid SamplerKind: " << in;
+    }
+
+    core::InterpolationType InterpolationType(pb::InterpolationType in) {
+        if (!InterpolationType_IsValid(in)) {
+            err_ << "invalid interpolation type, " << std::to_string(in) << "\n";
+            return core::InterpolationType::kUndefined;
+        }
+
+        switch (in) {
+            case pb::InterpolationType::flat:
+                return core::InterpolationType::kFlat;
+            case pb::InterpolationType::linear:
+                return core::InterpolationType::kLinear;
+            case pb::InterpolationType::perspective:
+                return core::InterpolationType::kPerspective;
+
+            case pb::InterpolationType::InterpolationType_INT_MIN_SENTINEL_DO_NOT_USE_:
+            case pb::InterpolationType::InterpolationType_INT_MAX_SENTINEL_DO_NOT_USE_:
+                break;
+        }
+        TINT_ICE() << "invalid InterpolationType: " << in;
+    }
+
+    core::InterpolationSampling InterpolationSampling(pb::InterpolationSampling in) {
+        if (!InterpolationSampling_IsValid(in)) {
+            err_ << "invalid interpolation sampling, " << std::to_string(in) << "\n";
+            return core::InterpolationSampling::kUndefined;
+        }
+
+        switch (in) {
+            case pb::InterpolationSampling::center:
+                return core::InterpolationSampling::kCenter;
+            case pb::InterpolationSampling::centroid:
+                return core::InterpolationSampling::kCentroid;
+            case pb::InterpolationSampling::sample:
+                return core::InterpolationSampling::kSample;
+            case pb::InterpolationSampling::first:
+                return core::InterpolationSampling::kFirst;
+            case pb::InterpolationSampling::either:
+                return core::InterpolationSampling::kEither;
+
+            case pb::InterpolationSampling::InterpolationSampling_INT_MIN_SENTINEL_DO_NOT_USE_:
+            case pb::InterpolationSampling::InterpolationSampling_INT_MAX_SENTINEL_DO_NOT_USE_:
+                break;
+        }
+        TINT_ICE() << "invalid InterpolationSampling: " << in;
+    }
+
+    core::BuiltinValue BuiltinValue(pb::BuiltinValue in) {
+        if (!BuiltinValue_IsValid(in)) {
+            err_ << "invalid builtin value, " << std::to_string(in) << "\n";
+            return core::BuiltinValue::kUndefined;
+        }
+
+        switch (in) {
+            case pb::BuiltinValue::point_size:
+                return core::BuiltinValue::kPointSize;
+            case pb::BuiltinValue::cull_distance:
+                return core::BuiltinValue::kCullDistance;
+            case pb::BuiltinValue::frag_depth:
+                return core::BuiltinValue::kFragDepth;
+            case pb::BuiltinValue::front_facing:
+                return core::BuiltinValue::kFrontFacing;
+            case pb::BuiltinValue::global_invocation_id:
+                return core::BuiltinValue::kGlobalInvocationId;
+            case pb::BuiltinValue::global_invocation_index:
+                return core::BuiltinValue::kGlobalInvocationIndex;
+            case pb::BuiltinValue::instance_index:
+                return core::BuiltinValue::kInstanceIndex;
+            case pb::BuiltinValue::local_invocation_id:
+                return core::BuiltinValue::kLocalInvocationId;
+            case pb::BuiltinValue::local_invocation_index:
+                return core::BuiltinValue::kLocalInvocationIndex;
+            case pb::BuiltinValue::num_workgroups:
+                return core::BuiltinValue::kNumWorkgroups;
+            case pb::BuiltinValue::position:
+                return core::BuiltinValue::kPosition;
+            case pb::BuiltinValue::sample_index:
+                return core::BuiltinValue::kSampleIndex;
+            case pb::BuiltinValue::sample_mask:
+                return core::BuiltinValue::kSampleMask;
+            case pb::BuiltinValue::subgroup_id:
+                return core::BuiltinValue::kSubgroupId;
+            case pb::BuiltinValue::subgroup_invocation_id:
+                return core::BuiltinValue::kSubgroupInvocationId;
+            case pb::BuiltinValue::subgroup_size:
+                return core::BuiltinValue::kSubgroupSize;
+            case pb::BuiltinValue::num_subgroups:
+                return core::BuiltinValue::kNumSubgroups;
+            case pb::BuiltinValue::vertex_index:
+                return core::BuiltinValue::kVertexIndex;
+            case pb::BuiltinValue::workgroup_id:
+                return core::BuiltinValue::kWorkgroupId;
+            case pb::BuiltinValue::workgroup_index:
+                return core::BuiltinValue::kWorkgroupIndex;
+            case pb::BuiltinValue::clip_distances:
+                return core::BuiltinValue::kClipDistances;
+            case pb::BuiltinValue::primitive_index:
+                return core::BuiltinValue::kPrimitiveIndex;
+            case pb::BuiltinValue::barycentric_coord:
+                return core::BuiltinValue::kBarycentricCoord;
+            case pb::BuiltinValue::BuiltinValue_INT_MIN_SENTINEL_DO_NOT_USE_:
+            case pb::BuiltinValue::BuiltinValue_INT_MAX_SENTINEL_DO_NOT_USE_:
+                break;
+        }
+        TINT_ICE() << "invalid BuiltinValue: " << in;
+    }
+
+    core::BuiltinFn BuiltinFn(pb::BuiltinFn in) {
+        if (!BuiltinFn_IsValid(in)) {
+            err_ << "invalid builtin function, " << std::to_string(in) << "\n";
+            return core::BuiltinFn::kNone;
+        }
+
+        switch (in) {
+            case pb::BuiltinFn::abs:
+                return core::BuiltinFn::kAbs;
+            case pb::BuiltinFn::acos:
+                return core::BuiltinFn::kAcos;
+            case pb::BuiltinFn::acosh:
+                return core::BuiltinFn::kAcosh;
+            case pb::BuiltinFn::add_sat:
+                return core::BuiltinFn::kAddSat;
+            case pb::BuiltinFn::all:
+                return core::BuiltinFn::kAll;
+            case pb::BuiltinFn::any:
+                return core::BuiltinFn::kAny;
+            case pb::BuiltinFn::array_length:
+                return core::BuiltinFn::kArrayLength;
+            case pb::BuiltinFn::asin:
+                return core::BuiltinFn::kAsin;
+            case pb::BuiltinFn::asinh:
+                return core::BuiltinFn::kAsinh;
+            case pb::BuiltinFn::atan:
+                return core::BuiltinFn::kAtan;
+            case pb::BuiltinFn::atan2:
+                return core::BuiltinFn::kAtan2;
+            case pb::BuiltinFn::atanh:
+                return core::BuiltinFn::kAtanh;
+            case pb::BuiltinFn::bitcast:
+                return core::BuiltinFn::kBitcast;
+            case pb::BuiltinFn::ceil:
+                return core::BuiltinFn::kCeil;
+            case pb::BuiltinFn::clamp:
+                return core::BuiltinFn::kClamp;
+            case pb::BuiltinFn::cos:
+                return core::BuiltinFn::kCos;
+            case pb::BuiltinFn::cosh:
+                return core::BuiltinFn::kCosh;
+            case pb::BuiltinFn::count_leading_zeros:
+                return core::BuiltinFn::kCountLeadingZeros;
+            case pb::BuiltinFn::count_one_bits:
+                return core::BuiltinFn::kCountOneBits;
+            case pb::BuiltinFn::count_trailing_zeros:
+                return core::BuiltinFn::kCountTrailingZeros;
+            case pb::BuiltinFn::cross:
+                return core::BuiltinFn::kCross;
+            case pb::BuiltinFn::degrees:
+                return core::BuiltinFn::kDegrees;
+            case pb::BuiltinFn::determinant:
+                return core::BuiltinFn::kDeterminant;
+            case pb::BuiltinFn::distance:
+                return core::BuiltinFn::kDistance;
+            case pb::BuiltinFn::dot:
+                return core::BuiltinFn::kDot;
+            case pb::BuiltinFn::dot4i8_packed:
+                return core::BuiltinFn::kDot4I8Packed;
+            case pb::BuiltinFn::dot4u8_packed:
+                return core::BuiltinFn::kDot4U8Packed;
+            case pb::BuiltinFn::dpdx:
+                return core::BuiltinFn::kDpdx;
+            case pb::BuiltinFn::dpdx_coarse:
+                return core::BuiltinFn::kDpdxCoarse;
+            case pb::BuiltinFn::dpdx_fine:
+                return core::BuiltinFn::kDpdxFine;
+            case pb::BuiltinFn::dpdy:
+                return core::BuiltinFn::kDpdy;
+            case pb::BuiltinFn::dpdy_coarse:
+                return core::BuiltinFn::kDpdyCoarse;
+            case pb::BuiltinFn::dpdy_fine:
+                return core::BuiltinFn::kDpdyFine;
+            case pb::BuiltinFn::exp:
+                return core::BuiltinFn::kExp;
+            case pb::BuiltinFn::exp2:
+                return core::BuiltinFn::kExp2;
+            case pb::BuiltinFn::extract_bits:
+                return core::BuiltinFn::kExtractBits;
+            case pb::BuiltinFn::face_forward:
+                return core::BuiltinFn::kFaceForward;
+            case pb::BuiltinFn::first_leading_bit:
+                return core::BuiltinFn::kFirstLeadingBit;
+            case pb::BuiltinFn::first_trailing_bit:
+                return core::BuiltinFn::kFirstTrailingBit;
+            case pb::BuiltinFn::floor:
+                return core::BuiltinFn::kFloor;
+            case pb::BuiltinFn::fma:
+                return core::BuiltinFn::kFma;
+            case pb::BuiltinFn::fract:
+                return core::BuiltinFn::kFract;
+            case pb::BuiltinFn::frexp:
+                return core::BuiltinFn::kFrexp;
+            case pb::BuiltinFn::fwidth:
+                return core::BuiltinFn::kFwidth;
+            case pb::BuiltinFn::fwidth_coarse:
+                return core::BuiltinFn::kFwidthCoarse;
+            case pb::BuiltinFn::fwidth_fine:
+                return core::BuiltinFn::kFwidthFine;
+            case pb::BuiltinFn::insert_bits:
+                return core::BuiltinFn::kInsertBits;
+            case pb::BuiltinFn::inverse_sqrt:
+                return core::BuiltinFn::kInverseSqrt;
+            case pb::BuiltinFn::ldexp:
+                return core::BuiltinFn::kLdexp;
+            case pb::BuiltinFn::length:
+                return core::BuiltinFn::kLength;
+            case pb::BuiltinFn::log:
+                return core::BuiltinFn::kLog;
+            case pb::BuiltinFn::log2:
+                return core::BuiltinFn::kLog2;
+            case pb::BuiltinFn::max:
+                return core::BuiltinFn::kMax;
+            case pb::BuiltinFn::min:
+                return core::BuiltinFn::kMin;
+            case pb::BuiltinFn::mix:
+                return core::BuiltinFn::kMix;
+            case pb::BuiltinFn::modf:
+                return core::BuiltinFn::kModf;
+            case pb::BuiltinFn::normalize:
+                return core::BuiltinFn::kNormalize;
+            case pb::BuiltinFn::pack2x16_float:
+                return core::BuiltinFn::kPack2X16Float;
+            case pb::BuiltinFn::pack2x16_snorm:
+                return core::BuiltinFn::kPack2X16Snorm;
+            case pb::BuiltinFn::pack2x16_unorm:
+                return core::BuiltinFn::kPack2X16Unorm;
+            case pb::BuiltinFn::pack4x8_snorm:
+                return core::BuiltinFn::kPack4X8Snorm;
+            case pb::BuiltinFn::pack4x8_unorm:
+                return core::BuiltinFn::kPack4X8Unorm;
+            case pb::BuiltinFn::pack4xi8:
+                return core::BuiltinFn::kPack4XI8;
+            case pb::BuiltinFn::pack4xu8:
+                return core::BuiltinFn::kPack4XU8;
+            case pb::BuiltinFn::pack4xi8_clamp:
+                return core::BuiltinFn::kPack4XI8Clamp;
+            case pb::BuiltinFn::pack4xu8_clamp:
+                return core::BuiltinFn::kPack4XU8Clamp;
+            case pb::BuiltinFn::pow:
+                return core::BuiltinFn::kPow;
+            case pb::BuiltinFn::quantize_to_f16:
+                return core::BuiltinFn::kQuantizeToF16;
+            case pb::BuiltinFn::radians:
+                return core::BuiltinFn::kRadians;
+            case pb::BuiltinFn::reflect:
+                return core::BuiltinFn::kReflect;
+            case pb::BuiltinFn::refract:
+                return core::BuiltinFn::kRefract;
+            case pb::BuiltinFn::reverse_bits:
+                return core::BuiltinFn::kReverseBits;
+            case pb::BuiltinFn::round:
+                return core::BuiltinFn::kRound;
+            case pb::BuiltinFn::saturate:
+                return core::BuiltinFn::kSaturate;
+            case pb::BuiltinFn::select:
+                return core::BuiltinFn::kSelect;
+            case pb::BuiltinFn::sign:
+                return core::BuiltinFn::kSign;
+            case pb::BuiltinFn::sin:
+                return core::BuiltinFn::kSin;
+            case pb::BuiltinFn::sinh:
+                return core::BuiltinFn::kSinh;
+            case pb::BuiltinFn::smoothstep:
+                return core::BuiltinFn::kSmoothstep;
+            case pb::BuiltinFn::sqrt:
+                return core::BuiltinFn::kSqrt;
+            case pb::BuiltinFn::step:
+                return core::BuiltinFn::kStep;
+            case pb::BuiltinFn::storage_barrier:
+                return core::BuiltinFn::kStorageBarrier;
+            case pb::BuiltinFn::tan:
+                return core::BuiltinFn::kTan;
+            case pb::BuiltinFn::tanh:
+                return core::BuiltinFn::kTanh;
+            case pb::BuiltinFn::transpose:
+                return core::BuiltinFn::kTranspose;
+            case pb::BuiltinFn::trunc:
+                return core::BuiltinFn::kTrunc;
+            case pb::BuiltinFn::unpack2x16_float:
+                return core::BuiltinFn::kUnpack2X16Float;
+            case pb::BuiltinFn::unpack2x16_snorm:
+                return core::BuiltinFn::kUnpack2X16Snorm;
+            case pb::BuiltinFn::unpack2x16_unorm:
+                return core::BuiltinFn::kUnpack2X16Unorm;
+            case pb::BuiltinFn::unpack4x8_snorm:
+                return core::BuiltinFn::kUnpack4X8Snorm;
+            case pb::BuiltinFn::unpack4x8_unorm:
+                return core::BuiltinFn::kUnpack4X8Unorm;
+            case pb::BuiltinFn::unpack4xi8:
+                return core::BuiltinFn::kUnpack4XI8;
+            case pb::BuiltinFn::unpack4xu8:
+                return core::BuiltinFn::kUnpack4XU8;
+            case pb::BuiltinFn::workgroup_barrier:
+                return core::BuiltinFn::kWorkgroupBarrier;
+            case pb::BuiltinFn::texture_barrier:
+                return core::BuiltinFn::kTextureBarrier;
+            case pb::BuiltinFn::texture_dimensions:
+                return core::BuiltinFn::kTextureDimensions;
+            case pb::BuiltinFn::texture_gather:
+                return core::BuiltinFn::kTextureGather;
+            case pb::BuiltinFn::texture_gather_compare:
+                return core::BuiltinFn::kTextureGatherCompare;
+            case pb::BuiltinFn::texture_num_layers:
+                return core::BuiltinFn::kTextureNumLayers;
+            case pb::BuiltinFn::texture_num_levels:
+                return core::BuiltinFn::kTextureNumLevels;
+            case pb::BuiltinFn::texture_num_samples:
+                return core::BuiltinFn::kTextureNumSamples;
+            case pb::BuiltinFn::texture_sample:
+                return core::BuiltinFn::kTextureSample;
+            case pb::BuiltinFn::texture_sample_bias:
+                return core::BuiltinFn::kTextureSampleBias;
+            case pb::BuiltinFn::texture_sample_compare:
+                return core::BuiltinFn::kTextureSampleCompare;
+            case pb::BuiltinFn::texture_sample_compare_level:
+                return core::BuiltinFn::kTextureSampleCompareLevel;
+            case pb::BuiltinFn::texture_sample_grad:
+                return core::BuiltinFn::kTextureSampleGrad;
+            case pb::BuiltinFn::texture_sample_level:
+                return core::BuiltinFn::kTextureSampleLevel;
+            case pb::BuiltinFn::texture_sample_base_clamp_to_edge:
+                return core::BuiltinFn::kTextureSampleBaseClampToEdge;
+            case pb::BuiltinFn::texture_store:
+                return core::BuiltinFn::kTextureStore;
+            case pb::BuiltinFn::texture_load:
+                return core::BuiltinFn::kTextureLoad;
+            case pb::BuiltinFn::atomic_load:
+                return core::BuiltinFn::kAtomicLoad;
+            case pb::BuiltinFn::atomic_store:
+                return core::BuiltinFn::kAtomicStore;
+            case pb::BuiltinFn::atomic_add:
+                return core::BuiltinFn::kAtomicAdd;
+            case pb::BuiltinFn::atomic_sub:
+                return core::BuiltinFn::kAtomicSub;
+            case pb::BuiltinFn::atomic_max:
+                return core::BuiltinFn::kAtomicMax;
+            case pb::BuiltinFn::atomic_min:
+                return core::BuiltinFn::kAtomicMin;
+            case pb::BuiltinFn::atomic_and:
+                return core::BuiltinFn::kAtomicAnd;
+            case pb::BuiltinFn::atomic_or:
+                return core::BuiltinFn::kAtomicOr;
+            case pb::BuiltinFn::atomic_xor:
+                return core::BuiltinFn::kAtomicXor;
+            case pb::BuiltinFn::atomic_exchange:
+                return core::BuiltinFn::kAtomicExchange;
+            case pb::BuiltinFn::atomic_compare_exchange_weak:
+                return core::BuiltinFn::kAtomicCompareExchangeWeak;
+            case pb::BuiltinFn::atomic_store_max:
+                return core::BuiltinFn::kAtomicStoreMax;
+            case pb::BuiltinFn::atomic_store_min:
+                return core::BuiltinFn::kAtomicStoreMin;
+            case pb::BuiltinFn::subgroup_ballot:
+                return core::BuiltinFn::kSubgroupBallot;
+            case pb::BuiltinFn::subgroup_elect:
+                return core::BuiltinFn::kSubgroupElect;
+            case pb::BuiltinFn::subgroup_broadcast:
+                return core::BuiltinFn::kSubgroupBroadcast;
+            case pb::BuiltinFn::subgroup_broadcast_first:
+                return core::BuiltinFn::kSubgroupBroadcastFirst;
+            case pb::BuiltinFn::subgroup_shuffle:
+                return core::BuiltinFn::kSubgroupShuffle;
+            case pb::BuiltinFn::subgroup_shuffle_xor:
+                return core::BuiltinFn::kSubgroupShuffleXor;
+            case pb::BuiltinFn::subgroup_shuffle_up:
+                return core::BuiltinFn::kSubgroupShuffleUp;
+            case pb::BuiltinFn::subgroup_shuffle_down:
+                return core::BuiltinFn::kSubgroupShuffleDown;
+            case pb::BuiltinFn::input_attachment_load:
+                return core::BuiltinFn::kInputAttachmentLoad;
+            case pb::BuiltinFn::subgroup_add:
+                return core::BuiltinFn::kSubgroupAdd;
+            case pb::BuiltinFn::subgroup_inclusive_add:
+                return core::BuiltinFn::kSubgroupInclusiveAdd;
+            case pb::BuiltinFn::subgroup_exclusive_add:
+                return core::BuiltinFn::kSubgroupExclusiveAdd;
+            case pb::BuiltinFn::subgroup_mul:
+                return core::BuiltinFn::kSubgroupMul;
+            case pb::BuiltinFn::subgroup_inclusive_mul:
+                return core::BuiltinFn::kSubgroupInclusiveMul;
+            case pb::BuiltinFn::subgroup_exclusive_mul:
+                return core::BuiltinFn::kSubgroupExclusiveMul;
+            case pb::BuiltinFn::subgroup_and:
+                return core::BuiltinFn::kSubgroupAnd;
+            case pb::BuiltinFn::subgroup_or:
+                return core::BuiltinFn::kSubgroupOr;
+            case pb::BuiltinFn::subgroup_xor:
+                return core::BuiltinFn::kSubgroupXor;
+            case pb::BuiltinFn::subgroup_min:
+                return core::BuiltinFn::kSubgroupMin;
+            case pb::BuiltinFn::subgroup_max:
+                return core::BuiltinFn::kSubgroupMax;
+            case pb::BuiltinFn::subgroup_all:
+                return core::BuiltinFn::kSubgroupAll;
+            case pb::BuiltinFn::subgroup_any:
+                return core::BuiltinFn::kSubgroupAny;
+            case pb::BuiltinFn::quad_broadcast:
+                return core::BuiltinFn::kQuadBroadcast;
+            case pb::BuiltinFn::quad_swap_x:
+                return core::BuiltinFn::kQuadSwapX;
+            case pb::BuiltinFn::quad_swap_y:
+                return core::BuiltinFn::kQuadSwapY;
+            case pb::BuiltinFn::quad_swap_diagonal:
+                return core::BuiltinFn::kQuadSwapDiagonal;
+            case pb::BuiltinFn::subgroup_matrix_load:
+                return core::BuiltinFn::kSubgroupMatrixLoad;
+            case pb::BuiltinFn::subgroup_matrix_store:
+                return core::BuiltinFn::kSubgroupMatrixStore;
+            case pb::BuiltinFn::subgroup_matrix_multiply:
+                return core::BuiltinFn::kSubgroupMatrixMultiply;
+            case pb::BuiltinFn::subgroup_matrix_multiply_accumulate:
+                return core::BuiltinFn::kSubgroupMatrixMultiplyAccumulate;
+            case pb::BuiltinFn::subgroup_matrix_scalar_add:
+                return core::BuiltinFn::kSubgroupMatrixScalarAdd;
+            case pb::BuiltinFn::subgroup_matrix_scalar_multiply:
+                return core::BuiltinFn::kSubgroupMatrixScalarMultiply;
+            case pb::BuiltinFn::subgroup_matrix_scalar_subtract:
+                return core::BuiltinFn::kSubgroupMatrixScalarSubtract;
+            case pb::BuiltinFn::print:
+                return core::BuiltinFn::kPrint;
+            case pb::BuiltinFn::has_resource:
+                return core::BuiltinFn::kHasResource;
+            case pb::BuiltinFn::get_resource:
+                return core::BuiltinFn::kGetResource;
+            case pb::BuiltinFn::buffer_view:
+                return core::BuiltinFn::kBufferView;
+            case pb::BuiltinFn::buffer_length:
+                return core::BuiltinFn::kBufferLength;
+            case pb::BuiltinFn::buffer_array_view:
+                return core::BuiltinFn::kBufferArrayView;
+
+            case pb::BuiltinFn::BuiltinFn_INT_MIN_SENTINEL_DO_NOT_USE_:
+            case pb::BuiltinFn::BuiltinFn_INT_MAX_SENTINEL_DO_NOT_USE_:
+                break;
+        }
+        TINT_ICE() << "invalid BuiltinFn: " << in;
+    }
+};
+
+}  // namespace
+
+Result<Module> Decode(std::span<const std::byte> encoded, const DecoderOptions& options) {
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+    pb::Module mod_in;
+    if (!mod_in.ParseFromArray(encoded.data(), static_cast<int>(encoded.size()))) {
+        return Failure{"failed to deserialize protobuf"};
+    }
+
+    return Decode(mod_in, options);
+}
+
+Result<Module> Decode(const pb::Module& mod_in, const DecoderOptions& options) {
+    return Decoder{mod_in, options}.Decode();
+}
+
+}  // namespace tint::core::ir::binary

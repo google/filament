@@ -1,0 +1,28 @@
+#version 450
+#extension GL_EXT_nonuniform_qualifier : require
+layout(local_size_x = 64) in;
+
+layout(set = 0, binding = 0) buffer SSBO
+{
+	vec4 v[];
+} o;
+
+layout(set = 0, binding = 1) uniform UBO { vec4 v[1024]; } v;
+layout(set = 0, binding = 2) uniform UBOs { vec4 v; } vs[];
+
+layout(set = 1, binding = 0) buffer SSBOIn { vec4 v[1024]; } w;
+layout(set = 1, binding = 1) buffer SSBOIns { vec4 v; } ws[];
+
+void in_func()
+{
+	o.v[gl_GlobalInvocationID.x] = v.v[gl_WorkGroupID.x];
+	o.v[gl_GlobalInvocationID.x] = vs[gl_WorkGroupID.x].v;
+
+	o.v[gl_GlobalInvocationID.x] = w.v[gl_WorkGroupID.x];
+	o.v[gl_GlobalInvocationID.x] = ws[gl_WorkGroupID.x].v;
+}
+
+void main()
+{
+	in_func();
+}

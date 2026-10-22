@@ -1,0 +1,35 @@
+name: 'Verify Release Notes'
+description: 'Verifies that a RELEASE_NOTES file has been modified'
+inputs:
+  repo-token:
+    description: 'The GitHub token'
+    required: true
+  pull-request-number:
+    description: 'The Pull Request number'
+    required: true
+  bypass-label-name:
+    description: 'The Label used to bypass this check'
+    required: false
+    default: 'internal'
+  release-notes-file:
+    description: 'The path to the RELEASE_NOTES file'
+    required: false
+    default: 'RELEASE_NOTES.md'
+  pull-request-repo-full-name:
+    description: 'The full name of the Pull Request repo'
+    required: false
+    default: ${{ github.event.pull_request.head.repo.full_name }}
+  pull-request-head-ref:
+    description: 'The HEAD ref of the Pull Request'
+    required: false
+    default: ${{ github.event.pull_request.head.ref }}
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.repo-token }}
+    - ${{ inputs.pull-request-number }}
+    - ${{ inputs.bypass-label-name }}
+    - ${{ inputs.release-notes-file }}
+    - ${{ inputs.pull-request-repo-full-name }}
+    - ${{ inputs.pull-request-head-ref }}

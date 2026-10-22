@@ -1,0 +1,41 @@
+diff --git a/src/google/protobuf/compiler/cpp/enum.cc b/src/google/protobuf/compiler/cpp/enum.cc
+index f889a0c..6e927f2 100644
+--- a/src/google/protobuf/compiler/cpp/enum.cc
++++ b/src/google/protobuf/compiler/cpp/enum.cc
+@@ -147,7 +147,7 @@ void EnumGenerator::GenerateDefinition(io::Printer* p) {
+                            .AnnotatedAs(value),
+                        {"kNumber", Int32ToString(value->number())},
+                        {"DEPRECATED",
+-                        value->options().deprecated() ? "[[deprecated]]" : ""},
++                        /*value->options().deprecated() ? "[[deprecated]]" : */""},
+                    },
+                    R"cc(
+                      $Msg_Enum_VALUE$$ DEPRECATED$ = $kNumber$,
+@@ -323,7 +323,7 @@ void EnumGenerator::GenerateSymbolImports(io::Printer* p) const {
+         {
+             Sub("VALUE", EnumValueName(enum_->value(j))).AnnotatedAs(value),
+             {"DEPRECATED",
+-             value->options().deprecated() ? "[[deprecated]]" : ""},
++             /*value->options().deprecated() ? "[[deprecated]]" : */""},
+         },
+         R"cc(
+           $DEPRECATED $static constexpr $Enum_$ $VALUE$ = $Msg_Enum$_$VALUE$;
+diff --git a/src/google/protobuf/compiler/cpp/helpers.h b/src/google/protobuf/compiler/cpp/helpers.h
+index a0dfe5e..94a44bd 100644
+--- a/src/google/protobuf/compiler/cpp/helpers.h
++++ b/src/google/protobuf/compiler/cpp/helpers.h
+@@ -63,12 +63,12 @@ inline FieldDescriptor::CppRepeatedType CalculateFieldDescriptorRepeatedType(
+ 
+ inline std::string DeprecatedAttribute(const Options&,
+                                        const FieldDescriptor* d) {
+-  return d->options().deprecated() ? "[[deprecated]] " : "";
++  return /*d->options().deprecated() ? "[[deprecated]] " : */"";
+ }
+ 
+ inline std::string DeprecatedAttribute(const Options&,
+                                        const EnumValueDescriptor* d) {
+-  return d->options().deprecated() ? "[[deprecated]] " : "";
++  return /*d->options().deprecated() ? "[[deprecated]] " : */"";
+ }
+ 
+ // Commonly-used separator comments.  Thick is a line of '=', thin is a line

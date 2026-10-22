@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filament Remote Viewer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header Dashboard Panel -->
+        <header class="dashboard-header">
+            <div class="brand">
+            </div>
+            <div class="status-panel">
+                <div class="status-item">
+                    <span class="status-label">Status:</span>
+                    <div class="status-indicator disconnected" id="connection-status">
+                        <span class="dot"></span>
+                        <span class="text">Connecting</span>
+                    </div>
+                </div>
+                <div class="status-divider"></div>
+                <div class="status-item">
+                    <span class="status-label">Resolution:</span>
+                    <span class="status-value" id="resolution-display">0 × 0</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Area -->
+        <main class="main-content">
+            <div class="viewer-wrapper">
+                <!-- Resizable Web Component -->
+                <filament-viewer id="remote-viewer"></filament-viewer>
+            </div>
+        </main>
+
+        <!-- Bottom Instructions / Control Panel -->
+        <footer class="dashboard-footer">
+            <div class="footer-info">
+                <span>Filament gltf_viewer Remote Display</span>
+            </div>
+        </footer>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>

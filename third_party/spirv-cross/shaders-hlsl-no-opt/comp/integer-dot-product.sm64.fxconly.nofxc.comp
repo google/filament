@@ -1,0 +1,42 @@
+#version 450
+#extension GL_EXT_shader_8bit_storage : require
+#extension GL_EXT_shader_16bit_storage : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_EXT_spirv_intrinsics : require
+
+layout(local_size_x = 1) in;
+
+layout(std430, binding = 0) buffer InOut {
+    uvec4 x;
+    uvec4 y;
+    int result;
+} comp;
+
+layout(std430, binding = 1) buffer InOut2 {
+    uint x;
+    uint y;
+    uint result;
+} comp2;
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6018], id = 4450)
+uint spdot_to_32(uint x, uint y, spirv_literal uint packedFormat);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6018], id = 4450)
+int spdot_to_i32(uint x, uint y, spirv_literal uint packedFormat);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6018], id = 4451)
+uint updot_to_32(uint x, uint y, spirv_literal uint packedFormat);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6018], id = 4454)
+uint udotaddsat_packed(uint x, uint y, uint acc, spirv_literal uint packedFormat);
+
+spirv_instruction (extensions = ["SPV_KHR_integer_dot_product"], capabilities = [6019, 6018], id = 4453)
+uint sdotaddsat_packed(uint x, uint y, uint acc, spirv_literal uint packedFormat);
+
+void main() {
+    uint spdot32 = spdot_to_32(comp2.x, comp2.y, 0x0); // PackedVectorFormat4x8Bit
+    int spdoti32 = spdot_to_i32(comp2.x, comp2.y, 0x0); // PackedVectorFormat4x8Bit
+    uint updot32 = updot_to_32(comp2.x, comp2.y, 0x0); // PackedVectorFormat4x8Bit
+    uint udotaddsat_pack = udotaddsat_packed(comp2.x, comp2.y, updot32, 0); // PackedVectorFormat4x8Bit
+    uint sdotaddsat_pack = sdotaddsat_packed(comp2.x, comp2.y, updot32, 0); // PackedVectorFormat4x8Bit
+}

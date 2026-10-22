@@ -1,0 +1,16 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_simdgroup_matrix>
+
+using namespace metal;
+
+struct SSBO
+{
+    uint data[1];
+};
+
+kernel void main0(device SSBO& ssbo [[buffer(0)]])
+{
+    ssbo.data[0u] = uint(sizeof(simdgroup_float8x8::storage_type) / sizeof(float));
+}
+

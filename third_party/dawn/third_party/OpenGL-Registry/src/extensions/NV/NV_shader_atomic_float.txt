@@ -1,0 +1,242 @@
+Name
+
+    NV_shader_atomic_float
+
+Name Strings
+
+    GL_NV_shader_atomic_float
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Contributors
+
+    Cyril Crassin, NVIDIA
+    Eric Werness, NVIDIA
+    Jeff Bolz, NVIDIA
+
+Status
+
+    Shipping
+
+Version
+
+    Last Modified Date:         August 13, 2012
+    NVIDIA Revision:            2
+
+Number
+
+    419
+
+Dependencies
+
+    This extension is written against the OpenGL 4.2 (Compatibility Profile)
+    Specification.
+
+    This extension is written against version 4.20 (revision 6) of the OpenGL
+    Shading Language Specification.
+
+    This extension interacts with EXT_shader_image_load_store,
+    ARB_shader_image_load_store, and GLSL 4.20.
+
+    This extension interacts with NV_shader_buffer_store and NV_gpu_shader5.
+
+    This extension interacts with NV_gpu_program5.
+
+    This extension interacts with EXT_shader_image_load_store and
+    NV_gpu_program5.
+
+    This extension interacts with GLSL 4.30, ARB_shader_storage_buffer_object,
+    and ARB_compute_shader.
+
+Overview
+
+    This extension provides GLSL built-in functions and assembly opcodes
+    allowing shaders to perform atomic read-modify-write operations to buffer
+    or texture memory with floating-point components.  The set of atomic
+    operations provided by this extension is limited to adds and exchanges.
+    Providing atomic add support allows shaders to atomically accumulate the
+    sum of floating-point values into buffer or texture memory across multiple
+    (possibly concurrent) shader invocations.
+
+    This extension provides GLSL support for atomics targeting image uniforms
+    (if GLSL 4.20, ARB_shader_image_load_store, or EXT_shader_image_load_store
+    is supported) or floating-point pointers (if NV_gpu_shader5 is supported).
+    Additionally, assembly opcodes for these operations is also provided if
+    NV_gpu_program5 is supported.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL 4.2 (Compatibility Profile) Specification
+(OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 4.2 (Compatibility Profile) Specification
+(Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 4.2 (Compatibility Profile) Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 4.2 (Compatibility Profile) Specification
+(Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 4.2 (Compatibility Profile) Specification
+(State and State Requests)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Modifications to the OpenGL Shading Language Specification, Version 4.20
+(revision 6)
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_NV_shader_atomic_float : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_NV_shader_atomic_float         1
+
+    Modify Section 8.11, Image Functions (p. 149)
+
+    (add to "imageAtomicAdd" table cell, p. 151)
+
+      float imageAtomicAdd(IMAGE_PARAMS, float data)
+
+    (add to "imageAtomicExchange" table cell, p. 152)
+
+      float imageAtomicExchange(IMAGE_PARAMS, float data)
+
+Dependencies on EXT_shader_image_load_store, ARB_shader_image_load_store, and
+GLSL 4.20
+
+    If none of EXT_shader_image_load_store, ARB_shader_image_load_store, or
+    GLSL 4.20 are supported, the new floating-point variants of the built-in
+    functions imageAtomicAdd and imageAtomicExchange should be removed.
+
+Dependencies on NV_shader_buffer_store and NV_gpu_shader5
+
+    If NV_shader_buffer_store and NV_gpu_shader5 are supported, the following
+    functions should be added to the "Section 8.Y, Shader Memory Functions"
+    language in the NV_shader_buffer_store specification:
+
+      float atomicAdd(float *address, float data);
+      float atomicExchange(float *address, float data);
+
+Dependencies on NV_gpu_program5
+
+    If NV_gpu_program5 is supported and "OPTION NV_shader_atomic_float" is
+    specified in an assembly program, "F32" should be allowed as a storage
+    modifier to the ATOM instruction for the atomic operations "ADD" and
+    "EXCH".
+
+    (Add to "Section 2.X.6, Program Options" of the NV_gpu_program4 extension,
+    as extended by NV_gpu_program5:)
+
+      + Floating-Point Atomic Operations (NV_shader_atomic_float)
+
+      If a program specifies the "NV_shader_atomic_float" option, it may use
+      "F32" storage modifier with the "ATOM" and "ATOMIM" opcodes to perform
+      atomic floating-point add or exchange operations.
+    
+    (Add to the table in "Section 2.X.8.Z, ATOM" in NV_gpu_program5:)
+
+      atomic     storage
+      modifier   modifiers            operation
+      --------   ------------------   --------------------------------------
+       ADD       U32, S32, U64, F32   compute a sum
+       ...
+       EXCH      U32, S32, U64, F32   exchange memory with operand
+
+Dependencies on EXT_shader_image_load_store and NV_gpu_program5
+
+    If EXT_shader_image_load_store and NV_gpu_program5 are supported and
+    "OPTION NV_shader_atomic_float" is specified in an assembly program, "F32"
+    should be allowed as a storage modifier to the ATOMIM instruction for the
+    atomic operations "ADD" and "EXCH".
+
+    (Add to the table in "Section 2.X.8.Z, ATOMIM" in the "Dependencies on
+    NV_gpu_program5" portion of the EXT_shader_image_load specification)
+
+      atomic     storage
+      modifier   modifiers       operation
+      --------   -------------   --------------------------------------
+       ADD       U32, S32, F32   compute a sum
+       ...
+       EXCH      U32, S32, F32   exchange memory with operand
+
+Dependencies on GLSL 4.30, ARB_shader_storage_buffer_object, and
+ARB_compute_shader
+
+    If GLSL 4.30 is supported, add the following atomic memory functions to
+    section 8.11 (Atomic Memory Functions) of the GLSL 4.30 specification:
+
+      float atomicAdd(inout float mem, float data);
+      float atomicExchange(inout float mem, float data);
+
+    If ARB_shader_storage_buffer_object or ARB_compute_shader are supported,
+    make similar edits to the functions documented in the
+    ARB_shader_storage_buffer object extension.
+
+    These functions are available if and only if GL_NV_shader_atomic_float is
+    enabled via the "#extension" directive.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    (1) What atomic operations should we support for floating-point targets?
+
+      RESOLVED:  Floating-point atomic addition is the main functionality
+      targeted by this extension.  We provide exchanges because the operation
+      needs no special hardware support.
+
+      We chose not to provide support for bitwise operations (AND/OR/XOR);
+      it's possible to support these by casting a pointer or aliasing an image
+      if required.  Minimum, maximum, and compare-and-swap make sense, but the
+      underlying atomic hardware targeted by this extension does not support
+      floating-point comparisons.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     2    08/13/12  pbrown    Add interaction with OpenGL 4.3 (and related ARB
+                              extensions) supporting floating-point atomics
+                              to shared and shader storage buffer memory.
+
+     1              pbrown    Internal revisions.

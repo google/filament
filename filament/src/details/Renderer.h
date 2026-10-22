@@ -1,0 +1,279 @@
+/*
+ * Copyright (C) 2015 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TNT_FILAMENT_DETAILS_RENDERER_H
+#define TNT_FILAMENT_DETAILS_RENDERER_H
+
+#include "Allocators.h"
+#include "BufferStuffingDetector.h"
+#include "downcast.h"
+#include "FrameInfo.h"
+#include "FrameSkipper.h"
+#include "PostProcessManager.h"
+#include "RenderPass.h"
+
+#include "details/SwapChain.h"
+
+#include <filament/FrameHistoryStream.h>
+#include <filament/Renderer.h>
+#include <filament/Viewport.h>
+
+#include <backend/DriverApiForward.h>
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+
+#include <utils/Allocator.h>
+#include <utils/compiler.h>
+#include <utils/FixedCapacityVector.h>
+
+#include <math/vec4.h>
+
+#include <tsl/robin_set.h>
+
+#include <algorithm>
+#include <chrono>
+#include <functional>
+#include <memory>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
+
+#ifndef FILAMENT_LOG_FRAME_INFO
+#define FILAMENT_LOG_FRAME_INFO 0
+#endif
+
+namespace filament {
+
+class TextureCache;
+
+namespace backend {
+class Driver;
+} // namespace backend
+
+class FEngine;
+class FRenderTarget;
+class FView;
+
+/*
+ * A concrete implementation of the Renderer Interface.
+ */
+class FRenderer : public Renderer {
+    static constexpr unsigned MAX_FRAMETIME_HISTORY = 32u;
+
+public:
+    // The FrameGraph arena size only depends on how the FrameGraph is used. Currently, 512 KiB handles the most
+    // complex graph Renderer can produce.
+    static constexpr size_t FRAMEGRAPH_ARENA_SIZE = 512 * 1024;
+
+    explicit FRenderer(FEngine& engine);
+
+    ~FRenderer() noexcept;
+
+    void terminate(FEngine& engine);
+
+    FEngine& getEngine() const noexcept { return mEngine; }
+
+    math::float4 getShaderUserTime() const { return mShaderUserTime; }
+
+    void setMaterialTimeEpoch(int64_t monotonic_clock_ns);
+    void setMaterialTimeEpoch(std::chrono::steady_clock::time_point monotonic_clock);
+    inline void resetUserTime() {
+        setMaterialTimeEpoch(clock::now());
+    }
+
+    void skipNextFrames(size_t frameCount) noexcept {
+        mFrameSkipper.skipNextFrames(frameCount);
+    }
+
+    size_t getFrameToSkipCount() const noexcept {
+        return mFrameSkipper.getFrameToSkipCount();
+    }
+
+    bool hasGpuFallenBehind() const noexcept;
+
+    void pauseRenderThread(uint64_t duration_ns);
+
+    // renders a single standalone view. The view must have a a custom rendertarget.
+    void renderStandaloneView(FView const* view);
+
+    void setPresentationTime(int64_t monotonic_clock_ns) noexcept;
+    void setPresentationTime(std::chrono::steady_clock::time_point monotonic_clock) noexcept;
+    void setDesiredPresentationTime(int64_t monotonic_clock_ns) noexcept;
+    void setDesiredPresentationTime(std::chrono::steady_clock::time_point monotonic_clock) noexcept;
+    void setRenderingDeadline(int64_t monotonic_clock_ns) noexcept;
+    void setRenderingDeadline(std::chrono::steady_clock::time_point monotonic_clock) noexcept;
+    void setFrameScheduleTime(std::chrono::steady_clock::time_point time) noexcept;
+
+    void setVsyncTime(uint64_t steadyClockTimeNano) noexcept;
+
+    // skip a frame
+    void skipFrame(uint64_t vsyncSteadyClockTimeNano);
+
+    // Whether a frame should be rendered or not.
+    bool shouldRenderFrame() const noexcept;
+
+    // start a frame
+    bool beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano);
+
+    // end a frame
+    void endFrame();
+
+    // render a view. must be called between beginFrame/enfFrame.
+    void render(FView const* view);
+
+    // read pixel from the current swapchain. must be called between beginFrame/enfFrame.
+    void readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+            backend::PixelBufferDescriptor&& buffer);
+
+    // read pixel from a rendertarget. must be called between beginFrame/enfFrame.
+    void readPixels(FRenderTarget const* renderTarget,
+            uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+            backend::PixelBufferDescriptor&& buffer);
+
+    // blits the current swapchain to another one
+    void copyFrame(FSwapChain* dstSwapChain, Viewport const& dstViewport,
+            Viewport const& srcViewport, CopyFrameFlag flags);
+
+
+    void setDisplayInfo(DisplayInfo const& info) noexcept {
+        mDisplayInfo.refreshRate = info.refreshRate;
+    }
+
+    void setFrameRateOptions(FrameRateOptions const& options) noexcept {
+        FrameRateOptions& frameRateOptions = mFrameRateOptions;
+        frameRateOptions = options;
+
+        // History can't be more than 31 frames (~0.5s), make it odd.
+        frameRateOptions.history = std::min(frameRateOptions.history / 2u * 2u + 1u,
+                MAX_FRAMETIME_HISTORY);
+
+        // History must at least be 3 frames
+        frameRateOptions.history = std::max(frameRateOptions.history, uint8_t(3));
+
+        frameRateOptions.interval = std::max(uint8_t(1), frameRateOptions.interval);
+
+        // headroom can't be larger than frame time, or less than 0
+        frameRateOptions.headRoomRatio = std::min(frameRateOptions.headRoomRatio, 1.0f);
+        frameRateOptions.headRoomRatio = std::max(frameRateOptions.headRoomRatio, 0.0f);
+    }
+
+    void setClearOptions(const ClearOptions& options) {
+        mClearOptions = options;
+    }
+
+    ClearOptions const& getClearOptions() const noexcept {
+        return mClearOptions;
+    }
+
+    utils::FixedCapacityVector<FrameInfo> getFrameInfoHistory(size_t const historySize) const noexcept {
+        return mFrameInfoManager.getFrameInfoHistory(historySize);
+    }
+
+    size_t getMaxFrameHistorySize() const noexcept {
+        return MAX_FRAMETIME_HISTORY;
+    }
+
+    // This is for testing only. Wait until all FrameInfo jobs are fully processed.
+    // Note that we do not wish for this to be called from Engine's flushAndWait() because
+    // flushAndWait() is typically used at engine shutdown, and there is no need to wait for
+    // frame history to complete at shutdown.
+    void waitForFrameHistory() {
+        mFrameInfoManager.waitForGpu();
+    }
+
+private:
+    friend class Renderer;
+    using Command = RenderPass::Command;
+    using clock = std::chrono::steady_clock;
+    using Epoch = clock::time_point;
+    using duration = clock::duration;
+
+    backend::TargetBufferFlags getClearFlags() const noexcept;
+    void initializeClearFlags() noexcept;
+
+    backend::TextureFormat getHdrFormat(const FView& view, bool translucent) const noexcept;
+    backend::TextureFormat getLdrFormat(bool translucent) const noexcept;
+
+    Epoch getUserEpoch() const { return mUserEpoch; }
+    double getMaterialTime() const noexcept {
+        duration const d = clock::now() - getUserEpoch();
+        // convert the duration (whatever it is) to a duration in seconds encoded as double
+        return std::chrono::duration<double>(d).count();
+    }
+
+    std::pair<backend::Handle<backend::HwRenderTarget>, backend::TargetBufferFlags>
+            getRenderTarget(FView const& view) const noexcept;
+
+    void recordHighWatermark(size_t const watermark) noexcept {
+        mCommandsHighWatermark = std::max(mCommandsHighWatermark, watermark);
+    }
+
+    size_t getCommandsHighWatermark() const noexcept {
+        return mCommandsHighWatermark;
+    }
+
+    void renderInternal(backend::DriverApi& driver, FView const* view, bool flush);
+    void renderJob(backend::DriverApi& driver, LinearAllocatorArena& arena, FView& view);
+
+    static std::pair<float, math::float2> prepareUpscaler(math::float2 scale,
+            TemporalAntiAliasingOptions const& taaOptions,
+            DynamicResolutionOptions const& dsrOptions);
+
+    // keep a reference to our engine
+    FEngine& mEngine;
+    FrameSkipper mFrameSkipper;
+    backend::Handle<backend::HwRenderTarget> mRenderTargetHandle;
+    FSwapChain* mSwapChain = nullptr;
+    size_t mCommandsHighWatermark = 0;
+    uint32_t mFrameId = 1; // id 0 is reserved for standalone views
+    uint32_t mLastSubmittedFrameId = 1;
+    FrameInfoManager mFrameInfoManager;
+#if FILAMENT_LOG_FRAME_INFO
+    FrameHistoryStream mFrameHistoryStream;
+#endif
+    backend::TextureFormat mHdrTranslucent;
+    backend::TextureFormat mHdrQualityMedium;
+    backend::TextureFormat mHdrQualityHigh;
+    backend::FeatureLevel mFeatureLevel;
+    bool mIsRGB8Supported : 1;
+    bool mIsFrameBufferFetchSupported : 1;
+    bool mIsFrameBufferFetchMultiSampleSupported : 1;
+    bool mIsAutoDepthResolveSupported : 1;
+    bool mIsPresentationTimeSupported : 1;
+    Epoch mUserEpoch;
+    math::float4 mShaderUserTime{};
+    DisplayInfo mDisplayInfo;
+    FrameRateOptions mFrameRateOptions;
+    ClearOptions mClearOptions;
+    backend::TargetBufferFlags mDiscardStartFlags{};
+    backend::TargetBufferFlags mClearFlags{};
+    tsl::robin_set<FRenderTarget*> mPreviousRenderTargets;
+    std::function<void()> mBeginFrameInternal;
+    uint64_t mVsyncSteadyClockTimeNano = 0;
+    std::chrono::steady_clock::time_point mRenderingDeadline{};
+    std::chrono::steady_clock::time_point mPresentationTime{};
+    std::chrono::steady_clock::time_point mDesiredPresentationTime{};
+    std::chrono::steady_clock::time_point mFrameScheduleTime{};
+    std::unique_ptr<TextureCache> mResourceAllocator{};
+    mutable BufferStuffingDetector mBufferStuffingDetector;
+};
+
+FILAMENT_DOWNCAST(Renderer)
+
+} // namespace filament
+
+#endif // TNT_FILAMENT_DETAILS_RENDERER_H

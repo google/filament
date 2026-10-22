@@ -1,0 +1,16 @@
+#version 450
+layout(local_size_x = 3, local_size_y_id = 1, local_size_z_id = 2) in;
+
+layout(constant_id = 3) const uint _6 = 13u;
+layout(constant_id = 4) const uint _7 = 14u;
+
+layout(set = 0, binding = 0, std430) buffer SSBO
+{
+    vec4 values[];
+} _10;
+
+void main()
+{
+    _10.values[gl_GlobalInvocationID.x] += vec4(2.0);
+}
+

@@ -1,0 +1,36 @@
+#version 450
+#if defined(GL_AMD_gpu_shader_half_float)
+#extension GL_AMD_gpu_shader_half_float : require
+#elif defined(GL_EXT_shader_explicit_arithmetic_types_float16)
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+#else
+#error No extension available for FP16.
+#endif
+#extension GL_EXT_shader_16bit_storage : require
+#extension GL_EXT_spirv_intrinsics : require
+
+layout(location = 0) in vec4 A;
+layout(location = 1) in vec4 B;
+layout(location = 0) out vec4 SV_Target;
+
+spirv_instruction(set = "GLSL.std.450", id = 80) float16_t spvNMax(float16_t, float16_t);
+spirv_instruction(set = "GLSL.std.450", id = 80) f16vec2 spvNMax(f16vec2, f16vec2);
+spirv_instruction(set = "GLSL.std.450", id = 80) f16vec3 spvNMax(f16vec3, f16vec3);
+spirv_instruction(set = "GLSL.std.450", id = 80) f16vec4 spvNMax(f16vec4, f16vec4);
+spirv_instruction(set = "GLSL.std.450", id = 80) float spvNMax(float, float);
+spirv_instruction(set = "GLSL.std.450", id = 80) vec2 spvNMax(vec2, vec2);
+spirv_instruction(set = "GLSL.std.450", id = 80) vec3 spvNMax(vec3, vec3);
+spirv_instruction(set = "GLSL.std.450", id = 80) vec4 spvNMax(vec4, vec4);
+spirv_instruction(set = "GLSL.std.450", id = 80) double spvNMax(double, double);
+spirv_instruction(set = "GLSL.std.450", id = 80) dvec2 spvNMax(dvec2, dvec2);
+spirv_instruction(set = "GLSL.std.450", id = 80) dvec3 spvNMax(dvec3, dvec3);
+spirv_instruction(set = "GLSL.std.450", id = 80) dvec4 spvNMax(dvec4, dvec4);
+
+void main()
+{
+    SV_Target.x = float(spvNMax(double(A.x), double(B.x)) + double(float(spvNMax(float16_t(A.x), float16_t(B.x))) + spvNMax(A.x, B.x)));
+    SV_Target.y = float(spvNMax(double(A.y), double(B.y)) + double(float(spvNMax(float16_t(A.y), float16_t(B.y))) + spvNMax(A.y, B.y)));
+    SV_Target.z = float(spvNMax(double(A.z), double(B.z)) + double(float(spvNMax(float16_t(A.z), float16_t(B.z))) + spvNMax(A.z, B.z)));
+    SV_Target.w = float(spvNMax(double(A.w), double(B.w)) + double(float(spvNMax(float16_t(A.w), float16_t(B.w))) + spvNMax(A.w, B.w)));
+}
+

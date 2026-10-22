@@ -1,0 +1,152 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglSwapBuffers">
+    <info>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglSwapBuffers</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglSwapBuffers</refname>
+        <refpurpose>
+            post <acronym>EGL</acronym> surface color buffer to a native window
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLBoolean <function>eglSwapBuffers</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLSurface <parameter>surface</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the EGL display connection.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>surface</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the EGL drawing surface whose buffers are to be swapped.
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            If <parameter>surface</parameter> is a back-buffered window
+            surface, then the color
+            buffer is copied (posted) to the native window associated with that
+            surface. If <parameter>surface</parameter> is a single-buffered
+            window, pixmap, or pixel buffer surface,
+            <function>eglSwapBuffers</function> has no effect.
+        </para>
+        <para>
+            The contents of ancillary buffers are always undefined after
+            calling <function>eglSwapBuffers</function>. The contents of the
+            color buffer are undefined if the value of the
+            <constant>EGL_SWAP_BEHAVIOR</constant> attribute of
+            <parameter>surface</parameter> is not
+            <constant>EGL_BUFFER_PRESERVED</constant>. The value of
+            <constant>EGL_SWAP_BEHAVIOR</constant> can be set for some
+            surfaces using
+            <citerefentry><refentrytitle>eglSurfaceAttrib</refentrytitle></citerefentry>.
+            <constant>EGL_SWAP_BEHAVIOR</constant> applies only to the color
+            buffer. EGL has no way to specify or query whether or not
+            ancillary buffers are preserved, and applications should not
+            rely on this behavior.
+        </para>
+        <para>
+            <function>eglSwapBuffers</function> performs an implicit
+            flush operation on the context (<function>glFlush</function>
+            for an OpenGL ES or OpenGL context,
+            <function>vgFlush</function> for an OpenVG context) bound to
+            <parameter>surface</parameter> before swapping. Subsequent
+            client API commands may be issued on that context
+            immediately after calling
+            <function>eglSwapBuffers</function>, but are not executed
+            until the buffer exchange is completed.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="resize"><title>Native Window Resizing</title>
+        <para>
+            If the native window corresponding to
+            <parameter>surface</parameter> has been resized prior to the
+            swap, <parameter>surface</parameter> must be resized to match.
+            <parameter>surface</parameter> will normally be resized by the
+            EGL implementation at the time the native window is resized. If
+            the implementation cannot do this transparently to the client,
+            then <function>eglSwapBuffers</function> must detect the change
+            and resize surface prior to copying its pixels to the native
+            window. If <parameter>surface</parameter> shrinks as a result of
+            resizing, some rendered pixels are lost. If
+            <parameter>surface</parameter> grows, the newly allocated buffer
+            contents are undefined. The resizing behavior described here
+            only maintains consistency of EGL surfaces and native windows;
+            clients are still responsible for detecting window size changes
+            (using platform-specific means) and changing their viewport and
+            scissor regions accordingly.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="notes"><title>Notes</title>
+        <para>
+            Attribute <constant>EGL_SWAP_BEHAVIOR</constant> is supported
+            only if the EGL version is 1.2 or greater. In earlier versions,
+            behavior is as though the attribute exists, and always has the
+            value <constant>EGL_BUFFER_DESTROYED</constant>.
+        </para>
+        <para>
+            The EGL 1.4 specification was updated to acknowledge that
+            ancillary buffers are not necessarily preserved after a swap,
+            and that the <constant>EGL_SWAP_BEHAVIOR</constant> attribute
+            applies only to the color buffer. This change in the
+            specification acknowledged the behavior of many shipping
+            implementations, and is not intended to result in behavior
+            changes in any existing implementation.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_FALSE</constant> is returned if swapping of the
+            surface buffers fails, <constant>EGL_TRUE</constant> otherwise.
+        </para>
+        <para>
+            <constant>EGL_BAD_DISPLAY</constant> is generated if
+            <parameter>display</parameter> is not an EGL display connection.
+        </para>
+        <para>
+            <constant>EGL_NOT_INITIALIZED</constant> is generated if
+            <parameter>display</parameter> has not been initialized.
+        </para>
+        <para>
+            <constant>EGL_BAD_SURFACE</constant> is generated if
+            <parameter>surface</parameter> is not an EGL drawing surface.
+        </para>
+        <para>
+            <constant>EGL_CONTEXT_LOST</constant> is generated if a power management
+            event has occurred. The application must destroy all contexts and
+            reinitialise OpenGL ES state and objects to continue rendering.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <function>glFlush</function>,
+            <citerefentry><refentrytitle>eglCopyBuffers</refentrytitle></citerefentry>,
+            <function>vgFlush</function>
+        </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

@@ -1,0 +1,71 @@
+/*
+ * Copyright (C) 2021 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "fg/FrameGraphResources.h"
+
+#include "fg/details/PassNode.h"
+#include "fg/details/ResourceNode.h"
+#include "fg/FrameGraph.h"
+#include "fg/FrameGraphId.h"
+
+#include <utils/debug.h>
+#include <utils/Panic.h>
+
+#include <cstdint>
+
+namespace filament {
+
+FrameGraphResources::FrameGraphResources(FrameGraph& fg, PassNode& passNode) noexcept
+    : mFrameGraph(fg), mPassNode(passNode) {
+}
+
+const char* FrameGraphResources::getPassName() const noexcept {
+    return mPassNode.getName();
+}
+
+// this perhaps weirdly returns a reference, this is to express the fact that if this method
+// fails, it has to assert (or throw), it can't return for e.g. a nullptr, because the public
+// API doesn't return pointers.
+// We use FILAMENT_CHECK_PRECONDITION() because these failures are due to caller contract violations (preconditions).
+VirtualResource& FrameGraphResources::getResource(FrameGraphHandle const handle) const {
+    FILAMENT_CHECK_PRECONDITION(handle) << "Uninitialized handle when using FrameGraphResources.";
+
+    VirtualResource* const resource = mFrameGraph.getResource(handle);
+
+    auto& declaredHandles = mPassNode.mDeclaredHandles;
+    const bool hasReadOrWrite = declaredHandles.find(handle.index) != declaredHandles.cend();
+
+    FILAMENT_CHECK_PRECONDITION(hasReadOrWrite)
+            << "Pass \"" << mPassNode.getName() << "\" didn't declare any access to resource \""
+            << resource->name.c_str() << "\"";
+
+    assert_invariant(resource->refcount);
+
+    return *resource;
+}
+
+FrameGraphResources::RenderPassInfo FrameGraphResources::getRenderPassInfo(uint32_t const id) const {
+    // this cast is safe because this can only be called from a RenderPassNode
+    RenderPassNode const& renderPassNode = static_cast<RenderPassNode const&>(mPassNode);
+    RenderPassNode::RenderPassData const* pRenderPassData = renderPassNode.getRenderPassData(id);
+
+    FILAMENT_CHECK_PRECONDITION(pRenderPassData) << "using invalid RenderPass index " << id
+                                                 << " in Pass \"" << mPassNode.getName() << "\"";
+
+    return { pRenderPassData->backend.target, pRenderPassData->backend.params };
+}
+
+} // namespace filament

@@ -1,0 +1,33 @@
+#version 450
+layout(local_size_x = 1) in;
+
+layout(std140, binding = 0) buffer block { highp uint passed; };
+struct S1 {
+	mediump vec4 a;
+	highp mat3x2 b;
+	bvec4 c;
+};
+
+bool compare_float    (highp float a, highp float b)  { return abs(a - b) < 0.05; }
+bool compare_vec2     (highp vec2 a, highp vec2 b)    { return compare_float(a.x, b.x)&&compare_float(a.y, b.y); }
+bool compare_vec4     (highp vec4 a, highp vec4 b)    { return compare_float(a.x, b.x)&&compare_float(a.y, b.y)&&compare_float(a.z, b.z)&&compare_float(a.w, b.w); }
+bool compare_mat3x2   (highp mat3x2 a, highp mat3x2 b){ return compare_vec2(a[0], b[0])&&compare_vec2(a[1], b[1])&&compare_vec2(a[2], b[2]); }
+bool compare_bvec4    (bvec4 a, bvec4 b)              { return a == b; }
+
+shared S1 s1;
+
+void main (void) {
+	s1.a = vec4(1.0, -5.0, -9.0, -5.0);
+	s1.b = mat3x2(1.0, -7.0, 1.0, 2.0, 8.0, 7.0);
+	s1.c = bvec4(false, true, false, false);
+
+	barrier();
+	memoryBarrier();
+	bool allOk = true;
+	allOk = allOk && compare_vec4(vec4(1.0, -5.0, -9.0, -5.0), s1.a);
+	allOk = allOk && compare_mat3x2(mat3x2(1.0, -7.0, 1.0, 2.0, 8.0, 7.0), s1.b);
+	allOk = allOk && compare_bvec4(bvec4(false, true, false, false), s1.c);
+	if (allOk)
+		passed++;
+
+}

@@ -1,0 +1,153 @@
+Name
+
+    NV_vertex_array_range2
+
+Name Strings
+
+    GL_NV_vertex_array_range2
+
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 2001.
+
+IP Status
+
+    NVIDIA Proprietary.
+
+Status
+
+    Complete
+
+Version
+
+    NVIDIA Date:  April 13, 2001
+    Version:      2
+
+Number
+
+    232
+
+Dependencies
+
+    Assumes support for the NV_vertex_array_range extension (version 1.1).
+
+    Support for NV_fence is recommended but not required.
+
+Overview
+
+    Enabling and disabling the vertex array range is specified by the
+    original NV_vertex_array_range extension specification to flush the
+    vertex array range implicitly.  In retrospect, this semantic is
+    extremely misconceived and creates terrible performance problems
+    for any application that wishes to mix conventional vertex arrays
+    with vertex arrange range-enabled vertex arrays.
+
+    This extension provides a new token for enabling/disabling the
+    vertex array range that does NOT perform an implicit vertex array
+    range flush when the enable/disable is performed.
+
+Issues
+
+    Should this extension expose a new enable that enables/disables the
+    vertex array range enable/disable semantic of performing an implicit
+    'vertex array range flush' when GL_VERTEX_ARRAY_RANGE_NV is enabled
+    or disabled, OR should it add a new enable token that acts identically
+    to GL_VERTEX_ARRAY_RANGE_NV without the implicit flush?
+
+      RESOLUTION:  The second option.  Enabling/disabling
+      GL_VERTEX_ARRAY_RANGE_WITHOUT_FLUSH_NV acts identically to
+      enabling/disabling GL_VERTEX_ARRAY_RANGE_NV, just without the
+      implicit flush.
+
+    Should GL_VERTEX_ARRAY_RANGE_WITHOUT_FLUSH_NV work with glIsEnabled?
+
+      RESOLUTION:  NO.  There is still just a single state boolean to
+      query.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter of EnableClientState,
+    DisableClientState:
+
+        VERTEX_ARRAY_RANGE_WITHOUT_FLUSH_NV  0x8533
+
+Additions to Chapter 2 of the OpenGL 1.1 Specification (OpenGL Operation)
+
+    Within the discussion of vertex arrays (Section 2.8) amended by
+    the NV_vertex_array_range extension specification, change the
+    discussion of enabling the vertex array range to:
+
+    The vertex array range is enabled or disabled by calling
+    EnableClientState or DisableClientState with the symbolic
+    constant VERTEX_ARRAY_RANGE_NV. 
+
+    The vertex array range is also enabled or disabled by calling
+    EnableClientState or DisableClientState with the symbolic constant
+    VERTEX_ARRAY_RANGE_WITHOUT_FLUSH_NV.  This second means to enable
+    and disable the vertex array range does not perform an implicit
+    vertex array range flush as described subsequently."
+
+    Within the discussion of vertex arrays (Section 2.8) amended by the
+    NV_vertex_array_range extension specification, change the discussion
+    of implicit vertex array range flushes to:
+
+    "A 'vertex array range flush' occurs when one of the following
+    operations occur:
+
+       o  Finish returns.
+
+       o  FlushVertexArrayRangeNV returns.
+
+       o  VertexArrayRangeNV returns.
+
+       o  DisableClientState of VERTEX_ARRAY_RANGE_NV returns.
+
+       o  EnableClientState of VERTEX_ARRAY_RANGE_NV returns.
+
+       o  Another OpenGL context is made current.
+
+    However, use of VERTEX_ARRAY_RANGE_WITHOUT_FLUSH_NV with
+    DisableClientState or EnableClientState does NOT perform an implicit
+    vertex array range flush."
+
+Additions to Chapter 5 of the OpenGL 1.1 Specification (Special Functions)
+
+    None
+
+Additions to the WGL interface:
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    No new errors.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    4/13/2001 - token value for GL_VERTEX_ARRAY_RANGE_WITHOUT_FLUSH_NV
+    should be 0x8533 (was incorrectly typed as 0x8503)
+

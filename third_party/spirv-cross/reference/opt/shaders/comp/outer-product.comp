@@ -1,0 +1,39 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) writeonly buffer SSBO
+{
+    mat2 m22;
+    mat2x3 m23;
+    mat2x4 m24;
+    mat3x2 m32;
+    mat3 m33;
+    mat3x4 m34;
+    mat4x2 m42;
+    mat4x3 m43;
+    mat4 m44;
+} _21;
+
+layout(binding = 1, std430) readonly buffer ReadSSBO
+{
+    vec2 v2;
+    vec3 v3;
+    vec4 v4;
+} _26;
+
+void main()
+{
+    vec2 _29 = _26.v2;
+    _21.m22 = outerProduct(_29, _29);
+    vec3 _38 = _26.v3;
+    _21.m23 = outerProduct(_38, _29);
+    vec4 _47 = _26.v4;
+    _21.m24 = outerProduct(_47, _29);
+    _21.m32 = outerProduct(_29, _38);
+    _21.m33 = outerProduct(_38, _38);
+    _21.m34 = outerProduct(_47, _38);
+    _21.m42 = outerProduct(_29, _47);
+    _21.m43 = outerProduct(_38, _47);
+    _21.m44 = outerProduct(_47, _47);
+}
+

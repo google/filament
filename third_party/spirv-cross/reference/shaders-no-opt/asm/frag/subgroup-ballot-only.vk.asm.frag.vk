@@ -1,0 +1,15 @@
+#version 450
+#extension GL_KHR_shader_subgroup_ballot : require
+
+layout(location = 0) flat in uint INDEX;
+layout(location = 0) out uvec4 SV_Target;
+
+void main()
+{
+    uvec4 _15 = subgroupBallot(INDEX < 100u);
+    SV_Target.x = _15.x;
+    SV_Target.y = _15.y;
+    SV_Target.z = _15.z;
+    SV_Target.w = _15.w;
+}
+

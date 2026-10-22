@@ -1,0 +1,295 @@
+Name
+
+    ARB_transform_feedback_overflow_query
+
+Name Strings
+
+    GL_ARB_transform_feedback_overflow_query
+
+Contact
+
+    Brian Paul, VMware Inc. (brianp 'at' vmware.com)
+
+Contributors
+
+    Brian Paul, VMware
+    Daniel Rakos, AMD
+    Daniel Koch, NVIDIA
+
+Notice
+
+    Copyright (c) 2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on June 26, 2014.
+    Ratified by the Khronos Board of Promoters on August 7, 2014.
+
+Version
+
+    Date: May 29, 2017
+    Revision: 5
+
+Number
+
+    ARB Extension #173
+
+Dependencies
+
+    OpenGL 3.0 is required.
+
+    The extension is written against the OpenGL 4.4 Specification, Core
+    Profile, March 19, 2014.
+
+    OpenGL 4.0 and ARB_transform_feedback3 affect the definition of this
+    extension.
+
+Overview
+
+    This extension adds new query types which can be used to detect overflow
+    of transform feedback buffers. The new query types are also accepted by
+    conditional rendering commands.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <target> parameter of BeginQuery, EndQuery,
+    BeginQueryIndexed, EndQueryIndexed, GetQueryiv, and GetQueryIndexediv:
+
+        TRANSFORM_FEEDBACK_OVERFLOW_ARB                 0x82EC
+        TRANSFORM_FEEDBACK_STREAM_OVERFLOW_ARB          0x82ED
+
+Additions to Chapter 4 of the OpenGL 4.4 (Core Profile) Specification (Event Model)
+
+    Modify Section 4.2, Query Objects and Asynchronous Queries
+
+    (add new bullet after second bullet on p. 39)
+
+      * Transform feedback overflow queries return information on whether or
+        not transform feedback overflow happened for one or more streams
+        (see section 13.x).
+
+    (modify errors section for BeginQueryIndexed on p. 40)
+
+    An INVALID_ENUM error is generated if <target> is not SAMPLES_PASSED,
+    ... for a primitives written query; or TRANSFORM_FEEDBACK_OVERFLOW_ARB
+    or TRANSFORM_FEEDBACK_STREAM_OVERFLOW_ARB for a transform feedback
+    overflow query.
+
+    An INVALID_VALUE error is generated if <target> is SAMPLES_PASSED ...
+    TIME_ELAPSED, or TRANSFORM_FEEDBACK_OVERFLOW_ARB, and <index> is not
+    zero.
+
+    An INVALID_VALUE error is generated if <target> is PRIMITIVES_GENERATED,
+    TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, or
+    TRANSFORM_FEEDBACK_STREAM_OVERFLOW_ARB, and <index> is not in the range
+    zero to the value of MAX_VERTEX_STREAMS minus one.
+
+    (modify errors section for EndQueryIndexed on p. 41-42)
+
+    An INVALID_ENUM error is generated if <target> is not SAMPLES_PASSED,
+    ... TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN,
+    TRANSFORM_FEEDBACK_OVERFLOW_ARB, or
+    TRANSFORM_FEEDBACK_STREAM_OVERFLOW_ARB.
+
+    An INVALID_VALUE error is generated if <target> is SAMPLES_PASSED, ...
+    TIME_ELAPSED, or TRANSFORM_FEEDBACK_OVERFLOW_ARB, and <index> is not
+    zero.
+
+    An INVALID_VALUE error is generated if <target> is PRIMITIVES_GENERATED,
+    TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, or
+    TRANSFORM_FEEDBACK_STREAM_OVERFLOW_ARB, and <index> is not in the range
+    zero to the value of MAX_VERTEX_STREAMS minus one.
+
+
+    Modify Section 4.2.1, Query Object Queries
+
+    (add new paragraph after fourth paragraph on p. 43)
+
+    For transform feedback overflow queries (TRANSFORM_FEEDBACK_OVERFLOW_ARB
+    and TRANSFORM_FEEDBACK_STREAM_OVERFLOW_ARB) if the number of bits is
+    non-zero, the minimum number of bits is 1.
+
+    (modify errors section for GetQueryIndexediv on p 43)
+
+    An INVALID_ENUM error is generated if <target> is not ...,
+    TRANSFORM_FEEDBACK_OVERFLOW_ARB, or TRANSFORM_FEEDBACK_STREAM_OVERFLOW_ARB.
+
+    An INVALID_VALUE error is generated if <target> is ..., or
+    TRANSFORM_FEEDBACK_OVERFLOW_ARB, and <index> is not zero.
+
+    An INVALID_VALUE error is generated if <target> is ..., or
+    TRANSFORM_FEEDBACK_STREAM_OVERFLOW_ARB, and <index> is not in the range
+    zero to the value of MAX_VERTEX_STREAMS minus one.
+
+Additions to Chapter 10 of the OpenGL 4.4 (Core Profile) Specification (Vertex Specification and Drawing Commands)
+
+    Modify Section 10.10, Conditional Rendering
+
+    (modify first paragraph on p. 338)
+
+    Conditional rendering can be used to discard rendering commands based on
+    the result of a query. Conditional rendering is started and stopped using
+    the commands
+        ...
+    <id> specifies the name of a query whose results are used to determine if
+    the rendering commands are discarded. If the result (SAMPLES_PASSED) of
+    the query is zero, or if the result (ANY_SAMPLES_PASSED,
+    ANY_SAMPLES_PASSED_CONSERVATIVE, TRANSFORM_FEEDBACK_OVERFLOW_ARB, or
+    TRANSFORM_FEEDBACK_STREAM_OVERFLOW_ARB) is false, ...
+
+    (modify second sentence of second paragraph on p. 338)
+
+    If the result (SAMPLES_PASSED) of the query is non-zero, or if the
+    result (ANY_SAMPLES_PASSED, ANY_SAMPLES_PASSED_CONSERVATIVE,
+    TRANSFORM_FEEDBACK_OVERFLOW_ARB, or
+    TRANSFORM_FEEDBACK_STREAM_OVERFLOW_ARB) is true, such commands are not
+    discarded.
+
+    (modify errors section for BeginConditionalRender on p. 339)
+
+    An INVALID_OPERATION error is generated if <id> is the named of a query
+    object with a target other than ..., TRANSFORM_FEEDBACK_OVERFLOW_ARB, or
+    TRANSFORM_FEEDBACK_STREAM_OVERFLOW_ARB, or if <id> is the name of a query
+    currently in progress.
+
+Additions to Chapter 13 of the OpenGL 4.4 (Core Profile) Specification
+(Fixed-Function Vertex Post-Processing)
+
+    Add new Section after 13.3, Primitive Queries
+
+    13.x Transform Feedback Overflow Queries
+
+    Transform feedback overflow queries use query objects to track whether
+    or not all stream vertices were written to buffer objects in transform
+    feedback mode.
+
+    When BeginQueryIndexed is called with a <target> of
+    TRANSFORM_FEEDBACK_OVERFLOW_ARB, the transform feedback overflow state
+    maintained by the GL is set to false. If transform feedback is active
+    and a primitive to be recorded on any stream does not fit in one of the
+    buffer objects used for capture, the overflow state is set to true.
+
+    When BeginQueryIndexed is called with a <target> of
+    TRANSFORM_FEEDBACK_STREAM_OVERFLOW_ARB, the transform feedback stream
+    overflow state maintained by the GL for vertex stream <index> is set to
+    false. There is a separate overflow state for each vertex stream. If
+    transform feedback is active and a primitive to be recorded on stream
+    <index> does not fit in one of the buffer objects used for capture, the
+    overflow state for vertex stream <index> is set to true.
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+     None.
+
+New State
+
+    Modify Table 23.74, Miscellaneous
+
+    (update the state table to cover the new query types on p. 599)
+
+    Get Value      Type  Get Command  Initial Value  Description                Sec.
+    -------------  ----  -----------  -------------  -------------------------  -----
+    CURRENT_QUERY  9xZ+  GetQueryiv         0        Active query object names  4.2.1
+
+New Implementation Dependent State
+
+    Modify Table 23.69, Implementation Dependent Values
+
+    (update the state table to cover the new query types on p. 594)
+
+    Get Value           Type  Get Command  Minimum Value   Description         Sec.
+    ------------------  ----  -----------  --------------  ------------------  -----
+    QUERY_COUNTER_BITS  9xZ+  GetQueryiv   see sec. 4.2.1  Asynchronous query  4.1.1
+                                                           counter bits
+
+Dependencies on OpenGL 4.0 and ARB_transform_feedback3
+
+    If OpenGL 4.0 and ARB_transform_feedback3 are not support then remove all
+    references to TRANSFORM_FEEDBACK_STREAM_OVERFLOW_ARB.
+
+Issues
+
+    (1) Why is this extension necessary?
+
+      RESOLVED:  An application can query the number of vertices written
+      to a transform feedback buffer and compare that to the size of the
+      buffer (or number of vertices drawn) to try to detect overflow but
+      that is ineffective if subsequent rendering is to be predicated on
+      that condition.  Basically, the whole point is to have a queries
+      which can be used by BeginConditionalRender.
+
+      Note that this feature is present in another, competing graphics API.
+      This extension will allow one to better implement that API's features
+      on top of OpenGL.
+
+    (2) For conditional rendering do we want to discard or not discard
+        drawing if the query indicates transform feedback buffer overflow?
+
+      RESOLVED: Some apps probably want one way while others want the
+      other. This can be solved by the GL_ARB_conditional_render_inverted
+      extension which allows one to specify predication either on the normal
+      or inverted query result.
+
+    (3) Is the overflow condition determined per transform feedback buffer or
+        per vertex stream?
+
+      DISCUSSION: There may be multiple buffers used to capture primitives of
+      the same vertex stream and while the buffers themselves are the ones
+      that overflow, the overflow condition itself is determined per vertex
+      stream, as no data is written to any of the buffers used to capture
+      primitives of a particular vertex stream if not all of them are able to
+      capture the whole primitive.
+
+      RESOLVED: Overflow is determined per vertex stream.
+
+    (4) What do queries with target TRANSFORM_FEEDBACK_OVERFLOW_ARB track?
+
+      RESOLVED: Tracks overflow condition for all vertex streams. If OpenGL 4.0
+      and ARB_transform_feedback3 are not supported this trivially simplifies to
+      tracking overflow condition for the first and only vertex stream.
+
+Revision History
+
+    Revision 5, 2017/05/29 (Daniel Koch)
+      - fix typo
+
+    Revision 4, 2014/06/17 (Jon Leech)
+      - Add missing error condition for BeginQueryIndexed / EndQueryIndexed
+        and <target>TRANSFORM_FEEDBACK_STREAM_OVERFLOW_ARB (Bug 12376).
+
+    Revision 3, 2014/04/25 (Daniel Rakos)
+      - Renamed to ARB_transform_feedback_overflow_query.
+      - Replaced EXT suffixes with ARB ones.
+
+    Revision 2, 2014/04/16 (Daniel Rakos)
+      - Renamed extension to EXT_transform_feedback_overflow_query.
+      - Renamed new query targets to TRANSFORM_FEEDBACK_OVERFLOW_EXT and
+        TRANSFORM_FEEDBACK_STREAM_OVERFLOW_EXT.
+      - Added issues (3) and (4).
+      - Moved transform feedback overflow queries to have their own section
+        instead of introducing them as part of primitive queries.
+      - Added state table changes.
+      - Clarified language and error conditions.
+
+    Revision 1, 2014/01/27 (Brian Paul)
+      - Initial revision.

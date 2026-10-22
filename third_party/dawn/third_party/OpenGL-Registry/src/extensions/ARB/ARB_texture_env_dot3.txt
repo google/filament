@@ -1,0 +1,166 @@
+Name
+
+    ARB_texture_env_dot3
+
+Name Strings
+
+    GL_ARB_texture_env_dot3
+    
+Contact
+
+    Bimal Poddar, Intel (bimal.poddar 'at' intel.com)
+    Dave Gosselin
+    Dan Ginsburg, AMD (dan.ginsburg 'at' amd.com)
+
+Notice
+
+    Copyright (c) 2001-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by ARB on February 16, 2001.
+
+Version
+
+    Last modified date: 2006/11/04
+
+Number
+
+    ARB Extension #19
+
+Dependencies
+
+    This extension is written against the OpenGL 1.2.1 Specification.
+    OpenGL 1.1, ARB_multitexture and ARB_texture_env_combine are required 
+    for this extension.
+
+Overview
+
+    Adds new operation to the texture combiner operations.
+
+        DOT3_RGB_ARB                    Arg0 <dotprod> Arg1
+        DOT3_RGBA_ARB                   Arg0 <dotprod> Arg1
+
+    where Arg0, Arg1 are specified by <params> parameter of 
+    TexEnvf, TexEnvi, TexEnvfv, and TexEnviv when the <pname>
+    parameter value is SOURCE0_RGB_ARB and SOURCE1_RGB_ARB.
+    
+Issues
+
+ 1. This extension is an ARB version of EXT_texture_env_dot3 which bears
+    a copyright by ATI Technologies. Is ATI willing to have the ARB
+    go ahead and modify their original spec and use it for the 
+    ARB extension.
+
+    - RESOLVED: ATI does not have a problem with the copyright issue.
+
+ 2. The EXT version of the spec does not multiply the output by 
+    RGB_SCALE_ARB and ALPHA_SCALE_ARB. There is no reason to impose this
+    restriction since it makes the scale operations non-orthogonal. 
+    Should the enum values for the new tokens in this extension should
+    be the same as the original EXT version?
+
+    - RESOLVED: No.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <pname> parameter value is COMBINE_RGB_ARB
+
+        DOT3_RGB_ARB                                    0x86AE
+        DOT3_RGBA_ARB                                   0x86AF
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+    Added to table 3.20 of the ARB_texture_env_combine spec:
+
+        COMBINE_RGB_ARB         Texture Function
+        ---------------         ----------------
+        DOT3_RGB_ARB            4*((Arg0_r - 0.5)*(Arg1_r - 0.5) +
+                                   (Arg0_g - 0.5)*(Arg1_g - 0.5) +
+                                   (Arg0_b - 0.5)*(Arg1_b - 0.5))
+
+                                This value is placed into all three
+                                r,g,b components of the output.
+
+        DOT3_RGBA_ARB           4*((Arg0_r - 0.5)*(Arg1_r - 0.5) +
+                                   (Arg0_g - 0.5)*(Arg1_g - 0.5) +
+                                   (Arg0_b - 0.5)*(Arg1_b - 0.5))
+
+                                This value is placed into all four
+                                r,g,b,a components of the output. Note
+                                that the result generated from 
+                                COMBINE_ALPHA_ARB function is ignored.
+
+Additions to Chapter 4 of the OpenGL 1.2 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    INVALID_ENUM is generated if <params> value for COMBINE_RGB_ARB
+    is not one of REPLACE, MODULATE, ADD, ADD_SIGNED_ARB, 
+    INTERPOLATE_ARB, SUBTRACT_ARB, DOT3_RGB_ARB or DOT3_RGBA_ARB.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+    06/11/04  benj      Updated contact info after ATI/AMD merger.
+
+    01/05/15  bpoddar   Fixed a mistake in the spec - DOT3_RGB_ARB and
+                        DOT3_RGBA_ARB are not valid arguments when
+                        <pname> parameter is COMBINE_ALPHA_ARB
+
+    01/02/02  bpoddar   Added original EXT/ARB contributors to the contact
+                        list
+
+    00/12/13  bpoddar   Added enum values for DOT3_RGB_ARB and DOT3_RGBA_ARB
+                        Added resolution to issue # 1.
+
+    00/12/06  bpoddar   Fixed typos - EXT -> ARB, RED_SCALE -> RGB_SCALE
+
+    00/12/01  bpoddar   Created an ARB version of the ARB_texture_env_dot3 
+                        by breaking up the proposed ARB_texture_env_combine
+                        spec.

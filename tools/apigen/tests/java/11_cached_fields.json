@@ -1,0 +1,211 @@
+{
+  "meta": {
+    "generator_version": "1.0.0",
+    "source_file": "/Users/mathias/sources/git/filament/tools/apigen/tests/java/11_cached_fields.h"
+  },
+  "includes": {
+    "user": [],
+    "system": [
+      "<filament/Skybox.h>",
+      "<filament/IndirectLight.h>",
+      "<utils/compiler.h>"
+    ]
+  },
+  "enums": [],
+  "classes": [
+    {
+      "name": "CachedFieldsTest",
+      "qualified_name": "CachedFieldsTest",
+      "location": {
+        "file": "tools/apigen/tests/java/11_cached_fields.h",
+        "line": 10
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "CachedFieldsTest",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [
+        {
+          "name": "setSkybox",
+          "qualified_name": "setSkybox(filament::Skybox * _Nullable)",
+          "location": {
+            "file": "tools/apigen/tests/java/11_cached_fields.h",
+            "line": 12
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "skybox",
+              "type": {
+                "cpp_name": "filament::Skybox *",
+                "qualified_name": "filament::Skybox*",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": true,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "nullable"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getSkybox",
+          "qualified_name": "getSkybox()",
+          "location": {
+            "file": "tools/apigen/tests/java/11_cached_fields.h",
+            "line": 13
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "filament::Skybox *",
+            "qualified_name": "filament::Skybox*",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": true,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "setIndirectLight",
+          "qualified_name": "setIndirectLight(filament::IndirectLight * _Nullable)",
+          "location": {
+            "file": "tools/apigen/tests/java/11_cached_fields.h",
+            "line": 15
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "ibl",
+              "type": {
+                "cpp_name": "filament::IndirectLight *",
+                "qualified_name": "filament::IndirectLight*",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": true,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "nullable"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getIndirectLight",
+          "qualified_name": "getIndirectLight()",
+          "location": {
+            "file": "tools/apigen/tests/java/11_cached_fields.h",
+            "line": 16
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "filament::IndirectLight *",
+            "qualified_name": "filament::IndirectLight*",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": true,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": []
+    }
+  ],
+  "functions": []
+}

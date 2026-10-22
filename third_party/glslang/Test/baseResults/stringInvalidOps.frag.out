@@ -1,0 +1,40 @@
+stringInvalidOps.frag
+ERROR: 0:5: ':' :  wrong operand types: no operation ':' exists that takes a left-hand operand of type ' const string' and a right operand of type ' const string' (or there is no acceptable conversion)
+ERROR: 0:6: '+' :  wrong operand types: no operation '+' exists that takes a left-hand operand of type ' const string' and a right operand of type ' const string' (or there is no acceptable conversion)
+ERROR: 0:7: '*' :  wrong operand types: no operation '*' exists that takes a left-hand operand of type ' const string' and a right operand of type ' const string' (or there is no acceptable conversion)
+ERROR: 0:7: '+' :  wrong operand types: no operation '+' exists that takes a left-hand operand of type ' const string' and a right operand of type ' const string' (or there is no acceptable conversion)
+ERROR: 4 compilation errors.  No code generated.
+
+
+Shader version: 450
+Requested GL_EXT_debug_printf
+ERROR: node is still EOpNull!
+0:4  Function Definition: main( ( global void)
+0:4    Function Parameters: 
+0:5    Sequence
+0:5      Constant:
+0:5        "def"
+0:6      Constant:
+0:6        "o"
+0:7      Constant:
+0:7        "o"
+0:?   Linker Objects
+
+
+Linked fragment stage:
+
+
+Shader version: 450
+Requested GL_EXT_debug_printf
+ERROR: node is still EOpNull!
+0:4  Function Definition: main( ( global void)
+0:4    Function Parameters: 
+0:5    Sequence
+0:5      Constant:
+0:5        "def"
+0:6      Constant:
+0:6        "o"
+0:7      Constant:
+0:7        "o"
+0:?   Linker Objects
+

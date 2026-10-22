@@ -1,0 +1,481 @@
+/*
+ * Copyright (C) 2015 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "OpenGLProgram.h"
+
+#include "GLTexture.h"
+#include "GLUtils.h"
+#include "OpenGLDriver.h"
+#include "OpenGLState.h"
+#include "ShaderCompilerService.h"
+
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+#include <backend/Program.h>
+
+#include <private/utils/Tracing.h>
+
+#include <utils/BitmaskEnum.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/Log.h>
+
+#include <algorithm>
+#include <array>
+#include <new>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include <stddef.h>
+#include <stdint.h>
+
+namespace filament::backend {
+
+using namespace filament::math;
+using namespace utils;
+using namespace backend;
+
+struct OpenGLProgram::LazyInitializationData {
+    Program::DescriptorSetInfo descriptorBindings;
+    Program::BindingUniformsInfo bindingUniformInfo;
+    FixedCapacityVector<Program::PushConstant> vertexPushConstants;
+    FixedCapacityVector<Program::PushConstant> fragmentPushConstants;
+};
+
+namespace {
+
+// Number of 'uint32_t' read out of the uniform buffer for a *single* element of a uniform of
+// the given type. This must match exactly what the glUniform*v() calls in updateUniforms()
+// consume, in particular MAT3 is read as a std140 mat3, i.e. 3 columns of 4 floats.
+// Returns 0 for types we don't upload (STRUCT) and for out-of-range values.
+constexpr uint32_t getUniformWordCount(UniformType const type) noexcept {
+    switch (type) {
+        case UniformType::BOOL:
+        case UniformType::FLOAT:
+        case UniformType::INT:
+        case UniformType::UINT:
+            return 1;
+        case UniformType::BOOL2:
+        case UniformType::FLOAT2:
+        case UniformType::INT2:
+        case UniformType::UINT2:
+            return 2;
+        case UniformType::BOOL3:
+        case UniformType::FLOAT3:
+        case UniformType::INT3:
+        case UniformType::UINT3:
+            return 3;
+        case UniformType::BOOL4:
+        case UniformType::FLOAT4:
+        case UniformType::INT4:
+        case UniformType::UINT4:
+            return 4;
+        case UniformType::MAT3:
+            return 12;  // std140 mat3: 3 columns of vec4
+        case UniformType::MAT4:
+            return 16;
+        case UniformType::STRUCT:
+            break;      // not supported
+    }
+    return 0;
+}
+
+} // anonymous namespace
+
+
+OpenGLProgram::OpenGLProgram() noexcept = default;
+
+OpenGLProgram::OpenGLProgram(OpenGLDriver& gld, Program&& program) noexcept
+        : HwProgram(std::move(program.getName())), mRec709Location(-1), mPushConstantFragmentStageOffset(0) {
+    auto* const lazyInitializationData = new(std::nothrow) LazyInitializationData();
+    if (UTILS_UNLIKELY(gld.getContext().isES2())) {
+        lazyInitializationData->bindingUniformInfo = std::move(program.getBindingUniformInfo());
+    }
+    lazyInitializationData->vertexPushConstants = std::move(program.getPushConstants(ShaderStage::VERTEX));
+    lazyInitializationData->fragmentPushConstants = std::move(program.getPushConstants(ShaderStage::FRAGMENT));
+    lazyInitializationData->descriptorBindings = std::move(program.getDescriptorBindings());
+
+    ShaderCompilerService& compiler = gld.getShaderCompilerService();
+    mToken = compiler.createProgram(name, std::move(program));
+
+    ShaderCompilerService::setUserData(mToken, lazyInitializationData);
+}
+
+OpenGLProgram::~OpenGLProgram() noexcept {
+    if (mToken) {
+        // if the token is non-nullptr it means the program has not been used, and
+        // we need to clean-up.
+        assert_invariant(gl.program == 0);
+
+        LazyInitializationData* const lazyInitializationData =
+                (LazyInitializationData *)ShaderCompilerService::getUserData(mToken);
+        delete lazyInitializationData;
+
+        ShaderCompilerService::terminate(mToken);
+        assert_invariant(!mToken);
+    }
+
+    delete [] mUniformsRecords;
+    const GLuint program = gl.program;
+    if (program) {
+        glDeleteProgram(program);
+    }
+}
+
+void OpenGLProgram::initialize(OpenGLDriver& gld) {
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+
+    assert_invariant(gl.program == 0);
+    assert_invariant(mToken);
+
+    LazyInitializationData* const lazyInitializationData =
+            (LazyInitializationData *)ShaderCompilerService::getUserData(mToken);
+
+    ShaderCompilerService& compiler = gld.getShaderCompilerService();
+    gl.program = compiler.getProgram(mToken);
+
+    assert_invariant(mToken == nullptr);
+    if (gl.program) {
+        assert_invariant(lazyInitializationData);
+        initializeProgramState(gld.getBackendState(), gl.program, *lazyInitializationData);
+        delete lazyInitializationData;
+    }
+}
+
+/*
+ * Initializes our internal state from a valid program. This must only be called after
+ * checkProgramStatus() has been successfully called.
+ */
+void OpenGLProgram::initializeProgramState(OpenGLState& gls, GLuint program,
+        LazyInitializationData& lazyInitializationData) {
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+
+    // from the pipeline layout we compute a mapping from {set, binding} to {binding}
+    // for both buffers and textures
+
+    for (auto&& entry: lazyInitializationData.descriptorBindings) {
+        std::sort(entry.begin(), entry.end(),
+                [](Program::Descriptor const& lhs, Program::Descriptor const& rhs) {
+                    return lhs.binding < rhs.binding;
+                });
+    }
+
+    GLuint tmu = 0;
+    GLuint binding = 0;
+
+    // needed for samplers
+    gls.useProgram(program);
+
+    UTILS_NOUNROLL
+    for (descriptor_set_t set = 0; set < MAX_DESCRIPTOR_SET_COUNT; set++) {
+        for (Program::Descriptor const& entry: lazyInitializationData.descriptorBindings[set]) {
+            switch (entry.type) {
+                case DescriptorType::UNIFORM_BUFFER:
+                case DescriptorType::SHADER_STORAGE_BUFFER: {
+                    if (!entry.name.empty()) {
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+                        if (UTILS_LIKELY(!gls.isES2())) {
+                            GLuint const index = glGetUniformBlockIndex(program,
+                                    entry.name.c_str());
+                            // `binding` is the buffer binding point we assign to this
+                            // descriptor; GLDescriptorSet::bind() reads it back and uses it to
+                            // index OpenGLState's per-target buffer binding cache, which has
+                            // MAX_BUFFER_BINDINGS entries. The descriptor list comes from the
+                            // material file (see ChunkDescriptorBindingsInfo) and can name the
+                            // same uniform block repeatedly, in which case glGetUniformBlockIndex
+                            // succeeds every time and this counter keeps growing, so it has to be
+                            // capped here. Descriptors past the cap are simply not bound.
+                            if (index != GL_INVALID_INDEX &&
+                                    UTILS_LIKELY(binding < OpenGLState::MAX_BUFFER_BINDINGS)) {
+                                // this can fail if the program doesn't use this descriptor
+                                glUniformBlockBinding(program, index, binding);
+                                mBindingMap.insert(set, entry.binding,
+                                        { binding, entry.type });
+                                ++binding;
+                            }
+                        } else
+#endif
+                        {
+                            auto pos = std::find_if(lazyInitializationData.bindingUniformInfo.begin(),
+                                    lazyInitializationData.bindingUniformInfo.end(),
+                                    [&name = entry.name](const auto& item) {
+                                return std::get<1>(item) == name;
+                            });
+                            if (pos != lazyInitializationData.bindingUniformInfo.end()) {
+                                // This index comes from the material file and is used as the
+                                // binding point for this buffer; GLDescriptorSet::bind() reads
+                                // it back and passes it to updateUniforms(), where it indexes
+                                // mUniformsRecords. It must be in range.
+                                uint8_t const uniformBufferIndex = std::get<0>(*pos);
+                                if (UTILS_LIKELY(uniformBufferIndex < Program::UNIFORM_BINDING_COUNT)) {
+                                    binding = uniformBufferIndex;
+                                    mBindingMap.insert(set, entry.binding, { binding, entry.type });
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+                case DescriptorType::SAMPLER_2D_FLOAT:
+                case DescriptorType::SAMPLER_2D_INT:
+                case DescriptorType::SAMPLER_2D_UINT:
+                case DescriptorType::SAMPLER_2D_DEPTH:
+                case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+                case DescriptorType::SAMPLER_2D_ARRAY_INT:
+                case DescriptorType::SAMPLER_2D_ARRAY_UINT:
+                case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+                case DescriptorType::SAMPLER_CUBE_FLOAT:
+                case DescriptorType::SAMPLER_CUBE_INT:
+                case DescriptorType::SAMPLER_CUBE_UINT:
+                case DescriptorType::SAMPLER_CUBE_DEPTH:
+                case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+                case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+                case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+                case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+                case DescriptorType::SAMPLER_3D_FLOAT:
+                case DescriptorType::SAMPLER_3D_INT:
+                case DescriptorType::SAMPLER_3D_UINT:
+                case DescriptorType::SAMPLER_2D_MS_FLOAT:
+                case DescriptorType::SAMPLER_2D_MS_INT:
+                case DescriptorType::SAMPLER_2D_MS_UINT:
+                case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
+                case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
+                case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
+                case DescriptorType::SAMPLER_EXTERNAL: {
+                    if (!entry.name.empty()) {
+                        GLint const loc = glGetUniformLocation(program, entry.name.c_str());
+                        // `tmu` is the texture unit we assign to this sampler;
+                        // GLDescriptorSet::bind() reads it back and uses it to index
+                        // OpenGLState's texture unit cache, which has MAX_TEXTURE_UNIT_COUNT
+                        // entries. The descriptor list comes from the material file (see
+                        // ChunkDescriptorBindingsInfo) and can name the same sampler
+                        // repeatedly, in which case glGetUniformLocation returns the same
+                        // valid location every time and this counter keeps growing, so it has
+                        // to be capped here. Descriptors past the cap are simply not bound.
+                        if (loc >= 0 &&
+                                UTILS_LIKELY(tmu < OpenGLState::MAX_TEXTURE_UNIT_COUNT)) {
+                            // this can fail if the program doesn't use this descriptor
+                            mBindingMap.insert(set, entry.binding, { tmu, entry.type });
+                            glUniform1i(loc, GLint(tmu));
+                            ++tmu;
+                        }
+                    }
+                    break;
+                }
+                case DescriptorType::INPUT_ATTACHMENT:
+                    break;
+            }
+        }
+        CHECK_GL_ERROR()
+    }
+
+    if (gls.isES2()) {
+        // ES2 initialization of (fake) UBOs
+        UniformsRecord* const uniformsRecords = new(std::nothrow) UniformsRecord[Program::UNIFORM_BINDING_COUNT];
+        UTILS_NOUNROLL
+        for (auto&& [index, name, uniforms] : lazyInitializationData.bindingUniformInfo) {
+            if (UTILS_VERY_UNLIKELY(index >= Program::UNIFORM_BINDING_COUNT)) {
+                continue;
+            }
+            uniformsRecords[index].locations.reserve(uniforms.size());
+            uniformsRecords[index].locations.resize(uniforms.size());
+            for (size_t j = 0, c = uniforms.size(); j < c; j++) {
+                GLint const loc = glGetUniformLocation(program, uniforms[j].name.c_str());
+                uniformsRecords[index].locations[j] = loc;
+                if (UTILS_UNLIKELY(index == 0)) {
+                    // This is a bit of a gross hack here, we stash the location of
+                    // "frameUniforms.rec709", which obviously the backend shouldn't know about,
+                    // which is used for emulating the "rec709" colorspace in the shader.
+                    // The backend also shouldn't know that binding 0 is where frameUniform is.
+                    std::string_view const uniformName{
+                            uniforms[j].name.data(), uniforms[j].name.size() };
+                    if (uniformName == "frameUniforms.rec709") {
+                        mRec709Location = loc;
+                    }
+                }
+            }
+            uniformsRecords[index].uniforms = std::move(uniforms);
+        }
+        mUniformsRecords = uniformsRecords;
+    }
+
+    auto& vertexConstants = lazyInitializationData.vertexPushConstants;
+    auto& fragmentConstants = lazyInitializationData.fragmentPushConstants;
+
+    size_t const totalConstantCount = vertexConstants.size() + fragmentConstants.size();
+    if (totalConstantCount > 0) {
+        mPushConstants.reserve(totalConstantCount);
+        mPushConstantFragmentStageOffset = vertexConstants.size();
+        auto const transformAndAdd = [&](Program::PushConstant const& constant) {
+            if (!constant.name.empty()) {
+                GLint const loc = glGetUniformLocation(program, constant.name.c_str());
+                mPushConstants.push_back({loc, constant.type});
+            } else {
+                // If the constant is not named, then we assume it will not be referenced in this
+                // program.
+                mPushConstants.push_back({ -1, constant.type });
+            }
+        };
+        std::for_each(vertexConstants.cbegin(), vertexConstants.cend(), transformAndAdd);
+        std::for_each(fragmentConstants.cbegin(), fragmentConstants.cend(), transformAndAdd);
+    }
+}
+
+void OpenGLProgram::updateUniforms(
+        uint32_t const index, GLuint const id, void const* buffer, uint32_t const size,
+        uint16_t const age, uint32_t const offset) const noexcept {
+    assert_invariant(mUniformsRecords);
+    assert_invariant(buffer);
+
+    // `index` is the binding point recorded in mBindingMap, which for ES2 comes from the
+    // material file (see ChunkBindingUniformInfo::unflatten). Both the parser and
+    // initializeProgramState() reject out-of-range values, check again here because this is
+    // what indexes mUniformsRecords, which has exactly UNIFORM_BINDING_COUNT entries.
+    if (UTILS_VERY_UNLIKELY(index >= Program::UNIFORM_BINDING_COUNT)) {
+        return;
+    }
+
+    // only update the uniforms if the UBO has changed since last time we updated
+    UniformsRecord const& records = mUniformsRecords[index];
+    if (records.id == id && records.age == age && records.offset == offset) {
+        return;
+    }
+    records.id = id;
+    records.age = age;
+    records.offset = offset;
+
+    assert_invariant(records.uniforms.size() == records.locations.size());
+
+    // apply the offset to the buffer
+    if (UTILS_VERY_UNLIKELY(offset > size)) {
+        // the dynamic offset is past the end of the buffer, there is nothing we can read
+        return;
+    }
+    buffer = static_cast<char const*>(buffer) + offset;
+
+    // number of 'uint32_t' readable at `buffer`; u.offset and u.size come verbatim from the
+    // material file and are not validated at parse time (the size of the buffer isn't known
+    // then), so every read below must be checked against this.
+    uint32_t const availableWords = uint32_t((size - offset) / sizeof(uint32_t));
+
+    for (size_t i = 0, c = records.uniforms.size(); i < c; i++) {
+        Program::Uniform const& u = records.uniforms[i];
+        GLint const loc = records.locations[i];
+        // mRec709Location is special, it is handled by setRec709ColorSpace() and the corresponding
+        // entry in `buffer` is typically not initialized, so we skip it.
+        if (loc < 0 || loc == mRec709Location) {
+            continue;
+        }
+        // u.offset is in 'uint32_t' units. Both terms are small (u.offset is a uint16_t and
+        // u.size a uint8_t), so this cannot overflow.
+        uint32_t const wordCount = uint32_t(u.size) * getUniformWordCount(u.type);
+        if (UTILS_VERY_UNLIKELY(!wordCount || uint32_t(u.offset) + wordCount > availableWords)) {
+            // the material declares a uniform that doesn't fit in the buffer it's bound to;
+            // reading it would be out-of-bounds. This can only happen with a broken or
+            // malicious material.
+            continue;
+        }
+        GLfloat const* const bf = reinterpret_cast<GLfloat const*>(buffer) + u.offset;
+        GLint const* const bi = reinterpret_cast<GLint const*>(buffer) + u.offset;
+
+        switch(u.type) {
+            case UniformType::FLOAT:
+                glUniform1fv(loc, u.size, bf);
+                break;
+            case UniformType::FLOAT2:
+                glUniform2fv(loc, u.size, bf);
+                break;
+            case UniformType::FLOAT3:
+                glUniform3fv(loc, u.size, bf);
+                break;
+            case UniformType::FLOAT4:
+                glUniform4fv(loc, u.size, bf);
+                break;
+
+            case UniformType::BOOL:
+            case UniformType::INT:
+            case UniformType::UINT:
+                glUniform1iv(loc, u.size, bi);
+                break;
+            case UniformType::BOOL2:
+            case UniformType::INT2:
+            case UniformType::UINT2:
+                glUniform2iv(loc, u.size, bi);
+                break;
+            case UniformType::BOOL3:
+            case UniformType::INT3:
+            case UniformType::UINT3:
+                glUniform3iv(loc, u.size, bi);
+                break;
+            case UniformType::BOOL4:
+            case UniformType::INT4:
+            case UniformType::UINT4:
+                glUniform4iv(loc, u.size, bi);
+                break;
+
+            case UniformType::MAT3: {
+                // glUniformMatrix3fv expect a packed mat3, but the UBO is in std140
+                // also, the GLES spec says:
+                // Locations for sequential array indices are not required to be sequential.
+                // The location for "a[1]" may or may not be equal to the location for "a[0]" + 1.
+                // Furthermore, since unused elements at the end of uniform arrays may be trimmed
+                // the location of the i + 1 array element may not be valid even if the location of
+                // the i element is valid. As a direct consequence, the value of the location of
+                // "a[0]" + 1 may refer to a different uniform entirely. Applications that wish to
+                // set individual array elements should query the locations of each element
+                // separately.
+
+                struct std140 {
+                    struct mat3 : public std::array<std::array<GLfloat, 4>, 3> {
+                    };
+                };
+                std140::mat3 const* const b = reinterpret_cast<std140::mat3 const*>(bf);
+
+                struct mat3 : public std::array<std::array<GLfloat, 3>, 3> {
+                    explicit mat3(std140::mat3 const& other) noexcept
+                        : std::array<std::array<GLfloat, 3>, 3>{ {
+                            { { other[0][0], other[0][1], other[0][2] } },
+                            { { other[1][0], other[1][1], other[1][2] } },
+                            { { other[2][0], other[2][1], other[2][2] } }
+                        } } {
+                    }
+                };
+
+                std::vector<mat3> const temp{ b, b + u.size };
+                glUniformMatrix3fv(loc, u.size, GL_FALSE,
+                        reinterpret_cast<GLfloat const*>(temp.data()));
+                break;
+            }
+
+            case UniformType::MAT4:
+                glUniformMatrix4fv(loc, u.size, GL_FALSE, bf);
+                break;
+
+            case UniformType::STRUCT:
+                // not supported
+                break;
+        }
+    }
+}
+
+void OpenGLProgram::setRec709ColorSpace(bool rec709) const noexcept {
+    glUniform1i(mRec709Location, rec709);
+}
+
+
+} // namespace filament::backend

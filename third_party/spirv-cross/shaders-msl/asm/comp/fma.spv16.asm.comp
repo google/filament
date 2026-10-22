@@ -1,0 +1,65 @@
+; SPIR-V
+; Version: 1.6
+; Generator: Khronos Glslang Reference Front End; 11
+; Bound: 30
+; Schema: 0
+               OpCapability Shader
+               OpCapability FMAKHR
+               OpExtension "SPV_KHR_fma"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %_ %__0
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %SSBO2 "SSBO2"
+               OpMemberName %SSBO2 0 "out_data"
+               OpName %_ ""
+               OpName %SSBO "SSBO"
+               OpMemberName %SSBO 0 "in_data"
+               OpName %__0 ""
+               OpDecorate %_runtimearr_v4float ArrayStride 16
+               OpDecorate %SSBO2 Block
+               OpMemberDecorate %SSBO2 0 NonReadable
+               OpMemberDecorate %SSBO2 0 Offset 0
+               OpDecorate %_ NonReadable
+               OpDecorate %_ Binding 1
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_runtimearr_v4float_0 ArrayStride 16
+               OpDecorate %SSBO Block
+               OpMemberDecorate %SSBO 0 NonWritable
+               OpMemberDecorate %SSBO 0 Offset 0
+               OpDecorate %__0 NonWritable
+               OpDecorate %__0 Binding 0
+               OpDecorate %__0 DescriptorSet 0
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_runtimearr_v4float = OpTypeRuntimeArray %v4float
+      %SSBO2 = OpTypeStruct %_runtimearr_v4float
+%_ptr_StorageBuffer_SSBO2 = OpTypePointer StorageBuffer %SSBO2
+          %_ = OpVariable %_ptr_StorageBuffer_SSBO2 StorageBuffer
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_runtimearr_v4float_0 = OpTypeRuntimeArray %v4float
+       %SSBO = OpTypeStruct %_runtimearr_v4float_0
+%_ptr_StorageBuffer_SSBO = OpTypePointer StorageBuffer %SSBO
+        %__0 = OpVariable %_ptr_StorageBuffer_SSBO StorageBuffer
+%_ptr_StorageBuffer_v4float = OpTypePointer StorageBuffer %v4float
+      %int_1 = OpConstant %int 1
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+     %uint_1 = OpConstant %uint 1
+         %29 = OpConstantComposite %v3uint %uint_1 %uint_1 %uint_1
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %19 = OpAccessChain %_ptr_StorageBuffer_v4float %__0 %int_0 %int_0
+         %20 = OpLoad %v4float %19
+         %22 = OpAccessChain %_ptr_StorageBuffer_v4float %__0 %int_0 %int_1
+         %23 = OpLoad %v4float %22
+         %24 = OpFmaKHR %v4float %20 %23 %23
+         %25 = OpAccessChain %_ptr_StorageBuffer_v4float %_ %int_0 %int_0
+               OpStore %25 %24
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,40 @@
+name: gltf-viewer
+options:
+    bundleIdPrefix: ${SAMPLE_CODE_DISAMBIGUATOR}.google.filament
+include: ../app-template.yml
+targets:
+    gltf-viewer:
+        sources: gltf-viewer/
+        sources:
+            - path: '../../../third_party/models/BusterDrone'
+              type: folder
+              buildPhase: resources
+            - path: 'generated/default_env/default_env_ibl.ktx'
+              buildPhase: resources
+              optional: true
+            - path: 'generated/default_env/default_env_skybox.ktx'
+              buildPhase: resources
+              optional: true
+        templates:
+            - FilamentApp
+        dependencies:
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libgltfio_core.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libuberarchive.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libimage.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libstb.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libbasis_transcoder.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libcamutils.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libdracodec.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libmeshoptimizer.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libviewer.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libcivetweb.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libuberzlib.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libimageio-lite.xcframework
+        preBuildScripts:
+            - path: build-resources.sh
+              name: Build Resources
+              inputFiles:
+                - ../../../third_party/environments/lightroom_14b.hdr
+              outputFiles:
+                - $(SRCROOT)/generated/default_env/default_env_ibl.ktx
+                - $(SRCROOT)/generated/default_env/default_env_skybox.ktx

@@ -1,0 +1,186 @@
+Name
+
+    NV_conservative_raster_underestimation
+
+Name Strings
+
+    GL_NV_conservative_raster_underestimation
+
+Contact
+
+    Kedarnath Thangudu, NVIDIA Corporation (kthangudu 'at' nvidia.com)
+
+Contributors
+
+    Mark Kilgard, NVIDIA
+
+Status
+
+    Shipping in NVIDIA release 388.XX drivers and up
+
+Version
+
+    Last Modified Date:         November 15, 2017
+    Revision:                   1
+
+Number
+
+    OpenGL Extension #518
+
+Dependencies
+
+    This extension is written against NV_conservative_raster as applied to
+    OpenGL 4.3 specification (Core Profile).
+
+    This extension interacts with NV_gpu_program4 and NV_gpu_program5.
+    
+Overview
+    
+    The extension NV_conservative_raster provides a new rasterization mode 
+    known as "Overestimated Conservative Rasterization", where any pixel that 
+    is partially covered, even if no sample location is covered, is treated as 
+    fully covered and a corresponding fragment will be shaded.  There is also 
+    an "Underestimated Conservative Rasterization" variant, where only the 
+    pixels that are completely covered by the primitive are rasterized. 
+
+    This extension provides the underestimated conservative rasterization 
+    information for each fragment in the fragment shader through a new
+    built-in gl_FragFullyCoveredNV.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 14 of the OpenGL 4.3 (Compatibility Profile) Specification
+(Fixed-Function Primitive Assembly and Rasterization)
+
+    Add a new paragraph at the end of subsection 14.6.X "Conservative 
+    Rasterization" (added by NV_conservative_raster)
+
+    When CONSERVATIVE_RASTERIZATION_NV is enabled, the fragment shader built-in
+    input boolean variable gl_FragFullyCoveredNV will indicate if the fragment 
+    being shaded is completely covered by the primitive.
+
+Additions to Chapter 15 of the OpenGL 4.3 (Compatibility Profile) Specification
+(Programmable Fragment Processing)
+
+    Add to the Section 15.2.2 (Shader Inputs)
+
+    When CONSERVATIVE_RASTERIZATION_NV is enabled, the built-in read-only 
+    variable gl_FragFullyCoveredNV is set to TRUE if the fragment is fully 
+    covered by the generating primitive, and FALSE otherwise.
+
+New State
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+    
+Modifications to the OpenGL Shading Language Specification, Version 4.30
+
+    Including the following line in a shader can be used to control the 
+    language features described in this extension:
+
+        #extension GL_NV_conservative_raster_underestimation : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+        #define GL_NV_conservative_raster_underestimation     1
+
+    Modify Section 7.1 (Built-In Language Variables), p. 113
+
+    Add to the list of fragment shader built-ins:
+
+        in bool gl_FragFullyCoveredNV;
+
+    Add the following descriptions for gl_FragFullyCoveredNV:
+
+    The built-in variable gl_FragFullyCoveredNV is a fragment-shader input 
+    variable which is set to TRUE, when CONSERVATIVE_RASTERIZATION_NV is 
+    enabled and the fragment is fully covered by the generating primitive, and 
+    FALSE otherwise. 
+
+Errors
+
+    None.
+
+Interactions with NV_gpu_program4 and NV_gpu_program5
+
+    If NV_gpu_program4 or NV_gpu_program5 is supported and the 
+    "NV_conservative_raster_underestimation" program option is specified, 
+    fragment programs can read the "fragment.fullycovered" attribute to 
+    determine if the fragment is fully covered by the primitive.
+
+    (Add the following rule to the NV_fragment_program4 grammar)
+
+    <attribBasic>   ::= ...
+                      | <fragPrefix> "fullycovered"
+
+    (Add the following to the Table X.X Fragment Attribute Bindings)
+
+    Fragment Attribute Binding  Components  Underlying State
+    --------------------------  ----------  ----------------------------
+    * fragment.fullycovered     (c,-,-,-)   fragment fully covered.
+
+    (Add the following to the Section 2.X.2, Program Grammar)
+
+    If a fragment attribute binding matches "fragment.fullycovered", the "x"
+    component of the fragment attribute variable is set to either 0 or 1,
+    depending on how the fragment is covered by the primitive.  If 
+    CONSERVATIVE_RASTERIZATION is enabled and the fragment is completely 
+    covered by the primitive, the fullycovered attribute is set to 1; 
+    otherwise, it is set to 0.  The "y", "z", and "w" coordinates are 
+    undefined.
+
+    If the "NV_conservative_raster_underestimation" program option is not 
+    specified, "fragment.fullycovered" binding is unavailable.
+
+Issues
+
+    (1) Do you need a new rasterization mode for underestimated conservative 
+    rasterization?
+
+    RESOLVED: Enabling CONSERVATIVE_RASTERIZATION will compute both 
+    overestimated and underestimated coverage for a primitive. A fragment will 
+    be shaded for each pixel that is covered under overestimation and the 
+    underestimation information is provided as a fragment shader input.  By 
+    simply discarding fragments that are not fully covered in the fragment 
+    shader, an application can achieve underestimated rasterization of a 
+    primitive in the final image.
+
+    (2) Should the y, z, and w components of the fragment.fullycovered
+    state for NV_gpu_program4 and NV_gpu_program5 be undefined?
+
+    RESOLVED: Yes.
+
+    The (c,-,-,-) is consistent with all the other scalar attributes in
+    NV_gpu_program*.
+
+    This undefined behavior is limited to the assembly interface and
+    not exposed in GLSL.
+
+    (3) How does having CONSERVATIVE_RASTERIZATION enabled affect the sample 
+    mask (gl_SampleMask) visible in the fragment shader?
+
+    RESOLVED: When you have CONSERVATIVE_RASTERIZATION enabled on, the 
+    gl_SampleMask will unconditionally show all 1's for valid samples.
+
+    Even with all 1's in gl_SampleMask doesn't imply that a fragment is
+    fully covered.
+    
+Revision History
+
+    Revision 1
+      - Internal revisions.

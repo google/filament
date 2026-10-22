@@ -1,0 +1,248 @@
+Name
+
+    ARB_shadow_ambient
+
+Name Strings
+
+    GL_ARB_shadow_ambient
+
+Contact
+
+    Brian Paul (brian_e_paul 'at' yahoo.com)
+
+Notice
+
+    Copyright (c) 2002-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by ARB on February 14, 2002.
+
+Version
+
+    Last Modified Date: 12 December 2001
+
+Number
+
+    ARB Extension #24
+
+Dependencies
+
+    OpenGL 1.1 is required.
+    ARB_shadow is required.
+    ARB_depth_texture is required.
+    This extension is written against the OpenGL 1.3 Specification.
+
+Overview
+
+    This is based on the GL_SGIX_shadow_ambient extension and is layered
+    upon the GL_ARB_shadow extension.
+
+    Basically, this extension allows the user to specify the texture
+    value to use when the texture compare function fails.  Normally
+    this value is zero.  By allowing an arbitrary value we can get
+    functionality which otherwise requires an advanced texture
+    combine extension (such as GL_NV_register_combiners) and multiple
+    texture units.
+
+IP Status
+
+    None.
+
+Issues
+
+    (1) How is this extension different from GL_SGIX_shadow_ambient?
+
+      It's functionally identical.  Since the original spec isn't in
+      the extension registry this one was written from scratch.
+
+    (2) Is this extension really needed?
+
+      RESOLUTION: Yes, if an advanced texture combine extension is not
+      available.  From Mark Kilgard's GDC presentation on shadow mapping:
+
+      The desired color for a lit, textured, shadow fragment is:
+
+      ( ambient + diffuseShade * diffuse) * decal + specular * shade
+
+      where diffuseShade = dimming + ( 1.0 - dimming ) * shade, and
+      shade is the result of the shadow test in [0,1].  dimming
+      expresses the scattered light in a scene.
+
+      If we limit shade to the range [<dimming>, 1] (where <dimming> is
+      TEXTURE_FAIL_VALUE_ARB) then we can express the diffuse term with
+      the standard GL_MODULATE texture env mode.
+
+      Furthermore, this extension allows implementing shadow arithmetic
+      with a single texture stage.  Otherwise, two texture stages are
+      needed in order to compute diffuseShade * diffuse * decal.
+
+      This extension is also useful for implementing shadowed lighting
+      expressions other than the one above.  In particular, a "poor-man's"
+      shadow mode can be implemented by setting TEXTURE_FAIL_VALUE_ARB to
+      the scene's ambient intensity and the texture environment mode to
+      GL_MODULATE.  This is the intention of the original
+      GL_SGIX_shadow_ambient extension.
+
+    (3) What are the downsides of this extension?
+
+      This extension places some arithmetic in the texture sampling logic
+      which would otherwise be better implemented in the texture combine
+      logic.
+
+      Also, there probably aren't many (if any) other uses for this logic
+      other than shadow ambient term.
+
+      Those who already implement advanced texture combine modes probably
+      won't want to implement this extension.
+
+    (4) What should the "shadow ambient" variable be named:
+
+      RESOLUTION: TEXTURE_COMPARE_FAIL_VALUE_ARB since this extension
+      specifies the value used when the texture comparison function fails.
+
+    (5) Is GL_ARB_shadow_ambient a good name for this extension?
+
+      RESOLUTION:  Probably.  Even though this extension is phrased in
+      general terms, it's going to be used almost exclusively for shadow
+      mapping applications.
+
+    (6) Should TEXTURE_COMPARE_FAIL_VALUE_ARB be an alias for
+      GL_SHADOW_AMBIENT_SGIX (from GL_SGIX_shadow_ambient)?
+
+      RESOLUTION: Yes.  It serves the same purpose and avoids adding
+      yet more state to texture objects.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of TexParameterf, TexParameteri,
+    TexParameterfv, TexParameteriv, GetTexParameterfv, and GetTexParameteriv:
+
+    TEXTURE_COMPARE_FAIL_VALUE_ARB  0x80BF  (same as SHADOW_AMBIENT_SGIX)
+
+Additions to Chapter 2 of the 1.3 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.3 Specification (Rasterization)
+
+    Section 3.8.4, Texture Parameters, p. 133, append table 3.19 with the
+    following:
+
+        Name                            Type   Legal Values
+        ------------------------------  -----  --------------------
+        TEXTURE_COMPARE_FAIL_VALUE_ARB  float   any value in [0, 1]
+
+    Section 3.8.4, Texture Parameters, append last paragraph with:
+
+        "The value set by TEXTURE_COMPARE_FAIL_VALUE_ARB is clamped to
+        lie in [0, 1]."
+
+    Modify section 3.8.13.1, defined in the GL_ARB_shadow specification,
+    as follows:
+
+        "3.8.13.1 Depth Texture Comparison Mode
+
+        [...]
+        else if TEXTURE_COMPARE_MODE_ARB = COMPARE_R_TO_TEXTURE_ARB
+
+            if TEXTURE_COMPARE_FUNC_ARB = LEQUAL
+
+                     { 1.0,                             if R <= Dt
+                 r = {
+                     { TEXTURE_COMPARE_FAIL_VALUE_ARB,  if R > Dt
+
+            else, if TEXTURE_COMPARE_FUNC_ARB = GEQUAL
+
+                     { 1.0,                             if R >= Dt
+                 r = {
+                     { TEXTURE_COMPARE_FAIL_VALUE_ARB,  if R < Dt
+
+            endif
+
+        [...]
+
+        If TEXTURE_MAG_FILTER is not NEAREST or TEXTURE_MIN_FILTER is
+        not NEAREST or NEAREST_MIPMAP_NEAREST then r may be computed by
+        comparing more than one depth texture value and texture R
+        coordinate.  The details of this are implementation-dependent
+        but r should be a value in the range
+        [TEXTURE_COMPARE_FAIL_VALUE_ARB, 1] and proportional to the
+        number of comparison passes or failures.
+
+        [...]
+
+Additions to Chapter 4 of the 1.3 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.3 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.3 Specification (State and State Requests)
+
+    In section 6.1.3, p. 200, change the paragraph introduced by the
+    ARB_shadow extension to be:
+
+    "The texture compare mode, function, result format and comparison
+    failure value may be queried by calling GetTexParameteriv or
+    GetTexParameterfv with <pname> set to TEXTURE_COMPARE_MODE_ARB,
+    TEXTURE_COMPARE_FUNC_ARB, TEXTURE_COMPARE_RESULT_ARB, or
+    TEXTURE_COMPARE_FAIL_VALUE_ARB, respectively."
+
+Additions to the GLX Specification
+
+    None
+
+Errors
+
+    None.
+
+New State
+
+    In table 6.16, Texture Objects, p. 224, add the following:
+
+    Get Value                      Type   Get Command          Init Val Description                Sec.   Attribute
+    ------------------------------ ------ -------------------- -------- -------------------------- ------ ---------
+    TEXTURE_COMPARE_FAIL_VALUE_ARB R[0,1] GetTexParameter[if]v   0.0    texture compare fail value 3.8.13 texture
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    16 April 2001
+        - initial version
+    22 April 2001
+        - rename TEXTURE_FAIL_LUMINANCE_ARB to TEXTURE_FAIL_VALUE_ARB.
+    23 April 2001
+        - minor tweaks
+    16 November 2001
+        - rename TEXTURE_FAIL_VALUE_ARB to TEXTURE_COMPARE_FAIL_VALUE_ARB
+    17 November 2001
+        - adjusted 3.8.7.1 section number
+    18 November 2001
+        - Clarify that TEXTURE_COMPARE_FAIL_VALUE_ARB is clamped to [0,1]
+        - added issue 6
+        - let TEXTURE_COMPARE_FAIL_VALUE_ARB be the same as SHADOW_AMBIENT_SGIX
+    12 December 2001
+        - rewritten against the OpenGL 1.3 spec
+        - fixed some typos

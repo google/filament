@@ -1,0 +1,10 @@
+This folder was updated as follows:
+
+cd third_party
+curl -L -O https://github.com/nothings/stb/archive/59e9702.zip
+unzip 59e9702.zip
+mv stb-* stb_new
+rsync -r stb_new/ stb/ --delete --exclude LICENSE tnt
+rm -rf 59e9702.zip stb_new
+rm -Rf stb/tests
+git add stb ; git status

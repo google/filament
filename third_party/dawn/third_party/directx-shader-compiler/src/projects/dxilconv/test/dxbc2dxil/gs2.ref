@@ -1,0 +1,196 @@
+
+%dx.types.Handle = type { i8* }
+%dx.types.CBufRet.i32 = type { i32, i32, i32, i32 }
+%dx.types.i8x16 = type { [16 x i8] }
+
+define void @main() {
+entry:
+  %0 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+  %1 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 0)
+  %2 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 0)
+  %3 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 2, i32 0)
+  %4 = fptoui float %1 to i32
+  %5 = fptoui float %2 to i32
+  %6 = fptoui float %3 to i32
+  %7 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 0)
+  %8 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 0)
+  %9 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 2, i32 0)
+  %10 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 3, i32 0)
+  %11 = fmul fast float 4.400000e+01, %7
+  %12 = fmul fast float 4.400000e+01, %8
+  %13 = fmul fast float 4.400000e+01, %9
+  %14 = fmul fast float 4.400000e+01, %10
+  %15 = call %dx.types.CBufRet.i32 @dx.op.cbufferLoadLegacy.i32(i32 59, %dx.types.Handle %0, i32 0)
+  %16 = extractvalue %dx.types.CBufRet.i32 %15, 0
+  %17 = icmp ne i32 %16, 0
+  br i1 %17, label %if0.then, label %if0.else
+
+if0.then:                                         ; preds = %entry
+  %18 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 0)
+  %19 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 0)
+  %20 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 2, i32 0)
+  %21 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 3, i32 0)
+  %22 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 0)
+  %23 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 0)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 0, float %18)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 1, float %19)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 2, float %20)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 3, float %21)
+  call void @dx.op.storeOutput.f32(i32 5, i32 1, i32 0, i8 0, float %22)
+  call void @dx.op.storeOutput.f32(i32 5, i32 1, i32 0, i8 1, float %23)
+  call void @dx.op.emitStream(i32 97, i8 0)
+  call void @dx.op.cutStream(i32 98, i8 0)
+  %24 = call float @dx.op.bitcastI32toF32(i32 126, i32 %4)
+  br label %if0.end
+
+if0.else:                                         ; preds = %entry
+  %25 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 3, i32 0)
+  %26 = fptoui float %25 to i32
+  %27 = call float @dx.op.bitcastI32toF32(i32 126, i32 %26)
+  %28 = call float @dx.op.bitcastI32toF32(i32 126, i32 0)
+  %29 = call float @dx.op.bitcastI32toF32(i32 126, i32 0)
+  %30 = call float @dx.op.bitcastI32toF32(i32 126, i32 0)
+  %31 = call float @dx.op.bitcastI32toF32(i32 126, i32 0)
+  call void @dx.op.storeOutput.i32(i32 5, i32 2, i32 0, i8 0, i32 %26)
+  call void @dx.op.storeOutput.i32(i32 5, i32 2, i32 0, i8 1, i32 %5)
+  call void @dx.op.storeOutput.i32(i32 5, i32 2, i32 0, i8 2, i32 %6)
+  call void @dx.op.storeOutput.f32(i32 5, i32 3, i32 0, i8 0, float 0.000000e+00)
+  call void @dx.op.storeOutput.f32(i32 5, i32 3, i32 0, i8 1, float 0.000000e+00)
+  call void @dx.op.storeOutput.f32(i32 5, i32 3, i32 0, i8 2, float 0.000000e+00)
+  call void @dx.op.storeOutput.f32(i32 5, i32 3, i32 0, i8 3, float 0.000000e+00)
+  call void @dx.op.storeOutput.f32(i32 5, i32 4, i32 0, i8 0, float %28)
+  call void @dx.op.storeOutput.f32(i32 5, i32 4, i32 0, i8 1, float %29)
+  call void @dx.op.storeOutput.f32(i32 5, i32 4, i32 0, i8 2, float %30)
+  call void @dx.op.storeOutput.f32(i32 5, i32 4, i32 0, i8 3, float %31)
+  call void @dx.op.storeOutput.f32(i32 5, i32 5, i32 0, i8 0, float %11)
+  call void @dx.op.storeOutput.f32(i32 5, i32 5, i32 0, i8 1, float %12)
+  call void @dx.op.storeOutput.f32(i32 5, i32 5, i32 0, i8 2, float %13)
+  call void @dx.op.storeOutput.f32(i32 5, i32 5, i32 0, i8 3, float %14)
+  call void @dx.op.storeOutput.i32(i32 5, i32 6, i32 0, i8 0, i32 %4)
+  call void @dx.op.storeOutput.i32(i32 5, i32 6, i32 0, i8 1, i32 %5)
+  call void @dx.op.storeOutput.i32(i32 5, i32 6, i32 0, i8 2, i32 %6)
+  call void @dx.op.emitStream(i32 97, i8 1)
+  call void @dx.op.cutStream(i32 98, i8 1)
+  br label %if0.end
+
+if0.end:                                          ; preds = %if0.else, %if0.then
+  %dx.v32.r3.0 = phi float [ %24, %if0.then ], [ %27, %if0.else ]
+  %32 = call float @dx.op.bitcastI32toF32(i32 126, i32 0)
+  %33 = call float @dx.op.bitcastI32toF32(i32 126, i32 0)
+  %34 = call float @dx.op.bitcastI32toF32(i32 126, i32 0)
+  %35 = call float @dx.op.bitcastI32toF32(i32 126, i32 0)
+  %36 = call i32 @dx.op.bitcastF32toI32(i32 127, float %dx.v32.r3.0)
+  call void @dx.op.storeOutput.i32(i32 5, i32 2, i32 0, i8 0, i32 %36)
+  call void @dx.op.storeOutput.i32(i32 5, i32 2, i32 0, i8 1, i32 %5)
+  call void @dx.op.storeOutput.i32(i32 5, i32 2, i32 0, i8 2, i32 %6)
+  call void @dx.op.storeOutput.f32(i32 5, i32 3, i32 0, i8 0, float 0.000000e+00)
+  call void @dx.op.storeOutput.f32(i32 5, i32 3, i32 0, i8 1, float 0.000000e+00)
+  call void @dx.op.storeOutput.f32(i32 5, i32 3, i32 0, i8 2, float 0.000000e+00)
+  call void @dx.op.storeOutput.f32(i32 5, i32 3, i32 0, i8 3, float 0.000000e+00)
+  call void @dx.op.storeOutput.f32(i32 5, i32 4, i32 0, i8 0, float %32)
+  call void @dx.op.storeOutput.f32(i32 5, i32 4, i32 0, i8 1, float %33)
+  call void @dx.op.storeOutput.f32(i32 5, i32 4, i32 0, i8 2, float %34)
+  call void @dx.op.storeOutput.f32(i32 5, i32 4, i32 0, i8 3, float %35)
+  call void @dx.op.storeOutput.f32(i32 5, i32 5, i32 0, i8 0, float %11)
+  call void @dx.op.storeOutput.f32(i32 5, i32 5, i32 0, i8 1, float %12)
+  call void @dx.op.storeOutput.f32(i32 5, i32 5, i32 0, i8 2, float %13)
+  call void @dx.op.storeOutput.f32(i32 5, i32 5, i32 0, i8 3, float %14)
+  call void @dx.op.storeOutput.i32(i32 5, i32 6, i32 0, i8 0, i32 %4)
+  call void @dx.op.storeOutput.i32(i32 5, i32 6, i32 0, i8 1, i32 %5)
+  call void @dx.op.storeOutput.i32(i32 5, i32 6, i32 0, i8 2, i32 %6)
+  call void @dx.op.emitStream(i32 97, i8 1)
+  call void @dx.op.cutStream(i32 98, i8 1)
+  %37 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 0)
+  %38 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 0)
+  %39 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 2, i32 0)
+  %40 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 3, i32 0)
+  %41 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 0)
+  %42 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 0)
+  call void @dx.op.storeOutput.f32(i32 5, i32 7, i32 0, i8 0, float %37)
+  call void @dx.op.storeOutput.f32(i32 5, i32 7, i32 0, i8 1, float %38)
+  call void @dx.op.storeOutput.f32(i32 5, i32 7, i32 0, i8 2, float %39)
+  call void @dx.op.storeOutput.f32(i32 5, i32 7, i32 0, i8 3, float %40)
+  call void @dx.op.storeOutput.f32(i32 5, i32 8, i32 0, i8 0, float %41)
+  call void @dx.op.storeOutput.f32(i32 5, i32 8, i32 0, i8 1, float %42)
+  call void @dx.op.emitStream(i32 97, i8 2)
+  call void @dx.op.cutStream(i32 98, i8 2)
+  ret void
+}
+
+; Function Attrs: nounwind readonly
+declare %dx.types.Handle @dx.op.createHandle(i32, i8, i32, i32, i1) #0
+
+; Function Attrs: nounwind readnone
+declare float @dx.op.loadInput.f32(i32, i32, i32, i8, i32) #1
+
+; Function Attrs: nounwind
+declare void @dx.op.tempRegStore.i32(i32, i32, i32) #2
+
+; Function Attrs: nounwind
+declare void @dx.op.tempRegStore.f32(i32, i32, float) #2
+
+; Function Attrs: nounwind readonly
+declare %dx.types.CBufRet.i32 @dx.op.cbufferLoadLegacy.i32(i32, %dx.types.Handle, i32) #0
+
+; Function Attrs: nounwind readonly
+declare float @dx.op.tempRegLoad.f32(i32, i32) #0
+
+; Function Attrs: nounwind
+declare void @dx.op.storeOutput.f32(i32, i32, i32, i8, float) #2
+
+; Function Attrs: nounwind
+declare void @dx.op.emitStream(i32, i8) #2
+
+; Function Attrs: nounwind
+declare void @dx.op.cutStream(i32, i8) #2
+
+; Function Attrs: nounwind readonly
+declare i32 @dx.op.tempRegLoad.i32(i32, i32) #0
+
+; Function Attrs: nounwind
+declare void @dx.op.storeOutput.i32(i32, i32, i32, i8, i32) #2
+
+; Function Attrs: nounwind readnone
+declare i32 @dx.op.bitcastF32toI32(i32, float) #1
+
+; Function Attrs: nounwind readnone
+declare float @dx.op.bitcastI32toF32(i32, i32) #1
+
+attributes #0 = { nounwind readonly }
+attributes #1 = { nounwind readnone }
+attributes #2 = { nounwind }
+
+!dx.version = !{!0}
+!dx.valver = !{!0}
+!dx.shaderModel = !{!1}
+!dx.resources = !{!2}
+!dx.entryPoints = !{!5}
+!llvm.ident = !{!26}
+
+!0 = !{i32 1, i32 0}
+!1 = !{!"gs", i32 6, i32 0}
+!2 = !{null, null, !3, null}
+!3 = !{!4}
+!4 = !{i32 0, %dx.types.i8x16 addrspace(2)* undef, !"CB0", i32 0, i32 0, i32 1, i32 16, null}
+!5 = !{void ()* @main, !"main", !6, !2, !24}
+!6 = !{!7, !10, null}
+!7 = !{!8}
+!8 = !{i32 0, !"COORD", i8 9, i8 0, !9, i8 0, i32 1, i8 4, i32 0, i8 0, null}
+!9 = !{i32 0}
+!10 = !{!11, !12, !13, !15, !16, !18, !20, !21, !23}
+!11 = !{i32 0, !"SV_Position", i8 9, i8 3, !9, i8 0, i32 1, i8 4, i32 0, i8 0, null}
+!12 = !{i32 1, !"AAA", i8 9, i8 0, !9, i8 0, i32 1, i8 2, i32 1, i8 0, null}
+!13 = !{i32 2, !"XXX", i8 5, i8 0, !9, i8 0, i32 1, i8 3, i32 0, i8 0, !14}
+!14 = !{i32 0, i32 1}
+!15 = !{i32 3, !"PPP", i8 9, i8 0, !9, i8 0, i32 1, i8 4, i32 1, i8 0, !14}
+!16 = !{i32 4, !"PPP", i8 9, i8 0, !17, i8 0, i32 1, i8 4, i32 2, i8 0, !14}
+!17 = !{i32 1}
+!18 = !{i32 5, !"PPP", i8 9, i8 0, !19, i8 0, i32 1, i8 4, i32 3, i8 0, !14}
+!19 = !{i32 2}
+!20 = !{i32 6, !"YYY", i8 5, i8 0, !9, i8 0, i32 1, i8 3, i32 4, i8 0, !14}
+!21 = !{i32 7, !"SV_Position", i8 9, i8 3, !9, i8 0, i32 1, i8 4, i32 0, i8 0, !22}
+!22 = !{i32 0, i32 2}
+!23 = !{i32 8, !"AAA", i8 9, i8 0, !9, i8 0, i32 1, i8 2, i32 1, i8 0, !22}
+!24 = !{i32 0, i64 256, i32 1, !25}
+!25 = !{i32 1, i32 12, i32 7, i32 1, i32 1}
+!26 = !{!"dxbc2dxil 1.2"}

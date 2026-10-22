@@ -1,0 +1,922 @@
+Name
+
+    EXT_separate_shader_objects
+
+Name Strings
+
+    GL_EXT_separate_shader_objects
+
+Contact
+
+    Mark Kilgard, NVIDIA (mjk 'at' nvidia.com)
+
+Contributors
+
+    Pat Brown
+    Eric Werness
+    Robert Ohannessian
+    Jason Green, TransGaming
+    Kevin Rogovin 
+    Greg Roth
+
+Status
+
+    Shipping in NVIDIA 190.00 release drivers
+
+    NOTE: there is an unrelated OpenGL ES extension also named
+    "GL_EXT_separate_shader_objects", found in the OpenGL ES extension
+    registry at http://www.khronos.org/registry/gles/ . These two extensions
+    have similar purposes, but completely different interfaces.
+
+Version
+
+    Last Modified Date:  March 7, 2013
+    Version:             11
+
+Number
+
+    377
+
+Dependencies
+
+    Written based on the wording of the OpenGL 3.0 (August 11, 2008)
+    specification.
+
+    This extension requires OpenGL 2.0 or ARB_shader_objects.
+
+    This extension depends on ARB_geometry_shader4, EXT_geometry_shader4,
+    and/or NV_geometry_shader4.
+
+Overview
+
+    Prior to this extension, GLSL requires multiple shader domains
+    (vertex, fragment, geometry) to be linked into a single monolithic
+    program object to specify a GLSL shader for each domain.
+
+    While GLSL's monolithic approach has some advantages for
+    optimizing shaders as a unit that span multiple domains, all
+    existing GPU hardware supports the more flexible mix-and-match
+    approach.
+
+    HLSL9, Cg, the prior OpenGL assembly program extensions, and game
+    console programmers favor a more flexible "mix-and-match" approach to
+    specifying shaders independently for these different shader domains.
+    Many developers build their shader content around the mix-and-match
+    approach where they can use a single vertex shader with multiple
+    fragment shaders (or vice versa).
+
+    This keep-it-simple extension adapts the "mix-and-match" shader
+    domain model for GLSL so different GLSL program objects can be bound
+    to different shader domains.
+
+    This extension redefines the operation of glUseProgram(GLenum program)
+    to be equivalent to:
+
+        glUseShaderProgramEXT(GL_VERTEX_SHADER, program);
+        glUseShaderProgramEXT(GL_GEOMETRY_SHADER_EXT, program);
+        glUseShaderProgramEXT(GL_FRAGMENT_SHADER, program);
+        glActiveProgramEXT(program);
+
+    You can also call these commands separately to bind each respective
+    domain.  The GL_VERTEX_SHADER, GL_GEOMETRY_SHADER_EXT, and
+    GL_FRAGMENT_SHADER tokens refer to the conventional vertex, geometry,
+    and fragment domains respectively.  glActiveProgramEXT specifies
+    the program that glUniform* commands will update.
+
+    Separate linking creates the possibility that certain output varyings
+    of a shader may go unread by the subsequent shader inputting varyings.
+    In this case, the output varyings are simply ignored.  It is also
+    possible input varyings from a shader may not be written as output
+    varyings of a preceding shader.  In this case, the unwritten input
+    varying values are undefined.  Implementations are encouraged to
+    zero these undefined input varying values.
+
+    This extension is a proof-of-concept that separate shader objects
+    can work for GLSL and a response to repeated requests for this
+    functionality.  There are various loose ends, particularly when
+    dealing with user-defined varyings.  The hope is a future extension
+    will improve this situation.
+
+New Procedures and Functions
+
+    void UseShaderProgramEXT(enum type, uint program);
+
+    void ActiveProgramEXT(uint program);
+
+    uint CreateShaderProgramEXT(enum type, const char *string);
+
+New Tokens
+
+    Accepted by <type> parameter to GetIntegerv and GetFloatv:
+
+        ACTIVE_PROGRAM_EXT                     0x8B8D (alias for CURRENT_PROGRAM)
+
+Additions to Chapter 2 of the OpenGL 3.0 Specification (OpenGL Operation)
+
+ -- Section 2.20.2 "Program Objects" (page 91) 
+
+    Add this paragraph after the 6th paragraph:
+
+    "The command
+
+        uint CreateShaderProgramEXT(enum type, const char *sting);
+
+    creates a stand-alone program from a source code string for a single
+    shader type.  This command is equivalent to the following command
+    sequence:
+
+        const uint shader = CreateShader(type);
+        if (shader) {
+            const int len = (int) strlen(string);
+            ShaderSource(shader, 1, &string, &len);
+            CompileShader(shader);
+            const uint program = CreateProgram();
+            if (program) {
+                int compiled = FALSE;
+                GetShaderiv(shader, COMPILE_STATUS, &compiled);
+                if (compiled) {
+                    AttachShader(program, shader);
+                    LinkProgram(program);
+                    DetachShader(program, shader);
+                }
+
+                // Possibly...
+                if (active-user-defined-varyings-in-linked-program) {
+                    append-error-to-info-log
+                    set-program-link-status-false
+                }
+
+                append-shader-info-log-to-program-info-log
+            }
+            DeleteShader(shader);
+            return program;
+        } else {
+            return 0;
+        }
+
+    Notice the program may not actually link if the linked program would
+    contain active user-defined varyings (because such varyings would
+    not be well-defined for a single shader domain).  If this situation
+    arises, the info log may explain this.
+
+    Because no shader is returned by CreateShaderProgramEXT and the shader
+    that is created is deleted in the course of the command sequence,
+    the info log of the shader object is copied to the program so the
+    shader's failed info log for the failed compilation is accessible
+    to the application."
+
+    Replace the 7th paragraph with:
+
+    "If a valid executable is created, it can be made part of the current
+    rendering state with the command:
+
+           void UseShaderProgramEXT(enum type, uint program);
+
+    where type is one of VERTEX_SHADER, GEOMETRY_SHADER_ARB, or
+    FRAGMENT_SHADER program shader types, and program is the program
+    object program containing valid executable code, i.e. has been linked
+    successfully.  Based on the type, the program becomes the current
+    vertex, fragment, or geometry shader program respectively and the
+    command installs the executable code as part of the respective current
+    rendering state.  If UseShaderProgramEXT is called with program set
+    to zero, it is as if the GL has no respective (vertex, geometry,
+    or fragment) programmable stage configured and the corresponding
+    fixed-function path will be used instead.  If program has not been
+    successfully linked, the error INVALID_OPERATION is generated and
+    the respective current shader state is not modified.
+
+    The command
+
+        void ActiveProgramEXT(uint program);
+
+    sets the linked program named by program to be the active program
+    (discussed later in the "Uniform Variables" subsection of section
+    2.20.3).  If program has not been successfully linked, the error
+    INVALID_OPERATION is generated and active program is not modified.
+
+    The command
+
+        void UseProgram(uint program);
+
+    is equivalent (modulo errors) to calling
+
+        UseShaderProgramEXT(VERTEX_SHADER, program);
+        UseShaderProgramEXT(GEOMETRY_SHADER_EXT, program);
+        UseShaderProgramEXT(FRAGMENT_SHADER, program);
+        ActiveProgramEXT(program);
+
+    If a program object contains multiple shader types but is not bound
+    for all its supported shader types, the program object's shader
+    types not bound do not affect GL's current rendering operation."
+
+ -- Section 2.15.3 "Shader Variables" (page 97) 
+
+    Replace the 15th paragraph of the "Uniform Variables" section:
+
+    "To load values into the uniform variables of the active program
+    object (specified by ActiveProgramEXT), use the commands ..."
+
+    Change the last bullet in the "Uniform Variables" section to:
+
+    "* if there is no active program in use."
+
+ -- Section 2.20.4 "Shader Execution" (page 103) 
+
+    Change the first paragraph to read:
+
+    "If a successfully linked program object that contains a vertex
+    shader is made current by calling UseShaderProgramEXT with a type of
+    VERTEX_SHADER, the executable version of the vertex shader is used to
+    process incoming vertex values rather than the fixed-function vertex
+    processing described in section 2.11 through 2.14.  In particular,
+    ..."
+
+ -- Section 2.20.5 "Required State" (page 109) 
+
+    Change the last paragraph to read:
+
+    "Additionally, four unsigned integers (initially all zero) are
+    required to hold the each respective name of the current vertex
+    shader program, current geometry shader program, current fragment
+    shader program, and active program respectively."
+
+Additions to Chapter 3 of the OpenGL 3.0 Specification (Rasterization)
+
+ -- Section 3.12 "Fragment Shaders" (page 231) 
+
+    Replace the second to the last paragraph with:
+
+    "When the current fragment shader program object currently includes
+    a fragment shader, its fragment shader is considered active, and is
+    used to process fragments.  If the fragment shader program object
+    has no fragment shader, or no fragment shader program object is
+    currently in use, the fixed-function fragment processing operations
+    described in the previous sections are used."
+
+ -- Section 3.12.1 "Shader Variables" (page 232) 
+
+    Add this paragraph after the third paragraph:
+
+    "User-defined varying values are well-defined only when the fragment
+    shader program object and the preceding programmable shading stage,
+    either the geometry shader stage if the geometry shader program
+    object contains geometry shader or else the vertex shader stage
+    if the vertex shader program object contains a vertex shader, are
+    the same program object.  So user-defined varying values are only
+    well-defined when both the varying variable's output shader and
+    input shader are the same program object.
+
+    In order to ensure well-defined behavior between a fragment shader
+    program with a different preceding geometry shader program or
+    vertex shader program when the current geometry shader program is
+    zero, applications must use the built-in varying variables such
+    as gl_TexCoord[0].  If the current fragment shader program object
+    uses user-defined input varying variables when the preceded current
+    geometry shader program is not the same program object or, in the
+    case the geometry shader program is zero, the preceding current
+    vertex shader program object is not the same program object, then
+    the values of such input varying variables are undefined.
+
+    The state of user-defined varying inputs to a fragment shader
+    are undefined /even if/ the preceding shader has varying outputs
+    that match the same name and type of the subsequent shader.
+    Implementations are encouraged but not required to force these
+    undefined input varying variables to zero."
+
+Additions to Chapter 4 of the OpenGL 3.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 3.0 Specification (Special
+Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 3.0 Specification (State and
+State Requests)
+
+ -- Section 5.4 "Display Lists" (page 311) 
+
+    Add "CreateShaderProgramEXT" to the "Program and shader objects"
+    list of commands that cannot be compiled into a display list but
+    are instead executed immediately.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Additions to the OpenGL Shading Language
+
+    None
+
+Additions to the ARB_geometry_shader4 specification
+
+ -- Section 2.16, Geometry Shaders
+
+    Replace the 3rd and 4th paragraphs to read:
+
+    "Geometry shaders are created as described in section 2.15.1 using a
+    type parameter of GEOMETRY_SHADER_ARB. They are attached to and used
+    in program objects as described in section 2.15.2. When a geometry
+    shader program object currently in use includes a geometry shader,
+    its geometry shader is considered active, and is used to process
+    primitives. If the geometry shader program object has no geometry
+    shader, or no program object is in use, this new primitive processing
+    pipeline stage is bypassed.
+
+    A program object that includes a geometry shader without a vertex
+    shader must only use built-in input varying variables; otherwise
+    a link error may occur."
+
+ -- Section 2.16.4, Geometry Shader Execution Environment
+
+    Change the first paragraph to read:
+
+    "If a successfully linked program object that contains a geometry shader is
+    made current as the geometry shader program object by calling
+    UseShaderProgramEXT with a type of GL_GEOMETRY_SHADER_ARB, the
+    executable version of the geometry shader is used to process
+    primitives resulting from the primitive assembly stage."
+
+    Add these paragraphs to the end of the section:
+
+    "User-defined varying values are well-defined only when the geometry
+    shader program object and the preceding vertex shader program object
+    are the same program object.  So user-defined varying values are only
+    well-defined when both the varying variable's output shader and
+    input shader are the same program object.
+
+    In order to ensure well-defined behavior between a geometry shader
+    program with a different preceding vertex shader program, applications
+    must use the built-in varying variables such as gl_TexCoord[0].
+    If the current geometry shader program object uses user-defined
+    input varying variables when the preceded current vertex shader
+    program object is not the same program object, then the values of
+    such input varying variables are undefined.
+
+    The state of user-defined varying inputs to a geometry shader
+    are undefined /even if/ the preceding vertex shader has varying
+    outputs that match the same name and type of the subsequent shader.
+    Implementations are encouraged but not required to force these
+    undefined input varying variables to zero."
+
+GLX Protocol
+
+    UNDER DEVELOPMENT
+
+Errors
+
+    UseShaderProgramEXT generates INVALID_ENUM if the type parameter is
+    not one of VERTEX_SHADER, GEOMETRY_SHADER_ARB, or FRAGMENT_SHADER.
+
+    UseShaderProgramEXT generates INVALID_OPERATION if the program
+    parameter has not been successfully linked.
+
+    UseShaderProgramEXT generates INVALID_OPERATION if transform feedback
+    is active.
+
+    ActiveProgramEXT generates INVALID_OPERATION if the program parameter
+    has not been successfully linked.
+
+    LinkProgram NO LONGER generates an INVALID_OPERATION if the program
+    object has a geometry shader attached and no vertex shader attached
+    as long as the geometry shader uses only built-in varying input
+    variables.
+
+Dependencies on ARB_geometry_shader4, EXT_geometry_shader4, and/or NV_geometry_shader4
+
+    If none of ARB_geometry_shader4, EXT_geometry_shader4, or
+    NV_geometry_shader4 are supported by the implementation, ignore all
+    references to geometry shaders and generate an INVALID_ENUM error
+    when UseShaderProgramEXT is called with the token GEOMETRY_SHADER_ARB.
+
+New State
+
+    Remove CURRENT_PROGRAM from table 6.30 (Program Object State) and
+    append these rows:
+
+    Get Value            Type  Get Command  Initial Value  Description               Sec     Attribute
+    -------------------  ----  -----------  -------------  ------------------------  ------  ---------
+    ACTIVE_PROGRAM_EXT   Z+    GetIntegerv  0              The program object        2.20.2  -
+    (alias for                                             that Uniform* commands
+     CURRENT_PROGRAM)                                      update
+    VERTEX_SHADER        Z+    GetIntegerv  0              Name of current vertex    2.20.2  -
+                                                           shader program object
+    GEOMETRY_SHADER_ARB  Z+    GetIntegerv  0              Name of current geometry  2.20.2  -
+                                                           shader program object
+    FRAGMENT_SHADER      Z+    GetIntegerv  0              Name of current fragment  2.20.2  -
+                                                           shader program object
+                                                    
+New Implementation Dependent State
+
+    None
+
+Issues
+
+    1.  What should this extension be called?
+
+        RESOLVED:  EXT_separate_shader_objects
+
+        The adjective "separate" is used in several extension names
+        (EXT_blend_equation_separate, EXT_blend_func_separate,
+        EXT_separate_specular_color, ATI_separate_stencil) when joined
+        state is made configurable separately.
+
+        The phrase "shader_objects" refers generally to GLSL shader
+        objects, matching the ARB_shader_objects name.
+
+        Whether the name should be "separate_shader_objects"
+        or "shader_objects_separate" is less clear.  The various
+        "separate" extensions have different conventions as to whether
+        separate is prefixed or suffixed with the separated state.
+        The prefixed form is more natural to say aloud, is consistent
+        with the ATI_separate_stencil naming approach, and abbreviates
+        to SSO (instead of the inopportune abbreviation SOS).
+
+    2.  What happens to a user-defined input varying variable that are
+        not written by a preceding shader's write to the corresponding
+        output varying variable.
+
+        RESOLVED:  The input variable variable's value is left undefined.
+        Implementations are encouraged but not required to zero the
+        value.
+
+        GLSL has a "rendezvous by name" model for connecting varying
+        output variables to varying input variables of a subsequent
+        shader.  With separate shaders, there's no assurance whether a
+        preceding shader will write a given user-defined input varying
+        variable.  HLSL9, Cg, and OpenGL assembly extension programs
+        handle this situation by with "rendezvous by API resource" model.
+        In GLSL terms, this means separate GLSL shaders /must/ communicate
+        by built-in varying variables rather than user-defined varying
+        variables.
+
+        It is undesirable from a performance standpoint to attempt to
+        support "rendezvous by name" for arbitrary separate shaders
+        because the separate shaders won't be naturally compiled to
+        match their varying inputs and outputs of the same name without
+        a special link step.  Such a special link would introduce an
+        extra validation overhead to binding separate shaders.  The link
+        itself would have to be deferred until glBegin time since separate
+        shaders won't match when transitioning from one set of consistent
+        shaders to another.  This special link would still create errors
+        or undefined behavior when the names of input and output varyings
+        matched but their types did not match.
+
+        Also the expectation from other shading APIs that support
+        mix-and-match shader usage is that "rendezvous by API resource"
+        is the expected norm.
+
+        Specifying the behavior being undefined allows a future ARB
+        version of this extension to be more specific without encumbering
+        this extension with enforcing a specific error.
+
+    3.  Do different program objects currently used by different shader
+        types share a single name space for uniforms?
+
+        RESOLVED:  No, different program objects have their own separate
+        name space for uniforms and each has locations specific to its
+        unique program object.
+
+    4.  How do the glUniform* commands determine what program object
+        to query?
+
+        RESOLVED:  This extension introduces the active program specified
+        by glActiveProgramEXT (similar to the active texture selector
+        specified by glActiveTexture) to specify the selector used by
+        glUniform* commands.
+
+        This active program is simply a selector and doesn't actually
+        control any rendering operation.
+
+        The active program can be queried with glGetIntegerv with
+        the GL_ACTIVE_PROGRAM_EXT token which is an alias for
+        GL_CURRENT_PROGRAM.
+
+        As an alternative to setting the GL_ACTIVE_PROGRAM_EXT selector
+        with glActiveProgramEXT, applications are instead encouraged
+        to use the glProgramUniform* commands introduced by the
+        EXT_direct_state_access extension which do not depend on a
+        selector but specify the program object with which to update
+        the specified uniform location explicitly.
+
+    5.  Do the glGetUniform* queries depend on the active program state
+        (GL_ACTIVE_PROGRAM_EXT)?
+
+        RESOLVED:  No, the glGetUniform* queries take the program
+        object for the query as an explicit parameter to the query.
+        These commands do not rely on a selector.
+
+    6a. Should the fragment shader program object be allowed to changed
+        within transform feedback mode?
+
+        RESOLVED:  No, this should generate a GL_INVALID_OPERATION error.
+
+        The OpenGL 3.0 and EXT_transform_feedback specifications say
+        glUseProgram generates a GL_INVALID_OPERATION error when transform
+        feedback is active.
+
+        The rationale for this is that user-defined varying outputs from
+        the vertex or geometry shader might change.
+
+        Perhaps it is desirable to allow different shader program objects
+        when transform feedback mode is active, but this extension
+        doesn't change the existing GLSL error behavior.  In fact,
+        glUseShaderProgramEXT generate the same error glUseProgram does.
+
+    6b. Should the active program be allowed to changed within transform
+        feedback mode?
+
+        RESOLVED:  Yes.
+
+        The active program simply allows uniforms to be changed but
+        doesn't actually change how the graphics pipeline itself is
+        configured or what programs are used for vertex, geometry,
+        and fragment processing.
+
+    7.  What if a program object contains shaders from two domains, say
+        both a vertex shader and a geometry shader, and the program object
+        is just used as the current fragment shader program object?
+
+        RESOLVED:  The vertex shader within the program object is
+        simply ignored.
+
+    8.  What if a program object contains both a vertex and fragment
+        shader and this program object is bound to both the current
+        vertex shader and fragment shader program object but there is
+        also a different geometry shader program object bound?
+
+        RESOLVED:  This works as long as the vertex shader and fragment
+        shader rely on built-in varying variables to communicate and don't
+        depend on passing values between each other with user-defined
+        varying variables because such variables are undefined if an
+        intervening different geometry shader program object is currently
+        used.  Specifically, the vertex shader will output to its
+        built-in varying output variables and the different geometry
+        shader program object can read those built-in varying values
+        through input varying variables.  Likewise the fragment shader
+        can use built-in varying input variables to get varying data
+        from the different geometry shader program object.
+
+    9.  Is glUseShaderProgramEXT allowed to be compiled within a
+        display list?
+
+        RESOLVED:  Yes, just like glUseProgram is allowed within a
+        display list.
+
+    10. Should there be some easier to use API for creating a GLSL
+        program that programs a single shader type?
+
+        RESOLVED:  Yes, see the glCreateShaderProgramEXT command.
+
+        The existing GLSL API for creating a GLSL program involves a lot
+        of steps to support multiple source strings, re-specification of
+        source code, attaching and detaching multiple shader objects,
+        and cross-domain linking.  These features are not particularly
+        relevant for creating separate shader programs.
+
+    11. Can glCreateShaderProgramEXT be compiled into a display list?
+
+        RESOLVED:  No.
+
+        glCreateShaderProgramEXT is equivalent to a sequence of commands
+        that are themselves not allowed to be compiled  into a display
+        list.
+
+    12. Should glCreateShaderProgramEXT allow user-defined varyings?
+
+        RESOLVED:   User-defined varyings are permitted (without error)
+        but shouldn't be used because their behavior is not defined.
+
+        glCreateShaderProgramEXT is likely to be used for compiling
+        separate shaders.  The tenative resolution to issue 2 says the
+        values of user-defined varying input varaibles are undefined if
+        the preceding shader doesn't belong to the same program object.
+        Since the programs returned by glCreateShaderProgramEXT are
+        always for a single domain, there's no point allowing user-defined
+        varyings if they can't be assumed to be well-defined.
+
+    13. How are interpolation modifiers handled for separate shader
+        programs?
+
+        RESOLVED:  For now, interpolation modifiers aren't supported
+        for separate shader object varyings.
+
+        Future resolution:  Unfortunately GLSL only provides interpolation
+        modifiers for user-defined varyings which aren't well-defined
+        for separate shader programs.
+
+        In the short-term, interpolation modifiers aren't commonly used
+        so not supporting interpolation modifiers for seperate GLSL
+        shader programs is probably acceptable.
+
+        Long-term, GLSL can be extended with #pragma constructs that
+        specify to the compiler the interpolation modifier for a given
+        fragment shader built-in varying.  Something like:
+
+            #pragma interpolation(gl_TexCoord[0], centroid)
+            #pragma interpolation(gl_TexCoord[1], flat)
+            #pragma interpolation(gl_TexCoord[2], smooth)
+            #pragma interpolation(gl_TexCoord[3], invariant)
+            #pragma interpolation(gl_TexCoord[4], noperspective)
+
+        This pragma is only legal within a fragment shader compilation
+        unit.  The pragma can be specified multiple times, but
+        inconsistent specification of a specific built-in varying's
+        interpolation is not allowed.
+
+        Alternatively, this extenion could add new built-in input varying
+        variables for the fragment shader:
+
+            // TexCoord category
+            varying in centroid               vec4  gl_CentroidTexCoord[];
+            varying in centroid noperspective vec4  gl_CentroidNoPerspectiveTexCoord[];
+            varying in float                  vec4  gl_FlatTexCoord[];
+            varying in noperspective          vec4  gl_NoPerspectiveTexCoord[];
+            varying in                        ivec4 gl_IntTexCoord[];
+
+            // Color category
+            varying in centroid               vec4  gl_CentroidColor;
+
+            // Secondary color category
+            varying in centroid               vec4  gl_CentroidSecondaryColor;
+
+            // Fog category
+            varying in centroid               vec4  gl_CentroidFogFragCoord;
+
+        It would be an error to use a varying from more than one category
+        in a single program.
+
+    14. Should glLinkProgram work to re-link a shader created with
+        glCreateShaderProgramEXT?
+
+        RESOLVED: NO because the shader created by glCreateShaderProgram
+        is detached and deleted as part of the glCreateShaderProgramEXT
+        sequence.  This means if you call glLinkProgram on a program
+        returned from glCreateShaderProgram, you'll find the re-link
+        fails because no shader object is attached.
+
+        An application is free to attach one or more new shader objects
+        to the program and then relink would work.
+
+        This is fine because re-linking isn't necessary/expected.
+
+    15. Wouldn't re-linking be necessary if the application wanted to
+        use glBindAttribLocation to assign a user-defined attribute to
+        a specific vertex attribute?
+
+        RESOLVED:  Yes and that's a problem if glCreateShaderProgramEXT
+        is used because the shader object is detached and deleted.
+
+        User-defined attributes will work when glCreateShaderProgramEXT
+        is used to easily create a vertex shader program, but the
+        appliation must be satisfied with the implementation-dependent
+        linker-assigned user-defined attributes returned by
+        glGetAttribLocation.
+
+        We could provide a new set of built-in attributes that correspond
+        to declared as:
+
+            attribute vec4 gl_VertexAttrib[];
+
+        How would these attributes map to the other built-in attributes?
+        That would depend on the implementation.  As with ARB_vertex_program,
+        some implementations could choose to alias such generate vertex attributes
+        with conventional vertex attributes (color, fog coord, etc.) or
+        an implementation could treat the generic attributes as disjoint
+        from the conventional vertex attributes.
+
+        If this is unsatisfactory, the solution is to avoid using
+        glCreateShaderProgramEXT and instead use the traditional GLSL
+        approach for creating programs (create shader, compile shader,
+        attach shader, bind attributes, link shader, use shader).
+
+        Demonstrating how to workaround this particular issue, here's
+        an example of creating and using a vertex shader for use with
+        separate shader objects that includes explicit binding of output
+        varyings to fragment data locations.  First the shader:
+        
+          varying in vec4 attribA;
+          varying in vec4 attribB;
+          void main()
+          {
+            gl_Position = ftransform();
+            gl_FrontColor = attribA;
+            gl_BackColor = attribB;
+          }
+          
+        Now creating and using a linked program from this shader where
+        attribA is initialized by vertex attribute 5 and attribB is
+        initialized by vertex attribute 7.
+
+          const GLuint shader = glCreateShader(GL_VERTEX_SHADER);
+          if (shader) {
+              const GLint len = (GLint) strlen(aboveShaderString);
+              glShaderSource(shader, 1, &aboveShaderString, &len);
+              glCompileShader(shader);
+              const uint program = glCreateProgram();
+              if (program) {
+                  GLint compiled = FALSE;
+                  glGetShaderiv(shader, COMPILE_STATUS, &compiled);
+                  if (compiled) {
+                      glAttachShader(program, shader);
+
+                      // Crucial code that glCreateShaderProgramEXT doesn't do
+                      glBindAttribLocation(program, 5, "attribA");
+                      glBindAttribLocation(program, 7, "attribB");
+
+                      glLinkProgram(program);
+                      glDetachShader(program, shader);
+
+                      // Show this program can actually be used as a vertex shader
+                      glUseShaderProgramEXT(GL_VERTEX_SHADER, program);
+                  }
+              }
+              glDeleteShader(shader);
+              return program;
+          } else {
+              return 0;
+          }
+
+        Optionally, the glDetachShader and glDeleteShader commands could
+        be removed to allow this program to be re-linked after different
+        glBindAttribLocation calls.
+
+    16. Can you use glBindFragDataLocation to direct varying output
+        variables from a fragment shader program created by
+        glCreateShaderProgramEXT to specific color buffers?
+
+        RESOLVED: NO for much the same reason you can't do this with
+        attributes as described in issue 15.  But you could create the
+        program with the standard GLSL creation process where you attach
+        your own shaders and relink.
+
+        For fragment shader programs created with
+        glCreateShaderProgramEXT, there is already the gl_FragData[]
+        builtin to output to numbered color buffers.  For integer
+        framebuffers, we would need to add:
+
+            varying out ivec4 gl_IntFragData[];
+
+        User-defined output fragment shader varyings can still be used
+        as long as the application is happy with the linker-assigned
+        locations.
+
+        Demonstrating how to workaround this particular issue, here's
+        an example of creating and using a fragment shader for use with
+        separate shader objects that includes explicit binding of output
+        varyings to fragment data locations.  First the shader:
+
+          varying out ivec4 bufferA;
+          varying out ivec4 bufferB;
+          void main()
+          {
+            bufferA = ivec4(1,2,3,4);
+            bufferB = ivec4(5,6,7,8);
+          }
+
+        Now creating and using a linked program from this shader where
+        bufferA outputs to color buffer 0 and bufferB outputs to color
+        buffer 1:
+
+          const GLuint shader = glCreateShader(GL_FRAGMENT_SHADER);
+          if (shader) {
+              const GLint len = (GLint) strlen(aboveShaderString);
+              glShaderSource(shader, 1, &aboveShaderString, &len);
+              glCompileShader(shader);
+              const uint program = glCreateProgram();
+              if (program) {
+                  GLint compiled = FALSE;
+                  glGetShaderiv(shader, COMPILE_STATUS, &compiled);
+                  if (compiled) {
+                      glAttachShader(program, shader);
+
+                      // Crucial code that glCreateShaderProgramEXT doesn't do
+                      glBindFragDataLocation(program, 0, "bufferA");
+                      glBindFragDataLocation(program, 1, "bufferB");
+
+                      glLinkProgram(program);
+                      glDetachShader(program, shader);
+
+                      // Show this program can actually be used as a fragment shader
+                      glUseShaderProgramEXT(GL_FRAGMENT_SHADER, program);
+                  }
+              }
+              glDeleteShader(shader);
+              return program;
+          } else {
+              return 0;
+          }
+
+        Optionally, the glDetachShader and glDeleteShader could be
+        removed to allow this program to be re-linked after different
+        glBindFragDataLocation calls.
+
+    17. Can you output varyings from a seperate shader program created
+        with glCreateShaderProgramEXT?
+
+        RESOLVED:  No.
+
+        glTransformFeedbackVaryings requires a re-link to take effect on a
+        program.  glCreateShaderProgramEXT detaches and deletes the shader
+        object use to create the program so a glLinkProgram will fail.
+
+        You can still create a vertex or geometry shader program
+        with the standard GLSL creation process where you could use
+        glTransformFeedbackVaryings and glLinkProgram.
+
+    18. I just don't get it?  Why is it such a big deal to just require
+        apps to link all their vertex and fragment shaders together?
+        Please explain a situation where mix-and-match shaders is
+        substantially better than GLSL as it exists without this
+        extension?
+
+        RESOLUTION:  Consider the (not uncommon) case of a vertex shader
+        for skinning a character.  The vertex shader is used in four
+        distinct types of rendering passes, each using the one vertex
+        shader but different fragment shaders.
+
+        For GLSL today, this situation today requires 4 program objects,
+        each containing the one vertex shader paired with each one of
+        the fragment shaders.
+
+        The one vertex shader has an array of dozens of skinning matrices
+        along with numerous other uniform parameters.
+
+        Each fragment shader has its own different set of uniforms too.
+
+        Each GLSL program object has its own (combined) set of GLuint
+        locations for the active uniforms of the vertex and fragment
+        shaders objects linked into the particular program object.
+
+        The locations for a given program object are arbitrary and
+        the location values of two distinct program objects have no
+        correlation.  This is true even when they each link in the same
+        vertex shader (or alternatively same fragment shader).
+
+        Now the application is saddled with the burden of managing
+        distinct location values for the same vertex shader skinning
+        matrices and other uniform variables as well as making sure
+        the values of these variables are mirroed over all four program
+        objects containing the skinning vertex shader.
+
+        What's worse is despite all the program objects being loaded
+        with the same vertex shader uniform variables for skinning, the
+        driver is exceedingly unlikely to recoginize that binding from
+        one of these program objects to another is going to result in
+        no actual vertex shader state change.  Noticing that the uniform
+        vertex shader variables are changing in lock-step over a series
+        of program objects (when the uniform fragment shader variables
+        ARE allowed to diverge) is exceedingly expensive.
+
+        This situation is simple to optimize with mix-and-match shaders
+        because there is just a single vertex shader to worry about.
+        It's only the current fragment shader program that is changing
+        so only the fragment shader state must be updated/re-validated.
+
+        It's also much easier and less expensive for the application to
+        update the vertex shader state because there is just one copy
+        of it to update.
+
+    19. In case of indirect rendering, should glCreateShaderProgramEXT
+        explicitly send string length parameter to server?
+        
+        PROPOSED: Yes. Although source code passed to
+        glCreateShaderProgramEXT is NUL terminated, the server can not
+        safely rely on the client to terminate the string so it must
+        add the NUL terminator before passing the protocol buffer to
+        the GL command processor. The string length is needed to do this
+        accurately.
+
+    20. Can glCreateShaderProgramEXT support command larger than the 
+        maximum command length supported by a single command?
+ 
+        PROPOSED: Yes. Source code passed to glCreateShaderProgramEXT is
+        unbounded. Command length can be more than the maximum command
+        length supported by a single command. Support for "large single"
+        command needs to be added.
+        
+         
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  ----------------------------------------
+    1     11/06/08  mjk       Initial revision
+    2     11/10/08  mjk       add glCreateShaderProgramEXT
+    3     11/12/08  mjk       fixed glCreateShaderProgramEXT
+                              add issues 12 and 13
+    4     11/14/08  mjk       issues 13 through 17
+    5     12/03/08  mjk       glActiveProgram replaces
+                              GL_UNIFORM_SHADER_EXT
+    6     04/01/09  mjk       corrections from Jason Green
+    7     08/12/09  mjk       Marked as shipping, resolve and
+                              improve issues 15 & 16
+    8     09/09/09  mjk       Assign number
+    9     09/09/09  mjk       Fix transposed page number
+    10    24/02/10  srahman   added glx protocol for
+                              glCreateShaderProgramEXT
+                              added issues 19 and 20 
+    11    03/07/13  Jon Leech Added note about the unrelated OpenGL ES
+                              extension of the same name.

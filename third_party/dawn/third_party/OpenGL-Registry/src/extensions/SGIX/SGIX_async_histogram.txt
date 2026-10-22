@@ -1,0 +1,124 @@
+XXX - Not complete yet!!!
+
+Name
+
+    SGIX_async_histogram
+
+Name Strings
+
+    GL_SGIX_async_histogram
+
+Version
+
+    $Date: 1998/02/11 23:24:25 $ $Revision: 1.3 $
+
+Number
+
+    134
+
+Dependencies
+
+    SGIX_async is required.
+    EXT_histogram is required.
+
+Overview
+
+    This extension introduces a new asynchronous mode for histogram
+    and minmax readbacks.  It allows programs to get the contents of a
+    histogram or minmax table without blocking and to continue issuing
+    graphics commands during the readback.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable and IsEnabled,
+    and by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+        ASYNC_HISTOGRAM_SGIX		0x832C
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        MAX_ASYNC_HISTOGRAM_SGIX        0x832D
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    Add the following to the end of the specification of histogram and
+    minmax operators in section 3.6.4 ("Pixel Transfer Operations"):
+
+    Calling Enable with the <cap> parameter set to
+    ASYNC_HISTOGRAM_SGIX causes subsequent GetHistogramEXT and
+    GetMinmaxEXT commands to be asynchronous (similar to the
+    asynchronous DrawPixels command described earlier).  An
+    implementation of these asynchronous commands may be non-blocking:
+    It may return control to the program immediately rather than
+    waiting for an asynchronous query command's results to be written
+    into host memory.  Asynchronous histogram and minmax readback
+    commands sample the OpenGL state vector at the time they are
+    issued, but they may be executed at some undefined point in the
+    future.  In particular, if subsequent commands change the contents
+    of the histogram or minmax table then the result of the query is
+    undefined.
+
+    Calling Disable with the <cap> parameter set to
+    ASYNC_HISTOGRAM_SGIX restores the default synchronous behavior.
+    
+Additions to Chapter 4 of the 1.1 Specification (Fragments and the
+Frame Buffer)
+
+    None
+    
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Dependencies on SGIX_async
+
+    This document adds a new category of asynchronous commands to
+    the framework defined by SGIX_async.
+
+Dependencies on EXT_histogram
+    
+    This document changes the semantics of the query commands defined
+    by EXT_histogram.
+
+Errors
+
+    INVALID_OPERATION is generated if GetHistogramEXT or GetMinmaxEXT
+    is called and ASYNC_HISTOGRAM_SGIX is enabled and the number of
+    asynchronous histogram or minmax readback commands that have been
+    issued but not queried (using FinishAsyncSGIX or PollAsyncSGIX)
+    exceeds MAX_ASYNC_HISTOGRAM_SGIX.
+
+New State
+
+    Get Value			Get Command	Type	Value	Attrib
+    ---------			-----------	----	-------	------
+    ASYNC_HISTOGRAM_SGIX        IsEnabled       B       False   enable
+
+New Implementation Dependent State
+
+								Minimum
+    Get Value			Get Command	Type		Value
+    ---------			-----------	----		-------
+    MAX_ASYNC_HISTOGRAM_SGIX    GetIntegerv     Z+              1

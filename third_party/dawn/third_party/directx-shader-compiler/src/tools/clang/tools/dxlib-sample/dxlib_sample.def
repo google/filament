@@ -1,0 +1,5 @@
+LIBRARY dxlib_sample
+
+EXPORTS
+    DxilD3DCompile=DxilD3DCompile
+    DxilD3DCompile2=DxilD3DCompile2

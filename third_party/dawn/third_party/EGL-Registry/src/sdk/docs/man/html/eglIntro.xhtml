@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglIntro - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglIntro">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglIntro — 
+            introduction to managing client API rendering through the
+            <abbr class="acronym">EGL</abbr> API.
+        </p>
+      </div>
+      <div class="refsect1" id="overview">
+        <h2>Overview</h2>
+        <p>
+            The <em class="firstterm">Khronos Native Platform Graphics
+            Interface</em> (EGL) provides a means for rendering
+            using a <em class="firstterm">client API</em> such as OpenGL ES
+            (a 3D renderer for embedded systems), OpenGL (a functional
+            superset of OpenGL ES for desktop systems), and OpenVG (a 2D
+            vector graphics renderer) together with a
+            <em class="firstterm">platform</em>, such as Microsoft Windows or
+            the X Window System.
+        </p>
+        <p>
+            Depending on its implementation EGL might be more or less
+            tightly integrated into the platform. Most EGL
+            functions require an EGL display connection, which can be
+            obtained by calling
+            <a class="citerefentry" href="eglGetPlatformDisplay.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetPlatformDisplay</span></span></a>
+            or
+            <a class="citerefentry" href="eglGetDisplay.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetDisplay</span></span></a>.
+            To initialize and
+            query what EGL version is supported on the display
+            connection, call
+            <a class="citerefentry" href="eglInitialize.xhtml"><span class="citerefentry"><span class="refentrytitle">eglInitialize</span></span></a>.
+        </p>
+        <p>
+            The EGL specification does not define the set of platforms that
+            may be supported by an EGL implementation, nor does it specify
+            behavior specific to any platform. The set of supported
+            platforms and their behavior is defined by platform-specific
+            extensions. To detect if a particular platform is supported,
+            clients should query the <code class="constant">EGL_EXTENSIONS</code>
+            string of <code class="constant">EGL_NO_DISPLAY</code> using
+            <a class="citerefentry" href="eglQueryString.xhtml"><span class="citerefentry"><span class="refentrytitle">eglQueryString</span></span></a>.
+        </p>
+        <p>
+            Platforms supporting EGL make a subset of their
+            visuals (which may also referred to as pixel formats, frame
+            buffer configurations, or other similar terms) available for
+            client API rendering. Windows and pixmaps created with these
+            visuals may also be rendered into using the platform APIs.
+        </p>
+        <p>
+            An EGL <em class="firstterm">surface</em> extends a native
+            window or pixmap with additional <em class="firstterm">auxillary
+            buffers</em>. These buffers include a color buffer, a
+            depth buffer, a stencil buffer, and an alpha mask buffer.
+            Some or all of the buffers listed are included in each EGL
+            frame buffer configuration.
+        </p>
+        <p>
+            EGL supports rendering into three types of surfaces:
+            windows, pixmaps and pixel buffers (pbuffers). EGL window
+            and pixmap surfaces are associated with corresponding
+            resources of the platform. EGL pixel buffers are
+            EGL-only resources, and do not accept rendering through the
+            platform APIs.
+        </p>
+        <p>
+            To render using a client API into an EGL surface, you must
+            determine the appropriate EGL frame buffer configuration,
+            which supports the rendering features the application
+            requires.
+            <a class="citerefentry" href="eglChooseConfig.xhtml"><span class="citerefentry"><span class="refentrytitle">eglChooseConfig</span></span></a>
+            returns an <span class="type">EGLConfig</span> matching the required
+            attributes, if any. A complete list of EGL frame buffer
+            configurations can be obtained by calling
+            <a class="citerefentry" href="eglGetConfigs.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetConfigs</span></span></a>.
+            Attributes of a particular EGL frame buffer configuration
+            can be queried by calling
+            <a class="citerefentry" href="eglGetConfigAttrib.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetConfigAttrib</span></span></a>.
+        </p>
+        <p>
+            For EGL window and pixmap surfaces, a suitable native window
+            or pixmap with a matching native visual must be created
+            first. For a given EGL frame buffer configuration, the
+            native visual type and ID can be retrieved with a call to
+            <a class="citerefentry" href="eglGetConfigAttrib.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetConfigAttrib</span></span></a>.
+            For pixel buffers, no underlying native resource is
+            required.
+        </p>
+        <p>
+            To create an EGL window surface from a native window, call
+            <a class="citerefentry" href="eglCreateWindowSurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreateWindowSurface</span></span></a>.
+            To create an EGL pixmap surface from a native pixmap, call
+            <a class="citerefentry" href="eglCreatePixmapSurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreatePixmapSurface</span></span></a>.
+            To create a pixel buffer (pbuffer) surface (which has no
+            associated native buffer), call
+            <a class="citerefentry" href="eglCreatePbufferSurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreatePbufferSurface</span></span></a>
+            To create a pixel buffer (pbuffer) surface whose color
+            buffer is provided by an OpenVG <span class="type">VGImage</span>, call
+            <a class="citerefentry" href="eglCreatePbufferFromClientBuffer.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreatePbufferFromClientBuffer</span></span></a>.
+            Use
+            <a class="citerefentry" href="eglDestroySurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglDestroySurface</span></span></a>
+            to release previously allocated resources.
+        </p>
+        <p>
+            An EGL rendering context is required to bind client API
+            rendering to an EGL surface. An EGL surface and an EGL
+            rendering context must have compatible EGL frame buffer
+            configurations. To create an EGL rendering context, call
+            <a class="citerefentry" href="eglCreateContext.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreateContext</span></span></a>.
+            The type of client API context created (OpenGL ES, OpenVG,
+            etc.) can be changed by first calling
+            <a class="citerefentry" href="eglBindAPI.xhtml"><span class="citerefentry"><span class="refentrytitle">eglBindAPI</span></span></a>.
+        </p>
+        <p>
+            An EGL rendering context may be bound to one or two EGL
+            surfaces by calling
+            <a class="citerefentry" href="eglMakeCurrent.xhtml"><span class="citerefentry"><span class="refentrytitle">eglMakeCurrent</span></span></a>.
+            This context/surface(s) association specifies the
+            <em class="firstterm">current context</em> and
+            <em class="firstterm">current surface</em>, and is used by all
+            client API rendering commands for the bound context until
+            <a class="citerefentry" href="eglMakeCurrent.xhtml"><span class="citerefentry"><span class="refentrytitle">eglMakeCurrent</span></span></a>
+            is called with different arguments.
+        </p>
+        <p>
+            Both platform and client API commands may be used to operate
+            on certain surfaces. However, the two command streams are
+            not synchronized. Synchronization can be explicitly
+            specified using by calling
+            <a class="citerefentry" href="eglWaitClient.xhtml"><span class="citerefentry"><span class="refentrytitle">eglWaitClient</span></span></a>,
+            <a class="citerefentry" href="eglWaitNative.xhtml"><span class="citerefentry"><span class="refentrytitle">eglWaitNative</span></span></a>,
+            and possibly by calling other platform APIs.
+        </p>
+      </div>
+      <div class="refsect1" id="examples">
+        <h2>Examples</h2>
+        <p>
+            Below is a minimal example of creating an RGBA-format window that
+            allows rendering with OpenGL ES.
+            The window is cleared to yellow when the program runs. For simplicity,
+            the program does not check for any errors.
+        </p>
+        <pre class="programlisting">
+#include &lt;stdlib.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;EGL/egl.h&gt;
+#include &lt;GLES/gl.h&gt;
+typedef ... NativeWindowType;
+extern NativeWindowType createNativeWindow(void);
+static EGLint const attribute_list[] = {
+        EGL_RED_SIZE, 1,
+        EGL_GREEN_SIZE, 1,
+        EGL_BLUE_SIZE, 1,
+        EGL_NONE
+};
+int main(int argc, char ** argv)
+{
+        EGLDisplay display;
+        EGLConfig config;
+        EGLContext context;
+        EGLSurface surface;
+        NativeWindowType native_window;
+        EGLint num_config;
+
+        /* get an EGL display connection */
+        display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+
+        /* initialize the EGL display connection */
+        eglInitialize(display, NULL, NULL);
+
+        /* get an appropriate EGL frame buffer configuration */
+        eglChooseConfig(display, attribute_list, &amp;config, 1, &amp;num_config);
+
+        /* create an EGL rendering context */
+        context = eglCreateContext(display, config, EGL_NO_CONTEXT, NULL);
+
+        /* create a native window */
+        native_window = createNativeWindow();
+
+        /* create an EGL window surface */
+        surface = eglCreateWindowSurface(display, config, native_window, NULL);
+
+        /* connect the context to the surface */
+        eglMakeCurrent(display, surface, surface, context);
+
+        /* clear the color buffer */
+        glClearColor(1.0, 1.0, 0.0, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glFlush();
+
+        eglSwapBuffers(display, surface);
+
+        sleep(10);
+        return EXIT_SUCCESS;
+}
+</pre>
+      </div>
+      <div class="refsect1" id="notes">
+        <h2>Notes</h2>
+        <p>
+            Prior to EGL 1.5, platforms were referred to as the
+            <em class="firstterm">native window system</em>, and
+            platform-specific queries and APIs were not available. Only a
+            single native window system was supported.
+        </p>
+      </div>
+      <div class="refsect1" id="usingeglextensions">
+        <h2>Using EGL Extensions</h2>
+        <p>
+            All supported EGL extensions will have a corresponding definition in
+            <code class="filename">egl.h</code> and a token in the extension strings returned
+            by
+            <a class="citerefentry" href="eglQueryString.xhtml"><span class="citerefentry"><span class="refentrytitle">eglQueryString</span></span></a>.
+        </p>
+      </div>
+      <div class="refsect1" id="futureeglversions">
+        <h2>Future EGL Versions</h2>
+        <p>
+            <a class="citerefentry" href="eglInitialize.xhtml"><span class="citerefentry"><span class="refentrytitle">eglInitialize</span></span></a>
+            and
+            <a class="citerefentry" href="eglQueryString.xhtml"><span class="citerefentry"><span class="refentrytitle">eglQueryString</span></span></a>
+            can be used to determine at run-time what version of EGL is available.
+            To check the EGL version at compile-time, test whether
+            <code class="constant">EGL_VERSION_<em class="replaceable"><code>x</code></em>_<em class="replaceable"><code>y</code></em></code>
+            is defined, where <em class="replaceable"><code>x</code></em> and
+            <em class="replaceable"><code>y</code></em> are the major and minor version
+            numbers.
+        </p>
+      </div>
+      <div class="refsect1" id="files">
+        <h2>Files</h2>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <code class="filename">GLES/egl.h</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    EGL header file
+                </p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+
+            <a class="citerefentry" href="eglBindAPI.xhtml"><span class="citerefentry"><span class="refentrytitle">eglBindAPI</span></span></a>,
+            <a class="citerefentry" href="eglChooseConfig.xhtml"><span class="citerefentry"><span class="refentrytitle">eglChooseConfig</span></span></a>,
+            <a class="citerefentry" href="eglCreateContext.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreateContext</span></span></a>,
+            <a class="citerefentry" href="eglCreatePbufferFromClientBuffer.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreatePbufferFromClientBuffer</span></span></a>,
+            <a class="citerefentry" href="eglCreatePbufferSurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreatePbufferSurface</span></span></a>,
+            <a class="citerefentry" href="eglCreatePixmapSurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreatePixmapSurface</span></span></a>,
+            <a class="citerefentry" href="eglCreateWindowSurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreateWindowSurface</span></span></a>,
+            <a class="citerefentry" href="eglDestroyContext.xhtml"><span class="citerefentry"><span class="refentrytitle">eglDestroyContext</span></span></a>,
+            <a class="citerefentry" href="eglDestroySurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglDestroySurface</span></span></a>,
+            <a class="citerefentry" href="eglGetConfigs.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetConfigs</span></span></a>,
+            <a class="citerefentry" href="eglGetDisplay.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetDisplay</span></span></a>,
+            <a class="citerefentry" href="eglGetPlatformDisplay.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetPlatformDisplay</span></span></a>,
+            <a class="citerefentry" href="eglInitialize.xhtml"><span class="citerefentry"><span class="refentrytitle">eglInitialize</span></span></a>,
+            <a class="citerefentry" href="eglMakeCurrent.xhtml"><span class="citerefentry"><span class="refentrytitle">eglMakeCurrent</span></span></a>,
+            <a class="citerefentry" href="eglQueryString.xhtml"><span class="citerefentry"><span class="refentrytitle">eglQueryString</span></span></a>,
+            <a class="citerefentry" href="eglSwapBuffers.xhtml"><span class="citerefentry"><span class="refentrytitle">eglSwapBuffers</span></span></a>,
+            <a class="citerefentry" href="eglTerminate.xhtml"><span class="citerefentry"><span class="refentrytitle">eglTerminate</span></span></a>,
+            <a class="citerefentry" href="eglWaitGL.xhtml"><span class="citerefentry"><span class="refentrytitle">eglWaitGL</span></span></a>,
+            <a class="citerefentry" href="eglWaitNative.xhtml"><span class="citerefentry"><span class="refentrytitle">eglWaitNative</span></span></a>
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

@@ -1,0 +1,9 @@
+# https://editorconfig.org
+
+root = false
+
+[*.[ch]]
+indent_size = unset
+indent_style = unset
+max_doc_length = unset
+max_line_length = unset

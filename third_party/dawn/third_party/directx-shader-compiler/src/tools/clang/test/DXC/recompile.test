@@ -1,0 +1,23 @@
+
+// Embed Debug, Recompile
+// RUN: %dxc /T ps_6_0 %S/Inputs/smoke.hlsl /Zi /Qembed_debug /Fo %t.recompile.cso
+// RUN: %dxc -dumpbin %t.recompile.cso | FileCheck %s --check-prefix=RECOMPILE_EMBED_DEBUG
+// RECOMPILE_EMBED_DEBUG:DICompileUnit
+
+// RUN: %dxc /T ps_6_0 %S/Inputs/smoke.hlsl /Zi /Qembed_debug /Fo %t.recompile.cc.cso /Cc /Ni /No /Lx
+// RUN: %dxc -dumpbin %t.recompile.cc.cso | FileCheck %s --check-prefix=RECOMPILE_CC_EMBED_DEBUG
+// RECOMPILE_CC_EMBED_DEBUG:DICompileUnit
+// RUN: %dxc  %t.recompile.cc.cso /recompile
+// RUN: %dxc  %t.recompile.cc.cso /recompile  /T ps_6_0 /E main
+
+// Strip Debug, Recompile PDB
+// RUN: %dxc /T ps_6_0 %S/Inputs/smoke.hlsl /Zi /Fd %t.recompiled.pdb
+// RUN: %dxc -dumpbin %t.recompiled.pdb | FileCheck %s --check-prefix=RECOMPILE_PDB
+// RECOMPILE_PDB:DICompileUnit
+// RUN: %dxc %t.recompiled.pdb  /recompile > %t.recompiled.pdb.ll
+// RUN: %dxc %t.recompiled.pdb /recompile /T ps_6_0 /E main
+
+
+// Command-line Defines, Recompile
+// RUN: %dxc  %S/Inputs/smoke.hlsl  /D "semantic = SV_Position" /T vs_6_0 /Zi /Qembed_debug /DDX12 /Fo %t.define.cso
+// RUN: %dxc %t.define.cso /recompile

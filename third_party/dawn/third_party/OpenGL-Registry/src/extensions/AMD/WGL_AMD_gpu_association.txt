@@ -1,0 +1,502 @@
+Name
+
+    AMD_gpu_association
+ 
+Name Strings
+
+    WGL_AMD_gpu_association
+
+Contact
+
+    Nick Haemel, AMD (nick.haemel 'at' amd.com)
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date: March 03, 2009
+    Author Revision: 1.0
+    
+    Based on:  WGL_ARB_make_current_read specification
+               Date: 3/15/2000   Version: 1.1
+               
+               EXT_framebuffer_object specification
+               Date: 2/13/2007   Revision #119
+
+Number
+
+    361
+
+Dependencies
+
+    OpenGL 1.5 is required.
+    
+    WGL_ARB_extensions_string is required.
+    
+    GL_EXT_framebuffer_object is required.
+
+    This extension interacts with WGL_ARB_make_current_read.
+
+    This extension interacts with GL_EXT_framebuffer_blit.
+    
+    This extension interacts with WGL_ARB_create_context.
+
+
+Overview
+
+
+    There currently is no way for applications to efficiently use GPU
+    resources in systems that contain more than one GPU. Vendors have 
+    provided methods that attempt to split the workload for an 
+    application among the available GPU resources. This has proven to be 
+    very inefficient because most applications were never written with 
+    these sorts of optimizations in mind. 
+    
+    This extension provides a mechanism for applications to explicitly
+    use the GPU resources on a given system individually. By providing 
+    this functionality, a driver allows applications to make appropriate
+    decisions regarding where and when to distribute rendering tasks.
+    
+    The set of GPUs available on a system can be queried by calling 
+    wglGetGPUIDsAMD(). The current GPU assigned to a specific context 
+    can be determined by calling wglGetContextGPUIDAMD. Each GPU in a 
+    system may have different performance characteristics in addition 
+    to supporting a different version of OpenGL. The specifics of each
+    GPU can be obtained by calling wglGetGPUInfo. This will allow 
+    applications to pick the most appropriate GPU for each rendering 
+    task.
+    
+    Once all necessary GPU information has been obtained, a context tied
+    to a specific GPU can be created with wglCreateAssociatedContextAMD.
+    These associated contexts can be made current with  
+    wglMakeAssociatedContextCurrentAMD and deleted with 
+    wglDeleteAssociatedContextAMD. Only one GPU associated or 
+    non-associated context can be current at one time per thread. 
+    
+    To provide an accelerated path for blitting data from one context
+    to another, the new blit function BlitContextFramebufferAMD has 
+    been added.
+    
+    
+
+
+New Procedures and Functions
+
+    UINT  wglGetGPUIDsAMD(UINT maxCount, UINT *ids);
+    
+    INT   wglGetGPUInfoAMD(UINT id, INT property, GLenum dataType,
+                           UINT size, void *data)
+    
+    UINT  wglGetContextGPUIDAMD(HGLRC hglrc);
+    
+    HGLRC wglCreateAssociatedContextAMD(UINT id);
+    
+    HGLRC wglCreateAssociatedContextAttribsAMD(UINT id, HGLRC hShareContext,
+				                               const int *attribList);
+				     
+    BOOL  wglDeleteAssociatedContextAMD(HGLRC hglrc);
+
+    BOOL  wglMakeAssociatedContextCurrentAMD(HGLRC hglrc);
+    
+    HGLRC wglGetCurrentAssociatedContextAMD(void);
+        
+    VOID  wglBlitContextFramebufferAMD(HGLRC dstCtx, GLint srcX0, GLint srcY0,
+                                       GLint srcX1, GLint srcY1, GLint dstX0,
+                                       GLint dstY0, GLint dstX1, GLint dstY1,
+                                       GLbitfield mask, GLenum filter);
+
+New Tokens
+
+    Accepted by the <property> parameter of wglGetGPUInfo:
+
+      WGL_GPU_VENDOR_AMD                 0x1F00
+      WGL_GPU_RENDERER_STRING_AMD        0x1F01
+      WGL_GPU_OPENGL_VERSION_STRING_AMD  0x1F02
+      WGL_GPU_FASTEST_TARGET_GPUS_AMD    0x21A2
+      WGL_GPU_RAM_AMD                    0x21A3
+      WGL_GPU_CLOCK_AMD                  0x21A4
+      WGL_GPU_NUM_PIPES_AMD              0x21A5
+      WGL_GPU_NUM_SIMD_AMD               0x21A6
+      WGL_GPU_NUM_RB_AMD                 0x21A7
+      WGL_GPU_NUM_SPI_AMD                0x21A8
+
+    Accepted by the <dataType> argument of wglGetGPUInfoAMD:
+
+      GL_UNSIGNED_BYTE
+      GL_UNSIGNED_INT
+      GL_INT
+      GL_FLOAT
+
+    Accepted by the <mask> argument of wglBlitContextFramebufferAMD:
+
+      GL_COLOR_BUFFER_BIT
+      GL_DEPTH_BUFFER_BIT
+      GL_STENCIL_BUFFER_BIT
+
+
+Additions to the GLX Specification
+
+    This specification is written for WGL.
+
+
+GLX Protocol
+
+    This specification is written for WGL.    
+
+
+Additions to the WGL Specification
+
+    GPU Associated Contexts
+    
+    When multiple GPUs are present, a context can be created for 
+    off-screen rendering that is associated with a specific GPU. 
+    This will allow applications to achieve an app-specific 
+    distributed GPU utilization.
+    
+    The IDs for available GPUs can be queried with the command:
+    
+        UINT  wglGetGPUIDsAMD(UINT maxCount, UINT *ids);
+    
+    where <maxCount> is the max number of IDs that can be returned and
+    <ids> is the array of returned IDs. If the function succeeds, 
+    the return value is the number of total GPUs available. The 
+    value 0 is returned if no GPUs are available or if the call has 
+    failed. The array pointer <ids> passed into the function will be 
+    populated by the smaller of maxCount or the total GPU count 
+    available. The ID 0 is reserved and will not be retuned as a 
+    valid GPU ID. If the array <ids> is NULL, the function will 
+    only return the total number of GPUs. <ids> will be tightly packed
+    with no 0 values between valid ids.
+    
+    Calling wglGetGPUIDsAMD once with <maxCount> set to zero returns 
+    the total available GPU count which can be used to allocate an 
+    appropriately sized id array before calling wglGetGPUIDsAMD 
+    again to query the full set of supported GPUs.
+
+    Each GPU in a system may have different properties, performance 
+    characteristics and different supported OpenGL versions. To 
+    determine which GPU is best suited for a specific task the 
+    following functions may be used:
+        
+        INT  wglGetGPUInfoAMD(UINT id, INT property, GLenum dataType,
+                              UINT size, void *data);
+
+    <id> is a GPU id obtained from calling wglGetGPUIDsAMD. The GPU ID 
+    must be a valid GPU ID. The function will fail if <id> is an invalid
+    GPU ID and -1 will be returned. <property> is the information being
+    queried. <dataType> may be GL_UNSIGNED_INT, GL_INT, GL_FLOAT, or 
+    GL_UNSIGNED_BYTE and signals what data type is to be returned. <size>
+    signals the size of the data buffer passed into wglGetGPUInfoAMD. 
+    This is the count of the array of type <dataType>. <data> is the 
+    buffer which will be filled with the requested information. For a 
+    string, <size> will be the number of characters allocated and will 
+    include NULL termination. For arrays of type GL_UNSIGNED_INT, GL_INT, 
+    and GL_FLOAT <size> will be the array depth. If the function 
+    succeeds, the number of values written will be returned. If the number
+    of values written is equal to <size>, the query should be repeated with
+    a larger <data> buffer. Strings should be queried using the
+    GL_UNSIGNED_BYTE type, are UTF-8 encoded and will be NULL terminated.
+    If the function fails, -1 will be returned. 
+
+    <property> defines the GPU property to be queried, and may be one of
+    WGL_GPU_OPENGL_VERSION_STRING_AMD, WGL_GPU_RENDERER_STRING_AMD,
+    WGL_GPU_FASTEST_TARGET_GPUS_AMD, WGL_GPU_RAM_AMD, WGL_GPU_CLOCK_AMD,
+    WGL_GPU_NUM_PIPES_AMD, WGL_GPU_NUM_SIMD_AMD, WGL_GPU_NUM_RB_AMD, or
+    WGL_GPU_NUM_SPI_AMD.
+
+    If <size> is not sufficient to hold the entire value for a particular
+    property, the number of values returned will equal <size>. If 
+    <dataType> is inappropriate for <property>, for instance INT for a 
+    property which is a string, the function will fail and -1 will be 
+    returned.
+
+    Querying WGL_GPU_OPENGL_VERSION_STRING_AMD returns the highest supported 
+    OpenGL version string and WGL_GPU_RENDERER_STRING_AMD returns name 
+    of the GPU. <dataType> must be GL_UNSIGNED_BYTE with the previous 
+    properties. Querying WGL_GPU_FASTEST_TARGET_GPUS_AMD returns an array 
+    of the IDs of GPUs with the fastest data blit rates when using 
+    wglBlitContextFramebufferAMD. This list is ordered fastest 
+    first. This provides a performance hint about which contexts and GPUS
+    are capable of transfering data between each other the quickest. Querying 
+    WGL_GPU_RAM_AMD returns the amount of RAM available to GPU in MB. Querying 
+    WGL_GPU_CLOCK_AMD returns the GPU clock speed in MHz.  Querying 
+    WGL_GPU_NUM_PIPES_AMD returns the nubmer of 3D pipes. Querying 
+    WGL_GPU_NUM_SIMD_AMD returns the number of SIMD ALU units in each 
+    shader pipe. Querying WGL_GPU_NUM_RB_AMD returns the number of render 
+    backends. Querying WGL_GPU_NUM_SPI_AMD returns the number of shader 
+    parameter interpolaters. If the <parameter> being queried is not 
+    applicable for the GPU specified by <id>, the value 0 will be returned.
+
+    Unassociated contexts are created by calling wglCreateContext. 
+    Although these contexts are unassociated, their use will still be 
+    tied to a single GPU in most cases. For this reason it is advantageous 
+    to be able to query the GPU an existing unassociated context resides 
+    on. If multiple GPUs are available, it would be undesirable 
+    to use one for rendering to visible surfaces and then chose the 
+    same one for off-screen rendering. Use the following command to 
+    determine which GPU a context is attached to:
+    
+        UINT  wglGetContextGPUIDAMD(HGLRC hglrc);
+    
+    <hglrc> is the context for which the GPU id will be returned. If the 
+    context is invalid or if an error has occurred, wglGetContextGPUIDAMD 
+    will return 0.
+    
+    To create an associated context, use:
+    
+        HGLRC wglCreateAssociatedContextAMD(UINT id);
+    
+    <id> must be a valid GPU id and cannot be 0. If a context was 
+    successfully created the handle will be returned by 
+    wglCreateAssociatedContextAMD. If a context could not be created, NULL 
+    will be returned. If a context could not be created, error information 
+    can be obtained by calling GetLastError. Upon successful creation,
+    no pixel format is tied to an associated context.
+    
+    To create an associated context and request a specific GL version, use:
+    
+        HGLRC wglCreateAssociatedContextAttribsAMD(UINT id, 
+                    HGLRC hShareContext, const int *attribList)
+    
+    All capabilities and limitations of wglCreateContextAttribsARB apply 
+    to wglCreateAssociatedContextAttribsAMD. Additionally, <id> must be 
+    a valid GPU ID and cannot be 0. If a context was successfully created 
+    the handle will be returned by wglCreateAssociatedContextAttribsAMD. 
+    If a context could not be created, NULL will be returned. In this 
+    case, error information can be obtained by calling GetLastError. Upon 
+    successful creation, no pixel format is tied to an associated context.
+    
+    <hShareContext> must either be NULL or that of an associated context 
+    created with the the same GPU ID as <id>. If <hShareContext> was 
+    created using a different ID, wglCreateAssociatedContextAttribsAMD 
+    will fail and return NULL.
+
+    
+    A context must be deleted once it is no longer needed. Use the 
+    following call to delete an associated context:
+    
+        BOOL wglDeleteAssociatedContextAMD(HGLRC hglrc);
+    
+    If the function succeeds, TRUE will be returned, otherwise FALSE is 
+    returned. <hglrc> must be a valid associated context created by 
+    calling wglCreateAssociatedContextAMD. If an unassociated context, 
+    created by calling wglCreateContext, is passed into <hglrc>, the 
+    function will fail. An associated context cannot be deleted by calling
+    wglDeleteContext. If an associated context is passed into 
+    wglDeleteContext, the result is undefiend.
+    
+    To render using an associated context, it must be made the current 
+    context for a thread: 
+        
+        BOOL  wglMakeAssociatedContextCurrentAMD(HGLRC hglrc);
+    
+    <hglrc> is a context handle created by calling 
+    wglCreateAssociatedContextAMD. If <hglrc> was created using 
+    wglCreateContext, the call will fail and FALSE will be returned. If 
+    <hglrc> is not a valid context and not NULL, the call will fail and 
+    FALSE will be returned. If the call succeeds, TRUE will be returned. 
+    To detach the current associated context, pass NULL as <hglrc>.
+    
+    Only one type of context can be current to a thread at a time. If an
+    unassociated context is current to a hdc when 
+    wglMakeAssociatedContextCurrentAMD is called with a valid <hglrc>, it 
+    is as if wglMakeCurrent is called first with an hglrc of NULL. If an 
+    associated context is current and wglMakeCurrent is called with a 
+    valid context, it is as if wglMakeAssociatedContextCurrentAMD is 
+    called with an hglrc of NULL.
+
+    The current associated context can be queried by calling:
+    
+        HGLRC wglGetCurrentAssociatedContextAMD(void);
+    
+    The current associated context is returned on a successful call to 
+    this function. If no associated context is current, NULL is returned. 
+    If an unassociated context is current, NULL will be returned. 
+
+    Associated contexts can be shared just as unassociated contexts can by 
+    calling wglShareLists. Associated contexts can only be shared with 
+    other contexts that were created with the same GPU id. Associated 
+    contexts cannot be shared with non-associated contexts. FALSE will be 
+    returned if either context is not valid or not an associated context 
+    associated with the same GPU.
+
+    An associated context can not be passed in as a parameter into 
+    wglCopyContext. If an associated context is passed into wglCopyContext,
+    the result is undefiend.
+    
+    The addresses returned from wglGetProcAddress are only valid for the 
+    current context. It may be invalid to use proc addresses obtained from
+    a traditional context with an associated context. Furthermore, the 
+    OpenGL version and extensions supported on an associated context may 
+    differ. Each context should be treated seperately, proc addressses 
+    should be queried for each after context creation.
+    
+    Calls to wglSwapBuffers and wglSwapLayerBuffers when an associated 
+    context is current will return FALSE and will have no effect.
+    
+    There is no way to use pBuffers with associated contexts.
+    
+    Overlays and underlays are not supported with associated contexts.
+    
+    The same associated context is used for both write and read operations.
+    
+    To facilitate high performance data communication between multiple 
+    contexts, a new function is necessary to blit data from one context 
+    to another. 
+    
+    VOID  wglBlitContextFramebufferAMD(HGLRC dstCtx, GLint srcX0, GLint srcY0,
+                                       GLint srcX1, GLint srcY1, GLint dstX0, 
+                                       GLint dstY0, GLint dstX1, GLint dstY1, 
+                                       GLbitfield mask, GLenum filter);
+
+    <dstCtx> is the context handle for the write context. <mask> is the 
+    bitwise OR of a number of values indicating which buffers are to be 
+    copied. The values are GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT, and 
+    GL_STENCIL_BUFFER_BIT, which are described in section 4.2.3.  The 
+    pixels corresponding to these buffers are copied from the source 
+    rectangle, bound by the locations (srcX0, srcY0) and (srcX1, srcY1), 
+    to the destination rectangle, bound by the locations (dstX0, dstY0) 
+    and (dstX1, dstY1).  The lower bounds of the rectangle are inclusive, 
+    while the upper bounds are exclusive. 
+
+    The source context is the current GL context. Specifying the current 
+    GL context as the <dstCtx> will result in the error 
+    GL_INVALID_OPERATION being generated. If <dstCtx> is invalid, the
+    error GL_INVALID_OPERATION will be generated. If no context is
+    current at the time of this call, the error GL_INVALID_OPERATION
+    will be generated. These errors may be queried by calling glGetError.
+    The target framebuffer will be the framebuffer bound to 
+    GL_DRAW_FRAMEBUFFER_EXT  in the context <dstCtx>. The source framebuffer 
+    will be the framebuffer bound to GL_READ_FRAMEBUFFER_EXT in the 
+    currently bound  context.
+
+    The restrictions that apply to the source and destination rectangles 
+    specified with <srcX0>, <srcY0>, <srcX1>, <srcY1>, <dstX0>, <dstY0>
+    <dstX0>, and <dstY0> are the same as those that apply for 
+    glBlitFramebufferEXT. The same error conditions exist as for
+    glBlitFramebufferEXT.
+    
+    When called, this function will execute immediately in the currently 
+    bound context. It is up to the caller to maintain appropriate 
+    synchronization between the current context and <dstCtx> to ensure 
+    rendering to the appropriate surfaces has completed on the current 
+    and <dstCtx> contexts.
+
+Additions to Chapter 4 of the OpenGL 1.5 Specification (Per-Fragment
+Operations and the Frame Buffer)
+Modify the beginning of section 4.4.1 as follows:
+
+    When an assoicated context is bound, the default state for an associated 
+    context is invalid for rendering. Because there is no attached window, 
+    there is no default framebuffer surface to render to. An app created 
+    framebuffer object must be bound for rendering to be valid. If the 
+    object bound to GL_FRAMEBUFFER_BINDING_EXT is 0, it is as if the 
+    framebuffer is incomplete, and an
+    GL_INVALID_FRAMEBUFFER_OPERATION_EXT error will be generated
+    where rendering is attempted.
+
+    
+New State
+
+    None
+        
+
+Interactions with GL_EXT_framebuffer_blit
+
+    If the framebuffer blit extension is not supported, all language 
+    referring to glBlitFramebufferEXT and wglBlitContextFramebufferAMD 
+    is removed.
+    
+Interactions with GL_EXT_framebuffer_object
+
+    If WGL_AMD_gpu_association is supported, and context created with it 
+    will also support EXT_framebuffer_object.
+
+
+Interactions with WGL_ARB_make_current_read
+
+    If the make current read extension is supported, it is invalid to pass 
+    an associated context handle as a parameter to 
+    wglMakeContextCurrentARB. If an associated context is passed into 
+    wglMakeContextCurrentARB, the result is undefiend.
+
+Interactions with WGL_ARB_create_context
+    If wglCreateContextAttribsARB is not supported, all language 
+    referring to wglCreateAssociatedContextAttribsAMD is removed.
+    
+
+Issues
+
+1. Is a different DC necessary in addition to an associated context?
+   
+   - Resolved. It seems unnecessary. An associated DC would be a virtual 
+   DC with no real meaning. Using an associated DC would require apps to 
+   create windows and set pixelformats that are meaningless.
+
+2. Should the list of IDs returned by wglGetGPUIDs be ordered in some 
+   way? By fastest GPU?
+   
+   - Resolved. There is no need to create a restriction. The GPU info can 
+   be queried.
+   
+3. What happens when the GPUs support different versions of OpenGL?
+   Do we allow this? Do we need the 
+   
+   - Resolved. It is the applications responsibility to use each GPU 
+   appropriately based on the supported version of OpenGL.
+   
+4. What should the relation between wglMakeAssociatedContextCurrentAMD and 
+   wglMakeCurrent be? Should it be legal to have an associated context and a 
+   normal context current to the same thread?
+   
+   - Resolved. It seems feasible to have an associated context and a normal 
+   one both current, but for simplicity, only one of any type will be allowed 
+   per thead.
+   
+5.  Will a call to wglShareLists with contexts that were not created through
+    wglCreateContext make it through to the driver? If not, will a new 
+    shareLists call be necessary?   
+    
+    -Resolved. This is not an issue.
+
+6.  Is GPUClock a good parameter for the GPUInfo structure? How should 
+    relative GPU performance be presented?
+    
+    - Resolved. This is sufficent. One alternative would be to test execution of 
+    some amount of geometry rendering. But applications are better positioned
+    to perform this based on their rendering needs.
+
+7.  Is BlitContextFramebufferEXT the best way to transfer data from one 
+    context to another? Or would it be better to create a read and write
+    context bind point?
+    
+    - Resolved. Both methods would work well. Adding a new function prevents 
+    the additional state that would have to be tracked for a global read and
+    write bind point. In addition, using global (wgl) bind points may 
+    introduce mutability issues when multiple threads are being used. 
+    Only one thread could use the interface at a time. 
+
+8.  Should the GPU ID be part of the pixel format? That would allow 
+    apps to search for a format that worked on different GPUs. 
+    
+    - Resolved. Using the pixel format would provide a non-intrusive solution,
+    but would require the app to use a DC that is not available through
+    current interfaces. In addition, the app would have to create a 
+    dummy window.
+
+9.  Are there any problems calling wglShareLists with contexts not created
+    by Windows?
+    
+    - Resolved. This is not an issue.
+
+10. What should happen in an associated context when the default FBO is 
+    bound? The 2 options seem to be 1. Throw an error and do not render,
+    2. Discard all rendering as failing the pixel ownership test.
+    
+    - The first option seems more logical.
+
+
+Revision History
+    03/03/2009 - Initial version written. Written by nickh

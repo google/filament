@@ -1,0 +1,148 @@
+# Copyright 2020 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import("../../../scripts/dawn_overrides_with_defaults.gni")
+import("../../../scripts/tint_overrides_with_defaults.gni")
+
+import("${dawn_root}/generator/dawn_generator.gni")
+import("${dawn_root}/scripts/dawn_features.gni")
+
+###############################################################################
+# Utils for tests and samples
+###############################################################################
+
+dawn_json_generator("dawn_utils_gen") {
+  target = "dawn_utils"
+  inputs = [
+    "${dawn_template_dir}/dawn/utils/ComboLimits.h",
+    "${dawn_template_dir}/dawn/utils/ComboLimits.cpp",
+  ]
+  outputs = [
+    "src/dawn/utils/ComboLimits.h",
+    "src/dawn/utils/ComboLimits.cpp",
+  ]
+}
+
+static_library("wgpu_utils") {
+  configs += [
+    "${dawn_root}/include/dawn:public",
+    "${dawn_root}/src/dawn/common:internal_config",
+    "${dawn_root}/src/tint:tint_public_config",
+  ]
+
+  sources = get_target_outputs(":dawn_utils_gen")
+  sources += [
+    "ComboRenderBundleEncoderDescriptor.cpp",
+    "ComboRenderBundleEncoderDescriptor.h",
+    "ComboRenderPipelineDescriptor.cpp",
+    "ComboRenderPipelineDescriptor.h",
+    "ScopedIgnoreValidationErrors.cpp",
+    "ScopedIgnoreValidationErrors.h",
+    "TextureUtils.cpp",
+    "TextureUtils.h",
+    "WGPUHelpers.cpp",
+    "WGPUHelpers.h",
+  ]
+
+  public_deps = [
+    "${dawn_abseil_dir}:absl",
+    "${dawn_root}/include/dawn:cpp_headers",
+    "${dawn_root}/src/dawn/common",
+  ]
+  deps = [ ":dawn_utils_gen" ]
+}
+
+static_library("test_utils") {
+  configs += [ "${dawn_root}/src/dawn/common:internal_config" ]
+
+  sources = [
+    "BinarySemaphore.cpp",
+    "BinarySemaphore.h",
+    "TerribleCommandBuffer.cpp",
+    "TerribleCommandBuffer.h",
+    "TestUtils.cpp",
+    "TestUtils.h",
+    "WireHelper.cpp",
+    "WireHelper.h",
+  ]
+
+  public_deps = [
+    ":wgpu_utils",
+    "${dawn_abseil_dir}:absl",
+    "${dawn_root}/include/dawn:cpp_headers",
+    "${dawn_root}/src/dawn:proc",
+    "${dawn_root}/src/dawn/common",
+    "${dawn_root}/src/dawn/native:headers",
+    "${dawn_root}/src/dawn/partition_alloc:raw_ptr",
+    "${dawn_root}/src/dawn/wire:static",
+  ]
+}
+
+static_library("system_utils") {
+  configs += [ "${dawn_root}/src/dawn/common:internal_config" ]
+
+  sources = [
+    "CommandLineParser.cpp",
+    "CommandLineParser.h",
+    "PlatformDebugLogger.h",
+    "SystemUtils.cpp",
+    "SystemUtils.h",
+    "Timer.h",
+  ]
+
+  public_deps = [
+    "${dawn_abseil_dir}:absl",
+    "${dawn_root}/src/dawn/common",
+  ]
+
+  frameworks = []
+
+  if (is_win && !dawn_is_winuwp) {
+    sources += [ "WindowsDebugLogger.cpp" ]
+  } else {
+    sources += [ "EmptyDebugLogger.cpp" ]
+  }
+
+  if (is_win) {
+    sources += [ "WindowsTimer.cpp" ]
+  } else if (is_mac) {
+    sources += [
+      "OSXTimer.cpp",
+      "ObjCUtils.h",
+      "ObjCUtils.mm",
+    ]
+    frameworks += [ "QuartzCore.framework" ]
+
+    # If a "build with ARC" config is present, remove it.
+    if (filter_include(configs, [ "//build/config/compiler:enable_arc" ]) !=
+        []) {
+      configs -= [ "//build/config/compiler:enable_arc" ]
+    }
+  } else {
+    sources += [ "PosixTimer.cpp" ]
+  }
+}

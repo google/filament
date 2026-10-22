@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglInitialize">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglInitialize</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglInitialize</refname>
+        <refpurpose>
+            initialize an <acronym>EGL</acronym> display connection
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLBoolean <function>eglInitialize</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLint * <parameter>major</parameter></paramdef>
+                <paramdef>EGLint * <parameter>minor</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the EGL display connection to initialize.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>major</parameter></term>
+                <listitem>
+                    <para>
+                        Returns the major version number of the EGL implementation.
+                        May be <constant>NULL</constant>.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>minor</parameter></term>
+                <listitem>
+                    <para>
+                        Returns the minor version number of the EGL implementation.
+                        May be <constant>NULL</constant>.
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="description"><title>Description</title>
+        <para>
+            <function>eglInitialize</function> initialized the EGL display
+            connection obtained with
+            <citerefentry><refentrytitle>eglGetDisplay</refentrytitle></citerefentry>.
+            Initializing an already initialized EGL display connection has no
+            effect besides returning the version numbers.
+        </para>
+        <para>
+            <parameter>major</parameter> and <parameter>minor</parameter>
+            do not return values if they are specified as <constant>NULL</constant>.
+        </para>
+        <para>
+            Use <citerefentry><refentrytitle>eglTerminate</refentrytitle></citerefentry>
+            to release resources associated with an EGL display connection.
+        </para>
+    </refsect1>
+    <refsect1 id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_FALSE</constant> is returned if
+            <function>eglInitialize</function> fails,
+            <constant>EGL_TRUE</constant> otherwise.
+            <parameter>major</parameter> and <parameter>minor</parameter> are not
+            modified when <constant>EGL_FALSE</constant> is returned.
+        </para>
+        <para>
+            <constant>EGL_BAD_DISPLAY</constant> is generated if
+            <parameter>display</parameter> is not an EGL display connection.
+        </para>
+        <para>
+            <constant>EGL_NOT_INITIALIZED</constant> is generated if
+            <parameter>display</parameter> cannot be initialized.
+        </para>
+    </refsect1>
+    <refsect1 id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglGetDisplay</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglTerminate</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

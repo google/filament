@@ -1,0 +1,110 @@
+#!/bin/sh
+
+st=0        # exit status (set to 1 if a test fails)
+skipped=
+fail="**FAIL**"
+skip="**SKIP**"
+success=" SUCCESS"
+TEST(){
+   # Try to make the log file easier to read:
+   echo "=============== pngtest $* ===================="
+   ./pngtest "$@"
+   status=$?
+   case "$status" in
+       0)  test_status="$success";;
+       77) test_status="$skip"
+           skipped=1;;
+       *)  test_status="$fail"
+           st="$status";;
+   esac
+   echo "===============$test_status $* ===================="
+   return "$status"
+}
+
+# The "standard" test
+TEST --strict "${srcdir}"/pngtest.png
+
+# PNG-3 tests
+TEST --strict "${srcdir}"/contrib/testpngs/png-3/*.png
+
+# Various crashers
+# Use --relaxed because some come from fuzzers that don't maintain CRCs
+TEST --relaxed "${srcdir}"/contrib/testpngs/crashers/badcrc.png
+# Use --xfail because there is no reliable way of disabling these errors
+# (Adler32 checking cannot be switched off on all builds and there is no
+# provision for turning the other checks into warnings.)
+TEST --xfail "${srcdir}"/contrib/testpngs/crashers/badadler.png
+TEST --xfail "${srcdir}"/contrib/testpngs/crashers/bad_iCCP.png
+TEST --xfail "${srcdir}"/contrib/testpngs/crashers/empty_ancillary_chunks.png
+for file in "${srcdir}"/contrib/testpngs/crashers/huge_*_chunk.png
+do
+   TEST --xfail "$file"
+done
+for file in "${srcdir}"/contrib/testpngs/crashers/huge_*safe_to_copy.png
+do
+   TEST --xfail "$file"
+done
+TEST --xfail "${srcdir}"/contrib/testpngs/crashers/huge_IDAT.png
+
+# Regression tests for required warnings (or errors):
+check_stdout(){
+   # $1: the test file (a bad PNG which must produce a warning, etc)
+   # $2: a string which must occur at the end of line on stdout for success
+   # result: an error message on descriptor 3 if the string is NOT found
+   #
+   # WARNING: when this script is executed on MSYS2 (Windows Cygwin variant)
+   # pngtest outputs lines terminated with <cr><lf> however the MSYS2 shell
+   # expects <lf> (\n) terminated lines so the <cr> ends up in the shell
+   # variable 'line' below.  The pattern matching ignores this because of the
+   # '*' at the end of the pattern match.
+   found=
+   skipped=
+   while read line
+   do
+      case "$line" in
+         *"$2"*) found=1;;
+         *"TEST SKIPPED"*) skipped=1;;
+      esac
+      echo "$line" # preserve the original output verbatim
+   done
+   # output the missing warning on descriptor 3:
+   test -z "$found" -a -z "$skipped" && echo "$1: $2" >&3
+}
+# NOTE: traditionally the Bourne shell executed the last element in a pipe
+# sequence in the original shell so it could set variables in the original
+# shell however this is not reliable and doesn't work in bash.
+#
+# It *is* reliable to use the actual exit status of the last command in
+# the pipeline.
+exec 4>&1 # original stdout - the log file
+{
+   exec 3>&1 # stdout is the pipe at this point
+   fail=" FAIL(EXPECTED)" # runtime scope
+   success=" SUCCESS(UNEXPECTED)" # there should be a write error
+   for file in "${srcdir}"/contrib/testpngs/badpal/*.png
+   do
+     # The exit code is ignored here, the test is that the particular errors
+     # (warnings) are produced.  The original output still ends up in the log
+     # file.
+     {
+        TEST "$file"
+        test "$?" -eq 77 && echo "TEST SKIPPED"
+     } |
+        check_stdout "$file" 'IDAT: Read palette index exceeding num_palette' |
+        check_stdout "$file" 'Wrote palette index exceeding num_palette' >&4
+   done
+   exec 3>&-
+} | {
+   # This may not be a sub-shell, if it is 'st' is undefined and the exit
+   # just ends up as 'exit'.
+   while read error
+   do
+      echo "MISSING REPORT: $error"
+      st=1
+   done
+   exit $st
+} || st=$?
+
+test "$st" -gt 0 && exit "$st"
+test -n "$skipped" && exit 77
+exit 0

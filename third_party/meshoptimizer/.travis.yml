@@ -1,0 +1,29 @@
+language: cpp
+
+matrix:
+  include:
+    - os: linux
+      compiler: gcc
+    - os: linux
+      compiler: clang
+    - os: osx
+      compiler: clang
+    - os: windows
+      env:
+        - TARGET="Visual Studio 15 2017"
+    - os: windows
+      env:
+        - TARGET="Visual Studio 15 2017 Win64"
+
+script:
+  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then make config=coverage test; fi
+  - if [[ "$CXX" == "clang++" ]]; then make config=sanitize test; fi
+  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then make config=release test; fi
+  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then cmake -G "$TARGET" -DBUILD_DEMO=ON; fi
+  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then cmake --build . -- -property:Configuration=Debug -verbosity:minimal; fi
+  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then ./Debug/demo.exe demo/pirate.obj; fi
+  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then cmake --build . -- -property:Configuration=Release -verbosity:minimal; fi
+  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then ./Release/demo.exe demo/pirate.obj; fi
+
+after_script:
+  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then bash <(curl -s https://codecov.io/bash); fi

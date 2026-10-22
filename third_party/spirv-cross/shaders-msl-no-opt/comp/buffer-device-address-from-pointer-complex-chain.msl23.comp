@@ -1,0 +1,21 @@
+#version 460
+
+#extension GL_EXT_buffer_reference: enable
+#extension GL_EXT_buffer_reference_uvec2: enable
+
+struct S {
+    vec3 v;
+};
+
+layout(buffer_reference) buffer SSBO{
+    S s[];
+};
+
+layout(push_constant) uniform PC {
+    uvec2 ptr;
+} pc;
+
+void main(){
+    SSBO ssbo = SSBO(pc.ptr);
+    ssbo.s[0].v = vec3(1.0);
+}

@@ -1,0 +1,211 @@
+Name
+
+    WGL_ARB_create_context_robustness
+
+Name Strings
+
+    WGL_ARB_create_context_robustness
+
+Contact
+
+    Jon Leech (jon 'at' alumni.caltech.edu)
+
+Notice
+
+    Copyright (c) 2010-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 9, 2010.
+    Approved by the Khronos Board of Promoters on July 23, 2010.
+
+Version
+
+    Version 3, 2010/07/22
+
+Number
+
+    ARB Extension #102
+
+Dependencies
+
+    WGL_ARB_extensions_string is required.
+
+    WGL_ARB_create_context is required.
+
+    An OpenGL implementation supporting GL_ARB_robustness is required.
+
+Overview
+
+    This extension allows creating an OpenGL context supporting robust
+    buffer access behavior and a specified graphics reset notification
+    behavior.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as a bit in the attribute value for WGL_CONTEXT_FLAGS_ARB
+    in the <*attrib_list> argument to wglCreateContextAttribsARB:
+
+        WGL_CONTEXT_ROBUST_ACCESS_BIT_ARB       0x00000004
+
+    Accepted as an attribute name in the <*attrib_list> argument to
+    wglCreateContextAttribsARB:
+
+        WGL_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB     0x8256
+
+    Accepted as an attribute value for
+    WGL_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB in the <*attrib_list>
+    argument to wglCreateContextAttribsARB:
+
+        WGL_NO_RESET_NOTIFICATION_ARB                   0x8261
+        WGL_LOSE_CONTEXT_ON_RESET_ARB                   0x8252
+
+Additions to the OpenGL / GLX / GLX Protocol Specificaitons
+
+    None. This specification is written for WGL.
+
+Additions to the WGL specification
+
+    This extension modifies language specified in the
+    WGL_ARB_create_context and WGL_ARB_create_context_profile
+    extensions.
+
+    In the description of wglCreateContextAttribsARB, insert a new
+    paragraph before the paragraph "The default value of
+    WGL_CONTEXT_FLAGS_ARB is 0.":
+
+   "If the WGL_CONTEXT_ROBUST_ACCESS_BIT_ARB bit is set in
+    WGL_CONTEXT_FLAGS_ARB, then a context supporting <robust buffer
+    access> will be created. Robust buffer access is defined in the
+    GL_ARB_robustness extension specification, and the resulting context
+    must also support either the GL_ARB_robustness extension, or a
+    version of OpenGL incorporating equivalent functionality."
+
+    Add a new paragraph to the description of
+    wglCreateContextAttribsARB:
+
+   "The attribute name WGL_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB
+    specifies the <reset notification behavior> of the rendering
+    context. Reset notification behavior is defined in the
+    GL_ARB_robustness extension specification, and the resulting context
+    must also support either the GL_ARB_robustness extension, or a
+    version of OpenGL incorporating equivalent functionality. The
+    attribute value may be either WGL_NO_RESET_NOTIFICATION_ARB or
+    WGL_LOSE_CONTEXT_ON_RESET_ARB, which respectively result in reset
+    notification behavior of GL_NO_RESET_NOTIFICATION_ARB and
+    GL_LOSE_CONTEXT_ON_RESET_ARB, as described by GL_ARB_robustness. The
+    default value for WGL_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB is
+    WGL_NO_RESET_NOTIFICATION_ARB."
+
+    Add "robust buffer access flag" and "reset notification behavior" to
+    the list of possible context creation errors resulting in a
+    ERROR_INVALID_PIXEL_FORMAT error in this sentence:
+
+   "* If the pixel format associated with <hDC> does not support OpenGL
+    contexts providing the requested API major and minor version,
+    forward-compatible flag, and/or debug context flag, then
+    ERROR_INVALID_PIXEL_FORMAT is generated."
+
+    Add a new context creation error to wglCreateContextAttribsARB:
+
+   "* If the reset notification behavior of <hShareContext> and the
+    newly created context are different, then
+    ERROR_INCOMPATIBLE_DEVICE_CONTEXTS_ARB is generated."
+
+    Add to the description of wglShareLists:
+
+   "If the reset notification behavior of <hglrc1> and <hglrc2> are
+    different, then wglShareLists will return FALSE, and GetLastError
+    will return ERROR_INCOMPATIBLE_DEVICE_CONTEXTS_ARB."
+
+Dependencies on WGL_ARB_extensions_string
+
+    Because there is no way to extend WGL, these calls are defined in
+    the ICD and can be called by obtaining the address with
+    wglGetProcAddress. Because this extension is a WGL extension, it is
+    not included in the GL_EXTENSIONS string. Its existence can be
+    determined with the WGL_ARB_extensions_string extension.
+
+Errors
+
+    ERROR_INVALID_PIXEL_FORMAT is generated if
+    WGL_CONTEXT_ROBUST_ACCESS_BIT_ARB is set in attribute
+    WGL_CONTEXT_FLAGS_ARB, and no GL context supporting the
+    GL_ARB_robustness extension with robust buffer access enabled
+    exists.
+
+    ERROR_INVALID_PIXEL_FORMAT is generated if no GL context supporting
+    the GL_ARB_robustness extension with the specified reset
+    notification behavior (the value of attribute
+    WGL_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB) can be created.
+
+    ERROR_INCOMPATIBLE_DEVICE_CONTEXTS_ARB is generated by
+    wglCreateContextAttribsARB if the reset notification behavior of
+    <hShareContext> does not match the reset notification behavior of
+    the context being created.
+
+    ERROR_INCOMPATIBLE_DEVICE_CONTEXTS_ARB is generated by wglShareLists
+    if the reset notification behavior of <hglrc1> and <hglrc2> are
+    different.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+   None
+
+Conformance Tests
+
+    TBD
+
+Sample Code
+
+    TBD
+
+Issues
+
+ 1) Should there be a discovery mechanism for GL contexts supported by
+    the implementation?
+
+    UNRESOLVED. As we add more and more versions, profiles, and context
+    flags, the number of possible types of contexts is growing rapidly.
+    Some discovery mechanism may be useful, but simply enumerating all
+    the possible contexts is probably impractica.
+
+ 2) How can applications query if a context supports robust buffer
+    access?
+
+    UNRESOLVED. See the matching issue in GL_ARB_robustness.
+
+Revision History
+
+    Version 3, 2010/07/22 - Assign enums for new tokens (shared with GLX and
+    GL robustness extensions).
+
+    Version 2, 2010/07/21 - Move reset notification behavior from a GL
+    toggle to a context creation parameter. Disallow sharing contexts
+    with different reset notification behaviors. Rename extension, since
+    it's no longer only about robust buffer access.
+
+    Version 1, 2010/06/06 - Initial version.

@@ -1,0 +1,8 @@
+#version 460 core
+#extension GL_EXT_descriptor_heap: enable
+layout(descriptor_heap, r32i) uniform iimage1D img[];
+
+void main()
+{
+    imageAtomicAdd(img[1], 1, 1);
+}

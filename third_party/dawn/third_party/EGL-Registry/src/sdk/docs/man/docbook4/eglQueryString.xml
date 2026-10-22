@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglQueryString">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglQueryString</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglQueryString</refname>
+        <refpurpose>
+            return a string describing an <acronym>EGL</acronym> display connection
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>char const * <function>eglQueryString</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLint <parameter>name</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the EGL display connection.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>name</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies a symbolic constant, one of
+                        <constant>EGL_CLIENT_APIS</constant>,
+                        <constant>EGL_VENDOR</constant>,
+                        <constant>EGL_VERSION</constant>, or
+                        <constant>EGL_EXTENSIONS</constant>.
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="description"><title>Description</title>
+        <para>
+            <function>eglQueryString</function> returns a pointer to a
+            static string describing an EGL display connection.
+            <parameter>name</parameter> can be one of the following:
+        </para>
+        <variablelist>
+            <varlistentry>
+                <term><constant>EGL_CLIENT_APIS</constant></term>
+                <listitem><para>
+                    Returns a string describing which client rendering
+                    APIs are supported. The string contains a
+                    space-separate list of API names. The list must
+                    include at least one of <code>OpenGL</code>,
+                    <code>OpenGL_ES</code>, or <code>OpenVG</code>.
+                    These strings correspond respectively to values
+                    <constant>EGL_OPENGL_API</constant>,
+                    <constant>EGL_OPENGL_ES_API</constant>, and
+                    <constant>EGL_OPENVG_API</constant> of the
+                    <citerefentry><refentrytitle>eglBindAPI</refentrytitle></citerefentry>,
+                    <parameter>api</parameter> argument.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_VENDOR</constant></term>
+                <listitem><para>
+                    Returns the company responsible for this EGL implementation. This
+                    name does not change from release to release.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_VERSION</constant></term>
+                <listitem><para>
+                    Returns a version or release number.
+                    The <constant>EGL_VERSION</constant> string is laid out as
+                    follows:</para>
+                <para>
+                    <replaceable>major_version</replaceable>.<replaceable>minor_version</replaceable>
+                    space
+                    <replaceable>vendor_specific_info</replaceable>
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_EXTENSIONS</constant></term>
+                <listitem><para>
+                    Returns a space separated list of supported extensions to EGL.
+                </para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="notes"><title>Notes</title>
+        <para>
+            <constant>EGL_CLIENT_APIS</constant> is supported only if
+            the EGL version is 1.2 or greater.
+        </para>
+    </refsect1>
+    <refsect1 id="errors"><title>Errors</title>
+        <para>
+            <constant>NULL</constant> is returned on failure.
+        </para>
+        <para>
+            <constant>EGL_BAD_DISPLAY</constant> is generated if
+            <parameter>display</parameter> is not an EGL display connection.
+        </para>
+        <para>
+            <constant>EGL_NOT_INITIALIZED</constant> is generated if
+            <parameter>display</parameter> has not been initialized.
+        </para>
+        <para>
+            <constant>EGL_BAD_PARAMETER</constant> is generated if
+            <parameter>name</parameter> is not an accepted value.
+        </para>
+    </refsect1>
+    <refsect1 id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglBindAPI</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetDisplay</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglInitialize</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

@@ -1,0 +1,376 @@
+Name
+
+    EXT_sync_reuse
+
+Name Strings
+
+    EGL_EXT_sync_reuse
+
+Contributors
+
+    Daniel Kartch
+    Jeff Vigil
+    Ray Smith
+
+Contacts
+
+    Daniel Kartch, NVIDIA Corporation (dkartch 'at' nvidia.com)
+
+Status
+
+    Complete
+
+Version
+
+    Version 4, May 16, 2018
+
+Number
+
+    EGL Extension #128
+
+Extension type
+
+    EGL display extension
+
+Dependencies
+
+    Requires EGL 1.5 or EGL 1.4 with EGL_KHR_fence_sync
+
+    Interacts with EGL_KHR_reusable_sync 
+    Interacts with EGL_ANDROID_native_fence_sync
+    Interacts with EGL_NV_cuda_event
+
+    This extension is written against the wording of the EGL 1.5
+    Specification.
+
+Overview
+
+    The original EGLSync extensions separated sync objects into two
+    types: fence sync objects signaled by one time events in an
+    API command pipeline; and reusable sync objects signaled by commands
+    which can be issued again and again. However, this conflates
+    reusability of the event triggering a sync object with the EGLSync
+    object itself.
+
+    Although the event associated with a fence sync object will only
+    occur once, there is no reason that it can't be replaced with a new
+    event. Doing so would avoid unnecessary allocation and free
+    operations in an application that repeatedly waits for events. With
+    the current interfaces, such applications must constantly create and
+    destroy new EGLSync objects.
+
+    This extension allows all sync objects to be reusable. When a sync
+    object is in the signaled state, it can be reset back to an
+    unsignaled state, regenerating or reevaluating the events that
+    trigger them. For fence sync objects, this means generating a new
+    fence in the current API. For OpenCL event sync objects, this means
+    waiting for a new OpenCL event handle. This mechanism also allows
+    sync objects to be created in the signaled state with no associated
+    fence/event, and have one applied later. Thus all EGLSyncs required
+    by an application can be allocated up front, before any rendering
+    operations have begun.
+
+New Types
+
+    None
+
+New Tokens
+
+    None
+
+New Procedures and Functions
+
+    EGLBoolean eglUnsignalSyncEXT(
+                    EGLDisplay dpy,
+                    EGLSync sync,
+                    const EGLAttrib *attrib_list);
+
+Replace text of subsections of 3.8.1 through 3.8.1.2 of EGL 1.5
+Specification. Existing tables are preserved.
+
+    3.8.1 Sync Objects
+
+    In addition to the aforementioned synchronization functions, which
+    provide an efficient means of serializing client and native API
+    operations within a thread, <sync objects> are provided to enable
+    synchronization of client API operations between threads and/or
+    between API contexts. Sync objects may be tested or waited upon by
+    application threads.
+
+    Sync objects have a status with two possible states: <signaled> and
+    <unsignaled>, and may initially be in either state. EGL may be asked
+    to wait for a sync object to become signaled, or a sync object’s
+    status may be queried.
+
+    Depending on the type of a sync object, its status may be changed
+    either by an external event, or by explicitly signaling and/or
+    unsignaling the sync. All sync objects are reusable. Once they enter
+    the signaled state, they may be changed back to unsignaled, possibly
+    replacing the associated external event that signals them.
+
+    Sync objects are associated with an EGLDisplay when they are
+    created, and have <attributes> defining additional aspects of the
+    sync object. All sync objects include attributes for their type and
+    their status. Additional attributes are discussed below for
+    different types of sync objects. If a sync object is created in the
+    signaled state, its initial attribute list may be incomplete, with
+    attributes necessary for its type provided when it is changed to
+    unsignaled.
+
+    <Fence sync objects> have an associated fence command in a client
+    API. A new fence command is generated whenever the sync object
+    enters the unsignaled state. When the client API executes the fence
+    command, an event is generated which signals the corresponding fence
+    sync object. Fence sync objects may not be explicitly signaled.
+    Fence sync objects may be used to wait for partial completion of a
+    client API command stream, as a more flexible form of glFinish or
+    vgFinish.
+
+    An <OpenCL event sync object> reflects the status of a corresponding
+    OpenCL event object to which the sync object is linked. This
+    provides another method of coordinating sharing of images between
+    EGL and OpenCL (see Chapter 9 of the OpenCL 1.0 Specification and
+    the cl_khr_egl_image extension). Waiting on such a sync object is
+    equivalent to waiting for completion of the linked OpenCL event
+    object.
+
+    The command
+
+        EGLSync eglCreateSync(EGLDisplay dpy, EGLenum type, const
+            EGLAttrib *attrib_list);
+
+    creates a sync object of the specified <type> associated with the
+    specified display <dpy>, and returns a handle to the new object.
+    <attrib list> is NULL or an attribute-value list specifying other
+    attributes of the sync object, terminated by an attribute entry
+    EGL_NONE. Attributes not specified in the list will be assigned
+    their default values.
+
+    The EGL_SYNC_STATUS attribute is defined for all sync types, but may
+    only be specified explicitly at creation time for some types of sync
+    objects, as discussed below. Other attributes are only allowed as
+    indicated below for the sync type.
+
+    Errors
+
+        eglCreateSync returns EGL_NO_SYNC on failure.
+        If <dpy> is not the name of a valid, initialized EGLDisplay, an
+        EGL_BAD_DISPLAY error is generated.
+        If <attrib_list> contains an attribute name not defined or not
+        allowed for the type of sync object being created, an
+        EGL_BAD_ATTRIBUTE error is generated.
+        If <type> is not a supported type of sync object, an
+        EGL_BAD_PARAMETER error is generated.
+        If <type> is EGL_SYNC_FENCE, the EGL_SYNC_STATUS attribute is
+        set to EGL_UNSIGNALED, and any of the following are true of the
+        current context for the bound API (the context returned by
+        eglGetCurrentContext), an EGL_BAD_MATCH error is generated:
+          * There is no current context (i.e., eglGetCurrentContext
+            returns EGL_NO_CONTEXT).
+          * <dpy> does not match the EGLDisplay of the context (the
+            EGLDisplay returned by eglGetCurrentDisplay).
+          * The context does not support fence commands.
+
+    While in the unsignaled state, the synchronization event associated
+    with a sync object cannot be changed. When the <condition> of a sync
+    object in the unsignaled state is satisfied, the sync is signaled,
+    causing any eglClientWaitSync or eglWaitSync commands (see below)
+    blocking on the sync to unblock.
+
+    Once signaled, a sync object may be reused for a new synchronization
+    event by switching it back to unsignaled. The command
+
+        EGLBoolean eglUnsignalSyncEXT(EGLDisplay dpy, EGLSync sync,
+            const EGLAttrib *attrib_list);
+
+    can be used to change the <sync> associated with display <dpy> from
+    the signaled state to the unsignaled state. The attribute list may
+    be used to provide or replace attributes specific to the sync type
+    as discussed below. The sync object's type and condition may not be
+    changed.
+
+    Errors
+
+        eglUnsignalSyncEXT returns EGL_FALSE on failure, and has no
+        effect on <sync>.
+        If <dpy> is not the name of a valid, initialized EGLDisplay, an
+        EGL_BAD_DISPLAY error is generated.
+        If <sync> is not a valid sync object associated with <dpy>, an
+        EGL_BAD_PARAMETER error is generated.
+        If <attrib_list> contains an attribute name not defined for the
+        type of <sync>, an EGL_BAD_ATTRIBUTE error is generated.
+        If <sync> is already in the unsignaled state, an EGL_BAD_ACCESS
+        error is generated.
+        If <sync>'s type is EGL_SYNC_FENCE and any of the following are
+        true of the current context for the bound API (the context
+        returned by eglGetCurrentContext), an EGL_BAD_MATCH error is
+        generated:
+          * There is no current context (i.e., eglGetCurrentContext
+            returns EGL_NO_CONTEXT).
+          * <dpy> does not match the EGLDisplay of the context (the
+            EGLDisplay returned by eglGetCurrentDisplay).
+          * The context does not support fence commands.
+        If <sync>'s type is EGL_SYNC_CL_EVENT and EGL_CL_EVENT_HANDLE
+        is not specified in <attrib_list>, then an EGL_BAD_ATTRIBUTE
+        error is generated.
+
+    3.8.1.1  Creating and Signaling Fence Sync Objects
+
+    If type is EGL_SYNC_FENCE, a fence sync object is created. The
+    EGL_SYNC_STATUS attribute may be specified as either EGL_UNSIGNALED
+    or EGL_SIGNALED, and will default to EGL_UNSIGNALED. No other
+    attributes may be specified for a fence sync object, either with
+    eglCreateSync or eglUnsignalSyncEXT. Queriable attributes of the
+    fence sync object are set as shown in table 3.7.
+
+    When a fence sync object is created in the unsignaled state, or
+    switched to that state with eglUnsignalSyncEXT, a fence command is
+    inserted into the command stream of the bound client API’s current
+    context (i.e., the context returned by eglGetCurrentContext), and is
+    associated with the sync object.
+
+    The only condition supported for fence sync objects is
+    EGL_SYNC_PRIOR_COMMANDS_COMPLETE, which is satisfied by completion
+    of the fence command corresponding to the sync object, and all
+    preceding commands in the associated client API context’s command
+    stream. The sync object will not be signaled until all effects from
+    these commands on the client API’s internal and framebuffer state
+    are fully realized. No other state is affected by execution of the
+    fence command.
+
+    Generation of fence commands for fence sync objects requires support
+    from the bound client API, and will not succeed unless the client
+    API satisfies one of the following properties. Note that eglWaitSync
+    (see section 3.8.1.3) also requires satisfying these conditions.
+      * client API is OpenGL, and either the OpenGL version is 3.2 or
+        greater, or the GL_ARB_sync extension is supported.
+      * client API is OpenGL ES, and either the OpenGL ES version is 3.0
+        or greater, or the GL_OES_EGL_sync extension is supported.
+      * client API is OpenVG, and the VG_KHR_EGL_sync extension is
+        supported.
+
+    3.8.1.2  Creating and Signaling OpenCL Event Sync Objects
+
+    If type is EGL_SYNC_CL_EVENT, an OpenCL event sync object is
+    created.  The EGL_SYNC_STATUS attribute may not be explicitly
+    specified during creation of this type of sync object. If no
+    EGL_CL_EVENT_HANDLE attribute is specified at creation time, the
+    sync object will be created in the signaled state. Otherwise its
+    status will be determined by the provided OpenCL event, as described
+    below. An EGL_CL_EVENT_HANDLE must always be specified for
+    eglUnsignalSyncEXT.
+
+    To use an OpenCL event sync object, the EGL_SYNC_CL_EVENT attribute
+    must be set to a valid OpenCL <event> handle returned by a call to
+    clEnqueueReleaseGLObjects or clEnqueueReleaseEGLObjects; other types
+    of OpenCL event handles are not supported. Implementations are not
+    required to validate the OpenCL event, and passing an invalid event
+    handle in <attrib_list> may result in undefined behavior up to and
+    including program termination. Note that EGL_CL_EVENT_HANDLE is not
+    a queriable property of a sync object. Queriable attributes of the
+    OpenCL event sync object are set as shown in table 3.8.
+
+    The status of such a sync object depends on <event>. When the status
+    of <event> is CL_QUEUED, CL_SUBMITTED, or CL_RUNNING, the status of
+    the linked sync object will be EGL_UNSIGNALED. When the status of
+    <event> changes to CL_COMPLETE, the status of the linked sync object
+    will become EGL_SIGNALED.
+
+    The only condition supported for OpenCL event sync objects is
+    EGL_SYNC_CL_EVENT_COMPLETE, which is satisfied when the status of
+    the OpenCL event associated with the sync object changes to
+    CL_COMPLETE.
+
+    Associating an OpenCL event handle with a sync object places a
+    reference on the linked OpenCL object. When the sync object is
+    deleted or the event handle is replaced, the reference will be
+    removed from the OpenCL object.
+
+If EGL_KHR_reusable_sync is present, then for sync objects of type
+EGL_SYNC_REUSABLE_KHR, the initial value of EGL_SYNC_STATUS may be
+set to either EGL_UNSIGNALED or EGL_SIGNALED, and will default to
+EGL_UNSIGNALED.
+
+If EGL_ANDROID_native_fence_sync is present, then for native fence sync
+objects, the EGL_SYNC_NATIVE_FENCE_FD_ANDROID attribute may be specified
+in eglUnsignalSyncEXT as well as eglCreateSync. If it is set to anything
+other than EGL_NO_NATIVE_FENCE_FD_ANDROID at creation time, then its
+initial EGL_SYNC_STATUS will reflect the current status of the provided
+fence FD, and it is an error to specifically set the status. If it is
+set to EGL_NO_NATIVE_FENCE_FD_ANDROID, then its EGL_SYNC_STATUS may be
+set to either EGL_UNSIGNALED (the default) or EGL_SIGNALED. If the
+status is signaled, then no native fence will be generated until after
+it is switched to unsignaled. If eglUnsignalSyncEXT is called for a
+native fence sync object with an FD of EGL_NO_NATIVE_FENCE_FD_ANDROID,
+then a new native fence will be generated at the next Flush(), as
+described for eglCreateSync.
+
+If EGL_NV_cuda_event is present, then for CUDA event sync objects, the
+EGL_CUDA_EVENT_HANDLE_NV may be specified in eglUnsignalSyncEXT as well
+as eglCreateSync. The current CUDA event handle is evaluated at the time
+the EGL sync object becomes unsignaled, and subsequent modification of
+the CUDA object with cudaEventRecord has no effect on the sync object
+until it is signaled. Subsequently restoring the sync object to
+unsignaled will cause the CUDA object to be reevaluated.
+
+Issues
+
+    1.  Should a new attribute be required to specify a sync object as
+        reusable?
+
+        RESOLVED: No. The presence of this extension is sufficient to
+        indicate reusability of all sync objects. This will not create
+        any incompatibilities with existing applications that use sync
+        objects only once.
+
+    2.  Can we leverage the existing eglSignalSyncKHR function from
+        EGL_KHR_reusable_sync for this extension?
+
+        RESOLVED: No. Some types of sync objects require attributes
+        which are themselves single-use objects, and must be replaced
+        for the sync object to be reused. Therefore a new function which
+        takes an attribute list is required.
+
+    3.  Should the function for unsignaling be based on eglSignalSyncKHR
+        from the KHR_reusable_sync extension, and take a mode parameter
+        to distinguish signaling/unsignaling?
+
+        RESOLVED: No. While all sync objects will support unsignaling,
+        the reusable sync object is the only known one that supports
+        direct signaling, rather than signaling through some condition
+        being achieved. Therefore it is simplest to have the new
+        function only support unsignaling, and continue to use the old
+        extension for the one case where signaling is required.
+
+    4.  If the initial attribute list is incomplete (e.g. an OpenCL
+        event handle is not provided during creation of an OpenCL event
+        sync object), should the EGL_SYNC_STATUS default to EGL_SIGNALED
+        rather than generating an error if it is left unspecified?
+
+        RESOLVED: Handling of allowed/default values for EGL_SYNC_STATUS
+        is based on the sync type. For fence syncs, either value is
+        allowed, defaulting to EGL_UNSIGNALED. For OpenCL event syncs,
+        the value may not be specified, and instead is determined by
+        whether an OpenCL event is provided at creation time, and if so
+        by the status of that event.
+
+Revision History
+
+    #4  (May 16, 2018) Daniel Kartch
+        - Minor corrections to wording
+
+    #3  (April 20, 2018) Daniel Kartch
+        - Renamed to EXT
+        - Fixed grammatical errors and prepared for publication
+
+    #2  (January 23, 2018) Daniel Kartch
+        - Rewrote some sections for clarity, and fixed typos
+        - Changed default/allowed behavior for signal state at creation
+          time to be determined by the sync type and other attributes.
+        - Simplified interaction with EGL_KHR_reusable_sync.
+        - Refined interaction with EGL_ANDROID_native_fence_sync to
+          clarify allowed initial states for the sync status and fix the
+          description of when new native fences are generated.
+
+    #1  (January 16, 2018) Daniel Kartch
+        - Initial draft as XXX

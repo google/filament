@@ -1,0 +1,18 @@
+#version 450
+
+layout(set = 15, binding = 0) uniform UBO
+{
+	float rd;
+};
+
+layout(set = 15, binding = 1) buffer SSBO
+{
+	float wr;
+};
+
+layout(set = 15, binding = 2) uniform sampler2D Samp;
+
+void main()
+{
+	wr = textureLod(Samp, vec2(0.5), 0.0).x + rd;
+}

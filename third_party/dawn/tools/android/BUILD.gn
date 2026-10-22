@@ -1,0 +1,248 @@
+# Copyright 2024 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import("../../scripts/dawn_overrides_with_defaults.gni")
+
+import("${dawn_root}/generator/dawn_generator.gni")
+
+dawn_json_generator("jni_gen") {
+  target = "jni"
+  inputs = [
+    "${dawn_root}/src/dawn/dawn_kotlin.json",
+    "${dawn_template_dir}/art/api_jni_types.cpp",
+    "${dawn_template_dir}/art/JNIClasses.cpp",
+    "${dawn_template_dir}/art/JNIClasses.h",
+    "${dawn_template_dir}/art/kotlin_record_conversion.cpp",
+    "${dawn_template_dir}/art/methods.cpp",
+    "${dawn_template_dir}/art/structures.cpp",
+    "${dawn_template_dir}/art/structures.h",
+  ]
+  outputs = [
+    "cpp/JNIClasses.cpp",
+    "cpp/JNIClasses.h",
+    "cpp/methods.cpp",
+    "cpp/structures.cpp",
+    "cpp/structures.h",
+  ]
+}
+
+dawn_json_generator("kotlin_gen") {
+  target = "kotlin"
+  inputs = [
+    "${dawn_root}/src/dawn/dawn_kotlin.json",
+    "${dawn_root}/src/dawn/webgpu_kt_docs.json",
+    "${dawn_template_dir}/art/api_kotlin_async_helpers.kt",
+    "${dawn_template_dir}/art/api_kotlin_callback.kt",
+    "${dawn_template_dir}/art/api_kotlin_constants.kt",
+    "${dawn_template_dir}/art/api_kotlin_enum.kt",
+    "${dawn_template_dir}/art/api_kotlin_exceptions.kt",
+    "${dawn_template_dir}/art/api_kotlin_function_pointer.kt",
+    "${dawn_template_dir}/art/api_kotlin_functions.kt",
+    "${dawn_template_dir}/art/api_kotlin_object.kt",
+    "${dawn_template_dir}/art/api_kotlin_structure.kt",
+    "${dawn_template_dir}/art/api_kotlin_types.kt",
+  ]
+  outputs = [
+    "java/androidx/webgpu/AdapterType.kt",
+    "java/androidx/webgpu/AddressMode.kt",
+    "java/androidx/webgpu/BackendType.kt",
+    "java/androidx/webgpu/BlendFactor.kt",
+    "java/androidx/webgpu/BlendOperation.kt",
+    "java/androidx/webgpu/BufferBindingType.kt",
+    "java/androidx/webgpu/BufferMapState.kt",
+    "java/androidx/webgpu/BufferUsage.kt",
+    "java/androidx/webgpu/CallbackMode.kt",
+    "java/androidx/webgpu/ColorSpacePrimariesDawn.kt",
+    "java/androidx/webgpu/ColorSpaceTransferDawn.kt",
+    "java/androidx/webgpu/ColorSpaceYCbCrMatrixDawn.kt",
+    "java/androidx/webgpu/ColorSpaceYCbCrRangeDawn.kt",
+    "java/androidx/webgpu/ColorWriteMask.kt",
+    "java/androidx/webgpu/CompareFunction.kt",
+    "java/androidx/webgpu/CompilationInfoRequestStatus.kt",
+    "java/androidx/webgpu/CompilationMessageType.kt",
+    "java/androidx/webgpu/ComponentSwizzle.kt",
+    "java/androidx/webgpu/CompositeAlphaMode.kt",
+    "java/androidx/webgpu/Constants.kt",
+    "java/androidx/webgpu/CreatePipelineAsyncStatus.kt",
+    "java/androidx/webgpu/CullMode.kt",
+    "java/androidx/webgpu/DeviceLostCallback.kt",
+    "java/androidx/webgpu/DeviceLostReason.kt",
+    "java/androidx/webgpu/ErrorFilter.kt",
+    "java/androidx/webgpu/ErrorType.kt",
+    "java/androidx/webgpu/Exceptions.kt",
+    "java/androidx/webgpu/ExternalTextureRotation.kt",
+    "java/androidx/webgpu/FeatureLevel.kt",
+    "java/androidx/webgpu/FeatureName.kt",
+    "java/androidx/webgpu/FilterMode.kt",
+    "java/androidx/webgpu/FrontFace.kt",
+    "java/androidx/webgpu/Functions.kt",
+    "java/androidx/webgpu/GPUAdapter.kt",
+    "java/androidx/webgpu/GPUAdapterInfo.kt",
+    "java/androidx/webgpu/GPUBindGroup.kt",
+    "java/androidx/webgpu/GPUBindGroupDescriptor.kt",
+    "java/androidx/webgpu/GPUBindGroupEntry.kt",
+    "java/androidx/webgpu/GPUBindGroupLayout.kt",
+    "java/androidx/webgpu/GPUBindGroupLayoutDescriptor.kt",
+    "java/androidx/webgpu/GPUBindGroupLayoutEntry.kt",
+    "java/androidx/webgpu/GPUBlendComponent.kt",
+    "java/androidx/webgpu/GPUBlendState.kt",
+    "java/androidx/webgpu/GPUBuffer.kt",
+    "java/androidx/webgpu/GPUBufferBindingLayout.kt",
+    "java/androidx/webgpu/GPUBufferDescriptor.kt",
+    "java/androidx/webgpu/GPUColor.kt",
+    "java/androidx/webgpu/GPUColorSpaceDawn.kt",
+    "java/androidx/webgpu/GPUColorTargetState.kt",
+    "java/androidx/webgpu/GPUCommandBuffer.kt",
+    "java/androidx/webgpu/GPUCommandBufferDescriptor.kt",
+    "java/androidx/webgpu/GPUCommandEncoder.kt",
+    "java/androidx/webgpu/GPUCommandEncoderDescriptor.kt",
+    "java/androidx/webgpu/GPUCompatibilityModeLimits.kt",
+    "java/androidx/webgpu/GPUCompilationInfo.kt",
+    "java/androidx/webgpu/GPUCompilationMessage.kt",
+    "java/androidx/webgpu/GPUComputePassDescriptor.kt",
+    "java/androidx/webgpu/GPUComputePassEncoder.kt",
+    "java/androidx/webgpu/GPUComputePipeline.kt",
+    "java/androidx/webgpu/GPUComputePipelineDescriptor.kt",
+    "java/androidx/webgpu/GPUComputeState.kt",
+    "java/androidx/webgpu/GPUConstantEntry.kt",
+    "java/androidx/webgpu/GPUDawnTogglesDescriptor.kt",
+    "java/androidx/webgpu/GPUDepthStencilState.kt",
+    "java/androidx/webgpu/GPUDevice.kt",
+    "java/androidx/webgpu/GPUDeviceDescriptor.kt",
+    "java/androidx/webgpu/GPUExtent2D.kt",
+    "java/androidx/webgpu/GPUExtent3D.kt",
+    "java/androidx/webgpu/GPUExternalTexture.kt",
+    "java/androidx/webgpu/GPUExternalTextureBindingEntry.kt",
+    "java/androidx/webgpu/GPUExternalTextureBindingLayout.kt",
+    "java/androidx/webgpu/GPUExternalTextureDescriptor.kt",
+    "java/androidx/webgpu/GPUFragmentState.kt",
+    "java/androidx/webgpu/GPUInstance.kt",
+    "java/androidx/webgpu/GPUInstanceDescriptor.kt",
+    "java/androidx/webgpu/GPUInstanceLimits.kt",
+    "java/androidx/webgpu/GPULimits.kt",
+    "java/androidx/webgpu/GPUMultisampleState.kt",
+    "java/androidx/webgpu/GPUOrigin2D.kt",
+    "java/androidx/webgpu/GPUOrigin3D.kt",
+    "java/androidx/webgpu/GPUPassTimestampWrites.kt",
+    "java/androidx/webgpu/GPUPipelineLayout.kt",
+    "java/androidx/webgpu/GPUPipelineLayoutDescriptor.kt",
+    "java/androidx/webgpu/GPUPrimitiveState.kt",
+    "java/androidx/webgpu/GPUQuerySet.kt",
+    "java/androidx/webgpu/GPUQuerySetDescriptor.kt",
+    "java/androidx/webgpu/GPUQueue.kt",
+    "java/androidx/webgpu/GPUQueueDescriptor.kt",
+    "java/androidx/webgpu/GPURenderBundle.kt",
+    "java/androidx/webgpu/GPURenderBundleDescriptor.kt",
+    "java/androidx/webgpu/GPURenderBundleEncoder.kt",
+    "java/androidx/webgpu/GPURenderBundleEncoderDescriptor.kt",
+    "java/androidx/webgpu/GPURenderPassColorAttachment.kt",
+    "java/androidx/webgpu/GPURenderPassDepthStencilAttachment.kt",
+    "java/androidx/webgpu/GPURenderPassDescriptor.kt",
+    "java/androidx/webgpu/GPURenderPassEncoder.kt",
+    "java/androidx/webgpu/GPURenderPassMaxDrawCount.kt",
+    "java/androidx/webgpu/GPURenderPipeline.kt",
+    "java/androidx/webgpu/GPURenderPipelineDescriptor.kt",
+    "java/androidx/webgpu/GPURequestAdapterOptions.kt",
+    "java/androidx/webgpu/GPURequestAdapterWebXROptions.kt",
+    "java/androidx/webgpu/GPURequestCallback.kt",
+    "java/androidx/webgpu/GPUSampler.kt",
+    "java/androidx/webgpu/GPUSamplerBindingLayout.kt",
+    "java/androidx/webgpu/GPUSamplerDescriptor.kt",
+    "java/androidx/webgpu/GPUShaderModule.kt",
+    "java/androidx/webgpu/GPUShaderModuleDescriptor.kt",
+    "java/androidx/webgpu/GPUShaderSourceSPIRV.kt",
+    "java/androidx/webgpu/GPUShaderSourceWGSL.kt",
+    "java/androidx/webgpu/GPUStencilFaceState.kt",
+    "java/androidx/webgpu/GPUStorageTextureBindingLayout.kt",
+    "java/androidx/webgpu/GPUSupportedFeatures.kt",
+    "java/androidx/webgpu/GPUSupportedInstanceFeatures.kt",
+    "java/androidx/webgpu/GPUSupportedWGSLLanguageFeatures.kt",
+    "java/androidx/webgpu/GPUSurface.kt",
+    "java/androidx/webgpu/GPUSurfaceCapabilities.kt",
+    "java/androidx/webgpu/GPUSurfaceColorManagement.kt",
+    "java/androidx/webgpu/GPUSurfaceConfiguration.kt",
+    "java/androidx/webgpu/GPUSurfaceDescriptor.kt",
+    "java/androidx/webgpu/GPUSurfaceSourceAndroidNativeWindow.kt",
+    "java/androidx/webgpu/GPUSurfaceTexture.kt",
+    "java/androidx/webgpu/GPUTexelCopyBufferInfo.kt",
+    "java/androidx/webgpu/GPUTexelCopyBufferLayout.kt",
+    "java/androidx/webgpu/GPUTexelCopyTextureInfo.kt",
+    "java/androidx/webgpu/GPUTexture.kt",
+    "java/androidx/webgpu/GPUTextureBindingLayout.kt",
+    "java/androidx/webgpu/GPUTextureBindingViewDimension.kt",
+    "java/androidx/webgpu/GPUTextureComponentSwizzle.kt",
+    "java/androidx/webgpu/GPUTextureComponentSwizzleDescriptor.kt",
+    "java/androidx/webgpu/GPUTextureDescriptor.kt",
+    "java/androidx/webgpu/GPUTextureView.kt",
+    "java/androidx/webgpu/GPUTextureViewDescriptor.kt",
+    "java/androidx/webgpu/GPUVertexAttribute.kt",
+    "java/androidx/webgpu/GPUVertexBufferLayout.kt",
+    "java/androidx/webgpu/GPUVertexState.kt",
+    "java/androidx/webgpu/IndexFormat.kt",
+    "java/androidx/webgpu/InstanceFeatureName.kt",
+    "java/androidx/webgpu/LoadOp.kt",
+    "java/androidx/webgpu/MapAsyncStatus.kt",
+    "java/androidx/webgpu/MapMode.kt",
+    "java/androidx/webgpu/MipmapFilterMode.kt",
+    "java/androidx/webgpu/OptionalBool.kt",
+    "java/androidx/webgpu/PopErrorScopeStatus.kt",
+    "java/androidx/webgpu/PowerPreference.kt",
+    "java/androidx/webgpu/PredefinedColorSpace.kt",
+    "java/androidx/webgpu/PresentMode.kt",
+    "java/androidx/webgpu/PrimitiveTopology.kt",
+    "java/androidx/webgpu/QueryType.kt",
+    "java/androidx/webgpu/QueueWorkDoneStatus.kt",
+    "java/androidx/webgpu/RequestAdapterStatus.kt",
+    "java/androidx/webgpu/RequestDeviceStatus.kt",
+    "java/androidx/webgpu/SType.kt",
+    "java/androidx/webgpu/SamplerBindingType.kt",
+    "java/androidx/webgpu/ShaderStage.kt",
+    "java/androidx/webgpu/Status.kt",
+    "java/androidx/webgpu/StencilOperation.kt",
+    "java/androidx/webgpu/StorageTextureAccess.kt",
+    "java/androidx/webgpu/StoreOp.kt",
+    "java/androidx/webgpu/SurfaceGetCurrentTextureStatus.kt",
+    "java/androidx/webgpu/TextureAspect.kt",
+    "java/androidx/webgpu/TextureDimension.kt",
+    "java/androidx/webgpu/TextureFormat.kt",
+    "java/androidx/webgpu/TextureSampleType.kt",
+    "java/androidx/webgpu/TextureUsage.kt",
+    "java/androidx/webgpu/TextureViewDimension.kt",
+    "java/androidx/webgpu/ToneMappingMode.kt",
+    "java/androidx/webgpu/UncapturedErrorCallback.kt",
+    "java/androidx/webgpu/VertexFormat.kt",
+    "java/androidx/webgpu/VertexStepMode.kt",
+    "java/androidx/webgpu/WGSLLanguageFeatureName.kt",
+  ]
+}
+
+group("android") {
+  deps = [
+    ":jni_gen",
+    ":kotlin_gen",
+  ]
+}

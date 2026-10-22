@@ -1,0 +1,173 @@
+copyright: |
+  Copyright 2025 WebGPU-Native developers
+
+  SPDX-License-Identifier: BSD-3-Clause
+name: prefix
+enum_prefix: 0x7FFF
+doc: |
+  This is a bare minimum extensions file to verify all extension types.
+constants:
+  - name: new_constant1
+    value: uint32_max
+    doc: |
+      New constant should have the namespace prefix in the name by default.
+  - name: new_constant2
+    namespace: webgpu
+    value: uint64_max
+    doc: |
+      New constant can be declared in the 'webgpu' namespace explicitly.
+  - name: new_constant3
+    namespace: compatibility_mode
+    value: uint64_max
+    doc: |
+      The 'compatibility_mode' namespace also has no prefix.
+      (This test is not really related to extensions, it's just easiest to test here.)
+typedefs:
+  - name: new_typedef1
+    type: uint32
+    doc: |
+      New typedef should have the namespace prefix in the name by default.
+  - name: new_typedef2
+    namespace: webgpu
+    type: uint64
+    doc: |
+      New typedef can be declared in the 'webgpu' namespace explicitly.
+enums:
+  - name: new_enum1
+    doc: |
+      New enum should have the namespace prefix in the name by default.
+    entries:
+      - name: new_value
+        doc: |
+          New enum entries for a new enum should not duplicate prefix.
+  - name: new_enum2
+    namespace: webgpu
+    doc: |
+      New enum can be declared in the 'webgpu' namespace explicitly.
+    entries:
+      - name: new_value
+        doc: |
+          New enum entries for a new enum should not duplicate prefix.
+  - name: old_enum
+    doc: |
+      Extended enum shouldn't have the namespace prefix in the name by default.
+    extended: True
+    entries:
+      - name: new_value
+        doc: |
+          New enum entries that extend should have the prefix in the name by default.
+bitflags:
+  - name: new_bitflag1
+    doc: |
+      New bitflag should have the namespace prefix in the name by default.
+    entries:
+      - name: none
+        doc: |
+          TODO
+      - name: new_value
+        doc: |
+          New bitflag entries shouldn't have the namespace prefix in the name by default.
+  - name: new_bitflag2
+    namespace: webgpu
+    doc: |
+      New bitflag can be declared in the 'webgpu' namespace explicitly.
+    entries:
+      - name: none
+        doc: |
+          TODO
+      - name: new_value
+        doc: |
+          New bitflag entries shouldn't have the namespace prefix in the name by default.
+  - name: old_bitflag
+    doc: |
+      Extended bitflag shouldn't have the namespace prefix in the name by default.
+    extended: True
+    entries:
+      - name: new_value
+        doc: |
+          New bitflag entries that extend should have the prefix in the name by default.
+        value: 0x1000000000000000
+structs:
+  - name: new_struct1
+    doc: |
+      New struct should have the namespace prefix in the name by default.
+    type: standalone
+    members:
+      - name: member1
+        doc: |
+          New struct members should not have namespace prefix in the name.
+        type: uint32
+        default: constant.new_constant1
+      - name: member2
+        doc: |
+          TODO
+        type: uint64
+        default: constant.new_constant2
+  - name: new_struct2
+    namespace: webgpu
+    doc: |
+      New struct can be declared in the 'webgpu' namespace explicitly.
+    type: extensible
+    members:
+      - name: struct_member
+        doc: |
+          TODO
+        type: struct.new_struct1
+callbacks:
+  - name: new_callback1
+    doc: |
+      New callback type should have the namespace prefix in the names by default.
+    style: callback_mode
+    args:
+      - name: message
+        doc: |
+          TODO
+        type: out_string
+        passed_with_ownership: false
+  - name: new_callback2
+    namespace: webgpu
+    doc: |
+      New callback type can be declared in the 'webgpu' namespace explicitly.
+    style: callback_mode
+    args:
+      - name: message
+        doc: |
+          TODO
+        type: out_string
+        passed_with_ownership: false
+functions:
+  - name: new_function1
+    doc: |
+      New function should have the namespace prefix in the name by default.
+  - name: new_function2
+    namespace: webgpu
+    doc: |
+      New function can be declared in the 'webgpu' namespace explicitly.
+objects:
+  - name: new_object1
+    doc: |
+      New object should have the namespace prefix in the name by default.
+    methods:
+      - name: new_method
+        doc: |
+          Method on new object should not have the namespace prefix in the name by default.
+  - name: new_object2
+    namespace: webgpu
+    doc: |
+      New object can be declared in the 'webgpu' namespace explicitly.
+    methods:
+      - name: new_method
+        doc: |
+          Method on new object should not have the namespace prefix in the name by default.
+  - name: old_object
+    doc: |
+      Extended object shouldn't have the namespace prefix in the name by default.
+    extended: True
+    methods:
+      - name: new_method1
+        doc: |
+          New method on old object should have the namespace prefix in the name by default.
+      - name: new_method2
+        namespace: webgpu
+        doc: |
+          New method on old object can be declared in the 'webgpu' namespace explicitly.

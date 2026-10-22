@@ -1,0 +1,427 @@
+Name
+
+    EXT_draw_buffers2
+
+Name Strings
+
+    GL_EXT_draw_buffers2
+
+Contact
+
+    Mike Strauss, NVIDIA Corporation (mstrauss 'at' nvidia.com)
+
+Status
+
+    Multi vendor extension
+ 
+    Shipping for GeForce 8 Series (November 2006) 
+
+Version
+
+    Last Modified Date:         10/02/2010
+    NVIDIA Revision:            11
+
+Number
+
+    340
+
+Dependencies
+
+    The extension is written against the OpenGL 2.0 Specification.
+
+    OpenGL 2.0 is required.
+
+Overview
+
+    This extension builds upon the ARB_draw_buffers extension and provides
+    separate blend enables and color write masks for each color output.  In
+    ARB_draw_buffers (part of OpenGL 2.0), separate values can be written to
+    each color buffer, but the blend enable and color write mask are global
+    and apply to all color outputs.
+
+    While this extension does provide separate blend enables, it does not
+    provide separate blend functions or blend equations per color output.
+
+
+New Procedures and Functions
+
+    void ColorMaskIndexedEXT(uint buf, boolean r, boolean g,
+                             boolean b, boolean a);
+
+    void GetBooleanIndexedvEXT(enum value, uint index, boolean *data);
+
+    void GetIntegerIndexedvEXT(enum value, uint index, int *data);
+
+    void EnableIndexedEXT(enum target, uint index);
+
+    void DisableIndexedEXT(enum target, uint index);
+
+    boolean IsEnabledIndexedEXT(enum target, uint index);    
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Modify the thrid paragraph of section 4.1.8 (Blending), p206, to 
+    read as follows:
+
+    Blending is dependent on the incoming fragment's alpha value and
+    that of the corresponding currently stored pixel.  Blending applies
+    only in RGBA mode; in color index mode it is bypassed.  Blending
+    is enabled or disabled for an individual draw buffer using
+
+        void EnableIndexedEXT(GLenum target, GLuint index);
+        void DisableIndexedEXT(GLenum target, GLuint index);
+
+    <target> is the symbolic constant BLEND and <index> is an integer
+    i specifying the draw buffer associated with the symbolic constant
+    DRAW_BUFFERi.  If the color buffer associated with DRAW_BUFFERi is 
+    one of FRONT, BACK, LEFT, RIGHT, or FRONT_AND_BACK (specifying 
+    multiple color buffers), then the state enabled or disabled is 
+    applicable for all of the buffers.  Blending can be enabled or 
+    disabled for all draw buffers using Enable or Disable with the 
+    symbolic constant BLEND.  If blending is disabled for a particular 
+    draw buffer, or if logical operation on color values is enabled 
+    (section 4.1.10), proceed to the next operation.
+
+
+    Modify the first paragraph of section 4.1.8 (Blending - Blending 
+    State), p209, to read as follows:
+
+    The state required for blending is two integers for the RGB and
+    alpha blend equations, four integers indicating the source and
+    destination RGB and alpha blending functions, four floating-point
+    values to store the RGBA constant blend color, and n bits 
+    indicating whether blending is enabled or disabled for each of the 
+    n draw buffers.  The initial blend equations for RGB and alpha are 
+    both FUNC_ADD.  The initial blending functions are ONE for the 
+    source RGB and alpha functions, and ZERO for the destination RGB 
+    and alpha functions.  The initial constant blend color is 
+    (R, G, B, A) = (0, 0, 0, 0).  Initially, blending is disabled for 
+    all draw buffers.
+
+
+    Modify the first paragraph of section 4.2.2 (Fine Control of Buffer
+    Updates) to read as followS:
+
+    Three commands are used to mask the writing of bits to each of the 
+    logical draw buffers after all per-fragment operations have been
+    performed.
+
+    The commands
+
+        void IndexMask(uint mask);
+        void ColorMask(boolean r, boolean g, boolean b, boolean a);
+        void ColorMaskIndexedEXT(uint buf, boolean r, boolean g, 
+                                 boolean b, boolean a);
+
+    control writes to the active draw buffers.  
+
+    The least significant n bits of <mask>, where n is the number of 
+    bits in a color index buffer, specify a mask.  Where a 1 appears in
+    this mask, the corresponding bit in the color index buffer (or 
+    buffers) is written; where a 0 appears, the bit is not written.  
+    This mask  applies only in color index mode.  
+
+    In RGBA mode, ColorMask and ColorMaskIndexedEXT are used to mask
+    the writing of R, G, B and A values to the draw buffer or buffers.  
+    ColorMaskIndexedEXT sets the mask for a particular draw buffer.  
+    The mask for DRAW_BUFFERi is modified by passing i as the parameter
+    <buf>.  <r>, <g>, <b>, and <a> indicate whether R, G, B, or A 
+    values, respectively, are written or not (a value of TRUE means 
+    that the corresponding  value is written).  The mask specified by 
+    <r>, <g>, <b>, and <a> is applied to the color buffer associated 
+    with DRAW_BUFFERi.  If DRAW_BUFFERi is one of FRONT, BACK, LEFT, 
+    RIGHT, or FRONT_AND_BACK (specifying multiple color buffers) then 
+    the mask is applied to all of the buffers.  ColorMask sets the mask
+    for all draw buffers to the same values as specified by <r>, <g>, 
+    <b>, and <a>.
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    Modify the second paragraph of section 6.1.1 (Simple Queries)
+    p244 to read as follows:
+
+    ...<data> is a pointer to a scalar or array of the indicated
+    type in which to place the returned data.
+
+        void GetBooleanIndexedvEXT(enum target, uint index, boolean *data);
+        void GetIntegerIndexedvEXT(enum target, uint index, int *data);
+
+    are used to query indexed state.  <target> is the name of 
+    the indexed state and <index> is the index of the particular
+    element being queried.  <data> is a pointer to a scalar or array
+    of the indicated type in which to place the returned data.  In
+    addition
+
+        boolean IsEnabled(enum value);
+
+    can be used to determine if <value> is currently enabled (as with
+    Enable) or disabled.
+
+        boolean IsEnabledIndexedEXT(enum target, uint index);
+
+    can be used to determine if the index state corresponding to
+    <target> and <index> is enabled or disabled.
+
+Additions to Appendix A of the OpenGL 2.0 Specification (Invariance)
+
+    None.
+ 
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    The following rendering commands are sent to the server as part of
+    a glXRender request:
+
+    ColorMaskIndexedEXT
+
+        2      12              rendering command length
+        2      352             rendering command opcode
+        4      CARD32          buf
+        1      BOOL            r
+        1      BOOL            g
+        1      BOOL            b
+        1      BOOL            a
+
+    EnableIndexedEXT
+
+        2      12              rendering length
+        2      353             rendering command opcode
+        4      ENUM            target
+        4      CARD32          index
+
+    DisableIndexedEXT
+
+        2      12    	       rendering length
+        2      354             rendering command opcode
+        4      ENUM            target
+        4      CARD32          index
+
+    The following new non-rendering commands are added:
+
+    GetBooleanIndexedvEXT
+
+        1      CARD8           opcode(X assigned)
+        1      210             GLX opcode
+        2      4               request length
+        4      GLX_CONTEXT_TAG context tag
+        4      ENUM            value
+        4      CARD32          index
+    =>
+        1                      reply
+        1                      unused
+        2      CARD16          sequence number
+        4      m               reply length, m = (n == 1 ? 0 :(n+p)/4)
+        4                      unused
+        4      CARD32          n (number of parameter components)
+
+        if (n == 1) this follows:
+
+        1      BOOL            data
+        15                     unused
+
+        otherwise this follows:
+
+        16                     unused
+        n*1    LISTofBOOL      data
+        p                      unused, p = pad(n)
+
+    GetIntegerIndexedvEXT
+
+        1      CARD8           opcode(X assigned)
+        1      211             GLX opcode
+        2      4               request length
+        4      GLX_CONTEXT_TAG context tag
+        4      ENUM            value
+        4      CARD32          index
+    =>
+        1                      reply
+        1                      unused
+        2      CARD16          sequence number
+        4      m               reply length, m = (n == 1 ? 0 : n)
+        4                      unused
+        4      CARD32          n (number of parameter components)
+
+        if (n == 1) this follows:
+
+        4      CARD32          data
+        12                     unused
+
+        otherwise this follows:
+
+        16                     unused
+        4*n    LISTofCARD32    data
+
+   IsEnabledIndexedEXT
+
+        1      CARD8           opcode(X assigned)
+        1      212             GLX opcode
+        2      4               request length
+        4      GLX_CONTEXT_TAG context tag
+        4      ENUM            target
+        4      CARD32          index
+   =>
+        1                      reply
+        1                      unused
+        2      CARD16          sequence number
+        4      0               reply length
+        4      BOOL32          return value
+        20                     unused
+
+Errors
+
+    The error INVALID_ENUM is generated by EnableIndexedEXT and
+    DisableIndexedEXT if the <target> parameter is not BLEND.
+
+    The error INVALID_OPERATION is generated by EnableIndexedEXT and 
+    DisableIndexeEXT if the <target> parameter is BLEND and the <index>
+    parameter is outside the range [0, MAX_DRAW_BUFFERS-1].
+
+    The error INVALID_ENUM is generated by IsEnabledIndexedEXT if the 
+    <target> parameter is not BLEND.
+
+    The error INVALID_OPERATION is generated by IsEnabledIndexedEXT if
+    the <target> parameter is BLEND and the <index> parameter is 
+    outside the range [0, MAX_DRAW_BUFFERS-1].
+
+    The error INVALID_OPERATION is generated by DrawBufferColorMaskEXT
+    if the <buf> parameter is outside the range 
+    [0, MAX_DRAW_BUFFERS-1].
+
+    The error INVALID_ENUM is generated by GetBooleanIndexedvEXT if the 
+    <target> parameter is not BLEND.
+
+    The error INVALID_OPERATION is generated by GetBooleanIndexedvEXT 
+    if the <target> parameter is BLEND and the <index> parameter is
+    outside the range [0, MAX_DRAW_BUFFERS-1].
+
+New State
+
+    Modify (table 6.20, p281), modifying the entry for BLEND and adding 
+    a new one.
+
+
+    Get Target  Type Get Command         Value Description                        Section       Attribute
+    ----------  ---- ------------------- ----- ---------------------------------- ------- -------------------
+    BLEND       B    IsEnabled           False Blending enabled for draw buffer 0  4.1.8  color-buffer/enable
+    BLEND       B    IsEnabledIndexedEXT False Blending enabled for draw buffer i  4.1.8  color-buffer/enable
+                                         where i is specified as <index>
+
+
+    Modify (table 6.21, p282), modifying the entry for COLOR_WRITEMASK
+    and adding a new one.
+
+    Get Value       Type Get Command           Value Description                        Section Attribute
+    --------------- ---- --------------------- ----- ---------------------------------- ------- ------------
+    COLOR_WRITEMASK 4xB  GetBooleanv           True  Color write mask for draw buffer 0 4.2.2   color-buffer
+    COLOR_WRITEMASK 4xB  GetBooleanIndexedvEXT True  Color write mask for draw buffer i 4.2.2   color-buffer
+                                                     where i is specified as <index>
+                                                              
+Issues
+
+    1.  Should the extension provide support for per draw buffer index 
+    masks as well as per draw buffer color masks?
+
+        RESOLVED:  No.  Color index rendering is not interesting
+        enough to warrant extending the API in this direction.
+    
+    2.  Should the API for specifying separate color write masks be
+    based on DrawBuffers() (specifying an array of write masks at 
+    once)?
+
+        RESOLVED:  No.  There are two ways to mimic the DrawBuffers()
+        API.  A function, ColorMasks(), could take an an element count 
+        and an array of four element boolean arrays as parameters.  
+        Each four element boolean array contains a set of red, green, 
+        blue, and alpha write masks for a specific color buffer.  An 
+        alternative is a ColorMasks() function that takes an element 
+        count and four parallel boolean arrays with one array per color
+        channel.  Neither approach is particularly clean.  A cleaner
+        approach, taken by ColorMaskIndexedEXT(), is to specify a 
+        color mask for a single draw buffer where the draw buffer is
+        specified as a parameter to the function.
+
+    3.  How should ColorMask() affect the per color buffer write masks?
+
+        RESOLVED:  ColorMask() should set all color buffer write masks
+        to the same values.  This is backwards compatible with the way
+        ColorMask() behaves in the absence of this extension.
+
+    4.  What should GetBooleanv return when COLOR_WRITEMASK is queried?
+
+        RESOLVED:  COLOR_WRITEMASK should return
+        DRAW_BUFFER0_COLOR_WRITEMASK_EXT.  This is backwards compatible
+        with the way the query works without this extension.  To query 
+        the writemask associated with a particular draw buffer, an 
+        application can use GetBooleanIndexedvEXT.
+
+    5.  How are separate blend enables controlled?  Should a new
+    function be introduced, or do Enable() and Disable() provide
+    sufficient functionality?
+
+        RESOLVED:  This extension introduces new functions
+        EnableIndexedEXT and DisableIndexedEXT that can be used to
+        enable/disable individual states of a state array.  These
+        functions are introduced because there is a trend towards
+        introducing arrays of state.  Rather than creating enums for
+        each index in the array, it is better to give applications
+        a mechanism for accessing a particular element of the state
+        array given the name of the state and an index into the array.
+
+    6.  What effect does enabling or disabling blending using BLEND
+    have on per draw buffer blend enables?
+
+        RESOLVED:  BLEND, used with Enable() and Disable(), should 
+        enable or disable all per draw buffer blend enables.  This is
+        similar to the way that ColorMask() affects the per draw
+        buffer write masks.
+      
+    7.  What does DRAW_BUFFERi mean in the context of functions like
+    ColorMaskIndexedEXT?
+    
+        PROPOSED:  When DrawBuffersARB is called with a list of buffers 
+        to be used for MRT rendering, DRAW_BUFFERi implies an index into 
+        the list of buffers.  That is, DRAW_BUFFER0 refers to the zeroeth
+        buffer in the array passed to DrawBuffersARB (or any of the other
+        ways to specify multiple render targets).  MAX_DRAW_BUFFERS is
+        also to be understood in this context to mean the number of currently
+        active draw buffers.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+    11    10/02/10  srahman   Added GLX protocol.
+
+    10    07/11/08  joburgess Added a clarification of ColorMaskIndexedEXT / DrawBuffersARB interaction.
+    
+     9    02/09/07  pbrown    Updated status section (now released).
+
+     8    10/23/06  pbrown    Fixed typo in the prototype for
+                              GetIntegerIndexedvEXT -- <data> should be an
+                              integer pointer.  Moved issues to the end.
+
+     7    10/21/06  barthold  Added revision history
+
+    1-6             mstrauss  Internal spec development.
+

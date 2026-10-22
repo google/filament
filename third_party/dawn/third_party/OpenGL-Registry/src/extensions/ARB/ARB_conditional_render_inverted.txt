@@ -1,0 +1,163 @@
+Name
+
+    ARB_conditional_render_inverted
+
+Name Strings
+
+    GL_ARB_conditional_render_inverted
+
+Contact
+
+    Brian Paul, VMware Inc. (brianp 'at' vmware.com)
+
+Contributors
+
+    Brian Paul, VMware
+    Daniel Rakos, AMD
+
+Notice
+
+    Copyright (c) 2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. 
+    Approved by the ARB on June 26, 2014.
+    Ratified by the Khronos Board of Promoters on August 7, 2014.
+
+Version
+
+    Date: June 9, 2014
+    Revision: 5
+
+Number
+
+    ARB Extension #161
+
+Dependencies
+
+    OpenGL 3.0 is required.
+
+    The extension is written against the OpenGL 4.4 Specification, Core
+    Profile, March 19, 2014.
+
+Overview
+
+    This extension adds new modes to BeginConditionalRender which invert
+    the condition used to determine whether to draw or not.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <mode> parameter of BeginConditionalRender:
+
+        QUERY_WAIT_INVERTED                             0x8E17
+        QUERY_NO_WAIT_INVERTED                          0x8E18
+        QUERY_BY_REGION_WAIT_INVERTED                   0x8E19  
+        QUERY_BY_REGION_NO_WAIT_INVERTED                0x8E1A  
+
+Additions to Chapter 10 of the OpenGL 4.4 (Core Profile) Specification (Vertex Specification and Drawing Commands)
+
+    Modify Section 10.10, Conditional Rendering
+
+    (add before the errors section for BeginConditionalRender on p. 339)
+
+    If <mode> is QUERY_WAIT_INVERTED, QUERY_NO_WAIT_INVERTED,
+    QUERY_BY_REGION_WAIT_INVERTED, or QUERY_BY_REGION_NO_WAIT_INVERTED
+    then the condition used to determine whether or not to render subsequent
+    drawing commands is negated with respect to QUERY_WAIT, QUERY_NO_WAIT,
+    QUERY_BY_REGION_WAIT, or QUERY_BY_REGION_NO_WAIT, respectively. If <mode>
+    is QUERY_NO_WAIT_INVERTED or QUERY_BY_REGION_NO_WAIT_INVERTED
+    the GL may choose to unconditionally execute the subsequent rendering
+    commands without waiting for the query to complete.
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None.
+
+Dependencies
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    (1) Why is this extension necessary?
+
+      RESOLVED:  A competing graphics API supports this feature.  This
+      extension will allow one to easier implement that API's features
+      on top of OpenGL. Also, with the GL_ARB_transform_feedback_overflow_query
+      extension, it's not obvious whether conditional rendering should
+      discard drawing if a transform feedback buffer overflow occurs or
+      doesn't occur. This extension allows both possibilities.
+
+    (2) Should there be QUERY_NO_WAIT_INVERTED and
+        QUERY_BY_REGION_NO_WAIT_INVERTED queries?
+
+      RESOLVED: Yes. Suppose we issue a SAMPLES_PASSED query and begin
+      conditional rendering with QUERY_NO_WAIT_INVERTED. If the query
+      it not ready yet, the GL might render the subsequent primitives even
+      if they might have been visible. There may be a non-obvious use for
+      this.
+
+    (3) What gets inverted, the condition or the behavior?
+
+      DISCUSSION: For QUERY_WAIT_INVERTED and QUERY_BY_REGION_WAIT_INVERTED
+      it doesn't really matter, but for the other two modes there are two
+      possibilities:
+
+        (a) Inverted condition, in which case the GL renders subsequent
+            primitives if the query is not complete yet.
+
+        (b) Inverted behavior, in which case the GL discards subsequent
+            primitives if the query is not complete yet.
+
+      RESOLVED: We chose option (a). The condition is inverted.
+
+Revision History
+
+    Revision 5, 2014/06/09 (Jon Leech)
+      - Assign enums per bug 12362
+
+    Revision 4, 2014/04/25 (Daniel Rakos)
+      - Renamed to ARB_conditional_render_inverted.
+      - Removed suffixes.
+      - Resolved isues (2) and (3).
+
+    Revision 3, 2014/04/16 (Daniel Rakos)
+      - Renamed extension to EXT_conditional_render_inverted.
+      - Marked issue (2) unresolved, changed the behavior for incomplete
+        queries, and added issue (3).
+      - Clarified language regarding what gets inverted and how issue (2)
+        affects the behavior.
+
+    Revision 2, 2014/04/10 (Brian Paul)
+      - Added issue (2) to justify QUERY_NO_WAIT_INVERTED_EXT.
+
+    Revision 1, 2014/02/03 (Brian Paul)
+      - Initial revision.

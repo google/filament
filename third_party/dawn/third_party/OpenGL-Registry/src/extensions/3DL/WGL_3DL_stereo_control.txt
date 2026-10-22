@@ -1,0 +1,148 @@
+Name
+
+    WGL_3DL_stereo_control
+
+Name Strings
+
+    WGL_3DL_stereo_control
+
+Contact
+
+    Seth Williams, 3Dlabs (seth.williams 'at' 3dlabs.com)
+    Harald Smit, 3Dlabs (harald.smit 'at' 3dlabs.com)
+
+Status
+
+    Complete
+
+Version
+
+    Date: 10/05/2005   Revision 1.0
+
+Number
+
+    313
+
+Dependencies
+
+    The extension is written against the OpenGL 2.0 Specification
+    although it should work on any previous OpenGL specification.
+
+    The WGL_EXT_extensions_string extension is required.
+
+Overview
+
+    The stereo extension provides an interface for manipulating the 
+    emitter signal from the video adapter used to drive lcd shutter 
+    glasses used for stereoscopic viewing.
+
+IP Status
+
+    None
+
+Issues
+
+    None
+
+New Procedures and Functions
+
+    BOOL wglSetStereoEmitterState3DL(HDC hDC, UINT uState)
+
+New Tokens
+
+   Accepted by the <uState> parameter:
+
+      WGL_STEREO_EMITTER_ENABLE_3DL        0x2055
+      WGL_STEREO_EMITTER_DISABLE_3DL       0x2056
+      WGL_STEREO_POLARITY_NORMAL_3DL       0x2057
+      WGL_STEREO_POLARITY_INVERT_3DL       0x2058
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    None
+
+Additions to Appendix A of the OpenGL 2.0 Specification (Invariance)
+
+    None
+
+Additions to the WGL Specification
+
+    The state of the stereo emitter for video adapters that support
+    stereoscopic headsets can be modified using the following function:
+
+    BOOL wglSetStereoEmitterState3DL(HDC hDC, UINT uState)
+
+    <hDC> is a device context for the graphics adapter or a window
+    residing on a monitor whose graphics adapter supports the stereo
+    extension.
+
+    <uState> is the new state requested and is one and only one of
+    the following values:
+
+      WGL_STEREO_EMITTER_ENABLE_3DL
+        Turn the stereo emitter output from the video adapter ON.
+
+      WGL_STEREO_EMITTER_DISABLE_3DL
+        Turn the stereo emitter output from the video adapter OFF.
+
+      WGL_STEREO_POLARITY_NORMAL_3DL
+        Generate an emitter signal for the stereoscopic headset to show
+        the scene from the left eye's point of view while the right eye's
+        shutter is closed and vice versa.
+
+      WGL_STEREO_POLARITY_INVERT_3DL
+        Generate an emitter signal for the stereoscopic headset to show
+        the scene from the left eye's point of view while the left eye's
+        shutter is closed and vice versa.
+
+    A call to wglSetStereoEmitterState is necessary for each state transition
+    required.
+
+Dependencies on WGL_EXT_extensions_string
+
+    Because there is no way to extend wgl, these calls are defined in
+    the ICD and can be called by obtaining the address with
+    wglGetProcAddress.  Because this extension is a WGL extension, it
+    is not included in the GL_EXTENSIONS string.  Its existence can be
+    determined with the WGL_EXT_extensions_string extension.
+
+Errors
+
+    If the function succeeds, a value of TRUE is returned.  If the
+    function fails, a value of FALSE is returned.  To get extended
+    error information, call GetLastError.
+
+      ERROR_DC_NOT_FOUND         <hDC> is invalid.
+
+      ERROR_INVALID_DATA         <uState> is invalid.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    09/28/2005  0.1  First draft.
+    10/05/2005  1.0  Initial public release.

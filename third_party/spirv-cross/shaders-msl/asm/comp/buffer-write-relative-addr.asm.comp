@@ -1,0 +1,93 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Wine VKD3D Shader Compiler; 0
+; Bound: 59
+; Schema: 0
+               OpCapability Shader
+               OpCapability UniformBufferArrayDynamicIndexing
+               OpCapability SampledBuffer
+               OpCapability ImageBuffer
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %vThreadIDInGroup
+               OpExecutionMode %main LocalSize 4 1 1
+               OpName %main "main"
+               OpName %cb5_struct "cb5_struct"
+               OpName %cb0_5 "cb0_5"
+               OpName %u0 "u0"
+               OpName %vThreadIDInGroup "vThreadIDInGroup"
+               OpName %r0 "r0"
+               OpDecorate %_arr_v4float_uint_5 ArrayStride 16
+               OpDecorate %cb5_struct Block
+               OpMemberDecorate %cb5_struct 0 Offset 0
+               OpDecorate %cb0_5 DescriptorSet 0
+               OpDecorate %cb0_5 Binding 1
+               OpDecorate %u0 DescriptorSet 0
+               OpDecorate %u0 Binding 0
+               OpDecorate %u0 NonReadable
+               OpDecorate %vThreadIDInGroup BuiltIn LocalInvocationId
+       %void = OpTypeVoid
+          %2 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+       %uint = OpTypeInt 32 0
+     %uint_5 = OpConstant %uint 5
+%_arr_v4float_uint_5 = OpTypeArray %v4float %uint_5
+ %cb5_struct = OpTypeStruct %_arr_v4float_uint_5
+%_ptr_Uniform_cb5_struct = OpTypePointer Uniform %cb5_struct
+      %cb0_5 = OpVariable %_ptr_Uniform_cb5_struct Uniform
+         %13 = OpTypeImage %uint Buffer 0 0 0 2 R32ui
+%_ptr_UniformConstant_13 = OpTypePointer UniformConstant %13
+         %u0 = OpVariable %_ptr_UniformConstant_13 UniformConstant
+        %int = OpTypeInt 32 1
+      %v3int = OpTypeVector %int 3
+%_ptr_Input_v3int = OpTypePointer Input %v3int
+%vThreadIDInGroup = OpVariable %_ptr_Input_v3int Input
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%_ptr_Input_int = OpTypePointer Input %int
+     %uint_0 = OpConstant %uint 0
+      %int_4 = OpConstant %int 4
+%_ptr_Function_float = OpTypePointer Function %float
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+%_ptr_Uniform_v4float = OpTypePointer Uniform %v4float
+     %v4uint = OpTypeVector %uint 4
+     %uint_3 = OpConstant %uint 3
+       %main = OpFunction %void None %2
+          %4 = OpLabel
+         %r0 = OpVariable %_ptr_Function_v4float Function
+         %24 = OpInBoundsAccessChain %_ptr_Input_int %vThreadIDInGroup %uint_0
+         %25 = OpLoad %int %24
+         %27 = OpShiftLeftLogical %int %25 %int_4
+         %28 = OpBitcast %float %27
+         %30 = OpInBoundsAccessChain %_ptr_Function_float %r0 %uint_0
+               OpStore %30 %28
+         %31 = OpInBoundsAccessChain %_ptr_Input_int %vThreadIDInGroup %uint_0
+         %32 = OpLoad %int %31
+         %33 = OpBitcast %float %32
+         %35 = OpInBoundsAccessChain %_ptr_Function_float %r0 %uint_1
+               OpStore %35 %33
+         %36 = OpLoad %13 %u0
+         %37 = OpInBoundsAccessChain %_ptr_Function_float %r0 %uint_0
+         %38 = OpLoad %float %37
+         %39 = OpBitcast %uint %38
+         %41 = OpShiftRightLogical %uint %39 %uint_2
+         %42 = OpInBoundsAccessChain %_ptr_Function_float %r0 %uint_1
+         %43 = OpLoad %float %42
+         %44 = OpBitcast %int %43
+         %45 = OpIAdd %uint %44 %uint_1
+         %47 = OpAccessChain %_ptr_Uniform_v4float %cb0_5 %uint_0 %45
+         %48 = OpLoad %v4float %47
+         %50 = OpBitcast %v4uint %48
+         %51 = OpVectorShuffle %v4uint %50 %50 0 0 0 0
+               OpImageWrite %36 %41 %51
+         %52 = OpVectorShuffle %v4uint %50 %50 1 1 1 1
+         %53 = OpIAdd %uint %41 %uint_1
+               OpImageWrite %36 %53 %52
+         %54 = OpVectorShuffle %v4uint %50 %50 2 2 2 2
+         %55 = OpIAdd %uint %41 %uint_2
+               OpImageWrite %36 %55 %54
+         %56 = OpVectorShuffle %v4uint %50 %50 3 3 3 3
+         %58 = OpIAdd %uint %41 %uint_3
+               OpImageWrite %36 %58 %56
+               OpReturn
+               OpFunctionEnd

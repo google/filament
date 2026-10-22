@@ -1,0 +1,22 @@
+struct T
+{
+    float c;
+};
+
+static const T _11 = { 40.0f };
+
+RWByteAddressBuffer _9 : register(u0);
+RWByteAddressBuffer _13 : register(u1);
+
+void comp_main()
+{
+    T v = _11;
+    _9.Store(40, asuint(v.c));
+    _13.Store(480, asuint(v.c));
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

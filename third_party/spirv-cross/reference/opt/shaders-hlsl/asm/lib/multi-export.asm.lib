@@ -1,0 +1,10 @@
+uint add_one(uint x)
+{
+    return x + 1u;
+}
+
+uint add_two(uint y)
+{
+    return y + 2u;
+}
+

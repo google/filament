@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <SurfaceView
+        android:id="@+id/surface_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:background="#C0000000"
+        android:padding="16dp">
+
+        <Switch
+            android:id="@+id/switch_projection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Use Desired Presentation Time"
+            android:textColor="#FFFFFF"
+            android:checked="false" />
+
+        <Switch
+            android:id="@+id/switch_pause"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Inject Pause at 6 o'clock"
+            android:textColor="#FFFFFF"
+            android:checked="false" />
+
+        <Switch
+            android:id="@+id/switch_pacing_demo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="60 FPS Pacing on 120Hz Display"
+            android:textColor="#FFFFFF"
+            android:checked="false" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="12dp">
+
+            <Button
+                android:id="@+id/btn_fps"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="120 FPS" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

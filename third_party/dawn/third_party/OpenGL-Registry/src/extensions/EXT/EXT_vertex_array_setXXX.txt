@@ -1,0 +1,160 @@
+Name
+
+    EXT_vertex_array_setXXX 
+    (No GenName version)
+
+Name Strings
+
+    GL_EXT_vertex_array_setXXX
+
+Version
+
+    $Date: 1999/04/03 08:40:30 $ $Revision: 1.2 $
+
+Number
+
+    ???
+
+Dependencies
+
+    EXT_static_vertex_array   
+
+Overview
+
+    This extension introduces named vertex array sets which encapsulate
+    vertex array state on the client side. The main purpose of these 
+    sets is to keep pointers to static vertex data and provide a name 
+    for different sets of static vertex data. The specification of 
+    static vertex data is done through EXT_static_vertex_array extension.
+
+Issues
+
+    *   Should we allow vertex array sets to be shared between
+    client side contexts? 
+
+New Procedures and Functions
+
+    const void *CreateArraySetExt(void);
+
+    void BindArraySetEXT(const void *arrayset);
+
+    void DeleteArraySetsEXT(sizei n,
+                         const void *arrayset[]);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetPointerv:
+
+    ARRAY_SET_BINDING_EXT
+
+Additions to Chapter 2, 3, 4 of the 1.1 Specification (OpenGL Operation,
+    Rasterization, Per-Fragment Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    A vertex array set is created by calling CreateArraySet which
+    returns the name of the newly created vertex array set. The 
+    newly created vertex array set also becomes the current 
+    vertex array set. The state encapsulated by a vertex array 
+    set immediately after it is first bound is equivalent to the 
+    default vertex array state at GL initialization.
+
+    Subsequent binding of a vertex array set is accomplished by 
+    calling BindArraySetEXT with arrayset set to the name of a 
+    previously created vertex array set. Subsequent bindings of a
+    vertex array set have no effect on its encapsulated state 
+    unless changed explicitly.
+    
+    When an OpenGL context is created, there is set of default vertex
+    array state associated with the context. In order that the access to
+    this default state is not lost, this extension treats the default state
+    as if its name was NULL. Unlike other vertex array sets, the NULL 
+    set cannot be deleted.
+    
+    Vertex array sets are deleted by calling DeleteArraySetsEXT with 
+    <arrayset> pointing to a list of <n> names of array sets to be 
+    deleted. DeleteArraySetsEXT implicitly performs a UnlockArraysExt 
+    on the sets to be deleted before deleting the <arrayset>. Once a 
+    vertex array set is deleted, it has no contents, and its name is 
+    freed.  If a vertex array set that is currently bound is deleted, 
+    the binding reverts to zero. DeleteArraySetsEXT ignores names 
+    that do not correspond to array sets, including NULL.
+    
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    The name of the currently bound vertex array set is returned in <params>
+    when GetPointerv is called with <pname> set to ARRAY_SET_BINDING_EXT. 
+    If no vertex array set is bound, NULL is returned.
+    
+    A vertex array set comprises of vertex array pointers, the size and
+    type information for each array, the corresponding enable flags and the
+    range of static data for each array. More explicitly, the state list
+    
+    ARRAY_ELEMENT_LOCK_COUNT_EXT
+    VERTEX_ARRAY
+    VERTEX_ARRAY_SIZE
+    VERTEX_ARRAY_TYPE
+    VERTEX_ARRAY_STRIDE
+    VERTEX_ARRAY_POINTER
+    NORMAL_ARRAY
+    NORMAL_ARRAY_TYPE
+    NORMAL_ARRAY_STRIDE
+    NORMAL_ARRAY_POINTER
+    COLOR_ARRAY
+    COLOR_ARRAY_SIZE
+    COLOR_ARRAY_TYPE
+    COLOR_ARRAY_STRIDE
+    COLOR_ARRAY_POINTER
+    INDEX_ARRAY
+    INDEX_ARRAY_TYPE
+    INDEX_ARRAY_STRIDE
+    INDEX_ARRAY_POINTER
+    TEXTURE_COORD_ARRAY
+    TEXTURE_COORD_ARRAY_SIZE
+    TEXTURE_COORD_ARRAY_TYPE
+    TEXTURE_COORD_ARRAY_STRIDE
+    TEXTURE_COORD_ARRAY_POINTER
+    EDGE_FLAG_ARRAY
+    EDGE_FLAG_ARRAY_STRIDE
+    EDGE_FLAG_ARRAY_POINTER
+    
+    composes a single vertex array set.
+    
+    When PushClientAttrib is called with CLIENT_VERTEX_ARRAY_BIT enabled,
+    the array pointers, types, size and stride are pushed, as well as
+    array pointer enables and the current vertex array set binding.
+    When the attribute set that includes vertex array information is
+    popped, the binding is first restored to its pushed value and then
+    the enables and the array pointers, types, size and stride are
+    are restored to their pushed values.
+
+Additions to the GLX Specification
+
+    No change is made to the GLX API.
+
+GLX Protocol
+
+    None
+
+Errors
+    INVALID_VALUE is generated if DeleteArraySetsEXT parameter <n> is
+    negative.
+
+    INVALID_OPERATION may be generated if any of the commands defined in this
+    extension is executed between the execution of Begin and the corresponding
+    execution of End.
+
+New State
+
+    Get Value               Get Command Type    Value   Attrib
+    ---------               ----------- ----    ------- ------
+
+    ARRAY_SET_BINDING_EXT   GetPointerv Y       0       vertex-array
+
+New Implementation Dependent State
+    
+    None
+
+

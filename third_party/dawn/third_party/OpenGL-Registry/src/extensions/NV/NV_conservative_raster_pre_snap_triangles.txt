@@ -1,0 +1,164 @@
+Name
+
+    NV_conservative_raster_pre_snap_triangles
+
+Name Strings
+
+    GL_NV_conservative_raster_pre_snap_triangles
+
+Contact
+
+    Kedarnath Thangudu, NVIDIA Corporation (kthangudu 'at' nvidia.com)
+
+Contributors
+
+    Pat Brown, NVIDIA Corporation
+    David P Gould, NVIDIA Corporation
+    Eric Werness, NVIDIA Corporation
+
+Status
+
+    Shipping in NVIDIA release 367.XX drivers and up.
+
+Version
+
+    Last Modified Date:         February 11, 2016
+    Revision:                   1
+
+Number
+
+    OpenGL Extension #487
+    OpenGL ES Extension #262
+
+Dependencies
+
+    This extension is written against the NV_conservative_raster extension as
+    applied to OpenGL 4.3 specification (Compatibility Profile) but may be
+    used with the Core profile or OpenGL ES 2.0 or later.
+
+Overview
+
+    When CONSERVATIVE_RASTERIZATION_NV is enabled, the fragments generated for
+    a primitive are conservative with respect to the primitive after snapping
+    to sub-pixel grid.  This extension provides a new mode of rasterization
+    for triangles where the fragments generated are conservative with respect
+    to the primitive at infinite precision before vertex snapping.
+
+    When the conservative raster mode is set to CONSERVATIVE_RASTER_MODE_PRE_-
+    SNAP_TRIANGLES, triangles are rasterized more conservatively, and may
+    generate fragments not generated when the mode is CONSERVATIVE_RASTER_MODE_-
+    POST_SNAP (default). In particular it may generate fragments for pixels
+    covered by triangles with zero area, or for pixels that are adjacent to
+    but not covered by any triangle. This modified behavior may be useful in
+    compensating for rounding errors caused by snapping vertex positions to a
+    sub-pixel grid during rasterization.  It's possible that a non-degenerate
+    triangle becomes degenerate due to snapping.  It's additionally possible
+    that rounding errors in computing the position of a vertex or from
+    snapping may cause a primitive that would cover a pixel at infinite
+    precision to fail to cover the pixel post-snap.  Rasterizing such
+    primitives more conservatively may be useful for "binning" algorithms
+    described in NV_conservative_raster.
+
+
+New Procedures and Functions
+
+    void ConservativeRasterParameteriNV(enum pname, int param);
+
+New Tokens
+
+    Accepted by the <pname> parameter of ConservativeRasterParameteriNV:
+        CONSERVATIVE_RASTER_MODE_NV                     0x954D
+
+    Accepted by the <param> parameter of ConservativeRasterParameteriNV:
+        CONSERVATIVE_RASTER_MODE_POST_SNAP_NV           0x954E
+        CONSERVATIVE_RASTER_MODE_PRE_SNAP_TRIANGLES_NV  0x954F
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetInteger64v, GetFloatv, and GetDoublev:
+
+        CONSERVATIVE_RASTER_MODE_NV                     0x954D
+
+
+Additions to Chapter 14 of the OpenGL 4.3 (Compatibility Profile) Specification
+(Fixed-Function Primitive Assembly and Rasterization)
+
+    Add the following paragraph to the end of the new subsection 14.6.X
+    "Conservative Rasterization" added by NV_conservative_raster
+
+    When CONSERVATIVE_RASTERIZATION_NV is enabled, the rasterization behavior
+    may be controlled by calling the following command
+
+        void ConservativeRasterParameteriNV(enum pname, int param);
+
+    with <pname> set to CONSERVATIVE_RASTER_MODE_NV. The <param> parameter
+    specifies the conservative raster mode to be used. If the mode is set to
+    CONSERVATIVE_RASTER_MODE_POST_SNAP_NV, the generated fragments are
+    conservative w.r.t the primitive after it is snapped to sub-pixel grid.
+    If the mode is set to CONSERVATIVE_RASTER_MODE_PRE_SNAP_TRIANGLES_NV
+    the fragments generated for triangles will be conservative w.r.t the
+    triangle at infinite precision. Since non-degenerate triangles may become
+    degenerate due to vertex snapping, this mode will generate fragments for
+    zero area triangles that are otherwise culled when the mode is
+    CONSERVATIVE_RASTER_MODE_POST_SNAP_NV. This mode may also generate fragments for pixels that
+    are within half a sub-pixel distance away from a triangle's infinite
+    precision boundary.  The default mode is set to CONSERVATIVE_RASTER_MODE_-
+    POST_SNAP_NV.
+
+New State
+
+    Get Value                           Get Command    Type  Initial Value          Description             Sec.    Attribute
+    ---------                           -----------    ----  -------------          -----------             ----    ---------
+    CONSERVATIVE_RASTER_MODE_NV         GetIntegerv    E     CONSERVATIVE_RASTER_-  Control conservative    14.6.X  -
+                                                             MODE_POST_SNAP         rasterization mode.
+
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Modifications to the OpenGL Shading Language Specification, Version 4.30
+
+    None.
+
+Errors
+
+    INVALID_ENUM is generated by ConservativeRasterParameteriNV if <pname> is
+    not CONSERVATIVE_RASTER_MODE_NV, or if <param> is not CONSERVATIVE_RASTER_-
+    MODE_POST_SNAP_NV or CONSERVATIVE_RASTER_MODE_PRE_SNAP_TRIANGLES_NV.
+
+Issues
+
+    (1) How does this extension interact with snap control?
+
+    RESOLVED: When the conservative raster mode is set to CONSERVATIVE_RASTER_-
+    MODE_PRE_SNAP_TRIANGLES the generated fragments are conservative w.r.t
+    triangle at infinite precision i.e. before snapping to the sub-pixel grid.
+    To achieve this implementations may augment/dilate the triangle edges by
+    an amount (proportional to the sub-pixel precision) to compensate for
+    rounding errors caused by snapping vertex positions to a sub-pixel grid.
+    The amount of dilation is implementation dependent.
+
+    (2) Which way do the fragments generated for zero-area triangles face?
+
+    RESOLVED: Setting the conservative raster mode to CONSERVATIVE_RASTER_-
+    MODE_PRE_SNAP_TRIANGLES generates fragments for zero-area (degenerate)
+    triangles that are otherwise culled.  Since degenerate triangles don't have
+    a normal and therefore no theoretical facing, all the degenerate triangles
+    will be considered back-facing.  Degenerate triangles will be culled when
+    back-face culling is enabled in GL.
+
+    (3) How are the attributes computed for the fragments generated for zero-
+        area triangles?
+
+    RESOLVED: Since extrapolation/interpolation is not defined for degenerate
+    triangles, the provoking vertex's attributes and z are used for all the
+    fragments of such triangles.
+
+Revision History
+
+    Revision 1
+    - Internal revisions.

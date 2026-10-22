@@ -1,0 +1,219 @@
+Name
+
+    NV_multisample_filter_hint
+
+Name Strings
+
+    GL_NV_multisample_filter_hint
+
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 2001.
+
+IP Status
+
+    NVIDIA Proprietary.
+
+Status
+
+    Shipping, May 2001
+
+Version
+
+    NVIDIA Date: May 16, 2001
+    Version:     1
+
+Number
+
+    259
+
+Dependencies
+
+    Written based on the OpenGL 1.2.1 specification.
+
+    Requires ARB_multisample.
+
+Overview
+
+    OpenGL multisampling typically assumes that the samples of a given
+    pixel are weighted uniformly and averaged to compute the pixel's
+    resolved color.  This extension provides a hint that permits
+    implementations to provide an alternative method of resolving the
+    color of multisampled pixels.
+
+    As an example of such an alternative method, NVIDIA's GeForce3 GPU
+    provides a technique known as Quincunx filtering.  This technique
+    is used in two-sample multisampling, but it blends the pixel's two
+    samples and three additional samples from adjacent pixels.  The sample
+    pattern is analogous to the 5 pattern on a die.  The quality of this
+    technique is widely regarded as comparable to 4 sample multisampling.
+
+Issues
+
+    Is the glHint mechanism the right mechanism to expose this functionality?
+
+      RESOLUTION:  Yes.  Multisample filtering quality is subject to
+      the kinds of variations that the glHint was intended to control.
+
+      Arguably, the glHint mechanism only provides two definite settings:
+      GL_FASTEST and GL_NICEST while there may be many different
+      techniques for controlling multisample filtering quality.
+      We expect hardware to support only one or two techniques rather
+      than a multitude of nearly indistinguishable sampling techniques.
+
+    When does changing the multisampling filter hint take effect?
+    
+      RESOLUTION: It may not be until the next swap buffers or glClear
+      operation that the multisample hint actually takes effect.
+      This may be implementation dependent.
+
+    What is the meaning of GL_DONT_CARE for the multisample hint?
+
+      RESOLUTION:  By default, NVIDIA expects to treat GL_DONT_CARE
+      the same as GL_FASTEST.  However, the meaning of GL_DONT_CARE
+      for this hint may be subject to a registry (or environment) setting,
+      possibly settable through a control panel.
+
+    Does GL_NICEST require Quincunx filtering?
+
+      RESOLUTION:  No.  NVIDIA's GeForce3 Quincunx filtering is one
+      possible technique that may be used to implement the GL_NICEST
+      setting, but future GPUs may use other techniques.
+
+    Can the meaning of the multisample hint vary depending on the number
+    of samples of the drawable?
+
+      RESOLUTION:  Yes.
+
+      The following describes how GeForce3 uses the multisample hint:
+
+      When using 2-sample multisampling with GeForce3, the multisample
+      filter hint affects multisample filtering as follows: GL_NICEST uses
+      5-tap Quincunx multisample filtering while GL_FASTEST uses standard
+      even-weighted 2-tap multisample filtering of the pixel's 2 samples.
+
+      When using 4-sample multisampling with GeForce3, the multisample
+      filter hint affects multisample filtering as follows: GL_NICEST
+      uses 9-tap 3x3 multisample filtering while GL_FASTEST uses standard
+      even-weighted 4-tap multisample filtering of the pixel's 4 samples.
+
+    What is the difference between a "tap" and a "sample"?
+
+      In the context of multisample filtering, a sample is
+      a subpixel frame buffer sample containing color, depth, and
+      stencil information.  A tap is a source of data for filtering.
+      Typically, samples are filtered by evenly weighting all the samples
+      belonging to a pixel.  In this case, the number of taps for the
+      filter is equal to the number of samples for the pixel.  In other
+      filtering schemes, the number of taps and samples may not be equal
+      (and potentially not evenly weighted as well).  For example,
+      GeForce3's quincunx filtering uses 5 taps even though each pixel
+      has only 2 multisample samples.  Three of the five taps source
+      samples outside the pixel's footprint of two samples.
+
+    Should the multisample filtering technique be determined by the
+    visual/PFD rather than OpenGL rendering context state?
+
+      RESOLUTION:  No.  The number of multisample samples per pixel that
+      a window has is a property of the visual/PFD, but the filtering
+      technique does not have to be defined up-front at when the pixel
+      format is set.
+
+    While not quite consistent with the way ARB_multisample is specified,
+    NVIDIA uses the SwapBuffers operation as a trigger for downsampling
+    multisample sample buffers (other operations such as glReadPixels
+    also trigger downsampling).  But a SwapBuffers operation can be
+    requested without a current OpenGL rendering context.  What happens
+    when a SwapBuffers operation is performed with no current OpenGL
+    rendering context?
+
+      RESOLUTION:  The multisample filter hint is treated as GL_DONT_CARE
+      in this case.  Applications that want the multisample filter hint
+      to apply to their BufferSwap operation should perform the BufferSwap
+      operation while bound to an OpenGL rendering context.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <target> parameter of Hint and by the <pname>
+    parameter of GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev:
+
+        MULTISAMPLE_FILTER_HINT_NV                0x8534
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+ --  Section 5.6 "Hints"
+
+     Replace the description of hint targets in the first paragraph with:
+
+     "target may be one of PERSPECTIVE_HINT, indicating the desired
+     quality of parameter interpolation; POINT_SMOOTH_HINT, indicating the
+     desired sampling quality of points; LINE_SMOOTH_HINT, indicating the
+     desired sampling quality of lines; POLYGON_SMOOTH_HINT, indicating
+     the desired sampling quality of polygons; FOG_HINT, indicating
+     whether fog calculations are done per pixel or per vertex; and
+     MULTISAMPLE_FILTER_HINT, indicating the desired quality of multisample
+     filtering.  The MULTISAMPLE_FILTER_HINT is ignored if the frame buffer
+     has no multisample samples.  When NICEST (or possibly DONT_CARE)
+     multisample filtering is requested and the frame buffer supports
+     multisampling, the multisample filter pattern may involve samples
+     outside the pixel's sample set.  The exact NICEST (or possibly
+     DONT_CARE) multisample filtering technique used is implementation
+     dependent and may vary with the number of multisample samples
+     supported."
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    None
+
+Additions to the GLX, WGL, and AGL Specification
+
+    Add the following to the description of what happens at SwapBuffers
+    time.
+
+    "When a SwapBuffers operation is performed by a thread without
+    a current OpenGL rendering context and the target drawable to be
+    swapped is multisampled, any multisample filtering operation that
+    occurs should be done as if the GL_MULTISAMPLE_FILTER_HINT value is
+    set to GL_DONT_CARE."
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+New State
+
+(table 6.23, p213) add the following entry:
+
+Get Value                      Type    Get Command   Initial Value   Description           Sec    Attribute
+----------------------------   ----    -----------   -------------   -----------           ------ --------------
+MULTISAMPLE_FILTER_HINT_NV     Z3      GetIntegerv   DONT_CARE       Multisample filter    5.6    hint
+                                                                     quality hint
+
+Revision History
+
+    None

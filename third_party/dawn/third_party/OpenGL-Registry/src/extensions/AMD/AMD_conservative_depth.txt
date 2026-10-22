@@ -1,0 +1,169 @@
+Name
+
+    AMD_conservative_depth
+
+Name String
+    
+    GL_AMD_conservative_depth
+
+Contact
+
+    Graham Sellers, AMD (graham.sellers 'at' amd.com)
+
+Contributors
+
+    Pierre Boudier, AMD
+    Graham Sellers, AMD
+
+Status
+
+    In Progress
+
+Version
+
+    Last Modified Date:         10/25/2010
+    Author Revision:            4
+
+Number
+
+    385
+
+Dependencies
+
+    OpenGL 3.0 is required.
+
+    This extension is written against the OpenGL Shading Language Version 4.00.
+
+Overview
+
+    There is a common optimization for hardware accelerated implementation of
+    OpenGL which relies on an early depth test to be run before the fragment
+    shader so that the shader evaluation can be skipped if the fragment ends
+    up being discarded because it is occluded.
+
+    This optimization does not affect the final rendering, and is typically
+    possible when the fragment does not change the depth programmatically.
+    (i.e.: it does not write to the built-in gl_FragDepth output). There are,
+    however a class of operations on the depth in the shader which could
+    still be performed while allowing the early depth test to operate.
+
+    This extension allows the application to pass enough information to the
+    GL implementation to activate such optimizations safely.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Modifications to the OpenGL Shading Language Specification version 1.50.9
+
+Additions to Chapter 1 of the OpenGL Shading Language 4.00.08 Specification (Introduction)
+
+    None.
+
+Additions to Chapter 2 of the OpenGL Shading Language 4.00.08 Specification (Overview of OpenGL Shading)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL Shading Language 4.00.08 Specification (Basics)
+
+    Add a new Section 3.3.x, GL_AMD_conservative_depth Extension
+
+    Including the following line in a shader can be used to control the language
+    features described in this extension:
+
+        #extension GL_AMD_conservative_depth: <behavior>
+
+    where <behavior> is as described in section 3.3.
+
+    A new preprocessor #define is added to the OpenGL Shading Language:
+
+        #define GL_AMD_conservative_depth 1
+
+Additions to Chapter 4 of the OpenGL Shading Language 4.00.08 Specification (Variables and Types)
+
+    Modify Section 4.3.8.2 (Output Layout Qualifiers) page 47
+
+    Modify the paragraph beginning: "Fragment shaders allow output layout
+    qualifiers only..."
+
+        Fragment shaders allow output layout qualifiers only on the interface
+        out, or for the purposes of redeclaring the built-in variable
+        gl_FragDepth (see Section 7.1, Built-In Language Variables).
+
+    Insert the following before the paragraph beginning: "Geometry shaders can
+    have three types of output layout qualifiers..."
+
+        The built-in fragment shader variable gl_FragDepth may be redeclared
+        using one of the following layout qualifiers.
+
+        layout-qualifier-id
+            depth_any
+            depth_greater
+            depth_less
+            depth_unchanged
+
+        For example:
+
+            layout (depth_greater) out float gl_FragDepth;
+
+        The layout qualifier for gl_FragDepth controls how the GL will interpret
+        assignments to the gl_FragDepth out variable for the purpose of depth
+        testing. Any assignment to gl_FragDepth will be honored by the shader
+        and the updated value of gl_FragDepth will still be written to the
+        depth buffer if it is determined that the depth write should occur.
+        However, depending on the layout qualifier of gl_FragDepth and the
+        current state of depth testing, the GL may perform optimizations or
+        reordering of operations to depth test and writes to improve performance.
+
+        By default, gl_FragDepth assumes the <depth_any> layout qualifier. When
+        the layout qualifier for gl_FragDepth is <depth_any>, the shader compiler
+        will note any assignment to gl_FragDepth modifying it in an unknown way,
+        and depth testing will always be performed after the shader has executed.
+        When the layout qualifier is <depth_greater>, the GL will assume that
+        any modification of gl_FragDepth will only increase its value. When the
+        layout qualifier is <depth_less>, the GL will assume that any
+        modification of gl_FragDepth will only decrease its value. When the
+        layout qualifier is <depth_unchanged>, the shader compiler will honor
+        any modification to gl_FragDepth, but the rest of the GL assume that
+        gl_FragDepth is not assigned a new value.
+
+        If a shader redeclares gl_FragDepth using the <depth_greater>,
+        <depth_less> or <depth_unchanged> and then violates this contract, the
+        results of the depth test may be inaccurate and any resulting rendering
+        will produce undefined results. However, no error is generated.
+
+        Redeclarations are performed as follows:
+
+            out float gl_FragDepth;                             // Redeclaration that changes nothing is allowed
+
+            layout (depth_any) out float gl_FragDepth;          // Assume that gl_FragDepth may be modified in any way
+            layout (depth_greater) out float gl_FragDepth;      // Assume that gl_FragDepth may be modified such that its value will only increase
+            layout (depth_less) out float gl_FragDepth;         // Assume that gl_FragDepth may be modified such that its value will only decrease
+            layout (depth_unchanged) out float gl_FragDepth;    // Assume that gl_FragDepth will not be modified
+
+        If gl_FragDepth is redeclared in any fragment shader in a program, it must
+        be redeclared in all fragment shaders in that program that have static
+        assignments to gl_FragDepth. All redeclarations of gl_FragDepth in all
+        fragment shaders in a single program must have the same set of qualifiers.
+        Within any shader, the first redeclarations of gl_FragDepth must appear
+        before any use of gl_FragDepth. The built-in gl_FragDepth is only
+        predeclared in fragment shaders, so redeclaring it in any other shader
+        language will be illegal.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  -----------------------------------------
+
+     4    25/10/2010  gsellers  Apply patch from idr.
+     3    04/01/2010  gsellers  Minor cleanup. Update to GLSL 4.00.
+     2    12/01/2009  gsellers  Internal updates
+     1    11/03/2009  pboudier  Initial draft

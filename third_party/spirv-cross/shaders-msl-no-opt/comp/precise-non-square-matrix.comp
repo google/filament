@@ -1,0 +1,18 @@
+#version 450
+
+layout(binding = 0) buffer SSBO
+{
+	mat3x4 A;
+	mat4x3 B;
+	mat3x3 C;
+	mat4 D;
+};
+
+void main()
+{
+	precise mat4 tmp0 = A * B;
+	precise mat3 tmp1 = B * A;
+	precise mat3x4 tmp2 = A * C;
+	precise mat3x4 tmp3 = D * A;
+	precise mat4x3 tmp4 = B * D;
+}

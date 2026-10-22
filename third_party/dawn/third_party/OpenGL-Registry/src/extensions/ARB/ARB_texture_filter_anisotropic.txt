@@ -1,0 +1,317 @@
+
+Name
+
+    ARB_texture_filter_anisotropic
+
+Name Strings
+
+    GL_ARB_texture_filter_anisotropic
+
+Contact
+
+    Piers Daniell (pdaniell 'at' nvidia.com)
+
+Contributors
+
+    Contributors to EXT_texture_filter_anisotropic
+    Jon Leech, Khronos
+    Daniel Koch, NVIDIA
+
+Notice
+
+    Copyright (c) 2017-2019 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date: February 26, 2019
+    Revision: 6
+
+Number
+
+    ARB Extension #195
+
+Dependencies
+
+    OpenGL 1.2 required.
+
+    This extension is written against the OpenGL 4.5 (Compatibility Profile)
+    Specification (October 24, 2016).
+
+Overview
+
+    Texture mapping using OpenGL's existing mipmap texture filtering
+    modes assumes that the projection of the pixel filter footprint into
+    texture space is a square (ie, isotropic).  In practice however, the
+    footprint may be long and narrow (ie, anisotropic).  Consequently,
+    mipmap filtering severely blurs images on surfaces angled obliquely
+    away from the viewer.
+
+    Several approaches exist for improving texture sampling by accounting
+    for the anisotropic nature of the pixel filter footprint into texture
+    space.  This extension provides a general mechanism for supporting
+    anisotropic texturing filtering schemes without specifying a
+    particular formulation of anisotropic filtering.
+
+    The extension permits the OpenGL application to specify on a per-texture
+    or -sampler object basis the maximum degree of anisotropy to account for
+    in texture filtering.
+
+    Increasing the maximum degree of anisotropy may
+    improve texture filtering, but may also significantly reduce the
+    implementation's texture filtering rate.  Implementations are free
+    to clamp the specified degree of anisotropy to the implementation's
+    maximum supported degree of anisotropy.
+
+    A sampler or texture's maximum degree of anisotropy is specified
+    independently from its minification and magnification filter (as
+    opposed to being supported as an entirely new filtering mode).
+    Implementations are free to use the specified minification and
+    magnification filter to select a particular anisotropic texture
+    filtering scheme.  For example, a NEAREST filter with a maximum
+    degree of anisotropy of two could be treated as a 2-tap filter that
+    accounts for the direction of anisotropy.  Implementations are also
+    permitted to ignore the minification or magnification filter and
+    implement the highest quality of anisotropic filtering possible.
+
+    Applications seeking the highest quality anisotropic filtering
+    available are advised to request a LINEAR_MIPMAP_LINEAR minification
+    filter, a LINEAR magnification filter, and a large maximum degree
+    of anisotropy.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameters of GetTexParameterfv,
+    GetTexParameteriv, TexParameterf, TexParameterfv, TexParameteri,
+    and TexParameteriv:
+
+        TEXTURE_MAX_ANISOTROPY              0x84FE
+
+    Accepted by the <pname> parameters of GetBooleanv, GetDoublev,
+    GetFloatv, and GetIntegerv:
+
+        MAX_TEXTURE_MAX_ANISOTROPY          0x84FF
+
+Additions to Chapter 8 of the OpenGL 4.5 Specification (Textures and Samplers)
+
+ --  Sections 8.10 "Texture Parameters"
+
+     Add the following entry to the end of Table 8.25, "Texture parameters
+     and their values":
+
+     Name                         Type    Legal Values
+     --------------------------   ------  --------------------------
+     TEXTURE_MAX_ANISOTROPY       float   greater or equal to 1.0
+
+     In the errors section for TexParameter*() on page 267 add the following:
+
+     "INVALID_VALUE is generated when TexParameter is called with <pname>
+     of TEXTURE_MAX_ANISOTROPY and any value specified by <param> or
+     <params> is less than 1.0."
+
+ --  Sections 8.14 "Texture Minification" and 8.15 "Texture Magnification"
+
+     After the first paragraph in Section 8.14:
+
+     "When the texture's value of TEXTURE_MAX_ANISOTROPY is equal to 1.0,
+     the GL uses an isotropic texture filtering approach as described in
+     this section and Section 8.15.  However, when the texture's value
+     of TEXTURE_MAX_ANISOTROPY is greater than 1.0, the GL implementation
+     should use a texture filtering scheme that accounts for a degree
+     of anisotropy up to the smaller of the texture's value of
+     TEXTURE_MAX_ANISOTROPY or the implementation-defined value of
+     MAX_TEXTURE_MAX_ANISOTROPY.
+
+     The particular scheme for anisotropic texture filtering is
+     implementation dependent.  Additionally, implementations are free
+     to consider the current texture minification and magnification modes
+     to control the specifics of the anisotropic filtering scheme used.
+
+     The anisotropic texture filtering scheme may only access mipmap
+     levels if the minification filter is one that requires mipmaps.
+     Additionally, when a minification filter is specified, the
+     anisotropic texture filtering scheme may only access texture mipmap
+     levels between the texture's values for TEXTURE_BASE_LEVEL and
+     TEXTURE_MAX_LEVEL, inclusive.  Implementations are also recommended
+     to respect the values of TEXTURE_MAX_LOD and TEXTURE_MIN_LOD to
+     whatever extent the particular anisotropic texture filtering
+     scheme permits this."
+
+     The following describes one particular approach to implementing
+     anisotropic texture filtering for the 2D texturing case:
+
+     "Anisotropic texture filtering substantially changes Section 8.14.
+     Previously a single scale factor P was determined based on the
+     pixel's projection into texture space.  Now two scale factors,
+     Px and Py, are computed.
+
+       Px = sqrt(dudx^2 + dvdx^2)
+       Py = sqrt(dudy^2 + dvdy^2)
+
+       Pmax = max(Px,Py)
+       Pmin = min(Px,Py)
+
+       N = min(ceil(Pmax/Pmin),maxAniso)
+       Lambda' = log2(Pmax/N)
+
+     where maxAniso is the smaller of the texture's value of
+     TEXTURE_MAX_ANISOTROPY or the implementation-defined value of
+     MAX_TEXTURE_MAX_ANISOTROPY.
+
+     It is acceptable for an implementation to round 'N' up to the nearest
+     supported sampling rate.  For example an implementation may only
+     support power-of-two sampling rates.
+
+     It is also acceptable for an implementation to approximate the ideal
+     functions Px and Py with functions Fx and Fy subject to the following
+     conditions:
+
+       1.  Fx is continuous and monotonically increasing in |du/dx| and |dv/dx|.
+           Fy is continuous and monotonically increasing in |du/dy| and |dv/dy|.
+
+       2.  max(|du/dx|,|dv/dx|} <= Fx <= |du/dx| + |dv/dx|.
+           max(|du/dy|,|dv/dy|} <= Fy <= |du/dy| + |dv/dy|.
+
+     Instead of a single sample, Tau, at (u,v,Lambda), 'N' locations in
+     the mipmap at LOD Lambda are sampled within the texture footprint of
+     the pixel.  This sum Tau_Aniso is defined using the single sample Tau.
+     When the texture's value of TEXTURE_MAX_ANISOTROPHY is greater
+     than 1.0, use Tau_Aniso instead of Tau to determine the fragment's
+     texture value.
+
+                     i=N
+                     ---
+     Tau_Aniso = 1/N \ Tau(u(x - 1/2 + i/(N+1), y), v(x - 1/2 + i/(N+1), y)),  Px > Py
+                     /
+                     ---
+                     i=1
+
+                     i=N
+                     ---
+     Tau_Aniso = 1/N \ Tau(u(x, y - 1/2 + i/(N+1)), v(x, y - 1/2 + i/(N+1))),  Py >= Px
+                     /
+                     ---
+                     i=1
+
+
+     It is acceptable to approximate the u and v functions with equally spaced
+     samples in texture space at LOD Lambda:
+
+                     i=N
+                     ---
+     Tau_Aniso = 1/N \ Tau(u(x,y)+dudx(i/(N+1)-1/2), v(x,y)+dvdx(i/(N+1)-1/2)), Px > Py
+                     /
+                     ---
+                     i=1
+
+                     i=N
+                     ---
+     Tau_Aniso = 1/N \ Tau(u(x,y)+dudy(i/(N+1)-1/2), v(x,y)+dvdy(i/(N+1)-1/2)), Py >= Px
+                     /
+                     ---
+                     i=1
+
+     "
+
+Additions to the GLX Specification
+
+     None
+
+New State
+
+(table 23.19, p721) add the entry:
+
+Get Value                   Type  Get Command        Initial Value   Description      Sec     Attribute
+--------------------------  ----  -----------------  --------------  ---------------  -----   ---------
+TEXTURE_MAX_ANISOTROPY       R    GetTexParameterfv  1.0             Maximum degree   8.14    texture
+                                                                     of anisotropy
+
+(table 23.23, p725) add the entry:
+
+Get Value                   Type  Get Command            Initial Value   Description      Sec     Attribute
+--------------------------  ----  ---------------------  --------------  ---------------  -----   ---------
+TEXTURE_MAX_ANISOTROPY       R    GetSamplerParameterfv  1.0             Maximum degree   8.14    -
+                                                                         of anisotropy
+
+
+New Implementation State
+
+(table 23.64, p766) add the entry:
+
+Get Value                       Type  Get Command   Minimum Value   Description      Sec     Attribute
+------------------------------  ----  ------------  --------------  ---------------  -----   ---------
+MAX_TEXTURE_MAX_ANISOTROPY       R    GetFloatv     16.0            Limit of         8.14    -
+                                                                    maximum degree
+                                                                    of anisotropy
+
+Issues
+
+    1) Should there be a particular anisotropic texture filtering minification
+      and magnification mode?
+
+      RESOLUTION:  NO.  The maximum degree of anisotropy should control
+      when anisotropic texturing is used.  Making this orthogonal to
+      the minification and magnification filtering modes allows these
+      settings to influence the anisotropic scheme used.  Yes, such
+      an anisotropic filtering scheme exists in hardware.
+
+    2) What should the minimum value for MAX_TEXTURE_MAX_ANISOTROPY be?
+
+      RESOLUTION:  16.0.  To support this extension, at least 16 to 1
+      anisotropy should be supported.  16.0 was chosen because this is what
+      all modern GPUs support at the time the ARB version of this extension
+      was forked from the EXT version.  The EXT version of this extension
+      specified 2, but it was written in 1999.
+
+    3) Should an implementation-defined limit for the maximum maximum degree of
+      anisotropy be "get-able"?
+
+      RESOLUTION:  YES.  But you should not assume that a high maximum
+      maximum degree of anisotropy implies anything about texture
+      filtering performance or quality.
+
+    4) Should anything particular be said about anisotropic 3D texture
+      and cube texture filtering?
+
+      RESOLUTION:  NO. It was decided by the OpenGL working group to leave
+      anisotropic filtering for 3D or cube textures as undefined. Anisotropic
+      filtering is only well-defined for 2D and 2D array textures. For
+      defined results with 3D and cube textures isotropic filtering should
+      be used by setting the anisotropy level to 1.0.
+
+    5) Should the maximum degree of anisotropy be a sampler parameter?
+
+       RESOLVED: Yes. The original EXT extension was created before sampler
+       objects were defined.
+
+Revision History
+
+    Rev.    Date      Author     Changes
+    ----  ---------- ---------  -----------------------------------------------
+    6     2019-02-26 pdaniell   Update issue 4 question and resolution.
+    5     2017-06-02 Jon Leech  Include anisotropy state in sampler objects
+                                (opengl/API/issues/15).
+    4     2017-05-29 dgkoch     Minor typography/gramatical fixes from OpenGL 4.6.
+    3     2017-05-24 pdaniell   Fix issue 2 to reflect the new minimum max
+                                anisotrpic version.
+    2     2017-04-25 pdaniell   Increase minimum max anisotropic value to 16.
+    1     2017-04-03 pdaniell   Initial draft for OpenGL 4.6 forked from
+                                GL_EXT_texture_filter_anisotropic

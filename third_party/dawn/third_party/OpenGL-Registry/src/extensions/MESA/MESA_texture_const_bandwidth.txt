@@ -1,0 +1,84 @@
+Name
+
+    MESA_texture_const_bandwidth
+
+Name Strings
+
+    GL_MESA_texture_const_bandwidth
+
+Contact
+
+    Rob Clark <robdclark@chromium.org>
+
+Contributors
+
+    Rob Clark, Google
+    Lina Versace, Google
+    Tapani Pälli, Intel
+
+Status
+
+    Proposal
+
+Version
+
+    Version 1, September, 2023
+
+Number
+
+    OpenGL Extension 560
+    OpenGL ES Extension 347
+
+Dependencies
+
+    Requires EXT_memory_object.
+
+Overview
+
+    The use of data dependent bandwidth compressed formats (UBWC, AFBC, etc)
+    can introduce a form of side-channel, in that the bandwidth used for
+    texture access is dependent on the texture's contents.  In some cases
+    an application may want to disable the use of data dependent formats on
+    specific textures.
+
+    For that purpose, this extension extends EXT_memory_object to introduce
+    a new <param> CONST_BW_TILING_MESA.
+
+IP Status
+
+    None
+
+Issues
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Types
+
+    None
+
+New Tokens
+
+    Returned in the <params> parameter of GetInternalFormativ or
+    GetInternalFormati64v when the <pname> parameter is TILING_TYPES_EXT,
+    returned in the <params> parameter of GetTexParameter{if}v,
+    GetTexParameterI{i ui}v, GetTextureParameter{if}v, and
+    GetTextureParameterI{i ui}v when the <pname> parameter is
+    TEXTURE_TILING_EXT, and accepted by the <params> parameter of
+    TexParameter{ifx}{v}, TexParameterI{i ui}v, TextureParameter{if}{v},
+    TextureParameterI{i ui}v when the <pname> parameter is
+    TEXTURE_TILING_EXT:
+
+        CONST_BW_TILING_MESA                       0x8BBE
+
+Errors
+
+    None
+
+Revision History
+
+    Version 1, 2023-9-28 (Rob Clark)
+        Initial draft.

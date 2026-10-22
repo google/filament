@@ -1,0 +1,5 @@
+# http://clang.llvm.org/docs/ClangFormatStyleOptions.html
+BasedOnStyle: Chromium
+
+ColumnLimit: 80
+InsertBraces: true

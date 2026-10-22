@@ -1,0 +1,18 @@
+#version 460
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+struct FHitGroupRootConstants
+{
+    uint BaseInstanceIndex;
+    uint UserData;
+};
+
+layout(binding = 20, std430) readonly buffer type_StructuredBuffer_FHitGroupRootConstants
+{
+    FHitGroupRootConstants _RESERVED_IDENTIFIER_FIXUP_m0[];
+} HitGroupData;
+
+void main()
+{
+}
+

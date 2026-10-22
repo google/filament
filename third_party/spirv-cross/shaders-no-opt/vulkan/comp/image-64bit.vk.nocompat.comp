@@ -1,0 +1,16 @@
+#version 450
+#extension GL_ARB_gpu_shader_int64 : require
+#extension GL_EXT_shader_image_int64 : require
+layout(local_size_x = 1) in;
+
+layout(set = 0, binding = 0, r64ui) uniform u64image2D uimg;
+layout(set = 0, binding = 1, r64i) uniform i64image2D iimg;
+
+void main()
+{
+	uint64_t uv = imageLoad(uimg, ivec2(gl_GlobalInvocationID.xy + 50)).x;
+	int64_t iv = imageLoad(iimg, ivec2(gl_GlobalInvocationID.xy + 50)).x;
+
+	uv = imageAtomicMax(uimg, ivec2(gl_GlobalInvocationID.xy), uv);
+	iv = imageAtomicMax(iimg, ivec2(gl_GlobalInvocationID.xy), iv);
+}

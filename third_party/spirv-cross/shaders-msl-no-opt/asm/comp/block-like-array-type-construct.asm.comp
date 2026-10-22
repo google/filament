@@ -1,0 +1,80 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 10
+; Bound: 32
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpName %main "main"
+               OpName %foo "foo"
+               OpName %foo2 "foo2"
+               OpName %SSBO "SSBO"
+               OpMemberName %SSBO 0 "a"
+               OpMemberName %SSBO 1 "b"
+               OpName %_ ""
+               OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+               OpMemberDecorate %SSBO 0 Offset 0
+               OpMemberDecorate %SSBO 1 Offset 4
+               OpDecorate %SSBO BufferBlock
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+			   OpDecorate %_arr_float_uint_4 ArrayStride 4
+			   OpDecorate %struct_arr ArrayStride 32
+			   OpMemberDecorate %struct 0 Offset 0
+			   OpMemberDecorate %struct 1 Offset 16
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+       %uint = OpTypeInt 32 0
+     %uint_2 = OpConstant %uint 2
+     %uint_4 = OpConstant %uint 4
+%_arr_float_uint_4 = OpTypeArray %float %uint_4
+%_ptr_Private__arr_float_uint_4 = OpTypePointer Private %_arr_float_uint_4
+        %foo = OpVariable %_ptr_Private__arr_float_uint_4 Private
+        %foo2 = OpVariable %_ptr_Private__arr_float_uint_4 Private
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+    %float_1 = OpConstant %float 1
+	%struct = OpTypeStruct %_arr_float_uint_4 %_arr_float_uint_4
+	%struct_arr = OpTypeArray %struct %uint_2
+	%ptr_struct = OpTypePointer Function %struct
+%_ptr_Private_float = OpTypePointer Private %float
+      %int_1 = OpConstant %int 1
+    %float_2 = OpConstant %float 2
+      %int_2 = OpConstant %int 2
+    %float_3 = OpConstant %float 3
+      %int_3 = OpConstant %int 3
+    %float_4 = OpConstant %float 4
+     %v3uint = OpTypeVector %uint 3
+     %uint_1 = OpConstant %uint 1
+%gl_WorkGroupSize = OpConstantComposite %v3uint %uint_1 %uint_1 %uint_1
+		%carr = OpConstantComposite %_arr_float_uint_4 %float_1 %float_2 %float_3 %float_4
+		%struct_constant_0 = OpConstantComposite %struct %carr %carr
+		%struct_constant_1 = OpConstantComposite %struct %carr %carr
+		%struct_arr_constant = OpConstantComposite %struct_arr %struct_constant_0 %struct_constant_1
+       %SSBO = OpTypeStruct %uint %int
+%_ptr_Uniform_SSBO = OpTypePointer Uniform %SSBO
+          %_ = OpVariable %_ptr_Uniform_SSBO Uniform
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+	   %struct_var = OpVariable %ptr_struct Function
+         %16 = OpAccessChain %_ptr_Private_float %foo %int_0
+               OpStore %16 %float_1
+			   OpStore %foo %carr
+         %19 = OpAccessChain %_ptr_Private_float %foo %int_1
+               OpStore %19 %float_2
+         %22 = OpAccessChain %_ptr_Private_float %foo %int_2
+               OpStore %22 %float_3
+         %25 = OpAccessChain %_ptr_Private_float %foo %int_3
+               OpStore %25 %float_4
+			   OpCopyMemory %foo2 %foo
+			%l0 = OpLoad %_arr_float_uint_4 %foo
+			%l1 = OpLoad %_arr_float_uint_4 %foo2
+			%struct0 = OpCompositeConstruct %struct %l0 %l1
+			OpStore %struct_var %struct0
+               OpReturn
+               OpFunctionEnd

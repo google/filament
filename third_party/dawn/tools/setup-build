@@ -1,0 +1,372 @@
+#!/usr/bin/env bash
+# Copyright 2022 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+set -e # Fail on any error.
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd )"
+ROOT_DIR="$( cd "$SCRIPT_DIR/.." >/dev/null 2>&1 && pwd )"
+
+POSSIBLE_BUILD_SYSTEMS="[gn|cmake]"
+POSSIBLE_BUILD_TYPES="[debug|release]"
+POSSIBLE_BUILD_ARCHS="[native|x86]"
+BUILD_FUZZER=""
+
+BUILD_SYSTEM=""
+BUILD_TYPE=""
+BUILD_ARCH=""
+FORCE=""
+VERBOSE=""
+SISO="1"
+SHARED=""
+INSTALL=""
+UBSAN=""
+ANDROID_ABI="arm64-v8a"
+ANDROID_NDK=""
+ANDROID_PLATFORM="android-28"
+USE_GCC_RUNTIME=0
+
+function show_usage() {
+  echo "setup-build [-f] $POSSIBLE_BUILD_SYSTEMS $POSSIBLE_BUILD_TYPES $POSSIBLE_BUILD_ARCHS [fuzz|fuzzer]"
+  echo
+  echo "Creates a build directory in <dawn>/out using either GN or CMake, then"
+  echo "updates the '<dawn>/out/active' symlink to point to the build directory."
+  echo
+  echo "Options:"
+  echo "  -h, --help    Print this help, then exit"
+  echo "  -v, --verbose Print the generate command"
+  echo "  -f, --force   Force rewrite of args.gn with specified options,"
+  echo "                even if args.gn exists"
+  echo "  gn            Create GN build configuration"
+  echo "  cmake         Create CMake build configuration"
+  echo "  release       Make a release build"
+  echo "  debug         Make a debug build"
+  echo " "
+  echo "  fuzz, fuzzer  Build fuzzers. Forces Clang to be used"
+  echo "  gccrt         Use GCC 14 runtime with clang"
+  echo "  install       Install to out/install (cmake only)"
+  echo "  native        Target the machine you're running on"
+  echo "  x86           Target a 32-bit x86 (adds -m32 to compiler flags)"
+  echo "  local         Use local compilation instead of remote"
+  echo "  remoteexec    Use siso to improve compile time (the default)"
+  echo "  shared        Build shared libs (cmake only)"
+  echo "  ubsan         Enable undefined behaviour sanitizer"
+  echo "  ndk=\$NDK_DIR The Android NDK root directory."
+  echo "                Targets Android. Only usable with cmake."
+  echo "  abi=\$ANDROID_API"
+  echo "                The Android target ABI. Default is arm64-v8a"
+  echo " "
+  if [[ ! -z "$1" ]]; then
+    echo
+    echo "error: $1"
+  fi
+  exit 1
+}
+
+function set_build_system() {
+  if [[ ! -z "$BUILD_SYSTEM" ]]; then
+    echo "conflicting build systems $BUILD_SYSTEM and $1"
+    exit 1
+  fi
+  BUILD_SYSTEM=$1
+}
+
+function set_build_type() {
+  if [[ ! -z "$BUILD_TYPE" ]]; then
+    echo "conflicting build types $BUILD_TYPE and $1"
+    exit 1
+  fi
+  BUILD_TYPE=$1
+}
+
+function set_build_arch() {
+  if [[ ! -z "$BUILD_ARCH" ]]; then
+    echo "conflicting build architectures $BUILD_ARCH and $1"
+    exit 1
+  fi
+  BUILD_ARCH=$1
+}
+
+for arg in "$@"; do
+  lowered_arg=$(echo "$arg" | tr '[:upper:]' '[:lower:]') # lowercase
+  case $lowered_arg in
+    "gn")
+      set_build_system $lowered_arg
+    ;;
+    "cmake")
+      set_build_system $lowered_arg
+    ;;
+    "debug")
+      set_build_type $lowered_arg
+    ;;
+    "release")
+      set_build_type $lowered_arg
+    ;;
+    "x86")
+      set_build_arch $lowered_arg
+    ;;
+    "native")
+    ;;
+    "gccrt")
+      USE_GCC_RUNTIME=1
+    ;;
+    "fuzz" | "fuzzer")
+      BUILD_FUZZER=1
+    ;;
+    "--force" | "-f")
+      FORCE=1
+    ;;
+    "install")
+      INSTALL=1
+    ;;
+    "--verbose" | "-v")
+      VERBOSE=1
+    ;;
+    "remoteexec")
+      SISO=1
+    ;;
+    "local")
+      SISO=
+    ;;
+    "shared")
+      SHARED=1
+    ;;
+    "ubsan")
+      UBSAN=1
+    ;;
+    ndk=*)
+      ANDROID_NDK="${arg:4}"
+    ;;
+    abi=*)
+      ANDROID_ABI="${arg:4}"
+    ;;
+    "--help" | "-help" | "-h")
+      show_usage
+    ;;
+    *)
+      show_usage "unknown argument '$arg'"
+    ;;
+  esac
+done
+
+if [[ -z "$BUILD_SYSTEM" ]]; then
+  show_usage "build system $POSSIBLE_BUILD_SYSTEMS is required"
+fi
+
+if [[ -z "$BUILD_TYPE" ]]; then
+  show_usage "build type $POSSIBLE_BUILD_TYPES required"
+fi
+
+if [[ ( -n "$UBSAN" ) && ( "$BUILD_SYSTEM-$BUILD_TYPE" == "gn-debug" ) ]]; then
+  show_usage "the gn build does not support ubsan with debug builds: use a release build instead"
+fi
+
+if [[ -n "$ANDROID_NDK" ]]; then
+  if [[ "$BUILD_SYSTEM" != "cmake" ]]; then
+    show_usage "the Android build only works with cmake"
+  fi
+  if [[ -n "$BUILD_ARCH" ]]; then
+    show_usage "Don't specify a target CPU with the Android build"
+  fi
+  if ! grep "^Android NDK" <"$ANDROID_NDK/README.md" >/dev/null; then
+    show_usage "Invalid Android NDK directory: $ANDROID_NDK"
+  fi
+fi
+
+BUILD_DIR="$BUILD_SYSTEM-$BUILD_TYPE"
+if [[ -n "$ANDROID_NDK" ]]; then
+  BUILD_DIR+="-$ANDROID_ABI"
+elif [[ ! -z "$BUILD_ARCH" ]]; then
+  BUILD_DIR+="-$BUILD_ARCH"
+fi
+if [[ ! -z "$BUILD_FUZZER" ]]; then
+  BUILD_DIR+="-fuzz"
+fi
+if [[ ! -z "$UBSAN" ]]; then
+  BUILD_DIR+="-ubsan"
+fi
+
+function generate() {
+  pushd "$ROOT_DIR" > /dev/null
+    test -n "$VERBOSE" && echo mkdir -p "out/$BUILD_DIR"
+    mkdir -p "out/$BUILD_DIR"
+    rm -fr "out/active" || true
+    ln -s "$BUILD_DIR" "out/active"
+    test -n "$VERBOSE" && echo "$@"
+    "$@"
+  popd > /dev/null
+}
+
+case $BUILD_SYSTEM in
+  "gn")
+    GN_ARGS=""
+    GN_OPTIONS=""
+    GN_OPTIONS+=' --add-export-compile-commands=//*'
+    case $BUILD_TYPE in
+      "debug")
+        GN_ARGS+="is_debug=true"
+      ;;
+      "release")
+        GN_ARGS+="is_debug=false"
+      ;;
+      *)
+        show_usage "invalid build type '$BUILD_TYPE'"
+      ;;
+    esac
+    case $BUILD_ARCH in
+      "")
+      ;;
+      "x86")
+        GN_ARGS+=" target_cpu=\"x86\""
+      ;;
+      *)
+        show_usage "invalid build architecture '$BUILD_ARCH'"
+      ;;
+    esac
+    if [[ -n "$BUILD_FUZZER" ]]; then
+        GN_ARGS+=" use_libfuzzer=true"
+        GN_ARGS+=" tint_build_ir_binary=true"
+    fi
+    if [[ -n "$SISO" ]]; then
+        GN_ARGS+=" use_siso=true"
+        GN_ARGS+=" use_remoteexec=true"
+    else
+        GN_ARGS+=" use_siso=false"
+    fi
+    if [[ -n "$UBSAN" ]]; then
+        GN_ARGS+=" is_ubsan=true"
+    fi
+    GN_ARGS+=" use_clang_modules=false"
+    if [[ -z "$FORCE" && -f "$ROOT_DIR/out/$BUILD_DIR/args.gn" ]]; then
+      generate "gn" "gen" $GN_OPTIONS "out/active" # keep existing args
+    else
+      generate "gn" "gen" $GN_OPTIONS "out/active" "--args=$GN_ARGS"
+    fi
+  ;;
+  "cmake")
+    CXX_FLAGS=()
+    C_FLAGS=()
+    CMAKE_FLAGS=()
+    CMAKE_FLAGS+=("-DTINT_BUILD_GLSL_WRITER=1")
+    CMAKE_FLAGS+=("-DTINT_BUILD_HLSL_WRITER=1")
+    CMAKE_FLAGS+=("-DTINT_BUILD_MSL_WRITER=1")
+    CMAKE_FLAGS+=("-DTINT_BUILD_SPV_WRITER=1")
+    CMAKE_FLAGS+=("-DTINT_BUILD_WGSL_WRITER=1")
+    CMAKE_FLAGS+=("-DTINT_BUILD_SPV_READER=1")
+    CMAKE_FLAGS+=("-DDAWN_BUILD_NODE_BINDINGS=1")
+    CMAKE_FLAGS+=("-DCMAKE_CXX_COMPILER=clang++")
+    CMAKE_FLAGS+=("-DCMAKE_C_COMPILER=clang")
+    if [[ $USE_GCC_RUNTIME == 1 ]]; then
+        GCCRT_DIR=/usr/lib/gcc/x86_64-linux-gnu/14
+        if [[ ! -d $GCCRT_DIR ]]; then
+            echo "error: specified 'gccrt' but $GCCRT_DIR does not exist"
+            exit 1
+        fi
+        CXX_FLAGS+=("--gcc-install-dir=$GCCRT_DIR")
+    fi
+    if [[ -n "$BUILD_FUZZER" ]]; then
+        CMAKE_FLAGS+=("-DTINT_BUILD_FUZZERS=ON")
+        CMAKE_FLAGS+=("-DDAWN_BUILD_PROTOBUF=ON")
+        CMAKE_FLAGS+=("-DTINT_BUILD_IR_BINARY=ON")
+        CMAKE_FLAGS+=("-DDAWN_USE_BUILT_DXC=ON")  # TODO(b/348200364)
+    fi
+    if [[ -x $(command -v ccache) ]]; then
+      CMAKE_FLAGS+=("-DCMAKE_CXX_COMPILER_LAUNCHER=ccache")
+    fi
+    case $BUILD_TYPE in
+      "debug")
+        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=Debug")
+      ;;
+      "release")
+        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=RelWithDebInfo")
+      ;;
+      *)
+        show_usage "invalid build type '$BUILD_TYPE'"
+      ;;
+    esac
+    if [[ -n "$ANDROID_NDK" ]]; then
+      CMAKE_FLAGS+="-DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake"
+      CMAKE_FLAGS+="-DANDROID_ABI=$ANDROID_ABI"
+      CMAKE_FLAGS+="-DANDROID_PLATFORM=$ANDROID_PLATFORM"
+      CMAKE_FLAGS+="-DDAWN_USE_X11=OFF"
+      CMAKE_FLAGS+="-DDAWN_ENABLE_VULKAN=ON"
+      CMAKE_FLAGS+="-DDAWN_ENABLE_OPENGLES=ON"
+    else
+      case $BUILD_ARCH in
+        "")
+        ;;
+        "x86")
+          CXX_FLAGS+=("-m32")
+          C_FLAGS+=("-m32")
+        ;;
+        *)
+          show_usage "invalid build architecture '$BUILD_ARCH'"
+        ;;
+      esac
+    fi
+    if [[ -n "$UBSAN" ]]; then
+      CMAKE_FLAGS+=("-DDAWN_ENABLE_UBSAN=ON")
+    fi
+    if [[ -n "$INSTALL" ]]; then
+      CMAKE_FLAGS+=("-DCMAKE_INSTALL_PREFIX=out/install")
+      CMAKE_FLAGS+=("-DTINT_ENABLE_INSTALL=ON")
+      CMAKE_FLAGS+=("-DDAWN_ENABLE_INSTALL=ON")
+
+      # With Ninja, avoid the need to relink at install time
+      # with installed directory location.
+      CMAKE_FLAGS+=("-DCMAKE_BUILD_WITH_INSTALL_RPATH=ON")
+
+      # Build Dawn as a monolithic library.  This is incompatible
+      # with BUILD_SHARED_LIBS=ON
+      CMAKE_FLAGS+=("-DBUILD_SHARED_LIBS=OFF")
+      if [[ -n "$SHARED" ]]; then
+        CMAKE_FLAGS+=("-DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED")
+      else
+        CMAKE_FLAGS+=("-DDAWN_BUILD_MONOLITHIC_LIBRARY=STATIC")
+      fi
+    else
+      if [[ -n "$SHARED" ]]; then
+        CMAKE_FLAGS+=("-DBUILD_SHARED_LIBS=ON")
+      fi
+    fi
+    if [[ -n "$CXX_FLAGS" ]]; then
+        CMAKE_FLAGS+=("-DCMAKE_CXX_FLAGS='${CXX_FLAGS[@]}'")
+    fi
+    if [[ -n "$C_FLAGS" ]]; then
+        CMAKE_FLAGS+=("-DCMAKE_C_FLAGS='${C_FLAGS[@]}'")
+    fi
+    generate "cmake"             \
+             "-S" "."            \
+             "-B" "out/active"   \
+             "-GNinja"           \
+             "${CMAKE_FLAGS[@]}"
+  ;;
+  *)
+    echo "invalid build system '$BUILD_SYSTEM'"
+    show_usage
+  ;;
+esac

@@ -1,0 +1,140 @@
+Name
+
+    NV_deep_texture3D
+
+Name Strings
+
+    GL_NV_deep_texture3D
+
+Contact
+
+    Eric Werness, NVIDIA Corporation (ewerness 'at' nvidia.com)
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified Date:         April 12, 2010
+    Revision:                   1
+
+Number
+
+    424
+
+Dependencies
+
+    This extension is written against the OpenGL 3.2 specification (Core
+    Profile).
+
+Overview
+
+    Some applications require 3D textures that have a significant number of
+    slices, but less resolution in width and height. In the current spec, the
+    maximum value for the size of all three dimensions is specified by a
+    single value. This extension adds a second set of limits against which 3D
+    textures can be checked if an application needs deeper textures than would
+    be allowed by the symmetric texture limits.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev, GetIntegerv
+    and GetFloatv:
+
+        MAX_DEEP_3D_TEXTURE_WIDTH_HEIGHT_NV              0x90D0
+        MAX_DEEP_3D_TEXTURE_DEPTH_NV                     0x90D1
+
+Additions to Chapter 2 of the OpenGL 3.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 3.2 Specification (Rasterization)
+
+    (modify 3.8.1 Texture Image Specification on p. 141
+
+    (add to the discussion of the maximum allowable size of a 3D texture)
+
+    If the width and height of the texel array for a three-dimensional texture
+    are both less than pow(2, j-lod) + 2Bt where j is the log base 2 of
+    MAX_DEEP_3D_TEXTURE_WIDTH_HEIGHT_NV, then the depth may be up to pow(2,
+    m-lod) + 2Bt where m is the log base 2 of MAX_DEEP_3D_TEXTURE_DEPTH_NV.
+    The error INVALID_VALUE is generated if the specified image is too large
+    to be stored under any conditions.
+
+Additions to Chapter 4 of the OpenGL 3.2 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    (modify the discussion of FramebufferTexture in 4.4 on p. 228)
+    
+    If textarget is TEXTURE_3D, then level must be greater than or equal to zero
+    and less than or equal to log2 of the larger of the values of
+    MAX_3D_TEXTURE_SIZE and MAX_DEEP_3D_TEXTURE_DEPTH_NV.
+
+    ...
+
+    layer specifies the layer of a 2-dimensional image within a 3-dimensional
+    texture.  An INVALID_VALUE error is generated if layer is larger than the
+    larger of the value of MAX_DEEP_3D_TEXTURE_DEPTH_NV-1 and the value of
+    MAX_3D_TEXTURE_SIZE-1.
+
+Additions to Chapter 5 of the OpenGL 3.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 3.2 Specification (State and
+State Requests)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    (add to Table 6.37, p. 302)
+
+                                                    Minimum
+    Get Value                            Type  Get Command  Value  Description         Sec.  Attribute
+    ----------------------------         ----  ----------- ------- ------------------  ----- ---------
+    MAX_DEEP_3D_TEXTURE_WIDTH_HEIGHT_NV   Z+   GetIntegerv   64    maximum width and   3.8.1     -
+                                                                   height for deep 3D
+                                                                   textures
+    MAX_DEEP_3D_TEXTURE_DEPTH_NV          Z+   GetIntegerv   64    maximum depth for   3.8.1     -
+                                                                   deep 3D textures
+
+
+Issues
+
+    1) Does this spec require that the texture exposed actually be deep?
+
+    RESOLVED: No. The spec doesn't require that MAX_DEEP_3D_TEXTURE_DEPTH is
+    actually greater than MAX_DEEP_3D_TEXTURE_WIDTH_HEIGHT, though the spec is
+    pointless if that isn't the case.
+
+    2) Does the spec guarantee that the entire 3D texture can be bound for
+       rendering?
+
+    RESOLVED: No. The framebuffer may be unsupported at the implementation's
+    discretion. Rendering to a single layer at a time may be supported even if
+    binding the entire 3D texture is unsupported. This is the case with the
+    initial NVIDIA implementation.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+    1               ewerness  Internal spec development.

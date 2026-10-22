@@ -1,0 +1,6 @@
+spv.descriptorHeap.HeapNotArray.error.comp
+ERROR: 0:3: 'img' : layout(descriptor_heap) decorated variable could only be declared as an array. 
+ERROR: 1 compilation errors.  No code generated.
+
+
+SPIR-V is not generated for failed compile or link

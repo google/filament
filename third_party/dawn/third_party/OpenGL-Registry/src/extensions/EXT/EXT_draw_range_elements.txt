@@ -1,0 +1,139 @@
+Name
+
+    EXT_draw_range_elements
+
+Name Strings
+
+    GL_EXT_draw_range_elements
+
+Version
+
+    $Date: 1997/5/19
+
+Number
+
+    112
+
+Proposal:
+Add a new vertex array rendering command:
+
+void glDrawRangeElementsEXT(
+        GLenum mode,
+        GLuint start,
+        GLuint end,
+        GLsizei count,
+        GLenum type,
+        const void *indices
+);
+
+Add two implementation-dependent limits for describing data size
+recommendations for glDrawRangeElementsEXT:
+
+GL_MAX_ELEMENTS_VERTICES_EXT  0x80E8
+GL_MAX_ELEMENTS_INDICES_EXT   0x80E9
+
+glDrawRangeElementsEXT is a restricted form of glDrawElements.  All
+vertices referenced by indices must lie between start and end inclusive.
+Not all vertices between start and end must be referenced, however
+unreferenced vertices may be sent through some of the vertex pipeline
+before being discarded, reducing performance from what could be achieved
+by an optimal index set.  Index values which lie outside the range will
+cause implementation-dependent results.
+
+glDrawRangeElementsEXT may also be further constrained to only operate
+at maximum performance for limited amounts of data.  Implementations may
+advertise recommended maximum amounts of vertex and index data using the
+GL_MAX_ELEMENTS_VERTICES_EXT and GL_MAX_ELEMENTS_INDICES_EXT enumerants.
+If a particular call to glDrawRangeElementsEXT has (end-start+1) greater
+than GL_MAX_ELEMENTS_VERTICES_EXT or if count is greater than
+GL_MAX_ELEMENTS_INDICES_EXT then the implementation may be forced to
+process the data less efficiently than it could have with less data.  An
+implementation which has no effective limits can advertise the maximum
+integer value for the two enumerants.  An implementation must always
+process a glDrawRangeElementsEXT call with valid parameters regardless
+of the amount of data passed in the call.
+
+GL_INVALID_VALUE will be returned if end is less than start.  Other
+errors are as for glDrawElements.
+
+Motivation:
+Rendering primitives from indexed vertex lists is a fairly common
+graphics operation, particularly in modeling applications such as VRML
+viewers.  OpenGL 1.1 added support for the glDrawElements API to allow
+rendering of primitives by indexing vertex array data.
+
+The specification of glDrawElements does not allow optimal performance
+for some OpenGL implementations, however.  In particular, it has no
+restrictions on the number of indices given, the number of unique
+vertices referenced nor a direct indication of the set of unique
+vertices referenced by the given indices.  This forces some OpenGL
+implementations to walk the index data given, building up a separate
+list of unique vertex references for later use in the pipeline.
+Additionally, since some OpenGL implementations have internal
+limitations on how many vertices they can deal with simultaneously the
+unbounded nature of glDrawElements requires the implementation to be
+prepared to segment the input data and do multiple passes.  These
+preprocessing steps can consume a significant amount of time.
+
+Such preprocessing can be done once and stored when building display
+lists but this only works for objects whose geometry does not change.
+Applications using morphing objects or other objects that are changing
+dynamically cannot take advantage of display lists and so must pay the
+preprocessing penalty on every redraw.
+
+glDrawRangeElementsEXT is designed to avoid the preprocessing steps
+which may be necessary for glDrawElements.  As such it does not have the
+flexibility of glDrawElements but it is sufficiently functional for a
+large class of applications to benefit from its use.
+glDrawRangeElementsEXT enhances glDrawElements in two ways:
+1.  The set of unique vertices referenced by the indices is explicitly
+indicated via the start and end parameters, removing the necessity to
+determine this through examination of the index data.  The
+implementation is given a contiguous chunk of vertex data that it can
+immediately begin streaming through the vertex pipeline.
+2.  Recommended limits on the amount of data to be processed can be
+indicated by the implementation through GL_MAX_ELEMENTS_VERTICES_EXT and
+GL_MAX_ELEMENTS_INDICES_EXT.  If an application respects these limits it
+removes the need to split the incoming data into multiple chunks since
+the maximums can be set to the optimal values for the implementation to
+handle in one pass.
+
+The first restriction isn't particularly onerous for applications since
+they can always call glDrawElements in the case where they cannot or do
+not know whether they can call glDrawRangeElementsEXT.  Performance
+should be at least as good as it was calling glDrawElements alone.  The
+second point isn't really a restriction as glDrawRangeElementsEXT
+doesn't fail if the data size limits are exceeded.
+
+OpenGL implementation effort is also minimal.  For implementations where
+glDrawElements performance is not affected by preprocessing
+glDrawRangeElementsEXT can be implemented simply as a call to
+glDrawElements and the maximums set to the maximum integer value.  For
+the case where glDrawElements is doing non-trivial preprocessing there
+is probably already an underlying routine that takes consecutive, nicely
+sectioned index and vertex chunks that glDrawRangeElementsEXT can plug
+directly in to.
+
+Design Decisions:
+The idea of providing a set of vertex indices along with a set of
+element indices was considered but dropped as it still may require some
+preprocessing, although there is some reduction in overhead from
+glDrawElements.  The implementation may require internal vertex data to
+be contiguous, in which case a gather operation would have to be
+performed with the vertex index list before vertex data could be
+processed.  It is expected that most apps will keep vertex data for
+particular elements packed consecutively anyway so the added flexibility
+of a vertex index list would potentially impose overhead with little
+expected benefit.  In the case where a vertex index list really is
+necessary to avoid performance penalties due to sparse vertex usage
+glDrawElements should provide performance similar to what such an API
+would have.
+
+The restriction on maximum data size cannot easily be lifted without
+potential performance implications.  For implementations which have an
+internal maximum vertex buffer size it would be necessary to break up
+large data sets into multiple chunks.  Splitting indexed data requires
+walking the indices and gathering those that fall within particular
+chunks into sets for processing, a time-consuming operation.  Splitting
+the indices themselves is easier but still requires some processing to
+handle connected primitives that cross a split.

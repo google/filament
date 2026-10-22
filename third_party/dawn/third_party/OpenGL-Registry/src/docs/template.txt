@@ -1,0 +1,723 @@
+* Template for specifying an extension to OpenGL, OpenGL ES,
+* and related APIs.
+*
+* Last Modified Date: January 20, 2010
+* Revision: 8
+*
+* Document Source: the OpenGL Extension Registry at
+*
+*   http://www.opengl.org/registry/
+*
+* and the OpenGL ES Extension Registry at
+*
+*   http://www.khronos.org/registry/gles/
+*
+* Notes:
+*
+*   Comments in this template document are preceded by an asterisk.
+*   This entire section is one big comment.
+*
+*   Extension documents are simple fixed-width ASCII text, up to 132
+*   characters wide. Here is a line of 132 characters for calibration:
+*
+*00000000011111111112222222222333333333344444444445555555555666666666677777777778888888888999999999900000000001111111111222222222233
+*
+*   Lines should end with a hard newline. Do not assume that any
+*   special formatting or interpretation will be made by software
+*   displaying the specification.
+*
+*   Although the extension file is formally 132 characters wide,
+*   text is limited to 72 characters, and only tables that require
+*   more than 72 character width extend to the full file width.
+*   Here is a line of 72 characters for calibration:
+*
+*00000000011111111112222222222333333333344444444445555555555666666666677
+*
+*   The extension is completely described by its specification, mostly
+*   in the "Additions to <section name>" sections. These sections are
+*   written as though the additions described by previous extensions
+*   had actually been made to specified portions of the OpenGL, OpenGL
+*   ES, OpenGL Shading Language, GLX, EGL, or other Specification
+*   documents.
+*
+*   The "Dependencies on Extension" sections are used to describe how
+*   the extension semantics are modified if a previous extension is not
+*   supported, or to indicate that a previous extension must be
+*   supported.
+*
+*   When changes are made to the contents of a table, new, changed,
+*   and removed table entries must be identified. All fields of
+*   changed table entires should be included, even if not all fields
+*   have changed.
+*
+*   An extension specification is always written against given
+*   version(s) of Specifications, which must be identified in the
+*   Dependencies section. That is, the references and modifications in
+*   the extension are applied to that version of the Specification.
+*
+*   The latest Khronos-approved version of Specifications should be
+*   used when writing an extension. If it is possible for the extension
+*   to be used with older versions of a Specification, this should also
+*   be described in the Dependencies section.
+*
+*   For consistency with OpenGL and ES Specifications, extension
+*   documents omit gl prefixes on command names, GL_ prefixes on
+*   token names, and GL prefixes on type names. Vendor-specific
+*   suffixes are included in these files, however. The terms
+*   "GL" and "ES" below should be taken to refer to OpenGL and
+*   OpenGL ES, respectively.
+*
+*   To be consistent with the GLX Specification, however, extensions
+*   defining GLX functionality include glX prefixes on command names
+*   and GLX_ prefixes on token names. Similarly, WGL extensions
+*   include wgl and WGL_ prefixes on command and token names.
+*
+*   An extension document should by preference include all the
+*   sections in this template unless a particular section indicates
+*   its inclusion is optional. If there is no text in a section,
+*   this is indicated by the word "None", such as:
+*
+*	Dependencies
+*
+*	    None
+*
+*   While this may appear excessively verbose, the purpose is to ensure
+*   that extension authors document all affected parts of Specifications.
+*   An exception is that headers for sections of Specifications that
+*   are not altered by the extension may be omitted, once the extension
+*   has been completed. Thus for example a GLX extension need not
+*   retain "Changes to Chapter <N> of the OpenGL 1.X Specification"
+*   headers, and an OpenGL extension that does not affect per-vertex
+*   processing in any way need not retain "Changes to Chapter 2...".
+*
+*   Lower-case or numeric subscripts of upper-case variables are
+*   simply appended to the variable. For example "R subscript t"
+*   is written as Rt. If it is not easy to distinguish the variable
+*   from the subscript, an underbar is used to separate them. For
+*   example, "R subscript T" is written as R_T.
+*
+*   Multiplication is indicated with an asterisk, not by adjacency
+*   of two variables.
+*
+*   In text, parameter names are distinguished by being surrounded
+*   with angle brackets. For example, the pname parameter to
+*   TexParameter is written as <pname>.
+*
+*   Math symbols (such as the 'tau', 'lambda', and 'rho' defined
+*   by the texturing section) should be completely written out
+*   in ASCII as described, rather than assuming a non-ASCII
+*   character set.
+*
+*   The template proper follows.
+
+************************************************************************
+
+Name
+
+    *	The formal name of the extension. The prefix of the name is a
+    *	vendor-specific tag. This is a short, capitalized string unique
+    *	to that vendor, such as "SGI" and "IBM" for those respective
+    *	companies. The prefix may also be "EXT" is two or more vendors
+    *	have agreed to support the extension, "ARB" if the OpenGL ARB
+    *	Working Group has voted to approve the extension, "OES" is the
+    *	OpenGL ES Working Group has voted to approve the extension,
+    *	and "KHR" if the EGL Working Group has voted to approve
+    *	the extension.
+    *
+    *	Some vendors use an additional convention where the vendor
+    *	tag may be followed by "S" to indicate an extension
+    *	only supported on a subset of their supported platforms,
+    *	and may be followed by an "X" to indicate an experimental
+    *	extension, which may be changed or withdrawn in the future.
+    *
+    *	The prefix is separated from the body of the name by an
+    *	underscore. Words within the name are also separated by
+    *	underscores. There is no capitalization used in the body of the
+    *	name. For example:
+
+    *	Name
+    *
+    *	    SGI_new_extension
+
+Name Strings
+
+    *	Extensions may apply to several different APIs, and extension
+    *	names are prefixed accordingly. The possible categories are:
+    *
+    *	Extension of	String query function	    Name prefixed by
+    *	------------	---------------------	    ----------------
+    *	GL and/or ES	glGetString		    GL_
+    *	GLU		gluGetString		    GLU_
+    *	GLX		glXQueryExtensionsString    GLX_
+    *	EGL		eglQueryString		    EGL_
+    *	WGL		glGetString,		    WGL_
+    *			wglGetExtensionsStringEXT(*)
+    *	AGL		???			    ???_
+    *
+    *	(*) Note: WGL extension strings are returned by both glGetString
+    *	and (if the WGL_EXT_extensions_string extension is supported) by
+    *	wglGetExtensionsStringEXT.
+    *
+    *	For example, an SGI-specific extension which adds entry points to
+    *	both GLX and OpenGL would be listed as:
+
+    *	Name Strings
+    *
+    *	    GL_SGI_new_extension
+    *	    GLX_SGI_new_extension
+
+    *	A multivendor extension which adds an entry point to WGL would be
+    *	listed as:
+
+    *	Name Strings
+    *
+    *	    WGL_EXT_new_extension
+
+    *	The name strings are included in header files, and are returned
+    *	by the string query functions as shown in the table above.
+    *	In most cases the Name String is simply the Name prefixed
+    *	by the relevant API.
+
+Contact
+
+    *	Name, company, and email address of people responsible for the
+    *	extension. We suggest using 'at' instead of '@' in email
+    *	addresses, to help prevent spam. For multivendor extensions,
+    *	contacts from each vendor supporting the extension are preferred.
+    *	A backup contact, in case the principal moves on, will be
+    *	helpful. Example:
+
+    *	Contact
+    *
+    *	    Jon Leech, Khronos (jon 'at' alumni.caltech.edu)
+
+Contributors
+
+    *	Name and company of other people who helped develop the
+    *	extension. Credit may be given to an entire Working
+    *	Group if contributions are too diffuse.
+
+    *	Contributors
+    *	    Members of the Khronos ARB-ES Convergence TSG
+
+Status
+
+    *	If the specification is incomplete, the Status section should
+    *	be something like
+    *
+    *	    XXX - Not complete yet. Do not ship!!!
+    *
+    *	to indicate that nobody should ship the extension in its
+    *	current, unfinished state. Once it is complete, Status should be
+    *	changed to "Complete". For extensions approved by Khronos, this
+    *	should be extended to note when the extension was approved by
+    *	the relevant Working Group(s) and by the Khronos Promoters.
+    *
+    *	Once the extension ships, its status should be changed to
+    *	indicate this, as well as what the version number at shipping
+    *	time is. Finally, if an extension is withdrawn (or never shipped
+    *	due to e.g. cancellation of a product), it should be marked
+    *	obsolete. Examples:
+
+    *	Status
+    *
+    *	    XXX - Not complete yet!!!
+
+    *	Status
+    *
+    *	    Complete. Approved by the Khronos Promoters on April 1, 2009.
+
+    *	Status
+    *
+    *	    Shipping (version Major.minor)
+
+    *	Status
+    *
+    *	    Obsolete
+
+Version
+
+    *	It's hard to generate good version numbers with version control
+    *	systems, since extension specs may live in many different source
+    *	trees. We now suggest including a manually-inserted date of last
+    *	modification and version number. These should be updated only
+    *	for meaningful changes to the extension, not just formatting.
+
+    *	Version
+    *
+    *	    Last Modified Date: January 20, 2010
+    *	    Revision: 8
+
+    *	If you do not include a date and version number when submitting
+    *	an extension to the registry, Khronos will generate one based on
+    *	the date the specification was received.
+
+Number
+
+    *	Extensions are numbered for documentation purposes. Each
+    *	extension should document its interactions with the core
+    *	Specification and with all other extensions (that are also
+    *	supported by the vendors shipping this extension) that have lower
+    *	numbers. For example, extension 3 should document its interactions
+    *	with the core document and (if any) with extensions 1 and 2.
+    *
+    *	The extension number has no meaning outside of the documentation.
+    *	In particular, it is not revealed to programmers who use OpenGL.
+    *	Extension numbers are assigned by Khronos when an extension is
+    *	submitted to the registry.
+    *
+    *	ARB and ES extensions follow separate numbering schemes from
+    *	vendor extensions. If an extension can be implemented against
+    *	both GL and ES, assign numbers from both registries.
+
+    Examples:
+
+    *	Number
+    *
+    *	    12
+
+    *	Number
+    *
+    *	    ARB Extension #12
+
+    *	Number
+    *
+    *	    ARB Extension #23
+    *	    OpenGL ES Extension #17
+
+Dependencies
+
+    *	List the oldest version of GL, ES, OpenGL Shading Language, GLX,
+    *	etc.) against which this extension can be implemented, as well
+    *	as the version and, if relevant, profile against which the
+    *	extension is written. Because specifications can be revised
+    *	after their initial release, affecting page and table numbering,
+    *	also include the release date of the specifications. It is
+    *	usually best to write the extension against the current
+    *	versions of Specifications even if it can be successfully
+    *	implemented against older versions).
+    *
+    *	Separately list all API profiles and extensions that must be
+    *	present for this extension to be implemented, and all extensions
+    *	whose presence or absence modifies the operation of this
+    *	extension.
+    *
+    *	If an extension can be implemented against both GL and ES,
+    *	document both requirements, and note if their are any
+    *	functionality differences (typically an extension which
+    *	works with both GL and ES will not support interactions
+    *	with GL features not present in ES in the ES version, but
+    *	it is still valuable to have a common extension spec).
+
+    *	Dependencies
+    *	    OpenGL 3.2 (either core or compatibility profiles) is
+    *	    required.
+    *
+    *	    This extension is written against the OpenGL 3.2
+    *	    (Core Profile) Specification (August 3, 2009).
+
+    *	Dependencies
+    *	    OpenGL 2.0 or OpenGL ES 2.0 are required.
+    *
+    *	    Some of the functionality of this extension is not supported
+    *	    when implemented against OpenGL ES 2.0.
+    *
+    *	    This extension is written against the OpenGL 2.0
+    *	    Specification (October 22, 2004).
+
+    *	Dependencies
+    *	    OpenGL 1.2 is required.
+    *
+    *	    ARB_texture_float affects the definition of this extension.
+    *
+    *	    This extension is written against the OpenGL 2.1
+    *	    Specification (May 16, 2008).
+
+Overview
+
+    *	What does the extension do?  What problem does it solve? This
+    *	can include background and rationale (unlike the specification
+    *	language proper). A common format is a single sentence
+    *	summarizing the extension, followed by greater levels of detail
+    *	which will help people understand the extension. Note that the
+    *	GL Specification explicitly does not include rationale, so the
+    *	overview is a good place to put it instead.
+
+IP Status
+
+    *	Document any known patents or other IP claims that may prohibit
+    *	royalty-free implementation of an extension, or impose other
+    *	constraints on implementations. It is better to write "No
+    *	known IP claims" rather than "None", since Khronos, or the
+    *	vendor for vendor extensions, may not know of relevant IP.
+    *
+    *	Examples:
+
+    *	IP Status
+    *
+    *	    ReallyBigCo has made unspecified IP claims against
+    *	    all implementations of this extension.
+
+    *	IP Status
+    *
+    *	    US Patent #7,654,321, owned by ReallyBigCo, may
+    *	    be infringed by implementations of this extension.
+
+    * (note: extensions which have been approved by the Khronos
+    * Promoters fall under the Khronos IP agreements, which
+    * offer mutual protections to the members who implement
+    * such extensions).
+
+    *	IP Status
+    *
+    *	    No known IP claims.
+
+New Procedures and Functions
+
+    *	List all the procedures and functions that are defined by this
+    *	extension. Each should be suffixed using the same string as was
+    *	chosen as the extension name prefix. All parameter names and
+    *	types must be included, including the return values of functions.
+    *	Follow the style used in the appropriate Specifications.
+    *	Example:
+
+    *	New Procedures and Functions
+    *
+    *	    void NewCommandEXT(int arg1, float arg2);
+
+New Types
+
+    *	List all new GL types defined by this extension. Include enough
+    *	information to define a common underlying C-language binding
+    *	definition on a per-architecture basis. For example, instead
+    *	of saying "GLhandleARB", say:
+
+    *	New Types
+    *
+    *	    typedef unsigned int GLhandleARB;
+
+New Tokens
+
+    *	This list should be complete. It should separate the new tokens
+    *	based on which procedures and parameters accept them, and
+    *	explicitly list those procedures and parameters. Token suffixes
+    *	must match the prefix chosen for the extension name. If
+    *	enumerant values have been assigned, include them; otherwise
+    *	list the values as "0x????". For example:
+
+    *	New Tokens
+    *
+    *	Accepted by the <pname> parameters of GetBooleanv, GetIntegerv,
+    *	GetInteger64v, GetFloatv, and GetDoublev:
+    *
+    *	    NEW_TOKEN_EXT		0x6042
+    *	    ANOTHER_TOKEN_EXT		0x????
+
+*   Now, for each section of the relevant Specification (GL, ES, GLX,
+*   EGL, etc.), show in detail all changes to the Specification
+*   document required to completely describe this extension. Changes
+*   should be written in the style of the specifications and should be
+*   phrased as changes to specific, identifiable parts of the document.
+*   In each section heading, include the version of the specification
+*   being modified. If an extension is being written against both GL
+*   and ES, it is usually best to show changes against the GL
+*   Specification, then summarize differences when implemented with
+*   ES in a "Dependencies" section following the changes (see below).
+
+Additions to Chapter 2 of the OpenGL 3.2 (Core Profile) Specification
+(OpenGL Operation)
+
+    *	Include any new command suffixes here (section 2.3)
+    *	Include any new error types here (section 2.5)
+
+Additions to Chapter 3 of the OpenGL 3.2 (Core Profile) Specification
+(Rasterization)
+
+Additions to Chapter 4 of the OpenGL 3.2 (Core Profile) Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+Additions to Chapter 5 of the OpenGL 3.2 (Core Profile) Specification
+(Special Functions)
+
+    *	List commands that are not included in display lists
+    *	(typically, Get* commands)
+
+Additions to Chapter 6 of the OpenGL 3.2 (Core Profile) Specification
+(State and State Requests)
+
+    *	The lists of state and implementation-dependent state are added
+    *	in the "New State" section. Add queries and new attributes here.
+
+Additions to Appendix A of the OpenGL 3.2 (Core Profile) Specification
+(Invariance)
+
+    *	If the utility of the extension would be increased by
+    *	specification of invariance relationships, note that here.
+
+Additions to Appendix D of the OpenGL 3.2 (Core Profile) Specification
+(Shared Objects and Multiple Contexts)
+
+    *	If object sharing behavior is affected by the extension,
+    *	describe that in the set of sharing rules in this section.
+
+************************************************************************
+
+*   If this is an OpenGL Shading Language extension, include a separate
+*   section for each affected chapter of the 1.50 (or specified version)
+*   Specification.
+
+Additions to Chapter 1 of the OpenGL Shading Language 1.50 Specification
+(Introduction)
+
+Additions to Chapter 2 of the OpenGL Shading Language 1.50 Specification
+(Overview of OpenGL Shading)
+
+Additions to Chapter 3 of the OpenGL Shading Language 1.50 Specification
+(Basics)
+
+Additions to Chapter 4 of the OpenGL Shading Language 1.50 Specification
+(Variables and Types)
+
+Additions to Chapter 5 of the OpenGL Shading Language 1.50 Specification
+(Operators and Expressions)
+
+Additions to Chapter 6 of the OpenGL Shading Language 1.50 Specification
+(Statements and Structure)
+
+Additions to Chapter 7 of the OpenGL Shading Language 1.50 Specification
+(Built-in Variables)
+
+Additions to Chapter 8 of the OpenGL Shading Language 1.50 Specification
+(Built-in Functions)
+
+Additions to Chapter 9 of the OpenGL Shading Language 1.50 Specification
+(Shading Language Grammar)
+
+Additions to Chapter 10 of the OpenGL Shading Language 1.50 Specification
+(Issues)
+
+************************************************************************
+
+*   If none of the window-system integration APIs are affected by
+*   this extension, indicate this by
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+*   Otherwise, for a WGL or AGL extension, include a description of how
+*   the extension affects those APIs. WGL and AGL don't have spec
+*   documents, but we still phrase these sections as "Changes to the
+*   Specification" in anticipation of specifications being written.
+
+Additions to the WGL Specification
+
+Additions to the AGL Specification
+
+************************************************************************
+
+*   For a GLX extension (since GLX has a formal Specification),
+*   include a separate section for each affected chapter of
+*   the GLX Specification:
+
+Additions to Chapter 1 of the GLX 1.4 Specification (Overview)
+
+Additions to Chapter 2 of the GLX 1.4 Specification (GLX Operation)
+
+Additions to Chapter 3 of the GLX 1.4 Specification
+(Functions and Errors)
+
+Additions to Chapter 4 of the GLX 1.4 Specification
+(Encoding on the X Byte Stream)
+
+Additions to Chapter 5 of the GLX 1.4 Specification (Extending OpenGL)
+
+Additions to Chapter 6 of the GLX 1.4 Specification (GLX Versions)
+
+************************************************************************
+
+*   Likewise for an EGL extension.
+
+Additions to Chapter 1 of the EGL 1.4 Specification (Overview)
+
+Additions to Chapter 2 of the EGL 1.4 Specification (EGL Operation)
+
+Additions to Chapter 3 of the EGL 1.4 Specification
+(EGL Functions and Errors)
+
+Additions to Chapter 4 of the EGL 1.4 Specification (Extending EGL)
+
+Additions to Chapter 5 of the EGL 1.4 Specification
+(EGL Versions and Enumerants)
+
+Additions to Chapter 6 of the EGL 1.4 Specification (Glossary)
+
+************************************************************************
+
+*   For an extension of any type which is to be supported by GLX indirect
+*   rendering, include additions to the GLX Protocol Specification.
+
+GLX Protocol
+
+    *	Add protocol here using the same format as the GLX protocol
+    *	document. Be sure to specify the values of enumerated types.
+    *
+    *	Use glXVendorPrivate for extended requests without a reply
+    *	(e.g., new GLX commands) :
+    *	    glXVendorPrivate
+    *
+    *		1   CARD8	opcode (X assigned)
+    *		1   16		GLX opcode
+    *		2   2+(n+p)/4	request length
+    *		4   CARD32	vendor-specific opcode
+    *		n   LISTofBYTE	vendor-specific data
+    *		p		unused, p=pad(n)
+    *
+    *	Make sure to reserve a vendor-specific opcode by request from
+    *	Khronos (just as enumerant values are assigned on request), then
+    *	define the layout of the vendor-specific data.
+    *
+    *	Use glXVendorPrivateWithReply for extended requests with a reply
+    *	(e.g., new gets for OpenGL):
+    *
+    *	    glXVendorPrivateWithReply
+    *
+    *		1   CARD8	opcode (X assigned)
+    *		1   17		GLX opcode
+    *		2   2+(n+p)/4	request length
+    *		4   CARD32	vendor-specific opcode
+    *		n   LISTofBYTE	vendor-specific data
+    *		p		unused, p=pad(n)
+    *	=>
+    *		1	1	reply
+    *		1		unused
+    *		2   CARD16	sequence number
+    *		4   n		reply length
+    *		24  LISTofBYTE	returned data
+    *		4*n LISTofBYTE	more returned data
+    *
+    *	This is similar to glXVendorPrivate except you also need to
+    *	define the layout of the returned data.
+    *
+    *	For extended OpenGL commands, be sure to specify whether it is a
+    *	rendering command or a non-rendering command, and if it is a
+    *	rendering command, whether or not it can be large.
+    *
+    *	To specify an extended visual attribute, specify a property
+    *	type/property value pair to use with glXGetVisualConfigs.
+
+    ********************************************************************
+
+Dependencies on GL and ES profiles, versions, and other extensions
+
+    *	Separately list each interaction which affects the behavior
+    *	of this extension depending on which other extensions
+    *	are present or on which version of Specifications this
+    *	extension is implemented against. Examples:
+
+    *	Dependencies on ARB_texture_float
+    *
+    *	    If ARB_texture_float is not supported, then
+    *	    delete all references to the R*F* pixel formats.
+
+    *	Dependencies on OpenGL ES
+    *
+    *	    If implemented for OpenGL ES, this extension
+    *	    behaves as specified, except:
+    *
+    *	    - Ignore all references to display lists and
+    *	      immediate mode, including changes to section 5.4.
+    *	    - Ignore all references to GLX and GLX Protocol.
+
+Errors
+
+    *	This list summarizes all possible errors generated by the
+    *	extension and should be complete (however, errors are best
+    *	described in the extension body text as well).
+
+New State
+
+    *	Include modifications to the state tables in chapter 6 of the
+    *	GL and/or ES Specifications (other Specifications do not
+    *	have state tables). For each affected table, identify the
+    *	table and describe all new or modified state values in the
+    *	format of that table. Client state (for e.g. vertex arrays or
+    *	pixel packing parameters) should have "client" listed in the
+    *	Attribute column. Example:
+
+    *	Changes to table 6.99, p. 516 (Funky Geometry State)
+    *
+    *					Initial
+    *	Get Value Type	Get Command	Value	Description Sec.    Attribute
+    *	--------- ----	-----------	------- ----------- ----    ---------
+    *	RADIUS	  R	GetFloatv	1.0	Disk radius 2.6     vertex
+
+New Implementation Dependent State
+
+    *	Describe all implementation dependent state in the same
+    *	fashion. Example:
+
+    *	(Changes to table 6.100, p. 518 (Implementation-Dependent State)
+    *
+    *					Minimum
+    *	Get Value   Type    Get Command Value	Description Sec.    Attribute
+    *	---------   ----    ----------- ------- ----------- ----    ---------
+    *	MAX_DISKS   Z+	    GetIntegerv 1000	Max. # of   2.5      -
+    *						disks.
+
+Sample Code
+
+    *	For complex extensions, it may be worthwhile to include
+    *	code samples of how to use the extension.
+
+Conformance Tests
+
+    *	If a conformance test is defined for the extension,
+    *	summarize its basic purpose, if not necessarily its
+    *	source code, here. If no test has been defined, note that
+    *	they are needed.
+
+Issues
+
+    *	List remaining open issues, or closed issues whose resolution
+    *	set a precedent or was otherwise especially interesting.
+    *	Briefly describe each issue, options considered, the choice
+    *	made, and the reason for that choice. The Issues section
+    *	documents motivation, rationale, etc. while not being a
+    *	normative part of the extension. We suggest a numerically
+    *	order list so that issues can refer to other issues.
+    *
+    *	We now recommend placing the Issues list near the end of
+    *	the extension, since it can grow very long yet is ancillary
+    *	to the specification itself.
+
+Revision History
+
+    *	Include important changes in the evolution of the extension.
+    *	It's especially important to include this section if the
+    *	extension is modified after a version has been shipped.
+    *
+    *	Example (and actual revision history of the template):
+
+*   Revision 8, 2010/01/20
+*     - Minor updates for completeness and consistency. Push updated
+*	template to the public Registry.
+*   Revision 7, 2009/12/07
+*     - Generalize template to allow for ES and GL extensions
+*	and change references from SGI to Khronos as the
+*	Registry owner.
+*   Revision 6, 2006/10/09
+*     - Move registry URL to www.opengl.org.
+*   Revision 5, 2004/06/22
+*     - Update template to allow OpenGL Shading Language and EGL
+*	extensions. Add "Sample Code" section. Include more examples
+*	under "IP Status". Add the template's revision history.
+*	Add state table examples. Cleanup overall formatting to make
+*	clear what are the section headers which must be present,
+*	in contrast to the examples which are just part of this
+*	template. Add document source URL.
+*   Revision 4, 2003/12/19
+*     - Add "New Types" section.
+*   Revision 3, 2000/04/26
+*     - Add "Author Revision" field to Version section, instead of
+*	relying on source code control versions.

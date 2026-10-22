@@ -1,0 +1,350 @@
+cmake_minimum_required(VERSION 3.19)
+project(filamentapp C ASM)
+
+if (FILAMENT_SKIP_SAMPLES)
+    return()
+endif()
+
+set(TARGET filamentapp)
+set(PUBLIC_HDR_DIR include)
+
+# MeshAssimp depends on assimp and on filamat, neither of which is available for WASM. The samples
+# that use it are host-only anyway.
+if (WASM)
+    set(FILAMENTAPP_HAS_ASSIMP FALSE)
+else()
+    set(FILAMENTAPP_HAS_ASSIMP TRUE)
+endif()
+
+# SDL and the civetweb-based remote web UI are desktop-only. ImGui, on the other hand, is also
+# needed for WASM: batch (automation) mode is driven from the ImGui callback.
+if (IS_HOST_PLATFORM)
+    set(FILAMENTAPP_HAS_SDL TRUE)
+    set(FILAMENTAPP_HAS_WEB_UI TRUE)
+else()
+    set(FILAMENTAPP_HAS_SDL FALSE)
+    set(FILAMENTAPP_HAS_WEB_UI FALSE)
+endif()
+
+if (IS_HOST_PLATFORM OR WASM)
+    set(FILAMENTAPP_HAS_IMGUI TRUE)
+else()
+    set(FILAMENTAPP_HAS_IMGUI FALSE)
+endif()
+
+set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
+set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
+set(RESOURCE_DIR  "${GENERATION_ROOT}/generated/resources")
+set(MATERIAL_DIR  "${GENERATION_ROOT}/generated/material")
+
+# ==================================================================================================
+# Headers, sources, libraries, and resources.
+# ==================================================================================================
+
+set(PUBLIC_HDRS
+        include/filamentapp/AssetLoader.h
+        include/filamentapp/AssetWriter.h
+        include/filamentapp/DesktopAssetLoader.h
+        include/filamentapp/DesktopAssetWriter.h
+        include/filamentapp/Config.h
+        include/filamentapp/Cube.h
+        include/filamentapp/Grid.h
+        include/filamentapp/FilamentApp.h
+        include/filamentapp/FilamentApp2.h
+        include/filamentapp/HeadlessDisplayManager.h
+        include/filamentapp/IBL.h
+        include/filamentapp/IcoSphere.h
+        include/filamentapp/NativeWindowHelper.h
+        include/filamentapp/Sphere.h
+)
+
+set(SRCS
+        src/Cube.cpp
+        src/DesktopAssetLoader.cpp
+        src/DesktopAssetWriter.cpp
+        src/Grid.cpp
+        src/FilamentApp.cpp
+        src/FilamentApp2.cpp
+        src/display_managers/HeadlessDisplayManager.cpp
+        src/IBL.cpp
+        src/IcoSphere.cpp
+        src/Sphere.cpp
+        src/PlatformHelper.cpp
+        src/PlatformHelper.h
+        include/filamentapp/DisplayManager.h
+        include/filamentapp/AppEvent.h
+        src/FilamentAppGui.h
+        src/FilamentAppGui.cpp
+)
+
+if (FILAMENTAPP_HAS_ASSIMP)
+    list(APPEND PUBLIC_HDRS
+            include/filamentapp/MeshAssimp.h
+    )
+    list(APPEND SRCS
+            src/MeshAssimp.cpp
+    )
+endif()
+
+if (IS_HOST_PLATFORM)
+    list(APPEND PUBLIC_HDRS
+            include/filamentapp/SDLDisplayManager.h
+            include/filamentapp/HtmlDisplayManager.h
+    )
+    list(APPEND SRCS
+            src/display_managers/SDLDisplayManager.cpp
+            src/display_managers/HtmlDisplayManager.cpp
+    )
+endif()
+
+if (WASM)
+    list(APPEND PUBLIC_HDRS
+            include/filamentapp/EmscriptenDisplayManager.h
+    )
+    list(APPEND SRCS
+            src/display_managers/EmscriptenDisplayManager.cpp
+    )
+endif()
+
+if (FILAMENT_SUPPORTS_VULKAN)
+    list(APPEND SRCS
+            src/backend_platforms/VulkanPlatformHelperCommon.h
+            src/backend_platforms/VulkanPlatformHelperCommon.cpp
+    )
+endif()
+
+set(LIBS
+        camutils
+        filament
+        filament-iblprefilter
+        geometry
+        image
+        imageio-lite
+        ktxreader
+        math
+        stb
+        utils
+)
+
+if (FILAMENTAPP_HAS_ASSIMP)
+    # filamat is only needed by MeshAssimp, which builds materials at runtime.
+    list(APPEND LIBS
+        assimp
+        filamat
+    )
+endif()
+
+if (FILAMENTAPP_HAS_IMGUI)
+    list(APPEND LIBS
+        filagui
+        imgui
+    )
+endif()
+
+if (IS_HOST_PLATFORM)
+    list(APPEND LIBS
+        civetweb
+        imageio
+        sdl2
+    )
+endif()
+
+set(MATERIAL_SRCS
+        materials/aiDefaultMat.mat
+        materials/aiDefaultTrans.mat
+        materials/depthVisualizer.mat
+        materials/transparentColor.mat
+)
+
+if (APPLE)
+    list(APPEND SRCS src/display_managers/NativeWindowHelperCocoa.mm)
+    if (FILAMENT_SUPPORTS_VULKAN)
+        list(APPEND SRCS src/backend_platforms/VulkanPlatformHelperApple.mm)
+    endif()
+    if (FILAMENT_SUPPORTS_WEBGPU)
+        list(APPEND SRCS src/backend_platforms/WebGPUPlatformHelperApple.mm)
+    endif()
+    list(APPEND LIBS "-framework Cocoa -framework QuartzCore")
+endif()
+
+if (LINUX)
+    list(APPEND SRCS src/display_managers/NativeWindowHelperLinux.cpp)
+    if (FILAMENT_SUPPORTS_VULKAN)
+        list(APPEND SRCS src/backend_platforms/VulkanPlatformHelperLinux.cpp)
+    endif()
+    if (FILAMENT_SUPPORTS_WEBGPU)
+        list(APPEND SRCS src/backend_platforms/WebGPUPlatformHelperLinux.cpp)
+    endif()
+endif()
+
+if (WIN32)
+    list(APPEND SRCS src/display_managers/NativeWindowHelperWindows.cpp)
+
+    if (FILAMENT_SUPPORTS_VULKAN)
+        list(APPEND SRCS src/backend_platforms/VulkanPlatformHelperWindows.cpp)
+    endif()
+    if (FILAMENT_SUPPORTS_WEBGPU)
+        list(APPEND SRCS src/backend_platforms/WebGPUPlatformHelperWindows.cpp)
+    endif()
+
+    list(APPEND LIBS sdl2main)
+endif()
+
+if (ANDROID)
+    if (FILAMENT_SUPPORTS_VULKAN)
+        list(APPEND SRCS src/backend_platforms/VulkanPlatformHelperAndroid.cpp)
+    endif()
+    if (FILAMENT_SUPPORTS_WEBGPU)
+        list(APPEND SRCS src/backend_platforms/WebGPUPlatformHelperAndroid.cpp)
+    endif()
+endif()
+
+if (WASM AND FILAMENT_SUPPORTS_WEBGPU)
+    list(APPEND SRCS src/backend_platforms/WebGPUPlatformHelperWasm.cpp)
+endif()
+
+# ==================================================================================================
+# Compile resources
+# ==================================================================================================
+
+if (CMAKE_CROSSCOMPILING OR FILAMENT_IMPORT_PREBUILT_EXECUTABLES)
+    include(${IMPORT_EXECUTABLES})
+endif()
+
+file(MAKE_DIRECTORY ${MATERIAL_DIR})
+file(MAKE_DIRECTORY ${RESOURCE_DIR})
+
+set(RESOURCE_BINS)
+
+set (MATC_FLAGS ${MATC_BASE_FLAGS})
+if (FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "instanced")
+    set (MATC_FLAGS ${MATC_FLAGS} -PstereoscopicType=instanced)
+    add_definitions(-DFILAMENT_SAMPLES_STEREO_TYPE_INSTANCED)
+elseif (FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview")
+    set (MATC_FLAGS ${MATC_FLAGS} -PstereoscopicType=multiview)
+    add_definitions(-DFILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
+endif ()
+
+foreach (mat_src ${MATERIAL_SRCS})
+    get_filename_component(localname "${mat_src}" NAME_WE)
+    get_filename_component(fullname "${mat_src}" ABSOLUTE)
+    set(output_path "${MATERIAL_DIR}/${localname}.filamat")
+    add_custom_command(
+            OUTPUT ${output_path}
+            COMMAND matc ${MATC_FLAGS} -o ${output_path} ${fullname}
+            MAIN_DEPENDENCY ${mat_src}
+            DEPENDS matc
+            COMMENT "Compiling material ${mat_src} to ${output_path}"
+    )
+    list(APPEND RESOURCE_BINS ${output_path})
+endforeach()
+
+get_resgen_vars(${RESOURCE_DIR} filamentapp)
+
+add_custom_command(
+        OUTPUT ${RESGEN_OUTPUTS}
+        COMMAND resgen ${RESGEN_FLAGS} ${RESOURCE_BINS}
+        DEPENDS resgen ${RESOURCE_BINS}
+        COMMENT "Aggregating resources"
+)
+
+if (DEFINED RESGEN_SOURCE_FLAGS)
+    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
+endif()
+
+# CMake fails to invoke ar on Windows unless there is at least one C/C++ file in the library.
+set(DUMMY_SRC "${RESOURCE_DIR}/dummy.c")
+add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
+
+add_library(filamentapp-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
+set_target_properties(filamentapp-resources PROPERTIES FOLDER Samples/Resources)
+
+# Web Display Manager resources
+set(WEB_RESOURCE_DIR "${GENERATION_ROOT}/generated/web_resources")
+file(MAKE_DIRECTORY ${WEB_RESOURCE_DIR})
+
+set(WEB_RESOURCE_BINS
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/display_managers/web/index.html
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/display_managers/web/style.css
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/display_managers/web/app.js
+)
+
+get_resgen_vars(${WEB_RESOURCE_DIR} filamentapp_web_resources)
+
+add_custom_command(
+        OUTPUT ${RESGEN_OUTPUTS}
+        COMMAND resgen -t ${RESGEN_FLAGS} ${WEB_RESOURCE_BINS}
+        DEPENDS resgen ${WEB_RESOURCE_BINS}
+        COMMENT "Bundling display manager web resources"
+)
+
+if (DEFINED RESGEN_SOURCE_FLAGS)
+    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
+endif()
+
+set(WEB_DUMMY_SRC "${WEB_RESOURCE_DIR}/dummy.c")
+add_custom_command(OUTPUT ${WEB_DUMMY_SRC} COMMAND echo "//" > ${WEB_DUMMY_SRC})
+
+add_library(filamentapp-web-resources ${WEB_DUMMY_SRC} ${RESGEN_SOURCE})
+set_target_properties(filamentapp-web-resources PROPERTIES FOLDER Samples/Resources)
+
+# ==================================================================================================
+# Include and target definitions
+# ==================================================================================================
+
+include_directories(${PUBLIC_HDR_DIR})
+
+add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
+
+# For WASM the WebGPU headers come from the emdawnwebgpu port (--use-port in CMAKE_CXX_FLAGS)
+# rather than from a Dawn build, so there is no dawncpp_headers target to link.
+if (FILAMENT_SUPPORTS_WEBGPU AND NOT WASM)
+target_link_libraries(${TARGET} PRIVATE dawncpp_headers)
+endif()
+
+if (IS_HOST_PLATFORM)
+    target_link_libraries(${TARGET} PUBLIC ${LIBS} filamentapp-resources filamentapp-web-resources)
+else()
+    target_link_libraries(${TARGET} PUBLIC ${LIBS} filamentapp-resources)
+endif()
+
+target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
+target_include_directories(${TARGET} PRIVATE
+        ${GENERATION_ROOT}
+        ${ROOT_DIR}/imageio/include
+)
+
+if (FILAMENTAPP_HAS_ASSIMP)
+    target_include_directories(${TARGET} PRIVATE
+            ${ROOT_DIR}/../third_party/libassimp/include
+    )
+endif()
+
+# ==================================================================================================
+# Compiler flags
+# ==================================================================================================
+
+if (MSVC)
+else()
+    target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
+endif()
+
+if (FILAMENTAPP_HAS_ASSIMP)
+    target_compile_definitions(${TARGET} PRIVATE FILAMENTAPP_HAS_ASSIMP)
+endif()
+if (FILAMENTAPP_HAS_IMGUI)
+    target_compile_definitions(${TARGET} PRIVATE FILAMENTAPP_HAS_IMGUI)
+endif()
+if (FILAMENTAPP_HAS_SDL)
+    target_compile_definitions(${TARGET} PRIVATE FILAMENTAPP_HAS_SDL)
+endif()
+if (FILAMENTAPP_HAS_WEB_UI)
+    target_compile_definitions(${TARGET} PRIVATE FILAMENTAPP_HAS_WEB_UI)
+endif()
+
+
+# ==================================================================================================
+# Installation
+# ==================================================================================================
+install(TARGETS filamentapp filamentapp-resources ARCHIVE DESTINATION lib/${DIST_DIR} LIBRARY DESTINATION lib/${DIST_DIR})

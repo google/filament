@@ -1,0 +1,133 @@
+Name
+
+    SGIX_texture_add_env
+
+Name Strings
+
+    GL_SGIX_texture_add_env
+
+Version
+
+    $Date: 1996/08/27 19:55:58 $ $Revision: 1.6 $
+
+Number
+
+    69
+
+Dependencies
+
+    None
+
+Overview
+
+    New texture environment function ADD is supported with the following 
+    equation: 
+	 		Cv = Cf + CcCt + Cb
+
+    New function may be specified by calling glTexEnv with GL_ADD token.
+    New parameter Cb (bias) may be specified by calling TexEnv with
+    TEXTURE_ENV_BIAS_SGIX token. 
+    
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv, and
+    TexEnvfi when the <pname> parameter value is GL_TEXTURE_ENV_MODE
+
+	ADD
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev, and by the <pname> parameter of TexEnvfv, and TexEnvfi
+
+        TEXTURE_ENV_BIAS_SGIX
+
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+	None
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+
+				Texture Environment
+				-------------------
+
+	Base Texture Format	REPLACE  MODULATE  BLEND  DECAL  ADD  
+	-------------------	-------  --------  -----  -----  ---             
+
+	ALPHA			 ...      ...       ...    ...   Rv = Rf
+				 ...      ...       ...    ...   Gv = Gf
+				 ...      ...       ...    ...   Bv = Bf
+				 ...      ...       ...    ...   Av = AfAt
+
+	LUMINANCE		 ...      ...       ...    ...   Rv = Rf+LtRc+Rb
+				 ...      ...       ...    ...   Gv = Gf+LtGc+Gb
+				 ...      ...       ...    ...   Bv = Bf+LtBc+Bb
+				 ...      ...       ...    ...   Av = Af
+
+	LUMINANCE_ALPHA		 ...      ...       ...    ...   Rv = Rf+LtRc+Rb
+				 ...      ...       ...    ...   Gv = Gf+LtGc+Gb
+				 ...      ...       ...    ...   Bv = Bf+LtBc+Bb
+				 ...      ...       ...    ...   Av = AfAt
+
+	INTENSITY		 ...      ...       ...    ...   Rv = Rf+ItRc+Rb
+				 ...      ...       ...    ...   Gv = Gf+ItGc+Gb
+				 ...      ...       ...    ...   Bv = Bf+ItBc+Bb
+				 ...      ...       ...    ...   Av = Af+ItAc+Ab
+
+	RGB			 ...      ...       ...    ...   Rv = Rf+RtRc+Rb
+				 ...      ...       ...    ...   Gv = Gf+GtGc+Gb
+				 ...      ...       ...    ...   Bv = Bf+BtBc+Bb
+				 ...      ...       ...    ...   Av = Af
+
+	RGBA			 ...      ...       ...    ...   Rv = Rf+RtRc+Rb
+				 ...      ...       ...    ...   Gv = Gf+GtGc+Gb
+				 ...      ...       ...    ...   Bv = Bf+BtBc+Bb
+				 ...      ...       ...    ...   Av = AfAt
+
+
+	Table 3.11: Texture functions.
+
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    The value of the texture environment bias is queried by calling 
+    GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev with <pname> set to 
+    TEXTURE_ENV_BIAS_SGIX.
+
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    Get Value			Get Command		Type		Initial Value	Attribute
+    ---------                   -----------		----		-------------	---------
+    TEXTURE_ENV_BIAS_SGIX	GetFloatv		  C		(0, 0, 0, 0)    texture
+
+
+New Implementation Dependent State
+
+    None

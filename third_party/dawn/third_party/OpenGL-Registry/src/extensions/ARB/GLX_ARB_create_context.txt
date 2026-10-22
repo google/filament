@@ -1,0 +1,642 @@
+Name
+
+    ARB_create_context
+    ARB_create_context_profile
+
+Name Strings
+
+    GLX_ARB_create_context
+    GLX_ARB_create_context_profile
+
+Contact
+
+    Jon Leech (jon 'at' alumni.caltech.edu)
+
+Notice
+
+    Copyright (c) 2009-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+IP Status
+
+    No known IP claims.
+
+Status
+
+    Complete. Approved by the ARB on July 28, 2009.
+    Approved by the Khronos Board of Promoters on August 28, 2009.
+    Version 8 update approved by the ARB on September 24, 2009.
+
+Version
+
+    Version 10, 2012/03/28
+
+Number
+
+    ARB Extension #56 (GLX_ARB_create_context)
+    ARB Extension #75 (GLX_ARB_create_context_profile)
+
+Dependencies
+
+    GLX 1.4 is required.
+
+    Some of the capabilities of these extensions are only available with
+    contexts supporting OpenGL 3.0 or later.
+
+    The presence of an OpenGL 3.2 or later implementation determines
+    whether or not GLX_ARB_create_context_profile is required.
+
+Overview
+
+    With the advent of new versions of OpenGL which deprecate features
+    and/or break backward compatibility with older versions, there is a
+    need and desire to indicate at context creation which interface will
+    be used. These extensions add a new context creation routine with
+    attributes specifying the GL version and context properties
+    requested for the context, and additionally add an attribute
+    specifying the GL profile requested for a context of OpenGL 3.2 or
+    later. It also allows making an OpenGL 3.0 or later context current
+    without providing a default framebuffer.
+
+New Procedures and Functions
+
+    GLXContext glXCreateContextAttribsARB(
+                    Display *dpy, GLXFBConfig config,
+                    GLXContext share_context, Bool direct,
+                    const int *attrib_list);
+
+New Tokens
+
+    Accepted as an attribute name in <*attrib_list>:
+
+        GLX_CONTEXT_MAJOR_VERSION_ARB           0x2091
+        GLX_CONTEXT_MINOR_VERSION_ARB           0x2092
+        GLX_CONTEXT_FLAGS_ARB                   0x2094
+        GLX_CONTEXT_PROFILE_MASK_ARB            0x9126
+
+    Accepted as bits in the attribute value for GLX_CONTEXT_FLAGS_ARB in
+    <*attrib_list>:
+
+        GLX_CONTEXT_DEBUG_BIT_ARB               0x0001
+        GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB  0x0002
+
+    Accepted as bits in the attribute value for
+    GLX_CONTEXT_PROFILE_MASK_ARB in <*attrib_list>:
+
+        GLX_CONTEXT_CORE_PROFILE_BIT_ARB        0x00000001
+        GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB 0x00000002
+
+Additions to the OpenGL / WGL Specifications
+
+    None. This specification is written for GLX.
+
+Additions to the GLX 1.4 Specification
+
+    Replace the initial six paragraphs of section 3.3.7 "Rendering
+    Contexts", describing glXCreateNewContext, with:
+
+   "To create an OpenGL rendering context, call
+
+        GLXContext glXCreateContextAttribsARB(
+                        Display *dpy,
+                        GLXFBConfig config,
+                        GLXContext share_context,
+                        Bool direct,
+                        const int *attrib_list);
+
+    If glXCreateContextAttribsARB succeeds, it initializes the context
+    to the initial state defined by the OpenGL specification, and
+    returns a handle to it. This handle can be used to render to any GLX
+    surface (window, pixmap, or pbuffer) compatible with <config>,
+    subject to constraints imposed by the OpenGL API version of the
+    context.
+
+    If <share_context> is not NULL, then all shareable data (excluding
+    OpenGL texture objects named 0) will be shared by <share_context>,
+    all other contexts <share_context> already shares with, and the
+    newly created context. An arbitrary number of GLXContexts can share
+    data in this fashion. The server context state for all sharing
+    contexts must exist in a single address space.
+
+    Direct rendering is requested if <direct> is True, and indirect
+    rendering if <direct> is False. If <direct> is True, the
+    implementation may nonetheless create an indirect rendering context
+    if any of the following conditions hold:
+
+      * The implementation does not support direct rendering.
+      * <display> is not a local X server.
+      * Implementation-dependent limits on the number of direct
+        rendering contexts that can be supported simultaneously are
+        exceeded.
+
+    Use glXIsDirect (see below) to determine whether or not a request
+    for a direct rendering context succeeded.
+
+    <attrib_list> specifies a list of attributes for the context. The
+    list consists of a sequence of <name,value> pairs terminated by the
+    value None (0). If an attribute is not specified in <attrib_list>,
+    then the default value specified below is used instead.
+
+    <attrib_list> may be NULL or empty (first attribute is None), in
+    which case all attributes assume their default values as described
+    below.
+
+    The attribute names GLX_CONTEXT_MAJOR_VERSION_ARB and
+    GLX_CONTEXT_MINOR_VERSION_ARB request an OpenGL context supporting
+    the specified version of the API. If successful, the context
+    returned must be backwards compatible with the context requested.
+    Backwards compatibility is determined as follows:
+
+    If a version less than or equal to 3.0 is requested, the context
+    returned may implement any of the following versions:
+
+      * Any version no less than that requested and no greater than 3.0.
+      * Version 3.1, if the GL_ARB_compatibility extension is also
+        implemented.
+      * The compatibility profile of version 3.2 or greater.
+
+    If version 3.1 is requested, the context returned may implement
+    any of the following versions:
+
+      * Version 3.1. The GL_ARB_compatibility extension may or may not
+        be implemented, as determined by the implementation.
+      * The core profile of version 3.2 or greater.
+
+    If version 3.2 or greater is requested, the context returned may
+    implement any of the following versions:
+
+      * The requested profile of the requested version.
+      * The requested profile of any later version, so long as no
+        features have been removed from that later version and profile.
+
+    Querying the GL_VERSION string with glGetString (or the
+    GL_MAJOR_VERSION and GL_MINOR_VERSION values with glGetIntegerv, in
+    a 3.0 or later context) will return the actual version supported by
+    a context.
+
+    The default values for GLX_CONTEXT_MAJOR_VERSION_ARB and
+    GLX_CONTEXT_MINOR_VERSION_ARB are 1 and 0 respectively. In this
+    case, implementations will typically return the most recent version
+    of OpenGL they support which is backwards compatible with OpenGL 1.0
+    (e.g. 3.0, 3.1 + GL_ARB_compatibility, or 3.2 compatibility profile)
+
+    The attribute name GLX_CONTEXT_PROFILE_MASK_ARB requests an OpenGL
+    context supporting a specific <profile> of the API. If the
+    GLX_CONTEXT_CORE_PROFILE_BIT_ARB bit is set in the attribute value,
+    then a context implementing the <core> profile of OpenGL is
+    returned. If the GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB bit is
+    set, then a context implementing the <compatibility> profile is
+    returned. If the requested OpenGL version is less than 3.2,
+    GLX_CONTEXT_PROFILE_MASK_ARB is ignored and the functionality of the
+    context is determined solely by the requested version.
+
+    Querying the value of GL_CONTEXT_PROFILE_MASK with glGetIntegerv
+    will return the profile mask used to create the context. This query
+    is only supported in an OpenGL 3.2 or later context.
+
+    The default value for GLX_CONTEXT_PROFILE_MASK_ARB is
+    GLX_CONTEXT_CORE_PROFILE_BIT_ARB. All OpenGL 3.2 implementations are
+    required to implement the core profile, but implementation of the
+    compatibility profile is optional.
+
+    If the core profile is requested, then the context returned cannot
+    implement functionality defined only by the compatibility profile.
+
+    The attribute name GLX_CONTEXT_FLAGS_ARB specifies a set of flag
+    bits affecting the rendering context.
+
+    If the GLX_CONTEXT_DEBUG_BIT_ARB flag bit is set in
+    GLX_CONTEXT_FLAGS_ARB, then a <debug context> will be created. Debug
+    contexts are intended for use during application development, and
+    provide additional runtime checking, validation, and logging
+    functionality while possibly incurring performance penalties. The
+    additional functionality provided by debug contexts may vary
+    according to the implementation(fn). In some cases a debug context
+    may be identical to a non-debug context.
+        [fn: The ARB Ecosystem TSG is still defining the expected and
+        required features of debug contexts.]
+
+    If the GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB is set in
+    GLX_CONTEXT_FLAGS_ARB, then a <forward-compatible> context will be
+    created. Forward-compatible contexts are defined only for OpenGL
+    versions 3.0 and later. They must not support functionality marked
+    as <deprecated> by that version of the API, while a
+    non-forward-compatible context must support all functionality in
+    that version, deprecated or not.
+
+    The default value of GLX_CONTEXT_FLAGS_ARB is 0.
+
+    The attribute name GLX_RENDER_TYPE specifies the type of rendering
+    to be supported by the context. RGBA rendering is supported if the
+    attribute value is GLX_RGBA_TYPE, and color index rendering is
+    supported if the attribute value is GLX_COLOR_INDEX_TYPE. The
+    default value of GLX_RENDER_TYPE is GLX_RGBA_TYPE. OpenGL contexts
+    supporting version 3.0 or later of the API do not support color
+    index rendering, even if a color index <config> is available.
+
+    On failure glXCreateContextAttribsARB returns NULL and generates an
+    X error with extended error information. Conditions that cause
+    failure include:
+
+      * If the server context state for <share_context> exists in an
+        address space that cannot be shared with the newly created
+        context, if <share_context> was created on a different screen
+        than the one referenced by <config>, or if the contexts are
+        otherwise incompatible (for example, one context being
+        associated with a hardware device driver and the other with a
+        software renderer), BadMatch is generated.
+
+      * If the server does not have enough resources to allocate the new
+        context, BadAlloc is generated.
+
+      * If <share_context> is neither zero nor a valid GLX rendering
+        context, GLXBadContext is generated.
+
+      * If <config> is not a valid GLXFBConfig, GLXBadFBConfig is
+        generated.
+
+      * If attribute GLX_RENDER_TYPE does not describe a valid rendering
+        type, BadValue is generated.
+
+      * If attributes GLX_CONTEXT_MAJOR_VERSION_ARB and
+        GLX_CONTEXT_MINOR_VERSION_ARB, when considered together with
+        attributes GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB and
+        GLX_RENDER_TYPE, specify an OpenGL version and feature set that
+        are not defined, BadMatch is generated.
+
+        The defined versions of OpenGL at the time of writing are OpenGL
+        1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 2.0, 2.1, 3.0, 3.1, and 3.2.
+        Feature deprecation was introduced with OpenGL 3.0, so
+        forward-compatible contexts may only be requested for OpenGL 3.0
+        and above. Thus, examples of invalid combinations of attributes
+        include:
+
+          - Major version < 1 or > 3
+          - Major version == 1 and minor version < 0 or > 5
+          - Major version == 2 and minor version < 0 or > 1
+          - Major version == 3 and minor version > 2
+          - Forward-compatible flag set and major version < 3
+          - Color index rendering and major version >= 3
+
+        Because the purpose of forward-compatible contexts is to allow
+        application development on a specific OpenGL version with the
+        knowledge that the app will run on a future version, context
+        creation will fail if GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB is
+        set and the context version returned cannot implement exactly
+        the requested version.
+
+      * If attribute GLX_CONTEXT_PROFILE_MASK_ARB has no bits set; has
+        any bits set other than GLX_CONTEXT_CORE_PROFILE_BIT_ARB and
+        GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB; has more than one of
+        these bits set; or if the implementation does not support the
+        requested profile, then GLXBadProfileARB is generated.
+
+      * If <config> does not support compatible OpenGL contexts
+        providing the requested API major and minor version,
+        forward-compatible flag, and debug context flag, GLXBadFBConfig
+        is generated.
+
+      * If an attribute or attribute value in <attrib_list>
+        is not recognized (including unrecognized bits in bitmask
+        attributes), BadValue is generated.
+
+    3.3.7.1 Legacy Context Creation
+    -------------------------------
+
+    To create an OpenGL rendering context of version 2.1 or below, call
+
+        GLXContext glXCreateNewContext(
+                        Display *dpy,
+                        GLXFBConfig config,
+                        int render_type,
+                        GLXContext share_list,
+                        Bool direct);
+
+    Calling glXCreateNewContext is equivalent to the command sequence
+
+        int attrib_list[] = {
+            GLX_RENDER_TYPE, render_type,
+            None
+        };
+
+        glXCreateContextAttribs(dpy, config, share_list, direct, attrib_list);
+
+    The legacy context creation routines can only return OpenGL 3.1
+    contexts if the GL_ARB_compatibility extension is supported, and can
+    only return OpenGL 3.2 or greater contexts implementing the
+    compatibility profile. This ensures compatibility for existing
+    applications. However, 3.0-aware applications are encouraged to use
+    wglCreateContextAttribsARB instead of the legacy routines.
+
+    To determine if an OpenGL rendering context is direct, call..."
+
+
+    In the description of glXMakeContextCurrent, replace the text
+
+   "If either <draw> or <read> are not a valid GLX drawable, a
+    GLXBadDrawable error is generated."
+
+    with
+
+   "If either <draw> or <read> are not a valid GLX drawable, a
+    GLXBadDrawable error is generated, unless <draw> and <read> are both
+    None and the OpenGL version supported by <ctx> is 3.0 or greater. In
+    this case the context is made current without a default framebuffer,
+    as defined in chapter 4 of the OpenGL 3.0 Specification."
+
+    Replace the text
+
+   "To release the current context without assigning a new one, set
+    <ctx> to NULL and set <draw> and <read> to None. If <ctx> is NULL
+    and <draw> and <read> are not None, or if <draw> or <read> are set
+    to None and <ctx> is not NULL, then a BadMatch error will be
+    generated."
+
+    with
+
+   "To release the current context without assigning a new one, set
+    <ctx> to NULL and set <draw> and <read> to None. A BadMatch
+    error will be generated under any of the following conditions:
+
+      * <ctx> is NULL, and either or both of <draw> and <read> are not
+        None.
+      * <ctx> is not NULL, and exactly one of <draw> or <read> is None.
+      * <ctx> is not NULL, both <draw> or <read> are None, and the
+        OpenGL version supported by <ctx> is less than 3.0."
+
+    After the sentence
+
+   "The first time <ctx> is made current, the viewport and scissor
+    dimensions are set to the size of the draw drawable (as though
+    glViewport(0,0,w,h) and glScissor(0,0,w,h) were called, where <w>
+    and <h> are the width and height of the drawable, respectively)."
+
+    insert
+
+   "If the first time <ctx> is made current, it is without a default
+    framebuffer (e.g. both <draw> and <read> are None), then the
+    viewport and scissor regions are set as though glViewport(0,0,0,0)
+    and glScissor(0,0,0,0) were called."
+
+GLX Errors
+
+    GLXBadProfileARB
+
+    The requested context profile is invalid or not supported.
+
+    BEC is the base error code for the extension, as returned by
+    XQueryExtension.
+
+    Encoding:
+
+        1      0                      Error
+        1      BEC + 13               Error code (GLXBadProfileARB)
+        2      CARD16                 sequence number
+        4      CARD32                 bad profile bitmask
+        2      CARD16                 minor opcode
+        1      CARD8                  major opcode
+        21                            unused
+
+GLX Protocol
+
+    Three new GLX protocol commands are added.
+
+    Send Extended Client Information To The Server (glXSetClientInfoARB
+    and glXSetClientInfo2ARB)
+    ----------------------------------------------
+
+    This request is sent to the server during initialization, describing
+    the GLX version, GLX extensions, GL version(s), and GL extensions
+    supported by the client. The client needs to send only names of GL
+    extensions that require server support, but must send all GLX
+    extension names.
+
+    When the server receives a GetString request, it uses this
+    information to compute the version and extensions that can be
+    supported on the connection. The GLX client library should append
+    any client-side only extensions to the extension string returned by
+    the GetString request. When the server receives a
+    glXCreateContextAttribsARB request, it uses this information to
+    determine whether the requested context version, attributes, and
+    flags can be supported on the connection.
+
+    glXSetClientInfo2ARB supersedes glXSetClientInfoARB, which in turn
+    supersedes the glXClientInfo request.  The client should only send
+    glXSetClientInfo2ARB if both GLX_ARB_create_context and
+    GLX_ARB_create_context_profile are present in the server's extension
+    string.  If only GLX_ARB_create_context is present, the client
+    should send glXSetClientInfoARB, and if neither are present
+    glXClientInfo should be sent. If none of these requests are ever
+    sent to the server, the server assumes the client supports OpenGL
+    major version 1 and minor version 0, GLX major version 1, and minor
+    version 0, and doesn't support any OpenGL or GLX extensions.
+
+    glXSetClientInfo2ARB Encoding:
+
+        1      CARD8                 opcode (X assigned)
+        1      35                    GLX opcode (glXSetClientInfoARB)
+        2      6+(n0*3)+((n1+p1)/4)+((n2+p2)/4)    request length
+        4      CARD32                client GLX major version
+        4      CARD32                client GLX minor version
+        4      n0                    number of context versions
+        4      n1                    number of bytes in extension_string
+        4      n2                    number of bytes in glx_extension_string
+        n0*3*4 LISTofCARD32          context versions
+        n1     STRING8               client GL extension string
+        p1                           unused, p1 = pad(n1)
+        n2     STRING8               client GLX extension string
+        p2                           unused, p2 = pad(n2)
+
+    glXSetClientInfoARB Encoding:
+
+        1      CARD8                 opcode (X assigned)
+        1      33                    GLX opcode (glXSetClientInfoARB)
+        2      6+(n0*2)+((n1+p1)/4)+((n2+p2)/4)    request length
+        4      CARD32                client GLX major version
+        4      CARD32                client GLX minor version
+        4      n0                    number of context versions
+        4      n1                    number of bytes in extension_string
+        4      n2                    number of bytes in glx_extension_string
+        n0*2*4 LISTofCARD32          context versions
+        n1     STRING8               client GL extension string
+        p1                           unused, p1 = pad(n1)
+        n2     STRING8               client GLX extension string
+        p2                           unused, p2 = pad(n2)
+
+    "Context versions" is a list of (major version, minor version,
+    [profile mask]) tuple; each tuple describes a GL version supported
+    by the client.  The profile mask member is only sent when using
+    glXSetClientInfo2ARB and is ignored for versions less than 3.2.
+    Only the highest supported version below 3.0 should be sent, since
+    OpenGL 2.1 is backwards compatible with all earlier versions.  For
+    example, a context versions array containing
+
+        { 2, 1, 0x0, 3, 0, 0x0, 3, 1, 0x0, 3, 2, 0x3 }
+
+    Means that the client supports all GL versions between 1.0 and 2.1,
+    as well as versions 3.0, 3.1, and 3.2.  Version 3.2 core and
+    compatibility profiles are supported.  A BadValue error will be
+    generated if the client sends a 3.2 or greater version tuple with a
+    profile mask of 0, or with a profile mask that does not include the
+    core profile.
+
+    If glXSetClientInfo2ARB or glXSetClientInfoARB are not sent by the
+    client prior to context creation the server will behave as if no
+    contexts above version 2.1 are supported, and assume the client
+    supports all GLX extensions.  If the client sends
+    glXSetClientInfoARB and the server supports
+    GLX_ARB_create_context_profile, the server will behave as if no
+    contexts above version 3.1 are supported.
+
+
+    Context Creation with Attributes (glXCreateContextAttribsARB)
+    --------------------------------
+
+    This request is sent to create a context with specified attributes
+
+        1     CARD8                  opcode (X assigned)
+        1     34                     GLX opcode (glXCreateContextAttribsARB)
+        2     7+n                    request length
+        4     GLX_CONTEXT            context
+        4     FBCONFIGID             fbconfig
+        4     CARD32                 screen
+        4     GLX_CONTEXT            share_context
+        1     BOOL                   isdirect
+        1     CARD8                  reserved1
+        2     CARD16                 reserved2
+        4     CARD32                 num_attribs
+        4*n   LISTofATTRIBUTE_PAIR   attribute, value pairs
+
+Errors
+
+    GLX errors for glXCreateContextAttribsARB and glXSetClientInfo2ARB
+    as described in the body of the specification.
+
+    glXMakeContextCurrent error behavior is relaxed to allow making an
+    OpenGL 3.0 or later context current without a default read or draw
+    framebuffer.
+
+Dependencies on GLX_ARB_create_context
+
+    If GLX_ARB_create_context_profile is supported, then
+    GLX_ARB_create_context must also be supported.
+
+Dependencies on OpenGL 3.2 and later OpenGL versions
+
+    If GLX_ARB_create_context is supported, and if the OpenGL
+    implementation supports OpenGL 3.2 or later, then
+    GLX_ARB_create_context_profile must also be supported. If the OpenGL
+    implementation does not support OpenGL 3.2 or later, then
+    GLX_ARB_create_context_profile may or may not be supported.
+
+    If GLX_ARB_create_context_profile is not supported, then the
+    GLX_CONTEXT_PROFILE_MASK_ARB attribute, the
+    GLX_CONTEXT_CORE_PROFILE_BIT_ARB and
+    GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB bits in that attribute,
+    and the ERROR_INVALID_PROFILE_ARB error are not defined, and
+    specifying the attribute in <attribList> attribute will generate
+    BadValue.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Conformance Tests
+
+    TBD
+
+Sample Code
+
+    TBD
+
+Issues
+
+    All non-window-system dependent issues described in the
+    WGL_ARB_create_context extension specification apply equally to
+    GLX_ARB_create_context.
+
+ 1) Why was the context creation parameter <render_type> folded into the
+    attribute list, while the parameters <direct> and <share_context>
+    remains explicit?
+
+    For <direct>, because different paths to the server may be taken for
+    creating direct contexts, and parsing the attribute list in the
+    client should not be required. For <share_context>, because putting
+    a GLXContext, which is implemented as a struct pointer, into a list
+    of 'int's does not work on LP64 architectures.
+
+ 2) What is the behavior when creating an indirect rendering context
+    with attributes, flags, or a GLXFBConfig that require extensions not
+    supported by the client GLX implementation?
+
+    Context creation will succeed, but using such features may be
+    impossible, since there may be no entry points defined in the client
+    library to control them.
+
+ 3) Does client support for profiles need to be sent to the server
+    along with client support for versions?
+
+    Yes.  glXSetClientInfo2ARB extends glXSetClientInfoARB to support
+    sending supported profile masks for each supported version.
+
+Revision History
+
+    Version 1, 2008/08/20 - Fork from WGL_ARB_create_context
+
+    Version 2, 2008/08/21 - Add viewport/scissor setting behavior when
+    no default framebuffer is made current.
+
+    Version 3, 2008/10/08 - Restore <direct> as an explicit parameter
+    instead of an attribute. Allow creating indirect contexts requiring
+    extensions not supported by the client. Add GLX protocol. Use
+    existing GLX_RENDER_TYPE token. Rename some parameters following
+    existing conventions. Update Errors section.
+
+    Version 4, 2008/10/13 - Move "undefined behavior when successfully
+    creating a context requiring extensions not supported by the client"
+    language from the spec into the issues list. Remove unused
+    GLX_DIRECT_RENDERER_ARB token. Expand description of
+    glXSetClientInfoARB protocol negotiation.
+
+    Version 5, 2008/10/22 - Mark as complete and assign extension number
+    for the registry.
+
+    Version 6, 2008/10/24 - Renumber to ARB extension #55 - misplaced
+    into vendor extension numbering scheme at first.
+
+    Version 7, 2009/07/27 - Add profiled context creation functionality
+    (GLX_CONTEXT_PROFILE_MASK_ARB and the associated bit tokens).
+    Clarify that if the core profile is requested, the returned context
+    cannot restore functionality from the compatibility profile (issue
+    17 in WGL_ARB_create_context). Specify the interdependencies between
+    the two GLX extensions defined here and OpenGL 3.2, including the
+    requirement that GLX_ARB_create_context_profile be supported if an
+    OpenGL 3.2 or later implementation is supported. Add issue 3 on
+    sending profile support to the server.
+
+    Version 8, 2009/08/30 - Add glXSetClientInfo2ARB to support sending
+    profile masks with the versions as well.  Specify which error is
+    generated in the case profile tokens are used with a server that
+    doesn't support them.  Replace ERROR_INVALID_PROFILE_ARB with
+    GLXBadProfileARB and define its encoding.
+
+    Version 9, 2009/11/19 - Clarify that BEC in the BadProfile protocol
+    represents the base error code for the GLX extension.
+
+    Version 10, 2012/03/28 - Clarify error conditions when
+    glXMakeContextCurrent is called with a valid context and exactly one
+    None drawable.

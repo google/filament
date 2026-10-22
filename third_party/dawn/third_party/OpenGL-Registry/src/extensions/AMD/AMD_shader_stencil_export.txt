@@ -1,0 +1,209 @@
+Name
+
+    AMD_shader_stencil_export
+
+Name Strings
+
+    GL_AMD_shader_stencil_export
+
+Contributors
+
+    Graham Sellers, AMD
+    Andrew Lewycky, AMD
+    Mais Alnasser, AMD
+
+Contact
+
+    Graham Sellers, AMD (graham.sellers 'at' amd.com)
+
+Status
+
+    In Progress.
+
+Version
+
+    Last Modified Date:         04/07/2010
+    Author Revision:            5
+
+Number
+
+    382
+
+Dependencies
+
+    OpenGL 1.0 is required.
+
+    ARB_fragment_shader is required.
+
+    This extension is written against the OpenGL Shading Language Specification
+    version 1.40.05
+
+Overview
+
+    In OpenGL, the stencil test is a powerful mechanism to selectively discard
+    fragments based on the content of the stencil buffer. However, facilites
+    to update the content of the stencil buffer are limited to operations such
+    as incrementing the existing value, or overwriting with a fixed reference
+    value.
+
+    This extension provides a mechanism whereby a shader may generate the
+    stencil reference value per invocation. When stencil testing is enabled,
+    this allows the test to be performed against the value generated in the
+    shader. When the stencil operation is set to GL_REPLACE, this allows a
+    value generated in the shader to be written to the stencil buffer directly.
+
+IP Status
+
+    None.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL 2.1 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 2.1 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 2.1 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 2.1 Specification (Special
+Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 2.1 Specification (State and
+State Requests)
+
+    None.
+
+Additions to the OpenGL Shading Language Version 1.40.05
+
+    Add a new Section 3.3.x, GL_AMD_shader_stencil_export Extension (p. 11)
+
+    3.3.x GL_AMD_shader_stencil_export
+
+    To use the GL_AMD_shader_stencil_export extension in a shader it must be
+    enabled using the #extension directive.
+
+    The shading language preprocessor #define GL_AMD_shader_stencil_export will
+    be defined to 1 if the GL_AMD_shader_stencil_export extension is supported.
+
+    Modify Section 7.2, "Fragment Shader Special Variables":
+
+    Add to the list of built-in special variables, p.63:
+
+        out int gl_FragStencilRefAMD;
+
+    Modify the paragraph beginning, "Fragment shaders output values to the
+    OpenGL pipeline..." to:
+
+    Fragment shaders output values to the OpenGL pipeline using the built-in
+    variables gl_FragColor, gl_FragData, gl_FragDepth, and gl_FragStencilRefAMD
+    unless the discard statement is executed. Both gl_FragColor and gl_FragData
+    are deprecated; the preferred usage is to explicitly declare these outputs
+    in the fragment shader using the out storage qualifier.
+
+    Insert a new paragraph after the paragraph describing gl_FragDepth:
+
+    Writing to gl_FragStencilRefAMD will establish the stencil reference value
+    for the fragment being processed. Only the least significant bits of the
+    integer gl_FragStencilRefAMD are considered up to the value of STENCIL_BITS
+    and higher order bits are discarded. If stencil testing is enabled and no
+    shader writes to gl_FragStencilRefAMD, then the fixed function value for
+    stencil reference will be used as the fragment's stencil reference value.
+    If a shader statically assignes a value to gl_FragStencilRefAMD, and there
+    is an execution path through the shader that does not set
+    gl_FragStencilRefAMD, then the value of the fragment's stencil reference
+    value may be undefined for executions of the shader that take that path.
+    That is, if the set of linked shaders statically contain a write to
+    gl_FragStencilRefAMD, then it is responsible for always writing it.
+
+    Modify the first paragraph on p.64:
+
+    If a shader executes the discard keyword, the fragment is discarded, and
+    the values of any user-defined fragment outputs, gl_FragDepth, gl_FragColor,
+    gl_FragData, and gl_FragStencilRefAMD become irrelevant.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    1) Should gl_FragStencilRefAMD be initialized to the current stencil
+       reference value on input to the fragment shader?
+
+       RESOLVED: No. gl_FragStencilRefAMD is write-only. If the current stencil
+       reference value is required in a shader, the application should place
+       it in a uniform.
+
+    2) Is it possible to output the stencil mask from the shader?
+
+       RESOLVED: No.
+
+    3) Is the global stencil mask still applied?
+
+       RESOLVED: Yes. The mask is global as there is no way to export the
+       stencil mask from the shader.
+
+    4) How is two-sided stencil handled? How do we export front and back
+       stencil references?
+
+       RESOLVED: There is only one export from the shader. However, two sided
+       stencil reference generation may be achived as:
+
+          if (gl_FrontFacing)
+            gl_FragStencilRefAMD = foo;
+          else
+            gl_FragStencilRefAMD = bar;
+
+       If both front and back stencil reference values are needed in a single
+       shader, user defined uniforms may be used.
+
+    5) If the value written to gl_FragStencilRefAMD is outside of the range of
+       values representable by the stencil buffer, what happens?
+
+       RESOLVED: The additional bits are discarded. This is logical as the
+       stencil mask is still applied and its bit-depth is that of the stencil
+       buffer. If clamping is desired, this should be performed in the shader.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  -----------------------------------------
+
+     5    04/07/2010  gsellers  Remove erroneous language stating that
+                                gl_FragStencilRefAMD is initialized to the fixed
+                                function reference value.
+     4    09/27/2009  gsellers  Update issues 1, 4 and 5.
+     3    07/16/2009  gsellers  Address two-sided stencil references.
+                                Add issues 3, 4 and 5.
+     2    07/14/2009  gsellers  Add AMD suffix to gl_FragStencilRef. Resolve (1)
+     1    07/10/2009  gsellers  Initial draft.

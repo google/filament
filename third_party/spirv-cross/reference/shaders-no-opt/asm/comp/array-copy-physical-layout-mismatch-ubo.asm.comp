@@ -1,0 +1,15 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std140) uniform UBO
+{
+    vec2 b[5];
+    vec2 c[5];
+} _7;
+
+void main()
+{
+    vec2 a[5] = _7.b;
+    a = _7.c;
+}
+

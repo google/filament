@@ -1,0 +1,975 @@
+Name
+
+    NV_vertex_program4
+
+Name Strings
+
+    (none)
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Status
+
+    Shipping for GeForce 8 Series (November 2006)
+
+Version
+
+    Last Modified Date:         12/14/09
+    NVIDIA Revision:            7
+
+Number
+
+    325
+
+Dependencies
+
+    OpenGL 1.1 is required.
+
+    This extension is written against the OpenGL 2.0 specification.
+
+    ARB_vertex_program is required.
+
+    NV_gpu_program4 is required.  This extension is supported if
+    "GL_NV_gpu_program4" is found in the extension string.
+
+    NVX_instanced_arrays affects the definition of this extension.
+
+Overview
+
+    This extension builds on the common assembly instruction set
+    infrastructure provided by NV_gpu_program4, adding vertex program-specific
+    features.
+
+    This extension provides the ability to specify integer vertex attributes
+    that are passed to vertex programs using integer data types, rather than
+    being converted to floating-point values as in existing vertex attribute
+    functions.  The set of input and output bindings provided includes all
+    bindings supported by ARB_vertex_program.  This extension provides
+    additional input bindings identifying the index of the vertex when vertex
+    arrays are used ("vertex.id") and the instance number when instanced
+    arrays are used ("vertex.instance", requires EXT_draw_instanced).  It
+    also provides output bindings allowing vertex programs to directly specify
+    clip distances (for user clipping) plus a set of generic attributes that
+    allow programs to pass a greater number of attributes to subsequent
+    pipeline stages than is possible using only the pre-defined fixed-function
+    vertex outputs.
+
+    By and large, programs written to ARB_vertex_program can be ported
+    directly by simply changing the program header from "!!ARBvp1.0" to
+    "!!NVvp4.0", and then modifying instructions to take advantage of the
+    expanded feature set.  There are a small number of areas where this
+    extension is not a functional superset of previous vertex program
+    extensions, which are documented in the NV_gpu_program4 specification.
+
+New Procedures and Functions
+
+    void VertexAttribI1iEXT(uint index, int x);
+    void VertexAttribI2iEXT(uint index, int x, int y);
+    void VertexAttribI3iEXT(uint index, int x, int y, int z);
+    void VertexAttribI4iEXT(uint index, int x, int y, int z, int w);
+
+    void VertexAttribI1uiEXT(uint index, uint x);
+    void VertexAttribI2uiEXT(uint index, uint x, uint y);
+    void VertexAttribI3uiEXT(uint index, uint x, uint y, uint z);
+    void VertexAttribI4uiEXT(uint index, uint x, uint y, uint z, uint w);
+
+    void VertexAttribI1ivEXT(uint index, const int *v);
+    void VertexAttribI2ivEXT(uint index, const int *v);
+    void VertexAttribI3ivEXT(uint index, const int *v);
+    void VertexAttribI4ivEXT(uint index, const int *v);
+
+    void VertexAttribI1uivEXT(uint index, const uint *v);
+    void VertexAttribI2uivEXT(uint index, const uint *v);
+    void VertexAttribI3uivEXT(uint index, const uint *v);
+    void VertexAttribI4uivEXT(uint index, const uint *v);
+
+    void VertexAttribI4bvEXT(uint index, const byte *v);
+    void VertexAttribI4svEXT(uint index, const short *v);
+    void VertexAttribI4ubvEXT(uint index, const ubyte *v);
+    void VertexAttribI4usvEXT(uint index, const ushort *v);
+
+    void VertexAttribIPointerEXT(uint index, int size, enum type,
+                                sizei stride, const void *pointer);
+
+    void GetVertexAttribIivEXT(uint index, enum pname, int *params);
+    void GetVertexAttribIuivEXT(uint index, enum pname, uint *params);
+
+    (note:  all these functions are shared with the EXT_gpu_shader4
+    extension.)
+
+New Tokens
+
+    Accepted by the <pname> parameters of GetVertexAttribdv,
+    GetVertexAttribfv, GetVertexAttribiv, GetVertexAttribIivEXT, and
+    GetVertexAttribIuivEXT:
+
+      VERTEX_ATTRIB_ARRAY_INTEGER_EXT                   0x88FD
+
+    (note:  this token is shared with the EXT_gpu_shader4 extension.)
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    Modify Section 2.7 (Vertex Specification), p.20
+
+    (insert before last paragraph, p.22) The commands
+
+      void VertexAttribI[1234]{i,ui}EXT(uint index, T values);
+      void VertexAttribI[1234]{i,ui}vEXT(uint index, T values);
+      void VertexAttribI4{b,s,ub,us}vEXT(uint index, T values);
+
+    specify fixed-point coordinates that are not converted to floating-point
+    values, but instead are represented as signed or unsigned integer values.
+    Vertex programs that use integer instructions may read these attributes
+    using integer data types.  A vertex program that attempts to read a vertex
+    attribute as a float will get undefined results if the attribute was
+    specified as an integer, and vice versa.
+
+    (modify second paragraph, p.23) Setting generic vertex attribute zero
+    specifies a vertex; the four vertex coordinates are taken from the values
+    of attribute zero. A Vertex2, Vertex3, or Vertex4 command is completely
+    equivalent to the corresponding VertexAttrib* or VertexAttribI* command
+    with an index of zero. ...
+
+    (insert at end of function list, p.24)
+
+      void VertexAttribIPointerEXT(uint index, int size, enum type,
+                                  sizei stride, const void *pointer);
+
+    (modify last paragraph, p.24) The <index> parameter in the
+    VertexAttribPointer and VertexAttribIPointerEXT commands identify the
+    generic vertex attribute array being described.  The error INVALID_VALUE
+    is generated if <index> is greater than or equal to MAX_VERTEX_ATTRIBS.
+    Generic attribute arrays with integer <type> arguments can be handled in
+    one of three ways:  converted to float by normalizing to [0,1] or [-1,1]
+    as specified in table 2.9, converted directly to float, or left as integer
+    values.  Data for an array specified by VertexAttribPointer will be
+    converted to floating-point by normalizing if the <normalized> parameter
+    is TRUE, and converted directly to floating-point otherwise.  Data for an
+    array specified by VertexAttribIPointerEXT will always be left as integer
+    values.
+
+    (modify Table 2.4, p. 25)
+
+                                         Integer
+      Command                   Sizes    Handling      Types
+      ----------------------    -------  ---------     -----------------
+      VertexPointer             2,3,4    cast          ...
+      NormalPointer             3        normalize     ...
+      ColorPointer              3,4      normalize     ...
+      SecondaryColorPointer     3        normalize     ...
+      IndexPointer              1        cast          ...
+      FogCoordPointer           1        n/a           ...
+      TexCoordPointer           1,2,3,4  cast          ...
+      EdgeFlagPointer           1        integer       ...
+      VertexAttribPointer       1,2,3,4  flag          ...
+      VertexAttribIPointerEXT   1,2,3,4  integer       byte, ubyte, short,
+                                                       ushort, int, uint
+
+      Table 2.4:  Vertex array sizes (values per vertex) and data types.  The
+      "integer handling" column indicates how fixed-point data types are
+      handled:  "cast" means that they converted to floating-point directly,
+      "normalize" means that they are converted to floating-point by
+      normalizing to [0,1] (for unsigned types) or [-1,1] (for signed types),
+      "integer" means that they remain as integer values, and "flag" means
+      that either "cast" or "normalized" applies, depending on the setting of
+      the <normalized> flag in VertexAttribPointer.
+
+    (modify end of pseudo-code, pp. 27-28)
+
+      for (j = 1; j < genericAttributes; j++) {
+        if (generic vertex attribute j array enabled) {
+          if (generic vertex attribute j array is a pure integer array) {
+            VertexAttribI[size][type]vEXT(j, generic vertex attribute j
+                                             array element i);
+          } else if (generic vertex attribute j array normalization flag
+                     is set and <type> is not FLOAT or DOUBLE) {
+            VertexAttrib[size]N[type]v(j, generic vertex attribute j
+                                          array element i);
+          } else {
+            VertexAttrib[size][type]v(j, generic vertex attribute j
+                                         array element i);
+          }
+        }
+      }
+
+      if (generic vertex attribute 0 array enabled) {
+        if (generic vertex attribute 0 array is a pure integer array) {
+          VertexAttribI[size][type]vEXT(0, generic vertex attribute 0
+                                           array element i);
+        } else if (generic vertex attribute 0 array normalization flag
+                   is set and <type> is not FLOAT or DOUBLE) {
+          VertexAttrib[size]N[type]v(0, generic vertex attribute 0
+                                        array element i);
+        } else {
+          VertexAttrib[size][type]v(0, generic vertex attribute 0
+                                       array element i);
+        }
+      }
+
+    Modify Section 2.X, GPU Programs
+
+    (insert after second paragraph)
+
+    Vertex Programs
+
+    Vertex programs are used to compute the transformed attributes of a
+    vertex, in lieu of the set of fixed-function operations described in
+    sections 2.10 through 2.13.  Vertex programs are run on a single vertex at
+    a time, and the state of neighboring vertices is not available.  The
+    inputs available to a vertex program are the vertex attributes described
+    in section 2.7.  The results of the program are the attributes of a
+    transformed vertex, which include (among other things) a transformed
+    position, colors, and texture coordinates.  The vertices transformed by a
+    vertex program are then processed normally by the remainder of the GL
+    pipeline.
+
+    Modify Section 2.X.2, Program Grammar
+
+    (replace third paragraph)
+
+    Vertex programs are required to begin with the header string "!!NVvp4.0".
+    This header string identifies the subsequent program body as being a
+    vertex program and indicates that it should be parsed according to the
+    base NV_gpu_program4 grammar plus the additions below.  Program string
+    parsing begins with the character immediately following the header string.
+
+    (add the following grammar rules to the NV_gpu_program4 base grammar)
+
+    <resultUseW>            ::= <resultVarName> <arrayMem> <optWriteMask>
+                              | <resultColor> <optWriteMask>
+                              | <resultColor> "." <colorType> <optWriteMask>
+                              | <resultColor> "." <faceType> <optWriteMask>
+                              | <resultColor> "." <faceType> "." <colorType> 
+                                "." <optWriteMask>
+
+    <resultUseD>            ::= <resultColor>
+                              | <resultColor> "." <colorType>
+                              | <resultColor> "." <faceType>
+                              | <resultColor> "." <faceType> "." <colorType>
+                              | <resultMulti>
+
+    <attribBasic>           ::= <vtxPrefix> "position"
+                              | <vtxPrefix> "weight" <optArrayMemAbs>
+                              | <vtxPrefix> "normal"
+                              | <vtxPrefix> "fogcoord"
+                              | <attribTexCoord> <optArrayMemAbs>
+                              | <attribGeneric> <arrayMemAbs>
+                              | <vtxPrefix> "id"
+                              | <vtxPrefix> "instance"
+
+    <attribColor>           ::= <vtxPrefix> "color"
+
+    <attribMulti>           ::= <attribTexCoord> <arrayRange>
+                              | <attribGeneric> <arrayRange>
+
+    <attribTexCoord>        ::= <vtxPrefix> "texcoord"
+
+    <attribGeneric>         ::= <vtxPrefix> "attrib"
+
+    <vtxPrefix>             ::= "vertex" "."
+
+    <resultBasic>           ::= <resPrefix> "position"
+                              | <resPrefix> "fogcoord"
+                              | <resPrefix> "pointsize"
+                              | <resultTexCoord> <optArrayMemAbs>
+                              | <resultClip> <arrayMemAbs>
+                              | <resultGeneric> <arrayMemAbs>
+                              | <resPrefix> "id"
+
+    <resultColor>           ::= <resPrefix> "color"
+
+    <resultMulti>           ::= <resultTexCoord> <arrayRange>
+                              | <resultClip> <arrayRange>
+                              | <resultGeneric> <arrayRange>
+
+    <resultTexCoord>        ::= <resPrefix> "texcoord"
+
+    <resultClip>            ::= <resPrefix> "clip"
+
+    <resultGeneric>         ::= <resPrefix> "attrib"
+
+    <resPrefix>             ::= "result" "."
+
+    (add the following subsection to Section 2.X.3.2, Program Attribute
+     Variables)
+
+    Vertex program attribute variables describe the attributes of the vertex
+    being transformed, as specified by the application.  The set of available
+    bindings is enumerated in Table X.X.  Except where otherwise noted, all
+    vertex program attribute bindings are four-component floating-point
+    vectors.
+
+      Vertex Attribute Binding  Components  Underlying State
+      ------------------------  ----------  ------------------------------
+      vertex.position           (x,y,z,w)   object coordinates
+      vertex.normal             (x,y,z,1)   normal
+      vertex.color              (r,g,b,a)   primary color
+      vertex.color.primary      (r,g,b,a)   primary color
+      vertex.color.secondary    (r,g,b,a)   secondary color
+      vertex.fogcoord           (f,0,0,1)   fog coordinate
+      vertex.texcoord           (s,t,r,q)   texture coordinate, unit 0
+      vertex.texcoord[n]        (s,t,r,q)   texture coordinate, unit n
+      vertex.attrib[n]          (x,y,z,w)   generic vertex attribute n
+      vertex.id                 (id,-,-,-)  vertex identifier (integer)
+      vertex.instance           (i,-,-,-)   primitive instance number (integer)
+      vertex.texcoord[n..o]     (x,y,z,w)   array of texture coordinates
+      vertex.attrib[n..o]       (x,y,z,w)   array of generic vertex attributes
+
+      Table X.X, Vertex Program Attribute Bindings.  <n> and <o> refer to
+      integer constants.  Only the "vertex.texcoord" and "vertex.attrib"
+      bindings are available in arrays.
+
+      NVIDIA Note:  The "vertex.weight" and "vertex.matrixindex" bindings
+      described in ARB_vertex_program use state provided only by extensions
+      not supported by NVIDIA implementations and are not available.
+
+    If a vertex attribute binding matches "vertex.position", the "x", "y", "z"
+    and "w" components of the vertex attribute variable are filled with the
+    "x", "y", "z", and "w" components, respectively, of the vertex position.
+
+    If a vertex attribute binding matches "vertex.normal", the "x", "y", and
+    "z" components of the vertex attribute variable are filled with the "x",
+    "y", and "z" components, respectively, of the vertex normal.  The "w"
+    component is filled with 1.
+
+    If a vertex attribute binding matches "vertex.color" or
+    "vertex.color.primary", the "x", "y", "z", and "w" components of the
+    vertex attribute variable are filled with the "r", "g", "b", and "a"
+    components, respectively, of the vertex color.
+
+    If a vertex attribute binding matches "vertex.color.secondary", the "x",
+    "y", "z", and "w" components of the vertex attribute variable are filled
+    with the "r", "g", "b", and "a" components, respectively, of the vertex
+    secondary color.
+
+    If a vertex attribute binding matches "vertex.fogcoord", the "x" component
+    of the vertex attribute variable is filled with the vertex fog coordinate.
+    The "y", "z", and "w" coordinates are filled with 0, 0, and 1,
+    respectively.
+
+    If a vertex attribute binding matches "vertex.texcoord" or
+    "vertex.texcoord[n]", the "x", "y", "z", and "w" components of the vertex
+    attribute variable are filled with the "s", "t", "r", and "q" components,
+    respectively, of the vertex texture coordinate set <n>.  If "[n]" is
+    omitted, texture coordinate set zero is used.
+
+    If a vertex attribute binding matches "vertex.instance", the "x" component
+    of the vertex attribute variable is filled with the integer instance
+    number for the primitive to which the vertex belongs.  The "y", "z", and
+    "w" components are undefined.
+
+    If a vertex attribute binding matches "vertex.attrib[n]", the "x", "y",
+    "z" and "w" components of the generic vertex attribute variable are filled
+    with the "x", "y", "z", and "w" components, respectively, of generic
+    vertex attribute <n>.  Note that "vertex.attrib[0]" and "vertex.position"
+    are equivalent.  Generic vertex attribute bindings are typeless, and can
+    be interpreted as having floating-point, signed integer, or unsigned
+    integer values, depending on how they are used in the program text.  If a
+    vertex attribute is read using a data type different from the one used to
+    specify the generic attribute, the values corresponding to the binding are
+    undefined.
+
+    As described in section 2.7, setting a generic vertex attribute may leave
+    a corresponding conventional vertex attribute undefined, and vice versa.
+    To prevent inadvertent use of attribute pairs with undefined attributes, a
+    vertex program will fail to load if it binds both a conventional vertex
+    attribute and a generic vertex attribute listed in the same row of Table
+    X.X.
+
+      Conventional Attribute Binding      Generic Attribute Binding
+      ------------------------------      -------------------------
+      vertex.position                     vertex.attrib[0]
+      vertex.normal                       vertex.attrib[2]
+      vertex.color                        vertex.attrib[3]
+      vertex.color.primary                vertex.attrib[3]
+      vertex.color.secondary              vertex.attrib[4]        
+      vertex.fogcoord                     vertex.attrib[5]
+      vertex.texcoord                     vertex.attrib[8]
+      vertex.texcoord[0]                  vertex.attrib[8]
+      vertex.texcoord[1]                  vertex.attrib[9]
+      vertex.texcoord[2]                  vertex.attrib[10]
+      vertex.texcoord[3]                  vertex.attrib[11]
+      vertex.texcoord[4]                  vertex.attrib[12]
+      vertex.texcoord[5]                  vertex.attrib[13]
+      vertex.texcoord[6]                  vertex.attrib[14]
+      vertex.texcoord[7]                  vertex.attrib[15]
+      vertex.texcoord[n]                  vertex.attrib[8+n]
+
+      Table X.X:  Invalid Vertex Attribute Binding Pairs.  Vertex programs
+      may not bind both attributes listed in any row.  The <n> in the last row
+      matches the number of any valid texture unit.
+
+    If a vertex attribute binding matches "vertex.texcoord[n..o]" or
+    "vertex.attrib[n..o]", a sequence of 1+<o>-<n> texture coordinate bindings
+    are created.  For texture coordinates, it is as though the sequence
+    "vertex.texcoord[n], vertex.texcoord[n+1], ... vertex.texcoord[o]" were
+    specfied.  These bindings are available only in explicit declarations of
+    array variables.  A program will fail to load if <n> is greater than <o>.
+
+    When doing vertex array rendering using buffer objects, a vertex ID is
+    also available.  If a vertex attribute binding matches "vertex.id", the
+    "x" component of this vertex attribute is filled with the integer index
+    <i> implicitly passed to ArrayElement() to specify the vertex.  The vertex
+    ID is defined if and only if:
+
+      * the vertex comes from a vertex array command that specifies a complete
+        primitive (e.g., DrawArrays, DrawElements),
+
+      * all enabled vertex arrays have non-zero buffer object bindings, and
+
+      * the vertex does not come from a display list (even if the display list
+        was compiled using DrawArrays/DrawElements using buffer objects).
+
+    The "y", "z", and "w" components of the vertex attribute are always
+    undefined.
+
+    (add the following subsection to section 2.X.3.5, Program Results.)
+
+    Vertex programs produce vertices, and the set of result variables
+    available to such programs correspond to the attributes of a transformed
+    vertex.  The set of allowable result variable bindings for vertex and
+    fragment programs is given in Table X.4.
+
+      Binding                        Components  Description
+      -----------------------------  ----------  ----------------------------
+      result.position                (x,y,z,w)   position in clip coordinates
+      result.color                   (r,g,b,a)   front-facing primary color
+      result.color.primary           (r,g,b,a)   front-facing primary color
+      result.color.secondary         (r,g,b,a)   front-facing secondary color
+      result.color.front             (r,g,b,a)   front-facing primary color
+      result.color.front.primary     (r,g,b,a)   front-facing primary color
+      result.color.front.secondary   (r,g,b,a)   front-facing secondary color
+      result.color.back              (r,g,b,a)   back-facing primary color
+      result.color.back.primary      (r,g,b,a)   back-facing primary color
+      result.color.back.secondary    (r,g,b,a)   back-facing secondary color
+      result.fogcoord                (f,*,*,*)   fog coordinate
+      result.pointsize               (s,*,*,*)   point size
+      result.texcoord                (s,t,r,q)   texture coordinate, unit 0
+      result.texcoord[n]             (s,t,r,q)   texture coordinate, unit n
+      result.attrib[n]               (x,y,z,w)   generic interpolant n
+      result.clip[n]                 (d,*,*,*)   clip plane distance
+      result.texcoord[n..o]          (s,t,r,q)   texture coordinates n thru o
+      result.attrib[n..o]            (x,y,z,w)   generic interpolants n thru o
+      result.clip[n..o]              (d,*,*,*)   clip distances n thru o
+      result.id                      (id,*,*,*)  vertex id
+
+      Table X.4:  Vertex Program Result Variable Bindings.  Components labeled
+      "*" are unused.
+
+    If a result variable binding matches "result.position", updates to the
+    "x", "y", "z", and "w" components of the result variable modify the "x",
+    "y", "z", and "w" components, respectively, of the transformed vertex's
+    clip coordinates.  Final window coordinates will be generated for the
+    vertex as described in section 2.14.4.4.
+
+    If a result variable binding match begins with "result.color", updates to
+    the "x", "y", "z", and "w" components of the result variable modify the
+    "r", "g", "b", and "a" components, respectively, of the corresponding
+    vertex color attribute in Table X.4.  Color bindings that do not specify
+    "front" or "back" are consided to refer to front-facing colors.  Color
+    bindings that do not specify "primary" or "secondary" are considered to
+    refer to primary colors.
+
+    If a result variable binding matches "result.fogcoord", updates to the "x"
+    component of the result variable set the transformed vertex's fog
+    coordinate.  Updates to the "y", "z", and "w" components of the result
+    variable have no effect.
+
+    If a result variable binding matches "result.pointsize", updates to the
+    "x" component of the result variable set the transformed vertex's point
+    size.  Updates to the "y", "z", and "w" components of the result variable
+    have no effect.
+
+    If a result variable binding matches "result.texcoord" or
+    "result.texcoord[n]", updates to the "x", "y", "z", and "w" components of
+    the result variable set the "s", "t", "r" and "q" components,
+    respectively, of the transformed vertex's texture coordinates for texture
+    unit <n>.  If "[n]" is omitted, texture unit zero is selected.
+
+    If a result variable binding matches "result.attrib[n]", updates to the
+    "x", "y", "z", and "w" components of the result variable set the "x", "y",
+    "z", and "w" components of the generic interpolant <n>.  Generic
+    interpolants may be used by subsequent geometry or fragment program
+    invocations, but are not available to fixed-function fragment processing.
+
+    If a result variable binding matches "result.clip[n]", updates to the "x"
+    component of the result variable set the clip distance for clip plane <n>.
+
+    If a result variable binding matches "result.texcoord[n..o]",
+    "result.attrib[n..o]", or "result.clip[n..o]", a sequence of 1+<o>-<n>
+    bindings is created.  For texture coordinates, it is as though the
+    sequence "result.texcoord[n], result.texcoord[n+1],
+    ... result.texcoord[o]" were specfied.  This binding is available only in
+    explicit declarations of array variables.  A program will fail to load if
+    <n> is greater than <o>.
+
+    If a result variable binding matches "result.id", updates to the "x"
+    component of the result variable provide a integer vertex identifier
+    available to geometry programs using the "vertex[m].id" attribute binding.
+    If a geometry program using vertex IDs is active and a vertex program is
+    active, the vertex program must write "result.id" or the vertex ID number
+    is undefined.
+
+    (add the following subsection to section 2.X.6, Program Options.)
+
+    Section 2.X.6.Y, Vertex Program Options
+
+    + Position-Invariant Vertex Programs (ARB_position_invariant)
+
+    If a vertex program specifies the "ARB_position_invariant" option, the
+    program is used to generate all transformed vertex attributes except for
+    position.  Instead, clip coordinates are computed as specified in section
+    2.10.  Additionally, user clipping is performed as described in section
+    2.11.  Use of position-invariant vertex programs should generally
+    guarantee that the transformed position of a vertex should be the same
+    whether vertex program mode is enabled or disabled, allowing for correct
+    mixed multi-pass rendering semantics.
+
+    When the position-invariant option is specified in a vertex program,
+    vertex programs can no longer declare (explicitly or implicitly) a result
+    variable bound to "result.position".  A semantic restriction is added to
+    indicate that a vertex program will fail to load if the number of
+    instructions it contains exceeds the implementation-dependent limit minus
+    four.
+
+    (add the following subsection to section 2.X.7, Program Declarations.)
+
+    Section 2.X.7.Y, Vertex Program Declarations
+
+    No declarations are supported at present for vertex programs.
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    Modify Section 6.1.14, Shader and Program Queries (p. 256)
+
+    (modify 2nd paragraph, p.259) The commands
+    
+      ...
+      void GetVertexAttribIivEXT(uint index, enum pname, int *params);
+      void GetVertexAttribIuivEXT(uint index, enum pname, uint *params);
+
+    obtain the...  <pname> must be one of VERTEX_ATTRIB_ARRAY_ENABLED,
+    ... VERTEX_ATTRIB_ARRAY_NORMALIZED, VERTEX_ATTRIB_ARRAY_INTEGER_EXT, or
+    CURRENT_VERTEX_ATTRIB. ...  
+
+    (split 3rd paragraph, p.259) ... The size, stride, type, normalized flag,
+    and unconverted integer flag are set by the commands VertexAttribPointer
+    and VertexAttribIPointerEXT.  The normalized flag is always set to FALSE by
+    by VertexAttribIPointerEXT.  The unconverted integer flag is always set to
+    FALSE by VertexAttribPointer and TRUE by VertexAttribIPointerEXT.
+
+    The query CURRENT_VERTEX_ATTRIB returns the current value for the generic
+    attribute <index>.  GetVertexAttribdv and GetVertexAttribfv read and
+    return the current attribute values as floating-point values;
+    GetVertexAttribiv reads them as floating-point values and converts them to
+    integer values; GetVertexAttribIivEXT reads and returns them a signed
+    integers; GetVertexAttribIuivEXT reads and returns them as unsigned
+    integers.  The results of the query are undefined if the current attribute
+    values are read using one data type but specified using a different one.
+    The error INVALID_OPERATION is generated if <index> is zero.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    The following rendering commands are sent to the server as part of a
+    glXRender request:
+
+    VertexAttribI1ivEXT
+        2           12               rendering command length
+        2           278              rendering command opcode
+        4           CARD32           index
+        4           INT32            v[0]
+
+    VertexAttribI2ivEXT
+        2           16               rendering command length
+        2           279              rendering command opcode
+        4           CARD32           index
+        4           INT32            v[0]
+        4           INT32            v[1]
+
+    VertexAttribI3ivEXT
+        2           20               rendering command length
+        2           280              rendering command opcode
+        4           CARD32           index
+        4           INT32            v[0]
+        4           INT32            v[1]
+        4           INT32            v[2]
+
+    VertexAttribI4ivEXT
+        2           24               rendering command length
+        2           281              rendering command opcode
+        4           CARD32           index
+        4           INT32            v[0]
+        4           INT32            v[1]
+        4           INT32            v[2]
+        4           INT32            v[3]
+
+    VertexAttribI1uivEXT
+        2           12               rendering command length
+        2           282              rendering command opcode
+        4           CARD32           index
+        4           CARD32           v[0]
+
+    VertexAttribI2uivEXT
+        2           16               rendering command length
+        2           283              rendering command opcode
+        4           CARD32           index
+        4           CARD32           v[0]
+        4           CARD32           v[1]
+
+    VertexAttribI3uivEXT
+        2           20               rendering command length
+        2           284              rendering command opcode
+        4           CARD32           index
+        4           CARD32           v[0]
+        4           CARD32           v[1]
+        4           CARD32           v[2]
+
+    VertexAttribI4uivEXT
+        2           24               rendering command length
+        2           285              rendering command opcode
+        4           CARD32           index
+        4           CARD32           v[0]
+        4           CARD32           v[1]
+        4           CARD32           v[2]
+        4           CARD32           v[3]
+
+    VertexAttribI4bvEXT
+        2           12               rendering command length
+        2           286              rendering command opcode
+        4           CARD32           index
+        1           INT8             v[0]
+        1           INT8             v[1]
+        1           INT8             v[2]
+        1           INT8             v[3]
+
+    VertexAttribI4svEXT
+        2           16               rendering command length
+        2           287              rendering command opcode
+        4           CARD32           index
+        2           INT16            v[0]
+        2           INT16            v[1]
+        2           INT16            v[2]
+        2           INT16            v[3]
+
+    VertexAttribI4ubvEXT
+        2           12               rendering command length
+        2           288              rendering command opcode
+        4           CARD32           index
+        1           CARD8            v[0]
+        1           CARD8            v[1]
+        1           CARD8            v[2]
+        1           CARD8            v[3]
+
+    VertexAttribI4usvEXT
+        2           16               rendering command length
+        2           289              rendering command opcode
+        4           CARD32           index
+        2           CARD16           v[0]
+        2           CARD16           v[1]
+        2           CARD16           v[2]
+        2           CARD16           v[3]
+
+    The following non-rendering commands are added.
+
+    GetVertexAttribIivEXT
+        1           CARD8            opcode (X assigned)
+        1           184              GLX opcode
+        2           4                request length
+        4           GLX_CONTEXT_TAG  context tag
+        4           CARD32           index
+        4           ENUM             pname
+      =>
+        1           1                reply
+        1                            unused
+        2           CARD16           sequence number
+        4           m                reply length, m=(n==1?0:n)
+        4                            unused
+        4           CARD32           n
+
+        if (n=1) this follows:
+
+        4           INT32            params
+        12                           unused
+
+        otherwise this follows:
+
+        16                           unused
+        n*4         LISTofINT32      params
+
+    GetVertexAttribIuivEXT
+        1           CARD8            opcode (X assigned)
+        1           185              GLX opcode
+        2           4                request length
+        4           GLX_CONTEXT_TAG  context tag
+        4           CARD32           index
+        4           ENUM             pname
+      =>
+        1           1                reply
+        1                            unused
+        2           CARD16           sequence number
+        4           m                reply length, m=(n==1?0:n)
+        4                            unused
+        4           CARD32           n
+
+        if (n=1) this follows:
+
+        4           CARD32           params
+        12                           unused
+
+        otherwise this follows:
+
+        16                           unused
+        n*4         LISTofCARD32     params
+
+Errors
+
+    None.
+
+Dependencies on EXT_draw_instanced
+
+    If EXT_draw_instanced or a similar extension is not supported,
+    references to the "vertex.instance" attribute binding and a
+    primitive's instance number should be eliminated.
+
+New State
+
+    (add to table 6.7, p. 268)
+                                                 Initial
+    Get Value            Type    Get Command     Value   Description          Sec.    Attribute
+    ---------            ----    --------------- ------- -------------------- ----    ---------
+    VERTEX_ATTRIB_ARRAY  16+xB   GetVertexAttrib FALSE   vertex attrib array  2.8     vertex-array
+      INTEGER_EXT                                        has unconverted ints
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    (1) Should a new set of immediate-mode functions be provided for "real
+    integer" attributes?  If so, which ones should be provided?
+
+      RESOLVED:  Yes, although an incomplete subset is provided.  This
+      extension provides vector and non-vector functions that accept 1-, 2-,
+      3-, and 4-component "int" and "uint" values.  Additionally, we provide
+      only 4-component vector versions of functions that accept "byte",
+      "ubyte", "short", and "ushort" values.  Note that the ARB_vertex_program
+      extension provided a similar incomplete subset.
+
+      Since existing VertexAttrib functions include versions that take integer
+      values and convert them to float, it was necessary to create a different
+      way to specify integer values that are not converted.  We created a new
+      set of functions using capital letter "I" to denote "real integer"
+      values.
+
+      This "I" approach is consistent with a similar choice made by
+      ARB_vertex_program for the existing integer attribute functions.  There
+      are two methods of converting to floating point -- straight casts and
+      normalization to [0,1] or [-1,+1].  The normalization version of the
+      attribute functions use the capital letter "N" to denote normalization.
+
+    (2) For vertex arrays with "real integer" attributes, should we provide a
+    new function to specify the array or re-use the existing one?
+
+      RESOLVED:  Provide a new function, VertexAttribIPointerEXT.  This
+      function and VertexAttribPointer both set the same attribute state --
+      state set by VertexAttribPointer for a given <index> will be overwritten
+      by VertexAttribIPointerEXT() and vice versa.  There is one new piece of
+      state per array (VERTEX_ATTRIB_ARRAY_INTEGER_EXT) which is set to TRUE
+      for VertexAttribIPointerEXT() and FALSE by VertexAttribPointer.  The use
+      of a new function with capital "I" in the name is consistent with the
+      choice made for immediate-mode integer attributes.
+
+      We considered reusing the existing VertexAttribPointer function by
+      hijacking the <normalized> parameter, which specifies whether the
+      provided arrays are converted to float by normalizing or a straight
+      cast.  It would have been possible to add a third setting to indicate
+      unconverted integer values, but that has two problems:  (a) it doesn't
+      agree with the <normalized> flag being specified as a "boolean" (which
+      only has two values), and (b) the enum value that would be used would be
+      outside the range [0,255] and "boolean" may be represented using
+      single-byte data types.
+
+      One other possibility would have been to create a new set of <type>
+      values to indicate integer values that are never converted to floating
+      point -- for example, GL_INTEGER_INT.
+
+    (3) Should we provide a whole new set of generic integer vertex
+    attributes?
+
+      RESOLVED:  No.  This extension makes the existing generic vertex
+      attributes "typeless", where they can store either integer or
+      floating-point data.  This avoids the need to introduce new hardware
+      resources for integer vertex attributes or software overhead in juggling
+      integer and floating-point generic attributes.
+
+      Vertex programs and any queries that access these attributes are
+      responsible for ensuring that they are read using the same data type
+      that they were specified using, and will get undefined results on type
+      mismatches.  Checking for such mismatches would be an excellent feature
+      for an instrumented OpenGL driver, or other debugging tool.
+
+    (4) Should we provide integer forms of existing conventional attributes?
+
+      RESOLVED:  No.  We could have provided "integer" versions of Color,
+      TexCoord, MultiTexCoord, and other functions, but it didn't seem useful.
+      The use of generic attributes for such values is perfectly acceptable,
+      and fixed-function vertex processing paths won't know what to do with
+      integer values for position, color, normal, and so on.
+
+    (5) With integers throughout the pipeline, should we provide automatic
+    identifiers that can be read to get a "vertex number"?  If so, how should
+    this functionality be provided?
+
+      RESOLVED:  The "vertex.id" binding provides an integer "vertex number"
+      for each vertex called the "vertex ID".
+
+      When using vertex arrays in vertex buffer objects (VBOs), the vertex ID
+      is defined to be the index of the vertex in the array -- the value
+      implicitly passed to ArrayElement() when DrawArrays() or DrawElements()
+      is called.  In practice, vertex arrays in buffer objects will be stored
+      in memory that is directly accessible by the GPU.  When functions such
+      as DrawArrays() or DrawElements() are called, a set of vertex indices
+      are passed to the GPU to identify the vertices to pull out of the buffer
+      objects.  These same indices can be easily passed to the vertex program.
+
+      Vertex IDs can be used by applications in a variety of ways, for example
+      to compute or look up some property of the vertex based on its position
+      in the data set.
+
+      Note:  The EXT_texture_buffer_object extension can be used to bind a
+      buffer object as a texture resource, which can the be used for lookups
+      in a vertex program.  If the amount of memory required for each vertex
+      is very large or is variable, the existing vertex array model might not
+      work very well.  However, with TexBOs (texture buffer objects), the
+      vertex program can be used to compute an offset into the buffer object
+      holding the vertex data and fetch the data needed using texture lookups.
+      This approach blurs the line between texture and vertex pulling, and
+      treats the "texture" in question as a simple array.
+
+    (6) Should vertex IDs be provided for vertices in immediate mode?
+    Vertices in display lists?  Vertex arrays compiled into a display list?
+
+      RESOLVED:  No to all.  
+
+      A different definition would be needed for immediate mode vertices,
+      since the vertex attributes are not specified with an index.  It would
+      have been possible to implement some sort of counter where the vertex ID
+      indicates that the vertex is the <N>th one since the previous Begin
+      command.
+
+      Vertex arrays compiled into a display list are an even more complicated
+      problem, since either the "array element" definition or the alternate
+      "immediate mode" definition could be used.  If the "array element"
+      definition were used, it would additionally be necessary to compile the
+      array element values into the display list.  This would introduce
+      additional overhead into the display list, and the storage space for the
+      array element numbers would be wasted if no program using vertex ID were
+      ever used.
+
+      While such functionality may be useful, it is left to a subsequent
+      extension.
+
+      If such functionality is required, immediate mode VertexAttribI1i()
+      calls can be used to specify the desired "vertex ID" values as integer
+      generic attributes.  In this case, the vertex program needs to refer to
+      the specified generic attribute, and not "vertex.id".
+
+    (7) Should vertex identifiers be provided for non-VBO vertex arrays?  For
+    vertex arrays that are a mix of VBO and non-VBO arrays?
+
+      RESOLVED:  Non-VBO arrays are generally not stored in memory directly
+      accessible by the GPU; the data are instead copied from the
+      application's memory as they are passed to the GPU.  Additionally, the
+      index ordering may not be preserved by the copy.  For example, if a
+      DrawElements() call passes vertices numbered 30, 20, 10, and 0 in order,
+      the GPU might see vertex 30's data first, immediately followed by vertex
+      20's data, and so on.
+
+      It would be possible for the driver to provide per-vertex ID values to
+      the GPU during the copy, but defining such functionality is left to a
+      subsequent extension.
+
+      For vertices with a mix of VBO arrays and non-VBO arrays, the non-VBO
+      arrays still have the same copy issues, so the automatic vertex ID is
+      not provided.
+
+      If such functionality is required, a generic vertex attribute array can
+      be set up using VertexAttribIPointerEXT(), holding integer values 0
+      through <maxSize>-1, where <maxSize> is the maximum vertex index used.
+      For each vertex, the appropriate "vertex ID" value will be taken from
+      this array.  In this case, the vertex program needs to refer to the
+      specified generic attribute, and not "vertex.id".
+
+    (8) Should vertex IDs be available to geometry programs, and if so, how?
+
+      RESOLVED:  Yes, vertex IDs can be passed to geometry programs using the
+      "result.id" binding in a vertex program.  Note there is no requirement
+      that the "result.id" written for a vertex must match the "vertex.id"
+      originally provided.
+
+      Vertex IDs are not automatically provided to geometry programs; if a
+      vertex program doesn't write to "result.id" or if fixed-function vertex
+      processing is used, the vertex ID visible to the geometry program is
+      undefined.
+
+    (9) For instanced arrays (EXT_draw_instanced), should a vertex program
+    be able to read the instance number?  If so, how?
+
+      RESOLVED:  Yes, instance IDs are available to vertex programs using the
+      "vertex.instance" attribute.  The instance ID is available in the "x"
+      component and should be read as an integer.
+
+    (10) Should instance IDs be available to geometry and fragment programs,
+    and if so, how?
+
+      UNRESOLVED:  No.  If a geometry or fragment program needs the instance
+      ID, the value read in the vertex program can be passed down using a
+      generic integer vertex attribute.
+
+      It would be possible to provide a named output binding (e.g.,
+      "result.instance") that could be used to pass the instance ID to the
+      next pipeline stage.  Using such a binding would have no functional
+      differences from using a generic attribute, except for a name.
+
+      In any event, instance IDs are not automatically available to geometry
+      or fragment programs; they must be passed from earlier pipeline stages.
+
+    (11) This is an NV extension (NV_vertex_program4).  Why do all the new
+    functions and tokens have an "EXT" extension?
+
+      RESOLVED:  These functions and tokens are shared between this extension
+      and the comparable high-level GLSL programmability extension
+      (EXT_gpu_shader4).  Rather than provide a duplicate set of functions, we
+      simply use the EXT version here.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  --------------------------------------------
+     7    09/15/08  jajones   Added GLX protocol.
+
+     6    03/11/09  pbrown    Fix section numbers for option/declaration
+                              sections.
+
+    1-5             pbrown    Internal spec development.

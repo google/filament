@@ -1,0 +1,29 @@
+name: Verify Release Notes
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened, labeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  verify-release-notes:
+    name: Verify Release Notes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          sparse-checkout: |
+            .github
+      - name: Verify release notes
+        uses: ./.github/actions/verify-release-notes
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ github.event.pull_request.number }}
+          release-notes-file: 'NEW_RELEASE_NOTES.md'

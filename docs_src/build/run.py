@@ -1,0 +1,215 @@
+# Copyright (C) 2025 The Android Open Source Project
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import json
+import os
+import re
+from utils import execute, ArgParseImpl
+import shutil
+
+CUR_DIR = os.path.dirname(os.path.abspath(__file__))
+DOCS_SRC_DIR = os.path.join(CUR_DIR, '../')
+ROOT_DIR = os.path.join(CUR_DIR, '../../')
+
+MDBOOK_DIR = os.path.join(CUR_DIR, '../src_mdbook')
+BOOK_OUPUT_DIR = os.path.join(MDBOOK_DIR, 'book')
+SRC_DIR = os.path.join(MDBOOK_DIR, 'src')
+
+MARKDEEP_DIR = os.path.join(CUR_DIR, '../src_markdeep')
+RAW_COPIES_DIR = os.path.join(CUR_DIR, '../src_raw')
+DUP_DIR = os.path.join(SRC_DIR, 'dup')
+MAIN_DIR = os.path.join(SRC_DIR, 'main')
+
+FILAMENT_MD = 'Filament.md.html'
+MATERIALS_MD = 'Materials.md.html'
+
+def transform_dup_file_link(line, transforms):
+  """
+  Transforms markdown links in duplicated files to point to the correct relative locations
+  within the generated mdbook site.
+
+  Args:
+    line: The markdown line containing potential links.
+    transforms: A dictionary mapping original link prefixes to their new destinations.
+  """
+  URL_CONTENT = r'[-a-zA-Z0-9()@:%_\+.~#?&//=]+'
+  # The link text excludes ']' so that several links on one line (e.g. a table row) are each
+  # matched separately instead of being merged into a single greedy match.
+  res = re.findall(rf'\[([^\]]+)\]\(({URL_CONTENT})\)', line)
+  for text, url in  res:
+    word = f'[{text}]({url})'
+    for tkey in transforms.keys():
+      if url.startswith(tkey):
+        nurl = url.replace(tkey, transforms[tkey])
+        line = line.replace(word, f'[{text}]({nurl})')
+        break
+  return line
+
+def pull_duplicates():
+  """
+  Reads `duplicates.json` and copies files from the project root into the mdbook source directory.
+  This allows us to maintain a single source of truth for files like README.md or CONTRIBUTING.md,
+  while seamlessly embedding them into the generated documentation site.
+  It also converts raw HTML examples to Markdown by extracting just the body and styles.
+  """
+  if not os.path.exists(DUP_DIR):
+    os.mkdir(DUP_DIR)
+
+  config = {}
+  with open(f'{CUR_DIR}/duplicates.json') as config_txt:
+    config = json.loads(config_txt.read())
+
+  for fin in config.keys():
+    new_name = config[fin]['dest']
+    link_transforms = config[fin].get('link_transforms', {})
+    fpath = os.path.join(ROOT_DIR, fin)
+    new_fpath = os.path.join(SRC_DIR, new_name)
+    os.makedirs(os.path.dirname(new_fpath), exist_ok=True)
+
+    with open(fpath, 'r') as in_file:
+      content = in_file.read()
+
+    if fpath.endswith('.html') and new_fpath.endswith('.md'):
+      # We replace multiple newlines so mdbook does not treat it as separated markdown paragraphs
+      content = re.sub(r'\n\s*\n+', '\n', content)
+      style_match = re.search(r'<style>(.*?)</style>', content, re.DOTALL | re.IGNORECASE)
+      style_str = f"<style>{style_match.group(1)}</style>\n" if style_match else ""
+      body_match = re.search(r'<body[^>]*>(.*?)</body>', content, re.DOTALL | re.IGNORECASE)
+      if body_match:
+        content = style_str + body_match.group(1)
+
+    if new_fpath.endswith('.md'):
+      def repl_empty_lines(m):
+        return re.sub(r'\n\s*\n+', '\n', m.group(0))
+      content = re.sub(r'<script.*?>.*?</script>', repl_empty_lines, content, flags=re.DOTALL | re.IGNORECASE)
+      content = re.sub(r'<style.*?>.*?</style>', repl_empty_lines, content, flags=re.DOTALL | re.IGNORECASE)
+
+    replacements = config[fin].get('replacements', {})
+    for old, new in replacements.items():
+      content = content.replace(old, new)
+
+    with open(new_fpath, 'w') as out_file:
+      for line in content.splitlines(True):
+        out_file.write(transform_dup_file_link(line, link_transforms))
+
+def pull_markdeep_docs():
+  import http.server
+  import socketserver
+  import threading
+  from selenium import webdriver
+  from selenium.webdriver.chrome.options import Options
+  from selenium.webdriver.common.by import By
+  import time
+
+  class Server(socketserver.ThreadingMixIn, http.server.HTTPServer):
+    """Handle requests in a separate thread."""
+
+  class Handler(http.server.SimpleHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=MARKDEEP_DIR, **kwargs)
+
+    def do_GET(self):
+      print(f'================ {self.path}')
+      # Use the checked-in markdeep since its locked to a version
+      if self.path == '/third_party/markdeep/markdeep.min.js':
+        file_path = f'{ROOT_DIR}/third_party/markdeep/markdeep.min.js'
+        try:
+          with open(file_path, 'rb') as f:
+            content = f.read()
+
+          self.send_response(200)
+          self.send_header('Content-type', 'application/javascript')
+          self.send_header('Content-Length', len(content))
+          self.end_headers()
+
+          # Send the file content
+          self.wfile.write(content)
+        except FileNotFoundError:
+          self.send_error(404, 'File not found')
+      else:
+        # For all other paths, use the default behavior (serve from MARKDEEP_DIR)
+        super().do_GET()
+
+  def start_server(port):
+    """Starts the web server in a separate thread."""
+    httpd = Server(("", port), Handler)
+    server_thread = threading.Thread(target=httpd.serve_forever)
+    server_thread.daemon = True  # Allow main thread to exit
+    server_thread.start()
+    print(f"Server started on port {port}...")
+    return httpd
+
+  PORT = 12345
+  httpd = start_server(PORT)
+
+  # Workaround for unknown dead-lock when the selenium tries to make request to the local server above.
+  time.sleep(3)
+
+  # Set up Chrome options for headless mode
+  chrome_options = Options()
+  chrome_options.add_argument("--headless")
+
+  # This option is necessary for running on some VMs
+  chrome_options.add_argument("--no-sandbox")
+
+  # Create a new Chrome instance in headless mode
+  driver = webdriver.Chrome(options=chrome_options)
+
+  for doc in ['Filament', 'Materials']:
+    # Open the URL with ?export, which markdeep will export the resulting html.
+    driver.get(f"http://localhost:{PORT}/{doc}.md.html?export")
+
+    time.sleep(1.5)
+
+    # We extract the html from the resulting "page" (an html output itself).
+    text = driver.find_elements(By.TAG_NAME, "pre")[0].text
+
+    # 1. Remove the double empty lines.  These make the following text seem like markdown text as oppose to embedded html.
+    # 2. Remove the max-width styling from the body tag.
+    # 3. Remove the font-family styling from the body tag.
+    # 4. Properly redirect images to the right directory
+    text = text.replace("\n\n","\n")\
+               .replace("max-width:680px;", "")\
+               .replace("font-family:Palatino", "--font-family:Palatino")\
+               .replace("\"./images", "\"../images")\
+               .replace("\"images/", "\"../images/")
+
+    # 5. Remove giant filament logo
+    text = '\n'.join([l for l in text.split("\n") if 'filament_logo.png' not in l])
+
+    # Save the page source as .md with embedded html
+    with open(f'{MAIN_DIR}/{doc.lower()}.md', "w", encoding="utf-8") as f:
+      f.write(text)
+
+  # Close the browser
+  driver.quit()
+  # Shutdown the server
+  httpd.shutdown()
+
+if __name__ == "__main__":
+  pull_duplicates()
+  pull_markdeep_docs()
+
+  res, err = execute('mdbook build', cwd=MDBOOK_DIR)
+  assert res == 0, f"failed to execute `mdbook`. return-code={res} err=\"{err}\""
+
+  shutil.copytree(RAW_COPIES_DIR, BOOK_OUPUT_DIR, dirs_exist_ok=True)
+  shutil.copy(os.path.join(MARKDEEP_DIR, FILAMENT_MD), BOOK_OUPUT_DIR)
+  shutil.copy(os.path.join(MARKDEEP_DIR, MATERIALS_MD), BOOK_OUPUT_DIR)
+
+  import copy_web_docs
+  copy_web_docs.run()
+
+  import copy_dokka_docs
+  copy_dokka_docs.run()

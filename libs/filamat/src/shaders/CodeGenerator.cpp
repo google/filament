@@ -1,0 +1,1353 @@
+/*
+ * Copyright (C) 2015 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "CodeGenerator.h"
+
+#include "MaterialInfo.h"
+
+#include "../PushConstantDefinitions.h"
+
+#include "generated/shaders.h"
+
+#include <private/filament/Variant.h>
+
+#include <backend/DriverEnums.h>
+
+#include <utils/sstream.h>
+
+#include <cctype>
+#include <iomanip>
+
+#include <assert.h>
+
+namespace filamat {
+
+// From driverEnum namespace
+using namespace filament;
+using namespace backend;
+using namespace utils;
+
+io::sstream& CodeGenerator::generateSeparator(io::sstream& out) {
+    out << '\n';
+    return out;
+}
+
+io::sstream& CodeGenerator::generateCommonProlog(io::sstream& out, ShaderStage const stage,
+        MaterialInfo const& material, filament::Variant const v, uint32_t const apiLevel) const {
+    switch (mShaderModel) {
+        case ShaderModel::MOBILE:
+            // Vulkan requires version 310 or higher
+            if (mTargetLanguage == TargetLanguage::SPIRV ||
+                mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
+                // Vulkan requires layout locations on ins and outs, which were not supported
+                // in ESSL 300
+                out << "#version 310 es\n\n";
+            } else {
+                if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+                    out << "#version 300 es\n\n";
+                } else {
+                    out << "#version 100\n\n";
+                }
+            }
+            if (material.hasExternalSamplers) {
+                if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+                    out << "#extension GL_OES_EGL_image_external_essl3 : require\n\n";
+                } else {
+                    out << "#extension GL_OES_EGL_image_external : require\n\n";
+                }
+            }
+            if (v.hasStereo() && stage == ShaderStage::VERTEX) {
+                switch (material.stereoscopicType) {
+                case StereoscopicType::INSTANCED:
+                    // If we're not processing the shader through glslang (in the case of unoptimized
+                    // OpenGL shaders), then we need to add the #extension string ourselves.
+                    // If we ARE running the shader through glslang, then we must not include it,
+                    // otherwise glslang will complain.
+                    out << "#ifndef FILAMENT_GLSLANG\n";
+                    out << "#extension GL_EXT_clip_cull_distance : require\n";
+                    out << "#endif\n\n";
+                    break;
+                case StereoscopicType::MULTIVIEW:
+                    if (mTargetApi == TargetApi::VULKAN) {
+                        out << "#extension GL_EXT_multiview : enable\n";
+                    } else {
+                        out << "#extension GL_OVR_multiview2 : require\n";
+                    }
+                    break;
+                case StereoscopicType::NONE:
+                    break;
+                }
+            }
+            break;
+        case ShaderModel::DESKTOP:
+            if (mTargetLanguage == TargetLanguage::SPIRV ||
+                mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
+                // Vulkan requires binding specifiers on uniforms and samplers, which were not
+                // supported in the OpenGL 4.1 GLSL profile.
+                out << "#version 450 core\n\n";
+            } else {
+                out << "#version 410 core\n\n";
+                out << "#extension GL_ARB_shading_language_packing : enable\n\n";
+            }
+            if (v.hasStereo() && stage == ShaderStage::VERTEX) {
+                switch (material.stereoscopicType) {
+                case StereoscopicType::INSTANCED:
+                    // Nothing to generate
+                    break;
+                case StereoscopicType::MULTIVIEW:
+                    if (mTargetApi == TargetApi::VULKAN) {
+                        out << "#extension GL_EXT_multiview : enable\n";
+                    } else {
+                        out << "#extension GL_OVR_multiview2 : require\n";
+                    }
+                    break;
+                case StereoscopicType::NONE:
+                    break;
+                }
+            }
+            break;
+    }
+
+    if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+        out << "#extension GL_OES_standard_derivatives : require\n\n";
+    }
+
+    // This allows our includer system to use the #line directive to denote the source file for
+    // #included code. This way, glslang reports errors more accurately.
+    out << "#extension GL_GOOGLE_cpp_style_line_directive : enable\n\n";
+
+    if (v.hasStereo() && stage == ShaderStage::VERTEX) {
+        switch (material.stereoscopicType) {
+        case StereoscopicType::INSTANCED:
+            // Nothing to generate
+            break;
+        case StereoscopicType::MULTIVIEW:
+            if (mTargetApi != TargetApi::VULKAN) {
+                out << "layout(num_views = " << material.stereoscopicEyeCount << ") in;\n";
+            }
+            break;
+        case StereoscopicType::NONE:
+            break;
+        }
+    }
+
+    if (stage == ShaderStage::COMPUTE) {
+        out << "layout(local_size_x = " << material.groupSize.x
+            << ", local_size_y = " <<  material.groupSize.y
+            << ", local_size_z = " <<  material.groupSize.z
+            << ") in;\n\n";
+    }
+
+    switch (mShaderModel) {
+        case ShaderModel::MOBILE:
+            out << "#define TARGET_MOBILE\n";
+            break;
+        case ShaderModel::DESKTOP:
+            break;
+    }
+
+    switch (mTargetApi) {
+        case TargetApi::OPENGL:
+            switch (mShaderModel) {
+                case ShaderModel::MOBILE:
+                    out << "#define TARGET_GLES_ENVIRONMENT\n";
+                    break;
+                case ShaderModel::DESKTOP:
+                    out << "#define TARGET_GL_ENVIRONMENT\n";
+                    break;
+            }
+            break;
+        case TargetApi::VULKAN:
+            out << "#define TARGET_VULKAN_ENVIRONMENT\n";
+            break;
+        case TargetApi::METAL:
+            out << "#define TARGET_METAL_ENVIRONMENT\n";
+            break;
+        case TargetApi::WEBGPU:
+            out << "#define TARGET_WEBGPU_ENVIRONMENT\n";
+            break;
+        case TargetApi::ALL:
+            // invalid should never happen
+            break;
+    }
+
+    switch (mTargetLanguage) {
+        case TargetLanguage::GLSL:
+            out << "#define FILAMENT_OPENGL_SEMANTICS\n";
+            break;
+        case TargetLanguage::SPIRV:
+            out << "#define FILAMENT_VULKAN_SEMANTICS\n";
+            break;
+    }
+
+    if (mTargetApi == TargetApi::VULKAN ||
+        mTargetApi == TargetApi::WEBGPU ||
+        mTargetApi == TargetApi::METAL ||
+        (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::DESKTOP) ||
+        mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
+        out << "#define FILAMENT_HAS_FEATURE_TEXTURE_GATHER\n";
+    }
+
+    if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+        out << "#define FILAMENT_HAS_FEATURE_INSTANCING\n";
+    }
+
+    switch (material.stereoscopicType) {
+    case StereoscopicType::INSTANCED:
+        generateDefine(out, "FILAMENT_STEREO_INSTANCED");
+        break;
+    case StereoscopicType::MULTIVIEW:
+        generateDefine(out, "FILAMENT_STEREO_MULTIVIEW");
+        break;
+    case StereoscopicType::NONE:
+        break;
+    }
+
+    if (stage == ShaderStage::VERTEX) {
+        if (material.flipUV) {
+            generateDefine(out, "FLIP_UV_ATTRIBUTE");
+        }
+        if (material.useLegacyMorphing) {
+            generateDefine(out, "LEGACY_MORPHING");
+        }
+    }
+    if (stage == ShaderStage::FRAGMENT) {
+        if (material.linearFog) {
+            generateDefine(out, "FILAMENT_LINEAR_FOG");
+        }
+        if (material.shadowFarAttenuation) {
+            generateDefine(out, "FILAMENT_SHADOW_FAR_ATTENUATION");
+        }
+        if (material.userMaterialHasCustomDepth) {
+            generateDefine(out, "MATERIAL_HAS_CUSTOM_DEPTH");
+        }
+    }
+
+    if (stage == ShaderStage::VERTEX) {
+        generateValueDefine(out, "VARYING", "out");
+        generateValueDefine(out, "ATTRIBUTE", "in");
+    } else if (stage == ShaderStage::FRAGMENT) {
+        generateValueDefine(out, "VARYING", "in");
+    }
+
+    auto getShadingDefine = [](Shading const shading) -> const char* {
+        switch (shading) {
+            case Shading::LIT:                 return "SHADING_MODEL_LIT";
+            case Shading::UNLIT:               return "SHADING_MODEL_UNLIT";
+            case Shading::SUBSURFACE:          return "SHADING_MODEL_SUBSURFACE";
+            case Shading::CLOTH:               return "SHADING_MODEL_CLOTH";
+            case Shading::SPECULAR_GLOSSINESS: return "SHADING_MODEL_SPECULAR_GLOSSINESS";
+        }
+    };
+
+    generateDefine(out, getShadingDefine(material.shading));
+
+    generateQualityDefine(out, material.quality);
+
+    // precision qualifiers
+    out << '\n';
+    Precision const defaultPrecision = getDefaultPrecision(stage);
+    const char* precision = getPrecisionQualifier(defaultPrecision);
+    out << "precision " << precision << " float;\n";
+    out << "precision " << precision << " int;\n";
+    if (mShaderModel == ShaderModel::MOBILE) {
+        if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+            out << "precision lowp sampler2DArray;\n";
+        }
+        if (material.has3dSamplers) {
+            out << "precision lowp sampler3D;\n";
+        }
+    }
+
+    // Filament-reserved specification constants (limited by CONFIG_MAX_RESERVED_SPEC_CONSTANTS)
+    out << '\n';
+    generateSpecializationConstant(out, "BACKEND_FEATURE_LEVEL",
+            +ReservedSpecializationConstants::BACKEND_FEATURE_LEVEL, 1);
+
+    if (mTargetApi == TargetApi::WEBGPU) {
+        // Note: This is a revived hack for a hack.
+        //
+        // WGSL doesn't support specialization constants as an array length
+        // CONFIG_MAX_INSTANCES is only needed for WebGL, so we can replace it with a constant.
+        // More information at https://github.com/gpuweb/gpuweb/issues/572#issuecomment-649760005
+        out << "const int CONFIG_MAX_INSTANCES = " << (int)CONFIG_MAX_INSTANCES << ";\n";
+        out << "const int CONFIG_FROXEL_BUFFER_HEIGHT = 2048;\n";
+        // In WebGPU, Dawn enforces that the descriptor binding size must be >= the shader's
+        // declared minBindingSize (height * 16 bytes). Since WebGPU doesn't support specialization
+        // constants for UBO sizes, we must hardcode WebGPU minspec in both places.
+        // With a WebGPU UBO minspec of 64 KiB (65536 bytes), height is set to 65536 / 16 = 4096.
+        out << "const int CONFIG_FROXEL_RECORD_BUFFER_HEIGHT = 4096;\n";
+        // Unlike the layout constants above, other specialization constants generated below
+        // remain WGSL overrides whose defaults are specialized by WebGPUProgram before it creates
+        // the shader module.
+    } else {
+        generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES",
+                +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES, (int)CONFIG_MAX_INSTANCES);
+
+        // the default of 1024 (16KiB) is needed for 32% of Android devices
+        generateSpecializationConstant(out, "CONFIG_FROXEL_BUFFER_HEIGHT",
+                +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT, 1024);
+
+        // With a GLES UBO minspec of 16 KiB (16384 bytes), height is set to 16384 / 16 = 1024.
+        generateSpecializationConstant(out, "CONFIG_FROXEL_RECORD_BUFFER_HEIGHT",
+                +ReservedSpecializationConstants::CONFIG_FROXEL_RECORD_BUFFER_HEIGHT, 1024);
+    }
+
+    // directional shadowmap visualization
+    generateSpecializationConstant(out, "CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP",
+            +ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP, false);
+
+    // froxel visualization
+    generateSpecializationConstant(out, "CONFIG_DEBUG_FROXEL_VISUALIZATION",
+            +ReservedSpecializationConstants::CONFIG_DEBUG_FROXEL_VISUALIZATION, false);
+
+    // Workaround a Metal pipeline compilation error with the message:
+    // "Could not statically determine the target of a texture". See surface_light_indirect.fs
+    generateSpecializationConstant(out, "CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND",
+            +ReservedSpecializationConstants::CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND, false);
+
+    generateSpecializationConstant(out, "CONFIG_POWER_VR_SHADER_WORKAROUNDS",
+            +ReservedSpecializationConstants::CONFIG_POWER_VR_SHADER_WORKAROUNDS, false);
+
+    generateSpecializationConstant(out, "CONFIG_STEREO_EYE_COUNT",
+            +ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT, material.stereoscopicEyeCount);
+
+    generateSpecializationConstant(out, "CONFIG_SH_BANDS_COUNT",
+            +ReservedSpecializationConstants::CONFIG_SH_BANDS_COUNT, 3);
+
+    generateSpecializationConstant(out, "CONFIG_SHADOW_SAMPLING_METHOD",
+            +ReservedSpecializationConstants::CONFIG_SHADOW_SAMPLING_METHOD, 1);
+
+    // CONFIG_MAX_STEREOSCOPIC_EYES is used to size arrays and on Adreno GPUs + vulkan, this has to
+    // be explicitly, statically defined (as in #define). Otherwise (using const int for
+    // example), we'd run into a GPU crash.
+    out << "#define CONFIG_MAX_STEREOSCOPIC_EYES " << (int) CONFIG_MAX_STEREOSCOPIC_EYES << "\n";
+
+    out << "#define CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS "
+        << (int) CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS << "\n";
+
+    if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+        // On ES2 since we don't have post-processing, we need to emulate EGL_GL_COLORSPACE_KHR,
+        // when it's not supported.
+        generateSpecializationConstant(out, "CONFIG_SRGB_SWAPCHAIN_EMULATION",
+                +ReservedSpecializationConstants::CONFIG_SRGB_SWAPCHAIN_EMULATION, false);
+    }
+
+    bool const isDepthVariant = filament::Variant::isValidDepthVariant(v);
+    if (isDepthVariant) {
+        out << "const bool RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING = false;\n";
+        out << "const bool RUNTIME_CONFIG_HAS_EXTRA_DIRECTIONAL_LIGHTS = false;\n";
+        out << "const bool RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING = false;\n";
+    } else {
+        bool const litVariants = material.isLit || material.hasShadowMultiplier;
+        generateSpecializationConstant(out, "RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING",
+                CONFIG_MAX_RESERVED_SPEC_CONSTANTS +
+                        +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING,
+                litVariants);
+        generateSpecializationConstant(out, "RUNTIME_CONFIG_HAS_EXTRA_DIRECTIONAL_LIGHTS",
+                CONFIG_MAX_RESERVED_SPEC_CONSTANTS + +DynamicSpecializationConstants::
+                        RUNTIME_CONFIG_HAS_EXTRA_DIRECTIONAL_LIGHTS,
+                false);
+        generateSpecializationConstant(out, "RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING",
+                CONFIG_MAX_RESERVED_SPEC_CONSTANTS + +DynamicSpecializationConstants::
+                        RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING,
+                litVariants);
+    }
+
+    out << '\n';
+    out << SHADERS_COMMON_DEFINES_GLSL_DATA;
+
+    // Api level enforcement.
+    generateValueDefine(out, "CLIENT_MATERIAL_API_LEVEL", apiLevel);
+    generateValueDefine(out, "UNSTABLE_MATERIAL_API_LEVEL", UNSTABLE_MATERIAL_API_LEVEL);
+
+    out << "\n";
+    return out;
+}
+
+Precision CodeGenerator::getDefaultPrecision(ShaderStage const stage) const {
+    switch (stage) {
+        case ShaderStage::VERTEX:
+            return Precision::HIGH;
+        case ShaderStage::FRAGMENT:
+            switch (mShaderModel) {
+                case ShaderModel::MOBILE:
+                    return Precision::MEDIUM;
+                case ShaderModel::DESKTOP:
+                    return Precision::HIGH;
+            }
+        case ShaderStage::COMPUTE:
+            return Precision::HIGH;
+    }
+}
+
+Precision CodeGenerator::getDefaultUniformPrecision() const {
+    switch (mShaderModel) {
+        case ShaderModel::MOBILE:
+            return Precision::MEDIUM;
+        case ShaderModel::DESKTOP:
+            return Precision::HIGH;
+    }
+}
+
+io::sstream& CodeGenerator::generateCommonEpilog(io::sstream& out) {
+    out << "\n"; // For line compression all shaders finish with a newline character.
+    return out;
+}
+
+io::sstream& CodeGenerator::generateSurfaceTypes(io::sstream& out, ShaderStage const stage) {
+    out << '\n';
+    switch (stage) {
+        case ShaderStage::VERTEX:
+            out << '\n';
+            out << SHADERS_SURFACE_TYPES_GLSL_DATA;
+            break;
+        case ShaderStage::FRAGMENT:
+            out << '\n';
+            out << SHADERS_SURFACE_TYPES_GLSL_DATA;
+            break;
+        case ShaderStage::COMPUTE:
+            break;
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generateSurfaceMain(io::sstream& out, ShaderStage const stage) {
+    switch (stage) {
+        case ShaderStage::VERTEX:
+            out << SHADERS_SURFACE_MAIN_VS_DATA;
+            break;
+        case ShaderStage::FRAGMENT:
+            out << SHADERS_SURFACE_MAIN_FS_DATA;
+            break;
+        case ShaderStage::COMPUTE:
+            out << SHADERS_SURFACE_MAIN_CS_DATA;
+            break;
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generatePostProcessMain(io::sstream& out, ShaderStage const stage) {
+    if (stage == ShaderStage::VERTEX) {
+        out << SHADERS_POST_PROCESS_MAIN_VS_DATA;
+    } else if (stage == ShaderStage::FRAGMENT) {
+        out << SHADERS_POST_PROCESS_MAIN_FS_DATA;
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generateCommonVariable(io::sstream& out, ShaderStage const stage,
+        const MaterialBuilder::CustomVariable& variable, const size_t index) {
+    auto const& name = variable.name;
+    const char* precisionString = getPrecisionQualifier(variable.precision);
+    if (!name.empty()) {
+        if (stage == ShaderStage::VERTEX) {
+            out << "\n#define VARIABLE_CUSTOM" << index << " " << name.c_str() << "\n";
+            out << "\n#define VARIABLE_CUSTOM_AT" << index << " variable_" << name.c_str() << "\n";
+            out << "LAYOUT_LOCATION(" << index << ") SHADING_INTERPOLATION VARYING "
+                << precisionString << " vec4 variable_" << name.c_str() << ";\n";
+        } else if (stage == ShaderStage::FRAGMENT) {
+            if (!variable.hasPrecision && variable.precision == Precision::DEFAULT) {
+                // for backward compatibility
+                precisionString = "highp";
+            }
+            out << "\nLAYOUT_LOCATION(" << index << ") SHADING_INTERPOLATION VARYING "
+                << precisionString << " vec4 variable_" << name.c_str() << ";\n";
+        }
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generateSurfaceShaderInputs(io::sstream& out, ShaderStage const stage,
+        const AttributeBitset& attributes, Interpolation const interpolation,
+        MaterialBuilder::PushConstantList const& pushConstants, uint32_t const pushConstantOffset) const {
+    auto const& attributeDatabase = MaterialBuilder::getAttributeDatabase();
+
+    const char* shading = getInterpolationQualifier(interpolation);
+    out << "#define SHADING_INTERPOLATION " << shading << "\n";
+
+    out << "\n";
+    attributes.forEachSetBit([&out, &attributeDatabase](size_t const i) {
+        generateDefine(out, attributeDatabase[i].getDefineName().c_str());
+    });
+
+    if (stage == ShaderStage::VERTEX) {
+        out << "\n";
+        attributes.forEachSetBit([&out, &attributeDatabase, this](size_t const i) {
+            auto const& attribute = attributeDatabase[i];
+            assert_invariant( i == attribute.location );
+            if (mTargetLanguage == TargetLanguage::SPIRV ||
+                    mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+                out << "layout(location = " << size_t(attribute.location) << ") in ";
+            } else {
+                out << "attribute ";
+            }
+            out << getTypeName(attribute.type) << " " << attribute.getAttributeName() << ";\n";
+        });
+
+        out << "\n";
+    }
+    generatePushConstants(out, pushConstants, attributes.size(), pushConstantOffset);
+
+    out << "\n";
+    out << SHADERS_SURFACE_VARYINGS_GLSL_DATA;
+    return out;
+}
+
+io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage const stage,
+        const CString& name, size_t const index,
+        MaterialBuilder::VariableQualifier const qualifier,
+        MaterialBuilder::Precision const precision,
+        MaterialBuilder::OutputType outputType) const {
+    if (name.empty() || stage == ShaderStage::VERTEX) {
+        return out;
+    }
+
+    // Feature level 0 only supports one output.
+    if (index > 0 && mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+        slog.w << "Discarding an output in the generated ESSL 1.0 shader: index = " << index
+               << ", name = " << name.c_str() << io::endl;
+        return out;
+    }
+
+    // TODO: add and support additional variable qualifiers
+    (void) qualifier;
+    assert(qualifier == MaterialBuilder::VariableQualifier::OUT);
+
+    // The material output type is the type the shader writes to from the material.
+    const MaterialBuilder::OutputType materialOutputType = outputType;
+
+    const char* swizzleString = "";
+
+    // Metal and WebGPU don't support some 3-component texture formats, so the backend uses 4-component
+    // formats behind the scenes. It's an error to output fewer components than the attachment
+    // needs, so we always output a float4 instead of a float3. It's never an error to output extra
+    // components.
+    //
+    // Meanwhile, ESSL 1.0 must always write to gl_FragColor, a vec4.
+    if (mTargetApi == TargetApi::METAL || mTargetApi == TargetApi::WEBGPU ||
+            mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+        if (outputType == MaterialBuilder::OutputType::FLOAT3) {
+            outputType = MaterialBuilder::OutputType::FLOAT4;
+            swizzleString = ".rgb";
+        }
+    }
+
+    const char* precisionString = getPrecisionQualifier(precision);
+    const char* materialTypeString = getOutputTypeName(materialOutputType);
+    const char* typeString = getOutputTypeName(outputType);
+
+    bool generate_essl3_code = mTargetLanguage == TargetLanguage::SPIRV
+            || mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1;
+
+    out << "\n#define FRAG_OUTPUT"               << index << " " << name.c_str();
+    if (generate_essl3_code) {
+        out << "\n#define FRAG_OUTPUT_AT"        << index << " output_" << name.c_str();
+    } else {
+        out << "\n#define FRAG_OUTPUT_AT"        << index << " gl_FragColor";
+    }
+    out << "\n#define FRAG_OUTPUT_MATERIAL_TYPE" << index << " " << materialTypeString;
+    out << "\n#define FRAG_OUTPUT_PRECISION"     << index << " " << precisionString;
+    out << "\n#define FRAG_OUTPUT_TYPE"          << index << " " << typeString;
+    out << "\n#define FRAG_OUTPUT_SWIZZLE"       << index << " " << swizzleString;
+    out << "\n";
+
+    if (generate_essl3_code) {
+        out << "\nlayout(location=" << index << ") out " << precisionString << " "
+            << typeString << " output_" << name.c_str() << ";\n";
+    }
+
+    return out;
+}
+
+
+io::sstream& CodeGenerator::generateSurfaceDepthMain(io::sstream& out, ShaderStage const stage) {
+    assert(stage != ShaderStage::VERTEX);
+    if (stage == ShaderStage::FRAGMENT) {
+        out << SHADERS_SURFACE_DEPTH_MAIN_FS_DATA;
+    }
+    return out;
+}
+
+const char* CodeGenerator::getUniformPrecisionQualifier(UniformType const type, Precision precision,
+        Precision const uniformPrecision, Precision const defaultPrecision) noexcept {
+    if (!hasPrecision(type)) {
+        // some types like bool can't have a precision qualifier
+        return "";
+    }
+    if (precision == Precision::DEFAULT) {
+        // if precision field is specified as default, turn it into the default precision for
+        // uniforms (which might be different on desktop vs mobile)
+        precision = uniformPrecision;
+    }
+    if (precision == defaultPrecision) {
+        // finally if the precision match the default precision of this stage, don't omit
+        // the precision qualifier -- which mean the effective precision might be different
+        // in different stages.
+        return "";
+    }
+    return getPrecisionQualifier(precision);
+}
+
+io::sstream& CodeGenerator::generateBuffers(io::sstream& out,
+        MaterialInfo::BufferContainer const& buffers) const {
+
+    for (auto const* buffer : buffers) {
+
+        // FIXME: we need to get the bindings for the SSBOs and that will depend on the samplers
+        descriptor_binding_t binding = 0;
+
+        if (mTargetApi == TargetApi::OPENGL) {
+            // For OpenGL, the set is not used bug the binding must be unique.
+            binding = getUniqueSsboBindingPoint();
+        }
+        generateBufferInterfaceBlock(out, ShaderStage::COMPUTE,
+                DescriptorSetBindingPoints::PER_MATERIAL, binding, *buffer);
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderStage const stage,
+        DescriptorSetBindingPoints const set,
+        descriptor_binding_t binding,
+        const BufferInterfaceBlock& uib) const {
+
+    if (mTargetApi == TargetApi::OPENGL) {
+        // For OpenGL, the set is not used bug the binding must be unique.
+        binding = getUniqueUboBindingPoint();
+    }
+
+    return generateBufferInterfaceBlock(out, stage, set, binding, uib);
+}
+
+io::sstream& CodeGenerator::generateInterfaceFields(io::sstream& out,
+        FixedCapacityVector<BufferInterfaceBlock::FieldInfo> const& infos,
+        Precision const defaultPrecision) const {
+    Precision const uniformPrecision = getDefaultUniformPrecision();
+
+    for (auto const& info : infos) {
+        if (mFeatureLevel < info.minFeatureLevel) {
+            continue;
+        }
+        char const* const type = getUniformTypeName(info);
+        char const* const precision = getUniformPrecisionQualifier(info.type, info.precision,
+                uniformPrecision, defaultPrecision);
+        out << "    " << precision;
+        if (precision[0] != '\0') out << " ";
+        out << type << " " << info.name.c_str();
+        if (info.isArray) {
+            if (info.sizeName.empty()) {
+                if (info.size) {
+                    out << "[" << info.size << "]";
+                } else {
+                    out << "[]";
+                }
+            } else {
+                out << "[" << info.sizeName.c_str() << "]";
+            }
+        }
+        out << ";\n";
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generateUboAsPlainUniforms(io::sstream& out, ShaderStage stage,
+        const BufferInterfaceBlock& uib) const {
+
+    auto const& infos = uib.getFieldInfoList();
+
+    std::string blockName{ uib.getName() };
+    std::string instanceName{ uib.getName() };
+    blockName.front() = char(std::toupper((unsigned char)blockName.front()));
+    instanceName.front() = char(std::tolower((unsigned char)instanceName.front()));
+
+    out << "\nstruct " << blockName << " {\n";
+
+    generateInterfaceFields(out, infos, Precision::DEFAULT);
+
+    out << "};\n";
+    out << "uniform " << blockName << " " << instanceName << ";\n";
+
+    return out;
+}
+
+io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, ShaderStage const stage,
+        DescriptorSetBindingPoints const set,
+        descriptor_binding_t const binding,
+        const BufferInterfaceBlock& uib) const {
+    if (uib.isEmptyForFeatureLevel(mFeatureLevel)) {
+        return out;
+    }
+
+    auto const& infos = uib.getFieldInfoList();
+
+    if (mTargetLanguage == TargetLanguage::GLSL &&
+            mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+        // we need to generate a structure instead
+        assert_invariant(mTargetApi == TargetApi::OPENGL);
+        assert_invariant(uib.getTarget() == BufferInterfaceBlock::Target::UNIFORM);
+        return generateUboAsPlainUniforms(out, stage, uib);
+    }
+
+    std::string blockName{ uib.getName() };
+    std::string instanceName{ uib.getName() };
+    blockName.front() = char(std::toupper((unsigned char)blockName.front()));
+    instanceName.front() = char(std::tolower((unsigned char)instanceName.front()));
+
+    out << "\nlayout(";
+    if (mTargetLanguage == TargetLanguage::SPIRV ||
+        mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
+        switch (mTargetApi) {
+            case TargetApi::METAL:
+            case TargetApi::VULKAN:
+                out << "set = " << +set << ", binding = " << +binding << ", ";
+                break;
+
+            case TargetApi::OPENGL:
+                // GLSL 4.5 / ESSL 3.1 require the 'binding' layout qualifier
+                // in the GLSL 4.5 / ESSL 3.1 case, the set is not used and binding is unique
+                out << "binding = " << +binding << ", ";
+                break;
+            case TargetApi::WEBGPU:
+                out << "set = " << +set << ", binding = " << +binding << ", ";
+            break;
+            case TargetApi::ALL:
+                // nonsensical, shouldn't happen.
+                break;
+        }
+    }
+    switch (uib.getAlignment()) {
+        case BufferInterfaceBlock::Alignment::std140:
+            out << "std140";
+            break;
+        case BufferInterfaceBlock::Alignment::std430:
+            out << "std430";
+            break;
+    }
+
+    out << ") ";
+
+    switch (uib.getTarget()) {
+        case BufferInterfaceBlock::Target::UNIFORM:
+            out << "uniform ";
+            break;
+        case BufferInterfaceBlock::Target::SSBO:
+            out << "buffer ";
+            break;
+    }
+
+    out << blockName << " ";
+
+    if (uib.getTarget() == BufferInterfaceBlock::Target::SSBO) {
+        uint8_t qualifiers = uib.getQualifier();
+        while (qualifiers) {
+            uint8_t const mask = 1u << ctz(unsigned(qualifiers));
+            switch (BufferInterfaceBlock::Qualifier(qualifiers & mask)) {
+                case BufferInterfaceBlock::Qualifier::COHERENT:  out << "coherent "; break;
+                case BufferInterfaceBlock::Qualifier::WRITEONLY: out << "writeonly "; break;
+                case BufferInterfaceBlock::Qualifier::READONLY:  out << "readonly "; break;
+                case BufferInterfaceBlock::Qualifier::VOLATILE:  out << "volatile "; break;
+                case BufferInterfaceBlock::Qualifier::RESTRICT:  out << "restrict "; break;
+            }
+            qualifiers &= ~mask;
+        }
+    }
+
+    out << "{\n";
+
+    generateInterfaceFields(out, infos, getDefaultPrecision(stage));
+
+    out << "} " << instanceName << ";\n";
+
+    return out;
+}
+
+io::sstream& CodeGenerator::generateCommonSamplers(io::sstream& out,
+        DescriptorSetBindingPoints const set,
+        SamplerInterfaceBlock::SamplerInfoList const& list) const {
+    if (list.empty()) {
+        return out;
+    }
+
+    for (auto const& info : list) {
+        auto type = info.type;
+        if (type == SamplerType::SAMPLER_EXTERNAL && mShaderModel != ShaderModel::MOBILE) {
+            // we're generating the shader for the desktop, where we assume external textures
+            // are not supported, in which case we revert to texture2d
+            type = SamplerType::SAMPLER_2D;
+        }
+        char const* const typeName = getSamplerTypeName(type, info.format, info.multisample);
+        char const* const precision = getPrecisionQualifier(info.precision);
+        if (mTargetLanguage == TargetLanguage::SPIRV) {
+            switch (mTargetApi) {
+                // Note that the set specifier is not covered by the desktop GLSL spec, including
+                // recent versions. It is only documented in the GL_KHR_vulkan_glsl extension.
+                case TargetApi::VULKAN:
+                    out << "layout(binding = " << +info.binding << ", set = " << +set << ") ";
+                    break;
+
+                // For Metal, each sampler group gets its own descriptor set, each of which will
+                // become an argument buffer. The first descriptor set is reserved for uniforms,
+                // hence the +1 here.
+                case TargetApi::METAL:
+                    out << "layout(binding = " << +info.binding << ", set = " << +set << ") ";
+                    break;
+
+                case TargetApi::OPENGL:
+                    // GLSL 4.5 / ESSL 3.1 require the 'binding' layout qualifier
+                    out << "layout(binding = " << getUniqueSamplerBindingPoint() << ") ";
+                    break;
+                case TargetApi::WEBGPU:
+                    out << "layout(binding = " << +info.binding << ", set = " << +set << ") ";
+                break;
+                case TargetApi::ALL:
+                    // should not happen
+                    break;
+            }
+        }
+        out << "uniform " << precision << " " << typeName << " " << info.uniformName.c_str();
+        out << ";\n";
+    }
+    out << "\n";
+
+    return out;
+}
+
+io::sstream& CodeGenerator::generatePostProcessSubpass(io::sstream& out, SubpassInfo subpass) {
+    if (!subpass.isValid) {
+        return out;
+    }
+
+    CString subpassName =
+            SamplerInterfaceBlock::generateUniformName(subpass.block.c_str(), subpass.name.c_str());
+
+    char const* const typeName = "subpassInput";
+    // In our Vulkan backend, subpass inputs always live in descriptor set 2. (ignored for GLES)
+    char const* const precision = getPrecisionQualifier(subpass.precision);
+    out << "layout(input_attachment_index = " << (int) subpass.attachmentIndex
+        << ", set = 2, binding = " << (int) subpass.binding
+        << ") ";
+    out << "uniform " << precision << " " << typeName << " " << subpassName.c_str();
+    out << ";\n";
+
+    out << "\n";
+
+    return out;
+}
+
+void CodeGenerator::fixupExternalSamplers(
+        std::string& shader, SamplerInterfaceBlock const& sib, FeatureLevel const featureLevel) noexcept {
+    auto const& infos = sib.getSamplerInfoList();
+    if (infos.empty()) {
+        return;
+    }
+
+    bool hasExternalSampler = false;
+
+    // Replace sampler2D declarations by samplerExternal declarations as they may have
+    // been swapped during a previous optimization step
+    for (auto const& info : infos) {
+        if (info.type == SamplerType::SAMPLER_EXTERNAL) {
+            auto name = std::string("sampler2D ") + info.uniformName.c_str();
+            size_t const index = shader.find(name);
+
+            if (index != std::string::npos) {
+                hasExternalSampler = true;
+                auto newName =
+                        std::string("samplerExternalOES ") + info.uniformName.c_str();
+                shader.replace(index, name.size(), newName);
+            }
+        }
+    }
+
+    // This method should only be called on shaders that have external samplers but since
+    // they may have been removed by previous optimization steps, we check again here
+    if (hasExternalSampler) {
+        // Find the #version line, so we can insert the #extension directive
+        size_t index = shader.find("#version");
+        index += 8;
+
+        // Find the end of the line and skip the line return
+        while (shader[index] != '\n') index++;
+        index++;
+
+        const char *extensionLine = (featureLevel >= FeatureLevel::FEATURE_LEVEL_1)
+                ? "#extension GL_OES_EGL_image_external_essl3 : require\n\n"
+                : "#extension GL_OES_EGL_image_external : require\n\n";
+        shader.insert(index, extensionLine);
+    }
+}
+
+
+io::sstream& CodeGenerator::generateDefine(io::sstream& out, const char* name) {
+    out << "#define " << name << "\n";
+    return out;
+}
+
+io::sstream& CodeGenerator::generateValueDefine(io::sstream& out, const char* name, uint32_t const value) {
+    out << "#define " << name << " " << value << "\n";
+    return out;
+}
+
+io::sstream& CodeGenerator::generateValueDefine(io::sstream& out, const char* name,
+        const char* string) {
+    out << "#define " << name << " " << string << "\n";
+    return out;
+}
+
+io::sstream& CodeGenerator::generateIndexedDefine(io::sstream& out, const char* name,
+        uint32_t const index, uint32_t const value) {
+    out << "#define " << name << index << " " << value << "\n";
+    return out;
+}
+
+struct SpecializationConstantFormatter {
+    std::string operator()(int const value) noexcept { return std::to_string(value); }
+    std::string operator()(float const value) noexcept { return std::to_string(value); }
+    std::string operator()(bool const value) noexcept { return value ? "true" : "false"; }
+};
+
+io::sstream& CodeGenerator::generateSpecializationConstant(io::sstream& out,
+        const char* name, uint32_t const id, std::variant<int, float, bool> value) const {
+
+    std::string const constantString = std::visit(SpecializationConstantFormatter(), value);
+
+    static const char* types[] = { "int", "float", "bool" };
+
+    if (mTargetLanguage == TargetLanguage::SPIRV) {
+        out << "layout (constant_id = " << id << ") const "
+            << types[value.index()] << " " << name << " = " << constantString << ";\n";
+    } else {
+        out << "#ifndef SPIRV_CROSS_CONSTANT_ID_" << id << '\n'
+            << "#define SPIRV_CROSS_CONSTANT_ID_" << id << " " << constantString << '\n'
+            << "#endif" << '\n'
+            << "const " << types[value.index()] << " " << name << " = SPIRV_CROSS_CONSTANT_ID_" << id
+            << ";\n\n";
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generatePushConstants(io::sstream& out,
+        MaterialBuilder::PushConstantList const& pushConstants, size_t const layoutLocation,
+        uint32_t startOffset) const {
+    if (UTILS_UNLIKELY(pushConstants.empty())) {
+        return out;
+    }
+    static constexpr char const* STRUCT_NAME = "Constants";
+
+    auto const getType = [](ConstantType const& type) {
+        switch (type) {
+            case ConstantType::BOOL:
+                return "bool";
+            case ConstantType::INT:
+                return "int";
+            case ConstantType::FLOAT:
+                return "float";
+        }
+    };
+    bool const outputSpirv =
+            mTargetLanguage == TargetLanguage::SPIRV && mTargetApi != TargetApi::OPENGL;
+    if (outputSpirv) {
+        out << "layout(push_constant) uniform " << STRUCT_NAME << " {\n";
+    } else {
+        out << "struct " << STRUCT_NAME << " {\n";
+    }
+
+    for (auto const& constant: pushConstants) {
+        if (outputSpirv && startOffset != 0) {
+            out << "layout(offset=" << startOffset << ") ";
+            startOffset = 0;
+        }
+        out << getType(constant.type) << " " << constant.name.c_str() << ";\n";
+    }
+
+
+    if (outputSpirv) {
+        out << "} " << PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
+    } else {
+        out << "};\n";
+        out << "LAYOUT_LOCATION(" << static_cast<int>(layoutLocation) << ") uniform " << STRUCT_NAME
+            << " " << PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generateMaterialProperty(io::sstream& out,
+        MaterialBuilder::Property const property, bool const isSet) {
+    if (isSet) {
+        out << "#define " << "MATERIAL_HAS_" << getConstantName(property) << "\n";
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generateQualityDefine(io::sstream& out, ShaderQuality const quality) const {
+    out << "#define FILAMENT_QUALITY_LOW    0\n";
+    out << "#define FILAMENT_QUALITY_NORMAL 1\n";
+    out << "#define FILAMENT_QUALITY_HIGH   2\n";
+
+    switch (quality) {
+        case ShaderQuality::DEFAULT:
+            switch (mShaderModel) {
+                default:                   goto quality_normal;
+                case ShaderModel::DESKTOP: goto quality_high;
+                case ShaderModel::MOBILE:  goto quality_low;
+            }
+        case ShaderQuality::LOW:
+        quality_low:
+            out << "#define FILAMENT_QUALITY FILAMENT_QUALITY_LOW\n";
+            break;
+        case ShaderQuality::NORMAL:
+        default:
+        quality_normal:
+            out << "#define FILAMENT_QUALITY FILAMENT_QUALITY_NORMAL\n";
+            break;
+        case ShaderQuality::HIGH:
+        quality_high:
+            out << "#define FILAMENT_QUALITY FILAMENT_QUALITY_HIGH\n";
+            break;
+    }
+
+    return out;
+}
+
+io::sstream& CodeGenerator::generateSurfaceCommon(io::sstream& out, ShaderStage const stage) {
+    out << SHADERS_COMMON_MATH_GLSL_DATA;
+    switch (stage) {
+        case ShaderStage::VERTEX:
+            out << SHADERS_SURFACE_INSTANCING_GLSL_DATA;
+            out << SHADERS_SURFACE_SHADOWING_GLSL_DATA;
+            break;
+        case ShaderStage::FRAGMENT:
+            out << SHADERS_SURFACE_INSTANCING_GLSL_DATA;
+            out << SHADERS_SURFACE_SHADOWING_GLSL_DATA;
+            out << SHADERS_COMMON_SHADING_FS_DATA;
+            out << SHADERS_COMMON_GRAPHICS_FS_DATA;
+            out << SHADERS_SURFACE_MATERIAL_FS_DATA;
+            break;
+        case ShaderStage::COMPUTE:
+            out << '\n';
+            // TODO: figure out if we need some common files here
+            break;
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generatePostProcessCommon(io::sstream& out, ShaderStage const stage) {
+    out << SHADERS_COMMON_MATH_GLSL_DATA;
+    if (stage == ShaderStage::VERTEX) {
+    } else if (stage == ShaderStage::FRAGMENT) {
+        out << SHADERS_COMMON_SHADING_FS_DATA;
+        out << SHADERS_COMMON_GRAPHICS_FS_DATA;
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generateSurfaceFog(io::sstream& out, ShaderStage const stage) {
+    if (stage == ShaderStage::VERTEX) {
+    } else if (stage == ShaderStage::FRAGMENT) {
+        out << SHADERS_SURFACE_FOG_FS_DATA;
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generateSurfaceMaterial(io::sstream& out, ShaderStage const stage) {
+    if (stage == ShaderStage::VERTEX) {
+        out << SHADERS_SURFACE_MATERIAL_INPUTS_VS_DATA;
+    } else if (stage == ShaderStage::FRAGMENT) {
+        out << SHADERS_SURFACE_MATERIAL_INPUTS_FS_DATA;
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generatePostProcessInputs(io::sstream& out, ShaderStage const stage) {
+    if (stage == ShaderStage::VERTEX) {
+        out << SHADERS_POST_PROCESS_INPUTS_VS_DATA;
+    } else if (stage == ShaderStage::FRAGMENT) {
+        out << SHADERS_POST_PROCESS_INPUTS_FS_DATA;
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generatePostProcessGetters(io::sstream& out, ShaderStage const stage) {
+    out << SHADERS_COMMON_GETTERS_GLSL_DATA;
+    if (stage == ShaderStage::VERTEX) {
+        out << SHADERS_POST_PROCESS_GETTERS_VS_DATA;
+    } else if (stage == ShaderStage::FRAGMENT) {
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generateSurfaceGetters(io::sstream& out, ShaderStage const stage) {
+    out << SHADERS_COMMON_GETTERS_GLSL_DATA;
+    switch (stage) {
+        case ShaderStage::VERTEX:
+            out << SHADERS_SURFACE_GETTERS_VS_DATA;
+            break;
+        case ShaderStage::FRAGMENT:
+            out << SHADERS_SURFACE_GETTERS_FS_DATA;
+            break;
+        case ShaderStage::COMPUTE:
+            out << SHADERS_SURFACE_GETTERS_CS_DATA;
+            break;
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generateSurfaceParameters(io::sstream& out, ShaderStage const stage) {
+    if (stage == ShaderStage::FRAGMENT) {
+        out << SHADERS_SURFACE_SHADING_PARAMETERS_FS_DATA;
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generateSurfaceLit(io::sstream& out, ShaderStage const stage,
+        filament::Variant const variant, Shading const shading, bool const customSurfaceShading) {
+    if (stage == ShaderStage::FRAGMENT) {
+        out << SHADERS_SURFACE_LIGHTING_FS_DATA;
+        if (filament::Variant::isShadowReceiverVariant(variant)) {
+            out << SHADERS_SURFACE_SHADOWING_FS_DATA;
+        }
+
+        // the only reason we have this assert here is that we used to have a check,
+        // which seemed unnecessary.
+        assert_invariant(shading != Shading::UNLIT);
+
+        out << SHADERS_SURFACE_BRDF_FS_DATA;
+        switch (shading) {
+            case Shading::UNLIT:
+                // can't happen
+                break;
+            case Shading::SPECULAR_GLOSSINESS:
+            case Shading::LIT:
+                if (customSurfaceShading) {
+                    out << SHADERS_SURFACE_SHADING_LIT_CUSTOM_FS_DATA;
+                } else {
+                    out << SHADERS_SURFACE_SHADING_MODEL_STANDARD_FS_DATA;
+                }
+                break;
+            case Shading::SUBSURFACE:
+                out << SHADERS_SURFACE_SHADING_MODEL_SUBSURFACE_FS_DATA;
+                break;
+            case Shading::CLOTH:
+                out << SHADERS_SURFACE_SHADING_MODEL_CLOTH_FS_DATA;
+                break;
+        }
+
+        out << SHADERS_SURFACE_AMBIENT_OCCLUSION_FS_DATA;
+        out << SHADERS_SURFACE_LIGHT_INDIRECT_FS_DATA;
+        out << SHADERS_SURFACE_LIGHT_DIRECTIONAL_FS_DATA;
+        out << SHADERS_SURFACE_LIGHT_PUNCTUAL_FS_DATA;
+        out << SHADERS_SURFACE_SHADING_LIT_FS_DATA;
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generateSurfaceUnlit(io::sstream& out, ShaderStage const stage,
+        filament::Variant const variant, bool const hasShadowMultiplier) {
+    if (stage == ShaderStage::FRAGMENT) {
+        if (hasShadowMultiplier) {
+            if (filament::Variant::isShadowReceiverVariant(variant)) {
+                out << SHADERS_SURFACE_SHADOWING_FS_DATA;
+            }
+        }
+        out << SHADERS_SURFACE_SHADING_UNLIT_FS_DATA;
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generateSurfaceReflections(io::sstream& out,
+        ShaderStage const stage) {
+    if (stage == ShaderStage::FRAGMENT) {
+        out << SHADERS_SURFACE_LIGHTING_FS_DATA;
+        out << SHADERS_SURFACE_LIGHT_REFLECTIONS_FS_DATA;
+        out << SHADERS_SURFACE_SHADING_REFLECTIONS_FS_DATA;
+    }
+    return out;
+}
+
+/* static */
+char const* CodeGenerator::getConstantName(MaterialBuilder::Property const property) noexcept {
+    using Property = MaterialBuilder::Property;
+    switch (property) {
+        case Property::BASE_COLOR:                  return "BASE_COLOR";
+        case Property::ROUGHNESS:                   return "ROUGHNESS";
+        case Property::METALLIC:                    return "METALLIC";
+        case Property::REFLECTANCE:                 return "REFLECTANCE";
+        case Property::AMBIENT_OCCLUSION:           return "AMBIENT_OCCLUSION";
+        case Property::CLEAR_COAT:                  return "CLEAR_COAT";
+        case Property::CLEAR_COAT_ROUGHNESS:        return "CLEAR_COAT_ROUGHNESS";
+        case Property::CLEAR_COAT_NORMAL:           return "CLEAR_COAT_NORMAL";
+        case Property::ANISOTROPY:                  return "ANISOTROPY";
+        case Property::ANISOTROPY_DIRECTION:        return "ANISOTROPY_DIRECTION";
+        case Property::THICKNESS:                   return "THICKNESS";
+        case Property::SUBSURFACE_POWER:            return "SUBSURFACE_POWER";
+        case Property::SUBSURFACE_COLOR:            return "SUBSURFACE_COLOR";
+        case Property::SHEEN_COLOR:                 return "SHEEN_COLOR";
+        case Property::SHEEN_ROUGHNESS:             return "SHEEN_ROUGHNESS";
+        case Property::GLOSSINESS:                  return "GLOSSINESS";
+        case Property::SPECULAR_COLOR:              return "SPECULAR_COLOR";
+        case Property::EMISSIVE:                    return "EMISSIVE";
+        case Property::NORMAL:                      return "NORMAL";
+        case Property::POST_LIGHTING_COLOR:         return "POST_LIGHTING_COLOR";
+        case Property::POST_LIGHTING_MIX_FACTOR:    return "POST_LIGHTING_MIX_FACTOR";
+        case Property::CLIP_SPACE_TRANSFORM:        return "CLIP_SPACE_TRANSFORM";
+        case Property::ABSORPTION:                  return "ABSORPTION";
+        case Property::TRANSMISSION:                return "TRANSMISSION";
+        case Property::IOR:                         return "IOR";
+        case Property::DISPERSION:                  return "DISPERSION";
+        case Property::MICRO_THICKNESS:             return "MICRO_THICKNESS";
+        case Property::BENT_NORMAL:                 return "BENT_NORMAL";
+        case Property::SPECULAR_FACTOR:             return "SPECULAR_FACTOR";
+        case Property::SPECULAR_COLOR_FACTOR:       return "SPECULAR_COLOR_FACTOR";
+        case Property::SHADOW_STRENGTH:             return "SHADOW_STRENGTH";
+        case Property::CLIP_SPACE_POSITION:         return "CLIP_SPACE_POSITION";
+        case Property::SECOND_ROUGHNESS:            return "SECOND_ROUGHNESS";
+        case Property::SECOND_ROUGHNESS_WEIGHT:     return "SECOND_ROUGHNESS_WEIGHT";
+        case Property::IRIDESCENCE:                 return "IRIDESCENCE";
+        case Property::IRIDESCENCE_IOR:             return "IRIDESCENCE_IOR";
+        case Property::IRIDESCENCE_THICKNESS:       return "IRIDESCENCE_THICKNESS";
+    }
+}
+
+char const* CodeGenerator::getTypeName(UniformType const type) noexcept {
+    switch (type) {
+        case UniformType::BOOL:   return "bool";
+        case UniformType::BOOL2:  return "bvec2";
+        case UniformType::BOOL3:  return "bvec3";
+        case UniformType::BOOL4:  return "bvec4";
+        case UniformType::FLOAT:  return "float";
+        case UniformType::FLOAT2: return "vec2";
+        case UniformType::FLOAT3: return "vec3";
+        case UniformType::FLOAT4: return "vec4";
+        case UniformType::INT:    return "int";
+        case UniformType::INT2:   return "ivec2";
+        case UniformType::INT3:   return "ivec3";
+        case UniformType::INT4:   return "ivec4";
+        case UniformType::UINT:   return "uint";
+        case UniformType::UINT2:  return "uvec2";
+        case UniformType::UINT3:  return "uvec3";
+        case UniformType::UINT4:  return "uvec4";
+        case UniformType::MAT3:   return "mat3";
+        case UniformType::MAT4:   return "mat4";
+        case UniformType::STRUCT: return "";
+    }
+}
+
+char const* CodeGenerator::getUniformTypeName(BufferInterfaceBlock::FieldInfo const& info) noexcept {
+    using Type = BufferInterfaceBlock::Type;
+    switch (info.type) {
+        case Type::STRUCT: return info.structName.c_str();
+        default:            return getTypeName(info.type);
+    }
+}
+
+char const* CodeGenerator::getOutputTypeName(MaterialBuilder::OutputType const type) noexcept {
+    switch (type) {
+        case MaterialBuilder::OutputType::FLOAT:  return "float";
+        case MaterialBuilder::OutputType::FLOAT2: return "vec2";
+        case MaterialBuilder::OutputType::FLOAT3: return "vec3";
+        case MaterialBuilder::OutputType::FLOAT4: return "vec4";
+        case MaterialBuilder::OutputType::INT:    return "int";
+        case MaterialBuilder::OutputType::INT2:   return "ivec2";
+        case MaterialBuilder::OutputType::INT3:   return "ivec3";
+        case MaterialBuilder::OutputType::INT4:   return "ivec4";
+        case MaterialBuilder::OutputType::UINT:   return "uint";
+        case MaterialBuilder::OutputType::UINT2:  return "uvec2";
+        case MaterialBuilder::OutputType::UINT3:  return "uvec3";
+        case MaterialBuilder::OutputType::UINT4:  return "uvec4";
+    }
+}
+
+char const* CodeGenerator::getSamplerTypeName(SamplerType const type, SamplerFormat const format,
+        bool const multisample) const noexcept {
+    switch (type) {
+        case SamplerType::SAMPLER_2D:
+            switch (format) {
+                case SamplerFormat::INT:    return multisample ? "isampler2DMS" : "isampler2D";
+                case SamplerFormat::UINT:   return multisample ? "usampler2DMS" : "usampler2D";
+                case SamplerFormat::FLOAT:  return multisample ? "sampler2DMS" : "sampler2D";
+                case SamplerFormat::SHADOW: return "sampler2DShadow";
+            }
+        case SamplerType::SAMPLER_3D:
+            assert(format != SamplerFormat::SHADOW);
+            switch (format) {
+                case SamplerFormat::INT:    return "isampler3D";
+                case SamplerFormat::UINT:   return "usampler3D";
+                case SamplerFormat::FLOAT:  return "sampler3D";
+                case SamplerFormat::SHADOW: return nullptr;
+            }
+        case SamplerType::SAMPLER_2D_ARRAY:
+            switch (format) {
+                case SamplerFormat::INT:    return multisample ? "isampler2DMSArray": "isampler2DArray";
+                case SamplerFormat::UINT:   return multisample ? "usampler2DMSArray": "usampler2DArray";
+                case SamplerFormat::FLOAT:  return multisample ? "sampler2DMSArray": "sampler2DArray";
+                case SamplerFormat::SHADOW: return "sampler2DArrayShadow";
+            }
+        case SamplerType::SAMPLER_CUBEMAP:
+            switch (format) {
+                case SamplerFormat::INT:    return "isamplerCube";
+                case SamplerFormat::UINT:   return "usamplerCube";
+                case SamplerFormat::FLOAT:  return "samplerCube";
+                case SamplerFormat::SHADOW: return "samplerCubeShadow";
+            }
+        case SamplerType::SAMPLER_EXTERNAL:
+            assert(format != SamplerFormat::SHADOW);
+            // Vulkan doesn't have external textures in the sense as GL. Vulkan external textures
+            // are created via VK_ANDROID_external_memory_android_hardware_buffer, but they are
+            // backed by VkImage just like a normal texture, and sampled from normally.
+            return (mTargetLanguage == TargetLanguage::SPIRV) ? "sampler2D" : "samplerExternalOES";
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            switch (format) {
+                case SamplerFormat::INT:    return "isamplerCubeArray";
+                case SamplerFormat::UINT:   return "usamplerCubeArray";
+                case SamplerFormat::FLOAT:  return "samplerCubeArray";
+                case SamplerFormat::SHADOW: return "samplerCubeArrayShadow";
+            }
+    }
+}
+
+char const* CodeGenerator::getInterpolationQualifier(Interpolation const interpolation) noexcept {
+    switch (interpolation) {
+        case Interpolation::SMOOTH: return "";
+        case Interpolation::FLAT:   return "flat ";
+    }
+}
+
+/* static */
+char const* CodeGenerator::getPrecisionQualifier(Precision const precision) noexcept {
+    switch (precision) {
+        case Precision::LOW:     return "lowp";
+        case Precision::MEDIUM:  return "mediump";
+        case Precision::HIGH:    return "highp";
+        case Precision::DEFAULT: return "";
+    }
+}
+
+/* static */
+bool CodeGenerator::hasPrecision(BufferInterfaceBlock::Type const type) noexcept {
+    switch (type) {
+        case UniformType::BOOL:
+        case UniformType::BOOL2:
+        case UniformType::BOOL3:
+        case UniformType::BOOL4:
+        case UniformType::STRUCT:
+            return false;
+        default:
+            return true;
+    }
+}
+
+} // namespace filamat

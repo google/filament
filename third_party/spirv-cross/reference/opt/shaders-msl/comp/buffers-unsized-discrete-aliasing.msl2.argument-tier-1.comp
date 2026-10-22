@@ -1,0 +1,45 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T>
+struct spvDescriptor
+{
+    T value;
+};
+
+template<typename T>
+struct spvDescriptorArray
+{
+    spvDescriptorArray(const device spvDescriptor<T>* ptr_) : ptr(&ptr_->value) {}
+    spvDescriptorArray(const device void *ptr_) : spvDescriptorArray(static_cast<const device spvDescriptor<T>*>(ptr_)) {}
+    const device T& operator [] (size_t i) const { return ptr[i]; }
+    const device T* ptr;
+};
+
+struct SSBOW
+{
+    char _m0_pad[4];
+    float a;
+};
+
+struct SSBO
+{
+    float b;
+};
+
+kernel void main0(device void* spvBufferAliasSet0Binding0 [[buffer(0)]], device void* spvBufferAliasSet1Binding0 [[buffer(1)]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]])
+{
+    spvDescriptorArray<device SSBOW*> RW {spvBufferAliasSet0Binding0};
+    spvDescriptorArray<device SSBO*> RO {spvBufferAliasSet0Binding0};
+    spvDescriptorArray<texture2d<float>> tex2d {spvBufferAliasSet1Binding0};
+    spvDescriptorArray<texture3d<float>> tex3d {spvBufferAliasSet1Binding0};
+
+    RW[gl_WorkGroupID.x]->a = RO[gl_WorkGroupID.x]->b;
+    RW[0]->a += tex2d[gl_WorkGroupID.x].read(uint2(int2(0)), 0).x;
+    RW[0]->a += tex3d[gl_WorkGroupID.x].read(uint3(int3(10)), 1).x;
+}
+

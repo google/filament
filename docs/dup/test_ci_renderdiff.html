@@ -1,0 +1,472 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>CI: renderdiff - Filament</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div style="display:flex;align-items:center;justify-content:center">
+                <img class="flogo" src="../images/filament_logo_small.png"/>
+            </div>
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <!-- Filament: disable themes because the markdeep part does not look good for dark themes -->
+                        <!--
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        -->
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Filament</h1>
+
+                    <div class="right-buttons">
+                        <a href="https://github.com/google/filament" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="rendering-difference-test"><a class="header" href="#rendering-difference-test">Rendering Difference Test</a></h1>
+<p>This tool (<code>/test/renderdiff</code>) is a collection of scripts to run visual regression tests on both <code>gltf_viewer</code>
+models and standalone Filament sample applications, producing headless renderings for automated diff comparison
+against golden references.</p>
+<p>This is mainly useful for continuous integration where GPUs are generally not available on cloud
+machines. To perform software rasterization, these scripts are centered around <a href="https://docs.mesa3d.org">Mesa</a>'s
+software rasterizers, but nothing bars us from using another rasterizer like <a href="https://github.com/google/swiftshader">SwiftShader</a>.
+Additionally, we should be able to use GPUs where available (though this is more of a future
+work).</p>
+<p>The script <code>render.py</code> contains the core logic for taking input parameters (such as the test
+description file) and executing the corresponding tests.</p>
+<p>In the <code>test</code> directory is a list of test descriptions that are specified in JSON. Please see
+<a href="FORMAT.html"><code>test/renderdiff/FORMAT.md</code></a> and <a href="tests/sample.json"><code>test/renderdiff/tests/sample.json</code></a>
+to glean the structure, and <a href="../../arch.html"><code>arch.md</code></a> for the end-to-end framework architecture.
+These tests support both <code>gltf_test</code> (glTF models) and <code>sample_test</code>
+(standalone sample binaries), declaring which <strong>renderers</strong> they run on using the <code>platform-backend</code>
+specification format (e.g., <code>"desktop-opengl"</code>, <code>"desktop-vulkan"</code>, <code>"web-webgl"</code>).</p>
+<h2 id="platforms"><a class="header" href="#platforms">Platforms</a></h2>
+<p>There are two platforms, and they keep <strong>separate goldens</strong>. The same scene rendered
+natively and in a browser does not produce the same pixels -- different rasterizer,
+different shader compiler -- so a <code>web-webgl</code> golden is never compared against a
+<code>desktop-opengl</code> one.</p>
+<div class="table-wrapper"><table><thead><tr><th>Platform</th><th>How it renders</th><th>Backends</th></tr></thead><tbody>
+<tr><td><code>desktop</code></td><td>Runs the native <code>gltf_viewer</code> headlessly against <a href="https://docs.mesa3d.org">Mesa</a>'s software rasterizers.</td><td><code>opengl</code>, <code>vulkan</code>, <code>webgpu</code></td></tr>
+<tr><td><code>web</code></td><td>Builds <code>gltf_viewer</code> to WebAssembly and drives it in a headless Chromium on <a href="https://github.com/google/swiftshader">SwiftShader</a>.</td><td><code>webgl</code>, <code>webgpu</code></td></tr>
+</tbody></table>
+</div>
+<p>The web platform is reproducible only because three things are pinned: the browser build
+(via <code>playwright</code> in <code>rendering_requirements.txt</code>, asserted at runtime against
+<code>EXPECTED_BROWSER_VERSION</code> in <code>web_renderer.py</code>), the rasterizer (SwiftShader, asserted at
+startup), and the render size. Changing any of them means regenerating the web goldens.</p>
+<h2 id="setting-up-python"><a class="header" href="#setting-up-python">Setting up python</a></h2>
+<p>The <code>renderdiff</code> project uses <code>python</code> extensively. To install the dependencies for producing
+renderings, do the following step</p>
+<ul>
+<li>Set up a virtual environment (from the root directory)
+<pre><code>python3 -m venv venv
+. ./venv/bin/activate
+</code></pre>
+</li>
+<li>Install the rendering dependencies
+<pre><code>pip install -r test/renderdiff/src/rendering_requirements.txt
+</code></pre>
+</li>
+<li>Install the viewer depdencies
+<pre><code>pip install -r test/renderdiff/src/viewer_requirements.txt
+</code></pre>
+</li>
+<li>For the commands in the following section, do not exit the virtual environment. Once you've
+completed all your work, you can exit with
+<pre><code>deactivate
+</code></pre>
+</li>
+</ul>
+<h2 id="running-the-test-locally"><a class="header" href="#running-the-test-locally">Running the test locally</a></h2>
+<ul>
+<li>To run the same presbumit as <a href="presubmit-renderdiff"><code>test-renderdiff</code></a>, you can do
+<pre><code>bash test/renderdiff/local_test.sh
+</code></pre>
+</li>
+<li>This script will generate the renderings based on the current state of your repo.
+Additionally, it will also compare the generated images with corresponding images in the
+golden repo.</li>
+<li>To just render without running the test, you could use the following script
+<pre><code>bash test/renderdiff/generate.sh
+</code></pre>
+</li>
+<li>Both scripts default to <code>--platform=desktop</code>. To render the web platform instead:
+<pre><code>bash test/renderdiff/generate.sh --platform=web
+</code></pre>
+This needs an emscripten SDK on <code>$EMSDK</code> (<code>bash build/common/get-emscripten.sh</code>); the
+script installs the pinned browser itself. Only one platform is rendered per invocation,
+matching how CI splits them across runners.</li>
+</ul>
+<blockquote>
+<p>[!IMPORTANT]
+<strong>The goldens are rendered on Linux/aarch64.</strong> A golden's path records the platform and the
+backend (<code>desktop-opengl</code> and so on) but not the host, and different hosts produce different
+pixels for reasons unrelated to any change: a different compiler, a different Mesa build, a
+different libm. On any other host, including macOS, <code>local_test.sh</code> prints a warning and its
+comparison results are advisory. Rendering locally is still the fastest way to see what a change
+does; to judge it against the goldens, read the presubmit result.</p>
+</blockquote>
+<h2 id="command-line-options"><a class="header" href="#command-line-options">Command-line Options</a></h2>
+<ul>
+<li><code>--test=&lt;path&gt;</code>: Path to the test suite configuration JSON file (defaults to
+<code>test/renderdiff/tests/presubmit.json</code>). For example, <code>--test=test/renderdiff/tests/sample.json</code>.</li>
+<li><code>--platform=&lt;desktop|web&gt;</code>: Which platform to build and render for (defaults to <code>desktop</code>).
+Passed to <code>compare.py</code> as well, which scopes the comparison to that platform's goldens.</li>
+<li><code>--test_filter=&lt;filter&gt;</code>: Run a subset of tests using fnmatch wildcards (<code>*</code>). It filters against
+the pattern <code>{test.name}.{platform}-{backend}.{target}</code>.</li>
+<li><code>--no_rebuild</code>: Skip rebuilding the executables (<code>gltf_viewer</code> and <code>filament-samples</code>).</li>
+<li><code>--build-only</code>: Build the executables and stop, without rendering. Used by the CI job that warms
+the compiler cache.</li>
+<li><code>--num_threads=&lt;number&gt;</code>: Number of renders to run concurrently. Each render uses the whole
+machine, because the software drivers size their worker pools from the core count, so the default
+is a quarter of the cores clamped to the range 2 to 4. Raising it oversubscribes the machine.
+Ignored on <code>web</code>, which renders sequentially (one browser page per test).</li>
+</ul>
+<p>For example, to run all <code>MSAA</code> tests on Vulkan without rebuilding, two renders at a time:</p>
+<pre><code>bash test/renderdiff/local_test.sh --test_filter='MSAA.*vulkan*.*' --no_rebuild --num_threads=2
+</code></pre>
+<h2 id="when-a-render-crashes"><a class="header" href="#when-a-render-crashes">When a render crashes</a></h2>
+<p>A render that dies on a signal is reported as, for example, <code>error=-6 (killed by SIGABRT)</code>, and its
+output usually names only the assertion that fired, which says nothing about the call that provoked
+it.</p>
+<p>Every run therefore collects what the crash left behind, at no cost when nothing crashed.
+<code>generate.sh</code> raises the core limit before rendering and runs <code>src/report_crashes.sh</code> on the way
+out, which writes a symbolized backtrace per crash into <code>out/renderdiff/crashes</code>. The CI uploads
+that directory with the rest of the renderdiff output, and the backtraces are echoed into the job
+log as well.</p>
+<p>The two platforms leave different evidence, and the script handles both:</p>
+<ul>
+<li>On Linux the kernel writes a core, read by <code>gdb</code>. Where it goes is <code>kernel.core_pattern</code>, which
+only root can change, so the CI points it at <code>/tmp/renderdiff-cores</code>; a local run without that
+setting usually leaves a <code>core</code> file in the test's working directory under <code>/tmp/renderdiff</code>,
+which the script also searches. Cores are deleted once read, because a debug build produces a
+very large one; set <code>RENDERDIFF_KEEP_CORES=1</code> to keep them.</li>
+<li>On macOS no core is written, regardless of the core limit, but ReportCrash leaves a symbolicated
+<code>.ips</code> report in <code>~/Library/Logs/DiagnosticReports</code>. The script renders those as ordinary
+backtraces with <code>src/format_ips.py</code>.</li>
+</ul>
+<p>The <code>web</code> platform never leaves a core, because a crash happens inside the browser. Instead, every
+web render writes the whole browser console next to its image, as
+<code>out/renderdiff/renders/&lt;suite&gt;/&lt;name&gt;.console.log</code>. The file is written whether or not the render
+succeeded, and the CI uploads it with the rest of the output. A failed render also prints the last
+30 console lines into the job log.</p>
+<h2 id="update-the-golden-images"><a class="header" href="#update-the-golden-images">Update the golden images</a></h2>
+<p>The golden images are stored in a github repository:
+https://github.com/google/filament-assets. Filament team members should have access to write
+to the repository. A typical flow for updating the goldens is to upload your changed images
+into <strong>branch</strong> of <code>filament-assets</code>. This branch is paired with a PR or commit on the
+<code>filament</code> repo.</p>
+<p>Because the goldens have to come from the same host presubmit renders on, the images themselves
+have to be produced by CI rather than on your machine. The routes below are ordered by how much you
+have to do by hand; the last two are only correct if you are running them on Linux/aarch64.</p>
+<h3 id="automated-update-via-commit-message"><a class="header" href="#automated-update-via-commit-message">Automated update via commit message</a></h3>
+<p>If you are confident in your changes and want CI to handle the update for you, add the following
+line to the commit message of your working branch on <code>filament</code>:</p>
+<pre><code>RDIFF_ACCEPT_NEW_GOLDENS
+</code></pre>
+<p>This has the following effects:</p>
+<ul>
+<li>The presubmit test <code>test-renderdiff</code> will be bypassed (it will not perform rendering or
+comparison).</li>
+<li>When the PR is merged, the postsubmit CI will automatically:
+<ol>
+<li>Build Filament and generate the new images, on the same runner presubmit compares on.</li>
+<li>Upload them to a temporary branch in <code>filament-assets</code>.</li>
+<li>Merge that branch into <code>main</code>.</li>
+</ol>
+</li>
+</ul>
+<p>The cost of this route is that nothing verifies the new goldens before they land: presubmit does
+not compare, so the first evidence that they are right is the next PR passing.</p>
+<h3 id="using-the-renderdiff-goldens-workflow"><a class="header" href="#using-the-renderdiff-goldens-workflow">Using the 'Renderdiff Goldens' workflow</a></h3>
+<p>To see the new goldens applied in presubmit before the change lands, generate them first:</p>
+<ul>
+<li>Run the <strong>Renderdiff Goldens</strong> workflow from the Actions tab, selecting your <code>filament</code> branch
+and giving it a branch name for the golden repo (for example <code>my-pr-branch-golden</code>). The workflow
+renders on the presubmit runner and pushes the images to that branch, overwriting it if it
+already exists.</li>
+<li>Add the following line to the commit message of your working branch on <code>filament</code>:
+<pre><code>RDIFF_BRANCH=my-pr-branch-golden
+</code></pre>
+</li>
+</ul>
+<p>Doing the above has multiple effects:</p>
+<ul>
+<li>The presubmit test <a href="https://github.com/google/filament/blob/e85dfe75c86106a05019e13ccdbef67e030af675/.github/workflows/presubmit.yml#L118"><code>test-renderdiff</code></a> will test against the provided
+branch of the golden repo (i.e. <code>my-pr-branch-golden</code>), so you can confirm the change is green
+before it merges.</li>
+<li>If the PR is merged, then there is another workflow that will merge <code>my-pr-branch-golden</code>
+to the <code>main</code> branch of the golden repo.</li>
+</ul>
+<h3 id="from-the-images-a-presubmit-run-produced"><a class="header" href="#from-the-images-a-presubmit-run-produced">From the images a presubmit run produced</a></h3>
+<p>Every <code>test-renderdiff</code> run attaches its renders as the <code>presubmit-renderdiff-result</code> artifact,
+including runs whose comparison failed, which is exactly when the images are interesting. Each
+platform leg (<code>test-renderdiff-platform</code>) uploads its own output, and the <code>test-renderdiff</code> job
+combines them into that one artifact.
+This is the route to use when the <strong>Renderdiff Goldens</strong> workflow is not available, for instance
+when the workflow file itself is only present on your branch.</p>
+<ul>
+<li>Download and unpack <code>presubmit-renderdiff-result</code> from the run.</li>
+<li>Build <code>diffimg</code> locally, which the script uses to work out which images actually changed:
+<pre><code>./build.sh debug diffimg
+</code></pre>
+</li>
+<li>Push the images to a branch of the golden repo. This needs write access to <code>filament-assets</code>,
+over SSH by default:
+<pre><code>python3 test/renderdiff/src/update_golden.py \
+    --branch=my-pr-branch-golden \
+    --source=&lt;unpacked artifact&gt;/renders \
+    --commit-msg="New goldens for my change" \
+    --push-to-remote
+</code></pre>
+</li>
+<li>Add <code>RDIFF_BRANCH=my-pr-branch-golden</code> to the commit message, as above.</li>
+</ul>
+<h3 id="manually-updating-the-golden-repo"><a class="header" href="#manually-updating-the-golden-repo">Manually updating the golden repo</a></h3>
+<ul>
+<li>Check out the golden repo
+<pre><code>git clone git@github.com:google/filament-assets.git
+</code></pre>
+</li>
+<li>Create a branch on the golden repo
+<pre><code>cd filament-assets
+git switch -c my-pr-branch-golden
+</code></pre>
+</li>
+<li>Copy the new images to their appropriate place in <code>filament-assets</code></li>
+<li>Push the <code>filament-assets</code> working branch to remote
+<pre><code>git push origin my-pr-branch-golden
+</code></pre>
+</li>
+<li>In the commit message of your working branch on <code>filament</code>, add the following line
+<pre><code>RDIFF_BRANCH=my-pr-branch-golden
+</code></pre>
+</li>
+</ul>
+<h3 id="using-a-script-to-update-the-golden-repo"><a class="header" href="#using-a-script-to-update-the-golden-repo">Using a script to update the golden repo</a></h3>
+<p>For the interactive equivalent of the above, which walks you through generating, reviewing and
+pushing the changes:</p>
+<ul>
+<li>Make sure you've completed the steps in 'Setting up python'</li>
+<li>Run interactive mode in the <code>update_golden.py</code> script.
+<pre><code>python3 test/renderdiff/src/update_golden.py
+</code></pre>
+</li>
+<li>Note the host caveat above: images generated this way are only the right goldens if you are on
+Linux/aarch64.</li>
+</ul>
+<h2 id="viewing-test-results"><a class="header" href="#viewing-test-results">Viewing test results</a></h2>
+<p>We provide a viewer for looking at the result of a test run. The viewer is a webapp that can
+be used by pointing your browser to a localhost port. If you input the viewer with a PR or a
+directory, it will parse the test result and show the results and the rendered and/or golden
+images.</p>
+<p><img src="../images/renderdiff_example.png" alt="Viewer" /></p>
+<p>To run the viewer of a test output directory that has been generated locally, you would run
+the following</p>
+<pre><code>python3 test/renderdiff/src/viewer.py --diff=[test output]
+</code></pre>
+<p>where <code>[test output]</code> is a directory containing the <code>compare_results*.json</code> of the test run.
+For example, it could be <code>out/renderdiff/diffs/presubmit</code> for the standard path to the
+<code>presubmit</code> test output. A platform-scoped run writes one file per platform
+(<code>compare_results_desktop.json</code>, <code>compare_results_web.json</code>); the viewer merges whatever it
+finds, and when a CI run is downloaded it overlays every platform's artifact into one tree
+first.</p>
+<p>To see the results of a Pull Request initiated test run, you would do the following</p>
+<pre><code>python3 test/renderdiff/src/viewer.py --pr_number=[PR #] --github_token=[github token]
+</code></pre>
+<p>where <code>[PR #]</code> is the numeric ID of your pull request, and the <code>[github token]</code> is an acess
+token that you (as a github user) needs to generate (<a href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens">reference</a>).</p>
+<p>To see the results of a specific run, you would do the following</p>
+<pre><code>python3 test/renderdiff/src/viewer.py --run_number=[RUN #] --github_token=[github token]
+</code></pre>
+<p>where <code>[RUN #]</code> is the numeric ID of the run. You can find the run number in the URL of the
+GitHub Actions page. For example, in the URL
+<code>https://github.com/google/filament/actions/runs/18023632663/job/51286323708?pr=9264</code>,
+the run number is <code>18023632663</code>.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../dup/test_ci_backend.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../dup/test_ci_sizeguard.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../dup/test_ci_backend.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../dup/test_ci_sizeguard.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

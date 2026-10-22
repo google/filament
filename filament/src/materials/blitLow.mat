@@ -1,0 +1,43 @@
+material {
+    name : blitLow,
+    parameters : [
+        {
+            type : sampler2d,
+            name : color,
+            precision: medium
+        },
+        {
+            type : float4,
+            name : viewport,
+            precision: high
+        },
+        {
+            type : float,
+            name : levelOfDetail,
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    depthWrite : false,
+    depthCulling : false,
+    domain: postprocess,
+    featureLevel : 0
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = materialParams.viewport.xy + postProcess.normalizedUV * materialParams.viewport.zw;
+        postProcess.vertex.xy = uvToRenderTargetUV(postProcess.vertex.xy);
+    }
+}
+
+fragment {
+    void postProcess(inout PostProcessInputs postProcess) {
+#if MATERIAL_FEATURE_LEVEL == 0
+        postProcess.color = texture(materialParams_color, variable_vertex.xy);
+#else
+        postProcess.color = textureLod(materialParams_color, variable_vertex.xy, materialParams.levelOfDetail);
+#endif
+    }
+}

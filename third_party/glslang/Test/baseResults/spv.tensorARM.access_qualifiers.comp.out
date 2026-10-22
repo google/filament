@@ -1,0 +1,9 @@
+spv.tensorARM.access_qualifiers.comp
+ERROR: 0:25: 'readonly' : argument cannot drop memory qualifier when passed to formal parameter 
+ERROR: 0:26: 'readonly' : argument cannot drop memory qualifier when passed to formal parameter 
+ERROR: 0:33: 'writeonly' : argument cannot drop memory qualifier when passed to formal parameter 
+ERROR: 0:34: 'writeonly' : argument cannot drop memory qualifier when passed to formal parameter 
+ERROR: 4 compilation errors.  No code generated.
+
+
+SPIR-V is not generated for failed compile or link

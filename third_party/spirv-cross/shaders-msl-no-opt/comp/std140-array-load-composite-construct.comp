@@ -1,0 +1,13 @@
+#version 450
+layout(local_size_x = 1) in;
+
+layout(std140, binding = 0) buffer SSBO
+{
+	float a[16];
+	vec4 b[16];
+};
+
+void main()
+{
+	b[gl_GlobalInvocationID.x] = vec4(a[gl_GlobalInvocationID.x]);
+}

@@ -1,0 +1,6 @@
+Name: @PROJECT_NAME@
+Description: Draco geometry de(com)pression library.
+Version: @DRACO_VERSION@
+Cflags: -I@includes_path@
+Libs: -L@libs_path@ -ldraco
+Libs.private: @CMAKE_THREAD_LIBS_INIT@

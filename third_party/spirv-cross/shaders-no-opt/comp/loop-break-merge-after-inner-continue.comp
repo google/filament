@@ -1,0 +1,21 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout (binding = 0) buffer STO
+{
+  uint data[];
+} ssbo;
+
+void main()
+{
+  while(true)
+  {
+    ssbo.data[0] += 1;
+    if (bool(ssbo.data[2]))
+    {
+      ssbo.data[5] += 1;
+      continue;
+    }
+    break;
+  }
+}

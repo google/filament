@@ -1,0 +1,165 @@
+XXX - Not complete yet!!!
+
+Name
+
+    SGIS_clip_band_hint
+
+Name Strings
+
+    GL_SGIS_clip_band_hint
+
+Version
+
+    $Date: 1998/08/07 02:43:19 $ $Revision: 1.1 $
+
+Number
+
+    XXX
+
+Dependencies
+
+    None
+
+Overview
+
+    For graphics systems that decouple geometry processing from the graphics
+    hardware to the host system CPU, it is often beneficial to allow the
+    host processing code not to have to perform clip checking if geometric
+    data is known not to require clipping.  Since many applications already
+    perform some amount of coarse-grained view volume clipping, this
+    information can be reused efficiently to turn clip-checking on or off.  
+    In addition, certain graphics subsystems are capable of performing fast 
+    2D viewport or, in some cases, 3D volume "scissoring" operations within
+    some coordinate range much faster that the host CPU could re-tesselate
+    clipped primitives.
+
+    This extension introduces the notion of an extended rasterizable view
+    volume that is an expansion of the clip-space view volume.  This volume
+    is the space within which a particular graphics system is much more
+    efficient at rejecting fragments that lie outside the view volume than
+    it is at performing strict view volume clipping.  This extended volume 
+    is characterized by queriable implementation dependent expansion factors
+    to the normal view volume.  Clip-checking can be turned on or off 
+    through the glHint mechanism.
+
+Issues
+
+    * This extension is essentially a superset of the 
+      clip_volume_hint extension.  Do we want to have this extension just
+      introduce the notion of clip band factors instead and use the
+      clip_volume_hint extension for the hint?
+
+    * It is possible that for certain implementation the X, Y and Z factors 
+      are dependent the size of the viewport and are thus not necessarily 
+      constant throughout the execution of an application.  Is there 
+      a better way of describing this and suggesting when to query these 
+      factors?
+
+    * Better name?  Should it have a different branding that SGIS?
+
+    * No mention has been made in the description on the effect user clip
+      planes have on the whether the clip-checking hint is honored or not.  
+      Clip-checking should probably always be performed for user defined 
+      clip planes independent of the state of the hint.
+
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+   Accepted by the <target> parameter of Hint and the <pname>
+   parameter of GetBooleanv, GetDoublev, GetFloatv and GetIntegerv:
+
+        CLIP_CHECK_HINT_SGIS	XXXXX
+
+   Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, 
+   GetFloatv, and GetDoublev:
+
+        CLIP_BAND_FACTOR_X_SGIS	XXXXX
+        CLIP_BAND_FACTOR_Y_SGIS	XXXXX
+        CLIP_BAND_FACTOR_Z_SGIS	XXXXX
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    Before the last paragraph of section 2.11 (Clipping), the following text
+    is added: (Should it go in the section 5.6 (Hints) instead?)
+
+    If it is known that primitives lie within the view volume,
+    the clip checking operation may be disabled through the use of the
+    CLIP_CHECK_HINT_SGIS hint.  In addition, clip-checking may be disabled
+    for graphics subsystems that are able to rasterize correctly primitives
+    that extend past the view volume but are still within some rasterizable
+    volume.  This extended clip volume is defined in clip coordinates by,
+
+		-(w_c * bf_x) <= x_c <= (w_c * bf_x)
+		-(w_c * bf_y) <= y_c <= (w_c * bf_y)
+		-(w_c * bf_z) <= z_c <= (w_c * bf_z)
+
+    where bf_x, bf_y and bf_z are implementation dependent values (greater
+    than or equal to 1.0) and can be queried by calling glGet with a 
+    <value> of CLIP_BAND_FACTOR_X_SGIS, CLIP_BAND_FACTOR_Y_SGIS and 
+    CLIP_BAND_FACTOR_X_SGIS respectively.  Clip-checking is disabled when 
+    the <hint> parameter to glHint is FASTEST, it is enabled for all other
+    values.
+
+    Since implementations may choose to base the clip band factors on a
+    function of the viewport size, it is recommended that these factors be
+    queried after the viewport which will be used for rendering has been 
+    set.
+
+    Results of rasterization for geometric primitives that extend past the 
+    rasterizable volume when clip checking has been disabled are 
+    undefined.  Finally, the state of the current raster position is not 
+    affected by the value of clip_band_hint and is always clipped against 
+    the actual clip volume.
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    To the list of hints in section 5.6 (Hints) add:
+
+    CLIP_CHECK_HINT, indicating whether to turn clip-checking on or off.
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    XXX - Not complete yet!!!
+
+GLX Protocol
+
+    XXX - Not complete yet!!!
+
+Errors
+
+
+New State
+
+								Initial
+    Get Value				Get Command	Type	Value		Attrib
+    ---------				-----------	----	-------		------
+
+    CLIP_CHECK_HINT_SGIS		GetIntegerv	Z3	DONT_CARE	Hint
+
+
+New Implementation Dependent State
+
+									Minimum
+    Get Value				Get Command	Type		Value
+    ---------				-----------	----		-------
+    
+    CLIP_BAND_FACTOR_X_SGIS		GetFloatv	R		1.0
+    CLIP_BAND_FACTOR_Y_SGIS		GetFloatv	R		1.0
+    CLIP_BAND_FACTOR_Z_SGIS		GetFloatv	R		1.0

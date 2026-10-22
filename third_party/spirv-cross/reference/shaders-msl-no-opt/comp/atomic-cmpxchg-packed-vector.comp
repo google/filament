@@ -1,0 +1,37 @@
+#pragma clang diagnostic ignored "-Wunused-variable"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_atomic>
+
+using namespace metal;
+
+struct AttData0
+{
+    packed_uint3 att0[1];
+};
+
+kernel void main0(device AttData0& __restrict _22 [[buffer(0)]])
+{
+    uint newVal = 432u;
+    uint prevVal = 0u;
+    uint curVal = 0u;
+    for (;;)
+    {
+        uint _30;
+        do
+        {
+            _30 = prevVal;
+        } while (!atomic_compare_exchange_weak_explicit((device atomic_uint*)&((device uint*)&_22.att0[0])[0u], &_30, newVal, memory_order_relaxed, memory_order_relaxed) && _30 == prevVal);
+        curVal = _30;
+        if (_30 != prevVal)
+        {
+            continue;
+        }
+        else
+        {
+            break;
+        }
+    }
+}
+

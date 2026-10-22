@@ -1,0 +1,6 @@
+# An stub file so that third_party/protobuf/proto_library.gni can build without
+# setting enable_js_protobuf to false in args.gn
+template("js_library") {
+  not_needed(invoker, "*")
+  not_needed([ "target_name" ])
+}

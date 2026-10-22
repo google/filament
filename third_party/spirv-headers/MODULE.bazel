@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: The Khronos Group, Inc.
+# SPDX-License-Identifier: MIT
+"""SPIRV-Headers"""
+
+module(
+    name = "spirv_headers",
+    version = "0.0.0",
+)
+
+bazel_dep(name = "rules_cc", version = "0.1.1")

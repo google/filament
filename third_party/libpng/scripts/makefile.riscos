@@ -1,0 +1,54 @@
+# Project:   libpng
+
+# Copyright (C) 2020 Cameron Cawley
+# Copyright (C) 1997 Tom Tanner
+
+# Toolflags:
+CCflags = -c -depend !Depend -IC:,C:zlib -g -throwback  -DRISCOS  -fnah -wz
+Linkflags = -aif -o $@
+LibFileflags = -c -l -o $@
+
+# Final targets:
+@.libpng-lib:   @.o.png @.o.pngerror @.o.pngrio @.o.pngwio @.o.pngmem \
+	@.o.pngpread @.o.pngset @.o.pngget @.o.pngread @.o.pngrtran \
+	@.o.pngrutil @.o.pngtrans @.o.pngwrite @.o.pngwtran @.o.pngwutil
+	LibFile $(LibFileflags) @.o.png @.o.pngerror @.o.pngrio @.o.pngrtran \
+	@.o.pngmem @.o.pngpread @.o.pngset @.o.pngget @.o.pngread @.o.pngwio \
+	@.o.pngrutil @.o.pngtrans  @.o.pngwrite @.o.pngwtran @.o.pngwutil
+@.mm-libpng-lib:   @.mm.png @.mm.pngerror @.mm.pngrio @.mm.pngwio @.mm.pngmem \
+	@.mm.pngpread @.mm.pngset @.mm.pngget @.mm.pngread @.mm.pngrtran \
+	@.mm.pngrutil @.mm.pngtrans @.mm.pngwrite @.mm.pngwtran @.mm.pngwutil
+	LibFile $(LibFileflags) @.mm.png @.mm.pngerror @.mm.pngrio \
+	@.mm.pngwio @.mm.pngmem @.mm.pngpread @.mm.pngset @.mm.pngget \
+	@.mm.pngread @.mm.pngrtran @.mm.pngrutil @.mm.pngtrans @.mm.pngwrite \
+	@.mm.pngwtran @.mm.pngwutil
+
+
+# User-editable dependencies:
+Test: @.pngtest
+	Run @.pngtest
+	@Remove @.pngtest
+
+#It would be nice if you could stop "make" listing from here on!
+@.pngtest:   @.o.pngtest @.libpng-lib C:o.Stubs C:zlib.o.zlib
+	Link $(Linkflags) @.o.pngtest @.libpng-lib C:o.Stubs C:zlib.o.zlib
+
+.SUFFIXES: .o .mm .c
+
+.c.mm:
+	MemCheck.CC cc $(ccflags) -o $@ LibPng:$<
+.c.o:
+	cc $(ccflags) -o $@ $<
+
+# See scripts.pnglibconf/mak for how to generate this:
+@.h.pnglibconf: @.scripts.pnglibconf/h/prebuilt
+	Copy @.scripts.pnglibconf/h/prebuilt $@ ~CF~V
+
+# Static dependencies:
+@.o.png @.o.pngerror @.o.pngrio @.o.pngwio @.o.pngmem \
+@.o.pngpread @.o.pngset @.o.pngget @.o.pngread @.o.pngrtran \
+@.o.pngrutil @.o.pngtrans @.o.pngwrite @.o.pngwtran @.o.pngwutil \
+@.o.pngtest: @.h.pnglibconf
+
+
+# Dynamic dependencies:

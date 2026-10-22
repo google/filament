@@ -1,0 +1,48 @@
+material {
+    name : ProceduralTextureQuad,
+    shadingModel : unlit,
+    culling : none,
+    parameters : [
+        {
+            type : sampler2d,
+            name : albedo
+        }
+    ],
+    variables : [
+        quadUV
+    ],
+    variantFilter : [ skinning, shadowReceiver, vsm ],
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        // 6 vertices defining 2 triangles forming a full screen quad or centered plane
+        const vec2 positions[6] = vec2[6](
+            vec2(-0.5, -0.5),
+            vec2( 0.5, -0.5),
+            vec2(-0.5,  0.5),
+            vec2( 0.5, -0.5),
+            vec2( 0.5,  0.5),
+            vec2(-0.5,  0.5)
+        );
+        const vec2 uvs[6] = vec2[6](
+            vec2(0.0, 0.0),
+            vec2(1.0, 0.0),
+            vec2(0.0, 1.0),
+            vec2(1.0, 0.0),
+            vec2(1.0, 1.0),
+            vec2(0.0, 1.0)
+        );
+
+        int vid = getVertexIndex();
+        material.worldPosition = vec4(positions[vid], 0.0, 1.0);
+        material.quadUV        = vec4(uvs[vid], 0.0, 0.0);
+    }
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = texture(materialParams_albedo, variable_quadUV.xy);
+    }
+}

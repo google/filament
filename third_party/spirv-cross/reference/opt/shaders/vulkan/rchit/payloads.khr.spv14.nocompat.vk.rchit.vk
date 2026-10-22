@@ -1,0 +1,15 @@
+#version 460
+#extension GL_EXT_ray_tracing : require
+
+struct Payload
+{
+    vec4 a;
+};
+
+layout(location = 0) rayPayloadInEXT Payload payload;
+
+void main()
+{
+    payload.a = vec4(10.0);
+}
+

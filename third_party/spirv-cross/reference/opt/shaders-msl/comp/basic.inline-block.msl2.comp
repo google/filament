@@ -1,0 +1,53 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+typedef packed_float4 packed_float4x4[4];
+
+struct Baz
+{
+    int f;
+    int g;
+};
+
+struct X
+{
+    int x;
+    int y;
+    float z;
+};
+
+struct Foo
+{
+    int a;
+    int b;
+    packed_float4x4 c;
+    X x[2];
+};
+
+struct Bar
+{
+    int d;
+    int e;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(3u, 3u, 2u);
+
+struct spvDescriptorSetBuffer0
+{
+    constant Bar* m_38 [[id(0)]];
+    Foo m_32 [[id(1)]];
+};
+
+struct spvDescriptorSetBuffer1
+{
+    device Baz* baz [[id(0)]][3];
+};
+
+kernel void main0(constant spvDescriptorSetBuffer0& spvDescriptorSet0 [[buffer(0)]], constant spvDescriptorSetBuffer1& spvDescriptorSet1 [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    spvDescriptorSet1.baz[gl_GlobalInvocationID.x]->f = spvDescriptorSet0.m_32.a + (*spvDescriptorSet0.m_38).d;
+    spvDescriptorSet1.baz[gl_GlobalInvocationID.x]->g = spvDescriptorSet0.m_32.b * (*spvDescriptorSet0.m_38).e;
+}
+

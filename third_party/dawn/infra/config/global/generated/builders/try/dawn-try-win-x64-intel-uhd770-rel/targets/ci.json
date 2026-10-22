@@ -1,0 +1,8 @@
+{
+  "dawn-win-x64-builder-rel": {
+    "additional_compile_targets": [
+      "default"
+    ]
+  },
+  "dawn-win-x64-intel-uhd770-rel": {}
+}

@@ -1,0 +1,377 @@
+Name
+
+    NVX_linked_gpu_multicast
+
+Name Strings
+
+    GL_NVX_linked_gpu_multicast
+
+Contact
+
+    Joshua Schnarr, NVIDIA Corporation (jschnarr 'at' nvidia.com)
+    Ingo Esser, NVIDIA Corporation (iesser 'at' nvidia.com)
+
+Contributors
+
+    Christoph Kubisch, NVIDIA
+    Mark Kilgard, NVIDIA
+
+Status
+
+    Shipping in NVIDIA release 361 drivers.
+
+Version
+
+    Last Modified Date:         July 21, 2016
+    NVIDIA Revision:            4
+
+Number
+
+    OpenGL Extension #493
+
+Dependencies
+
+    This extension is written against the OpenGL 4.5 specification (Compatibility Profile), dated
+    February 2, 2015.
+
+    This extension interacts with ARB_sparse_buffer.
+
+    This extension interacts with ARB_copy_image.
+
+    This extension interacts with EXT_direct_state_access.
+
+    This extension interacts with ARB_shader_viewport_layer_array.
+
+Overview
+
+    This extension enables novel multi-GPU rendering techniques by providing application control
+    over a group of linked GPUs with identical hardware configuration.
+
+    Multi-GPU rendering techniques fall into two categories: implicit and explicit.  Existing
+    explicit approaches like WGL_NV_gpu_affinity have two main drawbacks: CPU overhead and
+    application complexity.  An application must manage one context per GPU and multi-pump the API
+    stream.  Implicit multi-GPU rendering techniques avoid these issues by broadcasting rendering
+    from one context to multiple GPUs.  Common implicit approaches include alternate-frame
+    rendering (AFR), split-frame rendering (SFR) and multi-GPU anti-aliasing.  They each have
+    drawbacks.  AFR scales nicely but interacts poorly with inter-frame dependencies.  SFR can
+    improve latency but has challenges with offscreen rendering and scaling of vertex processing.
+    With multi-GPU anti-aliasing, each GPU renders the same content with alternate sample
+    positions and the driver blends the result to improve quality.  This also has issues with
+    offscreen rendering and can conflict with other anti-aliasing techniques.
+    
+    These issues with implicit multi-GPU rendering all have the same root cause: the driver lacks
+    adequate knowledge to accelerate every application.  To resolve this, NVX_linked_gpu_multicast
+    provides application control over multiple GPUs with a single context.
+
+    Key points:
+
+    - One context controls multiple GPUs.  Every GPU in the linked group can access every object.
+
+    - Rendering is broadcast.  Each draw is repeated across all GPUs in the linked group.
+
+    - Each GPU gets its own instance of all framebuffers and attached textures, allowing
+      individualized output for each GPU.  Input data can be customized for each GPU using buffers
+      created with the storage flag, LGPU_SEPARATE_STORAGE_BIT_NVX and a new API,
+      LGPUNamedBufferSubDataNVX. 
+
+    - Textures can be transferred from one GPU to another using LGPUCopyImageSubDataNVX.
+    
+    
+New Procedures and Functions
+
+    void LGPUNamedBufferSubDataNVX(
+        bitfield gpuMask, uint buffer,
+        intptr offset, sizeiptr size,
+        const void *data);
+
+    void LGPUCopyImageSubDataNVX(
+        uint sourceGpu, bitfield destinationGpuMask,
+        uint srcName, enum srcTarget, 
+        int srcLevel,
+        int srcX, int srxY, int srcZ,
+        uint dstName, enum dstTarget,
+        int dstLevel,
+        int dstX, int dstY, int dstZ,
+        sizei width, sizei height, sizei depth);
+
+    void LGPUInterlockNVX(void);
+    
+New Tokens
+
+    Accepted in the <flags> parameter of BufferStorage and
+    NamedBufferStorageEXT:
+
+        LGPU_SEPARATE_STORAGE_BIT_NVX               0x0800
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetInteger64v, GetFloatv, and GetDoublev:
+
+        MAX_LGPU_GPUS_NVX                           0x92BA
+
+Additions to the OpenGL 4.5 Specification (Compatibility Profile)
+
+    (Add a new chapter after chapter 19 "Compute Shaders")
+
+    20 Multicast Rendering
+
+    This chapter specifies commands for using multiple GPUs in a linked group.  Commands are
+    multicast, or repeated across all linked GPUs.  Objects are shared by all GPUs, however each
+    GPU has its own instance (copy) of many resources, including framebuffers.  When each GPU has
+    its own instance of a resource, it is considered to have per-GPU storage.  When all GPUs share
+    a single instance of a resource, this is considered GPU-shared storage. 
+
+    The mechanism for linking GPUs is implementation specific, as is the process-global mechanism
+    for enabling multicast rendering support (if necessary).  The number of GPUs usable for
+    multicast rendering by a context can be queried by calling GetIntegerv with the symbolic
+    constant MAX_LGPU_GPUS_NVX.  Individual GPUs are identified using zero-based indices in the
+    range [0, n-1], where n is the number of multicast GPUs.  GPUs are also be identified by
+    bitmasks of the form 2^i, where i is the GPU index.  A set of GPUs is specified by the union of
+    masks for each GPU in the set.
+
+    20.1 Multi-GPU Buffer Storage
+
+    Like other resources, buffer objects can have two types of storage, per-GPU storage or
+    GPU-shared storage.  Per-GPU storage can be explicitly requested using the
+    LGPU_SEPARATE_STORAGE_BIT_NVX flag with BufferStorage/NamedBufferStorageEXT.  If this flag is
+    not set, the type of storage used is undefined.  The implementation may use either type
+    and transition between them at any time.  Client reads of a buffer with per-GPU storage may
+    source from any GPU.
+
+    The following rules apply to buffer objects with per-GPU storage:
+
+      When mapped with WRITE_ONLY access, writes apply to all GPUs.
+      When bound to UNIFORM_BUFFER, client uniform updates apply to all GPUs.
+      When used as the write buffer for CopyBufferSubData or CopyNamedBufferSubData, writes apply to
+      all GPUs.
+
+    The following commands affect storage on all GPUs, even if the the buffer object has per-GPU
+    storage:
+
+      BufferSubData, NamedBufferSubData, ClearBufferSubData, and ClearNamedBufferData
+
+    An INVALID_VALUE error is generated if BufferStorage/NamedBufferStorageEXT is called with
+    LGPU_SEPARATE_STORAGE_BIT_NVX set with MAP_PERSISTENT_BIT or SPARSE_STORAGE_BIT_ARB.
+
+    To modify buffer object data on one or more GPUs, the client may use the command
+
+    void LGPUNamedBufferSubDataNVX(
+        bitfield gpuMask, uint buffer,
+        intptr offset, sizeiptr size,
+        const void *data);
+
+    This function operates similarly to NamedBufferSubData, except that it updates the per-GPU
+    buffer data on the set of GPUs defined by <gpuMask>.  
+
+    An INVALID_VALUE error is generated if <gpuMask> is zero.
+    An INVALID_OPERATION error is generated if <buffer> is not the name of an existing buffer
+    object.
+    An INVALID_VALUE error is generated if <offset> or <size> is negative, or if <offset> + <size>
+    is greater than the value of BUFFER_SIZE for the buffer object.
+    An INVALID_OPERATION error is generated if any part of the specified buffer range is mapped
+    with MapBufferRange or MapBuffer (see section 6.3), unless it was mapped with
+    MAP_PERSISTENT_BIT set in the MapBufferRange access flags.
+    An INVALID_OPERATION error is generated if the BUFFER_IMMUTABLE_STORAGE flag of the buffer
+    object is TRUE and the value of BUFFER_STORAGE_FLAGS for the buffer does not have the
+    DYNAMIC_STORAGE_BIT set.
+
+    20.2 Multi-GPU Framebuffers and Textures
+
+    All buffers in the default framebuffer as well as renderbuffers and textures bound to
+    framebuffer objects receive per-GPU storage.  Storage for other textures is undefined: it may
+    be per-GPU or GPU-shared and can transition between the types at any time. 
+
+    To copy texel data between GPUs, the client may use the command
+
+    void LGPUCopyImageSubDataNVX(
+        uint sourceGpu, bitfield destinationGpuMask,
+        uint srcName, enum srcTarget, 
+        int srcLevel,
+        int srcX, int srxY, int srcZ,
+        uint dstName, enum dstTarget,
+        int dstLevel,
+        int dstX, int dstY, int dstZ,
+        sizei width, sizei height, sizei depth);
+
+    This function operates similarly to CopyImageSubData, except that it takes a source GPU
+    and a destination GPU set defined by <destinationGpuMask>.
+
+    INVALID_ENUM is generated
+     * if either <srcTarget> or <dstTarget> 
+      - is not RENDERBUFFER or a valid non-proxy texture target
+      - is TEXTURE_BUFFER, or
+      - is one of the cubemap face selectors described in table 3.17,
+     * if the target does not match the type of the object.
+
+    INVALID_OPERATION is generated
+     * if either object is a texture and the texture is not complete,
+     * if the source and destination formats are not compatible,
+     * if the source and destination number of samples do not match,
+     * if one image is compressed and the other is uncompressed and the
+       block size of compressed image is not equal to the texel size
+       of the compressed image.
+
+    INVALID_VALUE is generated
+     * if <sourceGpu> is greater than or equal to MAX_LGPU_GPUS_NVX,
+     * if <destinationGpuMask> is zero,
+     * if either <srcName> or <dstName> does not correspond to a valid
+       renderbuffer or texture object according to the corresponding
+       target parameter, or
+     * if the specified level is not a valid level for the image, or
+     * if the dimensions of the either subregion exceeds the boundaries 
+       of the corresponding image object, or
+     * if the image format is compressed and the dimensions of the
+       subregion fail to meet the alignment constraints of the format.
+
+
+    20.3 Multi-GPU Synchronization
+
+    LGPUCopyImageSubDataNVX provides implicit synchronization with previous rendering to the given
+    texture or renderbuffer on the source GPU.  Synchronization of the copy with the destination
+    GPU(s) is achieved with the interlock function:
+
+      void LGPUInterlockNVX(void)
+
+    This is called to synchronize all linked GPUs to the same point in the API stream.  To
+    guarantee consistency, the interlock command must be used as a barrier between any two
+    accesses by multiple GPUs to the same memory when at least one of the accesses is a write.
+    For consistent copies between GPUs, synchronization is required before and after each copy:
+    
+    1. Prior to each call to LGPUCopyImageSubDataNVX, LGPUInterlockNVX() must be called after
+    the most recent read or write of the target image by a destination GPU.
+
+    2. After each call to LGPUCopyImageSubDataNVX, LGPUInterlockNVX() must be called 
+    prior to any future read or write of the target image by a destination GPU.
+
+    GPU writes and reads to/from GPU-shared locations require synchronization as well.  GPU writes
+    such as transform feedback, shader image store, CopyTexImage, CopyBufferSubData are not
+    automatically synchronized with writes by other GPUs.  Neither are GPU reads such as texture
+    fetches, shader image loads, CopyTexImage, etc. synchronized with writes by other GPUs.
+    Existing barriers such as TextureBarrier and MemoryBarrier only provide consistency guarantees
+    for rendering, writes and reads on a single GPU.
+    
+          
+    Additions to the AGL/GLX/WGL Specifications
+
+        None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    Relaxation of INVALID_ENUM errors
+    ---------------------------------
+    GetBooleanv, GetIntegerv, GetInteger64v, GetFloatv, and GetDoublev now accept new tokens as
+    described in the "New Tokens" section.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    Add to Table 23.82, Implementation-Dependent Values, p. 784
+
+                                                Minimum
+    Get Value               Type   Get Command  Value   Description               Sec.  Attribute
+    ----------------------  ----   -----------  ------- -----------------------   ----  ---------
+    MAX_LGPU_GPUS_NVX        Z+   GetIntegerv      2    Maximum number of         6.9     -
+                                                        usable GPUs
+Sample Code
+
+    Binocular stereo rendering example using NVX_linked_gpu_multicast with single GPU fallback:
+   
+    struct ViewData {
+        GLint viewport_index;
+        GLfloat mvp[16];
+        GLfloat modelview[16];
+    };
+    ViewData leftViewData = { 0, {...}, {...} };
+    ViewData rightViewData = { 1, {...}, {...} };
+
+    GLuint ubo[2];
+    glCreateBuffers(2, &ubo[0]);
+
+    if (has_NVX_linked_gpu_multicast) {
+        glNamedBufferStorage(ubo[0], size, NULL, GL_LGPU_SEPARATE_STORAGE_BIT_NVX | GL_DYNAMIC_STORAGE_BIT);
+        glLGPUNamedBufferSubDataNVX(0x1, ubo[0], 0, size, &leftViewData);
+        glLGPUNamedBufferSubDataNVX(0x2, ubo[0], 0, size, &rightViewData);
+    } else {
+        glNamedBufferStorage(ubo[0], size, &leftViewData, 0);
+        glNamedBufferStorage(ubo[1], size, &rightViewData, 0);
+    }
+
+    glViewportIndexedf(0, 0, 0, 640, 480);  // left viewport
+    glViewportIndexedf(1, 640, 0, 640, 480);  // right viewport
+    // Vertex shader sets gl_ViewportIndex according to viewport_index in UBO
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    if (has_NVX_linked_gpu_multicast) {
+        glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo[0]);
+        drawScene();
+        // Make GPU 1 wait for glClear above to complete on GPU 0
+        glLGPUInterlockNVX();
+        // Copy right viewport from GPU 1 to GPU 0
+        glLGPUCopyImageSubDataNVX(1, 0x1,
+                                  renderBuffer, GL_RENDERBUFFER, 0, 640, 0, 0,
+                                  renderBuffer, GL_RENDERBUFFER, 0, 640, 0, 0,
+                                  640, 480, 1);
+        // Make GPU 0 wait for GPU 1 copy to GPU 0
+        glLGPUInterlockNVX();
+    } else {
+        glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo[0]);
+        drawScene();
+        glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo[1]);
+        drawScene();
+    }
+    // Both viewports are now present in GPU 0's renderbuffer
+
+Issues
+
+  (1) Should we provide explicit inter-gpu synchronization API?  Will this make the implementation
+    easier or harder for the driver and applications?
+
+    RESOLVED. Yes. A naive implementation of implicit synchronization would simply interlock the
+    GPUs before and after each copy.  Smart implicit synchronization would have to track all APIs
+    that can modify buffers and textures, creating an excessive burden for driver implementation
+    and maintenance.  An application can track dependencies more easily and outperform a naive
+    driver implementation using explicit synchronization.
+
+  (2) How does this extension interact with queries (e.g. occlusion queries)?
+
+    RESOLVED. Queries are performed separately on each GPU. The standard GetQueryObject* APIs
+    return query results for GPU 0 only. However GetQueryBufferObject* can be used to retrieve
+    query results for all GPUs through a buffer with separate storage (LGPU_SEPARATE_STORAGE_BIT).
+
+  (3) Which textures and buffers have separate storage for each GPU?
+  
+    The default framebuffer and framebuffer texture attachments. Also buffers allocated with
+    LGPU_SEPARATE_STORAGE_BIT. Other buffers and textures may or may not have separate storage.
+
+  (4) Should we provide a mechanism to modify viewports independently for each GPU?
+
+    RESOLVED. No. This can be achieved using multicast UBOs and ARB_shader_viewport_layer_array.
+
+  (5) Should we expose this extension on single-GPU configurations?
+
+    RESOLVED. No. The extension provides no value unless MULTICAST_GPUS_NV > 1.  Limiting exposure
+    to these configurations guarantees that at least two GPUs will be available when the extension
+    is reported.
+
+  (6) Can rendering be enabled/disabled on a specific subset of GPUs?
+
+    This functionality will be added in a future version of this extension.
+
+  (7) Should glGet*BufferParameter* return the LGPU_SEPARATE_STORAGE_BIT_NVX bit when
+    BUFFER_STORAGE_FLAGS is queried?
+
+    RESOLVED. Yes. BUFFER_STORAGE_FLAGS must match the flags parameter input to *BufferStorage, as
+    specified in table 6.3.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     4    07/21/16  mjk       Register extension

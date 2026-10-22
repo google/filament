@@ -1,0 +1,34 @@
+#version 310 es
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(binding = 4, std140) uniform UBO
+{
+    vec4 uInvSize;
+    vec4 uScale;
+} _46;
+
+layout(binding = 0) uniform mediump sampler2D uHeight;
+layout(binding = 1) uniform mediump sampler2D uDisplacement;
+layout(binding = 2, rgba16f) uniform writeonly mediump image2D iHeightDisplacement;
+layout(binding = 3, rgba16f) uniform writeonly mediump image2D iGradJacobian;
+
+void main()
+{
+    vec4 _59 = (vec2(gl_GlobalInvocationID.xy) * _46.uInvSize.xy).xyxy + (_46.uInvSize * 0.5);
+    vec2 _67 = _59.xy;
+    mediump float _79 = textureLodOffset(uHeight, _67, 0.0, ivec2(-1, 0)).x;
+    float hp_copy_79 = _79;
+    mediump float _87 = textureLodOffset(uHeight, _67, 0.0, ivec2(1, 0)).x;
+    float hp_copy_87 = _87;
+    mediump float _94 = textureLodOffset(uHeight, _67, 0.0, ivec2(0, -1)).x;
+    float hp_copy_94 = _94;
+    mediump float _101 = textureLodOffset(uHeight, _67, 0.0, ivec2(0, 1)).x;
+    float hp_copy_101 = _101;
+    vec2 _128 = _59.zw;
+    vec2 _157 = ((textureLodOffset(uDisplacement, _128, 0.0, ivec2(1, 0)).xy - textureLodOffset(uDisplacement, _128, 0.0, ivec2(-1, 0)).xy) * 0.60000002384185791015625) * _46.uScale.z;
+    vec2 _161 = ((textureLodOffset(uDisplacement, _128, 0.0, ivec2(0, 1)).xy - textureLodOffset(uDisplacement, _128, 0.0, ivec2(0, -1)).xy) * 0.60000002384185791015625) * _46.uScale.z;
+    ivec2 _172 = ivec2(gl_GlobalInvocationID.xy);
+    imageStore(iHeightDisplacement, _172, vec4(textureLod(uHeight, _67, 0.0).x, 0.0, 0.0, 0.0));
+    imageStore(iGradJacobian, _172, vec4((_46.uScale.xy * 0.5) * vec2(hp_copy_87 - hp_copy_79, hp_copy_101 - hp_copy_94), ((1.0 + _157.x) * (1.0 + _161.y)) - (_157.y * _161.x), 0.0));
+}
+

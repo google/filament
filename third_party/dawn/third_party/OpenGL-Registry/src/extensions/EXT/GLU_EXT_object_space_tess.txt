@@ -1,0 +1,89 @@
+Name
+
+    EXT_object_space_tess
+
+Name Strings
+
+    GLU_EXT_object_space_tess
+
+Version
+
+    $Date: 1996/04/12
+
+Number
+
+    75
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension adds two object space tessellation methods for GLU nurbs 
+    surfaces. The existing tessellation methods GLU_PATH_LENGTH and 
+    GLU_PARAMETRIC_ERROR are view dependent since the error tolerance is 
+    measured in the screen space (in pixels), while the corresponding object
+    space tessellation methods are view independent in that the error tolerance
+    measurement is in the object space.
+  
+
+New Procedures and Functions
+
+   None
+
+New Tokens
+
+   Accepted by the <value> parameter of NurbsProperty:
+
+   OBJECT_PARAMETRIC_ERROR_EXT                       100208 
+   OBJECT_PATH_LENGTH_EXT                            100209
+
+Errors
+
+   None
+
+Additions to the GLU Specification Version 1.2, Section 7.6
+
+    NURBS properties
+    ----------------
+
+    GLU_SAMPLING_METHOD specifies how a NURBS surface should be tessellated. 
+    value may be set to one of GLU_PATH_LENGTH, GLU_PARAMETRIC_ERROR, 
+    GLU_DOMAIN_DISTANCE, GLU_OBJECT_PATH_LENGTH_EXT, or GLU_OBJECT_PARAMETRIC_ERROR_EXT. 
+    When set to 
+    GLU_PATH_LENGTH, the surface 
+    is rendered so that the maximum length, in pixels, of edges of the 
+    tessellation polygons is no greater than what is specified by 
+    GLU_SAMPLING_TOLERANCE. 
+    GLU_PARAMETRIC_ERROR specifies that
+    the surface is rendered in such a way that the value specified by
+    GLU_PARAMETRIC_TOLERANCE describes the maximum distance, in pixels,
+    between the tessellation polygons and the surfaces they approximate.
+    GLU_DOMAIN_DISTANCE allows the users to specify, in parametric  
+    coordinates, how many sample points per unit length are taken in u, v 
+    dimension. 
+    GLU_OBJECT_PATH_LENGTH_EXT  is similar to GLU_PATH_LENGTH except that it is
+    view independent, that is, it specifies that the surface is rendered so that
+    the maximum length, in object space, of edges of the tessellation polygons
+    is no greater than what is specified by GLU_SAMPLING_TOLERANCE.
+    GLU_OBJECT_PARAMETRIC_ERROR_EXT is similar to  GLU_PARAMETRIC_ERROR except
+    that it is view independent, that is, it specifies that 
+    the surface is rendered in such a way that the value specified by
+    GLU_PARAMETRIC_TOLERANCE describes the maximum distance, in object space,
+    between the tessellation polygons and the surfaces they approximate.
+    The default value of GLU_SAMPLING_METHOD is GLU_PATH_LENGTH.
+
+    GLU_SAMPLING_TOLERANCE specifies the maximum distance, in pixels or
+    in object space when the sampling method is set to GLU_PATH_LENGTH or
+    GLU_OBJECT_PATH_LENGTH_EXT. The default value for GLU_SAMPLING_TOLERANCE
+    is 50.0.
+
+    GLU_PARAMETRIC_TOLERANCE specifies the maximum distance, in pixels or
+    in object space when the sampling method is set to GLU_PARAMETRIC_ERROR
+    or GLU_OBJECT_PARAMETRIC_ERROR_EXT. The default value for 
+    GLU_PARAMETRIC_TOLERANCE is 0.5.
+
+
+   
+  

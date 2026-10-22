@@ -1,0 +1,9 @@
+# This module sets the following variables:
+# * tsl-robin-map_FOUND - true if tsl-robin-map found on the system
+# * tsl-robin-map_INCLUDE_DIRS - the directory containing tsl-robin-map headers
+@PACKAGE_INIT@
+
+if(NOT TARGET tsl::robin_map)
+  include("${CMAKE_CURRENT_LIST_DIR}/tsl-robin-mapTargets.cmake")
+  get_target_property(tsl-robin-map_INCLUDE_DIRS tsl::robin_map INTERFACE_INCLUDE_DIRECTORIES)
+endif()

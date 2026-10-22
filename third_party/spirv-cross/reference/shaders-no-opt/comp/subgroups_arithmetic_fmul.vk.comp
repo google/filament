@@ -1,0 +1,892 @@
+#version 450
+
+#if defined(GL_KHR_shader_subgroup_ballot)
+#extension GL_KHR_shader_subgroup_ballot : require
+#elif defined(GL_NV_shader_thread_group)
+#extension GL_NV_shader_thread_group : require
+#elif defined(GL_ARB_shader_ballot) && defined(GL_ARB_shader_int64)
+#extension GL_ARB_shader_int64 : enable
+#extension GL_ARB_shader_ballot : require
+#else
+#error No extensions available to emulate requested subgroup feature.
+#endif
+
+#if defined(GL_KHR_shader_subgroup_basic)
+#extension GL_KHR_shader_subgroup_basic : require
+#elif defined(GL_NV_shader_thread_group)
+#extension GL_NV_shader_thread_group : require
+#elif defined(GL_ARB_shader_ballot) && defined(GL_ARB_shader_int64)
+#extension GL_ARB_shader_int64 : enable
+#extension GL_ARB_shader_ballot : require
+#elif defined(GL_AMD_gcn_shader) && (defined(GL_AMD_gpu_shader_int64) || defined(GL_NV_gpu_shader5))
+#extension GL_AMD_gpu_shader_int64 : enable
+#extension GL_NV_gpu_shader5 : enable
+#extension GL_AMD_gcn_shader : require
+#else
+#error No extensions available to emulate requested subgroup feature.
+#endif
+
+#if defined(GL_KHR_shader_subgroup_ballot)
+#extension GL_KHR_shader_subgroup_ballot : require
+#elif defined(GL_NV_shader_thread_group)
+#extension GL_NV_shader_thread_group : require
+#elif defined(GL_ARB_shader_ballot) && defined(GL_ARB_shader_int64)
+#extension GL_ARB_shader_int64 : enable
+#extension GL_ARB_shader_ballot : require
+#else
+#error No extensions available to emulate requested subgroup feature.
+#endif
+
+#if defined(GL_NV_shader_thread_group)
+#extension GL_NV_shader_thread_group : require
+#endif
+
+#if defined(GL_KHR_shader_subgroup_arithmetic)
+#extension GL_KHR_shader_subgroup_arithmetic : require
+#elif defined(GL_NV_shader_thread_shuffle)
+#extension GL_NV_shader_thread_shuffle : require
+#else
+#error No extensions available to emulate requested subgroup feature.
+#endif
+
+#if defined(GL_KHR_shader_subgroup_arithmetic)
+#extension GL_KHR_shader_subgroup_arithmetic : require
+#elif defined(GL_NV_shader_thread_shuffle)
+#extension GL_NV_shader_thread_shuffle : require
+#else
+#error No extensions available to emulate requested subgroup feature.
+#endif
+
+#if defined(GL_KHR_shader_subgroup_arithmetic)
+#extension GL_KHR_shader_subgroup_arithmetic : require
+#elif defined(GL_NV_shader_thread_shuffle)
+#extension GL_NV_shader_thread_shuffle : require
+#else
+#error No extensions available to emulate requested subgroup feature.
+#endif
+layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 1, std430) buffer DATA_OUT
+{
+    float data_out_float;
+    vec2 data_out_vec2;
+    vec3 data_out_vec3;
+    vec4 data_out_vec4;
+    double data_out_double;
+    dvec2 data_out_dvec2;
+    dvec3 data_out_dvec3;
+    dvec4 data_out_dvec4;
+} _16;
+
+layout(binding = 0, std430) buffer DATA_IN
+{
+    float data_in_float[128];
+    vec2 data_in_vec2[128];
+    vec3 data_in_vec3[128];
+    vec4 data_in_vec4[128];
+    double data_in_double[128];
+    dvec2 data_in_dvec2[128];
+    dvec3 data_in_dvec3[128];
+    dvec4 data_in_dvec4[128];
+} _31;
+
+#if defined(GL_KHR_shader_subgroup_ballot)
+#elif defined(GL_NV_shader_thread_group)
+#define gl_SubgroupEqMask uvec4(gl_ThreadEqMaskNV, 0u, 0u, 0u)
+#define gl_SubgroupGeMask uvec4(gl_ThreadGeMaskNV, 0u, 0u, 0u)
+#define gl_SubgroupGtMask uvec4(gl_ThreadGtMaskNV, 0u, 0u, 0u)
+#define gl_SubgroupLeMask uvec4(gl_ThreadLeMaskNV, 0u, 0u, 0u)
+#define gl_SubgroupLtMask uvec4(gl_ThreadLtMaskNV, 0u, 0u, 0u)
+#elif defined(GL_ARB_shader_ballot)
+#define gl_SubgroupEqMask uvec4(unpackUint2x32(gl_SubGroupEqMaskARB), 0u, 0u)
+#define gl_SubgroupGeMask uvec4(unpackUint2x32(gl_SubGroupGeMaskARB), 0u, 0u)
+#define gl_SubgroupGtMask uvec4(unpackUint2x32(gl_SubGroupGtMaskARB), 0u, 0u)
+#define gl_SubgroupLeMask uvec4(unpackUint2x32(gl_SubGroupLeMaskARB), 0u, 0u)
+#define gl_SubgroupLtMask uvec4(unpackUint2x32(gl_SubGroupLtMaskARB), 0u, 0u)
+#endif
+
+#if defined(GL_KHR_shader_subgroup_basic)
+#elif defined(GL_NV_shader_thread_group)
+#define gl_SubgroupSize gl_WarpSizeNV
+#elif defined(GL_ARB_shader_ballot)
+#define gl_SubgroupSize gl_SubGroupSizeARB
+#elif defined(GL_AMD_gcn_shader)
+#define gl_SubgroupSize uint(gl_SIMDGroupSizeAMD)
+#endif
+
+#if defined(GL_KHR_shader_subgroup_ballot)
+#elif defined(GL_NV_shader_thread_group)
+uvec4 subgroupBallot(bool v) { return uvec4(ballotThreadNV(v), 0u, 0u, 0u); }
+#elif defined(GL_ARB_shader_ballot)
+uvec4 subgroupBallot(bool v) { return uvec4(unpackUint2x32(ballotARB(v)), 0u, 0u); }
+#endif
+
+#ifndef GL_KHR_shader_subgroup_basic
+bool subgroupElect()
+{
+    uvec4 activeMask = subgroupBallot(true);
+    uint firstLive = subgroupBallotFindLSB(activeMask);
+    return gl_SubgroupInvocationID == firstLive;
+}
+#endif
+
+#ifndef GL_KHR_shader_subgroup_ballot
+uint subgroupBallotBitCount(uvec4 value)
+{
+    ivec2 c = bitCount(value.xy);
+#ifdef GL_NV_shader_thread_group
+    return uint(c.x);
+#else
+    return uint(c.x + c.y);
+#endif
+}
+#endif
+
+#ifndef GL_KHR_shader_subgroup_ballot
+bool subgroupBallotBitExtract(uvec4 value, uint index)
+{
+#ifdef GL_NV_shader_thread_group
+    uint shifted = value.x >> index;
+#else
+    uint shifted = value[index >> 5u] >> (index & 0x1fu);
+#endif
+    return (shifted & 1u) != 0u;
+}
+#endif
+
+#if defined(GL_KHR_shader_subgroup_arithmetic)
+#elif defined(GL_NV_shader_thread_shuffle)
+float subgroupMul(float v)
+{
+    float reduction = 1.0f;
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        reduction = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            float s = shuffleXorNV(reduction, i, gl_SubgroupSize, valid);
+            reduction *= valid ? s : 1.0f;
+        }
+    }
+    else
+    {
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            float s = shuffleNV(v, i, gl_SubgroupSize);
+            reduction *= valid ? s : 1.0f;
+        }
+    }
+    return reduction;
+}
+vec2 subgroupMul(vec2 v)
+{
+    vec2 reduction = vec2(1.0f);
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        reduction = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            vec2 s = shuffleXorNV(reduction, i, gl_SubgroupSize, valid);
+            reduction *= valid ? s : vec2(1.0f);
+        }
+    }
+    else
+    {
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            vec2 s = shuffleNV(v, i, gl_SubgroupSize);
+            reduction *= valid ? s : vec2(1.0f);
+        }
+    }
+    return reduction;
+}
+vec3 subgroupMul(vec3 v)
+{
+    vec3 reduction = vec3(1.0f);
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        reduction = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            vec3 s = shuffleXorNV(reduction, i, gl_SubgroupSize, valid);
+            reduction *= valid ? s : vec3(1.0f);
+        }
+    }
+    else
+    {
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            vec3 s = shuffleNV(v, i, gl_SubgroupSize);
+            reduction *= valid ? s : vec3(1.0f);
+        }
+    }
+    return reduction;
+}
+vec4 subgroupMul(vec4 v)
+{
+    vec4 reduction = vec4(1.0f);
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        reduction = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            vec4 s = shuffleXorNV(reduction, i, gl_SubgroupSize, valid);
+            reduction *= valid ? s : vec4(1.0f);
+        }
+    }
+    else
+    {
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            vec4 s = shuffleNV(v, i, gl_SubgroupSize);
+            reduction *= valid ? s : vec4(1.0f);
+        }
+    }
+    return reduction;
+}
+double subgroupMul(double v)
+{
+    double reduction = 0.0LF;
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        reduction = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            double s = shuffleXorNV(reduction, i, gl_SubgroupSize, valid);
+            reduction *= valid ? s : 0.0LF;
+        }
+    }
+    else
+    {
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            double s = shuffleNV(v, i, gl_SubgroupSize);
+            reduction *= valid ? s : 0.0LF;
+        }
+    }
+    return reduction;
+}
+dvec2 subgroupMul(dvec2 v)
+{
+    dvec2 reduction = dvec2(1.0LF);
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        reduction = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            dvec2 s = shuffleXorNV(reduction, i, gl_SubgroupSize, valid);
+            reduction *= valid ? s : dvec2(1.0LF);
+        }
+    }
+    else
+    {
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            dvec2 s = shuffleNV(v, i, gl_SubgroupSize);
+            reduction *= valid ? s : dvec2(1.0LF);
+        }
+    }
+    return reduction;
+}
+dvec3 subgroupMul(dvec3 v)
+{
+    dvec3 reduction = dvec3(1.0LF);
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        reduction = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            dvec3 s = shuffleXorNV(reduction, i, gl_SubgroupSize, valid);
+            reduction *= valid ? s : dvec3(1.0LF);
+        }
+    }
+    else
+    {
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            dvec3 s = shuffleNV(v, i, gl_SubgroupSize);
+            reduction *= valid ? s : dvec3(1.0LF);
+        }
+    }
+    return reduction;
+}
+dvec4 subgroupMul(dvec4 v)
+{
+    dvec4 reduction = dvec4(1.0LF);
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        reduction = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            dvec4 s = shuffleXorNV(reduction, i, gl_SubgroupSize, valid);
+            reduction *= valid ? s : dvec4(1.0LF);
+        }
+    }
+    else
+    {
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            dvec4 s = shuffleNV(v, i, gl_SubgroupSize);
+            reduction *= valid ? s : dvec4(1.0LF);
+        }
+    }
+    return reduction;
+}
+#endif
+
+#if defined(GL_KHR_shader_subgroup_arithmetic)
+#elif defined(GL_NV_shader_thread_shuffle)
+float subgroupExclusiveMul(float v)
+{
+    float excl_scan = 1.0f;
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        excl_scan = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            float s = shuffleUpNV(excl_scan, i, gl_SubgroupSize, valid);
+            excl_scan *= valid ? s : 1.0f;
+        }
+        excl_scan = shuffleUpNV(excl_scan, 1u, gl_SubgroupSize);
+        if (subgroupElect())
+        {
+            excl_scan = 1.0f;
+        }
+    }
+    else
+    {
+        uint total = subgroupBallotBitCount(gl_SubgroupLtMask);
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            float s = shuffleNV(v, i, gl_SubgroupSize);
+            valid = valid && (i < total);
+            excl_scan *= valid ? s : 1.0f;
+        }
+    }
+    return excl_scan;
+}
+vec2 subgroupExclusiveMul(vec2 v)
+{
+    vec2 excl_scan = vec2(1.0f);
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        excl_scan = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            vec2 s = shuffleUpNV(excl_scan, i, gl_SubgroupSize, valid);
+            excl_scan *= valid ? s : vec2(1.0f);
+        }
+        excl_scan = shuffleUpNV(excl_scan, 1u, gl_SubgroupSize);
+        if (subgroupElect())
+        {
+            excl_scan = vec2(1.0f);
+        }
+    }
+    else
+    {
+        uint total = subgroupBallotBitCount(gl_SubgroupLtMask);
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            vec2 s = shuffleNV(v, i, gl_SubgroupSize);
+            valid = valid && (i < total);
+            excl_scan *= valid ? s : vec2(1.0f);
+        }
+    }
+    return excl_scan;
+}
+vec3 subgroupExclusiveMul(vec3 v)
+{
+    vec3 excl_scan = vec3(1.0f);
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        excl_scan = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            vec3 s = shuffleUpNV(excl_scan, i, gl_SubgroupSize, valid);
+            excl_scan *= valid ? s : vec3(1.0f);
+        }
+        excl_scan = shuffleUpNV(excl_scan, 1u, gl_SubgroupSize);
+        if (subgroupElect())
+        {
+            excl_scan = vec3(1.0f);
+        }
+    }
+    else
+    {
+        uint total = subgroupBallotBitCount(gl_SubgroupLtMask);
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            vec3 s = shuffleNV(v, i, gl_SubgroupSize);
+            valid = valid && (i < total);
+            excl_scan *= valid ? s : vec3(1.0f);
+        }
+    }
+    return excl_scan;
+}
+vec4 subgroupExclusiveMul(vec4 v)
+{
+    vec4 excl_scan = vec4(1.0f);
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        excl_scan = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            vec4 s = shuffleUpNV(excl_scan, i, gl_SubgroupSize, valid);
+            excl_scan *= valid ? s : vec4(1.0f);
+        }
+        excl_scan = shuffleUpNV(excl_scan, 1u, gl_SubgroupSize);
+        if (subgroupElect())
+        {
+            excl_scan = vec4(1.0f);
+        }
+    }
+    else
+    {
+        uint total = subgroupBallotBitCount(gl_SubgroupLtMask);
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            vec4 s = shuffleNV(v, i, gl_SubgroupSize);
+            valid = valid && (i < total);
+            excl_scan *= valid ? s : vec4(1.0f);
+        }
+    }
+    return excl_scan;
+}
+double subgroupExclusiveMul(double v)
+{
+    double excl_scan = 0.0LF;
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        excl_scan = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            double s = shuffleUpNV(excl_scan, i, gl_SubgroupSize, valid);
+            excl_scan *= valid ? s : 0.0LF;
+        }
+        excl_scan = shuffleUpNV(excl_scan, 1u, gl_SubgroupSize);
+        if (subgroupElect())
+        {
+            excl_scan = 0.0LF;
+        }
+    }
+    else
+    {
+        uint total = subgroupBallotBitCount(gl_SubgroupLtMask);
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            double s = shuffleNV(v, i, gl_SubgroupSize);
+            valid = valid && (i < total);
+            excl_scan *= valid ? s : 0.0LF;
+        }
+    }
+    return excl_scan;
+}
+dvec2 subgroupExclusiveMul(dvec2 v)
+{
+    dvec2 excl_scan = dvec2(1.0LF);
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        excl_scan = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            dvec2 s = shuffleUpNV(excl_scan, i, gl_SubgroupSize, valid);
+            excl_scan *= valid ? s : dvec2(1.0LF);
+        }
+        excl_scan = shuffleUpNV(excl_scan, 1u, gl_SubgroupSize);
+        if (subgroupElect())
+        {
+            excl_scan = dvec2(1.0LF);
+        }
+    }
+    else
+    {
+        uint total = subgroupBallotBitCount(gl_SubgroupLtMask);
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            dvec2 s = shuffleNV(v, i, gl_SubgroupSize);
+            valid = valid && (i < total);
+            excl_scan *= valid ? s : dvec2(1.0LF);
+        }
+    }
+    return excl_scan;
+}
+dvec3 subgroupExclusiveMul(dvec3 v)
+{
+    dvec3 excl_scan = dvec3(1.0LF);
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        excl_scan = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            dvec3 s = shuffleUpNV(excl_scan, i, gl_SubgroupSize, valid);
+            excl_scan *= valid ? s : dvec3(1.0LF);
+        }
+        excl_scan = shuffleUpNV(excl_scan, 1u, gl_SubgroupSize);
+        if (subgroupElect())
+        {
+            excl_scan = dvec3(1.0LF);
+        }
+    }
+    else
+    {
+        uint total = subgroupBallotBitCount(gl_SubgroupLtMask);
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            dvec3 s = shuffleNV(v, i, gl_SubgroupSize);
+            valid = valid && (i < total);
+            excl_scan *= valid ? s : dvec3(1.0LF);
+        }
+    }
+    return excl_scan;
+}
+dvec4 subgroupExclusiveMul(dvec4 v)
+{
+    dvec4 excl_scan = dvec4(1.0LF);
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        excl_scan = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            dvec4 s = shuffleUpNV(excl_scan, i, gl_SubgroupSize, valid);
+            excl_scan *= valid ? s : dvec4(1.0LF);
+        }
+        excl_scan = shuffleUpNV(excl_scan, 1u, gl_SubgroupSize);
+        if (subgroupElect())
+        {
+            excl_scan = dvec4(1.0LF);
+        }
+    }
+    else
+    {
+        uint total = subgroupBallotBitCount(gl_SubgroupLtMask);
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            dvec4 s = shuffleNV(v, i, gl_SubgroupSize);
+            valid = valid && (i < total);
+            excl_scan *= valid ? s : dvec4(1.0LF);
+        }
+    }
+    return excl_scan;
+}
+#endif
+
+#if defined(GL_KHR_shader_subgroup_arithmetic)
+#elif defined(GL_NV_shader_thread_shuffle)
+float subgroupInclusiveMul(float v)
+{
+    float incl_scan = 1.0f;
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        incl_scan = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            float s = shuffleUpNV(incl_scan, i, gl_SubgroupSize, valid);
+            incl_scan *= valid ? s : 1.0f;
+        }
+    }
+    else
+    {
+        uint total = subgroupBallotBitCount(gl_SubgroupLeMask);
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            float s = shuffleNV(v, i, gl_SubgroupSize);
+            valid = valid && (i < total);
+            incl_scan *= valid ? s : 1.0f;
+        }
+    }
+    return incl_scan;
+}
+vec2 subgroupInclusiveMul(vec2 v)
+{
+    vec2 incl_scan = vec2(1.0f);
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        incl_scan = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            vec2 s = shuffleUpNV(incl_scan, i, gl_SubgroupSize, valid);
+            incl_scan *= valid ? s : vec2(1.0f);
+        }
+    }
+    else
+    {
+        uint total = subgroupBallotBitCount(gl_SubgroupLeMask);
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            vec2 s = shuffleNV(v, i, gl_SubgroupSize);
+            valid = valid && (i < total);
+            incl_scan *= valid ? s : vec2(1.0f);
+        }
+    }
+    return incl_scan;
+}
+vec3 subgroupInclusiveMul(vec3 v)
+{
+    vec3 incl_scan = vec3(1.0f);
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        incl_scan = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            vec3 s = shuffleUpNV(incl_scan, i, gl_SubgroupSize, valid);
+            incl_scan *= valid ? s : vec3(1.0f);
+        }
+    }
+    else
+    {
+        uint total = subgroupBallotBitCount(gl_SubgroupLeMask);
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            vec3 s = shuffleNV(v, i, gl_SubgroupSize);
+            valid = valid && (i < total);
+            incl_scan *= valid ? s : vec3(1.0f);
+        }
+    }
+    return incl_scan;
+}
+vec4 subgroupInclusiveMul(vec4 v)
+{
+    vec4 incl_scan = vec4(1.0f);
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        incl_scan = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            vec4 s = shuffleUpNV(incl_scan, i, gl_SubgroupSize, valid);
+            incl_scan *= valid ? s : vec4(1.0f);
+        }
+    }
+    else
+    {
+        uint total = subgroupBallotBitCount(gl_SubgroupLeMask);
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            vec4 s = shuffleNV(v, i, gl_SubgroupSize);
+            valid = valid && (i < total);
+            incl_scan *= valid ? s : vec4(1.0f);
+        }
+    }
+    return incl_scan;
+}
+double subgroupInclusiveMul(double v)
+{
+    double incl_scan = 0.0LF;
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        incl_scan = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            double s = shuffleUpNV(incl_scan, i, gl_SubgroupSize, valid);
+            incl_scan *= valid ? s : 0.0LF;
+        }
+    }
+    else
+    {
+        uint total = subgroupBallotBitCount(gl_SubgroupLeMask);
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            double s = shuffleNV(v, i, gl_SubgroupSize);
+            valid = valid && (i < total);
+            incl_scan *= valid ? s : 0.0LF;
+        }
+    }
+    return incl_scan;
+}
+dvec2 subgroupInclusiveMul(dvec2 v)
+{
+    dvec2 incl_scan = dvec2(1.0LF);
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        incl_scan = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            dvec2 s = shuffleUpNV(incl_scan, i, gl_SubgroupSize, valid);
+            incl_scan *= valid ? s : dvec2(1.0LF);
+        }
+    }
+    else
+    {
+        uint total = subgroupBallotBitCount(gl_SubgroupLeMask);
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            dvec2 s = shuffleNV(v, i, gl_SubgroupSize);
+            valid = valid && (i < total);
+            incl_scan *= valid ? s : dvec2(1.0LF);
+        }
+    }
+    return incl_scan;
+}
+dvec3 subgroupInclusiveMul(dvec3 v)
+{
+    dvec3 incl_scan = dvec3(1.0LF);
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        incl_scan = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            dvec3 s = shuffleUpNV(incl_scan, i, gl_SubgroupSize, valid);
+            incl_scan *= valid ? s : dvec3(1.0LF);
+        }
+    }
+    else
+    {
+        uint total = subgroupBallotBitCount(gl_SubgroupLeMask);
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            dvec3 s = shuffleNV(v, i, gl_SubgroupSize);
+            valid = valid && (i < total);
+            incl_scan *= valid ? s : dvec3(1.0LF);
+        }
+    }
+    return incl_scan;
+}
+dvec4 subgroupInclusiveMul(dvec4 v)
+{
+    dvec4 incl_scan = dvec4(1.0LF);
+    uvec4 active_threads = subgroupBallot(true);
+    if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)
+    {
+        uint total = gl_SubgroupSize / 2u;
+        incl_scan = v;
+        for (uint i = 1u; i <= total; i <<= 1u)
+        {
+            bool valid;
+            dvec4 s = shuffleUpNV(incl_scan, i, gl_SubgroupSize, valid);
+            incl_scan *= valid ? s : dvec4(1.0LF);
+        }
+    }
+    else
+    {
+        uint total = subgroupBallotBitCount(gl_SubgroupLeMask);
+        for (uint i = 0u; i < gl_SubgroupSize; ++i)
+        {
+            bool valid = subgroupBallotBitExtract(active_threads, i);
+            dvec4 s = shuffleNV(v, i, gl_SubgroupSize);
+            valid = valid && (i < total);
+            incl_scan *= valid ? s : dvec4(1.0LF);
+        }
+    }
+    return incl_scan;
+}
+#endif
+
+void main()
+{
+    _16.data_out_float = subgroupMul(_31.data_in_float[gl_LocalInvocationID.x]);
+    _16.data_out_vec2 = subgroupMul(_31.data_in_vec2[gl_LocalInvocationID.x]);
+    _16.data_out_vec3 = subgroupMul(_31.data_in_vec3[gl_LocalInvocationID.x]);
+    _16.data_out_vec4 = subgroupMul(_31.data_in_vec4[gl_LocalInvocationID.x]);
+    _16.data_out_double = subgroupMul(_31.data_in_double[gl_LocalInvocationID.x]);
+    _16.data_out_dvec2 = subgroupMul(_31.data_in_dvec2[gl_LocalInvocationID.x]);
+    _16.data_out_dvec3 = subgroupMul(_31.data_in_dvec3[gl_LocalInvocationID.x]);
+    _16.data_out_dvec4 = subgroupMul(_31.data_in_dvec4[gl_LocalInvocationID.x]);
+    _16.data_out_float = subgroupExclusiveMul(_31.data_in_float[gl_LocalInvocationID.x]);
+    _16.data_out_vec2 = subgroupExclusiveMul(_31.data_in_vec2[gl_LocalInvocationID.x]);
+    _16.data_out_vec3 = subgroupExclusiveMul(_31.data_in_vec3[gl_LocalInvocationID.x]);
+    _16.data_out_vec4 = subgroupExclusiveMul(_31.data_in_vec4[gl_LocalInvocationID.x]);
+    _16.data_out_double = subgroupExclusiveMul(_31.data_in_double[gl_LocalInvocationID.x]);
+    _16.data_out_dvec2 = subgroupExclusiveMul(_31.data_in_dvec2[gl_LocalInvocationID.x]);
+    _16.data_out_dvec3 = subgroupExclusiveMul(_31.data_in_dvec3[gl_LocalInvocationID.x]);
+    _16.data_out_dvec4 = subgroupExclusiveMul(_31.data_in_dvec4[gl_LocalInvocationID.x]);
+    _16.data_out_float = subgroupInclusiveMul(_31.data_in_float[gl_LocalInvocationID.x]);
+    _16.data_out_vec2 = subgroupInclusiveMul(_31.data_in_vec2[gl_LocalInvocationID.x]);
+    _16.data_out_vec3 = subgroupInclusiveMul(_31.data_in_vec3[gl_LocalInvocationID.x]);
+    _16.data_out_vec4 = subgroupInclusiveMul(_31.data_in_vec4[gl_LocalInvocationID.x]);
+    _16.data_out_double = subgroupInclusiveMul(_31.data_in_double[gl_LocalInvocationID.x]);
+    _16.data_out_dvec2 = subgroupInclusiveMul(_31.data_in_dvec2[gl_LocalInvocationID.x]);
+    _16.data_out_dvec3 = subgroupInclusiveMul(_31.data_in_dvec3[gl_LocalInvocationID.x]);
+    _16.data_out_dvec4 = subgroupInclusiveMul(_31.data_in_dvec4[gl_LocalInvocationID.x]);
+}
+

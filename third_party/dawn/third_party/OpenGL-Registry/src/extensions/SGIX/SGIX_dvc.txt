@@ -1,0 +1,93 @@
+XXX - Not complete.
+
+Name
+
+    SGIX_dvc
+
+Name Strings
+
+    GL_SGIX_dvc
+
+Version
+
+    $Date: 1997/02/26 22:47:24 $ $Revision: 1.1 $
+
+Number
+
+    ???
+
+Dependencies
+
+	SGIX_image_compression is required.
+
+Overview
+
+	This extension creates a new compression type to be used with
+	SGIX_image_compression which allows the decompression from- and
+	compression to client data stored in the formats described by the DVC
+	and DVCPRO digital video compression standards.  These formats use the
+	YCrCb color space to represent pixels before compression and after
+	decompression.
+
+Issues
+
+	- How should the color spaces be specified?
+
+	- Are either DVC or DVCPRO copyrighted or trademarked names?
+
+New Procedures and Functions
+
+	None.
+
+New Tokens
+
+	Accepted by the <param> parameter of PixelStoref and PixelStorei
+	when the <pname> parameter is COMPRESSION_TYPE_SGIX:
+
+		DVC_SGIX
+		DVCPRO_SGIX
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+	None.
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+	3.6.1 Pixel Storage Modes
+
+	DVC_SGIX and DVCPRO_SGIX are added to the Valid Range of
+	UNPACK_COMPRESSION_TYPE in Table 3.1.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+	4.3.2 Reading Pixels
+	
+	DVC_SGIX and DVCPRO_SGIX are added to the Valid Range of
+	PACK_COMPRESSION_TYPE in Table 4.5.
+
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+	None.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+
+Additions to the GLX Specification
+
+
+GLX Protocol
+
+
+Errors
+
+	XXX
+
+New State
+
+	None.
+
+New Implementation Dependent State
+
+	None.

@@ -1,0 +1,49 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 100
+#endif
+constant int a = SPIRV_CROSS_CONSTANT_ID_0;
+#ifndef SPIRV_CROSS_CONSTANT_ID_1
+#define SPIRV_CROSS_CONSTANT_ID_1 200
+#endif
+constant int b = SPIRV_CROSS_CONSTANT_ID_1;
+
+struct A
+{
+    int member0[a];
+    int member1[b];
+};
+
+struct B
+{
+    int member0[b];
+    int member1[a];
+};
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_2
+#define SPIRV_CROSS_CONSTANT_ID_2 300
+#endif
+constant int c = SPIRV_CROSS_CONSTANT_ID_2;
+constant int d = (c + 50);
+
+struct SSBO
+{
+    A member_a;
+    B member_b;
+    int v[a];
+    int w[d];
+};
+
+constant int e_tmp [[function_constant(3)]];
+constant int e = is_function_constant_defined(e_tmp) ? e_tmp : 400;
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO& _22 [[buffer(0)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    _22.w[gl_GlobalInvocationID.x] += (_22.v[gl_GlobalInvocationID.x] + e);
+}
+

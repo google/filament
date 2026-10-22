@@ -1,0 +1,538 @@
+
+Name
+
+    ATI_vertex_array_object
+
+
+Name Strings
+
+    GL_ATI_vertex_array_object
+
+
+Contact
+
+    Rick Hammerstone, AMD (rick.hammerstone 'at' amd.com)
+
+
+Version
+
+    1.11 - 11/04/06
+    Updated contact info after ATI/AMD merger.
+
+    1.1 - 01/08/02
+    Changed DeleteObjectBufferATI to FreeObjectBufferATI to match the
+    glati.h header file. Removed objbuf attribute.
+
+    1.01 - 09/18/01
+    Added clarification that ArrayObectATI and VariantArrayObjectATI
+    are not allowed between Begin/End but may not return an error.
+
+    1.0 - 09/06/01
+    Changed references to ATI_vertex_shader to EXT_vertex_shader.
+
+    0.9 - 08/15/01
+    Added support for variant arrays.
+
+    0.8 - 07/06/01
+    Added table of new state.
+
+    0.7 - 07/02/01
+    Added official enumerants.
+
+    0.6 - 05/07/01
+    Chopped out most of the new entry points. Back to just object
+    buffers and one call to define vertex arrays in an object buffer. 
+
+    0.5 - 04/18/01
+    The great renaming. Added sample usage section. Expanded issues
+    section. 
+
+    0.4 - 04/09/01 
+    Rewrote to use new entry points.
+
+    0.3 - 04/06/01
+    Changed Allocate and Free to New and Delete.
+
+    0.2 - 03/26/01
+    Added error description, additions to section 5 and 6 of the spec.
+
+    0.1
+    Original version
+
+Number
+
+    247
+
+Dependencies
+
+    This extension is written against the OpenGL 1.2.1 Specification.
+    OpenGL 1.1 is required. GL_EXT_vertex_shader affects the
+    definition of this extension.
+
+
+Overview
+
+    This extension defines an interface that allows multiple sets of
+    vertex array data to be cached in persistent server-side memory.
+    It is intended to allow client data to be stored in memory that
+    can be directly accessed by graphics hardware.
+
+
+Issues
+
+    Should this extension include support for allowing vertex indices
+    to be stored on the server?
+    
+        RESOLUTION: NO. This might not be universally supported, and
+        seems simple enough to layer on top of this extension.
+
+    Is there a better name for this extension?
+
+        RESOLUTION: YES. The ArrayStore vs. StoredArray terminology
+        was confusing. StoredArrays have been changed to be
+        ArrayObjects. Since any type of object could be stored in the
+        ArrayStore, these have been changed to ObjectBuffers.
+
+    Should the layout of an array store be defined at array store
+    creation time?
+
+        RESOLUTION: NO. This could provide better performance if the
+        client specifies a data type that the hardware doesn't
+        support, but this isn't a performance path anyways, and it
+        adds a cumbersome interface on top of the extension.
+
+    Should the client be able to retrieve a pointer to the array store
+    instead of a handle?
+
+        RESOLUTION: NO. For now, it doesn't seem like this is a big
+        win, and it presents problems on certain OS's. It also
+        requires using an explicit synchronization mechanism. This
+        would be pretty trivial to add, however.
+
+    Should this just sit on top of the existing vertex array
+    implementation, instead of introducing a new set of API calls?
+
+        RESOLUTION: NO. Trying to fit something on top existing vertex
+        arrays introduces a lot of confusion as to where the data is
+        stored (on the client side vs. on the server side). Adding new
+        API that mirrors traditional vertex arrays doesn't seem to
+        cumbersome.
+
+
+New Procedures and Functions
+
+  For creating, updating, and querying object buffers:
+
+    uint NewObjectBufferATI(sizei size, const void *pointer, enum usage)
+
+    boolean IsObjectBufferATI(uint buffer)
+
+    void UpdateObjectBufferATI(uint buffer, uint offset, sizei size, 
+                               const void *pointer, enum preserve)
+
+    void GetObjectBufferfvATI(uint buffer, enum pname, float *params)
+
+    void GetObjectBufferivATI(uint buffer, enum pname, int *params)
+
+    void FreeObjectBufferATI(uint buffer)
+
+
+  For defining vertex arrays inside an object buffer:
+
+    void ArrayObjectATI(enum array, int size, enum type, 
+                        sizei stride, uint buffer, uint offset)
+
+  For querying vertex arrays inside an object buffer:
+
+    void GetArrayObjectfvATI(enum array, enum pname, float *params)
+
+    void GetArrayObjectivATI(enum array, enum pname, int *params)
+
+  If EXT_vertex_shader is defined, for defining variant arrays inside
+  an object buffer:
+
+    void VariantArrayObjectATI(uint id, enum type, sizei stride,
+			       uint buffer, uint offset)
+
+  If EXT_vertex_shader is defined, for querying variant arrays inside
+  an object buffer:
+
+    void GetVariantArrayObjectfvATI(uint id, enum pname, 
+                                    float *params)
+
+    void GetVariantArrayObjectivATI(uint id, enum pname,
+				    int *params)
+
+
+New Tokens
+
+    Accepted by the <usage> parameter of NewObjectBufferATI:
+
+        STATIC_ATI                      0x8760
+        DYNAMIC_ATI                     0x8761
+
+    Accepted by the <preserve> parameter of UpdateObjectBufferATI:
+
+        PRESERVE_ATI                    0x8762
+        DISCARD_ATI                     0x8763
+
+    Accepted by the <pname> parameter of GetObjectBufferivATI and
+    GetObjectBufferfvATI: 
+
+        OBJECT_BUFFER_SIZE_ATI          0x8764
+        OBJECT_BUFFER_USAGE_ATI         0x8765
+
+    Accepted by the <pname> parameter of GetArrayObjectivATI and
+    GetArrayObjectfvATI: 
+
+        ARRAY_OBJECT_BUFFER_ATI         0x8766
+        ARRAY_OBJECT_OFFSET_ATI         0x8767
+
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    In section 2.6.3, GL Commands within Begin/End, add ArrayObjectATI
+    to the list of commands that are not allowed within any Begin/End
+    pair, but may or may not generate an error. If EXT_vertex_shader
+    is defined, add VariantArrayObjectATI to the list of commands that
+    are not allowed within any Begin/End pair, but may or may not
+    generate an error.
+
+
+    Inserted between section 2.8, Vertex Arrays, and section 2.9,
+    Rectangles, a new section titled Vertex Array Objects.
+
+    In order to provide more a more efficient mechanism for storing
+    frequently used vertex array data on the server side, a client may
+    use the command
+
+        uint NewObjectBufferATI(sizei size, const void *pointer, 
+                                enum usage);
+
+    to allocate a persistent buffer in which client data may be
+    stored. <size> specifies the size of the allocation in machine
+    units (hereafter assumed to be unsigned bytes). <pointer>
+    specifies a region of client memory that contains data to
+    initialize the object buffer. If <pointer> is null, then the
+    object buffer is created but not initialized.
+
+    <usage> provides a hint to the implementation of whether the
+    contents of the object buffer will be static or dynamic. <usage>
+    must be either STATIC_ATI or DYNAMIC_ATI. If the client specifies
+    an object buffer as static, its contents may still be updated,
+    however this may result in reduced performance.
+
+    The return value is a positive integer that uniquely identifies
+    the object buffer. If the object buffer cannot be allocated, the
+    return value is zero.
+
+    When the client creates an object buffer using NewObjectBufferATI,
+    the implementation can provide more efficient transfers of data
+    between the client and the graphics controller by allocating the
+    object buffer in memory that can be directly addressed by the
+    graphics controller. In addition, because the object buffer is
+    persistent across multiple drawing commands, static data must only
+    be copied to the object buffer once.
+
+    To modify the data contained in the object buffer, the client may
+    use the command
+
+        void UpdateObjectBufferATI(uint buffer, uint offset, 
+                                   sizei size, const void *pointer, 
+                                   enum preserve);
+
+    <buffer> identifies the object buffer to be updated. <offset> and
+    <size> indicate the range of data in the object buffer that is to
+    be updated. <pointer> specifies a region of client memory that
+    contains data to update the object buffer.
+
+    The client can use the <preserve> parameter of
+    UpdateObjectBufferATI to indicate whether data outside the region
+    being updated must be preserved. <preserve> must be one of
+    PRESERVE_ATI or DISCARD_ATI. If a client specifies that data
+    outside the range being updated may be discarded, the
+    implementation may be able process updates in a more optimal
+    fashion.
+
+    Whenever UpdateObjectBufferATI is called, the byte values in the
+    object buffer from <offset> to <offset> + <size> - 1 are updated
+    with the data referenced by <pointer>. If the client specifies
+    PRESERVE_ATI, all other byte values in the object buffer remain
+    unchanged. If the client specifies DISCARD_ATI, then all byte
+    values outside the range that has been updated become undefined.
+
+    Once created, an object buffer remains available for use until it
+    is destroyed by calling
+
+        void FreeObjectBufferATI(uint buffer);
+
+    <buffer> identifies the object buffer to be destroyed.
+
+    After creating an object buffer, the client can use the command
+
+        void ArrayObjectATI(enum array, int size, enum type,
+                            sizei stride, uint buffer, uint offset);
+
+    to allow a portion of the object buffer to be used as a vertex
+    array. <array> specifies the array to be defined. This must match
+    one of the allowable enumerants accepted by EnableClientState and
+    DisableClientState. <size>, <type>, and <stride> specify the
+    format and packing of the data stored in the array in the same
+    manner as the corresponding vertex array pointer command. <size>
+    and <type> must match the allowed sizes and types given for the
+    corresponding commands in table 2.4.
+
+    <buffer> specifies the object buffer that contains the data to be
+    used as a vertex array. <offset> specifies the offset in machine
+    units into the object buffer at which the vertex array data
+    begins. When a vertex array is specified in this manner, the
+    memory pointer that is part of the client state for the vertex
+    array is set to null to indicate that the vertex array has been
+    defined using ArrayObjectATI instead of one of the pointer
+    commands. 
+
+    Vertex arrays that are defined to reside within an object buffer
+    function in the same manner as normal vertex arrays. They are
+    enabled and disabled by using the commands EnableClientState and
+    DisableClientState. Primitives can be constructed using
+    ArrayElement, DrawArrays, DrawElements, and DrawRangeElements.
+    Clients may use mix of traditional vertex arrays and vertex array
+    objects to specify geometry. 
+
+    There is no explicit mechanism to define interleaved vertex arrays
+    in an object buffer. This can be implicitly done by storing the
+    arrays in an interleaved fashion during NewObjectBufferATI or
+    UpdateObjectBufferATI. 
+
+    If EXT_vertex_shader is defined, then a client can define an array
+    of variant data using the command:
+
+	void VariantArrayObjectATI(uint id, enum type, sizei stride,
+				   uint buffer, uint offset);
+
+    <id> indicates the variant that this array should be associated
+    with.  The <type>, <stride>, <buffer>, and <offset> parameters
+    have the same meaning as the corresponding parameters of
+    ArrayObjectATI. As always, variant arrays have a fixed size of 4
+    components.
+
+    Variant arrays defined by VariantArrayObjectATI are enabled and
+    disabled in the same way as variant arrays defined by
+    VariantPointerATI, by using EnableVariantClientStateATI and
+    DisableVariantClientStateATI. 
+
+
+Additions to Chapter 3 of the 1.2.1 Specification (Rasterization)
+
+    None
+
+
+Additions to Chapter 4 of the 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+
+Additions to Chapter 5 of the 1.2.1 Specification (Special Functions)
+
+    Added to section 5.4, as part of the discussion of what commands
+    are compiled into display lists:
+
+    The commands defined by this extension function in the same manner
+    as the traditional vertex array commands when they are compiled
+    into a display list.
+    
+    Commands that are used to create and manage memory for stored
+    arrays are not included in display lists, but are executed
+    immediately. These include NewObjectBufferATI, IsObjectBufferATI,
+    UpdateObjectBufferATI, GetObjectBufferfvATI, GetObjectBufferivATI,
+    and FreeObjectBufferATI.
+
+    Commands that are used to define and query vertex arrays within an
+    object buffer are not included in display lists, but are executed
+    immediately. These include ArrayObjectATI, GetArrayObjectfvATI,
+    and GetArrayObjectivATI.
+
+
+Additions to Chapter 6 of the 1.2.1 Specification (State and State
+Requests)
+
+    Added to section 6.1 in a subsection titled Object Buffer Queries:
+
+    The command
+
+        boolean IsObjectBufferATI(uint buffer)
+
+    returns TRUE if <buffer> is the name of an object buffer. If
+    <buffer> is zero, or if <buffer> is a non-zero value that is not
+    the name of an object buffer, IsObjectBufferATI return FALSE.
+
+    Added to the list of queries in section 6.1.3, Enumerated Queries:
+
+        void GetObjectBuffer{if}vATI(uint buffer, enum value, T data);
+        void GetArrayObject{if}vATI(enum array, enum value, T data);
+
+      If EXT_vertex_shader is defined:
+
+        void GetVariantArrayObject{if}vATI(uint id, enum value, T data);
+
+    Appended to the description of the queries in section 6.1.3,
+    Enumerated Queries:
+
+    GetObjectBuffer is used to retrieve information about an object
+    buffer. <buffer> must identify a valid object buffer. <value> must
+    be one of OBJECT_BUFFER_SIZE_ATI or OBJECT_BUFFER_USAGE_ATI.
+
+    If <value> is OBJECT_BUFFER_SIZE_ATI, then the size of the object
+    buffer in bytes is returned in <data>. The exact size of the
+    object buffer is an implementation dependent value, but is
+    guaranteed to be at least as large as the value specified by the
+    <size> parameter of NewObjectBufferATI. If <value> is
+    OBJECT_BUFFER_USAGE_ATI, then the value returned in <data> will be
+    either STATIC_ATI or DYNAMIC_ATI. The return value will match the
+    value specified by the <usage> parameter of NewObjectBufferATI.
+
+    GetArrayObjectATI is used to retrieve information on a vertex
+    array located in an object buffer. <array> indicates the vertex
+    array that is to be queried. It must match one of the allowable
+    enumerants accepted by EnableClientState and DisableClientState.
+
+    If EXT_vertex_shader is defined, GetVariantArrayObjectATI is used
+    to retrieve information on a variant array located in an object
+    buffer. <id> indicates the variant that is to be queried.
+
+    For both queries, <value> must be one of ARRAY_OBJECT_BUFFER_ATI,
+    or ARRAY_OBJECT_OFFSET_ATI. For each of these enumerants, the
+    value returned in <data> represents the object buffer that
+    contains the vertex data, or the byte offset from the object
+    buffer at which the first vertex starts, respectively. If the
+    specified vertex array or variant array has not been defined to
+    reside in an object buffer, GetArrayObjectATI will return zero for
+    both enumerants.
+
+
+Errors
+
+    INVALID_ENUM is generated if the <usage> parameter of
+    NewObjectBufferATI is not STATIC_ATI or DYNAMIC_ATI.
+
+    OUT_OF_MEMORY may be generated if an object buffer cannot be
+    allocated because the <size> argument of NewObjectBufferATI is
+    too large.
+
+    INVALID_VALUE is generated if the <buffer> argument of
+    UpdateObjectBufferATI, GetObjectBufferfvATI, GetObjectBufferivATI,
+    FreeObjectBufferATI, and ArrayObjectATI does not identify a
+    valid object buffer.
+
+    INVALID_VALUE is generated if the <offset> and <size> parameters
+    of UpdateObjectBufferATI would reference a region of memory
+    outside that allocated by the call to NewObjectBufferATI.
+
+    INVALID_ENUM is generated if the <pname> parameter of
+    GetObjectBufferfvATI and GetObjectBufferivATI is not
+    OBJECT_BUFFER_SIZE_ATI or OBJECT_BUFFER_USAGE_ATI. 
+
+    INVALID_ENUM is generated if the <array> parameter of
+    ArrayObjectATI, GetArrayObjectfvATI, and GetArrayObjectivATI does
+    not match one of the enumerants allowed by EnableClientState and
+    DisableClientState.
+
+    INVALID_VALUE is generated if the <id> parameter of
+    VariantArrayObjectATI, GetVariantArrayObjectfvATI, and
+    GetVariantArrayObjectivATI does not correspond to a previously
+    defined variant.
+
+    INVALID_VALUE is generated if the <size> and <type> parameters of
+    ArrayObjectATI do not match the allowable sizes and types given
+    for the pointer command corresponding to the <array> parameter.
+
+    INVALID_VALUE is generated if the <offset> parameter of
+    ArrayObjectATI is larger than the size of the object buffer as
+    specified by NewObjectBufferATI.
+
+    INVALID_ENUM is generated if the <pname> parameter of
+    GetArrayObjectfvATI and GetArrayObjectivATI is not 
+    ARRAY_OBJECT_BUFFER_ATI or ARRAY_OBJECT_OFFSET_ATI.
+    
+
+New State
+
+    In a new table, Object Buffers
+
+    Get Value                   Get Command     Type    Initial Value   Attrib
+    ---------                   -----------     ----    -------------   ------
+    OBJECT_BUFFER_SIZE_ATI      GetIntegerv     Z+      0               -
+    OBJECT_BUFFER_USAGE_ATI     GetIntegerv     Z4      STATIC_ATI      -
+
+    ARRAY_OBJECT_BUFFER_ATI     GetIntegerv     Z+      0               -
+    ARRAY_OBJECT_OFFSET_ATI     GetIntegerv     Z+      0               -
+        
+    
+Usage Example
+
+    Here is a simple example that demonstrates usage of the extension.
+    The example provides a comparison between traditional vertex
+    arrays and vertex array objects. Note that this is not a
+    particularly efficient use of vertex array objects, since the
+    array object are only used once before being destroyed. Typically
+    the client will create many array objects and transfer all of its
+    vertex data to the server before beginning any rendering.
+
+    Traditional vertex arrays:
+
+        // Define
+        VertexPointer(4, FLOAT, 16, data);
+        ColorPointer(4, UNSIGNED_BYTE, 4, data + 256);
+
+        // Enable
+        EnableClientState(VERTEX_ARRAY);
+        EnableClientState(COLOR_ARRAY);
+
+        // Draw
+        DrawArrays(TRIANGLES, 0, 16);
+
+        // Disable
+        DisableClientState(VERTEX_ARRAY);
+        DisableClientState(COLOR_ARRAY);
+
+    Vertex array objects:
+
+        // Create object buffer
+        buffer = NewObjectBufferATI(320, data, STATIC_ATI);
+
+        // Define
+        ArrayObjectATI(VERTEX_ARRAY, 4, FLOAT, 16, buffer, 0);
+        ArrayObjectATI(COLOR_ARRAY, 4, UNSIGNED_BYTE, 4, buffer, 256);
+
+        // Enable
+        EnableClientState(VERTEX_ARRAY);
+        EnableClientState(COLOR_ARRAY);
+
+        // Draw
+        DrawArrays(TRIANGLES, 0, 16);
+
+        // Disable
+        DisableClientState(VERTEX_ARRAY);
+        DisableClientState(COLOR_ARRAY);
+
+        // Free object buffer
+        FreeObjectBufferATI(buffer);
+
+
+Implementation Notes
+
+    For maximum hardware performance, all vertex arrays except for
+    color and secondary color should always be specified to use float
+    as the component type. Color and secondary color arrays may be
+    specified to use either float or 4-component unsigned byte as the
+    component type.
+
+    Typically, an object buffer will contain all of the vertex
+    information associated with a given object in a scene. This can
+    include multiple arrays of geometry, color, and texture data. If
+    portions of this data are static, and portions are dynamic,
+    greater performance can be achieved by placing the dynamic vertex
+    data in a separate object buffer and updating the entire object
+    buffer at once.
+

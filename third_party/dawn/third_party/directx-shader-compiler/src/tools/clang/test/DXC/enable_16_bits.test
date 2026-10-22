@@ -1,0 +1,9 @@
+// Test /enable-16bit-types option
+// RUN: %dxc  %S/Inputs/smoke.hlsl /Tps_6_2 /enable-16bit-types
+
+// RUN: not %dxc  %S/Inputs/smoke.hlsl /Tps_6_1 /enable-16bit-types > %t.ps61 2>&1 
+// RUN: FileCheck --input-file=%t.ps61 %s
+// RUN: not %dxc  %S/Inputs/smoke.hlsl /Tps_6_2 /enable-16bit-types /HV 2017 > %t 2>&1
+// RUN: FileCheck --input-file=%t %s
+
+// CHECK:enable-16bit-types is only allowed for shader model >= 6.2 and HLSL Language >= 2018

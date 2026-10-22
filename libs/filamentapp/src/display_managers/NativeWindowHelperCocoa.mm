@@ -1,0 +1,128 @@
+/*
+ * Copyright (C) 2015 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <filamentapp/NativeWindowHelper.h>
+
+#include <utils/Panic.h>
+
+#include <Cocoa/Cocoa.h>
+#include <QuartzCore/QuartzCore.h>
+
+#include <SDL_syswm.h>
+
+#include <utils/Log.h>
+
+void* getNativeWindowFromSDL(SDL_Window* sdlWindow) {
+    SDL_SysWMinfo wmi;
+    SDL_VERSION(&wmi.version);
+    FILAMENT_CHECK_POSTCONDITION(SDL_GetWindowWMInfo(sdlWindow, &wmi))
+            << "SDL version unsupported!";
+    NSWindow* win = wmi.info.cocoa.window;
+    NSView* view = [win contentView];
+    return view;
+}
+
+void prepareNativeWindow(SDL_Window* sdlWindow) {
+    SDL_SysWMinfo wmi;
+    SDL_VERSION(&wmi.version);
+    FILAMENT_CHECK_POSTCONDITION(SDL_GetWindowWMInfo(sdlWindow, &wmi))
+            << "SDL version unsupported!";
+    NSWindow* win = wmi.info.cocoa.window;
+    [win setColorSpace:[NSColorSpace sRGBColorSpace]];
+}
+
+void* setUpMetalLayer(void* nativeView) {
+    NSView* view = (NSView*) nativeView;
+    [view setWantsLayer:YES];
+    CAMetalLayer* metalLayer = [CAMetalLayer layer];
+    metalLayer.bounds = view.bounds;
+    metalLayer.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
+    metalLayer.delegate = (id<CALayerDelegate>) view;
+
+    // It's important to set the drawableSize to the actual backing pixels. When rendering
+    // full-screen, we can skip the macOS compositor if the size matches the display size.
+    metalLayer.drawableSize = [view convertSizeToBacking:view.bounds.size];
+
+    // In its implementation of vkGetPhysicalDeviceSurfaceCapabilitiesKHR, MoltenVK takes into
+    // consideration both the size (in points) of the bounds, and the contentsScale of the
+    // CAMetalLayer from which the Vulkan surface was created.
+    // See also https://github.com/KhronosGroup/MoltenVK/issues/428
+    metalLayer.contentsScale = view.window.backingScaleFactor;
+
+    // This is set to NO by default, but is also important to ensure we can bypass the compositor
+    // in full-screen mode
+    // See "Direct to Display" http://metalkit.org/2017/06/30/introducing-metal-2.html.
+    metalLayer.opaque = YES;
+
+    [view setLayer:metalLayer];
+
+    return metalLayer;
+}
+
+void* resizeMetalLayerFromView(void* nativeView) {
+    if (!nativeView) {
+        return nullptr;
+    }
+    id obj = (__bridge id) nativeView;
+    if (![obj isKindOfClass:[NSView class]]) {
+        return nullptr;
+    }
+    NSView* view = (NSView*) obj;
+    CAMetalLayer* metalLayer = (CAMetalLayer*) view.layer;
+    if (metalLayer && [metalLayer isKindOfClass:[CAMetalLayer class]]) {
+        metalLayer.bounds = view.bounds;
+        metalLayer.drawableSize = [view convertSizeToBacking:view.bounds.size];
+        metalLayer.contentsScale = view.window.backingScaleFactor;
+    }
+    return metalLayer;
+}
+
+void* resizeMetalLayer(void* layer) {
+    if (!layer) {
+        return nullptr;
+    }
+    id obj = (__bridge id) layer;
+    if (![obj isKindOfClass:[CAMetalLayer class]]) {
+        return nullptr;
+    }
+    CAMetalLayer* metalLayer = (CAMetalLayer*) obj;
+    NSView* view = (NSView*) metalLayer.delegate;
+    return resizeMetalLayerFromView(view);
+}
+
+// When running in headless/web-server mode, the standard SDL main event pump is bypassed.
+// On macOS, if the Cocoa/AppKit event queue is not periodically pumped, the OS window manager
+// never processes layout passes or visibility changes (like orderFrontRegardless) for the
+// dummy off-screen NSWindow. Without this, Cocoa defers graphics backing store allocation
+// for the NSView, causing glReadPixels from the default framebuffer (0) to return a pitch-black
+// image. Calling this helper on the main thread processes pending events and forces
+// layout and backing store allocation. This is a necessary fix for reliable headless rendering
+// and streaming on macOS.
+extern "C" void pumpCocoaEvents() {
+    @autoreleasepool {
+        [NSApplication sharedApplication];
+        NSEvent* event;
+        do {
+            event = [NSApp nextEventMatchingMask:NSEventMaskAny
+                                       untilDate:[NSDate distantPast]
+                                          inMode:NSDefaultRunLoopMode
+                                         dequeue:YES];
+            if (event) {
+                [NSApp sendEvent:event];
+            }
+        } while (event);
+    }
+}

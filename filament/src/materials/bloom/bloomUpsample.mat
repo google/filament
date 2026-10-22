@@ -1,0 +1,62 @@
+material {
+    name : bloomUpsample,
+    parameters : [
+        {
+            type : sampler2d,
+            name : source,
+            precision: medium
+        },
+        {
+            type : float4,
+            name : resolution,
+            precision: high
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = uvToRenderTargetUV(postProcess.normalizedUV);
+    }
+}
+
+fragment {
+    void dummy(){}
+
+    void postProcess(inout PostProcessInputs postProcess) {
+        highp vec2 uv = variable_vertex.xy;
+
+#if FILAMENT_QUALITY < FILAMENT_QUALITY_HIGH
+        highp vec4 d = vec4(materialParams.resolution.zw, -materialParams.resolution.zw) * 0.5;
+        vec3 c;
+        c  = textureLod(materialParams_source, uv + d.zw, 0.0).rgb;
+        c += textureLod(materialParams_source, uv + d.xw, 0.0).rgb;
+        c += textureLod(materialParams_source, uv + d.xy, 0.0).rgb;
+        c += textureLod(materialParams_source, uv + d.zy, 0.0).rgb;
+        postProcess.color.rgb = c * 0.25;
+#else
+        // see SIGGRAPH 2014: Advances in Real-Time Rendering
+        //     "Next Generation Post-Processing in Call of Duty Advanced Warfare"
+        //      Jorge Jimenez
+        const float radius = 1.0;
+        highp vec4 d = vec4(materialParams.resolution.zw, -materialParams.resolution.zw) * radius;
+        vec3 c0, c1;
+        c0  = textureLod(materialParams_source, uv + d.zw, 0.0).rgb;
+        c0 += textureLod(materialParams_source, uv + d.xw, 0.0).rgb;
+        c0 += textureLod(materialParams_source, uv + d.xy, 0.0).rgb;
+        c0 += textureLod(materialParams_source, uv + d.zy, 0.0).rgb;
+        c0 += 4.0 * textureLod(materialParams_source, uv, 0.0).rgb;
+        c1  = textureLod(materialParams_source, uv + vec2(d.z,  0.0), 0.0).rgb;
+        c1 += textureLod(materialParams_source, uv + vec2(0.0,  d.w), 0.0).rgb;
+        c1 += textureLod(materialParams_source, uv + vec2(d.x,  0.0), 0.0).rgb;
+        c1 += textureLod(materialParams_source, uv + vec2( 0.0, d.y), 0.0).rgb;
+        postProcess.color.rgb = (c0 + 2.0 * c1) * (1.0 / 16.0);
+#endif
+    }
+}

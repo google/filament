@@ -1,0 +1,339 @@
+Name
+
+    MESAX_texture_stack
+
+Name Strings
+
+    GL_MESAX_texture_stack
+
+Contact
+
+    Ian Romanick, IBM (idr 'at' us.ibm.com)
+
+IP Status
+
+    No known IP issues.
+
+Status
+
+    TBD
+
+Version
+
+    $Date: 2005/12/12$ $Revision: 0.3$
+
+Number
+
+    318
+
+Dependencies
+
+    OpenGL 1.2 or GL_EXT_texture3D is required.
+
+    Support for ARB_fragment_program is assumed, but not required.
+
+    Support for ARB_fragment_program_shadow is assumed, but not required.
+
+    Support for EXT_framebuffer_object is assumed, but not required.
+
+    Written based on the wording of the OpenGL 2.0 specification and
+    ARB_fragment_program_shadow but not dependent on them.
+
+Overview
+
+    There are a number of circumstances where an application may wish to
+    blend two textures out of a larger set of textures.  Moreover, in some
+    cases the selected textures may vary on a per-fragment basis within
+    a polygon.  Several examples include:
+
+       1. High dynamic range textures.  The application stores several
+       different "exposures" of an image as different textures.  On a
+       per-fragment basis, the application selects which exposures are
+       used.
+
+       2. A terrain engine where the altitude of a point determines the
+       texture applied to it.  If the transition is from beach sand to
+       grass to rocks to snow, the application will store each texture
+       in a different texture map, and dynamically select which two
+       textures to blend at run-time.
+
+       3. Storing short video clips in textures.  Each depth slice is a
+       single frame of video.
+
+    Several solutions to this problem have been proposed, but they either
+    involve using a separate texture unit for each texture map or using 3D
+    textures without mipmaps.  Both of these options have major drawbacks.
+
+    This extension provides a third alternative that eliminates the major
+    drawbacks of both previous methods.  A new texture target,
+    TEXTURE_2D_STACK, is added that functions identically to TEXTURE_3D in
+    all aspects except the sizes of the non-base level images.  In
+    traditional 3D texturing, the size of the N+1 LOD is half the size
+    of the N LOD in all three dimensions.  For the TEXTURE_2D_STACK target,
+    the height and width of the N+1 LOD is halved, but the depth is the
+    same for all levels of detail. The texture then becomes a "stack" of
+    2D textures.  The per-fragment texel is selected by the R texture
+    coordinate.
+
+    References:
+
+        http://www.opengl.org/discussion_boards/cgi_directory/ultimatebb.cgi?ubb=get_topic;f=3;t=011557
+        http://www.opengl.org/discussion_boards/cgi_directory/ultimatebb.cgi?ubb=get_topic;f=3;t=000516
+        http://www.opengl.org/discussion_boards/cgi_directory/ultimatebb.cgi?ubb=get_topic;f=3;t=011903
+        http://www.delphi3d.net/articles/viewarticle.php?article=terraintex.htm
+
+Issues
+
+    (1) Is "texture stack" a good name for this functionality?
+
+        NO.  However, I can't think of anything else that is better.
+
+    (2) Should the R texture coordinate be treated as normalized or
+    un-normalized?  If it were un-normalized, floor(R) could be thought
+    of as a direct index into the texture stack.  This may be more
+    convenient for applications.
+
+        RESOLVED.  All texture coordinates are normalized.  The issue of
+        un-normalized texture coordinates has been discussed in the ARB
+        before and should be left for a layered extension.
+
+    (3) How does LOD selection work for stacked textures?
+
+        RESOLVED.  For 2D texture stacks the R coordinate is ignored, and
+        the LOD selection equations for 2D textures are used.  For 1D
+        texture stacks the T coordinate is ignored, and the LOD selection
+        equations for 1D textures are used.  The expected usage is in a
+        fragment program with an explicit LOD selection.
+
+    (4) What is the maximum size of a 2D texture stack?  Is it the same
+    as for a 3D texture, or should a new query be added?  How about for 1D
+    texture stacks?
+
+        UNRESOLVED.
+
+    (5) How are texture stacks exposed in GLSL?
+    
+        RESOLVED.  For now, they're not exposed at all.  Mesa doesn't
+	currently support GLSL, so it's somewhat moot.
+	
+	When this extension is converted to MESA, EXT, or ARB, it is
+	expected that an additional samplers (e.g., sampler1DStack and
+	sampler2DStack) and texture lookup functions (e.g., texture1DStack and
+	texture2Dstack) will be added.
+        
+    (6) Should a 1D texture stack also be exposed?
+
+        RESOLVED.  For orthogonality, yes.
+
+    (7) How are stacked textures attached to framebuffer objects?
+
+        SEMI-RESOLVED.  Slices of TEXTURE_2D_STACK textures are attached in
+        the same manner as slices of traditional 3D textures.
+
+        TEXTURE_1D_STACK textures are a bit more tricky.  This could be
+        handled one of two ways.  The entire texture could be attached using
+        FramebufferTexture2DEXT, or a new function could be created that
+        would allow the attachment of a single 1D slice of the texture.  The
+        spec currently uses the former, but the later may be more logical.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, by
+    the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev, and by the <target> parameter of TexImage3D, GetTexImage,
+    GetTexLevelParameteriv, GetTexLevelParameterfv, GetTexParameteriv, and
+    GetTexParameterfv:
+
+        TEXTURE_1D_STACK_MESAX            0x8759
+        TEXTURE_2D_STACK_MESAX            0x875A
+
+    Accepted by the <target> parameter of TexImage3D,
+    GetTexLevelParameteriv, and GetTexLevelParameterfv:
+
+        PROXY_TEXTURE_1D_STACK_MESAX      0x875B
+        PROXY_TEXTURE_2D_STACK_MESAX      0x875C
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev
+
+        TEXTURE_1D_STACK_BINDING_MESAX    0x875D
+        TEXTURE_2D_STACK_BINDING_MESAX    0x875E
+
+    Accepted by the <textarget> parameter of FramebufferTexture2DEXT:
+
+        TEXTURE_1D_STACK_MESAX
+
+    Accepted by the <textarget> parameter of FramebufferTexture3DEXT:
+
+        TEXTURE_2D_STACK_MESAX
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    -- Section 3.8.8 "Texture Minification" in the section "Scale Factor and Level of Detail"
+
+       Change the first paragraph (page 172) to say:
+
+       "Let s(x,y) be the function that associates an s texture coordinate
+       with each set of window coordinates (x,y) that lie within a primitive;
+       define t(x,y) and r(x,y) analogously.  Let u(x,y) = w_t * s(x,y),
+       v(x,y) = h_t * t(x,y), and w(x,y) = d_t * r(x,y), where w_t, h_t,
+       and d_t are as defined by equations 3.15, 3.16, and 3.17 with
+       w_s, h_s, and d_s equal to the width, height, and depth of the
+       image array whose level is level_base.  For a one-dimensional
+       texture, define v(x,y) = 0 and w(x,y) = 0; for a two-dimensional
+       texture or a 2D texture stack, define w(x,y) = 0..."
+
+    -- Section 3.8.8 "Texture Minification" in the section "Mipmapping"
+
+       After the first paragraph (page 175) add:
+
+       "For TEXTURE_2D_STACK_MESAX textures, d_b is always treated as
+       zero, regardless of the actual value, when performing mipmap
+       calculations."
+
+    -- Section 3.8.15 "Texture Application"
+
+       Change the first paragraph (page 189) to say:
+
+       "Texturing is enabled or disabled using the generic Enable and Disable
+       commands, respectively, with the symbolic constants TEXTURE_1D,
+       TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP, TEXTURE_1D_STACK_MESAX, or
+       TEXTURE_2D_STACK_MESAX to enable one-, two-, three-dimensional, cube
+       map, or 2D texture stack texture, respectively.  If both two- and
+       one-dimensional textures are enabled, the two-dimensional texture is
+       used.  If the three-dimensional and either of the two- or one-
+       dimensional textures is enabled, the three-dimensional texture is
+       used.  If the cube map texture and any of the three-, two-, or one-
+       dimensional textures is enabled, then cube map texturing is used.  If
+       1D texture stack is enabled and any of cube map, three-, two-, or
+       one-dimensional textures is enabled, 2D texture stack texturing is
+       used.  If 2D texture stack is enabled and any of cube map, three-,
+       two-, one-dimensional textures or 1D texture stack is enabled, 2D
+       texture stack texturing is used..."
+
+    -- Section 3.11.2 of ARB_fragment_program (Fragment Program Grammar and Restrictions):
+
+       (mostly add to existing grammar rules)
+
+       <optionName>           ::= "MESAX_texture_stack"
+
+       <texTarget>            ::= "1D"
+                               | "2D"
+                               | "3D"
+                               | "CUBE"
+                               | "RECT"
+                               | "1D_STACK"
+                               | "2D_STACK"
+
+    -- Add Section 3.11.4.5.4 Texture Stack Option
+
+       "If a fragment program specifies the "MESAX_texture_stack" program
+       option, the <texTarget> rule is modified to add the texture targets
+       1D_STACK and 2D_STACK (See Section 3.11.2)."
+
+    -- Modify Section 3.11.6  Fragment Program Texture Instruction Set
+
+       (replace 1st and 2nd paragraphs with the following paragraphs)
+
+      "The first three texture instructions described below specify the
+      mapping of 4-tuple input vectors to 4-tuple output vectors.
+      The sampling of the texture works as described in section 3.8,
+      except that texture environments and texture functions are not
+      applicable, and the texture enables hierarchy is replaced by explicit
+      references to the desired texture target (i.e., 1D, 2D, 3D, cube map,
+      rectangle, 1D_STACK, 2D_STACK).  These texture instructions specify
+      how the 4-tuple is mapped into the coordinates used for sampling.  The
+      following function is used to describe the texture sampling in the
+      descriptions below: 
+
+         vec4 TextureSample(float s, float t, float r, float lodBias,
+                            int texImageUnit, enum texTarget);
+
+      Note that not all three texture coordinates, s, t, and r, are
+      used by all texture targets.  In particular, 1D texture targets only
+      use the s component.  2D, RECT (non-power-of-two), and 1D_STACK texture
+      targets only use the s and t components.  SHADOW1D texture
+      targets only use the s and r components.  The descriptions of the
+      texture instructions below supply all three components, as would
+      be the case with CUBE, 3D, 2D_STACK, SHADOW2D, and SHADOWRECT targets."
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment Operations)
+
+    -- 4.4.2.3 Attaching Texture Images to a Framebuffer
+
+       Change the sixth paragraph to say:
+
+       "If <textarget> is TEXTURE_RECTANGLE_ARB, then <level> must be zero.
+       If <textarget> is TEXTURE_3D or TEXTURE_2D_STACK , then <level> must
+       be greater than or equal to zero and less than or equal to log base 2
+       of MAX_3D_TEXTURE_SIZE..."
+
+       Change the ninth paragraph to say:
+
+       "For FramebufferTexture2DEXT, if <texture> is not zero, then
+       <textarget> must be one of: TEXTURE_2D, TEXTURE_1D_STACK,
+       TEXTURE_RECTANGLE_ARB, TEXTURE_CUBE_MAP_POSITIVE_X,
+       TEXTURE_CUBE_MAP_POSITIVE_Y, TEXTURE_CUBE_MAP_POSITIVE_Z,
+       TEXTURE_CUBE_MAP_NEGATIVE_X, TEXTURE_CUBE_MAP_NEGATIVE_Y, or
+       TEXTURE_CUBE_MAP_NEGATIVE_Z."
+
+       Change the tenth paragraph to say:
+
+       "For FramebufferTexture3DEXT, if <texture> is not zero, then
+       <textarget> must be TEXTURE_3D or TEXTURE_2D_STACK."
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and State Requests)
+
+    None
+
+Additions to Appendix A of the OpenGL 2.0 Specification (Invariance)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    None
+
+Dependencies on ARB_fragment_program
+
+    If ARB_fragment_program is not supported, the changes to section 3.11
+    should be ignored.
+
+Dependencies on EXT_framebuffer_object
+
+    If EXT_framebuffer_object is not supported, the changes to section
+    4.4.2.3 should be ignored.
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    ||2005/11/15||0.1||idr||Initial draft version.||
+    ||2005/12/07||0.2||idr||Added framebuffer object interactions.||
+    ||2005/12/12||0.3||idr||Updated fragment program interactions.||

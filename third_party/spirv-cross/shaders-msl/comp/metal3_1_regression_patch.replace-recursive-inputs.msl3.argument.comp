@@ -1,0 +1,21 @@
+#version 450
+#extension GL_EXT_buffer_reference2 : require
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(buffer_reference) buffer recurs;
+layout(buffer_reference, buffer_reference_align = 16, set = 0, binding = 1, std140) buffer recurs
+{
+    int m1;
+    recurs m2;
+} nums;
+
+layout(set = 0, binding = 0, r32ui) uniform writeonly uimage2D tex;
+
+void main()
+{
+    int rslt = 0;
+    rslt += nums.m1;
+    rslt += nums.m2.m1;
+    rslt += nums.m2.m2.m1;
+    imageStore(tex, ivec2(gl_GlobalInvocationID.xy), uvec4(rslt, 0u, 0u, 1u));
+}

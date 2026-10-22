@@ -1,0 +1,35 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    int values[1];
+};
+
+constant int A_tmp [[function_constant(0)]];
+constant int A = is_function_constant_defined(A_tmp) ? A_tmp : 0;
+constant int A_1_tmp [[function_constant(1)]];
+constant int A_1 = is_function_constant_defined(A_1_tmp) ? A_1_tmp : 1;
+constant int A_2_tmp [[function_constant(2)]];
+constant int A_2 = is_function_constant_defined(A_2_tmp) ? A_2_tmp : 2;
+constant int A_3_tmp [[function_constant(3)]];
+constant int A_3 = is_function_constant_defined(A_3_tmp) ? A_3_tmp : 3;
+constant int A_4_tmp [[function_constant(4)]];
+constant int A_4 = is_function_constant_defined(A_4_tmp) ? A_4_tmp : 4;
+constant int A_5_tmp [[function_constant(5)]];
+constant int A_5 = is_function_constant_defined(A_5_tmp) ? A_5_tmp : 5;
+constant int A_6 = (A - A_1);
+constant int A_7 = (A_6 - A_2);
+constant int A_8 = (A_7 - A_3);
+constant int A_9 = (A_8 - A_4);
+constant int A_10 = (A_9 - A_5);
+constant int A_11 = (A_10 + A_5);
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO& _7 [[buffer(0)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    _7.values[gl_GlobalInvocationID.x] = A_11;
+}
+

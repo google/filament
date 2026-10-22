@@ -1,0 +1,833 @@
+Name
+
+    ARB_viewport_array
+
+Name Strings
+
+    GL_ARB_viewport_array
+
+Contributors
+
+    Graham Sellers, AMD
+    Mark Young, AMD
+    Nick Haemel, AMD
+    Bill Licea-Kane, AMD
+    Jeff Bolz, NVIDIA
+    Daniel Koch, TransGaming
+    Pat Brown, NVIDIA
+    Bruce Merry, ARM
+    Ian Stewart, NVIDIA
+
+Contact
+
+    Graham Sellers, AMD (graham.sellers 'at' amd.com)
+
+Notice
+
+    Copyright (c) 2010-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 9, 2010.
+    Approved by the Khronos Board of Promoters on July 23, 2010.
+
+Version
+
+    Last Modified Date:         06/25/2012
+    Author Revision:            18
+
+Number
+
+    ARB Extension #100
+
+Dependencies
+
+    OpenGL 1.0 is required.
+
+    OpenGL 3.2 or the EXT_geometry_shader4 or ARB_geometry_shader4 extensions
+    are required.
+
+    This extension is written against the OpenGL 3.2 (Compatibility)
+    Specification.
+
+    This extension is written against the OpenGL Shading Language Specification
+    version 1.50.09.
+
+Overview
+
+    OpenGL is modeled on a pipeline of operations. The final stage in this
+    pipeline before rasterization is the viewport transformation. This stage
+    transforms vertices from view space into window coordinates and allows the
+    application to specify a rectangular region of screen space into which
+    OpenGL should draw primitives. Unextended OpenGL implementations provide a
+    single viewport per context. In order to draw primitives into multiple
+    viewports, the OpenGL viewport may be changed between several draw calls.
+    With the advent of Geometry Shaders, it has become possible for an
+    application to amplify geometry and produce multiple output primitives
+    for each primitive input to the Geometry Shader. It is possible to direct
+    these primitives to render into a selected render target. However, all
+    render targets share the same, global OpenGL viewport.
+
+    This extension enhances OpenGL by providing a mechanism to expose multiple
+    viewports. Each viewport is specified as a rectangle. The destination
+    viewport may be selected per-primitive by the geometry shader. This allows
+    the Geometry Shader to produce different versions of primitives destined
+    for separate viewport rectangles on the same surface. Additionally, when
+    combined with multiple framebuffer attachments, it allows a different
+    viewport rectangle to be selected for each. This extension also exposes a
+    separate scissor rectangle for each viewport. Finally, the viewport bounds
+    are now floating point quantities allowing fractional pixel offsets to be
+    applied during the viewport transform.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    void ViewportArrayv(uint first, sizei count, const float * v);
+    void ViewportIndexedf(uint index, float x, float y, float w, float h);
+    void ViewportIndexedfv(uint index, const float * v);
+    void ScissorArrayv(uint first, sizei count, const int * v);
+    void ScissorIndexed(uint index, int left, int bottom, sizei width, sizei height);
+    void ScissorIndexedv(uint index, const int * v);
+    void DepthRangeArrayv(uint first, sizei count, const clampd * v);
+    void DepthRangeIndexed(uint index, clampd n, clampd f);
+    void GetFloati_v(enum target, uint index, float *data);
+    void GetDoublei_v(enum target, uint index, double *data);
+
+    void GetIntegerIndexedvEXT(enum target, uint index, int * v);
+    void EnableIndexedEXT(enum target, uint index);
+    void DisableIndexedEXT(enum target, uint index);
+    boolean IsEnabledIndexedEXT(enum target, uint index);
+
+    Note that GetIntegerIndexedvEXT, EnableIndexedEXT, DisableIndexedEXT and
+    IsEnabledIndexedEXT are introduced by other OpenGL extensions such as
+    EXT_draw_buffers2. If this extension is implemented against an earlier
+    version of OpenGL that does not support GetIntegeri_v and so on, the
+    'Indexed' versions of these functions may be used in their place.
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    GetDoublev and GetInteger64v:
+
+        MAX_VIEWPORTS                                   0x825B
+        VIEWPORT_SUBPIXEL_BITS                          0x825C
+        VIEWPORT_BOUNDS_RANGE                           0x825D
+        LAYER_PROVOKING_VERTEX                          0x825E
+        VIEWPORT_INDEX_PROVOKING_VERTEX                 0x825F
+
+    Accepted by the <pname> parameter of GetIntegeri_v:
+
+        SCISSOR_BOX                                     0x0C10
+
+    Accepted by the <pname> parameter of GetFloati_v:
+
+        VIEWPORT                                        0x0BA2
+
+    Accepted by the <pname> parameter of GetDoublei_v:
+
+        DEPTH_RANGE                                     0x0B70
+
+    Accepted by the <pname> parameter of Enablei, Disablei, and IsEnabledi:
+
+        SCISSOR_TEST                                    0x0C11
+
+    Returned in the <data> parameter from a Get query with a <pname> of
+    LAYER_PROVOKING_VERTEX or VIEWPORT_INDEX_PROVOKING_VERTEX:
+
+        FIRST_VERTEX_CONVENTION                         0x8E4D
+        LAST_VERTEX_CONVENTION                          0x8E4E
+        PROVOKING_VERTEX                                0x8E4F
+        UNDEFINED_VERTEX                                0x8260
+
+Additions to Chapter 2 of the OpenGL 3.2 (Compatibility) Specification (OpenGL
+Operation)
+
+    Modifications to Section 2.15.4, Geometry Shader Execution Environment
+
+    Add a paragraph after the description of gl_Layer, page 124.
+
+    The built-in special variable gl_ViewportIndex is used to direct
+    rendering to one of several viewports and is discussed in the section
+    entitled "Layer and Viewport Selection", below.
+
+    Rename the the "Layered Rendering" subsection to "Layer and Viewport
+    Selection" and append the following:
+
+    Geometry shaders may also select the destination viewport for each
+    output primitive. The destination viewport for a primitive may be
+    selected in the geometry shader by writing to the built-in output
+    variable gl_ViewportIndex. This functionality allows a geometry
+    shader to direct its output to a different viewport for each
+    primitive, or to draw multiple versions of a primitive into several
+    different viewports.
+
+    The specific vertex of a primitive that is used to select the
+    rendering layer or viewport index is implementation-dependent and
+    thus portable applications will assign the same layer and viewport
+    index for all vertices in a primitive. The vertex conventions
+    followed for gl_Layer and gl_ViewportIndex may be determined by
+    calling GetIntegerv with the symbolic constants
+    LAYER_PROVOKING_VERTEX and VIEWPORT_INDEX_PROVOKING_VERTEX,
+    respectively. For either value, if the value returned is
+    PROVOKING_VERTEX, then vertex selection follows the convention
+    specified by ProvokingVertex (see section 2.21). If the value
+    returned is FIRST_VERTEX_CONVENTION, selection is always taken from
+    the first vertex of a primitive. If the value returned is
+    LAST_VERTEX_CONVENTION, the selection is always taken from the last
+    vertex of a primitive. If the value returned is UNDEFINED_VERTEX,
+    the selection is not guaranteed to be taken from any specific vertex
+    in the primitive. The vertex considered the provoking vertex for
+    particular primitive types is given in Table 2.15.
+
+    Modify section 2.16.1 "Controlling the Viewport", page 126.
+
+    Change the first paragraph of section 2.16.1 to read
+
+    The viewport transformation is determined by the selected viewport's
+    width and height in pixels, p_x and p_y, respectively, and its
+    center (o_x,o_y) (also in pixels) ...
+
+        { leave equations intact }
+
+    Multiple viewports are available and are numbered zero through the
+    value of MAX_VIEWPORTS minus one. If a geometry shader is active and
+    writes to gl_ViewportIndex, the viewport transformation uses the
+    viewport corresponding to the value assigned to gl_ViewportIndex
+    taken from an implementation-dependent primitive vertex. If the
+    value of the viewport index is outside the range zero to the value
+    of MAX_VIEWPORTS minus one, the results of the viewport
+    transformation are undefined. If no geometry shader is active, or if
+    the active geometry shader does not write to gl_ViewportIndex, the
+    viewport numbered zero is used by the viewport transformation.
+
+    A single vertex may be used in more than one individual primitive, in
+    primitives such as TRIANGLE_STRIP.  In this case, the viewport
+    transformation is applied separately for each primitive.
+
+    The factor and offset applied to Z_d for each viewport encoded by n
+    and f are set using
+
+        void DepthRangeArrayv(uint first, sizei count, const clampd * v);
+        void DepthRangeIndexed(uint index, clampd n, clampd f);
+        void DepthRange(clampd n, clampd f);
+
+    DepthRangeArrayv is used to specify the depth range for multiple
+    viewports simultaneously. <first> specifies the index of the first
+    viewport to modify and <count> specifies the number of viewports. If
+    (<first> + <count>) is greater than the value of MAX_VIEWPORTS then
+    an INVALID_VALUE error will be generated. Viewports whose indices
+    lie outside the range [<first>, <first> + <count>) are not modified.
+    The <v> parameter contains the address of an array of clampd types
+    specifying near (n) and far (f) for each viewport in that order.
+
+    DepthRangeIndexed specifies the depth range for a single viewport
+    and is equivalent (assuming no errors are generated) to:
+
+        clampd v[] = { n, f };
+        DepthRangeArrayv(index, 1, v);
+
+    DepthRange sets the depth range for all viewports to the same values
+    and is equivalent (assuming no errors are generated) to:
+
+        for (uint i = 0; i < MAX_VIEWPORTS; i++)
+            DepthRangeIndexed(i, n, f);
+
+    Z_w is represented as either ...
+
+    Replace the end of section 2.16.1, starting from "Viewport transformation
+    parameters are specified using..."
+
+    Viewport transformation parameters are specified using
+
+        void ViewportArrayv(uint first, sizei count, const float * v);
+        void Viewport(int x, int y, sizei w, sizei h);
+        void ViewportIndexedf(uint index, float x, float y, float w, float h);
+        void ViewportIndexedfv(uint index, const float * v);
+
+    ViewportArrayv specifies parameters for multiple viewports
+    simultaneously. <first> specifies the index of the first viewport to
+    modify and <count> specifies the number of viewports. If (<first> +
+    <count>) is greater than the value of MAX_VIEWPORTS then an
+    INVALID_VALUE error will be generated. Viewports whose indices lie
+    outside the range [<first>, <first> + <count>) are not modified.
+    <v> contains the address of an array of floating point values
+    specifying the left (x), bottom (y), width (w) and height (h) of
+    each viewport, in that order. <x> and <y> give the location of the
+    viewport's lower left corner and <w> and <h> give the viewport's
+    width and height, respectively.
+
+    ViewportIndexedf and ViewportIndexedfv specify parameters for a
+    single viewport and are equivalent (assuming no errors are
+    generated) to:
+
+        float v[4] = { x, y, w, h };
+        ViewportArrayv(index, 1, v);
+
+    and
+
+        ViewportArrayv(index, 1, v);
+
+    respectively.
+
+    Viewport sets the parameters for all viewports to the same values
+    and is equivalent (assuming no errors are generated) to:
+
+        for (uint i = 0; i < MAX_VIEWPORTS; i++)
+            ViewportIndexedf(i, 1, (float)x, (float)y, (float)w, (float)h);
+
+    The viewport parameters shown in the above equations are found from these
+    values as
+
+        o_x = x + w /2,
+        o_y = y + h / 2,
+        p_x = w,
+        p  = h.
+
+    The location of the viewport's bottom-left corner, given by (x,y), are
+    clamped to be within the implementation-dependent viewport bounds range.
+    The viewport bounds range [min, max] tuple may be determined by
+    calling GetFloatv with the symbolic constant VIEWPORT_BOUNDS_RANGE
+    (see section 6.1).
+
+    Viewport width and height are clamped to implementation-dependent maximums
+    when specified. The maximum width and height may be found by calling
+    GetFloatv with the symbolic constant MAX_VIEWPORT_DIMS. The maximum
+    viewport dimensions must be greater than or equal to the larger of
+    the visible dimensions of the display being rendered to (if a
+    display exists), and the largest renderbuffer image which can be
+    successfully created and attached to a framebuffer object (see
+    chapter 4). INVALID_VALUE is generated if either w or h is negative.
+
+    The state required to implement the viewport transformations is four
+    floating-point values and two clamped floating-point values for each
+    viewport. In the initial state, w and h for each viewport are set to
+    the width and height, respectively, of the window into which the GL
+    is to do its rendering. If the default framebuffer is bound but no
+    default framebuffer is associated with the GL context (see chapter
+    4), then w and h are initially set to zero. o_x and o_y are set to
+    w/2 and h/2, respectively. n and f are set to 0.0 and 1.0,
+    respectively.
+
+    The precision with which the GL interprets the floating point viewport
+    bounds is implementation-dependent and may be determined by querying the
+    implementation-defined constant VIEWPORT_SUBPIXEL_BITS.
+
+Additions to Chapter 3 of the OpenGL 3.2 (Compatibility) Specification
+(Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 3.2 (Compatibility) Specification (Per-
+Fragment Operations and the Framebuffer)
+
+    Replace section 4.1.2 "Scissor Test", page 284.
+
+    The scissor test determines if (xw, yw) lies within the scissor rectangle
+    defined by four values for each viewport. These values are set with
+
+        void ScissorArrayv(uint first, sizei count, const int * v);
+        void ScissorIndexed(uint index, int left, int bottom, sizei width, sizei height);
+        void ScissorIndexedv(uint index, int * v);
+        void Scissor(int left, int bottom, sizei width, sizei height);
+
+    ScissorArrayv defines a set of scissor rectangles that are each
+    applied to the corresponding viewport (see section 2.16.1
+    "Controlling the Viewport"). <first> specifies the index of the
+    first scissor rectangle to modify, and <count> specifies the number
+    of scissor rectangles. If (<first> + <count>) is greater than the
+    value of MAX_VIEWPORTS, then an INVALID_VALUE error is generated.
+    <v> contains the address of an array of integers containing the
+    left, bottom, width and height of the scissor rectangles, in that
+    order.
+
+    If left <= x_w < left + width and bottom <= y_w < bottom + height
+    for the selected scissor rectangle, then the scissor test passes.
+    Otherwise, the test fails and the fragment is discarded. For points,
+    lines, and polygons, the scissor rectangle for a primitive is
+    selected in the same manner as the viewport (see section 2.16.1).
+    For pixel rectangles and bitmaps, the scissor rectangle numbered
+    zero is used for the scissor test.
+
+    The scissor test is enabled or disabled for all viewports using
+    Enable or Disable with the symbolic constant SCISSOR_TEST. The test
+    is enabled or disabled for a specific viewport using Enablei or
+    Disablei with the constant SCISSOR_TEST and the index of the
+    selected viewport. When disabled, it is as if the scissor test
+    always passes. The value of the scissor test enable for viewport <i>
+    can be queried by calling IsEnabledi with <target> SCISSOR_TEST and
+    <index> <i>. The value of the scissor test enable for viewport zero
+    may also be queried by calling IsEnabled with the same symbolic
+    constant, but no <index> parameter. If either width or height is
+    less than zero for any scissor rectangle, then an INVALID_VALUE
+    error is generated. If the viewport index specified to Enablei,
+    Disablei or IsEnabledi is greater or equal to the value of
+    MAX_VIEWPORTS, then an INVALID_VALUE error is generated.
+
+    The state required consists of four integer values per viewport, and
+    a bit indicating whether the test is enabled or disabled for each
+    viewport. In the initial state, left = bottom = 0, and width and
+    height are determined by the size of the window into which the GL is
+    to do its rendering for all viewports. If the default framebuffer is
+    bound but no default framebuffer is associated with the GL context
+    (see chapter 4), then with and height are initially set to zero.
+    Initially, the scissor test is disabled for all viewports.
+
+    ScissorIndexed and ScissorIndexedv specify the scissor rectangle for
+    a single viewport and are equivalent (assuming no errors are
+    generated) to:
+
+        int v[] = { left, bottom, width, height };
+        ScissorArrayv(index, 1, v);
+
+    and
+
+        ScissorArrayv(index, 1, v);
+
+    respectively.
+
+    Scissor sets the scissor rectangle for all viewports to the same
+    values and is equivalent (assuming no errors are generated) to:
+
+        for (uint i = 0; i < MAX_VIEWPORTS; i++) {
+            ScissorIndexed(i, left, bottom, width, height);
+        }
+
+    Calling Enable or Disable with the symbolic constant SCISSOR_TEST is
+    equivalent, assuming no errors, to:
+
+    for (uint i = 0; i < MAX_VIEWPORTS; i++) {
+        Enablei(SCISSOR_TEST, i);
+        /* or */
+        Disablei(SCISSOR_TEST, i);
+    }
+
+Additions to Chapter 5 of the OpenGL 3.2 (Compatibility) Specification (Special
+Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 3.2 (Compatibility) Specification (State
+and State Requests)
+
+    Modifications to Section 6.1.1 Simple Queries
+
+        Add to the list of indexed query functions:
+
+        void GetFloati_v(enum target, uint index, float *data);
+        void GetDoublei_v(enum target, uint index, float *data);
+
+Additions to the OpenGL Shading Language Version 1.50.09 Specification
+
+    Add a new Section 3.3.x, GL_ARB_viewport_array Extension (p. 13)
+
+    3.3.x GL_ARB_viewport_array Extension
+
+    To use the GL_ARB_viewport_array extension in a shader it must be
+    enabled using the #extension directive.
+
+    The shading language preprocessor #define GL_ARB_viewport_array will
+    be defined to 1 if the GL_ARB_viewport_array extension is supported.
+
+    Additions to Section 7.1 "Vertex and Geometry Shader Special Variables"
+
+    Add a paragraph after the paragraph describing gl_Layer, starting "The
+    built-in output variable gl_Layer is available only in the geometry
+    language, and provides the number of the layer of textures attached to a
+    FBO to direct rendering to.":
+
+    The built-in output variable gl_ViewportIndex is available only in the
+    geometry language, and provides the index of the viewport to which the
+    next primitive emitted from the geometry shader should be drawn. Primitives
+    generated by the geometry shader will undergo viewport transformation and
+    scissor testing using the viewport transformation and scissor rectangle
+    selected by the value of gl_ViewportIndex. The viewport index used will
+    come from one of the vertices in the primitive being shaded. Which vertex
+    the viewport index comes from is implementation-dependent, so it is best to
+    use the same viewport index for all vertices of the primitive. If a geometry
+    shader does not assign a value to gl_ViewportIndex, viewport transform
+    and scissor rectangle zero will be used. If a geometry shader assigns a
+    value to gl_ViewportIndex and there is a path through the shader that
+    does not set gl_ViewportIndex, then the value of gl_ViewportIndex is
+    undefined for executions of the shader that take that path. See section
+    2.15.4, under "Geometry Shader Outputs" for more information.
+
+    Add to the list of geometry shader built-in variables on p. 69:
+
+        out int gl_ViewportIndex;    // may be written to
+
+    Modify the description of EmitVertex() in Section 8.10, "Geometry Shader
+    Functions", page 104:
+
+    The function EmitVertex() specifies that a vertex is completed. A vertex
+    is added to the current output primitive using the current values of the
+    geometry shader's output variables, including gl_PointSize, gl_ClipDistance,
+    gl_Layer, gl_Position, gl_PrimitiveID and gl_ViewportIndex. The values
+    of all these...
+
+    Add to the list of built in constants available to geometry shaders in
+    Section 7.4:
+
+        const int gl_MaxViewports = 16;
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    TBD.
+
+Errors
+
+    INVALID_VALUE is generated by ViewportArrayv if <first> + <count> is
+    greater than or equal to the value of MAX_VIEWPORTS, or if any
+    viewport's width or height is less than 0.
+
+    INVALID_VALUE is generated by ScissorArrayv if <first> + <count> is
+    greater than or equal to the value of MAX_VIEWPORTS, or if any
+    scissor rectangle's width or height is less than zero.
+
+    INVALID_VALUE is generated by DepthRangeArrayv if <first> + <count> is
+    greater than or equal to the vaue of MAX_VIEWPORTS.
+
+    INVALID_VALUE is generated by Enablei, Disablei and IsEnabledi if
+    <index> is greater than or equal to the value of MAX_VIEWPORTS.
+
+New State
+
+    Table 6.13 (p. 405)
+
+    Get Value                 Type             Get Command       Initial Value   Description               Sec    Attribute
+    ------------------------  ---------------- ------------      -------------   ------------------------  -----  ---------
+    VIEWPORT                  16* x 4 x R      GetFloati_v       See 2.11.1      Viewport origin & extent  2.11.1 viewport
+    DEPTH_RANGE               16* x 2 x R[0,1] GetDoublei_v      See 2.16.1      Depth range near & far    2.16.1 viewport
+
+NOTE: The changes are that VIEWPORT and DEPTH_RANGE are extended to
+accommodate 16* copies and now consist of floating-point and
+double-precision values, respectively.
+
+    Table 6.26 (p. 418)
+
+    Get Value                 Type        Get Command           Initial Value   Description               Sec    Attribute
+    ------------------------  ----------  -------------         -------------   -------------------       -----  ---------
+    SCISSOR_TEST              16* x B     IsEnabledi            FALSE           Scissoring enabled        4.1.2  scissor/enable
+    SCISSOR_BOX               16* x 4 x Z GetIntegeri_v         See 4.1.2       Scissor box               4.1.2  scissor
+
+NOTE: The only change is that SCISSOR_TEST and SCISSOR_BOX are extended
+to accommodate 16* copies.
+
+New Implementation Dependent State
+
+    Get Value                        Type   Get Command     Minimum Value   Description                     Sec.
+    ---------                        ----   -----------     -------------   -------------------             -----
+    MAX_VIEWPORT_DIMS (NOTE 1)       2 x Z+ GetFloatv       See 2.16.1      Maximum viewport dimensions     2.16.1
+    MAX_VIEWPORTS                    Z+     GetIntegerv     16              Maximum number of               2.16.1
+                                                                            active viewports
+    VIEWPORT_SUBPIXEL_BITS           Z+     GetIntegerv     0               Number of bits of sub-pixel     2.16.1
+                                                                            precision for viewport bounds
+    VIEWPORT_BOUNDS_RANGE            2 x R  GetFloatv       (NOTE 2)        Viewport bounds range [min,max] 2.16.1
+    LAYER_PROVOKING_VERTEX           Z_4    GetIntegerv     -- (NOTE 3)     vertex convention followed by   2.15.4
+                                                                            the gl_Layer GLSL variable
+    VIEWPORT_INDEX_PROVOKING_VERTEX  Z_4    GetIntegerv     -- (NOTE 3)     vertex convention followed by   2.15.4
+                                                                            the gl_ViewportIndex GLSL
+                                                                            variable
+
+NOTE 1: The recommended get command is changed from GetIntegerv to GetFloatv.
+NOTE 2: range for viewport bounds:
+  * On GL3-capable hardware the VIEWPORT_BOUNDS_RANGE should be at least
+    [-16384, 16383].
+  * On GL4-capable hardware the VIEWPORT_BOUNDS_RANGE should be at least
+    [-32768, 32767].
+NOTE 3: Valid values are: FIRST_VERTEX_CONVENTION,
+LAST_VERTEX_CONVENTION, PROVOKING_VERTEX, UNDEFINED_VERTEX.
+
+Interactions with NV_depth_buffer_float
+
+    If NV_depth_buffer_float is supported, add the following commands:
+
+        void DepthRangeArraydvNV(uint first, sizei count, const double * v);
+        void DepthRangeIndexeddNV(uint index, double n, double f);
+
+    These functions are equivalent to the corresponding DepthRange*
+    functions, except the the parameters are clamped to [0, 1] when using
+    DepthRange*, but not when using DepthRange*dNV.  When <n> and <f> are
+    applied to <z_d>, they are clamped to the range appropriate given the
+    depth buffer's representation.
+
+Interactions with ARB_provoking_vertex, EXT_provoking_vertex, and OpenGL 3.2 or later
+
+    If none of ARB_provoking_vertex, EXT_provoking_vertex or OpenGL 3.2
+    or later are supported, ignore all references to ProvokingVertex and
+    PROVOKING_VERTEX. This extension will continue to require support
+    for the LAYER_PROVOKING_VERTEX and VIEWPORT_INDEX_PROVOKING_VERTEX
+    queries, but only FIRST_VERTEX_CONVENTION, LAST_VERTEX_CONVENTION,
+    or UNDEFINED_VERTEX will be enumerated.
+
+Dependencies on compatibitliy profile contexts
+
+    Pixel rectangle primitives and bitmaps are available only in
+    compatibility profile contexts. In the core profile, references to
+    pixel rectangles and bitmaps are removed from the description of
+    scissor rectangles in section 4.1.2.
+
+Interactions with NV_geometry_program4
+
+    If NV_geometry_program4 is supported and the "ARB_viewport_array" program
+    option is specified, geometry result variable "result.viewport" can be
+    used to specify the viewport array index to use for primitive viewport
+    transformations and scissoring.
+
+    (add the following rule to the NV_geometry_program4 grammar)
+
+    <resultBasic>      ::= ...
+                         | <resPrefix> "viewport"
+
+    (add the following to Table X.3, Geometry Program Result Variable Bindings)
+
+      Binding                        Components  Description
+      -----------------------------  ----------  ----------------------------
+      result.viewport                (v,*,*,*)   viewport array index
+
+    (add the following to Section 2.X.2, Program Grammar)
+
+    If a result variable binding matches "result.viewport", updates to the "x"
+    component of the result variable provide a single integer that serves as a
+    viewport index specifier for viewport arrays. The index must be written as
+    an integer value; writing a floating-point value will produce undefined
+    results. If a value outside the range [0, MAX_VIEWPORTS-1] is given, the
+    behavior is to proceed as if viewport index 0 was selected. If the
+    "ARB_viewport_array" program option is not specified, the "result.viewport"
+    binding is unavailable.
+
+    (add the following to Section 2.X.6.Y, Geometry Program Options)
+
+    + Viewport Array (ARB_viewport_array)
+
+    If a geometry program specifies the "ARB_viewport_array" option, the
+    result binding "result.viewport" will be available to specify the viewport
+    index to use for primitive viewport transformations and scissoring as
+    described in section 2.X.2.
+
+Issues
+
+    1) The name glViewportArray infers dynamic behavior and that the GL
+       may use values that present in the array at draw time. Would it be
+       more consistent to call this glViewportiv or glViewportv?
+
+       UNRESOLVED: For now, we'll leave it as glViewportArray.
+
+    2) Should we provide a mechanism to write gl_ViewportIndex in the vertex
+       shader? This would allow an application to assign gl_ViewportIndex
+       based on the value of a uniform, or from data read through an attribute,
+       for example.
+
+       RESOLVED: No. While it may be possible, there is no compelling use case,
+       and gl_Layer whose precedent we follow here, is not writable in the
+       vertex shader.
+
+    3) Does legacy glViewport update just the first viewport, or all of them?
+
+       RESOLVED: glViewport is equivalent to calling glViewportArray with
+       an array containing a single viewport once for each supported viewport.
+       It therefore defines all viewports in a single call. This is also true
+       for the legacy glScissor, glDepthRange, glEnable and glDisable functions.
+
+    4) When EXT_provoking_vertex is supported, is the provoking vertex convention
+       honored when selecting which vertex the gl_ViewportIndex property is to use?
+
+       RESOLVED: It is desirable that the provoking vertex convention
+       should be honored when selecting the vertex which gl_ViewportIndex is
+       obtained from (and similarly for gl_Layer). Other APIs require that these
+       properties should be taken from the "leading vertex", and this for
+       maximum content portability, it is desireable to be able to configure the
+       pipeline in the same way. However, there exists hardware which would
+       otherwise be able to support these features which does not have the
+       capability to configure which vertex this is selected from (even though
+       it may be doing so in a content-portable way). The
+       LAYER_PROVOKING_VERTEX and VIEWPORT_INDEX_PROVOKING_VERTEX
+       queries have been added to allow applications to determine if the
+       provoking vertex convention is being followed, and if not, which
+       convention is being used (if any). Note that applications which are
+       creating new content are advised that writing the same
+       gl_ViewportIndex and gl_Layer to all the vertices of a primitive is
+       the only portable solution.
+
+    5) Why glViewportIndex rather than glEnablei, and so on?
+
+       DISCUSSION: This extension follows the precedent of extensions such as
+       EXT_draw_buffers2, which introduced glEnableIndexed. These 'indexed'
+       functions since have been promoted to core OpenGL as glEnablei. If
+       this extension is used on an implementation supporting the glEnablei style
+       indexed functions, those may be used instead of, or in conjunction with
+       the glXXXXIndexed style indexed functions.
+
+    6) What happens if the viewport bounds lie on exact half-pixel coordinates?
+       For example, on a multi-sample surface, which samples should be considered
+       'inside' the viewport?
+
+       DISCUSSION: The viewport transformation includes clipping. Assuming this
+       clipping has similar precision to the viewport transform itself, then
+       the resulting clipped primitives should cut through partial pixels,
+       lighting only some of the samples within the pixel.
+
+       FEEDBACK FROM PAT:
+
+This discussion is technically incorrect -- the viewport
+transformation technically does *NOT* include any clipping.  However, for
+geometric primitives, the viewport transformation is applied to vertices
+post-clipping (despite the fact that it precedes clipping in the spec), so
+there is some clipping in the vicinity of the viewport transformation.
+
+"Guardband clipping" is an alternate implementation, producing nearly
+equivalent results to those specified by OpenGL.  When using guardband
+clipping, primitives are not clipped tightly to the view volume in X/Y:
+
+  -w <= x <= w
+  -w <= y <= w
+
+Instead, looser (or no) clipping is applied, for example:
+
+  -8w <= x <= 8w
+  -8w <= y <= 8w
+
+Since primitives are clipped far less aggressively, something has to be done
+to produce results similar to those with aggressive clipping.  To do this,
+such implementations will enable per-pixel scissoring to the viewport
+rectangle.
+
+There are several areas of difference that implementations using guardband
+clipping need to deal with (or ignore):
+
+* line- and point-mode polygons:  The OpenGL spec says that lines should be
+  drawn along the edges of polygons clipped to the frustum.  If you don't clip
+  tightly, you can't draw those edges.  (NOTE:  The behavior specified by
+  OpenGL ends up being somewhat shitty.  Let's say you have a line-mode
+  primitive clipped by both the left and right side of the frustum, which
+  implies that you should have vertical edges on the left and right side of
+  the viewport.  With integer viewport coordinates, both edges will be exactly
+  between pixel centers.  In practice, implementations' tiebreaking rules will
+  have either the left or right edge light up pixels outside the viewport.  If
+  the viewport is the full window, this means that one of those lines won't be
+  visible.
+
+* wide points and lines:  According to the OpenGL spec, line or point
+  primitives on or near the edge of the viewport should technically extend
+  outside the viewport.  For example, a four-pixel point on the left edge of
+  the viewport should light up eight pixels (2x4) outside the left edge of the
+  viewport.  The scissoring used for guardband clipping will discard those
+  pixels.  In my opinion, the scissored results are preferable to those called
+  for by the spec.  Of course, with the OpenGL spec behavior, there are no
+  visible artifacts if:  (a) the viewport covers the entire window or (b) the
+  application scissors manually itself.
+
+Fractional viewports make things more complicated, particularly if the
+implementation doesn't scissor at a per-sample granularity.  In this case,
+tight view volume clipping will result in primitives that are fully contained
+within the fractional viewport (to the limits of clipping math, at least).
+Guardband clipping will have primitives that extend beyond the viewport and
+probably cover full pixels at the boundary of the viewport.  (This discussion
+assumes that a guardband implementation with fractional viewports extends its
+viewport clip to pass on pixels containing any fraction of the floating-point
+viewport.)
+
+Direct3D 11 specifies that rasterization along the one-pixel edges of
+fractional viewports to be undefined.  If implementations want defined
+behavior with fractional viewports, they can program a slightly wider viewport
+and scissor away the pixels along the edge of the expanded viewport.
+
+My recommendation is as follows:
+
+(1) Edit the clipping section of the spec to explicitly permit implementations
+to clip to larger view volume extents in (x,y) and instead scissor to the
+viewport rectangle.  Note that this scissor rectangle needs to either be
+separate from the API-level scissor rectangle, or intersected with it.  This
+scissoring would always have to be enabled, regardless of the SCISSOR enabled.
+
+(2) Edit the viewport section of the spec to briefly discuss the implications
+of fractional viewports on the newly permitted scissoring.
+
+    7) What is the VIEWPORT_SUBPIXEL_BITS implementation defined value for?
+
+       This allows an application to query the precision of the viewport
+       transform. More specifically, if VIEWPORT_SUBPIXEL_BITS is zero, then
+       this indicates that the viewport bounds are likely implemented using
+       integers in hardware. If there are more bits (such as fixed point) then
+       this value will be non-zero. If the implementation truely has floating
+       point viewport bounds, it may report a sufficiently high value to
+       indicate this.
+
+    8) What happened to glGetIntegerv(GL_VIEWPORT, v)?
+
+       It still works. You can query floating point state with an integer query.
+       You'll get a rounded version of the state. You can also query indexed
+       state with a non-indexed query - you'll get the state for index 0. Thus
+       glGetIntegerv(GL_VIEWPORT, v) is the same as
+       glGetIntegeri_v(GL_VIEWPORT, 0, v), which is legal.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  -----------------------------------------
+    18    06/25/2012  Jon Leech Fixed GetIntegerIndexedivEXT ->
+                                GetIntegerIndexedvEXT typo (Bug 6694).
+    17    07/25/2010  Jon Leech Fix typo in ViewportArrayv pseudocode
+                                (Bug 6682).
+    16    07/19/2010  Jon Leech Add GetDoublei_v entry point and change
+                                state for DEPTH_RANGE to be indexed and
+                                queryable with this command (Bug 6495).
+                                Reflow a few paragraphs and sync
+                                language with 4.1 API spec.
+    15    06/16/2010  istewart  Add interaction with NV_geometry_program4.
+    14    05/26/2010  Jon Leech Fix minor typos, remove tabs, make language
+                                more consistent with GL core spec in
+                                some places, and reflow paragraphs
+                                following changes.
+    13    05/18/2010  gsellers  Rename to ARB_viewport_array.
+                                ARBify. Remove suffixes for Core 4.1.
+    12    05/17/2010  gsellers  Error is not generated for viewport bounds
+                                outside VIEWPORT_BOUNDS_RANGE.
+                                Incoporate feedback from pbrown.
+    11    05/11/2010  gsellers  Incorporate feedback from bmerry.
+    10    05/10/2010  dgkoch    allow UNDEFINED_VERTEX_EXT for compatibility
+     9    05/10/2010  dgkoch    add VIEWPORT_BOUNDS_RANGE and clarify the
+                                valid values for the viewport location.
+                                added queries to determing layer and viewport
+                                index provoking vertex convention.
+                                updated issue 4.
+     8    05/06/2010  gsellers  Remove error if viewport > MAX_VIEWPORT_DIMS.
+                                Fix typo in definition of glScissorIndexedv.
+                                Update description of ViewportArrayv to accept
+                                an array of floats, rather than an array of
+                                integers.
+     7    04/29/2010  gsellers  Updates and clarifications.
+     6    04/15/2010  gsellers  Add interaction with NV_depth_range.
+                                Change viewport bounds to floating point values.
+                                Add viewport subpixel precision query.
+                                Chage function names to ...Indexed.
+                                Add issues 6 and 7.
+     5    01/07/2010  gsellers  Change from AMD to EXT
+                                Change function prototypes
+                                Add glViewporti{_v}.
+                                Add glScissorArray, glScissori{_v}.
+                                Add glDepthRangeArrayv, glDepthRangei.
+     4    07/16/2009  gsellers  Document EXT_provoking_vertex interaction.
+                                Change 'leading vertex' to 'provoking vertex'.
+                                Clarify interaction with glViewport.
+                                Add multiple scissor rectangles.
+     3    07/14/2009  gsellers  Updates from nickh and wwlk
+     2    07/08/2009  gsellers  Updates from myoung
+     1    07/06/2009  gsellers  Initial draft

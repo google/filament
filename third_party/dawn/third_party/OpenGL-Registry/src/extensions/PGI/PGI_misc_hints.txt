@@ -1,0 +1,290 @@
+Name
+
+    PGI_misc_hints
+
+Name Strings
+
+    GL_PGI_misc_hints
+
+Version
+
+    $Date: 1996/04/22 23:24:16 $ $Revision: 1.1 $
+
+Number
+
+    77
+
+Dependencies
+
+    None
+
+Overview
+
+    The extension allows the app to give various hints regarding 
+    desired level of conformance, performance, features, etc.
+
+New Procedures and Functions
+
+    HintPGI
+
+New Tokens
+
+    Accepted by the <target> parameters of Hint and HintPGI:
+
+        PREFER_DOUBLEBUFFER_HINT_PGI        107000
+        STRICT_DEPTHFUNC_HINT_PGI           107030
+        STRICT_LIGHTING_HINT_PGI            107031
+        STRICT_SCISSOR_HINT_PGI             107032
+        FULL_STIPPLE_HINT_PGI               107033
+        NATIVE_GRAPHICS_BEGIN_HINT_PGI      107011
+        NATIVE_GRAPHICS_END_HINT_PGI        107012
+        CONSERVE_MEMORY_HINT_PGI            107005
+        RECLAIM_MEMORY_HINT_PGI             107006
+        ALWAYS_FAST_HINT_PGI                107020
+        ALWAYS_SOFT_HINT_PGI                107021
+        ALLOW_DRAW_OBJ_HINT_PGI             107022
+        ALLOW_DRAW_WIN_HINT_PGI             107023
+        ALLOW_DRAW_FRG_HINT_PGI             107024
+        ALLOW_DRAW_MEM_HINT_PGI             107025
+        CLIP_NEAR_HINT_PGI                  107040
+        CLIP_FAR_HINT_PGI                   107041
+        WIDE_LINE_HINT_PGI                  107042
+        BACK_NORMALS_HINT_PGI               107043
+
+    Accepted by the <pname> parameter of GetIntegerv
+
+        GL_NATIVE_GRAPHICS_HANDLE_PGI       107010
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    Function HintPGI behaves the same as Hint, except it accepts
+    only the hints described below (and hints from the PGI_vertex_hints
+    extension).  HintPGI also has a slightly different prototype
+    than Hint:
+
+         void HintPGI ( GLenum target, GLint mode )
+
+    HintPGI calls are sent to the server as Hint, so this function
+    does not require additional server protocol.
+
+    Functions Hint and HintPGI accept the following targets and modes:
+
+    [All hints are subject to Push/Pop with the HINT_BIT attributes,
+    except for these hints: PREFER_DOUBLEBUFFER_HINT_PGI, 
+    NATIVE_GRAPHICS_BEGIN_HINT_PGI, NATIVE_GRAPHICS_END_HINT_PGI,
+    RECLAIM_MEMORY_HINT_PGI.]
+
+    <target> = PREFER_DOUBLEBUFFER_HINT_PGI
+
+    This is a client-only mode.  In some cases the PGI client may
+    change the singlebuffer/doublebuffer attributes of some GLX
+    visuals.  If <mode> is TRUE, the client will tend to choose
+    doublebuffer in these cases; if <mode> is FALSE, the client
+    will tend to choose singlebuffer attributes.
+    
+    <target> = STRICT_DEPTHFUNC_HINT_PGI
+
+    This hint indicates whether the application is willing to accept
+    non-conformant depth functions.  When <mode> is TRUE or NICEST,
+    GL uses strictly conformant depth functions.  When <mode> is
+    FALSE, FASTEST, or DONT_CARE, GL may use an improper depth
+    function.
+
+    <target> = STRICT_LIGHTING_HINT_PGI
+
+    This hint indicates whether the application is willing to accept
+    non-conformant lighting operations.  When <mode> is TRUE or NICEST,
+    GL uses strictly conformant lighting operations.  When <mode> is
+    FALSE, FASTEST, or DONT_CARE, GL may use non-conformant lighting.
+
+    <target> = STRICT_SCISSOR_HINT_PGI
+
+    This hint indicates whether the application is willing to accept
+    non-conformant scissoring operations.  When <mode> is TRUE or NICEST,
+    GL uses strictly conformant scissoring.  When <mode> is FALSE,
+    FASTEST, or DONT_CARE, GL may use non-conformant scissoring.
+
+    <target> = FULL_STIPPLE_HINT_PGI
+
+    This hint indicates whether the application is willing to accept
+    non-conformant polygon stippling.  When <mode> is TRUE or NICEST,
+    GL uses strictly conformant polygon stippling.  When <mode> is FALSE,
+    FASTEST, or DONT_CARE, GL may use only a subset of the polygon
+    stipple pattern.
+
+    <target> = NATIVE_GRAPHICS_BEGIN_HINT_PGI
+
+    This hint indicates that the application is about to perform
+    rendering through the native API, outside the scope of GL.  If
+    <mode> is one of the parameters POINT, LINE, or FILL, then GL
+    prepares the native API for rendering of that kind of primitive.
+    If <mode> is TRUE, NICEST, or DONT_CARE, GL prepares the native
+    API for rendering of any primitive.  If <mode> is FASTEST, GL does
+    minimal preparation of the native API, and the API may not be in a
+    suitable state for any rendering.  If <mode> is FALSE, GL does nothing.
+
+    <target> = NATIVE_GRAPHICS_END_HINT_PGI
+
+    This hint indicates that the application has completed native-API
+    rendering outside the scope of GL, and that the application will not
+    use native-API rendering until the next NATIVE_GRAPHICS_BEGIN_HINT_PGI
+    hint.  When <mode> is NICEST, GL assumes that the entire native-API
+    state may be corrupted, and completely resets its state.  When <mode>
+    is TRUE, DONT_CARE, or FASTEST, GL performs minimal synchronization
+    of the native-API state.  When <mode> is FALSE, GL does not adjust
+    the native-API state.
+
+    <target> = CONSERVE_MEMORY_HINT_PGI
+
+    The hint indicates that the application should attempt to conserve
+    memory, perhaps at the cost of performance.  The <mode> parameter
+    indicates the level of conservation, from least conservation to
+    most conservation: FALSE, FASTEST, DONT_CARE, TRUE, or NICEST.
+    When <mode> is FALSE, GL does little or no memory conservation;
+    when <mode> is NICEST, GL does the most agressive memory conservation.
+
+    <target> = RECLAIM_MEMORY_HINT_PGI
+
+    The hint indicates that the application should reclaim unused
+    memory immediately.  The <mode> parameter indicates how aggressively
+    GL reclaims memory: FALSE, FASTEST, DONT_CARE, TRUE, or NICEST.
+    When <mode> is FALSE, GL reclaims little or no memory;
+    when <mode> is NICEST, GL does the most agressive memory reclaimation.
+
+    <target> = ALLOW_DRAW_OBJ_HINT_PGI
+    <target> = ALLOW_DRAW_WIN_HINT_PGI
+    <target> = ALLOW_DRAW_SPN_HINT_PGI
+    <target> = ALLOW_DRAW_MEM_HINT_PGI
+    <target> = ALWAYS_FAST_HINT_PGI
+    <target> = ALWAYS_SOFT_HINT_PGI
+
+    The <mode> for each of these hints may be TRUE or FALSE only.
+    Each of the ALLOW_DRAW_xxx_HINT_PGI hints indicates if OpenGL
+    low-level rendering may occur at the object-coordinate level,
+    window-coordinate level, fragment level, or plain-memory level.
+    If <mode> for a given <target> is TRUE, rendering may occur at
+    that level; if the <mode> is FALSE, rendering will not occur at
+    that level (perhaps at the expense of performance or conformance).
+
+    The two ALWAYS_xxxx_HINT_PGI hints describe combinations of the
+    ALLOW_DRAW_xxx_HINT_PGI hints.  If ALWAYS_FAST_HINT_PGI is TRUE,
+    then ALLOW_DRAW_OBJ_HINT_PGI is set TRUE, and the other ALLOW_DRAW_-
+    xxx_HINT_PGI hints are set to FALSE.  If ALWAYS_FAST_HINT_PGI is
+    FALSE, then all ALLOW_DRAW_xxx_HINT_PGI hints are set TRUE.
+    If ALWAYS_SOFT_HINT_PGI is TRUE, then ALLOW_DRAW_OBJ_HINT_PGI
+    is set FALSE, ALLOW_DRAW_MEM_HINT_PGI is set TRUE, and 
+    ALLOW_DRAW_WIN_HINT_PGI and ALLOW_DRAW_SPN_HINT_PGI are set to
+    TRUE or FALSE in an implementation-dependent manner.
+
+    <target> = CLIP_NEAR_HINT_PGI
+    <target> = CLIP_FAR_HINT_PGI
+
+    These hints indicate that the application does not require
+    hither/yon clipping when the depth test is disabled.  (The hint
+    has no effect when depth testing is enabled.) If <mode> is FALSE,
+    DONT_CARE, or FASTEST, GL may inhibit hither/yon clipping in some
+    situations.  If <mode> is NICEST, or TRUE, GL performs ordinary
+    hither/yon clipping.  If hither or yon clipping is disabled, and
+    if fragment depth values fall outside the range [0.0-1.0], then
+    rendering behavior is implementation-dependent.
+
+    <target> = LINE_WIDE_HINT_PGI
+
+    Indicates the rendering quality and speed of lines whose widths are
+    not equal to 1.0.  Allowed values are GL_FASTEST, GL_NICEST, and
+    GL_DONT_CARE.
+
+    <target> = BACK_NORMALS_HINT
+
+    Indicates that normals of backfacing facets should be inverted
+    when lighting is enabled, even if LIGHT_MODEL_TWO_SIDE is disabled.
+    The hint has no effect when lighting is disabled, and when
+    LIGHT_MODEL_TWO_SIDE is enabled.  If <mode> is FALSE, DONT_CARE,
+    or NICEST, GL inverts normals only when LIGHT_MODEL_TWO_SIDE is
+    enabled.  If <mode> is FASTEST or TRUE, GL inverts the normals
+    of backfacing facets whenever lighting is enabled.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Interactions with PGI_vertex_hints
+
+    If PGI_vertex_hints is available, then hints from that extension
+    may be used with the HintPGI function.
+
+Errors
+
+    INVALID_ENUM is generated if <target> or <mode> for Hint or HintPGI
+    is not one of the GLenums discussed above.
+
+New State
+								Initial
+    Get Value				Get Command	Type	Value	Attrib
+    ---------				-----------	----	-------	------
+
+    STRICT_DEPTHFUNC_HINT_PGI           GetIntegerv      Z       TRUE    hint
+
+    STRICT_LIGHTING_HINT_PGI            GetIntegerv      Z       TRUE    hint
+
+    STRICT_SCISSOR_HINT_PGI             GetIntegerv      Z       TRUE    hint
+
+    FULL_STIPPLE_HINT_PGI               GetIntegerv      Z       TRUE    hint
+
+    CONSERVE_MEMORY_HINT_PGI            GetIntegerv      Z       FALSE   hint
+
+    ALWAYS_FAST_HINT_PGI                GetIntegerv      Z       FALSE   hint
+
+    ALWAYS_SOFT_HINT_PGI                GetIntegerv      Z       FALSE   hint
+
+    ALLOW_DRAW_OBJ_HINT_PGI             GetIntegerv      Z       TRUE    hint
+
+    ALLOW_DRAW_WIN_HINT_PGI             GetIntegerv      Z       TRUE    hint
+
+    ALLOW_DRAW_SPN_HINT_PGI             GetIntegerv      Z       TRUE    hint
+
+    ALLOW_DRAW_MEM_HINT_PGI             GetIntegerv      Z       TRUE    hint
+
+    WIDE_LINE_HINT_PGI                  GetIntegerv      Z     DONT_CARE hint
+
+    CLIP_NEAR_HINT_PGI                  GetIntegerv      Z       TRUE    hint
+
+    CLIP_FAR_HINT_PGI                   GetIntegerv      Z       TRUE    hint
+
+    BACK_NORMALS_HINT_PGI               GetIntegerv      Z       FALSE   hint
+
+
+New Implementation Dependent State
+								Initial
+    Get Value				Get Command	Type	Value	Attrib
+    ---------				-----------	----	-------	------
+
+    PREFER_DOUBLEBUFFER_HINT_PGI        GetIntegerv      Z        +++   client
+
+    NATIVE_GRAPHICS_HANDLE_PGI          GetIntegerv      Z        ***   client
+
+    +++ Implementation-dependent.  (TRUE preferred.)
+
+    *** 0 if direct rendering to native API is not available;
+        otherwise, this is the handle for direct rendering to native API

@@ -1,0 +1,24 @@
+name: hello-gltf
+options:
+    bundleIdPrefix: ${SAMPLE_CODE_DISAMBIGUATOR}.google.filament
+include: ../app-template.yml
+targets:
+    hello-gltf:
+        sources: hello-gltf/
+        sources:
+            - path: '../../../third_party/models/DamagedHelmet/DamagedHelmet.glb'
+              buildPhase: resources
+        templates:
+            - FilamentApp
+        dependencies:
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libgltfio_core.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libuberarchive.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libimage.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libdracodec.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libmeshoptimizer.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libbasis_transcoder.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libstb.xcframework
+            - framework: ../../../out/$(FILAMENT_OUT_NAME)/filament/lib/libuberzlib.xcframework
+        preBuildScripts:
+            - path: build-resources.sh
+              name: Build Resources

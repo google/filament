@@ -1,0 +1,31 @@
+# Copyright 2016-2021 The Khronos Group Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+*.o
+*.d
+*.txt
+/build
+/test
+/spirv-cross
+/obj
+/msvc/x64
+/msvc/Debug
+/msvc/Release
+*.suo
+*.sdf
+*.opensdf
+*.shader
+*.a
+*.bc
+/external
+.vs/
+*.vcxproj.user
+
+# Mac OS X Finder
+.DS_Store
+
+!CMakeLists.txt
+!LICENSES/*.txt
+
+# Running tests leaves *.spv files in the root directory.
+*.spv

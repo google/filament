@@ -1,0 +1,47 @@
+{
+    "entryPoints" : [
+        {
+            "name" : "main",
+            "mode" : "frag"
+        }
+    ],
+    "outputs" : [
+        {
+            "type" : "vec4",
+            "name" : "@entryPointOutput",
+            "location" : 0
+        }
+    ],
+    "textures" : [
+        {
+            "type" : "sampler2D",
+            "name" : "ROIm",
+            "set" : 0,
+            "binding" : 1
+        }
+    ],
+    "separate_images" : [
+        {
+            "type" : "samplerBuffer",
+            "name" : "ROBuf",
+            "set" : 0,
+            "binding" : 0
+        }
+    ],
+    "images" : [
+        {
+            "type" : "image2D",
+            "name" : "RWIm",
+            "set" : 0,
+            "binding" : 1,
+            "format" : "rgba32f"
+        },
+        {
+            "type" : "imageBuffer",
+            "name" : "RWBuf",
+            "set" : 0,
+            "binding" : 0,
+            "format" : "rgba32f"
+        }
+    ]
+}

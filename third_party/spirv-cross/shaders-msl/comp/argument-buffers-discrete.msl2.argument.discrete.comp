@@ -1,0 +1,27 @@
+#version 450
+layout(local_size_x = 1) in;
+
+layout(set = 0, binding = 0) readonly buffer SSBO0
+{
+   vec4 v;
+} ssbo0;
+
+layout(set = 1, binding = 0) readonly buffer SSBO1
+{
+   vec4 v;
+} ssbo1;
+
+layout(set = 2, binding = 5) readonly buffer SSBO2
+{
+   vec4 v;
+} ssbo2;
+
+layout(set = 3, binding = 6) writeonly buffer SSBO3
+{
+   vec4 v;
+} ssbo3;
+
+void main()
+{
+   ssbo3.v = ssbo0.v + ssbo1.v + ssbo2.v;
+}

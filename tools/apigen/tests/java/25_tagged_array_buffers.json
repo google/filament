@@ -1,0 +1,1849 @@
+{
+  "meta": {
+    "generator_version": "1.0.0",
+    "source_file": "/Users/mathias/sources/git/filament/tools/apigen/tests/java/25_tagged_array_buffers.h"
+  },
+  "includes": {
+    "user": [],
+    "system": [
+      "<math/vec2.h>",
+      "<math/vec4.h>",
+      "<math/mat4.h>",
+      "<utils/compiler.h>",
+      "<utils/Slice.h>",
+      "<stdint.h>",
+      "<string_view>",
+      "<type_traits>"
+    ]
+  },
+  "aliases": [],
+  "enums": [],
+  "classes": [
+    {
+      "name": "TaggedArrayBuffersTest",
+      "qualified_name": "filament::TaggedArrayBuffersTest",
+      "location": {
+        "file": "tools/apigen/tests/java/25_tagged_array_buffers.h",
+        "line": 31
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "TaggedArrayBuffersTest",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [
+        {
+          "name": "setBuffer",
+          "qualified_name": "setBuffer(std::string_view, utils::Slice<const T>)",
+          "location": {
+            "file": "tools/apigen/tests/java/25_tagged_array_buffers.h",
+            "line": 52
+          },
+          "doc": {
+            "brief": "Set a uniform buffer parameter array by name.",
+            "details": "",
+            "params": {
+              "name": "Name of the parameter.",
+              "values": "Slice of values to set."
+            },
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "name",
+              "type": {
+                "cpp_name": "std::string_view",
+                "qualified_name": "std::basic_string_view<char>",
+                "category": "string",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "values",
+              "type": {
+                "cpp_name": "utils::Slice<const T>",
+                "qualified_name": "utils::Slice<const type-parameter-0-0>",
+                "category": "unknown",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified",
+                "is_template_param": true,
+                "template_param_name": "T"
+              },
+              "default_value": null,
+              "attributes": [
+                "filament:apigen:tagged_array"
+              ]
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": false,
+          "template_parameters": [
+            {
+              "name": "T",
+              "type": "typename"
+            }
+          ],
+          "constraint": "is_supported_t < T >>",
+          "specializations": [
+            {
+              "T": "float"
+            },
+            {
+              "T": "math::float2"
+            },
+            {
+              "T": "math::float4"
+            },
+            {
+              "T": "math::mat4f"
+            },
+            {
+              "T": "int32_t"
+            },
+            {
+              "T": "math::int4"
+            },
+            {
+              "T": "bool"
+            },
+            {
+              "T": "math::bool4"
+            }
+          ]
+        }
+      ],
+      "fields": [],
+      "aliases": [],
+      "constants": [],
+      "is_aggregate": false
+    }
+  ],
+  "functions": [],
+  "referenced_classes": [
+    {
+      "name": "is_slice",
+      "qualified_name": "utils::details::is_slice",
+      "location": {
+        "file": "utils/Slice.h",
+        "line": 44
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "is_slice",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [
+        "std::false_type"
+      ],
+      "methods": [],
+      "fields": [],
+      "aliases": [],
+      "constants": [],
+      "is_aggregate": false
+    },
+    {
+      "name": "Slice",
+      "qualified_name": "utils::Slice",
+      "location": {
+        "file": "utils/Slice.h",
+        "line": 56
+      },
+      "doc": {
+        "brief": "A fixed-size slice of a container.",
+        "details": "Analogous to std::span.",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "Slice",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [
+        {
+          "name": "Slice<T>",
+          "qualified_name": "Slice<T>()",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 73
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": false,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": [],
+          "is_constructor": true
+        },
+        {
+          "name": "Slice<T>",
+          "qualified_name": "Slice<T>(const iterator, const iterator)",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 74
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "begin",
+              "type": {
+                "cpp_name": "const iterator",
+                "qualified_name": "type-parameter-0-0*",
+                "category": "unknown",
+                "is_const": true,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "end",
+              "type": {
+                "cpp_name": "const iterator",
+                "qualified_name": "type-parameter-0-0*",
+                "category": "unknown",
+                "is_const": true,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": [],
+          "is_constructor": true
+        },
+        {
+          "name": "Slice<T>",
+          "qualified_name": "Slice<T>(pointer, size_type)",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 78
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "begin",
+              "type": {
+                "cpp_name": "pointer",
+                "qualified_name": "type-parameter-0-0*",
+                "category": "unknown",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "count",
+              "type": {
+                "cpp_name": "size_type",
+                "qualified_name": "size_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": [],
+          "is_constructor": true
+        },
+        {
+          "name": "Slice<T>",
+          "qualified_name": "Slice<T>(element_type (&)[N])",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 83
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "arr",
+              "type": {
+                "cpp_name": "element_type (&)[N]",
+                "qualified_name": "type-parameter-0-0[N]&",
+                "category": "unknown",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": true,
+                "is_move_reference": false,
+                "nullability": "unspecified",
+                "is_template_param": true,
+                "template_param_name": "N"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [
+            {
+              "name": "N",
+              "type": "size_t"
+            }
+          ],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "Slice<T>",
+          "qualified_name": "Slice<T>(Cont &&)",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 94
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "cont",
+              "type": {
+                "cpp_name": "Cont &&",
+                "qualified_name": "type-parameter-1-0&&",
+                "category": "unknown",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": true,
+                "nullability": "unspecified",
+                "is_template_param": true,
+                "template_param_name": "Cont"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [
+            {
+              "name": "Cont",
+              "type": "typename"
+            }
+          ],
+          "constraint": "IsConvertibleToSlice < Cont >>",
+          "specializations": []
+        },
+        {
+          "name": "Slice<T>",
+          "qualified_name": "Slice<T>(std::enable_if_t<std::is_const_v<U>, const Slice<value_type> &>)",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 100
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "rhs",
+              "type": {
+                "cpp_name": "std::enable_if_t<std::is_const_v<U>, const Slice<value_type> &>",
+                "qualified_name": "std::enable_if_t<utils::Slice<std::remove_cv_t<type-parameter-0-0>>&>",
+                "category": "unknown",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified",
+                "is_template_param": true,
+                "template_param_name": "U"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": false,
+          "template_parameters": [
+            {
+              "name": "U",
+              "type": "typename"
+            }
+          ],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "set",
+          "qualified_name": "set(pointer, size_type)",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 118
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "begin",
+              "type": {
+                "cpp_name": "pointer",
+                "qualified_name": "type-parameter-0-0*",
+                "category": "unknown",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "count",
+              "type": {
+                "cpp_name": "size_type",
+                "qualified_name": "size_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "set",
+          "qualified_name": "set(iterator, iterator)",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 124
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "begin",
+              "type": {
+                "cpp_name": "iterator",
+                "qualified_name": "type-parameter-0-0*",
+                "category": "unknown",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "end",
+              "type": {
+                "cpp_name": "iterator",
+                "qualified_name": "type-parameter-0-0*",
+                "category": "unknown",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "swap",
+          "qualified_name": "swap(Slice<T> &)",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 131
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "rhs",
+              "type": {
+                "cpp_name": "Slice<T> &",
+                "qualified_name": "utils::Slice&",
+                "category": "unknown",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": true,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "clear",
+          "qualified_name": "clear()",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 136
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "first",
+          "qualified_name": "first(size_type)",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 156
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "Slice<T>",
+            "qualified_name": "utils::Slice",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "count",
+              "type": {
+                "cpp_name": "size_type",
+                "qualified_name": "size_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "last",
+          "qualified_name": "last(size_type)",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 161
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "Slice<T>",
+            "qualified_name": "utils::Slice",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "count",
+              "type": {
+                "cpp_name": "size_type",
+                "qualified_name": "size_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "subspan",
+          "qualified_name": "subspan(size_type, size_type)",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 166
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "Slice<T>",
+            "qualified_name": "utils::Slice",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "offset",
+              "type": {
+                "cpp_name": "size_type",
+                "qualified_name": "size_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "count",
+              "type": {
+                "cpp_name": "size_type",
+                "qualified_name": "size_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": "dynamic_extent",
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "size",
+          "qualified_name": "size()",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 176
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "size_t",
+            "qualified_name": "size_t",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "sizeInBytes",
+          "qualified_name": "sizeInBytes()",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 177
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "size_t",
+            "qualified_name": "size_t",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "size_bytes",
+          "qualified_name": "size_bytes()",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 178
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "size_type",
+            "qualified_name": "size_t",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "empty",
+          "qualified_name": "empty()",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 179
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "bool",
+            "qualified_name": "bool",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "begin",
+          "qualified_name": "begin()",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 182
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "iterator",
+            "qualified_name": "type-parameter-0-0*",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "cbegin",
+          "qualified_name": "cbegin()",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 183
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "const_iterator",
+            "qualified_name": "const type-parameter-0-0*",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "end",
+          "qualified_name": "end()",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 184
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "iterator",
+            "qualified_name": "type-parameter-0-0*",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "cend",
+          "qualified_name": "cend()",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 185
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "const_iterator",
+            "qualified_name": "const type-parameter-0-0*",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "rbegin",
+          "qualified_name": "rbegin()",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 187
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "reverse_iterator",
+            "qualified_name": "std::reverse_iterator<type-parameter-0-0*>",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "crbegin",
+          "qualified_name": "crbegin()",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 188
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "const_reverse_iterator",
+            "qualified_name": "std::reverse_iterator<const type-parameter-0-0*>",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "rend",
+          "qualified_name": "rend()",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 189
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "reverse_iterator",
+            "qualified_name": "std::reverse_iterator<type-parameter-0-0*>",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "crend",
+          "qualified_name": "crend()",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 190
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "const_reverse_iterator",
+            "qualified_name": "std::reverse_iterator<const type-parameter-0-0*>",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "at",
+          "qualified_name": "at(const size_t)",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 198
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "reference",
+            "qualified_name": "type-parameter-0-0&",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "n",
+              "type": {
+                "cpp_name": "const size_t",
+                "qualified_name": "size_t",
+                "category": "primitive",
+                "is_const": true,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "front",
+          "qualified_name": "front()",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 202
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "reference",
+            "qualified_name": "type-parameter-0-0&",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "back",
+          "qualified_name": "back()",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 207
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "reference",
+            "qualified_name": "type-parameter-0-0&",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "data",
+          "qualified_name": "data()",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 212
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "pointer",
+            "qualified_name": "type-parameter-0-0*",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "hash",
+          "qualified_name": "hash()",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 217
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "size_t",
+            "qualified_name": "size_t",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [
+            {
+              "name": "Hash",
+              "type": "typename"
+            }
+          ],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": [
+        {
+          "name": "element_type",
+          "qualified_name": "utils::Slice::element_type",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 58
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "T",
+            "qualified_name": "type-parameter-0-0",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          }
+        },
+        {
+          "name": "value_type",
+          "qualified_name": "utils::Slice::value_type",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 59
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "std::remove_cv_t<T>",
+            "qualified_name": "std::remove_cv_t<type-parameter-0-0>",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          }
+        },
+        {
+          "name": "size_type",
+          "qualified_name": "utils::Slice::size_type",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 60
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "size_t",
+            "qualified_name": "size_t",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          }
+        },
+        {
+          "name": "difference_type",
+          "qualified_name": "utils::Slice::difference_type",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 61
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "ptrdiff_t",
+            "qualified_name": "ptrdiff_t",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          }
+        },
+        {
+          "name": "pointer",
+          "qualified_name": "utils::Slice::pointer",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 62
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "T *",
+            "qualified_name": "type-parameter-0-0*",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": true,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          }
+        },
+        {
+          "name": "const_pointer",
+          "qualified_name": "utils::Slice::const_pointer",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 63
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "const T *",
+            "qualified_name": "const type-parameter-0-0*",
+            "category": "unknown",
+            "is_const": true,
+            "is_pointer": true,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          }
+        },
+        {
+          "name": "reference",
+          "qualified_name": "utils::Slice::reference",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 64
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "T &",
+            "qualified_name": "type-parameter-0-0&",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": true,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          }
+        },
+        {
+          "name": "const_reference",
+          "qualified_name": "utils::Slice::const_reference",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 65
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "const T &",
+            "qualified_name": "const type-parameter-0-0&",
+            "category": "unknown",
+            "is_const": true,
+            "is_pointer": false,
+            "is_reference": true,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          }
+        },
+        {
+          "name": "iterator",
+          "qualified_name": "utils::Slice::iterator",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 66
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "T *",
+            "qualified_name": "type-parameter-0-0*",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": true,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          }
+        },
+        {
+          "name": "const_iterator",
+          "qualified_name": "utils::Slice::const_iterator",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 67
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "const T *",
+            "qualified_name": "const type-parameter-0-0*",
+            "category": "unknown",
+            "is_const": true,
+            "is_pointer": true,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          }
+        },
+        {
+          "name": "reverse_iterator",
+          "qualified_name": "utils::Slice::reverse_iterator",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 68
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "std::reverse_iterator<iterator>",
+            "qualified_name": "std::reverse_iterator<type-parameter-0-0*>",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          }
+        },
+        {
+          "name": "const_reverse_iterator",
+          "qualified_name": "utils::Slice::const_reverse_iterator",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 69
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "std::reverse_iterator<const_iterator>",
+            "qualified_name": "std::reverse_iterator<const type-parameter-0-0*>",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          }
+        }
+      ],
+      "constants": [
+        {
+          "name": "extent",
+          "qualified_name": "utils::Slice::extent",
+          "location": {
+            "file": "utils/Slice.h",
+            "line": 71
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "const size_type",
+            "qualified_name": "size_t",
+            "category": "primitive",
+            "is_const": true,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "raw_value": "static_cast < size_t > ( - 1 )",
+          "value": "static_cast < size_t >(- 1)"
+        }
+      ],
+      "is_aggregate": false
+    }
+  ]
+}

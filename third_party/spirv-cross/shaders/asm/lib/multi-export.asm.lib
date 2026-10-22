@@ -1,0 +1,54 @@
+; SPIR-V
+; Version: 1.5
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 40
+; Schema: 0
+               OpCapability Linkage
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpSource HLSL 630
+               OpName %add_one "add_one"
+               OpName %x "x"
+               OpName %add_two "add_two"
+               OpName %y "y"
+               OpName %helper_add "helper_add"
+               OpName %a "a"
+               OpName %b "b"
+               OpDecorate %add_one LinkageAttributes "add_one" Export
+               OpDecorate %add_two LinkageAttributes "add_two" Export
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+%_ptr_Function_uint = OpTypePointer Function %uint
+       %fn1 = OpTypeFunction %uint %_ptr_Function_uint
+       %fn2 = OpTypeFunction %uint %_ptr_Function_uint %_ptr_Function_uint
+
+ %helper_add = OpFunction %uint None %fn2
+          %a = OpFunctionParameter %_ptr_Function_uint
+          %b = OpFunctionParameter %_ptr_Function_uint
+       %h_bb = OpLabel
+       %h_av = OpLoad %uint %a
+       %h_bv = OpLoad %uint %b
+      %h_sum = OpIAdd %uint %h_av %h_bv
+               OpReturnValue %h_sum
+               OpFunctionEnd
+
+    %add_one = OpFunction %uint None %fn1
+          %x = OpFunctionParameter %_ptr_Function_uint
+       %o_bb = OpLabel
+       %o_xv = OpLoad %uint %x
+        %o_r = OpIAdd %uint %o_xv %uint_1
+               OpReturnValue %o_r
+               OpFunctionEnd
+
+    %add_two = OpFunction %uint None %fn1
+          %y = OpFunctionParameter %_ptr_Function_uint
+       %t_bb = OpLabel
+     %t_arg1 = OpVariable %_ptr_Function_uint Function
+     %t_arg2 = OpVariable %_ptr_Function_uint Function
+       %t_yv = OpLoad %uint %y
+               OpStore %t_arg1 %t_yv
+               OpStore %t_arg2 %uint_2
+        %t_r = OpFunctionCall %uint %helper_add %t_arg1 %t_arg2
+               OpReturnValue %t_r
+               OpFunctionEnd

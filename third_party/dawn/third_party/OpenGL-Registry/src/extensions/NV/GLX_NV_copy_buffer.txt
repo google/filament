@@ -1,0 +1,192 @@
+Name
+
+    GLX_NV_copy_buffer
+
+Name Strings
+
+    GLX_NV_copy_buffer
+
+Contact
+
+    Alex Goins, NVIDIA Corporation (agoins 'at' nvidia.com)
+
+Contributors
+
+    Alex Goins
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date:         July 15, 2014
+    Revision:                   5
+
+Number
+
+    OpenGL Extension #457
+
+Dependencies
+
+    GL_ARB_copy_buffer is required.
+
+    This extension interacts with EXT_direct_state_access.
+
+Overview
+
+    Extend GL_ARB_copy_buffer to have GLX bindings. 
+
+New Procedures and Functions
+
+    void glXCopyBufferSubDataNV(Display *dpy,
+        GLXContext readCtx, GLXContext writeCtx,
+        GLenum readTarget, GLenum writeTarget,
+        GLintptr readOffset, GLintptr writeOffset,
+        GLsizeiptr size);
+
+    void glXNamedCopyBufferSubDataNV(Display *dpy,
+        GLXContext readCtx, GLXContext writeCtx,
+        GLuint readBuffer, GLuint writeBuffer,
+        GLintptr readOffset, GLintptr writeOffset,
+        GLsizeiptr size);
+
+New Tokens
+
+    None
+
+Additions to the GLX Specification
+
+    The functions
+
+        void glXCopyBufferSubDataNV(Display *dpy,
+            GLXContext readCtx, GLXContext writeCtx,
+            GLenum readTarget, GLenum writeTarget,
+            GLintptr readOffset, GLintptr writeOffset,
+            GLsizeiptr size);
+
+        void glXNamedCopyBufferSubDataNV(Display *dpy,
+            GLXContext readCtx, GLXContext writeCtx,
+            GLuint readBuffer, GLuint writeBuffer,
+            GLintptr readOffset, GLintptr writeOffset,
+            GLsizeiptr size);
+
+    behave identically to the core functions glCopyBufferSubData and
+    glNamedCopyBufferSubDataEXT, except that the <readCtx> and
+    <writeCtx> parameters specify the contexts in which to look up the
+    source and destination objects, respectively.  A value of NULL for
+    either context indicates that the value which is returned by
+    glXGetCurrentContext() should be used instead. Both contexts must
+    share the same address space, as described in section 2.3.
+
+    The operations performed by these functions occur in the current context's
+    command stream.
+
+    If neither <readCtx> nor <writeCtx> is current, the error GLXBadContext is
+    generated.
+
+    If <readCtx> and <writeCtx> mix direct and indirect contexts, the error
+    GLXBadContext is generated.
+
+    If either <readCtx> or <writeCtx> is not a valid rendering context,
+    the error GLXBadContext is generated.
+
+    If the server portion of the contexts do not share the same address
+    space, the error BadMatch is generated.
+
+    If an error occurs due to GL parameter validation, the error BadMatch will
+    be generated.  Additionally, if either the source or destination context is
+    bound to the current thread, a GL error is set to indicate the cause. This
+    error code may be retrieved by calling glGetError().
+
+GLX Protocol
+
+    Two new GLX protocol commands are added.
+
+    glXCopyBufferSubDataNV
+        1       CARD8           opcode (X assigned)
+        1       16              GLX opcode (glXVendorPrivate)
+        2       20              request length
+        4       1387            vendor specific opcode
+        4       GLX_CONTEXT_TAG context tag
+        8       INT64           read_offset
+        8       INT64           write_offset
+        8       INT64           size
+        4       GLX_CONTEXT     read_context
+        4       GLX_CONTEXT     write_context
+        4       CARD32          read_target
+        4       CARD32          write_target
+
+    glXNamedCopyBufferSubDataNV
+        1       CARD8           opcode (X assigned)
+        1       16              GLX opcode (glXVendorPrivate)
+        2       20              request length
+        4       1388            vendor specific opcode
+        4       GLX_CONTEXT_TAG context tag
+        8       INT64           read_offset
+        8       INT64           write_offset
+        8       INT64           size
+        4       GLX_CONTEXT     read_context
+        4       GLX_CONTEXT     write_context
+        4       CARD32          read_buffer
+        4       CARD32          write_buffer
+
+Dependencies on EXT_direct_state_access:
+
+    If EXT_direct_state_access is not supported remove any references to
+    NamedCopyBufferSubData.
+
+Errors
+
+    The error INVALID_VALUE is generated if readOffset, writeOffset, or size are
+    less than zero, or if readOffset+size is greater than the value of
+    BUFFER_SIZE of readTarget/readBuffer, or if writeOffset+size is greater than
+    the value of BUFFER_SIZE of writeTarget/writeBuffer.
+
+    The error INVALID_OPERATION is generated if either readtarget/readBuffer or
+    writeTarget/writeBuffer are mapped.
+
+    The error INVALID_VALUE is generated if readTarget/readBuffer and
+    writeTarget/writeBuffer are the same buffer object, and the ranges
+    [readOffset, readOffset+size) and [writeOffset, writeOffset+size) overlap. 
+
+Usage Examples
+
+    (1) Copying across contexts using glXCopyBufferSubDataNV()
+
+        glXMakeCurrent(dpy, readWindow, readContext);
+        BindBuffer(COPY_READ_BUFFER, readBuffer);
+        BufferData(COPY_READ_BUFFER, updateSize, updateData, DYNAMIC_COPY);
+
+        glXMakeCurrent(dpy, writeWindow, writeContext);
+        BindBuffer(COPY_WRITE_BUFFER, writeBuffer);
+        glXCopyBufferSubDataNV(dpy, readContext, writeContext,
+                               COPY_READ_BUFFER, COPY_WRITE_BUFFER,
+                               0, writeOffset, updateSize);
+
+
+    (2) Copying across contexts using glXNamedCopyBufferSubDataNV()
+
+        glXMakeCurrent(dpy, readWindow, readContext);
+        BindBuffer(ARRAY_BUFFER, readBuffer);
+        BufferData(ARRAY_BUFFER, updateSize, updateData, DYNAMIC_COPY);
+
+        glXNamedCopyBufferSubDataNV(dpy, readContext, writeContext,
+                                    readBuffer, writeBuffer,
+                                    0, writeOffset, updateSize);
+
+Issues
+
+    TBD
+
+Revision History
+
+    Rev.    Date       Author    Changes
+    ----  --------     --------  -----------------------------------------
+     1    07/01/2014   agoins    Initial revision based on WGL_NV_copy_buffer.
+     2    07/02/2014   agoins    Add synchronization information. Add explicit
+                                 GL type prefixes. Update vendor opcodes.
+     3    07/14/2014   agoins    Update GLX protocol structures, more specific
+                                 GLX specification information
+     4    07/15/2014   agoins    More accurate error conditions
+     5    07/21/2014   agoins    Add tag field and change status to complete

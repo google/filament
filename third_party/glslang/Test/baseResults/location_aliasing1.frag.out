@@ -1,0 +1,27 @@
+location_aliasing1.frag
+ERROR: 0:6: 'location' : the aliases sharing the location 1 must be the same basic type and interpolation qualification
+ERROR: 1 compilation errors.  No code generated.
+
+
+Shader version: 430
+Requested GL_ARB_enhanced_layouts
+ERROR: node is still EOpNull!
+0:8  Function Definition: main( ( global void)
+0:8    Function Parameters: 
+0:?   Linker Objects
+0:?     'in1' (layout( location=1 component=0) smooth in float)
+0:?     'in2' (layout( location=1 component=2) flat in float)
+
+
+Linked fragment stage:
+
+
+Shader version: 430
+Requested GL_ARB_enhanced_layouts
+ERROR: node is still EOpNull!
+0:8  Function Definition: main( ( global void)
+0:8    Function Parameters: 
+0:?   Linker Objects
+0:?     'in1' (layout( location=1 component=0) smooth in float)
+0:?     'in2' (layout( location=1 component=2) flat in float)
+

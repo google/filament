@@ -1,0 +1,24 @@
+#version 460
+#extension GL_EXT_ray_tracing : enable
+#extension GL_EXT_shader_invocation_reorder : enable
+ 
+
+hitObjectEXT hObjGlob;                     // OK
+uniform hitObjectEXT uHitObj;              // ERROR
+
+layout(location=0) in hitObjectEXT hobjIn; // ERROR
+out hitObjectEXT hobjOut;                  // ERROR
+
+struct hObjWrapper{
+    hitObjectEXT objField;
+    vec3 v;
+};
+
+void foo(hitObjectEXT hObjArg) {}           // OK
+
+void main()
+{
+    hObjWrapper wrapper;                   // ERROR
+    hitObjectEXT localHitObj;               // OK
+    foo(localHitObj);                      // OK
+}

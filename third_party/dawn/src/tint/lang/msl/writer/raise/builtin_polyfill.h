@@ -1,0 +1,60 @@
+// Copyright 2023 The Dawn & Tint Authors
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#ifndef SRC_TINT_LANG_MSL_WRITER_RAISE_BUILTIN_POLYFILL_H_
+#define SRC_TINT_LANG_MSL_WRITER_RAISE_BUILTIN_POLYFILL_H_
+
+#include "src/tint/utils/result.h"
+
+// Forward declarations.
+namespace tint::core::ir {
+class Module;
+}  // namespace tint::core::ir
+
+namespace tint::msl::writer::raise {
+
+/// BuiltinPolyfillConfig describes the set of configuration options for the msl BuiltinPolyfill
+/// transform.
+struct BuiltinPolyfillConfig {
+    /// Set to `true` to polyfill `unpack2x16snorm()`.
+    bool polyfill_unpack_2x16_snorm = false;
+    /// Set to `true` to polyfill `unpack2x16unorm()`.
+    bool polyfill_unpack_2x16_unorm = false;
+    /// Set to `true` to polyfill `tanh(vec<f16> | f16)`
+    bool polyfill_tanh_f16 = false;
+};
+
+/// BuiltinPolyfill is a transform that replaces calls to builtins with polyfills and calls to
+/// MSL backend intrinsic functions.
+/// @param module the module to transform
+/// @param config the config to use in the transform
+/// @returns success or failure
+Result<SuccessType> BuiltinPolyfill(core::ir::Module& module, const BuiltinPolyfillConfig& config);
+
+}  // namespace tint::msl::writer::raise
+
+#endif  // SRC_TINT_LANG_MSL_WRITER_RAISE_BUILTIN_POLYFILL_H_

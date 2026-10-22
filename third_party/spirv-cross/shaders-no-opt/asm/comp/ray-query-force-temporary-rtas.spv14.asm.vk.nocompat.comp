@@ -1,0 +1,81 @@
+; SPIR-V
+; Version: 1.5
+; Generator: Khronos Glslang Reference Front End; 10
+; Bound: 43
+; Schema: 0
+               OpCapability Shader
+               OpCapability RayQueryKHR
+               OpExtension "SPV_KHR_ray_query"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %_ %__0 %rq
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 460
+               OpSourceExtension "GL_EXT_ray_query"
+               OpSourceExtension "GL_EXT_ray_tracing"
+               OpName %main "main"
+               OpName %va "va"
+               OpName %Buf "Buf"
+               OpMemberName %Buf 0 "vas"
+               OpName %_ ""
+               OpName %Registers "Registers"
+               OpMemberName %Registers 0 "index"
+               OpName %__0 ""
+               OpName %rq "rq"
+               OpDecorate %_arr_v2uint_uint_1024 ArrayStride 8
+               OpMemberDecorate %Buf 0 NonWritable
+               OpMemberDecorate %Buf 0 Offset 0
+               OpDecorate %Buf Block
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+               OpMemberDecorate %Registers 0 Offset 0
+               OpDecorate %Registers Block
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+%_ptr_Function_v2uint = OpTypePointer Function %v2uint
+  %uint_1024 = OpConstant %uint 1024
+%_arr_v2uint_uint_1024 = OpTypeArray %v2uint %uint_1024
+        %Buf = OpTypeStruct %_arr_v2uint_uint_1024
+%_ptr_StorageBuffer_Buf = OpTypePointer StorageBuffer %Buf
+          %_ = OpVariable %_ptr_StorageBuffer_Buf StorageBuffer
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+  %Registers = OpTypeStruct %uint
+%_ptr_PushConstant_Registers = OpTypePointer PushConstant %Registers
+        %__0 = OpVariable %_ptr_PushConstant_Registers PushConstant
+%_ptr_PushConstant_uint = OpTypePointer PushConstant %uint
+%_ptr_StorageBuffer_v2uint = OpTypePointer StorageBuffer %v2uint
+       %bool = OpTypeBool
+      %false = OpConstantFalse %bool
+         %32 = OpTypeRayQueryKHR
+%_ptr_Private_32 = OpTypePointer Private %32
+         %rq = OpVariable %_ptr_Private_32 Private
+         %36 = OpTypeAccelerationStructureKHR
+     %uint_0 = OpConstant %uint 0
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+    %float_0 = OpConstant %float 0
+         %42 = OpConstantComposite %v3float %float_0 %float_0 %float_0
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %va = OpVariable %_ptr_Function_v2uint Function
+               OpBranch %6
+          %6 = OpLabel
+               OpLoopMerge %8 %9 None
+               OpBranch %7
+          %7 = OpLabel
+         %25 = OpAccessChain %_ptr_PushConstant_uint %__0 %int_0
+         %26 = OpLoad %uint %25
+         %28 = OpAccessChain %_ptr_StorageBuffer_v2uint %_ %int_0 %26
+         %29 = OpLoad %v2uint %28
+               OpStore %va %29
+         %37 = OpConvertUToAccelerationStructureKHR %36 %29
+               OpBranch %9
+          %9 = OpLabel
+               OpBranchConditional %false %6 %8
+          %8 = OpLabel
+               OpRayQueryInitializeKHR %rq %37 %uint_0 %uint_0 %42 %float_0 %42 %float_0
+               OpReturn
+               OpFunctionEnd

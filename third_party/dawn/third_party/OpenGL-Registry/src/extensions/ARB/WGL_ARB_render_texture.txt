@@ -1,0 +1,910 @@
+Name 
+
+    ARB_render_texture 
+
+Name Strings 
+
+    WGL_ARB_render_texture 
+
+Contact 
+
+    Bimal Poddar, Intel, bimal.poddar@intel.com
+    Paula Womack, Nvidia, PWomack@nvidia.com
+
+Notice
+
+    Copyright (c) 2001-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status 
+
+    Complete. Approved by ARB on June 13, 2001
+
+Version 
+
+    Last Modified Date: July 16, 2001
+
+Number 
+
+    ARB Extension #20 
+
+Dependencies 
+
+    OpenGL 1.1 is required. 
+    WGL_ARB_extension_string is required. 
+    WGL_ARB_pixel_format is required. 
+    WGL_ARB_pbuffer is required. 
+    WGL_ARB_make_current_read affects the definition of this extension. 
+    GL_ARB_texture_cube_map affects the definition of this extension 
+    The extension is written against the OpenGL 1.2.1 Specification. 
+
+Overview 
+
+    This extension allows a color buffer to be used for both rendering and
+    texturing. When a color buffer is bound to a texture target it cannot 
+    be rendered to. Once it has been released from the texture it can be 
+    rendered to once again. 
+
+    This extension may provide a performance boost and reduce memory 
+    requirements on architectures that support rendering to the same 
+    memory where textures reside and in the same memory format and layout
+    required by texturing. The functionality is similar to CopyTexImage1D
+    and CopyTexImage2D. However, some changes were made to make it easier 
+    to avoid copying data: 
+
+    -   Only color buffers of a pbuffer can be bound as a texture. It is 
+        not possible to use the color buffer of a window as a texture. 
+
+    -   The texture internal format is determined when the color buffer 
+        is associated with the texture, guaranteeing that the color 
+        buffer format is equivalent to the texture internal format. 
+        
+    -   When a color buffer of a pbuffer is being used as a texture, 
+        the pbuffer can not be used for rendering; this makes it 
+        easier for implementations to avoid a copy of the image 
+        since the semantics of the pointer swap are clear. 
+
+    -   The application must release the color buffer from the texture 
+        before it can render to the pbuffer again. When the color buffer 
+        is bound as a texture, draw and read operations on the pbuffer 
+        are undefined. 
+
+    -   A mipmap attribute can be set, in which case memory will be 
+        allocated up front for mipmaps. The application can render 
+        the mipmap images or, if SGIS_generate_mipmap is supported, 
+        they can be automatically generated when the color buffer is 
+        bound as a texture. 
+
+    -   A texture target is associated with the pbuffer, so that cubemap 
+        images can be rendered into a single color buffer. 
+
+    Note that this extension may be used in conjunction with other 
+    extensions to associate video images/buffers to pbuffers.  Once the 
+    video image is associated with a pbuffer it can be used as a texture.
+    Also, if SGIX_generate_mipmap is supported, it is possible to 
+    create a complete set of mipmap images from a single color buffer. 
+
+IP Status 
+
+    There are no known IP issues. 
+
+Issues 
+
+ 1. Should we support 3D textures? What about 1D textures? 
+
+    3D textures - No. This adds a lot of implementation burden without 
+    having a good usage model.
+
+    1D textures - Yes. Just a special case of 2D texture.
+
+ 2. Should we allow a portion of the color buffer to be used as a texture? 
+    No, if a different size texture is needed the application can just 
+    create another pbuffer. 
+
+ 3. Do we need the MIPMAP_TEXTURE attribute? 
+
+    Yes this is good to have since some architectures may require all or 
+    some of the mipmaps to be stored together in memory. 
+
+ 4. Should we require power of 2 textures? 
+
+    Yes, we will allow an implementation to fail if the texture size is 
+    not a power of 2. This restriction can be relaxed later by the
+    exension that allows non-power of 2 texture.
+
+ 5. Should the render texture attributes be per color buffer or per drawable? 
+
+    There really isn't a mechanism for associating attributes with the color
+    buffer. Also, allowing different render texture attributes for each 
+    color buffer makes the extension more difficult to implement without 
+    providing a very useful tool for applications. 
+
+ 6. What should happen if the color buffer is used for rendering before it 
+    is released from the texture? 
+
+    There are three reasonable options: generate an error, create another 
+    buffer or have the rendering results be undefined.  Since this is an 
+    error condition, and not a useful feature, we should pick the option 
+    that is easiest to implement.  For now, we choose to have the rendering 
+    results be undefined--the rendering commands will be processed and the 
+    context will be updated but the pbuffer may or may  not be updated. 
+    Note that the pbuffer that contains the color buffer can be bound to a 
+    different context, so the invalid state must be stored with the pbuffer,
+    not the context.. (Also the texture object that contains the 
+    color buffer's image may be released from the current context). 
+
+ 7. Should the new pbuffer attributes be available through GL queries? 
+
+    No, like other pbuffer attributes you need to query them through the 
+    window system extension. This extension does not make any changes to 
+    OpenGL. 
+
+ 8. Should we allow a subset of mipmaps to be defined? 
+
+    No. 
+
+ 9. What happens when a pbuffer is bound as a texture and then a mode 
+    change occurs and the pbuffer is lost? 
+
+    The texture is not lost in this case. OpenGL doesn't have the notion 
+    of volatile textures and this extension should not introduce them. 
+    (It may be an interesting additional extension). When a color buffer 
+    is bound to a texture, it must be saved and restored by the driver, 
+    whenever texture memory is lost (even on a windows mode change). 
+
+10. Should there be any restrictions on the texture operations that 
+    can be performed on a color buffer? 
+
+    Yes. We allow TexSubImage and CopyTexSubImage calls but disallow 
+    TexImage and CopyTexImage calls. When a TexImage or CopyTexImage call 
+    is made then the color buffer is released back to the pbuffer and 
+    new memory is allocated for the texture. No mixing and matching of 
+    images is allowed. In other words, it is not possible to render a 
+    non-mipmapped image to a pbuffer, bind it to a texture and then 
+    call TexImage2D to create the other mipmap levels. Modifying any 
+    mipmap level via TexImage or CopyTexImage will cause the color 
+    buffer to be released back to the pbuffer, even if that level 
+    was not defined by the color buffer. 
+
+    Also, if DeleteTextures is called on the texture target, then the 
+    color buffer that is bound to the texture target is released back 
+    to the pbuffer.
+
+    The implicit release of the color buffer is intended to work just
+    like an explicit release - i.e. the color buffer is available for
+    rendering without the app having to call ReleaseTexImage.
+    
+11. When the color buffer is released from the texture (back to the pbuffer)
+    should the contents be preserved? 
+
+    No, this may prove difficult to implement on some architectures. 
+
+12. Should releasing the color buffer from the texture (back to the pbuffer)
+    affect the scissor or viewport? 
+
+    No, since releasing the color buffer, does not change its size, it 
+    should not affect the scissor or viewport. The application is also 
+    responsible for updating the viewport and scissor when changing which 
+    mipmap level it is rendering to (this is similar to window resize, 
+    where the application is responsible for updating the scissor and 
+    viewport).
+
+13. How should swap buffers work when a color buffer is bound as a texture? 
+
+    Since a color buffer (not a pbuffer) is bound to a texture, swap buffers
+    should be a no-op. Otherwise the name of the bound buffer (FRONT, BACK) 
+    will change while it is bound. Note that swap buffers works just as
+    for a pbuffer when the color buffer is not bound as a texture.
+
+14. What happens when the application binds one color buffer of a pbuffer 
+    to a texture and then tries to render to another color buffer of the 
+    pbuffer? 
+
+    If any of the pbuffer's color buffers are bound to a texture, then 
+    rendering results are undefined for all color buffers of the pbuffer. 
+
+15. Should it be an error to bind a color buffer of a pbuffer to a 
+    texture, if that pbuffer is current to another thread? 
+
+    No. It is not an error to make a drawable current to two threads right 
+    now. Read and draw operations produce indeterminate results when the 
+    pbuffer is bound to a texture. 
+
+16. Should we allow color buffers of all drawables (pbuffers and windows)
+    to be bound to textures? 
+
+    For now we just allow pbuffers. This is simpler since they are not 
+    shared with the window system and the color buffers are not part of the 
+    visible framebuffer. Also, windows can be resized at any time and 
+    handling this resize would unnecessarily complicate this extension. 
+
+17. Should we allow depth buffers to be bound as textures? 
+
+    This extension does not provide for this but it would be an interesting 
+    additional extension. When a color buffer is bound to a texture, only 
+    the color buffer is moved--ancillary buffers continue to be bound to 
+    the pbuffer. 
+
+    This extension is written such that adding depth textures should
+    be very easy.
+
+18. What happens when a color buffer is bound to a shared texture object? 
+
+    Since the color buffer is associated with the texture object itself, 
+    it should be shared. 
+
+19. Should we specify how this extension interacts with SGIS_generate_mipmap? 
+
+    No, since this is a potential ARB extension and SGIS_generate_mipmap 
+    is not. If SGIS_generate_mipmap is supported along with this extension,
+    then if wglBindTexImageARB is called and both GENERATE_MIPMAP_SGIS and 
+    WGL_MIPMAP_TEXTURE_ARB are TRUE, then a set of mipmaps should be 
+    generated. This behaviour needs to be documented in the 
+    SGIS_generate_mipmap (or equivalent) extension. 
+
+20. Should we support borders on render textures? 
+
+    No. Although borders are part of 1.2.1, they are often not supported 
+    and better techniques (such as virtual textures) are starting to 
+    become available for paging in large textures. 
+
+21. Should wglBindTexImageARB take an attribute indicating whether 
+    mipmaps are defined or should this be implied from the 
+    WGL_MIPMAP_TEXTURE_ARB attribute of the pbuffer? 
+
+    This should be implied from the WGL_MIPMAP_TEXTURE_ARB attribute 
+    since GL allows controls for the applications to use only level zero 
+    image even if the pbuffer has been defined large enough to
+    store mipmaps.
+
+22. This extension introduces pbuffer attributes that can be modified. 
+    (Previously all pbuffer attributes were static and could not be 
+    changed.) Should we allow the non-static attributes to be set when the 
+    pbuffer is created or should we require the application to call 
+    wglSetPbufferAttribARB? 
+
+    We require the application to call wglSetPbufferAttribARB to set 
+    non-static Pbuffer attributes since this seems to be more consistent 
+    with OpenGL specification.
+
+23. Do we need WGL_TEXTURE_FORMAT_ARB or is WGL_ALPHA_BITS_ARB enough
+    to distinguish between selecting RGB vs. RGBA textures? Additionally,
+    how is this parameter defined for non texture buffers.
+
+    Resolved: In order to accommodate RGBA visuals to support RGB textures
+    (i.e. ignore alpha) and to allow the specification to be extensible
+    for depth textures, WGL_TEXTURE_FORMAT_ARB is required in this
+    specification. This parameter is defined as WGL_NO_TEXTURE_ARB for
+    non texture buffers.
+
+24. Should luminance and Intensity texture formats be allowed?
+
+    No. WGL doesn't support single-channel framebuffer formats. Allowing
+    these formats would require a copy to reformat a RGB/RGBA framebuffer
+    to a Luminance or Intensity format. If luminance framebuffer gets
+    added to WGL, then this feature can be added at that time.
+
+Implementation Notes
+
+ 1. In order to prevent releases of a pbuffer from the texture object
+    and to deal with implicit release followed by an explicit release,
+    the GL implementation can keep a reference to any texture pbuffer
+    in the texture object. When the pbuffer is released, this handle
+    is set to NULL. Subsequent requests for releasing the texture
+    pbuffer are ignored.
+
+ 2. The implicit release of the color buffers has been specifed to 
+    work just like the explicit release so that the implementation
+    can delete a texture object (one of the implicit free cases) without 
+    having to track whether the texture was associated with any color buffers.
+
+Intended Usage 
+
+    To define a cube map texture, single threaded case 
+
+    1)  Create the rendering window. Call wglChoosePixelFormatARB and 
+        find a suitable pixel format for rendering the image. Set the pixel 
+        format for the rendering window to this pixel format. 
+
+    2)  Create the pbuffer. Call wglChoosePixelFormatARB and find a 
+        suitable pixel format for rendering the texture.  
+        WGL_DRAW_TO_PBUFFER and WGL_BIND_TO_TEXTURE_RGB_ARB or 
+        WGL_BIND_TO_TEXTURE_RGBA_ARB must be TRUE. Create the pbuffer 
+        with this pixel format. Set the pbuffer width and height to the 
+        width and height of the level zero image. Set WGL_TEXTURE_FORMAT_ARB 
+        to be WGL_TEXTURE_RGB_ARB or WGL_TEXTURE_RGBA_ARB. Also set 
+        WGL_TEXTURE_TARGET_ARB to WGL_TEXTURE_CUBE_MAP_ARB. 
+
+    3)  Create a context for the pbuffer. Make the context current to the 
+        pbuffer and initialize the context's attributes. 
+
+    4)  Render all the cube map faces to the pbuffer. Call 
+        wglSetPbufferAttribARB to set the cube map face before rendering
+        each face. Call glFlush. 
+
+    5)  Create a context for the window. Make the context current to the 
+        window and intialize the contexts attributes. Bind a texture object 
+        to the TEXTURE_CUBE_MAP_ARB target and set the texture parameters 
+        to the desired values. 
+
+    6)  Call wglBindTexImageARB to bind the pbuffer drawable to the cube 
+        map texture. Set <iBuffer> to WGL_FRONT or WGL_BACK depending upon
+        which color buffer was used for rendering the cube map.
+
+    7)  Render to the window using the cube map texture. 
+
+    8)  Call wglReleaseTexImageARB to release the color buffer of the 
+        pbuffer. Goto step 4 to generate more frames. 
+
+    To define a 2D texture, single threaded case 
+
+    In step 2, set the WGL_TEXTURE_TARGET_ARB to WGL_TEXTURE_2D_ARB.
+
+    Since a 2D texture does not have multiple faces, in step 5
+    there is no need to call wglSetPbufferAttribARB. 
+
+    In addition, if mipmaps are to be generated, the step 5 should
+    be repeated multiple times with calls to wglSetPbufferAttribARB
+    to set different mip levels.
+
+New Procedures and Functions 
+
+    BOOL wglBindTexImageARB (HPBUFFERARB hPbuffer, int iBuffer)
+
+    BOOL wglReleaseTexImageARB (HPBUFFERARB hPbuffer, int iBuffer) 
+
+    BOOL wglSetPbufferAttribARB (HPBUFFERARB hPbuffer, 
+        const int *piAttribList) 
+
+New Tokens 
+
+    Accepted by the <piAttributes> parameter of wglGetPixelFormatAttribivARB, 
+    wglGetPixelFormatAttribfvARB, and the <piAttribIList> and <pfAttribIList>
+    parameters of wglChoosePixelFormatARB: 
+
+        WGL_BIND_TO_TEXTURE_RGB_ARB         0x2070
+        WGL_BIND_TO_TEXTURE_RGBA_ARB        0x2071
+
+    Accepted by the <piAttribList> parameter of wglCreatePbufferARB and
+    by the <iAttribute> parameter of wglQueryPbufferARB: 
+
+        WGL_TEXTURE_FORMAT_ARB              0x2072
+        WGL_TEXTURE_TARGET_ARB              0x2073
+        WGL_MIPMAP_TEXTURE_ARB              0x2074
+
+    Accepted as a value in the <piAttribList> parameter of 
+    wglCreatePbufferARB and returned in the value parameter of
+    wglQueryPbufferARB when <iAttribute> is WGL_TEXTURE_FORMAT_ARB: 
+
+        WGL_TEXTURE_RGB_ARB                 0x2075
+        WGL_TEXTURE_RGBA_ARB                0x2076
+        WGL_NO_TEXTURE_ARB                  0x2077
+
+    Accepted as a value in the <piAttribList> parameter of 
+    wglCreatePbufferARB and returned in the value parameter of
+    wglQueryPbufferARB when <iAttribute> is WGL_TEXTURE_TARGET_ARB: 
+
+        WGL_TEXTURE_CUBE_MAP_ARB            0x2078
+        WGL_TEXTURE_1D_ARB                  0x2079
+        WGL_TEXTURE_2D_ARB                  0x207A
+        WGL_NO_TEXTURE_ARB                  0x2077
+
+    Accepted by the <piAttribList> parameter of wglSetPbufferAttribARB and 
+    by the <iAttribute> parameter of wglQueryPbufferARB: 
+
+        WGL_MIPMAP_LEVEL_ARB                0x207B
+        WGL_CUBE_MAP_FACE_ARB               0x207C
+
+    Accepted as a value in the <piAttribList> parameter of 
+    wglSetPbufferAttribARB and returned in the value parameter of
+    wglQueryPbufferARB when <iAttribute> is WGL_CUBE_MAP_FACE_ARB: 
+
+        WGL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB     0x207D
+        WGL_TEXTURE_CUBE_MAP_NEGATIVE_X_ARB     0x207E
+        WGL_TEXTURE_CUBE_MAP_POSITIVE_Y_ARB     0x207F
+        WGL_TEXTURE_CUBE_MAP_NEGATIVE_Y_ARB     0x2080
+        WGL_TEXTURE_CUBE_MAP_POSITIVE_Z_ARB     0x2081 
+        WGL_TEXTURE_CUBE_MAP_NEGATIVE_Z_ARB     0x2082
+
+    Accepted by the <iBuffer> parameter of wglBindTexImageARB and 
+    wglReleaseTexImageARB: 
+
+        WGL_FRONT_LEFT_ARB                  0x2083
+        WGL_FRONT_RIGHT_ARB                 0x2084
+        WGL_BACK_LEFT_ARB                   0x2085
+        WGL_BACK_RIGHT_ARB                  0x2086
+        WGL_AUX0_ARB                        0x2087 
+        WGL_AUX1_ARB                        0x2088 
+        WGL_AUX2_ARB                        0x2089 
+        WGL_AUX3_ARB                        0x208A 
+        WGL_AUX4_ARB                        0x208B 
+        WGL_AUX5_ARB                        0x208C 
+        WGL_AUX6_ARB                        0x208D
+        WGL_AUX7_ARB                        0x208E 
+        WGL_AUX8_ARB                        0x208F 
+        WGL_AUX9_ARB                        0x2090
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation) 
+
+    None. 
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization) 
+
+    None. 
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment 
+Operations and the Frame Buffer) 
+
+    None. 
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions) 
+
+    None. 
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and State 
+Requests) 
+
+    None. 
+
+Additions to the WGL Specification 
+
+    Add to the description of <piAttributes> in wglGetPixelFormatAttribivARB 
+    and <pfAttributes> in wglGetPixelFormatfv: 
+
+        WGL_BIND_TO_TEXTURE_RGB_ARB
+        WGL_BIND_TO_TEXTURE_RGBA_ARB
+
+        True if the color buffers can be bound to a RGB/RGBA texture. 
+        Currently only pbuffers can be bound as textures so this attribute 
+        will only be TRUE if WGL_DRAW_TO_PBUFFER is also TRUE. It is
+        possible to bind a RGBA visual to a RGB texture in
+        which case the values in the alpha component of the visual
+        are ignored when the color buffer is used as a RGB texture.
+
+        Implementations may choose not to support WGL_BIND_TO_TEXTURE_RGB_ARB
+        for RGBA visuals.
+
+    Add new table entries to match criteria in description of 
+    wglChoosePixelFormatARB: 
+
+        Attribute                       Type             Match Criteria 
+
+        WGL_BIND_TO_TEXTURE_RGB_ARB     boolean             exact
+        WGL_BIND_TO_TEXTURE_RGBA_ARB    boolean             exact
+
+    Modify wglCreatePbufferARB: 
+
+        HPBUFFERARB wglCreatePbufferARB (HDC hDC, int iPixelFormat, 
+            int iWidth, int iHeight, const int *piAttribList); 
+
+        ... 
+
+        <iWidth> and <iHeight> specify the pixel width and height of the 
+        rectangular pbuffer. If the texture format is set to
+        WGL_TEXTURE_RGB_ARB or WGL_TEXTURE_RGBA_ARB using 
+        WGL_TEXTURE_FORMAT_ARB, then the pbuffer width and height 
+        specify the size of the level zero texture image or, in the 
+        case of a cube map texture, each level zero image. 
+
+        <piAttribList> is a list of attribute {type, value} pairs containing 
+        integer attribute values.  All of the attributes in <piAttribList>
+        are followed by the corresponding required value. The list is 
+        terminated with a value of 0. 
+
+        <piAttribList> may be NULL or empty in which case all attributes assume
+        their default values as described below. 
+
+        The following attributes are supported by wglCreatePbufferARB: 
+
+        WGL_TEXTURE_FORMAT_ARB
+
+        This attribute indicates the format of the texture that will be
+        created when a pbuffer is bound to a texture map.
+        It can be set to WGL_TEXTURE_RGB_ARB, WGL_TEXTURE_RGBA_ARB or
+        WGL_NO_TEXTURE_ARB. The default value is WGL_NO_TEXTURE_ARB.
+
+        WGL_TEXTURE_TARGET_ARB 
+
+        This attribute indicates the target for the texture that will be 
+        created when the pbuffer is created with a texture format of
+        WGL_TEXTURE_RGB_ARB or WGL_TEXTURE_RGBA_ARB.  This attribute can
+        be set to WGL_NO_TEXTURE_ARB, WGL_TEXTURE_1D_ARB, WGL_TEXTURE_2D_ARB 
+        or WGL_TEXTURE_CUBE_MAP_ARB. The default value is WGL_NO_TEXTURE_ARB. 
+
+        WGL_MIPMAP_TEXTURE_ARB 
+
+        If this attribute is set to a non-zero value, and the texture format 
+        is set to WGL_TEXTURE_RGB_ARB or WGL_TEXTURE_RGBA_ARB, then storage 
+        for mipmaps will be allocated. The default value is FALSE. 
+
+        WGL_PBUFFER_LARGEST_ARB 
+
+        If this attribute is set to a non-zero value, the largest 
+        available pbuffer is allocated when the allocation of the pbuffer 
+        would otherwise fail due to insufficient resources.  The width or 
+        height of the allocated pbuffer never exceeds <iWidth> and <iHeight>, 
+        respectively. Also, if the pbuffer will be used as a texture 
+        (i.e., the value of the WGL_TEXTURE_TARGET_ARB attribute is
+        WGL_TEXTURE_1D_ARB, WGL_TEXTURE_2D_ARB or WGL_TEXTURE_CUBE_MAP_ARB
+        and texture format is WGL_TEXTURE_RGB_ARB or WGL_TEXTURE_RGBA_ARB),
+        then the aspect ratio will be preserved and the new width and 
+        height will be valid sizes for the corresponding texture target. 
+        (e.g. Both the width and height will be a power of 2 if the 
+        implementation only supports power of 2 textures. Similarily, 
+        the width and height will be equal for a cube map texture). 
+        Use wglQueryPbufferARB to retrieve the dimensions of the 
+        allocated pbuffer. The default value for this attribute is FALSE. 
+
+        The resulting pbuffer will contain color buffers and ancillary 
+        buffers as specified by <iPixelFormat>.  Note that pbuffers use 
+        framebuffer resources so applications should consider deallocating 
+        them when they are not in use. 
+
+        It is possible to create a pbuffer with back buffers and to swap the 
+        front and back buffers by calling wglSwapLayerBuffers.  The 
+        contents of the back buffers after the swap depends on the 
+        <iPixelFormat>.  (Pbuffers are the same as windows in this respect.) 
+
+        The contents of the depth and stencil buffers may not be preserved 
+        when rendering a texture to the pbuffer and switching which image 
+        of the texture is rendered to (e.g., switching from rendering one 
+        mipmap level to rendering another). 
+
+        When wglCreatePbufferARB fails to create a pbuffer, NULL is returned.
+        To get extended error information, call GetLastError. Possible 
+        errors are as follows: 
+
+        ERROR_INVALID_PIXEL_FORMAT  Pixel format is not valid. 
+
+        ERROR_NO_SYSTEM_RESOURCES   Insufficient resources exist. 
+
+        ERROR_INVALID_DATA          <iWidth> or <iHeight> is negative or zero. 
+
+        ERROR_INVALID_DATA          WGL_TEXTURE_TARGET_ARB attribute is 
+                                    set to WGL_TEXTURE_CUBE_MAP_ARB, and 
+                                    iWidth does not equal iHeight.
+
+        ERROR_INVALID_DATA          WGL_TEXTURE_TARGET_ARB attribute is set 
+                                    to WGL_TEXTURE_1D_ARB, and iHeight is 
+                                    not set to one. 
+
+        ERROR_INVALID_DATA          The pixel format attribute 
+                                    WGL_TEXTURE_FORMAT_ARB is 
+                                    WGL_TEXTURE_RGB_ARB or WGL_TEXTURE_RGBA_ARB
+                                    and WGL_PBUFFER_WIDTH and/or 
+                                    WGL_PBUFFER_HEIGHT specify an invalid 
+                                    size for the implementation (e.g., the 
+                                    texture size is not a power of 2). 
+
+        ERROR_INVALID_DATA          An attribute in <piAttribList> is not a 
+                                    valid attribute.
+
+        ERROR_INVALID_DATA          The texture format is set to 
+                                    WGL_NO_TEXTURE_ARB and texture target
+                                    is set to something other than 
+                                    WGL_NO_TEXTURE_ARB.
+
+        ERROR_INVALID_DATA          The texture format is set to some target
+                                    besides WGL_NO_TEXTURE_ARB and texture 
+                                    target is set to WGL_NO_TEXTURE_ARB.
+
+        .... 
+
+    Modify wglDestroyPbufferARB: 
+
+        A pbuffer is destroyed by calling 
+
+        BOOL wglDestroyPbufferARB(HPBUFFERARB hPbuffer); 
+
+        The pbuffer is destroyed once it is no longer current to any 
+        rendering context and once all color buffers that are bound to a
+        texture object have been released.  When a pbuffer is destroyed, 
+        any memory resources that are attached to it are freed
+        and its handle is no longer valid. 
+
+        ....
+
+    Add wglSetPbufferAttribARB: 
+
+        To set an attribute of a pbuffer call 
+
+        BOOL wglSetPbufferAttribARB (HPBUFFERARB hPbuffer, 
+                                     const int *piAttribList); 
+
+        with <hPbuffer> set to a previously returned pbuffer handle. 
+        <piAttribList> is a list of attribute {type, value} pairs containing
+        integer values. All the attributes in <piAttribList> are followed by 
+        the corresponding desired value. The list is terminated with 0. 
+        If <piAttribList> is NULL or empty then this function is a no-op. 
+
+        The following values are accepted: 
+
+        WGL_MIPMAP_LEVEL_ARB 
+
+        For mipmap textures, this attribute indicates which level of the 
+        mipmap should be rendered. The default value is zero. If the value
+        of this attribute is outside the range of supported mipmap level, 
+        the closest valid mipmap level is selected for rendering.
+
+        WGL_CUBE_MAP_FACE_ARB 
+
+        For cube map textures, this attribute indicates which face of the 
+        cube map should be rendered; it must be set to one of 
+
+        WGL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB, 
+        WGL_TEXTURE_CUBE_MAP_NEGATIVE_X_ARB, 
+        WGL_TEXTURE_CUBE_MAP_POSITIVE_Y_ARB, 
+        WGL_TEXTURE_CUBE_MAP_NEGATIVE_Y_ARB, 
+        WGL_TEXTURE_CUBE_MAP_POSITIVE_Z_ARB, 
+        WGL_TEXTURE_CUBE_MAP_NEGATIVE_Z_ARB.
+
+        The default value is WGL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB. 
+
+        If wglSetPbufferAttribARB fails, FALSE is returned.  To get extended
+        error information, call GetLastError. Possible errors are as follows: 
+
+        ERROR_INVALID_HANDLE        <hPbuffer> is not a valid handle. 
+
+        ERROR_INVALID_DATA          Bad attribute specified in <piAttribList>.
+
+        ERROR_INVALID_DATA          WGL_MIPMAP_LEVEL_ARB does not specify
+                                    a valid mipmap level.
+
+        ERROR_INVALID_DATA          WGL_CUBE_MAP_IMAGE_ARB is not set to a
+                                    valid value.
+
+        ....
+
+    Modify wglQueryPbufferARB: 
+
+        To query an attribute associated with a specific pbuffer, call 
+
+        BOOL wglQueryPbufferARB(HPBUFFERARB hPbuffer, int iAttribute, 
+                                int *piValue); 
+
+        with <hPbuffer> set to a previously returned pbuffer handle. 
+        <iAttribute> must be set to one of WGL_PBUFFER_WIDTH_ARB, 
+        WGL_PBUFFER_HEIGHT_ARB, WGL_PBUFFER_LOST_ARB, WGL_TEXTURE_TARGET_ARB, 
+        WGL_MIPMAP_TEXTURE_ARB, WGL_MIPMAP_LEVEL_ARB, WGL_CUBE_MAP_FACE_ARB
+        or WGL_TEXTURE_FORMAT_ARB.
+
+        The WGL_PBUFFER_LOST_ARB query can be used to determine if the pixel 
+        buffer memory was lost due to a display mode change.  A value of 
+        TRUE is returned in buffer <piValue> if the display mode change lost  
+        the memory for the pixel buffer. It is not an error to render to a 
+        pixel buffer in this state, but the effect of rendering to it is the
+        same as if the pixel buffer was destroyed:  the context state will 
+        be updated, but the values of the returned pixels are undefined.  
+        The pixel buffer must be destroyed and recreated if the pixel buffer
+        memory has been lost.  A value of FALSE is returned to indicate 
+        that the contents of the pixel buffer are unaffected by the display 
+        mode change. 
+
+        When a color buffer of a pbuffer is bound as a texture, then the 
+        contents of that texture must be preserved until the color buffer is 
+        released. If the pbuffer is lost, any color buffers that are bound 
+        to textures will be freed when they are released back to the pbuffer
+        by calling wglReleaseTexImage. 
+
+        If  wglPbufferAttribARB fails, FALSE is returned.  To get extended 
+        error information, call GetLastError. Possible errors are as follows: 
+
+        ERROR_INVALID_HANDLE        <hPbuffer> is not a valid handle. 
+
+        ERROR_INVALID_DATA          <iAttribute> is not a valid attribute.
+
+        .... 
+
+    Add wglBindTexImageARB and wglReleaseTexImageARB: 
+
+        The command 
+
+        BOOL wglBindTexImageARB (HPBUFFERARB hPbuffer, int iBuffer)
+
+        defines a one-dimensional texture image or two-dimensional 
+        texture image or a set of two-dimensional cube map texture images.  
+        The texture image or images consist of the image data in <iBuffer>
+        for the specified pbuffer, <hPbuffer>, and need not be copied.
+        The texture target, the texture format and the size of the 
+        texture components are derived from attributes of pbuffer 
+        specified by <hPbuffer>. 
+        
+        Note that any existing images associated with the different 
+        mipmap levels of the texture object are freed (it is as if 
+        TexImage was called with an image of zero width).
+
+        The pbuffer attribute WGL_TEXTURE_FORMAT_ARB determines the base 
+        internal format of the texture. The component sizes are also 
+        determined by pbuffer attributes as shown in the table below. 
+  
+        Texture Component           Size
+
+            R                   WGL_RED_BITS_ARB
+            G                   WGL_GREEN_BITS_ARB
+            B                   WGL_BLUE_BITS_ARB
+            A                   WGL_ALPHA_BITS_ARB
+
+
+        Table x.x: Size of texture components 
+
+        The texture targets are derived from the WGL_TEXTURE_TARGET_ARB 
+        attribute of <hPbuffer>. If the texture target for the pbuffer is 
+        WGL_TEXTURE_CUBE_MAP_ARB then <iBuffer> defines a set of cubemap 
+        images for the cube map texture objects which are bound to the 
+        current context (hereafter referred to as the current texture 
+        object).  Note that when the texture target is 
+        WGL_TEXTURE_CUBE_MAP_ARB, all cube map texture targets are defined
+        by a single call to wglBindTexImageARB. If the texture target is 
+        WGL_TEXTURE_2D_ARB, then <iBuffer> defines a 2D texture for the 
+        current 2D texture object; if the texture target is WGL_TEXTURE_1D_ARB, 
+        then <iBuffer> defines a 1D texture for the current 1D texture object. 
+
+        The possible values for <iBuffer> are WGL_FRONT_LEFT_ARB, 
+        WGL_FRONT_RIGHT_ARB, WGL_BACK_LEFT_ARB, WGL_BACK_RIGHT_ARB, and 
+        WGL_AUX0_ARB through WGL_AUXn_ARB. 
+
+        If <hPbuffer> is the calling thread's current drawable, 
+        wglBindTexImageARB performs an implicit glFlush. 
+
+        After this function is called, the pbuffer associated with <iBuffer> 
+        is no longer available for reading or writing. Any read
+        operation, such as glReadPixels, which reads values from any of the 
+        pbuffer's color buffers or ancillary buffers, will produce 
+        indeterminate results. In addition, any draw operation that is 
+        done to the pbuffer prior to wglReleaseTexImageARB being called, 
+        produces indeterminant results.  Specifically, if the pbuffer is 
+        current to a context and thread then rendering commands will be 
+        processed and the context state will be updated but the pbuffer may 
+        or may not be written. Also, SwapBuffers is a no-op if it is called 
+        on this pbuffer. 
+
+        Note that the color buffer is bound to a texture object. If the
+        texture object is shared between contexts, then the 
+        color buffer is also shared. If a texture object is deleted
+        before wglReleaseTexImageARB is called, then the color buffer is 
+        released and the pbuffer is made available for reading and writing. 
+
+        It is not an error to call TexImage2D, TexImage1D, 
+        CopyTexImage1D or CopyTexImage2D to replace an image of a texture 
+        object that has a color buffer bound to it. However, these calls 
+        will cause the color buffer to be released back to the pbuffer and 
+        new memory will be allocated for the texture. Note that the color 
+        buffer is released even if the image that is being defined is a 
+        mipmap level that was not defined by the color buffer. 
+
+        wglBindTexImageARB is ignored if there is no current rendering 
+        context. 
+
+        If  wglBindTexImageARB fails, FALSE is returned.  To get extended 
+        error information, call GetLastError. Possible errors are as follows: 
+
+        ERROR_INVALID_HANDLE        <hPbuffer> is not a valid handle. 
+
+        ERROR_INVALID_DATA          <iBuffer> is not a valid value. 
+
+        ERROR_INVALID_OPERATION     The pbuffer attribute 
+                                    WGL_TEXTURE_FORMAT_ARB is set to
+                                    WGL_NO_TEXTURE_ARB.
+
+        ERROR_INVALID_OPERATION     <iBuffer> is already bound to the texture
+
+
+    To release a color buffer that is being used as a texture call 
+
+        BOOL wglReleaseTexImageARB (HPBUFFERARB hPbuffer, int iBuffer) 
+
+        This releases the specified color buffer back to the pbuffer. The 
+        pbuffer is made available for reading and writing when it no
+        longer has any color buffers bound as textures. 
+
+        <iBuffer> must be one of WGL_FRONT_LEFT_ARB, WGL_FRONT_RIGHT_ARB, 
+        WGL_BACK_LEFT_ARB, WGL_BACK_RIGHT_ARB, or WGL_AUX0_ARB through 
+        WGL_AUXn_ARB. 
+
+        The contents of the color buffer are undefined when it is first 
+        released. In particular there is no guarantee that the texture
+        image is still present. However, the contents of other color 
+        buffers is unaffected by this call. Also, the contents of the depth,
+        stencil and accumulation buffers are not affected by 
+        wglBindTexImageARB and wglReleaseTexImageARB. 
+        
+        If the specified color buffer is no longer bound to a texture (e.g.,
+        because the texture object was deleted) then this call is a
+        noop; no error is generated. 
+
+        After a color buffer is released from a texture (either explicitly
+        by calling wglReleaseTexImageARB or implicitly by calling a 
+        routine such as TexImage2D), all texture images that were defined
+        by the color buffer become NULL (it is as if TexImage was 
+        called with an image of zero width).
+
+        If  wglReleaseTexImageARB fails, FALSE is returned. To get extended 
+        error information, call GetLastError. Possible errors are as follows: 
+
+        ERROR_INVALID_HANDLE        <hPbuffer> is not a valid handle. 
+
+        ERROR_INVALID_DATA          <iBuffer> is not a valid value. 
+        
+        ERROR_INVALID_OPERATION     The pbuffer attribute 
+                                    WGL_TEXTURE_FORMAT_ARB is set to
+                                    WGL_NO_TEXTURE_ARB.
+
+New State 
+
+    None 
+
+Dependencies on GL_ARB_texture_cube_map 
+
+    If GL_ARB_texture_cube_map is not supported then all references to
+    WGL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB, WGL_TEXTURE_CUBE_MAP_NEGATIVE_X_ARB,
+    WGL_TEXTURE_CUBE_MAP_POSITIVE_Y_ARB, WGL_TEXTURE_CUBE_MAP_NEGATIVE_Y_ARB,
+    WGL_TEXTURE_CUBE_MAP_POSITIVE_Z_ARB, WGL_TEXTURE_CUBE_MAP_NEGATIVE_Z_ARB, 
+    WGL_TEXTURE_CUBE_MAP_ARB and WGL_CUBE_MAP_FACE_ARB are deleted. 
+  
+Revision History 
+    07/16/01    bpoddar     1. Added WGL_TEXTURE_CUBE_MAP_POSITIVE_*_ARB 
+                               enums to the new tokens section.
+                            2. Added clarification on MIPMAP_LEVEL_ARB usage.
+                            3. Removed 1 invalid error condition from
+                               wglBindTexImage.
+                            4. Changed parameter references to <parameter>.
+
+    07/12/01    bpoddar     Fixed minor typos and added enum values.
+        
+    06/22/01    bpoddar     Minor language edits from ARB participants.
+
+    04/09/01    bpoddar     1. Renamed WGL_TEXTURE_TYPE_ARB to 
+                               WGL_TEXTURE_TARGET_ARB.
+                            2. Cleaned up behavior of WGL_TEXTURE_FORMAT_ARB.
+
+    03/23/01    bpoddar     1. Updated the implementation notes section
+                               with the discussion at the ARB. 
+                            2. Replaced ERROR_??? with specified errors
+                            3. Clarified width and height selection rules
+                               for WGL_PBUFFER_LARGEST.
+                            4. Added policy for dealing with mip levels
+                               both on Bind and Release.
+                            5. Specified behavior for implicit release and
+                               added comment to implementation section.
+                            6. Added couple of errors to SetPbufferAttrib. 
+
+    03/06/01    bpoddar     1. Deleted references to 3D texture
+                            2. Deleted references to LUMINANCE, INTENSITY
+                               textures.
+                            3. wglBindTexImageARB no longer provides a
+                               separate mipmap attribute (issue #21).
+                            4. Removed references to multiple texture 
+                               objects for cube maps.
+                            5. Added issue # 23.
+                            6. Added implementation notes section.
+
+    12/01/00    pwomack     Updated issues list. Require non-static pbuffer 
+                            attributes to be set via SetPbufferAttrib (they 
+                            cannot be set when the pbuffer is created.) 
+                            The WGL_TEXTURE_TARGET_ARB attribute now takes 
+                            WGL_NO_TEXTURE_ARB as a value, so the app can 
+                            indicate that the pbuffer will never be bound 
+                            as a texture. If a pbuffer is created with 
+                            WGL_TEXTURE_TARGET_ARB set to WGL_NO_TEXTURE_ARB, 
+                            then an error results if an attempt is made to 
+                            bind it as a texture. Specified default values 
+                            for all attribute lists. When a color buffer is 
+                            bound as a texture then drawing to the pbuffer 
+                            gives undefined results (previously the 
+                            rendering was lost). When a color buffer is 
+                            bound as a texture, calling TexImage or 
+                            CopyTexImage releases the color buffer back to 
+                            the pbuffer. 
+
+    11/12/00    pwomack     Created. Copied from GLX extension. Added WGL 
+                            calls and removed all GLX-centric stuff. 

@@ -1,0 +1,18 @@
+# Filament
+
+> Filament is a real-time physically based rendering engine for Android, iOS, Linux, macOS, Windows, and WASM.
+
+## Core Guides
+
+- [Physically Based Rendering in Filament](https://google.github.io/filament/Filament.md.html): Explains the equations and theory behind the material and lighting models used in Filament.
+- [Filament Materials](https://google.github.io/filament/Materials.md.html): Describes how to author Filament material files.
+
+## API Reference
+
+- [Android Documentation](https://google.github.io/filament/android/dokka/index.md): API documentation for the Android/Java/Kotlin bindings.
+
+## Development & Contribution
+
+- [Building Filament](https://raw.githubusercontent.com/google/filament/refs/heads/main/BUILDING.md): Build pre-requisites and compilation steps for desktop, mobile, and WASM targets.
+- [Contributing to Filament](https://raw.githubusercontent.com/google/filament/refs/heads/main/CONTRIBUTING.md): Rules for pull requests, commits, and contributing to the project.
+- [Code Style](https://raw.githubusercontent.com/google/filament/refs/heads/main/CODE_STYLE.md): Coding standards, design rules, and formatting conventions.

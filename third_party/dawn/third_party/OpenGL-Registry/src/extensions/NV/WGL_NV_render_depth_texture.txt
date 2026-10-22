@@ -1,0 +1,341 @@
+Name 
+
+    NV_render_depth_texture
+
+Name Strings 
+
+    WGL_NV_render_depth_texture 
+
+Contact 
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 2001, 2002.
+
+Status 
+
+    Shipping, March 2002.
+
+Version 
+
+    Last Modified Date:  2003/01/08
+    NVIDIA Revision:     1
+
+Number 
+
+    263
+
+Dependencies 
+
+    OpenGL 1.1 is required.
+
+    ARB_render_texture is required.
+
+    SGIX_depth_texture is required.
+
+    NV_render_texture_rectangle affects the definition of this extension.  
+
+Overview 
+
+    This extension allows a depth buffer to be used for both rendering and
+    texturing.  It is built upon the ARB_render_texture extension; the only
+    addition in this extension is the ability to use a depth buffer as a
+    DEPTH_COMPONENT texture map.
+
+Issues 
+
+    In the ARB_render_texture spec, the number and size of physical depth
+    buffers in a rendered texture is left undefined.  From the
+    ARB_render_texture specification:
+
+        The contents of the depth and stencil buffers may not be preserved 
+        when rendering a texture to the pbuffer and switching which image 
+        of the texture is rendered to (e.g., switching from rendering one 
+        mipmap level to rendering another). 
+
+    That behavior is clearly unacceptable in an implementation where the
+    rendered texture IS the depth buffer.
+
+      RESOLVED:  Yes, it needs to be fixed.  This extension specifies that
+      each mipmap level and cube map face gets its own depth buffer, whose
+      contents are preserved when switching render targets.
+    
+    Should there be separate pixel format attributes for BIND_TO_TEXTURE_DEPTH
+    and BIND_TO_TEXTURE_RECTANGLE_DEPTH?  Or is a single attribute sufficient?
+
+      RESOLVED:  We should support separate capabilities, as done with the
+      other formats.  See the NV_render_texture_rectangle spec for more info.
+
+    Should it be possible to have a single pbuffer support binding both color
+    and depth buffers to textures?
+
+      RESOLVED:  Yes.  This means that we must provide a separate
+      DEPTH_TEXTURE_FORMAT attribute that must be set at pbuffer creation
+      time, since using only the TEXTURE_FORMAT attribute would allow you to
+      create a pbuffer supporting either color or depth textures, but not
+      both.
+
+    For double-buffered or stereo pixel formats that support binding to depth
+    textures, how many depth buffers do you have?
+
+      RESOLVED:  There is only a single depth buffer for double-buffered or
+      stereo pixel formats.  Double buffering refers only to the number of
+      color buffers.  There will be multiple depth buffers only if the pbuffer
+      is specified to support mipmaps or cube maps.
+
+    What happens with multisample pixel formats, where the only depth buffer
+    contains multiple samples per pixel?  This issue is slightly different for
+    rendered depth textures, since multisample pixel formats do contain
+    "normal" color buffers in addition to the multisample buffer.
+
+      UNRESOLVED.
+
+New Procedures and Functions 
+
+    None.
+
+New Tokens 
+
+    Accepted by the <piAttributes> parameter of wglGetPixelFormatAttribivARB, 
+    wglGetPixelFormatAttribfvARB, and the <piAttribIList> and <pfAttribIList>
+    parameters of wglChoosePixelFormatARB: 
+
+        WGL_BIND_TO_TEXTURE_DEPTH_NV                    0x20A3
+        WGL_BIND_TO_TEXTURE_RECTANGLE_DEPTH_NV          0x20A4
+
+    Accepted by the <piAttribList> parameter of wglCreatePbufferARB and
+    by the <iAttribute> parameter of wglQueryPbufferARB: 
+
+        WGL_DEPTH_TEXTURE_FORMAT_NV                     0x20A5
+
+    Accepted as a value in the <piAttribList> parameter of wglCreatePbufferARB
+    and returned in the value parameter of wglQueryPbufferARB when
+    <iAttribute> is WGL_DEPTH_TEXTURE_FORMAT_NV:
+
+        WGL_TEXTURE_DEPTH_COMPONENT_NV                  0x20A6
+        WGL_NO_TEXTURE_ARB                              0x2077
+
+    Accepted by the <iBuffer> parameter of wglBindTexImageARB:
+
+        WGL_DEPTH_COMPONENT_NV                          0x20A7
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation) 
+
+    None. 
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization) 
+
+    None. 
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment 
+Operations and the Frame Buffer) 
+
+    None. 
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions) 
+
+    None. 
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and State 
+Requests) 
+
+    None. 
+
+Additions to the WGL Specification 
+
+    First, close your eyes and pretend that a WGL specification actually
+    existed.  Maybe if we all concentrate hard enough, one will magically
+    appear.
+
+
+    (Add to the description of <piAttributes> in wglGetPixelFormatAttribivARB
+    and <pfAttributes> in wglGetPixelFormatfv:)
+
+        WGL_BIND_TO_TEXTURE_DEPTH_NV
+        WGL_BIND_TO_TEXTURE_RECTANGLE_DEPTH_NV
+
+        True if the depth buffer can be bound to a DEPTH_COMPONENT texture or
+        texture rectangle.  Currently only pbuffers can be bound as textures
+        so this attribute will only be TRUE if WGL_DRAW_TO_PBUFFER is also
+        TRUE.
+
+
+    (Add new table entries to match criteria in description of 
+    wglChoosePixelFormatARB:)
+
+        Attribute                               Type     Match Criteria 
+
+        WGL_BIND_TO_TEXTURE_DEPTH_NV            boolean      exact
+        WGL_BIND_TO_TEXTURE_RECTANGLE_DEPTH_NV  boolean      exact
+
+
+    (In the wglCreatePbufferARB section, modify the attribute list)
+
+        WGL_TEXTURE_FORMAT_ARB
+
+        This attribute indicates the base internal format of the texture that
+        will be created when a color buffer of a pbuffer is bound to a texture
+        map.  It can be set to WGL_TEXTURE_RGB_ARB (indicating an internal
+        format of RGB), WGL_TEXTURE_RGBA_ARB (indicating a base internal
+        format of RGBA), or WGL_NO_TEXTURE_ARB. The default value is
+        WGL_NO_TEXTURE_ARB.
+
+        WGL_DEPTH_TEXTURE_FORMAT_NV
+
+        This attribute indicates the base internal format of the texture that
+        will be created when the depth buffer of a pbuffer is bound to a
+        texture map.  It can be set to WGL_TEXTURE_DEPTH_COMPONENT_NV
+        (indicating an internal format of DEPTH_COMPONENT), or
+        WGL_NO_TEXTURE_ARB. The default value is WGL_NO_TEXTURE_ARB.
+
+    (In the wglCreatePbufferARB section, modify the discussion of what happens
+    to the depth/stencil/accum buffers when switching between mipmap levels or
+    cube map faces.)
+
+    For pbuffers with a texture format of WGL_TEXTURE_RGB_ARB or
+    WGL_TEXTURE_RGBA_ARB, there will be a separate set of color buffers for
+    each mipmap level and cube map face in the pbuffer.  Otherwise, the WGL
+    implementation is free to share a single set of color, auxillary, and
+    accumulation buffers between levels or faces.
+
+    For pbuffers with a depth texture format of
+    WGL_TEXTURE_DEPTH_COMPONENT_NV, there will be a separate depth buffer for
+    each mipmap level and cube map face.  Otherwise, the WGL implementation is
+    free to share a single depth buffer between levels or faces.
+
+    The contents of any color or depth buffer that may be shared between faces
+    are undefined after switching between mipmap levels or cube map faces.
+
+    (In the wglCreatePbufferARB section, add to the error list)
+
+        ERROR_INVALID_DATA     WGL_DEPTH_TEXTURE_FORMAT_NV is
+                               WGL_TEXTURE_DEPTH_COMPONENT_NV,
+                               WGL_TEXTURE_TARGET_ARB is
+                               WGL_TEXTURE_RECTANGLE_NV, and the
+                               WGL_BIND_TO_TEXTURE_RECTANGLE_DEPTH_NV
+                               attribute is not set in the pixel format.
+
+        ERROR_INVALID_DATA     WGL_DEPTH_TEXTURE_FORMAT_NV is
+                               WGL_TEXTURE_DEPTH_COMPONENT_NV,
+                               WGL_TEXTURE_TARGET_ARB is not
+                               WGL_TEXTURE_RECTANGLE_NV, and the
+                               WGL_BIND_TO_TEXTURE_DEPTH_NV attribute is not
+                               set in the pixel format.
+
+   (In the wglCreatePbufferARB section, modify the error list, replacing the
+    errors concerning texture format/target combinations with the following.)
+
+        ERROR_INVALID_DATA     WGL_TEXTURE_TARGET_ARB is WGL_NO_TEXTURE_ARB
+                               and either WGL_TEXTURE_FORMAT_ARB or
+                               WGL_DEPTH_TEXTURE_FORMAT_NV is not
+                               WGL_NO_TEXTURE_ARB.
+
+        ERROR_INVALID_DATA     WGL_TEXTURE_TARGET_ARB is not
+                               WGL_NO_TEXTURE_ARB and both
+                               WGL_TEXTURE_FORMAT_ARB and
+                               WGL_DEPTH_TEXTURE_FORMAT_NV are
+                               WGL_NO_TEXTURE_ARB.
+
+    Modify wglDestroyPbufferARB: 
+
+        A pbuffer is destroyed by calling 
+
+        BOOL wglDestroyPbufferARB(HPBUFFERARB hPbuffer); 
+
+        The pbuffer is destroyed once it is no longer current to any rendering
+        context and once all color and depth buffers that are bound to a
+        texture object have been released.  When a pbuffer is destroyed, any
+        memory resources that are attached to it are freed and its handle is
+        no longer valid.
+
+        ....
+
+    Modify wglBindTexImageARB: 
+
+    ...
+
+        The pbuffer attribute WGL_DEPTH_TEXTURE_FORMAT_NV determines the base
+        internal format of the depth texture. The format-specific component
+        sizes are also determined by pbuffer attributes as shown in the table
+        below.  The component sizes are dependent on the format of the
+        texture.
+  
+        Texture Component           Size                 Format
+
+            D                   WGL_DEPTH_BITS_ARB       DEPTH_COMPONENT
+
+
+        Table x.x: Size of texture components 
+
+        ...
+
+        The possible values for <iBuffer> are WGL_FRONT_LEFT_ARB,
+        WGL_FRONT_RIGHT_ARB, WGL_BACK_LEFT_ARB, WGL_BACK_RIGHT_ARB,
+        WGL_DEPTH_COMPONENT_NV, and WGL_AUX0_ARB through WGL_AUXn_ARB.
+
+        ...
+
+
+    (Modify paragraphs in wglBindTexImageARB section to include language about
+     allowing depth buffers)
+
+    Note that the color or depth buffer is bound to a texture object.  If the
+    texture object is shared between contexts, then the color or depth buffers
+    are also shared.  If a texture object is deleted before
+    wglReleaseTexImageARB is called, then the color buffer is released and the
+    pbuffer is made available for reading and writing.
+
+    It is not an error to call TexImage2D, TexImage1D, CopyTexImage1D or
+    CopyTexImage2D to replace an image of a texture object that has a color or
+    depth buffer bound to it. However, these calls will cause the color or
+    depth buffers to be released back to the pbuffer and new memory will be
+    allocated for the texture. Note that the color or depth buffer is released
+    even if the image that is being defined is a mipmap level that was not
+    defined by the color buffer.
+
+
+    (Modify wglReleaseTexImageARB section to include language allowing the
+    binding of depth buffers)
+
+    To release a color or depth buffer that is being used as a texture call
+
+        BOOL wglReleaseTexImageARB (HPBUFFERARB hPbuffer, int iBuffer) 
+
+    This releases the specified color or depth buffer back to the pbuffer. The
+    pbuffer is made available for reading and writing when it no longer has
+    any color or depth buffers bound as textures.
+
+    <iBuffer> must be one of WGL_FRONT_LEFT_ARB, WGL_FRONT_RIGHT_ARB,
+    WGL_BACK_LEFT_ARB, WGL_BACK_RIGHT_ARB, WGL_DEPTH_COMPONENT_NV, or
+    WGL_AUX0_ARB through WGL_AUXn_ARB.
+
+    The contents of the color or depth buffer being released are undefined
+    when it is first released. In particular, there is no guarantee that the
+    texture image is still present. However, the contents of other color,
+    depth, stencil, or accumulation buffers are unaffected when the color or
+    depth buffer is released.
+
+    If the specified color or depth buffer is no longer bound to a texture
+    (e.g., because the texture object was deleted) then this call is a noop;
+    no error is generated.
+
+    After a color or depth buffer is released from a texture (either
+    explicitly by calling wglReleaseTexImageARB or implicitly by calling a
+    routine such as TexImage2D), all texture images that were defined by the
+    color buffer become NULL (it is as if TexImage was called with an image of
+    zero width).
+
+New State 
+
+    None 
+
+Dependencies on NV_render_texture_rectangle
+
+    If NV_render_texture_rectangle is not supported, all references to texture
+    rectangles and WGL_BIND_TO_TEXTURE_RECTANGLE_DEPTH_NV should be deleted.
+  
+Revision History 
+
+    None

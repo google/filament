@@ -1,0 +1,13 @@
+D bindings for the Assimp library (http://assimp.sf.net).
+---
+
+These bindings provide access to Assimp's C API. They were directly created
+from the C header files.
+
+You should be able to create sufficient DDoc documentation for the bindings
+using your favourite build tool (such as Rebuild). Please refer to the main
+(Doxygen-generated) documentation for general topics.
+
+Please note that the bindings have only been tested on 32 bit systems, they have
+yet to be adapted for the different size of the integer types in 64 bit builds
+of Assimp.

@@ -1,0 +1,26 @@
+static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
+
+RWByteAddressBuffer _10 : register(u0);
+cbuffer SPIRV_Cross_NumWorkgroups
+{
+    uint3 SPIRV_Cross_NumWorkgroups_1_count : packoffset(c0);
+};
+
+
+static uint3 gl_WorkGroupID;
+struct SPIRV_Cross_Input
+{
+    uint3 gl_WorkGroupID : SV_GroupID;
+};
+
+void comp_main()
+{
+    _10.Store3(0, SPIRV_Cross_NumWorkgroups_1_count + gl_WorkGroupID);
+}
+
+[numthreads(1, 1, 1)]
+void main(SPIRV_Cross_Input stage_input)
+{
+    gl_WorkGroupID = stage_input.gl_WorkGroupID;
+    comp_main();
+}

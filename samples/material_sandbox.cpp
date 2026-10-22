@@ -1,0 +1,1077 @@
+/*
+ * Copyright (C) 2018 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "material_sandbox.h"
+
+#include "common/arguments.h"
+
+#include <filamentapp/AssetLoader.h>
+#include <filamentapp/FilamentApp2.h>
+#include <filamentapp/IBL.h>
+#include <filamentapp/MeshAssimp.h>
+
+#include <filagui/ImGuiExtensions.h>
+
+#include <filament/Camera.h>
+#include <filament/DebugRegistry.h>
+#include <filament/Engine.h>
+#include <filament/Exposure.h>
+#include <filament/IndexBuffer.h>
+#include <filament/IndirectLight.h>
+#include <filament/LightManager.h>
+#include <filament/Material.h>
+#include <filament/MaterialInstance.h>
+#include <filament/RenderableManager.h>
+#include <filament/Renderer.h>
+#include <filament/Scene.h>
+#include <filament/TransformManager.h>
+#include <filament/VertexBuffer.h>
+#include <filament/View.h>
+
+#include <utils/getopt.h>
+#include <utils/Path.h>
+
+#include <math/mat3.h>
+#include <math/mat4.h>
+#include <math/norm.h>
+#include <math/vec4.h>
+
+#include <imgui.h>
+#include <samples/SampleConfig.h>
+
+#include <iostream>
+#include <map>
+#include <ranges>
+#include <vector>
+
+using namespace math;
+using namespace filament;
+using namespace filamat;
+using namespace utils;
+
+namespace {
+
+struct App {
+    FilamentApp2* filamentApp = nullptr;
+    SampleConfig config;
+};
+
+Scene* g_scene = nullptr;
+
+std::unique_ptr<MeshAssimp> g_meshSet;
+app::AssetLoader* g_assetLoader = nullptr;
+std::map<CString, MaterialInstance*> g_meshMaterialInstances;
+SandboxParameters g_params;
+ColorGradingOptions g_lastColorGradingOptions;
+ColorGrading* g_colorGrading = nullptr;
+SampleConfig g_config;
+FilamentApp2* g_filamentApp = nullptr;
+
+bool g_shadowPlane = false;
+bool g_singleMode = false;
+bool g_hideUi = true;
+float g_meshScale = 1.0f;
+float g_rangePlot[1024 * 3];
+float g_curvePlot[1024 * 3];
+
+constexpr ImVec2 verticalSliderSize(18.0f, 160.0f);
+constexpr ImVec2 plotLinesSize(320.0f, 160.0f);
+constexpr ImVec2 plotLinesWideSize(480.0f, 120.0f);
+
+struct GroundPlane {
+    VertexBuffer* vb = nullptr;
+    IndexBuffer* ib = nullptr;
+    Material* mat = nullptr;
+    Entity renderable;
+};
+
+GroundPlane g_groundPlane;
+
+void cleanup(Engine* engine, View*, Scene*) {
+    g_meshSet.reset(nullptr);
+    g_assetLoader = nullptr;
+
+    if (g_groundPlane.renderable) {
+        engine->destroy(g_groundPlane.renderable);
+        EntityManager::get().destroy(g_groundPlane.renderable);
+    }
+    if (g_groundPlane.mat) {
+        engine->destroy(g_groundPlane.mat);
+    }
+    if (g_groundPlane.vb) {
+        engine->destroy(g_groundPlane.vb);
+    }
+    if (g_groundPlane.ib) {
+        engine->destroy(g_groundPlane.ib);
+    }
+
+    for (const auto& material: g_meshMaterialInstances | std::views::values) {
+        engine->destroy(material);
+    }
+
+    for (const auto& material : g_params.materialInstance) {
+        engine->destroy(material);
+    }
+
+    for (const auto& material : g_params.material) {
+        engine->destroy(material);
+    }
+
+    engine->destroy(g_params.light);
+    engine->destroy(g_params.spotLight);
+    engine->destroy(g_colorGrading);
+
+    EntityManager& em = EntityManager::get();
+    em.destroy(g_params.light);
+    em.destroy(g_params.spotLight);
+}
+
+void setup(Engine* engine, View*, Scene* scene) {
+    g_scene = scene;
+
+    g_meshSet = std::make_unique<MeshAssimp>(*engine, g_assetLoader);
+
+    createInstances(g_params, *engine);
+
+    for (const auto& fname : g_config.positionalArgs) {
+        Path filename(fname.c_str_safe());
+        g_meshSet->addFromFile(filename, g_meshMaterialInstances);
+    }
+    if (g_config.positionalArgs.empty()) {
+        g_meshSet->addFromFile("assets/models/material_sphere/material_sphere.obj",
+                g_meshMaterialInstances);
+    }
+
+    auto& tcm = engine->getTransformManager();
+    if (!g_meshSet->getRenderables().empty()) {
+        auto ei = tcm.getInstance(g_meshSet->getRenderables()[0]);
+        tcm.setTransform(ei,
+                mat4f{ mat3f(g_meshScale), float3(0.0f, 0.0f, -4.0f) } * tcm.getWorldTransform(ei));
+    }
+
+    size_t count = 0;
+    auto& rcm = engine->getRenderableManager();
+    for (auto renderable : g_meshSet->getRenderables()) {
+        auto instance = rcm.getInstance(renderable);
+        if (!instance) continue;
+
+        rcm.setCastShadows(instance, g_params.castShadows);
+        rcm.setScreenSpaceContactShadows(instance, g_params.screenSpaceContactShadows);
+
+        if (!g_singleMode || count == 0) {
+            for (size_t i = 0; i < rcm.getPrimitiveCount(instance); i++) {
+                rcm.setMaterialInstanceAt(instance, i, g_params.materialInstance[MATERIAL_LIT]);
+            }
+        } else {
+            auto ei = tcm.getInstance(renderable);
+            tcm.setTransform(ei, mat4f{ mat3f(g_meshScale), float3(0.0f, 0.0f, -3.0f) } *
+                    tcm.getWorldTransform(ei));
+        }
+        count++;
+
+        scene->addEntity(renderable);
+    }
+
+    scene->addEntity(g_params.light);
+
+    // Parent the spot light to the root renderable in the mesh.
+    tcm.create(g_params.spotLight, tcm.getInstance(g_meshSet->getRenderables()[0]));
+    g_params.spotLightPosition = float3{0.0, 1.0, 0.0f};
+
+    if (g_shadowPlane) {
+        EntityManager& em = EntityManager::get();
+        Material* shadowMaterial = Material::Builder()
+                .package(RESOURCES_GROUNDSHADOW_DATA, RESOURCES_GROUNDSHADOW_SIZE)
+                .build(*engine);
+        shadowMaterial->setDefaultParameter("strength", 0.7f);
+
+        static constexpr uint32_t indices[] = {
+                0, 1, 2, 2, 3, 0
+        };
+
+        static constexpr float3 vertices[] = {
+                { -10, 0, -10 },
+                { -10, 0,  10 },
+                {  10, 0,  10 },
+                {  10, 0, -10 },
+        };
+
+        short4 const tbn = packSnorm16(
+                mat3f::packTangentFrame(
+                        mat3f{
+                                float3{ 1.0f, 0.0f, 0.0f },
+                                float3{ 0.0f, 0.0f, 1.0f },
+                                float3{ 0.0f, 1.0f, 0.0f }
+                        }
+                ).xyzw);
+
+        static const short4 normals[] { tbn, tbn, tbn, tbn };
+
+        VertexBuffer* vertexBuffer = VertexBuffer::Builder()
+                .vertexCount(4)
+                .bufferCount(2)
+                .attribute(POSITION, 0, VertexBuffer::AttributeType::FLOAT3)
+                .attribute(TANGENTS, 1, VertexBuffer::AttributeType::SHORT4)
+                .normalized(TANGENTS)
+                .build(*engine);
+
+        vertexBuffer->setBufferAt(*engine, 0, VertexBuffer::BufferDescriptor(
+                vertices, vertexBuffer->getVertexCount() * sizeof(vertices[0])));
+        vertexBuffer->setBufferAt(*engine, 1, VertexBuffer::BufferDescriptor(
+                normals, vertexBuffer->getVertexCount() * sizeof(normals[0])));
+
+        IndexBuffer* indexBuffer = IndexBuffer::Builder()
+                .indexCount(6)
+                .build(*engine);
+
+        indexBuffer->setBuffer(*engine, IndexBuffer::BufferDescriptor(
+                indices, indexBuffer->getIndexCount() * sizeof(uint32_t)));
+
+        Entity planeRenderable = em.create();
+        RenderableManager::Builder(1)
+                .boundingBox({{ 0, 0, 0 },
+                              { 10, 1e-4f, 10 }})
+                .material(0, shadowMaterial->getDefaultInstance())
+                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES,
+                        vertexBuffer, indexBuffer, 0, 6)
+                .culling(false)
+                .receiveShadows(true)
+                .castShadows(false)
+                .build(*engine, planeRenderable);
+
+        scene->addEntity(planeRenderable);
+
+        tcm.setTransform(tcm.getInstance(planeRenderable),
+                mat4f::translation(float3{ 0, -1, -4 }));
+
+        g_groundPlane = {
+            .vb = vertexBuffer,
+            .ib = indexBuffer,
+            .mat = shadowMaterial,
+            .renderable = planeRenderable,
+        };
+    }
+
+    if (auto* ibl = g_filamentApp->getIBL()) {
+        auto& params = g_params;
+        IndirectLight* const pIndirectLight = ibl->getIndirectLight();
+        // If we loaded an equirectangular IBL, we don't have spherical harmonics. In that case,
+        // simply skip the estimates.
+        if (ibl->hasSphericalHarmonics()) {
+            params.lightDirection =
+                    IndirectLight::getDirectionEstimate(ibl->getSphericalHarmonics());
+            float4 c = IndirectLight::getColorEstimate(
+                    ibl->getSphericalHarmonics(), params.lightDirection);
+            params.lightIntensity = c.w * pIndirectLight->getIntensity();
+            params.lightColor = c.rgb;
+        }
+    }
+
+    g_params.bloomOptions.dirt = g_filamentApp->getDirtTexture();
+}
+
+MaterialInstance* updateInstances(SandboxParameters& params) {
+    int material = params.currentMaterialModel;
+    if (material == MATERIAL_MODEL_LIT) {
+        if (params.currentBlending == BLENDING_TRANSPARENT) material = MATERIAL_TRANSPARENT;
+        if (params.currentBlending == BLENDING_FADE) material = MATERIAL_FADE;
+        if (params.ssr) {
+            if (params.currentBlending == BLENDING_THIN_REFRACTION) material = MATERIAL_THIN_SS_REFRACTION;
+            if (params.currentBlending == BLENDING_SOLID_REFRACTION) material = MATERIAL_SOLID_SS_REFRACTION;
+        } else {
+            if (params.currentBlending == BLENDING_THIN_REFRACTION) material = MATERIAL_THIN_REFRACTION;
+            if (params.currentBlending == BLENDING_SOLID_REFRACTION) material = MATERIAL_SOLID_REFRACTION;
+        }
+    }
+
+    bool hasRefraction = params.currentBlending == BLENDING_THIN_REFRACTION ||
+            params.currentBlending == BLENDING_SOLID_REFRACTION;
+
+    MaterialInstance* materialInstance = params.materialInstance[material];
+    materialInstance->setParameter("baseColor", RgbType::sRGB, params.color);
+
+    if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH) {
+        float4 emissive(Color::toLinear(params.emissiveColor), params.emissiveExposureWeight);
+        emissive.rgb *= Exposure::luminance(params.emissiveEV);
+        materialInstance->setParameter("emissive", emissive);
+    }
+
+    if (params.currentMaterialModel == MATERIAL_MODEL_LIT) {
+        materialInstance->setParameter("roughness", params.roughness);
+        materialInstance->setParameter("metallic", params.metallic);
+        if (!hasRefraction) {
+            materialInstance->setParameter("reflectance", params.reflectance);
+        }
+        materialInstance->setParameter("secondRoughness", params.secondRoughness);
+        materialInstance->setParameter("secondRoughnessWeight", params.secondRoughnessWeight);
+        materialInstance->setParameter("sheenColor", RgbType::sRGB, params.sheenColor);
+        materialInstance->setParameter("sheenRoughness", params.sheenRoughness);
+        materialInstance->setParameter("iridescence", params.iridescence);
+        materialInstance->setParameter("iridescenceIor", params.iridescenceIor);
+        materialInstance->setParameter("iridescenceThickness", params.iridescenceThickness);
+        materialInstance->setParameter("clearCoat", params.clearCoat);
+        materialInstance->setParameter("clearCoatRoughness", params.clearCoatRoughness);
+        materialInstance->setParameter("anisotropy", params.anisotropy);
+
+        if (params.currentBlending != BLENDING_OPAQUE) {
+            materialInstance->setParameter("alpha", params.alpha);
+        }
+
+        if (hasRefraction) {
+            float3 color = Color::toLinear(params.transmittanceColor);
+            materialInstance->setParameter("absorption",
+                    Color::absorptionAtDistance(color, params.distance));
+            materialInstance->setParameter("ior", params.ior);
+            materialInstance->setParameter("transmission", params.transmission);
+            if (params.currentBlending == BLENDING_SOLID_REFRACTION) {
+                materialInstance->setParameter("dispersion", params.dispersion);
+            }
+            materialInstance->setParameter("thickness", params.thickness);
+        }
+    }
+
+    if (params.currentMaterialModel == MATERIAL_MODEL_SPECGLOSS) {
+        materialInstance->setParameter("glossiness", params.glossiness);
+        materialInstance->setParameter("specularColor", params.specularColor);
+        materialInstance->setParameter("reflectance", params.reflectance);
+        materialInstance->setParameter("clearCoat", params.clearCoat);
+        materialInstance->setParameter("clearCoatRoughness", params.clearCoatRoughness);
+        materialInstance->setParameter("anisotropy", params.anisotropy);
+    }
+
+    if (params.currentMaterialModel == MATERIAL_MODEL_SUBSURFACE) {
+        materialInstance->setParameter("roughness", params.roughness);
+        materialInstance->setParameter("metallic", params.metallic);
+        materialInstance->setParameter("reflectance", params.reflectance);
+        materialInstance->setParameter("thickness", params.thickness);
+        materialInstance->setParameter("subsurfacePower", params.subsurfacePower);
+        materialInstance->setParameter("subsurfaceColor", RgbType::sRGB, params.subsurfaceColor);
+    }
+
+    if (params.currentMaterialModel == MATERIAL_MODEL_CLOTH) {
+        materialInstance->setParameter("roughness", params.roughness);
+        materialInstance->setParameter("sheenColor", RgbType::sRGB, params.sheenColor);
+        materialInstance->setParameter("subsurfaceColor", RgbType::sRGB, params.subsurfaceColor);
+    }
+
+    if (params.currentMaterialModel != MATERIAL_MODEL_UNLIT) {
+        materialInstance->setSpecularAntiAliasingVariance(params.specularAntiAliasingVariance);
+        materialInstance->setSpecularAntiAliasingThreshold(params.specularAntiAliasingThreshold);
+    }
+
+    return materialInstance;
+}
+
+void computeRangePlot(SandboxParameters& parameters) {
+    float4& ranges = parameters.colorGradingOptions.ranges;
+    ranges.y = clamp(ranges.y, ranges.x + 1e-5f, ranges.w - 1e-5f); // darks
+    ranges.z = clamp(ranges.z, ranges.x + 1e-5f, ranges.w - 1e-5f); // lights
+
+    for (size_t i = 0; i < 1024; i++) {
+        const float x = static_cast<float>(i) / 1024.0f;
+        const float s = 1.0f - smoothstep(ranges.x, ranges.y, x);
+        const float h = smoothstep(ranges.z, ranges.w, x);
+        g_rangePlot[i]        = s;
+        g_rangePlot[1024 + i] = 1.0f - s - h;
+        g_rangePlot[2048 + i] = h;
+    }
+}
+
+void rangePlotSeriesStart(const int series) {
+    // ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
+    switch (series) { // NOLINT(*-multiway-paths-covered)
+        case 0:
+            ImGui::PushStyleColor(ImGuiCol_PlotLines,
+                static_cast<ImVec4>(ImColor::HSV(0.4f, 0.25f, 1.0f)));
+            break;
+        case 1:
+            ImGui::PushStyleColor(ImGuiCol_PlotLines,
+                static_cast<ImVec4>(ImColor::HSV(0.8f, 0.25f, 1.0f)));
+            break;
+        case 2:
+            ImGui::PushStyleColor(ImGuiCol_PlotLines,
+                static_cast<ImVec4>(ImColor::HSV(0.17f, 0.21f, 1.0f)));
+            break;
+    }
+}
+
+void rangePlotSeriesEnd(const int series) {
+    if (series < 3) {
+        ImGui::PopStyleColor();
+    }
+}
+
+float getRangePlotValue(const int series, void* data, const int index) {
+    return static_cast<float*>(data)[series * 1024 + index];
+}
+
+float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highlightScale) {
+    float3 d = 1.0f / pow(midPoint, shadowGamma - 1.0f);
+    float3 dark = pow(v, shadowGamma) * d;
+    float3 light = highlightScale * (v - midPoint) + midPoint;
+    return float3{
+            v.r <= midPoint.r ? dark.r : light.r,
+            v.g <= midPoint.g ? dark.g : light.g,
+            v.b <= midPoint.b ? dark.b : light.b,
+    };
+}
+
+void computeCurvePlot(SandboxParameters& parameters) {
+    ColorGradingOptions &colorGrading = parameters.colorGradingOptions;
+    for (size_t i = 0; i < 1024; i++) {
+        float3 x{static_cast<float>(i) / 1024.0f * 2.0f};
+        float3 y = curves(x, colorGrading.gamma, colorGrading.midPoint, colorGrading.scale);
+        g_curvePlot[i]        = y.r;
+        g_curvePlot[1024 + i] = y.g;
+        g_curvePlot[2048 + i] = y.b;
+    }
+}
+
+void tooltipFloat(const float value) {
+    if (ImGui::IsItemActive() || ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("%.2f", value);
+    }
+}
+
+void pushSliderColors(const float hue) {
+    ImGui::PushStyleColor(ImGuiCol_FrameBg,
+        static_cast<ImVec4>(ImColor::HSV(hue, 0.5f, 0.5f)));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered,
+        static_cast<ImVec4>(ImColor::HSV(hue, 0.6f, 0.5f)));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgActive,
+        static_cast<ImVec4>(ImColor::HSV(hue, 0.7f, 0.5f)));
+    ImGui::PushStyleColor(ImGuiCol_SliderGrab,
+        static_cast<ImVec4>(ImColor::HSV(hue, 0.9f, 0.9f)));
+}
+
+void popSliderColors() { ImGui::PopStyleColor(4); }
+
+void gui(Engine* engine, View*) {
+    auto& params = g_params;
+    ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f));
+    if (g_hideUi) {
+        ImGui::SetNextWindowCollapsed(true, ImGuiCond_Always);
+    }
+    ImGui::Begin("Parameters");
+    {
+        if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Indent();
+            ImGui::Combo("Model", &params.currentMaterialModel,
+                    "Unlit\0Lit\0Subsurface\0Cloth\0Specular glossiness\0\0");
+
+            if (params.currentMaterialModel == MATERIAL_MODEL_LIT) {
+                ImGui::Combo("Blending", &params.currentBlending,
+                        "Opaque\0Transparent\0Fade\0Thin refraction\0Solid refraction\0\0");
+            }
+
+            ImGui::ColorEdit3("Base color", &params.color.r);
+
+            bool hasRefraction = params.currentBlending == BLENDING_THIN_REFRACTION ||
+                    params.currentBlending == BLENDING_SOLID_REFRACTION;
+
+            if (params.currentMaterialModel > MATERIAL_MODEL_UNLIT) {
+                if (params.currentBlending == BLENDING_TRANSPARENT ||
+                        params.currentBlending == BLENDING_FADE) {
+                    ImGui::SliderFloat("Alpha", &params.alpha, 0.0f, 1.0f);
+                }
+
+                if (params.currentMaterialModel != MATERIAL_MODEL_SPECGLOSS) {
+                    ImGui::SliderFloat("Roughness", &params.roughness, 0.0f, 1.0f);
+                } else {
+                    ImGui::SliderFloat("Glossiness", &params.glossiness, 0.0f, 1.0f);
+                    ImGui::ColorEdit3("Specular color", &params.specularColor.r);
+                }
+
+                if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH &&
+                        params.currentMaterialModel != MATERIAL_MODEL_SPECGLOSS) {
+                    if (!hasRefraction) {
+                        ImGui::SliderFloat("Metallic", &params.metallic, 0.0f, 1.0f);
+                        ImGui::SliderFloat("Reflectance", &params.reflectance, 0.0f, 1.0f);
+                    }
+                }
+
+                if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH &&
+                    params.currentMaterialModel != MATERIAL_MODEL_SUBSURFACE &&
+                    params.currentMaterialModel != MATERIAL_MODEL_SPECGLOSS) {
+                    ImGui::SliderFloat("2nd Roughness", &params.secondRoughness, 0.0f, 1.0f);
+                    ImGui::SliderFloat("2nd Roughness Weight", &params.secondRoughnessWeight, 0.0f, 1.0f);
+                }
+
+                if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH &&
+                        params.currentMaterialModel != MATERIAL_MODEL_SUBSURFACE) {
+                    ImGui::ColorEdit3("Sheen color", &params.sheenColor.r);
+                    ImGui::SliderFloat("Sheen roughness", &params.sheenRoughness, 0.0f, 1.0f);
+                    if (params.currentMaterialModel != MATERIAL_MODEL_SPECGLOSS) {
+                        ImGui::SliderFloat("Iridescence", &params.iridescence, 0.0f, 1.0f);
+                        ImGui::SliderFloat("Iridescence IOR", &params.iridescenceIor, 1.0f, 3.0f);
+                        ImGui::SliderFloat("Iridescence thickness",
+                                &params.iridescenceThickness, 0.0f, 2000.0f);
+                    }
+                    ImGui::SliderFloat("Clear coat", &params.clearCoat, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Clear coat roughness", &params.clearCoatRoughness, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Anisotropy", &params.anisotropy, -1.0f, 1.0f);
+                }
+
+                if (params.currentMaterialModel == MATERIAL_MODEL_SUBSURFACE) {
+                    ImGui::SliderFloat("Thickness", &params.thickness, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Subsurface power", &params.subsurfacePower, 1.0f, 24.0f);
+                    ImGui::ColorEdit3("Subsurface color", &params.subsurfaceColor.r);
+                }
+
+                if (params.currentMaterialModel == MATERIAL_MODEL_CLOTH) {
+                    ImGui::ColorEdit3("Sheen color", &params.sheenColor.r);
+                    ImGui::ColorEdit3("Subsurface color", &params.subsurfaceColor.r);
+                }
+
+                if (hasRefraction) {
+                    ImGui::SliderFloat("IOR", &params.ior, 1.0f, 3.0f);
+                    ImGui::SliderFloat("Transmission", &params.transmission, 0.0f, 1.0f);
+                    if (params.currentBlending == BLENDING_SOLID_REFRACTION) {
+                        ImGui::SliderFloat("Dispersion", &params.dispersion, 0.0f, 5.0f);
+                    }
+                    ImGui::SliderFloat("Thickness", &params.thickness, 0.0f, 1.0f);
+                    ImGui::ColorEdit3("Transmittance", &params.transmittanceColor.r);
+                    ImGui::SliderFloat("Distance", &params.distance, 0.0f, 4.0f);
+                    ImGui::Checkbox("Screen space refraction", &params.ssr);
+                }
+            }
+
+            ImGui::ColorEdit3("Emissive color", &params.emissiveColor.r);
+            ImGui::SliderFloat("Emissive EV", &params.emissiveEV, -24.0f, 24.0f);
+            ImGui::SliderFloat("Exposure weight", &params.emissiveExposureWeight, 0.0f, 1.0f);
+            ImGui::Unindent();
+        }
+
+        if (ImGui::CollapsingHeader("Shading AA")) {
+            ImGui::Indent();
+            ImGui::SliderFloat("Variance", &params.specularAntiAliasingVariance, 0.0f, 1.0f);
+            ImGui::SliderFloat("Threshold", &params.specularAntiAliasingThreshold, 0.0f, 1.0f);
+            ImGui::Unindent();
+        }
+
+        if (ImGui::CollapsingHeader("Object")) {
+            ImGui::Indent();
+            ImGui::Checkbox("Cast shadows##object", &params.castShadows);
+            ImGui::Unindent();
+        }
+
+        if (ImGui::CollapsingHeader("Camera")) {
+            ImGui::Indent();
+            ImGui::SliderFloat("Focal length", &params.cameraFocalLength, 16.0f, 90.0f);
+            ImGui::SliderFloat("Aperture", &params.cameraAperture, 1.0f, 32.0f);
+            ImGui::SliderFloat("Speed", &params.cameraSpeed, 800.0f, 1.0f);
+            ImGui::SliderFloat("ISO", &params.cameraISO, 25.0f, 6400.0f);
+            ImGui::SliderFloat("Near", &params.cameraNear, 0.01f, 1.0f);
+            ImGui::SliderFloat("Far", &params.cameraFar, 1.0f, 10000.0f);
+            ImGui::Unindent();
+
+            g_filamentApp->setCameraFocalLength(params.cameraFocalLength);
+            g_filamentApp->setCameraNearFar(params.cameraNear, params.cameraFar);
+        }
+
+        if (ImGui::CollapsingHeader("Indirect Light")) {
+            ImGui::Indent();
+            ImGui::SliderFloat("IBL", &params.iblIntensity, 0.0f, 50000.0f);
+            ImGui::SliderAngle("Rotation", &params.iblRotation);
+            if (ImGui::CollapsingHeader("SSAO")) {
+                int quality = static_cast<int>(params.ssaoOptions.quality);
+                int lowpass = static_cast<int>(params.ssaoOptions.lowPassFilter);
+                bool upsampling = params.ssaoOptions.upsampling != View::QualityLevel::LOW;
+                ImGui::Checkbox("Enabled##ssao", &params.ssaoOptions.enabled);
+                ImGui::SliderFloat("Radius", &params.ssaoOptions.radius, 0.05f, 5.0f);
+                ImGui::SliderFloat("Bias", &params.ssaoOptions.bias, 0.0f, 0.01f, "%.6f");
+                ImGui::SliderFloat("Min Horizon angle", &params.ssaoOptions.minHorizonAngleRad, 0.0f, M_PI_4, "%.6f");
+                ImGui::SliderFloat("Intensity", &params.ssaoOptions.intensity, 0.0f, 4.0f);
+                ImGui::SliderFloat("Power", &params.ssaoOptions.power, 0.0f, 4.0f);
+                ImGui::SliderInt("Quality", &quality, 0, 3);
+                ImGui::SliderInt("Low Pass", &lowpass, 0, 2);
+                ImGui::SliderFloat("Bilateral Threshold", &params.ssaoOptions.bilateralThreshold, 0.0f, 0.5f);
+                ImGui::Checkbox("Bent Normals", &params.ssaoOptions.bentNormals);
+                ImGui::Checkbox("High quality upsampling", &upsampling);
+// Can be used to debug SSAO
+//                ImGui::SliderInt("SampleCount",
+//                        debug.getPropertyAddress<int>("d.ssao.sampleCount"), 1, 128);
+//                ImGui::SliderInt("spiralTurns",
+//                        debug.getPropertyAddress<int>("d.ssao.spiralTurns"), 1,
+//                                *debug.getPropertyAddress<int>("d.ssao.sampleCount"));
+//                ImGui::SliderInt("kernelSize",
+//                        debug.getPropertyAddress<int>("d.ssao.kernelSize"), 1, 23);
+//                ImGui::SliderFloat("stddev",
+//                        debug.getPropertyAddress<float>("d.ssao.stddev"), 0.0f, 8.0f);
+
+                params.ssaoOptions.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
+                params.ssaoOptions.quality = static_cast<View::QualityLevel>(quality);
+                params.ssaoOptions.lowPassFilter = static_cast<View::QualityLevel>(lowpass);
+                if (ImGui::CollapsingHeader("Dominant Light Shadows")) {
+                    int sampleCount = params.ssaoOptions.ssct.sampleCount;
+                    int rayCount = params.ssaoOptions.ssct.rayCount;
+                    ImGui::Checkbox("Enabled##dls", &params.ssaoOptions.ssct.enabled);
+                    ImGui::SliderFloat("Cone angle", &params.ssaoOptions.ssct.lightConeRad, 0.0f, M_PI_2);
+                    ImGui::SliderFloat("Shadow Distance", &params.ssaoOptions.ssct.shadowDistance, 0.0f, 10.0f);
+                    ImGui::SliderFloat("Contact dist max", &params.ssaoOptions.ssct.contactDistanceMax, 0.0f, 100.0f);
+                    ImGui::SliderFloat("Intensity##dls", &params.ssaoOptions.ssct.intensity, 0.0f, 10.0f);
+                    ImGui::SliderFloat("Depth bias", &params.ssaoOptions.ssct.depthBias, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Depth slope bias", &params.ssaoOptions.ssct.depthSlopeBias, 0.0f, 1.0f);
+                    ImGui::SliderInt("Sample Count", &sampleCount, 1, 32);
+                    ImGui::SliderInt("Ray Count", &rayCount, 1, 8);
+                    ImGuiExt::DirectionWidget("Direction##dls", params.ssaoOptions.ssct.lightDirection.v);
+                    params.ssaoOptions.ssct.sampleCount = sampleCount;
+                    params.ssaoOptions.ssct.rayCount = rayCount;
+                }
+            }
+            ImGui::Unindent();
+        }
+
+        if (ImGui::CollapsingHeader("Directional Light")) {
+            ImGui::Indent();
+            ImGui::Checkbox("Enabled##directionalLight", &params.directionalLightEnabled);
+            ImGui::ColorEdit3("Color##directionalLight", &params.lightColor.r);
+            ImGui::SliderFloat("Lux", &params.lightIntensity, 0.0f, 150000.0f);
+            ImGui::SliderFloat("Sun size", &params.sunAngularRadius, 0.1f, 10.0f);
+            ImGui::SliderFloat("Halo size", &params.sunHaloSize, 1.01f, 40.0f);
+            ImGui::SliderFloat("Halo falloff", &params.sunHaloFalloff, 0.0f, 2048.0f);
+            ImGuiExt::DirectionWidget("Direction", params.lightDirection.v);
+            if (ImGui::CollapsingHeader("Contact Shadows")) {
+                ImGui::Checkbox("Enabled##contactShadows", &params.screenSpaceContactShadows);
+                ImGui::SliderInt("Steps", &params.stepCount, 0, 255);
+                ImGui::SliderFloat("Distance", &params.maxShadowDistance, 0.0f, 10.0f);
+            }
+            ImGui::Unindent();
+        }
+
+        if (ImGui::CollapsingHeader("Spot Light")) {
+            ImGui::Indent();
+            ImGui::Checkbox("Enabled##spotLight", &params.spotLightEnabled);
+            ImGui::SliderFloat3("Position", &params.spotLightPosition.x, -5.0f, 5.0f);
+            ImGui::ColorEdit3("Color##spotLight", &params.spotLightColor.r);
+            ImGui::Checkbox("Cast shadows##spotLight", &params.spotLightCastShadows);
+            ImGui::SliderFloat("Lumens", &params.spotLightIntensity, 0.0, 1000000.f);
+            ImGui::SliderAngle("Cone angle", &params.spotLightConeAngle, 0.0f, 90.0f);
+            ImGui::SliderFloat("Cone fade", &params.spotLightConeFade, 0.0f, 1.0f);
+            ImGui::Unindent();
+        }
+
+        if (ImGui::CollapsingHeader("Fog")) {
+            ImGui::Indent();
+            ImGui::Checkbox("Enable Fog", &params.fogOptions.enabled);
+            ImGui::SliderFloat("Start", &params.fogOptions.distance, 0.0f, 100.0f);
+            ImGui::SliderFloat("Density", &params.fogOptions.density, 0.0f, 1.0f);
+            ImGui::SliderFloat("Height", &params.fogOptions.height, 0.0f, 100.0f);
+            ImGui::SliderFloat("Height Falloff", &params.fogOptions.heightFalloff, 0.0f, 10.0f);
+            ImGui::SliderFloat("Scattering Start", &params.fogOptions.inScatteringStart, 0.0f, 100.0f);
+            ImGui::SliderFloat("Scattering Size", &params.fogOptions.inScatteringSize, 0.1f, 100.0f);
+            ImGui::Checkbox("Color from IBL", &params.fogOptions.fogColorFromIbl);
+            ImGui::ColorPicker3("Color", params.fogOptions.color.v);
+            ImGui::Unindent();
+        }
+
+        if (ImGui::CollapsingHeader("Post-processing")) {
+            ImGui::Indent();
+            ImGui::Checkbox("MSAA 4x", &params.msaa);
+            ImGui::Checkbox("TAA", &params.taaOptions.enabled);
+            if (params.taaOptions.enabled) {
+                ImGui::Indent();
+                ImGui::SliderFloat("feedback", &params.taaOptions.feedback, 0.0f, 1.0f);
+                ImGui::Unindent();
+            }
+            ImGui::Checkbox("FXAA", &params.fxaa);
+            ImGui::Checkbox("Bloom", &params.bloomOptions.enabled);
+            if (params.bloomOptions.enabled) {
+                ImGui::Indent();
+                ImGui::SliderFloat("Strength", &params.bloomOptions.strength, 0.0f, 1.0f);
+                ImGui::SliderFloat("Dirt", &params.bloomOptions.dirtStrength, 0.0f, 1.0f);
+                ImGui::Unindent();
+            }
+            ImGui::Checkbox("Dithering", &params.dithering);
+            ImGui::Unindent();
+        }
+
+        if (ImGui::CollapsingHeader("Color grading")) {
+            ColorGradingOptions& colorGrading = params.colorGradingOptions;
+
+            ImGui::Indent();
+            ImGui::Checkbox("Enabled##colorGrading", &params.colorGrading);
+            ImGui::Combo("Tone-mapping", &colorGrading.toneMapping,
+                    "Linear\0ACES (legacy)\0ACES\0Filmic\0Display Range\0\0");
+            ImGui::Checkbox("Luminance scaling", &colorGrading.luminanceScaling);
+            if (ImGui::CollapsingHeader("While balance")) {
+                ImGui::SliderInt("Temperature", &colorGrading.temperature, -100, 100);
+                ImGui::SliderInt("Tint", &colorGrading.tint, -100, 100);
+            }
+            if (ImGui::CollapsingHeader("Channel mixer")) {
+                pushSliderColors(0.0f / 7.0f);
+                ImGui::VSliderFloat("##outRed.r", verticalSliderSize, &colorGrading.outRed.r, -2.0f, 2.0f, "");
+                tooltipFloat(colorGrading.outRed.r);
+                ImGui::SameLine();
+                ImGui::VSliderFloat("##outRed.g", verticalSliderSize, &colorGrading.outRed.g, -2.0f, 2.0f, "");
+                tooltipFloat(colorGrading.outRed.g);
+                ImGui::SameLine();
+                ImGui::VSliderFloat("##outRed.b", verticalSliderSize, &colorGrading.outRed.b, -2.0f, 2.0f, "");
+                tooltipFloat(colorGrading.outRed.b);
+                ImGui::SameLine(0.0f, 18.0f);
+                popSliderColors();
+
+                pushSliderColors(2.0f / 7.0f);
+                ImGui::VSliderFloat("##outGreen.r", verticalSliderSize, &colorGrading.outGreen.r, -2.0f, 2.0f, "");
+                tooltipFloat(colorGrading.outGreen.r);
+                ImGui::SameLine();
+                ImGui::VSliderFloat("##outGreen.g", verticalSliderSize, &colorGrading.outGreen.g, -2.0f, 2.0f, "");
+                tooltipFloat(colorGrading.outGreen.g);
+                ImGui::SameLine();
+                ImGui::VSliderFloat("##outGreen.b", verticalSliderSize, &colorGrading.outGreen.b, -2.0f, 2.0f, "");
+                tooltipFloat(colorGrading.outGreen.b);
+                ImGui::SameLine(0.0f, 18.0f);
+                popSliderColors();
+
+                pushSliderColors(4.0f / 7.0f);
+                ImGui::VSliderFloat("##outBlue.r", verticalSliderSize, &colorGrading.outBlue.r, -2.0f, 2.0f, "");
+                tooltipFloat(colorGrading.outBlue.r);
+                ImGui::SameLine();
+                ImGui::VSliderFloat("##outBlue.g", verticalSliderSize, &colorGrading.outBlue.g, -2.0f, 2.0f, "");
+                tooltipFloat(colorGrading.outBlue.g);
+                ImGui::SameLine();
+                ImGui::VSliderFloat("##outBlue.b", verticalSliderSize, &colorGrading.outBlue.b, -2.0f, 2.0f, "");
+                tooltipFloat(colorGrading.outBlue.b);
+                popSliderColors();
+            }
+            if (ImGui::CollapsingHeader("Tonal ranges")) {
+                ImGui::ColorEdit3("Shadows", &colorGrading.shadows.x);
+                ImGui::SliderFloat("Shadows weight", &colorGrading.shadows.w, -2.0f, 2.0f);
+                ImGui::ColorEdit3("Mid-tones", &colorGrading.midtones.x);
+                ImGui::SliderFloat("Mid-tones weight", &colorGrading.midtones.w, -2.0f, 2.0f);
+                ImGui::ColorEdit3("Highlights", &colorGrading.highlights.x);
+                ImGui::SliderFloat("Highlights weight", &colorGrading.highlights.w, -2.0f, 2.0f);
+                ImGui::SliderFloat4("Ranges", &colorGrading.ranges.x, 0.0f, 1.0f);
+                computeRangePlot(params);
+                ImGuiExt::PlotLinesSeries("", 3,
+                        rangePlotSeriesStart, getRangePlotValue, rangePlotSeriesEnd,
+                        g_rangePlot, 1024, 0, "", 0.0f, 1.0f, plotLinesWideSize);
+            }
+            if (ImGui::CollapsingHeader("Color decision list")) {
+                ImGui::SliderFloat3("Slope", &colorGrading.slope.x, 0.0f, 2.0f);
+                ImGui::SliderFloat3("Offset", &colorGrading.offset.x, -0.5f, 0.5f);
+                ImGui::SliderFloat3("Power", &colorGrading.power.x, 0.0f, 2.0f);
+            }
+            if (ImGui::CollapsingHeader("Adjustments")) {
+                ImGui::SliderFloat("Contrast", &colorGrading.contrast, 0.0f, 2.0f);
+                ImGui::SliderFloat("Vibrance", &colorGrading.vibrance, 0.0f, 2.0f);
+                ImGui::SliderFloat("Saturation", &colorGrading.saturation, 0.0f, 2.0f);
+            }
+            if (ImGui::CollapsingHeader("Curves")) {
+                ImGui::Checkbox("Linked curves", &colorGrading.linkedCurves);
+
+                computeCurvePlot(params);
+
+                if (!colorGrading.linkedCurves) {
+                    pushSliderColors(0.0f / 7.0f);
+                    ImGui::VSliderFloat("##curveGamma.r", verticalSliderSize, &colorGrading.gamma.r, 0.0f, 4.0f, "");
+                    tooltipFloat(colorGrading.gamma.r);
+                    ImGui::SameLine();
+                    ImGui::VSliderFloat("##curveMid.r", verticalSliderSize, &colorGrading.midPoint.r, 0.0f, 2.0f, "");
+                    tooltipFloat(colorGrading.midPoint.r);
+                    ImGui::SameLine();
+                    ImGui::VSliderFloat("##curveScale.r", verticalSliderSize, &colorGrading.scale.r, 0.0f, 4.0f, "");
+                    tooltipFloat(colorGrading.scale.r);
+                    ImGui::SameLine(0.0f, 18.0f);
+                    popSliderColors();
+
+                    ImGui::PushStyleColor(ImGuiCol_PlotLines, static_cast<ImVec4>(ImColor::HSV(0.0f, 0.7f, 0.8f)));
+                    ImGui::PlotLines("", g_curvePlot, 1024, 0, "Red", 0.0f, 2.0f, plotLinesSize);
+                    ImGui::PopStyleColor();
+
+                    pushSliderColors(2.0f / 7.0f);
+                    ImGui::VSliderFloat("##curveGamma.g", verticalSliderSize, &colorGrading.gamma.g, 0.0f, 4.0f, "");
+                    tooltipFloat(colorGrading.gamma.g);
+                    ImGui::SameLine();
+                    ImGui::VSliderFloat("##curveMid.g", verticalSliderSize, &colorGrading.midPoint.g, 0.0f, 2.0f, "");
+                    tooltipFloat(colorGrading.midPoint.g);
+                    ImGui::SameLine();
+                    ImGui::VSliderFloat("##curveScale.g", verticalSliderSize, &colorGrading.scale.g, 0.0f, 4.0f, "");
+                    tooltipFloat(colorGrading.scale.g);
+                    ImGui::SameLine(0.0f, 18.0f);
+                    popSliderColors();
+
+                    ImGui::PushStyleColor(ImGuiCol_PlotLines, static_cast<ImVec4>(ImColor::HSV(0.3f, 0.7f, 0.8f)));
+                    ImGui::PlotLines("", g_curvePlot + 1024, 1024, 0, "Green", 0.0f, 2.0f, plotLinesSize);
+                    ImGui::PopStyleColor();
+
+                    pushSliderColors(4.0f / 7.0f);
+                    ImGui::VSliderFloat("##curveGamma.b", verticalSliderSize, &colorGrading.gamma.b, 0.0f, 4.0f, "");
+                    tooltipFloat(colorGrading.gamma.b);
+                    ImGui::SameLine();
+                    ImGui::VSliderFloat("##curveMid.b", verticalSliderSize, &colorGrading.midPoint.b, 0.0f, 2.0f, "");
+                    tooltipFloat(colorGrading.midPoint.b);
+                    ImGui::SameLine();
+                    ImGui::VSliderFloat("##curveScale.b", verticalSliderSize, &colorGrading.scale.b, 0.0f, 4.0f, "");
+                    tooltipFloat(colorGrading.scale.b);
+                    ImGui::SameLine(0.0f, 18.0f);
+                    popSliderColors();
+
+                    ImGui::PushStyleColor(ImGuiCol_PlotLines, static_cast<ImVec4>(ImColor::HSV(0.6f, 0.7f, 0.8f)));
+                    ImGui::PlotLines("", g_curvePlot + 2048, 1024, 0, "Blue", 0.0f, 2.0f, plotLinesSize);
+                    ImGui::PopStyleColor();
+                } else {
+                    ImGui::VSliderFloat("##curveGamma", verticalSliderSize, &colorGrading.gamma.r, 0.0f, 4.0f, "");
+                    tooltipFloat(colorGrading.gamma.r);
+                    ImGui::SameLine();
+                    ImGui::VSliderFloat("##curveMid", verticalSliderSize, &colorGrading.midPoint.r, 0.0f, 2.0f, "");
+                    tooltipFloat(colorGrading.midPoint.r);
+                    ImGui::SameLine();
+                    ImGui::VSliderFloat("##curveScale", verticalSliderSize, &colorGrading.scale.r, 0.0f, 4.0f, "");
+                    tooltipFloat(colorGrading.scale.r);
+                    ImGui::SameLine(0.0f, 18.0f);
+
+                    colorGrading.gamma = float3{colorGrading.gamma.r};
+                    colorGrading.midPoint = float3{colorGrading.midPoint.r};
+                    colorGrading.scale = float3{colorGrading.scale.r};
+
+                    ImGui::PushStyleColor(ImGuiCol_PlotLines, static_cast<ImVec4>(ImColor::HSV(0.17f, 0.21f, 0.9f)));
+                    ImGui::PlotLines("", g_curvePlot, 1024, 0, "RGB", 0.0f, 2.0f, plotLinesSize);
+                    ImGui::PopStyleColor();
+                }
+            }
+            ImGui::Unindent();
+        }
+
+        if (ImGui::CollapsingHeader("Debug")) {
+            DebugRegistry& debug = engine->getDebugRegistry();
+
+            auto debugCheckbox = [&debug](const char* label, const char* name) {
+                if (bool* p = debug.getPropertyAddress<bool>(name)) {
+                    ImGui::Checkbox(label, p);
+                }
+            };
+            auto debugSliderFloat = [&debug](const char* label, const char* name, float min, float max) {
+                if (float* p = debug.getPropertyAddress<float>(name)) {
+                    ImGui::SliderFloat(label, p, min, max);
+                }
+            };
+
+            ImGui::Indent();
+            debugCheckbox("Camera at origin", "d.view.camera_at_origin");
+            ImGui::Checkbox("Stable Shadow Map", &params.stableShadowMap);
+            debugCheckbox("Light Far uses shadow casters", "d.shadowmap.far_uses_shadowcasters");
+            debugCheckbox("Focus shadow casters", "d.shadowmap.focus_shadowcasters");
+
+            ImGui::SliderFloat("Normal bias", &params.normalBias, 0.0f, 4.0f);
+            ImGui::SliderFloat("Constant bias", &params.constantBias, 0.0f, 1.0f);
+            ImGui::SliderFloat("Polygon Offset Scale", &params.polygonOffsetSlope, 0.0f, 10.0f);
+            ImGui::SliderFloat("Polygon Offset Constant", &params.polygonOffsetConstant, 0.0f, 10.0f);
+
+            ImGui::Checkbox("Enable LiSPSM", &params.lispsm);
+            if (params.lispsm) {
+                debugSliderFloat("dzn", "d.shadowmap.dzn", 0.0f, 1.0f);
+                debugSliderFloat("dzf", "d.shadowmap.dzf", -1.0f, 0.0f);
+            }
+            ImGui::Unindent();
+        }
+    }
+    ImGui::End();
+
+    MaterialInstance* materialInstance = updateInstances(params);
+
+    auto& rcm = engine->getRenderableManager();
+    size_t count = 0;
+    for (auto renderable : g_meshSet->getRenderables()) {
+        auto instance = rcm.getInstance(renderable);
+        if (!instance) continue;
+        if (!g_singleMode || count == 0) {
+            for (size_t i = 0; i < rcm.getPrimitiveCount(instance); i++) {
+                rcm.setMaterialInstanceAt(instance, i, materialInstance);
+            }
+        }
+        count++;
+        rcm.setCastShadows(instance, params.castShadows);
+        rcm.setReceiveShadows(instance, true);
+    }
+
+    if (params.directionalLightEnabled && !params.hasDirectionalLight) {
+        g_scene->addEntity(params.light);
+        params.hasDirectionalLight = true;
+    } else if (!params.directionalLightEnabled && params.hasDirectionalLight) {
+        g_scene->remove(params.light);
+        params.hasDirectionalLight = false;
+    }
+
+    if (auto* ibl = g_filamentApp->getIBL()) {
+        ibl->getIndirectLight()->setIntensity(params.iblIntensity);
+        ibl->getIndirectLight()->setRotation(
+                mat3f::rotation(params.iblRotation, float3{ 0, 1, 0 }));
+    }
+
+    auto& lcm = engine->getLightManager();
+    auto lightInstance = lcm.getInstance(params.light);
+    lcm.setColor(lightInstance, params.lightColor);
+    lcm.setIntensity(lightInstance, params.lightIntensity);
+    lcm.setDirection(lightInstance, params.lightDirection);
+    lcm.setSunAngularRadius(lightInstance, params.sunAngularRadius);
+    lcm.setSunHaloSize(lightInstance, params.sunHaloSize);
+    lcm.setSunHaloFalloff(lightInstance, params.sunHaloFalloff);
+
+    LightManager::ShadowOptions options = lcm.getShadowOptions(lightInstance);
+    options.mapSize = 2048;
+    options.stable = params.stableShadowMap;
+    options.lispsm = params.lispsm;
+    options.normalBias = params.normalBias;
+    options.constantBias = params.constantBias;
+    options.polygonOffsetConstant = params.polygonOffsetConstant;
+    options.polygonOffsetSlope = params.polygonOffsetSlope;
+    options.screenSpaceContactShadows = params.screenSpaceContactShadows;
+    options.stepCount = params.stepCount;
+    options.maxShadowDistance = params.maxShadowDistance;
+    lcm.setShadowOptions(lightInstance, options);
+
+    if (params.spotLightEnabled && !params.hasSpotLight) {
+        g_scene->addEntity(params.spotLight);
+        params.hasSpotLight = true;
+    } else if (!params.spotLightEnabled && params.hasSpotLight) {
+        g_scene->remove(params.spotLight);
+        params.hasSpotLight = false;
+    }
+    auto spotLightInstance = lcm.getInstance(params.spotLight);
+    auto& tcm = engine->getTransformManager();
+    tcm.setTransform(tcm.getInstance(params.spotLight),
+            mat4f::translation(params.spotLightPosition));
+    lcm.setColor(spotLightInstance, params.spotLightColor);
+    lcm.setShadowCaster(spotLightInstance, params.spotLightCastShadows);
+    lcm.setIntensity(spotLightInstance, params.spotLightIntensity);
+    lcm.setSpotLightCone(spotLightInstance, params.spotLightConeAngle * params.spotLightConeFade,
+            params.spotLightConeAngle);
+}
+
+void preRender(Engine* engine, View* view, Scene*, Renderer* renderer) {
+    view->setAntiAliasing(g_params.fxaa ? View::AntiAliasing::FXAA : View::AntiAliasing::NONE);
+    view->setDithering(g_params.dithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
+    view->setBloomOptions(g_params.bloomOptions);
+    view->setFogOptions(g_params.fogOptions);
+    view->setTemporalAntiAliasingOptions(g_params.taaOptions);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    view->setSampleCount(static_cast<uint8_t>(g_params.msaa ? 4 : 1));
+#pragma clang diagnostic pop
+    view->setAmbientOcclusionOptions(g_params.ssaoOptions);
+
+    if (g_params.colorGrading) {
+        if (g_params.colorGradingOptions != g_lastColorGradingOptions) {
+            ColorGradingOptions &options = g_params.colorGradingOptions;
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+            ColorGrading *colorGrading = ColorGrading::Builder()
+                    .whiteBalance(static_cast<float>(options.temperature) / 100.0f,
+                        static_cast<float>(options.tint) / 100.0f)
+                    .channelMixer(options.outRed, options.outGreen, options.outBlue)
+                    .shadowsMidtonesHighlights(
+                            Color::toLinear(options.shadows),
+                            Color::toLinear(options.midtones),
+                            Color::toLinear(options.highlights),
+                            options.ranges
+                    )
+                    .slopeOffsetPower(options.slope, options.offset, options.power)
+                    .contrast(options.contrast)
+                    .vibrance(options.vibrance)
+                    .saturation(options.saturation)
+                    .curves(options.gamma, options.midPoint, options.scale)
+                    .toneMapping(static_cast<ColorGrading::ToneMapping>(options.toneMapping))
+                    .luminanceScaling(options.luminanceScaling)
+                    .build(*engine);
+#pragma clang diagnostic pop
+
+            if (g_colorGrading) {
+                engine->destroy(g_colorGrading);
+            }
+
+            g_colorGrading = colorGrading;
+            g_lastColorGradingOptions = options;
+        }
+        view->setColorGrading(g_colorGrading);
+    } else {
+        view->setColorGrading(nullptr);
+    }
+
+    // Without an IBL, we must clear the swapchain to black before each frame.
+    renderer->setClearOptions(
+            { .clearColor = { 0.0f, 0.0f, 0.0f, 1.0f }, .clear = !g_filamentApp->getIBL() });
+
+    Camera& camera = view->getCamera();
+    camera.setExposure(g_params.cameraAperture, 1.0f / g_params.cameraSpeed, g_params.cameraISO);
+}
+
+} // namespace
+
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        app::DisplayManager* dm, app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    g_config = config;
+    g_assetLoader = loader;
+    g_shadowPlane = config.getBool("shadow-plane");
+    g_singleMode = config.getBool("single-mode");
+    g_hideUi = config.getBool("hide-ui");
+    config.dirt = config.getString("dirt");
+    g_meshScale = config.getFloat("scale", 1.0f);
+    app->config = config;
+
+    g_params.bloomOptions.enabled = true;
+
+    auto fApp = samples::getBuilder(config, dm, loader)
+                        .setup(setup)
+                        .cleanup(cleanup)
+                        .imgui(gui)
+                        .preRender(preRender)
+                        .build();
+    app->filamentApp = fApp.get();
+    g_filamentApp = app->filamentApp;
+    return fApp;
+}
+
+samples::SampleParameters createAppParameters() {
+    return {
+        samples::Parameter::makeBool("shadow-plane", 'p', "Enable shadow-receiving ground plane",
+                false),
+        samples::Parameter::makeBool("single-mode", 'n', "Single object mode", false),
+        samples::Parameter::makeString("dirt", 'd', "Path to a dirt texture", ""),
+        samples::Parameter::makeFloat("scale", 's', "Applies uniform scale", 1.0f),
+        samples::Parameter::makeBool("hide-ui", '\0', "Hide the UI by default", false)
+    };
+}
+
+#ifndef __ANDROID__
+int main(const int argc, char* argv[]) {
+    SampleConfig config;
+    samples::CommandLineSpecification spec = {
+        .sampleDescription = "MATERIAL_SANDBOX is a tool for testing Filament materials.",
+        .positionalArgsDescription = { "mesh files (.obj, .fbx, .filamesh)" },
+        .parameters = createAppParameters(),
+    };
+
+    samples::handleCommandLineArguments(argc, argv, &config, spec);
+    auto dm = samples::getDisplayManager(config);
+    auto loader = samples::getAssetLoader(config);
+
+    for (const auto& fname : config.positionalArgs) {
+        Path filename(fname.c_str_safe());
+        if (!loader->exists(filename)) {
+            std::cerr << "file " << filename << " not found!" << std::endl;
+            return 1;
+        }
+    }
+
+    config.title = "Material Sandbox";
+    auto fApp = createSampleApp(config, dm.get(), loader.get());
+    fApp->run();
+    return 0;
+}
+#endif

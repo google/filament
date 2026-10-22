@@ -1,0 +1,8 @@
+[COMPATIBILITY]
+disable=consider-using-f-string
+
+[COMPLEXITY]
+disable=too-many-branches,too-many-instance-attributes
+
+[STYLE]
+disable=consider-using-in

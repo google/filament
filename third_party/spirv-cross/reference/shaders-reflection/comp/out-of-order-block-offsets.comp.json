@@ -1,0 +1,44 @@
+{
+    "entryPoints" : [
+        {
+            "name" : "main",
+            "mode" : "comp",
+            "workgroup_size" : [
+                1,
+                1,
+                1
+            ],
+            "workgroup_size_is_spec_constant_id" : [
+                false,
+                false,
+                false
+            ]
+        }
+    ],
+    "types" : {
+        "_7" : {
+            "name" : "SSBO",
+            "members" : [
+                {
+                    "name" : "foo",
+                    "type" : "uint",
+                    "offset" : 8
+                },
+                {
+                    "name" : "bar",
+                    "type" : "uint",
+                    "offset" : 4
+                }
+            ]
+        }
+    },
+    "ssbos" : [
+        {
+            "type" : "_7",
+            "name" : "SSBO",
+            "block_size" : 12,
+            "set" : 0,
+            "binding" : 0
+        }
+    ]
+}

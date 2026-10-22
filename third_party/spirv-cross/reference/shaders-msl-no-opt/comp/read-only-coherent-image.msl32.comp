@@ -1,0 +1,17 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    uint val;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO& _9 [[buffer(0)]], texture2d<uint, access::read, memory_coherence_device> img [[texture(0)]])
+{
+    _9.val = img.read(uint2(int2(10))).x;
+}
+

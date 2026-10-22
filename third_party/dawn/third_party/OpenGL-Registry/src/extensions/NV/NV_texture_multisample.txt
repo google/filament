@@ -1,0 +1,345 @@
+Name
+
+    NV_texture_multisample
+
+Name Strings
+
+    GL_NV_texture_multisample
+
+Contact
+
+    Jeff Bolz, NVIDIA Corporation (jbolz 'at' nvidia.com)
+
+Status
+
+    Shipping on NVIDIA GPUs (GeForce 8 and up) since Release 190.
+
+Version
+
+    Last Modified Date:         09/10/09
+    Revision:                   2
+
+Number
+
+    403
+
+Dependencies
+
+    OpenGL 2.0 is required.
+
+    This extension is written against the OpenGL 3.1 specification and the 
+    NV_gpu_program4 extension.
+
+    ARB_texture_multisample is required.
+
+    This extension interacts with NV_explicit_multisample.
+
+    This extension interacts with NV_framebuffer_multisample_coverage.
+
+    This extension interacts with EXT_direct_state_access.
+
+Overview
+
+    This specification extends NV_gpu_program4 to support per-sample fetching
+    from multisample textures described in ARB_texture_multisample.
+    Specifically, it adds:
+
+      * The TXFMS sample fetch instruction.
+
+      * Texture targets corresponding to the multisample textures added by
+        ARB_texture_multisample.
+
+      * A program option to enable these features.
+      
+    This specification also extends the ARB_texture_multisample extension
+    by adding support for EXT_direct_state_access and VCAA multisample
+    coverage with seperate <colorSamples> and <coverageSamples> parameters.
+
+New Procedures and Functions
+
+    void TexImage2DMultisampleCoverageNV(enum target,
+                                         sizei coverageSamples, sizei colorSamples,
+                                         int internalFormat,
+                                         sizei width, sizei height,
+                                         boolean fixedSampleLocations);
+                                         
+    void TexImage3DMultisampleCoverageNV(enum target,
+                                         sizei coverageSamples, sizei colorSamples,
+                                         int internalFormat,
+                                         sizei width, sizei height, sizei depth,
+                                         boolean fixedSampleLocations);
+                                         
+    void TextureImage2DMultisampleNV(uint texture, enum target,
+                                     sizei samples, int internalFormat,
+                                     sizei width, sizei height,
+                                     boolean fixedSampleLocations);
+                                     
+    void TextureImage3DMultisampleNV(uint texture, enum target,
+                                     sizei samples, int internalFormat,
+                                     sizei width, sizei height, sizei depth,
+                                     boolean fixedSampleLocations);
+                                     
+    void TextureImage2DMultisampleCoverageNV(uint texture, enum target,
+                                             sizei coverageSamples, sizei colorSamples,
+                                             int internalFormat,
+                                             sizei width, sizei height,
+                                             boolean fixedSampleLocations);
+                                             
+    void TextureImage3DMultisampleCoverageNV(uint texture, enum target,
+                                             sizei coverageSamples, sizei colorSamples,
+                                             int internalFormat,
+                                             sizei width, sizei height, sizei depth,
+                                             boolean fixedSampleLocations);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetTexLevelParameter:
+
+        TEXTURE_COVERAGE_SAMPLES_NV              0x9045
+        TEXTURE_COLOR_SAMPLES_NV                 0x9046
+
+Additions to Chapter 2 of the OpenGL 3.1 Specification (OpenGL Operation)
+
+    Modify Section 2.X.2, Program Grammar
+
+    If a program specifies the NV_texture_multisample program option, add to
+    existing grammar rules if not already present:
+
+    <texTarget>             ::= "2DMS"
+                              | "ARRAY2DMS"
+
+    <TEXop>                 ::= "TXFMS"
+
+    Add to section 2.X.4.4, Program Texture Access
+
+    Add row to table X.17
+
+                                                           coordinates used
+      texTarget          Texture Type                     s t r  layer  shadow
+      ----------------   ---------------------            -----  -----  ------
+      2DMS               TEXTURE_2D_MULTISAMPLE             <not supported>
+      ARRAY2DMS          TEXTURE_2D_MULTISAMPLE_ARRAY       <not supported>
+
+    Add row to table X.18
+
+                                      coordinates used
+      texTarget          supported      i j k  layer  lod
+      ----------------   ---------      -----  -----  ---
+      2DMS                  no          - - -    -     -
+      ARRAY2DMS             no          - - -    -     -
+
+    Replace or add language explaining TexelFetchMultisample after the
+    discussion of TexelFetch
+
+    The TXFMS instruction provides the ability to extract a single sample from
+    a specified renderbuffer, two-dimensional multisample, or two-dimensional
+    multisample array texture image using the function:
+
+      result_t_vec TexelFetchMultisample(int_vec coord, int_vec offset);
+
+    The extracted texel is converted to an (R,G,B,A) vector according to Table
+    3.20.  The result vector is interpreted as floating-point, signed integer,
+    or unsigned integer, according to the data type modifier of the
+    instruction.  If the internal format of the texture is not compatible with
+    the instruction's data type modifier, the extracted texel value is
+    undefined.
+
+    <coord> is a four-component signed integer vector used to identify the
+    single sample accessed. For the 2DMS and RENDERBUFFER targets, the x and y
+    components are used to select the pixel and the w component is used to
+    select the sample. For the ARRAY2DMS target, the x, y, and z components are
+    used to select the texel and the w component is used to select the sample.
+    All of the restrictions of TexelFetch apply to TexelFetchMultisample, with
+    the additional requirement that it must be called on a RENDERBUFFER, 2DMS,
+    or ARRAY2DMS texture target. If the sample number is greater than or equal
+    to the value of SAMPLES for the multisample texture, the results are
+    undefined.
+
+Additions to Chapter 3 of the OpenGL 3.1 Specification (Rasterization)
+
+    Add to the end of Section 3.8.4 (Multisample Textures):
+    
+    The commands
+    
+        void TexImage2DMultisampleCoverageNV(enum target,
+                                         sizei coverageSamples, sizei colorSamples,
+                                         int internalFormat,
+                                         sizei width, sizei height,
+                                         boolean fixedSampleLocations);
+                                         
+        void TexImage3DMultisampleCoverageNV(enum target,
+                                         sizei coverageSamples, sizei colorSamples,
+                                         int internalFormat,
+                                         sizei width, sizei height, sizei depth,
+                                         boolean fixedSampleLocations);
+                                         
+    establish the data storage, format, dimensions, and number of samples of a
+    multisample texture's image where the number of <colorSamples> and
+    <coverageSamples> can be explicitly specified.
+    
+    If <coverageSamples> is zero, then TEXTURE_COVERAGE_SAMPLES_NV 
+    is set to zero.  Otherwise <coverageSamples> represents a request 
+    for a desired minimum number of coverage samples. Since different 
+    implementations may support different coverage sample counts for 
+    multisampled rendering, the actual number of coverage samples 
+    allocated for the renderbuffer image is implementation dependent.  
+    However, the resulting value for TEXTURE_COVERAGE_SAMPLES_NV is
+    guaranteed to be greater than or equal to <coverageSamples> and no 
+    more than the next larger coverage sample count supported by the 
+    implementation.
+
+    If <colorSamples> is zero then TEXTURE_COLOR_SAMPLES_NV is set
+    to zero.  Otherwise, <colorSamples> represents a request for a 
+    desired minimum number of colors samples.  Since different 
+    implementations may support different color sample counts for 
+    multisampled rendering, the actual number of color samples 
+    allocated for the renderbuffer image is implementation dependent.
+    Furthermore, a given implementation may support different color 
+    sample counts for each supported coverage sample count.  The
+    resulting value for TEXTURE_COLOR_SAMPLES_NV is determined
+    after resolving the value for TEXTURE_COVERAGE_SAMPLES_NV.
+    If the requested color sample count exceeds the maximum number of
+    color samples supported by the implementation given the value of
+    TEXTURE_COVERAGE_SAMPLES_NV, the implementation will set
+    TEXTURE_COLOR_SAMPLES_NV to the highest supported value.  
+    Otherwise, the resulting value for TEXTURE_COLOR_SAMPLES_NV is
+    guaranteed to be greater than or equal to <colorSamples> and no 
+    more than the next larger color sample count supported by the 
+    implementation given the value of TEXTURE_COVERAGE_SAMPLES_NV.
+
+    If <colorSamples> is greater than <coverageSamples>, the error
+    INVALID_VALUE is generated.
+
+    If <coverageSamples> or <colorSamples> is greater than 
+    MAX_SAMPLES_EXT, the error INVALID_VALUE is generated.
+
+    If <coverageSamples> is greater than zero, and <colorSamples> is
+    zero, RENDERBUFFER_COLOR_SAMPLES_NV is set to an implementation
+    dependent value based on RENDERBUFFER_COVERAGE_SAMPLES_NV.
+    
+    An implementation may only support a subset of the possible
+    combinations of coverage samples and color samples.  Requests for
+    combinations not supported by the implementation are resolved to
+    a supported combination using the rules above.  The number of 
+    supported combinations is MAX_MULTISAMPLE_COVERAGE_MODES_NV.
+    MULTISAMPLE_COVERAGE_MODES_NV is an array of 
+    MAX_MULTISAMPLE_COVERAGE_MODES_NV pairs of integers representing
+    the combinations of coverage samples and color samples supported
+    by the implementation.  The first integer in each pair corresponds
+    to coverage samples, while the second corresponds to color samples.
+    
+    (Note: MULTISAMPLE_COVERAGE_MODES_NV and MAX_MULTISAMPLE_COVERAGE_MODES_NV
+    are specified in the NV_framebuffer_multisample_coverage extension.)
+
+    Add to the end of section 3.8.14 (Texture Objects):
+        
+    The following multisample texture update commands:
+    
+        void TextureImage2DMultisampleNV(uint texture, enum target,
+                                     sizei samples, int internalFormat,
+                                     sizei width, sizei height,
+                                     boolean fixedSampleLocations);
+                                         
+        void TextureImage3DMultisampleNV(uint texture, enum target,
+                                     sizei samples, int internalFormat,
+                                     sizei width, sizei height, sizei depth,
+                                     boolean fixedSampleLocations);
+                                         
+        void TextureImage2DMultisampleCoverageNV(uint texture, enum target,
+                                             sizei coverageSamples, sizei colorSamples,
+                                             int internalFormat,
+                                             sizei width, sizei height,
+                                             boolean fixedSampleLocations);
+                                                 
+        void TextureImage3DMultisampleCoverageNV(uint texture, enum target,
+                                             sizei coverageSamples, sizei colorSamples,
+                                             int internalFormat,
+                                             sizei width, sizei height, sizei depth,
+                                             boolean fixedSampleLocations);        
+
+    operate identically to the corresponding command where "Texture"
+    is substituted for "Tex" (and extension suffixes are dropped or
+    updated appropriately) except, rather than updating the current bound
+    texture for the texture unit indicated by the current active texture
+    state and the target parameter, these "Texture" commands update the
+    texture object named by the initial texture parameter.  If the
+    texture parameter is zero, then the target parameter selects the
+    default texture of the specified target to update.  The remaining
+    parameters following the initial texture parameter for the listed
+    "Texture" commands match the parameters for the corresponding "Tex"
+    command and are interpreted as they are for the "Tex" command.
+    If the texture parameter is for an unused name, the name becomes
+    used and the named texture object is set to a new state vector,
+    comprising all the state values listed in section 3.8.11, set
+    to the same initial values prior to the command's state update.
+    If the texture parameter is for a used name and that named texture
+    object has a different target than the specified target parameter,
+    the INVALID_OPERATION error is generated.  One consequence of this
+    error for commands that accepts TEXTURE_PROXY_* as a valid target
+    parameter is TEXTURE_PROXY_* target tokens generate errors if used
+    with a non-zero texture parameter because the target of a non-default
+    (non-zero) texture object is never a proxy target."
+
+Additions to Chapter 4 of the OpenGL 3.1 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 3.1 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 3.1 Specification (State and
+State Requests)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+    
+New State
+
+    (add to table 6.14, Textures (state per texture image p. 252)
+                                                                           Initial
+    Get Value                         Type  Get Command                    Value    Description          Section
+    --------------------------------  ----  -----------------------------  -------  -------------------  ------------
+    TEXTURE_COVERAGE_SAMPLES_NV        Z+   GetTexLevelParameter              0     Number of coverage   3.8.4
+                                                                                    samples per texel
+    TEXTURE_COLOR_SAMPLES_NV           Z+   GetTexLevelParameter              0     Number of color      3.8.4
+                                                                                    samples per texel
+
+Interactions with NV_explicit_multisample
+
+    If NV_explicit_multisample is not present, the language following the discussion
+    of Texelfetch in section 2.X.4.4, Program Texture Access will be new and should
+    omit any mention of sampling from renderbuffers.
+    
+Dependencies on EXT_direct_state_access
+
+    If EXT_direct_state_access is not supported, remove references to the
+    TextureImage* commands added by this extension.
+    
+Issues
+
+    (1) What should this extension be called?
+
+    RESOLVED: NV_texture_multisample. It contains the NVIDIA specific portions
+    of ARB_texture_multisample.
+
+    (2) What should the multisample texel fetch opcode be called?
+
+    RESOLVED: TEXFMS. It is currently called TXFMS to correspond to the GLSL
+    builtin, TexelFetchMultisample. It has been suggested that this builtin be
+    renamed. Even if it is, TEXFMS matches the opcode added via
+    NV_explicit_multisample. It is better to mismatch GLSL than have two opcodes
+    for the same operation.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+    1     6/23/09   groth     Extracted from portions of an earlier version of
+                              ARB_texture_multisample 
+
+    2     9/10/09   pdaniell  Add support for VCAA and DSA

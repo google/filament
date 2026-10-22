@@ -1,0 +1,185 @@
+/* vi: set sw=2 ts=4: */
+
+/*
+	$HeadURL: https://cvs.khronos.org/svn/repos/util/trunk/doc/iguide/igstyle.css $
+	$Revision: 7453 $
+	$Author: markc $
+*/
+
+body {
+  font-family: Verdana, Arial, Helvetica, sans-serif;
+  font-weight: normal;
+  color: #333333;
+  background-color: white;
+  margin: 4em;
+  max-width: 50em;
+}
+
+h1 {
+  color: #00A6A6;
+}
+
+h2, h3, h4, h5, h6 {
+  color: #146A68;
+}
+
+/* Set space between editedby and editor to 0.5em.
+ * editor margin-top contributes to this.
+ */
+h4.editedby {
+  margin-bottom: 0.5em;
+}
+
+/* Remove spaces between editedby & editor and editor & affiliation.
+ * affiliation is a div so there's no top-margin to fix.
+ */
+h3.editor {
+  margin-top: 0;
+  /* color: #333333; */
+  margin-bottom: 0;
+}
+
+/* Remove space between copyright and legal notice lines.
+ * Legal notice is in a div so there's no top-margin to fix.
+ */
+p.copyright {
+  margin-bottom: 0;
+}
+
+/* Remove space between edition, docrev & releaseinfo.*/
+p.edition {
+  margin-bottom: 0;
+}
+
+p.docrev {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+p.releaseinfo {
+  margin-top: 0;
+}
+
+p.title {
+  color: #146A68;
+}
+
+a {
+  text-decoration: none;
+}
+
+/* The following a: pseudo-class order is necessary in
+ * order to be effective.
+ */
+a:link {
+  color: #009999;
+}
+
+a:visited {
+  color: #006699;
+}
+
+a:hover {
+  color: #00CCCC;
+}
+
+a:active {
+  color: #0000FF;
+}
+
+code.code {
+  white-space: nowrap;
+}
+
+/* Increase space before abstract. */
+div.abstract > p.title {
+  margin-top: 3em;
+
+}
+
+div.footnote {
+  font-size: small;
+}
+
+div.legalnotice {
+  font-size: x-small;
+}
+
+div.article > div.titlepage {
+  text-align: center;
+}
+
+table {
+  border-collapse: collapse;*/
+  /*border-spacing: 0;*/
+  border-style: ridge;
+}
+
+td {
+  padding: 0.3em;
+}
+
+th {
+  padding: 0.3em;
+  /* background-color: #FFDEAD; */
+  background-color: #EBD8AF;
+}
+
+th:first-child {
+  /* background-color: #EFEFEF; */
+  background-color: #EBE57B;
+}
+
+.informalexample {
+  /*background-color: #D7D9D9;*/
+  background-color: #EBEBEB;
+  border: thin dashed #146A68;
+}
+
+/* override width="100%" set by xls style sheet. */
+div.revhistory > table {
+  width: auto;
+  border: thin solid;
+  font-size: small;
+  background-color: #EBEBEB;
+}
+
+div.revhistory > table th {
+  border-bottom: thin solid;
+}
+
+div.revhistory > table td {
+  border: thin dotted;
+}
+
+div.revhistory > table td.revremark {
+  border-bottom: thin solid;
+}
+
+.remark {
+  background-color: yellow;
+  color: maroon;
+}
+
+/* Haven't found a way to select .remark *except* when it's a child of
+ * .releaseinfo so I've had to add this. I tried the negation
+ * pseudo-operator without success.
+.releaseinfo .remark {
+  background-color: white;
+  color: #333333;
+}
+*/
+
+/* Selector notes:
+ * See http://css.maxdesign.com.au/selectutorial/selectors_adjacent.htm
+ * 
+ * A B selects a B that is a descendant of A.
+ * A > B selects a B that is a direct child of A.
+ * A + B selects a B that immediately follows an A where A & B are siblings.
+ * #foo is an id selector; can do A#foo to select an A with id="foo".
+ * .bar is a class selector; can do A.bar to select an A with class="bar".
+ * A[attrib<=value>] is an attribute selector. It selects an A with "attrib"
+ *    specified. Optionally a specific attribute value can also be specified.
+ * A:b is pseudo-element or pseudo-class selector. Examples are first-child,
+ *    visited, hover, first-line, first-letter.
+ */

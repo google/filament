@@ -1,0 +1,44 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct _19
+{
+    float2 _m0;
+    float2 _m1;
+};
+
+struct _6
+{
+    uint2 _m0[324];
+};
+
+struct _9
+{
+    float2 _m0[648];
+};
+
+struct _13
+{
+    float2 _m0[648];
+};
+
+kernel void main0(device _6& _7 [[buffer(0)]], device _9& _11 [[buffer(1)]], device _13& _14 [[buffer(2)]])
+{
+    for (uint _46 = 0u; _46 < 648u; _46 += 2u)
+    {
+        uint2 _47 = _7._m0[_46 / 2u];
+        float2 _48 = as_type<float2>(_47);
+        float2 _91;
+        float2 _69 = modf(_48, _91);
+        _11._m0[_46] = _91;
+        _11._m0[_46 + 1u] = _69;
+        _19 _74;
+        _74._m0 = modf(_48, _74._m1);
+        _19 _50 = _74;
+        _14._m0[_46] = _50._m1;
+        _14._m0[_46 + 1u] = _50._m0;
+    }
+}
+

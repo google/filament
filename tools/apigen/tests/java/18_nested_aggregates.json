@@ -1,0 +1,493 @@
+{
+  "meta": {
+    "generator_version": "1.0.0",
+    "source_file": "/Users/mathias/sources/git/filament/tools/apigen/tests/java/18_nested_aggregates.h"
+  },
+  "includes": {
+    "user": [],
+    "system": [
+      "<stdint.h>"
+    ]
+  },
+  "aliases": [],
+  "enums": [],
+  "classes": [
+    {
+      "name": "BuilderBase",
+      "qualified_name": "filament::BuilderBase",
+      "location": {
+        "file": "tools/apigen/tests/java/18_nested_aggregates.h",
+        "line": 7
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [
+        "apigen:skip"
+      ],
+      "type": {
+        "cpp_name": "BuilderBase",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [],
+      "fields": [],
+      "aliases": [],
+      "constants": [],
+      "is_aggregate": false
+    },
+    {
+      "name": "Vsm",
+      "qualified_name": "filament::NestedAggregatesTest::ShadowOptions::Vsm",
+      "location": {
+        "file": "tools/apigen/tests/java/18_nested_aggregates.h",
+        "line": 13
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "Vsm",
+        "category": "struct",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [],
+      "fields": [
+        {
+          "name": "elvsm",
+          "qualified_name": "elvsm",
+          "location": {
+            "file": "tools/apigen/tests/java/18_nested_aggregates.h",
+            "line": 14
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "bool",
+            "qualified_name": "bool",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "default_value": "false"
+        },
+        {
+          "name": "blurWidth",
+          "qualified_name": "blurWidth",
+          "location": {
+            "file": "tools/apigen/tests/java/18_nested_aggregates.h",
+            "line": 15
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "float",
+            "qualified_name": "float",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "default_value": "0.0f"
+        }
+      ],
+      "aliases": [],
+      "constants": [],
+      "parent_class": "ShadowOptions",
+      "is_nested": true,
+      "is_aggregate": true
+    },
+    {
+      "name": "ShadowOptions",
+      "qualified_name": "filament::NestedAggregatesTest::ShadowOptions",
+      "location": {
+        "file": "tools/apigen/tests/java/18_nested_aggregates.h",
+        "line": 12
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "ShadowOptions",
+        "category": "struct",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [],
+      "fields": [
+        {
+          "name": "mapSize",
+          "qualified_name": "mapSize",
+          "location": {
+            "file": "tools/apigen/tests/java/18_nested_aggregates.h",
+            "line": 18
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "uint32_t",
+            "qualified_name": "uint32_t",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "default_value": "1024"
+        },
+        {
+          "name": "cascadeSplitPositions",
+          "qualified_name": "cascadeSplitPositions",
+          "location": {
+            "file": "tools/apigen/tests/java/18_nested_aggregates.h",
+            "line": 19
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "float[3]",
+            "qualified_name": "float[3]",
+            "category": "unknown",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "default_value": "{ 0.125f , 0.25f , 0.50f }"
+        },
+        {
+          "name": "vsm",
+          "qualified_name": "vsm",
+          "location": {
+            "file": "tools/apigen/tests/java/18_nested_aggregates.h",
+            "line": 20
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "Vsm",
+            "qualified_name": "filament::NestedAggregatesTest::ShadowOptions::Vsm",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "default_value": null
+        },
+        {
+          "name": "constantBias",
+          "qualified_name": "constantBias",
+          "location": {
+            "file": "tools/apigen/tests/java/18_nested_aggregates.h",
+            "line": 21
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "type": {
+            "cpp_name": "float",
+            "qualified_name": "float",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "default_value": "0.001f"
+        }
+      ],
+      "aliases": [],
+      "constants": [],
+      "parent_class": "NestedAggregatesTest",
+      "is_nested": true,
+      "is_aggregate": true
+    },
+    {
+      "name": "Builder",
+      "qualified_name": "filament::NestedAggregatesTest::Builder",
+      "location": {
+        "file": "tools/apigen/tests/java/18_nested_aggregates.h",
+        "line": 24
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "Builder",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [
+        "BuilderBase<BuilderDetails>"
+      ],
+      "methods": [
+        {
+          "name": "Builder",
+          "qualified_name": "Builder()",
+          "location": {
+            "file": "tools/apigen/tests/java/18_nested_aggregates.h",
+            "line": 26
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": [],
+          "is_constructor": true
+        },
+        {
+          "name": "shadowOptions",
+          "qualified_name": "shadowOptions(const ShadowOptions &)",
+          "location": {
+            "file": "tools/apigen/tests/java/18_nested_aggregates.h",
+            "line": 33
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "Builder &",
+            "qualified_name": "filament::NestedAggregatesTest::Builder&",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": true,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "options",
+              "type": {
+                "cpp_name": "const ShadowOptions &",
+                "qualified_name": "filament::NestedAggregatesTest::ShadowOptions&",
+                "category": "object",
+                "is_const": true,
+                "is_pointer": false,
+                "is_reference": true,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": [],
+      "constants": [],
+      "parent_class": "NestedAggregatesTest",
+      "is_nested": true,
+      "is_aggregate": false,
+      "is_builder": true,
+      "category": "builder",
+      "archetype": "builder"
+    },
+    {
+      "name": "NestedAggregatesTest",
+      "qualified_name": "filament::NestedAggregatesTest",
+      "location": {
+        "file": "tools/apigen/tests/java/18_nested_aggregates.h",
+        "line": 9
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "NestedAggregatesTest",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [
+        {
+          "name": "setShadowOptions",
+          "qualified_name": "setShadowOptions(int, const ShadowOptions &)",
+          "location": {
+            "file": "tools/apigen/tests/java/18_nested_aggregates.h",
+            "line": 36
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "i",
+              "type": {
+                "cpp_name": "int",
+                "qualified_name": "int",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "options",
+              "type": {
+                "cpp_name": "const ShadowOptions &",
+                "qualified_name": "filament::NestedAggregatesTest::ShadowOptions&",
+                "category": "object",
+                "is_const": true,
+                "is_pointer": false,
+                "is_reference": true,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": [],
+      "constants": [],
+      "is_aggregate": false
+    }
+  ],
+  "functions": []
+}

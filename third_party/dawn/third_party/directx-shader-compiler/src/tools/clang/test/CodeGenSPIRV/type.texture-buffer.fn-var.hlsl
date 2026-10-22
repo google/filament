@@ -1,0 +1,34 @@
+// RUN: %dxc -T vs_6_0 -E main -fvk-use-gl-layout -fcgl %s -spirv | FileCheck %s
+
+// CHECK-DAG:  OpDecorate %_arr_float_uint_2 ArrayStride 4
+// CHECK-DAG:  %type_TextureBuffer_CBS = OpTypeStruct %_arr_float_uint_2
+// CHECK-DAG:  %CBS = OpTypeStruct %_arr_float_uint_2_0
+
+struct CBS
+{
+    float entry[2];
+};
+
+TextureBuffer<CBS> input;
+
+float foo()
+{
+    TextureBuffer<CBS> local = input;
+    CBS alias = local;
+// CHECK: %local = OpVariable %_ptr_Function_type_TextureBuffer_CBS Function
+// CHECK: [[loadedInput:%[0-9]+]] = OpLoad %type_TextureBuffer_CBS %input
+// CHECK: OpStore %local [[loadedInput]]
+// CHECK: [[loadedLocal:%[0-9]+]] = OpLoad %type_TextureBuffer_CBS %local
+// CHECK:   [[e1:%[0-9]+]] = OpCompositeExtract %_arr_float_uint_2 [[loadedLocal]]
+// CHECK:   [[e2:%[0-9]+]] = OpCompositeExtract %float [[e1]] 0
+// CHECK:   [[e3:%[0-9]+]] = OpCompositeExtract %float [[e1]] 1
+// CHECK:   [[c1:%[0-9]+]] = OpCompositeConstruct %_arr_float_uint_2_0 [[e2]] [[e3]]
+// CHECK:   [[c2:%[0-9]+]] = OpCompositeConstruct %CBS [[c1]]
+// CHECK:                    OpStore %alias [[c2]]
+    return alias.entry[1];
+}
+
+float main() : A
+{
+    return foo();
+}

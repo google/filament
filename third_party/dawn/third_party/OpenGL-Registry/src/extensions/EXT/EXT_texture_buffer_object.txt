@@ -1,0 +1,744 @@
+Name
+
+    EXT_texture_buffer_object
+
+Name Strings
+
+    GL_EXT_texture_buffer_object
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Status
+
+    Shipping for GeForce 8 Series (November 2006, Release 95)
+
+Version
+
+    Last Modified Date:         February 21, 2014
+    NVIDIA Revision:            8
+
+Number
+
+    330
+
+Dependencies
+
+    OpenGL 2.0 is required.
+
+    NV_gpu_program4 or EXT_gpu_shader4 is required.
+
+    This extension is written against the OpenGL 2.0 specification.
+
+    This extension depends trivially on EXT_texture_array.
+
+    This extension depends trivially on NV_texture_shader.
+
+    This extension depends trivially on EXT_texture_integer.
+
+    This extension depends trivially on ARB_texture_float.
+
+    This extension depends trivially on ARB_half_float_pixel.
+
+    This extension depends trivially on EXT_framebuffer_object,
+    ARB_framebuffer_object, and OpenGL 3.0.
+
+Overview
+
+    This extension provides a new texture type, called a buffer texture.
+    Buffer textures are one-dimensional arrays of texels whose storage comes
+    from an attached buffer object.  When a buffer object is bound to a buffer
+    texture, a format is specified, and the data in the buffer object is
+    treated as an array of texels of the specified format.
+
+    The use of a buffer object to provide storage allows the texture data to
+    be specified in a number of different ways:  via buffer object loads
+    (BufferData), direct CPU writes (MapBuffer), framebuffer readbacks
+    (EXT_pixel_buffer_object extension).  A buffer object can also be loaded
+    by transform feedback (NV_transform_feedback extension), which captures
+    selected transformed attributes of vertices processed by the GL.  Several
+    of these mechanisms do not require an extra data copy, which would be
+    required when using conventional TexImage-like entry points.
+
+    Buffer textures do not support mipmapping, texture lookups with normalized
+    floating-point texture coordinates, and texture filtering of any sort, and
+    may not be used in fixed-function fragment processing.  They can be
+    accessed via single texel fetch operations in programmable shaders.  For
+    assembly shaders (NV_gpu_program4), the TXF instruction is used.  For GLSL
+    (EXT_gpu_shader4), a new sampler type and texel fetch function are used.
+
+    Buffer textures can be substantially larger than equivalent
+    one-dimensional textures; the maximum texture size supported for buffer
+    textures in the initial implementation of this extension is 2^27 texels,
+    versus 2^13 (8192) texels for otherwise equivalent one-dimensional
+    textures.  (Note that this extension only guarantees support for buffer
+    textures with 2^16 texels, but we expect most implementations to exceed
+    that substantially.)  When a buffer object is attached to a buffer
+    texture, a size is not specified; rather, the number of texels in the
+    texture is taken by dividing the size of the buffer object by the size of
+    each texel.
+
+New Procedures and Functions
+
+    void TexBufferEXT(enum target, enum internalformat, uint buffer);
+    
+New Tokens
+
+    Accepted by the <target> parameter of BindBuffer, BufferData,
+    BufferSubData, MapBuffer, BindTexture, UnmapBuffer, GetBufferSubData,
+    GetBufferParameteriv, GetBufferPointerv, and TexBufferEXT, and
+    the <pname> parameter of GetBooleanv, GetDoublev, GetFloatv, and
+    GetIntegerv:
+
+        TEXTURE_BUFFER_EXT                              0x8C2A
+
+    Accepted by the <pname> parameters of GetBooleanv, GetDoublev,
+    GetFloatv, and GetIntegerv:
+
+        MAX_TEXTURE_BUFFER_SIZE_EXT                     0x8C2B
+        TEXTURE_BINDING_BUFFER_EXT                      0x8C2C
+        TEXTURE_BUFFER_DATA_STORE_BINDING_EXT           0x8C2D
+        TEXTURE_BUFFER_FORMAT_EXT                       0x8C2E
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    (Insert new Section 3.8.4, Buffer Textures.  Renumber subsequent
+    sections.)
+
+    In addition to one-, two-, and three-dimensional and cube map textures
+    described in previous sections, one additional type of texture is
+    supported.  A buffer texture is similar to a one-dimensional texture.
+    However, unlike other texture types, the texel array is not stored as part
+    of the texture.  Instead, a buffer object is attached to a buffer texture
+    and the texel array is taken from the data store of an attached buffer
+    object.  When the contents of a buffer object's data store are modified,
+    those changes are reflected in the contents of any buffer texture to which
+    the buffer object is attached.  Also unlike other textures, buffer
+    textures do not have multiple image levels; only a single data store is
+    available.
+
+    The command
+
+      void TexBufferEXT(enum target, enum internalformat, uint buffer);
+
+    attaches the storage for the buffer object named <buffer> to the active
+    buffer texture, and specifies an internal format for the texel array found
+    in the attached buffer object.  If <buffer> is zero, any buffer object
+    attached to the buffer texture is detached, and no new buffer object is
+    attached.  If <buffer> is non-zero, but is not the name of an existing
+    buffer object, the error INVALID_OPERATION is generated.  <target> must be
+    TEXTURE_BUFFER_EXT.  <internalformat> specifies the storage format, and
+    must be one of the sized internal formats found in Table X.1.
+
+    When a buffer object is attached to a buffer texture, the buffer object's
+    data store is taken as the texture's texel array.  The number of texels in
+    the buffer texture's texel array is given by 
+
+      floor(<buffer_size> / (<components> * sizeof(<base_type>)),
+
+    where <buffer_size> is the size of the buffer object, in basic machine
+    units and <components> and <base_type> are the element count and base data
+    type for elements, as specified in Table X.1.  The number of texels in the
+    texel array is then clamped to the implementation-dependent limit
+    MAX_TEXTURE_BUFFER_SIZE_EXT.  When a buffer texture is accessed in a
+    shader, the results of a texel fetch are undefined if the specified texel
+    number is greater than or equal to the clamped number of texels in the
+    texel array.
+
+    When a buffer texture is accessed in a shader, an integer is provided to
+    indicate the texel number being accessed.  If no buffer object is bound to
+    the buffer texture, the results of the texel access are undefined.
+    Otherwise, the attached buffer object's data store is interpreted as an
+    array of elements of the GL data type corresponding to <internalformat>.
+    Each texel consists of one to four elements that are mapped to texture
+    components (R, G, B, A, L, and I).  Element <m> of the texel numbered <n>
+    is taken from element <n> * <components> + <m> of the attached buffer
+    object's data store.  Elements and texels are both numbered starting with
+    zero.  For texture formats with normalized components, the extracted
+    values are converted to floating-point values according to Table 2.9.  The
+    components of the texture are then converted to an (R,G,B,A) vector
+    according to Table X.21, and returned to the shader as a four-component
+    result vector with components of the appropriate data type for the
+    texture's internal format.  The base data type, component count,
+    normalized component information, and mapping of data store elements to
+    texture components is specified in Table X.1.
+    
+                                                             Component
+      Sized Internal Format     Base Type  Components  Norm   0 1 2 3
+      ------------------------  ---------  ----------  ----   -------
+      ALPHA8                     ubyte         1        Y     A . . .
+      ALPHA16                    ushort        1        Y     A . . .
+      ALPHA16F_ARB               half          1        N     A . . .
+      ALPHA32F_ARB               float         1        N     A . . .
+      ALPHA8I_EXT                byte          1        N     A . . .
+      ALPHA16I_EXT               short         1        N     A . . .
+      ALPHA32I_EXT               int           1        N     A . . .
+      ALPHA8UI_EXT               ubyte         1        N     A . . .
+      ALPHA16UI_EXT              ushort        1        N     A . . .
+      ALPHA32UI_EXT              uint          1        N     A . . .
+
+      LUMINANCE8                 ubyte         1        Y     L . . .
+      LUMINANCE16                ushort        1        Y     L . . .
+      LUMINANCE16F_ARB           half          1        N     L . . .
+      LUMINANCE32F_ARB           float         1        N     L . . .
+      LUMINANCE8I_EXT            byte          1        N     L . . .
+      LUMINANCE16I_EXT           short         1        N     L . . .
+      LUMINANCE32I_EXT           int           1        N     L . . .
+      LUMINANCE8UI_EXT           ubyte         1        N     L . . .
+      LUMINANCE16UI_EXT          ushort        1        N     L . . .
+      LUMINANCE32UI_EXT          uint          1        N     L . . .
+
+      LUMINANCE8_ALPHA8          ubyte         2        Y     L A . .
+      LUMINANCE16_ALPHA16        ushort        2        Y     L A . .
+      LUMINANCE_ALPHA16F_ARB     half          2        N     L A . .
+      LUMINANCE_ALPHA32F_ARB     float         2        N     L A . .
+      LUMINANCE_ALPHA8I_EXT      byte          2        N     L A . .
+      LUMINANCE_ALPHA16I_EXT     short         2        N     L A . .
+      LUMINANCE_ALPHA32I_EXT     int           2        N     L A . .
+      LUMINANCE_ALPHA8UI_EXT     ubyte         2        N     L A . .
+      LUMINANCE_ALPHA16UI_EXT    ushort        2        N     L A . .
+      LUMINANCE_ALPHA32UI_EXT    uint          2        N     L A . .
+
+      INTENSITY8                 ubyte         1        Y     I . . .
+      INTENSITY16                ushort        1        Y     I . . .
+      INTENSITY16F_ARB           half          1        N     I . . .
+      INTENSITY32F_ARB           float         1        N     I . . .
+      INTENSITY8I_EXT            byte          1        N     I . . .
+      INTENSITY16I_EXT           short         1        N     A . . .
+      INTENSITY32I_EXT           int           1        N     A . . .
+      INTENSITY8UI_EXT           ubyte         1        N     A . . .
+      INTENSITY16UI_EXT          ushort        1        N     A . . .
+      INTENSITY32UI_EXT          uint          1        N     A . . .
+
+      RGBA8                      ubyte         4        Y     R G B A
+      RGBA16                     ushort        4        Y     R G B A
+      RGBA16F_ARB                half          4        N     R G B A
+      RGBA32F_ARB                float         4        N     R G B A
+      RGBA8I_EXT                 byte          4        N     R G B A
+      RGBA16I_EXT                short         4        N     R G B A
+      RGBA32I_EXT                int           4        N     R G B A
+      RGBA8UI_EXT                ubyte         4        N     R G B A
+      RGBA16UI_EXT               ushort        4        N     R G B A
+      RGBA32UI_EXT               uint          4        N     R G B A
+
+      Table X.1, Internal Formats for Buffer Textures.  For each format, the
+      data type of each element is indicated in the "Base Type" column and the
+      element count is in the "Components" column.  The "Norm" column
+      indicates whether components should be treated as normalized
+      floating-point values.  The "Component 0, 1, 2, and 3" columns indicate
+      the mapping of each element of a texel to texture components.
+
+    In addition to attaching buffer objects to textures, buffer objects can be
+    bound to the buffer object target named TEXTURE_BUFFER_EXT, in order to
+    specify, modify, or read the buffer object's data store.  The buffer
+    object bound to TEXTURE_BUFFER_EXT has no effect on rendering.  A buffer
+    object is bound to TEXTURE_BUFFER_EXT by calling BindBuffer with <target>
+    set to TEXTURE_BUFFER_EXT.  If no corresponding buffer object exists, one
+    is initialized as defined in section 2.9.
+
+    The commands BufferData, BufferSubData, MapBuffer, and UnmapBuffer may all
+    be used with <target> set to TEXTURE_BUFFER_EXT.  In this case, these
+    commands operate in the same fashion as described in section 2.9, but on
+    the buffer currently bound to the TEXTURE_BUFFER_EXT target.
+
+    Modify Section 3.8.11, Texture State and Proxy State (p. 178)
+
+    (insert into the first paragraph of the section, p. 178) ... a zero
+    compressed size, and zero-sized components).  The buffer texture target
+    contains an integer identifying the buffer object that buffer that
+    provided the data store for the texture, initially zero, and an integer
+    identifying the internal format of the texture, initially LUMINANCE8.
+    Next, there are the two sets of texture properties; ...
+
+    Modify Section 3.8.12, Texture Objects (p. 180)
+
+    (modify first paragraphs of section, p. 180, simply adding references to
+     buffer textures, which are treated as texture objects)
+
+    In addition to the default textures TEXTURE_1D, TEXTURE_2D, TEXTURE_3D,
+    TEXTURE_CUBE_MAP, and TEXTURE_BUFFER_EXT, named one-, two-, and
+    three-dimensional, cube map, and buffer texture objects can be created and
+    operated upon. The name space for texture objects is the unsigned
+    integers, with zero reserved by the GL.
+
+    A texture object is created by binding an unused name to TEXTURE_1D,
+    TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP, or TEXTURE_BUFFER_EXT. The
+    binding is effected by calling
+
+      void BindTexture( enum target, uint texture );
+
+    with target set to the desired texture target and texture set to the
+    unused name.  The resulting texture object is a new state vector,
+    comprising all the state values listed in section 3.8.11, set to the same
+    initial values. If the new texture object is bound to TEXTURE_1D,
+    TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP, or TEXTURE_BUFFER_EXT, it is and
+    remains a one-, two-, three-dimensional, cube map, or buffer texture
+    respectively until it is deleted.
+
+    BindTexture may also be used to bind an existing texture object to either
+    TEXTURE_1D, TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP, or
+    TEXTURE_BUFFER_EXT. The error INVALID_OPERATION is generated if an attempt
+    is made to bind a texture object of different dimensionality than the
+    specified target. If the bind is successful no change is made to the state
+    of the bound texture object, and any previous binding to target is broken.
+
+    ...
+
+    In the initial state, TEXTURE_1D, TEXTURE_2D, TEXTURE_3D,
+    TEXTURE_CUBE_MAP, and TEXTURE_BUFFER_EXT have one-, two-,
+    three-dimensional, cube map, and buffer texture state vectors respectively
+    associated with them. In order that access to these initial textures not
+    be lost, they are treated as texture objects all of whose names are 0. The
+    initial one-, two-, three-dimensional, cube map, and buffer texture is
+    therefore operated upon, queried, and applied as TEXTURE_1D, TEXTURE_2D,
+    TEXTURE_3D, TEXTURE_CUBE_MAP, or TEXTURE_BUFFER_EXT respectively while 0
+    is bound to the corresponding targets.
+
+    Texture objects are deleted by calling
+
+      void DeleteTextures( sizei n, uint *textures );
+
+    textures contains n names of texture objects to be deleted. After a
+    texture object is deleted, it has no contents or dimensionality, and its
+    name is again unused. If a texture that is currently bound to one of the
+    targets TEXTURE_1D, TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP, or
+    TEXTURE_BUFFER_EXT is deleted, it is as though BindTexture had been
+    executed with the same target and texture zero. Unused names in textures
+    are silently ignored, as is the value zero.
+
+    (modify second paragraph, p. 182, adding buffer textures, plus cube map
+    textures, which is an oversight in the core specification)
+
+    The texture object name space, including the initial one-, two-, and
+    three-dimensional, cube map, and buffer texture objects, is shared among
+    all texture units. A texture object may be bound to more than one texture
+    unit simultaneously. After a texture object is bound, any GL operations on
+    that target object affect any other texture units to which the same
+    texture object is bound.
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    Modify Section 5.4, Display Lists (p. 237)
+
+    (modify "Vertex buffer objects" portion of the list of non-listable
+    commands, p. 241)
+
+      Buffer objects: GenBuffers, DeleteBuffers, BindBuffer, BufferData,
+      BufferSubData, MapBuffer, UnmapBuffer, and TexBufferEXT.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    Modify Section 6.1.13, Buffer Object Queries (p. 255)
+
+    (modify the first paragraph on p. 256) The command
+    
+      void GetBufferSubData( enum target, intptr offset,
+                             sizeiptr size, void *data );
+
+    queries the data contents of a buffer object. target is ARRAY_BUFFER,
+    ELEMENT_ARRAY_BUFFER, or TEXTURE_BUFFER_EXT. ...
+
+    (modify the last paragraph of the section, p. 256) While the data store of
+    a buffer object is mapped, the pointer to the data store can be queried by
+    calling
+
+      void GetBufferPointerv( enum target, enum pname, void **params );
+
+    with target set to ARRAY_BUFFER, ELEMENT_ARRAY_BUFFER, or
+    TEXTURE_BUFFER_EXT, and pname set to BUFFER MAP POINTER.
+
+Additions to Appendix A of the OpenGL 2.0 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Dependencies on EXT_texture_array
+
+    If EXT_texture_array is supported, the introductory language describing
+    buffer textures should acknowledge the existence of array textures.  Other
+    than that, there are no dependencies between the two extensions.
+
+Dependencies on NV_texture_shader
+
+    If NV_texture_shader is not supported, references to the signed normalized
+    internal formats provided by that extension should be removed, and such
+    formats may not be passed to TexBufferEXT.
+
+Dependencies on EXT_texture_integer
+
+    If EXT_texture_integer is not supported, references to the signed and
+    unsigned integer internal formats provided by that extension should be
+    removed, and such formats may not be passed to TexBufferEXT.
+
+Dependencies on ARB_texture_float
+
+    If ARB_texture_float is not supported, references to the floating-point
+    internal formats provided by that extension should be removed, and such
+    formats may not be passed to TexBufferEXT.
+
+Dependencies on ARB_half_float_pixel
+
+    If ARB_texture_float is not supported, references to the 16-bit
+    floating-point internal formats provided by ARB_texture_float should be
+    removed, and such formats may not be passed to TexBufferEXT.  If an
+    implementation supports ARB_texture_float, but does not support
+    ARB_half_float_pixel, 16-bit floating-point texture formats may be
+    available using normal texture mechanisms, but not with buffer textures.
+
+Dependencies on EXT_framebuffer_object, ARB_framebuffer_object, and OpenGL
+3.0
+
+    If framebuffer objects are supported (via EXT_framebuffer_object,
+    ARB_framebuffer_object, or OpenGL 3.0), buffer textures may not be
+    attached to framebuffer objects.  
+
+    No modifications to these extensions is technically required, since they
+    already enumerate the set of valid texture targets supported (e.g.,
+    TEXTURE_2D) and the list does not include TEXTURE_BUFFER_EXT.
+
+Errors
+
+    INVALID_OPERATION is generated by TexBufferEXT if <buffer> is non-zero and
+    is not the name of an existing buffer object.
+
+New State
+
+    (add to table 6.15, Texture State Per Texture Unit/Binding Point p. 276)
+
+                                                            Initial
+    Get Value                           Type    Get Command  Value  Description                 Sec.    Attribute
+    ---------------------------------   ----    ----------- ------- --------------------------- ------  ---------
+    TEXTURE_BINDING_BUFFER_EXT          2*xZ+   GetIntegerv    0    Texture object bound to     3.8.12  texture
+                                                                    TEXTURE_BUFFER_EXT
+
+    (add to table 6.16, Texture State Per Texture Object, p. 276)
+
+                                                            Initial
+    Get Value                           Type    Get Command  Value  Description                 Sec.    Attribute
+    ---------------------------------   ----    ----------- ------- --------------------------- ------  ---------
+    TEXTURE_BUFFER_DATA_STORE_          nxZ+    GetIntegerv    0    Buffer object bound as      3.8.12  texture
+      BINDING_EXT                                                   the data store for the 
+                                                                    active image unit's buffer
+                                                                    texture
+    TEXTURE_BUFFER_FORMAT_EXT           nxZ+    GetIntegerv  LUMIN- Internal format for the     3.8.12  texture
+                                                             ANCE8  active image unit's buffer
+                                                                    texture
+
+    (add to table 6.37, Miscellaneous State, p. 298)
+
+                                                            Initial
+    Get Value                           Type    Get Command  Value  Description                 Sec.    Attribute
+    ---------------------------------   ----    ----------- ------- --------------------------- ------  ---------
+    TEXTURE_BUFFER_EXT                   Z+     GetIntegerv    0    Buffer object bound to      3.8.12  texture
+                                                                    the generic buffer texture
+                                                                    binding point
+
+New Implementation Dependent State
+
+    (modify Table 6.32, p. 293)
+                                                    Minimum
+    Get Value                    Type  Get Command   Value   Description            Sec.   Attribute
+    ---------------------------  ----  -----------  -------  ---------------------  -----  ---------
+    MAX_TEXTURE_BUFFER_SIZE_EXT   Z+   GetIntegerv   65536   number of addressable  3.8.4      -
+                                                             texels for buffer
+                                                             textures
+
+Issues
+
+    (1) Buffer textures are potentially large one-dimensional arrays that can
+        be accessed with single-texel fetches.  How should this functionality
+        be exposed?
+
+      RESOLVED:  Several options were considered.  The final approach creates
+      a new type of texture object, called a buffer texture, whose texel array
+      is taken from the data store from a buffer object.  The combined set of
+      extensions using buffer objects provides numerous locations where the GL
+      can read and write data to a buffer object:
+
+        EXT_vertex_buffer_object allows vertex attributes to be pulled from a
+        buffer object.
+
+        EXT_pixel_buffer_object allows pixel operations (DrawPixels,
+        ReadPixels, TexImage) to read or write data to a buffer object.
+
+        EXT_parameter_buffer_object and EXT_bindable_uniform allows assembly
+        vertex, fragment, and geometry programs, and all GLSL shaders to read
+        program parameter / uniform data from a buffer object.
+
+        EXT_texture_buffer_object allows programs to read texture data from a
+        buffer object.
+
+        NV_transform_feedback allows programs to write transformed vertex
+        attributes to a buffer object.
+
+      When combined, interesting feedback paths are possible, where large
+      arrays of data can be generated by the GPU and the consumed by it in
+      multi-pass algorithms, using the buffer object's storage to hold
+      intermediate data.  This allows applications to run complicated
+      algorithms on the GPU without necessarily pulling data back to host CPU
+      for additional processing.
+
+      Given that buffer object memory is visible to users as raw memory, all
+      uses of the memory must have well-defined data formats.  For VBO and
+      PBO, those formats are explicitly given by calls such as VertexPointer,
+      TexImage2D, or ReadPixels.  When used as a buffer texture, it is
+      necessary to specify an internal format with which the bytes of the
+      buffer object's data store are interpreted.
+
+      Another option considered was to greatly increase the maximum texture
+      size for 1D texture.  This has the advantage of not requiring new
+      mechanisms.  However, there are a couple limitations of this approach.
+      First, conventional textures have their own storage that is not
+      accessible elsewhere, which limits some of the sharing opportunities
+      described above.  Second, buffer textures do have slightly different
+      hardware implementations than 1D textures.  In the hardware of interest,
+      "normal" 1D textures can be mipmapped and filtered, but have a maximum
+      size that is considerably smaller than that supported for buffer
+      textures.  If both texture types used the same API mechanism, it might
+      be necessary to reprogram texture hardware and/or shaders depending on
+      the size of the textures used.  This will incur CPU overhead to
+      determine if such reprogramming is necessary and to perform the
+      reprogramming if so.
+
+    (2) Since buffer textures borrow storage from buffer objects, whose
+        storage is visible to applications, a format must be imposed on the
+        bytes of the buffer object.  What texture formats are supported for
+        buffer objects?
+
+      RESOLVED:  All sized one-, two-, and four-component internal formats
+      with 8-, 16-, and 32-bit components are supported.  Unsized internal
+      formats, and sized formats with other component sizes are also not
+      supported.  Three-component (RGB) formats are not supported due to
+      hardware limitations.
+
+      All component data types supported for normal textures are also
+      supported for buffer textures.  This includes unsigned [0,1] normalized
+      components (e.g., RGBA8), floating-point components from
+      ARB_texture_float (e.g., RGBA32F_ARB), signed and unsigned integer
+      components from EXT_texture_integer (e.g., RGBA8I_EXT, RGBA16UI_EXT),
+      and signed [-1,+1] normalized components from NV_texture_shader (e.g.,
+      SIGNED_RGBA8_NV).
+
+    (3) How can arrays of three-component vectors be accessed by applications?
+
+      RESOLVED:  Several approaches are possible.  
+
+      First, the vectors can be padded out to four components (RGBA), with an
+      extra unused component for each texel.  This has a couple undesirable
+      properties:  it adds 33% to the required storage and adding the extra
+      component may require reformatting of original data generated by the
+      application.  However, the data in this format can be retrieved with a
+      single 32-, 64-, or 128-bit lookup.  
+
+      Alternately, the buffer texture can be defined using a single component,
+      and a shader can perform three lookups to separately fetch texels 3*N,
+      3*N+1, and 3*N+2, combining the result in a three-component vector
+      representing "RGB" texel N.  This doesn't require extra storage or
+      reformatting and doesn't require additional bandwidth for texture
+      fetches.  But it does require additional shader instructions to obtain
+      each texel.
+
+    (4) Does this extension support fixed-function fragment processing,
+        somehow allowing buffer textures to be accessed without programmable
+        shaders?
+
+      RESOLVED:  No.  We expect that it would be difficult to properly access
+      a buffer texture and combine the returned texel with other color or
+      texture data, given the extremely limited programming model provided by
+      fixed-function fragment processing.
+
+      Note also that the single-precision floating-point representation
+      commonly used by current graphics hardware is not sufficiently precise
+      to exactly represent all texels in a large buffer texture.  For example,
+      it is not possible to represent 2^24+1 using the 32-bit IEEE
+      floating-point representation.
+
+    (5) What happens if a buffer object is deleted or respecified when bound
+        to a buffer texture?
+
+      RESOLVED: BufferData is allowed to be used to update a buffer object that
+      has already been bound to a texture with TexBuffer. The update to the data
+      is not guaranteed to affect the texture until next time it is bound to a
+      texture image unit.  When DeleteBuffers is called, any buffer that is
+      bound to a texture is removed from the names array, but remains as long as
+      it is bound to a texture.  The buffer is fully removed when the texture
+      unbinds it or when the texture buffer object is deleted.
+
+    (6) Should applications be able to modify the data store of a buffer
+        object while it is bound to a buffer texture?
+
+      RESOLVED: An application is allowed to update the data store for a buffer
+      object when the buffer object is bound to a texture.
+
+    (7) Do buffer textures support texture parameters (TexParameter) or
+        queries (GetTexParameter, GetTexLevelParameter, GetTexImage)?
+
+      RESOLVED:  No.  None of the existing parameters apply to buffer
+      textures, and this extension doesn't introduce the need for any new
+      ones.  Buffer textures have no levels, and the size in texels is
+      implicit (based on the data store).  Given that the texels themselves
+      are obtained from a buffer object, it seems more appropriate to retrieve
+      such data with buffer object queries.  The only "parameter" of a buffer
+      texture is the internal format, which is specified at the same time the
+      buffer object is bound.
+
+      Note that the spec edits above don't add explicit error language for any
+      of these cases.  That is because each of the functions enumerate the set
+      of valid <target> parameters.  Not editing the spec to allow
+      TEXTURE_BUFFER_EXT in these cases means that target is not legal, and an
+      INVALID_ENUM error should be generated.
+
+    (8) What about indirect rendering with a mix of big- and little-endian
+        clients?  If components are 16- or 32-bit, how are they interpreted?
+
+      RESOLVED:  Buffer object data are interpreted according to the native
+      representation of the server.  If the server and client have different
+      endianness, applications must perform byte swapping as needed to match
+      the server's representation.  No mechanism is provided to perform this
+      byte swapping on buffer object updates or when texels are fetched.
+
+      The same problem also exists when buffer objects are used for vertex
+      arrays (VBO).  For buffer objects used for pixel packing and unpacking
+      (ARB_pixel_buffer_object), the PixelStore byte swapping parameters
+      (PACK_SWAP_BYTES, UNPACK_SWAP_BYTES) would presumably apply and could be
+      used to perform the necessary byte swapping.
+
+    (9) Should the set of formats supported for buffer textures be enumerated,
+        or should the extension instead nominally support all formats, but
+        accept only an implementation-dependent subset?
+
+      RESOLVED:  Provide a specified set of supported formats.  This
+      extension simply enumerates all 8-, 16-, and 32-byte internal formats
+      with 1, 2, or 4 components, and specifies the mapping of unformatted
+      buffer object data to texture components.  A follow-on extension could
+      be done to support 3-component texels when better native hardware
+      support is available.  
+
+      Other than 3-component texels, the set of formats supported seems pretty
+      compehensive.  We expect that buffer textures would be used for general
+      computational tasks, where there is little need for formats with smaller
+      components (e.g., RGBA4444).  Such formats are generally not supported
+      natively on CPUs today.  With the general computational model provided
+      by NV_gpu_program4 and EXT_gpu_shader4, it would be possible to treat
+      such "packed" formats as larger single-component formats and unpack them
+      with a small number of shader instructions.
+
+      If and when double-precision floats or 64-bit integers are supported as
+      basic types usable by shaders, we would expect that an extension would
+      add new texture internal formats with 64-bit components and that those
+      formats would also be supported for general-purpose textures and buffer
+      textures as well.
+
+    (10) How are buffer textures supported in GLSL?
+
+      RESOLVED:  Create a new sampler type (samplerBuffer) for buffer textures
+      and add a new lookup function (texelFetchBuffer) to explicitly access
+      them using texture hardware.
+
+      Other possibilities considered included extending the notion of bindable
+      uniforms to support uniforms whose corresponding buffer objects can be
+      bound to texture resources (e.g., "texture bindable uniform" instead of
+      "bindable uniform").  We also considered automatically assigning
+      bindable uniforms to texture or shader resources as appropriate.  Note
+      that the restrictions, size limits, and performance characterstics of
+      buffer textures and parameter buffers (NV_parameter_buffer_object)
+      differ.  Automatic handling of uniforms adds driver complexity and may
+      tend to hide performance characteristics since it isn't clear what
+      resource would be used for what variable.  Additionally, it could
+      require shader recompilation if the size of a uniform array is variable,
+      and the hardware resource used depended on the size.  
+
+      In the end, the texture approach seemed the simplest, and we chose that.
+      It might be worth doing something more complex in the future.
+
+    (11) What is the TEXTURE_BUFFER_EXT buffer object binding point good for?
+
+      RESOLVED:  It can be used for loading data into buffer objects, and for
+      mapping and unmapping buffers, both without disturbing other binding
+      points.  Otherwise, it has no effect on GL operations, since buffer
+      objects are bound to textures using the TexBufferEXT() command that does
+      not affect the buffer object binding point.
+
+      Buffer object binding points have mixed usage.  In the
+      EXT_vertex_buffer_object extension (OpenGL 1.5), there are two binding
+      points.  The ELEMENT_ARRAY_BUFFER has a direct effect on rendering, as
+      it modifies DrawElements() calls.  The effect of ARRAY_BUFFER is much
+      more indirect; it is only used to affect subsequent vertex array calls
+      (e.g., VertexPointer) and has no direct effect on rendering.  The reason
+      for this is that the API was retrofitted on top of existing vertex array
+      APIs.  If a new vertex array API were created that emphasized or even
+      required the use of buffer objects, it seems likely that the buffer
+      object would be included in the calls equivalent to today's
+      VertexPointer() call.
+
+    (12) How is the various buffer texture-related state queried?
+
+      RESOLVED:  There are three pieces of state that can be queried:  (a) the
+      texture object bound to buffer texture binding point for the active
+      texture image unit, (b) the buffer object whose data store was used by
+      that texture object, and (c) the buffer object bound to the
+      TEXTURE_BUFFER_EXT binding point.
+
+      All three are queried with GetIntegerv, because it didn't seem worth the
+      trouble to add one or more new query functions.  Note that for (a) and
+      (b), the texture queried is the one bound to TEXTURE_BUFFER_EXT on the
+      active texture image unit.
+
+    (13) Should we provide a new set of names for the signed normalized
+         textures introduced in NV_texture_shader that match the convention
+         used for floating-point and integer textures?
+
+      RESOLVED: No.
+
+    (14) Can a buffer object be attached to more than one buffer texture at
+         once?
+
+      RESOLVED: Multiple buffer textures may attach to the same buffer object
+      simultaneously.
+
+    (15) How does this extension interact with display lists?
+
+      RESOLVED:  Buffer object commands can't be compiled into a display list.
+      The new command in this extension uses buffer objects, so we specify
+      that it also can't be compiled into a display list.
+
+    (16) Can buffer textures be rendered to via framebuffer objects?
+
+      RESOLVED:  No, not in this extension.
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+      8   02/21/14  pbrown    Clarify in the introduction that the minimum
+                              required MAX_TEXTURE_BUFFER_SIZE_EXT is only
+                              64K, and that the 2^27 number in the intro was
+                              referred to the initial implementation.
+
+      7   10/08/09  pbrown    Minor typo fix in the introduction.
+
+      6   10/21/08  pbrown    Clarify that buffer textures can not be
+                              used in conjunction with FBO.
+
+      5   04/16/08  pbrown    Clarify that either NV_gpu_program4 or 
+                              EXT_gpu_shader4 is required, not simply
+                              NV_gpu_program4.
+
+      4   10/30/07  ewerness  Add resolutions to various issues
+
+      3      --               Pre-release revisions.

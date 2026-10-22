@@ -1,0 +1,495 @@
+Name
+
+    EXT_gpu_shader5
+
+Name Strings
+
+    GL_EXT_gpu_shader5
+
+Contact
+
+    Jon Leech (oddhack 'at' sonic.net)
+    Daniel Koch, NVIDIA (dkoch 'at' nvidia.com)
+
+Contributors
+
+    Daniel Koch, NVIDIA (dkoch 'at' nvidia.com)
+    Pat Brown, NVIDIA (pbrown 'at' nvidia.com)
+    Jesse Hall, Google
+    Maurice Ribble, Qualcomm
+    Bill Licea-Kane, Qualcomm
+    Graham Connor, Imagination
+    Ben Bowman, Imagination
+    Jonathan Putsman, Imagination
+    Marcin Kantoch, Mobica
+    Slawomir Grajewski, Intel
+    Contributors to ARB_gpu_shader5
+
+Notice
+
+    Copyright (c) 2010-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+    Portions Copyright (c) 2013-2014 NVIDIA Corporation.
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date: March 27, 2015
+    Revision: 12
+
+Number
+
+    OpenGL ES Extension #178
+
+Dependencies
+
+    OpenGL ES 3.1 and OpenGL ES Shading Language 3.10 are required.
+
+    This specification is written against the OpenGL ES 3.1 (March 17,
+    2014) and OpenGL ES 3.10 Shading Language (March 17, 2014)
+    Specifications.
+
+    This extension interacts with EXT_geometry_shader.
+
+Overview
+
+    This extension provides a set of new features to the OpenGL ES Shading
+    Language and related APIs to support capabilities of new GPUs, extending
+    the capabilities of version 3.10 of the OpenGL ES Shading Language.
+    Shaders using the new functionality provided by this extension should
+    enable this functionality via the construct
+
+      #extension GL_EXT_gpu_shader5 : require     (or enable)
+
+    This extension provides a variety of new features for all shader types,
+    including:
+
+      * support for indexing into arrays of opaque types (samplers,
+        and atomic counters) using dynamically uniform integer expressions;
+
+      * support for indexing into arrays of images and shader storage blocks
+        using only constant integral expressions;
+
+      * extending the uniform block capability to allow shaders to index
+        into an array of uniform blocks;
+
+      * a "precise" qualifier allowing computations to be carried out exactly
+        as specified in the shader source to avoid optimization-induced
+        invariance issues (which might cause cracking in tessellation);
+
+      * new built-in functions supporting:
+
+        * fused floating-point multiply-add operations;
+
+      * extending the textureGather() built-in functions provided by
+        OpenGL ES Shading Language 3.10:
+
+        * allowing shaders to use arbitrary offsets computed at run-time to
+          select a 2x2 footprint to gather from; and
+        * allowing shaders to use separate independent offsets for each of
+          the four texels returned, instead of requiring a fixed 2x2
+          footprint.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Additions to the OpenGL ES 3.1 Specification
+
+    Add to the end of section 8.13.2, "Coordinate Wrapping and Texel
+    Selection":
+
+    ... texture source color of (0,0,0,1) for all four source texels.
+
+    The textureGatherOffsets built-in shader functions return a vector
+    derived from sampling four texels in the image array of level
+    <level_base>. For each of the four texel offsets specified by the
+    <offsets> argument, the rules for the LINEAR minification filter are
+    applied to identify a 2x2 texel footprint, from which the single texel
+    T_i0_j0 is selected. A four-component vector is then assembled by taking
+    a single component from each of the four T_i0_j0 texels in the same
+    manner as for the textureGather function.
+
+
+Additions to the OpenGL ES Shading Language 3.10 Specification
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_EXT_gpu_shader5 : <behavior>
+
+    where <behavior> is as specified in section 3.4.
+
+    A new preprocessor #define is added to the OpenGL ES Shading Language:
+
+      #define GL_EXT_gpu_shader5        1
+
+
+    Modifications to Section 3.7 (Keywords)
+
+    Remove "precise" from the list of reserved keywords and add it to the
+    list of keywords.
+
+    Remove the last paragraph from section 3.9.3 "Dynamically Uniform
+    Expressions" (starting "The definition is not used in this version...")
+
+
+    Add to the introduction to section 4.1.7, "Opaque Types" on p. 26:
+
+    When aggregated into arrays within a shader, opaque types can only be
+    indexed with a dynamically uniform integral expression (see section
+    3.9.3) unless otherwise noted; otherwise, results are undefined.
+
+
+    Replace the first paragraph of section 4.1.7.1, "Samplers" (removing the
+    second sentence) on p. 27:
+
+    Sampler types (e.g., sampler2D) are opaque types, declared and behaving
+    as described above for opaque types.
+
+    Sampler variables are ...
+
+
+
+    Modify Section 4.3.9 "Interface Blocks", as modified by
+    EXT_geometry_shader and EXT_shader_io_blocks:
+
+    (modify the paragraph starting "For uniform or shader storage blocks
+    declared as an array", removing the requirement for indexing uniform
+    blocks using constant expressions)
+
+    For uniform or shader storage blocks declared as an array, each
+    individual array element corresponds to a separate buffer object bind
+    range, backing one instance of the block. As the array size indicates
+    the number of buffer objects needed, uniform and shader storage block
+    array declarations must specify an array size. All indices used to index
+    a shader storage block array must be constant integral expressions. A
+    uniform block array can only be indexed with a dynamically uniform
+    integral expression, otherwise results are undefined.
+
+
+    Add new section 4.9gs5 before section 4.10 "Order of Qualification":
+
+    4.9gs5 The Precise Qualifier
+
+    Some algorithms may require that floating-point computations be carried
+    out in exactly the manner specified in the source code, even if the
+    implementation supports optimizations that could produce nearly
+    equivalent results with higher performance. For example, many GL
+    implementations support a "multiply-add" that can compute values such as
+
+      float result = (float(a) * float(b)) + float(c);
+
+    in a single operation. The result of a floating-point multiply-add may
+    not always be identical to first doing a multiply yielding a
+    floating-point result, and then doing a floating-point add. By default,
+    implementations are permitted to perform optimizations that effectively
+    modify the order of the operations used to evaluate an expression, even
+    if those optimizations may produce slightly different results relative
+    to unoptimized code.
+
+    The qualifier "precise" will ensure that operations contributing to a
+    variable's value are performed in the order and with the precision
+    specified in the source code. Order of evaluation is determined by
+    operator precedence and parentheses, as described in Section &5.
+    Expressions must be evaluated with a precision consistent with the
+    operation; for example, multiplying two "float" values must produce a
+    single value with "float" precision. This effectively prohibits the
+    arbitrary use of fused multiply-add operations if the intermediate
+    multiply result is kept at a higher precision. For example:
+
+      precise out vec4 position;
+
+    declares that computations used to produce the value of "position" must
+    be performed precisely using the order and precision specified. As with
+    the invariant qualifier (section &4.6.1), the precise qualifier may be
+    used to qualify a built-in or previously declared user-defined variable
+    as being precise:
+
+      out vec3 Color;
+      precise Color;            // make existing Color be precise
+
+    This qualifier will affect the evaluation of expressions used on the
+    right-hand side of an assignment if and only if:
+
+      * the variable assigned to is qualified as "precise"; or
+
+      * the value assigned is used later in the same function, either
+        directly or indirectly, on the right-hand of an assignment to a
+        variable declared as "precise".
+
+    Expressions computed in a function are treated as precise only if
+    assigned to a variable qualified as "precise" in that same function. Any
+    other expressions within a function are not automatically treated as
+    precise, even if they are used to determine a value that is returned by
+    the function and directly assigned to a variable qualified as "precise".
+
+    Some examples of the use of "precise" include:
+
+      in vec4 a, b, c, d;
+      precise out vec4 v;
+
+      float func(float e, float f, float g, float h)
+      {
+        return (e*f) + (g*h);            // no special precision
+      }
+
+      float func2(float e, float f, float g, float h)
+      {
+        precise result = (e*f) + (g*h);  // ensures a precise return value
+        return result;
+      }
+
+      float func3(float i, float j, precise out float k)
+      {
+        k = i * i + j;                   // precise, due to <k> declaration
+      }
+
+      void main(void)
+      {
+        vec4 r = vec3(a * b);           // precise, used to compute v.xyz
+        vec4 s = vec3(c * d);           // precise, used to compute v.xyz
+        v.xyz = r + s;                      // precise
+        v.w = (a.w * b.w) + (c.w * d.w);    // precise
+        v.x = func(a.x, b.x, c.x, d.x);     // values computed in func()
+                                            // are NOT precise
+        v.x = func2(a.x, b.x, c.x, d.x);    // precise!
+        func3(a.x * b.x, c.x * d.x, v.x);   // precise!
+      }
+
+
+    Modify Section 8.3, Common Functions, p. 104
+
+    (add support for floating-point multiply-add)
+
+    Syntax:
+
+      genType fma(genType a, genType b, genType c);
+
+    Computes and returns a * b + c.
+
+    In uses where the return value is eventually consumed by a variable
+    declared as precise:
+
+    * fma() is considered a single operation, whereas the expression
+      "a*b + c" consumed by a variable declared precise is considered two
+      operations.
+    * The precision of fma() can differ from the precision of the expression
+      "a*b + c".
+    * fma() will be computed with the same precision as any other fma()
+      consumed by a precise variable, giving invariant results for the same
+      input values of a, b, and c.
+
+    Otherwise, in the absence of precise consumption, there are no special
+    constraints on the number of operations or difference in precision
+    between fma() and the expression "a*b + c".
+
+
+    Modify the table of functions in section 8.9.3 "Texture Gather
+    Functions", changing the "Description" column for the existing
+    textureGatherOffset functions on p. 127:
+
+    Description
+
+        Perform a texture gather operation as in textureGather offset by
+        <offset> as described in textureOffset, except that the <offset> can
+        be variable (non-constant) and the implementation-dependent minimum
+        and maximum offset values are given by the values of
+        MIN_PROGRAM_TEXTURE_GATHER_OFFSET and
+        MAX_PROGRAM_TEXTURE_GATHER_OFFSET, respectively.
+
+
+    Add new textureGatherOffsets functions to the same table, on p. 127:
+
+    Syntax
+
+        gvec4 textureGatherOffsets(gsampler2D sampler, vec2 P,
+                                   ivec2 offsets[4] [, int comp])
+        gvec4 textureGatherOffsets(gsampler2DArray sampler, vec3 P,
+                                   ivec2 offsets[4] [, int comp])
+        vec4 textureGatherOffsets(sampler2DShadow sampler, vec2 P,
+                                  float refZ, ivec2 offsets[4])
+        vec4 textureGatherOffsets(sampler2DArrayShadow sampler, vec3 P,
+                                  float refZ, ivec2 offsets[4])
+
+    Description
+
+        Operate identically to textureGatherOffset except that <offsets> is
+        used to determine the location of the four texels to sample. Each of
+        the four texels is obtained by applying the corresponding offset in
+        <offsets> as a (u,v) coordinate offset to <coord>, identifying the
+        four-texel linear footprint, and then selecting texel (i0,j0) of
+        that footprint. The specified values in <offsets> must be constant
+        integral expressions.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    Note: These issues apply specifically to the definition of the
+    EXT_gpu_shader5 specification, which is based on the OpenGL extension
+    ARB_gpu_shader5 as updated in OpenGL 4.x. Resolved issues from
+    ARB_gpu_shader5 have been removed, but some remain applicable to this
+    extension. ARB_gpu_shader5 can be found in the OpenGL Registry.
+
+    (1) What functionality was removed relative to ARB_gpu_shader5?
+
+      - Instanced geometry support (moved into EXT_geometry_shader)
+      - Implicit conversions (moved to EXT_shader_implicit_conversions)
+      - Interactions with features not supported by the underlying
+        ES 3.1 API and Shading Language, including:
+        * interactions with ARB_gpu_Shader_fp64 and NV_gpu_shader, including
+          support for double-precision in implicit conversions and function
+          overload resolution
+        * multiple vertex streams (these require ARB_transform_feedback3)
+        * textureGather built-in variants for cube map array and rectangle
+          texture samples.
+        * shading language function overloading rules involving the type
+          double
+      - Functionality already in OpenGL ES 3.00, including packing and
+        unpacking of 16-bit types and converting floating-point values to or
+        from their integer bit encodings.
+      - Functionality already in OpenGL ES 3.10, including
+        * splitting and building floating-point numbers from a significand and
+          exponent, integer bitfield manipulation, and packing and unpacking
+          vectors of 8-bit fixed-point data types.
+        * a subset of the textureGather and textureGatherOffset builtins
+          (but some textureGather builtins remain in this extension).
+      - Functionality already in OES_sample_variables, including support for
+        reading a mask of covered samples in a fragment shader.
+      - Functionality already in OES_shader_multisample_interpolation,
+        including support for interpolating a fragment shader input at a
+        programmable offset relative to the pixel center, a programmable
+        sample number, or at the centroid.
+      - MAX_PROGRAM_TEXTURE_GATHER_COMPONENTS (Issue 9).
+
+    (2) What functionality was changed and added relative to
+        ARB_gpu_shader5?
+
+      - Support for indexing into arrays of samplers with extended to all
+        opaque types, and the description of allowed indices was rewritten
+        in terms of dynamically uniform expressions, as was done when
+        ARB_gpu_shader5 was promoted into OpenGL 4.0.
+      - The only remaining API interaction is an increase in a
+        minium-maximum value, so no "Changes to the OpenGL ES Specification"
+        sections are included above.
+      - arrays of images and shader storage blocks can only be indexed
+        with constant integral expressions.
+
+    (3) What should the rules on GLSL suffixing be?
+
+    RESOLVED: "precise" is not a reserved keyword in ESSL 3.00, but it is
+    a keyword in GLSL 4.40. ESSL 3.10 updated the reserved keyword list
+    to include all keywords used or reserved in GLSL 4.40 (but not otherwise
+    used in ES) and thus we can use "precise" in this spec by moving it
+    from the reserved keywords section. See bug 11179.
+
+    (4) Are changes to the "Order of Qualification" section needed?
+
+    RESOLVED. No. ESSL 3.10 relaxes the ordering constraints similarly to
+    GLSL 4.40. And thus there is no need for modifications to section 4.7
+    in 3.00 (4.10 in 3.10) in this extension.
+
+    (5) Are any more changes needed to the descriptions of texture gather?
+
+    Probably not. Bug 11109 suggests cleanup to be applied to both desktop
+    API and language specifications to make them cleaner and more
+    consistent. The important parts of this cleanup were done in the texture
+    gather functionality folded into ES 3.1, although some small language
+    tweaks may still be needed.
+
+    (6) Moved to EXT_shader_implicit_conversions Issue 4.
+
+    (7) Should uniform and shader storage blocks be backable with buffer
+        object subranges?
+
+    RESOLVED: Yes. The section 4.3.7 "Interface Blocks" language picked up
+    from desktop GL allows this (they are called "bind ranges"). This is a
+    spec oversight in ES, because BindBufferRange is fully supported in
+    OpenGL ES 3.0.
+
+    (8) Where is MAX_PROGRAM_TEXTURE_GATHER_COMPONENTS?
+
+    RESOLVED. It was not added in Core GL because ARB_texture_gather and
+    ARB_gpu_shader5 were both added to GL 4.0 and thus the query was
+    unneeded. Since OpenGL ES 3.1 also includes texture gather and the
+    multi-component gather support from gpu_shader5, the query was also
+    unnecessary there and here.  Bug 11002.
+
+    (9) Some vendors may not be able to support dynamic indexing
+    of arrays of images or shader storage blocks. What should we use instead?
+
+    RESOLVED: Only allowing 'constant integral expression' instead of
+    'dynamically uniform integer expression' for arrays of images or shader
+    storage blocks. For images this is done by carving out an exception in the
+    general language for opaque types. For shader storage blocks, different
+    rules are given for arrays of uniform blocks and arrays of shader storage
+    blocks.
+
+Revision History
+
+    Revision 1, 2013/10/27 (Jon Leech)
+        - Initial version based on ARB_gpu_shader5
+
+    Revision 2, 2013/11/06 (Jon Leech)
+        - Update Issues list with unresolved issues 4-7, which are dependent
+          on decisions to be made by the ARB and ES working groups.
+        - Remove {un,}packUnorm2x16EXT (already in ESSL 3.00)
+        - Match changes to ES 3.1 texture gather language, but still
+          reorganize the textureGather functions into their own subsection &
+          table. ES 3.1 restored the [, int comp] argument to the functions
+          it defined. Removed sampler2DRect variants incorrectly left in.
+        - Clean up function overloading example text and opened bug 11178 to
+          resolve possible problems with the GLSL 4.40 language this is
+          based on.
+        - Remove reference to image2DMS, since there is no longer any image
+          load/store support for multisample textures in ES 3.1
+        - Add issue (8) regarding "bind ranges".
+
+    Revision 3, 2013/11/14 (Jon Leech)
+        - Resolve function overloading issue 7, per bug 11178.
+
+    Revision 4, 2013/11/20 (Jon Leech)
+        - Sync with ES 3.1 spec language update.
+        - Refer to ES 3.1 instead of ES 3plus.
+
+    Revision 5, 2013/11/21 (Daniel Koch)
+        - removed implicit conversion language (to a separate document).
+        - updated textureGather functions to reflect the shadow gather
+          functionality being added in ES 3.1.
+        - added issue 9.
+
+    Revision 6, 2013/12/18 (Daniel Koch)
+        - minor cleanup
+        - added issue 10, restrict arrays of images to const-int-expr
+
+    Revision 7, 2014/02/12 (Daniel Koch)
+        - restrict indexing arrays of shader storage blocks to const-int-expr.
+        - Resolved issues 4, 5, 8, 9, 10 and supporting edits.
+
+    Revision 8, 2014/03/10 (Jon Leech)
+        - Rebase on OpenGL ES 3.1 and change suffix to EXT.
+        - Remove textureGather functions already present in the existing
+          GLSL-ES 3.10 spec section 8.9.3
+
+    Revision 9, 2014/03/26 (Daniel Koch)
+        - update contributors
+
+    Revision 10, 2014/03/28 (Jon Leech)
+        - Sync with released ES 3.1 specs. Reflow text.
+
+    Revision 11, 2014/04/01 (Daniel Koch)
+        - Update contributors
+
+    Revision 12, 2015/03/27 (Daniel Koch)
+        - Add missing function and token sections.

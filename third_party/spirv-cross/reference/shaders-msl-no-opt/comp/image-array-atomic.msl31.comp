@@ -1,0 +1,19 @@
+#pragma clang diagnostic ignored "-Wunused-variable"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_atomic>
+
+using namespace metal;
+
+struct PushConst
+{
+    uint texture0;
+};
+
+kernel void main0(constant PushConst& pc [[buffer(0)]], array<texture2d<uint, access::read_write>, 8> kTextures2D [[texture(0)]])
+{
+    uint _30 = kTextures2D[pc.texture0].atomic_fetch_add(uint2(int2(0)), 1u).x;
+    uint i = _30;
+}
+

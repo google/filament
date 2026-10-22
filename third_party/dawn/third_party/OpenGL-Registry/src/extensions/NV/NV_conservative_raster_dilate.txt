@@ -1,0 +1,148 @@
+Name
+
+    NV_conservative_raster_dilate
+
+Name Strings
+
+    GL_NV_conservative_raster_dilate
+
+Contact
+
+    Kedarnath Thangudu, NVIDIA Corporation (kthangudu 'at' nvidia.com)
+
+Contributors
+
+    Chris Wyman, NVIDIA Corporation (cwyman 'at' nvidia.com)
+    Aaron Lefohn, NVIDIA Corporation (alefohn 'at' nvidia.com)
+    Mark Kilgard, NVIDIA Corporation (mkilgard 'at' nvidia.com)
+    Eric Werness, NVIDIA Corporation (ewerness 'at' nvidia.com)
+
+Status
+
+    Shipping in Nvidia release 352.XX drivers and up.
+
+Version
+
+    Last Modified Date:         September 10, 2015
+    Revision:                   2
+
+Number
+
+    OpenGL Extension #480
+
+Dependencies
+
+    This extension is written against the NV_conservative_raster extension as 
+    applied to OpenGL 4.3 specification (Compatibility Profile) but may be 
+    used with the Core profile or OpenGL ES 2.0 or later.
+    
+Overview
+
+    This extension extends the conservative rasterization functionality 
+    provided by NV_conservative_raster. It provides a new control to generate 
+    an "over-conservative" rasterization by dilating primitives prior to 
+    rasterization.
+
+    When using conservative raster to bin geometry, this extension provides a 
+    programmable overlap region between adjacent primitives.  Regular 
+    rasterization bins triangles with a shared edge uniquely into pixels. 
+    Conservative raster has a one-pixel overlap along the shared edge.  Using 
+    a half-pixel raster dilation, this overlap region increases to two pixels.
+
+New Procedures and Functions
+    
+    void ConservativeRasterParameterfNV(enum pname, float value);
+
+New Tokens
+
+    Accepted by the <pname> parameter of ConservativeRasterParameterfNV:
+        CONSERVATIVE_RASTER_DILATE_NV                   0x9379
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, 
+    GetInteger64v, GetFloatv, and GetDoublev:
+
+        CONSERVATIVE_RASTER_DILATE_NV                   0x9379
+        CONSERVATIVE_RASTER_DILATE_RANGE_NV             0x937A
+        CONSERVATIVE_RASTER_DILATE_GRANULARITY_NV       0x937B
+
+Additions to Chapter 14 of the OpenGL 4.3 (Compatibility Profile) Specification
+(Fixed-Function Primitive Assembly and Rasterization)
+
+    Add the following paragraph to the end of the new subsection 14.6.X 
+    "Conservative Rasterization" added by NV_conservative_raster
+
+    When CONSERVATIVE_RASTERIZATION_NV is enabled, an "over conservative" 
+    rasterization of primitives may be achieved by dilating points, lines, or 
+    polygons in screen space prior to rasterization. The amount of dilation 
+    may be specified by the following command
+
+        void ConservativeRasterParameterfNV(enum pname, float value);
+
+    with the <pname> set to CONSERVATIVE_RASTER_DILATE_NV. The <value> 
+    specifies the amount of dilation as a fraction of the pixel size. Not all 
+    fractional values are supported. If the requested value is greater than
+    the maximum supported value, the maximum supported value is used. If any 
+    other supported value is requested, the nearest supported value which
+    is greater than the requested value is used. Only a dilation value of 0 
+    pixels is guaranteed to be supported; others depend on the implementation.
+    Calling Get with CONSERVATIVE_RASTER_DILATE_RANGE_NV returns 
+    two floating point values representing minimum and maximum supported 
+    dilation values. Calling Get with CONSERVATIVE_RASTER_DILATE_-
+    GRANULARITY_NV returns a single floating point value representing the 
+    value difference between consecutive supported values within the range.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+    
+Modifications to the OpenGL Shading Language Specification, Version 4.30
+
+    None.
+
+Errors
+    
+    If ConservativeRasterParameteriNV is called and <pname> is not 
+    CONSERVATIVE_RASTER_DILATE_NV the error INVALID_ENUM is generated.
+
+    If ConservativeRasterParameteriNV is called with <pname> set to 
+    CONSERVATIVE_RASTER_DILATE_NV the error INVALID_VALUE is generated if 
+    <value> is less than 0.
+
+New Implementation Dependent State
+                                                        Minimum
+    Get Value                      Type    Get Command  Value      Description                        Sec.
+    ---------                      ------- -----------  -------    ------------------------------     ------
+    CONSERVATIVE_RASTER_DILATE_-   2 x R+  GetFloatv    0, 0.75    Min and Max dilation values        14.6.X
+        RANGE_NV                                                   supported
+    CONSERVATIVE_RASTER_DILATE_-   R+      GetFloatv    0          Difference between consecutive     14.6.X
+        GRANULARITY_NV                                             supported values in the range
+
+New State
+
+    Get Value                       Get Command  Type  Initial Value  Description                  Sec.    Attribute
+    ---------                       -----------  ----  -------------  -----------                  ----    ---------
+    CONSERVATIVE_RASTER_DILATE_NV   GetFloatv    R+    0              Dilate primitives when       14.6.X  -
+                                                                      conservative rasterization
+                                                                      is enabled.
+
+NVIDIA Implementation Details
+
+    NVIDIA's GeForce 9xx and Quadro Mxxxx series of GPUs (GM20x) and Tegra X1 
+    support this extension with a granularity of 0.25 and a range of [0, 0.75].
+
+Issues
+
+    None.
+
+Revision History
+    
+    Revision 2
+    - Fix the descriptions for the <pname> parameters.
+    - Fix typos and wordings.
+
+    Revision 1
+    - Internal revisions.

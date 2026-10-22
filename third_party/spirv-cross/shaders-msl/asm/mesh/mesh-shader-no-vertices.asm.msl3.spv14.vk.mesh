@@ -1,0 +1,36 @@
+; SPIR-V
+; Version: 1.4
+; Generator: Khronos Glslang Reference Front End; 11
+; Bound: 18
+; Schema: 0
+               OpCapability MeshShadingEXT
+               OpExtension "SPV_EXT_mesh_shader"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint MeshEXT %4 "main" %17
+               OpExecutionMode %4 LocalSize 128 1 1
+               OpExecutionMode %4 OutputVertices 256
+               OpExecutionMode %4 OutputPrimitivesEXT 256
+               OpExecutionMode %4 OutputTrianglesEXT
+               OpDecorate %11 BuiltIn WorkgroupSize
+               OpDecorate %17 Location 0
+               OpDecorate %17 PerPrimitiveEXT
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeInt 32 0
+          %7 = OpConstant %6 0
+          %8 = OpTypeVector %6 3
+          %9 = OpConstant %6 128
+         %10 = OpConstant %6 1
+         %11 = OpConstantComposite %8 %9 %10 %10
+         %12 = OpTypeFloat 32
+         %13 = OpTypeVector %12 4
+         %14 = OpConstant %6 256
+         %15 = OpTypeArray %13 %14
+         %16 = OpTypePointer Output %15
+         %17 = OpVariable %16 Output
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+               OpSetMeshOutputsEXT %7 %7
+               OpReturn
+               OpFunctionEnd

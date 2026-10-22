@@ -1,0 +1,5 @@
+LIBRARY test_icd_version_2_export_icd_gpdpa
+EXPORTS
+    vk_icdGetInstanceProcAddr
+    vk_icdNegotiateLoaderICDInterfaceVersion
+    vk_icdGetPhysicalDeviceProcAddr

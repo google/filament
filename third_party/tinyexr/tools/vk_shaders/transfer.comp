@@ -1,0 +1,15 @@
+#version 450
+layout(local_size_x=64) in;
+layout(std430,binding=0) writeonly buffer D { float dst[]; };
+layout(std430,binding=1) readonly buffer S { float src[]; };
+layout(push_constant) uniform PC { uint n,tf,decode; } p;
+void main(){
+  uint i=gl_GlobalInvocationID.x; if(i>=p.n) return; float x=src[i],y=x;
+  if(p.tf==1u){ if(p.decode==1u) y=(x<=0.04045)?(x/12.92):pow((x+0.055)/1.055,2.4);
+                else y=(x<=0.0031308)?(12.92*x):(1.055*pow(x,1.0/2.4)-0.055); }
+  else if(p.tf==2u){ y=(p.decode==1u)?pow(x,2.2):pow(x,1.0/2.2); }
+  else if(p.tf==3u){ y=(p.decode==1u)?pow(x,2.4):pow(x,1.0/2.4); }
+  else if(p.tf==4u){ if(p.decode==1u) y=(x<0.081)?(x/4.5):pow((x+0.099)/1.099,1.0/0.45);
+                     else y=(x<0.018)?(4.5*x):(1.099*pow(x,0.45)-0.099); }
+  dst[i]=y;
+}

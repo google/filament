@@ -1,0 +1,511 @@
+cmake_minimum_required(VERSION 3.19)
+project(filament-samples C ASM)
+
+if (FILAMENT_SKIP_SAMPLES)
+    return()
+endif()
+
+set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
+set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
+set(RESOURCE_DIR  "${GENERATION_ROOT}/generated/resources")
+set(MATERIAL_DIR  "${GENERATION_ROOT}/generated/material")
+set(TEXTURE_DIR "${GENERATION_ROOT}/generated/texture")
+set(RESOURCE_BINS)
+
+# ==================================================================================================
+# Build materials
+# ==================================================================================================
+
+set(MATERIAL_SRCS
+        materials/aiDefaultMat.mat
+        materials/bakedColor.mat
+        materials/bakedTexture.mat
+        materials/aoPreview.mat
+        materials/arrayTexture.mat
+        materials/groundShadow.mat
+        materials/heightfield.mat
+        materials/image.mat
+        materials/mirror.mat
+        materials/overdraw.mat
+        materials/proceduralEffect.mat
+        materials/proceduralTextureQuad.mat
+        materials/sandboxCloth.mat
+        materials/sandboxLit.mat
+        materials/sandboxLitFade.mat
+        materials/sandboxLitTransparent.mat
+        materials/sandboxLitThinRefraction.mat
+        materials/sandboxLitThinRefractionSsr.mat
+        materials/sandboxLitSolidRefraction.mat
+        materials/sandboxLitSolidRefractionSsr.mat
+        materials/sandboxSpecGloss.mat
+        materials/sandboxSubsurface.mat
+        materials/sandboxUnlit.mat
+        materials/texturedLit.mat
+        materials/uvmorph.mat
+)
+
+# Tint does not support setting gl_PointSize, disable the relevant sample if using WebGPU
+# https://github.com/gpuweb/gpuweb/issues/1190
+if (NOT FILAMENT_SUPPORTS_WEBGPU)
+    set(MATERIAL_SRCS ${MATERIAL_SRCS} materials/pointSprites.mat)
+endif ()
+
+if (CMAKE_CROSSCOMPILING OR FILAMENT_IMPORT_PREBUILT_EXECUTABLES)
+    include(${IMPORT_EXECUTABLES})
+endif()
+
+file(MAKE_DIRECTORY ${MATERIAL_DIR})
+
+set (MATC_FLAGS ${MATC_BASE_FLAGS})
+if (FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "instanced")
+    set (MATC_FLAGS ${MATC_FLAGS} -PstereoscopicType=instanced)
+    add_definitions(-DFILAMENT_SAMPLES_STEREO_TYPE_INSTANCED)
+elseif (FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview")
+    set (MATC_FLAGS ${MATC_FLAGS} -PstereoscopicType=multiview)
+    add_definitions(-DFILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
+endif ()
+
+foreach (mat_src ${MATERIAL_SRCS})
+    get_filename_component(localname "${mat_src}" NAME_WE)
+    get_filename_component(fullname "${mat_src}" ABSOLUTE)
+    set(output_path "${MATERIAL_DIR}/${localname}.filamat")
+    add_custom_command(
+            OUTPUT ${output_path}
+            COMMAND matc ${MATC_FLAGS} -o ${output_path} ${fullname}
+            MAIN_DEPENDENCY ${mat_src}
+            DEPENDS matc
+            COMMENT "Compiling material ${mat_src} to ${output_path}"
+    )
+    list(APPEND RESOURCE_BINS ${output_path})
+endforeach()
+
+# ==================================================================================================
+# Build sample resources
+# ==================================================================================================
+
+file(MAKE_DIRECTORY ${RESOURCE_DIR})
+
+get_resgen_vars(${RESOURCE_DIR} resources)
+
+add_custom_command(
+        OUTPUT ${RESGEN_OUTPUTS}
+        COMMAND resgen ${RESGEN_FLAGS} ${RESOURCE_BINS}
+        DEPENDS resgen ${RESOURCE_BINS}
+        COMMENT "Aggregating resources"
+)
+
+if (DEFINED RESGEN_SOURCE_FLAGS)
+    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
+endif()
+
+# CMake fails to invoke ar on Windows unless there is at least one C/C++ file in the library.
+set(SAMPLE_DUMMY_SRC "${RESOURCE_DIR}/dummy_sample.c")
+add_custom_command(OUTPUT ${SAMPLE_DUMMY_SRC} COMMAND echo "//" > ${SAMPLE_DUMMY_SRC})
+
+add_library(sample-resources ${SAMPLE_DUMMY_SRC} ${RESGEN_SOURCE})
+set_target_properties(sample-resources PROPERTIES FOLDER Samples/Resources)
+
+# ==================================================================================================
+# Invoke cmgen to build KTX files for the default IBL and skybox
+# ==================================================================================================
+
+set(CMGEN_ARGS --quiet --format=ktx --size=256 --extract-blur=0.1)
+
+function(add_envmap SOURCE TARGET)
+    set(source_envmap "${ROOT_DIR}/${SOURCE}")
+
+    set(target_skybox "${PROJECT_BINARY_DIR}/assets/ibl/${TARGET}/${TARGET}_skybox.ktx")
+    set(target_envmap "${PROJECT_BINARY_DIR}/assets/ibl/${TARGET}/${TARGET}_ibl.ktx")
+
+    set(target_envmaps ${target_envmaps} ${target_skybox} PARENT_SCOPE)
+    set(target_envmaps ${target_envmaps} ${target_envmap} PARENT_SCOPE)
+
+    add_custom_command(OUTPUT ${target_skybox} ${target_envmap}
+        COMMAND cmgen -x assets/ibl/${TARGET} ${CMGEN_ARGS} ${source_envmap}
+        MAIN_DEPENDENCY ${source_envmap}
+        DEPENDS cmgen
+        COMMENT "Generating environment map ${target_envmap}")
+endfunction()
+
+add_envmap("third_party/environments/lightroom_14b.hdr" "lightroom_14b")
+
+# ==================================================================================================
+# Build suzanne resources
+# ==================================================================================================
+
+function(add_ktxfiles SOURCE TARGET EXTRA_ARGS)
+    set(source_path "${ROOT_DIR}/${SOURCE}")
+    set(target_path "${TEXTURE_DIR}/${TARGET}")
+    set(MONKEY_FILES ${MONKEY_FILES} ${target_path} PARENT_SCOPE)
+    add_custom_command(
+        OUTPUT ${target_path}
+        COMMAND mipgen --quiet ${EXTRA_ARGS} ${source_path} ${target_path}
+        MAIN_DEPENDENCY ${source_path}
+        DEPENDS mipgen
+        COMMENT "Generating mip levels for ${source_path}")
+endfunction()
+
+function(add_pngfile SOURCE TARGET)
+    set(source_path "${ROOT_DIR}/${SOURCE}")
+    set(target_path "${TEXTURE_DIR}/${TARGET}")
+    set(MONKEY_FILES ${MONKEY_FILES} ${target_path} PARENT_SCOPE)
+    add_custom_command(
+        OUTPUT ${target_path}
+        COMMAND ${CMAKE_COMMAND} -E copy ${source_path} ${target_path}
+        MAIN_DEPENDENCY ${source_path})
+endfunction()
+
+function(add_mesh SOURCE TARGET)
+    set(source_mesh "${ROOT_DIR}/${SOURCE}")
+    set(target_mesh "${RESOURCE_DIR}/${TARGET}")
+    set(MONKEY_FILES ${MESH_BINS} ${target_mesh} PARENT_SCOPE)
+    add_custom_command(
+        OUTPUT ${target_mesh}
+        COMMAND filamesh --compress ${source_mesh} ${target_mesh}
+        MAIN_DEPENDENCY ${source_mesh}
+        DEPENDS filamesh)
+endfunction()
+
+add_mesh("assets/models/monkey/monkey.obj" "suzanne.filamesh")
+
+set (COMPRESSION "--compression=uastc")
+add_ktxfiles("assets/models/monkey/color.png" "albedo.ktx2" "${COMPRESSION}")
+add_ktxfiles("assets/models/monkey/roughness.png" "roughness.ktx2" "${COMPRESSION};--grayscale;--linear")
+add_ktxfiles("assets/models/monkey/metallic.png" "metallic.ktx2" "${COMPRESSION};--grayscale;--linear")
+add_ktxfiles("assets/models/monkey/ao.png" "ao.ktx2" "${COMPRESSION};--grayscale;--linear")
+
+add_pngfile("assets/models/monkey/normal.png" "normal.png")
+
+get_resgen_vars(${RESOURCE_DIR} monkey)
+
+add_custom_command(
+        OUTPUT ${RESGEN_OUTPUTS}
+        COMMAND resgen ${RESGEN_FLAGS} ${MONKEY_FILES}
+        DEPENDS resgen ${MONKEY_FILES}
+        COMMENT "Aggregating monkey resources"
+)
+
+if (DEFINED RESGEN_SOURCE_FLAGS)
+    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
+endif()
+
+set(SUZANNE_DUMMY_SRC "${RESOURCE_DIR}/dummy_suzanne.c")
+add_custom_command(OUTPUT ${SUZANNE_DUMMY_SRC} COMMAND echo "//" > ${SUZANNE_DUMMY_SRC})
+
+add_library(suzanne-resources ${SUZANNE_DUMMY_SRC} ${RESGEN_SOURCE})
+set_target_properties(suzanne-resources PROPERTIES FOLDER Samples/Resources)
+
+# ==================================================================================================
+# Resources for gltf_viewer and gltf_instances
+# ==================================================================================================
+
+set(GLTF_DEMO_DUMMY_SRC "${RESOURCE_DIR}/dummy_gltf_demo.c")
+add_custom_command(OUTPUT ${GLTF_DEMO_DUMMY_SRC} COMMAND echo "//" > ${GLTF_DEMO_DUMMY_SRC})
+
+add_library(gltf-demo-resources ${GLTF_DEMO_DUMMY_SRC})
+set_target_properties(gltf-demo-resources PROPERTIES FOLDER Samples/Resources)
+
+set(GLTF_DEMO_RESOURCES
+    ${ROOT_DIR}/third_party/models/DamagedHelmet/DamagedHelmet.glb
+    ${MATERIAL_DIR}/groundShadow.filamat
+    ${MATERIAL_DIR}/overdraw.filamat
+)
+
+get_resgen_vars(${RESOURCE_DIR} gltf_demo)
+
+add_custom_command(
+        OUTPUT ${RESGEN_OUTPUTS}
+        COMMAND resgen ${RESGEN_FLAGS} ${GLTF_DEMO_RESOURCES}
+        DEPENDS resgen ${GLTF_DEMO_RESOURCES}
+)
+
+if (DEFINED RESGEN_SOURCE_FLAGS)
+    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
+endif()
+
+target_sources(gltf-demo-resources PRIVATE ${RESGEN_SOURCE})
+
+# ==================================================================================================
+# Common Sample Utilities
+# ==================================================================================================
+
+add_library(samples-common STATIC
+    common/arguments.cpp
+    common/arguments.h
+    include/samples/Parameter.h
+    include/samples/SampleConfig.h
+)
+
+target_include_directories(samples-common PUBLIC
+    include
+)
+target_link_libraries(samples-common filament filamentapp)
+
+set_target_properties(samples-common PROPERTIES FOLDER Samples/Common)
+
+get_property(_isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if (_isMultiConfig)
+    target_compile_definitions(samples-common PRIVATE RELATIVE_ASSET_PATH="..")
+else()
+    target_compile_definitions(samples-common PRIVATE RELATIVE_ASSET_PATH=".")
+endif()
+
+# ==================================================================================================
+# Compiler flags
+# ==================================================================================================
+
+if (MSVC)
+else()
+    set(COMPILER_FLAGS
+            -Wno-extern-c-compat
+            $<$<NOT:$<PLATFORM_ID:Linux>>:-Wno-address-of-packed-member>)
+endif()
+
+# ==================================================================================================
+# Test apps
+# ==================================================================================================
+
+set_property(GLOBAL PROPERTY FILAMENT_SAMPLES_LIST "")
+
+function(add_demo NAME)
+    include_directories(${GENERATION_ROOT})
+    add_executable(${NAME} ${NAME}.cpp)
+    target_link_libraries(${NAME} PRIVATE sample-resources samples-common)
+    target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
+    set_target_properties(${NAME} PROPERTIES FOLDER Samples)
+
+    # This is needed after XCode 15.3
+    if (APPLE)
+        set_target_properties(${NAME} PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE)
+        set_target_properties(${NAME} PROPERTIES INSTALL_RPATH /usr/local/lib)
+    endif()
+
+    set_property(GLOBAL APPEND PROPERTY FILAMENT_SAMPLES_LIST ${NAME})
+endfunction()
+
+# ==================================================================================================
+# WASM samples
+#
+# Each sample links to a <name>.js / <name>.wasm pair plus a generic HTML shell. The module is
+# MODULARIZE'd and INVOKE_RUN=0, so the page controls when and with which argv main() runs. WebGPU
+# needs that to install its device first, and the renderdiff harness to stage inputs into MEMFS.
+# ==================================================================================================
+
+function(add_wasm_demo NAME)
+    include_directories(${GENERATION_ROOT})
+    add_executable(${NAME} ${NAME}.cpp)
+    target_link_libraries(${NAME} PRIVATE sample-resources samples-common)
+    target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
+    set_target_properties(${NAME} PROPERTIES FOLDER Samples)
+
+    set(LOPTS "")
+    string(APPEND LOPTS " -s MODULARIZE=1")
+    string(APPEND LOPTS " -s EXPORT_NAME=FilamentSample")
+    string(APPEND LOPTS " -s ALLOW_MEMORY_GROWTH=1")
+    # Filament allocates large staging buffers up front; growing from the 16MB default thrashes.
+    string(APPEND LOPTS " -s INITIAL_MEMORY=268435456")
+    string(APPEND LOPTS " -s STACK_SIZE=4194304")
+    # main() is called explicitly by the page, and the runtime must survive it: the app runs on
+    # requestAnimationFrame callbacks long after main() has unwound.
+    string(APPEND LOPTS " -s INVOKE_RUN=0")
+    string(APPEND LOPTS " -s EXIT_RUNTIME=0")
+    string(APPEND LOPTS " -s FORCE_FILESYSTEM=1")
+    string(APPEND LOPTS " -s EXPORTED_RUNTIME_METHODS=['callMain','FS','HEAPU8']")
+    string(APPEND LOPTS " -s EXPORTED_FUNCTIONS=['_main','_malloc','_free']")
+    string(APPEND LOPTS " -s USE_WEBGL2=1")
+    string(APPEND LOPTS " -s FULL_ES3=1")
+    string(APPEND LOPTS " -s MIN_WEBGL_VERSION=2")
+    string(APPEND LOPTS " -s MAX_WEBGL_VERSION=2")
+
+    set_target_properties(${NAME} PROPERTIES LINK_FLAGS "${LOPTS}")
+
+    # The .js/.wasm pair is not loadable on its own: MODULARIZE=1 requires a page to instantiate the
+    # factory, and INVOKE_RUN=0 requires it to call main(). @ONLY is required because the template
+    # is mostly JavaScript, which CMake would otherwise mangle wherever it contains ${...}.
+    set(SAMPLE_NAME ${NAME})
+    configure_file(
+            ${CMAKE_CURRENT_SOURCE_DIR}/wasm_shell.html.in
+            ${CMAKE_CURRENT_BINARY_DIR}/${NAME}.html
+            @ONLY)
+
+    set_property(GLOBAL APPEND PROPERTY FILAMENT_SAMPLES_LIST ${NAME})
+endfunction()
+
+if (WASM)
+    add_wasm_demo(hellotriangle)
+
+    add_wasm_demo(gltf_viewer)
+    target_link_libraries(gltf_viewer PRIVATE gltf-demo-resources uberarchive gltfio_core viewer)
+
+    # gltf_viewer needs the ImGui font and the default IBL before it can show anything. Both are
+    # baked into MEMFS at the paths a desktop build would find them under, so no code has to know it
+    # is running in a browser. Models are staged into MEMFS by whoever drives the page instead.
+    target_link_options(gltf_viewer PRIVATE
+            "SHELL:--preload-file ${PROJECT_BINARY_DIR}/assets/fonts@/assets/fonts"
+            "SHELL:--preload-file ${PROJECT_BINARY_DIR}/assets/ibl@/assets/ibl")
+
+    get_property(ALL_SAMPLES GLOBAL PROPERTY FILAMENT_SAMPLES_LIST)
+    add_custom_target(filament-samples DEPENDS ${ALL_SAMPLES})
+    set_target_properties(filament-samples PROPERTIES FOLDER Samples)
+
+elseif (NOT ANDROID)
+    add_demo(animation)
+    add_demo(async_stream_bench)
+    add_demo(depthtesting)
+    add_demo(frame_generator)
+    add_demo(gltf_viewer)
+    add_demo(gltf_instances)
+    add_demo(heightfield)
+    add_demo(helloasync)
+    add_demo(hellomorphing)
+    add_demo(hellouvmorphing)
+    add_demo(hellopbr)
+    add_demo(hellotriangle)
+    add_demo(helloskinning)
+    add_demo(helloskinningbuffer)
+    add_demo(helloskinningbuffer_morebones)
+    add_demo(hellostereo)
+    add_demo(hybrid_instancing)
+    add_demo(image_viewer)
+    add_demo(lightbulb)
+    add_demo(material_sandbox)
+    add_demo(materialinstancestress)
+    add_demo(multiple_windows)
+    # Tint does not support setting gl_PointSize, disable the relevant sample if using WebGPU
+    # https://github.com/gpuweb/gpuweb/issues/1190
+    if (NOT FILAMENT_SUPPORTS_WEBGPU)
+        add_demo(point_sprites)
+    endif ()
+    add_demo(procedural_effect)
+    add_demo(procedural_texture_quad)
+    add_demo(rendertarget)
+    add_demo(sample_cloth)
+    add_demo(sample_full_pbr)
+    add_demo(sample_normal_map)
+    add_demo(shadowtest)
+    add_demo(skinningtest)
+    add_demo(strobecolor)
+    add_demo(suzanne)
+    add_demo(texturedquad)
+    add_demo(vbotest)
+    add_demo(viewtest)
+
+    get_property(ALL_SAMPLES GLOBAL PROPERTY FILAMENT_SAMPLES_LIST)
+    add_custom_target(filament-samples DEPENDS ${ALL_SAMPLES})
+    set_target_properties(filament-samples PROPERTIES FOLDER Samples)
+
+    # Sample app specific
+
+    target_link_libraries(gltf_viewer PRIVATE gltf-demo-resources uberarchive gltfio viewer)
+    target_link_libraries(gltf_instances PRIVATE gltf-demo-resources uberarchive gltfio viewer)
+    target_link_libraries(hellopbr PRIVATE filameshio suzanne-resources)
+    target_link_libraries(hellostereo PRIVATE filameshio suzanne-resources)
+    target_link_libraries(image_viewer PRIVATE viewer)
+    target_link_libraries(materialinstancestress PRIVATE filameshio suzanne-resources)
+    target_link_libraries(multiple_windows PRIVATE filameshio suzanne-resources)
+    target_link_libraries(rendertarget PRIVATE filameshio suzanne-resources)
+    target_link_libraries(sample_cloth PRIVATE filameshio)
+    target_link_libraries(sample_normal_map PRIVATE filameshio suzanne-resources)
+    target_link_libraries(suzanne PRIVATE filameshio suzanne-resources)
+
+    if (FILAMENT_DISABLE_MATOPT)
+        add_definitions(-DFILAMENT_DISABLE_MATOPT=1)
+    else()
+        add_definitions(-DFILAMENT_DISABLE_MATOPT=0)
+    endif()
+
+    # ==============================================================================================
+    # Installation
+    # ==============================================================================================
+    install(TARGETS gltf_viewer RUNTIME DESTINATION bin)
+    install(TARGETS material_sandbox RUNTIME DESTINATION bin)
+
+    # Install resources
+    install(DIRECTORY ${PROJECT_BINARY_DIR}/assets/fonts DESTINATION bin/assets)
+    install(DIRECTORY ${PROJECT_BINARY_DIR}/assets/ibl/ DESTINATION bin/assets/ibl)
+else()
+    # ==============================================================================================
+    # Android libfilament-samples.a
+    # ==============================================================================================
+
+    # Extract samples from FILAMENT_SAMPLES_LIST macro in SampleDispatcher.cpp (single source of truth)
+    # Ensure CMake reconfigures if SampleDispatcher.cpp is modified (e.g. samples added or removed).
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/SampleDispatcher.cpp")
+    file(READ ${CMAKE_CURRENT_SOURCE_DIR}/SampleDispatcher.cpp _sample_dispatcher_src)
+    string(REGEX MATCH "FILAMENT_SAMPLES_LIST\\\(V\\\)([^#]+)" _macro_content "${_sample_dispatcher_src}")
+    string(REGEX REPLACE "//[^\n\r]*" "" _macro_content "${_macro_content}")
+    string(REGEX MATCHALL "V\\\([a-zA-Z0-9_]+\\\)" _v_matches "${_macro_content}")
+    set(ANDROID_SAMPLES "")
+    foreach(_match ${_v_matches})
+        string(REGEX REPLACE "V\\\(([a-zA-Z0-9_]+)\\\)" "\\1" _sample_name "${_match}")
+        list(APPEND ANDROID_SAMPLES ${_sample_name})
+    endforeach()
+
+    if (NOT ANDROID_SAMPLES)
+        message(FATAL_ERROR "No samples parsed from FILAMENT_SAMPLES_LIST in SampleDispatcher.cpp")
+    endif()
+
+    add_library(filament-samples STATIC
+        SampleDispatcher.cpp
+        include/samples/SampleDispatcher.h
+    )
+    target_include_directories(filament-samples PUBLIC include)
+    target_link_libraries(filament-samples PRIVATE sample-resources samples-common filamentapp)
+
+    foreach(SAMPLE ${ANDROID_SAMPLES})
+        add_library(obj_${SAMPLE} OBJECT ${SAMPLE}.cpp)
+        target_compile_definitions(obj_${SAMPLE} PRIVATE
+            createSampleApp=create_${SAMPLE}_App
+            createAppParameters=create_${SAMPLE}_AppParameters)
+        target_include_directories(obj_${SAMPLE} PRIVATE ${GENERATION_ROOT} ${FILAMENT}/filament/include ${FILAMENT}/libs/math/include ${FILAMENT}/libs/filameshio/include ${FILAMENT}/libs/ktxreader/include)
+        target_compile_options(obj_${SAMPLE} PRIVATE ${COMPILER_FLAGS})
+        target_link_libraries(obj_${SAMPLE} PRIVATE sample-resources suzanne-resources samples-common filamentapp filament)
+
+        target_sources(filament-samples PRIVATE $<TARGET_OBJECTS:obj_${SAMPLE}>)
+    endforeach()
+
+    target_link_libraries(filament-samples PRIVATE filameshio suzanne-resources ktxreader)
+    target_link_libraries(filament-samples PRIVATE android log)
+
+    install(TARGETS filament-samples ARCHIVE DESTINATION lib/${DIST_DIR})
+    install(TARGETS sample-resources ARCHIVE DESTINATION lib/${DIST_DIR})
+    install(TARGETS suzanne-resources ARCHIVE DESTINATION lib/${DIST_DIR})
+    install(TARGETS samples-common ARCHIVE DESTINATION lib/${DIST_DIR})
+    install(DIRECTORY include/samples DESTINATION include)
+endif()
+
+# ==================================================================================================
+# Copy Assets
+#
+# This creates a structure like:
+#
+#    /lightbulb (etc)  sample app executable
+#    /assets/fonts     copied from REPO/assets
+#    /assets/models    copied from REPO/assets
+#    /textures         copied from REPO/third_party
+#
+# ==================================================================================================
+
+file(COPY ../third_party/textures DESTINATION ${PROJECT_BINARY_DIR})
+add_custom_target(textures ALL DEPENDS textures)
+set_target_properties(textures PROPERTIES FOLDER Samples/Assets)
+
+file(COPY ../assets DESTINATION ${PROJECT_BINARY_DIR}
+        PATTERN "reference" EXCLUDE
+        PATTERN "environments" EXCLUDE)
+add_custom_target(assets ALL DEPENDS assets)
+set_target_properties(assets PROPERTIES FOLDER Samples/Assets)
+
+add_custom_target(envs DEPENDS ${target_envmaps})
+set_target_properties(envs PROPERTIES FOLDER Samples/Assets)
+
+if (WASM)
+    # filament is shared with filament.js, so it must not depend on sample assets here: that would
+    # pull cmgen and the asset copies into every WASM build. The sample that needs them depends on
+    # them instead. --preload-file reads the assets at link time, so they have to be generated by
+    # then. The fonts are copied at configure time, but the IBL is produced by cmgen during the
+    # build.
+    add_dependencies(gltf_viewer assets envs)
+else()
+    add_dependencies(filament textures assets envs)
+endif()

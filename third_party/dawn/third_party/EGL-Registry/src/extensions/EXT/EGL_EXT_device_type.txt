@@ -1,0 +1,91 @@
+Name
+
+    EXT_device_type
+
+Name Strings
+
+    EGL_EXT_device_type
+
+Contributors
+
+    Simon Ser
+
+Contacts
+
+    Simon Ser (contact@emersion.fr)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1 - March 12th, 2026
+
+Number
+
+    EGL Extension #155
+
+Extension Type
+
+    EGL device extension
+
+Dependencies
+
+    Written based on the wording of the EGL 1.5 specification.
+
+    EGL_EXT_device_query is required.
+
+Overview
+
+    This extension advertises the device type of a given EGLDeviceEXT object.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as the <name> parameter of eglQueryDeviceAttribEXT
+
+        EGL_DEVICE_TYPE_EXT                 0x3590
+
+    Returned as the <value> parameter of eglQueryDeviceAttribEXT
+
+        EGL_DEVICE_TYPE_OTHER_EXT           0x3591
+        EGL_DEVICE_TYPE_INTEGRATED_GPU_EXT  0x3592
+        EGL_DEVICE_TYPE_DISCRETE_GPU_EXT    0x3593
+        EGL_DEVICE_TYPE_CPU_EXT             0x3594
+
+Changes to section 3.2 (Devices)
+
+    Add the following paragraph to the description of eglQueryDeviceAttribEXT:
+
+    To obtain the device type of an EGLDeviceEXT, call eglQueryDeviceAttribEXT
+    with <name> set to EGL_DEVICE_TYPE_EXT. The function will return one of the
+    following values:
+
+        EGL_DEVICE_TYPE_OTHER_EXT
+            The device does not match any other available types.
+        EGL_DEVICE_TYPE_INTEGRATED_GPU_EXT
+            The device is typically one embedded in or tightly coupled with the
+            host.
+        EGL_DEVICE_TYPE_DISCRETE_GPU_EXT
+            The device is typically a separate processor connected to the host
+            via an interlink.
+        EGL_DEVICE_TYPE_CPU_EXT
+            The device is typically running on the same processors as the host.
+
+Issues
+
+    None
+
+Revision History:
+
+    #1  (March 12th, 2026) Simon Ser
+        - Initial draft.
+

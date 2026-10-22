@@ -1,0 +1,50 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 11
+; Bound: 51
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpName %main "main"
+               OpName %a "a"
+               OpName %UBO "UBO"
+               OpMemberName %UBO 0 "b"
+               OpMemberName %UBO 1 "c"
+               OpName %_ ""
+               OpDecorate %_arr_vec2_uint_5 ArrayStride 16
+               OpDecorate %UBO Block
+               OpMemberDecorate %UBO 0 Offset 0
+               OpMemberDecorate %UBO 1 Offset 80
+               OpDecorate %_ Binding 0
+               OpDecorate %_ DescriptorSet 0
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+	  %vec2  = OpTypeVector %float 2
+       %uint = OpTypeInt 32 0
+     %uint_5 = OpConstant %uint 5
+%_arr_vec2_uint_5 = OpTypeArray %vec2 %uint_5
+%_ptr_Function__arr_vec2_uint_5 = OpTypePointer Function %_arr_vec2_uint_5
+%_ptr_Uniform__arr_vec2_uint_5 = OpTypePointer Uniform %_arr_vec2_uint_5
+%_ptr_Function_float = OpTypePointer Function %float
+%_ptr_Uniform_float = OpTypePointer Uniform %float
+       %UBO = OpTypeStruct %_arr_vec2_uint_5 %_arr_vec2_uint_5
+%_ptr_Uniform_UBO = OpTypePointer Uniform %UBO
+          %_ = OpVariable %_ptr_Uniform_UBO Uniform
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+          %a = OpVariable %_ptr_Function__arr_vec2_uint_5 Function
+         %ptr_b = OpAccessChain %_ptr_Uniform__arr_vec2_uint_5 %_ %int_0
+         %ptr_c = OpAccessChain %_ptr_Uniform__arr_vec2_uint_5 %_ %int_1
+		 %loaded_b = OpLoad %_arr_vec2_uint_5 %ptr_b
+		 OpStore %a %loaded_b
+		 OpCopyMemory %a %ptr_c
+               OpReturn
+               OpFunctionEnd

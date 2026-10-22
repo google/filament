@@ -1,0 +1,27 @@
+ShadingModel=lit
+BlendingMode=opaque
+
+Transmission=unsupported
+Volume=unsupported
+Ior=unsupported
+ClearCoat=unsupported
+
+VertexColors=optional
+BaseColorTexture=optional
+NormalTexture=optional
+OcclusionTexture=optional
+EmissiveTexture=optional
+MetallicRoughnessTexture=optional
+TextureTransforms=optional
+
+Sheen=optional
+SheenColorTexture=optional
+SheenRoughnessTexture=optional
+
+# KHR_material_specular Features
+Specular=optional
+SpecularTexture=optional
+SpecularColorTexture=unsupported
+
+# KHR_materials_dispersion Features
+Dispersion = unsupported

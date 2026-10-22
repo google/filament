@@ -1,0 +1,29 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the DirectXShaderCompiler, under the Apache License v2.0 with LLVM
+// Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+// SFINAE construct for enable_if to enable and disable declarations.
+//===----------------------------------------------------------------------===//
+
+#ifndef __HLSL_ENABLE_IF
+#define __HLSL_ENABLE_IF
+
+#if __HLSL_VERSION >= 2021
+
+namespace hlsl {
+
+template <bool B, typename T> struct enable_if {};
+
+template <typename T> struct enable_if<true, T> {
+  using type = T;
+};
+
+} // namespace hlsl
+
+#endif // __HLSL_VERSION >= 2021
+
+#endif // __HLSL_ENABLE_IF

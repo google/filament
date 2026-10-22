@@ -1,0 +1,45 @@
+; SPIR-V
+; Version: 1.6
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 24
+; Schema: 0
+               OpCapability VariablePointersStorageBuffer
+               OpCapability Int8
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %1 "main" %2
+               OpExecutionMode %1 LocalSize 16 1 1
+               OpDecorate %2 DescriptorSet 0
+               OpDecorate %2 Binding 0
+               OpDecorate %_struct_3 Block
+               OpMemberDecorate %_struct_3 0 Offset 0
+               OpDecorate %uchar_array ArrayStride 1
+       %void = OpTypeVoid
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+     %uint_3 = OpConstant %uint 3
+     %uint_16 = OpConstant %uint 16
+      %uchar = OpTypeInt 8 0
+    %uchar_0 = OpConstant %uchar 0
+%uchar_array = OpTypeArray %uchar %uint_16
+  %_struct_3 = OpTypeStruct %uchar_array
+%_ptr_StorageBuffer_uchar = OpTypePointer StorageBuffer %uchar
+%_ptr_StorageBuffer_uchar_array = OpTypePointer StorageBuffer %uchar_array
+%_ptr_StorageBuffer__struct_3 = OpTypePointer StorageBuffer %_struct_3
+          %2 = OpVariable %_ptr_StorageBuffer__struct_3 StorageBuffer
+         %15 = OpTypeFunction %void %_ptr_StorageBuffer_uchar_array
+         %16 = OpTypeFunction %void
+          %1 = OpFunction %void None %16
+         %17 = OpLabel
+         %18 = OpAccessChain %_ptr_StorageBuffer_uchar_array %2 %uint_0
+         %19 = OpFunctionCall %void %20 %18
+               OpReturn
+               OpFunctionEnd
+         %20 = OpFunction %void None %15
+         %21 = OpFunctionParameter %_ptr_StorageBuffer_uchar_array
+         %22 = OpLabel
+         %23 = OpAccessChain %_ptr_StorageBuffer_uchar %21 %uint_2
+               OpStore %23 %uchar_0
+               OpReturn
+               OpFunctionEnd

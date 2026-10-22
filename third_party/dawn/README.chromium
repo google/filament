@@ -1,0 +1,16 @@
+Name: Dawn
+Short Name: dawn
+URL: https://dawn.googlesource.com/dawn
+Update Mechanism: Autoroll
+Version: N/A
+Revision: a117f96e09e88e76c0a9e3b553b7316cda50633d
+License: BSD-3-Clause
+License File: LICENSE
+Security Critical: yes
+Shipped: yes
+
+Description:
+Dawn is an implementation of the WebGPU standard exposed through a C/C++
+interface. It provides implementations on top of native graphics APIs like
+D3D12, Metal and Vulkan, as well as a client-server implementation to remote
+WebGPU outside sandboxed context like Chromium's render processes.

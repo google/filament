@@ -1,0 +1,29 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    float3x4 A;
+    float3x4 B;
+    float3x4 C;
+    float4 D;
+    float w0;
+    float w1;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(64u, 1u, 1u);
+
+kernel void main0(device SSBO& _18 [[buffer(0)]])
+{
+    float4x3 Anew;
+    float4x3 Bnew;
+    do
+    {
+        Anew = transpose(_18.A * _18.w0);
+        Bnew = transpose(_18.B * _18.w1);
+    } while (false);
+    _18.D = float4(float4x3(Anew[0] + Bnew[0], Anew[1] + Bnew[1], Anew[2] + Bnew[2], Anew[3] + Bnew[3]) * _18.D, 1.0);
+}
+

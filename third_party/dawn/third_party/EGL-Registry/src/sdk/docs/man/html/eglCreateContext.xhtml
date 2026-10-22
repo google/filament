@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglCreateContext - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.2"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglCreateContext">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglCreateContext — 
+            create a new <abbr class="acronym">EGL</abbr> rendering context
+        </p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLContext <strong class="fsfunc">eglCreateContext</strong>(</code>
+              </td>
+              <td>EGLDisplay <var class="pdparam">display</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLConfig <var class="pdparam">config</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLContext <var class="pdparam">share_context</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLint const * <var class="pdparam">attrib_list</var><code>)</code>;</td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="parameters">
+        <h2>Parameters</h2>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>display</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies the
+                    <abbr class="acronym">EGL</abbr>
+                    display connection.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>config</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>Specifies the EGL frame buffer configuration that
+                    defines the frame buffer resource available to the rendering context.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>share_context</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies another
+                    <abbr class="acronym">EGL</abbr>
+                    rendering context with which to share data, as
+                    defined by the client API corresponding to the
+                    contexts. Data is also shared with all other
+                    contexts with which
+                    <em class="parameter"><code>share_context</code></em> shares data.
+                    <code class="constant">EGL_NO_CONTEXT</code> indicates that
+                    no sharing is to take place.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>attrib_list</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies attributes and attribute values for the
+                    context being created.
+                </p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            <code class="function">eglCreateContext</code> creates an EGL
+            rendering context for the current rendering API (as set with
+            <code class="function">eglBindAPI</code>) and returns a handle to the
+            context. The context can then be used to render into an EGL
+            drawing surface. If <code class="function">eglCreateContext</code>
+            fails to create a rendering context,
+            <code class="constant">EGL_NO_CONTEXT</code> is returned.
+        </p>
+        <p>
+            If <em class="parameter"><code>share_context</code></em> is not
+            <code class="constant">EGL_NO_CONTEXT</code>, then all shareable data
+            in the context (as defined by the client API specification
+            for the current rendering API) are shared by context
+            <em class="parameter"><code>share_context</code></em>, all other contexts
+            <em class="parameter"><code>share_context</code></em> already shares with,
+            and the newly created context. An arbitrary number of
+            rendering contexts can share data. However, all rendering
+            contexts that share data must themselves exist in the same
+            address space. Two rendering contexts share an address space
+            if both are owned by a single process.
+        </p>
+        <p>
+            <em class="parameter"><code>attrib_list</code></em> specifies a list of
+            attributes for the context. The list has the same structure
+            as described for <code class="function">eglChooseConfig</code>. The
+            attributes and attribute values which may be specified are
+            as follows:
+        </p>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_CONTEXT_MAJOR_VERSION</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Must be followed by an integer specifying the requested
+                    major version of an OpenGL or OpenGL ES context. The
+                    default value is 1. This attribute is an alias of the
+                    older <code class="constant">EGL_CONTEXT_CLIENT_VERSION</code>,
+                    and the tokens may be used interchangeably.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_CONTEXT_MINOR_VERSION</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Must be followed by an integer specifying the requested
+                    minor version of an OpenGL or OpenGL ES context. The
+                    default value is 0.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_CONTEXT_OPENGL_PROFILE_MASK</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Must be followed by an integer bitmask specifying the
+                    <em class="firstterm">profile</em> of an OpenGL context.
+                    Bits which may be set include
+                    <code class="constant">EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT</code>
+                    for a core profile and
+                    <code class="constant">EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT</code>
+                    for a compatibility profile. The default value is
+                    <code class="constant">EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT</code>.
+                    All OpenGL 3.2 and later implementations are required to
+                    implement the core profile, but implementation of the
+                    compatibility profile is optional.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_CONTEXT_OPENGL_DEBUG</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Must be followed by <code class="constant">EGL_TRUE</code>,
+                    specifying that an OpenGL or OpenGL ES <em class="firstterm">debug
+                    context</em> should be created, or
+                    <code class="constant">EGL_FALSE</code>, if a non-debug context
+                    should be created. The default value is
+                    <code class="constant">EGL_FALSE</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Must be followed by <code class="constant">EGL_TRUE</code>,
+                    specifying that a
+                    <em class="firstterm">forward-compatible</em> OpenGL context
+                    should be created, or <code class="constant">EGL_FALSE</code>, if
+                    a non-forward-compatible context should be created. The
+                    default value is <code class="constant">EGL_FALSE</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_CONTEXT_OPENGL_ROBUST_ACCESS</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Must be followed by <code class="constant">EGL_TRUE</code>,
+                    specifying that an OpenGL or OpenGL ES context
+                    supporting <em class="firstterm">robust buffer access</em>
+                    should be created, or <code class="constant">EGL_FALSE</code>, if
+                    a non-robust context should be created. The default
+                    value is <code class="constant">EGL_FALSE</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_CONTEXT_OPENGL_RESET_NOTIFICATION_STRATEGY</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Must be followed by
+                    <code class="constant">EGL_LOSE_CONTEXT_ON_RESET</code>,
+                    specifying that an OpenGL or OpenGL ES context with
+                    reset notification behavior
+                    <code class="constant">GL_LOSE_CONTEXT_ON_RESET_ARB</code> should
+                    be created, or
+                    <code class="constant">EGL_NO_RESET_NOTIFICATION</code>,
+                    specifying that an OpenGL or OpenGL ES context with
+                    reset notification behavior
+                    <code class="constant">GL_NO_RESET_NOTIFICATION_ARB</code> should
+                    be created, as described by the
+                    <code class="constant">GL_ARB_robustness</code> extension.
+                </p>
+              <p>
+                    If the
+                    <code class="constant">EGL_CONTEXT_OPENGL_ROBUST_ACCESS</code>
+                    attribute is not set to <code class="constant">EGL_TRUE</code>,
+                    context creation will not fail, but the resulting
+                    context may not support robust buffer access, and
+                    therefore may not support the requested reset
+                    notification strategy The default value for
+                    <code class="constant">EGL_CONTEXT_OPENGL_RESET_NOTIFICATION_STRATEGY</code>
+                    is <code class="constant">EGL_NO_RESET_NOTIFICATION</code> .
+                </p>
+            </dd>
+          </dl>
+        </div>
+        <p>
+            There are many possible interactions between requested OpenGL
+            and OpenGL ES context creation attributes, depending on the API
+            versions and extensions supported by the implementation. These
+            interactions are described in detail in the EGL 1.5
+            Specification, but are not listed here for compactness. The
+            requested attributes may not be able to be satisfied, but
+            context creation may still succeed. Applications should ensure
+            that the OpenGL or OpenGL ES contexts supports needed features
+            before using them, by determining the actual context version,
+            supported extensions, and supported context flags using runtime
+            queries.
+        </p>
+      </div>
+    </div>
+    <footer/>
+  </body>
+</html>

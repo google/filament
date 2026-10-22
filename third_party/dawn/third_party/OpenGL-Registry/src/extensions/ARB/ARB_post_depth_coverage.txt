@@ -1,0 +1,230 @@
+Name
+
+    ARB_post_depth_coverage
+
+Name Strings
+
+    GL_ARB_post_depth_coverage
+
+Contact
+
+    Piers Daniell, NVIDIA Corporation (pdaniell 'at' nvidia.com)
+
+Contributors
+
+    Jeff Bolz, NVIDIA
+    Pat Brown, NVIDIA
+    James Helferty, NVIDIA
+    Eric Werness, NVIDIA
+
+Notice
+
+    Copyright (c) 2015 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 26, 2015.
+    Ratified by the Khronos Board of Promoters on August 7, 2015.
+
+Version
+
+    Last Modified Date:         June 25, 2015
+    Revision:                   3
+
+Number
+
+    ARB Extension #180
+
+Dependencies
+
+    This extension is written against the OpenGL 4.5 specification
+    (Compatibility Profile).
+
+    This extension is written against version 4.50 of the OpenGL
+    Shading Language Specification.
+
+    This extension interacts with NV_fragment_program4.
+
+    This extension interacts with EXT_post_depth_coverage.
+
+Overview
+
+    This extension allows the fragment shader to control whether values in
+    gl_SampleMaskIn[] reflect the coverage after application of the early
+    depth and stencil tests.  This feature can be enabled with the following
+    layout qualifier in the fragment shader:
+
+        layout(post_depth_coverage) in;
+
+    Use of this feature implicitly enables early fragment tests.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 15 of the OpenGL 4.5 (Compatibility Profile) Specification
+(Rasterization)
+
+    Modify Section 15.1 Fragment Shader Variables, p. 558
+
+    (modify the third paragraph on p. 559)
+
+    ...When interpolating variables declared using "centroid in", the variable
+    is sampled at a location within the pixel covered by the primitive
+    generating the fragment. The fragment shader layout qualifier
+    "post_depth_coverage" (Section 15.2.2) does not affect the determination of the
+    centroid location.
+
+    Modify Section 15.2.2 Shader Inputs, p. 560
+
+    (modify the fourth paragraph on p. 562)
+
+    ...Bit <n> of element <w> in the array is set if and only if the sample
+    numbered <32w + n> is considered covered for this fragment shader
+    invocation. If the fragment shader specifies the "early_fragment_tests" and
+    "post_depth_coverage" layout qualifiers, then the sample is considered covered
+    if and only if the sample is covered by the primitive and the sample passes
+    the early fragment tests (as described in Section 15.2.4). If these layout
+    qualifiers are not specified, then the sample is considered covered if the
+    sample is covered by the primitive, regardless of the result of the
+    fragment tests. ...
+
+
+New Implementation Dependent State
+
+    None.
+
+New State
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Modifications to the OpenGL Shading Language Specification, Version 4.50
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_ARB_post_depth_coverage : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_ARB_post_depth_coverage                1
+
+
+    Modify Section 4.4.1.3 Fragment Shader Inputs (p. 63)
+
+    (replace the discussion of early_fragment_tests on p. 64)
+
+    Fragment shaders also allow the following layout qualifiers on "in" only (not
+    with variable declarations)
+
+        layout-qualifier-id
+            early_fragment_tests
+            post_depth_coverage
+
+    For example,
+
+        layout(early_fragment_tests) in;
+        layout(post_depth_coverage) in;
+
+    "early_fragment_tests" requests that fragment tests be performed before
+    fragment shader execution, as described in section 15.2.4 "Early Fragment
+    Tests" of the OpenGL Specification. If neither this nor post_depth_coverage
+    are declared, per-fragment tests will be performed after fragment shader
+    execution.
+
+    "post_depth_coverage" requests that the built-in "gl_SampleMaskIn[]" will
+    reflect the result of the early fragment tests, as described in section
+    15.2.2 "Shader Inputs" of the OpenGL Specification.
+
+    Only one fragment shader (compilation unit) need declare these, though
+    more than one can. If at least one fragment shader declares one of these,
+    then it is enabled.
+
+
+Dependencies on NV_fragment_program4
+
+    Modify Section 2.X.6.Y of the NV_fragment_program4 specification
+
+    (add new option section)
+
+    + Post-depth Coverage (ARB_post_depth_coverage)
+
+    If a fragment program specifies the "ARB_post_depth_coverage" option, the
+    sample mask will reflect the result of the early fragment tests, as
+    described in Section 15.2.2 "Shader Inputs". If a fragment program
+    specifies the ARB_post_depth_coverage option and not the
+    NV_early_fragment_tests option, it will fail to compile.
+
+Dependencies on EXT_post_depth_coverage
+
+    If a shader enables both EXT_post_depth_coverage and ARB_post_depth_coverage
+    the behavior of layout(post_depth_coverage) will match
+    ARB_post_depth_coverage.
+
+Errors
+
+    None.
+
+Issues
+
+    (1) Should the determination of a fragment's centroid use the pre-depth or
+    post-depth coverage?
+
+    RESOLVED: In this extension, it uses the pre-depth coverage. This way the
+    centroid location (and hence the result of shading) does not depend on the
+    rendering order, which is almost certainly the desired result for 3D
+    rendering.
+
+    For path rendering, it would be desirable to use post-depth centroid since
+    the stencil test really determines whether samples are inside the primitive
+    rather than whether samples are "occluded," and guaranteeing attributes
+    are sampled inside the path would be nice.
+
+    (2) What happens if you write gl_FragDepth? What about side-effects?
+
+    RESOLVED: Because the post_depth_coverage option implies
+    early_fragment_tests, the behavior for these cases is inhereted from the
+    basic early_fragment_tests behavior, so writes to gl_FragDepth are ignored
+    and side effects are only executed on shaders that are executed which have
+    already passed the early fragment operations.
+
+Revision History
+
+    Revision 3, June 25, 2015
+
+      Add interaction between ARB_post_depth_coverage and
+      EXT_post_depth_coverage behaviors
+
+    Revision 2, April 29, 2015
+
+      Implicitly enable early_fragment_tests when post_depth_coverage
+      is enabled. Add a clarification issue.
+
+    Revision 1, April 20, 2015
+
+      Initial ARB spec branched from EXT_post_depth_coverage

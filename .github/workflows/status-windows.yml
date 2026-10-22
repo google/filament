@@ -1,0 +1,31 @@
+name: Windows
+run-name: ${{ github.event.workflow_run.display_title }}
+
+on:
+  # zizmor: ignore[dangerous-triggers] - workflow_run is safe here: triggers on internal postsubmit push, no code checkout or untrusted artifact execution
+  workflow_run:
+    workflows: ["Postsubmit CI"]
+    types: [completed]
+
+permissions:
+  actions: read
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion != 'skipped' }}
+    steps:
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          script: |
+            const { data: { jobs } } = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.payload.workflow_run.id
+            });
+            const job = jobs.find(j => j.name === 'build-windows');
+            if (job && job.conclusion !== 'success') {
+              core.setFailed(`Windows build failed: ${job.conclusion}`);
+            } else if (!job) {
+              core.warning(`Job build-windows not found in the workflow run.`);
+            }

@@ -1,0 +1,193 @@
+Name
+
+    EXT_display_alloc
+
+Name Strings
+
+    EGL_EXT_display_alloc
+
+Contributors
+
+Contacts
+
+    Kyle Brenneman,  NVIDIA  (kbrenneman 'at' nvidia.com)
+
+Status
+
+    Complete.
+
+Version
+
+    Version 1 - March 25, 2022
+
+Number
+
+    EGL Extension #154
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Written based on the wording of the EGL 1.5 specification.
+
+    Requires EGL_EXT_platform_base or EGL 1.5
+
+    Interacts with the EGL_KHR_display_reference extension
+
+    This extension includes the function eglQueryDisplayAttribEXT as
+    defined in EGL_EXT_device_query.
+
+Overview
+
+    The existing semantics of EGLDisplay object lifetimes work well for
+    applications in which one module manages all EGL usage, and in which
+    EGL displays and the underlying native displays are expected to
+    remain available until application termination once they are
+    instantiated. However, EGL does not provide reasonable semantics for
+    the following use cases:
+
+      1) Applications that rely on toolkit libraries which use EGL
+         independently from the application itself.
+
+      2) Applications that use multiple native display objects with EGL
+         and wish to completely release resources associated with
+         EGLDisplay objects they no longer need.
+
+      3) Platforms where the native display connection can be closed,
+         such as X11 or Wayland. If the native display is closed, then
+         there's no possible reasonable behavior for an EGLDisplay.
+
+    This extension solves these problems by adding the ability to create
+    multiple unique, unshared EGLDisplay objects from the same native
+    display, and to destroy those EGLDisplay objects when the caller no
+    longer needs them.
+
+New Types
+
+    None
+
+New Functions
+
+    EGLBoolean eglDestroyDisplayEXT(EGLDisplay dpy);
+
+New Tokens
+
+    Accepted as an attribute in the <attrib_list> parameter of
+    eglGetPlatformDisplay and the <name> parameter of
+    eglQueryDisplayAttribEXT:
+
+        EGL_ALLOC_NEW_DISPLAY_EXT                       0x3379
+        
+In section "3.2 Initialization":
+
+Remove the sentence in the description of eglGetPlatformDisplay
+indicating no valid attribute names are defined, and add the following:
+
+    If the EGL_ALLOC_NEW_DISPLAY_EXT attribute is set to EGL_TRUE, then
+    eglGetPlatformDisplay creates a new, unique EGLDisplay handle, even
+    if the platform, native_display, and attributes would match an
+    existing EGLDisplay.
+
+    The default value of the EGL_ALLOC_NEW_DISPLAY_EXT attribute is
+    EGL_FALSE.
+
+Add to the end of section "3.2 Initialization":
+
+    To destroy an EGLDisplay handle, use:
+
+        EGLBoolean eglDestroyDisplayEXT(EGLDisplay dpy);
+
+    eglDestroyDisplayEXT frees the handle <dpy>.
+
+    If <dpy> is initialized, or if it is current to one or more threads,
+    then is is marked for deletion, and it will be destroyed when it is
+    terminated and no longer current.
+
+    After <dpy> is destroyed, it is not valid to pass to any EGL
+    function. Subsequent calls to eglGetPlatformDisplay may re-use the
+    EGLDisplay handle value for new displays.
+
+    If <dpy> was not created with the EGL_ALLOC_NEW_DISPLAY_EXT attribute
+    set to EGL_TRUE, then an EGL_BAD_ACCESS error is generated.
+
+Changes to section "3.3 EGL Queries":
+
+    Add EGL_ALLOC_NEW_DISPLAY_EXT to the attributes accepted by
+    eglQueryDisplayAttribEXT.
+
+Interactions with EGL_KHR_display_reference:
+
+    If a display has both EGL_ALLOC_NEW_DISPLAY_EXT and
+    EGL_TRACK_REFERENCES_KHR set to EGL_TRUE, then a call to
+    eglDestroyDisplayEXT will destroy the display after the display's
+    initialization count reaches zero.
+
+    That is, the display handle is not destroyed until eglTerminate has
+    been called as many times as eglInitialize.
+
+Issues
+
+    1.  What happens if an EGLDisplay is deleted while it's current to a
+        thread?
+
+        RESOLVED: Follow the same behavior as destroying a current
+        EGLContext or EGLSurface. Mark the display for deletion, but
+        don't delete it until it's no longer current.
+
+    2.  What happens if an EGLDisplay is deleted while it's initialized?
+        How should this interact with EGL_KHR_display_reference?
+
+        RESOLVED: An initialized display counts as "in use" for the
+        purposes of destruction, so the display doesn't get destroyed
+        until it's terminated. With EGL_KHR_display_reference, that just
+        means you have to call eglTerminate enough times to actually
+        terminate the display.
+
+        Treating an initialized display as "in use" allows for
+        compatibility with any libraries that get an EGLDisplay handle
+        from somewhere else, but expect to use EGL_KHR_display_reference
+        to maintain a reference to that display.
+
+        In addition, that keeps eglDestroyDisplayEXT and eglTerminate
+        orthogonal. If eglDestroyDisplayEXT destroyed an initialized
+        EGLDisplay, then it would effectively have one (or more)
+        implicit calls to eglTerminate.
+
+        Also note that unlike EGLContext and EGLSurface objects (whose
+        handles are invalidated immediately when they're marked for
+        deletion), an EGLDisplay handle remain valid until it's no
+        longer in use. That's necessary because eglMakeCurrent doesn't
+        accept EGL_NO_DISPLAY even to release the current context.
+
+    3.  Do we need a separate eglDestroyDisplayEXT function, instead of
+        just destroying the display when it's terminated?
+
+        RESOLVED: Yes. Using a separate function means that the
+        semantics of eglTerminate are unchanged. That keeps this
+        extension orthogonal to EGL_KHR_display_reference.
+
+    4.  What happens if you create two EGLDisplays from the same native
+        display?
+
+        RESOLVED: The two EGLDisplays will share the same native display
+        connection, but they are otherwise separate. Each EGLDisplay can
+        be initialized, terminated, and destroyed independently of one
+        another, and they're separate namespaces for EGLContexts,
+        EGLSurfaces, and other EGL objects.
+
+        Note that this not a change from core EGL: Calling
+        eglGetPlatformDisplay with the same native display but different
+        attribute lists already creates multiple EGLDisplay objects.
+
+        EGL_ALLOC_NEW_DISPLAY_EXT just tells eglGetPlatformDisplay to
+        create a new EGLDisplay even if the attribute lists are the
+        same.
+
+Revision History
+
+    #1 (March 25, 2022) Kyle Brenneman
+
+        - Initial draft
+

@@ -1,0 +1,7 @@
+{
+  "dawn-android-arm-builder-rel": {
+    "additional_compile_targets": [
+      "default"
+    ]
+  }
+}

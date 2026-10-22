@@ -1,0 +1,173 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template <typename T, int stride>
+struct spvPaddedArrayElement { T data; char padding[stride - sizeof(T)]; };
+
+struct S0
+{
+    float2 a[1];
+    float b;
+};
+
+struct S1
+{
+    packed_float3 a;
+    float b;
+};
+
+struct S2
+{
+    float3 a[1];
+    float b;
+};
+
+struct S3
+{
+    float2 a;
+    float b;
+};
+
+struct S4
+{
+    float2 c;
+};
+
+struct Content
+{
+    S0 m0s[1];
+    S1 m1s[1];
+    S2 m2s[1];
+    S0 m0;
+    S1 m1;
+    S2 m2;
+    S3 m3;
+    float m4;
+    S4 m3s[8];
+};
+
+struct SSBO1
+{
+    Content content;
+    Content content1[2];
+    Content content2;
+    float2x2 m0;
+    float2x2 m1;
+    float2x3 m2[4];
+    float3x2 m3;
+    float2x2 m4;
+    float2x2 m5[9];
+    float3x2 m6[4][2];
+    float2x3 m7;
+    float array[1];
+};
+
+struct S0_1
+{
+    float2 a[1];
+    char _m1_pad[8];
+    float b;
+};
+
+struct S1_1
+{
+    packed_float3 a;
+    float b;
+};
+
+struct S2_1
+{
+    float3 a[1];
+    float b;
+};
+
+struct S3_1
+{
+    float2 a;
+    float b;
+};
+
+struct S4_1
+{
+    float2 c;
+};
+
+struct Content_1
+{
+    spvPaddedArrayElement<S0_1, 32> m0s[1];
+    S1_1 m1s[1];
+    S2_1 m2s[1];
+    S0_1 m0;
+    char _m4_pad[8];
+    S1_1 m1;
+    S2_1 m2;
+    S3_1 m3;
+    float m4;
+    char _m8_pad[8];
+    spvPaddedArrayElement<S4_1, 16> m3s[8];
+};
+
+struct SSBO0
+{
+    Content_1 content;
+    Content_1 content1[2];
+    Content_1 content2;
+    float4 array[1];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO1& ssbo_430 [[buffer(0)]], device SSBO0& ssbo_140 [[buffer(1)]])
+{
+    float _200 = ssbo_140.content.m0s[0u].data.b;
+    float3 _208 = float3(ssbo_140.content.m1s[0u].a);
+    float _210 = ssbo_140.content.m1s[0u].b;
+    float3 _221 = ssbo_140.content.m2s[0u].a[0u];
+    float _223 = ssbo_140.content.m2s[0u].b;
+    float2 _230 = ssbo_140.content.m0.a[0u];
+    float _232 = ssbo_140.content.m0.b;
+    float3 _236 = float3(ssbo_140.content.m1.a);
+    float _238 = ssbo_140.content.m1.b;
+    float3 _245 = ssbo_140.content.m2.a[0u];
+    float _247 = ssbo_140.content.m2.b;
+    float2 _253 = ssbo_140.content.m3.a;
+    float _255 = ssbo_140.content.m3.b;
+    float _258 = ssbo_140.content.m4;
+    float2 _266 = ssbo_140.content.m3s[0u].data.c;
+    float2 _270 = ssbo_140.content.m3s[1u].data.c;
+    float2 _274 = ssbo_140.content.m3s[2u].data.c;
+    float2 _278 = ssbo_140.content.m3s[3u].data.c;
+    float2 _282 = ssbo_140.content.m3s[4u].data.c;
+    float2 _286 = ssbo_140.content.m3s[5u].data.c;
+    float2 _290 = ssbo_140.content.m3s[6u].data.c;
+    float2 _294 = ssbo_140.content.m3s[7u].data.c;
+    ssbo_430.content.m0s[0].a[0] = ssbo_140.content.m0s[0u].data.a[0u];
+    ssbo_430.content.m0s[0].b = _200;
+    ssbo_430.content.m1s[0].a = _208;
+    ssbo_430.content.m1s[0].b = _210;
+    ssbo_430.content.m2s[0].a[0] = _221;
+    ssbo_430.content.m2s[0].b = _223;
+    ssbo_430.content.m0.a[0] = _230;
+    ssbo_430.content.m0.b = _232;
+    ssbo_430.content.m1.a = _236;
+    ssbo_430.content.m1.b = _238;
+    ssbo_430.content.m2.a[0] = _245;
+    ssbo_430.content.m2.b = _247;
+    ssbo_430.content.m3.a = _253;
+    ssbo_430.content.m3.b = _255;
+    ssbo_430.content.m4 = _258;
+    ssbo_430.content.m3s[0].c = _266;
+    ssbo_430.content.m3s[1].c = _270;
+    ssbo_430.content.m3s[2].c = _274;
+    ssbo_430.content.m3s[3].c = _278;
+    ssbo_430.content.m3s[4].c = _282;
+    ssbo_430.content.m3s[5].c = _286;
+    ssbo_430.content.m3s[6].c = _290;
+    ssbo_430.content.m3s[7].c = _294;
+    ssbo_430.content.m1.a = ssbo_430.content.m3.a * ssbo_430.m6[1][1];
+}
+

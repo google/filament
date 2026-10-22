@@ -1,0 +1,122 @@
+GL_HP_occlusion_test - PRELIMINARY
+----------------------------------
+XXX - Not complete yet!!!
+
+Name
+
+    HP_occlusion_test
+
+Name Strings
+
+    GL_HP_occlusion_test 
+
+Number
+
+    137
+
+Overview
+
+This extension defines a mechanism whereby an application can determine the
+non-visibility of some set of geometry based on whether an encompassing set
+of geometry is non-visible. In general this feature does not guarantee that
+the target geometry is visible when the test fails, but is accurate with
+regard to non-visibility.
+
+Occlusion culling allows an application to render some geometry and at the
+completion of the rendering to determine if any of the geometry could or did
+modify the depth buffer, ie. a depth buffer test succeeded. The idea being
+that if the application renders a bounding box of some geometry in this mode
+and the occlusion test failed (ie. the bounding box was depth culled due to
+the current contents of the depth buffer) then the geometry enclosed by the
+bounding box would also be depth culled. Occlusion culling operates
+independently of the current rendering state (ie. when occlusion culling is
+enabled fragments are generated and the depth and/or color buffer may be
+updated). To prevent updating the depth/color buffers the application must
+disable updates to these buffers. As a side effect of reading the occlusion
+result the internal result state is cleared, setting it up for a new
+bounding box test.
+
+The expected usage of this feature is :
+
+    - disable updates to color and depth buffer (optional)
+        glDepthMask(GL_FALSE)
+        glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE)
+    - enable occlusion test
+        glEnable(GL_OCCLUSION_TEST_HP)
+    - render bounding geometry
+        gl rendering calls
+    - disable occlusion test
+        glDisable(GL_OCCLUSION_TEST_HP)
+    - enable updates to color and depth buffer
+        glDepthMask(GL_TRUE)
+        glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE)
+    - read occlusion test result
+        glGetBooleanv(GL_OCCLUSION_TEST_RESULT_HP, &result)
+    - if (result) render internal geometry
+      else don't render
+
+For this extension to be useful the assumption are being made :
+
+    - the time to render the geometry under test is much more than rendering
+        the encompassing geometry, including reading back the test result
+    - the application is modelling data that includes occluding structures
+        (eg. walls, hierarchial assemblies, ...)
+    - the application is structured in such a way as to utilize bounding
+        boxes for encompassing geometry
+
+New Procedures and Functions
+
+    none
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, by
+    the <pname> of GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev :
+
+        OCCLUSION_TEST_HP           0x????
+
+    Accepted by the <pname> of GetBooleanv, GetIntegerv, GetFloatv, and 
+    GetDoublev :
+
+        OCCLUSION_TEST_RESULT_HP    0x????
+
+New State
+
+    Boolean result of occlusion test, initial value of FALSE. The result is
+    set to FALSE as a side effect of reading it (executing a Get call).
+
+Issue
+
+    - should the interface allow for multiple occlusion tests to be enabled
+        possible extension :
+            add MAX_OCCLUSION_TESTS
+            add OCCLUSION_TESTn_HP where n is 1 to MAX_OCCLUSION_TESTS
+            add OCCLUSION_TEST_RESULTn_HP where n is 1 to MAX_OCCLUSION_TESTS
+            define semantics of multiple tests enables (ex. there exists 
+                precedence of tests, ie. TEST7 overrides TEST1 thru 6)
+            define how mulitple test results returned (ex. bit encoded in
+                return word, 32 per word)
+            define disable(OCCLUSION_TEST_HP) (un-numbered test) to disable
+                all currently enabled
+            resulting usage :
+                disable update to color and depth buffer
+                enable occlusion test 1
+                render bounding box 1
+                enable occlusion test 2
+                render bounding box 2
+                    ...
+                enable occlusion test n
+                render bounding box n
+                disable all occlusion tests
+                enable updates to color and depth buffer
+                read occlusion test results
+                for each result 
+                    if (result) render internal geometry
+                    else don't render
+
+   - should the interface be based on render mode semantics
+        no proposal at this time
+
+
+
+--------------64E073B876D--

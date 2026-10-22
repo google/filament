@@ -1,0 +1,112 @@
+material {
+    name : fsr_easu,
+    parameters : [
+        {
+            type : sampler2d,
+            name : color,
+            precision: medium
+        },
+        {
+            type : float2,
+            name : textureSize,
+            precision: high
+        },
+        {
+            type : float4,
+            name : resolution,
+            precision: high
+        },
+        {
+            type : float4,
+            name : EasuCon0,
+            precision: high
+        },
+        {
+            type : float4,
+            name : EasuCon1,
+            precision: high
+        },
+        {
+            type : float4,
+            name : EasuCon2,
+            precision: high
+        },
+        {
+            type : float4,
+            name : EasuCon3,
+            precision: high
+        },
+        {
+            type : float4,
+            name : viewport,
+            precision: high
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    depthWrite : false,
+    depthCulling : false,
+    domain: postprocess
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.normalizedUV = uvToRenderTargetUV(postProcess.normalizedUV);
+        postProcess.vertex.xy = postProcess.normalizedUV * materialParams.resolution.xy;
+    }
+}
+
+fragment {
+
+    precision mediump float;
+    precision highp int;
+
+    #define A_GPU 1
+    #define A_GLSL 1
+    #include "ffx_a.h"
+
+    #define FSR_EASU_F 1
+    #include "ffx_fsr1.h"
+
+#if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
+    #define gather textureGather
+#else
+    vec4 gather(const mediump sampler2D color, highp vec2 p, const int comp) {
+        highp ivec2 i = ivec2(p * materialParams.textureSize - 0.5);
+        vec4 d;
+        d[0] = texelFetchOffset(color, i, 0, ivec2(0, 1))[comp];
+        d[1] = texelFetchOffset(color, i, 0, ivec2(1, 1))[comp];
+        d[2] = texelFetchOffset(color, i, 0, ivec2(1, 0))[comp];
+        d[3] = texelFetchOffset(color, i, 0, ivec2(0, 0))[comp];
+        return d;
+    }
+#endif
+
+    AF4 FsrEasuRF(highp AF2 p) {
+        return gather(materialParams_color, p, 0);
+    }
+
+    AF4 FsrEasuGF(highp AF2 p) {
+        return gather(materialParams_color, p, 1);
+    }
+
+    AF4 FsrEasuBF(highp AF2 p) {
+        return gather(materialParams_color, p, 2);
+    }
+
+    void postProcess(inout PostProcessInputs postProcess) {
+        highp vec2 p = floor(variable_vertex.xy);
+
+        AF3 pix;
+
+        FsrEasuF(pix, p,
+            materialParams.EasuCon0,
+            materialParams.EasuCon1,
+            materialParams.EasuCon2,
+            materialParams.EasuCon3);
+
+        postProcess.color.rgb = pix;
+        postProcess.color.a = 1.0; // TODO: FSR doesn't support transparency.
+    }
+}

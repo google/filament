@@ -1,0 +1,65 @@
+#version 450
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
+#extension GL_EXT_shader_8bit_storage : require
+#extension GL_KHR_shader_subgroup_vote : require
+layout(local_size_x = 4, local_size_y = 1, local_size_z = 1) in;
+
+bool _42;
+
+layout(set = 0, binding = 1, std430) buffer Out
+{
+    uint _m0[];
+} Out_1;
+
+layout(set = 0, binding = 0, r32ui) uniform readonly uimageBuffer value;
+
+void main()
+{
+    uint8_t _str[6] = uint8_t[](uint8_t(118), uint8_t(97), uint8_t(108), uint8_t(117), uint8_t(101), uint8_t(0));
+    uint8_t _str_2[4] = uint8_t[](uint8_t(79), uint8_t(117), uint8_t(116), uint8_t(0));
+    bool _62;
+    bool _63;
+    if (true)
+    {
+        bool _58;
+        uint _59;
+        switch (imageLoad(value, int(gl_GlobalInvocationID.x)).x)
+        {
+            case 0u:
+            {
+                _58 = _42;
+                _59 = 0u;
+                break;
+            }
+            case 2u:
+            {
+                _58 = _42;
+                _59 = 0u;
+                break;
+            }
+            default:
+            {
+                _58 = subgroupAny(false);
+                _59 = 1u;
+                break;
+            }
+        }
+        if (0u == _59)
+        {
+            _62 = true;
+            _63 = subgroupAny(false);
+        }
+        else
+        {
+            _62 = false;
+            _63 = _58;
+        }
+    }
+    else
+    {
+    }
+    Out_1._m0[gl_GlobalInvocationID.x] = uint(_63);
+    Out_1._m0[gl_GlobalInvocationID.x + 4u] = uint(subgroupAny(_62));
+    return;
+}
+

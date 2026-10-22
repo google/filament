@@ -1,0 +1,1081 @@
+/*
+ * Copyright (C) 2026 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "BackendTest.h"
+#include "ImageExpectations.h"
+#include "Lifetimes.h"
+#include "Shader.h"
+#include "SharedShaders.h"
+#include "Skip.h"
+#include "TrianglePrimitive.h"
+
+#include <backend/BufferDescriptor.h>
+#include <backend/CallbackHandler.h>
+#include <backend/PixelBufferDescriptor.h>
+
+#include <atomic>
+#include <chrono>
+#include <cstdlib>
+#include <cstring>
+#include <thread>
+#include <vector>
+
+namespace test {
+
+using namespace filament;
+using namespace filament::backend;
+using namespace filament::math;
+
+struct AsyncState {
+    bool indexBufferCreated = false;
+    bool bufferObjectCreated = false;
+    bool textureCreated = false;
+    bool textureViewSwizzledCreated = false;
+    bool vertexBufferCreated = false;
+    bool indexBufferUpdated = false;
+    bool bufferObjectUpdated = false;
+    bool textureUpdated = false;
+    bool vertexBufferSet = false;
+    bool commandQueued = false;
+};
+
+static void signalCallback(void* user, AsyncCallStatus const status) {
+    EXPECT_EQ(status, AsyncCallStatus::COMPLETED);
+    bool* flag = static_cast<bool*>(user);
+    *flag = true;
+}
+
+// Records the status instead of asserting on it, so that the assertion happens on the test thread.
+struct AsyncCallResult {
+    bool fired = false;
+    AsyncCallStatus status = AsyncCallStatus::COMPLETED;
+};
+
+static void recordCallback(void* user, AsyncCallStatus const status) {
+    AsyncCallResult* result = static_cast<AsyncCallResult*>(user);
+    result->status = status;
+    result->fired = true;
+}
+
+TEST_F(BackendTest, BasicAsyncFlow) {
+    SKIP_IF(Backend::VULKAN, "Vulkan does not support asynchronous resource uploading");
+#if defined(FILAMENT_IOS) && !defined(FILAMENT_IOS_SIMULATOR)
+    // A-series devices rasterize this scene differently from every other environment (measured
+    // 2793888331 on an A10X), so there is no single hash this can be compared against.
+    GTEST_SKIP() << "no golden hash for this scene on iOS-family device hardware";
+#endif
+
+    constexpr int kRenderTargetSize = 512;
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+    RenderTargetHandle renderTarget = addCleanup(api.createDefaultRenderTarget());
+
+    Shader shader = SharedShaders::makeShader(api, *mCleanup,
+            ShaderRequest{
+                .mVertexType = VertexShaderType::Textured,
+                .mFragmentType = FragmentShaderType::Textured,
+                .mUniformType = ShaderUniformType::Sampler,
+            });
+
+    RenderPassParams params = getClearColorDepthRenderPass();
+    params.viewport = getFullViewport();
+
+    PipelineState ps = getColorWritePipelineState();
+    shader.addProgramToPipelineState(ps);
+
+    AsyncState state;
+
+    auto waitFor = [&](const bool& flag) {
+        int attempts = 0;
+        while (!flag && attempts < 1000) {
+            // Backends whose async jobs are time-sliced on the driver thread (e.g. Vulkan and
+            // WebGPU's AmortizationWorker) only make progress when something calls tick(); a
+            // real app does this every frame via the Renderer, but this low-level test bypasses
+            // that loop entirely. Backends with a dedicated worker thread (OpenGL, Metal) don't
+            // need this, but calling it is harmless for them too.
+            api.tick();
+            api.finish();
+            executeCommands();
+            getDriver().purge();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            attempts++;
+        }
+        EXPECT_TRUE(flag);
+    };
+
+    // 1. Asynchronous Creation
+
+    // Create Index Buffer Asynchronously
+    IndexBufferHandle ibh = addCleanup(api.createIndexBufferAsync(ElementType::UINT, 3,
+            BufferUsage::STATIC, nullptr, signalCallback, &state.indexBufferCreated));
+
+    // Create Buffer Object Asynchronously (for vertices)
+    BufferObjectHandle boh =
+            addCleanup(api.createBufferObjectAsync(sizeof(float2) * 3, BufferObjectBinding::VERTEX,
+                    BufferUsage::STATIC, nullptr, signalCallback, &state.bufferObjectCreated));
+
+    // Create Texture Asynchronously
+    TextureHandle th = addCleanup(
+            api.createTextureAsync(SamplerType::SAMPLER_2D, 1, TextureFormat::RGBA8, 1, 2, 2, 1,
+                    TextureUsage::DEFAULT, nullptr, signalCallback, &state.textureCreated));
+
+    // Wait for creation callbacks.
+    waitFor(state.indexBufferCreated);
+    waitFor(state.bufferObjectCreated);
+    waitFor(state.textureCreated);
+
+    // Create Texture View Swizzle Asynchronously (now that th is created)
+    TextureHandle tsv = addCleanup(api.createTextureViewSwizzleAsync(th, TextureSwizzle::CHANNEL_0,
+            TextureSwizzle::CHANNEL_1, TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3,
+            nullptr, signalCallback, &state.textureViewSwizzledCreated));
+
+    waitFor(state.textureViewSwizzledCreated);
+
+    // 2. Asynchronous Data Updates
+
+    // Update Index Buffer Asynchronously
+    uint32_t* indices = (uint32_t*) malloc(sizeof(uint32_t) * 3);
+    indices[0] = 0;
+    indices[1] = 1;
+    indices[2] = 2;
+    BufferDescriptor indexData(indices, sizeof(uint32_t) * 3,
+            [](void* buffer, size_t, void*) { free(buffer); });
+    api.updateIndexBufferAsync(ibh, std::move(indexData), 0, nullptr, signalCallback,
+            &state.indexBufferUpdated);
+
+    // Update Buffer Object Asynchronously
+    float2* vertices = (float2*) malloc(sizeof(float2) * 3);
+    vertices[0] = { -1.0, -1.0 };
+    vertices[1] = { 1.0, -1.0 };
+    vertices[2] = { -1.0, 1.0 };
+    BufferDescriptor vertexData(vertices, sizeof(float2) * 3,
+            [](void* buffer, size_t, void*) { free(buffer); });
+    api.updateBufferObjectAsync(boh, std::move(vertexData), 0, nullptr, signalCallback,
+            &state.bufferObjectUpdated);
+
+    // Update 3D Image Asynchronously (Texture)
+    uint32_t* texData = (uint32_t*) malloc(sizeof(uint32_t) * 4);
+    texData[0] = 0xFF0000FF; // Red
+    texData[1] = 0xFF00FF00; // Green
+    texData[2] = 0xFFFF0000; // Blue
+    texData[3] = 0xFFFFFFFF; // White
+    PixelBufferDescriptor pixelData(texData, sizeof(uint32_t) * 4, PixelDataFormat::RGBA,
+            PixelDataType::UBYTE, [](void* buffer, size_t, void*) { free(buffer); });
+    api.update3DImageAsync(th, 0, 0, 0, 0, 2, 2, 1, std::move(pixelData), nullptr, signalCallback,
+            &state.textureUpdated);
+
+    // 3. Asynchronous Setup
+
+    AttributeArray attributes = { Attribute{ .offset = 0,
+        .stride = sizeof(float2),
+        .buffer = 0,
+        .type = ElementType::FLOAT2,
+        .flags = 0 } };
+    VertexBufferInfoHandle vbih = addCleanup(api.createVertexBufferInfo(1, 1, attributes));
+    VertexBufferHandle vbh = addCleanup(api.createVertexBufferAsync(3, vbih, nullptr,
+            signalCallback, &state.vertexBufferCreated));
+
+    // Set Vertex Buffer Object Asynchronously
+    api.setVertexBufferObjectAsync(vbh, 0, boh, nullptr, signalCallback, &state.vertexBufferSet);
+
+    // Queue Command Asynchronously
+    api.queueCommandAsync(
+            []() {
+                // This command runs asynchronously.
+            },
+            nullptr, signalCallback, &state.commandQueued);
+
+    // Wait for all updates and setups to complete.
+    waitFor(state.indexBufferUpdated);
+    waitFor(state.bufferObjectUpdated);
+    waitFor(state.textureUpdated);
+    waitFor(state.vertexBufferCreated);
+    waitFor(state.vertexBufferSet);
+    waitFor(state.commandQueued);
+
+    // 4. Render using the asynchronously loaded resources
+
+    RenderPrimitiveHandle rph =
+            addCleanup(api.createRenderPrimitive(vbh, ibh, PrimitiveType::TRIANGLES));
+
+    // Bind texture
+    SamplerParams samplerParams {};
+    samplerParams.filterMin = SamplerMinFilter::NEAREST;
+    samplerParams.filterMag = SamplerMagFilter::NEAREST;
+
+    DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
+    // Use the swizzled view just to test it too!
+    api.updateDescriptorSetTexture(descriptorSet, 0, tsv, samplerParams);
+    api.bindDescriptorSet(descriptorSet, 0, {});
+
+    {
+        RenderFrame frame(api);
+
+        api.beginRenderPass(renderTarget, params);
+        ps.primitiveType = PrimitiveType::TRIANGLES;
+        ps.vertexBufferInfo = vbih;
+        api.bindPipeline(ps);
+        api.bindRenderPrimitive(rph);
+        api.draw2(0, 3, 1);
+        api.endRenderPass();
+
+        EXPECT_IMAGE(renderTarget,
+                ScreenshotParams(kRenderTargetSize, kRenderTargetSize, "BasicAsyncFlow",
+                        1079009730u));
+
+        api.commit(swapChain);
+    }
+}
+
+TEST_F(BackendTest, CanceledAsyncCallInvokesCallback) {
+    // The Vulkan backend does implement asynchronous uploading, but BackendTest only enables
+    // asynchronous mode for Metal, OpenGL and WebGPU (BackendTest.cpp), so there is no job queues
+    // here.
+    SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+
+    AsyncCallResult result;
+    bool commandRan = false;
+
+    auto waitFor = [&](const bool& flag) {
+        int attempts = 0;
+        while (!flag && attempts < 1000) {
+            // Backends whose async jobs are time-sliced on the driver thread (e.g. Vulkan and
+            // WebGPU's AmortizationWorker) only make progress when something calls tick(); a
+            // real app does this every frame via the Renderer, but this low-level test bypasses
+            // that loop entirely. Backends with a dedicated worker thread (OpenGL, Metal) don't
+            // need this, but calling it is harmless for them too.
+            api.tick();
+            api.finish();
+            executeCommands();
+            getDriver().purge();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            attempts++;
+        }
+        EXPECT_TRUE(flag);
+    };
+
+    // Only the first half of an asynchronous call runs here on the test thread, reserving the job
+    // id. The half that queues the actual job runs on the backend thread, when the command buffer
+    // below is executed, so the job is still cancelable at this point.
+    AsyncCallId const id = api.queueCommandAsync([&commandRan]() { commandRan = true; }, nullptr,
+            recordCallback, &result);
+    EXPECT_TRUE(api.cancelAsyncJob(id));
+
+    // A canceled call must still notify the caller, otherwise cancellation is indistinguishable
+    // from a call that is taking a long time, and whatever the callback owns is leaked.
+    waitFor(result.fired);
+    EXPECT_EQ(AsyncCallStatus::CANCELED, result.status)
+            << "a canceled call must report that it was canceled, not that it completed";
+    EXPECT_FALSE(commandRan) << "the canceled command must not have been executed";
+
+    // The job is gone, so canceling it a second time reports that there was nothing to cancel.
+    EXPECT_FALSE(api.cancelAsyncJob(id));
+}
+
+TEST_F(BackendTest, CanceledSetVertexBufferObjectAsyncInvokesCallback) {
+    SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+
+    auto waitFor = [&](const bool& flag) {
+        int attempts = 0;
+        while (!flag && attempts < 1000) {
+            // See BasicAsyncFlow for why tick() is needed here.
+            api.tick();
+            api.finish();
+            executeCommands();
+            getDriver().purge();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            attempts++;
+        }
+        EXPECT_TRUE(flag);
+    };
+
+    AsyncState state;
+    AttributeArray attributes = { Attribute{ .offset = 0,
+        .stride = sizeof(float2),
+        .buffer = 0,
+        .type = ElementType::FLOAT2,
+        .flags = 0 } };
+    VertexBufferInfoHandle vbih = addCleanup(api.createVertexBufferInfo(1, 1, attributes));
+    VertexBufferHandle vbh = addCleanup(api.createVertexBufferAsync(3, vbih, nullptr,
+            signalCallback, &state.vertexBufferCreated));
+    BufferObjectHandle boh =
+            addCleanup(api.createBufferObjectAsync(sizeof(float2) * 3, BufferObjectBinding::VERTEX,
+                    BufferUsage::STATIC, nullptr, signalCallback, &state.bufferObjectCreated));
+    waitFor(state.vertexBufferCreated);
+    waitFor(state.bufferObjectCreated);
+
+    // Same race as above. This call is worth its own test because the Metal backend doesn't run
+    // it on a job, it only sets a pointer on the backend thread, so both honoring the cancellation
+    // and releasing the reserved id are done by hand there.
+    AsyncCallResult result;
+    AsyncCallId const id = api.setVertexBufferObjectAsync(vbh, 0, boh, nullptr, recordCallback,
+            &result);
+    EXPECT_TRUE(api.cancelAsyncJob(id));
+
+    waitFor(result.fired);
+    EXPECT_EQ(AsyncCallStatus::CANCELED, result.status)
+            << "a canceled call must report that it was canceled, not that it completed";
+    EXPECT_FALSE(api.cancelAsyncJob(id));
+}
+
+// FVertexBuffer calls setVertexBufferObjectAsync right after createBufferObjectAsync without
+// waiting for the creation callback, and the draw still has to see the buffer.
+TEST_F(BackendTest, SetVertexBufferObjectAsyncBeforeBufferObjectCreated) {
+    SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
+
+    constexpr size_t kRenderTargetSize = 64;
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+
+    auto waitFor = [&](const bool& flag) {
+        int attempts = 0;
+        while (!flag && attempts < 1000) {
+            api.finish();
+            executeCommands();
+            getDriver().purge();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            attempts++;
+        }
+        EXPECT_TRUE(flag);
+    };
+
+    AsyncState state;
+
+    // Keeps the worker busy so the creation job below is still queued when the backend runs
+    // setVertexBufferObjectAsync. AMORTIZATION mode always runs in this order, and
+    // THREAD_PREFERRED would race without it.
+    std::atomic_bool releaseWorker = false;
+    api.queueCommandAsync(
+            [&releaseWorker]() {
+                for (int i = 0; i < 1000 && !releaseWorker.load(); i++) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                }
+            },
+            nullptr, signalCallback, &state.commandQueued);
+
+    // Same order as FVertexBuffer's asynchronous build.
+    AttributeArray attributes = { Attribute{ .offset = 0,
+        .stride = sizeof(float2),
+        .buffer = 0,
+        .type = ElementType::FLOAT2,
+        .flags = 0 } };
+    VertexBufferInfoHandle vbih = addCleanup(api.createVertexBufferInfo(1, 1, attributes));
+    VertexBufferHandle vbh = addCleanup(api.createVertexBufferAsync(3, vbih, nullptr,
+            signalCallback, &state.vertexBufferCreated));
+    BufferObjectHandle boh =
+            addCleanup(api.createBufferObjectAsync(sizeof(float2) * 3, BufferObjectBinding::VERTEX,
+                    BufferUsage::STATIC, nullptr, signalCallback, &state.bufferObjectCreated));
+    api.setVertexBufferObjectAsync(vbh, 0, boh, nullptr, signalCallback, &state.vertexBufferSet);
+
+    // A triangle that covers the whole viewport.
+    float2* vertices = (float2*) malloc(sizeof(float2) * 3);
+    vertices[0] = { -1.0, -1.0 };
+    vertices[1] = { 3.0, -1.0 };
+    vertices[2] = { -1.0, 3.0 };
+    BufferDescriptor vertexData(vertices, sizeof(float2) * 3,
+            [](void* buffer, size_t, void*) { free(buffer); });
+    api.updateBufferObjectAsync(boh, std::move(vertexData), 0, nullptr, signalCallback,
+            &state.bufferObjectUpdated);
+
+    executeCommands();
+    releaseWorker = true;
+
+    waitFor(state.commandQueued);
+    waitFor(state.vertexBufferCreated);
+    waitFor(state.bufferObjectCreated);
+    waitFor(state.vertexBufferSet);
+    waitFor(state.bufferObjectUpdated);
+
+    Shader shader = SharedShaders::makeShader(api, *mCleanup,
+            ShaderRequest{
+                .mVertexType = VertexShaderType::Noop,
+                .mFragmentType = FragmentShaderType::White,
+                .mUniformType = ShaderUniformType::None,
+            });
+
+    TextureHandle texture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, kRenderTargetSize, kRenderTargetSize, 1,
+            TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE));
+    RenderTargetHandle renderTarget = addCleanup(api.createRenderTarget(TargetBufferFlags::COLOR,
+            kRenderTargetSize, kRenderTargetSize, 1, 0, { { texture } }, {}, {}));
+
+    IndexBufferHandle ibh =
+            addCleanup(api.createIndexBuffer(ElementType::UINT, 3, BufferUsage::STATIC));
+    uint32_t* indices = (uint32_t*) malloc(sizeof(uint32_t) * 3);
+    indices[0] = 0;
+    indices[1] = 1;
+    indices[2] = 2;
+    api.updateIndexBuffer(ibh,
+            BufferDescriptor(indices, sizeof(uint32_t) * 3,
+                    [](void* buffer, size_t, void*) { free(buffer); }),
+            0);
+    RenderPrimitiveHandle rph =
+            addCleanup(api.createRenderPrimitive(vbh, ibh, PrimitiveType::TRIANGLES));
+
+    PipelineState ps = getColorWritePipelineState();
+    shader.addProgramToPipelineState(ps);
+    ps.primitiveType = PrimitiveType::TRIANGLES;
+    ps.vertexBufferInfo = vbih;
+
+    RenderPassParams params = getClearColorDepthRenderPass(float4(0, 0, 1, 1));
+    params.viewport.width = kRenderTargetSize;
+    params.viewport.height = kRenderTargetSize;
+
+    std::vector<uint8_t> pixels(kRenderTargetSize * kRenderTargetSize * 4);
+    bool readPixelsDone = false;
+    {
+        RenderFrame frame(api);
+        api.beginRenderPass(renderTarget, params);
+        api.bindPipeline(ps);
+        api.bindRenderPrimitive(rph);
+        api.draw2(0, 3, 1);
+        api.endRenderPass();
+
+        api.readPixels(renderTarget, 0, 0, kRenderTargetSize, kRenderTargetSize,
+                PixelBufferDescriptor(pixels.data(), pixels.size(), PixelDataFormat::RGBA,
+                        PixelDataType::UBYTE,
+                        [](void*, size_t, void* user) { *static_cast<bool*>(user) = true; },
+                        &readPixelsDone));
+        api.commit(swapChain);
+    }
+    waitFor(readPixelsDone);
+
+    // Without the vertex attribute every vertex sits at the origin and nothing is drawn, so the
+    // blue clear color stays.
+    size_t const center = (kRenderTargetSize / 2 * kRenderTargetSize + kRenderTargetSize / 2) * 4;
+    EXPECT_EQ(255, pixels[center + 0]) << "the vertex buffer was drawn without its buffer object";
+    EXPECT_EQ(255, pixels[center + 1]);
+    EXPECT_EQ(255, pixels[center + 2]);
+}
+
+TEST_F(BackendTest, DestroyAfterAsyncUpdatePreservesFifo) {
+    SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+
+    struct Callbacks {
+        bool ibUpdated = false;
+        bool boUpdated = false;
+        bool texUpdated = false;
+        bool vbSet = false;
+    } callbacks;
+
+    auto waitFor = [&](const bool& flag) {
+        int attempts = 0;
+        while (!flag && attempts < 1000) {
+            // See BasicAsyncFlow for why tick() is needed here.
+            api.tick();
+            api.finish();
+            executeCommands();
+            getDriver().purge();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            attempts++;
+        }
+        EXPECT_TRUE(flag);
+    };
+
+    // Create resources synchronously (asynchronous == false in backend).
+    IndexBufferHandle ibh = api.createIndexBuffer(ElementType::UINT, 3, BufferUsage::STATIC);
+    BufferObjectHandle boh = api.createBufferObject(sizeof(float2) * 3,
+            BufferObjectBinding::VERTEX, BufferUsage::STATIC);
+    TextureHandle th = api.createTexture(SamplerType::SAMPLER_2D, 1, TextureFormat::RGBA8, 1,
+            2, 2, 1, TextureUsage::DEFAULT);
+
+    AttributeArray attributes = { Attribute{
+        .offset = 0,
+        .stride = sizeof(float2),
+        .buffer = 0,
+        .type = ElementType::FLOAT2,
+        .flags = 0
+    } };
+    VertexBufferInfoHandle vbih = api.createVertexBufferInfo(1, 1, attributes);
+    VertexBufferHandle vbh = api.createVertexBuffer(3, vbih);
+    BufferObjectHandle boh2 = api.createBufferObject(sizeof(float2) * 3,
+            BufferObjectBinding::VERTEX, BufferUsage::STATIC);
+
+    // Enqueue async updates on synchronously created resources.
+    uint32_t* indices = (uint32_t*) malloc(sizeof(uint32_t) * 3);
+    indices[0] = 0;
+    indices[1] = 1;
+    indices[2] = 2;
+    BufferDescriptor indexData(indices, sizeof(uint32_t) * 3,
+            [](void* buffer, size_t, void*) { free(buffer); });
+    api.updateIndexBufferAsync(ibh, std::move(indexData), 0, nullptr, signalCallback,
+            &callbacks.ibUpdated);
+
+    float2* vertices = (float2*) malloc(sizeof(float2) * 3);
+    vertices[0] = { -1.0, -1.0 };
+    vertices[1] = { 1.0, -1.0 };
+    vertices[2] = { -1.0, 1.0 };
+    BufferDescriptor vertexData(vertices, sizeof(float2) * 3,
+            [](void* buffer, size_t, void*) { free(buffer); });
+    api.updateBufferObjectAsync(boh, std::move(vertexData), 0, nullptr, signalCallback,
+            &callbacks.boUpdated);
+
+    uint32_t* texData = (uint32_t*) malloc(sizeof(uint32_t) * 4);
+    for (int i = 0; i < 4; ++i) {
+        texData[i] = 0xFFFFFFFF;
+    }
+    PixelBufferDescriptor pixelData(texData, sizeof(uint32_t) * 4, PixelDataFormat::RGBA,
+            PixelDataType::UBYTE, [](void* buffer, size_t, void*) { free(buffer); });
+    api.update3DImageAsync(th, 0, 0, 0, 0, 2, 2, 1, std::move(pixelData), nullptr, signalCallback,
+            &callbacks.texUpdated);
+
+    api.setVertexBufferObjectAsync(vbh, 0, boh2, nullptr, signalCallback, &callbacks.vbSet);
+
+    // Destroy immediately: must be routed through JobQueue to preserve FIFO ordering after updates.
+    api.destroyIndexBuffer(ibh);
+    api.destroyBufferObject(boh);
+    api.destroyTexture(th);
+    api.destroyVertexBuffer(vbh);
+    api.destroyBufferObject(boh2);
+    api.destroyVertexBufferInfo(vbih);
+
+    waitFor(callbacks.ibUpdated);
+    waitFor(callbacks.boUpdated);
+    waitFor(callbacks.texUpdated);
+    waitFor(callbacks.vbSet);
+}
+
+// One async update routes the texture's destroy to the worker. The backend's binding cache must
+// still forget it, or a new texture that gets the same GL name is never actually bound.
+// Only one texture name is freed before the new texture is made, so any driver that reuses freed
+// names hands that one out. A driver that never reuses names passes without reaching the bug.
+TEST_F(BackendTest, DestroyAfterAsyncUpdateDoesNotLeaveStaleTextureBinding) {
+    SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
+
+    constexpr size_t kRenderTargetSize = 16;
+    constexpr uint32_t kRed = 0xFF0000FF;
+    constexpr uint32_t kGreen = 0xFF00FF00;
+    constexpr uint32_t kBlue = 0xFFFF0000;
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+
+    auto waitFor = [&](const bool& flag) {
+        int attempts = 0;
+        while (!flag && attempts < 1000) {
+            api.finish();
+            executeCommands();
+            getDriver().purge();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            attempts++;
+        }
+        EXPECT_TRUE(flag);
+    };
+
+    Shader shader = SharedShaders::makeShader(api, *mCleanup,
+            ShaderRequest{
+                .mVertexType = VertexShaderType::Textured,
+                .mFragmentType = FragmentShaderType::Textured,
+                .mUniformType = ShaderUniformType::Sampler,
+            });
+
+    TextureHandle colorTexture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, kRenderTargetSize, kRenderTargetSize, 1,
+            TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE));
+    RenderTargetHandle renderTarget = addCleanup(api.createRenderTarget(TargetBufferFlags::COLOR,
+            kRenderTargetSize, kRenderTargetSize, 1, 0, { { colorTexture } }, {}, {}));
+
+    TrianglePrimitive triangle(api);
+    float2 const fullScreen[3] = { { -1.0, -1.0 }, { 3.0, -1.0 }, { -1.0, 3.0 } };
+    triangle.updateVertices(fullScreen);
+
+    PipelineState ps = getColorWritePipelineState();
+    shader.addProgramToPipelineState(ps);
+    ps.primitiveType = PrimitiveType::TRIANGLES;
+    ps.vertexBufferInfo = triangle.getVertexBufferInfo();
+
+    RenderPassParams params = getClearColorDepthRenderPass();
+    params.viewport.width = kRenderTargetSize;
+    params.viewport.height = kRenderTargetSize;
+
+    SamplerParams samplerParams{};
+    samplerParams.filterMin = SamplerMinFilter::NEAREST;
+    samplerParams.filterMag = SamplerMagFilter::NEAREST;
+
+    auto createFilledTexture = [&](uint32_t const color) {
+        TextureHandle const th = api.createTexture(SamplerType::SAMPLER_2D, 1,
+                TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
+        uint32_t* texel = static_cast<uint32_t*>(malloc(sizeof(uint32_t)));
+        *texel = color;
+        api.update3DImage(th, 0, 0, 0, 0, 1, 1, 1,
+                PixelBufferDescriptor(texel, sizeof(uint32_t), PixelDataFormat::RGBA,
+                        PixelDataType::UBYTE, [](void* buffer, size_t, void*) { free(buffer); }));
+        return th;
+    };
+
+    auto drawAndReadCenter = [&](DescriptorSetHandle const descriptorSet) {
+        std::vector<uint8_t> pixels(kRenderTargetSize * kRenderTargetSize * 4);
+        bool readPixelsDone = false;
+        api.bindDescriptorSet(descriptorSet, 0, {});
+        {
+            RenderFrame frame(api);
+            api.beginRenderPass(renderTarget, params);
+            api.bindPipeline(ps);
+            api.bindRenderPrimitive(triangle.getRenderPrimitive());
+            api.draw2(0, 3, 1);
+            api.endRenderPass();
+            api.readPixels(renderTarget, 0, 0, kRenderTargetSize, kRenderTargetSize,
+                    PixelBufferDescriptor(pixels.data(), pixels.size(), PixelDataFormat::RGBA,
+                            PixelDataType::UBYTE,
+                            [](void*, size_t, void* user) { *static_cast<bool*>(user) = true; },
+                            &readPixelsDone));
+            api.commit(swapChain);
+        }
+        waitFor(readPixelsDone);
+        size_t const center =
+                (kRenderTargetSize / 2 * kRenderTargetSize + kRenderTargetSize / 2) * 4;
+        uint32_t color;
+        memcpy(&color, pixels.data() + center, sizeof(color));
+        return color;
+    };
+
+    // A synchronously created texture that the backend samples.
+    TextureHandle const oldTexture = createFilledTexture(kRed);
+    DescriptorSetHandle const oldDescriptorSet =
+            api.createDescriptorSet(shader.getDescriptorSetLayout());
+    api.updateDescriptorSetTexture(oldDescriptorSet, 0, oldTexture, samplerParams);
+    ASSERT_EQ(kRed, drawAndReadCenter(oldDescriptorSet));
+
+    // One async update is enough to make its destroy run on the worker.
+    bool asyncUpdated = false;
+    uint32_t* texel = static_cast<uint32_t*>(malloc(sizeof(uint32_t)));
+    *texel = kRed;
+    api.update3DImageAsync(oldTexture, 0, 0, 0, 0, 1, 1, 1,
+            PixelBufferDescriptor(texel, sizeof(uint32_t), PixelDataFormat::RGBA,
+                    PixelDataType::UBYTE, [](void* buffer, size_t, void*) { free(buffer); }),
+            nullptr, signalCallback, &asyncUpdated);
+    waitFor(asyncUpdated);
+
+    // Moves the upload unit off the old name, so the new texture below is created correctly and
+    // only the sampling unit still caches the old name.
+    addCleanup(createFilledTexture(kBlue));
+
+    api.destroyDescriptorSet(oldDescriptorSet);
+    api.destroyTexture(oldTexture);
+
+    // The worker runs jobs in order, so once this fires the destroy above has run.
+    bool workerDrained = false;
+    api.queueCommandAsync([]() {}, nullptr, signalCallback, &workerDrained);
+    waitFor(workerDrained);
+
+    // With name reuse this texture gets the old texture's GL name.
+    TextureHandle const newTexture = addCleanup(createFilledTexture(kGreen));
+    DescriptorSetHandle const newDescriptorSet = shader.createDescriptorSet(api);
+    api.updateDescriptorSetTexture(newDescriptorSet, 0, newTexture, samplerParams);
+
+    EXPECT_EQ(kGreen, drawAndReadCenter(newDescriptorSet))
+            << "the new texture was never bound; the sampler still reads the destroyed one";
+}
+
+// Same as above for a vertex buffer object. While the backend cache still holds the freed name,
+// uploads to a new buffer with that name go to the destroyed one, and a later real bind exposes an
+// empty buffer to the draw.
+TEST_F(BackendTest, DestroyAfterAsyncUpdateDoesNotLeaveStaleBufferBinding) {
+    SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
+
+    constexpr size_t kRenderTargetSize = 16;
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+
+    auto waitFor = [&](const bool& flag) {
+        int attempts = 0;
+        while (!flag && attempts < 1000) {
+            api.finish();
+            executeCommands();
+            getDriver().purge();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            attempts++;
+        }
+        EXPECT_TRUE(flag);
+    };
+
+    Shader shader = SharedShaders::makeShader(api, *mCleanup,
+            ShaderRequest{
+                .mVertexType = VertexShaderType::Noop,
+                .mFragmentType = FragmentShaderType::White,
+                .mUniformType = ShaderUniformType::None,
+            });
+
+    TextureHandle colorTexture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, kRenderTargetSize, kRenderTargetSize, 1,
+            TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE));
+    RenderTargetHandle renderTarget = addCleanup(api.createRenderTarget(TargetBufferFlags::COLOR,
+            kRenderTargetSize, kRenderTargetSize, 1, 0, { { colorTexture } }, {}, {}));
+
+    // Everything except the vertex buffer objects is made first, so no other buffer name is
+    // generated between the destroy and the new buffer.
+    AttributeArray attributes = { Attribute{
+        .offset = 0,
+        .stride = sizeof(float2),
+        .buffer = 0,
+        .type = ElementType::FLOAT2,
+        .flags = 0
+    } };
+    VertexBufferInfoHandle const vbih = addCleanup(api.createVertexBufferInfo(1, 1, attributes));
+    VertexBufferHandle const vbh = addCleanup(api.createVertexBuffer(3, vbih));
+    IndexBufferHandle const ibh =
+            addCleanup(api.createIndexBuffer(ElementType::UINT, 3, BufferUsage::STATIC));
+    uint32_t* indices = static_cast<uint32_t*>(malloc(sizeof(uint32_t) * 3));
+    indices[0] = 0;
+    indices[1] = 1;
+    indices[2] = 2;
+    api.updateIndexBuffer(ibh,
+            BufferDescriptor(indices, sizeof(uint32_t) * 3,
+                    [](void* buffer, size_t, void*) { free(buffer); }),
+            0);
+    RenderPrimitiveHandle const rph =
+            addCleanup(api.createRenderPrimitive(vbh, ibh, PrimitiveType::TRIANGLES));
+
+    PipelineState ps = getColorWritePipelineState();
+    shader.addProgramToPipelineState(ps);
+    ps.primitiveType = PrimitiveType::TRIANGLES;
+    ps.vertexBufferInfo = vbih;
+
+    RenderPassParams params = getClearColorDepthRenderPass(float4(0, 0, 1, 1));
+    params.viewport.width = kRenderTargetSize;
+    params.viewport.height = kRenderTargetSize;
+
+    auto makeVertices = [] {
+        float2* vertices = static_cast<float2*>(malloc(sizeof(float2) * 3));
+        vertices[0] = { -1.0, -1.0 };
+        vertices[1] = { 3.0, -1.0 };
+        vertices[2] = { -1.0, 3.0 };
+        return BufferDescriptor(vertices, sizeof(float2) * 3,
+                [](void* buffer, size_t, void*) { free(buffer); });
+    };
+
+    // A synchronously created buffer, left bound in the backend cache.
+    BufferObjectHandle const oldBuffer = api.createBufferObject(sizeof(float2) * 3,
+            BufferObjectBinding::VERTEX, BufferUsage::STATIC);
+    api.updateBufferObject(oldBuffer, makeVertices(), 0);
+
+    // One async update is enough to make its destroy run on the worker.
+    bool asyncUpdated = false;
+    api.updateBufferObjectAsync(oldBuffer, makeVertices(), 0, nullptr, signalCallback,
+            &asyncUpdated);
+    waitFor(asyncUpdated);
+
+    api.destroyBufferObject(oldBuffer);
+
+    // The worker runs jobs in order, so once this fires the destroy above has run.
+    bool workerDrained = false;
+    api.queueCommandAsync([]() {}, nullptr, signalCallback, &workerDrained);
+    waitFor(workerDrained);
+
+    // With name reuse this buffer gets the old buffer's GL name.
+    BufferObjectHandle const newBuffer = addCleanup(api.createBufferObject(sizeof(float2) * 3,
+            BufferObjectBinding::VERTEX, BufferUsage::STATIC));
+    api.setVertexBufferObject(vbh, 0, newBuffer);
+    api.updateBufferObject(newBuffer, makeVertices(), 0);
+
+    // Binds another buffer so the draw below really binds the new buffer's name.
+    addCleanup(api.createBufferObject(sizeof(float2) * 3, BufferObjectBinding::VERTEX,
+            BufferUsage::STATIC));
+
+    std::vector<uint8_t> pixels(kRenderTargetSize * kRenderTargetSize * 4);
+    bool readPixelsDone = false;
+    {
+        RenderFrame frame(api);
+        api.beginRenderPass(renderTarget, params);
+        api.bindPipeline(ps);
+        api.bindRenderPrimitive(rph);
+        api.draw2(0, 3, 1);
+        api.endRenderPass();
+        api.readPixels(renderTarget, 0, 0, kRenderTargetSize, kRenderTargetSize,
+                PixelBufferDescriptor(pixels.data(), pixels.size(), PixelDataFormat::RGBA,
+                        PixelDataType::UBYTE,
+                        [](void*, size_t, void* user) { *static_cast<bool*>(user) = true; },
+                        &readPixelsDone));
+        api.commit(swapChain);
+    }
+    waitFor(readPixelsDone);
+
+    size_t const center = (kRenderTargetSize / 2 * kRenderTargetSize + kRenderTargetSize / 2) * 4;
+    uint32_t color;
+    memcpy(&color, pixels.data() + center, sizeof(color));
+    EXPECT_EQ(0xFFFFFFFFu, color) << "the vertex data went to the destroyed buffer";
+}
+
+TEST_F(BackendTest, AsyncTextureViewRefRace) {
+    SKIP_IF(Backend::VULKAN, "no async");
+    SKIP_IF(Backend::WEBGPU, "no async");
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+    auto waitFor = [&](const bool& flag) {
+        int attempts = 0;
+        while (!flag && attempts < 1000) {
+            api.finish();
+            executeCommands();
+            getDriver().purge();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            attempts++;
+        }
+        EXPECT_TRUE(flag);
+    };
+
+    std::atomic<std::thread::id> workerId{};
+    bool idDone = false;
+    api.queueCommandAsync([&workerId] { workerId = std::this_thread::get_id(); }, nullptr,
+            signalCallback, &idDone);
+    waitFor(idDone);
+    ASSERT_NE(workerId.load(), std::this_thread::get_id()) << "worker is not a separate thread";
+
+    bool created = false;
+    TextureHandle const src = api.createTextureAsync(SamplerType::SAMPLER_2D, 2,
+            TextureFormat::RGBA8, 1, 4, 4, 1, TextureUsage::DEFAULT, nullptr, signalCallback,
+            &created);
+    waitFor(created);
+
+    TextureHandle const v1 = api.createTextureView(src, 0, 1);
+    executeCommands();
+
+    std::atomic_bool drained = false;
+    bool blockerDone = false;
+    bool drainDone = false;
+    // Sleep delays destruction so backend view creation overlaps without barriers.
+    api.queueCommandAsync([] { std::this_thread::sleep_for(std::chrono::milliseconds(200)); },
+            nullptr, signalCallback, &blockerDone);
+    api.destroyTexture(v1);
+    api.queueCommandAsync([&drained] { drained = true; }, nullptr, signalCallback, &drainDone);
+    TextureHandle const v2 = api.createTextureView(src, 0, 2);
+    executeCommands();
+    int drainAttempts = 0;
+    while (!drained.load() && drainAttempts < 2000) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        drainAttempts++;
+    }
+    EXPECT_TRUE(drained.load());
+
+    api.destroyTexture(v2);
+    api.destroyTexture(src);
+    bool finalDone = false;
+    api.queueCommandAsync([] {}, nullptr, signalCallback, &finalDone);
+    waitFor(blockerDone);
+    waitFor(drainDone);
+    waitFor(finalDone);
+}
+
+TEST_F(BackendTest, FinishDrainsQueuedAsyncJobs) {
+    SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+
+    // The sleep keeps a worker thread busy past finish() unless finish() waits for it. In
+    // amortization mode the job never runs without a tick().
+    std::atomic_bool commandRan = false;
+    AsyncCallResult result;
+    api.queueCommandAsync(
+            [&commandRan]() {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                commandRan = true;
+            },
+            nullptr, recordCallback, &result);
+
+    // One finish() with no tick() and no retry.
+    api.finish();
+    executeCommands();
+    getDriver().purge();
+
+    EXPECT_TRUE(commandRan.load()) << "finish() returned before the queued job ran";
+    EXPECT_TRUE(result.fired) << "finish() returned before the job's completion was scheduled";
+    EXPECT_EQ(AsyncCallStatus::COMPLETED, result.status);
+}
+
+// Runs each callback inside post() with a thread-local flag set, so a release callback can tell
+// whether it was dispatched through the handler.
+class MarkingHandler final : public CallbackHandler {
+public:
+    void post(void* user, Callback const callback) override {
+        sInPost = true;
+        callback(user);
+        sInPost = false;
+    }
+
+    static inline thread_local bool sInPost = false;
+};
+
+struct ReleaseRecord {
+    std::atomic_bool released = false;
+    std::atomic_bool throughHandler = false;
+};
+
+static void recordRelease(void*, size_t, void* user) {
+    ReleaseRecord* record = static_cast<ReleaseRecord*>(user);
+    record->throughHandler = MarkingHandler::sInPost;
+    record->released = true;
+}
+
+// One call per upload entry point whose job captures a BufferDescriptor.
+struct PendingUploads {
+    ReleaseRecord indexRelease;
+    ReleaseRecord bufferRelease;
+    ReleaseRecord imageRelease;
+    AsyncCallResult indexDone;
+    AsyncCallResult bufferDone;
+    AsyncCallResult imageDone;
+    AsyncCallId ids[3] = {};
+
+    void issue(DriverApi& api, IndexBufferHandle ibh, BufferObjectHandle boh, TextureHandle th,
+            CallbackHandler* handler, void const* data) {
+        ids[0] = api.updateIndexBufferAsync(ibh,
+                BufferDescriptor(data, sizeof(uint32_t) * 3, handler, recordRelease,
+                        &indexRelease),
+                0, nullptr, recordCallback, &indexDone);
+        ids[1] = api.updateBufferObjectAsync(boh,
+                BufferDescriptor(data, sizeof(float2) * 3, handler, recordRelease,
+                        &bufferRelease),
+                0, nullptr, recordCallback, &bufferDone);
+        ids[2] = api.update3DImageAsync(th, 0, 0, 0, 0, 2, 2, 1,
+                PixelBufferDescriptor(data, sizeof(uint32_t) * 4, PixelDataFormat::RGBA,
+                        PixelDataType::UBYTE, handler, recordRelease, &imageRelease),
+                nullptr, recordCallback, &imageDone);
+    }
+};
+
+// A BufferDescriptor's release callback goes through its handler. That has to hold for a canceled
+// upload as well, because the canceled job still owns the descriptor.
+TEST_F(BackendTest, CanceledAsyncUploadReleasesBufferThroughHandler) {
+    SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+
+    auto waitFor = [&](auto const& flag) {
+        int attempts = 0;
+        while (!flag && attempts < 1000) {
+            api.finish();
+            executeCommands();
+            getDriver().purge();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            attempts++;
+        }
+        EXPECT_TRUE(flag);
+    };
+
+    IndexBufferHandle ibh =
+            addCleanup(api.createIndexBuffer(ElementType::UINT, 3, BufferUsage::STATIC));
+    BufferObjectHandle boh = addCleanup(api.createBufferObject(sizeof(float2) * 3,
+            BufferObjectBinding::VERTEX, BufferUsage::STATIC));
+    TextureHandle th = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, 2, 2, 1, TextureUsage::DEFAULT));
+
+    MarkingHandler handler;
+    std::vector<uint8_t> data(64);
+    PendingUploads uploads;
+    uploads.issue(api, ibh, boh, th, &handler, data.data());
+
+    // The backend halves have not run yet, so each job is dropped when its half tries to queue it.
+    for (AsyncCallId const id : uploads.ids) {
+        EXPECT_TRUE(api.cancelAsyncJob(id));
+    }
+
+    waitFor(uploads.indexDone.fired);
+    waitFor(uploads.bufferDone.fired);
+    waitFor(uploads.imageDone.fired);
+    waitFor(uploads.indexRelease.released);
+    waitFor(uploads.bufferRelease.released);
+    waitFor(uploads.imageRelease.released);
+    EXPECT_TRUE(uploads.indexRelease.throughHandler) << "updateIndexBufferAsync";
+    EXPECT_TRUE(uploads.bufferRelease.throughHandler) << "updateBufferObjectAsync";
+    EXPECT_TRUE(uploads.imageRelease.throughHandler) << "update3DImageAsync";
+}
+
+// Same as above, but the jobs are already queued, so cancelAsyncJob() itself destroys them.
+TEST_F(BackendTest, CanceledQueuedAsyncUploadReleasesBufferThroughHandler) {
+    SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+
+    auto waitFor = [&](auto const& flag) {
+        int attempts = 0;
+        while (!flag && attempts < 1000) {
+            api.finish();
+            executeCommands();
+            getDriver().purge();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            attempts++;
+        }
+        EXPECT_TRUE(flag);
+    };
+
+    IndexBufferHandle ibh =
+            addCleanup(api.createIndexBuffer(ElementType::UINT, 3, BufferUsage::STATIC));
+    BufferObjectHandle boh = addCleanup(api.createBufferObject(sizeof(float2) * 3,
+            BufferObjectBinding::VERTEX, BufferUsage::STATIC));
+    TextureHandle th = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, 2, 2, 1, TextureUsage::DEFAULT));
+
+    // Holds the worker so the uploads below stay queued until they are canceled.
+    std::atomic_bool releaseWorker = false;
+    AsyncCallResult blockerDone;
+    api.queueCommandAsync(
+            [&releaseWorker]() {
+                for (int i = 0; i < 1000 && !releaseWorker.load(); i++) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                }
+            },
+            nullptr, recordCallback, &blockerDone);
+
+    MarkingHandler handler;
+    std::vector<uint8_t> data(64);
+    PendingUploads uploads;
+    uploads.issue(api, ibh, boh, th, &handler, data.data());
+    executeCommands();
+
+    for (AsyncCallId const id : uploads.ids) {
+        EXPECT_TRUE(api.cancelAsyncJob(id)) << "the upload ran before it could be canceled";
+    }
+    releaseWorker = true;
+
+    waitFor(blockerDone.fired);
+    waitFor(uploads.indexDone.fired);
+    waitFor(uploads.bufferDone.fired);
+    waitFor(uploads.imageDone.fired);
+    waitFor(uploads.indexRelease.released);
+    waitFor(uploads.bufferRelease.released);
+    waitFor(uploads.imageRelease.released);
+    EXPECT_TRUE(uploads.indexRelease.throughHandler) << "updateIndexBufferAsync";
+    EXPECT_TRUE(uploads.bufferRelease.throughHandler) << "updateBufferObjectAsync";
+    EXPECT_TRUE(uploads.imageRelease.throughHandler) << "update3DImageAsync";
+}
+
+} // namespace test

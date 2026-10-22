@@ -1,0 +1,56 @@
+#version 310 es
+#extension GL_OES_shader_image_atomic : require
+layout(local_size_x = 1) in;
+
+layout(r32ui, binding = 0) uniform highp uimage2D uImage;
+layout(r32i, binding = 1) uniform highp iimage2D iImage;
+layout(binding = 2, std430) buffer SSBO
+{
+    uint u32;
+    int  i32;
+} ssbo;
+
+shared uint shared_u32;
+shared int shared_i32;
+
+void main()
+{
+    atomicAdd(ssbo.u32, 1u);
+    atomicOr(ssbo.u32, 1u);
+    atomicXor(ssbo.u32, 1u);
+    atomicAnd(ssbo.u32, 1u);
+    atomicMin(ssbo.u32, 1u);
+    atomicMax(ssbo.u32, 1u);
+    atomicExchange(ssbo.u32, 1u);
+    atomicCompSwap(ssbo.u32, 10u, 2u);
+
+    atomicAdd(ssbo.i32, 1);
+    atomicOr(ssbo.i32, 1);
+    atomicXor(ssbo.i32, 1);
+    atomicAnd(ssbo.i32, 1);
+    atomicMin(ssbo.i32, 1);
+    atomicMax(ssbo.i32, 1);
+    atomicExchange(ssbo.i32, 1);
+    atomicCompSwap(ssbo.i32, 10, 2);
+
+	shared_u32 = 10u;
+	shared_i32 = 10;
+    atomicAdd(shared_u32, 1u);
+    atomicOr(shared_u32, 1u);
+    atomicXor(shared_u32, 1u);
+    atomicAnd(shared_u32, 1u);
+    atomicMin(shared_u32, 1u);
+    atomicMax(shared_u32, 1u);
+    atomicExchange(shared_u32, 1u);
+    atomicCompSwap(shared_u32, 10u, 2u);
+
+    atomicAdd(shared_i32, 1);
+    atomicOr(shared_i32, 1);
+    atomicXor(shared_i32, 1);
+    atomicAnd(shared_i32, 1);
+    atomicMin(shared_i32, 1);
+    atomicMax(shared_i32, 1);
+    atomicExchange(shared_i32, 1);
+    atomicCompSwap(shared_i32, 10, 2);
+}
+

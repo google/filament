@@ -1,0 +1,442 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Visual Studio 2012 Native Debugging Visualizers for LLVM
+
+Put this file into "%USERPROFILE%\Documents\Visual Studio 2015\Visualizers", creating the directory if necessary,
+or create a symbolic link so it updates automatically.
+
+mklink "%USERPROFILE%\Documents\Visual Studio 2015\Visualizers\clang.natvis" %HLSL_SRC_DIR%\tools\clang\utils\clang.natvis
+
+LLVM types are also used, those can be added with this command.
+
+mklink "%USERPROFILE%\Documents\Visual Studio 2015\Visualizers\llvm.natvis" %HLSL_SRC_DIR%\utils\llvm.natvis
+
+-->
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="clang::IdentifierInfo">
+    <DisplayString Condition="Entry != 0">({((llvm::StringMapEntry&lt;clang::IdentifierInfo *&gt;*)Entry)+1,s})</DisplayString>
+    <Expand>
+      <Item Condition="Entry != 0" Name="[Identifier]">((llvm::StringMapEntry&lt;clang::IdentifierInfo *&gt;*)Entry)+1,s</Item>
+      <Item Name="Token Kind">(clang::tok::TokenKind)TokenID</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::DeclarationName">
+    <DisplayString Condition="Ptr == 0">Empty</DisplayString>
+    <DisplayString Condition="(Ptr &amp; PtrMask) == StoredIdentifier">{{Identifier ({(clang::IdentifierInfo *)(Ptr &amp; ~PtrMask)})}}</DisplayString>
+    <DisplayString Condition="(Ptr &amp; PtrMask) == StoredObjCZeroArgSelector">{{ObjC Zero Arg Selector ({(clang::IdentifierInfo *)(Ptr &amp; ~PtrMask)})}}</DisplayString>
+    <DisplayString Condition="(Ptr &amp; PtrMask) == StoredObjCOneArgSelector">{{ObjC One Arg Selector ({(clang::IdentifierInfo *)(Ptr &amp; ~PtrMask)})}}</DisplayString>
+    <DisplayString Condition="(Ptr &amp; PtrMask) == StoredDeclarationNameExtra">{{Extra ({(clang::DeclarationNameExtra::ExtraKind)((clang::DeclarationNameExtra *)(Ptr &amp; ~PtrMask))-&gt;ExtraKindOrNumArgs})}}</DisplayString>
+    <Expand>
+      <Item Condition="(Ptr &amp; PtrMask) == StoredIdentifier" Name="[Identifier]">(clang::IdentifierInfo *)(Ptr &amp; ~PtrMask)</Item>
+      <Item Condition="(Ptr &amp; PtrMask) == StoredObjCZeroArgSelector" Name="[ObjC Zero Arg Selector]">(clang::IdentifierInfo *)(Ptr &amp; ~PtrMask)</Item>
+      <Item Condition="(Ptr &amp; PtrMask) == StoredObjCOneArgSelector" Name="[ObjC One Arg Selector]">(clang::IdentifierInfo *)(Ptr &amp; ~PtrMask)</Item>
+      <Item Condition="(Ptr &amp; PtrMask) == StoredDeclarationNameExtra" Name="[Extra]">(clang::DeclarationNameExtra::ExtraKind)((clang::DeclarationNameExtra *)(Ptr &amp; ~PtrMask))-&gt;ExtraKindOrNumArgs</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::Token">
+    <!-- MS Addition -->
+    <DisplayString Condition="Kind == 6">identifier (6) - {*((clang::IdentifierInfo*)PtrData)}</DisplayString>
+    <DisplayString>{(clang::tok::TokenKind)Kind}</DisplayString>
+  </Type>
+  <Type Name="clang::ASTVector&lt;*&gt;">
+    <DisplayString Condition="Begin == End">empty</DisplayString>
+    <DisplayString Condition="Begin != End">[{End - Begin}]</DisplayString>
+    <Expand>
+      <Item Name="[size]">End - Begin</Item>
+      <ArrayItems>
+        <Size>End - Begin</Size>
+        <ValuePointer>Begin</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="clang::Declarator">
+    <DisplayString>Declarator {Name}</DisplayString>
+  </Type>
+  <Type Name="clang::DeclSpec">
+    <DisplayString>[{(clang::DeclSpec::SCS)StorageClassSpec}], [{(clang::TypeSpecifierType)TypeSpecType}]</DisplayString>
+  </Type>
+  <Type Name="clang::PragmaHandler">
+    <DisplayString>{Name,s}</DisplayString>
+  </Type>
+  <Type Name="clang::FileEntry">
+    <DisplayString>{Name,s}</DisplayString>
+  </Type>
+  <Type Name="clang::DirectoryEntry">
+    <DisplayString>{Name,s}</DisplayString>
+  </Type>
+  <!-- MS Additions Start -->
+  <Type Name="clang::ActionResult&lt;clang::Expr *,1&gt;">
+    <!-- Code uses a clang::ExprResult typedef for this. -->
+    <DisplayString Condition="(PtrWithInvalid &amp; 1) == 1">invalid expression result</DisplayString>
+    <DisplayString Condition="(PtrWithInvalid &amp; 1) == 0">valid expression result - {(clang::Stmt::StmtClass)((clang::Expr *)PtrWithInvalid)->StmtBits.sClass}</DisplayString>
+    <Expand>
+      <Item Condition="(PtrWithInvalid &amp; 1) == 0" Name="[Expression]">(clang::Expr *)PtrWithInvalid</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::TemplateName">
+    <DisplayString Condition="0 == (((uintptr_t)0x3) &amp; ((uintptr_t)Storage.Val.Val.Value))">TemplateName {((clang::TemplateDecl*)Storage.Val.Val.Value)->Name}</DisplayString>
+  </Type>
+  <Type Name="clang::Type">
+    <DisplayString>Type Class={(clang::Type::TypeClass)TypeBits.TC}</DisplayString>
+    <Expand>
+      <Item Name="[TypeClass]">(clang::Type::TypeClass)TypeBits.TC</Item>
+
+      <!-- Builtin details -->
+      <Item Condition="clang::Type::TypeClass::Builtin == (clang::Type::TypeClass)TypeBits.TC" Name="[Kind]">(clang::BuiltinType::Kind)(((clang::BuiltinType*)this)->BuiltinTypeBits.Kind)</Item>
+      
+      <!-- TemplateSpecializationType -->
+      <Item Condition="clang::Type::TypeClass::TemplateSpecialization == (clang::Type::TypeClass)TypeBits.TC" Name="[TemplateName]">((clang::TemplateSpecializationType*)this)->Template</Item>
+      <Item Condition="clang::Type::TypeClass::TemplateSpecialization == (clang::Type::TypeClass)TypeBits.TC" Name="[NumArgs]">((clang::TemplateSpecializationType*)this)->NumArgs</Item>
+      <Item Condition="clang::Type::TypeClass::TemplateSpecialization == (clang::Type::TypeClass)TypeBits.TC" Name="[IsTypeAlias]">((clang::TemplateSpecializationType*)this)->TypeAlias</Item>
+      <ArrayItems Condition="clang::Type::TypeClass::TemplateSpecialization == (clang::Type::TypeClass)TypeBits.TC">
+        <Size>((clang::TemplateSpecializationType*)this)->NumArgs</Size>
+        <ValuePointer>(clang::TemplateArgument*)(((clang::TemplateSpecializationType*)this)+1)</ValuePointer>
+      </ArrayItems>
+      
+      <!-- FunctionProtoType details -->
+      <Item Condition="clang::Type::TypeClass::FunctionProto == (clang::Type::TypeClass)TypeBits.TC" Name="[ResultType]">((clang::FunctionType*)this)->ResultType</Item>
+      <Item Condition="clang::Type::TypeClass::FunctionProto == (clang::Type::TypeClass)TypeBits.TC" Name="[NumParams]">((clang::FunctionProtoType*)this)->NumParams</Item>
+      <ArrayItems Condition="clang::Type::TypeClass::FunctionProto == (clang::Type::TypeClass)TypeBits.TC">
+        <Size>((clang::FunctionProtoType*)this)->NumParams</Size>
+        <ValuePointer>(clang::QualType*)(((clang::FunctionProtoType*)this)+1)</ValuePointer>
+      </ArrayItems>
+      
+      <!-- TemplateTypeParmType details -->
+      <Item Condition="clang::Type::TypeClass::TemplateTypeParm == (clang::Type::TypeClass)TypeBits.TC" Name="[AsTemplateType]">(clang::TemplateTypeParmType*)this</Item>
+      
+      <!-- VectorType details -->
+      <Item Condition="clang::Type::TypeClass::Vector == (clang::Type::TypeClass)TypeBits.TC" Name="[VecKind]">(clang::VectorType::VectorKind)(((clang::VectorType*)this)->VectorTypeBits.VecKind)</Item>
+      <Item Condition="clang::Type::TypeClass::Vector == (clang::Type::TypeClass)TypeBits.TC" Name="[NumElements]">((clang::VectorType*)this)->VectorTypeBits.NumElements</Item>
+      <Item Condition="clang::Type::TypeClass::Vector == (clang::Type::TypeClass)TypeBits.TC" Name="[ElementType]">((clang::VectorType*)this)->ElementType</Item>
+
+      <!-- ExtVectorType details -->
+      <Item Condition="clang::Type::TypeClass::ExtVector == (clang::Type::TypeClass)TypeBits.TC" Name="[VecKind]">(clang::VectorType::VectorKind)(((clang::ExtVectorType*)this)->VectorTypeBits.VecKind)</Item>
+      <Item Condition="clang::Type::TypeClass::ExtVector == (clang::Type::TypeClass)TypeBits.TC" Name="[NumElements]">((clang::ExtVectorType*)this)->VectorTypeBits.NumElements</Item>
+      <Item Condition="clang::Type::TypeClass::ExtVector == (clang::Type::TypeClass)TypeBits.TC" Name="[ElementType]">((clang::ExtVectorType*)this)->ElementType</Item>
+      
+      <!-- DecltypeType details -->
+      <Item Condition="clang::Type::TypeClass::Decltype == (clang::Type::TypeClass)TypeBits.TC" Name="[Expr]">((clang::DecltypeType*)this)->E</Item>
+      <Item Condition="clang::Type::TypeClass::Decltype == (clang::Type::TypeClass)TypeBits.TC" Name="[UnderlyingType]">((clang::DecltypeType*)this)->UnderlyingType</Item>
+    
+      <!-- Record details -->
+      <Item Condition="clang::Type::TypeClass::Record == (clang::Type::TypeClass)TypeBits.TC" Name="[Decl]">(clang::RecordDecl*)(((clang::TagType*)this)->decl)</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::ExtQualsTypeCommonBase">
+    <DisplayString>ExtQualsTypeCommonBase Base={(clang::Type::TypeClass)BaseType-&gt;TypeBits.TC}</DisplayString>
+    <Expand>
+      <Item Name="Type">BaseType</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::QualType">
+    <!-- TypeAlignmentInBits = 4 -->
+    <DisplayString>QualType Type={(clang::ExtQualsTypeCommonBase*)(((uintptr_t)Value.Value) &amp; (~(uintptr_t)((1 &lt;&lt; 4) - 1))),na}</DisplayString>
+    <Expand>
+      <Item Name="[Type]">(clang::ExtQualsTypeCommonBase*)(((uintptr_t)Value.Value) &amp; (~(uintptr_t)((1 &lt;&lt; 4) - 1)))</Item>
+      <Item Name="[Const]"   >((uintptr_t)Value.Value) &amp; 0x1</Item>
+      <Item Name="[Restrict]">((uintptr_t)Value.Value) &amp; 0x2</Item>
+      <Item Name="[Volatile]">((uintptr_t)Value.Value) &amp; 0x4</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::Stmt">
+    <DisplayString>{(clang::Stmt::StmtClass)StmtBits.sClass}</DisplayString>
+    <Expand>
+      <Item Condition="clang::Stmt::StmtClass::DeclRefExprClass == (clang::Stmt::StmtClass)StmtBits.sClass" Name="[DeclRefExpr]">(clang::DeclRefExpr*)this</Item>
+      <Item Condition="clang::Stmt::StmtClass::InitListExprClass == (clang::Stmt::StmtClass)StmtBits.sClass" Name="[InitListExpr]">(clang::InitListExpr*)this</Item>
+      <Item Condition="clang::Stmt::StmtClass::CXXFunctionalCastExprClass == (clang::Stmt::StmtClass)StmtBits.sClass" Name="[CXXFunctionalCastExpr]">(clang::CXXFunctionalCastExpr*)this</Item>
+      <Item Condition="clang::Stmt::StmtClass::ParenExprClass == (clang::Stmt::StmtClass)StmtBits.sClass" Name="[ParenExpr]">(clang::ParenExpr*)this</Item>
+      <Item Condition="clang::Stmt::StmtClass::BinaryOperatorClass == (clang::Stmt::StmtClass)StmtBits.sClass" Name="[BinaryOperator]">(clang::BinaryOperator*)this</Item>
+      <Item Condition="clang::Stmt::StmtClass::ImplicitCastExprClass == (clang::Stmt::StmtClass)StmtBits.sClass" Name="[ImplicitCastExpr]">(clang::ImplicitCastExpr*)this</Item>
+      <Item Condition="clang::Stmt::StmtClass::IntegerLiteralClass == (clang::Stmt::StmtClass)StmtBits.sClass" Name="[IntegerLiteral]">(clang::IntegerLiteral*)this</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::Expr">
+    <DisplayString>{(clang::Stmt::StmtClass)StmtBits.sClass}</DisplayString>
+    <Expand>
+      <Item Name="[ObjectKind]">(ExprObjectKind)ExprBits.ObjectKind</Item>
+      <Item Name="[TypeDependent]">(bool)ExprBits.TypeDependent</Item>
+      <Item Name="[ValueKind]">(ExprValueKind)ExprBits.ValueKind</Item>
+
+      <Item Condition="clang::Stmt::StmtClass::CompoundAssignOperatorClass == (clang::Stmt::StmtClass)StmtBits.sClass" Name="[BinaryOperator]">(clang::BinaryOperator*)this</Item>
+
+      <Item Condition="clang::Stmt::StmtClass::ImplicitCastExprClass == (clang::Stmt::StmtClass)StmtBits.sClass" Name="[CastKind]">(clang::CastKind)(((clang::ImplicitCastExpr*)this)->CastExprBits.Kind)</Item>
+      <Item Condition="clang::Stmt::StmtClass::ImplicitCastExprClass == (clang::Stmt::StmtClass)StmtBits.sClass" Name="[Op]">(clang::Expr*)(((clang::ImplicitCastExpr*)this)->Op)</Item>
+
+      <Item Condition="clang::Stmt::StmtClass::DeclRefExprClass == (clang::Stmt::StmtClass)StmtBits.sClass" Name="[Decl]">((clang::DeclRefExpr*)this)->D</Item>
+      <Item Condition="clang::Stmt::StmtClass::DeclRefExprClass == (clang::Stmt::StmtClass)StmtBits.sClass" Name="[Loc]">((clang::DeclRefExpr*)this)->Loc</Item>
+      <Item Condition="clang::Stmt::StmtClass::DeclRefExprClass == (clang::Stmt::StmtClass)StmtBits.sClass" Name="[DNLoc]">((clang::DeclRefExpr*)this)->DNLoc</Item>
+      <Item Condition="clang::Stmt::StmtClass::DeclRefExprClass == (clang::Stmt::StmtClass)StmtBits.sClass" Name="[HasFoundDecl]">((clang::DeclRefExpr*)this)->DeclRefExprBits.HasFoundDecl</Item>
+      
+      <Item Condition="clang::Stmt::StmtClass::CStyleCastExprClass == (clang::Stmt::StmtClass)StmtBits.sClass" Name="[CastKind]">(clang::CastKind)(((clang::CStyleCastExpr*)this)->CastExprBits.Kind)</Item>
+      <Item Condition="clang::Stmt::StmtClass::CStyleCastExprClass == (clang::Stmt::StmtClass)StmtBits.sClass" Name="[SubExpr]">(clang::Expr*)(((clang::CastExpr*)this)->Op)</Item>
+
+      <Item Condition="clang::Stmt::StmtClass::CXXFunctionalCastExprClass == (clang::Stmt::StmtClass)StmtBits.sClass" Name="[CXXFunctionalCastExpr]">(clang::CXXFunctionalCastExpr*)this</Item>
+      
+      <Item Condition="clang::Stmt::StmtClass::InitListExprClass == (clang::Stmt::StmtClass)StmtBits.sClass" Name="[InitListExpr]">(clang::InitListExpr*)this</Item>
+      <Item Condition="clang::Stmt::StmtClass::IntegerLiteralClass == (clang::Stmt::StmtClass)StmtBits.sClass" Name="[IntegerLiteral]">(clang::IntegerLiteral*)this</Item>
+      <Item Condition="clang::Stmt::StmtClass::UnresolvedMemberExprClass == (clang::Stmt::StmtClass)StmtBits.sClass" Name="[UnresolvedMemberExpr]">(clang::UnresolvedMemberExpr*)this</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::BinaryOperator">
+    <DisplayString>BinaryOperator {(clang::BinaryOperator::Opcode)Opc}</DisplayString>
+    <Expand>
+      <Item Name="LHS">(clang::Expr*)SubExprs[0]</Item>
+      <Item Name="RHS">(clang::Expr*)SubExprs[1]</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::ExplicitCastExpr">
+    <DisplayString>ExplicitCastExpr {Op}</DisplayString>
+    <Expand>
+      <Item Name="[CastKind]">(clang::CastKind)CastExprBits.Kind</Item>
+      <Item Name="[Op]">(clang::Expr*)Op</Item>
+      <Item Name="[To-TInfo]">TInfo</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::InitListExpr">
+    <DisplayString>InitListExpr {InitExprs}</DisplayString>
+    <Expand>
+      <Item Name="[InitExprs]">InitExprs</Item>
+      <Item Name="[AltFormOrNull]">AltForm</Item>
+      <Item Name="[ArrayFillerOrUnionFieldInit]">ArrayFillerOrUnionFieldInit</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::CastExpr">
+    <DisplayString>CastExpr {Op}</DisplayString>
+    <Expand>
+      <Item Name="[CastKind]">(clang::CastKind)CastExprBits.Kind</Item>
+      <Item Name="[Op]">(clang::Expr*)Op</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::UnresolvedMemberExpr">
+    <DisplayString>UnresolvedMemberExpr {NameInfo}</DisplayString>
+    <Expand>
+      <Item Name="NameInfo">NameInfo</Item>
+      <Item Name="IsArrow">IsArrow</Item>
+      <Item Name="HasUnresolvedUsing">HasUnresolvedUsing</Item>
+      <Item Name="Base">Base</Item>
+      <ArrayItems>
+        <Size>NumResults</Size>
+        <ValuePointer>Results</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="clang::DeclAccessPair">
+    <DisplayString>{(clang::NamedDecl*)(Ptr &amp; ~(uintptr_t)0x3)} : {(clang::AccessSpecifier)(Ptr &amp; 0x3)}</DisplayString>
+    <Expand>
+      <Item Name="[NamedDecl]">(clang::NamedDecl*)(Ptr &amp; ~(uintptr_t)0x3)</Item>
+      <Item Name="[Access]">(clang::AccessSpecifier)(Ptr &amp; 0x3)</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::Decl">
+    <DisplayString Condition="
+                   clang::Decl::Kind::Var == (clang::Decl::Kind)DeclKind ||
+                   clang::Decl::Kind::ClassTemplateSpecialization == (clang::Decl::Kind)DeclKind ||
+                   clang::Decl::Kind::CXXRecord == (clang::Decl::Kind)DeclKind ||
+                   clang::Decl::Kind::ParmVar == (clang::Decl::Kind)DeclKind
+                   ">Decl {(clang::Decl::Kind)DeclKind} {((clang::NamedDecl*)this)->Name}</DisplayString>
+    <DisplayString>Decl {(clang::Decl::Kind)DeclKind}</DisplayString>
+    <Expand>
+      <Item Name="[DeclKind]">(clang::Decl::Kind)DeclKind</Item>
+      <Item Name="[InvalidDecl]" Condition="(bool)InvalidDecl">(bool)InvalidDecl</Item>
+      <Item Name="[HasAttrs]"  Condition="(bool)HasAttrs">(bool)HasAttrs</Item>
+      <Item Name="[Implicit]">(bool)Implicit</Item>
+      <Item Name="[Used]">(bool)Used</Item>
+      <Item Name="[Referenced]">(bool)Referenced</Item>
+      <Item Name="[DeclContext]" Condition="(DeclCtx.Val.Value &amp; 1) == 0">(clang::DeclContext*)DeclCtx.Val.Value</Item>
+      <!-- <Item Name="[DeclContext]" Condition="(DeclCtx.Val.Value &amp; 1) == 1">(clang::MultipleDC*)((uintptr_t)DeclCtx.Val.Value &amp; ~(uintptr_t)1)</Item> -->
+      <!-- for NamedDecl -->
+      <Item Condition="DeclKind == clang::Decl::Kind::Label ||
+                       DeclKind == clang::Decl::Kind::ClassTemplateSpecialization ||
+                       DeclKind == clang::Decl::Kind::Var"
+            Name="[Name]">((clang::NamedDecl*)this)->Name</Item>
+<!--
+                       DeclKind == clang::Decl::Kind::NamespaceAlias ||
+                       DeclKind == clang::Decl::Kind::Namespace ||
+                       DeclKind == clang::Decl::Kind::ClassTemplate ||
+                       DeclKind == clang::Decl::Kind::FunctionTemplate ||
+                       DeclKind == clang::Decl::Kind::TypeAliasTemplate ||
+                       DeclKind == clang::Decl::Kind::VarTemplate ||
+                       DeclKind == clang::Decl::Kind::TemplateTypeParm ||
+                       DeclKind == clang::Decl::Kind::Enum ||
+                       DeclKind == clang::Decl::Kind::Record ||
+                       DeclKind == clang::Decl::Kind::CXXRecord ||
+                       DeclKind == clang::Decl::Kind::ClassTemplateSpecialization ||
+                       DeclKind == clang::Decl::Kind::ClassTemplatePartialSpecialization ||
+                       DeclKind == clang::Decl::Kind::Field ||
+                       DeclKind == clang::Decl::Kind::Function ||
+                       DeclKind == clang::Decl::Kind::CXXMethod ||
+                       DeclKind == clang::Decl::Kind::CXXConversionMethod ||
+                       DeclKind == clang::Decl::Kind::CXXConstructorMethod ||
+                       DeclKind == clang::Decl::Kind::ParmVar ||
+                       DeclKind == clang::Decl::Kind::VarTemplateSpecialization ||
+                       DeclKind == clang::Decl::Kind::ImplicitParm"
+-->
+      <!-- For ValueDecl -->
+      <Item Condition="DeclKind == clang::Decl::Kind::ParmVar ||
+                       DeclKind == clang::Decl::Kind::Var"
+            Name="[DeclType]">((clang::ValueDecl*)this)->DeclType</Item>
+      <!-- For DeclaratorDecl -->
+      <Item Condition="DeclKind == clang::Decl::Kind::ParmVar ||
+                       DeclKind == clang::Decl::Kind::Var"
+            Name="[TypeSourceInfo]">(clang::TypeSourceInfo*) (((clang::DeclaratorDecl*)this)->DeclInfo).Val.Value</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::DeclContext">
+    <DisplayString>DeclContext {(clang::Decl::Kind)DeclKind}</DisplayString>
+    <Expand>
+      <Item Name="[AsDecl]" Condition="DeclKind == clang::Decl::Kind::ClassTemplateSpecialization">(clang::ClassTemplateSpecializationDecl*)this</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::SrcMgr::FileInfo">
+    <Expand>
+      <Item Name="[IncludeLoc]" Condition="IncludeLoc != 0">IncludeLoc</Item>
+      <Item Name="[IncludeLoc]" Condition="IncludeLoc == 0">"none for main file"</Item>
+      <Item Name="[FileIDs created during include]">NumCreatedFIDs</Item>
+      <Item Name="[CharacteristicKind]">(clang::SrcMgr::CharacteristicKind)(Data &amp; 3)</Item>
+      <Item Name="[HasLineDirectives]">0 != (Data &amp; 4)</Item>
+      <Item Name="[ContentCache]">(clang::SrcMgr::ContentCache *)(Data &amp; ~uintptr_t(7))</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::FieldDecl">
+    <DisplayString>FieldDecl - {Name}</DisplayString>
+    <Expand>
+      <Item Name="[Mutable]">Mutable</Item>
+      <Item Name="[CachedFieldIndex]">CachedFieldIndex</Item>
+      <Item Name="[DeclInfo]">DeclInfo</Item>
+      <Item Name="[DeclType]">DeclType</Item>
+      <Item Name="[DeclContext]" Condition="(DeclCtx.Val.Value &amp; 1) == 0">(clang::DeclContext*)DeclCtx.Val.Value</Item>
+      <Item Name="[InvalidDecl]" Condition="(bool)InvalidDecl">(bool)InvalidDecl</Item>
+      <Item Name="[HasAttrs]"  Condition="(bool)HasAttrs">(bool)HasAttrs</Item>
+      <Item Name="[Implicit]">(bool)Implicit</Item>
+      <Item Name="[Used]">(bool)Used</Item>
+      <Item Name="[Referenced]">(bool)Referenced</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::ClassTemplateSpecializationDecl">
+    <DisplayString>ClassTemplateSpecializationDecl - {Name}</DisplayString>
+    <Expand>
+      <Item Name="[Name]">Name</Item>
+      <Item Name="[TemplateArgs]">TemplateArgs</Item>
+      <Item Name="[TypeForDecl]">TypeForDecl</Item>
+      <Item Name="[DeclContext]" Condition="(DeclCtx.Val.Value &amp; 1) == 0">(clang::DeclContext*)DeclCtx.Val.Value</Item>
+      <Item Name="[SpecializationKind]">(clang::TemplateSpecializationKind)SpecializationKind</Item>
+      <Item Name="[InvalidDecl]" Condition="(bool)InvalidDecl">(bool)InvalidDecl</Item>
+      <Item Name="[HasAttrs]"  Condition="(bool)HasAttrs">(bool)HasAttrs</Item>
+      <Item Name="[Implicit]">(bool)Implicit</Item>
+      <Item Name="[Used]">(bool)Used</Item>
+      <Item Name="[Referenced]">(bool)Referenced</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::TemplateArgument">
+    <DisplayString>Template Argument Kind={(clang::TemplateArgument::ArgKind)DeclArg.Kind}</DisplayString>
+    <Expand>
+      <Item Condition="(clang::TemplateArgument::ArgKind)DeclArg.Kind == clang::TemplateArgument::ArgKind::Type" Name="[Type]">(clang::QualType*)(&amp;TypeOrValue.V)</Item>
+      <Item Condition="(clang::TemplateArgument::ArgKind)DeclArg.Kind == clang::TemplateArgument::ArgKind::Integral" Name="[Int]">Integer.VAL</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::TemplateArgumentList">
+    <DisplayString>TemplateArgumentList - {NumArguments} args</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Size>NumArguments</Size>
+        <ValuePointer>(TemplateArgument*) (~(uintptr_t)3 &amp; (uintptr_t)Arguments.Value)</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="clang::InitializedEntity">
+    <DisplayString>{Kind}</DisplayString>
+    <Expand>
+      <Item Name="Parent">Parent</Item>
+      <Item Name="Type">Type</Item>
+      <Item Condition="(clang::InitializedEntity::EntityKind::EK_Result == Kind) ||
+                       (clang::InitializedEntity::EntityKind::EK_Exception == Kind) ||
+                       (clang::InitializedEntity::EntityKind::EK_New == Kind) ||
+                       (clang::InitializedEntity::EntityKind::EK_Temporary == Kind)" Name="[Location]">LocAndNRVO.Location</Item>
+      <Item Condition="(clang::InitializedEntity::EntityKind::EK_Result == Kind) ||
+                       (clang::InitializedEntity::EntityKind::EK_Exception == Kind) ||
+                       (clang::InitializedEntity::EntityKind::EK_New == Kind) ||
+                       (clang::InitializedEntity::EntityKind::EK_Temporary == Kind)" Name="[NRVO]">LocAndNRVO.NRVO</Item>
+      <Item Condition="(clang::InitializedEntity::EntityKind::EK_LambdaCapture == Kind)" Name="[VarID]">Capture.VarID</Item>
+      <Item Condition="(clang::InitializedEntity::EntityKind::EK_LambdaCapture == Kind)" Name="[Location]">Capture.Location</Item>
+      <Item Condition="(clang::InitializedEntity::EntityKind::EK_Variable == Kind) ||
+                       (clang::InitializedEntity::EntityKind::EK_Member == Kind)" Name="[VariableOrMember]">VariableOrMember</Item>
+      <Item Condition="(clang::InitializedEntity::EntityKind::EK_Parameter == Kind)" Name="[Parameter]">(clang::ParmVarDecl*)(Parameter &amp; ~(uintptr_t)1)</Item>
+      <Item Condition="(clang::InitializedEntity::EntityKind::EK_Parameter == Kind)" Name="[Consumed]">Parameter &amp; 1</Item>
+      <Item Condition="(clang::InitializedEntity::EntityKind::EK_Temporary == Kind) ||
+                       (clang::InitializedEntity::EntityKind::EK_CompoundLiteralInit == Kind)" Name="[TypeInfo]">TypeInfo</Item>
+      <Item Condition="(clang::InitializedEntity::EntityKind::EK_Base == Kind)" Name="[Base]">Base</Item>
+      <Item Condition="(clang::InitializedEntity::EntityKind::EK_ArrayElement == Kind) ||
+                       (clang::InitializedEntity::EntityKind::EK_ComplexElement == Kind) ||
+                       (clang::InitializedEntity::EntityKind::EK_VectorElement == Kind)" Name="[Index]">Index</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::Parser">
+    <DisplayString>Parser @ {Tok}</DisplayString>
+  </Type>
+  <Type Name="clang::AttributeList">
+    <!-- Represents a syntactic attribute - should be called 'ParsedAttribute' -->
+    <DisplayString>{AttrName} - {(clang::AttributeList::Kind)AttrKind}</DisplayString>
+    <Expand>
+      <Item Name="NumArgs">NumArgs</Item>
+      <Item Name="SyntaxUsed">(clang::AttributeList::Syntax)SyntaxUsed</Item>
+      <Item Name="Invalid">Invalid</Item>
+      <Item Name="ArgsBuffer">(ArgsUnion*)(this+1)</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::OverloadExpr">
+    <DisplayString>OverloadExpr {NameInfo}</DisplayString>
+    <Expand>
+      <Item Name="Name">NameInfo</Item>
+      <Item Name="Results">Results</Item>
+      <ArrayItems>
+        <Size>NumResult</Size>
+        <ValuePointer>Results</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="clang::UnresolvedLookupExpr">
+    <DisplayString>UnresolvedLookupExpr {NameInfo}</DisplayString>
+    <Expand>
+      <Item Name="Overloaded">Overloaded</Item>
+      <Item Name="RequiresADL">RequiresADL</Item>
+      <Item Name="NamingClass">NamingClass</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::SourceLocation">
+    <DisplayString>{(clang::Decl::Kind)DeclKind}</DisplayString>
+    <Expand>
+      <Item Name="[valid]">(bool)(ID != 0)</Item>
+      <Item Name="[file-id]">!(bool)(ID &amp; (1 &lt;&lt;31))</Item>
+      <Item Name="[macro-id]">(bool)(ID &amp; (1 &lt;&lt;31))</Item>
+    </Expand>
+  </Type>
+  <Type Name="HLSL_INTRINSIC">
+    <DisplayString>Intrinsic {pArgs->pName}</DisplayString>
+    <Expand>
+      <Item Name="[Op]">Op</Item>
+      <ArrayItems>
+        <Size>uNumArgs</Size>
+        <ValuePointer>pArgs</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="HLSL_INTRINSIC_ARGUMENT">
+    <DisplayString>Arg: {pName}</DisplayString>
+  </Type>
+  <Type Name="hlsl::ParameterModifier">
+    <DisplayString>{m_Kind}</DisplayString>
+  </Type>
+  <Type Name="ATL::CSimpleArray&lt;*,*&gt;">
+    <DisplayString Condition="m_nSize == 0">[empty]</DisplayString>
+    <DisplayString Condition="m_nSize != 0">{m_nSize} elements</DisplayString>
+    <Expand>
+      <Item Name="[size]">m_nSize</Item>
+      <Item Name="[capacity]">m_nAllocSize</Item>
+      <ArrayItems>
+        <Size>m_nSize</Size>
+        <ValuePointer>m_aT</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <!-- MS Additions End -->
+</AutoVisualizer>

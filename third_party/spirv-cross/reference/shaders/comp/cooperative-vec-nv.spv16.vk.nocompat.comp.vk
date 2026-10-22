@@ -1,0 +1,44 @@
+#version 450
+#if defined(GL_AMD_gpu_shader_half_float)
+#extension GL_AMD_gpu_shader_half_float : require
+#elif defined(GL_EXT_shader_explicit_arithmetic_types_float16)
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+#else
+#error No extension available for FP16.
+#endif
+#extension GL_EXT_shader_16bit_storage : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
+#extension GL_EXT_shader_8bit_storage : require
+#extension GL_NV_cooperative_vector : require
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0, std430) buffer Q
+{
+    float16_t data_q[];
+} _15;
+
+void main()
+{
+    coopvecNV<float16_t, 16u> _20;
+    coopVecLoadNV(_20, _15.data_q, 16u);
+    coopvecNV<float16_t, 16u> tempArg = _20;
+    coopvecNV<float16_t, 16u> inVec = tempArg;
+    coopVecStoreNV(inVec, _15.data_q, 16u);
+    coopvecNV<float16_t, 16u> _33;
+    coopVecMatMulAddNV(_33, inVec, gl_ComponentTypeFloat16NV, _15.data_q, 16u, gl_ComponentTypeFloat16NV, _15.data_q, 16u, gl_ComponentTypeFloat16NV, 16u, 16u, gl_CooperativeVectorMatrixLayoutTrainingOptimalNV, false, 2u);
+    coopvecNV<float16_t, 16u> tempArg_1 = _33;
+    inVec = tempArg_1;
+    coopvecNV<float16_t, 16u> _38;
+    coopVecMatMulNV(_38, inVec, gl_ComponentTypeFloat16NV, _15.data_q, 16u, gl_ComponentTypeFloat16NV, 16u, 16u, gl_CooperativeVectorMatrixLayoutTrainingOptimalNV, false, 2u);
+    coopvecNV<float16_t, 16u> tempArg_2 = _38;
+    inVec = tempArg_2;
+    coopvecNV<float16_t, 8u> a = coopvecNV<float16_t, 8u>(float16_t(0.0));
+    inVec = max(inVec, inVec);
+    inVec[5] = inVec[3] + inVec[4];
+    coopVecOuterProductAccumulateNV(inVec, inVec, _15.data_q, 0u, 0u, gl_CooperativeVectorMatrixLayoutTrainingOptimalNV, gl_ComponentTypeFloat16NV);
+    coopVecReduceSumAccumulateNV(inVec, _15.data_q, 0u);
+    coopvecNV<int8_t, 8u> a_8bit = coopvecNV<int8_t, 8u>(int8_t(0));
+    coopvecNV<int, 8u> b_32bit = coopvecNV<int, 8u>(0);
+    b_32bit = (max((coopvecNV<int, 8u>(a_8bit)), b_32bit));
+}
+

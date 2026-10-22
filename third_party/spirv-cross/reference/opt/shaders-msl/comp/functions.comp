@@ -1,0 +1,9 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+kernel void main0()
+{
+}
+

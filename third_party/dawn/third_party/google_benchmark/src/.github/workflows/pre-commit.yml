@@ -1,0 +1,22 @@
+name: python + Bazel pre-commit checks
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+        persist-credentials: false
+    - name: Install uv
+      uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+      with:
+        python-version: 3.12
+    - name: Run pre-commit checks
+      run: uv run --only-group=dev pre-commit run --all-files --verbose --show-diff-on-failure

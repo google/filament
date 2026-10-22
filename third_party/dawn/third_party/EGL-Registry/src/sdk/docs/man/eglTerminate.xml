@@ -1,0 +1,73 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglTerminate">
+    <info>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglTerminate</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglTerminate</refname>
+        <refpurpose>
+            terminate an <acronym>EGL</acronym> display connection
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLBoolean <function>eglTerminate</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the EGL display connection to terminate.
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            <function>eglTerminate</function> releases resources associated with
+            an EGL display connection. Termination marks all EGL resources associated
+            with the EGL display connection for deletion. If contexts or surfaces
+            associated with <parameter>display</parameter> is current to any thread,
+            they are not released until they are no longer current as a result of
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>.
+        </para>
+        <para>
+            Terminating an already terminated EGL display connection has no effect.
+            A terminated display may be re-initialized by calling
+            <citerefentry><refentrytitle>eglInitialize</refentrytitle></citerefentry>
+            again.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_FALSE</constant> is returned if
+            <function>eglTerminate</function> fails,
+            <constant>EGL_TRUE</constant> otherwise.
+        </para>
+        <para>
+            <constant>EGL_BAD_DISPLAY</constant> is generated if
+            <parameter>display</parameter> is not an EGL display connection.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglInitialize</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

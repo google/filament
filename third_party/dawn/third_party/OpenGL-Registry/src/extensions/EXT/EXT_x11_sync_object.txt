@@ -1,0 +1,276 @@
+Name
+
+    EXT_x11_sync_object
+
+Name Strings
+
+    GL_EXT_x11_sync_object
+
+Contributors
+
+    Piers Daniell
+    Pierre-Loup Griffais
+    James Jones
+    Aaron Plattner
+
+Contact
+
+    James Jones, NVIDIA corporation (jajones 'at' nvidia.com)
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date: Jan 26, 2011
+    Author Revision: 2
+
+Number
+
+    406
+
+Dependencies
+
+    OpenGL 3.2, or an earlier OpenGL version supporting the ARB_sync
+    extension, is required.
+
+    Written based on the wording of the OpenGL 3.2 specification.
+
+    ARB_cl_event trivially affects the definition of this extension.
+
+    This extension is only supported with contexts created on an X11
+    display that supports the X Synchronization Extension version 3.1 or
+    later.
+
+Overview
+
+    Synchronization objects added the ability to better coordinate
+    operations between multiple GL command streams.  However, it is
+    desirable to have the same level of coordination between GL
+    command streams and external rendering APIs.  This extension
+    introduces two new concepts to build upon the synchronization
+    infrastructure provided by ARB_sync:
+
+      1) A means to import an X Synchronization Fence object into the
+         GL and use it as a sync object.
+
+      2) The concept of a reusable sync object.
+
+    The latter is necessary because the import operation is expensive
+    and performing it every time a synchronization point was reached
+    would make the synchronization prohibitively slow.
+
+    This extension stops short of allowing the GL to change the state
+    of imported/reusable sync objects, but does not add any language
+    that would prohibit such functionality from being added in a
+    subsequent extension.
+
+New Procedures and Functions
+
+    sync ImportSyncEXT(enum external_sync_type,
+                       intptr external_sync,
+                       bitfield flags);
+
+New Types
+
+    None
+
+New Tokens
+
+    Accepted by the <external_sync_type> parameter of
+    ImportSyncEXT:
+
+        SYNC_X11_FENCE_EXT                         0x90E1
+
+Additions to Chapter 2 of the OpenGL 3.2 Specification (OpenGL
+Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 3.2 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 3.2 Specification (Per-Fragment
+Operations and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 3.2 Specification (Special
+Functions)
+
+  Modify Section 5.2 "Sync Objects and Fences" (p. 241)
+
+  (Add after the seventh paragraph, p. 242)
+
+    "Additional types of sync objects can be imported from external
+    APIs. The command
+
+        sync ImportSyncEXT(enum external_sync_type,
+                           intptr external_sync,
+                           bitfield flags);
+
+    creates a GL sync object of the type <external_sync_type> based on
+    the object referred to by <external_sync>.
+
+    "<external_sync_type> must be SYNC_X11_FENCE_EXT, and
+    <external_sync> must be the XID of a valid X11 Synchronization Fence
+    object.  The status of the sync object returned will be SIGNALED
+    when the X object is in the triggered state, or UNSIGNALED
+    otherwise.
+
+    "<flags> must be 0."
+
+  (Replace the last sentence of paragraph 8, p. 242)
+
+    "The initial property values for a sync object created by FenceSync
+    or ImportSyncEXT are shown in tables 5.1 or 5.2 respectively.  A
+    sync object created using ImportSyncEXT should hold a reference to
+    any external resources needed to maintain the GL state associated
+    with the GL object should the external object be destroyed."
+
+  (Replace paragraph 9 with the following, p. 242)
+
+    "If FenceSync or ImportSyncEXT fail to create a sync object, zero
+    will be returned and a GL error will be generated as described. An
+    INVALID_ENUM error is generated if <condition> is not
+    SYNC_GPU_COMMANDS_COMPLETE or <external_sync_type> is not
+    SYNC_X11_FENCE_EXT.  If <flags> is not zero, or if <external_sync>
+    does not refer to a valid X Synchronization Fence object, an
+    INVALID_VALUE error is generated.
+
+    "However, implementations are not required to validate
+    <external_sync>, and passing an invalid external sync object handle
+    may result in undefined behavior up to and including program
+    termination."
+
+  (Add table 5.2 immediately following table 5.1, p. 243)
+
+    Property Name             Property Value
+    ------------------------  -------------------------------------
+    OBJECT_TYPE               <external_sync_type>
+    SYNC_CONDITION            NONE
+    SYNC_STATUS               dependent on state of <external_sync>
+    SYNC_FLAGS                <flags>
+
+    Table 5.2: Initial properties of a sync object created with
+    ImportSyncEXT.
+
+  (Replace paragraph 12 with the following, p. 243)
+
+    "If <sync> is in the signaled state, or if no ClientWaitSync or
+    WaitSync commands are blocking on <sync>, the object is deleted
+    immediately.  Otherwise, <sync> is flagged for deletion and will be
+    deleted when it reaches the signaled state and is no longer blocking
+    any ClientWaitSync or WaitSync command.  In either case, after
+    returning from DeleteSync the <sync> name is invalid and can no
+    longer be used to refer to the sync object.
+
+  Modify section 5.2.2 "Signaling" (p. 245)
+
+  (Replace the first paragraph with the following, p. 245)
+
+    "A sync object enters the signaled state only once the corresponding
+    fence command has completed and signaled the sync object, or the
+    external sync object associated with it has reached a state
+    corresponding to the GL signaled state as described in table 5.3."
+
+  (Add table 5.3)
+
+    OBJECT_TYPE         External state corresponding to GL signaled state
+    ------------------  -------------------------------------------------
+    SYNC_X11_FENCE_EXT  triggered
+
+  (Replace the last sentence of the last paragraph with the following,
+  p. 246)
+
+    "Additionally, sync objects linked to external sync objects require
+    implementation-specific, non-queriable internal state uniquely
+    identifying the external object.  The initial values of sync object
+    state are defined as specified by FenceSync and ImportSyncEXT."
+
+Additions to Chapter 6 of the OpenGL 3.2 Specification (State and State
+Requests)
+
+  Modify section 6.1.7 "Sync Object State" (p. 256)
+
+  (Replace the last sentence of paragraph 4 with the following, p. 256)
+
+    "The only types supported are SYNC_FENCE and SYNC_X11_FENCE_EXT."
+
+Additions to Appendix D of the OpenGL 3.2 Specification (Shared Objects
+and Multiple Contexts)
+
+  Modify section D.1.2 "Deleted Object and Object Name Lifetimes"
+  (p. 324)
+
+  Replace sentence 3 in the first paragraph with the following, (p. 324)
+
+    "A sync object is in use while it is not in the signaled state, or
+    while there are any GL clients and/or servers blocked on the sync
+    object as a result of ClientWaitSync or WaitSync commands."
+
+GLX Protocol
+
+    TBD
+
+Dependencies on ARB_sync
+
+    ARB_sync or GL version 3.2 or above are required to implement this
+    extension.
+
+Dependencies on ARB_cl_event
+
+    If ARB_cl_event is present, the language of the two specs must be
+    merged.  There should be no technical conflicts, but the actual
+    text modifications overlap.
+
+Errors
+
+    The error INVALID_ENUM is generated if ImportSyncEXT is called
+    where <external_sync_type> is not SYNC_X11_FENCE_EXT.
+
+    The error INVALID_VALUE is generated if ImportSyncEXT is called
+    where <external_sync> does not refer to a valid X11 Synchronization
+    Fence object.
+
+    The error INVALID_VALUE is generated if ImportSyncEXT is called
+    where <flags> is not 0.
+
+New State
+
+    None
+
+Issues
+
+    1) Should the import command be a generic entry point, or
+    specialized for X11 sync fence objects?
+
+      RESOLVED: A generic command is used.  This command can be reused
+      by future extensions to import other sync types.  It takes a
+      pointer-sized parameter that can be used to import any type of
+      synchronization object.  Objects that require more than one
+      value to uniquely identify them, e.g. OpenCL events, can define
+      an intermediate structure that contains all required values and
+      then pass in a pointer to the structure.
+
+    2) What happens if the X11 sync object is destroyed while the GL
+    sync object referencing it is still in use?
+
+      RESOLVED: The GL object should hold a reference on any resources
+      needed to continue using the sync object until the GL object is
+      deleted.
+
+Revision History
+
+    Date: 26-Jan-2011
+    Revision: 2 (James Jones)
+       - Renamed from EXT_x_sync_object to EXT_x11_sync_object.
+       - Added issues 1 and 2 and related spec language.
+       - Added language describing when external syncs are signaled.
+       - Added language describing when external syncs are deleted.
+
+    Date: 20-Jan-2011
+    Revision: 1 (James Jones)
+      - Initial Revision.

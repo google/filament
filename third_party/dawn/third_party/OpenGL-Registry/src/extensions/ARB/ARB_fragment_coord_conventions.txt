@@ -1,0 +1,745 @@
+Name
+
+    ARB_fragment_coord_conventions
+
+Name Strings
+
+    GL_ARB_fragment_coord_conventions
+
+Contributors
+
+    Jason Green, TransGaming
+    Daniel Koch, TransGaming
+    Gavriel State, TransGaming
+    Ryan Gordon, Destineer
+    Nicholas Vining, Destineer
+    John Kessenich, Intel
+
+Contact
+
+    Mark Kilgard, NVIDIA (mjk 'at' nvidia.com)
+    Daniel Koch, TransGaming (daniel 'at' transgaming.com)
+
+Notice
+
+    Copyright (c) 2009-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on July 3, 2009.
+
+Version
+
+    Last Modified Date:  August 2, 2009
+    Version:             10
+
+Number
+
+    ARB Extension #63
+
+Dependencies
+
+    This extension is written against the OpenGL 3.1 Specification but
+    can apply to prior specifications.
+
+    This extension interacts with ARB_fragment_program.
+
+    This extension interacts with ARB_fragment_shader.
+
+    This extension interacts with NV_fragment_program.
+
+    This extension interacts with NV_fragment_program_option.
+
+    This extension interacts with NV_fragment_program2.
+
+    This extension interacts with NV_fragment_program4.
+
+Overview
+
+    This extension provides alternative conventions for the fragment
+    coordinate XY location available for programmable fragment processing.
+
+    The scope of this extension deals *only* with how the fragment
+    coordinate XY location appears during programming fragment processing.
+    Beyond the scope of this extension are coordinate conventions used
+    for rasterization or transformation.
+
+    In the case of the coordinate conventions for rasterization and
+    transformation, some combination of the viewport, depth range, culling
+    state, and projection matrix state can be reconfigured to adopt other
+    arbitrary clip-space and window-space coordinate space conventions.
+    Adopting other clip-space and window-space conventions involves
+    adjusting existing OpenGL state.  However it is non-trivial to massage
+    an arbitrary fragment shader or program to adopt a different
+    window-space coordinate system because such shaders are encoded in
+    various textual representations.
+
+    The dominant 2D and 3D rendering APIs make two basic choices of
+    convention when locating fragments in window space.
+
+    The two choices are:
+
+    1)  Is the origin nearest the lower-left- or upper-left-most pixel
+        of the window?
+
+    2)  Is the (x,y) location of the pixel nearest the origin at (0,0)
+        or (0.5,0.5)?
+
+    OpenGL assumes a lower-left origin for window coordinates and assumes
+    pixel centers are located at half-pixel coordinates.  This means
+    the XY location (0.5,0.5) corresponds to the lower-left-most pixel
+    in a window.
+
+    Other window coordinate conventions exist for other rendering APIs.
+    X11, GDI, and Direct3D version through DirectX 9 assume an upper-left
+    window origin and locate pixel centers at integer XY values.
+    By this alternative convention, the XY location (0,0) corresponds
+    to the upper-left-most pixel in a window.
+
+    Direct3D for DirectX 10 assumes an upper-left origin (as do prior
+    DirectX versions) yet assumes half-pixel coordinates (unlike prior
+    DirectX versions).  By the DirectX 10 convention, the XY location
+    (0.5,0.5) corresponds to the upper-left-most pixel in a window.
+
+    Fragment shaders can directly access the location of a given
+    processed fragment in window space.  We call this location the
+    "fragment coordinate".
+
+    This extension provides a means for fragment shaders written in GLSL
+    or OpenGL assembly extensions to specify alternative conventions
+    for determining the fragment coordinate value accessed during
+    programmable fragment processing.
+
+    The motivation for this extension is to provide an easy, efficient
+    means for fragment shaders accessing a fragment's window-space
+    location to adopt the fragment coordinate convention for which the
+    shader was originally written.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the OpenGL 3.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 3.1 Specification (Rasterization)
+
+    Modify Section 3.9.2, "Shader Execution"
+
+    In subsection "Shader Inputs" replace the paragraph beginning "The
+    built-in variable gl_FragCoord ..." with:
+
+    "The built-in variable gl_FragCoord holds the fragment coordinate
+    (x_f,y_f,z_f,w_f) for the fragment.  Computing the fragment coordinate
+    depends on the fragment processing pixel-center and origin conventions
+    (discussed below) as follows:
+
+              { x_w - 0.5,   if the fragment processing pixel-center
+       x_f  = {                 convention is integer
+              { x_w,         otherwise
+
+              { H - y_w,     if the fragment processing origin
+       y_f' = {                 convention is upper-left
+              {     y_w,     otherwise
+
+              { y_f' - 0.5,  if the fragment processing pixel-center
+       y_f  = {                 convention is integer
+              { y_f',        otherwise
+
+       z_f  = z_w
+
+       w_f  = 1 / w_c
+
+    where (x_w, y_w, z_w) is the fragment's window-space position, w_c
+    is the w component of the fragment's clip-space position, and H is
+    the window's height in pixels. Note that the value of z_w already
+    has a polygon offset added in, if enabled (see section 3.6.4). Also
+    z_f must be precisely 0 or 1 in the case where z_w is either 0 or 1
+    respectively. The 1/w is computed from the w_c coordinate (see
+    section 2.12), which is the result of the product of the projection
+    matrix and the vertex's eye coordinates.
+
+    Unless otherwise specified by layout qualifiers in the fragment
+    shader (see section 4.3.x.1 "Input Layout Qualifier" of the OpenGL
+    Shading Language Specification), the fragment processing
+    pixel-center convention is half-integer and the fragment processing
+    origin convention is lower-left."
+
+Additions to Chapter 4 of the OpenGL 3.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 3.1 Specification (Special
+Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 3.1 Specification (State and
+State Requests)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Additions to version 1.40.07 of the OpenGL Shading Language Specification
+
+    "A new preprocessor #define is added to the OpenGL Shading Language:
+
+      #define GL_ARB_fragment_coord_conventions 1
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_ARB_fragment_coord_conventions : <behavior>
+
+    where <behavior> is as specified in section 3.3."
+
+Additions to Chapter 4 of the OpenGL Shadering Language (Variables and Types)
+version 1.40.07
+
+    Add a new Section 4.3.x (Layout Qualifiers) as follows:
+
+    "4.3.x Layout Qualifiers
+
+    Layout qualifiers can appear with an individual variable declared with
+    an interface qualifier:
+
+        <layout-qualifier> <interface-qualifier> <declaration>;
+
+        <layout-qualifier>:
+            layout( <layout-qualifier-id-list> )
+
+        <layout-qualifier-id-list>:
+            comma separated list of <layout-qualifier-id>
+
+        <interface-qualifier>:
+            in
+            out
+            uniform
+
+    Declarations of layouts can only be made at global scope, and only
+    where indicated in the following subsection; their details are
+    specific to what the interface qualifier is, and are discussed
+    individually.
+
+    The tokens in any <layout-qualifier-id-list> are identifiers, not
+    keywords. Generally they can be listed in any order. Order-dependent
+    meanings exist only if explicitly called out below. Similarily,
+    these identifiers are not case-sensitive, unless explicitly noted
+    otherwise.
+
+    4.3.x.1 Input Layout Qualifiers
+
+    Vertex shaders do not have any input layout qualifiers.
+
+    Fragment shaders can have an input layout only for redeclaring the
+    built-in variable gl_FragCoord (see section 7.2). The layout
+    qualifier identifiers for gl_FragCoord are
+
+        <layout-qualifier-id>
+            origin_upper_left
+            pixel_center_integer
+
+    By default, gl_FragCoord assumes a lower-left origin for window
+    coordinates and assumes pixel centers are located at half-pixel
+    coordinates. For example, the (x, y) location (0.5, 0.5) is returned
+    for the lower-left-most pixel in a window. The origin can be changed
+    by redeclaring gl_FragCoord with the <origin_upper_left> identifier,
+    moving the origin of gl_FragCoord to the upper left of the window,
+    with y increasing in value toward the bottom of the window. The
+    values returned can also be shifted by half a pixel in both x and y
+    by the <pixel_center_integer> identifier so it appears the pixels
+    are centered at whole number pixel offsets. This moves the (x, y)
+    value returned by gl_FragCoord of (0.5, 0.5) by default, to (0.0,
+    0.0) with <pixel_center_integer>. Redeclarations are done as follows
+
+        in vec4 gl_FragCoord;  // redeclaration that changes nothing is allowed
+
+        // All the following are allowed redeclarations that change behavior
+        layout(origin_upper_left) in vec4 gl_FragCoord;
+        layout(pixel_center_integer) in vec4 gl_FragCoord;
+        layout(origin_upper_left, pixel_center_integer) in vec4 gl_FragCoord;
+
+    If gl_FragCoord is redeclared in any fragment shader in a program,
+    it must be redeclared in all the fragment shaders in that program
+    that have a static use of gl_FragCoord. All redeclarations of
+    gl_FragCoord in all fragment shaders in a single program must have
+    the same set of qualifiers. Within any shader, the first
+    redeclarations of gl_FragCoord must appear before any use of
+    gl_FragCoord. The built-in gl_FragCoord is only predeclared in
+    fragment shaders, so redeclaring it in any other shader language
+    will be illegal.
+
+    Redeclaring gl_FragCoord with <origin_upper_left> and/or
+    <pixel_center_integer> qualifiers only affects gl_FragCoord.x and
+    gl_FragCoord.y. It has no affect on rasterization, transformation,
+    or any other part of the OpenGL pipeline or language features."
+
+
+Dependencies on ARB_fragment_program extension
+
+    3.11.3.1  Fragment Attributes
+
+    Modify this paragraph:
+
+    "If a fragment attribute binding matches "fragment.position", the "x"
+    and "y" components of the fragment attribute variable are filled
+    with the (x,y) window coordinates of the fragment center, relative
+    to the lower left corner of the window.  The "z" component is filled
+    with the fragment's z window coordinate.  This z window coordinate
+    undergoes an implied conversion to floating point.  This conversion
+    must leave the values 0 and 1 invariant.  The "w" component is
+    filled with the reciprocal of the fragment's clip w coordinate."
+
+    to read:
+
+    "If a fragment attribute binding matches "fragment.position", the "x",
+    "y", "z", and "w" components of the fragment attribute variable are
+    filled with the (f_x,f_y,f_z,f_w) components respectively of the
+    fragment coordinate for the fragment."
+
+    Add this section:
+
+   "3.11.4.5.3  Fragment Coordinate Conventions Fragment Program Options
+
+    These options affect the fragment coordinate conventions specified
+    in the "Shader Inputs" subsection of section 3.11.
+
+    If a fragment program specifies one of the option
+    "ARB_fragment_coord_origin_upper_left", the fragment processing origin
+    convention is upper-left (and otherwise is lower-left) for purposes of
+    computing the fragment coordinate when the fragment program executes.
+
+    If a fragment program specifies one of the option
+    "ARB_fragment_coord_pixel_center_integer", the fragment processing
+    pixel-center convention is integer (and otherwise is half-integer)
+    for purposes of computing the fragment coordinate when the fragment
+    program executes."
+
+Dependencies on NV_fragment_program extension
+
+    When this extension is supported, modify the NV_fragment_program
+    grammar to include:
+
+    <program>              ::= <progPrefix> <optionSequence> <instructionSequence> "END"
+
+    <optionSequence>       ::= <optionSequence> <option>
+                             | ""
+
+    <option>               ::= "OPTION" "ARB_fragment_coord_origin_upper_left" ";"
+                             | "OPTION" "ARB_fragment_coord_pixel_center_integer" ";"
+
+
+    Section 3.11.1.1, Fragment Program Attribute Registers
+
+    Modify this paragraph:
+
+    "f[WPOS].x and f[WPOS].y hold the (x,y) window coordinates of the
+    fragment center, and relative to the lower left corner of the window.
+    f[WPOS].z holds the associated z window coordinate, normally in the
+    range [0,1].  f[WPOS].w holds the reciprocal of the associated clip
+    w coordinate."
+
+    to read:
+
+    "The f[WPOS] register holds the components (x_f,y_f,z_f,w_f)
+    respectively of the fragment coordinate described in the "Shader
+    Inputs" subsection of section 3.11 (Fragment Shaders).
+
+    If the ARB_fragment_coord_origin_upper_left OPTION is specified, the
+    fragment processing origin convention is upper-left (and otherwise
+    is lower-left) for purposes of computing the fragment coordinate
+    when the fragment program executes.
+
+    If the ARB_fragment_coord_pixel_center_integer OPTION is specified,
+    the fragment processing pixel-center convention is integer (and
+    otherwise is half-integer) for purposes of computing the fragment
+    coordinate when the fragment program executes."
+
+Dependencies on NV_fragment_program4 extension
+
+    The language this extension adds for the ARB_fragment_program extension
+    also applies to the NV_fragment_program4 extension.  Specifically:
+
+    The language added to section 3.11.3.1 (Fragment Attributes)
+    replaces corresponding language in section 2.X.3.2 (Program Attribute
+    Variables).
+
+    The language added to section 3.11.4.5.3 (Fragment Coordinate
+    Conventions Fragment Program Options) belongs in section 2.X.5.Y
+    (Fragment Program Options) of the NV_fragment_program4 extension.
+
+Dependencies on ARB_compatibility
+
+    If ARB_compatibility is not supported, delete the clause
+    "which is the result of the product of the projection matrix and the
+    vertex's eye coordinates" in the sentence describing the computation of
+    1/w, in section 3.9.2.
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Issues
+
+    1. What should this extension be called?
+
+       RESOLVED:  ARB_fragment_coord_conventions.
+
+       We use "fragment" instead of "frag" in the name because other
+       extension names (ARB_fragment_program, ARB_fragment_shader)
+       use the term fragment.
+
+       We use "coord" to match the EXT_fog_coord extension's naming.
+
+       We use "conventions" because the extension provides two alternative
+       choices of convention:  upper-left origin (instead of lower-left)
+       and integer pixel center locations (instead of half-integer).
+
+    2. To what scope of OpenGL functionality should this extension apply?
+
+       RESOLVED:  This extension is limited to how the XY window-space
+       coordinates available to fragment shaders and programs are
+       computed.
+
+       This extension does NOT affect other 2D window coordinates such
+       as those passed to the glViewport, glReadPixels, glCopyPixels,
+       or glWindowsPos commands.
+
+    3. What is the primary goal of this extension have?
+
+       RESOLVED:  The goal is to increase the cross-API portability
+       of fragment shaders.  Most fragment shader inputs (texture
+       coordinate sets, colors) are treated identically among OpenGL
+       and other 3D APIs such as the various versions of Direct3D.
+       The chief exception is the fragment coordinate XY values which
+       depend on the 3D API's particular window space conventions.
+
+       We seek to avoid situations where shader source code must
+       be non-trivially modified to support differing window-space
+       conventions.  We also want minimize the performance effect on
+       fragment shader execution.  Rather than an application modifying
+       the shader source to add extra operations and parameters/uniforms
+       to adjust the native window coordinate origin, we want to control
+       the hardware's underlying convention for how the window origin
+       is provided to the shader.
+
+    4. Should this extension provide an API for programmatically
+       specifying a global or per-program/shader setting for the window
+       coordinate origin?
+
+       RESOLVED:  No, the fragment coordinate conventions are specified
+       within the GLSL fragment shader or assembly source text only.
+
+       The choice of convention for the fragment coordinate is best
+       specified within the program.
+
+       Having a hierarchy of alternative ways to specify the window
+       coordinate origin makes this extension more cumbersome than
+       necessary and increases driver validation overhead.
+
+       The expectation is that a fragment shader authored for an API
+       with alternative fragment coordinate conventions is converted
+       into an OpenGL fragment shader.  In this case, it's natural to
+       simply provide a way within the shader to express the originally
+       intended fragment coordinate convention.
+
+    5. Should this extension allow the pixel-center and origin choices
+       to be specified orthogonally?
+
+       RESOLVED:  Yes.
+
+       Direct3D versions prior to DirectX 10 have an integer pixel-center
+       convention while DirectX 10 has a half-integer pixel-center
+       convention though all Direct3D versions use the upper-left origin.
+
+       While RenderMan lacks access to a fragment coordinate during
+       shading, it uses an upper-left origin while the half-integer
+       pixel-center convention is most consistent with RenderMan's
+       rendering operation.
+
+       The upper-left origin convention in combination with the
+       half-integer pixel-center convention is also interesting for
+       developing compositing window systems since window systems
+       typically assume an upper-left origin but compositing operations
+       based on texture mapping works best with half-integer pixel-center
+       convention.
+
+    6. Should there be pragmas and OPTIONs for specifying both the OpenGL
+       convention and the non-OpenGL convention?
+
+       RESOLVED:  Just provide pragmas and OPTIONS for the non-OpenGL
+       conventions.  This avoids have to specify how multiple inconsistent
+       conventions are resolved.  Inconsistent conventions are more
+       problematic for GLSL because multiple shader objects may be
+       specified with inconsistent conventions and the inconsistency is
+       then deferred until program object linking.
+
+       Just allowing the non-OpenGL convention to be specified is simpler.
+       For GLSL, if any shader object has a non-OpenGL convention
+       specified, the convention applies to the linked program object.
+
+    7. Does this extension apply to the NV_fragment_program_option and
+       NV_fragment_program2 extensions?
+
+       RESOLVED:  Yes.  These two extensions depend on the
+       ARB_fragment_program extension grammar which this extension
+       amends.
+
+    8. Should there be any API for querying the fragment coordinate
+       conventions a given GLSL fragment shader or assembly fragment
+       program requests?
+
+       RESOLVED:  No.
+
+       There are not queries for other pragmas and OPTIONs.
+
+       The text for the shader or program can be queried and it is easy
+       enough to parse the text to determine the behavior of the program.
+
+    9. This extension adds no new command or new tokens.  Is that ok?
+
+       RESOLVED:  Yes.  The functionality of this extension is exercised
+       by enabling extensions and OPTIONs in fragment shader/program source
+       text.  If the extension string is advertised, you can assume the
+       specified syntax is parsed and put into effect.
+
+   10. Does the window origin convention apply to EXT_framebuffer_object
+       (FBO) and pixel buffer (pbuffer) rendering as well as window
+       rendering?
+
+       RESOLVED:  Yes.
+
+   11. Should this instead be a global state at the API level? This
+       means that, among other things, it will also affect the fixed
+       function pipeline?
+
+       RESOLVED: The scope of this extension deals *only* with how the
+       fragment coordinate XY location appears during programming
+       fragment processing.
+
+       See the Overview's third paragraph for the rationale for this
+       extension's scope.
+
+   12. For an implementation that does compile-time compilation (as
+       opposed to link-time or on-the-fly compilation), this would
+       appear to require the compiler to emit code to do the
+       transformation using internal uniforms regardless of whether it
+       is needed or not, because any other shader that it is linked
+       against may enable the pragma.
+
+       Some possible alternatives, none of which is caveat-free:
+       a) Require all fragment shaders to be consistent in the presence
+          or absence of the pragma. That makes it impossible to link a
+          shader written with the pragma against a stock shader that
+          doesn't do anything with gl_FragCoord.
+       b) Apply the pragma only within the shader it appears in. That
+          removes the spooky action at a distance (where linking another
+          shader in changes the behaviour of an existing one) - but if
+          your hardware has some magic knobs to implement these pragmas,
+          that may no longer be sufficient if there are multiple
+          flavours of gl_FragCoord in the same program.
+       c) Make this global state. See Issue 11.
+
+       RESOLVED:  Because this extension's pragmas only support requesting
+       a half-pixel fragment coordinate system and/or an upper-left
+       coordinate system, there is no way for multiple fragment shader
+       objects to specify an inconsistent fragment coordinate system.
+       This means for a given set of fragment shaders being linked
+       into a program object, there is exactly one fragment coordinate
+       convention.
+
+       (Fragment coordinate conventions are parsed and ignored for
+       non-fragment shader objects.  Generating a warning in the info
+       log when the pragma is ignored by non-fragment shader objects is
+       a reasonable response in this situation.)
+
+       Option b is not desirable because there should be exactly one
+       convention within a single linked program object.  Each fragment
+       shader object linked within a program object should not be allowed
+       its own convention.  The expected usage is shaders written for
+       DirectX 9 or 10 will be compiled with these pragmas appropriately;
+       such shaders only need one convention.  This extension assumes
+       implementations supporting this extension likely have hardware
+       modes that support both the OpenGL, DirectX 9, and DirectX 10
+       conventions for a given fragment shader without require extra
+       hidden uniforms.
+
+       Option c is not desirable because the fragment coordinate
+       convention really is a property of each shader rather than
+       global state.  A shader assuming OpenGL's conventional lower-left
+       convention expects to be able to add (0,1) to the fragment's
+       (x,y) location and move "up" a pixel.  Whereas a similar shader
+       coded for Direct3D would assume adding (0,1) to the fragment's
+       (x,y) would move "down" a pixel.  Controlling the fragment
+       coordinate convention from a global state setting is irrelevant to
+       fixed-function processing (where the fragment coordinate position
+       is never available).
+
+       NOTE: much of the above discussion is largely irrelevant now that
+       this extension uses layout qualifiers.  As noted in the
+       shading language additions above, all redeclarations of gl_FragCoord
+       must use the same set of qualifiers.  If a shader does not have a
+       static use of gl_FragCoord it doesn't need to redeclare it. It is
+       link-time error if multiple compilation units have inconsistent
+       qualifiers.
+
+   13. Is this "pragma" enough to provide DX compatibility? The
+       following items may need to be addressed as well:
+       a) edge rule: because of the y-inversion, rendering in DX mode or
+          OGL mode is not equivalent (upper and lower edges are not
+          rendered the same)
+       b) gl_FragCoord value: this is addressed by this proposal
+       c) viewport/scissor: if the shader is changed, it seems that
+          there will be a mismatch with the value given to
+          viewport/scissor which need to have the y-inversion as well.
+       d) face ordering: if this adjusts the viewport, it will
+          implicitly toggle the face ordering between CW and CCW.
+       e) sample position?
+
+       RESOLVED:  The scope of this extension deals *only* with how
+       the fragment coordinate XY location appears during programming
+       fragment processing.
+
+       Trying to address these is a much bigger undertaking than was
+       intended here, and is precisely why it was speced this way (to
+       avoid touching these issues).
+
+       See the Overview's third paragraph for the rationale for this
+       extension's scope.
+
+   14. Could this instead be done with functions (built-in or otherwise)
+       in GLSL? Since the purpose of this extension seems to be to
+       *ONLY* modify the gl_FragCoord when accessed in the fragment
+       shader, couldn't one just write a GLSL function which does the
+       same thing?
+
+       RESOLVED:  The scope of this extension is really limited to
+       support the straightforward translation of shaders written assuming
+       Direct3D's fragment coordinate conventions into OpenGL.
+
+       The intent is NOT to allow multiple conventions to be used with
+       in the fragment domain of a single program object.
+
+       The intent is also to support Direct3D's fragment coordinate
+       conventions in a way that can leverage existing hardware modes
+       used to support both OpenGL and Direct3D.  This is desirable
+       because it avoids the introduction of extra "hidden" uniforms
+       (to store a value such as the current window height).
+
+       If you support a "different" gl_FragCoord or provide a function
+       to return a Direct3D-style fragment coordinate, that introduces
+       the possibility that multiple fragment coordinate conventions can
+       exist in the same fragment shader program.  The pragma approach
+       precludes this.
+
+   15. Is the intent that the window origin convention is automatically
+       adjusted for onscreen (in a window) vs offscreen rendering (FBOs
+       or pbuffers)? ie if you have a fragment shader which is used with
+       both onscreen and offscreen rendering is it the application's
+       responsibility to track this and specify the appropriate window
+       convention (and potentially recompile the shader), or does this
+       happen automatically.
+
+       RESOLVED:  The fragment coordinate convention is specified with
+       respect to OpenGL window coordinates.
+
+       This means developers don't need to be aware if they are rendering
+       to a framebuffer object (FBO), pixel buffer (pbuffer), or window.
+
+       The application doesn't have to "track" how the fragment shader
+       is used.
+
+       The expectation is that there is no need to recompile a fragment
+       shader as the expectation is hardware modes exist to control the
+       window space origin appropriately.
+
+   16. Is there another way this could be specified other than a
+       #pragma? Some people aren't keen on the use of a pragma for this.
+       Other possibilities include providing a renamed gl_FragCoord with
+       the different semantics, or allowing gl_FragCoord to be redefined
+       in the shader with the desired qualifiers (similar to the
+       invariant qualifier)?
+
+       RESOLVED: Yes. This has been recast to use layout qualifiers
+       originally introduced in GLSL 1.40 and extended in GLSL 1.50.
+       However note that it is the intent of this extension to stand
+       separately from the GLSL 1.40/1.50 and it is desinged to be
+       implementable against GLSL 1.10 or 1.20.
+
+   17. If this extension doesn't actually change how the window space
+       positions are calculated and *only* modifies the gl_FragCoord
+       which is visible in the fragment shader/program, how does this
+       actually help an application which is using shaders which have
+       the assumption of integer pixel centers baked in (and thus
+       manually adjusting for the 0.5 offset) and which aren't accessing
+       gl_FragCoord (or equivalent) directly?
+
+       RESOLVED:  The scope of this extension deals *only* with how
+       the fragment coordinate XY location appears during programming
+       fragment processing.
+
+       See the Overview's third paragraph for the rationale for this
+       extension's scope.
+
+       This extension simplifies the complicating task of converting
+       OpenGL-style (lower-left, half-pixel) fragment coordinates to
+       Direct3D-style fragment coordinates in a way that allows existing
+       hardware mechanisms to support both OpenGL and Direct3D's
+       conventions to be leveraged. In particular, "hidden" uniforms to
+       track the current window height can be avoided when this is often
+       already maintained by the hardware.
+
+Revision History
+
+    Rev.    Date    Author     Changes
+    ----  -------- ---------  ----------------------------------------
+      1   1/08/07  mjk        Initial version
+      2   11/5/08  mjk        Feedback from Destineer
+      3   3/27/09  dgkoch     Add issue 11
+      4   5/01/09  dgkoch     fix typo, add discussion on issue 11
+                              add issues 12,13 based on comments from PB and BM
+      5   5/07/09  dgkoch     Update issue 13, add issues 14-17
+      6   5/11/09  mjk        Work with Daniel Koch too:
+                              Improve overview to clarify the extension's scope
+                              Add resolutions to issues 11 through 17
+                              Change language to make clear that pragmas apply
+                              to fragment shaders only; they are accepted but
+                              totally ignored for other shader types
+      7   5/15/09  dgkoch     fix date and a few typos
+      8   5/19/09  dgkoch     renamed as ARB extension
+      9   6/26/09  dgkoch     add #extension mechanism
+                              recast GLSL using layout qualifiers as in GLSL 1.50
+                              synced up with GL3.2 changes/rebased on GL3.1
+                              updated some issue resolutions
+                              added interactions with ARB_compatibility
+     10   8/02/09  Jon Leech  Reformat to 80 columns and assign ARB
+                              extension number.
+

@@ -1,0 +1,128 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Khronos Glslang Reference Front End; 6
+; Bound: 78
+; Schema: 0
+               OpCapability Shader
+               OpCapability ImageQuery
+               OpCapability StorageImageWriteWithoutFormat
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %gl_LocalInvocationID
+               OpExecutionMode %main LocalSize 16 16 1
+               OpSource GLSL 450
+               OpName %main "main"
+               OpName %r0 "r0"
+               OpName %u0 "u0"
+               OpName %i "i"
+               OpName %j "j"
+               OpName %gl_LocalInvocationID "gl_LocalInvocationID"
+               OpName %cb1_struct "cb1_struct"
+               OpMemberName %cb1_struct 0 "_m0"
+               OpName %cb0_1 "cb0_1"
+               OpDecorate %u0 DescriptorSet 0
+               OpDecorate %u0 Binding 1
+               OpDecorate %u0 NonReadable
+               OpDecorate %gl_LocalInvocationID BuiltIn LocalInvocationId
+               OpDecorate %_arr_v4float_uint_1 ArrayStride 16
+               OpMemberDecorate %cb1_struct 0 Offset 0
+               OpDecorate %cb1_struct Block
+               OpDecorate %cb0_1 DescriptorSet 0
+               OpDecorate %cb0_1 Binding 0
+               OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+      %v2int = OpTypeVector %int 2
+%_ptr_Function_v2int = OpTypePointer Function %v2int
+      %float = OpTypeFloat 32
+         %11 = OpTypeImage %float 2D 0 0 0 2 Unknown
+%_ptr_UniformConstant_11 = OpTypePointer UniformConstant %11
+         %u0 = OpVariable %_ptr_UniformConstant_11 UniformConstant
+       %uint = OpTypeInt 32 0
+     %uint_4 = OpConstant %uint 4
+     %v2uint = OpTypeVector %uint 2
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_0 = OpConstant %int 0
+     %uint_1 = OpConstant %uint 1
+       %bool = OpTypeBool
+     %uint_0 = OpConstant %uint 0
+      %v3int = OpTypeVector %int 3
+%_ptr_Input_v3int = OpTypePointer Input %v3int
+%gl_LocalInvocationID = OpVariable %_ptr_Input_v3int Input
+    %v4float = OpTypeVector %float 4
+%_arr_v4float_uint_1 = OpTypeArray %v4float %uint_1
+ %cb1_struct = OpTypeStruct %_arr_v4float_uint_1
+%_ptr_Uniform_cb1_struct = OpTypePointer Uniform %cb1_struct
+      %cb0_1 = OpVariable %_ptr_Uniform_cb1_struct Uniform
+%_ptr_Uniform_v4float = OpTypePointer Uniform %v4float
+      %int_1 = OpConstant %int 1
+    %uint_16 = OpConstant %uint 16
+     %v3uint = OpTypeVector %uint 3
+%gl_WorkGroupSize = OpConstantComposite %v3uint %uint_16 %uint_16 %uint_1
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %r0 = OpVariable %_ptr_Function_v2int Function
+          %i = OpVariable %_ptr_Function_int Function
+          %j = OpVariable %_ptr_Function_int Function
+         %14 = OpLoad %11 %u0
+         %15 = OpImageQuerySize %v2int %14
+         %19 = OpCompositeConstruct %v2uint %uint_4 %uint_4
+         %20 = OpShiftRightArithmetic %v2int %15 %19
+         %21 = OpCompositeExtract %int %20 0
+         %22 = OpCompositeExtract %int %20 1
+         %23 = OpCompositeConstruct %v2int %21 %22
+               OpStore %r0 %23
+               OpStore %i %int_0
+               OpBranch %27
+         %27 = OpLabel
+               OpLoopMerge %29 %30 None
+               OpBranch %31
+         %31 = OpLabel
+         %32 = OpLoad %int %i
+         %34 = OpAccessChain %_ptr_Function_int %r0 %uint_1
+         %35 = OpLoad %int %34
+         %37 = OpSLessThan %bool %32 %35
+               OpBranchConditional %37 %28 %29
+         %28 = OpLabel
+               OpStore %j %int_0
+               OpBranch %39
+         %39 = OpLabel
+               OpLoopMerge %41 %42 None
+               OpBranch %43
+         %43 = OpLabel
+         %44 = OpLoad %int %j
+         %46 = OpAccessChain %_ptr_Function_int %r0 %uint_0
+         %47 = OpLoad %int %46
+         %48 = OpSLessThan %bool %44 %47
+               OpBranchConditional %48 %40 %41
+         %40 = OpLabel
+         %49 = OpLoad %11 %u0
+         %50 = OpLoad %v2int %r0
+         %54 = OpLoad %v3int %gl_LocalInvocationID
+         %55 = OpVectorShuffle %v2int %54 %54 0 1
+         %57 = OpIMul %v2int %50 %55
+         %58 = OpLoad %int %i
+         %59 = OpLoad %int %j
+         %60 = OpCompositeConstruct %v2int %58 %59
+         %61 = OpIAdd %v2int %57 %60
+         %68 = OpAccessChain %_ptr_Uniform_v4float %cb0_1 %int_0 %int_0
+         %69 = OpLoad %v4float %68
+         %70 = OpVectorShuffle %v4float %69 %69 0 0 0 0
+               OpImageWrite %49 %61 %70
+               OpBranch %42
+         %42 = OpLabel
+         %71 = OpLoad %int %j
+         %73 = OpIAdd %int %71 %int_1
+               OpStore %j %73
+               OpBranch %39
+         %41 = OpLabel
+               OpBranch %30
+         %30 = OpLabel
+         %74 = OpLoad %int %i
+         %75 = OpIAdd %int %74 %int_1
+               OpStore %i %75
+               OpBranch %27
+         %29 = OpLabel
+               OpReturn
+               OpFunctionEnd

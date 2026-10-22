@@ -1,0 +1,132 @@
+Name
+
+    ARB_texture_buffer_object_rgb32
+
+Name Strings
+
+    GL_ARB_texture_buffer_object_rgb32
+
+Contact
+
+    Jeff Bolz, NVIDIA Corporation (jbolz 'at' nvidia.com)
+
+Contributors
+
+    Barthold Lichtenbelt, NVIDIA
+    Bill Licea-Kane, AMD
+    Graham Sellers, AMD
+    Greg Roth, NVIDIA
+    Nick Haemel, AMD
+    Pat Brown, NVIDIA
+    Pierre Boudier, AMD
+    Piers Daniell, NVIDIA
+
+Notice
+
+    Copyright (c) 2010-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB at the 2010/01/22 F2F meeting.
+    Approved by the Khronos Board of Promoters on March 10, 2010.
+
+Version
+
+    Last Modified Date:         December 7, 2009
+    Revision:                   2
+
+Number
+
+    ARB Extension #92
+
+Dependencies
+
+    This extension is written against the OpenGL 3.2 specification (Core 
+    Profile).
+
+Overview
+
+    This extension adds three new buffer texture formats - RGB32F, RGB32I, 
+    and RGB32UI.  This partially addresses one of the limitations of buffer 
+    textures in the original EXT_texture_buffer_object extension and in 
+    OpenGL 3.1, which provide no support for three-component formats.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the OpenGL 3.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 3.2 Specification (Rasterization)
+
+    Add to Table 3.15 "Internal formats for buffer textures", p.158
+
+    Sized Internal Format   Base Type   Components  Norm    Component
+                                                             0 1 2 3    
+    ---------------------   ---------   ----------  ----    ---------
+    RGB32F                  float       3           No       R G B 1
+    RGB32I                  int         3           No       R G B 1
+    RGB32UI                 uint        3           No       R G B 1
+
+Additions to Chapter 4 of the OpenGL 3.2 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 3.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 3.2 Specification (State and
+State Requests)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Issues
+
+    None
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+    2     12/07/09  jbolz     Rename EXT->ARB.
+    1               jbolz     Internal revisions.
+

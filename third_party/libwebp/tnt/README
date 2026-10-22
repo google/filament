@@ -1,0 +1,4 @@
+This folder was last updated as follows:
+edit update_libwebp.sh to assign desired value to shell variable 'tag'
+./update_libwebp.sh
+

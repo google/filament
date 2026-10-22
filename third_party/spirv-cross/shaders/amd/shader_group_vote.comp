@@ -1,0 +1,18 @@
+#version 450
+#extension GL_ARB_shader_group_vote : require
+
+layout (local_size_x = 64) in;
+layout (std430, binding = 0) buffer inputData
+{
+    float inputDataArray[];
+};
+
+void main ()
+{
+    float thisLaneData = inputDataArray [gl_LocalInvocationID.x];
+    bool laneActive = (thisLaneData > 0);
+
+    bool allInvocations = allInvocationsARB(laneActive);
+    bool anyInvocations = anyInvocationARB(laneActive);
+    bool allInvocationsEqual = allInvocationsEqualARB(laneActive);
+}

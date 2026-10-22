@@ -1,0 +1,13 @@
+material {
+    name : "Filament Default Material",
+    shadingModel : unlit,
+    variantFilter : [ vsm ],
+    featureLevel: 0
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor.rgb = vec3(0.8);
+    }
+}

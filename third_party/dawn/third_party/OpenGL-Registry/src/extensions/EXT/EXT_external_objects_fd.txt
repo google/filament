@@ -1,0 +1,184 @@
+Name
+
+    EXT_external_objects_fd
+
+Name Strings
+
+    GL_EXT_memory_object_fd
+    GL_EXT_semaphore_fd
+
+Contributors
+
+    Carsten Rohde, NVIDIA
+    James Jones, NVIDIA
+    Jan-Harald Fredriksen, ARM
+    Jeff Juliano, NVIDIA
+
+Contact
+
+    James Jones, NVIDIA (jajones 'at' nvidia.com)
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date: June 2, 2017
+    Revision: 7
+
+Number
+
+    504
+    OpenGL ES Extension #281
+
+Dependencies
+
+    Written against the OpenGL 4.5 and OpenGL ES 3.2 specifications
+
+    GL_EXT_memory_object_fd requires GL_EXT_memory_object
+
+    GL_EXT_semaphore_fd requires GL_EXT_semaphore
+
+    Requires ARB_texture_storage or a version of OpenGL or OpenGL ES that
+    incorporates it.
+
+Overview
+
+    Building upon the OpenGL memory object and semaphore framework
+    defined in EXT_external_objects, this extension enables an OpenGL
+    application to import a memory object or semaphore from POSIX file
+    descriptor external handles.
+
+New Procedures and Functions
+
+    If the GL_EXT_memory_object_fd string is reported, the following
+    commands are added:
+
+    void ImportMemoryFdEXT(uint memory,
+                           uint64 size,
+                           enum handleType,
+                           int fd);
+
+    If the GL_EXT_semaphore_fd string is reported, the following commands
+    are added:
+
+    void ImportSemaphoreFdEXT(uint semaphore,
+                              enum handleType,
+                              int fd);
+
+
+New Tokens
+
+    The following tokens are added if either of the GL_EXT_memory_object_fd
+    or GL_EXT_semaphore_fd strings are reported:
+
+    Accepted by the <handleType> parameter of ImportMemoryFdEXT() or
+    ImportSemaphoreFdEXT().
+
+        HANDLE_TYPE_OPAQUE_FD_EXT                  0x9586
+
+Additions to Chapter 4 of the OpenGL 4.5 Specification (Event Model)
+
+    Add the following entry to table 4.2 "Commands for importing
+    external semaphore handles."
+
+        | Handle Type               | Import command       |
+        +---------------------------+----------------------+
+        | HANDLE_TYPE_OPAQUE_FD_EXT | ImportSemaphoreFdEXT |
+        +---------------------------+----------------------+
+
+    Replace the paragraph in section 4.2.1 beginning "External handles
+    are often defined..." with the following
+
+        The command
+
+            ImportSemaphoreFdEXT(uint semaphore,
+                                 enum handleType,
+                                 int fd);
+
+        imports a semaphore from the file descriptor <fd>.  What type of
+        object <fd> refers to is determined by <handleType>.  A successful
+        import operation transfers ownership of <fd> to the GL
+        implementation, and performing any operation on <fd> in the
+        application after an import results in undefined behavior.
+
+Additions to Chapter 6 of the OpenGL 4.5 Specification (Memory Objects)
+
+    Add the following entry to table 6.2 "Commands for importing
+    external memory handles."
+
+        | Handle Type               | Import command    |
+        +---------------------------+-------------------+
+        | HANDLE_TYPE_OPAQUE_FD_EXT | ImportMemoryFdEXT |
+        +---------------------------+-------------------+
+
+    Replace the paragraph in section 6.1 beginning "External handles are
+    often defined..." with the following
+
+        The command
+
+            void ImportMemoryFdEXT(uint memory,
+                                   uint64 size,
+                                   enum handleType,
+                                   int fd);
+
+        imports a memory object of length <size> from the file descriptor
+        <fd>.  What type of object <fd> refers to is determined by
+        <handleType>.  A successful import operation transfers ownership
+        of <fd> to the GL implementation, and performing any operation on
+        <fd> in the application after an import results in undefined
+        behavior.
+
+Additions to Chapter 21 of the OpenGL 4.5 Specification (Special Functions)
+
+    Add the following to section 21.4.1, Commands Not Usable in Display
+    Lists.
+
+    Under the "Memory Objects" section:
+
+        ImportMemoryFdEXT
+
+    Under the "GL command stream management" section:
+
+        ImportSemaphoreFdEXT
+
+Issues
+
+    1)  Does this extension need to support importing Android/Linux
+        sync FD handles?
+
+        RESOLVED: No.  These are already usable in GL via extensions to the
+        EGLSync mechanism.  Adding them here in order to support them in GLX
+        contexts is not compelling enough to justify the additional effort.
+
+Revision History
+
+    Revision 8, 2022-07-15 (James Jones)
+        - Added commands to the list of commands not permitted in display
+          lists.
+
+    Revision 7, 2017-06-02 (James Jones)
+        - Added extension numbers.
+        - Clarified which extensions each command and token belongs to.
+        - Marked complete.
+
+    Revision 6, 2017-05-24 (James Jones)
+        - Filled in real token values
+
+    Revision 5, 2017-04-04 (James Jones)
+        - Clarified the effects of import operations on file descriptors.
+
+    Revision 4, 2017-03-17 (James Jones)
+        - Renamed from KHR to EXT.
+
+    Revision 3, 2016-09-28 (James Jones)
+        - Merged GL_EXT_memory_object_fd and GL_EXT_semaphore_fd.
+        - Added spec body describing the new commands and tokens.
+        - Added issue 1.
+
+    Revision 2, 2016-08-15 (Jeff Juliano)
+        - Clarified overview text.
+
+    Revision 1, 2016-08-05 (James Jones)
+        - Initial draft.

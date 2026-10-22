@@ -1,0 +1,3191 @@
+Name
+
+    NV_gpu_program5
+
+Name Strings
+
+    GL_NV_gpu_program5
+    GL_NV_gpu_program_fp64
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified Date:         05/25/2022
+    NVIDIA Revision:            8
+
+Number
+
+    388
+
+Dependencies
+
+    OpenGL 2.0 is required.
+
+    This extension is written against the OpenGL 3.0 specification.
+
+    NV_gpu_program4 and NV_gpu_program4_1 are required.
+
+    NV_shader_buffer_load is required.
+
+    NV_shader_buffer_store is required.
+
+    This extension is written against and interacts with the NV_gpu_program4,
+    NV_vertex_program4, NV_geometry_program4, and NV_fragment_program4
+    specifications.
+
+    This extension interacts with NV_tessellation_program5.
+
+    This extension interacts with ARB_transform_feedback3.
+
+    This extension interacts trivially with NV_shader_buffer_load.
+
+    This extension interacts trivially with NV_shader_buffer_store.
+
+    This extension interacts trivially with NV_parameter_buffer_object2.
+
+    This extension interacts trivially with OpenGL 3.3, ARB_texture_swizzle,
+    and EXT_texture_swizzle.
+
+    This extension interacts trivially with ARB_blend_func_extended.
+
+    This extension interacts trivially with EXT_shader_image_load_store.
+
+    This extension interacts trivially with ARB_shader_subroutine.
+
+    If the 64-bit floating-point portion of this extension is not supported,
+    "GL_NV_gpu_program_fp64" will not be found in the extension string.
+
+Overview
+
+    This specification documents the common instruction set and basic
+    functionality provided by NVIDIA's 5th generation of assembly instruction
+    sets supporting programmable graphics pipeline stages.
+
+    The instruction set builds upon the basic framework provided by the
+    ARB_vertex_program and ARB_fragment_program extensions to expose
+    considerably more capable hardware.  In addition to new capabilities for
+    vertex and fragment programs, this extension provides new functionality
+    for geometry programs as originally described in the NV_geometry_program4
+    specification, and serves as the basis for the new tessellation control
+    and evaluation programs described in the NV_tessellation_program5
+    extension.
+
+    Programs using the functionality provided by this extension should begin
+    with the program headers "!!NVvp5.0" (vertex programs), "!!NVtcp5.0"
+    (tessellation control programs), "!!NVtep5.0" (tessellation evaluation
+    programs), "!!NVgp5.0" (geometry programs), and "!!NVfp5.0" (fragment
+    programs).
+
+    This extension provides a variety of new features, including:
+
+      * support for 64-bit integer operations;
+
+      * the ability to dynamically index into an array of texture units or
+        program parameter buffers;
+
+      * extending texel offset support to allow loading texel offsets from
+        regular integer operands computed at run-time, instead of requiring
+        that the offsets be constants encoded in texture instructions;
+
+      * extending TXG (texture gather) support to return the 2x2 footprint
+        from any component of the texture image instead of always returning
+        the first (x) component;
+
+      * extending TXG to support shadow comparisons in conjunction with a
+        depth texture, via the SHADOW* targets;
+
+      * further extending texture gather support to provide a new opcode
+        (TXGO) that applies a separate texel offset vector to each of the four
+        samples returned by the instruction; 
+
+      * bit manipulation instructions, including ones to find the position of
+        the most or least significant set bit, bitfield insertion and
+        extraction, and bit reversal;
+
+      * a general data conversion instruction (CVT) supporting conversion
+        between any two data types supported by this extension; and
+
+      * new instructions to compute the composite of a set of boolean
+        conditions a group of shader threads.
+
+    This extension also provides some new capabilities for individual program
+    types, including:
+
+      * support for instanced geometry programs, where a geometry program may
+        be run multiple times for each primitive;
+
+      * support for emitting vertices in a geometry program where each vertex
+        emitted may be directed at a specified vertex stream and captured
+        using the ARB_transform_feedback3 extension;
+
+      * support for interpolating an attribute at a programmable offset
+        relative to the pixel center (IPAO), at a programmable sample number
+        (IPAS), or at the fragment's centroid location (IPAC) in a fragment
+        program;
+
+      * support for reading a mask of covered samples in a fragment program;
+
+      * support for reading a point sprite coordinate directly in a fragment
+        program, without overriding a texture coordinate;
+
+      * support for reading patch primitives and per-patch attributes
+        (introduced by ARB_tessellation_shader) in a geometry program; and
+
+      * support for multiple output vectors for a single color output in a
+        fragment program (as used by ARB_blend_func_extended).
+
+    This extension also provides optional support for 64-bit-per-component
+    variables and 64-bit floating-point arithmetic.  These features are
+    supported if and only if "NV_gpu_program_fp64" is found in the extension
+    string.
+
+    This extension incorporates the memory access operations from the
+    NV_shader_buffer_load and NV_parameter_buffer_object2 extensions,
+    originally built as add-ons to NV_gpu_program4.  It also provides the
+    following new capabilities:
+
+      * support for the features without requiring a separate OPTION keyword;
+
+      * support for indexing into an array of constant buffers using the LDC
+        opcode added by NV_parameter_buffer_object2;
+
+      * support for storing into buffer objects at a specified GPU address
+        using the STORE opcode, an allowing applications to create READ_WRITE
+        and WRITE_ONLY mappings when making a buffer object resident using the
+        API mechanisms in the NV_shader_buffer_store extension;
+
+      * storage instruction modifiers to allow loading and storing 64-bit
+        component values;
+
+      * support for atomic memory transactions using the ATOM opcode, where
+        the instruction atomically reads the memory pointed to by a pointer,
+        performs a specified computation, stores the results of that
+        computation, and returns the original value read;
+
+      * support for memory barrier transactions using the MEMBAR opcode, which
+        ensures that all memory stores issued prior to the opcode complete
+        prior to any subsequent memory transactions; and
+
+      * a fragment program option to specify that depth and stencil tests are
+        performed prior to fragment program execution.
+
+    Additionally, the assembly program languages supported by this extension
+    include support for reading, writing, and performing atomic memory
+    operations on texture image data using the opcodes and mechanisms
+    documented in the "Dependencies on NV_gpu_program5" section of the
+    EXT_shader_image_load_store extension.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev: 
+
+        MAX_GEOMETRY_PROGRAM_INVOCATIONS_NV             0x8E5A
+        MIN_FRAGMENT_INTERPOLATION_OFFSET_NV            0x8E5B
+        MAX_FRAGMENT_INTERPOLATION_OFFSET_NV            0x8E5C
+        FRAGMENT_PROGRAM_INTERPOLATION_OFFSET_BITS_NV   0x8E5D
+        MIN_PROGRAM_TEXTURE_GATHER_OFFSET_NV            0x8E5E
+        MAX_PROGRAM_TEXTURE_GATHER_OFFSET_NV            0x8E5F
+
+
+Additions to Chapter 2 of the OpenGL 3.0 Specification (OpenGL Operation)
+
+    Modify Section 2.X.2 of NV_fragment_program4, Program Grammar
+
+    (modify the section, updating the program header string for the extended
+     instruction set)
+
+    Fragment programs are required to begin with the header string
+    "!!NVfp5.0".  This header string identifies the subsequent program body as
+    being a fragment program and indicates that it should be parsed according
+    to the base NV_gpu_program5 grammar plus the additions below.  Program
+    string parsing begins with the character immediately following the header
+    string.
+
+    (add/change the following rules to the NV_fragment_program4 and 
+     NV_gpu_program5 base grammars)
+
+    <SpecialInstruction>    ::= "IPAC" <opModifiers> <instResult> "," 
+                                <instOperandV>
+                              | "IPAO" <opModifiers> <instResult> "," 
+                                <instOperandV> "," <instOperandV>
+                              | "IPAS" <opModifiers> <instResult> "," 
+                                <instOperandV> "," <instOperandS>
+
+    <interpModifier>        ::= "SAMPLE"
+
+    <attribBasic>           ::= <fragPrefix> "sampleid"
+                              | <fragPrefix> "samplemask"
+                              | <fragPrefix> "pointcoord"
+
+    <resultBasic>           ::= <resPrefix> "color" <resultOptColorNum>
+                                <resultOptColorType>
+                              | <resPrefix> "samplemask"
+
+    <resultOptColorType>    ::= ""
+                              | "." <colorType>
+
+
+    Modify Section 2.X.2 of NV_geometry_program4, Program Grammar
+
+    (modify the section, updating the program header string for the extended
+     instruction set)
+
+    Geometry programs are required to begin with the header string
+    "!!NVgp5.0".  This header string identifies the subsequent program body as
+    being a geometry program and indicates that it should be parsed according
+    to the base NV_gpu_program5 grammar plus the additions below.  Program
+    string parsing begins with the character immediately following the header
+    string.
+
+    (add the following rules to the NV_geometry_program4 and NV_gpu_program5
+     base grammars)
+
+    <declaration>           ::= "INVOCATIONS" <int>
+
+    <declPrimInType>        ::= "PATCHES"
+
+    <SpecialInstruction>    ::= "EMITS" <instOperandS>
+
+    <attribBasic>           ::= <primPrefix> "invocation"
+                              | <primPrefix> "vertexcount"
+                              | <attribTessOuter> <optArrayMemAbs>
+                              | <attribTessInner> <optArrayMemAbs>
+                              | <attribPatchGeneric> <optArrayMemAbs>
+
+    <attribMulti>           ::= <attribTessOuter> <arrayRange>
+                              | <attribTessInner> <arrayRange>
+                              | <attribPatchGeneric> <arrayRange>
+
+    <attribTessOuter>       ::= <primPrefix> "." "tessouter"
+
+    <attribTessInner>       ::= <primPrefix> "." "tessinner"
+
+    <attribPatchGeneric>    ::= <primPrefix> "." "patch" "." "attrib"
+
+
+    Modify Section 2.X.2 of NV_vertex_program4, Program Grammar
+
+    (modify the section, updating the program header string for the extended
+     instruction set)
+
+    Vertex programs are required to begin with the header string "!!NVvp5.0".
+    This header string identifies the subsequent program body as being a
+    vertex program and indicates that it should be parsed according to the
+    base NV_gpu_program5 grammar plus the additions below.  Program string
+    parsing begins with the character immediately following the header string.
+
+
+    Modify Section 2.X.2 of NV_gpu_program4, Program Grammar
+
+    (add the following grammar rules to the NV_gpu_program4 base grammar;
+     additional grammar rules usable for assembly programs are documented in
+     the EXT_shader_image_load_store and ARB_shader_subroutine specifications)
+
+    <instruction>           ::= <MemInstruction>
+
+    <MemInstruction>        ::= <ATOMop_instruction>
+                              | <STOREop_instruction>
+                              | <MEMBARop_instruction>
+
+    <VECTORop>              ::= "BFR"
+                              | "BTC"
+                              | "BTFL"
+                              | "BTFM"
+                              | "PK64"
+                              | "LDC"
+                              | "CVT"
+                              | "TGALL"
+                              | "TGANY"
+                              | "TGEQ"
+                              | "UP64"
+
+    <SCALARop>              ::= "LOAD"
+
+    <BINop>                 ::= "BFE"
+
+    <TRIop>                 ::= "BFI"
+
+    <TEXop_instruction>     ::= <TEXop> <opModifiers> <instResult> "," 
+                                <instOperandV> "," <instOperandV> "," 
+                                <texAccess>
+
+    <TEXop>                 ::= "TXG"
+                              | "LOD"
+
+    <TXDop>                 ::= "TXGO"
+
+    <ATOMop_instruction>    ::= <ATOMop> <opModifiers> <instResult> "," 
+                                <instOperandV> "," <instOperandS>
+
+    <ATOMop>                ::= "ATOM"
+
+    <STOREop_instruction>   ::= <STOREop> <opModifiers> <instOperandV> "," 
+                                <instOperandS>
+
+    <STOREop>               ::= "STORE"
+
+    <MEMBARop_instruction>  ::= <MEMBARop> <opModifiers>
+
+    <MEMBARop>              ::= "MEMBAR"
+
+    <opModifier>            ::= "F16"
+                              | "F32"
+                              | "F64"
+                              | "F32X2"
+                              | "F32X4"
+                              | "F64X2"
+                              | "F64X4"
+                              | "S8"
+                              | "S16"
+                              | "S32"
+                              | "S32X2"
+                              | "S32X4"
+                              | "S64"
+                              | "S64X2"
+                              | "S64X4"
+                              | "U8"
+                              | "U16"
+                              | "U32"
+                              | "U32X2"
+                              | "U32X4"
+                              | "U64"
+                              | "U64X2"
+                              | "U64X4"
+                              | "ADD"
+                              | "MIN"
+                              | "MAX"
+                              | "IWRAP"
+                              | "DWRAP"
+                              | "AND"
+                              | "OR"
+                              | "XOR"
+                              | "EXCH"
+                              | "CSWAP"
+                              | "COH"
+                              | "ROUND"
+                              | "CEIL"
+                              | "FLR"
+                              | "TRUNC"
+                              | "PREC"
+                              | "VOL"
+
+    <texAccess>             ::= <textureUseS> "," <texTarget> <optTexOffset>
+                              | <textureUseV> "," <texTarget> <optTexOffset>
+
+    <texTarget>             ::= "ARRAYCUBE"
+                              | "SHADOWARRAYCUBE"
+
+    <optTexOffset>          ::= /* empty */
+                              | <texOffset>
+
+    <texOffset>             ::= "offset" "(" <instOperandV> ")"
+
+    <namingStatement>       ::= <TEXTURE_statement>
+
+    <BUFFER_statement>      ::= <bufferDeclType> <establishName> 
+                                <optArraySize> <optArraySize> "=" 
+                                <bufferMultInit>
+
+    <bufferDeclType>        ::= "CBUFFER"
+
+    <TEXTURE_statement>     ::= "TEXTURE" <establishName> <texSingleInit>
+                              | "TEXTURE" <establishName> <optArraySize> 
+                                <texMultipleInit>
+
+    <texSingleInit>         ::= "=" <textureUseDS>
+
+    <texMultipleInit>       ::= "=" "{" <texItemList> "}"
+
+    <texItemList>           ::= <textureUseDM>
+                              | <textureUseDM> "," <texItemList>
+
+    <bufferBinding>         ::= "program" "." "buffer" <arrayRange>
+
+    <textureUseS>           ::= <textureUseV> <texImageUnitComp>
+
+    <textureUseV>           ::= <texImageUnit>
+                              | <texVarName> <optArrayMem>
+
+    <textureUseDS>          ::= "texture" <arrayMemAbs>
+
+    <textureUseDM>          ::= <textureUseDS>
+                              | "texture" <arrayRange>
+
+    <texImageUnitComp>      ::= <scalarSuffix>
+
+
+    Modify Section 2.X.3.1, Program Variable Types
+
+    (IGNORE if GL_NV_gpu_program_fp64 is not found in the extension string.
+     Otherwise modify storage size modifiers to guarantee that "LONG"
+     variables are at least 64 bits in size.)
+
+    Explicitly declared variables may optionally have one storage size
+    modifier.  Variables decared as "SHORT" will be represented using at least
+    16 bits per component.  "SHORT" floating-point values will have at least 5
+    bits of exponent and 10 bits of mantissa.  Variables declared as "LONG"
+    will be represented with at least 64 bits per component.  "LONG"
+    floating-point values will have at least 11 bits of exponent and 52 bits
+    of mantissa.  If no size modifier is provided, the GL will automatically
+    select component sizes.  Implementations are not required to support more
+    than one component size, so "SHORT", "LONG", and the default could all
+    refer to the same component size.  The "LONG" modifier is supported only
+    for declarations of temporary variables ("TEMP"), and attribute variables 
+    ("ATTRIB") in vertex programs.  The "SHORT" modifier is supported only 
+    for declarations of temporary variables and result variables ("OUTPUT").
+
+
+    Modify Section 2.X.3.2 of the NV_fragment_program4 specification, Program
+    Attribute Variables.
+
+    (Add a table entry and relevant text describing the fragment program
+     input sample mask variable.)
+
+      Fragment Attribute Binding  Components  Underlying State
+      --------------------------  ----------  ----------------------------
+      fragment.samplemask         (m,-,-,-)   fragment coverage mask
+      fragment.pointcoord         (s,t,-,-)   fragment point sprite coordinate
+
+    If a fragment attribute binding matches "fragment.samplemask", the "x"
+    component is filled with a coverage mask indicating the set of samples
+    covered by this fragment.  The coverage mask is a bitfield, where bit <n>
+    is one if the sample number <n> is covered and zero otherwise.  If
+    multisample buffers are not available (SAMPLE_BUFFERS is zero), bit zero
+    indicates if the center of the pixel corresponding to the fragment is
+    covered.
+
+    If a fragment attribute binding matches "fragment.pointcoord", the "x" and
+    "y" components are filled with the s and t point sprite coordinates
+    (section 3.3.1), respectively.  The "z" and "w" components are undefined.
+    If the fragment is generated by any primitive other than a point, or if
+    point sprites are disabled, all four components of the binding are
+    undefined.
+
+    Modify Section 2.X.3.2 of the NV_geometry_program4 specification, Program
+    Attribute Variables.
+
+    (Add a table entry and relevant text describing the geometry program
+    invocation attribute and per-patch attributes.)
+
+      Geometry Vertex Binding         Components  Description
+      -----------------------------   ----------  ----------------------------
+      ...
+      primitive.invocation            (id,-,-,-)  geometry program invocation
+      primitive.tessouter[n]          (x,-,-,-)   outer tess. level n
+      primitive.tessinner[n]          (x,-,-,-)   inner tess. level n
+      primitive.patch.attrib[n]       (x,y,z,w)   generic patch attribute n
+      primitive.tessouter[n..o]       (x,-,-,-)   outer tess. levels n to o
+      primitive.tessinner[n..o]       (x,-,-,-)   inner tess. levels n to o
+      primitive.patch.attrib[n..o]    (x,y,z,w)   generic patch attrib n to o
+      primitive.vertexcount           (c,-,-,-)   vertices in primitive
+
+    ...
+
+    If a geometry attribute binding matches "primitive.invocation", the "x"
+    component is filled with an integer giving the number of previous
+    invocations of the geometry program on the primitive being processed.  If
+    the geometry program is invoked only once per primitive (default), this
+    component will always be zero.  If the program is invoked multiple times
+    (via the INVOCATIONS declaration), the component will be zero on the first
+    invocation, one on the second, and so forth.  The "y", "z", and "w"
+    components of the variable are always undefined.
+
+    If an attribute binding matches "primitive.tessouter[n]", the "x"
+    component is filled with the per-patch outer tessellation level numbered
+    <n> of the input patch.  <n> must be less than four.  The "y", "z", and
+    "w" components are always undefined.  A program will fail to load if this
+    attribute binding is used and the input primitive type is not PATCHES.
+
+    If an attribute binding matches "primitive.tessinner[n]", the "x"
+    component is filled with the per-patch inner tessellation level numbered
+    <n> of the input patch.  <n> must be less than two.  The "y", "z", and "w"
+    components are always undefined.  A program will fail to load if this
+    attribute binding is used and the input primitive type is not PATCHES.
+
+    If an attribute binding matches "primitive.patch.attrib[n]", the "x", "y",
+    "z", and "w" components are filled with the corresponding components of
+    the per-patch generic attribute numbered <n> of the input patch.  A
+    program will fail to load if this attribute binding is used and the input
+    primitive type is not PATCHES.
+
+    If an attribute binding matches "primitive.tessouter[n..o]",
+    "primitive.tessinner[n..o]", or "primitive.patch.attrib[n..o]", a sequence
+    of 1+<o>-<n> outer tessellation level, inner tessellation level, or
+    per-patch generic attribute bindings is created.  For per-patch generic
+    attribute bindings, it is as though the sequence
+    "primitive.patch.attrib[n], primitive.patch.attrib[n+1], ...
+    primitive.patch.attrib[o]" were specfied.  These bindings are available
+    only in explicit declarations of array variables.  A program will fail to
+    load if <n> is greater than <o> or the input primitive type is not
+    PATCHES.
+
+    If a geometry attribute binding matches "primitive.vertexcount", the "x"
+    component is filled with the number of vertices in the input primitive
+    being processed.  The "y", "z", and "w" components of the variable are
+    always undefined.
+
+
+    Modify Section 2.X.3.5, Program Results
+
+    (modify Table X.X) 
+
+      Binding                        Components  Description
+      -----------------------------  ----------  ----------------------------
+      result.color[n].primary        (r,g,b,a)   primary color n (SRC_COLOR)
+      result.color[n].secondary      (r,g,b,a)   secondary color n (SRC1_COLOR)
+
+      Table X.X:  Fragment Result Variable Bindings. Components labeled "*"
+      are unused. "[n]" is optional -- color <n> is used if specified; color
+      0 is used otherwise.
+
+    (add after third paragraph)
+
+    If a result variable binding matches "result.color[n].primary" or
+    "result.color[n].secondary" and the ARB_blend_func_extended option is
+    specified, updates to the "x", "y", "z", and "w" components of these color
+    result variables modify the "r", "g", "b", and "a" components of the
+    SRC_COLOR and SRC1_COLOR color outputs, respectively, for the fragment
+    output color numbered <n>.  If the ARB_blend_func_extended program option
+    is not specified, the "result.color[n].primary" and
+    "result.color[n].secondary" bindings are unavailable.
+
+
+    Modify Section 2.X.3.6, Program Parameter Buffers
+
+    (modify the description of parameter buffer arrays to require that all
+    bindings in an array declaration must use the same single buffer *or*
+    buffer range)
+
+    ...  Program parameter buffer variables may be declared as arrays, but all
+    bindings assigned to the array must use the same binding point or binding
+    point range, and must increase consecutively.
+
+    (add to the end of the section)
+
+    In explicit variable declarations, the bindings in Table X.12.1 of the
+    form "program.buffer[a..b]" may also be used, and indicate the variable
+    spans multiple buffer binding points.  Such variables must be accessed as
+    an arrays, with the first index specifying an offset into the range of
+    buffer object binding points.  A buffer index of zero identifies binding
+    point <a>; an index of <b>-<a>-1 identifies binding point <b>.  If such a
+    variable is declared as an array, a second index must be provided to
+    identify the individual array element.  A program will fail to compile if
+    such bindings are used when <a> or <b> is negative or greater than or
+    equal to the number of buffer binding points supported for the program
+    type, or if <a> is greater than <b>.  The bindings in Table X.12.1 may not
+    be used in implicit variable declarations.
+
+      Binding                        Components  Underlying State
+      -----------------------------  ----------  -----------------------------
+      program.buffer[a..b][c]        (x,x,x,x)   program parameter buffers a
+                                                   through b, element c
+      program.buffer[a..b][c..d]     (x,x,x,x)   program parameter buffers a
+                                                   through b, elements b
+                                                   through c
+      program.buffer[a..b]           (x,x,x,x)   program parameter buffers a
+                                                   through b, all elements
+
+      Table X.12.1:  Program Parameter Buffer Array Bindings.  <a> and <b>
+      indicate buffer numbers, <c> and <d> indicate individual elements.
+
+    When bindings beginning with "program.buffer[a..b]" are used in a variable
+    declaration, they behave identically to corresponding beginning with
+    "program.buffer[a]", except that the variable is filled with a separate
+    set of values for each buffer binding point from <a> to <b> inclusive.
+
+    (add new section after Section 2.X.3.7, Program Condition Code Registers
+    and renumber subsequent sections accordingly)
+
+    Section 2.X.3.8, Program Texture Variables
+
+    Program texture variables are used as constants during program execution
+    and refer the texture objects bound to to one or more texture image units.
+    All texture variables have associated bindings and are read-only during
+    program execution.  Texture variables retain their values across program
+    invocations, and the set of texture image units to which they refer is
+    constant.  The texture object a variable refers to may be changed by
+    binding a new texture object to the appropriate target of the
+    corresponding texture image unit.  Texture variables may only be used to
+    identify a texture object in texture instructions, and may not be used as
+    operands in any other instruction.  Texture variables may be declared
+    explicitly via the <TEXTURE_statement> grammar rule, or implicitly by
+    using a texture image unit binding in an instruction.
+
+    Texture array variables may be declared as arrays, but the list of
+    texture image units assigned to the array must increase consectively.
+
+    Texture variables identify only a texture image unit; the corresponding
+    texture target (e.g., 1D, 2D, CUBE) and texture object is identified by
+    the <texTarget> grammar rule in instructions using the texture variable.
+
+      Binding          Components  Underlying State
+      ---------------  ----------  ------------------------------------------
+      texture[a]           x      texture object bound to image unit a
+      texture[a..b]        x      texture objects bound to image units a
+                                     through b
+
+      Table X.12.2:  Texture Image Unit Bindings.  <a> and <b> indicate
+      texture image unit numbers.
+
+    If a texture binding matches "texture[a]", the texture variable is filled
+    with a single integer referring to texture image unit <a>.
+
+    If a texture binding matches "texture[a..b]", the texture variable is
+    filled with an array of integers referring to texture image units <a>
+    through <b>, inclusive.  A program will fail to compile if <a> or <b> is
+    negative or greater than or equal to the number of texture image units
+    supported, or if <a> is greater than <b>.
+
+
+    Modify Section 2.X.4, Program Execution Environment
+
+    (Update the instruction set table to include new columns to indicate the
+     first ISA supporting the instruction, and to indicate whether the
+     instruction supports 64-bit floating-point modifiers.)
+
+      Instr-      Modifiers 
+      uction  V  F I C S H D  Out Inputs    Description
+      ------- -- - - - - - -  --- --------  --------------------------------
+      ABS     40 6 6 X X X F  v   v         absolute value
+      ADD     40 6 6 X X X F  v   v,v       add
+      AND     40 - 6 X - - S  v   v,v       bitwise and
+      ATOM    50 - - X - - -  s   v,su      atomic memory transaction
+      BFE     50 - X X - - S  v   v,v       bitfield extract
+      BFI     50 - X X - - S  v   v,v,v     bitfield insert
+      BFR     50 - X X - - S  v   v         bitfield reverse
+      BRK     40 - - - - - -  -   c         break out of loop instruction
+      BTC     50 - X X - - S  v   v         bit count
+      BTFL    50 - X X - - S  v   v         find least significant bit
+      BTFM    50 - X X - - S  v   v         find most significant bit
+      CAL     40 - - - - - -  -   c         subroutine call
+      CEIL    40 6 6 X X X F  v   vf        ceiling
+      CMP     40 6 6 X X X F  v   v,v,v     compare
+      CONT    40 - - - - - -  -   c         continue with next loop interation
+      COS     40 X - X X X F  s   s         cosine with reduction to [-PI,PI]
+      CVT     50 - - X X - F  v   v         general data type conversion
+      DDX     40 X - X X X F  v   v         derivative relative to X (fp-only)
+      DDY     40 X - X X X F  v   v         derivative relative to Y (fp-only)
+      DIV     40 6 6 X X X F  v   v,s       divide vector components by scalar
+      DP2     40 X - X X X F  s   v,v       2-component dot product
+      DP2A    40 X - X X X F  s   v,v,v     2-comp. dot product w/scalar add
+      DP3     40 X - X X X F  s   v,v       3-component dot product
+      DP4     40 X - X X X F  s   v,v       4-component dot product
+      DPH     40 X - X X X F  s   v,v       homogeneous dot product
+      DST     40 X - X X X F  v   v,v       distance vector
+      ELSE    40 - - - - - -  -   -         start if test else block
+      EMIT    40 - - - - - -  -   -         emit vertex stream 0 (gp-only)
+      EMITS   50 - X - - - S  -   s         emit vertex to stream (gp-only)
+      ENDIF   40 - - - - - -  -   -         end if test block
+      ENDPRIM 40 - - - - - -  -   -         end of primitive (gp-only)
+      ENDREP  40 - - - - - -  -   -         end of repeat block
+      EX2     40 X - X X X F  s   s         exponential base 2
+      FLR     40 6 6 X X X F  v   vf        floor
+      FRC     40 6 - X X X F  v   v         fraction
+      I2F     40 - 6 X - - S  vf  v         integer to float
+      IF      40 - - - - - -  -   c         start of if test block
+      IPAC    50 X - X X - F  v   v         interpolate at centroid (fp-only) 
+      IPAO    50 X - X X - F  v   v,v       interpolate w/offset (fp-only)
+      IPAS    50 X - X X - F  v   v,su      interpolate at sample (fp-only)
+      KIL     40 X X - - X F  -   vc        kill fragment
+      LDC     40 - - X X - F  v   v         load from constant buffer
+      LG2     40 X - X X X F  s   s         logarithm base 2
+      LIT     40 X - X X X F  v   v         compute lighting coefficients
+      LOAD    40 - - X X - F  v   su        global load
+      LOD     41 X - X X - F  v   vf,t      compute texture LOD
+      LRP     40 X - X X X F  v   v,v,v     linear interpolation
+      MAD     40 6 6 X X X F  v   v,v,v     multiply and add
+      MAX     40 6 6 X X X F  v   v,v       maximum
+      MEMBAR  50 - - - - - -  -   -         memory barrier
+      MIN     40 6 6 X X X F  v   v,v       minimum
+      MOD     40 - 6 X - - S  v   v,s       modulus vector components by scalar
+      MOV     40 6 6 X X X F  v   v         move
+      MUL     40 6 6 X X X F  v   v,v       multiply
+      NOT     40 - 6 X - - S  v   v         bitwise not
+      NRM     40 X - X X X F  v   v         normalize 3-component vector
+      OR      40 - 6 X - - S  v   v,v       bitwise or
+      PK2H    40 X X - - - F  s   vf        pack two 16-bit floats
+      PK2US   40 X X - - - F  s   vf        pack two floats as unsigned 16-bit
+      PK4B    40 X X - - - F  s   vf        pack four floats as signed 8-bit
+      PK4UB   40 X X - - - F  s   vf        pack four floats as unsigned 8-bit
+      PK64    50 X X - - - F  v   v         pack 4x32-bit vectors to 2x64
+      POW     40 X - X X X F  s   s,s       exponentiate
+      RCC     40 X - X X X F  s   s         reciprocal (clamped)
+      RCP     40 6 - X X X F  s   s         reciprocal
+      REP     40 6 6 - - X F  -   v         start of repeat block
+      RET     40 - - - - - -  -   c         subroutine return
+      RFL     40 X - X X X F  v   v,v       reflection vector
+      ROUND   40 6 6 X X X F  v   vf        round to nearest integer
+      RSQ     40 6 - X X X F  s   s         reciprocal square root
+      SAD     40 - 6 X - - S  vu  v,v,vu    sum of absolute differences
+      SCS     40 X - X X X F  v   s         sine/cosine without reduction
+      SEQ     40 6 6 X X X F  v   v,v       set on equal
+      SFL     40 6 6 X X X F  v   v,v       set on false
+      SGE     40 6 6 X X X F  v   v,v       set on greater than or equal
+      SGT     40 6 6 X X X F  v   v,v       set on greater than
+      SHL     40 - 6 X - - S  v   v,s       shift left
+      SHR     40 - 6 X - - S  v   v,s       shift right 
+      SIN     40 X - X X X F  s   s         sine with reduction to [-PI,PI]
+      SLE     40 6 6 X X X F  v   v,v       set on less than or equal
+      SLT     40 6 6 X X X F  v   v,v       set on less than
+      SNE     40 6 6 X X X F  v   v,v       set on not equal
+      SSG     40 6 - X X X F  v   v         set sign
+      STORE   50 - - - - - -  -   v,su      global store
+      STR     40 6 6 X X X F  v   v,v       set on true
+      SUB     40 6 6 X X X F  v   v,v       subtract
+      SWZ     40 X - X X X F  v   v         extended swizzle
+      TEX     40 X X X X - F  v   vf,t      texture sample
+      TGALL   50 X X X X - F  v   v         test all non-zero in thread group
+      TGANY   50 X X X X - F  v   v         test any non-zero in thread group
+      TGEQ    50 X X X X - F  v   v         test all equal in thread group
+      TRUNC   40 6 6 X X X F  v   vf        truncate (round toward zero)
+      TXB     40 X X X X - F  v   vf,t      texture sample with bias
+      TXD     40 X X X X - F  v vf,vf,vf,t  texture sample w/partials      
+      TXF     40 X X X X - F  v   vs,t      texel fetch
+      TXFMS   40 X X X X - F  v   vs,t      multisample texel fetch
+      TXG     41 X X X X - F  v   vf,t      texture gather
+      TXGO    50 X X X X - F  v vf,vs,vs,t  texture gather w/per-texel offsets
+      TXL     40 X X X X - F  v   vf,t      texture sample w/LOD
+      TXP     40 X X X X - F  v   vf,t      texture sample w/projection
+      TXQ     40 - - - - - S  vs  vs,t      texture info query
+      UP2H    40 X X X X - F  vf  s         unpack two 16-bit floats
+      UP2US   40 X X X X - F  vf  s         unpack two unsigned 16-bit integers
+      UP4B    40 X X X X - F  vf  s         unpack four signed 8-bit integers
+      UP4UB   40 X X X X - F  vf  s         unpack four unsigned 8-bit integers
+      UP64    50 X X X X - F  v   v         unpack 2x64 vectors to 4x32
+      X2D     40 X - X X X F  v   v,v,v     2D coordinate transformation
+      XOR     40 - 6 X - - S  v   v,v       exclusive or
+      XPD     40 X - X X X F  v   v,v       cross product
+    
+          Table X.13:  Summary of NV_gpu_program5 instructions.
+    
+      The "V" column indicates the first assembly language in the
+      NV_gpu_program4 family (if any) supporting the opcode.  "41" and "50"
+      indicate NV_gpu_program4_1 and NV_gpu_program5, respectively.
+
+      The "Modifiers" columns specify the set of modifiers allowed for the
+      instruction:
+
+        F = floating-point data type modifiers
+        I = signed and unsigned integer data type modifiers
+        C = condition code update modifiers
+        S = clamping (saturation) modifiers
+        H = half-precision float data type suffix
+        D = default data type modifier (F, U, or S)
+
+      For the "F" and "I" columns, an "X" indicates support for both unsized
+      type modifiers and sized type modifiers with fewer than 64 bits.  A "6"
+      indicates support for all modifiers, including 64-bit versions (when
+      supported).
+
+      The input and output columns describe the formats of the operands and
+      results of the instruction.
+
+        v:  4-component vector (data type is inherited from operation)
+        vf: 4-component vector (data type is always floating-point)
+        vs: 4-component vector (data type is always signed integer)
+        vu: 4-component vector (data type is always unsigned integer)
+        s:  scalar (replicated if written to a vector destination;
+                    data type is inherited from operation)
+        su:  scalar (data type is always unsigned integer)
+        c:  condition code test result (e.g., "EQ", "GT1.x")
+        vc: 4-component vector or condition code test
+        t:  texture
+
+      Instructions labeled "fp-only" and "gp-only" are supported only for
+      fragment and geometry programs, respectively.
+    
+
+    Modify Section 2.X.4.1, Program Instruction Modifiers
+
+    (Update the discussion of instruction precision modifiers.  If
+     GL_NV_gpu_program_fp64 is not found in the extension string, the "F64"
+     instruction modifier described below is not supported.)
+
+    (add to Table X.14 of the NV_gpu_program4 specification.)
+
+      Modifier  Description
+      --------  ---------------------------------------------------
+      F         Floating-point operation
+      U         Fixed-point operation, unsigned operands
+      S         Fixed-point operation, signed operands
+      ...
+      F32       Floating-point operation, 32-bit precision or
+                  access one 32-bit floating-point value
+      F64       Floating-point operation, 64-bit precision or
+                  access one 64-bit floating-point value
+      S32       Fixed-point operation, signed 32-bit operands or
+                  access one 32-bit signed integer value
+      S64       Fixed-point operation, signed 64-bit operands or
+                  access one 64-bit signed integer value
+      U32       Fixed-point operation, unsigned 32-bit operands or
+                  access one 32-bit unsigned integer value
+      U64       Fixed-point operation, unsigned 64-bit operands or
+                  access one 64-bit unsigned integer value
+      ...
+      F32X2     Access two 32-bit floating-point values
+      F32X4     Access four 32-bit floating-point values
+      F64X2     Access two 64-bit floating-point values
+      F64X4     Access four 64-bit floating-point values
+      S8        Access one 8-bit signed integer value
+      S16       Access one 16-bit signed integer value
+      S32X2     Access two 32-bit signed integer values
+      S32X4     Access four 32-bit signed integer values
+      S64       Access one 64-bit signed integer value
+      S64X2     Access two 64-bit signed integer values
+      S64X4     Access four 64-bit signed integer values
+      U8        Access one 8-bit unsigned integer value
+      U16       Access one 16-bit unsigned integer value
+      U32       Access one 32-bit unsigned integer value
+      U32X2     Access two 32-bit unsigned integer values
+      U32X4     Access four 32-bit unsigned integer values
+      U64       Access one 64-bit unsigned integer value
+      U64X2     Access two 64-bit unsigned integer values
+      U64X4     Access four 64-bit unsigned integer values
+
+      ADD       Perform add operation for ATOM
+      MIN       Perform minimum operation for ATOM
+      MAX       Perform maximum operation for ATOM
+      IWRAP     Perform wrapping increment for ATOM
+      DWRAP     Perform wrapping decrment for ATOM
+      AND       Perform logical AND operation for ATOM
+      OR        Perform logical OR operation for ATOM
+      XOR       Perform logical XOR operation for ATOM
+      EXCH      Perform exchange operation for ATOM
+      CSWAP     Perform compare-and-swap operation for ATOM
+
+      COH       Make LOAD and STORE operations use coherent caching
+      VOL       Make LOAD and STORE operations treat memory as volatile
+
+      PREC      Instruction results should be precise
+
+      ROUND     Inexact conversion results round to nearest value (even)
+      CEIL      Inexact conversion results round to larger value
+      FLR       Inexact conversion results round to smaller value
+      TRUNC     Inexact conversion results round to value closest to zero 
+      
+
+    "F", "U", and "S" modifiers are base data type modifiers and specify that
+    the instruction should operate on floating-point, unsigned integer, or
+    signed integer values, respectively.  For example, "ADD.F", "ADD.U", and
+    "ADD.S" specify component-wise addition of floating-point, unsigned
+    integer, or signed integer vectors, respectively.  While these modifiers
+    specify a data type, they do not specify an exact precision at which the
+    operation is performed.  Floating-point and fixed-point operations will
+    typically be carried out at 32-bit precision, unless otherwise described
+    in the instruction documentation or overridden by the precision modifiers.
+    If all operands are represented with less than 32-bit precision (e.g.,
+    variables with the "SHORT" component size modifier), operations may be
+    carried out at a precision no less than the precision of the largest
+    operand used by the instruction.  For some instructions, the data type of
+    some operands or the result are fixed; in these cases, the data type
+    modifier specifies the data type of the remaining values.
+
+    Operands represented with fewer bits than used to perform the instruction
+    will be promoted to a larger data type.  Signed integer operands will be
+    sign-extended, where the most significant bits are filled with ones if the
+    operand is negative and zero otherwise.  Unsigned integer operands will be
+    zero-extended, where the most significant bits are always filled with
+    zeroes.  Operands represented with more bits than used to perform the
+    instruction will be converted to lower precision.  Floating-point
+    overflows result in IEEE infinity encodings; integer overflows result in
+    the truncation of the most significant bits.
+
+    For arithmetic operations, the "F32", "F64", "U32", "U64", "S32", and
+    "S64" modifiers are precision-specific data type modifiers that specify
+    that floating-point, unsigned integer, or signed integer operations be
+    carried out with an internal precision of no less than 32 or 64 bits per
+    component, respectively.  The "F64", "U64", and "S64" modifiers are
+    supported on only a subset of instructions, as documented in the
+    instruction table.  The base data type of the instruction is trivially
+    derived from a precision-specific data type modifiers, and an instruction
+    may not specify both base and precision-specific data type modifiers.
+
+    ...
+
+    "SAT" and "SSAT" are clamping modifiers that generally specify that the
+    floating-point components of the instruction result should be clamped to
+    [0,1] or [-1,1], respectively, before updating the condition code and the
+    destination variable.  If no clamping suffix is specified, unclamped
+    results will be used for condition code updates (if any) and destination
+    variable writes.  Clamping modifiers are not supported on instructions
+    that do not produce floating-point results, with one exception.
+
+    ...
+
+    For load and store operations, the "F32", "F32X2", "F32X4", "F64",
+    "F64X2", "F64X4", "S8", "S16", "S32", "S32X2", "S32X4", "S64", "S64X2",
+    "S64X4", "U8", "U16", "U32", "U32X2", "U32X4", "U64", "U64X2", and "U64X4"
+    storage modifiers control how data are loaded from or stored to memory.
+    Storage modifiers are supported by the ATOM, LDC, LOAD, and STORE
+    instructions and are covered in more detail in the descriptions of these
+    instructions.  These instructions must specify exactly one of these
+    modifiers, and may not specify any of the base data type modifiers (F,U,S)
+    described above.  The base data types of the result vector of a load
+    instruction or the first operand of a store instruction are trivially
+    derived from the storage modifier.
+
+    For atomic memory operations performed by the ATOM instruction, the "ADD",
+    "MIN", "MAX", "IWRAP", "DWRAP", "AND", "OR", "XOR", "EXCH", and "CSWAP"
+    modifiers specify the operation to perform on the memory being accessed,
+    and are described in more detail in the description of this instruction.
+
+    For load and store operations, the "COH" modifier controls whether the 
+    operation uses a coherent level of the cache hierarchy, as described in 
+    Section 2.X.4.5.
+
+    For load and store operations, the "VOL" modifier controls whether the
+    operation treats the memory being read or written as volatile.
+    Instructions modified with "VOL" will always read or write the underlying
+    memory, whether or not previous or subsequent loads and stores access the
+    same memory.
+
+    For arithmetic and logical operations, the "PREC" modifier controls
+    whether the instruction result should be treated as precise.  For
+    instructions not qualified with ".PREC", the implementation may rearrange
+    the computations specified by the program instructions to execute more
+    efficiently, even if it may generate slightly different results in some
+    cases.  For example, an implementation may combine a MUL instruction with
+    a dependent ADD instruction and generate code to execute a MAD
+    (multiply-add) instruction instead.  The difference in rounding may
+    produce unacceptable artifacts for some algorithms.  When ".PREC" is
+    specified, the instruction will be executed in a manner that always
+    generates the same result regardless of the program instructions that
+    precede or follow the instruction.  Note that a ".PREC" modifier does not
+    affect the processing of any other instruction.  For example, tagging an
+    instruction with ".PREC" does not mean that the instructions used to
+    generate the instruction's operands will be treated as precise unless
+    those instructions are also qualified with ".PREC".
+
+    For the CVT (data type conversion) instruction, the "F16", "F32", "F64",
+    "S8", "S16", "S32", "S64", "U8", "U16", "U32", and "U64" storage modifiers
+    specify the data type of the vector operand and the converted result.  Two
+    storage modifiers must be provided, which specify the data type of the
+    result and the operand, respectively.  
+
+    For the CVT (data type conversion) instruction, the "ROUND", "CEIL",
+    "FLR", and "TRUNC" modifiers specify how to round converted results that
+    are not directly representable using the data type of the result.
+
+
+    Modify Section 2.X.4.4, Program Texture Access
+
+    (Extend the language describing the operation of texel offsets to cover
+     the new capability to load texel offsets from a register.  Otherwise,
+     this functionality is unchanged from previous extensions.)
+
+    <offset> is a 3-component signed integer vector, which can be specified
+    using constants embedded in the texture instruction according to the
+    <texOffsetImmed> grammar rule, or taken from a vector operand according to
+    the <texOffsetVar> grammar rule.  The three components of the offset
+    vector are added to the computed <u>, <v>, and <w> texel locations prior
+    to sampling.  When using a constant offset, one, two, or three components
+    may be specified in the instruction; if fewer than three are specified,
+    the remaining offset components are zero.  If no offsets are specified,
+    all three components of the offset are treated as zero.  A limited range
+    of offset values are supported; the minimum and maximum <texOffset> values
+    are implementation-dependent and given by MIN_PROGRAM_TEXEL_OFFSET_EXT and
+    MAX_PROGRAM_TEXEL_OFFSET_EXT, respectively.  A program will fail to load:
+
+      * if the texture target specified in the instruction is 1D, ARRAY1D,
+        SHADOW1D, or SHADOWARRAY1D, and the second or third component of a
+        constant offset vector is non-zero;
+
+      * if the texture target specified in the instruction is 2D, RECT,
+        ARRAY2D, SHADOW2D, SHADOWRECT, or SHADOWARRAY2D, and the third
+        component of a constant offset vector is non-zero;
+
+      * if the texture target is CUBE, SHADOWCUBE, ARRAYCUBE, or
+        SHADOWARRAYCUBE, and any component of a constant offset vector is
+        non-zero -- texel offsets are not supported for cube map or buffer
+        textures;
+
+      * if any component of the constant offset vector of a TXGO instruction
+        is non-zero -- non-constant offsets are provided in separate operands;
+
+      * if any component of a constant offset vector is less than
+        MIN_PROGRAM_TEXEL_OFFSET_EXT or greater than
+        MAX_PROGRAM_TEXEL_OFFSET_EXT;
+
+      * if a TXD or TXGO instruction specifies a non-constant texel offset
+        according to the <texOffsetVar> grammar rule; or
+
+      * if any instruction specifies a non-constant texel offset according
+        to the <texOffsetVar> grammar rule and the texture target is CUBE,
+        SHADOWCUBE, ARRAYCUBE, or SHADOWARRAYCUBE.
+
+    The implementation-dependent minimum and maximum texel offset values apply
+    to texel offsets are taken from a vector operand, but out-of-bounds or
+    invalid component values will not prevent program loading since the
+    offsets may not be computed until the program is executed.  Components of
+    the vector operand not needed for the texture target are ignored.  The W
+    component of the offset vector is always ignored; the Z component of the
+    offset vector is ignored unless the target is 3D; the Y component is
+    ignored if the target is 1D, ARRAY1D, SHADOW1D, or SHADOWARRAY1D.  If the
+    value of any non-ignored component of the vector operand is outside
+    implementation-dependent limits, the results of the texture lookup are
+    undefined.  For all instructions except TXGO, the limits are
+    MIN_PROGRAM_TEXEL_OFFSET_EXT and MAX_PROGRAM_TEXEL_OFFSET_EXT.  For the
+    TXGO instruction, the limits are MIN_PROGRAM_TEXTURE_GATHER_OFFSET_NV and
+    MAX_PROGRAM_TEXTURE_GATHER_OFFSET_NV.
+
+
+    (Modify language describing how the check for using multiple targets on a
+     single texture image unit works, to account for texture array variables
+     where a single instruction may access one of multiple textures and the
+     texture used is not known when the program is loaded.)
+
+    A program will fail to load if it attempts to sample from multiple texture
+    targets (including the SHADOW pseudo-targets) on the same texture image
+    unit.  For example, a program containing any two the following
+    instructions will fail to load:
+
+      TEX out, coord, texture[0], 1D;
+      TEX out, coord, texture[0], 2D;
+      TEX out, coord, texture[0], ARRAY2D;
+      TEX out, coord, texture[0], SHADOW2D;
+      TEX out, coord, texture[0], 3D;
+
+    For the purposes of this test, sampling using a texture variable declared
+    as an array is treated as though all texture image units bound to the
+    variable were accessed.  A program containing the following
+    instructions would fail to load:
+
+      TEXTURE textures[] = { texture[0..3] };
+      TEX out, coord, textures[2], 2D;     # acts as if all textures are used
+      TEX out, coord, texture[1], 3D;
+
+    (Add language describing texture gather component selection)
+
+    The TXG and TXGO instructions provide the ability to assemble a
+    four-component vector by taking the value of a single component of a
+    multi-component texture from each of four texels.  The component selected
+    is identified by the <texImageUnitComp> grammar rule.  Component selection
+    is not supported for any other instruction, and a program will fail to
+    load if <texImageUnitComp> is matched for any texture instruction other
+    than TXG or TXGO.
+
+
+    Add New Section 2.X.4.5, Program Memory Access
+
+    Programs may load from or store to buffer object memory via the ATOM
+    (atomic global memory operation), LDC (load constant), LOAD (global load),
+    and STORE (global store) instructions.
+
+    Load instructions read 8, 16, 32, 64, 128, or 256 bits of data from a
+    source address to produce a four-component vector, according to the
+    storage modifier specified with the instruction.  The storage modifier has
+    three parts:
+
+      - a base data type, "F", "S", or "U", specifying that the instruction
+        fetches floating-point, signed integer, or unsigned integer values,
+        respectively;
+
+      - a component size, specifying that the components fetched by the
+        instruction have 8, 16, 32, or 64 bits; and
+
+      - an optional component count, where "X2" and "X4" indicate that two or
+        four components be fetched, and no count indicates a single component
+        fetch.
+
+    When the storage modifier specifies that fewer than four components should
+    be fetched, remaining components are filled with zeroes.  When performing
+    an atomic memory operation (ATOM) or a global load (LOAD), the GPU address
+    is specified as an instruction operand.  When performing a constant buffer
+    load (LDC), the GPU address is derived by adding the base address of the
+    bound buffer object to an offset specified as an instruction operand.
+    Given a GPU address <address> and a storage modifier <modifier>, the
+    memory load can be described by the following code:
+
+      result_t_vec BufferMemoryLoad(char *address, OpModifier modifier)
+      {
+        result_t_vec result = { 0, 0, 0, 0 };
+        switch (modifier) {
+        case F32:
+            result.x = ((float32_t *)address)[0];
+            break;
+        case F32X2:
+            result.x = ((float32_t *)address)[0];
+            result.y = ((float32_t *)address)[1];
+            break;
+        case F32X4:
+            result.x = ((float32_t *)address)[0];
+            result.y = ((float32_t *)address)[1];
+            result.z = ((float32_t *)address)[2];
+            result.w = ((float32_t *)address)[3];
+            break;
+        case F64:
+            result.x = ((float64_t *)address)[0];
+            break;
+        case F64X2:
+            result.x = ((float64_t *)address)[0];
+            result.y = ((float64_t *)address)[1];
+            break;
+        case F64X4:
+            result.x = ((float64_t *)address)[0];
+            result.y = ((float64_t *)address)[1];
+            result.z = ((float64_t *)address)[2];
+            result.w = ((float64_t *)address)[3];
+            break;
+        case S8:
+            result.x = ((int8_t *)address)[0];
+            break;
+        case S16:
+            result.x = ((int16_t *)address)[0];
+            break;
+        case S32:
+            result.x = ((int32_t *)address)[0];
+            break;
+        case S32X2:
+            result.x = ((int32_t *)address)[0];
+            result.y = ((int32_t *)address)[1];
+            break;
+        case S32X4:
+            result.x = ((int32_t *)address)[0];
+            result.y = ((int32_t *)address)[1];
+            result.z = ((int32_t *)address)[2];
+            result.w = ((int32_t *)address)[3];
+            break;
+        case S64:
+            result.x = ((int64_t *)address)[0];
+            break;
+        case S64X2:
+            result.x = ((int64_t *)address)[0];
+            result.y = ((int64_t *)address)[1];
+            break;
+        case S64X4:
+            result.x = ((int64_t *)address)[0];
+            result.y = ((int64_t *)address)[1];
+            result.z = ((int64_t *)address)[2];
+            result.w = ((int64_t *)address)[3];
+            break;
+        case U8:
+            result.x = ((uint8_t *)address)[0];
+            break;
+        case U16:
+            result.x = ((uint16_t *)address)[0];
+            break;
+        case U32:
+            result.x = ((uint32_t *)address)[0];
+            break;
+        case U32X2:
+            result.x = ((uint32_t *)address)[0];
+            result.y = ((uint32_t *)address)[1];
+            break;
+        case U32X4:
+            result.x = ((uint32_t *)address)[0];
+            result.y = ((uint32_t *)address)[1];
+            result.z = ((uint32_t *)address)[2];
+            result.w = ((uint32_t *)address)[3];
+            break;
+        case U64:
+            result.x = ((uint64_t *)address)[0];
+            break;
+        case U64X2:
+            result.x = ((uint64_t *)address)[0];
+            result.y = ((uint64_t *)address)[1];
+            break;
+        case U64X4:
+            result.x = ((uint64_t *)address)[0];
+            result.y = ((uint64_t *)address)[1];
+            result.z = ((uint64_t *)address)[2];
+            result.w = ((uint64_t *)address)[3];
+            break;
+        }
+        return result;
+      }
+
+    Store instructions write the contents of a four-component vector operand
+    into 8, 16, 32, 64, 128, or 256 bits, according to the storage modifier
+    specified with the instruction.  The storage modifiers supported by stores
+    are identical to those supported for loads.  Given a GPU address
+    <address>, a vector operand <operand> containing the data to be stored,
+    and a storage modifier <modifier>, the memory store can be described by
+    the following code:
+
+      void BufferMemoryStore(char *address, operand_t_vec operand, 
+                             OpModifier modifier)
+      {
+        switch (modifier) {
+        case F32:
+            ((float32_t *)address)[0] = operand.x;
+            break;
+        case F32X2:
+            ((float32_t *)address)[0] = operand.x;
+            ((float32_t *)address)[1] = operand.y;
+            break;
+        case F32X4:
+            ((float32_t *)address)[0] = operand.x;
+            ((float32_t *)address)[1] = operand.y;
+            ((float32_t *)address)[2] = operand.z;
+            ((float32_t *)address)[3] = operand.w;
+            break;
+        case F64:
+            ((float64_t *)address)[0] = operand.x;
+            break;
+        case F64X2:
+            ((float64_t *)address)[0] = operand.x;
+            ((float64_t *)address)[1] = operand.y;
+            break;
+        case F64X4:
+            ((float64_t *)address)[0] = operand.x;
+            ((float64_t *)address)[1] = operand.y;
+            ((float64_t *)address)[2] = operand.z;
+            ((float64_t *)address)[3] = operand.w;
+            break;
+        case S8:
+            ((int8_t *)address)[0] = operand.x;
+            break;
+        case S16:
+            ((int16_t *)address)[0] = operand.x;
+            break;
+        case S32:
+            ((int32_t *)address)[0] = operand.x;
+            break;
+        case S32X2:
+            ((int32_t *)address)[0] = operand.x;
+            ((int32_t *)address)[1] = operand.y;
+            break;
+        case S32X4:
+            ((int32_t *)address)[0] = operand.x;
+            ((int32_t *)address)[1] = operand.y;
+            ((int32_t *)address)[2] = operand.z;
+            ((int32_t *)address)[3] = operand.w;
+            break;
+        case S64:
+            ((int64_t *)address)[0] = operand.x;
+            break;
+        case S64X2:
+            ((int64_t *)address)[0] = operand.x;
+            ((int64_t *)address)[1] = operand.y;
+            break;
+        case S64X4:
+            ((int64_t *)address)[0] = operand.x;
+            ((int64_t *)address)[1] = operand.y;
+            ((int64_t *)address)[2] = operand.z;
+            ((int64_t *)address)[3] = operand.w;
+            break;
+        case U8:
+            ((uint8_t *)address)[0] = operand.x;
+            break;
+        case U16:
+            ((uint16_t *)address)[0] = operand.x;
+            break;
+        case U32:
+            ((uint32_t *)address)[0] = operand.x;
+            break;
+        case U32X2:
+            ((uint32_t *)address)[0] = operand.x;
+            ((uint32_t *)address)[1] = operand.y;
+            break;
+        case U32X4:
+            ((uint32_t *)address)[0] = operand.x;
+            ((uint32_t *)address)[1] = operand.y;
+            ((uint32_t *)address)[2] = operand.z;
+            ((uint32_t *)address)[3] = operand.w;
+            break;
+        case U64:
+            ((uint64_t *)address)[0] = operand.x;
+            break;
+        case U64X2:
+            ((uint64_t *)address)[0] = operand.x;
+            ((uint64_t *)address)[1] = operand.y;
+            break;
+        case U64X4:
+            ((uint64_t *)address)[0] = operand.x;
+            ((uint64_t *)address)[1] = operand.y;
+            ((uint64_t *)address)[2] = operand.z;
+            ((uint64_t *)address)[3] = operand.w;
+            break;
+        }
+      }
+
+    If a global load or store accesses a memory address that does not
+    correspond to a buffer object made resident by MakeBufferResidentNV, the
+    results of the operation are undefined and may produce a fault resulting
+    in application termination.  If a load accesses a buffer object made
+    resident with an <access> parameter of WRITE_ONLY, or if a store accesses
+    a buffer object made resident with an <access> parameter of READ_ONLY, the
+    results of the operation are also undefined and may lead to application
+    termination.
+
+    The address used for global memory loads or stores or offset used for
+    constant buffer loads must be aligned to the fetch size corresponding to
+    the storage opcode modifier.  For S8 and U8, the offset has no alignment
+    requirements.  For S16 and U16, the offset must be a multiple of two basic
+    machine units.  For F32, S32, and U32, the offset must be a multiple of
+    four.  For F32X2, F64, S32X2, S64, U32X2, and U64, the offset must be a
+    multiple of eight.  For F32X4, F64X2, S32X4, S64X2, U32X4, and U64X2, the
+    offset must be a multiple of sixteen.  For F64X4, S64X4, and U64X4, the
+    offset must be a multiple of thirty-two.  If an offset is not correctly
+    aligned, the values returned by a buffer memory load will be undefined,
+    and the effects of a buffer memory store will also be undefined.
+
+    Global and image memory accesses in assembly programs are weakly ordered
+    and may require synchronization relative to other operations in the OpenGL
+    pipeline.  The ordering and synchronization mehcanisms described in
+    Section 2.14.X (of the EXT_shader_image_load_store extension
+    specification) for shaders using the OpenGL Shading Language apply equally
+    to loads, stores, and atomics performed in assembly programs.
+
+
+    Modify Section 2.X.6.Y of the NV_fragment_program4 specification
+
+    (add new option section)
+
+    + Early Per-Fragment Tests (NV_early_fragment_tests)
+
+    If a fragment program specifies the "NV_early_fragment_tests" option, the
+    depth and stencil tests will be performed prior to fragment program
+    invocation, as described in Section 3.X.
+    
+
+    Modify Section 2.X.7.Y of the NV_geometry_program4 specification
+
+    (Simply add the new input primitive type "PATCHES" to the list of tokens
+     allowed by the "PRIMITIVE_IN" declaration.)
+
+    - Input Primitive Type (PRIMITIVE_IN)
+
+    The PRIMITIVE_IN statement declares the type of primitives seen by a
+    geometry program.  The single argument must be one of "POINTS", "LINES",
+    "LINES_ADJACENCY", "TRIANGLES", "TRIANGLES_ADJACENCY", or "PATCHES".
+    
+
+    (Add a new optional program declaration to declare a geometry shader that
+     is run <N> times per primitive.)
+
+    Geometry programs support three types of mandatory declaration statements,
+    as described below.  Each of the three must be included exactly once in
+    the geometry program.
+    
+    ...
+
+    Geometry programs also support one optional declaration statement.
+
+    - Program Invocation Count (INVOCATIONS)
+
+    The INVOCATIONS statement declares the number of times the geometry
+    program is run on each primitive processed.  The single argument must be a
+    positive integer less than or equal to the value of the
+    implementation-dependent limit MAX_GEOMETRY_PROGRAM_INVOCATIONS_NV.  Each
+    invocation of the geometry program will have the same inputs and outputs
+    except for the built-in input variable "primitive.invocation".  This
+    variable will be an integer between 0 and <n>-1, where <n> is the declared
+    number of invocations.  If omitted, the program invocation count is one.
+
+
+    Section 2.X.8.Z, ATOM:  Atomic Global Memory Operation
+
+    The ATOM instruction performs an atomic global memory operation by reading
+    from memory at the address specified by the second unsigned integer scalar
+    operand, computing a new value based on the value read from memory and the
+    first (vector) operand, and then writing the result back to the same
+    memory address.  The memory transaction is atomic, guaranteeing that no
+    other write to the memory accessed will occur between the time it is read
+    and written by the ATOM instruction.  The result of the ATOM instruction
+    is the scalar value read from memory.
+
+    The ATOM instruction has two required instruction modifiers.  The atomic
+    modifier specifies the type of operation to be performed.  The storage
+    modifier specifies the size and data type of the operand read from memory
+    and the base data type of the operation used to compute the value to be
+    written to memory.
+
+      atomic     storage
+      modifier   modifiers            operation
+      --------   ------------------   --------------------------------------
+       ADD       U32, S32, U64        compute a sum
+       MIN       U32, S32             compute minimum
+       MAX       U32, S32             compute maximum
+       IWRAP     U32                  increment memory, wrapping at operand
+       DWRAP     U32                  decrement memory, wrapping at operand
+       AND       U32, S32             compute bit-wise AND
+       OR        U32, S32             compute bit-wise OR
+       XOR       U32, S32             compute bit-wise XOR
+       EXCH      U32, S32, U64        exchange memory with operand
+       CSWAP     U32, S32, U64        compare-and-swap
+
+     Table X.Y, Supported atomic and storage modifiers for the ATOM
+     instruction.
+
+    Not all storage modifiers are supported by ATOM, and the set of modifiers
+    allowed for any given instruction depends on the atomic modifier
+    specified.  Table X.Y enumerates the set of atomic modifiers supported by
+    the ATOM instruction, and the storage modifiers allowed for each.
+
+      tmp0 = VectorLoad(op0);
+      address = ScalarLoad(op1);
+      result = BufferMemoryLoad(address, storageModifier);
+      switch (atomicModifier) {
+      case ADD:
+        writeval = tmp0.x + result;
+        break;
+      case MIN:
+        writeval = min(tmp0.x, result);
+        break;
+      case MAX:
+        writeval = max(tmp0.x, result);
+        break;
+      case IWRAP:
+        writeval = (result >= tmp0.x) ? 0 : result+1; 
+        break;
+      case DWRAP:
+        writeval = (result == 0 || result > tmp0.x) ? tmp0.x : result-1;
+        break;
+      case AND:
+        writeval = tmp0.x & result;
+        break;
+      case OR:
+        writeval = tmp0.x | result;
+        break;
+      case XOR:
+        writeval = tmp0.x ^ result;
+        break;
+      case EXCH:
+        break;
+      case CSWAP:
+        if (result == tmp0.x) {
+          writeval = tmp0.y;
+        } else {
+          return result;  // no memory store
+        }
+        break;
+      }
+      BufferMemoryStore(address, writeval, storageModifier);
+
+    ATOM performs a scalar atomic operation.  The <y>, <z>, and <w> components
+    of the result vector are undefined.
+      
+    ATOM supports no base data type modifiers, but requires exactly one
+    storage modifier.  The base data types of the result vector, and the first
+    (vector) operand are derived from the storage modifier.  The second
+    operand is always interpreted as a scalar unsigned integer.
+
+
+    Section 2.X.8.Z, BFE:  Bitfield Extract
+
+    The BFE instruction extracts a selected set of performs a component-wise
+    bit extraction of the second vector operand to yield a result vector.  For
+    each component, the number of bits extracted is given by the x component
+    of the first vector operand, and the bit number of the least significant
+    bit extracted is given by the y component of the first vector operand.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = BitfieldExtract(tmp0.x, tmp0.y, tmp1.x);
+      result.y = BitfieldExtract(tmp0.x, tmp0.y, tmp1.y);
+      result.z = BitfieldExtract(tmp0.x, tmp0.y, tmp1.z);
+      result.w = BitfieldExtract(tmp0.x, tmp0.y, tmp1.w);
+
+    If the number of bits to extract is zero, zero is returned.  The results
+    of bitfield extraction are undefined
+
+      * if the number of bits to extract or the starting offset is negative,
+      * if the sum of the number of bits to extract and the starting offset
+        is greater than the total number of bits in the operand/result, or
+      * if the starting offset is greater than or equal to the total number of
+        bits in the operand/result.
+
+      Type BitfieldExtract(Type bits, Type offset, Type value)
+      {
+        if (bits < 0 || offset < 0 || offset >= TotalBits(Type) ||
+            bits + offset > TotalBits(Type)) {
+          /* result undefined */
+        } else if (bits == 0) {
+          return 0;
+        } else {
+          return (value << (TotalBits(Type) - (bits+offset))) >>
+                   (TotalBits(type) - bits);
+        }
+      }
+
+    BFE supports only signed and unsigned integer data type modifiers.  For
+    signed integer data types, the extracted value is sign-extended (i.e.,
+    filled with ones if the most significant bit extracted is one and filled
+    with zeroes otherwise).  For unsigned integer data types, the extracted
+    value is zero-extended.
+
+
+    Section 2.X.8.Z, BFI:  Bitfield Insert
+
+    The BFI instruction performs a component-wise bitfield insertion of the
+    second vector operand into the third vector operand to yield a result
+    vector.  For each component, the <n> least significant bits are extracted
+    from the corresponding component of the second vector operand, where <n>
+    is given by the x component of the first vector operand.  Those bits are
+    merged into the corresponding component of the third vector operand,
+    replacing bits <b> through <b>+<n>-1, to produce the result.  The bit
+    offset <b> is specified by the y component of the first operand.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      tmp2 = VectorLoad(op2);
+      result.x = BitfieldInsert(op0.x, op0.y, tmp1.x, tmp2.x);
+      result.y = BitfieldInsert(op0.x, op0.y, tmp1.y, tmp2.y);
+      result.z = BitfieldInsert(op0.x, op0.y, tmp1.z, tmp2.z);
+      result.w = BitfieldInsert(op0.x, op0.y, tmp1.w, tmp2.w);
+
+    The results of bitfield insertion are undefined
+
+      * if the number of bits to insert or the starting offset is negative,
+      * if the sum of the number of bits to insert and the starting offset
+        is greater than the total number of bits in the operand/result, or
+      * if the starting offset is greater than or equal to the total number of
+        bits in the operand/result.
+
+      Type BitfieldInsert(Type bits, Type offset, Type src, Type dst)
+      {
+        if (bits < 0 || offset < 0 || offset >= TotalBits(type) ||
+            bits + offset > TotalBits(Type)) {
+          /* result undefined */
+        } else if (bits == TotalBits(Type)) {
+          return src;
+        } else {
+          Type mask = ((1 << bits) - 1) << offset;
+          return ((src << offset) & mask) | (dst & (~mask));
+        }
+      }    
+
+    BFI supports only signed and unsigned integer data type modifiers.  If no
+    type modifier is specified, the operand and result vectors are treated as
+    signed integers.
+
+
+    Section 2.X.8.Z, BFR:  Bitfield Reverse
+
+    The BFR instruction performs a component-wise bit reversal of the single
+    vector operand to produce a result vector.  Bit reversal is performed by
+    exchanging the most and least significant bits, the second-most and
+    second-least significant bits, and so on. 
+
+      tmp0 = VectorLoad(op0);
+      result.x = BitReverse(tmp0.x);
+      result.y = BitReverse(tmp0.y);
+      result.z = BitReverse(tmp0.z);
+      result.w = BitReverse(tmp0.w);
+
+    BFR supports only signed and unsigned integer data type modifiers.  If no
+    type modifier is specified, the operand and result vectors are treated as
+    signed integers.
+
+
+    Section 2.X.8.Z, BTC:  Bit Count
+
+    The BTC instruction performs a component-wise bit count of the single
+    source vector to yield a result vector.  Each component of the result
+    vector contains the number of one bits in the corresponding component of
+    the source vector.
+
+      tmp0 = VectorLoad(op0);
+      result.x = BitCount(tmp0.x);
+      result.y = BitCount(tmp0.y);
+      result.z = BitCount(tmp0.z);
+      result.w = BitCount(tmp0.w);
+
+    BTC supports only signed and unsigned integer data type modifiers.  If no
+    type modifier is specified, both operands and the result are treated as
+    signed integers.
+
+
+    Section 2.X.8.Z, BTFL:  Find Least Significant Bit
+
+    The BTFL instruction searches for the least significant bit of each
+    component of the single source vector, yielding a result vector comprising
+    the bit number of the located bit for each component.
+
+      tmp0 = VectorLoad(op0);
+      result.x = FindLSB(tmp0.x);
+      result.y = FindLSB(tmp0.y);
+      result.z = FindLSB(tmp0.z);
+      result.w = FindLSB(tmp0.w);
+
+    BTFL supports only signed and unsigned integer data type modifiers.  For
+    unsigned integer data types, the search will yield the bit number of the
+    least significant one bit in each component, or the maximum integer (all
+    bits are ones) if the source vector component is zero.  For signed data
+    types, the search will yield the bit number of the least significant one
+    bit in each component, or -1 if the source vector component is zero.  If
+    no type modifier is specified, both operands and the result are treated as
+    signed integers.
+
+
+    Section 2.X.8.Z, BTFM:  Find Most Significant Bit
+
+    The BTFM instruction searches for the most significant bit of each
+    component of the single source vector, yielding a result vector comprising
+    the bit number of the located bit for each component.  
+
+      tmp0 = VectorLoad(op0);
+      result.x = FindMSB(tmp0.x);
+      result.y = FindMSB(tmp0.y);
+      result.z = FindMSB(tmp0.z);
+      result.w = FindMSB(tmp0.w);
+
+    BTFM supports only signed and unsigned integer data type modifiers.  For
+    unsigned integer data types, the search will yield the bit number of the
+    most significant one bit in each component , or the maximum integer (all
+    bits are ones) if the source vector component is zero.  For signed data
+    types, the search will yield the bit number of the most significant one
+    bit if the source value is positive, the bit number of the most
+    significant zero bit if the source value is negative, or -1 if the source
+    value is zero.  If no type modifier is specified, both operands and the
+    result are treated as signed integers.
+
+
+    Section 2.X.8.Z, CVT:  Data Type Conversion
+
+    The CVT instruction converts each component of the single source vector
+    from one specified data type to another to yield a result vector.
+
+      tmp0 = VectorLoad(op0);
+      result = DataTypeConvert(tmp0);
+
+    The CVT instruction requires two storage modifiers.  The first specifies
+    the data type of the result components; the second specifies the data type
+    of the operand components.  The supported storage modifiers are F16, F32,
+    F64, S8, S16, S32, S64, U8, U16, U32, and U64.  A storage modifier of
+    "F16" indicates a source or destination that is treated as having a
+    floating-point type, but whose sixteen least significant bits describe a
+    16-bit floating-point value using the encoding provided in Section 2.1.2.
+
+    If the component size of the source register doesn't match the size of the
+    specified operand data type, the source register components are first
+    interpreted as a value with the same base data type as the operand and
+    converted to the operand data type.  The operand components are then
+    converted to the result data type.  Finally, if the component size of the
+    destination register doesn't match the specified result data type, the
+    result components are converted to values of the same base data type with
+    a size matching the result register's component size.
+
+    Data type conversion is performed by first converting the source
+    components to an infinite-precision value of the destination data type,
+    and then converting to the result data type.  When converting between
+    floating-point and integer values, integer values are never interpreted as
+    being normalized to [0,1] or [-1,+1].  Converting the floating-point
+    special values -INF, +INF, and NaN to integers will yield undefined
+    results.
+
+    When converting from a non-integral floating-point value to an integer,
+    one of the two integers closest in value to the floating-point value are
+    chosen according to the rounding instruction modifier.  If "CEIL" or "FLR"
+    is specified, the larger or smaller value, respectively is chosen.  If
+    "TRUNC" is specified, the value nearest to zero is chosen.  If "ROUND" is
+    specified, if one integer is nearer in value to the original
+    floating-point value, it is chosen; otherwise, the even integer is chosen.
+    "ROUND" is used if no rounding modifier is specified.
+
+    When converting from the infinite-precision intermediate value to the
+    destination data type:
+
+      * Floating-point values not exactly representable in the destination
+        data are rounded to one of the two nearest values in the destination
+        type according to the rounding modifier.  Note that the results of
+        float-to-float conversion are not automatically rounded to integer
+        values, even if a rounding modifier such as CEIL or FLR is specified.
+
+      * Integer values are clamped to the closest value representable in the
+        result data type if the "SAT" (saturation) modifier is specified.
+
+      * Integer values drop the most significant bits if the "SAT" modifier is
+        not specified.
+
+    Negation and absolute value operators are not supported on the source
+    operand; a program using such operators will fail to compile.
+
+    CVT supports no data type modifiers; the type of the operand and result
+    vectors is fully specified by the required storage modifiers.
+
+
+    Section 2.X.8.Z, EMIT:  Emit Vertex
+
+    (Modify the description of the EMIT opcode to deal with the interaction
+     with multiple vertex streams added by ARB_transform_feedback3.  For more
+     information on vertex streams, see ARB_transform_feedback3.)
+
+    The EMIT instruction emits a new vertex to be added to the current output
+    primitive for vertex stream zero.  The attributes of the emitted vertex
+    are given by the current values of the vertex result variables.  After the
+    EMIT instruction completes, a new vertex is started and all result
+    variables become undefined.
+
+
+    Section 2.X.8.Z, EMITS:  Emit Vertex to Stream
+
+    (Add new geometry program opcode; the EMITS instruction is not supported
+     for any other program types.  For more information on vertex streams, see
+     ARB_transform_feedback3.)
+
+    The EMITS instruction emits a new vertex to be added to the current output
+    primitive for the vertex stream specified by the single signed integer
+    scalar operand.  The attributes of the emitted vertex are given by the
+    current values of the vertex result variables.  After the EMITS
+    instruction completes, a new vertex is started and all result variables
+    become undefined.
+
+    If the specified stream is negative or greater than or equal to the
+    implementation-dependent number of vertex streams
+    (MAX_VERTEX_STREAMS_NV), the results of the instruction are undefined.
+
+
+    Section 2.X.8.Z, IPAC:  Interpolate at Centroid
+
+    The IPAC instruction generates a result vector by evaluating the fragment
+    attribute named by the single vector operand at the centroid location.
+    The result vector would be identical to the value obtained by a MOV
+    instruction if the attribute variable were declared using the CENTROID
+    modifier.  
+
+    When interpolating an attribute variable with this instruction, the
+    CENTROID and SAMPLE attribute variable modifiers are ignored.  The FLAT
+    and NOPERSPECTIVE variable modifiers operate normally.
+
+     tmp0 = Interpolate(op0, x_pixel + x_centroid, y_pixel + x_centroid);
+     result = tmp0;
+
+    IPAC supports only floating-point data type modifiers.  A program will
+    fail to load if it contains an IPAC instruction whose single operand is
+    not a fragment program attribute variable or matches the "fragment.facing"
+    or "primitive.id" binding.
+
+
+    Section 2.X.8.Z, IPAO:  Interpolate with Offset
+
+    The IPAO instruction generates a result vector by evaluating the fragment
+    attribute named by the single vector operand at an offset from the pixel
+    center given by the x and y components of the second vector operand.  The
+    z and w components of the second vector operand are ignored.  The (x,y)
+    position used for interpolating the attribute variable is obtained by
+    adding the (x,y) offsets in the second vector operand to the (x,y)
+    position of the pixel center.  
+
+    The range of offsets supported by the IPAO instruction is
+    implementation-dependent.  The position used to interpolate the attribute
+    variable is undefined if the x or y component of the second operand is
+    less than MIN_FRAGMENT_INTERPOLATION_OFFSET_NV or greater than
+    MAX_FRAGMENT_INTERPOLATION_OFFSET_NV.  Additionally, the granularity of
+    offsets may be limited.  The (x,y) value may be snapped to a fixed
+    sub-pixel grid with the number of subpixel bits given by
+    FRAGMENT_PROGRAM_INTERPOLATION_OFFSET_BITS_NV.
+
+    When interpolating an attribute variable with this instruction, the
+    CENTROID and SAMPLE attribute variable modifiers are ignored.  The FLAT
+    and NOPERSPECTIVE variable modifiers operate normally.
+
+     tmp1 = VectorLoad(op1);
+     tmp0 = Interpolate(op0, x_pixel + tmp1.x, y_pixel + tmp2.x);
+     result = tmp0;
+
+    IPAO supports only floating-point data type modifiers.  A program will
+    fail to load if it contains an IPAO instruction whose first operand is not
+    a fragment program attribute variable or matches the "fragment.facing" or
+    "primitive.id" binding.
+
+
+    Section 2.X.8.Z, IPAS:  Interpolate at Sample Location
+
+    The IPAS instruction generates a result vector by evaluating the fragment
+    attribute named by the single vector operand at the location of the
+    pixel's sample whose sample number is given by the second integer scalar
+    operand.  If multisample buffers are not available (SAMPLE_BUFFERS is
+    zero), the attribute will be evaluated at the pixel center.  If the sample
+    number given by the second operand does not exist, the position used to
+    interpolate the attribute is undefined.
+
+    When interpolating an attribute variable with this instruction, the
+    CENTROID and SAMPLE attribute variable modifiers are ignored.  The FLAT
+    and NOPERSPECTIVE variable modifiers operate normally.
+
+     sample = ScalarLoad(op1);
+     tmp1 = SampleOffset(sample);
+     tmp0 = Interpolate(op0, x_pixel + tmp1.x, y_pixel + tmp2.x);
+     result = tmp0;
+
+    IPAS supports only floating-point data type modifiers.  A program will
+    fail to load if it contains an IPAO instruction whose first operand is not
+    a fragment program attribute variable or matches the "fragment.facing" or
+    "primitive.id" binding.
+
+
+    Section 2.X.8.Z, LDC:  Load from Constant Buffer
+
+    The LDC instruction loads a vector operand from a buffer object to yield a
+    result vector.  The operand used for the LDC instruction must correspond
+    to a parameter buffer variable declared using the "CBUFFER" statement; a
+    program will fail to load if any other type of operand is used in an LDC
+    instruction.
+
+      result = BufferMemoryLoad(&op0, storageModifier);
+
+    A base operand vector is fetched from memory as described in Section
+    2.X.4.5, with the GPU address derived from the binding corresponding to
+    the operand.  A final operand vector is derived from the base operand
+    vector by applying swizzle, negation, and absolute value operand modifiers
+    as described in Section 2.X.4.2.
+
+    The amount of memory in any given buffer object binding accessible by the
+    LDC instruction may be limited.  If any component fetched by the LDC
+    instruction extends 4*<n> or more basic machine units from the beginning
+    of the buffer object binding, where <n> is the implementation-dependent
+    constant MAX_PROGRAM_PARAMETER_BUFFER_SIZE_NV, the value fetched for that
+    component will be undefined.
+
+    LDC supports no base data type modifiers, but requires exactly one storage
+    modifier.  The base data types of the operand and result vectors are
+    derived from the storage modifier.
+
+
+    Section 2.X.8.Z, LOAD:  Global Load
+
+    The LOAD instruction generates a result vector by reading an address from
+    the single unsigned integer scalar operand and fetching data from buffer
+    object memory, as described in Section 2.X.4.5.
+
+      address = ScalarLoad(op0);
+      result = BufferMemoryLoad(address, storageModifier);
+
+    LOAD supports no base data type modifiers, but requires exactly one
+    storage modifier.  The base data type of the result vector is derived from
+    the storage modifier.  The single scalar operand is always interpreted as
+    an unsigned integer.
+
+
+    Section 2.X.8.Z, MEMBAR:  Memory Barrier
+
+    The MEMBAR instruction synchronizes memory transactions to ensure that
+    memory transactions resulting from any instruction executed by the thread
+    prior to the MEMBAR instruction complete prior to any memory transactions
+    issued after the instruction.
+
+    MEMBAR has no operands and generates no result.
+
+
+    Section 2.X.8.Z, PK64:  Pack 64-Bit Component
+
+    The PK64 instruction reads the four components of the single vector
+    operand as 32-bit values, packs the bit representations of these into a
+    pair of 64-bit values, and replicates those to produce a four-component
+    result vector.  The "x" and "y" components of the operand are packed to
+    produce the "x" and "z" components of the result vector; the "z" and "w"
+    components of the operand are packed to produce the "y" and "w" components
+    of the result vector.  The PK64 instruction can be reversed by the UP64
+    instruction below.
+
+    This instruction is intended to allow a program to reconstruct 64-bit
+    integer or floating-point values generated by the application but passed
+    to the GL as two 32-bit values taken from adjacent words in memory.  The
+    ability to use this technique depends on how the 64-bit value is stored in
+    memory.  For "little-endian" processors, first 32-bit value would hold the
+    with the least significant 32 bits of the 64-bit value.  For "big-endian"
+    processors, the first 32-bit value holds the most significant 32 bits of
+    the 64-bit value.  This reconstruction assumes that the first 32-bit word
+    comes from the x component of the operand and the second 32-bit word comes
+    from the y component.  The method used to construct a 64-bit value from a
+    pair of 32-bit values depends on the processor type.
+
+      tmp = VectorLoad(op0);
+
+      if (underlying system is little-endian) {
+        result.x = RawBits(tmp.x) | (RawBits(tmp.y) << 32);
+        result.y = RawBits(tmp.z) | (RawBits(tmp.w) << 32);
+        result.z = RawBits(tmp.x) | (RawBits(tmp.y) << 32);
+        result.w = RawBits(tmp.z) | (RawBits(tmp.w) << 32);
+      } else {
+        result.x = RawBits(tmp.y) | (RawBits(tmp.x) << 32);
+        result.y = RawBits(tmp.w) | (RawBits(tmp.z) << 32);
+        result.z = RawBits(tmp.y) | (RawBits(tmp.x) << 32);
+        result.w = RawBits(tmp.w) | (RawBits(tmp.z) << 32);
+      }
+
+    PK64 supports integer and floating-point data type modifiers, which
+    specify the base data type of the operand and result.  The single vector
+    operand is always treated as having 32-bit components, and the result is
+    treated as a vector with 64-bit components.  The encoding performed by
+    PK64 can be reversed using the UP64 instruction.
+
+    A program will fail to load if it contains a PK64 instruction that writes
+    its results to a variable not declared as "LONG".
+
+
+    Section 2.X.8.Z, STORE:  Global Store
+
+    The STORE instruction reads an address from the second unsigned integer
+    scalar operand and writes the contents of the first vector operand to
+    buffer object memory at that address, as described in Section 2.X.4.5.
+    This instruction generates no result.
+
+      tmp0 = VectorLoad(op0);
+      address = ScalarLoad(op1);
+      BufferMemoryStore(address, tmp0, storageModifier);
+
+    STORE supports no base data type modifiers, but requires exactly one
+    storage modifier.  The base data type of the vector components of the
+    first operand is derived from the storage modifier.  The second operand is
+    always interpreted as an unsigned integer scalar.
+
+
+    Section 2.X.8.Z, TEX:  Texture Sample
+
+    (Modify the instruction pseudo-code to account for texel offsets no
+     longer need to be immediate arguments.)
+
+      tmp = VectorLoad(op0);
+      if (instruction has variable texel offset) {
+        itmp = VectorLoad(op1);
+      } else {
+        itmp = instruction.texelOffset;
+      }
+      ddx = ComputePartialsX(tmp);
+      ddy = ComputePartialsY(tmp);
+      lambda = ComputeLOD(ddx, ddy);
+      result = TextureSample(tmp, lambda, ddx, ddy, itmp);
+
+
+    Section 2.X.8.Z, TGALL:  Test for All Non-Zero in a Thread Group
+
+    The TGALL instruction produces a result vector by reading a vector operand
+    for each active thread in the current thread group and comparing each
+    component to zero.  A result vector component contains a TRUE value
+    (described below) if the value of the corresponding component in the
+    operand vector is non-zero for all active threads, and a FALSE value
+    otherwise.
+
+    An implementation may choose to arrange programs threads into thread
+    groups, and execute an instruction simultaneously for each thread in the
+    group.  If the TGALL instruction is contained inside conditional flow
+    control blocks and not all threads in the group execute the instruction,
+    the operand values for threads not executing the instruction have no
+    bearing on the value returned.  The method used to arrange threads into
+    groups is undefined.
+
+      tmp = VectorLoad(op0);
+      result = { TRUE, TRUE, TRUE, TRUE };
+      for (all active threads) {
+        if ([thread]tmp.x == 0) result.x = FALSE;
+        if ([thread]tmp.y == 0) result.y = FALSE;
+        if ([thread]tmp.z == 0) result.z = FALSE;
+        if ([thread]tmp.w == 0) result.w = FALSE;
+      }
+
+    TGALL supports all data type modifiers.  For floating-point data types,
+    the TRUE value is 1.0 and the FALSE value is 0.0.  For signed integer data
+    types, the TRUE value is -1 and the FALSE value is 0.  For unsigned
+    integer data types, the TRUE value is the maximum integer value (all bits
+    are ones) and the FALSE value is zero.
+     
+
+    Section 2.X.8.Z, TGANY:  Test for Any Non-Zero in a Thread Group
+
+    The TGANY instruction produces a result vector by reading a vector operand
+    for each active thread in the current thread group and comparing each
+    component to zero.  A result vector component contains a TRUE value
+    (described below) if the value of the corresponding component in the
+    operand vector is non-zero for any active thread, and a FALSE value
+    otherwise.
+
+    An implementation may choose to arrange programs threads into thread
+    groups, and execute an instruction simultaneously for each thread in the
+    group.  If the TGANY instruction is contained inside conditional flow
+    control blocks and not all threads in the group execute the instruction,
+    the operand values for threads not executing the instruction have no
+    bearing on the value returned.  The method used to arrange threads into
+    groups is undefined.
+
+      tmp = VectorLoad(op0);
+      result = { FALSE, FALSE, FALSE, FALSE };
+      for (all active threads) {
+        if ([thread]tmp.x != 0) result.x = TRUE;
+        if ([thread]tmp.y != 0) result.y = TRUE;
+        if ([thread]tmp.z != 0) result.z = TRUE;
+        if ([thread]tmp.w != 0) result.w = TRUE;
+      }
+
+    TGANY supports all data type modifiers.  For floating-point data types,
+    the TRUE value is 1.0 and the FALSE value is 0.0.  For signed integer data
+    types, the TRUE value is -1 and the FALSE value is 0.  For unsigned
+    integer data types, the TRUE value is the maximum integer value (all bits
+    are ones) and the FALSE value is zero.
+
+
+    Section 2.X.8.Z, TGEQ:  Test for All Equal Values in a Thread Group
+
+    The TGEQ instruction produces a result vector by reading a vector operand
+    for each active thread in the current thread group and comparing each
+    component to zero.  A result vector component contains a TRUE value
+    (described below) if the value of the corresponding component in the
+    operand vector is the same for all active threads, and a FALSE value
+    otherwise.
+
+    An implementation may choose to arrange programs threads into thread
+    groups, and execute an instruction simultaneously for each thread in the
+    group.  If the TGEQ instruction is contained inside conditional flow
+    control blocks and not all threads in the group execute the instruction,
+    the operand values for threads not executing the instruction have no
+    bearing on the value returned.  The method used to arrange threads into
+    groups is undefined.
+
+      tmp = VectorLoad(op0);
+      tgall = { TRUE, TRUE, TRUE, TRUE };
+      tgany = { FALSE, FALSE, FALSE, FALSE };
+      for (all active threads) {
+        if ([thread]tmp.x == 0) tgall.x = FALSE; else tgany.x = TRUE;
+        if ([thread]tmp.y == 0) tgall.y = FALSE; else tgany.y = TRUE;
+        if ([thread]tmp.z == 0) tgall.z = FALSE; else tgany.z = TRUE;
+        if ([thread]tmp.w == 0) tgall.w = FALSE; else tgany.w = TRUE;
+      }
+      result.x = (tgall.x == tgany.x) ? TRUE : FALSE;
+      result.y = (tgall.y == tgany.y) ? TRUE : FALSE;
+      result.z = (tgall.z == tgany.z) ? TRUE : FALSE;
+      result.w = (tgall.w == tgany.w) ? TRUE : FALSE;
+
+    TGEQ supports all data type modifiers.  For floating-point data types, the
+    TRUE value is 1.0 and the FALSE value is 0.0.  For signed integer data
+    types, the TRUE value is -1 and the FALSE value is 0.  For unsigned
+    integer data types, the TRUE value is the maximum integer value (all bits
+    are ones) and the FALSE value is zero.
+
+
+    Section 2.X.8.Z, TXB:  Texture Sample with Bias
+
+    (Modify the instruction pseudo-code to account for texel offsets no
+     longer need to be immediate arguments.)
+
+      tmp = VectorLoad(op0);
+      if (instruction has variable texel offset) {
+        itmp = VectorLoad(op1);
+      } else {
+        itmp = instruction.texelOffset;
+      }
+      ddx = ComputePartialsX(tmp);
+      ddy = ComputePartialsY(tmp);
+      lambda = ComputeLOD(ddx, ddy);
+      result = TextureSample(tmp, lambda + tmp.w, ddx, ddy, itmp);
+
+    Section 2.X.8.Z, TXG:  Texture Gather
+
+    (Update the TXG opcode description from NV_gpu_program4_1 specification.
+     This version adds two capabilities:  any component of a multi-component
+     texture can be selected by tacking on a component name to the texture
+     variable passed to identify the texture unit, and depth compares are
+     supported if a SHADOW target is specified.)
+
+    The TXG instruction takes the four components of a single floating-point
+    vector operand as a texture coordinate, determines a set of four texels to
+    sample from the base level of detail of the specified texture image, and
+    returns one component from each texel in a four-component result vector.
+    To determine the four texels to sample, the minification and magnification
+    filters are ignored and the rules for LINEAR filter are applied to the
+    base level of the texture image to determine the texels T_i0_j1, T_i1_j1,
+    T_i1_j0, and T_i0_j0, as defined in equations 3.23 through 3.25. The 
+    texels are then converted to texture source colors (Rs,Gs,Bs,As) according 
+    to table 3.21, followed by application of the texture swizzle as described 
+    in section 3.8.13.  A four-component vector is returned by taking one of 
+    the four components of the swizzled texture source colors from each of the 
+    four selected texels.  The component is selected using the 
+    <texImageUnitComp> grammar rule, by adding a scalar suffix 
+    (".x", ".y", ".z", ".w") to the identified texture; if no scalar suffix 
+    is provided, the first component is selected.
+
+    TXG only operates on 2D, SHADOW2D, CUBE, SHADOWCUBE, ARRAY2D,
+    SHADOWARRAY2D, ARRAYCUBE, SHADOWARRAYCUBE, RECT, and SHADOWRECT texture
+    targets; a program will fail to compile if any other texture target is
+    used.
+
+    When using a "SHADOW" texture target, component selection is ignored.
+    Instead, depth comparisons are performed on the depth values for each of
+    the four selected texels, and 0/1 values are returned based on the results
+    of the comparison.  
+
+    As with other texture accesses, the results of a texture gather operation
+    are undefined if the texture target in the instruction is incompatible
+    with the selected texture's base internal format and depth compare mode.
+
+      tmp = VectorLoad(op0);
+      ddx = (0,0,0);
+      ddy = (0,0,0);
+      lambda = 0;
+      if (instruction has variable texel offset) {
+        itmp = VectorLoad(op1);
+      } else {
+        itmp = instruction.texelOffset;
+      }
+      result.x = TextureSample_i0j1(tmp, lambda, ddx, ddy, itmp).<comp>;
+      result.y = TextureSample_i1j1(tmp, lambda, ddx, ddy, itmp).<comp>;
+      result.z = TextureSample_i1j0(tmp, lambda, ddx, ddy, itmp).<comp>;
+      result.w = TextureSample_i0j0(tmp, lambda, ddx, ddy, itmp).<comp>;
+
+    In this pseudocode, "<comp>" refers to the texel component selected by the
+    <texImageUnitComp> grammar rule, as described above.
+
+    TXG supports all three data type modifiers.  The single operand is always
+    treated as a floating-point vector; the results are interpreted according
+    to the data type modifier.
+
+
+    Section 2.X.8.Z, TXGO:  Texture Gather with Per-Texel Offsets
+
+    Like the TXG instruction, the TXGO instruction takes the four components
+    of its first floating-point vector operand as a texture coordinate,
+    determines a set of four texels to sample from the base level of detail of
+    the specified texture image, and returns one component from each texel in
+    a four-component result vector.  The second and third vector operands are
+    taken as signed four-component integer vectors providing the x and y
+    components of the offsets, respectively, used to determine the location of
+    each of the four texels.  To determine the four texels to sample, each of
+    the four independent offsets is used in conjunction with the specified
+    texture coordinate to select a texel.  The minification and magnification
+    filters are ignored and the rules for LINEAR filtering are used to select
+    the texel T_i0_j0, as defined in equations 3.23 through 3.25, from the
+    base level of the texture image.  The texels are then converted to texture 
+    source colors (Rs,Gs,Bs,As) according to table 3.21, followed by 
+    application of the texture swizzle as described in section 3.8.13.  A 
+    four-component vector is returned by taking one of the four components 
+    of the swizzled texture source colors from each of the four selected 
+    texels.  The component is selected using the <texImageUnitComp> grammar 
+    rule, by adding a scalar suffix (".x", ".y", ".z", ".w") to the identified 
+    texture; if no scalar suffix is provided, the first component is selected.
+
+    TXGO only operates on 2D, SHADOW2D, ARRAY2D, SHADOWARRAY2D, RECT, and
+    SHADOWRECT texture targets; a program will fail to compile if any other
+    texture target is used.  
+
+    When using a "SHADOW" texture target, component selection is ignored.
+    Instead, depth comparisons are performed on the depth values for each of
+    the four selected texels, and 0/1 values are returned based on the results
+    of the comparison.  
+
+    As with other texture accesses, the results of a texture gather operation
+    are undefined if the texture target in the instruction is incompatible
+    with the selected texture's base internal format and depth compare mode.
+
+      tmp = VectorLoad(op0);
+      itmp1 = VectorLoad(op1);
+      itmp2 = VectorLoad(op2);
+      ddx = (0,0,0);
+      ddy = (0,0,0);
+      lambda = 0;
+      itmp = (op1.x, op2.x);
+      result.x = TextureSample_i0j0(tmp, lambda, ddx, ddy, itmp).<comp>;
+      itmp = (op1.y, op2.y);
+      result.y = TextureSample_i0j0(tmp, lambda, ddx, ddy, itmp).<comp>;
+      itmp = (op1.z, op2.z);
+      result.z = TextureSample_i0j0(tmp, lambda, ddx, ddy, itmp).<comp>;
+      itmp = (op1.w, op2.w);
+      result.w = TextureSample_i0j0(tmp, lambda, ddx, ddy, itmp).<comp>;
+
+    In this pseudocode, "<comp>" refers to the texel component selected by the
+    <texImageUnitComp> grammar rule, as described above.
+
+    If TEXTURE_WRAP_S or TEXTURE_WRAP_T are either CLAMP or MIRROR_CLAMP_EXT,
+    the results of the TXGO instruction are undefined.
+
+    Note:  The TXG instruction is equivalent to the TXGO instruction with X
+    and Y offset vectors of (0,1,1,0) and (0,0,-1,-1), respectively.
+
+    TXGO supports all three data type modifiers.  The first operand is always
+    treated as a floating-point vector and the second and third operands are
+    always treated as a signed integer vector; the results are interpreted
+    according to the data type modifier.
+
+
+    Section 2.X.8.Z, TXL:  Texture Sample with LOD
+
+    (Modify the instruction pseudo-code to account for texel offsets no
+     longer need to be immediate arguments.)
+
+      tmp = VectorLoad(op0);
+      if (instruction has variable texel offset) {
+        itmp = VectorLoad(op1);
+      } else {
+        itmp = instruction.texelOffset;
+      }
+      ddx = (0,0,0);
+      ddy = (0,0,0);
+      result = TextureSample(tmp, tmp.w, ddx, ddy, itmp);
+
+
+    Section 2.X.8.Z, TXP:  Texture Sample with Projection
+
+    (Modify the instruction pseudo-code to account for texel offsets no
+     longer need to be immediate arguments.)
+
+      tmp0 = VectorLoad(op0);
+      tmp0.x = tmp0.x / tmp0.w;
+      tmp0.y = tmp0.y / tmp0.w;
+      tmp0.z = tmp0.z / tmp0.w;
+      if (instruction has variable texel offset) {
+        itmp = VectorLoad(op1);
+      } else {
+        itmp = instruction.texelOffset;
+      }
+      ddx = ComputePartialsX(tmp);
+      ddy = ComputePartialsY(tmp);
+      lambda = ComputeLOD(ddx, ddy);
+      result = TextureSample(tmp, lambda, ddx, ddy, itmp);
+
+        
+    Section 2.X.8.Z, UP64:  Unpack 64-bit Component
+
+    The UP64 instruction produces a vector result with 32-bit components by
+    unpacking the bits of the "x" and "y" components of a 64-bit vector
+    operand.  The "x" component of the operand is unpacked to produce the "x"
+    and "y" components of the result vector; the "y" component is unpacked to
+    produce the "z" and "w" components of the result vector.
+
+    This instruction is intended to allow a program to pass 64-bit integer or
+    floating-point values to an application using two 32-bit values stored in
+    adjacent words in memory, which will be read by the application as single
+    64-bit values.  The ability to use this technique depends on how the
+    64-bit value is stored in memory.  For "little-endian" processors, the
+    first 32-bit value would hold the with the least significant 32 bits of
+    the 64-bit value.  For "big-endian" processors, the first 32-bit value
+    holds the most significant 32 bits of the 64-bit value.  This
+    reconstruction assumes that the first 32-bit word comes from the "x"
+    component of the operand and the second 32-bit word comes from the "y"
+    component.  The method used to unpack a 64-bit value into a pair of 32-bit
+    values depends on the processor type.
+
+      tmp = VectorLoad(op0);
+      if (underlying system is little-endian) {
+        result.x = (RawBits(tmp.x) >>  0) & 0xFFFFFFFF;
+        result.y = (RawBits(tmp.x) >> 32) & 0xFFFFFFFF;
+        result.z = (RawBits(tmp.y) >>  0) & 0xFFFFFFFF;
+        result.w = (RawBits(tmp.y) >> 32) & 0xFFFFFFFF;
+      } else {
+        result.x = (RawBits(tmp.x) >> 32) & 0xFFFFFFFF;
+        result.y = (RawBits(tmp.x) >>  0) & 0xFFFFFFFF;
+        result.z = (RawBits(tmp.y) >> 32) & 0xFFFFFFFF;
+        result.w = (RawBits(tmp.y) >>  0) & 0xFFFFFFFF;
+      }
+
+    UP64 supports integer and floating-point data type modifiers, which
+    specify the base data type of the operand and result.  The single operand
+    vector always has 64-bit components.  The result is treated as a vector
+    with 32-bit components.  The encoding performed by UP64 can be reversed
+    using the PK64 instruction.
+
+    A program will fail to load if it contains a UP64 instruction whose
+    operand is a variable not declared as "LONG".
+
+
+    Modify Section 2.14.6.1 of the NV_geometry_program4 specification,
+    Geometry Program Input Primitives
+
+    (add patches to the list of supported input primitive types)
+
+    The supported input primitive types are: ...
+
+    Patches (PATCHES)
+
+    Geometry programs that operate on patches are valid only for the
+    PATCHES_NV primitive type.  There are a variable number of vertices
+    available for each program invocation, depending on the number of input
+    vertices in the primitive itself.  For a patch with <n> vertices,
+    "vertex[0]" refers to the first vertex of the patch, and "vertex[<n>-1]"
+    refers to the last vertex.
+
+    
+    Modify Section 2.14.6.2 of the NV_geometry_program4 specification,
+    Geometry Program Output Primitives
+
+    (Add a new paragraph limiting the use of the EMITS opcode to geometry
+     programs with a POINTS output primitive type at the end of the section.
+     This limitation may be removed in future specifications.)
+
+    Geometry programs may write to multiple vertex streams only if the
+    specified output primitive type is POINTS.  A program will fail to load if
+    it contains and EMITS instruction and the output primitive type specified
+    by the PRIMITIVE_OUT declaration is not POINTS.
+
+    Modify Section 2.14.6.4 of the NV_geometry_program4 specification,
+    Geometry Program Output Limits
+
+    (Modify the limitation on the total number of components emitted by a
+     geometry program from NV_gpu_program4 to be per-invocation.  If a that
+     limit is 4096 and a program has 16 invocations, each of the 16 program
+     invocation can emit up to 4096 total components.)
+
+    There are two implementation-dependent limits that limit the total number
+    of vertices that each invocation of a program can emit.  First, the vertex
+    limit may not exceed the value of MAX_PROGRAM_OUTPUT_VERTICES_NV.  Second,
+    product of the vertex limit and the number of result variable components
+    written by the program (PROGRAM_RESULT_COMPONENTS_NV, as described in
+    section 2.X.3.5 of NV_gpu_program4) may not exceed the value of
+    MAX_PROGRAM_TOTAL_OUTPUT_COMPONENTS_NV.  A geometry program will fail to
+    load if its maximum vertex count or maximum total component count exceeds
+    the implementation-dependent limit.  The limits may be queried by calling
+    GetProgramiv with a <target> of GEOMETRY_PROGRAM_NV.  Note that the
+    maximum number of vertices that a geometry program can emit may be much
+    lower than MAX_PROGRAM_OUTPUT_VERTICES_NV if the program writes a large
+    number of result variable components.  If a geometry program has multiple
+    invocations (via the "INVOCATIONS" declaration), the program will load
+    successfully as long as no single invocation exceeds the total component
+    count limit, even if the total output of all invocations combined exceeds
+    the limit.
+
+
+Additions to Chapter 3 of the OpenGL 3.0 Specification (Rasterization)
+
+    Modify Section 3.X, Early Per-Fragment Tests, as documented in the
+    EXT_shader_image_load_store specification
+
+    (add new paragraph at the end of a section, describing how early fragment
+     tests work when assembly fragment programs are active)
+
+    If an assembly fragment program is active, early depth tests are
+    considered enabled if and only if the fragment program source included the
+    NV_early_fragment_tests option.
+
+
+   Add to Section 3.11.4.5 of ARB_fragment_program (Fragment Program):
+
+   Section 3.11.4.5.3, ARB_blend_func_extended Option
+
+   If a fragment program specifies the "ARB_blend_func_extended" option, dual 
+   source color outputs as described in ARB_blend_func_extended are made 
+   available through the use of the "result.color[n].primary" and
+   "result.color[n].secondary" result bindings, corresponding to SRC_COLOR
+   and SRC1_COLOR, respectively, for the fragment color output numbered <n>.
+
+
+Additions to Chapter 4 of the OpenGL 3.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Modify Section 4.4.3, Rendering When an Image of a Bound Texture Object
+    is Also Attached to the Framebuffer, p. 288
+
+    (Replace the complicated set of conditions with the following)
+
+    Specifically, the values of rendered fragments are undefined if any 
+    shader stage fetches texels from a given mipmap level, cubemap face, and 
+    array layer of a texture if that same mipmap level, cubemap face, and 
+    array layer of the texture can be written to via fragment shader outputs, 
+    even if the reads and writes are not in the same Draw call. However, an 
+    application can insert MemoryBarrier(TEXTURE_FETCH_BARRIER_BIT_NV) between
+    Draw calls that have such read/write hazards in order to guarantee that 
+    writes have completed and caches have been invalidated, as described in 
+    section 2.20.X.
+
+
+Additions to Chapter 5 of the OpenGL 3.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 3.0 Specification (State and
+State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 3.0 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    None, other than new conditions by which a program string would fail to
+    load.
+
+New State
+
+    None.
+
+
+New Implementation Dependent State
+
+                                                             Minimum
+    Get Value                         Type  Get Command       Value   Description           Sec.   Attrib
+    --------------------------------  ----  ---------------  -------  --------------------- ------ ------
+    MAX_GEOMETRY_PROGRAM_              Z+   GetIntegerv        32     Maximum number of GP  2.X.6.Y  -
+      INVOCATIONS_NV                                                  invocations per prim.
+    MIN_FRAGMENT_INTERPOLATION_        R    GetFloatv        -0.5     Max. negative offset  2.X.8.Z  -
+      OFFSET_NV                                                       for IPAO instruction.
+    MAX_FRAGMENT_INTERPOLATION_        R    GetFloatv         +0.5    Max. positive offset  2.X.8.Z  -
+      OFFSET_NV                                                       for IPAO instruction.
+    FRAGMENT_PROGRAM_INTERPOLATION_    Z+   GetIntegerv         4     Subpixel bit count    2.X.8.Z  -
+      OFFSET_BITS_NV                                                  for IPAO instruction
+
+
+Dependencies on NV_gpu_program4, NV_vertex_program4, NV_geometry_program4, and
+NV_fragment_program4
+
+    This extension is written against the NV_gpu_program4 family of
+    extensions, and introduces new instruction set features and inputs/outputs
+    described here.  These features are available only if the extension is
+    supported and the appropriate program header string is used ("!!NVvp5.0"
+    for vertex programs, "!!NVgp5.0" for geometry programs, and "!!NVfp5.0"
+    for fragment programs.) When loading a program with an older header (e.g.,
+    "!!NVvp4.0"), the instruction set features described in this extension are
+    not available.  The features in this extension build upon those documented
+    in full in NV_gpu_program4.
+
+Dependencies on NV_tessellation_program5
+
+    This extension provides the basic assembly instruction set constructs for
+    tessellation programs.  If this extension is supported, tessellation
+    control and evaluation programs are supported, as described in the
+    NV_tessellation_program5 specification.  There is no separate extension
+    string for tessellation programs; such support is implied by this
+    extension.
+
+Dependencies on ARB_transform_feedback3
+
+    The concept of multiple vertex streams emitted by a geometry shader is
+    introduced by ARB_transform_feedback3, as is the description of how they
+    operate and implementation-dependent limits on the number of streams.
+    This extension simply provides a mechanism to emit a vertex to more than
+    one stream.  If ARB_transform_feedback3 is not supported, language
+    describing the EMITS opcode and the restriction on PRIMITIVE_OUT when
+    EMITS is used should be removed.
+
+Dependencies on NV_shader_buffer_load
+
+    The programmability functionality provided by NV_shader_buffer_load is
+    also incorporated by this extension.  Any assembly program using a program
+    header corresponding to this or any subsequent extension (e.g.,
+    "!!NVfp5.0") may use the LOAD opcode without needing to declare "OPTION
+    NV_shader_buffer_load".
+
+    NV_shader_buffer_load is required by this extension, which means that the
+    API mechanisms documented there allowing applications to make a buffer
+    resident and query its GPU address are available to any applications using
+    this extension.
+
+    In addition to the basic functionality in NV_shader_buffer_load, this
+    extension provides the ability to load 64-bit integers and floating-point
+    values using the "S64", "S64X2", "S64X4", "U64", "U64X2", "U64X4", "F64",
+    "F64X2", and "F64X4" opcode modifiers.
+
+Dependencies on NV_shader_buffer_store
+
+    This extension provides assembly programmability support for the
+    NV_shader_buffer_store, which provides the API mechanisms allowing buffer
+    object to be stored to.  NV_shader_buffer_store does not have a separate
+    extension string entry, and will always be supported if this extension is
+    present.
+
+Dependencies on NV_parameter_buffer_object2
+
+    The programmability functionality provided by NV_parameter_buffer_object2
+    is also incorporated by this extension.  Any assembly program using a
+    program header corresponding to this or any subsequent extension (e.g.,
+    "!!NVfp5.0") may use the LDC opcode without needing to declare "OPTION
+    NV_parameter_buffer_object2".
+
+    In addition to the basic functionality in NV_parameter_buffer_object2,
+    this extension provides the ability to load 64-bit integers and
+    floating-point values using the "S64", "S64X2", "S64X4", "U64", "U64X2",
+    "U64X4", "F64", "F64X2", and "F64X4" opcode modifiers.
+
+Dependencies on OpenGL 3.3, ARB_texture_swizzle, and EXT_texture_swizzle
+
+    If OpenGL 3.3, ARB_texture_swizzle, and EXT_texture_swizzle are not
+    supported, remove the swizzling step from the definition of TXG and TXGO.
+
+Dependencies on ARB_blend_func_extended
+
+    If ARB_blend_func_extended is not supported, references to the dual source
+    color output bindings (result.color.primary and result.color.secondary)
+    should be removed.
+
+Dependencies on EXT_shader_image_load_store
+
+    EXT_shader_image_load_store provides OpenGL Shading Language mechanisms to
+    load/store to buffer and texture image memory, including spec language
+    describing memory access ordering and synchronization, a built-in function
+    (MemoryBarrierEXT) controlling synchronization of memory operations, and
+    spec language describing early fragment tests that can be enabled via GLSL
+    fragment shader source.  These sections of the EXT_shader_image_load_store
+    specification apply equally to the assembly program memory accesses
+    provided by this extension.  If EXT_shader_image_load_store is not
+    supported, the sections of that specification describing these features
+    should be considered to be added to this extension.
+
+    EXT_shader_image_load_store additionally provides and documents assembly
+    language support for image loads, stores, and atomics as described in the
+    "Dependencies on NV_gpu_program5" section of EXT_shader_image_load_store.
+    The features described there are automatically supported for all
+    NV_gpu_program5 assembly programs without requiring any additional
+    "OPTION" line.
+
+Dependencies on ARB_shader_subroutine
+
+    ARB_shader_subroutine provides and documents assembly language support for
+    subroutines as described in the "Dependencies on NV_gpu_program5" section
+    of ARB_shader_subroutine.  The features described there are automatically
+    supported for all NV_gpu_program5 assembly programs without requiring any
+    additional "OPTION" line.
+
+
+Issues
+
+    (1) Are there any restrictions or performance concerns involving the
+        support for indexing textures or parameter buffers?
+
+      RESOLVED:  There are no significant functional limitations.  Textures
+      and parameter buffers accessed with an index must be declared as arrays,
+      so the assembler knows which textures might be accessed this way.
+      Additionally, accessing an array of textures or parameter buffers with
+      an out-of-bounds index will yield undefined results.  
+
+      In particular, there is no limitation on the values used for indexing --
+      they are not required to be true constants and are not required to have
+      the same value for all vertices/fragments in a primitive.  However,
+      using divergent texture or parameter buffer indices may have performance
+      concerns.  We expect that GPU implementations of this extension will run
+      multiple program threads in parallel (SIMD).  If different threads in a
+      thread group have different indices, it will be necessary to do lookups
+      in more than one texture at once.  This is likely to result in some
+      thread serialization.  We expect that indexed texture or parameter
+      buffer access where all indices in a thread group match will perform
+      identically to non-indexed accesses.
+
+    (2) Which texture instructions support programmable texel offsets, and
+        what offset limits apply?
+
+      RESOLVED:  Most texture instructions (TEX, TXB, TXF, TXG, TXL, TXP)
+      support both constant texel offsets as provided by NV_gpu_program4 and
+      programmable texel offsets.  TXD supports only constant offsets.  TXGO
+      does not support non-zero or programmable offsets in the texture portion
+      of the instruction, but provides full support for programmable offsets
+      via two of the three vector arguments in the regular instruction.
+
+      For example,
+
+        TEX result, coord, texture[0], 2D, (-1,-1);
+
+      uses the NV_gpu_program4 mechanism applies a constant texel offset of
+      (-1,-1) to the texture coordinates.  With programmable offsets, the
+      following code applies the same offset.
+
+        TEMP offxy;
+        MOV offxy, {-1, -1};
+        TEX result, coord, texture[0], offset(offxy);
+
+      Of course, the programmable form allows the offsets to be computed in
+      the program and does not require constant values.
+
+      For most texture instructions, the range of allowable offsets is
+      [MIN_PROGRAM_TEXEL_OFFSET_EXT, MAX_PROGRAM_TEXEL_OFFSET_EXT] for both
+      constant and programmable texel offsets.  Constant offsets can be
+      checked when the program is loaded, and out-of-bounds offsets cause the
+      program to fail to load.  Programmable offsets can not have a
+      load-time range check; out-of-bounds offsets produce undefined results.
+
+      Additionally, the new TXGO instruction has a separate (likely larger)
+      allowable offset range, [MIN_PROGRAM_TEXTURE_GATHER_OFFSET_NV,
+      MAX_PROGRAM_TEXTURE_GATHER_OFFSET_NV], that applies to the offset
+      vectors passed in its second and third operand.
+
+      In the initial implementation of this extension, the range limits are
+      [-8,+7] for most instructions and [-32,+31] for TXGO.
+
+    (3) What is TXGO (texture gather with separate offsets) good for?
+
+      RESOLVED:  TXGO allows for efficiently sampling a single-component
+      texture with a variety of offsets that need not be contiguous.
+
+      For example, a shadow mapping algorithm using a high-resolution shadow
+      map may have pixels whose footpoint covers a large number of texels in
+      the shadow map.  Such pixels could do a single lookup into a
+      lower-resolution texture (using mipmapping), but quality problems will
+      arise.  Alternately, a shader could perform a large number of texture
+      lookups using either NEAREST or LINEAR filtering from the
+      high-resolution texture.  NEAREST filtering will require a separate
+      lookup for each texel accessed; LINEAR filtering may require somewhat
+      fewer lookups, but all accesses cover a 2x2 portion of the texture.  The
+      TXG instruction added to NV_gpu_program4_1 allows a 2x2 block of texels
+      to be returned in a single instruction in case the program wants to do
+      something other than linear filtering with the samples.  The TXGO allows
+      a program to do semi-random sampling of the texture without requiring
+      that each sample cover a 2x2 block of texels.  For example, the TXGO
+      instruction would allow a program to the four texels A, H, J, O from the
+      4x4 block depicted below:
+
+        TXGO result, coord, {-1,+2,0,+1}, {-1,0,+1,+2}, texture[0], 2D;
+
+      The "equivalent" TXG instruction would only sample the four center
+      texels F, G, J, and K
+
+        TXG result, coord, texture[0], 2D;
+
+      All sixteen texels of the footprint could be sampled with four TXG
+      instructions,
+
+        TXG result0, coord, texture[0], 2D, (-1,-1);
+        TXG result1, coord, texture[0], 2D, (-1,+1);
+        TXG result2, coord, texture[0], 2D, (+1,-1);
+        TXG result3, coord, texture[0], 2D, (+1,+1);
+
+      but accessing a smaller number of samples spread across the footprint
+      with fewer instructions may produce results that are good enough.
+
+      The figure here depicts a texture with texel (0,0) shown in the
+      upper-left corner.  If you insist on a lower-left origin, please look at
+      this figure while standing on your head.
+
+       (0,0) +-+-+-+-+
+             |A|B|C|D|
+             +-+-+-+-+
+             |E|F|G|H|
+             +-+-+-+-+
+             |I|J|K|L|
+             +-+-+-+-+
+             |M|N|O|P|
+             +-+-+-+-+ (4,4)
+
+    (4) Why are the results of TXGO (texture gather with separate offsets)
+        undefined if the wrap mode is CLAMP or MIRROR_CLAMP_EXT?
+
+      RESOLVED:  The CLAMP and MIRROR_CLAMP_EXT wrap modes are fairly
+      different from other wrap modes.  After adding any instruction offsets,
+      the spec says to pre-clamp the (u,v) coordinates to [0,texture_size]
+      before generating the footprint.  If such clamping occurs on one edge
+      for a normal texture filtering operation, the footprint ends up being
+      half border texels, half edge texels, and the clamping effectively
+      forces the interpolation weights used for texture filtering to 50/50.
+
+      We expect the TXG instruction to be used in cases where an application
+      may want to do custom filtering, and is in control of its own filtering
+      weights.  Coordinate clamping as above will affect the footprint used
+      for filtering, but not the weights.  In the NV_gpu_program4_1 spec, we
+      defined the TXG/CLAMP combination to simply return the "normal"
+      footprint produced after the pre-clamp operation above.  Any adjustment
+      of weights due to clamping is the responsibility of the application.  We
+      don't expect this to be a common operation, because CLAMP_TO_EDGE or
+      CLAMP_TO_BORDER are much more sensible wrap modes.
+
+      The hardware implementing TXGO is anticipated to extract all four
+      samples in a single pass.  However, the spec language is defined for
+      simplicity to perform four separate "gather" operations with the four
+      provided offsets, extract a single sample from each, and combine the
+      four samples into a vector.  This would require four separate pre-clamp
+      operations, which was deemed too costly to implement in hardware for a
+      wrap mode that doesn't work well with texture gather operations.  Even
+      if such hardware were built, it still wouldn't obtain a footprint
+      resembling the half-border, half-edge footprint for simple TXGO offsets
+      -- that would require different per-texel clamping rules for the four
+      samples.  We chose to leave the results of this operation undefined.
+
+    (5) Should double-precision floating-point support be required or
+        optional?  If optional, how?
+
+      RESOLVED:  Double-precision floating-point support will be optional in
+      case low-end GPUs supporting the remainder of these instruction features
+      choose to cut costs by removing the silicon necessary to implement
+      64-bit floating-point arithmetic.
+
+    (6) While this extension supports double-precision computation, how can
+        you provide high-precision inputs and outputs to the GPU programs?
+
+      RESOLVED:  The underlying hardware implementing this extension does not
+      provide full support for 64-bit floats, even though DOUBLE is a standard
+      data type provided by the GL.  For example, when specifying a vertex
+      array with a data type of DOUBLE, the vertex attribute components will
+      end up being converted to 32-bit floats (FLOAT) by the driver before
+      being passed to the hardware, and the extra precision in the original
+      64-bit float values will be lost.
+
+      For vertex attributes, the EXT_vertex_attrib_64bit and
+      NV_vertex_attrib_integer_64bit extensions provide the ability to specify
+      64-bit vertex attribute components using the VertexAttribL* and
+      VertexAttribLPointer APIs.  Such attributes can be read in a vertex
+      program using a "LONG ATTRIB" declaration:
+
+        LONG ATTRIB vector64;
+
+      The LONG modifier can only be used vertex program inputs, and can not be
+      used for inputs of any program type or outputs of any program type.  
+
+      For other cases, this extension provides the PK64 and UP64 instructions
+      that provide a mechanism to pass 64-bit components using consecutive
+      32-bit components.  For example, a 3-component vector with 64-bit
+      components can be passed to a vertex shader using multiple vertex
+      attributes without using the VertexAttribL APIs with the following code:
+
+        /* Pass the X/Y components in vertex attribute 0 (X/Y/Z/W).  Use 
+           stride to skip over Z. */
+        glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 3*sizeof(GLdouble), 
+                              (GLdouble *) buffer);
+
+        /* Pass the Z components in vertex attribute 1 (X/Y).  Use stride to
+           skip over original X/Y components. */
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 3*sizeof(GLdouble), 
+                              (GLdouble *) buffer + 2);
+
+      In this example, the vertex program would use the PK64 instruction to
+      reconstruct the 64-bit value for each component as follows:
+
+        LONG TEMP reconstructed;
+        PK64 reconstructed.xy, vertex.attrib[0];
+        PK64 reconstructed.z,  vertex.attrib[1];
+
+      A similar technique can be used to pass 64-bit values computed by a GPU
+      program, using transform feedback or writes to a color buffer.  The UP64
+      instruction would be used to convert the 64-bit computed value into two
+      32-bit values, which would be written to adjacent components.
+
+      Note also that the original hardware implementation of this extension
+      does not support interpolation of 64-bit floating-point values.  If an
+      application desires to pass a 64-bit floating-point value from a vertex
+      or geometry program to a fragment program, and doesn't require
+      interpolation, the PK64/UP64 techniques can be combined.  For example,
+      the vertex shader could unpack a 3-component vector with 64-bit
+      components into a four-component and a two-component 32-bit vector:
+
+        LONG TEMP result64;
+        RESULT result32[2] = { result.attrib[0..1] };
+        UP64 result32[0],    result64.xyxy;
+        UP64 result32[1].xy, result64.z;
+
+      The fragment program would read and reconstruct using PK64:
+
+        LONG TEMP input64;
+        FLAT ATTRIB input32[3] = { fragment.attrib[0..1] };
+        PK64 input64.xy, input32[0];
+        PK64 input64.z,  input32[1];
+
+      Note that such inputs must be declared as "FLAT" in the fragment program
+      to prevent the hardware from trying to do floating-point interpolation
+      on the separate 32-bit halves of the value being passed.  Such
+      interpolation would produce complete garbage.
+
+    (7) What are instanced geometry programs useful for?
+
+      RESOLVED:  Instanced geometry programs allow geometry programs that
+      perform regular operations to run more efficiently.
+
+      Consider a simple example of an algorithm that uses geometry programs to
+      render primitives to a cube map in a single pass.  Without instanced
+      geometry programs, the geometry program to render triangles to the cube
+      map would do something like:
+
+        for (face = 0; face < 6; face++) {
+          for (vertex = 0; vertex < 3; vertex++) {
+            project vertex <vertex> onto face <face>, output position
+            compute/copy attributes of emitted <vertex> to outputs
+            output <face> to result.layer
+            emit the projected vertex
+          }
+          end the primitive (next triangle)
+        }
+
+      This algorithm would output 18 vertices per input triangle, three for
+      each cube face.  The six triangles emitted would be rasterized, one per
+      face.  Geometry programs that emit a large number of attributes have
+      often posed performance challenges, since all the attributes must be
+      stored somewhere until the emitted primitives.  Large storage
+      requirements may limit the number of threads that can be run in parallel
+      and reduce overall performance.
+
+      Instanced geometry programs allow this example to be restructured to run
+      with six separate threads, one per face.  Each thread projects the
+      triangle to only a single face (identified by the invocation number) and
+      emits only 3 vertices.  The reduced storage requirements allow more
+      geometry program threads to be run in parallel, with greater overall
+      efficiency.
+
+      Additionally, the total number of attributes that can be emitted by a
+      single geometry program invocation is limited.  However, for instanced
+      geometry shaders, that limit applies to each of <N> program invocations
+      which allows for a larger total output.  For example, if the GL
+      implementation supports only 1024 components of output per program
+      invocation, the 18-vertex algorithm above could emit no more than 56
+      components per vertex.  The same algorithm implemented as a 3-vertex
+      6-invocation geometry program could theoretically allow for 341
+      components per vertex.
+
+    (8) What are the special interpolation opcodes (IPAC, IPAO, IPAS) good
+        for, and how do they work?
+
+      RESOLVED:  The interpolation opcodes allow programs to control the
+      frequency and location at which fragment inputs are sampled.  Limited
+      control has been provided in previous extensions, but the support was
+      more limited.  NV_gpu_program4 had an interpolation modifier (CENTROID)
+      that allowed attributes to be sampled inside the primitive, but that was
+      a per-attribute modifier -- you could only sample any given attribute at
+      one location.  NV_gpu_program4_1 added a new interpolation modifier
+      (SAMPLE) that directed that fragment programs be run once per sample,
+      and that the specified attributes be interpolated at the sample
+      location.  Per-sample interpolation can produce higher quality, but the
+      performance cost is significant since more fragment program invocations
+      are required.
+
+      This extension provides additional control over interpolation, and
+      allows programs to interpolate attributes at different locations without
+      necessarily requiring the performance hit of per-sample invocation.
+
+      The IPAC instruction allows an attribute to be sampled at the centroid
+      location, while still allowing the same attribute to be sampled
+      elsewhere.  The IPAS instruction allows the attribute to be sampled at a
+      number sample location, as per-sample interpolation would do.  Multiple
+      IPAS instructions with different sample numbers allows a program to
+      sample an attribute at multiple sample points in the pixel and then
+      combine the samples in a programmable manner, which may allow for higher
+      quality than simply interpolating at a single representative point in
+      the pixel.  The IPAO instruction allows the attribute to be sampled at
+      an arbitrary (x,y) offset relative to the pixel center.  The range of
+      supported (x,y) values is limited, and the limits in the initial
+      implementation are not large enough to permit sampling the attribute
+      outside the pixel.
+
+      Note that previous instruction sets allowed shaders to fake IPAC,
+      IPAS, and IPAO by a sequence such as:
+
+        TEMP ddx, ddy, offset, interp;
+        MOV interp, fragment.attrib[0];          # start with center
+        DDX ddx, fragment.attrib[0];
+        MAD interp, offset.x, ddx, interp;       # add offset.x * dA/dx
+        DDY ddx, fragment.attrib[0];
+        MAD interp, offset.y, ddy, interp;       # add offset.y * dA/dy
+
+      However, this method does not apply perspective correction.  The quality
+      of the results may be unacceptable, particularly for primitives that are
+      nearly perpendicular to the screen.
+
+      The semantics of the first operand of these instructions is different
+      from normal assembly instructions.  Operands are normally evaluated by
+      loading the value of the corresponding variable and applying any
+      swizzle/negation/absolute value modifier before the instruction is
+      executed.  In the IPAC/IPAO/IPAS instructions, the value of the
+      attribute is evaluated by the instruction itself.  Swizzles, negation,
+      and absolute value modifiers are still allowed, and are applied after
+      the attribute values are interpolated.
+
+    (9) When using a program that issues global stores (via the STORE
+        instruction), what amount of execution ordering is guaranteed?  How
+        can an application ensure that writes executed in a shader have
+        completed and will be visible to other operations using the buffer
+        object in question?
+
+      RESOLVED:  There are very few automatic guarantees for potential
+      write/read or write/write conflicts.  Program invocations will run in
+      generally run in arbitrary order, and applications can't rely on
+      read/write order to match primitive order.
+
+      To get consistent results when buffers are read and written using
+      multiple pipeline stages, manual synchronization using the
+      MemoryBarrierEXT() API documented in EXT_shader_image_load_store or some
+      other synchronization primitive is necessary.
+
+    (10) Unlike most other shader features, the STORE opcode allows for
+         externally-visible side effects from executing a program.  How does
+         this capability interact with other features of the GL?
+
+      RESOLVED:  First, some GL implementations support a variety of "early Z"
+      optimizations designed to minimize unnecessary fragment processing work,
+      such as executing an expensive fragment program on a fragment that will
+      eventually fail the depth test.  Such optimizations have been valid
+      because fragment programs had no side effects.  That is no longer the
+      case, and such optimizations may not be employed if the fragment program
+      performs a global store.  However, we provide a new "early depth and
+      stencil test" enable that allows applications to deterministically
+      control depth and stencil testing.  If enabled, depth testing is always
+      performed prior to fragment program execution.  Fragment programs will
+      never be run on fragments that fail any of these tests.
+
+      Second, we are permitting global stores in all program types; however,
+      the number of program invocations is not well-defined for some program
+      types.  For example, a GL implementation may choose to combine multiple
+      instances of identical vertices (e.g., duplicate indices in
+      DrawElements, immediate-mode vertices with identical data) into one
+      single vertex program invocation, or it may run a vertex program on each
+      separately.  Similarly, the tessellation primitive generator will
+      generate independent primitives with duplicated vertices, which may or
+      may not be combined for tessellation evaluation program execution.
+      Fragment program execution also has several issues described in more
+      detail below.
+
+    (11) What issues arise when running fragment programs doing global stores?
+
+      RESOLVED:  The order of per-fragment operations in the existing OpenGL
+      3.0 specification can be fairly loose, because previously-defined
+      fragment programs, shaders, and fixed-function fragment processing had
+      no side effects.  With side effects, the order of operations must be
+      defined more tightly.  In particular, the pixel ownership and scissor
+      tests are specified to be performed prior to fragment program execution,
+      and we provide an option to perform depth and stencil tests early as
+      well.
+
+      OpenGL implementations sometimes run fragment programs on "helper"
+      pixels that have no coverage in order to be able to compute sane partial
+      deriviatives for fragment program instructions (DDX, DDY) or automatic
+      level-of-detail calculation for texturing.  In this approach,
+      derivatives are approximated by computing the difference in a quantity
+      computed for a given fragment at (x,y) and a fragment at a neighboring
+      pixel.  When a fragment program is executed on a "helper" pixel, global
+      stores have no effect.  Helper pixels aren't explicitly mentioned in the
+      spec body; instead, partial derivatives are obtained by magic.
+
+      If a fragment program contains a KIL instruction, compilers may not
+      reorder code where an ATOM or STORE execution is executed before a KIL
+      instruction that logically precedes it in flow control.  Once a fragment
+      is killed, subsequent atomics or stores should never be executed.
+
+      Multisample rasterization poses several issues for fragment programs
+      with global stores.  The number of times a fragment program is executed
+      for multisample rendering is not fully specified, which gives
+      implementations a number of different choices -- pure multisample (only
+      runs once), pure supersample (runs once per covered sample), or modes in
+      between.  There are some ways for an application to indirectly control
+      the behavior -- for example, fragment programs specifying per-sample
+      attribute interpolation are guaranteed to run once per covered sample.
+
+      Note that when rendering to a multisample buffer, a pair of adjacent
+      triangles may cause a fragment program to be executed more than once at
+      a given (x,y) with different sets of samples covered.  This can also
+      occur in the interior of a quadrilateral or polygon primitive.
+      Implementations are permitted to split quads and polygons with >3
+      vertices into triangles, creating interior edges that split a pixel.
+
+    (12) What happens if early fragment tests are enabled, the early depth
+         test passes, and a fragment program that computes a new depth value
+         is executed?
+
+      RESOLVED:  The depth value produced by the fragment program has no
+      effect if early fragment tests are enabled.  The depth value computed by
+      a fragment program is used only by the post-fragment program stencil and
+      depth tests, and those tests always have no effect when early depth
+      testing is enabled.
+
+    (13) How do early fragment tests interact with occlusion queries?
+
+      RESOLVED:  When early fragment tests are enabled, sample counting for
+      occlusion queries also happens prior to fragment program execution.
+      Enabling early fragment tests can change the overall sample count,
+      because samples killed by alpha test and alpha to coverage will still be
+      counted if early fragment tests are enabled.
+
+    (14) What happens if a program performs a global store to a GPU address
+         corresponding to a read-only buffer mapping?  What if it performs a
+         global read to a write-only mapping?
+
+      RESOLVED:  Implementations may choose implement full memory protection,
+      in which case accesses using the wrong type of memory mapping will fault
+      and lead to termination of the application.  
+
+      However, full memory protection is not required in this extension --
+      implementations may choose to substitute a read-write mapping in place
+      of a read-only or write-only mapping.  As a result, we specify the
+      result of such invalid loads and stores to be undefined.  
+
+      Note that if a program erroneously writes to nominally read-only
+      mappings, the results may be weird.  If the implementation substitutes a
+      read-write mapping, such invalid writes are likely to proceed normally.
+      However, if the application later makes a buffer object non-resident and
+      the memory manager of the GL implementation needs to move the buffer,
+      the GL may assume that the contents of the buffer have not been modified
+      and thus discard the new values written by the (invalid) global store
+      instructions.
+
+    (15) What performance considerations apply to atomics?
+
+      RESOLVED:  Atomics can be useful for operations like locking, or for
+      maintaining counters.  Note that high-performance GPUs may have hundreds
+      of program threads in flight at once, and may also have some SIMD
+      characteristics (where threads are grouped and run as a unit).  Using
+      ATOM instructions with a single memory address to implement a critical
+      section will result in serial execution -- only one of the hundreds of
+      threads can execute code in the critical section at a time.  
+
+      When a global operation would be done under a lock, it may be possible
+      to improve performance if the algorithm can be parallelized to have
+      multiple critical sections.  For example, an application could allocate
+      an array of shared resources, each protected by its own lock, and use
+      the LSBs of the primitive ID or some function of the screen-space (x,y)
+      to determine which resource in the array to use.
+
+    (16) The atomic instruction ATOM returns the old contents of memory into
+         the result register.  Should we provide a version of this opcodes
+         that doesn't return a value?
+
+      RESOLVED:  No.  In theory, atomics that don't return any values can
+      perform better (because the program may not need to allocate resources
+      to hold a result or wait for the result.  However, a new opcode isn't
+      required to obtain this behavior -- a compiler can recognize that the
+      result of an ATOM instruction is written to a "dummy" temporary that
+      isn't read by subsequent instructions:
+
+        TEMP junk;
+        ATOM.ADD.U32 junk, address, 1;
+
+      The compiler can also recognize that the result will always be discarded
+      if a conditional write mask of "(FL)" is used.
+
+        ATOM.ADD.U32 not_junk (FL), address, 1;
+
+    (17) How do we ensure that memory access made by multiple program
+         invocations of possibly different types are coherent?
+
+      RESOLVED:  Atomic instructions allow program invocations to coordinate
+      using shared global memory addresses.  However, memory transactions,
+      including atomics, are not guaranteed to land in the order specified in
+      the program; they may be reordered by the compiler, cached in different
+      memory hierarchies, and stored in a distributed memory system where
+      later stores to one "partition" might be completed prior to earlier
+      stores to another.  The MEMBAR instruction helps control memory
+      transaction ordering by ensuring that all memory transactions prior to
+      the barrier complete before any after the barrier.  Additionally the
+      ".COH" modifier ensures that memory transactions using the modifier are
+      cached coherently and will be visible to other shader invocations.
+
+    (18) How do the TXG and TXGO opcodes work with sRGB textures?
+
+       RESOLVED. Gamma-correction is applied to the texture source color 
+       before "gathering" and hence applies to all four components, unless
+       the texture swizzle of the selected component is ALPHA in which case 
+       no gamma-correction is applied.
+
+    (19) How can render-to-texture algorithms take advantage of
+         MemoryBarrierEXT, nominally provided for global memory transactions?
+
+      RESOLVED: Many algorithms use RTT to ping-pong between two allocations,
+      using the result of one rendering pass as the input to the next. 
+      Existing mechanisms require expensive FBO Binds, DrawBuffer changes, or
+      FBO attachment changes to safely swap the render target and texture. With
+      memory barriers, layered geometry shader rendering, and texture arrays, 
+      an application can very cheaply ping-pong between two layers of a single 
+      texture. i.e.
+
+        X = 0;
+        // Bind the array texture to a texture unit
+        // Attach the array texture to an FBO using FramebufferTextureARB
+        while (!done) {
+          // Stuff X in a constant, vertex attrib, etc.
+          Draw - 
+            Texturing from layer X;
+            Writing gl_Layer = 1 - X in the geometry shader;
+          
+          MemoryBarrierEXT(TEXTURE_FETCH_BARRIER_BIT_NV);
+          X = 1 - X;
+        }
+
+      However, be warned that this requires geometry shaders and hence adds 
+      the overhead that all geometry must pass through an additional program
+      stage, so an application using large amounts of geometry could become 
+      geometry-limited or more shader-limited.
+
+    (20) What is the ".PREC" instruction modifier good for?
+
+      RESOLVED:  ".PREC" provides some invariance guarantees is useful for
+      certain algorithms.  Using ".PREC", it is possible to ensure that an
+      algorithm can be written to produce identical results on subtly
+      different inputs.  For example, the order of vertices visible to a
+      geometry or tessellation shader used to subdivide primitive edges might
+      present an edge shared between two primitives in one direction for one
+      primitive and the other direction for the adjacent primitive.  Even if
+      the weights are identical in the two cases, there may be cracking if the
+      computations are being done in an order-dependent manner.  If the
+      position of a new vertex were evaluation with code below with
+      limited-precision floating-point math, it's not necessarily the case
+      that we will get the same result for inputs (a,b,c) and (c,b,a) in the
+      following code:
+
+          ADD result, a, b;
+          ADD result, result, c;
+
+      There are two problems with this code:  the rounding errors will be
+      different and the implementation is free to rearrange the computation
+      order.  The code can be rewritten as follows with ".PREC" and a
+      symmetric evaluation order to ensure a precise result with the inputs
+      reversed:
+
+          ADD result, a, c;
+          ADD.PREC result, result, b;
+
+      Note that in this example, the first instruction doesn't need the
+      ".PREC" qualifier because the second instruction requires that the
+      implementation compute <a>+<c>, which will be done reliably if <a> and
+      <c> are inputs.  If <a> and <c> were results of other computations, the
+      first add and possibly the dependent computations may also need to be
+      tagged with ".PREC" to ensure reliable results.
+
+      The ".PREC" modifier will disable certain optimization and thus carries
+      a performance cost.
+
+    (21) What are the TGALL, TGANY, TGEQ instructions good for?
+
+      RESOLVED:  If an implementation performs SIMD thread execution,
+      divergent branching may result in reduced performance if the "if" and
+      "else" blocks of an "if" statement are executed sequentially.  For
+      example, an algorithm may have both a "fast path" that performs a
+      computation quickly for a subset of all cases and a "fast path" that
+      performs a computation quickly but correctly.  When performing SIMD
+      execution, code like the following:
+
+        SNE.S.CC cc.x, condition.x;
+        IF NE.x;
+          # do fast path
+        ELSE;
+          # do slow path
+        ENDIF;
+
+      may end up executing *both* the fast and slow paths for a SIMD thread
+      group if <condition> diverges, and may execute more slowly than simply
+      executing the slow path unconditionally.  These instructions allow code
+      like:
+
+        # Condition code matches NE if and only if condition.x is non-zero 
+        # for all threads.
+        TGALL.S.CC cc.x, condition.x;
+        IF NE.x;
+          # do fast path
+        ELSE;
+          # do slow path
+        ENDIF;
+
+      that executes the fast path if and only if it can be used for *all*
+      threads in the group.  For thread groups where <condition> diverges,
+      this algorithm would unconditionally run the slow path, but would never
+      run both in sequence.
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     8    05/25/22  shqxu     Fix use of a removed function
+                              MemoryBarrierNV.
+
+     7    09/11/14  pbrown    Minor typo fixes.
+
+     6    07/04/13  pbrown    Add missing language describing the
+                              <texImageUnitComp> grammar rule for component
+                              selection in TXG and TXGO instructions.
+
+     5    09/23/10  pbrown    Add missing constants for {MIN,MAX}_PROGRAM_
+                              TEXTURE_GATHER_OFFSET_NV (same as ARB/core).
+                              Add missing description for "su" in the opcode
+                              table; fix a couple operand order bugs for
+                              STORE.
+
+     4    06/22/10  pbrown    Specify that the y/z/w component of the ATOM
+                              results are undefined, as is the case with
+                              ATOMIM from EXT_shader_image_load_store.
+
+     3    04/13/10  pbrown    Remove F32 support from ATOM.ADD.
+
+     2    03/22/10  pbrown    Various wording updates to the spec overview, 
+                              dependencies, issues, and body.  Remove various
+                              spec language that has been refactored into the
+                              EXT_shader_image_load_store specification.
+
+     1              pbrown    Internal revisions.

@@ -1,0 +1,745 @@
+iomap.bindingPerResourceType.vert
+Shader version: 460
+0:? Sequence
+0:27  Function Definition: main( ( global void)
+0:27    Function Parameters: 
+0:29    Sequence
+0:29      Sequence
+0:29        move second child to first child ( temp 4-component vector of float)
+0:29          'result' ( temp 4-component vector of float)
+0:29          Constant:
+0:29            0.000000
+0:29            0.000000
+0:29            0.000000
+0:29            0.000000
+0:30      add second child into first child ( temp 4-component vector of float)
+0:30        'result' ( temp 4-component vector of float)
+0:30        a: direct index for structure (layout( column_major std140 offset=0) uniform 4-component vector of float)
+0:30          'anon@0' (layout( column_major std140) uniform block{layout( column_major std140 offset=0) uniform 4-component vector of float a})
+0:30          Constant:
+0:30            0 (const uint)
+0:31      add second child into first child ( temp 4-component vector of float)
+0:31        'result' ( temp 4-component vector of float)
+0:31        b: direct index for structure (layout( column_major std140 offset=0) uniform 4-component vector of float)
+0:31          'anon@2' (layout( column_major std140) uniform block{layout( column_major std140 offset=0) uniform 4-component vector of float b})
+0:31          Constant:
+0:31            0 (const uint)
+0:32      add second child into first child ( temp float)
+0:32        direct index ( temp float)
+0:32          'result' ( temp 4-component vector of float)
+0:32          Constant:
+0:32            0 (const int)
+0:32        direct index (layout( column_major std430 offset=0) temp float)
+0:32          c: direct index for structure (layout( column_major std430 offset=0) buffer 40-element array of float)
+0:32            'anon@1' (layout( column_major std430) buffer block{layout( column_major std430 offset=0) buffer 40-element array of float c})
+0:32            Constant:
+0:32              0 (const uint)
+0:32          Constant:
+0:32            5 (const int)
+0:33      add second child into first child ( temp 2-component vector of float)
+0:33        vector swizzle ( temp 2-component vector of float)
+0:33          'result' ( temp 4-component vector of float)
+0:33          Sequence
+0:33            Constant:
+0:33              1 (const int)
+0:33            Constant:
+0:33              2 (const int)
+0:33        direct index (layout( column_major std430 offset=0) temp 2-component vector of float)
+0:33          d: direct index for structure (layout( column_major std430 offset=0) buffer unsized 6-element array of 2-component vector of float)
+0:33            'anon@3' (layout( column_major std430) buffer block{layout( column_major std430 offset=0) buffer unsized 6-element array of 2-component vector of float d})
+0:33            Constant:
+0:33              0 (const uint)
+0:33          Constant:
+0:33            5 (const int)
+0:34      add second child into first child ( temp 4-component vector of float)
+0:34        'result' ( temp 4-component vector of float)
+0:34        imageLoad ( global 4-component vector of float)
+0:34          'Image1' (layout( rgba8) uniform image2D)
+0:34          Constant:
+0:34            5 (const int)
+0:34            10 (const int)
+0:35      add second child into first child ( temp 4-component vector of float)
+0:35        'result' ( temp 4-component vector of float)
+0:35        imageLoad ( global 4-component vector of float)
+0:35          'Image2' (layout( rgba8) uniform image2D)
+0:35          Constant:
+0:35            5 (const int)
+0:35            10 (const int)
+0:36      add second child into first child ( temp 4-component vector of float)
+0:36        'result' ( temp 4-component vector of float)
+0:36        texture ( global 4-component vector of float)
+0:36          'Sampler1' ( uniform sampler2D)
+0:36          Constant:
+0:36            0.500000
+0:36            0.500000
+0:37      add second child into first child ( temp 4-component vector of float)
+0:37        'result' ( temp 4-component vector of float)
+0:37        texture ( global 4-component vector of float)
+0:37          'Sampler2' ( uniform sampler2D)
+0:37          Constant:
+0:37            0.500000
+0:37            0.500000
+0:38      move second child to first child ( temp 4-component vector of float)
+0:38        gl_Position: direct index for structure ( gl_Position 4-component vector of float Position)
+0:38          'anon@4' ( out block{ gl_Position 4-component vector of float Position gl_Position,  gl_PointSize float PointSize gl_PointSize,  out unsized 1-element array of float ClipDistance gl_ClipDistance,  out unsized 1-element array of float CullDistance gl_CullDistance})
+0:38          Constant:
+0:38            0 (const uint)
+0:38        'result' ( temp 4-component vector of float)
+0:?   Linker Objects
+0:?     'anon@0' (layout( column_major std140) uniform block{layout( column_major std140 offset=0) uniform 4-component vector of float a})
+0:?     'anon@1' (layout( column_major std430) buffer block{layout( column_major std430 offset=0) buffer 40-element array of float c})
+0:?     'Image1' (layout( rgba8) uniform image2D)
+0:?     'Sampler1' ( uniform sampler2D)
+0:?     'anon@2' (layout( column_major std140) uniform block{layout( column_major std140 offset=0) uniform 4-component vector of float b})
+0:?     'anon@3' (layout( column_major std430) buffer block{layout( column_major std430 offset=0) buffer unsized 6-element array of 2-component vector of float d})
+0:?     'Image2' (layout( rgba8) uniform image2D)
+0:?     'Sampler2' ( uniform sampler2D)
+0:?     'anon@4' ( out block{ gl_Position 4-component vector of float Position gl_Position,  gl_PointSize float PointSize gl_PointSize,  out unsized 1-element array of float ClipDistance gl_ClipDistance,  out unsized 1-element array of float CullDistance gl_CullDistance})
+0:?     'gl_VertexID' ( gl_VertexId int VertexId)
+0:?     'gl_InstanceID' ( gl_InstanceId int InstanceId)
+
+iomap.bindingPerResourceType.frag
+Shader version: 460
+0:? Sequence
+0:29  Function Definition: main( ( global void)
+0:29    Function Parameters: 
+0:31    Sequence
+0:31      Sequence
+0:31        move second child to first child ( temp 4-component vector of float)
+0:31          'result' ( temp 4-component vector of float)
+0:31          Constant:
+0:31            0.000000
+0:31            0.000000
+0:31            0.000000
+0:31            0.000000
+0:32      add second child into first child ( temp 4-component vector of float)
+0:32        'result' ( temp 4-component vector of float)
+0:32        a: direct index for structure (layout( column_major std140 offset=0) uniform 4-component vector of float)
+0:32          'anon@0' (layout( column_major std140) uniform block{layout( column_major std140 offset=0) uniform 4-component vector of float a})
+0:32          Constant:
+0:32            0 (const uint)
+0:33      add second child into first child ( temp 4-component vector of float)
+0:33        'result' ( temp 4-component vector of float)
+0:33        b: direct index for structure (layout( column_major std140 offset=0) uniform 4-component vector of float)
+0:33          'anon@2' (layout( column_major std140) uniform block{layout( column_major std140 offset=0) uniform 4-component vector of float b})
+0:33          Constant:
+0:33            0 (const uint)
+0:34      add second child into first child ( temp float)
+0:34        direct index ( temp float)
+0:34          'result' ( temp 4-component vector of float)
+0:34          Constant:
+0:34            0 (const int)
+0:34        direct index (layout( column_major std430 offset=0) temp float)
+0:34          c: direct index for structure (layout( column_major std430 offset=0) buffer 40-element array of float)
+0:34            'anon@1' (layout( column_major std430) buffer block{layout( column_major std430 offset=0) buffer 40-element array of float c})
+0:34            Constant:
+0:34              0 (const uint)
+0:34          Constant:
+0:34            5 (const int)
+0:35      add second child into first child ( temp 2-component vector of float)
+0:35        vector swizzle ( temp 2-component vector of float)
+0:35          'result' ( temp 4-component vector of float)
+0:35          Sequence
+0:35            Constant:
+0:35              1 (const int)
+0:35            Constant:
+0:35              2 (const int)
+0:35        direct index (layout( column_major std430 offset=0) temp 2-component vector of float)
+0:35          d: direct index for structure (layout( column_major std430 offset=0) buffer unsized 6-element array of 2-component vector of float)
+0:35            'anon@3' (layout( column_major std430) buffer block{layout( column_major std430 offset=0) buffer unsized 6-element array of 2-component vector of float d})
+0:35            Constant:
+0:35              0 (const uint)
+0:35          Constant:
+0:35            5 (const int)
+0:36      add second child into first child ( temp 4-component vector of float)
+0:36        'result' ( temp 4-component vector of float)
+0:36        imageLoad ( global 4-component vector of float)
+0:36          'Image1' (layout( rgba8) uniform image2D)
+0:36          Constant:
+0:36            5 (const int)
+0:36            10 (const int)
+0:37      add second child into first child ( temp 4-component vector of float)
+0:37        'result' ( temp 4-component vector of float)
+0:37        imageLoad ( global 4-component vector of float)
+0:37          'Image2' (layout( rgba8) uniform image2D)
+0:37          Constant:
+0:37            5 (const int)
+0:37            10 (const int)
+0:38      add second child into first child ( temp 4-component vector of float)
+0:38        'result' ( temp 4-component vector of float)
+0:38        texture ( global 4-component vector of float)
+0:38          'Sampler1' ( uniform sampler2D)
+0:38          Constant:
+0:38            0.500000
+0:38            0.500000
+0:39      add second child into first child ( temp 4-component vector of float)
+0:39        'result' ( temp 4-component vector of float)
+0:39        texture ( global 4-component vector of float)
+0:39          'Sampler2' ( uniform sampler2D)
+0:39          Constant:
+0:39            0.500000
+0:39            0.500000
+0:40      move second child to first child ( temp 4-component vector of float)
+0:40        'Output' (layout( location=0) out 4-component vector of float)
+0:40        'result' ( temp 4-component vector of float)
+0:?   Linker Objects
+0:?     'anon@0' (layout( column_major std140) uniform block{layout( column_major std140 offset=0) uniform 4-component vector of float a})
+0:?     'anon@1' (layout( column_major std430) buffer block{layout( column_major std430 offset=0) buffer 40-element array of float c})
+0:?     'Image1' (layout( rgba8) uniform image2D)
+0:?     'Sampler1' ( uniform sampler2D)
+0:?     'anon@2' (layout( column_major std140) uniform block{layout( column_major std140 offset=0) uniform 4-component vector of float b})
+0:?     'anon@3' (layout( column_major std430) buffer block{layout( column_major std430 offset=0) buffer unsized 6-element array of 2-component vector of float d})
+0:?     'Image2' (layout( rgba8) uniform image2D)
+0:?     'Sampler2' ( uniform sampler2D)
+0:?     'Output' (layout( location=0) out 4-component vector of float)
+
+
+Linked vertex stage:
+
+
+Linked fragment stage:
+
+
+Shader version: 460
+0:? Sequence
+0:27  Function Definition: main( ( global void)
+0:27    Function Parameters: 
+0:29    Sequence
+0:29      Sequence
+0:29        move second child to first child ( temp 4-component vector of float)
+0:29          'result' ( temp 4-component vector of float)
+0:29          Constant:
+0:29            0.000000
+0:29            0.000000
+0:29            0.000000
+0:29            0.000000
+0:30      add second child into first child ( temp 4-component vector of float)
+0:30        'result' ( temp 4-component vector of float)
+0:30        a: direct index for structure (layout( column_major std140 offset=0) uniform 4-component vector of float)
+0:30          'anon@0' (layout( column_major std140) uniform block{layout( column_major std140 offset=0) uniform 4-component vector of float a})
+0:30          Constant:
+0:30            0 (const uint)
+0:31      add second child into first child ( temp 4-component vector of float)
+0:31        'result' ( temp 4-component vector of float)
+0:31        b: direct index for structure (layout( column_major std140 offset=0) uniform 4-component vector of float)
+0:31          'anon@2' (layout( column_major std140) uniform block{layout( column_major std140 offset=0) uniform 4-component vector of float b})
+0:31          Constant:
+0:31            0 (const uint)
+0:32      add second child into first child ( temp float)
+0:32        direct index ( temp float)
+0:32          'result' ( temp 4-component vector of float)
+0:32          Constant:
+0:32            0 (const int)
+0:32        direct index (layout( column_major std430 offset=0) temp float)
+0:32          c: direct index for structure (layout( column_major std430 offset=0) buffer 40-element array of float)
+0:32            'anon@1' (layout( column_major std430) buffer block{layout( column_major std430 offset=0) buffer 40-element array of float c})
+0:32            Constant:
+0:32              0 (const uint)
+0:32          Constant:
+0:32            5 (const int)
+0:33      add second child into first child ( temp 2-component vector of float)
+0:33        vector swizzle ( temp 2-component vector of float)
+0:33          'result' ( temp 4-component vector of float)
+0:33          Sequence
+0:33            Constant:
+0:33              1 (const int)
+0:33            Constant:
+0:33              2 (const int)
+0:33        direct index (layout( column_major std430 offset=0) temp 2-component vector of float)
+0:33          d: direct index for structure (layout( column_major std430 offset=0) buffer unsized 6-element array of 2-component vector of float)
+0:33            'anon@3' (layout( column_major std430) buffer block{layout( column_major std430 offset=0) buffer unsized 6-element array of 2-component vector of float d})
+0:33            Constant:
+0:33              0 (const uint)
+0:33          Constant:
+0:33            5 (const int)
+0:34      add second child into first child ( temp 4-component vector of float)
+0:34        'result' ( temp 4-component vector of float)
+0:34        imageLoad ( global 4-component vector of float)
+0:34          'Image1' (layout( rgba8) uniform image2D)
+0:34          Constant:
+0:34            5 (const int)
+0:34            10 (const int)
+0:35      add second child into first child ( temp 4-component vector of float)
+0:35        'result' ( temp 4-component vector of float)
+0:35        imageLoad ( global 4-component vector of float)
+0:35          'Image2' (layout( rgba8) uniform image2D)
+0:35          Constant:
+0:35            5 (const int)
+0:35            10 (const int)
+0:36      add second child into first child ( temp 4-component vector of float)
+0:36        'result' ( temp 4-component vector of float)
+0:36        texture ( global 4-component vector of float)
+0:36          'Sampler1' ( uniform sampler2D)
+0:36          Constant:
+0:36            0.500000
+0:36            0.500000
+0:37      add second child into first child ( temp 4-component vector of float)
+0:37        'result' ( temp 4-component vector of float)
+0:37        texture ( global 4-component vector of float)
+0:37          'Sampler2' ( uniform sampler2D)
+0:37          Constant:
+0:37            0.500000
+0:37            0.500000
+0:38      move second child to first child ( temp 4-component vector of float)
+0:38        gl_Position: direct index for structure ( gl_Position 4-component vector of float Position)
+0:38          'anon@4' ( out block{ gl_Position 4-component vector of float Position gl_Position,  gl_PointSize float PointSize gl_PointSize,  out 1-element array of float ClipDistance gl_ClipDistance,  out 1-element array of float CullDistance gl_CullDistance})
+0:38          Constant:
+0:38            0 (const uint)
+0:38        'result' ( temp 4-component vector of float)
+0:?   Linker Objects
+0:?     'anon@0' (layout( column_major std140) uniform block{layout( column_major std140 offset=0) uniform 4-component vector of float a})
+0:?     'anon@1' (layout( column_major std430) buffer block{layout( column_major std430 offset=0) buffer 40-element array of float c})
+0:?     'Image1' (layout( rgba8) uniform image2D)
+0:?     'Sampler1' ( uniform sampler2D)
+0:?     'anon@2' (layout( column_major std140) uniform block{layout( column_major std140 offset=0) uniform 4-component vector of float b})
+0:?     'anon@3' (layout( column_major std430) buffer block{layout( column_major std430 offset=0) buffer unsized 6-element array of 2-component vector of float d})
+0:?     'Image2' (layout( rgba8) uniform image2D)
+0:?     'Sampler2' ( uniform sampler2D)
+0:?     'anon@4' ( out block{ gl_Position 4-component vector of float Position gl_Position,  gl_PointSize float PointSize gl_PointSize,  out 1-element array of float ClipDistance gl_ClipDistance,  out 1-element array of float CullDistance gl_CullDistance})
+0:?     'gl_VertexID' ( gl_VertexId int VertexId)
+0:?     'gl_InstanceID' ( gl_InstanceId int InstanceId)
+Shader version: 460
+0:? Sequence
+0:29  Function Definition: main( ( global void)
+0:29    Function Parameters: 
+0:31    Sequence
+0:31      Sequence
+0:31        move second child to first child ( temp 4-component vector of float)
+0:31          'result' ( temp 4-component vector of float)
+0:31          Constant:
+0:31            0.000000
+0:31            0.000000
+0:31            0.000000
+0:31            0.000000
+0:32      add second child into first child ( temp 4-component vector of float)
+0:32        'result' ( temp 4-component vector of float)
+0:32        a: direct index for structure (layout( column_major std140 offset=0) uniform 4-component vector of float)
+0:32          'anon@0' (layout( column_major std140) uniform block{layout( column_major std140 offset=0) uniform 4-component vector of float a})
+0:32          Constant:
+0:32            0 (const uint)
+0:33      add second child into first child ( temp 4-component vector of float)
+0:33        'result' ( temp 4-component vector of float)
+0:33        b: direct index for structure (layout( column_major std140 offset=0) uniform 4-component vector of float)
+0:33          'anon@2' (layout( column_major std140) uniform block{layout( column_major std140 offset=0) uniform 4-component vector of float b})
+0:33          Constant:
+0:33            0 (const uint)
+0:34      add second child into first child ( temp float)
+0:34        direct index ( temp float)
+0:34          'result' ( temp 4-component vector of float)
+0:34          Constant:
+0:34            0 (const int)
+0:34        direct index (layout( column_major std430 offset=0) temp float)
+0:34          c: direct index for structure (layout( column_major std430 offset=0) buffer 40-element array of float)
+0:34            'anon@1' (layout( column_major std430) buffer block{layout( column_major std430 offset=0) buffer 40-element array of float c})
+0:34            Constant:
+0:34              0 (const uint)
+0:34          Constant:
+0:34            5 (const int)
+0:35      add second child into first child ( temp 2-component vector of float)
+0:35        vector swizzle ( temp 2-component vector of float)
+0:35          'result' ( temp 4-component vector of float)
+0:35          Sequence
+0:35            Constant:
+0:35              1 (const int)
+0:35            Constant:
+0:35              2 (const int)
+0:35        direct index (layout( column_major std430 offset=0) temp 2-component vector of float)
+0:35          d: direct index for structure (layout( column_major std430 offset=0) buffer unsized 6-element array of 2-component vector of float)
+0:35            'anon@3' (layout( column_major std430) buffer block{layout( column_major std430 offset=0) buffer unsized 6-element array of 2-component vector of float d})
+0:35            Constant:
+0:35              0 (const uint)
+0:35          Constant:
+0:35            5 (const int)
+0:36      add second child into first child ( temp 4-component vector of float)
+0:36        'result' ( temp 4-component vector of float)
+0:36        imageLoad ( global 4-component vector of float)
+0:36          'Image1' (layout( rgba8) uniform image2D)
+0:36          Constant:
+0:36            5 (const int)
+0:36            10 (const int)
+0:37      add second child into first child ( temp 4-component vector of float)
+0:37        'result' ( temp 4-component vector of float)
+0:37        imageLoad ( global 4-component vector of float)
+0:37          'Image2' (layout( rgba8) uniform image2D)
+0:37          Constant:
+0:37            5 (const int)
+0:37            10 (const int)
+0:38      add second child into first child ( temp 4-component vector of float)
+0:38        'result' ( temp 4-component vector of float)
+0:38        texture ( global 4-component vector of float)
+0:38          'Sampler1' ( uniform sampler2D)
+0:38          Constant:
+0:38            0.500000
+0:38            0.500000
+0:39      add second child into first child ( temp 4-component vector of float)
+0:39        'result' ( temp 4-component vector of float)
+0:39        texture ( global 4-component vector of float)
+0:39          'Sampler2' ( uniform sampler2D)
+0:39          Constant:
+0:39            0.500000
+0:39            0.500000
+0:40      move second child to first child ( temp 4-component vector of float)
+0:40        'Output' (layout( location=0) out 4-component vector of float)
+0:40        'result' ( temp 4-component vector of float)
+0:?   Linker Objects
+0:?     'anon@0' (layout( column_major std140) uniform block{layout( column_major std140 offset=0) uniform 4-component vector of float a})
+0:?     'anon@1' (layout( column_major std430) buffer block{layout( column_major std430 offset=0) buffer 40-element array of float c})
+0:?     'Image1' (layout( rgba8) uniform image2D)
+0:?     'Sampler1' ( uniform sampler2D)
+0:?     'anon@2' (layout( column_major std140) uniform block{layout( column_major std140 offset=0) uniform 4-component vector of float b})
+0:?     'anon@3' (layout( column_major std430) buffer block{layout( column_major std430 offset=0) buffer unsized 6-element array of 2-component vector of float d})
+0:?     'Image2' (layout( rgba8) uniform image2D)
+0:?     'Sampler2' ( uniform sampler2D)
+0:?     'Output' (layout( location=0) out 4-component vector of float)
+
+// Module Version 10000
+// Generated by (magic number): 8000b
+// Id's are bound by 102
+
+                              Capability Shader
+               1:             ExtInstImport  "GLSL.std.450"
+                              MemoryModel Logical GLSL450
+                              EntryPoint Vertex 4  "main" 95 100 101
+                              Source GLSL 460
+                              Name 4  "main"
+                              Name 9  "result"
+                              Name 12  "UBO1"
+                              MemberName 12(UBO1) 0  "a"
+                              Name 14  ""
+                              Name 22  "UBO2"
+                              MemberName 22(UBO2) 0  "b"
+                              Name 24  ""
+                              Name 32  "SSBO1"
+                              MemberName 32(SSBO1) 0  "c"
+                              Name 34  ""
+                              Name 47  "SSBO2"
+                              MemberName 47(SSBO2) 0  "d"
+                              Name 49  ""
+                              Name 64  "Image1"
+                              Name 72  "Image2"
+                              Name 80  "Sampler1"
+                              Name 87  "Sampler2"
+                              Name 93  "gl_PerVertex"
+                              MemberName 93(gl_PerVertex) 0  "gl_Position"
+                              MemberName 93(gl_PerVertex) 1  "gl_PointSize"
+                              MemberName 93(gl_PerVertex) 2  "gl_ClipDistance"
+                              MemberName 93(gl_PerVertex) 3  "gl_CullDistance"
+                              Name 95  ""
+                              Name 100  "gl_VertexID"
+                              Name 101  "gl_InstanceID"
+                              Decorate 12(UBO1) Block
+                              MemberDecorate 12(UBO1) 0 Offset 0
+                              Decorate 14 Binding 0
+                              Decorate 14 DescriptorSet 0
+                              Decorate 22(UBO2) Block
+                              MemberDecorate 22(UBO2) 0 Offset 0
+                              Decorate 24 Binding 1
+                              Decorate 24 DescriptorSet 0
+                              Decorate 31 ArrayStride 4
+                              Decorate 32(SSBO1) BufferBlock
+                              MemberDecorate 32(SSBO1) 0 Offset 0
+                              Decorate 34 Binding 0
+                              Decorate 34 DescriptorSet 0
+                              Decorate 46 ArrayStride 8
+                              Decorate 47(SSBO2) BufferBlock
+                              MemberDecorate 47(SSBO2) 0 Offset 0
+                              Decorate 49 Binding 1
+                              Decorate 49 DescriptorSet 0
+                              Decorate 64(Image1) Location 0
+                              Decorate 64(Image1) Binding 0
+                              Decorate 64(Image1) DescriptorSet 0
+                              Decorate 72(Image2) Location 2
+                              Decorate 72(Image2) Binding 1
+                              Decorate 72(Image2) DescriptorSet 0
+                              Decorate 80(Sampler1) Location 1
+                              Decorate 80(Sampler1) Binding 0
+                              Decorate 80(Sampler1) DescriptorSet 0
+                              Decorate 87(Sampler2) Location 3
+                              Decorate 87(Sampler2) Binding 1
+                              Decorate 87(Sampler2) DescriptorSet 0
+                              Decorate 93(gl_PerVertex) Block
+                              MemberDecorate 93(gl_PerVertex) 0 BuiltIn Position
+                              MemberDecorate 93(gl_PerVertex) 1 BuiltIn PointSize
+                              MemberDecorate 93(gl_PerVertex) 2 BuiltIn ClipDistance
+                              MemberDecorate 93(gl_PerVertex) 3 BuiltIn CullDistance
+                              Decorate 100(gl_VertexID) BuiltIn VertexId
+                              Decorate 101(gl_InstanceID) BuiltIn InstanceId
+               2:             TypeVoid
+               3:             TypeFunction 2
+               6:             TypeFloat 32
+               7:             TypeVector 6(float) 4
+               8:             TypePointer Function 7(fvec4)
+              10:    6(float) Constant 0
+              11:    7(fvec4) ConstantComposite 10 10 10 10
+        12(UBO1):             TypeStruct 7(fvec4)
+              13:             TypePointer Uniform 12(UBO1)
+              14:     13(ptr) Variable Uniform
+              15:             TypeInt 32 1
+              16:     15(int) Constant 0
+              17:             TypePointer Uniform 7(fvec4)
+        22(UBO2):             TypeStruct 7(fvec4)
+              23:             TypePointer Uniform 22(UBO2)
+              24:     23(ptr) Variable Uniform
+              29:             TypeInt 32 0
+              30:     29(int) Constant 40
+              31:             TypeArray 6(float) 30
+       32(SSBO1):             TypeStruct 31
+              33:             TypePointer Uniform 32(SSBO1)
+              34:     33(ptr) Variable Uniform
+              35:     15(int) Constant 5
+              36:             TypePointer Uniform 6(float)
+              39:     29(int) Constant 0
+              40:             TypePointer Function 6(float)
+              45:             TypeVector 6(float) 2
+              46:             TypeRuntimeArray 45(fvec2)
+       47(SSBO2):             TypeStruct 46
+              48:             TypePointer Uniform 47(SSBO2)
+              49:     48(ptr) Variable Uniform
+              50:             TypePointer Uniform 45(fvec2)
+              56:     29(int) Constant 1
+              59:     29(int) Constant 2
+              62:             TypeImage 6(float) 2D nonsampled format:Rgba8
+              63:             TypePointer UniformConstant 62
+      64(Image1):     63(ptr) Variable UniformConstant
+              66:             TypeVector 15(int) 2
+              67:     15(int) Constant 10
+              68:   66(ivec2) ConstantComposite 35 67
+      72(Image2):     63(ptr) Variable UniformConstant
+              77:             TypeImage 6(float) 2D sampled format:Unknown
+              78:             TypeSampledImage 77
+              79:             TypePointer UniformConstant 78
+    80(Sampler1):     79(ptr) Variable UniformConstant
+              82:    6(float) Constant 1056964608
+              83:   45(fvec2) ConstantComposite 82 82
+    87(Sampler2):     79(ptr) Variable UniformConstant
+              92:             TypeArray 6(float) 56
+93(gl_PerVertex):             TypeStruct 7(fvec4) 6(float) 92 92
+              94:             TypePointer Output 93(gl_PerVertex)
+              95:     94(ptr) Variable Output
+              97:             TypePointer Output 7(fvec4)
+              99:             TypePointer Input 15(int)
+100(gl_VertexID):     99(ptr) Variable Input
+101(gl_InstanceID):     99(ptr) Variable Input
+         4(main):           2 Function None 3
+               5:             Label
+       9(result):      8(ptr) Variable Function
+                              Store 9(result) 11
+              18:     17(ptr) AccessChain 14 16
+              19:    7(fvec4) Load 18
+              20:    7(fvec4) Load 9(result)
+              21:    7(fvec4) FAdd 20 19
+                              Store 9(result) 21
+              25:     17(ptr) AccessChain 24 16
+              26:    7(fvec4) Load 25
+              27:    7(fvec4) Load 9(result)
+              28:    7(fvec4) FAdd 27 26
+                              Store 9(result) 28
+              37:     36(ptr) AccessChain 34 16 35
+              38:    6(float) Load 37
+              41:     40(ptr) AccessChain 9(result) 39
+              42:    6(float) Load 41
+              43:    6(float) FAdd 42 38
+              44:     40(ptr) AccessChain 9(result) 39
+                              Store 44 43
+              51:     50(ptr) AccessChain 49 16 35
+              52:   45(fvec2) Load 51
+              53:    7(fvec4) Load 9(result)
+              54:   45(fvec2) VectorShuffle 53 53 1 2
+              55:   45(fvec2) FAdd 54 52
+              57:     40(ptr) AccessChain 9(result) 56
+              58:    6(float) CompositeExtract 55 0
+                              Store 57 58
+              60:     40(ptr) AccessChain 9(result) 59
+              61:    6(float) CompositeExtract 55 1
+                              Store 60 61
+              65:          62 Load 64(Image1)
+              69:    7(fvec4) ImageRead 65 68
+              70:    7(fvec4) Load 9(result)
+              71:    7(fvec4) FAdd 70 69
+                              Store 9(result) 71
+              73:          62 Load 72(Image2)
+              74:    7(fvec4) ImageRead 73 68
+              75:    7(fvec4) Load 9(result)
+              76:    7(fvec4) FAdd 75 74
+                              Store 9(result) 76
+              81:          78 Load 80(Sampler1)
+              84:    7(fvec4) ImageSampleExplicitLod 81 83 Lod 10
+              85:    7(fvec4) Load 9(result)
+              86:    7(fvec4) FAdd 85 84
+                              Store 9(result) 86
+              88:          78 Load 87(Sampler2)
+              89:    7(fvec4) ImageSampleExplicitLod 88 83 Lod 10
+              90:    7(fvec4) Load 9(result)
+              91:    7(fvec4) FAdd 90 89
+                              Store 9(result) 91
+              96:    7(fvec4) Load 9(result)
+              98:     97(ptr) AccessChain 95 16
+                              Store 98 96
+                              Return
+                              FunctionEnd
+// Module Version 10000
+// Generated by (magic number): 8000b
+// Id's are bound by 95
+
+                              Capability Shader
+               1:             ExtInstImport  "GLSL.std.450"
+                              MemoryModel Logical GLSL450
+                              EntryPoint Fragment 4  "main" 93
+                              ExecutionMode 4 OriginLowerLeft
+                              Source GLSL 460
+                              Name 4  "main"
+                              Name 9  "result"
+                              Name 12  "UBO1"
+                              MemberName 12(UBO1) 0  "a"
+                              Name 14  ""
+                              Name 22  "UBO2"
+                              MemberName 22(UBO2) 0  "b"
+                              Name 24  ""
+                              Name 32  "SSBO1"
+                              MemberName 32(SSBO1) 0  "c"
+                              Name 34  ""
+                              Name 47  "SSBO2"
+                              MemberName 47(SSBO2) 0  "d"
+                              Name 49  ""
+                              Name 64  "Image1"
+                              Name 72  "Image2"
+                              Name 80  "Sampler1"
+                              Name 87  "Sampler2"
+                              Name 93  "Output"
+                              Decorate 12(UBO1) Block
+                              MemberDecorate 12(UBO1) 0 Offset 0
+                              Decorate 14 Binding 0
+                              Decorate 14 DescriptorSet 0
+                              Decorate 22(UBO2) Block
+                              MemberDecorate 22(UBO2) 0 Offset 0
+                              Decorate 24 Binding 1
+                              Decorate 24 DescriptorSet 0
+                              Decorate 31 ArrayStride 4
+                              Decorate 32(SSBO1) BufferBlock
+                              MemberDecorate 32(SSBO1) 0 Offset 0
+                              Decorate 34 Binding 0
+                              Decorate 34 DescriptorSet 0
+                              Decorate 46 ArrayStride 8
+                              Decorate 47(SSBO2) BufferBlock
+                              MemberDecorate 47(SSBO2) 0 Offset 0
+                              Decorate 49 Binding 1
+                              Decorate 49 DescriptorSet 0
+                              Decorate 64(Image1) Location 0
+                              Decorate 64(Image1) Binding 0
+                              Decorate 64(Image1) DescriptorSet 0
+                              Decorate 72(Image2) Location 2
+                              Decorate 72(Image2) Binding 1
+                              Decorate 72(Image2) DescriptorSet 0
+                              Decorate 80(Sampler1) Location 1
+                              Decorate 80(Sampler1) Binding 0
+                              Decorate 80(Sampler1) DescriptorSet 0
+                              Decorate 87(Sampler2) Location 3
+                              Decorate 87(Sampler2) Binding 1
+                              Decorate 87(Sampler2) DescriptorSet 0
+                              Decorate 93(Output) Location 0
+               2:             TypeVoid
+               3:             TypeFunction 2
+               6:             TypeFloat 32
+               7:             TypeVector 6(float) 4
+               8:             TypePointer Function 7(fvec4)
+              10:    6(float) Constant 0
+              11:    7(fvec4) ConstantComposite 10 10 10 10
+        12(UBO1):             TypeStruct 7(fvec4)
+              13:             TypePointer Uniform 12(UBO1)
+              14:     13(ptr) Variable Uniform
+              15:             TypeInt 32 1
+              16:     15(int) Constant 0
+              17:             TypePointer Uniform 7(fvec4)
+        22(UBO2):             TypeStruct 7(fvec4)
+              23:             TypePointer Uniform 22(UBO2)
+              24:     23(ptr) Variable Uniform
+              29:             TypeInt 32 0
+              30:     29(int) Constant 40
+              31:             TypeArray 6(float) 30
+       32(SSBO1):             TypeStruct 31
+              33:             TypePointer Uniform 32(SSBO1)
+              34:     33(ptr) Variable Uniform
+              35:     15(int) Constant 5
+              36:             TypePointer Uniform 6(float)
+              39:     29(int) Constant 0
+              40:             TypePointer Function 6(float)
+              45:             TypeVector 6(float) 2
+              46:             TypeRuntimeArray 45(fvec2)
+       47(SSBO2):             TypeStruct 46
+              48:             TypePointer Uniform 47(SSBO2)
+              49:     48(ptr) Variable Uniform
+              50:             TypePointer Uniform 45(fvec2)
+              56:     29(int) Constant 1
+              59:     29(int) Constant 2
+              62:             TypeImage 6(float) 2D nonsampled format:Rgba8
+              63:             TypePointer UniformConstant 62
+      64(Image1):     63(ptr) Variable UniformConstant
+              66:             TypeVector 15(int) 2
+              67:     15(int) Constant 10
+              68:   66(ivec2) ConstantComposite 35 67
+      72(Image2):     63(ptr) Variable UniformConstant
+              77:             TypeImage 6(float) 2D sampled format:Unknown
+              78:             TypeSampledImage 77
+              79:             TypePointer UniformConstant 78
+    80(Sampler1):     79(ptr) Variable UniformConstant
+              82:    6(float) Constant 1056964608
+              83:   45(fvec2) ConstantComposite 82 82
+    87(Sampler2):     79(ptr) Variable UniformConstant
+              92:             TypePointer Output 7(fvec4)
+      93(Output):     92(ptr) Variable Output
+         4(main):           2 Function None 3
+               5:             Label
+       9(result):      8(ptr) Variable Function
+                              Store 9(result) 11
+              18:     17(ptr) AccessChain 14 16
+              19:    7(fvec4) Load 18
+              20:    7(fvec4) Load 9(result)
+              21:    7(fvec4) FAdd 20 19
+                              Store 9(result) 21
+              25:     17(ptr) AccessChain 24 16
+              26:    7(fvec4) Load 25
+              27:    7(fvec4) Load 9(result)
+              28:    7(fvec4) FAdd 27 26
+                              Store 9(result) 28
+              37:     36(ptr) AccessChain 34 16 35
+              38:    6(float) Load 37
+              41:     40(ptr) AccessChain 9(result) 39
+              42:    6(float) Load 41
+              43:    6(float) FAdd 42 38
+              44:     40(ptr) AccessChain 9(result) 39
+                              Store 44 43
+              51:     50(ptr) AccessChain 49 16 35
+              52:   45(fvec2) Load 51
+              53:    7(fvec4) Load 9(result)
+              54:   45(fvec2) VectorShuffle 53 53 1 2
+              55:   45(fvec2) FAdd 54 52
+              57:     40(ptr) AccessChain 9(result) 56
+              58:    6(float) CompositeExtract 55 0
+                              Store 57 58
+              60:     40(ptr) AccessChain 9(result) 59
+              61:    6(float) CompositeExtract 55 1
+                              Store 60 61
+              65:          62 Load 64(Image1)
+              69:    7(fvec4) ImageRead 65 68
+              70:    7(fvec4) Load 9(result)
+              71:    7(fvec4) FAdd 70 69
+                              Store 9(result) 71
+              73:          62 Load 72(Image2)
+              74:    7(fvec4) ImageRead 73 68
+              75:    7(fvec4) Load 9(result)
+              76:    7(fvec4) FAdd 75 74
+                              Store 9(result) 76
+              81:          78 Load 80(Sampler1)
+              84:    7(fvec4) ImageSampleImplicitLod 81 83
+              85:    7(fvec4) Load 9(result)
+              86:    7(fvec4) FAdd 85 84
+                              Store 9(result) 86
+              88:          78 Load 87(Sampler2)
+              89:    7(fvec4) ImageSampleImplicitLod 88 83
+              90:    7(fvec4) Load 9(result)
+              91:    7(fvec4) FAdd 90 89
+                              Store 9(result) 91
+              94:    7(fvec4) Load 9(result)
+                              Store 93(Output) 94
+                              Return
+                              FunctionEnd

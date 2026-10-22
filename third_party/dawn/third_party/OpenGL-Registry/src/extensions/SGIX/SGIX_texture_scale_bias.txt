@@ -1,0 +1,194 @@
+Name
+
+    SGIX_texture_scale_bias
+
+Name Strings
+
+    GL_SGIX_texture_scale_bias
+
+Version
+
+    $Date: 1997/02/26 03:36:38 $ $Revision: 1.9 $
+
+Number
+
+    56
+
+Dependencies
+
+    EXT_texture
+    EXT_texture3D
+    EXT_texture_object
+
+Overview
+
+    This extension adds scale, bias, and clamp to [0, 1] operations to the 
+    texture pipeline.
+    These operations are applied to the filtered result of a texture lookup,
+    before that result is used in the texture environment equations and
+    before the texture color lookup table of SGI_texture_color_table, 
+    if that extension exists.
+    These operations are distinct from the scale, bias, and clamp operations
+    that appear in the SGI_color_table extension, which are used to
+    define a color lookup table.
+
+    Scale and bias operations on texels can be used to better utilize the
+    color resolution of a particular texture internal format (see EXT_texture).
+
+Issues
+
+    *	still missing: GLX protocol, registry number
+
+    * 	RE and IMPACT do not have hardware support for this extension.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameters of TexParameterfv, TexParameteriv, 
+    and GetTexParameter:
+
+	POST_TEXTURE_FILTER_BIAS_SGIX		0x8179
+	POST_TEXTURE_FILTER_SCALE_SGIX		0x817A
+
+    Accepted by the <pname> parameters of GetBooleanv, GetDoublev, GetFloatv,
+    and GetIntegerv:
+
+	POST_TEXTURE_FILTER_BIAS_RANGE_SGIX	0x817B
+	POST_TEXTURE_FILTER_SCALE_RANGE_SGIX	0x817C
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    A scale or bias is specified using TexParameterfv or
+    TexParameteriv with a <pname> of either POST_TEXTURE_FILTER_SCALE_SGIX
+    or POST_TEXTURE_FILTER_BIAS_SGIX and with <params> set to an array of 
+    four values. The scale or bias values can be queried using 
+    GetTexParameterfv or GetTexParameteriv.
+
+    The scale, bias, and clamp operations are applied, in that order,
+    directly before the texture environment equations, or, if the 
+    SGI_texture_color_table extension exists, directly before the 
+    texture color lookup table.  
+    The four values for scale (or bias) correspond to the R, G, B, 
+    and A scale (or bias) factors.
+    These are applied to the corresponding texture components, Rt, Gt,
+    Bt, and At, as denoted in the EXT_texture extension.
+    Following the scale and bias is a clamp to [0, 1].
+
+    The scale, bias, and clamp operations are effectively disabled by
+    setting the four scale values to 1 and the four bias values to 0.
+    There is no specific enable or disable token for this extension.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations and the 
+    Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    The specification for "EXT_texture_object" describes the state that
+    comprises a texture object.  Here it is rewritten to include the
+    scale and bias state:
+
+   "A texture object comprises the image arrays, priority, border color,
+    filter modes, and wrap modes that are associated with that object.  More
+    explicitly, the state list
+    
+	TEXTURE,
+	TEXTURE_PRIORITY_EXT
+	TEXTURE_RED_SIZE,
+	TEXTURE_GREEN_SIZE,
+	TEXTURE_BLUE_SIZE,
+	TEXTURE_ALPHA_SIZE,
+	TEXTURE_LUMINANCE_SIZE,
+	TEXTURE_INTENSITY_SIZE,
+	TEXTURE_WIDTH,
+	TEXTURE_HEIGHT,
+	TEXTURE_DEPTH_EXT,
+	TEXTURE_BORDER,
+	TEXTURE_COMPONENTS,
+	TEXTURE_BORDER_COLOR,
+	TEXTURE_MIN_FILTER,
+	TEXTURE_MAG_FILTER,
+	TEXTURE_WRAP_S,
+	TEXTURE_WRAP_T,
+	TEXTURE_WRAP_R_EXT,
+	POST_TEXTURE_FILTER_BIAS_SGIX,
+	POST_TEXTURE_FILTER_SCALE_SGIX	
+
+    composes a single texture object."
+
+    Since an implementation may have a limited range for the values of scale
+    and bias (e.g. due to hardware constraints), this range can be queried.
+    The scale or bias range is obtained using GetFloatv (or other Get) with a 
+    <value> of POST_TEXTURE_FILTER_SCALE_RANGE_SGIX or 
+    POST_TEXTURE_FILTER_BIAS_RANGE_SGIX, respectively. An array of two floats
+    is returned.  The first is the minimum value and the second is the maximum 
+    value.
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    XXX
+
+Dependencies on EXT_texture
+
+    This extension refers to texture components as Rt, Gt, Bt, and At, 
+    as denoted in the EXT_texture extension.
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is not implemented, references to it should be deleted.
+
+Dependencies on EXT_texture_object
+
+    As described above, the scale and bias state is included as part of the
+    texture object state.
+    If EXT_texture_object is not implemented, references to it should be deleted.
+
+Errors
+
+    POST_TEXTURE_FILTER_BIAS_SGIX and POST_TEXTURE_FILTER_SCALE_SGIX are added 
+    to the list of <pname> parameters that are accepted by TexParameter[fi]v 
+    and GetTexParameter[fi]v. POST_TEXTURE_FILTER_BIAS_RANGE_SGIX and 
+    POST_TEXTURE_FILTER_SCALE_RANGE_SGIX are added to the list of <value> 
+    parameters that are accepted by Get.  
+
+New State
+
+    Get Value					Get Command		Type		Initial Value	Attribute
+    ---------					-----------		----		-------------	---------
+
+    POST_TEXTURE_FILTER_BIAS_SGIX		GetTexParameterfv	n x 4 x R	(0,0,0,0)	texture
+    POST_TEXTURE_FILTER_SCALE_SGIX		GetTexParameterfv	n x 4 x R	(1,1,1,1)	texture
+
+    Note:  The "Type" column shows "n x ..." since this state will appear 
+    in each of "n" texture objects defined by EXT_texture_object.
+    If EXT_texture_object is not implemented, then this state will appear
+    for each texture dimension (e.g. TEXTURE_1D, TEXTURE_2D, ...).
+
+New Implementation Dependent State
+
+    Get Value					Get Command		Type		Minimum Value	Attribute
+    ---------					-----------		----		-------------	---------
+
+    POST_TEXTURE_FILTER_BIAS_RANGE_SGIX		GetFloatv		2 x R		(0,1)		-
+    POST_TEXTURE_FILTER_SCALE_RANGE_SGIX	GetFloatv		2 x R		(0,1)		-
+
+    Note: The "Minimum Value" for POST_TEXTURE_FILTER_BIAS_RANGE_SGIX and
+    POST_TEXTURE_FILTER_SCALE_RANGE_SGIX is listed as a range, which might seem 
+    confusing.  What is meant is that an implementation will support at least 
+    the range listed.

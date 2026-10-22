@@ -1,0 +1,12 @@
+#version 450
+layout(local_size_x = 1) in;
+layout(set = 0, binding = 1, std140) buffer SSBO
+{
+	uint size;
+	float v[];
+};
+
+void main()
+{
+	size = v.length();
+}

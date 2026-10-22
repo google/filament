@@ -1,0 +1,16 @@
+#version 460
+#extension GL_EXT_ray_tracing : require
+
+layout(location = 3) rayPayloadEXT vec4 payload;
+
+layout(push_constant) uniform Registers
+{
+	uvec2 ptr;
+};
+
+void main()
+{
+    vec3 origin = vec3(0.0);
+    vec3 direction = vec3(0.0, 0.0, -1.0);
+    traceRayEXT(accelerationStructureEXT(ptr), gl_RayFlagsOpaqueEXT, 0xFF, 0u, 0u, 0u, origin, 0.0, direction, 100.0f, 3);
+}

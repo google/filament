@@ -1,0 +1,1144 @@
+{
+  "copyright": [
+    "SPDX-FileCopyrightText: 2022-2025 Arm Ltd.",
+    "SPDX-License-Identifier: MIT"
+  ],
+  "version": 1000001,
+  "revision": 1,
+  "instructions": [
+    {
+      "opname": "ARGMAX",
+      "opcode": 0,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "axis"
+        },
+        {
+          "kind": "IdRef",
+          "name": "nan_mode"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input"
+        }
+      ]
+    },
+    {
+      "opname": "AVG_POOL2D",
+      "opcode": 1,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "kernel"
+        },
+        {
+          "kind": "IdRef",
+          "name": "stride"
+        },
+        {
+          "kind": "IdRef",
+          "name": "pad"
+        },
+        {
+          "kind": "IdRef",
+          "name": "acc_type"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input_zp"
+        },
+        {
+          "kind": "IdRef",
+          "name": "output_zp"
+        }
+      ]
+    },
+    {
+      "opname": "CONV2D",
+      "opcode": 2,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "pad"
+        },
+        {
+          "kind": "IdRef",
+          "name": "stride"
+        },
+        {
+          "kind": "IdRef",
+          "name": "dilation"
+        },
+        {
+          "kind": "IdRef",
+          "name": "acc_type"
+        },
+        {
+          "kind": "IdRef",
+          "name": "local_bound"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input"
+        },
+        {
+          "kind": "IdRef",
+          "name": "weight"
+        },
+        {
+          "kind": "IdRef",
+          "name": "bias"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input_zp"
+        },
+        {
+          "kind": "IdRef",
+          "name": "weight_zp"
+        }
+      ]
+    },
+    {
+      "opname": "CONV3D",
+      "opcode": 3,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "pad"
+        },
+        {
+          "kind": "IdRef",
+          "name": "stride"
+        },
+        {
+          "kind": "IdRef",
+          "name": "dilation"
+        },
+        {
+          "kind": "IdRef",
+          "name": "acc_type"
+        },
+        {
+          "kind": "IdRef",
+          "name": "local_bound"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input"
+        },
+        {
+          "kind": "IdRef",
+          "name": "weight"
+        },
+        {
+          "kind": "IdRef",
+          "name": "bias"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input_zp"
+        },
+        {
+          "kind": "IdRef",
+          "name": "weight_zp"
+        }
+      ]
+    },
+    {
+      "opname": "DEPTHWISE_CONV2D",
+      "opcode": 4,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "pad"
+        },
+        {
+          "kind": "IdRef",
+          "name": "stride"
+        },
+        {
+          "kind": "IdRef",
+          "name": "dilation"
+        },
+        {
+          "kind": "IdRef",
+          "name": "acc_type"
+        },
+        {
+          "kind": "IdRef",
+          "name": "local_bound"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input"
+        },
+        {
+          "kind": "IdRef",
+          "name": "weight"
+        },
+        {
+          "kind": "IdRef",
+          "name": "bias"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input_zp"
+        },
+        {
+          "kind": "IdRef",
+          "name": "weight_zp"
+        }
+      ]
+    },
+    {
+      "opname": "FFT2D",
+      "opcode": 5,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "inverse"
+        },
+        {
+          "kind": "IdRef",
+          "name": "local_bound"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input_real"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input_imag"
+        }
+      ]
+    },
+    {
+      "opname": "MATMUL",
+      "opcode": 6,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "A"
+        },
+        {
+          "kind": "IdRef",
+          "name": "B"
+        },
+        {
+          "kind": "IdRef",
+          "name": "A_zp"
+        },
+        {
+          "kind": "IdRef",
+          "name": "B_zp"
+        }
+      ]
+    },
+    {
+      "opname": "MAX_POOL2D",
+      "opcode": 7,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "kernel"
+        },
+        {
+          "kind": "IdRef",
+          "name": "stride"
+        },
+        {
+          "kind": "IdRef",
+          "name": "pad"
+        },
+        {
+          "kind": "IdRef",
+          "name": "nan_mode"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input"
+        }
+      ]
+    },
+    {
+      "opname": "RFFT2D",
+      "opcode": 8,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "local_bound"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input_real"
+        }
+      ]
+    },
+    {
+      "opname": "TRANSPOSE_CONV2D",
+      "opcode": 9,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "out_pad"
+        },
+        {
+          "kind": "IdRef",
+          "name": "stride"
+        },
+        {
+          "kind": "IdRef",
+          "name": "acc_type"
+        },
+        {
+          "kind": "IdRef",
+          "name": "local_bound"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input"
+        },
+        {
+          "kind": "IdRef",
+          "name": "weight"
+        },
+        {
+          "kind": "IdRef",
+          "name": "bias"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input_zp"
+        },
+        {
+          "kind": "IdRef",
+          "name": "weight_zp"
+        }
+      ]
+    },
+    {
+      "opname": "CLAMP",
+      "opcode": 10,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "min_val"
+        },
+        {
+          "kind": "IdRef",
+          "name": "max_val"
+        },
+        {
+          "kind": "IdRef",
+          "name": "nan_mode"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input"
+        }
+      ]
+    },
+    {
+      "opname": "ERF",
+      "opcode": 11,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input"
+        }
+      ]
+    },
+    {
+      "opname": "SIGMOID",
+      "opcode": 12,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input"
+        }
+      ]
+    },
+    {
+      "opname": "TANH",
+      "opcode": 13,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input"
+        }
+      ]
+    },
+    {
+      "opname": "ADD",
+      "opcode": 14,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input2"
+        }
+      ]
+    },
+    {
+      "opname": "ARITHMETIC_RIGHT_SHIFT",
+      "opcode": 15,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "round"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input2"
+        }
+      ]
+    },
+    {
+      "opname": "BITWISE_AND",
+      "opcode": 16,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input2"
+        }
+      ]
+    },
+    {
+      "opname": "BITWISE_OR",
+      "opcode": 17,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input2"
+        }
+      ]
+    },
+    {
+      "opname": "BITWISE_XOR",
+      "opcode": 18,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input2"
+        }
+      ]
+    },
+    {
+      "opname": "INTDIV",
+      "opcode": 19,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input2"
+        }
+      ]
+    },
+    {
+      "opname": "LOGICAL_AND",
+      "opcode": 20,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input2"
+        }
+      ]
+    },
+    {
+      "opname": "LOGICAL_LEFT_SHIFT",
+      "opcode": 21,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input2"
+        }
+      ]
+    },
+    {
+      "opname": "LOGICAL_RIGHT_SHIFT",
+      "opcode": 22,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input2"
+        }
+      ]
+    },
+    {
+      "opname": "LOGICAL_OR",
+      "opcode": 23,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input2"
+        }
+      ]
+    },
+    {
+      "opname": "LOGICAL_XOR",
+      "opcode": 24,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input2"
+        }
+      ]
+    },
+    {
+      "opname": "MAXIMUM",
+      "opcode": 25,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "nan_mode"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input2"
+        }
+      ]
+    },
+    {
+      "opname": "MINIMUM",
+      "opcode": 26,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "nan_mode"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input2"
+        }
+      ]
+    },
+    {
+      "opname": "MUL",
+      "opcode": 27,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input2"
+        },
+        {
+          "kind": "IdRef",
+          "name": "shift"
+        }
+      ]
+    },
+    {
+      "opname": "POW",
+      "opcode": 28,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input2"
+        }
+      ]
+    },
+    {
+      "opname": "SUB",
+      "opcode": 29,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input2"
+        }
+      ]
+    },
+    {
+      "opname": "TABLE",
+      "opcode": 30,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "table"
+        }
+      ]
+    },
+    {
+      "opname": "ABS",
+      "opcode": 31,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        }
+      ]
+    },
+    {
+      "opname": "BITWISE_NOT",
+      "opcode": 32,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        }
+      ]
+    },
+    {
+      "opname": "CEIL",
+      "opcode": 33,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        }
+      ]
+    },
+    {
+      "opname": "CLZ",
+      "opcode": 34,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        }
+      ]
+    },
+    {
+      "opname": "COS",
+      "opcode": 35,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        }
+      ]
+    },
+    {
+      "opname": "EXP",
+      "opcode": 36,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        }
+      ]
+    },
+    {
+      "opname": "FLOOR",
+      "opcode": 37,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        }
+      ]
+    },
+    {
+      "opname": "LOG",
+      "opcode": 38,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        }
+      ]
+    },
+    {
+      "opname": "LOGICAL_NOT",
+      "opcode": 39,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        }
+      ]
+    },
+    {
+      "opname": "NEGATE",
+      "opcode": 40,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input1_zp"
+        },
+        {
+          "kind": "IdRef",
+          "name": "output_zp"
+        }
+      ]
+    },
+    {
+      "opname": "RECIPROCAL",
+      "opcode": 41,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        }
+      ]
+    },
+    {
+      "opname": "RSQRT",
+      "opcode": 42,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        }
+      ]
+    },
+    {
+      "opname": "SIN",
+      "opcode": 43,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        }
+      ]
+    },
+    {
+      "opname": "SELECT",
+      "opcode": 44,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input2"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input3"
+        }
+      ]
+    },
+    {
+      "opname": "EQUAL",
+      "opcode": 45,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input2"
+        }
+      ]
+    },
+    {
+      "opname": "GREATER",
+      "opcode": 46,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input2"
+        }
+      ]
+    },
+    {
+      "opname": "GREATER_EQUAL",
+      "opcode": 47,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input2"
+        }
+      ]
+    },
+    {
+      "opname": "REDUCE_ALL",
+      "opcode": 48,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "axis"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input"
+        }
+      ]
+    },
+    {
+      "opname": "REDUCE_ANY",
+      "opcode": 49,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "axis"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input"
+        }
+      ]
+    },
+    {
+      "opname": "REDUCE_MAX",
+      "opcode": 50,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "axis"
+        },
+        {
+          "kind": "IdRef",
+          "name": "nan_mode"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input"
+        }
+      ]
+    },
+    {
+      "opname": "REDUCE_MIN",
+      "opcode": 51,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "axis"
+        },
+        {
+          "kind": "IdRef",
+          "name": "nan_mode"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input"
+        }
+      ]
+    },
+    {
+      "opname": "REDUCE_PRODUCT",
+      "opcode": 52,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "axis"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input"
+        }
+      ]
+    },
+    {
+      "opname": "REDUCE_SUM",
+      "opcode": 53,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "axis"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input"
+        }
+      ]
+    },
+    {
+      "opname": "CONCAT",
+      "opcode": 54,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "axis"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input1",
+          "quantifier": "*"
+        }
+      ]
+    },
+    {
+      "opname": "PAD",
+      "opcode": 55,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "padding"
+        },
+        {
+          "kind": "IdRef",
+          "name": "pad_const"
+        }
+      ]
+    },
+    {
+      "opname": "RESHAPE",
+      "opcode": 56,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "shape"
+        }
+      ]
+    },
+    {
+      "opname": "REVERSE",
+      "opcode": 57,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "axis"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        }
+      ]
+    },
+    {
+      "opname": "SLICE",
+      "opcode": 58,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "start"
+        },
+        {
+          "kind": "IdRef",
+          "name": "size"
+        }
+      ]
+    },
+    {
+      "opname": "TILE",
+      "opcode": 59,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        },
+        {
+          "kind": "IdRef",
+          "name": "multiples"
+        }
+      ]
+    },
+    {
+      "opname": "TRANSPOSE",
+      "opcode": 60,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "perms"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input1"
+        }
+      ]
+    },
+    {
+      "opname": "GATHER",
+      "opcode": 61,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "values"
+        },
+        {
+          "kind": "IdRef",
+          "name": "indices"
+        }
+      ]
+    },
+    {
+      "opname": "SCATTER",
+      "opcode": 62,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "values_in"
+        },
+        {
+          "kind": "IdRef",
+          "name": "indices"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input"
+        }
+      ]
+    },
+    {
+      "opname": "RESIZE",
+      "opcode": 63,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "mode"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input"
+        },
+        {
+          "kind": "IdRef",
+          "name": "scale"
+        },
+        {
+          "kind": "IdRef",
+          "name": "offset"
+        },
+        {
+          "kind": "IdRef",
+          "name": "border"
+        }
+      ]
+    },
+    {
+      "opname": "CAST",
+      "opcode": 64,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "input"
+        }
+      ]
+    },
+    {
+      "opname": "RESCALE",
+      "opcode": 65,
+      "operands": [
+        {
+          "kind": "IdRef",
+          "name": "scale32"
+        },
+        {
+          "kind": "IdRef",
+          "name": "rounding_mode"
+        },
+        {
+          "kind": "IdRef",
+          "name": "per_channel"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input_unsigned"
+        },
+        {
+          "kind": "IdRef",
+          "name": "output_unsigned"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input"
+        },
+        {
+          "kind": "IdRef",
+          "name": "multiplier"
+        },
+        {
+          "kind": "IdRef",
+          "name": "shift"
+        },
+        {
+          "kind": "IdRef",
+          "name": "input_zp"
+        },
+        {
+          "kind": "IdRef",
+          "name": "output_zp"
+        }
+      ]
+    }
+  ],
+  "operand_kinds": []
+}

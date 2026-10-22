@@ -1,0 +1,178 @@
+Name
+
+    NV_robustness_video_memory_purge
+
+Name Strings
+
+    GL_NV_robustness_video_memory_purge
+    GLX_NV_robustness_video_memory_purge
+    EGL_NV_robustness_video_memory_purge
+
+Contact
+
+    Arthur Huillet, NVIDIA Corporation (ahuillet 'at' nvidia.com)
+
+Contributors
+
+    Arthur Huillet, NVIDIA Corporation
+    Jeff Juliano, NVIDIA Corporation
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified Date: May 26, 2016
+    Revision:           5
+
+Number
+
+    Unassigned
+
+Dependencies
+
+    This extension is written against the ARB_robustness and 
+    GLX_ARB_create_context extensions.
+
+Overview
+
+    Allow applications to be notified when video memory has been purged.
+
+    The NVIDIA OpenGL driver architecture on Linux has a limitation:
+    resources located in video memory are not persistent across certain
+    events. VT switches, suspend/resume events, and mode switching
+    events may erase the contents of video memory. Any resource that
+    is located exclusively in video memory, such as framebuffer objects
+    (FBOs), will be lost. As the OpenGL specification makes no mention
+    of events where the video memory is allowed to be cleared, the
+    driver attempts to hide this fact from the application, but cannot
+    do it for all resources.
+
+    This extension provides a way for applications to discover when video
+    memory content has been lost, so that the application can re-populate
+    the video memory content as necessary.
+
+    This extension will have a limited lifespan, as planned architectural
+    evolutions in the NVIDIA Linux driver stack will allow
+    video memory to be persistent. Any driver that exposes this
+    extension is a driver that considers video memory to be
+    volatile. Once the driver stack has been improved, the extension
+    will no longer be exposed.
+
+New Procedures and Functions
+
+    NONE
+
+New Tokens
+
+    Returned by GetGraphicsResetStatusARB, in addition to other tokens 
+    defined in ARB_robustness:
+
+        PURGED_CONTEXT_RESET_NV    0x92BB
+    
+    Accepted as an attribute name in the <*attrib_list> argument of
+    glXCreateContextAttribsARB:
+        
+        GLX_GENERATE_RESET_ON_VIDEO_MEMORY_PURGE_NV 0x20F7
+
+    Accepted as an attribute name in the <*attrib_list> argument of 
+    eglCreateContext:
+        
+        EGL_GENERATE_RESET_ON_VIDEO_MEMORY_PURGE_NV 0x334C
+
+Additions to Chapter 2 of the OpenGL 3.2 (Compatibility Profile)
+Specification (OpenGL Operation)
+
+    Modify subsection 2.6 "Graphics Reset Recovery". After:
+        UNKNOWN_CONTEXT_RESET_ARB indicates a detected graphics reset 
+        whose cause is unknown.
+
+    add:
+        PURGED_CONTEXT_RESET_NV indicates that video memory was purged
+        in a mode switch event. In that case, the application can no 
+        longer count on its resources' content being preserved, and must 
+        delete and recreate all buffer objects including FBOs and all 
+        textures bound to an FBO, transfer all relevant data again, 
+        and re-render to FBOs. Using buffer objects, including FBOs, 
+        that haven't been deleted and re-created is undefined behavior. 
+        Other objects are unaffected.
+
+        GetGraphicsResetStatusARB() needs to be called at least once 
+        every frame, after a Flush(), Finish(), or buffer swapping call.
+
+Additions to the GLX 1.4 Specification
+
+    This extension modifies language specified in the
+    GLX_ARB_create_context and GLX_ARB_create_context_profile
+    extensions.
+
+    Add a new paragraph to the description of glXCreateContextAttribsARB:
+
+        The attribute name GLX_GENERATE_RESET_ON_VIDEO_MEMORY_PURGE_NV, 
+        which defaults to GL_FALSE, can be specified as GL_TRUE. In this 
+        case, a context reset notification will be generated when video 
+        memory content has been lost. This will only take effect if the 
+        attribute GLX_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB is set to 
+        GLX_LOSE_CONTEXT_ON_RESET_ARB.
+
+Additions to the EGL 1.5 Specification
+
+    Modify the description of eglCreateContext. Add a new section:
+
+        3.7.1.7 OpenGL reset notification for video memory purge events
+
+        The attribute name EGL_GENERATE_RESET_ON_VIDEO_MEMORY_PURGE_NV, 
+        which defaults to GL_FALSE, can be specified as GL_TRUE. In this 
+        case, a context reset notification will be generated when video 
+        memory content has been lost. This will only take effect if the 
+        attribute EGL_CONTEXT_OPENGL_RESET_NOTIFICATION_STRATEGY is set 
+        to EGL_LOSE_CONTEXT_ON_RESET.
+
+Errors
+
+    NONE
+
+Issues
+
+    (1) Does this extension allow an application to be sure that the
+    rendered image is always perfect?
+
+    Events that clear video memory happen asynchronously to OpenGL
+    clients, so this extension does not guarantee perfect rendering.
+
+    (2) Which NVIDIA drivers are affected?
+
+    Not all NVIDIA drivers expose this extension, but all desktop Linux 
+    drivers at the time of its publishing are affected by the issues it 
+    addresses.
+
+Example
+
+    create_gl_context();
+    create_resources();
+    while (1) {
+        update_world();
+        if (GetGraphicsResetStatusARB() == PURGED_CONTEXT_RESET_NV) {
+            delete_resources();
+            create_resources();
+        }
+        render_frame();
+    }
+
+Revision History
+
+    #1 April 1, 2016: Arthur Huillet
+        - First draft.
+
+    #2 April 2, 2016: Jeff Juliano
+        - Reflow with line wrap, eliminate tabs.
+
+    #3 April 5, 2016: Arthur Huillet
+        - Rewrite as extension of ARB_robustness.
+
+    #4 April 20, 2016: Arthur Huillet
+        - Improve language.
+
+    #5 May 26, 2016: Arthur Huillet
+        - Add a context creation bit.

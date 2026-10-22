@@ -1,0 +1,47 @@
+@charset "utf-8";
+/* CSS Document */
+        li { font: normal 14px verdana, sans-serif; line-height: 14px; }
+        ul { font: normal 14px verdana, sans-serif; line-height: 14px; }
+        a:link, a:visited {color:blue; text-decoration:none;}
+        a:hover {color:blue; text-decoration:none; background-color:FFFF99; }
+        
+        #navwrap {
+                width: 320px;
+                margin:0 0 0 4px;
+                padding:0;
+                }
+                
+        #containerul, #containerul ul{
+        text-align:left;
+        margin:0 0 0 4px; /* Removes browser default margins applied to the lists. */
+        padding:0; /* Removes browser default padding applied to the lists. */
+        }
+        
+        #containerul li{
+        margin:0 0 0 15px; /* A left margin to indent the list items and give the menu a sense of structure. */
+        padding:4px 0 0 2px;
+        list-style-type:none; /* Removes the bullet point that usually goes next to each item in a list. */
+        font: normal 12px verdana, sans-serif; 
+        }
+        
+        #containerul li.Level1 {
+        margin:0 0 0 0;
+        padding:4px 0 0 2px;
+        list-style-type:none; /* Removes the bullet point that usually goes next to each item in a list. */
+        font: normal 14px verdana, sans-serif; 
+        }
+
+        #containerul .symbols{ /* Various styles to position the symbols next to the items in the menu. */
+        background-repeat:no-repeat;
+        float:left;
+        height:14px;
+        margin-right:5px;
+        margin-top:1px;
+        width:14px;
+        }
+        
+#containerul ul.Level2 {
+        margin:0;
+        padding: 0;
+        }       
+

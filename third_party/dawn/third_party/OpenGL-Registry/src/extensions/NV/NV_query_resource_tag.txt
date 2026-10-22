@@ -1,0 +1,193 @@
+Name
+
+    NV_query_resource_tag
+
+Name Strings
+
+    GL_NV_query_resource_tag
+
+Contact
+
+    Kevin Lefebvre, NVIDIA (klefebvre 'at' nvidia.com)
+
+Contributors
+
+Status
+
+    Under review.  Target release in NVIDIA 387.00 drivers.
+    NVIDIA's Tegra drivers will not expose this extensions.
+
+Version
+
+    Last Modified Date: May 4, 2017
+    Author Revision: 0.2
+
+Number
+
+     OpenGL Extension #512
+
+Dependencies
+
+    OpenGL 2.0 is required.
+    GL_NV_query_resource is required.
+    The extension is written against the OpenGL 2.0 Specification.
+
+Overview
+    
+    This extension adds the capability to associate a tag with one or more
+    memory resource allocations. This tag can be reported back during
+    queryResource operations and also be used to limit resource reporting to
+    only those allocations with the specified tag. A tag is a previously
+    reserved id and an optional text string.
+
+New Procedures and Functions
+
+    GenQueryResourceTagNV(GLsizei n, GLuint *tagIds)
+    DeleteQueryResourceTagNV(GLsizei n, const GLuint *tagIds)
+    QueryResourceTagNV(GLuint tagId, const GLchar *tagString)
+
+New Tokens
+    
+    none
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    none
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    none
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    none
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    none
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+  After the third paragraph of the "Section 6.1.x GPU Query Resource" of the
+  GL_NV_query_resource extension add the following:
+
+    The <tagId> parameter determines how the query handles memory allocation
+    tagged information. A value of 0 causes the query to not report any tag
+    information. A positive value will cause the query to return all memory
+    allocations associated with that tag (assuming the tag is valid, an
+    invalid tag results in the query responding as if the tagId value was 0).
+    A value of -1 will cause the query to return allocations for all tags.
+    In addition to the tagId being returned for an allocation the associated
+    tag text string will be returned if it exists.
+
+    The bufSize parameter indicates the size of the application provided buffer
+    in ints where the query results are returned. The buffer parameter points
+    to this return buffer. The commands return value is the number of ints
+    written in the return buffer. If the return value is negative then the
+    buffer is too small to hold the returned data. If the buffer pointer is
+    NULL then the return value specifies the size of buffer needed to hold the
+    results from the query call.
+
+  At the end of the "Section 6.1.x GPU Query Resource" of the 
+  GL_NV_query_resource extension add the following:
+  
+    The command GenQueryResourceTagNV returns <n> previously unused query
+    resource tag object names in the buffer <tagIds>.  These names are reserved
+    as used for the purposes of GenQueryResourceTagNV only, but they acquire
+    state only when they are first used by QueryResourceTagNV described below.
+
+    The tag objects are deleted by calling DeleteQueryResourceTagNV where
+    <tagIds> contains <n> names of tag objects to be deleted. After a state
+    object is deleted it has no contents. Whether the released TagId's will be
+    reused is implementation dependent. Unused names in <states> are silently
+    ignored, as is the value zero. If a tag object is deleted there may still
+    be memory allocations associated with the tagId but queries based on the
+    tagId will not report any information.
+
+    The command QueryResourceTagNV creates a query resource tag object
+    associated with the name <tagId>. If the <tagString> is non-null then the
+    null terminated string will be saved in the tag object (and will be
+    reported on a query). If the tagId aready has an associated object with
+    it then the new <tagString> will replace the exisiting string. To disable
+    tagging (ie. the creating of new objects without a tag) set the <tagId>
+    parameter to 0.
+
+Replace the format descriptor in this section with:
+
+    fixedHeader
+        fixedBlkSize - size of fixed header
+        version - data stream version number (version = 1 at this time)
+        devCount - count of devices
+    deviceBlk[i] (i from 0 to devCount - 1)
+        summaryBlk
+            devBlkSize - size of per device info including detail blocks
+            summaryBlkSize - summary block size
+            numAllocs - number of GL object allocations
+            vidmem - size of vidmem in use by GL objects
+            vidmemFree - size of vidmem allocated but not in use
+            detailCount - number of detail blocks
+        detailBlk[j] (j from 0 to detailCount - 1)
+            detailBlkSize - size of single detail block
+            memType - only vidmem at this time
+            objType - GL object type
+            numAllocs - number of objects of this objType
+            vidmem - amount of memory used for this objType
+    tagCount
+    tagRecord[k] (k from 0 to tagCount - 1)
+        size - size of this tag record entry
+        tagId - tag id
+        devId - device id this tag resides on
+        numAllocs - number of allocations with this tagId
+        vidmem - size of vidmem in use by objects with this tagId
+        strlen - length of optional tag string (in int's, 0 if no string)
+        str - optional null terminated tag string
+
+    note: sizes are in int's
+
+    Stepping through the buffer can be accomplished by:
+    
+        fixedHeader addr = address of buffer
+
+        deviceBlk[0] addr = fixedHeader addr + fixedBlkSize
+          summaryBlk addr = deviceBlk[0] addr
+          detailBlk[0] addr = summaryBlk addr + summaryBlkSize
+          detailBlk[1] addr = detailBlk[0] addr + detailBlkSize
+
+        deviceBlk[1] addr = deviceBlk[0] addr + devBlockSize
+
+        tagCount addr = deviceBlk[devCount] addr
+        tagRecond[0] addr = tagCount + 1
+
+    The intent of the sizes embedded in the stream is to enable backward
+    comaptibility. In future extension additions new state added to a block
+    will be added at he end. Exisiting buffer decoders wil continue to decode
+    the original data and ignore new data by using the sizes to step through
+    the buffer.
+
+Errors
+
+    None
+
+New State
+
+    None
+
+Issue:
+    1) After a DeleteQueryResourceTag inaddition to deleting the tagString
+       and marking the tagId as unused should the tagId be purged from the
+       memory allocations. This could be a potentially expensive operation,
+       the memory allocation structures need to be walked for every tagId
+       in the list while a log is taken. 
+
+       PROPOSED RESOLUTION: Mark the tagId as invalid, ignore invalid tags in
+       the QueryResource command, not hand it out in future GenQueryResourceTag
+       calls.
+
+Revision History
+
+    Rev.    Date    Author     Changes
+    ----  -------- ---------  ------------------------------------------------
+    0.1   05/04/17 klefebvre  First draft
+    0.2   07/07/17 klefebvre  add tag disable

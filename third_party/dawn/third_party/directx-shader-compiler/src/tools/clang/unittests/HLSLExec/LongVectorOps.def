@@ -1,0 +1,251 @@
+//
+//
+//
+
+#ifndef INPUT_SET
+#define INPUT_SET(SYMBOL)
+#endif
+
+INPUT_SET(Default1)
+INPUT_SET(Default2)
+INPUT_SET(Default3)
+INPUT_SET(RangeOne)
+INPUT_SET(RangeHalfPi)
+INPUT_SET(SplitDouble)
+INPUT_SET(BitShiftRhs)
+INPUT_SET(Zero)
+INPUT_SET(NoZero)
+INPUT_SET(Positive)
+INPUT_SET(Bitwise)
+INPUT_SET(SelectCond)
+INPUT_SET(FloatSpecial)
+INPUT_SET(AllOnes)
+INPUT_SET(WaveMultiPrefixBitwise)
+
+#undef INPUT_SET
+
+#ifndef OP
+#define OP(GROUP, SYMBOL, ARITY, INTRINSIC, OPERATOR, DEFINES, SHADER_NAME,   \
+          INPUT_SET_1, INPUT_SET_2, INPUT_SET_3)
+#endif
+
+#define OP_DEFAULT_DEFINES(GROUP, SYMBOL, ARITY, INTRINSIC, OPERATOR, DEFINES) \
+  OP(GROUP, SYMBOL, ARITY, INTRINSIC, OPERATOR, DEFINES, "LongVectorOp",       \
+     Default1, Default2, Default3)
+
+#define OP_DEFAULT(GROUP, SYMBOL, ARITY, INTRINSIC, OPERATOR)                  \
+  OP_DEFAULT_DEFINES(GROUP, SYMBOL, ARITY, INTRINSIC, OPERATOR, "")
+
+OP_DEFAULT(TernaryMath, Mad, 3, "mad", "")
+OP_DEFAULT(TernaryMath, Fma, 3, "fma", "")
+
+OP_DEFAULT(BinaryMath, Add, 2, "", "+")
+OP_DEFAULT(BinaryMath, Subtract, 2, "", "-")
+OP_DEFAULT(BinaryMath, Multiply, 2, "", "*")
+OP_DEFAULT(BinaryMath, Divide, 2, "", "/")
+OP_DEFAULT(BinaryMath, Modulus, 2, "", "%")
+OP_DEFAULT(BinaryMath, Min, 2, "min", ",")
+OP_DEFAULT(BinaryMath, Max, 2, "max", ",")
+OP_DEFAULT(BinaryMath, Ldexp, 2, "ldexp", ",")
+
+OP_DEFAULT(Bitwise, And, 2, "", "&")
+OP_DEFAULT(Bitwise, Or, 2, "", "|")
+OP_DEFAULT(Bitwise, Xor, 2, "", "^")
+OP(Bitwise, LeftShift, 2, "", "<<", "", "LongVectorOp", 
+   Default1, BitShiftRhs, Default3)
+OP(Bitwise, RightShift, 2, "", ">>", "", "LongVectorOp", 
+   Default1, BitShiftRhs, Default3)
+OP_DEFAULT(Bitwise, Saturate, 1, "saturate", "")
+OP_DEFAULT(Bitwise, ReverseBits, 1, "reversebits", "")
+OP(Bitwise, CountBits, 1, "countbits", "", "", "LongVectorOp", Bitwise, Default2, Default3)
+OP(Bitwise, FirstBitHigh, 1, "firstbithigh", "", "", "LongVectorOp", Bitwise, Default2, Default3)
+OP(Bitwise, FirstBitLow, 1, "firstbitlow", "", "", "LongVectorOp", Bitwise, Default2, Default3)
+
+OP_DEFAULT_DEFINES(Unary, Initialize, 1, "TestInitialize", "",
+                   " -DFUNC_INITIALIZE=1")
+
+OP_DEFAULT_DEFINES(ArrayOperator, ArrayOperator_StaticAccess, 1, "TestArrayOperatorStaticAccess", "",
+                   " -DTEST_ARRAY_OPERATOR")
+
+OP(ArrayOperator, ArrayOperator_DynamicAccess, 2, "TestArrayOperatorDynamicAccess", "", 
+   " -DTEST_ARRAY_OPERATOR=1 -DDYNAMIC_ACCESS=1", "LongVectorOP", Default1, Zero, Default3)
+
+#define OP_CAST_DEFAULT(GROUP, SYMBOL)                                         \
+  OP_DEFAULT_DEFINES(GROUP, SYMBOL, 1, "TestCast", "", "-DFUNC_TEST_CAST=1")
+#define OP_CAST(GROUP, SYMBOL, INPUT_SET_1)                                    \
+  OP(GROUP, SYMBOL, 1, "TestCast", "", "-DFUNC_TEST_CAST=1", "LongVectorOp",   \
+    INPUT_SET_1, Default2, Default3)
+
+OP_CAST_DEFAULT(Cast, CastToBool)
+OP_CAST_DEFAULT(Cast, CastToInt16)
+OP_CAST_DEFAULT(Cast, CastToInt32)
+OP_CAST_DEFAULT(Cast, CastToInt64)
+OP_CAST_DEFAULT(Cast, CastToUint16)
+OP_CAST_DEFAULT(Cast, CastToUint32)
+OP_CAST_DEFAULT(Cast, CastToUint64)
+OP_CAST(Cast, CastToUint16_FromFP, Positive)
+OP_CAST(Cast, CastToUint32_FromFP, Positive)
+OP_CAST(Cast, CastToUint64_FromFP, Positive)
+OP_CAST_DEFAULT(Cast, CastToFloat16)
+OP_CAST_DEFAULT(Cast, CastToFloat32)
+OP_CAST_DEFAULT(Cast, CastToFloat64)
+
+#undef OP_CAST_DEFAULT
+#undef OP_CAST
+
+OP(Trigonometric, Acos, 1, "acos", "", "", "LongVectorOp", 
+   RangeOne, Default2, Default3)
+OP(Trigonometric, Asin, 1, "asin", "", "", "LongVectorOp", 
+   RangeHalfPi, Default2, Default3)
+OP(Trigonometric, Atan, 1, "atan", "", "", "LongVectorOp", 
+   RangeHalfPi, Default2, Default3)
+OP_DEFAULT(Trigonometric, Cos, 1, "cos", "")
+OP_DEFAULT(Trigonometric, Cosh, 1, "cosh", "")
+OP_DEFAULT(Trigonometric, Sin, 1, "sin", "")
+OP_DEFAULT(Trigonometric, Sinh, 1, "sinh", "")
+OP_DEFAULT(Trigonometric, Tan, 1, "tan", "")
+OP_DEFAULT(Trigonometric, Tanh, 1, "tanh", "")
+
+OP_DEFAULT(AsType, AsFloat16, 1, "asfloat16", "")
+OP_DEFAULT(AsType, AsInt16, 1, "asint16", "")
+OP_DEFAULT(AsType, AsUint16, 1, "asuint16", "")
+OP_DEFAULT(AsType, AsFloat, 1, "asfloat", "")
+OP_DEFAULT(AsType, AsInt, 1, "asint", "")
+OP_DEFAULT(AsType, AsUint, 1, "asuint", "")
+OP_DEFAULT(AsType, AsDouble, 2, "asdouble", ",")
+OP(AsType, AsUint_SplitDouble, 1, "TestAsUintSplitDouble", "",
+   " -DFUNC_ASUINT_SPLITDOUBLE=1", "LongVectorOp", SplitDouble, SplitDouble,
+    SplitDouble)
+
+OP_DEFAULT(UnaryMath, Abs, 1, "abs", "")
+OP_DEFAULT(UnaryMath, Sign, 1, "sign", "")
+OP_DEFAULT(UnaryMath, Ceil, 1, "ceil", "")
+OP_DEFAULT(UnaryMath, Exp, 1, "exp", "")
+OP_DEFAULT(UnaryMath, Floor, 1, "floor", "")
+OP_DEFAULT(UnaryMath, Frac, 1, "frac", "")
+OP_DEFAULT(UnaryMath, Log, 1, "log", "")
+OP_DEFAULT(UnaryMath, Rcp, 1, "rcp", "")
+OP_DEFAULT(UnaryMath, Round, 1, "round", "")
+OP_DEFAULT(UnaryMath, Rsqrt, 1, "rsqrt", "")
+OP_DEFAULT(UnaryMath, Sqrt, 1, "sqrt", "")
+OP_DEFAULT(UnaryMath, Trunc, 1, "trunc", "")
+OP_DEFAULT(UnaryMath, Exp2, 1, "exp2", "")
+OP_DEFAULT(UnaryMath, Log10, 1, "log10", "")
+OP_DEFAULT(UnaryMath, Log2, 1, "log2", "")
+OP_DEFAULT_DEFINES(UnaryMath, Frexp, 1, "TestFrexp", "", " -DFUNC_FREXP=1")
+
+OP_DEFAULT(FloatSpecial, IsFinite, 1, "isfinite", "")
+OP_DEFAULT(FloatSpecial, IsInf, 1, "isinf", "")
+OP_DEFAULT(FloatSpecial, IsNan, 1, "isnan", "")
+OP_DEFAULT_DEFINES(FloatSpecial, ModF, 1, "TestModF", "", " -DFUNC_TEST_MODF=1")
+
+OP_DEFAULT(BinaryComparison, LessThan, 2, "", "<")
+OP_DEFAULT(BinaryComparison, LessEqual, 2, "", "<=")
+OP_DEFAULT(BinaryComparison, GreaterThan, 2, "", ">")
+OP_DEFAULT(BinaryComparison, GreaterEqual, 2, "", ">=")
+OP_DEFAULT(BinaryComparison, Equal, 2, "", "==")
+OP_DEFAULT(BinaryComparison, NotEqual, 2, "", "!=")
+
+OP_DEFAULT(Binary, Logical_And, 2, "and", ",")
+OP_DEFAULT(Binary, Logical_Or, 2, "or", ",")
+OP(Ternary, Select, 3, "TestSelect", "", " -DFUNC_TEST_SELECT=1",
+   "LongVectorOp", SelectCond, Default2, Default3)
+
+// For the 'any' and 'all' reduction operation, we test with three different
+// input data sets to cover the different cases of the operation. 'Any' returns
+// true if any of the inputs are non-zero, false otherwise. This is in
+// contrast to other ops where we can get coverage simply with different values
+// across the input set.
+OP(Reduction, Any_Mixed, 1, "any", "", " -DIS_REDUCTION_OP=1", "LongVectorOp",
+   Default1, Default2, Default3)
+OP(Reduction, Any_Zero, 1, "any", "", " -DIS_REDUCTION_OP=1", "LongVectorOp",
+   Zero, Default2, Default3)
+OP(Reduction, Any_NoZero, 1, "any", "", " -DIS_REDUCTION_OP=1", "LongVectorOp",
+   NoZero, Default2, Default3)
+OP(Reduction, All_Mixed, 1, "all", "", " -DIS_REDUCTION_OP=1", "LongVectorOp",
+   Default1, Default2, Default3)
+OP(Reduction, All_Zero, 1, "all", "", " -DIS_REDUCTION_OP=1", "LongVectorOp",
+   Zero, Default2, Default3)
+OP(Reduction, All_NoZero, 1, "all", "", " -DIS_REDUCTION_OP=1", "LongVectorOp",
+   NoZero, Default2, Default3)
+OP_DEFAULT(Reduction, Dot, 2, "dot", ",")
+
+OP_DEFAULT_DEFINES(Unary, ShuffleVector, 1, "TestShuffleVector", "", " -DFUNC_SHUFFLE_VECTOR=1")
+
+
+#define OP_LOAD_AND_STORE(SYMBOL, SHADER_NAME)                                 \
+   OP(UNARY, SYMBOL, 1, "", "", "", "LongVectorOp_" SHADER_NAME,               \
+       Default1, Default2, Default3)
+#define OP_LOAD_AND_STORE_SB(SYMBOL, SHADER_NAME)                              \
+   OP(UNARY, SYMBOL, 1, "", "", " -DUSE_STRUCTURED_BUFFER=1",                  \
+      "LongVectorOp_" SHADER_NAME, Default1, Default2, Default3)
+
+// BAB == Byte Address Buffer
+// RDH == Resource Descriptor Heap
+// RD == Root Descriptor
+// DT == Descriptor Table
+// SB == Structured Buffer
+OP_LOAD_AND_STORE(LoadAndStore_RDH_BAB_UAV,"ResourceDescriptorHeap_UAV")
+OP_LOAD_AND_STORE(LoadAndStore_RDH_BAB_SRV,"ResourceDescriptorHeap_SRV")
+OP_LOAD_AND_STORE(LoadAndStore_DT_BAB_UAV,"DescriptorTable_UAV")
+OP_LOAD_AND_STORE(LoadAndStore_DT_BAB_SRV, "DescriptorTable_SRV")
+OP_LOAD_AND_STORE(LoadAndStore_RD_BAB_UAV, "RootDescriptor_UAV")
+OP_LOAD_AND_STORE(LoadAndStore_RD_BAB_SRV, "RootDescriptor_SRV")
+
+OP_LOAD_AND_STORE_SB(LoadAndStore_RDH_SB_UAV, "ResourceDescriptorHeap_UAV")
+OP_LOAD_AND_STORE_SB(LoadAndStore_RDH_SB_SRV, "ResourceDescriptorHeap_SRV")
+OP_LOAD_AND_STORE_SB(LoadAndStore_DT_SB_UAV, "DescriptorTable_UAV")
+OP_LOAD_AND_STORE_SB(LoadAndStore_DT_SB_SRV, "DescriptorTable_SRV")
+OP_LOAD_AND_STORE_SB(LoadAndStore_RD_SB_UAV, "RootDescriptor_UAV")
+OP_LOAD_AND_STORE_SB(LoadAndStore_RD_SB_SRV, "RootDescriptor_SRV")
+
+#undef OP_LOAD_AND_STORE
+#undef OP_LOAD_AND_STORE_DEFINES
+
+OP_DEFAULT(Wave, WaveActiveSum, 1, "WaveActiveSum", "")
+OP_DEFAULT_DEFINES(Wave, WaveActiveMin, 1, "TestWaveActiveMin", "", " -DFUNC_WAVE_ACTIVE_MIN=1")
+OP_DEFAULT_DEFINES(Wave, WaveActiveMax, 1, "TestWaveActiveMax", "", " -DFUNC_WAVE_ACTIVE_MAX=1")
+OP(Wave, WaveActiveProduct, 1, "TestWaveActiveProduct", "", " -DFUNC_WAVE_ACTIVE_PRODUCT=1", "LongVectorOp", AllOnes, Default2, Default3)
+OP_DEFAULT_DEFINES(Wave, WaveActiveBitAnd, 1, "TestWaveActiveBitAnd", "", " -DFUNC_WAVE_ACTIVE_BIT_AND=1")
+OP_DEFAULT_DEFINES(Wave, WaveActiveBitOr, 1, "TestWaveActiveBitOr", "", " -DFUNC_WAVE_ACTIVE_BIT_OR=1")
+OP_DEFAULT_DEFINES(Wave, WaveActiveBitXor, 1, "TestWaveActiveBitXor", "", " -DFUNC_WAVE_ACTIVE_BIT_XOR=1")
+OP_DEFAULT_DEFINES(Wave, WaveActiveAllEqual, 1, "TestWaveActiveAllEqual", "", " -DFUNC_WAVE_ACTIVE_ALL_EQUAL=1")
+OP_DEFAULT_DEFINES(Wave, WaveReadLaneAt, 1, "TestWaveReadLaneAt", "", " -DFUNC_WAVE_READ_LANE_AT=1")
+OP_DEFAULT_DEFINES(Wave, WaveReadLaneFirst, 1, "TestWaveReadLaneFirst", "", " -DFUNC_WAVE_READ_LANE_FIRST=1")
+OP_DEFAULT_DEFINES(Wave, WavePrefixSum, 1, "TestWavePrefixSum", "", " -DFUNC_WAVE_PREFIX_SUM=1 -DOP_STORES_RESULT_ON_SPECIFIC_LANE=1")
+OP_DEFAULT_DEFINES(Wave, WavePrefixProduct, 1, "TestWavePrefixProduct", "", " -DFUNC_WAVE_PREFIX_PRODUCT=1 -DOP_STORES_RESULT_ON_SPECIFIC_LANE=1")
+OP(Wave, WaveMultiPrefixSum, 1, "TestWaveMultiPrefixSum", "", " -DFUNC_WAVE_MULTI_PREFIX_SUM=1 -DOP_STORES_RESULT_ON_SPECIFIC_LANE=1", "LongVectorOp", Default1, Default2, Default3)
+OP(Wave, WaveMultiPrefixProduct, 1, "TestWaveMultiPrefixProduct", "", " -DFUNC_WAVE_MULTI_PREFIX_PRODUCT=1 -DOP_STORES_RESULT_ON_SPECIFIC_LANE=1", "LongVectorOp", Default1, Default2, Default3)
+OP(Wave, WaveMultiPrefixBitAnd, 1, "TestWaveMultiPrefixBitAnd", "", " -DFUNC_WAVE_MULTI_PREFIX_BIT_AND=1 -DOP_STORES_RESULT_ON_SPECIFIC_LANE=1", "LongVectorOp", WaveMultiPrefixBitwise, Default2, Default3)
+OP(Wave, WaveMultiPrefixBitOr, 1, "TestWaveMultiPrefixBitOr", "", " -DFUNC_WAVE_MULTI_PREFIX_BIT_OR=1 -DOP_STORES_RESULT_ON_SPECIFIC_LANE=1", "LongVectorOp", WaveMultiPrefixBitwise, Default2, Default3)
+OP(Wave, WaveMultiPrefixBitXor, 1, "TestWaveMultiPrefixBitXor", "", " -DFUNC_WAVE_MULTI_PREFIX_BIT_XOR=1 -DOP_STORES_RESULT_ON_SPECIFIC_LANE=1", "LongVectorOp", WaveMultiPrefixBitwise, Default2, Default3)
+OP_DEFAULT_DEFINES(Wave, WaveMatch, 1, "TestWaveMatch", "", " -DFUNC_WAVE_MATCH=1 -DOP_STORES_RESULT_ON_SPECIFIC_LANE=1")
+
+#define OP_DERIVATIVE(GROUP, SYMBOL, DERIVATIVE_INTRINSIC)                     \
+  OP(GROUP, SYMBOL, 1, "TestDerivative", "", "-DFUNC_TEST_DERIVATIVE=1         \
+     -DNUMTHREADS_XYZ=2,2,1 -DOP_STORES_RESULT_ON_SPECIFIC_LANE=1"             \
+     " -DDERIVATIVE_FUNC=" DERIVATIVE_INTRINSIC,                               \
+     "LongVectorOp", Default2, Default1, Default3)
+
+OP_DERIVATIVE(Derivative, DerivativeDdx, "ddx")
+OP_DERIVATIVE(Derivative, DerivativeDdy, "ddy")
+OP_DERIVATIVE(Derivative, DerivativeDdxFine, "ddx_fine")
+OP_DERIVATIVE(Derivative, DerivativeDdyFine, "ddy_fine")
+
+#undef OP_DERIVATIVE
+
+#define OP_QUAD_READ(GROUP, ARITY, SYMBOL, QUAD_INTRINSIC, SOURCE_LANE_ID)     \
+  OP(GROUP, SYMBOL, ARITY, "TestQuadRead", "", "-DFUNC_TEST_QUAD_READ=1"       \
+     " -DNUMTHREADS_XYZ=2,2,1 -DOP_STORES_RESULT_ON_SPECIFIC_LANE=1"           \
+     " -DQUAD_READ_FUNC=" QUAD_INTRINSIC                                       \
+     " -DSOURCE_LANE_ID=" SOURCE_LANE_ID,                                      \
+      "LongVectorOp", Default1, Default2, Default3)
+
+OP_QUAD_READ(Quad, 2, QuadReadLaneAt, "QuadReadLaneAt", "2")
+OP_QUAD_READ(Quad, 1, QuadReadAcrossX, "QuadReadAcrossX", "2")
+OP_QUAD_READ(Quad, 1, QuadReadAcrossY, "QuadReadAcrossY", "1")
+OP_QUAD_READ(Quad, 1, QuadReadAcrossDiagonal, "QuadReadAcrossDiagonal", "0")
+
+#undef OP_QUAD_READ
+
+#undef OP

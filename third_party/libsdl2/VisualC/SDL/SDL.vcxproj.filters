@@ -1,0 +1,460 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="API Headers">
+      <UniqueIdentifier>{395b3af0-33d0-411b-b153-de1676bf1ef8}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\begin_code.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\close_code.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_assert.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_atomic.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_audio.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_bits.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_blendmode.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_clipboard.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_config.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_config_windows.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_copying.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_cpuinfo.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_egl.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_endian.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_error.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_events.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_filesystem.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_gamecontroller.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_gesture.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_haptic.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_hints.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_joystick.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_keyboard.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_keycode.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_loadso.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_log.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_main.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_messagebox.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_mouse.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_mutex.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_name.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_opengl.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_opengl_glext.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_opengles.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_opengles2.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_opengles2_gl2.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_opengles2_gl2ext.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_opengles2_gl2platform.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_opengles2_khrplatform.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_pixels.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_platform.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_power.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_quit.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_rect.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_render.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_revision.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_rwops.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_scancode.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_shape.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_stdinc.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_surface.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_system.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_syswm.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_test.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_test_assert.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_test_common.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_test_compare.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_test_crc32.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_test_font.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_test_fuzzer.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_test_harness.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_test_images.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_test_log.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_test_md5.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_test_random.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_thread.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_timer.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_touch.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_types.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_version.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_video.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SDL_vulkan.h">
+      <Filter>API Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\audio\directsound\SDL_directsound.h" />
+    <ClInclude Include="..\..\src\audio\disk\SDL_diskaudio.h" />
+    <ClInclude Include="..\..\src\audio\dummy\SDL_dummyaudio.h" />
+    <ClInclude Include="..\..\src\audio\SDL_audio_c.h" />
+    <ClInclude Include="..\..\src\audio\SDL_audiodev_c.h" />
+    <ClInclude Include="..\..\src\audio\SDL_sysaudio.h" />
+    <ClInclude Include="..\..\src\audio\SDL_wave.h" />
+    <ClInclude Include="..\..\src\audio\wasapi\SDL_wasapi.h" />
+    <ClInclude Include="..\..\src\audio\winmm\SDL_winmm.h" />
+    <ClInclude Include="..\..\src\core\windows\SDL_directx.h" />
+    <ClInclude Include="..\..\src\core\windows\SDL_windows.h" />
+    <ClInclude Include="..\..\src\core\windows\SDL_xinput.h" />
+    <ClInclude Include="..\..\src\dynapi\SDL_dynapi.h" />
+    <ClInclude Include="..\..\src\dynapi\SDL_dynapi_overrides.h" />
+    <ClInclude Include="..\..\src\dynapi\SDL_dynapi_procs.h" />
+    <ClInclude Include="..\..\src\events\blank_cursor.h" />
+    <ClInclude Include="..\..\src\events\default_cursor.h" />
+    <ClInclude Include="..\..\src\events\SDL_clipboardevents_c.h" />
+    <ClInclude Include="..\..\src\events\SDL_dropevents_c.h" />
+    <ClInclude Include="..\..\src\events\SDL_events_c.h" />
+    <ClInclude Include="..\..\src\events\SDL_gesture_c.h" />
+    <ClInclude Include="..\..\src\events\SDL_keyboard_c.h" />
+    <ClInclude Include="..\..\src\events\SDL_mouse_c.h" />
+    <ClInclude Include="..\..\src\events\SDL_sysevents.h" />
+    <ClInclude Include="..\..\src\events\SDL_touch_c.h" />
+    <ClInclude Include="..\..\src\events\SDL_windowevents_c.h" />
+    <ClInclude Include="..\..\src\haptic\SDL_syshaptic.h" />
+    <ClInclude Include="..\..\src\haptic\windows\SDL_dinputhaptic_c.h" />
+    <ClInclude Include="..\..\src\haptic\windows\SDL_windowshaptic_c.h" />
+    <ClInclude Include="..\..\src\haptic\windows\SDL_xinputhaptic_c.h" />
+    <ClInclude Include="..\..\src\joystick\SDL_joystick_c.h" />
+    <ClInclude Include="..\..\src\joystick\SDL_sysjoystick.h" />
+    <ClInclude Include="..\..\src\joystick\windows\SDL_dinputjoystick_c.h" />
+    <ClInclude Include="..\..\src\joystick\windows\SDL_windowsjoystick_c.h" />
+    <ClInclude Include="..\..\src\joystick\windows\SDL_xinputjoystick_c.h" />
+    <ClInclude Include="..\..\src\libm\math_libm.h" />
+    <ClInclude Include="..\..\src\libm\math_private.h" />
+    <ClInclude Include="..\..\src\render\opengl\SDL_glfuncs.h" />
+    <ClInclude Include="..\..\src\render\opengl\SDL_shaders_gl.h" />
+    <ClInclude Include="..\..\src\render\opengles\SDL_glesfuncs.h" />
+    <ClInclude Include="..\..\src\render\SDL_d3dmath.h" />
+    <ClInclude Include="..\..\src\render\SDL_sysrender.h" />
+    <ClInclude Include="..\..\src\render\SDL_yuv_sw_c.h" />
+    <ClInclude Include="..\..\src\render\software\SDL_blendfillrect.h" />
+    <ClInclude Include="..\..\src\render\software\SDL_blendline.h" />
+    <ClInclude Include="..\..\src\render\software\SDL_blendpoint.h" />
+    <ClInclude Include="..\..\src\render\software\SDL_draw.h" />
+    <ClInclude Include="..\..\src\render\software\SDL_drawline.h" />
+    <ClInclude Include="..\..\src\render\software\SDL_drawpoint.h" />
+    <ClInclude Include="..\..\src\render\software\SDL_render_sw_c.h" />
+    <ClInclude Include="..\..\src\render\software\SDL_rotate.h" />
+    <ClInclude Include="..\..\src\SDL_dataqueue.h" />
+    <ClInclude Include="..\..\src\SDL_error_c.h" />
+    <ClInclude Include="..\..\src\thread\SDL_systhread.h" />
+    <ClInclude Include="..\..\src\thread\SDL_thread_c.h" />
+    <ClInclude Include="..\..\src\thread\windows\SDL_systhread_c.h" />
+    <ClInclude Include="..\..\src\timer\SDL_timer_c.h" />
+    <ClInclude Include="..\..\src\video\dummy\SDL_nullevents_c.h" />
+    <ClInclude Include="..\..\src\video\dummy\SDL_nullframebuffer_c.h" />
+    <ClInclude Include="..\..\src\video\dummy\SDL_nullvideo.h" />
+    <ClInclude Include="..\..\src\video\SDL_blit.h" />
+    <ClInclude Include="..\..\src\video\SDL_blit_auto.h" />
+    <ClInclude Include="..\..\src\video\SDL_blit_copy.h" />
+    <ClInclude Include="..\..\src\video\SDL_blit_slow.h" />
+    <ClInclude Include="..\..\src\video\SDL_pixels_c.h" />
+    <ClInclude Include="..\..\src\video\SDL_rect_c.h" />
+    <ClInclude Include="..\..\src\video\SDL_RLEaccel_c.h" />
+    <ClInclude Include="..\..\src\video\SDL_shape_internals.h" />
+    <ClInclude Include="..\..\src\video\SDL_sysvideo.h" />
+    <ClInclude Include="..\..\src\video\SDL_vulkan_internal.h" />
+    <ClInclude Include="..\..\src\video\windows\SDL_vkeys.h" />
+    <ClInclude Include="..\..\src\video\windows\SDL_windowsclipboard.h" />
+    <ClInclude Include="..\..\src\video\windows\SDL_windowsevents.h" />
+    <ClInclude Include="..\..\src\video\windows\SDL_windowsframebuffer.h" />
+    <ClInclude Include="..\..\src\video\windows\SDL_windowskeyboard.h" />
+    <ClInclude Include="..\..\src\video\windows\SDL_windowsmessagebox.h" />
+    <ClInclude Include="..\..\src\video\windows\SDL_windowsmodes.h" />
+    <ClInclude Include="..\..\src\video\windows\SDL_windowsmouse.h" />
+    <ClInclude Include="..\..\src\video\windows\SDL_windowsopengl.h" />
+    <ClInclude Include="..\..\src\video\windows\SDL_windowsshape.h" />
+    <ClInclude Include="..\..\src\video\windows\SDL_windowsvideo.h" />
+    <ClInclude Include="..\..\src\video\windows\SDL_windowsvulkan.h" />
+    <ClInclude Include="..\..\src\video\windows\SDL_windowswindow.h" />
+    <ClInclude Include="..\..\src\video\windows\wmmsg.h" />
+    <ClInclude Include="..\..\src\video\SDL_yuv_c.h" />
+    <ClInclude Include="..\..\src\video\yuv2rgb\yuv_rgb.h" />
+    <ClInclude Include="..\..\src\render\direct3d11\SDL_shaders_d3d11.h" />
+    <ClInclude Include="..\..\src\render\direct3d\SDL_shaders_d3d.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\libm\e_atan2.c" />
+    <ClCompile Include="..\..\src\libm\e_log.c" />
+    <ClCompile Include="..\..\src\libm\e_log10.c" />
+    <ClCompile Include="..\..\src\libm\e_pow.c" />
+    <ClCompile Include="..\..\src\libm\e_rem_pio2.c" />
+    <ClCompile Include="..\..\src\libm\e_sqrt.c" />
+    <ClCompile Include="..\..\src\libm\k_cos.c" />
+    <ClCompile Include="..\..\src\libm\k_rem_pio2.c" />
+    <ClCompile Include="..\..\src\libm\k_sin.c" />
+    <ClCompile Include="..\..\src\libm\k_tan.c" />
+    <ClCompile Include="..\..\src\libm\s_atan.c" />
+    <ClCompile Include="..\..\src\libm\s_copysign.c" />
+    <ClCompile Include="..\..\src\libm\s_cos.c" />
+    <ClCompile Include="..\..\src\libm\s_fabs.c" />
+    <ClCompile Include="..\..\src\libm\s_floor.c" />
+    <ClCompile Include="..\..\src\libm\s_scalbn.c" />
+    <ClCompile Include="..\..\src\libm\s_sin.c" />
+    <ClCompile Include="..\..\src\libm\s_tan.c" />
+    <ClCompile Include="..\..\src\SDL.c" />
+    <ClCompile Include="..\..\src\SDL_assert.c" />
+    <ClCompile Include="..\..\src\atomic\SDL_atomic.c" />
+    <ClCompile Include="..\..\src\audio\SDL_audio.c" />
+    <ClCompile Include="..\..\src\audio\SDL_audiocvt.c" />
+    <ClCompile Include="..\..\src\audio\SDL_audiodev.c" />
+    <ClCompile Include="..\..\src\audio\SDL_audiotypecvt.c" />
+    <ClCompile Include="..\..\src\render\software\SDL_blendfillrect.c" />
+    <ClCompile Include="..\..\src\render\software\SDL_blendline.c" />
+    <ClCompile Include="..\..\src\render\software\SDL_blendpoint.c" />
+    <ClCompile Include="..\..\src\video\SDL_blit.c" />
+    <ClCompile Include="..\..\src\video\SDL_blit_0.c" />
+    <ClCompile Include="..\..\src\video\SDL_blit_1.c" />
+    <ClCompile Include="..\..\src\video\SDL_blit_A.c" />
+    <ClCompile Include="..\..\src\video\SDL_blit_auto.c" />
+    <ClCompile Include="..\..\src\video\SDL_blit_copy.c" />
+    <ClCompile Include="..\..\src\video\SDL_blit_N.c" />
+    <ClCompile Include="..\..\src\video\SDL_blit_slow.c" />
+    <ClCompile Include="..\..\src\video\SDL_bmp.c" />
+    <ClCompile Include="..\..\src\video\SDL_clipboard.c" />
+    <ClCompile Include="..\..\src\events\SDL_clipboardevents.c" />
+    <ClCompile Include="..\..\src\cpuinfo\SDL_cpuinfo.c" />
+    <ClCompile Include="..\..\src\render\SDL_d3dmath.c" />
+    <ClCompile Include="..\..\src\haptic\windows\SDL_dinputhaptic.c" />
+    <ClCompile Include="..\..\src\joystick\windows\SDL_dinputjoystick.c" />
+    <ClCompile Include="..\..\src\audio\directsound\SDL_directsound.c" />
+    <ClCompile Include="..\..\src\audio\disk\SDL_diskaudio.c" />
+    <ClCompile Include="..\..\src\render\software\SDL_drawline.c" />
+    <ClCompile Include="..\..\src\render\software\SDL_drawpoint.c" />
+    <ClCompile Include="..\..\src\events\SDL_dropevents.c" />
+    <ClCompile Include="..\..\src\audio\dummy\SDL_dummyaudio.c" />
+    <ClCompile Include="..\..\src\dynapi\SDL_dynapi.c" />
+    <ClCompile Include="..\..\src\video\SDL_egl.c" />
+    <ClCompile Include="..\..\src\SDL_dataqueue.c" />
+    <ClCompile Include="..\..\src\SDL_error.c" />
+    <ClCompile Include="..\..\src\events\SDL_events.c" />
+    <ClCompile Include="..\..\src\video\SDL_fillrect.c" />
+    <ClCompile Include="..\..\src\joystick\SDL_gamecontroller.c" />
+    <ClCompile Include="..\..\src\events\SDL_gesture.c" />
+    <ClCompile Include="..\..\src\stdlib\SDL_getenv.c" />
+    <ClCompile Include="..\..\src\haptic\SDL_haptic.c" />
+    <ClCompile Include="..\..\src\SDL_hints.c" />
+    <ClCompile Include="..\..\src\stdlib\SDL_iconv.c" />
+    <ClCompile Include="..\..\src\joystick\SDL_joystick.c" />
+    <ClCompile Include="..\..\src\events\SDL_keyboard.c" />
+    <ClCompile Include="..\..\src\SDL_log.c" />
+    <ClCompile Include="..\..\src\stdlib\SDL_malloc.c" />
+    <ClCompile Include="..\..\src\audio\SDL_mixer.c" />
+    <ClCompile Include="..\..\src\joystick\windows\SDL_mmjoystick.c" />
+    <ClCompile Include="..\..\src\events\SDL_mouse.c" />
+    <ClCompile Include="..\..\src\video\dummy\SDL_nullevents.c" />
+    <ClCompile Include="..\..\src\video\dummy\SDL_nullframebuffer.c" />
+    <ClCompile Include="..\..\src\video\dummy\SDL_nullvideo.c" />
+    <ClCompile Include="..\..\src\video\SDL_pixels.c" />
+    <ClCompile Include="..\..\src\power\SDL_power.c" />
+    <ClCompile Include="..\..\src\stdlib\SDL_qsort.c" />
+    <ClCompile Include="..\..\src\events\SDL_quit.c" />
+    <ClCompile Include="..\..\src\video\SDL_rect.c" />
+    <ClCompile Include="..\..\src\render\SDL_render.c" />
+    <ClCompile Include="..\..\src\render\direct3d\SDL_render_d3d.c" />
+    <ClCompile Include="..\..\src\render\direct3d11\SDL_render_d3d11.c" />
+    <ClCompile Include="..\..\src\render\opengl\SDL_render_gl.c" />
+    <ClCompile Include="..\..\src\render\opengles2\SDL_render_gles2.c" />
+    <ClCompile Include="..\..\src\render\software\SDL_render_sw.c" />
+    <ClCompile Include="..\..\src\video\SDL_RLEaccel.c" />
+    <ClCompile Include="..\..\src\render\software\SDL_rotate.c" />
+    <ClCompile Include="..\..\src\file\SDL_rwops.c" />
+    <ClCompile Include="..\..\src\render\opengl\SDL_shaders_gl.c" />
+    <ClCompile Include="..\..\src\render\opengles2\SDL_shaders_gles2.c" />
+    <ClCompile Include="..\..\src\video\SDL_shape.c" />
+    <ClCompile Include="..\..\src\atomic\SDL_spinlock.c" />
+    <ClCompile Include="..\..\src\stdlib\SDL_stdlib.c" />
+    <ClCompile Include="..\..\src\video\SDL_stretch.c" />
+    <ClCompile Include="..\..\src\stdlib\SDL_string.c" />
+    <ClCompile Include="..\..\src\video\SDL_surface.c" />
+    <ClCompile Include="..\..\src\thread\generic\SDL_syscond.c" />
+    <ClCompile Include="..\..\src\filesystem\windows\SDL_sysfilesystem.c" />
+    <ClCompile Include="..\..\src\loadso\windows\SDL_sysloadso.c" />
+    <ClCompile Include="..\..\src\thread\windows\SDL_sysmutex.c" />
+    <ClCompile Include="..\..\src\power\windows\SDL_syspower.c" />
+    <ClCompile Include="..\..\src\thread\windows\SDL_syssem.c" />
+    <ClCompile Include="..\..\src\thread\windows\SDL_systhread.c" />
+    <ClCompile Include="..\..\src\timer\windows\SDL_systimer.c" />
+    <ClCompile Include="..\..\src\thread\windows\SDL_systls.c" />
+    <ClCompile Include="..\..\src\thread\SDL_thread.c" />
+    <ClCompile Include="..\..\src\timer\SDL_timer.c" />
+    <ClCompile Include="..\..\src\events\SDL_touch.c" />
+    <ClCompile Include="..\..\src\video\SDL_video.c" />
+    <ClCompile Include="..\..\src\audio\SDL_wave.c" />
+    <ClCompile Include="..\..\src\events\SDL_windowevents.c" />
+    <ClCompile Include="..\..\src\core\windows\SDL_windows.c" />
+    <ClCompile Include="..\..\src\video\windows\SDL_windowsclipboard.c" />
+    <ClCompile Include="..\..\src\video\windows\SDL_windowsevents.c" />
+    <ClCompile Include="..\..\src\video\windows\SDL_windowsframebuffer.c" />
+    <ClCompile Include="..\..\src\haptic\windows\SDL_windowshaptic.c" />
+    <ClCompile Include="..\..\src\joystick\windows\SDL_windowsjoystick.c" />
+    <ClCompile Include="..\..\src\video\windows\SDL_windowskeyboard.c" />
+    <ClCompile Include="..\..\src\video\windows\SDL_windowsmessagebox.c" />
+    <ClCompile Include="..\..\src\video\windows\SDL_windowsmodes.c" />
+    <ClCompile Include="..\..\src\video\windows\SDL_windowsmouse.c" />
+    <ClCompile Include="..\..\src\video\windows\SDL_windowsopengl.c" />
+    <ClCompile Include="..\..\src\video\windows\SDL_windowsopengles.c" />
+    <ClCompile Include="..\..\src\video\windows\SDL_windowsshape.c" />
+    <ClCompile Include="..\..\src\video\windows\SDL_windowsvideo.c" />
+    <ClCompile Include="..\..\src\video\windows\SDL_windowswindow.c" />
+    <ClCompile Include="..\..\src\audio\winmm\SDL_winmm.c" />
+    <ClCompile Include="..\..\src\audio\wasapi\SDL_wasapi.c" />
+    <ClCompile Include="..\..\src\audio\wasapi\SDL_wasapi_win32.c" />
+    <ClCompile Include="..\..\src\core\windows\SDL_xinput.c" />
+    <ClCompile Include="..\..\src\haptic\windows\SDL_xinputhaptic.c" />
+    <ClCompile Include="..\..\src\joystick\windows\SDL_xinputjoystick.c" />
+    <ClCompile Include="..\..\src\render\SDL_yuv_sw.c" />
+    <ClCompile Include="..\..\src\audio\wasapi\SDL_wasapi.c" />
+    <ClCompile Include="..\..\src\video\SDL_vulkan_utils.c" />
+    <ClCompile Include="..\..\src\video\windows\SDL_windowsvulkan.c" />
+    <ClCompile Include="..\..\src\libm\e_fmod.c" />
+    <ClCompile Include="..\..\src\video\SDL_yuv.c" />
+    <ClCompile Include="..\..\src\video\yuv2rgb\yuv_rgb.c" />
+    <ClCompile Include="..\..\src\render\direct3d11\SDL_shaders_d3d11.c" />
+    <ClCompile Include="..\..\src\render\direct3d\SDL_shaders_d3d.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\..\src\main\windows\version.rc" />
+  </ItemGroup>
+</Project>

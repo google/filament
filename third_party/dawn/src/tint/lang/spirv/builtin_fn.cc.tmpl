@@ -1,0 +1,162 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate builtin_fn.cc
+
+To update the generated file, run:
+    ./tools/run gen
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- $I := LoadIntrinsics "src/tint/lang/spirv/spirv.def" -}}
+
+// clang-format off
+
+#include "src/tint/lang/spirv/builtin_fn.h"
+
+namespace tint::spirv {
+
+const char* str(BuiltinFn i) {
+    switch (i) {
+        case BuiltinFn::kNone:
+            return "<none>";
+{{- range $I.Sem.Builtins  }}
+        case BuiltinFn::k{{PascalCase .Name}}:
+            return "{{.Name}}";
+{{- end  }}
+    }
+    return "<unknown>";
+}
+
+tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
+    switch (fn) {
+        case BuiltinFn::kAtomicLoad:
+        case BuiltinFn::kImageDrefGather:
+        case BuiltinFn::kImageFetch:
+        case BuiltinFn::kImageGather:
+        case BuiltinFn::kImageRead:
+        case BuiltinFn::kImageSampleImplicitLod:
+        case BuiltinFn::kImageSampleExplicitLod:
+        case BuiltinFn::kImageSampleProjImplicitLod:
+        case BuiltinFn::kImageSampleProjExplicitLod:
+        case BuiltinFn::kImageSampleDrefImplicitLod:
+        case BuiltinFn::kImageSampleDrefExplicitLod:
+        case BuiltinFn::kImageSampleProjDrefImplicitLod:
+        case BuiltinFn::kImageSampleProjDrefExplicitLod:
+        case BuiltinFn::kOpImage:
+        case BuiltinFn::kOpSampledImage:
+        case BuiltinFn::kCooperativeMatrixLoad:
+            return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad};
+
+        case BuiltinFn::kImageWrite:
+        case BuiltinFn::kModf:
+        case BuiltinFn::kFrexp:
+        case BuiltinFn::kCooperativeMatrixStore:
+            return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kStore};
+
+        case BuiltinFn::kAtomicAnd:
+        case BuiltinFn::kAtomicCompareExchange:
+        case BuiltinFn::kAtomicExchange:
+        case BuiltinFn::kAtomicIAdd:
+        case BuiltinFn::kAtomicISub:
+        case BuiltinFn::kAtomicOr:
+        case BuiltinFn::kAtomicSMax:
+        case BuiltinFn::kAtomicSMin:
+        case BuiltinFn::kAtomicStore:
+        case BuiltinFn::kAtomicUMax:
+        case BuiltinFn::kAtomicUMin:
+        case BuiltinFn::kAtomicXor:
+        case BuiltinFn::kAtomicIIncrement:
+        case BuiltinFn::kAtomicIDecrement:
+            return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad, core::ir::Instruction::Access::kStore};
+
+        case BuiltinFn::kArrayLength:
+        case BuiltinFn::kDot:
+        case BuiltinFn::kImageQuerySize:
+        case BuiltinFn::kImageQuerySizeLod:
+        case BuiltinFn::kImageQueryLevels:
+        case BuiltinFn::kImageQuerySamples:
+        case BuiltinFn::kMatrixTimesMatrix:
+        case BuiltinFn::kMatrixTimesScalar:
+        case BuiltinFn::kMatrixTimesVector:
+        case BuiltinFn::kSelect:
+        case BuiltinFn::kVectorTimesMatrix:
+        case BuiltinFn::kVectorTimesScalar:
+        case BuiltinFn::kSDot:
+        case BuiltinFn::kUDot:
+        case BuiltinFn::kNone:
+        case BuiltinFn::kNormalize:
+        case BuiltinFn::kInverse:
+        case BuiltinFn::kSign:
+        case BuiltinFn::kAbs:
+        case BuiltinFn::kSMax:
+        case BuiltinFn::kSMin:
+        case BuiltinFn::kSClamp:
+        case BuiltinFn::kUMax:
+        case BuiltinFn::kUMin:
+        case BuiltinFn::kUClamp:
+        case BuiltinFn::kFindILsb:
+        case BuiltinFn::kFindSMsb:
+        case BuiltinFn::kFindUMsb:
+        case BuiltinFn::kRefract:
+        case BuiltinFn::kReflect:
+        case BuiltinFn::kFaceForward:
+        case BuiltinFn::kLdexp:
+        case BuiltinFn::kCooperativeMatrixMulAdd:
+        case BuiltinFn::kBitCount:
+        case BuiltinFn::kBitFieldInsert:
+        case BuiltinFn::kBitFieldSExtract:
+        case BuiltinFn::kBitFieldUExtract:
+        case BuiltinFn::kAdd:
+        case BuiltinFn::kSub:
+        case BuiltinFn::kMul:
+        case BuiltinFn::kSDiv:
+        case BuiltinFn::kSMod:
+        case BuiltinFn::kConvertFToS:
+        case BuiltinFn::kConvertSToF:
+        case BuiltinFn::kConvertUToF:
+        case BuiltinFn::kBitwiseAnd:
+        case BuiltinFn::kBitwiseOr:
+        case BuiltinFn::kBitwiseXor:
+        case BuiltinFn::kEqual:
+        case BuiltinFn::kNotEqual:
+        case BuiltinFn::kSGreaterThan:
+        case BuiltinFn::kSGreaterThanEqual:
+        case BuiltinFn::kSLessThan:
+        case BuiltinFn::kSLessThanEqual:
+        case BuiltinFn::kUGreaterThan:
+        case BuiltinFn::kUGreaterThanEqual:
+        case BuiltinFn::kULessThan:
+        case BuiltinFn::kULessThanEqual:
+        case BuiltinFn::kShiftLeftLogical:
+        case BuiltinFn::kShiftRightLogical:
+        case BuiltinFn::kShiftRightArithmetic:
+        case BuiltinFn::kNot:
+        case BuiltinFn::kSNegate:
+        case BuiltinFn::kFMod:
+        case BuiltinFn::kOuterProduct:
+        case BuiltinFn::kGroupNonUniformBroadcast:
+        case BuiltinFn::kGroupNonUniformBroadcastFirst:
+        case BuiltinFn::kGroupNonUniformShuffle:
+        case BuiltinFn::kGroupNonUniformShuffleXor:
+        case BuiltinFn::kGroupNonUniformShuffleDown:
+        case BuiltinFn::kGroupNonUniformShuffleUp:
+        case BuiltinFn::kGroupNonUniformQuadBroadcast:
+        case BuiltinFn::kGroupNonUniformQuadSwap:
+        case BuiltinFn::kGroupNonUniformSMin:
+        case BuiltinFn::kGroupNonUniformSMax:
+        case BuiltinFn::kInterpolateAtOffset:
+        case BuiltinFn::kSConvert:
+        case BuiltinFn::kUConvert:
+        case BuiltinFn::kAddCarry:
+            break;
+    }
+    return core::ir::Instruction::Accesses{};
+}
+
+}  // namespace tint::spirv
+
+// clang-format on

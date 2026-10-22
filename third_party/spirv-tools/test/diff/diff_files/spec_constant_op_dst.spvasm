@@ -1,0 +1,17 @@
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %1 "main"
+               OpExecutionMode %1 LocalSize 1 1 1
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %4 = OpTypeInt 32 0
+          %5 = OpTypeVector %4 3
+          %6 = OpConstant %4 1
+          %7 = OpSpecConstantComposite %5 %6 %6 %6
+          %8 = OpSpecConstantOp %4 CompositeExtract %7 2
+          %9 = OpSpecConstantOp %4 CompositeExtract %7 3
+         %10 = OpSpecConstantOp %4 IMul %8 %8
+          %1 = OpFunction %2 None %3
+         %11 = OpLabel
+               OpReturn
+               OpFunctionEnd

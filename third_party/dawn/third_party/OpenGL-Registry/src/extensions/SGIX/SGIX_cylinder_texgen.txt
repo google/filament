@@ -1,0 +1,106 @@
+Name
+
+    SGIX_cylinder_texgen
+
+Name Strings
+
+    GL_SGIX_cylinder_texgen
+
+Version
+
+    $Date: 1999/04/03 08:40:44 $ $Revision: 1.3 $
+
+Number
+
+    140
+
+Dependencies
+
+Overview
+
+    This extension adds two texture coordinate generation modes, both
+    of which generate a texture coordinate based on an intersection
+    of the reflected ray with a local cylinder.  The difference between
+    the two modes lies in the coordinate space in which the reflected
+    ray is assumed to reside.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <params> parameters of TexGeni, TexGenf, TexGend,
+    TexGeniv, TexGenfv, and TexGendv:
+
+	EYE_CYLINDER_SGIX
+	OBJECT_CYLINDER_SGIX
+	EYE_CYLINDER_RADIUS_SGIX
+	OBJECT_CYLINDER_RADIUS_SGIX
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    If TEXTURE_GEN_MODE indicates OBJECT_CYLINDER_SGIX, then the
+    generating function for the coordinate indicated by <coord> is
+
+	XXX
+
+    In other words, compute the reflection vector in object space from
+    the point P in object space, and find the intersection of this
+    reflection vector with a cylinder of radius r oriented along the x
+    axis in object space.  If the cylinder is cut perpendicular to its
+    axis at the point where the reflected ray intersects the cylinder,
+    g is the normalized arclength of the arc from the xy plane to the
+    intersection point along this cross section.
+
+    r is specified by calling TexGeni, TexGenf, or TexGend with <pname>
+    set to OBJECT_CYLINDER_SGIX and <params> set to r or by calling
+    TexGeniv, TexGenfv, or TexGendv set to OBJECT_CYLINDER_SGIX and
+    <params> pointing to an array containing r.
+
+    If TEXTURE_GEN_MODE indicates EYE_DISTANCE_TO_POINT_SGIS, then the
+    generating function for the coordinate indicated by <coord> is the
+    same as above, but ...
+
+	XXX
+
+    In other words, compute the reflection vector in eye space from the
+    point P in eye space, and find the intersection of this reflection
+    vector with a cylinder of radius r oriented along the x axis in
+    eye space.  If the cylinder is cut perpendicular to its axis at the
+    point where the reflected ray intersects the cylinder, g is the
+    normalized arclength of the arc from the xy plane to the intersection
+    point along this cross section.
+
+    r is specified by calling TexGeni, TexGenf, or TexGend with <pname>
+    set to EYE_CYLINDER_SGIX and <params> set to r or by calling
+    TexGeniv, TexGenfv, or TexGendv set to EYE_CYLINDER_SGIX and <params>
+    pointing to an array containing r.
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    None
+
+New State
+							Initial
+    Get Value			Get Command	Type	Value			Attrib
+    ---------			-----------	----	-------			------
+    EYE_CYLINDER_SGIX		GetTexGeniv	1 x R	{0}			texture
+    OBJECT_CYLINDER_SGIX	GetTexGeniv	1 x R	{0}			texture
+    EYE_CYLINDER_RADIUS_SGIX	GetTexGeniv	1 x R	{1}			texture
+    OBJECT_CYLINDER_RADIUS_SGIX	GetTexGeniv	1 x R	{1}			texture
+
+

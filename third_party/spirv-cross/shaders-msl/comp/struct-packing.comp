@@ -1,0 +1,77 @@
+#version 310 es
+layout(local_size_x = 1) in;
+
+struct S0
+{
+    vec2 a[1];
+    float b;
+};
+
+struct S1
+{
+    vec3 a;
+    float b;
+};
+
+struct S2
+{
+    vec3 a[1];
+    float b;
+};
+
+struct S3
+{
+    vec2 a;
+    float b;
+};
+
+struct S4
+{
+	vec2 c;
+};
+
+struct Content
+{
+    S0 m0s[1];
+    S1 m1s[1];
+    S2 m2s[1];
+    S0 m0;
+    S1 m1;
+    S2 m2;
+    S3 m3;
+    float m4;
+
+	S4 m3s[8];
+};
+
+layout(binding = 1, std430) buffer SSBO1
+{
+    Content content;
+    Content content1[2];
+    Content content2;
+
+    layout(column_major) mat2 m0;
+    layout(column_major) mat2 m1;
+    layout(column_major) mat2x3 m2[4];
+    layout(column_major) mat3x2 m3;
+    layout(row_major) mat2 m4;
+    layout(row_major) mat2 m5[9];
+    layout(row_major) mat2x3 m6[4][2];
+    layout(row_major) mat3x2 m7;
+    float array[];
+} ssbo_430;
+
+layout(binding = 0, std140) buffer SSBO0
+{
+    Content content;
+    Content content1[2];
+    Content content2;
+    float array[];
+} ssbo_140;
+
+void main()
+{
+    ssbo_430.content = ssbo_140.content;
+    ssbo_430.content.m1.a = ssbo_430.m6[1][1] * ssbo_430.content.m3.a;	// test packed matrix access
+}
+

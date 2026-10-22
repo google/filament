@@ -1,0 +1,33 @@
+material {
+    name : camera_feed,
+    shadingModel : unlit,
+    vertexDomain : device,
+    requires : [
+        uv0
+    ],
+    flipUV : false,
+    parameters : [
+        {
+            type : sampler2d,
+            name : cameraFeed
+        },
+        {
+            type : float3x3,
+            name : textureTransform
+        }
+    ]
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        // This applies the transform we received from displayTransformForOrientation.
+        material.uv0 = (materialParams.textureTransform * float3(material.uv0, 1.0)).rg;
+    }
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor.rgb = inverseTonemapSRGB(texture(materialParams_cameraFeed, getUV0()).rgb);
+    }
+}

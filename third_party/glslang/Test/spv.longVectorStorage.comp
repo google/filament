@@ -1,0 +1,84 @@
+#version 450 core
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_EXT_long_vector : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_scalar_block_layout : enable
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(constant_id = 0) const uint32_t c0 = 0;
+
+layout(set = 0, binding = 0, std140) buffer Buf140 {
+    vector<uint32_t, 5> v5[2];
+    vector<uint32_t, 7> v7;
+    vector<uint32_t, 1> v1[2];
+} buf140;
+
+layout(set = 0, binding = 0, std430) buffer Buf430 {
+    vector<uint32_t, 5> v5[2];
+    vector<uint32_t, 7> v7;
+    vector<uint32_t, 1> v1[2];
+} buf430;
+
+layout(set = 0, binding = 0, scalar) buffer BufScalar {
+    vector<uint32_t, 5> v5[2];
+    vector<uint32_t, 7> v7;
+    vector<uint32_t, 1> v1[2];
+} bufScalar;
+
+layout(set = 0, binding = 1) uniform UBO {
+    vector<uint32_t, 5> v5[2];
+    vector<uint32_t, 7> v7;
+    vector<uint32_t, 1> v1[2];
+} ubo;
+
+layout (push_constant, scalar) uniform PC {
+    layout(offset = 0) vector<uint32_t, 5> v5;
+    layout(offset = 28) vector<uint32_t, 7> v7;
+} pc;
+
+layout(scalar, buffer_reference) buffer BufScalarRef {
+    vector<uint32_t, 5> v5[2];
+    vector<uint32_t, 7> v7;
+    vector<uint32_t, 1> v1[2];
+};
+
+shared vector<uint32_t, 9> s9;
+shared vector<float, c0> s5;
+
+
+
+void main()
+{
+    vector<uint32_t, 1> v1;
+    vector<uint32_t, 5> v5;
+    vector<uint32_t, 7> v7;
+    vector<uint32_t, 9> v9;
+    vector<float, c0> vc;
+
+    BufScalarRef ref;
+
+    v1 = buf140.v1[0];
+    v1 = buf430.v1[1];
+    v1 = bufScalar.v1[1];
+    v1 = ubo.v1[1];
+    v1 = ref.v1[1];
+
+    v5 = buf140.v5[1];
+    v5 = buf430.v5[1];
+    v5 = bufScalar.v5[1];
+    v5 = ubo.v5[1];
+    v5 = pc.v5;
+    v5 = ref.v5[1];
+
+    v7 = buf140.v7;
+    v7 = buf430.v7;
+    v7 = bufScalar.v7;
+    v7 = ubo.v7;
+    v7 = pc.v7;
+    v7 = ref.v7;
+
+    v9 = s9;
+    vc = s5;
+}

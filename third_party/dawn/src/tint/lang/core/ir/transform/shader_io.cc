@@ -1,0 +1,351 @@
+// Copyright 2023 The Dawn & Tint Authors
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#include "src/tint/lang/core/ir/transform/shader_io.h"
+
+#include <memory>
+#include <utility>
+
+#include "src/tint/lang/core/ir/builder.h"
+#include "src/tint/lang/core/ir/module.h"
+#include "src/tint/lang/core/type/struct.h"
+#include "src/tint/utils/containers/vector.h"
+
+using namespace tint::core::fluent_types;     // NOLINT
+using namespace tint::core::number_suffixes;  // NOLINT
+
+namespace tint::core::ir::transform {
+
+namespace {
+
+/// PIMPL state for the transform.
+struct State {
+    /// The function that creates a backend state object.
+    std::function<MakeBackendStateFunc> make_backend_state;
+
+    /// The IR module.
+    Module& ir;
+    /// The IR builder.
+    Builder b{ir};
+    /// The type manager.
+    core::type::Manager& ty{ir.Types()};
+
+    /// The entry point currently being processed.
+    Function* ep = nullptr;
+
+    /// The backend state object for the current entry point.
+    std::unique_ptr<ShaderIOBackendState> backend{};
+
+    /// Process the module.
+    /// @returns Success if all of the sub-tasks succeed, otherwise propagates the failure reason
+    Result<SuccessType> Process() {
+        // Collect all structures before the transform has run, so that we can strip their shader IO
+        // attributes later.
+        Vector<const type::Struct*, 16> structures_to_strip;
+        for (auto* type : ir.Types()) {
+            if (auto* str = type->As<type::Struct>()) {
+                structures_to_strip.Push(str);
+            }
+        }
+
+        // Process the entry points.
+        // Take a copy of the function list since the transform adds new functions to the module.
+        auto functions = ir.functions;
+        for (auto& func : functions) {
+            // Only process entry points.
+            if (!func->IsEntryPoint()) {
+                continue;
+            }
+
+            TINT_CHECK_RESULT(ProcessEntryPoint(func, make_backend_state(ir, func)));
+        }
+
+        // Remove IO attributes from all structure members that had them prior to this transform.
+        for (auto* str : structures_to_strip) {
+            for (auto* member : str->Members()) {
+                // TODO(crbug.com/tint/745): Remove the const_cast.
+                const_cast<core::type::StructMember*>(member)->ResetAttributes();
+            }
+        }
+
+        return Success;
+    }
+
+    /// Process an entry point.
+    /// @param f the original entry point function
+    /// @param bs the backend state object
+    /// @returns Success if all of the sub-tasks succeed, otherwise propagates the failure reason
+    Result<SuccessType> ProcessEntryPoint(Function* f, std::unique_ptr<ShaderIOBackendState> bs) {
+        TINT_SCOPED_ASSIGNMENT(ep, f);
+        backend = std::move(bs);
+        TINT_DEFER(backend = nullptr);
+
+        // Process the parameters and return value to prepare for building a wrapper function.
+        GatherInputs();  // Calls backend->AddInput() for each input
+        GatherOutput();  // Calls backend->AddOutput() for each output
+
+        // Add an output for the vertex point size if needed.
+        std::optional<uint32_t> vertex_point_size_index;
+        if (ep->IsVertex() && backend->NeedsVertexPointSize()) {
+            ir.properties.Add(core::ir::Property::kAllowPointSizeBuiltin);
+            vertex_point_size_index =
+                backend->AddOutput(ir.symbols.New("vertex_point_size"), ty.f32(),
+                                   core::IOAttributes{
+                                       .builtin = core::BuiltinValue::kPointSize,
+                                   });
+        }
+
+        TINT_CHECK_RESULT_UNWRAP(new_params, backend->FinalizeInputs());
+        TINT_CHECK_RESULT_UNWRAP(new_ret_ty, backend->FinalizeOutputs());
+
+        // Skip entry points with no new inputs or outputs.
+        if (!backend->HasInputs() && !backend->HasOutputs()) {
+            return Success;
+        }
+
+        // Rename the old function and remove its pipeline stage, workgroup size and subgroup size,
+        // as we will be wrapping it with a new entry point.
+        auto name = ir.NameOf(ep).Name();
+        auto stage = ep->Stage();
+        auto wgsize = ep->WorkgroupSize();
+        auto sgsize = ep->SubgroupSize();
+        ir.SetName(ep, name + "_inner");
+        ep->SetStage(Function::PipelineStage::kUndefined);
+        ep->ClearWorkgroupSize();
+        ep->ClearSubgroupSize();
+
+        // Create the entry point wrapper function.
+        auto* wrapper_ep = b.Function(name, new_ret_ty);
+        wrapper_ep->SetParams(std::move(new_params));
+        wrapper_ep->SetStage(stage);
+        if (wgsize) {
+            wrapper_ep->SetWorkgroupSize((*wgsize)[0], (*wgsize)[1], (*wgsize)[2]);
+        }
+        if (sgsize) {
+            wrapper_ep->SetSubgroupSize(*sgsize);
+        }
+        auto wrapper = b.Append(wrapper_ep->Block());
+
+        // Call the original function, passing it the inputs and capturing its return value.
+        auto inner_call_args = BuildInnerCallArgs(wrapper);
+        auto* inner_result = wrapper.Call(ep->ReturnType(), ep, std::move(inner_call_args));
+        SetOutputs(wrapper, inner_result->Result());
+        if (vertex_point_size_index) {
+            backend->SetOutput(wrapper, vertex_point_size_index.value(), b.Constant(1_f));
+        }
+
+        backend->SetBackendOutputs(wrapper, inner_result->Result());
+
+        // Return the new result.
+        wrapper.Return(wrapper_ep, backend->MakeReturnValue(wrapper));
+
+        return Success;
+    }
+
+    /// Gather the shader inputs.
+    void GatherInputs() {
+        for (auto* param : ep->Params()) {
+            if (auto* str = param->Type()->As<core::type::Struct>()) {
+                for (auto* member : str->Members()) {
+                    auto name = str->Name().Name() + "_" + member->Name().Name();
+                    auto attributes = member->Attributes();
+                    if (attributes.interpolation && !ep->IsFragment()) {
+                        // Strip interpolation on non-fragment inputs
+                        attributes.interpolation = {};
+                    }
+                    backend->AddInput(ir.symbols.Register(name), member->Type(),
+                                      std::move(attributes));
+                }
+            } else {
+                // Pull out the IO attributes and remove them from the parameter.
+                auto attributes = param->Attributes();
+                if (attributes.interpolation && !ep->IsFragment()) {
+                    // Strip interpolation on non-fragment inputs
+                    attributes.interpolation = {};
+                }
+                param->ResetAttributes();
+
+                auto name = ir.NameOf(param);
+                backend->AddInput(name, param->Type(), std::move(attributes));
+            }
+        }
+    }
+
+    /// Gather the shader outputs.
+    void GatherOutput() {
+        if (ep->ReturnType()->Is<core::type::Void>()) {
+            return;
+        }
+
+        if (auto* str = ep->ReturnType()->As<core::type::Struct>()) {
+            for (auto* member : str->Members()) {
+                auto name = str->Name().Name() + "_" + member->Name().Name();
+                auto attributes = member->Attributes();
+                if (attributes.interpolation && !ep->IsVertex()) {
+                    // Strip interpolation on non-vertex outputs
+                    attributes.interpolation = {};
+                }
+                backend->AddOutput(ir.symbols.Register(name), member->Type(),
+                                   std::move(attributes));
+            }
+        } else {
+            // Pull out the IO attributes and remove them from the original function.
+            auto attributes = ep->ReturnAttributes();
+            if (attributes.interpolation && !ep->IsVertex()) {
+                // Strip interpolation on non-vertex outputs
+                attributes.interpolation = {};
+            }
+            ep->SetReturnAttributes({});
+
+            backend->AddOutput(ir.symbols.New(), ep->ReturnType(), std::move(attributes));
+        }
+    }
+
+    /// Build the argument list to call the original entry point function.
+    /// @param builder the IR builder for new instructions
+    /// @returns the argument list
+    Vector<Value*, 4> BuildInnerCallArgs(Builder& builder) {
+        uint32_t input_idx = 0;
+        Vector<Value*, 4> args;
+        for (auto* param : ep->Params()) {
+            if (auto* str = param->Type()->As<core::type::Struct>()) {
+                Vector<Value*, 4> construct_args;
+                for (uint32_t i = 0; i < str->Members().Length(); i++) {
+                    construct_args.Push(backend->GetInput(builder, input_idx++));
+                }
+                args.Push(builder.Construct(param->Type(), construct_args)->Result());
+            } else {
+                args.Push(backend->GetInput(builder, input_idx++));
+            }
+        }
+
+        return args;
+    }
+
+    /// Propagate outputs from the inner function call to their final destination.
+    /// @param builder the IR builder for new instructions
+    /// @param inner_result the return value from calling the original entry point function
+    void SetOutputs(Builder& builder, Value* inner_result) {
+        if (auto* str = inner_result->Type()->As<core::type::Struct>()) {
+            for (auto* member : str->Members()) {
+                Value* from =
+                    builder.Access(member->Type(), inner_result, u32(member->Index()))->Result();
+                backend->SetOutput(builder, member->Index(), from);
+            }
+        } else if (!inner_result->Type()->Is<core::type::Void>()) {
+            backend->SetOutput(builder, 0u, inner_result);
+        }
+    }
+};
+
+}  // namespace
+
+bool ShaderIOBackendState::HasBuiltinInput(core::BuiltinValue builtin) const {
+    return inputs.Any([builtin](auto& struct_mem_desc) {  //
+        return struct_mem_desc.attributes.builtin == builtin;
+    });
+}
+
+uint32_t ShaderIOBackendState::RequireBuiltinInput(core::BuiltinValue builtin,
+                                                   const core::type::Type* type,
+                                                   std::string_view name) {
+    for (uint32_t i = 0; i < inputs.Length(); i++) {
+        if (inputs[i].attributes.builtin == builtin) {
+            return i;
+        }
+    }
+    return AddInput(ir.symbols.New(name), type, core::IOAttributes{.builtin = builtin});
+}
+
+core::ir::Value* ShaderIOBackendState::PolyfillWorkgroupIndex(Builder& builder,
+                                                              uint32_t workgroup_id_index,
+                                                              uint32_t num_workgroups_index) {
+    if (tint_workgroup_index != nullptr) {
+        return tint_workgroup_index;
+    }
+
+    // workgroup_index = workgroup_id.x +
+    //                   (workgroup_id.y * num_workgroups.x) +
+    //                   (workgroup_id.z * num_workgroups.x * num_workgroups.y)
+    auto* workgroup_id = GetInput(builder, workgroup_id_index);
+    auto* num_workgroups = GetInput(builder, num_workgroups_index);
+
+    auto* num_workgroups_x = builder.Access(ty.u32(), num_workgroups, 0_u);
+    auto* num_workgroups_y = builder.Access(ty.u32(), num_workgroups, 1_u);
+    auto* z_part = builder.Multiply(num_workgroups_x, num_workgroups_y)->Result();
+    z_part = builder.Multiply(builder.Access(ty.u32(), workgroup_id, 2_u), z_part)->Result();
+    auto* y_part =
+        builder.Multiply(builder.Access(ty.u32(), workgroup_id, 1_u), num_workgroups_x)->Result();
+    auto* init = builder.Add(builder.Access(ty.u32(), workgroup_id, 0_u), y_part)->Result();
+    init = builder.Add(init, z_part)->Result();
+    tint_workgroup_index = init;
+    return tint_workgroup_index;
+}
+
+core::ir::Value* ShaderIOBackendState::PolyfillGlobalInvocationIndex(
+    Builder& builder,
+    uint32_t global_invocation_id_index,
+    uint32_t num_workgroups_index) {
+    if (tint_global_invocation_index) {
+        return tint_global_invocation_index;
+    }
+
+    // global_invocation_index =
+    //   global_invocation_id.x +
+    //   (global_invocation_id.y * num_workgroups.x * workgroup_size.x) +
+    //   (global_invocation_id.z * num_workgroups.x * workgroup_size.x * num_workgroups.y *
+    //   workgroup_size.y)
+    auto* num_workgroups = GetInput(builder, num_workgroups_index);
+    auto* global_id = GetInput(builder, global_invocation_id_index);
+
+    auto* global_id_x = builder.Access(ty.u32(), global_id, 0_u);
+    auto* global_id_y = builder.Access(ty.u32(), global_id, 1_u);
+    auto* global_id_z = builder.Access(ty.u32(), global_id, 2_u);
+
+    auto* num_workgroups_x = builder.Access(ty.u32(), num_workgroups, 0_u);
+    auto* num_workgroups_y = builder.Access(ty.u32(), num_workgroups, 1_u);
+
+    auto* x_size = builder.Multiply(num_workgroups_x, u32(workgroup_size->at(0)));
+    auto* y_size = builder.Multiply(num_workgroups_y, u32(workgroup_size->at(1)));
+
+    auto* z_part = builder.Multiply(x_size, y_size);
+    z_part = builder.Multiply(global_id_z, z_part);
+    auto* y_part = builder.Multiply(global_id_y, x_size);
+    auto* value = builder.Add(global_id_x, y_part);
+    value = builder.Add(value, z_part);
+    tint_global_invocation_index = value->Result();
+    return tint_global_invocation_index;
+}
+
+Result<SuccessType> RunShaderIOBase(Module& module,
+                                    std::function<MakeBackendStateFunc> make_backend_state) {
+    return State{make_backend_state, module}.Process();
+}
+
+ShaderIOBackendState::~ShaderIOBackendState() = default;
+
+}  // namespace tint::core::ir::transform

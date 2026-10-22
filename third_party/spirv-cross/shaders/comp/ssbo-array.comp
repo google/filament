@@ -1,0 +1,14 @@
+#version 310 es
+layout(local_size_x = 1) in;
+
+layout(std430, binding = 0) buffer SSBO
+{
+    vec4 data[];
+} ssbos[2];
+
+void main()
+{
+    uint ident = gl_GlobalInvocationID.x;
+    ssbos[1].data[ident] = ssbos[0].data[ident];
+}
+

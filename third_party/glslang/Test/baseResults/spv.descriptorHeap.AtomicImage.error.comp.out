@@ -1,0 +1,7 @@
+spv.descriptorHeap.AtomicImage.error.comp
+ERROR: 0:13: 'imageAtomicOr' : only supported on image with format r32i or r32ui 
+ERROR: 0:18: 'format' : image formats must match 
+ERROR: 2 compilation errors.  No code generated.
+
+
+SPIR-V is not generated for failed compile or link

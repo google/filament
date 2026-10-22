@@ -1,0 +1,13 @@
+;; Basic test that OpTypeForwardPointer is matched
+               OpCapability Kernel
+               OpCapability Addresses
+               OpCapability Linkage
+               OpMemoryModel Logical OpenCL
+               OpName %structptr "structptr"
+               OpTypeForwardPointer %structptr UniformConstant
+       %uint = OpTypeInt 32 0
+   %structt1 = OpTypeStruct %structptr %uint
+   %structt2 = OpTypeStruct %uint %structptr
+   %structt3 = OpTypeStruct %uint %uint %structptr
+   %structt4 = OpTypeStruct %uint %uint %uint %structptr
+  %structptr = OpTypePointer UniformConstant %structt1

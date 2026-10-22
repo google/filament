@@ -1,0 +1,175 @@
+Name
+
+    SGIS_texture_edge_clamp
+
+Name Strings
+
+    GL_SGIS_texture_edge_clamp
+
+Version
+
+    $Date: 1997/02/26 03:36:36 $ $Revision: 1.6 $
+
+Number
+
+    35
+
+Dependencies
+
+    EXT_texture3D affects the definition of this extension
+    SGIS_texture_filter4 affects the definition of this extension
+
+Overview
+
+    The base OpenGL provides clamping such that the texture coordinates are
+    limited to exactly the range [0,1].  When a texture coordinate is
+    clamped using this algorithm, the texture sampling filter straddles the
+    edge of the texture image, taking 1/2 its sample values from within the
+    texture image, and the other 1/2 from the texture border.  It is
+    sometimes desirable to clamp a texture without requiring a border, and
+    without using the constant border color.
+
+    This extension defines a new texture clamping algorithm.
+    CLAMP_TO_EDGE_SGIS clamps texture coordinates at all mipmap levels such
+    that the texture filter never samples a border texel.  When used with a
+    NEAREST or a LINEAR filter, the color returned when clamping is derived
+    only from texels at the edge of the texture image.  When used with
+    FILTER4 filters, the filter operations of CLAMP_TO_EDGE_SGIS are defined
+    but don't result in a nice clamp-to-edge color.
+
+    CLAMP_TO_EDGE_SGIS is supported by 1, 2, and 3-dimensional textures
+    only.
+
+Issues
+
+    *   Is the arithmetic for FILTER4 filters correct?  Is this the right
+	thing to do?
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <param> parameter of TexParameteri and TexParameterf,
+    and by the <params> parameter of TexParameteriv and TexParameterfv, when
+    their <pname> parameter is TEXTURE_WRAP_S, TEXTURE_WRAP_T, or
+    TEXTURE_WRAP_R_EXT:
+
+	CLAMP_TO_EDGE_SGIS		0x812F
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    GL Specification Table 3.7 is updated as follows:
+
+	Name				Type	    Legal Values
+	----				----	    ------------
+	TEXTURE_WRAP_S			integer	    CLAMP, REPEAT,
+						    CLAMP_TO_EDGE_SGIS
+	TEXTURE_WRAP_T			integer	    CLAMP, REPEAT,
+						    CLAMP_TO_EDGE_SGIS
+	TEXTURE_WRAP_R_EXT		integer	    CLAMP, REPEAT,
+						    CLAMP_TO_EDGE_SGIS
+	TEXTURE_MIN_FILTER		integer	    NEAREST, LINEAR,
+						    NEAREST_MIPMAP_NEAREST,
+						    NEAREST_MIPMAP_LINEAR,
+						    LINEAR_MIPMAP_NEAREST,
+						    LINEAR_MIPMAP_LINEAR,
+						    FILTER4_SGIS,
+						    LINEAR_CLIPMAP_LINEAR_SGIX
+	TEXTURE_MAG_FILTER		integer	    NEAREST, LINEAR,
+						    FILTER4_SGIS,
+						    LINEAR_DETAIL_SGIS,
+						    LINEAR_DETAIL_ALPHA_SGIS,
+						    LINEAR_DETAIL_COLOR_SGIS,
+						    LINEAR_SHARPEN_SGIS,
+						    LINEAR_SHARPEN_ALPHA_SGIS,
+						    LINEAR_SHARPEN_COLOR_SGIS,
+						    LINEAR_LEQUAL_R_SGIS,
+						    LINEAR_GEQUAL_R_SGIS
+	TEXTURE_BORDER_COLOR		4 floats    any 4 values in [0,1]
+	DETAIL_TEXTURE_LEVEL_SGIS	integer	    any non-negative integer
+	DETAIL_TEXTURE_MODE_SGIS	integer	    ADD, MODULATE
+	TEXTURE_MIN_LOD_SGIS		float	    any value
+	TEXTURE_MAX_LOD_SGIS		float	    any value
+	TEXTURE_BASE_LEVEL_SGIS		integer	    any non-negative integer
+	TEXTURE_MAX_LEVEL_SGIS		integer	    any non-negative integer
+	GENERATE_MIPMAP_SGIS		boolean	    TRUE or FALSE
+	TEXTURE_CLIPMAP_OFFSET_SGIX	2 floats    any 2 values
+
+	Table 3.7: Texture parameters and their values.
+
+    CLAMP_TO_EDGE_SGIS texture clamping is specified by calling
+    TexParameteri with <target> set to TEXTURE_1D, TEXTURE_2D, or
+    TEXTURE_3D_EXT, <pname> set to TEXTURE_WRAP_S, TEXTURE_WRAP_T,
+    or TEXTURE_WRAP_R_EXT, and <param> set to CLAMP_TO_EDGE_SGIS.
+
+    Let [min,max] be the range of a clamped texture coordinate, and let N
+    be the size of the 1D, 2D, or 3D texture image in the direction of
+    clamping.  Then in all cases
+
+	max = 1 - min
+
+    because the clamping is always symmetric about the [0,1] mapped range of
+    a texture coordinate.  When used with NEAREST or LINEAR filters,
+    CLAMP_TO_EDGE_SGIS defines a minimum clamping value of
+
+	min = 1 / 2*N
+
+    When used with FILTER4 filters, CLAMP_TO_EDGE_SGIS defines a minimum
+    clamping value of
+
+	min = 3 / 2*N,		N > 2
+
+	min = 1/2		N <= 2
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is not implemented, then the references clamping of 3D
+    textures in this file are invalid, and references to TEXTURE_WRAP_R_EXT
+    should be ignored.
+
+Dependencies on SGIS_texture_filter4
+
+    If SGIS_texture_filter4 is not implemented, then discussions about the
+    interaction of filter4 texture filters and the clamping function
+    described in this file are invalid, and should be ignored.
+
+Errors
+
+    None
+
+New State
+
+    Only the type information changes for these parameters:
+
+    Get Value		Get Command		Type	Initial Value	Attrib
+    ---------		-----------		----	-------------	------
+    TEXTURE_WRAP_S	GetTexParameteriv	n x Z3	REPEAT		texture
+    TEXTURE_WRAP_T	GetTexParameteriv	n x Z3	REPEAT		texture
+    TEXTURE_WRAP_R_EXT	GetTexParameteriv	n x Z3	REPEAT		texture
+
+New Implementation Dependent State
+
+    None

@@ -1,0 +1,27 @@
+name: Create a release branch from release tag
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+'
+      - 'vulkan-sdk-[0-9]+.[0-9]+.[0-9]+.[0-9]+'
+      - '!v[0-9]+.[0-9]+.rc*'
+
+jobs:
+  prepare-release-job:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Prepare CHANGELOG for version
+        run: |
+          python utils/generate_changelog.py CHANGES "${GITHUB_REF_NAME}" VERSION_CHANGELOG
+      - name: Create release
+        run: |
+          gh release create -t "Release ${GITHUB_REF_NAME}" -F VERSION_CHANGELOG "${GITHUB_REF_NAME}"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+

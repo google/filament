@@ -1,0 +1,333 @@
+XXX - Not complete yet!!!
+
+Name
+
+    SGIX_async
+
+Name Strings
+
+    GL_SGIX_async
+
+Version
+
+    $Date: 1998/06/04 20:57:36 $ $Revision: 1.8 $
+
+Number
+
+    132
+
+Dependencies
+
+    None.
+
+Overview
+
+    This extension provides a framework for asynchronous OpenGL
+    commands.  It also provides commands allowing a program to wait
+    for the completion of asynchronous commands.
+    
+    Asynchronous commands have two properties:
+    
+    1) Asynchronous commands are non-blocking.  For example, an
+    asynchronous ReadPixels command returns control to the program
+    immediately rather than blocking until the command completes.
+    This property allows the program to issue other OpenGL commands in
+    parallel with the execution of commands that normally block.
+    
+    2) Asynchronous commands may complete out-of-order with respect to
+    other OpenGL commands.  For example, an asynchronous TexImage
+    command may complete after subsequent OpenGL commands issued by
+    the program rather than maintaining the normal serial order of the
+    OpenGL command stream.  This property allows the graphics
+    accelerator to execute asynchronous commands in parallel with the
+    normal command stream, for instance using a secondary path to
+    transfer data from or to the host, without doing any dependency
+    checking.
+    
+    Programs that issue asynchronous commands must also be able to
+    determine when the commands have completed.  The completion status
+    may be needed so that results can be retrieved (e.g. the image
+    data from a ReadPixels command) or so that dependent commands can
+    be issued (e.g. drawing commands that use texture data downloaded
+    by an earlier asynchronous command).  This extension provides
+    fine-grain control over asynchronous commands by introducing a
+    mechanism for determining the status of individual commands.
+
+    Each invocation of an asynchronous command is associated with an
+    integer called a "marker."  A program specifies a marker before it
+    issues an asynchronous command.  The program may later issue a
+    command to query if any asynchronous commands have completed.  The
+    query commands return a marker to identify the command that
+    completed.  This extension provides both blocking and non-blocking
+    query commands.
+
+    This extension does not define any asynchronous commands.
+    See SGIX_async_pixel for the asynchronous pixel commands.
+
+Issues
+
+    * Should all asynchronous operations share the same marker name space?
+
+      Ans: Yes.  The argument for separate name spaces is that it
+      makes modularizing an application easier.  The proposal was to
+      use a separate name space for each category of commands,
+      e.g. readpixels, teximage, drawpixels, and histogram. That works
+      if each name space is used by only one part of the application
+      (e.g. one part of the application issues asynchronous readpixels
+      and some other part issues asynchronous teximage), but it
+      doesn't work if there are multiple uses of one name space
+      (e.g. two libraries that both use asynchronous readpixels).  It
+      doesn't seem worth complicating the API to provide such a
+      limited benefit.  The better solution is for a higher-level API
+      to provide a mechanism for registering an interest in particular
+      markers, similar to the X Windows mechanism for distributing
+      window events.
+
+    * Should the order of asynchronous operations be preserved, even
+      if they are executed out-of-order with respect to normal commands?
+    
+      Ans: No, let the extensions that define the async operations choose
+      whether or not to preserve order.
+
+    * Should the extension also define a WaitAsyncSGIX command that
+      guarantees completion of a specified asynchronous command before
+      subsequent commands are executed?  This command wouldn't require
+      the marker to make a round trip back to the host like
+      FinishAsyncSGIX does, so it could be implemented more efficiently.
+
+      Ans: No for now (no compelling application).
+
+    * When are errors associated with an asynchronous command
+      reported?
+
+      Ans: A call to GetError after an asynchronous command always
+      reports any errors associated with the command.  The behavior
+      is as if errors are detected at the time a command is issued rather
+      than when it is executed.  In this respect asynchronous commands
+      are no different from synchronous commands.
+      
+    * Should a call to MakeCurrent implicitly force all pending
+      asynchronous commands to complete?
+
+      Ans: This is an implementation issue.  It does not affect the
+      semantics of this extension.
+
+    * Should there be an implementation-dependent limit on the
+      number of outstanding asynchronous commands before the
+      application calls FinishAsync?
+      
+      Ans: This extension does not impose such a limit, but the
+      extensions that introduce asynchronous commands must address the
+      issue.  An asynchronous command that uses an application-allocated
+      buffer for return results (e.g. instruments) lets the application
+      determine the limit by sizing the buffer appropriately.
+
+    * Should this extension modify the instruments extension to use
+      the new PollAsyncSGIX command instead of PollInstrumentsSGIX?
+
+      Ans: No for now.
+
+    * Should there be a generic command to set the current marker
+      instead of a different mechanism for each asynchronous command?
+
+      Ans: Yes, this has been added (AsyncMarkerSGIX).
+
+    * Should there be a command to reserve a set of markers, like
+      GenLists?
+
+      Ans: Yes, this has been added (GenAsyncMarkers and
+      DeleteAsyncMarkers).
+
+    * Should name spaces be specified using enums instead of bitmasks?
+
+      Ans: Yes, but name spaces have now been removed (see above).
+
+    * Would it be better to define an extension that provides non-blocking
+      commands rather than asynchronous commands?
+
+      Ans: No.  Non-blocking commands would require the GL to preserve
+      the order of commands, but that limits the potential for
+      optimization.  The GL would have to check for dependencies
+      between a non-blocking command and all subsequent commands
+      (which is hard to do efficiently), or stall all subsequent
+      commands until the non-blocking command completes, or maintain
+      multiple sets of state.  By defining an asynchronous style of
+      execution we place the burden of detecting dependencies on the
+      application.  There is a large class of applications which can
+      easily guarantee that there are no dependencies.
+
+New Procedures and Functions
+
+    void AsyncMarkerSGIX(uint marker)
+
+    int FinishAsyncSGIX(uint *markerp)
+
+    int PollAsyncSGIX(uint *markerp)
+
+    uint GenAsyncMarkersSGIX(sizei range)
+
+    void DeleteAsyncMarkersSGIX(uint marker, sizei range)
+
+    boolean IsAsyncMarkerSGIX(uint marker)
+
+New Tokens
+
+    Accepted by the <pname> parameters of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+	ASYNC_MARKER_SGIX		0x8329
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.1 Specification (Fragments and the
+Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    Add to section 5.4 (Display Lists):
+    
+    The following commands are not included in display lists:
+
+	FinishAsyncSGIX
+	PollAsyncSGIX
+        GenAsyncMarkersSGIX
+        DeleteAsyncMarkersSGIX
+	IsAsyncMarkerSGIX
+
+    Add a section 5.X prior to the Instruments section entitled
+    "Asynchronous Commands":
+
+    Asynchronous commands are commands that may complete out-of-order
+    with respect to other OpenGL commands.  An asynchronous command
+    samples the OpenGL state vector when it is issued.  The sampled
+    state includes the results from the complete execution of all
+    synchronous (normal) commands issued prior to the asynchronous
+    command.  However, the results of an asynchronous command (state
+    changes or framebuffer updates) are not necessarily committed in
+    order.  An asynchronous command may commit its results any time
+    after the completion of all synchronous commands issued prior to
+    the asynchronous command.  An implementation may choose to execute
+    asynchronous commands in parallel with subsequent commands or at
+    some convenient time in the future.
+
+    Implementations of asynchronous commands may also be non-blocking.
+    For example, a non-blocking query command returns control to the
+    program immediately rather than stalling the program until the
+    results of the query are available.
+
+    When an asynchronous command is issued the current value of
+    ASYNC_MARKER_SGIX is associated with the particular invocation of
+    the command.  This value is an integer called a "marker" which can
+    be used by the application to identify a particular command when
+    it completes as described later in this section.  The value of
+    ASYNC_MARKER_SGIX is specified by calling AsyncMarkerSGIX with the
+    <marker> parameter set to the marker value.  It is not an error to
+    invoke multiple asynchronous commands without changing
+    ASYNC_MARKER_SGIX, although such a situation may make it
+    impossible for the application to distinguish the completion
+    status of the commands.
+
+    OpenGL provides two commands for determining that
+    previously-issued asynchronous commands have completed:
+    FinishAsyncSGIX, which blocks until an asynchronous command
+    completes, and PollAsyncSGIX, which is non-blocking.  Both
+    commands write the marker associated with the completed
+    asynchronous command into the integer referred to by the <markerp>
+    parameter.
+
+    FinishAsyncSGIX returns 1 when an asynchronous command has
+    completed.  If there are pending asynchronous commands but none
+    have completed then FinishAsyncSGIX blocks until at least one
+    command completes.  If there are no pending asynchronous commands
+    then FinishAsyncSGIX immediately returns 0 and does not modify the
+    integer referred to by <markerp>.
+
+    PollAsyncSGIX is identical to FinishAsyncSGIX except that if there
+    are no asynchronous commands that have completed then
+    PollAsyncSGIX immediately returns 0 rather than blocking.
+
+    Calls to FinishAsyncSGIX and PollAsyncSGIX may be freely
+    intermixed.  Once OpenGL has reported the completion of an
+    asynchronous command via either FinishAsyncSGIX or PollAsyncSGIX
+    the completion status of the command will not be reported again.
+    If several commands have the same marker associated with them, the
+    completion status of each command will be reported separately,
+    although these reports will be indistinguishable.  The order in
+    which asynchronous commands are reported is undefined by this
+    extension, although the extensions that define asynchronous
+    commands may guarantee a particular order.
+    
+    A program may guarantee that all outstanding asynchronous commands
+    have completed by calling Finish.  A call to Finish does not cause
+    the completion status of outstanding commands to be reported, so
+    subsequent calls to FinishAsyncSGIX or PollAsyncSGIX will report
+    the status of such commands.
+    
+    Three commands are provided to manage asynchronous command
+    markers.  A marker is "in use" if it is the current value of
+    ASYNC_MARKER_SGIX or if it is associated with any asynchronous
+    command that has been issued but has not been queried using
+    FinishAsyncSGIX or PollAsyncSGIX.  A marker may also be "reserved"
+    by calling GenAsyncMarkersSGIX.  GenAsyncMarkersSGIX returns an
+    integer n such that the markers n, n+1, n+2, ..., n+s-1 are not
+    previously reserved or in use, where s is the value of the <range>
+    parameter, or it returns 0 if no contiguous range of the specified
+    length could be reserved.  The command also records that each of
+    the markers in the returned range is reserved.
+    
+    DeleteAsyncMarkersSGIX records that each of the markers in the
+    range n, n+1, n+2, ..., n+s-1 is no longer reserved, where n is
+    the value of the <marker> parameter and s is the value of the
+    <range> parameter.  It is not an error if some of the markers in
+    the range are not reserved or are currently in use, but a marker
+    that is in use will remain so even if DeleteAsyncMarkersSGIX is
+    called.  IsAsyncMarkerSGIX returns 1 if the parameter <marker>
+    identifies a marker that is currently in use or reserved, and the
+    command returns 0 otherwise.
+
+    Note that the marker name space is never shared across contexts,
+    as the name spaces for texture objects and display lists may be.
+    
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    Add to the end of Section 4.4 (Sequentiality):
+    
+    Asynchronous OpenGL commands do not obey the normal sequentiality
+    guarantees for OpenGL commands.  Any command issued asynchronously
+    may be inserted into the GLX protocol stream at any command
+    boundary following the command that was issued before it.
+
+GLX Protocol
+
+    XXX Not complete.  Asynchronous commands should generate events
+    when they complete.  The current GLX spec says that no new events
+    are defined, so this will have to be changed.
+
+Errors
+
+    INVALID_OPERATION is generated if AsyncMarkerSGIX,
+    FinishAsyncSGIX, PollAsyncSGIX, GenAsyncMarkersSGIX,
+    DeleteAsyncMarkersSGIX or IsAsyncMarkerSGIX is called between
+    execution of Begin and the corresponding execution of End.
+
+New State
+
+    Get Value			Get Command	Type	Value	Attrib
+    ---------			-----------	----	-------	------
+    ASYNC_MARKER_SGIX           GetIntegerv     Z+      0       -
+
+New Implementation Dependent State
+
+    None

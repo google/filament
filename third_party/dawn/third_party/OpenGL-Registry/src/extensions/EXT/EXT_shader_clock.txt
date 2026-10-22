@@ -1,0 +1,110 @@
+Name
+
+    EXT_shader_clock
+
+Name Strings
+
+    GL_EXT_shader_clock
+
+Contact
+
+    Ashley Smith, Collabora <ashley.smith@collabora.com>
+
+Contributors
+
+    Ashley Smith, Collabora
+
+    and contributors to the ARB_shader_clock spec,
+    which provided the basis for this spec.
+
+Notice
+
+    Copyright (c) 2025 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Draft
+
+Version
+
+    Version 0.1, 2025/04/02
+
+Number
+
+    OpenGL ES Extension #348
+
+Dependencies
+
+    This extension is written against the OpenGL ES 3.1 specification.
+
+Overview
+
+    This extension is a port of GL_ARB_shader_clock to OpenGL ES. For the
+    complete overview of this extension, refer to the "Overview" section of
+    GL_ARB_shader_clock.
+
+Differences from GL_ARB_shader_clock
+
+    Append the EXT suffix to all new symbols.
+
+    Renumber sections to match the OpenGL ES 3.1 Specification.
+
+    Do not include GL_ARB_gpu_shader_int64 support and remove any references to
+    the uint64 type.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+IP Status
+
+    None.
+
+Modifications to the OpenGL Shading Language Specification, Version 4.60
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_EXT_shader_clock : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_EXT_shader_clock               1
+
+Additions to Chapter 8 of the OpenGL ES Shading Language Specification
+(Built-in Functions)
+
+    Add New Section 8.16, "Timing Functions"
+
+    Syntax:
+
+        uvec2 clock2x32EXT(void);
+
+    clock2x32EXT() returns a value representing the current execution clock as
+    seen by the shader processor encoded as a two-component vector of 32-bit
+    unsigned integers with the first component containing the 32 least
+    significant bits and the second component containing the 32 most significant
+    bits. Time monotonically increments as the processor executes instructions.
+    The returned time will wrap after it exceeds the maximum value representable
+    in 64 bits. The units of time are not defined and need not be constant. Time
+    is not guaranteed to be dynamically uniform across either a work group or a
+    invocations of a single draw or dispatch. However time is guaranteed to be
+    dynamically uniform across a single sub-group but only in a given shader
+    stage (where sub-group is implementation dependent and may be just one
+    invocation). The clock2x32EXT() functions serve as a code motion barriers.
+
+Issues
+
+
+Revision History
+
+    Rev  Date        Author           Changes
+    ---  ----------  --------------   ------------------------------------------
+      1  2025/04/02  ashleysmithcol   Initial revision based on ARB_shader_clock

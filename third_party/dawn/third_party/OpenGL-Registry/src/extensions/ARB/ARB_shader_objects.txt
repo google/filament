@@ -1,0 +1,3031 @@
+Name
+
+    ARB_shader_objects
+
+Name Strings
+
+    GL_ARB_shader_objects
+
+Contributors
+
+    Kurt Akeley
+    Allen Akin
+    Dave Baldwin
+    Bob Beretta
+    Pat Brown
+    Matt Craighead
+    Cass Everitt
+    Mandar Godse
+    Evan Hart
+    Phil Huxley
+    Deron Dann Johnson
+    James Jones
+    Dale Kirkland
+    John Kessenich
+    Steve Koren
+    Jon Leech
+    Bill Licea-Kane
+    Barthold Lichtenbelt
+    Kent Lin
+    Benjamin Lipchak
+    Rob Mace
+    Michael McCool
+    Teri Morrison
+    Jeremy Morris
+    Glenn Ortner
+    Ian Romanick
+    Randi Rost
+    Jeremy Sandmel
+    Folker Schamel
+    Mik Wells
+
+Contact
+
+    Barthold Lichtenbelt, 3Dlabs, Inc. (barthold 'at' 3dlabs.com)
+    Randi Rost, 3Dlabs, Inc. (rost 'at' 3dlabs.com)
+
+Notice
+
+    Copyright (c) 2003-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+IP Status
+
+    As described in the Contributor License, which can be found at
+    http://www.3dlabs.com/support/developer/ogl2/specs/3dlabs_contributor.pdf.
+
+Status
+
+    Complete. Approved by the ARB on June 11, 2003.
+    Updated revision 0.89 approved by the ARB on June 17, 2004.
+
+Version
+
+    Last Modified Date: December 14, 2009
+    Author Revision: 0.90
+
+Number
+
+    ARB Extension #30
+
+Dependencies
+
+    OpenGL 1.0 is required.
+
+    This extension is written against version 1.10 of the OpenGL Shading
+    Language Specification.
+
+    The extension is written against the OpenGL 1.4 Specification.
+
+Overview
+
+    This extension adds API calls that are necessary to manage shader
+    objects and program objects as defined in the OpenGL 2.0 white papers by
+    3Dlabs.
+
+    The generation of an executable that runs on one of OpenGL's
+    programmable units is modeled to that of developing a typical C/C++
+    application. There are one or more source files, each of which are
+    stored by OpenGL in a shader object. Each shader object (source file)
+    needs to be compiled and attached to a program object. Once all shader
+    objects are compiled successfully, the program object needs to be linked
+    to produce an executable. This executable is part of the program object,
+    and can now be loaded onto the programmable units to make it part of the
+    current OpenGL state. Both the compile and link stages generate a text
+    string that can be queried to get more information. This information
+    could be, but is not limited to, compile errors, link errors,
+    optimization hints, etc. Values for uniform variables, declared in a
+    shader, can be set by the application and used to control a shader's
+    behavior.
+
+    This extension defines functions for creating shader objects and program
+    objects, for compiling shader objects, for linking program objects, for
+    attaching shader objects to program objects, and for using a program
+    object as part of current state. Functions to load uniform values are
+    also defined. Some house keeping functions, like deleting an object and
+    querying object state, are also provided.
+
+    Although this extension defines the API for creating shader objects, it
+    does not define any specific types of shader objects. It is assumed that
+    this extension will be implemented along with at least one such
+    additional extension for creating a specific type of OpenGL 2.0 shader
+    (e.g., the ARB_fragment_shader extension or the ARB_vertex_shader
+    extension).
+
+Issues
+
+    1) What to do if part of a shader pair is not present?
+
+    DISCUSSION: There are several shader types that go together. For
+    example, a VERTEX_SHADER and a FRAGMENT_SHADER form a pair that is part
+    of the geometry pipeline. It is not required to supply both shader types
+    of a pair in a program object.
+
+    RESOLUTION: If one or the other of a pair is not present in the program
+    object, OpenGL will substitute the standard 1.4 OpenGL pipeline for the
+    one not present. The most likely place for this substitution to happen
+    is the link stage. Note that it is defined elsewhere exactly what part
+    of the OpenGL 1.4 pipeline a shader replaces.
+
+    2) Should source code string passed to ShaderSourceARB be null
+       terminated?
+
+    DISCUSSION: Source code strings should not be required to end with the
+    byte 0. This is a programming language dependent concept, and interferes
+    with loading source code out of files. (Memory mapping read-only files
+    leaves no ability to add a 0 at the end without an extra copy).
+    Development of shaders can be from files, not necessarily from embedded
+    source. If null termination was required a shader's source code would be
+    read from a file, based on an address and a length, then get copied to
+    add a 0 on, then are passed to the compiler which promptly goes and
+    finds the 0, in order to get back to an address and a length. That is
+    all useless work.
+
+    RESOLUTION: It is allowed, but not required, to have a null termination
+    at the end of the string. If the string is null terminated, OpenGL can
+    find out the length of the string, and the length parameter passed in
+    can be set to negative one.
+
+    3) Should the string passed in to GetUniformLocationARB be null
+       terminated?
+
+    DISCUSSION: It is not very likely that this will be a memory mapped
+    file, therefore null termination can be assumed.
+
+    RESOLUTION: Yes.
+
+    4) Should the string returned by GetInfoLog be null terminated?
+
+    DISCUSSION: In this case it is useful to have the info string be null
+    terminated, so it can be passed to printf() directly. All other strings
+    returned by the GL are also null terminated.
+
+    RESOLUTION: YES
+
+    5) Should GetInfoLog also return the length of the string?
+
+    DISCUSSION: This applies to an older version of GetInfoLog, but is no
+    longer applicable.
+
+    RESOLUTION: N/A
+
+    6) Do we need a new GLcharARB data type to handle input strings?
+
+    DISCUSSION: Currently there is no precedence of passing in strings into
+    OpenGL. This exposes a deficiency in OpenGL data types. In C++ a literal
+    string is of type char. OpenGL only has GLubyte and GLbyte data types,
+    defined as being unsigned char and signed char respectively. This means
+    that it is not possible to pass a literal string to OpenGL using either
+    GLubyte or GLbyte. For example, GetUniformLocationARB(programObj,
+    "Offset") needs to have the prototype GetUniformLocationARB(handleARB
+    obj, const char *string).
+
+    RESOLUTION: YES
+
+    7) Do we load uniforms using their string representation?
+
+    DISCUSSION: Loading uniforms is still performance sensitive, although
+    not as much as vertex attributes. Passing in a string into the load
+    uniform command seems too big of a performance hit. Every time the load
+    is called the string needs to be parsed and the location for the data
+    computed. It is better to move this performance cost outside the load
+    uniform command into GetUniformLocationARB.
+
+    RESOLUTION: NO.
+
+    8) Should Uniform*ARB take a program object as a parameter?
+
+    DISCUSSION: Again, this is a performance issue. If it does, the object
+    passed in needs to be validated for every uniform loaded. Instead, move
+    this validation cost outside the uniform command, and have the uniform
+    command modify uniforms for the currently in use program object (Set by
+    UseProgramObjectARB). The validation cost is now much lower. The program
+    object is validated once, when calling UseProgramObjectARB.
+
+    RESOLUTION: NO.
+
+    9) Should uniform values be state per program object?
+
+    DISCUSSION: Should values loaded for uniforms be kept in a program
+    object, so that they are retained across program object switches? This
+    is application friendly. However, loading uniforms becomes a bit more of
+    a heavy weight operation because the OpenGL implementation now has to
+    store its values with the program object, and reload when the program
+    object is made current, even if the previous program object already had
+    the same uniform values loaded.
+
+    RESOLUTION: YES. We don't want to force an application to re-load its
+    uniforms every time a program object is used.
+
+    10) Should the name space for uniforms be global per program object?
+
+    DISCUSSION: If one shader object references a uniform called "foo" and
+    another shader object, attached to the same program object, also
+    references "foo", are those shaders referencing the same uniform? If
+    they do not reference the same uniform values, uniforms now need to be
+    state per shader object and loaded per shader object. Also, if a vertex
+    shader references "foo" and the accompanying fragment shader also
+    references "foo", it would make sense to expect those to be the same
+    uniform reference.
+
+    RESOLUTION: YES.
+
+    11) What to do if no value is loaded for a uniform?
+
+    DISCUSSION: A program object can be used and rendering commenced without
+    loading values for all the uniforms referenced in its shader objects.
+    What to do in this case? Note that the values of the uniforms are state
+    belonging to the program object. Once loaded, these values are reused
+    whenever the program object is in use again. Should uniforms have an
+    initial value?
+
+    RESOLUTION: Uniforms are initialized to zero.
+
+    12) Should it be allowed to load uniforms in a display list?
+
+    DISCUSSION: Doing so will make the display list tied to a program
+    object. The location passed in to the load uniform commands is program
+    object specific. However, this can still be useful for some
+    applications. If a program object is in use at CallList time which does
+    not match that display list, then all bets are off. See also issue 30.
+
+    RESOLUTION: YES
+
+    13) Do we need uniforms that are local to a program object and uniforms
+        that are globally accessible by all program objects?
+
+    DISCUSSION: ARB_vertex_program has this functionality. It seems
+    convenient to be able to set a uniform once, and have its value be
+    accessible across many shaders (for example, a uniform used to set a
+    light position). This type of global uniform could be a performance win
+    as well, its value does not have to be cached by OpenGL per program
+    object, and re-loaded at every program object switch.
+
+    RESOLUTION: This is useful, but for this version of the spec this
+    functionality is deferred.
+
+    14) Do we need INT, FLOAT and BOOL versions of the load uniform
+        commands?
+
+    DISCUSSION: There are two types to keep separate. The type the uniform
+    is declared in the shader, and the type of the data the application uses
+    for uniform values. There are three basic uniform types that can be
+    declared in a shader: Float, Int and Bool. Thus one can envision an API
+    where the uniform type is encoded in the API name, besides the
+    application's data type. For example, UniformInt3iv(). Where the word
+    'Int' encodes the uniform type, and 'iv' the user input data type. On
+    the other hand, the uniform type information is known to the GL, and
+    therefore encoding it in the API name is redundant.
+
+    RESOLUTION: We won't encode the uniform type in the API name.
+
+    15) There is the potential for a huge explosion of load uniform
+        commands, what to do?
+
+    DISCUSSION: We need to be able to load a vec1, vec2, vec3, or vec4, or
+    arrays of vec1, arrays of vec2, arrays of vec3 or arrays of vec4.
+    Furtheremore, there is a need to also load 2x2, 3x3 and 4x4 matrices,
+    and arrays of 2x2, arrays of 3x3 and arrays of 4x4 matrices. The input
+    values to the load uniforms commands can (traditional OpenGL) come in
+    bytes, shorts, ints, floats, doubles and unsigned bytes, unsigned shorts
+    and unsigned ints.
+
+    RESOLUTION: A suggested subset is in the New Procedures and Functions
+    section below.
+
+    16) Should a special INVALID_HANDLE for the data type handleARB be
+        provided, or is 0 sufficient?
+
+    DISCUSSION: 0 is fine. There are less code defects if code compares to
+    zero than some invalid handle that is defined to zero anyway.
+    Applications should not compare to NULL, since NULL is not necessarily
+    defined to be zero in C, only in C++. Besides, a handleARB is an
+    integer.
+
+    RESOLUTION: YES.
+
+    17) What happens if the currently in use program object is re-linked by
+        calling LinkProgramARB?
+
+    DISCUSSION: Consider that the currently in use program object has a
+    uniform named "foo". The application changed some code around in that
+    program object, and still has a uniform named "foo", then calls
+    LinkProgramARB. After this link call the location of "foo" does not have
+    to be the same as before the link call. If LinkProgramARB does not imply
+    a call to UseProgramObjectARB, then a call to Uniform*ARB to load a
+    value for "foo" is ill defined. In this case, does the application use
+    the old location of "foo" or the new location?
+
+    It is consistent with other parts of OpenGL to have updates to an object
+    take effect after the update without issuing another command to make the
+    update active, for example the TexSubImage* commands.
+
+    RESOLUTION: The re-linked program will be used automatically, without
+    requiring a new call to UseProgarmObjectARB.
+
+    18) Should object handles be allocated by the application or by OpenGL?
+
+    DISCUSSION: For current OpenGL objects such as textures and display
+    lists, object Ids can be assigned by the application. The Id name space
+    is unique for texture objects and display lists. This resulted in a
+    different API for generating and managing texture Ids or Display List
+    Ids.
+
+    It is not desirable to keep the same mechanism for general object
+    management. It prevents the definition of generic operations on objects
+    such as deletion and querying. It prevents the OpenGL implementation
+    from managing the name space the way it sees fit. It is much more common
+    for the underlying library to allocate and manage handles and thereby
+    keep control of the name space. It can make using a third party supplied
+    library harder or even impossible.
+
+    RESOLUTION: Object handles should be allocated and its name space
+    managed by OpenGL, not by the application.
+
+    19) Should a handle be opaque to the application?
+
+    DISCUSSION: A handle is only read and written by OpenGL. Therefore the
+    interpretation of the value of the handle does not need to be exposed to
+    the application. However, we will expose how a handle is implemented.
+    Certain implementation choices for handles, like a pointer, are
+    discouraged. The practical solution seems to be to make a handle an
+    integer.
+
+    RESOLUTION: YES.
+
+    20) Do we need a way to get the source code back from a shader object?
+
+    DISCUSSION: To stay with the OpenGL philosophy that any state that can
+    be set also be queried, we need such a get. This function will return
+    the last set of strings stored in a shader object. Note that this set of
+    strings is not necessarily the same as the set of strings that compiled
+    and linked into program object currently in use.
+
+    RESOLUTION: YES, this is achieved through GetShaderSourceARB.
+
+    21) Are the limits on all resources an executable uses queriable and
+        known to the application?
+
+    DISCUSSION: Various proposals have been discussed. One very important
+    consideration is to end up with a specification that provides
+    application portability (e.g., ISVs do not need to support multiple
+    rendering back ends in order to run on all the different flavors of
+    hardware). ISVs definitely would prefer the specification to say that
+    the OpenGL Shading Language implementation is responsible for ensuring
+    that all valid shaders must run.
+
+    RESOLUTION: Resources that are easy to count (number of uniforms
+    available to a vertex shader, number of uniforms available to a fragment
+    shader, number of vertex attributes, number of varyings, number of
+    texture units) will have queriable limits. The application is
+    responsible for working within these externally visible limits. The
+    OpenGL Shading Language implementation is responsible for virtualizing
+    resources that are not easy to count (for example, the number of machine
+    instructions in the final executable, number of temporary registers used
+    in the final executable, etc.). The expectation is that for any
+    practical application an executable (generated by the link stage) will
+    run.
+
+    22) Should a higher level shading language be layered on top of OpenGL
+        instead of being designed to fit within OpenGL?
+
+    DISCUSSION: In the current design, the OpenGL Shading Language is
+    integrated into OpenGL and just provides alternative methods to the
+    state controlled pipeline of OpenGL 1.4. The Stanford approach is to
+    layer their shading language on top of OpenGL. This has some advantages
+    and disadvantages that will become apparent when the differences are
+    examined.
+
+    The Stanford approach uses a higher abstraction level. This helps with
+    writing some kinds of programs where the abstractions match the problem
+    domain. For example treating lights and surfaces as abstract entities
+    makes some 3D graphics operations easier, however OpenGL is now being
+    used for video and image processing where this abstraction is largely
+    irrelevant. Similarly many games have shunned lighting via traditional
+    means and use textures (light maps) instead.
+
+    There is nothing in the OpenGL Shading Language or bindings that prevent
+    higher levels of abstractions from being layered on top of a
+    programmable OpenGL. We also wish to keep the overall abstraction level
+    of OpenGL at its current level.
+
+    The Stanford approach also provides for different computational
+    frequencies. By having the higher levels of abstraction where one
+    program defines the current graphics operation in total allows the
+    compiler to separate out the parts that need to run at the primitive
+    group level, primitive level, vertex level and fragment level. The
+    compiler can therefore generate the code to run on the CPU, vertex
+    processor and fragment processor as appropriate. This is obviously more
+    complicated to implement than having the programmer specify the programs
+    to run on each part of the pipeline (although some hints are still
+    required by the Stanford language), although this does make the
+    virtualization of the hardware easier as the compiler has the overall
+    view.
+
+    The major disadvantage of this is that it forces more intrusive changes
+    to OpenGL to support the clear delineation of the primitives, vertices
+    and fragment operations. Many of the core OpenGL features have been
+    replaced.
+
+    An advantage of the current approach is that the look and feel of OpenGL
+    1.4 is maintained and it allows a graceful mix and match approach during
+    the transition period from fixed functionality to full programmability.
+
+    This is not a criticism of the Stanford work, as they had no choice but
+    to layer on top of OpenGL.
+
+    RESOLUTION: The OpenGL Shading Language should be built into OpenGL, and
+    not layered on top. It is also noted that if this is not the case,
+    OpenGL should still have a standard shading language.
+
+    23) Should an error be set if a glUseProgramObjectARB call is made on a
+        program object that has not been successfully linked?
+
+    DISCUSSION: This was an issue when UseProgramObject returned a Boolean
+    indicating success or failure. However, it no longer does, thus an error
+    has to be generated.
+
+    RESOLUTION: YES
+
+    24) Do we need a way to get object code back, just like the model of C
+        on host processors?
+
+    DISCUSSION: Lots in email on the arb-gl2 mailing list. This is about
+    lowest-level, machine specific code that may not even be portable within
+    a family of cards from the same vendor. One main goal is to save
+    compilation time. There seems to be general consensus that this has
+    merit.
+
+    RESOLUTION: This is an interesting capability to have, but will be
+    deferred to the next release or could be added as a separate extension.
+
+    25) How are samplers used to access textures?
+
+    DISCUSSION: Samplers are special uniforms used in the OpenGL Shading
+    Language to identify the texture object used for each texture lookup.
+    The value of a sampler indicates the texture image unit being accessed.
+    The type of the sampler identifies the target on that texture image
+    unit. The texture object bound to that texture image unit's target is
+    then used for the texture lookup. For example, a variable of type
+    sampler2D selects target TEXTURE_2D on its texture image unit. Binding
+    of texture objects to targets is done as usual with BindTexture.
+    Selecting the texture image unit to bind is done as usual with
+    ActiveTexture.
+
+    The location of a sampler needs to be queried with
+    GetUniformLocationARB, just like any uniform variable, and its value
+    needs to be set by calling Uniform1i{v}ARB.
+
+    In the future, sampler types might allow for binding a texture object
+    directly, instead of binding to a texture image unit first, to get to a
+    texture object.
+
+    RESOLUTION: Resolved
+
+    26) Do we need a validation command as a developers aid?
+
+    DISCUSSION: The LinkProgramARB command will check if the code in all
+    shaders in the program object will link. It will catch things like
+    having too many active samplers, a mismatch between varyings in a vertex
+    and fragment shader, etc. However, it will not check for any errors
+    related to the values of uniforms or inconsistent OpenGL state that
+    would result in undefined behavior or worse, prevent a program object
+    from executing. A validation command could check for things like a
+    mismatch between a shadow texture lookup and no TEXTURE_COMPARE_MODE
+    set. Or check for values of samplers being out of range. Or check for
+    samplers of different types being used to access the same texture image
+    unit, etc. This validate command will at least do all the validation
+    that needs to occur at render time, and it could do anything extra that
+    might help the developer understand their shader(s) better. Note that it
+    is not necessary to call validate, it only is a development tool.
+
+    RESOLUTION: YES, this is a desirable feature.
+
+    27) Should there be an info log per object?
+
+    DISCUSSION: To store the info log per object created is consistent with
+    the whole object model. However, it might not be useful to keep an info
+    log around till the object is deleted. It does take resources away from
+    the system. Hence we could keep one info log per object type (shader or
+    program objects) as not to take too many resources.
+
+    Alternatively, the specification could say that at least one info log is
+    kept per object type, but that the GL implementation is free to keep
+    more. This was considered in an earlier version of this specification,
+    but broke down when considering the life time of an info log in a
+    multi-context situation.
+
+    Note that in either case the API definition for GetInfoLogARB does not
+    change. The application passes in a handle for the object, and if the
+    info log does not exist it returns an empty string.
+
+    RESOLUTION: We will have an info log per object, and not worry about the
+    resource usage.
+
+    28) Is there a need to have a command to append source code to a shader
+        object?
+
+    DISCUSSION: AppendShaderARB facilitates applications that generate
+    shaders on the fly. Developers can pass parts of a shader source to
+    OpenGL this way. However, the application can do the same thing in its
+    own memory buffer, and then pass the whole shader to OpenGL using
+    ShaderSourceARB. The application usually doesn't have to copy or
+    concatenate strings together. It can build a list of strings and pass
+    those to OpenGL all at once using ShaderSourceARB.
+
+    RESOLUTION: No, this is deemed not necessary.
+
+    29) Should loading the source code into a shader object automatically
+        invoke a compilation?
+
+    DISCUSSION: Keeping the loading of source and compilation of the source
+    as two distinctive API commands makes it possible for the application to
+    control when an expensive operation like a compile is done. For example,
+    it could first load all source for all its shaders at startup, and
+    compile them as needed through the execution of the application. Keeping
+    it separate leaves the most control to the application.
+
+    RESOLUTION: No.
+
+    30) What happens if an application tries to load more values in a
+        uniform than its declared extent?
+
+    DISCUSSION: It is possible to run off the end of a uniform, which could
+    potentially corrupt other uniforms, or any data that is stored by OpenGL
+    at the position next to the uniform.
+
+    Since it is not known, nor desirable to dictate, where an implementation
+    stores its uniforms, it cannot be defined what happens when a load
+    uniform command runs off the end. While enforcing bounds checking is
+    potentially expensive and can cost a good deal of performance, the
+    safety provided by bounds checking is considered more important than the
+    highest possible uniform loading performance.
+
+    Note also that the OpenGL Shading Language states that it is undefined
+    when a shader references an array element outside the array bounds.
+
+    RESOLUTION: The GL implementation must do whatever bounds checking is
+    necessary while loading uniforms. Applications that would like the
+    highest API performance should strongly consider using vertex attributes
+    for a small number of frequently changing values.
+
+    31) Should UseProgramObjectARB be display-list-able?
+
+    DISCUSSION: Consider a geometric object consisting of multiple
+    primitives. The primitives within this geometric object are rendered
+    using different shaders. The only way to encapsulate this into one
+    display list is by allowing UseProgramObjectARB to be compiled into a
+    display list. If this is not allowed, then the geometric object has to
+    be broken up in potentially many display lists, creating a management
+    nightmare for ISVs.
+
+    ARB_vertex_program allows BindProgramARB to be compiled into a display
+    list. Thus when using ARB_vertex_program it is possible to achieve the
+    scenario described above.
+
+    UseProgramObjectARB will generate a GL error if its operation failed, so
+    that applications can still check if it succeeded.
+
+    RESOLUTION: Yes
+
+    32) Can you explain how uniform loading works?
+
+    DISCUSSION: Uniform variables, including samplers, are named and
+    declared in a shader. This name is a string and needs to be used in
+    GetUniformLocationARB to retrieve a location ID. Once this location ID
+    has been retrieved it won't change until the next call to
+    LinkProgramARB. After LinkProgramARB has been issued, the application
+    will have to query the location IDs of uniform variables again.
+    LinkProgramARB will initialize all uniforms to zero. Note that
+    GetUniformLocationARB will only return a location ID if the uniform is
+    part of the set of active uniforms, else it will return -1. The set of
+    active uniforms, for a given program object, can be queried with
+    GetActiveUniformARB.
+
+    Once the location ID is obtained, it can be used in the Uniform*ARB
+    commands to load value(s) for the uniform. Note that the Uniform*ARB
+    command used has to match the size and the type of the uniform variable.
+
+    GetUniformLocationARB can only retrieve location IDs for uniforms
+    declared as a basic type (float, int, bool and vectors thereof) and
+    arrays of basic types. It is not possible to query the location ID of a
+    structure, for example. The application will have to break down the
+    structure into its fields until it has reached a basic type or an array
+    of basic type. It does this by using the "." (dot) and "[]" operations
+    in the name string passed to GetUniformLocationARB. It is possible to
+    query the location ID of an element K in an array. It is possible to use
+    that location ID to load multiple values into an array starting at that
+    location K. However, it is not possible to take that location ID and add
+    an integer N to that location ID to advance to element K + N in that
+    array. The application will have to query the location ID of array
+    element K + N separately.
+
+    For example, consider the following structure:
+
+    struct {
+        struct {
+            float a;
+            float b[10];
+        } c[2];
+        vec2 d;
+    } e;
+
+    loc1 = GetUniformLocationARB(programObject, "e.d") is a valid command.
+    loc2 = GetUniformLocationARB(programObject, "e.c[0]") is not valid.
+    loc3 = GetUniformLocationARB(programObject, "e.c[0].b") is a valid command.
+    loc4 = GetUniformLocationARB(programObject, "e.c[0].b[2]") is a valid command.
+
+    The location loc2 cannot be retrieved because "e.c[0]" references a
+    structure.
+
+    Uniform2fARB(loc1, 1.0f, 2.0f) is a valid command.
+    Uniform2iARB(loc1, 1, 2) is not. loc1 references a vec2, not an ivec2.
+    Uniform1fARB(loc1, 1.0f) is not. loc1 references a vec2, not a float.
+    Uniform1fvARB(loc3, 10, floatPtr) is a valid command.
+    Uniform1fvARB(loc4, 10, floatPtr) is not. It runs off the end of the array.
+    Uniform1fvARB(loc4, 8, floatPtr) is a valid command.
+
+    RESOLUTION: Yes
+
+    33) Should automatic conversion of input data types be done when loading
+        uniforms?
+
+    DISCUSSION: In other words, if the application passes an integer to the
+    uniform loading commands, and the uniform is declared as a float, should
+    automatic type conversion of that integer to a float occur? The vertex
+    attribute loading commands do this, for example.
+
+    OpenGL specifies that this kind of type conversion is dependent on the
+    usage of the data. Color, normals and depth components are normalized
+    and converted to floats as specified in Table 2.6. Other components are
+    not normalized before conversion to float. However, generally it is not
+    known what a uniform is used for.
+
+    It is hard to imagine that it is useful for an application to pass in
+    data that is declared as a different type in the shader. In that case
+    the type of the uniform in the shader could be matched to the
+    application's data type instead.
+
+    RESOLUTION: NO. If the basic type of the uniform is float, then
+    Uniform*f{v}ARB will have to be used. If the basic type of the uniform
+    is integer, then Uniform*i{v}ARB will have to be used. If the basic type
+    of the uniform is a sampler, then Uniform1i{v}ARB will have to be used.
+
+    Since there is no Boolean type in C (and we are defining C bindings) but
+    there is a Boolean type in the OpenGL Shading Language, type conversion
+    needs to be done. It is allowed to either pass in floats or integers if
+    the uniform is declared as a boolean. If the basic type of the uniform
+    is a Boolean, then either Uniform*f{v}ARB or Uniform*i{v}ARB can be
+    used.
+
+    Note that the uniform loading API can later be extended to allow for
+    automatic type conversion, with and without normalization, if it turns
+    out that is desired.
+
+    34) Why introduce the new terms "Use" and "Create"?
+
+    DISCUSSION: This question refers to glUseProgramObjectARB,
+    glCreateShaderObjectARB and glCreateProgramOBjectARB. We could have
+    defined glNewShaderObjectARB, glNewProgramObjectARB and left off the
+    "Use" in glUseProgramOBjectARB, resulting in glProgramObjectARB.
+
+    RESOLUTION: "New" is used for an existing function name (glNewList) that
+    takes a name as input, instead of returning a handle. We deliberately
+    chose "Create" for functions that return handles. Similarly "Use" is
+    used in a function name that takes a handle as input. Different names
+    make it clear to the developer that there are different semantics.
+
+    35) How is a uniform array treated when only some of the array elements
+        are actually used?
+
+    DISCUSSION: We have two goals in mind:
+
+      1) To be able to always load a uniform array starting from offset 0
+         into the array.
+      2) To keep the list of active uniforms as small as possible.
+
+    RESOLUTION: For a uniform array declared in a shader,
+    GetActiveUniformARB() will return the name of the array, its basic type
+    and a count. This count is determined by the highest element used in the
+    shader (as determined by the linker / compiler). If the shader doesn't
+    use the array at all, then the GL should obviously not report it as an
+    active uniform. Loading more data for the array, using Uniform*ARB, than
+    the count returned by GetActiveUniformARB is allowed. The extra data is
+    silently ignored (sent to the bit-bucket).
+
+    For example, consider the array:
+
+        uniform vec3 a[10];
+
+    Which is used in a shader that uses elements 3 and 7 in this array.
+    GetActiveUniformARB will return:
+
+        "a" - the name of the array
+        8 - The size of the array (based on the highest element used, 7)
+        FLOAT_VEC3_ARB - The type
+
+    Since array elements 0 through 7 are active, the application can query
+    the locations for elements 0, 1, 2, 3, 4, 5, 6, 7 using
+    GetUniformLocationARB().
+
+    Loading data for this array using a count of 10 (not 8) is allowed. Thus
+    it is legal to issue:
+
+        location = GetUniformLocation(progObj, "a");
+        LoadUniform3fv(location, 10, dataPtr);
+
+    This will load data into array elements 0 through 7, since only array
+    elements 0 through 7 are active, and will ignore the rest of the data.
+
+    Array data is queried one element at a time. In order to query any
+    uniform, a location needs to be provided by the application. Therefore,
+    in this example, the application can query data for array elements 0
+    through 7, but not for elements 8 and 9.
+
+    This makes array loading portable, independent of the smartness of the
+    compiler / linker. It also encourages shader writers to start using
+    array elements starting at zero, and work their way upwards, to get
+    maximum resource efficiency from the OpenGL implementation. It also
+    works nicely with auto-sized uniform arrays (an array declared with
+    empty brackets "[]" and indexed only with compile time constants).
+
+    36) Should a location of -1 passed in to Uniform*ARB generate a GL error?
+
+    DISCUSSION: The Uniform*API commands will set an INVALID_OPERATION error
+    when passing in a location that does not exist. GetUniformLocationARB
+    will return -1 if the string passed in is not an active uniform, or if
+    it starts with the prefix "gl_". (This means you cannot get a location
+    for active built-in uniforms, for example gl_ModelviewMatrix).
+
+    If you're looping over GetUniformLocationARB and passing the result to
+    one of the Uniform*ARB commands, and if any -1 location passed to
+    Uniform*ARB will generate a GL error, then this means that you should
+    really bracket your Uniform*ARB command with a 'if (location != -1)
+    statement. It seems desireable to not generate a GL error when -1 is
+    passed in as a location to Uniform*ARB. The data passed in should then
+    be silently ignored.
+
+    RESOLUTION. NO. Note that this has changed since the version 0.87 (which
+    was published in the extension registry). That version did set an error
+    when passing in a location of -1.
+
+    37) What should the behavior of glDeleteObject(0) be?
+
+    DISCUSSION: It would be desirable to allow 0 as a valid input value, and
+    not raise an error.
+
+    RESOLUTION: glDeleteObject() will silently ignore deleting the value 0.
+    This is consistent with glDeleteTextures() that also silently ignores
+    deleting the value 0.
+
+    38) It is unclear how GetUniform*ARB works for matrices. Is the data
+        returned in column or row major order?
+
+    DISCUSSION: glGet(MODEL_VIEW_MATRIX) returns data in column major order.
+    It was discussed, but rejected, to add two new commands to return
+    matrices in column or row major order:
+
+    void GetUniformMatrixfvARB(handleARB programObj, int location,
+                               boolean transpose, float *params)
+    void GetUniformMatrixivARB(handleARB programObj, int location,
+                               boolean transpose, float *params)
+
+    RESOLUTION: GetUniformARB will return data in column major order,
+    regardles of the transpose flag used to set the matrix in the
+    LoadUniform*ARB commands.
+
+    39) Do "const" qualified variables consume uniform word storage, or not?
+
+    RESOLUTION: They do not.
+
+    40) What happens when a program object currently in use is re-linked,
+        and this re-link fails?
+
+    DISCUSSION: This should not affect the executable(s), part of the
+    current rendering state. As opposed to revert to fix pipeline for
+    example.
+
+    RESOLUTION: The currently active executable code will be kept until
+    changed or the program has been linked successfully.
+
+    41) What happens when an empty program object (one with no shader
+        objects attached) is linked?
+
+    DISCUSSION: Linking a program object with just a vertex shader will get
+    you fixed- function fragment processing. Vice versa, linking a program
+    object with just a fragment shader gets you fixed-function vertex
+    processing.
+
+    RESOLUTION: This will succeed and in this case you get the fixed
+    pipeline for both vertex and fragment processing if UseProgramObject()
+    is issued for this program object.
+
+    42) How to indicate the first element of an array when requesting a
+        uniform location?
+
+    DISCUSSION: There is a desire to have the location of the first element
+    of an array be indicated either using the name of the uniform array, or
+    by using the name appended with "[0]".
+
+    That would mean the following:
+
+        uniform s a[1]; // Where 's' is some struct with a field 'f' that is a float.
+
+    The following string combinations could be formed to pass into
+    GetUniformLocation:
+
+        a[0].f
+        a.f
+
+    If 'f' is an array float f[1] then the following string combinations
+    could be formed to pass into GetUniformLocation:
+
+        a[0].f[0]
+        a[0].f
+        a.f[0]
+        a.f
+
+    RESOLUTION: The spec is changed so that in the middle of a string it is
+    mandatory to use [0]. Thus that means that only the following two
+    strings are valid to pass to GetUniformLocation:
+
+        a[0].f
+        a[0].f[0]
+
+    43) What does GetActiveUniformARB() report for the following two
+        uniforms?
+
+    DISCUSSION: Consider shader code with:
+
+        uniform float a[1];
+        uniform float a;
+
+    The size reported by GetActiveUniformARB() will be '1', and the type
+    reported will be float. The string reported can be 'a' in both cases, or
+    can be 'a[0]' in the array case. In other words, from this data it is
+    not clear to the application if 'a' is an array of size one or a scalar.
+    Reporting 'a[0]' is the recommended way for the array case. Technically
+    it doesn't really matter, since it is legal to address the first element
+    of an array with 'a' or 'a[0]' and pass either string into
+    GetUniformLocation.
+
+    RESOLUTION: The GL implementation can report either string. However, it
+    is recommended to return 'a[0]'.
+
+    44) Do GL enables affect the built-in state available to a shader?
+
+    DISCUSSION: The lighting state, for example, is still tracked and kept
+    current even when lighting, or a specific light, is disabled. This goes
+    for all built-in state listed in Chapter 7.5 of the OpenGL Shading
+    Language Specification. Do realize that the enables
+    VERTEX_PROGRAM_POINT_SIZE and VERTEX_PROGRAM_TWO_SIDE do need to be
+    enabled by the application, to get their desired effect.
+
+    RESOLUTION: Enable state is a piece of orthogonal state that is not
+    available to a shader. The enable state does not affect the built-in
+    state that is available to a shader, which is listed in Chapter 7.5 of
+    the OpenGL Shading Language specification.
+
+    45) Please give an example of using the uniform API.
+
+    DISCUSSION: Below are two examples. The first one queries each active
+    uniform, then loads a value for it. The second example works of a list
+    of uniforms, and queries their locations. Some of the uniforms in that
+    list might not be active.
+
+    //
+    // Example code that queries active uniforms, then loads their values
+    //
+    void
+    example1(GLhandleARB programObject)
+    {
+        int    i, count, size, type, linked, location;
+        char   uniformName[1000];
+
+        // Link the program object and make sure it succeeded.
+        glLinkProgramARB(programObject);
+        glGetObjectParameterivARB(programObject, GL_OBJECT_LINK_STATUS_ARB, &linked);
+
+        if (!linked) {
+            return;
+        }
+
+        // Install the executables in the program object as part of current state.
+        glUseProgramObjectARB(programObject);
+
+        // Check for GL Errors
+
+        // Setup uniform values in the array 'colorInterior'.
+
+        // Query the number of active uniforms
+        glGetObjectParameterivARB(programObject, GL_OBJECT_ACTIVE_UNIFORMS_ARB,
+                                  &count);
+
+        // Loop over each of the active uniforms, and set their value
+        for (i = 0; i < count; i++)
+        {
+            glGetActiveUniformARB(programObject, i, 1000, NULL, &size, &type,
+                                  uniformName);
+            printf("active uniform: %s\n",uniformName);
+
+            location = glGetUniformLocationARB(programObject, uniformName);
+
+            if (type == GL_FLOAT_VEC3_ARB) {
+                float  *data;
+
+                // Allocate data based on 'size'
+                // do some kind of hash lookup on the uniform name to get the
+                // data to load for the uniform.
+                lookupUniformData(uniformName, data);
+
+                // This a vec3, therefore need to use the '3f' or '3fv' version
+                // of the uniform loading commands.
+                glUniform3fvARB(location, size, data);
+            } // else : Setup more types here
+        }
+    }
+
+
+    //
+    // Example code that has a list of uniforms, and loads values for each uniform
+    // in the list. Not all uniforms have to be active ones.
+    //
+    void
+    example2(GLhandleARB programObject)
+    {
+        int     i, count, linked, location;
+        char  **uniformName;
+        float  *data;
+
+        // Link the program object and make sure it succeeded.
+        glLinkProgramARB(programObject);
+        glGetObjectParameterivARB(programObject, GL_OBJECT_LINK_STATUS_ARB, &linked);
+
+        if (!linked) {
+            return;
+        }
+
+        // Install the executables in the program object as part of current state.
+        glUseProgramObjectARB(programObject);
+
+        // Check for GL Errors
+
+        // Setup uniform values in the array 'data'.
+        // Setup 'count' and the array 'uniformName'
+
+        // Loop over the list of uniforms in uniformName, and set their value
+        for (i = 0; i < count; i++)
+        {
+            // Location will be -1 if the uniform is not active, but that is OK
+            // the uniform loading commands will silently ignore a location of -1.
+            location = glGetUniformLocationARB(programObject, uniformName[i]);
+
+            // This a a vec3, therefore need to use the '3f' or '3fv' version of
+            // the uniform loading command.
+            glUniform3fvARB(location, 1, &data[i * 3]);
+        }
+    }
+
+    46) Should we add capability to query if an object is dirty?
+
+    DISCUSSION: Specifically, do we add a way to query if a program object
+    needs relinking? Do we add a way to query if a shader object needs
+    re-compilation?
+
+    RESOLUTION: No, the application can keep track of this information as
+    well. Mipmap state consistency is not queriable either, for example.
+
+New Procedures and Functions
+
+    void DeleteObjectARB(handleARB obj)
+
+    handleARB GetHandleARB(enum pname)
+
+    void DetachObjectARB(handleARB containerObj, handleARB attachedObj)
+
+    handleARB CreateShaderObjectARB(enum shaderType)
+
+    void ShaderSourceARB(handleARB shaderObj, sizei count, const charARB **string,
+                         const int *length)
+
+    void CompileShaderARB(handleARB shaderObj)
+
+    handleARB CreateProgramObjectARB(void)
+
+    void AttachObjectARB(handleARB containerObj, handleARB obj)
+
+    void LinkProgramARB(handleARB programObj)
+
+    void UseProgramObjectARB(handleARB programObj)
+
+    void ValidateProgramARB(handleARB programObj)
+
+    void Uniform1fARB(int location, float v0)
+    void Uniform2fARB(int location, float v0, float v1)
+    void Uniform3fARB(int location, float v0, float v1, float v2)
+    void Uniform4fARB(int location, float v0, float v1, float v2, float v3)
+
+    void Uniform1iARB(int location, int v0)
+    void Uniform2iARB(int location, int v0, int v1)
+    void Uniform3iARB(int location, int v0, int v1, int v2)
+    void Uniform4iARB(int location, int v0, int v1, int v2, int v3)
+
+    void Uniform1fvARB(int location, sizei count, const float *value)
+    void Uniform2fvARB(int location, sizei count, const float *value)
+    void Uniform3fvARB(int location, sizei count, const float *value)
+    void Uniform4fvARB(int location, sizei count, const float *value)
+
+    void Uniform1ivARB(int location, sizei count, const int *value)
+    void Uniform2ivARB(int location, sizei count, const int *value)
+    void Uniform3ivARB(int location, sizei count, const int *value)
+    void Uniform4ivARB(int location, sizei count, const int *value)
+
+    void UniformMatrix2fvARB(int location, sizei count, boolean transpose, const float *value)
+    void UniformMatrix3fvARB(int location, sizei count, boolean transpose, const float *value)
+    void UniformMatrix4fvARB(int location, sizei count, boolean transpose, const float *value)
+
+    void GetObjectParameterfvARB(handleARB obj, enum pname, float *params)
+    void GetObjectParameterivARB(handleARB obj, enum pname, int *params)
+
+    void GetInfoLogARB(handleARB obj, sizei maxLength, sizei *length, charARB *infoLog)
+
+    void GetAttachedObjectsARB(handleARB containerObj, sizei maxCount, sizei *count,
+                              handleARB *obj)
+
+    int GetUniformLocationARB(handleARB programObj, const charARB *name)
+
+    void GetActiveUniformARB(handleARB programObj, uint index, sizei maxLength,
+                             sizei *length, int *size, enum *type, charARB *name)
+
+    void GetUniformfvARB(handleARB programObj, int location, float *params)
+    void GetUniformivARB(handleARB programObj, int location, int *params)
+
+    void GetShaderSourceARB(handleARB obj, sizei maxLength, sizei *length,
+                            charARB *source)
+
+New Tokens
+
+    Accepted by the <pname> argument of GetHandleARB:
+
+        PROGRAM_OBJECT_ARB                              0x8B40
+
+    Accepted by the <pname> parameter of GetObjectParameter{fi}vARB:
+
+        OBJECT_TYPE_ARB                                 0x8B4E
+        OBJECT_SUBTYPE_ARB                              0x8B4F
+        OBJECT_DELETE_STATUS_ARB                        0x8B80
+        OBJECT_COMPILE_STATUS_ARB                       0x8B81
+        OBJECT_LINK_STATUS_ARB                          0x8B82
+        OBJECT_VALIDATE_STATUS_ARB                      0x8B83
+        OBJECT_INFO_LOG_LENGTH_ARB                      0x8B84
+        OBJECT_ATTACHED_OBJECTS_ARB                     0x8B85
+        OBJECT_ACTIVE_UNIFORMS_ARB                      0x8B86
+        OBJECT_ACTIVE_UNIFORM_MAX_LENGTH_ARB            0x8B87
+        OBJECT_SHADER_SOURCE_LENGTH_ARB                 0x8B88
+
+    Returned by the <params> parameter of GetObjectParameter{fi}vARB:
+
+        SHADER_OBJECT_ARB                               0x8B48
+
+    Returned by the <type> parameter of GetActiveUniformARB:
+
+        FLOAT                                           0x1406
+        FLOAT_VEC2_ARB                                  0x8B50
+        FLOAT_VEC3_ARB                                  0x8B51
+        FLOAT_VEC4_ARB                                  0x8B52
+        INT                                             0x1404
+        INT_VEC2_ARB                                    0x8B53
+        INT_VEC3_ARB                                    0x8B54
+        INT_VEC4_ARB                                    0x8B55
+        BOOL_ARB                                        0x8B56
+        BOOL_VEC2_ARB                                   0x8B57
+        BOOL_VEC3_ARB                                   0x8B58
+        BOOL_VEC4_ARB                                   0x8B59
+        FLOAT_MAT2_ARB                                  0x8B5A
+        FLOAT_MAT3_ARB                                  0x8B5B
+        FLOAT_MAT4_ARB                                  0x8B5C
+        SAMPLER_1D_ARB                                  0x8B5D
+        SAMPLER_2D_ARB                                  0x8B5E
+        SAMPLER_3D_ARB                                  0x8B5F
+        SAMPLER_CUBE_ARB                                0x8B60
+        SAMPLER_1D_SHADOW_ARB                           0x8B61
+        SAMPLER_2D_SHADOW_ARB                           0x8B62
+        SAMPLER_2D_RECT_ARB                             0x8B63
+        SAMPLER_2D_RECT_SHADOW_ARB                      0x8B64
+
+Additions to Chapter 2 of the OpenGL 1.4 Specification (OpenGL Operation)
+
+    Add two new rows to Table 2.2, page 9.
+
+          GL Type     Minimum        Description
+                      Bit Width
+          -------     -------        -------------
+           charARB      8            characters that make up strings
+           handleARB    32           identifier for generic objects
+
+    Modify Section 2.5, GL Errors, p. 11
+
+    (modify the last paragraph, p. 11) Four error generation conditions are
+    implicit...
+
+    (modify the first paragraph, p. 12) ...the error INVALID_VALUE results.
+    Third, the error INVALID_VALUE is generated by any command that takes
+    one or more handles as input, and one or more of these handles are not a
+    generic object handle generated by OpenGL. Finally, if memory is
+    exhausted...
+
+    Modify Section 2.6.1 Begin and End Objects, p. 13
+
+    Remove the term "objects" from this section.
+
+    Add a new section 2.14 Generic Objects, p.60
+
+    The currently existing object types in OpenGL, texture objects (see
+    Section 3.8.12) and display lists (see Section 5.4), each have their own
+    management API and object ID name space. Rather than designing a new API
+    for each new object type added to OpenGL, this section introduces a more
+    generic object API, which is initially applied to shader objects
+    (Section 2.14.1) and program objects (Section 2.14.2).
+
+    In OpenGL, a "generic object" is an OpenGL-managed opaque data
+    structure. The data stored in such a generic object may be quite large,
+    so applications are given control over how objects are managed. Generic
+    objects are given handles (names) by OpenGL at object creation time.
+    Applications can specify the data that is to be stored in objects and
+    can modify that data through function calls. Generic objects can be
+    created, deleted, modified, attached, detached and used as part of the
+    current rendering state.
+
+    Some types of generic objects act as containers for other objects.
+    Linking an object to another is called "attaching" and unlinking an
+    object is called "detaching".
+
+    To attach an object to a container object, use the command:
+
+        void AttachObjectARB (handleARB containerObj, handleARB obj)
+
+    The error INVALID_OPERATION is generated if <obj> is not a type that can
+    be attached to a container object or if <containerObj> is not a
+    container object. The same error is generated if an attempt is made to
+    attach the same object more than once to the same container object.
+
+    To detach an object from the container object it is attached to, use the
+    command:
+
+        void DetachObjectARB(handleARB containerObj, handleARB attachedObj)
+
+    If the object <attachedObj> is not attached to any other container
+    object in any rendering context, and the object is flagged for deletion,
+    the information for <attachedObj> and the data for <attachedObj> is
+    deleted. If <attachedObj> is not attached to <containerObj>, the error
+    INVALID_OPERATION is generated. The error INVALID_OPERATION is also
+    generated if <containerObj> is not a container object.
+
+    Generic objects can be deleted with the following command:
+
+        void DeleteObjectARB(handleARB obj)
+
+    This command will either delete the object, or flag it for deletion. An
+    object that is attached to a container object is not deleted until it is
+    no longer attached to any container object, for any context. If it is
+    still attached to at least one container object, the object is flagged
+    for deletion. If the object is part of the current rendering state, it
+    is not deleted until it is no longer part of the current rendering state
+    for any context. If the object is still part of the rendering state of
+    at least one context, it is flagged for deletion.
+
+    if an object is flagged for deletion, its Boolean status bit
+    OBJECT_DELETE_STATUS_ARB is set to true. The value of
+    OBJECT_DELETE_STATUS_ARB can be queried with GetObjectParameter{fi}vARB
+    (see Section 6.1.12).
+
+    DeleteObjectARB will silently ignore the value zero.
+
+    When a container object is deleted, it will detach each attached object
+    as part of the deletion process. When an object is deleted, all
+    information for the object referenced is lost. The data for the object
+    is also deleted. One bit of state is needed to indicate if a delete
+    request for an object was made. The default is no request.
+
+    Add Subsection 2.14.1 Shader Objects
+
+    Subsequent sections of this specification will define stages of the GL
+    pipeline that are programmable. The source code that makes up a program
+    that gets executed by one of the programmable stages is encapsulated in
+    one or more "shader objects". To create a shader object use the
+    following command:
+
+        handleARB CreateShaderObjectARB(enum shaderType)
+
+    The shader object is empty when it is created. The <shaderType> argument
+    specifies the type of shader object to be created, and should be one of
+    < >. (This list to be augmented by other extensions.) If the shader
+    object is created successfully, a handle that can be used to reference
+    it is returned, and its object specific parameter OBJECT_TYPE_ARB is set
+    to SHADER_OBJECT_ARB. The object specific parameter OBJECT_SUBTYPE_ARB
+    is set to the actual type of the shader object created. The value of
+    OBJECT_TYPE_ARB and OBJECT_SUBTYPE_ARB can be queried with
+    GetObjectParameter{fi}vARB (see Section 6.1.12). If the creation failed
+    the handle returned will be 0.
+
+    Source code for the shader is specified with the command:
+
+        void ShaderSourceARB(handleARB shaderObj, sizei count,
+                             const charARB **string, const int *length)
+
+    The <string> argument is an array of pointers to one or more, optionally
+    null terminated, character strings that make up the source code. The
+    <length> argument is an array with the number of charARBs in each string
+    (the string length). Each element in this array can be set to negative
+    one (or smaller), indicating that its accompanying string is null
+    terminated. If <length> is set to NULL, all strings in the <string>
+    argument are considered null terminated. The ShaderSourceARB command
+    sets the source code for the specified shader object <shaderObj> to the
+    text strings in the <string> array. If the object previously had source
+    code loaded into it, it is completely replaced. The number of strings in
+    the array is given in <count>. Any length passed in excludes the null
+    termination in its count. If <shaderObj> does not reference a shader
+    object, the error INVALID_OPERATION is generated.
+
+    The strings that are loaded into a shader object are expected to form
+    the source code for a valid shader as defined in the OpenGL Shading
+    Language Specification. Once the source code for a shader has been
+    loaded, the shader object can be compiled with the following command:
+
+        void CompileShaderARB(handleARB shaderObj)
+
+    This function will compile <shaderObj>. Each shader object has a Boolean
+    status, OBJECT_COMPILE_STATUS_ARB, that is modified as a result of
+    compilation. This status can be queried with GetObjectParameter{fi}vARB
+    (see Section 6.1.12). This status will be set to TRUE if the shader
+    <shaderObj> was compiled without errors and is ready for use, and FALSE
+    otherwise. Compilation can fail for a variety of reasons as listed in
+    the OpenGL Shading Language Specification. If CompileShaderARB failed,
+    any information about a previous compile is lost and is not restored.
+    Thus a failed compile does not restore the old state of <shaderObj>. If
+    <shaderObj> does not reference a shader object, the error
+    INVALID_OPERATION is generated.
+
+    Note that changing the source code of a shader object, through
+    ShaderSourceARB, does not change its compile status
+    OBJECT_COMPILE_STATUS_ARB.
+
+    Each shader object has an information log that is modified as a result
+    of compilation. This information log can be queried with GetInfoLogARB
+    to obtain more information about the compilation attempt (see Section
+    6.1.12).
+
+    Add Subsection 2.14.2 Program Objects
+
+    The shader objects that are to be used by the programmable stages of
+    OpenGL are collected together to form a "program object". The programs
+    that are executed by these programmable stages are called "executables".
+    All information necessary for defining an executable is encapsulated in
+    a program object. A program object is created with the following
+    command:
+
+        handleARB CreateProgramObjectARB(void)
+
+    Program objects are empty when they are created. If the program object
+    is created successfully, a handle that can be used to reference it is
+    returned and its attribute OBJECT_TYPE_ARB is set to PROGRAM_OBJECT_ARB.
+    If the creation failed the handle returned will be 0.
+
+    A program object is a container object. Shader objects are attached to a
+    program object with the command AttachObjectARB. It is permissible to
+    attach shader objects to program objects before source code has been
+    loaded into the shader object, or before the shader object has been
+    compiled. It is permissible to attach multiple shader objects of the
+    same type to a single program object, and it is permissible to attach a
+    shader object to more than one program object.
+
+    In order to use the shader objects contained in a program object, the
+    program object must be linked. This is accomplished with the following
+    command:
+
+        void LinkProgramARB (handleARB programObj)
+
+    This function will link <programObj>. Each program object has a Boolean
+    status, OBJECT_LINK_STATUS_ARB, that is modified as a result of linking.
+    This status can be queried with GetObjectParameter{fi}vARB (see Section
+    6.1.12). This status will be set to TRUE if a valid executable is
+    created, and FALSE otherwise. Linking can fail for a variety of reasons
+    as specified in the OpenGL Shading Language Specification. Linking will
+    also fail if one or more of the shader objects, attached to
+    <programObj>, are not compiled successfully, or if more active uniform
+    or active sampler variables are used in <programObj> than allowed (see
+    Sections 2.14.3 and 2.14.4). If LinkProgramARB failed, any information
+    about a previous link is lost and is not restored. Thus a failed link
+    does not restore the old state of <programObj>. If <programObj> is not
+    of type PROGRAM_OBJECT_ARB, the error INVALID_OPERATION is generated.
+
+    Each program object has an information log that is modified as a result
+    of a link operation. This information log can be queried with
+    GetInfoLogARB to obtain more information about the link operation (see
+    Section 6.1.12).
+
+    If a valid executable is created, it can be made part of the current
+    rendering state with the following command:
+
+        void UseProgramObjectARB(handleARB programObj)
+
+    This command will install the executable code as part of current
+    rendering state if the program object <programObj> contains valid
+    executable code, i.e. has been linked successfully. If
+    UseProgramObjectARB is called with the handle set to 0, it is as if the
+    GL had no programmable stages and the fixed functionality paths will be
+    used instead. If <programObj> cannot be made part of the current
+    rendering state, an INVALID_OPERATION error will be generated and the
+    current rendering state left unmodified. This error will be set, for
+    example, if <programObj> has not been linked successfully. If
+    <programObj> is not of type PROGRAM_OBJECT_ARB, the error
+    INVALID_OPERATION is generated.
+
+    While a program object is in use, applications are free to modify
+    attached shader objects, compile attached shader objects, attach
+    additional shader objects, and detach shader objects. This does not
+    affect the link status OBJECT_LINK_STATUS_ARB of the program object.
+    This does not affect the executable code that is part of the current
+    state either. That executable code is only affected when the program
+    object has been re-linked successfully. After such a successful re-link,
+    the LinkProgramARB command will install the generated executable code as
+    part of the current rendering state if the specified program object was
+    already in use as a result of a previous call to UseProgramObjectARB. If
+    this re-link failed, then the executable code part of the current state
+    does not change.
+
+    Add Subsection 2.14.3 Uniform Variables
+
+    Shaders can declare and name "uniform variables" as discussed in the
+    OpenGL Shading Language Specification. Values for these uniforms are to
+    remain constant over a primitive, and typically they are constant across
+    many primitives. Uniforms are program object specific state. They retain
+    their values once loaded, and their values are restored whenever a
+    program object is used, as long as the program object has not been
+    re-linked. A uniform is considered "active" if it is determined by the
+    compiler and linker that the uniform will actually be accessed when the
+    executable code is executed. In cases where the compiler and linker
+    cannot make a conclusive determination, the uniform will be considered
+    active.
+
+    As a result of a successful link all active uniforms belonging to the
+    program object are initialized to zero. A successful link will also
+    generate a location for each active uniform. The values of active
+    uniforms can be changed using this location and the appropriate
+    Uniform*ARB command (see below). These locations are invalidated and new
+    ones assigned after each successful re-link.
+
+    The following function can be used to find the location of an active
+    uniform variable within a program object:
+
+        int GetUniformLocationARB(handleARB programObj, const charARB *name)
+
+    This command will return the location of uniform variable <name>. <name>
+    has to be a null terminated string, without white space. The value of -1
+    will be returned if <name> does not correspond to an active uniform
+    variable name in <programObj> or if <name> starts with the reserved
+    prefix "gl_". If <programObj> has not been successfully linked, or if
+    <programObj> is not of type PROGRAM_OBJECT_ARB, the error
+    INVALID_OPERATION is generated. The location of a uniform variable does
+    not change until the next link command is issued.
+
+    A valid <name> cannot be a structure, an array of structures, or a
+    subcomponent of a vector or a matrix. In order to identify a valid
+    <name>, the "." (dot) and "[]" operators can be used in <name> to
+    operate on a structure or to operate on an array.
+
+    The first element of a uniform array is identified using the name of the
+    uniform array appended with "[0]". Except if the last part of the string
+    <name> indicates a uniform array, then the location of the first element
+    of that array can be retrieved by either using the name of the uniform
+    array, or the name of the uniform array appended with "[0]".
+
+    To determine which of the declared uniform variables are active and to
+    determine their sizes and types, use the command:
+
+        void GetActiveUniformARB(handleARB programObj, uint index,
+                                 sizei maxLength, sizei *length, int *size,
+                                 enum *type, charARB *name)
+
+    This command provides information about the uniform selected by <index>.
+    The <index> of 0 selects the first active uniform, and <index> of
+    OBJECT_ACTIVE_UNIFORMS_ARB-1 selects the last active uniform. The value
+    of OBJECT_ACTIVE_UNIFORMS_ARB can be queried with
+    GetObjectParameter{if}vARB (see Section 6.1.12). If <index> is greater
+    than or equal to OBJECT_ACTIVE_UNIFORMS_ARB, the error INVALID_VALUE is
+    generated.
+
+    The parameter <programObj> is a handle to a program object for which the
+    command LinkProgramARB has been issued in the past. It is not necessary
+    for <programObj> to have been linked successfully. The link could have
+    failed because the number of active uniforms exceeded the limit. If
+    <programObj> is not of type PROGRAM_OBJECT_ARB, the error
+    INVALID_OPERATION is generated.
+
+    If an error occurred, the return parameters <length>, <size>, <type> and
+    <name> will be unmodified.
+
+    For the selected uniform, the uniform name is returned into <name>. The
+    string <name> will be null terminated. The actual number of characters
+    written by the GL into <name> is returned in <length>. This count
+    excludes the null termination. If <length> is NULL then the GL ignores
+    this parameter. The maximum number of characters the GL is allowed to
+    write into <name> is passed in by <maxLength>. The returned uniform name
+    can be the name of built-in uniform state as well. The complete list of
+    built-in uniform state is described in section 7.5 of the OpenGL Shading
+    Language specification. The length of the longest uniform name in
+    <programObj> is given by OBJECT_ACTIVE_UNIFORM_MAX_LENGTH_ARB, which can
+    be queried with GetObjectParameter{if}vARB (see Section 6.1.12).
+
+    Each uniform variable, declared in a shader, is broken down into one or
+    more strings using the "." (dot) and "[]" operators, if necessary, to
+    the point that it is legal to pass each string back into
+    GetUniformLocationARB. Each of these strings constitutes one active
+    uniform, and each string is assigned an index.
+
+    For the selected uniform, the type of the uniform is returned into
+    <type>. The size of the uniform is returned into <size>. The value in
+    <size> is in units of the type returned in <type>. The type returned can
+    be any of FLOAT, FLOAT_VEC2_ARB, FLOAT_VEC3_ARB, FLOAT_VEC4_ARB, INT,
+    INT_VEC2_ARB, INT_VEC3_ARB, INT_VEC4_ARB, BOOL_ARB, BOOL_VEC2_ARB,
+    BOOL_VEC3_ARB, BOOL_VEC4_ARB, FLOAT_MAT2_ARB, FLOAT_MAT3_ARB,
+    FLOAT_MAT4_ARB, SAMPLER_1D_ARB, SAMPLER_2D_ARB, SAMPLER_3D_ARB,
+    SAMPLER_CUBE_ARB, SAMPLER_1D_SHADOW_ARB, SAMPLER_2D_SHADOW_ARB,
+    SAMPLER_2D_RECT_ARB or SAMPLER_2D_RECT_SHADOW_ARB.
+
+    If one or more elements of an array are active, GetActiveUniformARB will
+    return the name of the array in <name>, subject to the restrictions
+    listed above. The type of the array is returned in <type>. The <size>
+    parameter contains the highest array element index used, plus one. The
+    compiler or linker determines the highest index used. There will be only
+    one active uniform reported by the GL per uniform array.
+
+    This command will return as much information about active uniforms as
+    possible. If no information is available, <length> will be set to zero
+    and <name> will be an empty string. This situation could arise if
+    GetActiveUniformARB is issued after a failed link.
+
+    The following commands are used to load values into the uniform
+    variables of the program object that is currently in use.
+
+        void Uniform{1234}fARB(int location, T value)
+        void Uniform{1234}iARB(int location, T value)
+
+        void Uniform{1234}fvARB(int location, sizei count, T value)
+        void Uniform{1234}ivARB(int location, sizei count, T value)
+
+        void UniformMatrix(234}fvARB(int location, sizei count,
+                                     boolean transpose, T value)
+
+    These commands will load the given values into the uniform variable
+    location identified by <location>.
+
+    The Uniform{1234}f{v}ARB commands will load one or more floating-point
+    values <count> times into a uniform location defined as a float or
+    floating-point vector or an array of floats or an array of
+    floating-point vectors.
+
+    The Uniform{1234}i{v}ARB commands will load one or more integer values
+    <count> times into a uniform location defined as a sampler, integer or
+    integer vector or an array of integers or an array of integer vectors.
+    Only the Uniform1i{v}ARB commands can be used to load sampler values.
+    See section 2.14.4.
+
+    The UniformMatrix{234}fvARB commands will load a 2x2, 3x3 or 4x4 matrix
+    (corresponding to 2, 3, or 4 in the command name) of floating-point
+    values <count> times into a uniform location defined as a matrix or an
+    array of matrices. If <transpose> is FALSE, the matrix is specified in
+    column major order, otherwise in row major order.
+
+    When loading values for a uniform declared as a Boolean, a Boolean
+    vector or an array of Booleans or an array of Boolean vectors, both the
+    Uniform*i{v} and Uniform*f{v} set of commands can be used to load
+    Boolean values. Type conversion is done by the GL. The uniform is set to
+    FALSE if the input value is 0 or 0.0f, and set to TRUE otherwise. The
+    Uniform*ARB command used must match the size of the uniform, as declared
+    in the shader. For example, to load a uniform declared as a bvec2,
+    either Uniform2i{v}ARB or Uniform2f{v}ARB can be used. An
+    INVALID_OPERATION error will be generated if an attempt is made to use a
+    non-matching Uniform*ARB command. In this example using Uniform1ivARB
+    would generate an error.
+
+    For all other uniform types the Uniform*ARB command used must match the
+    size and type of the uniform, as declared in the shader. No type
+    conversions are done. For example, to load a uniform declared as a vec4,
+    Uniform4f{v}ARB must be used. To load a 3x3 matrix,
+    UniformFloatMatrix3fvARB must be used. An INVALID_OPERATION error will
+    be generated if an attempt is made to use a non-matching Uniform*ARB
+    command. In this example, using Uniform4i{v}ARB would generate an error.
+
+    When loading N elements starting at an arbitrary position k in a uniform
+    declared as an array, elements k through k + N - 1 in the array will be
+    replaced with the new values. Values for any array element that exceeds
+    the highest array element index used, as reported by
+    GetActiveUniformARB, will be ignored by the GL.
+
+    If the value of <location> is -1, the Uniform*ARB commands will silently
+    ignore the data passed in. The current uniform values will therefore not
+    be changed.
+
+    The following applies to errors that can be generated when loading
+    uniforms:
+
+      - If the size indicated in the name of the Uniform*ARB command used
+        does not match the size of the uniform declared in the shader, an
+        INVALID_OPERATION error is generated and the uniform's value is not
+        changed.
+      - If a uniform not of type Boolean is loaded, then if the type
+        indicated in the name of the Uniform*ARB command used does not match
+        the type of the uniform declared in the shader, an INVALID_OPERATION
+        error is generated and the uniform's value is not changed.
+      - If <location> is not -1 and <location> does not exist for the program
+        object currently in use, the error INVALID_OPERATION is generated.
+      - The error INVALID_OPERATION is generated by any of the Uniform*ARB
+        commands if there is no program object in use.
+
+    Add Subsection 2.14.4 Samplers
+
+    Samplers are special uniforms used in the OpenGL Shading Language to
+    identify the texture object used for each texture lookup. The value of a
+    sampler indicates the texture image unit being accessed. Setting a
+    sampler's value to i selects texture image unit number i. The values of
+    i range from zero to the maximum supported number of texture image
+    units. This maximum is implementation dependent, and defined in other
+    specifications.
+
+    The type of the sampler identifies the target on the texture image unit.
+    The texture object bound to that texture image unit's target is then
+    used for the texture lookup. For example, a variable of type sampler2D
+    selects target TEXTURE_2D on its texture image unit. Binding of texture
+    objects to targets is done as usual with BindTexture. Selecting the
+    texture image unit to bind to is done as usual with ActiveTexture.
+
+    The location of a sampler needs to be queried with
+    GetUniformLocationARB, just like any uniform variable. Sampler values
+    need to be set by calling Uniform1i{v}ARB. Loading samplers with any of
+    the other Uniform*ARB entry points is not allowed and will result in an
+    INVALID_OPERATION error.
+
+    It is not allowed to have variables of different sampler types pointing
+    to the same texture image unit within a program object. This situation
+    can only be detected at the next rendering command issued, and an
+    INVALID_OPERATION error will then be generated.
+
+    Active samplers are samplers actually being used in a program object.
+    The LinkProgramARB command determines if a sampler is active or not. The
+    LinkProgramARB command will attempt to determine if the active samplers
+    in the shader(s) contained in the program object exceed the maximum
+    allowable limits. If it determines that the count of active samplers
+    exceeds the allowable limits, then the link fails. (These limits are
+    determined by other extensions, and can be different for different types
+    of shaders.) If this cannot be determined at link time, for example if
+    the program object only contains a vertex shader, then this will be
+    determined at the next rendering command issued, and an
+    INVALID_OPERATION error will then be generated.
+
+    Add Subsection 2.14.5 Resource Limits
+
+    A shader should not fail to compile and a program object to link due to
+    lack of instruction space or lack of temporary variables.
+    Implementations should ensure that all valid shaders and program objects
+    could be successfully compiled, linked and executed.
+
+    Add Subsection 2.15 Validation
+
+    It is not always possible to determine at link time if a program object
+    actually will execute. Therefore validation is done when the first
+    rendering command is issued, to determine if the currently active
+    program object can be executed. If it cannot be executed then no
+    fragments will be rendered, and Begin, RasterPos, or any command that
+    performs an explicit Begin will generate the error INVALID_OPERATION.
+
+    This error is generated by Begin, RasterPos, or any command that
+    performs an explicit Begin if:
+
+      * One or more samplers of different types in the current program
+        object access the same texture image unit.
+      * If more than the maximum allowable texture image units are accessed
+        based on the count of active samplers and the rest of the GL state.
+        Note that LinkProgramARB can normally resolve this, except for the
+        case where an ARB_vertex_shader shader is mixed with an
+        ARB_fragment_program shader or mixed with fixed-function fragment
+        processing.
+
+    The INVALID_OPERATION error reported by these rendering commands does
+    not provide enough information to find out why the currently active
+    program object would not execute. No information at all is available
+    about a program object that would still execute, but is inefficient or
+    sub optimal given the current GL state. As a development aid, use the
+    command
+
+        void ValidateProgramARB(handleARB programObj)
+
+    to validate the program object <programObj> against the GL state at that
+    moment. Each program object has a Boolean status,
+    OBJECT_VALIDATE_STATUS_ARB, that is modified as a result of validation.
+    This status can be queried with GetObjectParameter{if}vARB (see Section
+    6.1.12). If validation succeeded this status will be set to TRUE,
+    otherwise it will be set to FALSE. If validation succeeded the program
+    object is guaranteed to execute, given the current GL state. If
+    validation failed, the program object is guaranteed to not execute,
+    given the current GL state. If <programObj> is not of type
+    PROGRAM_OBJECT_ARB, the error INVALID_OPERATION is generated.
+
+    ValidateProgramARB will validate at least as much as is done when a
+    rendering command is issued, and it could validate more. For example, it
+    could give a hint on how to optimize some piece of shader code.
+
+    ValidateProgramARB will store its information in the info log. This
+    information will either be an empty string or it will contain validation
+    information.
+
+    ValidateProgramARB is typically only useful during application
+    development. An application should not expect different OpenGL
+    implementations to produce identical information.
+
+    2.16 Undefined Behavior
+
+    By addressing arrays or matrices in a shader it is possible to index
+    outside the declared extent of a uniform. Thus it could be possible to
+    overwrite critical GL data that is stored next to the uniform in memory.
+    What this data could be is GL implementation specific. The OpenGL
+    Shading Language states that it is undefined what happens in this case.
+
+    The system environment the OpenGL implementation runs in can set certain
+    rules, or good practices, that restrict certain behavior. For example,
+    on a modern OS it is not allowed to overwrite data in someone else's
+    address space. Similarly it would therefore not be allowed to overwrite
+    GL data that belongs to another process. This could be further
+    restricted by disallowing the ability to overwrite data belonging to
+    another context within the same process. The GL implementation, in
+    combination with the system environment, decides what is acceptable
+    behavior; hence the specification leaves results undefined.
+
+    2.17 Required State
+
+    The state required to support shader objects consists of:
+
+      * The state that must be maintained to indicate which handles are
+        currently in use as shader object names.
+
+    The state required per shader object consists of:
+
+      * A handleARB indicating the shader object name.
+      * An array of arrays of type charARB containing the shader strings,
+        initially empty.
+      * An integer holding the length of the concatenation of the shader
+        strings, including one null termination.
+      * An array of unsigned integers holding the length of the shader
+        strings, initially zero.
+      * An integer holding the value of OBJECT_TYPE_ARB
+      * An integer holding the value of OBJECT_SUBTYPE_ARB
+      * A Boolean holding the status of the last compile.
+      * A Boolean holding the delete status.
+      * An array of type charARB containing the info log, initially empty.
+      * An integer holding the length of the info log, including a null
+        termination.
+
+    Initially, no shader objects exist.
+
+    The state required to support program objects consists of:
+
+      * The state that must be maintained to indicate which handles are
+        currently in use as program object names.
+      * One handleARB to store the handle of the program object currently in
+        use.
+
+    The state required per program object consists of:
+
+      * A handleARB indicating the program object object name.
+      * A list of handleARB to keep track of shader objects attached.
+      * An integer holding the number of attached shader objects.
+      * A Boolean indicating if the program object has been successfully
+        linked.
+      * A Boolean holding the status of the last validation attempt.
+      * A Boolean holding the delete status.
+      * An integer holding the value of OBJECT_TYPE_ARB.
+      * An array of type charARB containing the info log, initially empty.
+      * An integer holding the length of the info log, including a null
+        termination.
+      * An array of type charARB for each active uniform containing its
+        name, initially empty.
+      * An integer holding the length of the longest active uniform name,
+        including a null termination.
+      * An integer holding the number of active uniforms.
+      * An integer for each active uniform, containing its size.
+      * An integer for each active uniform, containing its type.
+      * An integer for each active uniform, holdings its location.
+
+    Initially, no program objects exist.
+
+Additions to Chapter 3 of the OpenGL 1.4 Specification (Rasterization)
+
+        None
+
+Additions to Chapter 4 of the OpenGL 1.4 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+        None
+
+Additions to Chapter 5 of the OpenGL 1.4 Specification (Special Functions)
+
+    Add to section 5.4, Display Lists.
+
+    Commands that are used to create and manage objects are not included in
+    display lists, but are executed immediately. These include
+    DeleteObjectARB, DetachObjectARB, CreateShaderObjectARB,
+    ShaderSourceARB, CompileShaderARB, CreateProgramObjectARB,
+    AttachObjectARB, and LinkProgramARB.
+
+    Commands that are used to query various pieces of object state are not
+    included in display lists, but are executed immediately. These include
+    GetHandleARB, GetObjectParameterfvARB, GetObjectParameterivARB,
+    GetInfoLogARB, GetUniformfvARB, GetUniformivARB, GetUniformLocationARB,
+    GetShaderSourceARB, GetActiveUniformARB, GetAttachedObjectsARB and
+    ValidateProgramARB.
+
+Additions to Chapter 6 of the OpenGL 1.4 Specification (State and State Requests)
+
+    Add a new section just after section 6.1.11 (p. 214) called 6.1.12
+    "Generic Object Queries" and renumber section 6.1.12 as 6.1.13.
+
+    The command
+
+        handleARB GetHandleARB(enum pname)
+
+    returns the handle to an object that is in use as part of current state.
+    <pname> specifies the state item for which the current object is to be
+    returned and can be one of PROGRAM_OBJECT_ARB. (This list is augmented
+    by other extensions.) If <pname> is not a valid state item, 0 is
+    returned.
+
+    The commands
+
+        void GetObjectParameterfvARB(handleARB obj, enum pname, float *params)
+        void GetObjectParameterivARB(handleARB obj, enum pname, int *params)
+
+    return object specific parameter values for object <obj> in <params>.
+    The parameter value to return is specified by <pname>.
+
+    If <pname> is OBJECT_TYPE_ARB, GetObjectParameter{if}vARB returns
+    PROGRAM_OBJECT_ARB if <obj> references a program object. It returns
+    SHADER_OBJECT_ARB if <obj> references any shader object. If <obj> is not
+    of type PROGRAM_OBJECT_ARB or SHADER_OBJECT_ARB, the error
+    INVALID_OPERATION is generated.
+
+    If <pname> is OBJECT_SUBTYPE_ARB, GetObjectParameter{if}vARB returns the
+    subtype of a shader object. If <obj> is not of type SHADER_OBJECT_ARB,
+    the error INVALID_OPERATION is generated.
+
+    If <pname> is OBJECT_DELETE_STATUS_ARB, GetObjectParameter{if}vARB
+    returns 1 or 1.0f if status is TRUE and 0 or 0.0f if status is FALSE. If
+    <obj> is not of type PROGRAM_OBJECT_ARB or SHADER_OBJECT_ARB, the error
+    INVALID_OPERATION is generated.
+
+    If <pname> is OBJECT_LINK_STATUS_ARB, GetObjectParameter{if}vARB returns
+    1 or 1.0f if status is TRUE and 0 or 0.0f if status is FALSE. If <obj>
+    is not of type PROGRAM_OBJECT_ARB, the error INVALID_OPERATION is
+    generated.
+
+    If <pname> is OBJECT_VALIDATE_STATUS_ARB, GetObjectParameter{if}vARB
+    returns 1 or 1.0f if status is TRUE and 0 or 0.0f if status is FALSE. If
+    <obj> is not of type PROGRAM_OBJECT_ARB, the error INVALID_OPERATION is
+    generated.
+
+    If <pname> is OBJECT_COMPILE_STATUS_ARB, GetObjectParameter{if}vARB
+    returns 1 or 1.0f if status is TRUE and 0 or 0.0f if status is FALSE. If
+    <obj> is not of type SHADER_OBJECT_ARB, the error INVALID_OPERATION is
+    generated.
+
+    If <pname> is OBJECT_INFO_LOG_LENGTH_ARB, GetObjectParameter{if}vARB
+    returns the length of the info log, including a null termination. If
+    there is no info log, 0 or 0.0f is returned. If <obj> is not of type
+    PROGRAM_OBJECT_ARB or SHADER_OBJECT_ARB, the error INVALID_OPERATION is
+    generated.
+
+    If <pname> is OBJECT_ATTACHED_OBJECTS_ARB, GetObjectParameter{if}vARB
+    returns the number of objects attached. If no objects are attached, 0 or
+    0.0f is returned. If <obj> is not of type PROGRAM_OBJECT_ARB the error
+    INVALID_OPERATION is generated.
+
+    If <pname> is OBJECT_ACTIVE_UNIFORMS_ARB, GetObjectParameter{if}vARB
+    returns the number of active uniforms. If no active uniforms exist, 0 or
+    0.0f is returned. If <obj> is not of type PROGRAM_OBJECT_ARB the error
+    INVALID_OPERATION is generated.
+
+    If <pname> is OBJECT_ACTIVE_UNIFORM_MAX_LENGTH_ARB,
+    GetObjectParameter{if}vARB returns the length of the longest active
+    uniform name, including a null termination. If no active uniforms exist,
+    0 or 0.0f is returned. If <obj> is not of type PROGRAM_OBJECT_ARB the
+    error INVALID_OPERATION is generated.
+
+    If <pname> is OBJECT_SHADER_SOURCE_LENGTH_ARB,
+    GetObjectParameter{if}vARB returns the length of the concatenation of
+    the source strings making up the shader source, including a null
+    termination. If no source exists, 0 or 0.0f is returned. If <obj> is not
+    of type SHADER_OBJECT_ARB the error INVALID_OPERATION is generated.
+
+    If an error occurred, the return parameter <params> will be unmodified.
+
+    The command
+
+        void GetAttachedObjectsARB(handleARB containerObj, sizei maxCount,
+                                   sizei *count, handleARB *obj)
+
+    returns the handles of objects attached to <containerObj> in <obj>. The
+    actual number of object handles written by the GL into <obj> is returned
+    in <count>. If no objects are attached, <count> is set to zero. If
+    <count> is NULL then the GL ignores this parameter. The maximum number
+    of handles the GL is allowed to write into <obj> is passed in by
+    <maxCount>. The number of objects attached to <containerObj> is given by
+    OBJECT_ATTACHED_OBJECTS_ARB, which can be queried with
+    GetObjectParameter{if}vARB. If <containerObj> is not of type
+    PROGRAM_OBJECT_ARB, the error INVALID_OPERATION is generated. If an
+    error occurred, the return parameters <count> and <obj> will be
+    unmodified.
+
+    A string that contains information about the last link or validation
+    attempt and last compilation attempt are kept per program or shader
+    object. This string is called the info log and can be obtained with the
+    command:
+
+        void GetInfoLogARB(handleARB obj, sizei maxLength, sizei *length,
+                           charARB *infoLog)
+
+    This command returns the info log string in <infoLog>. This string will
+    be null terminated. The actual number of characters written by the GL
+    into <infoLog> is returned in <length>, excluding the null termination.
+    If <length> is NULL then the GL ignores this parameter. The maximum
+    number of characters the GL is allowed to write into <infoLog> is passed
+    in by <maxLength>. The number of characters in the info log is given by
+    OBJECT_INFO_LOG_LENGTH_ARB, which can be queried with
+    GetObjectParameter{fi}vARB. If <obj> is a shader object, the returned
+    info log will either be an empty string or it will contain information
+    about the last compilation attempt for that object. If <obj> is a
+    program object, the returned info log will either be an empty string or
+    it will contain information about the last link attempt or last
+    validation attempt for that object. If <obj> is not of type
+    PROGRAM_OBJECT_ARB or SHADER_OBJECT_ARB, the error INVALID_OPERATION is
+    generated. If an error occurred, the return parameters <length> and
+    <infoLog> will be unmodified.
+
+    The info log is typically only useful during application development and
+    an application should not expect different OpenGL implementations to
+    produce identical info logs.
+
+    The command
+
+        void GetShaderSourceARB(handleARB obj, sizei maxLength,
+                                sizei *length, charARB *source)
+
+    will return in <source> the string making up the source code for the
+    shader object <obj>. The string <source> will be null terminated. The
+    actual number of characters written by the GL into <source> is returned
+    in <length>, excluding the null termination. If <length> is NULL then
+    the GL ignores this parameter. The maximum number of characters the GL
+    is allowed to write into <source> is passed in by <maxLength>. The
+    string <source> is a concatenation of the strings passed to OpenGL using
+    ShaderSourceARB. The length of this concatenation is given by
+    OBJECT_SHADER_SOURCE_LENGTH_ARB, which can be queried with
+    GetObjectParameter{if}vARB. If <obj> is not of type SHADER_OBJECT_ARB,
+    the error INVALID_OPERATION is generated. If an error occurred, the
+    return parameters <length> and <source> will be unmodified.
+
+    The commands
+
+        void GetUniformfvARB(handleARB programObj, int location, float *params)
+        void GetUniformivARB(handleARB programObj, int location, int *params)
+
+    return the value or values of the uniform at location <location> for
+    program object <programObj> in the array <params>. The type of the
+    uniform at <location> determines the number of values returned. The
+    error INVALID_OPERATION is generated if <programObj> is not of type
+    PROGRAM_OBJECT_ARB or if <programObj> has not been linked successfully
+    or if <location> is not a valid location for <programObj>. In order to
+    query the values of an array of uniforms a GetUniform*ARB command needs
+    to be issued for each array element. If the uniform queried is a matrix,
+    the values of the matrix are returned in column major order. If an error
+    occurred, the return parameter <params> will be unmodified.
+
+    Add to Table 6.3: State Variable Types (p. 217)
+
+        H    Object handle
+
+Additions to Appendix A of the OpenGL 1.4 Specification (Invariance)
+
+        None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    Analogous to sharing display lists and texture objects, it is possible
+    to share the name space for handles for all objects across a set of
+    contexts, as long as the server sides of the contexts share the same
+    address space. No change is made to the AGL/GLX/WGL API. If handles are
+    shared across contexts the data belonging to those objects are shared as
+    well. Changes to objects shared between multiple rendering contexts will
+    be serialized (i.e., the changes will occur in a specific order).
+
+    Changes to a program object made by one rendering context are not
+    guaranteed to take effect in another rendering context until the other
+    calls UseProgramObjectARB for that object.
+
+    When a program object is deleted by one rendering context, the object
+    itself is not destroyed until it is no longer the current program object
+    in any context.
+
+    When a shader object is deleted by one rendering context, the object
+    itself is not destroyed until it is no longer attached to any program
+    object in any context.
+
+GLX Protocol
+
+    The following rendering commands are sent to the server as part of a
+    glXRender request:
+
+    DeleteObjectARB
+
+        2           8                rendering command length
+        2           238              rendering command opcode
+        4           CARD32           obj
+
+    DetachObjectARB
+
+        2           12               rendering command length
+        2           239              rendering command opcode
+        4           CARD32           containerObj
+        4           CARD32           attachedObj
+
+    CompileShaderARB
+
+        2           8                rendering command length
+        2           240              rendering command opcode
+        4           CARD32           shaderObj
+
+    AttachObjectARB
+
+        2           12               rendering command length
+        2           241              rendering command opcode
+        4           CARD32           containerObj
+        4           CARD32           obj
+
+    LinkProgramARB
+
+        2           8                rendering command length
+        2           242              rendering command opcode
+        4           CARD32           programObj
+    
+    UseProgramObjectARB
+
+        2           8                rendering command length
+        2           243              rendering command opcode
+        4           CARD32           programObj
+
+    ValidateProgramARB
+
+        2           8                rendering command length
+        2           244              rendering command opcode
+        4           CARD32           programObj
+
+    Uniform1fARB
+
+        2           12               rendering command length
+        2           245              rendering command opcode
+        4           INT32            location
+        4           FLOAT32          v0
+
+    Uniform2fARB
+
+        2           16               rendering command length
+        2           246              rendering command opcode
+        4           INT32            location
+        4           FLOAT32          v0
+        4           FLOAT32          v1
+
+    Uniform3fARB
+
+        2           20               rendering command length
+        2           247              rendering command opcode
+        4           INT32            location
+        4           FLOAT32          v0
+        4           FLOAT32          v1
+        4           FLOAT32          v2
+
+    Uniform4fARB
+        2           24               rendering command length
+        2           248              rendering command opcode
+        4           INT32            location
+        4           FLOAT32          v0
+        4           FLOAT32          v1
+        4           FLOAT32          v2
+        4           FLOAT32          v3
+
+    Uniform1iARB
+
+        2           12               rendering command length
+        2           249              rendering command opcode
+        4           INT32            location
+        4           INT32            v0 
+
+    Uniform2iARB
+
+        2           16               rendering command length
+        2           250              rendering command opcode
+        4           INT32            location
+        4           INT32            v0
+        4           INT32            v1
+
+    Uniform3iARB
+
+        2           20               rendering command length
+        2           251              rendering command opcode
+        4           INT32            location
+        4           INT32            v0
+        4           INT32            v1
+        4           INT32            v2
+
+    Uniform4iARB
+
+        2           24               rendering command length
+        2           252              rendering command opcode
+        4           INT32            location
+        4           INT32            v0
+        4           INT32            v1
+        4           INT32            v2
+        4           INT32            v3
+
+    The following rendering commands are sent to the server as part of a
+    glXRender request or as a glXRenderLarge request:
+
+    ShaderSourceARB
+
+        2           12+(count*4)+n+p rendering command length
+        2           253              rendering command opcode
+        4           CARD32           shaderObj
+        4           CARD32           count
+        4*count     LISTofINT32      length
+        n           LISTofBYTE       string.  n is described below
+        p                            unused, p=pad(n)
+
+    If the command is encoded in a glXRenderLarge request, the
+    command opcode and command length fields above are expanded to
+    4 bytes each:
+
+        4           16+(count*4)+n+p rendering command length
+        4           253              rendering command opcode
+
+    n is the sum of the length of all the strings in the array passed
+    in as <string>.  The length of each string i, where i = [0, <count>),
+    is strlen(<string[i]>) if <length> is NULL or if <length[i]> is
+    negative.  Otherwise, the length of string i is <length[i]>.  If
+    <count> is 0, n is 0.
+
+    Uniform1fvARB
+
+        2           12+count*4       rendering command length
+        2           254              rendering command opcode
+        4           INT32            location
+        4           CARD32           count
+        4*count     LISTofFLOAT32    value
+
+    If the command is encoded in a glXRenderLarge request, the
+    command opcode and command length fields above are expanded to
+    4 bytes each:
+
+        4           16+count*4       rendering command length
+        4           254              rendering command opcode
+
+    Uniform2fvARB
+
+        2           12+count*4*2     rendering command length
+        2           255              rendering command opcode
+        4           INT32            location
+        4           CARD32           count
+        4*count*2   LISTofFLOAT32    value
+
+    If the command is encoded in a glXRenderLarge request, the
+    command opcode and command length fields above are expanded to
+    4 bytes each:
+
+        4           16+count*4*2     rendering command length
+        4           255              rendering command opcode
+
+    Uniform3fvARB
+
+        2           12+count*4*3     rendering command length
+        2           256              rendering command opcode
+        4           INT32            location
+        4           CARD32           count
+        4*count*3   LISTofFLOAT32    value
+
+    If the command is encoded in a glXRenderLarge request, the
+    command opcode and command length fields above are expanded to
+    4 bytes each:
+
+        4           16+count*4*3     rendering command length
+        4           256              rendering command opcode
+
+    Uniform4fvARB
+
+        2           12+count*4*4     rendering command length
+        2           257              rendering command opcode
+        4           INT32            location
+        4           CARD32           count
+        4*count*4   LISTofFLOAT32    value
+
+    If the command is encoded in a glXRenderLarge request, the
+    command opcode and command length fields above are expanded to
+    4 bytes each:
+
+        4           16+count*4*4     rendering command length
+        4           257              rendering command opcode
+
+    Uniform1ivARB
+
+        2           12+count*4       rendering command length
+        2           258              rendering command opcode
+        4           INT32            location
+        4           CARD32           count
+        4*count     LISTofINT32      value
+
+    If the command is encoded in a glXRenderLarge request, the
+    command opcode and command length fields above are expanded to
+    4 bytes each:
+
+        4           16+count*4       rendering command length
+        4           258              rendering command opcode
+
+    Uniform2ivARB
+
+        2           12+count*4*2     rendering command length
+        2           259              rendering command opcode
+        4           INT32            location
+        4           CARD32           count
+        4*count*2   LISTofINT32      value
+
+    If the command is encoded in a glXRenderLarge request, the
+    command opcode and command length fields above are expanded to
+    4 bytes each:
+
+        4           16+count*4*2     rendering command length
+        4           259              rendering command opcode
+
+    Uniform3ivARB
+
+        2           12+count*4*3     rendering command length
+        2           260              rendering command opcode
+        4           INT32            location
+        4           CARD32           count
+        4*count*3   LISTofINT32      value
+
+    If the command is encoded in a glXRenderLarge request, the
+    command opcode and command length fields above are expanded to
+    4 bytes each:
+
+        4           16+count*4*3     rendering command length
+        4           260              rendering command opcode
+
+    Uniform4ivARB
+
+        2           12+count*4*4     rendering command length
+        2           261              rendering command opcode
+        4           INT32            location
+        4           CARD32           count
+        4*count*4   LISTofINT32      value
+
+    If the command is encoded in a glXRenderLarge request, the
+    command opcode and command length fields above are expanded to
+    4 bytes each:
+
+        4           16+count*4*4     rendering command length
+        4           261              rendering command opcode
+
+    UniformMatrix2fvARB
+
+        2           16+4*count*2*2   rendering command length
+        2           262              rendering command opcode
+        4           INT32            location
+        4           CARD32           count
+        1           CARD8            transpose
+        3           CARD8            unused
+        4*count*2*2 LISTofFLOAT32    value
+
+    If the command is encoded in a glXRenderLarge request, the
+    command opcode and command length fields above are expanded to
+    4 bytes each:
+
+        4           20+4*count*2*2   rendering command length
+        4           262              rendering command opcode
+
+    UniformMatrix3fvARB
+
+        2           16+4*count*3*3   rendering command length
+        2           263              rendering command opcode
+        4           INT32            location
+        4           CARD32           count
+        1           CARD8            transpose
+        3           CARD8            unused
+        4*count*3*3 LISTofFLOAT32    value
+
+    If the command is encoded in a glXRenderLarge request, the
+    command opcode and command length fields above are expanded to
+    4 bytes each:
+
+        4           20+4*count*3*3   rendering command length
+        4           263              rendering command opcode
+
+    UniformMatrix4fvARB
+
+        2           16+4*count*4*4   rendering command length
+        2           264              rendering command opcode
+        4           INT32            location
+        4           CARD32           count
+        1           CARD8            transpose
+        3           CARD8            unused
+        4*count*4*4 LISTofFLOAT32    value
+
+    If the command is encoded in a glXRenderLarge request, the
+    command opcode and command length fields above are expanded to
+    4 bytes each:
+
+        4           20+4*count*4*4   rendering command length
+        4           264              rendering command opcode
+
+
+    The following non-rendering commands are added.
+
+    GetHandleARB
+
+        1           CARD8            opcode (X assigned)
+        1           167              GLX opcode
+        2           3                request length
+        4           GLX_CONTEXT_TAG  context tag
+        4           ENUM             pname
+      =>
+        1           1                reply
+        1                            unused
+        2           CARD16           sequence number
+        4           0                reply length
+        4           CARD32           return value
+        20                           unused
+
+    CreateShaderObjectARB
+
+        1           CARD8            opcode (X assigned)
+        1           168              GLX opcode
+        2           3                request length
+        4           GLX_CONTEXT_TAG  context tag
+        4           ENUM             shaderType
+      =>
+        1           1                reply
+        1                            unused
+        2           CARD16           sequence number
+        4           0                reply length
+        4           CARD32           return value
+        20                           unused
+
+    CreateProgramObjectARB
+
+        1           CARD8            opcode (X assigned)
+        1           169              GLX opcode
+        2           2                request length
+        4           GLX_CONTEXT_TAG  context tag
+      =>
+        1           1                reply
+        1                            unused
+        2           CARD16           sequence number
+        4           0                reply length
+        4           CARD32           return value
+        20                           unused
+
+    GetObjectParameterfvARB
+
+        1           CARD8            opcode (X assigned)
+        1           170              GLX opcode
+        2           4                request length
+        4           GLX_CONTEXT_TAG  context tag
+        4           CARD32           obj
+        4           ENUM             pname
+      =>
+        1           1                reply
+        1                            unused
+        1           CARD16           sequence number 
+        4           m                reply length, m = ((n == 1) ? 0 : n)
+        4                            unused
+        4           CARD32           n
+
+        if (n = 1) this follows:
+
+        4           FLOAT32          params
+        12                           unused
+
+        otherwise this follows:
+
+        16                           unused
+        n*4         LISTofFLOAT32    params
+
+    Note that n may be zero, indicating that a GL error occured.
+
+    GetObjectParameterivARB
+
+        1           CARD8            opcode (X assigened)
+        1           171              GLX opcode
+        2           4                request length
+        4           GLX_CONTEXT_TAG  context tag
+        4           CARD32           obj
+        4           ENUM             pname
+      =>
+        1           1                reply
+        1                            unused
+        2           CARD16           sequence number 
+        4           m                reply length, m = ((n == 1) ? 0 : n)
+        4                            unused
+        4           CARD32           n
+
+        if (n = 1) this follows:
+
+        4           INT32            params
+        12                           unused
+
+        otherwise this follows:
+
+        16                           unused
+        n*4         LISTofINT32      params
+
+    Note that n may be zero, indicating that a GL error occured.
+
+    GetInfoLogARB
+
+        1           CARD8            opcode (X assigned)
+        1           172              GLX opcode
+        2           4                request length
+        4           GLX_CONTEXT_TAG  context tag
+        4           CARD32           obj
+        4           CARD32           maxLength
+      =>
+        1           1                reply
+        1                            unused
+        2           CARD16           sequence number
+        4           m                reply length, m = (n+p)/4
+        4                            unused
+        4           CARD32           n, as defined below.
+        16                           unused
+        n           LISTofBYTE       infoLog
+        p                            unused, p = pad(n)
+
+    n is calculated on the server as strlen(<infoLog>) + 1 on success, or
+    0 if there was an error retrieving the info log.  If <length> is not
+    NULL, it is set to max(1, n) - 1.
+
+    GetAttachedObjectsARB
+
+        1           CARD8            opcode (X assigned)
+        1           173              GLX opcode
+        2           4                request length
+        4           GLX_CONTEXT_TAG  context tag
+        4           CARD32           containerObj
+        4           CARD32           maxCount
+      =>
+        1           1                reply
+        1                            unused
+        2           CARD16           sequence number
+        4           m                reply length, m = (n == 1 ? 0 : n)
+        4                            unused
+        4           CARD32           count, n = count
+
+        if (n = 1) this follows:
+
+        4           CARD32           obj
+        12                           unused
+
+        otherwise this follows:
+
+        16                           unused
+        4*n         LISTofCARD32     obj
+
+    Note that n may be zero, indicating that a GL error occured.
+
+    GetUniformLocationARB
+        1           CARD8            opcode (X assigned)
+        1           174              GLX opcode
+        2           (12+n+p)/4       request length
+        4           GLX_CONTEXT_TAG  context tag
+        4           CARD32           programObj
+        n           LISTofBYTE       name, n = strlen(name)+1
+        p                            unused, p = pad(n)
+      =>
+        1           1                reply
+        1                            unused
+        2           CARD16           sequence number
+        4           0                reply length
+        4           CARD32           return value
+        20                           unused
+
+    GetActiveUniformARB
+
+        1           CARD8            opcode (X assigned)
+        1           175              GLX opcode
+        2           5                request length
+        4           GLX_CONTEXT_TAG  context tag
+        4           CARD32           programObj
+        4           CARD32           index
+        4           CARD32           maxLength
+      =>
+        1           1                reply
+        1                            unused
+        2           CARD16           sequence number
+        4           m                reply length, m = (n+p)/4
+        4                            unused
+        4           CARD32           n, n = length+1
+        4           CARD32           size
+        4           ENUM             type
+        8                            unused
+        n           LISTofBYTE       name
+        p                            unused , p = pad(n)
+
+    n is calculated on the server as strlen(<name>) + 1 on success, or 0
+    if there was an error retrieving the active uniform's name.  If
+    <length> is not NULL, it is set to max(1, n) - 1.
+
+    GetUniformfvARB
+
+        1           CARD8            opcode (X assigned)
+        1           176              GLX opcode
+        2           4                request length
+        4           GLX_CONTEXT_TAG  context rag
+        4           CARD32           programObj
+        4           INT32            location
+      =>
+        1           1                reply
+        1                            unused
+        2           CARD16           sequence number
+        4           m                reply length, m = ((n == 1) ? 0 : n)
+        4                            unused
+        4           CARD32           n
+
+        if (n = 1) this follows:
+
+        4           FLOAT32          params
+        12                           unused
+
+        otherwise this follows:
+
+        16                           unused
+        4*n         LISTofFLOAT32    params
+
+    Note that n may be zero, indicating that a GL error occured.
+
+    GetUniformivARB
+
+        1           CARD8            opcode (X assigned)
+        1           177              GLX opcode
+        2           4                request length
+        4           GLX_CONTEXT_TAG  context rag
+        4           CARD32           programObj
+        4           INT32            location
+      =>
+        1           1                reply
+        1                            unused
+        2           CARD16           sequence number
+        4           m                reply length, m = ((n == 1) ? 0 : n)
+        4                            unused
+        4           INT32            n
+
+        if (n = 1) this follows:
+
+        4           INT32            params
+        12                           unused
+
+        otherwise this follows:
+
+        16                           unused
+        4*n         LISTofINT32      params
+
+    Note that n may be zero, indicating that a GL error occured.
+
+    GetShaderSourceARB
+
+        1           CARD8            opcode (X assigned)
+        1           178              GLX opcode
+        2           4                request length
+        4           GLX_CONTEXT_TAG  context tag
+        4           CARD32           obj
+        4           CARD32           maxLength
+      =>
+        1           1                reply
+        1                            unused
+        2           CARD16           sequence number
+        4           m                reply length, m = (n+p)/4
+        4                            unused
+        4           CARD32           length
+        16                           unused
+        n           LISTofBYTE       source, n = length+1
+        p                            unused, p = pad(n)
+
+    Note that n may be zero, indicating that a GL error occured.
+
+Errors
+
+    The error INVALID_VALUE is generated by any command that takes one or
+    more handles as input, and one or more of these handles are not an
+    object handle generated by OpenGL. Note that this error is also set when
+    passing in the value 0 as a handle, except for UseProgramObjectARB and
+    DeleteObject. Passing in 0 to UseProgramObjectARB is valid, and ignored
+    by DeleteObject.
+
+    The error INVALID_OPERATION is generated by AttachObjectARB if <obj> is
+    not of type SHADER_OBJECT_ARB or if <containerObj> is not of type
+    PROGRAM_OBJECT_ARB.
+
+    The error INVALID_OPERATION is generated by AttachObjectARB if <obj> is
+    already attached to <containerObj>.
+
+    The error INVALID_OPERATION is generated by DetachObjectARB if
+    <attachedObj> is not attached to <containerObj>.
+
+    The error INVALID_OPERATION is generated by DetachObjectARB if
+    <containerObj> is not of type PROGRAM_OBJECT_ARB.
+
+    The error INVALID_OPERATION is generated by ShaderSourceARB and
+    CompileShaderARB if <shaderObj> is not of type SHADER_OBJECT_ARB.
+
+    The error INVALID_OPERATION is generated by LinkProgramARB if
+    <programObj> is not of type PROGRAM_OBJECT_ARB.
+
+    The error INVALID_OPERATION is generated by UseProgramObjectARB if
+    <programObj> is not of type PROGRAM_OBJECT_ARB.
+
+    The error INVALID_OPERATION is generated by UseProgramObjectARB if
+    <programObj> could not be made part of the current state.
+
+    The error INVALID_OPERATION is generated by GetUniformLocationARB if
+    <programObj> is not of type PROGRAM_OBJECT_ARB or if <programObj> has
+    not been linked successfully.
+
+    The error INVALID_OPERATION is generated by GetActiveUniformARB if
+    <programObj> is not of type PROGRAM_OBJECT_ARB.
+
+    The error INVALID_VALUE is generated by GetActiveUniformARB if <index>
+    is greater than or equal to OBJECT_ACTIVE_UNIFORMS_ARB.
+
+    The error INVALID_OPERATION is generated by the Uniform*ARB commands if
+    the size does not match the size of the uniform declared in the shader.
+
+    The error INVALID_OPERATION is generated by the Uniform*ARB commands if
+    the type does not match the type of the uniform declared in the shader,
+    if the uniform is not of type Boolean.
+
+    The error INVALID_OPERATION is generated by the Uniform*ARB commands if
+    <location> is not -1 and <location> does not exist for the program object
+    currently in use.
+
+    The error INVALID_OPERATION is generated by the Uniform*ARB commands if
+    there is no program object in use.
+
+    The error INVALID_OPERATION is generated if a uniform command other than
+    Uniform1i{v}ARB is used to load a sampler value.
+
+    The error INVALID_OPERATION is generated by ValidateProgramARB if
+    <programObj> is not of type PROGRAM_OBJECT_ARB.
+
+    The error INVALID_OPERATION is generated by GetObjectParameter{if}vARB
+    if <pname> is OBJECT_TYPE_ARB or OBJECT_DELETE_STATUS_ARB or
+    OBJECT_INFO_LOG_LENGTH_ARB and <obj> is not of type PROGRAM_OBJECT_ARB
+    or SHADER_OBJECT_ARB.
+
+    The error INVALID_OPERATION is generated by GetObjectParameter{if}vARB
+    if <pname> is OBJECT_LINK_STATUS_ARB or OBJECT_VALIDATE_STATUS_ARB or
+    OBJECT_ATTACHED_OBJECTS_ARB or OBJECT_ACTIVE_UNIFORMS_ARB or
+    OBJECT_ACTIVE_UNIFORM_MAX_LENGTH_ARB and <obj> is not of type
+    PROGRAM_OBJECT_ARB.
+
+    The error INVALID_OPERATION is generated by GetObjectParameter{if}vARB
+    if <pname> is OBJECT_SUBTYPE_ARB or OBJECT_COMPILE_STATUS_ARB or
+    OBJECT_SHADER_SOURCE_LENGTH_ARB and <obj> is not of type
+    SHADER_OBJECT_ARB.
+
+    The error INVALID_OPERATION is generated by GetAttachedObjectsARB if
+    <containerObj> is not of type PROGRAM_OBJECT_ARB.
+
+    The error INVALID_OPERATION is generated by GetInfoLogARB if <obj> is
+    not of type SHADER_OBJECT_ARB or PROGRAM_OBJECT_ARB.
+
+    The error INVALID_OPERATION is generated by GetShaderSourceARB if <obj>
+    is not of type SHADER_OBJECT_ARB.
+
+    The error INVALID_OPERATION is generated by GetUniform{if}vARB if
+    <programObj> is not of type PROGRAM_OBJECT_ARB or if <programObj> has
+    not been linked successfully or if <location> is not a valid location
+    for <programObj>.
+
+    The error INVALID_OPERATION is generated if Begin, RasterPos, or any
+    command that performs an explicit Begin is called if:
+
+      - One or more samplers of different types in the current program
+        object access the same texture image unit.
+      - More than the maximum allowable texture image units are accessed
+        based on the count of active samplers and the rest of the GL state
+        (note that LinkProgramARB can normally resolve this, except for the
+        case where an ARB_vertex_shader shader is mixed with an
+        ARB_fragment_program shader or mixed with fixed-function fragment
+        processing).
+
+New State
+
+                                                                  Initial
+    Get Value                     Type  Get Command                Value    Description             Sec.    Attribute
+    ---------                     ----  -------------------------  -------  -----------             ----    ---------
+    PROGRAM_OBJECT_ARB             H     GetHandle                    0     Handle of current       2.14.2        -
+                                                                            program object
+
+    Table X. New state introduced.
+
+                                                                     Initial
+    Get Value                      Type   Get Command                Value        Description          Sec.  Attribute
+    ---------                      -----  -----------------------  -------------  -----------          ----   ---------
+    -                                H                           object specific  object handle         2.14.1    -
+    -                             0+xchar GetInfoLogARB               ""          Info log for shader   6.1.12    -
+                                                                                  objects
+    -                             0+xchar GetShaderSourceARB          ""          source for a shader   2.14.1    -
+    OBJECT_TYPE_ARB                 Z+    GetObjectParameterivARB   SHADER_OBJECT  Type of object        2.14.1    -
+    OBJECT_SUBTYPE_ARB              Z+    GetObjectParameterivARB     -            Sub type of object    2.14.1    -
+    OBJECT_DELETE_STATUS_ARB        B     GetObjectParameterivARB   FALSE          Shader deleted        2.14      -
+    OBJECT_COMPILE_STATUS_ARB       B     GetObjectParameterivARB   FALSE          Compile succeeded     2.14.1    -
+    OBJECT_INFO_LOG_LENGTH_ARB      Z+    GetObjectParameterivARB     0            Length of info log    6.1.12    -
+    OBJECT_SHADER_SOURCE_LENGTH_ARB Z+    GetObjectParameterivARB     0            Length of source code 6.1.12    -
+
+    Table X Shader object state.
+
+                                                                     Initial
+    Get Value                   Type       Get Command                Value         Description            Sec.    Attribute
+    ---------                   -----      -----------------------  -------------   -----------            ----    ---------
+    -                           0+xZ+      GetActiveUniformARB          -     Size of active uniform        2.14.3      -
+    -                           0+xZ+      GetActiveUniformARB          -     Type of active uniform        2.14.3      -
+    -                           0+xcharARB GetActiveUniformARB         ""     Name of active uniform        2.14.3      -
+    -                           0+xZ       GetUniformLocationARB        -     Location of active uniform    2.14.3      -
+    -                           0+xchar    GetInfoLogARB               ""     Info log for program objects  6.1.12      -
+    OBJECT_ATTACHED_OBJECTS_ARB Z+         GetObjectParameterivARB     0      Number of attached objects    6.1.12      -
+    OBJECT_ACTIVE_UNIFORMS_ARB  Z+         GetObjectParameterivARB     0      Number of active uniforms     2.14.3      -
+    OBJECT_DELETE_STATUS_ARB    B          GetObjectParameterivARB   FALSE          Program object deleted  2.14        -
+    OBJECT_LINK_STATUS_ARB      B          GetObjectParameterivARB   FALSE          Link succeeded          2.14.2      -
+    OBJECT_VALIDATE_STATUS_ARB  B          GetObjectParameterivARB   FALSE          Validate succeeded      2.15        -
+    OBJECT_INFO_LOG_LENGTH_ARB  Z+         GetObjectParameterivARB     0            Length of info log      6.1.12      -
+    OBJECT_TYPE_ARB             Z+         GetObjectParameterivARB   PROGRAM_OBJECT Type of object          2.14.2      -
+    OBJECT_ACTIVE_UNIFORM_
+                MAX_LENGTH_ARB  Z+         GetObjectParameterivARB     0            Max uniform name length 6.1.12      -
+    -                           0+xhandle  GetAttachedObjectsARB     empty list     Shader objects attached 6.1.12
+    -                           H                                  object specific  object handle           2.14.2      -
+
+    Table X Program object state.
+
+New Implementation Dependent State
+
+        None
+
+Sample Usage
+
+    For examples on how to use GetUniformLocationARB and the Uniform*ARB
+    API, see issue 32.
+
+    //
+    // Example usage of GetActiveUniformARB.
+    //
+    GLint maxLength;
+    GLint i, uniformCount;
+    GLcharARB **name;
+    GLsizei *length;
+    GLint *size;
+    GLenum *type;
+
+    //
+    // Get the number of uniforms, and the length of the longest name.
+    //
+    glGetObjectParameterivARB(programObject,
+                              GL_OBJECTS_ACTIVE_UNIFORM_MAX_LENGTH_ARB,
+                              &maxLength);
+    glGetObjectParameterivARB(programObject, GL_OBJECTS_ACTIVE_UNIFORMS_ARB,
+                              &uniformCount);
+
+    //
+    // Allocate arrays to store the answers in. For simplicity, the return
+    // from malloc is not checked for NULL.
+    //
+    size   = (GLint *) malloc(uniformCount * sizeof(GLint));
+    type   = (GLint *) malloc(uniformCount * sizeof(GLenum));
+    length = (GLsizei *) malloc(uniformCount * sizeof(GLsizei));
+    name   = (GLcharARB **) malloc(uniformCount * sizeof(GLcharARB **));
+
+    //
+    // Loop over glGetActiveUniformARB and store the results away.
+    //
+    for (i = 0; i < uniformCount; i++) {
+        name[i] = (GLcharARB *) malloc(maxLength * sizeof(GLcharARB));
+        glGetActiveUniformARB(programObject, i, maxLength, &length[i],
+                              &size[i], &type[i], name[i]);
+    }
+
+    See the ARB_vertex_shader and ARB_fragment_shader extension documents
+    for more examples.
+
+Revision History
+
+    Revision: 0.5 6/5/2002
+      - First draft for circulation
+    Revision: 0.51
+      - Started issues section. Added string discussions and uniform
+        discussions.
+      - Added content to the Contributors, and Errors section
+      - Named and explained all parameters to all API calls
+      - Added a new GLchar type
+      - Load/AppendShaderGL2 take a length argument
+      - GetUniformLocationGL2 takes a length argument for the string passed
+        in
+      - GetInfoLogGL2 now also optionally returns the length of the string
+      - Clarified DetachObjectGL2 and DeleteObject(s)GL2 and their
+        interaction
+    Revision 0.52
+      - Removed NULL_HANDLE_GL2
+      - Added explanation of what happens when program and shader objects
+        are shared among contexts.
+    Revision: 0.60
+      - Merged GL2_core_objects extension into this one. Core_objects is now
+        obsolete.
+    Revision: 0.61
+      - Took out any reference to 'project'. This term was unnecessary,
+        since it meant the same as program object.
+    Revision: 0.62
+      - Now references V1.0 of OpenGL Shading Language Specification
+      - Fixed minor typos
+      - Accepted by the GL2 working group
+    Revision: 0.63 10/17/2002
+      - Removed IsObjectGL2(). It overlaps with GetObjectParameter{if}vGL2.
+      - Expanded GetObjectParameter{if}GL2. Added OBJECT_TYPE_GL2.
+    Revision: 0.64 10/18/2002
+      - Added list of entrypoints that are not compiled into a display list
+        to section 5.
+      - Updated Errors section.
+    Revision: 0.65 10/23/2002
+      - Added GetShaderSourceGL2.
+      - Added GetUniform{if}vGL2
+      - Updated errors section.
+      - Moved shader resources section in here from GL2_vertex_shader.
+    Revision: 0.7 10/29/2002
+      - Added issue number 16.
+      - Second distribution to the GL2 working group.
+      - Now written against the OpenGL 1.4 specification.
+    Revision: 0.71 11/26/2002
+      - Added six more issues discussion uniform loading (issues 7-15).
+      - Added loadUniform commands to load values for INT and BOOL declared
+        uniforms.
+      - Changed the behavior for loadUniforms to allow to load the first N
+        values if loading into a uniform declared with an extent bigger than
+        N.
+      - Made a GLhandle an unsigned integer, read and written only by the GL
+      - Added high level shading language layering issue 22. This issue came
+        from the OpenGL Shading Language document.
+      - Updated resource limits issue number 21.
+    Revision: 0.72 01/27/2003
+      - Added issue 24.
+      - Added to the list of contributors.
+      - Changed the GLchar type to GLcharGL2
+      - Changed GLhandle type to GLhandleGL2
+    Revision: 0.73 02/20/2003
+      - Updated section 2.14.4. Loading uniforms of the wrong type will
+        result in undefined shader results.
+      - Loading more or less data than the declared extent of the uniform is
+        now handled consistently.
+      - Added section 2.14.4.1 'Samplers'
+      - Added an extra error condition for LinkProgramGL2 when using too
+        many active samplers.
+      - Added issue 25, explaining how to use samplers for texture access.
+      - Added issue 26, need for a validate command.
+      - Added section 2.15, Validation
+    Revision: 0.74 02/23/2003
+      - Added use of [] and . (dot) operators in GetUniformLocationGL2
+      - Refined wording in section 2.14.4.1.
+    Revision: 0.75 03/27/2003
+      - Begin can generate an error in certain cases.
+      - Closed issue 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 and made spec
+        changes, if necessary, to reflect the resolutions of these issues.
+      - Added issues 27, 28, 29, 30, 31.
+      - Changed the loadUniform API. Less entry points, aimed at performance
+        of loading uniforms. Also added a transpose flag to the matrix ones.
+      - Updated IP Status section to point to the contributors agreement.
+      - Removed ObjectParameter*GL2. These are not used anywhere.
+      - AttachObjectGL2 no longer returns a Boolean. There is no reason that
+        an attach should ever fail, if a valid program object and shader
+        object are passed in.
+      - Defined the lifetime of the pointers returned by GetInfoLogGL2 and
+        GetShaderSourceGL2.
+      - Added GetAttachedObjectsGL2.
+    Revision: 0.76 03/28/2003
+      - UseProgramObjectGL2 no longer returns anything. It can now be
+        compiled into a display list.
+      - Closed issues 14, 15, 30.
+      - Allowed loading more than one element in a uniform array, by just
+        querying the location of the first element to be loaded.
+      - Added the UNIFORM_ERROR_CHECK_GL2 enable.
+      - Changed GetInfoLogGL2 so that GL only has to maintain at least one
+        info log for shader objects and at least one for program objects.
+      - Added section 2.16, undefined behavior
+    Revision: 0.77 04/03/2003
+      - AppendShader now takes an array of strings, just like ShaderSource.
+      - GetShaderSources returns an array of strings.
+      - Closed issues 16, 17, 18, 19, 20.
+    Revision: 0.78 04/07/2003
+      - Closed issues 21, 22, 23, 24, 25, 26.
+      - Added lifetime to the pointer returned by ValidateProgram. Also
+        changed ValidateProgram to take a handle to a program object.
+      - LinkProgramGL2 will now set all uniforms to zero.
+      - Added GetShaderSourceGL2 example code.
+    Revision: 0.79 04/09/2003
+      - Added section 2.17, required state.
+      - Clarified GetInfoLog, especially when sharing objects across
+        contexts.
+      - Changed ValidateProgramGL2 to store its information in the info log.
+        It'll return a Boolean to indicate a successful validation.
+      - Clarified the use of the '.' And '[]' operators in
+        GetUniformLocation.
+    Revision: 0.80 04/17/2003
+      - Removed AppendShaderGL2.
+      - Closed issues 28, 29, 30 and 31.
+      - Clarified GetUniformLocationGL2 based on Folker's feedback.
+      - Added GetActiveUniformsGL2.
+    Revision: 0.81 04/18/2003
+      - GetUniformLocationGL2 only works for active uniforms now.
+      - Re-worded GetActiveUniformsGL2 to be more like GetActiveAttribsGL2.
+      - Added wording explicitly saying that a failed compile or link is not
+        state neutral (does not revert back to the old state).
+      - Added a sentence saying that the memory pointer returned by
+        GetActiveUniforms, GetInfoLog, GetAttachedObjects and
+        GetShaderSource is owned by OpenGL and should not be overwritten by
+        the caller.
+    Revision: 0.82 04/27/2003
+      - Forgot to close issue 27.
+      - Changed a few occurances of "char" to charGL2.
+      - Updated language describing GetUniformLocationGL2.
+      - Changed the location of the Contributors License to a publicly
+        accessible place on www.3dlabs.com.
+      - GetActiveUniformsGL2 is not display-listable.
+      - Removed one error condition for ValidateProgramGL2.
+      - Added errors for GetAttachedObjectsGL2.
+      - Renamed the following functions:
+      - glLoadShader --> glShaderSource
+      - glGetShaderString --> glGetShaderSource
+      - glAttachShaderObject --> glAttachObject
+      - glGetAttachedShaderObjects --> glGetAttachedObjects
+      - Clarified that GetActiveUniformsGL2 will return as much information
+        as possible. If it has none, it'll return a count of zero.
+      - Numerous clarifications and some reordering of paragraphs based on
+        Pat's feedback.
+      - Spelled out three reasons why LinkProgram can fail.
+      - Spelled out that the Uniform*GL2 command used needs to match both
+        the type and the size of a uniform declared in a shader.
+      - Updated the error checking rules for the Uniform*GL2 commands.
+      - Passing in '0', or a handle that is not an object handle generated
+        by the GL, results in the error INVALID_VALUE. All other calls that
+        get passed a valid handle, but that handle is of the wrong type for
+        that operation, set an INVALID_OPERATION error.
+      - Added issue 32, explaining GetUniformLocationGL2 and uniform
+        loading.
+    Revision: 0.83 04/28/2003
+      - Added more state tables.
+      - Added Kent Lin to the list of contributors.
+    Revision: 0.84 04/29/2003
+      - Added a few more examples to issue 32.
+      - Clarified the Errors section with respect to passing in 0 as a
+        handle.
+      - Version voted on, and approved, by the ARB-GL2 working group.
+    Revision: 0.85 05/09/2003
+      - Fixed a mistake in the program object state table for GetInfoLogGL2.
+      - Fixed a mistake in the resolution of issue 27.
+      - Clarified the resolution of issue 17.
+      - Clarified that in case of doubt by the compiler/linker, a uniform
+        will be marked as active. Section 2.14.3 (intro).
+      - Clarified that you need to pass in three NULL pointers to
+        GetActiveUniformsGL2, to only get the count of active uniforms.
+      - Clarified the lifetime of the pointers returned by
+        GetActiveUniformsGL2, GetShaderSourceGL2 and GetAttachedObjectsGL2.
+      - Fixed a typo in the first entry in the Errors section.
+      - Changed the count parameter in the Uniform*vGL2 commands to be of
+        type sizei. Also did this for ShaderSourceGL2.
+      - Expanded the two paragraphs explaining how Uniform*GL2 works into
+        several smaller ones.
+      - Clarified that GetInfoLogGL2 returns NULL if the handle passed in is
+        invalid, or not a program or shader object.
+      - Added fourth implicit error rule to section 2.5, GL Errors. Note
+        that this rule was already in the Errors section.
+      - Added Jon Leech, Evan Hart, Benjamin Lipchak and Jeremy Sandmel to
+        the list of contributors.
+      - Assigned enum values.
+    Revision: 0.86 05/15/2003
+      - Assigned missing enum value to SHADER_OBJECT_GL2.
+      - Replaced all GL2 occurrences with ARB. Fixed some typos.
+      - Added several more to the contributors list. If anyone is still left
+        out, let Bill Licea Kane, Jon Leech or myself know.
+    Revision: 0.87 06/13/2003
+      - Changed resolution of issue 27 and the description of GetInfoLog to
+        have an info log per object. Removed the info log language from the
+        AGL/GLX/WGL section.
+      - Changed the resolution of issue 14, 15, 25 (uniform API name).
+      - Changed the discussion and resolution of issue 30. (uniform
+        loading).
+      - Added issue 33.
+      - Changed the uniform API commands. The type of the uniform is no
+        longer encoded in the name of the API.
+      - Updated section 2.14.4, samplers.
+      - Updated the Errors section w.r.t. uniform loading
+      - Updated section 2.16, undefined behavior.
+      - Deleted DeleteObjectsARB.
+      - Removed the Boolean return from CompileShaderARB, LinkProgramARB and
+        ValidateProgramARB.
+      - Added several new error conditions for GetObjectParameter{if}vARB to
+        the Errors section an section 6.1.12.
+      - Updated the New State and Required State sections.
+      - Changed GetInfoLog to no longer return a pointer to GL memory.
+      - Changed GetAttachedObjects to no longer return a pointer to GL
+        memory.
+      - Changed GetActiveUniform to no longer return a pointer to GL memory.
+        This call now returns data for one active uniform, instead of all
+        active uniforms. Also added its returns (type, size and name) to the
+        state tables and Required State section.
+      - Changed GetShaderSource to no longer return a pointer to GL memory.
+      - Added OBJECT_SUBTYPE_ARB, OBJECT_DELETE_STATUS_ARB,
+        OBJECT_COMPILE_STATUS_ARB, OBJECT_LINK_STATUS_ARB,
+        OBJECT_VALIDATE_STATUS_ARB, OBJECT_INFO_LOG_LENGTH_ARB,
+        OBJECT_ATTACHED_OBJECTS_ARB, OBJECT_ACTIVE_UNIFORMS_ARB,
+        OBJECT_ACTIVE_UNIFORM_MAX_LENGTH_ARB,
+        OBJECT_SHADER_SOURCE_LENGTH_ARB as a queriable parameter to
+        GetObjectParameter{if}vARB.
+      - Modified the introduction to section 2.14 to mention texture and
+        display list objects.
+      - Added issue 34.
+      - Updated the example section with a new example.
+      - Re-ordered the Errors section. They are now in the order of API
+        calls described in Sections 2-6.
+      - Language clean-up throughout the document.
+      - Consistently used "OpenGL Shading Language" where appropriate (This
+        is the official name).
+      - Changed issue 5. This issue is now obsolete, with the new GetInfoLog
+        API.
+      - Clarified section 2.14.4, Samplers. The values to load range from 0
+        to to max available texture image units.
+      - ARB approved version.
+    Revision: 0.88 03/29/2004
+      - Added ARB extension number (31) and edited the status paragraph.
+      - GetActiveUniform now returns types for samplers.
+      - If at least one element in a uniform array is active, then this
+        array will be reported by GetActiveUniform as being active starting
+        at element 0 through the highest element used. Added issue 35
+        explaining this in detail.
+      - Passing in a location of -1 to Uniform*ARB will be silently ignored
+        (no GL error will be generated). Also added issue 36 explaining
+        this.
+      - DeleteObject will silently ignore the value 0. Added issue 37.
+      - The current program object handle is no longer part of the 'current'
+        state.
+      - Specified that GetUniform returns values in column major order for
+        matrices. Also clarified that GetUniform returns only one element of
+        an array of uniforms. Added issue 38.
+      - Specified what happens when ValidateProgramARB fails. This means
+        that the program object will not execute, and no fragments will be
+        rendered.
+      - Added 'const' to the data passed in the Uniform*vARB commands.
+      - Clarified that return parameters of the various Get commands are
+        unmodified if an error occurred.
+      - Added issue 39.
+      - Added issue 40, and clarified failed re-link behavior in the spec.
+      - Added issue 41.
+      - Clarified that the compile status of a shader object does not change
+        when source is loaded in it.
+      - Clarified that the link status of a program object is not affected
+        by attaching or detaching or re-compiling attached shader objects.
+      - Few fixes to the Errors section.
+      - Clarified GetUniformLocation and GetActiveUniform when addressing
+        the first element of an array. Added issue 42 explaining this.
+      - Added issue 43, 44 and 45.
+    Revision: 0.89 04/06/2004
+      - Updated the Shading Language Version referenced to the now official
+        version 1.10.
+      - Added language describing the Uniform* loading commands that
+        Uniform1i{v} is used to load samplers.
+      - Clarified issues 36, 42 and 43 based on Pat's feedback.
+      - Changed the examples in issue 45 a bit. Hopefully for the better.
+      - Added issue 46.
+      - Removed an error condition I had added earlier for glBegin().
+      - Expanded section 2.15 to include the exact conditions when
+        validation is allowed to fail. Previously these conditions were only
+        in the Errors section, listed for glBegin().
+      - ARB-GL2 workgroup approved version.
+    Revision: 0.90 12/14/2009
+      - Added GLX protocol 
+

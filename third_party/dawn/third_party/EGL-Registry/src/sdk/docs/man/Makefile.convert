@@ -1,0 +1,39 @@
+default: convert
+
+# Where to find Docbook 4 man page sources
+OLDMAN = docbook4
+
+# Converting Docbook 4 -> Docbook 5 - now use local (up to date) copy
+#DB4UPGRADE = /usr/share/xml/docbook/stylesheet/docbook5/db4-upgrade.xsl
+DB4UPGRADE = db4-upgrade.xsl
+DOCBOOK5CONV = xsltproc $(DB4UPGRADE)
+
+# Files to copy from parent directory (not legal Docbook 4)
+COPYFILES = reference.xml
+
+# Must edit XIncludes to declare Docbook namespace, which DB4 doesn't allow
+# This works on either <table> or <informaltable> root elements
+$(COPYFILES): $@
+	cp $(OLDMAN)/$@ $@
+	sed -i \
+	    -e 's#<table>#<table xmlns="http://docbook.org/ns/docbook" version="5.0">#g' \
+	    -e 's#<informaltable>#<informaltable xmlns="http://docbook.org/ns/docbook" version="5.0">#g' \
+	    $@
+
+SRCXML = $(wildcard $(OLDMAN)/egl[A-Z]*.xml)
+XML = $(filter-out $(COPYFILES),$(patsubst $(OLDMAN)/%.xml,%.xml,$(SRCXML)))
+
+## $(XML): %.xml: $(OLDMAN)/%.xml DOCTYPE.txt $(DB4UPGRADE)
+##	   cp DOCTYPE.txt $@
+
+$(XML): %.xml: $(OLDMAN)/%.xml $(DB4UPGRADE)
+	sed -e 's/&/AMPER/g' < $< | \
+	    $(DOCBOOK5CONV) - | \
+	    sed -e 's/AMPER/\&/g' >> $@
+
+# Actually convert pages from Docbook4 -> Docbook 5
+convert: $(XML) $(COPYFILES)
+
+# Remove generated targets
+clean clobber:
+	-rm -f $(XML) $(COPYFILES)

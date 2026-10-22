@@ -1,0 +1,48 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 7
+; Bound: 22
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpSourceExtension "GL_EXT_scalar_block_layout"
+               OpName %main "main"
+               OpName %SSBOScalar "SSBOScalar"
+               OpMemberName %SSBOScalar 0 "a"
+               OpMemberName %SSBOScalar 1 "b"
+               OpMemberName %SSBOScalar 2 "c"
+               OpName %_ ""
+               OpMemberDecorate %SSBOScalar 0 Offset 0
+               OpMemberDecorate %SSBOScalar 1 Offset 12
+               OpMemberDecorate %SSBOScalar 2 Offset 24
+               OpDecorate %SSBOScalar BufferBlock
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+ %SSBOScalar = OpTypeStruct %v3float %v3float %v3float
+%_ptr_Uniform_SSBOScalar = OpTypePointer Uniform %SSBOScalar
+          %_ = OpVariable %_ptr_Uniform_SSBOScalar Uniform
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+%_ptr_Uniform_v3float = OpTypePointer Uniform %v3float
+      %int_2 = OpConstant %int 2
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %15 = OpAccessChain %_ptr_Uniform_v3float %_ %int_1
+         %16 = OpLoad %v3float %15
+         %18 = OpAccessChain %_ptr_Uniform_v3float %_ %int_2
+         %19 = OpLoad %v3float %18
+		 	OpStore %18 %16
+         %20 = OpFMul %v3float %16 %19
+         %21 = OpAccessChain %_ptr_Uniform_v3float %_ %int_0
+               OpStore %21 %20
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,204 @@
+Name
+
+    EXT_shadow_funcs
+
+Name Strings
+
+    GL_EXT_shadow_funcs
+
+Contact
+
+    Mark J. Kilgard (mjk 'at' nvidia.com)
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date:  $Date: 2002/03/22 $
+    NVIDIA Revision:  $Revision: #5 $
+
+Number
+
+    267
+
+Dependencies
+
+    OpenGL 1.1 is required.
+    ARB_depth_texture is required.
+    ARB_shadow is required.
+    This extension is written against the OpenGL 1.3 Specification. 
+
+Overview
+
+    This extension generalizes the GL_ARB_shadow extension to support all
+    eight binary texture comparison functions rather than just GL_LEQUAL
+    and GL_GEQUAL.
+
+IP Status
+
+    None.
+
+Issues
+
+    (1) What should this extension be called?
+
+      RESOLUTION: EXT_shadow_funcs.  The extension adds new texture
+      compare (shadow) comparison functions to ARB_shadow.
+
+    (2) Are there issues with GL_EQUAL and GL_NOTEQUAL?
+
+      The GL_EQUAL mode (and GL_NOTEQUAL) may be difficult to obtain
+      well-defined behavior from. This is because there is no guarantee
+      that the divide done by the shadow mapping r/q division is going
+      to exactly match the z/w perspective divide and depth range scale
+      & bias used to generate depth values.  Perhaps it can work in a
+      well-defined manner in orthographic views or if you can guarantee
+      that the texture hardware's r/q is computed with the same hardware
+      used to compute z/w (NVIDIA's NV_texture_shader extension can
+      provide such a guarantee).
+
+      Similiarly, GL_LESS and GL_GREATER or only different from GL_LEQUAL
+      and GL_GEQUAL respectively by a single unit of depth precision
+      which may make the difference between these modes very subtle.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the 1.3 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.3 Specification (Rasterization)
+
+    Section 3.8.4, Texture Parameters, p. 133, update table 3.19 with the
+    following new legal values for TEXTURE_COMPARE_FUNC_ARB:
+
+        Name                        Type  Legal Values
+        --------------------------  ----  -------------------------------
+        TEXTURE_COMPARE_FUNC_ARB    enum  LEQUAL, GEQUAL, LESS, GREATER,
+                                          EQUAL, NOTEQUAL, ALWAYS, NEVER
+
+    After section 3.8.12, Texture Environments and Texture Functions,
+    p. 149, update the texture compare pseudo-code in section 3.8.13.1
+    (as added by ARB_shadow):
+
+        if TEXTURE_COMPARE_MODE_ARB = NONE
+
+            r = Dt
+
+        else if TEXTURE_COMPARE_MODE_ARB = COMPARE_R_TO_TEXTURE_ARB
+
+            if TEXTURE_COMPARE_FUNC_ARB = LEQUAL
+
+                 { 1.0,  if R <= Dt
+             r = {
+                 { 0.0,  if R > Dt
+    
+            else if TEXTURE_COMPARE_FUNC_ARB = GEQUAL
+    
+                 { 1.0,  if R >= Dt
+             r = {
+                 { 0.0,  if R < Dt
+    
+            else if TEXTURE_COMPARE_FUNC_ARB = LESS
+    
+                 { 1.0,  if R < Dt
+             r = {
+                 { 0.0,  if R >= Dt
+    
+            else if TEXTURE_COMPARE_FUNC_ARB = GREATER
+    
+                 { 1.0,  if R > Dt
+             r = {
+                 { 0.0,  if R <= Dt
+    
+            else if TEXTURE_COMPARE_FUNC_ARB = EQUAL
+    
+                 { 1.0,  if R == Dt
+             r = {
+                 { 0.0,  if R != Dt
+    
+            else if TEXTURE_COMPARE_FUNC_ARB = NOTEQUAL
+    
+                 { 1.0,  if R != Dt
+             r = {
+                 { 0.0,  if R == Dt
+    
+            else if TEXTURE_COMPARE_FUNC_ARB = ALWAYS
+    
+             r = 1.0
+    
+            else if TEXTURE_COMPARE_FUNC_ARB = NEVER
+    
+             r = 0.0
+
+            endif
+
+            if DEPTH_TEXTURE_MODE_ARB = LUMINANCE
+    
+                Lt = r
+    
+            else if DEPTH_TEXTURE_MODE_ARB = INTENSITY
+    
+                It = r
+    
+            else if DEPTH_TEXTURE_MODE_ARB = ALPHA
+    
+                At = r
+    
+            endif
+
+        endif
+
+Additions to Chapter 4 of the 1.3 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.3 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.3 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Errors
+
+    INVALID_ENUM is generated if TexParameter[if][v] parameter <pname>
+    is TEXTURE_COMPARE_FUNC_ARB and parameter <param> is not one of
+    LEQUAL, GEQUAL, LESS, GREATER, EQUAL, NOTEQUAL, ALWAYS, or NEVER.
+
+New State
+
+    In table 6.16, Texture Objects, p. 224, add the following:
+
+    Get Value                   Type  Get Command           Initial Value  Description     Sec.   Attribute
+    --------------------------  ----  --------------------  -------------  --------------  -----  ---------
+    TEXTURE_COMPARE_FUNC_ARB    Z_8   GetTexParameter[if]v  LEQUAL         compare func    3.8.13 texture
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    None
+
+NV20 Implementation Details
+
+    NV20 (GeForce3 and Quadro DCC) will fallback to software rasterization
+    if two or more texture units have distinct TEXTURE_COMPARE_FUNC_ARB
+    settings that are not opposites (eg, GL_EQUAL and GL_NOTEQUAL).
+    This is not an issue on NV25 (GeForce4 and Quadro4).

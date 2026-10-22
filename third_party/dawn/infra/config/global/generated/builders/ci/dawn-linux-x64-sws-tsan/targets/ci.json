@@ -1,0 +1,121 @@
+{
+  "dawn-linux-x64-sws-tsan": {
+    "gtest_tests": [
+      {
+        "args": [
+          "--enable-implicit-device-sync",
+          "--adapter-vendor-id=0x1AE0",
+          "--skip-symbolization-script=1"
+        ],
+        "merge": {
+          "script": "//scripts/merge_scripts/true_noop_merge.py"
+        },
+        "module_name": "//src/dawn/tests:dawn_end2end_tests/",
+        "module_scheme": "gtest",
+        "name": "dawn_end2end_implicit_sync_tests",
+        "resultdb": {
+          "result_format": "gtest_json"
+        },
+        "swarming": {
+          "containment_type": "AUTO",
+          "dimensions": {
+            "cpu": "x86-64",
+            "gpu": "none",
+            "os": "Ubuntu-22.04",
+            "pool": "chromium.tests.gpu"
+          },
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 5
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--enable-toggles=skip_validation",
+          "--adapter-vendor-id=0x1AE0",
+          "--skip-symbolization-script=1"
+        ],
+        "merge": {
+          "script": "//scripts/merge_scripts/true_noop_merge.py"
+        },
+        "module_name": "//src/dawn/tests:dawn_end2end_tests/",
+        "module_scheme": "gtest",
+        "name": "dawn_end2end_skip_validation_tests",
+        "resultdb": {
+          "result_format": "gtest_json"
+        },
+        "swarming": {
+          "containment_type": "AUTO",
+          "dimensions": {
+            "cpu": "x86-64",
+            "gpu": "none",
+            "os": "Ubuntu-22.04",
+            "pool": "chromium.tests.gpu"
+          },
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 5
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--adapter-vendor-id=0x1AE0",
+          "--skip-symbolization-script=1"
+        ],
+        "merge": {
+          "script": "//scripts/merge_scripts/true_noop_merge.py"
+        },
+        "module_name": "//src/dawn/tests:dawn_end2end_tests/",
+        "module_scheme": "gtest",
+        "name": "dawn_end2end_tests",
+        "resultdb": {
+          "result_format": "gtest_json"
+        },
+        "swarming": {
+          "containment_type": "AUTO",
+          "dimensions": {
+            "cpu": "x86-64",
+            "gpu": "none",
+            "os": "Ubuntu-22.04",
+            "pool": "chromium.tests.gpu"
+          },
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 5
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--use-wire",
+          "--adapter-vendor-id=0x1AE0",
+          "--skip-symbolization-script=1"
+        ],
+        "merge": {
+          "script": "//scripts/merge_scripts/true_noop_merge.py"
+        },
+        "module_name": "//src/dawn/tests:dawn_end2end_tests/",
+        "module_scheme": "gtest",
+        "name": "dawn_end2end_wire_tests",
+        "resultdb": {
+          "result_format": "gtest_json"
+        },
+        "swarming": {
+          "containment_type": "AUTO",
+          "dimensions": {
+            "cpu": "x86-64",
+            "gpu": "none",
+            "os": "Ubuntu-22.04",
+            "pool": "chromium.tests.gpu"
+          },
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 5
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://src/dawn/tests:dawn_end2end_tests/"
+      }
+    ]
+  }
+}

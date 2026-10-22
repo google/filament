@@ -1,0 +1,157 @@
+// Copyright 2023 The Dawn & Tint Authors
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+// An IDL file that adds support for Dawn extensions that are not part of the
+// upstream webgpu.idl.
+
+// ============================================================================
+// Language features, they are not defined in WebGPU's IDL.
+// ============================================================================
+enum WGSLLanguageFeatureName {
+    "readonly_and_readwrite_storage_textures",
+    "packed_4x8_integer_dot_product",
+    "unrestricted_pointer_parameters",
+    "pointer_composite_access",
+    "sized_binding_array",
+    "texel_buffers",
+    "fragment_depth",
+    "immediate_address_space",
+    "chromium_print",
+    "uniform_buffer_standard_layout",
+    "subgroup_id",
+    "subgroup_uniformity",
+    "texture_and_sampler_let",
+    "buffer_view",
+    "swizzle_assignment",
+    "linear_indexing",
+    "texture_formats_tier1",
+};
+
+// ============================================================================
+// Other extensions not in their own block below.
+// ============================================================================
+
+enum GPUFeatureName {
+    "atomic-vec2u-min-max",
+    "texture-compression-unaligned",
+}
+
+// ============================================================================
+// Subgroup matrices
+// ============================================================================
+enum GPUFeatureName {
+    "chromium-experimental-subgroup-matrix",
+}
+
+enum GPUSubgroupMatrixComponentType {
+  "f32",
+  "f16",
+  "u32",
+  "i32",
+  "u8",
+  "i8",
+};
+
+interface GPUSubgroupMatrixConfig {
+  readonly attribute GPUSubgroupMatrixComponentType componentType;
+  readonly attribute GPUSubgroupMatrixComponentType resultComponentType;
+  readonly attribute unsigned long M;
+  readonly attribute unsigned long N;
+  readonly attribute unsigned long K;
+};
+
+interface GPUAdapterInfo {
+    [SameObject] readonly attribute FrozenArray<GPUSubgroupMatrixConfig> subgroupMatrixConfigs;
+};
+
+// ============================================================================
+// MultiDrawIndirect
+// ============================================================================
+enum GPUFeatureName {
+    "multi-draw-indirect",
+};
+
+interface GPURenderPassEncoder {
+    undefined multiDrawIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset, GPUSize32 maxDrawCount,
+        GPUBuffer? drawCountBuffer, optional GPUSize64 drawCountBufferOffset = 0);
+    undefined multiDrawIndexedIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset,
+                                GPUSize32 maxDrawCount, GPUBuffer? drawCountBuffer = {},
+                                optional GPUSize64 drawCountBufferOffset = 0);
+};
+
+// ============================================================================
+// Write timestamp
+// ============================================================================
+interface GPUCommandEncoder {
+    undefined writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
+};
+
+// ============================================================================
+// Fixed-size binding arrays
+// ============================================================================
+dictionary GPUBindGroupLayoutEntry {
+    GPUSize32 bindingArraySize = 1;
+};
+
+// ============================================================================
+// Resource table
+// ============================================================================
+enum GPUFeatureName {
+    "chromium-experimental-sampling-resource-table",
+};
+
+dictionary GPUResourceTableDescriptor : GPUObjectDescriptorBase {
+    required GPUSize32 size;
+};
+interface GPUDevice {
+    GPUResourceTable createResourceTable(GPUResourceTableDescriptor descriptor);
+};
+
+interface GPUResourceTable {
+    undefined destroy();
+
+    undefined update(GPUIndex32 slot, GPUBindingResource resource);
+    GPUIndex32 insert(GPUBindingResource resource);
+    undefined remove(GPUIndex32 slot);
+
+    readonly attribute GPUSize32Out size;
+};
+GPUResourceTable includes GPUObjectBase;
+
+dictionary GPUPipelineLayoutDescriptor {
+    bool usesResourceTable = false;
+};
+
+interface GPUComputePassEncoder {
+    undefined setResourceTable(GPUResourceTable? table);
+};
+dictionary GPURenderPassDescriptor {
+    GPUResourceTable resourceTable;
+}
+dictionary GPURenderBundleEncoderDescriptor {
+    bool usesResourceTable = false;
+};

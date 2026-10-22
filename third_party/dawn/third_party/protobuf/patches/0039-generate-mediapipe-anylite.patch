@@ -1,0 +1,97 @@
+diff --git a/src/google/protobuf/compiler/cpp/helpers.cc b/src/google/protobuf/compiler/cpp/helpers.cc
+index 98fae20..f61b3fa 100644
+--- a/src/google/protobuf/compiler/cpp/helpers.cc
++++ b/src/google/protobuf/compiler/cpp/helpers.cc
+@@ -120,6 +120,14 @@ MessageKnownNonNullaryMethodsSnakeCase() {
+   return *methods;
+ }
+ 
++// TODO(crbug.com/332939935): This is used to allow generating an AnyLite proto
++// compatible with /third_party/medialite instead of checking in compiled
++// protobufs that complicate rolling.
++// Upstream should be fixed so that we don't need to generate a separate
++// AnyLite, then this patch/change should be dropped.
++constexpr absl::string_view kAnyLiteMessageName = "AnyLite";
++constexpr absl::string_view kAnyLiteProtoFile = "google/protobuf/any_lite.proto";
++
+ static const char* const kKeywordList[] = {
+     // clang-format off
+     "NULL",
+@@ -1373,11 +1381,13 @@ bool IsRepeatedPtrField(const FieldDescriptor* field) {
+ }
+ 
+ bool IsAnyMessage(const FileDescriptor* descriptor) {
+-  return descriptor->name() == kAnyProtoFile;
++  return descriptor->name() == kAnyProtoFile ||
++         descriptor->name() == kAnyLiteProtoFile;
+ }
+ 
+ bool IsAnyMessage(const Descriptor* descriptor) {
+-  return descriptor->name() == kAnyMessageName &&
++  return (descriptor->name() == kAnyMessageName ||
++          descriptor->name() == kAnyLiteMessageName) &&
+          IsAnyMessage(descriptor->file());
+ }
+ 
+diff --git a/src/google/protobuf/compiler/cpp/message.cc b/src/google/protobuf/compiler/cpp/message.cc
+index f060e32..f9a26a9 100644
+--- a/src/google/protobuf/compiler/cpp/message.cc
++++ b/src/google/protobuf/compiler/cpp/message.cc
+@@ -2391,30 +2391,34 @@ void MessageGenerator::GenerateClassMethods(io::Printer* p) {
+     return;
+   }
+   if (IsAnyMessage(descriptor_)) {
+-    p->Emit({{"any_field_descriptor",
+-              [&] {
+-                if (!HasDescriptorMethods(descriptor_->file(), options_)) {
+-                  return;
++    // TODO(crbug.com/332939935): Remove this workaround when the AnyLite patch
++    // can go away.
++    if (descriptor_->name() != "AnyLite") {
++      p->Emit({{"any_field_descriptor",
++                [&] {
++                  if (!HasDescriptorMethods(descriptor_->file(), options_)) {
++                    return;
++                  }
++                  p->Emit(
++                      R"cc(
++                        $nodiscard $bool $Msg$::GetAnyFieldDescriptors(
++                            const $pb$::Message& message,
++                            const $pb$::FieldDescriptor** type_url_field,
++                            const $pb$::FieldDescriptor** value_field) {
++                          return ::_pbi::GetAnyFieldDescriptors(message, type_url_field, value_field);
++                        }
++                      )cc");
++                }}},
++              R"cc(
++                $any_field_descriptor$;
++                $nodiscard $bool $Msg$::ParseAnyTypeUrl(
++                    //~
++                    ::absl::string_view type_url,
++                    std::string* $nonnull$ full_type_name) {
++                  return ::_pbi::ParseAnyTypeUrl(type_url, full_type_name);
+                 }
+-                p->Emit(
+-                    R"cc(
+-                      $nodiscard $bool $Msg$::GetAnyFieldDescriptors(
+-                          const $pb$::Message& message,
+-                          const $pb$::FieldDescriptor** type_url_field,
+-                          const $pb$::FieldDescriptor** value_field) {
+-                        return ::_pbi::GetAnyFieldDescriptors(message, type_url_field, value_field);
+-                      }
+-                    )cc");
+-              }}},
+-            R"cc(
+-              $any_field_descriptor$;
+-              $nodiscard $bool $Msg$::ParseAnyTypeUrl(
+-                  //~
+-                  ::absl::string_view type_url,
+-                  std::string* $nonnull$ full_type_name) {
+-                return ::_pbi::ParseAnyTypeUrl(type_url, full_type_name);
+-              }
+-            )cc");
++              )cc");
++    }
+   }
+   // Generate non-inline field definitions.
+   for (auto field : internal::FieldRange(descriptor_)) {

@@ -1,0 +1,283 @@
+// Copyright 2021 The Dawn & Tint Authors
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#include "src/dawn/native/CompilationMessages.h"
+
+#include <utility>
+
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
+#include "src/utils/numeric.h"
+#include "tint/tint.h"
+
+namespace dawn::native {
+
+namespace {
+
+wgpu::CompilationMessageType TintSeverityToMessageType(tint::diag::Severity severity) {
+    switch (severity) {
+        case tint::diag::Severity::Note:
+            return wgpu::CompilationMessageType::Info;
+        case tint::diag::Severity::Warning:
+            return wgpu::CompilationMessageType::Warning;
+        default:
+            return wgpu::CompilationMessageType::Error;
+    }
+}
+
+}  // anonymous namespace
+
+size_t CountUTF16CodeUnitsFromUTF8String(std::string_view utf8String) {
+    if (tint::utf8::IsASCII(utf8String)) {
+        return utf8String.size();
+    }
+
+    size_t numberOfUTF16CodeUnits = 0;
+    std::string_view remaining = utf8String;
+    while (!remaining.empty()) {
+        auto [codePoint, utf8CharacterByteLength] = tint::utf8::Decode(remaining);
+        // WGSL validation will already have prevented invalid UTF-8.
+        DAWN_ASSERT(utf8CharacterByteLength != 0);
+        remaining = remaining.substr(utf8CharacterByteLength);
+
+        // Count the number of code units in UTF-16. See https://en.wikipedia.org/wiki/UTF-16 for
+        // more details. Note that while the code points ranging from U+D800 to U+DFFF are not
+        // encodable in UTF-16 (they are surrogate code points), we still mark them as needing a
+        // single UTF-16 code unit. The computations performed in this function are only useful when
+        // the application uses UTF-16 internally (like JS code), so the source would have been
+        // valid UTF-16 already.
+        if (codePoint.value <= 0xFFFF) {
+            // Code points from U+0000 to U+D7FF and U+E000 to U+FFFF are encoded as single 16-bit
+            // code units. As noted above we also count surrogates as one UTF-16 code unit.
+            numberOfUTF16CodeUnits += 1;
+        } else {
+            // Code points from U+010000 to U+10FFFF are encoded as two 16-bit code units.
+            numberOfUTF16CodeUnits += 2;
+        }
+    }
+
+    return numberOfUTF16CodeUnits;
+}
+
+void ParsedCompilationMessages::AddUnanchoredMessage(std::string_view message,
+                                                     wgpu::CompilationMessageType type) {
+    CompilationMessageContent m = {};
+    m.message = message;
+    m.type = type;
+    AddMessage(std::move(m));
+}
+
+void ParsedCompilationMessages::AddMessageForTesting(std::string_view message,
+                                                     wgpu::CompilationMessageType type,
+                                                     uint64_t lineNum,
+                                                     uint64_t linePos,
+                                                     uint64_t offset,
+                                                     uint64_t length) {
+    AddMessage({{
+        .message = std::string(message),
+        .type = type,
+        .lineNum = lineNum,
+        .linePosInBytes = linePos,
+        .offsetInBytes = offset,
+        .lengthInBytes = length,
+        // Incorrect for non-ACSII strings
+        .linePosInUTF16 = linePos,
+        .offsetInUTF16 = offset,
+        .lengthInUTF16 = length,
+    }});
+}
+
+void ParsedCompilationMessages::AddMessage(const tint::diag::Diagnostic& diagnostic) {
+    // Tint line and column values are 1-based.
+    size_t lineNum = diagnostic.source.range.begin.line;
+    size_t linePosInBytes = diagnostic.source.range.begin.column;
+    // The offset is 0-based.
+    size_t offsetInBytes = 0;
+    size_t lengthInBytes = 0;
+    size_t linePosInUTF16 = 0;
+    size_t offsetInUTF16 = 0;
+    size_t lengthInUTF16 = 0;
+
+    if (lineNum && linePosInBytes && diagnostic.source.file) {
+        const tint::Source::FileContent& content = diagnostic.source.file->content;
+        std::string_view wholeFile = content.data.data();
+
+        // Line numbering in Tint source range starts at 1 while the array of lines ranges start at
+        // 0 (hence the -1).
+        size_t lineStartByteOffset = content.line_ranges[checked_cast<size_t>(lineNum - 1)].start;
+        offsetInBytes = lineStartByteOffset + linePosInBytes - 1;
+
+        // The linePosInBytes is 1-based.
+        size_t linePosOffsetInUTF16 = CountUTF16CodeUnitsFromUTF8String(
+            wholeFile.substr(lineStartByteOffset, linePosInBytes - 1));
+        linePosInUTF16 = linePosOffsetInUTF16 + 1;
+
+        // The offset is 0-based.
+        size_t fileStartToLineStartOffsetInUTF16 =
+            CountUTF16CodeUnitsFromUTF8String(wholeFile.substr(0, lineStartByteOffset));
+        offsetInUTF16 = fileStartToLineStartOffsetInUTF16 + linePosInUTF16 - 1;
+
+        // If the range has a valid start but the end is not specified, clamp it to the start.
+        size_t endLineNum = diagnostic.source.range.end.line;
+        size_t endLineCol = diagnostic.source.range.end.column;
+        if (endLineNum == 0 || endLineCol == 0) {
+            endLineNum = lineNum;
+            endLineCol = linePosInBytes;
+        }
+
+        size_t endLineStartByteOffset =
+            content.line_ranges[checked_cast<size_t>(endLineNum - 1)].start;
+        size_t endOffsetInBytes = endLineStartByteOffset + endLineCol - 1;
+        // The length of the message is the difference between the starting offset and the
+        // ending offset. Negative ranges aren't allowed.
+        DAWN_ASSERT(endOffsetInBytes >= offsetInBytes);
+        lengthInBytes = endOffsetInBytes - offsetInBytes;
+        lengthInUTF16 =
+            CountUTF16CodeUnitsFromUTF8String(wholeFile.substr(offsetInBytes, lengthInBytes));
+    }
+
+    std::string plainMessage = diagnostic.message.Plain();
+
+    AddMessage({{
+        .message = plainMessage,
+        .type = TintSeverityToMessageType(diagnostic.severity),
+        .lineNum = lineNum,
+        .linePosInBytes = linePosInBytes,
+        .offsetInBytes = offsetInBytes,
+        .lengthInBytes = lengthInBytes,
+        .linePosInUTF16 = linePosInUTF16,
+        .offsetInUTF16 = offsetInUTF16,
+        .lengthInUTF16 = lengthInUTF16,
+    }});
+}
+
+void ParsedCompilationMessages::AddMessage(CompilationMessageContent&& message) {
+    messages.push_back(message);
+}
+
+void ParsedCompilationMessages::AddMessages(const tint::diag::List& diagnostics) {
+    for (const auto& diag : diagnostics) {
+        AddMessage(diag);
+    }
+
+    AddFormattedTintMessages(diagnostics);
+}
+
+void ParsedCompilationMessages::AddFormattedTintMessages(const tint::diag::List& diagnostics) {
+    tint::diag::List messageList;
+    size_t warningCount = 0;
+    size_t errorCount = 0;
+    for (auto& diag : diagnostics) {
+        switch (diag.severity) {
+            case tint::diag::Severity::Error: {
+                errorCount++;
+                messageList.Add(diag);
+                break;
+            }
+            case tint::diag::Severity::Warning: {
+                warningCount++;
+                messageList.Add(diag);
+                break;
+            }
+            case tint::diag::Severity::Note: {
+                messageList.Add(diag);
+                break;
+            }
+            default:
+                break;
+        }
+    }
+    if (errorCount == 0 && warningCount == 0) {
+        return;
+    }
+    tint::diag::Formatter::Style style;
+    style.print_newline_at_end = false;
+    std::ostringstream t;
+    if (errorCount > 0) {
+        t << errorCount << " error(s) ";
+        if (warningCount > 0) {
+            t << "and ";
+        }
+    }
+    if (warningCount > 0) {
+        t << warningCount << " warning(s) ";
+    }
+    t << "generated while compiling the shader:\n"
+      << tint::diag::Formatter{style}.Format(messageList).Plain();
+    formattedTintMessages.push_back(t.str());
+}
+
+OwnedCompilationMessages::OwnedCompilationMessages(
+    ParsedCompilationMessages&& parsedCompilationMessagges)
+    : mMessageContents(parsedCompilationMessagges), mCompilationInfo() {
+    // Reserve the size of messages to avoid reallocations, so that we can use
+    // the raw pointer when adding each message.
+    mMessagesList.reserve(mMessageContents.messages.size());
+    mUtf16Messages.reserve(mMessageContents.messages.size());
+
+    // Build the CompilationMessage and DawnCompilationMessageUtf16 object for each message.
+    for (auto& m : mMessageContents.messages) {
+        if (m.type == wgpu::CompilationMessageType::Error ||
+            m.type == wgpu::CompilationMessageType::Warning) {
+            mHasWarningsOrErrors = true;
+        }
+
+        DawnCompilationMessageUtf16& utf16 = mUtf16Messages.emplace_back();
+        utf16.linePos = m.linePosInUTF16;
+        utf16.offset = m.offsetInUTF16;
+        utf16.length = m.lengthInUTF16;
+
+        CompilationMessage& message = mMessagesList.emplace_back();
+        message.message = ToOutputStringView(m.message);
+        message.type = m.type;
+        message.lineNum = m.lineNum;
+        message.linePos = m.linePosInBytes;
+        message.offset = m.offsetInBytes;
+        message.length = m.lengthInBytes;
+        // Points to the created DawnCompilationMessageUtf16, pointers would keep valid since
+        // mUtf16Messages has been reserved to the size of messages.
+        message.nextInChain = &utf16;
+    }
+
+    mCompilationInfo.messages = mMessagesList;
+}
+
+const CompilationInfo* OwnedCompilationMessages::GetCompilationInfo() const {
+    return &mCompilationInfo;
+}
+
+const std::vector<std::string>& OwnedCompilationMessages::GetFormattedTintMessages() const {
+    return mMessageContents.formattedTintMessages;
+}
+
+bool OwnedCompilationMessages::HasWarningsOrErrors() const {
+    return mHasWarningsOrErrors;
+}
+
+}  // namespace dawn::native

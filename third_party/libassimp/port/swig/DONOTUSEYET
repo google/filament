@@ -1,0 +1,1 @@
+The interface files are by no means complete yet and only work with the not-yet-released D SWIG backend, although adding support for other languages should not be too much of problem via #ifdefs.
