@@ -495,10 +495,49 @@ TEST(MaterialVariant, ExtraDirectionalLightsRequireDirectionalLighting) {
 
     auto const validKeys = DynamicSpecConstKey::getValidKeys(
             Variant{}, MaterialDomain::SURFACE, true);
-    EXPECT_EQ(validKeys.size, 6);
+    EXPECT_EQ(validKeys.size, 12);
     for (auto const key : validKeys) {
         EXPECT_FALSE(key.hasExtraDirectionalLights() && !key.hasDirectionalLighting());
     }
+}
+
+TEST(MaterialVariant, FogSpecKeyIsOnlyValidForColorSurfaceVariants) {
+    DynamicSpecConstKey fog;
+    fog.setFog(true);
+
+    // Fog applies to both lit and unlit surface materials.
+    for (bool const isLit : { false, true }) {
+        EXPECT_TRUE(DynamicSpecConstKey::isValidProgramSpecKey(
+                Variant{}, fog, MaterialDomain::SURFACE, isLit));
+        EXPECT_TRUE(DynamicSpecConstKey::isValidProgramSpecKey(
+                Variant(Variant::SRE | Variant::SKN), fog, MaterialDomain::SURFACE, isLit));
+        EXPECT_TRUE(DynamicSpecConstKey::filterProgramSpecKey(
+                Variant{}, fog, MaterialDomain::SURFACE, isLit).hasFog());
+    }
+
+    // ...but never to depth, SSR or post-process programs.
+    for (Variant::type_t const key : { Variant::DEPTH_VARIANT,
+                 Variant::type_t(Variant::DEP | Variant::PCK), Variant::SPECIAL_SSR_VARIANT }) {
+        EXPECT_FALSE(DynamicSpecConstKey::isValidProgramSpecKey(
+                Variant(key), fog, MaterialDomain::SURFACE, true)) << +key;
+        EXPECT_FALSE(DynamicSpecConstKey::filterProgramSpecKey(
+                Variant(key), fog, MaterialDomain::SURFACE, true).hasFog()) << +key;
+    }
+    EXPECT_FALSE(DynamicSpecConstKey::isValidProgramSpecKey(
+            Variant{}, fog, MaterialDomain::POST_PROCESS, false));
+    EXPECT_FALSE(DynamicSpecConstKey::filterProgramSpecKey(
+            Variant{}, fog, MaterialDomain::POST_PROCESS, false).hasFog());
+
+    // The FOG user variant filter removes the fog specialization.
+    EXPECT_FALSE(DynamicSpecConstKey::filterUserVariant(
+            fog, UserVariantFilterMask(UserVariantFilterBit::FOG)).hasFog());
+    EXPECT_TRUE(DynamicSpecConstKey::filterUserVariant(
+            fog, UserVariantFilterMask(UserVariantFilterBit::SSR)).hasFog());
+
+    // Unlit surface materials only have the fog specialization.
+    auto const unlitKeys = DynamicSpecConstKey::getValidKeys(
+            Variant{}, MaterialDomain::SURFACE, false);
+    EXPECT_EQ(unlitKeys.size, 2);
 }
 
 TEST(Material, SsrFilteredLitMaterialContainsPunctualShadowPrograms) {
@@ -522,26 +561,77 @@ TEST(Material, SsrFilteredLitMaterialContainsPunctualShadowPrograms) {
     MaterialDefinition const& definition = downcast(material)->getDefinition();
     DynamicSpecConstKey dynamicLighting;
     dynamicLighting.setDynamicLighting(true);
+    DynamicSpecConstKey fog;
+    fog.setFog(true);
+    DynamicSpecConstKey dynamicLightingAndFog = dynamicLighting;
+    dynamicLightingAndFog.setFog(true);
     constexpr Variant::type_t SHADOW_VARIANTS[] = {
             Variant::SRE,
-            Variant::SRE | Variant::FOG,
             Variant::SRE | Variant::SKN,
             Variant::S2D | Variant::SRE,
-            Variant::S2D | Variant::SRE | Variant::FOG,
             Variant::S2D | Variant::SRE | Variant::SKN,
     };
 
     for (Variant::type_t const key : SHADOW_VARIANTS) {
-        EXPECT_TRUE(definition.isValidProgram(
-                Variant(key), DynamicSpecConstKey{}, fengine.getShaderModel(),
-                fengine.isStereoSupported()));
-        EXPECT_TRUE(definition.isValidProgram(
-                Variant(key), dynamicLighting, fengine.getShaderModel(),
-                fengine.isStereoSupported()));
+        for (DynamicSpecConstKey const specKey :
+                { DynamicSpecConstKey{}, dynamicLighting, fog, dynamicLightingAndFog }) {
+            EXPECT_TRUE(definition.isValidProgram(
+                    Variant(key), specKey, fengine.getShaderModel(),
+                    fengine.isStereoSupported()))
+                    << "variant=" << +key << " specKey=" << specKey.key;
+        }
+        // Fog is a dynamic specialization constant now, there is no FOG variant anymore.
+        EXPECT_FALSE(definition.isValidProgram(
+                Variant(key | Variant::FOG), DynamicSpecConstKey{}, fengine.getShaderModel(),
+                fengine.isStereoSupported()))
+                << "variant=" << +key;
     }
     EXPECT_FALSE(definition.isValidProgram(
             Variant(Variant::SPECIAL_SSR_VARIANT), DynamicSpecConstKey{},
             fengine.getShaderModel(), fengine.isStereoSupported()));
+
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
+
+TEST(Material, FogFilteredMaterialRejectsFogSpecKey) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("LitMaterialWithoutFog");
+    builder.shading(Shading::LIT);
+    builder.variantFilter(uint32_t(UserVariantFilterBit::FOG));
+
+    filamat::Package result = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(result.isValid());
+
+    Material* material = Material::Builder()
+                                 .package(result.getData(), result.getSize())
+                                 .build(*engine);
+    ASSERT_NE(material, nullptr);
+
+    FEngine const& fengine = downcast(*engine);
+    MaterialDefinition const& definition = downcast(material)->getDefinition();
+    DynamicSpecConstKey dynamicLighting;
+    dynamicLighting.setDynamicLighting(true);
+    DynamicSpecConstKey fog;
+    fog.setFog(true);
+    DynamicSpecConstKey dynamicLightingAndFog = dynamicLighting;
+    dynamicLightingAndFog.setFog(true);
+
+    for (Variant::type_t const key : { Variant::type_t(0), Variant::SRE,
+                 Variant::type_t(Variant::S2D | Variant::SRE) }) {
+        EXPECT_TRUE(definition.isValidProgram(Variant(key), DynamicSpecConstKey{},
+                fengine.getShaderModel(), fengine.isStereoSupported())) << +key;
+        EXPECT_TRUE(definition.isValidProgram(Variant(key), dynamicLighting,
+                fengine.getShaderModel(), fengine.isStereoSupported())) << +key;
+        // The material has no fog code; the fog specialization would be a duplicate program.
+        EXPECT_FALSE(definition.isValidProgram(Variant(key), fog,
+                fengine.getShaderModel(), fengine.isStereoSupported())) << +key;
+        EXPECT_FALSE(definition.isValidProgram(Variant(key), dynamicLightingAndFog,
+                fengine.getShaderModel(), fengine.isStereoSupported())) << +key;
+    }
 
     engine->destroy(material);
     Engine::destroy(engine);

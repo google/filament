@@ -293,7 +293,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
         // explicit synchronization model make the ThreadWorker hard to implement without
         // significant infrastructure refactor (transfer queues, thread-safe VMA, etc), which will
         // be done in Phase 2.
-        mJobWorker = AmortizationWorker::create(mJobQueue);
+        mJobWorker = AmortizationWorker::create(mJobQueue, driverConfig.asynchronousFrameBudget);
     }
 
     mContext.getDebugUtils().init(mPlatform->getInstance(), mPlatform->getDevice(),
@@ -458,11 +458,6 @@ void VulkanDriver::tick(int) {
     // Destroy the resources of the readbacks that completed on the readPixels thread.
     mReadPixels.gc();
 
-    if (getJobWorker()) {
-        // This number is randomly/heuristically chosen. Consider making the number optional.
-        getJobWorker()->process(5);
-    }
-
     // If the Renderer is skipping a lot of frames, it's possible for
     // commands to accumulate, since we only flush command buffers if
     // driver.flush() is called, or in endFrame(). This ensures that
@@ -535,6 +530,17 @@ void VulkanDriver::endFrame(uint32_t frameId) {
     FVK_PROFILE_MARKER(PROFILE_NAME_ENDFRAME);
     endCommandRecording();
     collectGarbage();
+
+    // Queued async jobs run after the frame's own work.
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
+}
+
+void VulkanDriver::skipFrame(int) {
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
 }
 
 void VulkanDriver::updateDescriptorSetBuffer(
