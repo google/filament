@@ -101,7 +101,7 @@ public:
      *                 backend.vulkan.enable_pipeline_cache_persistence, its blob cache also
      *                 persists the driver's VkPipelineCache across runs: read here, so the blob
      *                 functions must be set before the Engine is created; written on the
-     *                 compiler thread once gc() sees pipeline compilation go quiet, and by
+     *                 compiler thread once gc() sees pipeline creation go quiet, and by
      *                 terminate().
      * @param context Information about the current instance of Vulkan, such as supported extensions,
      *                and enabled features.
@@ -267,7 +267,7 @@ private:
 
     void bindDynamicState(VkCommandBuffer cmdbuffer, uint16_t dirtyMask);
 
-    // Writes mPipelineCache to the platform's blob cache if its data changed. Returns false if the
+    // Writes mPipelineCache to the platform's blob cache if its size changed. Returns false if the
     // data could not be read. Runs on the compiler thread, or in terminate() once it has stopped.
     bool savePipelineCache() noexcept;
 
@@ -280,20 +280,19 @@ private:
 
     VulkanPlatform& mPlatform;
 
-    // Pipelines compiled so far, by the driver thread or the prewarm thread: those the creation
-    // feedback reports as missing mPipelineCache, or all of them without the feedback extension.
-    std::atomic<uint32_t> mPipelinesCompiled = 0;
+    // Pipelines created so far, by the driver thread or the prewarm thread.
+    std::atomic<uint32_t> mPipelinesCreated = 0;
 
-    // gc()'s last reading of mPipelinesCompiled, the flush event at which it last moved (or a save
-    // was queued), and whether pipelines have been compiled since the cache was last saved. The
+    // gc()'s last reading of mPipelinesCreated, the flush event at which it last moved (or a save
+    // was queued), and whether pipelines have been created since the cache was last saved. The
     // compiler thread sets the last one back when a save fails.
     uint32_t mPipelinesSeen = 0;
     Timestamp mPipelinesSeenAt = 0;
     std::atomic<bool> mPipelinesUnsaved = false;
 
-    // Hash of the data last read or written, so a save that would store the same bytes again
-    // writes nothing. Only savePipelineCache() uses it after construction.
-    uint32_t mSavedCacheHash = 0;
+    // Size of the data last read or written, so a save that finds the cache the same size writes
+    // nothing. Only savePipelineCache() uses it after construction.
+    size_t mSavedCacheSize = 0;
 
     // Static state used for VkPipeline creation and cache lookup.
     // Dynamically handled fields are set to 0 during binding.
