@@ -25,6 +25,7 @@
 
 #include "details/Camera.h"
 #include "details/Engine.h"
+#include "details/InstanceBuffer.h"
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
 #include "details/Renderer.h"
@@ -43,6 +44,7 @@
 #include <filament/FrameHistoryStream.h>
 #include <filament/Frustum.h>
 #include <filament/IndexBuffer.h>
+#include <filament/InstanceBuffer.h>
 #include <filament/SkinningBuffer.h>
 #include <filament/SwapChain.h>
 #include <filament/Texture.h>
@@ -569,6 +571,57 @@ TEST(FilamentTest, TransformManagerCallback) {
     tcm.unregisterChangeCallback(&tcm);
     tcm.destroy(e);
     em.destroy(e);
+    Engine::destroy((Engine**)&engine);
+}
+
+TEST(FilamentTest, InstanceBufferUidAndRevision) {
+    FEngine* engine = downcast(Engine::create(Engine::Backend::NOOP));
+
+    std::array<mat4f, 2> const transforms = {
+            mat4f::translation(float3{ 1.0f, 2.0f, 3.0f }),
+            mat4f::translation(float3{ 4.0f, 5.0f, 6.0f }) };
+
+    FInstanceBuffer* const a = downcast(InstanceBuffer::Builder(transforms.size())
+            .localTransforms(transforms.data())
+            .build(*engine));
+    FInstanceBuffer* const b = downcast(InstanceBuffer::Builder(transforms.size())
+            .build(*engine));
+
+    // 1. uids are unique and never 0
+    EXPECT_NE(a->getUid(), 0u);
+    EXPECT_NE(b->getUid(), 0u);
+    EXPECT_NE(a->getUid(), b->getUid());
+
+    // 2. the uid of a destroyed InstanceBuffer is never reused
+    uint64_t const uidB = b->getUid();
+    engine->destroy(b);
+    FInstanceBuffer* const c = downcast(InstanceBuffer::Builder(1).build(*engine));
+    EXPECT_NE(c->getUid(), 0u);
+    EXPECT_NE(c->getUid(), a->getUid());
+    EXPECT_NE(c->getUid(), uidB);
+
+    // 3. the revision only changes when the local transforms actually change
+    uint64_t const revision = a->getRevision();
+    a->setLocalTransforms(transforms.data(), transforms.size(), 0); // same transforms
+    EXPECT_EQ(a->getRevision(), revision);
+    a->setLocalTransforms(transforms.data(), 0, 0);                 // no transforms
+    EXPECT_EQ(a->getRevision(), revision);
+
+    mat4f const moved = mat4f::translation(float3{ 7.0f, 8.0f, 9.0f });
+    a->setLocalTransforms(&moved, 1, 1);
+    EXPECT_EQ(a->getRevision(), revision + 1);
+    EXPECT_EQ(a->getLocalTransform(0), transforms[0]);
+    EXPECT_EQ(a->getLocalTransform(1), moved);
+    EXPECT_EQ(a->getLocalTransforms()[1], moved);
+
+    a->setLocalTransforms(&moved, 1, 1);                            // same again
+    EXPECT_EQ(a->getRevision(), revision + 1);
+
+    // 4. the revision is per InstanceBuffer
+    EXPECT_EQ(c->getRevision(), 0u);
+
+    engine->destroy(a);
+    engine->destroy(c);
     Engine::destroy((Engine**)&engine);
 }
 

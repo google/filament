@@ -557,8 +557,22 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
     bool const filterTranslucentObjects =
             bool(extraFlags & CommandTypeFlags::FILTER_TRANSLUCENT_OBJECTS);
 
+    bool const isMotionVectorsPass =
+            bool(extraFlags & CommandTypeFlags::MOTION_VECTORS);
+
+    bool const motionVectorsReuseDepth =
+            bool(extraFlags & CommandTypeFlags::MOTION_VECTORS_REUSE_DEPTH);
+
+    bool const motionVectorsChannelDepthClear =
+            bool(extraFlags & CommandTypeFlags::MOTION_VECTORS_CHANNEL_DEPTH_CLEAR);
+
     bool const hasShadowing =
             renderFlags & HAS_SHADOWING;
+
+    // The motion vectors pass must match the color pass's coverage, so it always uses the regular
+    // culling mode.
+    bool const useShadowCulling =
+            hasShadowing && !isMotionVectorsPass;
 
     bool const viewInverseFrontFaces =
             renderFlags & HAS_INVERSE_FRONT_FACES;
@@ -568,6 +582,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
 
     bool const hasDepthClamp =
             renderFlags & HAS_DEPTH_CLAMP;
+
+    bool const isPickingVariant = Variant::isPickingVariant(variant);
+    bool const depthColorWrite = isPickingVariant || Variant::isDepthMomentsVariant(variant);
 
     float const cameraPositionDotCameraForward = dot(cameraPosition, cameraForward);
 
@@ -588,8 +605,8 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
         cmd.info.dynamicSpecConstKey = DynamicSpecConstKey::filterProgramSpecKey(
                 variant, specKey, MaterialDomain::SURFACE, true);
         cmd.info.rasterState = {};
-        cmd.info.rasterState.colorWrite = Variant::isPickingVariant(variant) || Variant::isDepthMomentsVariant(variant);
-        cmd.info.rasterState.depthWrite = true;
+        cmd.info.rasterState.colorWrite = depthColorWrite;
+        cmd.info.rasterState.depthWrite = !motionVectorsReuseDepth;
         cmd.info.rasterState.depthFunc = RasterState::DepthFunc::GE;
         cmd.info.rasterState.alphaToCoverage = false;
         cmd.info.rasterState.depthClamp = hasDepthClamp;
@@ -598,6 +615,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
     for (uint32_t i = range.first; i < range.last; ++i) {
         // Check if this renderable passes the visibilityMask.
         if (UTILS_UNLIKELY(!(soaVisibilityMask[i] & visibilityMask))) {
+            continue;
+        }
+        if (motionVectorsReuseDepth && UTILS_LIKELY(!soaVisibility[i].motionMoved)) {
             continue;
         }
 
@@ -682,6 +702,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
 
         const bool shadowCaster = soaVisibility[i].castShadows & hasShadowing;
         const bool writeDepthForShadowCasters = depthContainsShadowCasters & shadowCaster;
+        const bool renderableMoved = isMotionVectorsPass & soaVisibility[i].motionMoved;
 
         Slice<const FRenderPrimitive> const primitives = soaPrimitives[i];
         /*
@@ -803,31 +824,58 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
                 curr->key |= select(mi->getCullingMode() == CullingMode::FRONT_AND_BACK);
 
             } else if constexpr (isDepthPass) {
-                const CullingMode cullingMode = hasShadowing ? mi->getShadowCullingMode() : mi->getCullingMode();
+                const CullingMode cullingMode = useShadowCulling ?
+                        mi->getShadowCullingMode() : mi->getCullingMode();
                 const RasterState rs = ma->getRasterState();
                 const TransparencyMode mode = mi->getTransparencyMode();
                 const BlendingMode blendingMode = ma->getBlendingMode();
                 const bool translucent = (blendingMode != BlendingMode::OPAQUE
                         && blendingMode != BlendingMode::MASKED);
-                const bool isPickingVariant = Variant::isPickingVariant(variant);
-
-                cmd.key |= mi->getSortingKey(); // already all set-up for direct or'ing
-                cmd.info.rasterState.culling = cullingMode;
 
                 // FIXME: should writeDepthForShadowCasters take precedence over mi->getDepthWrite()?
-                cmd.info.rasterState.depthWrite =
+                bool const depthWrite =
                         (1 // only keep bit 0
                                 & (mi->isDepthWriteEnabled() |
                                           (mode == TransparencyMode::TWO_PASSES_ONE_SIDE) |
                                           isPickingVariant) &
                                 !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage)) |
                         writeDepthForShadowCasters;
+                cmd.info.rasterState.depthWrite = depthWrite & !motionVectorsReuseDepth;
+
+                // In the motion vectors pass, primitives of renderables that moved write their
+                // motion vectors with the MOT variant; when the pass has its own depth buffer, all
+                // others only write depth, as occluders (including materials without a MOT
+                // variant). When a channel clears the depth buffer mid-pass, static renderables
+                // with a MOT variant also write their (zero) motion vectors to overwrite any
+                // previous channel's motion vectors. Note that the dynamic specialization constants
+                // key, computed above for the DEPTH variant, is the same with MOT.
+                bool const mot = (renderableMoved | motionVectorsChannelDepthClear) &
+                        ma->hasMotionVectorsVariant();
+                cmd.info.materialVariant.setMotionVectors(mot);
+                cmd.info.rasterState.colorWrite = depthColorWrite | mot;
+                cmd.info.rasterState.culling = cullingMode;
+
+                cmd.key &= ~MATERIAL_MASK;
+                cmd.key |= mi->getSortingKey(); // already all set-up for direct or'ing
+                cmd.key |= makeField(cmd.info.materialVariant.key,
+                        MATERIAL_VARIANT_KEY_MASK, MATERIAL_VARIANT_KEY_SHIFT);
 
                 *curr = cmd;
-                // cancel command if both front and back faces are culled
-                curr->key |= select(cullingMode == CullingMode::FRONT_AND_BACK);
-                // cancel command if asked to filter translucent objects
-                curr->key |= select(filterTranslucentObjects & translucent);
+                // cancel command if both front and back faces are culled, if asked to filter
+                // translucent objects, or (in the motion vectors pass) if it doesn't write depth in
+                // the color pass or (when reusing depth) has no motion vectors variant
+                curr->key |= select((cullingMode == CullingMode::FRONT_AND_BACK) |
+                        (filterTranslucentObjects & translucent) |
+                        (isMotionVectorsPass & !depthWrite) |
+                        (motionVectorsReuseDepth & !mot));
+                // in the motion vectors pass, when static occluders are drawn, draw moving
+                // primitives after all static ones, across channels unless a channel clears the
+                // depth buffer (see the key layout). This is applied to curr->key because cmd.key
+                // accumulates bits across the primitives of a renderable.
+                curr->key |= select(!motionVectorsReuseDepth & renderableMoved &
+                        ma->hasMotionVectorsVariant(),
+                        (motionVectorsChannelDepthClear ? CommandKey(0) : CHANNEL_MASK) |
+                        BLENDING_MASK);
             }
 
             ++curr;
@@ -1019,7 +1067,12 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
                     assert_invariant(index < mCustomCommands.size());
                     pCustomCommands[index]();
                     currentPipeline = {};
-                    currentPrimitiveHandle ={};
+                    currentPrimitiveHandle = {};
+                    currentScissor = {};
+                    if (UTILS_UNLIKELY(hasScissorOverride)) {
+                        currentScissor = mScissor;
+                        driver.scissor(mScissor);
+                    }
                     continue;
                 }
 
