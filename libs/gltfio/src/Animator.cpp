@@ -88,16 +88,36 @@ struct AnimatorImpl {
     void updateBoneMatrices(FFilamentInstance* instance);
 };
 
+// Data pointer for a sampler accessor, or null when its blob is missing.
+// A cache-miss buffer leaves buffer->data null (a meshopt view leaves
+// buffer_view->data null when undecodable); the builders below dereference
+// the data unconditionally, so callers must check this first.
+static const uint8_t* samplerData(const cgltf_accessor* accessor) {
+    if (!accessor || !accessor->buffer_view) {
+        return nullptr;
+    }
+    const cgltf_buffer_view* view = accessor->buffer_view;
+    if (view->has_meshopt_compression) {
+        return (const uint8_t*) view->data;
+    }
+    if (!view->buffer) {
+        return nullptr;
+    }
+    return (const uint8_t*) view->buffer->data;
+}
+
 static void createSampler(const cgltf_animation_sampler& src, Sampler& dst) {
     // Copy the time values into a red-black tree.
     const cgltf_accessor* timelineAccessor = src.input;
-    const uint8_t* timelineBlob = nullptr;
+    const uint8_t* timelineBlob = samplerData(timelineAccessor);
     const float* timelineFloats = nullptr;
+    if (!timelineBlob || !samplerData(src.output)) {
+        GLTFIO_WARN("Animation sampler references missing buffer data; animation disabled.");
+        return;
+    }
     if (timelineAccessor->buffer_view->has_meshopt_compression) {
-        timelineBlob = (const uint8_t*) timelineAccessor->buffer_view->data;
         timelineFloats = (const float*) (timelineBlob + timelineAccessor->offset);
     } else {
-        timelineBlob = (const uint8_t*) timelineAccessor->buffer_view->buffer->data;
         timelineFloats = (const float*) (timelineBlob + timelineAccessor->offset +
                 timelineAccessor->buffer_view->offset);
     }
@@ -170,6 +190,16 @@ static void setTransformType(const cgltf_animation_channel& src, Channel& dst) {
 static bool accessorFitsView(const cgltf_accessor* accessor) {
     const cgltf_buffer_view* view = accessor->buffer_view;
     if (!view || accessor->is_sparse || accessor->count == 0) {
+        return false;
+    }
+    // A cache-miss buffer (or an undecodable meshopt view) leaves the data
+    // pointer null while the declared sizes still pass the checks below, and
+    // the sampler builders dereference the data unconditionally.
+    if (view->has_meshopt_compression) {
+        if (!view->data) {
+            return false;
+        }
+    } else if (!view->buffer || !view->buffer->data) {
         return false;
     }
     const cgltf_size elementSize = cgltf_calc_size(accessor->type, accessor->component_type);
