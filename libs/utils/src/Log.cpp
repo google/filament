@@ -76,14 +76,14 @@ ostream& LogStream::flush() noexcept {
         case LOG_DEBUG:
         case LOG_WARNING:
         case LOG_INFO:
-            _emscripten_out(str);
+            emscripten_out(str);
             break;
         case LOG_ERROR:
-            _emscripten_err(str);
+            emscripten_err(str);
             break;
         case LOG_VERBOSE:
 #ifndef NFIL_DEBUG
-            _emscripten_out(str);
+            emscripten_out(str);
 #endif
             break;
     }
