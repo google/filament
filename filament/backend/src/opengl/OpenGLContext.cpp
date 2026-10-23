@@ -473,6 +473,11 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
             // it doesn't kick the GPU earlier, so don't issue these calls as they seem to slow
             // things down.
             bugs->disable_glFlush = true;
+            // Seen on PowerVR Rogue GE9215 (driver 23.2): a partial write into a buffer that an
+            // in-flight frame still reads waits for that frame's GPU work, mapped unsynchronized
+            // or not, and the batched material-instance UBO is written that way every frame.
+            // Per-instance UBOs are rewritten whole with glBufferData, which doesn't wait.
+            bugs->disable_material_instance_uniform_batching = true;
             // On PowerVR (Rogue GE8320) using gl_InstanceID too early in the shader doesn't work.
             bugs->powervr_shader_workarounds = true;
             // On PowerVR (Rogue GE8320) destroying a fbo after glBlitFramebuffer is effectively
