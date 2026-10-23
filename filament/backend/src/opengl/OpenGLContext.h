@@ -307,6 +307,11 @@ public:
         // GE9215, where writing the batched UBO waits for in-flight frames that still read it.
         bool disable_material_instance_uniform_batching;
 
+        // On PowerVR Rogue GE9215, every glMapBufferRange/glUnmapBuffer pair costs more than a
+        // glBufferSubData of the same bytes, whatever the size. Write the unsynchronized and
+        // memory-mapped buffer updates with glBufferSubData instead.
+        bool disable_map_buffer_for_updates;
+
     } bugs = {};
 
     struct Procs {
@@ -406,6 +411,9 @@ private:
                     ""},
             {   bugs.disable_material_instance_uniform_batching,
                     "disable_material_instance_uniform_batching",
+                    "" },
+            {   bugs.disable_map_buffer_for_updates,
+                    "disable_map_buffer_for_updates",
                     "" }
     }};
 

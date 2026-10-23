@@ -12,3 +12,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - materials: the new `diffuseTransmission` and `diffuseTransmissionColor` material properties can be
   used in the lit (standard) shading model to create diffusely transmitting (translucent) surfaces
 - variant: completely remove FOG variant bit
+- gl: on PowerVR Rogue GE9215, material-instance uniforms are no longer batched and buffer updates
+  no longer go through `glMapBufferRange`
