@@ -80,7 +80,7 @@ struct BlobStore {
     }
 };
 
-// Flush events without a newly compiled pipeline before the backend writes its cache (gc() runs once per
+// Flush events without a new pipeline before the backend writes its cache (gc() runs once per
 // frame), with some margin.
 constexpr int SETTLE_FRAMES = 130;
 
@@ -187,7 +187,7 @@ TEST_F(VulkanPipelineCacheTest, LoadsWhatItSaved) {
     loaded->value = bytes;
     createAndTerminateDriver(loaded);
 
-    // The new driver read the cache and compiled nothing, so its terminate() wrote nothing.
+    // The new driver read the cache and created no pipeline, so its terminate() wrote nothing.
     std::lock_guard const guard(loaded->lock);
     EXPECT_GE(loaded->retrieves, 1);
     EXPECT_EQ(loaded->inserts, 0);
