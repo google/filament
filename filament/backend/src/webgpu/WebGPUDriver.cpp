@@ -135,7 +135,7 @@ WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform,
         // need its own thread-safe access to mDevice/mQueueManager, which isn't established here,
         // and this backend also targets Emscripten, where a raw std::thread isn't available by
         // default. Real backend-thread-offloaded uploads can follow later.
-        mJobWorker = AmortizationWorker::create(mJobQueue);
+        mJobWorker = AmortizationWorker::create(mJobQueue, driverConfig.asynchronousFrameBudget);
     }
 }
 
@@ -180,10 +180,6 @@ void WebGPUDriver::terminate() {
 }
 
 void WebGPUDriver::tick(int) {
-    if (getJobWorker()) {
-        // This number is randomly/heuristically chosen, matching Vulkan's amortization worker.
-        getJobWorker()->process(5);
-    }
 #if !defined(__EMSCRIPTEN__)
     mDevice.Tick();
     mAdapter.GetInstance().ProcessEvents();
@@ -226,6 +222,17 @@ void WebGPUDriver::endFrame(const uint32_t /* frameId */) {
 
     // Garbage collection (if necessary)
     mStagePool.gc();
+
+    // Queued async jobs run after the frame's own work.
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
+}
+
+void WebGPUDriver::skipFrame(int) {
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
 }
 
 // If a command encoder is in flight then the encoder is finished and submitted to the GPU queue.

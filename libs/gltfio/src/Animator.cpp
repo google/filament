@@ -566,8 +566,9 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
                 const float* const splineVerts = samplerValues + numMorphTargets;
                 const float* const outTangents = samplerValues + numMorphTargets * 2;
 
-                weights.resize(numMorphTargets);
-                for (int comp = 0; comp < numMorphTargets; ++comp) {
+                const int count = std::min(numMorphTargets, (int) MAX_MORPH_TARGETS);
+                weights.resize(count);
+                for (int comp = 0; comp < count; ++comp) {
                     float vert0 = splineVerts[comp + prevIndex * valuesPerKeyframe];
                     float tang0 = outTangents[comp + prevIndex * valuesPerKeyframe];
                     float tang1 = inTangents[comp + nextIndex * valuesPerKeyframe];
@@ -575,8 +576,9 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
                     weights[comp] = cubicSpline(vert0, tang0, vert1, tang1, t);
                 }
             } else {
-                weights.resize(valuesPerKeyframe);
-                for (int comp = 0; comp < valuesPerKeyframe; ++comp) {
+                const int count = std::min(valuesPerKeyframe, (int) MAX_MORPH_TARGETS);
+                weights.resize(count);
+                for (int comp = 0; comp < count; ++comp) {
                     float previous = samplerValues[comp + prevIndex * valuesPerKeyframe];
                     float current = samplerValues[comp + nextIndex * valuesPerKeyframe];
                     weights[comp] = (1 - t) * previous + t * current;
