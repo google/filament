@@ -1488,6 +1488,70 @@ TEST_F(glTFIOTest, DummyBufferSizeOverflowIsRejected) {
     AssetLoader::destroy(&assetLoader);
 }
 
+// Issue #10624: a glTF with a deeply nested node hierarchy (e.g. 7,000 nodes) used to exhaust the
+// call stack in FAssetLoader::traversePrimitives() and FAssetLoader::traverseEntities(). Verify
+// that both the standard and extended loaders traverse the hierarchy iteratively without crashing
+// and preserve the full parent-child transform chain.
+TEST_F(glTFIOTest, DeeplyNestedNodesDoNotOverflowStack) {
+    constexpr size_t kDepth = 5000;
+    std::vector<uint8_t> const glb = makeDeeplyNestedNodesGlb(kDepth);
+
+    auto checkLoad = [&](AssetConfigurationExtended* ext) {
+        AssetLoader* assetLoader = AssetLoader::create({
+                .engine = mEngine,
+                .materials = mMaterialProvider,
+                .names = mNameManager,
+                .ext = ext,
+        });
+        ASSERT_NE(assetLoader, nullptr);
+
+        FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+        EXPECT_EQ(asset->getEntityCount(), kDepth);
+        ASSERT_EQ(asset->getRenderableEntityCount(), 1u);
+
+        Aabb const bounds = asset->getBoundingBox();
+        EXPECT_FLOAT_EQ(bounds.min.x, float(kDepth));
+        EXPECT_FLOAT_EQ(bounds.min.y, 0.0f);
+        EXPECT_FLOAT_EQ(bounds.min.z, 0.0f);
+        EXPECT_FLOAT_EQ(bounds.max.x, float(kDepth + 1));
+        EXPECT_FLOAT_EQ(bounds.max.y, 1.0f);
+        EXPECT_FLOAT_EQ(bounds.max.z, 0.0f);
+
+        Entity const leaf = asset->getRenderableEntities()[0];
+        auto const& tm = mEngine->getTransformManager();
+        math::mat4f const worldTransform = tm.getWorldTransform(tm.getInstance(leaf));
+        EXPECT_FLOAT_EQ(worldTransform[3].x, float(kDepth));
+        EXPECT_FLOAT_EQ(worldTransform[3].y, 0.0f);
+        EXPECT_FLOAT_EQ(worldTransform[3].z, 0.0f);
+
+        // Walk from the leaf up to the instance root to verify all kDepth links in the chain.
+        FilamentInstance* const instance = asset->getInstance();
+        ASSERT_NE(instance, nullptr);
+        Entity current = leaf;
+        size_t steps = 0;
+        while (!current.isNull() && current != instance->getRoot()) {
+            current = tm.getParent(tm.getInstance(current));
+            ++steps;
+        }
+        EXPECT_EQ(current, instance->getRoot());
+        EXPECT_EQ(steps, kDepth);
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    };
+
+    checkLoad(nullptr);
+    if (AssetConfigurationExtended::isSupported()) {
+        AssetConfigurationExtended ext{ .gltfPath = "." };
+        checkLoad(&ext);
+    }
+}
+
 #if GLTFIO_DRACO_SUPPORTED
 // Issue #10495: in DracoCache.cpp convertAttribs(), `const uint32_t size = target->stride * n;`
 // overflowed 32-bit unsigned arithmetic when `stride * n > UINT32_MAX` (e.g. stride = 12 for VEC3
