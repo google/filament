@@ -477,6 +477,10 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
             // uniforms as a range of one batched UBO costs more backend-thread CPU than one UBO
             // per instance, the shape already used on ANGLE's Metal backend.
             bugs->disable_material_instance_uniform_batching = true;
+            // Seen on PowerVR Rogue GE9215 (driver 23.2): mapping a buffer the GPU still
+            // references for a write allocates and copies a new backing store, and the unmap
+            // copies again, so a per-frame UBO update costs several times a glBufferSubData.
+            bugs->disable_map_buffer_for_updates = true;
             // On PowerVR (Rogue GE8320) using gl_InstanceID too early in the shader doesn't work.
             bugs->powervr_shader_workarounds = true;
             // On PowerVR (Rogue GE8320) destroying a fbo after glBlitFramebuffer is effectively

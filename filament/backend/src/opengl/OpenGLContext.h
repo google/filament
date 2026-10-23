@@ -307,6 +307,13 @@ public:
         // where one UBO per instance measured less backend-thread CPU than the range binds.
         bool disable_material_instance_uniform_batching;
 
+        // On PowerVR Rogue, glMapBufferRange(GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT) on a
+        // buffer the GPU still references allocates and copies a new backing store, and
+        // glUnmapBuffer copies again, so a per-frame UBO update through the mapping costs several
+        // times what glBufferSubData does. Write the unsynchronized and memory-mapped buffer
+        // updates with glBufferSubData instead.
+        bool disable_map_buffer_for_updates;
+
     } bugs = {};
 
     struct Procs {
@@ -406,6 +413,9 @@ private:
                     ""},
             {   bugs.disable_material_instance_uniform_batching,
                     "disable_material_instance_uniform_batching",
+                    "" },
+            {   bugs.disable_map_buffer_for_updates,
+                    "disable_map_buffer_for_updates",
                     "" }
     }};
 
