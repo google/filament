@@ -212,6 +212,13 @@ void FFilamentInstance::recomputeBoundingBoxes() {
             }
         }
 
+        // A skinned primitive without JOINTS_0 or WEIGHTS_0 cannot be
+        // skinned: the loop below would dereference the empty joints or
+        // weights vector. cgltf_validate does not require the pair, so
+        // skip the primitive gracefully with an empty box.
+        if (joints.empty() || weights.empty()) {
+            return Aabb();
+        }
         Aabb aabb;
         TransformManager::Instance transformable = tm.getInstance(prim.node);
         const mat4f inverseGlobalTransform = inverse(tm.getWorldTransform(transformable));
@@ -453,4 +460,3 @@ Aabb FilamentInstance::getBoundingBox() const noexcept {
 }
 
 } // namespace filament::gltfio
-TEMP
