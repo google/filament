@@ -1340,6 +1340,68 @@ TEST_F(glTFIOTest, RejectsMeshoptSparseAccessorWithOutOfBoundsIndex) {
     AssetLoader::destroy(&assetLoader);
 }
 
+TEST_F(glTFIOTest, GetEntitiesByPrefix) {
+    static char const* const kGltf = R"({
+        "asset": { "version": "2.0" },
+        "scene": 0,
+        "scenes": [{ "nodes": [0, 1, 2, 3, 4] }],
+        "nodes": [
+            { "name": "prop_chair" },
+            { "name": "prop_chair" },
+            { "name": "prop_table" },
+            { "name": "prop_lamp" },
+            { "name": "light_main" }
+        ]
+    })";
+
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    FilamentAsset* const asset = assetLoader->createAsset(
+            reinterpret_cast<uint8_t const*>(kGltf), uint32_t(std::strlen(kGltf)));
+    ASSERT_NE(asset, nullptr);
+
+    // When entities is nullptr, returns the total count of matching entities regardless of maxCount.
+    EXPECT_EQ(asset->getEntitiesByPrefix("prop_", nullptr, 0), 4u);
+    EXPECT_EQ(asset->getEntitiesByPrefix("prop_", nullptr, 1), 4u);
+    EXPECT_EQ(asset->getEntitiesByPrefix("prop_chair", nullptr, 0), 2u);
+    EXPECT_EQ(asset->getEntitiesByPrefix("light_", nullptr, 0), 1u);
+    EXPECT_EQ(asset->getEntitiesByPrefix("nonexistent_", nullptr, 0), 0u);
+    EXPECT_EQ(asset->getEntitiesByPrefix("", nullptr, 0), 5u);
+
+    // When entities is non-null and maxCount is 0, writes nothing and returns 0.
+    Entity sentinel{};
+    EXPECT_EQ(asset->getEntitiesByPrefix("prop_", &sentinel, 0), 0u);
+    EXPECT_TRUE(sentinel.isNull());
+
+    // Retrieve all matching entities using the two-pass count-then-populate pattern.
+    size_t const propCount = asset->getEntitiesByPrefix("prop_", nullptr, 0);
+    ASSERT_EQ(propCount, 4u);
+    std::vector<Entity> props(propCount);
+    EXPECT_EQ(asset->getEntitiesByPrefix("prop_", props.data(), props.size()), 4u);
+    for (Entity const e : props) {
+        EXPECT_FALSE(e.isNull());
+        char const* const name = asset->getName(e);
+        ASSERT_NE(name, nullptr);
+        EXPECT_EQ(std::string_view(name).substr(0, 5), "prop_");
+    }
+
+    // Retrieve a capped subset when maxCount is smaller than the number of matching entities.
+    Entity partial[2]{};
+    EXPECT_EQ(asset->getEntitiesByPrefix("prop_", partial, 2), 2u);
+    EXPECT_FALSE(partial[0].isNull());
+    EXPECT_FALSE(partial[1].isNull());
+    EXPECT_NE(partial[0], partial[1]);
+
+    // Non-matching prefix with non-null output buffer returns 0.
+    Entity none[2]{};
+    EXPECT_EQ(asset->getEntitiesByPrefix("nonexistent_", none, 2), 0u);
+    EXPECT_TRUE(none[0].isNull());
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
