@@ -88,7 +88,9 @@ inline uint8_t toCode(Attribute attr, UvMap const& uvmap, bool hasUv0) {
             return POSITIONS_ID;
         // This logic is replicating slot assignment in AssetLoaderExtended.cpp
         case cgltf_attribute_type_texcoord: {
-            assert_invariant(attr.index < UvMapSize);
+            if (attr.index < 0 || attr.index >= UvMapSize) {
+                return INVALID_ID;
+            }
             UvSet uvset = uvmap[attr.index];
             switch (uvset) {
                 case gltfio::UV0:
