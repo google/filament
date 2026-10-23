@@ -465,7 +465,9 @@ class ClassContext:
         native_sigs: Dict[str, Set[Any]] = collections.defaultdict(set)
         for method in self.methods:
             m_name = method["name"]
-            if m_name in cached_getters or m_name in self.retained_references:
+            if m_name in cached_getters:
+                continue
+            if m_name in self.retained_references and not self.retained_references[m_name]["is_lazy"]:
                 continue
             if buffer_getter and m_name == buffer_getter:
                 continue
@@ -912,12 +914,27 @@ class ClassContext:
         These references are retained across the lifetime of the handle and served directly
         from Java instance fields rather than bridging through JNI.
 
+        Methods annotated with [[clang::annotate("filament:apigen:retained_lazy")]]
+        (UTILS_APIGEN_RETAINED_LAZY) are retained the same way, but the receiver may be wrapped
+        without the reference. Their descriptor has `is_lazy` set: the native pointer is resolved
+        at construction (from the supplied reference, or through the JNI getter, which is still
+        emitted) and kept in `native_field_name`; the getter wraps it lazily.
+
         Returns:
             Dictionary mapping method name (getter) to its retained reference descriptor.
         """
         retained: Dict[str, Dict[str, Any]] = collections.OrderedDict()
         for m in self.methods:
-            if not any(a in ("filament:apigen:retained", "apigen:retained") for a in m.get("attributes", [])):
+            attrs = m.get("attributes", [])
+            is_lazy = any(
+                a in ("filament:apigen:retained_lazy", "apigen:retained_lazy")
+                for a in attrs
+            )
+            is_retained = is_lazy or any(
+                a in ("filament:apigen:retained", "apigen:retained")
+                for a in attrs
+            )
+            if not is_retained:
                 continue
 
             name = m["name"]
@@ -940,6 +957,9 @@ class ClassContext:
                 "param_name": prop[0].lower() + prop[1:],
                 "java_type": java_type,
                 "is_nullable": is_nullable,
+                "is_lazy": is_lazy,
+                "native_field_name": f"mNative{prop}",
+                "native_getter": "n" + name[0].upper() + name[1:],
                 "nullability_annotation": "@Nullable" if is_nullable else "@NonNull",
                 "return_type": ret_t,
                 "method_ir": m,

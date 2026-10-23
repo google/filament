@@ -1308,7 +1308,20 @@ static cgltf_result cgltf_load_buffer_file(const cgltf_options* options, cgltf_s
 	cgltf_decode_uri(path + strlen(path) - strlen(uri));
 
 	void* file_data = NULL;
+	cgltf_size requested_size = size;
 	cgltf_result result = file_read(&options->memory, &options->file, path, &size, &file_data);
+
+	if (result == cgltf_result_success && file_data != NULL && size < requested_size)
+	{
+		/*
+		 * A present-but-short read must not succeed silently: the caller keeps
+		 * the declared buffer size, so every later access trusts a length the
+		 * reader never delivered. Fail the load instead. (A NULL data pointer
+		 * with success means "not downloaded yet" for the cache reader, and is
+		 * intentionally left alone.)
+		 */
+		result = cgltf_result_io_error;
+	}
 
 	memory_free(options->memory.user_data, path);
 
@@ -1547,7 +1560,7 @@ cgltf_result cgltf_load_buffers(const cgltf_options* options, cgltf_data* data, 
 
 static cgltf_size cgltf_calc_index_bound(cgltf_buffer_view* buffer_view, cgltf_size offset, cgltf_component_type component_type, cgltf_size count)
 {
-	char* data = (char*)buffer_view->buffer->data + offset + buffer_view->offset;
+	char* data = (char*)cgltf_buffer_view_data(buffer_view) + offset;
 	cgltf_size bound = 0;
 
 	switch (component_type)
@@ -1633,7 +1646,7 @@ cgltf_result cgltf_validate(cgltf_data* data)
 							sparse->indices_component_type != cgltf_component_type_r_16u &&
 							sparse->indices_component_type != cgltf_component_type_r_32u, cgltf_result_invalid_gltf);
 
-			if (sparse->indices_buffer_view->buffer->data)
+			if (cgltf_buffer_view_data(sparse->indices_buffer_view))
 			{
 				cgltf_size index_bound = cgltf_calc_index_bound(sparse->indices_buffer_view, sparse->indices_byte_offset, sparse->indices_component_type, sparse->count);
 
@@ -1720,7 +1733,7 @@ cgltf_result cgltf_validate(cgltf_data* data)
 			CGLTF_ASSERT_IF(indices && indices->type != cgltf_type_scalar, cgltf_result_invalid_gltf);
 			CGLTF_ASSERT_IF(indices && indices->stride != cgltf_component_size(indices->component_type), cgltf_result_invalid_gltf);
 
-			if (indices && indices->buffer_view && indices->buffer_view->buffer->data)
+			if (indices && indices->buffer_view && cgltf_buffer_view_data(indices->buffer_view))
 			{
 				cgltf_size index_bound = cgltf_calc_index_bound(indices->buffer_view, indices->offset, indices->component_type, indices->count);
 
