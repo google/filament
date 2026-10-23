@@ -26,6 +26,7 @@
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/FilamentInstance.h>
+#include <gltfio/MaterialProvider.h>
 #include <gltfio/math.h>
 #include <gltfio/ResourceLoader.h>
 #include <gltfio/TextureProvider.h>
@@ -1211,6 +1212,253 @@ TEST_F(glTFIOTest, InvalidDracoDecodeLoadsWithZeroFilledBuffers) {
     }
 }
 
+// Issue #10202: constrainMaterial() must reject UV indices >= UvMapSize without indexing out of
+// bounds on the stack-allocated UvMap, and disable the corresponding texture flags.
+TEST(glTFIOMaterialProvider, ConstrainMaterialRejectsOutOfBoundsUvIndices) {
+    for (uint8_t const badUv : { uint8_t(UvMapSize), uint8_t(100), uint8_t(127) }) {
+        MaterialKey key {
+            .hasBaseColorTexture = true,
+            .hasNormalTexture = true,
+            .hasOcclusionTexture = true,
+            .hasEmissiveTexture = true,
+            .hasMetallicRoughnessTexture = true,
+            .metallicRoughnessUV = badUv,
+            .baseColorUV = badUv,
+            .hasClearCoatTexture = true,
+            .clearCoatUV = badUv,
+            .hasClearCoatRoughnessTexture = true,
+            .clearCoatRoughnessUV = badUv,
+            .hasClearCoatNormalTexture = true,
+            .clearCoatNormalUV = badUv,
+            .hasClearCoat = true,
+            .hasTransmission = true,
+            .emissiveUV = badUv,
+            .aoUV = badUv,
+            .normalUV = badUv,
+            .hasTransmissionTexture = true,
+            .transmissionUV = badUv,
+            .hasSheenColorTexture = true,
+            .sheenColorUV = badUv,
+            .hasSheenRoughnessTexture = true,
+            .sheenRoughnessUV = badUv,
+            .hasVolumeThicknessTexture = true,
+            .volumeThicknessUV = badUv,
+            .hasSheen = true,
+            .hasVolume = true,
+            .hasSpecular = true,
+            .hasSpecularTexture = true,
+            .hasSpecularColorTexture = true,
+            .specularTextureUV = badUv,
+            .specularColorTextureUV = badUv,
+        };
+
+        UvMap uvmap {};
+        constrainMaterial(&key, &uvmap);
+
+        EXPECT_FALSE(key.hasBaseColorTexture);
+        EXPECT_FALSE(key.hasMetallicRoughnessTexture);
+        EXPECT_FALSE(key.hasNormalTexture);
+        EXPECT_FALSE(key.hasOcclusionTexture);
+        EXPECT_FALSE(key.hasEmissiveTexture);
+        EXPECT_FALSE(key.hasTransmissionTexture);
+        EXPECT_FALSE(key.hasClearCoatTexture);
+        EXPECT_FALSE(key.hasClearCoatRoughnessTexture);
+        EXPECT_FALSE(key.hasClearCoatNormalTexture);
+        EXPECT_FALSE(key.hasSheenColorTexture);
+        EXPECT_FALSE(key.hasSheenRoughnessTexture);
+        EXPECT_FALSE(key.hasVolumeThicknessTexture);
+        EXPECT_FALSE(key.hasSpecularTexture);
+        EXPECT_FALSE(key.hasSpecularColorTexture);
+        EXPECT_EQ(getNumUvSets(uvmap), 0u);
+    }
+
+    // A high-priority texture with an out-of-bounds UV index is dropped without consuming one of
+    // the two available Filament UV slots, so lower-priority textures with valid UV indices still
+    // receive UV0 and UV1.
+    MaterialKey mixedKey {
+        .hasBaseColorTexture = true,
+        .hasNormalTexture = true,
+        .hasEmissiveTexture = true,
+        .baseColorUV = 100,
+        .emissiveUV = 5,
+        .normalUV = 3,
+    };
+    UvMap mixedUvMap {};
+    constrainMaterial(&mixedKey, &mixedUvMap);
+
+    EXPECT_FALSE(mixedKey.hasBaseColorTexture);
+    EXPECT_TRUE(mixedKey.hasNormalTexture);
+    EXPECT_TRUE(mixedKey.hasEmissiveTexture);
+    EXPECT_EQ(mixedUvMap[3], gltfio::UV0);
+    EXPECT_EQ(mixedUvMap[5], gltfio::UV1);
+    EXPECT_EQ(getNumUvSets(mixedUvMap), 2u);
+}
+
+// Issue #10202: processShaderString() must not index uvmap or uvstrings out of bounds when
+// MaterialKey carries UV indices >= UvMapSize (including on disabled texture slots) or when UvMap
+// holds an out-of-range enum value.
+TEST(glTFIOMaterialProvider, ProcessShaderStringHandlesOutOfBoundsUvIndices) {
+    MaterialKey key {
+        .metallicRoughnessUV = 100,
+        .baseColorUV = 200,
+        .clearCoatUV = 8,
+        .clearCoatRoughnessUV = 9,
+        .clearCoatNormalUV = 10,
+        .emissiveUV = 250,
+        .aoUV = 255,
+        .normalUV = 8,
+        .transmissionUV = 127,
+        .sheenColorUV = 50,
+        .sheenRoughnessUV = 60,
+        .volumeThicknessUV = 70,
+        .specularTextureUV = 80,
+        .specularColorTextureUV = 90,
+    };
+
+    UvMap uvmap {};
+    uvmap[0] = gltfio::UV0;
+    uvmap[1] = gltfio::UV1;
+
+    std::string shader =
+            "${normal}|${color}|${metallic}|${ao}|${emissive}|${transmission}|"
+            "${clearCoat}|${clearCoatRoughness}|${clearCoatNormal}|"
+            "${sheenColor}|${sheenRoughness}|${volumeThickness}|${specular}|${specularColor}";
+    processShaderString(&shader, uvmap, key);
+
+    EXPECT_EQ(shader,
+            "vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|"
+            "vec2(0)|vec2(0)|vec2(0)|"
+            "vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)");
+
+    // Also verify valid UV0 / UV1 replacements alongside an invalid UvSet value in uvmap.
+    MaterialKey validKey {
+        .metallicRoughnessUV = 1,
+        .baseColorUV = 0,
+        .normalUV = 2,
+    };
+    uvmap[2] = static_cast<UvSet>(99);
+    std::string shader2 = "${color}|${metallic}|${normal}";
+    processShaderString(&shader2, uvmap, validKey);
+    EXPECT_EQ(shader2, "getUV0()|getUV1()|vec2(0)");
+}
+
+// Issue #10202: end-to-end test loading glTF assets whose material textures specify out-of-bounds
+// texCoord indices (>= UvMapSize, negative, or multiples of 128/256 that would otherwise wrap into
+// [0, UvMapSize - 1] on narrowing conversion) across both UbershaderProvider and JitShaderProvider,
+// as well as both the standard and extended asset loaders.
+TEST_F(glTFIOTest, OutOfBoundsMaterialTexCoordDoesNotOverflow) {
+    MaterialProvider* jitProvider = createJitShaderProvider(mEngine);
+    ASSERT_NE(jitProvider, nullptr);
+
+    auto makeGltfWithTexCoord = [](int texCoord) -> std::string {
+        std::string const tc = std::to_string(texCoord);
+        return std::string(
+                R"({"asset":{"version":"2.0"},)"
+                R"("extensionsUsed":["KHR_materials_clearcoat","KHR_materials_transmission",)"
+                R"("KHR_materials_sheen","KHR_materials_volume","KHR_materials_specular"],)"
+                R"("scene":0,"scenes":[{"nodes":[0]}],"nodes":[{"mesh":0}],)"
+                R"("meshes":[{"primitives":[)"
+                R"({"attributes":{"POSITION":0,"TEXCOORD_0":1,"TEXCOORD_8":1},"material":0},)"
+                R"({"attributes":{"POSITION":0,"TEXCOORD_0":1,"TEXCOORD_8":1},"material":1},)"
+                R"({"attributes":{"POSITION":0,"TEXCOORD_0":1,"TEXCOORD_8":1},"material":2},)"
+                R"({"attributes":{"POSITION":0,"TEXCOORD_0":1,"TEXCOORD_8":1},"material":3}]}],)"
+                R"("accessors":[)"
+                R"({"bufferView":0,"componentType":5126,"count":3,"type":"VEC3","min":[0,0,0],"max":[1,1,0]},)"
+                R"({"bufferView":1,"componentType":5126,"count":3,"type":"VEC2"}],)"
+                R"("bufferViews":[)"
+                R"({"buffer":0,"byteOffset":0,"byteLength":36},)"
+                R"({"buffer":0,"byteOffset":36,"byteLength":24}],)"
+                R"("buffers":[{"byteLength":60,"uri":"data:application/octet-stream;base64,)"
+                R"(AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAIA/"}],)"
+                R"("images":[{"uri":"data:image/png;base64,)"
+                R"(iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg=="}],)"
+                R"("textures":[{"source":0}],)"
+                R"("materials":[)"
+                R"({)"
+                R"("pbrMetallicRoughness":{)"
+                R"("baseColorTexture":{"index":0,"texCoord":0},)"
+                R"("metallicRoughnessTexture":{"index":0,"texCoord":)") + tc + R"(}},)"
+                R"("normalTexture":{"index":0,"texCoord":)" + tc + R"(},)"
+                R"("occlusionTexture":{"index":0,"texCoord":)" + tc + R"(},)"
+                R"("emissiveTexture":{"index":0,"texCoord":)" + tc + R"(},)"
+                R"("extensions":{)"
+                R"("KHR_materials_clearcoat":{)"
+                R"("clearcoatFactor":1.0,)"
+                R"("clearcoatTexture":{"index":0,"texCoord":)" + tc + R"(},)"
+                R"("clearcoatRoughnessTexture":{"index":0,"texCoord":)" + tc + R"(},)"
+                R"("clearcoatNormalTexture":{"index":0,"texCoord":)" + tc + R"(}}}},)"
+                R"({"extensions":{)"
+                R"("KHR_materials_sheen":{)"
+                R"("sheenColorFactor":[1,1,1],)"
+                R"("sheenColorTexture":{"index":0,"texCoord":)" + tc + R"(},)"
+                R"("sheenRoughnessTexture":{"index":0,"texCoord":)" + tc + R"(}}}},)"
+                R"({"extensions":{)"
+                R"("KHR_materials_transmission":{)"
+                R"("transmissionFactor":0.5,)"
+                R"("transmissionTexture":{"index":0,"texCoord":)" + tc + R"(}},)"
+                R"("KHR_materials_volume":{)"
+                R"("thicknessFactor":1.0,)"
+                R"("thicknessTexture":{"index":0,"texCoord":)" + tc + R"(}}}},)"
+                R"({"extensions":{)"
+                R"("KHR_materials_specular":{)"
+                R"("specularFactor":1.0,)"
+                R"("specularTexture":{"index":0,"texCoord":)" + tc + R"(},)"
+                R"("specularColorTexture":{"index":0,"texCoord":)" + tc + R"(}}}})"
+                R"(]})";
+    };
+
+    for (MaterialProvider* provider : { mMaterialProvider, jitProvider }) {
+        for (int const badTexCoord : { -1, 8, 100, 128, 256 }) {
+            std::string const gltf = makeGltfWithTexCoord(badTexCoord);
+
+            auto checkWithConfig = [&](AssetConfigurationExtended* ext) {
+                AssetLoader* loader = AssetLoader::create({
+                        .engine = mEngine,
+                        .materials = provider,
+                        .names = mNameManager,
+                        .ext = ext,
+                });
+                ASSERT_NE(loader, nullptr);
+
+                FilamentAsset* asset = loader->createAsset(
+                        reinterpret_cast<uint8_t const*>(gltf.data()), uint32_t(gltf.size()));
+                ASSERT_NE(asset, nullptr);
+
+                ResourceLoader resourceLoader({ mEngine, ".", false });
+                EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+                if (provider == jitProvider) {
+                    // Material 0 has baseColorTexture at texCoord 0 and other textures at
+                    // badTexCoord. Negative texCoord clamps to 0 (requiring only UV0), whereas
+                    // texCoord >= UvMapSize (including 128 and 256) clamps to UvMapSize - 1
+                    // rather than wrapping to 0 (requiring both UV0 and UV1).
+                    FilamentInstance* instance = asset->getInstance();
+                    ASSERT_NE(instance, nullptr);
+                    ASSERT_EQ(instance->getMaterialInstanceCount(), 4u);
+                    Material const* mat0 = instance->getMaterialInstances()[0]->getMaterial();
+                    ASSERT_NE(mat0, nullptr);
+                    AttributeBitset const required0 = mat0->getRequiredAttributes();
+                    EXPECT_TRUE(required0.test(VertexAttribute::UV0)) << "texCoord=" << badTexCoord;
+                    EXPECT_EQ(required0.test(VertexAttribute::UV1), badTexCoord >= UvMapSize)
+                            << "texCoord=" << badTexCoord;
+                }
+
+                loader->destroyAsset(asset);
+                AssetLoader::destroy(&loader);
+            };
+
+            checkWithConfig(nullptr);
+            if (AssetConfigurationExtended::isSupported()) {
+                AssetConfigurationExtended ext{ .gltfPath = "." };
+                checkWithConfig(&ext);
+            }
+        }
+    }
+
+    jitProvider->destroyMaterials();
+    delete jitProvider;
+}
+
 // Issue #10495: in FAssetLoader::createPrimitive(), `sizeof(ubyte4) * vertexCount` was computed in
 // uint32_t when sizing the dummy vertex buffer. A vertexCount >= 1,073,741,824 wrapped around
 // (e.g. 1,073,741,825 * 4 == 0x100000004 -> 4 bytes), allocating an undersized dummy buffer. Also,
@@ -1320,6 +1568,87 @@ TEST_F(glTFIOTest, DracoFaceIndicesSizeOverflowIsRejected) {
     }
 }
 #endif
+
+// Issue #10201: when a sparse accessor's indices bufferView uses EXT_meshopt_compression, the
+// decoded sparse indices must be validated against the accessor's element count so that an
+// out-of-bounds sparse index is rejected rather than writing past the unpacked float buffer.
+TEST_F(glTFIOTest, RejectsMeshoptSparseAccessorWithOutOfBoundsIndex) {
+    std::vector<uint8_t> const glb = makeMeshoptSparseAccessorOobGlb();
+
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    EXPECT_FALSE(resourceLoader.loadResources(asset));
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+TEST_F(glTFIOTest, GetEntitiesByPrefix) {
+    static char const* const kGltf = R"({
+        "asset": { "version": "2.0" },
+        "scene": 0,
+        "scenes": [{ "nodes": [0, 1, 2, 3, 4] }],
+        "nodes": [
+            { "name": "prop_chair" },
+            { "name": "prop_chair" },
+            { "name": "prop_table" },
+            { "name": "prop_lamp" },
+            { "name": "light_main" }
+        ]
+    })";
+
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    FilamentAsset* const asset = assetLoader->createAsset(
+            reinterpret_cast<uint8_t const*>(kGltf), uint32_t(std::strlen(kGltf)));
+    ASSERT_NE(asset, nullptr);
+
+    // When entities is nullptr, returns the total count of matching entities regardless of maxCount.
+    EXPECT_EQ(asset->getEntitiesByPrefix("prop_", nullptr, 0), 4u);
+    EXPECT_EQ(asset->getEntitiesByPrefix("prop_", nullptr, 1), 4u);
+    EXPECT_EQ(asset->getEntitiesByPrefix("prop_chair", nullptr, 0), 2u);
+    EXPECT_EQ(asset->getEntitiesByPrefix("light_", nullptr, 0), 1u);
+    EXPECT_EQ(asset->getEntitiesByPrefix("nonexistent_", nullptr, 0), 0u);
+    EXPECT_EQ(asset->getEntitiesByPrefix("", nullptr, 0), 5u);
+
+    // When entities is non-null and maxCount is 0, writes nothing and returns 0.
+    Entity sentinel{};
+    EXPECT_EQ(asset->getEntitiesByPrefix("prop_", &sentinel, 0), 0u);
+    EXPECT_TRUE(sentinel.isNull());
+
+    // Retrieve all matching entities using the two-pass count-then-populate pattern.
+    size_t const propCount = asset->getEntitiesByPrefix("prop_", nullptr, 0);
+    ASSERT_EQ(propCount, 4u);
+    std::vector<Entity> props(propCount);
+    EXPECT_EQ(asset->getEntitiesByPrefix("prop_", props.data(), props.size()), 4u);
+    for (Entity const e : props) {
+        EXPECT_FALSE(e.isNull());
+        char const* const name = asset->getName(e);
+        ASSERT_NE(name, nullptr);
+        EXPECT_EQ(std::string_view(name).substr(0, 5), "prop_");
+    }
+
+    // Retrieve a capped subset when maxCount is smaller than the number of matching entities.
+    Entity partial[2]{};
+    EXPECT_EQ(asset->getEntitiesByPrefix("prop_", partial, 2), 2u);
+    EXPECT_FALSE(partial[0].isNull());
+    EXPECT_FALSE(partial[1].isNull());
+    EXPECT_NE(partial[0], partial[1]);
+
+    // Non-matching prefix with non-null output buffer returns 0.
+    Entity none[2]{};
+    EXPECT_EQ(asset->getEntitiesByPrefix("nonexistent_", none, 2), 0u);
+    EXPECT_TRUE(none[0].isNull());
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);

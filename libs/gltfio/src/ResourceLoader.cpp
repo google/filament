@@ -782,6 +782,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
 
         // Decompress Draco meshes early on, which allows us to exploit subsequent processing such
         // as tangent generation.
+        bool needsValidation = false;
         DracoCache* dracoCache = &asset->mSourceAsset->dracoCache;
         auto& primitives = std::get<FFilamentAsset::ResourceInfo>(asset->mResourceInfo).mPrimitives;
         // Go through every primitive and check if it has a Draco mesh.
@@ -789,9 +790,16 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
             if (!prim->has_draco_mesh_compression) {
                 continue;
             }
-            utility::decodeDracoMeshes(gltf, prim, dracoCache);
+            needsValidation |= utility::decodeDracoMeshes(gltf, prim, dracoCache);
         }
-        if (!utility::decodeMeshoptCompression((cgltf_data*) gltf)) {
+        bool meshoptDecoded = false;
+        if (!utility::decodeMeshoptCompression((cgltf_data*) gltf, &meshoptDecoded)) {
+            return false;
+        }
+        needsValidation |= meshoptDecoded;
+
+        if (needsValidation && cgltf_validate((cgltf_data*) gltf) != cgltf_result_success) {
+            LOG(ERROR) << "Failed cgltf validation after decoding Draco/Meshopt meshes.";
             return false;
         }
 

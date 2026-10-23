@@ -427,8 +427,9 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
             continue;
         }
         if (atype == cgltf_attribute_type_texcoord) {
-            if (index >= UvMapSize) {
-                utils::slog.e << "Too many texture coordinate sets in " << name << utils::io::endl;
+            if (index < 0 || index >= UvMapSize) {
+                utils::slog.e << "Too many or invalid texture coordinate sets in " <<
+                        name << utils::io::endl;
                 continue;
             }
             UvSet uvset = out->uvmap[index];
@@ -555,11 +556,13 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
     // The color data should be a sequence of normalized UBYTE4, so dummy UVs are USHORT2 to make
     // the sizes match.
     if (mMaterials.needsDummyData(VertexAttribute::UV0) && !hasUv0) {
+        hasUv0 = true;
         attributesMap[{cgltf_attribute_type_texcoord, GENERATED_0}] = {VertexAttribute::UV0,
                 slotCount++};
     }
 
     if (mMaterials.needsDummyData(VertexAttribute::UV1) && !hasUv1) {
+        hasUv1 = true;
         attributesMap[{cgltf_attribute_type_texcoord, GENERATED_1}] = {VertexAttribute::UV1,
                 slotCount++};
     }
@@ -581,17 +584,24 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
                 slotCount++};
     }
 
+    bool needsValidation = false;
     if (!mCgltfBuffersLoaded) {
         mCgltfBuffersLoaded = utility::loadCgltfBuffers(gltf, mGltfPath.c_str(), mUriDataCache);
         if (!mCgltfBuffersLoaded) {
             return false;
         }
-        if (!utility::decodeMeshoptCompression(gltf)) {
+        if (!utility::decodeMeshoptCompression(gltf, &needsValidation)) {
             return false;
         }
     }
 
-    utility::decodeDracoMeshes(gltf, prim, input->dracoCache);
+    needsValidation |= utility::decodeDracoMeshes(gltf, prim, input->dracoCache);
+
+    if (needsValidation && cgltf_validate(gltf) != cgltf_result_success) {
+        utils::slog.e << "Failed cgltf validation after decoding Draco/Meshopt meshes."
+                      << utils::io::endl;
+        return false;
+    }
 
     auto slots = computeGeometries(prim, jobType, attributesMap, morphTargets, out->uvmap, name,
             mEngine);
