@@ -828,23 +828,25 @@ void VulkanPipelineCache::gc() noexcept {
     // being used by the GPU, and is therefore safe to destroy or reclaim.
     ++mCurrentTime;
 
-    uint32_t const created = mPipelinesCreated.load(std::memory_order_relaxed);
-    if (created != mPipelinesSeen) {
-        mPipelinesSeen = created;
-        mPipelinesSeenAt = mCurrentTime;
-        mPipelinesUnsaved.store(true, std::memory_order_relaxed);
-    }
-    if (mPipelinesUnsaved.load(std::memory_order_relaxed) &&
-            mCurrentTime - mPipelinesSeenAt > PIPELINE_CACHE_SAVE_QUIET) {
-        // A failed save is retried after another quiet period, not on every flush.
-        mPipelinesUnsaved.store(false, std::memory_order_relaxed);
-        mPipelinesSeenAt = mCurrentTime;
-        mCompilerThreadPool.queue(CompilerPriorityQueue::LOW, std::make_shared<ProgramToken>(),
-                [this]() {
-                    if (!savePipelineCache()) {
-                        mPipelinesUnsaved.store(true, std::memory_order_relaxed);
-                    }
-                });
+    if (mContext.isPipelineCachePersistenceEnabled()) {
+        uint32_t const created = mPipelinesCreated.load(std::memory_order_relaxed);
+        if (created != mPipelinesSeen) {
+            mPipelinesSeen = created;
+            mPipelinesSeenAt = mCurrentTime;
+            mPipelinesUnsaved.store(true, std::memory_order_relaxed);
+        }
+        if (mPipelinesUnsaved.load(std::memory_order_relaxed) &&
+                mCurrentTime - mPipelinesSeenAt > PIPELINE_CACHE_SAVE_QUIET) {
+            // A failed save is retried after another quiet period, not on every flush.
+            mPipelinesUnsaved.store(false, std::memory_order_relaxed);
+            mPipelinesSeenAt = mCurrentTime;
+            mCompilerThreadPool.queue(CompilerPriorityQueue::LOW, std::make_shared<ProgramToken>(),
+                    [this]() {
+                        if (!savePipelineCache()) {
+                            mPipelinesUnsaved.store(true, std::memory_order_relaxed);
+                        }
+                    });
+        }
     }
 
     // The Vulkan spec says: "When a command buffer begins recording, all state in that command
