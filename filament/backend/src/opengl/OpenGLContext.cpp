@@ -488,6 +488,11 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
                 // doesn't wait. Not set on the Rogue GE8300 (driver 1.9), where glBufferData
                 // waits as well.
                 bugs->disable_material_instance_uniform_batching = true;
+                // Seen on PowerVR Rogue GE9215 (driver 23.2): every glMapBufferRange/glUnmapBuffer
+                // pair costs more than a glBufferSubData of the same bytes, whatever the size. Not
+                // set on the Rogue GE8300 (driver 1.9), where an unsynchronized map doesn't wait
+                // and costs less.
+                bugs->disable_map_buffer_for_updates = true;
             }
             // On PowerVR (Rogue GE8320) using gl_InstanceID too early in the shader doesn't work.
             bugs->powervr_shader_workarounds = true;
