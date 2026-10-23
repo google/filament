@@ -1193,6 +1193,10 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
             (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
                                                        .vulkan.enable_pipeline_dynamic_state
                                              : false);
+    context.mPipelineCachePersistenceEnabled =
+            (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
+                                                       .vulkan.enable_pipeline_cache_persistence
+                                             : false);
 
     context.mPipelineCacheEvictionEnabled =
             (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend.vulkan
