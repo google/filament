@@ -303,7 +303,8 @@ public:
 
         // WebGL with ANGLE's Metal backend can incur significant overhead when binding many ranges
         // from a large UBO, especially when uniform layout conversion is required. In practice,
-        // batching is slower than using individual UBOs on this path.
+        // batching is slower than using individual UBOs on this path. Also set on PowerVR Rogue
+        // GE9215, where writing the batched UBO waits for in-flight frames that still read it.
         bool disable_material_instance_uniform_batching;
 
     } bugs = {};
