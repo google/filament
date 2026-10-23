@@ -5,12 +5,24 @@ runs:
   using: "composite"
   steps:
     - uses: ./.github/actions/dep-versions
-    - name: Cache Mesa and deps
+    # Only the install prefix is cached. It holds everything the consumers read: the shared
+    # libraries, the OSMesa headers that build.sh -X compiles against, and the Vulkan ICD manifest.
+    # The git checkout and the meson build directory are not needed once Mesa is installed, and
+    # caching them made the entry several times larger than the install itself.
+    #
+    # The key hashes get-mesa.sh because a change to its patch or meson options changes the
+    # binaries. It also names the LLVM and clang versions that Mesa is built and linked against.
+    - name: Cache Mesa
+      id: cache-mesa
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
       with:
-        path: mesa
-        key: ${{ runner.os }}-${{ runner.arch }}-mesa-deps-${{ env.GITHUB_MESA_VERSION }}
+        path: mesa/out
+        key: ${{ runner.os }}-${{ runner.arch }}-mesa-out-${{ env.GITHUB_MESA_VERSION }}-llvm${{ env.GITHUB_LLVM_VERSION }}-clang${{ env.GITHUB_CLANG_VERSION }}-${{ hashFiles('build/common/get-mesa.sh') }}
+    # On a cache hit the script still runs, but only to install the system dependencies: the cached
+    # libraries load them at runtime, and later steps rely on the toolchain it selects.
     - name: Get Mesa
+      env:
+        MESA_SKIP_BUILD: ${{ steps.cache-mesa.outputs.cache-hit }}
       run: |
         bash build/common/get-mesa.sh
       shell: bash
