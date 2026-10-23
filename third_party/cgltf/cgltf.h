@@ -1308,7 +1308,20 @@ static cgltf_result cgltf_load_buffer_file(const cgltf_options* options, cgltf_s
 	cgltf_decode_uri(path + strlen(path) - strlen(uri));
 
 	void* file_data = NULL;
+	cgltf_size requested_size = size;
 	cgltf_result result = file_read(&options->memory, &options->file, path, &size, &file_data);
+
+	if (result == cgltf_result_success && file_data != NULL && size < requested_size)
+	{
+		/*
+		 * A present-but-short read must not succeed silently: the caller keeps
+		 * the declared buffer size, so every later access trusts a length the
+		 * reader never delivered. Fail the load instead. (A NULL data pointer
+		 * with success means "not downloaded yet" for the cache reader, and is
+		 * intentionally left alone.)
+		 */
+		result = cgltf_result_io_error;
+	}
 
 	memory_free(options->memory.user_data, path);
 
