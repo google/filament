@@ -55,6 +55,8 @@
 
 #include <array>
 #include <iostream>
+#include <string>
+#include <vector>
 
 #include <stdlib.h>
 #include <string.h>
@@ -474,6 +476,23 @@ TextureSampler::MagFilter aiMagFilterToFilament(unsigned int aiMagFilter) {
     }
 }
 
+// Returns true if the given texture path, once appended to the model's directory, stays within
+// that directory. Texture paths come from the model file and cannot be trusted, so absolute paths
+// and paths that climb above the model directory (e.g. "../../etc/foo.png") are rejected.
+static bool isContainedRelativePath(const char* textureFile) {
+    // Path lexically canonicalizes its input, so "a/../b" becomes "b" and "a/../../b" becomes
+    // "../b". After canonicalization, any remaining ".." segment can only be a leading one.
+    Path const path(textureFile);
+    if (path.isEmpty()) {
+        return true;
+    }
+    if (path.isAbsolute()) {
+        return false;
+    }
+    std::vector<std::string> const segments = path.split();
+    return segments.empty() || segments.front() != "..";
+}
+
 // TODO: Change this to a member function (requires some alteration of cmakelsts.txt)
 void setTextureFromPath(const aiScene* scene, Engine* engine,
         std::vector<filament::Texture*> textures, const aiString& textureFile,
@@ -510,9 +529,12 @@ void setTextureFromPath(const aiScene* scene, Engine* engine,
 
     if (embeddedId != -1) {
         loadEmbeddedTexture(engine, scene->mTextures[embeddedId], &textureMap, isSRGB, hasAlpha);
-    } else {
+    } else if (isContainedRelativePath(textureFile.C_Str())) {
         loadTexture(engine, textureDirectory + textureFile.C_Str(), &textureMap, isSRGB, hasAlpha,
                 loader);
+    } else {
+        std::cout << "The texture " << textureFile.C_Str()
+                  << " is outside the model directory and will not be loaded" << std::endl;
     }
 
     textures.push_back(textureMap);
