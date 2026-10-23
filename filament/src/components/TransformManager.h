@@ -33,7 +33,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <utility>
-#include <variant>
 #include <vector>
 
 namespace utils {
@@ -95,7 +94,7 @@ public:
         return mAccurateTranslations;
     }
 
-    void create(utils::Entity entity);
+    void create(utils::Entity entity, Instance parent = {});
 
     void create(utils::Entity entity, Instance parent, const math::mat4f& localTransform);
 
@@ -223,7 +222,8 @@ public:
 private:
     struct Sim;
 
-    void createImpl(utils::Entity entity, Instance parent, std::variant<math::mat4, math::mat4f> localTransform);
+    UTILS_ALWAYS_INLINE
+    Instance createImpl(utils::Entity entity, Instance parent);
 
     void validateNode(Instance i) noexcept;
     void removeNode(Instance i) noexcept;

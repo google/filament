@@ -641,10 +641,11 @@ void FRenderableManager::create(
         destroy(zombie, driver);
     }
 
-    if (UTILS_UNLIKELY(manager.hasComponent(entity))) {
+    auto [ci, added] = manager.tryAddComponent(entity);
+    if (UTILS_UNLIKELY(!added && ci)) {
         destroy(entity, driver);
+        ci = manager.addComponent(entity);
     }
-    Instance const ci = manager.addComponent(entity);
     assert_invariant(ci);
 
     if (ci) {
@@ -805,14 +806,10 @@ void FRenderableManager::create(
 
 // this destroys a single component from an entity
 void FRenderableManager::destroyComponents(Entity const* entities, size_t const count, DriverApi& driver) noexcept {
-    auto& manager = mManager;
-    for (size_t k = 0; k < count; ++k) {
-        Entity const e = entities[k];
-        if (Instance const ci = getInstance(e)) {
-            destroyComponent(ci, driver);
-            manager.removeComponent(e);
-        }
-    }
+    mManager.removeComponentsWithCallback(entities, count,
+            [this, &driver](Instance const ci) noexcept {
+                destroyComponent(ci, driver);
+            });
 }
 
 void FRenderableManager::clientDestroy(Entity const e) noexcept {

@@ -1379,4 +1379,100 @@ BENCHMARK_F(TransformManagerFixture, defragmentSmartCursorDeepReparent)(benchmar
     scene.teardown(em, tcm);
 }
 
+BENCHMARK_F(TransformManagerFixture, createDestroyDefault)(benchmark::State& state) {
+    constexpr size_t COUNT = 1024;
+    std::vector<Entity> entities(COUNT);
+    em->create(COUNT, entities.data());
+
+    // Pre-warm capacities
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->create(entities[i]);
+    }
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->destroy(entities[i]);
+    }
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            for (size_t i = 0; i < COUNT; ++i) {
+                tcm->create(entities[i]);
+            }
+            for (size_t i = 0; i < COUNT; ++i) {
+                tcm->destroy(entities[i]);
+            }
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * COUNT);
+    }
+
+    em->destroy(COUNT, entities.data());
+}
+
+BENCHMARK_F(TransformManagerFixture, createDestroyMat4f)(benchmark::State& state) {
+    constexpr size_t COUNT = 1024;
+    std::vector<Entity> entities(COUNT);
+    em->create(COUNT, entities.data());
+    mat4f const local = mat4f::translation(float3{ 1.0f, 2.0f, 3.0f });
+
+    // Pre-warm capacities
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->create(entities[i], {}, local);
+    }
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->destroy(entities[i]);
+    }
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            for (size_t i = 0; i < COUNT; ++i) {
+                tcm->create(entities[i], {}, local);
+            }
+            for (size_t i = 0; i < COUNT; ++i) {
+                tcm->destroy(entities[i]);
+            }
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * COUNT);
+    }
+
+    em->destroy(COUNT, entities.data());
+}
+
+BENCHMARK_F(TransformManagerFixture, createDestroyMat4Accurate)(benchmark::State& state) {
+    tcm->setAccurateTranslationsEnabled(true);
+    constexpr size_t COUNT = 1024;
+    std::vector<Entity> entities(COUNT);
+    em->create(COUNT, entities.data());
+    mat4 const local = mat4::translation(double3{ 100000.125, -200000.25, 300000.5 });
+
+    // Pre-warm capacities
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->create(entities[i], {}, local);
+    }
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->destroy(entities[i]);
+    }
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            for (size_t i = 0; i < COUNT; ++i) {
+                tcm->create(entities[i], {}, local);
+            }
+            for (size_t i = 0; i < COUNT; ++i) {
+                tcm->destroy(entities[i]);
+            }
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * COUNT);
+    }
+
+    em->destroy(COUNT, entities.data());
+}
+
 
