@@ -55,7 +55,10 @@
 #include <backend/BufferDescriptor.h>
 #include <backend/DriverEnums.h>
 
+#include <utils/Entity.h>
+#include <utils/EntityManager.h>
 #include <utils/NameComponentManager.h>
+#include <utils/PagedArenaBitset.h>
 #include <utils/Slice.h>
 
 #include <math/half.h>
@@ -3496,6 +3499,86 @@ TEST_F(SceneCacheTest, DestroyedEntityIsEvictedFromAllViews) {
     prepare(scene, x, T);
     EXPECT_FALSE(hasRenderableRow(y, r2));
     EXPECT_FALSE(hasRenderableRow(x, r2));
+}
+
+// Removing an entity from the Scene and destroying another one in the same frame, with their
+// ids on two different PagedArenaBitset pages, used to evict two unrelated renderables that were
+// still in the Scene. PagedArenaBitset::merge() trusted the stale directory entries that
+// FScene's per-frame clear() of its pending-destroyed sets leaves behind.
+TEST_F(SceneCacheTest, RemoveAndDestroyOnDifferentPagesKeepsOtherEntities) {
+    constexpr uint32_t PAGE = 1u << PagedArenaBitset::FILAMENT_PAGE_SHIFT;
+    EntityManager& em = engine->getEntityManager();
+
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+
+    // Entity ids depend on what earlier tests did, so create enough entities to span a few
+    // pages, then look for ids that sit at the same offset on two consecutive pages.
+    std::vector<Entity> pool(3 * PAGE);
+    em.create(pool.size(), pool.data());
+    mEntities.insert(mEntities.end(), pool.begin(), pool.end());
+    std::vector<uint32_t> ids;
+    ids.reserve(pool.size());
+    for (Entity const e : pool) {
+        ids.push_back(e.getId());
+    }
+    std::sort(ids.begin(), ids.end());
+    std::vector<uint32_t> lows; // ids whose counterpart one page up also exists
+    for (uint32_t const id : ids) {
+        if (std::binary_search(ids.begin(), ids.end(), id + PAGE)) {
+            if (!lows.empty() && lows.front() / PAGE != id / PAGE) {
+                if (lows.size() >= 4) {
+                    break;
+                }
+                lows.clear();
+            }
+            lows.push_back(id);
+        }
+    }
+    ASSERT_GE(lows.size(), 4u);
+
+    // X and D are on page p; E = X + PAGE, Y = D + PAGE, U1 and U2 are on page p + 1.
+    Entity const X = Entity::import(int32_t(lows[0]));
+    Entity const D = Entity::import(int32_t(lows[1]));
+    Entity const E = Entity::import(int32_t(lows[0] + PAGE));
+    Entity const Y = Entity::import(int32_t(lows[1] + PAGE));
+    Entity const U1 = Entity::import(int32_t(lows[2] + PAGE));
+    Entity const U2 = Entity::import(int32_t(lows[3] + PAGE));
+
+    for (Entity const e : { X, E, D, Y }) {
+        engine->getTransformManager().create(e);
+        RenderableManager::Builder(1)
+                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
+                .build(*engine, e);
+        scene->addEntity(e);
+    }
+    prepare(scene, view, T);
+    ASSERT_TRUE(hasRenderableRow(view, X));
+    ASSERT_TRUE(hasRenderableRow(view, Y));
+
+    // Destroy an unrelated entity on page p + 1 in each of two frames. FScene double-buffers
+    // its pending-destroyed set, so both buffers end up cleared with a stale entry for p + 1.
+    em.destroy(U1);
+    prepare(scene, view, T);
+    em.destroy(U2);
+    prepare(scene, view, T);
+
+    // In one frame, remove E (page p + 1) from the Scene and destroy D (page p).
+    scene->remove(E);
+    engine->destroy(D);
+    em.destroy(D);
+    prepare(scene, view, T);
+
+    EXPECT_FALSE(hasRenderableRow(view, E));
+    EXPECT_FALSE(hasRenderableRow(view, D));
+    EXPECT_TRUE(hasRenderableRow(view, X));
+    EXPECT_TRUE(hasRenderableRow(view, Y));
+
+    // The cache must stay correct on later frames too.
+    prepare(scene, view, T);
+    EXPECT_TRUE(hasRenderableRow(view, X));
+    EXPECT_TRUE(hasRenderableRow(view, Y));
 }
 
 TEST_F(SceneCacheTest, SceneSwitchDropsOldSceneRows) {
