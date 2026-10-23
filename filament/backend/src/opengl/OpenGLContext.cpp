@@ -473,6 +473,10 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
             // it doesn't kick the GPU earlier, so don't issue these calls as they seem to slow
             // things down.
             bugs->disable_glFlush = true;
+            // Seen on PowerVR Rogue GE9215 (driver 23.2): binding each draw's material-instance
+            // uniforms as a range of one batched UBO costs more backend-thread CPU than one UBO
+            // per instance, the shape already used on ANGLE's Metal backend.
+            bugs->disable_material_instance_uniform_batching = true;
             // On PowerVR (Rogue GE8320) using gl_InstanceID too early in the shader doesn't work.
             bugs->powervr_shader_workarounds = true;
             // On PowerVR (Rogue GE8320) destroying a fbo after glBlitFramebuffer is effectively
