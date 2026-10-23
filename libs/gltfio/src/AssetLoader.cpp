@@ -57,6 +57,7 @@
 #include <tsl/robin_map.h>
 
 #include <codecvt>
+#include <limits>
 #include <locale>
 #include <memory>
 
@@ -702,9 +703,12 @@ void FAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
 
         if (!primitiveHasPosition(inputPrim)) {
             slog.w << "Skipping primitive without POSITION data in " << name << io::endl;
-            // Preserve the URI data cache handle when skipping a primitive.
-            auto& resourceInfo = std::get<FFilamentAsset::ResourceInfoExtended>(fAsset->mResourceInfo);
-            resourceInfo.uriDataCache = mLoaderExtended->getUriDataCache();
+            if (mLoaderExtended) {
+                // Preserve the URI data cache handle when skipping a primitive.
+                auto& resourceInfo =
+                        std::get<FFilamentAsset::ResourceInfoExtended>(fAsset->mResourceInfo);
+                resourceInfo.uriDataCache = mLoaderExtended->getUriDataCache();
+            }
             continue;
         }
 
@@ -1154,7 +1158,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
         }
 
         if (atype == cgltf_attribute_type_texcoord) {
-            if (index >= UvMapSize) {
+            if (index < 0 || index >= UvMapSize) {
                 slog.e << "Too many texture coordinate sets in " << name << io::endl;
                 continue;
             }
@@ -1184,6 +1188,10 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
             }
         }
 
+        if (innerAccessor->count > std::numeric_limits<uint32_t>::max()) {
+            slog.e << "Vertex count overflow in " << name << io::endl;
+            return false;
+        }
         vertexCount = innerAccessor->count;
 
         // The positions accessor is required to have min/max properties, use them to expand
@@ -1371,16 +1379,21 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
     }
 
     if (needsDummyData) {
-        const uint32_t requiredSize = sizeof(ubyte4) * vertexCount;
+        const uint64_t requiredSize64 = static_cast<uint64_t>(sizeof(ubyte4)) * vertexCount;
+        if (requiredSize64 > std::numeric_limits<uint32_t>::max()) {
+            slog.e << "Dummy buffer size overflow in " << name << io::endl;
+            return false;
+        }
+        const uint32_t requiredSize = static_cast<uint32_t>(requiredSize64);
         if (mDummyBufferObject == nullptr || requiredSize > mDummyBufferObject->getByteCount()) {
-            mDummyBufferObject = BufferObject::Builder().size(requiredSize).build(mEngine);
-            fAsset->mBufferObjects.push_back(mDummyBufferObject);
             uint32_t* dummyData = static_cast<uint32_t*>(malloc(requiredSize));
             if (!dummyData) {
                 slog.e << "Out of memory allocating dummy vertex data." << io::endl;
                 return false;
             }
             memset(dummyData, 0xff, requiredSize);
+            mDummyBufferObject = BufferObject::Builder().size(requiredSize).build(mEngine);
+            fAsset->mBufferObjects.push_back(mDummyBufferObject);
             VertexBuffer::BufferDescriptor bd(dummyData, requiredSize, FREE_CALLBACK);
             mDummyBufferObject->setBuffer(mEngine, std::move(bd));
         }
@@ -1516,6 +1529,10 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
         spConfig.specular_color_texture.has_transform ||
         spConfig.specular_texture.has_transform;
 
+    auto const clampTexCoord = [](cgltf_int texcoord) -> uint8_t {
+        return uint8_t(std::clamp(texcoord, 0, cgltf_int(UvMapSize - 1)));
+    };
+
     MaterialKey matkey {
         .doubleSided = !!inputMat->double_sided,
         .unlit = !!inputMat->unlit,
@@ -1525,27 +1542,27 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
         .hasOcclusionTexture = inputMat->occlusion_texture.texture != nullptr,
         .hasEmissiveTexture = inputMat->emissive_texture.texture != nullptr,
         .enableDiagnostics = mDiagnosticsEnabled,
-        .baseColorUV = static_cast<uint8_t>(baseColorTexture->texcoord),
+        .baseColorUV = clampTexCoord(baseColorTexture->texcoord),
         .hasClearCoatTexture = ccConfig.clearcoat_texture.texture != nullptr,
-        .clearCoatUV = static_cast<uint8_t>(ccConfig.clearcoat_texture.texcoord),
+        .clearCoatUV = clampTexCoord(ccConfig.clearcoat_texture.texcoord),
         .hasClearCoatRoughnessTexture = ccConfig.clearcoat_roughness_texture.texture != nullptr,
-        .clearCoatRoughnessUV = static_cast<uint8_t>(ccConfig.clearcoat_roughness_texture.texcoord),
+        .clearCoatRoughnessUV = clampTexCoord(ccConfig.clearcoat_roughness_texture.texcoord),
         .hasClearCoatNormalTexture = ccConfig.clearcoat_normal_texture.texture != nullptr,
-        .clearCoatNormalUV = static_cast<uint8_t>(ccConfig.clearcoat_normal_texture.texcoord),
+        .clearCoatNormalUV = clampTexCoord(ccConfig.clearcoat_normal_texture.texcoord),
         .hasClearCoat = !!inputMat->has_clearcoat,
         .hasTransmission = !!inputMat->has_transmission,
         .hasTextureTransforms = hasTextureTransforms,
-        .emissiveUV = static_cast<uint8_t>(inputMat->emissive_texture.texcoord),
-        .aoUV = static_cast<uint8_t>(inputMat->occlusion_texture.texcoord),
-        .normalUV = static_cast<uint8_t>(inputMat->normal_texture.texcoord),
+        .emissiveUV = clampTexCoord(inputMat->emissive_texture.texcoord),
+        .aoUV = clampTexCoord(inputMat->occlusion_texture.texcoord),
+        .normalUV = clampTexCoord(inputMat->normal_texture.texcoord),
         .hasTransmissionTexture = trConfig.transmission_texture.texture != nullptr,
-        .transmissionUV = static_cast<uint8_t>(trConfig.transmission_texture.texcoord),
+        .transmissionUV = clampTexCoord(trConfig.transmission_texture.texcoord),
         .hasSheenColorTexture = shConfig.sheen_color_texture.texture != nullptr,
-        .sheenColorUV = static_cast<uint8_t>(shConfig.sheen_color_texture.texcoord),
+        .sheenColorUV = clampTexCoord(shConfig.sheen_color_texture.texcoord),
         .hasSheenRoughnessTexture = shConfig.sheen_roughness_texture.texture != nullptr,
-        .sheenRoughnessUV = static_cast<uint8_t>(shConfig.sheen_roughness_texture.texcoord),
+        .sheenRoughnessUV = clampTexCoord(shConfig.sheen_roughness_texture.texcoord),
         .hasVolumeThicknessTexture = vlConfig.thickness_texture.texture != nullptr,
-        .volumeThicknessUV = static_cast<uint8_t>(vlConfig.thickness_texture.texcoord),
+        .volumeThicknessUV = clampTexCoord(vlConfig.thickness_texture.texcoord),
         .hasSheen = !!inputMat->has_sheen,
         .hasIOR = !!inputMat->has_ior,
         .hasVolume = !!inputMat->has_volume,
@@ -1553,8 +1570,8 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
         .hasSpecular = !!inputMat->has_specular,
         .hasSpecularTexture = spConfig.specular_texture.texture != nullptr,
         .hasSpecularColorTexture = spConfig.specular_color_texture.texture != nullptr,
-        .specularTextureUV = static_cast<uint8_t>(spConfig.specular_texture.texcoord),
-        .specularColorTextureUV = static_cast<uint8_t>(spConfig.specular_color_texture.texcoord),
+        .specularTextureUV = clampTexCoord(spConfig.specular_texture.texcoord),
+        .specularColorTextureUV = clampTexCoord(spConfig.specular_color_texture.texcoord),
     };
 
     if (inputMat->has_pbr_specular_glossiness) {
@@ -1562,16 +1579,16 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
         if (sgConfig.diffuse_texture.texture) {
             *baseColorTexture = sgConfig.diffuse_texture;
             matkey.hasBaseColorTexture = true;
-            matkey.baseColorUV = static_cast<uint8_t>(baseColorTexture->texcoord);
+            matkey.baseColorUV = clampTexCoord(baseColorTexture->texcoord);
         }
         if (sgConfig.specular_glossiness_texture.texture) {
             *metallicRoughnessTexture = sgConfig.specular_glossiness_texture;
             matkey.hasSpecularGlossinessTexture = true;
-            matkey.specularGlossinessUV = static_cast<uint8_t>(metallicRoughnessTexture->texcoord);
+            matkey.specularGlossinessUV = clampTexCoord(metallicRoughnessTexture->texcoord);
         }
     } else {
         matkey.hasMetallicRoughnessTexture = metallicRoughnessTexture->texture != nullptr;
-        matkey.metallicRoughnessUV = static_cast<uint8_t>(metallicRoughnessTexture->texcoord);
+        matkey.metallicRoughnessUV = clampTexCoord(metallicRoughnessTexture->texcoord);
     }
 
     switch (inputMat->alpha_mode) {
