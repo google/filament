@@ -117,7 +117,7 @@ public:
     /**
      * @return the Material associated with this instance
      */
-    UTILS_APIGEN_RETAINED
+    UTILS_APIGEN_RETAINED_LAZY
     Material const* UTILS_NONNULL getMaterial() const noexcept;
 
     /**

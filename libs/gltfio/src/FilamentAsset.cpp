@@ -239,17 +239,19 @@ size_t FFilamentAsset::getEntitiesByName(const char* name, Entity* entities,
 
 size_t FFilamentAsset::getEntitiesByPrefix(const char* prefix, Entity* entities,
         size_t maxCount) const noexcept {
-    if (maxCount == 0) {
+    if (entities != nullptr && maxCount == 0) {
         return 0;
     }
     std::string_view prefixString(prefix);
     size_t count = 0;
     for (auto& [k, v] : mNameToEntity) {
         if (k.compare(0, prefixString.size(), prefixString) == 0) {
+            if (entities == nullptr) {
+                count += v.size();
+                continue;
+            }
             for (Entity entity : v) {
-                if (entities) {
-                    entities[count] = entity;
-                }
+                entities[count] = entity;
                 if (++count >= maxCount) {
                     return count;
                 }
