@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-#include <limits.h>
-#include <gtest/gtest.h>
-
 #include <utils/Path.h>
+
+#include <gtest/gtest.h>
 
 #include <iosfwd>
 #include <string>
 #include <vector>
+
+#include <limits.h>
 
 #ifndef PATH_MAX    // should be in <limits.h>
 #define PATH_MAX    4096
@@ -79,6 +80,13 @@ TEST(WinPathTest, Sanitization) {
     // make sure it works with several ../
     r = Path::getCanonicalPath("..\\..\\bin");
     EXPECT_EQ("..\\..\\bin", r);
+
+    // Clamp .. at drive root and collapse .\.. to ..
+    r = Path::getCanonicalPath("C:\\..\\foo");
+    EXPECT_EQ("C:\\foo", r);
+
+    r = Path::getCanonicalPath(".\\..\\out");
+    EXPECT_EQ("..\\out", r);
 }
 
 TEST(WinPathTest, AbsolutePath) {
@@ -216,4 +224,29 @@ TEST(PathTest, GetParent) {
     p = "C:\\";
     r = p.getParent();
     EXPECT_EQ("C:\\", r);
+}
+
+TEST(WinPathTest, IsAncestorOf) {
+    EXPECT_FALSE(Path().isAncestorOf(Path("C:\\out")));
+    EXPECT_FALSE(Path("C:\\").isAncestorOf(Path()));
+
+    EXPECT_TRUE(Path("C:\\").isAncestorOf(Path("C:\\out")));
+    EXPECT_TRUE(Path("C:\\").isAncestorOf(Path("C:\\out\\bin")));
+    EXPECT_FALSE(Path("C:\\").isAncestorOf(Path("C:\\")));
+    EXPECT_FALSE(Path("C:\\").isAncestorOf(Path("D:\\out")));
+    EXPECT_FALSE(Path("C:\\").isAncestorOf(Path("out")));
+
+    EXPECT_TRUE(Path("C:\\out\\blue").isAncestorOf(Path("C:\\out\\blue\\bin")));
+    EXPECT_TRUE(Path("C:\\out\\blue\\").isAncestorOf(Path("C:\\out\\blue\\bin")));
+    EXPECT_FALSE(Path("C:\\out\\blue").isAncestorOf(Path("C:\\out\\blue")));
+    EXPECT_FALSE(Path("C:\\out\\blue").isAncestorOf(Path("C:\\out\\blueberry")));
+    EXPECT_FALSE(Path("C:\\out\\blue").isAncestorOf(Path("C:\\out\\blue\\..\\green")));
+
+    EXPECT_TRUE(Path("\\").isAncestorOf(Path("\\out")));
+    EXPECT_FALSE(Path(".").isAncestorOf(Path("\\out")));
+
+    EXPECT_TRUE(Path(".").isAncestorOf(Path("out\\bin")));
+    EXPECT_FALSE(Path(".").isAncestorOf(Path("..\\out")));
+    EXPECT_TRUE(Path("..").isAncestorOf(Path("..\\out")));
+    EXPECT_FALSE(Path("..").isAncestorOf(Path("..\\..\\out")));
 }
