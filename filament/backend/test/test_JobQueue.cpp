@@ -340,7 +340,7 @@ TEST(JobQueue, MultipleProducersConsumers) {
 
 TEST(AmortizationWorker, Process) {
     JobQueue::Ptr queue = JobQueue::create();
-    JobWorker::Ptr worker = AmortizationWorker::create(queue);
+    JobWorker::Ptr worker = AmortizationWorker::create(queue, {});
     int v = 0;
 
     queue->push([&v]() { v++; });
@@ -360,7 +360,7 @@ TEST(AmortizationWorker, Process) {
 
 TEST(AmortizationWorker, ProcessAll) {
     JobQueue::Ptr queue = JobQueue::create();
-    JobWorker::Ptr worker = AmortizationWorker::create(queue);
+    JobWorker::Ptr worker = AmortizationWorker::create(queue, {});
     int v = 0;
 
     queue->push([&v]() { v++; });
@@ -377,7 +377,7 @@ TEST(AmortizationWorker, ProcessAll) {
 
 TEST(AmortizationWorker, TerminateDrainsAllJobs) {
     JobQueue::Ptr queue = JobQueue::create();
-    JobWorker::Ptr worker = AmortizationWorker::create(queue);
+    JobWorker::Ptr worker = AmortizationWorker::create(queue, {});
     int v = 0;
 
     queue->push([&v]() { v++; });
@@ -395,7 +395,7 @@ TEST(AmortizationWorker, TerminateDrainsAllJobs) {
 
 TEST(AmortizationWorker, Drain) {
     JobQueue::Ptr queue = JobQueue::create();
-    JobWorker::Ptr worker = AmortizationWorker::create(queue);
+    JobWorker::Ptr worker = AmortizationWorker::create(queue, {});
     int v = 0;
 
     queue->push([&v]() { v++; });
@@ -411,7 +411,7 @@ TEST(AmortizationWorker, Drain) {
 
 TEST(AmortizationWorker, DrainChainedJobs) {
     JobQueue::Ptr queue = JobQueue::create();
-    JobWorker::Ptr worker = AmortizationWorker::create(queue);
+    JobWorker::Ptr worker = AmortizationWorker::create(queue, {});
     int v = 0;
 
     queue->push([&queue, &v]() {
@@ -423,6 +423,58 @@ TEST(AmortizationWorker, DrainChainedJobs) {
     EXPECT_EQ(11, v);
 }
 
+TEST(AmortizationWorker, ProcessFrameRunsOneJobWithZeroBudget) {
+    JobQueue::Ptr queue = JobQueue::create();
+    JobWorker::Ptr worker = AmortizationWorker::create(queue, std::chrono::nanoseconds(0));
+    int v = 0;
+
+    queue->push([&v]() { v++; });
+    queue->push([&v]() { v++; });
+    queue->push([&v]() { v++; });
+
+    worker->processFrame();
+    EXPECT_EQ(1, v);
+    worker->processFrame();
+    EXPECT_EQ(2, v);
+}
+
+TEST(AmortizationWorker, ProcessFrameDrainsWithinLargeBudget) {
+    JobQueue::Ptr queue = JobQueue::create();
+    JobWorker::Ptr worker = AmortizationWorker::create(queue, std::chrono::hours(1));
+    int v = 0;
+
+    queue->push([&v]() { v++; });
+    queue->push([&v]() { v++; });
+    queue->push([&v]() { v++; });
+
+    worker->processFrame();
+    EXPECT_EQ(3, v);
+}
+
+TEST(AmortizationWorker, ProcessFrameStopsAfterOverrun) {
+    using namespace std::chrono;
+    JobQueue::Ptr queue = JobQueue::create();
+    JobWorker::Ptr worker = AmortizationWorker::create(queue, milliseconds(1));
+    int v = 0;
+
+    auto const makeSlowJob = [&v]() {
+        return [&v]() {
+            auto const end = steady_clock::now() + milliseconds(2);
+            while (steady_clock::now() < end) {
+            }
+            v++;
+        };
+    };
+    queue->push(makeSlowJob());
+    queue->push(makeSlowJob());
+    queue->push(makeSlowJob());
+
+    // Each call gets a fresh budget, and the first job overruns it.
+    worker->processFrame();
+    EXPECT_EQ(1, v);
+    worker->processFrame();
+    EXPECT_EQ(2, v);
+}
 
 TEST(ThreadWorker, Process) {
     JobQueue::Ptr queue = JobQueue::create();

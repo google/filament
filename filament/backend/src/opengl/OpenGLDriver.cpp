@@ -364,7 +364,8 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform,
             // The worker operates on the same backend (engine) thread for the Amortization mode,
             // so use the same state.
             mWorkerState = mBackendState;
-            mJobWorker = AmortizationWorker::create(mJobQueue);
+            mJobWorker = AmortizationWorker::create(mJobQueue,
+                    driverConfig.asynchronousFrameBudget);
         }
     }
 }
@@ -4547,10 +4548,6 @@ void OpenGLDriver::tick(int) {
 #endif
     executeEveryNowAndThenOps();
     getShaderCompilerService().tick();
-    if (getJobWorker()) {
-        // This number is randomly/heuristically chosen. Consider making the number optional.
-        getJobWorker()->process(5);
-    }
 }
 
 void OpenGLDriver::beginFrame(
@@ -4623,6 +4620,17 @@ void OpenGLDriver::endFrame(UTILS_UNUSED uint32_t const frameId) {
     //glFinish();
     mPlatform.endFrame(frameId);
     insertEventMarker("endFrame");
+
+    // Queued async jobs run after the frame's own work.
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
+}
+
+void OpenGLDriver::skipFrame(int) {
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
 }
 
 void OpenGLDriver::updateDescriptorSetBuffer(

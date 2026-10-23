@@ -40,6 +40,10 @@ struct TangentSpaceMeshWrapper {
         struct Impl;
 
         Builder(bool isUnlit);
+        ~Builder() noexcept;
+
+        Builder(Builder const&) = delete;
+        Builder& operator=(Builder const&) = delete;
 
         Builder& vertexCount(size_t count) noexcept;
         Builder& normals(float3 const* normals) noexcept;

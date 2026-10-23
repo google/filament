@@ -104,11 +104,11 @@ TEST_F(BackendTest, BasicAsyncFlow) {
         int attempts = 0;
         while (!flag && attempts < 1000) {
             // Backends whose async jobs are time-sliced on the driver thread (e.g. Vulkan and
-            // WebGPU's AmortizationWorker) only make progress when something calls tick(); a
-            // real app does this every frame via the Renderer, but this low-level test bypasses
-            // that loop entirely. Backends with a dedicated worker thread (OpenGL, Metal) don't
-            // need this, but calling it is harmless for them too.
-            api.tick();
+            // WebGPU's AmortizationWorker) only make progress at a frame boundary, endFrame() or
+            // skipFrame(); a real app does this every frame via the Renderer, but this low-level
+            // test bypasses that loop entirely. Backends with a dedicated worker thread (OpenGL,
+            // Metal) don't need this, but calling it is harmless for them too.
+            api.skipFrame();
             api.finish();
             executeCommands();
             getDriver().purge();
@@ -259,11 +259,11 @@ TEST_F(BackendTest, CanceledAsyncCallInvokesCallback) {
         int attempts = 0;
         while (!flag && attempts < 1000) {
             // Backends whose async jobs are time-sliced on the driver thread (e.g. Vulkan and
-            // WebGPU's AmortizationWorker) only make progress when something calls tick(); a
-            // real app does this every frame via the Renderer, but this low-level test bypasses
-            // that loop entirely. Backends with a dedicated worker thread (OpenGL, Metal) don't
-            // need this, but calling it is harmless for them too.
-            api.tick();
+            // WebGPU's AmortizationWorker) only make progress at a frame boundary, endFrame() or
+            // skipFrame(); a real app does this every frame via the Renderer, but this low-level
+            // test bypasses that loop entirely. Backends with a dedicated worker thread (OpenGL,
+            // Metal) don't need this, but calling it is harmless for them too.
+            api.skipFrame();
             api.finish();
             executeCommands();
             getDriver().purge();
@@ -301,8 +301,8 @@ TEST_F(BackendTest, CanceledSetVertexBufferObjectAsyncInvokesCallback) {
     auto waitFor = [&](const bool& flag) {
         int attempts = 0;
         while (!flag && attempts < 1000) {
-            // See BasicAsyncFlow for why tick() is needed here.
-            api.tick();
+            // See BasicAsyncFlow for why skipFrame() is needed here.
+            api.skipFrame();
             api.finish();
             executeCommands();
             getDriver().purge();
@@ -490,8 +490,8 @@ TEST_F(BackendTest, DestroyAfterAsyncUpdatePreservesFifo) {
     auto waitFor = [&](const bool& flag) {
         int attempts = 0;
         while (!flag && attempts < 1000) {
-            // See BasicAsyncFlow for why tick() is needed here.
-            api.tick();
+            // See BasicAsyncFlow for why skipFrame() is needed here.
+            api.skipFrame();
             api.finish();
             executeCommands();
             getDriver().purge();
