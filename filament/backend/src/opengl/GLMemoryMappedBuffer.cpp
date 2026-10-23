@@ -86,7 +86,12 @@ GLMemoryMappedBuffer::GLMemoryMappedBuffer(OpenGLState& gls, HandleAllocatorGL& 
 
         gls.bindBuffer(bo->gl.binding, bo->gl.id);
 
-        addr = glMapBufferRange(bo->gl.binding, GLsizeiptr(offset), GLsizeiptr(size), gl_access);
+        // With the bug flag set the address stays null: copy() then writes each range with
+        // glBufferSubData and unmap() has nothing to do.
+        if (!gls.bugs.disable_map_buffer_for_updates) {
+            addr = glMapBufferRange(bo->gl.binding, GLsizeiptr(offset), GLsizeiptr(size),
+                    gl_access);
+        }
 
         CHECK_GL_ERROR();
 #   endif

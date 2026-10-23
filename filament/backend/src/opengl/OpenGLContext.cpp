@@ -478,6 +478,9 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
             // or not, and the batched material-instance UBO is written that way every frame.
             // Per-instance UBOs are rewritten whole with glBufferData, which doesn't wait.
             bugs->disable_material_instance_uniform_batching = true;
+            // Seen on PowerVR Rogue GE9215 (driver 23.2): every glMapBufferRange/glUnmapBuffer
+            // pair costs more than a glBufferSubData of the same bytes, whatever the size.
+            bugs->disable_map_buffer_for_updates = true;
             // On PowerVR (Rogue GE8320) using gl_InstanceID too early in the shader doesn't work.
             bugs->powervr_shader_workarounds = true;
             // On PowerVR (Rogue GE8320) destroying a fbo after glBlitFramebuffer is effectively

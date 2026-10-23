@@ -13,3 +13,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
   tick. Metal now runs them every frame too
 - java: `Engine.Config.asynchronousFrameBudget` (in nanoseconds) is added
 - web: `Engine$Config.asynchronousFrameBudgetMs` is added
+- gl: on PowerVR Rogue, material-instance uniforms are no longer batched and buffer updates no
+  longer go through `glMapBufferRange`
