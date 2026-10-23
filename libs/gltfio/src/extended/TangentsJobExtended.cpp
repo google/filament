@@ -279,6 +279,18 @@ void unpack(cgltf_accessor const* accessor, size_t const vertexCount, T out,
                         data::byteCount<T>(), vertexCount);
                 return;
             } else {
+                // A dimension mismatch must not reach the direct copy below:
+                // it reads a full output element per vertex from a narrower
+                // input stride, over-reading the source buffer when
+                // inDim < outDim. Route such accessors through the unpacking
+                // conversion instead, which clamps to the available data.
+                // (The inDim == 3 && outDim == 4 case above is a valid
+                // conversion and is unaffected; valid inputs never reach
+                // this branch, so their behavior is unchanged.)
+                if (inDim != outDim) {
+                    cgltf_accessor_unpack_floats(accessor, (float*) out, elementCount);
+                    return;
+                }
                 assert_invariant(inDim == outDim);
                 data::copy<T, T>((T) data, accessor->stride, (T) out, data::byteCount<T>(),
                         vertexCount);
