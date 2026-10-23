@@ -17,11 +17,11 @@
 #ifndef UBERZ_READABLE_ARCHIVE_H
 #define UBERZ_READABLE_ARCHIVE_H
 
-#include <stdint.h>
-
 #include <uberz/ArchiveEnums.h>
 
 #include <filament/MaterialEnums.h>
+
+#include <stdint.h>
 
 namespace filament::uberz {
 
