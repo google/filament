@@ -15,16 +15,22 @@ on:
   pull_request_target:
     types: [opened, synchronize, reopened]
 
-permissions:
-  contents: read
-  pull-requests: write
+permissions: {}
+
+# Collapse rapid successive pushes to the same PR into a single run to avoid
+# posting duplicate comments.
+concurrency:
+  group: auto-close-restricted-paths-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   auto-close-restricted-paths:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
       - name: Auto-close PR if it touches restricted paths
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         env:
           MSG_GITHUB: >
             Thank you for your contribution. To maintain the security and stability of our CI/CD pipelines,
