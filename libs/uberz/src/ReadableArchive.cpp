@@ -27,11 +27,12 @@ using namespace utils;
 namespace filament::uberz {
 
 static_assert(sizeof(ReadableArchive) == 4 + 4 + 8 + 8);
-static_assert(sizeof(ArchiveSpec) == 1 + 1 + 2 + 4 + 8 + 8);
+static_assert(sizeof(ArchiveSpec) == 1 + 1 + 2 + 4 + 8 + 8 + 2 + 2 + 4);
 static_assert(sizeof(ArchiveFlag) == 8 + 8);
 
 namespace {
 
+// ReSharper disable once CppMultiCharacterLiteral
 constexpr uint32_t READABLE_ARCHIVE_MAGIC = 'UBER';
 constexpr uint32_t READABLE_ARCHIVE_VERSION = 0;
 constexpr size_t WORD_SIZE = sizeof(uint64_t);
@@ -111,6 +112,11 @@ bool convertOffsetsToPointers(ReadableArchive* archive, size_t archiveSize) {
         size_t flagsSize;
         if (!checkedMultiply(spec.flagsCount, sizeof(ArchiveFlag), flagsSize)) {
             LOG(ERROR) << "Uberz flags array size overflows";
+            return false;
+        }
+
+        if (spec.supportedFlagsCount > spec.flagsCount) {
+            LOG(ERROR) << "Uberz support flags counts greater than flags count";
             return false;
         }
         

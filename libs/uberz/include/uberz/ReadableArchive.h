@@ -17,11 +17,11 @@
 #ifndef UBERZ_READABLE_ARCHIVE_H
 #define UBERZ_READABLE_ARCHIVE_H
 
-#include <stdint.h>
-
 #include <uberz/ArchiveEnums.h>
 
 #include <filament/MaterialEnums.h>
+
+#include <stdint.h>
 
 namespace filament::uberz {
 
@@ -62,6 +62,9 @@ struct ArchiveSpec {
         uint8_t* package;
         uint64_t packageOffset;
     };
+    uint16_t supportedFlagsCount;
+    UTILS_UNUSED uint16_t _padding0;
+    UTILS_UNUSED uint32_t _padding1;
 };
 
 struct ArchiveFlag {
