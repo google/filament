@@ -378,7 +378,7 @@ int main(int argc, char* argv[]) {
             if (g_grayscale && destIsLinear) {
                 data = fromLinearToGrayscale<uint8_t>(image);
             } else if (g_grayscale) {
-                data = fromLinearTosRGB<uint8_t, 1>(image);
+                data = fromLinearToSRGB<uint8_t, 1>(image);
             } else if (destIsLinear) {
                 if (componentCount == 3) {
                     data = fromLinearToRGB<uint8_t, 3>(image);
@@ -387,9 +387,9 @@ int main(int argc, char* argv[]) {
                 }
             } else {
                 if (componentCount == 3) {
-                    data = fromLinearTosRGB<uint8_t, 3>(image);
+                    data = fromLinearToSRGB<uint8_t, 3>(image);
                 } else {
-                    data = fromLinearTosRGB<uint8_t, 4>(image);
+                    data = fromLinearToSRGB<uint8_t, 4>(image);
                 }
             }
             container.setBlob({mip++, 0, 0}, data.get(), image.getWidth() * image.getHeight() *

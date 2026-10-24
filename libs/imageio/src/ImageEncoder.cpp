@@ -386,9 +386,9 @@ bool PNGEncoder::encode(const LinearImage& image) {
                     break;
                 case PixelFormat::sRGB:
                     if (dstChannels == 4) {
-                        data = fromLinearTosRGB<uint8_t, 4>(image);
+                        data = fromLinearToSRGB<uint8_t, 4>(image);
                     } else {
-                        data = fromLinearTosRGB<uint8_t, 3>(image);
+                        data = fromLinearToSRGB<uint8_t, 3>(image);
                     }
                     break;
                 case PixelFormat::LINEAR_RGB:

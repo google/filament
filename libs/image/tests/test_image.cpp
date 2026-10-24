@@ -14,17 +14,15 @@
  * limitations under the License.
  */
 
-#include <image/ColorTransform.h>
-#include <image/Ktx1Bundle.h>
-#include <image/ImageOps.h>
-#include <image/ImageSampler.h>
-#include <image/LinearImage.h>
-
 #include <imageio/ImageDecoder.h>
 #include <imageio/ImageDiffer.h>
 #include <imageio/ImageEncoder.h>
 
-#include <gtest/gtest.h>
+#include <image/ColorTransform.h>
+#include <image/ImageOps.h>
+#include <image/ImageSampler.h>
+#include <image/Ktx1Bundle.h>
+#include <image/LinearImage.h>
 
 #include <utils/Panic.h>
 #include <utils/Path.h>
@@ -32,9 +30,11 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
+#include <gtest/gtest.h>
+
 #include <fstream>
-#include <string>
 #include <sstream>
+#include <string>
 #include <vector>
 
 using std::istringstream;
@@ -299,9 +299,7 @@ TEST_F(ImageTest, ColorTransformRGB) { // NOLINT
     constexpr size_t bpr = w * sizeof(uint16_t) * 3;
     std::unique_ptr<uint8_t[]> data(new uint8_t[h * bpr]);
     memcpy(data.get(), texels, sizeof(texels));
-    LinearImage img = image::toLinear<uint16_t>(w, h, bpr, data, 
-        [ ](uint16_t v) -> uint16_t { return v; },
-        sRGBToLinear< filament::math::float3>);
+    LinearImage img = image::asLinear<uint16_t>(w, h, bpr, data.get());
     auto pixels = img.get<float3>();
     ASSERT_NEAR(pixels[0].x, 0.0f, 0.001f);
     ASSERT_NEAR(pixels[0].y, 0.0f, 0.001f);
@@ -323,9 +321,7 @@ TEST_F(ImageTest, ColorTransformRGBA) { // NOLINT
     constexpr size_t bpr = w * sizeof(uint16_t) * 4;
     std::unique_ptr<uint8_t[]> data(new uint8_t[h * bpr]);
     memcpy(data.get(), texels, sizeof(texels));
-    LinearImage img = image::toLinearWithAlpha<uint16_t>(w, h, bpr, data, 
-        [ ](uint16_t v) -> uint16_t { return v; },
-        sRGBToLinear< filament::math::float4>);
+    LinearImage img = image::toLinearWithAlpha<uint16_t>(w, h, bpr, data.get());
     auto pixels = reinterpret_cast<float4*>(img.getPixelRef());
     ASSERT_NEAR(pixels[3].x, 0.04282892f, 0.001f);
     ASSERT_NEAR(pixels[3].y, 0.12025354f, 0.001f);

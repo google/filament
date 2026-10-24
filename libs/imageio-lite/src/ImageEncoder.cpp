@@ -270,10 +270,10 @@ bool TIFFEncoder::encode(LinearImage const& image) {
     size_t const srcChannels = image.getChannels();
     std::unique_ptr<uint8_t[]> rgbaData;
     if (srcChannels == 4) {
-        rgbaData = fromLinearTosRGB<uint8_t, 4>(image);
+        rgbaData = fromLinearToSRGB<uint8_t, 4>(image);
     } else if (srcChannels == 3) {
         rgbaData = std::make_unique<uint8_t[]>(size_t(width) * height * 4);
-        auto rgb = fromLinearTosRGB<uint8_t, 3>(image);
+        auto rgb = fromLinearToSRGB<uint8_t, 3>(image);
         for (size_t i = 0, n = size_t(width) * height; i < n; ++i) {
             rgbaData[i * 4 + 0] = rgb[i * 3 + 0];
             rgbaData[i * 4 + 1] = rgb[i * 3 + 1];
