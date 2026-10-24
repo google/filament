@@ -39,6 +39,14 @@ endif()
 
 project(TNT C CXX ${EXTRA_LANGS})
 
+# The release version. VERSION is shared with Gradle and written by
+# build/common/bump-version.sh.
+file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/VERSION FILAMENT_VERSION LIMIT_COUNT 1)
+if (NOT FILAMENT_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
+    message(FATAL_ERROR "VERSION is not major.minor.patch: '${FILAMENT_VERSION}'")
+endif()
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/VERSION)
+
 # ==================================================================================================
 # Options
 # ==================================================================================================
