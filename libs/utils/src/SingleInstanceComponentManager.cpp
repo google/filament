@@ -215,10 +215,11 @@ void SingleInstanceComponentManagerBase::gcImpl(uint32_t const maxDestructions,
     flush();
 }
 
-SingleInstanceComponentManagerBase::Instance
+SingleInstanceComponentManagerBase::AddResult
 SingleInstanceComponentManagerBase::addComponentImpl(Entity const e, void* context,
         SoaAllocator const allocator) noexcept {
     Instance ci = 0;
+    bool added = false;
     if (!e.isNull()) {
         resume();
         if (isAmortizationSupported()) {
@@ -229,6 +230,7 @@ SingleInstanceComponentManagerBase::addComponentImpl(Entity const e, void* conte
         if (UTILS_LIKELY(inserted)) {
             ci = allocator(context, e);
             it.value() = ci;
+            added = true;
             {
                 LockGuard lock(mEbrEntitiesLock);
                 mEntities.add(e.getId());
@@ -239,43 +241,33 @@ SingleInstanceComponentManagerBase::addComponentImpl(Entity const e, void* conte
         }
     }
     assert(ci != 0);
-    return ci;
+    return { ci, added };
 }
 
 
 
-void SingleInstanceComponentManagerBase::removeComponentsImpl(Entity const* entities, size_t const count,
-        void* context, SoaDeallocator deallocator) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS {
+void SingleInstanceComponentManagerBase::eraseComponentFromMap(
+        InstanceMap::iterator const pos, Entity const e,
+        Entity const swappedEntity, Instance const index) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS {
     auto& map = mInstanceMap;
-    for (size_t k = 0; k < count; ++k) {
-        Entity const e = entities[k];
-        auto const pos = map.find(e);
-        if (UTILS_LIKELY(pos != map.end())) {
-            size_t const index = pos.value();
-            assert(index != 0);
+    map.erase_fast(pos);
 
-            auto const [lastIndex, swappedEntity] = deallocator(context, index);
-
-            map.erase_fast(pos);
-
-            if (!swappedEntity.isNull()) {
-                auto const swappedPos = map.find(swappedEntity);
-                assert(swappedPos != map.end());
-                swappedPos.value() = index;
-            }
-
-            // We only need to lock mEbrEntitiesLock when writing (mutating) mEntities because the
-            // global timeline thread (EntityManager) can read it concurrently. Since component
-            // managers only run on the main thread, read-only accesses to mEntities from this
-            // class do not need synchronization.
-            {
-                LockGuard lock(mEbrEntitiesLock);
-                mEntities.remove(e.getId());
-            }
-
-            notifyChange(e);
-        }
+    if (!swappedEntity.isNull()) {
+        auto const swappedPos = map.find(swappedEntity);
+        assert(swappedPos != map.end());
+        swappedPos.value() = index;
     }
+
+    // We only need to lock mEbrEntitiesLock when writing (mutating) mEntities because the
+    // global timeline thread (EntityManager) can read it concurrently. Since component
+    // managers only run on the main thread, read-only accesses to mEntities from this
+    // class do not need synchronization.
+    {
+        LockGuard lock(mEbrEntitiesLock);
+        mEntities.remove(e.getId());
+    }
+
+    notifyChange(e);
 
     // Lock-free read check: safe because no other thread mutates mEntities.
     if (mEntities.empty()) {

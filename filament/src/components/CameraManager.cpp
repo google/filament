@@ -58,13 +58,12 @@ FCamera* FCameraManager::create(FEngine& engine, Entity entity) {
         destroy(zombie, engine);
     }
 
-    // if this entity already has Camera component, destroy it.
-    if (UTILS_UNLIKELY(manager.hasComponent(entity))) {
+    // add the Camera component to the entity (destroying any previous one first)
+    auto [i, added] = manager.tryAddComponent(entity);
+    if (UTILS_UNLIKELY(!added && i)) {
         destroy(entity, engine);
+        i = manager.addComponent(entity);
     }
-
-    // add the Camera component to the entity
-    Instance const i = manager.addComponent(entity);
 
     // For historical reasons, FCamera must not move. So the CameraManager stores a pointer.
     FCamera* const camera = engine.getHeapAllocator().make<FCamera>(engine, entity);
@@ -84,23 +83,17 @@ void FCameraManager::destroyComponents(Entity const* entities, size_t const coun
     auto& manager = mManager;
     for (size_t k = 0; k < count; ++k) {
         Entity const e = entities[k];
-        if (Instance const i = manager.getInstance(e) ; i) {
-            // destroy the FCamera object
-            bool const ownsTransformComponent = manager.elementAt<OWNS_TRANSFORM_COMPONENT>(i);
-
-            { // scope for camera -- it's invalid after this scope.
-                FCamera* const camera = manager.elementAt<CAMERA>(i);
-                assert_invariant(camera);
-                engine.getHeapAllocator().destroy(camera);
-
-                // Remove the camera component
-                manager.removeComponent(e);
-            }
-
-            // if we added the transform component, remove it.
-            if (ownsTransformComponent) {
-                engine.getTransformManager().destroy(e);
-            }
+        bool ownsTransformComponent = false;
+        auto const [i, moved] = manager.removeComponentWithCallback(e,
+                [&manager, &engine, &ownsTransformComponent](Instance const ci) noexcept {
+                    ownsTransformComponent = manager.elementAt<OWNS_TRANSFORM_COMPONENT>(ci);
+                    FCamera* const camera = manager.elementAt<CAMERA>(ci);
+                    assert_invariant(camera);
+                    engine.getHeapAllocator().destroy(camera);
+                });
+        // if we added the transform component, remove it.
+        if (i && ownsTransformComponent) {
+            engine.getTransformManager().destroy(e);
         }
     }
 }
