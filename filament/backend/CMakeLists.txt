@@ -617,6 +617,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_Blit.cpp
             test/test_MissingRequiredAttributes.cpp
             test/test_ReadPixels.cpp
+            test/test_TimerQuery.cpp
             test/test_ReadTexture.cpp
             test/test_BufferUpdates.cpp
             test/test_AsyncCompletion.cpp
