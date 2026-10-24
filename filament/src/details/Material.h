@@ -179,6 +179,25 @@ public:
     RefractionType getRefractionType() const noexcept { return mDefinition.refractionType; }
     ReflectionMode getReflectionMode() const noexcept { return mDefinition.reflectionMode; }
 
+    // True if this material is drawn in the BLENDED pass, i.e. it is neither OPAQUE nor MASKED
+    // and doesn't use screen-space refraction (which is drawn in the REFRACT pass).
+    bool isDrawnInBlendedPass() const noexcept {
+        BlendingMode const blendingMode = getBlendingMode();
+        bool const hasScreenSpaceRefraction = getRefractionMode() == RefractionMode::SCREEN_SPACE;
+        return !hasScreenSpaceRefraction &&
+                (blendingMode != BlendingMode::OPAQUE && blendingMode != BlendingMode::MASKED);
+    }
+
+    // True if this material must be drawn without fog because fog is applied as a post-process
+    // instead. This only affects SURFACE materials that are not drawn in the BLENDED pass.
+    // Both RenderPass (sort key) and LocalProgramCache (program selection) rely on this, so
+    // they always agree on the program used.
+    bool isFogAppliedAsPostProcess(bool const fogAsPostProcessEnabled) const noexcept {
+        return fogAsPostProcessEnabled &&
+                getMaterialDomain() == MaterialDomain::SURFACE &&
+                !isDrawnInBlendedPass();
+    }
+
     bool hasSpecularAntiAliasing() const noexcept { return mDefinition.specularAntiAliasing; }
     float getSpecularAntiAliasingVariance() const noexcept { return mDefinition.specularAntiAliasingVariance; }
     float getSpecularAntiAliasingThreshold() const noexcept { return mDefinition.specularAntiAliasingThreshold; }

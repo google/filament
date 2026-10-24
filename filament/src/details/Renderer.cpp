@@ -1045,6 +1045,9 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     RenderPass::RenderFlags renderFlags = 0;
     if (view.hasShadowing())                renderFlags |= RenderPass::HAS_SHADOWING;
     if (view.isFrontFaceWindingInverted())  renderFlags |= RenderPass::HAS_INVERSE_FRONT_FACES;
+    if (UTILS_UNLIKELY(view.hasFog() && engine.features.material.enable_fog_as_postprocess)) {
+        renderFlags |= RenderPass::HAS_FOG_AS_POSTPROCESS;
+    }
 
     RenderPassBuilder passBuilder(commandArena);
     passBuilder.renderFlags(renderFlags);
