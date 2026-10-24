@@ -30,6 +30,9 @@ include_directories(${PUBLIC_HDR_DIR})
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 
 target_link_libraries(${TARGET} PUBLIC math utils)
+if (WIN32)
+    target_link_libraries(${TARGET} PRIVATE wsock32)
+endif()
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
