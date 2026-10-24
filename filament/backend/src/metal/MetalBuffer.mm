@@ -16,10 +16,12 @@
 
 #include "MetalBuffer.h"
 #include "MetalBufferPool.h"
-
 #include "MetalContext.h"
 
+#include <utils/Mutex.h>
 #include <utils/Panic.h>
+
+#include <memory>
 
 namespace filament {
 namespace backend {
@@ -180,8 +182,14 @@ void MetalBuffer::uploadWithPoolBuffer(id<MTLCommandBuffer> cmdBuffer, void* src
               destinationOffset:byteOffset
                            size:size];
     [blitEncoder endEncoding];
+    std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime = mContext.driverLifetimeTracker;
     [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-        bufferPool->releaseBuffer(staging);
+        if (auto driverTracker = weakDriverLifetime.lock()) {
+            utils::LockGuard const lock(driverTracker->mutex);
+            if (driverTracker->driver) {
+                bufferPool->releaseBuffer(staging);
+            }
+        }
     }];
 }
 
