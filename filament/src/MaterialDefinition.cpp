@@ -21,6 +21,7 @@
 #include "MaterialParser.h"
 
 #include "details/Engine.h"
+#include "details/Material.h"
 
 #include "ds/ColorPassDescriptorSet.h"
 
@@ -844,8 +845,13 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
 
     filaflat::ShaderContent& fsBuilder = engine.getFragmentShaderContent();
 
-    UTILS_UNUSED_IN_RELEASE bool const fsOK = parser.getShader(fsBuilder, sm,
-            fragmentVariant, ShaderStage::FRAGMENT);
+    bool fsOK = parser.getShader(fsBuilder, sm, fragmentVariant, ShaderStage::FRAGMENT);
+    if (!fsOK && isMotionVectorsVariant(variant)) {
+        if (FMaterial const* const defaultMaterial = engine.getDefaultMaterial()) {
+            fsOK = defaultMaterial->getDefinition().getMaterialParser().getShader(
+                    fsBuilder, sm, fragmentVariant, ShaderStage::FRAGMENT);
+        }
+    }
 
     FILAMENT_CHECK_POSTCONDITION(isNoop || (fsOK && !fsBuilder.empty()))
             << "The material '" << name.c_str()
@@ -1090,7 +1096,11 @@ bool MaterialDefinition::isValidProgram(Variant const variant, DynamicSpecConstK
         return false;
     }
     if (!mMaterialParser->hasShader(sm, fragmentVariant, ShaderStage::FRAGMENT)) {
-        return false;
+        // Materials with a custom vertex shader but a standard fragment shader omit the motion
+        // vectors fragment shader from their package and share the default material's one.
+        if (!isMotionVectorsVariant(variant)) {
+            return false;
+        }
     }
 
     if (!DynamicSpecConstKey::isValidProgramSpecKey(variant, specKey, materialDomain,
