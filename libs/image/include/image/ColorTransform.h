@@ -314,7 +314,7 @@ std::unique_ptr<uint8_t[]> fromLinearToRGBM(const LinearImage& image) {
 // Constructs a 3-channel LinearImage from RGBM data.
 inline LinearImage toLinearFromRGBM( math::float4 const* src, uint32_t w, uint32_t h) {
     LinearImage result(w, h, 3);
-    auto dst = result.get< math::float3>();
+    auto dst = result.get<math::float3>();
     for (uint32_t row = 0; row < h; ++row) {
         for (uint32_t col = 0; col < w; ++col, ++src, ++dst) {
             *dst = RGBMtoLinear(*src);
@@ -327,8 +327,8 @@ inline LinearImage fromLinearToRGBM(const LinearImage& image) {
     assert(image.getChannels() == 3);
     const uint32_t w = image.getWidth(), h = image.getHeight();
     LinearImage result(w, h, 4);
-    auto src = image.get< math::float3>();
-    auto dst = result.get< math::float4>();
+    auto src = image.get<math::float3>();
+    auto dst = result.get<math::float4>();
     for (uint32_t row = 0; row < h; ++row) {
         for (uint32_t col = 0; col < w; ++col, ++src, ++dst) {
             *dst = linearToRGBM(*src);
@@ -367,6 +367,61 @@ static LinearImage asLinearWithAlpha(size_t w, size_t h, size_t bpr, const uint8
     return result;
 }
 
+#if defined(__ARM_NEON)
+template<>
+inline LinearImage asLinearWithAlpha<uint8_t>(size_t w, size_t h, size_t bpr, const uint8_t* src) {
+    LinearImage result(w, h, 4);
+    float* UTILS_RESTRICT d = result.getPixelRef(0, 0);
+    constexpr float invMax = 1.0f / std::numeric_limits<uint8_t>::max();
+    for (size_t y = 0; y < h; ++y) {
+        uint8_t const* UTILS_RESTRICT p = src + y * bpr;
+        size_t n = w * 4;
+        for (; n >= 16; n -= 16, p += 16, d += 16) {
+            const uint8x16_t v8 = vld1q_u8(p);
+            const uint16x8_t v16_lo = vmovl_u8(vget_low_u8(v8));
+            const uint16x8_t v16_hi = vmovl_u8(vget_high_u8(v8));
+            const uint32x4_t v32_0 = vmovl_u16(vget_low_u16(v16_lo));
+            const uint32x4_t v32_1 = vmovl_u16(vget_high_u16(v16_lo));
+            const uint32x4_t v32_2 = vmovl_u16(vget_low_u16(v16_hi));
+            const uint32x4_t v32_3 = vmovl_u16(vget_high_u16(v16_hi));
+            vst1q_f32(d + 0,  vmulq_n_f32(vcvtq_f32_u32(v32_0), invMax));
+            vst1q_f32(d + 4,  vmulq_n_f32(vcvtq_f32_u32(v32_1), invMax));
+            vst1q_f32(d + 8,  vmulq_n_f32(vcvtq_f32_u32(v32_2), invMax));
+            vst1q_f32(d + 12, vmulq_n_f32(vcvtq_f32_u32(v32_3), invMax));
+        }
+        for (; n > 0; --n) {
+            *d++ = *p++ * invMax;
+        }
+    }
+    return result;
+}
+
+template<>
+inline LinearImage asLinearWithAlpha<uint16_t>(size_t w, size_t h, size_t bpr, const uint8_t* src) {
+    LinearImage result(w, h, 4);
+    float* UTILS_RESTRICT d = result.getPixelRef(0, 0);
+    constexpr float invMax = 1.0f / std::numeric_limits<uint16_t>::max();
+    for (size_t y = 0; y < h; ++y) {
+        uint16_t const* UTILS_RESTRICT p = reinterpret_cast<uint16_t const*>(src + y * bpr);
+        size_t n = w * 4;
+        for (; n >= 8; n -= 8, p += 8, d += 8) {
+            const uint16x8_t v16 = vld1q_u16(p);
+            const uint32x4_t v32_0 = vmovl_u16(vget_low_u16(v16));
+            const uint32x4_t v32_1 = vmovl_u16(vget_high_u16(v16));
+            vst1q_f32(d + 0, vmulq_n_f32(vcvtq_f32_u32(v32_0), invMax));
+            vst1q_f32(d + 4, vmulq_n_f32(vcvtq_f32_u32(v32_1), invMax));
+        }
+        if (n >= 4) {
+            const uint16x4_t v16 = vld1_u16(p);
+            const uint32x4_t v32 = vmovl_u16(v16);
+            vst1q_f32(d, vmulq_n_f32(vcvtq_f32_u32(v32), invMax));
+            d += 4;
+        }
+    }
+    return result;
+}
+#endif
+
 template<typename T>
 static LinearImage toLinear(size_t w, size_t h, size_t bpr, const uint8_t* src) {
     LinearImage result(w, h, 3);
@@ -396,6 +451,63 @@ static LinearImage asLinear(size_t w, size_t h, size_t bpr, const uint8_t* src) 
     }
     return result;
 }
+
+#if defined(__ARM_NEON)
+template<>
+inline LinearImage asLinear<uint8_t>(size_t w, size_t h, size_t bpr, const uint8_t* src) {
+    LinearImage result(w, h, 3);
+    float* UTILS_RESTRICT d = result.getPixelRef(0, 0);
+    constexpr float invMax = 1.0f / std::numeric_limits<uint8_t>::max();
+    for (size_t y = 0; y < h; ++y) {
+        uint8_t const* UTILS_RESTRICT p = src + y * bpr;
+        size_t n = w * 3;
+        for (; n >= 16; n -= 16, p += 16, d += 16) {
+            const uint8x16_t v8 = vld1q_u8(p);
+            const uint16x8_t v16_lo = vmovl_u8(vget_low_u8(v8));
+            const uint16x8_t v16_hi = vmovl_u8(vget_high_u8(v8));
+            const uint32x4_t v32_0 = vmovl_u16(vget_low_u16(v16_lo));
+            const uint32x4_t v32_1 = vmovl_u16(vget_high_u16(v16_lo));
+            const uint32x4_t v32_2 = vmovl_u16(vget_low_u16(v16_hi));
+            const uint32x4_t v32_3 = vmovl_u16(vget_high_u16(v16_hi));
+            vst1q_f32(d + 0,  vmulq_n_f32(vcvtq_f32_u32(v32_0), invMax));
+            vst1q_f32(d + 4,  vmulq_n_f32(vcvtq_f32_u32(v32_1), invMax));
+            vst1q_f32(d + 8,  vmulq_n_f32(vcvtq_f32_u32(v32_2), invMax));
+            vst1q_f32(d + 12, vmulq_n_f32(vcvtq_f32_u32(v32_3), invMax));
+        }
+        for (; n > 0; --n) {
+            *d++ = *p++ * invMax;
+        }
+    }
+    return result;
+}
+
+template<>
+inline LinearImage asLinear<uint16_t>(size_t w, size_t h, size_t bpr, const uint8_t* src) {
+    LinearImage result(w, h, 3);
+    float* UTILS_RESTRICT d = result.getPixelRef(0, 0);
+    constexpr float invMax = 1.0f / std::numeric_limits<uint16_t>::max();
+    for (size_t y = 0; y < h; ++y) {
+        uint16_t const* UTILS_RESTRICT p = reinterpret_cast<uint16_t const*>(src + y * bpr);
+        size_t n = w * 3;
+        for (; n >= 8; n -= 8, p += 8, d += 8) {
+            const uint16x8_t v16 = vld1q_u16(p);
+            const uint32x4_t v32_0 = vmovl_u16(vget_low_u16(v16));
+            const uint32x4_t v32_1 = vmovl_u16(vget_high_u16(v16));
+            vst1q_f32(d + 0, vmulq_n_f32(vcvtq_f32_u32(v32_0), invMax));
+            vst1q_f32(d + 4, vmulq_n_f32(vcvtq_f32_u32(v32_1), invMax));
+        }
+        for (; n >= 4; n -= 4, p += 4, d += 4) {
+            const uint16x4_t v16 = vld1_u16(p);
+            const uint32x4_t v32 = vmovl_u16(v16);
+            vst1q_f32(d, vmulq_n_f32(vcvtq_f32_u32(v32), invMax));
+        }
+        for (; n > 0; --n) {
+            *d++ = *p++ * invMax;
+        }
+    }
+    return result;
+}
+#endif
 
 template<typename T>
 static LinearImage toLinearWithAlphaNtohs(size_t w, size_t h, size_t bpr, const uint8_t* src) {
@@ -427,6 +539,40 @@ static LinearImage asLinearWithAlphaNtohs(size_t w, size_t h, size_t bpr, const 
     return result;
 }
 
+#if defined(__ARM_NEON)
+template<>
+inline LinearImage asLinearWithAlphaNtohs<uint16_t>(size_t w, size_t h, size_t bpr,
+        const uint8_t* src) {
+    LinearImage result(w, h, 4);
+    float* UTILS_RESTRICT d = result.getPixelRef(0, 0);
+    constexpr float invMax = 1.0f / std::numeric_limits<uint16_t>::max();
+    for (size_t y = 0; y < h; ++y) {
+        uint16_t const* UTILS_RESTRICT p = reinterpret_cast<uint16_t const*>(src + y * bpr);
+        size_t n = w * 4;
+        for (; n >= 8; n -= 8, p += 8, d += 8) {
+            uint16x8_t v16 = vld1q_u16(p);
+#if !defined(__ARM_BIG_ENDIAN)
+            v16 = vreinterpretq_u16_u8(vrev16q_u8(vreinterpretq_u8_u16(v16)));
+#endif
+            const uint32x4_t v32_0 = vmovl_u16(vget_low_u16(v16));
+            const uint32x4_t v32_1 = vmovl_u16(vget_high_u16(v16));
+            vst1q_f32(d + 0, vmulq_n_f32(vcvtq_f32_u32(v32_0), invMax));
+            vst1q_f32(d + 4, vmulq_n_f32(vcvtq_f32_u32(v32_1), invMax));
+        }
+        if (n >= 4) {
+            uint16x4_t v16 = vld1_u16(p);
+#if !defined(__ARM_BIG_ENDIAN)
+            v16 = vreinterpret_u16_u8(vrev16_u8(vreinterpret_u8_u16(v16)));
+#endif
+            const uint32x4_t v32 = vmovl_u16(v16);
+            vst1q_f32(d, vmulq_n_f32(vcvtq_f32_u32(v32), invMax));
+            d += 4;
+        }
+    }
+    return result;
+}
+#endif
+
 template<typename T>
 static LinearImage toLinearNtohs(size_t w, size_t h, size_t bpr, const uint8_t* src) {
     LinearImage result(w, h, 3);
@@ -456,6 +602,41 @@ static LinearImage asLinearNtohs(size_t w, size_t h, size_t bpr, const uint8_t* 
     }
     return result;
 }
+
+#if defined(__ARM_NEON)
+template<>
+inline LinearImage asLinearNtohs<uint16_t>(size_t w, size_t h, size_t bpr, const uint8_t* src) {
+    LinearImage result(w, h, 3);
+    float* UTILS_RESTRICT d = result.getPixelRef(0, 0);
+    constexpr float invMax = 1.0f / std::numeric_limits<uint16_t>::max();
+    for (size_t y = 0; y < h; ++y) {
+        uint16_t const* UTILS_RESTRICT p = reinterpret_cast<uint16_t const*>(src + y * bpr);
+        size_t n = w * 3;
+        for (; n >= 8; n -= 8, p += 8, d += 8) {
+            uint16x8_t v16 = vld1q_u16(p);
+#if !defined(__ARM_BIG_ENDIAN)
+            v16 = vreinterpretq_u16_u8(vrev16q_u8(vreinterpretq_u8_u16(v16)));
+#endif
+            const uint32x4_t v32_0 = vmovl_u16(vget_low_u16(v16));
+            const uint32x4_t v32_1 = vmovl_u16(vget_high_u16(v16));
+            vst1q_f32(d + 0, vmulq_n_f32(vcvtq_f32_u32(v32_0), invMax));
+            vst1q_f32(d + 4, vmulq_n_f32(vcvtq_f32_u32(v32_1), invMax));
+        }
+        for (; n >= 4; n -= 4, p += 4, d += 4) {
+            uint16x4_t v16 = vld1_u16(p);
+#if !defined(__ARM_BIG_ENDIAN)
+            v16 = vreinterpret_u16_u8(vrev16_u8(vreinterpret_u8_u16(v16)));
+#endif
+            const uint32x4_t v32 = vmovl_u16(v16);
+            vst1q_f32(d, vmulq_n_f32(vcvtq_f32_u32(v32), invMax));
+        }
+        for (; n > 0; --n) {
+            *d++ = ntohs(*p++) * invMax;
+        }
+    }
+    return result;
+}
+#endif
 
 }  // namespace Image
 

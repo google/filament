@@ -286,7 +286,7 @@ LoadedPng::LoadedPng(std::string filePath) : mFilePath(std::move(filePath)) {
     // convert them.
     mBytes = std::vector<unsigned char>(valuesInImage);
     for (int i = 0; i < valuesInImage; ++i) {
-        mBytes[i] = static_cast<uint8_t>(loadedImage.get<float>()[i] * 255.0f);
+        mBytes[i] = static_cast<uint8_t>(loadedImage.get<float>()[i] * 255.0f + 0.5f);
     }
 #endif
     // For platforms that don't support the image loading library, leave the loaded data blank.

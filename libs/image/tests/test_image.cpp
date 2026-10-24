@@ -361,6 +361,93 @@ TEST_F(ImageTest, ColorTransformRGB_10_11_11_REV) { // NOLINT
     }
 }
 
+TEST_F(ImageTest, ColorTransformAsLinear) { // NOLINT
+    constexpr size_t w = 13;
+    constexpr size_t h = 3;
+
+    // Test uint8_t (exercises 16-element NEON loop + scalar tail, with row padding).
+    {
+        constexpr float invMax8 = 1.0f / 255.0f;
+        const size_t bpr3 = w * 3 + 5;
+        vector<uint8_t> src3(h * bpr3, 0xcd);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 3; ++i) {
+                src3[y * bpr3 + i] = static_cast<uint8_t>((y * 53 + i * 17) & 0xff);
+            }
+        }
+        LinearImage img3 = image::asLinear<uint8_t>(w, h, bpr3, src3.data());
+        const float* dst3 = img3.getPixelRef(0, 0);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 3; ++i) {
+                EXPECT_FLOAT_EQ(dst3[y * w * 3 + i], src3[y * bpr3 + i] * invMax8);
+            }
+        }
+
+        const size_t bpr4 = w * 4 + 7;
+        vector<uint8_t> src4(h * bpr4, 0xcd);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 4; ++i) {
+                src4[y * bpr4 + i] = static_cast<uint8_t>((y * 71 + i * 29) & 0xff);
+            }
+        }
+        LinearImage img4 = image::asLinearWithAlpha<uint8_t>(w, h, bpr4, src4.data());
+        const float* dst4 = img4.getPixelRef(0, 0);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 4; ++i) {
+                EXPECT_FLOAT_EQ(dst4[y * w * 4 + i], src4[y * bpr4 + i] * invMax8);
+            }
+        }
+    }
+
+    // Test uint16_t and ntohs variants (exercises 8-element NEON loop, 4-element step, and scalar tail).
+    {
+        constexpr float invMax16 = 1.0f / 65535.0f;
+        const size_t stride3 = w * 3 + 3;
+        const size_t bpr3 = stride3 * sizeof(uint16_t);
+        vector<uint16_t> src3(h * stride3, 0xbeef);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 3; ++i) {
+                src3[y * stride3 + i] = static_cast<uint16_t>((y * 4099 + i * 1319) & 0xffff);
+            }
+        }
+        LinearImage img3 = image::asLinear<uint16_t>(w, h, bpr3,
+                reinterpret_cast<const uint8_t*>(src3.data()));
+        LinearImage img3Ntohs = image::asLinearNtohs<uint16_t>(w, h, bpr3,
+                reinterpret_cast<const uint8_t*>(src3.data()));
+        const float* dst3 = img3.getPixelRef(0, 0);
+        const float* dst3Ntohs = img3Ntohs.getPixelRef(0, 0);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 3; ++i) {
+                const uint16_t v = src3[y * stride3 + i];
+                EXPECT_FLOAT_EQ(dst3[y * w * 3 + i], v * invMax16);
+                EXPECT_FLOAT_EQ(dst3Ntohs[y * w * 3 + i], ntohs(v) * invMax16);
+            }
+        }
+
+        const size_t stride4 = w * 4 + 3;
+        const size_t bpr4 = stride4 * sizeof(uint16_t);
+        vector<uint16_t> src4(h * stride4, 0xbeef);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 4; ++i) {
+                src4[y * stride4 + i] = static_cast<uint16_t>((y * 6553 + i * 2713) & 0xffff);
+            }
+        }
+        LinearImage img4 = image::asLinearWithAlpha<uint16_t>(w, h, bpr4,
+                reinterpret_cast<const uint8_t*>(src4.data()));
+        LinearImage img4Ntohs = image::asLinearWithAlphaNtohs<uint16_t>(w, h, bpr4,
+                reinterpret_cast<const uint8_t*>(src4.data()));
+        const float* dst4 = img4.getPixelRef(0, 0);
+        const float* dst4Ntohs = img4Ntohs.getPixelRef(0, 0);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 4; ++i) {
+                const uint16_t v = src4[y * stride4 + i];
+                EXPECT_FLOAT_EQ(dst4[y * w * 4 + i], v * invMax16);
+                EXPECT_FLOAT_EQ(dst4Ntohs[y * w * 4 + i], ntohs(v) * invMax16);
+            }
+        }
+    }
+}
+
 TEST_F(ImageTest, Mipmaps) { // NOLINT
     Filter filter = filterFromString("HERMITE");
     ASSERT_EQ(filter, Filter::HERMITE);
