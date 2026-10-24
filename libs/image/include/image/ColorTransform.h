@@ -26,6 +26,10 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
+#if defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
+
 #include <algorithm>
 #include <memory>
 
@@ -35,6 +39,38 @@ namespace image {
 
 template <typename T>
 uint32_t linearToRGB_10_11_11_REV(const T& linear) {
+#if defined(__ARM_NEON)
+    // the max value for a RGB_11_11_10 is {65024, 65024, 64512} :  (2 - 2^-M) * 2^(E-1)
+    // we clamp to the min of that
+    float32x4_t v = { linear[0], linear[1], linear[2], 0.0f };
+    v = vminq_f32(v, vdupq_n_f32(64512.0f));
+    v = vmaxq_f32(v, vdupq_n_f32(0.0f));
+
+    // Convert float32 to fp11 (S=0, E=5, M=6) for R/G and fp10 (S=0, E=5, M=5) for B:
+    // - Erase extra mantissa bits: ~((1u << (22 - M)) - 1u)
+    // - Add rounding bias: 1u << (22 - M)
+    // - Multiply by exponent offset: ((1u << (E - 1u)) - 1u) << 23u = 2^-112
+    // - Shift into packed positions (R: >> 17, G: (>> 17) << 11 = >> 6, B: (>> 18) << 22 = << 4)
+    // - Mask each channel to its bit width (11, 11, 10 bits)
+    constexpr uint32x4_t mask = { 0xffff0000u, 0xffff0000u, 0xfffe0000u, 0u };
+    constexpr uint32x4_t rounding = { 0x00010000u, 0x00010000u, 0x00020000u, 0u };
+    constexpr float magic = 0x1.0p-112f;
+    constexpr int32x4_t shift = { -17, -6, 4, 0 };
+    constexpr uint32x4_t packMask = { 0x000007ffu, 0x003ff800u, 0xffc00000u, 0u };
+
+    uint32x4_t bits = vreinterpretq_u32_f32(v);
+    bits = vandq_u32(bits, mask);
+    bits = vaddq_u32(bits, rounding);
+    bits = vreinterpretq_u32_f32(vmulq_n_f32(vreinterpretq_f32_u32(bits), magic));
+    bits = vshlq_u32(bits, shift);
+    bits = vandq_u32(bits, packMask);
+#if defined(__aarch64__)
+    return vaddvq_u32(bits);
+#else
+    const uint32x2_t r = vorr_u32(vget_low_u32(bits), vget_high_u32(bits));
+    return vget_lane_u32(vpadd_u32(r, r), 0);
+#endif
+#else
     using fp11 = math::fp<0, 5, 6>;
     using fp10 = math::fp<0, 5, 5>;
     // the max value for a RGB_11_11_10 is {65024, 65024, 64512} :  (2 - 2^-M) * 2^(E-1)
@@ -46,6 +82,7 @@ uint32_t linearToRGB_10_11_11_REV(const T& linear) {
     const uint32_t ig = g.bits & 0x7FF;
     const uint32_t ib = b.bits & 0x3FF;
     return (ib << 22) | (ig << 11) | ir;
+#endif
 }
 
 template <typename T>

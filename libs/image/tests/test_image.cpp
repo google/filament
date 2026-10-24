@@ -329,6 +329,37 @@ TEST_F(ImageTest, ColorTransformRGBA) { // NOLINT
     ASSERT_NEAR(pixels[3].w, 0.99183642f, 0.001f);
 }
 
+TEST_F(ImageTest, ColorTransformRGB_10_11_11_REV) { // NOLINT
+    using fp11 = filament::math::fp<0, 5, 6>;
+    using fp10 = filament::math::fp<0, 5, 5>;
+    auto reference = [](const float3& linear) -> uint32_t {
+        const fp11 r = fp11::fromf(std::min(64512.0f, linear[0]));
+        const fp11 g = fp11::fromf(std::min(64512.0f, linear[1]));
+        const fp10 b = fp10::fromf(std::min(64512.0f, linear[2]));
+        const uint32_t ir = r.bits & 0x7FF;
+        const uint32_t ig = g.bits & 0x7FF;
+        const uint32_t ib = b.bits & 0x3FF;
+        return (ib << 22) | (ig << 11) | ir;
+    };
+
+    const float inf = std::numeric_limits<float>::infinity();
+    const float testValues[] = {
+        -inf, -100.0f, -1.0f, -1e-6f, -0.0f, 0.0f,
+        1e-8f, 1e-6f, 3e-5f, 6.103515625e-5f, 1e-4f,
+        0.001f, 0.1f, 0.3333333f, 0.5f, 1.0f, 2.5f, 16.0f, 100.0f, 1024.0f,
+        64511.0f, 64512.0f, 65024.0f, 100000.0f, inf
+    };
+
+    for (float r : testValues) {
+        for (float g : testValues) {
+            for (float b : testValues) {
+                const float3 c{ r, g, b };
+                EXPECT_EQ(image::linearToRGB_10_11_11_REV(c), reference(c));
+            }
+        }
+    }
+}
+
 TEST_F(ImageTest, Mipmaps) { // NOLINT
     Filter filter = filterFromString("HERMITE");
     ASSERT_EQ(filter, Filter::HERMITE);
