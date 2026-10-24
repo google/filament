@@ -897,6 +897,7 @@ export class Engine {
     public setActiveFeatureLevel(featureLevel: FeatureLevel): FeatureLevel;
     public getActiveFeatureLevel(): FeatureLevel;
     public static getSteadyClockTimeNano(): number;
+    public static getVersion(): string;
     public isValidColorGrading(colorGrading: ColorGrading): boolean;
     public isValidExpensiveMaterialInstance(materialInstance: MaterialInstance): boolean;
     public isValidIndexBuffer(indexBuffer: IndexBuffer): boolean;

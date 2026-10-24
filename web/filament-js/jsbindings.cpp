@@ -511,6 +511,10 @@ class_<Engine>("Engine")
 
     .class_function("getSteadyClockTimeNano", &Engine::getSteadyClockTimeNano)
 
+    .class_function("getVersion", (std::string (*)()) [] {
+        return std::string(Engine::getVersion());
+    })
+
     .function("unprotected", &Engine::unprotected)
 
     .function("enableAccurateTranslations", &Engine::enableAccurateTranslations)

@@ -16,3 +16,8 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - vulkan: fix a crash when more than 32 timer queries are outstanding. `createTimerQueryS` returns
   a null handle once the pool is exhausted, and `getTimerQueryValue` reports `ERROR` for it
   (#10658)
+- engine: `Engine::getVersion()` returns the version Filament was built from (#6277)
+- java: `Engine.getVersion()` is added
+- web: `Engine.getVersion()` is added
+- build: the release version moves to `VERSION` at the repository root, read by CMake and Gradle;
+  `android/gradle.properties` no longer has `VERSION_NAME`
