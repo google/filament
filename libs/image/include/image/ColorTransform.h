@@ -110,7 +110,7 @@ math::float3 linearToSRGB(const T& linear) {
 }
 
 template<>
-math::float3 linearToSRGB(const math::float3& color) {
+inline math::float3 linearToSRGB(const math::float3& color) {
     using math::float3;
     float3 sRGBColor{color};
     UTILS_NOUNROLL
@@ -185,7 +185,14 @@ inline float32x4_t sRGBToLinearSimd(float32x4_t sRGB) {
     // Degree-7 Chebyshev polynomial approximation of ((sRGB + 0.055) / 1.055)^2.4
     // in terms of s = sqrt((sRGB + 0.055) / 1.055) on [0.04045, 1.0].
     const float32x4_t u = vfmaq_n_f32(vdupq_n_f32(0.055f / 1.055f), sRGB, 1.0f / 1.055f);
+#if defined(__aarch64__) || defined(_M_ARM64)
     const float32x4_t s = vsqrtq_f32(u);
+#else
+    float32x4_t rsqrt = vrsqrteq_f32(u);
+    rsqrt = vmulq_f32(rsqrt, vrsqrtsq_f32(vmulq_f32(u, rsqrt), rsqrt));
+    rsqrt = vmulq_f32(rsqrt, vrsqrtsq_f32(vmulq_f32(u, rsqrt), rsqrt));
+    const float32x4_t s = vmulq_f32(u, rsqrt);
+#endif
 
     float32x4_t r = vdupq_n_f32(9.577179328e-03f);
     r = vfmaq_f32(vdupq_n_f32(-7.882753015e-02f), r, s);
