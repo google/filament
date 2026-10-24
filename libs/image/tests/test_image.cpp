@@ -448,6 +448,112 @@ TEST_F(ImageTest, ColorTransformAsLinear) { // NOLINT
     }
 }
 
+TEST_F(ImageTest, ColorTransformToLinear) { // NOLINT
+    constexpr size_t w = 13;
+    constexpr size_t h = 3;
+
+    // Test uint8_t (exercises 16-element NEON loop, 4-element NEON loop, and scalar tail).
+    {
+        constexpr float invMax8 = 1.0f / 255.0f;
+        const size_t bpr3 = w * 3 + 5;
+        vector<uint8_t> src3(h * bpr3, 0xcd);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 3; ++i) {
+                src3[y * bpr3 + i] = static_cast<uint8_t>((y * 53 + i * 17) & 0xff);
+            }
+        }
+        src3[0] = 0;
+        src3[1] = 10;
+        src3[2] = 11;
+        src3[3] = 255;
+        LinearImage img3 = image::toLinear<uint8_t>(w, h, bpr3, src3.data());
+        const float* dst3 = img3.getPixelRef(0, 0);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 3; ++i) {
+                const uint8_t v = src3[y * bpr3 + i];
+                EXPECT_NEAR(dst3[y * w * 3 + i], image::sRGBToLinear(v * invMax8), 1e-6f);
+            }
+        }
+
+        const size_t bpr4 = w * 4 + 7;
+        vector<uint8_t> src4(h * bpr4, 0xcd);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 4; ++i) {
+                src4[y * bpr4 + i] = static_cast<uint8_t>((y * 71 + i * 29) & 0xff);
+            }
+        }
+        LinearImage img4 = image::toLinearWithAlpha<uint8_t>(w, h, bpr4, src4.data());
+        const float* dst4 = img4.getPixelRef(0, 0);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 4; ++i) {
+                const uint8_t v = src4[y * bpr4 + i];
+                if ((i & 3) == 3) {
+                    EXPECT_FLOAT_EQ(dst4[y * w * 4 + i], v * invMax8);
+                } else {
+                    EXPECT_NEAR(dst4[y * w * 4 + i], image::sRGBToLinear(v * invMax8), 1e-6f);
+                }
+            }
+        }
+    }
+
+    // Test uint16_t and ntohs variants (exercises 8-element NEON loop, 4-element step, and scalar tail).
+    {
+        constexpr float invMax16 = 1.0f / 65535.0f;
+        const size_t stride3 = w * 3 + 3;
+        const size_t bpr3 = stride3 * sizeof(uint16_t);
+        vector<uint16_t> src3(h * stride3, 0xbeef);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 3; ++i) {
+                src3[y * stride3 + i] = static_cast<uint16_t>((y * 4099 + i * 1319) & 0xffff);
+            }
+        }
+        src3[0] = 0;
+        src3[1] = 2650;
+        src3[2] = 2651;
+        src3[3] = 65535;
+        LinearImage img3 = image::toLinear<uint16_t>(w, h, bpr3,
+                reinterpret_cast<const uint8_t*>(src3.data()));
+        LinearImage img3Ntohs = image::toLinearNtohs<uint16_t>(w, h, bpr3,
+                reinterpret_cast<const uint8_t*>(src3.data()));
+        const float* dst3 = img3.getPixelRef(0, 0);
+        const float* dst3Ntohs = img3Ntohs.getPixelRef(0, 0);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 3; ++i) {
+                const uint16_t v = src3[y * stride3 + i];
+                EXPECT_NEAR(dst3[y * w * 3 + i], image::sRGBToLinear(v * invMax16), 1e-6f);
+                EXPECT_NEAR(dst3Ntohs[y * w * 3 + i], image::sRGBToLinear(ntohs(v) * invMax16), 1e-6f);
+            }
+        }
+
+        const size_t stride4 = w * 4 + 3;
+        const size_t bpr4 = stride4 * sizeof(uint16_t);
+        vector<uint16_t> src4(h * stride4, 0xbeef);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 4; ++i) {
+                src4[y * stride4 + i] = static_cast<uint16_t>((y * 6553 + i * 2713) & 0xffff);
+            }
+        }
+        LinearImage img4 = image::toLinearWithAlpha<uint16_t>(w, h, bpr4,
+                reinterpret_cast<const uint8_t*>(src4.data()));
+        LinearImage img4Ntohs = image::toLinearWithAlphaNtohs<uint16_t>(w, h, bpr4,
+                reinterpret_cast<const uint8_t*>(src4.data()));
+        const float* dst4 = img4.getPixelRef(0, 0);
+        const float* dst4Ntohs = img4Ntohs.getPixelRef(0, 0);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 4; ++i) {
+                const uint16_t v = src4[y * stride4 + i];
+                if ((i & 3) == 3) {
+                    EXPECT_FLOAT_EQ(dst4[y * w * 4 + i], v * invMax16);
+                    EXPECT_FLOAT_EQ(dst4Ntohs[y * w * 4 + i], ntohs(v) * invMax16);
+                } else {
+                    EXPECT_NEAR(dst4[y * w * 4 + i], image::sRGBToLinear(v * invMax16), 1e-6f);
+                    EXPECT_NEAR(dst4Ntohs[y * w * 4 + i], image::sRGBToLinear(ntohs(v) * invMax16), 1e-6f);
+                }
+            }
+        }
+    }
+}
+
 TEST_F(ImageTest, Mipmaps) { // NOLINT
     Filter filter = filterFromString("HERMITE");
     ASSERT_EQ(filter, Filter::HERMITE);
