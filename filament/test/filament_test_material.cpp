@@ -806,10 +806,14 @@ TEST(Material, CompileVariantsIncludeMotionVectorsWhenEnabled) {
             /* shadowReceiver= */ utils::tribool{}, /* skinning= */ utils::tribool{});
     EXPECT_EQ(allVariants.size(), 8u);
 
-    // Both motion vectors programs exist and the material can render them.
+    // Standard materials omit motion vectors shaders from their package and render them using the
+    // default material's programs.
     MaterialDefinition const& definition = downcast(material)->getDefinition();
+    EXPECT_FALSE(definition.hasCustomDepthShader);
     for (Variant const variant : { motionVectors, skinnedMotionVectors }) {
-        EXPECT_TRUE(definition.isValidProgram(variant, DynamicSpecConstKey{},
+        EXPECT_FALSE(definition.isValidProgram(variant, DynamicSpecConstKey{},
+                fengine.getShaderModel(), fengine.isStereoSupported()));
+        EXPECT_TRUE(downcast(material)->isValidProgram(variant, DynamicSpecConstKey{},
                 fengine.getShaderModel(), fengine.isStereoSupported()));
     }
     EXPECT_TRUE(downcast(material)->hasMotionVectorsVariant());
@@ -914,6 +918,127 @@ TEST(Material, MotionVectorsCompileVariantsFollowRenderedPrograms) {
     engine->destroy(translucent);
     Engine::destroy(engine);
 }
+
+TEST(Material, MotionVectorsOmittedWhenSharedOrFragmentStandard) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    ASSERT_NE(engine, nullptr);
+    FEngine& fengine = downcast(*engine);
+    FEngine::DriverApi& driver = fengine.getDriverApi();
+    auto const sm = fengine.getShaderModel();
+    bool const stereo = fengine.isStereoSupported();
+
+    Variant const mot{ Variant::SPECIAL_MOT_VARIANT };
+    Variant const skinnedMot{ Variant::SPECIAL_MOT_VARIANT | Variant::SKN };
+
+    // 1. A material with custom varyings and a vertex shader that only modifies UVs/custom
+    // varyings (not vertex position) has hasCustomDepthShader == false and omits both MOT VS and
+    // MOT FS from its package, sharing the default material's programs.
+    {
+        filamat::MaterialBuilder builder;
+        builder.init();
+        builder.name("VaryingOnlyVertexMaterial")
+                .shading(Shading::UNLIT)
+                .variable(filamat::MaterialBuilder::Variable::CUSTOM0, "localPos")
+                .materialVertex(R"(
+                    void materialVertex(inout MaterialVertexInputs material) {
+                        material.localPos = getPosition();
+                    }
+                )")
+                .material(R"(
+                    void material(inout MaterialInputs material) {
+                        prepareMaterial(material);
+                        material.baseColor = variable_localPos;
+                    }
+                )");
+        filamat::Package const pkg = builder.build(engine->getJobSystem());
+        ASSERT_TRUE(pkg.isValid());
+        Material* mat = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
+        ASSERT_NE(mat, nullptr);
+        FMaterial* fmat = downcast(mat);
+        MaterialParser const& parser = fmat->getDefinition().getMaterialParser();
+
+        EXPECT_FALSE(fmat->getDefinition().hasCustomDepthShader);
+        EXPECT_FALSE(parser.hasShader(sm, mot, backend::ShaderStage::VERTEX));
+        EXPECT_FALSE(parser.hasShader(sm, skinnedMot, backend::ShaderStage::VERTEX));
+        EXPECT_FALSE(parser.hasShader(sm, mot, backend::ShaderStage::FRAGMENT));
+        EXPECT_TRUE(fmat->isSharedVariant(mot));
+        EXPECT_TRUE(fmat->isSharedVariant(skinnedMot));
+        EXPECT_TRUE(fmat->hasMotionVectorsVariant());
+
+        engine->destroy(mat);
+    }
+
+    // 2. A material whose vertex shader modifies worldPosition but whose fragment shader is
+    // standard (OPAQUE, no discard or gl_FragDepth) has hasCustomDepthShader == true, emits its
+    // custom MOT vertex shaders, omits the MOT fragment shader, and links against the default
+    // material's MOT fragment shader.
+    {
+        filamat::MaterialBuilder builder;
+        builder.init();
+        builder.name("PositionDisplacingVertexMaterial")
+                .shading(Shading::UNLIT)
+                .materialVertex(R"(
+                    void materialVertex(inout MaterialVertexInputs material) {
+                        material.worldPosition.xyz += vec3(0.0, 1.0, 0.0);
+                    }
+                )");
+        filamat::Package const pkg = builder.build(engine->getJobSystem());
+        ASSERT_TRUE(pkg.isValid());
+        Material* mat = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
+        ASSERT_NE(mat, nullptr);
+        FMaterial* fmat = downcast(mat);
+        MaterialParser const& parser = fmat->getDefinition().getMaterialParser();
+
+        EXPECT_TRUE(fmat->getDefinition().hasCustomDepthShader);
+        EXPECT_TRUE(parser.hasShader(sm, mot, backend::ShaderStage::VERTEX));
+        EXPECT_TRUE(parser.hasShader(sm, skinnedMot, backend::ShaderStage::VERTEX));
+        EXPECT_FALSE(parser.hasShader(sm, mot, backend::ShaderStage::FRAGMENT));
+        EXPECT_FALSE(fmat->isSharedVariant(mot));
+        EXPECT_TRUE(fmat->getDefinition().isValidProgram(mot, DynamicSpecConstKey{}, sm, stereo));
+        EXPECT_TRUE(fmat->getDefinition().isValidProgram(skinnedMot, DynamicSpecConstKey{}, sm,
+                stereo));
+        EXPECT_TRUE(fmat->hasMotionVectorsVariant());
+        EXPECT_TRUE(bool(fmat->getPrograms().prepareProgram(
+                driver, mot, DynamicSpecConstKey{}, backend::CompilerPriorityQueue::HIGH)));
+        EXPECT_TRUE(bool(fmat->getPrograms().prepareProgram(
+                driver, skinnedMot, DynamicSpecConstKey{}, backend::CompilerPriorityQueue::HIGH)));
+
+        engine->destroy(mat);
+    }
+
+    // 3. A material whose fragment shader calls discard in OPAQUE mode has a custom depth fragment
+    // shader, so its package retains both MOT VS and MOT FS.
+    {
+        filamat::MaterialBuilder builder;
+        builder.init();
+        builder.name("CustomDepthDiscardMaterial")
+                .shading(Shading::UNLIT)
+                .material(R"(
+                    void material(inout MaterialInputs material) {
+                        prepareMaterial(material);
+                        if (gl_FragCoord.x < 0.0) {
+                            discard;
+                        }
+                    }
+                )");
+        filamat::Package const pkg = builder.build(engine->getJobSystem());
+        ASSERT_TRUE(pkg.isValid());
+        Material* mat = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
+        ASSERT_NE(mat, nullptr);
+        FMaterial* fmat = downcast(mat);
+        MaterialParser const& parser = fmat->getDefinition().getMaterialParser();
+
+        EXPECT_TRUE(fmat->getDefinition().hasCustomDepthShader);
+        EXPECT_TRUE(parser.hasShader(sm, mot, backend::ShaderStage::VERTEX));
+        EXPECT_TRUE(parser.hasShader(sm, skinnedMot, backend::ShaderStage::VERTEX));
+        EXPECT_TRUE(parser.hasShader(sm, mot, backend::ShaderStage::FRAGMENT));
+        EXPECT_TRUE(fmat->hasMotionVectorsVariant());
+
+        engine->destroy(mat);
+    }
+
+    Engine::destroy(engine);
+}
 #endif
 
 TEST(Material, FeatureLevel0PackageHasNoEssl1MotionVectorsShaders) {
@@ -925,6 +1050,7 @@ TEST(Material, FeatureLevel0PackageHasNoEssl1MotionVectorsShaders) {
     builder.name("FeatureLevel0Material")
             .shading(Shading::UNLIT)
             .featureLevel(backend::FeatureLevel::FEATURE_LEVEL_0)
+            .isDefaultMaterial(true)
             .platform(filamat::MaterialBuilder::Platform::MOBILE)
             .targetApi(filamat::MaterialBuilder::TargetApi::OPENGL);
     filamat::Package const package = builder.build(engine->getJobSystem());
