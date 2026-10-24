@@ -37,40 +37,9 @@ using namespace filament;
 
 namespace image {
 
+// Only called when __ARM_NEON is not defined (unsupported).
 template <typename T>
 uint32_t linearToRGB_10_11_11_REV(const T& linear) {
-#if defined(__ARM_NEON)
-    // the max value for a RGB_11_11_10 is {65024, 65024, 64512} :  (2 - 2^-M) * 2^(E-1)
-    // we clamp to the min of that
-    float32x4_t v = { linear[0], linear[1], linear[2], 0.0f };
-    v = vminq_f32(v, vdupq_n_f32(64512.0f));
-    v = vmaxq_f32(v, vdupq_n_f32(0.0f));
-
-    // Convert float32 to fp11 (S=0, E=5, M=6) for R/G and fp10 (S=0, E=5, M=5) for B:
-    // - Erase extra mantissa bits: ~((1u << (22 - M)) - 1u)
-    // - Add rounding bias: 1u << (22 - M)
-    // - Multiply by exponent offset: ((1u << (E - 1u)) - 1u) << 23u = 2^-112
-    // - Shift into packed positions (R: >> 17, G: (>> 17) << 11 = >> 6, B: (>> 18) << 22 = << 4)
-    // - Mask each channel to its bit width (11, 11, 10 bits)
-    constexpr uint32x4_t mask = { 0xffff0000u, 0xffff0000u, 0xfffe0000u, 0u };
-    constexpr uint32x4_t rounding = { 0x00010000u, 0x00010000u, 0x00020000u, 0u };
-    constexpr float magic = 0x1.0p-112f;
-    constexpr int32x4_t shift = { -17, -6, 4, 0 };
-    constexpr uint32x4_t packMask = { 0x000007ffu, 0x003ff800u, 0xffc00000u, 0u };
-
-    uint32x4_t bits = vreinterpretq_u32_f32(v);
-    bits = vandq_u32(bits, mask);
-    bits = vaddq_u32(bits, rounding);
-    bits = vreinterpretq_u32_f32(vmulq_n_f32(vreinterpretq_f32_u32(bits), magic));
-    bits = vshlq_u32(bits, shift);
-    bits = vandq_u32(bits, packMask);
-#if defined(__aarch64__)
-    return vaddvq_u32(bits);
-#else
-    const uint32x2_t r = vorr_u32(vget_low_u32(bits), vget_high_u32(bits));
-    return vget_lane_u32(vpadd_u32(r, r), 0);
-#endif
-#else
     using fp11 = math::fp<0, 5, 6>;
     using fp10 = math::fp<0, 5, 5>;
     // the max value for a RGB_11_11_10 is {65024, 65024, 64512} :  (2 - 2^-M) * 2^(E-1)
@@ -82,7 +51,6 @@ uint32_t linearToRGB_10_11_11_REV(const T& linear) {
     const uint32_t ig = g.bits & 0x7FF;
     const uint32_t ib = b.bits & 0x3FF;
     return (ib << 22) | (ig << 11) | ir;
-#endif
 }
 
 template <typename T>
@@ -117,7 +85,7 @@ math::float3 RGBMtoLinear(const T& rgbm) {
 }
 
 template <typename T>
-math::float3 linearTosRGB(const T& linear) {
+math::float3 linearToSRGB(const T& linear) {
     using math::float3;
     constexpr float a = 0.055f;
     constexpr float a1 = 1.055f;
@@ -133,7 +101,19 @@ math::float3 linearTosRGB(const T& linear) {
     return sRGB;
 }
 
-inline float linearTosRGB(float linear) {
+template<>
+math::float3 linearToSRGB(const math::float3& color) {
+    using math::float3;
+    float3 sRGBColor{color};
+    UTILS_NOUNROLL
+    for (size_t i = 0; i < sRGBColor.size(); i++) {
+        sRGBColor[i] = sRGBColor[i] <= 0.0031308f ?
+                sRGBColor[i] * 12.92f : powf(sRGBColor[i], 1.0f / 2.4f) * 1.055f - 0.055f;
+    }
+    return sRGBColor;
+}
+
+inline float linearToSRGB(float linear) {
     if (linear <= 0.0031308f) {
         return linear * 12.92f;
     }
@@ -153,7 +133,7 @@ inline math::float3 sRGBToLinear(const math::float3& sRGB) {
     constexpr float a1 = 1.055f;
     constexpr float p = 2.4f;
     float3 linear;
-    for (size_t i=0 ; i<3 ; i++) {
+    for (size_t i = 0; i < 3; i++) {
         if (sRGB[i] <= 0.04045f) {
             linear[i] = sRGB[i] * (1.0f / 12.92f);
         } else {
@@ -170,7 +150,7 @@ inline math::float4 sRGBToLinear(const math::float4& sRGB) {
     constexpr float a1 = 1.055f;
     constexpr float p = 2.4f;
     float4 linear;
-    for (size_t i=0 ; i<3 ; i++) {
+    for (size_t i = 0; i < 3; i++) {
         if (sRGB[i] <= 0.04045f) {
             linear[i] = sRGB[i] * (1.0f / 12.92f);
         } else {
@@ -179,21 +159,6 @@ inline math::float4 sRGBToLinear(const math::float4& sRGB) {
     }
     linear[3] = sRGB[3];
     return linear;
-}
-
-template<typename T>
-T linearToSRGB(const T& color);
-
-template<>
-inline math::float3 linearToSRGB(const math::float3& color) {
-    using math::float3;
-    float3 sRGBColor{color};
-    UTILS_NOUNROLL
-    for (size_t i = 0; i < sRGBColor.size(); i++) {
-        sRGBColor[i] = sRGBColor[i] <= 0.0031308f ?
-                sRGBColor[i] * 12.92f : powf(sRGBColor[i], 1.0f / 2.4f) * 1.055f - 0.055f;
-    }
-    return sRGBColor;
 }
 
 // Creates a N-channel sRGB image from a linear floating-point image.
@@ -210,7 +175,7 @@ std::unique_ptr<uint8_t[]> fromLinearToSRGB(const LinearImage& image) {
         float const* p = image.getPixelRef(0, y);
         for (size_t x = 0; x < w; ++x, p += channels, d += N) {
             for (int n = 0; n < N; n++) {
-                const float source = n < 3 ? linearTosRGB(p[n]) : p[n];
+                const float source = n < 3 ? linearToSRGB(p[n]) : p[n];
                 float target =  math::saturate(source) * std::numeric_limits<T>::max() + 0.5f;
                 d[n] = T(target);
             }
@@ -240,44 +205,67 @@ std::unique_ptr<uint8_t[]> fromLinearToRGB(const LinearImage& image) {
     return dst;
 }
 
-// Creates a 4-channel RGBM u8 image from a f32 image.
-// The source image can have three or more channels, but only the first three are honored.
-template <typename T>
-std::unique_ptr<uint8_t[]> fromLinearToRGBM(const LinearImage& image) {
-    using namespace filament::math;
-    const size_t w = image.getWidth();
-    const size_t h = image.getHeight();
-    assert(image.getChannels() >= 3);
-    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * 4 * sizeof(T)]);
-    T* d = reinterpret_cast<T*>(dst.get());
-    for (size_t y = 0; y < h; ++y) {
-        for (size_t x = 0; x < w; ++x, d += 4) {
-            const auto src = image.get<float3>(uint32_t(x), uint32_t(y));
-            float4 l(linearToRGBM(*src) * std::numeric_limits<T>::max() + 0.5f);
-            for (size_t i = 0; i < 4; i++) {
-                d[i] = T(l[i]);
-            }
-        }
-    }
-    return dst;
-}
-
 // Creates a 3-channel RGB_10_11_11_REV image from a f32 image.
 // The source image can have three or more channels, but only the first three are honored.
 inline std::unique_ptr<uint8_t[]> fromLinearToRGB_10_11_11_REV(const LinearImage& image) {
     using namespace filament::math;
     const size_t w = image.getWidth();
     const size_t h = image.getHeight();
-    UTILS_UNUSED_IN_RELEASE const size_t channels = image.getChannels();
-    assert(channels >= 3);
-    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * sizeof(uint32_t)]);
-    uint8_t* d = dst.get();
-    for (size_t y = 0; y < h; ++y) {
-        for (size_t x = 0; x < w; ++x, d += sizeof(uint32_t)) {
-            const auto src = image.get<float3>(uint32_t(x), uint32_t(y));
-            const uint32_t v = linearToRGB_10_11_11_REV(*src);
-            *reinterpret_cast<uint32_t*>(d) = v;
+    const size_t channels = image.getChannels();
+    assert(channels == 3 || channels == 4);
+    const size_t count = w * h;
+    std::unique_ptr<uint8_t[]> dst(new uint8_t[count * sizeof(uint32_t)]);
+    uint32_t* UTILS_RESTRICT d = reinterpret_cast<uint32_t*>(dst.get());
+    float const* UTILS_RESTRICT p = image.getPixelRef();
+
+    size_t i = 0;
+#if defined(__ARM_NEON)
+    const float32x4_t maxVal = vdupq_n_f32(64512.0f);
+    const float32x4_t zero = vdupq_n_f32(0.0f);
+    const uint32x4_t mask11 = vdupq_n_u32(0xffff0000u);
+    const uint32x4_t mask10 = vdupq_n_u32(0xfffe0000u);
+    const uint32x4_t round11 = vdupq_n_u32(0x00010000u);
+    const uint32x4_t round10 = vdupq_n_u32(0x00020000u);
+    constexpr float magic = 0x1.0p-112f;
+
+    auto convert4 = [&](float32x4_t r, float32x4_t g, float32x4_t b) -> uint32x4_t {
+        r = vmaxq_f32(vminq_f32(r, maxVal), zero);
+        g = vmaxq_f32(vminq_f32(g, maxVal), zero);
+        b = vmaxq_f32(vminq_f32(b, maxVal), zero);
+
+        uint32x4_t ir = vandq_u32(vreinterpretq_u32_f32(r), mask11);
+        uint32x4_t ig = vandq_u32(vreinterpretq_u32_f32(g), mask11);
+        uint32x4_t ib = vandq_u32(vreinterpretq_u32_f32(b), mask10);
+
+        ir = vaddq_u32(ir, round11);
+        ig = vaddq_u32(ig, round11);
+        ib = vaddq_u32(ib, round10);
+
+        ir = vreinterpretq_u32_f32(vmulq_n_f32(vreinterpretq_f32_u32(ir), magic));
+        ig = vreinterpretq_u32_f32(vmulq_n_f32(vreinterpretq_f32_u32(ig), magic));
+        ib = vreinterpretq_u32_f32(vmulq_n_f32(vreinterpretq_f32_u32(ib), magic));
+
+        ir = vshrq_n_u32(ir, 17);
+        ig = vshrq_n_u32(ig, 17);
+        ib = vshrq_n_u32(ib, 18);
+
+        return vsliq_n_u32(vsliq_n_u32(ir, ig, 11), ib, 22);
+    };
+
+    if (channels == 3) {
+        for (; i + 4 <= count; i += 4, p += 12, d += 4) {
+            const float32x4x3_t rgb = vld3q_f32(p);
+            vst1q_u32(d, convert4(rgb.val[0], rgb.val[1], rgb.val[2]));
         }
+    } else {
+        for (; i + 4 <= count; i += 4, p += 16, d += 4) {
+            const float32x4x4_t rgba = vld4q_f32(p);
+            vst1q_u32(d, convert4(rgba.val[0], rgba.val[1], rgba.val[2]));
+        }
+    }
+#endif
+    for (; i < count; ++i, p += channels, ++d) {
+        *d = linearToRGB_10_11_11_REV(p);
     }
     return dst;
 }
@@ -296,6 +284,28 @@ std::unique_ptr<uint8_t[]> fromLinearToGrayscale(const LinearImage& image) {
         for (size_t x = 0; x < w; ++x, ++p, ++d) {
             const float gray =  math::saturate(*p) * std::numeric_limits<T>::max() + 0.5f;
             d[0] = T(gray);
+        }
+    }
+    return dst;
+}
+
+// Creates a 4-channel RGBM u8 image from a f32 image.
+// The source image can have three or more channels, but only the first three are honored.
+template <typename T>
+std::unique_ptr<uint8_t[]> fromLinearToRGBM(const LinearImage& image) {
+    using namespace filament::math;
+    const size_t w = image.getWidth();
+    const size_t h = image.getHeight();
+    assert(image.getChannels() >= 3);
+    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * 4 * sizeof(T)]);
+    T* d = reinterpret_cast<T*>(dst.get());
+    for (size_t y = 0; y < h; ++y) {
+        for (size_t x = 0; x < w; ++x, d += 4) {
+            const auto src = image.get<float3>(uint32_t(x), uint32_t(y));
+            float4 l(linearToRGBM(*src) * std::numeric_limits<T>::max() + 0.5f);
+            for (size_t i = 0; i < 4; i++) {
+                d[i] = T(l[i]);
+            }
         }
     }
     return dst;

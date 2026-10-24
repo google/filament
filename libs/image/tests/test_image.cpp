@@ -299,7 +299,7 @@ TEST_F(ImageTest, ColorTransformRGB) { // NOLINT
     constexpr size_t bpr = w * sizeof(uint16_t) * 3;
     std::unique_ptr<uint8_t[]> data(new uint8_t[h * bpr]);
     memcpy(data.get(), texels, sizeof(texels));
-    LinearImage img = image::asLinear<uint16_t>(w, h, bpr, data.get());
+    LinearImage img = image::toLinear<uint16_t>(w, h, bpr, data.get());
     auto pixels = img.get<float3>();
     ASSERT_NEAR(pixels[0].x, 0.0f, 0.001f);
     ASSERT_NEAR(pixels[0].y, 0.0f, 0.001f);
@@ -330,18 +330,6 @@ TEST_F(ImageTest, ColorTransformRGBA) { // NOLINT
 }
 
 TEST_F(ImageTest, ColorTransformRGB_10_11_11_REV) { // NOLINT
-    using fp11 = filament::math::fp<0, 5, 6>;
-    using fp10 = filament::math::fp<0, 5, 5>;
-    auto reference = [](const float3& linear) -> uint32_t {
-        const fp11 r = fp11::fromf(std::min(64512.0f, linear[0]));
-        const fp11 g = fp11::fromf(std::min(64512.0f, linear[1]));
-        const fp10 b = fp10::fromf(std::min(64512.0f, linear[2]));
-        const uint32_t ir = r.bits & 0x7FF;
-        const uint32_t ig = g.bits & 0x7FF;
-        const uint32_t ib = b.bits & 0x3FF;
-        return (ib << 22) | (ig << 11) | ir;
-    };
-
     const float inf = std::numeric_limits<float>::infinity();
     const float testValues[] = {
         -inf, -100.0f, -1.0f, -1e-6f, -0.0f, 0.0f,
@@ -350,12 +338,25 @@ TEST_F(ImageTest, ColorTransformRGB_10_11_11_REV) { // NOLINT
         64511.0f, 64512.0f, 65024.0f, 100000.0f, inf
     };
 
-    for (float r : testValues) {
-        for (float g : testValues) {
-            for (float b : testValues) {
-                const float3 c{ r, g, b };
-                EXPECT_EQ(image::linearToRGB_10_11_11_REV(c), reference(c));
+    constexpr uint32_t w = 7;
+    constexpr uint32_t h = 5;
+    constexpr size_t numValues = sizeof(testValues) / sizeof(testValues[0]);
+    for (uint32_t channels : { 3u, 4u }) {
+        LinearImage img(w, h, channels);
+        float* p = img.getPixelRef();
+        for (size_t i = 0; i < w * h; ++i) {
+            p[i * channels + 0] = testValues[(i * 3 + 0) % numValues];
+            p[i * channels + 1] = testValues[(i * 5 + 1) % numValues];
+            p[i * channels + 2] = testValues[(i * 7 + 2) % numValues];
+            if (channels == 4) {
+                p[i * channels + 3] = 1.0f;
             }
+        }
+        auto result = image::fromLinearToRGB_10_11_11_REV(img);
+        const uint32_t* packed = reinterpret_cast<const uint32_t*>(result.get());
+        for (size_t i = 0; i < w * h; ++i) {
+            const float3 c{ p[i * channels + 0], p[i * channels + 1], p[i * channels + 2] };
+            EXPECT_EQ(packed[i], image::linearToRGB_10_11_11_REV(c));
         }
     }
 }

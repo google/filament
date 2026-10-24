@@ -288,13 +288,13 @@ bool TIFFEncoder::encode(LinearImage const& image) {
             for (size_t x = 0; x < width; ++x, p += srcChannels, d += 4) {
                 if (srcChannels == 1) {
                     uint8_t g = uint8_t(
-                            filament::math::saturate(image::linearTosRGB(p[0])) * 255.0f + 0.5f);
+                            filament::math::saturate(image::linearToSRGB(p[0])) * 255.0f + 0.5f);
                     d[0] = d[1] = d[2] = g;
                 } else {
                     for (int i = 0; i < 3; i++) {
                         if (i < srcChannels) {
                             d[i] = uint8_t(
-                                    filament::math::saturate(image::linearTosRGB(p[i])) * 255.0f +
+                                    filament::math::saturate(image::linearToSRGB(p[i])) * 255.0f +
                                     0.5f);
                         } else {
                             d[i] = 0;
