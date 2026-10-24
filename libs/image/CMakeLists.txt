@@ -58,3 +58,22 @@ if (FILAMENT_BUILD_TESTING AND NOT ANDROID AND NOT WASM AND NOT IOS AND NOT FILA
     target_link_libraries(test_${TARGET} PRIVATE imageio gtest)
     set_target_properties(test_${TARGET} PROPERTIES FOLDER Tests)
 endif()
+
+# ==================================================================================================
+# Benchmarks
+# ==================================================================================================
+if (FILAMENT_BUILD_TESTING AND NOT WASM)
+    set(BENCHMARK_SRCS
+            benchmark/benchmark_ColorTransform.cpp
+    )
+
+    add_executable(benchmark_${TARGET} ${BENCHMARK_SRCS})
+    target_link_libraries(benchmark_${TARGET} PRIVATE benchmark_main image utils math)
+    set_target_properties(benchmark_${TARGET} PROPERTIES FOLDER Benchmarks)
+
+    if (MSVC)
+        target_compile_options(benchmark_${TARGET} PRIVATE $<$<CONFIG:Release>:/fp:fast>)
+    else()
+        target_compile_options(benchmark_${TARGET} PRIVATE $<$<CONFIG:Release>:-ffast-math -fno-finite-math-only>)
+    endif()
+endif()
