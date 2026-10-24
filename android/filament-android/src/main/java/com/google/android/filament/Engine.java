@@ -1117,6 +1117,16 @@ public class Engine {
     }
 
     /**
+     * Returns the version of Filament this library was built from, as "major.minor.patch".
+     *
+     * <p>The minor number is MATERIAL_VERSION.</p>
+     */
+    @NonNull
+    public static String getVersion() {
+        return nGetVersion();
+    }
+
+    /**
      * Check if a feature flag exists
      *
      * @param name name of the feature flag to check
@@ -1496,6 +1506,8 @@ public class Engine {
     private static native int nGetBackend(long nativeEngine);
     @IntRange(from = 0)
     private static native long nGetSteadyClockTimeNano();
+    @NonNull
+    private static native String nGetVersion();
     private static native boolean nHasFeatureFlag(long nativeEngine, @NonNull String name);
     private static native boolean nSetFeatureFlag(long nativeEngine, @NonNull String name, boolean value);
     private static native boolean nGetFeatureFlag(long nativeEngine, @NonNull String name);

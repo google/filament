@@ -37,6 +37,7 @@
 #include "details/View.h"
 
 #include <filament/Engine.h>
+#include <filament/MaterialEnums.h>
 
 #include <backend/CallbackHandler.h>
 #include <backend/DriverEnums.h>
@@ -54,6 +55,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 using namespace utils;
 
@@ -509,6 +511,17 @@ size_t Engine::getMaxStereoscopicEyes() noexcept {
 
 uint64_t Engine::getSteadyClockTimeNano() noexcept {
     return std::chrono::steady_clock::now().time_since_epoch().count();
+}
+
+const char* Engine::getVersion() noexcept {
+    // The minor number is MATERIAL_VERSION, which every minor release bumps.
+    static char const* const version = [] {
+        static char buffer[32];
+        snprintf(buffer, sizeof(buffer), "%d.%zu.%d",
+                FILAMENT_VERSION_MAJOR, MATERIAL_VERSION, FILAMENT_VERSION_PATCH);
+        return buffer;
+    }();
+    return version;
 }
 
 Slice<const Engine::FeatureFlag> Engine::getFeatureFlags() const noexcept {

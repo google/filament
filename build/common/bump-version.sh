@@ -67,9 +67,7 @@ replace \
     "pod 'Filament', '~> {{VERSION}}'" \
     README.md
 
-replace \
-    "VERSION_NAME={{VERSION}}" \
-    android/gradle.properties
+echo "${NEW_VERSION}" > VERSION
 
 replace \
     "spec.version = \"{{VERSION}}\"" \
