@@ -330,7 +330,8 @@ std::optional<GLSLTools::FragmentShaderInfo> GLSLTools::analyzeFragmentShader(
     return result;
 }
 
-bool GLSLTools::analyzeVertexShader(const std::string& shaderCode,
+std::optional<GLSLTools::VertexShaderInfo> GLSLTools::analyzeVertexShader(
+        const std::string& shaderCode,
         filament::backend::ShaderModel model,
         MaterialBuilder::MaterialDomain materialDomain, MaterialBuilder::TargetApi targetApi,
         MaterialBuilder::TargetLanguage targetLanguage) noexcept {
@@ -339,7 +340,7 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode,
 
     // TODO: After implementing post-process vertex shaders, properly analyze them here.
     if (materialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
-        return true;
+        return VertexShaderInfo{};
     }
 
     // Parse to check syntax and semantic.
@@ -355,7 +356,7 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode,
     if (!ok) {
         utils::slog.e << "ERROR: Unable to parse vertex shader" << io::endl;
         utils::slog.e << tShader.getInfoLog() << io::endl;
-        return false;
+        return std::nullopt;
     }
 
     TIntermNode* root = tShader.getIntermediate()->getTreeRoot();
@@ -364,10 +365,12 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode,
     if (materialFctNode == nullptr) {
         utils::slog.e << "ERROR: Invalid vertex shader" << io::endl;
         utils::slog.e << "ERROR: Unable to find materialVertex() function" << io::endl;
-        return false;
+        return std::nullopt;
     }
 
-    return true;
+    return VertexShaderInfo{
+        .userMaterialVertexHasCustomDepth = GLSLTools::hasCustomVertexDepth(root, materialFctNode)
+    };
 }
 
 void GLSLTools::init() {
@@ -801,6 +804,137 @@ bool GLSLTools::hasCustomDepth(TIntermNode* root, TIntermNode* entryPoint) {
     } hasCustomDepth(root);
 
     return hasCustomDepth(entryPoint);
+}
+
+static bool isVertexPositionProperty(std::string_view const name) noexcept {
+    return name == "worldPosition" ||
+           name == "clipSpaceTransform" ||
+           name == "clipSpacePosition";
+}
+
+bool GLSLTools::findVertexPositionWrites(std::string_view functionName, size_t parameterIdx,
+        TIntermNode* rootNode) noexcept {
+    glslang::TIntermAggregate* functionDef =
+            ASTHelpers::getFunctionBySignature(functionName, *rootNode);
+    if (functionDef == nullptr || functionDef->getSequence().size() < 2) {
+        return false;
+    }
+
+    std::vector<ASTHelpers::FunctionParameter> functionParameters;
+    ASTHelpers::getFunctionParameters(functionDef, functionParameters);
+    if (functionParameters.size() <= parameterIdx) {
+        return false;
+    }
+
+    ASTHelpers::FunctionParameter::Qualifier const qualifier =
+            functionParameters.at(parameterIdx).qualifier;
+    if (qualifier == ASTHelpers::FunctionParameter::IN ||
+        qualifier == ASTHelpers::FunctionParameter::CONST) {
+        return false;
+    }
+
+    std::deque<Symbol> symbols;
+    findSymbolsUsage(functionName, *rootNode, symbols);
+
+    std::string const& parameterName = functionParameters.at(parameterIdx).name;
+    for (Symbol& symbol : symbols) {
+        if (symbol.getName() != parameterName) {
+            continue;
+        }
+        // Whole-struct assignment (e.g. material = otherMaterial) modifies all fields,
+        // including worldPosition.
+        if (symbol.getAccesses().empty()) {
+            return true;
+        }
+        if (doesSymbolModifyVertexPosition(symbol, rootNode)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool GLSLTools::doesSymbolModifyVertexPosition(Symbol& symbol, TIntermNode* rootNode) noexcept {
+    for (const Access& access : symbol.getAccesses()) {
+        if (access.type == Access::Type::FunctionCall) {
+            if (symbol.hasDirectIndexForStruct()) {
+                TIntermAggregate* functionCall =
+                        ASTHelpers::getFunctionBySignature(access.string, *rootNode);
+                if (functionCall == nullptr) {
+                    return false;
+                }
+                std::vector<ASTHelpers::FunctionParameter> functionCallParameters;
+                ASTHelpers::getFunctionParameters(functionCall, functionCallParameters);
+                if (functionCallParameters.size() <= access.parameterIdx) {
+                    return false;
+                }
+                ASTHelpers::FunctionParameter const& parameter =
+                        functionCallParameters.at(access.parameterIdx);
+                if (parameter.qualifier == ASTHelpers::FunctionParameter::OUT ||
+                    parameter.qualifier == ASTHelpers::FunctionParameter::INOUT) {
+                    return isVertexPositionProperty(symbol.getDirectIndexStructName());
+                }
+                return false;
+            }
+            return findVertexPositionWrites(access.string, access.parameterIdx, rootNode);
+        }
+        if (access.type == Access::Type::DirectIndexForStruct) {
+            return isVertexPositionProperty(access.string);
+        }
+    }
+    return false;
+}
+
+bool GLSLTools::hasCustomVertexDepth(TIntermNode* root, TIntermNode* entryPoint) {
+    class HasBuiltinPositionWrite : public glslang::TIntermTraverser {
+        using TVisit = glslang::TVisit;
+        TIntermNode* const root;
+        bool modifiesPosition = false;
+
+    public:
+        bool operator()(TIntermNode* node) noexcept {
+            node->traverse(this);
+            return modifiesPosition;
+        }
+
+        explicit HasBuiltinPositionWrite(TIntermNode* root) : root(root) {}
+
+        bool visitAggregate(TVisit, TIntermAggregate* node) override {
+            if (node->getOp() == EOpFunctionCall) {
+                TIntermNode* const callee =
+                        ASTHelpers::getFunctionBySignature(node->getName(), *root);
+                assert_invariant(callee);
+                modifiesPosition = modifiesPosition || HasBuiltinPositionWrite{ root }(callee);
+                return !modifiesPosition;
+            }
+            return true;
+        }
+
+        bool visitBinary(TVisit, glslang::TIntermBinary* node) override {
+            TOperator const op = node->getOp();
+            Symbol symbol;
+            if (op >= EOpAssign && op <= EOpRightShiftAssign) {
+                const TIntermTyped* n = findLValueBase(node->getLeft(), symbol);
+                if (n != nullptr && n->getAsSymbolNode() != nullptr) {
+                    const TString& symbolTString = n->getAsSymbolNode()->getName();
+                    if (symbolTString == "gl_Position" || symbolTString == "gl_PointSize") {
+                        modifiesPosition = true;
+                    }
+                    return false;
+                }
+            }
+            return true;
+        }
+    } hasBuiltinPositionWrite(root);
+
+    if (hasBuiltinPositionWrite(entryPoint)) {
+        return true;
+    }
+
+    TIntermAggregate* const entryAggregate = entryPoint->getAsAggregate();
+    if (entryAggregate == nullptr) {
+        return false;
+    }
+    return findVertexPositionWrites(entryAggregate->getName(), 0, root);
 }
 
 } // namespace filamat
