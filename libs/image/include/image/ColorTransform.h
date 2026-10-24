@@ -33,6 +33,14 @@
 #include <algorithm>
 #include <memory>
 
+// for ntohs
+#if defined(WIN32)
+#    include <Winsock2.h>
+#    include <utils/unwindows.h>
+#else
+#    include <arpa/inet.h>
+#endif
+
 using namespace filament;
 
 namespace image {
