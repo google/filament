@@ -333,6 +333,114 @@ TEST_F(ImageTest, ColorTransformRGBA) { // NOLINT
     ASSERT_NEAR(pixels[3].w, 0.99183642f, 0.001f);
 }
 
+TEST_F(ImageTest, ColorTransformBatchFunctions) { // NOLINT
+    constexpr uint32_t w = 7;
+    constexpr uint32_t h = 5;
+    constexpr size_t total = w * h;
+
+    LinearImage img1(w, h, 1);
+    LinearImage img3(w, h, 3);
+    LinearImage img4(w, h, 4);
+    LinearImage imgHdr(w, h, 3);
+
+    for (size_t i = 0; i < total; ++i) {
+        float const t = float(i) / float(total - 1);
+        img1.getPixelRef()[i] = t;
+        img3.get<float3>()[i] = float3{ t * 0.003f, t, 1.0f - t };
+        img4.get<float4>()[i] = float4{ t * 0.003f, t, 1.0f - t, 0.25f + 0.5f * t };
+        imgHdr.get<float3>()[i] = float3{ t * 12.0f, t * 100.0f, t * 300.0f };
+    }
+
+    auto srgb3_from3 = fromLinearTosRGB<uint8_t, 3>(img3);
+    auto srgb3_from4 = fromLinearTosRGB<uint8_t, 3>(img4);
+    auto srgb4_from4 = fromLinearTosRGB<uint8_t, 4>(img4);
+    auto srgb1_from3 = fromLinearTosRGB<uint8_t, 1>(img3);
+    for (size_t i = 0; i < total; ++i) {
+        float4 const src = img4.get<float4>()[i];
+        uint8_t const er = uint8_t(filament::math::saturate(linearTosRGB(src.r)) * 255.0f + 0.5f);
+        uint8_t const eg = uint8_t(filament::math::saturate(linearTosRGB(src.g)) * 255.0f + 0.5f);
+        uint8_t const eb = uint8_t(filament::math::saturate(linearTosRGB(src.b)) * 255.0f + 0.5f);
+        uint8_t const ea = uint8_t(filament::math::saturate(src.a) * 255.0f + 0.5f);
+        EXPECT_EQ(srgb3_from3[i * 3 + 0], er);
+        EXPECT_EQ(srgb3_from3[i * 3 + 1], eg);
+        EXPECT_EQ(srgb3_from3[i * 3 + 2], eb);
+        EXPECT_EQ(srgb3_from4[i * 3 + 0], er);
+        EXPECT_EQ(srgb3_from4[i * 3 + 1], eg);
+        EXPECT_EQ(srgb3_from4[i * 3 + 2], eb);
+        EXPECT_EQ(srgb4_from4[i * 4 + 0], er);
+        EXPECT_EQ(srgb4_from4[i * 4 + 1], eg);
+        EXPECT_EQ(srgb4_from4[i * 4 + 2], eb);
+        EXPECT_EQ(srgb4_from4[i * 4 + 3], ea);
+        EXPECT_EQ(srgb1_from3[i], er);
+    }
+
+    auto rgb3_from4 = fromLinearToRGB<uint8_t, 3>(img4);
+    auto rgb4_from4 = fromLinearToRGB<uint8_t, 4>(img4);
+    auto gray = fromLinearToGrayscale<uint8_t>(img1);
+    for (size_t i = 0; i < total; ++i) {
+        float4 const src = img4.get<float4>()[i];
+        uint8_t const er = uint8_t(filament::math::saturate(src.r) * 255.0f + 0.5f);
+        uint8_t const eg = uint8_t(filament::math::saturate(src.g) * 255.0f + 0.5f);
+        uint8_t const eb = uint8_t(filament::math::saturate(src.b) * 255.0f + 0.5f);
+        uint8_t const ea = uint8_t(filament::math::saturate(src.a) * 255.0f + 0.5f);
+        EXPECT_EQ(rgb3_from4[i * 3 + 0], er);
+        EXPECT_EQ(rgb3_from4[i * 3 + 1], eg);
+        EXPECT_EQ(rgb3_from4[i * 3 + 2], eb);
+        EXPECT_EQ(rgb4_from4[i * 4 + 0], er);
+        EXPECT_EQ(rgb4_from4[i * 4 + 1], eg);
+        EXPECT_EQ(rgb4_from4[i * 4 + 2], eb);
+        EXPECT_EQ(rgb4_from4[i * 4 + 3], ea);
+        EXPECT_EQ(gray[i], uint8_t(filament::math::saturate(img1.getPixelRef()[i]) * 255.0f + 0.5f));
+    }
+
+    auto rgbmU8 = fromLinearToRGBM<uint8_t>(imgHdr);
+    LinearImage rgbmImg = fromLinearToRGBM(imgHdr);
+    LinearImage linFromRgbm = toLinearFromRGBM(rgbmImg.get<float4>(), w, h);
+    for (size_t i = 0; i < total; ++i) {
+        float3 const src = imgHdr.get<float3>()[i];
+        float4 const expectedRgbm = linearToRGBM(src);
+        float4 const actualRgbm = rgbmImg.get<float4>()[i];
+        EXPECT_NEAR(actualRgbm.r, expectedRgbm.r, 1e-5f);
+        EXPECT_NEAR(actualRgbm.g, expectedRgbm.g, 1e-5f);
+        EXPECT_NEAR(actualRgbm.b, expectedRgbm.b, 1e-5f);
+        EXPECT_NEAR(actualRgbm.a, expectedRgbm.a, 1e-5f);
+        for (size_t c = 0; c < 4; ++c) {
+            EXPECT_EQ(rgbmU8[i * 4 + c], uint8_t(expectedRgbm[c] * 255.0f + 0.5f));
+        }
+        float3 const expectedLin = RGBMtoLinear(actualRgbm);
+        float3 const actualLin = linFromRgbm.get<float3>()[i];
+        EXPECT_NEAR(actualLin.r, expectedLin.r, 1e-5f);
+        EXPECT_NEAR(actualLin.g, expectedLin.g, 1e-5f);
+        EXPECT_NEAR(actualLin.b, expectedLin.b, 1e-5f);
+    }
+
+    imgHdr.get<float3>()[0] = float3{ -1.0f, 0.0f, 70000.0f };
+    auto r11g11b10 = fromLinearToRGB_10_11_11_REV(imgHdr);
+    uint32_t const* packed101111 = reinterpret_cast<uint32_t const*>(r11g11b10.get());
+    for (size_t i = 0; i < total; ++i) {
+        float3 const src = imgHdr.get<float3>()[i];
+        EXPECT_EQ(packed101111[i], linearToRGB_10_11_11_REV(src));
+    }
+
+    LinearImage toLin3 = toLinear<uint8_t>(w, h, w * 3, srgb3_from3.get());
+    LinearImage toLin4 = toLinearWithAlpha<uint8_t>(w, h, w * 4, srgb4_from4.get());
+    for (size_t i = 0; i < total; ++i) {
+        float3 const s3(srgb3_from3[i * 3 + 0] / 255.0f,
+                srgb3_from3[i * 3 + 1] / 255.0f,
+                srgb3_from3[i * 3 + 2] / 255.0f);
+        float3 const e3 = sRGBToLinear(s3);
+        float3 const a3 = toLin3.get<float3>()[i];
+        EXPECT_NEAR(a3.r, e3.r, 1e-6f);
+        EXPECT_NEAR(a3.g, e3.g, 1e-6f);
+        EXPECT_NEAR(a3.b, e3.b, 1e-6f);
+        float4 const a4 = toLin4.get<float4>()[i];
+        EXPECT_NEAR(a4.r, e3.r, 1e-6f);
+        EXPECT_NEAR(a4.g, e3.g, 1e-6f);
+        EXPECT_NEAR(a4.b, e3.b, 1e-6f);
+        EXPECT_FLOAT_EQ(a4.a, 1.0f);
+    }
+}
+
 TEST_F(ImageTest, Mipmaps) { // NOLINT
     Filter filter = filterFromString("HERMITE");
     ASSERT_EQ(filter, Filter::HERMITE);

@@ -27,7 +27,7 @@ namespace image {
  * Value of a single point sample, allocated according to the number of image channels.
  */
 struct UTILS_PUBLIC SingleSample {
-    float& operator[](int index) { return *(data + index); }
+    float& operator[](int index) const { return *(data + index); }
     float* data = nullptr;
     ~SingleSample();
 };
@@ -92,7 +92,7 @@ struct Boundary {
 struct ImageSampler {
     Filter horizontalFilter = Filter::DEFAULT;
     Filter verticalFilter = Filter::DEFAULT;
-    Region sourceRegion = {0, 0, 1, 1};
+    Region sourceRegion = { .left = 0, .top = 0, .right = 1, .bottom = 1 };
     float filterRadiusMultiplier = 1;
     Boundary east;
     Boundary north;

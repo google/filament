@@ -88,4 +88,4 @@ UTILS_PUBLIC void blitImage(LinearImage& target, const LinearImage& source);
 } // namespace image
 
 
-#endif /* IMAGE_LINEARIMAGE_H */
+#endif /* IMAGE_IMAGEOPS_H */

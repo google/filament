@@ -150,7 +150,7 @@ LinearImage ImageDecoder::decode(std::istream& stream, const std::string& source
     std::unique_ptr<Decoder> decoder;
     switch (format) {
         case Format::NONE:
-            return LinearImage();
+            return {};
         case Format::PNG:
             decoder.reset(PNGDecoder::create(stream));
             decoder->setColorSpace(sourceSpace);
@@ -293,7 +293,7 @@ LinearImage PNGDecoder::decode() {
         mStream.seekg(mStreamStartPos);
         imageData.release();
     }
-    return LinearImage();
+    return {};
 }
 
 void PNGDecoder::cb_stream(png_structp png, png_bytep buffer, png_size_t size) {
@@ -440,7 +440,7 @@ LinearImage PSDDecoder::decode() {
         mStream.seekg(mStreamStartPos);
     }
 
-    return LinearImage();
+    return {};
 }
 
 // -----------------------------------------------------------------------------------------------
@@ -482,7 +482,7 @@ LinearImage EXRDecoder::decode() {
             std::cerr << "Could not decode OpenEXR: " << error << std::endl;
             FreeEXRErrorMessage(error);
             mStream.seekg(mStreamStartPos);
-            return LinearImage();
+            return {};
         }
 
         src.clear();
@@ -512,7 +512,7 @@ LinearImage EXRDecoder::decode() {
         mStream.seekg(mStreamStartPos);
     }
 
-    return LinearImage();
+    return {};
 }
 
 } // namespace image
