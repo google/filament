@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#include <image/ImageSampler.h>
 #include <image/ImageOps.h>
+#include <image/ImageSampler.h>
+
+#include <utils/Panic.h>
 
 #include <math/scalar.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
-
-#include <utils/Panic.h>
 
 #include <memory>
 #include <string>
