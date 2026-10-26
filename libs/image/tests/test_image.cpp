@@ -420,7 +420,7 @@ TEST_F(ImageTest, ColorTransformAsLinear) { // NOLINT
             for (size_t i = 0; i < w * 3; ++i) {
                 const uint16_t v = src3[y * stride3 + i];
                 EXPECT_FLOAT_EQ(dst3[y * w * 3 + i], v * invMax16);
-                EXPECT_FLOAT_EQ(dst3Ntohs[y * w * 3 + i], ntohs(v) * invMax16);
+                EXPECT_FLOAT_EQ(dst3Ntohs[y * w * 3 + i], image::detail::be_to_host(v) * invMax16);
             }
         }
 
@@ -442,7 +442,7 @@ TEST_F(ImageTest, ColorTransformAsLinear) { // NOLINT
             for (size_t i = 0; i < w * 4; ++i) {
                 const uint16_t v = src4[y * stride4 + i];
                 EXPECT_FLOAT_EQ(dst4[y * w * 4 + i], v * invMax16);
-                EXPECT_FLOAT_EQ(dst4Ntohs[y * w * 4 + i], ntohs(v) * invMax16);
+                EXPECT_FLOAT_EQ(dst4Ntohs[y * w * 4 + i], image::detail::be_to_host(v) * invMax16);
             }
         }
     }
@@ -521,7 +521,8 @@ TEST_F(ImageTest, ColorTransformToLinear) { // NOLINT
             for (size_t i = 0; i < w * 3; ++i) {
                 const uint16_t v = src3[y * stride3 + i];
                 EXPECT_NEAR(dst3[y * w * 3 + i], image::sRGBToLinear(v * invMax16), 1e-6f);
-                EXPECT_NEAR(dst3Ntohs[y * w * 3 + i], image::sRGBToLinear(ntohs(v) * invMax16), 1e-6f);
+                EXPECT_NEAR(dst3Ntohs[y * w * 3 + i],
+                        image::sRGBToLinear(image::detail::be_to_host(v) * invMax16), 1e-6f);
             }
         }
 
@@ -544,10 +545,11 @@ TEST_F(ImageTest, ColorTransformToLinear) { // NOLINT
                 const uint16_t v = src4[y * stride4 + i];
                 if ((i & 3) == 3) {
                     EXPECT_FLOAT_EQ(dst4[y * w * 4 + i], v * invMax16);
-                    EXPECT_FLOAT_EQ(dst4Ntohs[y * w * 4 + i], ntohs(v) * invMax16);
+                    EXPECT_FLOAT_EQ(dst4Ntohs[y * w * 4 + i], image::detail::be_to_host(v) * invMax16);
                 } else {
                     EXPECT_NEAR(dst4[y * w * 4 + i], image::sRGBToLinear(v * invMax16), 1e-6f);
-                    EXPECT_NEAR(dst4Ntohs[y * w * 4 + i], image::sRGBToLinear(ntohs(v) * invMax16), 1e-6f);
+                    EXPECT_NEAR(dst4Ntohs[y * w * 4 + i],
+                            image::sRGBToLinear(image::detail::be_to_host(v) * invMax16), 1e-6f);
                 }
             }
         }
