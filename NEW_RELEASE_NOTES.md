@@ -13,3 +13,6 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
   tick. Metal now runs them every frame too
 - java: `Engine.Config.asynchronousFrameBudget` (in nanoseconds) is added
 - web: `Engine$Config.asynchronousFrameBudgetMs` is added
+- vulkan: fix a crash when more than 32 timer queries are outstanding. `createTimerQueryS` returns
+  a null handle once the pool is exhausted, and `getTimerQueryValue` reports `ERROR` for it
+  (#10658)

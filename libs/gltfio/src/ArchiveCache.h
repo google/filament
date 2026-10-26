@@ -47,7 +47,7 @@ namespace filament::gltfio {
         const Material* const* getMaterials() const noexcept { return mMaterials.data(); }
         size_t getMaterialsCount() const noexcept { return mMaterials.size(); }
         void destroyMaterials();
-        FeatureMap getFeatureMap(Material* material) const;
+        FeatureMap getFeatureMap(const Material* material) const;
 
     private:
         Engine& mEngine;
