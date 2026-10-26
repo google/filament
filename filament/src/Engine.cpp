@@ -511,6 +511,10 @@ uint64_t Engine::getSteadyClockTimeNano() noexcept {
     return std::chrono::steady_clock::now().time_since_epoch().count();
 }
 
+const char* Engine::getVersion() noexcept {
+    return FILAMENT_VERSION;
+}
+
 Slice<const Engine::FeatureFlag> Engine::getFeatureFlags() const noexcept {
     return downcast(this)->getFeatureFlags();
 }

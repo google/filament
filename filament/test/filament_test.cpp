@@ -82,6 +82,7 @@
 #include <iostream>
 #include <limits>
 #include <random>
+#include <regex>
 #include <thread>
 #include <type_traits>
 #include <utility>
@@ -106,6 +107,11 @@ static bool vec3eq(float3 a, float3 b) {
     return  almostEqualUlps(a.x, b.x, 1) &&
             almostEqualUlps(a.y, b.y, 1) &&
             almostEqualUlps(a.z, b.z, 1);
+}
+
+TEST(FilamentTest, Version) {
+    // Matches what bump-version.sh writes: three numbers, no suffix.
+    EXPECT_TRUE(std::regex_match(Engine::getVersion(), std::regex("[0-9]+\\.[0-9]+\\.[0-9]+")));
 }
 
 TEST(FilamentTest, AabbMath) {
