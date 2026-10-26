@@ -380,7 +380,6 @@ private:
     size_t getLightCount() const noexcept;
     bool hasEntity(utils::Entity entity) const noexcept;
     void forEach(utils::Invocable<void(utils::Entity)>&& functor) const noexcept;
-    void flushNotifications() const noexcept;
     void flushPendingDestroyed() noexcept;
 
     static inline void computeLightRanges(math::float2* zrange,

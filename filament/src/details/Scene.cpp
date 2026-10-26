@@ -104,6 +104,7 @@ FScene::~FScene() noexcept {
 }
 
 void FScene::flushPendingDestroyed() noexcept {
+    mEngine.getEntityManager().flushNotifications();
     {
         LockGuard const lock(mPendingDestroyed->lock);
         if (mPendingDestroyed->entities.empty()) {
@@ -175,11 +176,6 @@ void SceneCacheData::resize(size_t const renderableCount, size_t const lightCoun
             renderableData.data<FScene::WORLD_AABB_EXTENT_Z>()[i] = 0;
         }
     }
-}
-
-void FScene::flushNotifications() const noexcept {
-    mEngine.getEntityManager().flushNotifications();
-    mEngine.getTransformManager().ensureWorldTransformsUpToDate();
 }
 
 UTILS_NOINLINE
@@ -474,8 +470,6 @@ void FScene::prepare(JobSystem&,
         bool const shadowReceiversAreCasters,
         SceneCacheData& cache) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
-
-    flushNotifications();
 
     processDeferredUpdates(worldTransform.upperLeft(), shadowReceiversAreCasters, cache);
 

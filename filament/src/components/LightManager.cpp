@@ -189,10 +189,11 @@ void FLightManager::create(const Builder& builder, Entity const entity) {
         destroy(zombie);
     }
 
-    if (UTILS_UNLIKELY(manager.hasComponent(entity))) {
+    auto [i, added] = manager.tryAddComponent(entity);
+    if (UTILS_UNLIKELY(!added && i)) {
         destroy(entity);
+        i = manager.addComponent(entity);
     }
-    Instance const i = manager.addComponent(entity);
     assert_invariant(i);
 
     if (i) {
@@ -226,14 +227,7 @@ void FLightManager::prepare(backend::DriverApi&) const noexcept {
 }
 
 void FLightManager::destroyComponents(Entity const* entities, size_t const count) noexcept {
-    auto& manager = mManager;
-    for (size_t k = 0; k < count; ++k) {
-        Entity const e = entities[k];
-        Instance const i = getInstance(e);
-        if (i) {
-            manager.removeComponent(e);
-        }
-    }
+    mManager.removeComponents(entities, count);
 }
 
 void FLightManager::terminate() noexcept {
