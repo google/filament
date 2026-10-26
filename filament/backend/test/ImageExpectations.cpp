@@ -170,11 +170,9 @@ void ImageExpectation::compareImage() const {
         if (pixelDeviations > mParams.allowedPixelDeviations()) {
             BackendTest::markImageAsFailure(mParams.filePrefix());
             image::LinearImage image;
-            image = image::toLinearWithAlpha<uint8_t>(
+            image = image::asLinearWithAlpha<uint8_t>(
                     mParams.width(), mParams.height(),
-                    mParams.width() * 4, (uint8_t *)imageDiff.data(),
-                    [](uint8_t value) -> float { return value; },
-                    [](filament::math::float4 rgba) -> filament::math::float4 { return rgba; });
+                    mParams.width() * 4, (uint8_t *)imageDiff.data());
             std::string filePath = mParams.diffFilePath();
             std::ofstream pngStream(filePath, std::ios::binary | std::ios::trunc);
             // To avoid going from linear -> sRGB -> linear save the PNG as linear.
@@ -230,11 +228,9 @@ RenderTargetDump::RenderTargetDump(filament::backend::DriverApi& api,
             // The image data is already linear, so pass in transforms that simply go from uint8_t
             // to float. toLinearWithAlpha divides the float values by uint8_t max so there's no
             // need to scale it to [0, 1]
-            image = image::toLinearWithAlpha<uint8_t>(
+            image = image::asLinearWithAlpha<uint8_t>(
                     internal->params.width(), internal->params.height(),
-                    internal->params.width() * 4, (uint8_t*) buffer,
-                    [](uint8_t value) -> float { return value; },
-                    [](filament::math::float4 rgba) -> filament::math::float4 { return rgba; });
+                    internal->params.width() * 4, (uint8_t*) buffer);
         }
         std::string filePath = internal->params.actualFilePath();
         std::ofstream pngStream(filePath, std::ios::binary | std::ios::trunc);
@@ -290,7 +286,7 @@ LoadedPng::LoadedPng(std::string filePath) : mFilePath(std::move(filePath)) {
     // convert them.
     mBytes = std::vector<unsigned char>(valuesInImage);
     for (int i = 0; i < valuesInImage; ++i) {
-        mBytes[i] = static_cast<uint8_t>(loadedImage.get<float>()[i] * 255.0f);
+        mBytes[i] = static_cast<uint8_t>(loadedImage.get<float>()[i] * 255.0f + 0.5f);
     }
 #endif
     // For platforms that don't support the image loading library, leave the loaded data blank.

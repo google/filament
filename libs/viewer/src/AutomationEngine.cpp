@@ -114,8 +114,7 @@ void AutomationEngine::exportScreenshot(View* view, Renderer* renderer, std::str
                 exportPPM(buffer, vp.width, vp.height, outstream);
             } else if (extension == "tif" || extension == "tiff") {
                 image::LinearImage image = image::toLinearWithAlpha<uint8_t>(
-                        vp.width, vp.height, vp.width * 4, (uint8_t*) buffer,
-                        [](uint8_t v) { return v; }, image::sRGBToLinear<filament::math::float4>);
+                        vp.width, vp.height, vp.width * 4, (uint8_t*) buffer);
                 imageio_lite::ImageEncoder::encode(outstream,
                         imageio_lite::ImageEncoder::Format::TIFF, image, "", "");
             } else {
