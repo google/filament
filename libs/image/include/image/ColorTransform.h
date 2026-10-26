@@ -33,23 +33,29 @@
 #include <algorithm>
 #include <memory>
 
-// for ntohs
-#if defined(WIN32)
-#    include <Winsock2.h>
-#    include <utils/unwindows.h>
-#else
-#    include <arpa/inet.h>
-#endif
-
-using namespace filament;
-
 namespace image {
+
+// Nothing public here.
+namespace detail {
+// Converts a 16-bit big-endian value (network byte order) to host byte order.
+static inline uint16_t be_to_host(uint16_t v) {
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+    return v;
+#else
+#if defined(_MSC_VER) && !defined(__clang__)
+    return _byteswap_ushort(v);
+#else
+    return __builtin_bswap16(v);
+#endif
+#endif
+}
+} // namespace detail
 
 // Only called when __ARM_NEON is not defined (unsupported).
 template <typename T>
 uint32_t linearToRGB_10_11_11_REV(const T& linear) {
-    using fp11 = math::fp<0, 5, 6>;
-    using fp10 = math::fp<0, 5, 5>;
+    using fp11 = filament::math::fp<0, 5, 6>;
+    using fp10 = filament::math::fp<0, 5, 5>;
     // the max value for a RGB_11_11_10 is {65024, 65024, 64512} :  (2 - 2^-M) * 2^(E-1)
     // we clamp to the min of that
     const fp11 r = fp11::fromf(std::min(64512.0f, linear[0]));
@@ -62,8 +68,8 @@ uint32_t linearToRGB_10_11_11_REV(const T& linear) {
 }
 
 template <typename T>
-math::float4 linearToRGBM(const T& linear) {
-    using math::float4;
+filament::math::float4 linearToRGBM(const T& linear) {
+    using filament::math::float4;
 
     float4 RGBM(linear[0], linear[1], linear[2], 1.0f);
 
@@ -74,7 +80,7 @@ math::float4 linearToRGBM(const T& linear) {
 
     float maxComponent = std::max(std::max(RGBM.r, RGBM.g), std::max(RGBM.b, 1e-6f));
     // Don't let M go below 1 in the [0..16] range
-    RGBM.a =  math::clamp(maxComponent, 1.0f / 16.0f, 1.0f);
+    RGBM.a =  filament::math::clamp(maxComponent, 1.0f / 16.0f, 1.0f);
     RGBM.a = std::ceil(RGBM.a * 255.0f) / 255.0f;
 
     RGBM.rgb = saturate(RGBM.rgb / RGBM.a);
@@ -83,8 +89,8 @@ math::float4 linearToRGBM(const T& linear) {
 }
 
 template <typename T>
-math::float3 RGBMtoLinear(const T& rgbm) {
-    using math::float3;
+filament::math::float3 RGBMtoLinear(const T& rgbm) {
+    using filament::math::float3;
 
     float3 linear(rgbm[0], rgbm[1], rgbm[2]);
     linear *= rgbm.a * 16.0f;
@@ -93,8 +99,8 @@ math::float3 RGBMtoLinear(const T& rgbm) {
 }
 
 template <typename T>
-math::float3 linearToSRGB(const T& linear) {
-    using math::float3;
+filament::math::float3 linearToSRGB(const T& linear) {
+    using filament::math::float3;
     constexpr float a = 0.055f;
     constexpr float a1 = 1.055f;
     constexpr float p = 1 / 2.4f;
@@ -110,8 +116,8 @@ math::float3 linearToSRGB(const T& linear) {
 }
 
 template<>
-inline math::float3 linearToSRGB(const math::float3& color) {
-    using math::float3;
+inline filament::math::float3 linearToSRGB(const filament::math::float3& color) {
+    using filament::math::float3;
     float3 sRGBColor{color};
     UTILS_NOUNROLL
     for (size_t i = 0; i < sRGBColor.size(); i++) {
@@ -135,8 +141,8 @@ template<typename T>
 T sRGBToLinear(const T& sRGB);
 
 template<>
-inline math::float3 sRGBToLinear(const math::float3& sRGB) {
-    using math::float3;
+inline filament::math::float3 sRGBToLinear(const filament::math::float3& sRGB) {
+    using filament::math::float3;
     constexpr float a = 0.055f;
     constexpr float a1 = 1.055f;
     constexpr float p = 2.4f;
@@ -152,8 +158,8 @@ inline math::float3 sRGBToLinear(const math::float3& sRGB) {
 }
 
 template<>
-inline math::float4 sRGBToLinear(const math::float4& sRGB) {
-    using math::float4;
+inline filament::math::float4 sRGBToLinear(const filament::math::float4& sRGB) {
+    using filament::math::float4;
     constexpr float a = 0.055f;
     constexpr float a1 = 1.055f;
     constexpr float p = 2.4f;
@@ -228,7 +234,7 @@ std::unique_ptr<uint8_t[]> fromLinearToSRGB(const LinearImage& image) {
         for (size_t x = 0; x < w; ++x, p += channels, d += N) {
             for (int n = 0; n < N; n++) {
                 const float source = n < 3 ? linearToSRGB(p[n]) : p[n];
-                float target =  math::saturate(source) * std::numeric_limits<T>::max() + 0.5f;
+                float target =  filament::math::saturate(source) * std::numeric_limits<T>::max() + 0.5f;
                 d[n] = T(target);
             }
         }
@@ -249,7 +255,7 @@ std::unique_ptr<uint8_t[]> fromLinearToRGB(const LinearImage& image) {
         float const* p = image.getPixelRef(0, y);
         for (size_t x = 0; x < w; ++x, p += channels, d += N) {
             for (int n = 0; n < N; n++) {
-                float target =  math::saturate(p[n]) * std::numeric_limits<T>::max() + 0.5f;
+                float target =  filament::math::saturate(p[n]) * std::numeric_limits<T>::max() + 0.5f;
                 d[n] = T(target);
             }
         }
@@ -334,7 +340,7 @@ std::unique_ptr<uint8_t[]> fromLinearToGrayscale(const LinearImage& image) {
     for (size_t y = 0; y < h; ++y) {
         float const* p = image.getPixelRef(0, y);
         for (size_t x = 0; x < w; ++x, ++p, ++d) {
-            const float gray =  math::saturate(*p) * std::numeric_limits<T>::max() + 0.5f;
+            const float gray =  filament::math::saturate(*p) * std::numeric_limits<T>::max() + 0.5f;
             d[0] = T(gray);
         }
     }
@@ -364,9 +370,9 @@ std::unique_ptr<uint8_t[]> fromLinearToRGBM(const LinearImage& image) {
 }
 
 // Constructs a 3-channel LinearImage from RGBM data.
-inline LinearImage toLinearFromRGBM( math::float4 const* src, uint32_t w, uint32_t h) {
+inline LinearImage toLinearFromRGBM( filament::math::float4 const* src, uint32_t w, uint32_t h) {
     LinearImage result(w, h, 3);
-    auto dst = result.get<math::float3>();
+    auto dst = result.get<filament::math::float3>();
     for (uint32_t row = 0; row < h; ++row) {
         for (uint32_t col = 0; col < w; ++col, ++src, ++dst) {
             *dst = RGBMtoLinear(*src);
@@ -379,8 +385,8 @@ inline LinearImage fromLinearToRGBM(const LinearImage& image) {
     assert(image.getChannels() == 3);
     const uint32_t w = image.getWidth(), h = image.getHeight();
     LinearImage result(w, h, 4);
-    auto src = image.get<math::float3>();
-    auto dst = result.get<math::float4>();
+    auto src = image.get<filament::math::float3>();
+    auto dst = result.get<filament::math::float4>();
     for (uint32_t row = 0; row < h; ++row) {
         for (uint32_t col = 0; col < w; ++col, ++src, ++dst) {
             *dst = linearToRGBM(*src);
@@ -392,11 +398,11 @@ inline LinearImage fromLinearToRGBM(const LinearImage& image) {
 template<typename T>
 static LinearImage toLinearWithAlpha(size_t w, size_t h, size_t bpr, const uint8_t* src) {
     LinearImage result(w, h, 4);
-    math::float4* d = reinterpret_cast<math::float4*>(result.getPixelRef(0, 0));
+    filament::math::float4* d = reinterpret_cast<filament::math::float4*>(result.getPixelRef(0, 0));
     for (size_t y = 0; y < h; ++y) {
         T const* p = reinterpret_cast<T const*>(src + y * bpr);
         for (size_t x = 0; x < w; ++x, p += 4) {
-            math::float4 sRGB(p[0], p[1], p[2], p[3]);
+            filament::math::float4 sRGB(p[0], p[1], p[2], p[3]);
             sRGB /= std::numeric_limits<T>::max();
             *d++ = sRGBToLinear(sRGB);
         }
@@ -463,11 +469,11 @@ inline LinearImage toLinearWithAlpha<uint16_t>(size_t w, size_t h, size_t bpr, c
 template<typename T>
 static LinearImage asLinearWithAlpha(size_t w, size_t h, size_t bpr, const uint8_t* src) {
     LinearImage result(w, h, 4);
-    math::float4* d = reinterpret_cast<math::float4*>(result.getPixelRef(0, 0));
+    filament::math::float4* d = reinterpret_cast<filament::math::float4*>(result.getPixelRef(0, 0));
     for (size_t y = 0; y < h; ++y) {
         T const* p = reinterpret_cast<T const*>(src + y * bpr);
         for (size_t x = 0; x < w; ++x, p += 4) {
-            math::float4 linear(p[0], p[1], p[2], p[3]);
+            filament::math::float4 linear(p[0], p[1], p[2], p[3]);
             linear /= std::numeric_limits<T>::max();
             *d++ = linear;
         }
@@ -533,11 +539,11 @@ inline LinearImage asLinearWithAlpha<uint16_t>(size_t w, size_t h, size_t bpr, c
 template<typename T>
 static LinearImage toLinear(size_t w, size_t h, size_t bpr, const uint8_t* src) {
     LinearImage result(w, h, 3);
-    math::float3* d = reinterpret_cast<math::float3*>(result.getPixelRef(0, 0));
+    filament::math::float3* d = reinterpret_cast<filament::math::float3*>(result.getPixelRef(0, 0));
     for (size_t y = 0; y < h; ++y) {
         T const* p = reinterpret_cast<T const*>(src + y * bpr);
         for (size_t x = 0; x < w; ++x, p += 3) {
-            math::float3 sRGB(p[0], p[1], p[2]);
+            filament::math::float3 sRGB(p[0], p[1], p[2]);
             sRGB /= std::numeric_limits<T>::max();
             *d++ = sRGBToLinear(sRGB);
         }
@@ -609,11 +615,11 @@ inline LinearImage toLinear<uint16_t>(size_t w, size_t h, size_t bpr, const uint
 template<typename T>
 static LinearImage asLinear(size_t w, size_t h, size_t bpr, const uint8_t* src) {
     LinearImage result(w, h, 3);
-    math::float3* d = reinterpret_cast<math::float3*>(result.getPixelRef(0, 0));
+    filament::math::float3* d = reinterpret_cast<filament::math::float3*>(result.getPixelRef(0, 0));
     for (size_t y = 0; y < h; ++y) {
         T const* p = reinterpret_cast<T const*>(src + y * bpr);
         for (size_t x = 0; x < w; ++x, p += 3) {
-            math::float3 linear(p[0], p[1], p[2]);
+            filament::math::float3 linear(p[0], p[1], p[2]);
             linear /= std::numeric_limits<T>::max();
             *d++ = linear;
         }
@@ -681,11 +687,13 @@ inline LinearImage asLinear<uint16_t>(size_t w, size_t h, size_t bpr, const uint
 template<typename T>
 static LinearImage toLinearWithAlphaNtohs(size_t w, size_t h, size_t bpr, const uint8_t* src) {
     LinearImage result(w, h, 4);
-    math::float4* d = reinterpret_cast<math::float4*>(result.getPixelRef(0, 0));
+    filament::math::float4* d = reinterpret_cast<filament::math::float4*>(result.getPixelRef(0, 0));
     for (size_t y = 0; y < h; ++y) {
         T const* p = reinterpret_cast<T const*>(src + y * bpr);
         for (size_t x = 0; x < w; ++x, p += 4) {
-            math::float4 sRGB(ntohs(p[0]), ntohs(p[1]), ntohs(p[2]), ntohs(p[3]));
+            filament::math::float4 sRGB(
+                detail::be_to_host(p[0]), detail::be_to_host(p[1]),
+                detail::be_to_host(p[2]), detail::be_to_host(p[3]));
             sRGB /= std::numeric_limits<T>::max();
             *d++ = sRGBToLinear(sRGB);
         }
@@ -730,11 +738,13 @@ inline LinearImage toLinearWithAlphaNtohs<uint16_t>(size_t w, size_t h, size_t b
 template<typename T>
 static LinearImage asLinearWithAlphaNtohs(size_t w, size_t h, size_t bpr, const uint8_t* src) {
     LinearImage result(w, h, 4);
-    math::float4* d = reinterpret_cast<math::float4*>(result.getPixelRef(0, 0));
+    filament::math::float4* d = reinterpret_cast<filament::math::float4*>(result.getPixelRef(0, 0));
     for (size_t y = 0; y < h; ++y) {
         T const* p = reinterpret_cast<T const*>(src + y * bpr);
         for (size_t x = 0; x < w; ++x, p += 4) {
-            math::float4 linear(ntohs(p[0]), ntohs(p[1]), ntohs(p[2]), ntohs(p[3]));
+            filament::math::float4 linear(
+                detail::be_to_host(p[0]), detail::be_to_host(p[1]),
+                detail::be_to_host(p[2]), detail::be_to_host(p[3]));
             linear /= std::numeric_limits<T>::max();
             *d++ = linear;
         }
@@ -779,11 +789,12 @@ inline LinearImage asLinearWithAlphaNtohs<uint16_t>(size_t w, size_t h, size_t b
 template<typename T>
 static LinearImage toLinearNtohs(size_t w, size_t h, size_t bpr, const uint8_t* src) {
     LinearImage result(w, h, 3);
-    math::float3* d = reinterpret_cast<math::float3*>(result.getPixelRef(0, 0));
+    filament::math::float3* d = reinterpret_cast<filament::math::float3*>(result.getPixelRef(0, 0));
     for (size_t y = 0; y < h; ++y) {
         T const* p = reinterpret_cast<T const*>(src + y * bpr);
         for (size_t x = 0; x < w; ++x, p += 3) {
-            math::float3 sRGB(ntohs(p[0]), ntohs(p[1]), ntohs(p[2]));
+            filament::math::float3 sRGB(
+                detail::be_to_host(p[0]), detail::be_to_host(p[1]), detail::be_to_host(p[2]));
             sRGB /= std::numeric_limits<T>::max();
             *d++ = sRGBToLinear(sRGB);
         }
@@ -819,7 +830,7 @@ inline LinearImage toLinearNtohs<uint16_t>(size_t w, size_t h, size_t bpr, const
             vst1q_f32(d, sRGBToLinearSimd(vmulq_n_f32(vcvtq_f32_u32(v32), invMax)));
         }
         for (; n > 0; --n) {
-            *d++ = sRGBToLinear(ntohs(*p++) * invMax);
+            *d++ = sRGBToLinear(detail::be_to_host(*p++) * invMax);
         }
     }
     return result;
@@ -829,11 +840,12 @@ inline LinearImage toLinearNtohs<uint16_t>(size_t w, size_t h, size_t bpr, const
 template<typename T>
 static LinearImage asLinearNtohs(size_t w, size_t h, size_t bpr, const uint8_t* src) {
     LinearImage result(w, h, 3);
-    math::float3* d = reinterpret_cast<math::float3*>(result.getPixelRef(0, 0));
+    filament::math::float3* d = reinterpret_cast<filament::math::float3*>(result.getPixelRef(0, 0));
     for (size_t y = 0; y < h; ++y) {
         T const* p = reinterpret_cast<T const*>(src + y * bpr);
         for (size_t x = 0; x < w; ++x, p += 3) {
-            math::float3 linear(ntohs(p[0]), ntohs(p[1]), ntohs(p[2]));
+            filament::math::float3 linear(
+                detail::be_to_host(p[0]), detail::be_to_host(p[1]), detail::be_to_host(p[2]));
             linear /= std::numeric_limits<T>::max();
             *d++ = linear;
         }
@@ -869,7 +881,7 @@ inline LinearImage asLinearNtohs<uint16_t>(size_t w, size_t h, size_t bpr, const
             vst1q_f32(d, vmulq_n_f32(vcvtq_f32_u32(v32), invMax));
         }
         for (; n > 0; --n) {
-            *d++ = ntohs(*p++) * invMax;
+            *d++ = detail::be_to_host(*p++) * invMax;
         }
     }
     return result;
