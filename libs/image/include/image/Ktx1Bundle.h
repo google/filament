@@ -17,9 +17,9 @@
 #ifndef IMAGE_KTX1BUNDLE_H
 #define IMAGE_KTX1BUNDLE_H
 
-#include <math/vec3.h>
-
 #include <utils/compiler.h>
+
+#include <math/vec3.h>
 
 #include <cstdint>
 #include <memory>
