@@ -25,6 +25,7 @@
 
 #include "details/Camera.h"
 #include "details/Engine.h"
+#include "details/InstanceBuffer.h"
 #include "details/Skybox.h"
 #include "details/View.h"
 
@@ -60,6 +61,8 @@
 #include <new>
 #include <tuple>
 #include <utility>
+
+#include <string.h>
 
 using namespace filament::backend;
 using namespace filament::math;
@@ -125,6 +128,53 @@ void FScene::flushPendingDestroyed() noexcept {
 SceneCacheData::SceneCacheData() noexcept = default;
 SceneCacheData::~SceneCacheData() noexcept = default;
 
+bool PrevTransform::bitwiseEquals(PrevTransform const& other) const noexcept {
+    return memcmp(&world, &other.world, sizeof(world)) == 0 &&
+           memcmp(&lo, &other.lo, sizeof(lo)) == 0;
+}
+
+mat4f const* SceneCacheData::MotionVectorsState::trackInstanceBuffer(
+        FInstanceBuffer const& ib) noexcept {
+    InstanceBufferHistory& history = instanceBuffers.try_emplace(ib.getUid()).first.value();
+    history.lastSeen = renderIndex;
+    if (history.locals.empty()) {
+        // No history yet: the entry is new, possibly inserted earlier at this render by another
+        // renderable using the same buffer.
+        history.pendingSnapshot = &ib;
+        return nullptr;
+    }
+    if (history.revision == ib.getRevision()) {
+        return nullptr;
+    }
+    // The snapshot is taken at commit, so that all the renderables using this buffer see the same
+    // history at this render.
+    history.pendingSnapshot = &ib;
+    assert_invariant(history.locals.size() == ib.getInstanceCount());
+    return history.locals.data();
+}
+
+void SceneCacheData::MotionVectorsState::reset() noexcept {
+    // reset() runs between frames; processDeferredUpdates() and prepareMotionVectors() always
+    // fill and drain `moved` within one FView::prepare().
+    assert_invariant(moved.empty());
+    instanceBuffers.clear();
+    hasHistory = false;
+    hasMovingRenderables = false;
+}
+
+void SceneCacheData::commitMovedRenderables() noexcept {
+#if defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+    auto& soa = renderableCache.getSoA();
+    for (auto const& [e, currTransform] : motionVectors.moved) {
+        uint32_t const index = renderableCache.getIndex(e);
+        assert_invariant(index != 0xFFFFFFFF);
+        renderableCache.extraAt(index) = currTransform;
+        soa.elementAt<FScene::VISIBILITY_STATE>(index).motionMoved = false;
+    }
+    motionVectors.moved.clear();
+#endif
+}
+
 bool SceneCacheData::hasDirtyEntities() const noexcept {
     return !removedEntities.empty() || !dirtyEntities.empty() || !destroyedEntities.empty();
 }
@@ -181,7 +231,7 @@ void SceneCacheData::resize(size_t const renderableCount, size_t const lightCoun
 UTILS_NOINLINE
 static void updateRenderableCache(
         FEngine& engine,
-        SceneCacheData::RenderableCache& cache,
+        SceneCacheData& sceneCache,
         Entity const e,
         FRenderableManager::Instance const ri,
         FTransformManager::Instance const ti,
@@ -209,8 +259,30 @@ static void updateRenderableCache(
     float const scale = (length(transform[0].xyz) + length(transform[1].xyz) +
             length(transform[2].xyz)) / 3.0f;
 
-    uint32_t const index = cache.acquire(e, rotatedTranslation);
+    auto& cache = sceneCache.renderableCache;
+    auto const [index, inserted] = cache.acquire(e, rotatedTranslation);
     auto& soa = cache.getSoA();
+
+#if defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+    auto& mv = sceneCache.motionVectors;
+    // The world transform in its exact stored representation. An entity without a Transform
+    // component uses the null instance, whose world transform is the identity: destroying the
+    // component of a renderable therefore reports a motion to the identity, like any other
+    // transform change.
+    PrevTransform const currTransform{ tcm.getWorldTransform(ti), tcm.getWorldTranslationLo(ti) };
+    PrevTransform& prevTransform = cache.extraAt(index);
+    if (inserted || sceneCache.needsFullUpdate || !mv.hasHistory) {
+        prevTransform = currTransform;
+    } else if (!currTransform.bitwiseEquals(prevTransform)) {
+        // The previous transform is advanced by commitMovedRenderables(), once this render has
+        // used it.
+        visibility.motionMoved = true;
+        mv.moved.emplace_back(e, currTransform);
+    }
+#else
+    (void)inserted;
+#endif
+
     soa.elementAt<FScene::RENDERABLE_ENTITY>(index) = e;
     soa.elementAt<FScene::WORLD_TRANSFORM>(index) = mat4f{ shaderWorldRotation };
     soa.elementAt<FScene::VISIBILITY_STATE>(index) = visibility;
@@ -251,7 +323,7 @@ static void updateLightCache(
         d = normalize(mat3f::getTransformForNormals(shaderWorldRotation) * d);
     }
 
-    uint32_t const index = cache.acquire(e, rotatedPosition);
+    auto const [index, _] = cache.acquire(e, rotatedPosition);
     auto& soa = cache.getSoA();
     soa.elementAt<FScene::LIGHT_ENTITY>(index) = e;
     soa.elementAt<FScene::RADIUS>(index) = r;
@@ -263,6 +335,7 @@ static void updateLightCache(
 bool FScene::processDeferredUpdates(mat3 const& worldRotation, bool shadowReceiversAreCasters,
         SceneCacheData& cache) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    assert_invariant(cache.motionVectors.moved.empty());
 
     FEngine& engine = mEngine;
     FTransformManager const& tcm = engine.getTransformManager();
@@ -362,14 +435,12 @@ bool FScene::processDeferredUpdates(mat3 const& worldRotation, bool shadowReceiv
     for (uint32_t const id : mTempExtractedRenderables) {
         Entity const e = Entity::import(int32_t(id));
         auto const ri = rcm.getInstance(e);
-        // Renderables with an instance count of 0 are not drawn, so we skip them entirely.
-        if (UTILS_LIKELY(rcm.getInstancesInfo(ri).count)) {
-            auto const ti = tcm.getInstance(e);
-            updateRenderableCache(engine, cache.renderableCache, e, ri, ti,
-                    worldRotation, shadowReceiversAreCasters);
-        } else {
+        if (UTILS_UNLIKELY(rcm.getInstancesInfo(ri).count == 0)) {
             cache.renderableCache.remove(e);
+            continue;
         }
+        updateRenderableCache(engine, cache, e, ri, tcm.getInstance(e),
+                worldRotation, shadowReceiversAreCasters);
     }
 
     lightEntities.extractTo(mTempExtractedLights);

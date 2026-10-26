@@ -281,6 +281,14 @@ Java_com_google_android_filament_View_nSetGuardBandOptions(JNIEnv *env, jclass c
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetMotionVectorsOptions(JNIEnv *env, jclass clazz, jlong nativeView, jboolean enabled) {
+    View* const that = (View*) nativeView;
+    View::MotionVectorsOptions options;
+    options.enabled = (bool)enabled;
+    that->setMotionVectorsOptions(options);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetMultiSampleAntiAliasingOptions(JNIEnv *env, jclass clazz, jlong nativeView, jboolean enabled, jint sampleCount, jboolean customResolve) {
     View* const that = (View*) nativeView;
     View::MultiSampleAntiAliasingOptions options;

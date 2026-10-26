@@ -32,7 +32,8 @@ struct PerRenderableData {
     highp int objectId;                        // used for picking
     highp float userData;   // TODO: We need a better solution, this currently holds the average local scale for the renderable
 #if MATERIAL_FEATURE_LEVEL > 0
-    highp vec4 reserved[8];
+    highp mat4 prevWorldFromWorldMatrix;       // motion vectors [variant: MOT]
+    highp vec4 reserved[4];
 #endif
 };
 

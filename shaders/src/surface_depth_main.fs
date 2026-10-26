@@ -6,6 +6,8 @@ layout(location = 0) out highp vec4 outPicking;
 #   else
 layout(location = 0) out highp uvec2 outPicking;
 #   endif
+#elif defined(VARIANT_HAS_MOT)
+layout(location = 0) out highp vec2 outMotionVector;
 #else
 // not color output
 #endif
@@ -13,7 +15,7 @@ layout(location = 0) out highp uvec2 outPicking;
 //------------------------------------------------------------------------------
 // Depth
 //
-// note: VARIANT_HAS_MNT and VARIANT_HAS_PICKING are mutually exclusive
+// note: VARIANT_HAS_MNT, VARIANT_HAS_PICKING and VARIANT_HAS_MOT are mutually exclusive
 //------------------------------------------------------------------------------
 
 highp vec4 computeDepthMomentsVSM(const highp float depth);
@@ -63,6 +65,23 @@ void main() {
     outPicking.y = floatBitsToUint(vertex_position.z / vertex_position.w);
 #endif
 
+#elif defined(VARIANT_HAS_MOT)
+    // Object motion in the previous frame's render-target UV space: both positions are projected
+    // with the previous (unjittered) camera. A position behind that camera (w <= 0) has no usable
+    // projection, which is reported as an invalid motion vector (|v| >= 1). The clamp keeps the
+    // RG16F output finite.
+    const highp float kMinW = 1.0e-6;
+    highp vec4 c = vertex_motionCurrClip;
+    highp vec4 p = vertex_motionPrevClip;
+    if (c == p) {
+        outMotionVector = vec2(0.0);
+    } else if (min(c.w, p.w) > kMinW) {
+        highp vec2 uvCurr = uvToRenderTargetUV(c.xy * (0.5 / c.w) + 0.5);
+        highp vec2 uvPrev = uvToRenderTargetUV(p.xy * (0.5 / p.w) + 0.5);
+        outMotionVector = clamp(uvCurr - uvPrev, vec2(-2.0), vec2(2.0));
+    } else {
+        outMotionVector = vec2(2.0);
+    }
 #else
     // that's it
 #endif

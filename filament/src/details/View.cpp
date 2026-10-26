@@ -38,6 +38,7 @@
 #include "details/RenderTarget.h"
 #include "details/Scene.h"
 #include "details/Skybox.h"
+#include "details/Texture.h"
 
 #if FILAMENT_ENABLE_FGVIEWER
 #include "fg/FgviewerManager.h"
@@ -51,6 +52,7 @@
 #include <filament/DebugRegistry.h>
 #include <filament/Exposure.h>
 #include <filament/Frustum.h>
+#include <filament/Texture.h>
 #include <filament/View.h>
 
 #include <backend/DriverEnums.h>
@@ -216,6 +218,7 @@ void FView::setScene(FScene* scene) noexcept {
         }
         mScene = scene;
         invalidateSceneCache();
+        resetMotionVectorsHistory();
         if (scene) {
             if (!mSceneCache) {
                 mSceneCache = std::make_unique<FScene::SceneCacheData>();
@@ -236,6 +239,8 @@ void FView::terminate(FEngine& engine) {
     driver.destroyBufferObject(mLightUbh);
     driver.destroyBufferObject(mRenderableUbh);
     clearFrameHistory(engine);
+
+    mIsMotionVectorsActive = false;
 
     ShadowMapManager::terminate(engine, mShadowMapManager);
     mUniforms.terminate(driver);
@@ -723,6 +728,9 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
         FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
         FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
+    // Latch the motion vectors state first: everything below must agree on it for this frame.
+    updateMotionVectorsActive(engine);
+
     JobSystem& js = engine.getJobSystem();
 
     /*
@@ -926,6 +934,11 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
         //       some of the items will end-up not being visible by any light. Can we do better?
         //       e.g. could we deffer some of the prepareVisibleRenderables() to later?
         scene->prepareVisibleRenderables(merged, cache);
+
+        // this must run after culling and before updateUBOs(), which uploads the UBO column
+        if (isMotionVectorsActive()) {
+            prepareMotionVectors(engine, cameraInfo.worldTransform, renderableData);
+        }
 
         // update those UBOs
         if (!merged.empty()) {
@@ -1138,6 +1151,10 @@ void FView::updateUBOs(
 
 
     // TODO: consider using JobSystem to parallelize this.
+    FScene::SceneCacheData::MotionVectorsState* const mv =
+            isMotionVectorsActive() ? &mSceneCache->motionVectors : nullptr;
+    FRenderableManager::Visibility* const visibility =
+            renderableData.data<FScene::VISIBILITY_STATE>();
     uint32_t j = rcount;
     for (uint32_t const i: visibleRenderables) {
         // even the instanced ones are copied here because we need to maintain the offsets
@@ -1147,9 +1164,20 @@ void FView::updateUBOs(
 
         auto& instancesInfo = instancesData[i];
         if (instancesInfo.buffer) {
-            instancesInfo.buffer->prepare(
-                    buffer,  j, instancesInfo.count,
-                    worldTransformData[i], uboData[i]);
+            FInstanceBuffer* const ib = instancesInfo.buffer;
+            mat4f const* prevLocalTransforms = nullptr;
+            // only the renderables visible from the camera are drawn by the motion vectors pass
+            // (prepareMotionVectors() tracks the InstanceBuffers of the others)
+            if (UTILS_UNLIKELY(mv && mVisibleRenderables.contains(i))) {
+                prevLocalTransforms = mv->trackInstanceBuffer(*ib);
+            }
+            bool const instancesMoved = ib->prepare(buffer, j, instancesInfo.count,
+                    worldTransformData[i], uboData[i], prevLocalTransforms);
+            if (UTILS_UNLIKELY(instancesMoved)) {
+                assert_invariant(mv);
+                visibility[i].motionMoved = true;
+                mv->hasMovingRenderables = true;
+            }
             j += instancesInfo.count;
         }
     }
@@ -1519,6 +1547,11 @@ void FView::commitFrameHistory(FEngine& engine) noexcept {
     disposer.destroy(std::move(last.taa.color.handle));
     disposer.destroy(std::move(last.taa.depth.handle));
     disposer.destroy(std::move(last.ssr.color.handle));
+    // (last.motionVectors holds no resources)
+
+    if (isMotionVectorsActive()) {
+        commitMotionVectorsHistory();
+    }
 
     // and then push the new history entry to the history stack
     frameHistory.commit();
@@ -1534,6 +1567,7 @@ void FView::clearFrameHistory(FEngine& engine) noexcept {
         disposer.destroy(std::move(last.taa.depth.handle));
         disposer.destroy(std::move(last.ssr.color.handle));
     }
+    resetMotionVectorsHistory();
 }
 
 void FView::executePickingQueries(DriverApi& driver,
@@ -1627,6 +1661,168 @@ void FView::setScreenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions optio
 void FView::setGuardBandOptions(GuardBandOptions const options) noexcept {
     mGuardBandOptions = options;
 }
+
+void FView::setMotionVectorsOptions(MotionVectorsOptions const options) noexcept {
+    mMotionVectorsOptions = options;
+}
+
+void FView::setMotionVectorsReadback(MotionVectorsReadback const& readback) {
+    if (FTexture const* const texture = readback.texture) {
+        FILAMENT_CHECK_PRECONDITION(texture->getTarget() == Texture::Sampler::SAMPLER_2D &&
+                                    texture->getFormat() == Texture::InternalFormat::RG16F)
+                << "The motion vectors readback texture must be a RG16F 2D texture";
+        constexpr Texture::Usage usage =
+                Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::BLIT_DST;
+        FILAMENT_CHECK_PRECONDITION((texture->getUsage() & usage) == usage)
+                << "The motion vectors readback texture needs the COLOR_ATTACHMENT and BLIT_DST "
+                   "usages";
+    }
+    mMotionVectorsReadback = readback;
+}
+
+#if defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+bool FView::evaluateMotionVectorsActive(FEngine const& engine) const noexcept {
+    // Motion vectors are mono only and are only consumed by post-processing; their depth variant
+    // isn't built for feature level 0, and the object motion vectors pass renders into RG16F.
+    return mMotionVectorsOptions.enabled && hasPostProcessPass() && !hasStereo() &&
+           engine.getActiveFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1 &&
+           engine.isRG16FColorRenderTargetSupported();
+}
+
+void FView::updateMotionVectorsActive(FEngine const& engine) noexcept {
+    bool const active = evaluateMotionVectorsActive(engine);
+    if (UTILS_UNLIKELY(active != mIsMotionVectorsActive)) {
+        // either way, there is no usable history
+        resetMotionVectorsHistory();
+    }
+    mIsMotionVectorsActive = active;
+}
+
+void FView::resetMotionVectorsHistory() noexcept {
+    for (size_t i = 0; i < mFrameHistory.size(); ++i) {
+        mFrameHistory[i].motionVectors.valid = false;
+    }
+    mFrameHistory.getCurrent().motionVectors.valid = false;
+    if (mSceneCache) {
+        mSceneCache->motionVectors.reset();
+    }
+}
+
+void FView::prepareMotionVectors(FEngine const& engine, mat4 const& worldTransform,
+        FScene::RenderableSoa& renderableData) noexcept {
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    assert_invariant(mSceneCache);
+
+    auto& cache = *mSceneCache;
+    auto& mv = cache.motionVectors;
+    auto const& masterCache = cache.renderableCache;
+    FTransformManager const& tcm = engine.getTransformManager();
+
+    // This starts a new render. The InstanceBuffers that aren't used from now on are evicted at
+    // commit. Bumping the index here, rather than at commit, guarantees that a pending snapshot
+    // is never older than this render.
+    mv.renderIndex++;
+
+    Entity const* const entities = renderableData.data<FScene::RENDERABLE_ENTITY>();
+    FRenderableManager::Visibility* const visibility =
+            renderableData.data<FScene::VISIBILITY_STATE>();
+    PerRenderableData* const uboData = renderableData.data<FScene::UBO>();
+
+    // inverse(worldTransform), only computed if something moved
+    mat4 invWorldTransform;
+    bool hasInvWorldTransform = false;
+
+    bool hasMovingRenderables = false;
+    for (uint32_t const i : mVisibleRenderables) {
+        mat4f M{};  // identity, i.e. the renderable didn't move
+        bool moved = false;
+        if (UTILS_UNLIKELY(visibility[i].motionMoved)) {
+            Entity const e = entities[i];
+            // renderableData was copied from the master cache at this render, and the master
+            // cache hasn't changed since, so every visible row is in it.
+            uint32_t const row = masterCache.getIndex(e);
+            assert_invariant(row != 0xFFFFFFFF);
+            FScene::PrevTransform const& prev = masterCache.extraAt(row);
+            mat4 const currWorld = tcm.getWorldTransformAccurate(tcm.getInstance(e));
+            double const detCurrWorld = det(currWorld);
+            if (UTILS_VERY_LIKELY(detCurrWorld != 0.0)) {
+                mat4 prevWorld{ prev.world };
+                prevWorld[3].xyz += prev.lo;
+                if (!hasInvWorldTransform) {
+                    invWorldTransform = inverse(worldTransform);
+                    hasInvWorldTransform = true;
+                }
+                // From this frame's shader world space to the previous position, in this
+                // frame's shader world space. Computed in double precision.
+                M = mat4f{ worldTransform * prevWorld * inverse(currWorld, detCurrWorld) *
+                           invWorldTransform };
+                moved = true;
+            }
+        }
+        // Rows are reassigned every frame, so every visible row must be written. Auto-instancing
+        // and updateUBOs() copy this column.
+        uboData[i].prevWorldFromWorldMatrix = M;
+        visibility[i].motionMoved = moved;
+        hasMovingRenderables = hasMovingRenderables || moved;
+    }
+
+    // updateUBOs() may also set this, for renderables whose instances moved
+    mv.hasMovingRenderables = hasMovingRenderables;
+
+    // The previous transforms of the rows that moved, visible or not, have been used: they
+    // become this render's transforms.
+    cache.commitMovedRenderables();
+
+    // The InstanceBuffers of all the scene renderables are tracked, like their transforms, so
+    // that an instance entering the view reports its motion. updateUBOs() tracks the ones of the
+    // visible renderables; this tracks the others, at the cost of a read per row and a hash
+    // lookup per row that has an InstanceBuffer.
+    FRenderableManager::InstancesInfo const* const instancesData =
+            renderableData.data<FScene::INSTANCES>();
+    assert_invariant(mVisibleRenderables.first == 0);
+    for (uint32_t i = mVisibleRenderables.last, c = uint32_t(renderableData.size()); i < c; i++) {
+        if (UTILS_UNLIKELY(instancesData[i].buffer)) {
+            mv.trackInstanceBuffer(*instancesData[i].buffer);
+        }
+    }
+}
+
+void FView::commitMotionVectorsHistory() noexcept {
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    assert_invariant(mSceneCache);
+
+    auto& mv = mSceneCache->motionVectors;
+    mv.hasHistory = true;
+
+    // Evict the InstanceBuffers that no scene renderable used at this render, which bounds the
+    // map, and snapshot the ones that were added or changed.
+    for (auto it = mv.instanceBuffers.begin(); it != mv.instanceBuffers.end();) {
+        auto& history = it.value();
+        if (history.lastSeen != mv.renderIndex) {
+            it = mv.instanceBuffers.erase(it);
+            continue;
+        }
+        if (history.pendingSnapshot) {
+            FInstanceBuffer const* const ib = history.pendingSnapshot;
+            auto const& locals = ib->getLocalTransforms();
+            if (history.locals.size() == locals.size()) {
+                std::copy(locals.begin(), locals.end(), history.locals.begin());
+            } else {
+                history.locals = locals;
+            }
+            history.revision = ib->getRevision();
+            history.pendingSnapshot = nullptr;
+        }
+        ++it;
+    }
+}
+#else
+bool FView::evaluateMotionVectorsActive(FEngine const&) const noexcept { return false; }
+void FView::updateMotionVectorsActive(FEngine const&) noexcept {}
+void FView::resetMotionVectorsHistory() noexcept {}
+void FView::prepareMotionVectors(FEngine const&, mat4 const&, FScene::RenderableSoa&) noexcept {}
+void FView::commitMotionVectorsHistory() noexcept {}
+#endif
 
 void FView::setAmbientOcclusionOptions(AmbientOcclusionOptions options) noexcept {
     options.radius = max(0.0f, options.radius);
@@ -1736,6 +1932,7 @@ void FView::detachScene(FScene const* scene) noexcept {
     if (mScene == scene) {
         mScene = nullptr;
         invalidateSceneCache();
+        resetMotionVectorsHistory();
     }
 }
 

@@ -219,6 +219,14 @@ public:
         return r;
     }
 
+    // Low-order part of the world translation, i.e. getWorldTransformAccurate() is
+    // getWorldTransform() with this added to its translation. Together with
+    // getWorldTransform(), this is the exact stored representation of the world transform.
+    math::float3 getWorldTranslationLo(Instance const ci) const noexcept {
+        ensureWorldTransformsUpToDate();
+        return mManager[ci].worldTranslationLo;
+    }
+
 private:
     struct Sim;
 

@@ -946,13 +946,18 @@ void MaterialDefinition::acquirePrograms(FEngine& engine,
                 specialization.specKey = specKey;
                 LocalProgramCache::CacheKey mappedKey = LocalProgramCache::mapCacheEntryKey(variant,
                         specKey, programCache.size());
+                // Motion vectors programs are only needed by Views that enable motion vectors,
+                // they're compiled lazily (or by warm-up), never at engine init.
+                bool const precache = !isMotionVectorsVariant(variant);
                 if (useCache) {
-                    if (Handle<HwProgram> program = materialCache.getOrAcquireProgram(
-                            engine, specialization, *this, parser, CompilerPriorityQueue::HIGH,
-                            false)) {
+                    Handle<HwProgram> const program = UTILS_LIKELY(precache)
+                            ? materialCache.getOrAcquireProgram(engine, specialization, *this,
+                                    parser, CompilerPriorityQueue::HIGH, false)
+                            : materialCache.acquireProgram(specialization);
+                    if (program) {
                         programCache[mappedKey] = program;
                     }
-                } else {
+                } else if (UTILS_LIKELY(precache)) {
                     programCache[mappedKey] = compileProgram(engine, parser,
                             specialization, CompilerPriorityQueue::HIGH);
                 }

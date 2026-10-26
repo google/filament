@@ -98,6 +98,9 @@ std::ostream& operator<<(std::ostream& out, const ScreenSpaceReflectionsOptions&
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, GuardBandOptions* out);
 std::ostream& operator<<(std::ostream& out, const GuardBandOptions& in);
 
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, MotionVectorsOptions* out);
+std::ostream& operator<<(std::ostream& out, const MotionVectorsOptions& in);
+
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, AntiAliasing* out);
 std::ostream& operator<<(std::ostream& out, AntiAliasing in);
 

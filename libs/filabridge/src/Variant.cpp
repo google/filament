@@ -30,41 +30,46 @@ namespace filament {
 
 Variant Variant::filterUserVariant(
         Variant variant, UserVariantFilterMask filterMask) noexcept {
-    // these are easy to filter by just removing the corresponding bit
+    // SSR is a special sentinel (MNT | PCK | DEP | STE); only the SSR and skinning filters apply
+    // to it.
+    if (isSSRVariant(variant)) {
+        if (filterMask & uint32_t(UserVariantFilterBit::SSR)) {
+            variant.key &= ~SPECIAL_SSR_VARIANT;
+        }
+        if (filterMask & uint32_t(UserVariantFilterBit::SKINNING)) {
+            variant.key &= ~SKN;
+        }
+        return variant;
+    }
+
     if (filterMask & uint32_t(UserVariantFilterBit::SKINNING)) {
         variant.key &= ~SKN;
+    }
+
+    // Motion vectors variants encode MOT as MNT | PCK, so handle them before VSM strips MNT.
+    if (isMotionVectorsVariant(variant)) {
+        if (filterMask & uint32_t(UserVariantFilterBit::MOTION_VECTORS)) {
+            variant.key &= ~MOT;
+        }
+        return variant;
     }
 
     if (filterMask & uint32_t(UserVariantFilterBit::STE)) {
         variant.key &= ~STE;
     }
 
-    if (isValidDepthVariant(variant)) {
-        // depth variants can have their MNT bit filtered
-        if (filterMask & uint32_t(UserVariantFilterBit::VSM)) {
-            variant.key &= ~MNT;
-        }
-    }
-
     if (filterMask & uint32_t(UserVariantFilterBit::SHADOW_RECEIVER)) {
         variant.key &= ~SRE;
     }
 
-    if (!isSSRVariant(variant)) {
-        // SSR still needs to be handled separately because MNT aliases S2D.
-        if (filterMask & uint32_t(UserVariantFilterBit::VSM)) {
-            variant.key &= ~S2D;
-        }
-
-        if (filterMask & uint32_t(UserVariantFilterBit::FOG)) {
-            variant.setFog(false);
-        }
-    } else {
-        // see if we need to filter out the SSR variants
-        if (filterMask & uint32_t(UserVariantFilterBit::SSR)) {
-            variant.key &= ~SPECIAL_SSR_VARIANT;
-        }
+    if (filterMask & uint32_t(UserVariantFilterBit::VSM)) {
+        variant.key &= ~(MNT | S2D);
     }
+
+    if (filterMask & uint32_t(UserVariantFilterBit::FOG)) {
+        variant.setFog(false);
+    }
+
     return variant;
 }
 
@@ -208,10 +213,10 @@ static auto const gDepthVariants{ details::get_depth_variants() };
 static auto const gPostProcessVariants{ details::get_post_process_variants() };
 
 static_assert(reserved_is_not_valid());
-static_assert(reserved_variant_count() == 26);
-static_assert(valid_variant_count() == 38);
-static_assert(vertex_variant_count() == 8 + 8);                   // 16
-static_assert(fragment_variant_count() == (8 - 2) + 1 + (2 + 1)); // 10
+static_assert(reserved_variant_count() == 24);
+static_assert(valid_variant_count() == 40);
+static_assert(vertex_variant_count() == 8 + 8 + 2);                   // 18
+static_assert(fragment_variant_count() == (8 - 2) + 1 + (2 + 1) + 1); // 11
 
 } // namespace details
 
