@@ -937,6 +937,7 @@ bool ChunkDescriptorBindingsInfo::unflatten(Unflattener& unflattener,
 
     auto& descriptors = (*container)[+DescriptorSetBindingPoints::PER_MATERIAL];
     descriptors.reserve(descriptorCount);
+    bitset64 seenBindings;
     for (size_t i = 0; i < descriptorCount; i++) {
         CString name;
         if (!unflattener.read(&name)) {
@@ -960,6 +961,10 @@ bool ChunkDescriptorBindingsInfo::unflatten(Unflattener& unflattener,
             // in DescriptorSetLayout, so it must be in range.
             return false;
         }
+        if (seenBindings[binding]) {
+            return false;
+        }
+        seenBindings.set(binding);
         descriptors.push_back({
                 std::move(name),
                 DescriptorType(type),

@@ -1141,6 +1141,76 @@ TEST_P(SpecializedInstanceLifetimeTest, DestroyInstanceKeepsMaterialDefinition) 
     Engine::destroy(engine);
 }
 
+TEST(Material, RejectMismatchedDescriptorBindingsAndLayout) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    ASSERT_NE(engine, nullptr);
+
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("DescriptorMismatchTest");
+    builder.shading(Shading::UNLIT);
+    builder.parameter("tex", filamat::MaterialBuilder::SamplerType::SAMPLER_2D,
+            filamat::MaterialBuilder::SamplerFormat::FLOAT);
+    filamat::Package const pkg = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(pkg.isValid());
+
+    Material* validMaterial =
+            Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
+    ASSERT_NE(validMaterial, nullptr);
+    engine->destroy(validMaterial);
+
+    auto const getChunkSpan = [](std::vector<uint8_t>& bytes, filamat::ChunkType const type)
+            -> std::pair<uint8_t*, uint8_t*> {
+        filaflat::ChunkContainer cc(bytes.data(), bytes.size());
+        if (!cc.parse() || !cc.hasChunk(type)) {
+            return { nullptr, nullptr };
+        }
+        auto const [start, end] = cc.getChunkRange(type);
+        return { bytes.data() + (start - bytes.data()), bytes.data() + (end - bytes.data()) };
+    };
+
+    // Case 1 (b/557281826 PoC): MAT_DSLI has 1 descriptor (binding 0), while MAT_DBDI declares
+    // a sampler at binding 63.
+    {
+        std::vector<uint8_t> mutated(pkg.getData(), pkg.getData() + pkg.getSize());
+        auto const [dsliStart, dsliEnd] =
+                getChunkSpan(mutated, filamat::MaterialDescriptorSetLayoutInfo);
+        auto const [dbdiStart, dbdiEnd] =
+                getChunkSpan(mutated, filamat::MaterialDescriptorBindingsInfo);
+        ASSERT_NE(dsliStart, nullptr);
+        ASSERT_NE(dbdiStart, nullptr);
+        dsliStart[0] = 1; // shrink layout to 1 descriptor (binding 0 only)
+        dbdiEnd[-1] = 63; // move sampler binding in MAT_DBDI to 63
+        EXPECT_EQ(Material::Builder().package(mutated.data(), mutated.size()).build(*engine),
+                nullptr);
+    }
+
+    // Case 2: MAT_DBDI declares a descriptor type that disagrees with MAT_DSLI for the same
+    // binding.
+    {
+        std::vector<uint8_t> mutated(pkg.getData(), pkg.getData() + pkg.getSize());
+        auto const [dbdiStart, dbdiEnd] =
+                getChunkSpan(mutated, filamat::MaterialDescriptorBindingsInfo);
+        ASSERT_NE(dbdiStart, nullptr);
+        dbdiEnd[-2] = uint8_t(backend::DescriptorType::SAMPLER_3D_FLOAT);
+        EXPECT_EQ(Material::Builder().package(mutated.data(), mutated.size()).build(*engine),
+                nullptr);
+    }
+
+    // Case 3: MAT_DBDI fails unflatten (duplicate binding 0).
+    {
+        std::vector<uint8_t> mutated(pkg.getData(), pkg.getData() + pkg.getSize());
+        auto const [dbdiStart, dbdiEnd] =
+                getChunkSpan(mutated, filamat::MaterialDescriptorBindingsInfo);
+        ASSERT_NE(dbdiStart, nullptr);
+        dbdiEnd[-1] = 0; // collides with UBO at binding 0
+        EXPECT_EQ(Material::Builder().package(mutated.data(), mutated.size()).build(*engine),
+                nullptr);
+    }
+
+    Engine::destroy(engine);
+}
+
 INSTANTIATE_TEST_SUITE_P(MaterialInstanceTest, SpecializedInstanceLifetimeTest,
         testing::Combine(testing::Bool(), testing::Bool()),
         [](testing::TestParamInfo<std::tuple<bool, bool>> const& info) {

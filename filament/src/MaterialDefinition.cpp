@@ -127,7 +127,7 @@ std::unique_ptr<MaterialDefinition> MaterialDefinition::create(FEngine& engine,
         }
     }
 
-    // processDescriptorSets() only asserts on this, which is compiled out in release builds.
+    // processDescriptorSets() only asserts on these, which is compiled out in release builds.
     MaterialParser::DescriptorSetLayoutContainer descriptorSetLayout;
     if (!parser->getDescriptorSetLayout(&descriptorSetLayout)) {
         CString name;
@@ -135,6 +135,34 @@ std::unique_ptr<MaterialDefinition> MaterialDefinition::create(FEngine& engine,
         LOG(ERROR) << "The material '" << name.c_str_safe()
                    << "' has an invalid descriptor set layout.";
         return nullptr;
+    }
+
+    MaterialParser::DescriptorBindingsContainer descriptorBindings;
+    if (!parser->getDescriptorBindings(&descriptorBindings)) {
+        CString name;
+        parser->getName(&name);
+        LOG(ERROR) << "The material '" << name.c_str_safe()
+                   << "' has invalid descriptor bindings.";
+        return nullptr;
+    }
+
+    // ChunkDescriptorBindingsInfo and ChunkDescriptorSetLayoutInfo are independent chunks.
+    // Every binding declared for the program's per-material set must exist in the layout with
+    // the same type.
+    auto const& layoutDescriptors = descriptorSetLayout.descriptors;
+    for (auto const& binding : descriptorBindings[+DescriptorSetBindingPoints::PER_MATERIAL]) {
+        bool const found = std::any_of(layoutDescriptors.begin(), layoutDescriptors.end(),
+                [&binding](DescriptorSetLayoutDescriptor const& d) {
+                    return d.binding == binding.binding && d.type == binding.type;
+                });
+        if (!found) {
+            CString name;
+            parser->getName(&name);
+            LOG(ERROR) << "The material '" << name.c_str_safe()
+                       << "' has a descriptor binding (" << +binding.binding
+                       << ") that does not match its descriptor set layout.";
+            return nullptr;
+        }
     }
 
     // processBlendingMode() copies these into RasterState, which the backends trust.
