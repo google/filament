@@ -213,8 +213,8 @@ bool isTransientUsage(wgpu::TextureUsage usage) {
 WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels,
         const TextureFormat format, const uint8_t samples, const uint32_t width,
         const uint32_t height, const uint32_t depth, const TextureUsage usage,
-        wgpu::Device const& device) noexcept
-    : HwTexture{ samplerType, levels, samples, width, height, depth, format, usage, false },
+        wgpu::Device const& device, const bool asynchronous) noexcept
+    : HwTexture{ samplerType, levels, samples, width, height, depth, format, usage, asynchronous },
       mViewFormat{ toWGPUTextureFormat(format) },
       mMipmapGenerationStrategy{ determineMipmapGenerationStrategy(mViewFormat, samplerType,
               samples, levels) },

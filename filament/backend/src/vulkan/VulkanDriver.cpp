@@ -45,6 +45,7 @@
 #include <utils/ImmutableCString.h>
 #include <utils/Panic.h>
 
+#include <algorithm>
 #include <chrono>
 #include <mutex>
 #ifndef NDEBUG
@@ -292,7 +293,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
         // explicit synchronization model make the ThreadWorker hard to implement without
         // significant infrastructure refactor (transfer queues, thread-safe VMA, etc), which will
         // be done in Phase 2.
-        mJobWorker = AmortizationWorker::create(mJobQueue);
+        mJobWorker = AmortizationWorker::create(mJobQueue, driverConfig.asynchronousFrameBudget);
     }
 
     mContext.getDebugUtils().init(mPlatform->getInstance(), mPlatform->getDevice(),
@@ -457,11 +458,6 @@ void VulkanDriver::tick(int) {
     // Destroy the resources of the readbacks that completed on the readPixels thread.
     mReadPixels.gc();
 
-    if (getJobWorker()) {
-        // This number is randomly/heuristically chosen. Consider making the number optional.
-        getJobWorker()->process(5);
-    }
-
     // If the Renderer is skipping a lot of frames, it's possible for
     // commands to accumulate, since we only flush command buffers if
     // driver.flush() is called, or in endFrame(). This ensures that
@@ -534,6 +530,17 @@ void VulkanDriver::endFrame(uint32_t frameId) {
     FVK_PROFILE_MARKER(PROFILE_NAME_ENDFRAME);
     endCommandRecording();
     collectGarbage();
+
+    // Queued async jobs run after the frame's own work.
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
+}
+
+void VulkanDriver::skipFrame(int) {
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
 }
 
 void VulkanDriver::updateDescriptorSetBuffer(
@@ -1969,6 +1976,25 @@ size_t VulkanDriver::getMaxArrayTextureLayers() {
     return mContext.getPhysicalDeviceLimits().maxImageArrayLayers;
 }
 
+size_t VulkanDriver::getMaxTextureCount(ShaderStage) {
+    return mContext.getPhysicalDeviceLimits().maxPerStageDescriptorSampledImages;
+}
+
+size_t VulkanDriver::getMaxSamplerCount(ShaderStage) {
+    return mContext.getPhysicalDeviceLimits().maxPerStageDescriptorSamplers;
+}
+
+size_t VulkanDriver::getExternalTextureCost() {
+    // A multi-planar (YCbCr) image may consume more than one descriptor; see
+    // VkSamplerYcbcrConversionImageFormatProperties::combinedImageSamplerDescriptorCount.
+    return 2;
+}
+
+size_t VulkanDriver::getExternalSamplerCost() {
+    // Combined image samplers count against both the sampled image and the sampler limits.
+    return getExternalTextureCost();
+}
+
 size_t VulkanDriver::getUniformBufferOffsetAlignment() {
     return mContext.getPhysicalDeviceLimits().minUniformBufferOffsetAlignment;
 }
@@ -2022,9 +2048,10 @@ void VulkanDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuff
     // pass a resource_ptr instead, which is ref-counted.
     auto ib = promoteToAsync(resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh));
 
-    getJobQueue()->push([this, ib, p = std::move(p), byteOffset,
+    getJobQueue()->push([this, ib, byteOffset,
+            bufferRelease = AsyncBufferRelease(this, std::move(p)),
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
-        updateIndexBufferCommon(ib, std::move(p), byteOffset);
+        updateIndexBufferCommon(ib, bufferRelease.detach(), byteOffset);
         completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
@@ -2055,9 +2082,10 @@ void VulkanDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferOb
     // pass a resource_ptr instead, which is ref-counted.
     auto bo = promoteToAsync(resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh));
 
-    getJobQueue()->push([this, bo, bd = std::move(bd), byteOffset,
+    getJobQueue()->push([this, bo, byteOffset,
+            bufferRelease = AsyncBufferRelease(this, std::move(bd)),
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
-        updateBufferObjectCommon(bo, std::move(bd), byteOffset);
+        updateBufferObjectCommon(bo, bufferRelease.detach(), byteOffset);
         completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
@@ -2110,10 +2138,10 @@ void VulkanDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th,
     auto t = promoteToAsync(resource_ptr<VulkanTexture>::cast(&mResourceManager, th));
 
     getJobQueue()->push([this, t, level, xoffset, yoffset, zoffset, width, height, depth,
-            data = std::move(data),
+            bufferRelease = AsyncBufferRelease(this, std::move(data)),
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         update3DImageCommon(t, level, xoffset, yoffset, zoffset, width, height, depth,
-                std::move(data));
+                bufferRelease.detach());
         completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
@@ -2165,7 +2193,7 @@ void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {
     auto t = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
     assert_invariant(t);
 
-    int32_t layerCount = int32_t(t->depth);
+    uint32_t layerCount = uint32_t(t->depth);
     if (t->target == SamplerType::SAMPLER_CUBEMAP_ARRAY ||
         t->target == SamplerType::SAMPLER_CUBEMAP) {
         layerCount *= 6;
@@ -2186,15 +2214,15 @@ void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {
 
         // TODO: there should be a way to do this using layerCount in vkBlitImage
         // TODO: vkBlitImage should be able to handle 3D textures too
-        for (uint8_t layer = 0; layer < layerCount; layer++) {
+        for (uint32_t layer = 0; layer < layerCount; layer++) {
             VulkanAttachment dst {
                 .level = uint8_t(level + 1),
-                .layer = layer,
+                .layer = uint8_t(layer),
             };
             dst.texture = t;
             VulkanAttachment src {
                 .level = uint8_t(level),
-                .layer = layer,
+                .layer = uint8_t(layer),
             };
             src.texture = t;
             mBlitter.blit(VK_FILTER_LINEAR, dst, dstOffsets, src, srcOffsets);

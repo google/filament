@@ -24,6 +24,7 @@
 #include <utils/JobSystem.h>
 #include <utils/Mutex.h>
 
+#include <chrono>
 #include <limits>
 #include <memory>
 #include <queue>
@@ -193,6 +194,11 @@ public:
     virtual void process(int jobCount) {}
 
     /**
+     * Processes jobs within one frame's time budget. (For non-threaded workers)
+     */
+    virtual void processFrame() {}
+
+    /**
      * Drains pending jobs and waits for currently running work to finish.
      */
     virtual void drain() = 0;
@@ -221,13 +227,15 @@ class AmortizationWorker final : public JobWorker {
 public:
     /**
      * Creates an instance of AmortizationWorker. Users should call this to create one.
+     * @param frameBudget Time each `processFrame()` call may spend on jobs.
      * @return An instance of AmortizationWorker
      */
-    static Ptr create(JobQueue::Ptr queue) {
-        return std::make_unique<AmortizationWorker>(std::move(queue), PassKey{});
+    static Ptr create(JobQueue::Ptr queue, std::chrono::nanoseconds frameBudget) {
+        return std::make_unique<AmortizationWorker>(std::move(queue), frameBudget, PassKey{});
     }
 
-    explicit AmortizationWorker(JobQueue::Ptr queue, PassKey); // This can be created only via `create()`
+    // This can be created only via `create()`
+    AmortizationWorker(JobQueue::Ptr queue, std::chrono::nanoseconds frameBudget, PassKey);
 
     ~AmortizationWorker() override;
 
@@ -243,6 +251,12 @@ public:
     void process(int jobCount) override;
 
     /**
+     * Runs jobs until the frame budget is spent, measured with std::chrono::steady_clock. Call it
+     * once per frame. At least one job runs per call, whatever the budget.
+     */
+    void processFrame() override;
+
+    /**
      * Drains all pending jobs in the queue.
      */
     void drain() override;
@@ -252,6 +266,9 @@ public:
      * This is safe to call multiple times.
      */
     void terminate() override;
+
+private:
+    std::chrono::nanoseconds const mFrameBudget;
 };
 
 

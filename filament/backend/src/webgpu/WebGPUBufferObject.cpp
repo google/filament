@@ -81,8 +81,8 @@ struct WebGPUBufferObject::VertexState final {
 // The usage flags are determined by the binding type, and always include CopyDst to allow for
 // updating the buffer.
 WebGPUBufferObject::WebGPUBufferObject(wgpu::Device const& device,
-        const BufferObjectBinding bindingType, const uint32_t byteCount)
-        : HwBufferObject{ byteCount, false } {
+        const BufferObjectBinding bindingType, const uint32_t byteCount, const bool asynchronous)
+        : HwBufferObject{ byteCount, asynchronous } {
     if (bindingType == BufferObjectBinding::VERTEX) {
         // The GPU buffer is created when attaching to a vertex buffer.
         mVertexState = std::make_unique<VertexState>();

@@ -458,7 +458,7 @@ void VulkanRenderTarget::emitBarriersBeginRenderPass(VulkanCommandBuffer& comman
         }
     };
 
-    for (size_t i = 0, count = mInfo->colors.count(); i < count; ++i) {
+    for (uint8_t i = 0, count = uint8_t(mInfo->colors.count()); i < count; ++i) {
         auto& attachment = attachments[i];
         auto tex = attachment.texture;
         if (samples == 1 || tex->samples == 1) {
@@ -565,7 +565,7 @@ void VulkanVertexBuffer::setBuffer(fvkmemory::resource_ptr<VulkanBufferObject> b
     size_t const count = vbi->getAttributeCount();
     VkBuffer* const vkbuffers = getVkBuffers();
     int8_t const* const attribToBuffer = vbi->getAttributeToBuffer();
-    for (uint8_t attribIndex = 0; attribIndex < count; attribIndex++) {
+    for (size_t attribIndex = 0; attribIndex < count; attribIndex++) {
         if (attribToBuffer[attribIndex] == static_cast<int8_t>(index)) {
             vkbuffers[attribIndex] = bufferObject->getVkBuffer();
             mAttributes.set(attribIndex);

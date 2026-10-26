@@ -15,7 +15,8 @@
 # The slowest entries come first so that they start first when there are fewer CPUs than jobs.
 shards=3 tools/cmgen/test_cmgen compare
 shards=8 libs/filamat/test_filamat
-shards=4 filament/test/test_filament --gtest_filter=-RenderingTest.*
+# Some of these tests render, such as RenderingTest. See README.md for what they need.
+shards=4 filament/test/test_filament
 exclusive libs/utils/test_utils
 libs/filament-matp/test_matp
 libs/viewer/test_settings

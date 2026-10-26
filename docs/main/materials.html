@@ -865,14 +865,23 @@ with a direction map</span></center></div></center>
 The result shown in <a href="#figure_anisotropydirectionproperty">figure&nbsp;16</a> was obtained using the direction map shown
 in <a href="#figure_anisotropydirectionproperty">figure&nbsp;16</a>.
 </p><p>
-<center><div class="image" style=""><a href="../images/screenshot_anisotropy_map.jpg" target="_blank"><img class="markdeep" src="../images/screenshot_anisotropy_map.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_anisotropydirectionproperty">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;16:</b> Example of Lighting: specularAmbientOcclusiona direction map</span></center></div></center>
+<center><div class="image" style=""><a href="../images/screenshot_anisotropy_map.jpg" target="_blank"><img class="markdeep" src="../images/screenshot_anisotropy_map.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_anisotropydirectionproperty">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;16:</b> Example of anisotropy direction map</span></center></div></center>
 </p>
 <a class="target" name="ambientocclusion">&nbsp;</a><a class="target" name="materialmodels/litmodel/ambientocclusion">&nbsp;</a><a class="target" name="toc3.2.21">&nbsp;</a><h3 id="ambient-occlusion"><a class="header" href="#ambient-occlusion">Ambient occlusion</a></h3>
 <p>
 <p>The <code>ambientOcclusion</code> property defines how much of the ambient light is accessible to a surface
-point. It is a per-pixel shadowing factor between 0.0 (fully shadowed) and 1.0 (fully lit). This
-property only affects diffuse indirect lighting (image-based lighting), not direct lights such as
-directional, point and spot lights, nor specular lighting.</p>
+point. It is a per-pixel shadowing factor between 0.0 (fully shadowed) and 1.0 (fully lit).</p>
+</p><p>
+This property mostly affects indirect lighting (image-based lighting). Diffuse indirect lighting is
+attenuated by this value, or by the minimum of this value and screen-space ambient occlusion when
+the latter is enabled. Specular indirect lighting of opaque and masked materials is attenuated by
+a specular occlusion term derived from this value, unless <code>specularAmbientOcclusion</code> is set to
+<code>none</code>, which is the default on mobile (see section  <a href="#toc4.2.37">4.2.37</a> and
+section  <a href="#toc4.2.36">4.2.36</a>).
+</p><p>
+When a material sets this property and the renderable receives shadows, the value is also used to
+compute micro-shadowing for directional lights, which attenuates direct lighting in occluded
+areas. Point and spot lights are not affected.
 </p><p>
 <center><div class="image" style=""><a href="../images/screenshot_ao.jpg" target="_blank"><img class="markdeep" src="../images/screenshot_ao.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_aoexample">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;17:</b> Comparison of materials without diffuse ambient occlusion
 (left) and with (right)</span></center></div></center>

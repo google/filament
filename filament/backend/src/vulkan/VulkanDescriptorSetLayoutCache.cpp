@@ -151,7 +151,6 @@ VkDescriptorSetLayout VulkanDescriptorSetLayoutCache::getVkLayout(
     count += appendBindings(&toBind[count], VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
             bitmasks.inputAttachment);
 
-    assert_invariant(count != 0 && "Need at least one binding for descriptor set layout.");
     assert_invariant(count <= VulkanDescriptorSetLayout::MAX_BINDINGS && "Exceeded MAX_BINDINGS.");
     VkDescriptorSetLayoutCreateInfo dlinfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,

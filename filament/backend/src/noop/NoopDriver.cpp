@@ -97,6 +97,9 @@ void NoopDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 void NoopDriver::endFrame(uint32_t frameId) {
 }
 
+void NoopDriver::skipFrame(int) {
+}
+
 void NoopDriver::flush(int) {
 }
 
@@ -296,6 +299,24 @@ size_t NoopDriver::getMaxTextureSize(SamplerType target) {
 
 size_t NoopDriver::getMaxArrayTextureLayers() {
     return 256u;
+}
+
+size_t NoopDriver::getMaxTextureCount(ShaderStage const stage) {
+    auto const& caps = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_3];
+    return stage == ShaderStage::VERTEX ? caps.MAX_VERTEX_SAMPLER_COUNT
+                                        : caps.MAX_FRAGMENT_SAMPLER_COUNT;
+}
+
+size_t NoopDriver::getMaxSamplerCount(ShaderStage const stage) {
+    return getMaxTextureCount(stage);
+}
+
+size_t NoopDriver::getExternalTextureCost() {
+    return 1;
+}
+
+size_t NoopDriver::getExternalSamplerCost() {
+    return 1;
 }
 
 size_t NoopDriver::getUniformBufferOffsetAlignment() {

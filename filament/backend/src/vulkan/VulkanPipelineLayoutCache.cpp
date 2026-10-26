@@ -36,7 +36,7 @@ VkPipelineLayout VulkanPipelineLayoutCache::getLayout(
     auto pushConstantRanges = program->getPushConstantRanges();
     if (pushConstantRangeCount > 0) {
         assert_invariant(pushConstantRangeCount <= Program::SHADER_TYPE_COUNT);
-        for (uint8_t i = 0; i < pushConstantRangeCount; ++i) {
+        for (uint32_t i = 0; i < pushConstantRangeCount; ++i) {
             auto const& range = pushConstantRanges[i];
             auto& pushConstant = key.pushConstant[i];
             if (range.stageFlags & VK_SHADER_STAGE_VERTEX_BIT) {

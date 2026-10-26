@@ -153,6 +153,7 @@ Platform::DriverConfig getDriverConfig(FEngine* instance) {
         .asynchronousMode = instance->features.backend.enable_asynchronous_operation
                                     ? instance->getConfig().asynchronousMode
                                     : AsynchronousMode::NONE,
+        .asynchronousFrameBudget = instance->getConfig().asynchronousFrameBudget,
     };
     return driverConfig;
 }
@@ -368,6 +369,9 @@ uint32_t FEngine::getJobSystemThreadPoolSize(Config const& config) noexcept {
     int threadCount = int(std::thread::hardware_concurrency()) - 2;
     // make sure we have at least 1 thread though
     threadCount = std::max(1, threadCount);
+    // Leave one slot for the thread that calls Engine::create(), which adopts itself into the
+    // JobSystem.
+    threadCount = std::min(threadCount, int(JobSystem::MAX_THREADS - 1));
     return threadCount;
 }
 
@@ -1275,30 +1279,39 @@ bool FEngine::isValid(const T* ptr, ResourceList<T> const& list) const {
     return l.find(ptr) != l.end();
 }
 
+UTILS_NOINLINE
+static void logDoubleFree(void const* ptr, const char* mangledName) {
+#if UTILS_HAS_RTTI
+    auto const typeName = CallStack::demangleTypeName(mangledName);
+    const char* const typeNameCStr = typeName.c_str();
+#else
+    (void) mangledName;
+    const char* const typeNameCStr = "<no-rtti>";
+#endif
+    ASSERT_PRECONDITION_NON_FATAL(false,
+            "Object %s at %p doesn't exist (double free?)", typeNameCStr, ptr);
+}
+
 template<typename T>
 UTILS_ALWAYS_INLINE
 bool FEngine::terminateAndDestroy(const T* ptr, ResourceList<T>& list) {
     if (ptr == nullptr) return true;
-    bool const success = list.remove(ptr);
-
+    if (UTILS_UNLIKELY(!list.remove(ptr))) {
 #if UTILS_HAS_RTTI
-    auto typeName = CallStack::typeName<T>();
-    const char * const typeNameCStr = typeName.c_str();
+        logDoubleFree(ptr, typeid(T).name());
 #else
-    const char * const typeNameCStr = "<no-rtti>";
+        logDoubleFree(ptr, nullptr);
 #endif
-
-    if (ASSERT_PRECONDITION_NON_FATAL(success,
-            "Object %s at %p doesn't exist (double free?)", typeNameCStr, ptr)) {
-
-        T* p = const_cast<T*>(ptr);
-
-        // Terminate the backend resources immediately as they're unnecessary from this point. The
-        // frontend object itself may have to outlive this call, see destroyOrDeferFrontendObject().
-        p->terminate(*this);
-        destroyOrDeferFrontendObject(p);
+        return false;
     }
-    return success;
+
+    T* p = const_cast<T*>(ptr);
+
+    // Terminate the backend resources immediately as they're unnecessary from this point. The
+    // frontend object itself may have to outlive this call, see destroyOrDeferFrontendObject().
+    p->terminate(*this);
+    destroyOrDeferFrontendObject(p);
+    return true;
 }
 
 

@@ -371,7 +371,7 @@ Java_com_google_android_filament_LightManager_nSetShadowOptions(JNIEnv *env, jcl
     options.vsm.elvsm = optionsVsmElvsm;
     options.vsm.blurWidth = optionsVsmBlurWidth;
     options.shadowBulbRadius = optionsShadowBulbRadius;
-    options.transform = { optionsTransformX, optionsTransformY, optionsTransformZ, optionsTransformW };
+    options.transform = { optionsTransformW, optionsTransformX, optionsTransformY, optionsTransformZ };
     options.penumbraScale = optionsPenumbraScale;
     options.penumbraRatioScale = optionsPenumbraRatioScale;
     options.maxPenumbraRatio = optionsMaxPenumbraRatio;
@@ -438,7 +438,7 @@ Java_com_google_android_filament_LightManager_nBuilderShadowOptions(JNIEnv *env,
     optionsCpp.vsm.elvsm = vsmElvsm;
     optionsCpp.vsm.blurWidth = vsmBlurWidth;
     optionsCpp.shadowBulbRadius = shadowBulbRadius;
-    optionsCpp.transform = { transformX, transformY, transformZ, transformW };
+    optionsCpp.transform = { transformW, transformX, transformY, transformZ };
     optionsCpp.penumbraScale = penumbraScale;
     optionsCpp.penumbraRatioScale = penumbraRatioScale;
     optionsCpp.maxPenumbraRatio = maxPenumbraRatio;

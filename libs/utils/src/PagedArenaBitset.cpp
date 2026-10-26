@@ -40,12 +40,19 @@ namespace utils {
  *
  * 1. INCLUSIVITY RULE:
  *    The hierarchy is strictly inclusive from the bottom up.
- *    [L3: Arena Bit] -> [L3: activeWordsMask] -> [L2: Directory Entry] -> [L1: Summary] -> [L0: Master]
+ *    [L3: Arena Bit] -> [L3: activeWordsMask] -> [L1: Summary] -> [L0: Master]
  *
  *    - If a bit is set in an L3 word, its corresponding bit in `activeWordsMask` MUST be set.
- *    - If `activeWordsMask` is non-zero, the L2 Directory Entry MUST be a valid index.
- *    - If an L2 entry is valid, the corresponding bit in L1 MUST be set.
+ *    - If a page is allocated (its L1 bit is set), its L2 Directory Entry MUST be a valid index.
  *    - If any bit in L1 is set, the corresponding bit in L0 MUST be set.
+ *
+ *    The L2 Directory is NOT part of this chain in the other direction: a valid-looking
+ *    directory entry does NOT imply that the page exists. clear() (and therefore every
+ *    static operation, which calls out->clear()) resets the masks and the arena but leaves
+ *    the 64 KiB directory untouched, and copyFrom() copies it verbatim. Such stale entries
+ *    may alias a live page or index past the end of the arena. Code MUST test the L1 bit
+ *    before reading a directory entry, and MUST NEVER branch on
+ *    `mDirectory[i] == INVALID_PAGE` to decide whether a page exists.
  *
  * 2. THE GHOST-BIT PROHIBITION:
  *    Top-down updates are forbidden. Never update a Mask (L0/L1) before
@@ -147,6 +154,8 @@ PagedArenaBitset& PagedArenaBitset::copyFrom(PagedArenaBitset const& other) {
     assert((mSummaryMask.empty() || mSummaryMask.size() == MASK_WORDS) && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
     if (UTILS_VERY_LIKELY(this != &other)) {
         mArena = other.mArena;
+        // Our own free list indexes our old arena; it would point at live pages of the new one.
+        mFreePages = other.mFreePages;
         mDirectory = other.mDirectory;
         mSummaryMask = other.mSummaryMask;
         mMasterMask = other.mMasterMask;
@@ -235,8 +244,16 @@ bool PagedArenaBitset::fetchAdd(uint32_t const index) {
 }
 
 UTILS_NOINLINE
-void PagedArenaBitset::add(Slice<const uint32_t> const indices) {
-    assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
+void PagedArenaBitset::add(Slice<const uint32_t> const indices,
+        PagedArenaBitset const* const filter) {
+    assert(mSummaryMask.size() == MASK_WORDS &&
+            "FATAL: Attempted to use a moved-from PagedArenaBitset!");
+    assert((!filter || filter->mSummaryMask.size() == MASK_WORDS) &&
+            "FATAL: Attempted to use a moved-from PagedArenaBitset!");
+
+    if (UTILS_UNLIKELY(filter && filter->empty())) {
+        return;
+    }
 
     uint32_t const* const UTILS_RESTRICT ptr = indices.data();
     size_t const count = indices.size();
@@ -252,6 +269,10 @@ void PagedArenaBitset::add(Slice<const uint32_t> const indices) {
     for (size_t i = 0; i < count; ++i) {
         uint32_t const index = ptr[i];
         assert(index < (1ULL << DOMAIN_BITS) && "Index out of bounds");
+
+        if (filter && !(*filter)[index]) {
+            continue;
+        }
 
         uint32_t const dirIdx = index >> FILAMENT_PAGE_SHIFT;
         if (UTILS_UNLIKELY(dirIdx != cachedDirIdx)) {
@@ -519,6 +540,7 @@ PagedArenaBitset& PagedArenaBitset::merge(const PagedArenaBitset& other) {
             uint32_t const maskIdx = (m << WORD_SHIFT) | maskBit;
 
             uint64_t otherMask = other.mSummaryMask[maskIdx];
+            uint64_t const myMask = mSummaryMask[maskIdx];
             // Note: Don't update mSummaryMask[maskIdx] yet.
 
             while (otherMask) {
@@ -527,22 +549,23 @@ PagedArenaBitset& PagedArenaBitset::merge(const PagedArenaBitset& other) {
                 uint32_t const dirIdx = (maskIdx << WORD_SHIFT) | bit;
 
                 uint16_t const otherPageIdx = other.mDirectory[dirIdx];
-                uint16_t myPageIdx = mDirectory[dirIdx];
 
-                if (myPageIdx == INVALID_PAGE) {
-                    myPageIdx = allocatePage();
-                    mDirectory[dirIdx] = myPageIdx;
-
+                // Trust the mask: clear() and copyFrom() leave stale directory entries behind.
+                if ((myMask & (1ULL << bit)) == 0) {
                     const auto& srcPage = other.mArena[otherPageIdx];
-                    mArena[myPageIdx] = srcPage;
-
                     uint32_t const pCount = srcPage.popcount();
-                    mSize += pCount;
+                    if (UTILS_LIKELY(pCount > 0)) {
+                        uint16_t const myPageIdx = allocatePage();
+                        mDirectory[dirIdx] = myPageIdx;
+                        mArena[myPageIdx] = srcPage;
+                        mSize += pCount;
 
-                    // Update masks only because we confirmed data was added
-                    mSummaryMask[maskIdx] |= (1ULL << bit);
-                    mMasterMask[m] |= (1ULL << maskBit);
+                        // Update masks only because we confirmed data was added
+                        mSummaryMask[maskIdx] |= (1ULL << bit);
+                        mMasterMask[m] |= (1ULL << maskBit);
+                    }
                 } else {
+                    uint16_t const myPageIdx = mDirectory[dirIdx];
                     auto& [activeWordsMask, words] = mArena[myPageIdx];
                     auto const& [activeWordsMaskOther, wordsOther] = other.mArena[otherPageIdx];
                     uint32_t newlySetBits = 0;
@@ -562,12 +585,7 @@ PagedArenaBitset& PagedArenaBitset::merge(const PagedArenaBitset& other) {
                     }
 
                     activeWordsMask |= activeWordsMaskOther;
-
-                    if (newlySetBits > 0) {
-                        mSize += newlySetBits;
-                        mSummaryMask[maskIdx] |= (1ULL << bit);
-                        mMasterMask[m] |= (1ULL << maskBit);
-                    }
+                    mSize += newlySetBits;
                 }
             }
 
@@ -1015,9 +1033,12 @@ uint32_t PagedArenaBitset::mergeSizeInternal(const Collection& inputs) {
             masterUnion &= masterUnion - 1;
             uint32_t const maskIdx = (m << WORD_SHIFT) | maskBit;
 
+            // Load each input's summary word once; it gates every directory read below.
+            uint64_t summaries[MAX_MULTI_WAY_INPUTS];
             uint64_t summaryUnion = 0;
             for (size_t i = 0; i < count; ++i) {
-                summaryUnion |= inputs[i]->mSummaryMask[maskIdx];
+                summaries[i] = inputs[i]->mSummaryMask[maskIdx];
+                summaryUnion |= summaries[i];
             }
 
             while (summaryUnion) {
@@ -1032,9 +1053,9 @@ uint32_t PagedArenaBitset::mergeSizeInternal(const Collection& inputs) {
                 uint64_t combinedMask = 0;
                 uint32_t activeCount = 0;
                 for (size_t i = 0; i < count; ++i) {
-                    uint16_t const d = inputs[i]->mDirectory[dirIdx];
-                    if (d != INVALID_PAGE) {
-                        auto const& page = inputs[i]->mArena[d];
+                    // Trust the mask, not the (possibly stale) directory entry.
+                    if (summaries[i] & (1ULL << bit)) {
+                        auto const& page = inputs[i]->mArena[inputs[i]->mDirectory[dirIdx]];
                         activePages[activeCount++] = page.words;
                         combinedMask |= page.activeWordsMask;
                     }
@@ -1323,14 +1344,19 @@ PagedArenaBitset& PagedArenaBitset::merge(PagedArenaBitset* UTILS_RESTRICT UTILS
             masterUnion &= masterUnion - 1;
             uint32_t const maskIdx = (m << WORD_SHIFT) | maskBit;
 
-            uint64_t summaryUnion = a.mSummaryMask[maskIdx] | b.mSummaryMask[maskIdx];
+            uint64_t const sumA = a.mSummaryMask[maskIdx];
+            uint64_t const sumB = b.mSummaryMask[maskIdx];
+            uint64_t summaryUnion = sumA | sumB;
             while (summaryUnion) {
                 int const bit = std::countr_zero(summaryUnion);
                 summaryUnion &= summaryUnion - 1;
                 uint32_t const dirIdx = (maskIdx << WORD_SHIFT) | bit;
 
-                uint16_t const pageAIdx = a.mDirectory[dirIdx];
-                uint16_t const pageBIdx = b.mDirectory[dirIdx];
+                // Trust the mask, not the (possibly stale) directory entries.
+                bool const hasA = (sumA & (1ULL << bit)) != 0;
+                bool const hasB = (sumB & (1ULL << bit)) != 0;
+                uint16_t const pageAIdx = hasA ? a.mDirectory[dirIdx] : INVALID_PAGE;
+                uint16_t const pageBIdx = hasB ? b.mDirectory[dirIdx] : INVALID_PAGE;
 
                 out->mArena.emplace_back();
                 Page& newPage = out->mArena.back();
@@ -1350,8 +1376,8 @@ PagedArenaBitset& PagedArenaBitset::merge(PagedArenaBitset* UTILS_RESTRICT UTILS
                         combinedMask &= (combinedMask - 1);
                     }
                 } else {
-                    // Optimized: Use a reference to avoid a Page copy if pop ends up being 0
-                    // (though for merge, if the page exists in A or B, pop is guaranteed > 0)
+                    // Use a reference to avoid a Page copy if pop ends up being 0, which happens
+                    // when the only source page is a ghost page (allocated, but all bits removed).
                     const Page& source = (pageAIdx != INVALID_PAGE) ? a.mArena[pageAIdx] : b.mArena[pageBIdx];
                     newPage = source;
                     pop = source.popcount(); // Ensure this uses std::popcount loop

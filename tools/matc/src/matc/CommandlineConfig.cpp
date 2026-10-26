@@ -411,6 +411,7 @@ bool CommandlineConfig::parse() {
                 break;
             case 'F':
                 mNoSamplerValidation = true;
+                break;
             case 'R':
                 mSaveRawVariants = true;
                 break;

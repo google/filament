@@ -543,9 +543,9 @@ public class FramePacer {
         @IntRange(from = 0)
         public long baseTime;
         @IntRange(from = 0)
-        public long vsyncPeriod;
+        public long vsyncPeriod = 16666666;
         @IntRange(from = 0)
-        public long frameScheduleTime;
+        public long frameScheduleTime = System.nanoTime();
         private @Nullable HardwareTimeline[] mTimelines;
 
         public VsyncTick() {
@@ -595,9 +595,9 @@ public class FramePacer {
 
     /** Holds dynamic pacing targets and latency pipeline depth requirements. */
     public static class Configuration {
-        public float targetFrameRate;
+        public float targetFrameRate = 60.0f;
         @IntRange(from = 0)
-        public long latency;
+        public long latency = 33333333;
 
         public Configuration() {
         }

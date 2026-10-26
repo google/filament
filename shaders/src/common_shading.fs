@@ -14,7 +14,9 @@ highp vec3  shading_position;         // position of the fragment in world space
 #endif
 
 #if defined(MATERIAL_HAS_CLEAR_COAT)
+#if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
       vec3  shading_clearCoatNormal;  // normalized clear coat layer normal, in world space
+#endif
 #endif
 #endif
 

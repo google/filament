@@ -784,7 +784,6 @@ public:
         setMaterialTimeEpoch(std::chrono::steady_clock::now());
     }
 
-
     /**
      * Requests the next frameCount frames to be skipped. For Debugging.
      * @param frameCount number of frames to skip.

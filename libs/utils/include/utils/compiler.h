@@ -196,6 +196,12 @@ void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
 #define UTILS_NOINLINE
 #endif
 
+#if __has_attribute(cold)
+#define UTILS_COLD __attribute__((cold))
+#else
+#define UTILS_COLD
+#endif
+
 #if __has_attribute(always_inline)
 #define UTILS_ALWAYS_INLINE __attribute__((always_inline))
 #else

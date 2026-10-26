@@ -27,6 +27,14 @@ float clearCoatLobe(const PixelParams pixel, const vec3 h, float NoH, float LoH,
 }
 #endif
 
+float f90(const PixelParams pixel) {
+#if defined(MATERIAL_HAS_SPECULAR_COLOR_FACTOR) || defined(MATERIAL_HAS_SPECULAR_FACTOR)
+    return pixel.f90;
+#else
+    return 1.0;
+#endif
+}
+
 #if defined(MATERIAL_HAS_ANISOTROPY)
 vec3 anisotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
         float NoV, float NoL, float NoH, float LoH) {
@@ -35,6 +43,8 @@ vec3 anisotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
     vec3 t = pixel.anisotropicT;
     vec3 b = pixel.anisotropicB;
     vec3 v = shading_view;
+
+    // TODO: ToB, BoV, at, and ab are light-invariant and could be pre-computed
 
     float ToV = dot(t, v);
     float BoV = dot(b, v);
@@ -52,7 +62,11 @@ vec3 anisotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
     // specular anisotropic BRDF
     float D = distributionAnisotropic(at, ab, ToH, BoH, NoH);
     float V = visibilityAnisotropic(pixel.roughness, at, ab, ToV, BoV, ToL, BoL, NoV, NoL);
+#if defined(MATERIAL_HAS_SPECULAR_COLOR_FACTOR) || defined(MATERIAL_HAS_SPECULAR_FACTOR)
+    vec3  F = fresnel(pixel.f0, f90(pixel), LoH);
+#else
     vec3  F = fresnel(pixel.f0, LoH);
+#endif
 
     return (D * V) * F;
 }
@@ -69,14 +83,6 @@ vec3 isotropicLobe(float roughness, vec3 f0, float f90, const vec3 h,
     vec3  F = fresnel(f0, LoH);
 #endif
     return (D * V) * F;
-}
-
-float f90(const PixelParams pixel) {
-#if defined(MATERIAL_HAS_SPECULAR_COLOR_FACTOR) || defined(MATERIAL_HAS_SPECULAR_FACTOR)
-    return pixel.f90;
-#else
-    return 1.0;
-#endif
 }
 
 vec3 specularLobe(const PixelParams pixel, const Light light, const vec3 h,
@@ -113,7 +119,7 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     vec3 h = normalize(shading_view + light.l);
 
     float NoV = shading_NoV;
-    float NoL = saturate(light.NoL);
+    float NoL = light.NoL;
     float NoH = saturate(dot(shading_normal, h));
     float LoH = saturate(dot(light.l, h));
 
@@ -123,6 +129,7 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
 
     // Optional secondary specular lobe
 #if defined(MATERIAL_HAS_SECOND_SPECULAR_LOBE)
+    // TODO: the Fresnel term of the second lobe could be shared with the first lobe
     vec3 secondFr = isotropicLobe(pixel.secondRoughness, pixel.f0, f90(pixel), h, NoV, NoL, NoH, LoH);
     secondFr *= pixel.secondEnergyCompensation;
     Fr = mix(Fr, secondFr, pixel.secondRoughnessWeight);

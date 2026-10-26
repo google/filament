@@ -115,6 +115,10 @@ struct VulkanCommandBuffer {
         return mAge;
     }
 
+    bool isProtected() const {
+        return mIsProtected;
+    }
+
 private:
     using HeldResource = std::variant<fvkmemory::resource_ptr<Resource>,
                                       fvkmemory::resource_ptr<ThreadSafeResource>>;
@@ -124,7 +128,7 @@ private:
     VulkanContext const& mContext;
     VulkanFencePool& mFencePool;
     uint8_t mMarkerCount;
-    bool const isProtected;
+    bool const mIsProtected;
     VkQueue mQueue;
     VulkanSemaphoreManager* mSemaphoreManager;
     fvkutils::StaticVector<VkSemaphore, 2> mWaitSemaphores;

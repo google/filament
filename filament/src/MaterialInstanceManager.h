@@ -39,7 +39,7 @@ public:
     MaterialInstanceManager& operator=(MaterialInstanceManager const& rhs) = delete;
     MaterialInstanceManager& operator=(MaterialInstanceManager&& rhs) noexcept;
 
-    ~MaterialInstanceManager();
+    ~MaterialInstanceManager() noexcept;
 
     /*
      * Destroy all the cached material instances. This needs to be done before the destruction of
@@ -50,7 +50,7 @@ public:
     /**
      * Resets the anonymous material instances cache.
      */
-    void reset();
+    void reset() noexcept;
 
     /**
      * This returns a material instance given a material and a tag.
@@ -61,7 +61,7 @@ public:
      * @param tag   A unique tag identifying the MaterialInstance
      * @return      A FMaterialInstance pointer
      */
-    FMaterialInstance* getMaterialInstance(FMaterial const* ma, uint32_t tag) const;
+    FMaterialInstance* getMaterialInstance(FMaterial const* ma, uint32_t tag) const noexcept;
 
     /**
      * This returns a material instance given a material from a cache.
@@ -74,7 +74,7 @@ public:
      * @param ma    FMaterial to get a MaterialInstance for
      * @return      A FMaterialInstance pointer
      */
-    FMaterialInstance* getMaterialInstance(FMaterial const* ma) const;
+    FMaterialInstance* getMaterialInstance(FMaterial const* ma) const noexcept;
 
 private:
     struct Key {

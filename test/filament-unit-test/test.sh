@@ -73,6 +73,12 @@ TEST_LIST=test/filament-unit-test/test_list.txt
 BUILD_DIR=out/cmake-debug
 RESULTS_DIR=out/test-results
 
+# The tests that render create Vulkan instances. The Vulkan loader loads every installed driver
+# for them, and unloads the drivers when the instance is destroyed. In a build with sanitizers,
+# LeakSanitizer then reports what a driver still referenced from its globals as leaked, which
+# Mesa's asahi driver does. The loader keeps the drivers loaded instead with this setting.
+export VK_LOADER_DISABLE_DYNAMIC_LIBRARY_UNLOADING=1
+
 echo "Running filament unit tests with up to ${JOBS} processes..."
 
 # One entry per job in each of these parallel arrays. A job is a whole binary, or one shard of it.
@@ -84,8 +90,8 @@ JOB_SHARD_TOTALS=()
 JOB_OUT_DIRS=()
 JOB_EXCLUSIVE=()
 
-# The entries carry gtest filter patterns such as RenderingTest.*, which must reach the binary
-# as written rather than be expanded against the files in the working directory.
+# The entries can carry gtest filter patterns such as -Foo.*, which must reach the binary as
+# written rather than be expanded against the files in the working directory.
 set -f
 
 MISSING=false

@@ -38,6 +38,7 @@ class UTILS_PUBLIC ostream : protected PrivateImplementation<ostream_> {
     friend struct ostream_;
 
 public:
+    ostream();
     virtual ~ostream();
 
     ostream& operator<<(short value) noexcept;

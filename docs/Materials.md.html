@@ -573,14 +573,23 @@ with a direction map](images/screenshot_anisotropy.png)
 The result shown in figure [anisotropyDirectionProperty] was obtained using the direction map shown
 in figure [anisotropyDirectionProperty].
 
-![Figure [anisotropyDirectionProperty]: Example of Lighting: specularAmbientOcclusiona direction map](images/screenshot_anisotropy_map.jpg)
+![Figure [anisotropyDirectionProperty]: Example of anisotropy direction map](images/screenshot_anisotropy_map.jpg)
 
 ### Ambient occlusion
 
 The `ambientOcclusion` property defines how much of the ambient light is accessible to a surface
-point. It is a per-pixel shadowing factor between 0.0 (fully shadowed) and 1.0 (fully lit). This
-property only affects diffuse indirect lighting (image-based lighting), not direct lights such as
-directional, point and spot lights, nor specular lighting.
+point. It is a per-pixel shadowing factor between 0.0 (fully shadowed) and 1.0 (fully lit).
+
+This property mostly affects indirect lighting (image-based lighting). Diffuse indirect lighting is
+attenuated by this value, or by the minimum of this value and screen-space ambient occlusion when
+the latter is enabled. Specular indirect lighting of opaque and masked materials is attenuated by
+a specular occlusion term derived from this value, unless `specularAmbientOcclusion` is set to
+`none`, which is the default on mobile (see section [Lighting: specularAmbientOcclusion] and
+section [Lighting: multiBounceAmbientOcclusion]).
+
+When a material sets this property and the renderable receives shadows, the value is also used to
+compute micro-shadowing for directional lights, which attenuates direct lighting in occluded
+areas. Point and spot lights are not affected.
 
 ![Figure [aoExample]: Comparison of materials without diffuse ambient occlusion
 (left) and with (right)](images/screenshot_ao.jpg)
