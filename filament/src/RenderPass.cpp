@@ -437,13 +437,15 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant, DynamicSpe
     keyBlending |= uint64_t(Pass::BLENDED);
     keyBlending |= uint64_t(CustomCommand::PASS);
 
+    BlendingMode const blendingMode = ma->getBlendingMode();
     bool const hasScreenSpaceRefraction = ma->getRefractionMode() == RefractionMode::SCREEN_SPACE;
-    bool const isBlendingCommand = ma->isDrawnInBlendedPass();
+    bool const isBlendingCommand = !hasScreenSpaceRefraction &&
+            (blendingMode != BlendingMode::OPAQUE && blendingMode != BlendingMode::MASKED);
 
     // When fog is applied as a post-process, non-blended commands must be drawn without fog.
     // This must happen before computing the sort key below so that it matches the program
-    // actually used (LocalProgramCache::filterForGetProgram() uses the same helper).
-    if (UTILS_UNLIKELY(ma->isFogAppliedAsPostProcess(hasFogAsPostProcess))) {
+    // actually used (see LocalProgramCache::filterForGetProgram()).
+    if (UTILS_UNLIKELY(hasFogAsPostProcess && !isBlendingCommand)) {
         dynamicSpecConstKey.setFog(false);
     }
 
