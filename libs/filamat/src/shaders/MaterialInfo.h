@@ -55,6 +55,7 @@ struct UTILS_PUBLIC MaterialInfo {
     bool instanced;
     bool vertexDomainDeviceJittered;
     bool userMaterialHasCustomDepth;
+    bool userMaterialVertexHasCustomDepth;
     int stereoscopicEyeCount;
     filament::SpecularAmbientOcclusion specularAO;
     filament::RefractionMode refractionMode;
