@@ -24,6 +24,8 @@
 #include <backend/platforms/WebGPUWasmPolyfill.h>
 #endif
 
+#include <utils/debug.h>
+
 #include <webgpu/webgpu_cpp.h>
 
 #include <string_view>
@@ -574,6 +576,7 @@ namespace filament::backend {
 
 /**
  * @param fUsage Filament's requested texture usage
+ * @param fFormat Filament's requested texture format
  * @param samples How many samples to use for MSAA
  * @param needsComputeStorageSupport if we need to use this texture as storage binding in something
  *                                   like a compute shader
@@ -583,7 +586,7 @@ namespace filament::backend {
  * @return The appropriate texture usage flags for the underlying texture
  */
 [[nodiscard]] constexpr wgpu::TextureUsage fToWGPUTextureUsage(TextureUsage const& fUsage,
-        const uint8_t samples, const bool needsComputeStorageSupport,
+        const TextureFormat fFormat, const uint8_t samples, const bool needsComputeStorageSupport,
         const bool needsRenderAttachmentSupport, const bool deviceSupportsTransientAttachments) {
     wgpu::TextureUsage retUsage{ wgpu::TextureUsage::None };
 
@@ -615,6 +618,7 @@ namespace filament::backend {
     wgpu::TextureUsage transientAttachmentNeeded{ wgpu::TextureUsage::None };
     bool const useTransientAttachment =
             deviceSupportsTransientAttachments &&
+            !isCompressedFormat(fFormat) &&
             // Usage consists of attachment flags only.
             none(fUsage & ~TextureUsage::ALL_ATTACHMENTS) &&
             // Usage contains at least one attachment flag.
@@ -653,6 +657,30 @@ namespace filament::backend {
         retUsage |= wgpu::TextureUsage::RenderAttachment;
         retUsage |= transientAttachmentNeeded;
     }
+
+    // WebGPU forbids compressed formats from being used as render attachments or storage
+    // bindings (see https://www.w3.org/TR/webgpu/#abstract-opdef-validating-gputexturedescriptor).
+    // Uploads to compressed textures never require a conversion blit (see conversionNecessary()),
+    // so these usages, which may have been added implicitly above (e.g. for UPLOADABLE), are never
+    // needed and must be removed for the texture descriptor to be valid.
+    if (isCompressedFormat(fFormat)) {
+        wgpu::TextureUsage disallowed =
+                wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::StorageBinding;
+#if !defined(__EMSCRIPTEN__)
+        disallowed |= wgpu::TextureUsage::TransientAttachment;
+#endif
+        retUsage &= ~disallowed;
+    }
+
+#if !defined(__EMSCRIPTEN__)
+    // TransientAttachment is a Dawn native extension rather than a core W3C WebGPU
+    // GPUTextureUsageFlags bit (see https://www.w3.org/TR/webgpu/#typedefdef-gputextureusageflags).
+    // Dawn's specification requires TransientAttachment to be paired with another attachment usage
+    // (RenderAttachment here, since StorageAttachment is unused) and forbids using it alone:
+    // https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/transient_attachments.md
+    assert_invariant(!(retUsage & wgpu::TextureUsage::TransientAttachment) ||
+                     bool(retUsage & wgpu::TextureUsage::RenderAttachment));
+#endif
 
     // NOTE: Unused wgpu flags:
     //  StorageAttachment
