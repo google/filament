@@ -1371,7 +1371,12 @@ static Status processUseDefaultDepthVariant(MaterialBuilder& builder, const Json
     if (value.toJsonBool()->getBool()) {
         builder.useDefaultDepthVariant();
     }
-    return Status::ok();;
+    return Status::ok();
+}
+
+static Status processIsDefaultMaterial(MaterialBuilder& builder, const JsonishValue& value) {
+    builder.isDefaultMaterial(value.toJsonBool()->getBool());
+    return Status::ok();
 }
 
 ParametersProcessor::ParametersProcessor() {
@@ -1423,6 +1428,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["groupSize"]                     = { &processGroupSizes, Type::ARRAY };
     mParameters["stereoscopicType"]              = { &processStereoscopicType, Type::STRING };
     mParameters["useDefaultDepthVariant"]        = { &processUseDefaultDepthVariant, Type::BOOL };
+    mParameters["isDefaultMaterial"]             = { &processIsDefaultMaterial, Type::BOOL };
     mParameters["linearFog"]                     = { &processLinearFog, Type::BOOL };
     mParameters["shadowFarAttenuation"]          = { &processShadowFarAttenuation, Type::BOOL };
     mParameters["apiLevel"]                      = { &processApiLevel, Type::NUMBER };

@@ -121,6 +121,10 @@ public:
         bool userMaterialHasCustomDepth = false;
     };
 
+    struct VertexShaderInfo {
+        bool userMaterialVertexHasCustomDepth = false;
+    };
+
     // Return true if:
     // The shader is syntactically and semantically valid AND
     // The shader features a material() function AND
@@ -131,7 +135,7 @@ public:
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
             bool hasCustomSurfaceShading) noexcept;
 
-    static bool analyzeVertexShader(const std::string& shaderCode,
+    static std::optional<VertexShaderInfo> analyzeVertexShader(const std::string& shaderCode,
             filament::backend::ShaderModel model,
             MaterialBuilder::MaterialDomain materialDomain, MaterialBuilder::TargetApi targetApi,
             MaterialBuilder::TargetLanguage targetLanguage) noexcept;
@@ -175,6 +179,8 @@ public:
 
     static bool hasCustomDepth(TIntermNode* root, TIntermNode* entryPoint);
 
+    static bool hasCustomVertexDepth(TIntermNode* root, TIntermNode* entryPoint);
+
 
 private:
     // Traverse a function definition and retrieve all symbol written to and all symbol passed down
@@ -196,6 +202,11 @@ private:
     // function calls if necessary.
     void scanSymbolForProperty(Symbol& symbol, TIntermNode* rootNode,
             MaterialBuilder::PropertyList& properties) const noexcept;
+
+    static bool findVertexPositionWrites(std::string_view functionName, size_t parameterIdx,
+            TIntermNode* rootNode) noexcept;
+
+    static bool doesSymbolModifyVertexPosition(Symbol& symbol, TIntermNode* rootNode) noexcept;
 
     // add lod bias to texture() calls
     static void textureLodBias(glslang::TIntermediate* intermediate, TIntermNode* root,
