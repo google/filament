@@ -197,6 +197,24 @@ void main() {
     position = getClipFromWorldMatrix() * getWorldPosition(material);
 #endif
 
+#if defined(VARIANT_HAS_MOT)
+#if defined(VERTEX_DOMAIN_DEVICE) || defined(VERTEX_DOMAIN_VIEW)
+    // v1 limitation: camera-locked geometry reports no motion
+    vertex_motionCurrClip = vec4(0.0, 0.0, 0.0, 1.0);
+    vertex_motionPrevClip = vec4(0.0, 0.0, 0.0, 1.0);
+#else
+    highp mat4 prevClipFromWorld = getPrevClipFromWorldMatrix();
+    highp vec4 p = getWorldPosition(material);              // after materialVertex()
+#if defined(VERTEX_DOMAIN_OBJECT)
+    highp vec4 q = object_uniforms_prevWorldFromWorldMatrix * p;
+#else
+    highp vec4 q = p;                                       // VERTEX_DOMAIN_WORLD
+#endif
+    vertex_motionCurrClip = prevClipFromWorld * p;
+    vertex_motionPrevClip = prevClipFromWorld * q;
+#endif
+#endif
+
 #if defined(VERTEX_DOMAIN_DEVICE)
     // GL convention to inverted DX convention (must happen after clipSpaceTransform)
     position.z = position.z * -0.5 + 0.5;

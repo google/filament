@@ -127,6 +127,10 @@ bool unordered_string_set::has(std::string_view str) const noexcept {
 
 unordered_string_set split(const char* extensions) noexcept {
     unordered_string_set set;
+    // eglQueryString() and glGetString() return NULL on error.
+    if (UTILS_UNLIKELY(!extensions)) {
+        return set;
+    }
     std::string_view string(extensions);
     do {
         auto p = string.find(' ');
