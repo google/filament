@@ -154,6 +154,10 @@ struct MaterialDefinition {
         return hasSurfaceVariants() && Variant::isDepthMomentsVariant(variant);
     }
 
+    bool isMotionVectorsVariant(Variant const variant) const noexcept {
+        return hasSurfaceVariants() && Variant::isMotionVectorsVariant(variant);
+    }
+
     // The user variant filter mask clears surface variant bits, so it must not be applied to a
     // key that isn't a surface variant bitfield -- doing so silently maps valid variants of the
     // other domains onto a different key.

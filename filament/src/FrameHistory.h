@@ -22,6 +22,7 @@
 
 #include <math/mat4.h>
 #include <math/vec2.h>
+#include <math/vec4.h>
 
 #include <stdint.h>
 
@@ -51,6 +52,11 @@ struct FrameHistoryEntry {
         FrameGraphTexture::Descriptor desc;
         math::mat4 projection;
     } ssr;
+    struct {
+        math::mat4 projection;          // unjittered clip-from-user-world, includes ts
+        math::float4 clipTransform{};   // ts as {sx, sy, tx, ty}
+        bool valid = false;             // set on frames rendered with motion vectors active
+    } motionVectors;
 };
 
 /*

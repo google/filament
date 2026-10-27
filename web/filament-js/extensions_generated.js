@@ -200,6 +200,13 @@ Filament.loadGeneratedExtensions = function() {
         return Object.assign(options, overrides);
     };
 
+    Filament.View.prototype.setMotionVectorsOptionsDefaults = function(overrides) {
+        const options = {
+            enabled: false,
+        };
+        return Object.assign(options, overrides);
+    };
+
     Filament.View.prototype.setVsmShadowOptionsDefaults = function(overrides) {
         const options = {
             anisotropy: 0,

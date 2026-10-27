@@ -1,5 +1,5 @@
-ShadingModel=lit
-BlendingMode=opaque
+ShadingModel = lit
+BlendingMode = ${BLENDING}
 
 Transmission=unsupported
 Volume=unsupported

@@ -1205,6 +1205,7 @@ $dokka.location:com.google.android.filament/Material.UserVariantFilterBit/ALL/#/
 $dokka.location:com.google.android.filament/Material.UserVariantFilterBit/DIRECTIONAL_LIGHTING/#/PointingToDeclaration/filament-android/com.google.android.filament/-material/-user-variant-filter-bit/-d-i-r-e-c-t-i-o-n-a-l_-l-i-g-h-t-i-n-g.md
 $dokka.location:com.google.android.filament/Material.UserVariantFilterBit/DYNAMIC_LIGHTING/#/PointingToDeclaration/filament-android/com.google.android.filament/-material/-user-variant-filter-bit/-d-y-n-a-m-i-c_-l-i-g-h-t-i-n-g.md
 $dokka.location:com.google.android.filament/Material.UserVariantFilterBit/FOG/#/PointingToDeclaration/filament-android/com.google.android.filament/-material/-user-variant-filter-bit/-f-o-g.md
+$dokka.location:com.google.android.filament/Material.UserVariantFilterBit/MOTION_VECTORS/#/PointingToDeclaration/filament-android/com.google.android.filament/-material/-user-variant-filter-bit/-m-o-t-i-o-n_-v-e-c-t-o-r-s.md
 $dokka.location:com.google.android.filament/Material.UserVariantFilterBit/SHADOW_RECEIVER/#/PointingToDeclaration/filament-android/com.google.android.filament/-material/-user-variant-filter-bit/-s-h-a-d-o-w_-r-e-c-e-i-v-e-r.md
 $dokka.location:com.google.android.filament/Material.UserVariantFilterBit/SKINNING/#/PointingToDeclaration/filament-android/com.google.android.filament/-material/-user-variant-filter-bit/-s-k-i-n-n-i-n-g.md
 $dokka.location:com.google.android.filament/Material.UserVariantFilterBit/SSR/#/PointingToDeclaration/filament-android/com.google.android.filament/-material/-user-variant-filter-bit/-s-s-r.md
@@ -2582,6 +2583,9 @@ $dokka.location:com.google.android.filament/View.FogOptions/skyColor/#/PointingT
 $dokka.location:com.google.android.filament/View.GuardBandOptions///PointingToDeclaration/filament-android/com.google.android.filament/-view/-guard-band-options/index.md
 $dokka.location:com.google.android.filament/View.GuardBandOptions/GuardBandOptions/#/PointingToDeclaration/filament-android/com.google.android.filament/-view/-guard-band-options/-guard-band-options.md
 $dokka.location:com.google.android.filament/View.GuardBandOptions/enabled/#/PointingToDeclaration/filament-android/com.google.android.filament/-view/-guard-band-options/enabled.md
+$dokka.location:com.google.android.filament/View.MotionVectorsOptions///PointingToDeclaration/filament-android/com.google.android.filament/-view/-motion-vectors-options/index.md
+$dokka.location:com.google.android.filament/View.MotionVectorsOptions/MotionVectorsOptions/#/PointingToDeclaration/filament-android/com.google.android.filament/-view/-motion-vectors-options/-motion-vectors-options.md
+$dokka.location:com.google.android.filament/View.MotionVectorsOptions/enabled/#/PointingToDeclaration/filament-android/com.google.android.filament/-view/-motion-vectors-options/enabled.md
 $dokka.location:com.google.android.filament/View.MultiSampleAntiAliasingOptions///PointingToDeclaration/filament-android/com.google.android.filament/-view/-multi-sample-anti-aliasing-options/index.md
 $dokka.location:com.google.android.filament/View.MultiSampleAntiAliasingOptions/MultiSampleAntiAliasingOptions/#/PointingToDeclaration/filament-android/com.google.android.filament/-view/-multi-sample-anti-aliasing-options/-multi-sample-anti-aliasing-options.md
 $dokka.location:com.google.android.filament/View.MultiSampleAntiAliasingOptions/customResolve/#/PointingToDeclaration/filament-android/com.google.android.filament/-view/-multi-sample-anti-aliasing-options/custom-resolve.md
@@ -2732,6 +2736,7 @@ $dokka.location:com.google.android.filament/View/getGridSize/#/PointingToDeclara
 $dokka.location:com.google.android.filament/View/getGuardBandOptions/#/PointingToDeclaration/filament-android/com.google.android.filament/-view/get-guard-band-options.md
 $dokka.location:com.google.android.filament/View/getLastDynamicResolutionScale/#float[]/PointingToDeclaration/filament-android/com.google.android.filament/-view/get-last-dynamic-resolution-scale.md
 $dokka.location:com.google.android.filament/View/getMaterialGlobal/#int#float[]/PointingToDeclaration/filament-android/com.google.android.filament/-view/get-material-global.md
+$dokka.location:com.google.android.filament/View/getMotionVectorsOptions/#/PointingToDeclaration/filament-android/com.google.android.filament/-view/get-motion-vectors-options.md
 $dokka.location:com.google.android.filament/View/getMultiSampleAntiAliasingOptions/#/PointingToDeclaration/filament-android/com.google.android.filament/-view/get-multi-sample-anti-aliasing-options.md
 $dokka.location:com.google.android.filament/View/getName/#/PointingToDeclaration/filament-android/com.google.android.filament/-view/get-name.md
 $dokka.location:com.google.android.filament/View/getNativeObject/#/PointingToDeclaration/filament-android/com.google.android.filament/-view/get-native-object.md
@@ -2781,6 +2786,7 @@ $dokka.location:com.google.android.filament/View/setGuardBandOptions/#com.google
 $dokka.location:com.google.android.filament/View/setLayerEnabled/#int#boolean/PointingToDeclaration/filament-android/com.google.android.filament/-view/set-layer-enabled.md
 $dokka.location:com.google.android.filament/View/setMaterialGlobal/#int#float#float#float#float/PointingToDeclaration/filament-android/com.google.android.filament/-view/set-material-global.md
 $dokka.location:com.google.android.filament/View/setMaterialGlobal/#int#float[]/PointingToDeclaration/filament-android/com.google.android.filament/-view/set-material-global.md
+$dokka.location:com.google.android.filament/View/setMotionVectorsOptions/#com.google.android.filament.View.MotionVectorsOptions/PointingToDeclaration/filament-android/com.google.android.filament/-view/set-motion-vectors-options.md
 $dokka.location:com.google.android.filament/View/setMultiSampleAntiAliasingOptions/#com.google.android.filament.View.MultiSampleAntiAliasingOptions/PointingToDeclaration/filament-android/com.google.android.filament/-view/set-multi-sample-anti-aliasing-options.md
 $dokka.location:com.google.android.filament/View/setName/#java.lang.String/PointingToDeclaration/filament-android/com.google.android.filament/-view/set-name.md
 $dokka.location:com.google.android.filament/View/setPostProcessingEnabled/#boolean/PointingToDeclaration/filament-android/com.google.android.filament/-view/set-post-processing-enabled.md

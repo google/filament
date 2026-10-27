@@ -669,6 +669,12 @@ public:
     MaterialBuilder& useDefaultDepthVariant() noexcept;
 
     /**
+     * Marks this material as Filament's built-in default material, ensuring that shared depth and
+     * motion vectors variants are emitted into its package.
+     */
+    MaterialBuilder& isDefaultMaterial(bool isDefault = true) noexcept;
+
+    /**
      * Sets the source ASCII material (aka .mat file).
      * The provided `source` string_view must remain valid until MaterialBuilder::build() is called.
      */
@@ -895,7 +901,8 @@ private:
             const MaterialInfo& info) const noexcept;
 
     bool hasCustomVaryings() const noexcept;
-    bool needsStandardDepthProgram() const noexcept;
+    bool needsCustomDepthFragmentProgram(MaterialInfo const& info) const noexcept;
+    bool needsStandardDepthProgram(MaterialInfo const& info) const noexcept;
 
     bool isLit() const noexcept { return mShading != Shading::UNLIT; }
 
@@ -1002,6 +1009,7 @@ private:
     bool mNoSamplerValidation = false;
 
     bool mUseDefaultDepthVariant = false;
+    bool mIsDefaultMaterial = false;
 
     // Default api level is always 1.
     uint32_t mApiLevel = 1;

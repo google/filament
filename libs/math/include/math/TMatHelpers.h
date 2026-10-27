@@ -98,7 +98,7 @@ constexpr MATRIX MATH_PURE gaussJordanInverse(MATRIX src) {
 //------------------------------------------------------------------------------
 // 2x2 matrix inverse is easy.
 template<typename MATRIX>
-constexpr MATRIX MATH_PURE fastInverse2(const MATRIX& x) {
+constexpr MATRIX MATH_PURE fastInverse2(const MATRIX& x, typename MATRIX::value_type det) {
     typedef typename MATRIX::value_type T;
 
     // Assuming the input matrix is:
@@ -118,12 +118,19 @@ constexpr MATRIX MATH_PURE fastInverse2(const MATRIX& x) {
     const T b = x[1][0];
     const T d = x[1][1];
 
-    const T det((a * d) - (b * c));
-    inverted[0][0] =  d / det;
-    inverted[0][1] = -c / det;
-    inverted[1][0] = -b / det;
-    inverted[1][1] =  a / det;
+    const T invDet = T(1) / det;
+    inverted[0][0] =  d * invDet;
+    inverted[0][1] = -c * invDet;
+    inverted[1][0] = -b * invDet;
+    inverted[1][1] =  a * invDet;
     return inverted;
+}
+
+template<typename MATRIX>
+constexpr MATRIX MATH_PURE fastInverse2(const MATRIX& x) {
+    typedef typename MATRIX::value_type T;
+    const T det = (x[0][0] * x[1][1]) - (x[1][0] * x[0][1]);
+    return fastInverse2(x, det);
 }
 
 //------------------------------------------------------------------------------
@@ -131,7 +138,7 @@ constexpr MATRIX MATH_PURE fastInverse2(const MATRIX& x) {
 // matrix inversion:
 // http://en.wikipedia.org/wiki/Invertible_matrix#Inversion_of_3.C3.973_matrices
 template<typename MATRIX>
-constexpr MATRIX MATH_PURE fastInverse3(const MATRIX& x) {
+constexpr MATRIX MATH_PURE fastInverse3(const MATRIX& x, typename MATRIX::value_type det) {
     typedef typename MATRIX::value_type T;
 
     // Assuming the input matrix is:
@@ -170,28 +177,143 @@ constexpr MATRIX MATH_PURE fastInverse3(const MATRIX& x) {
     const T h = x[1][2];
     const T i = x[2][2];
 
+    const T invDet = T(1) / det;
+
     // Do the full analytic inverse
+    inverted[0][0] = (e * i - f * h) * invDet;  // A
+    inverted[0][1] = (f * g - d * i) * invDet;  // B
+    inverted[0][2] = (d * h - e * g) * invDet;  // C
+    inverted[1][0] = (c * h - b * i) * invDet;  // D
+    inverted[1][1] = (a * i - c * g) * invDet;  // E
+    inverted[1][2] = (b * g - a * h) * invDet;  // F
+    inverted[2][0] = (b * f - c * e) * invDet;  // G
+    inverted[2][1] = (c * d - a * f) * invDet;  // H
+    inverted[2][2] = (a * e - b * d) * invDet;  // I
+
+    return inverted;
+}
+
+template<typename MATRIX>
+constexpr MATRIX MATH_PURE fastInverse3(const MATRIX& x) {
+    typedef typename MATRIX::value_type T;
+
+    const T a = x[0][0];
+    const T b = x[1][0];
+    const T c = x[2][0];
+    const T d = x[0][1];
+    const T e = x[1][1];
+    const T f = x[2][1];
+    const T g = x[0][2];
+    const T h = x[1][2];
+    const T i = x[2][2];
+
     const T A = e * i - f * h;
     const T B = f * g - d * i;
     const T C = d * h - e * g;
-    inverted[0][0] = A;                 // A
-    inverted[0][1] = B;                 // B
-    inverted[0][2] = C;                 // C
-    inverted[1][0] = c * h - b * i;     // D
-    inverted[1][1] = a * i - c * g;     // E
-    inverted[1][2] = b * g - a * h;     // F
-    inverted[2][0] = b * f - c * e;     // G
-    inverted[2][1] = c * d - a * f;     // H
-    inverted[2][2] = a * e - b * d;     // I
-
     const T det(a * A + b * B + c * C);
-    for (size_t col = 0; col < 3; ++col) {
-        for (size_t row = 0; row < 3; ++row) {
-            inverted[col][row] /= det;
-        }
-    }
+    return fastInverse3(x, det);
+}
+
+//------------------------------------------------------------------------------
+// 4x4 matrix inversion via Laplace expansion over 2x2 sub-determinants.
+template<typename MATRIX>
+constexpr MATRIX MATH_PURE fastInverse4(const MATRIX& x, typename MATRIX::value_type det) {
+    typedef typename MATRIX::value_type T;
+
+    const T m00 = x[0][0];
+    const T m01 = x[1][0];
+    const T m02 = x[2][0];
+    const T m03 = x[3][0];
+    const T m10 = x[0][1];
+    const T m11 = x[1][1];
+    const T m12 = x[2][1];
+    const T m13 = x[3][1];
+    const T m20 = x[0][2];
+    const T m21 = x[1][2];
+    const T m22 = x[2][2];
+    const T m23 = x[3][2];
+    const T m30 = x[0][3];
+    const T m31 = x[1][3];
+    const T m32 = x[2][3];
+    const T m33 = x[3][3];
+
+    const T s0 = m00 * m11 - m10 * m01;
+    const T s1 = m00 * m12 - m10 * m02;
+    const T s2 = m00 * m13 - m10 * m03;
+    const T s3 = m01 * m12 - m11 * m02;
+    const T s4 = m01 * m13 - m11 * m03;
+    const T s5 = m02 * m13 - m12 * m03;
+
+    const T c5 = m22 * m33 - m32 * m23;
+    const T c4 = m21 * m33 - m31 * m23;
+    const T c3 = m21 * m32 - m31 * m22;
+    const T c2 = m20 * m33 - m30 * m23;
+    const T c1 = m20 * m32 - m30 * m22;
+    const T c0 = m20 * m31 - m30 * m21;
+
+    const T invDet = T(1) / det;
+
+    MATRIX inverted{};
+    inverted[0][0] = ( m11 * c5 - m12 * c4 + m13 * c3) * invDet;
+    inverted[0][1] = (-m10 * c5 + m12 * c2 - m13 * c1) * invDet;
+    inverted[0][2] = ( m10 * c4 - m11 * c2 + m13 * c0) * invDet;
+    inverted[0][3] = (-m10 * c3 + m11 * c1 - m12 * c0) * invDet;
+
+    inverted[1][0] = (-m01 * c5 + m02 * c4 - m03 * c3) * invDet;
+    inverted[1][1] = ( m00 * c5 - m02 * c2 + m03 * c1) * invDet;
+    inverted[1][2] = (-m00 * c4 + m01 * c2 - m03 * c0) * invDet;
+    inverted[1][3] = ( m00 * c3 - m01 * c1 + m02 * c0) * invDet;
+
+    inverted[2][0] = ( m31 * s5 - m32 * s4 + m33 * s3) * invDet;
+    inverted[2][1] = (-m30 * s5 + m32 * s2 - m33 * s1) * invDet;
+    inverted[2][2] = ( m30 * s4 - m31 * s2 + m33 * s0) * invDet;
+    inverted[2][3] = (-m30 * s3 + m31 * s1 - m32 * s0) * invDet;
+
+    inverted[3][0] = (-m21 * s5 + m22 * s4 - m23 * s3) * invDet;
+    inverted[3][1] = ( m20 * s5 - m22 * s2 + m23 * s1) * invDet;
+    inverted[3][2] = (-m20 * s4 + m21 * s2 - m23 * s0) * invDet;
+    inverted[3][3] = ( m20 * s3 - m21 * s1 + m22 * s0) * invDet;
 
     return inverted;
+}
+
+template<typename MATRIX>
+constexpr MATRIX MATH_PURE fastInverse4(const MATRIX& x) {
+    typedef typename MATRIX::value_type T;
+
+    const T m00 = x[0][0];
+    const T m01 = x[1][0];
+    const T m02 = x[2][0];
+    const T m03 = x[3][0];
+    const T m10 = x[0][1];
+    const T m11 = x[1][1];
+    const T m12 = x[2][1];
+    const T m13 = x[3][1];
+    const T m20 = x[0][2];
+    const T m21 = x[1][2];
+    const T m22 = x[2][2];
+    const T m23 = x[3][2];
+    const T m30 = x[0][3];
+    const T m31 = x[1][3];
+    const T m32 = x[2][3];
+    const T m33 = x[3][3];
+
+    const T s0 = m00 * m11 - m10 * m01;
+    const T s1 = m00 * m12 - m10 * m02;
+    const T s2 = m00 * m13 - m10 * m03;
+    const T s3 = m01 * m12 - m11 * m02;
+    const T s4 = m01 * m13 - m11 * m03;
+    const T s5 = m02 * m13 - m12 * m03;
+
+    const T c5 = m22 * m33 - m32 * m23;
+    const T c4 = m21 * m33 - m31 * m23;
+    const T c3 = m21 * m32 - m31 * m22;
+    const T c2 = m20 * m33 - m30 * m23;
+    const T c1 = m20 * m32 - m30 * m22;
+    const T c0 = m20 * m31 - m30 * m21;
+
+    const T det = s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0;
+    return fastInverse4(x, det);
 }
 
 
@@ -240,15 +362,50 @@ struct Determinant {
 };
 
 template<typename T>
+struct Determinant<T, 4> {
+    static constexpr T determinant(Matrix<T, 4> in) {
+        const T m00 = in[0][0];
+        const T m01 = in[1][0];
+        const T m02 = in[2][0];
+        const T m03 = in[3][0];
+        const T m10 = in[0][1];
+        const T m11 = in[1][1];
+        const T m12 = in[2][1];
+        const T m13 = in[3][1];
+        const T m20 = in[0][2];
+        const T m21 = in[1][2];
+        const T m22 = in[2][2];
+        const T m23 = in[3][2];
+        const T m30 = in[0][3];
+        const T m31 = in[1][3];
+        const T m32 = in[2][3];
+        const T m33 = in[3][3];
+
+        const T s0 = m00 * m11 - m10 * m01;
+        const T s1 = m00 * m12 - m10 * m02;
+        const T s2 = m00 * m13 - m10 * m03;
+        const T s3 = m01 * m12 - m11 * m02;
+        const T s4 = m01 * m13 - m11 * m03;
+        const T s5 = m02 * m13 - m12 * m03;
+
+        const T c5 = m22 * m33 - m32 * m23;
+        const T c4 = m21 * m33 - m31 * m23;
+        const T c3 = m21 * m32 - m31 * m22;
+        const T c2 = m20 * m33 - m30 * m23;
+        const T c1 = m20 * m32 - m30 * m22;
+        const T c0 = m20 * m31 - m30 * m21;
+
+        return s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0;
+    }
+};
+
+template<typename T>
 struct Determinant<T, 3> {
     static constexpr T determinant(Matrix<T, 3> in) {
         return
-            in[0][0] * in[1][1] * in[2][2] +
-            in[1][0] * in[2][1] * in[0][2] +
-            in[2][0] * in[0][1] * in[1][2] -
-            in[2][0] * in[1][1] * in[0][2] -
-            in[1][0] * in[0][1] * in[2][2] -
-            in[0][0] * in[2][1] * in[1][2];
+            in[0][0] * (in[1][1] * in[2][2] - in[2][1] * in[1][2]) +
+            in[1][0] * (in[2][1] * in[0][2] - in[0][1] * in[2][2]) +
+            in[2][0] * (in[0][1] * in[1][2] - in[1][1] * in[0][2]);
     }
 };
 
@@ -402,7 +559,18 @@ template<typename MATRIX,
 inline constexpr MATRIX MATH_PURE inverse(const MATRIX& matrix) {
     return (MATRIX::NUM_ROWS == 2) ? fastInverse2<MATRIX>(matrix) :
            ((MATRIX::NUM_ROWS == 3) ? fastInverse3<MATRIX>(matrix) :
-            gaussJordanInverse<MATRIX>(matrix));
+            ((MATRIX::NUM_ROWS == 4) ? fastInverse4<MATRIX>(matrix) :
+             gaussJordanInverse<MATRIX>(matrix)));
+}
+
+template<typename MATRIX,
+        typename = std::enable_if_t<MATRIX::NUM_ROWS == MATRIX::NUM_COLS, int>>
+inline constexpr MATRIX MATH_PURE inverse(const MATRIX& matrix,
+        typename MATRIX::value_type det) {
+    return (MATRIX::NUM_ROWS == 2) ? fastInverse2<MATRIX>(matrix, det) :
+           ((MATRIX::NUM_ROWS == 3) ? fastInverse3<MATRIX>(matrix, det) :
+            ((MATRIX::NUM_ROWS == 4) ? fastInverse4<MATRIX>(matrix, det) :
+             gaussJordanInverse<MATRIX>(matrix)));
 }
 
 template<typename MATRIX_R, typename MATRIX_A, typename MATRIX_B,
@@ -638,6 +806,10 @@ private:
      */
     friend inline constexpr BASE<T> MATH_PURE inverse(const BASE<T>& matrix) {
         return matrix::inverse(matrix);
+    }
+
+    friend inline constexpr BASE<T> MATH_PURE inverse(const BASE<T>& matrix, T det) {
+        return matrix::inverse(matrix, det);
     }
 
     friend inline constexpr BASE<T> MATH_PURE cof(const BASE<T>& matrix) {

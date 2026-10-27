@@ -21,6 +21,7 @@
 #include "MaterialParser.h"
 
 #include "details/Engine.h"
+#include "details/Material.h"
 
 #include "ds/ColorPassDescriptorSet.h"
 
@@ -127,7 +128,7 @@ std::unique_ptr<MaterialDefinition> MaterialDefinition::create(FEngine& engine,
         }
     }
 
-    // processDescriptorSets() only asserts on this, which is compiled out in release builds.
+    // processDescriptorSets() only asserts on these, which is compiled out in release builds.
     MaterialParser::DescriptorSetLayoutContainer descriptorSetLayout;
     if (!parser->getDescriptorSetLayout(&descriptorSetLayout)) {
         CString name;
@@ -135,6 +136,34 @@ std::unique_ptr<MaterialDefinition> MaterialDefinition::create(FEngine& engine,
         LOG(ERROR) << "The material '" << name.c_str_safe()
                    << "' has an invalid descriptor set layout.";
         return nullptr;
+    }
+
+    MaterialParser::DescriptorBindingsContainer descriptorBindings;
+    if (!parser->getDescriptorBindings(&descriptorBindings)) {
+        CString name;
+        parser->getName(&name);
+        LOG(ERROR) << "The material '" << name.c_str_safe()
+                   << "' has invalid descriptor bindings.";
+        return nullptr;
+    }
+
+    // ChunkDescriptorBindingsInfo and ChunkDescriptorSetLayoutInfo are independent chunks.
+    // Every binding declared for the program's per-material set must exist in the layout with
+    // the same type.
+    auto const& layoutDescriptors = descriptorSetLayout.descriptors;
+    for (auto const& binding : descriptorBindings[+DescriptorSetBindingPoints::PER_MATERIAL]) {
+        bool const found = std::any_of(layoutDescriptors.begin(), layoutDescriptors.end(),
+                [&binding](DescriptorSetLayoutDescriptor const& d) {
+                    return d.binding == binding.binding && d.type == binding.type;
+                });
+        if (!found) {
+            CString name;
+            parser->getName(&name);
+            LOG(ERROR) << "The material '" << name.c_str_safe()
+                       << "' has a descriptor binding (" << +binding.binding
+                       << ") that does not match its descriptor set layout.";
+            return nullptr;
+        }
     }
 
     // processBlendingMode() copies these into RasterState, which the backends trust.
@@ -816,8 +845,13 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
 
     filaflat::ShaderContent& fsBuilder = engine.getFragmentShaderContent();
 
-    UTILS_UNUSED_IN_RELEASE bool const fsOK = parser.getShader(fsBuilder, sm,
-            fragmentVariant, ShaderStage::FRAGMENT);
+    bool fsOK = parser.getShader(fsBuilder, sm, fragmentVariant, ShaderStage::FRAGMENT);
+    if (!fsOK && isMotionVectorsVariant(variant)) {
+        if (FMaterial const* const defaultMaterial = engine.getDefaultMaterial()) {
+            fsOK = defaultMaterial->getDefinition().getMaterialParser().getShader(
+                    fsBuilder, sm, fragmentVariant, ShaderStage::FRAGMENT);
+        }
+    }
 
     FILAMENT_CHECK_POSTCONDITION(isNoop || (fsOK && !fsBuilder.empty()))
             << "The material '" << name.c_str()
@@ -946,13 +980,18 @@ void MaterialDefinition::acquirePrograms(FEngine& engine,
                 specialization.specKey = specKey;
                 LocalProgramCache::CacheKey mappedKey = LocalProgramCache::mapCacheEntryKey(variant,
                         specKey, programCache.size());
+                // Motion vectors programs are only needed by Views that enable motion vectors,
+                // they're compiled lazily (or by warm-up), never at engine init.
+                bool const precache = !isMotionVectorsVariant(variant);
                 if (useCache) {
-                    if (Handle<HwProgram> program = materialCache.getOrAcquireProgram(
-                            engine, specialization, *this, parser, CompilerPriorityQueue::HIGH,
-                            false)) {
+                    Handle<HwProgram> const program = UTILS_LIKELY(precache)
+                            ? materialCache.getOrAcquireProgram(engine, specialization, *this,
+                                    parser, CompilerPriorityQueue::HIGH, false)
+                            : materialCache.acquireProgram(specialization);
+                    if (program) {
                         programCache[mappedKey] = program;
                     }
-                } else {
+                } else if (UTILS_LIKELY(precache)) {
                     programCache[mappedKey] = compileProgram(engine, parser,
                             specialization, CompilerPriorityQueue::HIGH);
                 }
@@ -1057,7 +1096,11 @@ bool MaterialDefinition::isValidProgram(Variant const variant, DynamicSpecConstK
         return false;
     }
     if (!mMaterialParser->hasShader(sm, fragmentVariant, ShaderStage::FRAGMENT)) {
-        return false;
+        // Materials with a custom vertex shader but a standard fragment shader omit the motion
+        // vectors fragment shader from their package and share the default material's one.
+        if (!isMotionVectorsVariant(variant)) {
+            return false;
+        }
     }
 
     if (!DynamicSpecConstKey::isValidProgramSpecKey(variant, specKey, materialDomain,

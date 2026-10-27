@@ -20,6 +20,7 @@
 #include "FrameHistory.h"
 #include "MaterialInstanceManager.h"
 
+#include "ds/MotionVectorsDescriptorSet.h"
 #include "ds/PostProcessDescriptorSet.h"
 #include "ds/SsrPassDescriptorSet.h"
 #include "ds/StructureDescriptorSet.h"
@@ -95,8 +96,11 @@ public:
     void init() noexcept;
     void terminate(backend::DriverApi& driver) noexcept;
 
+    // hasMotionVectors must be the View's latched motion vectors state (see
+    // FView::isMotionVectorsActive()). It's a specialization constant, so it must not change
+    // for frame-to-frame validity; frames without valid motion vectors bind a zero texture.
     void configureTemporalAntiAliasingMaterial(backend::DriverApi& driver,
-            TemporalAntiAliasingOptions const& taaOptions) noexcept;
+            TemporalAntiAliasingOptions const& taaOptions, bool hasMotionVectors) noexcept;
 
     // methods below are ordered relative to their position in the pipeline (as much as possible)
 
@@ -112,6 +116,28 @@ public:
     FrameGraphId<FrameGraphTexture> transparentPicking(FrameGraph& fg,
             RenderPassBuilder const& passBuilder, uint8_t structureRenderFlags,
             uint32_t width, uint32_t height, float scale) noexcept;
+
+    // Object motion vectors pass. Returns the "objectMotionVectors" texture (v_obj):
+    //  - RG16F, svp-sized, with the same layout as the color pass's depth buffer, so it's sampled
+    //    at the same coordinates (with NEAREST filtering).
+    //  - v = uvCurr - uvPrev, in the previous frame's render-target UV space; both positions are
+    //    projected with the previous frame's unjittered projection (C_{t-1}). Only renderables
+    //    that moved write it, other pixels are 0.
+    //  - |v| >= 1 (on either component) means there is no valid previous position.
+    // The caller substitutes a 1x1 zero texture when no renderable moved or when there's no
+    // previous frame (fast path).
+    FrameGraphId<FrameGraphTexture> motionVectors(FrameGraph& fg,
+            RenderPassBuilder const& passBuilder, uint8_t renderFlags,
+            FrameGraphId<FrameGraphTexture> depth,
+            Viewport const& svp, Viewport const& xvp) noexcept;
+
+    // For testing only (see FView::setMotionVectorsReadback()). Copies the xvp region of `input`,
+    // a RG16F motion vectors texture, to the origin of `output`, an external RG16F texture of
+    // size `outputSize` (the copy is cropped to it). When `hasData` is false, `input` is the
+    // zero-texture substitute (fast path, or no history), and `output` is cleared to zero instead.
+    void readbackMotionVectors(FrameGraph& fg, FrameGraphId<FrameGraphTexture> input,
+            bool hasData, Viewport const& xvp, backend::Handle<backend::HwTexture> output,
+            math::uint2 outputSize) noexcept;
 
     // reflections pass
     FrameGraphId<FrameGraphTexture> ssr(FrameGraph& fg,
@@ -240,9 +266,12 @@ public:
             FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
             CameraInfo* inoutCameraInfo) const noexcept;
 
+    // objectMotionVectors is the output of motionVectors() (or its zero-texture substitute), and
+    // must be null when TAA wasn't configured with hasMotionVectors.
     FrameGraphId<FrameGraphTexture> taa(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input,
             FrameGraphId<FrameGraphTexture> depth,
+            FrameGraphId<FrameGraphTexture> objectMotionVectors,
             Viewport const& xvp,
             Viewport const& vp,
             FrameHistory& frameHistory,
@@ -330,6 +359,18 @@ public:
             FrameGraphId<FrameGraphTexture> input,
             FrameGraphId<FrameGraphTexture> shadowmap, float scale,
             uint8_t layer, uint8_t level, uint8_t channel, float power) noexcept;
+
+    // Draws the full motion vectors (reconstructed from `depth` and `objectMotionVectors`), or
+    // only `objectMotionVectors` when `objectOnly` is true, over `input`, which must cover the
+    // viewport, as described with the d.renderer.display_motion_vectors debug property. `svp` and
+    // `xvp` are the depth and motion vectors' viewports, i.e. the color pass's (before TAA
+    // upscaling). Returns `input` when `objectMotionVectors` is null.
+    FrameGraphId<FrameGraphTexture> debugDisplayMotionVectors(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input,
+            FrameGraphId<FrameGraphTexture> depth,
+            FrameGraphId<FrameGraphTexture> objectMotionVectors,
+            Viewport const& svp, Viewport const& xvp,
+            FrameHistory const& frameHistory, bool objectOnly, float scale) noexcept;
 
     // Combine an array texture pointed to by `input` into a single image, then return it.
     // This is only useful to check the multiview rendered scene as a debugging purpose, thus this
@@ -419,6 +460,10 @@ public:
 
     StructureDescriptorSet& getStructureDescriptorSet() const noexcept { return mStructureDescriptorSet; }
 
+    MotionVectorsDescriptorSet& getMotionVectorsDescriptorSet() const noexcept {
+        return mMotionVectorsDescriptorSet;
+    }
+
     void resetForRender() noexcept;
 
     static void unbindAllDescriptorSets(backend::DriverApi& driver) noexcept;
@@ -476,6 +521,7 @@ private:
     mutable SsrPassDescriptorSet mSsrPassDescriptorSet;
     mutable PostProcessDescriptorSet mPostProcessDescriptorSet;
     mutable StructureDescriptorSet mStructureDescriptorSet;
+    mutable MotionVectorsDescriptorSet mMotionVectorsDescriptorSet;
 
     struct BilateralPassConfig {
         uint8_t kernelSize = 11;

@@ -17,7 +17,7 @@
 #ifndef UBERZ_ARCHIVE_ENUMS_H
 #define UBERZ_ARCHIVE_ENUMS_H
 
-#include <stdint.h>
+#include <cstdint>
 
 namespace filament::uberz {
 
