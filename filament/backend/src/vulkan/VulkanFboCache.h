@@ -25,9 +25,12 @@
 
 #include <backend/TargetBufferInfo.h>
 
+#include <utils/FixedCapacityVector.h>
 #include <utils/Hash.h>
 
 #include <tsl/robin_map.h>
+
+#include <vector>
 
 namespace filament::backend {
 
@@ -103,11 +106,14 @@ public:
     // Retrieves or creates a VkFramebuffer handle.
     fvkmemory::resource_ptr<VulkanFramebuffer> getFramebuffer(FboKey const& config,
             fvkmemory::ResourceManager* resManager,
-            fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget) noexcept;
+            fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget,
+            fvkmemory::resource_ptr<VulkanSwapChain> swapchain);
 
     // Retrieves or creates a VkRenderPass handle.
     fvkmemory::resource_ptr<VulkanRenderPass> getRenderPass(
         RenderPassKey const& config, fvkmemory::ResourceManager* resManager) noexcept;
+
+    void onSwapchainDestroyed(fvkmemory::resource_ptr<VulkanSwapChain>);
 
     // Evicts old unused Vulkan objects. Call this once per frame.
     void gc() noexcept;
@@ -119,9 +125,33 @@ public:
     void terminate() noexcept;
 
 private:
+    struct SwapChainFbo {
+        fvkmemory::resource_ptr<VulkanFramebuffer> fbo;
+        // Used to decrement mRenderPassRefCount on removal.
+        VkRenderPass renderPass = VK_NULL_HANDLE;
+        // Checked against config.color[0] on a cache hit.
+        VkImageView color = VK_NULL_HANDLE;
+    };
+
+    using SwapChainPtr = fvkmemory::resource_ptr<VulkanSwapChain>;
+
+    struct SwapChainFboMapping {
+        SwapChainPtr swapchain; // key
+        utils::FixedCapacityVector<SwapChainFbo> fbos; // value
+    };
+
+    using SwapChainFboMappingList = std::vector<SwapChainFboMapping>;
+
+    void releaseSwapchainFbos(SwapChainFboMapping& mapping);
+    SwapChainFboMappingList::iterator findSwapChainFboMapping(SwapChainPtr swapchain);
+
     VkDevice mDevice;
     using FboMap = tsl::robin_map<FboKey, FboVal, FboKeyHashFn, FboKeyEqualFn>;
     FboMap mFramebufferCache;
+
+    // We never evict swapchain FBOs, but will delete them when swapchain is destroyed.
+    // We don't expect many swapchains
+    SwapChainFboMappingList mSwapchainFbos;
 
     using RenderPassMap = tsl::robin_map<RenderPassKey, RenderPassVal, RenderPassHash, RenderPassEq>;
     RenderPassMap mRenderPassCache;

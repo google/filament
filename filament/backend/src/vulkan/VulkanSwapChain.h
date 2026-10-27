@@ -92,8 +92,17 @@ struct VulkanSwapChain : public HwSwapChain, fvkmemory::Resource {
         mFrameScheduled.callback = std::make_shared<FrameScheduledCallback>(std::move(callback));
     }
 
+    // Returns the number of images in the swapchain.
+    uint32_t count() const noexcept {
+        return uint32_t(mColors.size());
+    }
+
+    uint32_t currentSwapIndex() const noexcept {
+        return mCurrentSwapIndex;
+    }
+
 private:
-	static constexpr int IMAGE_READY_SEMAPHORE_COUNT = FVK_MAX_COMMAND_BUFFERS;
+    static constexpr int IMAGE_READY_SEMAPHORE_COUNT = FVK_MAX_COMMAND_BUFFERS;
 
     void update();
 
