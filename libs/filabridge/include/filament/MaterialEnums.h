@@ -318,7 +318,15 @@ enum class UTILS_APIGEN_FLAGS UserVariantFilterBit : UserVariantFilterMask {
 
     SHADOW_RECEIVER = 0x04,      //!< Shadow receiver
     SKINNING = 0x08,             //!< Skinning
-    FOG = 0x10,                  //!< Fog
+
+    /**
+     * Fog
+     *
+     * \note Since fog was migrated to specialization constants, filtering this bit no longer
+     * removes shader variants. It removes the fog code (and its sampler) from offline compiled
+     * materials (.filamat), and prevents fog specializations from being compiled at runtime.
+     */
+    FOG = 0x10,
     VSM = 0x20,                  //!< Variance shadow maps
     SSR = 0x40,                  //!< Screen-space reflections
     STE = 0x80,                  //!< Instanced stereo rendering

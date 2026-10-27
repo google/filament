@@ -1818,8 +1818,6 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
     // isMaterialLit means shading != Shading::UNLIT || hasShadowMultiplier;
     const bool isMaterialLit = material->getDefinition().isVariantLit;
     Variant baseVariant{};
-    // TODO: Remove this after FOG is fully transferred to spec constant
-    baseVariant.setFog(false);
     baseVariant.setShadowSampler2D(isMaterialLit && view->hasShadowing() && (view->getShadowType() != ShadowType::PCF));
     baseVariant.setStereo(view->hasStereo());
 
