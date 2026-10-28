@@ -219,8 +219,12 @@ void FFilamentInstance::recomputeBoundingBoxes() {
         const FFilamentAsset::Skin& assetSkin = mOwner->mSkins[prim.skinIndex];
         for (size_t i = 0, n = verts.size(); i < n; i++) {
             mat4f tmp = mat4f(0.0f);
+            const size_t jointsCount = instanceSkin.joints.size();
             for (size_t j = 0; j < 4; j++) {
                 size_t jointIndex = joints[i][j];
+                if (jointIndex >= jointsCount) {
+                    continue;
+                }
                 Entity jointEntity = instanceSkin.joints[jointIndex];
                 mat4f globalJointTransform = tm.getWorldTransform(tm.getInstance(jointEntity));
                 mat4f inverseBindMatrix = assetSkin.inverseBindMatrices[jointIndex];
