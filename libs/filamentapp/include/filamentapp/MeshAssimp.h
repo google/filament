@@ -116,7 +116,7 @@ private:
             const uint8_t* buffer, size_t length);
 
     void processGLTFMaterial(const aiScene* scene, const aiMaterial* material,
-            const std::string& materialName, const std::string& dirName,
+            const std::string& materialName, const utils::Path& dirName,
             std::map<utils::CString, filament::MaterialInstance*>& outMaterials) const;
 
     template<bool SNORMUV0S, bool SNORMUV1S>
