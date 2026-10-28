@@ -1032,6 +1032,10 @@ void FAssetLoader::createMaterialVariants(const cgltf_mesh* mesh, Entity const e
         }
         for (size_t i = 0, m = srcPrim.mappings_count; i < m; i++) {
             const size_t variantIndex = srcPrim.mappings[i].variant;
+            if (variantIndex >= instance->mVariants.size()) {
+                LOG(WARNING) << "KHR_materials_variants mapping variant index out of range, skipping.";
+                continue;
+            }
             const cgltf_material* material = srcPrim.mappings[i].material;
             const bool hasVertexColor = primitiveHasVertexColor(srcPrim);
             MaterialInstance* mi =
