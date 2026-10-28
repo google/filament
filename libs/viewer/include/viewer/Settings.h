@@ -208,6 +208,7 @@ struct ViewSettings {
     Dithering dithering = Dithering::TEMPORAL;
     ShadowType shadowType = ShadowType::PCF;
     bool postProcessingEnabled = true;
+    bool tighterShadowCasterCulling = false;
 
     // View Options (sorted)
     AmbientOcclusionOptions ssao;
