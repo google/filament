@@ -42,6 +42,49 @@
 
 namespace utils {
 
+namespace {
+
+// Iterates over the logical segments of a canonical Path string without heap allocation.
+class SegmentCursor {
+public:
+    explicit SegmentCursor(std::string_view path) noexcept : mPath(path) {
+        if (!mPath.empty() && mPath.front() == SEPARATOR) {
+            mHasLeadingSeparator = true;
+            mPos = 1;
+        }
+    }
+
+    bool next(std::string_view& out) noexcept {
+        if (mHasLeadingSeparator) {
+            mHasLeadingSeparator = false;
+            out = mPath.substr(0, 1);
+            return true;
+        }
+        while (mPos < mPath.size() && mPath[mPos] == SEPARATOR) {
+            ++mPos;
+        }
+        if (mPos >= mPath.size()) {
+            return false;
+        }
+        size_t const end = mPath.find(SEPARATOR, mPos);
+        if (end == std::string_view::npos) {
+            out = mPath.substr(mPos);
+            mPos = mPath.size();
+        } else {
+            out = mPath.substr(mPos, end - mPos);
+            mPos = end + 1;
+        }
+        return true;
+    }
+
+private:
+    std::string_view mPath;
+    size_t mPos = 0;
+    bool mHasLeadingSeparator = false;
+};
+
+} // anonymous namespace
+
 Path::Path(const char* path)
     : Path(std::string(path)) {
 }
@@ -156,6 +199,79 @@ Path Path::getAncestor(int n) const {
     return result;
 }
 
+bool Path::isAncestorOf(const Path& path) const {
+    if (isEmpty() || path.isEmpty()) {
+        return false;
+    }
+
+    bool const selfRooted = isAbsolute() || m_path.front() == SEPARATOR;
+    bool const otherRooted = path.isAbsolute() || path.m_path.front() == SEPARATOR;
+    if (selfRooted != otherRooted) {
+        return false;
+    }
+
+    SegmentCursor selfCursor(m_path);
+    SegmentCursor otherCursor(path.m_path);
+
+    if (selfRooted) {
+        std::string_view selfSeg;
+        std::string_view otherSeg;
+        while (selfCursor.next(selfSeg)) {
+            if (!otherCursor.next(otherSeg) || selfSeg != otherSeg) {
+                return false;
+            }
+        }
+        return otherCursor.next(otherSeg);
+    }
+
+    auto advanceRelative = [](SegmentCursor& cursor, size_t& upCount,
+            std::string_view& firstNamed) noexcept -> bool {
+        upCount = 0;
+        std::string_view seg;
+        if (!cursor.next(seg)) {
+            return false;
+        }
+        if (seg == ".") {
+            if (!cursor.next(seg)) {
+                return false;
+            }
+        }
+        while (seg == "..") {
+            ++upCount;
+            if (!cursor.next(seg)) {
+                return false;
+            }
+        }
+        firstNamed = seg;
+        return true;
+    };
+
+    size_t selfUp = 0;
+    size_t otherUp = 0;
+    std::string_view selfSeg;
+    std::string_view otherSeg;
+    bool const selfHasNamed = advanceRelative(selfCursor, selfUp, selfSeg);
+    bool const otherHasNamed = advanceRelative(otherCursor, otherUp, otherSeg);
+
+    if (!selfHasNamed) {
+        if (otherUp < selfUp) {
+            return true;
+        }
+        return otherUp == selfUp && otherHasNamed;
+    }
+
+    if (!otherHasNamed || selfUp != otherUp || selfSeg != otherSeg) {
+        return false;
+    }
+
+    while (selfCursor.next(selfSeg)) {
+        if (!otherCursor.next(otherSeg) || selfSeg != otherSeg) {
+            return false;
+        }
+    }
+    return otherCursor.next(otherSeg);
+}
+
 std::string Path::getName() const {
     if (isEmpty()) return "";
 
@@ -265,6 +381,15 @@ std::string Path::getCanonicalPath(const std::string& path) {
         // remove ..
         if (segment == ".." && !segments.empty()) {
             if (segments.back().empty()) { // ignore if .. follows initial /
+                continue;
+            }
+#if defined(WIN32)
+            if (segments.size() == 1 && segments.back().size() == 2 && segments.back()[1] == ':') {
+                continue;
+            }
+#endif
+            if (segments.back() == ".") {
+                segments.back() = segment;
                 continue;
             }
             if (segments.back() != "..") {

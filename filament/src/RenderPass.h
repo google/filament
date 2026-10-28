@@ -72,6 +72,7 @@ public:
      *   CCC   = Channel
      *   PP    = Pass
      *   a     = alpha masking
+     *   m     = moving (motion vectors pass only)
      *   ppp   = priority
      *   t     = two-pass transparency ordering
      *   0     = reserved, must be zero
@@ -83,9 +84,14 @@ public:
      *   DEPTH command (b00)
      *   |  3|1| 2| 2| 2|1| 3 | 2|  6   |   10     |               32               |
      *   +---+-+--+--+--+-+---+--+------+----------+--------------------------------+
-     *   |CCC|0|00|01|00|0|ppp|00|000000| Z-bucket |          material-id           |
+     *   |CCC|0|00|01|00|m|ppp|00|000000| Z-bucket |          material-id           |
      *   +---+-+--+--+--+-+---+--+------+----------+--------------------------------+
      *   | correctness        |      optimizations (truncation allowed)             |
+     *
+     *   In the motion vectors pass, moving draws (m = 1) also force CCC = 111 (unless a channel
+     *   clears the depth buffer), so that they're drawn after all the static (depth-only) draws of
+     *   all channels: a static occluder drawn after a moving draw couldn't overwrite its motion
+     *   vectors, since it doesn't write color. m is 0 in all other depth passes.
      *
      *
      *   COLOR (b01) and REFRACT (b10) commands
@@ -210,12 +216,24 @@ public:
         // alpha-blended objects are not rendered in the depth buffer
         FILTER_TRANSLUCENT_OBJECTS = 0x10,
 
+        // depth pass that also writes object motion vectors for renderables that moved
+        // (must be combined with DEPTH, see OBJECT_MOTION_VECTORS)
+        MOTION_VECTORS = 0x20,
+        // the motion vectors pass reuses the color pass's depth buffer read-only, so static
+        // occluders are skipped and depth writes are disabled
+        MOTION_VECTORS_REUSE_DEPTH = 0x40,
+        // a channel clears the depth buffer in the motion vectors pass, so channels must be drawn
+        // in order and static renderables with a MOT variant also write zero motion vectors
+        MOTION_VECTORS_CHANNEL_DEPTH_CLEAR = 0x80,
+
         // generate commands for shadow map
         SHADOW = DEPTH | DEPTH_CONTAINS_SHADOW_CASTERS,
         // generate commands for SSAO
         SSAO = DEPTH | FILTER_TRANSLUCENT_OBJECTS,
         // generate commands for screen-space reflections
-        SCREEN_SPACE_REFLECTIONS = COLOR | FILTER_TRANSLUCENT_OBJECTS
+        SCREEN_SPACE_REFLECTIONS = COLOR | FILTER_TRANSLUCENT_OBJECTS,
+        // generate commands for the object motion vectors pass
+        OBJECT_MOTION_VECTORS = DEPTH | MOTION_VECTORS
     };
 
     /*
@@ -534,6 +552,10 @@ public:
     RenderPassBuilder& commandTypeFlags(RenderPass::CommandTypeFlags const commandTypeFlags) noexcept {
         mCommandTypeFlags = commandTypeFlags;
         return *this;
+    }
+
+    RenderPass::CommandTypeFlags getCommandTypeFlags() const noexcept {
+        return mCommandTypeFlags;
     }
 
     // specifies the geometry to generate commands for

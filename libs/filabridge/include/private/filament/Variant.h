@@ -49,6 +49,7 @@ struct Variant {
     // FOG: Fog (standard)
     // PCK: Picking (depth)
     // MNT: Output depth moments (depth)
+    // MOT: Output motion vectors (depth)
     // S2D: Sampler type for shadows (0: samplerShadowArray, 1: sampler2DArray) (standard)
     // STE: Instanced stereo rendering
     //
@@ -57,8 +58,10 @@ struct Variant {
     // Variant                    | S2D | FOG | DEP | SKN | SRE | STE |   64
     //                            +-----+-----+-----+-----+-----+-----+
     //                              MNT   PCK
+    //                              \--MOT--/
     //
     // Note that public UserVariantFilterBit keeps the old 8-bit values for API compatibility.
+    // Public MOTION_VECTORS (0x100) is translated to the internal MOT encoding below.
     //
     // Standard variants:
     //                            +-----+-----+-----+-----+-----+-----+
@@ -70,21 +73,22 @@ struct Variant {
     //
     // SSR variant:
     //                            +-----+-----+-----+-----+-----+-----+
-    //                            | MNT | PCK | DEP | SKN |  0  |  0  |    2
+    //                            | MNT | PCK | DEP | SKN |  0  | STE |    2
     //                            +-----+-----+-----+-----+-----+-----+
-    //                SSR            1     1     1     X     0     0
+    //                SSR            1     1     1     X     0     1
     //
     // Depth variants:
     //                            +-----+-----+-----+-----+-----+-----+
-    //                            | MNT | PCK |  1  | SKN |  0  | STE |   16 - 4 = 12
+    //                            | MNT | PCK |  1  | SKN |  0  | STE |   16 - 2 = 14
     //                            +-----+-----+-----+-----+-----+-----+
     //       Vertex depth            X     0     1     X     0     X
+    //      Vertex motion            1     1     1     X     0     0
     //     Fragment depth            0     X     1     0     0     0
     //     Fragment depth            1     0     1     0     0     0
-    //                SSR            1     1     1     X     0     0      [  -2]
-    //           Reserved            1     1     1     X     0     X      [  -2] (exclude SSR)
+    //    Fragment motion            1     1     1     0     0     0
+    //                SSR            1     1     1     X     0     1      [  -2]
     //
-    // 38 variants used (24 standard + 2 SSR + 12 depth), 26 reserved
+    // 40 variants used (24 standard + 2 SSR + 12 depth + 2 motion vectors), 24 reserved
     //
     // note: a valid variant can be neither a valid vertex nor a valid fragment variant
     //       (e.g.: FOG|SKN variants), the proper bits are filtered appropriately,
@@ -102,12 +106,17 @@ struct Variant {
     static constexpr type_t PCK   = 0x10; // picking (depth)
     static constexpr type_t S2D   = 0x20; // sampler type
     static constexpr type_t MNT   = 0x20; // variance shadow maps
+    static constexpr type_t MOT   = MNT | PCK; // motion vectors (depth variants only, mono only)
 
     static constexpr type_t NO_VARIANT         = 0u;
 
     // special variants (variants that use the reserved space)
-    static constexpr type_t SPECIAL_SSR_VARIANT= MNT | PCK | DEP;
+    static constexpr type_t SPECIAL_SSR_VARIANT = MNT | PCK | DEP | STE;
     static constexpr type_t SPECIAL_SSR_MASK =
+        STE | MNT | PCK | DEP | SRE;
+
+    static constexpr type_t SPECIAL_MOT_VARIANT = MNT | PCK | DEP;
+    static constexpr type_t SPECIAL_MOT_MASK =
         STE | MNT | PCK | DEP | SRE;
 
     static constexpr type_t STANDARD_MASK      = DEP;
@@ -123,7 +132,7 @@ struct Variant {
 
     // returns raw variant bits
     bool hasSkinningOrMorphing() const noexcept  { return key & SKN; }
-    bool hasStereo() const noexcept              { return key & STE; }
+    constexpr bool hasStereo() const noexcept    { return !isSSRVariant(*this) && (key & STE); }
 
     void setShadowReceiver(bool v) noexcept      { set(v, SRE); }
     void setSkinning(bool v) noexcept            { set(v, SKN); }
@@ -131,6 +140,8 @@ struct Variant {
     void setShadowSampler2D(bool v) noexcept     { set(v, S2D); }
     void setDepthMoments(bool v) noexcept        { set(v, MNT); }
     void setStereo(bool v) noexcept              { set(v, STE); }
+    // only meaningful for mono depth variants, MOT is MNT | PCK
+    void setMotionVectors(bool v) noexcept       { set(v, MOT); }
     constexpr void setFog(bool v) noexcept {
         // When the DEP bit is set, the FOG bit aliases with PCK. We must check the DEP bit before
         // modifying FOG to avoid accidentally unsetting PCK and breaking the SSR variant.
@@ -139,13 +150,15 @@ struct Variant {
         }
     }
 
+    static constexpr bool isMotionVectorsVariant(Variant variant) noexcept {
+        // In depth variants, MOT is MNT | PCK with STE = 0 (mono only).
+        return (variant.key & SPECIAL_MOT_MASK) == SPECIAL_MOT_VARIANT;
+    }
+
     static constexpr bool isValidDepthVariant(Variant variant) noexcept {
-        // (MNT | PCK | DEP), with or without SKN, is an SSR variant.
-        // The corresponding variants with STE are reserved.
-        constexpr type_t RESERVED_MASK  = MNT | PCK | DEP | SRE;
-        constexpr type_t RESERVED_VALUE = MNT | PCK | DEP;
-        return ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) &&
-               ((variant.key & RESERVED_MASK) != RESERVED_VALUE);
+        // (MNT | PCK | DEP), with or without SKN, is a motion vectors variant (STE = 0).
+        // (MNT | PCK | DEP | STE), with or without SKN, is an SSR variant.
+        return ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) && !isSSRVariant(variant);
    }
 
     static constexpr bool isValidStandardVariant(Variant variant) noexcept {
@@ -186,7 +199,7 @@ struct Variant {
     }
 
     static constexpr bool isDepthMomentsVariant(Variant variant) noexcept {
-        return !isSSRVariant(variant) && ((variant.key & (MNT | DEP)) == (MNT | DEP));
+        return (variant.key & (MNT | PCK | DEP)) == (MNT | DEP);
     }
 
     static constexpr bool isShadowReceiverVariant(Variant variant) noexcept {
@@ -198,11 +211,11 @@ struct Variant {
     }
 
     static constexpr bool isPickingVariant(Variant variant) noexcept {
-        return !isSSRVariant(variant) && ((variant.key & (PCK | DEP)) == (PCK | DEP));
+        return (variant.key & (MNT | PCK | DEP)) == (PCK | DEP);
     }
 
     static constexpr bool isStereoVariant(Variant variant) noexcept {
-        return (variant.key & STE) == STE;
+        return variant.hasStereo();
     }
 
     static constexpr Variant filterVariantVertex(Variant variant) noexcept {
@@ -213,6 +226,10 @@ struct Variant {
                 variant.key &= ~SPECIAL_SSR_VARIANT;
             }
             return variant & (STE | SKN | SRE);
+        }
+        if (isMotionVectorsVariant(variant)) {
+            // Only skinning affects the vertex shader's motion vectors variant
+            return variant & (SKN | SPECIAL_MOT_VARIANT);
         }
         if ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) {
             // Only MNT, skinning, and stereo affect the vertex shader's DEPTH variant
@@ -232,7 +249,8 @@ struct Variant {
             return variant & (S2D | FOG | SRE);
         }
         if ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) {
-            // Only VSM & PICKING affects the fragment shader's DEPTH variant
+            // Only VSM, PICKING & MOTION_VECTORS (MNT | PCK) affect the fragment shader's
+            // DEPTH variant
             return variant & (MNT | PCK | DEP);
         }
         return {};
@@ -290,8 +308,12 @@ struct Variant {
         };
         if (variant.key & STE) print("STE");
         if (variant.key & DEP) {
-            if (variant.key & MNT) print("MNT");
-            if (variant.key & PCK) print("PCK");
+            if (isMotionVectorsVariant(variant)) {
+                print("MOT");
+            } else {
+                if (variant.key & MNT) print("MNT");
+                if (variant.key & PCK) print("PCK");
+            }
 
             print("DEP");
         } else {

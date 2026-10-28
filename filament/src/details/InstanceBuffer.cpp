@@ -37,6 +37,10 @@
 #include <math/mat3.h>
 #include <math/mat4.h>
 
+#if defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
+
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -46,6 +50,24 @@
 namespace filament {
 
 using namespace backend;
+
+namespace {
+
+UTILS_ALWAYS_INLINE
+bool isTransformIdentical(math::mat4f const& a, math::mat4f const& b) noexcept {
+#if defined(__ARM_NEON) && defined(__aarch64__)
+    uint32x4_t const eq0 = vceqq_f32(vld1q_f32(&a[0].x), vld1q_f32(&b[0].x));
+    uint32x4_t const eq1 = vceqq_f32(vld1q_f32(&a[1].x), vld1q_f32(&b[1].x));
+    uint32x4_t const eq2 = vceqq_f32(vld1q_f32(&a[2].x), vld1q_f32(&b[2].x));
+    uint32x4_t const eq3 = vceqq_f32(vld1q_f32(&a[3].x), vld1q_f32(&b[3].x));
+    uint32x4_t const eq = vandq_u32(vandq_u32(eq0, eq1), vandq_u32(eq2, eq3));
+    return vminvq_u32(eq) != 0;
+#else
+    return a == b;
+#endif
+}
+
+} // anonymous namespace
 
 struct InstanceBuffer::BuilderDetails {
     size_t mInstanceCount = 0;
@@ -92,8 +114,9 @@ InstanceBuffer* InstanceBuffer::Builder::build(Engine& engine) const {
 
 // ------------------------------------------------------------------------------------------------
 
-FInstanceBuffer::FInstanceBuffer(FEngine&, const Builder& builder)
-    : mName(builder.getName()) {
+FInstanceBuffer::FInstanceBuffer(FEngine& engine, const Builder& builder)
+    : mName(builder.getName()),
+      mUid(engine.allocateInstanceBufferUid()) {
     mInstanceCount = builder->mInstanceCount;
 
     mLocalTransforms.reserve(mInstanceCount);
@@ -117,7 +140,20 @@ void FInstanceBuffer::setLocalTransforms(
             << "setLocalTransforms overflow. InstanceBuffer has only " << mInstanceCount
             << " instances, but trying to set " << count 
             << " transforms at offset " << offset << ".";
-    memcpy(mLocalTransforms.data() + offset, localTransforms, sizeof(math::mat4f) * count);
+    // only an actual change bumps the revision, so that rewriting the same transforms doesn't
+    // report any motion
+    math::mat4f* const dst = mLocalTransforms.data() + offset;
+    bool changed = false;
+    for (size_t i = 0; i < count; i++) {
+        if (!isTransformIdentical(dst[i], localTransforms[i])) {
+            changed = true;
+            break;
+        }
+    }
+    if (changed) {
+        memcpy(dst, localTransforms, sizeof(math::mat4f) * count);
+        mRevision++;
+    }
 }
 
 math::mat4f const& FInstanceBuffer::getLocalTransform(size_t index) const {
@@ -127,9 +163,21 @@ math::mat4f const& FInstanceBuffer::getLocalTransform(size_t index) const {
     return mLocalTransforms[index];
 }
 
-void FInstanceBuffer::prepare(
+// reads back a matrix stored in a std140 UBO structure
+static math::mat4 toMat4(std140::mat44 const& m) noexcept {
+    math::mat4 r;
+    for (size_t c = 0; c < 4; c++) {
+        for (size_t l = 0; l < 4; l++) {
+            r[c][l] = m[c][l];
+        }
+    }
+    return r;
+}
+
+bool FInstanceBuffer::prepare(
             PerRenderableData* const UTILS_RESTRICT buffer, uint32_t const index, uint32_t const count,
-            math::mat4f const& rootTransform, PerRenderableData const& ubo) {
+            math::mat4f const& rootTransform, PerRenderableData const& ubo,
+            math::mat4f const* const prevLocalTransforms) {
 
     // there is a precondition check for this, so this assert really should never trigger
     assert_invariant(count <= mInstanceCount);
@@ -142,6 +190,35 @@ void FInstanceBuffer::prepare(
         buffer[index + i].worldFromModelNormalMatrix = math::prescaleForNormals(m);
     }
     mIndex = index;
+
+    bool moved = false;
+    if (UTILS_UNLIKELY(prevLocalTransforms)) {
+        // Motion vectors: an instance whose local transform changed from L' to L gets its own
+        // previous-from-current transform, M * R * L' * inverse(L) * inverse(R), where R is the
+        // root transform and M is ubo.prevWorldFromWorldMatrix (the root's motion). The other
+        // instances keep M, copied with `ubo` above, which is also the fallback when R or L is
+        // singular. Computed in double precision.
+        math::mat4 const R{ rootTransform };
+        double const detR = det(R);
+        if (UTILS_VERY_LIKELY(detR != 0.0)) {
+            math::mat4 const MR = toMat4(ubo.prevWorldFromWorldMatrix) * R;
+            math::mat4 const invR = inverse(R, detR);
+            for (size_t i = 0, c = count; i < c; i++) {
+                math::mat4f const& L = mLocalTransforms[i];
+                math::mat4f const& prevL = prevLocalTransforms[i];
+                if (!isTransformIdentical(L, prevL)) {
+                    math::mat4 const Ld{ L };
+                    double const detL = det(Ld);
+                    if (UTILS_VERY_LIKELY(detL != 0.0)) {
+                        buffer[index + i].prevWorldFromWorldMatrix =
+                                math::mat4f{ MR * math::mat4{ prevL } * inverse(Ld, detL) * invR };
+                        moved = true;
+                    }
+                }
+            }
+        }
+    }
+    return moved;
 }
 
 } // namespace filament

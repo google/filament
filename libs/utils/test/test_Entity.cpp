@@ -1058,3 +1058,62 @@ TEST(EntityTest, GetAliveEntitiesOutParam) {
     em.destroy(entities[3]);
 }
 
+TEST(EntityTest, DestroyBatchesNotificationsAcrossSingleDestroyCalls) {
+    EntityManagerImpl em;
+    constexpr size_t COUNT = 20;
+    Entity entities[COUNT];
+    em.create(COUNT, entities);
+
+    // Destroy entities[0] before registering the callback; registerChangeCallback must flush
+    // pending notifications first so entities[0] is not spuriously delivered to the new callback.
+    em.destroy(entities[0]);
+    EXPECT_FALSE(em.isAlive(entities[0]));
+
+    size_t callbackInvocations = 0;
+    std::vector<Entity> notifiedEntities;
+    int token = 0;
+    em.registerChangeCallback(&token, [&](Slice<const Entity> slice) {
+        callbackInvocations++;
+        for (Entity const e : slice) {
+            notifiedEntities.push_back(e);
+        }
+    });
+    EXPECT_EQ(callbackInvocations, 0u);
+    EXPECT_TRUE(notifiedEntities.empty());
+
+    // Destroy 15 entities one by one; they must be buffered in mDirtyEntities without flushing.
+    for (size_t i = 1; i <= 15; ++i) {
+        em.destroy(entities[i]);
+        EXPECT_FALSE(em.isAlive(entities[i]));
+        EXPECT_EQ(callbackInvocations, 0u);
+    }
+
+    // The 16th single-entity destroy fills MAX_DIRTY_COUNT (16) and flushes the full batch at once.
+    em.destroy(entities[16]);
+    EXPECT_FALSE(em.isAlive(entities[16]));
+    EXPECT_EQ(callbackInvocations, 1u);
+    ASSERT_EQ(notifiedEntities.size(), 16u);
+    for (size_t i = 0; i < 16; ++i) {
+        EXPECT_EQ(notifiedEntities[i], entities[i + 1]);
+    }
+
+    // Destroy the remaining 3 entities; they stay buffered until advanceEpoch() or
+    // flushNotifications().
+    for (size_t i = 17; i < COUNT; ++i) {
+        em.destroy(entities[i]);
+        EXPECT_FALSE(em.isAlive(entities[i]));
+    }
+    EXPECT_EQ(callbackInvocations, 1u);
+
+    // advanceEpoch() must flush any remaining buffered destructions before sealing the epoch.
+    em.advanceEpoch();
+    EXPECT_EQ(callbackInvocations, 2u);
+    ASSERT_EQ(notifiedEntities.size(), 19u);
+    for (size_t i = 0; i < 19; ++i) {
+        EXPECT_EQ(notifiedEntities[i], entities[i + 1]);
+    }
+
+    em.unregisterChangeCallback(&token);
+}
+
+

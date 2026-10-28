@@ -64,23 +64,6 @@ BENCHMARK_DEFINE_F(BufferAllocatorFixture, allocateRetire)(benchmark::State& sta
     state.SetItemsProcessed(state.iterations());
 }
 
-BENCHMARK_DEFINE_F(BufferAllocatorFixture, allocateGpuRetireRelease)(benchmark::State& state) {
-    auto const size = static_cast<allocation_size_t>(state.range(0));
-    BufferAllocator allocator(TOTAL_SIZE, SLOT_SIZE);
-
-    PerformanceCounters pc(state);
-    for (UTILS_UNUSED auto _: state) {
-        auto const [id, offset] = allocator.allocate(size);
-        benchmark::DoNotOptimize(offset);
-        allocator.acquireGpu(id);
-        allocator.retire(id);
-        allocator.releaseGpu(id);
-    }
-    benchmark::ClobberMemory();
-    pc.stop();
-    state.SetItemsProcessed(state.iterations());
-}
-
 BENCHMARK_DEFINE_F(BufferAllocatorFixture, allocateBatchAndRetire)(benchmark::State& state) {
     auto const size = static_cast<allocation_size_t>(state.range(0));
     BufferAllocator allocator(TOTAL_SIZE, SLOT_SIZE);
@@ -138,10 +121,6 @@ BENCHMARK_DEFINE_F(BufferAllocatorFixture, reset)(benchmark::State& state) {
 }
 
 BENCHMARK_REGISTER_F(BufferAllocatorFixture, allocateRetire)
-        ->RangeMultiplier(2)
-        ->Range(16, 4096);
-
-BENCHMARK_REGISTER_F(BufferAllocatorFixture, allocateGpuRetireRelease)
         ->RangeMultiplier(2)
         ->Range(16, 4096);
 
