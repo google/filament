@@ -176,6 +176,8 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder, MaterialDefinition
     mDepthPrecacheDisabled =
             driver.isWorkaroundNeeded(Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL);
 
+    mHasMotionVectorsVariant = computeHasMotionVectorsVariant();
+
     mPrograms.initializeForMaterial(engine, *this, processSpecializationConstants(builder));
 
 #if FILAMENT_ENABLE_MATDBG
@@ -236,6 +238,24 @@ filament::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayout(
     return mDefinition.perViewDescriptorSetLayoutPcf;
 }
 
+bool FMaterial::isValidProgram(Variant const variant, DynamicSpecConstKey const specKey,
+        ShaderModel const shaderModel, bool const isStereoSupported) const noexcept {
+    if (isSharedVariant(variant)) {
+        FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
+        return pDefaultMaterial && pDefaultMaterial->getDefinition().isValidProgram(variant,
+                specKey, shaderModel, isStereoSupported);
+    }
+    return mDefinition.isValidProgram(variant, specKey, shaderModel, isStereoSupported);
+}
+
+bool FMaterial::computeHasMotionVectorsVariant() const noexcept {
+    // The SKN permutation isn't checked separately: it can only be missing with the `skinning`
+    // variant filter, and such materials already can't render skinned geometry in any pass.
+    return mDefinition.hasSurfaceVariants() &&
+           isValidProgram(Variant{ Variant::SPECIAL_MOT_VARIANT }, DynamicSpecConstKey{},
+                   mEngine.getShaderModel(), mEngine.isStereoSupported());
+}
+
 void FMaterial::compile(CompilerPriorityQueue const priority,
         UserVariantFilterMask variantSpec,
         CallbackHandler* handler,
@@ -275,7 +295,7 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
         for (auto const variant : variants) {
             for (auto specKey : specKeys) {
                 specKey = mDefinition.filterProgramSpecKey(variant, specKey);
-                if (mDefinition.isValidProgram(variant, specKey, shaderModel, isStereoSupported)) {
+                if (isValidProgram(variant, specKey, shaderModel, isStereoSupported)) {
 #ifndef NDEBUG
                     FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
                             "prepareProgram(variant found)",

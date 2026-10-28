@@ -8,6 +8,9 @@ highp int object_uniforms_morphTargetCount;
 highp int object_uniforms_flagsChannels;                   // see packFlags() below (0x00000fll)
 highp int object_uniforms_objectId;                        // used for picking
 highp float object_uniforms_userData;   // TODO: We need a better solution, this currently holds the average local scale for the renderable
+#if defined(VARIANT_HAS_MOT)
+highp mat4 object_uniforms_prevWorldFromWorldMatrix;       // motion vectors
+#endif
 
 //------------------------------------------------------------------------------
 // Instance access
@@ -45,6 +48,9 @@ void initObjectUniforms() {
     object_uniforms_flagsChannels               = objectUniforms.data[i].flagsChannels;
     object_uniforms_objectId                    = objectUniforms.data[i].objectId;
     object_uniforms_userData                    = objectUniforms.data[i].userData;
+#if defined(VARIANT_HAS_MOT)
+    object_uniforms_prevWorldFromWorldMatrix    = objectUniforms.data[i].prevWorldFromWorldMatrix;
+#endif
 }
 
 #if defined(FILAMENT_HAS_FEATURE_INSTANCING) && defined(MATERIAL_HAS_INSTANCES)

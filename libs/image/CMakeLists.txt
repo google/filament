@@ -30,6 +30,9 @@ include_directories(${PUBLIC_HDR_DIR})
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 
 target_link_libraries(${TARGET} PUBLIC math utils)
+if (WIN32)
+    target_link_libraries(${TARGET} PRIVATE wsock32)
+endif()
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
@@ -57,4 +60,13 @@ if (FILAMENT_BUILD_TESTING AND NOT ANDROID AND NOT WASM AND NOT IOS AND NOT FILA
     add_executable(test_${TARGET} tests/test_image.cpp)
     target_link_libraries(test_${TARGET} PRIVATE imageio gtest)
     set_target_properties(test_${TARGET} PROPERTIES FOLDER Tests)
+endif()
+
+# ==================================================================================================
+# Benchmarks
+# ==================================================================================================
+if (FILAMENT_BUILD_TESTING AND NOT WASM)
+    add_executable(benchmark_${TARGET} benchmarks/benchmark_image.cpp)
+    target_link_libraries(benchmark_${TARGET} PRIVATE benchmark_main ${TARGET} utils math)
+    set_target_properties(benchmark_${TARGET} PROPERTIES FOLDER Benchmarks)
 endif()

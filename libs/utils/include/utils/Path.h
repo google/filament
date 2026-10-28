@@ -124,6 +124,20 @@ public:
     Path getAncestor(int n) const;
 
     /**
+     * Tests whether this abstract pathname is an ancestor of the
+     * specified pathname.
+     *
+     * This is a purely lexical check; neither path is required to
+     * exist. A path is not considered an ancestor of itself.
+     *
+     * @param path the path to test against this pathname
+     *
+     * @return true if this pathname is a strict ancestor of the
+     *         specified path, false otherwise
+     */
+    bool isAncestorOf(const Path& path) const;
+
+    /**
      * Returns the name of the file or directory represented by
      * this abstract pathname.
      *

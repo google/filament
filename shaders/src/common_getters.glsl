@@ -73,6 +73,14 @@ highp mat4 getWorldFromClipMatrix() {
     return frameUniforms.worldFromClipMatrix;
 }
 
+#if defined(VARIANT_HAS_MOT)
+// Previous render's unjittered clip-from-world matrix, in this frame's world space.
+// Mono only: motion vectors are disabled with stereo.
+highp mat4 getPrevClipFromWorldMatrix() {
+    return frameUniforms.prevClipFromWorldMatrix;
+}
+#endif
+
 #if CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
 /**
  * Transforms a 2D clip-space position (x, y) directly into an un-normalized, un-translated world-space ray direction.

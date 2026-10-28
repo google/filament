@@ -95,6 +95,8 @@ option(FILAMENT_SUPPORTS_WEBP_TEXTURES "Enable webp texture support for Filament
 # On the regular filament build (where size is of less concern), we enable GTAO by default.
 option(FILAMENT_DISABLE_GTAO "Disable GTAO" OFF)
 
+option(FILAMENT_SUPPORTS_MOTION_VECTORS "Enable motion vectors support" ON)
+
 option(FILAMENT_BUILD_TESTING "Build tests" ON)
 
 option(FILAMENT_DEBUG_MUTEX "Enable utils::Mutex lock order and deadlock debugging" OFF)
@@ -744,6 +746,12 @@ if (FILAMENT_DISABLE_MATOPT)
 endif()
 
 set(MATC_BASE_FLAGS ${MATC_API_FLAGS} -p ${MATC_TARGET} ${MATC_OPT_FLAGS})
+
+if (FILAMENT_SUPPORTS_MOTION_VECTORS)
+    add_definitions(-DFILAMENT_SUPPORTS_MOTION_VECTORS)
+else()
+    set(MATC_BASE_FLAGS ${MATC_BASE_FLAGS} -V motionVectors)
+endif()
 
 # ==================================================================================================
 # Distribution

@@ -51,9 +51,24 @@ public:
 
     math::mat4f const& getLocalTransform(size_t index) const;
 
-    void prepare(
+    utils::FixedCapacityVector<math::mat4f> const& getLocalTransforms() const noexcept {
+        return mLocalTransforms;
+    }
+
+    // Unique identifier of this InstanceBuffer; never reused, even after it's destroyed.
+    uint64_t getUid() const noexcept { return mUid; }
+
+    // Incremented each time setLocalTransforms() actually changes the local transforms.
+    uint64_t getRevision() const noexcept { return mRevision; }
+
+    // If prevLocalTransforms is not null, it holds the local transforms at the previous render
+    // (getInstanceCount() entries), and the instances whose local transform changed get their own
+    // prevWorldFromWorldMatrix. Otherwise, all instances use ubo.prevWorldFromWorldMatrix.
+    // Returns true if one of the `count` instances got its own prevWorldFromWorldMatrix.
+    bool prepare(
             PerRenderableData* buffer, uint32_t index, uint32_t count,
-            math::mat4f const& rootTransform, PerRenderableData const& ubo);
+            math::mat4f const& rootTransform, PerRenderableData const& ubo,
+            math::mat4f const* prevLocalTransforms = nullptr);
 
     utils::ImmutableCString const& getName() const noexcept { return mName; }
 
@@ -64,6 +79,8 @@ private:
 
     utils::FixedCapacityVector<math::mat4f> mLocalTransforms;
     utils::ImmutableCString mName;
+    uint64_t mUid;
+    uint64_t mRevision = 0;
     uint32_t mInstanceCount;
     uint32_t mIndex = 0;
 };

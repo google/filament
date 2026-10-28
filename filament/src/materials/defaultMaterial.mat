@@ -2,7 +2,8 @@ material {
     name : "Filament Default Material",
     shadingModel : unlit,
     variantFilter : [ vsm ],
-    featureLevel: 0
+    featureLevel: 0,
+    isDefaultMaterial: true
 }
 
 fragment {

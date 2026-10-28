@@ -33,6 +33,7 @@
 
 #include <utils/compiler.h>
 #include <utils/Entity.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
 #include <utils/Mutex.h>
 #include <utils/PagedArenaBitset.h>
@@ -50,10 +51,12 @@
 
 #include <array>
 #include <memory>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
 #include <stddef.h>
+#include <stdint.h>
 
 namespace utils {
 class JobSystem;
@@ -63,6 +66,7 @@ namespace filament {
 
 class FEngine;
 class FIndirectLight;
+class FInstanceBuffer;
 class FRenderer;
 class FSkybox;
 class FView;
@@ -75,6 +79,17 @@ struct ShadowInfo {
     bool castsShadows = false;
     bool contactShadows = false;
     uint8_t index = 0;
+};
+
+struct PrevTransform {
+    // user world transform, in its exact stored representation (see getWorldTranslationLo())
+    math::mat4f world;
+    math::float3 lo;
+
+    // Bitwise equality of the stored representation, i.e. "did the value written change?".
+    // Unlike a float comparison this tells -0 from +0 and treats NaN as equal to itself, so a
+    // no-op write or an A->B->A sequence isn't a motion.
+    bool bitwiseEquals(PrevTransform const& other) const noexcept;
 };
 
 using RenderableSoa = utils::StructureOfArrays<
@@ -129,34 +144,73 @@ using LightSoa = utils::StructureOfArrays<
  * cache, and every column that a consumer reads back from it, MUST be listed in CachedColumns.
  * Any other column holds stale or indeterminate data and must be treated as write-only
  * scratch at best.
+ *
+ * Extra, when not void, is per-row side data that follows the row across swap-and-pop removals,
+ * like the translation. It lives outside the SoA, so it is never copied into the per-frame
+ * renderableData nor moved by its partitioning; see extraAt().
  */
-template<typename SoAType, size_t EntityColumn, size_t... CachedColumns>
+template<typename SoAType, typename Extra, size_t EntityColumn, size_t... CachedColumns>
 class SoaCache {
+    struct NoExtra {};
+    static constexpr bool kHasExtra = !std::is_void_v<Extra>;
+    using ExtraType = std::conditional_t<kHasExtra, Extra, NoExtra>;
+    using ExtraStorage = std::conditional_t<kHasExtra, std::vector<ExtraType>, NoExtra>;
+
     SoAType mSoA;
     std::vector<math::double3> mTranslations;
+    ExtraStorage mExtras;   // per-row side data, only when kHasExtra (see Extra)
     tsl::robin_map<utils::Entity, uint32_t, utils::Entity::Hasher> mIndexMap;
 
 public:
+    // Number of cached entities (and rows in the SoA).
     size_t size() const noexcept { return mSoA.size(); }
+
+    // Underlying SoA storage. Only EntityColumn and CachedColumns are maintained across
+    // removals and insertions (see class comment).
     SoAType& getSoA() noexcept { return mSoA; }
     const SoAType& getSoA() const noexcept { return mSoA; }
+
+    // Double-precision world translations, indexed identically to the SoA rows.
     utils::Slice<const math::double3> getTranslations() const noexcept {
         return { mTranslations.data(), mTranslations.size() };
     }
+
+    // Per-row side data, indexed like the SoA. acquire() leaves it value-initialized for a new
+    // row; the caller is expected to set it.
+    ExtraType& extraAt(uint32_t const index) noexcept {
+        static_assert(kHasExtra, "this SoaCache has no Extra");
+        return mExtras[index];
+    }
+    ExtraType const& extraAt(uint32_t const index) const noexcept {
+        static_assert(kHasExtra, "this SoaCache has no Extra");
+        return mExtras[index];
+    }
+
+    // Looks up `e` or inserts a new row for it, updating its cached `translation` in both cases.
+    // Returns `{ index, inserted }`, where `index` is the row index in the SoA and `inserted` is
+    // true iff a new row was appended (in which case the SoA columns are default-constructed and
+    // extraAt(index) is value-initialized for the caller to populate).
     UTILS_NOINLINE
-    uint32_t acquire(utils::Entity const e, math::double3 const& translation) {
+    std::pair<uint32_t, bool> acquire(utils::Entity const e, math::double3 const& translation) {
         auto const it = mIndexMap.find(e);
         if (UTILS_LIKELY(it != mIndexMap.end())) {
             uint32_t const index = it->second;
             mTranslations[index] = translation;
-            return index;
+            return { index, false };
         }
         uint32_t const index = static_cast<uint32_t>(mSoA.size());
         mSoA.push_back();
         mTranslations.push_back(translation);
+        if constexpr (kHasExtra) {
+            mExtras.emplace_back();
+        }
         mIndexMap[e] = index;
-        return index;
+        return { index, true };
     }
+
+    // Evicts `e` from the cache via swap-and-pop, migrating the last row's EntityColumn,
+    // CachedColumns, translation, and Extra into the vacated slot. No-op if `e` is not cached.
+    // Invalidates the row index previously held by the last row.
     UTILS_NOINLINE
     void remove(utils::Entity const e) {
         if (mSoA.size() == 0) {
@@ -172,13 +226,22 @@ public:
                 ((mSoA.template elementAt<CachedColumns>(index) =
                         mSoA.template elementAt<CachedColumns>(lastIndex)), ...);
                 mTranslations[index] = mTranslations[lastIndex];
+                if constexpr (kHasExtra) {
+                    mExtras[index] = std::move(mExtras[lastIndex]);
+                }
                 mIndexMap.find(lastEntity).value() = index;
             }
             mSoA.pop_back();
             mTranslations.pop_back();
+            if constexpr (kHasExtra) {
+                mExtras.pop_back();
+            }
             mIndexMap.erase(it);
         }
     }
+
+    // Returns the current row index of `e` in the SoA, or 0xFFFFFFFF if `e` is not cached.
+    // Note: row indices may change across remove() calls due to swap-and-pop.
     uint32_t getIndex(utils::Entity const e) const {
         auto const it = mIndexMap.find(e);
         if (it != mIndexMap.end()) {
@@ -194,10 +257,11 @@ public:
     using LightSoa = filament::LightSoa;
     using VisibleMaskType = filament::VisibleMaskType;
     using ShadowInfo = filament::ShadowInfo;
+    using PrevTransform = filament::PrevTransform;
 
     enum {
         RENDERABLE_ENTITY,      //   4 | Entity of the Renderable component
-        WORLD_TRANSFORM,        //  16 | instance of the Transform component
+        WORLD_TRANSFORM,        //  64 | instance of the Transform component
         VISIBILITY_STATE,       //   2 | visibility data of the component
         SKINNING_STATE,         //   1 | skinning data of the component
         SKINNING_BUFFER,        //   8 | bones uniform buffer handle, offset, indices and weights
@@ -247,7 +311,13 @@ public:
 
     struct SceneCacheData {
         using EntitySet = utils::PagedArenaBitset;
-        using RenderableCache = SoaCache<RenderableSoa, RENDERABLE_ENTITY,
+#if defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+        // The previous world transforms (motion vectors) ride along as the rows' Extra.
+        using RenderableCacheExtra = PrevTransform;
+#else
+        using RenderableCacheExtra = void;
+#endif
+        using RenderableCache = SoaCache<RenderableSoa, RenderableCacheExtra, RENDERABLE_ENTITY,
                 WORLD_TRANSFORM,
                 VISIBILITY_STATE,
                 SKINNING_STATE,
@@ -263,17 +333,54 @@ public:
                 WORLD_AABB_EXTENT_Z,
                 PRIMITIVES,
                 USER_DATA>;
-        using LightCache = SoaCache<LightSoa, LIGHT_ENTITY,
+        using LightCache = SoaCache<LightSoa, void, LIGHT_ENTITY,
                 RADIUS,
                 DIRECTION,
                 SPOT_PARAMS>;
 
+        struct InstanceBufferHistory {
+            uint64_t revision = 0;      // FInstanceBuffer revision of `locals`
+            uint32_t lastSeen = 0;      // last renderIndex at which a scene renderable used it
+            // set by trackInstanceBuffer() when `locals` must be snapshot at commit, null otherwise
+            FInstanceBuffer const* pendingSnapshot = nullptr;
+            // local transforms at the previous render, empty until the first snapshot
+            utils::FixedCapacityVector<math::mat4f> locals;
+        };
+
+        // Motion vectors state for this (View, Scene) pair, main thread only.
+        struct MotionVectorsState {
+            // key: FInstanceBuffer uid, which is never reused. There is one lookup per scene
+            // renderable that has an InstanceBuffer, at every render (see trackInstanceBuffer()).
+            tsl::robin_map<uint64_t, InstanceBufferHistory> instanceBuffers;
+            // Renderable entities whose transform changed at this render, with their new transform.
+            // Filled by processDeferredUpdates() while hasHistory is set, and drained by
+            // commitMovedRenderables() from FView::prepareMotionVectors() within the same
+            // FView::prepare() (hasHistory implies that motion vectors are active).
+            std::vector<std::pair<utils::Entity, PrevTransform>> moved;
+            uint32_t renderIndex = 0;            // View-local render counter
+            bool hasHistory = false;             // set at commit while motion vectors are active
+            bool hasMovingRenderables = false;   // set by prepare()
+
+            // Marks `ib` as used at this render, and schedules its snapshot at commit if it's new
+            // or its revision changed. Returns its local transforms at the previous render if its
+            // revision changed since, null otherwise.
+            math::mat4f const* trackInstanceBuffer(FInstanceBuffer const& ib) noexcept;
+
+            void reset() noexcept;
+        };
+
         SceneCacheData() noexcept;
         ~SceneCacheData() noexcept;
+
+        // Advances the master cache's previous transforms to this render's, and clears the
+        // motionMoved latch, for the entities in motionVectors.moved. Must run once those rows'
+        // previous transforms have been used, i.e. after FView::prepareMotionVectors() read them.
+        void commitMovedRenderables() noexcept;
 
         // Scene Cache. This can be reordered/modified outside of FScene
         RenderableSoa renderableData;
         LightSoa lightData;
+        MotionVectorsState motionVectors;
 
         // Directional lights in addition to the dominant one (which is stored at index 0 of
         // lightData). These are evaluated without shadows, so we only need their direction
@@ -380,7 +487,6 @@ private:
     size_t getLightCount() const noexcept;
     bool hasEntity(utils::Entity entity) const noexcept;
     void forEach(utils::Invocable<void(utils::Entity)>&& functor) const noexcept;
-    void flushNotifications() const noexcept;
     void flushPendingDestroyed() noexcept;
 
     static inline void computeLightRanges(math::float2* zrange,
