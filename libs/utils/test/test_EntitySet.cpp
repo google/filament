@@ -567,6 +567,133 @@ TEST(PagedArenaBitsetTest, MergeGhostBitBug) {
     EXPECT_EQ(result.size(), 0);
 }
 
+// The tests below cover stale directory entries. clear() and the static operations (which call
+// out->clear()) reset the masks but not the directory, and copyFrom() copies the directory
+// verbatim. Only the masks say which pages exist; reading a stale entry instead aliases two
+// pages onto the same arena slot, or indexes past the end of the arena.
+
+static std::vector<uint32_t> toVector(PagedArenaBitset const& bs) {
+    std::vector<uint32_t> bits;
+    bs.extractTo(bits);
+    return bits;
+}
+
+TEST(PagedArenaBitsetTest, MergeAfterClearIgnoresStaleDirectory) {
+    PagedArenaBitset a;
+    a.add(5000);    // page 1 -> arena[0]
+    a.clear();      // the directory entry for page 1 still says arena[0]
+    a.add(10);      // page 0 -> arena[0]
+
+    PagedArenaBitset b;
+    b.add(5001);    // page 1
+
+    a.merge(b);
+    EXPECT_EQ(toVector(a), (std::vector<uint32_t>{ 10, 5001 }));
+    EXPECT_EQ(a.size(), 2);
+}
+
+TEST(PagedArenaBitsetTest, MergeAfterCopyFromIgnoresStaleDirectory) {
+    // This is the sequence FScene uses: the pending set is cleared every frame, then copied
+    // into an empty set, which is then merged with another set.
+    PagedArenaBitset pending;
+    pending.add(4200);  // page 1 -> arena[0]
+    pending.clear();
+    pending.add(100);   // page 0 -> arena[0]
+
+    PagedArenaBitset destroyed;
+    destroyed.merge(pending);   // empty, so this is copyFrom(pending)
+
+    PagedArenaBitset removed;
+    removed.add(4300);  // page 1
+    destroyed.merge(removed);
+
+    EXPECT_EQ(toVector(destroyed), (std::vector<uint32_t>{ 100, 4300 }));
+    EXPECT_EQ(destroyed.size(), 2);
+}
+
+TEST(PagedArenaBitsetTest, MergeStaleDirectoryPastEndOfArena) {
+    PagedArenaBitset pending;
+    pending.add(100);   // page 0 -> arena[0]
+    pending.add(5000);  // page 1 -> arena[1]
+    pending.clear();
+    pending.add(200);   // page 0 -> arena[0]; the entry for page 1 still says arena[1]
+
+    PagedArenaBitset destroyed;
+    destroyed.merge(pending);   // copyFrom(): the arena has one page, the stale entry is copied
+
+    PagedArenaBitset removed;
+    removed.add(4300);  // page 1
+    destroyed.merge(removed);   // used to write arena[1], one page past the end
+
+    // A new page reuses arena[1]; with the bug it wiped 4300 and aliased page 1 onto page 2.
+    destroyed.add(9000);
+    EXPECT_EQ(toVector(destroyed), (std::vector<uint32_t>{ 200, 4300, 9000 }));
+    EXPECT_EQ(destroyed.size(), 3);
+}
+
+TEST(PagedArenaBitsetTest, MergeAfterStaticOperationIgnoresStaleDirectory) {
+    PagedArenaBitset a;
+    a.add(5000);    // page 1
+    PagedArenaBitset b;
+    b.add(5000);
+
+    PagedArenaBitset out;
+    PagedArenaBitset::intersect(&out, a, b);    // page 1 -> arena[0]
+    PagedArenaBitset c;
+    c.add(10);      // page 0
+    PagedArenaBitset::intersect(&out, c, c);    // clears out, page 0 -> arena[0]
+
+    PagedArenaBitset d;
+    d.add(5001);    // page 1
+    out.merge(d);
+    EXPECT_EQ(toVector(out), (std::vector<uint32_t>{ 10, 5001 }));
+}
+
+TEST(PagedArenaBitsetTest, MergeSizeIgnoresStaleDirectory) {
+    PagedArenaBitset a;
+    a.add(5000);    // page 1 -> arena[0]
+    a.clear();
+    a.add(100);     // page 0 -> arena[0]
+
+    PagedArenaBitset b;
+    b.add(4300);    // page 1
+
+    EXPECT_EQ(PagedArenaBitset::mergeSize(a, b), 2);
+    EXPECT_EQ(PagedArenaBitset::mergeSize(b, a), 2);
+}
+
+TEST(PagedArenaBitsetTest, StaticMergeIgnoresStaleDirectory) {
+    PagedArenaBitset a;
+    a.add(5000);    // page 1 -> arena[0]
+    a.clear();
+    a.add(100);     // page 0 -> arena[0]
+
+    PagedArenaBitset b;
+    b.add(4300);    // page 1
+
+    EXPECT_EQ(toVector(PagedArenaBitset::merge(a, b)), (std::vector<uint32_t>{ 100, 4300 }));
+    EXPECT_EQ(toVector(PagedArenaBitset::merge(b, a)), (std::vector<uint32_t>{ 100, 4300 }));
+}
+
+TEST(PagedArenaBitsetTest, CopyFromDoesNotKeepFreePages) {
+    PagedArenaBitset a;
+    a.add(10);      // page 0 -> arena[0]
+    a.add(5000);    // page 1 -> arena[1]
+    PagedArenaBitset drop;
+    drop.add(5000);
+    a.difference(drop);     // page 1 becomes empty, so arena[1] goes on a's free list
+
+    PagedArenaBitset src;
+    src.add(20);    // page 0 -> arena[0]
+    src.add(4200);  // page 1 -> arena[1]
+    a.copyFrom(src);
+
+    // A new page must not reuse arena[1], which now holds page 1.
+    a.add(9000);
+    EXPECT_EQ(toVector(a), (std::vector<uint32_t>{ 20, 4200, 9000 }));
+    EXPECT_EQ(a.size(), 3);
+}
+
 TEST(PagedArenaBitsetTest, Swap) {
     PagedArenaBitset bs1;
     PagedArenaBitset bs2;
@@ -950,4 +1077,46 @@ TEST(PagedArenaBitsetTest, BatchAddFilteredSlice) {
     PagedArenaBitset bsEmpty;
     bsEmpty.add({ batch.data(), batch.size() }, &emptyFilter);
     EXPECT_TRUE(bsEmpty.empty());
+}
+
+TEST(PagedArenaBitsetTest, OperatorSubscriptInvariants) {
+    PagedArenaBitset bs;
+    constexpr uint32_t kMaxIndex = (1u << PagedArenaBitset::DOMAIN_BITS) - 1u;
+
+    // Unallocated pages across the entire domain return false
+    EXPECT_FALSE(bs[0u]);
+    EXPECT_FALSE(bs[63u]);
+    EXPECT_FALSE(bs[64u]);
+    EXPECT_FALSE(bs[4095u]);
+    EXPECT_FALSE(bs[4096u]);
+    EXPECT_FALSE(bs[kMaxIndex]);
+
+    // Boundary bits within pages and words
+    std::vector<uint32_t> const testBits = {
+        0u, 1u, 63u, 64u, 65u, 4095u, 4096u, (1u << 20) + 123u, kMaxIndex
+    };
+    for (uint32_t const b : testBits) {
+        bs.add(b);
+    }
+
+    for (uint32_t const b : testBits) {
+        EXPECT_TRUE(bs[b]);
+    }
+    // Neighboring unset bits in allocated pages and unallocated pages
+    EXPECT_FALSE(bs[2u]);
+    EXPECT_FALSE(bs[62u]);
+    EXPECT_FALSE(bs[66u]);
+    EXPECT_FALSE(bs[4094u]);
+    EXPECT_FALSE(bs[4097u]);
+    EXPECT_FALSE(bs[kMaxIndex - 1u]);
+
+    // Removing a bit creating a ghost page still returns false
+    bs.remove(4096u);
+    EXPECT_FALSE(bs[4096u]);
+
+    // Clearing resets summary masks (while leaving stale directory entries) and must return false
+    bs.clear();
+    for (uint32_t const b : testBits) {
+        EXPECT_FALSE(bs[b]);
+    }
 }

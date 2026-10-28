@@ -43,11 +43,12 @@ public:
 
     /**
      * Checks if a given texture format is compatible with render pass-based mipmap generation.
+     * @param float32Filterable whether the device supports wgpu::FeatureName::Float32Filterable
      * @return A FormatCompatibility struct indicating whether the format is compatible
      *         and a reason if not.
      */
     [[nodiscard]] static FormatCompatibility getCompatibilityFor(wgpu::TextureFormat,
-            wgpu::TextureDimension, uint32_t sampleCount);
+            wgpu::TextureDimension, uint32_t sampleCount, bool float32Filterable);
 
     void generateMipmaps(wgpu::Texture const&);
 

@@ -1338,7 +1338,7 @@ Type
 
 Value
 :     Each entry must be any of `dynamicLighting`, `directionalLighting`, `shadowReceiver`,
-      `skinning`, `ssr`, or `stereo`.
+      `skinning`, `ssr`, `stereo`, or `motionVectors`.
 
 Description
 :     Used to specify a list of shader variants that the application guarantees will never be
@@ -1358,6 +1358,7 @@ Description of the variants:
 - `vsm`, used when VSM shadows are enabled and the object is a shadow receiver
 - `ssr`, used when screen-space reflections are enabled in the View
 - `stereo`, used when stereoscopic rendering is enabled in the View
+- `motionVectors`, used when motion vectors are enabled in the View
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
@@ -3138,6 +3139,8 @@ variants:
 - `fog`, used when global fog is applied to the scene
 - `vsm`, used when VSM shadows are enabled and the object is a shadow receiver
 - `ssr`, used when screen-space reflections are enabled in the View
+- `stereo`, used when stereoscopic rendering is enabled in the View
+- `motionVectors`, used when motion vectors are enabled in the View
 
 Example:
 ```

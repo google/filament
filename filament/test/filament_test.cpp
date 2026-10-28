@@ -25,6 +25,7 @@
 
 #include "details/Camera.h"
 #include "details/Engine.h"
+#include "details/InstanceBuffer.h"
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
 #include "details/Renderer.h"
@@ -43,6 +44,7 @@
 #include <filament/FrameHistoryStream.h>
 #include <filament/Frustum.h>
 #include <filament/IndexBuffer.h>
+#include <filament/InstanceBuffer.h>
 #include <filament/SkinningBuffer.h>
 #include <filament/SwapChain.h>
 #include <filament/Texture.h>
@@ -55,7 +57,10 @@
 #include <backend/BufferDescriptor.h>
 #include <backend/DriverEnums.h>
 
+#include <utils/Entity.h>
+#include <utils/EntityManager.h>
 #include <utils/NameComponentManager.h>
+#include <utils/PagedArenaBitset.h>
 #include <utils/Slice.h>
 
 #include <math/half.h>
@@ -569,6 +574,57 @@ TEST(FilamentTest, TransformManagerCallback) {
     Engine::destroy((Engine**)&engine);
 }
 
+TEST(FilamentTest, InstanceBufferUidAndRevision) {
+    FEngine* engine = downcast(Engine::create(Engine::Backend::NOOP));
+
+    std::array<mat4f, 2> const transforms = {
+            mat4f::translation(float3{ 1.0f, 2.0f, 3.0f }),
+            mat4f::translation(float3{ 4.0f, 5.0f, 6.0f }) };
+
+    FInstanceBuffer* const a = downcast(InstanceBuffer::Builder(transforms.size())
+            .localTransforms(transforms.data())
+            .build(*engine));
+    FInstanceBuffer* const b = downcast(InstanceBuffer::Builder(transforms.size())
+            .build(*engine));
+
+    // 1. uids are unique and never 0
+    EXPECT_NE(a->getUid(), 0u);
+    EXPECT_NE(b->getUid(), 0u);
+    EXPECT_NE(a->getUid(), b->getUid());
+
+    // 2. the uid of a destroyed InstanceBuffer is never reused
+    uint64_t const uidB = b->getUid();
+    engine->destroy(b);
+    FInstanceBuffer* const c = downcast(InstanceBuffer::Builder(1).build(*engine));
+    EXPECT_NE(c->getUid(), 0u);
+    EXPECT_NE(c->getUid(), a->getUid());
+    EXPECT_NE(c->getUid(), uidB);
+
+    // 3. the revision only changes when the local transforms actually change
+    uint64_t const revision = a->getRevision();
+    a->setLocalTransforms(transforms.data(), transforms.size(), 0); // same transforms
+    EXPECT_EQ(a->getRevision(), revision);
+    a->setLocalTransforms(transforms.data(), 0, 0);                 // no transforms
+    EXPECT_EQ(a->getRevision(), revision);
+
+    mat4f const moved = mat4f::translation(float3{ 7.0f, 8.0f, 9.0f });
+    a->setLocalTransforms(&moved, 1, 1);
+    EXPECT_EQ(a->getRevision(), revision + 1);
+    EXPECT_EQ(a->getLocalTransform(0), transforms[0]);
+    EXPECT_EQ(a->getLocalTransform(1), moved);
+    EXPECT_EQ(a->getLocalTransforms()[1], moved);
+
+    a->setLocalTransforms(&moved, 1, 1);                            // same again
+    EXPECT_EQ(a->getRevision(), revision + 1);
+
+    // 4. the revision is per InstanceBuffer
+    EXPECT_EQ(c->getRevision(), 0u);
+
+    engine->destroy(a);
+    engine->destroy(c);
+    Engine::destroy((Engine**)&engine);
+}
+
 TEST(FilamentTest, TransformManagerHierarchyAndMath) {
     EntityManager& em = EntityManager::get();
     FTransformManager tcm(em);
@@ -896,6 +952,129 @@ TEST(FilamentTest, TransformManagerLazyAndConcurrent) {
         tcm.destroy(e);
         em.destroy(e);
     }
+}
+
+TEST(FilamentTest, TransformManagerCreateOverloadsAndRecreation) {
+    EntityManager& em = EntityManager::get();
+    FTransformManager tcm(em);
+    tcm.setAccurateTranslationsEnabled(true);
+
+    Entity const root = em.create();
+    Entity const childDefault = em.create();
+    Entity const childFloat = em.create();
+    Entity const childDouble = em.create();
+
+    // 1. Default create(Entity) initializes identity local transform and zero lo translation
+    tcm.create(root);
+    auto const rootInst = tcm.getInstance(root);
+    ASSERT_TRUE(rootInst.isValid());
+    EXPECT_EQ(tcm.getTransform(rootInst), mat4f{});
+    EXPECT_EQ(tcm.getTransformAccurate(rootInst), mat4{});
+    EXPECT_EQ(tcm.getWorldTransform(rootInst), mat4f{});
+    EXPECT_EQ(tcm.getWorldTransformAccurate(rootInst), mat4{});
+
+    // 2. Re-creating an entity with an existing component replaces it cleanly and updates transform.
+    // Use translations with sub-float32-ULP residuals so localTranslationLo is non-zero.
+    mat4 const rootAccurate = mat4::translation(
+            double3{ 100000.1251220703125, -200000.250244140625, 300000.50048828125 });
+    tcm.create(root, {}, rootAccurate);
+    auto const newRootInst = tcm.getInstance(root);
+    ASSERT_TRUE(newRootInst.isValid());
+    for (size_t c = 0; c < 4; ++c) {
+        for (size_t r = 0; r < 4; ++r) {
+            EXPECT_NEAR(tcm.getTransformAccurate(newRootInst)[c][r], rootAccurate[c][r], 1e-6);
+            EXPECT_NEAR(tcm.getWorldTransformAccurate(newRootInst)[c][r], rootAccurate[c][r], 1e-6);
+        }
+    }
+
+    // 3. Create child with default overload, mat4f overload, and mat4 accurate overload
+    tcm.create(childDefault);
+    tcm.setParent(tcm.getInstance(childDefault), newRootInst);
+
+    mat4f const floatLocal = mat4f::translation(float3{ 1.5f, -2.5f, 3.5f });
+    tcm.create(childFloat, newRootInst, floatLocal);
+
+    mat4 const doubleLocal = mat4::translation(
+            double3{ 10000.37506103515625, -20000.6251220703125, 30000.875244140625 });
+    tcm.create(childDouble, newRootInst, doubleLocal);
+
+    mat4 const expectedFloatWorld = rootAccurate * mat4(floatLocal);
+    mat4 const expectedDoubleWorld = rootAccurate * doubleLocal;
+    for (size_t c = 0; c < 4; ++c) {
+        for (size_t r = 0; r < 4; ++r) {
+            EXPECT_NEAR(tcm.getTransformAccurate(tcm.getInstance(childDouble))[c][r],
+                    doubleLocal[c][r], 1e-6);
+            EXPECT_NEAR(tcm.getWorldTransformAccurate(tcm.getInstance(childDefault))[c][r],
+                    rootAccurate[c][r], 1e-6);
+            EXPECT_NEAR(tcm.getWorldTransformAccurate(tcm.getInstance(childFloat))[c][r],
+                    expectedFloatWorld[c][r], 1e-6);
+            EXPECT_NEAR(tcm.getWorldTransformAccurate(tcm.getInstance(childDouble))[c][r],
+                    expectedDoubleWorld[c][r], 1e-6);
+        }
+    }
+
+    Entity const all[] = { childDouble, childFloat, childDefault, root };
+    tcm.destroyComponents(all, 4);
+    em.destroy(4, all);
+}
+
+TEST(FilamentTest, ComponentManagersSingleProbeCreateAndDestroy) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    EntityManager& em = engine->getEntityManager();
+    auto& tcm = engine->getTransformManager();
+    auto& lcm = engine->getLightManager();
+
+    Entity const e1 = em.create();
+    Entity const e2 = em.create();
+    Entity const eMissing = em.create();
+
+    // 1. LightManager create, re-create on existing entity, and destroy
+    LightManager::Builder(LightManager::Type::POINT)
+            .intensityCandela(1000.0f)
+            .build(*engine, e1);
+    EXPECT_TRUE(lcm.hasComponent(e1));
+    EXPECT_EQ(lcm.getType(lcm.getInstance(e1)), LightManager::Type::POINT);
+    EXPECT_FLOAT_EQ(lcm.getIntensity(lcm.getInstance(e1)), 1000.0f);
+
+    // Re-creating a light on e1 replaces the existing component
+    LightManager::Builder(LightManager::Type::SUN)
+            .intensity(2500.0f)
+            .build(*engine, e1);
+    EXPECT_TRUE(lcm.hasComponent(e1));
+    EXPECT_EQ(lcm.getType(lcm.getInstance(e1)), LightManager::Type::SUN);
+    EXPECT_FLOAT_EQ(lcm.getIntensity(lcm.getInstance(e1)), 2500.0f);
+
+    // Destroying a missing entity is a safe no-op
+    lcm.destroy(eMissing);
+    lcm.destroy(e1);
+    EXPECT_FALSE(lcm.hasComponent(e1));
+
+    // 2. CameraManager create (auto-creates Transform), re-create, and destroy
+    Camera* cam1 = engine->createCamera(e1);
+    ASSERT_NE(cam1, nullptr);
+    EXPECT_TRUE(tcm.hasComponent(e1));
+
+    // Re-creating camera on e1 destroys old camera and creates a new one
+    Camera* cam1Replaced = engine->createCamera(e1);
+    ASSERT_NE(cam1Replaced, nullptr);
+    EXPECT_EQ(engine->getCameraComponent(e1), cam1Replaced);
+
+    // Camera on an entity that already owns a Transform does not destroy the Transform on camera destroy
+    tcm.create(e2);
+    Camera* cam2 = engine->createCamera(e2);
+    ASSERT_NE(cam2, nullptr);
+    engine->destroyCameraComponent(e2);
+    EXPECT_EQ(engine->getCameraComponent(e2), nullptr);
+    EXPECT_TRUE(tcm.hasComponent(e2));
+
+    engine->destroyCameraComponent(e1);
+    EXPECT_EQ(engine->getCameraComponent(e1), nullptr);
+    EXPECT_FALSE(tcm.hasComponent(e1));
+
+    tcm.destroy(e2);
+    Entity const all[] = { e1, e2, eMissing };
+    em.destroy(3, all);
+    Engine::destroy(&engine);
 }
 
 TEST(FilamentTest, TransformManagerDefragment) {
@@ -3496,6 +3675,86 @@ TEST_F(SceneCacheTest, DestroyedEntityIsEvictedFromAllViews) {
     prepare(scene, x, T);
     EXPECT_FALSE(hasRenderableRow(y, r2));
     EXPECT_FALSE(hasRenderableRow(x, r2));
+}
+
+// Removing an entity from the Scene and destroying another one in the same frame, with their
+// ids on two different PagedArenaBitset pages, used to evict two unrelated renderables that were
+// still in the Scene. PagedArenaBitset::merge() trusted the stale directory entries that
+// FScene's per-frame clear() of its pending-destroyed sets leaves behind.
+TEST_F(SceneCacheTest, RemoveAndDestroyOnDifferentPagesKeepsOtherEntities) {
+    constexpr uint32_t PAGE = 1u << PagedArenaBitset::FILAMENT_PAGE_SHIFT;
+    EntityManager& em = engine->getEntityManager();
+
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+
+    // Entity ids depend on what earlier tests did, so create enough entities to span a few
+    // pages, then look for ids that sit at the same offset on two consecutive pages.
+    std::vector<Entity> pool(3 * PAGE);
+    em.create(pool.size(), pool.data());
+    mEntities.insert(mEntities.end(), pool.begin(), pool.end());
+    std::vector<uint32_t> ids;
+    ids.reserve(pool.size());
+    for (Entity const e : pool) {
+        ids.push_back(e.getId());
+    }
+    std::sort(ids.begin(), ids.end());
+    std::vector<uint32_t> lows; // ids whose counterpart one page up also exists
+    for (uint32_t const id : ids) {
+        if (std::binary_search(ids.begin(), ids.end(), id + PAGE)) {
+            if (!lows.empty() && lows.front() / PAGE != id / PAGE) {
+                if (lows.size() >= 4) {
+                    break;
+                }
+                lows.clear();
+            }
+            lows.push_back(id);
+        }
+    }
+    ASSERT_GE(lows.size(), 4u);
+
+    // X and D are on page p; E = X + PAGE, Y = D + PAGE, U1 and U2 are on page p + 1.
+    Entity const X = Entity::import(int32_t(lows[0]));
+    Entity const D = Entity::import(int32_t(lows[1]));
+    Entity const E = Entity::import(int32_t(lows[0] + PAGE));
+    Entity const Y = Entity::import(int32_t(lows[1] + PAGE));
+    Entity const U1 = Entity::import(int32_t(lows[2] + PAGE));
+    Entity const U2 = Entity::import(int32_t(lows[3] + PAGE));
+
+    for (Entity const e : { X, E, D, Y }) {
+        engine->getTransformManager().create(e);
+        RenderableManager::Builder(1)
+                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
+                .build(*engine, e);
+        scene->addEntity(e);
+    }
+    prepare(scene, view, T);
+    ASSERT_TRUE(hasRenderableRow(view, X));
+    ASSERT_TRUE(hasRenderableRow(view, Y));
+
+    // Destroy an unrelated entity on page p + 1 in each of two frames. FScene double-buffers
+    // its pending-destroyed set, so both buffers end up cleared with a stale entry for p + 1.
+    em.destroy(U1);
+    prepare(scene, view, T);
+    em.destroy(U2);
+    prepare(scene, view, T);
+
+    // In one frame, remove E (page p + 1) from the Scene and destroy D (page p).
+    scene->remove(E);
+    engine->destroy(D);
+    em.destroy(D);
+    prepare(scene, view, T);
+
+    EXPECT_FALSE(hasRenderableRow(view, E));
+    EXPECT_FALSE(hasRenderableRow(view, D));
+    EXPECT_TRUE(hasRenderableRow(view, X));
+    EXPECT_TRUE(hasRenderableRow(view, Y));
+
+    // The cache must stay correct on later frames too.
+    prepare(scene, view, T);
+    EXPECT_TRUE(hasRenderableRow(view, X));
+    EXPECT_TRUE(hasRenderableRow(view, Y));
 }
 
 TEST_F(SceneCacheTest, SceneSwitchDropsOldSceneRows) {

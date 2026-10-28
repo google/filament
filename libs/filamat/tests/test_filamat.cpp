@@ -887,6 +887,142 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerOutputFactor) {
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
+TEST_F(MaterialCompiler, StaticCodeAnalyzerVertexCustomDepthDetection) {
+    const std::string fragmentCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+        }
+    )");
+
+    auto analyzeVertex = [&](const std::string& vertexCode,
+            MaterialBuilder::VertexDomain domain = MaterialBuilder::VertexDomain::OBJECT) {
+        MaterialBuilder builder;
+        builder.material(fragmentCode.c_str());
+        builder.materialVertex(vertexCode.c_str());
+        builder.platform(MaterialBuilder::Platform::MOBILE);
+        builder.optimization(MaterialBuilder::Optimization::NONE);
+        builder.shading(MaterialBuilder::Shading::LIT);
+        builder.vertexDomain(domain);
+        builder.require(filament::VertexAttribute::UV0);
+        builder.require(filament::VertexAttribute::COLOR);
+        builder.setApiLevel(filament::UNSTABLE_MATERIAL_API_LEVEL);
+
+        MaterialBuilder::PropertyList allProperties;
+        std::fill_n(allProperties, MaterialBuilder::MATERIAL_PROPERTIES_COUNT, true);
+
+        const std::string shaderCode = builder.peek(ShaderStage::VERTEX,
+                {
+                    .shaderModel = ShaderModel::MOBILE,
+                    .targetApi = MaterialBuilder::TargetApi::OPENGL,
+                    .targetLanguage = MaterialBuilder::TargetLanguage::GLSL,
+                    .featureLevel = FeatureLevel::FEATURE_LEVEL_1,
+                },
+                allProperties);
+        auto const result = GLSLTools::analyzeVertexShader(shaderCode, ShaderModel::MOBILE,
+                MaterialBuilder::MaterialDomain::SURFACE, MaterialBuilder::TargetApi::OPENGL,
+                MaterialBuilder::TargetLanguage::GLSL);
+        EXPECT_TRUE(result.has_value());
+        return result.has_value() && result->userMaterialVertexHasCustomDepth;
+    };
+
+    // Empty vertex shader does not modify position.
+    EXPECT_FALSE(analyzeVertex(R"(
+        void materialVertex(inout MaterialVertexInputs material) {
+        }
+    )"));
+
+    // Modifying UVs, color, worldNormal, or reading worldPosition does not modify vertex position.
+    EXPECT_FALSE(analyzeVertex(R"(
+        float readPos(in vec4 p) {
+            return p.x + p.y;
+        }
+        void materialVertex(inout MaterialVertexInputs material) {
+            material.uv0 = vec2(readPos(material.worldPosition));
+            material.color = vec4(1.0);
+            material.worldNormal = normalize(material.worldNormal);
+        }
+    )"));
+
+    // Direct or compound write to worldPosition modifies vertex position.
+    EXPECT_TRUE(analyzeVertex(R"(
+        void materialVertex(inout MaterialVertexInputs material) {
+            material.worldPosition.xyz += vec3(0.0, 1.0, 0.0);
+        }
+    )"));
+
+    // Passing worldPosition as an inout parameter to a helper function modifies vertex position,
+    // including when the call appears on the RHS of an assignment/initialization.
+    EXPECT_TRUE(analyzeVertex(R"(
+        void displace(inout vec3 pos) {
+            pos.y += 1.0;
+        }
+        void materialVertex(inout MaterialVertexInputs material) {
+            displace(material.worldPosition.xyz);
+        }
+    )"));
+
+    EXPECT_TRUE(analyzeVertex(R"(
+        float applyWind(inout vec4 pos) {
+            pos.x += sin(getUserTime().x) * 0.1;
+            return pos.x;
+        }
+        void materialVertex(inout MaterialVertexInputs material) {
+            float sway = applyWind(material.worldPosition);
+            material.uv0.x = sway;
+        }
+    )"));
+
+    // Passing the MaterialVertexInputs struct to an inout helper that writes worldPosition.
+    EXPECT_TRUE(analyzeVertex(R"(
+        void helper(inout MaterialVertexInputs m) {
+            m.worldPosition = vec4(1.0);
+        }
+        void materialVertex(inout MaterialVertexInputs material) {
+            helper(material);
+        }
+    )"));
+
+    // Passing the MaterialVertexInputs struct to an inout helper that only writes uv0.
+    EXPECT_FALSE(analyzeVertex(R"(
+        void helper(inout MaterialVertexInputs m) {
+            m.uv0 = vec2(0.5);
+        }
+        void materialVertex(inout MaterialVertexInputs material) {
+            helper(material);
+        }
+    )"));
+
+    // Direct writes to clipSpaceTransform or clipSpacePosition modify vertex position.
+    EXPECT_TRUE(analyzeVertex(R"(
+        void materialVertex(inout MaterialVertexInputs material) {
+            material.clipSpaceTransform = mat4(1.0);
+        }
+    )", MaterialBuilder::VertexDomain::DEVICE));
+
+    EXPECT_TRUE(analyzeVertex(R"(
+        void materialVertex(inout MaterialVertexInputs material) {
+            material.clipSpacePosition = vec4(0.0, 0.0, 0.0, 1.0);
+        }
+    )", MaterialBuilder::VertexDomain::DEVICE));
+
+    // Direct write to gl_Position or gl_PointSize modifies vertex position.
+    EXPECT_TRUE(analyzeVertex(R"(
+        void materialVertex(inout MaterialVertexInputs material) {
+            gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
+        }
+    )"));
+
+    EXPECT_TRUE(analyzeVertex(R"(
+        float setPointSize() {
+            gl_PointSize = 4.0;
+            return 1.0;
+        }
+        void materialVertex(inout MaterialVertexInputs material) {
+            material.uv0.x = setPointSize();
+        }
+    )"));
+}
+
 TEST_F(MaterialCompiler, EmptyName) {
     const std::string shaderCode(R"(
         void material(inout MaterialInputs material) {

@@ -90,6 +90,7 @@ public:
     using SoftShadowOptions = filament::SoftShadowOptions;
     using ScreenSpaceReflectionsOptions = filament::ScreenSpaceReflectionsOptions;
     using GuardBandOptions = filament::GuardBandOptions;
+    using MotionVectorsOptions = filament::MotionVectorsOptions;
     using StereoscopicOptions = filament::StereoscopicOptions;
 
     /**
@@ -408,6 +409,25 @@ public:
      * @return guard band options
      */
     GuardBandOptions const& getGuardBandOptions() const noexcept;
+
+    /**
+     * Enables or disables the motion vectors pass. Disabled by default.
+     *
+     * Motion vectors are only generated when post-processing is enabled, stereo is disabled,
+     * the engine runs at feature level 1 or higher and the device supports RG16F render
+     * targets; otherwise this setting has no effect.
+     *
+     * @param options motion vectors options
+     * @see MotionVectorsOptions
+     */
+    void setMotionVectorsOptions(MotionVectorsOptions options) noexcept;
+
+    /**
+     * Returns the motion vectors options.
+     *
+     * @return motion vectors options
+     */
+    MotionVectorsOptions const& getMotionVectorsOptions() const noexcept;
 
     /**
      * Enables or disable multi-sample antialiasing (MSAA). Disabled by default.

@@ -31,7 +31,7 @@
 namespace filament {
 
 // update this when a new version of filament wouldn't work with older materials
-static constexpr size_t MATERIAL_VERSION = 78;
+static constexpr size_t MATERIAL_VERSION = 80;
 
 // Those are the api levels that are used in the source material file (.mat)
 //
@@ -322,7 +322,8 @@ enum class UTILS_APIGEN_FLAGS UserVariantFilterBit : UserVariantFilterMask {
     VSM = 0x20,                  //!< Variance shadow maps
     SSR = 0x40,                  //!< Screen-space reflections
     STE = 0x80,                  //!< Instanced stereo rendering
-    ALL = 0xFF,
+    MOTION_VECTORS = 0x100,      //!< Motion vectors
+    ALL = 0x1FF,
 };
 
 } // namespace filament

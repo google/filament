@@ -1,8 +1,68 @@
 diff --git a/third_party/cgltf/cgltf.h b/third_party/cgltf/cgltf.h
-index 78ea905f0..97b5c8774 100644
+index 78ea905f0..91ef6ca13 100644
 --- a/third_party/cgltf/cgltf.h
 +++ b/third_party/cgltf/cgltf.h
-@@ -1612,8 +1612,19 @@ cgltf_result cgltf_validate(cgltf_data* data)
+@@ -536,6 +536,12 @@ typedef struct cgltf_dispersion
+ 	cgltf_float dispersion;
+ } cgltf_dispersion;
+ 
++typedef struct cgltf_retroreflection
++{
++	cgltf_float retroreflection_factor;
++	cgltf_texture_view retroreflection_texture;
++} cgltf_retroreflection;
++
+ typedef struct cgltf_material
+ {
+ 	char* name;
+@@ -552,6 +558,7 @@ typedef struct cgltf_material
+ 	cgltf_bool has_diffuse_transmission;
+ 	cgltf_bool has_anisotropy;
+ 	cgltf_bool has_dispersion;
++	cgltf_bool has_retroreflection;
+ 	cgltf_pbr_metallic_roughness pbr_metallic_roughness;
+ 	cgltf_pbr_specular_glossiness pbr_specular_glossiness;
+ 	cgltf_clearcoat clearcoat;
+@@ -565,6 +572,7 @@ typedef struct cgltf_material
+ 	cgltf_diffuse_transmission diffuse_transmission;
+ 	cgltf_anisotropy anisotropy;
+ 	cgltf_dispersion dispersion;
++	cgltf_retroreflection retroreflection;
+ 	cgltf_texture_view normal_texture;
+ 	cgltf_texture_view occlusion_texture;
+ 	cgltf_texture_view emissive_texture;
+@@ -1308,8 +1316,21 @@ static cgltf_result cgltf_load_buffer_file(const cgltf_options* options, cgltf_s
+ 	cgltf_decode_uri(path + strlen(path) - strlen(uri));
+ 
+ 	void* file_data = NULL;
++	cgltf_size requested_size = size;
+ 	cgltf_result result = file_read(&options->memory, &options->file, path, &size, &file_data);
+ 
++	if (result == cgltf_result_success && file_data != NULL && size < requested_size)
++	{
++		/*
++		 * A present-but-short read must not succeed silently: the caller keeps
++		 * the declared buffer size, so every later access trusts a length the
++		 * reader never delivered. Fail the load instead. (A NULL data pointer
++		 * with success means "not downloaded yet" for the cache reader, and is
++		 * intentionally left alone.)
++		 */
++		result = cgltf_result_io_error;
++	}
++
+ 	memory_free(options->memory.user_data, path);
+ 
+ 	*out_data = (result == cgltf_result_success) ? file_data : NULL;
+@@ -1547,7 +1568,7 @@ cgltf_result cgltf_load_buffers(const cgltf_options* options, cgltf_data* data,
+ 
+ static cgltf_size cgltf_calc_index_bound(cgltf_buffer_view* buffer_view, cgltf_size offset, cgltf_component_type component_type, cgltf_size count)
+ {
+-	char* data = (char*)buffer_view->buffer->data + offset + buffer_view->offset;
++	char* data = (char*)cgltf_buffer_view_data(buffer_view) + offset;
+ 	cgltf_size bound = 0;
+ 
+ 	switch (component_type)
+@@ -1612,8 +1633,19 @@ cgltf_result cgltf_validate(cgltf_data* data)
  			cgltf_accessor_sparse* sparse = &accessor->sparse;
  
  			cgltf_size indices_component_size = cgltf_component_size(sparse->indices_component_type);
@@ -24,7 +84,25 @@ index 78ea905f0..97b5c8774 100644
  
  			CGLTF_ASSERT_IF(sparse->indices_buffer_view->size < indices_req_size ||
  							sparse->values_buffer_view->size < values_req_size, cgltf_result_data_too_short);
-@@ -2433,9 +2444,14 @@ cgltf_size cgltf_accessor_unpack_floats(const cgltf_accessor* accessor, cgltf_fl
+@@ -1622,7 +1654,7 @@ cgltf_result cgltf_validate(cgltf_data* data)
+ 							sparse->indices_component_type != cgltf_component_type_r_16u &&
+ 							sparse->indices_component_type != cgltf_component_type_r_32u, cgltf_result_invalid_gltf);
+ 
+-			if (sparse->indices_buffer_view->buffer->data)
++			if (cgltf_buffer_view_data(sparse->indices_buffer_view))
+ 			{
+ 				cgltf_size index_bound = cgltf_calc_index_bound(sparse->indices_buffer_view, sparse->indices_byte_offset, sparse->indices_component_type, sparse->count);
+ 
+@@ -1709,7 +1741,7 @@ cgltf_result cgltf_validate(cgltf_data* data)
+ 			CGLTF_ASSERT_IF(indices && indices->type != cgltf_type_scalar, cgltf_result_invalid_gltf);
+ 			CGLTF_ASSERT_IF(indices && indices->stride != cgltf_component_size(indices->component_type), cgltf_result_invalid_gltf);
+ 
+-			if (indices && indices->buffer_view && indices->buffer_view->buffer->data)
++			if (indices && indices->buffer_view && cgltf_buffer_view_data(indices->buffer_view))
+ 			{
+ 				cgltf_size index_bound = cgltf_calc_index_bound(indices->buffer_view, indices->offset, indices->component_type, indices->count);
+ 
+@@ -2433,9 +2465,14 @@ cgltf_size cgltf_accessor_unpack_floats(const cgltf_accessor* accessor, cgltf_fl
  		reader_head += sparse->values_byte_offset;
  
  		cgltf_size index_stride = cgltf_component_size(sparse->indices_component_type);
@@ -40,7 +118,7 @@ index 78ea905f0..97b5c8774 100644
  			float* writer_head = out + writer_index * floats_per_element;
  
  			if (!cgltf_element_read_float(reader_head, accessor->type, accessor->component_type, accessor->normalized, writer_head, floats_per_element))
-@@ -2512,7 +2528,7 @@ cgltf_bool cgltf_accessor_read_uint(const cgltf_accessor* accessor, cgltf_size i
+@@ -2512,7 +2549,7 @@ cgltf_bool cgltf_accessor_read_uint(const cgltf_accessor* accessor, cgltf_size i
  	{
  		return 0;
  	}
@@ -49,7 +127,7 @@ index 78ea905f0..97b5c8774 100644
  	return cgltf_element_read_uint(element, accessor->type, accessor->component_type, out, element_size);
  }
  
-@@ -2531,7 +2547,7 @@ cgltf_size cgltf_accessor_read_index(const cgltf_accessor* accessor, cgltf_size
+@@ -2531,7 +2568,7 @@ cgltf_size cgltf_accessor_read_index(const cgltf_accessor* accessor, cgltf_size
  	{
  		return 0; // This is an error case, but we can't communicate the error with existing interface.
  	}
@@ -58,3 +136,57 @@ index 78ea905f0..97b5c8774 100644
  	return cgltf_component_read_index(element, accessor->component_type);
  }
  
+@@ -4436,6 +4473,41 @@ static int cgltf_parse_json_dispersion(jsmntok_t const* tokens, int i, const uin
+ 	return i;
+ }
+ 
++static int cgltf_parse_json_retroreflection(cgltf_options* options, jsmntok_t const* tokens, int i, const uint8_t* json_chunk, cgltf_retroreflection* out_retroreflection)
++{
++	CGLTF_CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
++	int size = tokens[i].size;
++	++i;
++
++
++	for (int j = 0; j < size; ++j)
++	{
++		CGLTF_CHECK_KEY(tokens[i]);
++
++		if (cgltf_json_strcmp(tokens + i, json_chunk, "retroreflectionFactor") == 0)
++		{
++			++i;
++			out_retroreflection->retroreflection_factor = cgltf_json_to_float(tokens + i, json_chunk);
++			++i;
++		}
++		else if (cgltf_json_strcmp(tokens + i, json_chunk, "retroreflectionTexture") == 0)
++		{
++			i = cgltf_parse_json_texture_view(options, tokens, i + 1, json_chunk, &out_retroreflection->retroreflection_texture);
++		}
++		else
++		{
++			i = cgltf_skip_json(tokens, i + 1);
++		}
++
++		if (i < 0)
++		{
++			return i;
++		}
++	}
++
++	return i;
++}
++
+ static int cgltf_parse_json_image(cgltf_options* options, jsmntok_t const* tokens, int i, const uint8_t* json_chunk, cgltf_image* out_image)
+ {
+ 	CGLTF_CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+@@ -4867,6 +4939,11 @@ static int cgltf_parse_json_material(cgltf_options* options, jsmntok_t const* to
+ 					out_material->has_dispersion = 1;
+ 					i = cgltf_parse_json_dispersion(tokens, i + 1, json_chunk, &out_material->dispersion);
+ 				}
++				else if (cgltf_json_strcmp(tokens + i, json_chunk, "KHR_materials_retroreflection") == 0)
++				{
++					out_material->has_retroreflection = 1;
++					i = cgltf_parse_json_retroreflection(options, tokens, i + 1, json_chunk, &out_material->retroreflection);
++				}
+ 				else
+ 				{
+ 					i = cgltf_parse_json_unprocessed_extension(options, tokens, i, json_chunk, &(out_material->extensions[out_material->extensions_count++]));

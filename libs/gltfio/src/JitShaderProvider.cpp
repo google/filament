@@ -78,6 +78,7 @@ JitShaderProvider::JitShaderProvider(Engine* engine, bool optimizeShaders,
         strToEnum["fog"]                    = filament::UserVariantFilterBit::FOG;
         strToEnum["ssr"]                    = filament::UserVariantFilterBit::SSR;
         strToEnum["stereo"]                 = filament::UserVariantFilterBit::STE;
+        strToEnum["motionVectors"]          = filament::UserVariantFilterBit::MOTION_VECTORS;
         return strToEnum;
     }();
 
@@ -89,6 +90,9 @@ JitShaderProvider::JitShaderProvider(Engine* engine, bool optimizeShaders,
         }
         mVariantFilter |= (uint32_t)strToEnum.at(filterStr);
     }
+#if !defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+    mVariantFilter |= uint32_t(filament::UserVariantFilterBit::MOTION_VECTORS);
+#endif
     MaterialBuilder::init();
 }
 

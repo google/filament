@@ -62,7 +62,11 @@ fi
 
 # Flags that vary by configuration. The defaults describe the OSMesa-backed debug build that the
 # opengl, vulkan and webgpu runs need on both hosts.
-BUILD_FLAGS=(-W -y release -X "${PROJECT_ROOT_DIR}/mesa")
+#
+# -X points at the Mesa install prefix, not the checkout. The build compiles against
+# <prefix>/include/GL/osmesa.h, and in CI only mesa/out is restored from the cache, so the source
+# tree's copy of the header is not there to fall back on.
+BUILD_FLAGS=(-W -y release -X "${PROJECT_ROOT_DIR}/mesa/out")
 BUILD_TYPE=debug
 BUILD_DIR=cmake-debug
 

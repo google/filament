@@ -43,6 +43,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <utility>
 
 namespace filament {
@@ -254,7 +255,7 @@ private:
             size_t froxelBufferEntryCount, Viewport const& viewport) noexcept;
 
     // internal state dependent on the viewport and needed for froxelizing
-    LinearAllocatorArena mArena;                        // ~256 KiB
+    std::optional<LinearAllocatorArena> mArena;         // ~256 KiB
 
     // 4096 froxels fits in a 16KiB buffer, the minimum guaranteed in GLES 3.x and Vulkan 1.1
     uint32_t mFroxelBufferEntryCount = 4096;

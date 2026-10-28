@@ -1,7 +1,7 @@
 Mako==1.4.2
 MarkupSafe==3.0.2
 PyYAML==6.0.2
-setuptools==83.0.0
+setuptools==84.1.0
 
 # Only needed by the 'web' platform (test/renderdiff/src/web_renderer.py). The version is
 # pinned because it pins the browser: 1.63.0 ships Chromium 153.0.8010.12 (playwright build

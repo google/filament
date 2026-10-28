@@ -938,6 +938,20 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                     }
                 }
 
+                // this needs the motion vectors to be enabled in the View options
+                if (bool* displayMotionVectors =
+                        debug.getPropertyAddress<bool>("d.renderer.display_motion_vectors")) {
+                    ImGui::Checkbox("Display Motion Vectors", displayMotionVectors);
+                    if (*displayMotionVectors) {
+                        ImGui::Indent();
+                        debugSliderFloat("scale##motion_vectors",
+                                "d.renderer.display_motion_vectors_scale", 1.0f, 100.0f);
+                        debugCheckbox("Object motion only",
+                                "d.renderer.display_motion_vectors_object_only");
+                        ImGui::Unindent();
+                    }
+                }
+
                 bool cameraFrustum = app->filamentApp->isCameraFrustumEnabled();
                 ImGui::Checkbox("Show Camera Frustum", &cameraFrustum);
                 app->filamentApp->setCameraFrustumEnabled(cameraFrustum);

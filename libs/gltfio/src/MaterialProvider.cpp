@@ -73,95 +73,59 @@ void constrainMaterial(MaterialKey* key, UvMap* uvmap) {
     const int MAX_INDEX = 2;
     UvMap retval {};
     int index = 1;
+    auto updateUv = [&retval, &index](uint8_t uv) -> bool {
+        if (uv >= UvMapSize) {
+            return false;
+        }
+        if (retval[uv] == UNUSED) {
+            if (index > MAX_INDEX) {
+                return false;
+            }
+            retval[uv] = (UvSet) index++;
+        }
+        return true;
+    };
     if (key->hasBaseColorTexture) {
-        retval[key->baseColorUV] = (UvSet) index++;
+        key->hasBaseColorTexture = updateUv(key->baseColorUV);
     }
-    if (key->hasMetallicRoughnessTexture && retval[key->metallicRoughnessUV] == UNUSED) {
-        retval[key->metallicRoughnessUV] = (UvSet) index++;
+    if (key->hasMetallicRoughnessTexture) {
+        key->hasMetallicRoughnessTexture = updateUv(key->metallicRoughnessUV);
     }
-    if (key->hasNormalTexture && retval[key->normalUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasNormalTexture = false;
-        } else {
-            retval[key->normalUV] = (UvSet) index++;
-        }
+    if (key->hasNormalTexture) {
+        key->hasNormalTexture = updateUv(key->normalUV);
     }
-    if (key->hasOcclusionTexture && retval[key->aoUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasOcclusionTexture = false;
-        } else {
-            retval[key->aoUV] = (UvSet) index++;
-        }
+    if (key->hasOcclusionTexture) {
+        key->hasOcclusionTexture = updateUv(key->aoUV);
     }
-    if (key->hasEmissiveTexture && retval[key->emissiveUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasEmissiveTexture = false;
-        } else {
-            retval[key->emissiveUV] = (UvSet) index++;
-        }
+    if (key->hasEmissiveTexture) {
+        key->hasEmissiveTexture = updateUv(key->emissiveUV);
     }
-    if (key->hasTransmissionTexture && retval[key->transmissionUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasTransmissionTexture = false;
-        } else {
-            retval[key->transmissionUV] = (UvSet) index++;
-        }
+    if (key->hasTransmissionTexture) {
+        key->hasTransmissionTexture = updateUv(key->transmissionUV);
     }
-    if (key->hasClearCoatTexture && retval[key->clearCoatUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasClearCoatTexture = false;
-        } else {
-            retval[key->clearCoatUV] = (UvSet) index++;
-        }
+    if (key->hasClearCoatTexture) {
+        key->hasClearCoatTexture = updateUv(key->clearCoatUV);
     }
-    if (key->hasClearCoatRoughnessTexture && retval[key->clearCoatRoughnessUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasClearCoatRoughnessTexture = false;
-        } else {
-            retval[key->clearCoatRoughnessUV] = (UvSet) index++;
-        }
+    if (key->hasClearCoatRoughnessTexture) {
+        key->hasClearCoatRoughnessTexture = updateUv(key->clearCoatRoughnessUV);
     }
-    if (key->hasClearCoatNormalTexture && retval[key->clearCoatNormalUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasClearCoatNormalTexture = false;
-        } else {
-            retval[key->clearCoatNormalUV] = (UvSet) index++;
-        }
+    if (key->hasClearCoatNormalTexture) {
+        key->hasClearCoatNormalTexture = updateUv(key->clearCoatNormalUV);
     }
-    if (key->hasSheenColorTexture && retval[key->sheenColorUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasSheenColorTexture = false;
-        } else {
-            retval[key->sheenColorUV] = (UvSet) index++;
-        }
+    if (key->hasSheenColorTexture) {
+        key->hasSheenColorTexture = updateUv(key->sheenColorUV);
     }
-    if (key->hasSheenRoughnessTexture && retval[key->sheenRoughnessUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasSheenRoughnessTexture = false;
-        } else {
-            retval[key->sheenRoughnessUV] = (UvSet) index++;
-        }
+    if (key->hasSheenRoughnessTexture) {
+        key->hasSheenRoughnessTexture = updateUv(key->sheenRoughnessUV);
     }
-    if (key->hasVolumeThicknessTexture && retval[key->volumeThicknessUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasVolumeThicknessTexture = false;
-        } else {
-            retval[key->volumeThicknessUV] = (UvSet) index++;
-        }
+    if (key->hasVolumeThicknessTexture) {
+        key->hasVolumeThicknessTexture = updateUv(key->volumeThicknessUV);
     }
-    if (key->hasSpecularTexture && retval[key->specularTextureUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasSpecularTexture = false;
-        } else {
-            retval[key->specularTextureUV] = (UvSet) index++;
-        }
+    if (key->hasSpecularTexture) {
+        key->hasSpecularTexture = updateUv(key->specularTextureUV);
     }
-    if (key->hasSpecularColorTexture && retval[key->specularColorTextureUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasSpecularColorTexture = false;
-        } else {
-            retval[key->specularColorTextureUV] = (UvSet) index++;
-        }
+    if (key->hasSpecularColorTexture) {
+        key->hasSpecularColorTexture = updateUv(key->specularColorTextureUV);
     }
 
     // NOTE: KHR_materials_clearcoat does not provide separate UVs, we'll assume UV0
@@ -176,20 +140,27 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
         }
     };
     static const std::string uvstrings[] = { "vec2(0)", "getUV0()", "getUV1()" };
-    const auto& normalUV = uvstrings[uvmap[config.normalUV]];
-    const auto& baseColorUV = uvstrings[uvmap[config.baseColorUV]];
-    const auto& metallicRoughnessUV = uvstrings[uvmap[config.metallicRoughnessUV]];
-    const auto& emissiveUV = uvstrings[uvmap[config.emissiveUV]];
-    const auto& transmissionUV = uvstrings[uvmap[config.transmissionUV]];
-    const auto& aoUV = uvstrings[uvmap[config.aoUV]];
-    const auto& clearCoatUV = uvstrings[uvmap[config.clearCoatUV]];
-    const auto& clearCoatRoughnessUV = uvstrings[uvmap[config.clearCoatRoughnessUV]];
-    const auto& clearCoatNormalUV = uvstrings[uvmap[config.clearCoatNormalUV]];
-    const auto& sheenColorUV = uvstrings[uvmap[config.sheenColorUV]];
-    const auto& sheenRoughnessUV = uvstrings[uvmap[config.sheenRoughnessUV]];
-    const auto& volumeThicknessUV = uvstrings[uvmap[config.volumeThicknessUV]];
-    const auto& specularUV = uvstrings[uvmap[config.specularTextureUV]];
-    const auto& specularColorUV = uvstrings[uvmap[config.specularColorTextureUV]];
+    auto getUvString = [&uvmap](uint8_t uv) -> const std::string& {
+        if (uv >= UvMapSize) {
+            return uvstrings[0];
+        }
+        UvSet const set = uvmap[uv];
+        return set < UvSetSize ? uvstrings[set] : uvstrings[0];
+    };
+    const auto& normalUV = getUvString(config.normalUV);
+    const auto& baseColorUV = getUvString(config.baseColorUV);
+    const auto& metallicRoughnessUV = getUvString(config.metallicRoughnessUV);
+    const auto& emissiveUV = getUvString(config.emissiveUV);
+    const auto& transmissionUV = getUvString(config.transmissionUV);
+    const auto& aoUV = getUvString(config.aoUV);
+    const auto& clearCoatUV = getUvString(config.clearCoatUV);
+    const auto& clearCoatRoughnessUV = getUvString(config.clearCoatRoughnessUV);
+    const auto& clearCoatNormalUV = getUvString(config.clearCoatNormalUV);
+    const auto& sheenColorUV = getUvString(config.sheenColorUV);
+    const auto& sheenRoughnessUV = getUvString(config.sheenRoughnessUV);
+    const auto& volumeThicknessUV = getUvString(config.volumeThicknessUV);
+    const auto& specularUV = getUvString(config.specularTextureUV);
+    const auto& specularColorUV = getUvString(config.specularColorTextureUV);
 
     replaceAll("${normal}", normalUV);
     replaceAll("${color}", baseColorUV);
