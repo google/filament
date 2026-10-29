@@ -12,6 +12,15 @@ LAYOUT_LOCATION(5) VARYING highp vec2 vertex_uv01;
 LAYOUT_LOCATION(5) VARYING highp vec4 vertex_uv01;
 #endif
 
+// filamat sets MATERIAL_SKIPS_SURFACE_INTERPOLANTS for an unlit material that never
+// reads vertex_worldPosition, vertex_worldNormal or vertex_position (see
+// MaterialBuilder::runSemanticAnalysis). The depth variants keep them: picking reads
+// vertex_position and VSM reads vertex_worldPosition.w.
+#if defined(MATERIAL_SKIPS_SURFACE_INTERPOLANTS) && !defined(VARIANT_DEPTH)
+#define FILAMENT_SKIPS_SURFACE_INTERPOLANTS
+#endif
+
+#if !defined(FILAMENT_SKIPS_SURFACE_INTERPOLANTS)
 #if defined(VARIANT_HAS_MNT)
 LAYOUT_LOCATION(6) centroid VARYING highp vec4 vertex_worldPosition;
 #else
@@ -26,6 +35,7 @@ LAYOUT_LOCATION(8) SHADING_INTERPOLATION VARYING mediump vec4 vertex_worldTangen
 #endif
 
 LAYOUT_LOCATION(9) VARYING highp vec4 vertex_position;
+#endif // !FILAMENT_SKIPS_SURFACE_INTERPOLANTS
 
 #if defined(FILAMENT_HAS_FEATURE_INSTANCING)
 LAYOUT_LOCATION(10) flat VARYING highp int instance_index;

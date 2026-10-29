@@ -119,6 +119,10 @@ public:
 
     struct FragmentShaderInfo {
         bool userMaterialHasCustomDepth = false;
+        // material() or surfaceShading() reads vertex_worldPosition, vertex_worldNormal,
+        // vertex_position or a shading_* global derived from them, directly or through
+        // a getter or helper.
+        bool userMaterialReadsSurfaceInterpolants = false;
     };
 
     struct VertexShaderInfo {

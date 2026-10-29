@@ -29,7 +29,10 @@
 #include <InfoSink.h>
 #include <localintermediate.h>
 
+#include <algorithm>
+#include <string>
 #include <string_view>
+#include <vector>
 
 using namespace utils;
 using namespace glslang;
@@ -316,6 +319,64 @@ std::optional<GLSLTools::FragmentShaderInfo> GLSLTools::analyzeFragmentShader(
         return std::nullopt;
     }
 
+    // Does the user's code read the surface interpolants, directly or through a shading_*
+    // global derived from them (see common_shading.fs) or a getter? Every called function
+    // is followed except prepareMaterial(), whose reads are skipped together with the
+    // interpolants. Like hasCustomDepth(), this looks at a single preprocessed permutation.
+    static constexpr std::string_view kSurfaceInterpolantSymbols[] = {
+        "vertex_worldPosition", "vertex_worldNormal", "vertex_worldTangent",
+        "vertex_position", "shading_position", "shading_view",
+        "shading_normalizedViewportCoord", "shading_normal",
+        "shading_geometricNormal", "shading_reflected", "shading_NoV",
+        "shading_tangentToWorld", "shading_bentNormal", "shading_clearCoatNormal",
+    };
+    class SurfaceInterpolantReadFinder : public TIntermTraverser {
+        TIntermNode& mRoot;
+        std::vector<std::string> mVisited;
+    public:
+        bool found = false;
+        explicit SurfaceInterpolantReadFinder(TIntermNode& root) : mRoot(root) {}
+        void visitSymbol(TIntermSymbol* node) override {
+            if (found) {
+                return;
+            }
+            std::string_view const name(node->getName().c_str(), node->getName().size());
+            for (auto const symbol : kSurfaceInterpolantSymbols) {
+                if (name == symbol) {
+                    found = true;
+                    return;
+                }
+            }
+        }
+        bool visitAggregate(TVisit, TIntermAggregate* node) override {
+            if (found) {
+                return false;
+            }
+            if (node->getOp() != EOpFunctionCall) {
+                return true;
+            }
+            std::string_view const signature = node->getName();
+            if (ASTHelpers::getFunctionName(signature) == "prepareMaterial") {
+                return true;
+            }
+            std::string const key(signature);
+            if (std::find(mVisited.begin(), mVisited.end(), key) != mVisited.end()) {
+                return true;
+            }
+            mVisited.push_back(key);
+            if (TIntermAggregate* const def = ASTHelpers::getFunctionBySignature(signature, mRoot)) {
+                def->traverse(this);
+            }
+            return !found;
+        }
+    };
+    auto const readsSurfaceInterpolants = [&](TIntermNode* fct) {
+        SurfaceInterpolantReadFinder finder(*root);
+        fct->traverse(&finder);
+        return finder.found;
+    };
+    result.userMaterialReadsSurfaceInterpolants = readsSurfaceInterpolants(materialFctNode);
+
     if (hasCustomSurfaceShading) {
         materialFctNode = ASTHelpers::getFunctionByNameOnly("surfaceShading", *root);
         if (materialFctNode == nullptr) {
@@ -324,6 +385,7 @@ std::optional<GLSLTools::FragmentShaderInfo> GLSLTools::analyzeFragmentShader(
                           << io::endl;
             return std::nullopt;
         }
+        result.userMaterialReadsSurfaceInterpolants |= readsSurfaceInterpolants(materialFctNode);
     }
 
     return result;

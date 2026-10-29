@@ -155,11 +155,13 @@ void main() {
     VARIABLE_CUSTOM_AT4 = material.VARIABLE_CUSTOM4;
 #endif
 
+#if !defined(FILAMENT_SKIPS_SURFACE_INTERPOLANTS)
     // The world position can be changed by the user in materialVertex()
     vertex_worldPosition.xyz = material.worldPosition.xyz;
 
 #ifdef HAS_ATTRIBUTE_TANGENTS
     vertex_worldNormal = material.worldNormal;
+#endif
 #endif
 
 #if defined(VARIANT_HAS_SHADOWING) && defined(MATERIAL_HAS_LIGHTING)
@@ -242,7 +244,9 @@ void main() {
 #endif
 
     // this must happen before we compensate for vulkan below
+#if !defined(FILAMENT_SKIPS_SURFACE_INTERPOLANTS)
     vertex_position = position;
+#endif
 
 #if defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_INSTANCED)
     // We're transforming a vertex whose x coordinate is within the range (-w to w).

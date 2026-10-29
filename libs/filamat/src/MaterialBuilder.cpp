@@ -757,9 +757,10 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.stereoscopicType = mStereoscopicType;
     info.stereoscopicEyeCount = mStereoscopicEyeCount;
 
-    // This is determined via static analysis of the glsl after prepareToBuild().
+    // These are determined via static analysis of the glsl after prepareToBuild().
     info.userMaterialHasCustomDepth = false;
     info.userMaterialVertexHasCustomDepth = false;
+    info.skipsSurfaceInterpolants = false;
 }
 
 void MaterialBuilder::initPushConstants() noexcept {
@@ -848,6 +849,21 @@ bool MaterialBuilder::runSemanticAnalysis(MaterialInfo* inOutInfo,
             success = result.has_value();
             if (success) {
                 inOutInfo->userMaterialHasCustomDepth = result->userMaterialHasCustomDepth;
+                // The surface interpolants feed lighting, fog, the screen-space effects,
+                // the TBN and the getters. A material that uses none of those can leave
+                // them out of its shaders, which saves varyings on tile-based GPUs.
+                bool const hasTBN =
+                        mProperties[static_cast<int>(Property::ANISOTROPY)] ||
+                        mProperties[static_cast<int>(Property::NORMAL)] ||
+                        mProperties[static_cast<int>(Property::BENT_NORMAL)] ||
+                        mProperties[static_cast<int>(Property::CLEAR_COAT_NORMAL)];
+                inOutInfo->skipsSurfaceInterpolants =
+                        mMaterialDomain == MaterialDomain::SURFACE &&
+                        !isLit() && !mShadowMultiplier &&
+                        (mVariantFilter & UserVariantFilterMask(UserVariantFilterBit::FOG)) &&
+                        mRefractionMode == RefractionMode::NONE &&
+                        mReflectionMode != ReflectionMode::SCREEN_SPACE &&
+                        !hasTBN && !result->userMaterialReadsSurfaceInterpolants;
             }
         }
     }

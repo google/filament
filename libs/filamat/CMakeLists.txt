@@ -178,6 +178,6 @@ if (FILAMENT_BUILD_TESTING AND IS_HOST_PLATFORM)
 
     add_executable(${TARGET} ${SRCS})
     target_include_directories(${TARGET} PRIVATE src)
-    target_link_libraries(${TARGET} filamat gtest)
+    target_link_libraries(${TARGET} filamat filaflat gtest)
     set_target_properties(${TARGET} PROPERTIES FOLDER Tests)
 endif()

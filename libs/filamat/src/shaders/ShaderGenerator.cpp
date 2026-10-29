@@ -114,6 +114,10 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(io::sstream& out,
         CodeGenerator::generateDefine(out, "MATERIAL_HAS_TRANSPARENT_SHADOW");
     }
 
+    if (material.skipsSurfaceInterpolants) {
+        CodeGenerator::generateDefine(out, "MATERIAL_SKIPS_SURFACE_INTERPOLANTS");
+    }
+
     if (stage == ShaderStage::FRAGMENT) {
         // We only support both screen-space refractions and reflections at the same time.
         // And the MATERIAL_HAS_REFRACTION/MATERIAL_HAS_REFLECTIONS defines signify if

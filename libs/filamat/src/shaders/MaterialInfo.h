@@ -56,6 +56,9 @@ struct UTILS_PUBLIC MaterialInfo {
     bool vertexDomainDeviceJittered;
     bool userMaterialHasCustomDepth;
     bool userMaterialVertexHasCustomDepth;
+    // Unlit material that never reads vertex_worldPosition, vertex_worldNormal or
+    // vertex_position, see MaterialBuilder::runSemanticAnalysis().
+    bool skipsSurfaceInterpolants;
     int stereoscopicEyeCount;
     filament::SpecularAmbientOcclusion specularAO;
     filament::RefractionMode refractionMode;
