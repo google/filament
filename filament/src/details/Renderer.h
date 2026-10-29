@@ -47,7 +47,9 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <utility>
+#include <vector>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -262,6 +264,9 @@ private:
     backend::TargetBufferFlags mDiscardStartFlags{};
     backend::TargetBufferFlags mClearFlags{};
     tsl::robin_set<FRenderTarget*> mPreviousRenderTargets;
+    std::vector<Viewport> mSwapChainViewports;  // of the Views rendered into it this frame
+    // what the 1st of them cleared it to, until copyFrame() draws over it
+    std::optional<backend::ClearColorValue> mSwapChainClearColor;
     std::function<void()> mBeginFrameInternal;
     uint64_t mVsyncSteadyClockTimeNano = 0;
     std::chrono::steady_clock::time_point mRenderingDeadline{};

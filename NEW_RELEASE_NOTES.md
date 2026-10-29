@@ -9,3 +9,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - engine: fix PCSS soft shadows of point and spot lights using the directional light's bulb radius
 - engine: fix a shader program leak when rendering PCSS or VSM shadows with the program cache
   disabled
+- engine: on Vulkan, a View rendered into the swap chain after others now clears its viewport
+  instead of loading it when `ClearOptions::clear` is set and no earlier View overlaps it
