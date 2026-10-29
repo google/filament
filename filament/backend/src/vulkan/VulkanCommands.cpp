@@ -24,10 +24,14 @@
 #include "VulkanConstants.h"
 #include "VulkanContext.h"
 
+#include <utils/compiler.h>
 #include <utils/CString.h>
 #include <utils/debug.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
+
+#include <functional>
+#include <utility>
 
 using namespace bluevk;
 using namespace utils;
@@ -89,9 +93,7 @@ std::pair<CString, Timestamp> const& VulkanGroupMarkers::top() const {
 
 bool VulkanGroupMarkers::empty() const noexcept { return mMarkers.empty(); }
 
-uint32_t VulkanCommandBuffer::sAgeCounter = 0;
-
-VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext const& context, 
+VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext const& context,
         VulkanFencePool& fencePool, VkDevice device, VkQueue queue,
         VkCommandPool pool, VulkanSemaphoreManager* semaphoreManager,
         bool isProtected)
@@ -103,7 +105,7 @@ VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext const& context,
       mSemaphoreManager(semaphoreManager),
       mBuffer(createCommandBuffer(device, pool)),
       mSubmission(semaphoreManager->acquire()),
-      mAge(++sAgeCounter) {
+      mAge(0) {
     mFenceStatus = mFencePool.acquireFenceStatus();
 }
 
@@ -112,7 +114,7 @@ void VulkanCommandBuffer::reset() noexcept {
     mResources.clear();
     mWaitSemaphores.clear();
     mWaitSemaphoreStages.clear();
-    mAge = ++sAgeCounter;
+    mAge = 0; // 0 is an invalid age
     mSubmission = mSemaphoreManager->acquire();
 
     // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence
@@ -170,7 +172,8 @@ void VulkanCommandBuffer::insertEvent(char const* marker) noexcept {
     }
 }
 
-void VulkanCommandBuffer::begin() noexcept {
+void VulkanCommandBuffer::begin(uint64_t age) noexcept {
+    mAge = age;
     // Begin writing into the command buffer.
     VkCommandBufferBeginInfo const binfo{
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -235,10 +238,13 @@ fvkmemory::resource_ptr<VulkanSemaphore> VulkanCommandBuffer::submit() {
 }
 
 CommandBufferPool::CommandBufferPool(VulkanContext const& context, VkDevice device, VkQueue queue,
-        uint8_t queueFamilyIndex, VulkanSemaphoreManager* semaphoreManager, bool isProtected)
+        uint8_t queueFamilyIndex, VulkanSemaphoreManager* semaphoreManager, bool isProtected,
+        fvkutils::CommandBufferAgeCounter& ageCounter, std::function<void()> drainAllPools)
     : mDevice(device),
       mRecording(INVALID),
-      mFencePool(context, device, CAPACITY) {
+      mFencePool(context, device, CAPACITY),
+      mCounter(ageCounter),
+      mDrainAllPools(std::move(drainAllPools)) {
     VkCommandPoolCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT |
@@ -267,10 +273,9 @@ VulkanCommandBuffer& CommandBufferPool::getRecording() {
     }
 
     auto const findNext = [this]() {
-        for (int8_t i = 0; i < CAPACITY; ++i) {
-            if (!mSubmitted[i]) {
-                return i;
-            }
+        auto freeBuffers = ~mSubmitted;
+        if (auto ind = freeBuffers.firstSetBit(); ind < CAPACITY) {
+            return int8_t(ind);
         }
         return INVALID;
     };
@@ -280,8 +285,15 @@ VulkanCommandBuffer& CommandBufferPool::getRecording() {
         gc();
     }
 
+    // The age window is shared with the other pool and only advances once the oldest in-flight
+    // age is released, so a free slot here does not imply room in the counter. Retire the
+    // completed buffers of every pool first; count() hard-fails otherwise.
+    if (UTILS_UNLIKELY(!mCounter.hasCapacity())) {
+        mDrainAllPools();
+    }
+
     auto& recording = *mBuffers[mRecording];
-    recording.begin();
+    recording.begin(mCounter.count());
 
     if (mGroupMarkers) {
         std::unique_ptr<VulkanGroupMarkers> markers = std::make_unique<VulkanGroupMarkers>();
@@ -304,6 +316,7 @@ void CommandBufferPool::gc() {
         auto& buffer = mBuffers[index];
         if (buffer->getStatus() == VK_SUCCESS) {
             reclaimed.set(index, true);
+            mCounter.release(buffer->age());
             buffer->reset();
         }
     });
@@ -389,8 +402,15 @@ VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFam
       mProtectedQueueFamilyIndex(protectedQueueFamilyIndex),
       mContext(context),
       mSemaphoreManager(semaphoreManager),
-      mPool(std::make_unique<CommandBufferPool>(
-              context, device, queue, queueFamilyIndex, semaphoreManager, false)) {}
+      mPool(std::make_unique<CommandBufferPool>(context, device, queue, queueFamilyIndex,
+              semaphoreManager, false, mAgeCounter, [this] { drainAllPools(); })) {}
+
+void VulkanCommands::drainAllPools() {
+    // Waiting on every submitted fence and reclaiming the buffers releases every submitted age,
+    // which leaves at most one recording buffer per pool in the counter's window.
+    wait();
+    gc();
+}
 
 void VulkanCommands::terminate() {
     mPool.reset();
@@ -409,7 +429,8 @@ VulkanCommandBuffer& VulkanCommands::getProtected() {
 
     if (!mProtectedPool) {
         mProtectedPool = std::make_unique<CommandBufferPool>(mContext, mDevice, mProtectedQueue,
-                mProtectedQueueFamilyIndex, mSemaphoreManager, true);
+                mProtectedQueueFamilyIndex, mSemaphoreManager, true, mAgeCounter,
+                [this] { drainAllPools(); });
     }
     auto& ret = mProtectedPool->getRecording();
     return ret;
@@ -479,8 +500,18 @@ void VulkanCommands::wait() {
 }
 
 void VulkanCommands::gc() {
+    // Like flush() and wait(), this can be reached (e.g. from finish()) after terminate().
+    if (!mPool) {
+        return;
+    }
+
     FVK_SYSTRACE_CONTEXT();
     FVK_SYSTRACE_START("commands::gc");
+
+    // Pool gc() only reclaims buffers whose cached fence status is VK_SUCCESS, which is otherwise
+    // refreshed only in tick(). Refresh it here so that ages of buffers that completed since then
+    // are released now, rather than leaving the staging buffer bypass to treat them as busy.
+    updateFences();
 
     mPool->gc();
     if (mProtectedPool) {

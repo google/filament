@@ -28,6 +28,7 @@
 
 #include <utils/compiler.h> // UTILS_FALLTHROUGH
 #include <utils/CString.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>    // ASSERT_POSTCONDITION
 
 using namespace bluevk;
@@ -186,8 +187,10 @@ VulkanDescriptorSetLayout::Bitmask VulkanDescriptorSetLayout::Bitmask::fromLayou
 }
 
 VulkanDescriptorSet::~VulkanDescriptorSet() {
-    for (auto setBundle: mSets) {
-        if (setBundle.onRecycleFn) {
+    for (auto const& setBundle: mSets) {
+        // recycleRetiredSets() may have already returned this VkDescriptorSet to the pool (and
+        // nulled out vkSet).
+        if (setBundle.vkSet != VK_NULL_HANDLE && setBundle.onRecycleFn) {
             setBundle.onRecycleFn(this);
         }
     }
@@ -200,22 +203,74 @@ VulkanDescriptorSet::VulkanDescriptorSet(fvkmemory::resource_ptr<VulkanDescripto
       uniqueDynamicUboCount(layout->count.dynamicUbo),
       mLayout(layout),
       mCurrentSetIndex(0) {
-    addNewSet(vkSet, std::move(onRecycleFn));
+    // There are no older sets to recycle yet, so this does not go through addNewSet().
+    mSets.push_back({ vkSet, std::move(onRecycleFn) });
 }
 
-void VulkanDescriptorSet::referencedBy(VulkanCommandBuffer& commands) {
+size_t VulkanDescriptorSet::getResourceIndex(uint8_t binding) {
+    auto const itr = std::find_if(mResources.begin(), mResources.end(),
+            [binding](BoundResource const& res) { return res.binding == binding; });
+    if (itr != mResources.end()) {
+        return size_t(std::distance(mResources.begin(), itr));
+    }
+    mResources.push_back({ .binding = binding });
+    return mResources.size() - 1;
+}
+
+void VulkanDescriptorSet::acquire(uint8_t binding,
+        fvkmemory::resource_ptr<VulkanTexture> texture) {
+    // mUboMask is indexed by the position in mResources, so it must be updated with the index of
+    // the entry that was actually written.
+    size_t const index = getResourceIndex(binding);
+    mResources[index] = { .resource = texture, .binding = binding };
+    mUboMask.unset(index);
+    mWrittenBindings.set(binding);
+}
+
+void VulkanDescriptorSet::acquire(uint8_t binding, fvkmemory::resource_ptr<VulkanBufferObject> bo,
+        VkDeviceSize offset, VkDeviceSize size) {
+    size_t const index = getResourceIndex(binding);
+    uint64_t const generation = bo->getGeneration();
+    mResources[index] = {
+        .resource = bo,
+        .generation = generation,
+        .offset = offset,
+        .size = size,
+        .binding = binding,
+    };
+    mUboMask.set(index);
+    mWrittenBindings.set(binding);
+}
+
+void VulkanDescriptorSet::referencedBy(VulkanCommandBuffer& commands,
+        fvkutils::CommandBufferAgeCounter const& ageCounter) {
     // This will store an age associated with this command buffer into the VulkanBuffer, which
     // will allow us to determine whether a barrier is necessary or not.
-    mUboMask.forEachSetBit([this, &commands](size_t index) {
-        auto& res = mResources[index];
-        fvkmemory::resource_ptr<VulkanBufferObject> bo =
-                fvkmemory::resource_ptr<VulkanBufferObject>::cast((VulkanBufferObject*) res.get());
-        bo->referencedBy(commands);
+    mUboMask.forEachSetBit([this, &commands, &ageCounter](size_t index) {
+        // delibrately not ref-counted to save some cycles.
+        auto* bo = static_cast<VulkanBufferObject*>(mResources[index].resource.get());
+        bo->referencedBy(commands, ageCounter);
     });
-    mSets[mCurrentSetIndex].fenceStatus = commands.getFenceStatus();
+    // The VkDescriptorSet cannot be recycled until this command buffer has completed.
+    ageCounter.markInFlight(mSets[mCurrentSetIndex].ages, commands.age());
 }
 
-void VulkanDescriptorSet::gc() {
+fvkutils::UniformBufferBitmask VulkanDescriptorSet::getStaleUbos() const noexcept {
+    // This is called for every bound set on every draw, so it must not allocate or touch refcounts.
+    fvkutils::UniformBufferBitmask stale;
+    mUboMask.forEachSetBit([this, &stale](size_t index) {
+        BoundResource const& entry = mResources[index];
+        auto const* bo = static_cast<VulkanBufferObject const*>(entry.resource.get());
+        if (bo->getGeneration() != entry.generation) {
+            stale.set(index);
+        }
+    });
+    return stale;
+}
+
+
+void VulkanDescriptorSet::recycleRetiredSets(
+        fvkutils::CommandBufferAgeCounter const& ageCounter) {
     size_t empty = 0;
     for (auto& setBundle: mSets) {
         assert_invariant(setBundle.onRecycleFn);
@@ -223,10 +278,15 @@ void VulkanDescriptorSet::gc() {
             empty++;
             continue;
         }
-        if (setBundle.fenceStatus && setBundle.fenceStatus->getStatus() == VK_SUCCESS) {
+        // The GPU may still be using the set if any command buffer that bound it is recording or
+        // executing. A set that was never bound has no ages, so it is recycled right away. This
+        // happens when a set is cloned again before it is bound (e.g. the external sampler clone
+        // followed by a stale-UBO refresh). This is only safe because the caller (addNewSet()) is
+        // about to replace the current set, see the declaration.
+        if (!ageCounter.isInFlight(setBundle.ages)) {
             setBundle.onRecycleFn(this);
             setBundle.vkSet = VK_NULL_HANDLE;
-            setBundle.fenceStatus = {};
+            setBundle.ages = {};
             empty++;
         }
     }
@@ -238,7 +298,7 @@ void VulkanDescriptorSet::gc() {
                 retainedSets.push_back({
                     setBundle.vkSet,
                     std::move(setBundle.onRecycleFn),
-                    std::move(setBundle.fenceStatus)
+                    setBundle.ages,
                 });
             }
         }
@@ -246,8 +306,9 @@ void VulkanDescriptorSet::gc() {
     }
 }
 
-void VulkanDescriptorSet::addNewSet(VkDescriptorSet vkSet, OnRecycle&& onRecycleFn) {
-    gc();
+void VulkanDescriptorSet::addNewSet(VkDescriptorSet vkSet, OnRecycle&& onRecycleFn,
+        fvkutils::CommandBufferAgeCounter const& ageCounter) {
+    recycleRetiredSets(ageCounter);
     mCurrentSetIndex = mSets.size();
     mSets.push_back({ vkSet, std::move(onRecycleFn) });
 }
@@ -562,6 +623,7 @@ VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& 
 
 void VulkanVertexBuffer::setBuffer(fvkmemory::resource_ptr<VulkanBufferObject> bufferObject,
         uint32_t index) {
+    assert_invariant(index < mResources.size());
     size_t const count = vbi->getAttributeCount();
     VkBuffer* const vkbuffers = getVkBuffers();
     int8_t const* const attribToBuffer = vbi->getAttributeToBuffer();
@@ -571,7 +633,16 @@ void VulkanVertexBuffer::setBuffer(fvkmemory::resource_ptr<VulkanBufferObject> b
             mAttributes.set(attribIndex);
         }
     }
-    mResources.push_back(bufferObject);
+    mResources[index] = bufferObject;
+}
+
+void VulkanVertexBuffer::referencedBy(VulkanCommandBuffer& commands,
+        fvkutils::CommandBufferAgeCounter const& ageCounter) {
+    for (auto& bo: mResources) {
+        if (bo) {
+            bo->referencedBy(commands, ageCounter);
+        }
+    }
 }
 
 VulkanBufferObject::VulkanBufferObject(VulkanContext const& context, VmaAllocator allocator,
