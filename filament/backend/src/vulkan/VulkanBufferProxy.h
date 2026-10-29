@@ -23,6 +23,9 @@
 #include "VulkanMemory.h"
 #include "VulkanStagePool.h"
 
+#include "vulkan/memory/Resource.h"
+#include "vulkan/utils/CommandBufferAgeCounter.h"
+
 #include <backend/DriverEnums.h>
 
 namespace filament::backend {
@@ -38,12 +41,19 @@ public:
             VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, VulkanBufferBinding binding,
             BufferUsage usage, uint32_t numBytes);
 
-    void loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData, uint32_t byteOffset,
-            uint32_t numBytes);
+    void loadFromCpu(VulkanCommandBuffer& commands,
+            fvkutils::CommandBufferAgeCounter const& ageCounter, const void* cpuData,
+            uint32_t byteOffset, uint32_t numBytes);
 
     VkBuffer getVkBuffer() const noexcept;
 
-    void referencedBy(VulkanCommandBuffer& commands);
+    void referencedBy(VulkanCommandBuffer& commands,
+            fvkutils::CommandBufferAgeCounter const& ageCounter);
+
+    // Incremented every time the backing VkBuffer is swapped out. Descriptor sets record the
+    // generation when they write this buffer into a descriptor, and compare it later to detect a
+    // stale VkBuffer.
+    uint64_t getGeneration() const noexcept { return mGeneration; }
 
 private:
     VulkanBufferBinding getBinding() const noexcept;
@@ -55,8 +65,10 @@ private:
 
     fvkmemory::resource_ptr<VulkanBuffer> mBuffer;
 
-    uint32_t mLastReadAge;
-    BufferUsage mUsage;
+    BufferUsage const mUsage;
+    VulkanBufferBinding const mBinding;
+    uint32_t const mNumBytes;
+    uint64_t mGeneration = 0;
 };
 
 } // namespace filament::backend

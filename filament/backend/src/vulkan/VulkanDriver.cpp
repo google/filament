@@ -2030,8 +2030,9 @@ void VulkanDriver::setVertexBufferObjectAsyncR(AsyncCallId jobId, Handle<HwVerte
 void VulkanDriver::updateIndexBufferCommon(resource_ptr<VulkanIndexBuffer> ib,
         BufferDescriptor&& p, uint32_t byteOffset) {
     VulkanCommandBuffer& commands = mCommands.get();
+    auto const& ageCounter = mCommands.getAgeCounter();
     commands.acquire(ib);
-    ib->loadFromCpu(commands, p.buffer, byteOffset, p.size);
+    ib->loadFromCpu(commands, ageCounter, p.buffer, byteOffset, p.size);
     scheduleDestroy(std::move(p));
 }
 
@@ -2064,8 +2065,10 @@ void VulkanDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuff
 void VulkanDriver::updateBufferObjectCommon(resource_ptr<VulkanBufferObject> bo,
         BufferDescriptor&& bd, uint32_t byteOffset) {
     VulkanCommandBuffer& commands = mCommands.get();
+    auto const& ageCounter = mCommands.getAgeCounter();
+
     commands.acquire(bo);
-    bo->loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
+    bo->loadFromCpu(commands, ageCounter, bd.buffer, byteOffset, bd.size);
     scheduleDestroy(std::move(bd));
 }
 
@@ -2098,10 +2101,11 @@ void VulkanDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferOb
 void VulkanDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> boh,
         BufferDescriptor&& bd, uint32_t byteOffset) {
     VulkanCommandBuffer& commands = mCommands.get();
+    auto const& ageCounter = mCommands.getAgeCounter();
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
     commands.acquire(bo);
     // TODO: implement unsynchronized version
-    bo->loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
+    bo->loadFromCpu(commands, ageCounter, bd.buffer, byteOffset, bd.size);
     scheduleDestroy(std::move(bd));
 }
 
@@ -2908,6 +2912,15 @@ void VulkanDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     VkCommandBuffer cmdbuffer = commands->buffer();
     commands->acquire(prim);
 
+    // Record that this command buffer reads the vertex and index buffers. This keeps their memory
+    // alive while the command buffer is in flight, and tells loadFromCpu() not to memcpy into them
+    // (and to issue a barrier) until the command buffer is done.
+    auto const& ageCounter = mCommands.getAgeCounter();
+    prim->vertexBuffer->referencedBy(*commands, ageCounter);
+    if (prim->indexBuffer) {
+        prim->indexBuffer->referencedBy(*commands, ageCounter);
+    }
+
     // This *must* match the VulkanVertexBufferInfo that was bound in bindPipeline(). But we want
     // to allow to call this before bindPipeline(), so the validation can only happen in draw()
     auto vbi = prim->vertexBuffer->vbi;
@@ -2997,7 +3010,8 @@ void VulkanDriver::prepareDraw() {
         }
         mPipelineState.bindInDraw.first = false;
     }
-    mDescriptorSetCache.commit(mCurrentRenderPass.commandBuffer, mPipelineState.pipelineLayout,
+    VulkanCommandBuffer* commands = mCurrentRenderPass.commandBuffer;
+    mDescriptorSetCache.commit(commands, mCommands.getAgeCounter(), mPipelineState.pipelineLayout,
             mPipelineState.descriptorSetMask);
 }
 

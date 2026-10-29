@@ -98,7 +98,7 @@ void VulkanExternalImageManager::updateSetAndLayout(
 
     set->boundLayout = mDescriptorSetLayoutCache->getVkLayout(layout->bitmask, outSamplers);
 
-    mDescriptorSetCache->cloneSet(set, actualExternalSamplers);
+    mDescriptorSetCache->cloneSet(set, {} /* uboMask */, actualExternalSamplers);
 
     // Update the external samplers in the set
     for (auto& [binding, sampler, image]: samplerAndBindings) {
