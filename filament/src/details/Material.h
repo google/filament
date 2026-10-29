@@ -230,11 +230,7 @@ public:
     }
 
     inline bool isSharedVariant(Variant const variant) const {
-        // The default material explicitly filters VSM variants to reduce binary size, so it cannot
-        // provide the MNT | DEP variant as a shared program.
-        return !mIsDefaultMaterial && !mDefinition.hasCustomDepthShader &&
-               mDefinition.isValidDepthVariant(variant) &&
-               !mDefinition.isDepthMomentsVariant(variant);
+        return mDefinition.isSharedVariant(variant, mIsDefaultMaterial);
     }
 
     // Like MaterialDefinition::isValidProgram(), except that a shared variant is checked against
