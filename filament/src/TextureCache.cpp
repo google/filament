@@ -282,10 +282,14 @@ void TextureCache::gc(bool const skippedFrame) noexcept {
     uint32_t evictedCount = 0;
     for (auto it = textureCache.begin(); it != textureCache.end();) {
         size_t const ageDiff = age - it->second.age;
-        if ((ageDiff >= MAX_AGE_SKIPPED_FRAME && skippedFrame) ||
-            (ageDiff >= mCacheMaxAge && evictedCount < MAX_EVICTION_COUNT)) {
-            evictedCount++;
-            auto const reason = (ageDiff >= MAX_AGE_SKIPPED_FRAME && skippedFrame)
+        bool const evictSkipped = skippedFrame && ageDiff > MAX_AGE_SKIPPED_FRAME;
+        bool const evictAgedOut = !skippedFrame &&
+                ageDiff >= mCacheMaxAge && evictedCount < MAX_EVICTION_COUNT;
+        if (evictSkipped || evictAgedOut) {
+            if (evictAgedOut) {
+                evictedCount++;
+            }
+            auto const reason = skippedFrame
                     ? EvictionReason::SKIPPED_FRAME
                     : EvictionReason::AGED_OUT;
             it = purge(it, reason);
@@ -296,13 +300,13 @@ void TextureCache::gc(bool const skippedFrame) noexcept {
         }
     }
 
-    // if we have MAX_UNIQUE_AGE_COUNT ages or more, we evict all the resources that
+    // if we have more than MAX_UNIQUE_AGE_COUNT ages, we evict all the resources that
     // are older than the MAX_UNIQUE_AGE_COUNT'th age.
-    if (!skippedFrame && ages.count() >= MAX_UNIQUE_AGE_COUNT) {
+    if (!skippedFrame && ages.count() > MAX_UNIQUE_AGE_COUNT) {
         uint32_t bits = ages.getValue();
         // remove from the set the ages we keep
-        for (size_t i = 0; i < MAX_UNIQUE_AGE_COUNT - 1; i++) {
-            bits &= ~(1 << ctz(bits));
+        for (size_t i = 0; i < MAX_UNIQUE_AGE_COUNT; i++) {
+            bits &= ~(1u << ctz(bits));
         }
         size_t const maxAge = ctz(bits);
         for (auto it = textureCache.begin(); it != textureCache.end();) {

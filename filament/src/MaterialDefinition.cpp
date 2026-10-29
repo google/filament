@@ -1050,10 +1050,8 @@ void MaterialDefinition::releasePrograms(FEngine& engine,
         }
     }
 
-    // Only destroy the "shared variants" if this is the default material (i.e. the programs in
-    // question that are shared) or if this material has custom depth shaders.
-    const bool destroySharedVariants = isDefaultMaterial || hasCustomDepthShader;
-
+    // Only destroy depth programs owned by this material; shared depth
+    // variants borrow their HwProgram from the default material.
     for (auto variant: getDepthVariants()) {
         DynamicSpecConstKey const specKey{ 0 };
         if (UTILS_LIKELY(isValidProgram(variant, specKey, shaderModel, isStereoSupported))) {
@@ -1064,7 +1062,7 @@ void MaterialDefinition::releasePrograms(FEngine& engine,
                 specialization.variant = variant;
                 specialization.specKey = specKey;
                 materialCache.releaseProgram(engine, specialization);
-            } else if (destroySharedVariants && program) {
+            } else if (!isSharedVariant(variant, isDefaultMaterial) && program) {
                 engine.getDriverApi().destroyProgram(program);
             }
             program.clear();
