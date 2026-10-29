@@ -97,12 +97,6 @@ FreeList::InitInfo FreeList::init(void* begin, void* end,
     return { static_cast<Node*>(p), d, num };
 }
 
-FreeList::FreeList(void* begin, void* end) noexcept
-        : mCur(end),    // mCur == mEnd disables the bump path: only push()ed slots can be pop()ed
-          mEnd(end),
-          mBegin(begin) {
-}
-
 FreeList::FreeList(void* begin, void* end,
         size_t const elementSize, size_t const alignment, size_t const extra) noexcept
 {

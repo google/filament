@@ -62,9 +62,9 @@ HandleAllocator<P0, P1, P2>::Allocator::Allocator(AreaPolicy::HeapArea const& ar
                      << area.size();
     }
 
-    // make sure we start with a clean arena. This is needed to ensure that all blocks start
-    // with an age of 0.
-    memset(area.data(), 0, maxHeapSize);
+    // Note: we do not memset(area.data(), 0, maxHeapSize) upfront; PoolAllocator (FreeList::pop)
+    // lazily zeroes each slot's 1-byte Node { age } prefix when bump-allocating it for the first
+    // time, avoiding touching unused physical pages beyond each pool's high-water mark.
 
     // size the different pools so that they can all contain the same number of handles
     size_t const count = maxHeapSize / (P0 + P1 + P2);

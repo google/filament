@@ -378,10 +378,6 @@ public:
 class FreeList {
 public:
     FreeList() noexcept = default;
-    // Constructs a "recycled-only" FreeList over [begin, end): it never bump-allocates and only
-    // hands out slots that were previously push()ed. Use this when the backing storage is carved
-    // by an external bump allocator (see e.g. backend::HandleAllocator).
-    FreeList(void* begin, void* end) noexcept;
     FreeList(void* begin, void* end, size_t elementSize, size_t alignment, size_t extra) noexcept;
     FreeList(const FreeList& rhs) = delete;
     FreeList& operator=(const FreeList& rhs) = delete;
@@ -399,8 +395,6 @@ public:
             return head;
         }
         if (UTILS_LIKELY(mCur < mEnd)) {
-            // A stride of 0 would hand out the same slot forever. Recycled-only lists
-            // (see FreeList(void*, void*)) have mCur == mEnd and must never reach this path.
             assert(stride > 0);
             void* const p = mCur;
             mCur = pointermath::add(p, stride);
