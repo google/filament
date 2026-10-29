@@ -6,3 +6,4 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+- variant: completely remove FOG variant bit
