@@ -281,6 +281,23 @@ public:
     using Priority = utils::JobSystem::Priority;
 
     /**
+     * Runs the job the worker just popped, then destroys it. Both happen inside the `wrapJob`
+     * call, so whatever the wrapper sets up around `run()` (e.g. an autorelease pool) also covers
+     * the job's captures. Valid only during that `wrapJob` call.
+     */
+    class RunJob {
+    public:
+        explicit RunJob(JobQueue::Job& job) noexcept : mJob(job) {}
+        RunJob(RunJob const&) = delete;
+        RunJob& operator=(RunJob const&) = delete;
+
+        void operator()() const;
+
+    private:
+        JobQueue::Job& mJob;
+    };
+
+    /**
      * Config settings for the worker
      */
     struct Config {
@@ -288,6 +305,10 @@ public:
         Priority priority = Priority::NORMAL;
         utils::Invocable<void()> onBegin;  // Executed when the thread worker begins
         utils::Invocable<void()> onEnd;    // Executed when the thread worker ends
+        // Wraps the call of each job, so the owner decides how jobs run, with setup before and
+        // cleanup after if needed. For example, Metal runs each job in an autorelease pool.
+        // It must call `run` exactly once. Jobs run directly when this is empty.
+        utils::Invocable<void(RunJob const& run)> wrapJob;
     };
 
     /**
