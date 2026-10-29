@@ -25,10 +25,12 @@
 #include "VulkanSemaphoreManager.h"
 
 #include "vulkan/memory/ResourcePointer.h"
+#include "vulkan/utils/CommandBufferAgeCounter.h"
 #include "vulkan/utils/StaticVector.h"
 
 #include <bluevk/BlueVK.h>
 
+#include <utils/bitset.h>
 #include <utils/Condition.h>
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
@@ -36,6 +38,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <functional>
 #include <list>
 #include <type_traits>
 #include <utility>
@@ -63,8 +66,9 @@ private:
 // DriverApi fence object and should not be destroyed until both the DriverApi object is freed and
 // we're done waiting on the most recent submission of the given command buffer.
 struct VulkanCommandBuffer {
-    VulkanCommandBuffer(VulkanContext const& context, VulkanFencePool& fencePool, VkDevice device, VkQueue queue,
-            VkCommandPool pool, VulkanSemaphoreManager* semaphoreManager, bool isProtected);
+    VulkanCommandBuffer(VulkanContext const& context, VulkanFencePool& fencePool, VkDevice device,
+            VkQueue queue, VkCommandPool pool, VulkanSemaphoreManager* semaphoreManager,
+            bool isProtected);
 
     VulkanCommandBuffer(VulkanCommandBuffer const&) = delete;
     VulkanCommandBuffer& operator=(VulkanCommandBuffer const&) = delete;
@@ -88,7 +92,8 @@ struct VulkanCommandBuffer {
     void popMarker() noexcept;
     void insertEvent(char const* marker) noexcept;
 
-    void begin() noexcept;
+    void begin(uint64_t age) noexcept;
+
     fvkmemory::resource_ptr<VulkanSemaphore> submit();
 
     inline void refreshStatus(VkDevice device) {
@@ -111,7 +116,7 @@ struct VulkanCommandBuffer {
         return mBuffer;
     }
 
-    uint32_t age() const {
+    uint64_t age() const {
         return mAge;
     }
 
@@ -122,8 +127,6 @@ struct VulkanCommandBuffer {
 private:
     using HeldResource = std::variant<fvkmemory::resource_ptr<Resource>,
                                       fvkmemory::resource_ptr<ThreadSafeResource>>;
-
-    static uint32_t sAgeCounter;
 
     VulkanContext const& mContext;
     VulkanFencePool& mFencePool;
@@ -137,15 +140,19 @@ private:
     fvkmemory::resource_ptr<VulkanSemaphore> mSubmission;
     std::shared_ptr<VulkanCmdFence> mFenceStatus;
     std::vector<HeldResource> mResources;
-    uint32_t mAge;
+    uint64_t mAge;
 };
 
 struct CommandBufferPool {
     using ActiveBuffers = utils::bitset64;
     static constexpr int8_t INVALID = -1;
 
+    // `ageCounter` is shared with the other pool (see VulkanCommands) and must outlive this pool.
+    // `drainAllPools` must wait for and reclaim the completed command buffers of every pool that
+    // shares `ageCounter`; it is invoked when the counter has no room for a new age.
     CommandBufferPool(VulkanContext const& context, VkDevice device, VkQueue queue,
-            uint8_t queueFamilyIndex, VulkanSemaphoreManager* semaphoreManager, bool isProtected);
+            uint8_t queueFamilyIndex, VulkanSemaphoreManager* semaphoreManager, bool isProtected,
+            fvkutils::CommandBufferAgeCounter& ageCounter, std::function<void()> drainAllPools);
     ~CommandBufferPool();
 
     VulkanCommandBuffer& getRecording();
@@ -179,6 +186,8 @@ private:
     std::vector<std::unique_ptr<VulkanCommandBuffer>> mBuffers;
     int8_t mRecording;
     VulkanFencePool mFencePool;
+    fvkutils::CommandBufferAgeCounter& mCounter;
+    std::function<void()> mDrainAllPools;
 
     std::unique_ptr<VulkanGroupMarkers> mGroupMarkers;
 };
@@ -221,6 +230,12 @@ public:
     // returns the current one.
     VulkanCommandBuffer& getProtected();
 
+    // Returns the age counter shared by the regular and protected command buffers. Ages are
+    // unique across both pools.
+    fvkutils::CommandBufferAgeCounter const& getAgeCounter() const {
+        return mAgeCounter;
+    }
+
     // Submits the current command buffer if it exists, then sets "current" to null.
     // If there are no outstanding commands then nothing happens and this returns false.
     bool flush();
@@ -261,12 +276,19 @@ public:
     utils::CString getTopGroupMarker() const;
 
 private:
+    // Waits for and reclaims the completed command buffers of both pools. Used by a pool when the
+    // shared age counter has no room for a new age (see CommandBufferAgeCounter).
+    void drainAllPools();
+
     VkDevice const mDevice;
     VkQueue const mProtectedQueue;
     // For defered initialization if/when we need protected content
     uint32_t const mProtectedQueueFamilyIndex;
     VulkanContext const& mContext;
     VulkanSemaphoreManager* mSemaphoreManager;
+
+    // Shared by both pools, so it must be declared (constructed) before and destroyed after them.
+    fvkutils::CommandBufferAgeCounter mAgeCounter;
 
     std::unique_ptr<CommandBufferPool> mPool;
     std::unique_ptr<CommandBufferPool> mProtectedPool;
