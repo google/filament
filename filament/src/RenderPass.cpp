@@ -421,12 +421,13 @@ UTILS_ALWAYS_INLINE // This function exists only to make the code more readable.
 inline              // and we don't need it in the compilation unit
 void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant, DynamicSpecConstKey const specKey,
         FMaterialInstance const* const UTILS_RESTRICT mi,
-        bool const inverseFrontFaces, bool const hasDepthClamp) noexcept {
+        bool const inverseFrontFaces, bool const hasDepthClamp,
+        bool const hasFogAsPostProcess) noexcept {
 
     FMaterial const * const UTILS_RESTRICT ma = mi->getMaterial();
     variant = Variant::filterVariant(variant, ma->isVariantLit());
 
-    DynamicSpecConstKey const dynamicSpecConstKey =
+    DynamicSpecConstKey dynamicSpecConstKey =
             ma->getDefinition().filterProgramSpecKey(variant, specKey);
 
     // Below, we evaluate both commands to avoid a branch
@@ -440,6 +441,13 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant, DynamicSpe
     bool const hasScreenSpaceRefraction = ma->getRefractionMode() == RefractionMode::SCREEN_SPACE;
     bool const isBlendingCommand = !hasScreenSpaceRefraction &&
             (blendingMode != BlendingMode::OPAQUE && blendingMode != BlendingMode::MASKED);
+
+    // When fog is applied as a post-process, non-blended commands must be drawn without fog.
+    // This must happen before computing the sort key below so that it matches the program
+    // actually used (see LocalProgramCache::filterForGetProgram()).
+    if (UTILS_UNLIKELY(hasFogAsPostProcess && !isBlendingCommand)) {
+        dynamicSpecConstKey.setFog(false);
+    }
 
     RasterState rasterState = mi->getRasterState();
 
@@ -582,6 +590,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
 
     bool const hasDepthClamp =
             renderFlags & HAS_DEPTH_CLAMP;
+
+    bool const hasFogAsPostProcess =
+            renderFlags & HAS_FOG_AS_POSTPROCESS;
 
     bool const isPickingVariant = Variant::isPickingVariant(variant);
     bool const depthColorWrite = isPickingVariant || Variant::isDepthMomentsVariant(variant);
@@ -742,7 +753,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
 
             if constexpr (isColorPass) {
                 setupColorCommand(cmd, renderableVariant, renderableSpecKey, mi,
-                        inverseFrontFaces, hasDepthClamp);
+                        inverseFrontFaces, hasDepthClamp, hasFogAsPostProcess);
                 const bool blendPass = Pass(cmd.key & PASS_MASK) == Pass::BLENDED;
                 if (blendPass) {
                     // TODO: at least for transparent objects, AABB should be per primitive
