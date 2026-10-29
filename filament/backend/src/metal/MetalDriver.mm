@@ -256,11 +256,12 @@ MetalDriver::MetalDriver(PlatformMetal* platform,
                 "JobQueueThreadWorker", utils::JobSystem::Priority::NORMAL, []() {}, // onBegin
                 []() {},                                                             // onEnd
                 // This thread has no autorelease pool of its own, so anything a job autoreleases
-                // would live until the thread exits. Each job and the release of its captures
-                // run in their own pool.
-                [](ThreadWorker::RunJob const& run) {                                // wrapJob
+                // would live until the thread exits. Resetting the job inside the pool releases
+                // its captures there too.
+                [](JobQueue::Job& job) {                                             // wrapJob
                     @autoreleasepool {
-                        run();
+                        job();
+                        job = nullptr;
                     }
                 },
             };

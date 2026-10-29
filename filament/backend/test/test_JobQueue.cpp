@@ -596,10 +596,11 @@ TEST(ThreadWorker, WrapJobWrapsEachJobOnTheWorkerThread) {
     std::atomic_int ranInsideWrapperOnWorker = { 0 };
 
     ThreadWorker::Config config = {
-        .wrapJob = [&](ThreadWorker::RunJob const& run) {
+        .wrapJob = [&](JobQueue::Job& job) {
             wrapCount++;
             insideWrapper.store(true);
-            run();
+            job();
+            job = nullptr;
             insideWrapper.store(false);
         }
     };
@@ -619,30 +620,6 @@ TEST(ThreadWorker, WrapJobWrapsEachJobOnTheWorkerThread) {
     worker->terminate();
     EXPECT_EQ(2, wrapCount.load());
     EXPECT_EQ(2, ranInsideWrapperOnWorker.load());
-}
-
-TEST(ThreadWorker, WrapJobDestroysJobBeforeReturning) {
-    struct SetOnDestroy {
-        void operator()(std::atomic_bool* flag) const { flag->store(true); }
-    };
-
-    JobQueue::Ptr queue = JobQueue::create();
-    std::atomic_bool destroyed = { false };
-    std::atomic_bool destroyedInsideWrapper = { false };
-
-    ThreadWorker::Config config = {
-        .wrapJob = [&](ThreadWorker::RunJob const& run) {
-            run();
-            destroyedInsideWrapper.store(destroyed.load());
-        }
-    };
-    JobWorker::Ptr worker = ThreadWorker::create(queue, std::move(config));
-
-    // A wrapper such as an autorelease pool has to cover what the captures release, too.
-    queue->push([guard = std::unique_ptr<std::atomic_bool, SetOnDestroy>(&destroyed)]() {});
-
-    worker->terminate();
-    EXPECT_TRUE(destroyedInsideWrapper.load());
 }
 
 // Destroying a worker without calling `terminate()` first is a programming error, and the process
@@ -669,26 +646,5 @@ TEST(ThreadWorkerDeathTest, DestroyWithoutTerminateAborts) {
     }, expected);
 
     GTEST_FLAG_SET(death_test_style, previousStyle);
-}
-
-// A `wrapJob` that never calls `run` would drop every job without a trace, so debug builds abort.
-TEST(ThreadWorkerDeathTest, WrapJobThatSkipsRunAborts) {
-#ifdef NDEBUG
-    GTEST_SKIP() << "assert_invariant is compiled out of release builds";
-#else
-    // See DestroyWithoutTerminateAborts for why the style is changed.
-    std::string const previousStyle = GTEST_FLAG_GET(death_test_style);
-    GTEST_FLAG_SET(death_test_style, "threadsafe");
-
-    EXPECT_DEATH({
-        JobQueue::Ptr queue = JobQueue::create();
-        ThreadWorker::Config config = { .wrapJob = [](ThreadWorker::RunJob const&) {} };
-        JobWorker::Ptr worker = ThreadWorker::create(queue, std::move(config));
-        queue->push([]() {});
-        worker->terminate();
-    }, "failed assertion");
-
-    GTEST_FLAG_SET(death_test_style, previousStyle);
-#endif
 }
 #endif

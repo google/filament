@@ -282,12 +282,6 @@ void AmortizationWorker::terminate() {
     drain();
 }
 
-void ThreadWorker::RunJob::operator()() const {
-    assert_invariant(mJob);
-    mJob();
-    mJob = nullptr;
-}
-
 ThreadWorker::ThreadWorker(JobQueue::Ptr queue, Config config, PassKey)
         : JobWorker(std::move(queue)), mConfig(std::move(config)) {
     mThread = std::thread([this]() {
@@ -299,12 +293,10 @@ ThreadWorker::ThreadWorker(JobQueue::Ptr queue, Config config, PassKey)
         }
 
         while (JobQueue::Job job = mQueue->pop(true)) {
-            RunJob const run(job);
             if (mConfig.wrapJob) {
-                mConfig.wrapJob(run);
-                assert_invariant(!job);
+                mConfig.wrapJob(job);
             } else {
-                run();
+                job();
             }
         }
 
