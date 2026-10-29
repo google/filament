@@ -343,18 +343,13 @@ wgpu::RenderPipeline WebGPUPipelineCache::createRenderPipeline(
             .dstFactor = toWebGPU(request.rasterState.blendFunctionDstAlpha)
         }
     };
-    // According to the WebGPU spec, a pipeline cannot have a fragment stage with zero color
-    // targets. This situation can arise in Filament during depth-only passes (like shadow map
-    // generation) if the material variant still includes a fragment shader.
-    //
-    // To handle this, we check if any color targets are configured for this pipeline. If not, we
-    // create a pipeline *without* a fragment stage. This makes the pipeline valid for a
-    // depth-only pass, allowing depth writes to proceed correctly.
+    // Keep the fragment stage for depth-only passes when one was supplied. Such shaders can
+    // write frag_depth or discard fragments even though they have no color targets.
 
     // Note that this needs to be defined in the same scope as the CreateRenderpipeline call
     std::array<wgpu::ColorTargetState, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT> colorTargets {};
 
-    if (request.fragmentShaderModule != nullptr && request.colorFormatCount > 0) {
+    if (request.fragmentShaderModule != nullptr) {
         fragmentState.module = request.fragmentShaderModule;
         fragmentState.entryPoint = "main";
         // see the comment about constants for the vertex state, as the same reasoning applies
