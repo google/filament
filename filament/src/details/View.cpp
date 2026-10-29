@@ -501,7 +501,7 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
         if (shadowMapCount + shadowMapCountNeeded <= maxShadowMapCount) {
             shadowMapCount += shadowMapCountNeeded;
             const auto& shadowOptions = lcm.getShadowOptions(li);
-            builder.shadowMap(entity, l, spotLight, &shadowOptions);
+            builder.shadowMap(le, l, spotLight, &shadowOptions);
         }
 
         if (shadowMapCount >= maxShadowMapCount) {
