@@ -264,6 +264,7 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/platform/VulkanPlatform.cpp
             src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
             src/vulkan/platform/VulkanPlatformSwapChainImpl.h
+            src/vulkan/utils/CommandBufferAgeCounter.h
             src/vulkan/utils/Conversion.cpp
             src/vulkan/utils/Conversion.h
             src/vulkan/utils/Definitions.h
@@ -641,7 +642,9 @@ if (FILAMENT_BUILD_TESTING)
         )
         if (FILAMENT_SUPPORTS_VULKAN)
             list(APPEND BACKEND_TEST_SRC
+                    test/test_VulkanCommandBufferAgeCounter.cpp
                     test/test_VulkanSpirvUtils.cpp
+                    test/test_VulkanStagingBufferBypass.cpp
             )
         endif()
         if (FILAMENT_SUPPORTS_WEBGPU)
