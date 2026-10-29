@@ -19,7 +19,10 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <atomic>
 #include <bitset>
+#include <random>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -741,4 +744,267 @@ TEST(AllocatorTest, LinearAllocatorStackInterleaved) {
     EXPECT_EQ(pointermath::add(scratch, 64), la.getCurrent());
     EXPECT_TRUE(la.free(a, 64));
     EXPECT_EQ(scratch, la.getCurrent());
+}
+
+TEST(AllocatorTest, PoolAllocatorHighWaterMark) {
+    constexpr size_t ELEMENT_SIZE = 64;
+    constexpr size_t ALIGNMENT = 32;
+    constexpr size_t COUNT = 16;
+    alignas(ALIGNMENT) uint8_t scratch[COUNT * ELEMENT_SIZE];
+    memset(scratch, 0x5A, sizeof(scratch));
+
+    PoolAllocator<ELEMENT_SIZE, ALIGNMENT> pa(scratch, sizeof(scratch));
+    EXPECT_EQ(scratch, pa.getBase());
+
+    // Construction must not touch any bytes in the backing buffer.
+    for (size_t i = 0; i < sizeof(scratch); ++i) {
+        ASSERT_EQ(0x5Au, scratch[i]);
+    }
+
+    // Allocate 3 elements (high-water mark = 3).
+    void* const p0 = pa.alloc();
+    void* const p1 = pa.alloc();
+    void* const p2 = pa.alloc();
+    EXPECT_EQ(scratch + 0 * ELEMENT_SIZE, p0);
+    EXPECT_EQ(scratch + 1 * ELEMENT_SIZE, p1);
+    EXPECT_EQ(scratch + 2 * ELEMENT_SIZE, p2);
+
+    // Free p1 and p2; they go into the recycled freelist.
+    pa.free(p1);
+    pa.free(p2);
+
+    // Subsequent allocations must reuse p2 and p1 before advancing the high-water mark.
+    void* const p3 = pa.alloc();
+    void* const p4 = pa.alloc();
+    EXPECT_EQ(p2, p3);
+    EXPECT_EQ(p1, p4);
+
+    // Memory beyond the 3rd element must remain completely untouched.
+    for (size_t i = 3 * ELEMENT_SIZE; i < sizeof(scratch); ++i) {
+        ASSERT_EQ(0x5Au, scratch[i]);
+    }
+}
+
+TEST(AllocatorTest, AtomicPoolAllocatorHighWaterMark) {
+    constexpr size_t ELEMENT_SIZE = 64;
+    constexpr size_t ALIGNMENT = 32;
+    constexpr size_t COUNT = 16;
+    alignas(ALIGNMENT) uint8_t scratch[COUNT * ELEMENT_SIZE];
+    memset(scratch, 0x5A, sizeof(scratch));
+
+    PoolAllocator<ELEMENT_SIZE, ALIGNMENT, 0, AtomicFreeList> pa(scratch, sizeof(scratch));
+    EXPECT_EQ(scratch, pa.getBase());
+
+    // Construction must not touch any bytes in the backing buffer.
+    for (size_t i = 0; i < sizeof(scratch); ++i) {
+        ASSERT_EQ(0x5Au, scratch[i]);
+    }
+
+    // Allocate 3 elements (high-water mark = 3).
+    void* const p0 = pa.alloc();
+    void* const p1 = pa.alloc();
+    void* const p2 = pa.alloc();
+    EXPECT_EQ(scratch + 0 * ELEMENT_SIZE, p0);
+    EXPECT_EQ(scratch + 1 * ELEMENT_SIZE, p1);
+    EXPECT_EQ(scratch + 2 * ELEMENT_SIZE, p2);
+
+    // Free p1 and p2; they go into the recycled atomic freelist.
+    pa.free(p1);
+    pa.free(p2);
+
+    // Subsequent allocations must reuse p2 and p1 before advancing the high-water mark.
+    void* const p3 = pa.alloc();
+    void* const p4 = pa.alloc();
+    EXPECT_EQ(p2, p3);
+    EXPECT_EQ(p1, p4);
+
+    // Memory beyond the 3rd element must remain completely untouched.
+    for (size_t i = 3 * ELEMENT_SIZE; i < sizeof(scratch); ++i) {
+        ASSERT_EQ(0x5Au, scratch[i]);
+    }
+}
+
+TEST(AllocatorTest, PoolAllocatorOffsetZeroInitialized) {
+    constexpr size_t ELEMENT_SIZE = 32;
+    constexpr size_t ALIGNMENT = 16;
+    constexpr size_t OFFSET = 4;
+    constexpr size_t STRIDE = (ELEMENT_SIZE + OFFSET + ALIGNMENT - 1) & ~(ALIGNMENT - 1);
+    alignas(ALIGNMENT) uint8_t scratch[8 * STRIDE];
+    memset(scratch, 0xFF, sizeof(scratch));
+
+    PoolAllocator<ELEMENT_SIZE, ALIGNMENT, OFFSET> pa(scratch, sizeof(scratch));
+
+    // First bump-allocated element must have its OFFSET prefix bytes zeroed.
+    auto* const p0 = static_cast<uint8_t*>(pa.alloc());
+    ASSERT_NE(nullptr, p0);
+    for (size_t i = 1; i <= OFFSET; ++i) {
+        EXPECT_EQ(0u, p0[-static_cast<ptrdiff_t>(i)]);
+    }
+
+    // Mutate prefix bytes, free, and re-allocate: recycled slot preserves its prefix bytes.
+    p0[-1] = 0x07;
+    pa.free(p0);
+    auto* const p0Recycled = static_cast<uint8_t*>(pa.alloc());
+    EXPECT_EQ(p0, p0Recycled);
+    EXPECT_EQ(0x07u, p0Recycled[-1]);
+
+    // Unallocated slots beyond the first slot must remain untouched (0xFF).
+    size_t const touchedBytes = static_cast<size_t>((p0 + ELEMENT_SIZE) - scratch);
+    for (size_t i = touchedBytes; i < sizeof(scratch); ++i) {
+        ASSERT_EQ(0xFFu, scratch[i]);
+    }
+}
+
+TEST(AllocatorTest, AtomicPoolAllocatorMultithreadedStress) {
+    constexpr size_t ELEMENT_SIZE = 64;
+    constexpr size_t ALIGNMENT = 32;
+    constexpr size_t OFFSET = 8;
+    constexpr size_t STRIDE = (ELEMENT_SIZE + OFFSET + ALIGNMENT - 1) & ~(ALIGNMENT - 1);
+    constexpr size_t SLOT_COUNT = 256;
+    constexpr size_t NUM_THREADS = 8;
+
+    // Include one extra ALIGNMENT of padding so pointermath::align(scratch, ALIGNMENT, OFFSET)
+    // still leaves room for all SLOT_COUNT slots.
+    alignas(ALIGNMENT) uint8_t scratch[SLOT_COUNT * STRIDE + ALIGNMENT];
+    memset(scratch, 0x5A, sizeof(scratch));
+
+    PoolAllocator<ELEMENT_SIZE, ALIGNMENT, OFFSET, AtomicFreeList> pa(scratch, sizeof(scratch));
+    auto* const base = static_cast<uint8_t*>(pa.getBase());
+    ASSERT_NE(nullptr, base);
+
+    std::atomic<int> slotOwner[SLOT_COUNT];
+    std::atomic<bool> slotSeen[SLOT_COUNT];
+    for (size_t i = 0; i < SLOT_COUNT; ++i) {
+        slotOwner[i].store(-1, std::memory_order_relaxed);
+        slotSeen[i].store(false, std::memory_order_relaxed);
+    }
+
+    auto runWorkers = [&](size_t maxLocalHeld, size_t iterations) {
+        std::atomic<bool> start{ false };
+        std::vector<std::thread> threads;
+        threads.reserve(NUM_THREADS);
+
+        for (size_t tid = 0; tid < NUM_THREADS; ++tid) {
+            threads.emplace_back([&, tid]() {
+                std::mt19937 rng(static_cast<uint32_t>(0xC001D00Du + tid * 101u));
+                struct HeldSlot {
+                    uint8_t* ptr;
+                    size_t idx;
+                    uint8_t pattern;
+                    uint8_t prefixTag;
+                };
+                std::vector<HeldSlot> held;
+                held.reserve(maxLocalHeld);
+
+                while (!start.load(std::memory_order_acquire)) {
+                    std::this_thread::yield();
+                }
+
+                auto releaseSlot = [&](HeldSlot const& s) {
+                    // Verify payload and prefix bytes were not clobbered while held.
+                    for (size_t b = 0; b < ELEMENT_SIZE; ++b) {
+                        EXPECT_EQ(s.pattern, s.ptr[b]);
+                    }
+                    for (size_t b = 1; b <= OFFSET; ++b) {
+                        EXPECT_EQ(s.prefixTag, s.ptr[-static_cast<ptrdiff_t>(b)]);
+                    }
+                    int const prev = slotOwner[s.idx].exchange(-1, std::memory_order_release);
+                    EXPECT_EQ(static_cast<int>(tid), prev);
+                    pa.free(s.ptr);
+                };
+
+                for (size_t iter = 0; iter < iterations; ++iter) {
+                    bool const shouldAlloc = held.empty() ||
+                            (held.size() < maxLocalHeld && (rng() & 1u) != 0u);
+                    if (shouldAlloc) {
+                        auto* const p = static_cast<uint8_t*>(pa.alloc());
+                        if (!p) {
+                            continue;
+                        }
+                        EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(p) & (ALIGNMENT - 1));
+                        ptrdiff_t const byteOffset = p - base;
+                        ASSERT_GE(byteOffset, 0);
+                        ASSERT_EQ(0, byteOffset % static_cast<ptrdiff_t>(STRIDE));
+                        size_t const idx = static_cast<size_t>(byteOffset) / STRIDE;
+                        ASSERT_LT(idx, SLOT_COUNT);
+
+                        // Claim exclusive ownership of this slot.
+                        int const prevOwner = slotOwner[idx].exchange(
+                                static_cast<int>(tid), std::memory_order_acq_rel);
+                        EXPECT_EQ(-1, prevOwner);
+
+                        bool const wasSeen = slotSeen[idx].exchange(true, std::memory_order_acq_rel);
+                        if (!wasSeen) {
+                            // First bump allocation of this slot must have zero-initialized OFFSET.
+                            for (size_t b = 1; b <= OFFSET; ++b) {
+                                EXPECT_EQ(0u, p[-static_cast<ptrdiff_t>(b)]);
+                            }
+                        } else {
+                            // Recycled slot must preserve the last prefix tag written to it.
+                            uint8_t const expectedPrefix = p[-1];
+                            for (size_t b = 1; b <= OFFSET; ++b) {
+                                EXPECT_EQ(expectedPrefix, p[-static_cast<ptrdiff_t>(b)]);
+                            }
+                        }
+
+                        uint8_t const pattern = static_cast<uint8_t>((tid * 37u + iter + 1u) & 0xFFu);
+                        uint8_t const prefixTag = static_cast<uint8_t>((idx ^ iter ^ tid) & 0xFFu);
+                        memset(p, pattern, ELEMENT_SIZE);
+                        memset(p - OFFSET, prefixTag, OFFSET);
+                        held.push_back({ p, idx, pattern, prefixTag });
+                    } else {
+                        size_t const victim = rng() % held.size();
+                        releaseSlot(held[victim]);
+                        held[victim] = held.back();
+                        held.pop_back();
+                    }
+                }
+
+                for (HeldSlot const& s : held) {
+                    releaseSlot(s);
+                }
+            });
+        }
+
+        start.store(true, std::memory_order_release);
+        for (auto& t : threads) {
+            t.join();
+        }
+    };
+
+    // Phase 1: Bounded contention (8 threads * 8 max slots = 64 max concurrent slots << 256).
+    constexpr size_t PHASE1_MAX_LOCAL_HELD = 8;
+    constexpr size_t PHASE1_MAX_TOTAL_SLOTS = NUM_THREADS * PHASE1_MAX_LOCAL_HELD;
+    runWorkers(PHASE1_MAX_LOCAL_HELD, 2500);
+
+    // Every slot beyond PHASE1_MAX_TOTAL_SLOTS must still have its untouched 0x5A poison bytes.
+    uint8_t const* const untouchedBegin = base + PHASE1_MAX_TOTAL_SLOTS * STRIDE - OFFSET;
+    uint8_t const* const scratchEnd = scratch + sizeof(scratch);
+    for (uint8_t const* p = untouchedBegin; p < scratchEnd; ++p) {
+        ASSERT_EQ(0x5Au, *p);
+    }
+
+    // Phase 2: Full saturation & exhaustion contention (8 * 40 = 320 > 256).
+    // Threads race across bump exhaustion and the outer freelist retry loop in AtomicFreeList::pop.
+    runWorkers(40, 3000);
+
+    // Conservation check: all SLOT_COUNT unique slots must still be allocatable after drain.
+    std::bitset<SLOT_COUNT> recovered;
+    std::vector<void*> allSlots;
+    allSlots.reserve(SLOT_COUNT);
+    for (size_t i = 0; i < SLOT_COUNT; ++i) {
+        auto* const p = static_cast<uint8_t*>(pa.alloc());
+        ASSERT_NE(nullptr, p);
+        size_t const idx = static_cast<size_t>(p - base) / STRIDE;
+        ASSERT_LT(idx, SLOT_COUNT);
+        EXPECT_FALSE(recovered.test(idx));
+        recovered.set(idx);
+        allSlots.push_back(p);
+    }
+    EXPECT_EQ(SLOT_COUNT, recovered.count());
+    EXPECT_EQ(nullptr, pa.alloc());
+
+    for (void* const p : allSlots) {
+        pa.free(p);
+    }
 }
