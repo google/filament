@@ -271,7 +271,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
                   [this](PixelBufferDescriptor&& pbd) { scheduleDestroy(std::move(pbd)); }),
           mDescriptorSetLayoutCache(mPlatform->getDevice(), &mResourceManager),
           mDescriptorSetCache(mPlatform->getDevice(), &mResourceManager),
-          mQueryManager(mPlatform->getDevice()),
+          mQueryManager(mContext, mPlatform->getDevice()),
           mExternalImageManager(&mSamplerCache, &mYcbcrConversionCache, &mDescriptorSetCache,
                   &mDescriptorSetLayoutCache),
           mStreamedImageManager(&mExternalImageManager),
@@ -1449,12 +1449,7 @@ Handle<HwSwapChain> VulkanDriver::createSwapChainHeadlessS() noexcept {
 Handle<HwTimerQuery> VulkanDriver::createTimerQueryS() noexcept {
     // The handle must be constructed here, as a synchronous call to getTimerQueryValue might happen
     // before createTimerQueryR is executed.
-    auto query = mQueryManager.getNextQuery(&mResourceManager);
-    if (!query) {
-        // The pool is exhausted. Hand back a null handle; the calls below treat it as a
-        // query that never ran rather than dereferencing it.
-        return {};
-    }
+    auto query = resource_ptr<VulkanTimerQuery>::construct(&mResourceManager);
     query.inc();
     return Handle<VulkanTimerQuery>(query.id());
 }
@@ -2162,11 +2157,10 @@ TimerQueryResult VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint
         return TimerQueryResult::ERROR;
     }
     auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
-    if (!vtq->isCompleted()) {
-        return TimerQueryResult::NOT_READY;
-    }
-
     auto results = mQueryManager.getResult(vtq);
+    if (results.error) {
+        return TimerQueryResult::ERROR;
+    }
     if (results.beginAvailable == 0 || results.endAvailable == 0) {
         return TimerQueryResult::NOT_READY;
     }

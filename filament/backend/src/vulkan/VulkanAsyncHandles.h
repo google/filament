@@ -28,6 +28,7 @@
 
 #include <bluevk/BlueVK.h>
 
+#include <utils/compiler.h>
 #include <utils/CString.h>
 #include <utils/Mutex.h>
 
@@ -44,6 +45,7 @@ namespace filament::backend {
 struct VulkanContext;
 
 class VulkanFencePool;
+class VulkanQueryManager;
 
 using PushConstantNameArray = utils::FixedCapacityVector<char const*>;
 using PushConstantNameByStage = std::array<PushConstantNameArray, Program::SHADER_TYPE_COUNT>;
@@ -275,39 +277,36 @@ struct VulkanSync : fvkmemory::ThreadSafeResource, public HwSync {
     std::vector<std::unique_ptr<CallbackData>> conversionCallbacks;
 };
 
+// A pair of timestamp queries in VulkanQueryManager's VkQueryPool, at indices 2 * index and
+// 2 * index + 1, together with the fences of the command buffers that wrote to them. The two
+// fences differ when the start and stop timestamps were recorded in different command buffers,
+// and stopping is null if the pair was never ended.
+struct VulkanQueryPair {
+    static constexpr uint32_t INVALID = UINT32_MAX;
+
+    uint32_t index = INVALID;
+    std::shared_ptr<VulkanCmdFence> starting;
+    std::shared_ptr<VulkanCmdFence> stopping;
+};
+
 struct VulkanTimerQuery : public HwTimerQuery, fvkmemory::ThreadSafeResource {
-    VulkanTimerQuery(uint32_t startingIndex, uint32_t stoppingIndex)
-        : mStartingQueryIndex(startingIndex),
-          mStoppingQueryIndex(stoppingIndex) {}
-
-    void setFence(std::shared_ptr<VulkanCmdFence> fence) noexcept {
-        utils::LockGuard const lock(mFenceMutex);
-        mFence = std::move(fence);
-    }
-
-    bool isCompleted() noexcept {
-        utils::LockGuard const lock(mFenceMutex);
-        // QueryValue is a synchronous call and might occur before beginTimerQuery has written
-        // anything into the command buffer, which is an error according to the validation layer
-        // that ships in the Android NDK.  Even when AVAILABILITY_BIT is set, validation seems to
-        // require that the timestamp has at least been written into a processed command buffer.
-
-        // This fence indicates that the corresponding buffer has been completed.
-        return mFence && mFence->getStatus() == VK_SUCCESS;
-    }
-
-    uint32_t getStartingQueryIndex() const { return mStartingQueryIndex; }
-
-    uint32_t getStoppingQueryIndex() const {
-        return mStoppingQueryIndex;
-    }
+    VulkanTimerQuery() = default;
 
 private:
-    uint32_t mStartingQueryIndex;
-    uint32_t mStoppingQueryIndex;
+    // All of the state is owned and managed by VulkanQueryManager.
+    friend class VulkanQueryManager;
 
-    std::shared_ptr<VulkanCmdFence> mFence;
-    utils::Mutex mFenceMutex;
+    // Guards the state shared between the backend thread, which binds query pairs, and the
+    // thread calling getTimerQueryValue, which reads them.
+    utils::Mutex mMutex;
+    // The query pair bound by the most recent beginTimerQuery. Its index is INVALID if the timer
+    // has never been begun or if its last begin failed.
+    VulkanQueryPair mPair UTILS_GUARDED_BY(mMutex);
+    // True if the last beginTimerQuery failed because no query pair was free.
+    bool mFailed UTILS_GUARDED_BY(mMutex) = false;
+
+    // True between a beginTimerQuery and its matching endTimerQuery. Backend thread only.
+    bool mActive = false;
 };
 
 } // namespace filament::backend
