@@ -164,40 +164,41 @@ TEST_F(CircularBufferTest, WrapAround) {
     const size_t bufferSize = pageSize * 2 - 128;
     CircularBuffer cb(bufferSize);
 
-    // 1. Allocate 3/4 of the buffer to advance the pointers.
+    // 1. Allocate 3/4 of Bank 0 to advance the pointers.
     const size_t allocSize1 = bufferSize * 3 / 4;
     void* p1 = cb.allocate(allocSize1);
     ASSERT_NE(p1, nullptr);
     memcpy(p1, std::vector<uint8_t>(allocSize1, 1).data(), allocSize1);
 
-    // 2. Consume the first chunk. `mHead` and `mTail` are now advanced.
+    // 2. Consume the first chunk and switch to Bank 1.
     (void)cb.getBuffer();
     EXPECT_TRUE(cb.empty());
+    cb.setBank(1);
 
-    // 3. Allocate another 3/4 of the buffer. This will cause the internal `mHead`
-    // to point beyond `mData + mSize`. The allocation should still succeed and
-    // return a pointer that is virtually contiguous.
+    // 3. Allocate 3/4 of the buffer in Bank 1.
     const size_t allocSize2 = bufferSize * 3 / 4;
     void* p2 = cb.allocate(allocSize2);
     ASSERT_NE(p2, nullptr);
+    EXPECT_EQ(static_cast<char*>(p1) + cb.getBankStride(), static_cast<char*>(p2));
     std::vector<uint8_t> data2(allocSize2);
     std::iota(data2.begin(), data2.end(), 100);
     memcpy(p2, data2.data(), allocSize2);
 
     EXPECT_EQ(cb.getUsed(), allocSize2);
 
-    // 4. Consume the second chunk. `getBuffer()` will handle the wrap-around logic internally.
+    // 4. Consume the second chunk and switch back to Bank 0.
     CircularBuffer::Range r2 = cb.getBuffer();
     EXPECT_EQ(r2.tail, p2);
     EXPECT_EQ(static_cast<char*>(r2.head) - static_cast<char*>(r2.tail), allocSize2);
     EXPECT_EQ(memcmp(r2.tail, data2.data(), allocSize2), 0);
     EXPECT_TRUE(cb.empty());
+    cb.setBank(0);
 
-    // 5. After wrapping, we should be able to make another large allocation.
-    // This verifies the internal pointers were reset correctly and the buffer is healthy.
+    // 5. After switching back to Bank 0, we can make a nearly full allocation starting at p1.
     const size_t allocSize3 = bufferSize - 1; // Almost full buffer
     void* p3 = cb.allocate(allocSize3);
     ASSERT_NE(p3, nullptr);
+    EXPECT_EQ(p1, p3);
     EXPECT_EQ(cb.getUsed(), allocSize3);
 
     // And verify its data.
@@ -208,6 +209,51 @@ TEST_F(CircularBufferTest, WrapAround) {
     EXPECT_EQ(r3.tail, p3);
     EXPECT_EQ(memcmp(r3.tail, data3.data(), allocSize3), 0);
     EXPECT_TRUE(cb.empty());
+}
+
+TEST_F(CircularBufferTest, BankSwitching) {
+    const size_t pageSize = CircularBuffer::getBlockSize();
+    const size_t bufferSize = pageSize * 8;
+    CircularBuffer cb(bufferSize);
+    EXPECT_EQ(bufferSize + pageSize, cb.getBankStride());
+
+    // Initial allocation starts at the base of Bank 0.
+    char* const bank0Base = static_cast<char*>(cb.allocate(128));
+    ASSERT_NE(bank0Base, nullptr);
+    EXPECT_EQ(0u, cb.getBank(bank0Base));
+    CircularBuffer::Range r0 = cb.getBuffer();
+    EXPECT_EQ(bank0Base, static_cast<char*>(r0.tail));
+
+    // Switching to Bank 1 places the next allocation at bank0Base + getBankStride().
+    cb.setBank(1);
+    char* const bank1Base = static_cast<char*>(cb.allocate(256));
+    EXPECT_EQ(bank0Base + cb.getBankStride(), bank1Base);
+    EXPECT_EQ(1u, cb.getBank(bank1Base));
+    CircularBuffer::Range r1 = cb.getBuffer();
+    EXPECT_EQ(bank1Base, static_cast<char*>(r1.tail));
+
+    // Staying in Bank 1 without calling setBank() continues contiguously in Bank 1.
+    char* const bank1Cont = static_cast<char*>(cb.allocate(256));
+    EXPECT_EQ(bank1Base + 256, bank1Cont);
+    EXPECT_EQ(1u, cb.getBank(bank1Cont));
+    (void)cb.getBuffer();
+
+    // Switching back to Bank 0 resets to bank0Base (offset 0 of Bank 0).
+    cb.setBank(0);
+    char* const bank0Reset = static_cast<char*>(cb.allocate(64));
+    EXPECT_EQ(bank0Base, bank0Reset);
+    EXPECT_EQ(0u, cb.getBank(bank0Reset));
+    (void)cb.getBuffer();
+
+#if !defined(__EMSCRIPTEN__)
+    // Writing into the guard page at the end of either Bank 0 or Bank 1 must fault.
+    EXPECT_DEATH({
+        *reinterpret_cast<char volatile*>(bank0Base + bufferSize) = 0x42;
+    }, "");
+    EXPECT_DEATH({
+        *reinterpret_cast<char volatile*>(bank1Base + bufferSize) = 0x42;
+    }, "");
+#endif
 }
 
 } // namespace filament::backend
