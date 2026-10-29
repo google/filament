@@ -222,11 +222,11 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
                              ? storageBindingCompatibleFormatForViewFormat(mViewFormat)
                              : mViewFormat },
       mAspect{ fToWGPUTextureViewAspect(usage, format) },
-      mWebGPUUsage{ fToWGPUTextureUsage(usage, samples,
+      mWebGPUUsage{ fToWGPUTextureUsage(usage, format, samples,
               mMipmapGenerationStrategy == MipmapGenerationStrategy::SPD_COMPUTE_PASS,
               mMipmapGenerationStrategy == MipmapGenerationStrategy::RENDER_PASS,
               supportsTransientAttachment(device)) },
-      mViewUsage{ fToWGPUTextureUsage(usage, samples, false, false,
+      mViewUsage{ fToWGPUTextureUsage(usage, format, samples, false, false,
               supportsTransientAttachment(device)) },
       mDimension{ toWebGPUTextureViewDimension(samplerType) },
       mBlockWidth{ filament::backend::getBlockWidth(format) },
