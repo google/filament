@@ -55,7 +55,7 @@ private:
 
     fvkmemory::resource_ptr<VulkanBuffer> mBuffer;
 
-    uint32_t mLastReadAge;
+    uint64_t mLastReadAge;
     BufferUsage mUsage;
 };
 
