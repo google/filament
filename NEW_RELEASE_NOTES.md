@@ -6,3 +6,6 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+- engine: fix PCSS soft shadows of point and spot lights using the directional light's bulb radius
+- engine: fix a shader program leak when rendering PCSS or VSM shadows with the program cache
+  disabled
