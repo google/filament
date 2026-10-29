@@ -28,6 +28,7 @@
 
 #include "vulkan/memory/Resource.h"
 #include "vulkan/memory/ResourcePointer.h"
+#include "vulkan/utils/CommandBufferAgeCounter.h"
 #include "vulkan/utils/Definitions.h"
 #include "vulkan/VulkanCommands.h"
 
@@ -174,19 +175,22 @@ public:
         return &mOffsets;
     }
 
-    template<typename Resource>
-    void acquire(fvkmemory::resource_ptr<Resource> res) {
-        if (res->template isType<VulkanBufferObject>()) {
-            mUboMask.set(mResources.size());
-        }
-        mResources.push_back(res);
-    }
+    // Holds a reference to a texture bound at `binding`.
+    void acquire(uint8_t binding, fvkmemory::resource_ptr<VulkanTexture> texture);
 
-    void referencedBy(VulkanCommandBuffer& commands);
+    // Holds a reference to a uniform buffer bound at `binding`, along with the range that was
+    // written into the descriptor and the buffer's generation at the time of the write.
+    void acquire(uint8_t binding, fvkmemory::resource_ptr<VulkanBufferObject> bo,
+            VkDeviceSize offset, VkDeviceSize size);
 
-    bool isBound() const {
-        return bool(mSets[mCurrentSetIndex].fenceStatus);
-    }
+    // Records that `commands` binds the current VkDescriptorSet, and reads from its uniform
+    // buffers.
+    void referencedBy(VulkanCommandBuffer& commands,
+            fvkutils::CommandBufferAgeCounter const& ageCounter);
+
+    // Returns the indices (in the same space as the internal UBO mask) of the uniform buffers whose
+    // backing VkBuffer has been swapped since they were written into this set's descriptors.
+    fvkutils::UniformBufferBitmask getStaleUbos() const noexcept;
 
     // The current layout used by the descriptor set. This one will match the bindings, including
     // external samplers data.
@@ -206,22 +210,53 @@ public:
 private:
     friend class VulkanDescriptorSetCache;
 
-    void addNewSet(VkDescriptorSet vkSet, OnRecycle&& onRecycleFn);
+    struct BoundResource {
+        fvkmemory::resource_ptr<fvkmemory::Resource> resource;
+        // The fields below are only meaningful for uniform buffers.
+        uint64_t generation = 0;
+        VkDeviceSize offset = 0;
+        VkDeviceSize size = 0;
+        uint8_t binding = 0;
+    };
 
-    void gc();
+    // Returns the index in mResources of the entry for `binding`, adding one if needed.
+    size_t getResourceIndex(uint8_t binding);
+
+    // Makes `vkSet` the current VkDescriptorSet. Every previous set, including the one that was
+    // current until now, is retired and recycled once no command buffer can use it anymore.
+    void addNewSet(VkDescriptorSet vkSet, OnRecycle&& onRecycleFn,
+            fvkutils::CommandBufferAgeCounter const& ageCounter);
+
+    // Recycles the retired sets that are no longer in use, i.e. those that no recording or
+    // executing command buffer has bound (including those that were never bound). It also
+    // compacts mSets, which invalidates mCurrentSetIndex.
+    //
+    // This treats *every* entry in mSets as retired, including the current one, so it must only
+    // be called from addNewSet(), immediately before the current set is replaced. Calling it at
+    // any other time would recycle the VkDescriptorSet that getVkSet() still hands out.
+    void recycleRetiredSets(fvkutils::CommandBufferAgeCounter const& ageCounter);
 
     struct InternalVkSet {
         VkDescriptorSet vkSet = {};
         OnRecycle onRecycleFn;
-        std::shared_ptr<VulkanCmdFence> fenceStatus;
+        // The ages of the command buffers that bound this VkDescriptorSet. Every one of them must
+        // have completed before the VkDescriptorSet can be recycled. A single fence would not do,
+        // because the regular and the protected queues may complete out of order.
+        fvkutils::AgeSet ages;
     };
 
     fvkmemory::resource_ptr<VulkanDescriptorSetLayout> mLayout;
     backend::DescriptorSetOffsetArray mOffsets;
-    std::vector<fvkmemory::resource_ptr<fvkmemory::Resource>> mResources;
+    std::vector<BoundResource> mResources;
     uint8_t mCurrentSetIndex;
     std::vector<InternalVkSet> mSets;
+    // Bit `i` is set if mResources[i] is a uniform buffer.
     fvkutils::UniformBufferBitmask mUboMask;
+    // Bit `b` is set once binding `b` has been written into the descriptor set. This is in the
+    // folded (one bit per binding) space that VulkanDescriptorSetCache::copySet() takes. A clone
+    // only copies these bindings, because the source descriptor of a binding that was never
+    // written is undefined and must not be copied.
+    fvkutils::SamplerBitmask mWrittenBindings;
 };
 
 struct VulkanMemoryMappedBuffer : public HwMemoryMappedBuffer, Resource {
@@ -439,9 +474,15 @@ struct VulkanVertexBuffer : public HwVertexBuffer, fvkmemory::Resource {
         return mAttributes == vbi->getDeclaredAttributes();
     }
 
+    // Records that `commands` reads from the attached buffer objects.
+    void referencedBy(VulkanCommandBuffer& commands,
+            fvkutils::CommandBufferAgeCounter const& ageCounter);
+
 private:
     utils::FixedCapacityVector<VkBuffer> mBuffers;
-    std::vector<fvkmemory::resource_ptr<VulkanBufferObject>> mResources;
+    // The buffer object attached at each buffer index. Command buffers that read from a buffer
+    // object hold its backing memory via referencedBy(), so replacing an entry here is safe.
+    std::array<fvkmemory::resource_ptr<VulkanBufferObject>, MAX_VERTEX_BUFFER_COUNT> mResources;
     VulkanVertexBufferInfo::AttributeBitSet mAttributes;
 };
 
@@ -454,12 +495,18 @@ struct VulkanIndexBuffer : public HwIndexBuffer, fvkmemory::Resource {
           mBuffer(context, allocator, stagePool, bufferCache, VulkanBufferBinding::INDEX,
                   BufferUsage::STATIC, elementSize * indexCount) {}
 
-    inline void loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData, uint32_t byteOffset,
-            uint32_t numBytes) {
-        mBuffer.loadFromCpu(commands, cpuData, byteOffset, numBytes);
+    // See VulkanBufferProxy::loadFromCpu().
+    inline VulkanCommandBuffer* loadFromCpu(VulkanCommands& commands, const void* cpuData,
+            uint32_t byteOffset, uint32_t numBytes) {
+        return mBuffer.loadFromCpu(commands, cpuData, byteOffset, numBytes);
     }
 
     inline VkBuffer getVkBuffer() const noexcept { return mBuffer.getVkBuffer(); }
+
+    inline void referencedBy(VulkanCommandBuffer& commands,
+            fvkutils::CommandBufferAgeCounter const& ageCounter) {
+        mBuffer.referencedBy(commands, ageCounter);
+    }
 
     VkIndexType const indexType;
 
@@ -472,15 +519,24 @@ struct VulkanBufferObject : public HwBufferObject, fvkmemory::Resource {
             VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, uint32_t byteCount,
             BufferObjectBinding bindingType, BufferUsage usage);
 
-    inline void loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData, uint32_t byteOffset,
-            uint32_t numBytes) {
-        mBuffer.loadFromCpu(commands, cpuData, byteOffset, numBytes);
+    // See VulkanBufferProxy::loadFromCpu().
+    inline VulkanCommandBuffer* loadFromCpu(VulkanCommands& commands, const void* cpuData,
+            uint32_t byteOffset, uint32_t numBytes) {
+        return mBuffer.loadFromCpu(commands, cpuData, byteOffset, numBytes);
     }
 
     inline VkBuffer getVkBuffer() const noexcept { return mBuffer.getVkBuffer(); }
 
-    inline void referencedBy(VulkanCommandBuffer& commands) {
-        mBuffer.referencedBy(commands);
+    inline void referencedBy(VulkanCommandBuffer& commands,
+            fvkutils::CommandBufferAgeCounter const& ageCounter) {
+        mBuffer.referencedBy(commands, ageCounter);
+    }
+
+    inline uint64_t getGeneration() const noexcept { return mBuffer.getGeneration(); }
+
+    // See VulkanBufferProxy::reset().
+    inline void reset(fvkutils::CommandBufferAgeCounter const& ageCounter) {
+        mBuffer.reset(ageCounter);
     }
 
     BufferObjectBinding const bindingType;

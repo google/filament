@@ -270,7 +270,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
                   mPlatform->getGraphicsQueueFamilyIndex(),
                   [this](PixelBufferDescriptor&& pbd) { scheduleDestroy(std::move(pbd)); }),
           mDescriptorSetLayoutCache(mPlatform->getDevice(), &mResourceManager),
-          mDescriptorSetCache(mPlatform->getDevice(), &mResourceManager),
+          mDescriptorSetCache(mPlatform->getDevice(), &mResourceManager,
+                  mCommands.getAgeCounter()),
           mQueryManager(mPlatform->getDevice()),
           mExternalImageManager(&mSamplerCache, &mYcbcrConversionCache, &mDescriptorSetCache,
                   &mDescriptorSetLayoutCache),
@@ -638,6 +639,10 @@ void VulkanDriver::finish(int dummy) {
 
     // This wait() is still necessary to update the fence status.
     mCommands.wait();
+
+    // Every command buffer has completed, so reclaim them now. This releases their ages, which
+    // lets the buffer updates that follow finish() take the staging buffer bypass.
+    mCommands.gc();
 
     mReadPixels.runUntilComplete();
 }
@@ -2029,9 +2034,10 @@ void VulkanDriver::setVertexBufferObjectAsyncR(AsyncCallId jobId, Handle<HwVerte
 
 void VulkanDriver::updateIndexBufferCommon(resource_ptr<VulkanIndexBuffer> ib,
         BufferDescriptor&& p, uint32_t byteOffset) {
-    VulkanCommandBuffer& commands = mCommands.get();
-    commands.acquire(ib);
-    ib->loadFromCpu(commands, p.buffer, byteOffset, p.size);
+    // Only a staging copy needs a command buffer, so loadFromCpu() starts one only if needed.
+    if (VulkanCommandBuffer* commands = ib->loadFromCpu(mCommands, p.buffer, byteOffset, p.size)) {
+        commands->acquire(ib);
+    }
     scheduleDestroy(std::move(p));
 }
 
@@ -2063,9 +2069,11 @@ void VulkanDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuff
 
 void VulkanDriver::updateBufferObjectCommon(resource_ptr<VulkanBufferObject> bo,
         BufferDescriptor&& bd, uint32_t byteOffset) {
-    VulkanCommandBuffer& commands = mCommands.get();
-    commands.acquire(bo);
-    bo->loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
+    // Only a staging copy needs a command buffer, so loadFromCpu() starts one only if needed.
+    if (VulkanCommandBuffer* commands =
+                    bo->loadFromCpu(mCommands, bd.buffer, byteOffset, bd.size)) {
+        commands->acquire(bo);
+    }
     scheduleDestroy(std::move(bd));
 }
 
@@ -2097,21 +2105,23 @@ void VulkanDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferOb
 
 void VulkanDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> boh,
         BufferDescriptor&& bd, uint32_t byteOffset) {
-    VulkanCommandBuffer& commands = mCommands.get();
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
-    commands.acquire(bo);
     // TODO: implement unsynchronized version
-    bo->loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
+    // Only a staging copy needs a command buffer, so loadFromCpu() starts one only if needed.
+    if (VulkanCommandBuffer* commands =
+                    bo->loadFromCpu(mCommands, bd.buffer, byteOffset, bd.size)) {
+        commands->acquire(bo);
+    }
     scheduleDestroy(std::move(bd));
 }
 
 void VulkanDriver::resetBufferObject(Handle<HwBufferObject> boh) {
-    // TODO: implement resetBufferObject(). This is equivalent to calling
-    // destroyBufferObject() followed by createBufferObject() keeping the same handle.
-    // It is actually okay to keep a no-op implementation, the intention here is to "orphan" the
-    // buffer (and possibly return it to a pool) and allocate a new one (or get it from a pool),
-    // so that no further synchronization with the GPU is needed.
-    // This is only useful if updateBufferObjectUnsynchronized() is implemented unsynchronizedly.
+    // The frontend declares that the current contents are no longer needed, typically right
+    // before an update that does not cover the whole buffer. If the GPU may still be reading the
+    // buffer, it is orphaned (like glBufferData(nullptr) does on GL), so that the update can write
+    // into a fresh buffer instead of going through a staging copy.
+    auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
+    bo->reset(mCommands.getAgeCounter());
 }
 
 void VulkanDriver::update3DImageCommon(resource_ptr<VulkanTexture> texture, uint32_t level,
@@ -2908,6 +2918,15 @@ void VulkanDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     VkCommandBuffer cmdbuffer = commands->buffer();
     commands->acquire(prim);
 
+    // Record that this command buffer reads the vertex and index buffers. This keeps their memory
+    // alive while the command buffer is in flight, and tells loadFromCpu() not to memcpy into them
+    // (and to issue a barrier) until the command buffer is done.
+    auto const& ageCounter = mCommands.getAgeCounter();
+    prim->vertexBuffer->referencedBy(*commands, ageCounter);
+    if (prim->indexBuffer) {
+        prim->indexBuffer->referencedBy(*commands, ageCounter);
+    }
+
     // This *must* match the VulkanVertexBufferInfo that was bound in bindPipeline(). But we want
     // to allow to call this before bindPipeline(), so the validation can only happen in draw()
     auto vbi = prim->vertexBuffer->vbi;
@@ -2974,15 +2993,16 @@ void VulkanDriver::prepareDraw() {
         // the external samplers.
         //
         // The final layouts of the descriptor sets are regenerated as needed at `bindDescriptorSet`.
-        VulkanDescriptorSetCache::DescriptorSetArray const& boundSets = mDescriptorSetCache.getBoundSets();
+        VulkanDescriptorSetCache::DescriptorSetArray const& stashedSets =
+                mDescriptorSetCache.getStashedSets();
         VulkanDescriptorSetLayout::DescriptorSetLayoutArray vklayouts;
-        for (size_t i = 0; i < boundSets.size(); i++) {
-            if (!boundSets[i]) {
+        for (size_t i = 0; i < stashedSets.size(); i++) {
+            if (!stashedSets[i]) {
                 vklayouts[i] = VK_NULL_HANDLE;
                 continue;
             }
 
-            vklayouts[i] = boundSets[i]->boundLayout;
+            vklayouts[i] = stashedSets[i]->boundLayout;
         }
         auto program =
                 resource_ptr<VulkanProgram>::cast(&mResourceManager, bundle.pipelineState.program);
@@ -2997,7 +3017,8 @@ void VulkanDriver::prepareDraw() {
         }
         mPipelineState.bindInDraw.first = false;
     }
-    mDescriptorSetCache.commit(mCurrentRenderPass.commandBuffer, mPipelineState.pipelineLayout,
+    VulkanCommandBuffer* commands = mCurrentRenderPass.commandBuffer;
+    mDescriptorSetCache.commit(commands, mPipelineState.pipelineLayout,
             mPipelineState.descriptorSetMask);
 }
 
