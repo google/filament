@@ -301,6 +301,7 @@ class TypeResolver:
         return (
             t.replace("filament::backend::", "backend::")
             .replace("filament::", "")
+            .replace("filamat::", "")
             .replace("utils::", "")
             .replace("math::", "")
         )
@@ -720,11 +721,19 @@ class TypeResolver:
             Tuple of (type_info_dict, regex_capture_groups_tuple).
         """
         # Step 1: Extract raw type string from AST node or string input
-        cpp_type = (
-            type_input.get("qualified_name") or type_input["cpp_name"]
-            if isinstance(type_input, dict)
-            else type_input
-        )
+        if isinstance(type_input, dict):
+            raw_cpp_name = type_input.get("cpp_name", "")
+            stripped_cpp_name = _strip_modifiers(raw_cpp_name)
+            if not type_input.get("is_pointer") and (
+                raw_cpp_name in self.enum_map
+                or stripped_cpp_name in self.enum_map
+                or stripped_cpp_name.split("::")[-1] in self.enum_map
+            ):
+                cpp_type = raw_cpp_name
+            else:
+                cpp_type = type_input.get("qualified_name") or raw_cpp_name
+        else:
+            cpp_type = type_input
 
         # Step 2: Resolve type aliases (typedefs, using declarations)
         is_linear_color = (
@@ -733,25 +742,32 @@ class TypeResolver:
         )
 
         resolved_type = cpp_type
-        if cpp_type in self.aliases:
-            resolved_type = self.aliases[cpp_type]
-        elif isinstance(type_input, dict) and type_input.get("cpp_name") in self.aliases:
-            resolved_type = self.aliases[type_input["cpp_name"]]
-        elif cpp_type.split("::")[-1] in self.aliases:
-            resolved_type = self.aliases[cpp_type.split("::")[-1]]
-        else:
-            stripped = _strip_modifiers(cpp_type)
-            if stripped in self.aliases:
-                resolved_type = self.aliases[stripped]
-            elif stripped.split("::")[-1] in self.aliases:
-                resolved_type = self.aliases[stripped.split("::")[-1]]
+        stripped_initial = _strip_modifiers(cpp_type)
+        is_local_enum = (
+            cpp_type in self.enum_map
+            or stripped_initial in self.enum_map
+            or stripped_initial.split("::")[-1] in self.enum_map
+        )
+        if not is_local_enum:
+            if cpp_type in self.aliases:
+                resolved_type = self.aliases[cpp_type]
+            elif isinstance(type_input, dict) and type_input.get("cpp_name") in self.aliases:
+                resolved_type = self.aliases[type_input["cpp_name"]]
+            elif cpp_type.split("::")[-1] in self.aliases:
+                resolved_type = self.aliases[cpp_type.split("::")[-1]]
+            else:
+                stripped = _strip_modifiers(cpp_type)
+                if stripped in self.aliases:
+                    resolved_type = self.aliases[stripped]
+                elif stripped.split("::")[-1] in self.aliases:
+                    resolved_type = self.aliases[stripped.split("::")[-1]]
 
         if resolved_type in ("LinearColor", "LinearColorA"):
             is_linear_color = True
 
         def check_exact(t: str) -> Optional[Tuple[Dict[str, Any], Tuple[Any, ...]]]:
             clean_t = self.strip_namespaces(t)
-            if t in self.enum_map or clean_t in self.enum_map:
+            if t in self.enum_map or clean_t in self.enum_map or t.split("::")[-1] in self.enum_map:
                 return None
             if t in TYPE_MAP:
                 return TYPE_MAP[t], ()

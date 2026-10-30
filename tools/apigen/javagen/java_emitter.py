@@ -86,6 +86,10 @@ from .specializations import (
     ENGINE_INTERCEPTED_METHODS,
     ENGINE_METHODS_JAVA,
     ENGINE_NATIVE_DECLS_JAVA,
+    MATERIAL_BUILDER_CTOR_JAVA,
+    MATERIAL_BUILDER_METHODS_JAVA,
+    MATERIAL_BUILDER_NATIVE_DECLS_JAVA,
+    MATERIAL_BUILDER_PREAMBLE_JAVA,
     MATERIAL_GET_DEFAULT_INSTANCE_BODY_JAVA,
     MATERIAL_GET_PARAMETERS_BODY_JAVA,
     MATERIAL_GET_PARAMETERS_NATIVE_DECL_JAVA,
@@ -454,6 +458,8 @@ class JavaEmitter:
         for m in methods_to_scan:
             if check_type(m["return_type"]): has_int_range = True
             r_info, _ = self.resolve_type_info(m["return_type"], silent=True)
+            if isinstance(m["return_type"], dict) and m["return_type"].get("is_reference") and not m["return_type"].get("is_pointer") and r_info.get("java") == self.name:
+                has_non_null = True
             if r_info.get("is_string") or r_info.get("java") == "String":
                 if m["return_type"].get("nullability") == "nullable" if isinstance(m["return_type"], dict) else False:
                     has_nullability = True
@@ -527,6 +533,10 @@ class JavaEmitter:
             has_non_null = True
             has_nullability = True
             has_size = False
+        elif self.name == "MaterialBuilder":
+            has_non_null = True
+            has_nullability = True
+            has_int_range = True
 
         if has_int_range or has_non_null or has_nullability or has_size or has_restrict_to or self.cached_fields:
             if has_int_range:
@@ -641,6 +651,8 @@ class JavaEmitter:
             out.append("    private long mNativeObject;")
             if self.name == "Material":
                 out.append("    private final MaterialInstance mDefaultInstance;")
+            elif self.name == "MaterialBuilder":
+                out.extend(MATERIAL_BUILDER_PREAMBLE_JAVA)
             for cached in self.cached_fields.values():
                 out.append(f"    private @Nullable {cached['type']} {cached['field_name']};")
             out.append("")
@@ -762,6 +774,13 @@ class JavaEmitter:
                     out.append("        mDefaultInstance = new MaterialInstance(nGetDefaultInstance(nativeObject), this);")
                     out.append("    }")
                     out.append("")
+                elif self.name == "MaterialBuilder":
+                    out.extend(MATERIAL_BUILDER_CTOR_JAVA)
+                    out.append(f"    {self.name}(long nativeObject) {{")
+                    out.append(f"        mNativeObject = nativeObject;")
+                    out.append("        mFinalizer = null;")
+                    out.append("    }")
+                    out.append("")
                 else:
                     out.append(f"    {self.name}(long nativeObject) {{")
                     out.append(f"        mNativeObject = nativeObject;")
@@ -839,6 +858,9 @@ class JavaEmitter:
             native_decls.extend(self.builder.generate_builder_native_decls())
         if self.name == "Engine":
             native_decls.extend(ENGINE_NATIVE_DECLS_JAVA)
+        if self.name == "MaterialBuilder":
+            out.extend(MATERIAL_BUILDER_METHODS_JAVA)
+            native_decls.extend(MATERIAL_BUILDER_NATIVE_DECLS_JAVA)
 
         # Step 15: Handle Lifetime Boilerplate & Cached Struct Getters
         if self.name == "ToneMapper":
@@ -3218,7 +3240,9 @@ class JavaEmitter:
                 
                 m_in = self.get_array_input_info(arg["type"])
                 is_pointer = arg["type"].get("is_pointer", False)
-                if m_in and "assert" in m_in and ("::mat" in arg["type"]["cpp_name"] or is_pointer):
+                arg_type_str = arg["type"].get("qualified_name") or arg["type"]["cpp_name"] if isinstance(arg["type"], dict) else str(arg["type"])
+                is_mat_arg = bool(re.search(r"::mat\d", arg_type_str)) or "::TMat" in arg_type_str
+                if m_in and "assert" in m_in and (is_mat_arg or is_pointer):
                     assert_method = m_in["assert"]
                     nullability = arg["type"].get("nullability", "unspecified")
                     arg_name = arg["name"]
@@ -3302,9 +3326,20 @@ class JavaEmitter:
         # - Emits input validation bounds checks.
         # - Maps return values from native handles, enums (via EnumCache), or primitive types.
         # - Attaches convenience and vector array overloads.
+        is_self_chain = (
+            not is_static
+            and isinstance(ret_type_cpp, dict)
+            and ret_type_cpp.get("is_reference", False)
+            and not ret_type_cpp.get("is_pointer", False)
+            and ret_info.get("java") == self.name
+            and self.archetype == "handle"
+        )
         ret_type = self.get_java_type(ret_type_cpp)
         ret_ann = self.get_annotation(ret_type_cpp)
-        if self.is_attribute_bitset(ret_type_cpp):
+        if is_self_chain:
+            ret_type = self.name
+            ret_ann = "@NonNull"
+        elif self.is_attribute_bitset(ret_type_cpp):
             ret_type = "Set<VertexBuffer.VertexAttribute>"
             ret_ann = "@NonNull"
         elif ret_info.get("is_string") or ret_type == "String":
@@ -3345,7 +3380,9 @@ class JavaEmitter:
 
             m_in = self.get_array_input_info(arg["type"])
             is_pointer = arg["type"].get("is_pointer", False)
-            if m_in and "assert" in m_in and ("::mat" in arg["type"]["cpp_name"] or is_pointer):
+            arg_type_str = arg["type"].get("qualified_name") or arg["type"]["cpp_name"] if isinstance(arg["type"], dict) else str(arg["type"])
+            is_mat_arg = bool(re.search(r"::mat\d", arg_type_str)) or "::TMat" in arg_type_str
+            if m_in and "assert" in m_in and (is_mat_arg or is_pointer):
                 assert_method = m_in["assert"]
                 nullability = arg["type"].get("nullability", "unspecified")
                 arg_name = arg["name"]
@@ -3357,7 +3394,10 @@ class JavaEmitter:
                 else:
                      out.append(f"        Asserts.{assert_method}In({arg_name});")
         
-        if self.name == "MaterialInstance" and name == "duplicate":
+        if is_self_chain:
+            out.append(f"        {native_name}({', '.join(call_args)});")
+            out.append("        return this;")
+        elif self.name == "MaterialInstance" and name == "duplicate":
             out.append(f"        long nativeInstance = {native_name}({', '.join(call_args)});")
             out.append('        if (nativeInstance == 0) throw new IllegalStateException("Couldn\'t duplicate MaterialInstance");')
             out.append("        return new MaterialInstance(nativeInstance, other.getMaterial());")
@@ -3866,8 +3906,18 @@ class JavaEmitter:
             decl = f"    private static native void {native_name}({', '.join(params_list)});"
         else:
             # Standard return type mapping
+            is_self_chain = (
+                not is_static
+                and isinstance(ret_type_cpp, dict)
+                and ret_type_cpp.get("is_reference", False)
+                and not ret_type_cpp.get("is_pointer", False)
+                and ret_info.get("java") == self.name
+                and self.archetype == "handle"
+            )
             ret_ann = None
-            if self.archetype == "bitfield" and (self.get_java_type(ret_type_cpp) == "void" or ret_info.get("cpp_type") in (self.name, f"{self.name} &", f"const {self.name} &")):
+            if is_self_chain:
+                ret_type = "void"
+            elif self.archetype == "bitfield" and (self.get_java_type(ret_type_cpp) == "void" or ret_info.get("cpp_type") in (self.name, f"{self.name} &", f"const {self.name} &")):
                 ret_type = self.value_type_info.get("storage_type", "int")
             elif ret_info.get("archetype") == "bitfield":
                 ret_type = ret_info.get("storage_type", "int")

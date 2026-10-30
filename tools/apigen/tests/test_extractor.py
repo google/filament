@@ -1282,5 +1282,37 @@ class TestExtractor(unittest.TestCase):
         self.assertEqual(vsm_fields["elvsm"].get("default_value"), "false")
         self.assertEqual(vsm_fields["blurWidth"].get("default_value"), "0.0f")
 
+    def test_constant_expression_evaluation(self):
+        """Verify that class-level constants with casts, expressions, and external references evaluate to actual values."""
+        code = """
+        typedef unsigned int uint32_t;
+        typedef unsigned long long uint64_t;
+        typedef unsigned long size_t;
+
+        namespace backend {
+            static constexpr size_t INDEX_COUNT_BITS = 26;
+            static constexpr size_t MAX_INDEX_COUNT = (size_t(1) << INDEX_COUNT_BITS) - 1;
+            static constexpr uint64_t FENCE_WAIT_FOR_EVER = uint64_t(-1);
+            static constexpr uint64_t SWAP_CHAIN_CONFIG_SRGB_COLORSPACE = 0x10;
+        }
+
+        class IndexBufferTest {
+        public:
+            static constexpr uint32_t MAX_INDEX_COUNT = uint32_t(backend::MAX_INDEX_COUNT);
+            static constexpr uint64_t FENCE_WAIT_FOR_EVER = backend::FENCE_WAIT_FOR_EVER;
+            static constexpr uint64_t WAIT_FOR_EVER = FENCE_WAIT_FOR_EVER;
+            static constexpr uint64_t CONFIG_SRGB_COLORSPACE = backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE;
+            static constexpr float EFFICIENCY_LED = 0.1171f;
+        };
+        """
+        ex = self.parse_source(code)
+        cls = next(c for c in ex.output["classes"] if c["name"] == "IndexBufferTest")
+        constants = {c["name"]: c["value"] for c in cls["constants"]}
+        self.assertEqual(constants["MAX_INDEX_COUNT"], "67108863")
+        self.assertEqual(constants["FENCE_WAIT_FOR_EVER"], "-1")
+        self.assertEqual(constants["WAIT_FOR_EVER"], "FENCE_WAIT_FOR_EVER")
+        self.assertEqual(constants["CONFIG_SRGB_COLORSPACE"], "0x10")
+        self.assertEqual(constants["EFFICIENCY_LED"], "0.1171f")
+
 if __name__ == '__main__':
     unittest.main()

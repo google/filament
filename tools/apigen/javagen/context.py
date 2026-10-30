@@ -66,6 +66,7 @@ from .config import (
 from .type_resolver import TypeResolver
 from .utils import (
     classify_scalar_family,
+    format_enum_entry_name,
     get_element_entry_name,
     get_size_param_attr,
     get_tagged_array_info,
@@ -79,6 +80,9 @@ _RE_NEG_SPACE = re.compile(r"-\s+")
 _RE_UNSIGNED_SUFFIX = re.compile(r"(?i)\b(0x[0-9a-f]+|\d+)u(?:ll|l)?\b")
 _RE_UNSIGNED_TRAILING = re.compile(r"(?i)(?<=[0-9a-fA-F])u(?:ll|l)?$")
 _RE_NEG_ONE_PARENS = re.compile(r"\((?:-\s*1|-1)\)")
+_RE_CPP_CAST = re.compile(
+    r"^(?:static_cast\s*<[^>]+>|(?:u?int(?:8|16|32|64)_t|size_t|ssize_t|int|long|float|double))\s*\(\s*(.*)\s*\)$"
+)
 _RE_CONST_WORD = re.compile(r"\bconst\b")
 _RE_MAT_DIM = re.compile(r"::mat\d")
 
@@ -290,6 +294,9 @@ class ClassContext:
         if parent_context:
             self.package: str = parent_context.package
             self.jni_package: str = parent_context.jni_package
+        elif "filamat/" in self.source_header or ir_class.get("qualified_name", "").startswith("filamat::"):
+            self.package = "com.google.android.filament.filamat"
+            self.jni_package = self.package.replace(".", "_")
         else:
             self.package = "com.google.android.filament"
             self.jni_package = self.package.replace(".", "_")
@@ -303,6 +310,7 @@ class ClassContext:
                 "FilamentAPI",
                 "BuilderBase",
                 "BuilderDetails",
+                "MaterialBuilderBase",
                 "utils::EnableBitmaskOperators",
             )
             and not b.startswith("backend::")
@@ -327,8 +335,8 @@ class ClassContext:
                 alias_type = alias.get("type", {})
                 for key in (alias_type.get("qualified_name"), alias_type.get("cpp_name")):
                     if key:
-                        self.enum_map[key] = enum_ir
-                        self.enum_map[self.type_resolver.strip_namespaces(key)] = enum_ir
+                        self.enum_map.setdefault(key, enum_ir)
+                        self.enum_map.setdefault(self.type_resolver.strip_namespaces(key), enum_ir)
 
         # Step 5: Synthesize Tagged Scalar Array Enums
         # --------------------------------------------
@@ -691,6 +699,8 @@ class ClassContext:
 
         # Step 4: Handle C++11 uniform zero-initialization syntax `{}`
         if val in ("{}", "{ }"):
+            if type_info.get("default_literal") is not None:
+                return type_info["default_literal"]
             if j_type in ("int", "short", "byte", "char", "long"):
                 return "(byte) 0" if j_type == "byte" else "0"
             if j_type == "float":
@@ -707,9 +717,13 @@ class ClassContext:
             if val == c_name or val.endswith(f"::{c_name}"):
                 return c_name
 
-        # Step 6: Map zero literals for byte parameters with explicit casts
+        # Step 6: Map zero literals for byte/boolean parameters
         if j_type == "byte" and val in ("0", "0x0"):
             return "(byte) 0"
+        if j_type == "boolean" and val in ("0", "0x0"):
+            return "false"
+        if j_type == "boolean" and val in ("1", "0x1"):
+            return "true"
 
         # Step 7: Map IEEE 754 floating-point infinity representations
         if "INFINITY" in val:
@@ -720,7 +734,7 @@ class ClassContext:
 
         # Step 8: Map C++ scoped enum constants to Java enum constant references
         if type_info.get("is_enum"):
-            entry_name = val.split("::")[-1].strip()
+            entry_name = format_enum_entry_name(type_info["java"], val.split("::")[-1].strip())
             return f"{type_info['java']}.{entry_name}"
 
         # Step 9: Strip C++ unsigned integer suffixes (e.g. 10u, 0xFFu, 1ULL)
@@ -764,11 +778,17 @@ class ClassContext:
         if _RE_NEG_ONE_PARENS.search(val) or ("std::numeric_limits" in val and "max" in val):
             return "-1"
 
-        # Step 4: Strip C++ unsigned integer suffixes
+        # Step 4: Unwrap C++ functional or static_cast expressions wrapping a constant value
+        cast_match = _RE_CPP_CAST.match(val)
+        while cast_match:
+            val = cast_match.group(1).strip()
+            cast_match = _RE_CPP_CAST.match(val)
+
+        # Step 5: Strip C++ unsigned integer suffixes
         val = _RE_UNSIGNED_SUFFIX.sub(r"\1", val)
         val = _RE_UNSIGNED_TRAILING.sub("", val)
 
-        # Step 5: Append 'f' suffix to float literals if missing
+        # Step 6: Append 'f' suffix to float literals if missing
         if j_type == "float" and not val.endswith(("f", "F")):
             val += "f"
         return val
@@ -1150,6 +1170,8 @@ class ClassContext:
                             arg_type["cpp_name"] = new_cpp_name
                             arg_type["qualified_name"] = concrete_arg if not is_ptr else f"{concrete_arg} *"
                             arg_type["is_template_param"] = False
+                            if len(specializations) > 1 and not is_ret_templated:
+                                arg["default_value"] = None
 
                 # Format specialization type string and synthesize unmangled return name if needed
                 spec_type_str = ", ".join(spec.values())

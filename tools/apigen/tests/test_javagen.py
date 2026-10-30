@@ -470,6 +470,12 @@ class TestJavaGen(unittest.TestCase):
                             "type": {"cpp_name": "const float", "qualified_name": "float", "category": "primitive"},
                             "value": "0.1171f",
                             "doc": {"brief": "LED efficiency."}
+                        },
+                        {
+                            "name": "MAX_INDEX_COUNT",
+                            "type": {"cpp_name": "const uint32_t", "qualified_name": "uint32_t", "category": "primitive"},
+                            "value": "uint32_t(67108863)",
+                            "doc": {"brief": "Maximum number of indices."}
                         }
                     ]
                 }
@@ -498,6 +504,7 @@ class TestJavaGen(unittest.TestCase):
             self.assertIn("public static final long FENCE_WAIT_FOR_EVER = -1;", java_src)
             self.assertIn("public static final long WAIT_FOR_EVER = FENCE_WAIT_FOR_EVER;", java_src)
             self.assertIn("public static final float EFFICIENCY_LED = 0.1171f;", java_src)
+            self.assertIn("public static final int MAX_INDEX_COUNT = 67108863;", java_src)
             self.assertIn("doWait(WAIT_FOR_EVER);", java_src)
 
     def test_no_apigen_attribute(self):
@@ -4106,6 +4113,58 @@ class TestJavaGen(unittest.TestCase):
             self.assertIn("    @Deprecated\n    public static class LegacyOptions {", java_src)
             self.assertIn("        @Deprecated\n        public float legacyScale = 1.0f;", java_src)
             self.assertIn("        public boolean enabled = true;", java_src)
+
+    def test_material_builder_filamat_generation(self):
+        """Verify end-to-end extraction and generation of MaterialBuilder for filamat-android."""
+        repo_root = Path(__file__).parent.parent.parent.parent
+        header_file = repo_root / "libs/filamat/include/filamat/MaterialBuilder.h"
+        self.assertTrue(header_file.exists(), "MaterialBuilder.h not found")
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            extracted_json = Path(tmp_dir) / "MaterialBuilder.json"
+            ext_res = subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(__file__).parent.parent / "extractor.py"),
+                    str(header_file),
+                    "-o", str(extracted_json),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(ext_res.returncode, 0, f"extractor failed: {ext_res.stderr}")
+
+            res = subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(__file__).parent.parent / "javagen.py"),
+                    "--java-dir", tmp_dir,
+                    "--jni-dir", tmp_dir,
+                    "--class-name", "MaterialBuilder",
+                    str(extracted_json),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(res.returncode, 0, f"javagen failed: {res.stderr}")
+
+            java_src = (Path(tmp_dir) / "MaterialBuilder.java").read_text()
+            cpp_src = (Path(tmp_dir) / "MaterialBuilder.cpp").read_text()
+
+            self.assertIn("package com.google.android.filament.filamat;", java_src)
+            self.assertIn('System.loadLibrary("filamat-jni");', java_src)
+            self.assertIn("public MaterialBuilder()", java_src)
+            self.assertIn("public static void init()", java_src)
+            self.assertIn("public static void shutdown()", java_src)
+            self.assertIn("public MaterialBuilder name(@NonNull String name)", java_src)
+            self.assertIn("public MaterialPackage build(@Nullable Object jobSystemProvider)", java_src)
+            self.assertIn("public MaterialBuilder constant(@NonNull String name, @NonNull ConstantType type, int defaultValue)", java_src)
+            self.assertIn("public MaterialBuilder constant(@NonNull String name, @NonNull ConstantType type, float defaultValue)", java_src)
+            self.assertIn("public MaterialBuilder constant(@NonNull String name, @NonNull ConstantType type, boolean defaultValue)", java_src)
+            self.assertIn("using namespace filamat;", cpp_src)
+            self.assertIn("Java_com_google_android_filament_filamat_MaterialBuilder_nCreateMaterialBuilder", cpp_src)
+            self.assertIn("Java_com_google_android_filament_filamat_MaterialBuilder_nBuilderBuild", cpp_src)
+            self.assertIn("that->groupSize(uint3{(uint32_t)groupSizex, (uint32_t)groupSizey, (uint32_t)groupSizez});", cpp_src)
 
 
 if __name__ == "__main__":

@@ -26,6 +26,7 @@ import itertools
 import subprocess
 import textwrap
 import collections
+import ctypes
 
 
 # -----------------------------------------------------------------------------
@@ -69,6 +70,76 @@ def setup_clang():
 
 clang_cindex = setup_clang()
 from clang.cindex import CursorKind, TypeKind, AccessSpecifier
+
+_RE_SIMPLE_LITERAL = re.compile(
+    r"^(?:"
+    r"-?0[xX][0-9a-fA-F]+[uUlL]*|"
+    r"(?:-\s*)?[0-9]+[uUlL]*|"
+    r"(?:-\s*)?(?:[0-9]+\.[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?[fFdD]?|"
+    r"(?:-\s*)?[0-9]+[eE][+-]?[0-9]+[fFdD]?|"
+    r"true|false"
+    r")$"
+)
+
+def _init_clang_eval():
+    lib = clang_cindex.conf.lib
+    if not hasattr(lib, "_apigen_eval_initialized"):
+        lib.clang_Cursor_Evaluate.argtypes = [clang_cindex.Cursor]
+        lib.clang_Cursor_Evaluate.restype = ctypes.c_void_p
+        lib.clang_EvalResult_getKind.argtypes = [ctypes.c_void_p]
+        lib.clang_EvalResult_getKind.restype = ctypes.c_int
+        lib.clang_EvalResult_isUnsignedInt.argtypes = [ctypes.c_void_p]
+        lib.clang_EvalResult_isUnsignedInt.restype = ctypes.c_uint
+        lib.clang_EvalResult_getAsLongLong.argtypes = [ctypes.c_void_p]
+        lib.clang_EvalResult_getAsLongLong.restype = ctypes.c_longlong
+        lib.clang_EvalResult_getAsUnsigned.argtypes = [ctypes.c_void_p]
+        lib.clang_EvalResult_getAsUnsigned.restype = ctypes.c_ulonglong
+        lib.clang_EvalResult_getAsDouble.argtypes = [ctypes.c_void_p]
+        lib.clang_EvalResult_getAsDouble.restype = ctypes.c_double
+        lib.clang_EvalResult_dispose.argtypes = [ctypes.c_void_p]
+        lib.clang_EvalResult_dispose.restype = None
+        lib._apigen_eval_initialized = True
+    return lib
+
+def evaluate_cursor_constant(cursor):
+    try:
+        lib = _init_clang_eval()
+        res = lib.clang_Cursor_Evaluate(cursor)
+        if not res:
+            return None
+        try:
+            kind = lib.clang_EvalResult_getKind(res)
+            can_type = cursor.type.get_canonical()
+            if kind == 1:  # CXEval_Int
+                if can_type.kind == TypeKind.BOOL:
+                    return "true" if lib.clang_EvalResult_getAsLongLong(res) != 0 else "false"
+                if lib.clang_EvalResult_isUnsignedInt(res):
+                    uval = lib.clang_EvalResult_getAsUnsigned(res)
+                    size = can_type.get_size()
+                    if size == 8 and uval >= (1 << 63):
+                        return str(ctypes.c_int64(uval).value)
+                    elif size <= 4 and uval >= (1 << 31):
+                        return str(ctypes.c_int32(uval).value)
+                    return str(uval)
+                else:
+                    return str(lib.clang_EvalResult_getAsLongLong(res))
+            elif kind == 2:  # CXEval_Float
+                dval = lib.clang_EvalResult_getAsDouble(res)
+                if can_type.kind == TypeKind.FLOAT:
+                    s = f"{dval:.7g}"
+                    if "." not in s and "e" not in s and "E" not in s:
+                        s += ".0"
+                    return s + "f"
+                else:
+                    s = f"{dval:.15g}"
+                    if "." not in s and "e" not in s and "E" not in s:
+                        s += ".0"
+                    return s
+        finally:
+            lib.clang_EvalResult_dispose(res)
+    except Exception:
+        pass
+    return None
 
 # -----------------------------------------------------------------------------
 # Configuration & Constants
@@ -605,6 +676,7 @@ def get_default_includes(filename):
             os.path.join(repo_root, "libs", "math", "include"),
             os.path.join(repo_root, "libs", "filabridge", "include"),
             os.path.join(repo_root, "libs", "filaflat", "include"),
+            os.path.join(repo_root, "libs", "filamat", "include"),
         ]
     return []
 
@@ -685,6 +757,37 @@ class Extractor:
         self.pending_trait_aliases = {} # alias_name -> target_trait_name
         self._parsed_headers = {self.filename}
         self._source_lines_cache = {}
+        self._cond_never_ranges_cache = {}
+
+    def _get_cond_never_ranges(self, file_path):
+        if not file_path or not os.path.isfile(file_path):
+            return []
+        abs_p = os.path.abspath(file_path)
+        if abs_p not in self._cond_never_ranges_cache:
+            self.get_source_line(abs_p, 1)
+            lines = self._source_lines_cache.get(abs_p, [])
+            ranges = []
+            start = None
+            for idx, line in enumerate(lines, start=1):
+                if re.search(r"[@\\]cond\s+(?:never|PRIVATE)\b", line) or re.search(r"[@\\]cond\s*$", line.strip()):
+                    if start is None:
+                        start = idx
+                elif re.search(r"[@\\]endcond\b", line):
+                    if start is not None:
+                        ranges.append((start, idx))
+                        start = None
+            self._cond_never_ranges_cache[abs_p] = ranges
+        return self._cond_never_ranges_cache[abs_p]
+
+    def _is_in_cond_never(self, cursor):
+        loc = cursor.location
+        if not loc or not loc.file:
+            return False
+        line = loc.line
+        for s, e in self._get_cond_never_ranges(loc.file.name):
+            if s <= line <= e:
+                return True
+        return False
 
     def get_source_line(self, file_path, line_num):
         if not file_path or not os.path.isfile(file_path):
@@ -833,6 +936,9 @@ class Extractor:
             if not is_in_main_file:
                 continue
 
+            if self._is_in_cond_never(child):
+                continue
+
             # Skip out-of-line method definitions (semantic parent is class/struct)
             if child.kind in (CursorKind.FUNCTION_DECL, CursorKind.FUNCTION_TEMPLATE):
                 if child.semantic_parent and child.semantic_parent.kind in (CursorKind.CLASS_DECL, CursorKind.STRUCT_DECL):
@@ -921,9 +1027,9 @@ class Extractor:
         
         start_scan = -1
         try:
-            # find 'using type =' or just 'enable_if_t'
+            # find 'using type =' or just 'enable_if_t' / 'enable_if'
             for i, t in enumerate(tokens):
-                if t == "enable_if_t":
+                if t in ("enable_if_t", "enable_if"):
                     start_scan = i
                     break
         except ValueError:
@@ -1024,10 +1130,16 @@ class Extractor:
         def is_polymorphic_cursor(c):
             return any(child.is_virtual_method() for child in c.get_children() if child.kind in (CursorKind.CXX_METHOD, CursorKind.DESTRUCTOR))
 
-        # Extract fields and methods from non-polymorphic base structs (if any)
+        # Extract fields, methods, enums, constants, and aliases from non-polymorphic base structs (if any)
+        skip_attrs = ("filament:apigen:skip", "filament:skip", "apigen:skip", "no_apigen", "noapigen", "skip_generation", "binding:skip")
         for b_decl in base_decls:
             if not is_polymorphic_cursor(b_decl):
                 for child in b_decl.get_children():
+                    if self._is_in_cond_never(child):
+                        continue
+                    child_attrs = extract_attributes(child)
+                    if any(a in skip_attrs or a.startswith("no_apigen") or a.startswith("skip_generation") for a in child_attrs):
+                        continue
                     if child.kind == CursorKind.FIELD_DECL:
                         if child.access_specifier == clang_cindex.AccessSpecifier.PUBLIC:
                             self.handle_field(child, cls)
@@ -1037,8 +1149,19 @@ class Extractor:
                                 continue
                             if not any(m["name"] == child.spelling for m in cls["methods"]):
                                 self.handle_method(child, cls)
+                    elif child.kind == CursorKind.ENUM_DECL:
+                        if child.access_specifier == clang_cindex.AccessSpecifier.PUBLIC:
+                            self.handle_enum(child, cls)
+                    elif child.kind == CursorKind.VAR_DECL:
+                        if child.access_specifier == clang_cindex.AccessSpecifier.PUBLIC:
+                            self.handle_constant(child, cls)
+                    elif child.kind == CursorKind.TYPEDEF_DECL or child.kind == CursorKind.TYPE_ALIAS_DECL:
+                        if child.access_specifier == clang_cindex.AccessSpecifier.PUBLIC:
+                            self.handle_alias(child, cls)
 
         for child in cursor.get_children():
+            if self._is_in_cond_never(child):
+                continue
             # If default access specifier (private for class, public for struct) handling is needed,
             # we can check cursor.access_specifier
             if child.kind == CursorKind.CXX_METHOD or child.kind == CursorKind.FUNCTION_TEMPLATE:
@@ -1079,7 +1202,7 @@ class Extractor:
                 trait_types = self.extract_trait(child)
                 if trait_types:
                     self.traits[child.spelling] = trait_types
-                elif child.is_definition():
+                elif child.is_definition() and child.access_specifier in (clang_cindex.AccessSpecifier.PUBLIC, clang_cindex.AccessSpecifier.INVALID):
                     # Handle nested class
                     cat = "object"
                     if child.kind == CursorKind.STRUCT_DECL:
@@ -1104,7 +1227,7 @@ class Extractor:
             cls["category"] = "utility"
             cls["is_utility"] = True
 
-        is_builder = (name == "Builder" or any("BuilderBase" in b for b in bases))
+        is_builder = (name == "Builder" or any(b == "BuilderBase" or b.startswith("BuilderBase<") or "::BuilderBase<" in b for b in bases))
         if is_builder:
             cls["is_builder"] = True
             cls["category"] = "builder"
@@ -1199,10 +1322,10 @@ class Extractor:
                             break
                     if semi_pos != -1:
                         subset = tokens[i + 3:semi_pos]
-                        # Check if enable_if_t in subset
+                        # Check if enable_if_t / enable_if in subset
                         enable_idx = -1
                         for idx, tok in enumerate(subset):
-                            if tok == "enable_if_t":
+                            if tok in ("enable_if_t", "enable_if"):
                                 enable_idx = idx
                                 break
                         if enable_idx != -1:
@@ -1406,6 +1529,10 @@ class Extractor:
         # If this constant aliases a constant already defined in this class, reference it by name
         if ref_cursor and any(c.get("name") == ref_cursor.spelling for c in cls.get("constants", [])):
             clean_val = ref_cursor.spelling
+        elif not _RE_SIMPLE_LITERAL.match(clean_val):
+            evaluated_val = evaluate_cursor_constant(cursor)
+            if evaluated_val is not None:
+                clean_val = evaluated_val
             
         const_obj["value"] = clean_val
         cls.setdefault("constants", []).append(const_obj)
@@ -1465,7 +1592,7 @@ class Extractor:
                 cls.setdefault("enums", []).append(enum_obj)
         elif decl and decl.kind in (CursorKind.STRUCT_DECL, CursorKind.CLASS_DECL):
             defn = decl.get_definition() or (decl if decl.is_definition() else None)
-            if defn:
+            if defn and not get_cursor_qualified_name(defn).startswith("std::"):
                 # Check if this struct has already been ingested into classes for this parent
                 existing = any(
                     c.get("name") == cursor.spelling and c.get("parent_class") == cls["name"]
@@ -1486,11 +1613,15 @@ class Extractor:
 
     def _namespace_has_functions(self, cursor):
         abs_filename = os.path.abspath(self.filename)
+        skip_attrs = ("filament:apigen:skip", "filament:skip", "apigen:skip", "no_apigen", "noapigen", "skip_generation", "binding:skip")
         for child in cursor.get_children():
             loc = child.location
             if loc.file and os.path.abspath(loc.file.name) == abs_filename:
                 if child.kind in (CursorKind.FUNCTION_DECL, CursorKind.FUNCTION_TEMPLATE):
-                    return True
+                    if not self._is_in_cond_never(child):
+                        attrs = extract_attributes(child)
+                        if not any(a in skip_attrs or a.startswith("no_apigen") or a.startswith("skip_generation") for a in attrs):
+                            return True
         return False
 
     def handle_namespace(self, cursor):
@@ -1498,12 +1629,18 @@ class Extractor:
         funcs = []
         enums = []
         constants = []
+        skip_attrs = ("filament:apigen:skip", "filament:skip", "apigen:skip", "no_apigen", "noapigen", "skip_generation", "binding:skip")
         
         for child in cursor.get_children():
             loc = child.location
             if not loc.file or os.path.abspath(loc.file.name) != abs_filename:
                 continue
+            if self._is_in_cond_never(child):
+                continue
             if child.kind in (CursorKind.FUNCTION_DECL, CursorKind.FUNCTION_TEMPLATE):
+                attrs = extract_attributes(child)
+                if any(a in skip_attrs or a.startswith("no_apigen") or a.startswith("skip_generation") for a in attrs):
+                    continue
                 func = self.parse_function(child)
                 func["is_static"] = True
                 funcs.append(func)
