@@ -54,9 +54,9 @@ struct Variant {
     //
     //   X: either 1 or 0
     //                            +-----+-----+-----+-----+-----+-----+
-    // Variant                    | S2D | PCK | DEP | SKN | SRE | STE |   64
+    // Variant                    | S2D |  0  | DEP | SKN | SRE | STE |   64
     //                            +-----+-----+-----+-----+-----+-----+
-    //                              MNT
+    //                              MNT   PCK
     //                              \--MOT--/
     //
     // Note that public UserVariantFilterBit keeps the old 8-bit values for API compatibility.
