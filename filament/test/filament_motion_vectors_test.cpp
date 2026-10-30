@@ -39,6 +39,7 @@
 #include "DynamicSpecConstKey.h"
 #include "LocalProgramCache.h"
 #include "MaterialParser.h"
+#include "ProgramSlotMap.h"
 
 #include "details/Engine.h"
 #include "details/Material.h"
@@ -1297,9 +1298,9 @@ TEST_F(MotionVectorsTest, CompileSharedMotionVectorsPrograms) {
     FMaterial const* const defaultMaterial = engine.getDefaultMaterial();
     ASSERT_NE(defaultMaterial, nullptr);
     LocalProgramCache::Programs const programs = defaultMaterial->getPrograms().getPrograms();
-    auto const isPrepared = [&programs](Variant const variant) {
-        return bool(programs[LocalProgramCache::mapCacheEntryKey(
-                variant, DynamicSpecConstKey{}, programs.size())]);
+    ProgramSlotMap const& slotMap = defaultMaterial->getDefinition().getProgramSlotMap();
+    auto const isPrepared = [&programs, &slotMap](Variant const variant) {
+        return bool(programs[slotMap.map(variant, DynamicSpecConstKey{})]);
     };
     Variant const variants[] = {
             Variant{ Variant::SPECIAL_MOT_VARIANT },
