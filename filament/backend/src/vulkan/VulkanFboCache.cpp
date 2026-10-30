@@ -24,6 +24,8 @@
 #include <utils/compiler.h>
 #include <utils/Panic.h>
 
+#include <algorithm>
+
 // If any VkRenderPass or VkFramebuffer is unused for more than TIME_BEFORE_EVICTION frames, it
 // is evicted from the cache.
 static constexpr uint32_t TIME_BEFORE_EVICTION = FVK_MAX_COMMAND_BUFFERS;
@@ -69,17 +71,39 @@ VulkanFboCache::VulkanFboCache(VkDevice device, uint32_t timeBeforeEvictionFbo)
           mTimeBeforeEvictionFbo(timeBeforeEvictionFbo) {}
 
 VulkanFboCache::~VulkanFboCache() {
-    FILAMENT_CHECK_POSTCONDITION(mFramebufferCache.empty() && mRenderPassCache.empty())
+    FILAMENT_CHECK_POSTCONDITION(
+            mFramebufferCache.empty() && mRenderPassCache.empty() && mSwapchainFbos.empty())
             << "Please explicitly call terminate() while the VkDevice is still alive.";
 }
 
 fvkmemory::resource_ptr<VulkanFramebuffer> VulkanFboCache::getFramebuffer(FboKey const& config,
         fvkmemory::ResourceManager* resManager,
-        fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget) noexcept {
-    FboMap::iterator iter = mFramebufferCache.find(config);
-    if (UTILS_LIKELY(iter != mFramebufferCache.end())) {
-        iter.value().timestamp = mCurrentTime;
-        return iter->second.handle;
+        fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget,
+        fvkmemory::resource_ptr<VulkanSwapChain> swapchain) {
+
+    SwapChainFboMappingList::iterator swapchainItr;
+    if (swapchain) {
+        uint32_t const index = swapchain->currentSwapIndex();
+        swapchainItr = findSwapChainFboMapping(swapchain);
+
+        // Try to find the swapchain cached fbos.
+        if (swapchainItr != mSwapchainFbos.end()) {
+            auto const& fboval = *swapchainItr;
+            // Note that we are not comparing against renderpass compat because they should be
+            // compatible by construction.
+            if (fboval.fbos[index].fbo) {
+                // If the color image of the swapchain has been changed, we should have called
+                // resetFramebuffers().  The following assert checks for this implicit assumption.
+                assert_invariant(fboval.fbos[index].color == config.color[0]);
+                return fboval.fbos[index].fbo;
+            }
+        }
+    } else {
+        FboMap::iterator iter = mFramebufferCache.find(config);
+        if (UTILS_LIKELY(iter != mFramebufferCache.end())) {
+            iter.value().timestamp = mCurrentTime;
+            return iter->second.handle;
+        }
     }
 
     // The attachment list contains: Color Attachments, Resolve Attachments, and Depth Attachment.
@@ -123,11 +147,29 @@ fvkmemory::resource_ptr<VulkanFramebuffer> VulkanFboCache::getFramebuffer(FboKey
     VkResult error = vkCreateFramebuffer(mDevice, &info, VKALLOC, &framebuffer);
     FILAMENT_CHECK_POSTCONDITION(error == VK_SUCCESS) << "Unable to create framebuffer."
                                                      << " error=" << static_cast<int32_t>(error);
-    fvkmemory::resource_ptr<VulkanFramebuffer> fbh =
+    fvkmemory::resource_ptr<VulkanFramebuffer> fbo =
             fvkmemory::resource_ptr<VulkanFramebuffer>::construct(resManager, mDevice, framebuffer,
                     renderTarget);
-    mFramebufferCache[config] = { fbh, mCurrentTime };
-    return fbh;
+
+    if (swapchain) {
+        uint32_t const index = swapchain->currentSwapIndex();
+        if (swapchainItr == mSwapchainFbos.end()) {
+            // Not found, we cache the struct along with one newly created fbo.
+            utils::FixedCapacityVector<SwapChainFbo> fbos{ swapchain->count() };
+            mSwapchainFbos.push_back({ swapchain, std::move(fbos) });
+            swapchainItr = mSwapchainFbos.end() - 1;
+        }
+        auto& fboval = *swapchainItr;
+        fboval.fbos[index] = {
+            .fbo = fbo,
+            .renderPass = config.renderPass,
+            .color = config.color[0],
+        };
+    } else {
+        mFramebufferCache[config] = { fbo, mCurrentTime };
+    }
+
+    return fbo;
 }
 
 fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
@@ -367,10 +409,15 @@ fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
 }
 
 void VulkanFboCache::resetFramebuffers() noexcept {
-    for (const auto& pair: mFramebufferCache) {
+    for (auto const& pair: mFramebufferCache) {
         mRenderPassRefCount[pair.first.renderPass]--;
     }
     mFramebufferCache.clear();
+
+    for (auto& mapping: mSwapchainFbos) {
+        releaseSwapchainFbos(mapping);
+    }
+    mSwapchainFbos.clear();
 }
 
 void VulkanFboCache::terminate() noexcept {
@@ -378,6 +425,29 @@ void VulkanFboCache::terminate() noexcept {
 
     mRenderPassRefCount.clear();
     mRenderPassCache.clear();
+}
+
+void VulkanFboCache::releaseSwapchainFbos(SwapChainFboMapping& mapping) {
+    for (auto const& fbo: mapping.fbos) {
+        if (fbo.renderPass != VK_NULL_HANDLE) {
+            mRenderPassRefCount[fbo.renderPass]--;
+        }
+    }
+}
+
+VulkanFboCache::SwapChainFboMappingList::iterator VulkanFboCache::findSwapChainFboMapping(
+        SwapChainPtr swapchain) {
+    return std::find_if(mSwapchainFbos.begin(), mSwapchainFbos.end(),
+            [&](SwapChainFboMapping const& fbomapping) {
+                return (fbomapping.swapchain == swapchain);
+            });
+}
+
+void VulkanFboCache::onSwapchainDestroyed(fvkmemory::resource_ptr<VulkanSwapChain> swapchain) {
+    if (auto itr = findSwapChainFboMapping(swapchain); itr != mSwapchainFbos.end()) {
+        releaseSwapchainFbos(*itr);
+        mSwapchainFbos.erase(itr);
+    }
 }
 
 // Frees up old framebuffers and render passes, then nulls out their key.  Doesn't bother removing

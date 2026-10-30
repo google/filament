@@ -1490,6 +1490,9 @@ void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
         return;
     }
     auto swapChain = resource_ptr<VulkanSwapChain>::cast(&mResourceManager, sch);
+
+    mFramebufferCache.onSwapchainDestroyed(swapChain);
+
     if (mCurrentSwapChain == swapChain) {
         mCurrentSwapChain = {};
     }
@@ -2265,10 +2268,14 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // first render pass. Note however that its contents are often preserved on subsequent render
     // passes, due to multiple views.
     TargetBufferFlags discardStart = params.flags.discardStart;
+    fvkmemory::resource_ptr<VulkanSwapChain> swapchain;
     if (rt->isSwapChain()) {
-        fvkmemory::resource_ptr<VulkanSwapChain> sc = mCurrentSwapChain;
-        assert_invariant(sc);
-        if (sc->isFirstRenderPass()) {
+        // There should be no subpasses for the swapchain rendertarget. This is an assumption made
+        // to keep the swapchain FBO compatible without too much bookkeeping.
+        assert_invariant(params.subpassMask == 0);
+        swapchain = mCurrentSwapChain;
+        assert_invariant(swapchain);
+        if (swapchain->isFirstRenderPass()) {
             if (!acquireNextSwapchainImage()) {
                 // We've failed to acquire the next image. Subsequent calls cannot assume the render
                 // pass exists.
@@ -2276,7 +2283,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
                 return;
             } else {
                 discardStart |= TargetBufferFlags::COLOR;
-                sc->markFirstRenderPass();
+                swapchain->markFirstRenderPass();
             }
         }
     }
@@ -2353,7 +2360,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     rt->emitBarriersBeginRenderPass(*commandBuffer);
 
     fvkmemory::resource_ptr<VulkanFramebuffer> vkfb =
-            mFramebufferCache.getFramebuffer(fbkey, &mResourceManager, rt);
+            mFramebufferCache.getFramebuffer(fbkey, &mResourceManager, rt, swapchain);
 
     // Assign a label to the framebuffer for debugging purposes.
 
