@@ -179,7 +179,13 @@ public class Material {
         public static final int SHADOW_RECEIVER = 0x4;
         /** Skinning */
         public static final int SKINNING = 0x8;
-        /** Fog */
+        /**
+         * Fog
+         *
+         * <p>Since fog was migrated to specialization constants, filtering this bit no longer
+         * removes shader variants. It removes the fog code (and its sampler) from offline compiled
+         * materials (.filamat), and prevents fog specializations from being compiled at runtime.</p>
+         */
         public static final int FOG = 0x10;
         /** Variance shadow maps */
         public static final int VSM = 0x20;

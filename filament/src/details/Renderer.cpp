@@ -1116,8 +1116,6 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     passBuilder.dynamicSpecConstKey(specKey);
 
     Variant variant;
-    // TODO: Remove this after FOG is fully transferred to spec constant
-    variant.setFog(false);
     variant.setShadowSampler2D(view.hasShadowing() && view.getShadowType() != ShadowType::PCF);
     variant.setStereo(view.hasStereo());
 
