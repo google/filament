@@ -125,6 +125,14 @@ struct MaterialInputs {
     vec3 specularColorFactor;
 #endif
 
+#if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE) && !defined(SHADING_MODEL_UNLIT)
+#if !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+#if defined(MATERIAL_HAS_RETROREFLECTION)
+    float retroreflection;
+#endif
+#endif
+#endif
+
 #if defined(MATERIAL_HAS_SHADOW_STRENGTH)
     float shadowStrength;
 #endif
@@ -242,6 +250,14 @@ void initMaterial(out MaterialInputs material) {
 
 #if defined(MATERIAL_HAS_SPECULAR_COLOR_FACTOR)
     material.specularColorFactor = vec3(1.0);
+#endif
+
+#if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE) && !defined(SHADING_MODEL_UNLIT)
+#if !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+#if defined(MATERIAL_HAS_RETROREFLECTION)
+    material.retroreflection = 0.0;
+#endif
+#endif
 #endif
 
 #if defined(MATERIAL_HAS_SHADOW_STRENGTH)
