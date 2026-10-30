@@ -16,6 +16,8 @@
 
 #include <gltfio/MaterialProvider.h>
 
+#include <utils/Log.h>
+
 #include <string>
 
 namespace filament::gltfio {
@@ -73,60 +75,86 @@ void constrainMaterial(MaterialKey* key, UvMap* uvmap) {
     const int MAX_INDEX = 2;
     UvMap retval {};
     int index = 1;
-    auto updateUv = [&retval, &index](uint8_t uv) -> bool {
+
+    auto constrainTexture = [&retval, &index](
+            uint8_t uv, bool hasTexture, const char* name) -> bool {
         if (uv >= UvMapSize) {
+            if (hasTexture) {
+                utils::slog.e << "Texture coordinate index " << int(uv) << " for " << name
+                        << " exceeds maximum supported index (" << (UvMapSize - 1) << ")."
+                        << utils::io::endl;
+            }
             return false;
         }
-        if (retval[uv] == UNUSED) {
+        if (hasTexture && retval[uv] == UNUSED) {
             if (index > MAX_INDEX) {
                 return false;
             }
             retval[uv] = (UvSet) index++;
         }
-        return true;
+        return hasTexture;
     };
-    if (key->hasBaseColorTexture) {
-        key->hasBaseColorTexture = updateUv(key->baseColorUV);
-    }
-    if (key->hasMetallicRoughnessTexture) {
-        key->hasMetallicRoughnessTexture = updateUv(key->metallicRoughnessUV);
-    }
-    if (key->hasNormalTexture) {
-        key->hasNormalTexture = updateUv(key->normalUV);
-    }
-    if (key->hasOcclusionTexture) {
-        key->hasOcclusionTexture = updateUv(key->aoUV);
-    }
-    if (key->hasEmissiveTexture) {
-        key->hasEmissiveTexture = updateUv(key->emissiveUV);
-    }
-    if (key->hasTransmissionTexture) {
-        key->hasTransmissionTexture = updateUv(key->transmissionUV);
-    }
-    if (key->hasClearCoatTexture) {
-        key->hasClearCoatTexture = updateUv(key->clearCoatUV);
-    }
-    if (key->hasClearCoatRoughnessTexture) {
-        key->hasClearCoatRoughnessTexture = updateUv(key->clearCoatRoughnessUV);
-    }
-    if (key->hasClearCoatNormalTexture) {
-        key->hasClearCoatNormalTexture = updateUv(key->clearCoatNormalUV);
-    }
-    if (key->hasSheenColorTexture) {
-        key->hasSheenColorTexture = updateUv(key->sheenColorUV);
-    }
-    if (key->hasSheenRoughnessTexture) {
-        key->hasSheenRoughnessTexture = updateUv(key->sheenRoughnessUV);
-    }
-    if (key->hasVolumeThicknessTexture) {
-        key->hasVolumeThicknessTexture = updateUv(key->volumeThicknessUV);
-    }
-    if (key->hasSpecularTexture) {
-        key->hasSpecularTexture = updateUv(key->specularTextureUV);
-    }
-    if (key->hasSpecularColorTexture) {
-        key->hasSpecularColorTexture = updateUv(key->specularColorTextureUV);
-    }
+
+    auto clampUv = [](uint8_t uv) -> uint8_t {
+        return uv < UvMapSize ? uv : 0;
+    };
+
+    key->hasBaseColorTexture = constrainTexture(
+            key->baseColorUV, key->hasBaseColorTexture, "baseColorTexture");
+    key->baseColorUV = clampUv(key->baseColorUV);
+
+    key->hasMetallicRoughnessTexture = constrainTexture(key->metallicRoughnessUV,
+            key->hasMetallicRoughnessTexture,
+            key->useSpecularGlossiness ? "specularGlossinessTexture" : "metallicRoughnessTexture");
+    key->metallicRoughnessUV = clampUv(key->metallicRoughnessUV);
+
+    key->hasNormalTexture = constrainTexture(
+            key->normalUV, key->hasNormalTexture, "normalTexture");
+    key->normalUV = clampUv(key->normalUV);
+
+    key->hasOcclusionTexture = constrainTexture(
+            key->aoUV, key->hasOcclusionTexture, "occlusionTexture");
+    key->aoUV = clampUv(key->aoUV);
+
+    key->hasEmissiveTexture = constrainTexture(
+            key->emissiveUV, key->hasEmissiveTexture, "emissiveTexture");
+    key->emissiveUV = clampUv(key->emissiveUV);
+
+    key->hasTransmissionTexture = constrainTexture(
+            key->transmissionUV, key->hasTransmissionTexture, "transmissionTexture");
+    key->transmissionUV = clampUv(key->transmissionUV);
+
+    key->hasClearCoatTexture = constrainTexture(
+            key->clearCoatUV, key->hasClearCoatTexture, "clearCoatTexture");
+    key->clearCoatUV = clampUv(key->clearCoatUV);
+
+    key->hasClearCoatRoughnessTexture = constrainTexture(key->clearCoatRoughnessUV,
+            key->hasClearCoatRoughnessTexture, "clearCoatRoughnessTexture");
+    key->clearCoatRoughnessUV = clampUv(key->clearCoatRoughnessUV);
+
+    key->hasClearCoatNormalTexture = constrainTexture(
+            key->clearCoatNormalUV, key->hasClearCoatNormalTexture, "clearCoatNormalTexture");
+    key->clearCoatNormalUV = clampUv(key->clearCoatNormalUV);
+
+    key->hasSheenColorTexture = constrainTexture(
+            key->sheenColorUV, key->hasSheenColorTexture, "sheenColorTexture");
+    key->sheenColorUV = clampUv(key->sheenColorUV);
+
+    key->hasSheenRoughnessTexture = constrainTexture(
+            key->sheenRoughnessUV, key->hasSheenRoughnessTexture, "sheenRoughnessTexture");
+    key->sheenRoughnessUV = clampUv(key->sheenRoughnessUV);
+
+    key->hasVolumeThicknessTexture = constrainTexture(
+            key->volumeThicknessUV, key->hasVolumeThicknessTexture, "volumeThicknessTexture");
+    key->volumeThicknessUV = clampUv(key->volumeThicknessUV);
+
+    key->hasSpecularTexture = constrainTexture(
+            key->specularTextureUV, key->hasSpecularTexture, "specularTexture");
+    key->specularTextureUV = clampUv(key->specularTextureUV);
+
+    key->hasSpecularColorTexture = constrainTexture(
+            key->specularColorTextureUV, key->hasSpecularColorTexture, "specularColorTexture");
+    key->specularColorTextureUV = clampUv(key->specularColorTextureUV);
 
     // NOTE: KHR_materials_clearcoat does not provide separate UVs, we'll assume UV0
     *uvmap = retval;

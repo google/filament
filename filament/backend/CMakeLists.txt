@@ -655,11 +655,13 @@ if (FILAMENT_BUILD_TESTING)
                     test/test_WebGPUAsyncTaskCounter.cpp
                     test/test_WebGPUComposeSwizzle.cpp
                     test/test_WebGPUSpecializationConstantProcessor.cpp
+                    test/test_WebGPUTextureUsage.cpp
                     test/test_WebGPUVertexHelper.cpp)
         endif()
         if (APPLE)
             # Metal-specific tests
             list(APPEND BACKEND_TEST_SRC
+                test/test_MetalAsyncJobs.mm
                 test/test_MetalBlitter.mm
             )
         endif()
