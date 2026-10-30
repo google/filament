@@ -71,16 +71,51 @@ public:
     };
     Range getBuffer() noexcept;
 
+    // The underlying virtual address space consists of two linear banks of size() bytes each, with
+    // each bank followed by a guard page:
+    //
+    //  mData                                    mData + mBankStride
+    //  v                                        v
+    //  +-------------+-------------+--------+   +-------------+-------------+--------+
+    //  |/////////////|. . . . . . .| Guard  |   |/////////////|. . . . . . .| Guard  |
+    //  |<- Bank 0  ->| (untouched) |  Page  |   |<- Bank 1  ->| (untouched) |  Page  |
+    //  |   in-flight |   pages     |        |   |   in-flight |   pages     |        |
+    //  +-------------+-------------+--------+   +-------------+-------------+--------+
+    //  |<--------- mSize --------->|            |<--------- mSize --------->|
+    //  |<----------- mBankStride ---------->|   |<----------- mBankStride ---------->|
+    //
+    // Neither bank ever wraps around. CommandBufferQueue bumps linearly within the active bank and
+    // resets to the base of Bank 0 (mData) or Bank 1 (mData + mBankStride) whenever that bank has
+    // no in-flight buffers, keeping physical page faults bounded by the in-flight high-water mark
+    // of each bank.
+    size_t getBank(void const* p) const noexcept {
+        char const* const base = static_cast<char const*>(mData);
+        char const* const ptr = static_cast<char const*>(p);
+        assert_invariant(ptr >= base && ptr < base + 2 * mBankStride);
+        return (ptr < base + mBankStride) ? 0u : 1u;
+    }
+
+    void setBank(size_t bank) noexcept {
+        assert_invariant(bank <= 1);
+        assert_invariant(empty());
+        mTail = static_cast<char*>(mData) + bank * mBankStride;
+        mHead = mTail;
+    }
+
+    size_t getBankStride() const noexcept { return mBankStride; }
+
 private:
     void* alloc(size_t size);
     void dealloc() noexcept;
 
     // pointer to the beginning of the circular buffer (constant)
     void* mData = nullptr;
-    int mAshmemFd = -1;
 
-    // size of the circular buffer (constant)
+    // size of each bank (constant)
     size_t const mSize;
+
+    // virtual address distance between Bank 0 and Bank 1 (includes guard page)
+    size_t mBankStride = 0;
 
     // pointer to the beginning of recorded data
     void* mTail = nullptr;
