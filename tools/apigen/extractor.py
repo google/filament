@@ -26,6 +26,7 @@ import itertools
 import subprocess
 import textwrap
 import collections
+import ctypes
 
 
 # -----------------------------------------------------------------------------
@@ -69,6 +70,76 @@ def setup_clang():
 
 clang_cindex = setup_clang()
 from clang.cindex import CursorKind, TypeKind, AccessSpecifier
+
+_RE_SIMPLE_LITERAL = re.compile(
+    r"^(?:"
+    r"-?0[xX][0-9a-fA-F]+[uUlL]*|"
+    r"(?:-\s*)?[0-9]+[uUlL]*|"
+    r"(?:-\s*)?(?:[0-9]+\.[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?[fFdD]?|"
+    r"(?:-\s*)?[0-9]+[eE][+-]?[0-9]+[fFdD]?|"
+    r"true|false"
+    r")$"
+)
+
+def _init_clang_eval():
+    lib = clang_cindex.conf.lib
+    if not hasattr(lib, "_apigen_eval_initialized"):
+        lib.clang_Cursor_Evaluate.argtypes = [clang_cindex.Cursor]
+        lib.clang_Cursor_Evaluate.restype = ctypes.c_void_p
+        lib.clang_EvalResult_getKind.argtypes = [ctypes.c_void_p]
+        lib.clang_EvalResult_getKind.restype = ctypes.c_int
+        lib.clang_EvalResult_isUnsignedInt.argtypes = [ctypes.c_void_p]
+        lib.clang_EvalResult_isUnsignedInt.restype = ctypes.c_uint
+        lib.clang_EvalResult_getAsLongLong.argtypes = [ctypes.c_void_p]
+        lib.clang_EvalResult_getAsLongLong.restype = ctypes.c_longlong
+        lib.clang_EvalResult_getAsUnsigned.argtypes = [ctypes.c_void_p]
+        lib.clang_EvalResult_getAsUnsigned.restype = ctypes.c_ulonglong
+        lib.clang_EvalResult_getAsDouble.argtypes = [ctypes.c_void_p]
+        lib.clang_EvalResult_getAsDouble.restype = ctypes.c_double
+        lib.clang_EvalResult_dispose.argtypes = [ctypes.c_void_p]
+        lib.clang_EvalResult_dispose.restype = None
+        lib._apigen_eval_initialized = True
+    return lib
+
+def evaluate_cursor_constant(cursor):
+    try:
+        lib = _init_clang_eval()
+        res = lib.clang_Cursor_Evaluate(cursor)
+        if not res:
+            return None
+        try:
+            kind = lib.clang_EvalResult_getKind(res)
+            can_type = cursor.type.get_canonical()
+            if kind == 1:  # CXEval_Int
+                if can_type.kind == TypeKind.BOOL:
+                    return "true" if lib.clang_EvalResult_getAsLongLong(res) != 0 else "false"
+                if lib.clang_EvalResult_isUnsignedInt(res):
+                    uval = lib.clang_EvalResult_getAsUnsigned(res)
+                    size = can_type.get_size()
+                    if size == 8 and uval >= (1 << 63):
+                        return str(ctypes.c_int64(uval).value)
+                    elif size <= 4 and uval >= (1 << 31):
+                        return str(ctypes.c_int32(uval).value)
+                    return str(uval)
+                else:
+                    return str(lib.clang_EvalResult_getAsLongLong(res))
+            elif kind == 2:  # CXEval_Float
+                dval = lib.clang_EvalResult_getAsDouble(res)
+                if can_type.kind == TypeKind.FLOAT:
+                    s = f"{dval:.7g}"
+                    if "." not in s and "e" not in s and "E" not in s:
+                        s += ".0"
+                    return s + "f"
+                else:
+                    s = f"{dval:.15g}"
+                    if "." not in s and "e" not in s and "E" not in s:
+                        s += ".0"
+                    return s
+        finally:
+            lib.clang_EvalResult_dispose(res)
+    except Exception:
+        pass
+    return None
 
 # -----------------------------------------------------------------------------
 # Configuration & Constants
@@ -1406,6 +1477,10 @@ class Extractor:
         # If this constant aliases a constant already defined in this class, reference it by name
         if ref_cursor and any(c.get("name") == ref_cursor.spelling for c in cls.get("constants", [])):
             clean_val = ref_cursor.spelling
+        elif not _RE_SIMPLE_LITERAL.match(clean_val):
+            evaluated_val = evaluate_cursor_constant(cursor)
+            if evaluated_val is not None:
+                clean_val = evaluated_val
             
         const_obj["value"] = clean_val
         cls.setdefault("constants", []).append(const_obj)

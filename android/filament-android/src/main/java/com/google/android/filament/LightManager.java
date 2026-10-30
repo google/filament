@@ -292,7 +292,8 @@ public class LightManager {
          * Whether this light casts light (enabled by default)
          *
          * <p>In some situations it can be useful to have a light in the scene that doesn't
-         * actually emit light, but does cast shadows.</p>
+         * actually emit light, but does cast shadows. To cast shadows with light casting
+         * disabled, you need to use the material {@code shadowMultiplier} property.</p>
          *
          * @param enable Enables or disables lighting from this Light.
          *
