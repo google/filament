@@ -19,7 +19,7 @@
 
 #include "DynamicSpecConstKey.h"
 #include "MaterialDefinition.h"
-#include "ProgramCacheLayout.h"
+#include "ProgramSlotMap.h"
 
 #include <private/filament/Variant.h>
 
@@ -59,7 +59,7 @@ public:
     using SpecializationConstants = utils::Slice<const backend::Program::SpecializationConstant>;
     using SpecializationConstantsRef =
            utils::InternPool<backend::Program::SpecializationConstant>::Ref;
-    using CacheKey = ProgramCacheLayout::Index;
+    using CacheKey = ProgramSlotMap::Index;
 
     LocalProgramCache() = default;
     LocalProgramCache(LocalProgramCache const& other);
@@ -81,7 +81,7 @@ public:
             Variant variant, DynamicSpecConstKey specKey,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept {
         filterForGetProgram(variant, specKey);
-        CacheKey const mappedKey = mLayout->map(variant, specKey);
+        CacheKey const mappedKey = mSlotMap->map(variant, specKey);
         backend::Handle<backend::HwProgram> program = mCachedPrograms[mappedKey];
         if (UTILS_LIKELY(program)) {
             return program;
@@ -95,7 +95,7 @@ public:
     backend::Handle<backend::HwProgram> getProgram(Variant variant,
             DynamicSpecConstKey specKey) const noexcept {
         filterForGetProgram(variant, specKey);
-        CacheKey const mappedKey = mLayout->map(variant, specKey);
+        CacheKey const mappedKey = mSlotMap->map(variant, specKey);
         backend::Handle<backend::HwProgram> program = mCachedPrograms[mappedKey];
         assert_invariant(program);
         return program;
@@ -161,8 +161,8 @@ private:
     // mSpecializationConstants, which terminate() releases.
     FMaterial const* mMaterial = nullptr;
     // Maps (variant, specKey) to a slot of mCachedPrograms; shared by all the materials of the
-    // same kind (see MaterialDefinition::getProgramCacheLayout()).
-    ProgramCacheLayout const* mLayout = nullptr;
+    // same kind (see MaterialDefinition::getProgramSlotMap()).
+    ProgramSlotMap const* mSlotMap = nullptr;
     mutable utils::FixedCapacityVector<backend::Handle<backend::HwProgram>> mCachedPrograms;
     SpecializationConstantsRef mSpecializationConstants;
 };

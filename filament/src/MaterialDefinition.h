@@ -42,7 +42,7 @@ namespace filament {
 
 class FEngine;
 class MaterialParser;
-class ProgramCacheLayout;
+class ProgramSlotMap;
 
 /** A MaterialDefinition is a parsed, unmarshalled material file, containing no state.
  *
@@ -103,7 +103,7 @@ struct MaterialDefinition {
             bool isVariantLit) noexcept;
     static utils::Slice<const Variant> getDepthVariantsFor(MaterialDomain materialDomain) noexcept;
 
-    ProgramCacheLayout const& getProgramCacheLayout() const noexcept;
+    ProgramSlotMap const& getProgramSlotMap() const noexcept;
 
     // Checks whether a given combination of Variant and DynamicSpecConstKey produces a valid and
     // compiled shader program for this material under the specified shader model and platform

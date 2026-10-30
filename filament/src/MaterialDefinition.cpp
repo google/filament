@@ -19,7 +19,7 @@
 #include "Froxelizer.h"
 #include "LocalProgramCache.h"
 #include "MaterialParser.h"
-#include "ProgramCacheLayout.h"
+#include "ProgramSlotMap.h"
 
 #include "details/Engine.h"
 #include "details/Material.h"
@@ -943,8 +943,8 @@ void MaterialDefinition::acquirePrograms(FEngine& engine,
     MaterialCache& materialCache = engine.getMaterialCache();
     ShaderModel const shaderModel = engine.getShaderModel();
     bool const isStereoSupported = engine.getDriverApi().isStereoSupported();
-    ProgramCacheLayout const& layout = getProgramCacheLayout();
-    assert_invariant(programCache.size() == layout.size());
+    ProgramSlotMap const& slotMap = getProgramSlotMap();
+    assert_invariant(programCache.size() == slotMap.size());
 
     ProgramSpecialization specialization = {
         .materialCrc32 = getMaterialParser().getCrc32(),
@@ -963,7 +963,7 @@ void MaterialDefinition::acquirePrograms(FEngine& engine,
                             isStereoSupported))) {
                     specialization.specKey = specKey;
                     if (Handle<HwProgram> program = materialCache.acquireProgram(specialization)) {
-                        programCache[layout.map(variant, specKey)] = program;
+                        programCache[slotMap.map(variant, specKey)] = program;
                     }
                 }
             }
@@ -979,7 +979,7 @@ void MaterialDefinition::acquirePrograms(FEngine& engine,
                         isStereoSupported))) {
                 specialization.variant = variant;
                 specialization.specKey = specKey;
-                LocalProgramCache::CacheKey mappedKey = layout.map(variant, specKey);
+                LocalProgramCache::CacheKey mappedKey = slotMap.map(variant, specKey);
                 // Motion vectors programs are only needed by Views that enable motion vectors,
                 // they're compiled lazily (or by warm-up), never at engine init.
                 bool const precache = !isMotionVectorsVariant(variant);
@@ -1006,7 +1006,7 @@ void MaterialDefinition::acquirePrograms(FEngine& engine,
                 specialization.variant = variant;
                 specialization.specKey = specKey;
                 if (Handle<HwProgram> program = materialCache.acquireProgram(specialization)) {
-                    programCache[layout.map(variant, specKey)] = program;
+                    programCache[slotMap.map(variant, specKey)] = program;
                 }
             }
         }
@@ -1022,8 +1022,8 @@ void MaterialDefinition::releasePrograms(FEngine& engine,
     MaterialCache& materialCache = engine.getMaterialCache();
     ShaderModel const shaderModel = engine.getShaderModel();
     bool const isStereoSupported = engine.getDriverApi().isStereoSupported();
-    ProgramCacheLayout const& layout = getProgramCacheLayout();
-    assert_invariant(programCache.size() == layout.size());
+    ProgramSlotMap const& slotMap = getProgramSlotMap();
+    assert_invariant(programCache.size() == slotMap.size());
 
     ProgramSpecialization specialization = {
         .materialCrc32 = getMaterialParser().getCrc32(),
@@ -1035,7 +1035,7 @@ void MaterialDefinition::releasePrograms(FEngine& engine,
                 materialDomain, isVariantLit)) {
             if (UTILS_LIKELY(isValidProgram(variant, specKey, shaderModel,
                         isStereoSupported))) {
-                Handle<HwProgram>& program = programCache[layout.map(variant, specKey)];
+                Handle<HwProgram>& program = programCache[slotMap.map(variant, specKey)];
                 if (useCache) {
                     specialization.variant = variant;
                     specialization.specKey = specKey;
@@ -1055,7 +1055,7 @@ void MaterialDefinition::releasePrograms(FEngine& engine,
     for (auto variant: getDepthVariants()) {
         DynamicSpecConstKey const specKey{ 0 };
         if (UTILS_LIKELY(isValidProgram(variant, specKey, shaderModel, isStereoSupported))) {
-            Handle<HwProgram>& program = programCache[layout.map(variant, specKey)];
+            Handle<HwProgram>& program = programCache[slotMap.map(variant, specKey)];
             if (useCache) {
                 specialization.variant = variant;
                 specialization.specKey = specKey;
@@ -1114,8 +1114,8 @@ bool MaterialDefinition::isValidProgram(Variant const variant, DynamicSpecConstK
     return true;
 }
 
-ProgramCacheLayout const& MaterialDefinition::getProgramCacheLayout() const noexcept {
-    return ProgramCacheLayout::get(materialDomain, isVariantLit);
+ProgramSlotMap const& MaterialDefinition::getProgramSlotMap() const noexcept {
+    return ProgramSlotMap::get(materialDomain, isVariantLit);
 }
 
 Slice<const Variant> MaterialDefinition::getVariantsFor(MaterialDomain const materialDomain,

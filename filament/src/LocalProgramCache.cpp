@@ -43,7 +43,7 @@ LocalProgramCache& LocalProgramCache::operator=(LocalProgramCache const& other) 
     assert_invariant(mSpecializationConstants.empty());
 
     mMaterial = other.mMaterial;
-    mLayout = other.mLayout;
+    mSlotMap = other.mSlotMap;
     mSpecializationConstants = other.mSpecializationConstants.clone();
     if (mMaterial != nullptr) {
         mCachedPrograms = FixedCapacityVector<Handle<HwProgram>>(other.mCachedPrograms.size());
@@ -64,13 +64,13 @@ void LocalProgramCache::initializeForMaterial(FEngine& engine, FMaterial const& 
     assert_invariant(mSpecializationConstants.empty());
 
     mMaterial = &material;
-    mLayout = &material.getDefinition().getProgramCacheLayout();
+    mSlotMap = &material.getDefinition().getProgramSlotMap();
 
     mSpecializationConstants =
             engine.getMaterialCache().getSpecializationConstantsInternPool().acquire(
                     std::move(specializationConstants));
 
-    mCachedPrograms = FixedCapacityVector<Handle<HwProgram>>(mLayout->size());
+    mCachedPrograms = FixedCapacityVector<Handle<HwProgram>>(mSlotMap->size());
 
     material.getDefinition().acquirePrograms(engine, mCachedPrograms.as_slice(),
             material.getMaterialParser(), mSpecializationConstants.get(),
@@ -84,12 +84,12 @@ Handle<HwProgram> LocalProgramCache::prepareProgramSlow(DriverApi& driver, Varia
     FEngine& engine = mMaterial->getEngine();
 
     Handle<HwProgram> result;
-    CacheKey const mappedKey = mLayout->map(variant, specKey);
+    CacheKey const mappedKey = mSlotMap->map(variant, specKey);
     if (mMaterial->isSharedVariant(variant)) {
         FMaterial const* defaultMaterial = engine.getDefaultMaterial();
         assert_invariant(defaultMaterial);
         LocalProgramCache const& defaultPrograms = defaultMaterial->getPrograms();
-        CacheKey const defaultMappedKey = defaultPrograms.mLayout->map(variant, specKey);
+        CacheKey const defaultMappedKey = defaultPrograms.mSlotMap->map(variant, specKey);
         result = defaultPrograms.mCachedPrograms[defaultMappedKey];
         if (!result) {
             result = defaultPrograms.prepareProgram(driver, variant, specKey, priorityQueue);

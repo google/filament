@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ProgramCacheLayout.h"
+#include "ProgramSlotMap.h"
 
 #include "DynamicSpecConstKey.h"
 #include "MaterialDefinition.h"
@@ -33,40 +33,40 @@
 
 namespace filament {
 
-ProgramCacheLayout const& ProgramCacheLayout::get(MaterialDomain const materialDomain,
+ProgramSlotMap const& ProgramSlotMap::get(MaterialDomain const materialDomain,
         bool const isVariantLit) noexcept {
     auto const make = [](MaterialDomain const domain, bool const lit) {
-        return ProgramCacheLayout(MaterialDefinition::getVariantsFor(domain, lit),
+        return ProgramSlotMap(MaterialDefinition::getVariantsFor(domain, lit),
                 MaterialDefinition::getDepthVariantsFor(domain), domain, lit);
     };
     switch (materialDomain) {
         case MaterialDomain::SURFACE:
             if (isVariantLit) {
-                static ProgramCacheLayout const sLayout = make(MaterialDomain::SURFACE, true);
-                return sLayout;
+                static ProgramSlotMap const sSlotMap = make(MaterialDomain::SURFACE, true);
+                return sSlotMap;
             } else {
-                static ProgramCacheLayout const sLayout = make(MaterialDomain::SURFACE, false);
-                return sLayout;
+                static ProgramSlotMap const sSlotMap = make(MaterialDomain::SURFACE, false);
+                return sSlotMap;
             }
         case MaterialDomain::POST_PROCESS: {
             // Post-process programs never use specialization keys, lighting doesn't matter.
-            static ProgramCacheLayout const sLayout = make(MaterialDomain::POST_PROCESS, false);
-            return sLayout;
+            static ProgramSlotMap const sSlotMap = make(MaterialDomain::POST_PROCESS, false);
+            return sSlotMap;
         }
         case MaterialDomain::COMPUTE: {
             // TODO: implement MaterialDomain::COMPUTE
             static constexpr Variant COMPUTE_VARIANTS[] = { Variant{ 0 } };
-            static ProgramCacheLayout const sLayout({ COMPUTE_VARIANTS, 1 }, {},
+            static ProgramSlotMap const sSlotMap({ COMPUTE_VARIANTS, 1 }, {},
                     MaterialDomain::COMPUTE, false);
-            return sLayout;
+            return sSlotMap;
         }
     }
     // Unreachable, but some compilers don't know.
-    static ProgramCacheLayout const sEmpty({}, {}, MaterialDomain::COMPUTE, false);
+    static ProgramSlotMap const sEmpty({}, {}, MaterialDomain::COMPUTE, false);
     return sEmpty;
 }
 
-ProgramCacheLayout::ProgramCacheLayout(utils::Slice<const Variant> const variants,
+ProgramSlotMap::ProgramSlotMap(utils::Slice<const Variant> const variants,
         utils::Slice<const Variant> const depthVariants, MaterialDomain const materialDomain,
         bool const isVariantLit) noexcept {
     for (Row& row : mSlots) {
@@ -77,7 +77,7 @@ ProgramCacheLayout::ProgramCacheLayout(utils::Slice<const Variant> const variant
         assert_invariant(variant.key < VARIANT_COUNT);
         Row& row = mSlots[variant.key];
         if (row[0] != NO_SLOT) {
-            return; // already in the layout (specKey 0 is always valid)
+            return; // already in the slot map (specKey 0 is always valid)
         }
 
         DynamicSpecConstKey::ValidKeys const keys =
@@ -102,12 +102,11 @@ ProgramCacheLayout::ProgramCacheLayout(utils::Slice<const Variant> const variant
     }
 }
 
-void ProgramCacheLayout::panicNoSlot(Variant const variant, DynamicSpecConstKey const specKey,
+void ProgramSlotMap::panicNoSlot(Variant const variant, DynamicSpecConstKey const specKey,
         uint32_t const size) {
     FILAMENT_CHECK_POSTCONDITION(false)
             << "Program cache has no slot for variant=" << uint32_t(variant.key)
             << ", specKey=" << uint32_t(specKey.key) << ", size=" << size;
-    std::abort(); // in case postcondition failures aren't fatal
 }
 
 } // namespace filament

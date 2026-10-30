@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_PROGRAMCACHELAYOUT_H
-#define TNT_FILAMENT_PROGRAMCACHELAYOUT_H
+#ifndef TNT_FILAMENT_PROGRAMSLOTMAP_H
+#define TNT_FILAMENT_PROGRAMSLOTMAP_H
 
 #include "DynamicSpecConstKey.h"
 
@@ -41,27 +41,27 @@ namespace filament {
 //
 // The mapping is a single lookup in a [variant][specKey] table (~2 KiB, shared by all the
 // materials of the same kind), so it stays as cheap as concatenating the key bits.
-class ProgramCacheLayout {
+class ProgramSlotMap {
 public:
     using Index = uint32_t;
 
-    // Layouts are immutable and shared by all the materials with the same domain and lighting.
-    static ProgramCacheLayout const& get(MaterialDomain materialDomain, bool isVariantLit) noexcept;
+    // Slot maps are immutable and shared by all the materials with the same domain and lighting.
+    static ProgramSlotMap const& get(MaterialDomain materialDomain, bool isVariantLit) noexcept;
 
-    ProgramCacheLayout(utils::Slice<const Variant> variants,
+    ProgramSlotMap(utils::Slice<const Variant> variants,
             utils::Slice<const Variant> depthVariants, MaterialDomain materialDomain,
             bool isVariantLit) noexcept;
 
-    ProgramCacheLayout(ProgramCacheLayout const&) = delete;
-    ProgramCacheLayout& operator=(ProgramCacheLayout const&) = delete;
+    ProgramSlotMap(ProgramSlotMap const&) = delete;
+    ProgramSlotMap& operator=(ProgramSlotMap const&) = delete;
 
     uint32_t size() const noexcept { return mSize; }
 
     // `specKey` must be filtered (see MaterialDefinition::filterProgramSpecKey()), panics if
     // there's no slot. Depth variants ignore `specKey`.
-    Index map(Variant const variant, DynamicSpecConstKey const specKey) const noexcept {
+    Index map(Variant const variant, DynamicSpecConstKey const specKey) const {
         uint16_t const slot = lookup(variant, specKey);
-        if (UTILS_UNLIKELY(slot == NO_SLOT)) {
+        if (UTILS_VERY_UNLIKELY(slot == NO_SLOT)) {
             panicNoSlot(variant, specKey, mSize);
         }
         return slot;
@@ -97,4 +97,4 @@ private:
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_PROGRAMCACHELAYOUT_H
+#endif // TNT_FILAMENT_PROGRAMSLOTMAP_H
