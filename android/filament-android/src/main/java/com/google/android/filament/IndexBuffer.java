@@ -90,6 +90,9 @@ public class IndexBuffer {
         }
     }
 
+    /** Maximum number of indices accepted by an index buffer. */
+    public static final int MAX_INDEX_COUNT = 67108863;
+
     IndexBuffer(long nativeObject) {
         mNativeObject = nativeObject;
     }
@@ -142,7 +145,8 @@ public class IndexBuffer {
         /**
          * Size of the index buffer in elements.
          *
-         * @param indexCount Number of indices the IndexBuffer can hold.
+         * @param indexCount Number of indices the IndexBuffer can hold. Must not exceed
+         *                   MAX_INDEX_COUNT (2^backend::INDEX_COUNT_BITS - 1).
          *
          * @return A reference to this Builder for chaining calls.
          */

@@ -470,6 +470,12 @@ class TestJavaGen(unittest.TestCase):
                             "type": {"cpp_name": "const float", "qualified_name": "float", "category": "primitive"},
                             "value": "0.1171f",
                             "doc": {"brief": "LED efficiency."}
+                        },
+                        {
+                            "name": "MAX_INDEX_COUNT",
+                            "type": {"cpp_name": "const uint32_t", "qualified_name": "uint32_t", "category": "primitive"},
+                            "value": "uint32_t(67108863)",
+                            "doc": {"brief": "Maximum number of indices."}
                         }
                     ]
                 }
@@ -498,6 +504,7 @@ class TestJavaGen(unittest.TestCase):
             self.assertIn("public static final long FENCE_WAIT_FOR_EVER = -1;", java_src)
             self.assertIn("public static final long WAIT_FOR_EVER = FENCE_WAIT_FOR_EVER;", java_src)
             self.assertIn("public static final float EFFICIENCY_LED = 0.1171f;", java_src)
+            self.assertIn("public static final int MAX_INDEX_COUNT = 67108863;", java_src)
             self.assertIn("doWait(WAIT_FOR_EVER);", java_src)
 
     def test_no_apigen_attribute(self):

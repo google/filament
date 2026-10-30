@@ -79,6 +79,9 @@ _RE_NEG_SPACE = re.compile(r"-\s+")
 _RE_UNSIGNED_SUFFIX = re.compile(r"(?i)\b(0x[0-9a-f]+|\d+)u(?:ll|l)?\b")
 _RE_UNSIGNED_TRAILING = re.compile(r"(?i)(?<=[0-9a-fA-F])u(?:ll|l)?$")
 _RE_NEG_ONE_PARENS = re.compile(r"\((?:-\s*1|-1)\)")
+_RE_CPP_CAST = re.compile(
+    r"^(?:static_cast\s*<[^>]+>|(?:u?int(?:8|16|32|64)_t|size_t|ssize_t|int|long|float|double))\s*\(\s*(.*)\s*\)$"
+)
 _RE_CONST_WORD = re.compile(r"\bconst\b")
 _RE_MAT_DIM = re.compile(r"::mat\d")
 
@@ -764,11 +767,17 @@ class ClassContext:
         if _RE_NEG_ONE_PARENS.search(val) or ("std::numeric_limits" in val and "max" in val):
             return "-1"
 
-        # Step 4: Strip C++ unsigned integer suffixes
+        # Step 4: Unwrap C++ functional or static_cast expressions wrapping a constant value
+        cast_match = _RE_CPP_CAST.match(val)
+        while cast_match:
+            val = cast_match.group(1).strip()
+            cast_match = _RE_CPP_CAST.match(val)
+
+        # Step 5: Strip C++ unsigned integer suffixes
         val = _RE_UNSIGNED_SUFFIX.sub(r"\1", val)
         val = _RE_UNSIGNED_TRAILING.sub("", val)
 
-        # Step 5: Append 'f' suffix to float literals if missing
+        # Step 6: Append 'f' suffix to float literals if missing
         if j_type == "float" and not val.endswith(("f", "F")):
             val += "f"
         return val
