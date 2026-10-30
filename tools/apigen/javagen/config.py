@@ -367,6 +367,12 @@ TYPE_PATTERNS: List[Tuple[str, Dict[str, Any]]] = [
         "to_cpp": "std::make_optional((bool){value})",
         "from_cpp": "(jboolean)({value}.value_or(false))",
     }),
+    (r"^(?:const\s+)?(?:std::)?optional<(?:filament::)?(?:backend::)?(?:filamat::)?(?:MaterialBuilder::)?ShaderStageFlags>(?:\s*&)?$", {
+        "java": "int", "jni": "jint", "jni_type": "jint",
+        "to_cpp": "({value} < 0 ? std::nullopt : std::make_optional((filament::backend::ShaderStageFlags){value}))",
+        "from_cpp": "(jint)({value}.has_value() ? (int){value}.value() : -1)",
+        "default_literal": "-1",
+    }),
     (r"^(?:const\s+)?utils::bitset<.*>(?:\s*&)?$", {
         "java": "int", "jni": "jint", "jni_type": "jint", "annotation": "@IntRange(from = 0)",
         "to_cpp": "{type}({value})",
@@ -472,6 +478,7 @@ def register_known_classes(classes: List[Dict[str, Any]]) -> None:
             # Step 2a: Strip top-level engine namespace prefixes for unqualified fallback
             clean = (
                 qname.replace("filament::", "")
+                .replace("filamat::", "")
                 .replace("backend::", "")
                 .replace("utils::", "")
                 .replace("math::", "")

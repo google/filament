@@ -57,7 +57,7 @@ struct MaterialInfo;
 struct Variant;
 class ChunkContainer;
 
-class UTILS_PUBLIC MaterialBuilderBase {
+class UTILS_PUBLIC UTILS_NOAPIGEN MaterialBuilderBase {
 public:
     /**
      * High-level hint that works in concert with TargetApi to determine the shader models (used to
@@ -102,7 +102,7 @@ public:
      *
      * Also note that glslang performs semantics analysis on whichever GLSL ends up being generated.
      */
-    enum class TargetLanguage {
+    enum class UTILS_NOAPIGEN TargetLanguage {
         GLSL,           // GLSL with OpenGL 4.1 / OpenGL ES 3.0 semantics
         SPIRV           // GLSL with Vulkan semantics
     };
@@ -114,7 +114,7 @@ public:
         PERFORMANCE
     };
 
-    enum class Workarounds : uint64_t {
+    enum class UTILS_NOAPIGEN Workarounds : uint64_t {
         NONE = 0,
         ALL = 0xFFFFFFFFFFFFFFFF
     };
@@ -164,6 +164,7 @@ protected:
 };
 
 // Utility function that looks at an Engine backend to determine TargetApi
+UTILS_NOAPIGEN
 inline constexpr MaterialBuilderBase::TargetApi targetApiFromBackend(
         filament::backend::Backend backend) noexcept {
     using filament::backend::Backend;
@@ -173,7 +174,7 @@ inline constexpr MaterialBuilderBase::TargetApi targetApiFromBackend(
         case Backend::OPENGL:  return TargetApi::OPENGL;
         case Backend::VULKAN:  return TargetApi::VULKAN;
         case Backend::METAL:   return TargetApi::METAL;
-        case Backend::WEBGPU:    return TargetApi::WEBGPU;
+        case Backend::WEBGPU:  return TargetApi::WEBGPU;
         case Backend::NOOP:    return TargetApi::OPENGL;
     }
 }
@@ -247,12 +248,12 @@ public:
     using TransparencyMode = filament::TransparencyMode;
     using SpecularAmbientOcclusion = filament::SpecularAmbientOcclusion;
 
-    using AttributeType = filament::backend::UniformType;
+    using AttributeType UTILS_NOAPIGEN = filament::backend::UniformType;
     using UniformType = filament::backend::UniformType;
     using ConstantType = filament::backend::ConstantType;
-    using ConstantValue = filament::backend::ConstantValue;
+    using ConstantValue UTILS_NOAPIGEN = filament::backend::ConstantValue;
     using SamplerType = filament::backend::SamplerType;
-    using SubpassType = filament::backend::SubpassType;
+    using SubpassType UTILS_NOAPIGEN = filament::backend::SubpassType;
     using SamplerFormat = filament::backend::SamplerFormat;
     using ParameterPrecision = filament::backend::Precision;
     using Precision = filament::backend::Precision;
@@ -260,7 +261,7 @@ public:
     using FeatureLevel = filament::backend::FeatureLevel;
     using StereoscopicType = filament::backend::StereoscopicType;
     using ShaderStage = filament::backend::ShaderStage;
-    using ShaderStageFlags = filament::backend::ShaderStageFlags;
+    using ShaderStageFlags UTILS_APIGEN_FLAGS = filament::backend::ShaderStageFlags;
 
     enum class VariableQualifier : uint8_t {
         OUT
@@ -286,14 +287,14 @@ public:
         UINT4
     };
 
-    struct PreprocessorDefine {
+    struct UTILS_NOAPIGEN PreprocessorDefine {
         std::string name;
         std::string value;
 
         PreprocessorDefine(std::string  name, std::string  value) :
                 name(std::move(name)), value(std::move(value)) {}
     };
-    using PreprocessorDefineList = std::vector<PreprocessorDefine>;
+    using PreprocessorDefineList UTILS_NOAPIGEN = std::vector<PreprocessorDefine>;
 
     MaterialBuilder& noSamplerValidation(bool enabled) noexcept;
 
@@ -301,10 +302,10 @@ public:
     MaterialBuilder& includeEssl1(bool enabled) noexcept;
 
     //! Set the name of this material.
-    MaterialBuilder& name(const char* name) noexcept;
+    MaterialBuilder& name(const char* UTILS_NONNULL name) noexcept;
 
     //! Set the commandline parameters of matc. Used for debugging purpose.
-    MaterialBuilder& compilationParameters(const char* params) noexcept;
+    MaterialBuilder& compilationParameters(const char* UTILS_NONNULL params) noexcept;
 
     //! Set the shading model.
     MaterialBuilder& shading(Shading shading) noexcept;
@@ -313,11 +314,11 @@ public:
     MaterialBuilder& interpolation(Interpolation interpolation) noexcept;
 
     //! Add a parameter (i.e., a uniform) to this material.
-    MaterialBuilder& parameter(const char* name, UniformType type,
+    MaterialBuilder& parameter(const char* UTILS_NONNULL name, UniformType type,
             ParameterPrecision precision = ParameterPrecision::DEFAULT) noexcept;
 
     //! Add a parameter array to this material.
-    MaterialBuilder& parameter(const char* name, size_t size, UniformType type,
+    MaterialBuilder& parameter(const char* UTILS_NONNULL name, size_t size, UniformType type,
             ParameterPrecision precision = ParameterPrecision::DEFAULT);
 
     //! Add a constant parameter to this material.
@@ -327,26 +328,27 @@ public:
             std::is_same<float, T>::value ||
             std::is_same<bool, T>::value>::type;
     template<typename T, typename = is_supported_constant_parameter_t<T>>
-    MaterialBuilder& constant(const char *name, ConstantType type, T defaultValue = 0);
+    MaterialBuilder& constant(const char* UTILS_NONNULL name, ConstantType type, T defaultValue = 0);
 
     /**
      * Add a sampler parameter to this material.
      *
      * When SamplerType::SAMPLER_EXTERNAL is specified, format and precision are ignored.
      */
-    MaterialBuilder& parameter(const char* name, SamplerType samplerType,
+    MaterialBuilder& parameter(const char* UTILS_NONNULL name, SamplerType samplerType,
             SamplerFormat format = SamplerFormat::FLOAT,
             ParameterPrecision precision = ParameterPrecision::DEFAULT,
             bool filterable = true, /* defaulting to filterable because format is default to float */
-            bool multisample = false, const char* transformName = "",
+            bool multisample = false, const char* UTILS_NULLABLE transformName = "",
             std::optional<ShaderStageFlags> stages = {});
 
+    UTILS_NOAPIGEN
     MaterialBuilder& buffer(filament::BufferInterfaceBlock bib);
 
     //! Custom variables (all float4).
-    MaterialBuilder& variable(Variable v, const char* name) noexcept;
+    MaterialBuilder& variable(Variable v, const char* UTILS_NONNULL name) noexcept;
 
-    MaterialBuilder& variable(Variable v, const char* name,
+    MaterialBuilder& variable(Variable v, const char* UTILS_NONNULL name,
             ParameterPrecision precision) noexcept;
 
     /**
@@ -389,7 +391,7 @@ public:
      * @param line The line number offset of the material, where 0 is the first line. Used for error
      *             reporting
      */
-    MaterialBuilder& material(const char* code, size_t line = 0) noexcept;
+    MaterialBuilder& material(const char* UTILS_NONNULL code, size_t line = 0) noexcept;
 
     /**
      * Set the vertex code content of this material.
@@ -419,7 +421,7 @@ public:
      * @param line The line number offset of the material, where 0 is the first line. Used for error
      *             reporting
      */
-    MaterialBuilder& materialVertex(const char* code, size_t line = 0) noexcept;
+    MaterialBuilder& materialVertex(const char* UTILS_NONNULL code, size_t line = 0) noexcept;
 
 
     MaterialBuilder& quality(ShaderQuality quality) noexcept;
@@ -622,6 +624,7 @@ public:
      * enabled. These workarounds typically disable important optimizations and in some cases
      * whole features.
      */
+    UTILS_NOAPIGEN
     MaterialBuilder& workarounds(Workarounds workarounds) noexcept;
 
     // TODO: this is present here for matc's "--print" flag, but ideally does not belong inside MaterialBuilder.
@@ -643,11 +646,11 @@ public:
     MaterialBuilder& variantFilter(filament::UserVariantFilterMask variantFilter) noexcept;
 
     //! Adds a new preprocessor macro definition to the shader code. Can be called repeatedly.
-    MaterialBuilder& shaderDefine(const char* name, const char* value) noexcept;
+    MaterialBuilder& shaderDefine(const char* UTILS_NONNULL name, const char* UTILS_NONNULL value) noexcept;
 
     //! Add a new fragment shader output variable. Only valid for materials in the POST_PROCESS domain.
     MaterialBuilder& output(VariableQualifier qualifier, OutputTarget target, Precision precision,
-            OutputType type, const char* name, int location = -1);
+            OutputType type, const char* UTILS_NONNULL name, int location = -1);
 
     MaterialBuilder& enableFramebufferFetch() noexcept;
 
@@ -678,6 +681,7 @@ public:
      * Sets the source ASCII material (aka .mat file).
      * The provided `source` string_view must remain valid until MaterialBuilder::build() is called.
      */
+    UTILS_NOAPIGEN
     MaterialBuilder& materialSource(std::string_view source) noexcept;
 
     //! Set the (client requested) api level that the material is supposed to be compiled against.
@@ -687,6 +691,7 @@ public:
      * Build the material. If you are using the Filament engine with this library, you should use
      * the job system provided by Engine.
      */
+    UTILS_NOAPIGEN
     Package build(utils::JobSystem& jobSystem);
 
 public:
@@ -697,19 +702,19 @@ public:
      * Add a subpass parameter to this material.
      */
     MaterialBuilder& subpass(SubpassType subpassType,
-            SamplerFormat format, ParameterPrecision precision, const char* name);
+            SamplerFormat format, ParameterPrecision precision, const char* UTILS_NONNULL name);
     MaterialBuilder& subpass(SubpassType subpassType,
-            SamplerFormat format, const char* name);
+            SamplerFormat format, const char* UTILS_NONNULL name);
     MaterialBuilder& subpass(SubpassType subpassType,
-            ParameterPrecision precision, const char* name);
-    MaterialBuilder& subpass(SubpassType subpassType, const char* name);
+            ParameterPrecision precision, const char* UTILS_NONNULL name);
+    MaterialBuilder& subpass(SubpassType subpassType, const char* UTILS_NONNULL name);
 
     struct Parameter {
         Parameter() noexcept: parameterType(INVALID) {}
 
         // Sampler
-        Parameter(const char* paramName, SamplerType t, SamplerFormat f, ParameterPrecision p,
-                bool filterable, bool ms, const char* tn, std::optional<ShaderStageFlags> s)
+        Parameter(const char* UTILS_NONNULL paramName, SamplerType t, SamplerFormat f, ParameterPrecision p,
+                bool filterable, bool ms, const char* UTILS_NULLABLE tn, std::optional<ShaderStageFlags> s)
             : name(paramName),
               size(1),
               precision(p),
@@ -722,7 +727,7 @@ public:
               parameterType(SAMPLER) {}
 
         // Uniform
-        Parameter(const char* paramName, UniformType t, size_t typeSize, ParameterPrecision p)
+        Parameter(const char* UTILS_NONNULL paramName, UniformType t, size_t typeSize, ParameterPrecision p)
             : name(paramName),
               size(typeSize),
               uniformType(t),
@@ -733,7 +738,7 @@ public:
               parameterType(UNIFORM) {}
 
         // Subpass
-        Parameter(const char* paramName, SubpassType t, SamplerFormat f, ParameterPrecision p)
+        Parameter(const char* UTILS_NONNULL paramName, SubpassType t, SamplerFormat f, ParameterPrecision p)
             : name(paramName),
               size(1),
               precision(p),
@@ -768,7 +773,7 @@ public:
 
     struct Output {
         Output() noexcept = default;
-        Output(const char* outputName, VariableQualifier qualifier, OutputTarget target,
+        Output(const char* UTILS_NONNULL outputName, VariableQualifier qualifier, OutputTarget target,
                 Precision precision, OutputType type, int location) noexcept
                 : name(outputName), qualifier(qualifier), target(target), precision(precision),
                   type(type), location(location) { }
@@ -845,7 +850,6 @@ public:
     FeatureLevel getFeatureLevel() const noexcept { return mFeatureLevel; }
 
     uint32_t getApiLevel() const noexcept { return mApiLevel; }
-    /// @endcond
 
     struct Attribute {
         std::string_view name;
@@ -866,6 +870,7 @@ public:
     static AttributeDatabase const& getAttributeDatabase() noexcept {
         return sAttributeDatabase;
     }
+    /// @endcond
 
 private:
     static const AttributeDatabase sAttributeDatabase;
@@ -887,7 +892,7 @@ private:
             PropertyList const& allProperties,
             CodeGenParams const& semanticCodeGenParams) noexcept;
 
-    bool runSemanticAnalysis(MaterialInfo* inOutInfo,
+    bool runSemanticAnalysis(MaterialInfo* UTILS_NONNULL inOutInfo,
             CodeGenParams const& semanticCodeGenParams) noexcept;
 
     bool checkMaterialLevelFeatures(MaterialInfo const& info) const noexcept;
