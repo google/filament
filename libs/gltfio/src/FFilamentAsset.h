@@ -283,6 +283,11 @@ struct FFilamentAsset : public FilamentAsset {
     // Indicates if resource decoding has started (not necessarily finished)
     bool mResourcesLoaded = false;
 
+    // Indicates that ResourceLoader::loadResources() succeeded, which means that the source buffers
+    // have been loaded and validated. Unlike mResourcesLoaded, this remains false when loading
+    // fails, in which case the source buffers must not be read (e.g. by the Animator).
+    bool mResourcesValid = false;
+
     DependencyGraph mDependencyGraph;
     std::unordered_map<std::string, std::vector<utils::Entity>> mNameToEntity;
     utils::CString mAssetExtras;
