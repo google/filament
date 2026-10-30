@@ -628,6 +628,30 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
     deviceDescriptor.requiredFeatureCount = enabledFeatures.size();
     deviceDescriptor.requiredFeatures = enabledFeatures.data();
 
+    // On PowerVR (Imagination) drivers, Dawn enables vulkan_disallow_npot_depth_stencil_mipmaps
+    // (crbug.com/540087398), which rejects non-power-of-two depth/stencil textures with more than
+    // one mip level. Filament creates such textures at screen-relative sizes (e.g. the SSAO
+    // structure pass), so texture creation would fail and every frame would render black. We
+    // disable the workaround on PowerVR only, leaving Dawn's defaults untouched elsewhere.
+    // Note: the underlying driver bug may still produce incorrect contents in the lower mip
+    // levels of these textures.
+    // Dawn toggles are a native-only concept. On the web, the browser owns the device and the
+    // WASM polyfill of DawnTogglesDescriptor has no disabled-toggle fields.
+#if !defined(__EMSCRIPTEN__)
+    constexpr uint32_t IMAGINATION_VENDOR_ID = 0x1010;
+    constexpr std::array<const char*, 1> POWERVR_DISABLED_TOGGLES = {
+        "vulkan_disallow_npot_depth_stencil_mipmaps",
+    };
+    wgpu::DawnTogglesDescriptor dawnTogglesDescriptor{};
+    wgpu::AdapterInfo adapterInfo{};
+    if (adapter.GetInfo(&adapterInfo) == wgpu::Status::Success &&
+            adapterInfo.vendorID == IMAGINATION_VENDOR_ID) {
+        dawnTogglesDescriptor.disabledToggleCount = POWERVR_DISABLED_TOGGLES.size();
+        dawnTogglesDescriptor.disabledToggles = POWERVR_DISABLED_TOGGLES.data();
+        deviceDescriptor.nextInChain = &dawnTogglesDescriptor;
+    }
+#endif
+
     // It is helpful to increase maxStorageTexturesPerShaderStage if the hardware supports it, but
     // not required. This allows our mipmap generation to perform as well as possible for the given
     // hardware. If we have more cases of "Nice to increase" limits like this we can generalize it
