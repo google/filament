@@ -94,6 +94,7 @@ from .config import (
 from .specializations import (
     ENGINE_INTERCEPTED_METHODS,
     get_engine_jni_methods,
+    get_material_builder_jni,
     get_material_get_parameters_jni,
     get_tone_mapper_jni,
     get_view_pick_jni,
@@ -147,7 +148,7 @@ def _format_layered_includes(headers: Set[str]) -> List[str]:
             layers[0].append((hdr.lower(), f'#include "{hdr}"'))
         elif hdr.startswith("private/filament/"):
             layers[1].append((hdr.lower(), f"#include <{hdr}>"))
-        elif hdr.startswith("filament/"):
+        elif hdr.startswith("filament/") or hdr.startswith("filamat/"):
             layers[2].append((hdr.lower(), f"#include <{hdr}>"))
         elif hdr.startswith("private/backend/"):
             layers[3].append((hdr.lower(), f"#include <{hdr}>"))
@@ -995,20 +996,30 @@ class JniEmitter:
                 "common/CallbackUtils.h",
             ])
 
+        if self.name == "MaterialBuilder":
+            included_headers.add("utils/JobSystem.h")
+
         # Step 3: Format Includes and Namespaces
         has_math = any(h.startswith("math/") for h in included_headers)
+        has_filamat = any(h.startswith("filamat/") for h in included_headers)
         out.extend(_format_layered_includes(included_headers))
         out.append("")
         out.append("using namespace filament;")
         out.append("using namespace filament::android;")
         if has_math:
             out.append("using namespace filament::math;")
+        if has_filamat:
+            out.append("using namespace filamat;")
         out.append("using namespace utils;")
         out.append("")
 
         # Step 4: Handle Special Custom Functions (e.g. ToneMapper destructor, View.pick)
         if self.name == "ToneMapper":
             out.extend(get_tone_mapper_jni(self.jni_package))
+
+        if self.name == "MaterialBuilder":
+            out.append(get_material_builder_jni(self.jni_package))
+            out.append("")
 
         if self.name == "View":
             jni_func_name = f"Java_{self.jni_package}_{self.name}_nPick"
@@ -1653,7 +1664,17 @@ class JniEmitter:
             is_slice_ret = ret_info.get("is_slice", False) and not ret_info.get("is_struct_slice", False)
             is_container_ret = ret_info.get("is_container", False) and not math_ret_info and not is_slice_ret
             is_struct_ret = ret_info.get("is_struct", False) and not self.is_aggregate
-            if self.archetype == "bitfield" and (
+            is_self_chain = (
+                not is_static
+                and isinstance(cpp_ret, dict)
+                and cpp_ret.get("is_reference", False)
+                and not cpp_ret.get("is_pointer", False)
+                and ret_info.get("java") == self.name
+                and self.archetype == "handle"
+            )
+            if is_self_chain:
+                jni_ret = "void"
+            elif self.archetype == "bitfield" and (
                 self.get_java_type(cpp_ret) == "void"
                 or ret_info.get("cpp_type") in (self.name, f"{self.name} &", f"const {self.name} &")
             ):
@@ -1737,6 +1758,8 @@ class JniEmitter:
                         if (is_quat and size == 4)
                         else comp_args
                     )
+                    if type_cstr.startswith("uint"):
+                        ctor_args = [f"(uint32_t){c}" for c in ctor_args]
                     cpp_call_args.append(f"{type_cstr}{{{', '.join(ctor_args)}}}")
 
                 else:
