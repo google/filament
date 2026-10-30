@@ -2989,6 +2989,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                         colorGradingConfig.translucent
                         ? PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
 
+                // The cached material instance must not retain FrameGraph-owned textures.
+                mi->setParameter("colorBuffer", getZeroTexture(), {});
+                mi->setParameter("bloomBuffer", getZeroTexture(), {});
+                mi->setParameter("flareBuffer", getZeroTexture(), {});
+                mi->setParameter("dirtBuffer", getOneTexture(), {});
+                mi->setParameter("starburstBuffer", getOneTexture(), {});
+
                 unbindAllDescriptorSets(driver);
             }
     );
