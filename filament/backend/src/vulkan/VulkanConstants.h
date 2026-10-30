@@ -220,4 +220,7 @@ static_assert(FVK_MAX_PIPELINE_AGE >= FVK_MAX_COMMAND_BUFFERS);
 static constexpr size_t FVK_MAX_PIPELINE_COUNT = 64;
 #endif // FVK_MAX_PIPELINE_COUNT
 
+// Enable experimental Asynchronous features for vulkan backend
+constexpr bool ASYNC_VER_2 = false;
+
 #endif
