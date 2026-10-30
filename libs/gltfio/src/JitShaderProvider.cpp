@@ -378,6 +378,23 @@ std::string shaderFromKey(const MaterialKey& config) {
                 )SHADER";
             }
         }
+
+        if (config.hasRetroreflection && !config.useSpecularGlossiness) {
+            shader += R"SHADER(
+                material.retroreflection = materialParams.retroreflectionFactor;
+            )SHADER";
+
+            if (config.hasRetroreflectionTexture) {
+                shader += "highp float2 retroreflectionUV = ${retroreflection};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "retroreflectionUV = (vec3(retroreflectionUV, 1.0) * "
+                              "materialParams.retroreflectionUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    material.retroreflection *= texture(materialParams_retroreflectionMap, retroreflectionUV).r;
+                )SHADER";
+            }
+        }
     }
 
     shader += "}\n";
@@ -617,6 +634,18 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
 
     if (config.hasDispersion) {
         builder.parameter("dispersion", MaterialBuilder::UniformType::FLOAT);
+    }
+
+    // RETROREFLECTION
+    if (config.hasRetroreflection && !config.unlit && !config.useSpecularGlossiness) {
+        builder.parameter("retroreflectionFactor", MaterialBuilder::UniformType::FLOAT);
+        if (config.hasRetroreflectionTexture) {
+            builder.parameter("retroreflectionMap", MaterialBuilder::SamplerType::SAMPLER_2D);
+            if (config.hasTextureTransforms) {
+                builder.parameter("retroreflectionUvMatrix", MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH);
+            }
+        }
     }
 
     if (config.unlit) {
