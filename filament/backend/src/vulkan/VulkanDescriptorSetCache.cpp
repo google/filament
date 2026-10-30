@@ -20,12 +20,18 @@
 #include "VulkanConstants.h"
 #include "VulkanHandles.h"
 
+#include "vulkan/memory/ResourcePointer.h"
+#include "vulkan/utils/Definitions.h"
+
 #include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
 
 #include <algorithm>
+#include <array>
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace filament::backend {
@@ -298,42 +304,72 @@ void VulkanDescriptorSetCache::unbind(uint8_t setIndex) {
 }
 
 void VulkanDescriptorSetCache::commit(VulkanCommandBuffer* commands,
+        fvkutils::CommandBufferAgeCounter const& ageCounter,
         VkPipelineLayout pipelineLayout, fvkutils::DescriptorSetMask const& setMask) {
     // setMask indicates the set of descriptor sets the driver wants to bind, curMask is the
     // actual set of sets that *needs* to be bound.
     fvkutils::DescriptorSetMask curMask = setMask;
 
-    auto const& updateSets = mStashedSets;
+    bool const sameLayout = mLastBoundInfo.pipelineLayout == pipelineLayout;
+    auto const& lastBoundSets = mLastBoundInfo.boundSets;
+
+    // The sets this draw will actually execute with: the ones stashed by bind() since the last
+    // commit, plus, when the pipeline layout is unchanged, the ones left bound by the previous
+    // commit (vkCmdBindDescriptorSets state persists across draws within a command buffer).
+    // Carrying the latter forward matters for the stale-UBO check below: a UBO can be swapped out
+    // between two draws without the frontend re-binding the set, and the draw would otherwise run
+    // with a descriptor pointing at the old VkBuffer.
+    DescriptorSetArray boundSets = mStashedSets;
+    if (sameLayout) {
+        for (size_t i = 0; i < boundSets.size(); ++i) {
+            if (!boundSets[i]) {
+                boundSets[i] = lastBoundSets[i];
+            }
+        }
+    }
+
+    fvkutils::DescriptorSetMask forceUpdateMask {};
     curMask.forEachSetBit([&](size_t index) {
-        if (!updateSets[index]) {
+        auto const& set = boundSets[index];
+        if (!set) {
+            curMask.unset(index);
+            return;
+        }
+        auto const staleUbos = set->getStaleUbos();
+        if (UTILS_UNLIKELY(staleUbos.any())) {
+            // The VkBuffer of some UBOs has been swapped out (due to the memcpy fast path).
+            // This switches the set to a new VkDescriptorSet, so it must be (re)bound.
+            refreshStaleUbos(set, staleUbos);
+            forceUpdateMask.set(index);
+            return;
+        }
+        if (!mStashedSets[index]) {
+            // Still bound from the previous commit and not stale, so there is nothing to do.
+            curMask.unset(index);
+            return;
+        }
+        bool const alreadyBound = sameLayout && set == lastBoundSets[index];
+        if (alreadyBound && set->uniqueDynamicUboCount == 0) {
             curMask.unset(index);
         }
     });
 
-    if (mLastBoundInfo.pipelineLayout == pipelineLayout) {
-        auto& lastBoundSets = mLastBoundInfo.boundSets;
-        curMask.forEachSetBit([&](size_t index) {
-            auto& set = updateSets[index];
-            if (set == lastBoundSets[index] && set->uniqueDynamicUboCount == 0) {
-                curMask.unset(index);
-            }
-        });
-    }
+    curMask = curMask | forceUpdateMask;
 
     curMask.forEachSetBit([&](size_t index) {
         // This code actually binds the descriptor sets.
-        auto set = updateSets[index];
+        auto& set = boundSets[index];
         VkCommandBuffer const cmdbuffer = commands->buffer();
         VkDescriptorSet const vkset = set->getVkSet();
         commands->acquire(set);
         vkCmdBindDescriptorSets(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, index,
                 1, &vkset, set->uniqueDynamicUboCount, set->getOffsets()->data());
-        set->referencedBy(*commands);
+        set->referencedBy(*commands, ageCounter);
     });
     mLastBoundInfo = {
         pipelineLayout,
         setMask,
-        updateSets,
+        std::move(boundSets),
     };
     mStashedSets = {};
 }
@@ -367,7 +403,34 @@ void VulkanDescriptorSetCache::updateBuffer(fvkmemory::resource_ptr<VulkanDescri
         .pBufferInfo = &info,
     };
     vkUpdateDescriptorSets(mDevice, 1, &descriptorWrite, 0, nullptr);
-    set->acquire(bufferObject);
+    set->acquire(binding, bufferObject, offset, size);
+}
+
+void VulkanDescriptorSetCache::refreshStaleUbos(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
+        fvkutils::UniformBufferBitmask staleUbos) noexcept {
+    using Entry = VulkanDescriptorSet::BoundResource;
+    constexpr size_t vshift = fvkutils::getVertexStageShift<fvkutils::UniformBufferBitmask>();
+    constexpr size_t fshift = fvkutils::getFragmentStageShift<fvkutils::UniformBufferBitmask>();
+
+    // cloneSet() expects a mask in layout space, where each binding has a bit per stage. Mask out
+    // both stages so the stale descriptors aren't copied only to be overwritten.
+    fvkutils::UniformBufferBitmask skipBindings;
+    staleUbos.forEachSetBit([&](size_t index) {
+        uint8_t const binding = set->mResources[index].binding;
+        skipBindings.set(binding + vshift);
+        skipBindings.set(binding + fshift);
+    });
+    cloneSet(set, skipBindings, {} /* samplerMask */);
+
+    staleUbos.forEachSetBit([&](size_t index) {
+        // Copy the entry, since updateBuffer() overwrites it with the current generation.
+        Entry const entry = set->mResources[index];
+        auto bo = fvkmemory::resource_ptr<VulkanBufferObject>::cast(
+                static_cast<VulkanBufferObject*>(entry.resource.get()));
+        // Rewrite the descriptor with the range it was originally given, so that subranges and
+        // dynamic offsets keep working.
+        updateBuffer(set, entry.binding, bo, entry.offset, entry.size);
+    });
 }
 
 void VulkanDescriptorSetCache::updateSampler(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
@@ -397,7 +460,7 @@ void VulkanDescriptorSetCache::updateSampler(fvkmemory::resource_ptr<VulkanDescr
         .pImageInfo = &info,
     };
     vkUpdateDescriptorSets(mDevice, 1, &descriptorWrite, 0, nullptr);
-    set->acquire(texture);
+    set->acquire(binding, texture);
 }
 
 void VulkanDescriptorSetCache::updateInputAttachment(
@@ -421,7 +484,7 @@ fvkmemory::resource_ptr<VulkanDescriptorSet> VulkanDescriptorSetCache::createSet
 }
 
 void VulkanDescriptorSetCache::cloneSet(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
-        fvkutils::SamplerBitmask samplerMask) noexcept {
+        fvkutils::UniformBufferBitmask uboMask, fvkutils::SamplerBitmask samplerMask) noexcept {
     auto const& layout = set->getLayout();
     // Build a new descriptor set from layout
     VkDescriptorSetLayout const genLayout = set->boundLayout;
@@ -430,9 +493,9 @@ void VulkanDescriptorSetCache::cloneSet(fvkmemory::resource_ptr<VulkanDescriptor
     // Each bitmask denotes a binding index, and separated into two stages - vertex and buffer
     // We fold the two stages into just the lower half of the bits to denote a combined set of
     // bindings.
-    Bitmask const ubo = layout->bitmask.ubo | layout->bitmask.dynamicUbo;
-    // Don't copy the samplers in the mask
-    Bitmask samplers = layout->bitmask.sampler ^ samplerMask;
+    // Don't copy the ubos and samplers in the masks.
+    Bitmask const ubo = (layout->bitmask.ubo | layout->bitmask.dynamicUbo) & ~uboMask;
+    Bitmask const samplers = layout->bitmask.sampler & ~samplerMask;
     Bitmask const copyBindings = foldBitsInHalf(ubo | samplers);
 
     VkDescriptorSet const srcSet = set->getVkSet();
@@ -460,19 +523,25 @@ void VulkanDescriptorSetCache::gc() { mStashedSets = {}; }
 
 void VulkanDescriptorSetCache::copySet(VkDescriptorSet srcSet, VkDescriptorSet dstSet,
         fvkutils::SamplerBitmask bindings) const {
-    // TODO: fix the size for better memory management
-    std::vector<VkCopyDescriptorSet> copies;
+    // `bindings` is in folded (per-binding) space, so it has at most MAX_BINDINGS set bits. This
+    // runs on every clone (external samplers and stale-UBO refreshes), so avoid a heap allocation.
+    std::array<VkCopyDescriptorSet, VulkanDescriptorSetLayout::MAX_BINDINGS> copies;
+    uint32_t count = 0;
     bindings.forEachSetBit([&](size_t index) {
-        copies.push_back({
+        assert_invariant(count < copies.size());
+        copies[count++] = {
             .sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET,
             .srcSet = srcSet,
             .srcBinding = (uint32_t) index,
             .dstSet = dstSet,
             .dstBinding = (uint32_t) index,
             .descriptorCount = 1,
-        });
+        };
     });
-    vkUpdateDescriptorSets(mDevice, 0, nullptr, copies.size(), copies.data());
+    if (count == 0) {
+        return;
+    }
+    vkUpdateDescriptorSets(mDevice, 0, nullptr, count, copies.data());
 }
 
 

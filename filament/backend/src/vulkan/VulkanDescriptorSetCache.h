@@ -20,6 +20,7 @@
 #include "VulkanHandles.h"
 
 #include "vulkan/memory/ResourcePointer.h"
+#include "vulkan/utils/CommandBufferAgeCounter.h"
 #include "vulkan/utils/Definitions.h"  // For DescriptorSetMask
 
 #include <backend/DriverEnums.h>
@@ -67,16 +68,19 @@ public:
 
     void unbind(uint8_t setIndex);
 
-    void commit(VulkanCommandBuffer* commands, VkPipelineLayout pipelineLayout,
+    void commit(VulkanCommandBuffer* commands,
+            fvkutils::CommandBufferAgeCounter const& ageCounter,
+            VkPipelineLayout pipelineLayout,
             fvkutils::DescriptorSetMask const& setMask);
 
     fvkmemory::resource_ptr<VulkanDescriptorSet> createSet(Handle<HwDescriptorSet> handle,
             fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
 
     // Create and set as current a new VkDescriptorSet using the `set` currently bound layout and
-    // copy all the bindings and ignoring the samplers bindings in the `samplerMask`.
+    // copy all the bindings except for the ubo bindings in `uboMask` and the samplers bindings in
+    // the `samplerMask`.
     void cloneSet(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
-            fvkutils::SamplerBitmask samplerMask) noexcept;
+            fvkutils::UniformBufferBitmask uboMask, fvkutils::SamplerBitmask samplerMask) noexcept;
 
     // This method is meant to be used with external samplers
     VkDescriptorSet getVkSet(DescriptorCount const& count, VkDescriptorSetLayout vklayout);
@@ -92,6 +96,11 @@ public:
     void resetCachedState() noexcept { mLastBoundInfo = {}; }
 
 private:
+    // Rewrites the stale uniform buffer descriptors of `set` (indices given by
+    // VulkanDescriptorSet::getStaleUbos()) into a newly cloned VkDescriptorSet.
+    void refreshStaleUbos(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
+            fvkutils::UniformBufferBitmask staleUbos) noexcept;
+
     void copySet(VkDescriptorSet srcSet, VkDescriptorSet destSet,
             fvkutils::SamplerBitmask copyBindings) const;
 
