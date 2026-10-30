@@ -237,6 +237,10 @@ public:
         return mColorWriteEnableFeatures.colorWriteEnable == VK_TRUE;
     }
 
+    inline bool isHostQueryResetSupported() const noexcept {
+        return mHostQueryResetFeatures.hostQueryReset == VK_TRUE;
+    }
+
     inline bool pipelineCreationFeedbackSupported() const noexcept {
         return mPipelineCreationFeedbackSupported;
     }
@@ -317,6 +321,9 @@ private:
     };
     VkPhysicalDeviceColorWriteEnableFeaturesEXT mColorWriteEnableFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COLOR_WRITE_ENABLE_FEATURES_EXT,
+    };
+    VkPhysicalDeviceHostQueryResetFeaturesEXT mHostQueryResetFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES_EXT,
     };
     VkExternalFenceHandleTypeFlags mFenceExportFlags = {};
 
