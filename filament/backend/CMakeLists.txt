@@ -661,6 +661,7 @@ if (FILAMENT_BUILD_TESTING)
         if (APPLE)
             # Metal-specific tests
             list(APPEND BACKEND_TEST_SRC
+                test/test_MetalAsyncJobs.mm
                 test/test_MetalBlitter.mm
             )
         endif()

@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
+#include "downcast.h"
 #include "DracoCache.h"
+#include "FFilamentInstance.h"
 #include "GlbBuilders.h"
 #include "Utility.h"
 
@@ -31,6 +33,7 @@
 #include <gltfio/ResourceLoader.h>
 #include <gltfio/TextureProvider.h>
 
+#include <filament/Box.h>
 #include <filament/Engine.h>
 #include <filament/MaterialEnums.h>
 #include <filament/RenderableManager.h>
@@ -1773,6 +1776,214 @@ TEST_F(glTFIOTest, OutOfBoundsTexCoord) {
     assetLoader->destroyAsset(asset);
     AssetLoader::destroy(&assetLoader);
 }
+
+// Returns the local translation of the "animated" node created by makeTranslationAnimationGlb().
+static math::float3 getAnimatedNodeTranslation(Engine* engine, FilamentAsset* asset) {
+    Entity const node = asset->getFirstEntityByName("animated");
+    EXPECT_FALSE(node.isNull());
+    TransformManager& tm = engine->getTransformManager();
+    return tm.getTransform(tm.getInstance(node))[3].xyz;
+}
+
+#define EXPECT_FLOAT3_EQ(actual, expected)              \
+    do {                                                \
+        math::float3 const a_ = (actual);               \
+        math::float3 const e_ = (expected);             \
+        EXPECT_FLOAT_EQ(a_.x, e_.x);                    \
+        EXPECT_FLOAT_EQ(a_.y, e_.y);                    \
+        EXPECT_FLOAT_EQ(a_.z, e_.z);                    \
+    } while (0)
+
+// Sanity check for the Animator's sampler import: a valid translation animation must still play
+// after the hardening for issues #10134 and #10138.
+TEST_F(glTFIOTest, TranslationAnimationPlays) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    std::vector<uint8_t> const glb = makeTranslationAnimationGlb();
+    FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+    Animator* const animator = asset->getInstance()->getAnimator();
+    ASSERT_NE(animator, nullptr);
+    ASSERT_EQ(animator->getAnimationCount(), 1u);
+    EXPECT_FLOAT_EQ(animator->getAnimationDuration(0), 1.0f);
+
+    // Out-of-range queries must not index past the end of the animation list.
+    EXPECT_FLOAT_EQ(animator->getAnimationDuration(1), 0.0f);
+    EXPECT_STREQ(animator->getAnimationName(1), "");
+    animator->applyAnimation(1, 0.5f);
+
+    animator->applyAnimation(0, 0.5f);
+    EXPECT_FLOAT3_EQ(getAnimatedNodeTranslation(mEngine, asset), 0.5f * kTranslationAnimationEnd);
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+// The timeline used to be read as a packed float array, which ignored the bufferView byteStride.
+// With a stride of 8 bytes, that reader would have seen the padding value as the second keyframe
+// and reported it as the duration.
+TEST_F(glTFIOTest, StridedAnimationTimestampsAreHonored) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    std::vector<uint8_t> const glb = makeTranslationAnimationGlb({ .timelineByteStride = 8 });
+    FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+    Animator* const animator = asset->getInstance()->getAnimator();
+    ASSERT_NE(animator, nullptr);
+    ASSERT_EQ(animator->getAnimationCount(), 1u);
+    EXPECT_FLOAT_EQ(animator->getAnimationDuration(0), 1.0f);
+    EXPECT_NE(animator->getAnimationDuration(0), kTranslationAnimationStridePadding);
+
+    animator->applyAnimation(0, 0.5f);
+    EXPECT_FLOAT3_EQ(getAnimatedNodeTranslation(mEngine, asset), 0.5f * kTranslationAnimationEnd);
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+// Non-finite timestamps are rejected during sampler import, which leaves the animation in the list
+// but with no playable channels, so applying it must not move the node. An infinite timestamp used
+// to be accepted and reported as the animation's duration. A NaN timestamp would be inserted into
+// the std::map that backs the timeline, breaking its strict weak ordering; it was previously
+// caught only by accident, because NaN compares equivalent to any existing key and so tripped the
+// duplicate-timestamp check.
+TEST_F(glTFIOTest, NonFiniteAnimationTimestampsDisableChannel) {
+    const float values[] = {
+        std::numeric_limits<float>::infinity(),
+        std::numeric_limits<float>::quiet_NaN(),
+    };
+    for (float const lastTimestamp : values) {
+        SCOPED_TRACE(testing::Message() << "lastTimestamp = " << lastTimestamp);
+
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+
+        std::vector<uint8_t> const glb =
+                makeTranslationAnimationGlb({ .lastTimestamp = lastTimestamp });
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        // cgltf_validate() does not inspect accessor contents, so the load itself succeeds.
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+        Animator* const animator = asset->getInstance()->getAnimator();
+        ASSERT_NE(animator, nullptr);
+        ASSERT_EQ(animator->getAnimationCount(), 1u);
+        EXPECT_FLOAT_EQ(animator->getAnimationDuration(0), 0.0f);
+
+        math::float3 const before = getAnimatedNodeTranslation(mEngine, asset);
+        animator->applyAnimation(0, 0.5f);
+        EXPECT_FLOAT3_EQ(getAnimatedNodeTranslation(mEngine, asset), before);
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
+// A buffer that has no URI and is not the GLB BIN chunk survives cgltf_load_buffers() with null
+// data, and cgltf_validate() only checks accessors against the declared byteLength. The Animator
+// used to read the timeline from that null pointer plus the file-controlled offsets. The same
+// situation arises on builds without a file system, where missing external resources are
+// tolerated, and with EXT_meshopt_compression fallback buffers.
+TEST_F(glTFIOTest, AnimationWithUnloadedBufferIsDisabled) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    std::vector<uint8_t> const glb =
+            makeTranslationAnimationGlb({ .timelineInUnloadedBuffer = true });
+    FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+    Animator* const animator = asset->getInstance()->getAnimator();
+    ASSERT_NE(animator, nullptr);
+    EXPECT_EQ(animator->getAnimationCount(), 0u);
+    EXPECT_FLOAT_EQ(animator->getAnimationDuration(0), 0.0f);
+
+    math::float3 const before = getAnimatedNodeTranslation(mEngine, asset);
+    animator->applyAnimation(0, 0.5f);
+    EXPECT_FLOAT3_EQ(getAnimatedNodeTranslation(mEngine, asset), before);
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+// Issue #10134 follow-up: loadResources() used to mark the asset as loaded before validating it,
+// so an instance created after a failed load still got an Animator. That Animator would then read
+// the animation output accessor, which points past the end of the buffer.
+TEST_F(glTFIOTest, FailedLoadDoesNotCreateAnimator) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    std::vector<uint8_t> const glb = makeTranslationAnimationGlb(
+            { .outputViewByteLength = 4096, .outputAccessorByteOffset = 4000 });
+    FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    EXPECT_FALSE(resourceLoader.loadResources(asset));
+    EXPECT_EQ(downcast(asset->getInstance())->mAnimator, nullptr);
+
+    FilamentInstance* const instance = assetLoader->createInstance(asset);
+    ASSERT_NE(instance, nullptr);
+    EXPECT_EQ(downcast(instance)->mAnimator, nullptr);
+
+    // recomputeBoundingBoxes() must not read the source buffers either. It returns early, which
+    // leaves the bounding box that the instance copied from the asset untouched.
+    Aabb const before = instance->getBoundingBox();
+    instance->recomputeBoundingBoxes();
+    Aabb const after = instance->getBoundingBox();
+    EXPECT_FLOAT3_EQ(after.min, before.min);
+    EXPECT_FLOAT3_EQ(after.max, before.max);
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+// The extended loader only loads the source buffers for assets that have primitives, so the
+// buffers of an animation-only asset are never loaded. The Animator used to read the sampler data
+// from the resulting null buffer pointer, offset by the accessor and bufferView offsets.
+TEST_F(glTFIOTest, ExtendedAnimationWithoutBufferDataIsDisabled) {
+    if (!AssetConfigurationExtended::isSupported()) {
+        GTEST_SKIP() << "The extended loader is not supported on this platform.";
+    }
+    AssetConfigurationExtended ext{ .gltfPath = "." };
+    AssetLoader* assetLoader = AssetLoader::create({
+            .engine = mEngine, .materials = mMaterialProvider, .names = mNameManager,
+            .ext = &ext });
+    ASSERT_NE(assetLoader, nullptr);
+
+    std::vector<uint8_t> const glb = makeTranslationAnimationGlb();
+    FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+    Animator* const animator = asset->getInstance()->getAnimator();
+    ASSERT_NE(animator, nullptr);
+    EXPECT_EQ(animator->getAnimationCount(), 0u);
+    animator->applyAnimation(0, 0.5f);
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+#undef EXPECT_FLOAT3_EQ
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);

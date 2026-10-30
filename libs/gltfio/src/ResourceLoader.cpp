@@ -831,6 +831,9 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     // materials or textures will be added. Notify the dependency graph.
     asset->mDependencyGraph.commitEdges();
 
+    // Only now is it safe for the Animator and recomputeBoundingBoxes() to read the source buffers.
+    asset->mResourcesValid = true;
+
     for (FFilamentInstance* instance : asset->mInstances) {
         instance->createAnimator();
     }

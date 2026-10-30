@@ -288,6 +288,12 @@ public:
         Priority priority = Priority::NORMAL;
         utils::Invocable<void()> onBegin;  // Executed when the thread worker begins
         utils::Invocable<void()> onEnd;    // Executed when the thread worker ends
+        // Wraps the call of each job, so the owner decides how jobs run, with setup before and
+        // cleanup after if needed. For example, Metal runs each job in an autorelease pool.
+        // It must call `job`. Resetting it to nullptr inside the wrapper destroys the captures
+        // there too, otherwise the job is destroyed after the wrapper returns. Jobs run directly
+        // when this is empty.
+        utils::Invocable<void(JobQueue::Job& job)> wrapJob;
     };
 
     /**

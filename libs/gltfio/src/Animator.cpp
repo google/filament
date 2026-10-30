@@ -26,6 +26,7 @@
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 
+#include <utils/debug.h>
 #include <utils/Log.h>
 
 #include <math/mat4.h>
@@ -34,6 +35,11 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
+#include <cgltf.h>
+
+#include <algorithm>
+#include <cmath>
+#include <limits>
 #include <map>
 #include <string>
 #include <vector>
@@ -88,22 +94,27 @@ struct AnimatorImpl {
     void updateBoneMatrices(FFilamentInstance* instance);
 };
 
+// Imports a sampler that has passed validateSampler(). On failure, dst.times is left empty, which
+// disables every channel that uses this sampler (see Animator::applyAnimation).
 static void createSampler(const cgltf_animation_sampler& src, Sampler& dst) {
-    // Copy the time values into a red-black tree.
+    // Copy the time values into a red-black tree. cgltf_accessor_unpack_floats honors the
+    // accessor stride and reads meshopt-decoded data when present.
     const cgltf_accessor* timelineAccessor = src.input;
-    const uint8_t* timelineBlob = nullptr;
-    const float* timelineFloats = nullptr;
-    if (timelineAccessor->buffer_view->has_meshopt_compression) {
-        timelineBlob = (const uint8_t*) timelineAccessor->buffer_view->data;
-        timelineFloats = (const float*) (timelineBlob + timelineAccessor->offset);
-    } else {
-        timelineBlob = (const uint8_t*) timelineAccessor->buffer_view->buffer->data;
-        timelineFloats = (const float*) (timelineBlob + timelineAccessor->offset +
-                timelineAccessor->buffer_view->offset);
+    vector<float> timeline(timelineAccessor->count);
+    if (cgltf_accessor_unpack_floats(timelineAccessor, timeline.data(), timeline.size()) !=
+            timeline.size()) {
+        GLTFIO_WARN("Unable to read animation timestamps; animation disabled.");
+        return;
     }
-    for (size_t i = 0, len = timelineAccessor->count; i < len; ++i) {
-        dst.times[timelineFloats[i]] = i;
-    }   
+    for (size_t i = 0, len = timeline.size(); i < len; ++i) {
+        // NaN keys would break the strict weak ordering that std::map relies upon.
+        if (UTILS_UNLIKELY(!std::isfinite(timeline[i]))) {
+            GLTFIO_WARN("Animation sampler has non-finite timestamps; animation disabled.");
+            dst.times.clear();
+            return;
+        }
+        dst.times[timeline[i]] = i;
+    }
     dst.inputCount = timelineAccessor->count;
     if (UTILS_UNLIKELY(dst.times.size() != dst.inputCount)) {
         GLTFIO_WARN("Animation sampler has duplicate timestamps; animation disabled.");
@@ -113,22 +124,29 @@ static void createSampler(const cgltf_animation_sampler& src, Sampler& dst) {
 
     // Convert source data to float.
     const cgltf_accessor* valuesAccessor = src.output;
+    cgltf_size componentCount;
     switch (valuesAccessor->type) {
         case cgltf_type_scalar:
-            dst.values.resize(valuesAccessor->count);
-            cgltf_accessor_unpack_floats(src.output, &dst.values[0], valuesAccessor->count);
+            componentCount = 1;
             break;
         case cgltf_type_vec3:
-            dst.values.resize(valuesAccessor->count * 3);
-            cgltf_accessor_unpack_floats(src.output, &dst.values[0], valuesAccessor->count * 3);
+            componentCount = 3;
             break;
         case cgltf_type_vec4:
-            dst.values.resize(valuesAccessor->count * 4);
-            cgltf_accessor_unpack_floats(src.output, &dst.values[0], valuesAccessor->count * 4);
+            componentCount = 4;
             break;
         default:
             GLTFIO_WARN("Unknown animation type.");
+            dst.times.clear();
             return;
+    }
+    dst.values.resize(valuesAccessor->count * componentCount);
+    if (cgltf_accessor_unpack_floats(valuesAccessor, dst.values.data(), dst.values.size()) !=
+            dst.values.size()) {
+        GLTFIO_WARN("Unable to read animation values; animation disabled.");
+        dst.times.clear();
+        dst.values.clear();
+        return;
     }
 
     switch (src.interpolation) {
@@ -167,17 +185,45 @@ static void setTransformType(const cgltf_animation_channel& src, Channel& dst) {
     }
 }
 
+// Returns the number of bytes that cgltf_buffer_view_data() can provide for the given bufferView,
+// or 0 if its data is unavailable. The Animator does not rely on cgltf_validate() having accepted
+// the asset, because buffers are not loaded and validated on every code path. For example, the
+// extended loader only loads buffers for assets that have primitives, and builds without a file
+// system allow external resources to be missing.
+static cgltf_size getReadableViewSize(const cgltf_buffer_view* view) {
+    if (view->data) {
+        // Only utility::decodeMeshoptCompression() sets bufferView data, and it allocates exactly
+        // count * stride bytes.
+        if (!view->has_meshopt_compression) {
+            return 0;
+        }
+        const cgltf_meshopt_compression& compression = view->meshopt_compression;
+        if (compression.stride == 0 ||
+                compression.count > std::numeric_limits<cgltf_size>::max() / compression.stride) {
+            return 0;
+        }
+        return std::min(view->size, compression.count * compression.stride);
+    }
+    const cgltf_buffer* buffer = view->buffer;
+    if (!buffer || !buffer->data || view->offset > buffer->size ||
+            view->size > buffer->size - view->offset) {
+        return 0;
+    }
+    return view->size;
+}
+
 static bool accessorFitsView(const cgltf_accessor* accessor) {
     const cgltf_buffer_view* view = accessor->buffer_view;
     if (!view || accessor->is_sparse || accessor->count == 0) {
         return false;
     }
+    const cgltf_size viewSize = getReadableViewSize(view);
     const cgltf_size elementSize = cgltf_calc_size(accessor->type, accessor->component_type);
     const cgltf_size stride = accessor->stride ? accessor->stride : elementSize;
-    if (elementSize == 0 || stride == 0 || accessor->offset > view->size) {
+    if (elementSize == 0 || stride == 0 || accessor->offset > viewSize) {
         return false;
     }
-    const cgltf_size available = view->size - accessor->offset;
+    const cgltf_size available = viewSize - accessor->offset;
     if (elementSize > available) {
         return false;
     }
@@ -250,7 +296,7 @@ static bool validateAnimation(const cgltf_animation& anim) {
 }
 
 Animator::Animator(FFilamentAsset const* asset, FFilamentInstance* instance) {
-    assert(asset->mResourcesLoaded && asset->mSourceAsset);
+    assert(asset->mResourcesValid && asset->mSourceAsset);
     mImpl = new AnimatorImpl();
     mImpl->asset = asset;
     mImpl->instance = instance;
@@ -311,7 +357,11 @@ void Animator::applyCrossFade(size_t previousAnimIndex, float previousAnimTime, 
 void Animator::addInstance(FFilamentInstance* instance) {
     const cgltf_data* srcAsset = mImpl->asset->mSourceAsset->hierarchy;
     const cgltf_animation* srcAnims = srcAsset->animations;
-    for (cgltf_size i = 0, len = srcAsset->animations_count; i < len; ++i) {
+    // The animations vector is empty when the constructor rejected the source animations, so it is
+    // used as the loop bound rather than the glTF animation count.
+    assert_invariant(mImpl->animations.empty() ||
+            mImpl->animations.size() == srcAsset->animations_count);
+    for (size_t i = 0, len = mImpl->animations.size(); i < len; ++i) {
         const cgltf_animation& srcAnim = srcAnims[i];
         Animation& dstAnim = mImpl->animations[i];
         mImpl->addChannels(instance->mNodeMap, srcAnim, dstAnim);
@@ -401,10 +451,16 @@ void Animator::updateBoneMatrices() {
 }
 
 float Animator::getAnimationDuration(size_t animationIndex) const {
+    if (animationIndex >= mImpl->animations.size()) {
+        return 0.0f;
+    }
     return mImpl->animations[animationIndex].duration;
 }
 
 const char* Animator::getAnimationName(size_t animationIndex) const {
+    if (animationIndex >= mImpl->animations.size()) {
+        return "";
+    }
     return mImpl->animations[animationIndex].name.c_str();
 }
 
