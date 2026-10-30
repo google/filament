@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "VulkanAsyncBackend.h"
+#include "VulkanAsyncWorker.h"
 namespace filament::backend {
-VulkanAsyncBackend::VulkanAsyncBackend(const VulkanPlatform* platform, const VulkanContext& context,
+VulkanAsyncWorker::VulkanAsyncWorker(const VulkanPlatform* platform, const VulkanContext& context,
     ResourceManager* resourceManager, bool asyncAvailable) {
     if (asyncAvailable) {
         // keep track of our own Semaphore manager for the later Sync work
@@ -31,33 +31,34 @@ VulkanAsyncBackend::VulkanAsyncBackend(const VulkanPlatform* platform, const Vul
                         );
     }
 }
-void VulkanAsyncBackend::terminate() noexcept{
+void VulkanAsyncWorker::terminate() noexcept{
     if (mTaskHandler) {
         mTaskHandler->shutdown();
         mTaskHandler.reset();
     }
+    mSemaphoreManager->terminate();
+    mAsyncCommands->terminate();
 }
 
-void VulkanAsyncBackend::runUntilComplete() {
+void VulkanAsyncWorker::runUntilComplete() {
     if (mTaskHandler) {
         mTaskHandler->drain();
     }
 }
 
-void VulkanAsyncBackend::postUpdateJob(std::function<void(VulkanCommandBuffer&)> job,
+void VulkanAsyncWorker::postUpdateJob(std::function<void(VulkanCommandBuffer&)> job,
     AsyncCallId jobId, DriverBase::AsyncCompletion* completion, JobQueue* queue) {
 
     startTaskHandler();
-    mTaskHandler->post([this, job, queue, completion, jobId] (bool const success) mutable {
+    mTaskHandler->post([this, job, queue, completion] (bool const success) mutable {
         VulkanCommandBuffer& commands = mAsyncCommands->get();
         job(commands);
         if (success) {
             mAsyncCommands->flush();
             mAsyncCommands->wait();
             mAsyncCommands->gc();
-            queue->push([completion, jobId]()  {
+            queue->push([completion]()  {
                 completion->schedule(AsyncCallStatus::COMPLETED);
-                FVK_LOGW << "Completion callback fired - " << jobId;
                 delete completion;
             });
         }
@@ -65,15 +66,11 @@ void VulkanAsyncBackend::postUpdateJob(std::function<void(VulkanCommandBuffer&)>
 
 }
 
-void VulkanAsyncBackend::startTaskHandler () {
+void VulkanAsyncWorker::startTaskHandler () {
     // We don't create a task handler (start a thread) unless an Async method is called.
     if (!mTaskHandler) {
         mTaskHandler = std::make_unique<fvkutils::TaskHandler>();
     }
 }
 
-void VulkanAsyncBackend::grabSyncHandles() {
-    // keep track of the semaphores or any other sync primitive from the mCommands
-    assert(mAsyncCommands);
-}
 }// namespace filament::backend
