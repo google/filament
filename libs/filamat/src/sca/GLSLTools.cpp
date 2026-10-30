@@ -319,17 +319,10 @@ std::optional<GLSLTools::FragmentShaderInfo> GLSLTools::analyzeFragmentShader(
         return std::nullopt;
     }
 
-    // Does the user's code read the surface interpolants, directly or through a shading_*
-    // global derived from them (see common_shading.fs) or a getter? Every called function
-    // is followed except prepareMaterial(), whose reads are skipped together with the
-    // interpolants. Like hasCustomDepth(), this looks at a single preprocessed permutation.
-    static constexpr std::string_view kSurfaceInterpolantSymbols[] = {
-        "vertex_worldPosition", "vertex_worldNormal", "vertex_worldTangent",
-        "vertex_position", "shading_position", "shading_view",
-        "shading_normalizedViewportCoord", "shading_normal",
-        "shading_geometricNormal", "shading_reflected", "shading_NoV",
-        "shading_tangentToWorld", "shading_bentNormal", "shading_clearCoatNormal",
-    };
+    // Does the user's code read one of kSurfaceInterpolantSymbols, directly or through a getter
+    // or helper? Every called function is followed except prepareMaterial(), whose reads are
+    // skipped together with the interpolants. Like hasCustomDepth(), this looks at a single
+    // preprocessed permutation.
     class SurfaceInterpolantReadFinder : public TIntermTraverser {
         TIntermNode& mRoot;
         std::vector<std::string> mVisited;

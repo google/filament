@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "generated/shaders.h"
+
 #include "sca/ASTHelpers.h"
 #include "sca/GLSLTools.h"
 
@@ -36,7 +38,11 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
+#include <iterator>
 #include <memory>
+#include <regex>
+#include <sstream>
 #include <string>
 
 using namespace utils;
@@ -549,9 +555,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerReflectance) {
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
-static bool readsSurfaceInterpolants(const std::string& fragmentCode) {
+static bool readsSurfaceInterpolants(const std::string& fragmentCode,
+        MaterialBuilder::Shading shading = MaterialBuilder::Shading::UNLIT) {
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode,
-            "", MaterialBuilder::Shading::UNLIT);
+            "", shading);
     auto const info = GLSLTools::analyzeFragmentShader(shaderCode, ShaderModel::MOBILE,
             MaterialBuilder::MaterialDomain::SURFACE, MaterialBuilder::TargetApi::OPENGL,
             MaterialBuilder::TargetLanguage::GLSL, false);
@@ -614,6 +621,61 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSurfaceInterpolantsReadDirectly) {
             material.baseColor = vertex_worldPosition;
         }
     )"));
+}
+
+TEST_F(MaterialCompiler, StaticCodeAnalyzerSurfaceInterpolantsReadThroughEveryGetter) {
+    // Each getter reads a different shading_* global, so renaming one that the symbol list
+    // misses fails here. Lit, because the tangent getters only exist with tangents.
+    for (const char* getter : { "getWorldTangentFrame()[0]", "getWorldPosition()",
+                 "getUserWorldPosition()", "getWorldViewVector()", "getWorldNormalVector()",
+                 "getWorldGeometricNormalVector()", "getWorldReflectedVector()",
+                 "vec3(getNdotV())", "getNormalizedViewportCoord()" }) {
+        SCOPED_TRACE(getter);
+        EXPECT_TRUE(readsSurfaceInterpolants(std::string(R"(
+            void material(inout MaterialInputs material) {
+                prepareMaterial(material);
+                material.baseColor = vec4()") + getter + R"(, 1.0);
+            }
+        )", MaterialBuilder::Shading::LIT));
+    }
+}
+
+// The analysis only notices reads of the symbols it lists, so every shading_* global in
+// common_shading.fs and every varying that MATERIAL_SKIPS_SURFACE_INTERPOLANTS removes in
+// surface_varyings.glsl must be in GLSLTools::kSurfaceInterpolantSymbols.
+TEST(StaticCodeAnalysis, SurfaceInterpolantSymbolsCoverTheShaders) {
+    auto const expectListed = [](const std::string& source, const char* pattern) {
+        const auto& symbols = GLSLTools::kSurfaceInterpolantSymbols;
+        const std::regex re(pattern);
+        int count = 0;
+        for (auto it = std::sregex_iterator(source.begin(), source.end(), re);
+                it != std::sregex_iterator(); ++it, ++count) {
+            EXPECT_NE(std::find(std::begin(symbols), std::end(symbols), it->str()),
+                    std::end(symbols)) << it->str() << " is not in kSurfaceInterpolantSymbols";
+        }
+        EXPECT_GT(count, 0) << pattern;
+    };
+
+    expectListed(std::string(reinterpret_cast<const char*>(SHADERS_COMMON_SHADING_FS_DATA),
+            SHADERS_COMMON_SHADING_FS_SIZE), R"(\bshading_\w+)");
+
+    const std::string varyings(reinterpret_cast<const char*>(SHADERS_SURFACE_VARYINGS_GLSL_DATA),
+            SHADERS_SURFACE_VARYINGS_GLSL_SIZE);
+    const size_t begin = varyings.find("#if !defined(FILAMENT_SKIPS_SURFACE_INTERPOLANTS)");
+    ASSERT_NE(begin, std::string::npos);
+    std::istringstream lines(varyings.substr(begin));
+    std::string line;
+    std::string block;
+    int depth = 0;
+    while (std::getline(lines, line)) {
+        if (line.rfind("#if", 0) == 0) {
+            depth++;
+        } else if (line.rfind("#endif", 0) == 0 && --depth == 0) {
+            break;
+        }
+        block += line + '\n';
+    }
+    expectListed(block, R"(\bvertex_\w+)");
 }
 
 // Builds an unlit material with the fog variant filtered out, as optimized mobile GLSL so
