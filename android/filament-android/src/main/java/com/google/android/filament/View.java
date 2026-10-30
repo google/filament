@@ -2362,9 +2362,9 @@ public class View {
      *
      * <p>Motion vectors are generated only when post-processing is enabled, stereo is disabled,
      * the engine runs at feature level 1 or higher and the device supports RG16F render targets.
-     * They capture the rigid motion of renderables (TransformManager and InstanceBuffer transforms)
-     * and of the camera. Skinning/morphing deformation and the VIEW/DEVICE vertex domains are not
-     * captured.
+     * They capture the rigid motion of renderables (TransformManager and InstanceBuffer
+     * transforms) and of the camera. Skinning/morphing deformation and the VIEW/DEVICE vertex
+     * domains are not captured.
      * TAA uses motion vectors automatically when they are enabled.</p>
      *
      * @see View#setMotionVectorsOptions

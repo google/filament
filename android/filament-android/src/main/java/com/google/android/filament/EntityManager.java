@@ -40,9 +40,8 @@ import androidx.annotation.RestrictTo;
  * <ul>
  *   <li><b>Entity Creation</b>: Methods like {@code create}() and {@code create}(size_t, Entity*) allocate new or recycled Entity
  * identities.</li>
- *   <li><b>Entity Destruction</b>: Methods like {@code destroy}(Entity) and {@code destroy}(size_t, Entity*) immediately mark entities
- * as dead (for {@code isAlive}()) and batch timeline and change-callback notifications until the internal buffer fills,
- * {@code flushNotifications}() is called, or {@code advanceEpoch}() seals the epoch.</li>
+ *   <li><b>Entity Destruction</b>: Methods like {@code destroy}(Entity) and {@code destroy}(size_t, Entity*) logically kill entities,
+ * instantly advancing the active timeline.</li>
  *   <li><b>Queries & Hooks</b>: Mechanisms to query logical presence ({@code isAlive}()) or subscribe to global destruction
  * notifications via {@code registerChangeCallback}().</li>
  * </ul>

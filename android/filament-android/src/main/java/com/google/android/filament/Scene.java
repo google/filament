@@ -130,7 +130,8 @@ public class Scene {
      *
      * @param entity <p>The entity is ignored for rendering purposes if it doesn't have a Renderable or Light component.</p>
      *
-     * <p>Adding an Entity that has already been destroyed with EntityManager::destroy() is a no-op.</p>
+     * <p>Adding an Entity that has already been destroyed with {@link EntityManager#destroy} is a
+     * no-op.</p>
      *
      * <p>\attention
      *  A given Entity object can only be added once to a Scene.</p>
@@ -142,7 +143,8 @@ public class Scene {
     /**
      * Adds a list of entities to the Scene.
      *
-     * <p>Entities that have already been destroyed with EntityManager::destroy() are skipped.</p>
+     * <p>Entities that have already been destroyed with {@link EntityManager#destroy} are
+     * skipped.</p>
      *
      * @param entities Array containing entities to add to the scene.
      */
@@ -180,8 +182,9 @@ public class Scene {
     /**
      * Returns the number of Entities in the Scene.
      *
-     * <p>Entities destroyed with EntityManager::destroy() are removed lazily the next time a View
-     * attached to this Scene is rendered or detached; until then they may still be counted.</p>
+     * <p>Entities destroyed with {@link EntityManager#destroy} are removed lazily the next time a
+     * {@link View} attached to this Scene is rendered or detached; until then they may still be
+     * counted.</p>
      *
      * @return Total number of Entities in the Scene.
      */
@@ -213,9 +216,9 @@ public class Scene {
     /**
      * Returns true if the given entity is in the Scene.
      *
-     * <p>Entities destroyed with EntityManager::destroy() are removed lazily the next time a View
-     * attached to this Scene is rendered or detached; until then they may still be reported as
-     * present.</p>
+     * <p>Entities destroyed with {@link EntityManager#destroy} are removed lazily the next time a
+     * {@link View} attached to this Scene is rendered or detached; until then they may still be
+     * reported as present.</p>
      *
      * @return Whether the given entity is in the Scene.
      */
@@ -228,8 +231,9 @@ public class Scene {
      *
      * <p>It is not allowed to add or remove an entity from the scene within the functor.</p>
      *
-     * <p>Entities destroyed with EntityManager::destroy() are removed lazily the next time a View
-     * attached to this Scene is rendered or detached; until then they may still be visited.</p>
+     * <p>Entities destroyed with {@link EntityManager#destroy} are removed lazily the next time a
+     * {@link View} attached to this Scene is rendered or detached; until then they may still be
+     * visited.</p>
      *
      * @param functor User provided functor called for each entity in the scene
      */
