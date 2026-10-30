@@ -14,25 +14,25 @@ struct Light {
 };
 
 struct PixelParams {
-    vec3  diffuseColor;
+    vec3 diffuseColor;
     float perceptualRoughness;
 #if defined(MATERIAL_HAS_REFRACTION)
     float perceptualRoughnessUnclamped;
 #endif
-    vec3  f0;
+    vec3 f0;
 #if defined(MATERIAL_HAS_SPECULAR_COLOR_FACTOR) || defined(MATERIAL_HAS_SPECULAR_FACTOR)
     float f90;
     float specular;
 #endif
     float roughness;
-    vec3  dfg;
-    vec3  energyCompensation;
+    vec3 dfg;
+    vec3 energyCompensation;
 
 #if defined(MATERIAL_HAS_SECOND_SPECULAR_LOBE)
     float secondRoughness;
     float secondPerceptualRoughness;
-    vec2  secondDfg;
-    vec3  secondEnergyCompensation;
+    vec2 secondDfg;
+    vec3 secondEnergyCompensation;
     float secondRoughnessWeight;
 #endif
 
@@ -43,7 +43,7 @@ struct PixelParams {
 #endif
 
 #if defined(MATERIAL_HAS_SHEEN_COLOR)
-    vec3  sheenColor;
+    vec3 sheenColor;
 #if !defined(SHADING_MODEL_CLOTH)
     float sheenRoughness;
     float sheenPerceptualRoughness;
@@ -53,8 +53,8 @@ struct PixelParams {
 #endif
 
 #if defined(MATERIAL_HAS_ANISOTROPY)
-    vec3  anisotropicT;
-    vec3  anisotropicB;
+    vec3 anisotropicT;
+    vec3 anisotropicB;
     float anisotropy;
 #endif
 
@@ -62,12 +62,12 @@ struct PixelParams {
     float thickness;
 #endif
 #if defined(SHADING_MODEL_SUBSURFACE)
-    vec3  subsurfaceColor;
+    vec3 subsurfaceColor;
     float subsurfacePower;
 #endif
 
 #if defined(SHADING_MODEL_CLOTH) && defined(MATERIAL_HAS_SUBSURFACE_COLOR)
-    vec3  subsurfaceColor;
+    vec3 subsurfaceColor;
 #endif
 
 #if defined(MATERIAL_HAS_REFRACTION)
@@ -78,7 +78,7 @@ struct PixelParams {
 #endif
     float transmission;
     float uThickness;
-    vec3  absorption;
+    vec3 absorption;
 #endif
 };
 
@@ -102,7 +102,7 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 v, const vec3 n) {
     vec3  anisotropyDirection = pixel.anisotropy >= 0.0 ? pixel.anisotropicB : pixel.anisotropicT;
     vec3  anisotropicTangent  = cross(anisotropyDirection, v);
     vec3  anisotropicNormal   = cross(anisotropicTangent, anisotropyDirection);
-    float bendFactor          = abs(pixel.anisotropy) * saturate(5.0 * pixel.perceptualRoughness);
+    float  bendFactor          = abs(pixel.anisotropy) * saturate(5.0 * pixel.perceptualRoughness);
     vec3  bentNormal          = normalize(mix(n, anisotropicNormal, bendFactor));
 
     vec3 r = reflect(-v, bentNormal);
