@@ -644,6 +644,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_ThreadPriorityOverride.cpp
             test/test_AsyncUploads.cpp
             test/test_Platform.cpp
+            test/test_VulkanPipelineCache.cpp
         )
         if (FILAMENT_SUPPORTS_VULKAN)
             list(APPEND BACKEND_TEST_SRC
@@ -661,6 +662,7 @@ if (FILAMENT_BUILD_TESTING)
         if (APPLE)
             # Metal-specific tests
             list(APPEND BACKEND_TEST_SRC
+                test/test_MetalAsyncJobs.mm
                 test/test_MetalBlitter.mm
             )
         endif()
