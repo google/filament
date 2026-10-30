@@ -9,3 +9,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - engine: fix PCSS soft shadows of point and spot lights using the directional light's bulb radius
 - engine: fix a shader program leak when rendering PCSS or VSM shadows with the program cache
   disabled
+- gl: on PowerVR Rogue GE9215, material-instance uniforms are no longer batched and buffer updates
+  no longer go through `glMapBufferRange`
