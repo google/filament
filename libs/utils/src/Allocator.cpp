@@ -84,7 +84,7 @@ void LinearAllocatorWithFallback::reset() noexcept {
 // FreeList
 // ------------------------------------------------------------------------------------------------
 
-FreeList::Node* FreeList::init(void* begin, void* end,
+FreeList::InitInfo FreeList::init(void* begin, void* end,
         size_t const elementSize, size_t const alignment, size_t const extra) noexcept
 {
     void* const p = pointermath::align(begin, alignment, extra);
@@ -94,30 +94,18 @@ FreeList::Node* FreeList::init(void* begin, void* end,
 
     const size_t d = uintptr_t(n) - uintptr_t(p);
     const size_t num = (uintptr_t(end) - uintptr_t(p)) / d;
-
-    // set first entry
-    Node* head = static_cast<Node*>(p);
-
-    // next entry
-    Node* cur = head;
-    for (size_t i = 1; i < num; ++i) {
-        Node* next = pointermath::add(cur, d);
-        cur->next = next;
-        cur = next;
-    }
-    assert_invariant(cur < end);
-    assert_invariant(pointermath::add(cur, d) <= end);
-    cur->next = nullptr;
-    return head;
+    return { static_cast<Node*>(p), d, num };
 }
 
 FreeList::FreeList(void* begin, void* end,
         size_t const elementSize, size_t const alignment, size_t const extra) noexcept
-        : mHead(init(begin, end, elementSize, alignment, extra))
-#ifndef NDEBUG
-        , mBegin(begin), mEnd(end)
-#endif
 {
+    auto const [p, d, num] = init(begin, end, elementSize, alignment, extra);
+    mCur = p;
+    mEnd = pointermath::add(p, num * d);
+    mBegin = p;
+    mStride = uint32_t(d);
+    mExtra = uint32_t(extra);
 }
 
 AtomicFreeList::AtomicFreeList(void* begin, void* end,
@@ -127,9 +115,15 @@ AtomicFreeList::AtomicFreeList(void* begin, void* end,
     // on some platform (e.g. web) this returns false. we really only care about mobile though.
     assert_invariant(mHead.is_lock_free());
 #endif
+    auto const [p, d, num] = FreeList::init(begin, end, elementSize, alignment, extra);
+    assert_invariant(d % sizeof(Node) == 0);
 
-    mStorage = FreeList::init(begin, end, elementSize, alignment, extra);
-    mHead.store({ 0, 0 });
+    mStorage = p;
+    mHead.store({ -1, 0 }, std::memory_order_relaxed);
+    mCurOffset.store(0, std::memory_order_relaxed);
+    mEndOffset = uint32_t(num * (d / sizeof(Node)));
+    mStrideInNodes = uint32_t(d / sizeof(Node));
+    mExtra = uint32_t(extra);
 }
 
 // ------------------------------------------------------------------------------------------------
