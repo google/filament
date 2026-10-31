@@ -12,3 +12,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - vulkan: with the `backend.vulkan.enable_pipeline_cache_persistence` feature flag, the backend
   keeps its `VkPipelineCache` across runs through `Platform::setBlobFunc`, as the GL backend does
   for program binaries; the blob functions must be set before the `Engine` is created
+- utils: `bitset` is no longer over-aligned to 16 bytes, which fixes a crash (SIGBUS) creating
+  Vulkan descriptor-set layouts on 32-bit ARM

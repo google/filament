@@ -18,6 +18,10 @@
 
 #include <gtest/gtest.h>
 
+#include <new>
+
+#include <stdint.h>
+
 using namespace utils;
 
 TEST(BitSetTest, bitset256) {
@@ -432,4 +436,27 @@ TEST(BitSetTest, ShiftOperatorsLargeRuntime) {
     for (size_t const n : shifts) {
         verifyShiftAmount(src, n);
     }
+}
+
+TEST(BitSetTest, EightByteAligned) {
+    // Pool allocators only guarantee alignof(std::max_align_t), which can be 8, so every
+    // operation must work on a bitset that isn't 16-byte aligned.
+    alignas(16) uint64_t buffer[2 + 4 + 4];
+    auto* a = new(buffer + 1) bitset256();
+    auto* b = new(buffer + 5) bitset256();
+    ASSERT_EQ(8, reinterpret_cast<uintptr_t>(a) % 16);
+    ASSERT_EQ(8, reinterpret_cast<uintptr_t>(b) % 16);
+
+    a->set(0);
+    a->set(255);
+    b->set(255);
+    EXPECT_EQ(2, a->count());
+    EXPECT_TRUE(a->any());
+    EXPECT_FALSE(a->all());
+    EXPECT_TRUE(*a != *b);
+    EXPECT_EQ(1, (*a & *b).count());
+    EXPECT_EQ(2, (*a | *b).count());
+    EXPECT_EQ(1, (*a ^ *b).count());
+    EXPECT_EQ(254, (~*a).count());
+    EXPECT_TRUE((*a | ~*a).all());
 }
