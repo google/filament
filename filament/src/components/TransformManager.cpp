@@ -121,14 +121,9 @@ void FTransformManager::markNodeDirty(Instance const i) noexcept UTILS_NO_THREAD
 UTILS_ALWAYS_INLINE
 FTransformManager::Instance FTransformManager::createImpl(
         Entity const entity, Instance const parent) {
-    // addComponent() always appends, but destroying a zombie or a previous component for
-    // `entity` below may move the last component, invalidating existing Instances.
+    // addComponent() always appends, but destroying a previous component for `entity` below may
+    // move the last component, invalidating existing Instances.
     auto& manager = mManager;
-
-    Entity zombie;
-    if (UTILS_UNLIKELY(manager.popPendingZombie(entity, zombie))) {
-        destroy(zombie);
-    }
 
     // New components are appended out of topological order; gc() -> defragment() restores
     // BFS order (parent-before-child, contiguous siblings) incrementally over later frames.

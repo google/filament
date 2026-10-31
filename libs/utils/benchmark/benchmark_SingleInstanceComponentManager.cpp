@@ -49,10 +49,6 @@ public:
     // Mirrors real Filament component managers (TransformManager, RenderableManager, LightManager,
     // CameraManager, NameComponentManager) when amortizationSupported is true.
     Instance create(Entity const e) {
-        Entity zombie;
-        if (UTILS_UNLIKELY(popPendingZombie(e, zombie))) {
-            removeComponent(zombie);
-        }
         return addComponent(e);
     }
 
@@ -63,56 +59,6 @@ public:
 };
 
 } // namespace
-
-// -------------------------------------------------------------------------------------------------
-// 1. popPendingZombie (Empty Queue Fast Path)
-// -------------------------------------------------------------------------------------------------
-static void BM_SICM_PopPendingZombie_Empty(benchmark::State& state) {
-    EntityManagerImpl em;
-    BenchComponentManager cm(em, true);
-    Entity const e = em.create();
-
-    for (auto _ : state) {
-        Entity zombie;
-        bool const hit = cm.popPendingZombie(e, zombie);
-        benchmark::DoNotOptimize(hit);
-        benchmark::DoNotOptimize(zombie);
-    }
-
-    em.destroy(e);
-}
-BENCHMARK(BM_SICM_PopPendingZombie_Empty);
-
-// -------------------------------------------------------------------------------------------------
-// 2. popPendingZombie (Pending Queue Hit Path - fetchRemove vs operator[] + remove)
-// -------------------------------------------------------------------------------------------------
-static void BM_SICM_PopPendingZombie_Hit(benchmark::State& state) {
-    EntityManagerImpl em;
-    BenchComponentManager cm(em, true);
-
-    size_t const count = state.range(0);
-    std::vector<Entity> entities(count);
-    em.create(count, entities.data());
-
-    for (auto _ : state) {
-        state.PauseTiming();
-        for (size_t i = 0; i < count; ++i) {
-            cm.mPendingDestruction.add(entities[i].getId());
-        }
-        state.ResumeTiming();
-
-        for (size_t i = 0; i < count; ++i) {
-            Entity zombie;
-            bool const hit = cm.popPendingZombie(entities[i], zombie);
-            benchmark::DoNotOptimize(hit);
-            benchmark::DoNotOptimize(zombie);
-        }
-    }
-    state.SetItemsProcessed(state.iterations() * count);
-
-    em.destroy(count, entities.data());
-}
-BENCHMARK(BM_SICM_PopPendingZombie_Hit)->Arg(1024)->Arg(4096);
 
 // -------------------------------------------------------------------------------------------------
 // 3. addComponent (Already Existing Component - Single Lookup vs Double Lookup)
@@ -179,7 +125,7 @@ static void BM_SICM_AddComponent_New(benchmark::State& state) {
 BENCHMARK(BM_SICM_AddComponent_New)->Arg(1024)->Arg(4096);
 
 // -------------------------------------------------------------------------------------------------
-// 5. Realistic Amortized Component Creation (create = popPendingZombie + addComponent)
+// 5. Realistic Amortized Component Creation
 // -------------------------------------------------------------------------------------------------
 static void BM_SICM_Create_Amortized(benchmark::State& state) {
     EntityManagerImpl em;
@@ -563,7 +509,6 @@ static void BM_SICM_CatchupGarbage_Dirty(benchmark::State& state) {
         cm->catchupGarbage();
 
         state.PauseTiming();
-        cm->mPendingDestruction.clear();
         cm->removeComponents(entities.data(), count);
         state.ResumeTiming();
     }
