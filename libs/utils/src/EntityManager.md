@@ -27,15 +27,15 @@ This document details the concurrent architectural data flows, timelines, and me
  
    1. catchupGarbage() Execution Window:
    
-      mMyWatermark (E2) -----------------------------------------------> Advance to E3
+      mHarvestedEpoch (E2) --------------------------------------------> Advance to E3
       
       PagedArenaBitset::intersect( Live Components (mEntities) , E3 Bitset )
                                |
-                               +---> [ Logical Zombies Extracted ]
+                               +---> [ Dead Entities Extracted ]
                                                |
                                                v
                                     mPendingDestruction.merge()
-                                    mEntities.difference()
+                                    (mEntities retains bits until physical eviction)
                                                |
                                                v
 -------------------------------------------------------------------------------------------------
@@ -43,14 +43,14 @@ This document details the concurrent architectural data flows, timelines, and me
  
    2. gc() Eviction Execution Window:
    
-      mPendingDestruction.swap( readyToDestruct )
-      
-      readyToDestruct.forEachSetBit( ... )
+      mPendingDestruction.popSetBits( ... )
              |
-             +---> Index Collides with recycled Active Entity?
-             |            |
-             |            +- (Yes) -> JIT Zombie Purge (popPendingZombie) -> Compaction
-             |            +- (No)  -> Invoke Concrete C++ Destructor (~Component)
+             v
+      Invoke Concrete C++ Destructor (~Component) -> eraseComponentFromMap()
+             |
+             +---> mPendingDestruction.fetchRemove(e)
+             +---> mEntities.remove(e)
+             +---> When mPendingDestruction.empty(): mWatermark.store(mHarvestedEpoch)
              v
       StructureOfArrays (Dense Payload Mapping)
       +--------+--------+--------+--------+
@@ -65,11 +65,8 @@ This document details the concurrent architectural data flows, timelines, and me
 ### 1. The Global Epoch Boundaries
 `EntityManagerImpl` maintains a growing array of sealed epoch bitsets. Only epochs that have been sealed via `advanceEpoch()` are processed by the managers.
 
-### 2. Logical Deletion (O(1) Intersect)
-In `catchupGarbage()`, dead entity IDs for sealed frames are bitwise intersected into `mPendingDestruction` and subtracted from `mEntities` instantly. Live rendering and game-loop queries immediately hide these components before their physical destructors have even been scheduled.
+### 2. Garbage Harvesting (`catchupGarbage()`)
+In `catchupGarbage()`, dead entity IDs from newly sealed epochs are bitwise intersected with `mEntities` and merged into `mPendingDestruction`, advancing `mHarvestedEpoch`. The dead entities remain in `mEntities` (and `mWatermark` is held) until physical eviction completes, guaranteeing that `EntityManagerImpl` never recycles an entity index while a component for that index still physically resides in any manager.
 
-### 3. Physical Array Defragmentation
-When `gc()` executes, it isolates the queue via an O(1) swap and processes each payload, utilizing `removeComponent()` to perform a swap-and-pop move to keep the underlying `StructureOfArrays` tightly packed in memory for maximum cache performance.
-
-### 4. JIT Eviction (popPendingZombie)
-Acts as an emergency safety net. If a recycled Entity ID index reallocates a payload spot before `gc()` has cleared the old frame's garbage, the implementation JIT-extracts the pending zombie from `mPendingDestruction` and safely purges the stale component to maintain layout integrity.
+### 3. Physical Array Defragmentation & Watermark Commit (`gc()`)
+When `gc()` executes, it pops batches from `mPendingDestruction` and invokes `removeComponent()`, performing a swap-and-pop move to keep the underlying `StructureOfArrays` tightly packed in memory and removing each evicted entity from `mEntities`. Once `mPendingDestruction` drains (or across frames via `EntityManagerImpl`'s automatic `mEntities` intersection leap-forward), `mWatermark` advances, allowing `EntityManagerImpl` to safely recycle the expired epoch indices.
