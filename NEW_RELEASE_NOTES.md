@@ -6,6 +6,8 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+- metal: map the `SRGB8_ALPHA8_ASTC_*` texture formats to Metal's sRGB ASTC pixel formats on
+  Apple-family GPUs (they previously had no Metal mapping)
 - engine: fix PCSS soft shadows of point and spot lights using the directional light's bulb radius
 - engine: fix a shader program leak when rendering PCSS or VSM shadows with the program cache
   disabled
