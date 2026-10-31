@@ -5592,10 +5592,31 @@ static bool DecodePixelData(/* out */ unsigned char **out_images,
     for (size_t c = 0; c < num_channels; c++) {
       for (size_t v = 0; v < static_cast<size_t>(num_lines); v++) {
         if (channels[c].pixel_type == TINYEXR_PIXELTYPE_HALF) {
+          if (width < 0) {
+            return false;
+          }
+          const size_t row_width = static_cast<size_t>(width);
+          if (row_width > data_len / sizeof(unsigned short)) {
+            // Insufficient data size
+            return false;
+          }
+          const size_t row_bytes = row_width * sizeof(unsigned short);
+          const size_t max_offset_units =
+              (row_width > 0) ? ((data_len - row_bytes) / row_width) : 0;
+          if (row_width > 0 &&
+              (pixel_data_size == 0 || v > max_offset_units / pixel_data_size ||
+               channel_offset_list[c] >
+                   max_offset_units - v * pixel_data_size)) {
+            // Insufficient data size
+            return false;
+          }
+          const size_t line_byte_offset =
+              (row_width > 0)
+                  ? ((v * pixel_data_size + channel_offset_list[c]) * row_width)
+                  : 0;
           const unsigned short *line_ptr =
-              reinterpret_cast<const unsigned short *>(
-                  data_ptr + v * pixel_data_size * size_t(width) +
-                  channel_offset_list[c] * static_cast<size_t>(width));
+              reinterpret_cast<const unsigned short *>(data_ptr +
+                                                       line_byte_offset);
 
           if (requested_pixel_types[c] == TINYEXR_PIXELTYPE_HALF) {
             unsigned short *outLine =
