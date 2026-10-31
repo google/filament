@@ -7,6 +7,7 @@
  * vector in world space, the tangent frame at the shading point, etc.
  */
 void computeShadingParams() {
+#if !defined(FILAMENT_SKIPS_SURFACE_INTERPOLANTS)
 #if defined(HAS_ATTRIBUTE_TANGENTS)
     highp vec3 n = vertex_worldNormal;
 #if defined(MATERIAL_NEEDS_TBN)
@@ -45,6 +46,7 @@ void computeShadingParams() {
     //    p = clipFromWorldMatrix * shading_position;
     //    shading_normalizedViewportCoord = p.xy * 0.5 / p.w + 0.5
     shading_normalizedViewportCoord = vertex_position.xy * (0.5 / vertex_position.w) + 0.5;
+#endif // !FILAMENT_SKIPS_SURFACE_INTERPOLANTS
 }
 
 /**
@@ -57,7 +59,7 @@ void computeShadingParams() {
  * the material compiler) after setting a value for MaterialInputs.normal.
  */
 void prepareMaterial(const MaterialInputs material) {
-#if defined(HAS_ATTRIBUTE_TANGENTS)
+#if defined(HAS_ATTRIBUTE_TANGENTS) && !defined(FILAMENT_SKIPS_SURFACE_INTERPOLANTS)
 #if defined(MATERIAL_HAS_NORMAL)
     shading_normal = normalize(shading_tangentToWorld * material.normal);
 #else

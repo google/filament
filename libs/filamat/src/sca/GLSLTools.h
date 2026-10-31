@@ -26,6 +26,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 
 class TIntermNode;
 
@@ -117,8 +118,22 @@ public:
     static void init();
     static void shutdown();
 
+    // The varyings that MATERIAL_SKIPS_SURFACE_INTERPOLANTS removes and the shading_* globals
+    // derived from them in common_shading.fs. test_filamat checks both files against this list.
+    static constexpr std::string_view kSurfaceInterpolantSymbols[] = {
+        "vertex_worldPosition", "vertex_worldNormal", "vertex_worldTangent",
+        "vertex_position", "shading_position", "shading_view",
+        "shading_normalizedViewportCoord", "shading_normal",
+        "shading_geometricNormal", "shading_reflected", "shading_NoV",
+        "shading_tangentToWorld", "shading_bentNormal", "shading_clearCoatNormal",
+    };
+
     struct FragmentShaderInfo {
         bool userMaterialHasCustomDepth = false;
+        // material() or surfaceShading() reads vertex_worldPosition, vertex_worldNormal,
+        // vertex_position or a shading_* global derived from them, directly or through
+        // a getter or helper.
+        bool userMaterialReadsSurfaceInterpolants = false;
     };
 
     struct VertexShaderInfo {

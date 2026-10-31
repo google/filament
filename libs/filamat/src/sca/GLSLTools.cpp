@@ -29,7 +29,10 @@
 #include <InfoSink.h>
 #include <localintermediate.h>
 
+#include <algorithm>
+#include <string>
 #include <string_view>
+#include <vector>
 
 using namespace utils;
 using namespace glslang;
@@ -316,6 +319,57 @@ std::optional<GLSLTools::FragmentShaderInfo> GLSLTools::analyzeFragmentShader(
         return std::nullopt;
     }
 
+    // Does the user's code read one of kSurfaceInterpolantSymbols, directly or through a getter
+    // or helper? Every called function is followed except prepareMaterial(), whose reads are
+    // skipped together with the interpolants. Like hasCustomDepth(), this looks at a single
+    // preprocessed permutation.
+    class SurfaceInterpolantReadFinder : public TIntermTraverser {
+        TIntermNode& mRoot;
+        std::vector<std::string> mVisited;
+    public:
+        bool found = false;
+        explicit SurfaceInterpolantReadFinder(TIntermNode& root) : mRoot(root) {}
+        void visitSymbol(TIntermSymbol* node) override {
+            if (found) {
+                return;
+            }
+            std::string_view const name(node->getName().c_str(), node->getName().size());
+            for (auto const symbol : kSurfaceInterpolantSymbols) {
+                if (name == symbol) {
+                    found = true;
+                    return;
+                }
+            }
+        }
+        bool visitAggregate(TVisit, TIntermAggregate* node) override {
+            if (found) {
+                return false;
+            }
+            if (node->getOp() != EOpFunctionCall) {
+                return true;
+            }
+            std::string_view const signature = node->getName();
+            if (ASTHelpers::getFunctionName(signature) == "prepareMaterial") {
+                return true;
+            }
+            std::string const key(signature);
+            if (std::find(mVisited.begin(), mVisited.end(), key) != mVisited.end()) {
+                return true;
+            }
+            mVisited.push_back(key);
+            if (TIntermAggregate* const def = ASTHelpers::getFunctionBySignature(signature, mRoot)) {
+                def->traverse(this);
+            }
+            return !found;
+        }
+    };
+    auto const readsSurfaceInterpolants = [&](TIntermNode* fct) {
+        SurfaceInterpolantReadFinder finder(*root);
+        fct->traverse(&finder);
+        return finder.found;
+    };
+    result.userMaterialReadsSurfaceInterpolants = readsSurfaceInterpolants(materialFctNode);
+
     if (hasCustomSurfaceShading) {
         materialFctNode = ASTHelpers::getFunctionByNameOnly("surfaceShading", *root);
         if (materialFctNode == nullptr) {
@@ -324,6 +378,7 @@ std::optional<GLSLTools::FragmentShaderInfo> GLSLTools::analyzeFragmentShader(
                           << io::endl;
             return std::nullopt;
         }
+        result.userMaterialReadsSurfaceInterpolants |= readsSurfaceInterpolants(materialFctNode);
     }
 
     return result;

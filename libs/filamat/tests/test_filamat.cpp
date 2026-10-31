@@ -14,20 +14,36 @@
  * limitations under the License.
  */
 
+#include "generated/shaders.h"
+
 #include "sca/ASTHelpers.h"
 #include "sca/GLSLTools.h"
 
 #include "shaders/ShaderGenerator.h"
 
+#include <private/filament/Variant.h>
+
+#include <filament/MaterialChunkType.h>
+#include <filament/MaterialEnums.h>
+
 #include <filamat/Enums.h>
 #include <filamat/MaterialBuilder.h>
+
+#include <filaflat/ChunkContainer.h>
+#include <filaflat/DictionaryReader.h>
+#include <filaflat/MaterialChunk.h>
 
 #include <utils/JobSystem.h>
 #include <utils/Panic.h>
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
+#include <iterator>
 #include <memory>
+#include <regex>
+#include <sstream>
+#include <string>
 
 using namespace utils;
 using namespace ASTHelpers;
@@ -537,6 +553,191 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerReflectance) {
     MaterialBuilder::PropertyList expected{ false };
     expected[static_cast<size_t>(MaterialBuilder::Property::REFLECTANCE)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
+static bool readsSurfaceInterpolants(const std::string& fragmentCode,
+        MaterialBuilder::Shading shading = MaterialBuilder::Shading::UNLIT) {
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode,
+            "", shading);
+    auto const info = GLSLTools::analyzeFragmentShader(shaderCode, ShaderModel::MOBILE,
+            MaterialBuilder::MaterialDomain::SURFACE, MaterialBuilder::TargetApi::OPENGL,
+            MaterialBuilder::TargetLanguage::GLSL, false);
+    EXPECT_TRUE(info.has_value());
+    return info.has_value() && info->userMaterialReadsSurfaceInterpolants;
+}
+
+TEST_F(MaterialCompiler, StaticCodeAnalyzerSurfaceInterpolantsNotRead) {
+    EXPECT_FALSE(readsSurfaceInterpolants(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(vec3(getObjectUserData()), 1.0);
+        }
+    )"));
+}
+
+TEST_F(MaterialCompiler, StaticCodeAnalyzerSurfaceInterpolantsReadThroughGetter) {
+    EXPECT_TRUE(readsSurfaceInterpolants(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(getWorldPosition(), 1.0);
+        }
+    )"));
+    EXPECT_TRUE(readsSurfaceInterpolants(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(getNormalizedViewportCoord(), 1.0);
+        }
+    )"));
+}
+
+TEST_F(MaterialCompiler, StaticCodeAnalyzerSurfaceInterpolantsReadThroughHelper) {
+    EXPECT_TRUE(readsSurfaceInterpolants(R"(
+        vec3 helper() {
+            return getWorldViewVector();
+        }
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(helper(), 1.0);
+        }
+    )"));
+}
+
+TEST_F(MaterialCompiler, StaticCodeAnalyzerSurfaceInterpolantsReadDirectly) {
+    EXPECT_TRUE(readsSurfaceInterpolants(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(shading_view, 1.0);
+        }
+    )"));
+    EXPECT_TRUE(readsSurfaceInterpolants(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(shading_normalizedViewportCoord, 0.0, 1.0);
+        }
+    )"));
+    EXPECT_TRUE(readsSurfaceInterpolants(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vertex_worldPosition;
+        }
+    )"));
+}
+
+TEST_F(MaterialCompiler, StaticCodeAnalyzerSurfaceInterpolantsReadThroughEveryGetter) {
+    // Each getter reads a different shading_* global, so renaming one that the symbol list
+    // misses fails here. Lit, because the tangent getters only exist with tangents.
+    for (const char* getter : { "getWorldTangentFrame()[0]", "getWorldPosition()",
+                 "getUserWorldPosition()", "getWorldViewVector()", "getWorldNormalVector()",
+                 "getWorldGeometricNormalVector()", "getWorldReflectedVector()",
+                 "vec3(getNdotV())", "getNormalizedViewportCoord()" }) {
+        SCOPED_TRACE(getter);
+        EXPECT_TRUE(readsSurfaceInterpolants(std::string(R"(
+            void material(inout MaterialInputs material) {
+                prepareMaterial(material);
+                material.baseColor = vec4()") + getter + R"(, 1.0);
+            }
+        )", MaterialBuilder::Shading::LIT));
+    }
+}
+
+// The analysis only notices reads of the symbols it lists, so every shading_* global in
+// common_shading.fs and every varying that MATERIAL_SKIPS_SURFACE_INTERPOLANTS removes in
+// surface_varyings.glsl must be in GLSLTools::kSurfaceInterpolantSymbols.
+TEST(StaticCodeAnalysis, SurfaceInterpolantSymbolsCoverTheShaders) {
+    auto const expectListed = [](const std::string& source, const char* pattern) {
+        const auto& symbols = GLSLTools::kSurfaceInterpolantSymbols;
+        const std::regex re(pattern);
+        int count = 0;
+        for (auto it = std::sregex_iterator(source.begin(), source.end(), re);
+                it != std::sregex_iterator(); ++it, ++count) {
+            EXPECT_NE(std::find(std::begin(symbols), std::end(symbols), it->str()),
+                    std::end(symbols)) << it->str() << " is not in kSurfaceInterpolantSymbols";
+        }
+        EXPECT_GT(count, 0) << pattern;
+    };
+
+    expectListed(std::string(reinterpret_cast<const char*>(SHADERS_COMMON_SHADING_FS_DATA),
+            SHADERS_COMMON_SHADING_FS_SIZE), R"(\bshading_\w+)");
+
+    const std::string varyings(reinterpret_cast<const char*>(SHADERS_SURFACE_VARYINGS_GLSL_DATA),
+            SHADERS_SURFACE_VARYINGS_GLSL_SIZE);
+    const size_t begin = varyings.find("#if !defined(FILAMENT_SKIPS_SURFACE_INTERPOLANTS)");
+    ASSERT_NE(begin, std::string::npos);
+    std::istringstream lines(varyings.substr(begin));
+    std::string line;
+    std::string block;
+    int depth = 0;
+    while (std::getline(lines, line)) {
+        if (line.rfind("#if", 0) == 0) {
+            depth++;
+        } else if (line.rfind("#endif", 0) == 0 && --depth == 0) {
+            break;
+        }
+        block += line + '\n';
+    }
+    expectListed(block, R"(\bvertex_\w+)");
+}
+
+// Builds an unlit material with the fog variant filtered out, as optimized mobile GLSL so
+// that the preprocessor has run and the test sees the varyings the shaders actually use.
+static Package buildUnlitMobileGlsl(JobSystem& jobSystem, const char* fragmentCode) {
+    MaterialBuilder builder;
+    builder.material(fragmentCode);
+    builder.shading(MaterialBuilder::Shading::UNLIT);
+    builder.platform(MaterialBuilder::Platform::MOBILE);
+    builder.targetApi(MaterialBuilder::TargetApi::OPENGL);
+    builder.optimization(MaterialBuilder::Optimization::PERFORMANCE);
+    builder.variantFilter(filament::UserVariantFilterMask(
+            filament::UserVariantFilterBit::FOG | filament::UserVariantFilterBit::SKINNING |
+            filament::UserVariantFilterBit::SHADOW_RECEIVER | filament::UserVariantFilterBit::VSM |
+            filament::UserVariantFilterBit::SSR));
+    Package package = builder.build(jobSystem);
+    EXPECT_TRUE(package.isValid());
+    return package;
+}
+
+static bool shaderUsesSurfaceInterpolants(const Package& package, filament::Variant variant,
+        ShaderStage stage) {
+    filaflat::ChunkContainer container(package.getData(), package.getSize());
+    EXPECT_TRUE(container.parse());
+    filaflat::BlobDictionary dictionary;
+    EXPECT_TRUE(filaflat::DictionaryReader::unflatten(container, ChunkType::DictionaryText,
+            dictionary));
+    filaflat::MaterialChunk chunk(container);
+    EXPECT_TRUE(chunk.initialize(ChunkType::MaterialGlsl));
+    filaflat::ShaderContent content;
+    EXPECT_TRUE(chunk.getShader(content, dictionary, ShaderModel::MOBILE, variant, stage));
+    const std::string glsl(reinterpret_cast<const char*>(content.data()), content.size());
+    return glsl.find("vertex_worldPosition") != std::string::npos ||
+           glsl.find("vertex_position") != std::string::npos;
+}
+
+TEST_F(MaterialCompiler, UnlitMaterialSkipsSurfaceInterpolants) {
+    const filament::Variant color(0);
+    const filament::Variant depth(filament::Variant::DEP);
+    // The picking fragment shader pairs with the plain depth vertex shader.
+    const filament::Variant picking(filament::Variant::DEP | filament::Variant::PCK);
+
+    const Package skips = buildUnlitMobileGlsl(*jobSystem, R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(1.0);
+        }
+    )");
+    EXPECT_FALSE(shaderUsesSurfaceInterpolants(skips, color, ShaderStage::VERTEX));
+    EXPECT_FALSE(shaderUsesSurfaceInterpolants(skips, color, ShaderStage::FRAGMENT));
+    // Picking reads vertex_position, so the depth variants keep the interpolants.
+    EXPECT_TRUE(shaderUsesSurfaceInterpolants(skips, depth, ShaderStage::VERTEX));
+    EXPECT_TRUE(shaderUsesSurfaceInterpolants(skips, picking, ShaderStage::FRAGMENT));
+
+    const Package reads = buildUnlitMobileGlsl(*jobSystem, R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(getWorldPosition(), 1.0);
+        }
+    )");
+    EXPECT_TRUE(shaderUsesSurfaceInterpolants(reads, color, ShaderStage::VERTEX));
+    EXPECT_TRUE(shaderUsesSurfaceInterpolants(reads, color, ShaderStage::FRAGMENT));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerAmbientOcclusion) {
