@@ -293,7 +293,11 @@ ThreadWorker::ThreadWorker(JobQueue::Ptr queue, Config config, PassKey)
         }
 
         while (JobQueue::Job job = mQueue->pop(true)) {
-            job();
+            if (mConfig.wrapJob) {
+                mConfig.wrapJob(job);
+            } else {
+                job();
+            }
         }
 
         if (mConfig.onEnd) {

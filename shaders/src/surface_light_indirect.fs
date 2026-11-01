@@ -772,11 +772,11 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     vec3 E = vec3(0.0); // TODO: fix for importance sampling
     if (ssrFr.a < 1.0) { // prevent evaluating the IBL if possible
         Fr = isEvaluateSpecularIBL(pixel, shading_normal, shading_view, shading_NoV);
-        # TODO: Second roughness
+        // TODO: Second roughness
     }
 #endif
 
-    // Ambient occlusion
+    // ambient occlusion
     float ssao = evaluateSSAO(interpolationCache);
     float diffuseAO = min(material.ambientOcclusion, ssao);
     float specularAO = specularAO(shading_NoV, diffuseAO, pixel.roughness, interpolationCache);
