@@ -1218,27 +1218,6 @@ void ViewerGui::updateUserInterface() {
 
     colorGradingUI(mSettings, mRangePlot, mCurvePlot);
 
-    if (mCustomUI) {
-        mCustomUI();
-    }
-
-    // At this point, all View settings have been modified,
-    //  so we can now push them into the Filament View.
-    applySettings(mEngine, mSettings.view, mView);
-    double const aspect =
-            (double) mView->getViewport().width / (double) mView->getViewport().height;
-    applySettings(mEngine, mSettings.camera, &mView->getCamera(), aspect);
-
-    auto lights = utils::FixedCapacityVector<utils::Entity>::with_capacity(mScene->getEntityCount());
-    mScene->forEach([&](utils::Entity entity) {
-        if (lm.hasComponent(entity)) {
-            lights.push_back(entity);
-        }
-    });
-
-    applySettings(mEngine, mSettings.lighting, mIndirectLight, mSunlight,
-            lights.data(), lights.size(), &lm, mScene, mView);
-
     // TODO(prideout): add support for hierarchy, animation and variant selection in remote mode. To
     // support these features, we will need to send a message (list of strings) from DebugServer to
     // the WebSockets client.
@@ -1316,6 +1295,27 @@ void ViewerGui::updateUserInterface() {
             mScene->remove(mAsset->getWireframe());
         }
     }
+
+    if (mCustomUI) {
+        mCustomUI();
+    }
+
+    // At this point, all View settings have been modified,
+    //  so we can now push them into the Filament View.
+    applySettings(mEngine, mSettings.view, mView);
+    double const aspect =
+            (double) mView->getViewport().width / (double) mView->getViewport().height;
+    applySettings(mEngine, mSettings.camera, &mView->getCamera(), aspect);
+
+    auto lights = utils::FixedCapacityVector<utils::Entity>::with_capacity(mScene->getEntityCount());
+    mScene->forEach([&](utils::Entity entity) {
+        if (lm.hasComponent(entity)) {
+            lights.push_back(entity);
+        }
+    });
+
+    applySettings(mEngine, mSettings.lighting, mIndirectLight, mSunlight,
+            lights.data(), lights.size(), &lm, mScene, mView);
 
     mSidebarWidth = ImGui::GetWindowWidth();
     ImGui::End();
