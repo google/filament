@@ -17,12 +17,12 @@
 #ifndef IMAGE_IMAGEENCODER_H_
 #define IMAGE_IMAGEENCODER_H_
 
-#include <iosfwd>
-#include <string>
-
 #include <image/LinearImage.h>
 
 #include <utils/compiler.h>
+
+#include <iosfwd>
+#include <string>
 
 namespace image {
 

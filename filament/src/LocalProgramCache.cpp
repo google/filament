@@ -166,22 +166,25 @@ void LocalProgramCache::clear(FEngine& engine) {
             mMaterial->isDefaultMaterial());
 }
 
-Variant LocalProgramCache::filterVariantForGetProgram(Variant variant) const noexcept {
+void LocalProgramCache::filterForGetProgram(Variant& variant,
+        DynamicSpecConstKey& specKey) const noexcept {
     if (UTILS_UNLIKELY(mMaterial->getEngine().features.material.enable_fog_as_postprocess)) {
         // if the fog as post-process feature is enabled, we need to proceed "as-if" the material
-        // didn't have the FOG variant bit.
+        // didn't have fog enabled.
         if (mMaterial->getMaterialDomain() == MaterialDomain::SURFACE) {
             BlendingMode const blendingMode = mMaterial->getBlendingMode();
             bool const hasScreenSpaceRefraction =
                     mMaterial->getRefractionMode() == RefractionMode::SCREEN_SPACE;
-            bool const isBlendingCommand = !hasScreenSpaceRefraction &&
+            bool const isBlendingCommand =
+                    !hasScreenSpaceRefraction &&
                     (blendingMode != BlendingMode::OPAQUE && blendingMode != BlendingMode::MASKED);
             if (!isBlendingCommand) {
+                // TODO: Remove this after FOG is fully transferred to spec constant
                 variant.setFog(false);
+                specKey.setFog(false);
             }
         }
     }
-    return variant;
 }
 
 Program::SpecializationConstant LocalProgramCache::getConstantImpl(uint32_t const id) const noexcept {

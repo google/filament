@@ -25,21 +25,37 @@ MESA_VERSION=${GITHUB_MESA_VERSION-25.0.6}
 ORIG_DIR=$(pwd)
 MESA_DIR=${MESA_DIR-${ORIG_DIR}/mesa}
 
-if [[ "$OS_NAME" == "Linux" ]]; then
-    sudo apt install python3-venv
+# When MESA_SKIP_BUILD is "true" and ${MESA_DIR}/out already holds an installed Mesa (for example,
+# one restored from the CI cache), only the system dependencies are installed. They are still
+# needed because the prebuilt libraries link against them at runtime, and because the CI build of
+# Filament relies on the toolchain that this script selects. The Mesa source checkout, the python
+# venv and the Mesa build itself are skipped.
+SKIP_BUILD=false
+if [[ "${MESA_SKIP_BUILD}" == "true" ]]; then
+    if [[ -d "${MESA_DIR}/out/lib" ]]; then
+        SKIP_BUILD=true
+    else
+        echo "MESA_SKIP_BUILD is set, but ${MESA_DIR}/out/lib does not exist; building Mesa"
+    fi
 fi
 
-# Install python deps
-python3 -m venv ${ORIG_DIR}/venv
-source ${ORIG_DIR}/venv/bin/activate
-
-NEEDED_PYTHON_DEPS=("mako" "setuptools" "pyyaml")
-for cmd in "${NEEDED_PYTHON_DEPS[@]}"; do
-    if ! python3 -m pip show -q "${cmd}" >/dev/null 2>&1; then
-        python3 -m pip install ${cmd}
+if [[ "$SKIP_BUILD" != "true" ]]; then
+    if [[ "$OS_NAME" == "Linux" ]]; then
+        sudo apt install python3-venv
     fi
-done
-deactivate
+
+    # Install python deps
+    python3 -m venv ${ORIG_DIR}/venv
+    source ${ORIG_DIR}/venv/bin/activate
+
+    NEEDED_PYTHON_DEPS=("mako" "setuptools" "pyyaml")
+    for cmd in "${NEEDED_PYTHON_DEPS[@]}"; do
+        if ! python3 -m pip show -q "${cmd}" >/dev/null 2>&1; then
+            python3 -m pip install ${cmd}
+        fi
+    done
+    deactivate
+fi
 
 LOCAL_PKG_CONFIG_PATH=
 
@@ -102,6 +118,14 @@ elif [[ "$OS_NAME" == "Darwin" ]]; then
         exit 1
     fi
 fi # [[ "$OS_NAME" == x ]]
+
+if [[ "$SKIP_BUILD" == "true" ]]; then
+    echo "Using the existing Mesa install in ${MESA_DIR}/out"
+    if [[ "$GITHUB_WORKFLOW" ]]; then
+        set +x
+    fi
+    exit 0
+fi
 
 LOCAL_LDFLAGS=${LDFLAGS}
 LOCAL_CPPFLAGS=${CPPFLAGS}

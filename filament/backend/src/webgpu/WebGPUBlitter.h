@@ -140,6 +140,9 @@ private:
     static_assert(sizeof(ShaderModuleKey) == 16, "ShaderModuleKey must not have implicit padding.");
 
     wgpu::Device mDevice;
+    // Whether 32-bit float textures can be linearly filtered (wgpu::FeatureName::Float32Filterable).
+    // If not, such sources are bound as UnfilterableFloat and blitted with nearest filtering.
+    bool const mFloat32Filterable;
     wgpu::Sampler mNearestSampler{ nullptr };
     wgpu::Sampler mLinearSampler{ nullptr };
     tsl::robin_map<RenderPipelineKey, wgpu::RenderPipeline, RenderPipelineKey::Hasher>

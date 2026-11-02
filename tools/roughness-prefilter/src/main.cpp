@@ -415,7 +415,7 @@ int main(int argc, char* argv[]) {
                 if (g_linearOutput) {
                     data = image::fromLinearToGrayscale<uint8_t>(image);
                 } else {
-                    data = image::fromLinearTosRGB<uint8_t, 1>(image);
+                    data = image::fromLinearToSRGB<uint8_t, 1>(image);
                 }
                 bundle.setBlob({(uint32_t) i}, data.get(), w * h);
                 return;

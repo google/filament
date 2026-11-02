@@ -108,9 +108,10 @@ runs:
         #
         # Correct these from `gh cache list` and from the eviction warning ccache-stats prints.
         # Headroom is tight: the repository held 12.6 GB across 64 entries at that date, shared
-        # with the mesa (905 MiB), emsdk (498 MiB per architecture), Vulkan SDK, CodeQL and glTF
-        # asset caches, and GitHub evicts least-recently-used entries. Re-earning an evicted mesa
-        # entry costs 30 to 60 minutes of paid runner time.
+        # with the mesa (905 MiB when it held the whole checkout; it now holds only the mesa/out
+        # install prefix, so re-measure it), emsdk (498 MiB per architecture), Vulkan SDK, CodeQL
+        # and glTF asset caches, and GitHub evicts least-recently-used entries. Re-earning an
+        # evicted mesa entry costs 30 to 60 minutes of paid runner time.
         case "${{ inputs.config }}" in
           ios)     CONFIG_BUDGET_MIB=2048 ;;
           desktop) CONFIG_BUDGET_MIB=2048 ;;

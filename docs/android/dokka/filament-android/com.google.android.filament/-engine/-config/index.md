@@ -30,6 +30,7 @@ Config can be used to customize engine requirements based on the applications ne
 | Name | Summary |
 |---|---|
 | [assertNativeWindowIsValid](assert-native-window-is-valid.md) | [main]<br>open var [~~assertNativeWindowIsValid~~](assert-native-window-is-valid.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)<br>Assert the native window associated to a SwapChain is valid when calling makeCurrent(). |
+| [asynchronousFrameBudget](asynchronous-frame-budget.md) | [main]<br>open var [asynchronousFrameBudget](asynchronous-frame-budget.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)<br>Per-frame time budget for queued asynchronous operations. |
 | [asynchronousMode](asynchronous-mode.md) | [main]<br>open var [asynchronousMode](asynchronous-mode.md): [Engine.AsynchronousMode](../-asynchronous-mode/index.md)<br>Asynchronous mode for the engine. |
 | [commandBufferSizeMB](command-buffer-size-m-b.md) | [main]<br>open var [commandBufferSizeMB](command-buffer-size-m-b.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)<br>Size in MiB of the low-level command buffer arena. |
 | [disableHandleUseAfterFreeCheck](disable-handle-use-after-free-check.md) | [main]<br>open var [disableHandleUseAfterFreeCheck](disable-handle-use-after-free-check.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html) |

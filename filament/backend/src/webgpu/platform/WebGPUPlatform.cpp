@@ -14,35 +14,34 @@
  * limitations under the License.
  */
 
-#include <backend/platforms/WebGPUPlatform.h>
-
 #include "webgpu/WebGPUConstants.h"
 #include "webgpu/WebGPUDriver.h"
 #include "webgpu/WebGPUStrings.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
+#include <backend/platforms/WebGPUPlatform.h>
+
 #include <utils/Hash.h>
+#include <utils/Mutex.h>
 #include <utils/Panic.h>
 
 #include <dawn/webgpu_cpp_print.h>
 #include <webgpu/webgpu_cpp.h>
-
-#include <utils/Mutex.h>
 
 #include <algorithm>
 #include <array>
 #include <cstdint>
 #include <functional>
 #include <sstream>// for one-time-ish setup string concatenation, namely error messaging
-#include <unordered_set>
-#include <utility>
-#include <vector>
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 #include <string>
 #include <string_view>
+#include <unordered_set>
+#include <utility>
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 #include <variant>
 #endif
+#include <vector>
 
 /**
  * WebGPU Backend implementation common across platforms or operating systems (at least for now).
@@ -62,9 +61,6 @@ constexpr std::array REQUIRED_FEATURES = {
     // support such devices, we will either need Filament to not attempt this, or find another
     // workaround. https://github.com/gpuweb/gpuweb/issues/2648
     wgpu::FeatureName::RG11B10UfloatRenderable,
-    // necessary for blit conversions of formats like RGBA32Float...
-    wgpu::FeatureName::Float32Filterable,
-
 
     // Unsupported on WASM
 #if !defined(__EMSCRIPTEN__)
@@ -76,6 +72,12 @@ constexpr std::array OPTIONAL_FEATURES = {
     wgpu::FeatureName::CoreFeaturesAndLimits,
     wgpu::FeatureName::DepthClipControl,
     wgpu::FeatureName::Depth32FloatStencil8,
+    // Linear filtering of R32Float, RG32Float, and RGBA32Float textures. This is optional in
+    // WebGPU (and Vulkan), and some GPUs (e.g. PowerVR, Adreno 5xx) do not support it. Without it,
+    // WebGPUDriver::isTextureFormatFilterable() reports fp32 formats as unfilterable, the blitter
+    // falls back to nearest filtering for fp32 sources, and fp32 mipmaps are generated with the
+    // SPD compute path instead of the (linearly filtering) render pass path.
+    wgpu::FeatureName::Float32Filterable,
 
     // Unsupported on WASM
 #if !defined(__EMSCRIPTEN__)
@@ -171,7 +173,6 @@ void assertLimitsAreExpressedInRequirementsStruct() {
     });
 }
 
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 [[nodiscard]] std::string_view toString(LimitToValidate limit) {
     switch (limit) {
         case LimitToValidate::MAX_BIND_GROUPS:
@@ -191,7 +192,6 @@ void assertLimitsAreExpressedInRequirementsStruct() {
             return "UNKNOWN";
     }
 }
-#endif
 
 [[nodiscard]] uint64_t valueForLimit(wgpu::Limits const& limits, LimitToValidate limit) {
     switch (limit) {
@@ -215,30 +215,22 @@ void assertLimitsAreExpressedInRequirementsStruct() {
 
 [[nodiscard]] bool satisfiesLimits(wgpu::Limits const& limits) {
     size_t failedLimitCount = 0;
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     std::stringstream failedLimitsStream;
-#endif
     forEachLimitToValidate([&](LimitToValidate const limit) {
         uint64_t supportedValue = valueForLimit(limits, limit);
         uint64_t requiredValue = valueForLimit(REQUIRED_LIMITS, limit);
         if (supportedValue < requiredValue) {
             failedLimitCount++;
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
             failedLimitsStream << toString(limit) << " required " << requiredValue << " but found "
                                << supportedValue << ". ";
-#else
-            return true;// break early if not printing anything
-#endif
         }
         return false;// don't break, keep going
     });
     if (failedLimitCount == 0) {
         return true;
     }
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-    FWGPU_LOGI << "Failed to satisfy " << failedLimitCount
+    FWGPU_LOGW << "Failed to satisfy " << failedLimitCount
                << " limit(s): " << failedLimitsStream.str();
-#endif
     return false;
 }
 
@@ -442,17 +434,18 @@ struct AdapterDetailsHash final {
                 [&details](auto const& featureName) {
                     return details.adapter.HasFeature(featureName);
                 })) {
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-        FWGPU_LOGI << "WebGPU adapter " << toString(details)
-                   << " does not have the minimum required features.";
-        FWGPU_LOGI << "Missing required feature(s): ";
+        // Always log the missing features (not just with FWGPU_PRINT_SYSTEM), so that an adapter
+        // rejection explains itself without requiring a rebuild.
+        std::stringstream missingFeaturesStream;
         for (wgpu::FeatureName const& requiredFeature: REQUIRED_FEATURES) {
             if (!details.adapter.HasFeature(requiredFeature)) {
-                FWGPU_LOGI << webGPUPrintableToString(requiredFeature);
+                missingFeaturesStream << requiredFeature << " ";
             }
         }
-        FWGPU_LOGI << "";
-#endif
+        FWGPU_LOGW << "WebGPU adapter " << toString(details)
+                   << " does not have the minimum required features. Missing required "
+                      "feature(s): "
+                   << missingFeaturesStream.str();
         return false;
     }
     wgpu::Limits supportedLimits {};
@@ -460,9 +453,7 @@ struct AdapterDetailsHash final {
             details.adapter.GetLimits(&supportedLimits) == wgpu::Status::Success)
             << "Failed to get limits for WebGPU adapter: " << toString(details);
     if (!satisfiesLimits(supportedLimits)) {
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-        FWGPU_LOGI << " (for WebGPU adapter " << toString(details) << ")";
-#endif
+        FWGPU_LOGW << " (for WebGPU adapter " << toString(details) << ")";
         return false;
     }
     return true;

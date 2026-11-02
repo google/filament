@@ -95,6 +95,7 @@ enum class DynamicSpecializationConstants : uint8_t {
     RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING = 0,
     RUNTIME_CONFIG_HAS_EXTRA_DIRECTIONAL_LIGHTS = 1,
     RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING = 2,
+    RUNTIME_CONFIG_HAS_FOG = 3,
     // check CONFIG_NEXT_DYNAMIC_SPEC_CONSTANT and CONFIG_MAX_DYNAMIC_SPEC_CONSTANTS below
 };
 
@@ -128,7 +129,7 @@ static_assert(CONFIG_MAX_DYNAMIC_SPEC_CONSTANTS + CONFIG_MAX_RESERVED_SPEC_CONST
 constexpr size_t CONFIG_NEXT_RESERVED_SPEC_CONSTANT = 12;
 
 // The number of the next unassigned dynamic spec constant.
-constexpr size_t CONFIG_NEXT_DYNAMIC_SPEC_CONSTANT = CONFIG_MAX_RESERVED_SPEC_CONSTANTS + 3;
+constexpr size_t CONFIG_NEXT_DYNAMIC_SPEC_CONSTANT = CONFIG_MAX_RESERVED_SPEC_CONSTANTS + 4;
 
 // The maximum number of shadow maps possible.
 // There is currently a maximum limit of 128 shadow maps.

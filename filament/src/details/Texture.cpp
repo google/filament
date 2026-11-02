@@ -482,14 +482,18 @@ void FTexture::setImageCommon(FEngine& engine, size_t const level,
             << "Operation not supported with multisample ("
             << unsigned(mSampleCount) << ") texture.";
 
-    FILAMENT_CHECK_PRECONDITION(xoffset + width <= valueForLevel(level, mWidth))
+    size_t const textureWidthAtLevel = valueForLevel(level, mWidth);
+    FILAMENT_CHECK_PRECONDITION(width <= textureWidthAtLevel &&
+            xoffset <= textureWidthAtLevel - width)
             << "xoffset (" << unsigned(xoffset) << ") + width (" << unsigned(width)
-            << ") > texture width (" << valueForLevel(level, mWidth) << ") at level ("
+            << ") > texture width (" << textureWidthAtLevel << ") at level ("
             << unsigned(level) << ")";
 
-    FILAMENT_CHECK_PRECONDITION(yoffset + height <= valueForLevel(level, mHeight))
+    size_t const textureHeightAtLevel = valueForLevel(level, mHeight);
+    FILAMENT_CHECK_PRECONDITION(height <= textureHeightAtLevel &&
+            yoffset <= textureHeightAtLevel - height)
             << "yoffset (" << unsigned(yoffset) << ") + height (" << unsigned(height)
-            << ") > texture height (" << valueForLevel(level, mHeight) << ") at level ("
+            << ") > texture height (" << textureHeightAtLevel << ") at level ("
             << unsigned(level) << ")";
 
     FILAMENT_CHECK_PRECONDITION(p.buffer) << "Data buffer is nullptr.";
@@ -516,7 +520,8 @@ void FTexture::setImageCommon(FEngine& engine, size_t const level,
             break;
     }
 
-    FILAMENT_CHECK_PRECONDITION(zoffset + depth <= effectiveTextureDepthOrLayers)
+    FILAMENT_CHECK_PRECONDITION(depth <= effectiveTextureDepthOrLayers &&
+            zoffset <= effectiveTextureDepthOrLayers - depth)
             << "zoffset (" << unsigned(zoffset) << ") + depth (" << unsigned(depth)
             << ") > texture depth (" << effectiveTextureDepthOrLayers << ") at level ("
             << unsigned(level) << ")";
@@ -553,6 +558,22 @@ void FTexture::setImageCommon(FEngine& engine, size_t const level,
         size_t const bpr = PBD::computeDataSize(p.format, p.type, stride, 1, p.alignment);
         size_t const bpl = bpr * height; // TODO: PBD should have a "layer stride"
         // TODO: PBD should have a p.depth (# layers to skip)
+
+        // Vulkan's adjustedMemcpy infers the per-layer row count from the buffer
+        // (p.size / bpr / depth) and steps layers by that amount, while the check
+        // below assumes layers of exactly `height` rows. When the buffer holds more
+        // rows per layer than `height` and depth >= 2, the copy reads past the
+        // buffer even though the check below passes. Require the inferred layer
+        // height to cover the copied rows; this also promotes adjustedMemcpy's
+        // debug-only pbdHeight - top >= height assert to a release check.
+        size_t const inferredLayerHeight = bpr ? p.size / bpr / depth : 0;
+        FILAMENT_CHECK_PRECONDITION(p.top + height <= inferredLayerHeight)
+                << "buffer overflow: (size=" << size_t(p.size) << ", stride=" << size_t(p.stride)
+                << ", left=" << unsigned(p.left) << ", top=" << unsigned(p.top)
+                << ") smaller than specified region "
+                   "{{"
+                << unsigned(xoffset) << "," << unsigned(yoffset) << "," << unsigned(zoffset) << "},{"
+                << unsigned(width) << "," << unsigned(height) << "," << unsigned(depth) << "}}";
 
         /* Calculates the byte offset of the last pixel in a 3D sub-region. */
         auto const calculateLastPixelOffset = [bpp, bpr, bpl](

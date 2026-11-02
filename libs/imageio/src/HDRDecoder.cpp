@@ -18,9 +18,9 @@
 
 #include <image/ImageOps.h>
 
-#include <math/vec3.h>
-
 #include <utils/Log.h>
+
+#include <math/vec3.h>
 
 #include <cstring>
 #include <limits>

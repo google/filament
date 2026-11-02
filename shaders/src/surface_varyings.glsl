@@ -36,6 +36,12 @@ highp int logical_instance_index;
 LAYOUT_LOCATION(11) VARYING highp vec4 vertex_lightSpacePosition;
 #endif
 
+#if defined(VARIANT_HAS_MOT)
+// Location 11 is free: motion vectors variants never have VARIANT_HAS_SHADOWING
+LAYOUT_LOCATION(11) VARYING highp vec4 vertex_motionCurrClip;   // C_{t-1} * P_t
+LAYOUT_LOCATION(12) VARYING highp vec4 vertex_motionPrevClip;   // C_{t-1} * P_{t-1}
+#endif
+
 // Note that fragColor is an output and is not declared here; see surface_main.fs and surface_depth_main.fs
 
 #if defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_INSTANCED)

@@ -968,6 +968,9 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 if (filament::Variant::isSSRVariant(v.variant)) {
                     continue;
                 }
+                if (filament::Variant::isMotionVectorsVariant(v.variant)) {
+                    continue;
+                }
             }
 
             JobSystem::Job* job = jobs::createJob(jobSystem, parent, [&]() {

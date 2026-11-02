@@ -35,11 +35,14 @@
 #include <algorithm>
 #include <atomic>
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <limits>
 #include <memory>
 #include <mutex> // for LockGuard
 #include <new>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -199,8 +202,8 @@ public:
                 // Safely write to the shared member buffer
                 mDirtyEntities[mDirtyCount++] = entities[i];
 
-                // Batch Process when buffer is full
-                if (mDirtyCount == MAX_DIRTY_COUNT) {
+                // Batch Process when buffer is full and more entities remain in this call
+                if (UTILS_UNLIKELY(mDirtyCount == MAX_DIRTY_COUNT && i + 1 < n)) {
                     // 1. Extract the shared data to a private stack buffer
                     Entity localBuffer[MAX_DIRTY_COUNT];
                     std::copy_n(mDirtyEntities, MAX_DIRTY_COUNT, localBuffer);
@@ -220,56 +223,62 @@ public:
             }
         }
 
-        // Handle any remaining entities in the buffer
-        if (mDirtyCount > 0) {
+        if (UTILS_UNLIKELY(mDirtyCount == MAX_DIRTY_COUNT)) {
             Entity localBuffer[MAX_DIRTY_COUNT];
-            uint32_t const remainder = mDirtyCount;
-            std::copy_n(mDirtyEntities, remainder, localBuffer);
+            std::copy_n(mDirtyEntities, MAX_DIRTY_COUNT, localBuffer);
             mDirtyCount = 0;
 
             stateLock.unlock();
-            flushDestroyBuffer(localBuffer, remainder);
+            flushDestroyBuffer(localBuffer, MAX_DIRTY_COUNT);
         } else {
             stateLock.unlock(); // Ensure lock is dropped before listeners
         }
 
         // notify our listeners that some entities are being destroyed
-        auto listeners = getListeners();
-        for (auto const& l : listeners) {
-            l->onEntitiesDestroyed(n, entities);
+        if (UTILS_UNLIKELY(mHasListeners.load(std::memory_order_acquire))) {
+            auto listeners = getListeners();
+            for (auto const& l : listeners) {
+                l->onEntitiesDestroyed(n, entities);
+            }
         }
     }
 
     void flushDestroyBuffer(Entity const* localEntities, uint32_t const count) noexcept {
         // Lock the timeline EXACTLY ONCE for the entire batch
         {
-            LockGuard timelineLock(mTimelineLock);
+            LockGuard const timelineLock(mTimelineLock);
             auto& currentGarbage = *mTimeline.back().garbageBits;
 
+#ifndef NDEBUG
             for (size_t i = 0; i < count; ++i) {
                 Entity::Type const fullId = localEntities[i].getId();
-#ifndef NDEBUG
                 assert(!mDebugGlobalPurgatory[fullId] && "EBR: Double-Destroy caught!");
                 mDebugGlobalPurgatory.add(fullId);
-#endif
-                currentGarbage.add(fullId);
             }
+#endif
+            static_assert(sizeof(Entity) == sizeof(uint32_t) && std::is_standard_layout_v<Entity>,
+                    "Entity must be layout-compatible with uint32_t for Slice forwarding");
+            currentGarbage.add({ reinterpret_cast<uint32_t const*>(localEntities), count });
         } // mTimelineLock dropped!
 
         // Trigger Callbacks outside ALL locks
-        triggerChangeCallbacks(localEntities, count);
+        if (mHasChangeCallbacks.load(std::memory_order_acquire)) {
+            triggerChangeCallbacks(localEntities, count);
+        }
     }
 
     void registerListener(Listener* l) noexcept {
         LockGuard const lock(mListenerLock);
         if (std::ranges::find(mListeners, l) == mListeners.end()) {
             mListeners.push_back(l);
+            mHasListeners.store(true, std::memory_order_release);
         }
     }
 
     void unregisterListener(Listener* l) noexcept {
         LockGuard const lock(mListenerLock);
         std::erase(mListeners, l);
+        mHasListeners.store(!mListeners.empty(), std::memory_order_release);
     }
 
     void registerWatermark(std::atomic<uint64_t>* const watermark, ImmutableCString name,
@@ -317,6 +326,8 @@ public:
     }
 
     void advanceEpoch() noexcept {
+        flushNotifications();
+
         std::unique_ptr<PagedArenaBitset> newBitset;
         {
             LockGuard const lock(mCreationLock);
@@ -391,14 +402,17 @@ public:
     }
 
     void registerChangeCallback(void const* token, ChangeCallback callback) noexcept {
+        flushNotifications();
         LockGuard const lock(mListenerLock);
         mChangeCallbacks.push_back({token, std::move(callback)});
+        mHasChangeCallbacks.store(true, std::memory_order_release);
     }
 
     void unregisterChangeCallback(void const* token) noexcept {
         LockGuard const lock(mListenerLock);
         std::erase_if(mChangeCallbacks,
                 [token](auto const& info) { return info.token == token; });
+        mHasChangeCallbacks.store(!mChangeCallbacks.empty(), std::memory_order_release);
     }
 
     void flushNotifications() noexcept {
@@ -619,6 +633,8 @@ private:
     mutable Mutex mListenerLock;
     std::vector<Listener*> mListeners UTILS_GUARDED_BY(mListenerLock);
     std::vector<CallbackInfo> mChangeCallbacks UTILS_GUARDED_BY(mListenerLock);
+    std::atomic<bool> mHasListeners{false};
+    std::atomic<bool> mHasChangeCallbacks{false};
 };
 
 } // namespace utils

@@ -23,6 +23,7 @@
 #include <gtest/gtest.h>
 #include <meshoptimizer.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -315,6 +316,84 @@ std::vector<uint8_t> makeMorphTargetGlb(int morphTargetCount) {
     return assembleGlb(std::move(json), std::move(bin));
 }
 
+std::vector<uint8_t> makeAnimatedMorphTargetGlb(int morphTargetCount) {
+    std::string targets;
+    std::string weights = "[";
+    for (int i = 0; i < morphTargetCount; ++i) {
+        targets += (i == 0) ? R"({"POSITION":2})" : R"(,{"POSITION":2})";
+        weights += (i == 0) ? "0.0" : ",0.0";
+    }
+    weights += "]";
+
+    size_t const linearCount = 2u * size_t(morphTargetCount);
+    size_t const cubicCount = 2u * 3u * size_t(morphTargetCount);
+    size_t const linearBytes = linearCount * sizeof(float);
+    size_t const cubicBytes = cubicCount * sizeof(float);
+    size_t const linearOffset = 128u;
+    size_t const cubicOffset = linearOffset + linearBytes;
+    size_t const totalBytes = cubicOffset + cubicBytes;
+
+    std::string json =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+            R"("nodes":[{"mesh":0}],)"
+            R"("meshes":[{"weights":)" + weights +
+            R"(,"primitives":[{"attributes":{"POSITION":0,"TANGENT":1},"mode":4,)"
+            R"("targets":[)" + targets + R"(]}]}],)"
+            R"("animations":[)"
+            R"({"samplers":[{"input":3,"interpolation":"LINEAR","output":4}],)"
+            R"("channels":[{"sampler":0,"target":{"node":0,"path":"weights"}}]},)"
+            R"({"samplers":[{"input":3,"interpolation":"CUBICSPLINE","output":5}],)"
+            R"("channels":[{"sampler":0,"target":{"node":0,"path":"weights"}}]}],)"
+            R"("accessors":[)"
+            R"({"bufferView":0,"componentType":5126,"count":3,"type":"VEC3",)"
+            R"("min":[0,0,0],"max":[1,1,0]},)"
+            R"({"bufferView":1,"componentType":5126,"count":3,"type":"VEC4"},)"
+            R"({"bufferView":2,"componentType":5126,"count":3,"type":"VEC3",)"
+            R"("min":[0,0,0],"max":[0,0,0]},)"
+            R"({"bufferView":3,"componentType":5126,"count":2,"type":"SCALAR",)"
+            R"("min":[0],"max":[1]},)"
+            R"({"bufferView":4,"componentType":5126,"count":)" + std::to_string(linearCount) +
+            R"(,"type":"SCALAR"},)"
+            R"({"bufferView":5,"componentType":5126,"count":)" + std::to_string(cubicCount) +
+            R"(,"type":"SCALAR"}],)"
+            R"("bufferViews":[)"
+            R"({"buffer":0,"byteOffset":0,"byteLength":36},)"
+            R"({"buffer":0,"byteOffset":36,"byteLength":48},)"
+            R"({"buffer":0,"byteOffset":84,"byteLength":36},)"
+            R"({"buffer":0,"byteOffset":120,"byteLength":8},)"
+            R"({"buffer":0,"byteOffset":)" + std::to_string(linearOffset) +
+            R"(,"byteLength":)" + std::to_string(linearBytes) + R"(},)"
+            R"({"buffer":0,"byteOffset":)" + std::to_string(cubicOffset) +
+            R"(,"byteLength":)" + std::to_string(cubicBytes) + R"(}],)"
+            R"("buffers":[{"byteLength":)" + std::to_string(totalBytes) + R"(}]})";
+
+    std::vector<uint8_t> bin(totalBytes, 0);
+    float* fbin = reinterpret_cast<float*>(bin.data());
+    // 3 vertex positions at float offset 0: (0,0,0), (1,0,0), (0,1,0).
+    fbin[3] = 1.0f;
+    fbin[7] = 1.0f;
+    // 3 vertex base tangents (vec4) at byteOffset 36 = float offset 9.
+    for (int v = 0; v < 3; ++v) {
+        fbin[9 + v * 4 + 0] = 1.0f;
+        fbin[9 + v * 4 + 3] = 1.0f;
+    }
+    // 2 keyframe timestamps at byteOffset 120 = float offset 30.
+    fbin[30] = 0.0f;
+    fbin[31] = 1.0f;
+    // Keyframe 1 linear weights.
+    float* linearWeights = fbin + (linearOffset / sizeof(float));
+    for (int i = 0; i < morphTargetCount; ++i) {
+        linearWeights[morphTargetCount + i] = 1.0f;
+    }
+    // Keyframe 1 cubic spline vertex weights.
+    float* cubicWeights = fbin + (cubicOffset / sizeof(float));
+    for (int i = 0; i < morphTargetCount; ++i) {
+        cubicWeights[4 * morphTargetCount + i] = 1.0f;
+    }
+
+    return assembleGlb(std::move(json), std::move(bin));
+}
+
 float3 sparseMorphPositionDelta(int v) {
     return { 0.25f * float(v + 1), 0.5f, -0.125f };
 }
@@ -453,6 +532,313 @@ std::vector<uint8_t> makeColorSeamMorphGlb(MorphMaterial material) {
         // Morph position deltas (6 x vec3) at float offset 72, a function of the position only.
         fbin[72 + v * 3 + 2] = 0.5f * (p.x + p.y);
     }
+
+    return assembleGlb(std::move(json), std::move(bin));
+}
+
+std::vector<uint8_t> makePositionlessPrimitiveGlb(bool includeValidSiblingPrimitive) {
+    std::string primitives = R"({"attributes":{"TEXCOORD_0":0}})";
+    if (includeValidSiblingPrimitive) {
+        primitives += R"(,{"attributes":{"POSITION":1,"TEXCOORD_0":0}})";
+    }
+
+    std::string json =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+            R"("nodes":[{"mesh":0}],)"
+            R"("meshes":[{"primitives":[)" + primitives + R"(]}],)"
+            R"("accessors":[)"
+            R"({"bufferView":0,"componentType":5126,"count":3,"type":"VEC2"},)"
+            R"({"bufferView":1,"componentType":5126,"count":3,"type":"VEC3",)"
+            R"("min":[0,0,0],"max":[1,1,0]}],)"
+            R"("bufferViews":[)"
+            R"({"buffer":0,"byteOffset":0,"byteLength":24},)"
+            R"({"buffer":0,"byteOffset":24,"byteLength":36}],)"
+            R"("buffers":[{"byteLength":60}]})";
+
+    std::vector<uint8_t> bin(60, 0);
+    float* fbin = reinterpret_cast<float*>(bin.data());
+    // TEXCOORD_0 (3 x vec2) at float offset 0.
+    fbin[2] = 1.0f;
+    fbin[5] = 1.0f;
+    // POSITION (3 x vec3) at float offset 6: (0,0,0), (1,0,0), (0,1,0).
+    fbin[9] = 1.0f;
+    fbin[13] = 1.0f;
+
+    return assembleGlb(std::move(json), std::move(bin));
+}
+
+std::vector<uint8_t> makeInvalidDracoGlb() {
+    std::string json = R"({
+  "asset": { "version": "2.0" },
+  "extensionsUsed": ["KHR_draco_mesh_compression"],
+  "buffers": [
+    { "byteLength": 64 }
+  ],
+  "bufferViews": [
+    { "buffer": 0, "byteOffset": 0, "byteLength": 64 }
+  ],
+  "accessors": [
+    {
+      "componentType": 5126,
+      "count": 3,
+      "type": "VEC3",
+      "min": [0, 0, 0],
+      "max": [1, 1, 1]
+    },
+    {
+      "componentType": 5126,
+      "count": 3,
+      "type": "VEC3"
+    },
+    {
+      "componentType": 5123,
+      "count": 3,
+      "type": "SCALAR"
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": { "POSITION": 0, "NORMAL": 1 },
+          "indices": 2,
+          "mode": 4,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 0,
+              "attributes": { "POSITION": 0, "NORMAL": 1 }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    { "mesh": 0 }
+  ],
+  "scenes": [
+    { "nodes": [0] }
+  ],
+  "scene": 0
+})";
+
+    return assembleGlb(std::move(json), std::vector<uint8_t>(64, 0xff));
+}
+
+std::vector<uint8_t> makeDummyBufferOverflowGlb(uint64_t vertexCount) {
+    std::string json = std::string(R"({
+  "asset": { "version": "2.0" },
+  "extensionsUsed": ["KHR_materials_unlit"],
+  "buffers": [
+    { "byteLength": 6 }
+  ],
+  "bufferViews": [
+    { "buffer": 0, "byteOffset": 0, "byteLength": 6 }
+  ],
+  "accessors": [
+    {
+      "componentType": 5126,
+      "count": )") + std::to_string(vertexCount) + R"(,
+      "type": "VEC3",
+      "min": [0, 0, 0],
+      "max": [1, 1, 1]
+    },
+    {
+      "bufferView": 0,
+      "componentType": 5123,
+      "count": 3,
+      "type": "SCALAR"
+    }
+  ],
+  "images": [
+    {}
+  ],
+  "textures": [
+    { "source": 0 }
+  ],
+  "materials": [
+    {
+      "pbrMetallicRoughness": {
+        "baseColorTexture": { "index": 0 }
+      },
+      "extensions": {
+        "KHR_materials_unlit": {}
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": { "POSITION": 0 },
+          "indices": 1,
+          "material": 0
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    { "mesh": 0 }
+  ],
+  "scenes": [
+    { "nodes": [0] }
+  ],
+  "scene": 0
+})";
+
+    return assembleGlb(std::move(json), std::vector<uint8_t>(6, 0));
+}
+
+std::vector<uint8_t> makeDeeplyNestedNodesGlb(size_t depth) {
+    EXPECT_GT(depth, 1u);
+
+    char buffer[7];
+
+    std::string nodes;
+    nodes.reserve(depth * 44);
+    nodes += R"({"translation":[1,0,0],"children":[1]})";
+
+    for (size_t i = 1; i < depth - 1; ++i) {
+        nodes += R"(,{"translation":[1,0,0],"children":[)";
+        // Re-use the buffer to convert the index to a string, avoiding heap allocations
+        auto [ptr, _] = std::to_chars(buffer, buffer + sizeof(buffer), i + 1);
+        nodes.append(buffer, ptr - buffer);
+        nodes += "]}";
+    }
+    nodes += R"(,{"translation":[1,0,0],"mesh":0})";
+
+    std::string json =
+            R"({"asset":{"version":"2.0"},"extensionsUsed":["KHR_materials_unlit"],)"
+            R"("scene":0,"scenes":[{"nodes":[0]}],)"
+            R"("nodes":[)" + nodes + R"(],)"
+            R"("materials":[{"extensions":{"KHR_materials_unlit":{}}}],)"
+            R"("meshes":[{"primitives":[{"attributes":{"POSITION":0},"material":0}]}],)"
+            R"("accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3",)"
+            R"("min":[0,0,0],"max":[1,1,0]}],)"
+            R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36}],)"
+            R"("buffers":[{"byteLength":36}]})";
+
+    std::vector<uint8_t> bin(36, 0);
+    float* fbin = reinterpret_cast<float*>(bin.data());
+    // 3 vertex positions: (0,0,0), (1,0,0), (0,1,0).
+    fbin[3] = 1.0f;
+    fbin[7] = 1.0f;
+
+    return assembleGlb(std::move(json), std::move(bin));
+}
+  
+std::vector<uint8_t> makeMeshoptSparseAccessorOobGlb() {
+    constexpr uint32_t kVertexCount = 3u;
+    constexpr uint16_t kOobSparseIndex = uint16_t(kVertexCount);
+
+    std::vector<uint8_t> encodedIndices(meshopt_encodeIndexSequenceBound(1, kOobSparseIndex + 1));
+    size_t const encodedSize = meshopt_encodeIndexSequence(encodedIndices.data(),
+            encodedIndices.size(), &kOobSparseIndex, 1);
+    EXPECT_GT(encodedSize, 0u);
+    encodedIndices.resize(encodedSize);
+
+    // Layout of the binary buffer:
+    //   [0..36):   3 x vec3 float positions (starts with 0.0f, so bytes [0..2) are uint16_t(0))
+    //   [36..72):  3 x vec3 float base normals
+    //   [72..84):  1 x vec3 float sparse normal value
+    //   [84..84+encodedSize): meshopt-compressed sparse index stream
+    constexpr size_t kPositionsOffset = 0;
+    constexpr size_t kPositionsBytes = kVertexCount * sizeof(float3);
+    constexpr size_t kNormalsOffset = kPositionsOffset + kPositionsBytes;
+    constexpr size_t kNormalsBytes = kVertexCount * sizeof(float3);
+    constexpr size_t kSparseValuesOffset = kNormalsOffset + kNormalsBytes;
+    constexpr size_t kSparseValuesBytes = sizeof(float3);
+    constexpr size_t kMeshoptOffset = kSparseValuesOffset + kSparseValuesBytes;
+    size_t const totalBytes = kMeshoptOffset + encodedIndices.size();
+
+    std::vector<uint8_t> bin(totalBytes, 0);
+    float* fbin = reinterpret_cast<float*>(bin.data());
+    // Positions: (0,0,0), (1,0,0), (0,1,0). Vertex 0 is all zero bytes, which doubles as the
+    // uncompressed fallback bytes for bufferView 3 so that raw pre-decode index validation sees 0.
+    fbin[3] = 1.0f;
+    fbin[7] = 1.0f;
+    // Base normals: (0,0,1) for all 3 vertices.
+    for (uint32_t v = 0; v < kVertexCount; ++v) {
+        fbin[9 + v * 3 + 2] = 1.0f;
+    }
+    // Sparse normal replacement value: (0,1,0).
+    fbin[18 + 1] = 1.0f;
+    // Copy the meshopt-compressed sparse index stream.
+    std::copy(encodedIndices.begin(), encodedIndices.end(), bin.begin() + kMeshoptOffset);
+
+    std::string json = R"({
+  "asset": { "version": "2.0" },
+  "extensionsUsed": ["EXT_meshopt_compression"],
+  "buffers": [
+    { "byteLength": )" + std::to_string(totalBytes) + R"( }
+  ],
+  "bufferViews": [
+    { "buffer": 0, "byteOffset": )" + std::to_string(kPositionsOffset) +
+            R"(, "byteLength": )" + std::to_string(kPositionsBytes) + R"( },
+    { "buffer": 0, "byteOffset": )" + std::to_string(kNormalsOffset) +
+            R"(, "byteLength": )" + std::to_string(kNormalsBytes) + R"( },
+    { "buffer": 0, "byteOffset": )" + std::to_string(kSparseValuesOffset) +
+            R"(, "byteLength": )" + std::to_string(kSparseValuesBytes) + R"( },
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 2,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": )" + std::to_string(kMeshoptOffset) + R"(,
+          "byteLength": )" + std::to_string(encodedIndices.size()) + R"(,
+          "byteStride": 2,
+          "count": 1,
+          "mode": "INDICES"
+        }
+      }
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 3,
+      "type": "VEC3",
+      "min": [0, 0, 0],
+      "max": [1, 1, 0]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 3,
+      "type": "VEC3",
+      "sparse": {
+        "count": 1,
+        "indices": {
+          "bufferView": 3,
+          "componentType": 5123
+        },
+        "values": {
+          "bufferView": 2
+        }
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": { "POSITION": 0, "NORMAL": 1 },
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    { "mesh": 0 }
+  ],
+  "scenes": [
+    { "nodes": [0] }
+  ],
+  "scene": 0
+})";
 
     return assembleGlb(std::move(json), std::move(bin));
 }

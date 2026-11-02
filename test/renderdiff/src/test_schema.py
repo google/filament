@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import os
 import struct
 import sys
@@ -375,6 +376,54 @@ class TestSchemaInvariants(unittest.TestCase):
             self.assertIsInstance(sample_cases[0], renderers.SampleRenderTestCase)
             self.assertEqual(sample_cases[0].target_name, "hellotriangle")
             self.assertEqual(sample_cases[0].extra_args, ["--headless"])
+
+    def test_desktop_gltf_case_carries_nested_settings(self):
+        renderer = renderers.DesktopRenderer("desktop", "opengl", "/bin/gltf_viewer")
+        data = {
+            "name": "SettingsSuite",
+            "renderers": ["desktop-opengl"],
+            "tests": [
+                {
+                    "name": "Bloom",
+                    "gltf_test": {
+                        "models": ["Box"],
+                        "rendering": {"view.bloom.enabled": True}
+                    }
+                }
+            ]
+        }
+        cfg = test_config.RenderTestConfig(data)
+        cfg.tests[0].gltf_test.models_map = {"Box": "/models/Box.glb"}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cases = renderer._create_test_cases(cfg.tests[0], tmpdir)
+        self.assertEqual(json.loads(cases[0].settings_json), {"view": {"bloom": {"enabled": True}}})
+
+    def test_expand_dotted_keys(self):
+        rendering = {
+            "camera.focalLength": 35.0,
+            "view.bloom.enabled": True,
+            "view.dithering": "NONE",
+            "animation": {"enabled": True, "time": 0.5},
+            "lighting.lights": [{"type": "POINT"}],
+        }
+        self.assertEqual(test_config.expand_dotted_keys(rendering), {
+            "camera": {"focalLength": 35.0},
+            "view": {"bloom": {"enabled": True}, "dithering": "NONE"},
+            "animation": {"enabled": True, "time": 0.5},
+            "lighting": {"lights": [{"type": "POINT"}]},
+        })
+
+        # AutomationSpec applies keys in order and only touches the fields each one names, so a
+        # later key overrides an earlier one field by field.
+        self.assertEqual(
+            test_config.expand_dotted_keys(
+                {"animation": {"enabled": True, "time": 0.5}, "animation.time": 1.0}),
+            {"animation": {"enabled": True, "time": 1.0}})
+
+        # The expansion must not alias the test's own rendering dictionary.
+        source = {"animation": {"enabled": True}}
+        test_config.expand_dotted_keys(source)["animation"]["enabled"] = False
+        self.assertTrue(source["animation"]["enabled"])
 
 
 class TestModelVariant(unittest.TestCase):

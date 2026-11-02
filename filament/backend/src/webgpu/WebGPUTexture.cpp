@@ -160,14 +160,14 @@ bool isTransientUsage(wgpu::TextureUsage usage) {
 }
 
 [[nodiscard]] WebGPUTexture::MipmapGenerationStrategy determineMipmapGenerationStrategy(
-        const wgpu::TextureFormat format, const SamplerType samplerType, const uint8_t sampleCount,
-        const uint8_t mipmapLevels) {
+        wgpu::TextureFormat const format, SamplerType const samplerType, uint8_t const sampleCount,
+        uint8_t const mipmapLevels, bool const float32Filterable) {
     if (mipmapLevels <= 1) {
         return WebGPUTexture::MipmapGenerationStrategy::NONE; // no mipmap generation needed
     }
     const WebGPURenderPassMipmapGenerator::FormatCompatibility renderPassCompatibility{
         WebGPURenderPassMipmapGenerator::getCompatibilityFor(format,
-                toWebGPUTextureDimension(samplerType), sampleCount)
+                toWebGPUTextureDimension(samplerType), sampleCount, float32Filterable)
     };
     if (renderPassCompatibility.compatible) {
         return WebGPUTexture::MipmapGenerationStrategy::RENDER_PASS;
@@ -217,7 +217,7 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
     : HwTexture{ samplerType, levels, samples, width, height, depth, format, usage, asynchronous },
       mViewFormat{ toWGPUTextureFormat(format) },
       mMipmapGenerationStrategy{ determineMipmapGenerationStrategy(mViewFormat, samplerType,
-              samples, levels) },
+              samples, levels, device.HasFeature(wgpu::FeatureName::Float32Filterable)) },
       mWebGPUFormat{ mMipmapGenerationStrategy == MipmapGenerationStrategy::SPD_COMPUTE_PASS
                              ? storageBindingCompatibleFormatForViewFormat(mViewFormat)
                              : mViewFormat },

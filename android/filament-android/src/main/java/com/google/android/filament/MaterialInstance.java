@@ -42,7 +42,8 @@ public class MaterialInstance {
         static final Material.TransparencyMode[] sTransparencyModeValues = Material.TransparencyMode.values();
     }
 
-    private final @Nullable Material mMaterial;
+    private @Nullable Material mMaterial;
+    private final long mNativeMaterial;
     private long mNativeObject;
 
     /** stencil operation */
@@ -150,10 +151,11 @@ public class MaterialInstance {
     MaterialInstance(long nativeObject, @Nullable Material material) {
         mNativeObject = nativeObject;
         mMaterial = material;
+        mNativeMaterial = material != null ? material.getNativeObject() : nGetMaterial(nativeObject);
     }
 
-    /* package */ MaterialInstance(long nativeMaterialInstance) {
-        this(nativeMaterialInstance, null);
+    /* package */ MaterialInstance(long nativeObject) {
+        this(nativeObject, null);
     }
 
     @NonNull
@@ -200,7 +202,12 @@ public class MaterialInstance {
     }
 
     /** @return the Material associated with this instance */
+    @NonNull
     public Material getMaterial() {
+        if (mMaterial == null) {
+            if (mNativeMaterial == 0) throw new IllegalStateException("Couldn't get Material");
+            mMaterial = new Material(mNativeMaterial);
+        }
         return mMaterial;
     }
 
@@ -916,6 +923,7 @@ public class MaterialInstance {
     }
 
     private static native long nDuplicate(long nativeOther, @Nullable String name);
+    private static native long nGetMaterial(long nativeMaterialInstance);
     @NonNull
     private static native String nGetName(long nativeMaterialInstance);
     private static native void nSetParameter(long nativeMaterialInstance, @NonNull String name, float value);

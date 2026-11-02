@@ -102,6 +102,38 @@
             }
         },
         {
+            "name": "PcssSpotLight",
+            "description": "PCSS soft shadows of a spot light, with a zero-radius sun in the scene",
+            "apply_presets": ["base", "point_light_models"],
+            "gltf_test": {
+                "rendering": {
+                    "view.shadowType": "PCSS",
+                    "lighting.iblIntensity": 5000.0,
+                    // The sun only fills the dominant directional light slot. Its zero bulb
+                    // radius must not leak into the spot light's penumbra.
+                    "lighting.sunlight.intensity": 0.0,
+                    "lighting.sunlight.shadowOptions.shadowBulbRadius": 0.0,
+                    "lighting.lights": [
+                        {
+                            "type": "SPOT",
+                            "position": [1.5, 2.5, -2.5],
+                            "direction": [-1.5, -2.5, -1.5],
+                            "color": [1.0, 1.0, 1.0],
+                            "intensity": 10000000.0,
+                            "falloff": 10.0,
+                            "spotInner": 0.4,
+                            "spotOuter": 0.8,
+                            "castShadows": true,
+                            "shadowOptions": {
+                                "mapSize": 1024,
+                                "shadowBulbRadius": 0.3
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        {
             "name": "Bloom",
             "description": "Bloom",
             "apply_presets": ["base", "bloom_models"],

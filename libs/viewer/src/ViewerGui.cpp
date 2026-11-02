@@ -819,6 +819,8 @@ void ViewerGui::updateUserInterface() {
         ImGui::Unindent();
 
         ImGui::Checkbox("Screen-space Guard Band", &mSettings.view.guardBand.enabled);
+
+        ImGui::Checkbox("Motion vectors", &mSettings.view.motionVectors.enabled);
     }
 
     if (ImGui::CollapsingHeader("Bloom Options")) {

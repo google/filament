@@ -95,7 +95,8 @@ constexpr std::string_view FRAGMENT_SHADER_ENTRY_POINT{ "fragmentShaderMain" };
 // the blit. This allows for scaling, format conversion, and resolving multisampled textures.
 // The blitter caches pipelines, layouts, and shaders to avoid recompilation.
 WebGPUBlitter::WebGPUBlitter(wgpu::Device const& device)
-    : mDevice{ device } {}
+    : mDevice{ device },
+      mFloat32Filterable{ device.HasFeature(wgpu::FeatureName::Float32Filterable) } {}
 
 // Performs a blit operation from a source to a destination texture.
 // This function first checks if a direct texture-to-texture copy can be performed.
@@ -239,21 +240,31 @@ void WebGPUBlitter::blit(wgpu::Queue const& queue, wgpu::CommandEncoder const& c
             << "Failed to create uniform buffer for texture swizzle?";
     queue.WriteBuffer(uniformBuffer, /* buffer offset */ 0, &blitFragmentShaderArgs,
             sizeof(BlitFragmentShaderArgs));
+
+    wgpu::TextureFormat const sourceFormat{ args.source.texture.GetFormat() };
+    // Without the Float32Filterable feature, 32-bit float textures can only be bound as
+    // UnfilterableFloat, which requires a non-filtering sampler. In that case, fall back to
+    // nearest filtering (as the OpenGL backend does when fp32 linear filtering is unsupported).
+    bool const unfilterableFloat32Source{ !mFloat32Filterable &&
+                                          isFloat32ColorFormat(sourceFormat) };
+    SamplerMagFilter const filter{ unfilterableFloat32Source ? SamplerMagFilter::NEAREST
+                                                             : args.filter };
+
     size_t textureBindGroupEntriesCount{ 2 }; // just the texture and uniform by default
     // get/create/bind sample if needed...
     wgpu::Sampler sampler{ nullptr };
     if (args.source.texture.GetSampleCount() <= 1) {
         textureBindGroupEntriesCount++; // add the sampler to the count
-        switch (args.filter) {
+        switch (filter) {
             case SamplerMagFilter::NEAREST:
                 if (!mNearestSampler) {
-                    createSampler(args.filter);
+                    createSampler(filter);
                 }
                 sampler = mNearestSampler;
                 break;
             case SamplerMagFilter::LINEAR:
                 if (!mLinearSampler) {
-                    createSampler(args.filter);
+                    createSampler(filter);
                 }
                 sampler = mLinearSampler;
                 break;
@@ -277,17 +288,17 @@ void WebGPUBlitter::blit(wgpu::Queue const& queue, wgpu::CommandEncoder const& c
         }
     };
     const bool multisampledSource{ args.source.texture.GetSampleCount() > 1 };
-    const bool depthSource{ hasDepth(args.source.texture.GetFormat()) };
+    bool const depthSource{ hasDepth(sourceFormat) };
     const bool depthDestination{ hasDepth(args.destination.texture.GetFormat()) };
 
     wgpu::TextureSampleType srcSampleType = {};
     if (depthSource) {
         srcSampleType = wgpu::TextureSampleType::Depth;
-    } else if (multisampledSource) {
+    } else if (multisampledSource || unfilterableFloat32Source) {
         srcSampleType = wgpu::TextureSampleType::UnfilterableFloat;
-    } else if (isIntFormat(args.source.texture.GetFormat())) {
+    } else if (isIntFormat(sourceFormat)) {
         srcSampleType = wgpu::TextureSampleType::Sint;
-    } else if (isUIntFormat(args.source.texture.GetFormat())) {
+    } else if (isUIntFormat(sourceFormat)) {
         srcSampleType = wgpu::TextureSampleType::Uint;
     } else {
         srcSampleType = wgpu::TextureSampleType::Float;
@@ -296,7 +307,7 @@ void WebGPUBlitter::blit(wgpu::Queue const& queue, wgpu::CommandEncoder const& c
     const PipelineLayoutKey pipelineLayoutKey{
         .sourceDimension = sourceDimension,
         .sourceSampleType = srcSampleType,
-        .filterType = args.filter,
+        .filterType = filter,
         .multisampledSource = multisampledSource,
     };
     const wgpu::BindGroupDescriptor textureBindGroupDescriptor{
@@ -355,11 +366,11 @@ void WebGPUBlitter::blit(wgpu::Queue const& queue, wgpu::CommandEncoder const& c
             << "Failed to create render pass encoder for blit.";
     const RenderPipelineKey renderPipelineKey{
         .sourceDimension = sourceDimension,
-        .sourceTextureFormat = args.source.texture.GetFormat(),
+        .sourceTextureFormat = sourceFormat,
         .sourceSampleType = srcSampleType,
         .destinationTextureFormat = args.destination.texture.GetFormat(),
         .sourceSampleCount = static_cast<uint8_t>(args.source.texture.GetSampleCount()),
-        .filterType = args.filter,
+        .filterType = filter,
     };
     renderPassEncoder.SetPipeline(getOrCreateRenderPipeline(renderPipelineKey));
     renderPassEncoder.SetBindGroup(TEXTURE_BIND_GROUP_INDEX, textureBindGroup);

@@ -44,6 +44,18 @@ namespace filament::backend {
            textureFormat == wgpu::TextureFormat::Depth32FloatStencil8;
 }
 
+/**
+ * @return true if the format is a 32-bit float color format, which can only be linearly filtered
+ *         (i.e. used with a wgpu::TextureSampleType::Float binding) when the device has the
+ *         wgpu::FeatureName::Float32Filterable feature.
+ *         See https://www.w3.org/TR/webgpu/#float32-filterable
+ */
+[[nodiscard]] constexpr bool isFloat32ColorFormat(wgpu::TextureFormat const format) {
+    return format == wgpu::TextureFormat::R32Float ||
+           format == wgpu::TextureFormat::RG32Float ||
+           format == wgpu::TextureFormat::RGBA32Float;
+}
+
 [[nodiscard]] constexpr bool isUIntFormat(const wgpu::TextureFormat format) {
     // see https://www.w3.org/TR/webgpu/#texture-formats
     //  and https://www.w3.org/TR/webgpu/#texture-format-caps

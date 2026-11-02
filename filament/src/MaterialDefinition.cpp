@@ -405,7 +405,7 @@ void MaterialDefinition::processMain() {
     bool const isLit = isVariantLit || hasShadowMultiplier;
     bool const isSSR = reflectionMode == ReflectionMode::SCREEN_SPACE ||
             refractionMode == RefractionMode::SCREEN_SPACE;
-    bool const hasFog = !(variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::FOG));
+    bool const hasFog = isFogSupported();
 
     perViewLayoutIndex = ColorPassDescriptorSet::getIndex(isLit, isSSR, hasFog);
 
@@ -581,6 +581,9 @@ void MaterialDefinition::processSpecializationConstants(FEngine& engine) {
                     +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING] =
                     isVariantLit;
 
+    specializationConstants[CONFIG_MAX_RESERVED_SPEC_CONSTANTS +
+            +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_FOG] = false;
+
     // Initialize the rest of the reserved constants with a dummy value.
     for (size_t i = CONFIG_NEXT_RESERVED_SPEC_CONSTANT; i < CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
             i++) {
@@ -669,7 +672,7 @@ void MaterialDefinition::processDescriptorSets(FEngine& engine) {
     bool const isLit = isVariantLit || hasShadowMultiplier;
     bool const isSSR = reflectionMode == ReflectionMode::SCREEN_SPACE ||
             refractionMode == RefractionMode::SCREEN_SPACE;
-    bool const hasFog = !(variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::FOG));
+    bool const hasFog = isFogSupported();
 
     this->perViewDescriptorSetLayoutPcfDescription = descriptor_sets::getPerViewDescriptorSetLayout(
             materialDomain, isLit, isSSR, hasFog, false);
@@ -861,6 +864,10 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
                   +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING] =
                 specialization.specKey.hasDirectionalLighting();
     }
+    constants[CONFIG_MAX_RESERVED_SPEC_CONSTANTS +
+              +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_FOG] =
+            specialization.specKey.hasFog();
+
     program.specializationConstants(std::move(constants));
 
     program.pushConstants(ShaderStage::VERTEX, pushConstants[uint8_t(ShaderStage::VERTEX)]);
@@ -939,13 +946,18 @@ void MaterialDefinition::acquirePrograms(FEngine& engine,
                 specialization.specKey = specKey;
                 LocalProgramCache::CacheKey mappedKey = LocalProgramCache::mapCacheEntryKey(variant,
                         specKey, programCache.size());
+                // Motion vectors programs are only needed by Views that enable motion vectors,
+                // they're compiled lazily (or by warm-up), never at engine init.
+                bool const precache = !isMotionVectorsVariant(variant);
                 if (useCache) {
-                    if (Handle<HwProgram> program = materialCache.getOrAcquireProgram(
-                            engine, specialization, *this, parser, CompilerPriorityQueue::HIGH,
-                            false)) {
+                    Handle<HwProgram> const program = UTILS_LIKELY(precache)
+                            ? materialCache.getOrAcquireProgram(engine, specialization, *this,
+                                    parser, CompilerPriorityQueue::HIGH, false)
+                            : materialCache.acquireProgram(specialization);
+                    if (program) {
                         programCache[mappedKey] = program;
                     }
-                } else {
+                } else if (UTILS_LIKELY(precache)) {
                     programCache[mappedKey] = compileProgram(engine, parser,
                             specialization, CompilerPriorityQueue::HIGH);
                 }
@@ -1004,10 +1016,8 @@ void MaterialDefinition::releasePrograms(FEngine& engine,
         }
     }
 
-    // Only destroy the "shared variants" if this is the default material (i.e. the programs in
-    // question that are shared) or if this material has custom depth shaders.
-    const bool destroySharedVariants = isDefaultMaterial || hasCustomDepthShader;
-
+    // Only destroy depth programs owned by this material; shared depth
+    // variants borrow their HwProgram from the default material.
     for (auto variant: getDepthVariants()) {
         DynamicSpecConstKey const specKey{ 0 };
         if (UTILS_LIKELY(isValidProgram(variant, specKey, shaderModel, isStereoSupported))) {
@@ -1018,7 +1028,7 @@ void MaterialDefinition::releasePrograms(FEngine& engine,
                 specialization.variant = variant;
                 specialization.specKey = specKey;
                 materialCache.releaseProgram(engine, specialization);
-            } else if (destroySharedVariants && program) {
+            } else if (!isSharedVariant(variant, isDefaultMaterial) && program) {
                 engine.getDriverApi().destroyProgram(program);
             }
             program.clear();
@@ -1055,6 +1065,13 @@ bool MaterialDefinition::isValidProgram(Variant const variant, DynamicSpecConstK
 
     if (!DynamicSpecConstKey::isValidProgramSpecKey(variant, specKey, materialDomain,
                 isVariantLit)) {
+        return false;
+    }
+
+    // Materials compiled without fog support (variantFilter: [fog]) have no fog code, so the fog
+    // specialization would be identical to the non-fog one. When FOG was a variant, the missing
+    // shader rejected it implicitly; now that it is a spec constant we must reject it here.
+    if (specKey.hasFog() && !isFogSupported()) {
         return false;
     }
 

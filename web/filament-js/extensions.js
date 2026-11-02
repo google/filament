@@ -378,6 +378,12 @@ Filament.loadClassExtensions = function() {
         this._setGuardBandOptions(options);
     };
 
+    /// setMotionVectorsOptions ::method::
+    Filament.View.prototype.setMotionVectorsOptions = function(overrides) {
+        const options = this.setMotionVectorsOptionsDefaults(overrides);
+        this._setMotionVectorsOptions(options);
+    };
+
     /// setStereoscopicOptions ::method::
     Filament.View.prototype.setStereoscopicOptions = function(overrides) {
         const options = this.setStereoscopicOptionsDefaults(overrides);

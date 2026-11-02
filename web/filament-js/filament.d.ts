@@ -736,6 +736,7 @@ export class View {
     public setFogOptions(options: View$FogOptions): void;
     public setVignetteOptions(options: View$VignetteOptions): void;
     public setGuardBandOptions(options: View$GuardBandOptions): void;
+    public setMotionVectorsOptions(options: View$MotionVectorsOptions): void;
     public setStereoscopicOptions(options: View$StereoscopicOptions): void;
     public setAmbientOcclusion(ambientOcclusion: View$AmbientOcclusion): void;
     public getAmbientOcclusion(): View$AmbientOcclusion;
@@ -1682,6 +1683,7 @@ export interface ViewSettings {
     vignette: View$VignetteOptions;
     vsmShadowOptions: View$VsmShadowOptions;
     guardBand: View$GuardBandOptions;
+    motionVectors: View$MotionVectorsOptions;
     stereoscopicOptions: View$StereoscopicOptions;
     colorGrading: ColorGradingSettings;
     dynamicLighting: DynamicLightingSettings;
@@ -2426,6 +2428,23 @@ export interface View$ScreenSpaceReflectionsOptions {
  * Currently the guard band can only be enabled or disabled.</p>
  */
 export interface View$GuardBandOptions {
+    enabled?: boolean;
+}
+
+/**
+ * Options for the motion vectors pass.
+ *
+ * Motion vectors are generated only when post-processing is enabled, stereo is disabled,
+ * the engine runs at feature level 1 or higher and the device supports RG16F render targets.
+ * They capture the rigid motion of renderables (TransformManager and InstanceBuffer transforms)
+ * and of the camera. Skinning/morphing deformation and the VIEW/DEVICE vertex domains are not
+ * captured.
+ * TAA uses motion vectors automatically when they are enabled.
+ *
+ * @see View::setMotionVectorsOptions
+ */
+export interface View$MotionVectorsOptions {
+    /** enables the motion vectors pass */
     enabled?: boolean;
 }
 

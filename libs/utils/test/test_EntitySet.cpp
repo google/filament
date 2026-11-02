@@ -1078,3 +1078,45 @@ TEST(PagedArenaBitsetTest, BatchAddFilteredSlice) {
     bsEmpty.add({ batch.data(), batch.size() }, &emptyFilter);
     EXPECT_TRUE(bsEmpty.empty());
 }
+
+TEST(PagedArenaBitsetTest, OperatorSubscriptInvariants) {
+    PagedArenaBitset bs;
+    constexpr uint32_t kMaxIndex = (1u << PagedArenaBitset::DOMAIN_BITS) - 1u;
+
+    // Unallocated pages across the entire domain return false
+    EXPECT_FALSE(bs[0u]);
+    EXPECT_FALSE(bs[63u]);
+    EXPECT_FALSE(bs[64u]);
+    EXPECT_FALSE(bs[4095u]);
+    EXPECT_FALSE(bs[4096u]);
+    EXPECT_FALSE(bs[kMaxIndex]);
+
+    // Boundary bits within pages and words
+    std::vector<uint32_t> const testBits = {
+        0u, 1u, 63u, 64u, 65u, 4095u, 4096u, (1u << 20) + 123u, kMaxIndex
+    };
+    for (uint32_t const b : testBits) {
+        bs.add(b);
+    }
+
+    for (uint32_t const b : testBits) {
+        EXPECT_TRUE(bs[b]);
+    }
+    // Neighboring unset bits in allocated pages and unallocated pages
+    EXPECT_FALSE(bs[2u]);
+    EXPECT_FALSE(bs[62u]);
+    EXPECT_FALSE(bs[66u]);
+    EXPECT_FALSE(bs[4094u]);
+    EXPECT_FALSE(bs[4097u]);
+    EXPECT_FALSE(bs[kMaxIndex - 1u]);
+
+    // Removing a bit creating a ghost page still returns false
+    bs.remove(4096u);
+    EXPECT_FALSE(bs[4096u]);
+
+    // Clearing resets summary masks (while leaving stale directory entries) and must return false
+    bs.clear();
+    for (uint32_t const b : testBits) {
+        EXPECT_FALSE(bs[b]);
+    }
+}

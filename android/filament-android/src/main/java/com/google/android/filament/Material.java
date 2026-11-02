@@ -187,7 +187,9 @@ public class Material {
         public static final int SSR = 0x40;
         /** Instanced stereo rendering */
         public static final int STE = 0x80;
-        public static final int ALL = 0xFF;
+        /** Motion vectors */
+        public static final int MOTION_VECTORS = 0x100;
+        public static final int ALL = 0x1FF;
     }
 
     /** Refraction */

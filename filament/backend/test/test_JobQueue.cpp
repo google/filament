@@ -588,6 +588,40 @@ TEST(ThreadWorker, DestroyAfterTerminate) {
     EXPECT_TRUE(endCalled);
 }
 
+TEST(ThreadWorker, WrapJobWrapsEachJobOnTheWorkerThread) {
+    JobQueue::Ptr queue = JobQueue::create();
+    std::thread::id const testThread = std::this_thread::get_id();
+    std::atomic_int wrapCount = { 0 };
+    std::atomic_bool insideWrapper = { false };
+    std::atomic_int ranInsideWrapperOnWorker = { 0 };
+
+    ThreadWorker::Config config = {
+        .wrapJob = [&](JobQueue::Job& job) {
+            wrapCount++;
+            insideWrapper.store(true);
+            job();
+            job = nullptr;
+            insideWrapper.store(false);
+        }
+    };
+    JobWorker::Ptr worker = ThreadWorker::create(queue, std::move(config));
+
+    auto const makeJob = [&]() {
+        return [&]() {
+            if (insideWrapper.load() && std::this_thread::get_id() != testThread) {
+                ranInsideWrapperOnWorker++;
+            }
+        };
+    };
+    queue->push(makeJob());
+    queue->push(makeJob());
+
+    // `terminate` runs the pending jobs without adding one of its own, unlike `drain`.
+    worker->terminate();
+    EXPECT_EQ(2, wrapCount.load());
+    EXPECT_EQ(2, ranInsideWrapperOnWorker.load());
+}
+
 // Destroying a worker without calling `terminate()` first is a programming error, and the process
 // must die on it. In debug builds `~ThreadWorker()` asserts, in release builds the assert is
 // compiled out but `std::thread`'s destructor still calls `std::terminate()` on a joinable thread.

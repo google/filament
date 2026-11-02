@@ -1554,7 +1554,7 @@ non-shader data.</p>
 <p>
 <dl><dt>Type</dt><dd><p>     array of <code>string</code>
 </p></dd><dt>Value</dt><dd><p>      Each entry must be any of <code>dynamicLighting</code>, <code>directionalLighting</code>, <code>shadowReceiver</code>,
-      <code>skinning</code>, <code>ssr</code>, or <code>stereo</code>.
+      <code>skinning</code>, <code>ssr</code>, <code>stereo</code>, or <code>motionVectors</code>.
 </p></dd><dt>Description</dt><dd><p>      Used to specify a list of shader variants that the application guarantees will never be
       needed. These shader variants are skipped during the code generation phase, thus reducing
       the overall size of the material.
@@ -1579,7 +1579,9 @@ non-shader data.</p>
 </li>
 <li class="minus"><code>ssr</code>, used when screen-space reflections are enabled in the View
 </li>
-<li class="minus"><code>stereo</code>, used when stereoscopic rendering is enabled in the View</li></ul>
+<li class="minus"><code>stereo</code>, used when stereoscopic rendering is enabled in the View
+</li>
+<li class="minus"><code>motionVectors</code>, used when motion vectors are enabled in the View</li></ul>
 </p><pre class="listing tilde"><code><span class="line">material <span class="hljs-punctuation">{</span></span>
 <span class="line">    name <span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Invisible shadow plane&quot;</span><span class="hljs-punctuation">,</span></span>
 <span class="line">    shadingModel <span class="hljs-punctuation">:</span> unlit<span class="hljs-punctuation">,</span></span>
@@ -3013,7 +3015,11 @@ variants:
 </li>
 <li class="minus"><code>vsm</code>, used when VSM shadows are enabled and the object is a shadow receiver
 </li>
-<li class="minus"><code>ssr</code>, used when screen-space reflections are enabled in the View</li></ul>
+<li class="minus"><code>ssr</code>, used when screen-space reflections are enabled in the View
+</li>
+<li class="minus"><code>stereo</code>, used when stereoscopic rendering is enabled in the View
+</li>
+<li class="minus"><code>motionVectors</code>, used when motion vectors are enabled in the View</li></ul>
 </p><p>
 Example:
 </p><pre class="listing backtick"><code><span class="line">--variant-filter=skinning,shadowReceiver</span></code></pre><p>

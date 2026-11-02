@@ -35,9 +35,15 @@
 #    include <arpa/inet.h>
 #endif
 
+#include <utils/compiler.h>
 #include <utils/Log.h>
+
 #include <math/vec3.h>
 #include <math/vec4.h>
+
+#if defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
 
 #include <tinyexr.h>
 
@@ -267,24 +273,16 @@ LinearImage PNGDecoder::decode() {
 
         if (colorType == PNG_COLOR_TYPE_RGBA) {
             if (getColorSpace() == ImageDecoder::ColorSpace::SRGB) {
-                return toLinearWithAlpha<uint16_t>(width, height, rowBytes, imageData,
-                        [](uint16_t v) -> uint16_t { return ntohs(v); },
-                        sRGBToLinear<filament::math::float4>);
+                return toLinearWithAlphaNtohs<uint16_t>(width, height, rowBytes, imageData.get());
             } else {
-                return toLinearWithAlpha<uint16_t>(width, height, rowBytes, imageData,
-                        [](uint16_t v) -> uint16_t { return ntohs(v); },
-                        [](const filament::math::float4& color) ->  filament::math::float4 { return color; });
+                return asLinearWithAlphaNtohs<uint16_t>(width, height, rowBytes, imageData.get());
             }
         } else {
             // Convert to linear float (PNG 16 stores data in network order (big endian).
             if (getColorSpace() == ImageDecoder::ColorSpace::SRGB) {
-                return toLinear<uint16_t>(width, height, rowBytes, imageData,
-                        [](uint16_t v) -> uint16_t { return ntohs(v); },
-                        sRGBToLinear< filament::math::float3>);
+                return toLinearNtohs<uint16_t>(width, height, rowBytes, imageData.get());
             } else {
-                return toLinear<uint16_t>(width, height, rowBytes, imageData,
-                        [](uint16_t v) -> uint16_t { return ntohs(v); },
-                        [](const filament::math::float3& color) ->  filament::math::float3 { return color; });
+                return asLinearNtohs<uint16_t>(width, height, rowBytes, imageData.get());
             }
         }
     } catch(std::runtime_error& e) {
@@ -490,17 +488,21 @@ LinearImage EXRDecoder::decode() {
 
         LinearImage image((uint32_t) width, (uint32_t) height, 3);
 
+        const size_t count = size_t(width) * size_t(height);
+        float const* UTILS_RESTRICT s = rgba;
+        float* UTILS_RESTRICT d = image.getPixelRef();
         size_t i = 0;
-        for (uint32_t y = 0; y < height; y++) {
-            for (uint32_t x = 0; x < width; x++) {
-                filament::math::float3& pixel =
-                        *reinterpret_cast< filament::math::float3*>(image.getPixelRef(x, y));
-                pixel.r = rgba[i++];
-                pixel.g = rgba[i++];
-                pixel.b = rgba[i++];
-                // skip alpha
-                i++;
-            }
+#if defined(__ARM_NEON)
+        for (; i + 4 <= count; i += 4, s += 16, d += 12) {
+            const float32x4x4_t v = vld4q_f32(s);
+            const float32x4x3_t rgb = { v.val[0], v.val[1], v.val[2] };
+            vst3q_f32(d, rgb);
+        }
+#endif
+        for (; i < count; ++i, s += 4, d += 3) {
+            d[0] = s[0];
+            d[1] = s[1];
+            d[2] = s[2];
         }
 
         free(rgba);

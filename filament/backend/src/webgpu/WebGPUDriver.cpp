@@ -1054,7 +1054,8 @@ bool WebGPUDriver::isTextureFormatMipmappable(const TextureFormat format) {
     // passing 2D and sampleCount 1 to only check the format
     const WebGPURenderPassMipmapGenerator::FormatCompatibility renderPassCompatibility{
         WebGPURenderPassMipmapGenerator::getCompatibilityFor(webGpuFormat,
-                wgpu::TextureDimension::e2D, 1)
+                wgpu::TextureDimension::e2D, 1,
+                mDevice.HasFeature(wgpu::FeatureName::Float32Filterable))
     };
 
     if (renderPassCompatibility.compatible) {

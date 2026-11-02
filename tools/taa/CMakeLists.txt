@@ -16,13 +16,7 @@ target_link_libraries(${TARGET} PRIVATE
     uberarchive
     gltfio
     viewer
-    imageio
-    image
     filamentapp
-    filament
-    backend
-    utils
-    math
 )
 
 if (NOT MSVC)
@@ -40,4 +34,3 @@ if (APPLE)
 endif()
 
 set_target_properties(${TARGET} PROPERTIES FOLDER Tools)
-

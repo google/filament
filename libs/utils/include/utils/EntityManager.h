@@ -56,8 +56,9 @@ class SingleInstanceComponentManagerBase;
  * This group is aimed at standard usage for applications, renderers, and game systems.
  * - **Entity Creation**: Methods like @p create() and @p create(size_t, Entity*) allocate new or recycled Entity
  *   identities.
- * - **Entity Destruction**: Methods like @p destroy(Entity) and @p destroy(size_t, Entity*) logically kill entities,
- *   instantly advancing the active timeline.
+ * - **Entity Destruction**: Methods like @p destroy(Entity) and @p destroy(size_t, Entity*) immediately mark entities
+ *   as dead (for @p isAlive()) and batch timeline and change-callback notifications until the internal buffer fills,
+ *   @p flushNotifications() is called, or @p advanceEpoch() seals the epoch.
  * - **Queries & Hooks**: Mechanisms to query logical presence (@p isAlive()) or subscribe to global destruction
  *   notifications via @p registerChangeCallback().
  *

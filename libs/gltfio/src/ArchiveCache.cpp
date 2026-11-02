@@ -32,9 +32,8 @@
 
 #include <zstd.h>
 
-#include <stddef.h>
-#include <stdint.h>
-#include <string.h>
+#include <cstddef>
+#include <cstdint>
 
 using namespace utils;
 using namespace filament::uberz;
@@ -68,27 +67,27 @@ void ArchiveCache::load(const void* archiveData, uint64_t archiveByteCount) {
     // from attacker-controlled archive files (decompression bomb).
     static constexpr uint64_t MAX_ARCHIVE_DECOMPRESSED_SIZE = 256ull * 1024ull * 1024ull; // 256 MiB
     if (UTILS_UNLIKELY(decompSize > MAX_ARCHIVE_DECOMPRESSED_SIZE)) {
-        utils::slog.e << "ArchiveCache: decompressed size exceeds limit (" << decompSize
-                      << " bytes)" << utils::io::endl;
+        slog.e << "ArchiveCache: decompressed size exceeds limit (" << decompSize
+                << " bytes)" << io::endl;
         return;
     }
-    uint64_t* basePointer = (uint64_t*) utils::aligned_alloc(decompSize, 8);
+    auto* basePointer = (uint64_t*) utils::aligned_alloc(decompSize, 8);
     if (UTILS_UNLIKELY(basePointer == nullptr)) {
-        utils::slog.e << "ArchiveCache: failed to allocate decompression buffer ("
-                      << decompSize << " bytes)" << utils::io::endl;
+        slog.e << "ArchiveCache: failed to allocate decompression buffer ("
+                << decompSize << " bytes)" << io::endl;
         return;
     }
     const size_t decompressed = ZSTD_decompress(basePointer, decompSize, archiveData,
             archiveByteCount);
     if (UTILS_UNLIKELY(ZSTD_isError(decompressed))) {
-        utils::slog.e << "ArchiveCache: decompression failed: " << ZSTD_getErrorName(decompressed)
-                      << utils::io::endl;
-        utils::aligned_free(basePointer);
+        slog.e << "ArchiveCache: decompression failed: " << ZSTD_getErrorName(decompressed)
+                << io::endl;
+        aligned_free(basePointer);
         return;
     }
-    mArchive = (ReadableArchive*) basePointer;
+    mArchive = reinterpret_cast<ReadableArchive*>(basePointer);
     if (!convertOffsetsToPointers(mArchive, decompSize)) {
-        utils::aligned_free(basePointer);
+        aligned_free(basePointer);
         mArchive = nullptr;
         return;
     }
@@ -102,16 +101,22 @@ Material* ArchiveCache::getMaterial(const ArchiveRequirements& reqs) {
         return nullptr;
     }
 
+    // Multiple specs may match our needs. We gather them all in a list and extract the
+    // cheapest one by picking the spec that defines the smallest number of flags/features.
+    std::vector<std::pair<uint64_t, const ArchiveSpec&>> suitableSpecs;
+
     for (uint64_t i = 0; i < mArchive->specsCount; ++i) {
         const ArchiveSpec& spec = mArchive->specs[i];
         if (spec.blendingMode != INVALID_BLENDING && spec.blendingMode != reqs.blendingMode) {
-            debugSuitability(i, "blend mode mismatch.");
+            debugSuitability(int(i), "blend mode mismatch.");
             continue;
         }
+
         if (spec.shadingModel != INVALID_SHADING_MODEL && spec.shadingModel != reqs.shadingModel) {
-            debugSuitability(i, "material model.");
+            debugSuitability(int(i), "material model.");
             continue;
         }
+
         bool specIsSuitable = true;
 
         // For each feature required by the mesh, this ubershader is suitable only if it includes a
@@ -132,7 +137,7 @@ Material* ArchiveCache::getMaterial(const ArchiveRequirements& reqs) {
                 }
             }
             if (!found) {
-                debugSuitability(i, meshRequirement.c_str());
+                debugSuitability(int(i), meshRequirement.c_str());
                 specIsSuitable = false;
                 break;
             }
@@ -148,22 +153,31 @@ Material* ArchiveCache::getMaterial(const ArchiveRequirements& reqs) {
                 // because almost none of our feature flags are REQUIRED.
                 auto iter = reqs.features.find(CString(flag.name));
                 if (iter == reqs.features.end() || iter.value() == false) {
-                    debugSuitability(i, flag.name);
+                    debugSuitability(int(i), flag.name);
                     specIsSuitable = false;
                 }
             }
         }
 
         if (specIsSuitable) {
-            if (mMaterials[i] == nullptr) {
-                mMaterials[i] = Material::Builder()
-                    .package(spec.package, spec.packageByteCount)
-                    .build(mEngine);
-            }
-
-            return mMaterials[i];
+            suitableSpecs.emplace_back(i, spec);
         }
     }
+
+    if (!suitableSpecs.empty()) {
+        // Find the cheapest spec to build the material from
+        auto [index, spec] = *std::ranges::min_element(suitableSpecs,
+                [](const auto& a, const auto& b) {
+                    return a.second.supportedFlagsCount < b.second.supportedFlagsCount;
+                });
+        if (mMaterials[index] == nullptr) {
+            mMaterials[index] = Material::Builder()
+                .package(spec.package, spec.packageByteCount)
+                .build(mEngine);
+        }
+        return mMaterials[index];
+    }
+
     return nullptr;
 }
 
@@ -180,11 +194,11 @@ Material* ArchiveCache::getDefaultMaterial() {
 }
 
 void ArchiveCache::destroyMaterials() {
-    for (auto mat : mMaterials) mEngine.destroy(mat);
+    for (const auto mat : mMaterials) mEngine.destroy(mat);
     mMaterials.clear();
 }
 
-FeatureMap ArchiveCache::getFeatureMap(Material* material) const {
+FeatureMap ArchiveCache::getFeatureMap(const Material* material) const {
     FeatureMap features;
     for (size_t specIndex = 0; specIndex < mMaterials.size(); ++specIndex) {
         if (material == mMaterials[specIndex]) {
@@ -202,7 +216,7 @@ FeatureMap ArchiveCache::getFeatureMap(Material* material) const {
 ArchiveCache::~ArchiveCache() {
     assert_invariant(mMaterials.empty() &&
         "Please call destroyMaterials explicitly to ensure correct destruction order");
-    utils::aligned_free(mArchive);
+    aligned_free(mArchive);
 }
 
 } // namespace filament::gltfio

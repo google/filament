@@ -243,6 +243,9 @@ class ModelViewer(
             for (uri in asset.resourceUris) {
                 val resourceBuffer = callback(uri)
                 if (resourceBuffer == null) {
+                    // Release the partially-loaded asset rather than leaking it.
+                    resourceLoader.evictResourceData()
+                    assetLoader.destroyAsset(asset)
                     this.asset = null
                     return
                 }

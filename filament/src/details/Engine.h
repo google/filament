@@ -195,6 +195,13 @@ public:
         return mMaterialId.fetch_add(1, std::memory_order_relaxed);
     }
 
+    // Returns a unique, non-zero InstanceBuffer identifier. Identifiers are never reused, which
+    // lets per-View motion vectors history key InstanceBuffers without ABA issues.
+    // Main thread only, like InstanceBuffer creation.
+    uint64_t allocateInstanceBufferUid() noexcept {
+        return ++mInstanceBufferUidCounter;
+    }
+
     const FMaterial* getDefaultMaterial() const noexcept { return mDefaultMaterial; }
     // The default material's default instance, created by init(). Renderables without a material
     // instance use it, and shared variants of other materials bind its descriptor sets.
@@ -247,6 +254,12 @@ public:
 
     bool isStereoSupported() const noexcept {
         return getDriver().isStereoSupported();
+    }
+
+    // Whether RG16F is supported as a color render target format; required by the object
+    // motion vectors pass. Queried once in init().
+    bool isRG16FColorRenderTargetSupported() const noexcept {
+        return mIsRG16FColorRenderTargetSupported;
     }
 
     bool isAsynchronousModeEnabled() const noexcept;
@@ -672,6 +685,7 @@ private:
     Platform* mPlatform = nullptr;
     bool mOwnPlatform = false;
     bool mAutomaticInstancingEnabled = false;
+    bool mIsRG16FColorRenderTargetSupported = false;
     void* mSharedGLContext = nullptr;
     backend::Handle<backend::HwRenderPrimitive> mFullScreenTriangleRph;
     FVertexBuffer* mFullScreenTriangleVb = nullptr;
@@ -726,6 +740,9 @@ private:
     ResourceList<FSync> mSyncs UTILS_GUARDED_BY(mSyncListLock){ "Sync" };
 
     mutable std::atomic<uint32_t> mMaterialId = 0;
+
+    // source of allocateInstanceBufferUid(), main thread only
+    uint64_t mInstanceBufferUidCounter = 0;
 
     // FMaterialInstance are handled directly by FMaterial
     std::unordered_map<const FMaterial*, ResourceList<FMaterialInstance>> mMaterialInstances;
@@ -822,6 +839,10 @@ public:
             bool disable_subpasses = false;
             // See Renderer::setPresentationTime()
             bool disable_set_presentation_time = false;
+            // The motion vectors debug view, see FRenderer::FRenderer()
+            bool display_motion_vectors = false;
+            bool display_motion_vectors_object_only = false;
+            float display_motion_vectors_scale = 20.0f;
         } renderer;
         struct {
             bool debug_froxel_visualization = false;

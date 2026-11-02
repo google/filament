@@ -4,13 +4,18 @@ on:
   push:
     branches: [ "main" ]
     paths-ignore:
+      - 'art/**'
+      - 'assets/**'
       - 'docs/**'
+      - 'docs_src/**'
+      - 'ide/**'
+      - 'shaders/**'
+      - 'skills/**'
       - 'third_party/**'
-  pull_request:
-    branches: [ "main" ]
-    paths-ignore:
-      - 'docs/**'
-      - 'third_party/**'
+  schedule:
+    # Every Sunday at 3:30am PST
+    - cron: '30 3 * * 0'
+      timezone: "America/Los_Angeles"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -46,31 +51,26 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
-        fetch-depth: 0
+        fetch-depth: 1
         persist-credentials: false
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
+      uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
       with:
         languages: ${{ matrix.language }}
         build-mode: ${{ matrix.build-mode }}
         config: |
-          paths-ignore:
-            - 'docs/**'
-            - 'third_party/**'
-
-    - name: Run manual build steps
-      if: matrix.build-mode == 'manual'
-      shell: bash
-      run: |
-        echo 'If you are using a "manual" build mode for one or more of the' \
-          'languages you are analyzing, replace this with the commands to build' \
-          'your code, for example:'
-        echo '  make bootstrap'
-        echo '  make release'
-        exit 1
+          paths:
+            - .github
+            - android
+            - filament
+            - ios
+            - libs
+            - samples
+            - tools
+            - web
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
+      uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
       with:
         category: "/language:${{matrix.language}}"

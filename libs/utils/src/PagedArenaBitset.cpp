@@ -192,22 +192,6 @@ PagedArenaBitset PagedArenaBitset::clone() const {
     return out;
 }
 
-bool PagedArenaBitset::operator[](uint32_t const index) const noexcept {
-    assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
-    assert(index < (1ULL << DOMAIN_BITS) && "Index out of bounds");
-
-    uint32_t const dirIdx = index >> FILAMENT_PAGE_SHIFT;
-    uint32_t const maskIdx = dirIdx >> WORD_SHIFT;
-    uint32_t const bitInMask = dirIdx & WORD_MASK;
-
-    if ((mSummaryMask[maskIdx] & (1ULL << bitInMask)) == 0) return false;
-
-    uint16_t const pageIdx = mDirectory[dirIdx];
-    uint32_t const wordIdx = (index >> WORD_SHIFT) & WORD_MASK;
-    uint32_t const bitIdx = index & WORD_MASK;
-    return (mArena[pageIdx].words[wordIdx] >> bitIdx) & 1ULL;
-}
-
 UTILS_NOINLINE
 bool PagedArenaBitset::fetchAdd(uint32_t const index) {
     assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");

@@ -149,7 +149,7 @@ static void usage(char* name) {
             "   --variant-filter=<filter>, -V <filter>\n"
             "       Filter out specified comma-separated variants:\n"
             "           shadowReceiver, skinning, vsm, fog,\n"
-            "           ssr (screen-space reflections), stereo\n"
+            "           ssr (screen-space reflections), stereo, motionVectors\n"
             "       directionalLighting is deprecated and ignored.\n"
             "       This variant filter is merged with the filter from the material, if any.\n\n"
             "   --workarounds, -W\n"
@@ -233,6 +233,8 @@ static UserVariantFilterMask parseVariantFilter(const std::string& arg) {
             variantFilter |= uint32_t(UserVariantFilterBit::SSR);
         } else if (item == "stereo") {
             variantFilter |= uint32_t(UserVariantFilterBit::STE);
+        } else if (item == "motionVectors") {
+            variantFilter |= uint32_t(UserVariantFilterBit::MOTION_VECTORS);
         }
     }
     return variantFilter;
@@ -374,7 +376,7 @@ bool CommandlineConfig::parse() {
                 std::cout << MATERIAL_VERSION << std::endl;
                 exit(0);
             case 'V':
-                mVariantFilter = parseVariantFilter(arg);
+                mVariantFilter |= parseVariantFilter(arg);
                 break;
             case 'W':
                 if (arg == "none") {

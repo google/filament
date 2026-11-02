@@ -1450,6 +1450,11 @@ Handle<HwTimerQuery> VulkanDriver::createTimerQueryS() noexcept {
     // The handle must be constructed here, as a synchronous call to getTimerQueryValue might happen
     // before createTimerQueryR is executed.
     auto query = mQueryManager.getNextQuery(&mResourceManager);
+    if (!query) {
+        // The pool is exhausted. Hand back a null handle; the calls below treat it as a
+        // query that never ran rather than dereferencing it.
+        return {};
+    }
     query.inc();
     return Handle<VulkanTimerQuery>(query.id());
 }
@@ -2153,6 +2158,9 @@ void VulkanDriver::setupExternalImage(void* image) {
 }
 
 TimerQueryResult VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
+    if (!tqh) {
+        return TimerQueryResult::ERROR;
+    }
     auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
     if (!vtq->isCompleted()) {
         return TimerQueryResult::NOT_READY;
@@ -3071,11 +3079,17 @@ void VulkanDriver::scissor(Viewport scissorBox) {
 }
 
 void VulkanDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
+    if (!tqh) {
+        return;
+    }
     auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
     mQueryManager.beginQuery(&(mCommands.get()), vtq);
 }
 
 void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
+    if (!tqh) {
+        return;
+    }
     auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
     mQueryManager.endQuery(&(mCommands.get()), vtq);
 }
