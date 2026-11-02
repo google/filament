@@ -342,6 +342,15 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device, bool enableDebugUtils 
         VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME,
         VK_EXT_COLOR_WRITE_ENABLE_EXTENSION_NAME,
 
+        // Allows timer queries to be reset on the host with vkResetQueryPoolEXT instead of by
+        // recording vkCmdResetQueryPool. Host-side reset is preferred because Arm reported that
+        // vkCmdResetQueryPool can cause GPU bubbles, which led ANGLE to make the same switch
+        // (angleproject:6692, https://anglebug.com/42265186). On Pixel 11 (PowerVR),
+        // vkCmdResetQueryPool has also been observed to execute as a compute workload. The
+        // extension is only enabled on the device if the hostQueryReset feature is supported;
+        // otherwise VulkanQueryManager falls back to vkCmdResetQueryPool.
+        VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME,
+
         // Allows pipelines to be restricted to either protected or unprotected command buffers.
         // This is required to use protected memory on ARM proprietary drivers, where enabling
         // protected memory otherwise causes excessive load/store unit activity (see b/208458772).
@@ -733,6 +742,10 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // both the extension's feature and protected memory are supported.
     if (!mImpl->mContext.mPipelineProtectedAccessSupported) {
         setErase(deviceExts, VK_EXT_PIPELINE_PROTECTED_ACCESS_EXTENSION_NAME);
+    }
+
+    if (!mImpl->mContext.isHostQueryResetSupported()) {
+        setErase(deviceExts, VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME);
     }
 
     mImpl->mContext.mDebugUtilsNamesEnabled =
@@ -1128,6 +1141,10 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
 
     if (setContains(deviceExts, VK_EXT_COLOR_WRITE_ENABLE_EXTENSION_NAME)) {
         chainStruct(&context.mPhysicalDeviceFeatures, &context.mColorWriteEnableFeatures);
+    }
+
+    if (setContains(deviceExts, VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME)) {
+        chainStruct(&context.mPhysicalDeviceFeatures, &context.mHostQueryResetFeatures);
     }
 
     VkPhysicalDevicePipelineProtectedAccessFeaturesEXT pipelineProtectedAccessFeatures = {
@@ -1531,6 +1548,15 @@ void VulkanPlatform::createLogicalDeviceAndQueues(
 
     if (setContains(deviceExtensions, VK_EXT_COLOR_WRITE_ENABLE_EXTENSION_NAME)) {
         chainStruct(&deviceCreateInfo, &context.mColorWriteEnableFeatures);
+    }
+
+    VkPhysicalDeviceHostQueryResetFeaturesEXT hostQueryReset = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES_EXT,
+        .hostQueryReset = VK_TRUE,
+    };
+    if (setContains(deviceExtensions, VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME)) {
+        assert_invariant(context.isHostQueryResetSupported());
+        chainStruct(&deviceCreateInfo, &hostQueryReset);
     }
 
     mImpl->mDevice = createVkDevice(deviceCreateInfo);
