@@ -359,7 +359,7 @@ static void BM_SICM_NotifyChange_Single_Bitset(benchmark::State& state) {
     PagedArenaBitset filteredBitset;
     PagedArenaBitset filterMask;
     for (size_t i = 0; i < count; i += 2) {
-        filterMask.add(entities[i].getId());
+        filterMask.add(EntityManager::getIndex(entities[i]));
     }
 
     cm.registerBitset(&unfilteredBitset);
@@ -399,7 +399,7 @@ static void BM_SICM_NotifyChange_Slice_Bitset(benchmark::State& state) {
     PagedArenaBitset filteredBitset;
     PagedArenaBitset filterMask;
     for (size_t i = 0; i < count; i += 2) {
-        filterMask.add(entities[i].getId());
+        filterMask.add(EntityManager::getIndex(entities[i]));
     }
 
     cm.registerBitset(&unfilteredBitset);
@@ -538,7 +538,7 @@ static void BM_SICM_GC_Full(benchmark::State& state) {
         state.PauseTiming();
         for (size_t i = 0; i < count; ++i) {
             cm.addComponent(entities[i]);
-            cm.mPendingDestruction.add(entities[i].getId());
+            cm.mPendingDestruction.add(EntityManager::getIndex(entities[i]));
         }
         state.ResumeTiming();
 
@@ -574,7 +574,7 @@ static void BM_SICM_GC_Amortized(benchmark::State& state) {
         state.PauseTiming();
         for (size_t i = 0; i < count; ++i) {
             cm.create(entities[i]);
-            cm.mPendingDestruction.add(entities[i].getId());
+            cm.mPendingDestruction.add(EntityManager::getIndex(entities[i]));
         }
         state.ResumeTiming();
 

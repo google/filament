@@ -22,6 +22,7 @@
 #include <utils/Slice.h>
 
 #include <algorithm>
+#include <cassert>
 #include <utility>
 
 namespace utils {
@@ -66,10 +67,10 @@ void SingleInstanceComponentManagerBase::recordDirtyEntity(Entity const e) noexc
 }
 
 void SingleInstanceComponentManagerBase::notifyChange(Entity const e) noexcept {
-    uint32_t const id = e.getId();
+    uint32_t const index = EntityManager::getIndex(e);
     for (auto const [bitset, filter] : mBitsets) {
-        if (!filter || (*filter)[id]) {
-            bitset->add(id);
+        if (!filter || (*filter)[index]) {
+            bitset->add(index);
         }
     }
 
@@ -84,7 +85,7 @@ void SingleInstanceComponentManagerBase::notifyChange(Slice<const Entity> const 
 
     Slice const ids{ reinterpret_cast<uint32_t const*>(entities.data()), entities.size() };
     for (auto const [bitset, filter] : mBitsets) {
-        bitset->add(ids, filter);
+        bitset->add(ids, filter, EntityManager::INDEX_MASK);
     }
 
     if (UTILS_UNLIKELY(!mChangeCallbacks.empty())) {
@@ -155,6 +156,16 @@ void SingleInstanceComponentManagerBase::catchupGarbage() noexcept {
     }
 }
 
+void SingleInstanceComponentManagerBase::catchupCurrentGarbage() noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS {
+    if (mEntities.empty()) {
+        return;
+    }
+    mEntityManager.intersectCurrentGarbage(mCollapsedGarbage, mEntities);
+    if (UTILS_UNLIKELY(!mCollapsedGarbage.empty())) {
+        mPendingDestruction.merge(mCollapsedGarbage);
+    }
+}
+
 void SingleInstanceComponentManagerBase::gcImpl(uint32_t const maxDestructions,
         void* context, void* extraArg, EvictionDispatcher const dispatcher) noexcept {
 
@@ -179,7 +190,7 @@ void SingleInstanceComponentManagerBase::gcImpl(uint32_t const maxDestructions,
         size_t count = 0;
         mPendingDestruction.popSetBits([&](uint32_t const bit) noexcept {
             if (count < batchLimit) {
-                buffer[count++] = Entity::import(bit);
+                buffer[count++] = mEntityManager.getEntity(bit);
                 return true;
             }
             return false;
@@ -204,6 +215,7 @@ SingleInstanceComponentManagerBase::addComponentImpl(Entity const e, void* conte
     Instance ci = 0;
     bool added = false;
     if (!e.isNull()) {
+        assert(mEntityManager.isAlive(e));
         resume();
 
         auto [it, inserted] = mInstanceMap.try_emplace(e, 0);
@@ -213,7 +225,7 @@ SingleInstanceComponentManagerBase::addComponentImpl(Entity const e, void* conte
             added = true;
             {
                 LockGuard const lock(mEbrEntitiesLock);
-                mEntities.add(e.getId());
+                mEntities.add(EntityManager::getIndex(e));
             }
             notifyChange(e);
         } else {
@@ -238,8 +250,8 @@ void SingleInstanceComponentManagerBase::eraseComponentFromMap(
         swappedPos.value() = index;
     }
 
-    uint32_t const id = e.getId();
-    bool const wasPending = mPendingDestruction.fetchRemove(id);
+    uint32_t const entityIndex = EntityManager::getIndex(e);
+    bool const wasPending = mPendingDestruction.fetchRemove(entityIndex);
     if (wasPending && !mInGc && mPendingDestruction.empty()) {
         uint64_t const currentWatermark = mWatermark.load(std::memory_order_relaxed);
         if (currentWatermark < mHarvestedEpoch) {
@@ -253,7 +265,7 @@ void SingleInstanceComponentManagerBase::eraseComponentFromMap(
     // class do not need synchronization.
     {
         LockGuard const lock(mEbrEntitiesLock);
-        mEntities.remove(id);
+        mEntities.remove(entityIndex);
     }
 
     notifyChange(e);

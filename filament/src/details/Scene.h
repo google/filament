@@ -38,6 +38,7 @@
 #include <utils/Mutex.h>
 #include <utils/PagedArenaBitset.h>
 #include <utils/Range.h>
+#include <utils/SingleInstanceComponentManager.h>
 #include <utils/Slice.h>
 #include <utils/StructureOfArrays.h>
 
@@ -50,7 +51,6 @@
 #include <tsl/robin_map.h>
 
 #include <array>
-#include <memory>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -249,6 +249,16 @@ public:
         }
         return 0xFFFFFFFF;
     }
+
+    // Clears all cached rows.
+    void clear() noexcept {
+        mSoA.clear();
+        mTranslations.clear();
+        if constexpr (kHasExtra) {
+            mExtras.clear();
+        }
+        mIndexMap.clear();
+    }
 };
 
 class FScene : public Scene {
@@ -396,30 +406,23 @@ public:
 
         // Internal Master Cache, cannot be modified outside FScene.
         //
-        // Invariant: SceneCacheData is per-View, whereas FScene::mEntities is shared across all
-        // Views attached to the Scene. Prior to processDeferredUpdates() running for a given View,
-        // its master cache is NOT guaranteed to be a subset of mEntities (it may still hold rows
-        // for entities already removed from mEntities via remove() or flushPendingDestroyed()).
-        // Only AFTER processDeferredUpdates() completes for that View is its cache
-        // guaranteed to be a subset of (mEntities & alive). Consequently, per-View cache eviction
-        // must depend solely on this View's own removedEntities and destroyedEntities sets, and
-        // must never be filtered by FScene::mEntities.
+        // Invariant: Whenever an entity is removed or evicted from FScene (via remove(),
+        // removeAllEntities(), gc(), or pruneDestroyedEntities()), it is immediately evicted from
+        // every registered FView's renderableCache, lightCache, and directionalLights before
+        // FScene's EBR watermark advances, ensuring no stale Entity handle can linger past index
+        // reclamation. When a FView attaches to an FScene (needsFullUpdate = true), any rows left
+        // over from a previous Scene are pruned by full 32-bit Entity membership in mSceneManager.
         RenderableCache renderableCache;
         LightCache lightCache;
         EntitySet directionalLights;
         utils::Entity dominantDirectionalLight;
 
-        // entities for which a component has changed (could have been added/removed/modified)
+        // 17-bit indices of entities for which a component has changed (added/removed/modified)
         EntitySet dirtyEntities;
-
-        // entities that have been removed from the scene
-        EntitySet removedEntities;
-
-        // entities that have died (main-thread only)
-        EntitySet destroyedEntities;
 
         math::mat3 previousWorldRotation;
         bool previousShadowReceiversAreCasters = false;
+        bool hasEvictedEntities = false;
         // Set on creation and on every registration; cleared at the end of
         // processDeferredUpdates().
         bool needsFullUpdate = true;
@@ -444,6 +447,8 @@ public:
     ~FScene() noexcept;
 
     void terminate(FEngine& engine);
+
+    void gc() noexcept;
 
     bool processDeferredUpdates(math::mat3 const& worldRotation, bool shadowReceiversAreCasters, SceneCacheData& cache) noexcept;
 
@@ -474,6 +479,30 @@ public:
 private:
     using EntitySet = SceneCacheData::EntitySet;
 
+    class SceneComponentManager : public utils::SingleInstanceComponentManager<> {
+        using Base = utils::SingleInstanceComponentManager<>;
+    public:
+        explicit SceneComponentManager(utils::EntityManager& em) noexcept
+                : Base(em, "SceneComponentManager") {}
+
+        using Base::gc;
+        using Base::catchupCurrentGarbage;
+
+        void clearAll() noexcept {
+            if (empty()) {
+                return;
+            }
+            mInstanceMap.clear();
+            mPendingDestruction.clear();
+            {
+                utils::LockGuard const lock(mEbrEntitiesLock);
+                mEntities.clear();
+            }
+            mData.resize(1);
+            suspend();
+        }
+    };
+
     friend class Scene;
     void setSkybox(FSkybox* skybox) noexcept;
     void setIndirectLight(FIndirectLight* ibl) noexcept { mIndirectLight = ibl; }
@@ -482,41 +511,32 @@ private:
     void remove(utils::Entity entity);
     void removeEntities(utils::Slice<const utils::Entity> entities);
     void removeAllEntities() noexcept;
-    size_t getEntityCount() const noexcept { return mEntities.size(); }
+    size_t getEntityCount() const noexcept { return mSceneManager.getComponentCount(); }
     size_t getRenderableCount() const noexcept;
     size_t getLightCount() const noexcept;
     bool hasEntity(utils::Entity entity) const noexcept;
     void forEach(utils::Invocable<void(utils::Entity)>&& functor) const noexcept;
-    void flushPendingDestroyed() noexcept;
+    void pruneDestroyedEntities() noexcept;
+    void destroyComponents(utils::Entity const* entities, size_t count) noexcept;
 
     static inline void computeLightRanges(math::float2* zrange,
             CameraInfo const& camera, const math::float4* spheres, size_t count) noexcept;
 
-    struct PendingDestroyed {
-        utils::Mutex lock;
-        EntitySet entities UTILS_GUARDED_BY(lock);
-    };
-
     FEngine& mEngine;
     FSkybox* mSkybox = nullptr;
     FIndirectLight* mIndirectLight = nullptr;
-    std::shared_ptr<PendingDestroyed> mPendingDestroyed =
-            std::make_shared<PendingDestroyed>();
+    SceneComponentManager mSceneManager;
+
     friend class FView;
     void registerView(FView* view);
     void unregisterView(FView* view);
     std::vector<FView*> mRegisteredViews;
-
-    // Master list of Entities in the scene
-    EntitySet mEntities;
 
     // temporary storage, used to avoid allocations in steady state
     std::vector<uint32_t> mTempExtractedRenderables;
     std::vector<uint32_t> mTempExtractedLights;
     std::vector<std::pair<FLightManager::Instance, TransformManager::Instance>>
             mTempDirectionalInstances;
-    EntitySet mTempPendingDestroyed;
-    EntitySet mTempAliveEntities;
     EntitySet mTempActiveDirty;
     EntitySet mTempRenderableEntities;
     EntitySet mTempLightEntities;

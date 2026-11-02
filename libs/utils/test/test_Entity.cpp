@@ -577,30 +577,53 @@ TEST(EntityTest, ComponentManager_MoveSemanticsRebindWatermark) {
     em.destroy(NUM, C.data());
 }
 
-TEST(EntityTest, Legacy_AliveEntitiesReturns32BitIDs) {
+TEST(EntityTest, AliveEntitiesStores17BitIndicesAndReinflatesViaGetEntity) {
     EntityManagerImpl em;
-    constexpr size_t NUM = 1024;
+    EXPECT_TRUE(em.getEntity(0).isNull());
+
+    std::atomic<uint64_t> pinWatermark{ 0 };
+    em.registerWatermark(&pinWatermark, "PinWatermark");
+
+    constexpr size_t NUM = 1024; // >= MIN_FREE_INDICES so recycled indices are reused immediately
     std::vector<Entity> A(NUM);
     em.create(NUM, A.data());
-    auto const firstId = A[0].getId();
-    EXPECT_EQ(EntityManagerImpl::getIndex(A[0]), 1);
-    EXPECT_EQ(EntityManagerImpl::getGeneration(A[0]), 0);
+    uint32_t const firstIndex = EntityManagerImpl::getIndex(A[0]);
+    EXPECT_EQ(firstIndex, 1u);
+    EXPECT_EQ(EntityManagerImpl::getGeneration(A[0]), 0u);
+    EXPECT_EQ(em.getEntity(firstIndex), A[0]);
 
+    {
+        PagedArenaBitset alive = em.getAliveEntities();
+        EXPECT_TRUE(alive[firstIndex]);
+    }
+
+    // Destroy all of A while pinWatermark holds EBR purgatory open.
     em.destroy(NUM, A.data());
     em.flushNotifications();
     em.advanceEpoch();
-    em.reclaimSafeEpochs(); // A is recycled
+    em.reclaimSafeEpochs(); // Blocked by pinWatermark!
+
+    // Logical death is immediate, yet getEntity(index) still reinflates A[0]'s generation while
+    // A[0] is protected in EBR purgatory!
+    EXPECT_FALSE(em.isAlive(A[0]));
+    EXPECT_FALSE(em.getAliveEntities()[firstIndex]);
+    EXPECT_EQ(em.getEntity(firstIndex), A[0]);
+
+    // Release EBR watermark so A's indices are reclaimed and their generations increment.
+    em.unregisterWatermark(&pinWatermark);
 
     std::vector<Entity> B(NUM);
     em.create(NUM, B.data());
-    // The first element of B inherits A[0]'s index but has generation 1
-    EXPECT_EQ(EntityManagerImpl::getIndex(B[0]), 1);
-    EXPECT_EQ(EntityManagerImpl::getGeneration(B[0]), 1);
+    // The first element of B inherits A[0]'s 17-bit index with generation 1.
+    EXPECT_EQ(EntityManagerImpl::getIndex(B[0]), firstIndex);
+    EXPECT_EQ(EntityManagerImpl::getGeneration(B[0]), 1u);
+    EXPECT_NE(B[0], A[0]);
+    EXPECT_EQ(em.getEntity(firstIndex), B[0]);
+    EXPECT_TRUE(em.isAlive(B[0]));
+    EXPECT_FALSE(em.isAlive(A[0]));
 
     PagedArenaBitset alive = em.getAliveEntities();
-
-    EXPECT_TRUE(alive[B[0].getId()]);
-    EXPECT_FALSE(alive[firstId]);
+    EXPECT_TRUE(alive[firstIndex]);
 
     em.destroy(NUM, B.data());
 }
@@ -782,15 +805,15 @@ TEST(EntityTest, ComponentManager_CatchupGarbageExtractsDeadEntities) {
     cm.catchupGarbage();
 
     // A remains in mEntities and the EBR watermark is held at 0 until A is physically evicted.
-    EXPECT_TRUE(cm.getEntities()[A.getId()]);
-    EXPECT_TRUE(cm.getEntities()[B.getId()]);
-    EXPECT_TRUE(cm.getPendingDestruction()[A.getId()]);
+    EXPECT_TRUE(cm.getEntities()[EntityManager::getIndex(A)]);
+    EXPECT_TRUE(cm.getEntities()[EntityManager::getIndex(B)]);
+    EXPECT_TRUE(cm.getPendingDestruction()[EntityManager::getIndex(A)]);
     EXPECT_EQ(cm.getWatermark(), 0u);
 
     cm.gc(&cm, &TestManager::removeComponent);
 
-    EXPECT_FALSE(cm.getEntities()[A.getId()]);
-    EXPECT_TRUE(cm.getEntities()[B.getId()]);
+    EXPECT_FALSE(cm.getEntities()[EntityManager::getIndex(A)]);
+    EXPECT_TRUE(cm.getEntities()[EntityManager::getIndex(B)]);
     EXPECT_TRUE(cm.getPendingDestruction().empty());
     EXPECT_EQ(cm.getWatermark(), em.getLatestEpochID() - 1);
 
@@ -1056,16 +1079,16 @@ TEST(EntityTest, GetAliveEntitiesOutParam) {
     EXPECT_EQ(out.size(), 4u);
     EXPECT_FALSE(out[9999u]);
     for (Entity const e : entities) {
-        EXPECT_TRUE(out[e.getId()]);
+        EXPECT_TRUE(out[EntityManager::getIndex(e)]);
     }
 
     em.destroy(entities[1]);
     em.getAliveEntities(out);
     EXPECT_EQ(out.size(), 3u);
-    EXPECT_TRUE(out[entities[0].getId()]);
-    EXPECT_FALSE(out[entities[1].getId()]);
-    EXPECT_TRUE(out[entities[2].getId()]);
-    EXPECT_TRUE(out[entities[3].getId()]);
+    EXPECT_TRUE(out[EntityManager::getIndex(entities[0])]);
+    EXPECT_FALSE(out[EntityManager::getIndex(entities[1])]);
+    EXPECT_TRUE(out[EntityManager::getIndex(entities[2])]);
+    EXPECT_TRUE(out[EntityManager::getIndex(entities[3])]);
 
     em.destroy(entities[0]);
     em.destroy(entities[2]);
@@ -1202,7 +1225,7 @@ TEST(EntityTest, ComponentManager_ExplicitRemoveClearsPendingAndAdvancesWatermar
     em.advanceEpoch(); // Seals deadEntity in Epoch 1
 
     cm.catchupGarbage();
-    EXPECT_TRUE(cm.getPendingDestruction()[deadEntity.getId()]);
+    EXPECT_TRUE(cm.getPendingDestruction()[EntityManager::getIndex(deadEntity)]);
     EXPECT_EQ(cm.getWatermark(), 0u);
 
     // Explicitly removing the pending component clears mPendingDestruction and advances watermark.
@@ -1301,6 +1324,62 @@ TEST(EntityTest, ComponentManager_CascadingDestroyDuringGcDoesNotCorruptPendingB
         EXPECT_TRUE(cm2.getPendingDestruction().empty());
         EXPECT_EQ(cm2.getWatermark(), 1u);
     }
+}
+
+TEST(EntityTest, ComponentManager_CatchupCurrentGarbageHarvestsUnsealedEpoch) {
+    EntityManagerImpl em;
+    struct EmptyManager : public SingleInstanceComponentManager<> {
+        explicit EmptyManager(EntityManager& em) noexcept
+                : SingleInstanceComponentManager<>(em, "EmptyManager", false) {}
+        using SingleInstanceComponentManager<>::catchupCurrentGarbage;
+        using SingleInstanceComponentManager<>::gc;
+        PagedArenaBitset const& getPendingDestruction() const noexcept {
+            return mPendingDestruction;
+        }
+    };
+
+    EmptyManager cm(em);
+
+    // Advance once so current sealed fence is 1 and active unsealed epoch is 2.
+    em.advanceEpoch();
+
+    Entity const e1 = em.create();
+    Entity const e2 = em.create();
+    Entity const unrelated = em.create();
+    cm.addComponent(e1);
+    cm.addComponent(e2);
+
+    // Destroy e1 and unrelated without calling advanceEpoch() (unsealed active epoch).
+    em.destroy(e1);
+    em.destroy(unrelated);
+
+    // Normal gc() only inspects sealed epochs, so e1 remains until catchupCurrentGarbage().
+    cm.gc(&cm, &EmptyManager::removeComponents);
+    EXPECT_TRUE(cm.hasComponent(e1));
+    EXPECT_EQ(cm.getWatermark(), 1u);
+
+    // catchupCurrentGarbage() flushes mDirtyEntities and intersects the active unsealed epoch
+    // WITHOUT advancing the EBR watermark past the last sealed fence.
+    cm.catchupCurrentGarbage();
+    EXPECT_EQ(cm.getPendingDestruction().size(), 1u);
+    EXPECT_TRUE(cm.getPendingDestruction()[EntityManager::getIndex(e1)]);
+    EXPECT_EQ(cm.getWatermark(), 1u);
+
+    // Subsequent gc() drains e1 while keeping e2 intact and watermark at sealed fence 1.
+    cm.gc(&cm, &EmptyManager::removeComponents);
+    EXPECT_FALSE(cm.hasComponent(e1));
+    EXPECT_TRUE(cm.hasComponent(e2));
+    EXPECT_TRUE(cm.getPendingDestruction().empty());
+    EXPECT_EQ(cm.getWatermark(), 1u);
+
+    // Sealing the epoch later must be idempotent (e1 was already evicted).
+    em.advanceEpoch();
+    cm.gc(&cm, &EmptyManager::removeComponents);
+    EXPECT_EQ(cm.getComponentCount(), 1u);
+    EXPECT_EQ(cm.getWatermark(), 2u);
+
+    cm.removeComponent(e2);
+    em.destroy(e2);
 }
 
 

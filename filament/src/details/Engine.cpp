@@ -830,6 +830,9 @@ void FEngine::gc() {
     mTransformManager.gc();
     mCameraManager.gc(*this);
     mRenderableManager.gc(getDriverApi());
+    mScenes.forEach([](FScene* scene) {
+        scene->gc();
+    });
 
     // Because the managers just drained their pending destructions and updated their watermarks
     // to the latest harvested epoch, advanceEpoch() will see the highest possible safe threshold,
