@@ -536,7 +536,8 @@ void gui(Engine* engine, View*) {
                         ImGui::SliderFloat("IOR##iridescenceIor", &params.iridescenceIor, 1.0f, 3.0f);
                         ImGui::SliderFloat("Thickness##iridescenceThickness",
                                 &params.iridescenceThickness, 0.0f, 2000.0f);
-                        ImGui::SliderFloat("Retroreflection", &params.retroreflection, 0.0f, 1.0f);
+                        ImGui::SeparatorText("Retroreflection");
+                        ImGui::SliderFloat("Weight##retroreflectionWeight", &params.retroreflection, 0.0f, 1.0f);
                     }
                     ImGui::SeparatorText("Clear Coat Layer");
                     ImGui::SliderFloat("Weight##clearCoatWeight", &params.clearCoat, 0.0f, 1.0f);
