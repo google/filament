@@ -25,6 +25,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 
+import com.google.android.filament.proguard.UsedByNative;
+
 /**
  * A Scene is a flat container of Renderable and Light instances.
  *
@@ -63,6 +65,7 @@ public class Scene {
 
     @FunctionalInterface
     public interface ForEachCallback {
+        @UsedByNative("Scene.cpp")
         void accept(@Entity int entity);
     }
 

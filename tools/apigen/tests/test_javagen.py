@@ -167,8 +167,9 @@ class TestJavaGen(unittest.TestCase):
             # Invariants
             self.assertNotIn("mNativeObject", java_src)
             self.assertNotIn("getNativeObject()", java_src)
-            self.assertIn("private float mCenterX;", java_src)
-            self.assertIn("private float mHalfExtentX;", java_src)
+            self.assertIn("import com.google.android.filament.proguard.UsedByNative;", java_src)
+            self.assertIn('@UsedByNative("RenderableManager.cpp")\n    private float mCenterX;', java_src)
+            self.assertIn('@UsedByNative("RenderableManager.cpp")\n    private float mHalfExtentX;', java_src)
             self.assertIn("public void setCenter(float centerX, float centerY, float centerZ)", java_src)
             self.assertIn("public void setCenter(@NonNull @Size(min = 3) float[] center)", java_src)
             self.assertIn("public float[] getCenter(@Nullable @Size(min = 3) float[] out)", java_src)
@@ -3793,6 +3794,30 @@ class TestJavaGen(unittest.TestCase):
             self.assertFalse(res.is_clean)
             err_cats = [e.category for e in res.errors]
             self.assertIn("reflection", err_cats)
+
+            # Case 4: Reflection GetFieldID / GetMethodID missing @UsedByNative
+            (j_dir / "TestUsedByNative.java").write_text(
+                "package com.google.android.filament;\n"
+                "public class TestUsedByNative {\n"
+                "    public int unannotatedField;\n"
+                "    public void unannotatedMethod() {}\n"
+                "}\n"
+            )
+            (c_dir / "TestUsedByNative.cpp").write_text(
+                '#include <jni.h>\n'
+                'void test(JNIEnv* env) {\n'
+                '    jclass clazz = env->FindClass("com/google/android/filament/TestUsedByNative");\n'
+                '    env->GetFieldID(clazz, "unannotatedField", "I");\n'
+                '    env->GetMethodID(clazz, "unannotatedMethod", "()V");\n'
+                '}\n'
+            )
+            val = BindingValidator(tmp_path / "java", c_dir, target_classes={"TestUsedByNative"})
+            res = val.run()
+            self.assertFalse(res.is_clean)
+            err_msgs = "\n".join(e.message for e in res.errors)
+            self.assertIn("unannotatedField", err_msgs)
+            self.assertIn("unannotatedMethod", err_msgs)
+            self.assertIn("missing @UsedByNative", err_msgs)
 
     def test_generic_standalone_pojo_struct_getter(self):
         """Verify standalone zero-argument POJO struct getters generate cached fields, lazy getters, and skip JNI."""
