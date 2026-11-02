@@ -29,6 +29,7 @@
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
 #include "details/Renderer.h"
+#include "details/SkinningBuffer.h"
 #include "details/View.h"
 
 #include <private/filament/BufferInterfaceBlock.h>
@@ -211,18 +212,106 @@ TEST(FilamentTest, SkinningMath) {
 
 
     std::default_random_engine generator(82828); // NOLINT
-    std::uniform_real_distribution<float> const distribution(-4, 4);
-    std::uniform_real_distribution dangle(-f::TAU, f::TAU);
-    auto rand_gen = std::bind(distribution, generator);
+    std::uniform_real_distribution<float> distribution(-4.0f, 4.0f);
+    std::uniform_real_distribution<float> scale_dist(0.5f, 4.0f);
+    std::uniform_real_distribution<float> dangle(-f::TAU, f::TAU);
+    auto rand_gen = [&]() { return distribution(generator); };
+    auto rand_scale = [&]() {
+        float const s = scale_dist(generator);
+        return rand_gen() < 0.0f ? -s : s;
+    };
 
     for (size_t i = 0; i < 100; ++i) {
+        float3 axis{ rand_gen(), rand_gen(), rand_gen() };
+        if (length(axis) < 1e-3f) {
+            axis = float3{ 0.0f, 1.0f, 0.0f };
+        }
         m =
-                mat4f::translation(float3{rand_gen(), rand_gen(), rand_gen()}) *
-                mat4f::rotation(dangle(generator), normalize(float3{rand_gen(), rand_gen(), rand_gen()})) *
-                mat4f::scaling(float3{rand_gen(), rand_gen(), rand_gen()});
+                mat4f::translation(float3{ rand_gen(), rand_gen(), rand_gen() }) *
+                mat4f::rotation(dangle(generator), normalize(axis)) *
+                mat4f::scaling(float3{ rand_scale(), rand_scale(), rand_scale() });
         check(m, v);
     }
 }
+
+namespace filament {
+
+TEST(FilamentTest, Bones) {
+    EXPECT_EQ(FSkinningBuffer::getPhysicalBoneCount(0), 0u);
+    EXPECT_EQ(FSkinningBuffer::getPhysicalBoneCount(1), size_t(CONFIG_MAX_BONE_COUNT));
+    EXPECT_EQ(FSkinningBuffer::getPhysicalBoneCount(CONFIG_MAX_BONE_COUNT),
+            size_t(CONFIG_MAX_BONE_COUNT));
+    EXPECT_EQ(FSkinningBuffer::getPhysicalBoneCount(CONFIG_MAX_BONE_COUNT + 1),
+            size_t(2 * CONFIG_MAX_BONE_COUNT));
+
+    auto mulBoneVertex = [](PerRenderableBoneUib::BoneData const& bone, float3 v) -> float3 {
+        mat4f const t(
+                bone.transform[0],
+                bone.transform[1],
+                bone.transform[2],
+                float4{ 0.0f, 0.0f, 0.0f, 1.0f });
+        mat4f const m = transpose(t);
+        return v.x * m[0].xyz + (v.y * m[1].xyz + (v.z * m[2].xyz + m[3].xyz));
+    };
+
+    auto mulBoneNormal = [](PerRenderableBoneUib::BoneData const& bone, float3 n) -> float3 {
+        float const a = bone.transform[0][0];
+        float const b = bone.transform[0][1];
+        float const c = bone.transform[0][2];
+        float const d = bone.transform[1][0];
+        float const e = bone.transform[1][1];
+        float const f = bone.transform[1][2];
+        float const g = bone.transform[2][0];
+        float const h = bone.transform[2][1];
+        float const i = bone.transform[2][2];
+
+        mat3f cof;
+        cof[0] = bone.cof0;
+        cof[1] = float3{ bone.cof1x, a * i - c * g, c * d - a * f };
+        cof[2] = float3{ d * h - e * g, b * g - a * h, a * e - b * d };
+        return normalize(cof * n);
+    };
+
+    std::default_random_engine generator(82828); // NOLINT
+    std::uniform_real_distribution<float> distribution(-4.0f, 4.0f);
+    std::uniform_real_distribution<float> scale_dist(0.5f, 4.0f);
+    std::uniform_real_distribution<float> dangle(-f::TAU, f::TAU);
+    auto rand_gen = [&]() { return distribution(generator); };
+    auto rand_scale = [&]() {
+        float const s = scale_dist(generator);
+        return rand_gen() < 0.0f ? -s : s;
+    };
+
+    constexpr float3 v = { 1.0f, 2.0f, 3.0f };
+    float3 const n = normalize(float3{ 1.0f, -2.0f, 0.5f });
+
+    for (size_t i = 0; i < 100; ++i) {
+        float3 axis{ rand_gen(), rand_gen(), rand_gen() };
+        if (length(axis) < 1e-3f) {
+            axis = float3{ 0.0f, 1.0f, 0.0f };
+        }
+        mat4f const m =
+                mat4f::translation(float3{ rand_gen(), rand_gen(), rand_gen() }) *
+                mat4f::rotation(dangle(generator), normalize(axis)) *
+                mat4f::scaling(float3{ rand_scale(), rand_scale(), rand_scale() });
+
+        PerRenderableBoneUib::BoneData const bone = FSkinningBuffer::makeBone(m);
+
+        float3 const expectedPos = (m * float4{ v, 1.0f }).xyz;
+        float3 const actualPos = mulBoneVertex(bone, v);
+        EXPECT_NEAR(expectedPos.x, actualPos.x, 1e-5f);
+        EXPECT_NEAR(expectedPos.y, actualPos.y, 1e-5f);
+        EXPECT_NEAR(expectedPos.z, actualPos.z, 1e-5f);
+
+        float3 const expectedNormal = normalize(cof(m.upperLeft()) * n);
+        float3 const actualNormal = mulBoneNormal(bone, n);
+        EXPECT_NEAR(expectedNormal.x, actualNormal.x, 1e-5f);
+        EXPECT_NEAR(expectedNormal.y, actualNormal.y, 1e-5f);
+        EXPECT_NEAR(expectedNormal.z, actualNormal.z, 1e-5f);
+    }
+}
+
+} // namespace filament
 
 TEST(FilamentTest, TransformManagerSimple) {
     EntityManager& em = EntityManager::get();
@@ -315,7 +404,9 @@ TEST(FilamentTest, TransformManager) {
         c++;
     }
 
-    EXPECT_EQ(tcm.getChildrenEnd(parent)++, tcm.getChildrenEnd(parent));
+    auto endIt = tcm.getChildrenEnd(parent);
+    EXPECT_EQ(endIt++, tcm.getChildrenEnd(parent));
+    EXPECT_EQ(endIt, tcm.getChildrenEnd(parent));
     EXPECT_EQ(tcm.getChildrenBegin(parent), tcm.getChildrenEnd(parent));
     EXPECT_EQ(c, tcm.getChildCount(newParent));
 
@@ -1644,6 +1735,9 @@ TEST(FilamentTest, UniformBuffer) {
         EXPECT_EQ(-5.0f, data->u[1].v);
         EXPECT_EQ(-7.0f, data->u[2].v);
         EXPECT_EQ(23.0f, data->f8);
+        EXPECT_EQ((float3{ 10, 20, 30 }), data->m0[0].xyz);
+        EXPECT_EQ((float3{ 40, 50, 60 }), data->m0[1].xyz);
+        EXPECT_EQ((float3{ 70, 80, 90 }), data->m0[2].xyz);
         EXPECT_EQ((mat4f{100, 200, 300, 0, 400, 500, 600, 0, 700, 800, 900, 0, 0, 0, 0, 1}), data->m1);
     };
 
@@ -1709,20 +1803,24 @@ TEST(FilamentTest, UniformBuffer) {
     buffer.setUniform(offsetof(ubo, m1), mat4f{100,200,300,0, 400,500,600,0, 700,800,900,0, 0,0,0,1 });
 
     CHECK(data);
+    EXPECT_EQ((mat3f{ 10, 20, 30, 40, 50, 60, 70, 80, 90 }),
+            buffer.getUniform<mat3f>(offsetof(ubo, m0)));
 
-    ubo copy(*data);
-    CHECK(data);
-    CHECK(&copy);
+    UniformBuffer copy(sizeof(ubo));
+    copy.setUniforms(buffer);
+    CHECK(static_cast<ubo const*>(buffer.getBuffer()));
+    CHECK(static_cast<ubo const*>(copy.getBuffer()));
 
-    ubo move(copy);
-    CHECK(&move);
+    UniformBuffer moved(std::move(copy));
+    CHECK(static_cast<ubo const*>(moved.getBuffer()));
 
-    copy = *data;
-    CHECK(data);
-    CHECK(&copy);
+    UniformBuffer copyAssigned(sizeof(ubo));
+    copyAssigned.setUniforms(buffer);
+    CHECK(static_cast<ubo const*>(copyAssigned.getBuffer()));
 
-    move = copy;
-    CHECK(&move);
+    UniformBuffer moveAssigned(16);
+    moveAssigned = std::move(copyAssigned);
+    CHECK(static_cast<ubo const*>(moveAssigned.getBuffer()));
 }
 
 TEST(FilamentTest, UniformBufferSize1) {
@@ -1735,17 +1833,29 @@ TEST(FilamentTest, UniformBufferSize1) {
             { "f1b", 0, BufferInterfaceBlock::Type::FLOAT },  // offset = 36
     });
     BufferInterfaceBlock uib(b.build());
+    EXPECT_EQ(48u, uib.getSize());
     UniformBuffer buffer(uib.getSize());
+    buffer.clean();
+    EXPECT_FALSE(buffer.isDirty());
 
-    float4 f4(1.0f);
+    float4 f4(1.0f, 2.0f, 3.0f, 4.0f);
     ssize_t f4_offset = uib.getFieldOffset("f4a", 0);
+    EXPECT_EQ(0, f4_offset);
     buffer.setUniformArray(f4_offset, &f4, 1);
 
-    float f1(1.0f);
+    float f1(5.0f);
     ssize_t f1_offset = uib.getFieldOffset("f1b", 0);
+    EXPECT_EQ(36, f1_offset);
     buffer.setUniformArray(f1_offset, &f1, 1);
 
+    EXPECT_TRUE(buffer.isDirty());
+    EXPECT_EQ(f4, buffer.getUniform<float4>(f4_offset));
+    EXPECT_EQ(f1, buffer.getUniform<float>(f1_offset));
+
+    buffer.clean();
+    EXPECT_FALSE(buffer.isDirty());
     buffer.invalidate();
+    EXPECT_TRUE(buffer.isDirty());
 }
 
 TEST(FilamentTest, UniformBufferSize2) {
@@ -1755,20 +1865,32 @@ TEST(FilamentTest, UniformBufferSize2) {
             { "f4a", 0, BufferInterfaceBlock::Type::FLOAT4 }, // offset = 0
             { "f4b", 0, BufferInterfaceBlock::Type::FLOAT4 }, // offset = 16
             { "f1a", 0, BufferInterfaceBlock::Type::FLOAT },  // offset = 32
-            { "f2a", 0, BufferInterfaceBlock::Type::FLOAT2 }, // offset = 36
+            { "f2a", 0, BufferInterfaceBlock::Type::FLOAT2 }, // offset = 40 (8-byte aligned)
     });
     BufferInterfaceBlock uib(b.build());
+    EXPECT_EQ(48u, uib.getSize());
     UniformBuffer buffer(uib.getSize());
+    buffer.clean();
+    EXPECT_FALSE(buffer.isDirty());
 
-    float4 f4(1.0f);
+    float4 f4(1.0f, 2.0f, 3.0f, 4.0f);
     ssize_t f4_offset = uib.getFieldOffset("f4a", 0);
+    EXPECT_EQ(0, f4_offset);
     buffer.setUniformArray(f4_offset, &f4, 1);
 
-    float2 f2(1.0f);
+    float2 f2(5.0f, 6.0f);
     ssize_t f2_offset = uib.getFieldOffset("f2a", 0);
+    EXPECT_EQ(40, f2_offset);
     buffer.setUniformArray(f2_offset, &f2, 1);
 
+    EXPECT_TRUE(buffer.isDirty());
+    EXPECT_EQ(f4, buffer.getUniform<float4>(f4_offset));
+    EXPECT_EQ(f2, buffer.getUniform<float2>(f2_offset));
+
+    buffer.clean();
+    EXPECT_FALSE(buffer.isDirty());
     buffer.invalidate();
+    EXPECT_TRUE(buffer.isDirty());
 }
 
 TEST(FilamentTest, BufferInterfaceBlockRejectsOffsetWrap) {
@@ -1901,8 +2023,6 @@ TEST(FilamentTest, BoxCulling) {
     EXPECT_TRUE( frustum.intersects(box.translateTo({  10,  10, -10 })) );
     EXPECT_TRUE( frustum.intersects(box.translateTo({  10, -10, -10 })) );
     EXPECT_TRUE( frustum.intersects(box.translateTo({ -10,  10, -10 })) );
-    EXPECT_TRUE( frustum.intersects(box.translateTo({ -10,  10, -10 })) );
-    EXPECT_TRUE( frustum.intersects(box.translateTo({  10, -10, -10 })) );
 
     // box outside frustum planes
     EXPECT_FALSE( frustum.intersects(box.translateTo({ 0,     0,    0})) );
@@ -1944,8 +2064,6 @@ TEST(FilamentTest, SphereCulling) {
     EXPECT_TRUE( frustum.intersects(sphere + float4{ 10, 10, -10, 0 }) );
     EXPECT_TRUE( frustum.intersects(sphere + float4{ 10, -10, -10, 0 }) );
     EXPECT_TRUE( frustum.intersects(sphere + float4{ -10, 10, -10, 0 }) );
-    EXPECT_TRUE( frustum.intersects(sphere + float4{ -10, 10, -10, 0 }) );
-    EXPECT_TRUE( frustum.intersects(sphere + float4{ 10, -10, -10, 0 }) );
 
     // sphere outside frustum planes
     EXPECT_FALSE( frustum.intersects(sphere + float4{ 0, 0, 0, 0}) );
@@ -1955,8 +2073,8 @@ TEST(FilamentTest, SphereCulling) {
     // slightly inside the frustum
     EXPECT_TRUE( frustum.intersects(sphere + float4{ -100, 0, -100, 0}) );
 
-    // A sphere that entirely contain the frustum
-    EXPECT_TRUE(frustum.intersects({ 0, 200 }));
+    // A sphere that entirely contains the frustum
+    EXPECT_TRUE(frustum.intersects(float4{ 0, 0, 0, 200 }));
 }
 
 TEST(FilamentTest, ColorConversion) {
@@ -1977,6 +2095,12 @@ TEST(FilamentTest, ColorConversion) {
 
     EXPECT_LT((sRGBColor{0.5f, 0.0f, 0.0f}.x), Color::toSRGB<ACCURATE>({0.5f, 0.0f, 0.0f}).x);
 
+    // sRGB(0.5): 1.055 * 0.5^(1/2.4) - 0.055 = 0.735356983
+    EXPECT_NEAR(0.735357f, Color::toSRGB<ACCURATE>({0.5f, 0.0f, 0.0f}).x, 1e-5f);
+    EXPECT_NEAR(0.735357f, Color::toSRGB<FAST>({0.5f, 0.0f, 0.0f}).x, 1e-2f);
+    // Linear regime (x <= 0.0031308): 12.92 * 0.001 = 0.01292
+    EXPECT_NEAR(0.01292f, Color::toSRGB<ACCURATE>({0.001f, 0.0f, 0.0f}).x, 1e-6f);
+
     EXPECT_PRED1(isGray, Color::toSRGB<FAST>(LinearColor{0.5f}));
     EXPECT_PRED1(isGray, Color::toSRGB<ACCURATE>(LinearColor{0.5f}));
 
@@ -1995,6 +2119,19 @@ TEST(FilamentTest, ColorConversion) {
     EXPECT_GT((LinearColor{0.5f, 0.0f, 0.0f}.x), Color::toLinear<FAST>({0.5f, 0.0f, 0.0f}).x);
 
     EXPECT_GT((LinearColor{0.5f, 0.0f, 0.0f}.x), Color::toLinear<ACCURATE>({0.5f, 0.0f, 0.0f}).x);
+
+    // Linear(0.5): ((0.5 + 0.055) / 1.055)^2.4 = 0.21404114
+    EXPECT_NEAR(0.2140411f, Color::toLinear<ACCURATE>({0.5f, 0.0f, 0.0f}).x, 1e-5f);
+    EXPECT_NEAR(0.2140411f, Color::toLinear<FAST>({0.5f, 0.0f, 0.0f}).x, 1e-2f);
+    // Linear regime (x <= 0.04045): 0.01292 / 12.92 = 0.001
+    EXPECT_NEAR(0.001f, Color::toLinear<ACCURATE>({0.01292f, 0.0f, 0.0f}).x, 1e-6f);
+
+    // Round-trip accuracy
+    LinearColor const orig{ 0.1f, 0.5f, 0.8f };
+    LinearColor const roundTrip = Color::toLinear<ACCURATE>(Color::toSRGB<ACCURATE>(orig));
+    EXPECT_NEAR(orig.r, roundTrip.r, 1e-6f);
+    EXPECT_NEAR(orig.g, roundTrip.g, 1e-6f);
+    EXPECT_NEAR(orig.b, roundTrip.b, 1e-6f);
 
     EXPECT_PRED1(isGray, Color::toLinear<FAST>(sRGBColor{0.5f}));
     EXPECT_PRED1(isGray, Color::toLinear<ACCURATE>(sRGBColor{0.5f}));
@@ -2240,7 +2377,7 @@ TEST(FilamentTest, ColorGradingNeonValidation) {
 
     struct LutData {
         std::vector<uint32_t> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat format,
@@ -2266,6 +2403,8 @@ TEST(FilamentTest, ColorGradingNeonValidation) {
             .build(*engine);
 
     // 3. Verify Metadata and Pixels
+    ASSERT_GT(neonLut.width, 0u);
+    ASSERT_FALSE(neonLut.pixels.empty());
     ASSERT_EQ(neonLut.width, scalarLut.width);
     ASSERT_EQ(neonLut.pixels.size(), scalarLut.pixels.size());
 
@@ -2294,7 +2433,7 @@ TEST(FilamentTest, ColorGradingMediumNeonValidation) {
 
     struct LutData {
         std::vector<uint32_t> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat format,
@@ -2338,6 +2477,8 @@ TEST(FilamentTest, ColorGradingMediumNeonValidation) {
             .build(*engine);
 
     // 3. Verify Metadata and Pixels
+    ASSERT_GT(neonLut.width, 0u);
+    ASSERT_FALSE(neonLut.pixels.empty());
     ASSERT_EQ(neonLut.width, scalarLut.width);
     ASSERT_EQ(neonLut.pixels.size(), scalarLut.pixels.size());
 
@@ -2367,7 +2508,7 @@ TEST(FilamentTest, ColorGradingNeonLinearValidation) {
 
     struct LutData {
         std::vector<uint32_t> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat format,
@@ -2395,6 +2536,8 @@ TEST(FilamentTest, ColorGradingNeonLinearValidation) {
             .build(*engine);
 
     // 3. Verify Metadata and Pixels
+    ASSERT_GT(neonLut.width, 0u);
+    ASSERT_FALSE(neonLut.pixels.empty());
     ASSERT_EQ(neonLut.width, scalarLut.width);
     ASSERT_EQ(neonLut.pixels.size(), scalarLut.pixels.size());
 
@@ -2422,7 +2565,7 @@ TEST(FilamentTest, ColorGradingMediumNeonLinearValidation) {
 
     struct LutData {
         std::vector<uint32_t> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat format,
@@ -2468,6 +2611,8 @@ TEST(FilamentTest, ColorGradingMediumNeonLinearValidation) {
             .build(*engine);
 
     // 3. Verify Metadata and Pixels
+    ASSERT_GT(neonLut.width, 0u);
+    ASSERT_FALSE(neonLut.pixels.empty());
     ASSERT_EQ(neonLut.width, scalarLut.width);
     ASSERT_EQ(neonLut.pixels.size(), scalarLut.pixels.size());
 
@@ -2495,7 +2640,7 @@ TEST(FilamentTest, ColorGradingAdvancedNeonValidation) {
 
     struct LutData {
         std::vector<uint32_t> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat format,
@@ -2531,6 +2676,8 @@ TEST(FilamentTest, ColorGradingAdvancedNeonValidation) {
             .build(*engine);
 
     // 3. Verify Metadata and Pixels
+    ASSERT_GT(neonLut.width, 0u);
+    ASSERT_FALSE(neonLut.pixels.empty());
     ASSERT_EQ(neonLut.width, scalarLut.width);
     ASSERT_EQ(neonLut.pixels.size(), scalarLut.pixels.size());
 
@@ -2557,12 +2704,12 @@ TEST(FilamentTest, ColorGradingHalfNeonValidation) {
 
     struct LutDataHalf {
         std::vector<half> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     struct LutDataInt {
         std::vector<uint32_t> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     auto exporterHalf = [](void const* data, size_t const size, backend::PixelDataFormat format,
@@ -2620,6 +2767,8 @@ TEST(FilamentTest, ColorGradingHalfNeonValidation) {
             .exportLut(exporterInt, &scalarIntLut)
             .build(*engine);
 
+    ASSERT_GT(neonHalfLut.width, 0u);
+    ASSERT_FALSE(neonHalfLut.pixels.empty());
     ASSERT_EQ(neonHalfLut.width, scalarHalfLut.width);
     ASSERT_EQ(neonHalfLut.pixels.size(), scalarHalfLut.pixels.size());
     ASSERT_EQ(neonHalfLut.pixels.size() / 4, neonIntLut.pixels.size());
@@ -2710,11 +2859,6 @@ TEST(FilamentTest, ColorGradingHalfNeonValidation) {
 }
 
 TEST(FilamentTest, ToneMapperNeonValidation) {
-    Engine* engine = Engine::Builder()
-            .backend(Engine::Backend::NOOP)
-            .feature("engine.color_grading.use_optimized_default_builder", true)
-            .build();
-
     std::vector<ToneMapper*> toneMappers;
     toneMappers.push_back(new LinearToneMapper());
     toneMappers.push_back(new ACESToneMapper());
@@ -2823,8 +2967,6 @@ TEST(FilamentTest, ToneMapperNeonValidation) {
         delete tm;
     }
     std::cout << "====================================================================\n\n";
-
-    Engine::destroy((Engine**)&engine);
 }
 #endif
 

@@ -280,33 +280,43 @@ TEST(PagedArenaBitsetTest, IntersectMulti) {
 
 TEST(PagedArenaBitsetTest, IntersectMultiEmpty) {
     PagedArenaBitset bs1;
-    PagedArenaBitset const bs2;
+    PagedArenaBitset bs2;
+    PagedArenaBitset const bs3;
 
     bs1.add(1);
+    bs2.add(1);
 
-    PagedArenaBitset const res = PagedArenaBitset::intersect(bs1, bs2);
+    // Pass 3 operands so the variadic multi-way intersectInternal overload is exercised.
+    PagedArenaBitset const res = PagedArenaBitset::intersect(bs1, bs2, bs3);
     EXPECT_TRUE(res.empty());
 }
 
 TEST(PagedArenaBitsetTest, Defragment) {
     PagedArenaBitset bs;
-    bs.add(10); // Page 0
-    bs.add(5000); // Page 1 (since 5000 > 4096!)
+    bs.add(10);   // Page 0 (dirIdx 0)
+    bs.add(4103); // Page 1 (dirIdx 1, offset 7)
+    bs.add(8199); // Page 2 (dirIdx 2, offset 7)
+
+    EXPECT_EQ(bs.size(), 3);
+
+    // Remove all bits from page 1 so dirIdx 1 becomes a ghost page between page 0 and page 2.
+    bs.remove(4103);
 
     EXPECT_EQ(bs.size(), 2);
 
-    // Remove bits from page 1!
-    bs.remove(5000);
-
-    EXPECT_EQ(bs.size(), 1);
-
-    // Now page 1 is a ghost page!
-    // Let's defragment!
+    // Defragment drops ghost page 1 and relocates page 2 from physical index 2 to physical index 1.
     bs.defragment();
 
-    EXPECT_EQ(bs.size(), 1);
+    EXPECT_EQ(bs.size(), 2);
     EXPECT_TRUE(bs[10]);
-    EXPECT_FALSE(bs[5000]);
+    EXPECT_FALSE(bs[4103]);
+    EXPECT_TRUE(bs[8199]);
+
+    std::vector<uint32_t> extracted;
+    bs.extractTo(extracted);
+    ASSERT_EQ(extracted.size(), 2u);
+    EXPECT_EQ(extracted[0], 10u);
+    EXPECT_EQ(extracted[1], 8199u);
 }
 
 TEST(PagedArenaBitsetTest, LargeIndices) {
@@ -835,17 +845,29 @@ TEST(PagedArenaBitsetTest, DefragmentEdgeCases) {
     EXPECT_TRUE(emptyBs.empty());
 
     PagedArenaBitset bs;
-    bs.add(10);    // Page 0
-    bs.add(5000);  // Page 1
-    bs.add(10000); // Page 2
+    bs.add(10);    // Page 0 (dirIdx 0)
+    bs.add(4105);  // Page 1 (dirIdx 1, offset 9)
+    bs.add(8201);  // Page 2 (dirIdx 2, offset 9)
+    bs.add(12297); // Page 3 (dirIdx 3, offset 9)
 
-    bs.remove(5000);  // Page 1 ghost
-    bs.remove(10000); // Page 2 ghost
+    bs.remove(4105); // Page 1 ghost
+    bs.remove(8201); // Page 2 ghost
 
-    // Defragmenting multiple consecutive ghosts
+    // Defragmenting multiple consecutive ghosts before an active higher page
     bs.defragment();
-    EXPECT_EQ(bs.size(), 1);
+    EXPECT_EQ(bs.size(), 2);
     EXPECT_TRUE(bs[10]);
+    EXPECT_FALSE(bs[4105]);
+    EXPECT_FALSE(bs[8201]);
+    EXPECT_TRUE(bs[12297]);
+
+    // Re-allocating page 1 after defragmentation must not alias page 3
+    bs.add(4100);
+    EXPECT_EQ(bs.size(), 3);
+    EXPECT_TRUE(bs[10]);
+    EXPECT_TRUE(bs[4100]);
+    EXPECT_FALSE(bs[4105]);
+    EXPECT_TRUE(bs[12297]);
 }
 
 TEST(PagedArenaBitsetTest, ExchangeAndSelfMove) {

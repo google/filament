@@ -20,6 +20,8 @@
 
 #include <gtest/gtest.h>
 
+#include <cstddef>
+#include <new>
 #include <thread>
 #include <vector>
 
@@ -35,6 +37,10 @@ TEST(MutexTest, BasicLockUnlock) {
 
     {
         LockGuard const guard(mLock);
+        std::thread t([&mLock]() {
+            EXPECT_FALSE(mLock.try_lock());
+        });
+        t.join();
     }
 
     {
@@ -44,15 +50,15 @@ TEST(MutexTest, BasicLockUnlock) {
     }
 }
 
-TEST(DebugMutexTest, SelfDeadlock) {
 #ifdef GTEST_HAS_DEATH_TEST
+TEST(DebugMutexTest, SelfDeadlock) {
     EXPECT_DEATH({
         debug::Mutex mLock;
         mLock.lock();
         mLock.lock();
     }, "Self-Deadlock / Recursive Lock Detected");
-#endif
 }
+#endif
 
 TEST(DebugMutexTest, ValidOrderNoCycle) {
     debug::Mutex A;
@@ -68,8 +74,8 @@ TEST(DebugMutexTest, ValidOrderNoCycle) {
     A.unlock();
 }
 
-TEST(DebugMutexTest, DirectOrderInversion) {
 #ifdef GTEST_HAS_DEATH_TEST
+TEST(DebugMutexTest, DirectOrderInversion) {
     EXPECT_DEATH({
         debug::Mutex A;
         debug::Mutex B;
@@ -87,11 +93,9 @@ TEST(DebugMutexTest, DirectOrderInversion) {
         });
         t.join();
     }, "Lock-Order Inversion / Potential Deadlock Detected");
-#endif
 }
 
 TEST(DebugMutexTest, TransitiveOrderInversion) {
-#ifdef GTEST_HAS_DEATH_TEST
     EXPECT_DEATH({
         debug::Mutex A;
         debug::Mutex B;
@@ -119,25 +123,29 @@ TEST(DebugMutexTest, TransitiveOrderInversion) {
         });
         t3.join();
     }, "Lock-Order Inversion / Potential Deadlock Detected");
-#endif
 }
+#endif
 
 TEST(DebugMutexTest, DestructionPointerReuse) {
     debug::Mutex B;
-    {
-        debug::Mutex A;
-        A.lock();
-        B.lock();
-        B.unlock();
-        A.unlock();
-    } // A is destroyed here, clearing edge A -> B from the graph
+    alignas(debug::Mutex) std::byte storage[sizeof(debug::Mutex)];
 
-    // Now creating a new mutex and establishing B -> A2 should not trigger a cycle
-    debug::Mutex A2;
+    auto* A = new (storage) debug::Mutex();
+    void const* const addrA = A;
+    A->lock();
     B.lock();
-    A2.lock();
-    A2.unlock();
     B.unlock();
+    A->unlock();
+    A->~Mutex(); // A is destroyed here, clearing edge A -> B from the graph
+
+    // Constructing A2 at the exact same address and establishing B -> A2 must not trigger a cycle.
+    auto* A2 = new (storage) debug::Mutex();
+    ASSERT_EQ(addrA, static_cast<void const*>(A2));
+    B.lock();
+    A2->lock();
+    A2->unlock();
+    B.unlock();
+    A2->~Mutex();
 }
 
 TEST(DebugMutexTest, OutOfOrderUnlock) {
@@ -151,24 +159,24 @@ TEST(DebugMutexTest, OutOfOrderUnlock) {
     B.unlock();
 }
 
-TEST(DebugMutexTest, EbrStallTimelineLockInversion) {
 #ifdef GTEST_HAS_DEATH_TEST
+TEST(DebugMutexTest, TryLockOrderInversion) {
     EXPECT_DEATH({
-        debug::Mutex mEbrEntitiesLock; // Lock A
-        debug::Mutex mTimelineLock;    // Lock B
+        debug::Mutex A;
+        debug::Mutex B;
 
-        // Trace 1 (Main Thread): removeComponentsImpl() locks A, then suspend() -> unregisterWatermark() locks B
-        mEbrEntitiesLock.lock();
-        mTimelineLock.lock();
-        mTimelineLock.unlock();
-        mEbrEntitiesLock.unlock();
+        // Thread 1 establishes A -> B order
+        A.lock();
+        EXPECT_TRUE(B.try_lock());
+        B.unlock();
+        A.unlock();
 
-        // Trace 2 (Background/Engine Thread): advanceEpoch() locks B, then getExpiredEpochsLocked() locks A
-        std::thread backgroundThread([&mTimelineLock, &mEbrEntitiesLock]() {
-            mTimelineLock.lock();
-            mEbrEntitiesLock.lock();
+        // Thread 2 attempts B -> A inversion via try_lock()
+        std::thread backgroundThread([&B, &A]() {
+            B.lock();
+            (void)A.try_lock();
         });
         backgroundThread.join();
     }, "Lock-Order Inversion / Potential Deadlock Detected");
-#endif
 }
+#endif

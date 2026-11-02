@@ -192,13 +192,15 @@ TEST(EntityTest, NameComponent) {
     i1 = cm.getInstance(entities[1]);
     EXPECT_EQ(1, i1.asValue());
     i2 = cm.getInstance(entities[2]);
-    EXPECT_EQ(0, i0.asValue());
+    EXPECT_EQ(0, i2.asValue());
 
     EXPECT_STREQ("i1", cm.getName(i1));
 
     em.destroy(8, entities);
+    em.advanceEpoch();
 
     cm.gc();
+    EXPECT_FALSE(cm.hasComponent(entities[1]));
 }
 
 TEST(EntityTest, Callback) {
@@ -413,40 +415,51 @@ TEST(EntityTest, EntityManager_ConcurrentCreateAndDestroy) {
 TEST(EntityTest, EntityManager_EBR_ConcurrentTimelineStress) {
     EntityManagerImpl em;
     std::atomic<bool> active{ true };
+    std::atomic<size_t> batchesCreated{ 0 };
+    std::atomic<size_t> epochsAdvanced{ 0 };
+    std::atomic<size_t> reclaimsRun{ 0 };
+    std::atomic<size_t> watermarkCycles{ 0 };
 
     // Thread 1: Generates garbage rapidly
-    std::thread t1([&em, &active]() {
+    std::thread t1([&em, &active, &batchesCreated]() {
         std::vector<Entity> ents(128);
         while (active.load(std::memory_order_relaxed)) {
             em.create(128, ents.data());
+            for (Entity const e : ents) {
+                EXPECT_TRUE(em.isAlive(e));
+            }
             em.destroy(128, ents.data());
+            batchesCreated.fetch_add(1, std::memory_order_relaxed);
             std::this_thread::yield();
         }
     });
 
     // Thread 2: Advances the timeline (Allocates from bitset pool)
-    std::thread t2([&em, &active]() {
+    std::thread t2([&em, &active, &epochsAdvanced]() {
         while (active.load(std::memory_order_relaxed)) {
             em.advanceEpoch();
+            epochsAdvanced.fetch_add(1, std::memory_order_relaxed);
             std::this_thread::yield();
         }
     });
 
     // Thread 3: Reclaims safe epochs (Returns to bitset pool)
-    std::thread t3([&em, &active]() {
+    std::thread t3([&em, &active, &reclaimsRun]() {
         while (active.load(std::memory_order_relaxed)) {
             em.reclaimSafeEpochs();
+            reclaimsRun.fetch_add(1, std::memory_order_relaxed);
             std::this_thread::yield();
         }
     });
 
     // Thread 4: Registers/Unregisters watermarks (Also returns to pool and moves safe threshold)
-    std::thread t4([&em, &active]() {
+    std::thread t4([&em, &active, &watermarkCycles]() {
         std::atomic<uint64_t> watermark{ 0 };
         while (active.load(std::memory_order_relaxed)) {
             em.registerWatermark(&watermark, "StressWatermark");
             watermark.store(em.getLatestEpochID(), std::memory_order_relaxed);
             em.unregisterWatermark(&watermark);
+            watermarkCycles.fetch_add(1, std::memory_order_relaxed);
             std::this_thread::yield();
         }
     });
@@ -460,9 +473,15 @@ TEST(EntityTest, EntityManager_EBR_ConcurrentTimelineStress) {
     t3.join();
     t4.join();
 
-    // Final cleanup
+    EXPECT_GT(batchesCreated.load(), 0u);
+    EXPECT_GT(epochsAdvanced.load(), 0u);
+    EXPECT_GT(reclaimsRun.load(), 0u);
+    EXPECT_GT(watermarkCycles.load(), 0u);
+
+    // Final cleanup: all destroyed entities should be reclaimed once the final epoch is sealed
     em.advanceEpoch();
     em.reclaimSafeEpochs();
+    EXPECT_EQ(em.getEntityCount(), 0u);
 }
 
 TEST(EntityTest, ComponentManager_ZombieSafelyMovedDuringDefragmentation) {
@@ -800,18 +819,29 @@ TEST(EntityTest, ComponentManager_CatchupGarbageLeapsOverCleanFrames) {
     };
 
     TestManager cm(em);
-    Entity dummy = em.create();
+    Entity const dummy = em.create();
+    Entity const blocker = em.create();
     cm.addComponent(dummy);
+    cm.addComponent(blocker);
 
-    // Loop 5 times calling em.advanceEpoch() without destroying anything
+    // Destroy blocker in epoch 1 so advanceEpoch()'s background auto-leap stops at epoch 1
+    // while blocker is still present in cm's entity bitset.
+    em.destroy(blocker);
+
+    // Seal epoch 1 (containing blocker) followed by 4 completely clean epochs (2..5).
     for (size_t i = 0; i < 5; ++i) {
         em.advanceEpoch();
     }
 
+    // Explicitly remove blocker before catchupGarbage() so all 5 missed epochs (1..5)
+    // have zero intersection with cm's current entity bitset, and watermark is still 0.
+    cm.removeComponent(blocker);
+    ASSERT_EQ(cm.getWatermark(), 0u);
+
     cm.catchupGarbage();
 
     EXPECT_TRUE(cm.getPendingDestruction().empty());
-    EXPECT_EQ(cm.getWatermark(), 5); // leaps forward to currentEpoch - 1 (which is 5)
+    EXPECT_EQ(cm.getWatermark(), 5u); // leaps forward to currentEpoch - 1 (which is 5)
 
     em.destroy(dummy);
 }
