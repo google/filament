@@ -1539,8 +1539,12 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
     auto shConfig = inputMat->sheen;
     auto vlConfig = inputMat->volume;
     auto spConfig = inputMat->specular;
+    auto rrConfig = inputMat->retroreflection;
     *baseColorTexture = mrConfig.base_color_texture;
     *metallicRoughnessTexture = mrConfig.metallic_roughness_texture;
+
+    bool const hasRetroreflection = inputMat->has_retroreflection &&
+            !inputMat->unlit && !inputMat->has_pbr_specular_glossiness;
 
     bool hasTextureTransforms =
         sgConfig.diffuse_texture.has_transform ||
@@ -1557,7 +1561,8 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
         shConfig.sheen_roughness_texture.has_transform ||
         trConfig.transmission_texture.has_transform ||
         spConfig.specular_color_texture.has_transform ||
-        spConfig.specular_texture.has_transform;
+        spConfig.specular_texture.has_transform ||
+        (hasRetroreflection && rrConfig.retroreflection_texture.has_transform);
 
     auto const clampTexCoord = [](cgltf_int texcoord) -> uint8_t {
         return uint8_t(std::clamp(texcoord, 0, cgltf_int(UvMapSize - 1)));
@@ -1600,8 +1605,12 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
         .hasSpecular = !!inputMat->has_specular,
         .hasSpecularTexture = spConfig.specular_texture.texture != nullptr,
         .hasSpecularColorTexture = spConfig.specular_color_texture.texture != nullptr,
+        .hasRetroreflection = hasRetroreflection,
         .specularTextureUV = clampTexCoord(spConfig.specular_texture.texcoord),
         .specularColorTextureUV = clampTexCoord(spConfig.specular_color_texture.texcoord),
+        .hasRetroreflectionTexture =
+                hasRetroreflection && rrConfig.retroreflection_texture.texture != nullptr,
+        .retroreflectionUV = clampTexCoord(rrConfig.retroreflection_texture.texcoord),
     };
 
     if (inputMat->has_pbr_specular_glossiness) {
@@ -1690,6 +1699,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
     auto shConfig = inputMat->sheen;
     auto vlConfig = inputMat->volume;
     auto spConfig = inputMat->specular;
+    auto rrConfig = inputMat->retroreflection;
 
     // Check the material blending mode, not the cgltf blending mode, because the provider
     // might have selected an alternative blend mode (e.g. to support transmission).
@@ -1917,6 +1927,20 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         }
     }
 
+    if (matkey.hasRetroreflection && mi->getMaterial()->hasParameter("retroreflectionFactor")) {
+        mi->setParameter("retroreflectionFactor", rrConfig.retroreflection_factor);
+
+        if (matkey.hasRetroreflectionTexture) {
+            fAsset->addTextureBinding(mi, "retroreflectionMap",
+                    rrConfig.retroreflection_texture.texture, LINEAR);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt = rrConfig.retroreflection_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("retroreflectionUvMatrix", uvmat);
+            }
+        }
+    }
+
     *cacheEntry = { .instance = mi, .uvmap = *uvmap };
     return mi;
 }
@@ -2032,6 +2056,12 @@ FFilamentAsset* FAssetLoader::preresolveTextures(FFilamentAsset* fAsset,
                 bool sameTexture = spConfig.specular_color_texture.texture ==
                                    spConfig.specular_texture.texture;
                 resolveTexture(spConfig.specular_texture.texture, sameTexture ? sRGB : LINEAR);
+            }
+        }
+        if (matkey.hasRetroreflection) {
+            auto rrConfig = inputMat->retroreflection;
+            if (matkey.hasRetroreflectionTexture) {
+                resolveTexture(rrConfig.retroreflection_texture.texture, LINEAR);
             }
         }
     }

@@ -322,6 +322,7 @@ MaterialInstance* updateInstances(SandboxParameters& params) {
         materialInstance->setParameter("iridescence", params.iridescence);
         materialInstance->setParameter("iridescenceIor", params.iridescenceIor);
         materialInstance->setParameter("iridescenceThickness", params.iridescenceThickness);
+        materialInstance->setParameter("retroreflection", params.retroreflection);
         materialInstance->setParameter("clearCoat", params.clearCoat);
         materialInstance->setParameter("clearCoatRoughness", params.clearCoatRoughness);
         materialInstance->setParameter("anisotropy", params.anisotropy);
@@ -519,6 +520,7 @@ void gui(Engine* engine, View*) {
                         ImGui::SliderFloat("Iridescence IOR", &params.iridescenceIor, 1.0f, 3.0f);
                         ImGui::SliderFloat("Iridescence thickness",
                                 &params.iridescenceThickness, 0.0f, 2000.0f);
+                        ImGui::SliderFloat("Retroreflection", &params.retroreflection, 0.0f, 1.0f);
                     }
                     ImGui::SliderFloat("Clear coat", &params.clearCoat, 0.0f, 1.0f);
                     ImGui::SliderFloat("Clear coat roughness", &params.clearCoatRoughness, 0.0f, 1.0f);

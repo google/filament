@@ -150,6 +150,13 @@ void getSpecularPixelParams(const MaterialInputs material, inout PixelParams pix
 #endif
 }
 
+void getRetroreflectionPixelParams(const MaterialInputs material, inout PixelParams pixel) {
+#if defined(MATERIAL_HAS_RETROREFLECTION) && !defined(SHADING_MODEL_CLOTH) && \
+        !defined(SHADING_MODEL_SUBSURFACE) && !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+    pixel.retroreflection = saturate(material.retroreflection);
+#endif
+}
+
 void getSheenPixelParams(
         const MaterialInputs material, inout PixelParams pixel, float kernelRoughness) {
 #if defined(MATERIAL_HAS_SHEEN_COLOR) && !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE)
@@ -306,6 +313,7 @@ void getPixelParams(const MaterialInputs material, out PixelParams pixel) {
     getRoughnessPixelParams(material, pixel, kernelRoughness);
     getSubsurfacePixelParams(material, pixel);
     getAnisotropyPixelParams(material, pixel);
+    getRetroreflectionPixelParams(material, pixel);
     getEnergyCompensationPixelParams(pixel);
 }
 
