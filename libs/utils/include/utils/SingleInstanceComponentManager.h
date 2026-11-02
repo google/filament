@@ -227,6 +227,13 @@ protected:
      */
     void catchupGarbage() noexcept;
 
+    /*
+     * Harvests any entities in mEntities that were destroyed in the current (unsealed) epoch
+     * into mPendingDestruction, without advancing mWatermark (since the current epoch is still
+     * open). Must only be called from the main thread outside gcImpl().
+     */
+    void catchupCurrentGarbage() noexcept;
+
     InstanceMap mInstanceMap;
     PagedArenaBitset mPendingDestruction;
 

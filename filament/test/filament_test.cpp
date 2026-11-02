@@ -80,6 +80,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <initializer_list>
 #include <iostream>
@@ -87,6 +88,7 @@
 #include <random>
 #include <thread>
 #include <type_traits>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -3699,7 +3701,7 @@ protected:
     }
 
     static bool hasDirectionalLight(View* view, Entity e) {
-        return downcast(view)->getSceneCache()->directionalLights[e.getId()];
+        return downcast(view)->getSceneCache()->directionalLights[EntityManager::getIndex(e)];
     }
 
     void cleanupTrackedResources() {
@@ -3836,33 +3838,33 @@ TEST_F(SceneCacheTest, RemoveAndDestroyOnDifferentPagesKeepsOtherEntities) {
     std::vector<Entity> pool(3 * PAGE);
     em.create(pool.size(), pool.data());
     mEntities.insert(mEntities.end(), pool.begin(), pool.end());
-    std::vector<uint32_t> ids;
-    ids.reserve(pool.size());
+    std::vector<uint32_t> indices;
+    indices.reserve(pool.size());
     for (Entity const e : pool) {
-        ids.push_back(e.getId());
+        indices.push_back(EntityManager::getIndex(e));
     }
-    std::sort(ids.begin(), ids.end());
-    std::vector<uint32_t> lows; // ids whose counterpart one page up also exists
-    for (uint32_t const id : ids) {
-        if (std::binary_search(ids.begin(), ids.end(), id + PAGE)) {
-            if (!lows.empty() && lows.front() / PAGE != id / PAGE) {
+    std::sort(indices.begin(), indices.end());
+    std::vector<uint32_t> lows; // indices whose counterpart one page up also exists
+    for (uint32_t const idx : indices) {
+        if (std::binary_search(indices.begin(), indices.end(), idx + PAGE)) {
+            if (!lows.empty() && lows.front() / PAGE != idx / PAGE) {
                 if (lows.size() >= 4) {
                     break;
                 }
                 lows.clear();
             }
-            lows.push_back(id);
+            lows.push_back(idx);
         }
     }
     ASSERT_GE(lows.size(), 4u);
 
     // X and D are on page p; E = X + PAGE, Y = D + PAGE, U1 and U2 are on page p + 1.
-    Entity const X = Entity::import(int32_t(lows[0]));
-    Entity const D = Entity::import(int32_t(lows[1]));
-    Entity const E = Entity::import(int32_t(lows[0] + PAGE));
-    Entity const Y = Entity::import(int32_t(lows[1] + PAGE));
-    Entity const U1 = Entity::import(int32_t(lows[2] + PAGE));
-    Entity const U2 = Entity::import(int32_t(lows[3] + PAGE));
+    Entity const X = em.getEntity(lows[0]);
+    Entity const D = em.getEntity(lows[1]);
+    Entity const E = em.getEntity(lows[0] + PAGE);
+    Entity const Y = em.getEntity(lows[1] + PAGE);
+    Entity const U1 = em.getEntity(lows[2] + PAGE);
+    Entity const U2 = em.getEntity(lows[3] + PAGE);
 
     for (Entity const e : { X, E, D, Y }) {
         engine->getTransformManager().create(e);
@@ -4424,25 +4426,25 @@ TEST_F(SceneCacheTest, ContactShadowsFollowSceneLightsAndShadowOptions) {
     // 1. Enabling contact shadows on a positional light notifies, and is picked up.
     options.screenSpaceContactShadows = true;
     lcm.setShadowOptions(li, options);
-    EXPECT_TRUE(cache.dirtyEntities[p.getId()]);
+    EXPECT_TRUE(cache.dirtyEntities[EntityManager::getIndex(p)]);
     prepare(scene, view, T);
     EXPECT_TRUE(cache.lightsHaveContactShadows);
 
     // 2. Setting the same options again is a no-op: nothing is dirtied.
     lcm.setShadowOptions(li, options);
-    EXPECT_FALSE(cache.dirtyEntities[p.getId()]);
+    EXPECT_FALSE(cache.dirtyEntities[EntityManager::getIndex(p)]);
     EXPECT_FALSE(cache.hasDirtyEntities());
 
     // 3. Any other field notifies (operator== covers every field), and the comparison is made
     //    after clamping: 4096 clamps to 2048, so going from 2048 to 4096 is a no-op.
     options.mapSize = 2048;
     lcm.setShadowOptions(li, options);
-    EXPECT_TRUE(cache.dirtyEntities[p.getId()]);
+    EXPECT_TRUE(cache.dirtyEntities[EntityManager::getIndex(p)]);
     prepare(scene, view, T);
     EXPECT_TRUE(cache.lightsHaveContactShadows);
     options.mapSize = 4096;
     lcm.setShadowOptions(li, options);
-    EXPECT_FALSE(cache.dirtyEntities[p.getId()]);
+    EXPECT_FALSE(cache.dirtyEntities[EntityManager::getIndex(p)]);
 
     // 4. The dominant directional light counts too.
     options.screenSpaceContactShadows = false;
@@ -4601,6 +4603,109 @@ TEST_F(SceneCacheTest, UnrelatedEntitiesDoNotDirtySceneCache) {
     downcast(tcm).ensureWorldTransformsUpToDate();
     EXPECT_TRUE(cache.hasDirtyEntities());
     EXPECT_TRUE(downcast(scene)->processDeferredUpdates(T.upperLeft(), false, cache));
+}
+
+TEST_F(SceneCacheTest, SceneHoldsEbrWatermarkAndMultiViewEvictionSurvivesIndexRecycling) {
+    Scene* scene = createScene();
+    View* viewX = createView();
+    View* viewY = createView();
+    viewX->setScene(scene);
+    viewY->setScene(scene);
+    EntityManager& em = engine->getEntityManager();
+
+    // Flush any pending epochs from earlier tests and drain pre-existing free-list entries until
+    // EntityManager bump-allocates a fresh generation-0 index (meaning mFreeList.size() < 1024).
+    downcast(engine)->gc();
+    downcast(engine)->gc();
+    while (true) {
+        Entity const drain = createEntity();
+        if (drain.getId() == EntityManager::getIndex(drain)) {
+            break;
+        }
+    }
+
+    Entity const r1 = createRenderable();
+    Entity const p1 = createPointLight();
+    Entity const d1 = createDirectionalLight();
+    scene->addEntity(r1);
+    scene->addEntity(p1);
+    scene->addEntity(d1);
+
+    prepare(scene, viewX, T);
+    prepare(scene, viewY, T);
+    ASSERT_TRUE(hasRenderableRow(viewX, r1));
+    ASSERT_TRUE(hasRenderableRow(viewY, r1));
+    ASSERT_TRUE(hasLightRow(viewX, p1));
+    ASSERT_TRUE(hasLightRow(viewY, p1));
+    ASSERT_TRUE(hasDirectionalLight(viewX, d1));
+    ASSERT_TRUE(hasDirectionalLight(viewY, d1));
+
+    // Create > 2 * MIN_FREE_INDICES (2048) extra entities with higher indices than r1 so that once
+    // reclaimed, r1 sits near the front of mFreeList while mFreeList.size() stays well above 1024.
+    constexpr size_t kExtraCount = 2200;
+    std::vector<Entity> extras(kExtraCount);
+    em.create(kExtraCount, extras.data());
+    mEntities.insert(mEntities.end(), extras.begin(), extras.end());
+
+    std::unordered_set<uint32_t> destroyedIndices;
+    destroyedIndices.insert(EntityManager::getIndex(r1));
+    destroyedIndices.insert(EntityManager::getIndex(p1));
+    destroyedIndices.insert(EntityManager::getIndex(d1));
+    for (Entity const e : extras) {
+        destroyedIndices.insert(EntityManager::getIndex(e));
+    }
+
+    // Destroy component data, then destroy the entities in EntityManager.
+    engine->destroy(r1);
+    engine->destroy(p1);
+    engine->destroy(d1);
+    em.destroy(r1);
+    em.destroy(p1);
+    em.destroy(d1);
+    em.destroy(extras.size(), extras.data());
+
+    // Seal the epoch and attempt reclamation directly on EntityManager WITHOUT running FScene::gc()
+    // or prepare(): Scene's component manager must hold the EBR watermark so none of the 2203
+    // destroyed indices can be recycled (even across 1050 > MIN_FREE_INDICES allocations).
+    em.advanceEpoch();
+    em.reclaimSafeEpochs();
+    for (size_t i = 0; i < 1050; ++i) {
+        Entity const probe = createEntity();
+        EXPECT_EQ(0u, destroyedIndices.count(EntityManager::getIndex(probe)));
+    }
+
+    // Now run FEngine::gc() WITHOUT calling prepare() on viewY. FScene::gc() evicts r1/p1/d1 from
+    // Scene AND immediately evicts them from all attached View caches (including inactive viewY),
+    // then advances its EBR watermark so EntityManager can recycle their 17-bit indices.
+    downcast(engine)->gc();
+    EXPECT_FALSE(scene->hasEntity(r1));
+    EXPECT_FALSE(hasRenderableRow(viewY, r1));
+    EXPECT_FALSE(hasLightRow(viewY, p1));
+    EXPECT_FALSE(hasDirectionalLight(viewY, d1));
+
+    // Allocate until we obtain a recycled entity reusing r1's 17-bit index (guaranteed within 1025
+    // allocations since r1 has the smallest index among the 2203 newly reclaimed indices).
+    Entity r1Recycled;
+    for (size_t i = 0; i < 1100; ++i) {
+        Entity const candidate = createEntity();
+        if (EntityManager::getIndex(candidate) == EntityManager::getIndex(r1)) {
+            r1Recycled = candidate;
+            break;
+        }
+    }
+    ASSERT_FALSE(r1Recycled.isNull());
+    EXPECT_NE(r1Recycled, r1);
+
+    // Attach a new renderable to r1Recycled, add to Scene, and finally prepare inactive viewY.
+    engine->getTransformManager().create(r1Recycled);
+    RenderableManager::Builder(1)
+            .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
+            .build(*engine, r1Recycled);
+    scene->addEntity(r1Recycled);
+
+    prepare(scene, viewY, T);
+    EXPECT_FALSE(hasRenderableRow(viewY, r1));
+    EXPECT_TRUE(hasRenderableRow(viewY, r1Recycled));
 }
 
 int main(int argc, char** argv) {

@@ -62,11 +62,11 @@ This document details the concurrent architectural data flows, timelines, and me
 
 ## Architectural Key Concepts
 
-### 1. The Global Epoch Boundaries
-`EntityManagerImpl` maintains a growing array of sealed epoch bitsets. Only epochs that have been sealed via `advanceEpoch()` are processed by the managers.
+### 1. The Global Epoch Boundaries & 17-Bit Index Space
+`EntityManagerImpl` maintains a growing array of sealed epoch bitsets (`PagedArenaBitset`). Because EBR guarantees that two `Entity` instances sharing the same 17-bit base index can never coexist while alive or pending physical eviction, all `PagedArenaBitset` instances store only the 17-bit base index (`EntityManager::getIndex(e)`), and `mGens[index]` retains the dead entity's generation until `recycleGarbageEpochs()` increments it right before returning `index` to `mFreeList`. Any index read from a manager's or scene's bitset can therefore be lock-freely reinflated to its full 32-bit `Entity` via `EntityManager::getEntity(index)`.
 
 ### 2. Garbage Harvesting (`catchupGarbage()`)
-In `catchupGarbage()`, dead entity IDs from newly sealed epochs are bitwise intersected with `mEntities` and merged into `mPendingDestruction`, advancing `mHarvestedEpoch`. The dead entities remain in `mEntities` (and `mWatermark` is held) until physical eviction completes, guaranteeing that `EntityManagerImpl` never recycles an entity index while a component for that index still physically resides in any manager.
+In `catchupGarbage()`, dead 17-bit entity indices from newly sealed epochs are bitwise intersected with `mEntities` and merged into `mPendingDestruction`, advancing `mHarvestedEpoch`. The dead indices remain in `mEntities` (and `mWatermark` is held) until physical eviction completes, guaranteeing that `EntityManagerImpl` never recycles an entity index while a component for that index still physically resides in any manager or scene.
 
 ### 3. Physical Array Defragmentation & Watermark Commit (`gc()`)
-When `gc()` executes, it pops batches from `mPendingDestruction` and invokes `removeComponent()`, performing a swap-and-pop move to keep the underlying `StructureOfArrays` tightly packed in memory and removing each evicted entity from `mEntities`. Once `mPendingDestruction` drains (or across frames via `EntityManagerImpl`'s automatic `mEntities` intersection leap-forward), `mWatermark` advances, allowing `EntityManagerImpl` to safely recycle the expired epoch indices.
+When `gc()` executes, it pops batches of 17-bit indices from `mPendingDestruction`, reinflates each `Entity` via `EntityManager::getEntity(index)`, and invokes `removeComponent()`, performing a swap-and-pop move to keep the underlying `StructureOfArrays` tightly packed in memory and removing each evicted index from `mEntities`. Once `mPendingDestruction` drains (or across frames via `EntityManagerImpl`'s automatic `mEntities` intersection leap-forward), `mWatermark` advances, allowing `EntityManagerImpl` to increment `mGens[index]` and safely recycle the expired epoch indices.
