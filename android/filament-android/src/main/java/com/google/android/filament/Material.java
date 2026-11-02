@@ -1203,16 +1203,25 @@ public class Material {
     }
     /** Holds information about a material parameter. */
     public static class ParameterInfo {
+        @UsedByNative("Material.cpp")
         public String name;
+        @UsedByNative("Material.cpp")
         public boolean isSampler;
+        @UsedByNative("Material.cpp")
         public boolean isSubpass;
+        @UsedByNative("Material.cpp")
         public ParameterType type;
+        @UsedByNative("Material.cpp")
         public SamplerType samplerType;
+        @UsedByNative("Material.cpp")
         public SubpassType subpassType;
+        @UsedByNative("Material.cpp")
         @IntRange(from = 0)
         public int count;
+        @UsedByNative("Material.cpp")
         public Precision precision;
 
+        @UsedByNative("Material.cpp")
         public ParameterInfo() {
         }
 
