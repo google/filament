@@ -472,13 +472,9 @@ void gui(Engine* engine, View*) {
     ImGui::SetNextWindowSize(ImVec2(g_sidebarWidth, height), ImGuiCond_Once);
     ImGui::SetNextWindowSizeConstraints(ImVec2(20, height), ImVec2(width, height));
 
-    if (g_hideUi) {
-        ImGui::SetNextWindowCollapsed(true, ImGuiCond_Always);
-    }
-
     ImGui::Begin("Filament", nullptr, ImGuiWindowFlags_NoTitleBar);
     {
-        if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::CollapsingHeader("Material", !g_hideUi ? ImGuiTreeNodeFlags_DefaultOpen : 0)) {
             ImGui::Indent();
             ImGui::Combo("Model", &params.currentMaterialModel,
                     "Unlit\0Lit\0Subsurface\0Cloth\0Specular glossiness\0\0");
