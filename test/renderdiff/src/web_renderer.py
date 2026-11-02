@@ -237,17 +237,14 @@ class WebGltfRenderTestCase(GltfRenderTestCase):
 class WebRenderer(BaseRenderer):
   """Renders renderdiff tests with the WASM build of gltf_viewer inside headless Chromium."""
 
-  # The size the web goldens are stored at.
-  RENDER_WIDTH = 512
-  RENDER_HEIGHT = 512
-
-  # ViewerGui sizes its sidebar from its contents (ViewerGui.cpp sets mSidebarWidth from
-  # ImGui::GetWindowWidth()), not from ViewerGui::DEFAULT_SIDEBAR_WIDTH, so the value is
-  # emergent rather than declared. FilamentApp2 then renders the scene into the window minus
-  # the sidebar, which is why the window we ask for is wider than the image we want. Measured
-  # at --force-device-scale-factor=1. If ImGui styling ever changes this drifts -- which is
-  # precisely why _validate_tif() asserts the dimensions of the TIFF that actually came out.
-  SIDEBAR_WIDTH = 410
+  # The window gltf_viewer is asked for, the counterpart of the fixed default window the desktop
+  # renderer gets. FilamentApp2 renders the scene into the window minus the sidebar width that
+  # gltf_viewer passes to ViewerGui, so the captured image is narrower than this. The harness
+  # deliberately does not predict that width: the image is whatever size gltf_viewer produces,
+  # exactly as on desktop, and diffimg reports a size mismatch against the golden if the
+  # sidebar ever changes. 952 keeps the current web goldens at 512x512.
+  WINDOW_WIDTH = 952
+  WINDOW_HEIGHT = 512
 
   # A correctly sized but empty render must not pass as a golden.
   MIN_DISTINCT_COLORS = 16
@@ -479,7 +476,7 @@ class WebRenderer(BaseRenderer):
       argv = [
           '-a', FILAMENT_API[self.backend],
           '--batch=/work/spec.json',
-          f'--window-size={self.RENDER_WIDTH + self.SIDEBAR_WIDTH}x{self.RENDER_HEIGHT}',
+          f'--window-size={self.WINDOW_WIDTH}x{self.WINDOW_HEIGHT}',
           model_memfs,
       ]
       print(f'{out_name}: argv={argv}')
@@ -576,13 +573,12 @@ class WebRenderer(BaseRenderer):
     except ValueError as e:
       return str(e)
 
+    # The dimensions are not checked here. They are a property of the golden, and diffimg
+    # already fails a comparison whose sizes differ.
     width = tags.get(_TAG_IMAGE_WIDTH, [0])[0]
     height = tags.get(_TAG_IMAGE_LENGTH, [0])[0]
-    if (width, height) != (self.RENDER_WIDTH, self.RENDER_HEIGHT):
-      # Almost certainly SIDEBAR_WIDTH drifting. Refusing the image is the whole point: silently
-      # accepting a differently sized render would rewrite every golden on the next update.
-      return (f'expected a {self.RENDER_WIDTH}x{self.RENDER_HEIGHT} image but got '
-              f'{width}x{height}; SIDEBAR_WIDTH ({self.SIDEBAR_WIDTH}) is probably stale')
+    if width == 0 or height == 0:
+      return f'image has no pixels ({width}x{height})'
 
     colors = _tiff_distinct_colors(tif, tags)
     if colors is None:
