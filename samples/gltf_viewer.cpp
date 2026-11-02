@@ -639,7 +639,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                          Scene* scene) {
         app->engine = engine;
         app->names = new NameComponentManager(EntityManager::get());
-        app->viewer = new ViewerGui(engine, scene, view, 410);
+        app->viewer = new ViewerGui(engine, scene, view, 440);
         app->viewer->getSettings().viewer.autoScaleEnabled = !app->actualSize;
 
         engine->enableAccurateTranslations();
@@ -803,16 +803,8 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                 }
             }
 
-            const ImVec4 yellow(1.0f,1.0f,0.0f,1.0f);
-
-            if (!app->notificationText.empty()) {
-                ImGui::TextColored(yellow, "Picked %s", app->notificationText.c_str());
-                ImGui::Spacing();
-            }
-
             float const progress = app->resourcesLoadedSynchronously
-                                           ? 1.0f
-                                           : app->resourceLoader->asyncGetLoadProgress();
+                    ? 1.0f : app->resourceLoader->asyncGetLoadProgress();
             if (progress < 1.0) {
                 ImGui::ProgressBar(progress);
             } else {
@@ -824,49 +816,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
             // when in batch mode. This is useful when a human is observing progress.
             const int flags = automation.isBatchModeEnabled() ? ImGuiTreeNodeFlags_DefaultOpen : 0;
 
-            if (ImGui::CollapsingHeader("Automation", flags)) {
-                ImGui::Indent();
-
-                if (automation.isRunning()) {
-                    ImGui::TextColored(yellow, "Test case %zu / %zu",
-                            automation.currentTest(), automation.testCount());
-                } else {
-                    ImGui::TextColored(yellow, "%zu test cases", automation.testCount());
-                }
-
-                auto options = automation.getOptions();
-
-                ImGui::PushItemWidth(150);
-                ImGui::SliderFloat("Sleep (seconds)", &options.sleepDuration, 0.0, 5.0);
-                ImGui::PopItemWidth();
-
-                // Hide the tooltip during automation to avoid photobombing the screenshot.
-                if (ImGui::IsItemHovered() && !automation.isRunning()) {
-                    ImGui::SetTooltip("Specifies the amount of time to sleep between test cases.");
-                }
-
-                ImGui::Checkbox("Export screenshot for each test", &options.exportScreenshots);
-                ImGui::Checkbox("Export settings JSON for each test", &options.exportSettings);
-
-                automation.setOptions(options);
-
-                if (automation.isRunning()) {
-                    if (ImGui::Button("Stop batch test")) {
-                        automation.stopRunning();
-                    }
-                } else if (ImGui::Button("Run batch test")) {
-                    automation.startRunning();
-                }
-
-                if (ImGui::Button("Export view settings")) {
-                    AutomationEngine::exportSettings(app->viewer->getSettings(), "settings.json");
-                    app->messageBoxText = utils::CString(automation.getStatusMessage());
-                    ImGui::OpenPopup("MessageBox");
-                }
-                ImGui::Unindent();
-            }
-
-            if (ImGui::CollapsingHeader("Stats")) {
+            if (ImGui::CollapsingHeader("Scene Stats")) {
                 ImGui::Indent();
                 ImGui::Text("%zu entities in the asset", app->asset->getEntityCount());
                 ImGui::Text("%zu renderables (excluding UI)", scene->getRenderableCount());
@@ -1015,6 +965,53 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                 app->viewer->getSettings().view.stencilBufferEnabled = visualizeOverdraw;
             }
 
+            if (ImGui::CollapsingHeader("Automation", flags)) {
+                ImGui::Indent();
+
+                if (automation.isRunning()) {
+                    ImGui::Text("Test case %zu / %zu",
+                            automation.currentTest(), automation.testCount());
+                } else {
+                    ImGui::Text("%zu test cases", automation.testCount());
+                }
+
+                auto options = automation.getOptions();
+
+                ImGui::PushItemWidth(150);
+                ImGui::SliderFloat("Sleep (seconds)", &options.sleepDuration, 0.0, 5.0);
+                ImGui::PopItemWidth();
+
+                // Hide the tooltip during automation to avoid photobombing the screenshot.
+                if (ImGui::IsItemHovered() && !automation.isRunning()) {
+                    ImGui::SetTooltip("Specifies the amount of time to sleep between test cases.");
+                }
+
+                ImGui::Checkbox("Export screenshot for each test", &options.exportScreenshots);
+                ImGui::Checkbox("Export settings JSON for each test", &options.exportSettings);
+
+                automation.setOptions(options);
+
+                if (automation.isRunning()) {
+                    if (ImGui::Button("Stop batch test")) {
+                        automation.stopRunning();
+                    }
+                } else if (ImGui::Button("Run batch test")) {
+                    automation.startRunning();
+                }
+
+                if (ImGui::Button("Export view settings")) {
+                    AutomationEngine::exportSettings(app->viewer->getSettings(), "settings.json");
+                    app->messageBoxText = utils::CString(automation.getStatusMessage());
+                    ImGui::OpenPopup("MessageBox");
+                }
+                ImGui::Unindent();
+            }
+
+            if (!app->notificationText.empty()) {
+                ImGui::Text("Picked %s", app->notificationText.c_str());
+                ImGui::Spacing();
+            }
+
             if (ImGui::BeginPopupModal("MessageBox", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
                 ImGui::Text("%s", app->messageBoxText.c_str());
                 if (ImGui::Button("OK", ImVec2(120, 0))) {
@@ -1120,7 +1117,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
     auto gui = [app](Engine*, View*) {
         app->viewer->updateUserInterface();
-
         app->filamentApp->setSidebarWidth(app->viewer->getSidebarWidth());
     };
 
