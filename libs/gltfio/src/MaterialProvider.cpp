@@ -20,51 +20,13 @@
 
 #include <string>
 
+#include <string.h>
+
 namespace filament::gltfio {
 
+// MaterialKey is always kept properly padded/packed. It is safe to memcmp it directly.
 bool operator==(const MaterialKey& k1, const MaterialKey& k2) {
-    return
-        (k1.doubleSided == k2.doubleSided) &&
-        (k1.unlit == k2.unlit) &&
-        (k1.hasVertexColors == k2.hasVertexColors) &&
-        (k1.hasBaseColorTexture == k2.hasBaseColorTexture) &&
-        (k1.hasNormalTexture == k2.hasNormalTexture) &&
-        (k1.hasOcclusionTexture == k2.hasOcclusionTexture) &&
-        (k1.hasEmissiveTexture == k2.hasEmissiveTexture) &&
-        (k1.useSpecularGlossiness == k2.useSpecularGlossiness) &&
-        (k1.alphaMode == k2.alphaMode) &&
-        (k1.hasMetallicRoughnessTexture == k2.hasMetallicRoughnessTexture) &&
-        (k1.metallicRoughnessUV == k2.metallicRoughnessUV) &&
-        (k1.baseColorUV == k2.baseColorUV) &&
-        (k1.hasClearCoatTexture == k2.hasClearCoatTexture) &&
-        (k1.clearCoatUV == k2.clearCoatUV) &&
-        (k1.hasClearCoatRoughnessTexture == k2.hasClearCoatRoughnessTexture) &&
-        (k1.clearCoatRoughnessUV == k2.clearCoatRoughnessUV) &&
-        (k1.hasClearCoatNormalTexture == k2.hasClearCoatNormalTexture) &&
-        (k1.clearCoatNormalUV == k2.clearCoatNormalUV) &&
-        (k1.hasClearCoat == k2.hasClearCoat) &&
-        (k1.hasTransmission == k2.hasTransmission) &&
-        (k1.hasTextureTransforms == k2.hasTextureTransforms) &&
-        (k1.emissiveUV == k2.emissiveUV) &&
-        (k1.aoUV == k2.aoUV) &&
-        (k1.normalUV == k2.normalUV) &&
-        (k1.hasTransmissionTexture == k2.hasTransmissionTexture) &&
-        (k1.transmissionUV == k2.transmissionUV) &&
-        (k1.hasSheenColorTexture == k2.hasSheenColorTexture) &&
-        (k1.sheenColorUV == k2.sheenColorUV) &&
-        (k1.hasSheenRoughnessTexture == k2.hasSheenRoughnessTexture) &&
-        (k1.sheenRoughnessUV == k2.sheenRoughnessUV) &&
-        (k1.hasVolumeThicknessTexture == k2.hasVolumeThicknessTexture) &&
-        (k1.volumeThicknessUV == k2.volumeThicknessUV) &&
-        (k1.hasSheen == k2.hasSheen) &&
-        (k1.hasIOR == k2.hasIOR) &&
-        (k1.hasVolume == k2.hasVolume) &&
-        (k1.hasSpecular == k2.hasSpecular) &&
-        (k1.hasSpecularTexture == k2.hasSpecularTexture) &&
-        (k1.hasSpecularColorTexture == k2.hasSpecularColorTexture) &&
-        (k1.specularTextureUV == k2.specularTextureUV) &&
-        (k1.specularColorTextureUV == k2.specularColorTextureUV)
-        ;
+    return memcmp(&k1, &k2, sizeof(MaterialKey)) == 0;
 }
 
 // Filament supports up to 2 UV sets. glTF has arbitrary texcoord set indices, but it allows
@@ -156,6 +118,10 @@ void constrainMaterial(MaterialKey* key, UvMap* uvmap) {
             key->specularColorTextureUV, key->hasSpecularColorTexture, "specularColorTexture");
     key->specularColorTextureUV = clampUv(key->specularColorTextureUV);
 
+    key->hasRetroreflectionTexture = constrainTexture(
+            key->retroreflectionUV, key->hasRetroreflectionTexture, "retroreflectionTexture");
+    key->retroreflectionUV = clampUv(key->retroreflectionUV);
+
     // NOTE: KHR_materials_clearcoat does not provide separate UVs, we'll assume UV0
     *uvmap = retval;
 }
@@ -189,6 +155,7 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     const auto& volumeThicknessUV = getUvString(config.volumeThicknessUV);
     const auto& specularUV = getUvString(config.specularTextureUV);
     const auto& specularColorUV = getUvString(config.specularColorTextureUV);
+    const auto& retroreflectionUV = getUvString(config.retroreflectionUV);
 
     replaceAll("${normal}", normalUV);
     replaceAll("${color}", baseColorUV);
@@ -204,6 +171,7 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     replaceAll("${volumeThickness}", volumeThicknessUV);
     replaceAll("${specular}", specularUV);
     replaceAll("${specularColor}", specularColorUV);
+    replaceAll("${retroreflection}", retroreflectionUV);
 }
 
 } // namespace filament::gltfio

@@ -58,6 +58,10 @@ struct PixelParams {
     float anisotropy;
 #endif
 
+#if defined(MATERIAL_HAS_RETROREFLECTION)
+    float retroreflection;
+#endif
+
 #if defined(SHADING_MODEL_SUBSURFACE) || defined(MATERIAL_HAS_REFRACTION)
     float thickness;
 #endif

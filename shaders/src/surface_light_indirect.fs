@@ -159,6 +159,17 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
     return getSpecularDominantDirection(n, r, pixel.roughness);
 }
 
+#if defined(MATERIAL_HAS_RETROREFLECTION)
+vec3 getRetroReflectedVector(const PixelParams pixel, const vec3 n) {
+#if defined(MATERIAL_HAS_ANISOTROPY)
+    vec3 r = getReflectedVector(pixel, shading_reflected, n);
+#else
+    vec3 r = shading_view;
+#endif
+    return getSpecularDominantDirection(n, r, pixel.roughness);
+}
+#endif
+
 //------------------------------------------------------------------------------
 // Prefiltered importance sampling
 //------------------------------------------------------------------------------
@@ -753,7 +764,11 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
 
 #if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
     vec3 E = specularDFG(pixel);
+#if defined(MATERIAL_HAS_RETROREFLECTION)
+    if (ssrFr.a < 1.0 && pixel.retroreflection < 1.0) { // prevent reading the IBL if possible
+#else
     if (ssrFr.a < 1.0) { // prevent reading the IBL if possible
+#endif
         vec3 r = getReflectedVector(pixel, shading_normal);
         Fr = E * prefilteredRadiance(r, perceptualRoughnessToLod(pixel.perceptualRoughness));
         Fr *= pixel.energyCompensation;
@@ -768,6 +783,16 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
         Fr = mix(Fr, secondFr, pixel.secondRoughnessWeight);
 #endif
     }
+
+#if defined(MATERIAL_HAS_RETROREFLECTION)
+    if (pixel.retroreflection > 0.0) {
+        vec3 r_retro = getRetroReflectedVector(pixel, shading_normal);
+        vec3 Fr_retro = E * prefilteredRadiance(r_retro,
+                perceptualRoughnessToLod(pixel.perceptualRoughness));
+        Fr_retro *= pixel.energyCompensation;
+        Fr = mix(Fr * (1.0 - ssrFr.a), Fr_retro, pixel.retroreflection);
+    }
+#endif
 #elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
     vec3 E = vec3(0.0); // TODO: fix for importance sampling
     if (ssrFr.a < 1.0) { // prevent evaluating the IBL if possible
@@ -827,7 +852,15 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
 #endif
 
 #if defined(MATERIAL_HAS_REFLECTIONS)
+#if defined(MATERIAL_HAS_RETROREFLECTION)
+    if (pixel.retroreflection > 0.0) {
+        Fr += (E * ssrFr.rgb) * (1.0 - pixel.retroreflection);
+    } else {
+        Fr = Fr * (1.0 - ssrFr.a) + (E * ssrFr.rgb);
+    }
+#else
     Fr = Fr * (1.0 - ssrFr.a) + (E * ssrFr.rgb);
+#endif
 #endif
 
     // Combine all terms

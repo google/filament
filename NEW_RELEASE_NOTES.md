@@ -12,3 +12,6 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - vulkan: with the `backend.vulkan.enable_pipeline_cache_persistence` feature flag, the backend
   keeps its `VkPipelineCache` across runs through `Platform::setBlobFunc`, as the GL backend does
   for program binaries; the blob functions must be set before the `Engine` is created
+- materials: the new `retroreflection` material property can be used in the lit (standard) shading
+  model to create retroreflective surfaces
+- gltf: `KHR_materials_retroreflection` is now supported

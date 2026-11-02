@@ -100,6 +100,7 @@ pod 'Filament', '~> 1.79.0'
 - HDR/linear lighting
 - Metallic workflow
 - Clear coat
+- Retroreflection
 - Anisotropic lighting
 - Approximated translucent (subsurface) materials
 - Cloth/fabric/sheen shading
@@ -163,6 +164,7 @@ pod 'Filament', '~> 1.79.0'
   - [x] KHR_materials_emissive_strength
   - [x] KHR_materials_ior
   - [x] KHR_materials_pbrSpecularGlossiness
+  - [x] KHR_materials_retroreflection
   - [x] KHR_materials_sheen
   - [x] KHR_materials_specular
   - [x] KHR_materials_transmission

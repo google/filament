@@ -36,13 +36,12 @@ float f90(const PixelParams pixel) {
 }
 
 #if defined(MATERIAL_HAS_ANISOTROPY)
-vec3 anisotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
+vec3 anisotropicLobe(const PixelParams pixel, const Light light, const vec3 v, const vec3 h,
         float NoV, float NoL, float NoH, float LoH) {
 
     vec3 l = light.l;
     vec3 t = pixel.anisotropicT;
     vec3 b = pixel.anisotropicB;
-    vec3 v = shading_view;
 
     // TODO: ToB, BoV, at, and ab are light-invariant and could be pre-computed
 
@@ -85,10 +84,10 @@ vec3 isotropicLobe(float roughness, vec3 f0, float f90, const vec3 h,
     return (D * V) * F;
 }
 
-vec3 specularLobe(const PixelParams pixel, const Light light, const vec3 h,
+vec3 specularLobe(const PixelParams pixel, const Light light, const vec3 v, const vec3 h,
         float NoV, float NoL, float NoH, float LoH) {
 #if defined(MATERIAL_HAS_ANISOTROPY)
-    return anisotropicLobe(pixel, light, h, NoV, NoL, NoH, LoH);
+    return anisotropicLobe(pixel, light, v, h, NoV, NoL, NoH, LoH);
 #else
     return isotropicLobe(pixel.roughness, pixel.f0, f90(pixel), h, NoV, NoL, NoH, LoH);
 #endif
@@ -114,7 +113,9 @@ vec3 diffuseLobe(const PixelParams pixel, float NoV, float NoL, float LoH) {
  * The surface BRDF uses a diffuse lobe and a specular lobe to render both
  * dielectrics and conductors. The specular lobe is based on the Cook-Torrance
  * micro-facet model (see surface_brdf.fs for more details). In addition, the
- * specular lobe can be either isotropic or anisotropic.
+ * specular lobe can be either isotropic or anisotropic. When the retroreflection
+ * parameter is set, the specular lobe will be a weighted blend between the regular
+ * specular reflection and the retroreflection component.
  *
  * Sheen BRDF
  * The sheen BRDF simulates the soft, fabric-like reflection seen on materials such
@@ -137,7 +138,19 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
 
     // The energy compensation term is used to counteract the darkening effect
     // at high roughness
-    vec3 Fr = specularLobe(pixel, light, h, NoV, NoL, NoH, LoH) * pixel.energyCompensation;
+    vec3 Fr = specularLobe(pixel, light, shading_view, h, NoV, NoL, NoH, LoH);
+
+#if defined(MATERIAL_HAS_RETROREFLECTION)
+    if (pixel.retroreflection > 0.0) {
+        vec3 h_retro = normalize(shading_reflected + light.l);
+        float NoH_retro = saturate(dot(shading_normal, h_retro));
+        float LoH_retro = saturate(dot(light.l, h_retro));
+        vec3 Fr_retro = specularLobe(pixel, light, shading_reflected, h_retro,
+                NoV, NoL, NoH_retro, LoH_retro);
+        Fr = mix(Fr, Fr_retro, pixel.retroreflection);
+    }
+#endif
+    Fr *= pixel.energyCompensation;
 
     // Optional secondary specular lobe
 #if defined(MATERIAL_HAS_SECOND_SPECULAR_LOBE)
