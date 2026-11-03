@@ -53,6 +53,7 @@ VkDeviceSize alignValue(VkDeviceSize valueToAlign, VkDeviceSize alignment) {
 
 fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStage::acquireSegment(
         fvkmemory::ResourceManager* resManager, uint32_t segmentOffset, uint32_t numBytes) {
+    utils::LockGuard const lock(mLock);
     assert_invariant(numBytes <= mCapacity && segmentOffset <= mCapacity - numBytes);
     auto segment = fvkmemory::resource_ptr<Segment>::construct(resManager, this, numBytes,
             segmentOffset, [this](uint32_t offset) { mSegments.erase(offset); });

@@ -285,7 +285,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
           mStereoscopicType(driverConfig.stereoscopicType),
           mStereoscopicEyeCount(driverConfig.stereoscopicEyeCount),
           mAsynchronousMode(driverConfig.asynchronousMode),
-          mAsyncBackend(platform, context, &mResourceManager, ASYNC_VER_2) {
+          mAsyncWorker(platform, context, &mResourceManager, ASYNC_VER_2) {
 
     if (mAsynchronousMode != AsynchronousMode::NONE) {
         mJobQueue = JobQueue::create();
@@ -642,7 +642,7 @@ void VulkanDriver::finish(int dummy) {
 
     mReadPixels.runUntilComplete();
     if constexpr (ASYNC_VER_2) {
-        mAsyncBackend.runUntilComplete();
+        mAsyncWorker.runUntilComplete();
     }
 }
 
@@ -2055,7 +2055,7 @@ void VulkanDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuff
         auto asyncJobFunc = [this, ib, &p, byteOffset](VulkanCommandBuffer& commands) mutable {
             updateIndexBufferCommon(ib, std::move(p), byteOffset, commands);
         };
-        mAsyncBackend.postUpdateJob(asyncJobFunc, jobId, completion, getJobQueue());
+        mAsyncWorker.postUpdateJob(asyncJobFunc, jobId, completion, getJobQueue());
     } else {
         getJobQueue()->push([this, ib, byteOffset,
                 bufferRelease = AsyncBufferRelease(this, std::move(p)),
@@ -2095,7 +2095,7 @@ void VulkanDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferOb
         auto asyncJobFunc = [this, bo, &bd, byteOffset](VulkanCommandBuffer& commands) mutable {
             updateBufferObjectCommon(bo, std::move(bd), byteOffset, commands);
         };
-        mAsyncBackend.postUpdateJob(asyncJobFunc, jobId, completion, getJobQueue());
+        mAsyncWorker.postUpdateJob(asyncJobFunc, jobId, completion, getJobQueue());
     } else {
         getJobQueue()->push([this, bo, byteOffset,
                 bufferRelease = AsyncBufferRelease(this, std::move(bd)),
@@ -2152,23 +2152,14 @@ void VulkanDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th,
     // resource is still pending in the queue, the `cast` call inside the lambda will crash. So we
     // pass a resource_ptr instead, which is ref-counted.
     auto t = promoteToAsync(resource_ptr<VulkanTexture>::cast(&mResourceManager, th));
-    if constexpr (false) {
-        AsyncCompletion* completion = new AsyncCompletion(this, handler, callback, user);
-        auto asyncJobFunc = [this, t, level, xoffset, yoffset, zoffset, width, height, depth,
-                &data](VulkanCommandBuffer& commands) mutable {
-            update3DImageCommon(t, level, xoffset, yoffset, zoffset, width, height, depth,
-                    std::move(data));
-        };
-        mAsyncBackend.postUpdateJob(asyncJobFunc, jobId, completion, getJobQueue());
-    } else {
-        getJobQueue()->push([this, t, level, xoffset, yoffset, zoffset, width, height, depth,
-                bufferRelease = AsyncBufferRelease(this, std::move(data)),
-                completion = AsyncCompletion(this, handler, callback, user)]() mutable {
-            update3DImageCommon(t, level, xoffset, yoffset, zoffset, width, height, depth,
-                    bufferRelease.detach());
-            completion.schedule(AsyncCallStatus::COMPLETED);
-        }, jobId);
-    }
+
+    getJobQueue()->push([this, t, level, xoffset, yoffset, zoffset, width, height, depth,
+            bufferRelease = AsyncBufferRelease(this, std::move(data)),
+            completion = AsyncCompletion(this, handler, callback, user)]() mutable {
+        update3DImageCommon(t, level, xoffset, yoffset, zoffset, width, height, depth,
+                bufferRelease.detach());
+        completion.schedule(AsyncCallStatus::COMPLETED);
+    }, jobId);
 }
 
 void VulkanDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {

@@ -103,9 +103,15 @@ public:
 
     inline uint32_t currentOffset() { return mCurrentOffset; }
 
-    inline bool isSafeToReset() const { return mSegments.empty(); }
+    inline bool isSafeToReset() const {
+        utils::LockGuard const lock(mLock);
+        return mSegments.empty();
+    }
 
-    inline void reset() { mCurrentOffset = 0; }
+    inline void reset() {
+        utils::LockGuard const lock(mLock);
+        mCurrentOffset = 0;
+    }
 
     // Marks a region of the block as "in-use", and provides information about
     // the allocated region to the caller. Note: this assumes that numBytes
@@ -129,6 +135,7 @@ private:
     // for easy deletions later. This is managed by the blocks themselves, in an
     // RAII pattern, during construction and destruction.
     std::unordered_map<uint32_t, Segment*> mSegments;
+    mutable utils::Mutex mLock;
 };
 
 class VulkanStageImage {
