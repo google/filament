@@ -22,13 +22,21 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.Size;
 
+import com.google.android.filament.proguard.UsedByNative;
+
 /** An axis aligned 3D box represented by its center and half-extent. */
 public class Box {
+    @UsedByNative("RenderableManager.cpp")
     private float mCenterX;
+    @UsedByNative("RenderableManager.cpp")
     private float mCenterY;
+    @UsedByNative("RenderableManager.cpp")
     private float mCenterZ;
+    @UsedByNative("RenderableManager.cpp")
     private float mHalfExtentX;
+    @UsedByNative("RenderableManager.cpp")
     private float mHalfExtentY;
+    @UsedByNative("RenderableManager.cpp")
     private float mHalfExtentZ;
 
     public Box() {

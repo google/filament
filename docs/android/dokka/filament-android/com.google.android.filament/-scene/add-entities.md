@@ -7,7 +7,7 @@ open fun [addEntities](add-entities.md)(entities: [Array](https://kotlinlang.org
 
 Adds a list of entities to the Scene. 
 
-Entities that have already been destroyed with destroy are skipped.
+Entities that have already been destroyed with EntityManager::destroy() are skipped.
 
 #### Parameters
 

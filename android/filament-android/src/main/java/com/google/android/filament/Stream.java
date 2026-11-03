@@ -24,6 +24,8 @@ import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.RestrictTo;
 
+import com.google.android.filament.proguard.UsedByNative;
+
 /**
  * Stream is used to attach a video stream to a Filament {@code Texture}.
  *
@@ -118,6 +120,7 @@ public class Stream {
     public static class Builder {
         @SuppressWarnings({"FieldCanBeLocal", "UnusedDeclaration"}) // Keep to finalize native resources
         private final BuilderFinalizer mFinalizer;
+        @UsedByNative("StreamHelper.cpp")
         private final long mNativeBuilder;
 
         public Builder() {

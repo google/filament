@@ -7,9 +7,6 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 - webgpu: preserve fragment depth writes and discard in depth-only render passes (#10717).
-- engine: fix PCSS soft shadows of point and spot lights using the directional light's bulb radius
-- engine: fix a shader program leak when rendering PCSS or VSM shadows with the program cache
-  disabled
-- vulkan: with the `backend.vulkan.enable_pipeline_cache_persistence` feature flag, the backend
-  keeps its `VkPipelineCache` across runs through `Platform::setBlobFunc`, as the GL backend does
-  for program binaries; the blob functions must be set before the `Engine` is created
+- gltf: `KHR_materials_iridescence` is now supported
+- gltf: `KHR_materials_anisotropy` is now supported
+

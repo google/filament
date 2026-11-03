@@ -51,6 +51,10 @@ material {
         },
         {
             type : float,
+            name : retroreflection
+        },
+        {
+            type : float,
             name : clearCoat
         },
         {
@@ -103,6 +107,7 @@ fragment {
         material.iridescence = materialParams.iridescence;
         material.iridescenceIor = materialParams.iridescenceIor;
         material.iridescenceThickness = materialParams.iridescenceThickness;
+        material.retroreflection = materialParams.retroreflection;
         material.clearCoat = materialParams.clearCoat;
         material.clearCoatRoughness = materialParams.clearCoatRoughness;
         material.anisotropy = materialParams.anisotropy;

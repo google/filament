@@ -44,6 +44,9 @@ REORGANIZE_HEADERS = REPO_ROOT / "tools/reorganize-headers/run.py"
 JAVA_OUT_DIR = REPO_ROOT / "android/filament-android/src/main/java/com/google/android/filament"
 CPP_OUT_DIR = REPO_ROOT / "android/filament-android/src/main/cpp"
 
+FILAMAT_JAVA_OUT_DIR = REPO_ROOT / "android/filamat-android/src/main/java/com/google/android/filament/filamat"
+FILAMAT_CPP_OUT_DIR = REPO_ROOT / "android/filamat-android/src/main/cpp"
+
 INCLUDES = [
     "-I", str(REPO_ROOT),
     "-I", str(REPO_ROOT / "filament/include"),
@@ -52,7 +55,12 @@ INCLUDES = [
     "-I", str(REPO_ROOT / "filament/backend/include"),
     "-I", str(REPO_ROOT / "libs/filabridge/include"),
     "-I", str(REPO_ROOT / "libs/filaflat/include"),
+    "-I", str(REPO_ROOT / "libs/filamat/include"),
 ]
+
+FILAMAT_TARGETS = {
+    "MaterialBuilder",
+}
 
 TARGETS = [
     ("ACESLegacyToneMapper", REPO_ROOT / "filament/include/filament/ToneMapper.h"),
@@ -79,6 +87,7 @@ TARGETS = [
     ("LightManager", REPO_ROOT / "filament/include/filament/LightManager.h"),
     ("LinearToneMapper", REPO_ROOT / "filament/include/filament/ToneMapper.h"),
     ("Material", REPO_ROOT / "filament/include/filament/Material.h"),
+    ("MaterialBuilder", REPO_ROOT / "libs/filamat/include/filamat/MaterialBuilder.h"),
     ("MaterialInstance", REPO_ROOT / "filament/include/filament/MaterialInstance.h"),
     ("MorphTargetBuffer", REPO_ROOT / "filament/include/filament/MorphTargetBuffer.h"),
     ("PBRNeutralToneMapper", REPO_ROOT / "filament/include/filament/ToneMapper.h"),
@@ -206,6 +215,7 @@ def main() -> None:
 
     java_out_dir = args.java_dir.resolve()
     cpp_out_dir = args.jni_dir.resolve()
+    use_default_dirs = (java_out_dir == JAVA_OUT_DIR.resolve() and cpp_out_dir == CPP_OUT_DIR.resolve())
     jobs = max(1, args.jobs)
 
     if not REORGANIZE_HEADERS.exists():
@@ -228,12 +238,22 @@ def main() -> None:
             sys.exit(1)
         selected_targets = [target_map[t] for t in args.targets]
 
+    def get_target_dirs(name: str):
+        if use_default_dirs and name in FILAMAT_TARGETS:
+            return FILAMAT_JAVA_OUT_DIR, FILAMAT_CPP_OUT_DIR
+        return java_out_dir, cpp_out_dir
+
     print(f"Generating Android bindings ({len(selected_targets)} targets, {jobs} workers)...")
     print(f"  Java output dir: {java_out_dir}")
     print(f"  JNI C++ output dir: {cpp_out_dir}")
+    if use_default_dirs and any(t[0] in FILAMAT_TARGETS for t in selected_targets):
+        print(f"  Filamat Java output dir: {FILAMAT_JAVA_OUT_DIR}")
+        print(f"  Filamat JNI C++ output dir: {FILAMAT_CPP_OUT_DIR}")
 
-    java_out_dir.mkdir(parents=True, exist_ok=True)
-    cpp_out_dir.mkdir(parents=True, exist_ok=True)
+    for name, _ in selected_targets:
+        t_java_dir, t_cpp_dir = get_target_dirs(name)
+        t_java_dir.mkdir(parents=True, exist_ok=True)
+        t_cpp_dir.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         json_files = []
@@ -260,7 +280,8 @@ def main() -> None:
 
         print("\n[2/2] Generating Java and JNI C++ bindings...")
         for item in json_files:
-            ok, name, err = generate_target(item, java_out_dir, cpp_out_dir)
+            t_java_dir, t_cpp_dir = get_target_dirs(item[0])
+            ok, name, err = generate_target(item, t_java_dir, t_cpp_dir)
             if not ok:
                 print(f"Error: {err}", file=sys.stderr)
                 sys.exit(1)
@@ -275,12 +296,15 @@ def main() -> None:
         "Corners",
         "Aabb",
     }
-    for item in java_out_dir.glob("*.java"):
-        if item.stem not in target_names and item.stem in helper_stems:
-            item.unlink()
-    for item in cpp_out_dir.glob("*.cpp"):
-        if item.stem not in target_names and item.stem in helper_stems:
-            item.unlink()
+    for out_j, out_c in {(java_out_dir, cpp_out_dir), (FILAMAT_JAVA_OUT_DIR, FILAMAT_CPP_OUT_DIR)}:
+        if out_j.exists():
+            for item in out_j.glob("*.java"):
+                if item.stem not in target_names and item.stem in helper_stems:
+                    item.unlink()
+        if out_c.exists():
+            for item in out_c.glob("*.cpp"):
+                if item.stem not in target_names and item.stem in helper_stems:
+                    item.unlink()
 
     out_display = (
         java_out_dir.relative_to(REPO_ROOT)
@@ -291,16 +315,39 @@ def main() -> None:
 
     if args.validate:
         print("\n[Validation] Running static parity and reflection validation...")
-        target_set = {t[0] for t in selected_targets} if args.targets else None
-        validator = BindingValidator(
-            java_dir=java_out_dir,
-            cpp_dir=cpp_out_dir,
-            verbose=False,
-            target_classes=target_set,
-        )
-        val_result = validator.run()
-        print(val_result.format_report(verbose=False))
-        if not val_result.is_clean:
+        validation_groups = []
+        if use_default_dirs:
+            filament_targets = {t[0] for t in selected_targets if t[0] not in FILAMAT_TARGETS}
+            filamat_targets = {t[0] for t in selected_targets if t[0] in FILAMAT_TARGETS}
+            if filament_targets:
+                validation_groups.append((
+                    java_out_dir,
+                    cpp_out_dir,
+                    filament_targets if args.targets else None,
+                ))
+            if filamat_targets:
+                validation_groups.append((
+                    FILAMAT_JAVA_OUT_DIR,
+                    FILAMAT_CPP_OUT_DIR,
+                    filamat_targets if args.targets else None,
+                ))
+        else:
+            target_set = {t[0] for t in selected_targets} if args.targets else None
+            validation_groups.append((java_out_dir, cpp_out_dir, target_set))
+
+        all_clean = True
+        for val_java_dir, val_cpp_dir, val_targets in validation_groups:
+            validator = BindingValidator(
+                java_dir=val_java_dir,
+                cpp_dir=val_cpp_dir,
+                verbose=False,
+                target_classes=val_targets,
+            )
+            val_result = validator.run()
+            print(val_result.format_report(verbose=False))
+            if not val_result.is_clean:
+                all_clean = False
+        if not all_clean:
             print("\nError: Static validation failed!", file=sys.stderr)
             sys.exit(1)
         print("✓ Static validation passed with zero errors.")
