@@ -122,6 +122,15 @@ void constrainMaterial(MaterialKey* key, UvMap* uvmap) {
             key->retroreflectionUV, key->hasRetroreflectionTexture, "retroreflectionTexture");
     key->retroreflectionUV = clampUv(key->retroreflectionUV);
 
+    key->hasIridescenceTexture = constrainTexture(
+            key->iridescenceUV, key->hasIridescenceTexture, "iridescenceTexture");
+    key->iridescenceUV = clampUv(key->iridescenceUV);
+
+    key->hasIridescenceThicknessTexture = constrainTexture(
+            key->iridescenceThicknessUV, key->hasIridescenceThicknessTexture,
+            "iridescenceThicknessTexture");
+    key->iridescenceThicknessUV = clampUv(key->iridescenceThicknessUV);
+
     // NOTE: KHR_materials_clearcoat does not provide separate UVs, we'll assume UV0
     *uvmap = retval;
 }
@@ -156,6 +165,8 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     const auto& specularUV = getUvString(config.specularTextureUV);
     const auto& specularColorUV = getUvString(config.specularColorTextureUV);
     const auto& retroreflectionUV = getUvString(config.retroreflectionUV);
+    const auto& iridescenceUV = getUvString(config.iridescenceUV);
+    const auto& iridescenceThicknessUV = getUvString(config.iridescenceThicknessUV);
 
     replaceAll("${normal}", normalUV);
     replaceAll("${color}", baseColorUV);
@@ -172,6 +183,8 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     replaceAll("${specular}", specularUV);
     replaceAll("${specularColor}", specularColorUV);
     replaceAll("${retroreflection}", retroreflectionUV);
+    replaceAll("${iridescence}", iridescenceUV);
+    replaceAll("${iridescenceThickness}", iridescenceThicknessUV);
 }
 
 } // namespace filament::gltfio
