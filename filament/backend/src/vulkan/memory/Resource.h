@@ -72,6 +72,7 @@ inline bool isThreadSafeType(ResourceType type) {
            type == ResourceType::FENCE ||
            type == ResourceType::TIMER_QUERY ||
            type == ResourceType::SYNC ||
+           type == ResourceType::STAGE_SEGMENT ||
            type == ResourceType::STREAM;
 }
 
