@@ -433,6 +433,35 @@ std::string shaderFromKey(const MaterialKey& config) {
                 )SHADER";
             }
         }
+
+        if (config.hasAnisotropy && !config.useSpecularGlossiness) {
+            shader += R"SHADER(
+                material.anisotropy = materialParams.anisotropyStrength;
+                float anisotropyCos = cos(materialParams.anisotropyRotation);
+                float anisotropySin = sin(materialParams.anisotropyRotation);
+            )SHADER";
+
+            if (config.hasAnisotropyTexture) {
+                shader += "highp float2 anisotropyUV = ${anisotropy};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "anisotropyUV = (vec3(anisotropyUV, 1.0) * "
+                              "materialParams.anisotropyUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    vec3 anisotropyTex = texture(materialParams_anisotropyMap, anisotropyUV).rgb;
+                    material.anisotropy *= anisotropyTex.b;
+                    vec2 anisotropyDirection = anisotropyTex.rg * 2.0 - 1.0;
+                    anisotropyDirection =
+                            mat2(anisotropyCos, anisotropySin, -anisotropySin, anisotropyCos) *
+                            anisotropyDirection;
+                    material.anisotropyDirection = vec3(anisotropyDirection, 0.0);
+                )SHADER";
+            } else {
+                shader += R"SHADER(
+                    material.anisotropyDirection = vec3(anisotropyCos, anisotropySin, 0.0);
+                )SHADER";
+            }
+        }
     }
 
     shader += "}\n";
@@ -703,6 +732,19 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
             builder.parameter("iridescenceThicknessMap", MaterialBuilder::SamplerType::SAMPLER_2D);
             if (config.hasTextureTransforms) {
                 builder.parameter("iridescenceThicknessUvMatrix", MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH);
+            }
+        }
+    }
+
+    // ANISOTROPY
+    if (config.hasAnisotropy && !config.unlit && !config.useSpecularGlossiness) {
+        builder.parameter("anisotropyStrength", MaterialBuilder::UniformType::FLOAT);
+        builder.parameter("anisotropyRotation", MaterialBuilder::UniformType::FLOAT);
+        if (config.hasAnisotropyTexture) {
+            builder.parameter("anisotropyMap", MaterialBuilder::SamplerType::SAMPLER_2D);
+            if (config.hasTextureTransforms) {
+                builder.parameter("anisotropyUvMatrix", MaterialBuilder::UniformType::MAT3,
                         MaterialBuilder::ParameterPrecision::HIGH);
             }
         }

@@ -1261,6 +1261,9 @@ TEST(glTFIOMaterialProvider, ConstrainMaterialRejectsOutOfBoundsUvIndices) {
             .hasIridescenceThicknessTexture = true,
             .iridescenceThicknessUV = badUv,
             .hasIridescence = true,
+            .hasAnisotropyTexture = true,
+            .anisotropyUV = badUv,
+            .hasAnisotropy = true,
         };
 
         UvMap uvmap {};
@@ -1283,6 +1286,7 @@ TEST(glTFIOMaterialProvider, ConstrainMaterialRejectsOutOfBoundsUvIndices) {
         EXPECT_FALSE(key.hasRetroreflectionTexture);
         EXPECT_FALSE(key.hasIridescenceTexture);
         EXPECT_FALSE(key.hasIridescenceThicknessTexture);
+        EXPECT_FALSE(key.hasAnisotropyTexture);
         EXPECT_EQ(getNumUvSets(uvmap), 0u);
     }
 
@@ -1330,6 +1334,7 @@ TEST(glTFIOMaterialProvider, ProcessShaderStringHandlesOutOfBoundsUvIndices) {
         .retroreflectionUV = 100,
         .iridescenceUV = 110,
         .iridescenceThicknessUV = 120,
+        .anisotropyUV = 130,
     };
 
     UvMap uvmap {};
@@ -1340,13 +1345,13 @@ TEST(glTFIOMaterialProvider, ProcessShaderStringHandlesOutOfBoundsUvIndices) {
             "${normal}|${color}|${metallic}|${ao}|${emissive}|${transmission}|"
             "${clearCoat}|${clearCoatRoughness}|${clearCoatNormal}|"
             "${sheenColor}|${sheenRoughness}|${volumeThickness}|${specular}|${specularColor}|"
-            "${retroreflection}|${iridescence}|${iridescenceThickness}";
+            "${retroreflection}|${iridescence}|${iridescenceThickness}|${anisotropy}";
     processShaderString(&shader, uvmap, key);
 
     EXPECT_EQ(shader,
             "vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|"
             "vec2(0)|vec2(0)|vec2(0)|"
-            "vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)");
+            "vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)");
 
     // Also verify valid UV0 / UV1 replacements alongside an invalid UvSet value in uvmap.
     MaterialKey validKey {
@@ -2159,6 +2164,87 @@ TEST_F(glTFIOTest, IridescenceMaterial) {
 
     Material const* mat3 = instance->getMaterialInstances()[3]->getMaterial();
     EXPECT_FALSE(mat3->hasParameter("iridescenceFactor"));
+
+    loader->destroyAsset(asset);
+    jitProvider->destroyMaterials();
+    delete jitProvider;
+    AssetLoader::destroy(&loader);
+}
+
+TEST_F(glTFIOTest, AnisotropyMaterial) {
+    MaterialProvider* jitProvider = createJitShaderProvider(mEngine);
+    ASSERT_NE(jitProvider, nullptr);
+
+    std::string const gltf =
+            R"({"asset":{"version":"2.0"},)"
+            R"("extensionsUsed":["KHR_materials_anisotropy","KHR_materials_unlit",)"
+            R"("KHR_materials_pbrSpecularGlossiness","KHR_texture_transform"],)"
+            R"("scene":0,"scenes":[{"nodes":[0]}],"nodes":[{"mesh":0}],)"
+            R"("meshes":[{"primitives":[)"
+            R"({"attributes":{"POSITION":0,"TEXCOORD_0":1},"material":0},)"
+            R"({"attributes":{"POSITION":0,"TEXCOORD_0":1},"material":1},)"
+            R"({"attributes":{"POSITION":0,"TEXCOORD_0":1},"material":2},)"
+            R"({"attributes":{"POSITION":0,"TEXCOORD_0":1},"material":3}]}],)"
+            R"("accessors":[)"
+            R"({"bufferView":0,"componentType":5126,"count":3,"type":"VEC3","min":[0,0,0],"max":[1,1,0]},)"
+            R"({"bufferView":1,"componentType":5126,"count":3,"type":"VEC2"}],)"
+            R"("bufferViews":[)"
+            R"({"buffer":0,"byteOffset":0,"byteLength":36},)"
+            R"({"buffer":0,"byteOffset":36,"byteLength":24}],)"
+            R"("buffers":[{"byteLength":60,"uri":"data:application/octet-stream;base64,)"
+            R"(AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAIA/"}],)"
+            R"("images":[{"uri":"data:image/png;base64,)"
+            R"(iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg=="}],)"
+            R"("textures":[{"source":0}],)"
+            R"("materials":[)"
+            R"({"extensions":{"KHR_materials_anisotropy":{"anisotropyStrength":0.75,"anisotropyRotation":0.5}}},)"
+            R"({"extensions":{"KHR_materials_anisotropy":{)"
+            R"("anisotropyStrength":0.5,"anisotropyRotation":1.0,)"
+            R"("anisotropyTexture":{"index":0,"texCoord":0,)"
+            R"("extensions":{"KHR_texture_transform":{"scale":[2.0,2.0]}}}}}},)"
+            R"({"extensions":{"KHR_materials_unlit":{},)"
+            R"("KHR_materials_anisotropy":{"anisotropyStrength":1.0}}},)"
+            R"({"extensions":{"KHR_materials_pbrSpecularGlossiness":{},)"
+            R"("KHR_materials_anisotropy":{"anisotropyStrength":1.0}}})"
+            R"(]})";
+
+    AssetLoader* loader = AssetLoader::create({
+            .engine = mEngine,
+            .materials = jitProvider,
+            .names = mNameManager,
+    });
+    ASSERT_NE(loader, nullptr);
+
+    FilamentAsset* asset = loader->createAsset(
+            reinterpret_cast<uint8_t const*>(gltf.data()), uint32_t(gltf.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+    FilamentInstance* instance = asset->getInstance();
+    ASSERT_NE(instance, nullptr);
+    ASSERT_EQ(instance->getMaterialInstanceCount(), 4u);
+
+    Material const* mat0 = instance->getMaterialInstances()[0]->getMaterial();
+    EXPECT_TRUE(mat0->hasParameter("anisotropyStrength"));
+    EXPECT_TRUE(mat0->hasParameter("anisotropyRotation"));
+    EXPECT_FALSE(mat0->hasParameter("anisotropyMap"));
+
+    Material const* mat1 = instance->getMaterialInstances()[1]->getMaterial();
+    EXPECT_TRUE(mat1->hasParameter("anisotropyStrength"));
+    EXPECT_TRUE(mat1->hasParameter("anisotropyRotation"));
+    EXPECT_TRUE(mat1->hasParameter("anisotropyMap"));
+    EXPECT_TRUE(mat1->hasParameter("anisotropyUvMatrix"));
+
+    // KHR_materials_anisotropy must be ignored on unlit and specular-glossiness materials.
+    Material const* mat2 = instance->getMaterialInstances()[2]->getMaterial();
+    EXPECT_FALSE(mat2->hasParameter("anisotropyStrength"));
+    EXPECT_FALSE(mat2->hasParameter("anisotropyRotation"));
+
+    Material const* mat3 = instance->getMaterialInstances()[3]->getMaterial();
+    EXPECT_FALSE(mat3->hasParameter("anisotropyStrength"));
+    EXPECT_FALSE(mat3->hasParameter("anisotropyRotation"));
 
     loader->destroyAsset(asset);
     jitProvider->destroyMaterials();

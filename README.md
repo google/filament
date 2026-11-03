@@ -159,6 +159,7 @@ pod 'Filament', '~> 1.80.0'
 - Extensions
   - [x] KHR_draco_mesh_compression
   - [x] KHR_lights_punctual
+  - [x] KHR_materials_anisotropy
   - [x] KHR_materials_clearcoat
   - [x] KHR_materials_dispersion
   - [x] KHR_materials_emissive_strength

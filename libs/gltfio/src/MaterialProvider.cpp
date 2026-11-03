@@ -131,6 +131,10 @@ void constrainMaterial(MaterialKey* key, UvMap* uvmap) {
             "iridescenceThicknessTexture");
     key->iridescenceThicknessUV = clampUv(key->iridescenceThicknessUV);
 
+    key->hasAnisotropyTexture = constrainTexture(
+            key->anisotropyUV, key->hasAnisotropyTexture, "anisotropyTexture");
+    key->anisotropyUV = clampUv(key->anisotropyUV);
+
     // NOTE: KHR_materials_clearcoat does not provide separate UVs, we'll assume UV0
     *uvmap = retval;
 }
@@ -167,6 +171,7 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     const auto& retroreflectionUV = getUvString(config.retroreflectionUV);
     const auto& iridescenceUV = getUvString(config.iridescenceUV);
     const auto& iridescenceThicknessUV = getUvString(config.iridescenceThicknessUV);
+    const auto& anisotropyUV = getUvString(config.anisotropyUV);
 
     replaceAll("${normal}", normalUV);
     replaceAll("${color}", baseColorUV);
@@ -185,6 +190,7 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     replaceAll("${retroreflection}", retroreflectionUV);
     replaceAll("${iridescence}", iridescenceUV);
     replaceAll("${iridescenceThickness}", iridescenceThicknessUV);
+    replaceAll("${anisotropy}", anisotropyUV);
 }
 
 } // namespace filament::gltfio

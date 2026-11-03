@@ -1541,6 +1541,7 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
     auto spConfig = inputMat->specular;
     auto rrConfig = inputMat->retroreflection;
     auto irConfig = inputMat->iridescence;
+    auto anConfig = inputMat->anisotropy;
     *baseColorTexture = mrConfig.base_color_texture;
     *metallicRoughnessTexture = mrConfig.metallic_roughness_texture;
 
@@ -1548,6 +1549,9 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
             !inputMat->unlit && !inputMat->has_pbr_specular_glossiness;
 
     bool const hasIridescence = inputMat->has_iridescence &&
+            !inputMat->unlit && !inputMat->has_pbr_specular_glossiness;
+
+    bool const hasAnisotropy = inputMat->has_anisotropy &&
             !inputMat->unlit && !inputMat->has_pbr_specular_glossiness;
 
     bool hasTextureTransforms =
@@ -1568,7 +1572,8 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
         spConfig.specular_texture.has_transform ||
         (hasRetroreflection && rrConfig.retroreflection_texture.has_transform) ||
         (hasIridescence && irConfig.iridescence_texture.has_transform) ||
-        (hasIridescence && irConfig.iridescence_thickness_texture.has_transform);
+        (hasIridescence && irConfig.iridescence_thickness_texture.has_transform) ||
+        (hasAnisotropy && anConfig.anisotropy_texture.has_transform);
 
     auto const clampTexCoord = [](cgltf_int texcoord) -> uint8_t {
         return uint8_t(std::clamp(texcoord, 0, cgltf_int(UvMapSize - 1)));
@@ -1624,6 +1629,9 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
                 hasIridescence && irConfig.iridescence_thickness_texture.texture != nullptr,
         .iridescenceThicknessUV = clampTexCoord(irConfig.iridescence_thickness_texture.texcoord),
         .hasIridescence = hasIridescence,
+        .anisotropyUV = clampTexCoord(anConfig.anisotropy_texture.texcoord),
+        .hasAnisotropyTexture = hasAnisotropy && anConfig.anisotropy_texture.texture != nullptr,
+        .hasAnisotropy = hasAnisotropy,
     };
 
     if (inputMat->has_pbr_specular_glossiness) {
@@ -1714,6 +1722,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
     auto spConfig = inputMat->specular;
     auto rrConfig = inputMat->retroreflection;
     auto irConfig = inputMat->iridescence;
+    auto anConfig = inputMat->anisotropy;
 
     // Check the material blending mode, not the cgltf blending mode, because the provider
     // might have selected an alternative blend mode (e.g. to support transmission).
@@ -1981,6 +1990,21 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         }
     }
 
+    if (matkey.hasAnisotropy && mi->getMaterial()->hasParameter("anisotropyStrength")) {
+        mi->setParameter("anisotropyStrength", anConfig.anisotropy_strength);
+        mi->setParameter("anisotropyRotation", anConfig.anisotropy_rotation);
+
+        if (matkey.hasAnisotropyTexture) {
+            fAsset->addTextureBinding(mi, "anisotropyMap",
+                    anConfig.anisotropy_texture.texture, LINEAR);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt = anConfig.anisotropy_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("anisotropyUvMatrix", uvmat);
+            }
+        }
+    }
+
     *cacheEntry = { .instance = mi, .uvmap = *uvmap };
     return mi;
 }
@@ -2111,6 +2135,12 @@ FFilamentAsset* FAssetLoader::preresolveTextures(FFilamentAsset* fAsset,
             }
             if (matkey.hasIridescenceThicknessTexture) {
                 resolveTexture(irConfig.iridescence_thickness_texture.texture, LINEAR);
+            }
+        }
+        if (matkey.hasAnisotropy) {
+            auto anConfig = inputMat->anisotropy;
+            if (matkey.hasAnisotropyTexture) {
+                resolveTexture(anConfig.anisotropy_texture.texture, LINEAR);
             }
         }
     }
