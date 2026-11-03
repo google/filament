@@ -45,7 +45,7 @@
 
 #include "DriverBase.h"
 #include "JobQueue.h"
-#include "VulkanAsyncBackend.h"
+#include "VulkanAsyncWorker.h"
 #include "private/backend/Driver.h"
 
 #include <utils/FixedCapacityVector.h>
@@ -241,7 +241,7 @@ private:
     JobQueue::Ptr mJobQueue;
     JobWorker::Ptr mJobWorker;
 
-    VulkanAsyncBackend mAsyncBackend;
+    VulkanAsyncWorker mAsyncWorker;
 
     uint8_t mTicksSinceLastGc = 0;
 
