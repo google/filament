@@ -113,8 +113,11 @@ struct alignas(4) MaterialKey {
     bool hasIridescenceThicknessTexture : 1;
     uint8_t iridescenceThicknessUV : 7;
     bool hasIridescence : 1;
-    uint8_t padding : 7;
-    uint16_t padding2;
+    uint8_t anisotropyUV : 7;
+    bool hasAnisotropyTexture : 1;
+    bool hasAnisotropy : 1;
+    uint8_t padding : 6;
+    uint8_t padding2;
 };
 
 static_assert(sizeof(MaterialKey) == 24, "MaterialKey has unexpected size.");
