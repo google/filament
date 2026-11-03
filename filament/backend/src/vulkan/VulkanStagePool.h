@@ -52,7 +52,7 @@ public:
     VulkanStage& operator=(const VulkanStage& other) = delete;
     VulkanStage& operator=(VulkanStage&& other) = delete;
 
-    class Segment : public fvkmemory::Resource {
+    class Segment : public fvkmemory::ThreadSafeResource {
     public:
         using OnRecycle = std::function<void(uint32_t offset)>;
 
