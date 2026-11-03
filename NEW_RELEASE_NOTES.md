@@ -6,3 +6,6 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+- gltf: `KHR_materials_iridescence` is now supported
+- gltf: `KHR_materials_anisotropy` is now supported
+
