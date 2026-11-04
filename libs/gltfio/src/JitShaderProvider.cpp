@@ -706,12 +706,9 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
 
     // VOLUME
     if (config.hasVolume) {
-        builder.refractionMode(RefractionMode::SCREEN_SPACE);
         if (!config.hasDiffuseTransmission || config.hasTransmission) {
             builder.refractionMode(RefractionMode::SCREEN_SPACE);
 
-        // Override thin transmission if both extensions are used
-        builder.refractionType(RefractionType::SOLID);
             // Override thin transmission if both extensions are used
             builder.refractionType(RefractionType::SOLID);
         }
