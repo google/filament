@@ -166,6 +166,9 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     vec3 penumbraColor = min(vec3(1.0 / PI), Fd / max(2.0 * (1.0 - pixel.diffuseColor), vec3(FLT_EPS)));
     Fd = mix(penumbraColor, Fd, pow4(occlusion));
 #endif
+#if defined(MATERIAL_HAS_REFRACTION) && !defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION)
+    Fd *= 1.0 - pixel.transmission;
+#endif
 
 #if defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION)
     vec3 Ft = pixel.diffuseTransmissionColor * Fd_Lambert();
