@@ -445,7 +445,7 @@ private:
     VulkanVertexBufferInfo::AttributeBitSet mAttributes;
 };
 
-struct VulkanIndexBuffer : public HwIndexBuffer, fvkmemory::Resource {
+struct VulkanIndexBuffer : public HwIndexBuffer, fvkmemory::ThreadSafeResource {
     VulkanIndexBuffer(VulkanContext const& context, VmaAllocator allocator,
             VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, uint8_t elementSize,
             uint32_t indexCount)

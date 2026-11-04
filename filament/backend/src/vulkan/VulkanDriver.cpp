@@ -417,6 +417,10 @@ void VulkanDriver::terminate() {
     mDescriptorSetCache.terminate();
     mPipelineLayoutCache.terminate();
 
+    if constexpr(ASYNC_VER_2) {
+        mAsyncWorker.terminate();
+    }
+
     // Before terminating ResourceManager, we must make sure all of the resource_ptrs have been unset.
     mResourceManager.terminate();
 
