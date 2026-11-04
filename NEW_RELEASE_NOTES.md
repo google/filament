@@ -11,4 +11,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - gltf: `KHR_materials_diffuse_transmission` is now supported
 - materials: the new `diffuseTransmission` and `diffuseTransmissionColor` material properties can be
   used in the lit (standard) shading model to create diffusely transmitting (translucent) surfaces
-
+- variant: completely remove FOG variant bit
