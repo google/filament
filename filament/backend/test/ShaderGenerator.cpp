@@ -187,4 +187,14 @@ Program ShaderGenerator::getProgramWithPushConstants(filament::backend::DriverAp
     return program;
 }
 
+Program ShaderGenerator::getProgramWithSpecializationConstants(filament::backend::DriverApi&,
+        Program::SpecializationConstantsInfo constants) {
+    Program program;
+    program.shaderLanguage(mShaderLanguage);
+    program.shader(ShaderStage::VERTEX, mVertexBlob.data(), mVertexBlob.size());
+    program.shader(ShaderStage::FRAGMENT, mFragmentBlob.data(), mFragmentBlob.size());
+    program.specializationConstants(std::move(constants));
+    return program;
+}
+
 } // namespace test

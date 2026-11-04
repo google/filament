@@ -25,14 +25,17 @@ abstract class Platform {
         return "The Android Project".equalsIgnoreCase(System.getProperty("java.vendor"));
     }
 
+    @SuppressWarnings("DataFlowIssue")
     static boolean isWindows() {
         return System.getProperty("os.name").contains("Windows");
     }
 
+    @SuppressWarnings("DataFlowIssue")
     static boolean isMacOS() {
         return System.getProperty("os.name").contains("Mac OS X");
     }
 
+    @SuppressWarnings("DataFlowIssue")
     static boolean isLinux() {
         // Android reports "Linux" as the OS name
         return System.getProperty("os.name").contains("Linux") && !isAndroid();
@@ -45,9 +48,15 @@ abstract class Platform {
             try {
                 if (isAndroid()) {
                     Class<?> clazz = Class.forName("com.google.android.filament.AndroidPlatform");
+                    // As of API 37, this should be getDeclaredConstructor().newInstance() but for
+                    // backward compatibility we must keep the old call.
+                    //noinspection deprecation
                     mCurrentPlatform = (Platform) clazz.newInstance();
                 } else {
                     Class<?> clazz = Class.forName("com.google.android.filament.DesktopPlatform");
+                    // As of API 37, this should be getDeclaredConstructor().newInstance() but for
+                    // backward compatibility we must keep the old call.
+                    //noinspection deprecation
                     mCurrentPlatform = (Platform) clazz.newInstance();
                 }
             } catch (Exception e) {

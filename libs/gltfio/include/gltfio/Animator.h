@@ -82,15 +82,23 @@ public:
      */
     void resetBoneMatrices();
 
-    /** Returns the number of \c animation definitions in the glTF asset. */
+    /**
+     * Returns the number of \c animation definitions in the glTF asset.
+     *
+     * This is zero when the asset's animations failed validation, in which case they are all
+     * disabled.
+     */
     size_t getAnimationCount() const;
 
-    /** Returns the duration of the specified glTF \c animation in seconds. */
+    /**
+     * Returns the duration of the specified glTF \c animation in seconds, or zero if
+     * animationIndex is out of range.
+     */
     float getAnimationDuration(size_t animationIndex) const;
 
     /**
      * Returns a weak reference to the string name of the specified \c animation, or an
-     * empty string if none was specified.
+     * empty string if none was specified or if animationIndex is out of range.
      */
     const char* getAnimationName(size_t animationIndex) const;
 

@@ -67,9 +67,30 @@ class FTransformManager;
  *  tcm.destroy(object);
  * ~~~~~~~~~~~
  *
+ * Instance lifetime
+ * =================
+ *
+ * An Instance is a transient handle: Instances are not stable when a component is added,
+ * removed or gc() is called on a component manager. In addition, TransformManager reorders
+ * its components internally to speed up world transform computation, which changes the Instance
+ * associated with an Entity.
+ * An Instance obtained from getInstance() is only valid until the next call to any of:
+ *
+ * - create(), destroy() or setParent() on this TransformManager,
+ * - Renderer::endFrame() or Renderer::skipFrame(), which perform periodic maintenance.
+ *
+ * Instances must therefore not be kept across frames. Keep the Entity instead, and call
+ * getInstance() again when needed; it is a fast lookup. Using a stale Instance doesn't crash
+ * but silently accesses the wrong component.
+ *
  */
 class UTILS_PUBLIC TransformManager : public FilamentAPI {
 public:
+    /**
+     * An Instance representing a transform component.
+     * Instances are not stable when a component is added, removed or gc() is called on a
+     * component manager.
+     */
     using Instance = utils::EntityInstance<TransformManager>;
 
     struct children_sentinel {};
@@ -138,6 +159,9 @@ public:
      * @param e An Entity.
      * @return An Instance object, which represents the transform component associated with the Entity e.
      * @note Use Instance::isValid() to make sure the component exists.
+     * @note The returned Instance is transient and must not be kept across frames, see
+     *       "Instance lifetime" above. Instances are not stable when a component is added,
+     *       removed or gc() is called on a component manager.
      * @see hasComponent()
      */
     Instance getInstance(utils::Entity e) const noexcept;
@@ -291,9 +315,6 @@ public:
      * @param ci              The instance of the transform component to set the local transform to.
      * @param localTransform  The local transform (i.e. relative to the parent).
      * @see getTransform()
-     * @attention This operation can be slow if the hierarchy of transform is too deep, and this
-     *            will be particularly bad when updating a lot of transforms. In that case,
-     *            consider using openLocalTransformTransaction() / commitLocalTransformTransaction().
      */
     void setTransform(Instance ci, const math::mat4f& localTransform) noexcept;
 
@@ -303,9 +324,6 @@ public:
      * @param ci              The instance of the transform component to set the local transform to.
      * @param localTransform  The local transform (i.e. relative to the parent).
      * @see getTransform()
-     * @attention This operation can be slow if the hierarchy of transform is too deep, and this
-     *            will be particularly bad when updating a lot of transforms. In that case,
-     *            consider using openLocalTransformTransaction() / commitLocalTransformTransaction().
      */
     void setTransform(Instance ci, const math::mat4& localTransform) noexcept;
 
@@ -346,31 +364,21 @@ public:
     math::mat4 getWorldTransformAccurate(Instance ci) const noexcept;
 
     /**
-     * Opens a local transform transaction. During a transaction, getWorldTransform() can
-     * return an invalid transform until commitLocalTransformTransaction() is called. However,
-     * setTransform() will perform significantly better and in constant time.
+     * Opens a local transform transaction.
      *
-     * This is useful when updating many transforms and the transform hierarchy is deep (say more
-     * than 4 or 5 levels).
-     *
-     * @note If the local transform transaction is already open, this is a no-op.
-     *
+     * @deprecated This method is obsolete and is now a no-op.
      * @see commitLocalTransformTransaction(), setTransform()
      */
+    UTILS_DEPRECATED
     void openLocalTransformTransaction() noexcept;
 
     /**
-     * Commits the currently open local transform transaction. When this returns, calls
-     * to getWorldTransform() will return the proper value.
+     * Commits the currently open local transform transaction.
      *
-     * @attention failing to call this method when done updating the local transform will cause
-     *            a lot of rendering problems. The system never closes the transaction
-     *            automatically.
-     *
-     * @note If the local transform transaction is not open, this is a no-op.
-     *
+     * @deprecated This method is obsolete and is now a no-op.
      * @see openLocalTransformTransaction(), setTransform()
      */
+    UTILS_DEPRECATED
     void commitLocalTransformTransaction() noexcept;
 
 protected:

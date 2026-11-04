@@ -42,7 +42,8 @@ public:
      * Creates a Filament texture and a texture view
      */
     WebGPUTexture(SamplerType, uint8_t levels, TextureFormat, uint8_t samples, uint32_t width,
-            uint32_t height, uint32_t depth, TextureUsage, wgpu::Device const&) noexcept;
+            uint32_t height, uint32_t depth, TextureUsage, wgpu::Device const&,
+            bool asynchronous = false) noexcept;
 
     /**
      * Creates a "Filament Texture View", where the underlying texture is the same as the source,

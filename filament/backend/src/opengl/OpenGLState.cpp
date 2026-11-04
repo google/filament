@@ -325,6 +325,13 @@ void OpenGLState::deleteBuffer(GLuint buffer, GLenum target) noexcept {
 #endif
 }
 
+void OpenGLState::unbindBuffer(GLenum target, GLuint buffer) noexcept {
+    size_t const targetIndex = getIndexForBufferTarget(target);
+    if (buffer && state.buffers.genericBinding[targetIndex] == buffer) {
+        bindBuffer(target, 0);
+    }
+}
+
 void OpenGLState::deleteVertexArray(GLuint vao) noexcept {
     if (UTILS_LIKELY(vao)) {
         procs.deleteVertexArrays(1, &vao);

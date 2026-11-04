@@ -14,35 +14,34 @@
  * limitations under the License.
  */
 
-#include <backend/platforms/WebGPUPlatform.h>
-
 #include "webgpu/WebGPUConstants.h"
 #include "webgpu/WebGPUDriver.h"
 #include "webgpu/WebGPUStrings.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
+#include <backend/platforms/WebGPUPlatform.h>
+
 #include <utils/Hash.h>
+#include <utils/Mutex.h>
 #include <utils/Panic.h>
 
 #include <dawn/webgpu_cpp_print.h>
 #include <webgpu/webgpu_cpp.h>
-
-#include <utils/Mutex.h>
 
 #include <algorithm>
 #include <array>
 #include <cstdint>
 #include <functional>
 #include <sstream>// for one-time-ish setup string concatenation, namely error messaging
-#include <unordered_set>
-#include <utility>
-#include <vector>
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 #include <string>
 #include <string_view>
+#include <unordered_set>
+#include <utility>
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 #include <variant>
 #endif
+#include <vector>
 
 /**
  * WebGPU Backend implementation common across platforms or operating systems (at least for now).
@@ -62,9 +61,6 @@ constexpr std::array REQUIRED_FEATURES = {
     // support such devices, we will either need Filament to not attempt this, or find another
     // workaround. https://github.com/gpuweb/gpuweb/issues/2648
     wgpu::FeatureName::RG11B10UfloatRenderable,
-    // necessary for blit conversions of formats like RGBA32Float...
-    wgpu::FeatureName::Float32Filterable,
-
 
     // Unsupported on WASM
 #if !defined(__EMSCRIPTEN__)
@@ -76,6 +72,12 @@ constexpr std::array OPTIONAL_FEATURES = {
     wgpu::FeatureName::CoreFeaturesAndLimits,
     wgpu::FeatureName::DepthClipControl,
     wgpu::FeatureName::Depth32FloatStencil8,
+    // Linear filtering of R32Float, RG32Float, and RGBA32Float textures. This is optional in
+    // WebGPU (and Vulkan), and some GPUs (e.g. PowerVR, Adreno 5xx) do not support it. Without it,
+    // WebGPUDriver::isTextureFormatFilterable() reports fp32 formats as unfilterable, the blitter
+    // falls back to nearest filtering for fp32 sources, and fp32 mipmaps are generated with the
+    // SPD compute path instead of the (linearly filtering) render pass path.
+    wgpu::FeatureName::Float32Filterable,
 
     // Unsupported on WASM
 #if !defined(__EMSCRIPTEN__)
@@ -100,7 +102,9 @@ enum class LimitToValidate : uint8_t {
 constexpr wgpu::Limits REQUIRED_LIMITS = {
     .maxBindGroups = filament::backend::MAX_DESCRIPTOR_SET_COUNT,
     .maxBindingsPerBindGroup = 2 * filament::backend::MAX_DESCRIPTOR_COUNT,
-    .maxSamplersPerShaderStage = 16, // TODO should be set to filament::backend::MAX_SAMPLER_COUNT,
+    // This is the minimum we require (feature levels 1 and 2). Higher limits, when supported by
+    // the adapter, should be requested at device creation instead (see the TODO there).
+    .maxSamplersPerShaderStage = 16,
     .maxStorageBuffersPerShaderStage = filament::backend::MAX_SSBO_COUNT,
     .maxVertexBuffers = 8, // TODO should be set to filament::backend::MAX_VERTEX_BUFFER_COUNT,
     .maxVertexAttributes = filament::backend::MAX_VERTEX_ATTRIBUTE_COUNT,
@@ -169,7 +173,6 @@ void assertLimitsAreExpressedInRequirementsStruct() {
     });
 }
 
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 [[nodiscard]] std::string_view toString(LimitToValidate limit) {
     switch (limit) {
         case LimitToValidate::MAX_BIND_GROUPS:
@@ -189,7 +192,6 @@ void assertLimitsAreExpressedInRequirementsStruct() {
             return "UNKNOWN";
     }
 }
-#endif
 
 [[nodiscard]] uint64_t valueForLimit(wgpu::Limits const& limits, LimitToValidate limit) {
     switch (limit) {
@@ -213,30 +215,22 @@ void assertLimitsAreExpressedInRequirementsStruct() {
 
 [[nodiscard]] bool satisfiesLimits(wgpu::Limits const& limits) {
     size_t failedLimitCount = 0;
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     std::stringstream failedLimitsStream;
-#endif
     forEachLimitToValidate([&](LimitToValidate const limit) {
         uint64_t supportedValue = valueForLimit(limits, limit);
         uint64_t requiredValue = valueForLimit(REQUIRED_LIMITS, limit);
         if (supportedValue < requiredValue) {
             failedLimitCount++;
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
             failedLimitsStream << toString(limit) << " required " << requiredValue << " but found "
                                << supportedValue << ". ";
-#else
-            return true;// break early if not printing anything
-#endif
         }
         return false;// don't break, keep going
     });
     if (failedLimitCount == 0) {
         return true;
     }
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-    FWGPU_LOGI << "Failed to satisfy " << failedLimitCount
+    FWGPU_LOGW << "Failed to satisfy " << failedLimitCount
                << " limit(s): " << failedLimitsStream.str();
-#endif
     return false;
 }
 
@@ -440,17 +434,18 @@ struct AdapterDetailsHash final {
                 [&details](auto const& featureName) {
                     return details.adapter.HasFeature(featureName);
                 })) {
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-        FWGPU_LOGI << "WebGPU adapter " << toString(details)
-                   << " does not have the minimum required features.";
-        FWGPU_LOGI << "Missing required feature(s): ";
+        // Always log the missing features (not just with FWGPU_PRINT_SYSTEM), so that an adapter
+        // rejection explains itself without requiring a rebuild.
+        std::stringstream missingFeaturesStream;
         for (wgpu::FeatureName const& requiredFeature: REQUIRED_FEATURES) {
             if (!details.adapter.HasFeature(requiredFeature)) {
-                FWGPU_LOGI << webGPUPrintableToString(requiredFeature);
+                missingFeaturesStream << requiredFeature << " ";
             }
         }
-        FWGPU_LOGI << "";
-#endif
+        FWGPU_LOGW << "WebGPU adapter " << toString(details)
+                   << " does not have the minimum required features. Missing required "
+                      "feature(s): "
+                   << missingFeaturesStream.str();
         return false;
     }
     wgpu::Limits supportedLimits {};
@@ -458,9 +453,7 @@ struct AdapterDetailsHash final {
             details.adapter.GetLimits(&supportedLimits) == wgpu::Status::Success)
             << "Failed to get limits for WebGPU adapter: " << toString(details);
     if (!satisfiesLimits(supportedLimits)) {
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-        FWGPU_LOGI << " (for WebGPU adapter " << toString(details) << ")";
-#endif
+        FWGPU_LOGW << " (for WebGPU adapter " << toString(details) << ")";
         return false;
     }
     return true;
@@ -635,6 +628,30 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
     deviceDescriptor.requiredFeatureCount = enabledFeatures.size();
     deviceDescriptor.requiredFeatures = enabledFeatures.data();
 
+    // On PowerVR (Imagination) drivers, Dawn enables vulkan_disallow_npot_depth_stencil_mipmaps
+    // (crbug.com/540087398), which rejects non-power-of-two depth/stencil textures with more than
+    // one mip level. Filament creates such textures at screen-relative sizes (e.g. the SSAO
+    // structure pass), so texture creation would fail and every frame would render black. We
+    // disable the workaround on PowerVR only, leaving Dawn's defaults untouched elsewhere.
+    // Note: the underlying driver bug may still produce incorrect contents in the lower mip
+    // levels of these textures.
+    // Dawn toggles are a native-only concept. On the web, the browser owns the device and the
+    // WASM polyfill of DawnTogglesDescriptor has no disabled-toggle fields.
+#if !defined(__EMSCRIPTEN__)
+    constexpr uint32_t IMAGINATION_VENDOR_ID = 0x1010;
+    constexpr std::array<const char*, 1> POWERVR_DISABLED_TOGGLES = {
+        "vulkan_disallow_npot_depth_stencil_mipmaps",
+    };
+    wgpu::DawnTogglesDescriptor dawnTogglesDescriptor{};
+    wgpu::AdapterInfo adapterInfo{};
+    if (adapter.GetInfo(&adapterInfo) == wgpu::Status::Success &&
+            adapterInfo.vendorID == IMAGINATION_VENDOR_ID) {
+        dawnTogglesDescriptor.disabledToggleCount = POWERVR_DISABLED_TOGGLES.size();
+        dawnTogglesDescriptor.disabledToggles = POWERVR_DISABLED_TOGGLES.data();
+        deviceDescriptor.nextInChain = &dawnTogglesDescriptor;
+    }
+#endif
+
     // It is helpful to increase maxStorageTexturesPerShaderStage if the hardware supports it, but
     // not required. This allows our mipmap generation to perform as well as possible for the given
     // hardware. If we have more cases of "Nice to increase" limits like this we can generalize it
@@ -648,6 +665,14 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
             std::min(MAX_MIPMAP_STORAGE_TEXTURES_PER_STAGE,
                     supportedLimits.maxStorageTexturesPerShaderStage);
     limitsToRequest.maxImmediateSize = supportedLimits.maxImmediateSize;
+    // TODO: request min(adapter maximum, FEATURE_LEVEL_CAPS[FEATURE_LEVEL_3]) for both
+    //  maxSamplersPerShaderStage and maxSampledTexturesPerShaderStage. Note that
+    //  MAX_SAMPLER_COUNT is a total across stages, not a per-stage limit. When the
+    //  material.check_device_sampler_limits feature flag is set, material creation validates
+    //  sampler usage against the limits granted to the device (see
+    //  WebGPUDriver::getMaxTextureCount() and getMaxSamplerCount()), and those default to the spec
+    //  minimum (16) unless requested here. This matters in particular for external textures, each
+    //  of which counts as 4 sampled textures. getFeatureLevel() also depends on these limits.
     deviceDescriptor.requiredLimits = &limitsToRequest;
 
     deviceDescriptor.SetDeviceLostCallback(wgpu::CallbackMode::AllowSpontaneous,

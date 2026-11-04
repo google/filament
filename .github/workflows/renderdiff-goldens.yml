@@ -1,0 +1,91 @@
+name: 'Renderdiff Goldens'
+
+# Renders the renderdiff suite and pushes the result to a branch of filament-assets, on demand.
+#
+# Two things make this necessary. The goldens are host-specific, because a golden path records only
+# the platform and the backend: images rendered anywhere other than the runner presubmit uses are
+# the wrong goldens, so a contributor cannot simply generate them on a laptop. And a change that
+# legitimately alters many images needs those images produced somewhere before its pull request can
+# pass.
+#
+# The usual flow is to run this against the pull request's branch, then put RDIFF_BRANCH=<branch>
+# in the commit message so presubmit compares against what this produced. Merging the pull request
+# then folds that branch into the goldens' main branch, through merge-renderdiff-goldens in
+# postsubmit-main.yml.
+#
+# See test/renderdiff/README.md for the procedure, including what to do when this workflow does not
+# yet exist on the default branch, which is the one case it cannot help with: GitHub only offers a
+# workflow_dispatch entry point once the workflow file is on the default branch.
+
+on:
+  workflow_dispatch:
+    inputs:
+      golden-branch:
+        description: 'Branch of filament-assets to write the goldens to (created or overwritten).'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  regenerate-goldens:
+    name: regenerate-goldens
+    # The same label the presubmit test-renderdiff job uses. Goldens have to come from the runner
+    # that will be compared against.
+    runs-on: 'arm-ubuntu-24.04-16core'
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/renderdiff
+        with:
+          compare: 'false'
+          ccache-config: desktop-renderdiff
+      # Before the push, so that a failure there still leaves the images somewhere they can be
+      # recovered from and pushed by hand.
+      - name: Upload renderdiff output
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: renderdiff-goldens
+          path: ./out/renderdiff
+          retention-days: 100
+      - name: Push the goldens to a branch
+        env:
+          GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}
+          GOLDEN_BRANCH: ${{ inputs.golden-branch }}
+          FILAMENT_REF: ${{ github.ref_name }}
+          FILAMENT_SHA: ${{ github.sha }}
+        run: |
+          git config --global user.email "filament.bot@gmail.com"
+          git config --global user.name "Filament Bot"
+          git config --global credential.helper cache
+
+          # update_golden.py force-creates the branch, so re-running this against the same branch
+          # replaces it rather than accumulating commits.
+          python3 test/renderdiff/src/update_golden.py \
+              --branch="${GOLDEN_BRANCH}" \
+              --source=$(pwd)/out/renderdiff/renders \
+              --commit-msg="Regenerate goldens from filament@${FILAMENT_SHA} (${FILAMENT_REF})" \
+              --push-to-remote \
+              --golden-repo-token=${GH_TOKEN}
+        shell: bash
+      - name: Summarize
+        env:
+          GOLDEN_BRANCH: ${{ inputs.golden-branch }}
+        run: |
+          {
+            echo "## Renderdiff goldens"
+            echo ""
+            echo "Pushed to \`${GOLDEN_BRANCH}\` on google/filament-assets."
+            echo ""
+            echo "Add this line to the commit message of the filament change that needs them:"
+            echo ""
+            echo '```'
+            echo "RDIFF_BRANCH=${GOLDEN_BRANCH}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+        shell: bash

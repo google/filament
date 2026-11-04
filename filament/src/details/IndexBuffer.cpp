@@ -86,9 +86,13 @@ IndexBuffer::Builder& IndexBuffer::Builder::async(backend::CallbackHandler* hand
     return *this;
 }
 
-IndexBuffer* IndexBuffer::Builder::build(Engine& engine) {
+IndexBuffer* IndexBuffer::Builder::build(Engine& engine) const {
     FILAMENT_CHECK_PRECONDITION(!mImpl->mAsynchronous || engine.isAsynchronousModeEnabled())
             << "Engine not configured for async operations";
+
+    FILAMENT_CHECK_PRECONDITION(mImpl->mIndexCount <= backend::MAX_INDEX_COUNT)
+            << "indexCount " << mImpl->mIndexCount << " exceeds the maximum of "
+            << backend::MAX_INDEX_COUNT;
 
     return downcast(engine).createIndexBuffer(*this);
 }
@@ -124,14 +128,7 @@ FIndexBuffer::FIndexBuffer(FEngine& engine, const Builder& builder)
                 /* userParam1 */ this,
                 /* userParam2 */ builder->mAsyncCreationUserData,
                 /* onCountdownComplete */ [this](backend::AsyncCallStatus const status) {
-                    // Always leaves CREATING, even when canceled: FEngine::destroy waits on that
-                    // to free the object, so one that stays CREATING is deferred forever.
-                    // `std::memory_order_relaxed` should be sufficient because no other variables
-                    // need to be visible to other threads in a strict sequence.
-                    mCreationStatus.store(status == backend::AsyncCallStatus::CANCELED
-                                    ? CreationStatus::CANCELED
-                                    : CreationStatus::CREATED,
-                            std::memory_order_relaxed);
+                    mCreationState.settle(status);
                 },
                 /* driver */ &engine.getDriver());
 
@@ -151,7 +148,7 @@ FIndexBuffer::FIndexBuffer(FEngine& engine, const Builder& builder)
         // In regular (non-asynchronous) mode, we know creation is complete as soon as all
         // creation-relevant API calls are recorded into the command stream, because subsequent API
         // calls will always be invoked after that (even including asynchronous version of APIs).
-        mCreationStatus.store(CreationStatus::CREATED, std::memory_order_relaxed);
+        mCreationState.setCreated();
     }
 }
 

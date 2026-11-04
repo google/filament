@@ -19,9 +19,10 @@ import time
 import subprocess
 import json
 
+
 from golden_manager import GoldenManager, ACCESS_TYPE_SSH, ACCESS_TYPE_TOKEN
 
-from utils import execute, ArgParseImpl
+from utils import execute, ArgParseImpl, renderer_spec
 from utils import prompt_helper, PROMPT_YES, PROMPT_NO
 
 def line_prompt(prompt, validator=lambda a:True):
@@ -89,11 +90,16 @@ def _get_deletes_updates(update_dir, golden_dir, diffimg_path):
     base_files = set(os.path.join('.', os.path.relpath(p, golden_dir)) for p in glob.glob(os.path.join(golden_dir, '**', f'*.{ext}'), recursive=True) if os.path.isfile(p))
     new_files = set(os.path.join('.', os.path.relpath(p, update_dir)) for p in glob.glob(os.path.join(update_dir, '**', f'*.{ext}'), recursive=True) if os.path.isfile(p))
 
-    # Files in base but not in new are candidates for deletion (if we decide to prune)
-    # However, update_golden typically only updates/adds based on the new render set.
-    # But strict sync might imply deleting missing ones.
-    # The original logic was: delete = list(base - new).
-    delete_files = list(base_files - new_files)
+    # A golden absent from the new render set is only stale if this render set actually covered
+    # the renderer that produced it. Each platform renders on its own CI matrix leg (desktop
+    # natively against Mesa, web in a headless browser), and the on-demand goldens workflow renders
+    # desktop only, so a run that only rendered 'desktop-*' says nothing about whether the
+    # 'web-*' goldens are still wanted -- and deleting them would silently destroy the other
+    # platform's baselines. Files whose names do not encode a renderer are never deleted; they
+    # are still refreshed through the update path below.
+    rendered_specs = {spec for spec in map(renderer_spec, new_files) if spec}
+    delete_files = [p for p in (base_files - new_files)
+                    if renderer_spec(p) in rendered_specs]
 
     # Files in new but not in base are definitely updates (additions)
     update_files = list(new_files - base_files)
@@ -116,6 +122,7 @@ def _get_deletes_updates(update_dir, golden_dir, diffimg_path):
     ret_delete += delete_files
 
   return ret_delete, ret_update
+
 
 # Ask a bunch of questions to gather the configuration for the update
 def _interactive_mode(base_golden_dir, diffimg_path):
@@ -180,8 +187,9 @@ if __name__ == "__main__":
   parser.add_argument('--branch', help='Branch of the golden repo to write to')
   parser.add_argument('--golden-repo-token', help='Access token for the golden repo')
   parser.add_argument('--push-to-remote', action="store_true", help='Push the golden repo changes to remote')
+  # generate.sh builds diffimg into the debug tree, alongside the renderers.
   parser.add_argument('--diffimg', help='Path to the diffimg tool',
-                      default='./out/cmake-release/tools/diffimg/diffimg')
+                      default='./out/cmake-debug/tools/diffimg/diffimg')
 
   # write-to-branch mode
   parser.add_argument('--source', help='Directory containing the new goldens')
@@ -203,15 +211,15 @@ if __name__ == "__main__":
   diffimg_path = args.diffimg
   # Try to find diffimg if default path doesn't exist, mainly for local interactive use convenience
   if not os.path.exists(diffimg_path):
-    # fallback check for debug build
-    debug_path = './out/cmake-debug/tools/diffimg/diffimg'
-    if os.path.exists(debug_path):
-      diffimg_path = debug_path
+    # fallback check for a release build
+    release_path = './out/cmake-release/tools/diffimg/diffimg'
+    if os.path.exists(release_path):
+      diffimg_path = release_path
 
   # This is the write-to-branch mode
   if args.branch and args.source and args.commit_msg:
     if not os.path.exists(diffimg_path):
-      print(f"Error: diffimg tool not found at {diffimg_path}. Please build it first (e.g., ./build.sh release diffimg)")
+      print(f"Error: diffimg tool not found at {diffimg_path}. Please build it first (e.g., ./build.sh debug diffimg)")
       sys.exit(1)
     assert os.path.exists(args.source), f'{args.source} (--source) directory not found'
     deletes, updates = _get_deletes_updates(args.source, base_golden_dir, diffimg_path)
@@ -230,7 +238,7 @@ if __name__ == "__main__":
   # Else, we're in interactive mode of write-to-branch (for local execution).
   else:
     if not os.path.exists(diffimg_path):
-      print(f"Error: diffimg tool not found at {diffimg_path}. Please build it first (e.g., ./build.sh release diffimg)")
+      print(f"Error: diffimg tool not found at {diffimg_path}. Please build it first (e.g., ./build.sh debug diffimg)")
       sys.exit(1)
     config = _interactive_mode(base_golden_dir, diffimg_path)
     _do_update(golden_manager, config)

@@ -98,7 +98,7 @@ VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext const& context,
     : mContext(context),
       mFencePool(fencePool),
       mMarkerCount(0),
-      isProtected(isProtected),
+      mIsProtected(isProtected),
       mQueue(queue),
       mSemaphoreManager(semaphoreManager),
       mBuffer(createCommandBuffer(device, pool)),
@@ -203,7 +203,7 @@ fvkmemory::resource_ptr<VulkanSemaphore> VulkanCommandBuffer::submit() {
         .protectedSubmit = VK_TRUE,
     };
 
-    if (isProtected) {
+    if (mIsProtected) {
         submitInfo.pNext = &protectedSubmitInfo;
     }
 

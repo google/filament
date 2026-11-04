@@ -17,15 +17,16 @@
 #ifndef UBERZ_WRITABLE_ARCHIVE_H
 #define UBERZ_WRITABLE_ARCHIVE_H
 
+#include <uberz/ArchiveEnums.h>
+
 #include <filament/MaterialEnums.h>
 
-#include <uberz/ArchiveEnums.h>
-#include <utils/FixedCapacityVector.h>
 #include <utils/CString.h>
-
-#include <string_view>
+#include <utils/FixedCapacityVector.h>
 
 #include <tsl/robin_map.h>
+
+#include <string_view>
 
 namespace filament::uberz {
 

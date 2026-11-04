@@ -3,7 +3,11 @@
 # ToneMapping
 
 [main]\
-enum [ToneMapping](index.md)
+enum [~~ToneMapping~~](index.md)---
+
+### Deprecated
+
+---
 
 List of available tone-mapping operators.
 
@@ -15,11 +19,11 @@ Use Builder::toneMapper(ToneMapper*) instead
 
 | | |
 |---|---|
-| [LINEAR](-l-i-n-e-a-r/index.md) | [main]<br>[LINEAR](-l-i-n-e-a-r/index.md)<br>Linear tone mapping (i.e. no tone mapping) |
-| [ACES_LEGACY](-a-c-e-s_-l-e-g-a-c-y/index.md) | [main]<br>[ACES_LEGACY](-a-c-e-s_-l-e-g-a-c-y/index.md)<br>ACES tone mapping, with a brightness modifier to match Filament's legacy tone mapper |
-| [ACES](-a-c-e-s/index.md) | [main]<br>[ACES](-a-c-e-s/index.md)<br>ACES tone mapping |
-| [FILMIC](-f-i-l-m-i-c/index.md) | [main]<br>[FILMIC](-f-i-l-m-i-c/index.md)<br>Filmic tone mapping, modelled after ACES but applied in sRGB space |
-| [DISPLAY_RANGE](-d-i-s-p-l-a-y_-r-a-n-g-e/index.md) | [main]<br>[DISPLAY_RANGE](-d-i-s-p-l-a-y_-r-a-n-g-e/index.md)<br>Tone mapping used to validate/debug scene exposure |
+| [LINEAR](-l-i-n-e-a-r/index.md) | [main]<br>[~~LINEAR~~](-l-i-n-e-a-r/index.md)<br>Linear tone mapping (i.e. no tone mapping) |
+| [ACES_LEGACY](-a-c-e-s_-l-e-g-a-c-y/index.md) | [main]<br>[~~ACES_LEGACY~~](-a-c-e-s_-l-e-g-a-c-y/index.md)<br>ACES tone mapping, with a brightness modifier to match Filament's legacy tone mapper |
+| [ACES](-a-c-e-s/index.md) | [main]<br>[~~ACES~~](-a-c-e-s/index.md)<br>ACES tone mapping |
+| [FILMIC](-f-i-l-m-i-c/index.md) | [main]<br>[~~FILMIC~~](-f-i-l-m-i-c/index.md)<br>Filmic tone mapping, modelled after ACES but applied in sRGB space |
+| [DISPLAY_RANGE](-d-i-s-p-l-a-y_-r-a-n-g-e/index.md) | [main]<br>[~~DISPLAY_RANGE~~](-d-i-s-p-l-a-y_-r-a-n-g-e/index.md)<br>Tone mapping used to validate/debug scene exposure |
 
 ## Functions
 

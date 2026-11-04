@@ -5,4 +5,6 @@
 [main]\
 val [DIRECTIONAL_LIGHTING](-d-i-r-e-c-t-i-o-n-a-l_-l-i-g-h-t-i-n-g.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 1
 
-Directional lighting
+Directional lighting 
+
+Since directional lighting was migrated to specialization constants, filtering this bit no longer affects the size of offline compiled materials (.filamat). However, we keep it for pruning unnecessary pipeline compilations at runtime.

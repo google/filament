@@ -36,7 +36,8 @@ class EntityManager;
  *
  * To access the name of an existing entity, clients should first use NameComponentManager to get a
  * temporary handle called an \em instance. Please note that instances are ephemeral; clients should
- * store entities, not instances.
+ * store entities, not instances. Instances are not stable when a component is added, removed or
+ * gc() is called on a component manager.
  *
  * Usage example:
  *
@@ -50,6 +51,11 @@ class EntityManager;
  */
 class UTILS_PUBLIC NameComponentManager : private SingleInstanceComponentManager<CString> {
 public:
+    /**
+     * An Instance representing a name component.
+     * Instances are not stable when a component is added, removed or gc() is called on a
+     * component manager.
+     */
     using Instance = EntityInstance<NameComponentManager>;
 
     /**
@@ -69,7 +75,12 @@ public:
     /**
      * Gets a temporary handle that can be used to access the name.
      *
+     * @param e An Entity.
      * @return Non-zero handle if the entity has a name component, 0 otherwise.
+     * @note Use Instance::isValid() to make sure the component exists.
+     * @note Instances are not stable when a component is added, removed or gc() is called
+     *       on a component manager.
+     * @see hasComponent()
      */
     Instance getInstance(Entity const e) const noexcept {
         return { SingleInstanceComponentManager::getInstance(e) };

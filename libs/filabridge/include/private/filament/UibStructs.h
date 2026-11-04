@@ -26,6 +26,8 @@
 #include <array>
 #include <string_view>
 
+#include <stddef.h>
+
 /*
  * Here we define all the UBOs known by filament as C structs. It is used by filament to
  * fill the uniform values and get the interface block names. It is also used by filabridge to
@@ -137,7 +139,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::float4 iblSH[9];                      // actually float3 entries (std140 requires float4 alignment)
 
     // --------------------------------------------------------------------------------------------
-    // Directional Lighting [variant: DIR]
+    // Directional Lighting (controlled via dynamic specialization constants)
     // --------------------------------------------------------------------------------------------
     math::float3 lightDirection;                // directional light direction
     float padding0;
@@ -146,7 +148,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::float2 shadowFarAttenuationParams;    // a, a/far (a=1/pct-of-far)
 
     // --------------------------------------------------------------------------------------------
-    // Directional light shadowing [variant: SRE | DIR]
+    // Directional light shadowing [variant: SRE]
     // --------------------------------------------------------------------------------------------
     // bit 0: directional (sun) shadow enabled
     // bit 1: directional (sun) screen-space contact shadow enabled
@@ -176,7 +178,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     uint32_t shadowSamplingType;                // 0: vsm, 1: dpcf
 
     // --------------------------------------------------------------------------------------------
-    // Fog [variant: FOG]
+    // Fog [specialization constant: RUNTIME_CONFIG_HAS_FOG]
     // --------------------------------------------------------------------------------------------
     math::float3 fogDensity;        // { density, -falloff * yc, density * exp(-fallof * yc) }
     float fogStart;
@@ -195,7 +197,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::float2 fogReserved0;
 
     // --------------------------------------------------------------------------------------------
-    // Screen-space reflections [variant: SSR (i.e.: MNT | PCK | DEP)]
+    // Screen-space reflections [variant: SSR (i.e.: MNT | PCK | DEP | STE)]
     // --------------------------------------------------------------------------------------------
     math::mat4f ssrReprojection;
     math::mat4f ssrUvFromViewMatrix;
@@ -218,7 +220,8 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float es2Reserved2;
 
     // --------------------------------------------------------------------------------------------
-    // Extra directional lights, in addition to the dominant one [variant: DIR]
+    // Extra directional lights, in addition to the dominant one
+    // (controlled via dynamic specialization constants)
     // These are evaluated without shadows and without the sun disc.
     // --------------------------------------------------------------------------------------------
     // xyz: normalized direction towards the light, w: light channel bits
@@ -230,8 +233,15 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     int32_t extraDirReserved1;
     int32_t extraDirReserved2;
 
+    // --------------------------------------------------------------------------------------------
+    // Motion vectors [variant: MOT]
+    // --------------------------------------------------------------------------------------------
+    // Previous render's unjittered clip-from-world matrix, expressed in this frame's shader world
+    // space. Mono: motion vectors are disabled with stereo.
+    math::mat4f prevClipFromWorldMatrix;
+
     // bring PerViewUib to 2 KiB
-    math::float4 reserved[9];
+    math::float4 reserved[5];
 };
 
 // 2 KiB == 128 float4s
@@ -250,7 +260,11 @@ struct PerRenderableData {
     // TODO: We need a better solution, this currently holds the average local scale for the renderable
     float userData;
 
-    math::float4 reserved[8];
+    // Motion vectors [variant: MOT]: previous-from-current world transform of this draw,
+    // in shader world space. Identity when the draw didn't move.
+    std140::mat44 prevWorldFromWorldMatrix;  // std140 offset 128
+
+    math::float4 reserved[4];
 
     static uint32_t packFlagsChannels(
             bool skinning, uint8_t morphing, bool contactShadows, bool hasInstanceBuffer,
@@ -273,6 +287,10 @@ static_assert(std::is_trivially_default_constructible_v<PerRenderableData>,
 
 static_assert(sizeof(PerRenderableData) == 256,
         "sizeof(PerRenderableData) must be 256 bytes");
+
+// must match the std140 layout of PerRenderableData in surface_types.glsl
+static_assert(offsetof(PerRenderableData, prevWorldFromWorldMatrix) == 128,
+        "PerRenderableData::prevWorldFromWorldMatrix must be at std140 offset 128");
 
 struct alignas(256) PerRenderableUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr std::string_view _name{ "ObjectUniforms" };
@@ -317,13 +335,14 @@ struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
         math::mat4f lightFromWorldMatrix;               // 64
         math::float4 lightFromWorldZ;                   // 16
         math::float4 scissorNormalized;                 // 16
-        math::float2 normalBias;                        //  8   // for EVSM/PCSS must be zero
+        float normalBias;                               //  4   // for EVSM/PCSS must be zero
         float projectionParam;                          //  4   // ortho (far-near), perspective near/(far-near)
         float wsOneOverTexelSizeAtOneMeter;             //  4   // for spot/point lights
         uint32_t maxMipLevel_maxSearchRadius;           //  4   // packed half2
         uint32_t bulbRadius_vsmExponent;                //  4   // packed half2
         uint32_t maxPenumbraRatio_penumbraRatioScale;   //  4   // packed half2
         uint32_t evsm4_layer;                           //  4   // 0x00.00.01.FF
+        uint32_t reserved;                              //  4
     };
     ShadowData shadows[CONFIG_MAX_SHADOWMAPS];
 };

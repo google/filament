@@ -489,6 +489,8 @@ public class Engine {
                     config.forceGLES2Context, config.assertNativeWindowIsValid,
                     config.gpuContextPriority.ordinal(),
                     config.sharedUboInitialSizeInBytes,
+                    config.asynchronousMode.ordinal(),
+                    config.asynchronousFrameBudget,
                     config.enableMultipleDirectionalLights);
             return this;
         }
@@ -998,6 +1000,9 @@ public class Engine {
      * timely fashion, such as when responding to Android's
      * <code>android.view.SurfaceHolder.Callback.surfaceDestroyed</code></p>
      *
+     * <p>In asynchronous mode this also waits for every asynchronous call issued before it to run.
+     * A command passed to runCommandAsync() must not wait on the engine, or this call deadlocks.</p>
+     *
      * <p>If the backend thread has encountered an unrecoverable error, this function becomes a no-op.</p>
      */
     public void flushAndWait() {
@@ -1017,6 +1022,9 @@ public class Engine {
      * in cases where a guarantee about the <code>SwapChain</code> destruction is needed in a
      * timely fashion, such as when responding to Android's
      * <code>android.view.SurfaceHolder.Callback.surfaceDestroyed</code></p>
+     *
+     * <p>In asynchronous mode this also waits for every asynchronous call issued before it to run.
+     * A command passed to runCommandAsync() must not wait on the engine, or this call deadlocks.</p>
      *
      * <p>If the backend thread has encountered an unrecoverable error, this function becomes a no-op and returns false.</p>
      *
@@ -1327,6 +1335,7 @@ public class Engine {
          *
          * @deprecated use "backend.disable_parallel_shader_compile" feature flag instead
          */
+        @Deprecated
         public boolean disableParallelShaderCompile = false;
         public StereoscopicType stereoscopicType = StereoscopicType.NONE;
         public long stereoscopicEyeCount = 2;
@@ -1346,6 +1355,7 @@ public class Engine {
          *
          * @deprecated use "backend.opengl.assert_native_window_is_valid" feature flag instead
          */
+        @Deprecated
         public boolean assertNativeWindowIsValid = false;
         /**
          * GPU context priority level.
@@ -1372,6 +1382,24 @@ public class Engine {
          * invoking asynchronous methods.</p>
          */
         public AsynchronousMode asynchronousMode = AsynchronousMode.NONE;
+        /**
+         * Per-frame time budget for queued asynchronous operations.
+         *
+         * <p>It applies when they run on the backend thread (AsynchronousMode::AMORTIZATION, or
+         * THREAD_PREFERRED falling back to it). It is the elapsed time on the backend
+         * thread, measured with std::chrono::steady_clock, so time the thread spends preempted
+         * counts too.</p>
+         *
+         * <p>The operations run in Renderer::endFrame(), after the frame's own commands, and in
+         * Renderer::skipFrame(). A frame skipped because Renderer::beginFrame() returned false
+         * runs none, since the GPU is already behind. Each Renderer gets its own budget per frame,
+         * and so does each Renderer::renderStandaloneView() call.</p>
+         *
+         * <p>One operation always runs per frame, even with a budget of 0, so the queue keeps moving.
+         * An operation that starts within the budget runs to completion, so a frame can go over
+         * by up to one operation.</p>
+         */
+        public long asynchronousFrameBudget = 2_000_000;
         /**
          * Capacity of the LRU cache for material definitions.
          *
@@ -1510,6 +1538,8 @@ public class Engine {
             boolean forceGLES2Context, boolean assertNativeWindowIsValid,
             int gpuContextPriority,
             long sharedUboInitialSizeInBytes,
+            int asynchronousMode,
+            long asynchronousFrameBudget,
             boolean enableMultipleDirectionalLights);
     private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);

@@ -162,10 +162,6 @@ MaterialInstance* Material::getDefaultInstance() noexcept {
     return downcast(this)->getDefaultInstance();
 }
 
-MaterialInstance const* Material::getDefaultInstance() const noexcept {
-    return downcast(this)->getDefaultInstance();
-}
-
 void Material::compile(CompilerPriorityQueue const priority, UserVariantFilterMask const variants,
         CallbackHandler* handler, utils::Invocable<void(Material*)>&& callback) noexcept {
     downcast(this)->compile(priority, variants, handler, std::move(callback));

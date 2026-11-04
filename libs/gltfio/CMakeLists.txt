@@ -148,7 +148,9 @@ build_ubershader(transmission_masked       transmission    lit masked)
 build_ubershader(volume_opaque             volume          lit opaque)
 build_ubershader(volume_fade               volume          lit fade)
 build_ubershader(volume_masked             volume          lit masked)
-build_ubershader(sheen                     sheen           _ _)
+build_ubershader(sheen_opaque              sheen           lit opaque)
+build_ubershader(sheen_fade                sheen           lit fade)
+build_ubershader(sheen_masked              sheen           lit masked)
 build_ubershader(specular_opaque           specular        lit opaque)
 build_ubershader(specular_fade             specular        lit fade)
 build_ubershader(specular_masked           specular        lit masked)
@@ -241,6 +243,7 @@ if (FILAMENT_BUILD_TESTING)
 
     add_test_gltf("third_party/models/AnimatedMorphCube/AnimatedMorphCube.glb" "AnimatedMorphCube.glb")
     add_test_gltf("third_party/models/DamagedHelmet/DamagedHelmetWebp.glb" "DamagedHelmetWebp.glb")
+    add_test_gltf("libs/gltfio/test/data/invalid_accessor_type.glb" "invalid_accessor_type.glb")
 
     add_custom_target(test_gltfio_files DEPENDS ${GLTF_TEST_FILES})
 
@@ -249,7 +252,7 @@ if (FILAMENT_BUILD_TESTING)
     if (TNT_DEV AND NOT WASM AND NOT ANDROID AND NOT IOS)
         set(TEST_TARGET test_gltfio)
 
-        add_executable(${TEST_TARGET} test/gltfio_test.cpp)
+        add_executable(${TEST_TARGET} test/gltfio_test.cpp test/GlbBuilders.cpp)
         add_dependencies(${TEST_TARGET} test_gltfio_files)
         set_property(TARGET test_gltfio PROPERTY LINK_LIBRARIES)
 

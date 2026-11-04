@@ -159,11 +159,15 @@ DECL_DRIVER_API_N(setFrameCompletedCallback,
         backend::CallbackHandler*, handler,
         utils::Invocable<void(void)>&&, callback)
 
+// Sets the time the next presented frame should be displayed at. Only valid if
+// isPresentationTimeSupported() returns true.
 DECL_DRIVER_API_N(setPresentationTime,
         int64_t, monotonic_clock_ns)
 
 DECL_DRIVER_API_N(endFrame,
         uint32_t, frameId)
+
+DECL_DRIVER_API_0(skipFrame)
 
 // hint to the driver that we're done with all render targets up to this point. i.e. the driver
 // can start rendering. e.g. correspond to glFlush() for a GLES driver.
@@ -425,6 +429,12 @@ DECL_DRIVER_API_SYNCHRONOUS_0(uint8_t, getMaxDrawBuffers)
 DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxUniformBufferSize)
 DECL_DRIVER_API_SYNCHRONOUS_N(size_t, getMaxTextureSize, backend::SamplerType, target)
 DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxArrayTextureLayers)
+// Per-stage limits of the current device. Each sampler descriptor consumes one texture and one
+// sampler, except SAMPLER_EXTERNAL whose cost is given by getExternal{Texture|Sampler}Cost().
+DECL_DRIVER_API_SYNCHRONOUS_N(size_t, getMaxTextureCount, backend::ShaderStage, stage)
+DECL_DRIVER_API_SYNCHRONOUS_N(size_t, getMaxSamplerCount, backend::ShaderStage, stage)
+DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getExternalTextureCost)
+DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getExternalSamplerCost)
 DECL_DRIVER_API_SYNCHRONOUS_0(math::float2, getClipSpaceParams)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage2, backend::Platform::ExternalImageHandleRef, image)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage, void*, image)
@@ -433,6 +443,9 @@ DECL_DRIVER_API_SYNCHRONOUS_N(bool, isWorkaroundNeeded, backend::Workaround, wor
 DECL_DRIVER_API_SYNCHRONOUS_0(backend::FeatureLevel, getFeatureLevel)
 DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getUniformBufferOffsetAlignment)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isCompositorTimingSupported)
+// Whether setPresentationTime() is honored by this backend and platform. When this returns
+// false, setPresentationTime() is a no-op and must not be called.
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isPresentationTimeSupported)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, queryFrameTimestamps, backend::SwapChainHandle, swapChain, uint64_t, frameId, backend::FrameTimestamps*, outFrameTimestamps)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, queryCompositorTiming, backend::SwapChainHandle, swapChain, backend::CompositorTiming*, outCompositorTiming)
 

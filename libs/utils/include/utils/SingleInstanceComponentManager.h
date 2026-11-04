@@ -47,7 +47,24 @@ class EntityManager;
 class UTILS_PUBLIC SingleInstanceComponentManagerBase {
 public:
     using ChangeCallback = Invocable<void(Slice<const Entity>)>;
+    /**
+     * An Instance representing a component.
+     *
+     * @note Instances are not stable when a component is added, removed or gc() is called on a
+     * component manager.
+     */
     using Instance = EntityInstanceBase::Type;
+
+    struct AddResult {
+        Instance ci;    // Component instance (0 if the entity is null).
+        bool added;     // True if newly added; false if the entity already had a component.
+    };
+
+    struct RemoveResult {
+        Instance removed; // Slot index of the removed component, or 0 if not found.
+        Instance moved;   // Prior slot index of the last element moved into `removed`
+                          // (equal to `removed` if no swap occurred, or 0 if not found).
+    };
 
     static constexpr bool USE_SORTED_DIRTY_ARRAY = false;
 
@@ -55,8 +72,9 @@ public:
      * Registers a callback to be triggered when components are added, removed, or modified.
      * @param token A unique identifier for the listener (e.g., 'this' pointer).
      * @param callback The callback to invoke.
-     * @note Registering the same token multiple times will result in multiple
-     *       registrations and the callback being invoked multiple times.
+     * @note Only changes occurring after the callback is registered are buffered and reported
+     *       (matching registerBitset). Registering the same token multiple times will result in
+     *       multiple registrations and the callback being invoked multiple times.
      */
     void registerChangeCallback(void const* token, ChangeCallback callback) noexcept;
 
@@ -78,8 +96,10 @@ public:
     /**
      * Registers a bitset to be updated when entities change.
      * @param bitset A pointer to the PagedArenaBitset to register.
+     * @param filter An optional filter bitset; if non-null, only entities present in *filter
+     *               are added to *bitset.
      */
-    void registerBitset(PagedArenaBitset* bitset);
+    void registerBitset(PagedArenaBitset* bitset, PagedArenaBitset const* filter = nullptr);
 
     /**
      * Unregisters a bitset.
@@ -114,16 +134,25 @@ public:
     bool popPendingZombie(Entity newEntity, Entity& outZombie) noexcept;
 
     /**
-     * Records a change for the given entity.
-     * Flushes notifications if the internal buffer becomes full.
+     * Records a change for the given entity or slice of entities.
+     * Registered bitsets are updated immediately; if any change callbacks are registered,
+     * the entities are buffered and flushed when the internal buffer becomes full.
      */
     void notifyChange(Entity e) noexcept;
+    void notifyChange(Slice<const Entity> entities) noexcept;
 
     // Non-templated Presence & Instance queries
     bool hasComponent(Entity const e) const noexcept {
         return getInstance(e) != 0;
     }
 
+    /**
+     * Gets an Instance representing the component associated with the given Entity.
+     * @param e An Entity.
+     * @return An Instance object, or 0 if the entity has no component.
+     * @note Instances are not stable when a component is added, removed or gc() is called
+     *       on a component manager.
+     */
     Instance getInstance(Entity const e) const noexcept {
         auto const pos = mInstanceMap.find(e);
         return pos != mInstanceMap.end() ? pos->second : 0;
@@ -183,13 +212,8 @@ public:
     void checkZombieCollisionPanic(Entity newEntity) noexcept;
 
 protected:
-    struct CompactionResult {
-        size_t lastIndex;
-        Entity swappedEntity;
-    };
-
+    using InstanceMap = tsl::robin_map<Entity, Instance, Entity::Hasher>;
     using SoaAllocator = Instance (*)(void* context, Entity e);
-    using SoaDeallocator = CompactionResult (*)(void* context, size_t index);
     using EvictionDispatcher = void (*)(void* ctx, void* extra, Entity const* entities, size_t count);
 
     /**
@@ -221,9 +245,10 @@ protected:
     SingleInstanceComponentManagerBase(SingleInstanceComponentManagerBase&& rhs) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS;
     SingleInstanceComponentManagerBase& operator=(SingleInstanceComponentManagerBase&& rhs) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS;
 
-    Instance addComponentImpl(Entity e, void* context, SoaAllocator allocator) noexcept;
+    AddResult addComponentImpl(Entity e, void* context, SoaAllocator allocator) noexcept;
 
-    void removeComponentsImpl(Entity const* entities, size_t count, void* context, SoaDeallocator deallocator) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS;
+    void eraseComponentFromMap(InstanceMap::iterator pos, Entity e,
+            Entity swappedEntity, Instance index) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS;
 
     void gcImpl(uint32_t maxDestructions,
             void* context, void* extraArg, EvictionDispatcher dispatcher) noexcept;
@@ -234,7 +259,7 @@ protected:
      */
     void catchupGarbage() noexcept;
 
-    tsl::robin_map<Entity, Instance, Entity::Hasher> mInstanceMap;
+    InstanceMap mInstanceMap;
     PagedArenaBitset mPendingDestruction;
 
     /*
@@ -259,6 +284,8 @@ protected:
     PagedArenaBitset mEntities UTILS_GUARDED_BY(mEbrEntitiesLock);
 
 private:
+    void recordDirtyEntity(Entity e) noexcept;
+
     EntityManager& mEntityManager;
     ImmutableCString mName;
     bool mAmortizationSupported = false;
@@ -272,11 +299,16 @@ private:
         ChangeCallback callback;
     };
 
+    struct BitsetRegistration {
+        PagedArenaBitset* bitset;
+        PagedArenaBitset const* filter;
+    };
+
     static constexpr size_t MAX_DIRTY_COUNT = 16;
     Entity mDirtyEntities[MAX_DIRTY_COUNT];
     size_t mDirtyCount = 0;
     std::vector<CallbackInfo> mChangeCallbacks;
-    std::vector<PagedArenaBitset*> mBitsets;
+    std::vector<BitsetRegistration> mBitsets;
 };
 
 /*
@@ -307,6 +339,12 @@ protected:
 public:
     using SoA = StructureOfArrays<Elements ..., Entity>;
     using Structure = typename SoA::Structure;
+    /**
+     * An Instance representing a component.
+     *
+     * @note Instances are not stable when a component is added, removed or gc() is called on a
+     * component manager.
+     */
     using Instance = EntityInstanceBase::Type;
 
     explicit SingleInstanceComponentManager(EntityManager& em, ImmutableCString name,
@@ -353,13 +391,32 @@ public:
 
     // Add a component to the given Entity. If the entity already has a component from this
     // manager, this function is a no-op.
-    // This invalidates all pointers components.
+    // Instances are not stable when a component is added, removed or gc() is called.
+    // This also invalidates all pointers to components.
     Instance addComponent(Entity e);
 
+    // Adds a component to the given Entity using a single hash-table probe, returning both the
+    // Instance and whether the component was newly added (false if the entity already had one).
+    AddResult tryAddComponent(Entity e);
+
     // Removes a component from the given entity.
-    // This invalidates all pointers components.
+    // Instances are not stable when a component is added, removed or gc() is called.
+    // This also invalidates all pointers to components.
     Instance removeComponent(Entity e);
     void removeComponents(Entity const* entities, size_t count) noexcept;
+
+    // Removes a component (or batch of components) using a single hash-table probe per entity,
+    // invoking preRemove(Instance) before the SoA swap-and-pop overwrites the removed slot.
+    //
+    // Contract: preRemove is invoked while holding an internal mInstanceMap iterator; it may
+    // access SoA fields of any existing instance, but MUST NOT add or remove components on this
+    // manager (doing so would invalidate the iterator).
+    template<typename PreRemove>
+    RemoveResult removeComponentWithCallback(Entity e, PreRemove&& preRemove) noexcept;
+
+    template<typename PreRemove>
+    void removeComponentsWithCallback(Entity const* entities, size_t count,
+            PreRemove&& preRemove) noexcept;
 
     // return the first instance
     Instance begin() noexcept {
@@ -574,15 +631,12 @@ protected:
     }
 
     SoA mData;
-
-private:
-    Instance removeComponentsHelper(Entity const* entities, size_t count) noexcept;
 };
 
 // Keep these outside of the class because CLion has trouble parsing them
 template<typename ... Elements>
-typename SingleInstanceComponentManager<Elements ...>::Instance
-SingleInstanceComponentManager<Elements ...>::addComponent(Entity e) {
+SingleInstanceComponentManagerBase::AddResult
+SingleInstanceComponentManager<Elements ...>::tryAddComponent(Entity e) {
     auto allocator = [](void* ctx, Entity ent) noexcept -> Instance {
         auto self = static_cast<SingleInstanceComponentManager*>(ctx);
         self->mData.push_back(Structure{}).template back<ENTITY_INDEX>() = ent;
@@ -591,45 +645,59 @@ SingleInstanceComponentManager<Elements ...>::addComponent(Entity e) {
     return addComponentImpl(e, this, allocator);
 }
 
-template <typename ... Elements>
+template<typename ... Elements>
 typename SingleInstanceComponentManager<Elements ...>::Instance
-SingleInstanceComponentManager<Elements ... >::removeComponentsHelper(Entity const* entities, size_t const count) noexcept {
-    Instance lastIndex = 0;
-    struct Context {
-        SingleInstanceComponentManager* self;
-        Instance* pLastIndex;
-    } ctx { this, &lastIndex };
+SingleInstanceComponentManager<Elements ...>::addComponent(Entity e) {
+    return tryAddComponent(e).ci;
+}
 
-    auto deallocator = [](void* context, size_t index) noexcept -> CompactionResult {
-        auto ctxPtr = static_cast<Context*>(context);
-        auto self = ctxPtr->self;
-        size_t last = self->mData.size() - 1;
-        *(ctxPtr->pLastIndex) = last;
+template <typename ... Elements>
+template <typename PreRemove>
+SingleInstanceComponentManagerBase::RemoveResult
+SingleInstanceComponentManager<Elements ... >::removeComponentWithCallback(
+        Entity const e, PreRemove&& preRemove) noexcept {
+    auto& map = mInstanceMap;
+    auto const pos = map.find(e);
+    if (UTILS_LIKELY(pos != map.end())) {
+        Instance const index = pos.value();
+        assert(index != 0);
 
+        preRemove(index);
+
+        size_t const last = mData.size() - 1;
         Entity swappedEntity;
         if (last != index) {
-            self->mData.forEach([index, last](auto* p) {
+            mData.forEach([index, last](auto* p) {
                 p[index] = std::move(p[last]);
             });
-            swappedEntity = self->mData.template elementAt<ENTITY_INDEX>(index);
+            swappedEntity = mData.template elementAt<ENTITY_INDEX>(index);
         }
-        self->mData.pop_back();
-        return { last, swappedEntity };
-    };
+        mData.pop_back();
 
-    removeComponentsImpl(entities, count, &ctx, deallocator);
-    return lastIndex;
+        eraseComponentFromMap(pos, e, swappedEntity, index);
+        return { index, Instance(last) };
+    }
+    return { 0, 0 };
+}
+
+template <typename ... Elements>
+template <typename PreRemove>
+void SingleInstanceComponentManager<Elements ... >::removeComponentsWithCallback(
+        Entity const* entities, size_t const count, PreRemove&& preRemove) noexcept {
+    for (size_t k = 0; k < count; ++k) {
+        removeComponentWithCallback(entities[k], preRemove);
+    }
 }
 
 template <typename ... Elements>
 typename SingleInstanceComponentManager<Elements ...>::Instance
 SingleInstanceComponentManager<Elements ... >::removeComponent(Entity const e) {
-    return removeComponentsHelper(&e, 1);
+    return removeComponentWithCallback(e, [](Instance) noexcept {}).moved;
 }
 
 template <typename ... Elements>
 void SingleInstanceComponentManager<Elements ... >::removeComponents(Entity const* entities, size_t const count) noexcept {
-    removeComponentsHelper(entities, count);
+    removeComponentsWithCallback(entities, count, [](Instance) noexcept {});
 }
 
 } // namespace utils

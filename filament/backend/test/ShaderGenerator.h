@@ -55,6 +55,9 @@ public:
     filament::backend::Program getProgramWithPushConstants(filament::backend::DriverApi&,
             std::array<PushConstants, filament::backend::Program::SHADER_TYPE_COUNT> constants);
 
+    filament::backend::Program getProgramWithSpecializationConstants(filament::backend::DriverApi&,
+            filament::backend::Program::SpecializationConstantsInfo constants);
+
 private:
     using ShaderStage = filament::backend::ShaderStage;
 

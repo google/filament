@@ -50,7 +50,7 @@ Java_com_google_android_filament_InstanceBuffer_nSetLocalTransforms(JNIEnv *env,
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_InstanceBuffer_nGetLocalTransform(JNIEnv *env, jclass clazz, jlong nativeInstanceBuffer, jint index, jfloatArray out_) {
-    InstanceBuffer* const that = (InstanceBuffer*) nativeInstanceBuffer;
+    InstanceBuffer const * const that = (InstanceBuffer const *) nativeInstanceBuffer;
     jfloat *out = env->GetFloatArrayElements(out_, nullptr);
     wrapJni(env, [=]() {
         *reinterpret_cast<mat4f *>(out) = that->getLocalTransform((size_t)index);

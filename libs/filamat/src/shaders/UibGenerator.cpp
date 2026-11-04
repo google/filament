@@ -157,7 +157,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "iblSH",                  9, Type::FLOAT3                  },
 
             // ------------------------------------------------------------------------------------
-            // Directional Lighting [variant: DIR]
+            // Directional Lighting (controlled via dynamic specialization constants)
             // ------------------------------------------------------------------------------------
             { "lightDirection",         0, Type::FLOAT3, Precision::HIGH },
             { "padding0",               0, Type::FLOAT                   },
@@ -166,7 +166,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "shadowFarAttenuationParams", 0, Type::FLOAT2, Precision::HIGH },
 
             // ------------------------------------------------------------------------------------
-            // Directional light shadowing [variant: SRE | DIR]
+            // Directional light shadowing [variant: SRE]
             // ------------------------------------------------------------------------------------
             { "directionalShadows",       0, Type::INT                      },
             { "ssContactShadowDistance",  0, Type::FLOAT                    },
@@ -188,7 +188,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "shadowSamplingType",      0, Type::UINT                   },
 
             // ------------------------------------------------------------------------------------
-            // Fog [variant: FOG]
+            // Fog [specialization constant: RUNTIME_CONFIG_HAS_FOG]
             // ------------------------------------------------------------------------------------
             { "fogDensity",              0, Type::FLOAT3,Precision::HIGH },
             { "fogStart",                0, Type::FLOAT, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
@@ -207,7 +207,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "fogReserved0",            0, Type::FLOAT2, Precision::HIGH },
 
             // ------------------------------------------------------------------------------------
-            // Screen-space reflections [variant: SSR (i.e.: MNT | PCK | DEP)]
+            // Screen-space reflections [variant: SSR (i.e.: MNT | PCK | DEP | STE)]
             // ------------------------------------------------------------------------------------
             { "ssrReprojection",         0, Type::MAT4,  Precision::HIGH },
             { "ssrUvFromViewMatrix",     0, Type::MAT4,  Precision::HIGH },
@@ -230,7 +230,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "es2Reserved2",            0, Type::FLOAT                  },
 
             // ------------------------------------------------------------------------------------
-            // Extra directional lights [variant: DIR]
+            // Extra directional lights (controlled via dynamic specialization constants)
             // ------------------------------------------------------------------------------------
             { "extraLightDirection",      CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS,
                                              Type::FLOAT4, Precision::HIGH },
@@ -240,6 +240,11 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "extraDirReserved0",        0, Type::INT                     },
             { "extraDirReserved1",        0, Type::INT                     },
             { "extraDirReserved2",        0, Type::INT                     },
+
+            // ------------------------------------------------------------------------------------
+            // Motion vectors [variant: MOT]
+            // ------------------------------------------------------------------------------------
+            { "prevClipFromWorldMatrix",  0, Type::MAT4, Precision::HIGH },
 
             // bring PerViewUib to 2 KiB
             { "reserved", sizeof(PerViewUib::reserved)/16, Type::FLOAT4 }

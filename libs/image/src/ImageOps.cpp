@@ -16,9 +16,10 @@
 
 #include <image/ImageOps.h>
 
+#include <utils/Panic.h>
+
 #include <math/vec3.h>
 #include <math/vec4.h>
-#include <utils/Panic.h>
 
 #include <algorithm>
 #include <memory>
@@ -63,7 +64,7 @@ LinearImage horizontalStack(const LinearImage* first, size_t count) {
             const auto& img = first[c];
             uint32_t swidth = img.getWidth();
             float const* src = img.getPixelRef() + row * swidth * nchannels;
-            memcpy(dst, src, swidth * nchannels * sizeof(float));
+            memcpy(dst, src, size_t(swidth) * nchannels * sizeof(float));
             dst += swidth * nchannels;
         }
     }
@@ -114,7 +115,7 @@ LinearImage verticalFlip(const LinearImage& image) {
     for (uint32_t row = 0; row < height; ++row) {
         float const* src = image.getPixelRef(0, row);
         float* dst = result.getPixelRef(0, height - 1 - row);
-        memcpy(dst, src, width * channels * sizeof(float));
+        memcpy(dst, src, size_t(width) * channels * sizeof(float));
     }
     return result;
 }
@@ -181,7 +182,7 @@ LinearImage combineChannels(LinearImage const* img, size_t count) {
     LinearImage result(width, height, (uint32_t) count);
     float* dst = result.getPixelRef();
     uint32_t sindex = 0, dindex = 0;
-    while (dindex < width * height * count) {
+    while (dindex < size_t(width) * height * count) {
         for (size_t c = 0; c < count; ++c, ++dindex) {
             const LinearImage& plane = img[c];
             float const* src = plane.getPixelRef();
@@ -225,7 +226,7 @@ LinearImage cropRegion(const LinearImage& image, uint32_t left, uint32_t top, ui
     float const* source = image.getPixelRef(left, top);
     float* target = result.getPixelRef();
     for (int32_t row = 0; row < height; ++row) {
-        memcpy(target, source, width * channels * sizeof(float));
+        memcpy(target, source, size_t(width) * channels * sizeof(float));
         target += width * channels;
         source += image.getWidth() * channels;
     }

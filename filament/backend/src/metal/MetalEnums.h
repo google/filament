@@ -345,6 +345,8 @@ constexpr inline MTLBlendFactor getMetalBlendFactor(BlendFunction function) noex
         case BlendFunction::ONE_MINUS_DST_ALPHA: return MTLBlendFactorOneMinusDestinationAlpha;
         case BlendFunction::SRC_ALPHA_SATURATE: return MTLBlendFactorSourceAlphaSaturated;
     }
+    // should never happen
+    return MTLBlendFactorOne;
 }
 
 constexpr inline MTLCullMode getMetalCullMode(CullingMode cullMode) noexcept {

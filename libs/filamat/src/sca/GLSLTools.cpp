@@ -48,7 +48,7 @@ GLSLangCleaner::~GLSLangCleaner() {
 
 // ------------------------------------------------------------------------------------------------
 // If the error message is associated with API level, this formats it to be more human-readable.
-static void formatApiLevelErrorLog(utils::io::ostream& out, const char* log) {
+static void formatApiLevelErrorLog(io::ostream& out, const char* log) {
     if (!log) return;
     
     std::string_view fullLog(log);
@@ -69,7 +69,7 @@ static void formatApiLevelErrorLog(utils::io::ostream& out, const char* log) {
         size_t endPos = line.find(postfix, startPos);
         if (startPos == std::string_view::npos || endPos == std::string_view::npos) {
             // Doesn't fit to the template, simply print the log as is.
-            out << line << utils::io::endl;
+            out << line << io::endl;
             start = end + 1;
             continue;
         }
@@ -102,7 +102,7 @@ static void formatApiLevelErrorLog(utils::io::ostream& out, const char* log) {
                 out << ((c == '_') ? ' ' : c);
             }
         }
-        out << utils::io::endl;
+        out << io::endl;
         start = end + 1;
     }
 }
@@ -172,14 +172,13 @@ public:
     bool visitBinary(TVisit, TIntermBinary* node) override {
         TOperator const op = node->getOp();
         Symbol symbol;
-        if (op == EOpAssign || op == EOpAddAssign || op == EOpDivAssign || op == EOpSubAssign
-            || op == EOpMulAssign ) {
+        // Capture all assignment operators
+        if (op >= EOpAssign && op <= EOpRightShiftAssign) {
             const TIntermTyped* n = findLValueBase(node->getLeft(), symbol);
             if (n != nullptr && n->getAsSymbolNode() != nullptr) {
                 const TString& symbolTString = n->getAsSymbolNode()->getName();
                 symbol.setName(symbolTString.c_str());
                 mEvents.push_back(symbol);
-                return false; // Don't visit subtree since we just traced it with findLValueBase()
             }
         }
         return true;
@@ -235,8 +234,8 @@ bool GLSLTools::analyzeComputeShader(const std::string& shaderCode,
     EShMessages const msg = glslangFlagsFromTargetApi(targetApi, targetLanguage);
     bool const ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!ok) {
-        utils::slog.e << "ERROR: Unable to parse compute shader:" << utils::io::endl;
-        utils::slog.e << tShader.getInfoLog() << utils::io::endl;
+        utils::slog.e << "ERROR: Unable to parse compute shader:" << io::endl;
+        utils::slog.e << tShader.getInfoLog() << io::endl;
         return false;
     }
 
@@ -246,8 +245,8 @@ bool GLSLTools::analyzeComputeShader(const std::string& shaderCode,
     // Check there is a material function definition in this shader.
     TIntermNode* materialFctNode = ASTHelpers::getFunctionByNameOnly(materialFunctionName, *root);
     if (materialFctNode == nullptr) {
-        utils::slog.e << "ERROR: Invalid compute shader:" << utils::io::endl;
-        utils::slog.e << "ERROR: Unable to find " << materialFunctionName << "() function" << utils::io::endl;
+        utils::slog.e << "ERROR: Invalid compute shader:" << io::endl;
+        utils::slog.e << "ERROR: Unable to find " << materialFunctionName << "() function" << io::endl;
         return false;
     }
 
@@ -273,8 +272,8 @@ std::optional<GLSLTools::FragmentShaderInfo> GLSLTools::analyzeFragmentShader(
     EShMessages const msg = glslangFlagsFromTargetApi(targetApi, targetLanguage);
     bool const ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!ok) {
-        utils::slog.e << "ERROR: Unable to parse fragment shader:" << utils::io::endl;
-        utils::slog.e << tShader.getInfoLog() << utils::io::endl;
+        utils::slog.e << "ERROR: Unable to parse fragment shader:" << io::endl;
+        utils::slog.e << tShader.getInfoLog() << io::endl;
         return std::nullopt;
     }
 
@@ -284,8 +283,8 @@ std::optional<GLSLTools::FragmentShaderInfo> GLSLTools::analyzeFragmentShader(
     // Check there is a material function definition in this shader.
     TIntermNode* materialFctNode = ASTHelpers::getFunctionByNameOnly(materialFunctionName, *root);
     if (materialFctNode == nullptr) {
-        utils::slog.e << "ERROR: Invalid fragment shader:" << utils::io::endl;
-        utils::slog.e << "ERROR: Unable to find " << materialFunctionName << "() function" << utils::io::endl;
+        utils::slog.e << "ERROR: Invalid fragment shader:" << io::endl;
+        utils::slog.e << "ERROR: Unable to find " << materialFunctionName << "() function" << io::endl;
         return std::nullopt;
     }
 
@@ -303,8 +302,8 @@ std::optional<GLSLTools::FragmentShaderInfo> GLSLTools::analyzeFragmentShader(
     TIntermAggregate* prepareMaterialNode =
             ASTHelpers::getFunctionByNameOnly("prepareMaterial", *root);
     if (prepareMaterialNode == nullptr) {
-        utils::slog.e << "ERROR: Invalid fragment shader:" << utils::io::endl;
-        utils::slog.e << "ERROR: Unable to find prepareMaterial() function" << utils::io::endl;
+        utils::slog.e << "ERROR: Invalid fragment shader:" << io::endl;
+        utils::slog.e << "ERROR: Unable to find prepareMaterial() function" << io::endl;
         return std::nullopt;
     }
 
@@ -312,17 +311,17 @@ std::optional<GLSLTools::FragmentShaderInfo> GLSLTools::analyzeFragmentShader(
     bool const prepareMaterialCalled = ASTHelpers::isFunctionCalled(
             prepareMaterialSignature, *materialFctNode, *root);
     if (!prepareMaterialCalled) {
-        utils::slog.e << "ERROR: Invalid fragment shader:" << utils::io::endl;
-        utils::slog.e << "ERROR: prepareMaterial() is not called" << utils::io::endl;
+        utils::slog.e << "ERROR: Invalid fragment shader:" << io::endl;
+        utils::slog.e << "ERROR: prepareMaterial() is not called" << io::endl;
         return std::nullopt;
     }
 
     if (hasCustomSurfaceShading) {
         materialFctNode = ASTHelpers::getFunctionByNameOnly("surfaceShading", *root);
         if (materialFctNode == nullptr) {
-            utils::slog.e << "ERROR: Invalid fragment shader:" << utils::io::endl;
+            utils::slog.e << "ERROR: Invalid fragment shader:" << io::endl;
             utils::slog.e << "ERROR: Unable to find surfaceShading() function"
-                          << utils::io::endl;
+                          << io::endl;
             return std::nullopt;
         }
     }
@@ -330,7 +329,8 @@ std::optional<GLSLTools::FragmentShaderInfo> GLSLTools::analyzeFragmentShader(
     return result;
 }
 
-bool GLSLTools::analyzeVertexShader(const std::string& shaderCode,
+std::optional<GLSLTools::VertexShaderInfo> GLSLTools::analyzeVertexShader(
+        const std::string& shaderCode,
         filament::backend::ShaderModel model,
         MaterialBuilder::MaterialDomain materialDomain, MaterialBuilder::TargetApi targetApi,
         MaterialBuilder::TargetLanguage targetLanguage) noexcept {
@@ -339,7 +339,7 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode,
 
     // TODO: After implementing post-process vertex shaders, properly analyze them here.
     if (materialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
-        return true;
+        return VertexShaderInfo{};
     }
 
     // Parse to check syntax and semantic.
@@ -353,21 +353,23 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode,
     EShMessages const msg = glslangFlagsFromTargetApi(targetApi, targetLanguage);
     bool const ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!ok) {
-        utils::slog.e << "ERROR: Unable to parse vertex shader" << utils::io::endl;
-        utils::slog.e << tShader.getInfoLog() << utils::io::endl;
-        return false;
+        utils::slog.e << "ERROR: Unable to parse vertex shader" << io::endl;
+        utils::slog.e << tShader.getInfoLog() << io::endl;
+        return std::nullopt;
     }
 
     TIntermNode* root = tShader.getIntermediate()->getTreeRoot();
     // Check there is a material function definition in this shader.
     TIntermNode* materialFctNode = ASTHelpers::getFunctionByNameOnly("materialVertex", *root);
     if (materialFctNode == nullptr) {
-        utils::slog.e << "ERROR: Invalid vertex shader" << utils::io::endl;
-        utils::slog.e << "ERROR: Unable to find materialVertex() function" << utils::io::endl;
-        return false;
+        utils::slog.e << "ERROR: Invalid vertex shader" << io::endl;
+        utils::slog.e << "ERROR: Unable to find materialVertex() function" << io::endl;
+        return std::nullopt;
     }
 
-    return true;
+    return VertexShaderInfo{
+        .userMaterialVertexHasCustomDepth = GLSLTools::hasCustomVertexDepth(root, materialFctNode)
+    };
 }
 
 void GLSLTools::init() {
@@ -428,7 +430,7 @@ bool GLSLTools::findPropertyWritesOperations(std::string_view functionName, size
             ASTHelpers::getFunctionBySignature(functionName, *rootNode);
     if (functionMaterialDef == nullptr) {
         utils::slog.e << "Unable to find function '" << functionName << "' definition."
-                << utils::io::endl;
+                << io::endl;
         return false;
     }
 
@@ -437,7 +439,7 @@ bool GLSLTools::findPropertyWritesOperations(std::string_view functionName, size
 
     if (functionMaterialParameters.size() <= parameterIdx) {
         utils::slog.e << "Unable to find function '" << functionName <<  "' parameterIndex: " <<
-                parameterIdx << utils::io::endl;
+                parameterIdx << io::endl;
         return false;
     }
 
@@ -688,7 +690,7 @@ void GLSLTools::textureLodBias(TIntermediate* intermediate, TIntermNode* root,
     if (!pIntermSymbolLodBias) {
         // something went wrong
         utils::slog.e << "lod bias ignored because \"" << lodBiasSymbolName << "\" was not found!"
-                      << utils::io::endl;
+                      << io::endl;
         return;
     }
 
@@ -781,9 +783,8 @@ bool GLSLTools::hasCustomDepth(TIntermNode* root, TIntermNode* entryPoint) {
                     const TString& symbolTString = n->getAsSymbolNode()->getName();
                     if (symbolTString == "gl_FragDepth") {
                         hasCustomDepth = true;
+                        return false;
                     }
-                    // Don't visit subtree since we just traced it with findLValueBase()
-                    return false;
                 }
             }
             return true;
@@ -801,6 +802,139 @@ bool GLSLTools::hasCustomDepth(TIntermNode* root, TIntermNode* entryPoint) {
     } hasCustomDepth(root);
 
     return hasCustomDepth(entryPoint);
+}
+
+static bool isVertexPositionProperty(std::string_view const name) noexcept {
+    return name == "worldPosition" ||
+           name == "clipSpaceTransform" ||
+           name == "clipSpacePosition";
+}
+
+bool GLSLTools::findVertexPositionWrites(std::string_view functionName, size_t parameterIdx,
+        TIntermNode* rootNode) noexcept {
+    glslang::TIntermAggregate* functionDef =
+            ASTHelpers::getFunctionBySignature(functionName, *rootNode);
+    if (functionDef == nullptr || functionDef->getSequence().size() < 2) {
+        return false;
+    }
+
+    std::vector<ASTHelpers::FunctionParameter> functionParameters;
+    ASTHelpers::getFunctionParameters(functionDef, functionParameters);
+    if (functionParameters.size() <= parameterIdx) {
+        return false;
+    }
+
+    ASTHelpers::FunctionParameter::Qualifier const qualifier =
+            functionParameters.at(parameterIdx).qualifier;
+    if (qualifier == ASTHelpers::FunctionParameter::IN ||
+        qualifier == ASTHelpers::FunctionParameter::CONST) {
+        return false;
+    }
+
+    std::deque<Symbol> symbols;
+    findSymbolsUsage(functionName, *rootNode, symbols);
+
+    std::string const& parameterName = functionParameters.at(parameterIdx).name;
+    for (Symbol& symbol : symbols) {
+        if (symbol.getName() != parameterName) {
+            continue;
+        }
+        // Whole-struct assignment (e.g. material = otherMaterial) modifies all fields,
+        // including worldPosition.
+        if (symbol.getAccesses().empty()) {
+            return true;
+        }
+        if (doesSymbolModifyVertexPosition(symbol, rootNode)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool GLSLTools::doesSymbolModifyVertexPosition(Symbol& symbol, TIntermNode* rootNode) noexcept {
+    for (const Access& access : symbol.getAccesses()) {
+        if (access.type == Access::Type::FunctionCall) {
+            if (symbol.hasDirectIndexForStruct()) {
+                TIntermAggregate* functionCall =
+                        ASTHelpers::getFunctionBySignature(access.string, *rootNode);
+                if (functionCall == nullptr) {
+                    return false;
+                }
+                std::vector<ASTHelpers::FunctionParameter> functionCallParameters;
+                ASTHelpers::getFunctionParameters(functionCall, functionCallParameters);
+                if (functionCallParameters.size() <= access.parameterIdx) {
+                    return false;
+                }
+                ASTHelpers::FunctionParameter const& parameter =
+                        functionCallParameters.at(access.parameterIdx);
+                if (parameter.qualifier == ASTHelpers::FunctionParameter::OUT ||
+                    parameter.qualifier == ASTHelpers::FunctionParameter::INOUT) {
+                    return isVertexPositionProperty(symbol.getDirectIndexStructName());
+                }
+                return false;
+            }
+            return findVertexPositionWrites(access.string, access.parameterIdx, rootNode);
+        }
+        if (access.type == Access::Type::DirectIndexForStruct) {
+            return isVertexPositionProperty(access.string);
+        }
+    }
+    return false;
+}
+
+bool GLSLTools::hasCustomVertexDepth(TIntermNode* root, TIntermNode* entryPoint) {
+    class BuiltinPositionWriteChecker : public glslang::TIntermTraverser {
+        using TVisit = glslang::TVisit;
+        TIntermNode* const mRoot;
+        bool mModifiesPosition = false;
+
+    public:
+        explicit BuiltinPositionWriteChecker(TIntermNode* root) noexcept : mRoot(root) {}
+
+        bool modifiesPosition(TIntermNode* node) noexcept {
+            node->traverse(this);
+            return mModifiesPosition;
+        }
+
+        bool visitAggregate(TVisit, TIntermAggregate* node) override {
+            if (node->getOp() == EOpFunctionCall) {
+                TIntermNode* const callee =
+                        ASTHelpers::getFunctionBySignature(node->getName(), *mRoot);
+                assert_invariant(callee);
+                mModifiesPosition = mModifiesPosition ||
+                        BuiltinPositionWriteChecker(mRoot).modifiesPosition(callee);
+                return !mModifiesPosition;
+            }
+            return true;
+        }
+
+        bool visitBinary(TVisit, glslang::TIntermBinary* node) override {
+            TOperator const op = node->getOp();
+            Symbol symbol;
+            if (op >= EOpAssign && op <= EOpRightShiftAssign) {
+                const TIntermTyped* n = findLValueBase(node->getLeft(), symbol);
+                if (n != nullptr && n->getAsSymbolNode() != nullptr) {
+                    const TString& symbolTString = n->getAsSymbolNode()->getName();
+                    if (symbolTString == "gl_Position" || symbolTString == "gl_PointSize") {
+                        mModifiesPosition = true;
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+    };
+
+    BuiltinPositionWriteChecker checker(root);
+    if (checker.modifiesPosition(entryPoint)) {
+        return true;
+    }
+
+    TIntermAggregate* const entryAggregate = entryPoint->getAsAggregate();
+    if (entryAggregate == nullptr) {
+        return false;
+    }
+    return findVertexPositionWrites(entryAggregate->getName(), 0, root);
 }
 
 } // namespace filamat

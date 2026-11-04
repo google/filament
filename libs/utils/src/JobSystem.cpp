@@ -220,10 +220,13 @@ JobSystem::JobSystem(uint32_t const userThreadCount, uint32_t adoptableThreadsCo
         // limit the pool such that threadPoolCount + adoptableThreadsCount <= MAX_THREADS
         const uint32_t maxThreadPoolCount = MAX_THREADS - adoptableThreadsCount;
         if (threadPoolCount > maxThreadPoolCount) {
-            LOG(WARNING) << "JobSystem: threadPoolCount (" << threadPoolCount
-                         << ") + adoptableThreadsCount (" << adoptableThreadsCount
-                         << ") exceeds MAX_THREADS (" << MAX_THREADS
-                         << "), clamping pool count to " << maxThreadPoolCount;
+            // The auto-detected count is clamped silently since the caller can't act on it.
+            if (userThreadCount != 0) {
+                LOG(WARNING) << "JobSystem: threadPoolCount (" << threadPoolCount
+                             << ") + adoptableThreadsCount (" << adoptableThreadsCount
+                             << ") exceeds MAX_THREADS (" << MAX_THREADS
+                             << "), clamping pool count to " << maxThreadPoolCount;
+            }
             threadPoolCount = maxThreadPoolCount;
         }
 

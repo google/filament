@@ -126,7 +126,7 @@ public:
          *
          * @see SkinningBuffer::setBones
          */
-        SkinningBuffer* UTILS_NONNULL build(Engine& engine);
+        SkinningBuffer* UTILS_NONNULL build(Engine& engine) const;
     private:
         friend class FSkinningBuffer;
     };

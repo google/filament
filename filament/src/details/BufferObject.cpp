@@ -70,7 +70,7 @@ BufferObject::Builder& BufferObject::Builder::name(utils::ImmutableCString const
     return BuilderNameMixin::name(name);
 }
 
-BufferObject* BufferObject::Builder::build(Engine& engine) {
+BufferObject* BufferObject::Builder::build(Engine& engine) const {
     return downcast(engine).createBufferObject(*this);
 }
 

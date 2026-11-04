@@ -23,9 +23,8 @@
 #include <utils/compiler.h>
 #include <utils/Mutex.h>
 
-#include <atomic>
+#include <iterator>
 #include <list>
-#include <mutex>
 
 namespace filament::backend {
 
@@ -38,13 +37,23 @@ class CallbackHandler;
  * are typically called from different threads.
  * The callback is specified with "setCallback", which atomically creates a new set of
  * conditions to be met.
+ *
+ * Callbacks are scheduled outside of mLock, so no ordering is guaranteed between callbacks
+ * belonging to different sets of conditions: two threads completing two sets can enqueue their
+ * callbacks onto the driver in either order.
  */
 class CallbackManager {
-    struct Callback {
-        mutable std::atomic_int count{};
+    struct CallbackInfo {
         CallbackHandler* handler = nullptr;
         CallbackHandler::Callback func = {};
         void* user = nullptr;
+        explicit operator bool() const noexcept { return func != nullptr; }
+    };
+
+    // All fields in Callback are guarded by mLock.
+    struct Callback {
+        mutable int count = 0;
+        CallbackInfo callback{};
     };
 
     using Container = std::list<Callback>;
@@ -74,24 +83,58 @@ public:
     void setCallback(CallbackHandler* handler, CallbackHandler::Callback func, void* user);
 
 private:
-    Container::const_iterator getCurrent() const noexcept {
-        utils::LockGuard const lock(mLock);
-        return --mCallbacks.end();
-    }
-
-    Container::iterator allocateNewSlot() {
-        utils::LockGuard const lock(mLock);
-        auto curr = --mCallbacks.end();
+    Container::iterator allocateNewSlot() UTILS_REQUIRES(mLock) {
+        Container::iterator const curr = std::prev(mCallbacks.end());
         mCallbacks.emplace_back();
         return curr;
     }
-    void destroySlot(Container::const_iterator curr) noexcept {
-        utils::LockGuard const lock(mLock);
+
+    void destroySlot(Container::const_iterator const curr) noexcept UTILS_REQUIRES(mLock) {
         mCallbacks.erase(curr);
     }
 
+    Handle createCondition() const noexcept UTILS_REQUIRES(mLock) {
+        Container::const_iterator const curr = std::prev(mCallbacks.end());
+        curr->count++;
+        return curr;
+    }
+
+    CallbackInfo decrementAndCheck(Handle const curr) noexcept UTILS_REQUIRES(mLock) {
+        if (--curr->count == 0) {
+            if (curr->callback) {
+                auto const callback = curr->callback;
+                destroySlot(curr);
+                return callback;
+            }
+        }
+        return {};
+    }
+
+    bool setSlotCallback(CallbackInfo const& callback) UTILS_REQUIRES(mLock) {
+        Container::iterator const curr = allocateNewSlot();
+        curr->callback = callback;
+        if (curr->count == 0) {
+            destroySlot(curr);
+            return true;
+        }
+        return false;
+    }
+
+    // Claims the first pending callback, clearing it from its slot so that it can't be scheduled
+    // twice. Returns an empty CallbackInfo when no pending callback is left. The slot itself is
+    // kept: its conditions still hold outstanding Handles that must remain valid for put().
+    // Unlike the helpers above, this acquires mLock itself, so that it can be used directly as a
+    // loop condition; UTILS_EXCLUDES catches a caller that already holds mLock.
+    CallbackInfo takePendingCallback() noexcept UTILS_EXCLUDES(mLock);
+
+    // Hands a callback over to the driver. DriverBase::scheduleCallback() acquires the driver's
+    // own locks, so this must never be called with mLock held; UTILS_EXCLUDES makes that a
+    // compile-time error under -Wthread-safety.
+    void schedule(CallbackInfo const& callback) const noexcept UTILS_EXCLUDES(mLock);
+
     DriverBase& mDriver;
     mutable utils::Mutex mLock;
+    // mLock guards mCallbacks as well as the fields of all Callback elements.
     Container mCallbacks UTILS_GUARDED_BY(mLock);
 };
 

@@ -63,8 +63,12 @@ void prepareMaterial(const MaterialInputs material) {
 #else
     shading_normal = getWorldGeometricNormalVector();
 #endif
-    shading_NoV = clampNoV(dot(shading_normal, shading_view));
-    shading_reflected = reflect(-shading_view, shading_normal);
+    float NoV = dot(shading_normal, shading_view);
+    // reflect(-shading_view, shading_normal) is equivalent to:
+    //      2 * dot(shading_normal, shading_view) * shading_normal - shading_view
+    // so we can save a vec3 dot product by reusing NoV
+    shading_reflected = 2.0 * NoV * shading_normal - shading_view;
+    shading_NoV = clampNoV(NoV);
 
 #if defined(MATERIAL_HAS_BENT_NORMAL)
     shading_bentNormal = normalize(shading_tangentToWorld * material.bentNormal);
@@ -73,7 +77,7 @@ void prepareMaterial(const MaterialInputs material) {
 #if defined(MATERIAL_HAS_CLEAR_COAT)
 #if defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     shading_clearCoatNormal = normalize(shading_tangentToWorld * material.clearCoatNormal);
-#else
+#elif defined(MATERIAL_HAS_NORMAL)
     shading_clearCoatNormal = getWorldGeometricNormalVector();
 #endif
 #endif

@@ -14,17 +14,19 @@
  * limitations under the License.
  */
 
-#include <uberz/WritableArchive.h>
 #include <uberz/ReadableArchive.h>
-
-#include <zstd.h>
-
-#include <string_view>
+#include <uberz/WritableArchive.h>
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
+
+#include <zstd.h>
+
+#include <algorithm>
+#include <cstring>
+#include <string_view>
 
 using namespace utils;
 using namespace std::literals;
@@ -252,6 +254,7 @@ FixedCapacityVector<uint8_t> WritableArchive::serialize() const {
     }
 
     ReadableArchive archive;
+    // ReSharper disable once CppMultiCharacterLiteral
     archive.magic = 'UBER';
     archive.version = 0;
     archive.specsCount = mMaterials.size();
@@ -264,6 +267,8 @@ FixedCapacityVector<uint8_t> WritableArchive::serialize() const {
         spec.shadingModel = mat.shadingModel;
         spec.blendingMode = mat.blendingMode;
         spec.flagsCount = mat.flags.size();
+        spec.supportedFlagsCount = std::ranges::count_if(mat.flags,
+                [&](const auto& pair) { return pair.second != ArchiveFeature::UNSUPPORTED; });
         spec.flagsOffset = flaglistOffset + flagCount * sizeof(ArchiveFlag);
         spec.packageByteCount = mat.package.size();
         spec.packageOffset = filamatOffset;

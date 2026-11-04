@@ -59,7 +59,7 @@ vec4 evaluateMaterial(const MaterialInputs material) {
             highp vec2 p = frameUniforms.shadowFarAttenuationParams;
             visibility = 1.0 - ((1.0 - visibility) * saturate(p.x - z * z * p.y));
 #endif // FILAMENT_SHADOW_FAR_ATTENUATION
-    }
+        }
         if ((frameUniforms.directionalShadows & 0x2) != 0 && visibility > 0.0) {
             if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0) {
                 visibility *= (1.0 - screenSpaceContactShadow(frameUniforms.lightDirection));

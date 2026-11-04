@@ -32,7 +32,10 @@ if __name__ == "__main__":
   parser.add_argument('--executable', help='Path to the executable (e.g. gltf_viewer)', required=True)
   parser.add_argument('--output_dir', help='Output Directory', required=True)
   parser.add_argument('--test_filter', help='Filter for the tests to run')
-  parser.add_argument('--num_threads', help='Number of threads to use for rendering', type=int)
+  parser.add_argument('--num_threads',
+                      help='Number of renders to run concurrently. Each render uses every core it '
+                           'can, so the default is a small fraction of the core count.',
+                      type=int)
 
   args, _ = parser.parse_known_args(sys.argv[1:])
   test = test_config.parse_from_path(args.test)
@@ -49,7 +52,9 @@ if __name__ == "__main__":
 
   named_output_dir = os.path.join(args.output_dir, test.name)
 
-  with open(os.path.join(named_output_dir, f'render_results_{args.backend}.json'), 'w') as f:
+  # Named by renderer: the platforms share backend names (webgpu), and their outputs are merged.
+  results_name = f'render_results_{args.platform}-{args.backend}.json'
+  with open(os.path.join(named_output_dir, results_name), 'w') as f:
     f.write(json.dumps(results, indent=2))
 
   shutil.copy2(args.test, os.path.join(named_output_dir, 'test.json'))

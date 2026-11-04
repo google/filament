@@ -25,6 +25,7 @@
 #include <backend/platforms/OpenGLPlatform.h>
 
 #include <array>
+#include <atomic>
 
 #include <stdint.h>
 
@@ -33,7 +34,7 @@ namespace filament::backend {
 struct GLTextureRef {
     GLTextureRef() = default;
     // view reference counter
-    uint16_t count = 1;
+    std::atomic<uint16_t> count{ 1 };
     // Current per-view values of the texture (in GL we can only have a single View active at
     // a time, and this tracks that state). It's used to avoid unnecessarily change state.
     int8_t baseLevel = 127;

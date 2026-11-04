@@ -75,7 +75,10 @@ DriverBase::DriverBase(const Platform::DriverConfig& driverConfig) noexcept
                 while (serviceThreadCallbackQueue.empty() && !mExitRequested) {
                     serviceThreadCondition.wait(lock);
                 }
-                if (mExitRequested) {
+                // Exit only after the queue is drained. Abandoning callbacks would strand callers
+                // waiting on a completion that never arrives (e.g. FEngine defers freeing an
+                // asynchronous object until its creation callback settles it).
+                if (mExitRequested && serviceThreadCallbackQueue.empty()) {
                     break;
                 }
                 // move the callbacks to a temporary vector
@@ -120,9 +123,18 @@ void DriverBase::CallbackData::release(CallbackData* data) {
 
 void DriverBase::scheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback) {
     if (handler && UTILS_HAS_THREADING) {
-        LockGuard const lock(mServiceThreadLock);
-        mServiceThreadCallbackQueue.emplace_back(handler, callback, user);
-        mServiceThreadCondition.notify_one();
+        {
+            LockGuard const lock(mServiceThreadLock);
+            if (!mExitRequested) {
+                mServiceThreadCallbackQueue.emplace_back(handler, callback, user);
+                mServiceThreadCondition.notify_one();
+                return;
+            }
+        }
+        // Once exit is requested the ServiceThread may already be gone, so dispatch here. Release
+        // the lock first because CountdownCallbackHandler::post() calls back into this function
+        // and the lock is not recursive.
+        handler->post(user, callback);
     } else {
         LockGuard const lock(mPurgeLock);
         mCallbacks.emplace_back(user, callback);

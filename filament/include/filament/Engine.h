@@ -29,6 +29,7 @@
 #include <utils/Slice.h>
 #include <utils/tribool.h>
 
+#include <chrono>
 #include <functional>
 #include <initializer_list>
 #include <optional>
@@ -466,6 +467,25 @@ public:
         AsynchronousMode asynchronousMode = AsynchronousMode::NONE;
 
         /**
+         * Per-frame time budget for queued asynchronous operations.
+         *
+         * It applies when they run on the backend thread (AsynchronousMode::AMORTIZATION, or
+         * THREAD_PREFERRED falling back to it). It is the elapsed time on the backend
+         * thread, measured with std::chrono::steady_clock, so time the thread spends preempted
+         * counts too.
+         *
+         * The operations run in Renderer::endFrame(), after the frame's own commands, and in
+         * Renderer::skipFrame(). A frame skipped because Renderer::beginFrame() returned false
+         * runs none, since the GPU is already behind. Each Renderer gets its own budget per frame,
+         * and so does each Renderer::renderStandaloneView() call.
+         *
+         * One operation always runs per frame, even with a budget of 0, so the queue keeps moving.
+         * An operation that starts within the budget runs to completion, so a frame can go over
+         * by up to one operation.
+         */
+        std::chrono::nanoseconds asynchronousFrameBudget = std::chrono::milliseconds(2);
+
+        /**
          * Capacity of the LRU cache for material definitions.
          *
          * A value of 0 indicates that definitions will be destroyed immediately when they are no
@@ -870,7 +890,7 @@ public:
     /**
      * @return EntityManager used by filament
      */
-    utils::EntityManager& getEntityManager() noexcept;
+    utils::EntityManager& getEntityManager() const noexcept;
 
     /**
      * @return RenderableManager reference
@@ -878,14 +898,29 @@ public:
     RenderableManager& getRenderableManager() noexcept;
 
     /**
+     * @return RenderableManager reference
+     */
+    RenderableManager const& getRenderableManager() const noexcept;
+
+    /**
      * @return LightManager reference
      */
     LightManager& getLightManager() noexcept;
 
     /**
+     * @return LightManager reference
+     */
+    LightManager const& getLightManager() const noexcept;
+
+    /**
      * @return TransformManager reference
      */
     TransformManager& getTransformManager() noexcept;
+
+    /**
+     * @return TransformManager reference
+     */
+    TransformManager const& getTransformManager() const noexcept;
 
     /**
      * Helper to enable accurate translations.
@@ -985,6 +1020,16 @@ public:
      *         is called or the entity itself is destroyed.
      */
     Camera* UTILS_NULLABLE getCameraComponent(utils::Entity entity) noexcept;
+
+    /**
+     * Returns the Camera component of the given entity.
+     *
+     * @param entity An entity.
+     * @return A pointer to the Camera component for this entity or nullptr if the entity didn't
+     *         have a Camera component. The pointer is valid until destroyCameraComponent()
+     *         is called or the entity itself is destroyed.
+     */
+    Camera const* UTILS_NULLABLE getCameraComponent(utils::Entity entity) const noexcept;
 
     /**
      * Destroys the Camera component associated with the given entity.
@@ -1194,6 +1239,9 @@ public:
      * timely fashion, such as when responding to Android's
      * <code>android.view.SurfaceHolder.Callback.surfaceDestroyed</code></p>
      *
+     * <p>In asynchronous mode this also waits for every asynchronous call issued before it to run.
+     * A command passed to runCommandAsync() must not wait on the engine, or this call deadlocks.</p>
+     *
      * @note If the backend thread has encountered an unrecoverable error, this function becomes a no-op.
      */
     void flushAndWait();
@@ -1210,6 +1258,9 @@ public:
      * in cases where a guarantee about the <code>SwapChain</code> destruction is needed in a
      * timely fashion, such as when responding to Android's
      * <code>android.view.SurfaceHolder.Callback.surfaceDestroyed</code></p>
+     *
+     * <p>In asynchronous mode this also waits for every asynchronous call issued before it to run.
+     * A command passed to runCommandAsync() must not wait on the engine, or this call deadlocks.</p>
      *
      * @param timeout A timeout in nanoseconds
      * @return true if successful, false if flushAndWait timed out, in which case it wasn't successful and commands
@@ -1343,7 +1394,7 @@ public:
       * @return JobSystem used by filament
       */
     UTILS_NOAPIGEN
-    utils::JobSystem& getJobSystem() noexcept;
+    utils::JobSystem& getJobSystem() const noexcept;
 
 #if defined(__EMSCRIPTEN__)
     /**
@@ -1379,12 +1430,15 @@ public:
     UTILS_NOAPIGEN
     DebugRegistry& getDebugRegistry() noexcept;
 
+    UTILS_NOAPIGEN
+    DebugRegistry const& getDebugRegistry() const noexcept;
+
     /**
      * Check if a feature flag exists
      * @param name name of the feature flag to check
      * @return true if the feature flag exists, false otherwise
      */
-    inline bool hasFeatureFlag(char const* UTILS_NONNULL name) noexcept {
+    inline bool hasFeatureFlag(char const* UTILS_NONNULL name) const noexcept {
         return getFeatureFlag(name).has_value();
     }
 
@@ -1415,8 +1469,8 @@ public:
     /**
      * Asynchronously ensures that the variants of the specified Material needed to render it
      * in the provided View are compiled. This takes into account the view's features
-     * (e.g. dynamic lighting, fog, stereo, shadowing), alongside the specified shadow receiver
-     * and skinning configurations.
+     * (e.g. dynamic lighting, fog, stereo, shadowing, motion vectors), alongside the specified
+     * shadow receiver and skinning configurations.
      *
      * After issuing several Engine::compile() calls in a row, it is recommended to call
      * Engine::flush() such that the backend can start the compilation work as soon as possible.

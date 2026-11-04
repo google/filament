@@ -135,6 +135,10 @@ size_t RenderableManager::getInstanceCount(Instance instance) const noexcept {
     return downcast(this)->getInstanceCount(instance);
 }
 
+void RenderableManager::setInstanceCount(Instance const instance, size_t const instanceCount) {
+    downcast(this)->setInstanceCount(instance, instanceCount);
+}
+
 void RenderableManager::setMaterialInstanceAt(Instance const instance,
         size_t const primitiveIndex, MaterialInstance const* materialInstance) {
     downcast(this)->setMaterialInstanceAt(instance, 0, primitiveIndex, downcast(materialInstance));
@@ -184,6 +188,12 @@ void RenderableManager::setGeometryAt(Instance const instance, size_t const prim
     FILAMENT_CHECK_PRECONDITION(indices->isCreationComplete())
             << "IndexBuffer's creation is still in progress or was canceled";
 
+    size_t const indexCount = indices->getIndexCount();
+    FILAMENT_CHECK_PRECONDITION(count <= indexCount && offset <= indexCount - count)
+            << "[instance=" << instance.asValue() << ", primitive @ " << primitiveIndex
+            << "] offset (" << offset << ") + count (" << count << ") > indexCount ("
+            << indexCount << ")";
+
     downcast(this)->setGeometryAt(instance, 0, primitiveIndex,
             type, downcast(vertices), downcast(indices), offset, count);
 }
@@ -198,6 +208,12 @@ void RenderableManager::setGeometryAt(Instance const instance, size_t const prim
         size_t const offset, size_t const count) {
     FILAMENT_CHECK_PRECONDITION(vertices->isCreationComplete())
             << "VertexBuffer's creation is still in progress or was canceled";
+
+    size_t const vertexCount = vertices->getVertexCount();
+    FILAMENT_CHECK_PRECONDITION(count <= vertexCount && offset <= vertexCount - count)
+            << "[instance=" << instance.asValue() << ", primitive @ " << primitiveIndex
+            << "] offset (" << offset << ") + count (" << count << ") > vertexCount ("
+            << vertexCount << ")";
 
     downcast(this)->setGeometryAt(instance, 0, primitiveIndex,
             type, downcast(vertices), offset, count);

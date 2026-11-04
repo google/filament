@@ -29,6 +29,8 @@
 
 #include <utils/Invocable.h>
 
+#include <atomic>
+
 #include <stdint.h>
 
 namespace filament {
@@ -86,11 +88,11 @@ public:
     void setFrameCompletedCallback(backend::CallbackHandler* handler,
                 utils::Invocable<void(SwapChain*)>&& callback) noexcept;
 
-    static bool isSRGBSwapChainSupported(FEngine& engine) noexcept;
+    static bool isSRGBSwapChainSupported(FEngine const& engine) noexcept;
 
-    static bool isMSAASwapChainSupported(FEngine& engine, uint32_t samples) noexcept;
+    static bool isMSAASwapChainSupported(FEngine const& engine, uint32_t samples) noexcept;
 
-    static bool isProtectedContentSupported(FEngine& engine) noexcept;
+    static bool isProtectedContentSupported(FEngine const& engine) noexcept;
 
     utils::tribool isFrameRateChangeSupported() const noexcept;
 
@@ -105,7 +107,7 @@ private:
     FEngine& mEngine;
     backend::Handle<backend::HwSwapChain> mHwSwapChain;
     bool mFrameScheduledCallbackIsSet = false;
-    mutable utils::tribool mFrameRateSupportState = utils::tribool::kIndeterminate;
+    mutable std::atomic<utils::tribool> mFrameRateSupportState{ utils::tribool::kIndeterminate };
     void* mNativeWindow{};
     uint32_t mWidth{};
     uint32_t mHeight{};

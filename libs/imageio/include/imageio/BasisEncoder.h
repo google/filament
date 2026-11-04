@@ -17,11 +17,12 @@
 #ifndef IMAGE_BASISENCODER_H_
 #define IMAGE_BASISENCODER_H_
 
-#include <stddef.h>
-#include <stdint.h>
+#include <image/LinearImage.h>
+
 #include <utils/compiler.h>
 
-#include <image/LinearImage.h>
+#include <stddef.h>
+#include <stdint.h>
 
 namespace image {
 

@@ -134,7 +134,7 @@ void uploadCallback(void* buffer, size_t size, void* user) {
 
 // Parses a data URI and returns a blob that gets malloc'd in cgltf, which the caller must free.
 // (implementation snarfed from meshoptimizer)
-uint8_t const* parseDataUri(const char* uri, std::string* mimeType, size_t* psize) {
+uint8_t* parseDataUri(const char* uri, std::string* mimeType, size_t* psize) {
     if (strncmp(uri, "data:", 5) != 0) {
         return nullptr;
     }
@@ -155,7 +155,7 @@ uint8_t const* parseDataUri(const char* uri, std::string* mimeType, size_t* psiz
         }
         *mimeType = std::string(uri + 5, comma - 7);
         *psize = size;
-        return (const uint8_t*) data;
+        return (uint8_t*) data;
     }
     return nullptr;
 }
@@ -293,7 +293,7 @@ inline void createSkins(cgltf_data const* gltf, bool normalize,
     }
 }
 
-static bool indexAccessorFitsBuffer(cgltf_accessor const* accessor, uint32_t bindingSize) {
+static bool indexAccessorFitsBuffer(cgltf_accessor const* accessor, size_t bindingSize) {
     if (!accessor->buffer_view) {
         return false;
     }
@@ -361,10 +361,11 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
                     elementSize = 8; // SHORT4
                 }
 
-                const size_t size = count * elementSize;
-                if (size == 0) {
+                if (elementSize == 0 || count == 0 ||
+                        count > std::numeric_limits<uint32_t>::max() / elementSize) {
                     continue;
                 }
+                const uint32_t size = static_cast<uint32_t>(count * elementSize);
                 if (slot.vertexBuffer) {
                     void* zeros = malloc(size);
                     if (!zeros) {
@@ -380,29 +381,25 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
                 }
 
                 if (slot.indexBuffer) {
-                    if (accessor->component_type == cgltf_component_type_r_8u) {
-                        // glTF 8-bit indices are 1 byte, but Filament IndexBuffer requires at least
-                        // 16-bit indices. We allocate 2 bytes per index to match the expansion
-                        // performed in the conversion path below.
-                        const size_t size16 = count * sizeof(uint16_t);
-                        void* zeros = malloc(size16);
-                        if (!zeros) {
-                            LOG(ERROR) << "Out of memory allocating zeroed index buffer.";
-                            continue;
-                        }
-                        memset(zeros, 0, size16);
-                        IndexBuffer::BufferDescriptor bd(zeros, size16, FREE_CALLBACK);
-                        slot.indexBuffer->setBuffer(engine, std::move(bd));
-                    } else {
-                        void* zeros = malloc(size);
-                        if (!zeros) {
-                            LOG(ERROR) << "Out of memory allocating zeroed index buffer.";
-                            continue;
-                        }
-                        memset(zeros, 0, size);
-                        IndexBuffer::BufferDescriptor bd(zeros, size, FREE_CALLBACK);
-                        slot.indexBuffer->setBuffer(engine, std::move(bd));
+                    // Size the zeroed blob from the destination. The IndexBuffer holds
+                    // (indexCount * elementSize) bytes, where glTF 8-bit indices are promoted to
+                    // 16-bit because Filament has no 8-bit index type. The accessor's declared
+                    // type has no say in this, which is what keeps the blob within capacity.
+                    size_t const indexCount = slot.indexBuffer->getIndexCount();
+                    size_t const componentSize = cgltf_component_size(accessor->component_type);
+                    size_t const indexSize =
+                            componentSize == 1 ? sizeof(uint16_t) : componentSize;
+                    if (indexCount == 0 || indexSize == 0) {
+                        continue;
                     }
+                    void* zeros = calloc(indexCount, indexSize);
+                    if (!zeros) {
+                        LOG(ERROR) << "Out of memory allocating zeroed index buffer.";
+                        continue;
+                    }
+                    IndexBuffer::BufferDescriptor bd(zeros, indexCount * indexSize,
+                            FREE_CALLBACK);
+                    slot.indexBuffer->setBuffer(engine, std::move(bd));
                     continue;
                 }
             }
@@ -542,29 +539,44 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
                 continue;
             }
 
-            if (!indexAccessorFitsBuffer(accessor, size)) {
+            // Redundant with AssetLoader and with cgltf_validate(): Draco and meshopt decoding
+            // replace the bufferView but never accessor->stride, which cgltf computes at parse
+            // time. Kept as the last check before the bytes reach the driver.
+            if (!utility::isUploadableIndexAccessor(accessor)) {
+                LOG(ERROR) << "Malformed index accessor: indices must be scalar, tightly packed "
+                              "and non-sparse.";
+                return false;
+            }
+
+            // Size the copy from the destination. The IndexBuffer was allocated as
+            // (indexCount * componentSize), with 8-bit indices widened to 16-bit, so that is
+            // exactly how many bytes may be written and, given the check above, exactly how many
+            // source bytes the accessor describes.
+            size_t const indexCount = slot.indexBuffer->getIndexCount();
+            size_t const componentSize = cgltf_component_size(accessor->component_type);
+            size_t const srcByteCount = indexCount * componentSize;
+
+            if (!indexAccessorFitsBuffer(accessor, srcByteCount)) {
                 LOG(ERROR) << "Index accessor size exceeds buffer capacity.";
                 return false;
             }
 
             if (accessor->component_type == cgltf_component_type_r_8u) {
-                if (size_t(size) > std::numeric_limits<size_t>::max() / 2) {
-                    LOG(WARNING) << "Index buffer size would overflow on conversion, skipping.";
-                    continue;
-                }
-                const size_t size16 = size_t(size) * 2;
-                uint16_t* data16 = (uint16_t*) malloc(size16);
+                // glTF 8-bit indices are 1 byte, but Filament has no 8-bit index type, so the
+                // IndexBuffer holds two bytes per index.
+                size_t const dstByteCount = srcByteCount * 2;
+                uint16_t* data16 = (uint16_t*) malloc(dstByteCount);
                 if (!data16) {
                     LOG(WARNING) << "Failed to allocate memory for index buffer conversion, skipping.";
                     continue;
                 }
-                utility::convertBytesToShorts(data16, data, size);
-                IndexBuffer::BufferDescriptor bd(data16, size16, FREE_CALLBACK);
+                utility::convertBytesToShorts(data16, data, srcByteCount);
+                IndexBuffer::BufferDescriptor bd(data16, dstByteCount, FREE_CALLBACK);
 
                 slot.indexBuffer->setBuffer(engine, std::move(bd));
                 continue;
             }
-            IndexBuffer::BufferDescriptor bd(data, size, uploadCallback,
+            IndexBuffer::BufferDescriptor bd(data, srcByteCount, uploadCallback,
                     uploadUserdata(asset, uriDataCache));
             slot.indexBuffer->setBuffer(engine, std::move(bd));
             continue;
@@ -770,6 +782,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
 
         // Decompress Draco meshes early on, which allows us to exploit subsequent processing such
         // as tangent generation.
+        bool needsValidation = false;
         DracoCache* dracoCache = &asset->mSourceAsset->dracoCache;
         auto& primitives = std::get<FFilamentAsset::ResourceInfo>(asset->mResourceInfo).mPrimitives;
         // Go through every primitive and check if it has a Draco mesh.
@@ -777,9 +790,16 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
             if (!prim->has_draco_mesh_compression) {
                 continue;
             }
-            utility::decodeDracoMeshes(gltf, prim, dracoCache);
+            needsValidation |= utility::decodeDracoMeshes(gltf, prim, dracoCache);
         }
-        if (!utility::decodeMeshoptCompression((cgltf_data*) gltf)) {
+        bool meshoptDecoded = false;
+        if (!utility::decodeMeshoptCompression((cgltf_data*) gltf, &meshoptDecoded)) {
+            return false;
+        }
+        needsValidation |= meshoptDecoded;
+
+        if (needsValidation && cgltf_validate((cgltf_data*) gltf) != cgltf_result_success) {
+            LOG(ERROR) << "Failed cgltf validation after decoding Draco/Meshopt meshes.";
             return false;
         }
 
@@ -810,6 +830,9 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     // Non-textured renderables are now considered ready, and we can guarantee that no new
     // materials or textures will be added. Notify the dependency graph.
     asset->mDependencyGraph.commitEdges();
+
+    // Only now is it safe for the Animator and recomputeBoundingBoxes() to read the source buffers.
+    asset->mResourcesValid = true;
 
     for (FFilamentInstance* instance : asset->mInstances) {
         instance->createAnimator();
@@ -877,12 +900,21 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
     const cgltf_buffer_view* bv = image->buffer_view;
     const char* uri = image->uri;
 
+    if (!bv && !uri) {
+        LOG(ERROR) << "Missing image source data";
+        return {};
+    }
+
     std::string mime = image->mime_type ? image->mime_type : "";
     size_t dataUriSize;
-    const uint8_t* dataUriContent = uri ? parseDataUri(uri, &mime, &dataUriSize) : nullptr;
+    std::unique_ptr<uint8_t, void(*)(void*)> dataUriContent(
+            !bv && uri ? parseDataUri(uri, &mime, &dataUriSize) : nullptr, &std::free);
 
     if (mime.empty()) {
-        assert_invariant(uri && "Non-URI images must supply a mime type.");
+        if (!uri) {
+            LOG(ERROR) << "Non-URI images must supply a mime type.";
+            return {};
+        }
         const std::string extension = Path(uri).getExtension();
         mime = extension == "jpg" ? "image/jpeg" : "image/" + extension;
     }
@@ -899,7 +931,10 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
 
     // Check if the texture slot uses BufferView data.
     if (void** bufferViewData = bv ? &bv->buffer->data : nullptr; bufferViewData) {
-        assert_invariant(!dataUriContent);
+        if (!*bufferViewData) {
+            LOG(ERROR) << "Missing buffer data for texture";
+            return {};
+        }
         const size_t offset = bv ? bv->offset : 0;
         const uint8_t* sourceData = offset + (const uint8_t*) *bufferViewData;
         if (auto iter = mBufferTextureCache[cacheIdx].find(sourceData);
@@ -919,15 +954,13 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
     else if (dataUriContent) {
         if (auto iter = mBufferTextureCache[cacheIdx].find(uri);
                 iter != mBufferTextureCache[cacheIdx].end()) {
-            free((void*)dataUriContent);
             return {iter->second, CacheResult::FOUND};
         }
-        if (Texture* texture = provider->pushTexture(dataUriContent, dataUriSize, mime.c_str(), flags); texture) {
-            free((void*)dataUriContent);
+        if (Texture* texture = provider->pushTexture(
+                dataUriContent.get(), dataUriSize, mime.c_str(), flags); texture) {
             mBufferTextureCache[cacheIdx][uri] = texture;
             return {texture, CacheResult::MISS};
         }
-        free((void*)dataUriContent);
     }
 
     // Check the user-supplied resource cache for this URI.
@@ -974,7 +1007,7 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
         return {nullptr, CacheResult::NOT_READY};
     }
 
-    const char* name = srcTexture.name ? srcTexture.name : uri;
+    const char* name = srcTexture.name ? srcTexture.name : (uri ? uri : "");
     LOG(ERROR) << "Unable to create texture " << name << ": " << provider->getPushMessage();
     return {};
 }
@@ -1103,7 +1136,8 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
         JobSystem::Job* parent = js->createJob();
         for (size_t j = 0; j < batchSize; ++j) {
             Params* pptr = &jobParams[offset + j];
-            JobSystem::Job* job = jobs::createJob(*js, parent, [pptr] { TangentsJob::run(pptr); });
+            JobSystem::Job* job = parent ?
+                    jobs::createJob(*js, parent, [pptr] { TangentsJob::run(pptr); }) : nullptr;
             if (UTILS_LIKELY(job)) {
                 js->run(job);
             } else {

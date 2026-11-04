@@ -43,14 +43,24 @@ using UriDataCacheHandle = std::shared_ptr<UriDataCache>;
 namespace filament::gltfio::utility {
 
 // Functions that are shared between the original implementation and the extended implementation.
-void decodeDracoMeshes(cgltf_data const* gltf, cgltf_primitive const* prim, DracoCache* dracoCache);
-bool decodeMeshoptCompression(cgltf_data* data);
+bool decodeDracoMeshes(cgltf_data const* gltf, cgltf_primitive const* prim, DracoCache* dracoCache);
+bool decodeMeshoptCompression(cgltf_data* data, bool* decoded = nullptr);
 bool primitiveHasVertexColor(cgltf_primitive* inPrim);
 uint32_t computeBindingSize(cgltf_accessor const* accessor);
 void convertBytesToShorts(uint16_t* dst, uint8_t const* src, size_t count);
 uint32_t computeBindingOffset(cgltf_accessor const* accessor);
 bool requiresConversion(cgltf_accessor const* accessor);
 bool requiresPacking(cgltf_accessor const* accessor);
+
+// Returns true if the given accessor can safely be uploaded into an IndexBuffer whose capacity is
+// (count * componentSize), which is how AssetLoader sizes every IndexBuffer it creates.
+//
+// glTF 2.0 requires index accessors to be SCALAR and forbids byteStride on the bufferView they
+// reference, so a conforming asset always satisfies this. We check it ourselves rather than relying
+// on cgltf_validate(), because the upload size and the allocation size are computed by two
+// different expressions and this predicate is what makes them equal.
+bool isUploadableIndexAccessor(cgltf_accessor const* accessor);
+
 bool loadCgltfBuffers(cgltf_data const* gltf, char const* gltfPath,
         UriDataCacheHandle uriDataCacheHandle);
 

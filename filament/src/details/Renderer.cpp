@@ -29,8 +29,10 @@
 #include "details/MaterialInstance.h"
 #include "details/Scene.h"
 #include "details/SwapChain.h"
+#include "details/Texture.h"
 #include "details/View.h"
 
+#include "ds/MotionVectorsDescriptorSet.h"
 #include "ds/StructureDescriptorSet.h"
 
 #include "fg/FrameGraph.h"
@@ -107,6 +109,7 @@ FRenderer::FRenderer(FEngine& engine) :
         mIsFrameBufferFetchSupported(false),
         mIsFrameBufferFetchMultiSampleSupported(false),
         mIsAutoDepthResolveSupported(false),
+        mIsPresentationTimeSupported(false),
         mUserEpoch(engine.getEngineEpoch()),
         mResourceAllocator(std::make_unique<TextureCache>(
                 engine.getSharedResourceAllocatorDisposer(),
@@ -120,6 +123,23 @@ FRenderer::FRenderer(FEngine& engine) :
             &engine.debug.renderer.disable_buffer_padding);
     debugRegistry.registerProperty("d.renderer.disable_subpasses",
             &engine.debug.renderer.disable_subpasses);
+    // Motion vectors debug view: displays the full motion vectors (reconstructed from the depth
+    // buffer and the object motion vectors), or only the object motion vectors
+    // ("objectMotionVectors") with _object_only, of the Views that have motion vectors active, over
+    // a dimmed grayscale image of the View:
+    //  - the hue is the screen-space direction of the motion, from the previous position to the
+    //    current one: red is right, chartreuse up, cyan left and violet down;
+    //  - the brightness is the length of the motion, in fractions of the viewport per frame,
+    //    multiplied by _scale and saturated to 1; the image shows through where it's dark;
+    //  - pixels without a valid previous position (|v| >= 1) are a black and white checkerboard.
+    // The colors are the same on all backends. Note that the object motion vectors are in the
+    // previous frame's render-target UV space, which differs only with dynamic resolution.
+    debugRegistry.registerProperty("d.renderer.display_motion_vectors",
+            &engine.debug.renderer.display_motion_vectors);
+    debugRegistry.registerProperty("d.renderer.display_motion_vectors_scale",
+            &engine.debug.renderer.display_motion_vectors_scale);
+    debugRegistry.registerProperty("d.renderer.display_motion_vectors_object_only",
+            &engine.debug.renderer.display_motion_vectors_object_only);
     debugRegistry.registerProperty("d.shadowmap.display_shadow_texture",
             &engine.debug.shadowmap.display_shadow_texture);
     debugRegistry.registerProperty("d.shadowmap.display_shadow_texture_scale",
@@ -146,6 +166,7 @@ FRenderer::FRenderer(FEngine& engine) :
     mIsFrameBufferFetchSupported = driver.isFrameBufferFetchSupported();
     mIsFrameBufferFetchMultiSampleSupported = driver.isFrameBufferFetchMultiSampleSupported();
     mIsAutoDepthResolveSupported = driver.isAutoDepthResolveSupported();
+    mIsPresentationTimeSupported = driver.isPresentationTimeSupported();
 
     // our default HDR translucent format, fallback to LDR if not supported by the backend
     if (!driver.isRenderTargetFormatSupported(TextureFormat::RGBA16F)) {
@@ -268,10 +289,17 @@ void FRenderer::initializeClearFlags() noexcept {
 
 void FRenderer::setPresentationTime(int64_t const monotonic_clock_ns) noexcept {
     using namespace std::chrono;
-    mPresentationTime = steady_clock::time_point(nanoseconds(monotonic_clock_ns));
+    setPresentationTime(steady_clock::time_point(nanoseconds(monotonic_clock_ns)));
 }
 
-void FRenderer::setPresentationTime(std::chrono::steady_clock::time_point const monotonic_clock) noexcept {
+void FRenderer::setPresentationTime(
+        std::chrono::steady_clock::time_point const monotonic_clock) noexcept {
+    // Backends and platforms that can't honor a presentation time never enter paced mode; we
+    // drop the request here so that beginFrame() doesn't see a presentation time at all.
+    if (UTILS_UNLIKELY(!mIsPresentationTimeSupported ||
+                       mEngine.debug.renderer.disable_set_presentation_time)) {
+        return;
+    }
     mPresentationTime = monotonic_clock;
 }
 
@@ -310,10 +338,18 @@ std::pair<float, float2> FRenderer::prepareUpscaler(float2 const scale,
     }
     if (taaOptions.enabled) {
         bias += taaOptions.lodBias;
-        if (taaOptions.upscaling) {
-            if (taaOptions.upscaling > 1.0f) {
-                derivativesScale = 1.0f / taaOptions.upscaling;
-            }
+        if (taaOptions.upscaling > 1.0f) {
+            // Rasterization happens at render resolution while the frame is presented at
+            // `upscaling` times that, so the texture footprint per rasterized pixel is
+            // `upscaling` times the footprint per presented pixel -- one mip too blurry per
+            // doubling. This is the same term dynamic resolution applies above, for the same
+            // reason, and it is a correctness term rather than a sharpening one.
+            //
+            // derivativesScale below does NOT cover it: that scales the normal derivatives
+            // geometric specular antialiasing filters over (see normalFiltering() in
+            // surface_shading_lit.fs), which has nothing to do with mip selection.
+            bias -= std::log2(taaOptions.upscaling);
+            derivativesScale = 1.0f / taaOptions.upscaling;
         }
     }
     return { bias, derivativesScale };
@@ -340,6 +376,8 @@ void FRenderer::skipFrame(uint64_t const vsyncSteadyClockTimeNano) {
     // Gives the backend a chance to execute periodic tasks. This must be called before
     // the frame skipper.
     driver.tick();
+
+    driver.skipFrame();
 
     // do this before engine.flush()
     mResourceAllocator->gc(true);
@@ -476,6 +514,9 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         mRenderingDeadline = {};
 
         if (presentationTime.time_since_epoch().count()) {
+            // setPresentationTime() is a no-op if the backend doesn't support it, so the
+            // presentation time can only be set if it is supported.
+            assert_invariant(mIsPresentationTimeSupported);
             driver.setPresentationTime(std::chrono::duration_cast<nanoseconds>(
                     presentationTime.time_since_epoch()).count());
         }
@@ -502,6 +543,8 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         engine.prepare(driver);
     };
 
+    // mPresentationTime is only ever set when the backend supports it, so we can't be in paced
+    // mode on a backend or platform that ignores the presentation time.
     bool const isPacedMode = mPresentationTime.time_since_epoch().count() != 0;
     if (isPacedMode || shouldRenderFrame()) {
         // if beginFrame() returns true, we are expecting a call to endFrame(),
@@ -796,9 +839,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
         hasFXAA = false;
         scale = 1.0f;
     } else {
-        // This configures post-process materials by setting constant parameters
+        // Note: the TAA material is configured after FView::prepare(), see below.
         if (taaOptions.enabled) {
-            ppm.configureTemporalAntiAliasingMaterial(driver, taaOptions);
             if (taaOptions.upscaling > 1.0f) {
                 // for now TAA upscaling is incompatible with regular dsr
                 dsrOptions.enabled = false;
@@ -1005,6 +1047,47 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
         ds.prepareMaterialGlobals(view.getMaterialGlobals());
     }
 
+    // This configures post-process materials by setting constant parameters. This must happen
+    // after FView::prepare(), which latches the motion vectors state for this frame.
+    if (taaOptions.enabled) {
+        ppm.configureTemporalAntiAliasingMaterial(driver, taaOptions,
+                view.isMotionVectorsActive());
+    }
+
+    /*
+     * Motion vectors: record this render's camera, and update the PER_VIEW UBO of the object
+     * motion vectors pass. It's never updated again after this point.
+     */
+
+    bool hasObjectMotionVectorsPass = false;
+    if (view.isMotionVectorsActive()) {
+        FrameHistory& frameHistory = view.getFrameHistory();
+        auto const& previous = frameHistory.getPrevious().motionVectors;
+
+        // The unjittered clip-from-user-world matrix, which is also TAA's projection.
+        frameHistory.getCurrent().motionVectors = {
+                .projection = cameraInfo.projection * cameraInfo.getUserViewMatrix(),
+                .clipTransform = cameraInfo.clipTransform,
+                .valid = true };
+
+        // Without a previous render, or when nothing moved, the object motion vectors are all
+        // zero, so the pass is skipped.
+        hasObjectMotionVectorsPass = previous.valid && view.hasMovingRenderables();
+        if (hasObjectMotionVectorsPass) {
+            MotionVectorsDescriptorSet& ds = ppm.getMotionVectorsDescriptorSet();
+            // The coverage must match the color pass's depth buffer, which TAA samples, so this
+            // uses the jittered camera and the same viewport as the color pass.
+            ds.prepareCamera(engine, taaCameraInfo);
+            ds.prepareTime(engine, getShaderUserTime());
+            ds.prepareViewport(svp, xvp);
+            ds.prepareLodBias(bias, derivativeScale);
+            ds.prepareMaterialGlobals(view.getMaterialGlobals());
+            // the previous projection, re-expressed in this frame's shader world space
+            ds.prepareMotionVectors(
+                    mat4f{ previous.projection * inverse(cameraInfo.worldTransform) });
+        }
+    }
+
     /*
      * Allocate command buffer
      */
@@ -1029,11 +1112,12 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     specKey.setDynamicLighting(view.hasDynamicLighting());
     specKey.setExtraDirectionalLights(view.hasExtraDirectionalLights());
     specKey.setDirectionalLighting(view.hasDirectionalLighting());
+    specKey.setFog(view.hasFog());
     passBuilder.dynamicSpecConstKey(specKey);
 
     Variant variant;
-    variant.setDirectionalLighting(false);
-    variant.setFog(view.hasFog());
+    // TODO: Remove this after FOG is fully transferred to spec constant
+    variant.setFog(false);
     variant.setShadowSampler2D(view.hasShadowing() && view.getShadowType() != ShadowType::PCF);
     variant.setStereo(view.hasStereo());
 
@@ -1131,10 +1215,6 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
      * Depth + Color passes
      */
 
-    // updatePrimitivesLod must be run before appendCommands and once for each set
-    // of RenderPass::setCamera / RenderPass::setGeometry calls.
-    FView::updatePrimitivesLod(view.getRenderableData(),
-            engine, cameraInfo, view.getVisibleRenderables());
 
     passBuilder.camera(cameraInfo.getPosition(), cameraInfo.getForwardVector());
     passBuilder.geometry(view.getRenderableData(), view.getVisibleRenderables());
@@ -1260,6 +1340,10 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     // --------------------------------------------------------------------------------------------
     // Color passes
 
+    // Save the base RenderPassBuilder before mutating it for the color pass, so the object motion
+    // vectors pass can use it without the color pass's custom commands and descriptor sets.
+    RenderPassBuilder motionVectorsPassBuilder = passBuilder;
+
     // This one doesn't need to be a FrameGraph pass because it always happens by construction
     // (i.e. it won't be culled, unless everything is culled), so no need to complexify things.
     passBuilder.variant(variant);
@@ -1273,6 +1357,10 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     // TODO: don't generate this command if there are no content in this channel or if it's the
     //       first channel.
     bitset32 const channelDepthClearMask = view.getChannelDepthClearMask();
+    if (channelDepthClearMask.any() && hasObjectMotionVectorsPass) {
+        motionVectorsPassBuilder.commandTypeFlags(
+                RenderPass::CommandTypeFlags::MOTION_VECTORS_CHANNEL_DEPTH_CLEAR);
+    }
     channelDepthClearMask.forEachSetBit([&](size_t const channel) {
         passBuilder.customCommand(channel,
             RenderPass::Pass::DEPTH,
@@ -1286,6 +1374,22 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
                 Variant::type_t variant = isRenderingMultiview ? Variant::STE : 0;
                 ppm.clearAncillaryBuffers(driver, TargetBufferFlags::DEPTH, variant);
             });
+        if (hasObjectMotionVectorsPass) {
+            motionVectorsPassBuilder.customCommand(channel,
+                RenderPass::Pass::DEPTH,
+                RenderPass::CustomCommand::PROLOGUE,
+                0, [&ppm, &driver, &view] {
+                    // set the per-view descriptor set (always unlit, no ssr, no fog, no vsm)
+                    auto const& ds = view.getColorPassDescriptorSet(ShadowType::PCF)[
+                            ColorPassDescriptorSet::getIndex(false, false, false)];
+                    ds.bind(driver, DescriptorSetBindingPoints::PER_VIEW);
+
+                    ppm.clearAncillaryBuffers(driver, TargetBufferFlags::DEPTH, 0);
+
+                    // restore the motion vectors per-view descriptor set for subsequent draws
+                    ppm.getMotionVectorsDescriptorSet().bind(driver);
+                });
+        }
     });
 
     // color-grading as subpass is done either by the color pass or the TAA pass if any
@@ -1331,8 +1435,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     // RenderPass::IS_INSTANCED_STEREOSCOPIC only applies to the color pass
     if (view.hasStereo() &&
         engine.getConfig().stereoscopicType == StereoscopicType::INSTANCED) {
-        renderFlags |= RenderPass::IS_INSTANCED_STEREOSCOPIC;
-        passBuilder.renderFlags(renderFlags);
+        passBuilder.renderFlags(renderFlags | RenderPass::IS_INSTANCED_STEREOSCOPIC);
     }
 
     // create the pass, which generates all its commands (this is a heavy operation)
@@ -1436,6 +1539,45 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     // In practice, this is used on Vulkan and older Metal devices.
     auto depth = ppm.resolve(fg, "Resolved Depth Buffer", colorPassOutput.depth, { .levels = 1 });
 
+    // The depth and object motion vectors have the layout of the color pass's buffers (for the
+    // debug view, before TAA's upscaling changes svp and xvp).
+    filament::Viewport const motionVectorsSvp = svp;
+    filament::Viewport const motionVectorsXvp = xvp;
+
+    // --------------------------------------------------------------------------------------------
+    // Object motion vectors pass -- automatically culled if not used
+
+    if (view.isMotionVectorsActive()) {
+        FrameGraphId<FrameGraphTexture> objectMotionVectors;
+        if (hasObjectMotionVectorsPass) {
+            // Reuse the color pass's depth buffer unless MSAA is enabled (where resolved depth
+            // takes sample 0's sub-pixel depth rather than the pixel center's depth) or a channel
+            // clears the depth buffer mid-pass.
+            auto const motionVectorsDepth = msaaSampleCount == 1 && channelDepthClearMask.none() ?
+                    colorPassOutput.depth : FrameGraphId<FrameGraphTexture>{};
+            objectMotionVectors = ppm.motionVectors(fg, motionVectorsPassBuilder, renderFlags,
+                    motionVectorsDepth, svp, xvp);
+        } else {
+            // Nothing moved, or there is no previous render: the zero texture means that there
+            // is no object motion.
+            objectMotionVectors = fg.import("Object Motion Vectors (none)", {
+                    .width = 1, .height = 1, .format = TextureFormat::RGBA8
+            }, FrameGraphTexture::Usage::SAMPLEABLE,
+                    FrameGraphTexture{ .handle = engine.getZeroTexture() });
+        }
+        // See PostProcessManager::motionVectors() for the contents of this texture.
+        blackboard["objectMotionVectors"] = objectMotionVectors;
+
+        // for testing only
+        auto const& readback = view.getMotionVectorsReadback();
+        if (UTILS_UNLIKELY(readback.texture)) {
+            ppm.readbackMotionVectors(fg, objectMotionVectors, hasObjectMotionVectorsPass, xvp,
+                    readback.texture->getHwHandle(), {
+                            uint32_t(readback.texture->getWidth()),
+                            uint32_t(readback.texture->getHeight()) });
+        }
+    }
+
     // Debug: CSM visualisation
     if (UTILS_UNLIKELY(engine.debug.shadowmap.visualize_cascades &&
                        view.hasShadowing() && view.hasDirectionalLighting())) {
@@ -1449,7 +1591,11 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
 
     // TAA for color pass
     if (taaOptions.enabled) {
-        input = ppm.taa(fg, input, depth, xvp, vp,
+        // null unless a visible renderable moved while motion vectors are active
+        auto const objectMotionVectors = hasObjectMotionVectorsPass ?
+                blackboard.get<FrameGraphTexture>("objectMotionVectors") :
+                FrameGraphId<FrameGraphTexture>{};
+        input = ppm.taa(fg, input, depth, objectMotionVectors, xvp, vp,
                 view.getFrameHistory(), &FrameHistoryEntry::taa,
                 taaOptions, colorGradingConfig);
         if (taaOptions.upscaling > 1.0f) {
@@ -1613,6 +1759,16 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
         }
     }
 
+    // Debug: motion vectors visualization, see FRenderer::FRenderer()
+    if (UTILS_UNLIKELY(engine.debug.renderer.display_motion_vectors &&
+                       view.isMotionVectorsActive())) {
+        auto const objectMotionVectors = blackboard.get<FrameGraphTexture>("objectMotionVectors");
+        input = ppm.debugDisplayMotionVectors(fg, input, depth, objectMotionVectors,
+                motionVectorsSvp, motionVectorsXvp, view.getFrameHistory(),
+                engine.debug.renderer.display_motion_vectors_object_only,
+                engine.debug.renderer.display_motion_vectors_scale);
+    }
+
     if (UTILS_UNLIKELY(engine.debug.shadowmap.display_shadow_texture)) {
         auto shadowmap = blackboard.get<FrameGraphTexture>("shadowmap");
         input = ppm.debugDisplayShadowTexture(fg, input, shadowmap,
@@ -1635,7 +1791,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     //fg.export_graphviz(graphviz, view.getName());
     //DLOG(INFO) << graphviz.c_str();
 
-    fg.execute(driver);
+    fg.execute(driver, view.getName());
 
     // save the current history entry and destroy the oldest entry
     view.commitFrameHistory(engine);

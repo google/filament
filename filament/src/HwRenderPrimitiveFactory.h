@@ -85,19 +85,8 @@ private:
         }
     };
 
-    struct Value { // 4 bytes
-        Handle handle;
-    };
-
-    struct ValueHasher {
-        size_t operator()(Value const v) const noexcept {
-            return std::hash<Handle::HandleId>()(v.handle.getId());
-        }
-    };
-
-    friend bool operator==(Value const lhs, Value const rhs) noexcept {
-        return lhs.handle == rhs.handle;
-    }
+    using Value = BimapHandleValue;
+    using ValueHasher = BimapHandleValueHasher;
 
     // Size of the arena used for the "set" part of the bimap
     // about ~65K entry before fall back to heap

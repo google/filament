@@ -137,6 +137,10 @@ public:
         return mPhysicalDeviceProperties.properties.limits;
     }
 
+    inline VkPhysicalDeviceProperties const& getPhysicalDeviceProperties() const noexcept {
+        return mPhysicalDeviceProperties.properties;
+    }
+
     inline uint32_t getPhysicalDeviceVendorId() const noexcept {
         return mPhysicalDeviceProperties.properties.vendorID;
     }
@@ -203,6 +207,12 @@ public:
         return mProtectedMemorySupported;
     }
 
+    // True if VK_EXT_pipeline_protected_access is enabled on the device, in which case every
+    // pipeline should be restricted to either protected or unprotected command buffers.
+    inline bool isPipelineProtectedAccessSupported() const noexcept {
+        return mPipelineProtectedAccessSupported;
+    }
+
     inline bool isImageView2DOn3DImageSupported() const noexcept {
         return mPortabilitySubsetFeatures.imageView2DOn3DImage == VK_TRUE;
     }
@@ -221,6 +231,14 @@ public:
 
     inline bool isExtendedDynamicState2Supported() const noexcept {
         return mExtendedDynamicState2Features.extendedDynamicState2 == VK_TRUE;
+    }
+
+    inline bool isColorWriteEnableSupported() const noexcept {
+        return mColorWriteEnableFeatures.colorWriteEnable == VK_TRUE;
+    }
+
+    inline bool isHostQueryResetSupported() const noexcept {
+        return mHostQueryResetFeatures.hostQueryReset == VK_TRUE;
     }
 
     inline bool pipelineCreationFeedbackSupported() const noexcept {
@@ -248,6 +266,14 @@ public:
 
     inline bool isPipelineDynamicStateEnabled() const noexcept {
         return mPipelineDynamicStateEnabled;
+    }
+
+    inline bool isPipelineCacheEvictionEnabled() const noexcept {
+        return mPipelineCacheEvictionEnabled;
+    }
+
+    inline bool isPipelineCachePersistenceEnabled() const noexcept {
+        return mPipelineCachePersistenceEnabled;
     }
 
     inline bool isGlobalPrioritySupported() const noexcept {
@@ -293,6 +319,12 @@ private:
     VkPhysicalDeviceExtendedDynamicState2FeaturesEXT mExtendedDynamicState2Features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_2_FEATURES_EXT,
     };
+    VkPhysicalDeviceColorWriteEnableFeaturesEXT mColorWriteEnableFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COLOR_WRITE_ENABLE_FEATURES_EXT,
+    };
+    VkPhysicalDeviceHostQueryResetFeaturesEXT mHostQueryResetFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES_EXT,
+    };
     VkExternalFenceHandleTypeFlags mFenceExportFlags = {};
 
     // These are options that are either supported or not supported in the current
@@ -305,6 +337,7 @@ private:
     bool mLazilyAllocatedMemorySupported = false;
     bool mPipelineCreationFeedbackSupported = false;
     bool mProtectedMemorySupported = false;
+    bool mPipelineProtectedAccessSupported = false;
     bool mGlobalPrioritySupported = false;
     bool mDriverPropertiesSupported = false;
 
@@ -316,6 +349,8 @@ private:
     bool mParallelShaderCompileDisabled = false;
     bool mStagingBufferBypassEnabled = false;
     bool mPipelineDynamicStateEnabled = false;
+    bool mPipelineCacheEvictionEnabled = false;
+    bool mPipelineCachePersistenceEnabled = false;
 
     fvkutils::VkFormatList mDepthStencilFormats;
     fvkutils::VkFormatList mBlittableDepthStencilFormats;

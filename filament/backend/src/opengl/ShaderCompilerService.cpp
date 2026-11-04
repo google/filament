@@ -98,7 +98,8 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
     }
 
     ShaderCompilerService& compiler;
-    CString const& name;
+    // The token can outlive its OpenGLProgram on the compiler thread, so it keeps its own copy.
+    CString name;
     CString programString;
     FixedCapacityVector<std::pair<CString, uint8_t>> attributes;
     Program::ShaderSource shaderSourceCode;
@@ -988,6 +989,10 @@ void ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t cons
     }
     token->retrievedFromBlobCache = true;
     token->signal(); // notify that `token->gl.program` is ready to use
+    // The program is ready, so the callback handle must be submitted. The compilation path does
+    // this in `linkProgram`, which a cache hit skips. Must follow `signal()` so that a caller woken
+    // by the callback doesn't block in `wait()`.
+    token->trySubmittingCallback();
     return true;
 }
 

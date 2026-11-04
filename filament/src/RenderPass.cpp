@@ -306,10 +306,20 @@ RenderPass::Command* RenderPass::instanceify(
 
     auto equivalent = [](Command const& lhs, Command const& rhs) {
         // This predicate must also filter out commands that are not eligible for auto-instancing.
-        if (UTILS_UNLIKELY(lhs.info.hasSkinning || lhs.info.hasMorphing || lhs.info.instanceCount > 1)) {
+        // Hybrid-instanced commands are excluded even when their instanceCount is 1, because
+        // their info.index refers to the InstanceBuffer's slots in the per-renderable UBO, not to
+        // an entry of the scene's UBO SoA (which is what the processor below reads from).
+        // Commands using an `instanced` material are excluded because such shaders read
+        // objectUniforms.data[0] for non-hybrid draws (see surface_instancing.glsl), so all
+        // merged instances would use the first renderable's data.
+        if (UTILS_UNLIKELY(lhs.info.hasSkinning || lhs.info.hasMorphing ||
+                lhs.info.hasHybridInstancing || lhs.info.hasInstancedMaterial ||
+                lhs.info.instanceCount > 1)) {
             return false;
         }
-        if (UTILS_UNLIKELY(rhs.info.hasSkinning || rhs.info.hasMorphing || rhs.info.instanceCount > 1)) {
+        if (UTILS_UNLIKELY(rhs.info.hasSkinning || rhs.info.hasMorphing ||
+                rhs.info.hasHybridInstancing || rhs.info.hasInstancedMaterial ||
+                rhs.info.instanceCount > 1)) {
             return false;
         }
         // Now check for equality
@@ -416,6 +426,9 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant, DynamicSpe
     FMaterial const * const UTILS_RESTRICT ma = mi->getMaterial();
     variant = Variant::filterVariant(variant, ma->isVariantLit());
 
+    DynamicSpecConstKey const dynamicSpecConstKey =
+            ma->getDefinition().filterProgramSpecKey(variant, specKey);
+
     // Below, we evaluate both commands to avoid a branch
 
     uint64_t keyBlending = cmdDraw.key;
@@ -436,6 +449,10 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant, DynamicSpe
     keyDraw |= uint64_t(CustomCommand::PASS);
     keyDraw |= mi->getSortingKey(); // already all set-up for direct or'ing
     keyDraw |= makeField(variant.key, MATERIAL_VARIANT_KEY_MASK, MATERIAL_VARIANT_KEY_SHIFT);
+    // The fog specialization is decided per renderable (see generateCommands()), so unlike the
+    // per-view specialization constants it must participate in the sort key, otherwise commands
+    // using different pipelines would interleave and cause unnecessary pipeline switches.
+    keyDraw |= makeField(dynamicSpecConstKey.hasFog(), MATERIAL_FOG_MASK, MATERIAL_FOG_SHIFT);
     keyDraw |= makeField(rasterState.alphaToCoverage, BLENDING_MASK, BLENDING_SHIFT);
 
     cmdDraw.key = isBlendingCommand ? keyBlending : keyDraw;
@@ -452,8 +469,7 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant, DynamicSpe
     cmdDraw.info.rasterState.inverseFrontFaces = inverseFrontFaces;
     cmdDraw.info.rasterState.depthClamp = hasDepthClamp;
     cmdDraw.info.materialVariant = variant;
-    cmdDraw.info.dynamicSpecConstKey = DynamicSpecConstKey::filterProgramSpecKey(
-            variant, specKey, ma->getMaterialDomain(), ma->isVariantLit());
+    cmdDraw.info.dynamicSpecConstKey = dynamicSpecConstKey;
     // we keep "RasterState::colorWrite" to the value set by material (could be disabled)
 }
 
@@ -541,8 +557,22 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
     bool const filterTranslucentObjects =
             bool(extraFlags & CommandTypeFlags::FILTER_TRANSLUCENT_OBJECTS);
 
+    bool const isMotionVectorsPass =
+            bool(extraFlags & CommandTypeFlags::MOTION_VECTORS);
+
+    bool const motionVectorsReuseDepth =
+            bool(extraFlags & CommandTypeFlags::MOTION_VECTORS_REUSE_DEPTH);
+
+    bool const motionVectorsChannelDepthClear =
+            bool(extraFlags & CommandTypeFlags::MOTION_VECTORS_CHANNEL_DEPTH_CLEAR);
+
     bool const hasShadowing =
             renderFlags & HAS_SHADOWING;
+
+    // The motion vectors pass must match the color pass's coverage, so it always uses the regular
+    // culling mode.
+    bool const useShadowCulling =
+            hasShadowing && !isMotionVectorsPass;
 
     bool const viewInverseFrontFaces =
             renderFlags & HAS_INVERSE_FRONT_FACES;
@@ -552,6 +582,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
 
     bool const hasDepthClamp =
             renderFlags & HAS_DEPTH_CLAMP;
+
+    bool const isPickingVariant = Variant::isPickingVariant(variant);
+    bool const depthColorWrite = isPickingVariant || Variant::isDepthMomentsVariant(variant);
 
     float const cameraPositionDotCameraForward = dot(cameraPosition, cameraForward);
 
@@ -572,8 +605,8 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
         cmd.info.dynamicSpecConstKey = DynamicSpecConstKey::filterProgramSpecKey(
                 variant, specKey, MaterialDomain::SURFACE, true);
         cmd.info.rasterState = {};
-        cmd.info.rasterState.colorWrite = Variant::isPickingVariant(variant) || Variant::isDepthMomentsVariant(variant);
-        cmd.info.rasterState.depthWrite = true;
+        cmd.info.rasterState.colorWrite = depthColorWrite;
+        cmd.info.rasterState.depthWrite = !motionVectorsReuseDepth;
         cmd.info.rasterState.depthFunc = RasterState::DepthFunc::GE;
         cmd.info.rasterState.alphaToCoverage = false;
         cmd.info.rasterState.depthClamp = hasDepthClamp;
@@ -582,6 +615,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
     for (uint32_t i = range.first; i < range.last; ++i) {
         // Check if this renderable passes the visibilityMask.
         if (UTILS_UNLIKELY(!(soaVisibilityMask[i] & visibilityMask))) {
+            continue;
+        }
+        if (motionVectorsReuseDepth && UTILS_LIKELY(!soaVisibility[i].motionMoved)) {
             continue;
         }
 
@@ -620,6 +656,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
         bool const hasSkinningOrMorphing = hasSkinning || hasMorphing;
 
         Variant renderableVariant{ variant };
+        DynamicSpecConstKey renderableSpecKey{ specKey };
 
         // We can't have SSR and shadowing together by construction.
         assert_invariant(!Variant::isSSRVariant(variant) || !hasShadowing);
@@ -631,7 +668,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
         FRenderableManager::MorphingBindingInfo const& morphing = soaMorphing[i];
 
         if constexpr (isColorPass) {
-            renderableVariant.setFog(soaVisibility[i].fog && Variant::isFogVariant(variant));
+            renderableSpecKey.setFog(specKey.hasFog() && soaVisibility[i].fog);
             cmd.key = uint64_t(Pass::COLOR);
         } else if constexpr (isDepthPass) {
             cmd.key = uint64_t(Pass::DEPTH);
@@ -665,6 +702,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
 
         const bool shadowCaster = soaVisibility[i].castShadows & hasShadowing;
         const bool writeDepthForShadowCasters = depthContainsShadowCasters & shadowCaster;
+        const bool renderableMoved = isMotionVectorsPass & soaVisibility[i].motionMoved;
 
         Slice<const FRenderPrimitive> const primitives = soaPrimitives[i];
         /*
@@ -696,13 +734,14 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
             cmd.info.count = primitive.getCount();
             cmd.info.type = primitive.getPrimitiveType();
             cmd.info.isIndexed = primitive.isIndexed();
+            cmd.info.hasInstancedMaterial = ma->isInstanced();
             cmd.info.morphingOffset = primitive.getMorphingBufferOffset();
 // FIXME: morphtarget buffer
 //            cmd.info.morphTargetBuffer = morphing.morphTargetBuffer ?
 //                    morphing.morphTargetBuffer->getHwHandle() : SamplerGroupHandle{};
 
             if constexpr (isColorPass) {
-                setupColorCommand(cmd, renderableVariant, specKey, mi,
+                setupColorCommand(cmd, renderableVariant, renderableSpecKey, mi,
                         inverseFrontFaces, hasDepthClamp);
                 const bool blendPass = Pass(cmd.key & PASS_MASK) == Pass::BLENDED;
                 if (blendPass) {
@@ -785,31 +824,65 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
                 curr->key |= select(mi->getCullingMode() == CullingMode::FRONT_AND_BACK);
 
             } else if constexpr (isDepthPass) {
-                const CullingMode cullingMode = hasShadowing ? mi->getShadowCullingMode() : mi->getCullingMode();
+                const CullingMode cullingMode = useShadowCulling ?
+                        mi->getShadowCullingMode() : mi->getCullingMode();
                 const RasterState rs = ma->getRasterState();
                 const TransparencyMode mode = mi->getTransparencyMode();
                 const BlendingMode blendingMode = ma->getBlendingMode();
                 const bool translucent = (blendingMode != BlendingMode::OPAQUE
                         && blendingMode != BlendingMode::MASKED);
-                const bool isPickingVariant = Variant::isPickingVariant(variant);
-
-                cmd.key |= mi->getSortingKey(); // already all set-up for direct or'ing
-                cmd.info.rasterState.culling = cullingMode;
 
                 // FIXME: should writeDepthForShadowCasters take precedence over mi->getDepthWrite()?
-                cmd.info.rasterState.depthWrite =
+                bool const depthWrite =
                         (1 // only keep bit 0
                                 & (mi->isDepthWriteEnabled() |
                                           (mode == TransparencyMode::TWO_PASSES_ONE_SIDE) |
                                           isPickingVariant) &
                                 !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage)) |
                         writeDepthForShadowCasters;
+                cmd.info.rasterState.depthWrite = depthWrite & !motionVectorsReuseDepth;
+
+                // In the motion vectors pass, primitives of renderables that moved write their
+                // motion vectors with the MOT variant; when the pass has its own depth buffer, all
+                // others only write depth, as occluders (including materials without a MOT
+                // variant). When a channel clears the depth buffer mid-pass, static renderables
+                // with a MOT variant also write their (zero) motion vectors to overwrite any
+                // previous channel's motion vectors. Note that the dynamic specialization constants
+                // key, computed above for the DEPTH variant, is the same with MOT.
+                bool const mot = isMotionVectorsPass &&
+                        ((renderableMoved | motionVectorsChannelDepthClear) &
+                         ma->hasMotionVectorsVariant());
+                // MOT is (MNT | PCK), and PCK is the picking bit: setting the MOT bits to false
+                // outside of the motion vectors pass would also clear the picking bit (and the
+                // VSM one), silently turning a picking command into a plain depth command that
+                // writes no color, so the picking buffer would never be filled.
+                if (isMotionVectorsPass) {
+                    cmd.info.materialVariant.setMotionVectors(mot);
+                }
+                cmd.info.rasterState.colorWrite = depthColorWrite | mot;
+                cmd.info.rasterState.culling = cullingMode;
+
+                cmd.key &= ~MATERIAL_MASK;
+                cmd.key |= mi->getSortingKey(); // already all set-up for direct or'ing
+                cmd.key |= makeField(cmd.info.materialVariant.key,
+                        MATERIAL_VARIANT_KEY_MASK, MATERIAL_VARIANT_KEY_SHIFT);
 
                 *curr = cmd;
-                // cancel command if both front and back faces are culled
-                curr->key |= select(cullingMode == CullingMode::FRONT_AND_BACK);
-                // cancel command if asked to filter translucent objects
-                curr->key |= select(filterTranslucentObjects & translucent);
+                // cancel command if both front and back faces are culled, if asked to filter
+                // translucent objects, or (in the motion vectors pass) if it doesn't write depth in
+                // the color pass or (when reusing depth) has no motion vectors variant
+                curr->key |= select((cullingMode == CullingMode::FRONT_AND_BACK) |
+                        (filterTranslucentObjects & translucent) |
+                        (isMotionVectorsPass & !depthWrite) |
+                        (motionVectorsReuseDepth & !mot));
+                // in the motion vectors pass, when static occluders are drawn, draw moving
+                // primitives after all static ones, across channels unless a channel clears the
+                // depth buffer (see the key layout). This is applied to curr->key because cmd.key
+                // accumulates bits across the primitives of a renderable.
+                curr->key |= select(!motionVectorsReuseDepth & renderableMoved &
+                        ma->hasMotionVectorsVariant(),
+                        (motionVectorsChannelDepthClear ? CommandKey(0) : CHANNEL_MASK) |
+                        BLENDING_MASK);
             }
 
             ++curr;
@@ -1001,7 +1074,12 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
                     assert_invariant(index < mCustomCommands.size());
                     pCustomCommands[index]();
                     currentPipeline = {};
-                    currentPrimitiveHandle ={};
+                    currentPrimitiveHandle = {};
+                    currentScissor = {};
+                    if (UTILS_UNLIKELY(hasScissorOverride)) {
+                        currentScissor = mScissor;
+                        driver.scissor(mScissor);
+                    }
                     continue;
                 }
 

@@ -382,14 +382,14 @@ void postRender(Engine*, View* view, Scene*, Renderer* renderer) {
         frame -= 1;
 
         const Viewport& vp = view->getViewport();
-        uint8_t const* pixels = new uint8_t[vp.width * vp.height * 3];
+        uint8_t const* pixels = new uint8_t[size_t(vp.width) * vp.height * 3];
 
         struct CaptureState {
             View* view = nullptr;
             int currentFrame = 0;
         };
 
-        backend::PixelBufferDescriptor buffer(pixels, vp.width * vp.height * 3,
+        backend::PixelBufferDescriptor buffer(pixels, size_t(vp.width) * vp.height * 3,
                 backend::PixelBufferDescriptor::PixelDataFormat::RGB,
                 backend::PixelBufferDescriptor::PixelDataType::UBYTE,
                 [](void* buffer, size_t, void* user) {
@@ -508,6 +508,8 @@ int main(int const argc, char* argv[]) {
     };
 
     SampleConfig config;
+    config.title = "Frame Generator";
+    config.headless = true;
     samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
     auto loader = samples::getAssetLoader(config);
@@ -520,8 +522,6 @@ int main(int const argc, char* argv[]) {
         }
     }
 
-    config.title = "Frame Generator";
-    config.headless = true;
     auto fApp = createSampleApp(config, dm.get(), loader.get());
     fApp->run();
 

@@ -50,6 +50,7 @@
 #include <utils/Invocable.h>
 #include <utils/Mutex.h>
 
+#include <atomic>
 #include <string_view>
 
 #include <stddef.h>
@@ -123,10 +124,6 @@ public:
 
     BufferInterfaceBlock::FieldInfo const* reflect(std::string_view name) const noexcept;
 
-    FMaterialInstance const* getDefaultInstance() const noexcept {
-        return const_cast<FMaterial*>(this)->getDefaultInstance();
-    }
-
     FMaterialInstance* getDefaultInstance() noexcept;
 
     FEngine& getEngine() const noexcept  { return mEngine; }
@@ -139,11 +136,10 @@ public:
         if (!isSharedVariant(variant)) {
             return false;
         }
-        FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
-        if (UTILS_UNLIKELY(!pDefaultMaterial)) {
+        FMaterialInstance const* const pDefaultInstance = mEngine.getDefaultMaterialInstance();
+        if (UTILS_UNLIKELY(!pDefaultInstance)) {
             return false;
         }
-        FMaterialInstance const* const pDefaultInstance = pDefaultMaterial->getDefaultInstance();
         pDefaultInstance->use(driver, variant);
         return true;
     }
@@ -173,6 +169,8 @@ public:
     }
     bool isDoubleSided() const noexcept { return mDefinition.doubleSided; }
     bool hasDoubleSidedCapability() const noexcept { return mDefinition.doubleSidedCapability; }
+    // true if the material was built with `instanced: true` (i.e. MATERIAL_HAS_INSTANCES)
+    bool isInstanced() const noexcept { return mDefinition.instanced; }
     bool isAlphaToCoverageEnabled() const noexcept { return mDefinition.rasterState.alphaToCoverage; }
     float getMaskThreshold() const noexcept { return mDefinition.maskThreshold; }
     bool hasShadowMultiplier() const noexcept { return mDefinition.hasShadowMultiplier; }
@@ -186,6 +184,12 @@ public:
     float getSpecularAntiAliasingThreshold() const noexcept { return mDefinition.specularAntiAliasingThreshold; }
 
     bool isDefaultMaterial() const noexcept { return mIsDefaultMaterial; }
+
+    // Returns true if this material can render the motion vectors variant (DEP | MOT). Materials
+    // that use the shared depth programs report the default material's answer. Materials without
+    // it (e.g. built with the `motionVectors` variant filter) must be drawn depth-only in the
+    // motion vectors pass, i.e. with a motion vector of zero.
+    bool hasMotionVectorsVariant() const noexcept { return mHasMotionVectorsVariant; }
 
     backend::descriptor_binding_t getSamplerBinding(
             std::string_view const& name) const;
@@ -207,7 +211,9 @@ public:
     }
     size_t getParameters(ParameterInfo* parameters, size_t count) const noexcept;
 
-    uint32_t generateMaterialInstanceId() const noexcept { return mMaterialInstanceId++; }
+    uint32_t generateMaterialInstanceId() const noexcept {
+        return mMaterialInstanceId.fetch_add(1, std::memory_order_relaxed);
+    }
 
     LocalProgramCache& getPrograms() noexcept { return mPrograms; }
 
@@ -224,12 +230,13 @@ public:
     }
 
     inline bool isSharedVariant(Variant const variant) const {
-        // The default material explicitly filters VSM variants to reduce binary size, so it cannot
-        // provide the MNT | DEP variant as a shared program.
-        return mDefinition.materialDomain == MaterialDomain::SURFACE && !mIsDefaultMaterial &&
-               !mDefinition.hasCustomDepthShader && Variant::isValidDepthVariant(variant) &&
-               !Variant::isDepthMomentsVariant(variant);
+        return mDefinition.isSharedVariant(variant, mIsDefaultMaterial);
     }
+
+    // Like MaterialDefinition::isValidProgram(), except that a shared variant is checked against
+    // the default material, whose programs render it (see isSharedVariant()).
+    bool isValidProgram(Variant variant, DynamicSpecConstKey specKey,
+            backend::ShaderModel shaderModel, bool isStereoSupported) const noexcept;
 
     MaterialParser const& getMaterialParser() const noexcept {
 #if FILAMENT_ENABLE_MATDBG
@@ -287,17 +294,18 @@ private:
         backend::CallbackHandler* handler,
         utils::Invocable<void(Material*)>&& callback) noexcept;
 
+    bool computeHasMotionVectorsVariant() const noexcept;
+
     MaterialDefinition const& mDefinition;
 
     bool mIsDefaultMaterial = false;
 
     bool mUseUboBatching = false;
     bool mDepthPrecacheDisabled = false;
-
-    FMaterial const* mDefaultMaterial = nullptr;
+    bool mHasMotionVectorsVariant = false;
 
     // reserve some space to construct the default material instance
-    mutable FMaterialInstance* mDefaultMaterialInstance = nullptr;
+    FMaterialInstance* mDefaultMaterialInstance = nullptr;
 
 #if FILAMENT_ENABLE_MATDBG
     matdbg::MaterialKey mDebuggerId;
@@ -313,7 +321,7 @@ private:
 
     FEngine& mEngine;
     const uint32_t mMaterialId;
-    mutable uint32_t mMaterialInstanceId = 0;
+    mutable std::atomic<uint32_t> mMaterialInstanceId = 0;
 
     LocalProgramCache mPrograms;
 };

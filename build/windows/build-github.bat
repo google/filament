@@ -39,6 +39,7 @@ if "%TARGET%" == "release" (
     set INSTALL=--target install
     set BUILD_RELEASE_VARIANTS=1
     set CREATE_ARCHIVE=1
+    set CCACHE_DISABLE=1
 )
 
 set VISUAL_STUDIO_VERSION="Enterprise"
@@ -56,6 +57,16 @@ if errorlevel 1 exit /b %errorlevel%
 
 msbuild /version
 cmake --version
+
+set HAS_CCACHE=
+if not "%CCACHE_DISABLE%" == "1" (
+    where ccache >nul 2>nul
+    if not errorlevel 1 (
+        ccache --version
+        set "CCACHE_SLOPPINESS=file_macro,time_macros,locale,file_stat_matches"
+        set HAS_CCACHE=1
+    )
+)
 
 :: Important: build debug builds first, when disk space is plentiful. Debug builds require
 :: significantly more temporary space.
@@ -117,6 +128,7 @@ cmake ..\.. ^
     -DCMAKE_INSTALL_PREFIX=..\%variant% ^
     -DFILAMENT_WINDOWS_CI_BUILD:BOOL=ON ^
     -DFILAMENT_SUPPORTS_VULKAN=ON ^
+    "-DCMAKE_VS_GLOBALS=UseMultiToolTask=true;EnforceProcessCountAcrossBuilds=true" ^
     || exit /b
 
 set build_flags=-j %NUMBER_OF_PROCESSORS%
@@ -137,6 +149,10 @@ set build_flags=-j %NUMBER_OF_PROCESSORS%
 
 cmake --build . %INSTALL% --config %config% %build_flags% -- /m || exit /b
 @echo off
+
+if "%HAS_CCACHE%" == "1" (
+    ccache --show-stats
+)
 
 echo Disk info after building variant: %variant%
 call :ShowDiskInfo

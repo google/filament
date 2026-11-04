@@ -44,7 +44,10 @@ DescriptorSetLayout::DescriptorSetLayout(
 
     assert_invariant(mMaxDescriptorBinding < utils::bitset64::BIT_COUNT);
 
-    mDescriptorTypes = utils::FixedCapacityVector<backend::DescriptorType>(mMaxDescriptorBinding + 1);
+    // DescriptorType has no invalid/none enumerator and value 0 is SAMPLER_2D_FLOAT; use
+    // INPUT_ATTACHMENT for unpopulated slots because neither isBuffer() nor isSampler() matches it.
+    mDescriptorTypes = utils::FixedCapacityVector<backend::DescriptorType>(
+            mMaxDescriptorBinding + 1, backend::DescriptorType::INPUT_ATTACHMENT);
     for (auto&& desc : descriptorSetLayout.descriptors) {
         mDescriptorTypes[desc.binding] = desc.type;
     }

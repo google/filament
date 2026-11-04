@@ -192,13 +192,15 @@ TEST(EntityTest, NameComponent) {
     i1 = cm.getInstance(entities[1]);
     EXPECT_EQ(1, i1.asValue());
     i2 = cm.getInstance(entities[2]);
-    EXPECT_EQ(0, i0.asValue());
+    EXPECT_EQ(0, i2.asValue());
 
     EXPECT_STREQ("i1", cm.getName(i1));
 
     em.destroy(8, entities);
+    em.advanceEpoch();
 
     cm.gc();
+    EXPECT_FALSE(cm.hasComponent(entities[1]));
 }
 
 TEST(EntityTest, Callback) {
@@ -413,40 +415,51 @@ TEST(EntityTest, EntityManager_ConcurrentCreateAndDestroy) {
 TEST(EntityTest, EntityManager_EBR_ConcurrentTimelineStress) {
     EntityManagerImpl em;
     std::atomic<bool> active{ true };
+    std::atomic<size_t> batchesCreated{ 0 };
+    std::atomic<size_t> epochsAdvanced{ 0 };
+    std::atomic<size_t> reclaimsRun{ 0 };
+    std::atomic<size_t> watermarkCycles{ 0 };
 
     // Thread 1: Generates garbage rapidly
-    std::thread t1([&em, &active]() {
+    std::thread t1([&em, &active, &batchesCreated]() {
         std::vector<Entity> ents(128);
         while (active.load(std::memory_order_relaxed)) {
             em.create(128, ents.data());
+            for (Entity const e : ents) {
+                EXPECT_TRUE(em.isAlive(e));
+            }
             em.destroy(128, ents.data());
+            batchesCreated.fetch_add(1, std::memory_order_relaxed);
             std::this_thread::yield();
         }
     });
 
     // Thread 2: Advances the timeline (Allocates from bitset pool)
-    std::thread t2([&em, &active]() {
+    std::thread t2([&em, &active, &epochsAdvanced]() {
         while (active.load(std::memory_order_relaxed)) {
             em.advanceEpoch();
+            epochsAdvanced.fetch_add(1, std::memory_order_relaxed);
             std::this_thread::yield();
         }
     });
 
     // Thread 3: Reclaims safe epochs (Returns to bitset pool)
-    std::thread t3([&em, &active]() {
+    std::thread t3([&em, &active, &reclaimsRun]() {
         while (active.load(std::memory_order_relaxed)) {
             em.reclaimSafeEpochs();
+            reclaimsRun.fetch_add(1, std::memory_order_relaxed);
             std::this_thread::yield();
         }
     });
 
     // Thread 4: Registers/Unregisters watermarks (Also returns to pool and moves safe threshold)
-    std::thread t4([&em, &active]() {
+    std::thread t4([&em, &active, &watermarkCycles]() {
         std::atomic<uint64_t> watermark{ 0 };
         while (active.load(std::memory_order_relaxed)) {
             em.registerWatermark(&watermark, "StressWatermark");
             watermark.store(em.getLatestEpochID(), std::memory_order_relaxed);
             em.unregisterWatermark(&watermark);
+            watermarkCycles.fetch_add(1, std::memory_order_relaxed);
             std::this_thread::yield();
         }
     });
@@ -460,9 +473,15 @@ TEST(EntityTest, EntityManager_EBR_ConcurrentTimelineStress) {
     t3.join();
     t4.join();
 
-    // Final cleanup
+    EXPECT_GT(batchesCreated.load(), 0u);
+    EXPECT_GT(epochsAdvanced.load(), 0u);
+    EXPECT_GT(reclaimsRun.load(), 0u);
+    EXPECT_GT(watermarkCycles.load(), 0u);
+
+    // Final cleanup: all destroyed entities should be reclaimed once the final epoch is sealed
     em.advanceEpoch();
     em.reclaimSafeEpochs();
+    EXPECT_EQ(em.getEntityCount(), 0u);
 }
 
 TEST(EntityTest, ComponentManager_ZombieSafelyMovedDuringDefragmentation) {
@@ -800,18 +819,29 @@ TEST(EntityTest, ComponentManager_CatchupGarbageLeapsOverCleanFrames) {
     };
 
     TestManager cm(em);
-    Entity dummy = em.create();
+    Entity const dummy = em.create();
+    Entity const blocker = em.create();
     cm.addComponent(dummy);
+    cm.addComponent(blocker);
 
-    // Loop 5 times calling em.advanceEpoch() without destroying anything
+    // Destroy blocker in epoch 1 so advanceEpoch()'s background auto-leap stops at epoch 1
+    // while blocker is still present in cm's entity bitset.
+    em.destroy(blocker);
+
+    // Seal epoch 1 (containing blocker) followed by 4 completely clean epochs (2..5).
     for (size_t i = 0; i < 5; ++i) {
         em.advanceEpoch();
     }
 
+    // Explicitly remove blocker before catchupGarbage() so all 5 missed epochs (1..5)
+    // have zero intersection with cm's current entity bitset, and watermark is still 0.
+    cm.removeComponent(blocker);
+    ASSERT_EQ(cm.getWatermark(), 0u);
+
     cm.catchupGarbage();
 
     EXPECT_TRUE(cm.getPendingDestruction().empty());
-    EXPECT_EQ(cm.getWatermark(), 5); // leaps forward to currentEpoch - 1 (which is 5)
+    EXPECT_EQ(cm.getWatermark(), 5u); // leaps forward to currentEpoch - 1 (which is 5)
 
     em.destroy(dummy);
 }
@@ -1006,3 +1036,114 @@ TEST(EntityTest, ComponentManager_AutomatedLeapForward_BlocksOnIntersection) {
     // Now it should be advanced to Epoch 1
     EXPECT_EQ(cm.getWatermark(), 1);
 }
+
+TEST(EntityTest, EntityInstanceIncrementDecrement) {
+    struct DummyTag {};
+    using Instance = EntityInstance<DummyTag>;
+
+    Instance i{ 5 };
+    Instance const prevInc = i++;
+    EXPECT_EQ(prevInc.asValue(), 5u);
+    EXPECT_EQ(i.asValue(), 6u);
+
+    Instance const preInc = ++i;
+    EXPECT_EQ(preInc.asValue(), 7u);
+    EXPECT_EQ(i.asValue(), 7u);
+
+    Instance const prevDec = i--;
+    EXPECT_EQ(prevDec.asValue(), 7u);
+    EXPECT_EQ(i.asValue(), 6u);
+
+    Instance const preDec = --i;
+    EXPECT_EQ(preDec.asValue(), 5u);
+    EXPECT_EQ(i.asValue(), 5u);
+}
+
+TEST(EntityTest, GetAliveEntitiesOutParam) {
+    EntityManagerImpl em;
+    Entity entities[4];
+    em.create(4, entities);
+
+    PagedArenaBitset out;
+    // Pre-populate with stale bits to ensure getAliveEntities overwrites existing contents.
+    out.add(9999u);
+    em.getAliveEntities(out);
+
+    EXPECT_EQ(out.size(), 4u);
+    EXPECT_FALSE(out[9999u]);
+    for (Entity const e : entities) {
+        EXPECT_TRUE(out[e.getId()]);
+    }
+
+    em.destroy(entities[1]);
+    em.getAliveEntities(out);
+    EXPECT_EQ(out.size(), 3u);
+    EXPECT_TRUE(out[entities[0].getId()]);
+    EXPECT_FALSE(out[entities[1].getId()]);
+    EXPECT_TRUE(out[entities[2].getId()]);
+    EXPECT_TRUE(out[entities[3].getId()]);
+
+    em.destroy(entities[0]);
+    em.destroy(entities[2]);
+    em.destroy(entities[3]);
+}
+
+TEST(EntityTest, DestroyBatchesNotificationsAcrossSingleDestroyCalls) {
+    EntityManagerImpl em;
+    constexpr size_t COUNT = 20;
+    Entity entities[COUNT];
+    em.create(COUNT, entities);
+
+    // Destroy entities[0] before registering the callback; registerChangeCallback must flush
+    // pending notifications first so entities[0] is not spuriously delivered to the new callback.
+    em.destroy(entities[0]);
+    EXPECT_FALSE(em.isAlive(entities[0]));
+
+    size_t callbackInvocations = 0;
+    std::vector<Entity> notifiedEntities;
+    int token = 0;
+    em.registerChangeCallback(&token, [&](Slice<const Entity> slice) {
+        callbackInvocations++;
+        for (Entity const e : slice) {
+            notifiedEntities.push_back(e);
+        }
+    });
+    EXPECT_EQ(callbackInvocations, 0u);
+    EXPECT_TRUE(notifiedEntities.empty());
+
+    // Destroy 15 entities one by one; they must be buffered in mDirtyEntities without flushing.
+    for (size_t i = 1; i <= 15; ++i) {
+        em.destroy(entities[i]);
+        EXPECT_FALSE(em.isAlive(entities[i]));
+        EXPECT_EQ(callbackInvocations, 0u);
+    }
+
+    // The 16th single-entity destroy fills MAX_DIRTY_COUNT (16) and flushes the full batch at once.
+    em.destroy(entities[16]);
+    EXPECT_FALSE(em.isAlive(entities[16]));
+    EXPECT_EQ(callbackInvocations, 1u);
+    ASSERT_EQ(notifiedEntities.size(), 16u);
+    for (size_t i = 0; i < 16; ++i) {
+        EXPECT_EQ(notifiedEntities[i], entities[i + 1]);
+    }
+
+    // Destroy the remaining 3 entities; they stay buffered until advanceEpoch() or
+    // flushNotifications().
+    for (size_t i = 17; i < COUNT; ++i) {
+        em.destroy(entities[i]);
+        EXPECT_FALSE(em.isAlive(entities[i]));
+    }
+    EXPECT_EQ(callbackInvocations, 1u);
+
+    // advanceEpoch() must flush any remaining buffered destructions before sealing the epoch.
+    em.advanceEpoch();
+    EXPECT_EQ(callbackInvocations, 2u);
+    ASSERT_EQ(notifiedEntities.size(), 19u);
+    for (size_t i = 0; i < 19; ++i) {
+        EXPECT_EQ(notifiedEntities[i], entities[i + 1]);
+    }
+
+    em.unregisterChangeCallback(&token);
+}
+
+

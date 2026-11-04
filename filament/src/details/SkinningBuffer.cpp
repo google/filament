@@ -73,7 +73,7 @@ SkinningBuffer::Builder& SkinningBuffer::Builder::name(utils::ImmutableCString c
     return BuilderNameMixin::name(name);
 }
 
-SkinningBuffer* SkinningBuffer::Builder::build(Engine& engine) {
+SkinningBuffer* SkinningBuffer::Builder::build(Engine& engine) const {
     return downcast(engine).createSkinningBuffer(*this);
 }
 
@@ -113,7 +113,7 @@ void FSkinningBuffer::terminate(FEngine& engine) {
 
 void FSkinningBuffer::setBones(FEngine& engine,
         RenderableManager::Bone const* transforms, size_t const count, size_t const offset) {
-    FILAMENT_CHECK_PRECONDITION((offset + count) <= mBoneCount)
+    FILAMENT_CHECK_PRECONDITION(count <= mBoneCount && offset <= mBoneCount - count)
             << "SkinningBuffer (size=" << (unsigned)mBoneCount
             << ") overflow (boneCount=" << (unsigned)count << ", offset=" << (unsigned)offset
             << ")";
@@ -129,7 +129,7 @@ void FSkinningBuffer::setBones(FEngine& engine,
 
 void FSkinningBuffer::setBones(FEngine& engine,
         mat4f const* transforms, size_t const count, size_t const offset) {
-    FILAMENT_CHECK_PRECONDITION((offset + count) <= mBoneCount)
+    FILAMENT_CHECK_PRECONDITION(count <= mBoneCount && offset <= mBoneCount - count)
             << "SkinningBuffer (size=" << (unsigned)mBoneCount
             << ") overflow (boneCount=" << (unsigned)count << ", offset=" << (unsigned)offset
             << ")";

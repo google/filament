@@ -26,6 +26,7 @@
 #include <utils/tribool.h>
 
 #include <atomic>
+#include <chrono>
 #include <memory>
 #include <mutex>
 
@@ -375,6 +376,13 @@ public:
          * Asynchronous mode for the engine. Defines how asynchronous operations are handled.
          */
         AsynchronousMode asynchronousMode = AsynchronousMode::NONE;
+
+        /**
+         * Time each frame may spend running queued asynchronous operations in the amortization
+         * strategy, measured with std::chrono::steady_clock.
+         * See Engine::Config::asynchronousFrameBudget.
+         */
+        std::chrono::nanoseconds asynchronousFrameBudget = std::chrono::milliseconds(2);
     };
 
     Platform() noexcept;
@@ -530,6 +538,9 @@ public:
      * from any thread from the time at which setBlobFunc is called until the time that Platform
      * is destroyed. Concurrent calls to these functions from different threads is also allowed.
      * Either function can be null.
+     * With backend.vulkan.enable_pipeline_cache_persistence, the Vulkan backend stores its whole
+     * pipeline cache as one value, which can be several megabytes. It reads it once, when the
+     * Engine is created, so the functions must be set before then for it to be used.
      *
      * @param insertBlob    an Invocable that inserts a new value into the cache and associates
      *                      it with the given key

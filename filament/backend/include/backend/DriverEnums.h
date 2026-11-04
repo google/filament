@@ -122,6 +122,10 @@ static constexpr size_t MAX_PUSH_CONSTANT_COUNT     = 32;   // Vulkan 1.1 spec a
                                                             // of push constant (we assume 4-byte
                                                             // types).
 
+// HwIndexBuffer::count is declared with this width. Shrinking it lowers MAX_INDEX_COUNT everywhere.
+static constexpr size_t INDEX_COUNT_BITS            = 26;
+static constexpr size_t MAX_INDEX_COUNT             = (size_t(1) << INDEX_COUNT_BITS) - 1;
+
 // Per feature level caps
 // Use (int)FeatureLevel to index this array
 static constexpr struct {

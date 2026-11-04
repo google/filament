@@ -846,6 +846,45 @@ void BM_bitset_PopSetBits(benchmark::State& state) {
 
 BENCHMARK_TEMPLATE(BM_bitset_PopSetBits, PagedArenaBitset)->Range(10, 100000)->Iterations(10);
 
+template<typename Policy>
+void BM_bitset_Lookup(benchmark::State& state) {
+    size_t const count = state.range(0);
+    std::default_random_engine gen{123};
+    std::uniform_int_distribution<uint32_t> ndBase{0, 100000};
+    std::uniform_int_distribution<uint32_t> ndGen{0, 0};
+
+    Policy set;
+    std::vector<uint32_t> queries;
+    queries.reserve(count * 2);
+    size_t idx = 0;
+    while (idx < count) {
+        uint32_t const base = ndBase(gen);
+        uint32_t const g = ndGen(gen);
+        size_t const batchSize = std::min<size_t>(count - idx, 100);
+        for (size_t j = 0; j < batchSize; ++j) {
+            uint32_t const bit = (g << 17) | ((base + j) & 0x1FFFF);
+            set.add(bit);
+            queries.push_back(bit);
+            queries.push_back(bit ^ 0x1000u); // Mix hits and misses
+        }
+        idx += batchSize;
+    }
+
+    {
+        PerformanceCounters pc(state);
+        for (auto _ : state) {
+            size_t hits = 0;
+            for (uint32_t const q : queries) {
+                hits += set[q];
+            }
+            benchmark::DoNotOptimize(hits);
+        }
+    }
+    state.SetItemsProcessed(state.iterations() * queries.size());
+}
+
+BENCHMARK_TEMPLATE(BM_bitset_Lookup, PagedArenaBitset)->Range(10, 100000);
+
 BENCHMARK_TEMPLATE(BM_bitset_IntersectMulti2, PagedArenaBitset)->Range(10, 100000);
 BENCHMARK_TEMPLATE(BM_bitset_IntersectMulti6, PagedArenaBitset)->Range(10, 100000);
 BENCHMARK_TEMPLATE(BM_bitset_IntersectChained6, PagedArenaBitset)->Range(10, 100000);

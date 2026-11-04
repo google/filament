@@ -113,6 +113,37 @@ static void BM_EntityManager_DestroySingular(benchmark::State& state) {
 }
 BENCHMARK(BM_EntityManager_DestroySingular)->Range(8, 8192);
 
+static void BM_EntityManager_DestroySingularWithCallback(benchmark::State& state) {
+    EntityManagerImpl em;
+    size_t const count = state.range(0);
+    std::vector<Entity> entities(count);
+    size_t destroyedTotal = 0;
+    int token = 0;
+    em.registerChangeCallback(&token, [&destroyedTotal](Slice<const Entity> slice) {
+        destroyedTotal += slice.size();
+        benchmark::DoNotOptimize(destroyedTotal);
+    });
+
+    for (auto _ : state) {
+        state.PauseTiming();
+        em.create(count, entities.data());
+        state.ResumeTiming();
+
+        for (size_t i = 0; i < count; ++i) {
+            em.destroy(entities[i]);
+        }
+        em.flushNotifications();
+
+        state.PauseTiming();
+        em.advanceEpoch();
+        em.reclaimSafeEpochs();
+        state.ResumeTiming();
+    }
+
+    em.unregisterChangeCallback(&token);
+}
+BENCHMARK(BM_EntityManager_DestroySingularWithCallback)->Range(8, 8192);
+
 static void BM_EntityManager_DestroyBatched(benchmark::State& state) {
     EntityManagerImpl em;
     size_t const count = state.range(0);

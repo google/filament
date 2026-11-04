@@ -21,6 +21,8 @@
 #include <utils/Mutex.h>
 #include <utils/Panic.h>
 
+#include <chrono>
+
 namespace filament::backend {
 
 using namespace utils;
@@ -188,6 +190,11 @@ void JobQueue::stop() noexcept {
     mQueueCondition.notify_all(); // Wake up all waiting threads
 }
 
+bool JobQueue::empty() const noexcept {
+    LockGuard const lock(mQueueMutex);
+    return mJobOrder.empty();
+}
+
 JobQueue::JobId JobQueue::genNextJobId() noexcept {
     // We assume this method is called within the critical section.
     JobId newJobId = mNextJobId++;
@@ -207,8 +214,9 @@ void JobWorker::terminate() {
     }
 }
 
-AmortizationWorker::AmortizationWorker(JobQueue::Ptr queue, PassKey)
-    : JobWorker(std::move(queue)) {
+AmortizationWorker::AmortizationWorker(JobQueue::Ptr queue,
+        std::chrono::nanoseconds const frameBudget, PassKey)
+    : JobWorker(std::move(queue)), mFrameBudget(frameBudget) {
 }
 
 AmortizationWorker::~AmortizationWorker() = default;
@@ -237,11 +245,41 @@ void AmortizationWorker::process(int const jobCount) {
     }
 }
 
+void AmortizationWorker::processFrame() {
+    if (!mQueue) {
+        return;
+    }
+
+    // Measuring from the start of the call keeps a coarse clock (100 us on the web) from adding
+    // rounding error per job.
+    using clock = std::chrono::steady_clock;
+    clock::time_point const start = clock::now();
+
+    // The first job runs whatever the budget, so the queue always advances.
+    do {
+        JobQueue::Job job = mQueue->pop(false);
+        if (!job) {
+            break;
+        }
+        job();
+    } while (clock::now() - start < mFrameBudget);
+}
+
+void AmortizationWorker::drain() {
+    if (!mQueue) {
+        return;
+    }
+
+    while (!mQueue->empty()) {
+        process(-1);
+    }
+}
+
 void AmortizationWorker::terminate() {
     JobWorker::terminate();
 
     // Drain all pending jobs.
-    process(-1);
+    drain();
 }
 
 ThreadWorker::ThreadWorker(JobQueue::Ptr queue, Config config, PassKey)
@@ -255,7 +293,11 @@ ThreadWorker::ThreadWorker(JobQueue::Ptr queue, Config config, PassKey)
         }
 
         while (JobQueue::Job job = mQueue->pop(true)) {
-            job();
+            if (mConfig.wrapJob) {
+                mConfig.wrapJob(job);
+            } else {
+                job();
+            }
         }
 
         if (mConfig.onEnd) {
@@ -267,6 +309,33 @@ ThreadWorker::ThreadWorker(JobQueue::Ptr queue, Config config, PassKey)
 ThreadWorker::~ThreadWorker() {
     // Destroying a worker without calling `terminate()` first is a programming error.
     assert_invariant(!mThread.joinable());
+}
+
+void ThreadWorker::drain() {
+    if (!mQueue) {
+        return;
+    }
+
+    assert_invariant(std::this_thread::get_id() != mThread.get_id());
+
+    struct DrainFence {
+        utils::Mutex mutex;
+        utils::Condition condition;
+        bool done = false;
+    } fence;
+
+    JobQueue::JobId const id = mQueue->push([&fence]() {
+        utils::LockGuard const lock(fence.mutex);
+        fence.done = true;
+        fence.condition.notify_one();
+    });
+
+    if (id == JobQueue::InvalidJobId) {
+        return;
+    }
+
+    utils::UniqueLock lock(fence.mutex);
+    fence.condition.wait(lock, [&fence]() { return fence.done; });
 }
 
 void ThreadWorker::terminate() {

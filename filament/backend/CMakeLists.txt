@@ -273,6 +273,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/utils/Spirv.cpp
             src/vulkan/utils/Spirv.h
             src/vulkan/utils/StaticVector.h
+            src/vulkan/utils/TaskHandler.cpp
+            src/vulkan/utils/TaskHandler.h
     )
     if (LINUX)
         list(APPEND SRCS
@@ -308,6 +310,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/utils/SpecializationConstantProcessor.h
             src/webgpu/utils/StringPlaceholderTemplateProcessor.cpp
             src/webgpu/utils/StringPlaceholderTemplateProcessor.h
+            src/webgpu/utils/VertexHelper.cpp
+            src/webgpu/utils/VertexHelper.h
             src/webgpu/WebGPUBlitter.cpp
             src/webgpu/WebGPUBlitter.h
             src/webgpu/WebGPUBufferBase.cpp
@@ -613,21 +617,26 @@ if (FILAMENT_BUILD_TESTING)
             test/test_Blit.cpp
             test/test_MissingRequiredAttributes.cpp
             test/test_ReadPixels.cpp
+            test/test_TimerQuery.cpp
             test/test_ReadTexture.cpp
             test/test_BufferUpdates.cpp
             test/test_AsyncCompletion.cpp
             test/test_Callbacks.cpp
+            test/test_CallbackManager.cpp
             test/test_JobQueue.cpp
             test/test_MemoryMappedBuffer.cpp
             test/test_MsaaSwapChain.cpp
             test/test_FrameRateControl.cpp
             test/test_MRT.cpp
             test/test_PushConstants.cpp
+            test/test_SpecializationConstants.cpp
             test/test_LoadImage.cpp
             test/test_StencilBuffer.cpp
             test/test_Scissor.cpp
             test/test_MipLevels.cpp
             test/test_Handles.cpp
+            test/test_BackendUtils.cpp
+            test/test_BlobCacheKey.cpp
             test/test_CircularBuffer.cpp
             test/test_CommandBufferQueue.cpp
             test/test_DescriptorSet.cpp
@@ -635,16 +644,25 @@ if (FILAMENT_BUILD_TESTING)
             test/test_ThreadPriorityOverride.cpp
             test/test_AsyncUploads.cpp
             test/test_Platform.cpp
+            test/test_VulkanPipelineCache.cpp
         )
+        if (FILAMENT_SUPPORTS_VULKAN)
+            list(APPEND BACKEND_TEST_SRC
+                    test/test_VulkanSpirvUtils.cpp
+            )
+        endif()
         if (FILAMENT_SUPPORTS_WEBGPU)
             list(APPEND BACKEND_TEST_SRC
                     test/test_WebGPUAsyncTaskCounter.cpp
                     test/test_WebGPUComposeSwizzle.cpp
-                    test/test_WebGPUSpecializationConstantProcessor.cpp)
+                    test/test_WebGPUSpecializationConstantProcessor.cpp
+                    test/test_WebGPUTextureUsage.cpp
+                    test/test_WebGPUVertexHelper.cpp)
         endif()
         if (APPLE)
             # Metal-specific tests
             list(APPEND BACKEND_TEST_SRC
+                test/test_MetalAsyncJobs.mm
                 test/test_MetalBlitter.mm
             )
         endif()
@@ -655,6 +673,9 @@ if (FILAMENT_BUILD_TESTING)
             filamat
             SPIRV
             spirv-cross-glsl)
+        if (FILAMENT_SUPPORTS_VULKAN)
+            list(APPEND BACKEND_TEST_LIBS SPIRV-Headers)
+        endif()
         # imageio drives the golden-image comparison and is only built for host
         # platforms (see the IS_HOST_PLATFORM block in the root CMakeLists).
         # NOTE: this must not be `if (TARGET imageio)` — imageio is added after

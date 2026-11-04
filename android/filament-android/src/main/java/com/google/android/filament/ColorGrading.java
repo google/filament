@@ -129,6 +129,7 @@ public class ColorGrading {
      *
      * @deprecated Use Builder::toneMapper(ToneMapper*) instead
      */
+    @Deprecated
     public enum ToneMapping {
         /** Linear tone mapping (i.e. no tone mapping) */
         LINEAR,
@@ -263,6 +264,7 @@ public class ColorGrading {
          *
          * @deprecated Use toneMapper(ToneMapper*) instead
          */
+        @Deprecated
         @NonNull
         public Builder toneMapping(@NonNull ToneMapping toneMapping) {
             nBuilderToneMapping(mNativeBuilder, toneMapping.toFilamentNative());

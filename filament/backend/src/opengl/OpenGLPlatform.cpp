@@ -130,6 +130,10 @@ OpenGLPlatform::ContextType OpenGLPlatform::getCurrentContextType() const noexce
     return ContextType::UNPROTECTED;
 }
 
+bool OpenGLPlatform::isPresentationTimeSupported() const noexcept {
+    return false;
+}
+
 void OpenGLPlatform::setPresentationTime(
         UTILS_UNUSED int64_t presentationTimeInNanosecond) noexcept {
 }

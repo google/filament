@@ -17,7 +17,15 @@
 #include <ktxreader/Ktx1Reader.h>
 
 
-#if defined(__ANDROID__) || defined(IMAGEIO_LITE)
+// imageio-lite is a cut-down decoder without the libpng/libz/tinyexr dependencies, which are not
+// built for Android or WASM. It is also selectable on desktop via IMAGEIO_LITE.
+#if defined(__ANDROID__) || defined(__EMSCRIPTEN__) || defined(IMAGEIO_LITE)
+#define FILAMENTAPP_USE_IMAGEIO_LITE 1
+#else
+#define FILAMENTAPP_USE_IMAGEIO_LITE 0
+#endif
+
+#if FILAMENTAPP_USE_IMAGEIO_LITE
 #include <imageio-lite/ImageDecoder.h>
 namespace image_ns = imageio_lite;
 #else
@@ -96,7 +104,7 @@ bool IBL::loadFromEquirect(const utils::Path& path) {
             return false;
         }
         std::istringstream in_stream(std::string(buf.begin(), buf.end()), std::ios::binary);
-#if defined(__ANDROID__) || defined(IMAGEIO_LITE)
+#if FILAMENTAPP_USE_IMAGEIO_LITE
         image::LinearImage* image = new image::LinearImage(image_ns::ImageDecoder::decode(in_stream,
                 utils::CString(path.getAbsolutePath().c_str())));
 #else
@@ -106,7 +114,7 @@ bool IBL::loadFromEquirect(const utils::Path& path) {
         w = image->getWidth();
         h = image->getHeight();
         n = image->getChannels();
-        size = w * h * n * sizeof(float);
+        size = size_t(w) * h * n * sizeof(float);
         data = image->getPixelRef();
         user = image;
         destroyer = [](void*, size_t, void* user) {
@@ -116,7 +124,7 @@ bool IBL::loadFromEquirect(const utils::Path& path) {
         auto buf = mAssetLoader->load(path);
         if (!buf.empty()) {
             stbi_info_from_memory(buf.data(), buf.size(), &w, &h, nullptr);
-            size = w * h * sizeof(float3);
+            size = size_t(w) * h * sizeof(float3);
             data = (float3*) stbi_loadf_from_memory(buf.data(), buf.size(), &w, &h, &n, 3);
         }
         destroyer = [](void* data, size_t, void*) {
@@ -364,7 +372,7 @@ bool IBL::loadCubemapLevel(filament::Texture** texture, Texture::PixelBufferDesc
             break;
         }
 
-        memcpy(p + faceSize * j, data, w * h * sizeof(uint32_t));
+        memcpy(p + faceSize * j, data, size_t(w) * h * sizeof(uint32_t));
 
         stbi_image_free(data);
     }

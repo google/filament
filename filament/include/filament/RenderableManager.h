@@ -81,10 +81,15 @@ class FRenderableManager;
  * scene->addEntity(renderable);
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
- * To modify the state of an existing renderable, clients should first use RenderableManager
- * to get a temporary handle called an \em instance. The instance can then be used to get or set
- * the renderable's state. Please note that instances are ephemeral; clients should store entities,
- * not instances.
+ * Instance lifetime
+ * =================
+ *
+ * An Instance is a transient handle: Instances are not stable when a component is added,
+ * removed or gc() is called on a component manager.
+ *
+ * Instances must therefore not be kept across frames. Keep the Entity instead, and call
+ * getInstance() again when needed; it is a fast lookup. Using a stale Instance doesn't crash
+ * but silently accesses the wrong component.
  *
  * - For details about constructing renderables, see RenderableManager::Builder.
  * - To associate a 4x4 transform with an entity, see TransformManager.
@@ -94,6 +99,11 @@ class UTILS_PUBLIC RenderableManager : public FilamentAPI {
     struct BuilderDetails;
 
 public:
+    /**
+     * An Instance representing a renderable component.
+     * Instances are not stable when a component is added, removed or gc() is called on a
+     * component manager.
+     */
     using Instance = utils::EntityInstance<RenderableManager>;
     using PrimitiveType = backend::PrimitiveType;
 
@@ -103,9 +113,15 @@ public:
     bool hasComponent(utils::Entity e) const noexcept;
 
     /**
-     * Gets a temporary handle that can be used to access the renderable state.
+     * Gets an Instance representing the renderable component associated with the given Entity.
      *
+     * @param e An Entity.
      * @return Non-zero handle if the entity has a renderable component, 0 otherwise.
+     * @note Use Instance::isValid() to make sure the component exists.
+     * @note The returned Instance is transient and must not be kept across frames, see
+     *       "Instance lifetime" above. Instances are not stable when a component is added,
+     *       removed or gc() is called on a component manager.
+     * @see hasComponent()
      */
     Instance getInstance(utils::Entity e) const noexcept;
 
@@ -902,6 +918,36 @@ public:
      * @see Builder::instances()
      */
     size_t getInstanceCount(Instance instance) const noexcept;
+
+    /**
+     * Changes the number of draw instances of this renderable.
+     *
+     * For renderables using manual instancing (i.e. built with Builder::instances(size_t)),
+     * the instance count is silently clamped between 0 and 32767.
+     *
+     * For renderables built with an InstanceBuffer
+     * (i.e. Builder::instances(size_t, InstanceBuffer*)), the instance count must be less
+     * than or equal to both the InstanceBuffer's instance count and
+     * Engine::getMaxAutomaticInstances().
+     *
+     * An instance count of 0 means the renderable is not drawn in any pass (including shadow
+     * passes), but its component is otherwise left untouched. This allows, for instance, to
+     * allocate resources for a maximum number of instances up front and only draw the ones
+     * currently needed.
+     *
+     * All instances are culled using the same bounding box, so care must be taken to make
+     * sure all instances render inside the renderable's bounding box.
+     *
+     * @param instance Instance of the component obtained from getInstance().
+     * @param instanceCount The new number of instances.
+     *
+     * @exception utils::PreConditionPanic if the renderable uses an InstanceBuffer and
+     *                                     instanceCount exceeds its capacity.
+     *
+     * @see Builder::instances()
+     * @see getInstanceCount()
+     */
+    void setInstanceCount(Instance instance, size_t instanceCount);
 
     /**
      * Changes the material instance binding for the given primitive.

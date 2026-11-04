@@ -660,6 +660,8 @@ VkBlendFactor getBlendFactor(BlendFunction mode) {
         case BlendFunction::ONE_MINUS_DST_ALPHA:   return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
         case BlendFunction::SRC_ALPHA_SATURATE:    return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
     }
+    // should never happen
+    return VK_BLEND_FACTOR_ONE;
 }
 
 VkCullModeFlags getCullMode(CullingMode mode) {

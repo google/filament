@@ -82,6 +82,10 @@ public:
         return mBindingMap.get(set, binding);
     }
 
+    bool isSampler(descriptor_set_t set, descriptor_binding_t binding) const noexcept {
+        return mBindingMap.isSampler(set, binding);
+    }
+
     utils::bitset64 getActiveDescriptors(descriptor_set_t set) const noexcept {
         return mBindingMap.getActiveDescriptors(set);
     }

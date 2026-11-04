@@ -62,6 +62,7 @@ set(SRCS
         src/materials/flare/flare.cpp
         src/materials/fog/fog.cpp
         src/materials/fsr/fsr.cpp
+        src/materials/motionVectors/motionVectors.cpp
         src/materials/sgsr/sgsr.cpp
         src/materials/ssao/ssao.cpp
         src/AtlasAllocator.cpp
@@ -154,6 +155,7 @@ set(SRCS
         src/ds/ColorPassDescriptorSet.cpp
         src/ds/DescriptorSet.cpp
         src/ds/DescriptorSetLayout.cpp
+        src/ds/MotionVectorsDescriptorSet.cpp
         src/ds/PostProcessDescriptorSet.cpp
         src/ds/ShadowMapDescriptorSet.cpp
         src/ds/SsrPassDescriptorSet.cpp
@@ -242,6 +244,7 @@ set(PRIVATE_HDRS
         src/downcast.h
         src/ds/ColorPassDescriptorSet.h
         src/ds/DescriptorSetLayout.h
+        src/ds/MotionVectorsDescriptorSet.h
         src/ds/PostProcessDescriptorSet.h
         src/ds/ShadowMapDescriptorSet.h
         src/ds/SsrPassDescriptorSet.h
@@ -266,6 +269,7 @@ set(PRIVATE_HDRS
         src/materials/fsr/ffx_a.h
         src/materials/fsr/ffx_fsr1.h
         src/materials/fsr/ffx_fsr1_mobile.fs
+        src/materials/motionVectors/motionVectors.h
         src/ZstdHelper.h
 )
 
@@ -314,6 +318,12 @@ set(MATERIAL_SRCS
         src/materials/ssao/sao.mat
         src/materials/ssao/saoBentNormals.mat
 )
+
+if (FILAMENT_SUPPORTS_MOTION_VECTORS)
+    list(APPEND MATERIAL_SRCS
+        src/materials/motionVectors/debugMotionVectors.mat
+    )
+endif()
 
 if (NOT FILAMENT_DISABLE_GTAO)
     list(APPEND MATERIAL_SRCS
@@ -378,6 +388,7 @@ add_definitions(
     -DFILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB=${FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB}
     -DFILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB=${FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB}
     -DFILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB=${FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB}
+    -DFVK_HANDLE_ARENA_SIZE_IN_MB=${FILAMENT_VULKAN_HANDLE_ARENA_SIZE_IN_MB}
 )
 
 # ==================================================================================================
@@ -682,7 +693,7 @@ set(dfg_package_name "dfg")
 get_resgen_vars(${RESOURCE_DIR} ${dfg_package_name})
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
-        COMMAND resgen ${RESGEN_FLAGS} -Z ${output_path_dfg_bin}
+        COMMAND resgen ${RESGEN_FLAGS} -z ${output_path_dfg_bin}
         DEPENDS resgen
         DEPENDS ${output_path_dfg_bin}
         COMMENT "Generating DFG resource package for ${dfg_package_name}"

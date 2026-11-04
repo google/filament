@@ -25,7 +25,29 @@ else
     GOLDEN_BRANCH=$(git log -1 | python3 test/renderdiff/src/commit_msg.py)
 fi
 
+# The goldens are rendered by presubmit on Linux/aarch64, and the golden path records only the
+# platform and the backend, not the host. A different host produces different pixels for reasons
+# that have nothing to do with the change under test: a different compiler, a different Mesa build,
+# a different libm. Rendering locally is still the fastest way to see what a change does, so this
+# warns rather than refusing to run.
+if [[ "$(uname -s)" != "Linux" ]] || [[ "$(uname -m)" != "aarch64" ]]; then
+    echo ""
+    echo "############################################################################"
+    echo "# WARNING: this host is $(uname -s)/$(uname -m), but the goldens are"
+    echo "# generated on Linux/aarch64. Comparison results below are advisory:"
+    echo "# differences are expected and are not necessarily regressions."
+    echo "#"
+    echo "# To judge a change against the goldens, read the presubmit result, or use"
+    echo "# the 'Renderdiff Goldens' workflow. See test/renderdiff/README.md."
+    echo "############################################################################"
+    echo ""
+fi
+
 TEST_CONFIG="${RENDERDIFF_TEST_DIR}/tests/presubmit.json"
+# generate.sh renders one platform per invocation and defaults to desktop. The comparison has to be
+# scoped to the same platform, including when none was given: an unscoped compare.py walks every
+# golden and would report the other platform's goldens as missing renders.
+PLATFORM="desktop"
 PASSTHROUGH_ARGS=()
 
 for i in "$@"
@@ -34,14 +56,18 @@ case $i in
     --test=*)
     TEST_CONFIG="${i#*=}"
     ;;
+    --platform=*)
+    PLATFORM="${i#*=}"
+    ;;
     *)
     PASSTHROUGH_ARGS+=("$i")
     ;;
 esac
 done
 
-bash `dirname $0`/generate.sh --test="${TEST_CONFIG}" "${PASSTHROUGH_ARGS[@]}" && \
-    ./build.sh release diffimg && \
+# generate.sh builds diffimg along with the renderers, so there is no separate build step here.
+bash `dirname $0`/generate.sh --test="${TEST_CONFIG}" --platform="${PLATFORM}" \
+        "${PASSTHROUGH_ARGS[@]}" && \
     python3 ${RENDERDIFF_TEST_DIR}/src/golden_manager.py \
             --branch=${GOLDEN_BRANCH} \
             --output=${GOLDEN_OUTPUT_DIR} && \
@@ -49,7 +75,8 @@ bash `dirname $0`/generate.sh --test="${TEST_CONFIG}" "${PASSTHROUGH_ARGS[@]}" &
             --src=${GOLDEN_OUTPUT_DIR} \
             --dest=${RENDER_OUTPUT_DIR} \
             --out=${DIFF_OUTPUT_DIR} \
-            --diffimg="$(pwd)/out/cmake-release/tools/diffimg/diffimg" \
+            --platform="${PLATFORM}" \
+            --diffimg="$(diffimg_path_ "${PLATFORM}")" \
             --test="${TEST_CONFIG}" "${PASSTHROUGH_ARGS[@]}"
 
 end_

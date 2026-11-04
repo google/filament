@@ -42,6 +42,7 @@ struct AppConfig {
     bool keepExtension = false;
     bool appendNull = false;
     bool generateC = false;
+    bool generateCoff = false;
     bool quietMode = false;
     bool embedJson = false;
     bool compress = false;
@@ -81,6 +82,8 @@ Options:
        Append a null terminator to each data blob
    --cfile, -c
        Generate xxd-style C file (useful for WebAssembly)
+   --coff, -o
+       Generate a Windows COFF object file (.obj)
    --json, -j
        Embed a JSON string in the output that provides a summary
        of all resource sizes and names. Useful for size analysis.
@@ -151,7 +154,7 @@ static std::string& replaceAll(std::string& context, const std::string& from, co
 
 // Parses command-line arguments using utils::getopt::getopt and populates the AppConfig struct.
 static AppConfig handleArguments(int const argc, char* argv[]) {
-    static constexpr const char* OPTSTR = "hLp:x:ktcqjzZ";
+    static constexpr const char* OPTSTR = "hLp:x:ktcoqjzZ";
     static const utils::getopt::option OPTIONS[] = {
             { "help",         utils::getopt::no_argument,       nullptr, 'h' },
             { "license",      utils::getopt::no_argument,       nullptr, 'L' },
@@ -160,6 +163,7 @@ static AppConfig handleArguments(int const argc, char* argv[]) {
             { "keep",         utils::getopt::no_argument,       nullptr, 'k' },
             { "text",         utils::getopt::no_argument,       nullptr, 't' },
             { "cfile",        utils::getopt::no_argument,       nullptr, 'c' },
+            { "coff",         utils::getopt::no_argument,       nullptr, 'o' },
             { "quiet",        utils::getopt::no_argument,       nullptr, 'q' },
             { "json",         utils::getopt::no_argument,       nullptr, 'j' },
             { "compress",     utils::getopt::no_argument,       nullptr, 'z' },
@@ -191,6 +195,9 @@ static AppConfig handleArguments(int const argc, char* argv[]) {
                 break;
             case 'c':
                 config.generateC = true;
+                break;
+            case 'o':
+                config.generateCoff = true;
                 break;
             case 'q':
                 config.quietMode = true;
@@ -280,6 +287,124 @@ static void writeXxdEntry(std::ofstream& xxdStream, const std::string& resourceN
     xxdStream << "\n";
 }
 
+static void writeLe16(std::ofstream& out, uint16_t const v) {
+    const uint8_t bytes[2] = {
+        uint8_t(v & 0xffu),
+        uint8_t((v >> 8u) & 0xffu),
+    };
+    out.write(reinterpret_cast<const char*>(bytes), sizeof(bytes));
+}
+
+static void writeLe32(std::ofstream& out, uint32_t const v) {
+    const uint8_t bytes[4] = {
+        uint8_t(v & 0xffu),
+        uint8_t((v >> 8u) & 0xffu),
+        uint8_t((v >> 16u) & 0xffu),
+        uint8_t((v >> 24u) & 0xffu),
+    };
+    out.write(reinterpret_cast<const char*>(bytes), sizeof(bytes));
+}
+
+// Writes a Windows COFF (.obj) file containing packageData in a read-only .rdata section
+// exported under packageSymbol.
+static void writeCoffObject(const Path& coffPath, const std::string& packageSymbol,
+        const std::vector<uint8_t>& packageData) {
+#if defined(_M_ARM64) || (defined(_WIN32) && defined(__aarch64__))
+    constexpr uint16_t kCoffMachine = 0xAA64u; // IMAGE_FILE_MACHINE_ARM64
+#else
+    constexpr uint16_t kCoffMachine = 0x8664u; // IMAGE_FILE_MACHINE_AMD64
+#endif
+    // IMAGE_SCN_CNT_INITIALIZED_DATA (0x00000040) |
+    // IMAGE_SCN_ALIGN_16BYTES        (0x00500000) |
+    // IMAGE_SCN_MEM_READ             (0x40000000)
+    constexpr uint32_t kSectionCharacteristics = 0x40500040u;
+    constexpr uint8_t kSymClassExternal = 2u; // IMAGE_SYM_CLASS_EXTERNAL
+    constexpr uint8_t kSymClassStatic = 3u;   // IMAGE_SYM_CLASS_STATIC
+    constexpr uint32_t kHeaderAndSectionSize = 20u + 40u;
+
+    const uint32_t rawDataSize = static_cast<uint32_t>(packageData.size());
+    const uint32_t paddingSize = (4u - (rawDataSize & 3u)) & 3u;
+    const uint32_t rawDataOffset = rawDataSize > 0u ? kHeaderAndSectionSize : 0u;
+    const uint32_t symbolTableOffset = kHeaderAndSectionSize + rawDataSize + paddingSize;
+    const uint32_t numberOfSymbols = 3u;
+
+    auto out = openOutputFile(coffPath, std::ios::binary);
+
+    // 1. COFF File Header (20 bytes)
+    writeLe16(out, kCoffMachine);      // Machine
+    writeLe16(out, 1u);                // NumberOfSections
+    writeLe32(out, 0u);                // TimeDateStamp
+    writeLe32(out, symbolTableOffset); // PointerToSymbolTable
+    writeLe32(out, numberOfSymbols);   // NumberOfSymbols
+    writeLe16(out, 0u);                // SizeOfOptionalHeader
+    writeLe16(out, 0u);                // Characteristics
+
+    // 2. Section Header #1: .rdata (40 bytes)
+    const char sectionName[8] = { '.', 'r', 'd', 'a', 't', 'a', '\0', '\0' };
+    out.write(sectionName, 8);
+    writeLe32(out, 0u);                      // VirtualSize
+    writeLe32(out, 0u);                      // VirtualAddress
+    writeLe32(out, rawDataSize);             // SizeOfRawData
+    writeLe32(out, rawDataOffset);           // PointerToRawData
+    writeLe32(out, 0u);                      // PointerToRelocations
+    writeLe32(out, 0u);                      // PointerToLinenumbers
+    writeLe16(out, 0u);                      // NumberOfRelocations
+    writeLe16(out, 0u);                      // NumberOfLinenumbers
+    writeLe32(out, kSectionCharacteristics); // Characteristics
+
+    // 3. Section Raw Data + 4-byte alignment padding
+    if (rawDataSize > 0u) {
+        out.write(reinterpret_cast<const char*>(packageData.data()), rawDataSize);
+    }
+    if (paddingSize > 0u) {
+        const char zeroPad[4] = { 0, 0, 0, 0 };
+        out.write(zeroPad, paddingSize);
+    }
+
+    // 4. Symbol Table (3 entries, 18 bytes each = 54 bytes)
+    // Entry 0: .rdata section symbol
+    out.write(sectionName, 8);
+    writeLe32(out, 0u); // Value
+    writeLe16(out, 1u); // SectionNumber (1-based)
+    writeLe16(out, 0u); // Type (IMAGE_SYM_TYPE_NULL)
+    const char secSymTail[2] = { char(kSymClassStatic), 1 }; // NumberOfAuxSymbols = 1
+    out.write(secSymTail, 2);
+
+    // Entry 1: Auxiliary Section Definition for .rdata (18 bytes)
+    writeLe32(out, rawDataSize); // Length
+    writeLe16(out, 0u);          // NumberOfRelocations
+    writeLe16(out, 0u);          // NumberOfLinenumbers
+    writeLe32(out, 0u);          // CheckSum
+    writeLe16(out, 1u);          // Number
+    const char auxTail[4] = { 0, 0, 0, 0 }; // Selection + 3 unused bytes
+    out.write(auxTail, 4);
+
+    // Entry 2: External symbol for <PACKAGE>_PACKAGE
+    const bool useStringTable = packageSymbol.size() > 8u;
+    if (useStringTable) {
+        writeLe32(out, 0u); // Zeroes (indicates long name in string table)
+        writeLe32(out, 4u); // Offset into string table (immediately after 4-byte size)
+    } else {
+        char shortName[8] = {};
+        memcpy(shortName, packageSymbol.data(), packageSymbol.size());
+        out.write(shortName, 8);
+    }
+    writeLe32(out, 0u); // Value (offset 0 in .rdata)
+    writeLe16(out, 1u); // SectionNumber (1 = .rdata)
+    writeLe16(out, 0u); // Type (IMAGE_SYM_TYPE_NULL)
+    const char extSymTail[2] = { char(kSymClassExternal), 0 }; // NumberOfAuxSymbols = 0
+    out.write(extSymTail, 2);
+
+    // 5. String Table
+    if (useStringTable) {
+        const uint32_t stringTableSize = 4u + static_cast<uint32_t>(packageSymbol.size()) + 1u;
+        writeLe32(out, stringTableSize);
+        out.write(packageSymbol.c_str(), packageSymbol.size() + 1u);
+    } else {
+        writeLe32(out, 4u);
+    }
+}
+
 int main(int argc, char* argv[]) {
     // Parse arguments and check for input files.
     const AppConfig config = handleArguments(argc, argv);
@@ -312,6 +437,7 @@ int main(int argc, char* argv[]) {
     const Path binPath(deployDir + (packageFile + ".bin"));
     const Path headerPath(deployDir + (packageFile + ".h"));
     const Path xxdPath(deployDir + (packageFile + ".c"));
+    const Path coffPath(deployDir + (packageFile + ".obj"));
 
     // Prepare assembly file content by replacing placeholders.
     std::string aasmstr(APPLE_ASM_TEMPLATE);
@@ -479,6 +605,13 @@ int main(int argc, char* argv[]) {
         xxdStream << "};\n\n";
         if (!config.quietMode) {
             std::cout << " " << xxdPath;
+        }
+    }
+
+    if (config.generateCoff) {
+        writeCoffObject(coffPath, packageSymbol, packageData);
+        if (!config.quietMode) {
+            std::cout << " " << coffPath;
         }
     }
 

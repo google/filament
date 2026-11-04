@@ -14,17 +14,15 @@
  * limitations under the License.
  */
 
-#include <image/ColorTransform.h>
-#include <image/Ktx1Bundle.h>
-#include <image/ImageOps.h>
-#include <image/ImageSampler.h>
-#include <image/LinearImage.h>
-
 #include <imageio/ImageDecoder.h>
 #include <imageio/ImageDiffer.h>
 #include <imageio/ImageEncoder.h>
 
-#include <gtest/gtest.h>
+#include <image/ColorTransform.h>
+#include <image/ImageOps.h>
+#include <image/ImageSampler.h>
+#include <image/Ktx1Bundle.h>
+#include <image/LinearImage.h>
 
 #include <utils/Panic.h>
 #include <utils/Path.h>
@@ -32,9 +30,11 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
+#include <gtest/gtest.h>
+
 #include <fstream>
-#include <string>
 #include <sstream>
+#include <string>
 #include <vector>
 
 using std::istringstream;
@@ -299,9 +299,7 @@ TEST_F(ImageTest, ColorTransformRGB) { // NOLINT
     constexpr size_t bpr = w * sizeof(uint16_t) * 3;
     std::unique_ptr<uint8_t[]> data(new uint8_t[h * bpr]);
     memcpy(data.get(), texels, sizeof(texels));
-    LinearImage img = image::toLinear<uint16_t>(w, h, bpr, data, 
-        [ ](uint16_t v) -> uint16_t { return v; },
-        sRGBToLinear< filament::math::float3>);
+    LinearImage img = image::toLinear<uint16_t>(w, h, bpr, data.get());
     auto pixels = img.get<float3>();
     ASSERT_NEAR(pixels[0].x, 0.0f, 0.001f);
     ASSERT_NEAR(pixels[0].y, 0.0f, 0.001f);
@@ -323,14 +321,239 @@ TEST_F(ImageTest, ColorTransformRGBA) { // NOLINT
     constexpr size_t bpr = w * sizeof(uint16_t) * 4;
     std::unique_ptr<uint8_t[]> data(new uint8_t[h * bpr]);
     memcpy(data.get(), texels, sizeof(texels));
-    LinearImage img = image::toLinearWithAlpha<uint16_t>(w, h, bpr, data, 
-        [ ](uint16_t v) -> uint16_t { return v; },
-        sRGBToLinear< filament::math::float4>);
+    LinearImage img = image::toLinearWithAlpha<uint16_t>(w, h, bpr, data.get());
     auto pixels = reinterpret_cast<float4*>(img.getPixelRef());
     ASSERT_NEAR(pixels[3].x, 0.04282892f, 0.001f);
     ASSERT_NEAR(pixels[3].y, 0.12025354f, 0.001f);
     ASSERT_NEAR(pixels[3].z, 0.42922019f, 0.001f);
     ASSERT_NEAR(pixels[3].w, 0.99183642f, 0.001f);
+}
+
+TEST_F(ImageTest, ColorTransformRGB_10_11_11_REV) { // NOLINT
+    const float inf = std::numeric_limits<float>::infinity();
+    const float testValues[] = {
+        -inf, -100.0f, -1.0f, -1e-6f, -0.0f, 0.0f,
+        1e-8f, 1e-6f, 3e-5f, 6.103515625e-5f, 1e-4f,
+        0.001f, 0.1f, 0.3333333f, 0.5f, 1.0f, 2.5f, 16.0f, 100.0f, 1024.0f,
+        64511.0f, 64512.0f, 65024.0f, 100000.0f, inf
+    };
+
+    constexpr uint32_t w = 7;
+    constexpr uint32_t h = 5;
+    constexpr size_t numValues = sizeof(testValues) / sizeof(testValues[0]);
+    for (uint32_t channels : { 3u, 4u }) {
+        LinearImage img(w, h, channels);
+        float* p = img.getPixelRef();
+        for (size_t i = 0; i < w * h; ++i) {
+            p[i * channels + 0] = testValues[(i * 3 + 0) % numValues];
+            p[i * channels + 1] = testValues[(i * 5 + 1) % numValues];
+            p[i * channels + 2] = testValues[(i * 7 + 2) % numValues];
+            if (channels == 4) {
+                p[i * channels + 3] = 1.0f;
+            }
+        }
+        auto result = image::fromLinearToRGB_10_11_11_REV(img);
+        const uint32_t* packed = reinterpret_cast<const uint32_t*>(result.get());
+        for (size_t i = 0; i < w * h; ++i) {
+            const float3 c{ p[i * channels + 0], p[i * channels + 1], p[i * channels + 2] };
+            EXPECT_EQ(packed[i], image::linearToRGB_10_11_11_REV(c));
+        }
+    }
+}
+
+TEST_F(ImageTest, ColorTransformAsLinear) { // NOLINT
+    constexpr size_t w = 13;
+    constexpr size_t h = 3;
+
+    // Test uint8_t (exercises 16-element NEON loop + scalar tail, with row padding).
+    {
+        constexpr float invMax8 = 1.0f / 255.0f;
+        const size_t bpr3 = w * 3 + 5;
+        vector<uint8_t> src3(h * bpr3, 0xcd);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 3; ++i) {
+                src3[y * bpr3 + i] = static_cast<uint8_t>((y * 53 + i * 17) & 0xff);
+            }
+        }
+        LinearImage img3 = image::asLinear<uint8_t>(w, h, bpr3, src3.data());
+        const float* dst3 = img3.getPixelRef(0, 0);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 3; ++i) {
+                EXPECT_FLOAT_EQ(dst3[y * w * 3 + i], src3[y * bpr3 + i] * invMax8);
+            }
+        }
+
+        const size_t bpr4 = w * 4 + 7;
+        vector<uint8_t> src4(h * bpr4, 0xcd);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 4; ++i) {
+                src4[y * bpr4 + i] = static_cast<uint8_t>((y * 71 + i * 29) & 0xff);
+            }
+        }
+        LinearImage img4 = image::asLinearWithAlpha<uint8_t>(w, h, bpr4, src4.data());
+        const float* dst4 = img4.getPixelRef(0, 0);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 4; ++i) {
+                EXPECT_FLOAT_EQ(dst4[y * w * 4 + i], src4[y * bpr4 + i] * invMax8);
+            }
+        }
+    }
+
+    // Test uint16_t and ntohs variants (exercises 8-element NEON loop, 4-element step, and scalar tail).
+    {
+        constexpr float invMax16 = 1.0f / 65535.0f;
+        const size_t stride3 = w * 3 + 3;
+        const size_t bpr3 = stride3 * sizeof(uint16_t);
+        vector<uint16_t> src3(h * stride3, 0xbeef);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 3; ++i) {
+                src3[y * stride3 + i] = static_cast<uint16_t>((y * 4099 + i * 1319) & 0xffff);
+            }
+        }
+        LinearImage img3 = image::asLinear<uint16_t>(w, h, bpr3,
+                reinterpret_cast<const uint8_t*>(src3.data()));
+        LinearImage img3Ntohs = image::asLinearNtohs<uint16_t>(w, h, bpr3,
+                reinterpret_cast<const uint8_t*>(src3.data()));
+        const float* dst3 = img3.getPixelRef(0, 0);
+        const float* dst3Ntohs = img3Ntohs.getPixelRef(0, 0);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 3; ++i) {
+                const uint16_t v = src3[y * stride3 + i];
+                EXPECT_FLOAT_EQ(dst3[y * w * 3 + i], v * invMax16);
+                EXPECT_FLOAT_EQ(dst3Ntohs[y * w * 3 + i], image::detail::be_to_host(v) * invMax16);
+            }
+        }
+
+        const size_t stride4 = w * 4 + 3;
+        const size_t bpr4 = stride4 * sizeof(uint16_t);
+        vector<uint16_t> src4(h * stride4, 0xbeef);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 4; ++i) {
+                src4[y * stride4 + i] = static_cast<uint16_t>((y * 6553 + i * 2713) & 0xffff);
+            }
+        }
+        LinearImage img4 = image::asLinearWithAlpha<uint16_t>(w, h, bpr4,
+                reinterpret_cast<const uint8_t*>(src4.data()));
+        LinearImage img4Ntohs = image::asLinearWithAlphaNtohs<uint16_t>(w, h, bpr4,
+                reinterpret_cast<const uint8_t*>(src4.data()));
+        const float* dst4 = img4.getPixelRef(0, 0);
+        const float* dst4Ntohs = img4Ntohs.getPixelRef(0, 0);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 4; ++i) {
+                const uint16_t v = src4[y * stride4 + i];
+                EXPECT_FLOAT_EQ(dst4[y * w * 4 + i], v * invMax16);
+                EXPECT_FLOAT_EQ(dst4Ntohs[y * w * 4 + i], image::detail::be_to_host(v) * invMax16);
+            }
+        }
+    }
+}
+
+TEST_F(ImageTest, ColorTransformToLinear) { // NOLINT
+    constexpr size_t w = 13;
+    constexpr size_t h = 3;
+
+    // Test uint8_t (exercises 16-element NEON loop, 4-element NEON loop, and scalar tail).
+    {
+        constexpr float invMax8 = 1.0f / 255.0f;
+        const size_t bpr3 = w * 3 + 5;
+        vector<uint8_t> src3(h * bpr3, 0xcd);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 3; ++i) {
+                src3[y * bpr3 + i] = static_cast<uint8_t>((y * 53 + i * 17) & 0xff);
+            }
+        }
+        src3[0] = 0;
+        src3[1] = 10;
+        src3[2] = 11;
+        src3[3] = 255;
+        LinearImage img3 = image::toLinear<uint8_t>(w, h, bpr3, src3.data());
+        const float* dst3 = img3.getPixelRef(0, 0);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 3; ++i) {
+                const uint8_t v = src3[y * bpr3 + i];
+                EXPECT_NEAR(dst3[y * w * 3 + i], image::sRGBToLinear(v * invMax8), 1e-6f);
+            }
+        }
+
+        const size_t bpr4 = w * 4 + 7;
+        vector<uint8_t> src4(h * bpr4, 0xcd);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 4; ++i) {
+                src4[y * bpr4 + i] = static_cast<uint8_t>((y * 71 + i * 29) & 0xff);
+            }
+        }
+        LinearImage img4 = image::toLinearWithAlpha<uint8_t>(w, h, bpr4, src4.data());
+        const float* dst4 = img4.getPixelRef(0, 0);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 4; ++i) {
+                const uint8_t v = src4[y * bpr4 + i];
+                if ((i & 3) == 3) {
+                    EXPECT_FLOAT_EQ(dst4[y * w * 4 + i], v * invMax8);
+                } else {
+                    EXPECT_NEAR(dst4[y * w * 4 + i], image::sRGBToLinear(v * invMax8), 1e-6f);
+                }
+            }
+        }
+    }
+
+    // Test uint16_t and ntohs variants (exercises 8-element NEON loop, 4-element step, and scalar tail).
+    {
+        constexpr float invMax16 = 1.0f / 65535.0f;
+        const size_t stride3 = w * 3 + 3;
+        const size_t bpr3 = stride3 * sizeof(uint16_t);
+        vector<uint16_t> src3(h * stride3, 0xbeef);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 3; ++i) {
+                src3[y * stride3 + i] = static_cast<uint16_t>((y * 4099 + i * 1319) & 0xffff);
+            }
+        }
+        src3[0] = 0;
+        src3[1] = 2650;
+        src3[2] = 2651;
+        src3[3] = 65535;
+        LinearImage img3 = image::toLinear<uint16_t>(w, h, bpr3,
+                reinterpret_cast<const uint8_t*>(src3.data()));
+        LinearImage img3Ntohs = image::toLinearNtohs<uint16_t>(w, h, bpr3,
+                reinterpret_cast<const uint8_t*>(src3.data()));
+        const float* dst3 = img3.getPixelRef(0, 0);
+        const float* dst3Ntohs = img3Ntohs.getPixelRef(0, 0);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 3; ++i) {
+                const uint16_t v = src3[y * stride3 + i];
+                EXPECT_NEAR(dst3[y * w * 3 + i], image::sRGBToLinear(v * invMax16), 1e-6f);
+                EXPECT_NEAR(dst3Ntohs[y * w * 3 + i],
+                        image::sRGBToLinear(image::detail::be_to_host(v) * invMax16), 1e-6f);
+            }
+        }
+
+        const size_t stride4 = w * 4 + 3;
+        const size_t bpr4 = stride4 * sizeof(uint16_t);
+        vector<uint16_t> src4(h * stride4, 0xbeef);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 4; ++i) {
+                src4[y * stride4 + i] = static_cast<uint16_t>((y * 6553 + i * 2713) & 0xffff);
+            }
+        }
+        LinearImage img4 = image::toLinearWithAlpha<uint16_t>(w, h, bpr4,
+                reinterpret_cast<const uint8_t*>(src4.data()));
+        LinearImage img4Ntohs = image::toLinearWithAlphaNtohs<uint16_t>(w, h, bpr4,
+                reinterpret_cast<const uint8_t*>(src4.data()));
+        const float* dst4 = img4.getPixelRef(0, 0);
+        const float* dst4Ntohs = img4Ntohs.getPixelRef(0, 0);
+        for (size_t y = 0; y < h; ++y) {
+            for (size_t i = 0; i < w * 4; ++i) {
+                const uint16_t v = src4[y * stride4 + i];
+                if ((i & 3) == 3) {
+                    EXPECT_FLOAT_EQ(dst4[y * w * 4 + i], v * invMax16);
+                    EXPECT_FLOAT_EQ(dst4Ntohs[y * w * 4 + i], image::detail::be_to_host(v) * invMax16);
+                } else {
+                    EXPECT_NEAR(dst4[y * w * 4 + i], image::sRGBToLinear(v * invMax16), 1e-6f);
+                    EXPECT_NEAR(dst4Ntohs[y * w * 4 + i],
+                            image::sRGBToLinear(image::detail::be_to_host(v) * invMax16), 1e-6f);
+                }
+            }
+        }
+    }
 }
 
 TEST_F(ImageTest, Mipmaps) { // NOLINT
@@ -699,4 +922,57 @@ TEST_F(ImageTest, LinearImageDimensionOverflow) { // NOLINT
 
     LinearImage img2(2, 2, 0);
     EXPECT_FALSE(img2);
+}
+
+static LinearImage decodeHdr(const string& resolution, std::initializer_list<uint8_t> body) {
+    string data = "#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n" + resolution + "\n";
+    data.append(body.begin(), body.end());
+    istringstream in(data);
+    return ImageDecoder::decode(in, "test.hdr");
+}
+
+TEST_F(ImageTest, HdrDecode) { // NOLINT
+    // RGBE decodes to (c + 0.5) * 2^(e - 136), so 128 at e=129 is just over 1.
+    const float one = 128.5f / 128.0f;
+    const float low = 0.5f / 128.0f;
+
+    LinearImage flat = decodeHdr("-Y 1 +X 2", { 128, 0, 0, 129,  0, 0, 0, 0 });
+    ASSERT_TRUE(flat);
+    auto const* px = reinterpret_cast<float3 const*>(flat.getPixelRef());
+    EXPECT_EQ(px[0], float3(one, low, low));
+    EXPECT_EQ(px[1], float3(0));
+
+    LinearImage rle = decodeHdr("-Y 1 +X 8", { 2, 2, 0, 8,
+            0x88, 128,  0x88, 0,  0x88, 0,  0x08, 129, 129, 129, 129, 129, 129, 129, 129 });
+    ASSERT_TRUE(rle);
+    px = reinterpret_cast<float3 const*>(rle.getPixelRef());
+    EXPECT_EQ(px[0], float3(one, low, low));
+    EXPECT_EQ(px[7], float3(one, low, low));
+}
+
+TEST_F(ImageTest, HdrDecodeTruncated) { // NOLINT
+    // Shorter than the format signature.
+    istringstream sig("#?RGB");
+    EXPECT_FALSE(ImageDecoder::decode(sig, "test.hdr"));
+
+    // Too short to detect the scanline encoding.
+    EXPECT_FALSE(decodeHdr("-Y 1 +X 256", { 0xFF, 0x00 }));
+
+    // Flat scanline cut short.
+    EXPECT_FALSE(decodeHdr("-Y 1 +X 256", { 0xFF, 0x00, 0x00 }));
+
+    // RLE, scanline width cut short.
+    EXPECT_FALSE(decodeHdr("-Y 1 +X 8", { 2, 2, 0 }));
+
+    // RLE, last literal run cut short.
+    EXPECT_FALSE(decodeHdr("-Y 1 +X 8", { 2, 2, 0, 8,
+            0x88, 128,  0x88, 0,  0x88, 0,  0x08, 129, 129 }));
+
+    // RLE, last repeat run missing its value.
+    EXPECT_FALSE(decodeHdr("-Y 1 +X 8", { 2, 2, 0, 8,
+            0x88, 128,  0x88, 0,  0x88, 0,  0x88 }));
+
+    // RLE, second scanline header missing.
+    EXPECT_FALSE(decodeHdr("-Y 2 +X 8", { 2, 2, 0, 8,
+            0x88, 128,  0x88, 0,  0x88, 0,  0x88, 129 }));
 }

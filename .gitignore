@@ -24,3 +24,5 @@ results
 /gltf
 /filament-assets
 /venv
+
+__pycache__/

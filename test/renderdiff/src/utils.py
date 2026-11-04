@@ -18,6 +18,7 @@ import shutil
 import argparse
 import sys
 import pathlib
+import re
 import shlex
 
 def execute(cmd,
@@ -117,3 +118,21 @@ def important_print(msg):
     information = f'--- {line} ' + (' ' * diff) + '---'
     print(information)
   print('-' * (max_len + 8))
+
+# Render artifacts are named '{test}.{platform}-{backend}.{target}.{ext}' (see
+# renderers.py), so the renderer that produced an artifact can be recovered from its
+# filename alone. Several tools need this -- compare.py to scope a comparison to the
+# platform a CI job actually rendered, update_golden.py to avoid deleting another
+# platform's goldens -- so the pattern lives here rather than being duplicated.
+_RENDERER_SPEC_RE = re.compile(r'\.([A-Za-z0-9]+-[A-Za-z0-9]+)\.[^.]+\.[^.]+$')
+
+def renderer_spec(path_str):
+  """Returns the 'platform-backend' an artifact belongs to, or None if unencoded."""
+  match = _RENDERER_SPEC_RE.search(os.path.basename(path_str))
+  return match.group(1) if match else None
+
+def renderer_platform(path_str):
+  """Returns just the 'platform' an artifact belongs to, or None if unencoded."""
+  spec = renderer_spec(path_str)
+  return spec.split('-')[0] if spec else None
+

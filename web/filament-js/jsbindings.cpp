@@ -94,6 +94,8 @@
 #include <materials/uberarchive.h>
 #include <stb_image.h>
 
+#include <chrono>
+
 // Avoid warnings for deprecated Filament APIs.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -351,6 +353,15 @@ value_object<filament::Engine::Config>("Engine$Config")
     .field("gpuContextPriority", &filament::Engine::Config::gpuContextPriority)
     .field("sharedUboInitialSizeInBytes", &filament::Engine::Config::sharedUboInitialSizeInBytes)
     .field("asynchronousMode", &filament::Engine::Config::asynchronousMode)
+    .field("asynchronousFrameBudgetMs",
+            +[](filament::Engine::Config const& config) {
+                return std::chrono::duration<double, std::milli>(
+                        config.asynchronousFrameBudget).count();
+            },
+            +[](filament::Engine::Config& config, double const ms) {
+                config.asynchronousFrameBudget = std::chrono::duration_cast<
+                        std::chrono::nanoseconds>(std::chrono::duration<double, std::milli>(ms));
+            })
     .field("enableMultipleDirectionalLights",
             &filament::Engine::Config::enableMultipleDirectionalLights);
 
@@ -623,7 +634,9 @@ class_<Engine>("Engine")
             allow_raw_pointers())
     /// getCameraComponent ::method::
     /// ::retval:: an instance of [Camera]
-    .function("getCameraComponent", &Engine::getCameraComponent, allow_raw_pointers())
+    .function("getCameraComponent",
+            select_overload<Camera*(utils::Entity entity)>(&Engine::getCameraComponent),
+            allow_raw_pointers())
     /// destroyCameraComponent ::method::
     /// camera ::argument:: an [Entity] with a camera component
     .function("destroyCameraComponent", (void (*)(Engine*, utils::Entity)) []
@@ -918,6 +931,7 @@ class_<View>("View")
     .function("_setFogOptions", &View::setFogOptions)
     .function("_setVignetteOptions", &View::setVignetteOptions)
     .function("_setGuardBandOptions", &View::setGuardBandOptions)
+    .function("_setMotionVectorsOptions", &View::setMotionVectorsOptions)
     .function("_setStereoscopicOptions", &View::setStereoscopicOptions)
     .function("setAmbientOcclusion", &View::setAmbientOcclusion)
     .function("getAmbientOcclusion", &View::getAmbientOcclusion)
@@ -1414,6 +1428,7 @@ class_<RenderableManager>("RenderableManager")
     .function("getAxisAlignedBoundingBox", &RenderableManager::getAxisAlignedBoundingBox)
     .function("getPrimitiveCount", &RenderableManager::getPrimitiveCount)
     .function("getInstanceCount", &RenderableManager::getInstanceCount)
+    .function("setInstanceCount", &RenderableManager::setInstanceCount)
     .function("setMaterialInstanceAt", &RenderableManager::setMaterialInstanceAt,
             allow_raw_pointers())
     .function("clearMaterialInstanceAt", &RenderableManager::clearMaterialInstanceAt)
@@ -1909,7 +1924,7 @@ class_<Texture>("Texture")
     .class_function("isTextureSwizzleSupported", (bool (*)(Engine*)) [] (Engine* engine) {
         return Texture::isTextureSwizzleSupported(*engine);
     }, allow_raw_pointers())
-    .function("generateMipmaps", &Texture::generateMipmaps)
+    .function("generateMipmaps", select_overload<void(Engine&)>(&Texture::generateMipmaps))
     .function("_setImage", EMBIND_LAMBDA(void, (Texture* self,
             Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {
         self->setImage(*engine, level, std::move(*pbd.pbd));
@@ -2680,6 +2695,7 @@ value_object<ViewSettings>("ViewSettings")
     .field("vignette", &ViewSettings::vignette)
     .field("vsmShadowOptions", &ViewSettings::vsmShadowOptions)
     .field("guardBand", &ViewSettings::guardBand)
+    .field("motionVectors", &ViewSettings::motionVectors)
     .field("stereoscopicOptions", &ViewSettings::stereoscopicOptions)
     .field("colorGrading", &ViewSettings::colorGrading)
     .field("dynamicLighting", &ViewSettings::dynamicLighting)

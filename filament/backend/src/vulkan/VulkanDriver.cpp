@@ -45,6 +45,7 @@
 #include <utils/ImmutableCString.h>
 #include <utils/Panic.h>
 
+#include <algorithm>
 #include <chrono>
 #include <mutex>
 #ifndef NDEBUG
@@ -256,8 +257,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
                   mPlatform->getGraphicsQueueFamilyIndex(), mPlatform->getProtectedGraphicsQueue(),
                   mPlatform->getProtectedGraphicsQueueFamilyIndex(), mContext, &mSemaphoreManager),
           mPipelineLayoutCache(mPlatform->getDevice()),
-          mPipelineCache(*this, mPlatform->getDevice(), mContext),
-          mStagePool(mAllocator, &mResourceManager, &mCommands,
+          mPipelineCache(*this, *mPlatform, mContext),
+          mStagePool(mAllocator, &mResourceManager, &mCommands, mPlatform->getPhysicalDevice(),
                   &mContext.getPhysicalDeviceLimits()),
           mBufferCache(mContext, mResourceManager, mAllocator),
           mFramebufferCache(mPlatform->getDevice(),
@@ -270,7 +271,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
                   [this](PixelBufferDescriptor&& pbd) { scheduleDestroy(std::move(pbd)); }),
           mDescriptorSetLayoutCache(mPlatform->getDevice(), &mResourceManager),
           mDescriptorSetCache(mPlatform->getDevice(), &mResourceManager),
-          mQueryManager(mPlatform->getDevice()),
+          mQueryManager(mContext, mPlatform->getDevice()),
           mExternalImageManager(&mSamplerCache, &mYcbcrConversionCache, &mDescriptorSetCache,
                   &mDescriptorSetLayoutCache),
           mStreamedImageManager(&mExternalImageManager),
@@ -292,7 +293,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
         // explicit synchronization model make the ThreadWorker hard to implement without
         // significant infrastructure refactor (transfer queues, thread-safe VMA, etc), which will
         // be done in Phase 2.
-        mJobWorker = AmortizationWorker::create(mJobQueue);
+        mJobWorker = AmortizationWorker::create(mJobQueue, driverConfig.asynchronousFrameBudget);
     }
 
     mContext.getDebugUtils().init(mPlatform->getInstance(), mPlatform->getDevice(),
@@ -376,20 +377,11 @@ utils::FixedCapacityVector<ShaderLanguage> VulkanDriver::getShaderLanguages(
 
 void VulkanDriver::terminate() {
     // Flush all pending asynchronous tasks. Some tasks may end up posting follow-up operations to
-    // the `ServiceThread` (e.g., via CountdownCallbackHandler or any user-provided handlers). So we
-    // early stop the ServiceThread to ensure these are processed as well. Tasks posted to the main
-    // thread (due to no user handler) during this process are handled later by `Driver::purge`
-    // within `FEngine::shutdown`.
+    // the `ServiceThread` (e.g., via CountdownCallbackHandler or any user-provided handlers), which
+    // is stopped at the end of this method. Tasks posted to the main thread (due to no user
+    // handler) during this process are handled later by `Driver::purge` within `FEngine::shutdown`.
     if (getJobWorker()) {
         getJobWorker()->terminate();
-    }
-    // Complete the in-flight readbacks first: their completion callbacks are posted from the
-    // readPixels thread via scheduleDestroy(), and anything posted once the ServiceThread has
-    // joined is never dispatched - the user's callback would silently be dropped.
-    mReadPixels.runUntilComplete();
-    if constexpr (UTILS_HAS_THREADING) {
-        // Flush any callbacks the drained jobs posted via scheduleCallback().
-        stopServiceThread();
     }
 
     // Flush and wait here to make sure all queued commands are executed and resources that are tied
@@ -452,6 +444,12 @@ void VulkanDriver::terminate() {
     mContext.getDebugUtils().terminate();
 
     mPlatform->terminate();
+
+    if constexpr (UTILS_HAS_THREADING) {
+        // Stop last so the callbacks scheduled above, by finish(0)'s readPixels drain and by
+        // mPipelineCache.terminate(), are still dispatched on the ServiceThread.
+        stopServiceThread();
+    }
 }
 
 void VulkanDriver::tick(int) {
@@ -459,11 +457,6 @@ void VulkanDriver::tick(int) {
 
     // Destroy the resources of the readbacks that completed on the readPixels thread.
     mReadPixels.gc();
-
-    if (getJobWorker()) {
-        // This number is randomly/heuristically chosen. Consider making the number optional.
-        getJobWorker()->process(5);
-    }
 
     // If the Renderer is skipping a lot of frames, it's possible for
     // commands to accumulate, since we only flush command buffers if
@@ -525,6 +518,10 @@ void VulkanDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
         CallbackHandler* handler, utils::Invocable<void(void)>&& callback) {
 }
 
+bool VulkanDriver::isPresentationTimeSupported() {
+    return mPlatform->isPresentationTimeSupported();
+}
+
 void VulkanDriver::setPresentationTime(int64_t monotonic_clock_ns) {
     mPlatform->setPresentationTime(monotonic_clock_ns);
 }
@@ -533,6 +530,17 @@ void VulkanDriver::endFrame(uint32_t frameId) {
     FVK_PROFILE_MARKER(PROFILE_NAME_ENDFRAME);
     endCommandRecording();
     collectGarbage();
+
+    // Queued async jobs run after the frame's own work.
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
+}
+
+void VulkanDriver::skipFrame(int) {
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
 }
 
 void VulkanDriver::updateDescriptorSetBuffer(
@@ -542,6 +550,11 @@ void VulkanDriver::updateDescriptorSetBuffer(
         uint32_t offset,
         uint32_t size) {
     FVK_SYSTRACE_SCOPE();
+    // Validate at entry: `binding` comes from the material file and may be out of range.
+    if (UTILS_VERY_UNLIKELY(binding >= VulkanDescriptorSetLayout::MAX_BINDINGS)) {
+        return;
+    }
+
     auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
     auto buffer = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
     mDescriptorSetCache.updateBuffer(set, binding, buffer, offset, size);
@@ -553,6 +566,13 @@ void VulkanDriver::updateDescriptorSetTexture(
         backend::TextureHandle th,
         SamplerParams params) {
     FVK_SYSTRACE_SCOPE();
+    // See updateDescriptorSetBuffer(). Checking here also covers the external image and streamed
+    // image managers below, which store `binding` and apply the update later on, outside of the
+    // descriptor set cache.
+    if (UTILS_VERY_UNLIKELY(binding >= VulkanDescriptorSetLayout::MAX_BINDINGS)) {
+        return;
+    }
+
     auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
 
@@ -601,6 +621,10 @@ void VulkanDriver::flush(int) {
 
 void VulkanDriver::finish(int dummy) {
     FVK_SYSTRACE_SCOPE();
+
+    if (getJobWorker()) {
+        getJobWorker()->drain();
+    }
 
     endCommandRecording();
 
@@ -1425,7 +1449,7 @@ Handle<HwSwapChain> VulkanDriver::createSwapChainHeadlessS() noexcept {
 Handle<HwTimerQuery> VulkanDriver::createTimerQueryS() noexcept {
     // The handle must be constructed here, as a synchronous call to getTimerQueryValue might happen
     // before createTimerQueryR is executed.
-    auto query = mQueryManager.getNextQuery(&mResourceManager);
+    auto query = resource_ptr<VulkanTimerQuery>::construct(&mResourceManager);
     query.inc();
     return Handle<VulkanTimerQuery>(query.id());
 }
@@ -1952,6 +1976,25 @@ size_t VulkanDriver::getMaxArrayTextureLayers() {
     return mContext.getPhysicalDeviceLimits().maxImageArrayLayers;
 }
 
+size_t VulkanDriver::getMaxTextureCount(ShaderStage) {
+    return mContext.getPhysicalDeviceLimits().maxPerStageDescriptorSampledImages;
+}
+
+size_t VulkanDriver::getMaxSamplerCount(ShaderStage) {
+    return mContext.getPhysicalDeviceLimits().maxPerStageDescriptorSamplers;
+}
+
+size_t VulkanDriver::getExternalTextureCost() {
+    // A multi-planar (YCbCr) image may consume more than one descriptor; see
+    // VkSamplerYcbcrConversionImageFormatProperties::combinedImageSamplerDescriptorCount.
+    return 2;
+}
+
+size_t VulkanDriver::getExternalSamplerCost() {
+    // Combined image samplers count against both the sampled image and the sampler limits.
+    return getExternalTextureCost();
+}
+
 size_t VulkanDriver::getUniformBufferOffsetAlignment() {
     return mContext.getPhysicalDeviceLimits().minUniformBufferOffsetAlignment;
 }
@@ -2005,9 +2048,10 @@ void VulkanDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuff
     // pass a resource_ptr instead, which is ref-counted.
     auto ib = promoteToAsync(resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh));
 
-    getJobQueue()->push([this, ib, p = std::move(p), byteOffset,
+    getJobQueue()->push([this, ib, byteOffset,
+            bufferRelease = AsyncBufferRelease(this, std::move(p)),
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
-        updateIndexBufferCommon(ib, std::move(p), byteOffset);
+        updateIndexBufferCommon(ib, bufferRelease.detach(), byteOffset);
         completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
@@ -2038,9 +2082,10 @@ void VulkanDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferOb
     // pass a resource_ptr instead, which is ref-counted.
     auto bo = promoteToAsync(resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh));
 
-    getJobQueue()->push([this, bo, bd = std::move(bd), byteOffset,
+    getJobQueue()->push([this, bo, byteOffset,
+            bufferRelease = AsyncBufferRelease(this, std::move(bd)),
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
-        updateBufferObjectCommon(bo, std::move(bd), byteOffset);
+        updateBufferObjectCommon(bo, bufferRelease.detach(), byteOffset);
         completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
@@ -2093,10 +2138,10 @@ void VulkanDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th,
     auto t = promoteToAsync(resource_ptr<VulkanTexture>::cast(&mResourceManager, th));
 
     getJobQueue()->push([this, t, level, xoffset, yoffset, zoffset, width, height, depth,
-            data = std::move(data),
+            bufferRelease = AsyncBufferRelease(this, std::move(data)),
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         update3DImageCommon(t, level, xoffset, yoffset, zoffset, width, height, depth,
-                std::move(data));
+                bufferRelease.detach());
         completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
@@ -2108,12 +2153,14 @@ void VulkanDriver::setupExternalImage(void* image) {
 }
 
 TimerQueryResult VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
-    auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
-    if (!vtq->isCompleted()) {
-        return TimerQueryResult::NOT_READY;
+    if (!tqh) {
+        return TimerQueryResult::ERROR;
     }
-
+    auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
     auto results = mQueryManager.getResult(vtq);
+    if (results.error) {
+        return TimerQueryResult::ERROR;
+    }
     if (results.beginAvailable == 0 || results.endAvailable == 0) {
         return TimerQueryResult::NOT_READY;
     }
@@ -2148,7 +2195,7 @@ void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {
     auto t = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
     assert_invariant(t);
 
-    int32_t layerCount = int32_t(t->depth);
+    uint32_t layerCount = uint32_t(t->depth);
     if (t->target == SamplerType::SAMPLER_CUBEMAP_ARRAY ||
         t->target == SamplerType::SAMPLER_CUBEMAP) {
         layerCount *= 6;
@@ -2169,15 +2216,15 @@ void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {
 
         // TODO: there should be a way to do this using layerCount in vkBlitImage
         // TODO: vkBlitImage should be able to handle 3D textures too
-        for (uint8_t layer = 0; layer < layerCount; layer++) {
+        for (uint32_t layer = 0; layer < layerCount; layer++) {
             VulkanAttachment dst {
                 .level = uint8_t(level + 1),
-                .layer = layer,
+                .layer = uint8_t(layer),
             };
             dst.texture = t;
             VulkanAttachment src {
                 .level = uint8_t(level),
-                .layer = layer,
+                .layer = uint8_t(layer),
             };
             src.texture = t;
             mBlitter.blit(VK_FILTER_LINEAR, dst, dstOffsets, src, srcOffsets);
@@ -3026,11 +3073,17 @@ void VulkanDriver::scissor(Viewport scissorBox) {
 }
 
 void VulkanDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
+    if (!tqh) {
+        return;
+    }
     auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
     mQueryManager.beginQuery(&(mCommands.get()), vtq);
 }
 
 void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
+    if (!tqh) {
+        return;
+    }
     auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
     mQueryManager.endQuery(&(mCommands.get()), vtq);
 }

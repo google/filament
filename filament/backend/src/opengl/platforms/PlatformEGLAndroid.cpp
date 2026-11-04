@@ -243,6 +243,10 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
             << "Failed to create ExternalStreamManagerAndroid";
 
     Driver* driver = PlatformEGL::createDriver(sharedContext, driverConfig);
+    if (UTILS_UNLIKELY(!driver)) {
+        // On failure the display may be terminated, so eglQueryString() would return NULL.
+        return nullptr;
+    }
     auto const extensions = GLUtils::split(eglQueryString(getEglDisplay(), EGL_EXTENSIONS));
 
     ext.egl.ANDROID_presentation_time = extensions.has("EGL_ANDROID_presentation_time");
@@ -650,10 +654,16 @@ bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImag
     return true;
 }
 
+bool PlatformEGLAndroid::isPresentationTimeSupported() const noexcept {
+    // Check the entry point as well as the extension string, because eglGetProcAddress() may
+    // fail to return a pointer even when the extension is advertised.
+    return ext.egl.ANDROID_presentation_time && eglPresentationTimeANDROID != nullptr;
+}
+
 void PlatformEGLAndroid::setPresentationTime(int64_t const presentationTimeInNanosecond) noexcept {
     EGLSurface const currentDrawSurface = eglGetCurrentSurface(EGL_DRAW);
     if (currentDrawSurface != EGL_NO_SURFACE) {
-        if (UTILS_UNLIKELY(ext.egl.ANDROID_presentation_time)) {
+        if (UTILS_UNLIKELY(isPresentationTimeSupported())) {
             eglPresentationTimeANDROID(
                     getEglDisplay(),
                     currentDrawSurface,

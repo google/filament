@@ -83,7 +83,7 @@ private:
         Buffer() {}
 
         explicit Buffer(GLenum target) noexcept : target(target) {}
-        GLenum target;                          // 4
+        GLenum target = 0;                      // 4
         GLuint id = 0;                          // 4
         uint32_t offset = 0;                    // 4
         uint32_t size = 0;                      // 4
@@ -93,7 +93,7 @@ private:
     struct DynamicBuffer {
         DynamicBuffer() = default;
         explicit DynamicBuffer(GLenum target) noexcept : target(target) { }
-        GLenum target;                          // 4
+        GLenum target = 0;                      // 4
         GLuint id = 0;                          // 4
         uint32_t offset = 0;                    // 4
         uint32_t size = 0;                      // 4
@@ -128,6 +128,7 @@ private:
     };
     struct Descriptor {
         std::variant<
+                std::monostate,
                 Buffer,
                 DynamicBuffer,
                 BufferGLES2,

@@ -59,7 +59,7 @@ void TransformManager::create(Entity const entity, Instance const parent, const 
 }
 
 void TransformManager::create(Entity const entity, Instance const parent) {
-    downcast(this)->create(entity, parent, mat4f{});
+    downcast(this)->create(entity, parent);
 }
 
 void TransformManager::destroy(Entity const e) noexcept {
@@ -108,11 +108,9 @@ size_t TransformManager::getChildren(Instance const i, Entity* children,
 }
 
 void TransformManager::openLocalTransformTransaction() noexcept {
-    downcast(this)->openLocalTransformTransaction();
 }
 
 void TransformManager::commitLocalTransformTransaction() noexcept {
-    downcast(this)->commitLocalTransformTransaction();
 }
 
 TransformManager::children_iterator TransformManager::getChildrenBegin(

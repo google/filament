@@ -42,20 +42,32 @@
 #include <condition_variable>
 #include <mutex>
 #include <thread>
+#include <utility>
+#include <vector>
 
 using namespace filament;
 using namespace filament::backend;
 using ::testing::_;
+using ::testing::Invoke;
 using ::testing::Return;
 
 namespace {
 
+// State shared between the test fixture (main thread) and the driver it creates (backend thread).
+struct AsyncTestState {
+    std::atomic<uint32_t> capturedSize{ 0 };
+    std::mutex mutex;
+    std::condition_variable cv;
+    // Status the test driver reports for every asynchronous creation call it enrolls.
+    std::atomic<AsyncCallStatus> asyncCreationStatus{ AsyncCallStatus::COMPLETED };
+    // When set, asynchronous creation calls are held back until Driver::terminate() flushes them,
+    // mimicking a real backend whose in-flight jobs only settle during teardown.
+    std::atomic_bool withholdAsyncCompletion{ false };
+};
+
 class CustomTestDriver : public MockDriver {
 public:
-    CustomTestDriver(std::atomic<uint32_t>* sizeDest, std::mutex* mutex,
-            std::condition_variable* cv, std::atomic<AsyncCallStatus>* asyncCreationStatus)
-            : mSizeDest(sizeDest), mMutex(mutex), mCv(cv),
-              mAsyncCreationStatus(asyncCreationStatus) {
+    explicit CustomTestDriver(AsyncTestState* state) : mState(state) {
         // Set up default nice mock behaviors to pass Engine validation checks
         ON_CALL(*this, getFeatureLevel())
                 .WillByDefault(Return(FeatureLevel::FEATURE_LEVEL_1));
@@ -71,6 +83,10 @@ public:
                 .WillByDefault(Return(2048));
         ON_CALL(*this, isAsynchronousModeEnabled())
                 .WillByDefault(Return(true));
+        // Real backends drain their in-flight asynchronous jobs in terminate(), which runs on the
+        // backend thread, after the engine has already cleaned up whatever the user leaked.
+        ON_CALL(*this, terminate())
+                .WillByDefault(Invoke([this]() { flushWithheldAsyncCallbacks(); }));
     }
     ~CustomTestDriver() override = default;
 
@@ -107,8 +123,8 @@ public:
     void createBufferObjectR(BufferObjectHandle h, uint32_t byteCount,
             BufferObjectBinding bindingType, BufferUsage usage, utils::ImmutableCString&& tag) {
         if (tag == "MyTestVertexBuffer") {
-            mSizeDest->store(byteCount, std::memory_order_release);
-            mCv->notify_one(); // Signal that the size has been captured
+            mState->capturedSize.store(byteCount, std::memory_order_release);
+            mState->cv.notify_one(); // Signal that the size has been captured
         }
     }
 
@@ -116,16 +132,30 @@ public:
     Dispatcher getDispatcher() const noexcept override;
 
 private:
-    void reportAsyncCreationStatus(AsyncCallback const callback, void* user) const {
-        if (callback) {
-            callback(user, mAsyncCreationStatus->load(std::memory_order_acquire));
+    void reportAsyncCreationStatus(AsyncCallback const callback, void* user) {
+        if (!callback) {
+            return;
+        }
+        if (mState->withholdAsyncCompletion.load(std::memory_order_acquire)) {
+            mWithheldAsyncCallbacks.push_back({ callback, user });
+            return;
+        }
+        callback(user, mState->asyncCreationStatus.load(std::memory_order_acquire));
+    }
+
+    void flushWithheldAsyncCallbacks() {
+        auto const status = mState->asyncCreationStatus.load(std::memory_order_acquire);
+        // Dispatch from a local: a callback is free to enqueue more asynchronous work.
+        decltype(mWithheldAsyncCallbacks) withheld;
+        withheld.swap(mWithheldAsyncCallbacks);
+        for (auto [callback, user]: withheld) {
+            callback(user, status);
         }
     }
 
-    std::atomic<uint32_t>* mSizeDest;
-    std::mutex* mMutex;
-    std::condition_variable* mCv;
-    std::atomic<AsyncCallStatus>* mAsyncCreationStatus;
+    AsyncTestState* mState;
+    // Only touched from the backend thread: the async entry points above and terminate().
+    std::vector<std::pair<AsyncCallback, void*>> mWithheldAsyncCallbacks;
 };
 
 Dispatcher CustomTestDriver::getDispatcher() const noexcept {
@@ -134,10 +164,7 @@ Dispatcher CustomTestDriver::getDispatcher() const noexcept {
 
 class CustomTestPlatform : public Platform {
 public:
-    CustomTestPlatform(std::atomic<uint32_t>* sizeDest, std::mutex* mutex,
-            std::condition_variable* cv, std::atomic<AsyncCallStatus>* asyncCreationStatus)
-            : mSizeDest(sizeDest), mMutex(mutex), mCv(cv),
-              mAsyncCreationStatus(asyncCreationStatus) {}
+    explicit CustomTestPlatform(AsyncTestState* state) : mState(state) {}
     ~CustomTestPlatform() override = default;
 
     int getOSVersion() const noexcept override { return 0; }
@@ -145,22 +172,16 @@ public:
 
     Driver* createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) override {
         // Heap-allocate the driver. The Engine takes ownership and deletes it in FEngine destructor.
-        return new ::testing::NiceMock<CustomTestDriver>(mSizeDest, mMutex, mCv,
-                mAsyncCreationStatus);
+        return new ::testing::NiceMock<CustomTestDriver>(mState);
     }
 
 private:
-    std::atomic<uint32_t>* mSizeDest;
-    std::mutex* mMutex;
-    std::condition_variable* mCv;
-    std::atomic<AsyncCallStatus>* mAsyncCreationStatus;
+    AsyncTestState* mState;
 };
 
 class VertexBufferTest : public ::testing::Test {
 protected:
-    VertexBufferTest()
-            : mCapturedSize(0),
-              mCustomPlatform(&mCapturedSize, &mMutex, &mCv, &mAsyncCreationStatus) {
+    VertexBufferTest() : mCustomPlatform(&mState) {
         mEngine = Engine::Builder()
                           .backend(Backend::NOOP)
                           .platform(&mCustomPlatform)
@@ -176,13 +197,13 @@ protected:
         static_cast<FEngine*>(mEngine)->flush();
 
         // Safely block the main thread until the asynchronous creation command completes
-        std::unique_lock<std::mutex> lock(mMutex);
-        bool success = mCv.wait_for(lock, std::chrono::seconds(2), [this]() {
-            return mCapturedSize.load(std::memory_order_acquire) != 0;
+        std::unique_lock<std::mutex> lock(mState.mutex);
+        bool success = mState.cv.wait_for(lock, std::chrono::seconds(2), [this]() {
+            return mState.capturedSize.load(std::memory_order_acquire) != 0;
         });
 
         EXPECT_TRUE(success);
-        EXPECT_EQ(mCapturedSize.load(), expectedSize);
+        EXPECT_EQ(mState.capturedSize.load(), expectedSize);
 
         mEngine->destroy(vb);
     }
@@ -202,8 +223,15 @@ protected:
     // Builds a VertexBuffer asynchronously, then blocks until the test driver has reported
     // `status` for every call the creation countdown enrolls.
     VertexBuffer* buildAsyncVertexBuffer(AsyncCallStatus const status) {
-        mAsyncCreationStatus.store(status, std::memory_order_release);
+        mState.asyncCreationStatus.store(status, std::memory_order_release);
 
+        VertexBuffer* vb = buildAsyncVertexBuffer();
+
+        return waitUntilCreationSettled(vb) ? vb : nullptr;
+    }
+
+    // Builds a VertexBuffer asynchronously and flushes, without waiting for creation to settle.
+    VertexBuffer* buildAsyncVertexBuffer() {
         VertexBuffer* vb = VertexBuffer::Builder()
                 .name("MyAsyncVertexBuffer")
                 .vertexCount(100)
@@ -215,7 +243,7 @@ protected:
         // Flush so that the background render thread processes the creation commands.
         static_cast<FEngine*>(mEngine)->flush();
 
-        return waitUntilCreationSettled(vb) ? vb : nullptr;
+        return vb;
     }
 
     // Adds a renderable component drawing `vb` to `entity`, the public path that ends up
@@ -229,10 +257,7 @@ protected:
     }
 
     Engine* mEngine = nullptr;
-    std::atomic<uint32_t> mCapturedSize;
-    std::mutex mMutex;
-    std::condition_variable mCv;
-    std::atomic<AsyncCallStatus> mAsyncCreationStatus{ AsyncCallStatus::COMPLETED };
+    AsyncTestState mState;
     CustomTestPlatform mCustomPlatform;
 };
 
@@ -343,6 +368,25 @@ TEST_F(VertexBufferTest, TrailingPaddingInterleavedBufferSize) {
             .build(*mEngine);
 
     runSizingTest(vb, 3200);
+}
+
+TEST_F(VertexBufferTest, LeakedAsyncBufferOutlivesShutdownCleanup) {
+    // Regression test for the use-after-free in FEngine::cleanupResourceList: the shutdown path
+    // that cleans up what the user leaked used to free the frontend object unconditionally, while
+    // the still-pending creation callback held a pointer to it and later wrote its status.
+    mState.withholdAsyncCompletion.store(true, std::memory_order_release);
+
+    VertexBuffer* vb = buildAsyncVertexBuffer();
+    ASSERT_NE(vb, nullptr);
+
+    // Creation cannot settle before the driver terminates, so shutdown is guaranteed to see this
+    // buffer mid-creation. It is deliberately never destroyed: Engine::destroy() has to clean it
+    // up, and then keep it alive until the withheld callbacks run on the backend thread.
+    ASSERT_FALSE(downcast(vb)->isCreationSettled());
+
+    // Asserts inside shutdown() catch a deferred destruction that never resolves; a sanitizer
+    // build catches the frontend object being freed too early.
+    Engine::destroy(&mEngine);
 }
 
 } // namespace

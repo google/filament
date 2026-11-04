@@ -72,24 +72,27 @@ JitShaderProvider::JitShaderProvider(Engine* engine, bool optimizeShaders,
     // Note that this is the same as the list in tools/matc/src/ParametersProcessor.cpp
     static const std::unordered_map<std::string, filament::UserVariantFilterBit> strToEnum  = [] {
         std::unordered_map<std::string, filament::UserVariantFilterBit> strToEnum;
-        strToEnum["directionalLighting"]    = filament::UserVariantFilterBit::DIRECTIONAL_LIGHTING;
         strToEnum["shadowReceiver"]         = filament::UserVariantFilterBit::SHADOW_RECEIVER;
         strToEnum["skinning"]               = filament::UserVariantFilterBit::SKINNING;
         strToEnum["vsm"]                    = filament::UserVariantFilterBit::VSM;
         strToEnum["fog"]                    = filament::UserVariantFilterBit::FOG;
         strToEnum["ssr"]                    = filament::UserVariantFilterBit::SSR;
         strToEnum["stereo"]                 = filament::UserVariantFilterBit::STE;
+        strToEnum["motionVectors"]          = filament::UserVariantFilterBit::MOTION_VECTORS;
         return strToEnum;
     }();
 
     for (auto& filterStr : variantFilters) {
-        // TODO: dynamicLighting bit is removed 26/07/2. Remove by 26/8/31
-        if (std::string_view(filterStr) == "dynamicLighting") {
-            std::cerr << "Warning: dynamicLighting variant filter is deprecated and ignored.";
+        // TODO: directionalLighting bit is removed 2026-09-21. Remove by 2026-12-31.
+        if (std::string_view(filterStr) == "directionalLighting") {
+            std::cerr << "Warning: directionalLighting variant filter is deprecated and ignored.";
             continue;
         }
         mVariantFilter |= (uint32_t)strToEnum.at(filterStr);
     }
+#if !defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+    mVariantFilter |= uint32_t(filament::UserVariantFilterBit::MOTION_VECTORS);
+#endif
     MaterialBuilder::init();
 }
 
@@ -375,6 +378,90 @@ std::string shaderFromKey(const MaterialKey& config) {
                 )SHADER";
             }
         }
+
+        if (config.hasRetroreflection && !config.useSpecularGlossiness) {
+            shader += R"SHADER(
+                material.retroreflection = materialParams.retroreflectionFactor;
+            )SHADER";
+
+            if (config.hasRetroreflectionTexture) {
+                shader += "highp float2 retroreflectionUV = ${retroreflection};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "retroreflectionUV = (vec3(retroreflectionUV, 1.0) * "
+                              "materialParams.retroreflectionUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    material.retroreflection *= texture(materialParams_retroreflectionMap, retroreflectionUV).r;
+                )SHADER";
+            }
+        }
+
+        if (config.hasIridescence && !config.useSpecularGlossiness) {
+            shader += R"SHADER(
+                material.iridescence = materialParams.iridescenceFactor;
+            )SHADER";
+
+            if (config.hasIridescenceTexture) {
+                shader += "highp float2 iridescenceUV = ${iridescence};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "iridescenceUV = (vec3(iridescenceUV, 1.0) * "
+                              "materialParams.iridescenceUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    material.iridescence *= texture(materialParams_iridescenceMap, iridescenceUV).r;
+                )SHADER";
+            }
+
+            shader += R"SHADER(
+                material.iridescenceIor = materialParams.iridescenceIor;
+            )SHADER";
+
+            if (config.hasIridescenceThicknessTexture) {
+                shader += "highp float2 iridescenceThicknessUV = ${iridescenceThickness};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "iridescenceThicknessUV = (vec3(iridescenceThicknessUV, 1.0) * "
+                              "materialParams.iridescenceThicknessUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    material.iridescenceThickness = mix(materialParams.iridescenceThicknessMinimum,
+                            materialParams.iridescenceThicknessMaximum,
+                            texture(materialParams_iridescenceThicknessMap, iridescenceThicknessUV).g);
+                )SHADER";
+            } else {
+                shader += R"SHADER(
+                    material.iridescenceThickness = materialParams.iridescenceThicknessMaximum;
+                )SHADER";
+            }
+        }
+
+        if (config.hasAnisotropy && !config.useSpecularGlossiness) {
+            shader += R"SHADER(
+                material.anisotropy = materialParams.anisotropyStrength;
+                float anisotropyCos = cos(materialParams.anisotropyRotation);
+                float anisotropySin = sin(materialParams.anisotropyRotation);
+            )SHADER";
+
+            if (config.hasAnisotropyTexture) {
+                shader += "highp float2 anisotropyUV = ${anisotropy};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "anisotropyUV = (vec3(anisotropyUV, 1.0) * "
+                              "materialParams.anisotropyUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    vec3 anisotropyTex = texture(materialParams_anisotropyMap, anisotropyUV).rgb;
+                    material.anisotropy *= anisotropyTex.b;
+                    vec2 anisotropyDirection = anisotropyTex.rg * 2.0 - 1.0;
+                    anisotropyDirection =
+                            mat2(anisotropyCos, anisotropySin, -anisotropySin, anisotropyCos) *
+                            anisotropyDirection;
+                    material.anisotropyDirection = vec3(anisotropyDirection, 0.0);
+                )SHADER";
+            } else {
+                shader += R"SHADER(
+                    material.anisotropyDirection = vec3(anisotropyCos, anisotropySin, 0.0);
+                )SHADER";
+            }
+        }
     }
 
     shader += "}\n";
@@ -614,6 +701,53 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
 
     if (config.hasDispersion) {
         builder.parameter("dispersion", MaterialBuilder::UniformType::FLOAT);
+    }
+
+    // RETROREFLECTION
+    if (config.hasRetroreflection && !config.unlit && !config.useSpecularGlossiness) {
+        builder.parameter("retroreflectionFactor", MaterialBuilder::UniformType::FLOAT);
+        if (config.hasRetroreflectionTexture) {
+            builder.parameter("retroreflectionMap", MaterialBuilder::SamplerType::SAMPLER_2D);
+            if (config.hasTextureTransforms) {
+                builder.parameter("retroreflectionUvMatrix", MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH);
+            }
+        }
+    }
+
+    // IRIDESCENCE
+    if (config.hasIridescence && !config.unlit && !config.useSpecularGlossiness) {
+        builder.parameter("iridescenceFactor", MaterialBuilder::UniformType::FLOAT);
+        builder.parameter("iridescenceIor", MaterialBuilder::UniformType::FLOAT);
+        builder.parameter("iridescenceThicknessMaximum", MaterialBuilder::UniformType::FLOAT);
+        if (config.hasIridescenceTexture) {
+            builder.parameter("iridescenceMap", MaterialBuilder::SamplerType::SAMPLER_2D);
+            if (config.hasTextureTransforms) {
+                builder.parameter("iridescenceUvMatrix", MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH);
+            }
+        }
+        if (config.hasIridescenceThicknessTexture) {
+            builder.parameter("iridescenceThicknessMinimum", MaterialBuilder::UniformType::FLOAT);
+            builder.parameter("iridescenceThicknessMap", MaterialBuilder::SamplerType::SAMPLER_2D);
+            if (config.hasTextureTransforms) {
+                builder.parameter("iridescenceThicknessUvMatrix", MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH);
+            }
+        }
+    }
+
+    // ANISOTROPY
+    if (config.hasAnisotropy && !config.unlit && !config.useSpecularGlossiness) {
+        builder.parameter("anisotropyStrength", MaterialBuilder::UniformType::FLOAT);
+        builder.parameter("anisotropyRotation", MaterialBuilder::UniformType::FLOAT);
+        if (config.hasAnisotropyTexture) {
+            builder.parameter("anisotropyMap", MaterialBuilder::SamplerType::SAMPLER_2D);
+            if (config.hasTextureTransforms) {
+                builder.parameter("anisotropyUvMatrix", MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH);
+            }
+        }
     }
 
     if (config.unlit) {

@@ -54,9 +54,9 @@ struct ParallelForJobData;
 class JobSystem {
 public:
     static constexpr size_t MAX_JOB_COUNT = 1 << 14; // 16384
+    static constexpr uint32_t MAX_THREADS = 32;
 
 private:
-    static constexpr uint32_t MAX_THREADS = 32;
     static constexpr uint32_t JOB_COUNT_MASK = MAX_JOB_COUNT - 1;
     static constexpr uint32_t WAITER_COUNT_SHIFT = 24;
     static_assert(MAX_JOB_COUNT <= 0x7FFE, "MAX_JOB_COUNT must be <= 0x7FFE");
@@ -131,7 +131,8 @@ public:
      *     for at least 1 pool worker thread.
      *   - If `adoptableThreadsCount >= MAX_THREADS`, it is clamped to `MAX_THREADS - 1` with an error.
      *   - If `userThreadCount + adoptableThreadsCount > MAX_THREADS`, `userThreadCount` is clamped to
-     *     `(MAX_THREADS - adoptableThreadsCount)` with a warning.
+     *     `(MAX_THREADS - adoptableThreadsCount)`. A warning is logged only when `userThreadCount`
+     *     was non-zero.
      *
      * @param userThreadCount Number of worker threads in the pool, 0 for auto-detect, or SINGLE_THREADED.
      * @param adoptableThreadsCount Maximum number of external threads that can be adopted concurrently (max: MAX_THREADS - 1).

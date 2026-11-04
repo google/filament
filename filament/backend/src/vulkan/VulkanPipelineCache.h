@@ -33,6 +33,7 @@
 
 #include <tsl/robin_map.h>
 
+#include <atomic>
 #include <type_traits>
 
 namespace filament::backend {
@@ -40,6 +41,7 @@ namespace filament::backend {
 struct VulkanProgram;
 struct VulkanBufferObject;
 struct VulkanTexture;
+class VulkanPlatform;
 
 // VulkanPipelineCache manages a cache of descriptor sets and pipelines.
 //
@@ -95,11 +97,17 @@ public:
      *
      * @param driver The driver this is being instantiated for. This is used only for construction of
      *               the callback manager, which references the driver for scheduling callbacks.
-     * @param device The device that the pipelines will be created and run on.
+     * @param platform Provides the device that the pipelines will be created and run on. With
+     *                 backend.vulkan.enable_pipeline_cache_persistence, its blob cache also
+     *                 persists the driver's VkPipelineCache across runs: read here, so the blob
+     *                 functions must be set before the Engine is created; written on the
+     *                 compiler thread once gc() sees pipeline creation go quiet, and by
+     *                 terminate().
      * @param context Information about the current instance of Vulkan, such as supported extensions,
      *                and enabled features.
      */
-    VulkanPipelineCache(DriverBase& driver, VkDevice device, VulkanContext const& context);
+    VulkanPipelineCache(DriverBase& driver, VulkanPlatform& platform,
+            VulkanContext const& context);
 
     // Loads a fake pipeline into memory on a separate thread, with the intent of
     // preloading the Vulkan cache with enough information to have a cache hit when
@@ -190,7 +198,10 @@ private:
         VkShaderModule shaders[SHADER_MODULE_COUNT];                              //  16  : 0
         VkRenderPass renderPass;                                                  //  8   : 16
         uint16_t topology;                                                        //  2   : 24
-        uint16_t subpassIndex;                                                    //  2   : 26
+        uint8_t subpassIndex;                                                     //  1   : 26
+        // Non-zero if the pipeline is used in a protected command buffer. Only meaningful if
+        // VK_EXT_pipeline_protected_access is enabled, otherwise it is always zero.
+        uint8_t protectedAccess;                                                  //  1   : 27
         VertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT]; //  128 : 28
         VertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];      //  128 : 156
         RasterState rasterState;                                                  //  16  : 284
@@ -256,12 +267,32 @@ private:
 
     void bindDynamicState(VkCommandBuffer cmdbuffer, uint16_t dirtyMask);
 
+    // Writes mPipelineCache to the platform's blob cache if its size changed. Returns false if the
+    // data could not be read. Runs on the compiler thread, or in terminate() once it has stopped.
+    bool savePipelineCache() noexcept;
+
     // Immutable state.
     VkDevice mDevice = VK_NULL_HANDLE;
 
     // Vuklan Driver pipeline cache handle. In the cases a pipeline has been  evicted by the `gc`,
     // recreating the same pipeline is cheaper, helping with frame stalling.
     VkPipelineCache mPipelineCache = VK_NULL_HANDLE;
+
+    VulkanPlatform& mPlatform;
+
+    // Pipelines created so far, by the driver thread or the prewarm thread.
+    std::atomic<uint32_t> mPipelinesCreated = 0;
+
+    // gc()'s last reading of mPipelinesCreated, the flush event at which it last moved (or a save
+    // was queued), and whether pipelines have been created since the cache was last saved. The
+    // compiler thread sets the last one back when a save fails.
+    uint32_t mPipelinesSeen = 0;
+    Timestamp mPipelinesSeenAt = 0;
+    std::atomic<bool> mPipelinesUnsaved = false;
+
+    // Size of the data last read or written, so a save that finds the cache the same size writes
+    // nothing. Only savePipelineCache() uses it after construction.
+    size_t mSavedCacheSize = 0;
 
     // Static state used for VkPipeline creation and cache lookup.
     // Dynamically handled fields are set to 0 during binding.
@@ -295,6 +326,11 @@ private:
     bool const mHasVertexInputDynamicState;
     bool const mHasDynamicState;
     bool const mHasDynamicState2;
+    bool const mHasColorWriteEnable;
+    bool const mHasPipelineProtectedAccess;
+
+    // Cached context capabilities for pipeline cache eviction
+    bool const mPipelineCacheThresholdEvictionEnabled;
 
     [[maybe_unused]] VulkanContext const& mContext;
 

@@ -167,8 +167,9 @@ class TestJavaGen(unittest.TestCase):
             # Invariants
             self.assertNotIn("mNativeObject", java_src)
             self.assertNotIn("getNativeObject()", java_src)
-            self.assertIn("private float mCenterX;", java_src)
-            self.assertIn("private float mHalfExtentX;", java_src)
+            self.assertIn("import com.google.android.filament.proguard.UsedByNative;", java_src)
+            self.assertIn('@UsedByNative("RenderableManager.cpp")\n    private float mCenterX;', java_src)
+            self.assertIn('@UsedByNative("RenderableManager.cpp")\n    private float mHalfExtentX;', java_src)
             self.assertIn("public void setCenter(float centerX, float centerY, float centerZ)", java_src)
             self.assertIn("public void setCenter(@NonNull @Size(min = 3) float[] center)", java_src)
             self.assertIn("public float[] getCenter(@Nullable @Size(min = 3) float[] out)", java_src)
@@ -470,6 +471,12 @@ class TestJavaGen(unittest.TestCase):
                             "type": {"cpp_name": "const float", "qualified_name": "float", "category": "primitive"},
                             "value": "0.1171f",
                             "doc": {"brief": "LED efficiency."}
+                        },
+                        {
+                            "name": "MAX_INDEX_COUNT",
+                            "type": {"cpp_name": "const uint32_t", "qualified_name": "uint32_t", "category": "primitive"},
+                            "value": "uint32_t(67108863)",
+                            "doc": {"brief": "Maximum number of indices."}
                         }
                     ]
                 }
@@ -498,6 +505,7 @@ class TestJavaGen(unittest.TestCase):
             self.assertIn("public static final long FENCE_WAIT_FOR_EVER = -1;", java_src)
             self.assertIn("public static final long WAIT_FOR_EVER = FENCE_WAIT_FOR_EVER;", java_src)
             self.assertIn("public static final float EFFICIENCY_LED = 0.1171f;", java_src)
+            self.assertIn("public static final int MAX_INDEX_COUNT = 67108863;", java_src)
             self.assertIn("doWait(WAIT_FOR_EVER);", java_src)
 
     def test_no_apigen_attribute(self):
@@ -991,7 +999,7 @@ class TestJavaGen(unittest.TestCase):
                         {"name": "mapSize", "type": {"cpp_name": "uint32_t", "qualified_name": "uint32_t", "category": "primitive"}, "default_value": "1024"},
                         {"name": "cascadeSplitPositions", "type": {"cpp_name": "float[3]", "qualified_name": "float[3]", "category": "unknown"}, "default_value": "{ 0.125f, 0.25f, 0.50f }"},
                         {"name": "vsm", "type": {"cpp_name": "struct Vsm", "qualified_name": "filament::LightManager::ShadowOptions::Vsm", "category": "object"}},
-                        {"name": "transform", "type": {"cpp_name": "math::quatf", "qualified_name": "filament::math::details::TQuaternion<float>", "category": "object"}}
+                        {"name": "transform", "type": {"cpp_name": "math::quatf", "qualified_name": "filament::math::details::TQuaternion<float>", "category": "object"}, "default_value": "{ 1.0f }"}
                     ],
                     "methods": [],
                     "enums": [],
@@ -1060,12 +1068,21 @@ class TestJavaGen(unittest.TestCase):
             java_src = (Path(tmp_dir) / "LightManager.java").read_text()
             cpp_src = (Path(tmp_dir) / "LightManager.cpp").read_text()
 
-            # Verify nested class structure in Java
+            # Verify nested class structure and default values in Java
             self.assertIn("public static class ShadowOptions {", java_src)
             self.assertIn("public static class Vsm {", java_src)
-            self.assertIn("private float mCascadeSplitPositions0;", java_src)
-            self.assertIn("private float mCascadeSplitPositions1;", java_src)
-            self.assertIn("private float mCascadeSplitPositions2;", java_src)
+            self.assertIn("public boolean elvsm = false;", java_src)
+            self.assertIn("public float blurWidth = 0.0f;", java_src)
+            self.assertIn("public int mapSize = 1024;", java_src)
+            self.assertIn("private float mCascadeSplitPositions0 = 0.125f;", java_src)
+            self.assertIn("private float mCascadeSplitPositions1 = 0.25f;", java_src)
+            self.assertIn("private float mCascadeSplitPositions2 = 0.50f;", java_src)
+            self.assertIn("private boolean mVsmElvsm = false;", java_src)
+            self.assertIn("private float mVsmBlurWidth = 0.0f;", java_src)
+            self.assertIn("private float mTransformX = 0.0f;", java_src)
+            self.assertIn("private float mTransformY = 0.0f;", java_src)
+            self.assertIn("private float mTransformZ = 0.0f;", java_src)
+            self.assertIn("private float mTransformW = 1.0f;", java_src)
             self.assertIn("public void setCascadeSplitPositions(@NonNull @Size(min = 3) float[] cascadeSplitPositions)", java_src)
             self.assertIn("public float[] getCascadeSplitPositions(@Nullable @Size(min = 3) float[] out)", java_src)
             self.assertIn("public void setTransform(@NonNull @Size(min = 4) float[] transform)", java_src)
@@ -1079,7 +1096,7 @@ class TestJavaGen(unittest.TestCase):
             self.assertIn("options.cascadeSplitPositions[2] = optionsCascadeSplitPositions2;", cpp_src)
             self.assertIn("options.vsm.elvsm = optionsVsmElvsm;", cpp_src)
             self.assertIn("options.vsm.blurWidth = optionsVsmBlurWidth;", cpp_src)
-            self.assertIn("options.transform = { optionsTransformX, optionsTransformY, optionsTransformZ, optionsTransformW };", cpp_src)
+            self.assertIn("options.transform = { optionsTransformW, optionsTransformX, optionsTransformY, optionsTransformZ };", cpp_src)
             self.assertIn("that->setShadowOptions(EntityInstance<LightManager>(i), options);", cpp_src)
 
     def test_custom_negative_enums_and_deduplication(self):
@@ -3401,6 +3418,73 @@ class TestJavaGen(unittest.TestCase):
         self.assertNotIn("nGetNativeWindow", jni_src)
         self.assertIn("Java_com_google_android_filament_CustomView_nRender", jni_src)
 
+    def test_retained_lazy_references_annotation(self):
+        """Verify that apigen:retained_lazy getters fall back to JNI when no parent was supplied."""
+        from tools.apigen.javagen import JavaEmitter, JniEmitter, ClassContext
+
+        test_ir = {
+            "name": "CustomInstance",
+            "qualified_name": "filament::CustomInstance",
+            "category": "class",
+            "archetype": "handle",
+            "fields": [],
+            "enums": [],
+            "methods": [
+                {
+                    "name": "getMaterial",
+                    "qualified_name": "getMaterial()",
+                    "is_const": True,
+                    "attributes": ["filament:apigen:retained_lazy"],
+                    "return_type": {
+                        "cpp_name": "const Material *",
+                        "qualified_name": "const filament::Material *",
+                        "category": "pointer",
+                        "is_pointer": True,
+                        "nullability": "nonnull",
+                    },
+                    "arguments": [],
+                    "doc": {"brief": "Returns associated Material."}
+                },
+            ]
+        }
+
+        ctx = ClassContext(test_ir, "filament/CustomInstance.h")
+        self.assertTrue(ctx.retained_references["getMaterial"]["is_lazy"])
+
+        java_src = JavaEmitter(ctx).generate_java()
+
+        # 1. Non-final nullable field, plus the parent's native pointer resolved at construction
+        self.assertIn("private @Nullable Material mMaterial;", java_src)
+        self.assertNotIn("private final @Nullable Material mMaterial;", java_src)
+        self.assertIn("private final long mNativeMaterial;", java_src)
+
+        # 2. Canonical constructor accepts null and resolves the native pointer through JNI if
+        #    needed, plus a single-argument package constructor
+        self.assertIn("CustomInstance(long nativeObject, @Nullable Material material) {", java_src)
+        self.assertIn(
+            "        mNativeMaterial = material != null ? material.getNativeObject() : nGetMaterial(nativeObject);",
+            java_src)
+        self.assertIn("/* package */ CustomInstance(long nativeObject) {\n        this(nativeObject, null);", java_src)
+        self.assertIn("public static CustomInstance wrap(long nativeObject) {", java_src)
+
+        # 3. Getter honors C++ nullability and lazily wraps the stored native pointer
+        self.assertIn(
+            "    @NonNull\n"
+            "    public Material getMaterial() {\n"
+            "        if (mMaterial == null) {\n"
+            "            if (mNativeMaterial == 0) throw new IllegalStateException(\"Couldn't get Material\");\n"
+            "            mMaterial = new Material(mNativeMaterial);\n"
+            "        }\n"
+            "        return mMaterial;\n"
+            "    }",
+            java_src)
+
+        # 4. Native declaration and JNI bridge are emitted
+        self.assertIn("private static native long nGetMaterial(long nativeCustomInstance);", java_src)
+        jni_src = JniEmitter(ctx).generate_jni()
+        self.assertIn("Java_com_google_android_filament_CustomInstance_nGetMaterial", jni_src)
+        self.assertIn("->getMaterial()", jni_src)
+
     def test_handle_wrap_factory_and_package_private_constructor(self):
         """Verify that handle classes generate package-private constructors and @RestrictTo wrap factories."""
         from tools.apigen.javagen import JavaEmitter, ClassContext
@@ -3711,6 +3795,30 @@ class TestJavaGen(unittest.TestCase):
             err_cats = [e.category for e in res.errors]
             self.assertIn("reflection", err_cats)
 
+            # Case 4: Reflection GetFieldID / GetMethodID missing @UsedByNative
+            (j_dir / "TestUsedByNative.java").write_text(
+                "package com.google.android.filament;\n"
+                "public class TestUsedByNative {\n"
+                "    public int unannotatedField;\n"
+                "    public void unannotatedMethod() {}\n"
+                "}\n"
+            )
+            (c_dir / "TestUsedByNative.cpp").write_text(
+                '#include <jni.h>\n'
+                'void test(JNIEnv* env) {\n'
+                '    jclass clazz = env->FindClass("com/google/android/filament/TestUsedByNative");\n'
+                '    env->GetFieldID(clazz, "unannotatedField", "I");\n'
+                '    env->GetMethodID(clazz, "unannotatedMethod", "()V");\n'
+                '}\n'
+            )
+            val = BindingValidator(tmp_path / "java", c_dir, target_classes={"TestUsedByNative"})
+            res = val.run()
+            self.assertFalse(res.is_clean)
+            err_msgs = "\n".join(e.message for e in res.errors)
+            self.assertIn("unannotatedField", err_msgs)
+            self.assertIn("unannotatedMethod", err_msgs)
+            self.assertIn("missing @UsedByNative", err_msgs)
+
     def test_generic_standalone_pojo_struct_getter(self):
         """Verify standalone zero-argument POJO struct getters generate cached fields, lazy getters, and skip JNI."""
         from tools.apigen.javagen import ClassContext, JavaEmitter, JniEmitter
@@ -3958,6 +4066,130 @@ class TestJavaGen(unittest.TestCase):
         cpp_src = JniEmitter(ctx).generate_jni()
         self.assertIn("nGetDummyManager", cpp_src)
         self.assertIn("(jlong)&(that->getDummyManager())", cpp_src)
+
+    def test_deprecated_annotations_fixture(self):
+        """Verify C++ @deprecated documentation annotations generate @Deprecated Java annotations end-to-end."""
+        header_file = self.test_dir / "27_deprecated.h"
+        json_file = self.test_dir / "27_deprecated.json"
+        self.assertTrue(header_file.exists(), "27_deprecated.h fixture not found")
+        self.assertTrue(json_file.exists(), "27_deprecated.json fixture not found")
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            extracted_json = Path(tmp_dir) / "extracted.json"
+            repo_root = Path(__file__).parent.parent.parent.parent
+            ext_res = subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(__file__).parent.parent / "extractor.py"),
+                    str(header_file),
+                    "-I", str(repo_root / "filament/include"),
+                    "-I", str(repo_root / "libs/utils/include"),
+                    "-I", str(repo_root / "libs/math/include"),
+                    "-I", str(repo_root / "filament/backend/include"),
+                    "-o", str(extracted_json),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(ext_res.returncode, 0, f"extractor failed: {ext_res.stderr}")
+
+            res = subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(__file__).parent.parent / "javagen.py"),
+                    "--java-dir", tmp_dir,
+                    "--jni-dir", tmp_dir,
+                    str(extracted_json),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(res.returncode, 0, f"javagen failed: {res.stderr}")
+
+            java_src = (Path(tmp_dir) / "DeprecatedTest.java").read_text()
+            cpp_src = (Path(tmp_dir) / "DeprecatedTest.cpp").read_text()
+
+            expected_java = (self.test_dir / "27_deprecated.java").read_text()
+            expected_cpp = (self.test_dir / "27_deprecated.cpp").read_text()
+
+            self.assertEqual(java_src, expected_java)
+            self.assertEqual(cpp_src, expected_cpp)
+
+            # Explicitly validate @Deprecated placement on class, enums, entries, builder, overloads, and fields
+            self.assertIn("@Deprecated\npublic class DeprecatedTest {", java_src)
+            self.assertIn("    @Deprecated\n    public enum LegacyMode {", java_src)
+            self.assertIn("        /** Non-deprecated entry inside a deprecated enum. */\n        FAST,", java_src)
+            self.assertIn("        @Deprecated\n        SLOW;", java_src)
+            self.assertIn("        @Deprecated\n        MEDIUM,", java_src)
+            self.assertIn("        /** High quality. */\n        HIGH;", java_src)
+            self.assertIn("        @Deprecated\n        public enum BuilderFlag {", java_src)
+            self.assertIn("            @Deprecated\n            LEGACY;", java_src)
+            self.assertIn("        @Deprecated\n        @NonNull\n        public Builder legacyOption(int value) {", java_src)
+            self.assertIn("        @NonNull\n        public Builder modernOption(int value) {", java_src)
+            self.assertIn("        @Deprecated\n        @NonNull\n        public DeprecatedTest build(@NonNull Engine engine) {", java_src)
+            self.assertIn("    @Deprecated\n    public void legacyMethod() {", java_src)
+            self.assertIn("    /** Active non-deprecated instance method. */\n    public void modernMethod() {", java_src)
+            self.assertIn("    @Deprecated\n    public void legacyMethodWithDefaults() {", java_src)
+            self.assertIn("    @Deprecated\n    public void legacyMethodWithDefaults(int count) {", java_src)
+            self.assertIn("    @Deprecated\n    public void legacyMethodWithDefaults(int count, float factor) {", java_src)
+            self.assertIn("    @Deprecated\n    public void legacyVectorMethod(float valuex, float valuey, float valuez) {", java_src)
+            self.assertIn("    @Deprecated\n    public void legacyVectorMethod(@NonNull @Size(min = 3) float[] value) {", java_src)
+            self.assertIn("    @Deprecated\n    public static int legacyStaticMethod(int x) {", java_src)
+            self.assertIn("    @Deprecated\n    public static class LegacyOptions {", java_src)
+            self.assertIn("        @Deprecated\n        public float legacyScale = 1.0f;", java_src)
+            self.assertIn("        public boolean enabled = true;", java_src)
+
+    def test_material_builder_filamat_generation(self):
+        """Verify end-to-end extraction and generation of MaterialBuilder for filamat-android."""
+        repo_root = Path(__file__).parent.parent.parent.parent
+        header_file = repo_root / "libs/filamat/include/filamat/MaterialBuilder.h"
+        self.assertTrue(header_file.exists(), "MaterialBuilder.h not found")
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            extracted_json = Path(tmp_dir) / "MaterialBuilder.json"
+            ext_res = subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(__file__).parent.parent / "extractor.py"),
+                    str(header_file),
+                    "-o", str(extracted_json),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(ext_res.returncode, 0, f"extractor failed: {ext_res.stderr}")
+
+            res = subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(__file__).parent.parent / "javagen.py"),
+                    "--java-dir", tmp_dir,
+                    "--jni-dir", tmp_dir,
+                    "--class-name", "MaterialBuilder",
+                    str(extracted_json),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(res.returncode, 0, f"javagen failed: {res.stderr}")
+
+            java_src = (Path(tmp_dir) / "MaterialBuilder.java").read_text()
+            cpp_src = (Path(tmp_dir) / "MaterialBuilder.cpp").read_text()
+
+            self.assertIn("package com.google.android.filament.filamat;", java_src)
+            self.assertIn('System.loadLibrary("filamat-jni");', java_src)
+            self.assertIn("public MaterialBuilder()", java_src)
+            self.assertIn("public static void init()", java_src)
+            self.assertIn("public static void shutdown()", java_src)
+            self.assertIn("public MaterialBuilder name(@NonNull String name)", java_src)
+            self.assertIn("public MaterialPackage build(@Nullable Object jobSystemProvider)", java_src)
+            self.assertIn("public MaterialBuilder constant(@NonNull String name, @NonNull ConstantType type, int defaultValue)", java_src)
+            self.assertIn("public MaterialBuilder constant(@NonNull String name, @NonNull ConstantType type, float defaultValue)", java_src)
+            self.assertIn("public MaterialBuilder constant(@NonNull String name, @NonNull ConstantType type, boolean defaultValue)", java_src)
+            self.assertIn("using namespace filamat;", cpp_src)
+            self.assertIn("Java_com_google_android_filament_filamat_MaterialBuilder_nCreateMaterialBuilder", cpp_src)
+            self.assertIn("Java_com_google_android_filament_filamat_MaterialBuilder_nBuilderBuild", cpp_src)
+            self.assertIn("that->groupSize(uint3{(uint32_t)groupSizex, (uint32_t)groupSizey, (uint32_t)groupSizez});", cpp_src)
 
 
 if __name__ == "__main__":

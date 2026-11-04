@@ -250,8 +250,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                     app->spheres.back().setRadius(0.025f).setPosition(lcm.getPosition(instance));
 
                     auto mi = app->spheres.back().getMaterialInstance();
-                    mi->setParameter("baseColor", RgbaType::LINEAR,
-                            LinearColorA{ lcm.getColor(instance), 100.0f });
+                    mi->setParameter("baseColor", RgbType::LINEAR, lcm.getColor(instance));
                     mi->setParameter("roughness", 0.2f);
                     mi->setParameter("metallic", 0.0f);
                 }
@@ -292,7 +291,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
             app->spheres.emplace_back(*engine, app->filamentApp->getDefaultMaterial());
             app->spheres.back().setRadius(0.2f);
             auto mi = app->spheres.back().getMaterialInstance();
-            mi->setParameter("baseColor", RgbaType::LINEAR, LinearColorA{ 1, 1, 1, 1 });
+            mi->setParameter("baseColor", RgbType::LINEAR, LinearColor{ 1, 1, 1 });
             mi->setParameter("roughness", 0.01f);
             mi->setParameter("metallic", 1.0f);
             scene->addEntity(app->spheres.back().getSolidRenderable());

@@ -75,7 +75,6 @@ set(SRCS
         src/architecture.cpp
         src/ashmem.cpp
         src/debug.cpp
-        src/debug/Mutex.cpp
         src/Allocator.cpp
         src/AsyncJobQueue.cpp
         src/CallStack.cpp
@@ -104,6 +103,10 @@ set(SRCS
         src/PagedArenaBitset.cpp
         src/PagedArenaBitsetPool.cpp
 )
+
+if (FILAMENT_DEBUG_MUTEX)
+    list(APPEND SRCS src/debug/Mutex.cpp)
+endif()
 
 if (WIN32)
     list(APPEND SRCS src/win32/Path.cpp)
@@ -171,6 +174,17 @@ if (LINUX)
     target_link_libraries(${TARGET} PRIVATE dl)
 endif()
 
+if (NOT MSVC)
+    target_compile_options(${TARGET} PRIVATE
+        $<$<CONFIG:Release>:-fvisibility-inlines-hidden>
+    )
+    if (NOT WASM AND NOT FILAMENT_USING_GCC)
+        target_compile_options(${TARGET} PRIVATE
+            $<$<CONFIG:Release>:-fstrict-vtable-pointers>
+        )
+    endif()
+endif()
+
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(${TARGET} PRIVATE -Wthread-safety)
 endif()
@@ -213,6 +227,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_FixedCircularBuffer.cpp
             test/test_Hash.cpp
             test/test_InternPool.cpp
+            test/test_InternalDebugRegistry.cpp
             test/test_LruCache.cpp
             test/test_JobSystem.cpp
             test/test_MonotonicRingMap.cpp
@@ -231,6 +246,10 @@ if (FILAMENT_BUILD_TESTING)
             test/test_Mutex.cpp
             test/test_ThreadMap.cpp
     )
+
+    if (NOT FILAMENT_DEBUG_MUTEX)
+        list(APPEND TEST_SRCS src/debug/Mutex.cpp)
+    endif()
 
     if (WASM_PTHREADS)
         target_compile_definitions(${TARGET} PUBLIC -DFILAMENT_WASM_THREADS)
@@ -268,7 +287,8 @@ if (FILAMENT_BUILD_TESTING AND NOT WASM)
             benchmark/benchmark_mutex.cpp
             benchmark/benchmark_memcpy.cpp
             benchmark/benchmark_EntitySet.cpp
-            benchmark/benchmark_EntityManager.cpp)
+            benchmark/benchmark_EntityManager.cpp
+            benchmark/benchmark_SingleInstanceComponentManager.cpp)
 
 
     add_executable(benchmark_${TARGET} ${BENCHMARK_SRCS})

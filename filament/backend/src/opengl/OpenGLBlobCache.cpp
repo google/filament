@@ -48,9 +48,7 @@ GLuint OpenGLBlobCache::retrieve(BlobCacheKey* outKey, Platform& platform,
     GLuint programId = 0;
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-    // TODO(exv): Don't copy these spec constants!
-    BlobCacheKey::SpecializationConstants constants(program.getSpecializationConstants());
-    BlobCacheKey key{ program.getCacheId(), std::move(constants) };
+    BlobCacheKey key{ program.getCacheId(), program.getSpecializationConstants() };
 
     // FIXME: use a static buffer to avoid systematic allocation
     // always attempt with 64 KiB

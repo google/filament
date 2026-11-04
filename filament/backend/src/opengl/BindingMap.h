@@ -84,12 +84,19 @@ public:
         mActiveDescriptors[set].set(binding);
     }
 
-    // `binding` must be a bit set in getActiveDescriptors(set), which insert() guarantees is
+    // In both get() and isSampler(), `set` is bounded by MAX_DESCRIPTOR_SET_COUNT by the caller
+    // and `binding` must be a bit set in getActiveDescriptors(set), which insert() guarantees is
     // always less than MAX_DESCRIPTOR_COUNT (== bitset64::BIT_COUNT).
     GLuint get(descriptor_set_t set, descriptor_binding_t binding) const noexcept {
         assert_invariant(set < MAX_DESCRIPTOR_SET_COUNT);
         assert_invariant(binding < MAX_DESCRIPTOR_COUNT);
         return mStorage[set][binding].binding;
+    }
+
+    bool isSampler(descriptor_set_t set, descriptor_binding_t binding) const noexcept {
+        assert_invariant(set < MAX_DESCRIPTOR_SET_COUNT);
+        assert_invariant(binding < MAX_DESCRIPTOR_COUNT);
+        return bool(mStorage[set][binding].sampler);
     }
 
     utils::bitset64 getActiveDescriptors(descriptor_set_t set) const noexcept {

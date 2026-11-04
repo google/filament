@@ -69,16 +69,26 @@ public class RemoteServer {
      * Pops a message off the incoming queue or returns null if there are no unread messages.
      */
     public @Nullable ReceivedMessage acquireReceivedMessage() {
-        int length = nPeekReceivedBufferLength(mNativeObject);
-        if (length == 0) {
+        // Pop the message off the queue first. Once acquired, the native message is owned by us
+        // and can no longer be modified or freed by the network thread.
+        long nativeMessage = nAcquireReceivedMessage(mNativeObject);
+        if (nativeMessage == 0) {
             return null;
         }
-        ReceivedMessage message = new ReceivedMessage();
-        message.label = nPeekReceivedLabel(mNativeObject);
-        message.buffer = ByteBuffer.allocateDirect(length);
-        message.buffer.order(ByteOrder.LITTLE_ENDIAN);
-        nAcquireReceivedMessage(mNativeObject, message.buffer, length);
-        return message;
+        try {
+            int length = nGetReceivedBufferLength(nativeMessage);
+            if (length <= 0) {
+                return null;
+            }
+            ReceivedMessage message = new ReceivedMessage();
+            message.label = nGetReceivedLabel(nativeMessage);
+            message.buffer = ByteBuffer.allocateDirect(length);
+            message.buffer.order(ByteOrder.LITTLE_ENDIAN);
+            nCopyReceivedBuffer(nativeMessage, message.buffer);
+            return message;
+        } finally {
+            nReleaseReceivedMessage(mNativeObject, nativeMessage);
+        }
     }
 
     /*
@@ -99,8 +109,10 @@ public class RemoteServer {
 
     private static native long nCreate(int port);
     private static native String nPeekIncomingLabel(long nativeObject);
-    private static native String nPeekReceivedLabel(long nativeObject);
-    private static native int nPeekReceivedBufferLength(long nativeObject);
-    private static native void nAcquireReceivedMessage(long nativeObject, ByteBuffer buffer, int length);
+    private static native long nAcquireReceivedMessage(long nativeObject);
+    private static native String nGetReceivedLabel(long nativeMessage);
+    private static native int nGetReceivedBufferLength(long nativeMessage);
+    private static native void nCopyReceivedBuffer(long nativeMessage, ByteBuffer buffer);
+    private static native void nReleaseReceivedMessage(long nativeObject, long nativeMessage);
     private static native void nDestroy(long nativeObject);
 }

@@ -64,6 +64,12 @@ Generally, adding lights to the scene hurts performance, however filament is des
 1. Prefer spot lights to point lights and use the smallest outer cone angle possible.
 2. Use the smallest possible falloff distance for point and spot lights. Performance is very sensitive to overlapping lights. The falloff distance essentially defines a sphere of influence for the light, so try to position point and spot lights such that they don't overlap too much. On the other hand, a scene can contain hundreds of non overlapping lights without incurring a significant overhead.
 
+# Instance lifetime
+
+An Instance is a transient handle: Instances are not stable when a component is added, removed or gc() is called on a component manager.
+
+Instances must therefore not be kept across frames. Keep the Entity instead, and call getInstance() again when needed; it is a fast lookup. Using a stale Instance doesn't crash but silently accesses the wrong component.
+
 #### See also
 
 | |

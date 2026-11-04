@@ -17,10 +17,10 @@
 #ifndef TNT_IBL_PREFILTER_IBLPREFILTER_H
 #define TNT_IBL_PREFILTER_IBLPREFILTER_H
 
+#include <filament/Texture.h>
+
 #include <utils/compiler.h>
 #include <utils/Entity.h>
-
-#include <filament/Texture.h>
 
 namespace filament {
 class Engine;
@@ -130,8 +130,16 @@ public:
          * @return returns outCubemap
          */
         filament::Texture* operator()(
-                filament::Texture const* equirectangular,
+                filament::Texture* equirectangular,
                 filament::Texture* outCubemap = nullptr);
+
+        /** @deprecated Use non-const equirectangular Texture* overload instead. */
+        UTILS_DEPRECATED
+        filament::Texture* operator()(
+                filament::Texture const* equirectangular,
+                filament::Texture* outCubemap = nullptr) {
+            return operator()(const_cast<filament::Texture*>(equirectangular), outCubemap);
+        }
 
     private:
         IBLPrefilterContext& mContext;
@@ -205,8 +213,17 @@ public:
          * @return returns outIrradianceTexture
          */
         filament::Texture* operator()(Options options,
-                filament::Texture const* environmentCubemap,
+                filament::Texture* environmentCubemap,
                 filament::Texture* outIrradianceTexture = nullptr);
+
+        /** @deprecated Use non-const environmentCubemap Texture* overload instead. */
+        UTILS_DEPRECATED
+        filament::Texture* operator()(Options options,
+                filament::Texture const* environmentCubemap,
+                filament::Texture* outIrradianceTexture = nullptr) {
+            return operator()(options, const_cast<filament::Texture*>(environmentCubemap),
+                    outIrradianceTexture);
+        }
 
         /**
          * Generates a prefiltered cubemap.
@@ -223,8 +240,17 @@ public:
          * @return returns outReflectionsTexture
          */
         filament::Texture* operator()(
-                filament::Texture const* environmentCubemap,
+                filament::Texture* environmentCubemap,
                 filament::Texture* outIrradianceTexture = nullptr);
+
+        /** @deprecated Use non-const environmentCubemap Texture* overload instead. */
+        UTILS_DEPRECATED
+        filament::Texture* operator()(
+                filament::Texture const* environmentCubemap,
+                filament::Texture* outIrradianceTexture = nullptr) {
+            return operator()(const_cast<filament::Texture*>(environmentCubemap),
+                    outIrradianceTexture);
+        }
 
     private:
         IBLPrefilterContext& mContext;
@@ -300,8 +326,17 @@ public:
          * @return returns outReflectionsTexture
          */
         filament::Texture* operator()(Options options,
-                filament::Texture const* environmentCubemap,
+                filament::Texture* environmentCubemap,
                 filament::Texture* outReflectionsTexture = nullptr);
+
+        /** @deprecated Use non-const environmentCubemap Texture* overload instead. */
+        UTILS_DEPRECATED
+        filament::Texture* operator()(Options options,
+                filament::Texture const* environmentCubemap,
+                filament::Texture* outReflectionsTexture = nullptr) {
+            return operator()(options, const_cast<filament::Texture*>(environmentCubemap),
+                    outReflectionsTexture);
+        }
 
         /**
          * Generates a prefiltered cubemap.
@@ -316,8 +351,17 @@ public:
          * @return returns outReflectionsTexture
          */
         filament::Texture* operator()(
-                filament::Texture const* environmentCubemap,
+                filament::Texture* environmentCubemap,
                 filament::Texture* outReflectionsTexture = nullptr);
+
+        /** @deprecated Use non-const environmentCubemap Texture* overload instead. */
+        UTILS_DEPRECATED
+        filament::Texture* operator()(
+                filament::Texture const* environmentCubemap,
+                filament::Texture* outReflectionsTexture = nullptr) {
+            return operator()(const_cast<filament::Texture*>(environmentCubemap),
+                    outReflectionsTexture);
+        }
 
         // TODO: option for progressive filtering
 

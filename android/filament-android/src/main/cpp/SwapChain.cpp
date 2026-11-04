@@ -32,19 +32,19 @@ using namespace utils;
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_SwapChain_nIsProtectedContentSupported(JNIEnv *env, jclass clazz, jlong nativeEngine) {
-    Engine* const engine = (Engine*) nativeEngine;
+    Engine const* const engine = (Engine const*) nativeEngine;
     return (jboolean)SwapChain::isProtectedContentSupported(*engine);
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_SwapChain_nIsSRGBSwapChainSupported(JNIEnv *env, jclass clazz, jlong nativeEngine) {
-    Engine* const engine = (Engine*) nativeEngine;
+    Engine const* const engine = (Engine const*) nativeEngine;
     return (jboolean)SwapChain::isSRGBSwapChainSupported(*engine);
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_SwapChain_nIsMSAASwapChainSupported(JNIEnv *env, jclass clazz, jlong nativeEngine, jint samples) {
-    Engine* const engine = (Engine*) nativeEngine;
+    Engine const* const engine = (Engine const*) nativeEngine;
     return (jboolean)SwapChain::isMSAASwapChainSupported(*engine, (uint32_t)samples);
 }
 

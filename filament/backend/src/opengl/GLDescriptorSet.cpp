@@ -50,13 +50,16 @@ namespace filament::backend {
 
 GLDescriptorSet::GLDescriptorSet(OpenGLState& gl, DescriptorSetLayoutHandle dslh,
         GLDescriptorSetLayout const* layout)
-        : descriptors(layout->maxDescriptorBinding + 1),
+        : descriptors(layout->descriptors.empty() ? 0 : layout->maxDescriptorBinding + 1),
           dslh(std::move(dslh)) {
 
     // We have allocated enough storage for all descriptors. Now allocate the empty descriptor
     // themselves.
     for (auto const& entry : layout->descriptors) {
         size_t const index = entry.binding;
+        if (UTILS_VERY_UNLIKELY(index >= descriptors.size())) {
+            continue;
+        }
 
         // now we'll initialize the alternative for each way we can handle this descriptor.
         auto& desc = descriptors[index].desc;
@@ -64,7 +67,8 @@ GLDescriptorSet::GLDescriptorSet(OpenGLState& gl, DescriptorSetLayoutHandle dslh
             case DescriptorType::UNIFORM_BUFFER: {
                 // A uniform buffer can have dynamic offsets or not and have special handling for
                 // ES2 (where we need to emulate it). That's four alternatives.
-                bool const dynamicOffset = any(entry.flags & DescriptorFlags::DYNAMIC_OFFSET);
+                bool const dynamicOffset = any(entry.flags & DescriptorFlags::DYNAMIC_OFFSET) &&
+                        dynamicBufferCount < CONFIG_UNIFORM_BINDING_COUNT;
                 dynamicBuffers.set(index, dynamicOffset);
                 if (UTILS_UNLIKELY(gl.isES2())) {
                     if (dynamicOffset) {
@@ -84,7 +88,8 @@ GLDescriptorSet::GLDescriptorSet(OpenGLState& gl, DescriptorSetLayoutHandle dslh
             }
             case DescriptorType::SHADER_STORAGE_BUFFER: {
                 // shader storage buffers are not supported on ES2, So that's two alternatives.
-                bool const dynamicOffset = any(entry.flags & DescriptorFlags::DYNAMIC_OFFSET);
+                bool const dynamicOffset = any(entry.flags & DescriptorFlags::DYNAMIC_OFFSET) &&
+                        dynamicBufferCount < CONFIG_UNIFORM_BINDING_COUNT;
                 dynamicBuffers.set(index, dynamicOffset);
                 auto const type = GLUtils::getBufferBindingType(BufferObjectBinding::SHADER_STORAGE);
                 if (dynamicOffset) {
@@ -144,6 +149,9 @@ GLDescriptorSet::GLDescriptorSet(OpenGLState& gl, DescriptorSetLayoutHandle dslh
 void GLDescriptorSet::update(OpenGLState&,
         descriptor_binding_t binding, GLBufferObject* bo, size_t offset, size_t size) noexcept {
     assert_invariant(binding < descriptors.size());
+    if (UTILS_VERY_UNLIKELY(binding >= descriptors.size())) {
+        return;
+    }
     std::visit([=](auto&& arg) {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, Buffer> || std::is_same_v<T, DynamicBuffer>) {
@@ -169,6 +177,9 @@ void GLDescriptorSet::update(OpenGLState& gl, HandleAllocatorGL& handleAllocator
     GLTexture* t = th ? handleAllocator.handle_cast<GLTexture*>(th) : nullptr;
 
     assert_invariant(binding < descriptors.size());
+    if (UTILS_VERY_UNLIKELY(binding >= descriptors.size())) {
+        return;
+    }
     std::visit([=, &gl](auto&& arg) mutable {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, Sampler> ||
@@ -285,8 +296,9 @@ void GLDescriptorSet::bind(
     // are never cross-validated. A broken or malicious material can therefore declare a
     // binding in the program that doesn't exist in this set, which would index `descriptors`
     // out-of-bounds below and std::visit() a variant read out of bounds. Drop those bindings.
-    // `descriptors` holds maxDescriptorBinding + 1 entries, i.e. 1 to MAX_DESCRIPTOR_COUNT of
-    // them; the full-width case is special-cased because a 64-bit shift would be UB.
+    // `descriptors` holds maxDescriptorBinding + 1 entries (or 0 if the layout is empty), i.e.
+    // 0 to MAX_DESCRIPTOR_COUNT of them; the full-width case is special-cased because a 64-bit
+    // shift would be UB.
     assert_invariant(descriptors.size() <= utils::bitset64::BIT_COUNT);
     uint64_t const existingBindings = descriptors.size() >= utils::bitset64::BIT_COUNT
             ? ~uint64_t(0) : (uint64_t(1) << descriptors.size()) - uint64_t(1);
@@ -300,33 +312,45 @@ void GLDescriptorSet::bind(
         // This would fail here if we're trying to set a descriptor that doesn't exist in the
         // program. In other words, a mismatch between the program's layout and this descriptor-set.
         assert_invariant(binding < descriptors.size());
+        if (UTILS_VERY_UNLIKELY(binding >= descriptors.size())) {
+            return;
+        }
 
         auto const& entry = descriptors[binding];
         std::visit(
                 [&gl, &handleAllocator, &p, &dynamicOffsetIndex, set, binding, offsets]
                 (auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, Buffer>) {
-                GLuint const bindingPoint = p.getBufferBinding(set, binding);
-                GLintptr const offset = arg.offset;
-                assert_invariant(arg.id || (!arg.size && !offset));
-                gl.bindBufferRange(arg.target, bindingPoint, arg.id, offset, arg.size);
+            if constexpr (std::is_same_v<T, std::monostate>) {
+                // Unpopulated slot in a sparse or empty descriptor set layout.
+            } else if constexpr (std::is_same_v<T, Buffer>) {
+                if (UTILS_VERY_LIKELY(!p.isSampler(set, binding))) {
+                    GLuint const bindingPoint = p.getBufferBinding(set, binding);
+                    GLintptr const offset = arg.offset;
+                    assert_invariant(arg.id || (!arg.size && !offset));
+                    gl.bindBufferRange(arg.target, bindingPoint, arg.id, offset, arg.size);
+                }
             } else if constexpr (std::is_same_v<T, DynamicBuffer>) {
-                GLuint const bindingPoint = p.getBufferBinding(set, binding);
                 GLintptr const offset = arg.offset + offsets[dynamicOffsetIndex++];
-                assert_invariant(arg.id || (!arg.size && !offset));
-                gl.bindBufferRange(arg.target, bindingPoint, arg.id, offset, arg.size);
+                if (UTILS_VERY_LIKELY(!p.isSampler(set, binding))) {
+                    GLuint const bindingPoint = p.getBufferBinding(set, binding);
+                    assert_invariant(arg.id || (!arg.size && !offset));
+                    gl.bindBufferRange(arg.target, bindingPoint, arg.id, offset, arg.size);
+                }
             } else if constexpr (std::is_same_v<T, BufferGLES2>) {
-                GLuint const bindingPoint = p.getBufferBinding(set, binding);
                 GLintptr offset = arg.offset;
                 if (arg.dynamicOffset) {
                     offset += offsets[dynamicOffsetIndex++];
                 }
-                if (arg.bo) {
+                if (arg.bo && UTILS_VERY_LIKELY(!p.isSampler(set, binding))) {
+                    GLuint const bindingPoint = p.getBufferBinding(set, binding);
                     p.updateUniforms(bindingPoint, arg.bo->gl.id, arg.bo->gl.buffer,
                             arg.bo->byteCount, arg.bo->age, offset);
                 }
             } else if constexpr (std::is_same_v<T, Sampler>) {
+                if (UTILS_VERY_UNLIKELY(!p.isSampler(set, binding))) {
+                    return;
+                }
                 GLuint const unit = p.getTextureUnit(set, binding);
                 if (arg.handle) {
                     GLTexture const* const t = handleAllocator.handle_cast<GLTexture*>(arg.handle);
@@ -339,6 +363,9 @@ void GLDescriptorSet::bind(
                     gl.unbindTextureUnit(unit);
                 }
             } else if constexpr (std::is_same_v<T, SamplerWithAnisotropyWorkaround>) {
+                if (UTILS_VERY_UNLIKELY(!p.isSampler(set, binding))) {
+                    return;
+                }
                 GLuint const unit = p.getTextureUnit(set, binding);
                 if (arg.handle) {
                     GLTexture const* const t = handleAllocator.handle_cast<GLTexture*>(arg.handle);
@@ -357,6 +384,9 @@ void GLDescriptorSet::bind(
                     gl.unbindTextureUnit(unit);
                 }
             } else if constexpr (std::is_same_v<T, SamplerGLES2>) {
+                if (UTILS_VERY_UNLIKELY(!p.isSampler(set, binding))) {
+                    return;
+                }
                 // in ES2 the sampler parameters need to be set on the texture itself
                 GLuint const unit = p.getTextureUnit(set, binding);
                 if (arg.handle) {
@@ -431,7 +461,7 @@ void GLDescriptorSet::validate(HandleAllocatorGL& allocator,
         UTILS_UNUSED_IN_RELEASE
         bool const pipelineLayoutMatchesDescriptorSetLayout = std::equal(
                 dsl->descriptors.begin(), dsl->descriptors.end(),
-                cur->descriptors.begin(),
+                cur->descriptors.begin(), cur->descriptors.end(),
                 [](DescriptorSetLayoutDescriptor const& lhs,
                         DescriptorSetLayoutDescriptor const& rhs) {
                     return lhs.type == rhs.type &&

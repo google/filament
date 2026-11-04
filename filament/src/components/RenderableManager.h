@@ -41,6 +41,7 @@
 #include <math/mat4.h>
 
 #include <algorithm>
+#include <utility>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -76,6 +77,9 @@ public:
         bool reversedWindingOrder       : 1;
         bool fog                        : 1;
         GeometryType geometryType       : 2;
+        // Per-View transient, always false in the component. FView::prepare() sets it in the
+        // View's SoA copy for every visible renderable when motion vectors are active.
+        bool motionMoved                : 1;
     };
 
     struct Skinning {
@@ -175,6 +179,14 @@ public:
     void flushNotifications() noexcept {
         mManager.flushNotifications();
     }
+    void registerBitset(utils::PagedArenaBitset* bitset,
+            utils::PagedArenaBitset const* filter = nullptr) {
+        mManager.registerBitset(bitset, filter);
+    }
+    void unregisterBitset(utils::PagedArenaBitset const* bitset) {
+        mManager.unregisterBitset(bitset);
+    }
+
     void setBones(Instance instance, Bone const* transforms, size_t boneCount, size_t offset = 0);
     void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount, size_t offset = 0);
     void setSkinningBuffer(Instance instance, FSkinningBuffer const* skinningBuffer,
@@ -234,6 +246,7 @@ public:
     size_t getLevelCount(Instance) const noexcept { return 1u; }
     size_t getPrimitiveCount(Instance instance, uint8_t level) const noexcept;
     size_t getInstanceCount(Instance instance) const noexcept;
+    void setInstanceCount(Instance instance, size_t instanceCount);
     void setMaterialInstanceAt(Instance instance, uint8_t level,
             size_t primitiveIndex, FMaterialInstance const* mi);
     void clearMaterialInstanceAt(Instance instance, uint8_t level, size_t primitiveIndex);
@@ -255,8 +268,8 @@ public:
     struct Entry {
         VertexBuffer* vertices = nullptr;
         IndexBuffer* indices = nullptr;
-        uint32_t offset = 0;
-        uint32_t count = 0;
+        size_t offset = 0;
+        size_t count = 0;
         MaterialInstance const* materialInstance = nullptr;
         PrimitiveType type = PrimitiveType::TRIANGLES;
         uint16_t blendOrder = 0;

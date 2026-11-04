@@ -22,6 +22,10 @@ namespace test {
 
 SkipEnvironment::SkipEnvironment(test::Backend backend) : backend(backend) {}
 SkipEnvironment::SkipEnvironment(test::OperatingSystem os) : os(os) {}
+SkipEnvironment::SkipEnvironment(Headless) : headless(true) {}
+SkipEnvironment::SkipEnvironment(Headless, test::Backend backend)
+    : backend(backend),
+      headless(true) {}
 SkipEnvironment::SkipEnvironment(test::OperatingSystem os, test::Backend backend)
     : backend(backend),
       os(os) {}
@@ -30,7 +34,8 @@ bool SkipEnvironment::matches() {
     bool backendMatches = !backend.has_value() || *backend == BackendTest::sBackend;
     bool osMatches = !os.has_value() || *os == BackendTest::sOperatingSystem;
     bool isMobileMatches = !isMobile.has_value() || *isMobile == BackendTest::sIsMobilePlatform;
-    return backendMatches && osMatches && isMobileMatches;
+    bool headlessMatches = !headless.has_value() || *headless == BackendTest::isHeadless();
+    return backendMatches && osMatches && isMobileMatches && headlessMatches;
 }
 
 std::string SkipEnvironment::describe() {
@@ -64,6 +69,13 @@ std::string SkipEnvironment::describe_actual_environment() {
             reality << ", and ";
         }
         reality << "device " << (BackendTest::sIsMobilePlatform ? "was" : "was not") << " mobile";
+        resultWritten = true;
+    }
+    if (headless.has_value()) {
+        if (resultWritten) {
+            reality << ", and ";
+        }
+        reality << "the run " << (BackendTest::isHeadless() ? "was" : "was not") << " headless";
     }
     return reality.str();
 }
@@ -87,6 +99,13 @@ std::string SkipEnvironment::describe_requirements() {
             requirement << ", and ";
         }
         requirement << "device needs to " << (*isMobile ? "be" : "not be") << " mobile";
+        resultWritten = true;
+    }
+    if (headless.has_value() && BackendTest::isHeadless() != headless) {
+        if (resultWritten) {
+            requirement << ", and ";
+        }
+        requirement << "the run needs to " << (*headless ? "be" : "not be") << " headless";
     }
     return requirement.str();
 }

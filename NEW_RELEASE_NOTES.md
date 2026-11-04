@@ -6,5 +6,6 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
-- build: Keep exceptions enabled for separately built host tools when `build.sh -E` disables exceptions for the target build.
-- vulkan: report depth and stencil render-target format support correctly
+- gltf: `KHR_materials_iridescence` is now supported
+- gltf: `KHR_materials_anisotropy` is now supported
+

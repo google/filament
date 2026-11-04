@@ -32,6 +32,18 @@ To ensure the security and integrity of our project automation and documentation
 - **`.github/`**: Modifications to CI/CD workflows and repository configuration are restricted to maintainers. Pull requests from external contributors touching this directory will be automatically closed. Please open an issue to discuss proposed changes to automation.
 - **`docs/`**: The documentation in the `/docs` directory is generated from source. Please make edits to the files in `docs_src/` instead.
 
+## Security Policy & Vulnerability Reporting
+
+Filament does **not** accept unsolicited pull requests for security vulnerabilities (including AI-generated patches or automated scanner findings). All unsolicited security pull requests will be closed without review.
+
+If you have discovered a potential security vulnerability, please file a GitHub issue according to our [Security Policy](/SECURITY.md).
+
+### Maintainer Response Template for Security PRs
+
+When closing an unsolicited or AI-generated security pull request, maintainers may use the following response:
+
+> Thank you for your interest in Filament. As outlined in our [Security Policy](/SECURITY.md), Filament does not accept unsolicited or AI-generated security pull requests, and they are closed without review. If you have identified a potential vulnerability, please open an issue describing the code location, vulnerability mechanism, and reproduction details.
+
 ## Code Style
 
 See [CODE_STYLE.md](/CODE_STYLE.md)

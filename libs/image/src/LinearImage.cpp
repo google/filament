@@ -20,9 +20,9 @@
 
 #include <cstdint>
 #include <cstring> // for memset
+#include <limits>
 #include <memory>
 #include <new>
-#include <limits>
 
 namespace image  {
 

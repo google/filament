@@ -21,6 +21,10 @@
 #include <filament/Material.h>
 #include <filament/RenderableManager.h>
 
+#include <backend/DriverEnums.h>
+
+#include <utils/Panic.h>
+
 #include <math/half.h>
 #include <math/mat3.h>
 #include <math/norm.h>
@@ -28,8 +32,10 @@
 #include <math/vec3.h>
 
 #include <gtest/gtest.h>
+#include <meshoptimizer.h>
 
 #include <sstream>
+#include <vector>
 
 using namespace filament;
 using namespace filamesh;
@@ -382,6 +388,277 @@ TEST_F(FilameshTest, InvalidIndexTypeRejected) {
     write(stream, matname.c_str(), matnamelength + 1);
 
     string serialized = stream.str();
+    MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
+
+    auto mesh = MeshReader::loadMeshFromBuffer(engine, serialized.data(), serialized.size(), nullptr, nullptr, mi);
+    EXPECT_EQ(mesh.vertexBuffer, nullptr);
+    EXPECT_EQ(mesh.indexBuffer, nullptr);
+
+    engine->destroy(mi);
+}
+
+// Non-interleaved single-triangle mesh whose index fields come from the caller.
+static string serializeWithIndices(uint32_t flags, IndexType indexType, uint32_t indexCount,
+        uint32_t indexSize, const void* indexData) {
+    const Header header {
+        .version = VERSION,
+        .parts = 1,
+        .aabb = unitBox,
+        .flags = flags,
+        .offsetTangents = sizeof(positions),
+        .offsetColor = sizeof(positions) + sizeof(tangents),
+        .offsetUV0 = sizeof(positions) + sizeof(tangents) + sizeof(colors),
+        .strideUV1 = maxint,
+        .vertexCount = vertexCount,
+        .vertexSize = sizeof(positions) + sizeof(tangents) + sizeof(colors) + sizeof(uv0),
+        .indexType = indexType,
+        .indexCount = indexCount,
+        .indexSize = indexSize
+    };
+    const uint32_t nmats = 1;
+    const string matname = "DefaultMaterial";
+    const uint32_t matnamelength = matname.size();
+
+    stringstream stream(ios_base::out);
+    write(stream, MAGICID, sizeof(MAGICID));
+    write(stream, &header, sizeof(header));
+    write(stream, positions, sizeof(positions));
+    write(stream, tangents, sizeof(tangents));
+    write(stream, colors, sizeof(colors));
+    write(stream, uv0, sizeof(uv0));
+    write(stream, (const char*) indexData, indexSize);
+    write(stream, parts, sizeof(parts));
+    write(stream, &nmats, sizeof(nmats));
+    write(stream, &matnamelength, sizeof(matnamelength));
+    write(stream, matname.c_str(), matnamelength + 1);
+    return stream.str();
+}
+
+TEST_F(FilameshTest, IndexSizeMismatchRejected) {
+    // Three UI16 indices take 6 bytes, but the header claims 8.
+    static const uint16_t paddedIndices[] = { 0, 1, 2, 0 };
+    string serialized = serializeWithIndices(0, IndexType::UI16, 3, sizeof(paddedIndices),
+            paddedIndices);
+    MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
+
+    auto mesh = MeshReader::loadMeshFromBuffer(engine, serialized.data(), serialized.size(), nullptr, nullptr, mi);
+    EXPECT_EQ(mesh.vertexBuffer, nullptr);
+    EXPECT_EQ(mesh.indexBuffer, nullptr);
+
+    engine->destroy(mi);
+}
+
+TEST_F(FilameshTest, IndexCountWrappingByteSizeRejected) {
+    // The byte size of this many UI32 indices does not fit in 32 bits.
+    static const uint32_t indices32[] = { 0, 1, 2 };
+    string serialized = serializeWithIndices(0, IndexType::UI32,
+            uint32_t(UINT32_MAX / sizeof(uint32_t) + 1), sizeof(indices32), indices32);
+    MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
+
+    auto mesh = MeshReader::loadMeshFromBuffer(engine, serialized.data(), serialized.size(), nullptr, nullptr, mi);
+    EXPECT_EQ(mesh.vertexBuffer, nullptr);
+    EXPECT_EQ(mesh.indexBuffer, nullptr);
+
+    engine->destroy(mi);
+}
+
+TEST_F(FilameshTest, CompressedIndexCountAboveMaxRejected) {
+    // A multiple of 3 above MAX_INDEX_COUNT. indexSize is not checked against it when compressed.
+    const uint32_t indexCount = 3u << 25;
+    ASSERT_GT(indexCount, backend::MAX_INDEX_COUNT);
+    string serialized = serializeWithIndices(COMPRESSION, IndexType::UI16, indexCount,
+            sizeof(indices), indices);
+    MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
+
+    auto mesh = MeshReader::loadMeshFromBuffer(engine, serialized.data(), serialized.size(), nullptr, nullptr, mi);
+    EXPECT_EQ(mesh.vertexBuffer, nullptr);
+    EXPECT_EQ(mesh.indexBuffer, nullptr);
+
+    engine->destroy(mi);
+}
+
+TEST_F(FilameshTest, PartOffsetIndexCountWrapRejected) {
+    constexpr uint32_t kIndexCount = 16;
+    const uint16_t sixteenIndices[kIndexCount] = {};
+    const Header header {
+        .version = VERSION,
+        .parts = 1,
+        .aabb = unitBox,
+        .flags = INTERLEAVED | TEXCOORD_SNORM16,
+        .offsetPosition = offsetof(InterleavedVertex, position),
+        .stridePosition = sizeof(InterleavedVertex),
+        .offsetTangents = offsetof(InterleavedVertex, tangent),
+        .strideTangents = sizeof(InterleavedVertex),
+        .offsetColor = offsetof(InterleavedVertex, color),
+        .strideColor = sizeof(InterleavedVertex),
+        .offsetUV0 = offsetof(InterleavedVertex, uv0),
+        .strideUV0 = sizeof(InterleavedVertex),
+        .offsetUV1 = maxint,
+        .strideUV1 = maxint,
+        .vertexCount = vertexCount,
+        .vertexSize = sizeof(interleavedVertices),
+        .indexType = IndexType::UI16,
+        .indexCount = kIndexCount,
+        .indexSize = sizeof(sixteenIndices)
+    };
+    // 0xFFFFFFF0 + 0x20 wraps modulo 2^32 to 0x10 (== kIndexCount).
+    const Part wrappingParts[1] { Part {
+        .offset = 0xFFFFFFF0u,
+        .indexCount = 0x20u,
+        .minIndex = 0,
+        .maxIndex = 2,
+        .material = 0,
+        .aabb = unitBox
+    }};
+    const uint32_t nmats = 1;
+    const string matname = "DefaultMaterial";
+    const uint32_t matnamelength = matname.size();
+
+    stringstream stream(ios_base::out);
+    write(stream, MAGICID, sizeof(MAGICID));
+    write(stream, &header, sizeof(header));
+    write(stream, interleavedVertices, sizeof(interleavedVertices));
+    write(stream, sixteenIndices, sizeof(sixteenIndices));
+    write(stream, wrappingParts, sizeof(wrappingParts));
+    write(stream, &nmats, sizeof(nmats));
+    write(stream, &matnamelength, sizeof(matnamelength));
+    write(stream, matname.c_str(), matnamelength + 1);
+
+    string serialized = stream.str();
+    MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
+
+#if GTEST_HAS_EXCEPTIONS
+    EXPECT_THROW(MeshReader::loadMeshFromBuffer(
+            engine, serialized.data(), serialized.size(), nullptr, nullptr, mi),
+            utils::PreconditionPanic);
+#else
+    EXPECT_DEATH(MeshReader::loadMeshFromBuffer(
+            engine, serialized.data(), serialized.size(), nullptr, nullptr, mi),
+            "offset \\(4294967280\\) \\+ count \\(32\\) > indexCount \\(16\\)");
+#endif
+
+    engine->destroy(mi);
+}
+
+// Appends one meshopt-encoded vertex stream and returns its size.
+static uint32_t appendEncodedStream(vector<uint8_t>& out, const void* data, size_t stride) {
+    vector<uint8_t> encoded(meshopt_encodeVertexBufferBound(vertexCount, stride));
+    encoded.resize(meshopt_encodeVertexBuffer(encoded.data(), encoded.size(), data, vertexCount,
+            stride));
+    out.insert(out.end(), encoded.begin(), encoded.end());
+    return uint32_t(encoded.size());
+}
+
+// Valid streams for the compressed non-interleaved layout, with uv0 reused as uv1 if requested.
+static vector<uint8_t> encodeStreams(CompressionHeader& sizes, bool withUV1) {
+    vector<uint8_t> streams;
+    sizes = {};
+    sizes.positions = appendEncodedStream(streams, positions, sizeof(half4));
+    sizes.tangents = appendEncodedStream(streams, tangents, sizeof(short4));
+    sizes.colors = appendEncodedStream(streams, colors, sizeof(ubyte4));
+    sizes.uv0 = appendEncodedStream(streams, uv0, sizeof(half2));
+    if (withUV1) {
+        sizes.uv1 = appendEncodedStream(streams, uv0, sizeof(half2));
+    }
+    return streams;
+}
+
+// Compressed non-interleaved single-triangle mesh, laid out the way MeshWriter emits it.
+// hasUV1 sets only the Header's UV1 attribute. The CompressionHeader comes from sizes.
+static string serializeCompressed(const CompressionHeader& sizes, const vector<uint8_t>& streams,
+        bool hasUV1) {
+    static const uint32_t indices32[] = { 0, 1, 2 };
+    vector<uint8_t> compressedIndices(meshopt_encodeIndexBufferBound(3, vertexCount));
+    compressedIndices.resize(meshopt_encodeIndexBuffer(compressedIndices.data(),
+            compressedIndices.size(), indices32, 3));
+
+    const uint32_t offsetUV0 = vertexCount * (sizeof(half4) + sizeof(short4) + sizeof(ubyte4));
+    const Header header {
+        .version = VERSION,
+        .parts = 1,
+        .aabb = unitBox,
+        .flags = COMPRESSION,
+        .offsetTangents = vertexCount * sizeof(half4),
+        .offsetColor = vertexCount * (sizeof(half4) + sizeof(short4)),
+        .offsetUV0 = offsetUV0,
+        .offsetUV1 = hasUV1 ? uint32_t(offsetUV0 + vertexCount * sizeof(half2)) : maxint,
+        .strideUV1 = hasUV1 ? 0 : maxint,
+        .vertexCount = vertexCount,
+        .vertexSize = uint32_t(sizeof(CompressionHeader) + streams.size()),
+        .indexType = IndexType::UI16,
+        .indexCount = 3,
+        .indexSize = uint32_t(compressedIndices.size())
+    };
+    const uint32_t nmats = 1;
+    const string matname = "DefaultMaterial";
+    const uint32_t matnamelength = matname.size();
+
+    stringstream stream(ios_base::out);
+    write(stream, MAGICID, sizeof(MAGICID));
+    write(stream, &header, sizeof(header));
+    write(stream, &sizes, sizeof(sizes));
+    write(stream, streams.data(), streams.size());
+    write(stream, compressedIndices.data(), compressedIndices.size());
+    write(stream, parts, sizeof(parts));
+    write(stream, &nmats, sizeof(nmats));
+    write(stream, &matnamelength, sizeof(matnamelength));
+    write(stream, matname.c_str(), matnamelength + 1);
+    return stream.str();
+}
+
+TEST_F(FilameshTest, CompressedNonInterleaved) {
+    MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
+    for (bool withUV1 : { false, true }) {
+        CompressionHeader sizes;
+        const vector<uint8_t> streams = encodeStreams(sizes, withUV1);
+        string serialized = serializeCompressed(sizes, streams, withUV1);
+
+        auto mesh = MeshReader::loadMeshFromBuffer(engine, serialized.data(), serialized.size(),
+                nullptr, nullptr, mi);
+        EXPECT_NE(mesh.vertexBuffer, nullptr) << "withUV1 = " << withUV1;
+        EXPECT_NE(mesh.indexBuffer, nullptr) << "withUV1 = " << withUV1;
+
+        engine->destroy(mesh.renderable);
+        engine->destroy(mesh.vertexBuffer);
+        engine->destroy(mesh.indexBuffer);
+    }
+    engine->destroy(mi);
+}
+
+TEST_F(FilameshTest, CompressedStreamSizesWrappingRejected) {
+    // The sizes add up to 2^32 + 20, which a 32-bit size_t wraps to 20.
+    CompressionHeader sizes;
+    const vector<uint8_t> streams = encodeStreams(sizes, false);
+    sizes = { .positions = 0x80000000u, .tangents = 0x80000000u };
+    string serialized = serializeCompressed(sizes, streams, false);
+    MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
+
+    auto mesh = MeshReader::loadMeshFromBuffer(engine, serialized.data(), serialized.size(), nullptr, nullptr, mi);
+    EXPECT_EQ(mesh.vertexBuffer, nullptr);
+    EXPECT_EQ(mesh.indexBuffer, nullptr);
+
+    engine->destroy(mi);
+}
+
+TEST_F(FilameshTest, CompressedUV1StreamWithoutUV1AttributeRejected) {
+    // The decoded buffer has no room for UV1, so decoding the stream would write past its end.
+    CompressionHeader sizes;
+    const vector<uint8_t> streams = encodeStreams(sizes, true);
+    string serialized = serializeCompressed(sizes, streams, false);
+    MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
+
+    auto mesh = MeshReader::loadMeshFromBuffer(engine, serialized.data(), serialized.size(), nullptr, nullptr, mi);
+    EXPECT_EQ(mesh.vertexBuffer, nullptr);
+    EXPECT_EQ(mesh.indexBuffer, nullptr);
+
+    engine->destroy(mi);
+}
+
+TEST_F(FilameshTest, CompressedUV1AttributeWithoutUV1StreamRejected) {
+    // Nothing would fill the UV1 range, so uninitialized memory would be uploaded.
+    CompressionHeader sizes;
+    const vector<uint8_t> streams = encodeStreams(sizes, false);
+    string serialized = serializeCompressed(sizes, streams, true);
     MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
 
     auto mesh = MeshReader::loadMeshFromBuffer(engine, serialized.data(), serialized.size(), nullptr, nullptr, mi);

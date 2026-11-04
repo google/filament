@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
+#include <filament/MaterialChunkType.h>
+#include <filament/MaterialEnums.h>
+
+#include <matdbg/JsonWriter.h>
+#include <matdbg/ShaderInfo.h>
+
 #include <filaflat/ChunkContainer.h>
 #include <filaflat/DictionaryReader.h>
 #include <filaflat/MaterialChunk.h>
 #include <filaflat/Unflattener.h>
 
-#include <filament/MaterialChunkType.h>
-#include <filament/MaterialEnums.h>
-
 #include <backend/DriverEnums.h>
-
-#include <matdbg/JsonWriter.h>
-#include <matdbg/ShaderInfo.h>
 
 #include <string>
 
@@ -347,7 +347,7 @@ const char* toString(backend::DescriptorFlags flags) noexcept {
 }
 
 // Returns a human-readable variant description.
-// For example: DYN|DIR
+// For example: SRE|SKN
 std::string formatVariantString(Variant variant, MaterialDomain domain) noexcept;
 
 } // namespace matdbg
