@@ -197,6 +197,7 @@ TEST(ThreadMapTest, ConcurrentSetAndFindIndexDataRace) {
 
 TEST(ThreadMapTest, ConcurrentSetReaderDataRace) {
     ThreadMap<uint64_t> map(2);
+    std::atomic<bool> start{false};
     std::atomic<bool> done{false};
     std::atomic<uint32_t> validNonZeroReads{0};
 
@@ -205,15 +206,19 @@ TEST(ThreadMapTest, ConcurrentSetReaderDataRace) {
     t1.join();
 
     std::thread reader([&]() {
+        start.store(true, std::memory_order_release);
         while (!done.load(std::memory_order_relaxed)) {
             uint64_t const val = map.get(tid1);
             if (val != 0) {
+                EXPECT_LE(val, 500000u);
                 validNonZeroReads.fetch_add(1, std::memory_order_relaxed);
             }
         }
     });
 
     std::thread writer([&]() {
+        while (!start.load(std::memory_order_acquire)) {
+        }
         for (size_t i = 1; i <= 500000; ++i) {
             map.set(0, i, tid1);
         }
