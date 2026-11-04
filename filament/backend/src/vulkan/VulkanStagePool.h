@@ -289,6 +289,8 @@ private:
 
     // Store the current "time" (really just a frame count) and LRU eviction parameters.
     uint64_t mCurrentFrame = 0;
+
+    mutable utils::Mutex mLock;
 };
 
 } // namespace filament::backend
