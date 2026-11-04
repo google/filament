@@ -831,6 +831,26 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerRetroreflection) {
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
+TEST_F(MaterialCompiler, StaticCodeAnalyzerDiffuseTransmission) {
+    const std::string fragmentCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.diffuseTransmission = 0.8;
+            material.diffuseTransmissionColor = vec3(1.0, 0.5, 0.2);
+        }
+    )");
+
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
+
+    constexpr GLSLTools glslTools;
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
+    expected[static_cast<size_t>(MaterialBuilder::Property::DIFFUSE_TRANSMISSION)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::DIFFUSE_TRANSMISSION_COLOR)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerNormal) {
     const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
