@@ -252,7 +252,7 @@ enum class ReflectionMode : uint8_t {
 // can't really use std::underlying_type<AttributeIndex>::type because the driver takes a uint32_t
 using AttributeBitset = utils::bitset32;
 
-static constexpr size_t MATERIAL_PROPERTIES_COUNT = 38;
+static constexpr size_t MATERIAL_PROPERTIES_COUNT = 40;
 enum class Property : uint8_t {
     BASE_COLOR,               //!< float4, all shading models
     ROUGHNESS,                //!< float,  lit shading models only
@@ -292,6 +292,8 @@ enum class Property : uint8_t {
     IRIDESCENCE_IOR,          //!< float,  lit shading models only, except cloth
     IRIDESCENCE_THICKNESS,    //!< float,  lit shading models only, except cloth
     RETROREFLECTION,          //!< float,  lit shading models only, except subsurface and cloth
+    DIFFUSE_TRANSMISSION,     //!< float,  lit shading models only, except subsurface and cloth
+    DIFFUSE_TRANSMISSION_COLOR, //!< float3, lit shading models only, except subsurface and cloth
 
     // when adding new Properties, make sure to update MATERIAL_PROPERTIES_COUNT
 };

@@ -161,23 +161,41 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
 #endif
 
     vec3 Fd = diffuseLobe(pixel, NoV, NoL, LoH);
-#if defined(MATERIAL_HAS_REFRACTION)
-    Fd *= (1.0 - pixel.transmission);
-#endif
-
-    // TODO: attenuate the diffuse lobe to avoid energy gain
-
 #if defined(HAS_COLORED_PENUMBRA)
     // Saturate the diffuse color to simulate subsurface scattering
     vec3 penumbraColor = min(vec3(1.0 / PI), Fd / max(2.0 * (1.0 - pixel.diffuseColor), vec3(FLT_EPS)));
     Fd = mix(penumbraColor, Fd, pow4(occlusion));
 #endif
 
+#if defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION)
+    vec3 Ft = pixel.diffuseTransmissionColor * Fd_Lambert();
+    Fd = mix(
+        Fd * NoL,
+        Ft * saturate(dot(-shading_normal, light.l)), // TODO: precompute in Light structure
+        pixel.diffuseTransmission
+    );
+#if defined(MATERIAL_HAS_REFRACTION)
+    Fd *= 1.0 - pixel.transmission;
+#endif
+    vec3 color = Fd + Fr * NoL;
+#else
     vec3 color = Fd + Fr;
+#endif
+
+    // TODO: attenuate the diffuse lobe to avoid energy gain
 
 #if defined(MATERIAL_HAS_SHEEN_COLOR)
     color *= pixel.sheenScaling;
-    color += sheenLobe(pixel, NoV, NoL, NoH);
+    vec3 sheen = sheenLobe(pixel, NoV, NoL, NoH);
+#if defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION)
+    sheen *= NoL;
+#endif
+    color += sheen;
+#endif
+
+#if defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION)
+    // Kill NoL here since we applied it before
+    NoL = 1.0;
 #endif
 
 #if defined(MATERIAL_HAS_CLEAR_COAT)

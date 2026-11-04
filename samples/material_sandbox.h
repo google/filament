@@ -143,6 +143,8 @@ struct SandboxParameters {
     float iridescenceIor = 1.3f;
     float iridescenceThickness = 400.0f;
     float retroreflection = 0.0f;
+    float diffuseTransmission = 0.0f;
+    sRGBColor diffuseTransmissionColor = { 1.0f, 1.0f, 1.0f };
     sRGBColor transmittanceColor =  { 1.0f };
     sRGBColor specularColor = { 0.0f };
     sRGBColor subsurfaceColor = { 0.0f };
