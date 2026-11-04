@@ -70,6 +70,7 @@ std::string_view getTypeStr(ResourceType type);
 inline bool isThreadSafeType(ResourceType type) {
     return type == ResourceType::PROGRAM ||
            type == ResourceType::FENCE ||
+           type == ResourceType::INDEX_BUFFER ||
            type == ResourceType::TIMER_QUERY ||
            type == ResourceType::SYNC ||
            type == ResourceType::STAGE_SEGMENT ||
