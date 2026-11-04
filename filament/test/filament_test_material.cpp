@@ -380,6 +380,7 @@ TEST(Material, CompileMaterialWithSkinningEnabled) {
             /* shadowReceiver= */ utils::tribool(false),
             /* skinning= */ utils::tribool(true));
 
+    EXPECT_FALSE(variants.empty());
     for (auto const v : variants) {
         EXPECT_FALSE(filament::Variant::isShadowReceiverVariant(v));
         EXPECT_TRUE(v.hasSkinningOrMorphing());
