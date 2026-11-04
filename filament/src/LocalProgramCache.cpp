@@ -166,8 +166,7 @@ void LocalProgramCache::clear(FEngine& engine) {
             mMaterial->isDefaultMaterial());
 }
 
-void LocalProgramCache::filterForGetProgram(Variant& variant,
-        DynamicSpecConstKey& specKey) const noexcept {
+void LocalProgramCache::filterForGetProgram(DynamicSpecConstKey& specKey) const noexcept {
     if (UTILS_UNLIKELY(mMaterial->getEngine().features.material.enable_fog_as_postprocess)) {
         // if the fog as post-process feature is enabled, we need to proceed "as-if" the material
         // didn't have fog enabled.
@@ -179,8 +178,6 @@ void LocalProgramCache::filterForGetProgram(Variant& variant,
                     !hasScreenSpaceRefraction &&
                     (blendingMode != BlendingMode::OPAQUE && blendingMode != BlendingMode::MASKED);
             if (!isBlendingCommand) {
-                // TODO: Remove this after FOG is fully transferred to spec constant
-                variant.setFog(false);
                 specKey.setFog(false);
             }
         }
