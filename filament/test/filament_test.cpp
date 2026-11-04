@@ -4105,6 +4105,23 @@ TEST_F(SceneCacheTest, LightDataCapacityForSimdOverRead) {
     }
 }
 
+// Guards the scratch size invariant asserted in FView::prepareVisibleLights() (debug builds).
+// The buffer must hold the directional light slot too, rounded up to 4.
+TEST_F(SceneCacheTest, LightDistancesFitScratchBuffer) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    createCamera(view);
+
+    for (size_t p = 1; p <= 8; ++p) {
+        scene->addEntity(createPointLight());
+        ASSERT_TRUE(renderFrame(view)) << "p = " << p;
+        // all lights must be visible, so p = 4 and p = 8 hit the worst case
+        EXPECT_EQ(p + FScene::DIRECTIONAL_LIGHTS_COUNT,
+                downcast(view)->getSceneCache()->lightData.size()) << "p = " << p;
+    }
+}
+
 TEST_F(SceneCacheTest, EntitiesWithoutTransformUseIdentity) {
     Scene* scene = createScene();
     View* view = createView();
