@@ -16,6 +16,7 @@
 
 #include <filagui/ImGuiHelper.h>
 
+#include <algorithm>
 #include <vector>
 #include <unordered_map>
 
@@ -242,28 +243,28 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
     auto& rcm = mEngine->getRenderableManager();
 
     // Avoid rendering when minimized and scale coordinates for retina displays.
-    int fbwidth = (int)(commands->DisplaySize.x * commands->DisplayFramebufferScale.x);
-    int fbheight = (int)(commands->DisplaySize.y * commands->DisplayFramebufferScale.y);
-    if (fbwidth == 0 || fbheight == 0)
+    int const fbwidth = (int)(commands->DisplaySize.x * commands->FramebufferScale.x);
+    int const fbheight = (int)(commands->DisplaySize.y * commands->FramebufferScale.y);
+    if (fbwidth <= 0 || fbheight <= 0)
         return;
 
     // Update projection dynamically based on viewport's DisplayPos and DisplaySize.
-    ImVec2 display_pos = commands->DisplayPos;
-    ImVec2 display_size = commands->DisplaySize;
+    ImVec2 const displayPos = commands->DisplayPos;
+    ImVec2 const displaySize = commands->DisplaySize;
 
-    double bottom = display_pos.y + double(display_size.y);
-    double top = display_pos.y;
+    double bottom = displayPos.y + double(displaySize.y);
+    double top = displayPos.y;
 
-    if(mFlipVertical) {
+    if (mFlipVertical) {
         top = bottom;
-        bottom = display_pos.y;
+        bottom = displayPos.y;
     }
 
     mCamera->setProjection(Camera::Projection::ORTHO,
-        display_pos.x, display_pos.x + double(display_size.x), bottom, top, 0.0, 1.0);
+            displayPos.x, displayPos.x + double(displaySize.x), bottom, top, 0.0, 1.0);
 
-    const ImVec2 clip_off = commands->DisplayPos;
-    const ImVec2 clip_scale = commands->FramebufferScale;
+    ImVec2 const clipOff = commands->DisplayPos;
+    ImVec2 const clipScale = commands->FramebufferScale;
 
     // Ensure that we have enough vertex buffers and index buffers.
     createBuffers(commands->CmdListsCount);
@@ -310,22 +311,22 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
                     materialInstance = mMaterial2dInstances[material2dIndex++];
                 }
 
-                // Project scissor/clipping rectangles into framebuffer space
-                float clip_min_x = (pcmd.ClipRect.x - clip_off.x) * clip_scale.x;
-                float clip_max_x = (pcmd.ClipRect.z - clip_off.x) * clip_scale.x;
-                float clip_min_y = (pcmd.ClipRect.y - clip_off.y) * clip_scale.y;
-                float clip_max_y = (pcmd.ClipRect.w - clip_off.y) * clip_scale.y;
+                // Project scissor/clipping rectangles into framebuffer space.
+                float clipMinX = (pcmd.ClipRect.x - clipOff.x) * clipScale.x;
+                float clipMaxX = (pcmd.ClipRect.z - clipOff.x) * clipScale.x;
+                float clipMinY = (pcmd.ClipRect.y - clipOff.y) * clipScale.y;
+                float clipMaxY = (pcmd.ClipRect.w - clipOff.y) * clipScale.y;
 
-                clip_min_x = std::max(0.0f, std::min(clip_min_x, static_cast<float>(fbwidth)));
-                clip_max_x = std::max(0.0f, std::min(clip_max_x, static_cast<float>(fbwidth)));
-                clip_min_y = std::max(0.0f, std::min(clip_min_y, static_cast<float>(fbheight)));
-                clip_max_y = std::max(0.0f, std::min(clip_max_y, static_cast<float>(fbheight)));
+                clipMinX = std::clamp(clipMinX, 0.0f, static_cast<float>(fbwidth));
+                clipMaxX = std::clamp(clipMaxX, 0.0f, static_cast<float>(fbwidth));
+                clipMinY = std::clamp(clipMinY, 0.0f, static_cast<float>(fbheight));
+                clipMaxY = std::clamp(clipMaxY, 0.0f, static_cast<float>(fbheight));
 
-                auto scissorLeft = static_cast<uint32_t>(clip_min_x);
-                auto scissorWidth = static_cast<uint32_t>(std::max(0.0f, clip_max_x - clip_min_x));
-                auto scissorBottom = static_cast<uint32_t>(
-                        mFlipVertical ? clip_min_y : (static_cast<float>(fbheight) - clip_max_y));
-                auto scissorHeight = static_cast<uint32_t>(std::max(0.0f, clip_max_y - clip_min_y));
+                auto const scissorLeft = static_cast<uint32_t>(clipMinX);
+                auto const scissorWidth = static_cast<uint32_t>(std::max(0.0f, clipMaxX - clipMinX));
+                auto const scissorBottom = static_cast<uint32_t>(
+                        mFlipVertical ? clipMinY : (static_cast<float>(fbheight) - clipMaxY));
+                auto const scissorHeight = static_cast<uint32_t>(std::max(0.0f, clipMaxY - clipMinY));
 
                 materialInstance->setScissor(scissorLeft, scissorBottom, scissorWidth, scissorHeight);
                 if (texture) {
