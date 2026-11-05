@@ -14,7 +14,7 @@ The EntityManager is the core source-of-truth for Entity identities in Filament.
 This group is aimed at standard usage for applications, renderers, and game systems.
 
 - **Entity Creation**: Methods like `create`() and `create`(size_t, Entity*) allocate new or recycled Entity identities.
-- **Entity Destruction**: Methods like `destroy`(Entity) and `destroy`(size_t, Entity*) logically kill entities, instantly advancing the active timeline.
+- **Entity Destruction**: Methods like `destroy`(Entity) and `destroy`(size_t, Entity*) immediately mark entities as dead (for `isAlive`()) and batch timeline and change-callback notifications until the internal buffer fills, `flushNotifications`() is called, or `advanceEpoch`() seals the epoch.
 - **Queries** &**Hooks**: Mechanisms to query logical presence (`isAlive`()) or subscribe to global destruction notifications via `registerChangeCallback`().
 
 ### 2. Internal Component API (ECS Integration &Component Managers)

@@ -82,6 +82,16 @@ fvkmemory::resource_ptr<VulkanFramebuffer> VulkanFboCache::getFramebuffer(FboKey
         return iter->second.handle;
     }
 
+    fvkmemory::resource_ptr<VulkanFramebuffer> fbh =
+            createFramebuffer(config, resManager, renderTarget);
+    mRenderPassRefCount[config.renderPass]++;
+    mFramebufferCache[config] = { fbh, mCurrentTime };
+    return fbh;
+}
+
+fvkmemory::resource_ptr<VulkanFramebuffer> VulkanFboCache::createFramebuffer(FboKey const& config,
+        fvkmemory::ResourceManager* resManager,
+        fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget) const {
     // The attachment list contains: Color Attachments, Resolve Attachments, and Depth Attachment.
     // For simplicity, create an array that can hold the maximum possible number of attachments.
     // Note that this needs to have the same ordering as the corollary array in getRenderPass.
@@ -118,16 +128,12 @@ fvkmemory::resource_ptr<VulkanFramebuffer> VulkanFboCache::getFramebuffer(FboKey
         .height = config.height,
         .layers = config.layers,
     };
-    mRenderPassRefCount[info.renderPass]++;
     VkFramebuffer framebuffer;
     VkResult error = vkCreateFramebuffer(mDevice, &info, VKALLOC, &framebuffer);
     FILAMENT_CHECK_POSTCONDITION(error == VK_SUCCESS) << "Unable to create framebuffer."
                                                      << " error=" << static_cast<int32_t>(error);
-    fvkmemory::resource_ptr<VulkanFramebuffer> fbh =
-            fvkmemory::resource_ptr<VulkanFramebuffer>::construct(resManager, mDevice, framebuffer,
-                    renderTarget);
-    mFramebufferCache[config] = { fbh, mCurrentTime };
-    return fbh;
+    return fvkmemory::resource_ptr<VulkanFramebuffer>::construct(resManager, mDevice, framebuffer,
+            renderTarget);
 }
 
 fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
@@ -366,15 +372,11 @@ fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
     return rph;
 }
 
-void VulkanFboCache::resetFramebuffers() noexcept {
+void VulkanFboCache::terminate() noexcept {
     for (const auto& pair: mFramebufferCache) {
         mRenderPassRefCount[pair.first.renderPass]--;
     }
     mFramebufferCache.clear();
-}
-
-void VulkanFboCache::terminate() noexcept {
-    resetFramebuffers();
 
     mRenderPassRefCount.clear();
     mRenderPassCache.clear();

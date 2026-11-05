@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include <utils/MonotonicRingMap.h>
+
+#include <gtest/gtest.h>
 
 using namespace utils;
 
@@ -86,7 +86,9 @@ TEST(MonotonicRingMap, Full) {
 
     EXPECT_EQ(nullptr, map.find(10));
     ASSERT_NE(nullptr, map.find(20));
+    EXPECT_EQ(200, *map.find(20));
     ASSERT_NE(nullptr, map.find(50));
+    EXPECT_EQ(500, *map.find(50));
 }
 
 TEST(MonotonicRingMap, FindAfterWrapAround) {
@@ -101,9 +103,15 @@ TEST(MonotonicRingMap, FindAfterWrapAround) {
     EXPECT_EQ(50, map.back().first);
 
     ASSERT_NE(nullptr, map.find(20));
+    EXPECT_EQ(200, *map.find(20));
     ASSERT_NE(nullptr, map.find(30));
+    EXPECT_EQ(300, *map.find(30));
     ASSERT_NE(nullptr, map.find(40));
+    EXPECT_EQ(400, *map.find(40));
     ASSERT_NE(nullptr, map.find(50));
+    EXPECT_EQ(500, *map.find(50));
+    EXPECT_EQ(nullptr, map.find(25)); // missing key in first wrapped segment
+    EXPECT_EQ(nullptr, map.find(45)); // missing key in second wrapped segment
 
     map.insert(60, 600); // oldest is 30, head is at index 2
 
@@ -111,8 +119,16 @@ TEST(MonotonicRingMap, FindAfterWrapAround) {
     EXPECT_EQ(60, map.back().first);
 
     EXPECT_EQ(nullptr, map.find(20));
+    EXPECT_EQ(nullptr, map.find(35));
+    EXPECT_EQ(nullptr, map.find(55));
     ASSERT_NE(nullptr, map.find(30));
+    EXPECT_EQ(300, *map.find(30));
+    ASSERT_NE(nullptr, map.find(40));
+    EXPECT_EQ(400, *map.find(40));
+    ASSERT_NE(nullptr, map.find(50));
+    EXPECT_EQ(500, *map.find(50));
     ASSERT_NE(nullptr, map.find(60));
+    EXPECT_EQ(600, *map.find(60));
 
     map.insert(70, 700); // oldest is 40, head is at index 3
     map.insert(80, 800); // oldest is 50, head is at index 0
@@ -121,10 +137,20 @@ TEST(MonotonicRingMap, FindAfterWrapAround) {
     EXPECT_EQ(80, map.back().first);
 
     EXPECT_EQ(nullptr, map.find(40));
+    EXPECT_EQ(nullptr, map.find(65));
     ASSERT_NE(nullptr, map.find(50));
+    EXPECT_EQ(500, *map.find(50));
     ASSERT_NE(nullptr, map.find(60));
+    EXPECT_EQ(600, *map.find(60));
     ASSERT_NE(nullptr, map.find(70));
+    EXPECT_EQ(700, *map.find(70));
     ASSERT_NE(nullptr, map.find(80));
+    EXPECT_EQ(800, *map.find(80));
+
+    map.clear();
+    EXPECT_TRUE(map.empty());
+    EXPECT_EQ(0, map.size());
+    EXPECT_EQ(nullptr, map.find(50));
 }
 
 #if !defined(NDEBUG) && defined(GTEST_HAS_DEATH_TEST)

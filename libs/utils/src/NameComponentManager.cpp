@@ -38,10 +38,6 @@ const char* NameComponentManager::getName(Instance const instance) const noexcep
 }
 
 void NameComponentManager::addComponent(Entity const e) {
-    Entity zombie;
-    if (UTILS_UNLIKELY(popPendingZombie(e, zombie))) {
-        destroy(zombie);
-    }
     SingleInstanceComponentManager::addComponent(e);
 }
 

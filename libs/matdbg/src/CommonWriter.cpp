@@ -56,7 +56,6 @@ std::string formatVariantString(Variant variant, MaterialDomain domain) noexcept
                 if (variant.key & Variant::MNT) variantString += "MNT|";
             }
         } else {
-            if (variant.key & Variant::FOG) variantString += "FOG|";
             if (variant.key & Variant::S2D) variantString += "S2D|";
         }
         if (variant.key & Variant::STE) variantString += "STE|";
