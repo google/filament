@@ -775,23 +775,20 @@ if (FILAMENT_BUILD_TESTING)
     # ==================================================================================================
     # Compute tests
     #
-    #if (NOT IOS AND NOT WASM)
-    #
-    #add_executable(compute_test
-    #        test/ComputeTest.cpp
-    #        test/Arguments.cpp
-    #        test/test_ComputeBasic.cpp
-    #        )
-    #
-    #target_link_libraries(compute_test PRIVATE
-    #        backend
-    #        getopt
-    #        gtest
-    #        )
-    #
-    #set_target_properties(compute_test PROPERTIES FOLDER Tests)
-    #
-    #endif()
+    # This fixture uses native GL only for readback synchronization. Keep it off platforms
+    # without compute-capable headers, and do not expose GL dependencies to other test targets.
+    if (FILAMENT_SUPPORTS_OPENGL AND (ANDROID OR LINUX))
+        add_executable(compute_test test/test_ComputeBindings.cpp test/Arguments.cpp)
+        target_link_libraries(compute_test PRIVATE backend gtest)
+        target_include_directories(compute_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+        if (LINUX AND FILAMENT_SUPPORTS_EGL_ON_LINUX)
+            find_library(COMPUTE_TEST_GLES_LIBRARY GLESv2 REQUIRED)
+            target_link_libraries(compute_test PRIVATE ${COMPUTE_TEST_GLES_LIBRARY})
+        elseif (LINUX)
+            target_link_libraries(compute_test PRIVATE bluegl)
+        endif()
+        set_target_properties(compute_test PROPERTIES FOLDER Tests)
+    endif()
 
     # ==================================================================================================
     # Metal utils tests
