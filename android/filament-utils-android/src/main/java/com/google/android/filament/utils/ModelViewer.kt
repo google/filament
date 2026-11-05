@@ -358,7 +358,6 @@ class ModelViewer(
             return false
         }
         if (framePacer.hasGpuFallenBehind(renderer)) {
-            renderer.skipFrame(frameTimeNanos)
             return false
         }
         if (framePacer.pacingStatus == FramePacer.PacingStatus.DISPLAY_STUFFED) {
