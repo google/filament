@@ -1194,9 +1194,12 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
             continue;
         }
 
+        // For 3D textures, Metal selects the target z-plane via depthPlane; slice must be 0.
+        const bool is3D = attachment.getTexture().textureType == MTLTextureType3D;
         descriptor.colorAttachments[i].texture = attachment.getTexture();
         descriptor.colorAttachments[i].level = attachment.getLevel();
-        descriptor.colorAttachments[i].slice = attachment.getLayer();
+        descriptor.colorAttachments[i].slice = is3D ? 0 : attachment.getLayer();
+        descriptor.colorAttachments[i].depthPlane = is3D ? attachment.getLayer() : 0;
         descriptor.colorAttachments[i].loadAction = getLoadAction(params, getTargetBufferFlagsAt(i));
         descriptor.colorAttachments[i].storeAction = getStoreAction(params,
                 getTargetBufferFlagsAt(i));
@@ -1219,11 +1222,13 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
             descriptor.colorAttachments[i].texture = attachment.getMsaaTexture();
             descriptor.colorAttachments[i].level = 0;
             descriptor.colorAttachments[i].slice = 0;
+            descriptor.colorAttachments[i].depthPlane = 0;
             const bool discard = any(discardFlags & getTargetBufferFlagsAt(i));
             if (!discard) {
                 descriptor.colorAttachments[i].resolveTexture = attachment.getTexture();
                 descriptor.colorAttachments[i].resolveLevel = attachment.getLevel();
-                descriptor.colorAttachments[i].resolveSlice = attachment.getLayer();
+                descriptor.colorAttachments[i].resolveSlice = is3D ? 0 : attachment.getLayer();
+                descriptor.colorAttachments[i].resolveDepthPlane = is3D ? attachment.getLayer() : 0;
                 descriptor.colorAttachments[i].storeAction = MTLStoreActionMultisampleResolve;
             }
         }
