@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 
 #include "WebGPURenderTarget.h"
+#include "WebGPUTexture.h"
 #include "webgpu/WebGPUBlitter.h"
 #include "webgpu/WebGPUConstants.h"
 #include "webgpu/WebGPUMemoryMappedBuffer.h"
@@ -45,6 +46,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 #ifndef FILAMENT_WEBGPU_HANDLE_ARENA_SIZE_IN_MB
 #define FILAMENT_WEBGPU_HANDLE_ARENA_SIZE_IN_MB 8
@@ -106,12 +108,27 @@ private:
     void deferCreationCompletionCallback(CallbackHandler* handler, AsyncCallback callback,
             void* user);
 
+    // Releases the pending external image states whose submission has completed. When
+    // gpuIsIdle is true, all of them are released.
+    void releaseCompletedExternalImages(bool gpuIsIdle = false);
+
     // The platform (e.g. OS) specific aspects of the WebGPU backend are strictly only
     // handled in the WebGPUPlatform.
     WebGPUPlatform& mPlatform;
     wgpu::Adapter mAdapter = nullptr;
     wgpu::Device mDevice = nullptr;
     wgpu::Limits mDeviceLimits = {};
+    // How imported external images end their SharedTextureMemory access, which depends on the
+    // Dawn backend (e.g. Android can fall back from Vulkan to OpenGL ES) and on the shared fence
+    // features enabled on the device.
+    WebGPUExternalImageState::EndAccessConfig mExternalImageEndAccessConfig{};
+    // External image states whose texture handle was destroyed. Each one is released once the
+    // submission that may reference it has completed on the GPU, see destroyTexture().
+    struct PendingExternalImageRelease {
+        std::shared_ptr<WebGPUExternalImageState> state;
+        std::shared_ptr<WebGPUSubmissionState> submission;
+    };
+    std::vector<PendingExternalImageRelease> mPendingExternalImageReleases;
     WebGPUQueueManager mQueueManager;
     WebGPUStagePool mStagePool;
     void* mNativeWindow = nullptr;

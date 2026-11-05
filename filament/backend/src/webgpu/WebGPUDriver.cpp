@@ -129,6 +129,31 @@ WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform,
                                                : false) } {
     mDevice.GetLimits(&mDeviceLimits);
 
+#if !defined(__EMSCRIPTEN__)
+    wgpu::AdapterInfo adapterInfo{};
+    if (mAdapter.GetInfo(&adapterInfo) == wgpu::Status::Success) {
+        switch (adapterInfo.backendType) {
+            case wgpu::BackendType::Vulkan: {
+                using wgpu::FeatureName;
+                mExternalImageEndAccessConfig = {
+                    .supported = mDevice.HasFeature(FeatureName::SharedFenceSyncFD) ||
+                                 mDevice.HasFeature(FeatureName::SharedFenceVkSemaphoreOpaqueFD),
+                    .chainVkImageLayoutEndState = true,
+                };
+                break;
+            }
+            case wgpu::BackendType::Metal:
+                mExternalImageEndAccessConfig = {
+                    .supported = mDevice.HasFeature(wgpu::FeatureName::SharedFenceMTLSharedEvent),
+                };
+                break;
+            default:
+                // Shared texture memory is not imported on other backends.
+                break;
+        }
+    }
+#endif
+
     if (driverConfig.asynchronousMode != AsynchronousMode::NONE) {
         mJobQueue = JobQueue::create();
         // As with Vulkan, always use AmortizationWorker for now: a dedicated ThreadWorker would
@@ -177,6 +202,12 @@ void WebGPUDriver::terminate() {
     }
 
     finish();
+
+    // On native, the GPU is idle after finish(), so every pending external image can be released,
+    // including those whose completion callback has not been delivered yet. Under Emscripten,
+    // finish() does not wait, but no SharedTextureMemory is involved and the browser keeps the
+    // resources of in-flight work alive.
+    releaseCompletedExternalImages(/*gpuIsIdle=*/true);
 }
 
 void WebGPUDriver::tick(int) {
@@ -227,12 +258,26 @@ void WebGPUDriver::endFrame(const uint32_t /* frameId */) {
     if (getJobWorker()) {
         getJobWorker()->processFrame();
     }
+    releaseCompletedExternalImages();    
 }
 
 void WebGPUDriver::skipFrame(int) {
     if (getJobWorker()) {
         getJobWorker()->processFrame();
     }
+    releaseCompletedExternalImages();
+}
+
+void WebGPUDriver::releaseCompletedExternalImages(const bool gpuIsIdle) {
+    auto const isReleasable = [gpuIsIdle](PendingExternalImageRelease const& pending) {
+        return gpuIsIdle || pending.submission->getStatus() != FenceStatus::TIMEOUT_EXPIRED;
+    };
+    // Dropping the last reference to a state ends its SharedTextureMemory access and releases the
+    // retained external image.
+    mPendingExternalImageReleases.erase(
+            std::remove_if(mPendingExternalImageReleases.begin(),
+                    mPendingExternalImageReleases.end(), isReleasable),
+            mPendingExternalImageReleases.end());
 }
 
 // If a command encoder is in flight then the encoder is finished and submitted to the GPU queue.
@@ -249,6 +294,7 @@ void WebGPUDriver::finish(int /* dummy */) {
 
     mQueueManager.finish();
     mPipelineState = {};
+    releaseCompletedExternalImages();
 
 #if !defined(__EMSCRIPTEN__)
     // We use polling to advance webgpu's callback counter until all the read backs have been
@@ -337,6 +383,16 @@ void WebGPUDriver::destroyTexture(Handle<HwTexture> textureHandle) {
         return;
     }
     auto* texture = handleCast<WebGPUTexture>(textureHandle);
+    if (auto const& externalImage = texture->getExternalImageState()) {
+        // Commands that reference this texture may still be in the open command encoder or
+        // executing on the GPU. Ending the SharedTextureMemory access (or handing the buffer back
+        // to its producer) now would fail Dawn's submit validation or race with the GPU reads.
+        // getLatestSubmissionState() returns the state of the open encoder if there is one, and of
+        // the last submission otherwise, so it completes after every command that may reference
+        // the texture.
+        mPendingExternalImageReleases.push_back(
+                { externalImage, mQueueManager.getLatestSubmissionState() });
+    }
     if (texture->asynchronous && getJobQueue()) {
         // Route the destruction through the queue to preserve FIFO ordering with any pending
         // async update for this handle (e.g. update3DImageAsync).
@@ -768,6 +824,15 @@ void WebGPUDriver::createTextureViewSwizzleCommon(Handle<HwTexture> textureHandl
     auto sourceTexture{ handleCast<WebGPUTexture>(sourceTextureHandle) };
     assert_invariant(sourceTexture);
 
+    if (sourceTexture->isExternalImage()) {
+        static bool sWarnedExternalSwizzle = false;
+        if (!sWarnedExternalSwizzle) {
+            sWarnedExternalSwizzle = true;
+            FWGPU_LOGW << "WebGPUDriver::createTextureViewSwizzle: swizzling is not supported for "
+                          "external textures and will be ignored";
+        }
+    }
+
     wgpu::TextureComponentSwizzle const nextSwizzle{
         .r = toWGPUComponentSwizzle(r),
         .g = toWGPUComponentSwizzle(g),
@@ -805,7 +870,16 @@ void WebGPUDriver::createTextureExternalImage2R(Handle<HwTexture> textureHandle,
         const uint32_t width, const uint32_t height, const backend::TextureUsage usage,
         Platform::ExternalImageHandleRef externalImage, utils::ImmutableCString&& tag) {
     FWGPU_SYSTRACE_SCOPE();
-    PANIC_POSTCONDITION("External WebGPU Texture is not supported");
+    WebGPUPlatform::ExternalImageImportResult imported = mPlatform.importExternalImage(
+            externalImage, mDevice, target, format, width, height, usage);
+    WebGPUTexture const* const texture = constructHandle<WebGPUTexture>(textureHandle, target,
+            format, width, height, usage, std::move(imported), mExternalImageEndAccessConfig);
+    // The texture must be bindable: either through the imported wgpu::ExternalTexture, or through
+    // a 2D texture view (provided by the platform or derived from the imported texture).
+    FILAMENT_CHECK_POSTCONDITION(texture->getExternalTexture() || texture->getDefaultTextureView())
+            << "Failed to import external image in WebGPU backend: the import provided neither an "
+               "external texture nor a texture view that can be bound as one";
+    setDebugTag(textureHandle.getId(), std::move(tag));
 }
 
 void WebGPUDriver::createTextureExternalImageR(Handle<HwTexture> textureHandle,
@@ -2431,12 +2505,39 @@ void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> descriptor
     auto texture = handleCast<WebGPUTexture>(textureHandle);
 
     if (!bindGroup->getIsLocked()) {
+        SamplerParams effectiveParams = params;
+        if (texture->target == SamplerType::SAMPLER_EXTERNAL) {
+            // WGSL textureSampleBaseClampToEdge requires a filtering or non-filtering sampler with
+            // clamp-to-edge addressing, no anisotropy, and no mipmap filtering.
+            effectiveParams.wrapS = SamplerWrapMode::CLAMP_TO_EDGE;
+            effectiveParams.wrapT = SamplerWrapMode::CLAMP_TO_EDGE;
+            effectiveParams.wrapR = SamplerWrapMode::CLAMP_TO_EDGE;
+            effectiveParams.anisotropyLog2 = 0;
+            effectiveParams.compareMode = SamplerCompareMode::NONE;
+            switch (effectiveParams.filterMin) {
+                case SamplerMinFilter::NEAREST:
+                case SamplerMinFilter::NEAREST_MIPMAP_NEAREST:
+                case SamplerMinFilter::NEAREST_MIPMAP_LINEAR:
+                    effectiveParams.filterMin = SamplerMinFilter::NEAREST;
+                    break;
+                case SamplerMinFilter::LINEAR:
+                case SamplerMinFilter::LINEAR_MIPMAP_NEAREST:
+                case SamplerMinFilter::LINEAR_MIPMAP_LINEAR:
+                    effectiveParams.filterMin = SamplerMinFilter::LINEAR;
+                    break;
+            }
+        }
         // Dawn will cache duplicate samplers, so we don't strictly need to maintain a cache here.
-        const auto sampler = makeSampler(params);
-        wgpu::BindGroupEntry tEntry{
-            .binding = static_cast<uint32_t>(binding * 2),
-            .textureView = texture->getDefaultTextureView() };
-        bindGroup->addEntry(tEntry.binding, std::move(tEntry));
+        const auto sampler = makeSampler(effectiveParams);
+        const uint32_t textureBinding = static_cast<uint32_t>(binding * 2);
+        if (texture->getExternalTexture()) {
+            bindGroup->addExternalTextureEntry(textureBinding, texture->getExternalTexture());
+        } else {
+            wgpu::BindGroupEntry tEntry{
+                .binding = textureBinding,
+                .textureView = texture->getDefaultTextureView() };
+            bindGroup->addEntry(tEntry.binding, std::move(tEntry));
+        }
 
         wgpu::BindGroupEntry sEntry{
             .binding = static_cast<uint32_t>(binding * 2 + 1),
@@ -2445,19 +2546,24 @@ void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> descriptor
 #if FWGPU_ENABLED(FWGPU_DEBUG_BIND_GROUPS)
         FWGPU_LOGD << "updateDescriptorSetTexture:";
         FWGPU_LOGD << "  wgpu::BindGroupLayout handle: " << bindGroup->getLayout().Get();
-        FWGPU_LOGD << "  texture: binding:" << tEntry.binding
-                   << " wgpu handle:" << texture->getTexture().Get()
-                   << " " << webGPUTextureToString(texture->getTexture())
-                   << " " << webGPUPrintableToString(texture->getAspect());
+        if (texture->getExternalTexture()) {
+            FWGPU_LOGD << "  externalTexture: binding:" << textureBinding
+                       << " wgpu handle:" << texture->getExternalTexture().Get();
+        } else {
+            FWGPU_LOGD << "  texture: binding:" << textureBinding
+                       << " wgpu handle:" << texture->getTexture().Get()
+                       << " " << webGPUTextureToString(texture->getTexture())
+                       << " " << webGPUPrintableToString(texture->getAspect());
+        }
         FWGPU_LOGD << "  sampler: binding:" << sEntry.binding
-                   << " filterMag:" << filamentSamplerMagFilterToString(params.filterMag)
-                   << " filterMin:" << filamentSamplerMinFilterToString(params.filterMin)
-                   << " wrapS:" << filamentSamplerWrapModeToString(params.wrapS)
-                   << " wrapT:" << filamentSamplerWrapModeToString(params.wrapT)
-                   << " wrapR:" << filamentSamplerWrapModeToString(params.wrapR)
-                   << " anisotropyLog2:" << +params.anisotropyLog2
-                   << " compareMode:" << filamentSamplerCompareModeToString(params.compareMode)
-                   << " compareFunc:" << filamentSamplerCompareFuncToString(params.compareFunc);
+                   << " filterMag:" << filamentSamplerMagFilterToString(effectiveParams.filterMag)
+                   << " filterMin:" << filamentSamplerMinFilterToString(effectiveParams.filterMin)
+                   << " wrapS:" << filamentSamplerWrapModeToString(effectiveParams.wrapS)
+                   << " wrapT:" << filamentSamplerWrapModeToString(effectiveParams.wrapT)
+                   << " wrapR:" << filamentSamplerWrapModeToString(effectiveParams.wrapR)
+                   << " anisotropyLog2:" << +effectiveParams.anisotropyLog2
+                   << " compareMode:" << filamentSamplerCompareModeToString(effectiveParams.compareMode)
+                   << " compareFunc:" << filamentSamplerCompareFuncToString(effectiveParams.compareFunc);
 #endif
     }
 }

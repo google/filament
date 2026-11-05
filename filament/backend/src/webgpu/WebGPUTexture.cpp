@@ -36,6 +36,8 @@
 #endif
 
 #include <cstdint>
+#include <memory>
+#include <utility>
 
 namespace filament::backend {
 
@@ -55,6 +57,34 @@ bool isTransientUsage(wgpu::TextureUsage usage) {
 #else
     return false;
 #endif
+}
+
+// Returns the view bound when an imported external image has no wgpu::ExternalTexture: the view
+// provided by the platform, if any, or else a 2D view of the imported texture when its format is
+// one that Dawn accepts in an external texture binding. Returns null otherwise.
+wgpu::TextureView makeExternalImageDefaultView(
+        WebGPUPlatform::ExternalImageImportResult& imported) {
+    if (imported.defaultTextureView) {
+        return std::move(imported.defaultTextureView);
+    }
+    if (!imported.texture) {
+        return nullptr;
+    }
+    switch (imported.texture.GetFormat()) {
+        case wgpu::TextureFormat::RGBA8Unorm:
+        case wgpu::TextureFormat::BGRA8Unorm:
+        case wgpu::TextureFormat::RGBA16Float: {
+            const wgpu::TextureViewDescriptor descriptor{
+                .label = "external_image_view",
+                .dimension = wgpu::TextureViewDimension::e2D,
+                .mipLevelCount = 1,
+                .arrayLayerCount = 1,
+            };
+            return imported.texture.CreateView(&descriptor);
+        }
+        default:
+            return nullptr;
+    }
 }
 
 [[nodiscard]] constexpr wgpu::StringView getUserTextureLabel(const SamplerType target) {
@@ -282,6 +312,74 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
 #endif
 }
 
+WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const TextureFormat format,
+        const uint32_t width, const uint32_t height, const TextureUsage usage,
+        WebGPUPlatform::ExternalImageImportResult&& imported,
+        const WebGPUExternalImageState::EndAccessConfig endAccessConfig) noexcept
+    : HwTexture{ samplerType, 1, 1, width, height, 1, format, usage, /*async=*/false },
+      mViewFormat{ imported.texture ? imported.texture.GetFormat() : toWGPUTextureFormat(format) },
+      mMipmapGenerationStrategy{ MipmapGenerationStrategy::NONE },
+      mWebGPUFormat{ mViewFormat },
+      mAspect{ wgpu::TextureAspect::All },
+      mWebGPUUsage{ imported.texture ? imported.texture.GetUsage()
+                                     : wgpu::TextureUsage::TextureBinding },
+      mViewUsage{ wgpu::TextureUsage::TextureBinding },
+      mDimension{ toWebGPUTextureViewDimension(samplerType) },
+      mBlockWidth{ filament::backend::getBlockWidth(format) },
+      mBlockHeight{ filament::backend::getBlockHeight(format) },
+      mArrayLayerCount{ 1 },
+      // copy rather than move: the external image state below also keeps a reference so that it
+      // can end the SharedTextureMemory access scope
+      mTexture{ imported.texture },
+      mDefaultMipLevel{ 0 },
+      mDefaultBaseArrayLayer{ 0 },
+      mDefaultTextureView{ makeExternalImageDefaultView(imported) },
+      mExternalImage{ std::make_shared<WebGPUExternalImageState>(std::move(imported),
+              endAccessConfig) } {
+}
+
+WebGPUExternalImageState::WebGPUExternalImageState(
+        WebGPUPlatform::ExternalImageImportResult&& imported,
+        [[maybe_unused]] const EndAccessConfig endAccessConfig) noexcept
+    : mExternalTexture{ std::move(imported.externalTexture) },
+#if !defined(__EMSCRIPTEN__)
+      mSharedTextureMemory{ std::move(imported.sharedTextureMemory) },
+      mEndAccessConfig{ endAccessConfig },
+#endif
+      mTexture{ std::move(imported.texture) },
+      mPlane0View{ std::move(imported.plane0) },
+      mPlane1View{ std::move(imported.plane1) },
+      mRetainedExternalImage{ std::move(imported.retainedImage) } {
+}
+
+WebGPUExternalImageState::~WebGPUExternalImageState() {
+#if !defined(__EMSCRIPTEN__)
+    if (mSharedTextureMemory && mTexture && mEndAccessConfig.supported) {
+        wgpu::SharedTextureMemoryEndAccessState endState{};
+        // Only Dawn's Vulkan backend accepts (and requires) the Vulkan layout end state. Other
+        // backends, e.g. the OpenGL ES fallback on Android, reject it.
+        wgpu::SharedTextureMemoryVkImageLayoutEndState vkLayoutEndState{};
+        if (mEndAccessConfig.chainVkImageLayoutEndState) {
+            endState.nextInChain = &vkLayoutEndState;
+        }
+        // The GPU has completed every submission that used the texture (see
+        // WebGPUDriver::destroyTexture), so the returned fences are already signaled.
+        mSharedTextureMemory.EndAccess(mTexture, &endState);
+    }
+#endif
+    // Release the WebGPU objects that alias the external buffer before the retained image, which
+    // hands the buffer back to its producer. Members would otherwise be destroyed in reverse
+    // declaration order, i.e. the retained image first.
+    mExternalTexture = nullptr;
+    mPlane1View = nullptr;
+    mPlane0View = nullptr;
+    mTexture = nullptr;
+#if !defined(__EMSCRIPTEN__)
+    mSharedTextureMemory = nullptr;
+#endif
+    mRetainedExternalImage.clear();
+}
+
 WebGPUTexture::WebGPUTexture(WebGPUTexture const* src, const uint8_t baseLevel,
         const uint8_t levelCount) noexcept
     : HwTexture{ src->target, levelCount, src->samples, src->width, src->height, src->depth,
@@ -346,7 +444,18 @@ WebGPUTexture::WebGPUTexture(const WebGPUTexture* src,
       mDefaultMipLevel{ src->mDefaultMipLevel },
       mDefaultBaseArrayLayer{ 0 },
       mMsaaSidecarTexture{src->mMsaaSidecarTexture},
-      mSwizzle{ composeSwizzle(src->getSwizzle(), nextSwizzle) } {
+      mSwizzle{ composeSwizzle(src->getSwizzle(), nextSwizzle) },
+      mExternalImage{ src->mExternalImage } {
+
+    if (mExternalImage) {
+        // wgpu::ExternalTexture cannot be swizzled, so the swizzle is ignored. The view shares the
+        // source's external image state (keeping the import alive after the source handle is
+        // destroyed) and its default texture view, which is only used when no external texture
+        // was imported.
+        mSwizzle = {};
+        mDefaultTextureView = src->mDefaultTextureView;
+        return;
+    }
 
     wgpu::TextureViewDescriptor viewDesc{
         .label = "swizzled_texture_view",

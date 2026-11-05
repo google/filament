@@ -81,6 +81,9 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
     wEntries.reserve(layout.descriptors.size() + samplerCount);
     mBindGroupEntries.reserve(wEntries.capacity());
 
+    std::vector<wgpu::ExternalTextureBindingLayout> externalTextureLayouts;
+    externalTextureLayouts.reserve(layout.descriptors.size());
+
     for (auto fEntry: layout.descriptors) {
         FILAMENT_CHECK_PRECONDITION(fEntry.binding < MAX_DESCRIPTOR_COUNT)
                 << "Descriptor binding " << +fEntry.binding << " exceeds MAX_DESCRIPTOR_COUNT ("
@@ -155,34 +158,42 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
                 break;
             }
             case DescriptorType::SAMPLER_EXTERNAL: {
-                PANIC_POSTCONDITION("External Sampler is not supported");
+                wEntry.nextInChain = &externalTextureLayouts.emplace_back();
+                auto& samplerEntry = wEntries.emplace_back();
+                auto& samplerEntryInfo = mBindGroupEntries.emplace_back();
+                samplerEntry.binding = fEntry.binding * 2 + 1;
+                samplerEntryInfo.binding = samplerEntry.binding;
+                samplerEntry.visibility = wEntry.visibility;
+                samplerEntry.sampler.type = wgpu::SamplerBindingType::Filtering;
                 break;
             }
         }
-        if (isDepthDescriptor(fEntry.type)) {
-            wEntry.texture.sampleType = wgpu::TextureSampleType::Depth;
-        } else if (isFloatDescriptor(fEntry.type)) {
-            if (any(fEntry.flags & DescriptorFlags::UNFILTERABLE)) {
-                wEntry.texture.sampleType = wgpu::TextureSampleType::UnfilterableFloat;
-            } else {
-                wEntry.texture.sampleType = wgpu::TextureSampleType::Float;
+        if (fEntry.type != DescriptorType::SAMPLER_EXTERNAL) {
+            if (isDepthDescriptor(fEntry.type)) {
+                wEntry.texture.sampleType = wgpu::TextureSampleType::Depth;
+            } else if (isFloatDescriptor(fEntry.type)) {
+                if (any(fEntry.flags & DescriptorFlags::UNFILTERABLE)) {
+                    wEntry.texture.sampleType = wgpu::TextureSampleType::UnfilterableFloat;
+                } else {
+                    wEntry.texture.sampleType = wgpu::TextureSampleType::Float;
+                }
+            } else if (isIntDescriptor(fEntry.type)) {
+                wEntry.texture.sampleType = wgpu::TextureSampleType::Sint;
+            } else if (isUnsignedIntDescriptor(fEntry.type)) {
+                wEntry.texture.sampleType = wgpu::TextureSampleType::Uint;
             }
-        } else if (isIntDescriptor(fEntry.type)) {
-            wEntry.texture.sampleType = wgpu::TextureSampleType::Sint;
-        } else if (isUnsignedIntDescriptor(fEntry.type)) {
-            wEntry.texture.sampleType = wgpu::TextureSampleType::Uint;
-        }
 
-        if (is3dTypeDescriptor(fEntry.type)) {
-            wEntry.texture.viewDimension = wgpu::TextureViewDimension::e3D;
-        } else if (is2dTypeDescriptor(fEntry.type)) {
-            wEntry.texture.viewDimension = wgpu::TextureViewDimension::e2D;
-        } else if (is2dArrayTypeDescriptor(fEntry.type)) {
-            wEntry.texture.viewDimension = wgpu::TextureViewDimension::e2DArray;
-        } else if (isCubeTypeDescriptor(fEntry.type)) {
-            wEntry.texture.viewDimension = wgpu::TextureViewDimension::Cube;
-        } else if (isCubeArrayTypeDescriptor(fEntry.type)) {
-            wEntry.texture.viewDimension = wgpu::TextureViewDimension::CubeArray;
+            if (is3dTypeDescriptor(fEntry.type)) {
+                wEntry.texture.viewDimension = wgpu::TextureViewDimension::e3D;
+            } else if (is2dTypeDescriptor(fEntry.type)) {
+                wEntry.texture.viewDimension = wgpu::TextureViewDimension::e2D;
+            } else if (is2dArrayTypeDescriptor(fEntry.type)) {
+                wEntry.texture.viewDimension = wgpu::TextureViewDimension::e2DArray;
+            } else if (isCubeTypeDescriptor(fEntry.type)) {
+                wEntry.texture.viewDimension = wgpu::TextureViewDimension::Cube;
+            } else if (isCubeArrayTypeDescriptor(fEntry.type)) {
+                wEntry.texture.viewDimension = wgpu::TextureViewDimension::CubeArray;
+            }
         }
     }
     // TODO: layoutDescriptor has a "Label". Ideally we can get info on what this layout is for

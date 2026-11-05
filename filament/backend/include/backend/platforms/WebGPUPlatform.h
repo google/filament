@@ -17,6 +17,7 @@
 #ifndef TNT_FILAMENT_BACKEND_PLATFORMS_WEBGPUPLATFORM_H
 #define TNT_FILAMENT_BACKEND_PLATFORMS_WEBGPUPLATFORM_H
 
+#include <backend/DriverEnums.h>
 #include <backend/Platform.h>
 
 #if defined(__linux__) && defined(FILAMENT_SUPPORTS_X11)
@@ -77,6 +78,22 @@ public:
     [[nodiscard]] virtual Configuration getConfiguration() const noexcept {
         return {};
     }
+
+    struct ExternalImageImportResult {
+        wgpu::ExternalTexture externalTexture = nullptr;
+#if !defined(__EMSCRIPTEN__)
+        wgpu::SharedTextureMemory sharedTextureMemory = nullptr;
+#endif
+        wgpu::Texture texture = nullptr;
+        wgpu::TextureView plane0 = nullptr;
+        wgpu::TextureView plane1 = nullptr;
+        wgpu::TextureView defaultTextureView = nullptr;
+        ExternalImageHandle retainedImage{};
+    };
+
+    [[nodiscard]] virtual ExternalImageImportResult importExternalImage(
+            ExternalImageHandleRef image, wgpu::Device const& device, SamplerType target,
+            TextureFormat format, uint32_t width, uint32_t height, TextureUsage usage);
 
 protected:
     [[nodiscard]] Driver* createDriver(void* sharedContext,

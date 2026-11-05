@@ -655,6 +655,7 @@ if (FILAMENT_BUILD_TESTING)
             list(APPEND BACKEND_TEST_SRC
                     test/test_WebGPUAsyncTaskCounter.cpp
                     test/test_WebGPUComposeSwizzle.cpp
+                    test/test_WebGPUExternalTexture.cpp
                     test/test_WebGPUSpecializationConstantProcessor.cpp
                     test/test_WebGPUTextureUsage.cpp
                     test/test_WebGPUVertexHelper.cpp)

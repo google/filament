@@ -27,6 +27,7 @@
 #include <spirv_glsl.hpp>
 #include <spirv_msl.hpp>
 
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -160,7 +161,19 @@ ShaderGenerator::Blob ShaderGenerator::transpileShader(ShaderStage stage, std::s
     } else if (backend == Backend::VULKAN) {
         return { (uint8_t*)spirv.data(), (uint8_t*)(spirv.data() + spirv.size()) };
     } else if (backend == Backend::WEBGPU){
-        EXPECT_THAT(filamat::GLSLPostProcessor::spirvToWgsl(&spirv, &result), ::testing::IsTrue());
+        // Declare the SAMPLER_EXTERNAL descriptors as `texture_external`, as filamat does for
+        // materials.
+        std::vector<filamat::GLSLPostProcessor::ExternalSamplerBinding> externalSamplers;
+        for (size_t set = 0; set < descriptorSets.size(); set++) {
+            for (auto const& descriptor: descriptorSets[set]) {
+                auto const& layout = std::get<DescriptorSetLayoutDescriptor>(descriptor);
+                if (layout.type == DescriptorType::SAMPLER_EXTERNAL) {
+                    externalSamplers.push_back({ descriptor_set_t(set), layout.binding });
+                }
+            }
+        }
+        EXPECT_THAT(filamat::GLSLPostProcessor::spirvToWgsl(&spirv, &result, externalSamplers),
+                ::testing::IsTrue());
         return { result.c_str(), result.c_str() + result.length() + 1 };
     }
 

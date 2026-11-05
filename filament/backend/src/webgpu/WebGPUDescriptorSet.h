@@ -54,6 +54,8 @@ public:
      */
     void addEntry(unsigned int index, wgpu::BindGroupEntry&& entry);
 
+    void addExternalTextureEntry(unsigned int index, wgpu::ExternalTexture const& externalTexture);
+
     /**
      * Finalizes the descriptor set by creating the wgpu::BindGroup. After this call, the
      * descriptor set is considered "locked" and cannot be modified further.
@@ -83,6 +85,7 @@ private:
     wgpu::BindGroupLayout mLayout = nullptr;
     std::array<uint8_t, MAX_WEBGPU_BINDINGS_PER_SET> mEntryIndexByBinding{};
     std::vector<wgpu::BindGroupEntry> mEntries;
+    std::vector<wgpu::ExternalTextureBindingEntry> mExternalTextureEntries;
     const size_t mEntriesWithDynamicOffsetsCount;
     // This is created lazily when lockAndReturn is called.
     wgpu::BindGroup mBindGroup = nullptr;

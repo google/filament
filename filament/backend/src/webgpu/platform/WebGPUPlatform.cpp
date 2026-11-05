@@ -82,8 +82,57 @@ constexpr std::array OPTIONAL_FEATURES = {
     // Unsupported on WASM
 #if !defined(__EMSCRIPTEN__)
     wgpu::FeatureName::TextureComponentSwizzle,
+    wgpu::FeatureName::DawnMultiPlanarFormats,
+    wgpu::FeatureName::MultiPlanarFormatP010,
+    wgpu::FeatureName::MultiPlanarFormatNv12a,
+    wgpu::FeatureName::Unorm16FormatsForExternalTexture,
+#if defined(__APPLE__)
+    wgpu::FeatureName::SharedTextureMemoryIOSurface,
+    wgpu::FeatureName::SharedFenceMTLSharedEvent,
+#elif defined(__ANDROID__)
+    wgpu::FeatureName::SharedTextureMemoryAHardwareBuffer,
+    wgpu::FeatureName::OpaqueYCbCrAndroidForExternalTexture,
+#elif defined(__linux__)
+    wgpu::FeatureName::SharedTextureMemoryDmaBuf,
+#endif
 #endif
 };
+
+#if !defined(__EMSCRIPTEN__)
+// Dawn's Vulkan backend rejects device creation when more than one shared fence feature is
+// enabled, even if the adapter advertises both. Listed in preference order: SyncFD matches Android
+// and Linux sync_file fences (and Dawn's OpenGL ES fallback on Android), with OpaqueFD as a
+// fallback for Vulkan drivers without sync_file export.
+constexpr std::array PREFERRED_SHARED_FENCE_FEATURES = {
+    wgpu::FeatureName::SharedFenceSyncFD,
+    wgpu::FeatureName::SharedFenceVkSemaphoreOpaqueFD,
+};
+
+#if defined(__ANDROID__) || defined(__linux__)
+constexpr bool ENABLE_FD_SHARED_FENCE_FEATURES = true;
+#else
+constexpr bool ENABLE_FD_SHARED_FENCE_FEATURES = false;
+#endif
+#endif
+
+template<typename Fn>
+void forEachSupportedOptionalFeature(wgpu::Adapter const& adapter, Fn&& fn) {
+    for (wgpu::FeatureName const feature : OPTIONAL_FEATURES) {
+        if (adapter.HasFeature(feature)) {
+            fn(feature);
+        }
+    }
+#if !defined(__EMSCRIPTEN__)
+    if constexpr (ENABLE_FD_SHARED_FENCE_FEATURES) {
+        for (wgpu::FeatureName const feature : PREFERRED_SHARED_FENCE_FEATURES) {
+            if (adapter.HasFeature(feature)) {
+                fn(feature);
+                break;
+            }
+        }
+    }
+#endif
+}
 
 enum class LimitToValidate : uint8_t {
     begin = 0,// needs to be first for iterating through all possible values in the enum
@@ -538,9 +587,10 @@ wgpu::Adapter selectPreferredAdapter(
         if (!adapterMeetsMinimumRequirements(details)) {
             continue;
         }
-        size_t supportedOptionalFeaturesCount = std::count_if(OPTIONAL_FEATURES.begin(),
-                OPTIONAL_FEATURES.end(), [&details](auto const& featureName) {
-                    return details.adapter.HasFeature(featureName);
+        size_t supportedOptionalFeaturesCount = 0;
+        forEachSupportedOptionalFeature(details.adapter,
+                [&supportedOptionalFeaturesCount](wgpu::FeatureName) {
+                    supportedOptionalFeaturesCount += 1;
                 });
         // select this one if it is the first (perhaps it is the only one anyway)...
         if (selectedAdapter == nullptr) {
@@ -613,15 +663,13 @@ wgpu::Adapter WebGPUPlatform::requestAdapter(wgpu::Surface const& surface) {
 
 wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
     std::vector<wgpu::FeatureName> enabledFeatures;
-    enabledFeatures.reserve(REQUIRED_FEATURES.size() + OPTIONAL_FEATURES.size());
+    enabledFeatures.reserve(REQUIRED_FEATURES.size() + OPTIONAL_FEATURES.size() + 1);
     for (auto const& requiredFeature : REQUIRED_FEATURES) {
         enabledFeatures.push_back(requiredFeature);
     }
-    for (auto const& optionalFeature : OPTIONAL_FEATURES) {
-        if (adapter.HasFeature(optionalFeature)) {
-            enabledFeatures.push_back(optionalFeature);
-        }
-    }
+    forEachSupportedOptionalFeature(adapter, [&enabledFeatures](wgpu::FeatureName const feature) {
+        enabledFeatures.push_back(feature);
+    });
     wgpu::DeviceDescriptor deviceDescriptor{};
     deviceDescriptor.label = "graphics_device";
     deviceDescriptor.defaultQueue.label = "default_queue";
@@ -665,14 +713,17 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
             std::min(MAX_MIPMAP_STORAGE_TEXTURES_PER_STAGE,
                     supportedLimits.maxStorageTexturesPerShaderStage);
     limitsToRequest.maxImmediateSize = supportedLimits.maxImmediateSize;
-    // TODO: request min(adapter maximum, FEATURE_LEVEL_CAPS[FEATURE_LEVEL_3]) for both
-    //  maxSamplersPerShaderStage and maxSampledTexturesPerShaderStage. Note that
-    //  MAX_SAMPLER_COUNT is a total across stages, not a per-stage limit. When the
-    //  material.check_device_sampler_limits feature flag is set, material creation validates
-    //  sampler usage against the limits granted to the device (see
-    //  WebGPUDriver::getMaxTextureCount() and getMaxSamplerCount()), and those default to the spec
-    //  minimum (16) unless requested here. This matters in particular for external textures, each
-    //  of which counts as 4 sampled textures. getFeatureLevel() also depends on these limits.
+    auto const& fl3Caps = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_3];
+    uint32_t const targetSamplersPerStage = static_cast<uint32_t>(
+            std::max(fl3Caps.MAX_VERTEX_SAMPLER_COUNT, fl3Caps.MAX_FRAGMENT_SAMPLER_COUNT));
+    limitsToRequest.maxSamplersPerShaderStage =
+            std::min(supportedLimits.maxSamplersPerShaderStage, targetSamplersPerStage);
+    // Each external texture counts as 4 sampled textures and 1 uniform buffer against the per-stage
+    // binding limits in WebGPU.
+    limitsToRequest.maxSampledTexturesPerShaderStage =
+            std::min(supportedLimits.maxSampledTexturesPerShaderStage, targetSamplersPerStage * 4u);
+    limitsToRequest.maxUniformBuffersPerShaderStage =
+            supportedLimits.maxUniformBuffersPerShaderStage;
     deviceDescriptor.requiredLimits = &limitsToRequest;
 
     deviceDescriptor.SetDeviceLostCallback(wgpu::CallbackMode::AllowSpontaneous,
@@ -738,6 +789,12 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
     printDeviceDetails(device);
 #endif
     return device;
+}
+
+WebGPUPlatform::ExternalImageImportResult WebGPUPlatform::importExternalImage(
+        ExternalImageHandleRef, wgpu::Device const&, SamplerType, TextureFormat, uint32_t,
+        uint32_t, TextureUsage) {
+    return {};
 }
 
 Driver* WebGPUPlatform::createDriver(void* sharedContext,

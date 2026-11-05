@@ -20,6 +20,8 @@
 #include "DriverBase.h"
 
 #include <backend/DriverEnums.h>
+#include <backend/Platform.h>
+#include <backend/platforms/WebGPUPlatform.h>
 #if defined(__EMSCRIPTEN__)
 #include <backend/platforms/WebGPUWasmPolyfill.h>
 #endif
@@ -27,8 +29,61 @@
 #include <webgpu/webgpu_cpp.h>
 
 #include <cstdint>
+#include <memory>
 
 namespace filament::backend {
+
+/**
+ * Owns the WebGPU objects backing an imported external image. It is shared (via std::shared_ptr)
+ * between the WebGPUTexture created by the import and any views derived from it (e.g. swizzle
+ * views), so that the image, and its SharedTextureMemory access scope, outlive the destruction of
+ * the original texture handle.
+ *
+ * The destructor ends the SharedTextureMemory access and releases the retained external image,
+ * which hands the buffer back to its producer. It must therefore only run once the GPU has
+ * finished every submission that may reference the image. WebGPUDriver::destroyTexture ensures
+ * this by deferring the release of the last reference until that submission has completed.
+ */
+class WebGPUExternalImageState {
+public:
+    /**
+     * How the SharedTextureMemory access scope is ended, which depends on the device.
+     */
+    struct EndAccessConfig {
+        // Whether EndAccess can be called. Once the texture was used, Dawn's EndAccess exports a
+        // fence, which requires a shared fence feature (SharedFenceMTLSharedEvent on Metal,
+        // SharedFenceSyncFD or SharedFenceVkSemaphoreOpaqueFD on Vulkan). Without it, EndAccess
+        // is a validation error, so the access scope is left open and the objects are released.
+        bool supported = false;
+        // Whether EndAccess must chain a wgpu::SharedTextureMemoryVkImageLayoutEndState, which is
+        // only valid (and required) when the device runs on Dawn's Vulkan backend.
+        bool chainVkImageLayoutEndState = false;
+    };
+
+    WebGPUExternalImageState(WebGPUPlatform::ExternalImageImportResult&& imported,
+            EndAccessConfig endAccessConfig) noexcept;
+    ~WebGPUExternalImageState();
+
+    WebGPUExternalImageState(WebGPUExternalImageState const&) = delete;
+    WebGPUExternalImageState& operator=(WebGPUExternalImageState const&) = delete;
+
+    [[nodiscard]] wgpu::ExternalTexture const& getExternalTexture() const noexcept {
+        return mExternalTexture;
+    }
+
+private:
+    wgpu::ExternalTexture mExternalTexture = nullptr;
+#if !defined(__EMSCRIPTEN__)
+    wgpu::SharedTextureMemory mSharedTextureMemory = nullptr;
+    EndAccessConfig mEndAccessConfig{};
+#endif
+    // The texture created from mSharedTextureMemory, which is needed to end the access scope.
+    wgpu::Texture mTexture = nullptr;
+    wgpu::TextureView mPlane0View = nullptr;
+    wgpu::TextureView mPlane1View = nullptr;
+    // Released last, after the WebGPU objects that alias the external buffer.
+    Platform::ExternalImageHandle mRetainedExternalImage{};
+};
 
 class WebGPUTexture : public HwTexture {
 public:
@@ -46,6 +101,18 @@ public:
             bool asynchronous = false) noexcept;
 
     /**
+     * Creates a Filament texture wrapping an imported external image (e.g., wgpu::ExternalTexture
+     * or wgpu::SharedTextureMemory).
+     * When the import provides no wgpu::ExternalTexture and no default view, a 2D default view is
+     * created from the imported texture if its format can be bound to an external texture slot
+     * (RGBA8Unorm, BGRA8Unorm or RGBA16Float).
+     * @param endAccessConfig see WebGPUExternalImageState::EndAccessConfig
+     */
+    WebGPUTexture(SamplerType, TextureFormat, uint32_t width, uint32_t height, TextureUsage,
+            WebGPUPlatform::ExternalImageImportResult&& imported,
+            WebGPUExternalImageState::EndAccessConfig endAccessConfig) noexcept;
+
+    /**
      * Creates a "Filament Texture View", where the underlying texture is the same as the source,
      * but the view elements differ
      */
@@ -54,7 +121,9 @@ public:
     /**
      * @param nextSwizzle the swizzle to apply to the source texture.
      * Creates a new texture view by composing the nextSwizzle with the source which itself it
-     * could be a swizzled view
+     * could be a swizzled view.
+     * If the source wraps a wgpu::ExternalTexture, the view shares the source's external image
+     * state and the swizzle is ignored, because external textures cannot be swizzled.
      */
     WebGPUTexture(WebGPUTexture const* source, wgpu::TextureComponentSwizzle nextSwizzle) noexcept;
 
@@ -68,6 +137,19 @@ public:
 
     [[nodiscard]] wgpu::TextureView const& getDefaultTextureView() const {
         return mDefaultTextureView;
+    }
+
+    [[nodiscard]] wgpu::ExternalTexture getExternalTexture() const noexcept {
+        return mExternalImage ? mExternalImage->getExternalTexture() : nullptr;
+    }
+
+    // true if this texture wraps an imported external image (or is a view derived from one)
+    [[nodiscard]] bool isExternalImage() const noexcept { return mExternalImage != nullptr; }
+
+    // the external image state shared with views of this texture, or null
+    [[nodiscard]] std::shared_ptr<WebGPUExternalImageState> const&
+    getExternalImageState() const noexcept {
+        return mExternalImage;
     }
 
     [[nodiscard]] wgpu::TextureView makeAttachmentTextureView(uint8_t mipLevel, uint32_t arrayLayer,
@@ -145,6 +227,8 @@ private:
     wgpu::Texture mMsaaSidecarTexture = nullptr;
     // an undefined mSwizzle means that is not a swizzle view
     wgpu::TextureComponentSwizzle mSwizzle{};
+    // non-null only for textures wrapping an imported external image (and views derived from them)
+    std::shared_ptr<WebGPUExternalImageState> mExternalImage;
 
     [[nodiscard]] wgpu::TextureView makeTextureView(const uint8_t& baseLevel,
             const uint8_t& levelCount, const uint32_t& baseArrayLayer,

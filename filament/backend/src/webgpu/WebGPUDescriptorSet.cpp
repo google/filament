@@ -52,6 +52,7 @@ WebGPUDescriptorSet::WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
               bindGroupEntries.end(), [](auto const& entry) { return entry.hasDynamicOffset; })) } {
 
     mEntries.resize(bindGroupEntries.size());
+    mExternalTextureEntries.resize(bindGroupEntries.size());
     for (size_t i = 0; i < bindGroupEntries.size(); ++i) {
         mEntries[i].binding = bindGroupEntries[i].binding;
     }
@@ -84,11 +85,34 @@ void WebGPUDescriptorSet::addEntry(const unsigned int index, wgpu::BindGroupEntr
 
     entry.binding = index;
     mEntries[entryIndex] = std::move(entry);
+    mExternalTextureEntries[entryIndex].externalTexture = nullptr;
+}
+
+void WebGPUDescriptorSet::addExternalTextureEntry(const unsigned int index,
+        wgpu::ExternalTexture const& externalTexture) {
+    if (mBindGroup) {
+        return;
+    }
+    FILAMENT_CHECK_POSTCONDITION(index < mEntryIndexByBinding.size())
+            << "impossible/invalid index for a descriptor/binding (out of range or >= "
+               "MAX_WEBGPU_BINDINGS_PER_SET) "
+            << index;
+    uint8_t const entryIndex = mEntryIndexByBinding[index];
+    FILAMENT_CHECK_POSTCONDITION(entryIndex != INVALID_INDEX && entryIndex < mEntries.size())
+            << "Invalid binding index: " << index;
+
+    mEntries[entryIndex] = { .binding = index };
+    mExternalTextureEntries[entryIndex].externalTexture = externalTexture;
 }
 
 wgpu::BindGroup WebGPUDescriptorSet::lockAndReturn(wgpu::Device const& device) {
     if (mBindGroup) {
         return mBindGroup;
+    }
+    for (size_t i = 0; i < mEntries.size(); ++i) {
+        if (mExternalTextureEntries[i].externalTexture) {
+            mEntries[i].nextInChain = &mExternalTextureEntries[i];
+        }
     }
     // TODO label? Should we just copy layout label?
     const wgpu::BindGroupDescriptor descriptor{
@@ -121,11 +145,16 @@ wgpu::BindGroup WebGPUDescriptorSet::lockAndReturn(wgpu::Device const& device) {
         if (entry.textureView) {
             FWGPU_LOGD << "    binding:" << entry.binding << " texture (view)";
         }
+        if (entry.nextInChain) {
+            FWGPU_LOGD << "    binding:" << entry.binding << " external texture";
+        }
     }
 #endif
     mLayout = nullptr;
     mEntries.clear();
     mEntries.shrink_to_fit();
+    mExternalTextureEntries.clear();
+    mExternalTextureEntries.shrink_to_fit();
     return mBindGroup;
 }
 
