@@ -9,4 +9,7 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - webgpu: preserve fragment depth writes and discard in depth-only render passes (#10717).
 - gltf: `KHR_materials_iridescence` is now supported
 - gltf: `KHR_materials_anisotropy` is now supported
-
+- gltf: `KHR_materials_diffuse_transmission` is now supported
+- materials: the new `diffuseTransmission` and `diffuseTransmissionColor` material properties can be
+  used in the lit (standard) shading model to create diffusely transmitting (translucent) surfaces
+- variant: completely remove FOG variant bit

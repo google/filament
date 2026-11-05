@@ -132,26 +132,30 @@ TEST(PagedArenaBitsetPoolTest, HighWaterMarkScaling) {
 TEST(PagedArenaBitsetPoolTest, ClearPool) {
     PagedArenaBitsetPool pool;
 
-    PagedArenaBitset* address1 = nullptr;
-    PagedArenaBitset* address2 = nullptr;
-
     {
         PagedArenaBitsetPool::ScopedBitset bs1 = pool.get();
         PagedArenaBitsetPool::ScopedBitset bs2 = pool.get();
-        address1 = bs1.get();
-        address2 = bs2.get();
+        EXPECT_NE(bs1.get(), bs2.get());
     } // Both returned to pool's free-list
+
+    EXPECT_EQ(pool.size(), 2u);
 
     // Clear the pool to free all resources
     pool.clear();
+    EXPECT_EQ(pool.size(), 0u);
 
-    // Checkout one bitset. Since the pool was cleared, this will allocate a new one.
-    PagedArenaBitsetPool::ScopedBitset bs3 = pool.get();
-    // Checkout a second one. This will also allocate a new one.
-    PagedArenaBitsetPool::ScopedBitset bs4 = pool.get();
+    {
+        // Checkout one bitset. Since the pool was cleared, this will allocate a new one.
+        PagedArenaBitsetPool::ScopedBitset bs3 = pool.get();
+        // Checkout a second one. This will also allocate a new one.
+        PagedArenaBitsetPool::ScopedBitset bs4 = pool.get();
 
-    // Verify they are distinct from each other
-    EXPECT_NE(bs3.get(), bs4.get());
+        // Verify they are distinct from each other and the free-list remains empty while checked out
+        EXPECT_NE(bs3.get(), bs4.get());
+        EXPECT_EQ(pool.size(), 0u);
+    }
+
+    EXPECT_EQ(pool.size(), 2u);
 }
 
 TEST(PagedArenaBitsetPoolTest, PoolSize) {

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include "AtlasAllocator.h"
+
+#include <gtest/gtest.h>
 
 using namespace filament;
 
@@ -138,9 +138,11 @@ TEST(AtlasAllocator, AllocateFourCascades_Test) {
 
     auto e4 = allocator.allocate(128);
     EXPECT_EQ(e4.layer, 4);
+    EXPECT_EQ(e4.viewport, Viewport(0, 0, 128, 128));
 
     auto e5 = allocator.allocate(128);
     EXPECT_EQ(e5.layer, 4);
+    EXPECT_EQ(e5.viewport, Viewport(128, 0, 128, 128));
 }
 
 TEST(AtlasAllocator, AllocateBySize) {
@@ -289,8 +291,12 @@ TEST(AtlasAllocator, FreeInvalid) {
     AtlasAllocator allocator(256);
     AtlasAllocator::Allocation invalid;
     EXPECT_FALSE(invalid.isValid());
-    // Should not crash
+    // Should not crash or corrupt allocator state
     allocator.free(invalid);
+    auto valid = allocator.allocate(256);
+    EXPECT_TRUE(valid.isValid());
+    EXPECT_EQ(valid.layer, 0);
+    EXPECT_EQ(valid.viewport, Viewport(0, 0, 256, 256));
 }
 
 TEST(AtlasAllocator, Checkerboard) {

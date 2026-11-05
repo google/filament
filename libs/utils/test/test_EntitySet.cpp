@@ -280,38 +280,48 @@ TEST(PagedArenaBitsetTest, IntersectMulti) {
 
 TEST(PagedArenaBitsetTest, IntersectMultiEmpty) {
     PagedArenaBitset bs1;
-    PagedArenaBitset const bs2;
+    PagedArenaBitset bs2;
+    PagedArenaBitset const bs3;
 
     bs1.add(1);
+    bs2.add(1);
 
-    PagedArenaBitset const res = PagedArenaBitset::intersect(bs1, bs2);
+    // Pass 3 operands so the variadic multi-way intersectInternal overload is exercised.
+    PagedArenaBitset const res = PagedArenaBitset::intersect(bs1, bs2, bs3);
     EXPECT_TRUE(res.empty());
 }
 
 TEST(PagedArenaBitsetTest, Defragment) {
     PagedArenaBitset bs;
-    bs.add(10); // Page 0
-    bs.add(5000); // Page 1 (since 5000 > 4096!)
+    bs.add(10);   // Page 0 (dirIdx 0)
+    bs.add(4103); // Page 1 (dirIdx 1, offset 7)
+    bs.add(8199); // Page 2 (dirIdx 2, offset 7)
+
+    EXPECT_EQ(bs.size(), 3);
+
+    // Remove all bits from page 1 so dirIdx 1 becomes a ghost page between page 0 and page 2.
+    bs.remove(4103);
 
     EXPECT_EQ(bs.size(), 2);
 
-    // Remove bits from page 1!
-    bs.remove(5000);
-
-    EXPECT_EQ(bs.size(), 1);
-
-    // Now page 1 is a ghost page!
-    // Let's defragment!
+    // Defragment drops ghost page 1 and relocates page 2 from physical index 2 to physical index 1.
     bs.defragment();
 
-    EXPECT_EQ(bs.size(), 1);
+    EXPECT_EQ(bs.size(), 2);
     EXPECT_TRUE(bs[10]);
-    EXPECT_FALSE(bs[5000]);
+    EXPECT_FALSE(bs[4103]);
+    EXPECT_TRUE(bs[8199]);
+
+    std::vector<uint32_t> extracted;
+    bs.extractTo(extracted);
+    ASSERT_EQ(extracted.size(), 2u);
+    EXPECT_EQ(extracted[0], 10u);
+    EXPECT_EQ(extracted[1], 8199u);
 }
 
 TEST(PagedArenaBitsetTest, LargeIndices) {
     PagedArenaBitset bs;
-    uint32_t const largeIndex = (1U << 25) - 1; // Limit suggested by user!
+    uint32_t const largeIndex = (1U << (PagedArenaBitset::DOMAIN_BITS - 1)) + 123u;
     bs.add(largeIndex);
     EXPECT_TRUE(bs[largeIndex]);
     EXPECT_EQ(bs.size(), 1);
@@ -412,7 +422,7 @@ TEST(PagedArenaBitsetTest, SelfIntersection) {
 
 TEST(PagedArenaBitsetTest, MaxIndex) {
     PagedArenaBitset bs;
-    uint32_t const maxIndex = (1U << 27) - 1;
+    uint32_t const maxIndex = (1U << PagedArenaBitset::DOMAIN_BITS) - 1;
     bs.add(maxIndex);
     EXPECT_TRUE(bs[maxIndex]);
     EXPECT_EQ(bs.size(), 1);
@@ -835,17 +845,29 @@ TEST(PagedArenaBitsetTest, DefragmentEdgeCases) {
     EXPECT_TRUE(emptyBs.empty());
 
     PagedArenaBitset bs;
-    bs.add(10);    // Page 0
-    bs.add(5000);  // Page 1
-    bs.add(10000); // Page 2
+    bs.add(10);    // Page 0 (dirIdx 0)
+    bs.add(4105);  // Page 1 (dirIdx 1, offset 9)
+    bs.add(8201);  // Page 2 (dirIdx 2, offset 9)
+    bs.add(12297); // Page 3 (dirIdx 3, offset 9)
 
-    bs.remove(5000);  // Page 1 ghost
-    bs.remove(10000); // Page 2 ghost
+    bs.remove(4105); // Page 1 ghost
+    bs.remove(8201); // Page 2 ghost
 
-    // Defragmenting multiple consecutive ghosts
+    // Defragmenting multiple consecutive ghosts before an active higher page
     bs.defragment();
-    EXPECT_EQ(bs.size(), 1);
+    EXPECT_EQ(bs.size(), 2);
     EXPECT_TRUE(bs[10]);
+    EXPECT_FALSE(bs[4105]);
+    EXPECT_FALSE(bs[8201]);
+    EXPECT_TRUE(bs[12297]);
+
+    // Re-allocating page 1 after defragmentation must not alias page 3
+    bs.add(4100);
+    EXPECT_EQ(bs.size(), 3);
+    EXPECT_TRUE(bs[10]);
+    EXPECT_TRUE(bs[4100]);
+    EXPECT_FALSE(bs[4105]);
+    EXPECT_TRUE(bs[12297]);
 }
 
 TEST(PagedArenaBitsetTest, ExchangeAndSelfMove) {
@@ -970,28 +992,25 @@ TEST(PagedArenaBitsetTest, BatchAddSliceAndInvariants) {
         verifyEquivalent(batchBs, scalarBs);
     }
 
-    // 3. Multi-page & alternating-page stress across all 8 L0 Master Mask words (2^27 domain),
+    // 3. Multi-page & alternating-page stress across all 32 pages of the 2^17 domain,
     // forcing multiple mArena vector reallocations and cachedDirIdx thrashing + hits
     {
         std::vector<uint32_t> batch;
-        // Span all 8 master words (each master word covers 64 * 64 * 4096 = 16,777,216 indices)
-        for (uint32_t m = 0; m < 8; ++m) {
-            uint32_t const base = m * (1u << 24);
-            // Multiple pages per master word, multiple words per page
-            for (uint32_t p = 0; p < 40; ++p) {
-                uint32_t const pageBase = base + p * 4096u;
-                batch.push_back(pageBase + 0u);
-                batch.push_back(pageBase + 63u);
-                batch.push_back(pageBase + 64u + (p % 64u));
-                batch.push_back(pageBase + 4095u);
-            }
+        constexpr uint32_t kNumPages = 1u << (PagedArenaBitset::DOMAIN_BITS -
+                PagedArenaBitset::FILAMENT_PAGE_SHIFT);
+        for (uint32_t p = 0; p < kNumPages; ++p) {
+            uint32_t const pageBase = p * 4096u;
+            batch.push_back(pageBase + 0u);
+            batch.push_back(pageBase + 63u);
+            batch.push_back(pageBase + 64u + (p % 64u));
+            batch.push_back(pageBase + 4095u);
         }
         // Interleave alternating pages and duplicates to test cachedDirIdx transitions
-        for (size_t i = 0, n = batch.size(); i < n; i += 7) {
+        for (size_t i = 0, n = batch.size(); i < n; i += 3) {
             batch.push_back(batch[i]);
             batch.push_back(batch[n - 1 - i]);
         }
-        // Include highest valid index in the 2^27 domain
+        // Include highest valid index in the domain
         batch.push_back((1u << PagedArenaBitset::DOMAIN_BITS) - 1u);
 
         PagedArenaBitset batchBs;
@@ -1077,6 +1096,20 @@ TEST(PagedArenaBitsetTest, BatchAddFilteredSlice) {
     PagedArenaBitset bsEmpty;
     bsEmpty.add({ batch.data(), batch.size() }, &emptyFilter);
     EXPECT_TRUE(bsEmpty.empty());
+
+    // Masked batch add strips high generation bits before bounds check, filter probe, and insertion
+    constexpr uint32_t kIndexMask = (1u << PagedArenaBitset::DOMAIN_BITS) - 1u;
+    std::vector<uint32_t> const generationalBatch = {
+        (5u << PagedArenaBitset::DOMAIN_BITS) | 10u,
+        (99u << PagedArenaBitset::DOMAIN_BITS) | (4096u + 6u), // filtered out
+        (255u << PagedArenaBitset::DOMAIN_BITS) | (8192u + 77u)
+    };
+    PagedArenaBitset bsMasked;
+    bsMasked.add({ generationalBatch.data(), generationalBatch.size() }, &filter, kIndexMask);
+    EXPECT_EQ(bsMasked.size(), 2u);
+    EXPECT_TRUE(bsMasked[10u]);
+    EXPECT_TRUE(bsMasked[8192u + 77u]);
+    EXPECT_FALSE(bsMasked[4096u + 6u]);
 }
 
 TEST(PagedArenaBitsetTest, OperatorSubscriptInvariants) {
@@ -1093,7 +1126,7 @@ TEST(PagedArenaBitsetTest, OperatorSubscriptInvariants) {
 
     // Boundary bits within pages and words
     std::vector<uint32_t> const testBits = {
-        0u, 1u, 63u, 64u, 65u, 4095u, 4096u, (1u << 20) + 123u, kMaxIndex
+        0u, 1u, 63u, 64u, 65u, 4095u, 4096u, (1u << 16) + 123u, kMaxIndex
     };
     for (uint32_t const b : testBits) {
         bs.add(b);

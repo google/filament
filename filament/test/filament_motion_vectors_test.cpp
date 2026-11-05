@@ -1205,14 +1205,13 @@ TEST_F(MotionVectorsTest, MaterialVertexDisplacement) {
     EXPECT_TRUE(tv.isAllZero());
 }
 
-// Case 8: filtering out the VSM and fog variants doesn't remove the motion vectors variant,
-// although MOT is encoded as MNT | PCK (which alias S2D and FOG).
-TEST_F(MotionVectorsTest, MaskedWithVsmAndFogFilter) {
+// Case 8: filtering out the VSM variant doesn't remove the motion vectors variant,
+// although MOT is encoded as MNT | PCK (and MNT aliases S2D).
+TEST_F(MotionVectorsTest, MaskedWithVsmFilter) {
     TestView& tv = *mView;
     Material const* const material = buildMaterial({
             .blending = BlendingMode::MASKED,
-            .variantFilter = UserVariantFilterMask(UserVariantFilterBit::VSM) |
-                             UserVariantFilterMask(UserVariantFilterBit::FOG),
+            .variantFilter = UserVariantFilterMask(UserVariantFilterBit::VSM),
             .fragment = kHalfTransparentFragment,
             .vertex = kLocalPositionVertex,
             .localPosVariable = true });
