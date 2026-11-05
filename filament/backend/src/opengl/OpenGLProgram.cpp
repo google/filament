@@ -33,6 +33,7 @@
 #include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
+#include <utils/Panic.h>
 
 #include <algorithm>
 #include <array>
@@ -185,8 +186,7 @@ void OpenGLProgram::initializeProgramState(OpenGLState& gls, GLuint program,
     for (descriptor_set_t set = 0; set < MAX_DESCRIPTOR_SET_COUNT; set++) {
         for (Program::Descriptor const& entry: lazyInitializationData.descriptorBindings[set]) {
             switch (entry.type) {
-                case DescriptorType::UNIFORM_BUFFER:
-                case DescriptorType::SHADER_STORAGE_BUFFER: {
+                case DescriptorType::UNIFORM_BUFFER: {
                     if (!entry.name.empty()) {
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
                         if (UTILS_LIKELY(!gls.isES2())) {
@@ -229,6 +229,31 @@ void OpenGLProgram::initializeProgramState(OpenGLState& gls, GLuint program,
                             }
                         }
                     }
+                    break;
+                }
+                case DescriptorType::SHADER_STORAGE_BUFFER: {
+#if defined(BACKEND_OPENGL_LEVEL_GLES31)
+                    if (entry.name.empty() || !(gls.context().isAtLeastGLES<3, 1>() ||
+                            gls.context().isAtLeastGL<4, 3>())) {
+                        break;
+                    }
+                    GLuint const index = glGetProgramResourceIndex(program,
+                            GL_SHADER_STORAGE_BLOCK, entry.name.c_str());
+                    if (index != GL_INVALID_INDEX) {
+                        // Unlike uniform blocks, GLES storage blocks cannot be rebound after
+                        // linking. Use the shader's binding, not its resource index or the UBO
+                        // binding counter. Desktop GL uses the same shader binding contract.
+                        GLenum const property = GL_BUFFER_BINDING;
+                        GLint storageBinding = -1;
+                        glGetProgramResourceiv(program, GL_SHADER_STORAGE_BLOCK, index,
+                                1, &property, 1, nullptr, &storageBinding);
+                        FILAMENT_CHECK_PRECONDITION(storageBinding >= 0 &&
+                                size_t(storageBinding) < OpenGLState::MAX_BUFFER_BINDINGS)
+                                << "Shader storage buffer binding exceeds the backend limit";
+                        mBindingMap.insert(set, entry.binding,
+                                { GLuint(storageBinding), entry.type });
+                    }
+#endif
                     break;
                 }
                 case DescriptorType::SAMPLER_2D_FLOAT:
