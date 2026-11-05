@@ -433,7 +433,7 @@ private:
     bool mValidProgram = false;
     utils::bitset8 mInvalidDescriptorSetBindings;
     utils::bitset8 mInvalidDescriptorSetBindingOffsets;
-    void updateDescriptors(utils::bitset8 invalidDescriptorSets) noexcept;
+    void updateDescriptors(utils::bitset8 invalidDescriptorSets, bool isCompute = false) noexcept;
 
     struct {
         DescriptorSetHandle dsh;

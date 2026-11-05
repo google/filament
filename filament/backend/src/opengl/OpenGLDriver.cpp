@@ -5076,10 +5076,10 @@ void OpenGLDriver::bindDescriptorSet(
     }
 }
 
-void OpenGLDriver::updateDescriptors(bitset8 const invalidDescriptorSets) noexcept {
+void OpenGLDriver::updateDescriptors(bitset8 const invalidDescriptorSets, bool const isCompute) noexcept {
     assert_invariant(mBoundProgram);
     auto const offsetOnly = mInvalidDescriptorSetBindingOffsets & ~mInvalidDescriptorSetBindings;
-    invalidDescriptorSets.forEachSetBit([this, offsetOnly,
+    invalidDescriptorSets.forEachSetBit([this, offsetOnly, isCompute,
             &boundDescriptorSets = mBoundDescriptorSets,
             &state = getBackendState(),
             &boundProgram = *mBoundProgram](size_t const set) {
@@ -5087,13 +5087,13 @@ void OpenGLDriver::updateDescriptors(bitset8 const invalidDescriptorSets) noexce
         auto const& entry = boundDescriptorSets[set];
         if (entry.dsh) {
             GLDescriptorSet const* const ds = handle_cast<GLDescriptorSet*>(entry.dsh);
+            if (UTILS_UNLIKELY(!offsetOnly[set]) && !isCompute) {
 #ifndef NDEBUG
-            if (UTILS_UNLIKELY(!offsetOnly[set])) {
                 // validate that this descriptor-set layout matches the layout set in the pipeline
                 // we don't need to do the check if only the offset is changing
                 ds->validate(mHandleAllocator, mCurrentSetLayout[set]);
-            }
 #endif
+            }
             ds->bind(state, mHandleAllocator, boundProgram,
                     set, entry.offsets.data(), offsetOnly[set]);
         }
@@ -5238,6 +5238,14 @@ void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, uint3 const workGr
         // is invalid. The shader compile error has already been dumped to the console at this
         // point, so it's fine to simply return early.
         return;
+    }
+
+    // Compute has no graphics pipeline layout to validate against. Apply the same pending
+    // descriptor bindings and dynamic offsets as draw calls, using this program's binding map.
+    auto const invalidDescriptorSets =
+            mInvalidDescriptorSetBindings | mInvalidDescriptorSetBindingOffsets;
+    if (UTILS_UNLIKELY(invalidDescriptorSets.any())) {
+        updateDescriptors(invalidDescriptorSets, true);
     }
 
 #if defined(BACKEND_OPENGL_LEVEL_GLES31)
