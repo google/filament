@@ -79,8 +79,10 @@ TEST(RefCountedMapTest, ValueType_GetsValue) {
 
 TEST(RefCountedMapTest, ValueType_CanReleaseNullValue) {
     RefCountedMap<KeyType, ValueType> map;
-    map.acquire(1);
+    EXPECT_EQ(map.acquire(1), nullptr);
+    EXPECT_FALSE(map.empty());
     map.release(1, [](ValueType& it) { ADD_FAILURE(); });
+    EXPECT_TRUE(map.empty());
 }
 
 #ifdef GTEST_HAS_DEATH_TEST
@@ -163,8 +165,10 @@ TEST(RefCountedMapTest, PlainPointerType_GetsValue) {
 
 TEST(RefCountedMapTest, PlainPointerType_CanReleaseNullValue) {
     RefCountedMap<KeyType, PlainPointerType> map;
-    map.acquire(1);
+    EXPECT_EQ(map.acquire(1), nullptr);
+    EXPECT_FALSE(map.empty());
     map.release(1, [](ValueType& it) { ADD_FAILURE(); });
+    EXPECT_TRUE(map.empty());
 }
 
 #ifdef GTEST_HAS_DEATH_TEST
@@ -240,8 +244,10 @@ TEST(RefCountedMapTest, SmartPointerType_GetsValue) {
 
 TEST(RefCountedMapTest, SmartPointerType_CanReleaseNullValue) {
     RefCountedMap<KeyType, SmartPointerType> map;
-    map.acquire(1);
+    EXPECT_EQ(map.acquire(1), nullptr);
+    EXPECT_FALSE(map.empty());
     map.release(1, [](ValueType& it) { ADD_FAILURE(); });
+    EXPECT_TRUE(map.empty());
 }
 
 #ifdef GTEST_HAS_DEATH_TEST

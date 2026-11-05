@@ -68,6 +68,9 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(io::sstream& out,
     if (filament::Variant::isValidDepthVariant(variant)) {
         CodeGenerator::generateDefine(out, "VARIANT_DEPTH");
     }
+    if (filament::Variant::isMotionVectorsVariant(variant)) {
+        CodeGenerator::generateDefine(out, "VARIANT_HAS_MOT");
+    }
 
     switch (stage) {
         case ShaderStage::VERTEX:
@@ -428,7 +431,9 @@ std::string ShaderGenerator::createSurfaceVertexProgram(ShaderModel const shader
             filament::Variant::isValidDepthVariant(variant) &&
             // must have an empty vertex shader
             mIsMaterialVertexShaderEmpty &&
-            // but must not be MASKED mode
+            // but no custom depth computations
+            !material.userMaterialHasCustomDepth &&
+            // and must not be MASKED mode
             material.blendingMode != BlendingMode::MASKED &&
             // and must not have transparent shadows
             !(material.hasTransparentShadow  &&

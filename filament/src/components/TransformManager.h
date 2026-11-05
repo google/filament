@@ -33,7 +33,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <utility>
-#include <variant>
 #include <vector>
 
 namespace utils {
@@ -95,7 +94,7 @@ public:
         return mAccurateTranslations;
     }
 
-    void create(utils::Entity entity);
+    void create(utils::Entity entity, Instance parent = {});
 
     void create(utils::Entity entity, Instance parent, const math::mat4f& localTransform);
 
@@ -220,10 +219,19 @@ public:
         return r;
     }
 
+    // Low-order part of the world translation, i.e. getWorldTransformAccurate() is
+    // getWorldTransform() with this added to its translation. Together with
+    // getWorldTransform(), this is the exact stored representation of the world transform.
+    math::float3 getWorldTranslationLo(Instance const ci) const noexcept {
+        ensureWorldTransformsUpToDate();
+        return mManager[ci].worldTranslationLo;
+    }
+
 private:
     struct Sim;
 
-    void createImpl(utils::Entity entity, Instance parent, std::variant<math::mat4, math::mat4f> localTransform);
+    UTILS_ALWAYS_INLINE
+    Instance createImpl(utils::Entity entity, Instance parent);
 
     void validateNode(Instance i) noexcept;
     void removeNode(Instance i) noexcept;

@@ -121,6 +121,9 @@ in table [standardProperties].
 **iridescence**           | Strength of the thin film layer, which tints the Fresnel reflectance with the interference between the film's two interfaces
 **iridescenceIor**        | Index of refraction of the thin film layer
 **iridescenceThickness**  | Thickness of the thin film layer, in nanometers
+**retroreflection**        | Strength of the retroreflective specular lobe, which reflects light back toward its source instead of along the mirror direction
+**diffuseTransmission**   | Fraction of non-specularly reflected light that is diffusely transmitted through the surface rather than diffusely reflected
+**diffuseTransmissionColor** | Color of the diffusely transmitted light
 **clearCoat**             | Strength of the clear coat layer
 **clearCoatRoughness**    | Perceived smoothness or roughness of the clear coat layer
 **normal**                | A detail normal used to perturb the surface using _bump mapping_ (_normal mapping_)
@@ -140,73 +143,79 @@ in table [standardProperties].
 
 The type and range of each property is described in table [standardPropertiesTypes].
 
-        Property          |   Type   |            Range         |           Note
--------------------------:|:--------:|:------------------------:|:-------------------------
-**baseColor**             | float4   |  [0..1]                  | Pre-multiplied linear RGB
-**roughness**             | float    |  [0..1]                  |
-**metallic**              | float    |  [0..1]                  | Should be 0 or 1
-**reflectance**           | float    |  [0..1]                  | Prefer values > 0.35
-**anisotropy**            | float    |  [-1..1]                 | Anisotropy is in the tangent direction when this value is positive
-**anisotropyDirection**   | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
-**specularFactor**        | float    |  [0..1]                  | Optional, defaults to 1.0
-**specularColorFactor**   | float3   |  [0..1]                  | Linear RGB, defaults to 1.0
-**secondRoughness**       | float    |  [0..1]                  |
-**secondRoughnessWeight** | float    |  [0..1]                  |
-**sheenColor**            | float3   |  [0..1]                  | Linear RGB
-**sheenRoughness**        | float    |  [0..1]                  |
-**iridescence**           | float    |  [0..1]                  | Optional, defaults to 0.0
-**iridescenceIor**        | float    |  [1..n]                  | Optional, defaults to 1.3
-**iridescenceThickness**  | float    |  [0..n]                  | Optional, defaults to 400.0, in nanometers
-**clearCoat**             | float    |  [0..1]                  | Should be 0 or 1
-**clearCoatRoughness**    | float    |  [0..1]                  |
-**normal**                | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
-**bentNormal**            | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
-**clearCoatNormal**       | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
-**ambientOcclusion**      | float    |  [0..1]                  |
-**emissive**              | float4   |  rgb=[0..n], a=[0..1]    | Linear RGB intensity in nits, alpha encodes the exposure weight
-**postLightingColor**     | float4   |  [0..1]                  | Pre-multiplied linear RGB
-**ior**                   | float    |  [1..n]                  | Optional, usually deduced from the reflectance
-**transmission**          | float    |  [0..1]                  |
-**absorption**            | float3   |  [0..n]                  |
-**microThickness**        | float    |  [0..n]                  |
-**thickness**             | float    |  [0..n]                  |
-**dispersion**            | float    |  [0..n]                  | Realistic values are between [0, 1], with the exception of Rutile, which has a value of 2.04
-**shadowStrength**        | float    |  [0..1]                  |
+          Property           |   Type   |            Range         |           Note
+----------------------------:|:--------:|:------------------------:|:-------------------------
+**baseColor**                | float4    |  [0..1]                  | Pre-multiplied linear RGB
+**roughness**                | float     |  [0..1]                  |
+**metallic**                 | float     |  [0..1]                  | Should be 0 or 1
+**reflectance**               | float     |  [0..1]                  | Prefer values > 0.35
+**diffuseTransmission**      | float     |  [0..1]                  | Optional, defaults to 0.0
+**diffuseTransmissionColor** | float3    |  [0..1]                  | Linear RGB, defaults to 1.0
+**anisotropy**               | float     |  [-1..1]                 | Anisotropy is in the tangent direction when this value is positive
+**anisotropyDirection**      | float3    |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
+**specularFactor**           | float     |  [0..1]                  | Optional, defaults to 1.0
+**specularColorFactor**      | float3    |  [0..1]                  | Linear RGB, defaults to 1.0
+**secondRoughness**          | float     |  [0..1]                  |
+**secondRoughnessWeight**    | float     |  [0..1]                  |
+**sheenColor**               | float3    |  [0..1]                  | Linear RGB
+**sheenRoughness**           | float     |  [0..1]                  |
+**iridescence**              | float     |  [0..1]                  | Optional, defaults to 0.0
+**iridescenceIor**           | float     |  [1..n]                  | Optional, defaults to 1.3
+**iridescenceThickness**     | float     |  [0..n]                  | Optional, defaults to 400.0, in nanometers
+**retroreflection**           | float     |  [0..1]                  | Optional, defaults to 0.0
+**clearCoat**                | float     |  [0..1]                  | Should be 0 or 1
+**clearCoatRoughness**       | float     |  [0..1]                  |
+**normal**                   | float3    |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
+**bentNormal**               | float3    |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
+**clearCoatNormal**          | float3    |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
+**ambientOcclusion**         | float     |  [0..1]                  |
+**emissive**                 | float4    |  rgb=[0..n], a=[0..1]    | Linear RGB intensity in nits, alpha encodes the exposure weight
+**postLightingColor**        | float4    |  [0..1]                  | Pre-multiplied linear RGB
+**ior**                      | float     |  [1..n]                  | Optional, usually deduced from the reflectance
+**transmission**             | float     |  [0..1]                  |
+**absorption**               | float3    |  [0..n]                  |
+**microThickness**           | float     |  [0..n]                  |
+**thickness**                | float     |  [0..n]                  |
+**dispersion**               | float     |  [0..n]                  | Realistic values are between [0, 1], with the exception of Rutile, which has a value of 2.04
+**shadowStrength**           | float     |  [0..1]                  |
 [Table [standardPropertiesTypes]: Range and type of the standard model's properties]
 
 
-        Property          |      API level
--------------------------:|:---------------------
-**baseColor**             | 1
-**roughness**             | 1
-**metallic**              | 1
-**reflectance**           | 1
-**anisotropy**            | 1
-**anisotropyDirection**   | 1
-**specularFactor**        | 1
-**specularColorFactor**   | 1
-**secondRoughness**       | 2
-**secondRoughnessWeight** | 2
-**sheenColor**            | 1
-**sheenRoughness**        | 1
-**iridescence**           | 1
-**iridescenceIor**        | 1
-**iridescenceThickness**  | 1
-**clearCoat**             | 1
-**clearCoatRoughness**    | 1
-**normal**                | 1
-**bentNormal**            | 1
-**clearCoatNormal**       | 1
-**ambientOcclusion**      | 1
-**emissive**              | 1
-**postLightingColor**     | 1
-**ior**                   | 1
-**transmission**          | 1
-**absorption**            | 1
-**microThickness**        | 1
-**thickness**             | 1
-**dispersion**            | 1
-**shadowStrength**        | 1
+          Property           |      API level
+----------------------------:|:---------------------
+**baseColor**                | 1
+**roughness**                | 1
+**metallic**                 | 1
+**reflectance**               | 1
+**diffuseTransmission**      | 1
+**diffuseTransmissionColor** | 1
+**anisotropy**               | 1
+**anisotropyDirection**      | 1
+**specularFactor**           | 1
+**specularColorFactor**      | 1
+**secondRoughness**          | 2
+**secondRoughnessWeight**    | 2
+**sheenColor**               | 1
+**sheenRoughness**           | 1
+**iridescence**              | 1
+**iridescenceIor**           | 1
+**iridescenceThickness**     | 1
+**retroreflection**           | 1
+**clearCoat**                | 1
+**clearCoatRoughness**       | 1
+**normal**                   | 1
+**bentNormal**               | 1
+**clearCoatNormal**          | 1
+**ambientOcclusion**         | 1
+**emissive**                 | 1
+**postLightingColor**        | 1
+**ior**                      | 1
+**transmission**             | 1
+**absorption**               | 1
+**microThickness**           | 1
+**thickness**                | 1
+**dispersion**               | 1
+**shadowStrength**           | 1
 [Table [standardPropertiesApiLevel]: API level of each property]
 
 !!! Note: About linear RGB
@@ -382,6 +391,23 @@ it easy to define from a texture.
 See section [Index of refraction] for more information about the `ior` property and refractive
 indices.
 
+### Diffuse transmission
+
+The `diffuseTransmission` property controls the fraction of non-specularly reflected light that is
+diffusely transmitted through a dielectric surface (using a Lambertian BTDF directed along the
+opposite of the surface normal) rather than diffusely reflected. Real-world examples include leaves,
+paper, wax, and thin plastics. When combined with `absorption` and `thickness`, attenuation is
+applied to the diffusely transmitted light.
+
+When this property is combined with refraction, the `transmission` property of refraction overrides
+the `diffuseTransmission` (with `transmission` set to 1.0, diffuse transmission is not visible
+anymore).
+
+### Diffuse transmission color
+
+The `diffuseTransmissionColor` property defines the linear RGB color of the diffusely transmitted
+light when `diffuseTransmission` is enabled.
+
 ### Specular factor
 
 The `specularFactor` property scales the amount of specular reflection for non-metallic surfaces.
@@ -490,6 +516,24 @@ The `iridescenceThickness` property is the thickness of the thin film in nanomet
 are on the order of the wavelength of visible light, which is why the default is 400: below roughly
 100nm the film produces almost no visible tint, and past a few thousand nanometers the interference
 becomes too dense in wavelength to read as a color.
+
+### Retroreflection
+
+The `retroreflection` property blends the base specular lobe between standard forward reflection
+(0.0) and retroreflection (1.0), where light is reflected back toward the light source rather than
+along the mirror reflection direction. Real-world examples include retroreflective tape on traffic
+cones, safety vests, road signs, and bicycle reflectors.
+
+For best results, apply this property on rough metallic surfaces. Non-metallic surfaces will only
+provide an achromatic specular response.
+
+!!! Warning
+    The retroreflection property effectively doubles the cost of specular computations. To achieve
+    the effect, a second specular lobe is computed so it is best to avoid using this property
+    when it is not needed by the material.
+
+![Figure [retroreflectionProperty]: A rough, metallic object with `retroreflection` set to 0.0 (left)
+and 1.0 (right)](images/materials/retroreflection.png)
 
 ### Clear coat
 
@@ -1338,7 +1382,7 @@ Type
 
 Value
 :     Each entry must be any of `dynamicLighting`, `directionalLighting`, `shadowReceiver`,
-      `skinning`, `ssr`, or `stereo`.
+      `skinning`, `ssr`, `stereo`, or `motionVectors`.
 
 Description
 :     Used to specify a list of shader variants that the application guarantees will never be
@@ -1358,6 +1402,7 @@ Description of the variants:
 - `vsm`, used when VSM shadows are enabled and the object is a shadow receiver
 - `ssr`, used when screen-space reflections are enabled in the View
 - `stereo`, used when stereoscopic rendering is enabled in the View
+- `motionVectors`, used when motion vectors are enabled in the View
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
@@ -2691,6 +2736,9 @@ struct MaterialInputs {
     float  iridescenceIor;      // default: 1.3
     float  iridescenceThickness;// default: 400.0, in nanometers
 
+    // only available when the shading model is lit
+    float  retroreflection;     // default: 0.0
+
     // not available when the shading model is subsurface or cloth
     float  clearCoat;           // default: 1.0
     float  clearCoatRoughness;  // default: 0.0
@@ -3138,6 +3186,8 @@ variants:
 - `fog`, used when global fog is applied to the scene
 - `vsm`, used when VSM shadows are enabled and the object is a shadow receiver
 - `ssr`, used when screen-space reflections are enabled in the View
+- `stereo`, used when stereoscopic rendering is enabled in the View
+- `motionVectors`, used when motion vectors are enabled in the View
 
 Example:
 ```

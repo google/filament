@@ -243,6 +243,10 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
             << "Failed to create ExternalStreamManagerAndroid";
 
     Driver* driver = PlatformEGL::createDriver(sharedContext, driverConfig);
+    if (UTILS_UNLIKELY(!driver)) {
+        // On failure the display may be terminated, so eglQueryString() would return NULL.
+        return nullptr;
+    }
     auto const extensions = GLUtils::split(eglQueryString(getEglDisplay(), EGL_EXTENSIONS));
 
     ext.egl.ANDROID_presentation_time = extensions.has("EGL_ANDROID_presentation_time");

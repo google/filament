@@ -154,6 +154,18 @@ struct MaterialDefinition {
         return hasSurfaceVariants() && Variant::isDepthMomentsVariant(variant);
     }
 
+    bool isSharedVariant(Variant const variant, bool const isDefaultMaterial) const noexcept {
+        // The default material explicitly filters VSM variants to reduce binary size, so it cannot
+        // provide the MNT | DEP variant as a shared program.
+        return !isDefaultMaterial && !hasCustomDepthShader &&
+               isValidDepthVariant(variant) &&
+               !isDepthMomentsVariant(variant);
+    }
+
+    bool isMotionVectorsVariant(Variant const variant) const noexcept {
+        return hasSurfaceVariants() && Variant::isMotionVectorsVariant(variant);
+    }
+
     // The user variant filter mask clears surface variant bits, so it must not be applied to a
     // key that isn't a surface variant bitfield -- doing so silently maps valid variants of the
     // other domains onto a different key.

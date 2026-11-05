@@ -137,6 +137,10 @@ public:
         return mPhysicalDeviceProperties.properties.limits;
     }
 
+    inline VkPhysicalDeviceProperties const& getPhysicalDeviceProperties() const noexcept {
+        return mPhysicalDeviceProperties.properties;
+    }
+
     inline uint32_t getPhysicalDeviceVendorId() const noexcept {
         return mPhysicalDeviceProperties.properties.vendorID;
     }
@@ -233,6 +237,10 @@ public:
         return mColorWriteEnableFeatures.colorWriteEnable == VK_TRUE;
     }
 
+    inline bool isHostQueryResetSupported() const noexcept {
+        return mHostQueryResetFeatures.hostQueryReset == VK_TRUE;
+    }
+
     inline bool pipelineCreationFeedbackSupported() const noexcept {
         return mPipelineCreationFeedbackSupported;
     }
@@ -262,6 +270,10 @@ public:
 
     inline bool isPipelineCacheEvictionEnabled() const noexcept {
         return mPipelineCacheEvictionEnabled;
+    }
+
+    inline bool isPipelineCachePersistenceEnabled() const noexcept {
+        return mPipelineCachePersistenceEnabled;
     }
 
     inline bool isGlobalPrioritySupported() const noexcept {
@@ -310,6 +322,9 @@ private:
     VkPhysicalDeviceColorWriteEnableFeaturesEXT mColorWriteEnableFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COLOR_WRITE_ENABLE_FEATURES_EXT,
     };
+    VkPhysicalDeviceHostQueryResetFeaturesEXT mHostQueryResetFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES_EXT,
+    };
     VkExternalFenceHandleTypeFlags mFenceExportFlags = {};
 
     // These are options that are either supported or not supported in the current
@@ -335,6 +350,7 @@ private:
     bool mStagingBufferBypassEnabled = false;
     bool mPipelineDynamicStateEnabled = false;
     bool mPipelineCacheEvictionEnabled = false;
+    bool mPipelineCachePersistenceEnabled = false;
 
     fvkutils::VkFormatList mDepthStencilFormats;
     fvkutils::VkFormatList mBlittableDepthStencilFormats;

@@ -257,7 +257,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
                   mPlatform->getGraphicsQueueFamilyIndex(), mPlatform->getProtectedGraphicsQueue(),
                   mPlatform->getProtectedGraphicsQueueFamilyIndex(), mContext, &mSemaphoreManager),
           mPipelineLayoutCache(mPlatform->getDevice()),
-          mPipelineCache(*this, mPlatform->getDevice(), mContext),
+          mPipelineCache(*this, *mPlatform, mContext),
           mStagePool(mAllocator, &mResourceManager, &mCommands, mPlatform->getPhysicalDevice(),
                   &mContext.getPhysicalDeviceLimits()),
           mBufferCache(mContext, mResourceManager, mAllocator),
@@ -271,7 +271,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
                   [this](PixelBufferDescriptor&& pbd) { scheduleDestroy(std::move(pbd)); }),
           mDescriptorSetLayoutCache(mPlatform->getDevice(), &mResourceManager),
           mDescriptorSetCache(mPlatform->getDevice(), &mResourceManager),
-          mQueryManager(mPlatform->getDevice()),
+          mQueryManager(mContext, mPlatform->getDevice()),
           mExternalImageManager(&mSamplerCache, &mYcbcrConversionCache, &mDescriptorSetCache,
                   &mDescriptorSetLayoutCache),
           mStreamedImageManager(&mExternalImageManager),
@@ -1449,12 +1449,7 @@ Handle<HwSwapChain> VulkanDriver::createSwapChainHeadlessS() noexcept {
 Handle<HwTimerQuery> VulkanDriver::createTimerQueryS() noexcept {
     // The handle must be constructed here, as a synchronous call to getTimerQueryValue might happen
     // before createTimerQueryR is executed.
-    auto query = mQueryManager.getNextQuery(&mResourceManager);
-    if (!query) {
-        // The pool is exhausted. Hand back a null handle; the calls below treat it as a
-        // query that never ran rather than dereferencing it.
-        return {};
-    }
+    auto query = resource_ptr<VulkanTimerQuery>::construct(&mResourceManager);
     query.inc();
     return Handle<VulkanTimerQuery>(query.id());
 }
@@ -1490,6 +1485,7 @@ void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
         return;
     }
     auto swapChain = resource_ptr<VulkanSwapChain>::cast(&mResourceManager, sch);
+
     if (mCurrentSwapChain == swapChain) {
         mCurrentSwapChain = {};
     }
@@ -2162,11 +2158,10 @@ TimerQueryResult VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint
         return TimerQueryResult::ERROR;
     }
     auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
-    if (!vtq->isCompleted()) {
-        return TimerQueryResult::NOT_READY;
-    }
-
     auto results = mQueryManager.getResult(vtq);
+    if (results.error) {
+        return TimerQueryResult::ERROR;
+    }
     if (results.beginAvailable == 0 || results.endAvailable == 0) {
         return TimerQueryResult::NOT_READY;
     }
@@ -2265,10 +2260,14 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // first render pass. Note however that its contents are often preserved on subsequent render
     // passes, due to multiple views.
     TargetBufferFlags discardStart = params.flags.discardStart;
+    fvkmemory::resource_ptr<VulkanSwapChain> swapchain;
     if (rt->isSwapChain()) {
-        fvkmemory::resource_ptr<VulkanSwapChain> sc = mCurrentSwapChain;
-        assert_invariant(sc);
-        if (sc->isFirstRenderPass()) {
+        // There should be no subpasses for the swapchain rendertarget. This is an assumption made
+        // to keep the swapchain FBO compatible without too much bookkeeping.
+        assert_invariant(params.subpassMask == 0);
+        swapchain = mCurrentSwapChain;
+        assert_invariant(swapchain);
+        if (swapchain->isFirstRenderPass()) {
             if (!acquireNextSwapchainImage()) {
                 // We've failed to acquire the next image. Subsequent calls cannot assume the render
                 // pass exists.
@@ -2276,7 +2275,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
                 return;
             } else {
                 discardStart |= TargetBufferFlags::COLOR;
-                sc->markFirstRenderPass();
+                swapchain->markFirstRenderPass();
             }
         }
     }
@@ -2352,8 +2351,21 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     rt->emitBarriersBeginRenderPass(*commandBuffer);
 
-    fvkmemory::resource_ptr<VulkanFramebuffer> vkfb =
-            mFramebufferCache.getFramebuffer(fbkey, &mResourceManager, rt);
+    fvkmemory::resource_ptr<VulkanFramebuffer> vkfb;
+    if (swapchain) {
+        // Swapchain framebuffers are owned by the swapchain so that they are never evicted. One is
+        // reused for every render pass on a given image since those render passes are compatible.
+        vkfb = swapchain->getCurrentFramebuffer();
+        if (!vkfb) {
+            // Cached framebuffers retain the render target to keep their VkImageView cache keys
+            // valid. Swapchain framebuffers are uncached and cleared when attachments change, so
+            // they do not need a render target reference.
+            vkfb = mFramebufferCache.createFramebuffer(fbkey, &mResourceManager, {});
+            swapchain->setCurrentFramebuffer(vkfb);
+        }
+    } else {
+        vkfb = mFramebufferCache.getFramebuffer(fbkey, &mResourceManager, rt);
+    }
 
     // Assign a label to the framebuffer for debugging purposes.
 
@@ -3160,9 +3172,9 @@ bool VulkanDriver::acquireNextSwapchainImage() {
     }
 
     auto const [acquired, backingChanged] = mCurrentSwapChain->acquire();
+    // Note that the swapchain releases its own framebuffers when its backing images change, so
+    // the FBO cache does not need to be reset here.
     if (backingChanged) {
-        mFramebufferCache.resetFramebuffers();
-
         if (mPlatform->getCustomization().flushAndWaitOnWindowResize) {
             // In this scenario the command buffer was flushed, so we need
             // to set again the pipeline state and descriptor set state.

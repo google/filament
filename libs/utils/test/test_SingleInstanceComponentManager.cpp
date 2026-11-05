@@ -171,3 +171,75 @@ TEST(SingleInstanceComponentManagerTest, DuplicateCallbackTest) {
     em.destroy(e);
     em.destroy(e2);
 }
+
+TEST(SingleInstanceComponentManagerTest, TryAddAndRemoveWithCallback) {
+    EntityManager& em = EntityManager::get();
+    TestManager manager(em);
+
+    Entity const e1 = em.create();
+    Entity const e2 = em.create();
+    Entity const e3 = em.create();
+    Entity const eMissing = em.create();
+
+    // 1. tryAddComponent on new entities returns { ci, true }
+    auto const [i1, added1] = manager.tryAddComponent(e1);
+    EXPECT_TRUE(added1);
+    EXPECT_EQ(i1, 1u);
+    manager.setValue(i1, 100);
+
+    auto const [i2, added2] = manager.tryAddComponent(e2);
+    EXPECT_TRUE(added2);
+    EXPECT_EQ(i2, 2u);
+    manager.setValue(i2, 200);
+
+    auto const [i3, added3] = manager.tryAddComponent(e3);
+    EXPECT_TRUE(added3);
+    EXPECT_EQ(i3, 3u);
+    manager.setValue(i3, 300);
+
+    // 2. tryAddComponent on an existing entity returns { existingInstance, false }
+    // and preserves existing component payload
+    auto const [i2Dup, added2Dup] = manager.tryAddComponent(e2);
+    EXPECT_FALSE(added2Dup);
+    EXPECT_EQ(i2Dup, i2);
+    EXPECT_EQ(manager.elementAt<0>(i2).value, 200);
+    EXPECT_EQ(manager.getComponentCount(), 3u);
+
+    // 3. removeComponentWithCallback on a missing entity does not invoke callback and returns {0, 0}
+    bool missingCalled = false;
+    auto const missingRes = manager.removeComponentWithCallback(eMissing, [&](TestManager::Instance) {
+        missingCalled = true;
+    });
+    EXPECT_FALSE(missingCalled);
+    EXPECT_EQ(missingRes.removed, 0u);
+    EXPECT_EQ(missingRes.moved, 0u);
+
+    // 4. removeComponentWithCallback on e1 (slot 1) invokes preRemove(1) BEFORE moving e3 (slot 3)
+    int observedPreSwapValue = -1;
+    TestManager::Instance observedPreSwapInstance = 0;
+    auto const rem1 = manager.removeComponentWithCallback(e1, [&](TestManager::Instance const ci) {
+        observedPreSwapInstance = ci;
+        observedPreSwapValue = manager.elementAt<0>(ci).value;
+    });
+    EXPECT_EQ(observedPreSwapInstance, 1u);
+    EXPECT_EQ(observedPreSwapValue, 100);
+    EXPECT_EQ(rem1.removed, 1u);
+    EXPECT_EQ(rem1.moved, 3u);
+    // e3 should now reside at slot 1 with value 300
+    EXPECT_EQ(manager.getInstance(e3), 1u);
+    EXPECT_EQ(manager.elementAt<0>(1u).value, 300);
+
+    // 5. removeComponentsWithCallback on a batch (including already-removed e1 and missing eMissing)
+    std::vector<int> batchRemovedValues;
+    Entity const batch[] = { e1, e2, eMissing, e3 };
+    manager.removeComponentsWithCallback(batch, 4, [&](TestManager::Instance const ci) {
+        batchRemovedValues.push_back(manager.elementAt<0>(ci).value);
+    });
+    ASSERT_EQ(batchRemovedValues.size(), 2u);
+    EXPECT_EQ(batchRemovedValues[0], 200);
+    EXPECT_EQ(batchRemovedValues[1], 300);
+    EXPECT_TRUE(manager.empty());
+
+    Entity const all[] = { e1, e2, e3, eMissing };
+    em.destroy(4, all);
+}

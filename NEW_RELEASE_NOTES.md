@@ -6,13 +6,10 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
-- filamat: convert FOG variant into a specialization constant. [⚠️ **Recompile Materials**]
-- engine: in `AsynchronousMode::AMORTIZATION`, queued async operations now run at the end of each
-  frame and in `Renderer::skipFrame()`, within a per-frame time budget set by the new
-  `Engine::Config::asynchronousFrameBudget` (2 ms by default), instead of 5 operations per backend
-  tick. Metal now runs them every frame too
-- java: `Engine.Config.asynchronousFrameBudget` (in nanoseconds) is added
-- web: `Engine$Config.asynchronousFrameBudgetMs` is added
-- vulkan: fix a crash when more than 32 timer queries are outstanding. `createTimerQueryS` returns
-  a null handle once the pool is exhausted, and `getTimerQueryValue` reports `ERROR` for it
-  (#10658)
+- webgpu: preserve fragment depth writes and discard in depth-only render passes (#10717).
+- gltf: `KHR_materials_iridescence` is now supported
+- gltf: `KHR_materials_anisotropy` is now supported
+- gltf: `KHR_materials_diffuse_transmission` is now supported
+- materials: the new `diffuseTransmission` and `diffuseTransmissionColor` material properties can be
+  used in the lit (standard) shading model to create diffusely transmitting (translucent) surfaces
+- variant: completely remove FOG variant bit

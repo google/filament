@@ -106,7 +106,7 @@ One `(regime, upscaling)` pair. `-e` (headless) with no `-r`/`-u` sweeps all 3 r
 |---|---|---|
 | `static` | nothing | ghost-free by construction; measures flicker and steady-state sharpness |
 | `camera` | camera (orbit or dolly, see `--camera-motion`) | expected ghost-free; disocclusions should resolve in a handful of frames |
-| `object` | glTF animation | interior ghosting on the moving object is **expected and not a bug** — Filament has no per-object motion vectors. What should still recover is the dis/occluded silhouette. |
+| `object` | `--object-motion animation` (default): the glTF clip; `translate`: the asset's root entity dollies screen-right; `spin`: it rotates about its vertical axis | `animation` on a skinned asset (Fox) deforms the mesh, which per-object motion vectors do not cover, so interior ghosting on it is **expected and not a bug** and `view.motionVectors.enabled` changes nothing. `translate` and `spin` are rigid, i.e. exactly what the motion vectors pass reports: with motion vectors on, interior ghosting should go away and only the dis/occluded silhouette should still have to recover; with them off, the interior smears. |
 
 Motion runs for the first half of the capture window then **stops** — frames past the midpoint
 of `--frames` are a static hold, not moving footage. This is deliberate (it turns the second half
@@ -121,15 +121,46 @@ cleanly.
 
 | scene | what it is for |
 |---|---|
-| `third_party/models/Fox/Fox.glb` | the default, and what the checked-in baseline is generated from. Thin limbs, hard silhouettes, and the only scene here with animation — so the only one whose `object` regime measures anything. **`-A` matters**: 0 (`Survey`, the default) barely moves, 1 is `Walk`, 2 is `Run`. |
-| `third_party/models/DamagedHelmet/DamagedHelmet.glb` | specular and normal-mapped content Fox has none of; it is what made two upscaling bugs visible that Fox alone missed. No checked-in baseline — generate one before leaning on it. |
+| `third_party/models/Fox/Fox.glb` | the default, and what the checked-in baseline is generated from. Thin limbs, hard silhouettes, and the only scene here with a *skinned* animation. **`-A` matters**: 0 (`Survey`, the default) barely moves, 1 is `Walk`, 2 is `Run`. With `--object-motion translate` it is also the rigid moving-object scene with the hardest silhouettes. |
+| `third_party/models/DamagedHelmet/DamagedHelmet.glb` | specular and normal-mapped content Fox has none of; it is what made two upscaling bugs visible that Fox alone missed. No checked-in baseline — generate one before leaning on it. With `--object-motion spin` it is the moving-object scene whose *interior* has the most to lose to camera-only reprojection: highlights slide across the surface as it turns. |
+| `third_party/models/BusterDrone/scene.gltf` | the only real-content asset with a *rigid* node animation (propellers, hull parts; no skin, a few morph weights), so the one `--object-motion animation` scene where motion vectors apply. 39 meshes, textured; `-A 0` is the only clip. The propellers move many render texels per frame — expect the `|v| >= 1` "no previous position" path to fire on them under upscaling. |
 | `tools/taa/models/SubpixelStar/SubpixelStar.glb` | sub-pixel flicker on thin high-contrast geometry (below). |
 | `tools/taa/models/ParallaxPillar/ParallaxPillar.glb` | a chroma-distinct silhouette edge under camera parallax. |
 | `tools/taa/models/SSRReflection/SSRReflection.glb` | chroma motion from a view-dependent reflection on a geometrically static surface. |
 
-Only Fox has animation. On every other scene the `object` regime plays nothing and therefore
-measures exactly what `static` does — identical numbers, not a second data point. Don't read them
-as one.
+Only Fox and BusterDrone have animation. On every other scene `--object-motion animation` plays
+nothing and therefore measures exactly what `static` does — identical numbers, not a second data
+point. Don't read them as one. `translate` and `spin` move any scene.
+
+### Measuring motion vectors
+
+`view.motionVectors.enabled` (through `-s`) only changes what TAA does on pixels whose object
+*rigidly* moved, so measure it on a rigid `object` run and compare on/off:
+
+```bash
+cat > /tmp/mv_on.json <<'EOF'
+{ "view": { "motionVectors": { "enabled": true } } }
+EOF
+H=./out/cmake-debug/tools/taa/taa_harness
+$H -e -r object --object-motion spin -F box -q -o /tmp/spin_off.json third_party/models/DamagedHelmet/DamagedHelmet.glb
+$H -e -r object --object-motion spin -F box -q -s /tmp/mv_on.json -o /tmp/spin_on.json third_party/models/DamagedHelmet/DamagedHelmet.glb
+```
+
+What to look at: `edge_ghost_peak` and `edge_rmse_mean` (the interior and trailing-edge smear
+camera-only reprojection leaves behind), `edge_recovery_frames` (whether the dis/occluded strip
+still resolves), and `sharpness_mean` (interior detail that misaligned history blurs away). A
+`translate` run at the camera dolly's default speed is the same experiment with the roles
+swapped; `--camera-motion translate` vs `--object-motion translate` should then agree closely
+with motion vectors on, and disagree without them.
+
+Measured on lavapipe, `-F box -M 4`, motion vectors off → on: DamagedHelmet `translate`
+edge_rmse_mean 0.167 → 0.028 (1:1) and 0.192 → 0.054 (2:1), `spin` 0.148 → 0.050 and 0.179 →
+0.087; Fox `translate` 0.102 → 0.032 and 0.129 → 0.052; edge_ghost_peak drops by 3-14x in every
+case. BusterDrone `animation` barely changes (its propellers are thin and fast; the body moves a
+few texels), so it is a smoke test, not a measurement. With `motionAdaptiveHistory` on, a moving
+object re-arms the global `motionHoldFrames` hold; that is what the numbers above include, and
+removing the trigger costs 3-11% of edge_rmse_mean on these scenes (the derivation is in
+`filament/src/materials/antiAliasing/taa/taa.md`).
 
 ### Ring-binned flicker, with `SubpixelStar`
 
@@ -256,11 +287,13 @@ Fox and quietly puts the third column back up near `defaults` has broken it.
 | `--camera-motion rotate\|translate` | `rotate` | orbit vs pure dolly (parallax only, no rotation) |
 | `--camera-speed` | 90 (deg/s) | rotate-mode angular speed |
 | `--camera-texels-per-frame` | 3.5 | translate-mode parallax speed, in render-resolution texels/frame at the target's depth |
-| `--camera-translation-align as-requested\|pixel\|subpixel` | `as-requested` | isolates history-buffer resampling specifically — `pixel` = every reprojection an exact texel fetch, `subpixel` = every reprojection a half-texel fetch |
-| `-A` | 0 | which glTF animation the `object` regime plays — **check this**, the default is often not the one that moves; see Test scenes |
-| `--object-speed` | 1.0 | animation playback multiplier, object regime |
+| `--camera-translation-align as-requested\|pixel\|subpixel` | `as-requested` | isolates history-buffer resampling specifically — `pixel` = every reprojection an exact texel fetch, `subpixel` = every reprojection a half-texel fetch. Also applies to `--object-motion translate` |
+| `--object-motion animation\|translate\|spin` | `animation` | what the `object` regime moves: the glTF clip, the asset's root entity dollying screen-right, or the root entity spinning about its vertical axis. Only the last two are rigid, i.e. visible to motion vectors |
+| `-A` | 0 | which glTF animation `--object-motion animation` plays — **check this**, the default is often not the one that moves; see Test scenes |
+| `--object-speed` | 0 (= mode default: 1.0 / 90) | `animation`: playback multiplier; `spin`: degrees/second |
+| `--object-texels-per-frame` | 3.5 | `translate` speed, in render-resolution texels/frame at the target's depth — same convention and default as `--camera-texels-per-frame` |
 | `-d <dir>` | off | dump captures/references/amplified diffs/mask as PNGs — use this to actually *look at* a discrepancy the numbers flag |
-| `-s <settings.json>` | off | full `TemporalAntiAliasingOptions` via the same JSON `gltf_viewer`'s viewer reads/writes (`enabled`/`upscaling` are schedule-owned and ignored) |
+| `-s <settings.json>` | off | full `TemporalAntiAliasingOptions` and `MotionVectorsOptions` via the same JSON `gltf_viewer`'s viewer reads/writes (TAA `enabled`/`upscaling` are schedule-owned and ignored) |
 | `-q` | auto | suppress the progress bar (auto-on already when stderr isn't a terminal) |
 | `--visualize-disocclusion` | off | replace every frame with `taa.mat`'s disocclusion rejection mask (white = history fully rejected) -- pair with `-d`, and ignore that run's metrics |
 
@@ -272,6 +305,7 @@ Fox and quietly puts the third column back up near `defaults` has broken it.
   "size": 512, "warmup_frames": 64, "capture_frames": 16,
   "reference_filter": "lanczos-filament", "reference_samples": 256, "msaa": 4,
   "camera_motion": "rotate", "camera_speed_deg_per_sec": 90,
+  "object_motion": "animation", "animation": 0, "object_speed": 1,   // or object_texels_per_frame / object_speed_deg_per_sec
   "records": [
     { "regime": "static", "upscaling": 1, "metric": "edge_rmse_mean", "value": 0.0212 },
     ...

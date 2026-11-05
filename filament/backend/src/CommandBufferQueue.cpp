@@ -133,7 +133,9 @@ void CommandBufferQueue::flush() {
             "Space used at this time: " << used <<
             " bytes, overflow: " << used - mFreeSpace << " bytes";
 
+    size_t const bank = circularBuffer.getBank(begin);
     mFreeSpace -= used;
+    mBankUsed[bank] += used;
     mCommandBuffersToExecute.push_back({ begin, end });
     mCondition.notify_one();
 
@@ -161,6 +163,14 @@ void CommandBufferQueue::flush() {
             mCondition.wait(lock);
         }
     }
+
+    // Ping-pong to the base of Bank 0 or the opposite bank whenever it has no in-flight buffers so
+    // we only fault in physical pages up to the in-flight high-water mark of each bank.
+    if (mBankUsed[0] == 0) {
+        circularBuffer.setBank(0);
+    } else if (mBankUsed[1 - bank] == 0) {
+        circularBuffer.setBank(1 - bank);
+    }
 }
 
 std::vector<CommandBufferQueue::Range> CommandBufferQueue::waitForCommands() const {
@@ -177,7 +187,10 @@ std::vector<CommandBufferQueue::Range> CommandBufferQueue::waitForCommands() con
 void CommandBufferQueue::releaseBuffer(CommandBufferQueue::Range const& buffer) {
     size_t const used = std::distance(
             static_cast<char const*>(buffer.begin), static_cast<char const*>(buffer.end));
+    size_t const bank = mCircularBuffer.getBank(buffer.begin);
     LockGuard const lock(mLock);
+    assert_invariant(mBankUsed[bank] >= used);
+    mBankUsed[bank] -= used;
     mFreeSpace += used;
     mCondition.notify_one();
 }

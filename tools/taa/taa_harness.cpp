@@ -59,8 +59,25 @@
  *     every one a half-texel fetch (the worst case), and comparing the two at the same speed
  *     attributes whatever changes to that resampling and nothing else translate mode does.
  *
- * --object-speed is the same idea for the object regime: a multiplier on animation playback time,
- * for when the authored animation itself moves too little to measure.
+ * How the object regime moves
+ * ----------------------------
+ * --object-motion picks what the object regime actually moves:
+ *
+ *   - animation: the glTF clip (-A), played through gltfio's Animator. --object-speed multiplies
+ *     playback time, for when the authored clip itself moves too little to measure. A skinned
+ *     asset (Fox) DEFORMS here, which per-object motion vectors do not cover, so this mode cannot
+ *     show what view.motionVectors changes.
+ *   - translate: the asset's root entity dollies screen-right through the TransformManager, by
+ *     --object-texels-per-frame render-resolution texels at the target's depth, with the same
+ *     --camera-translation-align policy as the camera dolly. The mirror image of camera translate:
+ *     identical screen-space speed, but now it is the object that moved, which is exactly what the
+ *     motion vectors pass reports and camera reprojection alone cannot see.
+ *   - spin: the root entity rotates about the vertical axis through its bounds centre at
+ *     --object-speed degrees/second. Screen-space speed varies across the model, and specular
+ *     highlights slide over the surface, which is the content camera-only reprojection smears.
+ *
+ * translate and spin are pure functions of the shot, like the camera modes, so the per-frame
+ * references track them for free.
  *
  * Determinism
  * -----------
@@ -303,9 +320,9 @@ enum class Regime : uint8_t {
     // to be ghost-free, and disocclusions (which here are pure parallax) are expected to resolve
     // quickly.
     CAMERA,
-    // Scene animates, camera still. Filament has no per-object motion vectors, so interior
-    // ghosting is EXPECTED here and is reported, not failed; what matters is that the
-    // dis/occluded edges recover.
+    // Scene animates, camera still. Per-object motion vectors are off by default (and do not yet
+    // cover skinning/morphing), so interior ghosting is EXPECTED here and is reported, not failed;
+    // what matters is that the dis/occluded edges recover.
     OBJECT,
 };
 
@@ -763,6 +780,19 @@ enum class TranslationAlign : uint8_t {
     SUBPIXEL,
 };
 
+// What the OBJECT regime moves. See "How the object regime moves" at the top of the file.
+enum class ObjectMotion : uint8_t {
+    // The glTF clip, through gltfio's Animator. A skinned asset deforms, which per-object motion
+    // vectors do not cover.
+    ANIMATION,
+    // The asset's root entity dollies screen-right through the TransformManager, the mirror image
+    // of CameraMotion::TRANSLATE: same texel speed, same alignment policy, opposite reference
+    // frame. The motion is rigid, so it is exactly what the motion vectors pass reports.
+    TRANSLATE,
+    // The root entity rotates about the vertical axis through its bounds centre.
+    SPIN,
+};
+
 struct Options {
     Path model;
     Path output = "taa_metrics.json";
@@ -786,11 +816,18 @@ struct Options {
     // parallax, is the point of a translation test). Deliberately not integral by default, so
     // AS_REQUESTED alignment does not silently coincide with PIXEL.
     double cameraTexelsPerFrame = 3.5;
+    // Shared by the camera dolly and ObjectMotion::TRANSLATE: the question it answers (exact vs
+    // half-texel history fetches) is the same whichever side moved.
     TranslationAlign cameraTranslationAlign = TranslationAlign::AS_REQUESTED;
-    // Multiplies elapsed animation time in the OBJECT regime. The animation itself sets the
-    // natural time scale, so unlike the camera there is no principled default speed -- 1.0 is
-    // "play it as authored" and this exists for when that turns out to move too little to
-    // measure, the same complaint camera rotation had at its old default.
+    ObjectMotion objectMotion = ObjectMotion::ANIMATION;
+    // ObjectMotion::TRANSLATE's speed, with the camera dolly's convention and default, so a
+    // translate/translate pair of runs differs only in which side moved.
+    double objectTexelsPerFrame = 3.5;
+    // ANIMATION: multiplies elapsed animation time. The animation itself sets the natural time
+    // scale, so unlike the camera there is no principled default speed -- 1.0 is "play it as
+    // authored" and this exists for when that turns out to move too little to measure, the same
+    // complaint camera rotation had at its old default.
+    // SPIN: degrees per second, defaulting to the camera orbit's speed (see --camera-speed).
     double objectSpeed = 1.0;
     float edgeThreshold = 0.08f;
     float diffGain = 8.0f;
@@ -798,6 +835,7 @@ struct Options {
     TemporalAntiAliasingOptions::JitterPattern jitterPattern =
             TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X16;
     TemporalAntiAliasingOptions taaOptions = {};
+    MotionVectorsOptions motionVectorsOptions = {};
     ReferenceFilter referenceFilter = ReferenceFilter::LANCZOS;
     // Which glTF animation the object regime plays. It matters: a survey/idle clip barely moves,
     // and a regime that does not move measures nothing.
@@ -834,6 +872,11 @@ struct App {
     FilamentAsset* asset = nullptr;
     FilamentInstance* instance = nullptr;
     Entity sunlight;
+
+    // The asset's root transform as loaded. ObjectMotion::TRANSLATE/SPIN compose their motion
+    // onto this every shot, and every other mode restores it, so a run never inherits the pose
+    // the previous run left behind.
+    mat4f rootRestTransform;
 
     // Framing, derived once from the asset bounds so the camera path is scale-independent.
     float3 target = {};
@@ -973,9 +1016,36 @@ void applyShot(App* app, Shot const& shot) {
     float3 const up = { 0.0f, 1.0f, 0.0f };
     float3 const right = normalize(cross(normalize(app->target - baseEye), up));
 
+    // texels/frame -> world units/frame at the target's depth, then a straight multiple of the
+    // (integer) motion frame count -- see TranslationAlign and motionFrameIndex() for why an
+    // index rather than motionTime / stepSeconds. Shared by the camera dolly and the object
+    // translation so the two are the same motion seen from the other side.
+    auto const translationOffset = [&](double texelsPerFrame) {
+        switch (o.cameraTranslationAlign) {
+            case TranslationAlign::AS_REQUESTED:
+                break;
+            case TranslationAlign::PIXEL:
+                texelsPerFrame = std::round(texelsPerFrame);
+                break;
+            case TranslationAlign::SUBPIXEL:
+                texelsPerFrame = std::floor(texelsPerFrame) + 0.5;
+                break;
+        }
+        Viewport const& vp = app->view->getViewport();
+        // Render, not output, resolution: under upscaling TAA resolves at vp/upscaling and this
+        // speed is meant to be comparable across upscaling factors, matching the "render texel"
+        // convention the rest of the harness (and taa.mat) already uses.
+        double const renderHeight = double(vp.height) / double(run.upscaling);
+        double const worldUnitsPerTexel = 2.0 * distance * std::tan(0.5 * fov) / renderHeight;
+        return texelsPerFrame * double(shot.motionFrameIndex) * worldUnitsPerTexel;
+    };
+
     float3 eye = baseEye;
     float3 lookAtPoint = app->target;
     double animationTime = 0.0;
+    // Composed onto the root's rest transform below. Identity unless the object regime moves
+    // the root, so every other regime (and the reference/warm-up phases) renders the rest pose.
+    mat4f objectTransform;
     switch (run.regime) {
         case Regime::STATIC:
             break;
@@ -986,29 +1056,7 @@ void applyShot(App* app, Shot const& shot) {
                 eye = app->target + float3{ float(std::sin(angle) * distance),
                         float(app->radius) * 0.35f, float(std::cos(angle) * distance) };
             } else {
-                // texels/frame -> world units/frame at the target's depth, then a straight
-                // multiple of the (integer) motion frame count -- see TranslationAlign and
-                // motionFrameIndex() for why an index rather than motionTime / stepSeconds.
-                double texelsPerFrame = o.cameraTexelsPerFrame;
-                switch (o.cameraTranslationAlign) {
-                    case TranslationAlign::AS_REQUESTED:
-                        break;
-                    case TranslationAlign::PIXEL:
-                        texelsPerFrame = std::round(texelsPerFrame);
-                        break;
-                    case TranslationAlign::SUBPIXEL:
-                        texelsPerFrame = std::floor(texelsPerFrame) + 0.5;
-                        break;
-                }
-                Viewport const& vp = app->view->getViewport();
-                // Render, not output, resolution: under upscaling TAA resolves at vp/upscaling
-                // and this speed is meant to be comparable across upscaling factors, matching the
-                // "render texel" convention the rest of the harness (and taa.mat) already uses.
-                double const renderHeight = double(vp.height) / double(run.upscaling);
-                double const worldUnitsPerTexel =
-                        2.0 * distance * std::tan(0.5 * fov) / renderHeight;
-                double const offset = texelsPerFrame * double(shot.motionFrameIndex)
-                        * worldUnitsPerTexel;
+                double const offset = translationOffset(o.cameraTexelsPerFrame);
                 eye = baseEye + right * float(offset);
                 // Translate the look-at point by the same vector: view DIRECTION stays fixed,
                 // only position moves, which is what makes this a pure dolly rather than a pan
@@ -1017,7 +1065,25 @@ void applyShot(App* app, Shot const& shot) {
             }
             break;
         case Regime::OBJECT:
-            animationTime = shot.motionTime * o.objectSpeed;
+            switch (o.objectMotion) {
+                case ObjectMotion::ANIMATION:
+                    animationTime = shot.motionTime * o.objectSpeed;
+                    break;
+                case ObjectMotion::TRANSLATE:
+                    // The camera dolly moves the eye along `right`; moving the object the same
+                    // way gives the same screen-space motion in the opposite direction, which
+                    // is irrelevant to every metric and keeps the two modes one line apart.
+                    objectTransform = mat4f::translation(
+                            right * float(translationOffset(o.objectTexelsPerFrame)));
+                    break;
+                case ObjectMotion::SPIN: {
+                    float const angle = float(shot.motionTime * o.objectSpeed * (F_PI / 180.0));
+                    objectTransform = mat4f::translation(app->target)
+                            * mat4f::rotation(angle, up)
+                            * mat4f::translation(-app->target);
+                    break;
+                }
+            }
             break;
     }
     camera.lookAt(eye, lookAtPoint, up);
@@ -1031,6 +1097,17 @@ void applyShot(App* app, Shot const& shot) {
         }
     }
 
+    // After the Animator, which only writes the nodes the clip targets and so never the root's
+    // rest pose this composes onto. Written every shot, including when objectTransform is the
+    // identity: setTransform() with an unchanged value is what a static object looks like to the
+    // motion vectors pass (a dirty bit and a bitwise-equal transform), so a static run exercises
+    // that path rather than a never-touched one.
+    {
+        TransformManager& tcm = app->engine->getTransformManager();
+        tcm.setTransform(tcm.getInstance(app->asset->getRoot()),
+                objectTransform * app->rootRestTransform);
+    }
+
     app->view->setMultiSampleAntiAliasingOptions({
             .enabled = shot.msaaSamples > 1, .sampleCount = shot.msaaSamples });
 
@@ -1039,6 +1116,8 @@ void applyShot(App* app, Shot const& shot) {
     taa.enabled = shot.taaEnabled;
     taa.upscaling = run.upscaling;
     app->view->setTemporalAntiAliasingOptions(taa);
+    app->view->setMotionVectorsOptions({
+            .enabled = app->options.motionVectorsOptions.enabled && shot.taaEnabled });
 
     // Camera::setShift takes a translation in NDC, so a jitter of j texels is j/size -- the
     // convention its documentation states. Do not "fix" this to 2/size to match the arithmetic in
@@ -1305,6 +1384,22 @@ void writeJson(App* app, std::vector<Record> const& records) {
     } else {
         json << "  \"camera_speed_deg_per_sec\": " << o.cameraRotateSpeedDegPerSec << ",\n";
     }
+    json << "  \"object_motion\": \""
+         << (o.objectMotion == ObjectMotion::ANIMATION ? "animation"
+                    : o.objectMotion == ObjectMotion::TRANSLATE ? "translate" : "spin")
+         << "\",\n";
+    switch (o.objectMotion) {
+        case ObjectMotion::ANIMATION:
+            json << "  \"animation\": " << o.animation << ",\n";
+            json << "  \"object_speed\": " << o.objectSpeed << ",\n";
+            break;
+        case ObjectMotion::TRANSLATE:
+            json << "  \"object_texels_per_frame\": " << o.objectTexelsPerFrame << ",\n";
+            break;
+        case ObjectMotion::SPIN:
+            json << "  \"object_speed_deg_per_sec\": " << o.objectSpeed << ",\n";
+            break;
+    }
     json << "  \"records\": [\n";
     for (size_t i = 0; i < records.size(); i++) {
         Record const& r = records[i];
@@ -1386,6 +1481,11 @@ void setup(Engine* engine, View* view, Scene* scene) {
     // Skinned assets ship bounds for the rest pose, which is not where the animation puts them.
     app->instance->recomputeBoundingBoxes();
     app->asset->releaseSourceData();
+
+    {
+        TransformManager const& tcm = engine->getTransformManager();
+        app->rootRestTransform = tcm.getTransform(tcm.getInstance(app->asset->getRoot()));
+    }
 
     scene->addEntities(app->asset->getEntities(), app->asset->getEntityCount());
 
@@ -1705,6 +1805,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
             exit(1);
         }
         o.taaOptions = settings.view.taa;
+        o.motionVectorsOptions = settings.view.motionVectors;
         o.jitterPattern = o.taaOptions.jitterPattern;
     }
     CString const pattern = config.getString("jitter-pattern");
@@ -1781,7 +1882,7 @@ samples::SampleParameters createAppParameters() {
         samples::Parameter::makeString("jitter-pattern", 'J',
                 "rgss4, helix4, halton8, halton16, halton32 (overrides --settings)", ""),
         samples::Parameter::makeString("settings", 's',
-                "JSON settings file; view.taa is applied to every run", ""),
+                "JSON settings file; view.taa and view.motionVectors are applied to every run", ""),
         samples::Parameter::makeFloat("diff-gain", 'G',
                 "Amplification applied to dumped difference images", 8.0f),
         samples::Parameter::makeInt("animation", 'A',

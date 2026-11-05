@@ -280,7 +280,6 @@ private:
     bool mResetAnimation = true;      // set when building ImGui widgets, honored in applyAnimation
 
     // Color grading UI state.
-    float mToneMapPlot[1024];
     float mRangePlot[1024 * 3];
     float mCurvePlot[1024 * 3];
 };

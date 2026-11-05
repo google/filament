@@ -18,9 +18,9 @@
 
 #include <image/ImageOps.h>
 
-#include <math/vec3.h>
-
 #include <utils/Log.h>
+
+#include <math/vec3.h>
 
 #include <cstring>
 #include <limits>
@@ -107,13 +107,19 @@ LinearImage HDRDecoder::decode() {
 
     // First, test for non-RLE images.
     const auto pos = mStream.tellg();
-    mStream.read((char*) rgbe.get(), 3);
+    if (!mStream.read((char*) rgbe.get(), 3)) {
+        slog.e << "Unexpected EOF before scanline data" << io::endl;
+        return {};
+    }
     mStream.seekg(pos);
 
     if (rgbe[0] != 0x2 || rgbe[1] != 0x2 || (rgbe[2] & 0x80) || width < 8 || width > 32767) {
         for (uint32_t y = 0; y < height; y++) {
             filament::math::float3* dst = reinterpret_cast<filament::math::float3*>(image.getPixelRef(0, y));
-            mStream.read((char*) rgbe.get(), width * 4);
+            if (!mStream.read((char*) rgbe.get(), width * 4)) {
+                slog.e << "Unexpected EOF in non-RLE scanline" << io::endl;
+                return {};
+            }
             // (rgb/256) * 2^(e-128)
             size_t pixel = 0;
             for (size_t x = 0; x < width; x++, pixel += 4) {
@@ -128,15 +134,13 @@ LinearImage HDRDecoder::decode() {
     } else {
         for (uint32_t y = 0; y < height; y++) {
             uint16_t magic;
-            mStream.read((char*) &magic, 2);
-            if (magic != 0x0202) {
+            if (!mStream.read((char*) &magic, 2) || magic != 0x0202) {
                 slog.e << "invalid scanline (magic)" << io::endl;
                 return {};
             }
 
             uint16_t w;
-            mStream.read((char*) &w, 2);
-            if (ntohs(w) != width) {
+            if (!mStream.read((char*) &w, 2) || ntohs(w) != width) {
                 slog.e << "invalid scanline (width)" << io::endl;
                 return {};
             }
@@ -159,7 +163,10 @@ LinearImage HDRDecoder::decode() {
                             return {};
                         }
                         char v;
-                        mStream.read(&v, 1);
+                        if (!mStream.read(&v, 1)) {
+                            slog.e << "Unexpected EOF during RLE read" << io::endl;
+                            return {};
+                        }
                         memset(d, v, run_length);
                         d += run_length;
                         num_bytes += run_length;
@@ -174,7 +181,10 @@ LinearImage HDRDecoder::decode() {
                             slog.e << "RLE buffer overflow detected" << io::endl;
                             return {};
                         }
-                        mStream.read(d, run_length);
+                        if (!mStream.read(d, run_length)) {
+                            slog.e << "Unexpected EOF during RLE read" << io::endl;
+                            return {};
+                        }
                         d += run_length;
                         num_bytes += run_length;
                     }
@@ -209,7 +219,7 @@ LinearImage ImageDecoder::decode(std::istream& stream, const std::string& source
     Format format = Format::NONE;
 
     std::streampos pos = stream.tellg();
-    char buf[16];
+    char buf[16] = {};
     stream.read(buf, sizeof(buf));
 
     if (HDRDecoder::checkSignature(buf)) {

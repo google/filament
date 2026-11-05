@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
+#include <imageio/ImageDecoder.h>
 #include <imageio/ImageDiffer.h>
+#include <imageio/ImageEncoder.h>
 
 #include <image/ColorTransform.h>
 #include <image/ImageOps.h>
-#include <imageio/ImageDecoder.h>
-#include <imageio/ImageEncoder.h>
+
 #include <utils/Panic.h>
 
 #include <fstream>

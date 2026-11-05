@@ -42,6 +42,8 @@
 
 #include <backend/DriverEnums.h>
 
+#include <utils/Path.h>
+
 #include <math/norm.h>
 #include <math/TVecHelpers.h>
 #include <math/vec3.h>
@@ -55,6 +57,8 @@
 
 #include <array>
 #include <iostream>
+#include <string>
+#include <vector>
 
 #include <stdlib.h>
 #include <string.h>
@@ -350,11 +354,11 @@ struct State {
 };
 
 //TODO: Remove redundant method from sample_full_pbr
-static void loadTexture(Engine* engine, const std::string& filePath, Texture** map, bool sRGB,
+static void loadTexture(Engine* engine, const Path& filePath, Texture** map, bool sRGB,
         bool hasAlpha, filament::app::AssetLoader* loader) {
 
-    if (!filePath.empty() && loader) {
-        auto buf = loader->load(Path(filePath));
+    if (!filePath.isEmpty() && loader) {
+        auto buf = loader->load(filePath);
         if (!buf.empty()) {
             int w, h, n;
             int numChannels = hasAlpha ? 4 : 3;
@@ -477,7 +481,7 @@ TextureSampler::MagFilter aiMagFilterToFilament(unsigned int aiMagFilter) {
 // TODO: Change this to a member function (requires some alteration of cmakelsts.txt)
 void setTextureFromPath(const aiScene* scene, Engine* engine,
         std::vector<filament::Texture*> textures, const aiString& textureFile,
-        const std::string& materialName, const std::string& textureDirectory,
+        const std::string& materialName, const Path& textureDirectory,
         aiTextureMapMode* mapMode, const char* parameterName,
         std::map<utils::CString, MaterialInstance*>& outMaterials,
         filament::app::AssetLoader* loader, unsigned int aiMinFilterType = 0,
@@ -511,8 +515,21 @@ void setTextureFromPath(const aiScene* scene, Engine* engine,
     if (embeddedId != -1) {
         loadEmbeddedTexture(engine, scene->mTextures[embeddedId], &textureMap, isSRGB, hasAlpha);
     } else {
-        loadTexture(engine, textureDirectory + textureFile.C_Str(), &textureMap, isSRGB, hasAlpha,
-                loader);
+        // Texture paths come from the model file and cannot be trusted; reject paths that resolve
+        // outside the model directory (e.g. absolute paths or "../../etc/foo.png").
+        Path const modelDir = textureDirectory.isEmpty() ? Path(".") : textureDirectory;
+        Path const relativePath(textureFile.C_Str());
+        // When the model has no parent directory, check containment against "." but load the
+        // bare relative path. Some loaders (e.g. AAssetManager on Android) require exact entry
+        // names and do not resolve a leading "./".
+        Path const texturePath = textureDirectory.isEmpty() ? relativePath
+                                                            : modelDir.concat(relativePath);
+        if (!relativePath.isAbsolute() && modelDir.isAncestorOf(modelDir.concat(relativePath))) {
+            loadTexture(engine, texturePath, &textureMap, isSRGB, hasAlpha, loader);
+        } else {
+            std::cout << "The texture " << textureFile.C_Str()
+                      << " is outside the model directory and will not be loaded" << std::endl;
+        }
     }
 
     textures.push_back(textureMap);
@@ -947,7 +964,7 @@ void MeshAssimp::processNode(Asset& asset,
 
                     if (isGLTF && outMaterials.find(utils::CString(materialName.c_str())) ==
                                           outMaterials.end()) {
-                        std::string dirName = asset.file.getParent();
+                        Path const dirName = asset.file.getParent();
                         processGLTFMaterial(scene, material, materialName, dirName, outMaterials);
                     }
 
@@ -1014,7 +1031,7 @@ void MeshAssimp::processNode(Asset& asset,
 }
 
 void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* material,
-        const std::string& materialName, const std::string& dirName,
+        const std::string& materialName, const Path& dirName,
         std::map<utils::CString, MaterialInstance*>& outMaterials) const {
 
     aiString baseColorPath;

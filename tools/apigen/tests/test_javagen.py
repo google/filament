@@ -167,8 +167,9 @@ class TestJavaGen(unittest.TestCase):
             # Invariants
             self.assertNotIn("mNativeObject", java_src)
             self.assertNotIn("getNativeObject()", java_src)
-            self.assertIn("private float mCenterX;", java_src)
-            self.assertIn("private float mHalfExtentX;", java_src)
+            self.assertIn("import com.google.android.filament.proguard.UsedByNative;", java_src)
+            self.assertIn('@UsedByNative("RenderableManager.cpp")\n    private float mCenterX;', java_src)
+            self.assertIn('@UsedByNative("RenderableManager.cpp")\n    private float mHalfExtentX;', java_src)
             self.assertIn("public void setCenter(float centerX, float centerY, float centerZ)", java_src)
             self.assertIn("public void setCenter(@NonNull @Size(min = 3) float[] center)", java_src)
             self.assertIn("public float[] getCenter(@Nullable @Size(min = 3) float[] out)", java_src)
@@ -470,6 +471,12 @@ class TestJavaGen(unittest.TestCase):
                             "type": {"cpp_name": "const float", "qualified_name": "float", "category": "primitive"},
                             "value": "0.1171f",
                             "doc": {"brief": "LED efficiency."}
+                        },
+                        {
+                            "name": "MAX_INDEX_COUNT",
+                            "type": {"cpp_name": "const uint32_t", "qualified_name": "uint32_t", "category": "primitive"},
+                            "value": "uint32_t(67108863)",
+                            "doc": {"brief": "Maximum number of indices."}
                         }
                     ]
                 }
@@ -498,6 +505,7 @@ class TestJavaGen(unittest.TestCase):
             self.assertIn("public static final long FENCE_WAIT_FOR_EVER = -1;", java_src)
             self.assertIn("public static final long WAIT_FOR_EVER = FENCE_WAIT_FOR_EVER;", java_src)
             self.assertIn("public static final float EFFICIENCY_LED = 0.1171f;", java_src)
+            self.assertIn("public static final int MAX_INDEX_COUNT = 67108863;", java_src)
             self.assertIn("doWait(WAIT_FOR_EVER);", java_src)
 
     def test_no_apigen_attribute(self):
@@ -3787,6 +3795,30 @@ class TestJavaGen(unittest.TestCase):
             err_cats = [e.category for e in res.errors]
             self.assertIn("reflection", err_cats)
 
+            # Case 4: Reflection GetFieldID / GetMethodID missing @UsedByNative
+            (j_dir / "TestUsedByNative.java").write_text(
+                "package com.google.android.filament;\n"
+                "public class TestUsedByNative {\n"
+                "    public int unannotatedField;\n"
+                "    public void unannotatedMethod() {}\n"
+                "}\n"
+            )
+            (c_dir / "TestUsedByNative.cpp").write_text(
+                '#include <jni.h>\n'
+                'void test(JNIEnv* env) {\n'
+                '    jclass clazz = env->FindClass("com/google/android/filament/TestUsedByNative");\n'
+                '    env->GetFieldID(clazz, "unannotatedField", "I");\n'
+                '    env->GetMethodID(clazz, "unannotatedMethod", "()V");\n'
+                '}\n'
+            )
+            val = BindingValidator(tmp_path / "java", c_dir, target_classes={"TestUsedByNative"})
+            res = val.run()
+            self.assertFalse(res.is_clean)
+            err_msgs = "\n".join(e.message for e in res.errors)
+            self.assertIn("unannotatedField", err_msgs)
+            self.assertIn("unannotatedMethod", err_msgs)
+            self.assertIn("missing @UsedByNative", err_msgs)
+
     def test_generic_standalone_pojo_struct_getter(self):
         """Verify standalone zero-argument POJO struct getters generate cached fields, lazy getters, and skip JNI."""
         from tools.apigen.javagen import ClassContext, JavaEmitter, JniEmitter
@@ -4106,6 +4138,58 @@ class TestJavaGen(unittest.TestCase):
             self.assertIn("    @Deprecated\n    public static class LegacyOptions {", java_src)
             self.assertIn("        @Deprecated\n        public float legacyScale = 1.0f;", java_src)
             self.assertIn("        public boolean enabled = true;", java_src)
+
+    def test_material_builder_filamat_generation(self):
+        """Verify end-to-end extraction and generation of MaterialBuilder for filamat-android."""
+        repo_root = Path(__file__).parent.parent.parent.parent
+        header_file = repo_root / "libs/filamat/include/filamat/MaterialBuilder.h"
+        self.assertTrue(header_file.exists(), "MaterialBuilder.h not found")
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            extracted_json = Path(tmp_dir) / "MaterialBuilder.json"
+            ext_res = subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(__file__).parent.parent / "extractor.py"),
+                    str(header_file),
+                    "-o", str(extracted_json),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(ext_res.returncode, 0, f"extractor failed: {ext_res.stderr}")
+
+            res = subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(__file__).parent.parent / "javagen.py"),
+                    "--java-dir", tmp_dir,
+                    "--jni-dir", tmp_dir,
+                    "--class-name", "MaterialBuilder",
+                    str(extracted_json),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(res.returncode, 0, f"javagen failed: {res.stderr}")
+
+            java_src = (Path(tmp_dir) / "MaterialBuilder.java").read_text()
+            cpp_src = (Path(tmp_dir) / "MaterialBuilder.cpp").read_text()
+
+            self.assertIn("package com.google.android.filament.filamat;", java_src)
+            self.assertIn('System.loadLibrary("filamat-jni");', java_src)
+            self.assertIn("public MaterialBuilder()", java_src)
+            self.assertIn("public static void init()", java_src)
+            self.assertIn("public static void shutdown()", java_src)
+            self.assertIn("public MaterialBuilder name(@NonNull String name)", java_src)
+            self.assertIn("public MaterialPackage build(@Nullable Object jobSystemProvider)", java_src)
+            self.assertIn("public MaterialBuilder constant(@NonNull String name, @NonNull ConstantType type, int defaultValue)", java_src)
+            self.assertIn("public MaterialBuilder constant(@NonNull String name, @NonNull ConstantType type, float defaultValue)", java_src)
+            self.assertIn("public MaterialBuilder constant(@NonNull String name, @NonNull ConstantType type, boolean defaultValue)", java_src)
+            self.assertIn("using namespace filamat;", cpp_src)
+            self.assertIn("Java_com_google_android_filament_filamat_MaterialBuilder_nCreateMaterialBuilder", cpp_src)
+            self.assertIn("Java_com_google_android_filament_filamat_MaterialBuilder_nBuilderBuild", cpp_src)
+            self.assertIn("that->groupSize(uint3{(uint32_t)groupSizex, (uint32_t)groupSizey, (uint32_t)groupSizez});", cpp_src)
 
 
 if __name__ == "__main__":

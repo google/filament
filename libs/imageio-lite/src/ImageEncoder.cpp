@@ -270,10 +270,10 @@ bool TIFFEncoder::encode(LinearImage const& image) {
     size_t const srcChannels = image.getChannels();
     std::unique_ptr<uint8_t[]> rgbaData;
     if (srcChannels == 4) {
-        rgbaData = fromLinearTosRGB<uint8_t, 4>(image);
+        rgbaData = fromLinearToSRGB<uint8_t, 4>(image);
     } else if (srcChannels == 3) {
         rgbaData = std::make_unique<uint8_t[]>(size_t(width) * height * 4);
-        auto rgb = fromLinearTosRGB<uint8_t, 3>(image);
+        auto rgb = fromLinearToSRGB<uint8_t, 3>(image);
         for (size_t i = 0, n = size_t(width) * height; i < n; ++i) {
             rgbaData[i * 4 + 0] = rgb[i * 3 + 0];
             rgbaData[i * 4 + 1] = rgb[i * 3 + 1];
@@ -288,13 +288,13 @@ bool TIFFEncoder::encode(LinearImage const& image) {
             for (size_t x = 0; x < width; ++x, p += srcChannels, d += 4) {
                 if (srcChannels == 1) {
                     uint8_t g = uint8_t(
-                            filament::math::saturate(image::linearTosRGB(p[0])) * 255.0f + 0.5f);
+                            filament::math::saturate(image::linearToSRGB(p[0])) * 255.0f + 0.5f);
                     d[0] = d[1] = d[2] = g;
                 } else {
                     for (int i = 0; i < 3; i++) {
                         if (i < srcChannels) {
                             d[i] = uint8_t(
-                                    filament::math::saturate(image::linearTosRGB(p[i])) * 255.0f +
+                                    filament::math::saturate(image::linearToSRGB(p[i])) * 255.0f +
                                     0.5f);
                         } else {
                             d[i] = 0;
