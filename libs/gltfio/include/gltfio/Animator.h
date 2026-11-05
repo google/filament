@@ -105,6 +105,14 @@ public:
     // For internal use only.
     void addInstance(FFilamentInstance* instance);
 
+    /** Creates an Animator that will use the corresponding asset and instance, 
+     * can be used to animate an instance with animation from another asset.
+     * When used, the caller is responsible for deleting it.
+     * The normal way of getting an Animator is to call FilamentInstance::getAnimator().
+     */
+    Animator(FilamentAsset *asset, FilamentInstance *instance);
+    ~Animator();
+
 private:
 
     /*! \cond PRIVATE */
@@ -114,7 +122,6 @@ private:
 
     // If "instance" is null, then this is the primary animator.
     Animator(FFilamentAsset const* asset, FFilamentInstance* instance);
-    ~Animator();
 
     Animator(const Animator& animator) = delete;
     Animator(Animator&& animator) = delete;
