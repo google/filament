@@ -252,7 +252,7 @@ enum class ReflectionMode : uint8_t {
 // can't really use std::underlying_type<AttributeIndex>::type because the driver takes a uint32_t
 using AttributeBitset = utils::bitset32;
 
-static constexpr size_t MATERIAL_PROPERTIES_COUNT = 38;
+static constexpr size_t MATERIAL_PROPERTIES_COUNT = 40;
 enum class Property : uint8_t {
     BASE_COLOR,               //!< float4, all shading models
     ROUGHNESS,                //!< float,  lit shading models only
@@ -292,6 +292,8 @@ enum class Property : uint8_t {
     IRIDESCENCE_IOR,          //!< float,  lit shading models only, except cloth
     IRIDESCENCE_THICKNESS,    //!< float,  lit shading models only, except cloth
     RETROREFLECTION,          //!< float,  lit shading models only, except subsurface and cloth
+    DIFFUSE_TRANSMISSION,     //!< float,  lit shading models only, except subsurface and cloth
+    DIFFUSE_TRANSMISSION_COLOR, //!< float3, lit shading models only, except subsurface and cloth
 
     // when adding new Properties, make sure to update MATERIAL_PROPERTIES_COUNT
 };
@@ -319,7 +321,15 @@ enum class UTILS_APIGEN_FLAGS UserVariantFilterBit : UserVariantFilterMask {
 
     SHADOW_RECEIVER = 0x04,      //!< Shadow receiver
     SKINNING = 0x08,             //!< Skinning
-    FOG = 0x10,                  //!< Fog
+
+    /**
+     * Fog
+     *
+     * \note Since fog was migrated to specialization constants, filtering this bit no longer
+     * removes shader variants. It removes the fog code (and its sampler) from offline compiled
+     * materials (.filamat), and prevents fog specializations from being compiled at runtime.
+     */
+    FOG = 0x10,
     VSM = 0x20,                  //!< Variance shadow maps
     SSR = 0x40,                  //!< Screen-space reflections
     STE = 0x80,                  //!< Instanced stereo rendering

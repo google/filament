@@ -830,10 +830,13 @@ void FEngine::gc() {
     mTransformManager.gc();
     mCameraManager.gc(*this);
     mRenderableManager.gc(getDriverApi());
+    mScenes.forEach([](FScene* scene) {
+        scene->gc();
+    });
 
-    // Because the managers just updated their watermarks to the current epoch,
-    // advanceEpoch() will see the highest possible safe threshold, allowing
-    // it to reclaim the maximum amount of global IDs this frame.
+    // Because the managers just drained their pending destructions and updated their watermarks
+    // to the latest harvested epoch, advanceEpoch() will see the highest possible safe threshold,
+    // allowing it to reclaim the maximum amount of global IDs this frame.
     mEntityManager.advanceEpoch();
 
     if (asyncJob) {
@@ -1818,8 +1821,6 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
     // isMaterialLit means shading != Shading::UNLIT || hasShadowMultiplier;
     const bool isMaterialLit = material->getDefinition().isVariantLit;
     Variant baseVariant{};
-    // TODO: Remove this after FOG is fully transferred to spec constant
-    baseVariant.setFog(false);
     baseVariant.setShadowSampler2D(isMaterialLit && view->hasShadowing() && (view->getShadowType() != ShadowType::PCF));
     baseVariant.setStereo(view->hasStereo());
 

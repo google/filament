@@ -381,6 +381,7 @@ TEST(Material, CompileMaterialWithSkinningEnabled) {
             /* shadowReceiver= */ utils::tribool(false),
             /* skinning= */ utils::tribool(true));
 
+    EXPECT_FALSE(variants.empty());
     for (auto const v : variants) {
         EXPECT_FALSE(filament::Variant::isShadowReceiverVariant(v));
         EXPECT_TRUE(v.hasSkinningOrMorphing());
@@ -452,10 +453,8 @@ TEST(MaterialVariant, DynamicLightingSpecKeySupportsPunctualShadowReceivers) {
 
     constexpr Variant::type_t SHADOW_VARIANTS[] = {
             Variant::SRE,
-            Variant::SRE | Variant::FOG,
             Variant::SRE | Variant::SKN,
             Variant::S2D | Variant::SRE,
-            Variant::S2D | Variant::SRE | Variant::FOG,
             Variant::S2D | Variant::SRE | Variant::SKN,
             Variant::S2D | Variant::SRE | Variant::STE,
     };
@@ -614,11 +613,6 @@ TEST(Material, SsrFilteredLitMaterialContainsPunctualShadowPrograms) {
                     fengine.isStereoSupported()))
                     << "variant=" << +key << " specKey=" << specKey.key;
         }
-        // Fog is a dynamic specialization constant now, there is no FOG variant anymore.
-        EXPECT_FALSE(definition.isValidProgram(
-                Variant(key | Variant::FOG), DynamicSpecConstKey{}, fengine.getShaderModel(),
-                fengine.isStereoSupported()))
-                << "variant=" << +key;
     }
     EXPECT_FALSE(definition.isValidProgram(
             Variant(Variant::SPECIAL_SSR_VARIANT), DynamicSpecConstKey{},
