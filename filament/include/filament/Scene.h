@@ -159,8 +159,9 @@ public:
     /**
      * Returns the number of Entities in the Scene.
      *
-     * Entities destroyed with EntityManager::destroy() are removed lazily the next time a View
-     * attached to this Scene is rendered or detached; until then they may still be counted.
+     * Entities destroyed with EntityManager::destroy() are removed lazily after a subsequent
+     * garbage collection or the next time a View attached to this Scene is rendered or detached;
+     * until then they may still be counted.
      *
      * @return Total number of Entities in the Scene.
      */
@@ -183,21 +184,22 @@ public:
     /**
      * Returns true if the given entity is in the Scene.
      *
-     * Entities destroyed with EntityManager::destroy() are removed lazily the next time a View
-     * attached to this Scene is rendered or detached; until then they may still be reported as
-     * present.
+     * Entities destroyed with EntityManager::destroy() are removed lazily after a subsequent
+     * garbage collection or the next time a View attached to this Scene is rendered or detached;
+     * until then they may still be reported as present.
      *
      * @return Whether the given entity is in the Scene.
      */
     bool hasEntity(utils::Entity entity) const noexcept;
 
     /**
-     * Invokes user functor on each entity in the scene.
+     * Invokes user functor on each entity in the scene in unspecified order.
      *
      * It is not allowed to add or remove an entity from the scene within the functor.
      *
-     * Entities destroyed with EntityManager::destroy() are removed lazily the next time a View
-     * attached to this Scene is rendered or detached; until then they may still be visited.
+     * Entities destroyed with EntityManager::destroy() are removed lazily after a subsequent
+     * garbage collection or the next time a View attached to this Scene is rendered or detached;
+     * until then they may still be visited.
      *
      * @param functor User provided functor called for each entity in the scene
      */

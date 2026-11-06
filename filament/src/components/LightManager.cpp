@@ -184,11 +184,6 @@ void FLightManager::init(FEngine&) noexcept {
 void FLightManager::create(const Builder& builder, Entity const entity) {
     auto& manager = mManager;
 
-    Entity zombie;
-    if (UTILS_UNLIKELY(manager.popPendingZombie(entity, zombie))) {
-        destroy(zombie);
-    }
-
     auto [i, added] = manager.tryAddComponent(entity);
     if (UTILS_UNLIKELY(!added && i)) {
         destroy(entity);
