@@ -411,15 +411,15 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
                 float clipMinY = (pcmd.ClipRect.y - clipOff.y) * clipScale.y;
                 float clipMaxY = (pcmd.ClipRect.w - clipOff.y) * clipScale.y;
 
-                clipMinX = std::clamp(clipMinX, 0.0f, static_cast<float>(fbwidth));
-                clipMaxX = std::clamp(clipMaxX, 0.0f, static_cast<float>(fbwidth));
-                clipMinY = std::clamp(clipMinY, 0.0f, static_cast<float>(fbheight));
-                clipMaxY = std::clamp(clipMaxY, 0.0f, static_cast<float>(fbheight));
+                clipMinX = std::clamp(clipMinX, 0.0f, float(fbwidth));
+                clipMaxX = std::clamp(clipMaxX, 0.0f, float(fbwidth));
+                clipMinY = std::clamp(clipMinY, 0.0f, float(fbheight));
+                clipMaxY = std::clamp(clipMaxY, 0.0f, float(fbheight));
 
                 auto const scissorLeft = static_cast<uint32_t>(clipMinX);
                 auto const scissorWidth = static_cast<uint32_t>(std::max(0.0f, clipMaxX - clipMinX));
                 auto const scissorBottom = static_cast<uint32_t>(
-                        mFlipVertical ? clipMinY : (static_cast<float>(fbheight) - clipMaxY));
+                        mFlipVertical ? clipMinY : (float(fbheight) - clipMaxY));
                 auto const scissorHeight = static_cast<uint32_t>(std::max(0.0f, clipMaxY - clipMinY));
 
                 materialInstance->setScissor(scissorLeft, scissorBottom, scissorWidth, scissorHeight);
