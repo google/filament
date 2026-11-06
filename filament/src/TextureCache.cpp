@@ -39,6 +39,7 @@
 #include <algorithm>
 #include <array>
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -261,8 +262,9 @@ void TextureCache::gc(bool const skippedFrame) noexcept {
 
     // Purging strategy:
     //  - remove all entries older than MAX_AGE_SKIPPED_FRAME when skipping a frame
-    //  - remove entries older than mCacheMaxAgeSoft
+    //  - remove entries older than mCacheMaxAge (soft limit)
     //      - remove only MAX_EVICTION_COUNT entry per gc(),
+    //  - remove all entries older than mCacheMaxAge + HARD_MAX_AGE_OFFSET (hard limit)
     //  - look for the number of unique resource ages present in the cache (this basically gives
     //    us how many buckets of resources we have corresponding to previous frames.
     //      - remove all resources that have an age older than the MAX_UNIQUE_AGE_COUNT'th bucket
@@ -272,21 +274,29 @@ void TextureCache::gc(bool const skippedFrame) noexcept {
     // when skipping a frame, the maximum age to keep in the cache
     constexpr size_t MAX_AGE_SKIPPED_FRAME = 1;
 
-    // maximum entry count to evict per GC, under the mCacheMaxAgeSoft limit
+    // maximum entry count to evict per GC, under the soft mCacheMaxAge limit
     constexpr size_t MAX_EVICTION_COUNT = 1;
 
     // maximum number of unique ages in the cache
     constexpr size_t MAX_UNIQUE_AGE_COUNT = 3;
+
+    // grace period (in frames) beyond mCacheMaxAge before all expired entries are hard-evicted
+    constexpr size_t HARD_MAX_AGE_OFFSET = MAX_UNIQUE_AGE_COUNT - 1;
+    size_t const cacheMaxAgeHard =
+            (mCacheMaxAge > std::numeric_limits<size_t>::max() - HARD_MAX_AGE_OFFSET)
+                    ? std::numeric_limits<size_t>::max()
+                    : mCacheMaxAge + HARD_MAX_AGE_OFFSET;
 
     bitset32 ages;
     uint32_t evictedCount = 0;
     for (auto it = textureCache.begin(); it != textureCache.end();) {
         size_t const ageDiff = age - it->second.age;
         bool const evictSkipped = skippedFrame && ageDiff > MAX_AGE_SKIPPED_FRAME;
-        bool const evictAgedOut = !skippedFrame &&
+        bool const evictHardAgedOut = !skippedFrame && ageDiff >= cacheMaxAgeHard;
+        bool const evictSoftAgedOut = !skippedFrame && !evictHardAgedOut &&
                 ageDiff >= mCacheMaxAge && evictedCount < MAX_EVICTION_COUNT;
-        if (evictSkipped || evictAgedOut) {
-            if (evictAgedOut) {
+        if (evictSkipped || evictHardAgedOut || evictSoftAgedOut) {
+            if (evictSoftAgedOut) {
                 evictedCount++;
             }
             auto const reason = skippedFrame
