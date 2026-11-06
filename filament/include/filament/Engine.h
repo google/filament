@@ -391,9 +391,10 @@ public:
         uint32_t resourceAllocatorCacheSizeMB = 64;
 
         /*
-         * This value determines how many frames texture entries are kept for in the cache. This
-         * is a soft limit, meaning some texture older than this are allowed to stay in the cache.
-         * Typically only one texture is evicted per frame.
+         * This value determines how many frames unused texture entries are kept in the cache.
+         * Entries older than resourceAllocatorCacheMaxAge are subject to a soft limit where
+         * typically one texture is evicted per frame, while entries older than
+         * resourceAllocatorCacheMaxAge + 2 frames are unconditionally evicted.
          * The default is 1.
          */
         uint32_t resourceAllocatorCacheMaxAge = 1;

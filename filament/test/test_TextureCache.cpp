@@ -199,5 +199,148 @@ TEST_F(TextureCacheTest, UniqueAgeLimitRetainsThreeBuckets) {
     cache.terminate();
 }
 
+TEST_F(TextureCacheTest, AgedOutHardLimitPurgesBurstOfAbandonedTextures) {
+    Engine::Config config{};
+    config.resourceAllocatorCacheMaxAge = 1;
+    TextureCache cache{ config, mDriverApi };
+
+    // Frame 0: allocate 1 steady-state active texture plus 8 transient feature textures
+    // (simulating e.g. a Bloom/DoF/SSR mip chain that gets disabled after Frame 0).
+    TextureHandle const tActive = allocTexture(cache, 64);
+    std::array<TextureHandle, 8> tBurst{};
+    for (size_t i = 0; i < tBurst.size(); i++) {
+        tBurst[i] = allocTexture(cache, 100 + uint32_t(i));
+    }
+    cache.destroyTexture(tActive);
+    for (TextureHandle const h : tBurst) {
+        cache.destroyTexture(h);
+    }
+    cache.gc(false);
+
+    // Frames 1 & 2: reuse only tActive each frame. Because tActive moves to the current frame's
+    // age bucket on every frame, only 2 unique ages exist in the cache ({0, currentAge}), so
+    // UNIQUE_AGE_LIMIT (3) does not trigger; soft eviction removes 1 burst texture per frame.
+    for (int frame = 1; frame <= 2; frame++) {
+        TextureHandle const activeHit = allocTexture(cache, 64);
+        EXPECT_EQ(activeHit.getId(), tActive.getId());
+        cache.destroyTexture(activeHit);
+        cache.gc(false);
+    }
+
+    // Frame 3: reuse tActive. The 6 remaining burst textures from Frame 0 now have
+    // ageDiff == 3 >= cacheMaxAgeHard (1 + 2), so all 6 must be purged in this single gc() pass.
+    TextureHandle const activeHitF3 = allocTexture(cache, 64);
+    EXPECT_EQ(activeHitF3.getId(), tActive.getId());
+    cache.destroyTexture(activeHitF3);
+    cache.gc(false);
+
+    // Verify tActive is still cached while all 8 burst textures were evicted.
+    TextureHandle const activeCheck = allocTexture(cache, 64);
+    EXPECT_EQ(activeCheck.getId(), tActive.getId());
+    cache.destroyTexture(activeCheck);
+
+    for (size_t i = 0; i < tBurst.size(); i++) {
+        TextureHandle const burstCheck = allocTexture(cache, 100 + uint32_t(i));
+        EXPECT_NE(burstCheck.getId(), tBurst[i].getId());
+        cache.destroyTexture(burstCheck);
+    }
+
+    cache.terminate();
+}
+
+TEST_F(TextureCacheTest, HardLimitRespectsConfiguredMaxAge) {
+    Engine::Config config{};
+    config.resourceAllocatorCacheMaxAge = 4;
+    TextureCache cache{ config, mDriverApi };
+
+    // Frame 0: allocate and return 5 distinct textures.
+    std::array<TextureHandle, 5> t{};
+    for (size_t i = 0; i < t.size(); i++) {
+        t[i] = allocTexture(cache, 200 + uint32_t(i));
+        cache.destroyTexture(t[i]);
+    }
+    cache.gc(false);
+
+    // Frames 1..3 (ageDiff == 1..3 < mCacheMaxAge (4)): 0 evictions.
+    cache.gc(false);
+    cache.gc(false);
+    cache.gc(false);
+
+    // Frames 4 & 5 (ageDiff == 4, 5 in [4, 6)): soft rate-limited eviction removes t[0] and t[1].
+    cache.gc(false);
+    cache.gc(false);
+
+    // Verify t[0] and t[1] were evicted, t[2] is still cached (reusing it refreshes t[2] to age 5),
+    // while leaving t[3] and t[4] untouched in the cache at age 0.
+    TextureHandle const t0_check = allocTexture(cache, 200);
+    TextureHandle const t1_check = allocTexture(cache, 201);
+    TextureHandle const t2_check = allocTexture(cache, 202);
+    EXPECT_NE(t0_check.getId(), t[0].getId());
+    EXPECT_NE(t1_check.getId(), t[1].getId());
+    EXPECT_EQ(t2_check.getId(), t[2].getId());
+    cache.destroyTexture(t0_check);
+    cache.destroyTexture(t1_check);
+    cache.destroyTexture(t2_check);
+
+    // Frame 6: t[3] and t[4] reach ageDiff == 6 >= cacheMaxAgeHard (4 + 2), so both are purged
+    // at once, whereas t[2] (refreshed at age 5 -> ageDiff == 1 < 4) remains cached.
+    cache.gc(false);
+
+    TextureHandle const t2_after = allocTexture(cache, 202);
+    TextureHandle const t3_after = allocTexture(cache, 203);
+    TextureHandle const t4_after = allocTexture(cache, 204);
+    EXPECT_EQ(t2_after.getId(), t[2].getId());
+    EXPECT_NE(t3_after.getId(), t[3].getId());
+    EXPECT_NE(t4_after.getId(), t[4].getId());
+
+    cache.destroyTexture(t2_after);
+    cache.destroyTexture(t3_after);
+    cache.destroyTexture(t4_after);
+    cache.terminate();
+}
+
+TEST_F(TextureCacheTest, HardEvictionDoesNotConsumeSoftEvictionBudget) {
+    Engine::Config config{};
+    config.resourceAllocatorCacheMaxAge = 1;
+    TextureCache cache{ config, mDriverApi };
+
+    // Frame 0: insert 3 textures at age 0.
+    TextureHandle const tOld0 = allocTexture(cache, 100);
+    TextureHandle const tOld1 = allocTexture(cache, 101);
+    TextureHandle const tOld2 = allocTexture(cache, 102);
+    cache.destroyTexture(tOld0);
+    cache.destroyTexture(tOld1);
+    cache.destroyTexture(tOld2);
+    cache.gc(false);
+
+    // Frame 1: tOld0 is soft-evicted; [tOld1(age=0), tOld2(age=0)] remain.
+    cache.gc(false);
+
+    // Frame 2: append 2 new textures at age 2 behind the old entries.
+    // End-of-Frame-2 gc soft-evicts tOld1, leaving [tOld2(age=0), tRecent0(age=2), tRecent1(age=2)].
+    TextureHandle const tRecent0 = allocTexture(cache, 200);
+    TextureHandle const tRecent1 = allocTexture(cache, 201);
+    cache.destroyTexture(tRecent0);
+    cache.destroyTexture(tRecent1);
+    cache.gc(false);
+
+    // Frame 3: tOld2 (at front of container) has ageDiff == 3 >= cacheMaxAgeHard (3) and is
+    // hard-evicted without consuming MAX_EVICTION_COUNT (1), so tRecent0 (ageDiff == 1) is also
+    // soft-evicted while tRecent1 (ageDiff == 1) stays cached.
+    cache.gc(false);
+
+    TextureHandle const tRecent1_check = allocTexture(cache, 201);
+    TextureHandle const tOld2_check = allocTexture(cache, 102);
+    TextureHandle const tRecent0_check = allocTexture(cache, 200);
+    EXPECT_EQ(tRecent1_check.getId(), tRecent1.getId());
+    EXPECT_NE(tOld2_check.getId(), tOld2.getId());
+    EXPECT_NE(tRecent0_check.getId(), tRecent0.getId());
+
+    cache.destroyTexture(tRecent1_check);
+    cache.destroyTexture(tOld2_check);
+    cache.destroyTexture(tRecent0_check);
+    cache.terminate();
+}
+
 } // anonymous namespace
 
