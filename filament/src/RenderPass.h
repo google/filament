@@ -27,6 +27,7 @@
 #include <private/filament/EngineEnums.h>
 #include <private/filament/Variant.h>
 
+#include <backend/BufferDescriptor.h>
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -61,7 +62,6 @@ class FMaterialInstance;
 class FRenderPrimitive;
 class RenderPassBuilder;
 class ColorPassDescriptorSet;
-struct PerRenderableData;
 
 class RenderPass {
 public:
@@ -507,7 +507,7 @@ private:
     backend::Viewport mScissorViewport{ 0, 0, INT32_MAX, INT32_MAX };
     Command const* /* const */ mCommandBegin = nullptr;   // Pointer to the first command
     Command const* /* const */ mCommandEnd = nullptr;     // Pointer to one past the last command
-    mutable std::vector<PerRenderableData> mInstancingStagingBuffer;
+    mutable backend::BufferDescriptor mInstancingStagingBuffer;
     mutable std::vector<Command*> mInstancingDescriptorSetPatch;
     BufferObjectSharedHandle mInstancedUboHandle; // ubo for instanced primitives
     DescriptorSetSharedHandle mInstancedDescriptorSetHandle; // a descriptor-set to hold the ubo
