@@ -462,6 +462,35 @@ std::string shaderFromKey(const MaterialKey& config) {
                 )SHADER";
             }
         }
+
+        if (config.hasDiffuseTransmission && !config.useSpecularGlossiness) {
+            shader += R"SHADER(
+                material.diffuseTransmission = materialParams.diffuseTransmissionFactor;
+                material.diffuseTransmissionColor = materialParams.diffuseTransmissionColorFactor;
+            )SHADER";
+
+            if (config.hasDiffuseTransmissionTexture) {
+                shader += "highp float2 diffuseTransmissionUV = ${diffuseTransmission};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "diffuseTransmissionUV = (vec3(diffuseTransmissionUV, 1.0) * "
+                              "materialParams.diffuseTransmissionUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    material.diffuseTransmission *= texture(materialParams_diffuseTransmissionMap, diffuseTransmissionUV).a;
+                )SHADER";
+            }
+
+            if (config.hasDiffuseTransmissionColorTexture) {
+                shader += "highp float2 diffuseTransmissionColorUV = ${diffuseTransmissionColor};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "diffuseTransmissionColorUV = (vec3(diffuseTransmissionColorUV, 1.0) * "
+                              "materialParams.diffuseTransmissionColorUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    material.diffuseTransmissionColor *= texture(materialParams_diffuseTransmissionColorMap, diffuseTransmissionColorUV).rgb;
+                )SHADER";
+            }
+        }
     }
 
     shader += "}\n";
@@ -677,10 +706,12 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
 
     // VOLUME
     if (config.hasVolume) {
-        builder.refractionMode(RefractionMode::SCREEN_SPACE);
+        if (!config.hasDiffuseTransmission || config.hasTransmission) {
+            builder.refractionMode(RefractionMode::SCREEN_SPACE);
 
-        // Override thin transmission if both extensions are used
-        builder.refractionType(RefractionType::SOLID);
+            // Override thin transmission if both extensions are used
+            builder.refractionType(RefractionType::SOLID);
+        }
 
         builder.parameter("volumeAbsorption", MaterialBuilder::UniformType::FLOAT3);
         builder.parameter("volumeThicknessFactor", MaterialBuilder::UniformType::FLOAT);
@@ -745,6 +776,28 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
             builder.parameter("anisotropyMap", MaterialBuilder::SamplerType::SAMPLER_2D);
             if (config.hasTextureTransforms) {
                 builder.parameter("anisotropyUvMatrix", MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH);
+            }
+        }
+    }
+
+    // DIFFUSE TRANSMISSION
+    if (config.hasDiffuseTransmission && !config.unlit && !config.useSpecularGlossiness) {
+        builder.parameter("diffuseTransmissionFactor", MaterialBuilder::UniformType::FLOAT);
+        builder.parameter("diffuseTransmissionColorFactor", MaterialBuilder::UniformType::FLOAT3);
+        if (config.hasDiffuseTransmissionTexture) {
+            builder.parameter("diffuseTransmissionMap", MaterialBuilder::SamplerType::SAMPLER_2D);
+            if (config.hasTextureTransforms) {
+                builder.parameter("diffuseTransmissionUvMatrix", MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH);
+            }
+        }
+        if (config.hasDiffuseTransmissionColorTexture) {
+            builder.parameter("diffuseTransmissionColorMap",
+                    MaterialBuilder::SamplerType::SAMPLER_2D);
+            if (config.hasTextureTransforms) {
+                builder.parameter("diffuseTransmissionColorUvMatrix",
+                        MaterialBuilder::UniformType::MAT3,
                         MaterialBuilder::ParameterPrecision::HIGH);
             }
         }
