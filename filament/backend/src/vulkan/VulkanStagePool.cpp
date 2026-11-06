@@ -53,6 +53,7 @@ VkDeviceSize alignValue(VkDeviceSize valueToAlign, VkDeviceSize alignment) {
 
 fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStage::acquireSegment(
         fvkmemory::ResourceManager* resManager, uint32_t segmentOffset, uint32_t numBytes) {
+    utils::LockGuard const lock(mLock);
     assert_invariant(numBytes <= mCapacity && segmentOffset <= mCapacity - numBytes);
     auto segment = fvkmemory::resource_ptr<Segment>::construct(resManager, this, numBytes,
             segmentOffset, [this](uint32_t offset) { mSegments.erase(offset); });
@@ -72,6 +73,7 @@ VulkanStagePool::VulkanStagePool(VmaAllocator allocator, fvkmemory::ResourceMana
 
 fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStagePool::acquireStage(size_t requestedBytes,
         uint32_t alignment) {
+    utils::LockGuard const lock(mLock);
     // Stages track capacities and offsets in 32 bits. FTexture::setImageCommon caps texture
     // uploads at INT32_MAX bytes, so the request still fits after alignment.
     assert_invariant(requestedBytes <= std::numeric_limits<uint32_t>::max());
@@ -120,6 +122,7 @@ fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStagePool::acquireStage(size
     // Update the stage's metadata, and reinsert it with the remaining segment
     // capacity.
     uint32_t spaceRemaining = pStage->capacity() - pStage->currentOffset();
+
     mStages.insert({ spaceRemaining, pStage });
 
     return pSegment;
@@ -266,7 +269,7 @@ fvkmemory::resource_ptr<VulkanStageImage::Resource> VulkanStagePool::acquireImag
 void VulkanStagePool::gc() noexcept {
     FVK_SYSTRACE_CONTEXT();
     FVK_SYSTRACE_START("stagepool::gc");
-
+    utils::LockGuard const lock(mLock);
     // If this is one of the first few frames, return early to avoid wrapping unsigned integers.
     if (++mCurrentFrame <= TIME_BEFORE_EVICTION) {
         return;
