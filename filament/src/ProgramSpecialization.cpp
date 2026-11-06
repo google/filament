@@ -21,7 +21,8 @@ namespace filament {
 
 size_t ProgramSpecialization::hash() const noexcept {
     size_t seed = 0;
-    utils::hash::combine_fast(seed, materialCrc32);
+    // Ids are small sequential integers, so mix them before the weak combine.
+    utils::hash::combine_fast(seed, utils::hash::MurmurHashFn<uint64_t>{}(definitionId));
     utils::hash::combine_fast(seed, variant.key);
     utils::hash::combine_fast(seed, specKey.key);
     // Both specKey and dynamic constants (indices 16-31) track the same dynamic state.
@@ -36,7 +37,7 @@ bool ProgramSpecialization::operator==(ProgramSpecialization const& rhs) const n
     }
     // Both specKey and dynamic constants track the same state. Direct slice comparison
     // safely avoids element-wise loop overhead because dynamic constants are unmutated defaults here.
-    return materialCrc32 == rhs.materialCrc32 && variant == rhs.variant &&
+    return definitionId == rhs.definitionId && variant == rhs.variant &&
            specKey == rhs.specKey &&
            specializationConstants == rhs.specializationConstants;
 }
