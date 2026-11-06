@@ -1237,7 +1237,10 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
                         +DescriptorSetBindingPoints::PER_RENDERABLE,
                         {{ offset, info.skinningOffset }, driver});
 
-                if (UTILS_UNLIKELY(info.hasMorphing)) {
+                // Both skinning and morphing share Variant::SKINNING_OR_MORPHING, whose vertex shader
+                // declares pushConstants.morphingBufferOffset; WebGPU requires immediate data to
+                // be populated whenever the bound shader variant references it.
+                if (UTILS_UNLIKELY(info.materialVariant.hasSkinningOrMorphing())) {
                     driver.setPushConstant(ShaderStage::VERTEX,
                             +PushConstantIds::MORPHING_BUFFER_OFFSET, int32_t(info.morphingOffset));
                 }

@@ -653,6 +653,8 @@ private:
             FScene::RenderableSoa& renderableData,
             utils::Range<uint32_t> visibleRenderables) noexcept;
 
+    void ensureDynamicLightingBuffers(FEngine& engine, backend::DriverApi& driver) noexcept;
+
     static void prepareVisibleLights(FLightManager const& lcm,
             utils::Slice<float> scratch,
             math::mat4f const& viewMatrix, Frustum const& frustum,

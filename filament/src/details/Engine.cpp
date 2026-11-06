@@ -16,6 +16,7 @@
 
 #include "details/Engine.h"
 
+#include "Froxelizer.h"
 #include "MaterialParser.h"
 #include "RenderPrimitive.h"
 #include "TextureCache.h"
@@ -52,6 +53,7 @@
 
 #include <private/filament/DescriptorSets.h>
 #include <private/filament/EngineEnums.h>
+#include <private/filament/UibStructs.h>
 #include <private/filament/Variant.h>
 
 #include <filament/ColorGrading.h>
@@ -569,8 +571,24 @@ void FEngine::init() {
         driverApi.update3DImage(mDummyZeroTextureArray, 0, 0, 0, 0, 1, 1, 1,
                 { zeroRGBA.data(), size(zeroRGBA), Texture::Format::RGBA, Texture::Type::UBYTE });
 
-        mDummyUniformBuffer = driverApi.createBufferObject(CONFIG_MINSPEC_UBO_SIZE,
+        size_t const dummyUboSize = std::max({
+                size_t(CONFIG_MINSPEC_UBO_SIZE),
+                sizeof(PerRenderableUib),
+                sizeof(PerRenderableBoneUib),
+                sizeof(PerRenderableMorphingUib),
+                sizeof(ShadowUib),
+                CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib),
+                Froxelizer::getFroxelBufferByteCount(driverApi),
+                Froxelizer::getFroxelRecordBufferByteCount(driverApi),
+        });
+        mDummyUniformBuffer = driverApi.createBufferObject(dummyUboSize,
                 BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
+        if (UTILS_UNLIKELY(driverApi.isWorkaroundNeeded(Workaround::ADRENO_UNIFORM_ARRAY_CRASH))) {
+            auto* const initData = driverApi.allocatePod<PerRenderableBoneUib::BoneData>(1);
+            memset(initData, 0, sizeof(PerRenderableBoneUib::BoneData));
+            driverApi.updateBufferObject(mDummyUniformBuffer,
+                    { initData, sizeof(PerRenderableBoneUib::BoneData) }, 0);
+        }
 
         mLightManager.init(*this);
         mDFG.init(*this);
