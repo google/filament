@@ -241,7 +241,22 @@ PostProcessManager::~PostProcessManager() noexcept = default;
 void PostProcessManager::setFrameUniforms(DriverApi& driver,
         TypedUniformBuffer<PerViewUib>& uniforms) noexcept {
     mPostProcessDescriptorSet.setFrameUniforms(driver, uniforms);
-    mSsrPassDescriptorSet.setFrameUniforms(mEngine, uniforms);
+}
+
+SsrPassDescriptorSet& PostProcessManager::getSsrPassDescriptorSet() const noexcept {
+    if (UTILS_UNLIKELY(!mSsrPassDescriptorSet)) {
+        mSsrPassDescriptorSet = std::make_unique<SsrPassDescriptorSet>();
+        mSsrPassDescriptorSet->init(mEngine);
+    }
+    return *mSsrPassDescriptorSet;
+}
+
+MotionVectorsDescriptorSet& PostProcessManager::getMotionVectorsDescriptorSet() const noexcept {
+    if (UTILS_UNLIKELY(!mMotionVectorsDescriptorSet)) {
+        mMotionVectorsDescriptorSet = std::make_unique<MotionVectorsDescriptorSet>();
+        mMotionVectorsDescriptorSet->init(mEngine);
+    }
+    return *mMotionVectorsDescriptorSet;
 }
 
 void PostProcessManager::bindPostProcessDescriptorSet(DriverApi& driver) const noexcept {
@@ -367,10 +382,8 @@ void PostProcessManager::init() noexcept {
             +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS, engine.getZeroTexture(),
             {});
 
-    mSsrPassDescriptorSet.init(engine);
     mPostProcessDescriptorSet.init(engine);
     mStructureDescriptorSet.init(engine);
-    mMotionVectorsDescriptorSet.init(engine);
 
     mWorkaroundSplitEasu =
             driver.isWorkaroundNeeded(Workaround::SPLIT_EASU);
@@ -430,26 +443,18 @@ void PostProcessManager::init() noexcept {
     }
 
     if (engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1)) {
-        mStarburstTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
-                TextureFormat::R8, 1, 256, 1, 1, TextureUsage::DEFAULT);
-
-        PixelBufferDescriptor dataStarburst(driver.allocate(256), 256,
-                PixelDataFormat::R, PixelDataType::UBYTE);
-        std::generate_n((uint8_t*)dataStarburst.buffer, 256,
-                [&dist = mUniformDistribution, &gen = mEngine.getRandomEngine()]() {
-                    float const r = 0.5f + 0.5f * dist(gen);
-                    return uint8_t(r * 255.0f);
-                });
-
-        driver.update3DImage(mStarburstTexture,
-                0, 0, 0, 0, 256, 1, 1,
-                std::move(dataStarburst));
+        // Preserve the Engine PRNG sequence across lazy starburst texture creation: previously
+        // mStarburstTexture was populated unconditionally here using 256 draws from
+        // mEngine.getRandomEngine(), which shares state with temporalNoise in ColorGrading and TAA.
+        mEngine.getRandomEngine().discard(256);
     }
 }
 
 void PostProcessManager::terminate(DriverApi& driver) noexcept {
     FEngine& engine = mEngine;
-    driver.destroyTexture(mStarburstTexture);
+    if (mStarburstTexture) {
+        driver.destroyTexture(mStarburstTexture);
+    }
 
     driver.destroyDescriptorSet(mDummyPerRenderableDsh);
 
@@ -464,9 +469,39 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
     }
 
     mPostProcessDescriptorSet.terminate(engine.getDescriptorSetLayoutFactory(), driver);
-    mSsrPassDescriptorSet.terminate(driver);
+    if (mSsrPassDescriptorSet) {
+        mSsrPassDescriptorSet->terminate(driver);
+        mSsrPassDescriptorSet.reset();
+    }
     mStructureDescriptorSet.terminate(driver);
-    mMotionVectorsDescriptorSet.terminate(driver);
+    if (mMotionVectorsDescriptorSet) {
+        mMotionVectorsDescriptorSet->terminate(driver);
+        mMotionVectorsDescriptorSet.reset();
+    }
+}
+
+Handle<HwTexture> PostProcessManager::getStarburstTexture() noexcept {
+    if (UTILS_UNLIKELY(!mStarburstTexture)) {
+        assert_invariant(mEngine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1));
+        DriverApi& driver = mEngine.getDriverApi();
+        mStarburstTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
+                TextureFormat::R8, 1, 256, 1, 1, TextureUsage::DEFAULT);
+
+        PixelBufferDescriptor dataStarburst(driver.allocate(256), 256,
+                PixelDataFormat::R, PixelDataType::UBYTE);
+        std::default_random_engine starburstRandomEngine;
+        std::uniform_real_distribution<float> uniformDistribution{ 0.0f, 1.0f };
+        std::generate_n(static_cast<uint8_t*>(dataStarburst.buffer), 256,
+                [&dist = uniformDistribution, &gen = starburstRandomEngine]() {
+                    float const r = 0.5f + 0.5f * dist(gen);
+                    return uint8_t(r * 255.0f);
+                });
+
+        driver.update3DImage(mStarburstTexture,
+                0, 0, 0, 0, 256, 1, 1,
+                std::move(dataStarburst));
+    }
+    return mStarburstTexture;
 }
 
 Handle<HwTexture> PostProcessManager::getOneTexture() const noexcept {
@@ -889,6 +924,7 @@ void PostProcessManager::readbackMotionVectors(FrameGraph& fg,
 FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
         RenderPassBuilder const& passBuilder,
         FrameHistory const& frameHistory,
+        TypedUniformBuffer<PerViewUib>& frameUniforms,
         FrameGraphId<FrameGraphTexture> const structure,
         FrameGraphTexture::Descriptor const& desc) noexcept {
 
@@ -943,20 +979,23 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                     data.history = builder.sample(history);
                 }
             },
-            [this, passBuilder = passBuilder](FrameGraphResources const& resources,
+            [this, &frameUniforms, passBuilder = passBuilder](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) mutable {
+                SsrPassDescriptorSet& ssrDs = getSsrPassDescriptorSet();
+                ssrDs.setFrameUniforms(mEngine, frameUniforms);
+
                 // set structure sampler
-                mSsrPassDescriptorSet.prepareStructure(mEngine, data.structure ?
+                ssrDs.prepareStructure(mEngine, data.structure ?
                         resources.getTexture(data.structure) : getOneTexture());
 
                 // the history sampler is a regular texture2D
                 TextureHandle const history = data.history ?
                         resources.getTexture(data.history) : getZeroTexture();
-                mSsrPassDescriptorSet.prepareHistorySSR(mEngine, history);
+                ssrDs.prepareHistorySSR(mEngine, history);
 
-                mSsrPassDescriptorSet.commit(mEngine);
+                ssrDs.commit(mEngine);
 
-                mSsrPassDescriptorSet.bind(driver);
+                ssrDs.bind(driver);
 
                 bindPerRenderableDescriptorSet(driver);
 
@@ -2883,7 +2922,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
             starburst = fg.import("starburst", {
                     .width = 256, .height = 1, .format = TextureFormat::R8
             }, FrameGraphTexture::Usage::SAMPLEABLE,
-                    FrameGraphTexture{ .handle = mStarburstTexture });
+                    FrameGraphTexture{ .handle = getStarburstTexture() });
         }
     }
 

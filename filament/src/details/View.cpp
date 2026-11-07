@@ -101,6 +101,7 @@ FView::FView(FEngine& engine)
         : mCommonRenderableDescriptorSet("mCommonRenderableDescriptorSet",
                 engine.getPerRenderableDescriptorSetLayout()),
           mFroxelizer(engine),
+          mEngine(engine),
           mFogEntity(engine.getEntityManager().create()),
           mIsStereoSupported(engine.getDriverApi().isStereoSupported()),
           mUniforms(engine.getDriverApi()),
@@ -187,8 +188,6 @@ FView::FView(FEngine& engine)
 
     mIsDynamicResolutionSupported = driver.isFrameTimeSupported();
 
-    mDefaultColorGrading = mColorGrading = engine.getDefaultColorGrading();
-
     BufferObjectHandle const dummyUbo = engine.getDummyUniformBuffer();
     for (auto&& colorPassDescriptorSet : mColorPassDescriptorSet) {
         colorPassDescriptorSet.init(engine, dummyUbo, dummyUbo, dummyUbo);
@@ -196,6 +195,10 @@ FView::FView(FEngine& engine)
 }
 
 FView::~FView() noexcept = default;
+
+const FColorGrading* FView::getColorGrading() const noexcept {
+    return mColorGrading ? mColorGrading : mEngine.getDefaultColorGrading();
+}
 
 UTILS_NOINLINE
 void FView::ensureDynamicLightingBuffers(FEngine& engine, DriverApi& driver) noexcept {

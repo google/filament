@@ -854,15 +854,16 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
         depth = config.lutDimension;
     }
 
-    size_t const lutElementCount = size_t(width) * height * depth;
-    assert_invariant(lutElementCount > 0);
-    size_t elementSize = mIsOneDimensional ? sizeof(half) : sizeof(half4);
-    void* data = malloc(lutElementCount * elementSize);
-
     auto [textureFormat, format, type] =
             selectLutTextureParams(builder->format, mIsOneDimensional);
     assert_invariant(FTexture::isTextureFormatSupported(engine, textureFormat));
     assert_invariant(FTexture::validatePixelFormatAndType(textureFormat, format, type));
+
+    size_t const lutElementCount = size_t(width) * height * depth;
+    assert_invariant(lutElementCount > 0);
+    size_t const elementSize = mIsOneDimensional ? sizeof(half) :
+            (type == PixelDataType::UINT_2_10_10_10_REV ? sizeof(uint32_t) : sizeof(half4));
+    void* const data = malloc(lutElementCount * elementSize);
 
 #if defined(__ARM_NEON)
 #if defined(__clang__)
@@ -926,10 +927,8 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
 #if defined(__ARM_NEON)
     } else if (isDefaultState) {
         generateDefaultLUTNeon(engine, data, config, builder);
-        elementSize = sizeof(uint32_t);
     } else if (isMediumState) {
         generateMediumLUTNeon(engine, data, config, builder);
-        elementSize = sizeof(uint32_t);
 #endif
     } else {
         JobSystem& js = engine.getJobSystem();
@@ -987,8 +986,6 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
             }
         }
         js.runAndWait(slices);
-
-        elementSize = type == PixelDataType::UINT_2_10_10_10_REV ? sizeof(uint32_t) : sizeof(half4);
     }
 
     if (builder->exportCallback) {

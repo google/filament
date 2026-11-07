@@ -61,6 +61,11 @@ Program& Program::shader(ShaderStage shader, void const* data, size_t const size
     return *this;
 }
 
+Program& Program::shader(ShaderStage const shader, ShaderBlob&& blob) noexcept {
+    mShadersSource[size_t(shader)] = std::move(blob);
+    return *this;
+}
+
 Program& Program::shaderLanguage(ShaderLanguage const shaderLanguage) {
     mShaderLanguage = shaderLanguage;
     return *this;

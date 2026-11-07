@@ -170,7 +170,7 @@ struct Engine::BuilderDetails {
     void* mSharedContext = nullptr;
     bool mPaused = false;
     std::unordered_map<CString, bool> mFeatureFlags;
-    ColorGrading::Builder mColorGradingBuilder;
+    std::optional<ColorGrading::Builder> mColorGradingBuilder;
 
     static Config validateConfig(Config config) noexcept;
 };
@@ -546,7 +546,13 @@ void FEngine::init() {
                     new UboManager(getDriverApi(), slotSize, mConfig.sharedUboInitialSizeInBytes);
         }
 
-        mDefaultColorGrading = downcast(mColorGradingBuilder.build(*this));
+        // A user-supplied ColorGrading::Builder may hold non-owning pointers (toneMapper,
+        // exportUser) whose lifetime only extends until Engine::Builder::build() returns, so build
+        // it synchronously here. Only the default builder path (!mColorGradingBuilder.has_value())
+        // is deferred to FEngine::getDefaultColorGrading().
+        if (mColorGradingBuilder.has_value()) {
+            mDefaultColorGrading = downcast(mColorGradingBuilder->build(*this));
+        }
 
         constexpr float3 dummyPositions[1] = {};
         constexpr short4 dummyTangents[1] = {};
@@ -593,6 +599,7 @@ void FEngine::init() {
         mLightManager.init(*this);
         mDFG.init(*this);
     }
+    mColorGradingBuilder.reset();
 
     mPostProcessManager.init();
 
@@ -1036,6 +1043,15 @@ const FMaterial* FEngine::getSkyboxMaterial() noexcept {
         mSkyboxMaterial = FSkybox::createMaterial(*this);
     }
     return mSkyboxMaterial;
+}
+
+const FColorGrading* FEngine::getDefaultColorGrading() noexcept {
+    if (UTILS_UNLIKELY(mDefaultColorGrading == nullptr &&
+                getSupportedFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1)) {
+        assert_invariant(!mColorGradingBuilder.has_value());
+        mDefaultColorGrading = downcast(ColorGrading::Builder().build(*this));
+    }
+    return mDefaultColorGrading;
 }
 
 // -----------------------------------------------------------------------------------------------

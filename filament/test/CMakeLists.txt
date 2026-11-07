@@ -68,6 +68,7 @@ if (FILAMENT_BUILD_TESTING)
                 test_CircularQueue.cpp
                 test_compact.cpp
                 test_DeformationAndViewMemory.cpp
+                test_EngineAndPostProcessMemory.cpp
                 test_EngineShutdown.cpp
                 test_FenceManager.cpp
                 test_FramePacer.cpp
