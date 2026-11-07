@@ -386,12 +386,10 @@ public:
     }
 
     void setColorGrading(FColorGrading const* colorGrading) noexcept {
-        mColorGrading = colorGrading == nullptr ? mDefaultColorGrading : colorGrading;
+        mColorGrading = colorGrading;
     }
 
-    const FColorGrading* getColorGrading() const noexcept {
-        return mColorGrading;
-    }
+    const FColorGrading* getColorGrading() const noexcept;
 
     void setDithering(Dithering const dithering) noexcept {
         mDithering = dithering;
@@ -727,7 +725,7 @@ private:
     StereoscopicOptions mStereoscopicOptions;
     BlendMode mBlendMode = BlendMode::OPAQUE;
     const FColorGrading* mColorGrading = nullptr;
-    const FColorGrading* mDefaultColorGrading = nullptr;
+    FEngine& mEngine;
     utils::Entity mFogEntity{};
     bool mIsStereoSupported : 1;
     utils::bitset32 mChannelDepthClearMask{};

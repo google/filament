@@ -32,6 +32,8 @@
 
 #include <filament/MaterialEnums.h>
 
+#include <filaflat/ChunkContainer.h>
+
 #include <backend/DriverEnums.h>
 
 #include <utils/Logger.h>
@@ -826,7 +828,7 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
      * Vertex shader
      */
 
-    filaflat::ShaderContent& vsBuilder = engine.getVertexShaderContent();
+    filaflat::ShaderContent vsBuilder;
 
     UTILS_UNUSED_IN_RELEASE bool const vsOK = parser.getShader(vsBuilder, sm,
             vertexVariant, ShaderStage::VERTEX);
@@ -841,11 +843,12 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
      * Fragment shader
      */
 
-    filaflat::ShaderContent& fsBuilder = engine.getFragmentShaderContent();
+    filaflat::ShaderContent fsBuilder;
 
     bool fsOK = parser.getShader(fsBuilder, sm, fragmentVariant, ShaderStage::FRAGMENT);
     if (!fsOK && isMotionVectorsVariant(variant)) {
         if (FMaterial const* const defaultMaterial = engine.getDefaultMaterial()) {
+            fsBuilder.clear();
             fsOK = defaultMaterial->getDefinition().getMaterialParser().getShader(
                     fsBuilder, sm, fragmentVariant, ShaderStage::FRAGMENT);
         }
@@ -858,8 +861,8 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
             << variant << ", filtered=" << fragmentVariant << ").";
 
     Program program;
-    program.shader(ShaderStage::VERTEX, vsBuilder.data(), vsBuilder.size())
-            .shader(ShaderStage::FRAGMENT, fsBuilder.data(), fsBuilder.size())
+    program.shader(ShaderStage::VERTEX, std::move(vsBuilder))
+            .shader(ShaderStage::FRAGMENT, std::move(fsBuilder))
             .shaderLanguage(parser.getShaderLanguage())
             .diagnostics(name,
                     [variant, vertexVariant, fragmentVariant](CString const& name,

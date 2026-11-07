@@ -98,6 +98,7 @@ public:
     // string-based shaders are null terminated, consequently the size parameter must include the
     // null terminating character.
     Program& shader(ShaderStage shader, void const* data, size_t size);
+    Program& shader(ShaderStage shader, ShaderBlob&& blob) noexcept;
 
     // Sets the language of the shader sources provided with shader() (defaults to ESSL3)
     Program& shaderLanguage(ShaderLanguage shaderLanguage);
