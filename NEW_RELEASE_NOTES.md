@@ -13,3 +13,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - materials: the new `diffuseTransmission` and `diffuseTransmissionColor` material properties can be
   used in the lit (standard) shading model to create diffusely transmitting (translucent) surfaces
 - variant: completely remove FOG variant bit
+- engine: on Vulkan, a View rendered into the swap chain after others now clears its viewport
+  instead of loading it when `ClearOptions::clear` is set and no earlier View overlaps it
