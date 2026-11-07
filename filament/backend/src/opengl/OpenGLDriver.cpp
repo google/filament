@@ -3482,7 +3482,8 @@ void OpenGLDriver::updateBufferObjectUnsynchronized(
         assert_invariant(bo->gl.id);
         assert_invariant(bd.size + byteOffset <= bo->byteCount);
 
-        if (bo->gl.binding != GL_UNIFORM_BUFFER) {
+        if (bo->gl.binding != GL_UNIFORM_BUFFER ||
+                getBackendState().bugs.disable_map_buffer_for_updates) {
             // TODO: use updateBuffer() for all types of buffer? Make sure GL supports that.
             updateBufferObject(boh, std::move(bd), byteOffset);
         } else {
