@@ -73,6 +73,14 @@
 #   define UTILS_FALLTHROUGH
 #endif
 
+#if defined(_MSC_VER) && _MSC_VER >= 1929
+#   define UTILS_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+#elif __has_attribute(no_unique_address)
+#   define UTILS_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#else
+#   define UTILS_NO_UNIQUE_ADDRESS
+#endif
+
 #if __has_attribute(visibility)
 #    ifndef TNT_DEV
 #        define UTILS_PRIVATE __attribute__((visibility("hidden")))

@@ -18,11 +18,13 @@
 
 #include <utils/compiler.h>
 #include <utils/Entity.h>
+#include <utils/EntityInstanceMap.h>
 #include <utils/PagedArenaBitset.h>
 #include <utils/SingleInstanceComponentManager.h>
 #include <utils/Slice.h>
 
 #include <benchmark/benchmark.h>
+#include <tsl/robin_map.h>
 
 #include <algorithm>
 #include <cstddef>
@@ -58,7 +60,164 @@ public:
     using SingleInstanceComponentManager<BenchComponent>::mPendingDestruction;
 };
 
+struct RobinMapAdapter {
+    using Instance = EntityInstanceBase::Type;
+    tsl::robin_map<Entity, Instance, Entity::Hasher> map;
+
+    Instance getInstance(Entity const e) const noexcept {
+        auto const pos = map.find(e);
+        return pos != map.end() ? pos->second : 0;
+    }
+
+    void insert(Entity const e, Instance const ci) {
+        map.try_emplace(e, ci);
+    }
+
+    void update(Entity const e, Instance const ci) noexcept {
+        map.find(e).value() = ci;
+    }
+
+    void erase(Entity const e) noexcept {
+        auto const pos = map.find(e);
+        if (pos != map.end()) {
+            map.erase_fast(pos);
+        }
+    }
+
+    void clear() noexcept {
+        map.clear();
+    }
+};
+
 } // namespace
+
+// -------------------------------------------------------------------------------------------------
+// 1. Container Microbenchmarks: RobinMap vs EntityInstanceMap<PAGE_SHIFT>
+// -------------------------------------------------------------------------------------------------
+template <typename MapType>
+static void BM_Map_GetInstance_SequentialHit(benchmark::State& state) {
+    EntityManagerImpl em;
+    MapType map;
+
+    size_t const count = state.range(0);
+    std::vector<Entity> entities(count);
+    em.create(count, entities.data());
+    for (size_t i = 0; i < count; ++i) {
+        map.insert(entities[i], EntityInstanceBase::Type(i + 1));
+    }
+
+    for (auto _ : state) {
+        for (size_t i = 0; i < count; ++i) {
+            auto const ci = map.getInstance(entities[i]);
+            benchmark::DoNotOptimize(ci);
+        }
+    }
+    state.SetItemsProcessed(state.iterations() * count);
+
+    em.destroy(count, entities.data());
+}
+BENCHMARK_TEMPLATE(BM_Map_GetInstance_SequentialHit, RobinMapAdapter)->Arg(1024)->Arg(8192)->Arg(65536);
+BENCHMARK_TEMPLATE(BM_Map_GetInstance_SequentialHit, EntityInstanceMap<8>)->Arg(1024)->Arg(8192)->Arg(65536);
+BENCHMARK_TEMPLATE(BM_Map_GetInstance_SequentialHit, EntityInstanceMap<9>)->Arg(1024)->Arg(8192)->Arg(65536);
+BENCHMARK_TEMPLATE(BM_Map_GetInstance_SequentialHit, EntityInstanceMap<10>)->Arg(1024)->Arg(8192)->Arg(65536);
+BENCHMARK_TEMPLATE(BM_Map_GetInstance_SequentialHit, EntityInstanceMap<11>)->Arg(1024)->Arg(8192)->Arg(65536);
+
+template <typename MapType>
+static void BM_Map_GetInstance_RandomHit(benchmark::State& state) {
+    EntityManagerImpl em;
+    MapType map;
+
+    size_t const count = state.range(0);
+    std::vector<Entity> entities(count);
+    em.create(count, entities.data());
+    for (size_t i = 0; i < count; ++i) {
+        map.insert(entities[i], EntityInstanceBase::Type(i + 1));
+    }
+
+    std::vector<Entity> queries = entities;
+    std::default_random_engine rng(42);
+    std::shuffle(queries.begin(), queries.end(), rng);
+
+    for (auto _ : state) {
+        for (size_t i = 0; i < count; ++i) {
+            auto const ci = map.getInstance(queries[i]);
+            benchmark::DoNotOptimize(ci);
+        }
+    }
+    state.SetItemsProcessed(state.iterations() * count);
+
+    em.destroy(count, entities.data());
+}
+BENCHMARK_TEMPLATE(BM_Map_GetInstance_RandomHit, RobinMapAdapter)->Arg(1024)->Arg(8192)->Arg(65536);
+BENCHMARK_TEMPLATE(BM_Map_GetInstance_RandomHit, EntityInstanceMap<8>)->Arg(1024)->Arg(8192)->Arg(65536);
+BENCHMARK_TEMPLATE(BM_Map_GetInstance_RandomHit, EntityInstanceMap<9>)->Arg(1024)->Arg(8192)->Arg(65536);
+BENCHMARK_TEMPLATE(BM_Map_GetInstance_RandomHit, EntityInstanceMap<10>)->Arg(1024)->Arg(8192)->Arg(65536);
+BENCHMARK_TEMPLATE(BM_Map_GetInstance_RandomHit, EntityInstanceMap<11>)->Arg(1024)->Arg(8192)->Arg(65536);
+
+template <typename MapType>
+static void BM_Map_GetInstance_Miss(benchmark::State& state) {
+    EntityManagerImpl em;
+    MapType map;
+
+    size_t const count = state.range(0);
+    std::vector<Entity> active(count);
+    std::vector<Entity> missing(count);
+    em.create(count, active.data());
+    em.create(count, missing.data());
+    for (size_t i = 0; i < count; ++i) {
+        map.insert(active[i], EntityInstanceBase::Type(i + 1));
+    }
+
+    std::default_random_engine rng(42);
+    std::shuffle(missing.begin(), missing.end(), rng);
+
+    for (auto _ : state) {
+        for (size_t i = 0; i < count; ++i) {
+            auto const ci = map.getInstance(missing[i]);
+            benchmark::DoNotOptimize(ci);
+        }
+    }
+    state.SetItemsProcessed(state.iterations() * count);
+
+    em.destroy(count, active.data());
+    em.destroy(count, missing.data());
+}
+BENCHMARK_TEMPLATE(BM_Map_GetInstance_Miss, RobinMapAdapter)->Arg(1024)->Arg(8192)->Arg(65535);
+BENCHMARK_TEMPLATE(BM_Map_GetInstance_Miss, EntityInstanceMap<8>)->Arg(1024)->Arg(8192)->Arg(65535);
+BENCHMARK_TEMPLATE(BM_Map_GetInstance_Miss, EntityInstanceMap<9>)->Arg(1024)->Arg(8192)->Arg(65535);
+BENCHMARK_TEMPLATE(BM_Map_GetInstance_Miss, EntityInstanceMap<10>)->Arg(1024)->Arg(8192)->Arg(65535);
+BENCHMARK_TEMPLATE(BM_Map_GetInstance_Miss, EntityInstanceMap<11>)->Arg(1024)->Arg(8192)->Arg(65535);
+
+template <typename MapType>
+static void BM_Map_InsertAndErase(benchmark::State& state) {
+    EntityManagerImpl em;
+    MapType map;
+
+    size_t const count = state.range(0);
+    std::vector<Entity> entities(count);
+    em.create(count, entities.data());
+
+    std::vector<Entity> shuffled = entities;
+    std::default_random_engine rng(42);
+    std::shuffle(shuffled.begin(), shuffled.end(), rng);
+
+    for (auto _ : state) {
+        for (size_t i = 0; i < count; ++i) {
+            map.insert(entities[i], EntityInstanceBase::Type(i + 1));
+        }
+        for (size_t i = 0; i < count; ++i) {
+            map.erase(shuffled[i]);
+        }
+    }
+    state.SetItemsProcessed(state.iterations() * count);
+
+    em.destroy(count, entities.data());
+}
+BENCHMARK_TEMPLATE(BM_Map_InsertAndErase, RobinMapAdapter)->Arg(1024)->Arg(8192)->Arg(65536);
+BENCHMARK_TEMPLATE(BM_Map_InsertAndErase, EntityInstanceMap<8>)->Arg(1024)->Arg(8192)->Arg(65536);
+BENCHMARK_TEMPLATE(BM_Map_InsertAndErase, EntityInstanceMap<9>)->Arg(1024)->Arg(8192)->Arg(65536);
+BENCHMARK_TEMPLATE(BM_Map_InsertAndErase, EntityInstanceMap<10>)->Arg(1024)->Arg(8192)->Arg(65536);
+BENCHMARK_TEMPLATE(BM_Map_InsertAndErase, EntityInstanceMap<11>)->Arg(1024)->Arg(8192)->Arg(65536);
 
 // -------------------------------------------------------------------------------------------------
 // 3. addComponent (Already Existing Component - Single Lookup vs Double Lookup)
@@ -305,7 +464,7 @@ static void BM_SICM_GetInstance_Hit(benchmark::State& state) {
     cm.removeComponents(entities.data(), count);
     em.destroy(count, entities.data());
 }
-BENCHMARK(BM_SICM_GetInstance_Hit)->Arg(1024)->Arg(8192);
+BENCHMARK(BM_SICM_GetInstance_Hit)->Arg(1024)->Arg(8192)->Arg(32768);
 
 // -------------------------------------------------------------------------------------------------
 // 10. getInstance / hasComponent (Miss Path on Populated Manager)
@@ -339,7 +498,7 @@ static void BM_SICM_GetInstance_Miss(benchmark::State& state) {
     em.destroy(count, activeEntities.data());
     em.destroy(count, missingEntities.data());
 }
-BENCHMARK(BM_SICM_GetInstance_Miss)->Arg(1024)->Arg(8192);
+BENCHMARK(BM_SICM_GetInstance_Miss)->Arg(1024)->Arg(8192)->Arg(32768);
 
 // -------------------------------------------------------------------------------------------------
 // 11. notifyChange(Entity) with Registered Bitsets (Unfiltered + Filtered)

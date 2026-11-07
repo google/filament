@@ -58,6 +58,7 @@ struct VulkanPlatformPrivate {
     QueueIndices mProtectedGraphicsQueue;
     VkQueue mProtectedGraphicsQueueHandle = VK_NULL_HANDLE;
     VulkanContext mContext = {};
+    VulkanPlatform::ExtensionSet mEnabledLayers;
 
     bool mSharedContext = false;
     bool mForceXCBSwapchain = false;
@@ -167,6 +168,7 @@ ExtensionSet getLayers(bool enableRenderdoc) {
                            std::string_view(desired.data(), desired.size());
                 });
         if (itr != availableLayers.cend()) {
+            FVK_LOGI << "Enabling Vulkan layer: " << desired.c_str();
             setInsert(enabledLayers, desired);
         }
     }
@@ -305,7 +307,8 @@ ExtensionSet getInstanceExtensions(ExtensionSet const& externallyRequiredExts,
     return exts;
 }
 
-ExtensionSet getDeviceExtensions(VkPhysicalDevice device, bool enableDebugUtils = false) {
+ExtensionSet getDeviceExtensions(VkPhysicalDevice device, bool enableDebugUtils = false,
+        ExtensionSet const& enabledLayers = {}) {
     ExtensionSet const TARGET_EXTS = {
     // We only support external image for Android for now, but nothing bars us from
     // supporting other platforms.
@@ -362,22 +365,27 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device, bool enableDebugUtils 
 #endif
     };
     ExtensionSet exts;
+    auto collectExtensions = [&](FixedCapacityVector<VkExtensionProperties> const& extensions) {
+        for (auto const& extension: extensions) {
+            std::string_view name { extension.extensionName };
+
+            // To workaround an Adreno bug where the extension name could be of 0 length.
+            if (name.empty()) {
+                continue;
+            }
+
+            if (setContains(TARGET_EXTS, name) ||
+                    (enableDebugUtils && name == VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
+                setInsert(exts, name);
+            }
+        }
+    };
     // Identify supported physical device extensions
-    FixedCapacityVector<VkExtensionProperties> const extensions
-            = fvkutils::enumerate(vkEnumerateDeviceExtensionProperties, device,
-                    static_cast<const char*>(nullptr) /* pLayerName */);
-    for (auto const& extension: extensions) {
-        std::string_view name { extension.extensionName };
-
-        // To workaround an Adreno bug where the extension name could be of 0 length.
-        if (name.empty()) {
-            continue;
-        }
-
-        if (setContains(TARGET_EXTS, name) ||
-                (enableDebugUtils && name == VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
-            setInsert(exts, name);
-        }
+    collectExtensions(fvkutils::enumerate(vkEnumerateDeviceExtensionProperties, device,
+            static_cast<const char*>(nullptr) /* pLayerName */));
+    for (auto const& layer: enabledLayers) {
+        collectExtensions(
+                fvkutils::enumerate(vkEnumerateDeviceExtensionProperties, device, layer.c_str()));
     }
     return exts;
 }
@@ -728,7 +736,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // If a shared context is not used, we will use our own provided list; otherwise, we do not
     // assume any extensions.
     if (!mImpl->mSharedContext) {
-        deviceExts = getDeviceExtensions(mImpl->mPhysicalDevice, enableDebugUtils);
+        deviceExts = getDeviceExtensions(mImpl->mPhysicalDevice, enableDebugUtils,
+                mImpl->mEnabledLayers);
         auto [prunedInstExts, prunedDeviceExts] =
                 pruneExtensions(mImpl->mPhysicalDevice, driverConfig, instExts, deviceExts);
         instExts = prunedInstExts;
@@ -1030,6 +1039,7 @@ void VulkanPlatform::createInstance(ExtensionSet const& requiredExts,
     bool validationFeaturesSupported = false;
 
     auto const enabledLayers = getLayers(enableRenderdoc);
+    mImpl->mEnabledLayers = enabledLayers;
     auto const enabledLayersCStr = toCStrVector(enabledLayers);
 
     if (!enabledLayersCStr.empty()) {
