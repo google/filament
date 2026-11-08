@@ -29,10 +29,12 @@
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
 #include "details/Renderer.h"
+#include "details/Scene.h"
 #include "details/SkinningBuffer.h"
 #include "details/View.h"
 
 #include <private/filament/BufferInterfaceBlock.h>
+#include <private/filament/UibStructs.h>
 
 #include <filament/Box.h>
 #include <filament/BufferObject.h>
@@ -60,6 +62,7 @@
 
 #include <utils/Entity.h>
 #include <utils/EntityManager.h>
+#include <utils/memalign.h>
 #include <utils/NameComponentManager.h>
 #include <utils/PagedArenaBitset.h>
 #include <utils/Slice.h>
@@ -91,6 +94,9 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
+#include <stdint.h>
+#include <string.h>
 
 using namespace filament;
 using namespace filament::math;
@@ -3543,6 +3549,27 @@ TEST(FilamentTest, MultipleDirectionalLights) {
         em.destroy(e);
     }
     Engine::destroy((Engine**)&engine);
+}
+
+TEST(FilamentTest, SceneCacheUboRowsAreZeroed) {
+    FScene::SceneCacheData cache;
+    size_t const capacity = 16;
+    size_t const bufferSize = FScene::RenderableSoa::getNeededSize(capacity);
+
+    // Leave a dirty block of the same size on the heap, so the allocation below likely reuses it.
+    void* const dirty = utils::aligned_alloc(bufferSize,
+            std::max(alignof(std::max_align_t), alignof(PerRenderableData)));
+    ASSERT_NE(dirty, nullptr);
+    memset(dirty, 0xAB, bufferSize);
+    utils::aligned_free(dirty);
+
+    cache.resize(1, 1);
+    ASSERT_EQ(capacity, cache.renderableData.capacity());
+
+    auto const* const p = reinterpret_cast<uint8_t const*>(
+            cache.renderableData.data<FScene::UBO>());
+    size_t const size = capacity * sizeof(PerRenderableData);
+    EXPECT_TRUE(std::all_of(p, p + size, [](uint8_t const b) { return b == 0; }));
 }
 
 namespace {
