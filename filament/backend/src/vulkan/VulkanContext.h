@@ -286,6 +286,11 @@ public:
         return mGoogleDisplayTimingEnabled;
     }
 
+    // Whether the driver needs the queries of one fence serialized (see VulkanCmdFence).
+    inline bool isFenceQuerySerializationNeeded() const noexcept {
+        return mFenceQuerySerializationNeeded;
+    }
+
 private:
     VkPhysicalDeviceMemoryProperties mMemoryProperties = {};
     VkPhysicalDeviceProperties2 mPhysicalDeviceProperties = {
@@ -343,6 +348,9 @@ private:
 
     // VK_GOOGLE_display_timing device extension
     bool mGoogleDisplayTimingEnabled = false;
+
+    // A driver workaround, set in VulkanPlatform.
+    bool mFenceQuerySerializationNeeded = false;
 
     // These are options that can be enabled or disabled at an application level.
     bool mAsyncPipelineCachePrewarmingEnabled = false;

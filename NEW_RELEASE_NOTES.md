@@ -15,3 +15,6 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
   directly rather than relying on `Engine` garbage collection (#10852)
 - filamentapp: `HeadlessDisplayManager` now waits before retrying a declined frame, so headless
   runs are no longer dominated by retries of skipped frames
+- vulkan: on the proprietary PowerVR driver before DDK 25.2, queries of one fence are serialized,
+  so two threads polling it no longer make the driver close its sync fd twice (an fdsan abort on
+  Android)

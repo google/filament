@@ -57,7 +57,8 @@ std::shared_ptr<VulkanCmdFence> VulkanFencePool::acquireFenceStatus() noexcept {
     std::function<void(VkFence)> recycleFn = [this](VkFence fence) {
         this->releaseFence(fence);
     };
-    const auto fenceStatus = std::make_shared<VulkanCmdFence>(fence, recycleFn);
+    const auto fenceStatus = std::make_shared<VulkanCmdFence>(fence, recycleFn,
+            mContext.isFenceQuerySerializationNeeded());
     // Store a weak pointer to the fence status, so we can clear the fence
     // later if terminate() is called.
     mFenceStatuses.push_back(std::weak_ptr<VulkanCmdFence>(fenceStatus));

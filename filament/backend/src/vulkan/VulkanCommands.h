@@ -188,6 +188,7 @@ private:
     VulkanFencePool mFencePool;
     fvkutils::CommandBufferAgeCounter& mCounter;
     std::function<void()> mDrainAllPools;
+    bool const mSerializeFenceQueries;
 
     std::unique_ptr<VulkanGroupMarkers> mGroupMarkers;
 };
