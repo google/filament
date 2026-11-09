@@ -100,7 +100,7 @@ TEST(WinPathTest, AbsolutePath) {
     EXPECT_EQ("C:\\out\\blue\\bin", p.getPath());
 
     p = Path("../bin").getAbsolutePath();
-    EXPECT_NE(cwd, p);
+    EXPECT_EQ(cwd.concat("../bin"), p);
     EXPECT_TRUE(p.isAbsolute());
 }
 
@@ -191,7 +191,7 @@ TEST(WinPathTest, Concatenate) {
     EXPECT_EQ("foo\\bar", r.getPath());
 }
 
-TEST(PathTest, GetParent) {
+TEST(WinPathTest, GetParent) {
     std::string r;
     Path p("C:\\out\\bin");
     r = p.getParent();

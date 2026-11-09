@@ -4191,6 +4191,181 @@ class TestJavaGen(unittest.TestCase):
             self.assertIn("Java_com_google_android_filament_filamat_MaterialBuilder_nBuilderBuild", cpp_src)
             self.assertIn("that->groupSize(uint3{(uint32_t)groupSizex, (uint32_t)groupSizey, (uint32_t)groupSizez});", cpp_src)
 
+    def test_struct_slice_return_and_pojo_flags(self):
+        """Verify utils::Slice<const Struct> return marshalling and UTILS_APIGEN_FLAGS in POJO structs."""
+        from tools.apigen.javagen import ClassContext, JavaEmitter, JniEmitter
+        from tools.apigen.javagen.validator import BindingValidator
+
+        options_ir = {
+            "name": "SampleOptions",
+            "qualified_name": "filament::SampleOptions",
+            "parent_class": "View",
+            "is_pojo_struct": True,
+            "archetype": "pojo_struct",
+            "location": {"file": "filament/Options.h"},
+            "attributes": [],
+            "methods": [],
+            "enums": [
+                {
+                    "name": "FeatureFlags",
+                    "qualified_name": "filament::SampleOptions::FeatureFlags",
+                    "is_flags": True,
+                    "attributes": ["filament:apigen:flags"],
+                    "entries": [
+                        {"name": "MODE_A", "value": 1, "doc": {}},
+                        {"name": "MODE_B", "value": 2, "doc": {}},
+                        {"name": "MODE_C", "value": 4, "doc": {}},
+                        {"name": "MODE_D", "value": 8, "doc": {}},
+                    ],
+                }
+            ],
+            "fields": [
+                {
+                    "name": "featureIndex",
+                    "type": {"cpp_name": "int8_t", "qualified_name": "int8_t", "category": "primitive"},
+                    "default_value": "-1",
+                    "attributes": [],
+                },
+                {
+                    "name": "featureFlags",
+                    "type": {
+                        "cpp_name": "FeatureFlags",
+                        "qualified_name": "filament::SampleOptions::FeatureFlags",
+                        "category": "enum",
+                        "is_flags": True,
+                    },
+                    "default_value": "FeatureFlags::MODE_A",
+                    "attributes": [],
+                },
+            ],
+        }
+
+        info_ir = {
+            "name": "DeviceFeatureInfo",
+            "qualified_name": "filament::MockEngine::DeviceFeatureInfo",
+            "parent_class": "MockEngine",
+            "is_aggregate": True,
+            "type": {"category": "struct"},
+            "attributes": [],
+            "methods": [],
+            "enums": [],
+            "fields": [
+                {
+                    "name": "name",
+                    "type": {
+                        "cpp_name": "utils::ImmutableCString",
+                        "qualified_name": "utils::ImmutableCString",
+                        "category": "object",
+                    },
+                    "attributes": [],
+                },
+                {
+                    "name": "vendorId",
+                    "type": {"cpp_name": "uint32_t", "qualified_name": "uint32_t", "category": "primitive"},
+                    "default_value": "0",
+                    "attributes": [],
+                },
+                {
+                    "name": "index",
+                    "type": {"cpp_name": "int8_t", "qualified_name": "int8_t", "category": "primitive"},
+                    "default_value": "0",
+                    "attributes": [],
+                },
+                {
+                    "name": "supportedFlags",
+                    "type": {
+                        "cpp_name": "SampleOptions::FeatureFlags",
+                        "qualified_name": "filament::SampleOptions::FeatureFlags",
+                        "category": "enum",
+                        "is_flags": True,
+                    },
+                    "default_value": "SampleOptions::FeatureFlags::MODE_A",
+                    "attributes": [],
+                },
+                {
+                    "name": "recommended",
+                    "type": {"cpp_name": "bool", "qualified_name": "bool", "category": "primitive"},
+                    "default_value": "false",
+                    "attributes": [],
+                },
+            ],
+        }
+
+        engine_ir = {
+            "name": "MockEngine",
+            "qualified_name": "filament::MockEngine",
+            "archetype": "handle",
+            "attributes": [],
+            "fields": [],
+            "enums": [],
+            "methods": [
+                {
+                    "name": "getDeviceFeatures",
+                    "qualified_name": "filament::MockEngine::getDeviceFeatures",
+                    "return_type": {
+                        "cpp_name": "utils::Slice<const DeviceFeatureInfo>",
+                        "qualified_name": "utils::Slice<const filament::MockEngine::DeviceFeatureInfo>",
+                        "category": "object",
+                    },
+                    "arguments": [],
+                    "is_const": True,
+                    "is_noexcept": True,
+                    "is_static": False,
+                    "attributes": [],
+                }
+            ],
+        }
+
+        from tools.apigen.javagen.config import register_known_classes
+        register_known_classes([options_ir, info_ir, engine_ir])
+
+        # Verify POJO flags enum emission
+        view_ir = {
+            "name": "MockView",
+            "qualified_name": "filament::MockView",
+            "archetype": "handle",
+            "attributes": [],
+            "fields": [],
+            "enums": [],
+            "methods": [],
+        }
+        options_for_view = dict(options_ir, parent_class="MockView")
+        view_ctx = ClassContext(
+            view_ir, "MockView.h", nested_structs_map={"MockView": [options_for_view]}
+        )
+        view_java = JavaEmitter(view_ctx).generate_java()
+        self.assertIn("public static class FeatureFlags {", view_java)
+        self.assertIn("public static final int MODE_A = 0x1;", view_java)
+        self.assertIn("public static final int MODE_D = 0x8;", view_java)
+        self.assertIn("public int featureFlags = SampleOptions.FeatureFlags.MODE_A;", view_java)
+        self.assertNotIn("featureFlags.toFilamentNative()", view_java)
+
+        # Verify struct slice return emission and BindingValidator compliance
+        engine_ctx = ClassContext(
+            engine_ir, "MockEngine.h", nested_structs_map={"MockEngine": [info_ir]}
+        )
+        engine_java = JavaEmitter(engine_ctx).generate_java()
+        engine_cpp = JniEmitter(engine_ctx).generate_jni()
+
+        self.assertIn("public DeviceFeatureInfo[] getDeviceFeatures()", engine_java)
+        self.assertIn("private static native DeviceFeatureInfo[] nGetDeviceFeatures(long nativeMockEngine);", engine_java)
+        self.assertIn('@UsedByNative("MockEngine.cpp")', engine_java)
+        self.assertIn("public String name;", engine_java)
+        self.assertIn("env->NewObjectArray(count, jniState.clazz, nullptr)", engine_cpp)
+        self.assertIn("env->NewStringUTF((info.name).c_str())", engine_cpp)
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            j_dir = tmp_path / "java"
+            c_dir = tmp_path / "cpp"
+            j_dir.mkdir()
+            c_dir.mkdir()
+            (j_dir / "MockEngine.java").write_text(engine_java)
+            (c_dir / "MockEngine.cpp").write_text(engine_cpp)
+            val = BindingValidator(j_dir, c_dir, target_classes={"MockEngine"})
+            res = val.run()
+            self.assertTrue(res.is_clean, f"BindingValidator errors: {[e.message for e in res.errors]}")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -138,7 +138,7 @@ LinearImage ImageDecoder::decode(std::istream& stream, const std::string& source
     Format format = Format::NONE;
 
     std::streampos pos = stream.tellg();
-    char buf[16];
+    char buf[16] = {};
     stream.read(buf, sizeof(buf));
 
     if (PNGDecoder::checkSignature(buf)) {

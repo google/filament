@@ -103,6 +103,7 @@ pod 'Filament', '~> 1.80.0'
 - Retroreflection
 - Anisotropic lighting
 - Approximated translucent (subsurface) materials
+- Diffuse transmission
 - Cloth/fabric/sheen shading
 - Normal mapping & ambient occlusion mapping
 - Image-based lighting
@@ -159,10 +160,13 @@ pod 'Filament', '~> 1.80.0'
 - Extensions
   - [x] KHR_draco_mesh_compression
   - [x] KHR_lights_punctual
+  - [x] KHR_materials_anisotropy
   - [x] KHR_materials_clearcoat
+  - [x] KHR_materials_diffuse_transmission
   - [x] KHR_materials_dispersion
   - [x] KHR_materials_emissive_strength
   - [x] KHR_materials_ior
+  - [x] KHR_materials_iridescence
   - [x] KHR_materials_pbrSpecularGlossiness
   - [x] KHR_materials_retroreflection
   - [x] KHR_materials_sheen

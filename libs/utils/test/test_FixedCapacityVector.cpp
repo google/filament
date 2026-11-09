@@ -78,10 +78,15 @@ TEST(FixedCapacityVectorTest, Simple) {
 
 TEST(FixedCapacityVectorTest, Constructors) {
     FixedCapacityVector<std::string> v_default;
+    EXPECT_EQ(v_default.capacity(), 0);
     EXPECT_EQ(v_default.size(), 0);
 
     FixedCapacityVector<std::string> v_size(8);
+    EXPECT_EQ(v_size.capacity(), 8);
     EXPECT_EQ(v_size.size(), 8);
+    for (size_t i = 0; i < v_size.size(); ++i) {
+        EXPECT_EQ(v_size[i], "");
+    }
 
     FixedCapacityVector<std::string> v_size_proto(4, "pixelflinger");
     EXPECT_EQ(v_size_proto.capacity(), 4);
@@ -92,6 +97,7 @@ TEST(FixedCapacityVectorTest, Constructors) {
     EXPECT_EQ(v_size_proto[3], "pixelflinger");
 
     FixedCapacityVector<std::string> v_copy(v_size_proto);
+    EXPECT_NE(v_copy.data(), v_size_proto.data());
     EXPECT_EQ(v_size_proto.capacity(), 4);
     EXPECT_EQ(v_size_proto.size(), 4);
     EXPECT_EQ(v_size_proto[0], "pixelflinger");
@@ -126,6 +132,7 @@ TEST(FixedCapacityVectorTest, Assignments) {
     FixedCapacityVector<std::string> v_move_assigned(10);
 
     v_assigned = v;
+    EXPECT_NE(v_assigned.data(), v.data());
     EXPECT_EQ(v_assigned.capacity(), 4);
     EXPECT_EQ(v_assigned.size(), 4);
     EXPECT_EQ(v_assigned[0], "pixelflinger");
@@ -146,6 +153,9 @@ TEST(FixedCapacityVectorTest, Assignments) {
     EXPECT_EQ(v_move_assigned[1], "pixelflinger");
     EXPECT_EQ(v_move_assigned[2], "pixelflinger");
     EXPECT_EQ(v_move_assigned[3], "pixelflinger");
+    // Move assignment swaps buffers, so v now holds v_move_assigned's original 10-element buffer.
+    EXPECT_EQ(v.capacity(), 10); // NOLINT(clang-analyzer-cplusplus.Move)
+    EXPECT_EQ(v.size(), 10);     // NOLINT(clang-analyzer-cplusplus.Move)
 }
 
 TEST(FixedCapacityVectorTest, Access) {
