@@ -211,6 +211,11 @@ void SceneCacheData::resize(size_t const renderableCount, size_t const lightCoun
     if (renderableData.capacity() < renderableDataCapacity) {
         renderableData.clear();
         renderableData.setCapacity(renderableDataCapacity);
+        // updateUBOs() uploads whole rows, but some bytes are never written (reserved fields,
+        // std140 padding, prevWorldFromWorldMatrix without motion vectors). Zero them so stale
+        // heap data can't reach the GPU.
+        memset(renderableData.data<FScene::UBO>(), 0,
+                renderableDataCapacity * sizeof(PerRenderableData));
     }
     renderableData.resize(renderableCount);
 
