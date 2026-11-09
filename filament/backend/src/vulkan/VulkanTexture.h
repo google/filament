@@ -75,7 +75,7 @@ private:
 
 struct VulkanTextureState : public fvkmemory::Resource {
     VulkanTextureState(VulkanStagePool& stagePool, VulkanCommands* commands, VmaAllocator allocator,
-            VkDevice device, VkImage image, VkDeviceMemory deviceMemory,
+            VkDevice device, VkImage image, VkDeviceMemory deviceMemory, VmaAllocation allocation,
             VkDeviceMemory stagingMemory, VkBuffer stagingBuffer, Platform::ExternalImageHandle ahBuffer,
             VkFormat format, VkImageViewType viewType, uint8_t levels, uint8_t layerCount,
             VkSamplerYcbcrConversion ycbcrConversion, VkImageUsageFlags usage, bool isProtected);
@@ -116,7 +116,13 @@ private:
     fvkmemory::resource_ptr<VulkanStream> mStream;
 
     VkImage const mTextureImage;
+
+    // At most one of these is set, and it means this texture owns the image:
+    //  - mTextureImageMemory: memory handed over with an internally created image.
+    //  - mTextureImageAllocation: memory allocated through VMA (user-facing textures).
+    // If neither is set, the image is owned elsewhere (e.g. swapchain images).
     VkDeviceMemory const mTextureImageMemory;
+    VmaAllocation const mTextureImageAllocation;
     VkFormat const mVkFormat;
     VkImageViewType const mViewType;
     VkImageSubresourceRange const mFullViewRange;

@@ -158,12 +158,27 @@ VmaAllocator createAllocator(VkInstance instance, VkPhysicalDevice physicalDevic
         .vkCreateImage = vkCreateImage,
         .vkDestroyImage = vkDestroyImage,
         .vkCmdCopyBuffer = vkCmdCopyBuffer,
-        .vkGetBufferMemoryRequirements2KHR = vkGetBufferMemoryRequirements2KHR,
-        .vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2KHR,
-        .vkGetPhysicalDeviceMemoryProperties2KHR = vkGetPhysicalDeviceMemoryProperties2KHR,
-        .vkGetPhysicalDeviceProperties2KHR = vkGetPhysicalDeviceProperties2KHR,
+        // With vulkanApiVersion 1.1, VMA reads the core 1.1 functions from these *KHR slots.
+        .vkGetBufferMemoryRequirements2KHR = vkGetBufferMemoryRequirements2,
+        .vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2,
+        .vkBindBufferMemory2KHR = vkBindBufferMemory2,
+        .vkBindImageMemory2KHR = vkBindImageMemory2,
+        .vkGetPhysicalDeviceMemoryProperties2KHR = vkGetPhysicalDeviceMemoryProperties2,
+        .vkGetPhysicalDeviceProperties2KHR = vkGetPhysicalDeviceProperties2,
 #endif
     };
+
+    // Target Vulkan 1.1, Filament's minimum, so VMA honors the driver's dedicated allocation hints.
+    // Disabled on ARM for now: Mali only flags transient attachments, which are already dedicated,
+    // and on a Pixel 6 Pro the hints left 90-280 MB of unused VMA block space versus about 23 MB
+    // without them.
+    VkPhysicalDeviceProperties physicalDeviceProperties;
+    vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
+    bool const isARM = physicalDeviceProperties.vendorID == 0x13B5;
+    uint32_t const vmaApiVersion = isARM ? VK_API_VERSION_1_0
+                                         : VK_MAKE_API_VERSION(0, FVK_REQUIRED_VERSION_MAJOR,
+                                                   FVK_REQUIRED_VERSION_MINOR, 0);
+
     VmaAllocatorCreateInfo const allocatorInfo{
         // Disable the internal VMA synchronization because the backend is singled threaded.
         // Improve CPU performance when using VMA functions. The backend will guarantee that all
@@ -173,6 +188,7 @@ VmaAllocator createAllocator(VkInstance instance, VkPhysicalDevice physicalDevic
         .device = device,
         .pVulkanFunctions = &funcs,
         .instance = instance,
+        .vulkanApiVersion = vmaApiVersion,
     };
     vmaCreateAllocator(&allocatorInfo, &allocator);
     return allocator;
