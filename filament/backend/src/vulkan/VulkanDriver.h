@@ -103,6 +103,16 @@ private:
 
 private:
     void collectGarbage();
+
+    // Returns a cached import of the external image's native buffer that is
+    // compatible with the given parameters, or an empty pointer. Updates the
+    // cache's LRU order on hit.
+    resource_ptr<VulkanTexture> findExternalImageImport(void const* bufferKey, VkFormat format,
+            uint64_t externalFormat, uint32_t width, uint32_t height, TextureUsage usage,
+            VkSamplerYcbcrConversion conversion);
+
+    // Drops the cached imports that have not been reused for a while.
+    void pruneExternalImageImports();
     void bindPipelineImpl(PipelineState const& pipelineState, VkPipelineLayout pipelineLayout,
             fvkutils::DescriptorSetMask descriptorSetMask);
 
@@ -182,6 +192,38 @@ private:
     VulkanQueryManager mQueryManager;
     VulkanExternalImageManager mExternalImageManager;
     VulkanStreamedImageManager mStreamedImageManager;
+
+    // Imports of external images, keyed by their native buffer (e.g.
+    // AHardwareBuffer).
+    //
+    // Clients such as ImageReader-based video playback cycle through a small
+    // set of buffers, and bind each of them again and again through a new
+    // ExternalImageHandle. Without this cache, every bind would import the
+    // buffer again (new VkImage, imported memory, and a layout transition that
+    // may discard the buffer contents). Instead, textures for a cached buffer
+    // share the imported VkImage, while each one holds its own
+    // ExternalImageHandle.
+    struct ExternalImageImport {
+        void const* bufferKey = nullptr;
+        VkFormat format = VK_FORMAT_UNDEFINED;
+        uint64_t externalFormat = 0;
+        uint32_t width = 0;
+        uint32_t height = 0;
+        TextureUsage usage = {};
+        VkSamplerYcbcrConversion conversion = VK_NULL_HANDLE;
+        // Texture owning the import. It holds no ExternalImageHandle.
+        resource_ptr<VulkanTexture> texture;
+        uint32_t lastUsedFrame = 0;
+    };
+    // Most recently used at the back.
+    std::vector<ExternalImageImport> mExternalImageImports;
+    uint32_t mExternalImageImportFrame = 0;
+    // Maximum number of cached imports.
+    // This avoid infinite caching of imports.
+    static constexpr size_t MAX_EXTERNAL_IMAGE_IMPORTS = 12;
+    // Imports not reused for this many frames are dropped, so that the buffers
+    // of a destroyed producer are not kept alive.
+    static constexpr uint32_t EXTERNAL_IMAGE_IMPORT_MAX_IDLE_FRAMES = 120;
 
     // This maps a VulkanSwapchain to a native swapchain. VulkanSwapchain should have a copy of the
     // Platform::Swapchain pointer, but queryFrameTimestamps() and queryCompositorTiming() are

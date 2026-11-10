@@ -31,6 +31,7 @@
 #include <utils/RangeMap.h>
 
 #include <unordered_map>
+#include <utility>
 
 namespace filament::backend {
 
@@ -300,6 +301,15 @@ struct VulkanTexture : public HwTexture, fvkmemory::Resource {
 
     VkSamplerYcbcrConversion getYcbcrConversion() const { return mState->mYcbcr.conversion; }
 
+    // Keeps the given external image alive for as long as this texture exists,
+    // i.e. until the GPU is done with it (textures are ref-counted by the
+    // command buffers that use them). Used when several textures share an
+    // imported external image, so that each one holds the handle it was created
+    // from.
+    void setExternalImage(Platform::ExternalImageHandle externalImage) {
+        mExternalImage = std::move(externalImage);
+    }
+
 #if FVK_ENABLED(FVK_DEBUG_TEXTURE)
     void print() const;
 #endif
@@ -320,6 +330,9 @@ private:
     VkImageSubresourceRange mPrimaryViewRange;
 
     VkComponentMapping mSwizzle {};
+
+    // The external image this texture was created from.
+    Platform::ExternalImageHandle mExternalImage;
 };
 
 } // namespace filament::backend

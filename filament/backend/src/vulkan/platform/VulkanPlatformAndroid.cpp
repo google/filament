@@ -217,6 +217,11 @@ VulkanPlatformAndroid::ExternalImageDescAndroid VulkanPlatformAndroid::getExtern
     };
 }
 
+void const* VulkanPlatformAndroid::getExternalImageBufferKey(ExternalImageHandleRef image) const {
+    auto const* fvkExternalImage = static_cast<ExternalImageVulkanAndroid const*>(image.get());
+    return fvkExternalImage ? fvkExternalImage->aHardwareBuffer : nullptr;
+}
+
 bool VulkanPlatformAndroid::copyExternalImageToMemoryYUV(
         ExternalImageHandleRef image, void* dstData, uint32_t w, uint32_t h) const {
 

@@ -391,6 +391,7 @@ void VulkanDriver::terminate() {
     mCurrentSwapChain = {};
     mDefaultRenderTarget = {};
     mPipelineState = {};
+    mExternalImageImports.clear();
 
     mQueryManager.terminate();
 
@@ -529,6 +530,8 @@ void VulkanDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 void VulkanDriver::endFrame(uint32_t frameId) {
     FVK_PROFILE_MARKER(PROFILE_NAME_ENDFRAME);
     endCommandRecording();
+    ++mExternalImageImportFrame;
+    pruneExternalImageImports();
     collectGarbage();
 
     // Queued async jobs run after the frame's own work.
@@ -541,6 +544,41 @@ void VulkanDriver::skipFrame(int) {
     if (getJobWorker()) {
         getJobWorker()->processFrame();
     }
+}
+
+resource_ptr<VulkanTexture> VulkanDriver::findExternalImageImport(void const* bufferKey,
+        VkFormat format, uint64_t externalFormat, uint32_t width, uint32_t height,
+        TextureUsage usage, VkSamplerYcbcrConversion conversion) {
+    for (auto it = mExternalImageImports.begin(); it != mExternalImageImports.end(); ++it) {
+        if (it->bufferKey != bufferKey) {
+            continue;
+        }
+        if (it->format != format || it->externalFormat != externalFormat || it->width != width ||
+                it->height != height || it->usage != usage || it->conversion != conversion) {
+            // The buffer's metadata changed. The import cannot be reused. We drop it
+            // here, but the in-flight textures sharing it will keep it alive until
+            // the GPU is done.
+            mExternalImageImports.erase(it);
+            return {};
+        }
+        // Move to the back (most recently used).
+        ExternalImageImport entry = std::move(*it);
+        mExternalImageImports.erase(it);
+        entry.lastUsedFrame = mExternalImageImportFrame;
+        mExternalImageImports.push_back(std::move(entry));
+        return mExternalImageImports.back().texture;
+    }
+    return {};
+}
+
+void VulkanDriver::pruneExternalImageImports() {
+    auto& imports = mExternalImageImports;
+    imports.erase(std::remove_if(imports.begin(), imports.end(),
+                          [frame = mExternalImageImportFrame](ExternalImageImport const& entry) {
+                              return frame - entry.lastUsedFrame >
+                                     EXTERNAL_IMAGE_IMPORT_MAX_IDLE_FRAMES;
+                          }),
+            imports.end());
 }
 
 void VulkanDriver::updateDescriptorSetBuffer(
@@ -924,6 +962,39 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::S
     // assert_invariant(format == metadata.filamentFormat);
     // assert_invariant(fvkutils::getVkFormat(format) == metadata.format);
 
+    // Software-decoded YUV images are copied from the native buffer
+    // every time they are bound, so their imports are not shared.
+    void const* const bufferKey = metadata.isStagingRequired
+                                          ? nullptr
+                                          : mPlatform->getExternalImageBufferKey(externalImage);
+
+    VkSamplerYcbcrConversion const conversion =
+            mExternalImageManager.getVkSamplerYcbcrConversion(metadata);
+
+    if (bufferKey) {
+        if (auto src = findExternalImageImport(bufferKey, metadata.format, metadata.externalFormat,
+                    metadata.width, metadata.height, usage, conversion)) {
+            // This buffer was already imported, so share its VkImage instead of
+            // importing it again.
+            VkComponentMapping const identity = {
+                VK_COMPONENT_SWIZZLE_IDENTITY,
+                VK_COMPONENT_SWIZZLE_IDENTITY,
+                VK_COMPONENT_SWIZZLE_IDENTITY,
+                VK_COMPONENT_SWIZZLE_IDENTITY,
+            };
+            auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th,
+                    mPlatform->getDevice(), mPlatform->getPhysicalDevice(), mContext, mAllocator,
+                    &mCommands, src, identity);
+            // This texture, not the shared import, holds the handle it was created
+            // from, so the handle is released once the GPU is done with this
+            // texture.
+            texture->setExternalImage(Platform::ExternalImageHandle(externalImage));
+            texture.inc();
+            mResourceManager.associateHandle(th.getId(), std::move(tag));
+            return;
+        }
+    }
+
     auto imgData = mPlatform->createVkImageFromExternal(externalImage, width, height);
 
     assert_invariant(imgData.internal.valid() || imgData.external.valid());
@@ -941,14 +1012,58 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::S
         memory = imgData.external.memory;
     }
 
-    VkSamplerYcbcrConversion const conversion =
-            mExternalImageManager.getVkSamplerYcbcrConversion(metadata);
+    auto& commands = mCommands.get();
+
+    if (bufferKey) {
+        // Import owned by the cache. It does not hold the ExternalImageHandle,
+        // otherwise the handle (and the client resources it keeps alive) would
+        // only be released when the import is evicted from the cache.
+        auto import = resource_ptr<VulkanTexture>::construct(&mResourceManager, mContext,
+                mPlatform->getDevice(), mAllocator, &mResourceManager, &mCommands, vkimage, memory,
+                vkformat, conversion, imgData.internal.stagingMemory,
+                imgData.internal.stagingBuffer, Platform::ExternalImageHandle(),
+                static_cast<uint8_t>(metadata.mipLevels), metadata.samples, metadata.width,
+                metadata.height, metadata.layers, usage, mStagePool);
+        // Unlike uploaded textures or swapchains, we need to explicit transition
+        // this texture into the read layout. This only happens once per imported
+        // buffer.
+        import->transitionLayout(&commands, import->getPrimaryViewRange(), VulkanLayout::FRAG_READ);
+
+        mExternalImageImports.push_back({
+            .bufferKey = bufferKey,
+            .format = metadata.format,
+            .externalFormat = metadata.externalFormat,
+            .width = metadata.width,
+            .height = metadata.height,
+            .usage = usage,
+            .conversion = conversion,
+            .texture = import,
+            .lastUsedFrame = mExternalImageImportFrame,
+        });
+        if (mExternalImageImports.size() > MAX_EXTERNAL_IMAGE_IMPORTS) {
+            mExternalImageImports.erase(mExternalImageImports.begin());
+        }
+
+        VkComponentMapping const identity = {
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+        };
+        auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th,
+                mPlatform->getDevice(), mPlatform->getPhysicalDevice(), mContext, mAllocator,
+                &mCommands, import, identity);
+        texture->setExternalImage(Platform::ExternalImageHandle(externalImage));
+        texture.inc();
+        mResourceManager.associateHandle(th.getId(), std::move(tag));
+        return;
+    }
+
     auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mContext,
             mPlatform->getDevice(), mAllocator, &mResourceManager, &mCommands, vkimage, memory,
             vkformat, conversion, imgData.internal.stagingMemory, imgData.internal.stagingBuffer,
             externalImage, static_cast<uint8_t>(metadata.mipLevels), metadata.samples,
             metadata.width, metadata.height, metadata.layers, usage, mStagePool);
-    auto& commands = mCommands.get();
     // Unlike uploaded textures or swapchains, we need to explicit transition this
     // texture into the read layout.
     texture->transitionLayout(&commands, texture->getPrimaryViewRange(), VulkanLayout::FRAG_READ);

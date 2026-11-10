@@ -488,6 +488,21 @@ public:
     }
 
     /**
+     * Returns a key identifying the native buffer backing the given external
+     * image (e.g. its AHardwareBuffer), or nullptr if imports of this image
+     * must not be reused.
+     *
+     * The backend uses this key to reuse the VkImage it imported for a buffer
+     * when that same buffer is bound again through a new ExternalImageHandle,
+     * instead of importing it again. While an import is cached, the imported
+     * memory keeps the native buffer alive, so a key cannot be recycled for a
+     * different buffer.
+     */
+    virtual void const* getExternalImageBufferKey(ExternalImageHandleRef image) const {
+        return nullptr;
+    }
+
+    /**
      * Whether this platform can honor setPresentationTime().
      *
      * The default implementation returns true when the `VK_GOOGLE_display_timing` device
