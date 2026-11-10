@@ -90,7 +90,7 @@ public:
 
     // Acquire or create a new entry in the cache for the given material data.
     MaterialDefinition* UTILS_NULLABLE acquireMaterial(FEngine& engine, const void* UTILS_NONNULL data,
-            size_t size) noexcept;
+            size_t size, bool copyPayload = true) noexcept;
 
     // Release an entry in the cache, potentially freeing its GPU resources.
     void releaseMaterial(FEngine& engine, MaterialDefinition const& definition) noexcept;

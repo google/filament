@@ -22,13 +22,15 @@
 
 #include <utils/compiler.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/Slice.h>
 
 #include <tsl/robin_map.h>
 
 namespace filaflat {
 
 using ShaderContent = utils::FixedCapacityVector<uint8_t>;
-using BlobDictionary = utils::FixedCapacityVector<ShaderContent>;
+using ShaderContentView = utils::Slice<const uint8_t>;
+using BlobDictionary = utils::FixedCapacityVector<ShaderContentView>;
 
 class Unflattener;
 

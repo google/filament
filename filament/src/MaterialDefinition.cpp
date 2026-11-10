@@ -55,9 +55,10 @@ using namespace backend;
 using namespace utils;
 
 std::unique_ptr<MaterialParser> MaterialDefinition::createParser(Backend const backend,
-        FixedCapacityVector<ShaderLanguage> languages, const void* data, size_t size) {
+        FixedCapacityVector<ShaderLanguage> languages, const void* data, size_t size,
+        bool const copyPayload) {
     // unique_ptr so we don't leak MaterialParser on failures below
-    auto materialParser = std::make_unique<MaterialParser>(languages, data, size);
+    auto materialParser = std::make_unique<MaterialParser>(languages, data, size, copyPayload);
 
     MaterialParser::ParseResult const materialResult = materialParser->parse();
 
@@ -438,9 +439,14 @@ void MaterialDefinition::processMain() {
 
     perViewLayoutIndex = ColorPassDescriptorSet::getIndex(isLit, isSSR, hasFog);
 
-    mMaterialParser->getSourceShader(&source);
-
     processParameterNames();
+}
+
+utils::CString const& MaterialDefinition::getSource() const noexcept {
+    std::call_once(mSourceOnce, [this] {
+        mMaterialParser->getSourceShader(&mSource);
+    });
+    return mSource;
 }
 
 void MaterialDefinition::processParameterNames() {
@@ -691,8 +697,10 @@ void MaterialDefinition::processDescriptorSets(FEngine& engine) {
 
     UTILS_UNUSED_IN_RELEASE bool success;
 
-    success = mMaterialParser->getDescriptorBindings(&programDescriptorBindings);
-    assert_invariant(success);
+    if (engine.getBackend() == Backend::OPENGL) {
+        success = mMaterialParser->getDescriptorBindings(&programDescriptorBindings);
+        assert_invariant(success);
+    }
 
     success = mMaterialParser->getDescriptorSetLayout(&this->descriptorSetLayoutDescription);
     assert_invariant(success);
@@ -714,17 +722,19 @@ void MaterialDefinition::processDescriptorSets(FEngine& engine) {
     this->perViewDescriptorSetLayoutPcfDescription.label = CString{ name }.append("_perView");
     this->perViewDescriptorSetLayoutS2dDescription.label = CString{ name }.append("_perViewVsm");
 
-    // get the PER_RENDERABLE and PER_VIEW descriptor binding info
-    for (auto&& [bindingPoint, dsl] : {
-            std::pair{ DescriptorSetBindingPoints::PER_RENDERABLE,
-                    descriptor_sets::getPerRenderableLayout() },
-            std::pair{ DescriptorSetBindingPoints::PER_VIEW,
-                    this->perViewDescriptorSetLayoutPcfDescription }}) {
-        Program::DescriptorBindingsInfo& descriptors = programDescriptorBindings[+bindingPoint];
-        descriptors.reserve(dsl.descriptors.size());
-        for (auto const& entry: dsl.descriptors) {
-            auto const& descriptorName = descriptor_sets::getDescriptorName(bindingPoint, entry.binding);
-            descriptors.push_back({ descriptorName, entry.type, entry.binding });
+    if (engine.getBackend() == Backend::OPENGL) {
+        // get the PER_RENDERABLE and PER_VIEW descriptor binding info
+        for (auto&& [bindingPoint, dsl] : {
+                std::pair{ DescriptorSetBindingPoints::PER_RENDERABLE,
+                        descriptor_sets::getPerRenderableLayout() },
+                std::pair{ DescriptorSetBindingPoints::PER_VIEW,
+                        this->perViewDescriptorSetLayoutPcfDescription }}) {
+            Program::DescriptorBindingsInfo& descriptors = programDescriptorBindings[+bindingPoint];
+            descriptors.reserve(dsl.descriptors.size());
+            for (auto const& entry: dsl.descriptors) {
+                auto const& descriptorName = descriptor_sets::getDescriptorName(bindingPoint, entry.binding);
+                descriptors.push_back({ descriptorName, entry.type, entry.binding });
+            }
         }
     }
 
@@ -778,17 +788,19 @@ Handle<HwProgram> MaterialDefinition::compileProgram(
     }
     pb.priorityQueue(priorityQueue);
 
-    // Set descriptor sets for the program.
-    // Note: right now, we're going to assume VSM is disabled. In the future, we
-    // may want to provide both to the backend, so that both can be built.
-    pb.descriptorLayout(+DescriptorSetBindingPoints::PER_VIEW,
-            getPerViewDescriptorSetLayoutDescription(
-                    specialization.variant,
-                    isShadowSampler2DVariant(specialization.variant)));
-    pb.descriptorLayout(+DescriptorSetBindingPoints::PER_RENDERABLE,
-            descriptor_sets::getPerRenderableLayout());
-    pb.descriptorLayout(
-            +DescriptorSetBindingPoints::PER_MATERIAL, descriptorSetLayoutDescription);
+    if (engine.getBackend() == Backend::VULKAN) {
+        // Set descriptor sets for the program.
+        // Note: right now, we're going to assume VSM is disabled. In the future, we
+        // may want to provide both to the backend, so that both can be built.
+        pb.descriptorLayout(+DescriptorSetBindingPoints::PER_VIEW,
+                getPerViewDescriptorSetLayoutDescription(
+                        specialization.variant,
+                        isShadowSampler2DVariant(specialization.variant)));
+        pb.descriptorLayout(+DescriptorSetBindingPoints::PER_RENDERABLE,
+                descriptor_sets::getPerRenderableLayout());
+        pb.descriptorLayout(
+                +DescriptorSetBindingPoints::PER_MATERIAL, descriptorSetLayoutDescription);
+    }
 
     auto const program = engine.getDriverApi().createProgram(
             std::move(pb), ImmutableCString{name.c_str_safe()});
@@ -835,8 +847,10 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
 
     FILAMENT_CHECK_POSTCONDITION(isNoop || (vsOK && !vsBuilder.empty()))
             << "The material '" << name.c_str()
-            << "' has not been compiled to include the required GLSL or SPIR-V chunks for the "
-               "vertex shader (variant="
+            << (parser.hasShader(sm, vertexVariant, ShaderStage::VERTEX)
+                       ? "' failed to decode the vertex shader chunk (variant="
+                       : "' has not been compiled to include the required GLSL or SPIR-V chunks "
+                         "for the vertex shader (variant=")
             << variant << ", filtered=" << vertexVariant << ").";
 
     /*
@@ -856,8 +870,10 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
 
     FILAMENT_CHECK_POSTCONDITION(isNoop || (fsOK && !fsBuilder.empty()))
             << "The material '" << name.c_str()
-            << "' has not been compiled to include the required GLSL or SPIR-V chunks for the "
-               "fragment shader (variant="
+            << (parser.hasShader(sm, fragmentVariant, ShaderStage::FRAGMENT)
+                       ? "' failed to decode the fragment shader chunk (variant="
+                       : "' has not been compiled to include the required GLSL or SPIR-V chunks "
+                         "for the fragment shader (variant=")
             << variant << ", filtered=" << fragmentVariant << ").";
 
     Program program;
@@ -880,12 +896,14 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
         program.attributes(attributeInfo);
     }
 
-    program.descriptorBindings(+DescriptorSetBindingPoints::PER_VIEW,
-            programDescriptorBindings[+DescriptorSetBindingPoints::PER_VIEW]);
-    program.descriptorBindings(+DescriptorSetBindingPoints::PER_RENDERABLE,
-            programDescriptorBindings[+DescriptorSetBindingPoints::PER_RENDERABLE]);
-    program.descriptorBindings(+DescriptorSetBindingPoints::PER_MATERIAL,
-            programDescriptorBindings[+DescriptorSetBindingPoints::PER_MATERIAL]);
+    if (engine.getBackend() == Backend::OPENGL) {
+        program.descriptorBindings(+DescriptorSetBindingPoints::PER_VIEW,
+                programDescriptorBindings[+DescriptorSetBindingPoints::PER_VIEW]);
+        program.descriptorBindings(+DescriptorSetBindingPoints::PER_RENDERABLE,
+                programDescriptorBindings[+DescriptorSetBindingPoints::PER_RENDERABLE]);
+        program.descriptorBindings(+DescriptorSetBindingPoints::PER_MATERIAL,
+                programDescriptorBindings[+DescriptorSetBindingPoints::PER_MATERIAL]);
+    }
     auto constants = FixedCapacityVector<Program::SpecializationConstant>(
             specialization.specializationConstants);
     if (isVariantLit || hasShadowMultiplier) {

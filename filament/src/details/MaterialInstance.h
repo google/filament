@@ -40,8 +40,9 @@
 #include <tsl/robin_map.h>
 
 #include <algorithm>
+#include <atomic>
 #include <limits>
-#include <mutex>
+#include <memory>
 #include <string_view>
 #include <variant>
 
@@ -328,17 +329,21 @@ private:
         FTexture const* texture;
         backend::SamplerParams params;
     };
+    using TextureParameterMap = tsl::robin_map<backend::descriptor_binding_t, TextureParameter>;
+
+    struct InstancePrograms {
+        LocalProgramCache programs;
+        utils::FixedCapacityVector<backend::Program::SpecializationConstant>
+                pendingSpecializationConstants;
+    };
 
     std::variant<BufferAllocator::AllocationId, backend::Handle<backend::HwBufferObject>> mUboData;
-    BufferAllocator::allocation_size_t mUboOffset = 0;
-    tsl::robin_map<backend::descriptor_binding_t, TextureParameter> mTextureParameters;
+    std::unique_ptr<TextureParameterMap> mTextureParameters;
     mutable DescriptorSet mDescriptorSet;
     UniformBuffer mUniforms;
 
     // HACK: Mutable so that prepareProgram() can update specialization constants.
-    mutable LocalProgramCache mPrograms;
-    mutable utils::FixedCapacityVector<backend::Program::SpecializationConstant>
-            mPendingSpecializationConstants;
+    mutable std::unique_ptr<InstancePrograms> mInstancePrograms;
 
     backend::PolygonOffset mPolygonOffset{};
     backend::StencilState mStencilState{};
@@ -359,6 +364,9 @@ private:
     const bool mUseUboBatching : 1;
     TransparencyMode mTransparencyMode : 2;
 
+    mutable std::atomic<bool> mMissingSamplersWarned{ false };
+    BufferAllocator::allocation_size_t mUboOffset = 0;
+
     uint64_t mMaterialSortingKey = 0;
 
     // Scissor rectangle is specified as: Left Bottom Width Height.
@@ -369,7 +377,6 @@ private:
 
     utils::CString mName;
     mutable utils::bitset64 mMissingSamplerDescriptors{};
-    mutable std::once_flag mMissingSamplersFlag;
 };
 
 FILAMENT_DOWNCAST(MaterialInstance)

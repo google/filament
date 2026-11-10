@@ -130,7 +130,7 @@ FSkybox::FSkybox(FEngine& engine, const Builder& builder) noexcept
 }
 
 FMaterial const* FSkybox::createMaterial(FEngine& engine) {
-    Material::Builder builder;
+    FMaterial::StaticMaterialBuilder builder;
     switch (engine.getConfig().stereoscopicType) {
         case Engine::StereoscopicType::NONE:
         case Engine::StereoscopicType::INSTANCED:

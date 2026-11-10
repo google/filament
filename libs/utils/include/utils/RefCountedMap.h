@@ -123,11 +123,19 @@ public:
             return &insert(std::move(lruItem->key), std::move(lruItem->value));
         }
 
-        T r = factory();
-        if (r == NullValue{}()) {
-            return nullptr;
+        if constexpr (std::is_same_v<decltype(factory()), std::pair<Key, T>>) {
+            auto [newKey, r] = factory();
+            if (r == NullValue{}()) {
+                return nullptr;
+            }
+            return &insert(std::move(newKey), std::move(r));
+        } else {
+            T r = factory();
+            if (r == NullValue{}()) {
+                return nullptr;
+            }
+            return &insert(key, std::move(r));
         }
-        return &insert(key, std::move(r));
     }
 
     template<typename F>
