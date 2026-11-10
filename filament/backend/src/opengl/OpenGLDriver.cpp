@@ -2901,6 +2901,19 @@ bool OpenGLDriver::isTextureFormatSupported(TextureFormat const format) {
                ext.KHR_texture_compression_astc_hdr ||
                ext.WEBGL_compressed_texture_astc;
     }
+    switch (format) {
+        case TextureFormat::R16:
+        case TextureFormat::R16_SNORM:
+        case TextureFormat::RG16:
+        case TextureFormat::RG16_SNORM:
+        case TextureFormat::RGB16:
+        case TextureFormat::RGB16_SNORM:
+        case TextureFormat::RGBA16:
+        case TextureFormat::RGBA16_SNORM:
+            return ext.EXT_texture_norm16;
+        default:
+            break;
+    }
     if (mContext.isES2()) {
         return textureFormatToFormatAndType(format).first != GL_NONE;
     }
@@ -2951,6 +2964,15 @@ bool OpenGLDriver::isTextureFormatFilterable(TextureFormat format) {
         case TextureFormat::R11F_G11F_B10F:
         case TextureFormat::RGB9_E5:
             return true;
+        case TextureFormat::R16:
+        case TextureFormat::R16_SNORM:
+        case TextureFormat::RG16:
+        case TextureFormat::RG16_SNORM:
+        case TextureFormat::RGB16:
+        case TextureFormat::RGB16_SNORM:
+        case TextureFormat::RGBA16:
+        case TextureFormat::RGBA16_SNORM:
+            return gl.ext.EXT_texture_norm16;
         case TextureFormat::R16F:
         case TextureFormat::RG16F:
         case TextureFormat::RGB16F:
@@ -3014,6 +3036,12 @@ bool OpenGLDriver::isRenderTargetFormatSupported(TextureFormat const format) {
         // Three-component SRGB is a color-renderable texture format in core OpenGL on desktop.
         case TextureFormat::SRGB8:
             return mContext.isAtLeastGL<4, 5>();
+
+        // 16-bit normalized formats from GL_EXT_texture_norm16.
+        case TextureFormat::R16:
+        case TextureFormat::RG16:
+        case TextureFormat::RGBA16:
+            return gl.ext.EXT_texture_norm16;
 
         // Half-float formats, requires extension.
         case TextureFormat::R16F:
