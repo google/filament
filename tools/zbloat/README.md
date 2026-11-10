@@ -16,16 +16,6 @@ Filament repo root:
     ./tools/zbloat/zbloat.py ./android/filament-android
     open index.html
 
-This tool uses Python, `nm`, and `objdump`.
-
-### Linux, macOS, and Docker
-
-The `nm` tool works slightly differently between macOS and Linux, so a `Dockerfile` is
-provided that installs dependencies inside a Linux container. This is also convenient if you
-do not have both versions of Python on your system.
-
-The easy way to use docker is to invoke the helper bash script. Simply type `zbloat.sh [args...]`
-instead of `zbloat.py [args...]`. The first time you run it, it will be slow but subsequent times
-will be fast.
+This tool uses Python 3, `nm`, and `objdump`.
 
 Many thanks to Evan Martin for his interactive treemap widget.

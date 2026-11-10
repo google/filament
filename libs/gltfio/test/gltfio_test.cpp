@@ -251,6 +251,22 @@ TEST_F(glTFIOTest, AnimatedMorphCubeMaterials) {
     EXPECT_EQ(name, "Material");
 }
 
+// A lit material without clear coat gets the ubershader built without the clear coat lobe, and one
+// with clear coat still gets the stock one.
+TEST_F(glTFIOTest, ClearCoatPicksUbershader) {
+    UvMap uvmap{};
+    MaterialKey plain{};
+    Material* const a = mMaterialProvider->getMaterial(&plain, &uvmap, "plain");
+    ASSERT_NE(a, nullptr);
+    EXPECT_STREQ(a->getName(), "base_lit_opaque_nocc");
+
+    MaterialKey coated{};
+    coated.hasClearCoat = true;
+    Material* const b = mMaterialProvider->getMaterial(&coated, &uvmap, "coated");
+    ASSERT_NE(b, nullptr);
+    EXPECT_STREQ(b->getName(), "base_lit_opaque");
+}
+
 TEST_F(glTFIOTest, StbProviderCancelFreesDecodedTextureWithStbAllocator) {
     TextureProvider* provider = createStbProvider(mEngine);
     Texture* texture = provider->pushTexture(VALID_1X1_PNG, sizeof(VALID_1X1_PNG), "image/png",
