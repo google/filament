@@ -18,10 +18,12 @@
 
 #include "MetalHandles.h"
 
+#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Logger.h>
-#include <utils/debug.h>
+#include <utils/Mutex.h>
 
+#include <memory>
 #include <utility>
 
 namespace filament {
@@ -135,26 +137,32 @@ id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context) {
         return context->pendingCommandBuffer;
     }
     context->pendingCommandBuffer = [context->commandQueue commandBuffer];
-    // It's safe for this block to capture the context variable. MetalDriver::terminate will ensure
-    // all frames and their completion handlers finish before context is deallocated.
+    // Use a weak_ptr to DriverLifetimeTracker to ensure that the driver and context have not been
+    // destroyed before this completion handler runs asynchronously.
+    std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime = context->driverLifetimeTracker;
     const uint64_t thisCommandBufferId = context->pendingCommandBufferId;
     [context->pendingCommandBuffer addCompletedHandler:^(id <MTLCommandBuffer> buffer) {
-        context->resourceTracker.clearResources((__bridge void*) buffer);
+        if (auto driverTracker = weakDriverLifetime.lock()) {
+            utils::LockGuard const lock(driverTracker->mutex);
+            if (driverTracker->driver) {
+                context->resourceTracker.clearResources((__bridge void*) buffer);
 
-        // Command buffers should complete in order, so latestCompletedCommandBufferId will only
-        // ever increase.
-        context->latestCompletedCommandBufferId = thisCommandBufferId;
+                // Command buffers should complete in order, so latestCompletedCommandBufferId will
+                // only ever increase.
+                context->latestCompletedCommandBufferId = thisCommandBufferId;
 
-        auto errorCode = (MTLCommandBufferError)buffer.error.code;
-        if (errorCode == MTLCommandBufferErrorMemoryless) {
-            LOG(WARNING) << "Metal: memoryless geometry limit reached. Continuing with private "
-                            "storage mode.";
-            context->memorylessLimitsReached = true;
-        }
+                auto errorCode = (MTLCommandBufferError)buffer.error.code;
+                if (errorCode == MTLCommandBufferErrorMemoryless) {
+                    LOG(WARNING) << "Metal: memoryless geometry limit reached. Continuing with "
+                                    "private storage mode.";
+                    context->memorylessLimitsReached = true;
+                }
 
-        if (UTILS_UNLIKELY(errorCode != MTLCommandBufferErrorNone)) {
-            logMTLCommandBufferError(errorCode);
-            context->commandBufferErrors.push(buffer.error);
+                if (UTILS_UNLIKELY(errorCode != MTLCommandBufferErrorNone)) {
+                    logMTLCommandBufferError(errorCode);
+                    context->commandBufferErrors.push(buffer.error);
+                }
+            }
         }
     }];
     FILAMENT_CHECK_POSTCONDITION(context->pendingCommandBuffer)

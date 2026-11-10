@@ -20,14 +20,13 @@
 #include <utils/compiler.h>
 #include <utils/Entity.h>
 #include <utils/EntityInstance.h>
+#include <utils/EntityInstanceMap.h>
 #include <utils/EntityManager.h>
 #include <utils/Invocable.h>
 #include <utils/Mutex.h>
 #include <utils/PagedArenaBitset.h>
 #include <utils/Slice.h>
 #include <utils/StructureOfArrays.h>
-
-#include <tsl/robin_map.h>
 
 #include <atomic>
 #include <utility>
@@ -128,8 +127,7 @@ public:
      *       on a component manager.
      */
     Instance getInstance(Entity const e) const noexcept {
-        auto const pos = mInstanceMap.find(e);
-        return pos != mInstanceMap.end() ? pos->second : 0;
+        return mInstanceMap.getInstance(e);
     }
 
     PagedArenaBitset const& getEntityBitset() const noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS {
@@ -184,7 +182,7 @@ public:
     uint64_t getWatermark() const noexcept { return mWatermark.load(std::memory_order_relaxed); }
 
 protected:
-    using InstanceMap = tsl::robin_map<Entity, Instance, Entity::Hasher>;
+    using InstanceMap = EntityInstanceMap<>;
     using SoaAllocator = Instance (*)(void* context, Entity e);
     using EvictionDispatcher = void (*)(void* ctx, void* extra, Entity const* entities, size_t count);
 
@@ -213,7 +211,7 @@ protected:
 
     AddResult addComponentImpl(Entity e, void* context, SoaAllocator allocator) noexcept;
 
-    void eraseComponentFromMap(InstanceMap::iterator pos, Entity e,
+    void eraseComponentFromMap(uint32_t* slot, Entity e,
             Entity swappedEntity, Instance index) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS;
 
     // Note: dispatcher may safely remove additional components (cascading destruction),
@@ -382,12 +380,14 @@ public:
     Instance removeComponent(Entity e);
     void removeComponents(Entity const* entities, size_t count) noexcept;
 
-    // Removes a component (or batch of components) using a single hash-table probe per entity,
+    // Removes a component (or batch of components) using a single map lookup per entity,
     // invoking preRemove(Instance) before the SoA swap-and-pop overwrites the removed slot.
     //
-    // Contract: preRemove is invoked while holding an internal mInstanceMap iterator; it may
-    // access SoA fields of any existing instance, but MUST NOT add or remove components on this
-    // manager (doing so would invalidate the iterator).
+    // Contract: preRemove is invoked while holding a pointer to the entity's slot in mInstanceMap
+    // and before the SoA swap-and-pop completes; it may access SoA fields of any existing instance,
+    // but MUST NOT add or remove components on this manager (removing the last component would
+    // clear() mInstanceMap and free the page backing the held slot pointer, and mutating the SoA
+    // during swap-and-pop would corrupt indices).
     template<typename PreRemove>
     RemoveResult removeComponentWithCallback(Entity e, PreRemove&& preRemove) noexcept;
 
@@ -495,10 +495,10 @@ protected:
             Entity& ej = elementAt<ENTITY_INDEX>(j);
             std::swap(ei, ej);
             if (ei) {
-                map[ei] = i;
+                map.update(ei, i);
             }
             if (ej) {
-                map[ej] = j;
+                map.update(ej, j);
             }
         }
     }
@@ -633,10 +633,9 @@ template <typename PreRemove>
 SingleInstanceComponentManagerBase::RemoveResult
 SingleInstanceComponentManager<Elements ... >::removeComponentWithCallback(
         Entity const e, PreRemove&& preRemove) noexcept {
-    auto& map = mInstanceMap;
-    auto const pos = map.find(e);
-    if (UTILS_LIKELY(pos != map.end())) {
-        Instance const index = pos.value();
+    uint32_t* const slot = mInstanceMap.findSlot(e);
+    if (UTILS_LIKELY(slot != nullptr)) {
+        Instance const index = InstanceMap::getSlotInstance(slot);
         assert(index != 0);
 
         preRemove(index);
@@ -651,7 +650,7 @@ SingleInstanceComponentManager<Elements ... >::removeComponentWithCallback(
         }
         mData.pop_back();
 
-        eraseComponentFromMap(pos, e, swappedEntity, index);
+        eraseComponentFromMap(slot, e, swappedEntity, index);
         return { index, Instance(last) };
     }
     return { 0, 0 };

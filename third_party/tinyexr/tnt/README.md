@@ -20,6 +20,10 @@ rm -rf tinyexr/jni
 rm -rf tinyexr/test
 ```
 
+Apply our local patches:
+
+git am tinyexr-filament.patch
+
 Commit the update:
 ```
 git add tinyexr

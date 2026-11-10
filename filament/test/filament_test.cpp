@@ -29,10 +29,12 @@
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
 #include "details/Renderer.h"
+#include "details/Scene.h"
 #include "details/SkinningBuffer.h"
 #include "details/View.h"
 
 #include <private/filament/BufferInterfaceBlock.h>
+#include <private/filament/UibStructs.h>
 
 #include <filament/Box.h>
 #include <filament/BufferObject.h>
@@ -60,6 +62,7 @@
 
 #include <utils/Entity.h>
 #include <utils/EntityManager.h>
+#include <utils/memalign.h>
 #include <utils/NameComponentManager.h>
 #include <utils/PagedArenaBitset.h>
 #include <utils/Slice.h>
@@ -91,6 +94,9 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
+#include <stdint.h>
+#include <string.h>
 
 using namespace filament;
 using namespace filament::math;
@@ -3316,6 +3322,49 @@ TEST(FilamentTest, CompressedFormatsHaveBlockInfo) {
     }
 }
 
+TEST(FilamentTest, Norm16TextureFormats) {
+    using backend::PixelDataFormat;
+    using backend::PixelDataType;
+    using backend::TextureFormat;
+    using backend::TextureType;
+
+    struct Norm16FormatSpec {
+        TextureFormat format;
+        size_t expectedSize;
+        size_t expectedComponents;
+        PixelDataFormat expectedPixelFormat;
+        PixelDataType expectedPixelType;
+        bool expectedIsColor;
+    };
+
+    constexpr Norm16FormatSpec kSpecs[] = {
+        { TextureFormat::R16,          2, 1, PixelDataFormat::R,    PixelDataType::USHORT, true  },
+        { TextureFormat::R16_SNORM,    2, 1, PixelDataFormat::R,    PixelDataType::SHORT,  false },
+        { TextureFormat::RG16,         4, 2, PixelDataFormat::RG,   PixelDataType::USHORT, true  },
+        { TextureFormat::RG16_SNORM,   4, 2, PixelDataFormat::RG,   PixelDataType::SHORT,  false },
+        { TextureFormat::RGB16,        6, 3, PixelDataFormat::RGB,  PixelDataType::USHORT, true  },
+        { TextureFormat::RGB16_SNORM,  6, 3, PixelDataFormat::RGB,  PixelDataType::SHORT,  false },
+        { TextureFormat::RGBA16,       8, 4, PixelDataFormat::RGBA, PixelDataType::USHORT, true  },
+        { TextureFormat::RGBA16_SNORM, 8, 4, PixelDataFormat::RGBA, PixelDataType::SHORT,  false },
+    };
+
+    for (auto const& spec : kSpecs) {
+        EXPECT_FALSE(backend::isCompressedFormat(spec.format));
+        EXPECT_FALSE(backend::isUnsignedIntFormat(spec.format));
+        EXPECT_FALSE(backend::isSignedIntFormat(spec.format));
+        EXPECT_EQ(backend::isColorFormat(spec.format), spec.expectedIsColor);
+        EXPECT_EQ(backend::getFormatSize(spec.format), spec.expectedSize);
+        EXPECT_EQ(backend::getFormatComponentCount(spec.format), spec.expectedComponents);
+        EXPECT_EQ(backend::getTextureType(spec.format), TextureType::FLOAT);
+        EXPECT_TRUE(FTexture::validatePixelFormatAndType(
+                spec.format, spec.expectedPixelFormat, spec.expectedPixelType));
+        EXPECT_FALSE(FTexture::validatePixelFormatAndType(
+                spec.format, PixelDataFormat::RGBA_INTEGER, spec.expectedPixelType));
+        EXPECT_FALSE(FTexture::validatePixelFormatAndType(
+                spec.format, spec.expectedPixelFormat, PixelDataType::UBYTE));
+    }
+}
+
 TEST(FilamentTest, TextureSetImageCompressedSizeValidation) {
     Engine* engine = Engine::create(Engine::Backend::NOOP);
 
@@ -3543,6 +3592,27 @@ TEST(FilamentTest, MultipleDirectionalLights) {
         em.destroy(e);
     }
     Engine::destroy((Engine**)&engine);
+}
+
+TEST(FilamentTest, SceneCacheUboRowsAreZeroed) {
+    FScene::SceneCacheData cache;
+    size_t const capacity = 16;
+    size_t const bufferSize = FScene::RenderableSoa::getNeededSize(capacity);
+
+    // Leave a dirty block of the same size on the heap, so the allocation below likely reuses it.
+    void* const dirty = utils::aligned_alloc(bufferSize,
+            std::max(alignof(std::max_align_t), alignof(PerRenderableData)));
+    ASSERT_NE(dirty, nullptr);
+    memset(dirty, 0xAB, bufferSize);
+    utils::aligned_free(dirty);
+
+    cache.resize(1, 1);
+    ASSERT_EQ(capacity, cache.renderableData.capacity());
+
+    auto const* const p = reinterpret_cast<uint8_t const*>(
+            cache.renderableData.data<FScene::UBO>());
+    size_t const size = capacity * sizeof(PerRenderableData);
+    EXPECT_TRUE(std::all_of(p, p + size, [](uint8_t const b) { return b == 0; }));
 }
 
 namespace {
@@ -4102,6 +4172,23 @@ TEST_F(SceneCacheTest, LightDataCapacityForSimdOverRead) {
         prepare(scene, view, T);
         EXPECT_GT(cache.lightData.capacity(), roundup4(p)) << "p = " << p;
         EXPECT_GE(cache.lightData.capacity(), roundup4(p + 1)) << "p = " << p;
+    }
+}
+
+// Guards the scratch size invariant asserted in FView::prepareVisibleLights() (debug builds).
+// The buffer must hold the directional light slot too, rounded up to 4.
+TEST_F(SceneCacheTest, LightDistancesFitScratchBuffer) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    createCamera(view);
+
+    for (size_t p = 1; p <= 8; ++p) {
+        scene->addEntity(createPointLight());
+        ASSERT_TRUE(renderFrame(view)) << "p = " << p;
+        // all lights must be visible, so p = 4 and p = 8 hit the worst case
+        EXPECT_EQ(p + FScene::DIRECTIONAL_LIGHTS_COUNT,
+                downcast(view)->getSceneCache()->lightData.size()) << "p = " << p;
     }
 }
 
@@ -4706,6 +4793,97 @@ TEST_F(SceneCacheTest, SceneHoldsEbrWatermarkAndMultiViewEvictionSurvivesIndexRe
     prepare(scene, viewY, T);
     EXPECT_FALSE(hasRenderableRow(viewY, r1));
     EXPECT_TRUE(hasRenderableRow(viewY, r1Recycled));
+}
+
+TEST_F(SceneCacheTest, SoaCacheEntityInstanceMapInvariants) {
+    EntityManager& em = engine->getEntityManager();
+    FScene::SceneCacheData::RenderableCache cache;
+
+    // 1. Empty cache and null entity return 0xFFFFFFFFu.
+    EXPECT_EQ(0u, cache.size());
+    EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(Entity{}));
+
+    // 2. Multi-page acquire (> 2 * 1024 entries per page) with 0-based row indices. The Extra
+    //    (PrevTransform) only exists when motion vectors are compiled in.
+    constexpr size_t kCount = 2500;
+    std::vector<Entity> entities(kCount);
+    em.create(kCount, entities.data());
+    mEntities.insert(mEntities.end(), entities.begin(), entities.end());
+
+    // Unallocated page query before insertion returns 0xFFFFFFFFu.
+    for (size_t i = 0; i < kCount; ++i) {
+        EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(entities[i]));
+    }
+
+    for (size_t i = 0; i < kCount; ++i) {
+        double3 const t{ double(i), double(i * 2), double(i * 3) };
+        auto const [idx, inserted] = cache.acquire(entities[i], t);
+        ASSERT_TRUE(inserted);
+        ASSERT_EQ(uint32_t(i), idx);
+        // A new row has its EntityColumn populated by acquire() itself.
+        EXPECT_EQ(entities[i], cache.getSoA().elementAt<FScene::RENDERABLE_ENTITY>(idx));
+        cache.getSoA().elementAt<FScene::USER_DATA>(idx) = float(i + 100);
+#if defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+        cache.extraAt(idx) = PrevTransform{
+            mat4f::translation(float3{ float(i), 0.0f, 0.0f }),
+            float3{ float(i), 1.0f, 2.0f }
+        };
+#endif
+    }
+    EXPECT_EQ(kCount, cache.size());
+
+    // 3. Re-acquiring existing entities returns { idx, false } and updates translation in-place.
+    for (size_t i = 0; i < kCount; ++i) {
+        EXPECT_EQ(uint32_t(i), cache.getIndex(entities[i]));
+        double3 const updatedT{ double(i + 10), double(i + 20), double(i + 30) };
+        auto const [idx, inserted] = cache.acquire(entities[i], updatedT);
+        EXPECT_FALSE(inserted);
+        EXPECT_EQ(uint32_t(i), idx);
+        EXPECT_EQ(updatedT, cache.getTranslations()[idx]);
+        EXPECT_EQ(float(i + 100), cache.getSoA().elementAt<FScene::USER_DATA>(idx));
+#if defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+        EXPECT_EQ(float(i), cache.extraAt(idx).lo.x);
+#endif
+    }
+
+    // 4. Forged/stale generation sharing the same 17-bit index must miss getIndex() and remove().
+    Entity const target = entities[0];
+    uint32_t const forgedId = target.getId() ^ (1u << FILAMENT_GENERATION_SHIFT);
+    Entity const forged = Entity::import(static_cast<int32_t>(forgedId));
+    ASSERT_EQ(EntityManager::getIndex(target), EntityManager::getIndex(forged));
+    ASSERT_NE(target, forged);
+    EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(forged));
+    cache.remove(forged);
+    EXPECT_EQ(kCount, cache.size());
+    EXPECT_EQ(0u, cache.getIndex(target));
+
+    // 5. Swap-and-pop removal from front (row 0) migrates the last row into row 0.
+    Entity const lastEntity = entities[kCount - 1];
+    cache.remove(target);
+    EXPECT_EQ(kCount - 1, cache.size());
+    EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(target));
+    EXPECT_EQ(0u, cache.getIndex(lastEntity));
+    EXPECT_EQ(lastEntity, cache.getSoA().elementAt<FScene::RENDERABLE_ENTITY>(0));
+    EXPECT_EQ(float(kCount - 1 + 100), cache.getSoA().elementAt<FScene::USER_DATA>(0));
+    EXPECT_EQ((double3{ double(kCount - 1 + 10), double(kCount - 1 + 20), double(kCount - 1 + 30) }),
+            cache.getTranslations()[0]);
+#if defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+    EXPECT_EQ(float(kCount - 1), cache.extraAt(0).lo.x);
+#endif
+
+    // 6. Removing the current last row pops without swapping.
+    Entity const newLast = cache.getSoA().elementAt<FScene::RENDERABLE_ENTITY>(cache.size() - 1);
+    cache.remove(newLast);
+    EXPECT_EQ(kCount - 2, cache.size());
+    EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(newLast));
+    EXPECT_EQ(0u, cache.getIndex(lastEntity));
+
+    // 7. clear() resets all rows and map entries.
+    cache.clear();
+    EXPECT_EQ(0u, cache.size());
+    for (Entity const e : entities) {
+        EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(e));
+    }
 }
 
 int main(int argc, char** argv) {

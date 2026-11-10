@@ -26,7 +26,7 @@ import (
 )
 
 var VERBOSE_LEXER = false
-var KNOWN_MACROS = []string{"UTILS_PUBLIC"}
+var KNOWN_MACROS = []string{"UTILS_PUBLIC", "UTILS_APIGEN_FLAGS"}
 
 // item represents a token or text string returned from the scanner.
 type item struct {
@@ -599,6 +599,11 @@ func lexEnum(lex *lexer) error {
 		return errors.New("at least one value in the enum")
 	}
 	lex.emit(itemIdentifier)
+	if lex.acceptRune('=') {
+		lex.emit(itemEquals)
+		lex.acceptRun("0123456789abcdefABCDEFxXuUlL+-")
+		lex.emit(itemDefaultValue)
+	}
 
 	for !lex.acceptRune('}') {
 		if !lex.acceptRune(',') {
@@ -612,6 +617,11 @@ func lexEnum(lex *lexer) error {
 			return errors.New("valid identifier in enum")
 		}
 		lex.emit(itemIdentifier)
+		if lex.acceptRune('=') {
+			lex.emit(itemEquals)
+			lex.acceptRun("0123456789abcdefABCDEFxXuUlL+-")
+			lex.emit(itemDefaultValue)
+		}
 	}
 	lex.emit(itemCloseBrace)
 	if !lex.acceptRune(';') {
