@@ -59,7 +59,7 @@ std::vector<std::unique_ptr<char[]>> churnHeapForMaterialParser() {
 std::vector<Variant> getMotionVectorsCompileVariants(View const* view, Material const* material,
         utils::tribool const skinning) {
     auto const variants = FEngine::getMaterialCompileVariants(downcast(view), downcast(material),
-            /* shadowReceiver= */ utils::tribool(false), skinning);
+            skinning);
     std::vector<Variant> result;
     for (auto const v : variants) {
         if (Variant::isMotionVectorsVariant(v)) {
@@ -382,13 +382,19 @@ TEST(Material, CompileMaterialWithSkinningEnabled) {
 
     auto variants = FEngine::getMaterialCompileVariants(
             downcast(view), downcast(material),
-            /* shadowReceiver= */ utils::tribool(false),
             /* skinning= */ utils::tribool(true));
 
     EXPECT_FALSE(variants.empty());
     for (auto const v : variants) {
-        EXPECT_FALSE(filament::Variant::isShadowReceiverVariant(v));
         EXPECT_TRUE(v.hasSkinningOrMorphing());
+    }
+
+    // Unlit materials (without a shadow multiplier) never receive shadows.
+    auto const specKeys = FEngine::getMaterialCompileDynamicSpecConstKey(
+            downcast(view), downcast(material), /* shadowReceiver= */ utils::tribool{});
+    EXPECT_FALSE(specKeys.empty());
+    for (auto const specKey : specKeys) {
+        EXPECT_FALSE(specKey.hasShadowReceiver());
     }
 
     engine->destroy(view);
@@ -416,35 +422,57 @@ TEST(Material, CompileLitMaterialWithShadowReceiverEnabled) {
                                  .build(*engine);
     ASSERT_NE(material, nullptr);
 
-    auto variants = FEngine::getMaterialCompileVariants(
-            downcast(view), downcast(material),
-            /* shadowReceiver= */ utils::tribool(true),
-            /* skinning= */ utils::tribool(false));
+    auto const specKeys = FEngine::getMaterialCompileDynamicSpecConstKey(
+            downcast(view), downcast(material), /* shadowReceiver= */ utils::tribool(true));
+    ASSERT_EQ(specKeys.size(), 1u);
+    EXPECT_TRUE(specKeys[0].hasShadowReceiver());
 
-    // Verify that SRE is successfully generated for the lit material.
-    bool hasShadowReceiver = false;
-    for (auto const v : variants) {
-        if (filament::Variant::isShadowReceiverVariant(v)) {
-            hasShadowReceiver = true;
-            break;
-        }
-    }
-    EXPECT_TRUE(hasShadowReceiver);
+    auto const allSpecKeys = FEngine::getMaterialCompileDynamicSpecConstKey(
+            downcast(view), downcast(material), /* shadowReceiver= */ utils::tribool{});
+    ASSERT_EQ(allSpecKeys.size(), 2u);
+    EXPECT_FALSE(allSpecKeys[0].hasShadowReceiver());
+    EXPECT_TRUE(allSpecKeys[1].hasShadowReceiver());
 
     FEngine const& fengine = downcast(*engine);
     MaterialDefinition const& definition = downcast(material)->getDefinition();
     DynamicSpecConstKey dynamicLighting;
     dynamicLighting.setDynamicLighting(true);
+    DynamicSpecConstKey dynamicLightingAndShadowReceiver = dynamicLighting;
+    dynamicLightingAndShadowReceiver.setShadowReceiver(true);
 
     EXPECT_TRUE(definition.isValidProgram(
-            Variant(Variant::S2D | Variant::SRE), DynamicSpecConstKey{},
+            Variant(Variant::S2D), dynamicLightingAndShadowReceiver,
             fengine.getShaderModel(), fengine.isStereoSupported()));
     EXPECT_TRUE(definition.isValidProgram(
+            Variant(Variant::S2D), dynamicLighting,
+            fengine.getShaderModel(), fengine.isStereoSupported()));
+    EXPECT_FALSE(definition.isValidProgram(
             Variant(Variant::S2D | Variant::SRE), dynamicLighting,
             fengine.getShaderModel(), fengine.isStereoSupported()));
     EXPECT_TRUE(definition.isValidProgram(
             Variant(Variant::SPECIAL_SSR_VARIANT), DynamicSpecConstKey{},
             fengine.getShaderModel(), fengine.isStereoSupported()));
+
+    EXPECT_TRUE(definition.isShadowSampler2DSupported());
+    EXPECT_TRUE(definition.isVsmSupported());
+    auto const resolved = definition.resolveProgram(
+            Variant(Variant::S2D), dynamicLightingAndShadowReceiver);
+    EXPECT_EQ(resolved.variant, Variant(Variant::S2D));
+    EXPECT_TRUE(resolved.specKey.hasShadowReceiver());
+
+    // S2D depends only on the view's shadow type, even when hasShadowing() is false.
+    view->setShadowType(ShadowType::VSM);
+    EXPECT_FALSE(downcast(view)->hasShadowing());
+    bool hasStandardVariant = false;
+    for (auto const v : FEngine::getMaterialCompileVariants(
+                 downcast(view), downcast(material),
+                 /* skinning= */ utils::tribool(false))) {
+        if (Variant::isValidStandardVariant(v)) {
+            hasStandardVariant = true;
+            EXPECT_TRUE(Variant::isShadowSampler2DVariant(v));
+        }
+    }
+    EXPECT_TRUE(hasStandardVariant);
 
     engine->destroy(view);
     engine->destroy(material);
@@ -532,7 +560,7 @@ TEST(MaterialVariant, ExtraDirectionalLightsRequireDirectionalLighting) {
 
     auto const validKeys = DynamicSpecConstKey::getValidKeys(
             Variant{}, MaterialDomain::SURFACE, true);
-    EXPECT_EQ(validKeys.size, 12);
+    EXPECT_EQ(validKeys.size, 24);
     for (auto const key : validKeys) {
         EXPECT_FALSE(key.hasExtraDirectionalLights() && !key.hasDirectionalLighting());
     }
@@ -577,6 +605,42 @@ TEST(MaterialVariant, FogSpecKeyIsOnlyValidForColorSurfaceVariants) {
     EXPECT_EQ(unlitKeys.size, 2);
 }
 
+TEST(MaterialVariant, ShadowReceiverSpecKeyIsOnlyValidForLitColorSurfaceVariants) {
+    DynamicSpecConstKey shadowReceiver;
+    shadowReceiver.setShadowReceiver(true);
+
+    for (Variant::type_t const key : { Variant::type_t(0), Variant::SKN, Variant::S2D,
+                 Variant::type_t(Variant::S2D | Variant::SKN | Variant::STE) }) {
+        EXPECT_TRUE(DynamicSpecConstKey::isValidProgramSpecKey(
+                Variant(key), shadowReceiver, MaterialDomain::SURFACE, true)) << +key;
+        EXPECT_TRUE(DynamicSpecConstKey::filterProgramSpecKey(
+                Variant(key), shadowReceiver, MaterialDomain::SURFACE, true)
+                .hasShadowReceiver()) << +key;
+        EXPECT_FALSE(DynamicSpecConstKey::isValidProgramSpecKey(
+                Variant(key), shadowReceiver, MaterialDomain::SURFACE, false)) << +key;
+        EXPECT_FALSE(DynamicSpecConstKey::filterProgramSpecKey(
+                Variant(key), shadowReceiver, MaterialDomain::SURFACE, false)
+                .hasShadowReceiver()) << +key;
+    }
+
+    for (Variant::type_t const key : { Variant::DEPTH_VARIANT,
+                 Variant::type_t(Variant::DEP | Variant::PCK), Variant::SPECIAL_SSR_VARIANT,
+                 Variant::SPECIAL_MOT_VARIANT }) {
+        EXPECT_FALSE(DynamicSpecConstKey::isValidProgramSpecKey(
+                Variant(key), shadowReceiver, MaterialDomain::SURFACE, true)) << +key;
+        EXPECT_FALSE(DynamicSpecConstKey::filterProgramSpecKey(
+                Variant(key), shadowReceiver, MaterialDomain::SURFACE, true)
+                .hasShadowReceiver()) << +key;
+    }
+    EXPECT_FALSE(DynamicSpecConstKey::isValidProgramSpecKey(
+            Variant{}, shadowReceiver, MaterialDomain::POST_PROCESS, true));
+
+    EXPECT_FALSE(DynamicSpecConstKey::filterUserVariant(shadowReceiver,
+            UserVariantFilterMask(UserVariantFilterBit::SHADOW_RECEIVER)).hasShadowReceiver());
+    EXPECT_TRUE(DynamicSpecConstKey::filterUserVariant(shadowReceiver,
+            UserVariantFilterMask(UserVariantFilterBit::VSM)).hasShadowReceiver());
+}
+
 TEST(Material, SsrFilteredLitMaterialContainsPunctualShadowPrograms) {
     Engine* engine = Engine::create(Engine::Backend::NOOP);
 
@@ -602,21 +666,30 @@ TEST(Material, SsrFilteredLitMaterialContainsPunctualShadowPrograms) {
     fog.setFog(true);
     DynamicSpecConstKey dynamicLightingAndFog = dynamicLighting;
     dynamicLightingAndFog.setFog(true);
-    constexpr Variant::type_t SHADOW_VARIANTS[] = {
-            Variant::SRE,
-            Variant::SRE | Variant::SKN,
-            Variant::S2D | Variant::SRE,
-            Variant::S2D | Variant::SRE | Variant::SKN,
+    DynamicSpecConstKey shadowReceiver;
+    shadowReceiver.setShadowReceiver(true);
+    DynamicSpecConstKey dynamicLightingAndShadowReceiver = dynamicLighting;
+    dynamicLightingAndShadowReceiver.setShadowReceiver(true);
+    constexpr Variant::type_t STANDARD_VARIANTS[] = {
+            0,
+            Variant::SKN,
+            Variant::S2D,
+            Variant::S2D | Variant::SKN,
     };
 
-    for (Variant::type_t const key : SHADOW_VARIANTS) {
+    for (Variant::type_t const key : STANDARD_VARIANTS) {
         for (DynamicSpecConstKey const specKey :
-                { DynamicSpecConstKey{}, dynamicLighting, fog, dynamicLightingAndFog }) {
+                { DynamicSpecConstKey{}, dynamicLighting, fog, dynamicLightingAndFog,
+                        shadowReceiver, dynamicLightingAndShadowReceiver }) {
             EXPECT_TRUE(definition.isValidProgram(
                     Variant(key), specKey, fengine.getShaderModel(),
                     fengine.isStereoSupported()))
                     << "variant=" << +key << " specKey=" << specKey.key;
         }
+        EXPECT_FALSE(definition.isValidProgram(
+                Variant(key | Variant::SRE), DynamicSpecConstKey{}, fengine.getShaderModel(),
+                fengine.isStereoSupported()))
+                << "variant=" << +key;
     }
     EXPECT_FALSE(definition.isValidProgram(
             Variant(Variant::SPECIAL_SSR_VARIANT), DynamicSpecConstKey{},
@@ -652,8 +725,7 @@ TEST(Material, FogFilteredMaterialRejectsFogSpecKey) {
     DynamicSpecConstKey dynamicLightingAndFog = dynamicLighting;
     dynamicLightingAndFog.setFog(true);
 
-    for (Variant::type_t const key : { Variant::type_t(0), Variant::SRE,
-                 Variant::type_t(Variant::S2D | Variant::SRE) }) {
+    for (Variant::type_t const key : { Variant::type_t(0), Variant::S2D }) {
         EXPECT_TRUE(definition.isValidProgram(Variant(key), DynamicSpecConstKey{},
                 fengine.getShaderModel(), fengine.isStereoSupported())) << +key;
         EXPECT_TRUE(definition.isValidProgram(Variant(key), dynamicLighting,
@@ -666,6 +738,219 @@ TEST(Material, FogFilteredMaterialRejectsFogSpecKey) {
     }
 
     engine->destroy(material);
+    Engine::destroy(engine);
+}
+
+TEST(Material, ShadowReceiverFilteredMaterialRejectsShadowReceiverSpecKey) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("LitMaterialWithoutShadowReceiver");
+    builder.shading(Shading::LIT);
+    builder.variantFilter(uint32_t(UserVariantFilterBit::SHADOW_RECEIVER));
+
+    filamat::Package result = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(result.isValid());
+
+    Material* material = Material::Builder()
+                                 .package(result.getData(), result.getSize())
+                                 .build(*engine);
+    ASSERT_NE(material, nullptr);
+
+    FEngine const& fengine = downcast(*engine);
+    MaterialDefinition const& definition = downcast(material)->getDefinition();
+    EXPECT_FALSE(definition.isShadowReceiverSupported());
+    DynamicSpecConstKey dynamicLighting;
+    dynamicLighting.setDynamicLighting(true);
+    DynamicSpecConstKey shadowReceiver;
+    shadowReceiver.setShadowReceiver(true);
+    DynamicSpecConstKey dynamicLightingAndShadowReceiver = dynamicLighting;
+    dynamicLightingAndShadowReceiver.setShadowReceiver(true);
+
+    // S2D programs remain valid because non-PCF views use them even for non-receivers.
+    for (Variant::type_t const key : { Variant::type_t(0), Variant::S2D }) {
+        EXPECT_TRUE(definition.isValidProgram(Variant(key), DynamicSpecConstKey{},
+                fengine.getShaderModel(), fengine.isStereoSupported())) << +key;
+        EXPECT_TRUE(definition.isValidProgram(Variant(key), dynamicLighting,
+                fengine.getShaderModel(), fengine.isStereoSupported())) << +key;
+        // The material has no shadowing code; the shadow receiver specialization would be a
+        // duplicate program.
+        EXPECT_FALSE(definition.isValidProgram(Variant(key), shadowReceiver,
+                fengine.getShaderModel(), fengine.isStereoSupported())) << +key;
+        EXPECT_FALSE(definition.isValidProgram(Variant(key), dynamicLightingAndShadowReceiver,
+                fengine.getShaderModel(), fengine.isStereoSupported())) << +key;
+        EXPECT_FALSE(definition.resolveProgram(Variant(key), shadowReceiver)
+                .specKey.hasShadowReceiver()) << +key;
+    }
+
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
+
+TEST(Material, VsmFilteredMaterialKeepsS2dProgramsWithoutShadowing) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("LitMaterialWithoutVsm");
+    builder.shading(Shading::LIT);
+    builder.variantFilter(uint32_t(UserVariantFilterBit::VSM));
+
+    filamat::Package result = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(result.isValid());
+
+    Material* material = Material::Builder()
+                                 .package(result.getData(), result.getSize())
+                                 .build(*engine);
+    ASSERT_NE(material, nullptr);
+
+    FEngine const& fengine = downcast(*engine);
+    MaterialDefinition const& definition = downcast(material)->getDefinition();
+    EXPECT_TRUE(definition.isShadowSampler2DSupported());
+    EXPECT_FALSE(definition.isVsmSupported());
+    DynamicSpecConstKey shadowReceiver;
+    shadowReceiver.setShadowReceiver(true);
+
+    auto const pcf = definition.resolveProgram(Variant{}, shadowReceiver);
+    EXPECT_EQ(pcf.variant, Variant{});
+    EXPECT_TRUE(pcf.specKey.hasShadowReceiver());
+    EXPECT_TRUE(definition.isValidProgram(Variant{}, shadowReceiver,
+            fengine.getShaderModel(), fengine.isStereoSupported()));
+
+    // Non-PCF views keep the S2D variant, but without shadow receiving (no shadowing code).
+    for (Variant::type_t const key :
+            { Variant::S2D, Variant::type_t(Variant::S2D | Variant::SKN) }) {
+        Variant const requested(key);
+        auto const resolved = definition.resolveProgram(requested, shadowReceiver);
+        Variant const variant = resolved.variant;
+        DynamicSpecConstKey const specKey = resolved.specKey;
+        EXPECT_EQ(variant, requested) << +key;
+        EXPECT_TRUE(definition.isValidProgram(variant, specKey,
+                fengine.getShaderModel(), fengine.isStereoSupported())) << +key;
+
+        EXPECT_FALSE(specKey.hasShadowReceiver()) << +key;
+        EXPECT_FALSE(definition.isValidProgram(variant, shadowReceiver,
+                fengine.getShaderModel(), fengine.isStereoSupported())) << +key;
+    }
+
+    // VSM shadow map depth programs are still filtered out.
+    EXPECT_FALSE(definition.isValidProgram(Variant(Variant::DEP | Variant::MNT),
+            DynamicSpecConstKey{}, fengine.getShaderModel(), fengine.isStereoSupported()));
+
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
+
+static void checkResolveProgram(MaterialDefinition const& definition, FEngine const& engine) {
+    backend::ShaderModel const sm = engine.getShaderModel();
+    bool const stereo = engine.isStereoSupported();
+    size_t const variantCount =
+            definition.hasSurfaceVariants() ? VARIANT_COUNT : POST_PROCESS_VARIANT_COUNT;
+    for (size_t v = 0; v < variantCount; v++) {
+        for (size_t k = 0; k < DYNAMIC_SPEC_CONST_KEY_COUNT; k++) {
+            Variant const variant{ Variant::type_t(v) };
+            DynamicSpecConstKey const specKey{ DynamicSpecConstKey::type_t(k) };
+            auto const resolved = definition.resolveProgram(variant, specKey);
+
+            // Must only clear bits.
+            ASSERT_EQ(resolved.specKey.key & ~specKey.key, 0)
+                    << "variant=" << v << " specKey=" << k;
+
+            auto const again = definition.resolveProgram(resolved.variant, resolved.specKey);
+            ASSERT_EQ(again.variant, resolved.variant) << "variant=" << v << " specKey=" << k;
+            ASSERT_EQ(again.specKey, resolved.specKey) << "variant=" << v << " specKey=" << k;
+
+            // Validity depends only on the resolved variant's shaders, not the resolved specKey.
+            ASSERT_EQ(definition.isValidProgram(resolved.variant, resolved.specKey, sm, stereo),
+                    definition.isValidProgram(resolved.variant, DynamicSpecConstKey{}, sm, stereo))
+                    << "variant=" << v << " specKey=" << k;
+        }
+    }
+}
+
+TEST(Material, ResolveProgramIsIdempotentAndValid) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    FEngine const& fengine = downcast(*engine);
+
+    constexpr uint32_t VSM = uint32_t(UserVariantFilterBit::VSM);
+    constexpr uint32_t SHADOW_RECEIVER = uint32_t(UserVariantFilterBit::SHADOW_RECEIVER);
+    constexpr uint32_t FOG = uint32_t(UserVariantFilterBit::FOG);
+    struct Config {
+        const char* name;
+        bool postProcess;
+        Shading shading;
+        bool shadowMultiplier;
+        uint32_t variantFilter;
+    };
+    const Config configs[] = {
+            { "Lit", false, Shading::LIT, false, 0 },
+            { "LitNoVsm", false, Shading::LIT, false, VSM },
+            { "LitNoShadowReceiverNoFog", false, Shading::LIT, false, SHADOW_RECEIVER | FOG },
+            { "Unlit", false, Shading::UNLIT, false, 0 },
+            { "UnlitShadowMultiplierNoVsm", false, Shading::UNLIT, true, VSM },
+            { "PostProcess", true, Shading::UNLIT, false, 0 },
+    };
+
+    DynamicSpecConstKey shadowReceiver;
+    shadowReceiver.setShadowReceiver(true);
+
+    for (Config const& config : configs) {
+        SCOPED_TRACE(config.name);
+
+        filamat::MaterialBuilder builder;
+        builder.init();
+        builder.name(config.name);
+        if (config.postProcess) {
+            builder.materialDomain(filamat::MaterialBuilder::MaterialDomain::POST_PROCESS);
+            builder.materialSource(R"(
+                void postProcess(inout PostProcessInputs postProcess) {
+                    postProcess.color = float4(1.0);
+                }
+            )");
+        } else {
+            builder.shading(config.shading);
+            builder.shadowMultiplier(config.shadowMultiplier);
+            builder.variantFilter(config.variantFilter);
+        }
+        filamat::Package result = builder.build(engine->getJobSystem());
+        ASSERT_TRUE(result.isValid());
+
+        Material* material = Material::Builder()
+                                     .package(result.getData(), result.getSize())
+                                     .build(*engine);
+        ASSERT_NE(material, nullptr);
+
+        MaterialDefinition const& definition = downcast(material)->getDefinition();
+        checkResolveProgram(definition, fengine);
+
+        if (definition.isShadowSampler2DSupported()) {
+            // Simulate an ESSL 1.0 package without S2D programs (cannot be loaded directly here).
+            SCOPED_TRACE("without S2D programs");
+            auto& mutableDefinition = const_cast<MaterialDefinition&>(definition);
+            mutableDefinition.hasShadowSampler2DVariant = false;
+
+            checkResolveProgram(definition, fengine);
+
+            // S2D falls back to the regular variant without shadow receiving; PCF is unaffected.
+            auto const fallback = definition.resolveProgram(
+                    Variant(Variant::S2D | Variant::SKN), shadowReceiver);
+            EXPECT_EQ(fallback.variant, Variant(Variant::SKN));
+            EXPECT_FALSE(fallback.specKey.hasShadowReceiver());
+            auto const pcf = definition.resolveProgram(Variant(Variant::SKN), shadowReceiver);
+            EXPECT_EQ(pcf.variant, Variant(Variant::SKN));
+            EXPECT_EQ(pcf.specKey.hasShadowReceiver(), definition.isShadowReceiverSupported());
+            // The depth variants use the same bit as S2D for MNT; the fallback must not touch them.
+            Variant const depthMoments(Variant::DEP | Variant::MNT);
+            EXPECT_EQ(definition.resolveProgram(depthMoments, DynamicSpecConstKey{}).variant,
+                    depthMoments);
+
+            mutableDefinition.hasShadowSampler2DVariant = true;
+        }
+
+        engine->destroy(material);
+    }
+
     Engine::destroy(engine);
 }
 
@@ -691,13 +976,17 @@ TEST(Material, SsrFilteredShadowMultiplierContainsPunctualShadowPrograms) {
     MaterialDefinition const& definition = downcast(material)->getDefinition();
     DynamicSpecConstKey dynamicLighting;
     dynamicLighting.setDynamicLighting(true);
+    DynamicSpecConstKey dynamicLightingAndShadowReceiver = dynamicLighting;
+    dynamicLightingAndShadowReceiver.setShadowReceiver(true);
 
-    EXPECT_TRUE(definition.isValidProgram(
-            Variant(Variant::SRE), dynamicLighting,
-            fengine.getShaderModel(), fengine.isStereoSupported()));
-    EXPECT_TRUE(definition.isValidProgram(
-            Variant(Variant::S2D | Variant::SRE), dynamicLighting,
-            fengine.getShaderModel(), fengine.isStereoSupported()));
+    for (Variant::type_t const key : { Variant::type_t(0), Variant::S2D }) {
+        EXPECT_TRUE(definition.isValidProgram(
+                Variant(key), dynamicLighting,
+                fengine.getShaderModel(), fengine.isStereoSupported())) << +key;
+        EXPECT_TRUE(definition.isValidProgram(
+                Variant(key), dynamicLightingAndShadowReceiver,
+                fengine.getShaderModel(), fengine.isStereoSupported())) << +key;
+    }
     EXPECT_FALSE(definition.isValidProgram(
             Variant(Variant::SPECIAL_SSR_VARIANT), DynamicSpecConstKey{},
             fengine.getShaderModel(), fengine.isStereoSupported()));
@@ -728,15 +1017,11 @@ TEST(Material, CompileUnlitMaterialShadowMultiplierWithShadowReceiverEnabled) {
                                  .build(*engine);
     ASSERT_NE(material, nullptr);
 
-    auto variants = FEngine::getMaterialCompileVariants(
-            downcast(view), downcast(material),
-            /* shadowReceiver= */ utils::tribool(true),
-            /* skinning= */ utils::tribool(false));
-
-    // Verify that SRE is successfully generated for the lit material.
+    auto const specKeys = FEngine::getMaterialCompileDynamicSpecConstKey(
+            downcast(view), downcast(material), /* shadowReceiver= */ utils::tribool(true));
     bool hasShadowReceiver = false;
-    for (auto const v : variants) {
-        if (filament::Variant::isShadowReceiverVariant(v)) {
+    for (auto const specKey : specKeys) {
+        if (specKey.hasShadowReceiver()) {
             hasShadowReceiver = true;
             break;
         }
@@ -800,10 +1085,10 @@ TEST(Material, CompileVariantsIncludeMotionVectorsWhenEnabled) {
     EXPECT_EQ(variants[0], motionVectors);
     EXPECT_EQ(variants[1], skinnedMotionVectors);
 
-    // Worst case: 4 color + 2 depth + 2 motion vectors variants.
+    // Worst case: 2 color + 2 depth + 2 motion vectors variants.
     auto const allVariants = FEngine::getMaterialCompileVariants(fview, downcast(material),
-            /* shadowReceiver= */ utils::tribool{}, /* skinning= */ utils::tribool{});
-    EXPECT_EQ(allVariants.size(), 8u);
+            /* skinning= */ utils::tribool{});
+    EXPECT_EQ(allVariants.size(), 6u);
 
     // Standard materials omit motion vectors shaders from their package and render them using the
     // default material's programs.

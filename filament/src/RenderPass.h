@@ -146,8 +146,11 @@ public:
     static constexpr uint64_t MATERIAL_INSTANCE_ID_MASK     = 0x00000FFFllu;
     static constexpr unsigned MATERIAL_INSTANCE_ID_SHIFT    = 0;
 
-    static constexpr uint64_t MATERIAL_VARIANT_KEY_MASK     = 0x0007F000llu;
+    static constexpr uint64_t MATERIAL_VARIANT_KEY_MASK     = 0x0003F000llu;
     static constexpr unsigned MATERIAL_VARIANT_KEY_SHIFT    = 12;
+
+    static constexpr uint64_t MATERIAL_SHADOW_RECEIVER_MASK = 0x00040000llu;
+    static constexpr unsigned MATERIAL_SHADOW_RECEIVER_SHIFT = 18;
 
     static constexpr uint64_t MATERIAL_FOG_MASK             = 0x00080000llu;
     static constexpr unsigned MATERIAL_FOG_SHIFT            = 19;
@@ -186,9 +189,9 @@ public:
     static constexpr uint64_t CUSTOM_INDEX_MASK             = 0x00000000FFFFFFFFllu;
     static constexpr unsigned CUSTOM_INDEX_SHIFT            = 0;
 
-    // we assume Variant fits in 7-bits (leaving 1 bit for fog).
+    // we assume Variant fits in 6-bits (leaving 1 bit for shadow receiver and 1 bit for fog).
     static_assert(sizeof(Variant::type_t) == 1);
-    static_assert(VARIANT_BITS <= 7, "VARIANT_BITS exceeds MATERIAL_VARIANT_KEY_MASK");
+    static_assert(VARIANT_BITS <= 6, "VARIANT_BITS exceeds MATERIAL_VARIANT_KEY_MASK");
 
     enum class Pass : uint64_t {    // 6-bits max
         DEPTH    = uint64_t(0x00) << PASS_SHIFT,
@@ -239,13 +242,13 @@ public:
     /*
      * The sorting material key is 32 bits and encoded as:
      *
-     * |     12     | 1 |   7    |     12     |
-     * +------------+---+--------+------------+
-     * |  material  |fog|variant |  instance  |
-     * +------------+---+--------+------------+
+     * |     12     | 1 | 1 |   6    |     12     |
+     * +------------+---+---+--------+------------+
+     * |  material  |fog|sre|variant |  instance  |
+     * +------------+---+---+--------+------------+
      *
-     * The variant and fog bit are inserted while building the commands, because we don't know them
-     * before that.
+     * The variant, shadow receiver (sre) and fog bits are inserted while building the commands,
+     * because we don't know them before that.
      */
     static CommandKey makeMaterialSortingKey(uint32_t const materialId, uint32_t const instanceId) noexcept {
         CommandKey const key = ((materialId << MATERIAL_ID_SHIFT) & MATERIAL_ID_MASK) |

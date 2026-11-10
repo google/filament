@@ -32,12 +32,12 @@ LAYOUT_LOCATION(10) flat VARYING highp int instance_index;
 highp int logical_instance_index;
 #endif
 
-#if defined(VARIANT_HAS_SHADOWING) && defined(MATERIAL_HAS_LIGHTING)
+#if defined(MATERIAL_HAS_SHADOWING) && defined(MATERIAL_HAS_LIGHTING)
 LAYOUT_LOCATION(11) VARYING highp vec4 vertex_lightSpacePosition;
 #endif
 
 #if defined(VARIANT_HAS_MOT)
-// Location 11 is free: motion vectors variants never have VARIANT_HAS_SHADOWING
+// Location 11 is free: motion vectors variants never have MATERIAL_HAS_SHADOWING
 LAYOUT_LOCATION(11) VARYING highp vec4 vertex_motionCurrClip;   // C_{t-1} * P_t
 LAYOUT_LOCATION(12) VARYING highp vec4 vertex_motionPrevClip;   // C_{t-1} * P_{t-1}
 #endif

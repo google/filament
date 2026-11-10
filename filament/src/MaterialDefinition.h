@@ -176,25 +176,37 @@ struct MaterialDefinition {
         return hasSurfaceVariants() ? Variant::filterUserVariant(variant, filterMask) : variant;
     }
 
-    // Materials compiled with variantFilter: [fog] have no fog code at all.
     bool isFogSupported() const noexcept {
         return !(variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::FOG));
     }
 
-    // Material-aware version of DynamicSpecConstKey::filterProgramSpecKey(): on top of the
-    // generic variant/domain/lighting rules, it applies this material's compile-time
-    // restrictions (currently: no fog code when compiled with variantFilter: [fog]).
-    // Prefer this over the DynamicSpecConstKey version whenever a material is available.
-    // The result always passes the specKey checks of isValidProgram().
-    DynamicSpecConstKey filterProgramSpecKey(Variant const variant,
-            DynamicSpecConstKey specKey) const noexcept {
-        specKey = DynamicSpecConstKey::filterProgramSpecKey(
-                variant, specKey, materialDomain, isVariantLit);
-        // Without fog code, the fog specialization would be a redundant program.
-        if (UTILS_UNLIKELY(!isFogSupported())) {
-            specKey.setFog(false);
+    bool isShadowReceiverSupported() const noexcept {
+        return !(variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::SHADOW_RECEIVER));
+    }
+
+    bool isVsmSupported() const noexcept {
+        return !(variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::VSM));
+    }
+
+    // True if this material includes S2D shaders (used by non-PCF views; omitted on ESSL 1.0).
+    bool isShadowSampler2DSupported() const noexcept {
+        return hasShadowSampler2DVariant;
+    }
+
+    struct ProgramKey {
+        Variant variant;
+        DynamicSpecConstKey specKey;
+    };
+
+    ProgramKey resolveProgram(Variant variant, DynamicSpecConstKey specKey) const noexcept {
+        variant = Variant::filterVariant(variant, isVariantLit);
+        // Fall back to the regular program without shadows if S2D shaders are missing (ESSL 1.0).
+        if (UTILS_UNLIKELY(isShadowSampler2DVariant(variant) && !isShadowSampler2DSupported())) {
+            variant.setShadowSampler2D(false);
+            specKey.setShadowReceiver(false);
         }
-        return specKey;
+        specKey = filterProgramSpecKey(variant, specKey);
+        return { variant, specKey };
     }
 
     backend::DescriptorSetLayout const& getPerViewDescriptorSetLayoutDescription(
@@ -240,6 +252,7 @@ struct MaterialDefinition {
     bool doubleSidedCapability = false;
     bool hasShadowMultiplier = false;
     bool hasCustomDepthShader = false;
+    bool hasShadowSampler2DVariant = false;
     bool specularAntiAliasing = false;
     bool instanced = false;
 
@@ -287,6 +300,28 @@ private:
     // sampler) and on the device, so it can't be validated when the material is compiled.
     // Only called when the material.check_device_sampler_limits feature flag is set.
     bool checkSamplerLimits(FEngine& engine) const noexcept;
+
+    // Clears specKey bits unsupported by this material. Must only clear bits
+    // (assumed by isValidProgram()).
+    DynamicSpecConstKey filterProgramSpecKey(Variant const variant,
+            DynamicSpecConstKey specKey) const noexcept {
+        specKey = DynamicSpecConstKey::filterProgramSpecKey(
+                variant, specKey, materialDomain, isVariantLit);
+
+        if (UTILS_UNLIKELY(!isFogSupported())) {
+            specKey.setFog(false);
+        }
+
+        if (UTILS_UNLIKELY(!isShadowReceiverSupported())) {
+            specKey.setShadowReceiver(false);
+        }
+
+        // S2D programs compiled with variantFilter: [vsm] have no shadowing code.
+        if (UTILS_UNLIKELY(isShadowSampler2DVariant(variant) && !isVsmSupported())) {
+            specKey.setShadowReceiver(false);
+        }
+        return specKey;
+    }
 
     void processMain();
     void processParameterNames();

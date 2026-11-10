@@ -1870,6 +1870,63 @@ TEST_F(MaterialCompiler, MetalDynamicBufferOffsets) {
     }
 }
 
+// Non-PCF views draw lit materials with the S2D fragment shader, so `variantFilter: [vsm]` must
+// keep it and strip its shadowing code instead. We check this via RUNTIME_CONFIG_HAS_SHADOWING,
+// which only survives SPIR-V optimization when shadowing code references it.
+TEST_F(MaterialCompiler, VsmFilterKeepsS2dFragmentShaderWithoutShadowing) {
+    constexpr uint32_t HAS_SHADOWING = uint32_t(filament::CONFIG_MAX_RESERVED_SPEC_CONSTANTS +
+            +filament::DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_SHADOWING);
+
+    auto const declaresSpecConstant = [](filaflat::ShaderContent const& content,
+            uint32_t const specId) {
+        constexpr size_t HEADER_SIZE = 5;
+        uint32_t const* const words = reinterpret_cast<uint32_t const*>(content.data());
+        size_t const wordCount = content.size() / sizeof(uint32_t);
+        for (size_t i = HEADER_SIZE; i < wordCount;) {
+            uint32_t const instLen = words[i] >> 16;
+            uint32_t const op = words[i] & 0xFFFF;
+            if (instLen == 0 || i + instLen > wordCount) {
+                break;
+            }
+            if (op == spv::Op::OpDecorate && instLen >= 4 &&
+                    words[i + 2] == spv::Decoration::DecorationSpecId &&
+                    words[i + 3] == specId) {
+                return true;
+            }
+            i += instLen;
+        }
+        return false;
+    };
+
+    struct {
+        filament::UserVariantFilterMask filter;
+        bool s2dHasShadowing;
+    } const cases[] = {
+        { 0, true },
+        { filament::UserVariantFilterMask(filament::UserVariantFilterBit::VSM), false },
+    };
+    for (auto const& c : cases) {
+        MaterialBuilder builder = createTextureGatherLitSurfaceBuilder();
+        builder.targetApi(MaterialBuilder::TargetApi::VULKAN);
+        builder.variantFilter(c.filter);
+        Package const pkg = builder.build(*jobSystem);
+        ASSERT_TRUE(pkg.isValid()) << c.filter;
+
+        filaflat::ShaderContent regular;
+        ASSERT_TRUE(extractShader(pkg, filamat::ChunkType::MaterialSpirv,
+                filamat::ChunkType::DictionarySpirv, ShaderModel::MOBILE,
+                filament::Variant{}, ShaderStage::FRAGMENT, regular)) << c.filter;
+        EXPECT_TRUE(declaresSpecConstant(regular, HAS_SHADOWING)) << c.filter;
+
+        filaflat::ShaderContent s2d;
+        ASSERT_TRUE(extractShader(pkg, filamat::ChunkType::MaterialSpirv,
+                filamat::ChunkType::DictionarySpirv, ShaderModel::MOBILE,
+                filament::Variant(filament::Variant::S2D), ShaderStage::FRAGMENT, s2d))
+                << c.filter;
+        EXPECT_EQ(declaresSpecConstant(s2d, HAS_SHADOWING), c.s2dHasShadowing) << c.filter;
+    }
+}
+
 TEST_F(MaterialCompiler, MetalShaderMinification) {
     auto buildMslFragment = [&](MaterialBuilder::Optimization opt,
             bool generateDebugInfo) -> std::string {

@@ -94,14 +94,15 @@ TEST(Variant, PunctualShadowReceiversDoNotAliasSsr) {
             for (V::type_t const stereo : STEREO_STATES) {
                 V const requested(V::SRE | sampler | skinning | stereo);
                 V const filtered = V::filterVariant(requested, true);
+                V const expected(requested.key & ~V::SRE);
 
-                EXPECT_EQ(filtered, requested)
-                        << "filterVariant must not alter lit shadow-receiver variants";
+                EXPECT_EQ(filtered, expected)
+                        << "filterVariant must only remove SRE from lit standard variants";
                 EXPECT_TRUE(V::isValidStandardVariant(filtered));
                 EXPECT_TRUE(V::isValidSurfaceVariant(filtered));
                 EXPECT_FALSE(V::isSSRVariant(filtered));
                 EXPECT_FALSE(V::isValidDepthVariant(filtered));
-                EXPECT_TRUE(V::isShadowReceiverVariant(filtered));
+                EXPECT_FALSE(V::isShadowReceiverVariant(filtered));
                 EXPECT_EQ(V::isShadowSampler2DVariant(filtered), sampler == V::S2D);
                 EXPECT_EQ(V::filterUserVariant(filtered, SSR_FILTER), filtered);
             }
@@ -243,36 +244,50 @@ TEST(Variant, SurfaceShaderEnumerationKeepsShadowVariantsWhenSsrIsFiltered) {
     constexpr UserVariantFilterMask SHADOW_RECEIVER_FILTER =
             uint32_t(UserVariantFilterBit::SHADOW_RECEIVER);
 
+    // SRE is a spec constant, so S2D no longer requires it.
     std::vector<Variant> const all = determineSurfaceVariants(0, true, false);
-    EXPECT_TRUE(containsVariant(all, V(V::SRE), filament::backend::ShaderStage::VERTEX));
-    EXPECT_TRUE(containsVariant(all, V(V::SRE), filament::backend::ShaderStage::FRAGMENT));
-    EXPECT_TRUE(containsVariant(
+    EXPECT_FALSE(containsVariant(all, V(V::SRE), filament::backend::ShaderStage::VERTEX));
+    EXPECT_FALSE(containsVariant(all, V(V::SRE), filament::backend::ShaderStage::FRAGMENT));
+    EXPECT_FALSE(containsVariant(
             all, V(V::S2D | V::SRE), filament::backend::ShaderStage::FRAGMENT));
+    EXPECT_TRUE(containsVariant(all, V(V::S2D), filament::backend::ShaderStage::FRAGMENT));
     EXPECT_TRUE(containsVariant(
             all, V(V::SPECIAL_SSR_VARIANT), filament::backend::ShaderStage::FRAGMENT));
 
     std::vector<Variant> const withoutSsr =
             determineSurfaceVariants(SSR_FILTER, true, false);
     EXPECT_TRUE(containsVariant(
-            withoutSsr, V(V::S2D | V::SRE), filament::backend::ShaderStage::FRAGMENT));
+            withoutSsr, V(V::S2D), filament::backend::ShaderStage::FRAGMENT));
     EXPECT_FALSE(containsVariant(
             withoutSsr, V(V::SPECIAL_SSR_VARIANT), filament::backend::ShaderStage::FRAGMENT));
 
+    // [vsm] removes depth-moments variants only; S2D stays for non-PCF views.
     std::vector<Variant> const withoutVsm =
             determineSurfaceVariants(VSM_FILTER, true, false);
     EXPECT_TRUE(containsVariant(
-            withoutVsm, V(V::SRE), filament::backend::ShaderStage::FRAGMENT));
+            withoutVsm, V(V::NO_VARIANT), filament::backend::ShaderStage::FRAGMENT));
+    EXPECT_TRUE(containsVariant(
+            withoutVsm, V(V::S2D), filament::backend::ShaderStage::FRAGMENT));
     EXPECT_FALSE(containsVariant(
-            withoutVsm, V(V::S2D | V::SRE), filament::backend::ShaderStage::FRAGMENT));
+            withoutVsm, V(V::DEP | V::MNT), filament::backend::ShaderStage::VERTEX));
+    EXPECT_FALSE(containsVariant(
+            withoutVsm, V(V::DEP | V::MNT), filament::backend::ShaderStage::FRAGMENT));
     EXPECT_TRUE(containsVariant(
             withoutVsm, V(V::SPECIAL_SSR_VARIANT), filament::backend::ShaderStage::FRAGMENT));
+    // 4 vertex (skinning x stereo) + 1 fragment depth-moments shaders removed.
+    EXPECT_EQ(all.size() - withoutVsm.size(), 5u);
 
+    for (UserVariantFilterMask const filter : { UserVariantFilterMask(0), VSM_FILTER }) {
+        std::vector<Variant> const unlit = determineSurfaceVariants(filter, false, false);
+        EXPECT_FALSE(containsVariant(
+                unlit, V(V::S2D), filament::backend::ShaderStage::FRAGMENT)) << filter;
+    }
+
+    // [shadowReceiver] keeps S2D for non-PCF views.
     std::vector<Variant> const withoutShadowReceiver =
             determineSurfaceVariants(SHADOW_RECEIVER_FILTER, true, false);
-    EXPECT_FALSE(containsVariant(
-            withoutShadowReceiver, V(V::SRE), filament::backend::ShaderStage::FRAGMENT));
-    EXPECT_FALSE(containsVariant(
-            withoutShadowReceiver, V(V::S2D | V::SRE), filament::backend::ShaderStage::FRAGMENT));
+    EXPECT_TRUE(containsVariant(
+            withoutShadowReceiver, V(V::S2D), filament::backend::ShaderStage::FRAGMENT));
     EXPECT_TRUE(containsVariant(
             withoutShadowReceiver, V(V::SPECIAL_SSR_VARIANT),
             filament::backend::ShaderStage::FRAGMENT));
@@ -280,16 +295,20 @@ TEST(Variant, SurfaceShaderEnumerationKeepsShadowVariantsWhenSsrIsFiltered) {
     std::vector<Variant> const shadowMultiplier =
             determineSurfaceVariants(SSR_FILTER, false, true);
     EXPECT_TRUE(containsVariant(
-            shadowMultiplier, V(V::S2D | V::SRE), filament::backend::ShaderStage::FRAGMENT));
+            shadowMultiplier, V(V::S2D), filament::backend::ShaderStage::FRAGMENT));
 }
 
 TEST(Variant, RuntimeProgramEnumerationContainsShadowAndSsrVariants) {
     using V = filament::Variant;
     utils::Slice<const V> const lit = filament::VariantUtils::getLitVariants();
 
-    EXPECT_TRUE(containsVariant(lit, V(V::SRE)));
-    EXPECT_TRUE(containsVariant(lit, V(V::SRE | V::SKN)));
-    EXPECT_TRUE(containsVariant(lit, V(V::S2D | V::SRE)));
+    EXPECT_FALSE(containsVariant(lit, V(V::SRE)));
+    EXPECT_FALSE(containsVariant(lit, V(V::SRE | V::SKN)));
+    EXPECT_FALSE(containsVariant(lit, V(V::S2D | V::SRE)));
+    EXPECT_TRUE(containsVariant(lit, V(V::NO_VARIANT)));
+    EXPECT_TRUE(containsVariant(lit, V(V::SKN)));
+    EXPECT_TRUE(containsVariant(lit, V(V::S2D)));
+    EXPECT_TRUE(containsVariant(lit, V(V::S2D | V::SKN)));
     EXPECT_TRUE(containsVariant(lit, V(V::SPECIAL_SSR_VARIANT)));
 }
 
@@ -370,8 +389,8 @@ TEST(Variant, VariantCountsIncludeMotionVectors) {
             ++motionVectorsCount;
         }
     }
-    // 12 standard + 2 SSR + 12 depth + 2 motion vectors
-    EXPECT_EQ(validCount, 28u);
+    // 16 standard + 2 SSR + 12 depth + 2 motion vectors
+    EXPECT_EQ(validCount, 32u);
     EXPECT_EQ(depthCount, 14u);
     EXPECT_EQ(motionVectorsCount, 2u);
 

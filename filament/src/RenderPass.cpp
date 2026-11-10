@@ -459,10 +459,9 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant, DynamicSpe
         bool const hasFogAsPostProcess) noexcept {
 
     FMaterial const * const UTILS_RESTRICT ma = mi->getMaterial();
-    variant = Variant::filterVariant(variant, ma->isVariantLit());
-
-    DynamicSpecConstKey dynamicSpecConstKey =
-            ma->getDefinition().filterProgramSpecKey(variant, specKey);
+    auto const resolved = ma->getDefinition().resolveProgram(variant, specKey);
+    variant = resolved.variant;
+    DynamicSpecConstKey dynamicSpecConstKey = resolved.specKey;
 
     // Below, we evaluate both commands to avoid a branch
 
@@ -491,10 +490,13 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant, DynamicSpe
     keyDraw |= uint64_t(CustomCommand::PASS);
     keyDraw |= mi->getSortingKey(); // already all set-up for direct or'ing
     keyDraw |= makeField(variant.key, MATERIAL_VARIANT_KEY_MASK, MATERIAL_VARIANT_KEY_SHIFT);
-    // The fog specialization is decided per renderable (see generateCommands()), so unlike the
-    // per-view specialization constants it must participate in the sort key, otherwise commands
-    // using different pipelines would interleave and cause unnecessary pipeline switches.
+    // The fog and shadow receiver specializations are decided per renderable (see
+    // generateCommands()), so unlike the per-view specialization constants they must participate
+    // in the sort key, otherwise commands using different pipelines would interleave and cause
+    // unnecessary pipeline switches.
     keyDraw |= makeField(dynamicSpecConstKey.hasFog(), MATERIAL_FOG_MASK, MATERIAL_FOG_SHIFT);
+    keyDraw |= makeField(dynamicSpecConstKey.hasShadowReceiver(),
+            MATERIAL_SHADOW_RECEIVER_MASK, MATERIAL_SHADOW_RECEIVER_SHIFT);
     keyDraw |= makeField(rasterState.alphaToCoverage, BLENDING_MASK, BLENDING_SHIFT);
 
     cmdDraw.key = isBlendingCommand ? keyBlending : keyDraw;
@@ -703,16 +705,15 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
         Variant renderableVariant{ variant };
         DynamicSpecConstKey renderableSpecKey{ specKey };
 
-        // We can't have SSR and shadowing together by construction.
-        assert_invariant(!Variant::isSSRVariant(variant) || !hasShadowing);
-        renderableVariant.setShadowReceiver(soaVisibility[i].receiveShadows && hasShadowing);
-
         renderableVariant.setSkinning(hasSkinningOrMorphing);
 
         FRenderableManager::SkinningBindingInfo const& skinning = soaSkinning[i];
         FRenderableManager::MorphingBindingInfo const& morphing = soaMorphing[i];
 
         if constexpr (isColorPass) {
+            // We can't have SSR and shadowing together by construction.
+            assert_invariant(!Variant::isSSRVariant(variant) || !hasShadowing);
+            renderableSpecKey.setShadowReceiver(soaVisibility[i].receiveShadows && hasShadowing);
             renderableSpecKey.setFog(specKey.hasFog() && soaVisibility[i].fog);
             cmd.key = uint64_t(Pass::COLOR);
         } else if constexpr (isDepthPass) {

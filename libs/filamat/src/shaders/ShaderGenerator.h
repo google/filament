@@ -58,7 +58,8 @@ public:
             MaterialBuilder::FeatureLevel featureLevel,
             MaterialInfo const& material, filament::Variant variant,
             filament::Interpolation interpolation,
-            filament::VertexDomain vertexDomain, uint32_t apiLevel) const noexcept;
+            filament::VertexDomain vertexDomain,
+            filament::UserVariantFilterMask variantFilter, uint32_t apiLevel) const noexcept;
 
     std::string createSurfaceFragmentProgram(filament::backend::ShaderModel shaderModel,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
@@ -94,7 +95,8 @@ private:
     static void generateSurfaceMaterialVariantDefines(utils::io::sstream& out,
             filament::backend::ShaderStage stage,
             MaterialBuilder::FeatureLevel featureLevel,
-            MaterialInfo const& material, filament::Variant variant) noexcept;
+            MaterialInfo const& material, filament::Variant variant,
+            filament::UserVariantFilterMask variantFilter) noexcept;
 
     static void generatePostProcessMaterialVariantDefines(utils::io::sstream& out,
             filament::backend::ShaderStage stage,
@@ -129,6 +131,10 @@ private:
             MaterialBuilder::FeatureLevel featureLevel) noexcept;
 
     static bool hasLighting(MaterialInfo const& material, filament::Variant variant) noexcept;
+
+    static bool hasShadowing(MaterialInfo const& material, filament::Variant variant,
+            filament::UserVariantFilterMask variantFilter,
+            MaterialBuilder::FeatureLevel featureLevel) noexcept;
 
     MaterialBuilder::PropertyList mProperties;
     MaterialBuilder::VariableList mVariables;

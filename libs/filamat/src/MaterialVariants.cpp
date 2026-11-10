@@ -36,8 +36,16 @@ std::vector<Variant> determineSurfaceVariants(
             continue;
         }
 
+        // We cannot remove the S2D programs for materials with variantFilter: [vsm], since we still
+        // need them to draw for non-PCF scenes. However, we remove the shadowing code inside these
+        // programs instead.
+        filament::UserVariantFilterMask filter = userVariantFilter;
+        if (filament::Variant::isShadowSampler2DVariant(variant)) {
+            filter &= ~filament::UserVariantFilterMask(filament::UserVariantFilterBit::VSM);
+        }
+
         filament::Variant filteredVariant =
-                filament::Variant::filterUserVariant(variant, userVariantFilter);
+                filament::Variant::filterUserVariant(variant, filter);
 
         // Remove variants for unlit materials
         filteredVariant = filament::Variant::filterVariant(

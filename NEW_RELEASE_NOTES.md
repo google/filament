@@ -15,3 +15,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
   directly rather than relying on `Engine` garbage collection (#10852)
 - filamentapp: `HeadlessDisplayManager` now waits before retrying a declined frame, so headless
   runs are no longer dominated by retries of skipped frames
+- filamat: convert SRE (shadow receiver) variant into a specialization constant. [⚠️ **Recompile Materials**]

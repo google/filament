@@ -338,6 +338,10 @@ MaterialDefinition::MaterialDefinition(FEngine& engine,
     processSpecializationConstants(engine);
     processPushConstants();
     processDescriptorSets(engine);
+
+    hasShadowSampler2DVariant = hasSurfaceVariants() &&
+            mMaterialParser->hasShader(engine.getShaderModel(),
+                    Variant{ Variant::S2D }, ShaderStage::FRAGMENT);
 }
 
 void MaterialDefinition::processMain() {
@@ -618,6 +622,9 @@ void MaterialDefinition::processSpecializationConstants(FEngine& engine) {
 
     specializationConstants[CONFIG_MAX_RESERVED_SPEC_CONSTANTS +
             +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_FOG] = false;
+
+    specializationConstants[CONFIG_MAX_RESERVED_SPEC_CONSTANTS +
+            +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_SHADOWING] = false;
 
     // Initialize the rest of the reserved constants with a dummy value.
     for (size_t i = CONFIG_NEXT_RESERVED_SPEC_CONSTANT; i < CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
@@ -916,6 +923,9 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
         constants[CONFIG_MAX_RESERVED_SPEC_CONSTANTS +
                   +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING] =
                 specialization.specKey.hasDirectionalLighting();
+        constants[CONFIG_MAX_RESERVED_SPEC_CONSTANTS +
+                  +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_SHADOWING] =
+                specialization.specKey.hasShadowReceiver();
     }
     constants[CONFIG_MAX_RESERVED_SPEC_CONSTANTS +
               +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_FOG] =
@@ -1115,15 +1125,7 @@ bool MaterialDefinition::isValidProgram(Variant const variant, DynamicSpecConstK
         }
     }
 
-    if (!DynamicSpecConstKey::isValidProgramSpecKey(variant, specKey, materialDomain,
-                isVariantLit)) {
-        return false;
-    }
-
-    // Materials compiled without fog support (variantFilter: [fog]) have no fog code, so the fog
-    // specialization would be identical to the non-fog one. When FOG was a variant, the missing
-    // shader rejected it implicitly; now that it is a spec constant we must reject it here.
-    if (specKey.hasFog() && !isFogSupported()) {
+    if (filterProgramSpecKey(variant, specKey) != specKey) {
         return false;
     }
 

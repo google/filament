@@ -1030,7 +1030,8 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 if (v.stage == ShaderStage::VERTEX) {
                     shader = sg.createSurfaceVertexProgram(
                             shaderModel, targetApi, targetLanguage, featureLevel,
-                            info, v.variant, mInterpolation, mVertexDomain, mApiLevel);
+                            info, v.variant, mInterpolation, mVertexDomain, mVariantFilter,
+                            mApiLevel);
                 } else if (v.stage == ShaderStage::FRAGMENT) {
                     shader = sg.createSurfaceFragmentProgram(
                             shaderModel, targetApi, targetLanguage, featureLevel,
@@ -1641,7 +1642,8 @@ std::string MaterialBuilder::peek(backend::ShaderStage const stage,
         case ShaderStage::VERTEX:
             return sg.createSurfaceVertexProgram(
                     params.shaderModel, params.targetApi, params.targetLanguage,
-                    params.featureLevel, info, {}, mInterpolation, mVertexDomain, mApiLevel);
+                    params.featureLevel, info, {}, mInterpolation, mVertexDomain, mVariantFilter,
+                    mApiLevel);
         case ShaderStage::FRAGMENT:
             return sg.createSurfaceFragmentProgram(
                     params.shaderModel, params.targetApi, params.targetLanguage,
