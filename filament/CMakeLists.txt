@@ -721,6 +721,10 @@ include_directories(src)
 # we're building a library
 add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
 
+# Engine::getVersion()
+set_source_files_properties(src/Engine.cpp PROPERTIES COMPILE_DEFINITIONS
+        "FILAMENT_VERSION_MAJOR=${FILAMENT_VERSION_MAJOR};FILAMENT_VERSION_PATCH=${FILAMENT_VERSION_PATCH}")
+
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 

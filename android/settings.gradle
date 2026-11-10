@@ -36,3 +36,12 @@ include ':samples:sample-render-validation'
 include ':samples:sample-cpp-viewer'
 
 rootProject.name = 'filament'
+
+// The release version lives in VERSION at the repository root, shared with CMake.
+// -PVERSION_NAME still overrides it.
+def filamentVersion = new File(settingsDir.parentFile, 'VERSION').text.trim()
+gradle.beforeProject { project ->
+    if (!project.hasProperty('VERSION_NAME')) {
+        project.ext.VERSION_NAME = filamentVersion
+    }
+}

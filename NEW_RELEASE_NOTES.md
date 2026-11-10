@@ -13,3 +13,9 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - materials: the new `diffuseTransmission` and `diffuseTransmissionColor` material properties can be
   used in the lit (standard) shading model to create diffusely transmitting (translucent) surfaces
 - variant: completely remove FOG variant bit
+- engine: `Engine::getVersion()` returns the version Filament was built from. The minor version is
+  `MATERIAL_VERSION` (#6277)
+- java: `Engine.getVersion()` is added
+- web: `Engine.getVersion()` is added
+- build: the release version moves to `VERSION` at the repository root, read by CMake and Gradle;
+  `android/gradle.properties` no longer has `VERSION_NAME`

@@ -48,6 +48,7 @@
 #include <filament/Frustum.h>
 #include <filament/IndexBuffer.h>
 #include <filament/InstanceBuffer.h>
+#include <filament/MaterialEnums.h>
 #include <filament/SkinningBuffer.h>
 #include <filament/SwapChain.h>
 #include <filament/Texture.h>
@@ -89,6 +90,8 @@
 #include <iostream>
 #include <limits>
 #include <random>
+#include <regex>
+#include <string>
 #include <thread>
 #include <type_traits>
 #include <unordered_set>
@@ -117,6 +120,14 @@ static bool vec3eq(float3 a, float3 b) {
     return  almostEqualUlps(a.x, b.x, 1) &&
             almostEqualUlps(a.y, b.y, 1) &&
             almostEqualUlps(a.z, b.z, 1);
+}
+
+TEST(FilamentTest, Version) {
+    // Three numbers, no suffix, and the minor one is MATERIAL_VERSION.
+    std::cmatch match;
+    ASSERT_TRUE(std::regex_match(Engine::getVersion(), match,
+            std::regex("[0-9]+\\.([0-9]+)\\.[0-9]+")));
+    EXPECT_EQ(match[1].str(), std::to_string(MATERIAL_VERSION));
 }
 
 TEST(FilamentTest, AabbMath) {

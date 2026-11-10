@@ -349,6 +349,11 @@ Java_com_google_android_filament_Engine_nGetSteadyClockTimeNano(JNIEnv *env, jcl
     return (jlong)Engine::getSteadyClockTimeNano();
 }
 
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_google_android_filament_Engine_nGetVersion(JNIEnv *env, jclass clazz) {
+    return (Engine::getVersion()) ? env->NewStringUTF(Engine::getVersion()) : nullptr;
+}
+
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Engine_nHasFeatureFlag(JNIEnv *env, jclass clazz, jlong nativeEngine, jstring name_) {
     Engine const * const that = (Engine const *) nativeEngine;
