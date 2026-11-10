@@ -14,33 +14,33 @@
  * limitations under the License.
  */
 
-#include <matdbg/ShaderReplacer.h>
+#include "eiff/ChunkContainer.h"
+#include "eiff/DictionarySpirvChunk.h"
+#include "eiff/DictionaryTextChunk.h"
+#include "eiff/LineDictionary.h"
+#include "eiff/MaterialBinaryChunk.h"
+#include "eiff/MaterialTextChunk.h"
 
-#include <backend/DriverEnums.h>
+#include "sca/builtinResource.h"
+#include "sca/GLSLTools.h"
+
+#include "spirv-tools/libspirv.h"
+
+#include <matdbg/ShaderReplacer.h>
 
 #include <filamat/MaterialBuilder.h>
 
 #include <filaflat/DictionaryReader.h>
 #include <filaflat/MaterialChunk.h>
 
-#include <utils/Log.h>
+#include <backend/DriverEnums.h>
 
-#include <algorithm>
-#include <sstream>
+#include <utils/Log.h>
 
 #include <GlslangToSpv.h>
 
-#include "sca/builtinResource.h"
-#include "sca/GLSLTools.h"
-
-#include "eiff/ChunkContainer.h"
-#include "eiff/DictionarySpirvChunk.h"
-#include "eiff/DictionaryTextChunk.h"
-#include "eiff/MaterialBinaryChunk.h"
-#include "eiff/MaterialTextChunk.h"
-#include "eiff/LineDictionary.h"
-
-#include "spirv-tools/libspirv.h"
+#include <algorithm>
+#include <sstream>
 
 namespace filament::matdbg {
 
@@ -112,7 +112,7 @@ private:
     const ChunkType mDictTag;
     const ChunkType mMatTag;
     vector<BinaryEntry> mShaderRecords;
-    filaflat::BlobDictionary mDataBlobs;
+    utils::FixedCapacityVector<ShaderContent> mDataBlobs;
 };
 
 ShaderReplacer::ShaderReplacer(Backend backend, ShaderLanguage language,
@@ -402,12 +402,15 @@ void ShaderIndex::replaceShader(backend::ShaderModel model, Variant variant,
 
 BlobIndex::BlobIndex(ChunkType dictTag, ChunkType matTag, const filaflat::ChunkContainer& cc) :
         mDictTag(dictTag), mMatTag(matTag) {
-    // Decompress SMOL-V.
+    filaflat::BlobDictionary compressedBlobs;
     DictionaryReader reader;
-    reader.unflatten(cc, mDictTag, mDataBlobs);
+    reader.unflatten(cc, mDictTag, compressedBlobs);
 
     filaflat::MaterialChunk matChunk(cc);
     matChunk.initialize(matTag);
+
+    mDataBlobs.reserve(compressedBlobs.size());
+    mDataBlobs.resize(compressedBlobs.size());
 
     const auto& offsets = matChunk.getOffsets();
     mShaderRecords.reserve(offsets.size());
@@ -415,6 +418,10 @@ BlobIndex::BlobIndex(ChunkType dictTag, ChunkType matTag, const filaflat::ChunkC
         BinaryEntry info;
         filaflat::MaterialChunk::decodeKey(key, &info.shaderModel, &info.variant, &info.stage);
         info.dictionaryIndex = offset;
+        if (offset < mDataBlobs.size() && mDataBlobs[offset].empty()) {
+            matChunk.getShader(mDataBlobs[offset], compressedBlobs,
+                    info.shaderModel, info.variant, info.stage);
+        }
         mShaderRecords.emplace_back(info);
     }
 }

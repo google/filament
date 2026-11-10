@@ -83,8 +83,14 @@ constexpr std::pair<ChunkType, ChunkType> shaderLanguageToTags(ShaderLanguage co
 
 MaterialParser::MaterialParserDetails::MaterialParserDetails(
         FixedCapacityVector<ShaderLanguage> preferredLanguages, const void* data,
-        size_t const size)
-    : mManagedBuffer(data, size),
+        size_t const size, bool const copyPayload)
+    // Binary dictionary chunks (SPIR-V SMOL-V and MetalLibrary) pad blobs to 8-byte offsets
+    // relative to the start of the package and expect 8-byte pointer alignment. Built-in resgen
+    // packages are 8-byte aligned; fall back to an aligned heap copy if a caller supplies an
+    // unaligned buffer while parsing shader chunks (keeping language-less cache probes zero-copy).
+    : mManagedBuffer(data, size,
+              copyPayload || (!preferredLanguages.empty() &&
+                              reinterpret_cast<uintptr_t>(data) % 8u != 0u)),
       mChunkContainer(mManagedBuffer.data(), mManagedBuffer.size()),
       mPreferredLanguages(std::move(preferredLanguages)),
       mMaterialChunk(mChunkContainer) {
@@ -103,13 +109,20 @@ bool MaterialParser::MaterialParserDetails::getFromSimpleChunk(
     return false;
 }
 
-MaterialParser::MaterialParserDetails::ManagedBuffer::ManagedBuffer(const void* start, size_t const size)
-        : mStart(malloc(size)), mSize(size) {
-    memcpy(mStart, start, size);
+MaterialParser::MaterialParserDetails::ManagedBuffer::ManagedBuffer(
+        const void* start, size_t const size, bool const copyPayload)
+        : mStart(copyPayload ? malloc(size) : const_cast<void*>(start)),
+          mSize(size),
+          mOwnsBuffer(copyPayload) {
+    if (copyPayload && size > 0) {
+        memcpy(mStart, start, size);
+    }
 }
 
 MaterialParser::MaterialParserDetails::ManagedBuffer::~ManagedBuffer() noexcept {
-    free(mStart);
+    if (mOwnsBuffer) {
+        free(mStart);
+    }
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -141,8 +154,8 @@ bool MaterialParser::get(typename T::Container* container) const noexcept {
 }
 
 MaterialParser::MaterialParser(FixedCapacityVector<ShaderLanguage> preferredLanguages,
-        const void* data, size_t const size)
-    : mImpl(std::move(preferredLanguages), data, size) {
+        const void* data, size_t const size, bool const copyPayload)
+    : mImpl(std::move(preferredLanguages), data, size, copyPayload) {
 }
 
 ChunkContainer& MaterialParser::getChunkContainer() noexcept {
@@ -151,6 +164,10 @@ ChunkContainer& MaterialParser::getChunkContainer() noexcept {
 
 ChunkContainer const& MaterialParser::getChunkContainer() const noexcept {
     return mImpl.mChunkContainer;
+}
+
+bool MaterialParser::parseChunkContainer() noexcept {
+    return getChunkContainer().parse();
 }
 
 MaterialParser::ParseResult MaterialParser::parse() noexcept {
@@ -255,27 +272,33 @@ bool MaterialParser::getSourceShader(CString* cstring) const noexcept {
     }
 
     // Get the bound and decompress it.
-    const size_t decompressBound =
+    unsigned long long const frameContentSize =
             ZSTD_getFrameContentSize(compressed, compressedSize);
-    if (ZSTD_isError(decompressBound)) {
+    if (frameContentSize == ZSTD_CONTENTSIZE_ERROR ||
+            frameContentSize == ZSTD_CONTENTSIZE_UNKNOWN) {
         return false;
     }
     // Reject implausibly large declared sizes to prevent unbounded allocation
     // from attacker-controlled .filamat files (decompression bomb).
     static constexpr size_t MAX_ZSTD_DECOMPRESSED_SIZE = 256u * 1024u * 1024u; // 256 MiB
-    if (UTILS_UNLIKELY(decompressBound > MAX_ZSTD_DECOMPRESSED_SIZE)) {
+    if (UTILS_UNLIKELY(frameContentSize > MAX_ZSTD_DECOMPRESSED_SIZE)) {
         return false;
     }
+    size_t const decompressBound = static_cast<size_t>(frameContentSize);
 
-    auto dst_buffer = std::make_unique<char[]>(decompressBound);
+    CString dst(decompressBound);
+    char emptyDummy = 0;
+    void* const dstBuffer = decompressBound > 0
+            ? static_cast<void*>(dst.data())
+            : static_cast<void*>(&emptyDummy);
     const size_t decompressed =
             ZSTD_decompress(
-                    dst_buffer.get(), decompressBound,
+                    dstBuffer, decompressBound,
                     compressed, compressedSize);
-    if (ZSTD_isError(decompressed)) {
+    if (ZSTD_isError(decompressed) || decompressed != decompressBound) {
         return false;
     }
-    *cstring = CString { dst_buffer.get(), decompressed };
+    *cstring = std::move(dst);
 
     return true;
 }

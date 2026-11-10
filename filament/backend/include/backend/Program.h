@@ -143,6 +143,7 @@ public:
         return mSpecializationConstants;
     }
 
+    // Populated by MaterialDefinition for Backend::OPENGL only.
     DescriptorSetInfo& getDescriptorBindings() noexcept {
         return mDescriptorBindings;
     }
@@ -156,6 +157,7 @@ public:
         return *this;
     }
 
+    // Populated by MaterialDefinition for Backend::VULKAN only.
     const DescriptorSetLayoutArray& getDescriptorSetLayouts() const noexcept {
         return mDescriptorLayouts;
     }
