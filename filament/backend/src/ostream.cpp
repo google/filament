@@ -287,6 +287,14 @@ io::ostream& operator<<(io::ostream& out, TextureFormat format) {
         CASE(TextureFormat, SRGB8_ALPHA8_ASTC_10x10)
         CASE(TextureFormat, SRGB8_ALPHA8_ASTC_12x10)
         CASE(TextureFormat, SRGB8_ALPHA8_ASTC_12x12)
+        CASE(TextureFormat, R16)
+        CASE(TextureFormat, R16_SNORM)
+        CASE(TextureFormat, RG16)
+        CASE(TextureFormat, RG16_SNORM)
+        CASE(TextureFormat, RGB16)
+        CASE(TextureFormat, RGB16_SNORM)
+        CASE(TextureFormat, RGBA16)
+        CASE(TextureFormat, RGBA16_SNORM)
         CASE(TextureFormat, UNUSED)
     }
     return out;

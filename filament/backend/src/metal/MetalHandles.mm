@@ -840,6 +840,8 @@ MTLPixelFormat MetalTexture::decidePixelFormat(MetalContext* context, TextureFor
         case TextureFormat::RGB8: return MTLPixelFormatRGBA8Unorm;
         case TextureFormat::SRGB8: return MTLPixelFormatRGBA8Unorm_sRGB;
         case TextureFormat::RGB8_SNORM: return MTLPixelFormatRGBA8Snorm;
+        case TextureFormat::RGB16: return MTLPixelFormatRGBA16Unorm;
+        case TextureFormat::RGB16_SNORM: return MTLPixelFormatRGBA16Snorm;
         case TextureFormat::RGB32F: return MTLPixelFormatRGBA32Float;
         case TextureFormat::RGB16F: return MTLPixelFormatRGBA16Float;
         case TextureFormat::RGB8UI: return MTLPixelFormatRGBA8Uint;
