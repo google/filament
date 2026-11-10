@@ -25,3 +25,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
   Apple-family GPUs (they previously had no Metal mapping)
 - utils: `bitset` is no longer over-aligned to 16 bytes, which fixes a crash (SIGBUS) creating
   Vulkan descriptor-set layouts on 32-bit ARM
+- gl: on PowerVR Rogue GE9215, material-instance uniforms are no longer batched and buffer updates
+  no longer go through `glMapBufferRange`
