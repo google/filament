@@ -174,7 +174,7 @@ UTILS_NOINLINE
 void PostProcessManager::PostProcessMaterial::loadMaterial(FEngine& engine) const noexcept {
     // TODO: After all materials using this class have been converted to the post-process material
     //       domain, load both OPAQUE and TRANSPARENT variants here.
-    auto builder = Material::Builder();
+    auto builder = FMaterial::StaticMaterialBuilder();
     builder.package(mData, mSize);
     // PostProcessMaterials are lazily loaded on first use during FrameGraph execution, after
     // UboManager::beginFrame() has already run in FRenderer::beginFrame(). Any SURFACE-domain

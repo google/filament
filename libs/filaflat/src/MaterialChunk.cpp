@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "SmolvUtils.h"
+
 #include <private/filament/LineDictionaryUtils.h>
 #include <private/filament/Variant.h>
 
@@ -27,6 +29,9 @@
 #include <utils/Log.h>
 
 #include <charconv>
+#if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
+#include <smolv.h>
+#endif
 
 #include <string_view>
 #include <vector>
@@ -308,7 +313,24 @@ bool MaterialChunk::getBinaryShader(BlobDictionary const& dictionary,
         return false;
     }
 
-    shaderContent = dictionary[pos->second];
+    ShaderContentView const slice = dictionary[pos->second];
+    if (mMaterialTag == filamat::ChunkType::MaterialSpirv) {
+#if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
+        size_t const spirvSize = getBoundedSmolvDecodedSize(slice.data(), slice.size());
+        if (spirvSize == 0) {
+            return false;
+        }
+        shaderContent = ShaderContent(spirvSize);
+        return smolv::Decode(slice.data(), slice.size(), shaderContent.data(), spirvSize);
+#else
+        return false;
+#endif
+    }
+
+    shaderContent = ShaderContent(slice.size());
+    if (!slice.empty()) {
+        memcpy(shaderContent.data(), slice.data(), slice.size());
+    }
     return true;
 }
 
