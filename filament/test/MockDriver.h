@@ -41,7 +41,14 @@ using ::testing::Return;
 // testing complex rendering logic is limited.
 class MockDriver : public Driver {
 public:
-    MockDriver() = default;
+    MockDriver() {
+        // Material creation validates sampler usage against these, so default to permissive
+        // values rather than gmock's default of 0.
+        ON_CALL(*this, getMaxTextureCount(_)).WillByDefault(Return(MAX_SAMPLER_COUNT));
+        ON_CALL(*this, getMaxSamplerCount(_)).WillByDefault(Return(MAX_SAMPLER_COUNT));
+        ON_CALL(*this, getExternalTextureCost()).WillByDefault(Return(size_t(1)));
+        ON_CALL(*this, getExternalSamplerCost()).WillByDefault(Return(size_t(1)));
+    }
     ~MockDriver() override = default;
 
     uint64_t nextFakeHandle = 1;
@@ -89,6 +96,10 @@ public:
     MOCK_METHOD(size_t, getMaxUniformBufferSize, (), (override));
     MOCK_METHOD(size_t, getMaxTextureSize, (backend::SamplerType target), (override));
     MOCK_METHOD(size_t, getMaxArrayTextureLayers, (), (override));
+    MOCK_METHOD(size_t, getMaxTextureCount, (backend::ShaderStage stage), (override));
+    MOCK_METHOD(size_t, getMaxSamplerCount, (backend::ShaderStage stage), (override));
+    MOCK_METHOD(size_t, getExternalTextureCost, (), (override));
+    MOCK_METHOD(size_t, getExternalSamplerCost, (), (override));
     MOCK_METHOD(math::float2, getClipSpaceParams, (), (override));
     MOCK_METHOD(void, setupExternalImage2, (backend::Platform::ExternalImageHandleRef image),
             (override));

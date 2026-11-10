@@ -181,7 +181,11 @@ utils::CString ResourceNode::graphvizify() const noexcept {
 }
 
 utils::CString ResourceNode::graphvizifyEdgeColor() const noexcept {
+#if !defined(NDEBUG) || FILAMENT_ENABLE_FGVIEWER
     return "darkolivegreen";
+#else
+    return {};
+#endif
 }
 
 } // namespace filament

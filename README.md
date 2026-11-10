@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.77.3'
+    implementation 'com.google.android.filament:filament-android:1.80.0'
 }
 ```
 
@@ -50,7 +50,7 @@ Here are all the libraries available in the group `com.google.android.filament`:
 iOS projects can use CocoaPods to install the latest release:
 
 ```shell
-pod 'Filament', '~> 1.77.3'
+pod 'Filament', '~> 1.80.0'
 ```
 
 ## Documentation
@@ -100,8 +100,10 @@ pod 'Filament', '~> 1.77.3'
 - HDR/linear lighting
 - Metallic workflow
 - Clear coat
+- Retroreflection
 - Anisotropic lighting
 - Approximated translucent (subsurface) materials
+- Diffuse transmission
 - Cloth/fabric/sheen shading
 - Normal mapping & ambient occlusion mapping
 - Image-based lighting
@@ -158,11 +160,15 @@ pod 'Filament', '~> 1.77.3'
 - Extensions
   - [x] KHR_draco_mesh_compression
   - [x] KHR_lights_punctual
+  - [x] KHR_materials_anisotropy
   - [x] KHR_materials_clearcoat
+  - [x] KHR_materials_diffuse_transmission
   - [x] KHR_materials_dispersion
   - [x] KHR_materials_emissive_strength
   - [x] KHR_materials_ior
+  - [x] KHR_materials_iridescence
   - [x] KHR_materials_pbrSpecularGlossiness
+  - [x] KHR_materials_retroreflection
   - [x] KHR_materials_sheen
   - [x] KHR_materials_specular
   - [x] KHR_materials_transmission

@@ -66,7 +66,6 @@ import androidx.annotation.Size;
  *
  * <ul>
  *   <li>create(), destroy() or setParent() on this TransformManager,</li>
- *   <li>commitLocalTransformTransaction(),</li>
  *   <li>Renderer::endFrame() or Renderer::skipFrame(), which perform periodic maintenance.
  * Instances must therefore not be kept across frames. Keep the Entity instead, and call
  * getInstance() again when needed; it is a fast lookup. Using a stale Instance doesn't crash
@@ -286,9 +285,6 @@ public class TransformManager {
      *
      * @param ci The instance of the transform component to set the local transform to.
      * @param localTransform The local transform (i.e. relative to the parent).
-     * @attention This operation can be slow if the hierarchy of transform is too deep, and this
-     *            will be particularly bad when updating a lot of transforms. In that case,
-     *            consider using openLocalTransformTransaction() / commitLocalTransformTransaction().
      *
      * @see #getTransform
      */
@@ -304,9 +300,6 @@ public class TransformManager {
      *
      * @param ci The instance of the transform component to set the local transform to.
      * @param localTransform The local transform (i.e. relative to the parent).
-     * @attention This operation can be slow if the hierarchy of transform is too deep, and this
-     *            will be particularly bad when updating a lot of transforms. In that case,
-     *            consider using openLocalTransformTransaction() / commitLocalTransformTransaction().
      *
      * @see #getTransform
      */
@@ -386,18 +379,12 @@ public class TransformManager {
     /**
      * Opens a local transform transaction.
      *
-     * <p>During a transaction, getWorldTransform() can
-     * return an invalid transform until commitLocalTransformTransaction() is called. However,
-     * setTransform() will perform significantly better and in constant time.</p>
-     *
-     * <p>This is useful when updating many transforms and the transform hierarchy is deep (say more
-     * than 4 or 5 levels).</p>
-     *
-     * <p>If the local transform transaction is already open, this is a no-op.</p>
+     * @deprecated This method is obsolete and is now a no-op.
      *
      * @see #commitLocalTransformTransaction
      * @see #setTransform
      */
+    @Deprecated
     public void openLocalTransformTransaction() {
         nOpenLocalTransformTransaction(getNativeObject());
     }
@@ -405,18 +392,12 @@ public class TransformManager {
     /**
      * Commits the currently open local transform transaction.
      *
-     * <p>When this returns, calls
-     * to getWorldTransform() will return the proper value.</p>
-     *
-     * <p>@attention failing to call this method when done updating the local transform will cause
-     *            a lot of rendering problems. The system never closes the transaction
-     *            automatically.</p>
-     *
-     * <p>If the local transform transaction is not open, this is a no-op.</p>
+     * @deprecated This method is obsolete and is now a no-op.
      *
      * @see #openLocalTransformTransaction
      * @see #setTransform
      */
+    @Deprecated
     public void commitLocalTransformTransaction() {
         nCommitLocalTransformTransaction(getNativeObject());
     }

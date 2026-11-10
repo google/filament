@@ -21,35 +21,6 @@ float computeDiffuseAlpha(float a) {
 }
 #endif
 
-#if defined(GEOMETRIC_SPECULAR_AA)
-float normalFiltering(float perceptualRoughness, const vec3 worldNormal) {
-    // Kaplanyan 2016, "Stable specular highlights"
-    // Tokuyoshi 2017, "Error Reduction and Simplification for Shading Anti-Aliasing"
-    // Tokuyoshi and Kaplanyan 2019, "Improved Geometric Specular Antialiasing"
-
-    // This implementation is meant for deferred rendering in the original paper but
-    // we use it in forward rendering as well (as discussed in Tokuyoshi and Kaplanyan
-    // 2019). The main reason is that the forward version requires an expensive transform
-    // of the half vector by the tangent frame for every light. This is therefore an
-    // approximation but it works well enough for our needs and provides an improvement
-    // over our original implementation based on Vlachos 2015, "Advanced VR Rendering".
-
-    vec3 du = dFdx(worldNormal);
-    vec3 dv = dFdy(worldNormal);
-
-    // specular AA factor to correct for resolution scaling (DSR and TAAx4)
-    du *= frameUniforms.derivativesScale.x;
-    dv *= frameUniforms.derivativesScale.y;
-
-    float variance = materialParams._specularAntiAliasingVariance * (dot(du, du) + dot(dv, dv));
-    float roughness = perceptualRoughnessToRoughness(perceptualRoughness);
-    float kernelRoughness = min(2.0 * variance, materialParams._specularAntiAliasingThreshold);
-    float squareRoughness = saturate(roughness * roughness + kernelRoughness);
-
-    return roughnessToPerceptualRoughness(sqrt(squareRoughness));
-}
-#endif
-
 void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel) {
     vec4 baseColor = material.baseColor;
 
@@ -111,7 +82,9 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
 #endif
 
     pixel.etaIR = airIor / materialIor;  // air -> material
+#if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
     pixel.etaRI = materialIor / airIor;  // material -> air
+#endif
 #if defined(MATERIAL_HAS_DISPERSION) && (REFRACTION_TYPE == REFRACTION_TYPE_SOLID)
     pixel.dispersion = material.dispersion;
 #endif
@@ -125,7 +98,8 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
 #else
     pixel.absorption = vec3(0.0);
 #endif
-#if defined(SHADING_MODEL_SUBSURFACE) || defined(MATERIAL_HAS_REFRACTION)
+#if defined(SHADING_MODEL_SUBSURFACE) || \
+        (defined(MATERIAL_HAS_REFRACTION) && (REFRACTION_TYPE == REFRACTION_TYPE_SOLID))
     pixel.thickness = max(0.0, material.thickness);
 #endif
 #if defined(MATERIAL_HAS_MICRO_THICKNESS) && (REFRACTION_TYPE == REFRACTION_TYPE_THIN)
@@ -141,26 +115,46 @@ void getSpecularPixelParams(const MaterialInputs material, inout PixelParams pix
 #if defined(MATERIAL_HAS_SPECULAR_FACTOR)
     pixel.specular = material.specularFactor;
 #endif
+}
 
-#if defined(MATERIAL_HAS_SPECULAR_COLOR_FACTOR)
-    pixel.specularColor = material.specularColorFactor;
+void getRetroreflectionPixelParams(const MaterialInputs material, inout PixelParams pixel) {
+#if defined(MATERIAL_HAS_RETROREFLECTION) && !defined(SHADING_MODEL_CLOTH) && \
+        !defined(SHADING_MODEL_SUBSURFACE) && !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+    pixel.retroreflection = saturate(material.retroreflection);
 #endif
 }
 
-void getSheenPixelParams(const MaterialInputs material, inout PixelParams pixel) {
+void getDiffuseTransmissionPixelParams(const MaterialInputs material, inout PixelParams pixel) {
+#if defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION) && !defined(SHADING_MODEL_CLOTH) && \
+        !defined(SHADING_MODEL_SUBSURFACE) && !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+    pixel.diffuseTransmission = saturate(material.diffuseTransmission);
+    pixel.diffuseTransmissionColor = saturate(material.diffuseTransmissionColor);
+    pixel.diffuseTransmissionColor *= (1.0 - material.metallic);
+#if defined(MATERIAL_HAS_ABSORPTION)
+#if defined(MATERIAL_HAS_THICKNESS)
+    float thickness = max(0.0, material.thickness);
+#else
+    float thickness = 0.5;
+#endif
+    pixel.diffuseTransmissionColor *=
+            saturate(exp(-max(vec3(0.0), material.absorption) * thickness));
+#endif
+#endif
+}
+
+void getSheenPixelParams(
+        const MaterialInputs material, inout PixelParams pixel, float kernelRoughness) {
 #if defined(MATERIAL_HAS_SHEEN_COLOR) && !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE)
     pixel.sheenColor = material.sheenColor;
 
     float sheenPerceptualRoughness = material.sheenRoughness;
-    sheenPerceptualRoughness = clamp(sheenPerceptualRoughness, MIN_PERCEPTUAL_ROUGHNESS, 1.0);
 
 #if defined(GEOMETRIC_SPECULAR_AA)
-    sheenPerceptualRoughness =
-            normalFiltering(sheenPerceptualRoughness, getWorldGeometricNormalVector());
+    sheenPerceptualRoughness = normalFiltering(kernelRoughness, sheenPerceptualRoughness);
 #endif
 
-    pixel.sheenPerceptualRoughness = sheenPerceptualRoughness;
-    pixel.sheenRoughness = perceptualRoughnessToRoughness(sheenPerceptualRoughness);
+    pixel.sheenPerceptualRoughness = clamp(sheenPerceptualRoughness, MIN_PERCEPTUAL_ROUGHNESS, 1.0);
+    pixel.sheenRoughness = perceptualRoughnessToRoughness(pixel.sheenPerceptualRoughness);
 #endif
 }
 
@@ -173,22 +167,21 @@ void getIridescencePixelParams(const MaterialInputs material, inout PixelParams 
 #endif
 }
 
-void getClearCoatPixelParams(const MaterialInputs material, inout PixelParams pixel) {
+void getClearCoatPixelParams(
+        const MaterialInputs material, inout PixelParams pixel, float kernelRoughness) {
 #if defined(MATERIAL_HAS_CLEAR_COAT)
     pixel.clearCoat = material.clearCoat;
 
     // Clamp the clear coat roughness to avoid divisions by 0
     float clearCoatPerceptualRoughness = material.clearCoatRoughness;
-    clearCoatPerceptualRoughness =
-            clamp(clearCoatPerceptualRoughness, MIN_PERCEPTUAL_ROUGHNESS, 1.0);
 
 #if defined(GEOMETRIC_SPECULAR_AA)
-    clearCoatPerceptualRoughness =
-            normalFiltering(clearCoatPerceptualRoughness, getWorldGeometricNormalVector());
+    clearCoatPerceptualRoughness = normalFiltering(kernelRoughness, clearCoatPerceptualRoughness);
 #endif
 
-    pixel.clearCoatPerceptualRoughness = clearCoatPerceptualRoughness;
-    pixel.clearCoatRoughness = perceptualRoughnessToRoughness(clearCoatPerceptualRoughness);
+    pixel.clearCoatPerceptualRoughness =
+            clamp(clearCoatPerceptualRoughness, MIN_PERCEPTUAL_ROUGHNESS, 1.0);
+    pixel.clearCoatRoughness = perceptualRoughnessToRoughness(pixel.clearCoatPerceptualRoughness);
 
 #if defined(CLEAR_COAT_IOR_CHANGE)
     // The base layer's f0 is computed assuming an interface from air to an IOR
@@ -197,56 +190,6 @@ void getClearCoatPixelParams(const MaterialInputs material, inout PixelParams pi
     // by using the correct interface
     pixel.f0 = mix(pixel.f0, f0ClearCoatToSurface(pixel.f0), pixel.clearCoat);
 #endif
-#endif
-}
-
-void getRoughnessPixelParams(const MaterialInputs material, inout PixelParams pixel) {
-#if defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
-    float perceptualRoughness = computeRoughnessFromGlossiness(material.glossiness);
-#else
-    float perceptualRoughness = material.roughness;
-#endif
-
-#if defined(MATERIAL_HAS_SECOND_SPECULAR_LOBE)
-    float secondPerceptualRoughness = material.secondRoughness;
-#endif
-
-#if defined(MATERIAL_HAS_REFRACTION)
-    // This is used by the refraction code and must be saved before we apply specular AA
-    pixel.perceptualRoughnessUnclamped = perceptualRoughness;
-#endif
-
-#if defined(GEOMETRIC_SPECULAR_AA)
-    perceptualRoughness = normalFiltering(perceptualRoughness, getWorldGeometricNormalVector());
-#if defined(MATERIAL_HAS_SECOND_SPECULAR_LOBE)
-    secondPerceptualRoughness =
-            normalFiltering(secondPerceptualRoughness, getWorldGeometricNormalVector());
-#endif
-#endif
-
-#if defined(MATERIAL_HAS_CLEAR_COAT) && defined(MATERIAL_HAS_CLEAR_COAT_ROUGHNESS)
-    // This is a hack but it will do: the base layer must be at least as rough
-    // as the clear coat layer to take into account possible diffusion by the
-    // top layer
-    float basePerceptualRoughness = max(perceptualRoughness, pixel.clearCoatPerceptualRoughness);
-    perceptualRoughness = mix(perceptualRoughness, basePerceptualRoughness, pixel.clearCoat);
-#if defined(MATERIAL_HAS_SECOND_SPECULAR_LOBE)
-    basePerceptualRoughness = max(secondPerceptualRoughness, pixel.clearCoatPerceptualRoughness);
-    secondPerceptualRoughness =
-            mix(secondPerceptualRoughness, basePerceptualRoughness, pixel.clearCoat);
-#endif
-#endif
-
-    // Clamp the roughness to a minimum value to avoid divisions by 0 during lighting
-    pixel.perceptualRoughness = clamp(perceptualRoughness, MIN_PERCEPTUAL_ROUGHNESS, 1.0);
-    // Remaps the roughness to a perceptually linear roughness (roughness^2)
-    pixel.roughness = perceptualRoughnessToRoughness(pixel.perceptualRoughness);
-
-#if defined(MATERIAL_HAS_SECOND_SPECULAR_LOBE)
-    pixel.secondPerceptualRoughness =
-            clamp(secondPerceptualRoughness, MIN_PERCEPTUAL_ROUGHNESS, 1.0);
-    pixel.secondRoughness = perceptualRoughnessToRoughness(pixel.secondPerceptualRoughness);
-    pixel.secondRoughnessWeight = material.secondRoughnessWeight;
 #endif
 }
 
@@ -295,11 +238,18 @@ void getPixelParams(const MaterialInputs material, out PixelParams pixel) {
     getSpecularPixelParams(material, pixel);
     getCommonPixelParams(material, pixel);
     getIridescencePixelParams(material, pixel);
-    getSheenPixelParams(material, pixel);
-    getClearCoatPixelParams(material, pixel);
-    getRoughnessPixelParams(material, pixel);
+#if defined(GEOMETRIC_SPECULAR_AA)
+    float kernelRoughness = computeKernelRoughness(getWorldGeometricNormalVector());
+#else
+    float kernelRoughness = 0.0;
+#endif
+    getSheenPixelParams(material, pixel, kernelRoughness);
+    getClearCoatPixelParams(material, pixel, kernelRoughness);
+    getRoughnessPixelParams(material, pixel, kernelRoughness);
     getSubsurfacePixelParams(material, pixel);
     getAnisotropyPixelParams(material, pixel);
+    getRetroreflectionPixelParams(material, pixel);
+    getDiffuseTransmissionPixelParams(material, pixel);
     getEnergyCompensationPixelParams(pixel);
 }
 

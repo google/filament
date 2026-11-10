@@ -736,6 +736,7 @@ export class View {
     public setFogOptions(options: View$FogOptions): void;
     public setVignetteOptions(options: View$VignetteOptions): void;
     public setGuardBandOptions(options: View$GuardBandOptions): void;
+    public setMotionVectorsOptions(options: View$MotionVectorsOptions): void;
     public setStereoscopicOptions(options: View$StereoscopicOptions): void;
     public setAmbientOcclusion(ambientOcclusion: View$AmbientOcclusion): void;
     public getAmbientOcclusion(): View$AmbientOcclusion;
@@ -788,7 +789,9 @@ export class TransformManager {
     public setTransform(instance: TransformManager$Instance, xform: mat4): void;
     public getTransform(instance: TransformManager$Instance): mat4;
     public getWorldTransform(instance: TransformManager$Instance): mat4;
+    /** @deprecated has no effect. */
     public openLocalTransformTransaction(): void;
+    /** @deprecated has no effect. */
     public commitLocalTransformTransaction(): void;
     public getParent(instance: TransformManager$Instance): Entity;
     public getChildren(instance: TransformManager$Instance): Vector<Entity>;
@@ -1386,6 +1389,14 @@ export enum Texture$InternalFormat {
     SRGB8_ALPHA8_ASTC_10x10,
     SRGB8_ALPHA8_ASTC_12x10,
     SRGB8_ALPHA8_ASTC_12x12,
+    R16,
+    R16_SNORM,
+    RG16,
+    RG16_SNORM,
+    RGB16,
+    RGB16_SNORM,
+    RGBA16,
+    RGBA16_SNORM,
 }
 
 export enum Texture$Sampler {
@@ -1680,6 +1691,7 @@ export interface ViewSettings {
     vignette: View$VignetteOptions;
     vsmShadowOptions: View$VsmShadowOptions;
     guardBand: View$GuardBandOptions;
+    motionVectors: View$MotionVectorsOptions;
     stereoscopicOptions: View$StereoscopicOptions;
     colorGrading: ColorGradingSettings;
     dynamicLighting: DynamicLightingSettings;
@@ -2351,7 +2363,7 @@ export interface View$TemporalAntiAliasingOptions {
     filterWidth?: number;
     /** history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA). */
     feedback?: number;
-    /** texturing lod bias (typically -1 or -2) */
+    /** texture lod bias (typically between -1.0 and 0.0) */
     lodBias?: number;
     /** post-TAA sharpen, especially useful when upscaling is true. */
     sharpness?: number;
@@ -2373,12 +2385,32 @@ export interface View$TemporalAntiAliasingOptions {
     boxClipping?: View$TemporalAntiAliasingOptions$BoxClipping;
     /** Jitter Pattern */
     jitterPattern?: View$TemporalAntiAliasingOptions$JitterPattern;
-    /** High values increases ghosting artefact, lower values increases jittering, range [0.75, 1.25] */
+    /** High values increases ghosting artefact, lower values increases jittering, range [0.6, 1.25] */
     varianceGamma?: number;
     /** adjust the feedback dynamically to reduce flickering */
     preventFlickering?: boolean;
     /** whether to apply history reprojection (debug option) */
     historyReprojection?: boolean;
+    /** relaxes history rejection under low camera motion to reduce flickering on static content */
+    motionAdaptiveHistory?: boolean;
+    /** camera motion threshold in texels above which history rejection is applied at full strength */
+    motionDeltaThreshold?: number;
+    /** minimum history clamping strength when the camera is static, in (0, 1] */
+    minBoxStrength?: number;
+    /** minimum history feedback scale when the camera is static, in (0, 1] */
+    minAlphaStrength?: number;
+    /** normalized depth threshold below which distant/sky pixels always use full history rejection */
+    skyDepthThreshold?: number;
+    /** number of frames to maintain full history rejection after camera motion stops (0 to disable) */
+    motionHoldFrames?: number;
+    /** enables depth-based disocclusion detection to reduce ghosting around moving objects */
+    depthDisocclusion?: boolean;
+    /** depth difference threshold for disocclusion detection */
+    disocclusionDepthThreshold?: number;
+    /** reduces false disocclusions on thin static geometry at a higher GPU cost */
+    disocclusionHistoryNeighborhood?: boolean;
+    /** uses a wider reconstruction filter kernel for higher sharpness at 1:1 resolution, at a higher GPU cost */
+    exactLanczosSupport?: boolean;
 }
 
 /**
@@ -2404,6 +2436,23 @@ export interface View$ScreenSpaceReflectionsOptions {
  * Currently the guard band can only be enabled or disabled.</p>
  */
 export interface View$GuardBandOptions {
+    enabled?: boolean;
+}
+
+/**
+ * Options for the motion vectors pass.
+ *
+ * Motion vectors are generated only when post-processing is enabled, stereo is disabled,
+ * the engine runs at feature level 1 or higher and the device supports RG16F render targets.
+ * They capture the rigid motion of renderables (TransformManager and InstanceBuffer transforms)
+ * and of the camera. Skinning/morphing deformation and the VIEW/DEVICE vertex domains are not
+ * captured.
+ * TAA uses motion vectors automatically when they are enabled.
+ *
+ * @see View::setMotionVectorsOptions
+ */
+export interface View$MotionVectorsOptions {
+    /** enables the motion vectors pass */
     enabled?: boolean;
 }
 

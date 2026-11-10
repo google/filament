@@ -44,7 +44,11 @@ PassNode::PassNode(PassNode&& rhs) noexcept = default;
 PassNode::~PassNode() noexcept = default;
 
 utils::CString PassNode::graphvizifyEdgeColor() const noexcept {
+#if !defined(NDEBUG) || FILAMENT_ENABLE_FGVIEWER
     return utils::CString{"red"};
+#else
+    return {};
+#endif
 }
 
 void PassNode::registerResource(FrameGraphHandle const resourceHandle) noexcept {

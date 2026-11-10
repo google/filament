@@ -91,13 +91,13 @@ public class NestedAggregatesTest {
     }
     public static class ShadowOptions {
         @IntRange(from = 0)
-        public int mapSize;
-        private float mCascadeSplitPositions0;
-        private float mCascadeSplitPositions1;
-        private float mCascadeSplitPositions2;
-        private boolean mVsmElvsm;
-        private float mVsmBlurWidth;
-        public float constantBias;
+        public int mapSize = 1024;
+        private float mCascadeSplitPositions0 = 0.125f;
+        private float mCascadeSplitPositions1 = 0.25f;
+        private float mCascadeSplitPositions2 = 0.50f;
+        private boolean mVsmElvsm = false;
+        private float mVsmBlurWidth = 0.0f;
+        public float constantBias = 0.001f;
 
         public ShadowOptions() {
         }
@@ -205,8 +205,8 @@ public class NestedAggregatesTest {
         }
 
         public static class Vsm {
-            public boolean elvsm;
-            public float blurWidth;
+            public boolean elvsm = false;
+            public float blurWidth = 0.0f;
 
             public Vsm() {
             }

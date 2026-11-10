@@ -30,6 +30,8 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.Size;
 
+import com.google.android.filament.proguard.UsedByNative;
+
 /**
  * A Renderer instance represents an operating system's window.
  *
@@ -933,11 +935,11 @@ public class Renderer {
      * frame pacing and dynamic resolution scaling.</p>
      */
     public static class DisplayInfo {
-        public float refreshRate;
+        public float refreshRate = 60.0f;
         @IntRange(from = 0)
-        public long presentationDeadlineNanos;
+        public long presentationDeadlineNanos = 0;
         @IntRange(from = 0)
-        public long vsyncOffsetNanos;
+        public long vsyncOffsetNanos = 0;
 
         public DisplayInfo() {
         }
@@ -985,21 +987,36 @@ public class Renderer {
         /** value not yet available */
         public static final long PENDING = - 2;
 
+        @UsedByNative("Renderer.cpp")
         @IntRange(from = 0)
         public int frameId;
+        @UsedByNative("Renderer.cpp")
         public long gpuFrameDuration;
+        @UsedByNative("Renderer.cpp")
         public long denoisedGpuFrameDuration;
+        @UsedByNative("Renderer.cpp")
         public long beginFrame;
+        @UsedByNative("Renderer.cpp")
         public long endFrame;
+        @UsedByNative("Renderer.cpp")
         public long backendBeginFrame;
+        @UsedByNative("Renderer.cpp")
         public long backendEndFrame;
+        @UsedByNative("Renderer.cpp")
         public long gpuFrameComplete;
+        @UsedByNative("Renderer.cpp")
         public long vsync;
+        @UsedByNative("Renderer.cpp")
         public long displayPresent;
+        @UsedByNative("Renderer.cpp")
         public long presentDeadline;
+        @UsedByNative("Renderer.cpp")
         public long displayPresentInterval;
+        @UsedByNative("Renderer.cpp")
         public long compositionToPresentLatency;
+        @UsedByNative("Renderer.cpp")
         public long expectedPresentLatency;
+        @UsedByNative("Renderer.cpp")
         public long frameScheduleTime;
 
         public FrameInfo() {
@@ -1166,12 +1183,12 @@ public class Renderer {
      * @see Renderer.DisplayInfo
      */
     public static class FrameRateOptions {
-        public float headRoomRatio;
-        public float scaleRate;
+        public float headRoomRatio = 0.0f;
+        public float scaleRate = 1.0f / 8.0f;
         @IntRange(from = 0)
-        public int history;
+        public int history = 15;
         @IntRange(from = 0)
-        public int interval;
+        public int interval = 1;
 
         public FrameRateOptions() {
         }
@@ -1224,9 +1241,9 @@ public class Renderer {
         private double mClearColorZ;
         private double mClearColorW;
         @IntRange(from = 0)
-        public int clearStencil;
-        public boolean clear;
-        public boolean discard;
+        public int clearStencil = 0;
+        public boolean clear = false;
+        public boolean discard = true;
 
         public ClearOptions() {
         }

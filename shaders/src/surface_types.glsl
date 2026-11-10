@@ -5,13 +5,14 @@ struct ShadowData {
     highp mat4 lightFromWorldMatrix;
     highp vec4 lightFromWorldZ;
     highp vec4 scissorNormalized;
-    highp vec2 normalBias;
+    highp float normalBias;
     highp float projectionParam;
     highp float wsOneOverTexelSizeAtOneMeter;
     highp uint maxMipLevel_maxSearchRadius;
     highp uint bulbRadius_vsmExponent;
     highp uint maxPenumbraRatio_penumbraRatioScale;
     highp uint evsm4_layer;
+    mediump uint reserved;
 };
 #endif
 
@@ -31,7 +32,8 @@ struct PerRenderableData {
     highp int objectId;                        // used for picking
     highp float userData;   // TODO: We need a better solution, this currently holds the average local scale for the renderable
 #if MATERIAL_FEATURE_LEVEL > 0
-    highp vec4 reserved[8];
+    highp mat4 prevWorldFromWorldMatrix;       // motion vectors [variant: MOT]
+    highp vec4 reserved[4];
 #endif
 };
 

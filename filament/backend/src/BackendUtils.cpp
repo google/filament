@@ -24,6 +24,7 @@
 #include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/debug.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -84,6 +85,8 @@ size_t getFormatSize(TextureFormat format) noexcept {
             return 1;
 
         // 16-bits per element
+        case TextureFormat::R16:
+        case TextureFormat::R16_SNORM:
         case TextureFormat::R16F:
         case TextureFormat::R16UI:
         case TextureFormat::R16I:
@@ -110,6 +113,8 @@ size_t getFormatSize(TextureFormat format) noexcept {
         case TextureFormat::R32F:
         case TextureFormat::R32UI:
         case TextureFormat::R32I:
+        case TextureFormat::RG16:
+        case TextureFormat::RG16_SNORM:
         case TextureFormat::RG16F:
         case TextureFormat::RG16UI:
         case TextureFormat::RG16I:
@@ -127,6 +132,8 @@ size_t getFormatSize(TextureFormat format) noexcept {
             return 4;
 
         // 48-bits per element
+        case TextureFormat::RGB16:
+        case TextureFormat::RGB16_SNORM:
         case TextureFormat::RGB16F:
         case TextureFormat::RGB16UI:
         case TextureFormat::RGB16I:
@@ -136,6 +143,8 @@ size_t getFormatSize(TextureFormat format) noexcept {
         case TextureFormat::RG32F:
         case TextureFormat::RG32UI:
         case TextureFormat::RG32I:
+        case TextureFormat::RGBA16:
+        case TextureFormat::RGBA16_SNORM:
         case TextureFormat::RGBA16F:
         case TextureFormat::RGBA16UI:
         case TextureFormat::RGBA16I:
@@ -238,6 +247,7 @@ TextureType getTextureType(TextureFormat const format) noexcept {
             return TextureType::FLOAT;
 
         case TextureFormat::R8:
+        case TextureFormat::R16:
         case TextureFormat::R16F:
         case TextureFormat::RG8:
         case TextureFormat::RGB565:
@@ -246,14 +256,17 @@ TextureType getTextureType(TextureFormat const format) noexcept {
         case TextureFormat::R32F:
         case TextureFormat::RGB8:
         case TextureFormat::SRGB8:
+        case TextureFormat::RG16:
         case TextureFormat::RG16F:
         case TextureFormat::R11F_G11F_B10F:
         case TextureFormat::RGB9_E5:
         case TextureFormat::RGBA8:
         case TextureFormat::SRGB8_A8:
         case TextureFormat::RGB10_A2:
+        case TextureFormat::RGB16:
         case TextureFormat::RGB16F:
         case TextureFormat::RG32F:
+        case TextureFormat::RGBA16:
         case TextureFormat::RGBA16F:
         case TextureFormat::RGB32F:
         case TextureFormat::RGBA32F:
@@ -263,6 +276,10 @@ TextureType getTextureType(TextureFormat const format) noexcept {
         case TextureFormat::RG8_SNORM:
         case TextureFormat::RGB8_SNORM:
         case TextureFormat::RGBA8_SNORM:
+        case TextureFormat::R16_SNORM:
+        case TextureFormat::RG16_SNORM:
+        case TextureFormat::RGB16_SNORM:
+        case TextureFormat::RGBA16_SNORM:
             // SNORM are treated as float
             return TextureType::FLOAT;
 
@@ -374,6 +391,8 @@ size_t getFormatComponentCount(TextureFormat format) noexcept {
         case TextureFormat::R8_SNORM:
         case TextureFormat::R8UI:
         case TextureFormat::R8I:
+        case TextureFormat::R16:
+        case TextureFormat::R16_SNORM:
         case TextureFormat::R16F:
         case TextureFormat::R16UI:
         case TextureFormat::R16I:
@@ -390,6 +409,8 @@ size_t getFormatComponentCount(TextureFormat format) noexcept {
         case TextureFormat::RG8_SNORM:
         case TextureFormat::RG8UI:
         case TextureFormat::RG8I:
+        case TextureFormat::RG16:
+        case TextureFormat::RG16_SNORM:
         case TextureFormat::RG16F:
         case TextureFormat::RG16UI:
         case TextureFormat::RG16I:
@@ -407,6 +428,8 @@ size_t getFormatComponentCount(TextureFormat format) noexcept {
         case TextureFormat::RGB8UI:
         case TextureFormat::RGB8I:
         case TextureFormat::R11F_G11F_B10F:
+        case TextureFormat::RGB16:
+        case TextureFormat::RGB16_SNORM:
         case TextureFormat::RGB16F:
         case TextureFormat::RGB16UI:
         case TextureFormat::RGB16I:
@@ -424,6 +447,8 @@ size_t getFormatComponentCount(TextureFormat format) noexcept {
         case TextureFormat::RGB10_A2:
         case TextureFormat::RGBA8UI:
         case TextureFormat::RGBA8I:
+        case TextureFormat::RGBA16:
+        case TextureFormat::RGBA16_SNORM:
         case TextureFormat::RGBA16F:
         case TextureFormat::RGBA16UI:
         case TextureFormat::RGBA16I:
@@ -636,6 +661,9 @@ bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped)
 
     const auto freeFunc = [](void* buffer,
             UTILS_UNUSED size_t size, UTILS_UNUSED void* user) { free(buffer); };
+    // Texture::setImage() rejects sizes where 4 * data.size would wrap. DataReshaper divides
+    // first, so a wrapped size would make it write past the buffer.
+    assert_invariant(data.size <= SIZE_MAX / 4);
     const size_t reshapedSize = 4 * data.size / 3;
     const PixelDataFormat reshapedFormat =
         data.format == PixelDataFormat::RGB ? PixelDataFormat::RGBA : PixelDataFormat::RGBA_INTEGER;
@@ -773,7 +801,9 @@ CString to_string<filament::backend::TextureFormat>(filament::backend::TextureFo
         CASE(RED_RGTC1) CASE(SIGNED_RED_RGTC1) CASE(RED_GREEN_RGTC2)
         CASE(SIGNED_RED_GREEN_RGTC2) CASE(RGB_BPTC_SIGNED_FLOAT)
         CASE(RGB_BPTC_UNSIGNED_FLOAT) CASE(RGBA_BPTC_UNORM)
-        CASE(SRGB_ALPHA_BPTC_UNORM)
+        CASE(SRGB_ALPHA_BPTC_UNORM) CASE(R16) CASE(R16_SNORM)
+        CASE(RG16) CASE(RG16_SNORM) CASE(RGB16) CASE(RGB16_SNORM)
+        CASE(RGBA16) CASE(RGBA16_SNORM)
 #undef CASE
     }
     return "Unknown";

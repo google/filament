@@ -70,6 +70,12 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, uint8_t* val) {
     return i + 1;
 }
 
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, int8_t* val) {
+    CHECK_TOKTYPE(tokens[i], JSMN_PRIMITIVE);
+    *val = strtol(jsonChunk + tokens[i].start, nullptr, 10);
+    return i + 1;
+}
+
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, uint16_t* val) {
     CHECK_TOKTYPE(tokens[i], JSMN_PRIMITIVE);
     *val = strtol(jsonChunk + tokens[i].start, nullptr, 10);
@@ -855,6 +861,26 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAli
             i = parse(tokens, i + 1, jsonChunk, &out->preventFlickering);
         } else if (compare(tok, jsonChunk, "historyReprojection") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->historyReprojection);
+        } else if (compare(tok, jsonChunk, "motionAdaptiveHistory") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->motionAdaptiveHistory);
+        } else if (compare(tok, jsonChunk, "motionDeltaThreshold") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->motionDeltaThreshold);
+        } else if (compare(tok, jsonChunk, "minBoxStrength") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->minBoxStrength);
+        } else if (compare(tok, jsonChunk, "minAlphaStrength") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->minAlphaStrength);
+        } else if (compare(tok, jsonChunk, "skyDepthThreshold") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->skyDepthThreshold);
+        } else if (compare(tok, jsonChunk, "motionHoldFrames") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->motionHoldFrames);
+        } else if (compare(tok, jsonChunk, "depthDisocclusion") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->depthDisocclusion);
+        } else if (compare(tok, jsonChunk, "disocclusionDepthThreshold") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->disocclusionDepthThreshold);
+        } else if (compare(tok, jsonChunk, "disocclusionHistoryNeighborhood") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->disocclusionHistoryNeighborhood);
+        } else if (compare(tok, jsonChunk, "exactLanczosSupport") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->exactLanczosSupport);
         } else {
             slog.w << "Invalid TemporalAntiAliasingOptions key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -884,7 +910,17 @@ std::ostream& operator<<(std::ostream& out, const TemporalAntiAliasingOptions& i
         << "\"jitterPattern\": " << (in.jitterPattern) << ",\n"
         << "\"varianceGamma\": " << (in.varianceGamma) << ",\n"
         << "\"preventFlickering\": " << to_string(in.preventFlickering) << ",\n"
-        << "\"historyReprojection\": " << to_string(in.historyReprojection) << "\n"
+        << "\"historyReprojection\": " << to_string(in.historyReprojection) << ",\n"
+        << "\"motionAdaptiveHistory\": " << to_string(in.motionAdaptiveHistory) << ",\n"
+        << "\"motionDeltaThreshold\": " << (in.motionDeltaThreshold) << ",\n"
+        << "\"minBoxStrength\": " << (in.minBoxStrength) << ",\n"
+        << "\"minAlphaStrength\": " << (in.minAlphaStrength) << ",\n"
+        << "\"skyDepthThreshold\": " << (in.skyDepthThreshold) << ",\n"
+        << "\"motionHoldFrames\": " << (in.motionHoldFrames) << ",\n"
+        << "\"depthDisocclusion\": " << to_string(in.depthDisocclusion) << ",\n"
+        << "\"disocclusionDepthThreshold\": " << (in.disocclusionDepthThreshold) << ",\n"
+        << "\"disocclusionHistoryNeighborhood\": " << to_string(in.disocclusionHistoryNeighborhood) << ",\n"
+        << "\"exactLanczosSupport\": " << to_string(in.exactLanczosSupport) << "\n"
         << "}";
 }
 
@@ -947,6 +983,32 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, GuardBandOption
 }
 
 std::ostream& operator<<(std::ostream& out, const GuardBandOptions& in) {
+    return out << "{\n"
+        << "\"enabled\": " << to_string(in.enabled) << "\n"
+        << "}";
+}
+
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, MotionVectorsOptions* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "enabled") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else {
+            slog.w << "Invalid MotionVectorsOptions key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid MotionVectorsOptions value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+std::ostream& operator<<(std::ostream& out, const MotionVectorsOptions& in) {
     return out << "{\n"
         << "\"enabled\": " << to_string(in.enabled) << "\n"
         << "}";

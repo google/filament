@@ -30,6 +30,7 @@
 #include <gltfio/TextureProvider.h>
 
 #include <filamentapp/AssetLoader.h>
+#include <filamentapp/AssetWriter.h>
 #include <filamentapp/DesktopAssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 #include <filamentapp/IBL.h>
@@ -53,6 +54,7 @@
 
 #include <camutils/Manipulator.h>
 
+#include <utils/compiler.h>
 #include <utils/getopt.h>
 #include <utils/Log.h>
 #include <utils/NameComponentManager.h>
@@ -73,6 +75,7 @@
 #include <iostream>
 #include <set>
 #include <sstream>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -164,6 +167,18 @@ struct App {
     bool screenshot = false;
     uint8_t screenshotSeq = 0;
     bool screenshotAsPPM = false;
+
+    // Set when --screenshot is given, which excludes --batch. FilamentApp2 then captures a fixed
+    // frame, so the render must not depend on how long loading takes: resources are loaded
+    // synchronously, and the settings start from the same Settings{} baseline batch mode uses.
+    bool deterministicCapture = false;
+
+    // gltfio only reports load progress for asynchronous loads, so a synchronous load would
+    // otherwise read as 0% forever.
+    bool resourcesLoadedSynchronously = false;
+
+    // A deterministic capture applies the render settings once, as batch mode does per test.
+    bool renderSettingsApplied = false;
 };
 
 const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
@@ -444,6 +459,30 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     app->batchFile = config.getString("batch");
     app->screenshotAsPPM = config.getBool("screenshot-as-ppm");
 
+    // Each of these pairs selects conflicting behavior, and without a check one option would
+    // silently override the other. This reports and exits like the other argument errors here,
+    // rather than using FILAMENT_CHECK_PRECONDITION, because an uncaught PreconditionPanic
+    // terminates without printing its reason when exceptions are enabled.
+    bool const hasBatch = !app->batchFile.empty();
+    bool const hasScreenshot = !config.screenshotPath.empty();
+    auto const requireExclusive = [](bool conflict, const char* message) {
+        if (conflict) {
+            std::cerr << message << std::endl;
+            exit(1);
+        }
+    };
+    requireExclusive(hasBatch && hasScreenshot,
+            "--batch and --screenshot are mutually exclusive: batch mode exports its own "
+            "screenshot for each test.");
+    requireExclusive(hasBatch && !app->settingsFile.empty(),
+            "--batch and --settings are mutually exclusive: each batch test replaces all "
+            "settings.");
+    requireExclusive(hasScreenshot && app->screenshotAsPPM,
+            "--screenshot and --screenshot-as-ppm are mutually exclusive: --screenshot always "
+            "writes a TIFF.");
+
+    app->deterministicCapture = hasScreenshot;
+
     utils::Path filename;
     if (!config.positionalArgs.empty()) {
         filename = getPathForGLTFAsset(config.positionalArgs[0].c_str_safe());
@@ -488,6 +527,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 #if !defined(__EMSCRIPTEN__)
             // First compile high priority variants
             ma->compile(Material::CompilerPriorityQueue::HIGH,
+                    UserVariantFilterBit::DYNAMIC_LIGHTING |
                     UserVariantFilterBit::DIRECTIONAL_LIGHTING |
                     UserVariantFilterBit::SHADOW_RECEIVER);
 
@@ -565,10 +605,19 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
             }
         }
 
-        if (!app->resourceLoader->asyncBeginLoad(app->asset)) {
+        // A deterministic capture happens on a fixed frame, so the whole asset has to be present on
+        // the first one. The synchronous load decodes and uploads every texture before returning,
+        // which makes the capture independent of how fast decoding runs. gltfio only allows the
+        // synchronous API when threading is available.
+        bool const loadSynchronously = UTILS_HAS_THREADING && app->deterministicCapture;
+        bool const loadStarted = loadSynchronously
+                                         ? app->resourceLoader->loadResources(app->asset)
+                                         : app->resourceLoader->asyncBeginLoad(app->asset);
+        if (!loadStarted) {
             std::cerr << "Unable to start loading resources for " << filename << std::endl;
             exit(1);
         }
+        app->resourcesLoadedSynchronously = loadSynchronously;
 
         if (app->recomputeAabb) {
             app->asset->getInstance()->recomputeBoundingBoxes();
@@ -590,7 +639,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                          Scene* scene) {
         app->engine = engine;
         app->names = new NameComponentManager(EntityManager::get());
-        app->viewer = new ViewerGui(engine, scene, view, 410);
+        app->viewer = new ViewerGui(engine, scene, view, 440);
         app->viewer->getSettings().viewer.autoScaleEnabled = !app->actualSize;
 
         engine->enableAccurateTranslations();
@@ -645,21 +694,35 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         }
 
         bool const hasSettingsFile = !app->settingsFile.empty();
-        if (hasSettingsFile) {
-            bool const success = loadSettings(appLoader,
-                    utils::Path(app->settingsFile.c_str_safe()), &app->viewer->getSettings());
-            if (success) {
-                std::cout << "Loaded settings from " << app->settingsFile.c_str_safe() << std::endl;
-            } else {
-                std::cerr << "Failed to load settings from " << app->settingsFile.c_str_safe()
-                          << std::endl;
+        auto const loadSettingsFile = [app, appLoader, engine, scene, batchMode,
+                                              hasSettingsFile]() {
+            if (hasSettingsFile) {
+                bool const success = loadSettings(appLoader,
+                        utils::Path(app->settingsFile.c_str_safe()), &app->viewer->getSettings());
+                if (success) {
+                    std::cout << "Loaded settings from " << app->settingsFile.c_str_safe()
+                              << std::endl;
+                } else {
+                    std::cerr << "Failed to load settings from " << app->settingsFile.c_str_safe()
+                              << std::endl;
+                    // Like a bad batch spec, this must end a scripted capture rather than let it
+                    // produce an image with the wrong settings.
+                    if (app->deterministicCapture) {
+                        exit(1);
+                    }
+                }
             }
-        }
 
-        if (hasSettingsFile || batchMode) {
-            // Instantiate point lights loaded from settings file
-            app->automationEngine->updateCustomLights(engine,
-                    app->viewer->getSettings().lighting.lights, scene);
+            if (hasSettingsFile || batchMode) {
+                // Instantiate point lights loaded from settings file
+                app->automationEngine->updateCustomLights(engine,
+                        app->viewer->getSettings().lighting.lights, scene);
+            }
+        };
+
+        // A deterministic capture loads the settings file once the asset is in place; see below.
+        if (!app->deterministicCapture) {
+            loadSettingsFile();
         }
 
         // The JIT provider lives in the full gltfio target, and WASM builds only gltfio_core.
@@ -687,6 +750,42 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         loadResources(filename);
         app->viewer->setAsset(app->asset, app->instance);
 
+        if (app->deterministicCapture) {
+            // Batch mode replaces the whole Settings with a test case built on Settings{}, so the
+            // interactive defaults ViewerGui installs (MSAA, SSAO, bloom, FXAA, temporal
+            // dithering), the sunlight it estimates from the IBL in setupIBL(), and the animation
+            // gltf_viewer enables never reach a batch render. Start from the same baseline so the
+            // settings file describes the complete deviation from Settings{}.
+            Settings& settings = app->viewer->getSettings();
+            settings = Settings{};
+            settings.viewer.autoScaleEnabled = !app->actualSize;
+            loadSettingsFile();
+
+            // ViewerGui pushes the view, camera and lighting settings every frame, and preRender
+            // pushes the viewer, debug and render settings, but nothing else applies material
+            // settings. Batch mode applies them once per test, which is what this does.
+            for (size_t i = 0, c = app->instance->getMaterialInstanceCount(); i < c; i++) {
+                applySettings(engine, settings.material, app->instance->getMaterialInstances()[i]);
+            }
+
+            // Record the effective settings next to the image, as batch mode does for each test.
+            // This goes through the AssetWriter that FilamentApp2 writes the screenshot with, so
+            // that a relative path resolves to the same directory for both files. The trailing
+            // newline matches AutomationEngine::exportSettings, which batch mode uses.
+            utils::Path const screenshotPath(app->config.screenshotPath.c_str_safe());
+            utils::Path const settingsPath =
+                    screenshotPath.getParent() + (screenshotPath.getNameWithoutExtension() + ".json");
+            JsonSerializer serializer;
+            std::string const json = serializer.writeJson(settings) + "\n";
+            filament::app::AssetWriter const* writer = app->filamentApp->getAssetWriter();
+            if (!writer ||
+                    !writer->write(settingsPath, reinterpret_cast<uint8_t const*>(json.data()),
+                            json.size())) {
+                std::cerr << "Failed to write settings to " << settingsPath << std::endl;
+                exit(1);
+            }
+        }
+
         createGroundPlane(engine, scene, app.get());
         createOverdrawVisualizerEntities(engine, scene, app.get());
 
@@ -704,14 +803,8 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                 }
             }
 
-            const ImVec4 yellow(1.0f,1.0f,0.0f,1.0f);
-
-            if (!app->notificationText.empty()) {
-                ImGui::TextColored(yellow, "Picked %s", app->notificationText.c_str());
-                ImGui::Spacing();
-            }
-
-            float const progress = app->resourceLoader->asyncGetLoadProgress();
+            float const progress = app->resourcesLoadedSynchronously
+                    ? 1.0f : app->resourceLoader->asyncGetLoadProgress();
             if (progress < 1.0) {
                 ImGui::ProgressBar(progress);
             } else {
@@ -723,49 +816,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
             // when in batch mode. This is useful when a human is observing progress.
             const int flags = automation.isBatchModeEnabled() ? ImGuiTreeNodeFlags_DefaultOpen : 0;
 
-            if (ImGui::CollapsingHeader("Automation", flags)) {
-                ImGui::Indent();
-
-                if (automation.isRunning()) {
-                    ImGui::TextColored(yellow, "Test case %zu / %zu",
-                            automation.currentTest(), automation.testCount());
-                } else {
-                    ImGui::TextColored(yellow, "%zu test cases", automation.testCount());
-                }
-
-                auto options = automation.getOptions();
-
-                ImGui::PushItemWidth(150);
-                ImGui::SliderFloat("Sleep (seconds)", &options.sleepDuration, 0.0, 5.0);
-                ImGui::PopItemWidth();
-
-                // Hide the tooltip during automation to avoid photobombing the screenshot.
-                if (ImGui::IsItemHovered() && !automation.isRunning()) {
-                    ImGui::SetTooltip("Specifies the amount of time to sleep between test cases.");
-                }
-
-                ImGui::Checkbox("Export screenshot for each test", &options.exportScreenshots);
-                ImGui::Checkbox("Export settings JSON for each test", &options.exportSettings);
-
-                automation.setOptions(options);
-
-                if (automation.isRunning()) {
-                    if (ImGui::Button("Stop batch test")) {
-                        automation.stopRunning();
-                    }
-                } else if (ImGui::Button("Run batch test")) {
-                    automation.startRunning();
-                }
-
-                if (ImGui::Button("Export view settings")) {
-                    AutomationEngine::exportSettings(app->viewer->getSettings(), "settings.json");
-                    app->messageBoxText = utils::CString(automation.getStatusMessage());
-                    ImGui::OpenPopup("MessageBox");
-                }
-                ImGui::Unindent();
-            }
-
-            if (ImGui::CollapsingHeader("Stats")) {
+            if (ImGui::CollapsingHeader("Scene Stats")) {
                 ImGui::Indent();
                 ImGui::Text("%zu entities in the asset", app->asset->getEntityCount());
                 ImGui::Text("%zu renderables (excluding UI)", scene->getRenderableCount());
@@ -837,6 +888,20 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                     }
                 }
 
+                // this needs the motion vectors to be enabled in the View options
+                if (bool* displayMotionVectors =
+                        debug.getPropertyAddress<bool>("d.renderer.display_motion_vectors")) {
+                    ImGui::Checkbox("Display Motion Vectors", displayMotionVectors);
+                    if (*displayMotionVectors) {
+                        ImGui::Indent();
+                        debugSliderFloat("scale##motion_vectors",
+                                "d.renderer.display_motion_vectors_scale", 1.0f, 100.0f);
+                        debugCheckbox("Object motion only",
+                                "d.renderer.display_motion_vectors_object_only");
+                        ImGui::Unindent();
+                    }
+                }
+
                 bool cameraFrustum = app->filamentApp->isCameraFrustumEnabled();
                 ImGui::Checkbox("Show Camera Frustum", &cameraFrustum);
                 app->filamentApp->setCameraFrustumEnabled(cameraFrustum);
@@ -898,6 +963,53 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                 view->setVisibleLayers(overdrawVisibilityBit,
                         (uint8_t)visualizeOverdraw << App::Scene::OVERDRAW_VISIBILITY_LAYER);
                 app->viewer->getSettings().view.stencilBufferEnabled = visualizeOverdraw;
+            }
+
+            if (ImGui::CollapsingHeader("Automation", flags)) {
+                ImGui::Indent();
+
+                if (automation.isRunning()) {
+                    ImGui::Text("Test case %zu / %zu",
+                            automation.currentTest(), automation.testCount());
+                } else {
+                    ImGui::Text("%zu test cases", automation.testCount());
+                }
+
+                auto options = automation.getOptions();
+
+                ImGui::PushItemWidth(150);
+                ImGui::SliderFloat("Sleep (seconds)", &options.sleepDuration, 0.0, 5.0);
+                ImGui::PopItemWidth();
+
+                // Hide the tooltip during automation to avoid photobombing the screenshot.
+                if (ImGui::IsItemHovered() && !automation.isRunning()) {
+                    ImGui::SetTooltip("Specifies the amount of time to sleep between test cases.");
+                }
+
+                ImGui::Checkbox("Export screenshot for each test", &options.exportScreenshots);
+                ImGui::Checkbox("Export settings JSON for each test", &options.exportSettings);
+
+                automation.setOptions(options);
+
+                if (automation.isRunning()) {
+                    if (ImGui::Button("Stop batch test")) {
+                        automation.stopRunning();
+                    }
+                } else if (ImGui::Button("Run batch test")) {
+                    automation.startRunning();
+                }
+
+                if (ImGui::Button("Export view settings")) {
+                    AutomationEngine::exportSettings(app->viewer->getSettings(), "settings.json");
+                    app->messageBoxText = utils::CString(automation.getStatusMessage());
+                    ImGui::OpenPopup("MessageBox");
+                }
+                ImGui::Unindent();
+            }
+
+            if (!app->notificationText.empty()) {
+                ImGui::Text("Picked %s", app->notificationText.c_str());
+                ImGui::Spacing();
             }
 
             if (ImGui::BeginPopupModal("MessageBox", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -1005,7 +1117,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
     auto gui = [app](Engine*, View*) {
         app->viewer->updateUserInterface();
-
         app->filamentApp->setSidebarWidth(app->viewer->getSidebarWidth());
     };
 
@@ -1095,6 +1206,14 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         // FIXME: This applySettings() is done here instead of in AutomationEngine.cpp because
         // we need access to the Renderer, which AutomationEngine does not provide.
         applySettings(engine, app->viewer->getSettings().debug, renderer);
+
+        // Batch mode also applies the render settings, once per test. Only the frame rate options
+        // matter: the viewer settings above replace the clear options on every frame in both
+        // paths. The Renderer is not available during setup, so this happens on the first frame.
+        if (app->deterministicCapture && !app->renderSettingsApplied) {
+            renderer->setFrameRateOptions(app->viewer->getSettings().render.frameRateOptions);
+            app->renderSettingsApplied = true;
+        }
 
         // technically we don't need to do this each frame
         auto& tcm = engine->getTransformManager();

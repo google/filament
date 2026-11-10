@@ -48,7 +48,8 @@ size_t ZstdHelper::getDecodedSize(const void* src, size_t src_size) noexcept {
 }
 
 size_t ZstdHelper::decompress(void* dst, size_t dst_size, const void* src, size_t src_size) noexcept {
-    return ZSTD_decompress(dst, dst_size, src, src_size);
+    size_t const res = ZSTD_decompress(dst, dst_size, src, src_size);
+    return ZSTD_isError(res) ? 0 : res;
 }
 
 } // namespace filament

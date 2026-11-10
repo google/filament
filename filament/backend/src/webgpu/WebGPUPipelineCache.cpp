@@ -121,6 +121,8 @@ int32_t depthBiasRound(float depthBias) {
         case BlendFunction::ONE_MINUS_DST_ALPHA: return wgpu::BlendFactor::OneMinusDstAlpha;
         case BlendFunction::SRC_ALPHA_SATURATE:  return wgpu::BlendFactor::SrcAlphaSaturated;
     }
+    // should never happen
+    return wgpu::BlendFactor::One;
 }
 
 }  // namespace
@@ -194,12 +196,11 @@ void WebGPUPipelineCache::populateKey(RenderPipelineRequest const& request,
         outKey.colorFormats[colorIndex] = request.colorFormats[colorIndex];
     }
     // vertex buffers...
-    for (WebGPUVertexBufferInfo::WebGPUSlotBindingInfo const& vertexBufferSlot:
-            request.vertexBufferSlots) {
-        assert_invariant(vertexBufferSlot.sourceBufferIndex < MAX_VERTEX_BUFFER_COUNT);
-        outKey.vertexBuffers[vertexBufferSlot.sourceBufferIndex].stride = vertexBufferSlot.stride;
-        outKey.vertexBuffers[vertexBufferSlot.sourceBufferIndex].offset =
-                vertexBufferSlot.bufferOffset;
+    assert_invariant(request.vertexBufferSlots.size() <= MAX_VERTEX_BUFFER_COUNT);
+    for (size_t slotIndex{ 0 }; slotIndex < request.vertexBufferSlots.size(); slotIndex++) {
+        outKey.vertexBuffers[slotIndex].stride =
+                static_cast<uint32_t>(request.vertexBufferLayouts[slotIndex].arrayStride);
+        outKey.vertexBuffers[slotIndex].offset = request.vertexBufferSlots[slotIndex].bufferOffset;
     }
     // vertex attributes...
     uint8_t currentAttributeIndex{ 0 };
@@ -215,7 +216,7 @@ void WebGPUPipelineCache::populateKey(RenderPipelineRequest const& request,
             };
             outKey.vertexAttributes[currentAttributeIndex].bufferIndex = bufferIndex;
             outKey.vertexAttributes[currentAttributeIndex].offset =
-                    static_cast<uint8_t>(vertexAttribute.offset);
+                    static_cast<uint16_t>(vertexAttribute.offset);
             outKey.vertexAttributes[currentAttributeIndex].shaderLocation =
                     static_cast<uint8_t>(vertexAttribute.shaderLocation);
             outKey.vertexAttributes[currentAttributeIndex].format = vertexAttribute.format;
@@ -342,18 +343,13 @@ wgpu::RenderPipeline WebGPUPipelineCache::createRenderPipeline(
             .dstFactor = toWebGPU(request.rasterState.blendFunctionDstAlpha)
         }
     };
-    // According to the WebGPU spec, a pipeline cannot have a fragment stage with zero color
-    // targets. This situation can arise in Filament during depth-only passes (like shadow map
-    // generation) if the material variant still includes a fragment shader.
-    //
-    // To handle this, we check if any color targets are configured for this pipeline. If not, we
-    // create a pipeline *without* a fragment stage. This makes the pipeline valid for a
-    // depth-only pass, allowing depth writes to proceed correctly.
+    // Keep the fragment stage for depth-only passes when one was supplied. Such shaders can
+    // write frag_depth or discard fragments even though they have no color targets.
 
     // Note that this needs to be defined in the same scope as the CreateRenderpipeline call
     std::array<wgpu::ColorTargetState, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT> colorTargets {};
 
-    if (request.fragmentShaderModule != nullptr && request.colorFormatCount > 0) {
+    if (request.fragmentShaderModule != nullptr) {
         fragmentState.module = request.fragmentShaderModule;
         fragmentState.entryPoint = "main";
         // see the comment about constants for the vertex state, as the same reasoning applies

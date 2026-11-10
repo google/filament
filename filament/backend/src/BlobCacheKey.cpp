@@ -16,20 +16,56 @@
 
 #include "BlobCacheKey.h"
 
+#include <backend/Program.h>
+
+#include <utils/Hash.h>
+
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <functional>
 #include <memory>
+#include <string_view>
+#include <type_traits>
+#include <variant>
 
 namespace filament::backend {
 
+uint64_t BlobCacheKey::computeProgramId(Program const& program) noexcept {
+    // Each stage is hashed separately and combined in order, so stage boundaries matter.
+    std::hash<std::string_view> const hasher;
+    size_t h = 0;
+    auto const& sources = program.getShadersSource();
+    for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
+        auto const& source = sources[i];
+        h = utils::hash::combine(h,
+                hasher({ reinterpret_cast<char const*>(source.data()), source.size() }));
+    }
+    return h;
+}
+
 struct BlobCacheKey::Key {
+    // The key is hashed/compared as raw bytes by the platform blob cache, so its
+    // object representation must be fully deterministic (no padding, no unused bytes).
+    // This is why we can't store Program::SpecializationConstant (a std::variant) directly.
+    struct Entry {
+        uint32_t type;      // index of the active variant alternative
+        uint32_t value;     // bool as 0/1, other alternatives as their raw 32 bits
+    };
     uint64_t id;
-    Program::SpecializationConstant constants[];
+    Entry constants[];
 };
 
 BlobCacheKey::BlobCacheKey() noexcept = default;
 
 BlobCacheKey::BlobCacheKey(uint64_t id,
         BlobCacheKey::SpecializationConstants const& specConstants) {
-    mSize = sizeof(Key) + sizeof(Key::constants[0]) * specConstants.size();
+    static_assert(std::has_unique_object_representations_v<Key::Entry>,
+            "BlobCacheKey bytes are hashed/compared directly; no padding allowed");
+    static_assert(sizeof(Key) == sizeof(uint64_t),
+            "BlobCacheKey::Key must not have padding");
+
+    mSize = sizeof(Key) + sizeof(Key::Entry) * specConstants.size();
 
     Key* const pKey = (Key *)malloc(mSize);
     memset(pKey, 0, mSize);
@@ -37,7 +73,21 @@ BlobCacheKey::BlobCacheKey(uint64_t id,
 
     mData->id = id;
     for (size_t i = 0; i < specConstants.size(); i++) {
-        mData->constants[i] = specConstants[i];
+        auto const& sc = specConstants[i];
+        Key::Entry& entry = mData->constants[i];
+        entry.type = uint32_t(sc.index());
+        // Encode explicitly so the layout doesn't depend on endianness, and require every
+        // non-bool alternative to be exactly 32 bits so new types must pick an encoding.
+        std::visit([&entry](auto v) {
+            using T = decltype(v);
+            if constexpr (std::is_same_v<T, bool>) {
+                entry.value = v ? 1u : 0u;
+            } else {
+                static_assert(sizeof(T) == sizeof(entry.value),
+                        "new SpecializationConstant types need an explicit encoding");
+                std::memcpy(&entry.value, &v, sizeof(v));
+            }
+        }, sc);
     }
 }
 

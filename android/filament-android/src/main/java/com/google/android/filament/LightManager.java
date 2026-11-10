@@ -26,6 +26,8 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.Size;
 
+import com.google.android.filament.proguard.UsedByNative;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
@@ -292,7 +294,8 @@ public class LightManager {
          * Whether this light casts light (enabled by default)
          *
          * <p>In some situations it can be useful to have a light in the scene that doesn't
-         * actually emit light, but does cast shadows.</p>
+         * actually emit light, but does cast shadows. To cast shadows with light casting
+         * disabled, you need to use the material {@code shadowMultiplier} property.</p>
          *
          * @param enable Enables or disables lighting from this Light.
          *
@@ -1162,37 +1165,65 @@ public class LightManager {
     }
     /** Control the quality / performance of the shadow map associated to this light */
     public static class ShadowOptions {
+        @UsedByNative("LightManager.cpp")
         @IntRange(from = 0)
-        public int mapSize;
+        public int mapSize = 1024;
+        @UsedByNative("LightManager.cpp")
         @IntRange(from = 0)
-        public int shadowCascades;
-        private float mCascadeSplitPositions0;
-        private float mCascadeSplitPositions1;
-        private float mCascadeSplitPositions2;
-        public float constantBias;
-        public float normalBias;
-        public float shadowFar;
-        public float shadowNearHint;
-        public float shadowFarHint;
-        public boolean stable;
-        public boolean lispsm;
-        public float polygonOffsetConstant;
-        public float polygonOffsetSlope;
-        public boolean screenSpaceContactShadows;
+        public int shadowCascades = 1;
+        @UsedByNative("LightManager.cpp")
+        private float mCascadeSplitPositions0 = 0.125f;
+        @UsedByNative("LightManager.cpp")
+        private float mCascadeSplitPositions1 = 0.25f;
+        @UsedByNative("LightManager.cpp")
+        private float mCascadeSplitPositions2 = 0.50f;
+        @UsedByNative("LightManager.cpp")
+        public float constantBias = 0.001f;
+        @UsedByNative("LightManager.cpp")
+        public float normalBias = 1.0f;
+        @UsedByNative("LightManager.cpp")
+        public float shadowFar = 0.0f;
+        @UsedByNative("LightManager.cpp")
+        public float shadowNearHint = 1.0f;
+        @UsedByNative("LightManager.cpp")
+        public float shadowFarHint = 100.0f;
+        @UsedByNative("LightManager.cpp")
+        public boolean stable = false;
+        @UsedByNative("LightManager.cpp")
+        public boolean lispsm = true;
+        @UsedByNative("LightManager.cpp")
+        public float polygonOffsetConstant = 0.5f;
+        @UsedByNative("LightManager.cpp")
+        public float polygonOffsetSlope = 2.0f;
+        @UsedByNative("LightManager.cpp")
+        public boolean screenSpaceContactShadows = false;
+        @UsedByNative("LightManager.cpp")
         @IntRange(from = 0)
-        public int stepCount;
-        public float maxShadowDistance;
-        private boolean mVsmElvsm;
-        private float mVsmBlurWidth;
-        public float shadowBulbRadius;
-        private float mTransformX;
-        private float mTransformY;
-        private float mTransformZ;
-        private float mTransformW;
-        public float penumbraScale;
-        public float penumbraRatioScale;
-        public float maxPenumbraRatio;
-        public float maxSearchRadius;
+        public int stepCount = 8;
+        @UsedByNative("LightManager.cpp")
+        public float maxShadowDistance = 0.3f;
+        @UsedByNative("LightManager.cpp")
+        private boolean mVsmElvsm = false;
+        @UsedByNative("LightManager.cpp")
+        private float mVsmBlurWidth = 0.0f;
+        @UsedByNative("LightManager.cpp")
+        public float shadowBulbRadius = -1.0f;
+        @UsedByNative("LightManager.cpp")
+        private float mTransformX = 0.0f;
+        @UsedByNative("LightManager.cpp")
+        private float mTransformY = 0.0f;
+        @UsedByNative("LightManager.cpp")
+        private float mTransformZ = 0.0f;
+        @UsedByNative("LightManager.cpp")
+        private float mTransformW = 1.0f;
+        @UsedByNative("LightManager.cpp")
+        public float penumbraScale = 1.0f;
+        @UsedByNative("LightManager.cpp")
+        public float penumbraRatioScale = 1.0f;
+        @UsedByNative("LightManager.cpp")
+        public float maxPenumbraRatio = 0.0f;
+        @UsedByNative("LightManager.cpp")
+        public float maxSearchRadius = 0.0f;
 
         public ShadowOptions() {
         }
@@ -1542,8 +1573,8 @@ public class LightManager {
          * @see View#setShadowType
          */
         public static class Vsm {
-            public boolean elvsm;
-            public float blurWidth;
+            public boolean elvsm = false;
+            public float blurWidth = 0.0f;
 
             public Vsm() {
             }

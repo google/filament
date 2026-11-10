@@ -3,7 +3,11 @@
 # AmbientOcclusion
 
 [main]\
-enum [AmbientOcclusion](index.md)
+enum [~~AmbientOcclusion~~](index.md)---
+
+### Deprecated
+
+---
 
 List of available ambient occlusion techniques
 
@@ -15,8 +19,8 @@ use AmbientOcclusionOptions::enabled instead
 
 | | |
 |---|---|
-| [NONE](-n-o-n-e/index.md) | [main]<br>[NONE](-n-o-n-e/index.md)<br>No Ambient Occlusion |
-| [SSAO](-s-s-a-o/index.md) | [main]<br>[SSAO](-s-s-a-o/index.md)<br>Basic, sampling SSAO |
+| [NONE](-n-o-n-e/index.md) | [main]<br>[~~NONE~~](-n-o-n-e/index.md)<br>No Ambient Occlusion |
+| [SSAO](-s-s-a-o/index.md) | [main]<br>[~~SSAO~~](-s-s-a-o/index.md)<br>Basic, sampling SSAO |
 
 ## Functions
 

@@ -22,6 +22,7 @@
 #include <backend/Handle.h>
 
 #include <utils/bitset.h>
+#include <utils/compiler.h>
 #include <utils/FixedCapacityVector.h>
 
 #include <stddef.h>
@@ -57,11 +58,12 @@ public:
     }
 
     bool isValid(backend::descriptor_binding_t const binding) const noexcept {
-        return mSamplers[binding] || mUniformBuffers[binding];
+        return binding < utils::bitset64::BIT_COUNT &&
+                (mSamplers[binding] || mUniformBuffers[binding]);
     }
 
     bool isSampler(backend::descriptor_binding_t const binding) const noexcept {
-        return mSamplers[binding];
+        return binding < utils::bitset64::BIT_COUNT && mSamplers[binding];
     }
 
     utils::bitset64 getValidDescriptors() const noexcept {
@@ -78,6 +80,10 @@ public:
 
     backend::DescriptorType getDescriptorType(
         backend::descriptor_binding_t const binding) const noexcept {
+        if (UTILS_VERY_UNLIKELY(!isValid(binding) || binding >= mDescriptorTypes.size())) {
+            // Return INPUT_ATTACHMENT as a sentinel since neither isBuffer() nor isSampler() is true.
+            return backend::DescriptorType::INPUT_ATTACHMENT;
+        }
         return mDescriptorTypes[binding];
     }
 

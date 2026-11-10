@@ -29,6 +29,7 @@
 #include <utils/Slice.h>
 #include <utils/tribool.h>
 
+#include <chrono>
 #include <functional>
 #include <initializer_list>
 #include <optional>
@@ -464,6 +465,25 @@ public:
          * invoking asynchronous methods.
          */
         AsynchronousMode asynchronousMode = AsynchronousMode::NONE;
+
+        /**
+         * Per-frame time budget for queued asynchronous operations.
+         *
+         * It applies when they run on the backend thread (AsynchronousMode::AMORTIZATION, or
+         * THREAD_PREFERRED falling back to it). It is the elapsed time on the backend
+         * thread, measured with std::chrono::steady_clock, so time the thread spends preempted
+         * counts too.
+         *
+         * The operations run in Renderer::endFrame(), after the frame's own commands, and in
+         * Renderer::skipFrame(). A frame skipped because Renderer::beginFrame() returned false
+         * runs none, since the GPU is already behind. Each Renderer gets its own budget per frame,
+         * and so does each Renderer::renderStandaloneView() call.
+         *
+         * One operation always runs per frame, even with a budget of 0, so the queue keeps moving.
+         * An operation that starts within the budget runs to completion, so a frame can go over
+         * by up to one operation.
+         */
+        std::chrono::nanoseconds asynchronousFrameBudget = std::chrono::milliseconds(2);
 
         /**
          * Capacity of the LRU cache for material definitions.
@@ -1449,8 +1469,8 @@ public:
     /**
      * Asynchronously ensures that the variants of the specified Material needed to render it
      * in the provided View are compiled. This takes into account the view's features
-     * (e.g. dynamic lighting, fog, stereo, shadowing), alongside the specified shadow receiver
-     * and skinning configurations.
+     * (e.g. dynamic lighting, fog, stereo, shadowing, motion vectors), alongside the specified
+     * shadow receiver and skinning configurations.
      *
      * After issuing several Engine::compile() calls in a row, it is recommended to call
      * Engine::flush() such that the backend can start the compilation work as soon as possible.

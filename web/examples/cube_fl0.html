@@ -53,7 +53,8 @@
     class App {
       constructor(canvas, options) {
         this.canvas = canvas;
-        const config = backend ? {} : { forceGLES2Context: true };
+        const isWebGPU = options.backend === Filament.Backend.WEBGPU;
+        const config = isWebGPU ? {} : { forceGLES2Context: true };
         const engine = this.engine = Filament.Engine.create(this.canvas, options, config);
         console.log("Engine Config forceGLES2Context:", engine.getConfig().forceGLES2Context);
         this.scene = engine.createScene();

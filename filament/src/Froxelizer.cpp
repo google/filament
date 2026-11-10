@@ -58,6 +58,7 @@
 #include <cmath>
 #include <functional>
 #include <limits>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -144,8 +145,7 @@ View::FroxelConfigurationInfo Froxelizer::getFroxelConfigurationInfo() const noe
 }
 
 Froxelizer::Froxelizer(FEngine& engine)
-    : mArena("froxel", PER_FROXELDATA_ARENA_SIZE),
-      mZLightNear(FROXEL_FIRST_SLICE_DEPTH_DEFAULT),
+    : mZLightNear(FROXEL_FIRST_SLICE_DEPTH_DEFAULT),
       mZLightFar(FROXEL_LAST_SLICE_DISTANCE_DEFAULT),
       mUserZLightNear(FROXEL_FIRST_SLICE_DEPTH_DEFAULT),
       mUserZLightFar(FROXEL_LAST_SLICE_DISTANCE_DEFAULT) {
@@ -183,6 +183,7 @@ Froxelizer::~Froxelizer() {
 
 void Froxelizer::terminate(DriverApi& driverApi) noexcept {
     resetLocalArena();
+    mArena.reset();
 
     if (mRecordsBuffer) {
         driverApi.destroyBufferObject(mRecordsBuffer);
@@ -416,7 +417,7 @@ bool Froxelizer::update() noexcept {
         uint16_t froxelCountX, froxelCountY, froxelCountZ;
         computeFroxelLayout(&froxelDimension, &froxelCountX, &froxelCountY, &froxelCountZ,
                 getFroxelBufferEntryCount(), viewport);
-        const uint32_t froxelCount = uint32_t(froxelCountX * froxelCountY * froxelCountZ);
+        const uint32_t froxelCount = uint32_t(froxelCountX) * froxelCountY * froxelCountZ;
 
         mFroxelDimension = froxelDimension;
         // note: because froxelDimension is a power-of-two and viewport is an integer, mClipFroxel
@@ -429,18 +430,20 @@ bool Froxelizer::update() noexcept {
         DLOG(INFO) << "Froxel: " << viewport.width << "x" << viewport.height << " / "
                    << froxelDimension.x << "x" << froxelDimension.y << io::endl
                    << "Froxel: " << froxelCountX << "x" << froxelCountY << "x" << froxelCountZ
-                   << " = " << (froxelCountX * froxelCountY * froxelCountZ) << " ("
-                   << getFroxelBufferEntryCount() - froxelCountX * froxelCountY * froxelCountZ
+                   << " = " << froxelCount << " ("
+                   << getFroxelBufferEntryCount() - froxelCount
                    << " lost)";
 
         if (mDistancesZ) {
             resetLocalArena();
+        } else if (UTILS_UNLIKELY(!mArena.has_value())) {
+            mArena.emplace("froxel", PER_FROXELDATA_ARENA_SIZE);
         }
 
-        mDistancesZ      = mArena.alloc<float>(froxelCountZ + 1);
-        mPlanesX         = mArena.alloc<float4>(froxelCountX + 1);
-        mPlanesY         = mArena.alloc<float4>(froxelCountY + 1);
-        mBoundingSpheres = mArena.alloc<float4>(froxelCount);
+        mDistancesZ      = mArena->alloc<float>(froxelCountZ + 1);
+        mPlanesX         = mArena->alloc<float4>(froxelCountX + 1);
+        mPlanesY         = mArena->alloc<float4>(froxelCountY + 1);
+        mBoundingSpheres = mArena->alloc<float4>(froxelCount);
         mFroxelCountX = froxelCountX;
         mFroxelCountY = froxelCountY;
         mFroxelCountZ = froxelCountZ;
@@ -556,15 +559,18 @@ bool Froxelizer::update() noexcept {
 
 UTILS_NOINLINE
 void Froxelizer::resetLocalArena() noexcept {
-    mArena.free(mDistancesZ, (mFroxelCountZ + 1) * sizeof(float));
-    mArena.free(mPlanesX, (mFroxelCountX + 1) * sizeof(float4));
-    mArena.free(mPlanesY, (mFroxelCountY + 1) * sizeof(float4));
-    mArena.free(mBoundingSpheres, mFroxelCount * sizeof(float4));
-    mArena.reset();
-    mBoundingSpheres = nullptr;
-    mPlanesY = nullptr;
-    mPlanesX = nullptr;
-    mDistancesZ = nullptr;
+    if (mDistancesZ) {
+        assert_invariant(mArena.has_value());
+        mArena->free(mDistancesZ, (mFroxelCountZ + 1) * sizeof(float));
+        mArena->free(mPlanesX, (mFroxelCountX + 1) * sizeof(float4));
+        mArena->free(mPlanesY, (mFroxelCountY + 1) * sizeof(float4));
+        mArena->free(mBoundingSpheres, mFroxelCount * sizeof(float4));
+        mArena->reset();
+        mBoundingSpheres = nullptr;
+        mPlanesY = nullptr;
+        mPlanesX = nullptr;
+        mDistancesZ = nullptr;
+    }
 }
 
 Froxel Froxelizer::getFroxelAt(size_t const x, size_t const y, size_t const z) const noexcept {
@@ -642,7 +648,7 @@ void Froxelizer::froxelizeLights(FEngine& engine,
         auto const& recordBufferUser(mRecordBufferUser);
         auto gpuFroxelEntries(mFroxelBufferUser);
         gpuFroxelEntries.set(gpuFroxelEntries.begin(),
-                mFroxelCountX * mFroxelCountY * mFroxelCountZ);
+                size_t(mFroxelCountX) * mFroxelCountY * mFroxelCountZ);
         for (auto const& entry : gpuFroxelEntries) {
             // go through every light for that froxel
             for (size_t i = 0; i < entry.count(); i++) {
@@ -799,7 +805,8 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
         FroxelEntry entry{ offset, uint8_t(b.lights.count()) };
         const size_t lightCount = entry.count();
 
-        if (UTILS_UNLIKELY(offset + lightCount >= mFroxelRecordBufferEntryCount)) {
+        if (UTILS_UNLIKELY(lightCount >= mFroxelRecordBufferEntryCount ||
+                offset >= mFroxelRecordBufferEntryCount - lightCount)) {
             // DLOG(INFO) << "out of space: " << i << ", at " << offset;
             // note: instead of dropping froxels we could look for similar records we've already
             // filed up.

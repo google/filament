@@ -42,3 +42,13 @@ By default, the script respects the `--gtest_filter` arguments defined in `test_
 ```bash
 ./test/filament-unit-test/test.sh -f
 ```
+
+## Tests that render
+
+Some of the tests in `test_filament`, such as `RenderingTest`, render with the platform's default backend: Vulkan on Linux and Metal on macOS. On a Linux machine without a GPU, Vulkan needs Mesa's software driver, lavapipe, which is what the CI uses. On Debian and Ubuntu, install it with:
+
+```bash
+sudo apt-get install mesa-vulkan-drivers
+```
+
+In a build with sanitizers (`./build.sh -b`), LeakSanitizer reports what some of Mesa's Vulkan drivers still reference from their globals as leaked, once the Vulkan loader unloads them. `test.sh` sets `VK_LOADER_DISABLE_DYNAMIC_LIBRARY_UNLOADING=1` to keep them loaded; set it too when you run such a build of `test_filament` directly.

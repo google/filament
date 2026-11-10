@@ -274,8 +274,8 @@ public class DeprecatedTest {
     @Deprecated
     public static class LegacyOptions {
         @Deprecated
-        public float legacyScale;
-        public boolean enabled;
+        public float legacyScale = 1.0f;
+        public boolean enabled = true;
 
         public LegacyOptions() {
         }

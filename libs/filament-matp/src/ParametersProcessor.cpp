@@ -1324,13 +1324,13 @@ static Status processVariantFilter(MaterialBuilder& builder, const JsonishValue&
     using filament::Variant;
     static const std::unordered_map<std::string_view, filament::UserVariantFilterBit> strToEnum  = [] {
         std::unordered_map<std::string_view, filament::UserVariantFilterBit> strToEnum;
-        strToEnum["directionalLighting"]    = filament::UserVariantFilterBit::DIRECTIONAL_LIGHTING;
         strToEnum["shadowReceiver"]         = filament::UserVariantFilterBit::SHADOW_RECEIVER;
         strToEnum["skinning"]               = filament::UserVariantFilterBit::SKINNING;
         strToEnum["vsm"]                    = filament::UserVariantFilterBit::VSM;
         strToEnum["fog"]                    = filament::UserVariantFilterBit::FOG;
         strToEnum["ssr"]                    = filament::UserVariantFilterBit::SSR;
         strToEnum["stereo"]                 = filament::UserVariantFilterBit::STE;
+        strToEnum["motionVectors"]          = filament::UserVariantFilterBit::MOTION_VECTORS;
         return strToEnum;
     }();
 
@@ -1349,9 +1349,9 @@ static Status processVariantFilter(MaterialBuilder& builder, const JsonishValue&
         }
 
         const std::string& s = elementValue->toJsonString()->getString();
-        // TODO: dynamicLighting bit is removed 26/07/2. Remove by 26/8/31
-        if (s == "dynamicLighting") {
-            std::cerr << "Warning: dynamicLighting variant filter is deprecated and ignored." << std::endl;
+        // TODO: directionalLighting bit is removed 2026-09-21. Remove by 2026-12-31.
+        if (s == "directionalLighting") {
+            std::cerr << "Warning: directionalLighting variant filter is deprecated and ignored." << std::endl;
             continue;
         }
         if (!isStringValidEnum(strToEnum, s)) {
@@ -1371,7 +1371,12 @@ static Status processUseDefaultDepthVariant(MaterialBuilder& builder, const Json
     if (value.toJsonBool()->getBool()) {
         builder.useDefaultDepthVariant();
     }
-    return Status::ok();;
+    return Status::ok();
+}
+
+static Status processIsDefaultMaterial(MaterialBuilder& builder, const JsonishValue& value) {
+    builder.isDefaultMaterial(value.toJsonBool()->getBool());
+    return Status::ok();
 }
 
 ParametersProcessor::ParametersProcessor() {
@@ -1423,6 +1428,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["groupSize"]                     = { &processGroupSizes, Type::ARRAY };
     mParameters["stereoscopicType"]              = { &processStereoscopicType, Type::STRING };
     mParameters["useDefaultDepthVariant"]        = { &processUseDefaultDepthVariant, Type::BOOL };
+    mParameters["isDefaultMaterial"]             = { &processIsDefaultMaterial, Type::BOOL };
     mParameters["linearFog"]                     = { &processLinearFog, Type::BOOL };
     mParameters["shadowFarAttenuation"]          = { &processShadowFarAttenuation, Type::BOOL };
     mParameters["apiLevel"]                      = { &processApiLevel, Type::NUMBER };

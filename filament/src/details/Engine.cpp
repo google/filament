@@ -153,6 +153,7 @@ Platform::DriverConfig getDriverConfig(FEngine* instance) {
         .asynchronousMode = instance->features.backend.enable_asynchronous_operation
                                     ? instance->getConfig().asynchronousMode
                                     : AsynchronousMode::NONE,
+        .asynchronousFrameBudget = instance->getConfig().asynchronousFrameBudget,
     };
     return driverConfig;
 }
@@ -368,6 +369,9 @@ uint32_t FEngine::getJobSystemThreadPoolSize(Config const& config) noexcept {
     int threadCount = int(std::thread::hardware_concurrency()) - 2;
     // make sure we have at least 1 thread though
     threadCount = std::max(1, threadCount);
+    // Leave one slot for the thread that calls Engine::create(), which adopts itself into the
+    // JobSystem.
+    threadCount = std::min(threadCount, int(JobSystem::MAX_THREADS - 1));
     return threadCount;
 }
 
@@ -390,6 +394,9 @@ void FEngine::init() {
     LOG(INFO) << "Backend feature level: " << int(driverApi.getFeatureLevel());
     LOG(INFO) << "FEngine feature level: " << int(mActiveFeatureLevel);
 
+    // the object motion vectors pass renders into an RG16F color target
+    mIsRG16FColorRenderTargetSupported =
+            driverApi.isRenderTargetFormatSupported(TextureFormat::RG16F);
 
     mResourceAllocatorDisposer = std::make_shared<TextureCacheDisposer>(driverApi);
 
@@ -823,10 +830,13 @@ void FEngine::gc() {
     mTransformManager.gc();
     mCameraManager.gc(*this);
     mRenderableManager.gc(getDriverApi());
+    mScenes.forEach([](FScene* scene) {
+        scene->gc();
+    });
 
-    // Because the managers just updated their watermarks to the current epoch,
-    // advanceEpoch() will see the highest possible safe threshold, allowing
-    // it to reclaim the maximum amount of global IDs this frame.
+    // Because the managers just drained their pending destructions and updated their watermarks
+    // to the latest harvested epoch, advanceEpoch() will see the highest possible safe threshold,
+    // allowing it to reclaim the maximum amount of global IDs this frame.
     mEntityManager.advanceEpoch();
 
     if (asyncJob) {
@@ -898,9 +908,9 @@ bool FEngine::flushAndWait(uint64_t const timeout) {
         status = fence->wait(FFence::Mode::FLUSH, timeout);
         destroy(fence);
     } else {
-        // When executing in a single-threaded (e.g. wasm) environment, fence would
-        // fail. Instead, directly execute the outstanding commands.
-        execute();
+        // Without threads nothing could signal a fence, so run the commands here instead.
+        // flush() executes them, finish() included, before it returns.
+        flush();
     }
 
     // finally, execute callbacks that might have been scheduled
@@ -1275,30 +1285,39 @@ bool FEngine::isValid(const T* ptr, ResourceList<T> const& list) const {
     return l.find(ptr) != l.end();
 }
 
+UTILS_NOINLINE
+static void logDoubleFree(void const* ptr, const char* mangledName) {
+#if UTILS_HAS_RTTI
+    auto const typeName = CallStack::demangleTypeName(mangledName);
+    const char* const typeNameCStr = typeName.c_str();
+#else
+    (void) mangledName;
+    const char* const typeNameCStr = "<no-rtti>";
+#endif
+    ASSERT_PRECONDITION_NON_FATAL(false,
+            "Object %s at %p doesn't exist (double free?)", typeNameCStr, ptr);
+}
+
 template<typename T>
 UTILS_ALWAYS_INLINE
 bool FEngine::terminateAndDestroy(const T* ptr, ResourceList<T>& list) {
     if (ptr == nullptr) return true;
-    bool const success = list.remove(ptr);
-
+    if (UTILS_UNLIKELY(!list.remove(ptr))) {
 #if UTILS_HAS_RTTI
-    auto typeName = CallStack::typeName<T>();
-    const char * const typeNameCStr = typeName.c_str();
+        logDoubleFree(ptr, typeid(T).name());
 #else
-    const char * const typeNameCStr = "<no-rtti>";
+        logDoubleFree(ptr, nullptr);
 #endif
-
-    if (ASSERT_PRECONDITION_NON_FATAL(success,
-            "Object %s at %p doesn't exist (double free?)", typeNameCStr, ptr)) {
-
-        T* p = const_cast<T*>(ptr);
-
-        // Terminate the backend resources immediately as they're unnecessary from this point. The
-        // frontend object itself may have to outlive this call, see destroyOrDeferFrontendObject().
-        p->terminate(*this);
-        destroyOrDeferFrontendObject(p);
+        return false;
     }
-    return success;
+
+    T* p = const_cast<T*>(ptr);
+
+    // Terminate the backend resources immediately as they're unnecessary from this point. The
+    // frontend object itself may have to outlive this call, see destroyOrDeferFrontendObject().
+    p->terminate(*this);
+    destroyOrDeferFrontendObject(p);
+    return true;
 }
 
 
@@ -1769,8 +1788,8 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
         tribool const shadowReceiver,
         tribool const skinning) noexcept {
 
-    // the maximum possible is 6 variants (4 color + 2 depth)
-    auto variants = FixedCapacityVector<Variant>::with_capacity(6);
+    // the maximum possible is 8 variants (4 color + 2 depth + 2 motion vectors)
+    auto variants = FixedCapacityVector<Variant>::with_capacity(8);
 
     // apply() iteratively expands the `variants` vector by mutating existing elements
     // in-place if `value` is determinate, or by duplicating them if `value` is indeterminate.
@@ -1802,9 +1821,6 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
     // isMaterialLit means shading != Shading::UNLIT || hasShadowMultiplier;
     const bool isMaterialLit = material->getDefinition().isVariantLit;
     Variant baseVariant{};
-    // TODO: Remove this after DIR is fully transferred to spec constant
-    baseVariant.setDirectionalLighting(false);
-    baseVariant.setFog(view->hasFog());
     baseVariant.setShadowSampler2D(isMaterialLit && view->hasShadowing() && (view->getShadowType() != ShadowType::PCF));
     baseVariant.setStereo(view->hasStereo());
 
@@ -1839,6 +1855,19 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
         apply(depthStart, skinning, &Variant::setSkinning);
     }
 
+    // Use the options-derived state rather than isMotionVectorsActive(), which is only latched
+    // by prepare(): warm-up typically happens before the first frame. Only materials without a
+    // motion vectors program are skipped: they're always drawn depth-only in the motion vectors
+    // pass (see RenderPass). Translucent ones aren't, since their instances can write depth.
+    if (view->evaluateMotionVectorsActive(material->getEngine()) &&
+            material->hasMotionVectorsVariant()) {
+        Variant motionVectorsVariant{ Variant::DEPTH_VARIANT };
+        motionVectorsVariant.setMotionVectors(true);
+        size_t const motionVectorsStart = variants.size();
+        variants.push_back(motionVectorsVariant);
+        apply(motionVectorsStart, skinning, &Variant::setSkinning);
+    }
+
     return variants;
 }
 
@@ -1851,6 +1880,9 @@ FixedCapacityVector<DynamicSpecConstKey> FEngine::getMaterialCompileDynamicSpecC
     baseKey.setDynamicLighting(isMaterialLit && view->hasDynamicLighting());
     baseKey.setExtraDirectionalLights(isMaterialLit && view->hasExtraDirectionalLights());
     baseKey.setDirectionalLighting(isMaterialLit && view->hasDirectionalLighting());
+    // Note: fog can also be disabled per renderable (RenderableManager::setFogEnabled()); like
+    // the variant-based precompile before it, we only precompile the view-level choice here.
+    baseKey.setFog(view->hasFog());
 
     keys.push_back(baseKey);
 

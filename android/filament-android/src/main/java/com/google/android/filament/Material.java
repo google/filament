@@ -159,15 +159,33 @@ public class Material {
     public static class UserVariantFilterBit {
         private UserVariantFilterBit() {}
 
-        /** Directional lighting */
+        /**
+         * Directional lighting
+         *
+         * <p>Since directional lighting was migrated to specialization constants, filtering this bit
+         * no longer affects the size of offline compiled materials (.filamat). However, we keep it
+         * for pruning unnecessary pipeline compilations at runtime.</p>
+         */
         public static final int DIRECTIONAL_LIGHTING = 0x1;
-        /** Dynamic lighting */
+        /**
+         * Dynamic lighting
+         *
+         * <p>Since dynamic lighting was migrated to specialization constants, filtering this bit
+         * no longer affects the size of offline compiled materials (.filamat). However, we keep it
+         * for pruning unnecessary pipeline compilations at runtime.</p>
+         */
         public static final int DYNAMIC_LIGHTING = 0x2;
         /** Shadow receiver */
         public static final int SHADOW_RECEIVER = 0x4;
         /** Skinning */
         public static final int SKINNING = 0x8;
-        /** Fog */
+        /**
+         * Fog
+         *
+         * <p>Since fog was migrated to specialization constants, filtering this bit no longer
+         * removes shader variants. It removes the fog code (and its sampler) from offline compiled
+         * materials (.filamat), and prevents fog specializations from being compiled at runtime.</p>
+         */
         public static final int FOG = 0x10;
         /** Variance shadow maps */
         public static final int VSM = 0x20;
@@ -175,7 +193,9 @@ public class Material {
         public static final int SSR = 0x40;
         /** Instanced stereo rendering */
         public static final int STE = 0x80;
-        public static final int ALL = 0xFF;
+        /** Motion vectors */
+        public static final int MOTION_VECTORS = 0x100;
+        public static final int ALL = 0x1FF;
     }
 
     /** Refraction */
@@ -1189,16 +1209,25 @@ public class Material {
     }
     /** Holds information about a material parameter. */
     public static class ParameterInfo {
+        @UsedByNative("Material.cpp")
         public String name;
+        @UsedByNative("Material.cpp")
         public boolean isSampler;
+        @UsedByNative("Material.cpp")
         public boolean isSubpass;
+        @UsedByNative("Material.cpp")
         public ParameterType type;
+        @UsedByNative("Material.cpp")
         public SamplerType samplerType;
+        @UsedByNative("Material.cpp")
         public SubpassType subpassType;
+        @UsedByNative("Material.cpp")
         @IntRange(from = 0)
         public int count;
+        @UsedByNative("Material.cpp")
         public Precision precision;
 
+        @UsedByNative("Material.cpp")
         public ParameterInfo() {
         }
 

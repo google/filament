@@ -38,6 +38,9 @@ clean.doFirst {
 android {
     namespace 'com.google.android.filament.cppviewer'
     compileSdk versions.compileSdk
+    // The native code links against Filament's static libraries, so it must use the same NDK
+    // (and therefore the same libc++) that build.sh used to compile them.
+    ndkVersion versions.ndk
 
     defaultConfig {
         applicationId "com.google.android.filament.cppviewer"

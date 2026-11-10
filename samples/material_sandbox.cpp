@@ -19,7 +19,6 @@
 #include "common/arguments.h"
 
 #include <filamentapp/AssetLoader.h>
-#include <filamentapp/DesktopAssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 #include <filamentapp/IBL.h>
 #include <filamentapp/MeshAssimp.h>
@@ -73,16 +72,18 @@ struct App {
 Scene* g_scene = nullptr;
 
 std::unique_ptr<MeshAssimp> g_meshSet;
-filament::app::AssetLoader* g_assetLoader = nullptr;
-std::map<utils::CString, MaterialInstance*> g_meshMaterialInstances;
+app::AssetLoader* g_assetLoader = nullptr;
+std::map<CString, MaterialInstance*> g_meshMaterialInstances;
 SandboxParameters g_params;
 ColorGradingOptions g_lastColorGradingOptions;
 ColorGrading* g_colorGrading = nullptr;
 SampleConfig g_config;
 FilamentApp2* g_filamentApp = nullptr;
+int g_sidebarWidth = 440;
 
 bool g_shadowPlane = false;
 bool g_singleMode = false;
+bool g_hideUi = true;
 float g_meshScale = 1.0f;
 float g_rangePlot[1024 * 3];
 float g_curvePlot[1024 * 3];
@@ -319,6 +320,13 @@ MaterialInstance* updateInstances(SandboxParameters& params) {
         materialInstance->setParameter("secondRoughnessWeight", params.secondRoughnessWeight);
         materialInstance->setParameter("sheenColor", RgbType::sRGB, params.sheenColor);
         materialInstance->setParameter("sheenRoughness", params.sheenRoughness);
+        materialInstance->setParameter("iridescence", params.iridescence);
+        materialInstance->setParameter("iridescenceIor", params.iridescenceIor);
+        materialInstance->setParameter("iridescenceThickness", params.iridescenceThickness);
+        materialInstance->setParameter("retroreflection", params.retroreflection);
+        materialInstance->setParameter("diffuseTransmission", params.diffuseTransmission);
+        materialInstance->setParameter("diffuseTransmissionColor",
+                RgbType::sRGB, params.diffuseTransmissionColor);
         materialInstance->setParameter("clearCoat", params.clearCoat);
         materialInstance->setParameter("clearCoatRoughness", params.clearCoatRoughness);
         materialInstance->setParameter("anisotropy", params.anisotropy);
@@ -327,13 +335,15 @@ MaterialInstance* updateInstances(SandboxParameters& params) {
             materialInstance->setParameter("alpha", params.alpha);
         }
 
-        if  (hasRefraction) {
+        if (hasRefraction) {
             float3 color = Color::toLinear(params.transmittanceColor);
             materialInstance->setParameter("absorption",
                     Color::absorptionAtDistance(color, params.distance));
             materialInstance->setParameter("ior", params.ior);
             materialInstance->setParameter("transmission", params.transmission);
-            materialInstance->setParameter("dispersion", params.dispersion);
+            if (params.currentBlending == BLENDING_SOLID_REFRACTION) {
+                materialInstance->setParameter("dispersion", params.dispersion);
+            }
             materialInstance->setParameter("thickness", params.thickness);
         }
     }
@@ -413,8 +423,8 @@ float getRangePlotValue(const int series, void* data, const int index) {
     return static_cast<float*>(data)[series * 1024 + index];
 }
 
-inline float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highlightScale) {
-    float3 d = 1.0f / (pow(midPoint, shadowGamma - 1.0f));
+float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highlightScale) {
+    float3 d = 1.0f / pow(midPoint, shadowGamma - 1.0f);
     float3 dark = pow(v, shadowGamma) * d;
     float3 light = highlightScale * (v - midPoint) + midPoint;
     return float3{
@@ -456,10 +466,18 @@ void popSliderColors() { ImGui::PopStyleColor(4); }
 
 void gui(Engine* engine, View*) {
     auto& params = g_params;
+    ImGui::GetStyle().WindowRounding = 0;
     ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f));
-    ImGui::Begin("Parameters");
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+
+    const float width = ImGui::GetIO().DisplaySize.x;
+    const float height = ImGui::GetIO().DisplaySize.y;
+    ImGui::SetNextWindowSize(ImVec2(g_sidebarWidth, height), ImGuiCond_Once);
+    ImGui::SetNextWindowSizeConstraints(ImVec2(20, height), ImVec2(width, height));
+
+    ImGui::Begin("Filament", nullptr, ImGuiWindowFlags_NoTitleBar);
     {
-        if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::CollapsingHeader("Material", !g_hideUi ? ImGuiTreeNodeFlags_DefaultOpen : 0)) {
             ImGui::Indent();
             ImGui::Combo("Model", &params.currentMaterialModel,
                     "Unlit\0Lit\0Subsurface\0Cloth\0Specular glossiness\0\0");
@@ -468,6 +486,8 @@ void gui(Engine* engine, View*) {
                 ImGui::Combo("Blending", &params.currentBlending,
                         "Opaque\0Transparent\0Fade\0Thin refraction\0Solid refraction\0\0");
             }
+
+            ImGui::SeparatorText("Base Layer");
 
             ImGui::ColorEdit3("Base color", &params.color.r);
 
@@ -496,53 +516,79 @@ void gui(Engine* engine, View*) {
                 }
 
                 if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH &&
+                        params.currentMaterialModel != MATERIAL_MODEL_SUBSURFACE) {
+                    ImGui::SliderFloat("Anisotropy", &params.anisotropy, -1.0f, 1.0f);
+                }
+
+                if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH &&
                     params.currentMaterialModel != MATERIAL_MODEL_SUBSURFACE &&
                     params.currentMaterialModel != MATERIAL_MODEL_SPECGLOSS) {
-                    ImGui::SliderFloat("2nd Roughness", &params.secondRoughness, 0.0f, 1.0f);
-                    ImGui::SliderFloat("2nd Roughness Weight", &params.secondRoughnessWeight, 0.0f, 1.0f);
+                    ImGui::SeparatorText("Secondary Specular Lobe");
+                    ImGui::SliderFloat("Weight##roughness2Weight", &params.secondRoughnessWeight, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Roughness##roughness2", &params.secondRoughness, 0.0f, 1.0f);
                 }
 
                 if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH &&
                         params.currentMaterialModel != MATERIAL_MODEL_SUBSURFACE) {
-                    ImGui::ColorEdit3("Sheen color", &params.sheenColor.r);
-                    ImGui::SliderFloat("Sheen roughness", &params.sheenRoughness, 0.0f, 1.0f);
-                    ImGui::SliderFloat("Clear coat", &params.clearCoat, 0.0f, 1.0f);
-                    ImGui::SliderFloat("Clear coat roughness", &params.clearCoatRoughness, 0.0f, 1.0f);
-                    ImGui::SliderFloat("Anisotropy", &params.anisotropy, -1.0f, 1.0f);
+                    ImGui::SeparatorText("Sheen Layer");
+                    ImGui::ColorEdit3("Color##sheenColor", &params.sheenColor.r);
+                    ImGui::SliderFloat("Roughness##sheenRoughness", &params.sheenRoughness, 0.0f, 1.0f);
+                    if (params.currentMaterialModel != MATERIAL_MODEL_SPECGLOSS) {
+                        ImGui::SeparatorText("Iridescence");
+                        ImGui::SliderFloat("Weight##iridescenceWeight", &params.iridescence, 0.0f, 1.0f);
+                        ImGui::SliderFloat("IOR##iridescenceIor", &params.iridescenceIor, 1.0f, 3.0f);
+                        ImGui::SliderFloat("Thickness##iridescenceThickness",
+                                &params.iridescenceThickness, 0.0f, 2000.0f);
+                        ImGui::SeparatorText("Retroreflection");
+                        ImGui::SliderFloat("Weight##retroreflectionWeight", &params.retroreflection, 0.0f, 1.0f);
+                        ImGui::SeparatorText("Diffuse Transmission");
+                        ImGui::SliderFloat("Weight##diffuseTransmissionWeight",
+                                &params.diffuseTransmission, 0.0f, 1.0f);
+                        ImGui::ColorEdit3("Color##diffuseTransmissionColor",
+                                &params.diffuseTransmissionColor.r);
+                    }
+                    ImGui::SeparatorText("Clear Coat Layer");
+                    ImGui::SliderFloat("Weight##clearCoatWeight", &params.clearCoat, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Roughness##clearCoatRoughness", &params.clearCoatRoughness, 0.0f, 1.0f);
                 }
 
                 if (params.currentMaterialModel == MATERIAL_MODEL_SUBSURFACE) {
-                    ImGui::SliderFloat("Thickness", &params.thickness, 0.0f, 1.0f);
-                    ImGui::SliderFloat("Subsurface power", &params.subsurfacePower, 1.0f, 24.0f);
-                    ImGui::ColorEdit3("Subsurface color", &params.subsurfaceColor.r);
+                    ImGui::SeparatorText("Subsurface Layer");
+                    ImGui::SliderFloat("Thickness##subsurfaceThickness", &params.thickness, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Power##subsurfacePower", &params.subsurfacePower, 1.0f, 24.0f);
+                    ImGui::ColorEdit3("Color##subsurfaceColor", &params.subsurfaceColor.r);
                 }
 
                 if (params.currentMaterialModel == MATERIAL_MODEL_CLOTH) {
-                    ImGui::ColorEdit3("Sheen color", &params.sheenColor.r);
-                    ImGui::ColorEdit3("Subsurface color", &params.subsurfaceColor.r);
+                    ImGui::ColorEdit3("Sheen color##sheenColor", &params.sheenColor.r);
+                    ImGui::ColorEdit3("Subsurface color##subsurfaceColor", &params.subsurfaceColor.r);
                 }
 
                 if (hasRefraction) {
-                    ImGui::SliderFloat("IOR", &params.ior, 1.0f, 3.0f);
-                    ImGui::SliderFloat("Transmission", &params.transmission, 0.0f, 1.0f);
-                    ImGui::SliderFloat("Dispersion", &params.dispersion, 0.0f, 5.0f);
-                    ImGui::SliderFloat("Thickness", &params.thickness, 0.0f, 1.0f);
-                    ImGui::ColorEdit3("Transmittance", &params.transmittanceColor.r);
-                    ImGui::SliderFloat("Distance", &params.distance, 0.0f, 4.0f);
-                    ImGui::Checkbox("Screen space refraction", &params.ssr);
+                    ImGui::SeparatorText("Refraction");
+                    ImGui::SliderFloat("IOR##refractionIor", &params.ior, 1.0f, 3.0f);
+                    ImGui::SliderFloat("Transmission##refractionTransmission", &params.transmission, 0.0f, 1.0f);
+                    if (params.currentBlending == BLENDING_SOLID_REFRACTION) {
+                        ImGui::SliderFloat("Dispersion##refractionDispersion", &params.dispersion, 0.0f, 5.0f);
+                    }
+                    ImGui::SliderFloat("Thickness##refractionThickness", &params.thickness, 0.0f, 1.0f);
+                    ImGui::ColorEdit3("Transmittance##refractionTransmittance", &params.transmittanceColor.r);
+                    ImGui::SliderFloat("Distance##refractionDistance", &params.distance, 0.0f, 4.0f);
+                    ImGui::Checkbox("Screen-space##refractionSsr", &params.ssr);
                 }
             }
 
-            ImGui::ColorEdit3("Emissive color", &params.emissiveColor.r);
-            ImGui::SliderFloat("Emissive EV", &params.emissiveEV, -24.0f, 24.0f);
-            ImGui::SliderFloat("Exposure weight", &params.emissiveExposureWeight, 0.0f, 1.0f);
+            ImGui::SeparatorText("Emissive Layer");
+            ImGui::ColorEdit3("Color##emissiveColor", &params.emissiveColor.r);
+            ImGui::SliderFloat("EV##emissiveEV", &params.emissiveEV, -24.0f, 24.0f);
+            ImGui::SliderFloat("Exposure weight##emissiveExposureWeight", &params.emissiveExposureWeight, 0.0f, 1.0f);
             ImGui::Unindent();
         }
 
         if (ImGui::CollapsingHeader("Shading AA")) {
             ImGui::Indent();
-            ImGui::SliderFloat("Variance", &params.specularAntiAliasingVariance, 0.0f, 1.0f);
-            ImGui::SliderFloat("Threshold", &params.specularAntiAliasingThreshold, 0.0f, 1.0f);
+            ImGui::SliderFloat("Variance##specularAntiAliasingVariance", &params.specularAntiAliasingVariance, 0.0f, 1.0f);
+            ImGui::SliderFloat("Threshold##specularAntiAliasingThreshold", &params.specularAntiAliasingThreshold, 0.0f, 1.0f);
             ImGui::Unindent();
         }
 
@@ -577,13 +623,13 @@ void gui(Engine* engine, View*) {
                 ImGui::Checkbox("Enabled##ssao", &params.ssaoOptions.enabled);
                 ImGui::SliderFloat("Radius", &params.ssaoOptions.radius, 0.05f, 5.0f);
                 ImGui::SliderFloat("Bias", &params.ssaoOptions.bias, 0.0f, 0.01f, "%.6f");
-                ImGui::SliderFloat("Min Horizon angle", &params.ssaoOptions.minHorizonAngleRad, 0.0f, M_PI_4, "%.6f");
+                ImGui::SliderFloat("Min horizon angle", &params.ssaoOptions.minHorizonAngleRad, 0.0f, M_PI_4, "%.6f");
                 ImGui::SliderFloat("Intensity", &params.ssaoOptions.intensity, 0.0f, 4.0f);
                 ImGui::SliderFloat("Power", &params.ssaoOptions.power, 0.0f, 4.0f);
                 ImGui::SliderInt("Quality", &quality, 0, 3);
-                ImGui::SliderInt("Low Pass", &lowpass, 0, 2);
-                ImGui::SliderFloat("Bilateral Threshold", &params.ssaoOptions.bilateralThreshold, 0.0f, 0.5f);
-                ImGui::Checkbox("Bent Normals", &params.ssaoOptions.bentNormals);
+                ImGui::SliderInt("Low pass", &lowpass, 0, 2);
+                ImGui::SliderFloat("Bilateral threshold", &params.ssaoOptions.bilateralThreshold, 0.0f, 0.5f);
+                ImGui::Checkbox("Bent normals", &params.ssaoOptions.bentNormals);
                 ImGui::Checkbox("High quality upsampling", &upsampling);
 // Can be used to debug SSAO
 //                ImGui::SliderInt("SampleCount",
@@ -604,13 +650,13 @@ void gui(Engine* engine, View*) {
                     int rayCount = params.ssaoOptions.ssct.rayCount;
                     ImGui::Checkbox("Enabled##dls", &params.ssaoOptions.ssct.enabled);
                     ImGui::SliderFloat("Cone angle", &params.ssaoOptions.ssct.lightConeRad, 0.0f, M_PI_2);
-                    ImGui::SliderFloat("Shadow Distance", &params.ssaoOptions.ssct.shadowDistance, 0.0f, 10.0f);
-                    ImGui::SliderFloat("Contact dist max", &params.ssaoOptions.ssct.contactDistanceMax, 0.0f, 100.0f);
+                    ImGui::SliderFloat("Shadow distance", &params.ssaoOptions.ssct.shadowDistance, 0.0f, 10.0f);
+                    ImGui::SliderFloat("Contact max distance", &params.ssaoOptions.ssct.contactDistanceMax, 0.0f, 100.0f);
                     ImGui::SliderFloat("Intensity##dls", &params.ssaoOptions.ssct.intensity, 0.0f, 10.0f);
                     ImGui::SliderFloat("Depth bias", &params.ssaoOptions.ssct.depthBias, 0.0f, 1.0f);
                     ImGui::SliderFloat("Depth slope bias", &params.ssaoOptions.ssct.depthSlopeBias, 0.0f, 1.0f);
-                    ImGui::SliderInt("Sample Count", &sampleCount, 1, 32);
-                    ImGui::SliderInt("Ray Count", &rayCount, 1, 8);
+                    ImGui::SliderInt("Sample count", &sampleCount, 1, 32);
+                    ImGui::SliderInt("Ray count", &rayCount, 1, 8);
                     ImGuiExt::DirectionWidget("Direction##dls", params.ssaoOptions.ssct.lightDirection.v);
                     params.ssaoOptions.ssct.sampleCount = sampleCount;
                     params.ssaoOptions.ssct.rayCount = rayCount;
@@ -654,9 +700,9 @@ void gui(Engine* engine, View*) {
             ImGui::SliderFloat("Start", &params.fogOptions.distance, 0.0f, 100.0f);
             ImGui::SliderFloat("Density", &params.fogOptions.density, 0.0f, 1.0f);
             ImGui::SliderFloat("Height", &params.fogOptions.height, 0.0f, 100.0f);
-            ImGui::SliderFloat("Height Falloff", &params.fogOptions.heightFalloff, 0.0f, 10.0f);
-            ImGui::SliderFloat("Scattering Start", &params.fogOptions.inScatteringStart, 0.0f, 100.0f);
-            ImGui::SliderFloat("Scattering Size", &params.fogOptions.inScatteringSize, 0.1f, 100.0f);
+            ImGui::SliderFloat("Height falloff", &params.fogOptions.heightFalloff, 0.0f, 10.0f);
+            ImGui::SliderFloat("Scattering start", &params.fogOptions.inScatteringStart, 0.0f, 100.0f);
+            ImGui::SliderFloat("Scattering size", &params.fogOptions.inScatteringSize, 0.1f, 100.0f);
             ImGui::Checkbox("Color from IBL", &params.fogOptions.fogColorFromIbl);
             ImGui::ColorPicker3("Color", params.fogOptions.color.v);
             ImGui::Unindent();
@@ -863,6 +909,7 @@ void gui(Engine* engine, View*) {
             ImGui::Unindent();
         }
     }
+    g_sidebarWidth = ImGui::GetWindowWidth();
     ImGui::End();
 
     MaterialInstance* materialInstance = updateInstances(params);
@@ -997,22 +1044,28 @@ void preRender(Engine* engine, View* view, Scene*, Renderer* renderer) {
 } // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
-        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+        app::DisplayManager* dm, app::AssetLoader* loader) {
     auto app = std::make_shared<App>();
     g_config = config;
     g_assetLoader = loader;
     g_shadowPlane = config.getBool("shadow-plane");
     g_singleMode = config.getBool("single-mode");
+    g_hideUi = config.getBool("hide-ui");
     config.dirt = config.getString("dirt");
     g_meshScale = config.getFloat("scale", 1.0f);
     app->config = config;
 
     g_params.bloomOptions.enabled = true;
 
+    auto appUI = [app](Engine* engine, View* view) {
+        gui(engine, view);
+        app->filamentApp->setSidebarWidth(g_sidebarWidth);
+    };
+
     auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
-                        .imgui(gui)
+                        .imgui(appUI)
                         .preRender(preRender)
                         .build();
     app->filamentApp = fApp.get();
@@ -1027,6 +1080,7 @@ samples::SampleParameters createAppParameters() {
         samples::Parameter::makeBool("single-mode", 'n', "Single object mode", false),
         samples::Parameter::makeString("dirt", 'd', "Path to a dirt texture", ""),
         samples::Parameter::makeFloat("scale", 's', "Applies uniform scale", 1.0f),
+        samples::Parameter::makeBool("hide-ui", '\0', "Hide the UI by default", false)
     };
 }
 

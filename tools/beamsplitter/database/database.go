@@ -69,8 +69,9 @@ func (defn StructDefinition) QualifiedName() string  { return defn.qualifier + d
 func (defn StructDefinition) Parent() TypeDefinition { return defn.parent }
 
 type EnumValue struct {
-	Description string
-	Name        string
+	Description   string
+	Name          string
+	ExplicitValue string
 }
 
 type EnumDefinition struct {
@@ -290,9 +291,14 @@ func (context *gatherContext) gatherTypeDefinitions(node parse.Node, prefix stri
 			parent:      parent,
 		}
 		for i, val := range concrete.Values {
+			explicitVal := ""
+			if i < len(concrete.ExplicitValues) {
+				explicitVal = concrete.ExplicitValues[i]
+			}
 			defn.Values[i] = EnumValue{
-				Name:        val,
-				Description: context.getDescription(int(concrete.ValueLines[i])),
+				Name:          val,
+				ExplicitValue: explicitVal,
+				Description:   context.getDescription(int(concrete.ValueLines[i])),
 			}
 		}
 		context.definitions = append(context.definitions, defn)

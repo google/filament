@@ -69,10 +69,10 @@ struct App {
     FilamentApp2* filamentApp = nullptr;
 };
 
-static const char* MODEL_FILE = "assets/models/monkey/monkey.obj";
-static const char* TEXTURE_NORMAL = "assets/models/monkey/normal.png";
-static const char* TEXTURE_BASECOLOR = "assets/models/monkey/color.png";
-static const char* TEXTURE_ROUGHNESS = "assets/models/monkey/roughness.png";
+static const char* MODEL_FILE = "assets/models/cloth/cloth.obj";
+static const char* TEXTURE_NORMAL = "textures/Striped_cotton_01/Striped_cotton_01_Normal.png";
+static const char* TEXTURE_BASECOLOR = "textures/Striped_cotton_01/Striped_cotton_01_Color.png";
+static const char* TEXTURE_ROUGHNESS = "textures/Striped_cotton_01/Striped_cotton_01_Roughness.png";
 static const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
 
 } // namespace

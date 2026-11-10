@@ -20,11 +20,17 @@
 #include <cgltf.h>
 #include <tsl/robin_map.h>
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 
 #ifndef GLTFIO_DRACO_SUPPORTED
 #define GLTFIO_DRACO_SUPPORTED 0
 #endif
+
+namespace draco {
+class Mesh;
+} // namespace draco
 
 namespace filament::gltfio {
 
@@ -57,6 +63,7 @@ private:
 class DracoMesh {
 public:
     static DracoMesh* decode(const uint8_t* compressedData, size_t compressedSize);
+    static DracoMesh* createForTest(draco::Mesh* mesh, uint32_t numFacesOverride = 0);
     bool getFaceIndices(cgltf_accessor* destination) const;
     bool getVertexAttributes(uint32_t attributeId, cgltf_accessor* destination) const;
     ~DracoMesh();

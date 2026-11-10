@@ -470,6 +470,8 @@ constexpr /* inline */ GLenum getInternalFormat(TextureFormat const format) noex
         case TextureFormat::R8I:               return GL_R8I;
 
         // 16-bits per element
+        case TextureFormat::R16:               return GL_R16;
+        case TextureFormat::R16_SNORM:         return GL_R16_SNORM;
         case TextureFormat::R16F:              return GL_R16F;
         case TextureFormat::R16UI:             return GL_R16UI;
         case TextureFormat::R16I:              return GL_R16I;
@@ -488,6 +490,8 @@ constexpr /* inline */ GLenum getInternalFormat(TextureFormat const format) noex
         case TextureFormat::R32F:              return GL_R32F;
         case TextureFormat::R32UI:             return GL_R32UI;
         case TextureFormat::R32I:              return GL_R32I;
+        case TextureFormat::RG16:              return GL_RG16;
+        case TextureFormat::RG16_SNORM:        return GL_RG16_SNORM;
         case TextureFormat::RG16F:             return GL_RG16F;
         case TextureFormat::RG16UI:            return GL_RG16UI;
         case TextureFormat::RG16I:             return GL_RG16I;
@@ -502,6 +506,8 @@ constexpr /* inline */ GLenum getInternalFormat(TextureFormat const format) noex
         case TextureFormat::DEPTH32F_STENCIL8: return GL_DEPTH32F_STENCIL8;
 
         // 48-bits per element
+        case TextureFormat::RGB16:             return GL_RGB16;
+        case TextureFormat::RGB16_SNORM:       return GL_RGB16_SNORM;
         case TextureFormat::RGB16F:            return GL_RGB16F;
         case TextureFormat::RGB16UI:           return GL_RGB16UI;
         case TextureFormat::RGB16I:            return GL_RGB16I;
@@ -510,6 +516,8 @@ constexpr /* inline */ GLenum getInternalFormat(TextureFormat const format) noex
         case TextureFormat::RG32F:             return GL_RG32F;
         case TextureFormat::RG32UI:            return GL_RG32UI;
         case TextureFormat::RG32I:             return GL_RG32I;
+        case TextureFormat::RGBA16:            return GL_RGBA16;
+        case TextureFormat::RGBA16_SNORM:      return GL_RGBA16_SNORM;
         case TextureFormat::RGBA16F:           return GL_RGBA16F;
         case TextureFormat::RGBA16UI:          return GL_RGBA16UI;
         case TextureFormat::RGBA16I:           return GL_RGBA16I;
@@ -613,7 +621,7 @@ constexpr /* inline */ GLenum getInternalFormat(TextureFormat const format) noex
             return 0;
 #endif
 
-#if defined(GL_KHR_texture_compression_astc_hdr)
+#if defined(GL_KHR_texture_compression_astc_hdr) || defined(GL_KHR_texture_compression_astc_ldr)
         case TextureFormat::RGBA_ASTC_4x4:     return GL_COMPRESSED_RGBA_ASTC_4x4_KHR;
         case TextureFormat::RGBA_ASTC_5x4:     return GL_COMPRESSED_RGBA_ASTC_5x4_KHR;
         case TextureFormat::RGBA_ASTC_5x5:     return GL_COMPRESSED_RGBA_ASTC_5x5_KHR;

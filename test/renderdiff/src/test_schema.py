@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import os
 import struct
 import sys
@@ -376,6 +377,117 @@ class TestSchemaInvariants(unittest.TestCase):
             self.assertEqual(sample_cases[0].target_name, "hellotriangle")
             self.assertEqual(sample_cases[0].extra_args, ["--headless"])
 
+    def test_desktop_gltf_case_carries_nested_settings(self):
+        renderer = renderers.DesktopRenderer("desktop", "opengl", "/bin/gltf_viewer")
+        data = {
+            "name": "SettingsSuite",
+            "renderers": ["desktop-opengl"],
+            "tests": [
+                {
+                    "name": "Bloom",
+                    "gltf_test": {
+                        "models": ["Box"],
+                        "rendering": {"view.bloom.enabled": True}
+                    }
+                }
+            ]
+        }
+        cfg = test_config.RenderTestConfig(data)
+        cfg.tests[0].gltf_test.models_map = {"Box": "/models/Box.glb"}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cases = renderer._create_test_cases(cfg.tests[0], tmpdir)
+        self.assertEqual(json.loads(cases[0].settings_json), {"view": {"bloom": {"enabled": True}}})
+
+    def test_expand_dotted_keys(self):
+        rendering = {
+            "camera.focalLength": 35.0,
+            "view.bloom.enabled": True,
+            "view.dithering": "NONE",
+            "animation": {"enabled": True, "time": 0.5},
+            "lighting.lights": [{"type": "POINT"}],
+        }
+        self.assertEqual(test_config.expand_dotted_keys(rendering), {
+            "camera": {"focalLength": 35.0},
+            "view": {"bloom": {"enabled": True}, "dithering": "NONE"},
+            "animation": {"enabled": True, "time": 0.5},
+            "lighting": {"lights": [{"type": "POINT"}]},
+        })
+
+        # AutomationSpec applies keys in order and only touches the fields each one names, so a
+        # later key overrides an earlier one field by field.
+        self.assertEqual(
+            test_config.expand_dotted_keys(
+                {"animation": {"enabled": True, "time": 0.5}, "animation.time": 1.0}),
+            {"animation": {"enabled": True, "time": 1.0}})
+
+        # The expansion must not alias the test's own rendering dictionary.
+        source = {"animation": {"enabled": True}}
+        test_config.expand_dotted_keys(source)["animation"]["enabled"] = False
+        self.assertTrue(source["animation"]["enabled"])
+
+
+class TestModelVariant(unittest.TestCase):
+    """Tests the choice among glTF-Sample-Assets variants of a model."""
+
+    def setUp(self):
+        self._models = tempfile.TemporaryDirectory()
+        self.addCleanup(self._models.cleanup)
+        root = self._models.name
+        # Duck has several variants; Box has no quantized variant.
+        for rel in ("Duck/glTF-Binary/Duck.glb", "Duck/glTF/Duck.gltf",
+                    "Duck/glTF-Quantized/Duck.gltf", "Duck/glTF-Draco/Duck.gltf",
+                    "Box/glTF-Binary/Box.glb"):
+            file_path = os.path.join(root, rel)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            open(file_path, "w").close()
+        test_config._MODEL_SCAN_CACHE.clear()
+
+    def _suite(self, preset_gltf, test_gltf):
+        return {
+            "name": "VariantSuite",
+            "renderers": ["desktop-webgpu"],
+            "presets": [{"name": "base", "gltf_test": preset_gltf}],
+            "tests": [{"name": "T", "apply_presets": ["base"], "gltf_test": test_gltf}],
+        }
+
+    def _model_path(self, rel):
+        return os.path.join(self._models.name, rel)
+
+    def test_default_prefers_binary(self):
+        cfg = test_config.RenderTestConfig(self._suite(
+            {"model_search_paths": [self._models.name]}, {"models": ["Duck"]}))
+        self.assertEqual(cfg.tests[0].gltf_test.models_map["Duck"],
+                         self._model_path("Duck/glTF-Binary/Duck.glb"))
+
+    def test_explicit_variant(self):
+        cfg = test_config.RenderTestConfig(self._suite(
+            {"model_search_paths": [self._models.name]},
+            {"models": ["Duck"], "model_variant": "glTF-Quantized"}))
+        gltf = cfg.tests[0].gltf_test
+        self.assertEqual(gltf.model_variant, "glTF-Quantized")
+        self.assertEqual(gltf.models_map["Duck"],
+                         self._model_path("Duck/glTF-Quantized/Duck.gltf"))
+
+    def test_variant_inherited_from_preset(self):
+        cfg = test_config.RenderTestConfig(self._suite(
+            {"model_search_paths": [self._models.name], "model_variant": "glTF-Draco"},
+            {"models": ["Duck"]}))
+        self.assertEqual(cfg.tests[0].gltf_test.models_map["Duck"],
+                         self._model_path("Duck/glTF-Draco/Duck.gltf"))
+
+    def test_missing_variant_is_reported(self):
+        with self.assertRaises(AssertionError) as raised:
+            test_config.RenderTestConfig(self._suite(
+                {"model_search_paths": [self._models.name]},
+                {"models": ["Box"], "model_variant": "glTF-Quantized"}))
+        self.assertIn("glTF-Quantized", str(raised.exception))
+
+    def test_rejects_non_variant_name(self):
+        with self.assertRaises(AssertionError):
+            test_config.RenderTestConfig(self._suite(
+                {"model_search_paths": [self._models.name]},
+                {"models": ["Duck"], "model_variant": "Quantized"}))
+
 
 def _make_tiff(width: int, height: int, pixels: bytes, samples: int = 4) -> bytes:
     """Builds a minimal little-endian, uncompressed TIFF, matching what Filament writes."""
@@ -495,24 +607,22 @@ class TestWebRenderer(unittest.TestCase):
 
     def test_accepts_a_well_formed_render(self):
         renderer = self._renderer()
-        width, height = renderer.RENDER_WIDTH, renderer.RENDER_HEIGHT
+        width, height = 512, 512
         pixels = bytes((i * 7) % 251 for i in range(width * height * 4))
         self.assertIsNone(renderer._validate_tif(_make_tiff(width, height, pixels)))
 
-    def test_rejects_wrong_size(self):
-        # The image size depends on an empirically measured ImGui sidebar width, so it can drift
-        # silently. If it ever does, every golden would be rewritten; refuse instead.
+    def test_accepts_any_size(self):
+        # The image size follows gltf_viewer's sidebar width, which the harness does not predict.
+        # A size change is caught by diffimg against the golden, not here.
         renderer = self._renderer()
-        width, height = renderer.RENDER_WIDTH + 1, renderer.RENDER_HEIGHT
+        width, height = 482, 512
         pixels = bytes((i * 7) % 251 for i in range(width * height * 4))
-        problem = renderer._validate_tif(_make_tiff(width, height, pixels))
-        self.assertIsNotNone(problem)
-        self.assertIn('SIDEBAR_WIDTH', problem)
+        self.assertIsNone(renderer._validate_tif(_make_tiff(width, height, pixels)))
 
     def test_rejects_blank_render(self):
         # A correctly sized all-black image is the classic false pass.
         renderer = self._renderer()
-        width, height = renderer.RENDER_WIDTH, renderer.RENDER_HEIGHT
+        width, height = 512, 512
         problem = renderer._validate_tif(_make_tiff(width, height, bytes(width * height * 4)))
         self.assertIsNotNone(problem)
         self.assertIn('trivial', problem)
@@ -733,8 +843,8 @@ def main():
     loader = unittest.TestLoader()
     suite = unittest.TestSuite(
         loader.loadTestsFromTestCase(cls)
-        for cls in (TestSchemaInvariants, TestWebRenderer, TestGoldenDeletion,
-                    TestCompareScoping))
+        for cls in (TestSchemaInvariants, TestModelVariant, TestWebRenderer,
+                    TestGoldenDeletion, TestCompareScoping))
 
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)

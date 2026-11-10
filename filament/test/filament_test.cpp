@@ -17,6 +17,7 @@
 #include "Allocators.h"
 #include "Froxelizer.h"
 #include "MaterialParser.h"
+#include "RenderPrimitive.h"
 #include "UniformBuffer.h"
 
 #include "components/RenderableManager.h"
@@ -24,14 +25,19 @@
 
 #include "details/Camera.h"
 #include "details/Engine.h"
+#include "details/InstanceBuffer.h"
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
 #include "details/Renderer.h"
+#include "details/Scene.h"
+#include "details/SkinningBuffer.h"
 #include "details/View.h"
 
 #include <private/filament/BufferInterfaceBlock.h>
+#include <private/filament/UibStructs.h>
 
 #include <filament/Box.h>
+#include <filament/BufferObject.h>
 #include <filament/Camera.h>
 #include <filament/Color.h>
 #include <filament/ColorGrading.h>
@@ -40,13 +46,25 @@
 #include <filament/Engine.h>
 #include <filament/FrameHistoryStream.h>
 #include <filament/Frustum.h>
+#include <filament/IndexBuffer.h>
+#include <filament/InstanceBuffer.h>
+#include <filament/SkinningBuffer.h>
+#include <filament/SwapChain.h>
+#include <filament/Texture.h>
 #include <filament/ToneMapper.h>
+#include <filament/VertexBuffer.h>
+#include <filament/Viewport.h>
 
 #include <private/backend/BackendUtils.h>
 
+#include <backend/BufferDescriptor.h>
 #include <backend/DriverEnums.h>
 
+#include <utils/Entity.h>
+#include <utils/EntityManager.h>
+#include <utils/memalign.h>
 #include <utils/NameComponentManager.h>
+#include <utils/PagedArenaBitset.h>
 #include <utils/Slice.h>
 
 #include <math/half.h>
@@ -61,17 +79,24 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <initializer_list>
 #include <iostream>
 #include <limits>
 #include <random>
+#include <thread>
 #include <type_traits>
+#include <unordered_set>
 #include <utility>
 #include <vector>
+
+#include <stdint.h>
+#include <string.h>
 
 using namespace filament;
 using namespace filament::math;
@@ -195,18 +220,106 @@ TEST(FilamentTest, SkinningMath) {
 
 
     std::default_random_engine generator(82828); // NOLINT
-    std::uniform_real_distribution<float> const distribution(-4, 4);
-    std::uniform_real_distribution dangle(-f::TAU, f::TAU);
-    auto rand_gen = std::bind(distribution, generator);
+    std::uniform_real_distribution<float> distribution(-4.0f, 4.0f);
+    std::uniform_real_distribution<float> scale_dist(0.5f, 4.0f);
+    std::uniform_real_distribution<float> dangle(-f::TAU, f::TAU);
+    auto rand_gen = [&]() { return distribution(generator); };
+    auto rand_scale = [&]() {
+        float const s = scale_dist(generator);
+        return rand_gen() < 0.0f ? -s : s;
+    };
 
     for (size_t i = 0; i < 100; ++i) {
+        float3 axis{ rand_gen(), rand_gen(), rand_gen() };
+        if (length(axis) < 1e-3f) {
+            axis = float3{ 0.0f, 1.0f, 0.0f };
+        }
         m =
-                mat4f::translation(float3{rand_gen(), rand_gen(), rand_gen()}) *
-                mat4f::rotation(dangle(generator), normalize(float3{rand_gen(), rand_gen(), rand_gen()})) *
-                mat4f::scaling(float3{rand_gen(), rand_gen(), rand_gen()});
+                mat4f::translation(float3{ rand_gen(), rand_gen(), rand_gen() }) *
+                mat4f::rotation(dangle(generator), normalize(axis)) *
+                mat4f::scaling(float3{ rand_scale(), rand_scale(), rand_scale() });
         check(m, v);
     }
 }
+
+namespace filament {
+
+TEST(FilamentTest, Bones) {
+    EXPECT_EQ(FSkinningBuffer::getPhysicalBoneCount(0), 0u);
+    EXPECT_EQ(FSkinningBuffer::getPhysicalBoneCount(1), size_t(CONFIG_MAX_BONE_COUNT));
+    EXPECT_EQ(FSkinningBuffer::getPhysicalBoneCount(CONFIG_MAX_BONE_COUNT),
+            size_t(CONFIG_MAX_BONE_COUNT));
+    EXPECT_EQ(FSkinningBuffer::getPhysicalBoneCount(CONFIG_MAX_BONE_COUNT + 1),
+            size_t(2 * CONFIG_MAX_BONE_COUNT));
+
+    auto mulBoneVertex = [](PerRenderableBoneUib::BoneData const& bone, float3 v) -> float3 {
+        mat4f const t(
+                bone.transform[0],
+                bone.transform[1],
+                bone.transform[2],
+                float4{ 0.0f, 0.0f, 0.0f, 1.0f });
+        mat4f const m = transpose(t);
+        return v.x * m[0].xyz + (v.y * m[1].xyz + (v.z * m[2].xyz + m[3].xyz));
+    };
+
+    auto mulBoneNormal = [](PerRenderableBoneUib::BoneData const& bone, float3 n) -> float3 {
+        float const a = bone.transform[0][0];
+        float const b = bone.transform[0][1];
+        float const c = bone.transform[0][2];
+        float const d = bone.transform[1][0];
+        float const e = bone.transform[1][1];
+        float const f = bone.transform[1][2];
+        float const g = bone.transform[2][0];
+        float const h = bone.transform[2][1];
+        float const i = bone.transform[2][2];
+
+        mat3f cof;
+        cof[0] = bone.cof0;
+        cof[1] = float3{ bone.cof1x, a * i - c * g, c * d - a * f };
+        cof[2] = float3{ d * h - e * g, b * g - a * h, a * e - b * d };
+        return normalize(cof * n);
+    };
+
+    std::default_random_engine generator(82828); // NOLINT
+    std::uniform_real_distribution<float> distribution(-4.0f, 4.0f);
+    std::uniform_real_distribution<float> scale_dist(0.5f, 4.0f);
+    std::uniform_real_distribution<float> dangle(-f::TAU, f::TAU);
+    auto rand_gen = [&]() { return distribution(generator); };
+    auto rand_scale = [&]() {
+        float const s = scale_dist(generator);
+        return rand_gen() < 0.0f ? -s : s;
+    };
+
+    constexpr float3 v = { 1.0f, 2.0f, 3.0f };
+    float3 const n = normalize(float3{ 1.0f, -2.0f, 0.5f });
+
+    for (size_t i = 0; i < 100; ++i) {
+        float3 axis{ rand_gen(), rand_gen(), rand_gen() };
+        if (length(axis) < 1e-3f) {
+            axis = float3{ 0.0f, 1.0f, 0.0f };
+        }
+        mat4f const m =
+                mat4f::translation(float3{ rand_gen(), rand_gen(), rand_gen() }) *
+                mat4f::rotation(dangle(generator), normalize(axis)) *
+                mat4f::scaling(float3{ rand_scale(), rand_scale(), rand_scale() });
+
+        PerRenderableBoneUib::BoneData const bone = FSkinningBuffer::makeBone(m);
+
+        float3 const expectedPos = (m * float4{ v, 1.0f }).xyz;
+        float3 const actualPos = mulBoneVertex(bone, v);
+        EXPECT_NEAR(expectedPos.x, actualPos.x, 1e-5f);
+        EXPECT_NEAR(expectedPos.y, actualPos.y, 1e-5f);
+        EXPECT_NEAR(expectedPos.z, actualPos.z, 1e-5f);
+
+        float3 const expectedNormal = normalize(cof(m.upperLeft()) * n);
+        float3 const actualNormal = mulBoneNormal(bone, n);
+        EXPECT_NEAR(expectedNormal.x, actualNormal.x, 1e-5f);
+        EXPECT_NEAR(expectedNormal.y, actualNormal.y, 1e-5f);
+        EXPECT_NEAR(expectedNormal.z, actualNormal.z, 1e-5f);
+    }
+}
+
+} // namespace filament
 
 TEST(FilamentTest, TransformManagerSimple) {
     EntityManager& em = EntityManager::get();
@@ -259,23 +372,6 @@ TEST(FilamentTest, TransformManager) {
     EXPECT_EQ(tcm.getTransform(child), mat4f{ float4{ 1 }});
     EXPECT_EQ(tcm.getWorldTransform(child), mat4f{ float4{ 2 }});
 
-    // test local transaction
-    tcm.openLocalTransformTransaction();
-    tcm.setTransform(parent, mat4f{ float4{ 4 }});
-
-    // check the transforms ARE NOT propagated
-    EXPECT_EQ(tcm.getTransform(parent), mat4f{ float4{ 4 }});
-    EXPECT_EQ(tcm.getWorldTransform(parent), mat4f{ float4{ 2 }});
-    EXPECT_EQ(tcm.getTransform(child), mat4f{ float4{ 1 }});
-    EXPECT_EQ(tcm.getWorldTransform(child), mat4f{ float4{ 2 }});
-
-    tcm.commitLocalTransformTransaction();
-    // test propagation after closing the transaction
-    EXPECT_EQ(tcm.getTransform(parent), mat4f{ float4{ 4 }});
-    EXPECT_EQ(tcm.getWorldTransform(parent), mat4f{ float4{ 4 }});
-    EXPECT_EQ(tcm.getTransform(child), mat4f{ float4{ 1 }});
-    EXPECT_EQ(tcm.getWorldTransform(child), mat4f{ float4{ 4 }});
-
     //
     // test out-of-order parent/child
     //
@@ -291,19 +387,8 @@ TEST(FilamentTest, TransformManager) {
     // make sure child/parent are out of order (i.e.: setParent() doesn't invalidate instances)
     EXPECT_LT(tcm.getInstance(entities[1]), tcm.getInstance(entities[2]));
 
-    // local transaction reorders parent/child
     constexpr auto t = mat4::translation(double3(1.0 / 3.0));
-    tcm.openLocalTransformTransaction();
     tcm.setTransform(newParent, t);
-    tcm.commitLocalTransformTransaction();
-
-    // local transaction invalidates Instances
-    parent = tcm.getInstance(entities[0]);
-    child = tcm.getInstance(entities[1]);
-    newParent = tcm.getInstance(entities[2]);
-
-    // check parent / child order is correct
-    EXPECT_GT(child, newParent);
 
     // check transform propagation
 
@@ -327,7 +412,9 @@ TEST(FilamentTest, TransformManager) {
         c++;
     }
 
-    EXPECT_EQ(tcm.getChildrenEnd(parent)++, tcm.getChildrenEnd(parent));
+    auto endIt = tcm.getChildrenEnd(parent);
+    EXPECT_EQ(endIt++, tcm.getChildrenEnd(parent));
+    EXPECT_EQ(endIt, tcm.getChildrenEnd(parent));
     EXPECT_EQ(tcm.getChildrenBegin(parent), tcm.getChildrenEnd(parent));
     EXPECT_EQ(c, tcm.getChildCount(newParent));
 
@@ -573,28 +660,67 @@ TEST(FilamentTest, TransformManagerCallback) {
 
     callbackCount = 0;
 
-    // Test modify without transaction
+    // Test modify
     auto const instance = tcm.getInstance(e);
     constexpr auto t = mat4f::translation(float3{ 1, 2, 3 });
     tcm.setTransform(instance, t);
     tcm.flushNotifications();
     EXPECT_EQ(callbackCount, 1);
 
-    callbackCount = 0;
-
-    // Test transaction
-    tcm.openLocalTransformTransaction();
-    tcm.setTransform(instance, mat4f::translation(float3{ 4, 5, 6 }));
-    tcm.flushNotifications();
-    EXPECT_EQ(callbackCount, 0);
-
-    tcm.commitLocalTransformTransaction();
-    tcm.flushNotifications();
-    EXPECT_EQ(callbackCount, 1);
-
     tcm.unregisterChangeCallback(&tcm);
     tcm.destroy(e);
     em.destroy(e);
+    Engine::destroy((Engine**)&engine);
+}
+
+TEST(FilamentTest, InstanceBufferUidAndRevision) {
+    FEngine* engine = downcast(Engine::create(Engine::Backend::NOOP));
+
+    std::array<mat4f, 2> const transforms = {
+            mat4f::translation(float3{ 1.0f, 2.0f, 3.0f }),
+            mat4f::translation(float3{ 4.0f, 5.0f, 6.0f }) };
+
+    FInstanceBuffer* const a = downcast(InstanceBuffer::Builder(transforms.size())
+            .localTransforms(transforms.data())
+            .build(*engine));
+    FInstanceBuffer* const b = downcast(InstanceBuffer::Builder(transforms.size())
+            .build(*engine));
+
+    // 1. uids are unique and never 0
+    EXPECT_NE(a->getUid(), 0u);
+    EXPECT_NE(b->getUid(), 0u);
+    EXPECT_NE(a->getUid(), b->getUid());
+
+    // 2. the uid of a destroyed InstanceBuffer is never reused
+    uint64_t const uidB = b->getUid();
+    engine->destroy(b);
+    FInstanceBuffer* const c = downcast(InstanceBuffer::Builder(1).build(*engine));
+    EXPECT_NE(c->getUid(), 0u);
+    EXPECT_NE(c->getUid(), a->getUid());
+    EXPECT_NE(c->getUid(), uidB);
+
+    // 3. the revision only changes when the local transforms actually change
+    uint64_t const revision = a->getRevision();
+    a->setLocalTransforms(transforms.data(), transforms.size(), 0); // same transforms
+    EXPECT_EQ(a->getRevision(), revision);
+    a->setLocalTransforms(transforms.data(), 0, 0);                 // no transforms
+    EXPECT_EQ(a->getRevision(), revision);
+
+    mat4f const moved = mat4f::translation(float3{ 7.0f, 8.0f, 9.0f });
+    a->setLocalTransforms(&moved, 1, 1);
+    EXPECT_EQ(a->getRevision(), revision + 1);
+    EXPECT_EQ(a->getLocalTransform(0), transforms[0]);
+    EXPECT_EQ(a->getLocalTransform(1), moved);
+    EXPECT_EQ(a->getLocalTransforms()[1], moved);
+
+    a->setLocalTransforms(&moved, 1, 1);                            // same again
+    EXPECT_EQ(a->getRevision(), revision + 1);
+
+    // 4. the revision is per InstanceBuffer
+    EXPECT_EQ(c->getRevision(), 0u);
+
+    engine->destroy(a);
+    engine->destroy(c);
     Engine::destroy((Engine**)&engine);
 }
 
@@ -927,6 +1053,129 @@ TEST(FilamentTest, TransformManagerLazyAndConcurrent) {
     }
 }
 
+TEST(FilamentTest, TransformManagerCreateOverloadsAndRecreation) {
+    EntityManager& em = EntityManager::get();
+    FTransformManager tcm(em);
+    tcm.setAccurateTranslationsEnabled(true);
+
+    Entity const root = em.create();
+    Entity const childDefault = em.create();
+    Entity const childFloat = em.create();
+    Entity const childDouble = em.create();
+
+    // 1. Default create(Entity) initializes identity local transform and zero lo translation
+    tcm.create(root);
+    auto const rootInst = tcm.getInstance(root);
+    ASSERT_TRUE(rootInst.isValid());
+    EXPECT_EQ(tcm.getTransform(rootInst), mat4f{});
+    EXPECT_EQ(tcm.getTransformAccurate(rootInst), mat4{});
+    EXPECT_EQ(tcm.getWorldTransform(rootInst), mat4f{});
+    EXPECT_EQ(tcm.getWorldTransformAccurate(rootInst), mat4{});
+
+    // 2. Re-creating an entity with an existing component replaces it cleanly and updates transform.
+    // Use translations with sub-float32-ULP residuals so localTranslationLo is non-zero.
+    mat4 const rootAccurate = mat4::translation(
+            double3{ 100000.1251220703125, -200000.250244140625, 300000.50048828125 });
+    tcm.create(root, {}, rootAccurate);
+    auto const newRootInst = tcm.getInstance(root);
+    ASSERT_TRUE(newRootInst.isValid());
+    for (size_t c = 0; c < 4; ++c) {
+        for (size_t r = 0; r < 4; ++r) {
+            EXPECT_NEAR(tcm.getTransformAccurate(newRootInst)[c][r], rootAccurate[c][r], 1e-6);
+            EXPECT_NEAR(tcm.getWorldTransformAccurate(newRootInst)[c][r], rootAccurate[c][r], 1e-6);
+        }
+    }
+
+    // 3. Create child with default overload, mat4f overload, and mat4 accurate overload
+    tcm.create(childDefault);
+    tcm.setParent(tcm.getInstance(childDefault), newRootInst);
+
+    mat4f const floatLocal = mat4f::translation(float3{ 1.5f, -2.5f, 3.5f });
+    tcm.create(childFloat, newRootInst, floatLocal);
+
+    mat4 const doubleLocal = mat4::translation(
+            double3{ 10000.37506103515625, -20000.6251220703125, 30000.875244140625 });
+    tcm.create(childDouble, newRootInst, doubleLocal);
+
+    mat4 const expectedFloatWorld = rootAccurate * mat4(floatLocal);
+    mat4 const expectedDoubleWorld = rootAccurate * doubleLocal;
+    for (size_t c = 0; c < 4; ++c) {
+        for (size_t r = 0; r < 4; ++r) {
+            EXPECT_NEAR(tcm.getTransformAccurate(tcm.getInstance(childDouble))[c][r],
+                    doubleLocal[c][r], 1e-6);
+            EXPECT_NEAR(tcm.getWorldTransformAccurate(tcm.getInstance(childDefault))[c][r],
+                    rootAccurate[c][r], 1e-6);
+            EXPECT_NEAR(tcm.getWorldTransformAccurate(tcm.getInstance(childFloat))[c][r],
+                    expectedFloatWorld[c][r], 1e-6);
+            EXPECT_NEAR(tcm.getWorldTransformAccurate(tcm.getInstance(childDouble))[c][r],
+                    expectedDoubleWorld[c][r], 1e-6);
+        }
+    }
+
+    Entity const all[] = { childDouble, childFloat, childDefault, root };
+    tcm.destroyComponents(all, 4);
+    em.destroy(4, all);
+}
+
+TEST(FilamentTest, ComponentManagersSingleProbeCreateAndDestroy) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    EntityManager& em = engine->getEntityManager();
+    auto& tcm = engine->getTransformManager();
+    auto& lcm = engine->getLightManager();
+
+    Entity const e1 = em.create();
+    Entity const e2 = em.create();
+    Entity const eMissing = em.create();
+
+    // 1. LightManager create, re-create on existing entity, and destroy
+    LightManager::Builder(LightManager::Type::POINT)
+            .intensityCandela(1000.0f)
+            .build(*engine, e1);
+    EXPECT_TRUE(lcm.hasComponent(e1));
+    EXPECT_EQ(lcm.getType(lcm.getInstance(e1)), LightManager::Type::POINT);
+    EXPECT_FLOAT_EQ(lcm.getIntensity(lcm.getInstance(e1)), 1000.0f);
+
+    // Re-creating a light on e1 replaces the existing component
+    LightManager::Builder(LightManager::Type::SUN)
+            .intensity(2500.0f)
+            .build(*engine, e1);
+    EXPECT_TRUE(lcm.hasComponent(e1));
+    EXPECT_EQ(lcm.getType(lcm.getInstance(e1)), LightManager::Type::SUN);
+    EXPECT_FLOAT_EQ(lcm.getIntensity(lcm.getInstance(e1)), 2500.0f);
+
+    // Destroying a missing entity is a safe no-op
+    lcm.destroy(eMissing);
+    lcm.destroy(e1);
+    EXPECT_FALSE(lcm.hasComponent(e1));
+
+    // 2. CameraManager create (auto-creates Transform), re-create, and destroy
+    Camera* cam1 = engine->createCamera(e1);
+    ASSERT_NE(cam1, nullptr);
+    EXPECT_TRUE(tcm.hasComponent(e1));
+
+    // Re-creating camera on e1 destroys old camera and creates a new one
+    Camera* cam1Replaced = engine->createCamera(e1);
+    ASSERT_NE(cam1Replaced, nullptr);
+    EXPECT_EQ(engine->getCameraComponent(e1), cam1Replaced);
+
+    // Camera on an entity that already owns a Transform does not destroy the Transform on camera destroy
+    tcm.create(e2);
+    Camera* cam2 = engine->createCamera(e2);
+    ASSERT_NE(cam2, nullptr);
+    engine->destroyCameraComponent(e2);
+    EXPECT_EQ(engine->getCameraComponent(e2), nullptr);
+    EXPECT_TRUE(tcm.hasComponent(e2));
+
+    engine->destroyCameraComponent(e1);
+    EXPECT_EQ(engine->getCameraComponent(e1), nullptr);
+    EXPECT_FALSE(tcm.hasComponent(e1));
+
+    tcm.destroy(e2);
+    Entity const all[] = { e1, e2, eMissing };
+    em.destroy(3, all);
+    Engine::destroy(&engine);
+}
+
 TEST(FilamentTest, TransformManagerDefragment) {
     EntityManager& em = EntityManager::get();
     FTransformManager tcm(em);
@@ -1200,27 +1449,10 @@ TEST(FilamentTest, TransformManagerOrphans) {
         EXPECT_EQ(world(g), grandChildLocal);
         cleanup({ p, c, g });
     }
-
-    // Destroy during a local transform transaction.
-    {
-        Entity const p = em.create();
-        Entity const c = em.create();
-        Entity const g = em.create();
-        tcm.create(p, {}, parentLocal);
-        tcm.create(c, tcm.getInstance(p), childLocal);
-        tcm.create(g, tcm.getInstance(c), grandChildLocal);
-
-        tcm.openLocalTransformTransaction();
-        tcm.destroy(p);
-        tcm.commitLocalTransformTransaction();
-        EXPECT_EQ(world(c), childLocal);
-        EXPECT_EQ(world(g), childLocal * grandChildLocal);
-        cleanup({ p, c, g });
-    }
 }
 
 TEST(FilamentTest, TransformManagerRandomizedHierarchy) {
-    // Applies seeded random sequences of hierarchy edits, transform updates, transactions and
+    // Applies seeded random sequences of hierarchy edits, transform updates, and
     // partial defragmentations, and checks after every operation that each world transform
     // matches the product of the local transforms up the parent chain. Periodically, it runs
     // defragmentation to completion, checks the BFS layout, and exercises the defragmented fast
@@ -1370,17 +1602,8 @@ TEST(FilamentTest, TransformManagerRandomizedHierarchy) {
                 setLocal(nodes[uniform(nodes.size())], randomLocal());
             } else if (kind < 90) {
                 tcm.defragment(1 + uniform(8));
-            } else if (kind < 95) {
-                tcm.gc();
             } else {
-                tcm.openLocalTransformTransaction();
-                for (size_t k = 0, n = 1 + uniform(4); k < n; ++k) {
-                    setLocal(nodes[uniform(nodes.size())], randomLocal());
-                }
-                if (chance(0.5)) {
-                    tcm.setParent(tcm.getInstance(nodes[uniform(nodes.size())]), {});
-                }
-                tcm.commitLocalTransformTransaction();
+                tcm.gc();
             }
 
             checkWorldTransforms();
@@ -1520,6 +1743,9 @@ TEST(FilamentTest, UniformBuffer) {
         EXPECT_EQ(-5.0f, data->u[1].v);
         EXPECT_EQ(-7.0f, data->u[2].v);
         EXPECT_EQ(23.0f, data->f8);
+        EXPECT_EQ((float3{ 10, 20, 30 }), data->m0[0].xyz);
+        EXPECT_EQ((float3{ 40, 50, 60 }), data->m0[1].xyz);
+        EXPECT_EQ((float3{ 70, 80, 90 }), data->m0[2].xyz);
         EXPECT_EQ((mat4f{100, 200, 300, 0, 400, 500, 600, 0, 700, 800, 900, 0, 0, 0, 0, 1}), data->m1);
     };
 
@@ -1585,20 +1811,24 @@ TEST(FilamentTest, UniformBuffer) {
     buffer.setUniform(offsetof(ubo, m1), mat4f{100,200,300,0, 400,500,600,0, 700,800,900,0, 0,0,0,1 });
 
     CHECK(data);
+    EXPECT_EQ((mat3f{ 10, 20, 30, 40, 50, 60, 70, 80, 90 }),
+            buffer.getUniform<mat3f>(offsetof(ubo, m0)));
 
-    ubo copy(*data);
-    CHECK(data);
-    CHECK(&copy);
+    UniformBuffer copy(sizeof(ubo));
+    copy.setUniforms(buffer);
+    CHECK(static_cast<ubo const*>(buffer.getBuffer()));
+    CHECK(static_cast<ubo const*>(copy.getBuffer()));
 
-    ubo move(copy);
-    CHECK(&move);
+    UniformBuffer moved(std::move(copy));
+    CHECK(static_cast<ubo const*>(moved.getBuffer()));
 
-    copy = *data;
-    CHECK(data);
-    CHECK(&copy);
+    UniformBuffer copyAssigned(sizeof(ubo));
+    copyAssigned.setUniforms(buffer);
+    CHECK(static_cast<ubo const*>(copyAssigned.getBuffer()));
 
-    move = copy;
-    CHECK(&move);
+    UniformBuffer moveAssigned(16);
+    moveAssigned = std::move(copyAssigned);
+    CHECK(static_cast<ubo const*>(moveAssigned.getBuffer()));
 }
 
 TEST(FilamentTest, UniformBufferSize1) {
@@ -1611,17 +1841,29 @@ TEST(FilamentTest, UniformBufferSize1) {
             { "f1b", 0, BufferInterfaceBlock::Type::FLOAT },  // offset = 36
     });
     BufferInterfaceBlock uib(b.build());
+    EXPECT_EQ(48u, uib.getSize());
     UniformBuffer buffer(uib.getSize());
+    buffer.clean();
+    EXPECT_FALSE(buffer.isDirty());
 
-    float4 f4(1.0f);
+    float4 f4(1.0f, 2.0f, 3.0f, 4.0f);
     ssize_t f4_offset = uib.getFieldOffset("f4a", 0);
+    EXPECT_EQ(0, f4_offset);
     buffer.setUniformArray(f4_offset, &f4, 1);
 
-    float f1(1.0f);
+    float f1(5.0f);
     ssize_t f1_offset = uib.getFieldOffset("f1b", 0);
+    EXPECT_EQ(36, f1_offset);
     buffer.setUniformArray(f1_offset, &f1, 1);
 
+    EXPECT_TRUE(buffer.isDirty());
+    EXPECT_EQ(f4, buffer.getUniform<float4>(f4_offset));
+    EXPECT_EQ(f1, buffer.getUniform<float>(f1_offset));
+
+    buffer.clean();
+    EXPECT_FALSE(buffer.isDirty());
     buffer.invalidate();
+    EXPECT_TRUE(buffer.isDirty());
 }
 
 TEST(FilamentTest, UniformBufferSize2) {
@@ -1631,20 +1873,32 @@ TEST(FilamentTest, UniformBufferSize2) {
             { "f4a", 0, BufferInterfaceBlock::Type::FLOAT4 }, // offset = 0
             { "f4b", 0, BufferInterfaceBlock::Type::FLOAT4 }, // offset = 16
             { "f1a", 0, BufferInterfaceBlock::Type::FLOAT },  // offset = 32
-            { "f2a", 0, BufferInterfaceBlock::Type::FLOAT2 }, // offset = 36
+            { "f2a", 0, BufferInterfaceBlock::Type::FLOAT2 }, // offset = 40 (8-byte aligned)
     });
     BufferInterfaceBlock uib(b.build());
+    EXPECT_EQ(48u, uib.getSize());
     UniformBuffer buffer(uib.getSize());
+    buffer.clean();
+    EXPECT_FALSE(buffer.isDirty());
 
-    float4 f4(1.0f);
+    float4 f4(1.0f, 2.0f, 3.0f, 4.0f);
     ssize_t f4_offset = uib.getFieldOffset("f4a", 0);
+    EXPECT_EQ(0, f4_offset);
     buffer.setUniformArray(f4_offset, &f4, 1);
 
-    float2 f2(1.0f);
+    float2 f2(5.0f, 6.0f);
     ssize_t f2_offset = uib.getFieldOffset("f2a", 0);
+    EXPECT_EQ(40, f2_offset);
     buffer.setUniformArray(f2_offset, &f2, 1);
 
+    EXPECT_TRUE(buffer.isDirty());
+    EXPECT_EQ(f4, buffer.getUniform<float4>(f4_offset));
+    EXPECT_EQ(f2, buffer.getUniform<float2>(f2_offset));
+
+    buffer.clean();
+    EXPECT_FALSE(buffer.isDirty());
     buffer.invalidate();
+    EXPECT_TRUE(buffer.isDirty());
 }
 
 TEST(FilamentTest, BufferInterfaceBlockRejectsOffsetWrap) {
@@ -1777,8 +2031,6 @@ TEST(FilamentTest, BoxCulling) {
     EXPECT_TRUE( frustum.intersects(box.translateTo({  10,  10, -10 })) );
     EXPECT_TRUE( frustum.intersects(box.translateTo({  10, -10, -10 })) );
     EXPECT_TRUE( frustum.intersects(box.translateTo({ -10,  10, -10 })) );
-    EXPECT_TRUE( frustum.intersects(box.translateTo({ -10,  10, -10 })) );
-    EXPECT_TRUE( frustum.intersects(box.translateTo({  10, -10, -10 })) );
 
     // box outside frustum planes
     EXPECT_FALSE( frustum.intersects(box.translateTo({ 0,     0,    0})) );
@@ -1820,8 +2072,6 @@ TEST(FilamentTest, SphereCulling) {
     EXPECT_TRUE( frustum.intersects(sphere + float4{ 10, 10, -10, 0 }) );
     EXPECT_TRUE( frustum.intersects(sphere + float4{ 10, -10, -10, 0 }) );
     EXPECT_TRUE( frustum.intersects(sphere + float4{ -10, 10, -10, 0 }) );
-    EXPECT_TRUE( frustum.intersects(sphere + float4{ -10, 10, -10, 0 }) );
-    EXPECT_TRUE( frustum.intersects(sphere + float4{ 10, -10, -10, 0 }) );
 
     // sphere outside frustum planes
     EXPECT_FALSE( frustum.intersects(sphere + float4{ 0, 0, 0, 0}) );
@@ -1831,8 +2081,8 @@ TEST(FilamentTest, SphereCulling) {
     // slightly inside the frustum
     EXPECT_TRUE( frustum.intersects(sphere + float4{ -100, 0, -100, 0}) );
 
-    // A sphere that entirely contain the frustum
-    EXPECT_TRUE(frustum.intersects({ 0, 200 }));
+    // A sphere that entirely contains the frustum
+    EXPECT_TRUE(frustum.intersects(float4{ 0, 0, 0, 200 }));
 }
 
 TEST(FilamentTest, ColorConversion) {
@@ -1853,6 +2103,12 @@ TEST(FilamentTest, ColorConversion) {
 
     EXPECT_LT((sRGBColor{0.5f, 0.0f, 0.0f}.x), Color::toSRGB<ACCURATE>({0.5f, 0.0f, 0.0f}).x);
 
+    // sRGB(0.5): 1.055 * 0.5^(1/2.4) - 0.055 = 0.735356983
+    EXPECT_NEAR(0.735357f, Color::toSRGB<ACCURATE>({0.5f, 0.0f, 0.0f}).x, 1e-5f);
+    EXPECT_NEAR(0.735357f, Color::toSRGB<FAST>({0.5f, 0.0f, 0.0f}).x, 1e-2f);
+    // Linear regime (x <= 0.0031308): 12.92 * 0.001 = 0.01292
+    EXPECT_NEAR(0.01292f, Color::toSRGB<ACCURATE>({0.001f, 0.0f, 0.0f}).x, 1e-6f);
+
     EXPECT_PRED1(isGray, Color::toSRGB<FAST>(LinearColor{0.5f}));
     EXPECT_PRED1(isGray, Color::toSRGB<ACCURATE>(LinearColor{0.5f}));
 
@@ -1871,6 +2127,19 @@ TEST(FilamentTest, ColorConversion) {
     EXPECT_GT((LinearColor{0.5f, 0.0f, 0.0f}.x), Color::toLinear<FAST>({0.5f, 0.0f, 0.0f}).x);
 
     EXPECT_GT((LinearColor{0.5f, 0.0f, 0.0f}.x), Color::toLinear<ACCURATE>({0.5f, 0.0f, 0.0f}).x);
+
+    // Linear(0.5): ((0.5 + 0.055) / 1.055)^2.4 = 0.21404114
+    EXPECT_NEAR(0.2140411f, Color::toLinear<ACCURATE>({0.5f, 0.0f, 0.0f}).x, 1e-5f);
+    EXPECT_NEAR(0.2140411f, Color::toLinear<FAST>({0.5f, 0.0f, 0.0f}).x, 1e-2f);
+    // Linear regime (x <= 0.04045): 0.01292 / 12.92 = 0.001
+    EXPECT_NEAR(0.001f, Color::toLinear<ACCURATE>({0.01292f, 0.0f, 0.0f}).x, 1e-6f);
+
+    // Round-trip accuracy
+    LinearColor const orig{ 0.1f, 0.5f, 0.8f };
+    LinearColor const roundTrip = Color::toLinear<ACCURATE>(Color::toSRGB<ACCURATE>(orig));
+    EXPECT_NEAR(orig.r, roundTrip.r, 1e-6f);
+    EXPECT_NEAR(orig.g, roundTrip.g, 1e-6f);
+    EXPECT_NEAR(orig.b, roundTrip.b, 1e-6f);
 
     EXPECT_PRED1(isGray, Color::toLinear<FAST>(sRGBColor{0.5f}));
     EXPECT_PRED1(isGray, Color::toLinear<ACCURATE>(sRGBColor{0.5f}));
@@ -1943,7 +2212,7 @@ TEST(FilamentTest, FroxelData) {
 
     FScene::LightSoa lights;
     lights.push_back();   // first one is always skipped
-    lights.push_back(float4{ 0, 0, -5, 1 }, 0.0f, 0.0f, -5.0f, 1.0f, float3{}, float3{}, double2{}, e, spotParams, Culler::result_type(1), float2{}, FScene::ShadowInfo{});
+    lights.push_back(e, float4{ 0, 0, -5, 1 }, 0.0f, 0.0f, -5.0f, 1.0f, float3{}, float3{}, double2{}, spotParams, Culler::result_type(1), float2{}, FScene::ShadowInfo{});
 
     {
         froxelData.froxelizeLights(*engine, {}, lights);
@@ -2116,7 +2385,7 @@ TEST(FilamentTest, ColorGradingNeonValidation) {
 
     struct LutData {
         std::vector<uint32_t> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat format,
@@ -2142,6 +2411,8 @@ TEST(FilamentTest, ColorGradingNeonValidation) {
             .build(*engine);
 
     // 3. Verify Metadata and Pixels
+    ASSERT_GT(neonLut.width, 0u);
+    ASSERT_FALSE(neonLut.pixels.empty());
     ASSERT_EQ(neonLut.width, scalarLut.width);
     ASSERT_EQ(neonLut.pixels.size(), scalarLut.pixels.size());
 
@@ -2170,7 +2441,7 @@ TEST(FilamentTest, ColorGradingMediumNeonValidation) {
 
     struct LutData {
         std::vector<uint32_t> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat format,
@@ -2214,6 +2485,8 @@ TEST(FilamentTest, ColorGradingMediumNeonValidation) {
             .build(*engine);
 
     // 3. Verify Metadata and Pixels
+    ASSERT_GT(neonLut.width, 0u);
+    ASSERT_FALSE(neonLut.pixels.empty());
     ASSERT_EQ(neonLut.width, scalarLut.width);
     ASSERT_EQ(neonLut.pixels.size(), scalarLut.pixels.size());
 
@@ -2243,7 +2516,7 @@ TEST(FilamentTest, ColorGradingNeonLinearValidation) {
 
     struct LutData {
         std::vector<uint32_t> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat format,
@@ -2271,6 +2544,8 @@ TEST(FilamentTest, ColorGradingNeonLinearValidation) {
             .build(*engine);
 
     // 3. Verify Metadata and Pixels
+    ASSERT_GT(neonLut.width, 0u);
+    ASSERT_FALSE(neonLut.pixels.empty());
     ASSERT_EQ(neonLut.width, scalarLut.width);
     ASSERT_EQ(neonLut.pixels.size(), scalarLut.pixels.size());
 
@@ -2298,7 +2573,7 @@ TEST(FilamentTest, ColorGradingMediumNeonLinearValidation) {
 
     struct LutData {
         std::vector<uint32_t> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat format,
@@ -2344,6 +2619,8 @@ TEST(FilamentTest, ColorGradingMediumNeonLinearValidation) {
             .build(*engine);
 
     // 3. Verify Metadata and Pixels
+    ASSERT_GT(neonLut.width, 0u);
+    ASSERT_FALSE(neonLut.pixels.empty());
     ASSERT_EQ(neonLut.width, scalarLut.width);
     ASSERT_EQ(neonLut.pixels.size(), scalarLut.pixels.size());
 
@@ -2371,7 +2648,7 @@ TEST(FilamentTest, ColorGradingAdvancedNeonValidation) {
 
     struct LutData {
         std::vector<uint32_t> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat format,
@@ -2407,6 +2684,8 @@ TEST(FilamentTest, ColorGradingAdvancedNeonValidation) {
             .build(*engine);
 
     // 3. Verify Metadata and Pixels
+    ASSERT_GT(neonLut.width, 0u);
+    ASSERT_FALSE(neonLut.pixels.empty());
     ASSERT_EQ(neonLut.width, scalarLut.width);
     ASSERT_EQ(neonLut.pixels.size(), scalarLut.pixels.size());
 
@@ -2433,12 +2712,12 @@ TEST(FilamentTest, ColorGradingHalfNeonValidation) {
 
     struct LutDataHalf {
         std::vector<half> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     struct LutDataInt {
         std::vector<uint32_t> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     auto exporterHalf = [](void const* data, size_t const size, backend::PixelDataFormat format,
@@ -2496,6 +2775,8 @@ TEST(FilamentTest, ColorGradingHalfNeonValidation) {
             .exportLut(exporterInt, &scalarIntLut)
             .build(*engine);
 
+    ASSERT_GT(neonHalfLut.width, 0u);
+    ASSERT_FALSE(neonHalfLut.pixels.empty());
     ASSERT_EQ(neonHalfLut.width, scalarHalfLut.width);
     ASSERT_EQ(neonHalfLut.pixels.size(), scalarHalfLut.pixels.size());
     ASSERT_EQ(neonHalfLut.pixels.size() / 4, neonIntLut.pixels.size());
@@ -2586,11 +2867,6 @@ TEST(FilamentTest, ColorGradingHalfNeonValidation) {
 }
 
 TEST(FilamentTest, ToneMapperNeonValidation) {
-    Engine* engine = Engine::Builder()
-            .backend(Engine::Backend::NOOP)
-            .feature("engine.color_grading.use_optimized_default_builder", true)
-            .build();
-
     std::vector<ToneMapper*> toneMappers;
     toneMappers.push_back(new LinearToneMapper());
     toneMappers.push_back(new ACESToneMapper());
@@ -2699,8 +2975,6 @@ TEST(FilamentTest, ToneMapperNeonValidation) {
         delete tm;
     }
     std::cout << "====================================================================\n\n";
-
-    Engine::destroy((Engine**)&engine);
 }
 #endif
 
@@ -2856,6 +3130,23 @@ TEST(FilamentTest, FrameHistoryStreamTest) {
 
     engine->destroy(swapChain);
     engine->destroy(renderer);
+    Engine::destroy(&engine);
+}
+
+TEST(FilamentTest, FlushAndWaitDispatchesCallbacksOfPendingCommands) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    BufferObject* bo = BufferObject::Builder().size(sizeof(uint32_t)).build(*engine);
+
+    static constexpr uint32_t data = 0;
+    bool released = false;
+    bo->setBuffer(*engine, backend::BufferDescriptor(&data, sizeof(data),
+            [](void*, size_t, void* user) { *static_cast<bool*>(user) = true; }, &released));
+
+    // The setBuffer() command has not been flushed yet, so flushAndWait() has to run it.
+    engine->flushAndWait();
+    EXPECT_TRUE(released);
+
+    engine->destroy(bo);
     Engine::destroy(&engine);
 }
 
@@ -3019,6 +3310,152 @@ TEST(FilamentTest, DefaultMaterialInstance) {
     Engine::destroy(&engine);
 }
 
+TEST(FilamentTest, CompressedFormatsHaveBlockInfo) {
+    using backend::TextureFormat;
+    for (auto f = uint16_t(TextureFormat::EAC_R11);
+            f <= uint16_t(TextureFormat::SRGB_ALPHA_BPTC_UNORM); ++f) {
+        TextureFormat const format = TextureFormat(f);
+        ASSERT_TRUE(backend::isCompressedFormat(format)) << f;
+        EXPECT_GT(backend::getBlockWidth(format), 0u) << f;
+        EXPECT_GT(backend::getBlockHeight(format), 0u) << f;
+        EXPECT_GT(backend::getFormatSize(format), 0u) << f;
+    }
+}
+
+TEST(FilamentTest, Norm16TextureFormats) {
+    using backend::PixelDataFormat;
+    using backend::PixelDataType;
+    using backend::TextureFormat;
+    using backend::TextureType;
+
+    struct Norm16FormatSpec {
+        TextureFormat format;
+        size_t expectedSize;
+        size_t expectedComponents;
+        PixelDataFormat expectedPixelFormat;
+        PixelDataType expectedPixelType;
+        bool expectedIsColor;
+    };
+
+    constexpr Norm16FormatSpec kSpecs[] = {
+        { TextureFormat::R16,          2, 1, PixelDataFormat::R,    PixelDataType::USHORT, true  },
+        { TextureFormat::R16_SNORM,    2, 1, PixelDataFormat::R,    PixelDataType::SHORT,  false },
+        { TextureFormat::RG16,         4, 2, PixelDataFormat::RG,   PixelDataType::USHORT, true  },
+        { TextureFormat::RG16_SNORM,   4, 2, PixelDataFormat::RG,   PixelDataType::SHORT,  false },
+        { TextureFormat::RGB16,        6, 3, PixelDataFormat::RGB,  PixelDataType::USHORT, true  },
+        { TextureFormat::RGB16_SNORM,  6, 3, PixelDataFormat::RGB,  PixelDataType::SHORT,  false },
+        { TextureFormat::RGBA16,       8, 4, PixelDataFormat::RGBA, PixelDataType::USHORT, true  },
+        { TextureFormat::RGBA16_SNORM, 8, 4, PixelDataFormat::RGBA, PixelDataType::SHORT,  false },
+    };
+
+    for (auto const& spec : kSpecs) {
+        EXPECT_FALSE(backend::isCompressedFormat(spec.format));
+        EXPECT_FALSE(backend::isUnsignedIntFormat(spec.format));
+        EXPECT_FALSE(backend::isSignedIntFormat(spec.format));
+        EXPECT_EQ(backend::isColorFormat(spec.format), spec.expectedIsColor);
+        EXPECT_EQ(backend::getFormatSize(spec.format), spec.expectedSize);
+        EXPECT_EQ(backend::getFormatComponentCount(spec.format), spec.expectedComponents);
+        EXPECT_EQ(backend::getTextureType(spec.format), TextureType::FLOAT);
+        EXPECT_TRUE(FTexture::validatePixelFormatAndType(
+                spec.format, spec.expectedPixelFormat, spec.expectedPixelType));
+        EXPECT_FALSE(FTexture::validatePixelFormatAndType(
+                spec.format, PixelDataFormat::RGBA_INTEGER, spec.expectedPixelType));
+        EXPECT_FALSE(FTexture::validatePixelFormatAndType(
+                spec.format, spec.expectedPixelFormat, PixelDataType::UBYTE));
+    }
+}
+
+TEST(FilamentTest, TextureSetImageCompressedSizeValidation) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+
+    // 10x10 ETC2_RGB8 is 3x3 blocks of 8 bytes.
+    constexpr size_t requiredSize = 3 * 3 * 8;
+    std::vector<uint8_t> data(requiredSize + 1);
+    auto makePbd = [&data](size_t size) {
+        return Texture::PixelBufferDescriptor(data.data(), size,
+                Texture::CompressedType::ETC2_RGB8, uint32_t(size), nullptr);
+    };
+
+    Texture* compressed = Texture::Builder()
+            .width(10)
+            .height(10)
+            .format(Texture::InternalFormat::ETC2_RGB8)
+            .build(*engine);
+    compressed->setImage(*engine, 0, makePbd(requiredSize));
+    compressed->setImage(*engine, 0, makePbd(requiredSize + 1));
+
+    Texture* uncompressed = Texture::Builder()
+            .width(10)
+            .height(10)
+            .format(Texture::InternalFormat::RGBA8)
+            .build(*engine);
+
+#if GTEST_HAS_EXCEPTIONS
+    EXPECT_THROW(compressed->setImage(*engine, 0, makePbd(requiredSize - 1)),
+            utils::PreconditionPanic);
+    EXPECT_THROW(uncompressed->setImage(*engine, 0, makePbd(requiredSize)),
+            utils::PreconditionPanic);
+#else
+    EXPECT_DEATH(compressed->setImage(*engine, 0, makePbd(requiredSize - 1)), "buffer overflow");
+    EXPECT_DEATH(uncompressed->setImage(*engine, 0, makePbd(requiredSize)),
+            "requires a compressed texture format");
+#endif
+
+    engine->destroy(compressed);
+    engine->destroy(uncompressed);
+    Engine::destroy(&engine);
+}
+
+TEST(FilamentTest, TextureSetImageUploadSizeLimit) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+
+    // The precondition fires before the buffer is read, so a small buffer can claim a large size.
+    constexpr size_t tooLarge = size_t(std::numeric_limits<int32_t>::max()) + 1;
+    std::vector<uint8_t> data(16);
+    auto makeCompressedPbd = [&data](size_t size) {
+        return Texture::PixelBufferDescriptor(data.data(), size,
+                Texture::CompressedType::ETC2_RGB8, 16, nullptr);
+    };
+
+    Texture* compressed = Texture::Builder()
+            .width(4)
+            .height(4)
+            .format(Texture::InternalFormat::ETC2_RGB8)
+            .build(*engine);
+
+    // 16384x16384 RGBA32F is 4 GiB.
+    Texture* large = Texture::Builder()
+            .width(16384)
+            .height(16384)
+            .format(Texture::InternalFormat::RGBA32F)
+            .build(*engine);
+
+#if GTEST_HAS_EXCEPTIONS
+    EXPECT_THROW(compressed->setImage(*engine, 0, makeCompressedPbd(tooLarge)),
+            utils::PreconditionPanic);
+    // An empty region still sends the upload, so the cap must apply there too.
+    EXPECT_THROW(compressed->setImage(*engine, 0, 0, 0, 0, 0, 0, 1, makeCompressedPbd(tooLarge)),
+            utils::PreconditionPanic);
+    EXPECT_THROW(large->setImage(*engine, 0,
+                         Texture::PixelBufferDescriptor(data.data(), size_t(16384) * 16384 * 16,
+                                 Texture::Format::RGBA, Texture::Type::FLOAT, nullptr)),
+            utils::PreconditionPanic);
+#else
+    EXPECT_DEATH(compressed->setImage(*engine, 0, makeCompressedPbd(tooLarge)),
+            "exceeds the maximum");
+    EXPECT_DEATH(compressed->setImage(*engine, 0, 0, 0, 0, 0, 0, 1, makeCompressedPbd(tooLarge)),
+            "exceeds the maximum");
+    EXPECT_DEATH(large->setImage(*engine, 0,
+                         Texture::PixelBufferDescriptor(data.data(), size_t(16384) * 16384 * 16,
+                                 Texture::Format::RGBA, Texture::Type::FLOAT, nullptr)),
+            "exceeds the maximum");
+#endif
+
+    engine->destroy(compressed);
+    engine->destroy(large);
+    Engine::destroy(&engine);
+}
+
 TEST(FilamentTest, ECREpochBasedReclamationManagers) {
     Engine* engine = Engine::Builder().backend(Engine::Backend::NOOP).build();
     auto& em = engine->getEntityManager();
@@ -3116,8 +3553,11 @@ TEST(FilamentTest, MultipleDirectionalLights) {
         static_cast<Scene*>(scene)->addEntity(entities[i]);
     }
 
+    FView* view = downcast(engine->createView());
+    view->setScene(scene);
+
     LinearAllocatorArena arena("MultipleDirectionalLights test arena", 3 * 1024 * 1024);
-    FScene::SceneCacheData cache;
+    FScene::SceneCacheData& cache = *view->getSceneCache();
     scene->prepare(engine->getJobSystem(), arena, mat4{}, false, cache);
 
     // the most intense directional light is the dominant one, at index 0 of the LightSoa
@@ -3145,12 +3585,1305 @@ TEST(FilamentTest, MultipleDirectionalLights) {
     EXPECT_TRUE(lightData.elementAt<FScene::LIGHT_ENTITY>(0) == entities[0]);
     EXPECT_EQ(0u, cache.extraDirectionalLightCount);
 
+    engine->destroy(view);
     engine->destroy(scene);
     for (auto& e : entities) {
         engine->destroy(e);
         em.destroy(e);
     }
     Engine::destroy((Engine**)&engine);
+}
+
+TEST(FilamentTest, SceneCacheUboRowsAreZeroed) {
+    FScene::SceneCacheData cache;
+    size_t const capacity = 16;
+    size_t const bufferSize = FScene::RenderableSoa::getNeededSize(capacity);
+
+    // Leave a dirty block of the same size on the heap, so the allocation below likely reuses it.
+    void* const dirty = utils::aligned_alloc(bufferSize,
+            std::max(alignof(std::max_align_t), alignof(PerRenderableData)));
+    ASSERT_NE(dirty, nullptr);
+    memset(dirty, 0xAB, bufferSize);
+    utils::aligned_free(dirty);
+
+    cache.resize(1, 1);
+    ASSERT_EQ(capacity, cache.renderableData.capacity());
+
+    auto const* const p = reinterpret_cast<uint8_t const*>(
+            cache.renderableData.data<FScene::UBO>());
+    size_t const size = capacity * sizeof(PerRenderableData);
+    EXPECT_TRUE(std::all_of(p, p + size, [](uint8_t const b) { return b == 0; }));
+}
+
+namespace {
+
+class SceneCacheTest : public testing::Test {
+protected:
+    void SetUp() override {
+        engine = Engine::create(Engine::Backend::NOOP);
+    }
+
+    void TearDown() override {
+        cleanupTrackedResources();
+        Engine::destroy(&engine);
+    }
+
+    void recreateEngine(Engine::Config const& config) {
+        cleanupTrackedResources();
+        Engine::destroy(&engine);
+        engine = Engine::Builder()
+                .backend(Engine::Backend::NOOP)
+                .config(&config)
+                .build();
+    }
+
+    Scene* createScene() {
+        Scene* const s = engine->createScene();
+        mScenes.push_back(s);
+        return s;
+    }
+
+    View* createView() {
+        View* const v = engine->createView();
+        mViews.push_back(v);
+        return v;
+    }
+
+    SkinningBuffer* createSkinningBuffer(uint32_t boneCount) {
+        SkinningBuffer* const sb = SkinningBuffer::Builder().boneCount(boneCount).build(*engine);
+        mSkinningBuffers.push_back(sb);
+        return sb;
+    }
+
+    Entity createEntity() {
+        Entity const e = engine->getEntityManager().create();
+        mEntities.push_back(e);
+        return e;
+    }
+
+    Entity createRenderable(bool withTransform = true) {
+        Entity const e = createEntity();
+        if (withTransform) {
+            engine->getTransformManager().create(e);
+        }
+        RenderableManager::Builder(1)
+                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
+                .build(*engine, e);
+        return e;
+    }
+
+    Entity createPointLight(bool withTransform = true, float3 const& position = { 0, 0, 0 }) {
+        Entity const e = createEntity();
+        if (withTransform) {
+            engine->getTransformManager().create(e);
+        }
+        LightManager::Builder(LightManager::Type::POINT)
+                .position(position)
+                .intensity(1000.0f)
+                .falloff(10.0f)
+                .build(*engine, e);
+        return e;
+    }
+
+    Entity createDirectionalLight(bool withTransform = true,
+            LightManager::Type type = LightManager::Type::DIRECTIONAL,
+            float intensity = 1000.0f) {
+        Entity const e = createEntity();
+        if (withTransform) {
+            engine->getTransformManager().create(e);
+        }
+        LightManager::Builder(type)
+                .intensity(intensity)
+                .direction({ 0, -1, 0 })
+                .build(*engine, e);
+        return e;
+    }
+
+    void prepare(Scene* scene, View* view, mat4 const& worldTransform) {
+        downcast(scene)->prepare(downcast(engine)->getJobSystem(), arena, worldTransform,
+                false, *downcast(view)->getSceneCache());
+    }
+
+    // Attaches a camera to `view`, at z = +5 looking at the origin, so that a unit box at the
+    // origin is visible and anything at z > 5 is behind the camera.
+    void createCamera(View* view) {
+        Entity const e = createEntity();
+        Camera* const camera = engine->createCamera(e);
+        camera->setProjection(45.0, 1.0, 0.1, 100.0);
+        camera->lookAt({ 0, 0, 5 }, { 0, 0, 0 }, { 0, 1, 0 });
+        view->setCamera(camera);
+        view->setViewport({ 0, 0, 64, 64 });
+    }
+
+    // Gives primitive `index` of `builder` its own (never uploaded) vertex and index buffers.
+    // The NOOP backend never reads them; what matters is that every build() allocates a fresh
+    // FRenderPrimitive array.
+    void setGeometry(RenderableManager::Builder& builder, size_t const index) {
+        VertexBuffer* const vb = VertexBuffer::Builder()
+                .vertexCount(3)
+                .bufferCount(1)
+                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3)
+                .build(*engine);
+        mVertexBuffers.push_back(vb);
+        IndexBuffer* const ib = IndexBuffer::Builder()
+                .indexCount(3)
+                .bufferType(IndexBuffer::IndexType::USHORT)
+                .build(*engine);
+        mIndexBuffers.push_back(ib);
+        builder.geometry(index, RenderableManager::PrimitiveType::TRIANGLES, vb, ib, 0, 3);
+    }
+
+    // Renders one frame of `view` through the whole pipeline (FView::prepare(), culling,
+    // RenderPass command generation) with the NOOP backend. Returns false if the frame was skipped.
+    bool renderFrame(View* view) {
+        if (!mRenderer) {
+            mRenderer = engine->createRenderer();
+            mSwapChain = engine->createSwapChain(64, 64);
+        }
+        mVsyncNanos += 16'666'667;
+        if (!mRenderer->beginFrame(mSwapChain, mVsyncNanos)) {
+            return false;
+        }
+        mRenderer->render(view);
+        mRenderer->endFrame();
+        engine->flushAndWait();
+        return true;
+    }
+
+    // Row of `e` in the View's per-frame RenderableSoa (which FView::prepare() partitions),
+    // or 0xFFFFFFFF if it is not there.
+    static uint32_t findFrameRow(View* view, Entity const e) {
+        auto const& soa = downcast(view)->getRenderableData();
+        for (uint32_t i = 0, c = soa.size(); i < c; i++) {
+            if (soa.elementAt<FScene::RENDERABLE_ENTITY>(i) == e) {
+                return i;
+            }
+        }
+        return 0xFFFFFFFFu;
+    }
+
+    static bool hasRenderableRow(View* view, Entity e) {
+        return downcast(view)->getSceneCache()->renderableCache.getIndex(e) != 0xFFFFFFFFu;
+    }
+
+    static bool hasLightRow(View* view, Entity e) {
+        return downcast(view)->getSceneCache()->lightCache.getIndex(e) != 0xFFFFFFFFu;
+    }
+
+    static bool hasDirectionalLight(View* view, Entity e) {
+        return downcast(view)->getSceneCache()->directionalLights[EntityManager::getIndex(e)];
+    }
+
+    void cleanupTrackedResources() {
+        if (!engine) {
+            return;
+        }
+        for (View* v : mViews) {
+            engine->destroy(v);
+        }
+        mViews.clear();
+        for (Scene* s : mScenes) {
+            engine->destroy(s);
+        }
+        mScenes.clear();
+        for (SkinningBuffer* sb : mSkinningBuffers) {
+            engine->destroy(sb);
+        }
+        mSkinningBuffers.clear();
+        auto& em = engine->getEntityManager();
+        for (Entity const e : mEntities) {
+            engine->destroy(e);
+            if (em.isAlive(e)) {
+                em.destroy(e);
+            }
+        }
+        mEntities.clear();
+        // after the renderables that reference them
+        for (VertexBuffer* vb : mVertexBuffers) {
+            engine->destroy(vb);
+        }
+        mVertexBuffers.clear();
+        for (IndexBuffer* ib : mIndexBuffers) {
+            engine->destroy(ib);
+        }
+        mIndexBuffers.clear();
+        if (mRenderer) {
+            engine->destroy(mSwapChain);
+            engine->destroy(mRenderer);
+            mSwapChain = nullptr;
+            mRenderer = nullptr;
+        }
+    }
+
+    // Not identity, so the first prepare() of a fresh cache is a full rebuild (see B2(c)).
+    mat4 const T = mat4::translation(double3{ 0, 0, -1 });
+
+    Engine* engine = nullptr;
+    LinearAllocatorArena arena{ "SceneCacheTest", 1024 * 1024 };
+    std::vector<View*> mViews;
+    std::vector<Scene*> mScenes;
+    std::vector<SkinningBuffer*> mSkinningBuffers;
+    std::vector<Entity> mEntities;
+    std::vector<VertexBuffer*> mVertexBuffers;
+    std::vector<IndexBuffer*> mIndexBuffers;
+    Renderer* mRenderer = nullptr;
+    SwapChain* mSwapChain = nullptr;
+    uint64_t mVsyncNanos = 0;
+};
+
+} // namespace
+
+TEST_F(SceneCacheTest, DestroyedEntityIsEvictedFromAllViews) {
+    Scene* scene = createScene();
+    View* x = createView();
+    View* y = createView();
+    x->setScene(scene);
+    y->setScene(scene);
+
+    // 1. Prepare X then Y; destroy entities via EntityManager::destroy() while still in Scene.
+    Entity const r1 = createRenderable();
+    Entity const p1 = createPointLight();
+    Entity const d1 = createDirectionalLight();
+    scene->addEntity(r1);
+    scene->addEntity(p1);
+    scene->addEntity(d1);
+
+    prepare(scene, x, T);
+    prepare(scene, y, T);
+    ASSERT_TRUE(hasRenderableRow(x, r1));
+    ASSERT_TRUE(hasRenderableRow(y, r1));
+    ASSERT_TRUE(hasLightRow(x, p1));
+    ASSERT_TRUE(hasLightRow(y, p1));
+    ASSERT_TRUE(hasDirectionalLight(x, d1));
+    ASSERT_TRUE(hasDirectionalLight(y, d1));
+
+    engine->getEntityManager().destroy(r1);
+    engine->getEntityManager().destroy(p1);
+    engine->getEntityManager().destroy(d1);
+
+    prepare(scene, x, T);
+    prepare(scene, y, T);
+    EXPECT_FALSE(hasRenderableRow(x, r1));
+    EXPECT_FALSE(hasRenderableRow(y, r1));
+    EXPECT_FALSE(hasLightRow(x, p1));
+    EXPECT_FALSE(hasLightRow(y, p1));
+    EXPECT_FALSE(hasDirectionalLight(x, d1));
+    EXPECT_FALSE(hasDirectionalLight(y, d1));
+
+    engine->destroy(r1);
+    engine->destroy(p1);
+    engine->destroy(d1);
+
+    // 2. Prepare Y before X, and call engine->destroy(e) before em.destroy(e).
+    Entity const r2 = createRenderable();
+    scene->addEntity(r2);
+    prepare(scene, x, T);
+    prepare(scene, y, T);
+    ASSERT_TRUE(hasRenderableRow(x, r2));
+    ASSERT_TRUE(hasRenderableRow(y, r2));
+
+    engine->destroy(r2);
+    engine->getEntityManager().destroy(r2);
+
+    prepare(scene, y, T);
+    prepare(scene, x, T);
+    EXPECT_FALSE(hasRenderableRow(y, r2));
+    EXPECT_FALSE(hasRenderableRow(x, r2));
+}
+
+// Removing an entity from the Scene and destroying another one in the same frame, with their
+// ids on two different PagedArenaBitset pages, used to evict two unrelated renderables that were
+// still in the Scene. PagedArenaBitset::merge() trusted the stale directory entries that
+// FScene's per-frame clear() of its pending-destroyed sets leaves behind.
+TEST_F(SceneCacheTest, RemoveAndDestroyOnDifferentPagesKeepsOtherEntities) {
+    constexpr uint32_t PAGE = 1u << PagedArenaBitset::FILAMENT_PAGE_SHIFT;
+    EntityManager& em = engine->getEntityManager();
+
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+
+    // Entity ids depend on what earlier tests did, so create enough entities to span a few
+    // pages, then look for ids that sit at the same offset on two consecutive pages.
+    std::vector<Entity> pool(3 * PAGE);
+    em.create(pool.size(), pool.data());
+    mEntities.insert(mEntities.end(), pool.begin(), pool.end());
+    std::vector<uint32_t> indices;
+    indices.reserve(pool.size());
+    for (Entity const e : pool) {
+        indices.push_back(EntityManager::getIndex(e));
+    }
+    std::sort(indices.begin(), indices.end());
+    std::vector<uint32_t> lows; // indices whose counterpart one page up also exists
+    for (uint32_t const idx : indices) {
+        if (std::binary_search(indices.begin(), indices.end(), idx + PAGE)) {
+            if (!lows.empty() && lows.front() / PAGE != idx / PAGE) {
+                if (lows.size() >= 4) {
+                    break;
+                }
+                lows.clear();
+            }
+            lows.push_back(idx);
+        }
+    }
+    ASSERT_GE(lows.size(), 4u);
+
+    // X and D are on page p; E = X + PAGE, Y = D + PAGE, U1 and U2 are on page p + 1.
+    Entity const X = em.getEntity(lows[0]);
+    Entity const D = em.getEntity(lows[1]);
+    Entity const E = em.getEntity(lows[0] + PAGE);
+    Entity const Y = em.getEntity(lows[1] + PAGE);
+    Entity const U1 = em.getEntity(lows[2] + PAGE);
+    Entity const U2 = em.getEntity(lows[3] + PAGE);
+
+    for (Entity const e : { X, E, D, Y }) {
+        engine->getTransformManager().create(e);
+        RenderableManager::Builder(1)
+                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
+                .build(*engine, e);
+        scene->addEntity(e);
+    }
+    prepare(scene, view, T);
+    ASSERT_TRUE(hasRenderableRow(view, X));
+    ASSERT_TRUE(hasRenderableRow(view, Y));
+
+    // Destroy an unrelated entity on page p + 1 in each of two frames. FScene double-buffers
+    // its pending-destroyed set, so both buffers end up cleared with a stale entry for p + 1.
+    em.destroy(U1);
+    prepare(scene, view, T);
+    em.destroy(U2);
+    prepare(scene, view, T);
+
+    // In one frame, remove E (page p + 1) from the Scene and destroy D (page p).
+    scene->remove(E);
+    engine->destroy(D);
+    em.destroy(D);
+    prepare(scene, view, T);
+
+    EXPECT_FALSE(hasRenderableRow(view, E));
+    EXPECT_FALSE(hasRenderableRow(view, D));
+    EXPECT_TRUE(hasRenderableRow(view, X));
+    EXPECT_TRUE(hasRenderableRow(view, Y));
+
+    // The cache must stay correct on later frames too.
+    prepare(scene, view, T);
+    EXPECT_TRUE(hasRenderableRow(view, X));
+    EXPECT_TRUE(hasRenderableRow(view, Y));
+}
+
+TEST_F(SceneCacheTest, SceneSwitchDropsOldSceneRows) {
+    Scene* sceneA = createScene();
+    Scene* sceneB = createScene();
+    View* view = createView();
+
+    Entity const a = createRenderable();
+    Entity const pA = createPointLight();
+    Entity const sunA = createDirectionalLight();
+    Entity const b = createRenderable();
+    sceneA->addEntity(a);
+    sceneA->addEntity(pA);
+    sceneA->addEntity(sunA);
+    sceneB->addEntity(b);
+
+    view->setScene(sceneA);
+    prepare(sceneA, view, T);
+    ASSERT_TRUE(hasRenderableRow(view, a));
+    ASSERT_TRUE(hasLightRow(view, pA));
+    ASSERT_TRUE(hasDirectionalLight(view, sunA));
+
+    view->setScene(sceneB);
+    prepare(sceneB, view, T);
+    EXPECT_FALSE(hasRenderableRow(view, a));
+    EXPECT_FALSE(hasLightRow(view, pA));
+    EXPECT_FALSE(hasDirectionalLight(view, sunA));
+    EXPECT_TRUE(hasRenderableRow(view, b));
+}
+
+TEST_F(SceneCacheTest, SceneSwitchKeepsSharedEntity) {
+    Scene* sceneA = createScene();
+    Scene* sceneB = createScene();
+    View* view = createView();
+
+    Entity const s = createRenderable();
+    sceneA->addEntity(s);
+    sceneB->addEntity(s);
+
+    view->setScene(sceneA);
+    prepare(sceneA, view, T);
+    ASSERT_TRUE(hasRenderableRow(view, s));
+
+    sceneA->remove(s);
+    view->setScene(sceneB);
+    prepare(sceneB, view, T);
+    EXPECT_TRUE(hasRenderableRow(view, s));
+}
+
+TEST_F(SceneCacheTest, FreshCacheLoadsExistingEntities) {
+    Scene* scene = createScene();
+    View* view = createView();
+
+    Entity const e = createRenderable();
+    scene->addEntity(e);
+
+    view->setScene(scene);
+    prepare(scene, view, mat4{});
+    EXPECT_TRUE(hasRenderableRow(view, e));
+}
+
+// An Entity destroyed before it is added can never be pruned lazily (its destruction
+// notification has already been delivered), so addEntity() / addEntities() must not add it.
+TEST_F(SceneCacheTest, AddDestroyedEntityIsNoOp) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& em = engine->getEntityManager();
+
+    Entity const dead = createRenderable();
+    Entity const alive = createRenderable();
+    engine->destroy(dead);
+    em.destroy(dead);
+
+    scene->addEntity(dead);
+    scene->addEntity(alive);
+    EXPECT_FALSE(scene->hasEntity(dead));
+    EXPECT_TRUE(scene->hasEntity(alive));
+    EXPECT_EQ(1u, scene->getEntityCount());
+
+    // the batch path skips dead entities too, and re-adding a live one is still idempotent
+    Entity const batch[] = { dead, alive };
+    scene->addEntities(batch, 2);
+    EXPECT_FALSE(scene->hasEntity(dead));
+    EXPECT_EQ(1u, scene->getEntityCount());
+
+    // the null Entity is never alive
+    scene->addEntity(Entity{});
+    EXPECT_FALSE(scene->hasEntity(Entity{}));
+    EXPECT_EQ(1u, scene->getEntityCount());
+
+    prepare(scene, view, T);
+    EXPECT_FALSE(hasRenderableRow(view, dead));
+    EXPECT_TRUE(hasRenderableRow(view, alive));
+    EXPECT_EQ(1u, scene->getEntityCount());
+}
+
+TEST_F(SceneCacheTest, RemoveAllEntitiesEvictsRows) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+
+    Entity const r = createRenderable();
+    Entity const p = createPointLight();
+    Entity const d = createDirectionalLight();
+
+    // 1. Fast path (same worldTransform).
+    scene->addEntity(r);
+    scene->addEntity(p);
+    scene->addEntity(d);
+    prepare(scene, view, T);
+    ASSERT_EQ(1u, cache.renderableCache.size());
+    ASSERT_EQ(1u, cache.lightCache.size());
+    ASSERT_FALSE(cache.directionalLights.empty());
+
+    scene->removeAllEntities();
+    prepare(scene, view, T);
+    EXPECT_EQ(0u, cache.renderableCache.size());
+    EXPECT_EQ(0u, cache.lightCache.size());
+    EXPECT_TRUE(cache.directionalLights.empty());
+
+    // 2. Full-rebuild path (different worldRotation).
+    mat4 const T2 = mat4::rotation(0.5, double3{ 0, 1, 0 }) * T;
+    scene->addEntity(r);
+    scene->addEntity(p);
+    scene->addEntity(d);
+    prepare(scene, view, T);
+    ASSERT_EQ(1u, cache.renderableCache.size());
+    ASSERT_EQ(1u, cache.lightCache.size());
+    ASSERT_FALSE(cache.directionalLights.empty());
+
+    scene->removeAllEntities();
+    prepare(scene, view, T2);
+    EXPECT_EQ(0u, cache.renderableCache.size());
+    EXPECT_EQ(0u, cache.lightCache.size());
+    EXPECT_TRUE(cache.directionalLights.empty());
+
+    // 3. Re-add r after removeAllEntities() and before prepare().
+    scene->addEntity(r);
+    scene->addEntity(p);
+    scene->addEntity(d);
+    prepare(scene, view, T2);
+    scene->removeAllEntities();
+    scene->addEntity(r);
+    prepare(scene, view, T2);
+    EXPECT_TRUE(hasRenderableRow(view, r));
+    EXPECT_FALSE(hasLightRow(view, p));
+    EXPECT_FALSE(hasDirectionalLight(view, d));
+}
+
+TEST_F(SceneCacheTest, SetSkinningBufferUpdatesCache) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+    auto& rcm = engine->getRenderableManager();
+
+    SkinningBuffer* sb1 = createSkinningBuffer(256);
+    SkinningBuffer* sb2 = createSkinningBuffer(256);
+
+    Entity const e = createEntity();
+    engine->getTransformManager().create(e);
+    RenderableManager::Builder(1)
+            .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
+            .enableSkinningBuffers(true)
+            .skinning(sb1, 256, 0)
+            .build(*engine, e);
+    scene->addEntity(e);
+
+    prepare(scene, view, T);
+    auto const ri = rcm.getInstance(e);
+    auto const handle1 = downcast(rcm).getSkinningBufferInfo(ri).handle;
+    uint32_t const idx1 = cache.renderableCache.getIndex(e);
+    ASSERT_NE(0xFFFFFFFFu, idx1);
+    EXPECT_EQ(handle1,
+            cache.renderableCache.getSoA().elementAt<FScene::SKINNING_BUFFER>(idx1).handle);
+
+    rcm.setSkinningBuffer(ri, sb2, 256, 0);
+    auto const handle2 = downcast(rcm).getSkinningBufferInfo(ri).handle;
+    ASSERT_NE(handle1, handle2);
+
+    prepare(scene, view, T);
+    uint32_t const idx2 = cache.renderableCache.getIndex(e);
+    ASSERT_NE(0xFFFFFFFFu, idx2);
+    EXPECT_EQ(handle2,
+            cache.renderableCache.getSoA().elementAt<FScene::SKINNING_BUFFER>(idx2).handle);
+}
+
+TEST_F(SceneCacheTest, LightDataCapacityForSimdOverRead) {
+    auto roundup4 = [](size_t n) { return (n + 3u) & ~size_t(3u); };
+
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+
+    for (size_t p = 1; p <= 48; ++p) {
+        Entity const e = createPointLight();
+        scene->addEntity(e);
+        prepare(scene, view, T);
+        EXPECT_GT(cache.lightData.capacity(), roundup4(p)) << "p = " << p;
+        EXPECT_GE(cache.lightData.capacity(), roundup4(p + 1)) << "p = " << p;
+    }
+}
+
+// Guards the scratch size invariant asserted in FView::prepareVisibleLights() (debug builds).
+// The buffer must hold the directional light slot too, rounded up to 4.
+TEST_F(SceneCacheTest, LightDistancesFitScratchBuffer) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    createCamera(view);
+
+    for (size_t p = 1; p <= 8; ++p) {
+        scene->addEntity(createPointLight());
+        ASSERT_TRUE(renderFrame(view)) << "p = " << p;
+        // all lights must be visible, so p = 4 and p = 8 hit the worst case
+        EXPECT_EQ(p + FScene::DIRECTIONAL_LIGHTS_COUNT,
+                downcast(view)->getSceneCache()->lightData.size()) << "p = " << p;
+    }
+}
+
+TEST_F(SceneCacheTest, EntitiesWithoutTransformUseIdentity) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+    auto& tcm = engine->getTransformManager();
+    auto& rcm = engine->getRenderableManager();
+    auto& lcm = engine->getLightManager();
+
+    float3 const pos{ 1.0f, 2.0f, 3.0f };
+    float3 const expectedPos = (mat4f{ T } * float4{ pos, 1.0f }).xyz;
+
+    Entity const r1 = createRenderable(true);
+    tcm.destroy(r1);
+    Entity const r2 = createRenderable(true);
+    tcm.setTransform(tcm.getInstance(r2), mat4f::translation(float3{ 10.0f, 0.0f, 0.0f }));
+    Entity const p = createPointLight(false, pos);
+    Entity const sun = createDirectionalLight(false, LightManager::Type::SUN);
+
+    scene->addEntity(r1);
+    scene->addEntity(r2);
+    scene->addEntity(p);
+    scene->addEntity(sun);
+
+    // 1. Full rebuild path (first prepare).
+    prepare(scene, view, T);
+
+    uint32_t idxR1 = cache.renderableCache.getIndex(r1);
+    ASSERT_NE(0xFFFFFFFFu, idxR1);
+    EXPECT_EQ(double3{ 0.0 }, cache.renderableCache.getTranslations()[idxR1]);
+    EXPECT_EQ(mat4f{ T }, cache.renderableData.elementAt<FScene::WORLD_TRANSFORM>(idxR1));
+
+    uint32_t idxP = cache.lightCache.getIndex(p);
+    ASSERT_NE(0xFFFFFFFFu, idxP);
+    EXPECT_EQ(double3{ pos }, cache.lightCache.getTranslations()[idxP]);
+    EXPECT_EQ(expectedPos,
+            cache.lightData.elementAt<FScene::POSITION_RADIUS>(
+                    FScene::DIRECTIONAL_LIGHTS_COUNT + idxP).xyz);
+
+    EXPECT_TRUE(hasDirectionalLight(view, sun));
+
+    // 2. Fast path (same T) after dirtying each entity without a transform.
+    rcm.setPriority(rcm.getInstance(r1), 5);
+    tcm.destroy(r2);
+    lcm.setIntensity(lcm.getInstance(p), 2000.0f);
+    lcm.setIntensity(lcm.getInstance(sun), 2000.0f);
+
+    prepare(scene, view, T);
+
+    idxR1 = cache.renderableCache.getIndex(r1);
+    ASSERT_NE(0xFFFFFFFFu, idxR1);
+    EXPECT_EQ(double3{ 0.0 }, cache.renderableCache.getTranslations()[idxR1]);
+    EXPECT_EQ(mat4f{ T }, cache.renderableData.elementAt<FScene::WORLD_TRANSFORM>(idxR1));
+
+    uint32_t const idxR2 = cache.renderableCache.getIndex(r2);
+    ASSERT_NE(0xFFFFFFFFu, idxR2);
+    EXPECT_EQ(double3{ 0.0 }, cache.renderableCache.getTranslations()[idxR2]);
+    EXPECT_EQ(mat4f{ T }, cache.renderableData.elementAt<FScene::WORLD_TRANSFORM>(idxR2));
+
+    idxP = cache.lightCache.getIndex(p);
+    ASSERT_NE(0xFFFFFFFFu, idxP);
+    EXPECT_EQ(double3{ pos }, cache.lightCache.getTranslations()[idxP]);
+    EXPECT_EQ(expectedPos,
+            cache.lightData.elementAt<FScene::POSITION_RADIUS>(
+                    FScene::DIRECTIONAL_LIGHTS_COUNT + idxP).xyz);
+
+    EXPECT_TRUE(hasDirectionalLight(view, sun));
+}
+
+TEST_F(SceneCacheTest, DirectionalLightTies) {
+    Engine::Config config{};
+    config.enableMultipleDirectionalLights = true;
+    recreateEngine(config);
+    ASSERT_NE(nullptr, engine);
+
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+    auto& lcm = engine->getLightManager();
+
+    Entity lights[3] = { createEntity(), createEntity(), createEntity() };
+    std::sort(std::begin(lights), std::end(lights), [](Entity a, Entity b) {
+        return a.getId() < b.getId();
+    });
+
+    for (size_t i = 0; i < 3; ++i) {
+        LightManager::ShadowOptions shadowOpts{};
+        shadowOpts.screenSpaceContactShadows = (i == 0);
+        LightManager::Builder(LightManager::Type::DIRECTIONAL)
+                .intensity(1000.0f)
+                .direction(normalize(float3{ float(i + 1), -1.0f, 0.0f }))
+                .shadowOptions(shadowOpts)
+                .build(*engine, lights[i]);
+        scene->addEntity(lights[i]);
+    }
+
+    prepare(scene, view, T);
+
+    EXPECT_EQ(lights[0], cache.lightData.elementAt<FScene::LIGHT_ENTITY>(0));
+    ASSERT_EQ(2u, cache.extraDirectionalLightCount);
+    auto const li0 = downcast(lcm).getInstance(lights[0]);
+    auto const li1 = downcast(lcm).getInstance(lights[1]);
+    auto const li2 = downcast(lcm).getInstance(lights[2]);
+    EXPECT_NE(li0, cache.extraDirectionalLightInstances[0]);
+    EXPECT_NE(li0, cache.extraDirectionalLightInstances[1]);
+    EXPECT_EQ(li1, cache.extraDirectionalLightInstances[0]);
+    EXPECT_EQ(li2, cache.extraDirectionalLightInstances[1]);
+    EXPECT_TRUE(cache.lightsHaveContactShadows);
+
+    // Enable contact shadows only on non-dominant directional lights, with no punctual lights.
+    LightManager::ShadowOptions noContact{};
+    noContact.screenSpaceContactShadows = false;
+    LightManager::ShadowOptions withContact{};
+    withContact.screenSpaceContactShadows = true;
+    lcm.setShadowOptions(lcm.getInstance(lights[0]), noContact);
+    lcm.setShadowOptions(lcm.getInstance(lights[1]), withContact);
+    lcm.setShadowOptions(lcm.getInstance(lights[2]), withContact);
+
+    prepare(scene, view, T);
+    EXPECT_EQ(lights[0], cache.lightData.elementAt<FScene::LIGHT_ENTITY>(0));
+    EXPECT_FALSE(cache.lightsHaveContactShadows);
+}
+
+TEST_F(SceneCacheTest, ConcurrentDestroyAndViewSceneChanges) {
+    Scene* sceneA = createScene();
+    Scene* sceneB = createScene();
+    View* view1 = createView();
+    View* view2 = createView();
+    auto& em = engine->getEntityManager();
+
+    constexpr size_t kEntityCount = 2048;
+    constexpr size_t kRenderableCount = 16;
+    std::vector<Entity> entities(kEntityCount);
+    em.create(kEntityCount, entities.data());
+    mEntities.insert(mEntities.end(), entities.begin(), entities.end());
+
+    for (size_t i = 0; i < kRenderableCount; ++i) {
+        engine->getTransformManager().create(entities[i]);
+        RenderableManager::Builder(1)
+                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
+                .build(*engine, entities[i]);
+        sceneA->addEntity(entities[i]);
+        sceneB->addEntity(entities[i]);
+    }
+
+    View* extraViews[8];
+    for (View*& v : extraViews) {
+        v = createView();
+    }
+
+    view1->setScene(sceneA);
+    view2->setScene(sceneB);
+    prepare(sceneA, view1, T);
+    prepare(sceneB, view2, T);
+    for (size_t i = 0; i < kRenderableCount; ++i) {
+        ASSERT_TRUE(hasRenderableRow(view1, entities[i]));
+        ASSERT_TRUE(hasRenderableRow(view2, entities[i]));
+    }
+
+    std::atomic<bool> start{ false };
+    std::atomic<bool> done{ false };
+    std::thread destroyer([&] {
+        while (!start.load(std::memory_order_acquire)) {
+        }
+        for (Entity const e : entities) {
+            em.destroy(1, &e);
+        }
+        done.store(true, std::memory_order_release);
+    });
+
+    start.store(true, std::memory_order_release);
+    while (!done.load(std::memory_order_acquire)) {
+        for (View* v : extraViews) {
+            v->setScene(sceneA);
+        }
+        view1->setScene(sceneB);
+        view1->setScene(nullptr);
+        view1->setScene(sceneA);
+        for (View* v : extraViews) {
+            v->setScene(nullptr);
+        }
+        Scene* temp = engine->createScene();
+        view2->setScene(temp);
+        view2->setScene(sceneB);
+        engine->destroy(temp);
+    }
+    destroyer.join();
+
+    view1->setScene(sceneA);
+    view2->setScene(sceneB);
+    prepare(sceneA, view1, T);
+    prepare(sceneB, view2, T);
+    for (size_t i = 0; i < kRenderableCount; ++i) {
+        EXPECT_FALSE(hasRenderableRow(view1, entities[i]));
+        EXPECT_FALSE(hasRenderableRow(view2, entities[i]));
+    }
+}
+
+TEST_F(SceneCacheTest, DestroyedEntityPrunedOnUnregisterView) {
+    Scene* sceneA = createScene();
+    Scene* sceneB = createScene();
+    View* view1 = createView();
+    View* view2 = createView();
+
+    Entity const r1 = createRenderable();
+    Entity const r2 = createRenderable();
+    sceneA->addEntity(r1);
+    sceneA->addEntity(r2);
+
+    view1->setScene(sceneA);
+    prepare(sceneA, view1, T);
+    ASSERT_TRUE(sceneA->hasEntity(r1));
+    ASSERT_TRUE(sceneA->hasEntity(r2));
+    ASSERT_EQ(2u, sceneA->getEntityCount());
+
+    // 1. Destroy r1, then detach view1 before prepare() runs on sceneA.
+    engine->getEntityManager().destroy(r1);
+    view1->setScene(nullptr);
+    EXPECT_FALSE(sceneA->hasEntity(r1));
+    EXPECT_EQ(1u, sceneA->getEntityCount());
+
+    // Even after another View attaches and prepares sceneA, r1 must not remain in sceneA.
+    view2->setScene(sceneA);
+    prepare(sceneA, view2, T);
+    EXPECT_FALSE(sceneA->hasEntity(r1));
+    EXPECT_TRUE(sceneA->hasEntity(r2));
+    EXPECT_EQ(1u, sceneA->getEntityCount());
+
+    // 2. Destroy r2, then switch view2 to sceneB before prepare() runs on sceneA.
+    engine->getEntityManager().destroy(r2);
+    view2->setScene(sceneB);
+    prepare(sceneB, view2, T);
+    EXPECT_FALSE(sceneA->hasEntity(r2));
+    EXPECT_EQ(0u, sceneA->getEntityCount());
+}
+
+// The PRIMITIVES column is a Slice into the FRenderPrimitive array owned by the renderable
+// component, and it is now cached across frames. Rebuilding a renderable frees that array and
+// allocates a new one, so the row must be refreshed before the next frame reads it, all the way
+// down to the per-frame SoA that RenderPass consumes.
+TEST_F(SceneCacheTest, RebuiltRenderableRefreshesFramePrimitives) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    createCamera(view);
+    auto& rcm = engine->getRenderableManager();
+
+    Entity const e = createEntity();
+    engine->getTransformManager().create(e);
+    scene->addEntity(e);
+
+    auto const rebuild = [&](size_t const primitiveCount) {
+        RenderableManager::Builder builder(primitiveCount);
+        builder.boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }});
+        for (size_t i = 0; i < primitiveCount; i++) {
+            setGeometry(builder, i);
+        }
+        builder.build(*engine, e);
+    };
+
+    // Renders a frame, then checks that the row of `e` in the per-frame SoA points to the
+    // component's current primitive array, and that the color pass summed the right count.
+    auto const renderAndCheck = [&](size_t const primitiveCount) {
+        ASSERT_TRUE(renderFrame(view));
+        auto const& soa = downcast(view)->getRenderableData();
+        uint32_t const row = findFrameRow(view, e);
+        ASSERT_NE(0xFFFFFFFFu, row);
+        auto const& visible = downcast(view)->getVisibleRenderables();
+        ASSERT_TRUE(row >= visible.first && row < visible.last) << "the renderable was culled";
+
+        auto const current = downcast(rcm).getRenderPrimitives(rcm.getInstance(e), 0);
+        ASSERT_EQ(primitiveCount, current.size());
+        auto const& cached = soa.elementAt<FScene::PRIMITIVES>(row);
+        EXPECT_EQ(current.data(), cached.data());
+        EXPECT_EQ(current.size(), cached.size());
+        // RenderPass::updateSummedPrimitiveCounts() ran on the frame's PRIMITIVES
+        EXPECT_EQ(primitiveCount, FScene::getPrimitiveCount(soa, visible.first, visible.last));
+    };
+
+    // Built after being added to the Scene: the addComponent() notification brings it in.
+    rebuild(1);
+    ASSERT_NO_FATAL_FAILURE(renderAndCheck(1));
+
+    // Rebuilding frees the previous FRenderPrimitive array: a stale slice would dangle.
+    rebuild(3);
+    ASSERT_NO_FATAL_FAILURE(renderAndCheck(3));
+
+    // Shrinking it would also make a stale slice read past the new array.
+    rebuild(2);
+    ASSERT_NO_FATAL_FAILURE(renderAndCheck(2));
+}
+
+// lightsHaveContactShadows is a property of the Scene's lights, not of the lights visible this
+// frame, and it is kept up to date through setShadowOptions(), which only notifies the caches when
+// the effective (clamped) options actually change.
+TEST_F(SceneCacheTest, ContactShadowsFollowSceneLightsAndShadowOptions) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+    auto& lcm = engine->getLightManager();
+    auto& rcm = engine->getRenderableManager();
+    auto& tcm = engine->getTransformManager();
+
+    Entity const r = createRenderable();
+    Entity const sun = createDirectionalLight();
+    Entity const p = createPointLight();
+    scene->addEntity(r);
+    scene->addEntity(sun);
+    scene->addEntity(p);
+
+    prepare(scene, view, T);
+    EXPECT_FALSE(cache.lightsHaveContactShadows);
+
+    auto const li = lcm.getInstance(p);
+    LightManager::ShadowOptions options = lcm.getShadowOptions(li);
+
+    // 1. Enabling contact shadows on a positional light notifies, and is picked up.
+    options.screenSpaceContactShadows = true;
+    lcm.setShadowOptions(li, options);
+    EXPECT_TRUE(cache.dirtyEntities[EntityManager::getIndex(p)]);
+    prepare(scene, view, T);
+    EXPECT_TRUE(cache.lightsHaveContactShadows);
+
+    // 2. Setting the same options again is a no-op: nothing is dirtied.
+    lcm.setShadowOptions(li, options);
+    EXPECT_FALSE(cache.dirtyEntities[EntityManager::getIndex(p)]);
+    EXPECT_FALSE(cache.hasDirtyEntities());
+
+    // 3. Any other field notifies (operator== covers every field), and the comparison is made
+    //    after clamping: 4096 clamps to 2048, so going from 2048 to 4096 is a no-op.
+    options.mapSize = 2048;
+    lcm.setShadowOptions(li, options);
+    EXPECT_TRUE(cache.dirtyEntities[EntityManager::getIndex(p)]);
+    prepare(scene, view, T);
+    EXPECT_TRUE(cache.lightsHaveContactShadows);
+    options.mapSize = 4096;
+    lcm.setShadowOptions(li, options);
+    EXPECT_FALSE(cache.dirtyEntities[EntityManager::getIndex(p)]);
+
+    // 4. The dominant directional light counts too.
+    options.screenSpaceContactShadows = false;
+    lcm.setShadowOptions(li, options);
+    prepare(scene, view, T);
+    EXPECT_FALSE(cache.lightsHaveContactShadows);
+
+    auto const sunInstance = lcm.getInstance(sun);
+    LightManager::ShadowOptions sunOptions = lcm.getShadowOptions(sunInstance);
+    sunOptions.screenSpaceContactShadows = true;
+    lcm.setShadowOptions(sunInstance, sunOptions);
+    prepare(scene, view, T);
+    EXPECT_TRUE(cache.lightsHaveContactShadows);
+
+    // 5. Removing that light from the Scene clears it.
+    scene->remove(sun);
+    prepare(scene, view, T);
+    EXPECT_FALSE(cache.lightsHaveContactShadows);
+
+    // 6. End to end: the flag does not depend on light culling. The point light (radius 10) is
+    //    moved to z = +50, behind a camera at z = +5 looking down -z, so it is culled; yet
+    //    View::hasContactShadows() is true because a visible renderable and a Scene light both
+    //    have contact shadows enabled.
+    createCamera(view);
+    rcm.setScreenSpaceContactShadows(rcm.getInstance(r), true);
+    tcm.setTransform(tcm.getInstance(p), mat4f::translation(float3{ 0, 0, 50 }));
+    options.screenSpaceContactShadows = true;
+    lcm.setShadowOptions(li, options);
+    ASSERT_TRUE(renderFrame(view));
+    // the frame's light list was shrunk to the visible lights: only the directional slot is left
+    EXPECT_EQ(FScene::DIRECTIONAL_LIGHTS_COUNT, cache.lightData.size());
+    EXPECT_TRUE(cache.renderablesHaveContactShadows);
+    EXPECT_TRUE(cache.lightsHaveContactShadows);
+    EXPECT_TRUE(downcast(view)->hasContactShadows());
+}
+
+TEST_F(SceneCacheTest, CameraTranslationSkipsRebuildAndPreservesPrecision) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+    auto& tcm = engine->getTransformManager();
+    tcm.setAccurateTranslationsEnabled(true);
+
+    Box const aabb{ { 1.25f, -2.5f, 3.75f }, { 4.5f, 5.5f, 6.5f } };
+    Entity const r = createEntity();
+    tcm.create(r);
+    RenderableManager::Builder(1).boundingBox(aabb).build(*engine, r);
+
+    tcm.setTransform(tcm.getInstance(r),
+            mat4::translation(double3{ 100000.25, -50000.5, 25000.125 }) *
+                    mat4::rotation(0.7, double3{ 0, 1, 0 }) *
+                    mat4::scaling(double3{ 1.5, 2.0, 0.5 }));
+    mat4 const modelR = tcm.getWorldTransformAccurate(tcm.getInstance(r));
+
+    float3 const localLightPos{ 3.5f, -7.25f, 11.125f };
+    Entity const p = createPointLight(true, localLightPos);
+    tcm.setTransform(tcm.getInstance(p),
+            mat4::translation(double3{ 100005.0, -49995.0, 25010.0 }) *
+                    mat4::rotation(-0.35, double3{ 1, 0, 0 }));
+    mat4 const modelP = tcm.getWorldTransformAccurate(tcm.getInstance(p));
+
+    Entity const sun = createDirectionalLight(false);
+
+    scene->addEntity(r);
+    scene->addEntity(p);
+    scene->addEntity(sun);
+
+    mat3 const R1 = mat3::rotation(0.3, double3{ 0, 1, 0 }) *
+            mat3::rotation(-0.2, double3{ 1, 0, 0 });
+    double3 const cam1{ 100000.0, -50000.0, 25000.0 };
+    mat4 const W1 = mat4{ R1 } * mat4::translation(-cam1);
+
+    prepare(scene, view, W1);
+
+    // 1. Pure camera translation does not rebuild the master cache.
+    double3 const cam2{ 100010.5, -50003.25, 24990.75 };
+    mat4 const W2 = mat4{ R1 } * mat4::translation(-cam2);
+    EXPECT_FALSE(downcast(scene)->processDeferredUpdates(W2.upperLeft(), false, cache));
+
+    prepare(scene, view, W2);
+
+    auto const verifyFrameData = [&](mat4 const& W) {
+        uint32_t const idxR = cache.renderableCache.getIndex(r);
+        ASSERT_NE(0xFFFFFFFFu, idxR);
+        mat4f const expectedShaderWorld = mat4f{ W * modelR };
+        EXPECT_EQ(expectedShaderWorld,
+                cache.renderableData.elementAt<FScene::WORLD_TRANSFORM>(idxR));
+
+        Box const expectedAabb = rigidTransform(aabb, expectedShaderWorld);
+        EXPECT_EQ(expectedAabb.center,
+                cache.renderableData.elementAt<FScene::WORLD_AABB_CENTER>(idxR));
+        EXPECT_EQ(expectedAabb.center.x,
+                cache.renderableData.elementAt<FScene::WORLD_AABB_CENTER_X>(idxR));
+        EXPECT_EQ(expectedAabb.center.y,
+                cache.renderableData.elementAt<FScene::WORLD_AABB_CENTER_Y>(idxR));
+        EXPECT_EQ(expectedAabb.center.z,
+                cache.renderableData.elementAt<FScene::WORLD_AABB_CENTER_Z>(idxR));
+        EXPECT_EQ(expectedAabb.halfExtent,
+                cache.renderableData.elementAt<FScene::WORLD_AABB_EXTENT>(idxR));
+
+        uint32_t const idxP = cache.lightCache.getIndex(p);
+        ASSERT_NE(0xFFFFFFFFu, idxP);
+        uint32_t const lightRow = FScene::DIRECTIONAL_LIGHTS_COUNT + idxP;
+        float3 const expectedLightPos = float3((W * (modelP * double4{ localLightPos, 1.0 })).xyz);
+        EXPECT_EQ(expectedLightPos,
+                cache.lightData.elementAt<FScene::POSITION_RADIUS>(lightRow).xyz);
+        EXPECT_EQ(expectedLightPos.x, cache.lightData.elementAt<FScene::POSITION_X>(lightRow));
+        EXPECT_EQ(expectedLightPos.y, cache.lightData.elementAt<FScene::POSITION_Y>(lightRow));
+        EXPECT_EQ(expectedLightPos.z, cache.lightData.elementAt<FScene::POSITION_Z>(lightRow));
+    };
+
+    ASSERT_NO_FATAL_FAILURE(verifyFrameData(W2));
+
+    // 2. Changing the 3x3 rotation of worldTransform triggers a master cache rebuild.
+    mat3 const R2 = mat3::rotation(-0.4, double3{ 0, 0, 1 });
+    mat4 const W3 = mat4{ R2 } * mat4::translation(-cam2);
+    EXPECT_TRUE(downcast(scene)->processDeferredUpdates(W3.upperLeft(), false, cache));
+
+    prepare(scene, view, W3);
+    ASSERT_NO_FATAL_FAILURE(verifyFrameData(W3));
+    EXPECT_EQ(normalize(mat3f{ R2 } * float3{ 0.0f, -1.0f, 0.0f }),
+            cache.lightData.elementAt<FScene::DIRECTION>(0));
+}
+
+TEST_F(SceneCacheTest, UnrelatedEntitiesDoNotDirtySceneCache) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    auto& cache = *downcast(view)->getSceneCache();
+    auto& rcm = engine->getRenderableManager();
+    auto& lcm = engine->getLightManager();
+    auto& tcm = engine->getTransformManager();
+
+    Entity const inScene = createRenderable();
+    scene->addEntity(inScene);
+
+    mat4 const T{};
+    prepare(scene, view, T);
+    EXPECT_FALSE(cache.hasDirtyEntities());
+
+    // Creating or mutating entities outside the scene must not dirty the scene's view cache.
+    Entity const outsideRenderable = createRenderable();
+    Entity const outsideLight = createPointLight();
+    rcm.setAxisAlignedBoundingBox(rcm.getInstance(outsideRenderable),
+            Box{ { 0, 0, 0 }, { 2, 2, 2 } });
+    lcm.setIntensity(lcm.getInstance(outsideLight), 5000.0f);
+    tcm.setTransform(tcm.getInstance(outsideRenderable), mat4f::translation(float3{ 1, 2, 3 }));
+    downcast(tcm).ensureWorldTransformsUpToDate();
+
+    EXPECT_FALSE(cache.hasDirtyEntities());
+    EXPECT_FALSE(downcast(scene)->processDeferredUpdates(T.upperLeft(), false, cache));
+
+    // Mutating an entity that IS in the scene still marks the cache dirty.
+    tcm.setTransform(tcm.getInstance(inScene), mat4f::translation(float3{ 4, 5, 6 }));
+    downcast(tcm).ensureWorldTransformsUpToDate();
+    EXPECT_TRUE(cache.hasDirtyEntities());
+    EXPECT_TRUE(downcast(scene)->processDeferredUpdates(T.upperLeft(), false, cache));
+}
+
+TEST_F(SceneCacheTest, SceneHoldsEbrWatermarkAndMultiViewEvictionSurvivesIndexRecycling) {
+    Scene* scene = createScene();
+    View* viewX = createView();
+    View* viewY = createView();
+    viewX->setScene(scene);
+    viewY->setScene(scene);
+    EntityManager& em = engine->getEntityManager();
+
+    // Flush any pending epochs from earlier tests and drain pre-existing free-list entries until
+    // EntityManager bump-allocates a fresh generation-0 index (meaning mFreeList.size() < 1024).
+    downcast(engine)->gc();
+    downcast(engine)->gc();
+    while (true) {
+        Entity const drain = createEntity();
+        if (drain.getId() == EntityManager::getIndex(drain)) {
+            break;
+        }
+    }
+
+    Entity const r1 = createRenderable();
+    Entity const p1 = createPointLight();
+    Entity const d1 = createDirectionalLight();
+    scene->addEntity(r1);
+    scene->addEntity(p1);
+    scene->addEntity(d1);
+
+    prepare(scene, viewX, T);
+    prepare(scene, viewY, T);
+    ASSERT_TRUE(hasRenderableRow(viewX, r1));
+    ASSERT_TRUE(hasRenderableRow(viewY, r1));
+    ASSERT_TRUE(hasLightRow(viewX, p1));
+    ASSERT_TRUE(hasLightRow(viewY, p1));
+    ASSERT_TRUE(hasDirectionalLight(viewX, d1));
+    ASSERT_TRUE(hasDirectionalLight(viewY, d1));
+
+    // Create > 2 * MIN_FREE_INDICES (2048) extra entities with higher indices than r1 so that once
+    // reclaimed, r1 sits near the front of mFreeList while mFreeList.size() stays well above 1024.
+    constexpr size_t kExtraCount = 2200;
+    std::vector<Entity> extras(kExtraCount);
+    em.create(kExtraCount, extras.data());
+    mEntities.insert(mEntities.end(), extras.begin(), extras.end());
+
+    std::unordered_set<uint32_t> destroyedIndices;
+    destroyedIndices.insert(EntityManager::getIndex(r1));
+    destroyedIndices.insert(EntityManager::getIndex(p1));
+    destroyedIndices.insert(EntityManager::getIndex(d1));
+    for (Entity const e : extras) {
+        destroyedIndices.insert(EntityManager::getIndex(e));
+    }
+
+    // Destroy component data, then destroy the entities in EntityManager.
+    engine->destroy(r1);
+    engine->destroy(p1);
+    engine->destroy(d1);
+    em.destroy(r1);
+    em.destroy(p1);
+    em.destroy(d1);
+    em.destroy(extras.size(), extras.data());
+
+    // Seal the epoch and attempt reclamation directly on EntityManager WITHOUT running FScene::gc()
+    // or prepare(): Scene's component manager must hold the EBR watermark so none of the 2203
+    // destroyed indices can be recycled (even across 1050 > MIN_FREE_INDICES allocations).
+    em.advanceEpoch();
+    em.reclaimSafeEpochs();
+    for (size_t i = 0; i < 1050; ++i) {
+        Entity const probe = createEntity();
+        EXPECT_EQ(0u, destroyedIndices.count(EntityManager::getIndex(probe)));
+    }
+
+    // Now run FEngine::gc() WITHOUT calling prepare() on viewY. FScene::gc() evicts r1/p1/d1 from
+    // Scene AND immediately evicts them from all attached View caches (including inactive viewY),
+    // then advances its EBR watermark so EntityManager can recycle their 17-bit indices.
+    downcast(engine)->gc();
+    EXPECT_FALSE(scene->hasEntity(r1));
+    EXPECT_FALSE(hasRenderableRow(viewY, r1));
+    EXPECT_FALSE(hasLightRow(viewY, p1));
+    EXPECT_FALSE(hasDirectionalLight(viewY, d1));
+
+    // Allocate until we obtain a recycled entity reusing r1's 17-bit index (guaranteed within 1025
+    // allocations since r1 has the smallest index among the 2203 newly reclaimed indices).
+    Entity r1Recycled;
+    for (size_t i = 0; i < 1100; ++i) {
+        Entity const candidate = createEntity();
+        if (EntityManager::getIndex(candidate) == EntityManager::getIndex(r1)) {
+            r1Recycled = candidate;
+            break;
+        }
+    }
+    ASSERT_FALSE(r1Recycled.isNull());
+    EXPECT_NE(r1Recycled, r1);
+
+    // Attach a new renderable to r1Recycled, add to Scene, and finally prepare inactive viewY.
+    engine->getTransformManager().create(r1Recycled);
+    RenderableManager::Builder(1)
+            .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
+            .build(*engine, r1Recycled);
+    scene->addEntity(r1Recycled);
+
+    prepare(scene, viewY, T);
+    EXPECT_FALSE(hasRenderableRow(viewY, r1));
+    EXPECT_TRUE(hasRenderableRow(viewY, r1Recycled));
+}
+
+TEST_F(SceneCacheTest, SoaCacheEntityInstanceMapInvariants) {
+    EntityManager& em = engine->getEntityManager();
+    FScene::SceneCacheData::RenderableCache cache;
+
+    // 1. Empty cache and null entity return 0xFFFFFFFFu.
+    EXPECT_EQ(0u, cache.size());
+    EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(Entity{}));
+
+    // 2. Multi-page acquire (> 2 * 1024 entries per page) with 0-based row indices. The Extra
+    //    (PrevTransform) only exists when motion vectors are compiled in.
+    constexpr size_t kCount = 2500;
+    std::vector<Entity> entities(kCount);
+    em.create(kCount, entities.data());
+    mEntities.insert(mEntities.end(), entities.begin(), entities.end());
+
+    // Unallocated page query before insertion returns 0xFFFFFFFFu.
+    for (size_t i = 0; i < kCount; ++i) {
+        EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(entities[i]));
+    }
+
+    for (size_t i = 0; i < kCount; ++i) {
+        double3 const t{ double(i), double(i * 2), double(i * 3) };
+        auto const [idx, inserted] = cache.acquire(entities[i], t);
+        ASSERT_TRUE(inserted);
+        ASSERT_EQ(uint32_t(i), idx);
+        // A new row has its EntityColumn populated by acquire() itself.
+        EXPECT_EQ(entities[i], cache.getSoA().elementAt<FScene::RENDERABLE_ENTITY>(idx));
+        cache.getSoA().elementAt<FScene::USER_DATA>(idx) = float(i + 100);
+#if defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+        cache.extraAt(idx) = PrevTransform{
+            mat4f::translation(float3{ float(i), 0.0f, 0.0f }),
+            float3{ float(i), 1.0f, 2.0f }
+        };
+#endif
+    }
+    EXPECT_EQ(kCount, cache.size());
+
+    // 3. Re-acquiring existing entities returns { idx, false } and updates translation in-place.
+    for (size_t i = 0; i < kCount; ++i) {
+        EXPECT_EQ(uint32_t(i), cache.getIndex(entities[i]));
+        double3 const updatedT{ double(i + 10), double(i + 20), double(i + 30) };
+        auto const [idx, inserted] = cache.acquire(entities[i], updatedT);
+        EXPECT_FALSE(inserted);
+        EXPECT_EQ(uint32_t(i), idx);
+        EXPECT_EQ(updatedT, cache.getTranslations()[idx]);
+        EXPECT_EQ(float(i + 100), cache.getSoA().elementAt<FScene::USER_DATA>(idx));
+#if defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+        EXPECT_EQ(float(i), cache.extraAt(idx).lo.x);
+#endif
+    }
+
+    // 4. Forged/stale generation sharing the same 17-bit index must miss getIndex() and remove().
+    Entity const target = entities[0];
+    uint32_t const forgedId = target.getId() ^ (1u << FILAMENT_GENERATION_SHIFT);
+    Entity const forged = Entity::import(static_cast<int32_t>(forgedId));
+    ASSERT_EQ(EntityManager::getIndex(target), EntityManager::getIndex(forged));
+    ASSERT_NE(target, forged);
+    EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(forged));
+    cache.remove(forged);
+    EXPECT_EQ(kCount, cache.size());
+    EXPECT_EQ(0u, cache.getIndex(target));
+
+    // 5. Swap-and-pop removal from front (row 0) migrates the last row into row 0.
+    Entity const lastEntity = entities[kCount - 1];
+    cache.remove(target);
+    EXPECT_EQ(kCount - 1, cache.size());
+    EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(target));
+    EXPECT_EQ(0u, cache.getIndex(lastEntity));
+    EXPECT_EQ(lastEntity, cache.getSoA().elementAt<FScene::RENDERABLE_ENTITY>(0));
+    EXPECT_EQ(float(kCount - 1 + 100), cache.getSoA().elementAt<FScene::USER_DATA>(0));
+    EXPECT_EQ((double3{ double(kCount - 1 + 10), double(kCount - 1 + 20), double(kCount - 1 + 30) }),
+            cache.getTranslations()[0]);
+#if defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+    EXPECT_EQ(float(kCount - 1), cache.extraAt(0).lo.x);
+#endif
+
+    // 6. Removing the current last row pops without swapping.
+    Entity const newLast = cache.getSoA().elementAt<FScene::RENDERABLE_ENTITY>(cache.size() - 1);
+    cache.remove(newLast);
+    EXPECT_EQ(kCount - 2, cache.size());
+    EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(newLast));
+    EXPECT_EQ(0u, cache.getIndex(lastEntity));
+
+    // 7. clear() resets all rows and map entries.
+    cache.clear();
+    EXPECT_EQ(0u, cache.size());
+    for (Entity const e : entities) {
+        EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(e));
+    }
 }
 
 int main(int argc, char** argv) {

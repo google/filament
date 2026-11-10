@@ -128,7 +128,7 @@ void Grid::update(uint32_t const width, uint32_t const height, uint32_t const de
 
     std::vector<float3> vertices;
     std::vector<uint32_t> indices;
-    size_t const verticeCount = (depth + 1) * (height + 1) * (width + 1);
+    size_t const verticeCount = (size_t(depth) + 1) * (height + 1) * (width + 1);
     vertices.reserve(verticeCount);
     indices.reserve(verticeCount * 2);
 

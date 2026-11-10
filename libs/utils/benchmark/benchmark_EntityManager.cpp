@@ -113,6 +113,37 @@ static void BM_EntityManager_DestroySingular(benchmark::State& state) {
 }
 BENCHMARK(BM_EntityManager_DestroySingular)->Range(8, 8192);
 
+static void BM_EntityManager_DestroySingularWithCallback(benchmark::State& state) {
+    EntityManagerImpl em;
+    size_t const count = state.range(0);
+    std::vector<Entity> entities(count);
+    size_t destroyedTotal = 0;
+    int token = 0;
+    em.registerChangeCallback(&token, [&destroyedTotal](Slice<const Entity> slice) {
+        destroyedTotal += slice.size();
+        benchmark::DoNotOptimize(destroyedTotal);
+    });
+
+    for (auto _ : state) {
+        state.PauseTiming();
+        em.create(count, entities.data());
+        state.ResumeTiming();
+
+        for (size_t i = 0; i < count; ++i) {
+            em.destroy(entities[i]);
+        }
+        em.flushNotifications();
+
+        state.PauseTiming();
+        em.advanceEpoch();
+        em.reclaimSafeEpochs();
+        state.ResumeTiming();
+    }
+
+    em.unregisterChangeCallback(&token);
+}
+BENCHMARK(BM_EntityManager_DestroySingularWithCallback)->Range(8, 8192);
+
 static void BM_EntityManager_DestroyBatched(benchmark::State& state) {
     EntityManagerImpl em;
     size_t const count = state.range(0);
@@ -176,10 +207,10 @@ static void BM_ComponentManager_CatchupGarbage(benchmark::State& state) {
 
     size_t const count = state.range(0);
     std::vector<Entity> entities(count);
-    em.create(count, entities.data());
 
     for (auto _ : state) {
         state.PauseTiming();
+        em.create(count, entities.data());
         TestManager cm(em);
         for (size_t i = 0; i < count; ++i) {
             cm.addComponent(entities[i]);
@@ -195,11 +226,14 @@ static void BM_ComponentManager_CatchupGarbage(benchmark::State& state) {
 
         state.PauseTiming();
         cm.suspend();
+        for (size_t i = 1; i < count; i += 2) {
+            em.destroy(entities[i]);
+        }
+        em.flushNotifications();
+        em.advanceEpoch();
         em.reclaimSafeEpochs();
         state.ResumeTiming();
     }
-
-    em.destroy(count, entities.data());
 }
 BENCHMARK(BM_ComponentManager_CatchupGarbage)->Range(8, 8192);
 
@@ -240,19 +274,22 @@ static void BM_ComponentManager_Defragmentation(benchmark::State& state) {
 
     size_t const count = state.range(0);
     std::vector<Entity> entities(count);
-    em.create(count, entities.data());
 
     for (auto _ : state) {
         state.PauseTiming();
+        em.create(count, entities.data());
         TestManager cm(em);
         for (size_t i = 0; i < count; ++i) {
             cm.addComponent(entities[i]);
         }
         std::default_random_engine rng(1337);
         std::vector<Entity> toDestroy;
+        std::vector<Entity> survivors;
         for (size_t i = 0; i < count; ++i) {
             if (rng() % 4 == 0) {
                 toDestroy.push_back(entities[i]);
+            } else {
+                survivors.push_back(entities[i]);
             }
         }
         em.destroy(toDestroy.size(), toDestroy.data());
@@ -264,11 +301,12 @@ static void BM_ComponentManager_Defragmentation(benchmark::State& state) {
 
         state.PauseTiming();
         cm.suspend();
+        em.destroy(survivors.size(), survivors.data());
+        em.flushNotifications();
+        em.advanceEpoch();
         em.reclaimSafeEpochs();
         state.ResumeTiming();
     }
-
-    em.destroy(count, entities.data());
 }
 BENCHMARK(BM_ComponentManager_Defragmentation)->Range(8, 8192);
 
@@ -332,10 +370,11 @@ static void BM_MT_Contention_Create_Vs_Destroy(benchmark::State& state) {
             constexpr size_t BATCH = 128;
             while (active.load(std::memory_order_relaxed)) {
                 for (size_t i = 0; i < NUM; i += BATCH) {
+                    size_t const count = std::min(BATCH, NUM - i);
                     Entity localBatch[BATCH];
-                    std::copy_n(&preallocated[i], BATCH, localBatch);
-                    em.destroy(BATCH, localBatch);
-                    em.create(BATCH, &preallocated[i]);
+                    std::copy_n(&preallocated[i], count, localBatch);
+                    em.destroy(count, localBatch);
+                    em.create(count, &preallocated[i]);
                 }
             }
         });

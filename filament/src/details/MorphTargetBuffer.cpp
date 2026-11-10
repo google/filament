@@ -186,7 +186,7 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t const targetInde
             << "setPositionsAt() called on a MorphTargetBuffer without a position buffer. Use "
                "withPositions(true) in the Builder.";
 
-    FILAMENT_CHECK_PRECONDITION(offset + count <= mVertexCount)
+    FILAMENT_CHECK_PRECONDITION(count <= mVertexCount && offset <= mVertexCount - count)
             << "MorphTargetBuffer (size=" << (unsigned)mVertexCount
             << ") overflow (count=" << (unsigned)count << ", offset=" << (unsigned)offset << ")";
 
@@ -213,7 +213,7 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t const targetInde
             << "setPositionsAt() called on a MorphTargetBuffer without a position buffer. Use "
                "withPositions(true) in the Builder.";
 
-    FILAMENT_CHECK_PRECONDITION(offset + count <= mVertexCount)
+    FILAMENT_CHECK_PRECONDITION(count <= mVertexCount && offset <= mVertexCount - count)
             << "MorphTargetBuffer (size=" << mVertexCount
             << ") overflow (count=" << (unsigned)count << ", offset=" << (unsigned)offset << ")";
 
@@ -239,7 +239,7 @@ void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t const targetIndex
             << "setTangentsAt() called on a MorphTargetBuffer without a tangent buffer. Use "
                "withTangents(true) in the Builder.";
 
-    FILAMENT_CHECK_PRECONDITION(offset + count <= mVertexCount)
+    FILAMENT_CHECK_PRECONDITION(count <= mVertexCount && offset <= mVertexCount - count)
             << "MorphTargetBuffer (size=" << mVertexCount
             << ") overflow (count=" << (unsigned)count << ", offset=" << (unsigned)offset << ")";
 

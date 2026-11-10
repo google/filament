@@ -288,7 +288,15 @@ enum_<Texture::InternalFormat>("Texture$InternalFormat") // aka backend::Texture
     .value("SRGB8_ALPHA8_ASTC_10x8", Texture::InternalFormat::SRGB8_ALPHA8_ASTC_10x8)
     .value("SRGB8_ALPHA8_ASTC_10x10", Texture::InternalFormat::SRGB8_ALPHA8_ASTC_10x10)
     .value("SRGB8_ALPHA8_ASTC_12x10", Texture::InternalFormat::SRGB8_ALPHA8_ASTC_12x10)
-    .value("SRGB8_ALPHA8_ASTC_12x12", Texture::InternalFormat::SRGB8_ALPHA8_ASTC_12x12);
+    .value("SRGB8_ALPHA8_ASTC_12x12", Texture::InternalFormat::SRGB8_ALPHA8_ASTC_12x12)
+    .value("R16", Texture::InternalFormat::R16)
+    .value("R16_SNORM", Texture::InternalFormat::R16_SNORM)
+    .value("RG16", Texture::InternalFormat::RG16)
+    .value("RG16_SNORM", Texture::InternalFormat::RG16_SNORM)
+    .value("RGB16", Texture::InternalFormat::RGB16)
+    .value("RGB16_SNORM", Texture::InternalFormat::RGB16_SNORM)
+    .value("RGBA16", Texture::InternalFormat::RGBA16)
+    .value("RGBA16_SNORM", Texture::InternalFormat::RGBA16_SNORM);
 
 enum_<Texture::Usage>("Texture$Usage") // aka backend::TextureUsage
     .value("DEFAULT", Texture::Usage::DEFAULT)

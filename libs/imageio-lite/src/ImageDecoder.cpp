@@ -313,31 +313,15 @@ LinearImage TIFFDecoder::decode() {
 
     if (getColorSpace() == ImageDecoder::ColorSpace::SRGB) {
         if (samplesPerPixel == 4) {
-            return toLinearWithAlpha<uint8_t>(
-                    width, height, width * 4, imageData.get(),
-                    [](uint8_t v) -> uint8_t { return v; },
-                    image::sRGBToLinear<filament::math::float4>);
+            return toLinearWithAlpha<uint8_t>( width, height, width * 4, imageData.get());
         } else {
-            return toLinear<uint8_t>(
-                    width, height, width * 3, imageData.get(),
-                    [](uint8_t v) -> uint8_t { return v; },
-                    image::sRGBToLinear<filament::math::float3>);
+            return toLinear<uint8_t>( width, height, width * 3, imageData.get());
         }
     } else {
         if (samplesPerPixel == 4) {
-            return toLinearWithAlpha<uint8_t>(
-                    width, height, width * 4, imageData.get(),
-                    [](uint8_t v) -> uint8_t { return v; },
-                    [](filament::math::float4 const& color) -> filament::math::float4 {
-                        return color;
-                    });
+            return asLinearWithAlpha<uint8_t>( width, height, width * 4, imageData.get());
         } else {
-            return toLinear<uint8_t>(
-                    width, height, width * 3, imageData.get(),
-                    [](uint8_t v) -> uint8_t { return v; },
-                    [](filament::math::float3 const& color) -> filament::math::float3 {
-                        return color;
-                    });
+            return asLinear<uint8_t>( width, height, width * 3, imageData.get());
         }
     }
 }

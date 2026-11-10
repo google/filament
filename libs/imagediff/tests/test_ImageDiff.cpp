@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
+#include <imagediff/ImageDiff.h>
 
 #include <image/LinearImage.h>
-#include <imagediff/ImageDiff.h>
+
+#include <gtest/gtest.h>
 
 #include <vector>
 
@@ -29,7 +30,7 @@ protected:
     LinearImage createImage(uint32_t w, uint32_t h, float val) {
         LinearImage img(w, h, 3);
         float* p = img.getPixelRef();
-        for (size_t i = 0; i < w * h * 3; ++i) {
+        for (size_t i = 0; i < size_t(w) * h * 3; ++i) {
             p[i] = val;
         }
         return img;

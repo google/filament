@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-#include "private/filament/Variant.h"
-
 #include <private/filament/LineDictionaryUtils.h>
+#include <private/filament/Variant.h>
 
 #include <filament/MaterialChunkType.h>
 
@@ -24,7 +23,6 @@
 #include <filaflat/MaterialChunk.h>
 
 #include <utils/compiler.h>
-#include <utils/debug.h>
 #include <utils/Invocable.h>
 #include <utils/Log.h>
 
@@ -284,7 +282,10 @@ bool MaterialChunk::getTextShader(Unflattener unflattener,
 
     // Write the terminating null character.
     shaderContent[cursor++] = 0;
-    assert_invariant(cursor == shaderSize);
+    // A short body leaves stale bytes from the previous shader in this reused buffer.
+    if (UTILS_UNLIKELY(cursor != shaderSize)) {
+        return false;
+    }
 
     return true;
 }

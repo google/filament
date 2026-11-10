@@ -24,6 +24,8 @@
 #include <backend/Platform.h>
 #include <backend/platforms/OpenGLPlatform.h>
 
+#include <private/utils/FeatureFlagManager.h>
+
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Logger.h>
@@ -101,13 +103,16 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
 
     glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE,             &gets.max_renderbuffer_size);
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS,           &gets.max_texture_image_units);
+    glGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS,    &gets.max_vertex_texture_image_units);
     glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS,  &gets.max_combined_texture_image_units);
     glGetIntegerv(GL_MAX_TEXTURE_SIZE,                  &gets.max_texture_size);
     glGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE,         &gets.max_cubemap_texture_size);
     glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE,               &gets.max_3d_texture_size);
     glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS,          &gets.max_array_texture_layers);
 
-    mFeatureLevel = resolveFeatureLevel(major, minor, ext, gets, bugs);
+    bool const checkDeviceSamplerLimits = driverConfig.featureFlagManager &&
+            driverConfig.featureFlagManager->features.material.check_device_sampler_limits;
+    mFeatureLevel = resolveFeatureLevel(major, minor, ext, gets, bugs, checkDeviceSamplerLimits);
 
     initWorkarounds(bugs, &ext, mFeatureLevel);
 
@@ -185,6 +190,7 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
     LOG(INFO) << "GL_MAX_RENDERBUFFER_SIZE = " << gets.max_renderbuffer_size;
     LOG(INFO) << "GL_MAX_SAMPLES = " << gets.max_samples;
     LOG(INFO) << "GL_MAX_TEXTURE_IMAGE_UNITS = " << gets.max_texture_image_units;
+    LOG(INFO) << "GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS = " << gets.max_vertex_texture_image_units;
     LOG(INFO) << "GL_MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS = "
               << gets.max_transform_feedback_separate_attribs;
     LOG(INFO) << "GL_MAX_UNIFORM_BLOCK_SIZE = " << gets.max_uniform_block_size;
@@ -460,6 +466,13 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
                 // Renderer of the form [Mesa Intel(R) HD Graphics 505 (APL 3)]
                 // b/405252622
                 bugs->disable_invalidate_framebuffer = true;
+
+                // Seen on
+                // [Intel]
+                // [Mesa Intel(R) Arc(tm) A750 Graphics (DG2)]
+                // [4.6 (Core Profile) Mesa 26.0.8-1ubuntu0.3]
+                // [4.60]
+                bugs->disable_framebuffer_fetch_extension = true;
             }
         } else if (strstr(renderer, "PowerVR")) {
             // PowerVR GPU
@@ -591,7 +604,8 @@ void OpenGLContext::initWorkarounds(Bugs const& bugs, Extensions* ext,
 FeatureLevel OpenGLContext::resolveFeatureLevel(GLint major, GLint minor,
         Extensions const& exts,
         Gets const& gets,
-        Bugs const& bugs) noexcept {
+        Bugs const& bugs,
+        bool const requireVertexTextureUnits) noexcept {
 
     constexpr auto const caps3 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_3];
     constexpr GLint MAX_VERTEX_SAMPLER_COUNT = caps3.MAX_VERTEX_SAMPLER_COUNT;
@@ -600,6 +614,9 @@ FeatureLevel OpenGLContext::resolveFeatureLevel(GLint major, GLint minor,
     (void)exts;
     (void)gets;
     (void)bugs;
+
+    bool const hasVertexTextureUnits = !requireVertexTextureUnits ||
+            gets.max_vertex_texture_image_units >= MAX_VERTEX_SAMPLER_COUNT;
 
     FeatureLevel featureLevel = FeatureLevel::FEATURE_LEVEL_1;
 
@@ -613,6 +630,7 @@ FeatureLevel OpenGLContext::resolveFeatureLevel(GLint major, GLint minor,
             if (exts.EXT_texture_cube_map_array) {
                 featureLevel = FeatureLevel::FEATURE_LEVEL_2;
                 if (gets.max_texture_image_units >= MAX_FRAGMENT_SAMPLER_COUNT &&
+                    hasVertexTextureUnits &&
                     gets.max_combined_texture_image_units >=
                             (MAX_FRAGMENT_SAMPLER_COUNT + MAX_VERTEX_SAMPLER_COUNT)) {
                     featureLevel = FeatureLevel::FEATURE_LEVEL_3;
@@ -643,6 +661,7 @@ FeatureLevel OpenGLContext::resolveFeatureLevel(GLint major, GLint minor,
             featureLevel = FeatureLevel::FEATURE_LEVEL_2;
             // figure out our feature level
             if (gets.max_texture_image_units >= MAX_FRAGMENT_SAMPLER_COUNT &&
+                hasVertexTextureUnits &&
                 gets.max_combined_texture_image_units >=
                 (MAX_FRAGMENT_SAMPLER_COUNT + MAX_VERTEX_SAMPLER_COUNT)) {
                 featureLevel = FeatureLevel::FEATURE_LEVEL_3;
@@ -699,6 +718,7 @@ void OpenGLContext::initExtensionsGLES(Extensions* ext, GLint major, GLint minor
     ext->EXT_texture_compression_bptc = exts.has("GL_EXT_texture_compression_bptc"sv);
     ext->EXT_texture_cube_map_array = exts.has("GL_EXT_texture_cube_map_array"sv) || exts.has("GL_OES_texture_cube_map_array"sv);
     ext->EXT_texture_filter_anisotropic = exts.has("GL_EXT_texture_filter_anisotropic"sv);
+    ext->EXT_texture_norm16 = exts.has("GL_EXT_texture_norm16"sv);
 #if !defined(FILAMENT_IOS)
     ext->EXT_texture_sRGB = exts.has("GL_EXT_sRGB"sv);
 #endif  // !defined(FILAMENT_IOS)
@@ -718,13 +738,16 @@ void OpenGLContext::initExtensionsGLES(Extensions* ext, GLint major, GLint minor
     ext->OES_texture_npot = exts.has("GL_OES_texture_npot"sv);
     ext->OES_vertex_array_object = exts.has("GL_OES_vertex_array_object"sv);
     ext->OVR_multiview2 = exts.has("GL_OVR_multiview2"sv);
+    ext->WEBGL_compressed_texture_astc = exts.has("WEBGL_compressed_texture_astc"sv);
     ext->WEBGL_compressed_texture_etc = exts.has("WEBGL_compressed_texture_etc"sv);
     ext->WEBGL_compressed_texture_s3tc = exts.has("WEBGL_compressed_texture_s3tc"sv);
     ext->WEBGL_compressed_texture_s3tc_srgb = exts.has("WEBGL_compressed_texture_s3tc_srgb"sv);
 
-    // ES 3.2 implies EXT_color_buffer_float (but not necessarily filterable)
+    // ES 3.2 implies EXT_color_buffer_float (but not necessarily filterable) and
+    // KHR_texture_compression_astc_ldr
     if (major > 3 || (major == 3 && minor >= 2)) {
         ext->EXT_color_buffer_float = true;
+        ext->KHR_texture_compression_astc_ldr = true;
     }
     // ES 3.x implies EXT_discard_framebuffer, OES_vertex_array_object and OES_texture_half_float_linear
     if (major >= 3) {
@@ -771,6 +794,7 @@ void OpenGLContext::initExtensionsGL(Extensions* ext, GLint major, GLint minor) 
     ext->EXT_texture_compression_s3tc_srgb = exts.has("GL_EXT_texture_compression_s3tc_srgb"sv);
     ext->EXT_texture_cube_map_array = true;
     ext->EXT_texture_filter_anisotropic = exts.has("GL_EXT_texture_filter_anisotropic"sv);
+    ext->EXT_texture_norm16 = true;
     ext->EXT_texture_sRGB = exts.has("GL_EXT_texture_sRGB"sv);
     ext->GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
     ext->KHR_parallel_shader_compile = exts.has("GL_KHR_parallel_shader_compile"sv);
@@ -786,6 +810,7 @@ void OpenGLContext::initExtensionsGL(Extensions* ext, GLint major, GLint minor) 
     ext->OES_texture_npot = true;
     ext->OES_vertex_array_object = true;
     ext->OVR_multiview2 = exts.has("GL_OVR_multiview2"sv);
+    ext->WEBGL_compressed_texture_astc = false;
     ext->WEBGL_compressed_texture_etc = false;
     ext->WEBGL_compressed_texture_s3tc = false;
     ext->WEBGL_compressed_texture_s3tc_srgb = false;

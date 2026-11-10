@@ -180,8 +180,8 @@ public class Page {
     private void normalize(float[] inout) {
         final double d = inout[0] * inout[0] + inout[1] * inout[1] + inout[2] * inout[2];
         final double inv = 1.0 / Math.sqrt(d);
-        inout[0] *= inv;
-        inout[1] *= inv;
-        inout[2] *= inv;
+        inout[0] = (float) (inout[0] * inv);
+        inout[1] = (float) (inout[1] * inv);
+        inout[2] = (float) (inout[2] * inv);
     }
 }

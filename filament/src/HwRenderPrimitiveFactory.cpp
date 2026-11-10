@@ -72,17 +72,17 @@ auto HwRenderPrimitiveFactory::create(DriverApi& driver,
     // the common case is that we've never seen it (i.e.: no reuse)
     if (UTILS_LIKELY(pos == mBimap.end())) {
         auto handle = driver.createRenderPrimitive(vbh, ibh, type);
-        mBimap.insert(key, { handle });
+        mBimap.insert(key, { handle.getId() });
         return handle;
     }
 
     ++(pos->first.pKey->refs);
-    return pos->second.handle;
+    return Handle(pos->second.id);
 }
 
 void HwRenderPrimitiveFactory::destroy(DriverApi& driver, Handle handle) noexcept {
     // look for this handle in our map
-    auto pos = mBimap.findValue(Value{ handle });
+    auto pos = mBimap.findValue(Value{ handle.getId() });
     if (--pos->second.pKey->refs == 0) {
         mBimap.erase(pos);
         driver.destroyRenderPrimitive(handle);

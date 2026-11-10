@@ -156,6 +156,7 @@ public:
         GLint max_renderbuffer_size;
         GLint max_samples;
         GLint max_texture_image_units;
+        GLint max_vertex_texture_image_units;
         GLint max_texture_size;
         GLint max_cubemap_texture_size;
         GLint max_3d_texture_size;
@@ -195,6 +196,7 @@ public:
         bool EXT_texture_compression_s3tc_srgb;
         bool EXT_texture_cube_map_array;
         bool EXT_texture_filter_anisotropic;
+        bool EXT_texture_norm16;
         bool EXT_texture_sRGB;
         bool GOOGLE_cpp_style_line_directive;
         bool KHR_debug;
@@ -212,6 +214,7 @@ public:
         bool OES_texture_npot;
         bool OES_vertex_array_object;
         bool OVR_multiview2;
+        bool WEBGL_compressed_texture_astc;
         bool WEBGL_compressed_texture_etc;
         bool WEBGL_compressed_texture_s3tc;
         bool WEBGL_compressed_texture_s3tc_srgb;
@@ -436,10 +439,13 @@ private:
 
     static void initWorkarounds(Bugs const& bugs, Extensions* ext, FeatureLevel const featureLevel);
 
+    // When requireVertexTextureUnits is true, feature level 3 also requires the vertex texture
+    // units that FEATURE_LEVEL_CAPS guarantees for it.
     static FeatureLevel resolveFeatureLevel(GLint major, GLint minor,
             Extensions const& exts,
             Gets const& gets,
-            Bugs const& bugs) noexcept;
+            Bugs const& bugs,
+            bool requireVertexTextureUnits) noexcept;
 };
 
 } // namespace filament::backend

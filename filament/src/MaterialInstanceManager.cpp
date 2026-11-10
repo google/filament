@@ -30,7 +30,7 @@ MaterialInstanceManager::MaterialInstanceManager() noexcept = default;
 
 MaterialInstanceManager::MaterialInstanceManager(MaterialInstanceManager&& rhs) noexcept = default;
 MaterialInstanceManager& MaterialInstanceManager::operator=(MaterialInstanceManager&& rhs) noexcept = default;
-MaterialInstanceManager::~MaterialInstanceManager() = default;
+MaterialInstanceManager::~MaterialInstanceManager() noexcept = default;
 
 void MaterialInstanceManager::terminate(FEngine& engine) {
     for (auto const& [key, instance] : mMaterialInstances) {
@@ -46,13 +46,14 @@ void MaterialInstanceManager::terminate(FEngine& engine) {
     mAnonymousMaterialInstances.clear();
 }
 
-void MaterialInstanceManager::reset() {
+void MaterialInstanceManager::reset() noexcept {
     for (auto& [material, pool] : mAnonymousMaterialInstances) {
         pool.highWaterMark = 0;
     }
 }
 
-FMaterialInstance* MaterialInstanceManager::getMaterialInstance(FMaterial const* ma, uint32_t tag) const {
+FMaterialInstance* MaterialInstanceManager::getMaterialInstance(
+        FMaterial const* ma, uint32_t tag) const noexcept {
     Key const key{ma, tag};
     auto it = mMaterialInstances.find(key);
     if (it != mMaterialInstances.end()) {
@@ -64,7 +65,8 @@ FMaterialInstance* MaterialInstanceManager::getMaterialInstance(FMaterial const*
     return instance;
 }
 
-FMaterialInstance* MaterialInstanceManager::getMaterialInstance(FMaterial const* ma) const {
+FMaterialInstance* MaterialInstanceManager::getMaterialInstance(
+        FMaterial const* ma) const noexcept {
     AnonymousPool& pool = mAnonymousMaterialInstances[ma];
     if (pool.highWaterMark < pool.instances.size()) {
         return pool.instances[pool.highWaterMark++];

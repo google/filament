@@ -248,6 +248,8 @@ private:
         assert_invariant(mWorkerState);
         return *mWorkerState;
     }
+    // Call only from async jobs. Reading mWorkerState elsewhere races with the worker's init.
+    void flushIfSharedContext() const noexcept;
 
     ShaderCompilerService& getShaderCompilerService() noexcept {
         return mShaderCompilerService;

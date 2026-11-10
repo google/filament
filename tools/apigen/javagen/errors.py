@@ -205,3 +205,4 @@ class IRParseError(JavaGenError):
         super().__init__(msg)
         self.file_path = file_path
         self.details = details
+

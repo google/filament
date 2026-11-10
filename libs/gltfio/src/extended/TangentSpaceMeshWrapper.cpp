@@ -257,6 +257,9 @@ private:
 Builder::Builder(bool isUnlit)
     : mImpl(new Impl{isUnlit}) {}
 
+Builder::~Builder() noexcept {
+    delete mImpl;
+}
 
 Builder& Builder::vertexCount(size_t count) noexcept {
     mImpl->vertexCount(count);

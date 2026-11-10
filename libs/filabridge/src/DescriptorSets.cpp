@@ -220,7 +220,9 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
     switch (domain) {
         case MaterialDomain::SURFACE: {
             //
-            // CAVEAT: The logic here must match MaterialBuilder::checkMaterialLevelFeatures()
+            // CAVEAT: The logic here must match MaterialBuilder::checkMaterialLevelFeatures().
+            // MaterialDefinition::checkSamplerLimits() also uses this layout when validating
+            // against the device limits (material.check_device_sampler_limits).
             //
             auto layout = perViewDescriptorSetLayout;
             // remove descriptors not needed for unlit materials

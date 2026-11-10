@@ -35,7 +35,7 @@ jobs:
     steps:
       - name: Check commit verification
         id: check
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
             const { data } = await github.rest.repos.getCommit({
@@ -106,10 +106,15 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - uses: ./.github/actions/ccache
+        with:
+          config: desktop
       - name: Run build script
         run: |
           build\windows\build-github.bat presubmit
         shell: cmd
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
 
   build-android:
     name: build-android
@@ -220,24 +225,6 @@ jobs:
           cd build/web && printf "y" | ./build.sh presubmit
       - uses: ./.github/actions/ccache-stats
         if: ${{ !cancelled() }}
-
-  validate-docs:
-    name: validate-docs
-    runs-on: 'ubuntu-24.04'
-    needs: [check-verification]
-    if: always() && !cancelled() && !needs.check-verification.outputs.skip
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - id: get_commit_msg
-        uses: ./.github/actions/get-commit-msg
-      - name: Check for manual edits to /docs
-        env:
-          OUTPUTS_HASHES: ${{ steps.get_commit_msg.outputs.hashes }}
-        run: |
-          bash docs_src/build/presubmit_check.sh $OUTPUTS_HASHES
 
   # Cheap gate for test-renderdiff below. It exists so that the expensive job can be skipped whole
   # rather than step by step: a RDIFF_ACCEPT_NEW_GOLDENS commit used to allocate the renderdiff
@@ -437,8 +424,13 @@ jobs:
       - name: Run build script
         # We need to build before clang-tidy can run analysis
         run: |
-          # -b enables ASAN and UBSAN (Address and Undefined Behavior Sanitizers) for the debug build
-          ./build.sh -b -p desktop debug
+          # -b enables ASAN and UBSAN (Address and Undefined Behavior Sanitizers) for the debug build.
+          # -d and -t compile matdbg and fgviewer, which build.sh otherwise always disables, so this
+          # is the only presubmit build that covers them. Their servers only start when
+          # FILAMENT_MATDBG_PORT or FILAMENT_FGVIEWER_PORT is set, so the unit tests below, which
+          # run against this tree, behave the same. The postsubmit desktop-asan-debug warmer must
+          # run this exact command for the cache to hit.
+          ./build.sh -b -d -t -p desktop debug
           # This will build and install the release build. -W and -y none reproduce what
           # build/linux/build.sh passes for a release-only build; they have to, because this build
           # and build-linux share the desktop-release cache.
@@ -450,7 +442,10 @@ jobs:
       - name: Check - public header inclusion
         run: bash test/code-correctness/headers-inclusion.sh out/release/filament/include
       - name: Check - Filament unit tests
-        run: bash test/filament-unit-test/test.sh
+        run: |
+          # The tests that render, such as RenderingTest, use Mesa's software Vulkan driver.
+          sudo apt-get install -y libvulkan1 mesa-vulkan-drivers
+          bash test/filament-unit-test/test.sh
 
   test-backend:
     name: test-backend

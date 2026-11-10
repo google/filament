@@ -206,14 +206,19 @@ Driver* PlatformGLX::createDriver(void* sharedGLContext,
         return nullptr;
     }
 
-    int contextAttribs[] = {
-            GLX_CONTEXT_MAJOR_VERSION_ARB, 4,
-            GLX_CONTEXT_MINOR_VERSION_ARB, 1,
-            GL_NONE
-    };
-
-    mGLXContext = g_glx.createContext(mGLXDisplay, mGLXConfig,
-            (GLXContext)sharedGLContext, True, contextAttribs);
+    // Try all versions down, from GL 4.6 to 4.1.
+    for (int minor = 6; minor >= 1; minor--) {
+        int const contextAttribs[] = {
+                GLX_CONTEXT_MAJOR_VERSION_ARB, 4,
+                GLX_CONTEXT_MINOR_VERSION_ARB, minor,
+                GL_NONE
+        };
+        mGLXContext = g_glx.createContext(mGLXDisplay, mGLXConfig,
+                (GLXContext)sharedGLContext, True, contextAttribs);
+        if (mGLXContext) {
+            break;
+        }
+    }
 
     int pbufferAttribs[] = {
             GLX_PBUFFER_WIDTH, 1,
@@ -257,14 +262,19 @@ void PlatformGLX::createContext(bool shared) {
         }
     }
 
-    int contextAttribs[] = {
-        GLX_CONTEXT_MAJOR_VERSION_ARB, 4,
-        GLX_CONTEXT_MINOR_VERSION_ARB, 1,
-        GL_NONE
-    };
-
-    GLXContext context = g_glx.createContext(mGLXDisplay, mGLXConfig,
-            mGLXContext, True, contextAttribs);
+    GLXContext context = nullptr;
+    for (int minor = 6; minor >= 1; minor--) {
+        int const contextAttribs[] = {
+            GLX_CONTEXT_MAJOR_VERSION_ARB, 4,
+            GLX_CONTEXT_MINOR_VERSION_ARB, minor,
+            GL_NONE
+        };
+        context = g_glx.createContext(mGLXDisplay, mGLXConfig,
+                mGLXContext, True, contextAttribs);
+        if (context) {
+            break;
+        }
+    }
     if (!context) {
         LOG(ERROR) << "Failed to create shared context";
         return;

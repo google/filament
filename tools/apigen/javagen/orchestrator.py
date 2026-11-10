@@ -30,9 +30,10 @@ Key Responsibilities:
        `IRParseError` exceptions if the JSON is malformed or inaccessible.
     2. Sibling Type Discovery & Cross-Header Indexing:
        Discovers and registers sibling `.json` files in the same directory into
-       `config.KNOWN_CLASSES` so that composite aggregate structs (e.g. `Box`,
-       `Viewport`) referenced in foreign methods can have their memory layouts
-       and leaf fields resolved during parameter unrolling.
+       `config.KNOWN_CLASSES` (cached by `(abspath, mtime)` in `_SIBLING_IR_CACHE`)
+       so that composite aggregate structs (e.g. `Box`, `Viewport`) referenced in
+       foreign methods can have their memory layouts and leaf fields resolved during
+       parameter unrolling.
     3. Structural Filtering & Builder Association:
        - Detects classes annotated with `UTILS_NOAPIGEN` (`apigen:skip`, `no_apigen`)
          and excludes them from code generation.
@@ -52,12 +53,64 @@ import collections
 import glob
 import json
 import os
-import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from .config import register_known_classes
 from .context import ClassContext
 from .errors import IRParseError
+from .utils import has_skip_attr
+
+# Cache of parsed sibling IR files: abspath -> (mtime, classes, referenced_classes)
+# Avoids re-parsing sibling JSON files across multiple target invocations in the same process.
+_SIBLING_IR_CACHE: Dict[str, Tuple[float, List[Dict[str, Any]], List[Dict[str, Any]]]] = {}
+
+
+def _is_builder_ir(clazz: Dict[str, Any]) -> bool:
+    """Return True if a class IR dictionary represents a Builder class."""
+    return bool(
+        clazz.get("is_builder")
+        or clazz.get("archetype") == "builder"
+        or clazz.get("category") == "builder"
+        or (clazz.get("name") == "Builder" and clazz.get("parent_class"))
+    )
+
+
+def _register_sibling_irs(ir_file: str) -> None:
+    """Discover and register classes from sibling JSON IR files in the same directory.
+
+    When generating bindings for a class like Frustum, it may reference Box or Viewport.
+    Sibling JSON files contain the field definitions necessary to unroll those structs.
+    """
+    target_abs = os.path.abspath(ir_file)
+    ir_dir = os.path.dirname(target_abs)
+    if not os.path.isdir(ir_dir):
+        return
+
+    for sibling in glob.glob(os.path.join(ir_dir, "*.json")):
+        sibling_abs = os.path.abspath(sibling)
+        if sibling_abs == target_abs:
+            continue
+        try:
+            mtime = os.path.getmtime(sibling_abs)
+            cached = _SIBLING_IR_CACHE.get(sibling_abs)
+            if cached is not None and cached[0] == mtime:
+                classes, ref_classes = cached[1], cached[2]
+            else:
+                with open(sibling_abs, "r") as sf:
+                    sdata = json.load(sf)
+                if not isinstance(sdata, dict):
+                    continue
+                classes = sdata.get("classes", [])
+                ref_classes = sdata.get("referenced_classes", [])
+                _SIBLING_IR_CACHE[sibling_abs] = (mtime, classes, ref_classes)
+
+            if classes:
+                register_known_classes(classes)
+            if ref_classes:
+                register_known_classes(ref_classes)
+        except Exception:
+            # Ignore unreadable or partially written sibling files during concurrent builds
+            pass
 
 
 def process_file(
@@ -65,7 +118,7 @@ def process_file(
     java_dir: str,
     jni_dir: str,
     diagnostic_mode: bool = False,
-    class_name: Optional[str] = None
+    class_name: Optional[str] = None,
 ) -> None:
     """Process a JSON IR file and generate matching Java and JNI C++ binding files.
 
@@ -107,102 +160,50 @@ def process_file(
     register_known_classes(data.get("classes", []))
     register_known_classes(data.get("referenced_classes", []))
 
-    # Step 3: Discover and register known classes from sibling JSON files in same directory.
-    # When generating bindings for a class like Frustum, it may reference Box or Viewport.
-    # Sibling JSON files contain the field definitions necessary to unroll those structs.
-    ir_dir = os.path.dirname(os.path.abspath(ir_file))
-    if os.path.isdir(ir_dir):
-        for sibling in glob.glob(os.path.join(ir_dir, "*.json")):
-            if os.path.abspath(sibling) != os.path.abspath(ir_file):
-                try:
-                    with open(sibling, "r") as sf:
-                        sdata = json.load(sf)
-                        if isinstance(sdata, dict):
-                            if "classes" in sdata:
-                                register_known_classes(sdata["classes"])
-                            if "referenced_classes" in sdata:
-                                register_known_classes(sdata["referenced_classes"])
-                except Exception:
-                    # Ignore unreadable or partially written sibling files during concurrent builds
-                    pass
+    # Step 3: Discover and register known classes from sibling JSON files in same directory
+    _register_sibling_irs(ir_file)
 
     # Step 4: Resolve source header path for #include directive in JNI file
     source_header = "tests/java/00_basic.h"  # Fallback for unit test IRs without location
     if data.get("classes"):
-        target_cls = None
-        if class_name:
-            target_cls = next((c for c in data["classes"] if c.get("name") == class_name), None)
-        if not target_cls:
-            target_cls = data["classes"][0]
-        source_header = target_cls.get(
-            "location", {}
-        ).get("file", f"filament/{target_cls['name']}.h")
+        target_cls = (
+            next((c for c in data["classes"] if c.get("name") == class_name), None)
+            if class_name
+            else None
+        ) or data["classes"][0]
+        source_header = target_cls.get("location", {}).get(
+            "file", f"filament/{target_cls['name']}.h"
+        )
 
-    # Standard skip attribute markers indicating UTILS_NOAPIGEN
-    skip_attrs = (
-        "filament:apigen:skip", "filament:skip", "apigen:skip",
-        "no_apigen", "noapigen", "skip_generation", "binding:skip"
-    )
-
-    # Step 5: Catalog nested builders by parent class name
+    # Step 5 & 6: Catalog nested builders and nested aggregate structs by parent class name
     builders_by_parent: Dict[str, Dict[str, Any]] = {}
-    for clazz in data.get("classes", []):
-        # Skip builder if annotated with UTILS_NOAPIGEN
-        if any(
-            attr in skip_attrs or attr.startswith("no_apigen") or attr.startswith("skip_generation")
-            for attr in clazz.get("attributes", [])
-        ):
-            continue
-        # Test if class qualifies as a Builder archetype
-        if (
-            clazz.get("is_builder")
-            or clazz.get("archetype") == "builder"
-            or clazz.get("category") == "builder"
-            or clazz.get("name") == "Builder"
-        ):
-            parent = clazz.get("parent_class")
-            if parent:
-                builders_by_parent[parent] = clazz
-
-    # Step 6: Catalog nested structs and inner classes by parent class name
     nested_structs_by_parent: Dict[str, List[Dict[str, Any]]] = collections.defaultdict(list)
+
     for clazz in data.get("classes", []):
-        # Skip nested struct if annotated with UTILS_NOAPIGEN
-        if any(
-            attr in skip_attrs or attr.startswith("no_apigen") or attr.startswith("skip_generation")
-            for attr in clazz.get("attributes", [])
-        ):
+        # Skip builder or nested struct if annotated with UTILS_NOAPIGEN
+        if has_skip_attr(clazz):
             continue
         parent = clazz.get("parent_class")
-        if parent:
-            # Check if this class is an aggregate struct or has struct fields
-            if clazz.get("is_aggregate") or (
-                len(clazz.get("fields", [])) > 0
-                and (
-                    clazz.get("category") == "struct"
-                    or clazz.get("type", {}).get("category") == "struct"
-                )
-            ):
-                nested_structs_by_parent[parent].append(clazz)
+        if not parent:
+            continue
+        if _is_builder_ir(clazz) or clazz.get("name") == "Builder":
+            builders_by_parent[parent] = clazz
+        elif clazz.get("is_aggregate") or (
+            len(clazz.get("fields", [])) > 0
+            and (
+                clazz.get("category") == "struct"
+                or clazz.get("type", {}).get("category") == "struct"
+            )
+        ):
+            nested_structs_by_parent[parent].append(clazz)
 
     # Step 7: Iterate over non-nested classes and emit bindings
-    for clazz in data.get("classes", []):
-        # Check if the class is explicitly skipped via UTILS_NOAPIGEN
-        if any(
-            attr in skip_attrs or attr.startswith("no_apigen") or attr.startswith("skip_generation")
-            for attr in clazz.get("attributes", [])
-        ):
-            continue
+    valid_classes = [c for c in data.get("classes", []) if not has_skip_attr(c)]
+    has_exact_class_match = any(c.get("name") == class_name for c in data.get("classes", []))
 
+    for clazz in valid_classes:
         # Skip standalone file generation for nested classes (they emit inside parent classes)
-        if clazz.get("is_nested") and clazz.get("parent_class"):
-            continue
-        if (
-            clazz.get("is_builder")
-            or clazz.get("archetype") == "builder"
-            or clazz.get("category") == "builder"
-            or (clazz.get("name") == "Builder" and clazz.get("parent_class"))
-        ):
+        if (clazz.get("is_nested") and clazz.get("parent_class")) or _is_builder_ir(clazz):
             continue
 
         # Step 7a: Merge top-level header enums into the class definition
@@ -226,44 +227,31 @@ def process_file(
         if class_name:
             if clazz.get("name") == class_name:
                 override = class_name
-            elif not any(c.get("name") == class_name for c in data.get("classes", [])):
+            elif not has_exact_class_match and valid_classes and clazz == valid_classes[0]:
                 # If class_name does not match any class by name, apply to primary class in header
-                valid_classes = [
-                    c for c in data.get("classes", [])
-                    if not any(
-                        attr in skip_attrs or attr.startswith("no_apigen") or attr.startswith("skip_generation")
-                        for attr in c.get("attributes", [])
-                    )
-                ]
-                if valid_classes and clazz == valid_classes[0]:
-                    override = class_name
-                else:
-                    continue
+                override = class_name
             else:
                 continue
 
         # Step 7d: Instantiate the ClassContext data model
-        builder_ir = builders_by_parent.get(clazz.get("name"))
         ctx = ClassContext(
             clazz,
             source_header,
             name_override=override,
-            builder_ir=builder_ir,
-            nested_structs_map=nested_structs_by_parent
+            builder_ir=builders_by_parent.get(clazz.get("name")),
+            nested_structs_map=nested_structs_by_parent,
         )
         ctx.diagnostic_mode = diagnostic_mode
 
         # Step 8: Emit Java wrapper class file (.java)
-        java_content = ctx.generate_java()
         java_path = os.path.join(java_dir, f"{ctx.name}.java")
         with open(java_path, "w") as jf:
-            jf.write(java_content)
+            jf.write(ctx.generate_java())
 
         # Step 9: Emit JNI C++ bridge file (.cpp)
-        jni_content = ctx.generate_jni()
         jni_path = os.path.join(jni_dir, f"{ctx.name}.cpp")
         with open(jni_path, "w") as cf:
-            cf.write(jni_content)
+            cf.write(ctx.generate_jni())
 
 
 def main(argv: Optional[List[str]] = None) -> None:
@@ -290,9 +278,10 @@ def main(argv: Optional[List[str]] = None) -> None:
     parser.add_argument("--jni-dir", default=".", help="Output directory for generated JNI C++ files")
     parser.add_argument("--class-name", default=None, help="Override Java and JNI target class name")
     parser.add_argument(
-        "-d", "--diagnostic",
+        "-d",
+        "--diagnostic",
         action="store_true",
-        help="Enable diagnostic warnings for unknown or unmapped types"
+        help="Enable diagnostic warnings for unknown or unmapped types",
     )
 
     # Step 2: Parse arguments
@@ -304,7 +293,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         args.java_dir,
         args.jni_dir,
         args.diagnostic,
-        class_name=args.class_name
+        class_name=args.class_name,
     )
 
 

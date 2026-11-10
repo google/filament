@@ -20,14 +20,13 @@
 #include <utils/compiler.h>
 #include <utils/Entity.h>
 #include <utils/EntityInstance.h>
+#include <utils/EntityInstanceMap.h>
 #include <utils/EntityManager.h>
 #include <utils/Invocable.h>
 #include <utils/Mutex.h>
 #include <utils/PagedArenaBitset.h>
 #include <utils/Slice.h>
 #include <utils/StructureOfArrays.h>
-
-#include <tsl/robin_map.h>
 
 #include <atomic>
 #include <utility>
@@ -54,6 +53,17 @@ public:
      * component manager.
      */
     using Instance = EntityInstanceBase::Type;
+
+    struct AddResult {
+        Instance ci;    // Component instance (0 if the entity is null).
+        bool added;     // True if newly added; false if the entity already had a component.
+    };
+
+    struct RemoveResult {
+        Instance removed; // Slot index of the removed component, or 0 if not found.
+        Instance moved;   // Prior slot index of the last element moved into `removed`
+                          // (equal to `removed` if no swap occurred, or 0 if not found).
+    };
 
     static constexpr bool USE_SORTED_DIRTY_ARRAY = false;
 
@@ -85,40 +95,16 @@ public:
     /**
      * Registers a bitset to be updated when entities change.
      * @param bitset A pointer to the PagedArenaBitset to register.
+     * @param filter An optional filter bitset; if non-null, only entities present in *filter
+     *               are added to *bitset.
      */
-    void registerBitset(PagedArenaBitset* bitset);
+    void registerBitset(PagedArenaBitset* bitset, PagedArenaBitset const* filter = nullptr);
 
     /**
      * Unregisters a bitset.
      * @param bitset A pointer to the PagedArenaBitset to unregister.
      */
     void unregisterBitset(PagedArenaBitset const* bitset);
-
-    /**
-     * @brief Checks if a newly allocated/recycled Entity collides with an active but logically-dead component payload (a pending zombie).
-     *
-     * @details Under Filament's asynchronous Epoch-Based Reclamation (EBR) system, when an entity is globally destroyed,
-     * its corresponding component payload is immediately cilled logically (e.g., removed from the active bitset) inside
-     * @p catchupGarbage(), but its physical slot inside the dense payload array is not freed until the next @p gc() call.
-     *
-     * If the central EntityManager recycles the dead entity's index and reallocates it to a brand new entity
-     * (@p newEntity, which inherits the same index but with a higher generation number) *before* this component
-     * manager has physically run its garbage collector, the old "zombie" component payload will still be residing at
-     * that exact index slot inside the dense payload array, creating a catastrophic collision.
-     *
-     * To resolve this, concrete component managers MUST call @p popPendingZombie() inside their component allocation paths.
-     * If a collision is detected:
-     * 1. The old zombie's identity is extracted in @p outZombie.
-     * 2. The zombie's bit is immediately popped and removed from @p mPendingDestruction.
-     * 3. The caller MUST immediately and synchronously invoke the C++ payload destructor and array swap-and-pop
-     *    compaction logic on @p outZombie (e.g., by calling @p removeComponent(outZombie)) before allocating
-     *    the component for @p newEntity.
-     *
-     * @param[in] newEntity The newly created Entity to check for recycled index collisions.
-     * @param[out] outZombie Reference to store the pre-existing logically dead Entity that was collided with.
-     * @return True if a pending zombie component was found and popped (requiring immediate destruction), false otherwise.
-     */
-    bool popPendingZombie(Entity newEntity, Entity& outZombie) noexcept;
 
     /**
      * Records a change for the given entity or slice of entities.
@@ -141,8 +127,7 @@ public:
      *       on a component manager.
      */
     Instance getInstance(Entity const e) const noexcept {
-        auto const pos = mInstanceMap.find(e);
-        return pos != mInstanceMap.end() ? pos->second : 0;
+        return mInstanceMap.getInstance(e);
     }
 
     PagedArenaBitset const& getEntityBitset() const noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS {
@@ -196,16 +181,9 @@ public:
 
     uint64_t getWatermark() const noexcept { return mWatermark.load(std::memory_order_relaxed); }
 
-    void checkZombieCollisionPanic(Entity newEntity) noexcept;
-
 protected:
-    struct CompactionResult {
-        size_t lastIndex;
-        Entity swappedEntity;
-    };
-
+    using InstanceMap = EntityInstanceMap<>;
     using SoaAllocator = Instance (*)(void* context, Entity e);
-    using SoaDeallocator = CompactionResult (*)(void* context, size_t index);
     using EvictionDispatcher = void (*)(void* ctx, void* extra, Entity const* entities, size_t count);
 
     /**
@@ -215,17 +193,11 @@ protected:
      * @param[in] name Descriptive diagnostic name for this component manager.
      * @param[in] amortizationSupported Set to true to opt-in to multi-frame physical destruction amortization.
      *
-     * @note **CRITICAL CONCURRENCY CONTRACT**:
-     * If @p amortizationSupported is set to **true**, the physical component payload array is no longer guaranteed
-     * to be purged synchronously inside the current frame. This exposes the manager to Just-In-Time (JIT)
-     * recycled index collisions.
-     *
-     * **IT BECOMES THE STRICT RESPONSIBILITY** of the concrete Component Manager implementation to invoke
-     * @p popPendingZombie() and synchronously purge any colliding zombie component payloads inside their
-     * @p create() allocation paths BEFORE assigning the new component.
-     *
-     * If @p amortizationSupported is **false** (the default), physical payloads are purged synchronously per frame,
-     * relaxing this implementation requirement (suitable for test harnesses and micro-benchmarks).
+     * @note When @p amortizationSupported is true, the manager's EBR watermark is held behind any
+     *       epoch that still has un-evicted components in @p mPendingDestruction (preventing the
+     *       EntityManager from recycling those entity indices until physical eviction completes).
+     *       Sustained entity destruction rates exceeding the per-frame @p maxDestructions budget
+     *       will therefore delay index reclamation until the backlog drains.
      */
     explicit SingleInstanceComponentManagerBase(EntityManager& em, ImmutableCString name,
             bool amortizationSupported = false) noexcept;
@@ -237,10 +209,13 @@ protected:
     SingleInstanceComponentManagerBase(SingleInstanceComponentManagerBase&& rhs) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS;
     SingleInstanceComponentManagerBase& operator=(SingleInstanceComponentManagerBase&& rhs) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS;
 
-    Instance addComponentImpl(Entity e, void* context, SoaAllocator allocator) noexcept;
+    AddResult addComponentImpl(Entity e, void* context, SoaAllocator allocator) noexcept;
 
-    void removeComponentsImpl(Entity const* entities, size_t count, void* context, SoaDeallocator deallocator) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS;
+    void eraseComponentFromMap(uint32_t* slot, Entity e,
+            Entity swappedEntity, Instance index) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS;
 
+    // Note: dispatcher may safely remove additional components (cascading destruction),
+    // but must not add components or call begin() / catchupGarbage().
     void gcImpl(uint32_t maxDestructions,
             void* context, void* extraArg, EvictionDispatcher dispatcher) noexcept;
 
@@ -250,7 +225,14 @@ protected:
      */
     void catchupGarbage() noexcept;
 
-    tsl::robin_map<Entity, Instance, Entity::Hasher> mInstanceMap;
+    /*
+     * Harvests any entities in mEntities that were destroyed in the current (unsealed) epoch
+     * into mPendingDestruction, without advancing mWatermark (since the current epoch is still
+     * open). Must only be called from the main thread outside gcImpl().
+     */
+    void catchupCurrentGarbage() noexcept;
+
+    InstanceMap mInstanceMap;
     PagedArenaBitset mPendingDestruction;
 
     /*
@@ -281,8 +263,10 @@ private:
     ImmutableCString mName;
     bool mAmortizationSupported = false;
     bool mSuspended = true;
+    bool mInGc = false;
     PagedArenaBitset mCollapsedGarbage;
     std::atomic<uint64_t> mWatermark{0};
+    uint64_t mHarvestedEpoch = 0;
     std::vector<const PagedArenaBitset*> mMissedGarbage;
 
     struct CallbackInfo {
@@ -290,11 +274,16 @@ private:
         ChangeCallback callback;
     };
 
+    struct BitsetRegistration {
+        PagedArenaBitset* bitset;
+        PagedArenaBitset const* filter;
+    };
+
     static constexpr size_t MAX_DIRTY_COUNT = 16;
     Entity mDirtyEntities[MAX_DIRTY_COUNT];
     size_t mDirtyCount = 0;
     std::vector<CallbackInfo> mChangeCallbacks;
-    std::vector<PagedArenaBitset*> mBitsets;
+    std::vector<BitsetRegistration> mBitsets;
 };
 
 /*
@@ -381,11 +370,30 @@ public:
     // This also invalidates all pointers to components.
     Instance addComponent(Entity e);
 
+    // Adds a component to the given Entity using a single hash-table probe, returning both the
+    // Instance and whether the component was newly added (false if the entity already had one).
+    AddResult tryAddComponent(Entity e);
+
     // Removes a component from the given entity.
     // Instances are not stable when a component is added, removed or gc() is called.
     // This also invalidates all pointers to components.
     Instance removeComponent(Entity e);
     void removeComponents(Entity const* entities, size_t count) noexcept;
+
+    // Removes a component (or batch of components) using a single map lookup per entity,
+    // invoking preRemove(Instance) before the SoA swap-and-pop overwrites the removed slot.
+    //
+    // Contract: preRemove is invoked while holding a pointer to the entity's slot in mInstanceMap
+    // and before the SoA swap-and-pop completes; it may access SoA fields of any existing instance,
+    // but MUST NOT add or remove components on this manager (removing the last component would
+    // clear() mInstanceMap and free the page backing the held slot pointer, and mutating the SoA
+    // during swap-and-pop would corrupt indices).
+    template<typename PreRemove>
+    RemoveResult removeComponentWithCallback(Entity e, PreRemove&& preRemove) noexcept;
+
+    template<typename PreRemove>
+    void removeComponentsWithCallback(Entity const* entities, size_t count,
+            PreRemove&& preRemove) noexcept;
 
     // return the first instance
     Instance begin() noexcept {
@@ -487,10 +495,10 @@ protected:
             Entity& ej = elementAt<ENTITY_INDEX>(j);
             std::swap(ei, ej);
             if (ei) {
-                map[ei] = i;
+                map.update(ei, i);
             }
             if (ej) {
-                map[ej] = j;
+                map.update(ej, j);
             }
         }
     }
@@ -600,15 +608,12 @@ protected:
     }
 
     SoA mData;
-
-private:
-    Instance removeComponentsHelper(Entity const* entities, size_t count) noexcept;
 };
 
 // Keep these outside of the class because CLion has trouble parsing them
 template<typename ... Elements>
-typename SingleInstanceComponentManager<Elements ...>::Instance
-SingleInstanceComponentManager<Elements ...>::addComponent(Entity e) {
+SingleInstanceComponentManagerBase::AddResult
+SingleInstanceComponentManager<Elements ...>::tryAddComponent(Entity e) {
     auto allocator = [](void* ctx, Entity ent) noexcept -> Instance {
         auto self = static_cast<SingleInstanceComponentManager*>(ctx);
         self->mData.push_back(Structure{}).template back<ENTITY_INDEX>() = ent;
@@ -617,45 +622,58 @@ SingleInstanceComponentManager<Elements ...>::addComponent(Entity e) {
     return addComponentImpl(e, this, allocator);
 }
 
-template <typename ... Elements>
+template<typename ... Elements>
 typename SingleInstanceComponentManager<Elements ...>::Instance
-SingleInstanceComponentManager<Elements ... >::removeComponentsHelper(Entity const* entities, size_t const count) noexcept {
-    Instance lastIndex = 0;
-    struct Context {
-        SingleInstanceComponentManager* self;
-        Instance* pLastIndex;
-    } ctx { this, &lastIndex };
+SingleInstanceComponentManager<Elements ...>::addComponent(Entity e) {
+    return tryAddComponent(e).ci;
+}
 
-    auto deallocator = [](void* context, size_t index) noexcept -> CompactionResult {
-        auto ctxPtr = static_cast<Context*>(context);
-        auto self = ctxPtr->self;
-        size_t last = self->mData.size() - 1;
-        *(ctxPtr->pLastIndex) = last;
+template <typename ... Elements>
+template <typename PreRemove>
+SingleInstanceComponentManagerBase::RemoveResult
+SingleInstanceComponentManager<Elements ... >::removeComponentWithCallback(
+        Entity const e, PreRemove&& preRemove) noexcept {
+    uint32_t* const slot = mInstanceMap.findSlot(e);
+    if (UTILS_LIKELY(slot != nullptr)) {
+        Instance const index = InstanceMap::getSlotInstance(slot);
+        assert(index != 0);
 
+        preRemove(index);
+
+        size_t const last = mData.size() - 1;
         Entity swappedEntity;
         if (last != index) {
-            self->mData.forEach([index, last](auto* p) {
+            mData.forEach([index, last](auto* p) {
                 p[index] = std::move(p[last]);
             });
-            swappedEntity = self->mData.template elementAt<ENTITY_INDEX>(index);
+            swappedEntity = mData.template elementAt<ENTITY_INDEX>(index);
         }
-        self->mData.pop_back();
-        return { last, swappedEntity };
-    };
+        mData.pop_back();
 
-    removeComponentsImpl(entities, count, &ctx, deallocator);
-    return lastIndex;
+        eraseComponentFromMap(slot, e, swappedEntity, index);
+        return { index, Instance(last) };
+    }
+    return { 0, 0 };
+}
+
+template <typename ... Elements>
+template <typename PreRemove>
+void SingleInstanceComponentManager<Elements ... >::removeComponentsWithCallback(
+        Entity const* entities, size_t const count, PreRemove&& preRemove) noexcept {
+    for (size_t k = 0; k < count; ++k) {
+        removeComponentWithCallback(entities[k], preRemove);
+    }
 }
 
 template <typename ... Elements>
 typename SingleInstanceComponentManager<Elements ...>::Instance
 SingleInstanceComponentManager<Elements ... >::removeComponent(Entity const e) {
-    return removeComponentsHelper(&e, 1);
+    return removeComponentWithCallback(e, [](Instance) noexcept {}).moved;
 }
 
 template <typename ... Elements>
 void SingleInstanceComponentManager<Elements ... >::removeComponents(Entity const* entities, size_t const count) noexcept {
-    removeComponentsHelper(entities, count);
+    removeComponentsWithCallback(entities, count, [](Instance) noexcept {});
 }
 
 } // namespace utils

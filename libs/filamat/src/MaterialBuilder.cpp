@@ -400,6 +400,11 @@ MaterialBuilder& MaterialBuilder::useDefaultDepthVariant() noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::isDefaultMaterial(bool const isDefault) noexcept {
+    mIsDefaultMaterial = isDefault;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::materialDomain(
         MaterialDomain const materialDomain) noexcept {
     mMaterialDomain = materialDomain;
@@ -754,6 +759,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
 
     // This is determined via static analysis of the glsl after prepareToBuild().
     info.userMaterialHasCustomDepth = false;
+    info.userMaterialVertexHasCustomDepth = false;
 }
 
 void MaterialBuilder::initPushConstants() noexcept {
@@ -830,9 +836,12 @@ bool MaterialBuilder::runSemanticAnalysis(MaterialInfo* inOutInfo,
                 targetApi, targetLanguage);
     } else {
         shaderCode = peek(ShaderStage::VERTEX, semanticCodeGenParams, mProperties);
-        success = GLSLTools::analyzeVertexShader(shaderCode, model, mMaterialDomain,
+        auto const vertexResult = GLSLTools::analyzeVertexShader(shaderCode, model, mMaterialDomain,
                 targetApi, targetLanguage);
+        success = vertexResult.has_value();
         if (success) {
+            inOutInfo->userMaterialVertexHasCustomDepth =
+                    vertexResult->userMaterialVertexHasCustomDepth;
             shaderCode = peek(ShaderStage::FRAGMENT, semanticCodeGenParams, mProperties);
             auto const result = GLSLTools::analyzeFragmentShader(shaderCode, model, mMaterialDomain,
                     targetApi, targetLanguage, mCustomSurfaceShading);
@@ -918,8 +927,9 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
             mMaterialVertexCode.getCode(), mMaterialVertexCode.getLineOffset(),
             mMaterialDomain);
 
-    container.emplace<bool>(MaterialHasCustomDepthShader,
-            needsStandardDepthProgram() && !mUseDefaultDepthVariant);
+    bool const hasCustomDepthShader = needsStandardDepthProgram(info);
+    bool const hasCustomDepthFragmentShader = needsCustomDepthFragmentProgram(info);
+    container.emplace<bool>(MaterialHasCustomDepthShader, hasCustomDepthShader);
 
     std::atomic_bool cancelJobs(false);
     bool firstJob = true;
@@ -949,15 +959,20 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
         JobSystem::Job* parent = jobSystem.createJob();
 
         for (const auto& v : variants) {
+            if (isSurfaceDomain && !mIsDefaultMaterial &&
+                    filament::Variant::isMotionVectorsVariant(v.variant)) {
+                if (v.stage == ShaderStage::VERTEX && !hasCustomDepthShader) {
+                    continue;
+                }
+                if (v.stage == ShaderStage::FRAGMENT && !hasCustomDepthFragmentShader) {
+                    continue;
+                }
+            }
+
             if (params.featureLevel == FeatureLevel::FEATURE_LEVEL_0 && isSurfaceDomain) {
                 assert_invariant(params.shaderModel == ShaderModel::MOBILE);
                 assert_invariant(params.targetApi == TargetApi::OPENGL);
                 // skip all variants that can't be used with ESSL1
-                if (filament::Variant::isValidStandardVariant(v.variant)) {
-                    if (v.variant.hasDirectionalLighting()) {
-                        continue;
-                    }
-                }
                 if (filament::Variant::isShadowReceiverVariant(v.variant)) {
                     continue;
                 }
@@ -971,6 +986,9 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                     continue;
                 }
                 if (filament::Variant::isSSRVariant(v.variant)) {
+                    continue;
+                }
+                if (filament::Variant::isMotionVectorsVariant(v.variant)) {
                     continue;
                 }
             }
@@ -1465,21 +1483,76 @@ static const char* to_string(ShaderStageFlags const stageFlags) noexcept {
 
 bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const noexcept {
 
-    auto logSamplerOverflow = [](SamplerInterfaceBlock const& sib) {
+    auto logSamplerOverflow = [](SamplerInterfaceBlock const& sib, utils::LogSeverity severity) {
         auto const& samplers = sib.getSamplerInfoList();
         auto const* stage = to_string(sib.getStageFlags());
         for (auto const& sampler: samplers) {
-            LOG(ERROR) << "\"" << sampler.name.c_str() << "\" "
+            LOG(LEVEL(severity)) << "\"" << sampler.name.c_str() << "\" "
                    << Enums::toString(sampler.type) << " " << stage << '\n';
         }
     };
 
-    auto userSamplerCount = info.sib.getSize();
-    for (auto const& sampler: info.sib.getSamplerInfoList()) {
-        if (sampler.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL) {
-            userSamplerCount += 1;
+    // Fails if the material uses more samplers than guaranteed by its feature level. Here, each
+    // external sampler counts as a single texture regardless of the backend. Its actual cost
+    // depends on the backend and the device (e.g. 4 textures on WebGPU), and can optionally be
+    // validated when the material is loaded (see MaterialDefinition::checkSamplerLimits()).
+    //
+    // On OpenGL ES and Vulkan, counting each external sampler as 2 textures is a good heuristic
+    // for mobile devices. If the material targets either backend and exceeds the limit under
+    // that accounting, a warning is emitted, but the check does not fail.
+    auto checkSamplerCount = [this, &info, &logSamplerOverflow]() -> bool {
+        if (mNoSamplerValidation) {
+            return true;
         }
-    }
+
+        uint32_t const userSamplerCount = info.sib.getSize();
+        auto const& samplerList = info.sib.getSamplerInfoList();
+        uint32_t const externalSamplerCount = uint32_t(std::count_if(
+                samplerList.begin(), samplerList.end(),
+                [](SamplerInterfaceBlock::SamplerInfo const& sampler) {
+                    return sampler.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL;
+                }));
+
+        // Count how many samplers filament uses based on the material properties. This must
+        // match descriptor_sets::getPerViewDescriptorSetLayout().
+        // note: currently SSAO is not used with unlit, but we want to keep that possibility.
+        uint32_t textureUsedByFilamentCount = 4;    // shadowMap, structure, ssao, fog texture
+        if (info.isLit) {
+            textureUsedByFilamentCount += 2;        // dfg, specular
+        }
+        if (info.reflectionMode == ReflectionMode::SCREEN_SPACE ||
+            info.refractionMode == RefractionMode::SCREEN_SPACE) {
+            textureUsedByFilamentCount += 1;        // ssr
+        }
+        if (mVariantFilter & uint32_t(UserVariantFilterBit::FOG)) {
+            textureUsedByFilamentCount -= 1;        // fog texture
+        }
+
+        uint32_t const maxTextureCount =
+                FEATURE_LEVEL_CAPS[+info.featureLevel].MAX_FRAGMENT_SAMPLER_COUNT;
+        uint32_t const maxUserSamplerCount = maxTextureCount - textureUsedByFilamentCount;
+        if (userSamplerCount > maxUserSamplerCount) {
+            LOG(ERROR) << "Error: material \"" << mMaterialName.c_str()
+                   << "\" has feature level " << +info.featureLevel
+                   << " and is using more than " << maxUserSamplerCount
+                   << " samplers.";
+            logSamplerOverflow(info.sib, utils::LogSeverity::kError);
+            return false;
+        }
+
+        bool const targetsGlesOrVulkan =
+                any(mTargetApi & (TargetApi::OPENGL | TargetApi::VULKAN));
+        if (targetsGlesOrVulkan &&
+                userSamplerCount + externalSamplerCount > maxUserSamplerCount) {
+            LOG(WARNING) << "Warning: material \"" << mMaterialName.c_str()
+                   << "\" has feature level " << +info.featureLevel
+                   << " and is using more than " << maxUserSamplerCount
+                   << " samplers when each external sampler is counted as 2. This may exceed"
+                   << " the sampler limits of OpenGL ES or Vulkan mobile devices.";
+            logSamplerOverflow(info.sib, utils::LogSeverity::kWarning);
+        }
+        return true;
+    };
 
     switch (info.featureLevel) {
         case FeatureLevel::FEATURE_LEVEL_0:
@@ -1493,32 +1566,7 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
             return true;
         case FeatureLevel::FEATURE_LEVEL_1:
         case FeatureLevel::FEATURE_LEVEL_2: {
-            if (mNoSamplerValidation) {
-                break;
-            }
-
-            constexpr auto maxTextureCount = FEATURE_LEVEL_CAPS[1].MAX_FRAGMENT_SAMPLER_COUNT;
-
-            // count how many samplers filament uses based on the material properties
-            // note: currently SSAO is not used with unlit, but we want to keep that possibility.
-            uint32_t textureUsedByFilamentCount = 4;    // shadowMap, structure, ssao, fog texture
-            if (info.isLit) {
-                textureUsedByFilamentCount += 3;        // froxels, dfg, specular
-            }
-            if (info.reflectionMode == ReflectionMode::SCREEN_SPACE ||
-                info.refractionMode == RefractionMode::SCREEN_SPACE) {
-                textureUsedByFilamentCount += 1;        // ssr
-            }
-            if (mVariantFilter & uint32_t(UserVariantFilterBit::FOG)) {
-                textureUsedByFilamentCount -= 1;        // fog texture
-            }
-
-            if (userSamplerCount > maxTextureCount - textureUsedByFilamentCount) {
-                LOG(ERROR) << "Error: material \"" << mMaterialName.c_str()
-                       << "\" has feature level " << +info.featureLevel
-                       << " and is using more than " << maxTextureCount - textureUsedByFilamentCount
-                       << " samplers.";
-                logSamplerOverflow(info.sib);
+            if (!checkSamplerCount()) {
                 return false;
             }
             auto const& samplerList = info.sib.getSamplerInfoList();
@@ -1530,19 +1578,13 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
                 LOG(ERROR) << "Error: material \"" << mMaterialName.c_str()
                        << "\" has feature level " << +info.featureLevel
                        << " and uses a samplerCubemapArray.";
-                logSamplerOverflow(info.sib);
+                logSamplerOverflow(info.sib, utils::LogSeverity::kError);
                 return false;
             }
             break;
         }
         case FeatureLevel::FEATURE_LEVEL_3: {
-            // TODO: we need constants somewhere for these values
-            // TODO: 16 is artificially low for now, until we have a better idea of what we want
-            if (userSamplerCount > 16) {
-                LOG(ERROR) << "Error: material \"" << mMaterialName.c_str()
-                       << "\" has feature level " << +info.featureLevel
-                       << " and is using more than 16 samplers";
-                logSamplerOverflow(info.sib);
+            if (!checkSamplerCount()) {
                 return false;
             }
             break;
@@ -1560,14 +1602,28 @@ bool MaterialBuilder::hasCustomVaryings() const noexcept {
     return false;
 }
 
-bool MaterialBuilder::needsStandardDepthProgram() const noexcept {
-    const bool hasEmptyVertexCode = mMaterialVertexCode.getCode().empty();
-    return !hasEmptyVertexCode ||
-           hasCustomVaryings() ||
+bool MaterialBuilder::needsCustomDepthFragmentProgram(
+        MaterialInfo const& info) const noexcept {
+    if (mUseDefaultDepthVariant) {
+        return false;
+    }
+    return info.userMaterialHasCustomDepth ||
            mBlendingMode == BlendingMode::MASKED ||
            (mTransparentShadow &&
             (mBlendingMode == BlendingMode::TRANSPARENT ||
              mBlendingMode == BlendingMode::FADE));
+}
+
+bool MaterialBuilder::needsStandardDepthProgram(MaterialInfo const& info) const noexcept {
+    if (mUseDefaultDepthVariant) {
+        return false;
+    }
+    return needsCustomDepthFragmentProgram(info) ||
+           info.userMaterialVertexHasCustomDepth ||
+           mProperties[size_t(Property::CLIP_SPACE_TRANSFORM)] ||
+           mProperties[size_t(Property::CLIP_SPACE_POSITION)] ||
+           mVertexDomain != VertexDomain::OBJECT ||
+           mUseLegacyMorphing;
 }
 
 std::string MaterialBuilder::peek(backend::ShaderStage const stage,
@@ -1759,17 +1815,6 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
         container.emplace<uint8_t>(MaterialStereoscopicType, static_cast<uint8_t>(mStereoscopicType));
     }
 
-    // create a unique material id
-    auto const& vert = mMaterialVertexCode.getCode();
-    auto const& frag = mMaterialFragmentCode.getCode();
-    std::hash<std::string_view> const hasher;
-    size_t const materialId = hash::combine(
-            MATERIAL_VERSION,
-            hash::combine(
-                    hasher({ vert.data(), vert.size() }),
-                    hasher({ frag.data(), frag.size() })));
-
-    container.emplace<uint64_t>(MaterialCacheId, materialId);
     if (!mMaterialSource.empty()) {
         container.push<CompressedStringChunk>(
                 MaterialSource, mMaterialSource,
