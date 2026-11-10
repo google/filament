@@ -13,3 +13,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - materials: the new `diffuseTransmission` and `diffuseTransmissionColor` material properties can be
   used in the lit (standard) shading model to create diffusely transmitting (translucent) surfaces
 - variant: completely remove FOG variant bit
+- engine: fix `RenderTarget` validation rejecting layers of 2D-array textures at mip levels above 0
+  (the layer count was halved per level as for 3D textures)
