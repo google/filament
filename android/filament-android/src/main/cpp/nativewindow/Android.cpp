@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <android/native_window.h>
 #include <android/native_window_jni.h>
 #include <jni.h>
 
@@ -21,6 +22,10 @@ extern "C" {
 
 void* getNativeWindow(JNIEnv* env, jclass, jobject surface) {
     return ANativeWindow_fromSurface(env, surface);
+}
+
+void releaseNativeWindow(void* nativeWindow) {
+    ANativeWindow_release(static_cast<ANativeWindow*>(nativeWindow));
 }
 
 jlong createNativeSurface(jint width, jint height) {

@@ -14,6 +14,8 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - materials: the new `diffuseTransmission` and `diffuseTransmissionColor` material properties can be
   used in the lit (standard) shading model to create diffusely transmitting (translucent) surfaces
 - variant: completely remove FOG variant bit
+- android: `Engine.destroySwapChain()` releases the `ANativeWindow` taken from a `Surface`, fixing a
+  file descriptor leak. It now waits for the driver thread to run pending commands before returning.
 - opengl: key the program binary cache on the final shader source instead of the user material
   code; remove the `MAT_UUID` material chunk. [⚠️ **Recompile Materials**]
 - engine: fix `RenderTarget` validation rejecting layers of 2D-array textures at mip levels above 0
