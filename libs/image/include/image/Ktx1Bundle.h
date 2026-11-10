@@ -160,6 +160,8 @@ public:
     static constexpr uint32_t R8UI = 0x8232;
     static constexpr uint32_t R8I = 0x8231;
     static constexpr uint32_t STENCIL_INDEX8 = 0x8D48;
+    static constexpr uint32_t R16 = 0x822A;
+    static constexpr uint32_t R16_SNORM = 0x8F98;
     static constexpr uint32_t R16F = 0x822D;
     static constexpr uint32_t R16UI = 0x8234;
     static constexpr uint32_t R16I = 0x8233;
@@ -180,6 +182,8 @@ public:
     static constexpr uint32_t R32F = 0x822E;
     static constexpr uint32_t R32UI = 0x8236;
     static constexpr uint32_t R32I = 0x8235;
+    static constexpr uint32_t RG16 = 0x822C;
+    static constexpr uint32_t RG16_SNORM = 0x8F99;
     static constexpr uint32_t RG16F = 0x822F;
     static constexpr uint32_t RG16UI = 0x823A;
     static constexpr uint32_t RG16I = 0x8239;
@@ -194,12 +198,16 @@ public:
     static constexpr uint32_t DEPTH_COMPONENT32F = 0x8CAC;
     static constexpr uint32_t DEPTH24_STENCIL8 = 0x88F0;
     static constexpr uint32_t DEPTH32F_STENCIL8 = 0x8CAD;
+    static constexpr uint32_t RGB16 = 0x8054;
+    static constexpr uint32_t RGB16_SNORM = 0x8F9A;
     static constexpr uint32_t RGB16F = 0x881B;
     static constexpr uint32_t RGB16UI = 0x8D77;
     static constexpr uint32_t RGB16I = 0x8D89;
     static constexpr uint32_t RG32F = 0x8230;
     static constexpr uint32_t RG32UI = 0x823C;
     static constexpr uint32_t RG32I = 0x823B;
+    static constexpr uint32_t RGBA16 = 0x805B;
+    static constexpr uint32_t RGBA16_SNORM = 0x8F9B;
     static constexpr uint32_t RGBA16F = 0x881A;
     static constexpr uint32_t RGBA16UI = 0x8D76;
     static constexpr uint32_t RGBA16I = 0x8D88;

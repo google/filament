@@ -1888,6 +1888,11 @@ bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
             // early exit condition is flattened in EASU code
             return vendorId == 0x5143; // Qualcomm
         }
+        case Workaround::POWER_VR_SHADER_WORKAROUNDS: {
+            auto const vendorId = mContext.getPhysicalDeviceVendorId();
+            // textureGather is slow on PowerVR + Vulkan (tested on Pixel11).
+            return vendorId == 0x1010; // ImgTec (PowerVR)
+        }
         case Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP:
             // Supporting depth attachment as both sampler and attachment is only possible if we set
             // the depth attachment as read-only (e.g. during SSAO pass), however note that the

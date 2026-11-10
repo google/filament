@@ -16,6 +16,7 @@
 
 #include "BlobCacheKey.h"
 
+#include <backend/DriverEnums.h>
 #include <backend/Program.h>
 
 #include <gtest/gtest.h>
@@ -150,6 +151,38 @@ TEST(BlobCacheKeyTest, CopyAndMove) {
     BlobCacheKey assigned;
     assigned = std::move(moved);
     EXPECT_TRUE(sameBytes(assigned, copy));
+}
+
+namespace {
+
+Program makeProgram(char const* vs, char const* fs) {
+    Program program;
+    program.shader(ShaderStage::VERTEX, vs, std::strlen(vs) + 1);
+    program.shader(ShaderStage::FRAGMENT, fs, std::strlen(fs) + 1);
+    return program;
+}
+
+constexpr char const* VS = "#version 300 es\nvoid main() { gl_Position = vec4(0.0); }\n";
+constexpr char const* FS = "#version 300 es\nout highp vec4 c;\nvoid main() { c = vec4(1.0); }\n";
+
+} // namespace
+
+TEST(BlobCacheKeyTest, ProgramIdIsDeterministic) {
+    EXPECT_EQ(BlobCacheKey::computeProgramId(makeProgram(VS, FS)),
+            BlobCacheKey::computeProgramId(makeProgram(VS, FS)));
+}
+
+TEST(BlobCacheKeyTest, ProgramIdTracksContent) {
+    uint64_t const base = BlobCacheKey::computeProgramId(makeProgram(VS, FS));
+
+    // a single character change in either stage
+    EXPECT_NE(base, BlobCacheKey::computeProgramId(makeProgram(VS,
+            "#version 300 es\nout highp vec4 c;\nvoid main() { c = vec4(0.0); }\n")));
+    EXPECT_NE(base, BlobCacheKey::computeProgramId(makeProgram(
+            "#version 300 es\nvoid main() { gl_Position = vec4(1.0); }\n", FS)));
+
+    // swapping stages must not collide
+    EXPECT_NE(base, BlobCacheKey::computeProgramId(makeProgram(FS, VS)));
 }
 
 } // namespace filament::backend

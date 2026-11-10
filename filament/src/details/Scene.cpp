@@ -41,6 +41,7 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Entity.h>
+#include <utils/EntityInstanceMap.h>
 #include <utils/EntityManager.h>
 #include <utils/Invocable.h>
 #include <utils/Mutex.h>
@@ -123,6 +124,32 @@ void FScene::destroyComponents(Entity const* entities, size_t const count) noexc
     }
 }
 
+template<typename SoAType, typename Extra, size_t EntityColumn, size_t... CachedColumns>
+UTILS_NOINLINE
+std::pair<uint32_t, bool>
+SoaCache<SoAType, Extra, EntityColumn, CachedColumns...>::insertNew(
+        Entity const e, double3 const& translation) {
+    // acquire() only gets here when getInstance(e) returned 0, i.e. the slot for e's 17-bit index
+    // is either empty or still holds a stale generation of that index. The latter must never
+    // happen (see the SceneCacheData invariant): insert() would orphan the stale row, remove()
+    // could no longer find it, and pruneStaleRows() would never terminate.
+    assert_invariant(mIndexMap.getArray().get(EntityManager::getIndex(e)) == 0);
+    uint32_t const index = static_cast<uint32_t>(mSoA.size());
+    mSoA.push_back();
+    mSoA.template elementAt<EntityColumn>(index) = e;
+    mTranslations.push_back(translation);
+    if constexpr (kHasExtra) {
+        mExtras.emplace_back();
+    }
+    mIndexMap.insert(e, index + 1u);
+    return { index, true };
+}
+
+template std::pair<uint32_t, bool> SceneCacheData::RenderableCache::insertNew(
+        Entity, double3 const&);
+template std::pair<uint32_t, bool> SceneCacheData::LightCache::insertNew(
+        Entity, double3 const&);
+
 SceneCacheData::SceneCacheData() noexcept = default;
 SceneCacheData::~SceneCacheData() noexcept = default;
 
@@ -184,6 +211,11 @@ void SceneCacheData::resize(size_t const renderableCount, size_t const lightCoun
     if (renderableData.capacity() < renderableDataCapacity) {
         renderableData.clear();
         renderableData.setCapacity(renderableDataCapacity);
+        // updateUBOs() uploads whole rows, but some bytes are never written (reserved fields,
+        // std140 padding, prevWorldFromWorldMatrix without motion vectors). Zero them so stale
+        // heap data can't reach the GPU.
+        memset(renderableData.data<FScene::UBO>(), 0,
+                renderableDataCapacity * sizeof(PerRenderableData));
     }
     renderableData.resize(renderableCount);
 

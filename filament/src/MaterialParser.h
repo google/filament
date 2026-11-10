@@ -74,8 +74,6 @@ public:
     uint32_t computeCrc32() const noexcept;
     // Return the cached computed CRC32 or the CRC32 built into the material file if one exists.
     std::optional<uint32_t> getPrecomputedCrc32() const noexcept;
-    // Return the CRC32 of the material.
-    uint32_t getCrc32() const noexcept;
 
     backend::ShaderLanguage getShaderLanguage() const noexcept;
 
@@ -83,7 +81,6 @@ public:
     bool getMaterialVersion(uint32_t* value) const noexcept;
     bool getFeatureLevel(uint8_t* value) const noexcept;
     bool getName(utils::CString*) const noexcept;
-    bool getCacheId(uint64_t* cacheId) const noexcept;
     bool getUIB(BufferInterfaceBlock* uib) const noexcept;
     bool getSIB(SamplerInterfaceBlock* sib) const noexcept;
     bool getSubpasses(SubpassInfo* subpass) const noexcept;

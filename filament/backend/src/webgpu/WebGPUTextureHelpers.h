@@ -291,6 +291,15 @@ namespace filament::backend {
             FWGPU_LOGW << "Requested Filament texture format RGBA4 but getting "
                           "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)";
             return wgpu::TextureFormat::Undefined;
+        case TextureFormat::R16:
+        case TextureFormat::R16_SNORM:
+        case TextureFormat::RG16:
+        case TextureFormat::RG16_SNORM:
+        case TextureFormat::RGB16:
+        case TextureFormat::RGB16_SNORM:
+        case TextureFormat::RGBA16:
+        case TextureFormat::RGBA16_SNORM:
+            return wgpu::TextureFormat::Undefined;
     }
 }
 

@@ -44,10 +44,11 @@ type StructNode struct {
 }
 
 type EnumNode struct {
-	Line       int
-	Name       string
-	Values     []string
-	ValueLines []int // used to find docstring for each enum value
+	Line           int
+	Name           string
+	Values         []string
+	ExplicitValues []string
+	ValueLines     []int // used to find docstring for each enum value
 }
 
 type UsingNode struct {

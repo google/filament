@@ -15,10 +15,11 @@
  */
 
 #include <ktxreader/Ktx1Reader.h>
-#include <utils/Log.h>
 
 #include <filament/Engine.h>
 #include <filament/Texture.h>
+
+#include <utils/Log.h>
 
 namespace ktxreader {
 namespace Ktx1Reader {
@@ -242,6 +243,8 @@ TextureFormat toTextureFormat(const KtxInfo& info) {
         case Ktx1Bundle::R8UI: return TextureFormat::R8UI;
         case Ktx1Bundle::R8I: return TextureFormat::R8I;
         case Ktx1Bundle::STENCIL_INDEX8: return TextureFormat::STENCIL8;
+        case Ktx1Bundle::R16: return TextureFormat::R16;
+        case Ktx1Bundle::R16_SNORM: return TextureFormat::R16_SNORM;
         case Ktx1Bundle::R16F: return TextureFormat::R16F;
         case Ktx1Bundle::R16UI: return TextureFormat::R16UI;
         case Ktx1Bundle::R16I: return TextureFormat::R16I;
@@ -262,6 +265,8 @@ TextureFormat toTextureFormat(const KtxInfo& info) {
         case Ktx1Bundle::R32F: return TextureFormat::R32F;
         case Ktx1Bundle::R32UI: return TextureFormat::R32UI;
         case Ktx1Bundle::R32I: return TextureFormat::R32I;
+        case Ktx1Bundle::RG16: return TextureFormat::RG16;
+        case Ktx1Bundle::RG16_SNORM: return TextureFormat::RG16_SNORM;
         case Ktx1Bundle::RG16F: return TextureFormat::RG16F;
         case Ktx1Bundle::RG16UI: return TextureFormat::RG16UI;
         case Ktx1Bundle::RG16I: return TextureFormat::RG16I;
@@ -274,12 +279,16 @@ TextureFormat toTextureFormat(const KtxInfo& info) {
         case Ktx1Bundle::RGBA8I: return TextureFormat::RGBA8I;
         case Ktx1Bundle::DEPTH24_STENCIL8: return TextureFormat::DEPTH24_STENCIL8;
         case Ktx1Bundle::DEPTH32F_STENCIL8: return TextureFormat::DEPTH32F_STENCIL8;
+        case Ktx1Bundle::RGB16: return TextureFormat::RGB16;
+        case Ktx1Bundle::RGB16_SNORM: return TextureFormat::RGB16_SNORM;
         case Ktx1Bundle::RGB16F: return TextureFormat::RGB16F;
         case Ktx1Bundle::RGB16UI: return TextureFormat::RGB16UI;
         case Ktx1Bundle::RGB16I: return TextureFormat::RGB16I;
         case Ktx1Bundle::RG32F: return TextureFormat::RG32F;
         case Ktx1Bundle::RG32UI: return TextureFormat::RG32UI;
         case Ktx1Bundle::RG32I: return TextureFormat::RG32I;
+        case Ktx1Bundle::RGBA16: return TextureFormat::RGBA16;
+        case Ktx1Bundle::RGBA16_SNORM: return TextureFormat::RGBA16_SNORM;
         case Ktx1Bundle::RGBA16F: return TextureFormat::RGBA16F;
         case Ktx1Bundle::RGBA16UI: return TextureFormat::RGBA16UI;
         case Ktx1Bundle::RGBA16I: return TextureFormat::RGBA16I;
