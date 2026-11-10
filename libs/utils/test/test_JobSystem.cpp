@@ -1343,8 +1343,10 @@ TEST(JobSystem, JobPoolExhaustionNullJobRun) {
         heldJobs.push_back(job);
     }
 
-    // Pool must be exhausted
-    EXPECT_EQ(heldJobs.size(), JobSystem::MAX_JOB_COUNT);
+    // The pool storage comes from malloc() and may not be cache-line aligned like Job, so the
+    // pool can hold one job fewer (e.g. with glibc).
+    EXPECT_GE(heldJobs.size(), JobSystem::MAX_JOB_COUNT - 1);
+    EXPECT_LE(heldJobs.size(), JobSystem::MAX_JOB_COUNT);
 
     // Any further job creation returns nullptr
     JobSystem::Job* nullJob1 = js.createJob(nullptr, [](JobSystem&, JobSystem::Job*) {});
