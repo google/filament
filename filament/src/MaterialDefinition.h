@@ -272,6 +272,10 @@ struct MaterialDefinition {
     uint64_t cacheId = 0;
     utils::CString source;
 
+    // Keys the program cache. Ids are never reused, so a stale program entry can't match a new
+    // definition. Reloading the same content after its definition is freed gets a new id.
+    uint64_t const uniqueId;
+
 private:
     friend class MaterialCache;
     friend class FMaterial; // for onEditCallback

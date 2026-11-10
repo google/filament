@@ -779,6 +779,7 @@ void ViewerGui::updateUserInterface() {
     }
 
     if (ImGui::CollapsingHeader("TAA Options")) {
+        ImGui::Checkbox("Enabled##taa", &mSettings.view.taa.enabled);
         ImGui::SliderFloat("Upscaling", &mSettings.view.taa.upscaling, 1.0f, 3.0f);
         ImGui::Checkbox("History reprojection", &mSettings.view.taa.historyReprojection);
         ImGui::SliderFloat("Feedback", &mSettings.view.taa.feedback, 0.0f, 1.0f);

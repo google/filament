@@ -113,7 +113,7 @@ ProgramSpecialization LocalProgramCache::getProgramSpecialization(Variant const 
     assert_invariant(mMaterial != nullptr);
 
     return ProgramSpecialization{
-        .materialCrc32 = mMaterial->getMaterialParser().getCrc32(),
+        .definitionId = mMaterial->getDefinition().uniqueId,
         .variant = variant,
         .specKey = specKey,
         .specializationConstants = mSpecializationConstants.get(),

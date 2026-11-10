@@ -18,6 +18,7 @@
 
 #include "Froxelizer.h"
 #include "LocalProgramCache.h"
+#include "MaterialCache.h"
 #include "MaterialParser.h"
 #include "ProgramSlotMap.h"
 
@@ -328,7 +329,8 @@ void MaterialDefinition::terminate(FEngine& engine) {
 
 MaterialDefinition::MaterialDefinition(FEngine& engine,
         std::unique_ptr<MaterialParser> materialParser)
-        : mMaterialParser(std::move(materialParser)) {
+        : uniqueId(engine.getMaterialCache().allocateDefinitionId()),
+          mMaterialParser(std::move(materialParser)) {
 
     processMain();
     processBlendingMode();
@@ -956,7 +958,7 @@ void MaterialDefinition::acquirePrograms(FEngine& engine,
     assert_invariant(programCache.size() == slotMap.size());
 
     ProgramSpecialization specialization = {
-        .materialCrc32 = getMaterialParser().getCrc32(),
+        .definitionId = uniqueId,
         .specializationConstants = specializationConstants,
     };
 
@@ -1035,7 +1037,7 @@ void MaterialDefinition::releasePrograms(FEngine& engine,
     assert_invariant(programCache.size() == slotMap.size());
 
     ProgramSpecialization specialization = {
-        .materialCrc32 = getMaterialParser().getCrc32(),
+        .definitionId = uniqueId,
         .specializationConstants = specializationConstants,
     };
 

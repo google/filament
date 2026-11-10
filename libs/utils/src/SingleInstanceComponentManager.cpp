@@ -218,10 +218,10 @@ SingleInstanceComponentManagerBase::addComponentImpl(Entity const e, void* conte
         assert(mEntityManager.isAlive(e));
         resume();
 
-        auto [it, inserted] = mInstanceMap.try_emplace(e, 0);
+        auto const [slot, existing, inserted] = mInstanceMap.tryInsertSlot(e);
         if (UTILS_LIKELY(inserted)) {
             ci = allocator(context, e);
-            it.value() = ci;
+            InstanceMap::commitSlot(slot, e, ci);
             added = true;
             {
                 LockGuard const lock(mEbrEntitiesLock);
@@ -229,7 +229,7 @@ SingleInstanceComponentManagerBase::addComponentImpl(Entity const e, void* conte
             }
             notifyChange(e);
         } else {
-            ci = it.value();
+            ci = existing;
         }
     }
     assert(ci != 0);
@@ -239,15 +239,12 @@ SingleInstanceComponentManagerBase::addComponentImpl(Entity const e, void* conte
 
 
 void SingleInstanceComponentManagerBase::eraseComponentFromMap(
-        InstanceMap::iterator const pos, Entity const e,
+        uint32_t* const slot, Entity const e,
         Entity const swappedEntity, Instance const index) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS {
-    auto& map = mInstanceMap;
-    map.erase_fast(pos);
+    InstanceMap::clearSlot(slot);
 
     if (!swappedEntity.isNull()) {
-        auto const swappedPos = map.find(swappedEntity);
-        assert(swappedPos != map.end());
-        swappedPos.value() = index;
+        mInstanceMap.update(swappedEntity, index);
     }
 
     uint32_t const entityIndex = EntityManager::getIndex(e);
@@ -271,7 +268,10 @@ void SingleInstanceComponentManagerBase::eraseComponentFromMap(
     notifyChange(e);
 
     // Lock-free read check: safe because no other thread mutates mEntities.
+    // When the manager becomes completely empty, release all allocated map pages along with
+    // suspending the EBR watermark so inactive managers retain zero heap page footprint.
     if (mEntities.empty()) {
+        mInstanceMap.clear();
         suspend();
     }
 }
