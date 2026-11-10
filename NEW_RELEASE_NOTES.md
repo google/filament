@@ -23,3 +23,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - gltfio: lit materials without clear coat use ubershaders built without the clear coat lobe
 - metal: map the `SRGB8_ALPHA8_ASTC_*` texture formats to Metal's sRGB ASTC pixel formats on
   Apple-family GPUs (they previously had no Metal mapping)
+- gl: on PowerVR Rogue GE9215, material-instance uniforms are no longer batched and buffer updates
+  no longer go through `glMapBufferRange`
