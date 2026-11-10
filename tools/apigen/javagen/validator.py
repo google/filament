@@ -103,9 +103,16 @@ _JAVA_ANNOTATION_RE = re.compile(r"@\w+(?:\([^)]*\))?\s*")
 
 # Matches Java field declarations while excluding type/statement keywords
 _JAVA_FIELD_RE = re.compile(
-    r"^\s*(?:(?:public|protected|private|final|static|volatile|transient)\s+)*"
+    r"^\s*(?:@\w+(?:\([^)]*\))?\s+)*(?:(?:public|protected|private|final|static|volatile|transient)\s+)*(?:@\w+(?:\([^)]*\))?\s+)*"
     r"(?!class\b|enum\b|interface\b|return\b|new\b|import\b|package\b)"
     r"([\w<>\[\]\.]+)\s+(\w+)\s*(?:=\s*[^;]+)?\s*;",
+    re.MULTILINE,
+)
+
+# Matches non-native Java method or constructor declarations
+_JAVA_METHOD_OR_CTOR_RE = re.compile(
+    r"^\s*(?:@\w+(?:\([^)]*\))?\s+)*(?:(?:public|protected|private|static|final|synchronized|abstract|default)\s+)*"
+    r"(?:([\w<>\[\]\.\?]+)\s+)?(\w+)\s*\([^;{}]*\)\s*(?:\{|;)",
     re.MULTILINE,
 )
 
@@ -176,6 +183,27 @@ def _get_line_num(line_offsets: List[int], pos: int) -> int:
         1-based line number corresponding to `pos`.
     """
     return max(1, bisect.bisect_right(line_offsets, pos))
+
+
+def _has_preceding_used_by_native(content: str, start_pos: int, end_pos: int) -> bool:
+    """Return True if the declaration at `[start_pos, end_pos]` is annotated with `@UsedByNative`."""
+    if "@UsedByNative" in content[start_pos:end_pos]:
+        return True
+    for line in reversed(content[:start_pos].splitlines()):
+        stripped = line.strip()
+        if (
+            not stripped
+            or stripped.startswith("//")
+            or stripped.startswith("/*")
+            or stripped.startswith("*")
+        ):
+            continue
+        if stripped.startswith("@"):
+            if "@UsedByNative" in stripped:
+                return True
+            continue
+        break
+    return False
 
 
 # -----------------------------------------------------------------------------
@@ -290,6 +318,7 @@ class JavaField:
         field_type: Declared Java type of the field (e.g., `int`, `float`, `long`).
         file_path: Source `.java` file path.
         line: 1-based line number of the field declaration.
+        is_used_by_native: True if annotated with `@UsedByNative`.
     """
 
     class_name: str
@@ -297,6 +326,26 @@ class JavaField:
     field_type: str
     file_path: Path
     line: int
+    is_used_by_native: bool = False
+
+
+@dataclass
+class JavaMethod:
+    """Represents a parsed Java method or constructor declaration.
+
+    Attributes:
+        class_name: Fully-qualified enclosing Java class name (using `$` for nested classes).
+        method_name: Name of the method, or `"<init>"` for constructors.
+        file_path: Source `.java` file path.
+        line: 1-based line number of the declaration.
+        is_used_by_native: True if annotated with `@UsedByNative`.
+    """
+
+    class_name: str
+    method_name: str
+    file_path: Path
+    line: int
+    is_used_by_native: bool = False
 
 
 @dataclass
@@ -511,8 +560,10 @@ class BindingValidator:
         # Parsed Java data
         self.java_native_methods: Dict[str, List[JavaNativeMethod]] = {}
         self.java_fields: Dict[Tuple[str, str], JavaField] = {}
+        self.java_methods: Dict[Tuple[str, str], List[JavaMethod]] = {}
         self.java_class_field_names: Dict[str, Set[str]] = {}
         self.java_classes_by_simple_name: Dict[str, List[str]] = {}
+        self.java_known_classes: Set[str] = set()
 
         # Parsed C++ data
         self.cpp_jni_functions: Dict[Tuple[str, str], List[CppJniFunction]] = {}
@@ -528,6 +579,7 @@ class BindingValidator:
         self._validate_symbol_parity(result)
         self._validate_signatures(result)
         self._validate_reflection_fields(result)
+        self._validate_reflection_methods(result)
         return result
 
     # -------------------------------------------------------------------------
@@ -564,6 +616,15 @@ class BindingValidator:
         line_offsets = _compute_line_offsets(content)
         masked = self._mask_code(content)
 
+        # Register all class, enum, and interface scopes in this file
+        for token in _JAVA_CLASS_TOKEN_RE.finditer(masked):
+            if token.group(1):
+                enclosing = self._find_enclosing_java_class(masked, token.end(), file_path.stem)
+                full_cls = f"{package}.{enclosing}" if package else enclosing
+                self.java_known_classes.add(full_cls)
+                if full_cls not in self.java_classes_by_simple_name.get(enclosing, []):
+                    self.java_classes_by_simple_name.setdefault(enclosing, []).append(full_cls)
+
         # Extract all Java `native` method declarations
         for m in _JAVA_NATIVE_METHOD_RE.finditer(content):
             start_pos = m.start()
@@ -599,6 +660,7 @@ class BindingValidator:
             field_type, field_name = m.groups()
             enclosing_class = self._find_enclosing_java_class(masked, start_pos, file_path.stem)
             full_class_name = f"{package}.{enclosing_class}" if package else enclosing_class
+            has_ubn = _has_preceding_used_by_native(content, start_pos, m.end())
 
             f_obj = JavaField(
                 class_name=full_class_name,
@@ -606,12 +668,38 @@ class BindingValidator:
                 field_type=field_type,
                 file_path=file_path,
                 line=line_num,
+                is_used_by_native=has_ubn,
             )
             self.java_fields[(full_class_name, field_name)] = f_obj
             self.java_class_field_names.setdefault(full_class_name, set()).add(field_name)
-            self.java_classes_by_simple_name.setdefault(enclosing_class, []).append(
-                full_class_name
+            if full_class_name not in self.java_classes_by_simple_name.get(enclosing_class, []):
+                self.java_classes_by_simple_name.setdefault(enclosing_class, []).append(
+                    full_class_name
+                )
+
+        # Extract non-native Java methods and constructors for reflection validation
+        for m in _JAVA_METHOD_OR_CTOR_RE.finditer(content):
+            start_pos = m.start()
+            ret_type, raw_name = m.groups()
+            if raw_name in (
+                "if", "for", "while", "switch", "catch", "synchronized",
+                "return", "throw", "new", "super", "this",
+            ):
+                continue
+            line_num = _get_line_num(line_offsets, start_pos)
+            enclosing_class = self._find_enclosing_java_class(masked, start_pos, file_path.stem)
+            full_class_name = f"{package}.{enclosing_class}" if package else enclosing_class
+            simple_cls = enclosing_class.split("$")[-1]
+            method_name = "<init>" if (not ret_type and raw_name == simple_cls) else raw_name
+            has_ubn = _has_preceding_used_by_native(content, start_pos, m.end())
+            m_obj = JavaMethod(
+                class_name=full_class_name,
+                method_name=method_name,
+                file_path=file_path,
+                line=line_num,
+                is_used_by_native=has_ubn,
             )
+            self.java_methods.setdefault((full_class_name, method_name), []).append(m_obj)
 
     def _mask_code(self, code: str) -> str:
         """Mask comments and string literals with spaces to allow reliable brace/scope parsing.
@@ -782,6 +870,8 @@ class BindingValidator:
                             var_to_class[clazz_var] = (
                                 f"com.google.android.filament.{parts[0]}${parts[1]}"
                             )
+                        elif f"{full_jname}${raw_t}" in self.java_known_classes:
+                            var_to_class[clazz_var] = f"{full_jname}${raw_t}"
                         else:
                             var_to_class[clazz_var] = f"com.google.android.filament.{raw_t}"
 
@@ -1011,3 +1101,54 @@ class BindingValidator:
                         f"'{field_obj.field_type}', but JNI GetFieldID requested signature '{rf.signature}' "
                         f"('{expected_java_type}')",
                     )
+
+            if field_obj and not field_obj.is_used_by_native:
+                result.add_error(
+                    field_obj.file_path,
+                    field_obj.line,
+                    "reflection",
+                    f"Java field '{target_class}.{rf.field_name}' is accessed via JNI GetFieldID in "
+                    f"'{rf.file_path.name}:{rf.line}' but is missing @UsedByNative annotation",
+                )
+
+    def _validate_reflection_methods(self, result: ValidationResult) -> None:
+        """Verify that `GetMethodID` calls on Filament Java classes target methods/constructors annotated with `@UsedByNative`."""
+        for rm in self.cpp_reflection_methods:
+            target_class = rm.target_class
+            simple_cls = target_class.split(".")[-1].split("$")[0]
+            if self.target_classes and simple_cls not in self.target_classes:
+                continue
+
+            if target_class not in self.java_known_classes:
+                candidates = self.java_classes_by_simple_name.get(
+                    target_class.split(".")[-1], []
+                )
+                if candidates:
+                    target_class = candidates[0]
+                else:
+                    continue
+
+            if rm.is_static and rm.method_name in ("values", "valueOf"):
+                continue
+
+            methods = self.java_methods.get((target_class, rm.method_name), [])
+            if not methods:
+                result.add_error(
+                    rm.file_path,
+                    rm.line,
+                    "reflection",
+                    f"Reflection method lookup failed: Java class '{target_class}' does not contain "
+                    f"method '{rm.method_name}' (expected JNI signature '{rm.signature}')",
+                )
+                continue
+
+            if not any(m.is_used_by_native for m in methods):
+                first_m = methods[0]
+                kind = "constructor" if rm.method_name == "<init>" else "method"
+                result.add_error(
+                    first_m.file_path,
+                    first_m.line,
+                    "reflection",
+                    f"Java {kind} '{target_class}.{rm.method_name}' is accessed via JNI GetMethodID in "
+                    f"'{rm.file_path.name}:{rm.line}' but is missing @UsedByNative annotation",
+                )

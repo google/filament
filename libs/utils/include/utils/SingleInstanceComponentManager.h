@@ -20,14 +20,13 @@
 #include <utils/compiler.h>
 #include <utils/Entity.h>
 #include <utils/EntityInstance.h>
+#include <utils/EntityInstanceMap.h>
 #include <utils/EntityManager.h>
 #include <utils/Invocable.h>
 #include <utils/Mutex.h>
 #include <utils/PagedArenaBitset.h>
 #include <utils/Slice.h>
 #include <utils/StructureOfArrays.h>
-
-#include <tsl/robin_map.h>
 
 #include <atomic>
 #include <utility>
@@ -108,32 +107,6 @@ public:
     void unregisterBitset(PagedArenaBitset const* bitset);
 
     /**
-     * @brief Checks if a newly allocated/recycled Entity collides with an active but logically-dead component payload (a pending zombie).
-     *
-     * @details Under Filament's asynchronous Epoch-Based Reclamation (EBR) system, when an entity is globally destroyed,
-     * its corresponding component payload is immediately cilled logically (e.g., removed from the active bitset) inside
-     * @p catchupGarbage(), but its physical slot inside the dense payload array is not freed until the next @p gc() call.
-     *
-     * If the central EntityManager recycles the dead entity's index and reallocates it to a brand new entity
-     * (@p newEntity, which inherits the same index but with a higher generation number) *before* this component
-     * manager has physically run its garbage collector, the old "zombie" component payload will still be residing at
-     * that exact index slot inside the dense payload array, creating a catastrophic collision.
-     *
-     * To resolve this, concrete component managers MUST call @p popPendingZombie() inside their component allocation paths.
-     * If a collision is detected:
-     * 1. The old zombie's identity is extracted in @p outZombie.
-     * 2. The zombie's bit is immediately popped and removed from @p mPendingDestruction.
-     * 3. The caller MUST immediately and synchronously invoke the C++ payload destructor and array swap-and-pop
-     *    compaction logic on @p outZombie (e.g., by calling @p removeComponent(outZombie)) before allocating
-     *    the component for @p newEntity.
-     *
-     * @param[in] newEntity The newly created Entity to check for recycled index collisions.
-     * @param[out] outZombie Reference to store the pre-existing logically dead Entity that was collided with.
-     * @return True if a pending zombie component was found and popped (requiring immediate destruction), false otherwise.
-     */
-    bool popPendingZombie(Entity newEntity, Entity& outZombie) noexcept;
-
-    /**
      * Records a change for the given entity or slice of entities.
      * Registered bitsets are updated immediately; if any change callbacks are registered,
      * the entities are buffered and flushed when the internal buffer becomes full.
@@ -154,8 +127,7 @@ public:
      *       on a component manager.
      */
     Instance getInstance(Entity const e) const noexcept {
-        auto const pos = mInstanceMap.find(e);
-        return pos != mInstanceMap.end() ? pos->second : 0;
+        return mInstanceMap.getInstance(e);
     }
 
     PagedArenaBitset const& getEntityBitset() const noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS {
@@ -209,10 +181,8 @@ public:
 
     uint64_t getWatermark() const noexcept { return mWatermark.load(std::memory_order_relaxed); }
 
-    void checkZombieCollisionPanic(Entity newEntity) noexcept;
-
 protected:
-    using InstanceMap = tsl::robin_map<Entity, Instance, Entity::Hasher>;
+    using InstanceMap = EntityInstanceMap<>;
     using SoaAllocator = Instance (*)(void* context, Entity e);
     using EvictionDispatcher = void (*)(void* ctx, void* extra, Entity const* entities, size_t count);
 
@@ -223,17 +193,11 @@ protected:
      * @param[in] name Descriptive diagnostic name for this component manager.
      * @param[in] amortizationSupported Set to true to opt-in to multi-frame physical destruction amortization.
      *
-     * @note **CRITICAL CONCURRENCY CONTRACT**:
-     * If @p amortizationSupported is set to **true**, the physical component payload array is no longer guaranteed
-     * to be purged synchronously inside the current frame. This exposes the manager to Just-In-Time (JIT)
-     * recycled index collisions.
-     *
-     * **IT BECOMES THE STRICT RESPONSIBILITY** of the concrete Component Manager implementation to invoke
-     * @p popPendingZombie() and synchronously purge any colliding zombie component payloads inside their
-     * @p create() allocation paths BEFORE assigning the new component.
-     *
-     * If @p amortizationSupported is **false** (the default), physical payloads are purged synchronously per frame,
-     * relaxing this implementation requirement (suitable for test harnesses and micro-benchmarks).
+     * @note When @p amortizationSupported is true, the manager's EBR watermark is held behind any
+     *       epoch that still has un-evicted components in @p mPendingDestruction (preventing the
+     *       EntityManager from recycling those entity indices until physical eviction completes).
+     *       Sustained entity destruction rates exceeding the per-frame @p maxDestructions budget
+     *       will therefore delay index reclamation until the backlog drains.
      */
     explicit SingleInstanceComponentManagerBase(EntityManager& em, ImmutableCString name,
             bool amortizationSupported = false) noexcept;
@@ -247,9 +211,11 @@ protected:
 
     AddResult addComponentImpl(Entity e, void* context, SoaAllocator allocator) noexcept;
 
-    void eraseComponentFromMap(InstanceMap::iterator pos, Entity e,
+    void eraseComponentFromMap(uint32_t* slot, Entity e,
             Entity swappedEntity, Instance index) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS;
 
+    // Note: dispatcher may safely remove additional components (cascading destruction),
+    // but must not add components or call begin() / catchupGarbage().
     void gcImpl(uint32_t maxDestructions,
             void* context, void* extraArg, EvictionDispatcher dispatcher) noexcept;
 
@@ -258,6 +224,13 @@ protected:
      * and marks dead entities logically dead in mPendingDestruction without moving memory.
      */
     void catchupGarbage() noexcept;
+
+    /*
+     * Harvests any entities in mEntities that were destroyed in the current (unsealed) epoch
+     * into mPendingDestruction, without advancing mWatermark (since the current epoch is still
+     * open). Must only be called from the main thread outside gcImpl().
+     */
+    void catchupCurrentGarbage() noexcept;
 
     InstanceMap mInstanceMap;
     PagedArenaBitset mPendingDestruction;
@@ -290,8 +263,10 @@ private:
     ImmutableCString mName;
     bool mAmortizationSupported = false;
     bool mSuspended = true;
+    bool mInGc = false;
     PagedArenaBitset mCollapsedGarbage;
     std::atomic<uint64_t> mWatermark{0};
+    uint64_t mHarvestedEpoch = 0;
     std::vector<const PagedArenaBitset*> mMissedGarbage;
 
     struct CallbackInfo {
@@ -405,12 +380,14 @@ public:
     Instance removeComponent(Entity e);
     void removeComponents(Entity const* entities, size_t count) noexcept;
 
-    // Removes a component (or batch of components) using a single hash-table probe per entity,
+    // Removes a component (or batch of components) using a single map lookup per entity,
     // invoking preRemove(Instance) before the SoA swap-and-pop overwrites the removed slot.
     //
-    // Contract: preRemove is invoked while holding an internal mInstanceMap iterator; it may
-    // access SoA fields of any existing instance, but MUST NOT add or remove components on this
-    // manager (doing so would invalidate the iterator).
+    // Contract: preRemove is invoked while holding a pointer to the entity's slot in mInstanceMap
+    // and before the SoA swap-and-pop completes; it may access SoA fields of any existing instance,
+    // but MUST NOT add or remove components on this manager (removing the last component would
+    // clear() mInstanceMap and free the page backing the held slot pointer, and mutating the SoA
+    // during swap-and-pop would corrupt indices).
     template<typename PreRemove>
     RemoveResult removeComponentWithCallback(Entity e, PreRemove&& preRemove) noexcept;
 
@@ -518,10 +495,10 @@ protected:
             Entity& ej = elementAt<ENTITY_INDEX>(j);
             std::swap(ei, ej);
             if (ei) {
-                map[ei] = i;
+                map.update(ei, i);
             }
             if (ej) {
-                map[ej] = j;
+                map.update(ej, j);
             }
         }
     }
@@ -656,10 +633,9 @@ template <typename PreRemove>
 SingleInstanceComponentManagerBase::RemoveResult
 SingleInstanceComponentManager<Elements ... >::removeComponentWithCallback(
         Entity const e, PreRemove&& preRemove) noexcept {
-    auto& map = mInstanceMap;
-    auto const pos = map.find(e);
-    if (UTILS_LIKELY(pos != map.end())) {
-        Instance const index = pos.value();
+    uint32_t* const slot = mInstanceMap.findSlot(e);
+    if (UTILS_LIKELY(slot != nullptr)) {
+        Instance const index = InstanceMap::getSlotInstance(slot);
         assert(index != 0);
 
         preRemove(index);
@@ -674,7 +650,7 @@ SingleInstanceComponentManager<Elements ... >::removeComponentWithCallback(
         }
         mData.pop_back();
 
-        eraseComponentFromMap(pos, e, swappedEntity, index);
+        eraseComponentFromMap(slot, e, swappedEntity, index);
         return { index, Instance(last) };
     }
     return { 0, 0 };

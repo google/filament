@@ -30,6 +30,8 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.Size;
 
+import com.google.android.filament.proguard.UsedByNative;
+
 /**
  * A Renderer instance represents an operating system's window.
  *
@@ -985,21 +987,36 @@ public class Renderer {
         /** value not yet available */
         public static final long PENDING = - 2;
 
+        @UsedByNative("Renderer.cpp")
         @IntRange(from = 0)
         public int frameId;
+        @UsedByNative("Renderer.cpp")
         public long gpuFrameDuration;
+        @UsedByNative("Renderer.cpp")
         public long denoisedGpuFrameDuration;
+        @UsedByNative("Renderer.cpp")
         public long beginFrame;
+        @UsedByNative("Renderer.cpp")
         public long endFrame;
+        @UsedByNative("Renderer.cpp")
         public long backendBeginFrame;
+        @UsedByNative("Renderer.cpp")
         public long backendEndFrame;
+        @UsedByNative("Renderer.cpp")
         public long gpuFrameComplete;
+        @UsedByNative("Renderer.cpp")
         public long vsync;
+        @UsedByNative("Renderer.cpp")
         public long displayPresent;
+        @UsedByNative("Renderer.cpp")
         public long presentDeadline;
+        @UsedByNative("Renderer.cpp")
         public long displayPresentInterval;
+        @UsedByNative("Renderer.cpp")
         public long compositionToPresentLatency;
+        @UsedByNative("Renderer.cpp")
         public long expectedPresentLatency;
+        @UsedByNative("Renderer.cpp")
         public long frameScheduleTime;
 
         public FrameInfo() {

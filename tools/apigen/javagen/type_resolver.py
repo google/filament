@@ -301,6 +301,7 @@ class TypeResolver:
         return (
             t.replace("filament::backend::", "backend::")
             .replace("filament::", "")
+            .replace("filamat::", "")
             .replace("utils::", "")
             .replace("math::", "")
         )
@@ -720,11 +721,19 @@ class TypeResolver:
             Tuple of (type_info_dict, regex_capture_groups_tuple).
         """
         # Step 1: Extract raw type string from AST node or string input
-        cpp_type = (
-            type_input.get("qualified_name") or type_input["cpp_name"]
-            if isinstance(type_input, dict)
-            else type_input
-        )
+        if isinstance(type_input, dict):
+            raw_cpp_name = type_input.get("cpp_name", "")
+            stripped_cpp_name = _strip_modifiers(raw_cpp_name)
+            if not type_input.get("is_pointer") and (
+                raw_cpp_name in self.enum_map
+                or stripped_cpp_name in self.enum_map
+                or stripped_cpp_name.split("::")[-1] in self.enum_map
+            ):
+                cpp_type = raw_cpp_name
+            else:
+                cpp_type = type_input.get("qualified_name") or raw_cpp_name
+        else:
+            cpp_type = type_input
 
         # Step 2: Resolve type aliases (typedefs, using declarations)
         is_linear_color = (
@@ -733,25 +742,32 @@ class TypeResolver:
         )
 
         resolved_type = cpp_type
-        if cpp_type in self.aliases:
-            resolved_type = self.aliases[cpp_type]
-        elif isinstance(type_input, dict) and type_input.get("cpp_name") in self.aliases:
-            resolved_type = self.aliases[type_input["cpp_name"]]
-        elif cpp_type.split("::")[-1] in self.aliases:
-            resolved_type = self.aliases[cpp_type.split("::")[-1]]
-        else:
-            stripped = _strip_modifiers(cpp_type)
-            if stripped in self.aliases:
-                resolved_type = self.aliases[stripped]
-            elif stripped.split("::")[-1] in self.aliases:
-                resolved_type = self.aliases[stripped.split("::")[-1]]
+        stripped_initial = _strip_modifiers(cpp_type)
+        is_local_enum = (
+            cpp_type in self.enum_map
+            or stripped_initial in self.enum_map
+            or stripped_initial.split("::")[-1] in self.enum_map
+        )
+        if not is_local_enum:
+            if cpp_type in self.aliases:
+                resolved_type = self.aliases[cpp_type]
+            elif isinstance(type_input, dict) and type_input.get("cpp_name") in self.aliases:
+                resolved_type = self.aliases[type_input["cpp_name"]]
+            elif cpp_type.split("::")[-1] in self.aliases:
+                resolved_type = self.aliases[cpp_type.split("::")[-1]]
+            else:
+                stripped = _strip_modifiers(cpp_type)
+                if stripped in self.aliases:
+                    resolved_type = self.aliases[stripped]
+                elif stripped.split("::")[-1] in self.aliases:
+                    resolved_type = self.aliases[stripped.split("::")[-1]]
 
         if resolved_type in ("LinearColor", "LinearColorA"):
             is_linear_color = True
 
         def check_exact(t: str) -> Optional[Tuple[Dict[str, Any], Tuple[Any, ...]]]:
             clean_t = self.strip_namespaces(t)
-            if t in self.enum_map or clean_t in self.enum_map:
+            if t in self.enum_map or clean_t in self.enum_map or t.split("::")[-1] in self.enum_map:
                 return None
             if t in TYPE_MAP:
                 return TYPE_MAP[t], ()
@@ -853,6 +869,7 @@ class TypeResolver:
             inner_type_str = slice_match.group(1).strip()
             inner_info, _ = self.resolve_type_info(inner_type_str, silent=True)
             if inner_info.get("is_struct"):
+                struct_cls = inner_info.get("struct_cls") or self.is_aggregate_struct(inner_type_str)
                 return {
                     "java": f"{inner_info['java']}[]",
                     "jni": "jlongArray",
@@ -860,6 +877,8 @@ class TypeResolver:
                     "is_slice": True,
                     "is_struct_slice": True,
                     "inner_info": inner_info,
+                    "struct_cls": struct_cls,
+                    "java_elem_type": inner_info["java"],
                     "cpp_type": f"utils::Slice<{inner_info.get('cpp_type', inner_type_str)}>",
                 }, ()
             scalar = inner_info.get("scalar") or inner_info.get("java", "long")
@@ -1371,8 +1390,26 @@ class TypeResolver:
 
         # Case 7: Enum values with ::
         if "::" in val and "(" not in val:
-            parts = val.replace("::", ".").split(".")
+            parts = [p for p in val.replace("filament::", "").replace("::", ".").split(".") if p]
             enum_cls, enum_const = parts[-2], parts[-1]
+            if len(parts) >= 3:
+                outer_cls = parts[-3]
+                if outer_cls == enclosing_struct_name:
+                    return f"{enclosing_struct_name}.{enum_cls}.{enum_const}"
+                pojo_cls = self.is_pojo_struct(outer_cls) or KNOWN_CLASSES.get(outer_cls)
+                parent_cls = (
+                    (
+                        pojo_cls.get("parent_class")
+                        or ("View" if pojo_cls.get("location", {}).get("file", "").endswith("Options.h") else None)
+                    )
+                    if pojo_cls
+                    else None
+                )
+                if parent_cls:
+                    root_name = getattr(getattr(self.context, "parent_context", None), "name", None) or self.name
+                    if parent_cls != root_name:
+                        return f"{parent_cls}.{outer_cls}.{enum_cls}.{enum_const}"
+                return f"{outer_cls}.{enum_cls}.{enum_const}"
             if enclosing_struct_name:
                 nested_enums = getattr(self.context, "enums", [])
                 if any(e["name"] == enum_cls for e in nested_enums):
@@ -1473,7 +1510,9 @@ class TypeResolver:
         attrs = field.get("attributes", [])
         if "apigen:java_type:float" not in attrs:
             default_val = field.get("default_value")
-            cpp_t = field.get("type", {}).get("cpp_name", "") if isinstance(field.get("type"), dict) else str(field.get("type"))
+            f_type = field.get("type")
+            t_info, _ = self.resolve_type_info(f_type, silent=True) if f_type else ({}, ())
+            cpp_t = f_type.get("cpp_name", "") if isinstance(f_type, dict) else str(f_type)
             if default_val == "nullptr":
                 annotations.append("@Nullable")
             elif cpp_t == "math::float2":
@@ -1482,6 +1521,8 @@ class TypeResolver:
                 annotations.append("@NonNull @Size(min = 3)")
             elif cpp_t in ("math::float4", "LinearColorA"):
                 annotations.append("@NonNull @Size(min = 4)")
+            elif t_info.get("is_flags"):
+                annotations.append("@IntRange(from = 0)")
             elif default_val and "::" in default_val:
                 annotations.append("@NonNull")
 
@@ -1603,19 +1644,30 @@ class TypeResolver:
                 })
                 continue
 
-            # Case 4: Enum
+            # Case 4: Enum or Bitmask Flags
             enum_info, _ = self.resolve_type_info(f_type, silent=True)
-            if enum_info.get("is_enum") or any(e["name"] == clean_cpp_type for e in struct_cls.get("enums", [])):
+            matching_enum = next(
+                (e for e in struct_cls.get("enums", []) if e["name"] == clean_cpp_type), None
+            )
+            is_flags_field = bool(
+                enum_info.get("is_flags") or (matching_enum and is_flags_enum(matching_enum))
+            )
+            if enum_info.get("is_enum") or is_flags_field or matching_enum is not None:
                 parent = struct_cls.get("parent_class") or "View"
                 scoped_enum = (
                     f"{parent}::{struct_cls['name']}::{clean_cpp_type}"
-                    if any(e["name"] == clean_cpp_type for e in struct_cls.get("enums", []))
+                    if matching_enum is not None
                     else f"{parent}::{clean_cpp_type}"
+                )
+                java_expr = (
+                    (f"{var_name}.{fname}" if is_flags_field else f"{var_name}.{fname}.toFilamentNative()")
+                    if var_name
+                    else fname
                 )
                 leaves.append({
                     "name": fname,
                     "java_type": "int",
-                    "java_expr": f"{var_name}.{fname}.toFilamentNative()" if var_name else fname,
+                    "java_expr": java_expr,
                     "jni_type": "jint",
                     "jni_param_name": fname,
                     "cpp_assign": f"options.{fname} = ({scoped_enum}){fname};",
@@ -1881,7 +1933,21 @@ class TypeResolver:
                 field_id_name = f"{prefix}{fname}" if prefix else fname
                 java_field_name = f"m{prefix}{fcap}" if prefix else fname
                 java_t = f_info.get("java", "")
-                if f_info.get("is_enum") or java_t == "int":
+                if f_info.get("is_string") or java_t == "String":
+                    raw_ft = (
+                        (ftype.get("qualified_name") or ftype.get("cpp_name", ""))
+                        if isinstance(ftype, dict)
+                        else str(ftype)
+                    )
+                    clean_ft = self.strip_namespaces(raw_ft).replace("&", "").replace("const", "").strip()
+                    sig, setter = "Ljava/lang/String;", "SetObjectField"
+                    if "string_view" in clean_ft:
+                        cast, cast_end = "env->NewStringUTF(std::string(", ").c_str())"
+                    elif clean_ft in ("CString", "StaticString", "ImmutableCString", "string"):
+                        cast, cast_end = "env->NewStringUTF((", ").c_str())"
+                    else:
+                        cast, cast_end = "", ""
+                elif f_info.get("is_enum") or java_t == "int":
                     sig, setter, cast, cast_end = "I", "SetIntField", "static_cast<jint>(", ")"
                 elif java_t == "long":
                     sig, setter, cast, cast_end = "J", "SetLongField", "static_cast<jlong>(", ")"

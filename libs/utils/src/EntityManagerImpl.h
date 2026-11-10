@@ -73,14 +73,25 @@ public:
     using EntityManager::makeIdentity;
 
     EntityManagerImpl() noexcept
-            : mGens(new(std::nothrow) uint8_t[RAW_INDEX_COUNT]) {
+            : mGens(new(std::nothrow) std::atomic<uint8_t>[RAW_INDEX_COUNT]) {
         // initialize all the generations to 0
-        std::fill_n(mGens, RAW_INDEX_COUNT, 0);
+        for (size_t i = 0; i < RAW_INDEX_COUNT; ++i) {
+            mGens[i].store(0, std::memory_order_relaxed);
+        }
         mTimeline.push_back({mCurrentEpochID.load(std::memory_order_relaxed), std::make_unique<PagedArenaBitset>()});
     }
 
     ~EntityManagerImpl() noexcept {
         delete [] mGens;
+    }
+
+    Entity getEntity(Entity::Type const index) const noexcept {
+        assert(index < RAW_INDEX_COUNT);
+        if (UTILS_UNLIKELY(index == 0)) {
+            return {};
+        }
+        uint8_t const gen = mGens[index].load(std::memory_order_relaxed);
+        return Entity{ makeIdentity(gen, index) };
     }
 
     bool isAlive(Entity const e) const noexcept {
@@ -92,10 +103,11 @@ public:
         LockGuard const lock(mDestructionLock);
         uint32_t const index = getIndex(e);
 
-        // Is this entity the current tenant of this memory slot?
-        bool const alive = (getGeneration(e) == mGens[index]);
-        assert(alive == mAliveEntities[e.getId()]);
-        return alive;
+        // An entity is alive iff its 17-bit index is currently active AND its generation matches
+        // the current tenant generation (mGens[index] retains a dead entity's generation until EBR
+        // reclamation increments it upon recycling).
+        return mAliveEntities[index] &&
+                (getGeneration(e) == mGens[index].load(std::memory_order_relaxed));
     }
 
     UTILS_NOINLINE
@@ -140,13 +152,13 @@ public:
                         index = currentIndex++;
                     }
 
-                    // Read mGens lock-free because this index is mathematically sterile
-                    uint8_t const gen = [this, index]() UTILS_NO_THREAD_SAFETY_ANALYSIS noexcept {
-                        return mGens[index];
-                    }();
+                    // Safe relaxed load: this index is sterile (in neither mAliveEntities nor any
+                    // active EBR reader) and recycleGarbageEpochs() updated mGens[index] under
+                    // mCreationLock before pushing to mFreeList.
+                    uint8_t const gen = mGens[index].load(std::memory_order_relaxed);
                     Entity e = Entity{makeIdentity(gen, index)};
                     entities[processed + i] = e;
-                    localCreated[validCount++] = e.getId();
+                    localCreated[validCount++] = index;
                 }
                 mCurrentIndex = currentIndex;
             } // mCreationLock dropped!
@@ -156,9 +168,7 @@ public:
             // -------------------------------------------------------------
             if (UTILS_LIKELY(validCount > 0)) {
                 LockGuard const stateLock(mDestructionLock);
-                for (size_t i = 0; i < validCount; i++) {
-                    mAliveEntities.add(localCreated[i]);
-                }
+                mAliveEntities.add({ localCreated, validCount });
             } // mDestructionLock dropped!
 
 #if FILAMENT_UTILS_TRACK_ENTITIES
@@ -179,20 +189,18 @@ public:
     UTILS_NOINLINE
     void destroy(size_t const n, Entity const* entities) noexcept {
         UniqueLock stateLock(mDestructionLock);
-        uint8_t* const gens = mGens;
         for (size_t i = 0; i < n; i++) {
             if (!entities[i]) {
                 continue; // behave like free(), ok to free null Entity.
             }
 
-            bool const isAlive = getGeneration(entities[i]) == mGens[getIndex(entities[i])];
+            Entity::Type const index = getIndex(entities[i]);
+            bool const isAlive = mAliveEntities[index] &&
+                    (getGeneration(entities[i]) == mGens[index].load(std::memory_order_relaxed));
             assert(isAlive);
 
             if (UTILS_LIKELY(isAlive)) {
-                Entity::Type const index = getIndex(entities[i]);
-
-                gens[index]++;
-                mAliveEntities.remove(entities[i].getId());
+                mAliveEntities.remove(index);
 
 #if FILAMENT_UTILS_TRACK_ENTITIES
                 // MUST be protected by mDestructionLock
@@ -251,14 +259,15 @@ public:
 
 #ifndef NDEBUG
             for (size_t i = 0; i < count; ++i) {
-                Entity::Type const fullId = localEntities[i].getId();
-                assert(!mDebugGlobalPurgatory[fullId] && "EBR: Double-Destroy caught!");
-                mDebugGlobalPurgatory.add(fullId);
+                Entity::Type const index = getIndex(localEntities[i]);
+                assert(!mDebugGlobalPurgatory[index] && "EBR: Double-Destroy or premature index reuse caught!");
+                mDebugGlobalPurgatory.add(index);
             }
 #endif
             static_assert(sizeof(Entity) == sizeof(uint32_t) && std::is_standard_layout_v<Entity>,
                     "Entity must be layout-compatible with uint32_t for Slice forwarding");
-            currentGarbage.add({ reinterpret_cast<uint32_t const*>(localEntities), count });
+            currentGarbage.add({ reinterpret_cast<uint32_t const*>(localEntities), count },
+                    nullptr, INDEX_MASK);
         } // mTimelineLock dropped!
 
         // Trigger Callbacks outside ALL locks
@@ -382,6 +391,18 @@ public:
         return currentEpoch - 1;
     }
 
+    void intersectCurrentGarbage(
+            PagedArenaBitset& out, PagedArenaBitset const& filter) noexcept {
+        flushNotifications();
+        LockGuard const lock(mTimelineLock);
+        PagedArenaBitset const& currentGarbage = *mTimeline.back().garbageBits;
+        if (UTILS_LIKELY(currentGarbage.empty())) {
+            out.clear();
+            return;
+        }
+        PagedArenaBitset::intersect(&out, filter, currentGarbage);
+    }
+
     UTILS_NOINLINE void reclaimSafeEpochs() noexcept {
         constexpr size_t BATCH_SIZE = RECLAMATION_EPOCH_BATCH_SIZE;
         std::array<GarbageEpoch, BATCH_SIZE> batch;
@@ -486,10 +507,11 @@ private:
 
         for (size_t i = 0; i < count; ++i) {
             auto& garbageBits = batch[i].garbageBits;
-            garbageBits->forEachSetBit([this](uint32_t const bit) UTILS_NO_THREAD_SAFETY_ANALYSIS noexcept {
-                // STRIP THE GENERATION: Convert the ID back to a pure index
-                // before pushing it to the available free-list.
-                Entity::Type const index = getIndex(Entity::import(bit));
+            garbageBits->forEachSetBit([this](uint32_t const index) UTILS_NO_THREAD_SAFETY_ANALYSIS noexcept {
+                assert(index < RAW_INDEX_COUNT);
+                // Advance the generation only now that every EBR reader has physically evicted
+                // the previous tenant of `index`.
+                mGens[index].fetch_add(1, std::memory_order_relaxed);
                 mFreeList.push_back(index); // FIXME: this will heap allocate (std::deque)
             });
             garbageBits->clear();
@@ -504,7 +526,9 @@ private:
         uint64_t const currentEpoch = mCurrentEpochID.load(std::memory_order_relaxed);
         if (UTILS_LIKELY(!mActiveWatermarks.empty())) {
             for (auto const& info : mActiveWatermarks) {
-                uint64_t wm = info.watermark->load(std::memory_order_relaxed);
+                // Acquire pairs with release stores to mWatermark in component managers so
+                // lock-free mGens reads (e.g. getEntity() during GC) happen-before reclamation.
+                uint64_t wm = info.watermark->load(std::memory_order_acquire);
                 if (info.entityBitset && wm < currentEpoch - 1) {
                     uint64_t newWm = wm;
 
@@ -612,8 +636,14 @@ private:
     std::vector<std::unique_ptr<PagedArenaBitset>> mBitsetPool UTILS_GUARDED_BY(mCreationLock);
 
     mutable Mutex mDestructionLock;
-    uint8_t* const mGens UTILS_GUARDED_BY(mDestructionLock);                   // stores the generation of each index.
-    PagedArenaBitset mAliveEntities UTILS_GUARDED_BY(mDestructionLock);        // stores entities that are alive
+    // Stores the current generation for each 17-bit index.
+    // Mutated exclusively in recycleGarbageEpochs() under mCreationLock while the index is
+    // sterile (absent from mAliveEntities, mFreeList, and every active EBR reader).
+    // Safe to read with relaxed semantics under mCreationLock (create), under mDestructionLock
+    // when mAliveEntities[index] is true (isAlive / destroy), or lock-free for any index
+    // protected from reclamation by an active EBR watermark (getEntity).
+    std::atomic<uint8_t>* const mGens;
+    PagedArenaBitset mAliveEntities UTILS_GUARDED_BY(mDestructionLock);        // 17-bit indices of alive entities
     Entity mDirtyEntities[MAX_DIRTY_COUNT] UTILS_GUARDED_BY(mDestructionLock);
     size_t mDirtyCount UTILS_GUARDED_BY(mDestructionLock) = 0;
 #if FILAMENT_UTILS_TRACK_ENTITIES
