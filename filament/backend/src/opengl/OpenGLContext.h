@@ -196,6 +196,7 @@ public:
         bool EXT_texture_compression_s3tc_srgb;
         bool EXT_texture_cube_map_array;
         bool EXT_texture_filter_anisotropic;
+        bool EXT_texture_norm16;
         bool EXT_texture_sRGB;
         bool GOOGLE_cpp_style_line_directive;
         bool KHR_debug;

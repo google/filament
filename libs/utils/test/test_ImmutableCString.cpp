@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include <utils/ImmutableCString.h>
+
+#include <gtest/gtest.h>
 
 #include <algorithm>
 #include <cstddef>
@@ -64,15 +64,27 @@ TEST(ImmutableCString, Constructors) {
         EXPECT_EQ(7, str.length());
         EXPECT_TRUE(str.isStatic());
     }
-    // Copy constructor
+    // Copy constructor (static)
     {
         ImmutableCString const s1("copy me");
         EXPECT_TRUE(s1.isStatic());
         ImmutableCString const s2(s1); // NOLINT(*-unnecessary-copy-initialization)
         EXPECT_STREQ("copy me", s2.c_str());
         EXPECT_TRUE(s2.isStatic());
+        EXPECT_EQ(s1.c_str(), s2.c_str());
     }
-    // Move constructor
+    // Copy constructor (dynamic)
+    {
+        const char* dyn_cstr = "dynamic copy me";
+        ImmutableCString const s1(dyn_cstr);
+        EXPECT_TRUE(s1.isDynamic());
+        ImmutableCString const s2(s1); // NOLINT(*-unnecessary-copy-initialization)
+        EXPECT_STREQ("dynamic copy me", s2.c_str());
+        EXPECT_EQ(s1.length(), s2.length());
+        EXPECT_TRUE(s2.isDynamic());
+        EXPECT_NE(s1.c_str(), s2.c_str());
+    }
+    // Move constructor (static)
     {
         ImmutableCString s1("move me");
         EXPECT_TRUE(s1.isStatic());
@@ -80,21 +92,40 @@ TEST(ImmutableCString, Constructors) {
         EXPECT_STREQ("move me", s2.c_str());
         EXPECT_TRUE(s2.isStatic());
     }
+    // Move constructor (dynamic)
+    {
+        const char* dyn_cstr = "dynamic move me";
+        ImmutableCString s1(dyn_cstr);
+        const char* const original_ptr = s1.c_str();
+        EXPECT_TRUE(s1.isDynamic());
+        ImmutableCString const s2(std::move(s1));
+        EXPECT_STREQ("dynamic move me", s2.c_str());
+        EXPECT_TRUE(s2.isDynamic());
+        EXPECT_EQ(original_ptr, s2.c_str());
+    }
 }
 
 TEST(ImmutableCString, Assignment) {
-    // Copy assignment
+    // Copy assignment (static and dynamic)
     {
         ImmutableCString const s1("copy");
         ImmutableCString s2;
         s2 = s1;
         EXPECT_STREQ("copy", s2.c_str());
         EXPECT_TRUE(s2.isStatic());
+
+        const char* dyn_cstr = "dynamic copy";
+        ImmutableCString const s3(dyn_cstr);
+        EXPECT_TRUE(s3.isDynamic());
+        s2 = s3;
+        EXPECT_STREQ("dynamic copy", s2.c_str());
+        EXPECT_TRUE(s2.isDynamic());
+        EXPECT_NE(s3.c_str(), s2.c_str());
     }
     // Move assignment
     {
         ImmutableCString s1("move");
-        ImmutableCString s2;
+        ImmutableCString s2("previous");
         s2 = std::move(s1);
         EXPECT_STREQ("move", s2.c_str());
         EXPECT_TRUE(s2.isStatic());
@@ -111,8 +142,7 @@ TEST(ImmutableCString, Assignment) {
     {
         ImmutableCString s1("self-move");
         s1 = std::move(s1);
-        // A self-move-assignment should leave the object in a valid state.
-        // Our implementation has a guard against self-move, so the object is unchanged.
+        // A self-move-assignment via swap leaves the object unchanged.
         EXPECT_STREQ("self-move", s1.c_str());
         EXPECT_TRUE(s1.isStatic());
     }
@@ -191,11 +221,19 @@ TEST(ImmutableCString, NoHeapAllocation) {
     EXPECT_TRUE(s.isStatic());
     ImmutableCString t(s); // no allocation
     EXPECT_TRUE(t.isStatic());
-    s = t; // no allocation
+    EXPECT_EQ(s.c_str(), t.c_str());
+
+    ImmutableCString u("different literal");
+    EXPECT_TRUE(u.isStatic());
+    s = u; // no allocation
     EXPECT_TRUE(s.isStatic());
-    t = std::move(s); // no allocation and s is now empty
+    EXPECT_STREQ("different literal", s.c_str());
+
+    t = std::move(s); // no allocation (swaps t and s)
     EXPECT_TRUE(t.isStatic());
-    EXPECT_STREQ("hello world", t.c_str());
+    EXPECT_STREQ("different literal", t.c_str());
+    EXPECT_TRUE(s.isStatic());
+    EXPECT_STREQ("hello world", s.c_str());
 }
 
 TEST(ImmutableCString, HeapAllocation) {

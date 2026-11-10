@@ -31,6 +31,8 @@ MTLPixelFormat getMetalFormat(MetalContext* context, TextureFormat format) noexc
         case TextureFormat::STENCIL8: return MTLPixelFormatStencil8;
 
         // 16-bits per element
+        case TextureFormat::R16: return MTLPixelFormatR16Unorm;
+        case TextureFormat::R16_SNORM: return MTLPixelFormatR16Snorm;
         case TextureFormat::R16F: return MTLPixelFormatR16Float;
         case TextureFormat::R16UI: return MTLPixelFormatR16Uint;
         case TextureFormat::R16I: return MTLPixelFormatR16Sint;
@@ -51,6 +53,8 @@ MTLPixelFormat getMetalFormat(MetalContext* context, TextureFormat format) noexc
         case TextureFormat::R32F: return MTLPixelFormatR32Float;
         case TextureFormat::R32UI: return MTLPixelFormatR32Uint;
         case TextureFormat::R32I: return MTLPixelFormatR32Sint;
+        case TextureFormat::RG16: return MTLPixelFormatRG16Unorm;
+        case TextureFormat::RG16_SNORM: return MTLPixelFormatRG16Snorm;
         case TextureFormat::RG16F: return MTLPixelFormatRG16Float;
         case TextureFormat::RG16UI: return MTLPixelFormatRG16Uint;
         case TextureFormat::RG16I: return MTLPixelFormatRG16Sint;
@@ -66,6 +70,8 @@ MTLPixelFormat getMetalFormat(MetalContext* context, TextureFormat format) noexc
         case TextureFormat::DEPTH32F_STENCIL8: return MTLPixelFormatDepth32Float_Stencil8;
 
         // 48-bits per element
+        case TextureFormat::RGB16:
+        case TextureFormat::RGB16_SNORM:
         case TextureFormat::RGB16F:
         case TextureFormat::RGB16UI:
         case TextureFormat::RGB16I:
@@ -75,6 +81,8 @@ MTLPixelFormat getMetalFormat(MetalContext* context, TextureFormat format) noexc
         case TextureFormat::RG32F: return MTLPixelFormatRG32Float;
         case TextureFormat::RG32UI: return MTLPixelFormatRG32Uint;
         case TextureFormat::RG32I: return MTLPixelFormatRG32Sint;
+        case TextureFormat::RGBA16: return MTLPixelFormatRGBA16Unorm;
+        case TextureFormat::RGBA16_SNORM: return MTLPixelFormatRGBA16Snorm;
         case TextureFormat::RGBA16F: return MTLPixelFormatRGBA16Float;
         case TextureFormat::RGBA16UI: return MTLPixelFormatRGBA16Uint;
         case TextureFormat::RGBA16I: return MTLPixelFormatRGBA16Sint;

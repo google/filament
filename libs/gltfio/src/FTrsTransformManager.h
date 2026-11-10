@@ -60,10 +60,6 @@ public:
 
     void create(utils::Entity entity, const float3& translation,
                 const quatf& rotation, const float3& scale) {
-        utils::Entity zombie;
-        if (UTILS_UNLIKELY(mManager.popPendingZombie(entity, zombie))) {
-            destroy(zombie);
-        }
         if (UTILS_UNLIKELY(mManager.hasComponent(entity))) {
             destroy(entity);
         }
