@@ -20,8 +20,11 @@
 #include "Lifetimes.h"
 #include "Shader.h"
 #include "SharedShaders.h"
+#include "SharedShadersConstants.h"
 #include "Skip.h"
 #include "TrianglePrimitive.h"
+
+#include <private/filament/SamplerInterfaceBlock.h>
 
 #include <utils/debug.h>
 #include <utils/Hash.h>
@@ -30,6 +33,7 @@
 #include <fstream>
 #include <algorithm>
 #include <limits>
+#include <string>
 
 using namespace filament;
 using namespace filament::backend;
@@ -64,6 +68,20 @@ layout(location = 0) out uvec4 fragColor;
 
 void main() {
     fragColor = uvec4(1);
+}
+
+)");
+
+// Samples a 16-pixel-wide render target as four 4-pixel-wide columns, where column i shows layer i
+// of a 3D texture.
+std::string fragmentFetch3DLayerColumns(R"(#version 450 core
+
+layout(location = 0) out vec4 fragColor;
+
+layout(binding = 0, set = 0) uniform sampler3D test_tex;
+
+void main() {
+    fragColor = texelFetch(test_tex, ivec3(0, 0, int(gl_FragCoord.x) / 4), 0);
 }
 
 )");
@@ -482,6 +500,143 @@ TEST_F(ReadPixelsTest, ReadPixelsIntClear) {
             }, (void*)&expectedValue);
 
     api.readPixels(renderTarget, 0, 0, renderTargetSize, renderTargetSize, std::move(descriptor));
+    api.commit(swapChain);
+    api.endFrame(0);
+    flushAndWait();
+}
+
+TEST_F(ReadPixelsTest, RenderInto3DTextureLayers) {
+    // Draws a different color into each layer (depth slice) of a 3D texture, through a render
+    // target that targets that layer. Then samples all layers into a 2D render target, one column
+    // per layer, and reads it back. This verifies that rendering into a 3D texture layer writes
+    // to that layer and not to another.
+    SKIP_IF(Backend::WEBGPU,
+            "The WebGPU backend does not support rendering into 3D texture layers yet");
+
+    // The sampling shader (fragmentFetch3DLayerColumns) assumes these values.
+    constexpr size_t renderTargetSize = 16;
+    constexpr uint16_t layers = 4;
+    constexpr size_t columnWidth = renderTargetSize / layers;
+    static math::float4 const layerColors[layers] = {
+            { 1, 0, 0, 1 },
+            { 0, 1, 0, 1 },
+            { 0, 0, 1, 1 },
+            { 1, 1, 1, 1 },
+    };
+
+    DriverApi& api = getDriverApi();
+
+    Handle<HwSwapChain> const swapChain = addCleanup(api.createSwapChainHeadless(
+            renderTargetSize, renderTargetSize, 0));
+    api.makeCurrent(swapChain, swapChain);
+
+    auto const usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
+    Handle<HwTexture> const texture3D = addCleanup(api.createTexture(SamplerType::SAMPLER_3D, 1,
+            TextureFormat::RGBA8, 1, renderTargetSize, renderTargetSize, layers, usage));
+
+    Handle<HwTexture> const texture2D = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, renderTargetSize, renderTargetSize, 1, usage));
+    Handle<HwRenderTarget> const renderTarget2D = addCleanup(api.createRenderTarget(
+            TargetBufferFlags::COLOR, renderTargetSize, renderTargetSize, 1, 0,
+            {{ texture2D }}, {}, {}));
+
+    TrianglePrimitive triangle(api);
+    math::float2 const fullScreenVertices[3] = {
+            { -1.0f, -1.0f }, { 3.0f, -1.0f }, { -1.0f, 3.0f } };
+    triangle.updateVertices(fullScreenVertices);
+
+    Shader colorShader = SharedShaders::makeShader(api, *mCleanup, {
+            .mVertexType = VertexShaderType::Simple,
+            .mFragmentType = FragmentShaderType::SolidColored,
+            .mUniformType = ShaderUniformType::Simple,
+    });
+    auto const ubuffer = addCleanup(api.createBufferObject(sizeof(SimpleMaterialParams),
+            BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC));
+
+    filament::SamplerInterfaceBlock::SamplerInfo const samplerInfo{ "test", "tex", 0,
+        SamplerType::SAMPLER_3D, SamplerFormat::FLOAT, Precision::HIGH, false };
+    Shader fetchShader(api, *mCleanup, ShaderConfig{
+            .vertexShader = SharedShaders::getVertexShaderText(VertexShaderType::Noop,
+                    ShaderUniformType::None),
+            .fragmentShader = fragmentFetch3DLayerColumns,
+            .uniforms = {{ "test_tex", DescriptorType::SAMPLER_3D_FLOAT, samplerInfo }},
+    });
+
+    api.beginFrame(0, 0, 0);
+
+    // Draw each layer's color into that layer. The clear color is black, so only the draw can
+    // produce the expected color.
+    colorShader.bindUniform<SimpleMaterialParams>(api, ubuffer);
+
+    PipelineState colorState = getColorWritePipelineState();
+    colorShader.addProgramToPipelineState(colorState);
+    colorState.primitiveType = PrimitiveType::TRIANGLES;
+    colorState.vertexBufferInfo = triangle.getVertexBufferInfo();
+
+    for (uint16_t layer = 0; layer < layers; ++layer) {
+        Handle<HwRenderTarget> const renderTarget = addCleanup(api.createRenderTarget(
+                TargetBufferFlags::COLOR, renderTargetSize, renderTargetSize, 1, 0,
+                {{ texture3D, 0, layer }}, {}, {}));
+
+        colorShader.uploadUniform(api, ubuffer, SimpleMaterialParams{
+                .color = layerColors[layer],
+        });
+
+        RenderPassParams params = getClearColorDepthRenderPass(math::float4(0, 0, 0, 1));
+        params.viewport.width = renderTargetSize;
+        params.viewport.height = renderTargetSize;
+
+        api.beginRenderPass(renderTarget, params);
+        api.bindPipeline(colorState);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
+        api.endRenderPass();
+    }
+
+    // Sample all layers into the 2D render target, one column per layer.
+    DescriptorSetHandle const descriptorSet = fetchShader.createDescriptorSet(api);
+    api.updateDescriptorSetTexture(descriptorSet, 0, texture3D, SamplerParams{
+            .filterMag = SamplerMagFilter::NEAREST,
+            .filterMin = SamplerMinFilter::NEAREST });
+    api.bindDescriptorSet(descriptorSet, 0, {});
+
+    PipelineState fetchState = getColorWritePipelineState();
+    fetchShader.addProgramToPipelineState(fetchState);
+    fetchState.primitiveType = PrimitiveType::TRIANGLES;
+    fetchState.vertexBufferInfo = triangle.getVertexBufferInfo();
+
+    RenderPassParams params = getClearColorDepthRenderPass();
+    params.viewport.width = renderTargetSize;
+    params.viewport.height = renderTargetSize;
+
+    api.beginRenderPass(renderTarget2D, params);
+    api.bindPipeline(fetchState);
+    api.bindRenderPrimitive(triangle.getRenderPrimitive());
+    api.draw2(0, 3, 1);
+    api.endRenderPass();
+
+    constexpr size_t bufferSizeBytes = renderTargetSize * renderTargetSize * 4;
+    void* buffer = calloc(1, bufferSizeBytes);
+
+    PixelBufferDescriptor descriptor(buffer, bufferSizeBytes, PixelDataFormat::RGBA,
+            PixelDataType::UBYTE, 1, 0, 0, renderTargetSize,
+            [](void* b, size_t size, void* user) {
+                uint8_t const* px = (uint8_t const*)b;
+                for (size_t i = 0; i < size / 4; ++i) {
+                    size_t const x = i % renderTargetSize;
+                    math::float4 const expected = layerColors[x / columnWidth];
+                    uint8_t const* p = px + i * 4;
+                    EXPECT_EQ(p[0], uint8_t(expected.r * 255)) << "pixel " << i;
+                    EXPECT_EQ(p[1], uint8_t(expected.g * 255)) << "pixel " << i;
+                    EXPECT_EQ(p[2], uint8_t(expected.b * 255)) << "pixel " << i;
+                    EXPECT_EQ(p[3], uint8_t(expected.a * 255)) << "pixel " << i;
+                }
+                free(b);
+            }, nullptr);
+
+    api.readPixels(renderTarget2D, 0, 0, renderTargetSize, renderTargetSize,
+            std::move(descriptor));
+
     api.commit(swapChain);
     api.endFrame(0);
     flushAndWait();

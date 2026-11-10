@@ -7,7 +7,7 @@ open fun [hasEntity](has-entity.md)(entity: [Int](https://kotlinlang.org/api/lat
 
 Returns true if the given entity is in the Scene. 
 
-Entities destroyed with EntityManager::destroy() are removed lazily the next time a View attached to this Scene is rendered or detached; until then they may still be reported as present.
+Entities destroyed with EntityManager::destroy() are removed lazily after a subsequent garbage collection or the next time a View attached to this Scene is rendered or detached; until then they may still be reported as present.
 
 #### Return
 

@@ -31,10 +31,13 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Logger.h>
+#include <utils/Mutex.h>
 #include <utils/Panic.h>
 #include <utils/trap.h>
 
 #include <math/scalar.h>
+
+#include <memory>
 
 #include <math.h>
 
@@ -447,15 +450,22 @@ void MetalSwapChain::scheduleFrameScheduledCallback(int64_t presentationTimeNs) 
                                     context.driver, flags, presentationTimeNs)];
 
     backend::CallbackHandler* handler = frameScheduled.handler;
-    MetalDriver* driver = context.driver;
+    std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime = context.driverLifetimeTracker;
     [getPendingCommandBuffer(&context) addScheduledHandler:^(id<MTLCommandBuffer> cb) {
         Callback* user = static_cast<Callback*>(callback.p);
         [callback reset];
         if (flags & SwapChain::CALLBACK_DEFAULT_USE_METAL_COMPLETION_HANDLER) {
             Callback::func(user);
-        } else {
-            driver->scheduleCallback(handler, user, &Callback::func);
+            return;
         }
+        if (auto driverTracker = weakDriverLifetime.lock()) {
+            utils::LockGuard const lock(driverTracker->mutex);
+            if (driverTracker->driver) {
+                driverTracker->driver->scheduleCallback(handler, user, &Callback::func);
+                return;
+            }
+        }
+        delete user;
     }];
 }
 
@@ -480,11 +490,18 @@ void MetalSwapChain::scheduleFrameCompletedCallback() {
             [[ReleasablePointer alloc] initWithPointer:new Callback(frameCompleted.callback)];
 
     CallbackHandler* handler = frameCompleted.handler;
-    MetalDriver* driver = context.driver;
+    std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime = context.driverLifetimeTracker;
     [getPendingCommandBuffer(&context) addCompletedHandler:^(id<MTLCommandBuffer> cb) {
         Callback* user = static_cast<Callback*>(callback.p);
         [callback reset];
-        driver->scheduleCallback(handler, user, &Callback::func);
+        if (auto driverTracker = weakDriverLifetime.lock()) {
+            utils::LockGuard const lock(driverTracker->mutex);
+            if (driverTracker->driver) {
+                driverTracker->driver->scheduleCallback(handler, user, &Callback::func);
+                return;
+            }
+        }
+        delete user;
     }];
 }
 
@@ -999,11 +1016,17 @@ void MetalTexture::loadWithCopyBuffer(id<MTLCommandBuffer> blitCommandBuffer, ui
                       destinationLevel:level
                      destinationOrigin:region.origin];
     // We must ensure we only capture a pointer to bufferPool, not "this", as this texture could
-    // be deallocated before the completion handler runs. The MetalBufferPool is guaranteed to
-    // outlive the completion handler.
+    // be deallocated before the completion handler runs. Use DriverLifetimeTracker to ensure the
+    // driver and MetalBufferPool have not been destroyed.
     MetalBufferPool* bufferPool = this->context.bufferPool;
+    std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime = this->context.driverLifetimeTracker;
     [blitCommandBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-        bufferPool->releaseBuffer(entry);
+        if (auto driverTracker = weakDriverLifetime.lock()) {
+            utils::LockGuard const lock(driverTracker->mutex);
+            if (driverTracker->driver) {
+                bufferPool->releaseBuffer(entry);
+            }
+        }
     }];
     [blitCommandEncoder endEncoding];
 }
@@ -1196,9 +1219,12 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
             continue;
         }
 
+        // For 3D textures, Metal selects the target z-plane via depthPlane; slice must be 0.
+        const bool is3D = attachment.getTexture().textureType == MTLTextureType3D;
         descriptor.colorAttachments[i].texture = attachment.getTexture();
         descriptor.colorAttachments[i].level = attachment.getLevel();
-        descriptor.colorAttachments[i].slice = attachment.getLayer();
+        descriptor.colorAttachments[i].slice = is3D ? 0 : attachment.getLayer();
+        descriptor.colorAttachments[i].depthPlane = is3D ? attachment.getLayer() : 0;
         descriptor.colorAttachments[i].loadAction = getLoadAction(params, getTargetBufferFlagsAt(i));
         descriptor.colorAttachments[i].storeAction = getStoreAction(params,
                 getTargetBufferFlagsAt(i));
@@ -1221,11 +1247,13 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
             descriptor.colorAttachments[i].texture = attachment.getMsaaTexture();
             descriptor.colorAttachments[i].level = 0;
             descriptor.colorAttachments[i].slice = 0;
+            descriptor.colorAttachments[i].depthPlane = 0;
             const bool discard = any(discardFlags & getTargetBufferFlagsAt(i));
             if (!discard) {
                 descriptor.colorAttachments[i].resolveTexture = attachment.getTexture();
                 descriptor.colorAttachments[i].resolveLevel = attachment.getLevel();
-                descriptor.colorAttachments[i].resolveSlice = attachment.getLayer();
+                descriptor.colorAttachments[i].resolveSlice = is3D ? 0 : attachment.getLayer();
+                descriptor.colorAttachments[i].resolveDepthPlane = is3D ? attachment.getLayer() : 0;
                 descriptor.colorAttachments[i].storeAction = MTLStoreActionMultisampleResolve;
             }
         }
