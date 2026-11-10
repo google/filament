@@ -50,6 +50,7 @@
 #include <math/half.h>
 #include <math/mat4.h>
 #include <math/vec2.h>
+#include <math/vec3.h>
 #include <math/vec4.h>
 
 #include <array>
@@ -181,6 +182,15 @@ public:
     ShadowMap::ShaderParameters const& getCascadeShaderParameters(size_t const index) const noexcept {
         return mCascadesShaderParameters[index];
     }
+
+    using SilhouettePlanes = std::array<math::float4, Culler::TIGHTER_CULLING_PLANE_COUNT>;
+
+    // Computes the planes of the volume containing every shadow caster that can cast a shadow
+    // into the camera frustum `pv`, for a directional light travelling along `lightDir`.
+    // Planes follow the Frustum convention (outward normals, inside is negative) and are pushed
+    // `wsOneTexel` outwards. Unused entries are padded with planes that never cull.
+    static SilhouettePlanes findSilhouette(math::mat4f const& pv, math::float3 const& lightDir,
+            float wsOneTexel) noexcept;
 
 private:
     explicit ShadowMapManager(FEngine& engine);

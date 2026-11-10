@@ -19,6 +19,7 @@
 #include "Froxelizer.h"
 #include "MaterialParser.h"
 #include "RenderPrimitive.h"
+#include "ShadowMapManager.h"
 #include "UniformBuffer.h"
 
 #include "components/RenderableManager.h"
@@ -2265,6 +2266,124 @@ TEST(FilamentTest, BoxCulling12PlanesBitHandling) {
             // Every other bit must survive untouched.
             EXPECT_EQ(results[i] & ~mask, other & ~mask)
                     << "bit " << bit << " leaked into other bits at box " << i;
+        }
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+// Shadow caster volume: ShadowMapManager::findSilhouette()
+// ------------------------------------------------------------------------------------------------
+
+TEST(FilamentTest, ShadowCasterVolume) {
+    // The volume must contain the camera frustum swept towards the light, otherwise a caster that
+    // shadows the visible area could be culled, and must exclude what lies downstream of the
+    // frustum, otherwise it doesn't cull anything. Degenerate light directions, parallel to a
+    // frustum edge or plane, are included because the plane classification is ambiguous there.
+    auto const view = [](float3 const eye, float3 const center, float3 const up) {
+        return inverse(mat4f::lookAt(eye, center, up));
+    };
+    struct {
+        char const* name;
+        mat4f pv;
+    } const cameras[] = {
+            { "perspective 60deg 16:9",
+                    mat4f::perspective(60.0f, 16.0f / 9.0f, 0.1f, 100.0f) *
+                    view({ 1, 2, 3 }, { 10, 0, -5 }, { 0, 1, 0 }) },
+            { "perspective 20deg rolled",
+                    mat4f::perspective(20.0f, 1.0f, 1.0f, 500.0f) *
+                    view({ -4, 10, 2 }, { 0, 0, 0 }, { 0.3f, 1, 0 }) },
+            { "perspective 110deg 1:2",
+                    mat4f::perspective(110.0f, 0.5f, 0.05f, 50.0f) *
+                    view({ 0, 1, 0 }, { 0, 1, -1 }, { 0, 1, 0 }) },
+            { "orthographic",
+                    mat4f::ortho(-10.0f, 10.0f, -5.0f, 5.0f, 0.5f, 50.0f) *
+                    view({ 3, 7, -2 }, { 0, 0, -20 }, { 0, 1, 0 }) },
+    };
+
+    std::default_random_engine gen(7); // NOLINT
+    std::uniform_real_distribution<double> weight(0.0, 1.0);
+
+    for (auto const& camera : cameras) {
+        // Corners in the same order as ShadowMapManager: 0-3 on the far plane, 4-7 on the near
+        // plane, bit 0 selects +x and bit 1 selects +y in clip space.
+        mat4 const clipToWorld = inverse(mat4(camera.pv));
+        std::array<double3, 8> corners;
+        double3 centroid{};
+        for (size_t i = 0; i < 8; i++) {
+            double4 const p = clipToWorld * double4{
+                    (i & 1u) ? 1.0 : -1.0, (i & 2u) ? 1.0 : -1.0, (i & 4u) ? -1.0 : 1.0, 1.0 };
+            corners[i] = p.xyz / p.w;
+            centroid += corners[i] / 8.0;
+        }
+        double diameter = 0.0;
+        for (double3 const& a : corners) {
+            for (double3 const& b : corners) {
+                diameter = std::max(diameter, length(b - a));
+            }
+        }
+
+        // Directions spread over the sphere, plus the degenerate ones.
+        std::vector<double3> directions;
+        constexpr size_t SPHERE_DIRECTION_COUNT = 256;
+        for (size_t i = 0; i < SPHERE_DIRECTION_COUNT; i++) {
+            double const y = 1.0 - 2.0 * (double(i) + 0.5) / double(SPHERE_DIRECTION_COUNT);
+            double const r = std::sqrt(1.0 - y * y);
+            double const phi = double(i) * d::PI * (3.0 - std::sqrt(5.0));
+            directions.push_back({ std::cos(phi) * r, y, std::sin(phi) * r });
+        }
+        for (size_t a = 0; a < 8; a++) {
+            for (size_t const b : { a ^ 1u, a ^ 2u, a ^ 4u }) {
+                directions.push_back(normalize(corners[b] - corners[a])); // along each edge
+            }
+        }
+        float4 frustumPlanes[6];
+        Frustum(camera.pv).getNormalizedPlanes(frustumPlanes);
+        for (float4 const& plane : frustumPlanes) {
+            for (size_t a = 0; a < 8; a++) {
+                double3 const t = cross(double3(plane.xyz), corners[a ^ 1u] - corners[a]);
+                if (length(t) > 0.0) {
+                    directions.push_back(normalize(t)); // within each frustum plane
+                }
+            }
+        }
+
+        for (size_t i = 0; i < directions.size(); i++) {
+            double3 const lightDir = directions[i];
+            auto const planes = ShadowMapManager::findSilhouette(camera.pv, float3(lightDir), 0.0f);
+            auto const distance = [](float4 const& plane, double3 const& p) {
+                return dot(double3(plane.xyz), p) + double(plane.w);
+            };
+
+            for (float4 const& plane : planes) {
+                ASSERT_TRUE(std::isfinite(plane.x) && std::isfinite(plane.y) &&
+                            std::isfinite(plane.z) && !std::isnan(plane.w))
+                        << camera.name << ", direction " << i;
+            }
+
+            // Random points of the frustum, swept towards the light, must be inside every plane.
+            for (size_t s = 0; s < 64; s++) {
+                double3 p{};
+                double total = 0.0;
+                for (double3 const& c : corners) {
+                    double const w = weight(gen);
+                    p += c * w;
+                    total += w;
+                }
+                p /= total;
+                for (double const t : { 0.0, 1.0, 10.0, 100.0, 1000.0 }) {
+                    double3 const q = p - lightDir * t;
+                    for (float4 const& plane : planes) {
+                        ASSERT_LE(distance(plane, q), 1e-4 * (1.0 + length(q)))
+                                << camera.name << ", direction " << i << ", sweep " << t;
+                    }
+                }
+            }
+
+            // A point far downstream of the frustum can't shadow it and must be culled.
+            double3 const downstream = centroid + lightDir * (10.0 * diameter);
+            EXPECT_TRUE(std::any_of(planes.begin(), planes.end(), [&](float4 const& plane) {
+                return distance(plane, downstream) > 0.0;
+            })) << camera.name << ", direction " << i;
         }
     }
 }

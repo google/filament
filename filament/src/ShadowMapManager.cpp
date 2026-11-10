@@ -1048,7 +1048,7 @@ static const uint8_t FRUSTUM_SILHOUETTE_VERTICES_LUT[64][8] = {
     {1, 3, 2, 6, 7, 5, 4, 0}, // 56
     {1, 3, 2, 6, 4, 0, 2, 2}, // 57
     {4, 0, 2, 6, 7, 5, 2, 2}, // 58
-    {1, 3, 2, 0, 2, 2, 2, 2}, // 59
+    {0, 2, 6, 4, 2, 2, 2, 2}, // 59
     {2, 2, 2, 2, 2, 2, 2, 2}, // 60
     {1, 3, 2, 0, 2, 2, 2, 2}, // 61
     {4, 6, 7, 5, 2, 2, 2, 2}, // 62
@@ -1079,13 +1079,12 @@ static FrustumCorners computeFrustumCorners(mat4f const& projectionInverse) noex
     return out;
 }
 
-using SilhouettePlanes =
-    std::array<float4, Culler::TIGHTER_CULLING_PLANE_COUNT>;
+using SilhouettePlanes = ShadowMapManager::SilhouettePlanes;
 
 // Reference:
 // https://github.com/godotengine/godot/pull/82584/changes#diff-8babe54c0b184d1c71d515dc1a35aedcb772169ef06ade4fe5d7f162086aaa2a
-static SilhouettePlanes findSilhouette(mat4f const &pv, float3 const &lightDir,
-                                       float const wsOneTexel) noexcept {
+SilhouettePlanes ShadowMapManager::findSilhouette(mat4f const& pv, float3 const& lightDir,
+        float const wsOneTexel) noexcept {
     // 1. Initialize the culling planes list and camera frustum planes/corners.
     SilhouettePlanes cullingPlanes;
     size_t planeCount = 0;
@@ -1139,35 +1138,50 @@ static SilhouettePlanes findSilhouette(mat4f const &pv, float3 const &lightDir,
     }
 
     // 3. Construct edge planes by extruding silhouette edges along the light direction.
-    assert_invariant(vertexCount <= cullingPlanes.size());
-    for (size_t i = 0; i < vertexCount - 1; i++) {
-        uint8_t gIdx1 = entries[i];
-        uint8_t gIdx2 = entries[i + 1];
-
-        float3 v1 = frustumCorners[gIdx1];
-        float3 v2 = frustumCorners[gIdx2];
-
-        float3 n = normalize(cross(v2 - v1, lightDir));
-        float d = -dot(n, v1);
-
+    // An edge (nearly) parallel to the light direction doesn't define a plane: the cross product
+    // vanishes and normalizing it yields either NaNs, which the culler treats as "outside" and
+    // would cull every caster, or a plane with an arbitrary orientation that can cut through
+    // the frustum. Skipping such an edge only enlarges the volume, so culling stays conservative.
+    constexpr float MIN_EDGE_LIGHT_SIN2 = 1e-6f; // sin(angle) ~ 1e-3
+    auto const addEdgePlane = [&](uint8_t const index1, uint8_t const index2) {
+        float3 const v1 = frustumCorners[index1];
+        float3 const v2 = frustumCorners[index2];
+        float3 const edge = v2 - v1;
+        float3 const c = cross(edge, lightDir);
+        float const c2 = dot(c, c);
+        // |edge x lightDir|^2 = |edge|^2 |lightDir|^2 sin^2(angle). Written so NaNs are rejected.
+        float const minC2 = MIN_EDGE_LIGHT_SIN2 * dot(edge, edge) * dot(lightDir, lightDir);
+        if (UTILS_UNLIKELY(!(c2 > minC2))) {
+            return;
+        }
+        float3 const n = c / std::sqrt(c2);
+        float const d = -dot(n, v1);
         // We always push the planes one texel away to avoid edge shadow clipping artifacts.
         cullingPlanes[planeCount++] = float4(n, d - wsOneTexel);
+    };
+
+    assert_invariant(vertexCount <= cullingPlanes.size());
+    for (size_t i = 0; i < vertexCount - 1; i++) {
+        addEdgePlane(entries[i], entries[i + 1]);
     }
-
     // Finally, we close the loop.
-    uint8_t gIdx1 = entries[vertexCount - 1];
-    uint8_t gIdx2 = entries[0];
-
-    float3 v1 = frustumCorners[gIdx1];
-    float3 v2 = frustumCorners[gIdx2];
-
-    float3 n = normalize(cross(v2 - v1, lightDir));
-    float d = -dot(n, v1);
-
-    cullingPlanes[planeCount++] = float4(n, d - wsOneTexel);
+    addEdgePlane(entries[vertexCount - 1], entries[0]);
 
     // 4. Close the back of the volume and pad the list out.
     closeCullingVolume();
+
+#ifndef NDEBUG
+    // The volume contains the camera frustum, so its centroid must be inside every plane. This
+    // catches a wrong winding in the silhouette look-up table or a handedness mismatch.
+    float3 centroid{};
+    for (float3 const& corner : frustumCorners) {
+        centroid += corner;
+    }
+    centroid /= float(frustumCorners.size());
+    for (float4 const& plane : cullingPlanes) {
+        assert_invariant(dot(plane.xyz, centroid) + plane.w <= 0.0f);
+    }
+#endif
 
     return cullingPlanes;
 }
