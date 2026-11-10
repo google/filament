@@ -20,5 +20,6 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
   code; remove the `MAT_UUID` material chunk. [⚠️ **Recompile Materials**]
 - engine: fix `RenderTarget` validation rejecting layers of 2D-array textures at mip levels above 0
   (the layer count was halved per level as for 3D textures)
+- gltfio: lit materials without clear coat use ubershaders built without the clear coat lobe
 - metal: map the `SRGB8_ALPHA8_ASTC_*` texture formats to Metal's sRGB ASTC pixel formats on
   Apple-family GPUs (they previously had no Metal mapping)
