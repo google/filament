@@ -3322,6 +3322,49 @@ TEST(FilamentTest, CompressedFormatsHaveBlockInfo) {
     }
 }
 
+TEST(FilamentTest, Norm16TextureFormats) {
+    using backend::PixelDataFormat;
+    using backend::PixelDataType;
+    using backend::TextureFormat;
+    using backend::TextureType;
+
+    struct Norm16FormatSpec {
+        TextureFormat format;
+        size_t expectedSize;
+        size_t expectedComponents;
+        PixelDataFormat expectedPixelFormat;
+        PixelDataType expectedPixelType;
+        bool expectedIsColor;
+    };
+
+    constexpr Norm16FormatSpec kSpecs[] = {
+        { TextureFormat::R16,          2, 1, PixelDataFormat::R,    PixelDataType::USHORT, true  },
+        { TextureFormat::R16_SNORM,    2, 1, PixelDataFormat::R,    PixelDataType::SHORT,  false },
+        { TextureFormat::RG16,         4, 2, PixelDataFormat::RG,   PixelDataType::USHORT, true  },
+        { TextureFormat::RG16_SNORM,   4, 2, PixelDataFormat::RG,   PixelDataType::SHORT,  false },
+        { TextureFormat::RGB16,        6, 3, PixelDataFormat::RGB,  PixelDataType::USHORT, true  },
+        { TextureFormat::RGB16_SNORM,  6, 3, PixelDataFormat::RGB,  PixelDataType::SHORT,  false },
+        { TextureFormat::RGBA16,       8, 4, PixelDataFormat::RGBA, PixelDataType::USHORT, true  },
+        { TextureFormat::RGBA16_SNORM, 8, 4, PixelDataFormat::RGBA, PixelDataType::SHORT,  false },
+    };
+
+    for (auto const& spec : kSpecs) {
+        EXPECT_FALSE(backend::isCompressedFormat(spec.format));
+        EXPECT_FALSE(backend::isUnsignedIntFormat(spec.format));
+        EXPECT_FALSE(backend::isSignedIntFormat(spec.format));
+        EXPECT_EQ(backend::isColorFormat(spec.format), spec.expectedIsColor);
+        EXPECT_EQ(backend::getFormatSize(spec.format), spec.expectedSize);
+        EXPECT_EQ(backend::getFormatComponentCount(spec.format), spec.expectedComponents);
+        EXPECT_EQ(backend::getTextureType(spec.format), TextureType::FLOAT);
+        EXPECT_TRUE(FTexture::validatePixelFormatAndType(
+                spec.format, spec.expectedPixelFormat, spec.expectedPixelType));
+        EXPECT_FALSE(FTexture::validatePixelFormatAndType(
+                spec.format, PixelDataFormat::RGBA_INTEGER, spec.expectedPixelType));
+        EXPECT_FALSE(FTexture::validatePixelFormatAndType(
+                spec.format, spec.expectedPixelFormat, PixelDataType::UBYTE));
+    }
+}
+
 TEST(FilamentTest, TextureSetImageCompressedSizeValidation) {
     Engine* engine = Engine::create(Engine::Backend::NOOP);
 
