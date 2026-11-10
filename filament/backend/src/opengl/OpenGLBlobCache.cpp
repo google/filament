@@ -48,7 +48,8 @@ GLuint OpenGLBlobCache::retrieve(BlobCacheKey* outKey, Platform& platform,
     GLuint programId = 0;
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-    BlobCacheKey key{ program.getCacheId(), program.getSpecializationConstants() };
+    BlobCacheKey key{ BlobCacheKey::computeProgramId(program),
+            program.getSpecializationConstants() };
 
     // FIXME: use a static buffer to avoid systematic allocation
     // always attempt with 64 KiB
