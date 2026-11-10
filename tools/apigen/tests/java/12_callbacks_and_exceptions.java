@@ -23,31 +23,39 @@ import java.lang.IllegalStateException;
 import androidx.annotation.NonNull;
 import androidx.annotation.RestrictTo;
 
+import com.google.android.filament.proguard.UsedByNative;
+
 public class CallbacksAndExceptionsTest {
     private long mNativeObject;
 
     @FunctionalInterface
     public interface ForEachCallback {
+        @UsedByNative("CallbacksAndExceptionsTest.cpp")
         void accept(@Entity int entity);
     }
     @FunctionalInterface
     public interface ForEachThrowingCallback {
+        @UsedByNative("CallbacksAndExceptionsTest.cpp")
         void accept(@Entity int entity);
     }
     @FunctionalInterface
     public interface FindFirstCallback {
+        @UsedByNative("CallbacksAndExceptionsTest.cpp")
         boolean accept(@Entity int entity);
     }
     @FunctionalInterface
     public interface FindFirstThrowingCallback {
+        @UsedByNative("CallbacksAndExceptionsTest.cpp")
         boolean accept(@Entity int entity);
     }
     @FunctionalInterface
     public interface ProcessPairCallback {
+        @UsedByNative("CallbacksAndExceptionsTest.cpp")
         void accept(int arg0, float arg1);
     }
     @FunctionalInterface
     public interface ProcessPairThrowingCallback {
+        @UsedByNative("CallbacksAndExceptionsTest.cpp")
         void accept(int arg0, float arg1);
     }
 

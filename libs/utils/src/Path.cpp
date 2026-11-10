@@ -14,28 +14,76 @@
  * limitations under the License.
  */
 
+#if defined(WIN32)
+#include <utils/compiler.h>
+#endif
 #include <utils/Path.h>
+#if defined(WIN32)
+#include <utils/win32/stdtypes.h>
+#endif
 
-#include <sstream>
 #include <ostream>
-#include <iterator>
+#include <string_view>
+
+#include <sys/stat.h>
+#if !defined(WIN32)
+#include <unistd.h>
+#endif
+
+#include <limits.h>
 
 #if defined(WIN32)
-#   include <utils/compiler.h>
-#   include <utils/win32/stdtypes.h>
 #   define SEPARATOR '\\'
 #   define SEPARATOR_STR  "\\"
 #else
-#   include <unistd.h>
 #   define SEPARATOR '/'
 #   define SEPARATOR_STR "/"
 #endif
 
-
-#include <limits.h>
-#include <sys/stat.h>
-
 namespace utils {
+
+namespace {
+
+// Iterates over the logical segments of a canonical Path string without heap allocation.
+class SegmentCursor {
+public:
+    explicit SegmentCursor(std::string_view path) noexcept : mPath(path) {
+        if (!mPath.empty() && mPath.front() == SEPARATOR) {
+            mHasLeadingSeparator = true;
+            mPos = 1;
+        }
+    }
+
+    bool next(std::string_view& out) noexcept {
+        if (mHasLeadingSeparator) {
+            mHasLeadingSeparator = false;
+            out = mPath.substr(0, 1);
+            return true;
+        }
+        while (mPos < mPath.size() && mPath[mPos] == SEPARATOR) {
+            ++mPos;
+        }
+        if (mPos >= mPath.size()) {
+            return false;
+        }
+        size_t const end = mPath.find(SEPARATOR, mPos);
+        if (end == std::string_view::npos) {
+            out = mPath.substr(mPos);
+            mPos = mPath.size();
+        } else {
+            out = mPath.substr(mPos, end - mPos);
+            mPos = end + 1;
+        }
+        return true;
+    }
+
+private:
+    std::string_view mPath;
+    size_t mPos = 0;
+    bool mHasLeadingSeparator = false;
+};
+
+} // anonymous namespace
 
 Path::Path(const char* path)
     : Path(std::string(path)) {
@@ -151,11 +199,94 @@ Path Path::getAncestor(int n) const {
     return result;
 }
 
+bool Path::isAncestorOf(const Path& path) const {
+    if (isEmpty() || path.isEmpty()) {
+        return false;
+    }
+
+    bool const selfRooted = isAbsolute() || m_path.front() == SEPARATOR;
+    bool const otherRooted = path.isAbsolute() || path.m_path.front() == SEPARATOR;
+    if (selfRooted != otherRooted) {
+        return false;
+    }
+
+    SegmentCursor selfCursor(m_path);
+    SegmentCursor otherCursor(path.m_path);
+
+    if (selfRooted) {
+        std::string_view selfSeg;
+        std::string_view otherSeg;
+        while (selfCursor.next(selfSeg)) {
+            if (!otherCursor.next(otherSeg) || selfSeg != otherSeg) {
+                return false;
+            }
+        }
+        return otherCursor.next(otherSeg);
+    }
+
+    auto advanceRelative = [](SegmentCursor& cursor, size_t& upCount,
+            std::string_view& firstNamed) noexcept -> bool {
+        upCount = 0;
+        std::string_view seg;
+        if (!cursor.next(seg)) {
+            return false;
+        }
+        if (seg == ".") {
+            if (!cursor.next(seg)) {
+                return false;
+            }
+        }
+        while (seg == "..") {
+            ++upCount;
+            if (!cursor.next(seg)) {
+                return false;
+            }
+        }
+        firstNamed = seg;
+        return true;
+    };
+
+    size_t selfUp = 0;
+    size_t otherUp = 0;
+    std::string_view selfSeg;
+    std::string_view otherSeg;
+    bool const selfHasNamed = advanceRelative(selfCursor, selfUp, selfSeg);
+    bool const otherHasNamed = advanceRelative(otherCursor, otherUp, otherSeg);
+
+    if (!selfHasNamed) {
+        if (otherUp < selfUp) {
+            return true;
+        }
+        return otherUp == selfUp && otherHasNamed;
+    }
+
+    if (!otherHasNamed || selfUp != otherUp || selfSeg != otherSeg) {
+        return false;
+    }
+
+    while (selfCursor.next(selfSeg)) {
+        if (!otherCursor.next(otherSeg) || selfSeg != otherSeg) {
+            return false;
+        }
+    }
+    return otherCursor.next(otherSeg);
+}
+
 std::string Path::getName() const {
     if (isEmpty()) return "";
 
-    std::vector<std::string> segments(split());
-    return segments.back();
+    size_t end = m_path.size();
+    while (end > 1 && (m_path[end - 1] == '/' || m_path[end - 1] == '\\')) {
+        --end;
+    }
+    size_t const pos = m_path.find_last_of(SEPARATOR, end - 1);
+    if (pos == std::string::npos) {
+        return m_path.substr(0, end);
+    }
+    if (pos == 0 && end == 1) {
+        return m_path.substr(0, 1);
+    }
+    return m_path.substr(pos + 1, end - pos - 1);
 }
 
 std::string Path::getExtension() const {
@@ -217,7 +348,8 @@ std::vector<std::string> Path::split() const {
 std::string Path::getCanonicalPath(const std::string& path) {
     if (path.empty()) return "";
 
-    std::vector<std::string> segments;
+    std::string_view const pathView(path);
+    std::vector<std::string_view> segments;
 
     // If the path starts with a / we must preserve it
     bool starts_with_slash = path.front() == SEPARATOR;
@@ -231,10 +363,10 @@ std::string Path::getCanonicalPath(const std::string& path) {
     do {
         current = size_t(next + 1);
         // Handle both Unix and Windows style separators
-        next = path.find_first_of("/\\", current);
+        next = pathView.find_first_of("/\\", current);
 
-        std::string segment(path.substr(current, next - current));
-        size_t size = segment.length();
+        std::string_view const segment(pathView.substr(current, next - current));
+        size_t const size = segment.length();
 
         // skip empty (keep initial)
         if (size == 0 && !segments.empty()) {
@@ -251,6 +383,15 @@ std::string Path::getCanonicalPath(const std::string& path) {
             if (segments.back().empty()) { // ignore if .. follows initial /
                 continue;
             }
+#if defined(WIN32)
+            if (segments.size() == 1 && segments.back().size() == 2 && segments.back()[1] == ':') {
+                continue;
+            }
+#endif
+            if (segments.back() == ".") {
+                segments.back() = segment;
+                continue;
+            }
             if (segments.back() != "..") {
                 segments.pop_back();
                 continue;
@@ -263,10 +404,10 @@ std::string Path::getCanonicalPath(const std::string& path) {
     // Join the vector as a single string, every element is
     // separated by a '/'. This process adds an extra / at
     // the end that might need to be removed
-    std::stringstream clean_path;
-    std::copy(segments.begin(), segments.end(),
-            std::ostream_iterator<std::string>(clean_path, SEPARATOR_STR));
-    std::string new_path = clean_path.str();
+    std::string new_path;
+    for (std::string_view const& s : segments) {
+        new_path.append(s).push_back(SEPARATOR);
+    }
 
     if (starts_with_slash && new_path.empty()) {
         new_path = SEPARATOR_STR;

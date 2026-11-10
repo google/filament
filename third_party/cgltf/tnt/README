@@ -2,3 +2,6 @@ This folder was last updated as follows:
 edit update_cgltf.sh to assign desired value to shell variable 'tag'
 ./update_cgltf.sh
 
+This script will attempt to apply the Filament-specific fixes listed
+in cgltf-filament.patch. If that step fails, please fix the patch
+file accordingly.

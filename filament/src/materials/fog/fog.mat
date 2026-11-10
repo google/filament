@@ -2,7 +2,7 @@ material {
     name : fog,
     vertexDomain : device,
     shadingModel : unlit,
-    variantFilter : [ skinning, shadowReceiver, vsm, fog ],
+    variantFilter : [ skinning, shadowReceiver, vsm, fog, stereo, ssr ],
     culling: none,
     blending : transparent,
     depthWrite : false,

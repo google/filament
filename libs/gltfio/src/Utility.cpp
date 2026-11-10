@@ -22,6 +22,8 @@
 
 #include <private/utils/Tracing.h>
 
+#include <backend/DriverEnums.h>
+
 #include <utils/Log.h>
 #include <utils/Panic.h>
 
@@ -36,10 +38,10 @@ namespace filament::gltfio::utility {
 
 using namespace utils;
 
-void decodeDracoMeshes(cgltf_data const* gltf, cgltf_primitive const* prim,
+bool decodeDracoMeshes(cgltf_data const* gltf, cgltf_primitive const* prim,
         DracoCache* dracoCache) {
     if (!prim->has_draco_mesh_compression) {
-        return;
+        return false;
     }
 
     // For a given primitive and attribute, find the corresponding accessor.
@@ -58,13 +60,15 @@ void decodeDracoMeshes(cgltf_data const* gltf, cgltf_primitive const* prim,
     DracoMesh* mesh = dracoCache->findOrCreateMesh(draco.buffer_view);
     if (!mesh) {
         slog.e << "Cannot decompress mesh, Draco decoding error." << io::endl;
-        return;
+        return false;
     }
 
     // Copy over the decompressed data, converting the data type if necessary.
     if (prim->indices && !mesh->getFaceIndices(prim->indices)) {
-        return;
+        return false;
     }
+
+    bool decoded = prim->indices != nullptr;
 
     // Go through each attribute in the decompressed mesh.
     for (cgltf_size i = 0; i < draco.attributes_count; i++) {
@@ -85,10 +89,13 @@ void decodeDracoMeshes(cgltf_data const* gltf, cgltf_primitive const* prim,
         if (!mesh->getVertexAttributes(id, accessor)) {
             break;
         }
+        decoded = true;
     }
+    return decoded;
 }
 
-bool decodeMeshoptCompression(cgltf_data* data) {
+bool decodeMeshoptCompression(cgltf_data* data, bool* decoded) {
+    bool hasDecoded = false;
     for (size_t i = 0; i < data->buffer_views_count; ++i) {
         if (!data->buffer_views[i].has_meshopt_compression) {
             continue;
@@ -244,6 +251,10 @@ bool decodeMeshoptCompression(cgltf_data* data) {
         }
 
         data->buffer_views[i].data = destination;
+        hasDecoded = true;
+    }
+    if (decoded) {
+        *decoded = hasDecoded;
     }
     return true;
 }
@@ -353,10 +364,11 @@ bool isUploadableIndexAccessor(cgltf_accessor const* accessor) {
         return false;
     }
 
-    // Two ceilings apply: IndexBuffer::Builder::indexCount() takes a uint32_t, and
-    // (count * componentSize) must not wrap size_t. Comparing against the smaller of the two keeps
-    // both bounds effective where cgltf_size is 32 bits, as it is on WASM.
-    cgltf_size const maxCount = std::min(cgltf_size(std::numeric_limits<uint32_t>::max()),
+    // Two ceilings apply: IndexBuffer::Builder::indexCount() caps the index count at
+    // backend::MAX_INDEX_COUNT, and (count * componentSize) must not wrap size_t. Comparing against
+    // the smaller of the two keeps both bounds effective where cgltf_size is 32 bits, as it is on
+    // WASM.
+    cgltf_size const maxCount = std::min(cgltf_size(backend::MAX_INDEX_COUNT),
             cgltf_size(std::numeric_limits<size_t>::max() / componentSize));
     if (accessor->count > maxCount) {
         return false;

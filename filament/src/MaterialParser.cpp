@@ -220,14 +220,6 @@ std::optional<uint32_t> MaterialParser::getPrecomputedCrc32() const noexcept {
     return std::nullopt;
 }
 
-uint32_t MaterialParser::getCrc32() const noexcept {
-    std::optional<uint32_t> crc32 = getPrecomputedCrc32();
-    if (crc32) {
-        return *crc32;
-    }
-    return computeCrc32();
-}
-
 ShaderLanguage MaterialParser::getShaderLanguage() const noexcept {
     return mImpl.mChosenLanguage;
 }
@@ -286,13 +278,6 @@ bool MaterialParser::getSourceShader(CString* cstring) const noexcept {
     *cstring = CString { dst_buffer.get(), decompressed };
 
     return true;
-}
-
-bool MaterialParser::getCacheId(uint64_t* cacheId) const noexcept {
-   auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialCacheId);
-    if (start == end) return false;
-   Unflattener unflattener(start, end);
-   return unflattener.read(cacheId);
 }
 
 bool MaterialParser::getUIB(BufferInterfaceBlock* container) const noexcept {
@@ -422,6 +407,30 @@ bool MaterialParser::getCustomBlendFunction(std::array<BlendFunction, 4>* value)
     (*value)[1] = BlendFunction((blendFunctions >> 16) & 0xFF);
     (*value)[2] = BlendFunction((blendFunctions >>  8) & 0xFF);
     (*value)[3] = BlendFunction((blendFunctions >>  0) & 0xFF);
+    // RasterState keeps these in 4-bit fields, so values 11 to 15 would reach the backends.
+    // Lists every enumerator so -Wswitch fails the build when BlendFunction grows.
+    auto const isValid = [](BlendFunction const function) {
+        switch (function) {
+            case BlendFunction::ZERO:
+            case BlendFunction::ONE:
+            case BlendFunction::SRC_COLOR:
+            case BlendFunction::ONE_MINUS_SRC_COLOR:
+            case BlendFunction::DST_COLOR:
+            case BlendFunction::ONE_MINUS_DST_COLOR:
+            case BlendFunction::SRC_ALPHA:
+            case BlendFunction::ONE_MINUS_SRC_ALPHA:
+            case BlendFunction::DST_ALPHA:
+            case BlendFunction::ONE_MINUS_DST_ALPHA:
+            case BlendFunction::SRC_ALPHA_SATURATE:
+                return true;
+        }
+        return false;
+    };
+    for (BlendFunction const function : *value) {
+        if (!isValid(function)) {
+            return false;
+        }
+    }
     return result;
 }
 
@@ -913,6 +922,7 @@ bool ChunkDescriptorBindingsInfo::unflatten(Unflattener& unflattener,
 
     auto& descriptors = (*container)[+DescriptorSetBindingPoints::PER_MATERIAL];
     descriptors.reserve(descriptorCount);
+    bitset64 seenBindings;
     for (size_t i = 0; i < descriptorCount; i++) {
         CString name;
         if (!unflattener.read(&name)) {
@@ -936,6 +946,10 @@ bool ChunkDescriptorBindingsInfo::unflatten(Unflattener& unflattener,
             // in DescriptorSetLayout, so it must be in range.
             return false;
         }
+        if (seenBindings[binding]) {
+            return false;
+        }
+        seenBindings.set(binding);
         descriptors.push_back({
                 std::move(name),
                 DescriptorType(type),

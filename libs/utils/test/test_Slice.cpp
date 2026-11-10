@@ -55,16 +55,23 @@ TEST(SliceTest, ValueEqual) {
 TEST(SliceTest, ValueNotEqual) {
     FixedCapacityVector<int> vec1 = {1, 3, 3, 7};
     FixedCapacityVector<int> vec2 = {4, 2, 0};
+    FixedCapacityVector<int> vec3 = {1, 3, 3, 8};
     Slice<const int> slice1 = vec1.as_slice();
     Slice<const int> slice2 = vec2.as_slice();
+    Slice<const int> slice3 = vec3.as_slice();
 
     EXPECT_FALSE(slice1 == slice2);
+    EXPECT_FALSE(slice1 == slice3);
+    EXPECT_TRUE(slice1 != slice3);
 }
 
 TEST(SliceTest, CanCoerceMutableToConst) {
     FixedCapacityVector<int> vec = {1, 3, 3, 7};
     Slice<int> sliceMutable = vec.as_slice();
     Slice<const int> sliceConst = sliceMutable;
+    EXPECT_EQ(sliceConst.data(), sliceMutable.data());
+    EXPECT_EQ(sliceConst.size(), sliceMutable.size());
+    EXPECT_TRUE(sliceConst == sliceMutable);
 }
 
 TEST(SliceTest, CanCompareMutableWithConst) {
@@ -73,6 +80,8 @@ TEST(SliceTest, CanCompareMutableWithConst) {
     Slice<int> slice1 = vec1.as_slice();
     Slice<const int> slice2 = vec2.as_slice();
 
+    EXPECT_TRUE(slice1 == slice2);
+    EXPECT_FALSE(slice1 != slice2);
     EXPECT_TRUE(slice1.hash() == slice2.hash());
 }
 
@@ -82,6 +91,8 @@ TEST(SliceTest, CanCompareConstWithMutable) {
     Slice<const int> slice1 = vec1.as_slice();
     Slice<int> slice2 = vec2.as_slice();
 
+    EXPECT_TRUE(slice1 == slice2);
+    EXPECT_FALSE(slice1 != slice2);
     EXPECT_TRUE(slice1.hash() == slice2.hash());
 }
 
@@ -159,6 +170,7 @@ TEST(SliceTest, AsBytes) {
     Slice<uint8_t> writableBytes = as_writable_bytes(s);
     EXPECT_EQ(writableBytes.size(), sizeof(int));
     writableBytes[0] = 0xAA;
+    EXPECT_EQ(bytes[0], 0xAA);
 }
 
 #if __cplusplus >= 201703L

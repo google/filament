@@ -400,6 +400,11 @@ MaterialBuilder& MaterialBuilder::useDefaultDepthVariant() noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::isDefaultMaterial(bool const isDefault) noexcept {
+    mIsDefaultMaterial = isDefault;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::materialDomain(
         MaterialDomain const materialDomain) noexcept {
     mMaterialDomain = materialDomain;
@@ -754,6 +759,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
 
     // This is determined via static analysis of the glsl after prepareToBuild().
     info.userMaterialHasCustomDepth = false;
+    info.userMaterialVertexHasCustomDepth = false;
 }
 
 void MaterialBuilder::initPushConstants() noexcept {
@@ -830,9 +836,12 @@ bool MaterialBuilder::runSemanticAnalysis(MaterialInfo* inOutInfo,
                 targetApi, targetLanguage);
     } else {
         shaderCode = peek(ShaderStage::VERTEX, semanticCodeGenParams, mProperties);
-        success = GLSLTools::analyzeVertexShader(shaderCode, model, mMaterialDomain,
+        auto const vertexResult = GLSLTools::analyzeVertexShader(shaderCode, model, mMaterialDomain,
                 targetApi, targetLanguage);
+        success = vertexResult.has_value();
         if (success) {
+            inOutInfo->userMaterialVertexHasCustomDepth =
+                    vertexResult->userMaterialVertexHasCustomDepth;
             shaderCode = peek(ShaderStage::FRAGMENT, semanticCodeGenParams, mProperties);
             auto const result = GLSLTools::analyzeFragmentShader(shaderCode, model, mMaterialDomain,
                     targetApi, targetLanguage, mCustomSurfaceShading);
@@ -918,8 +927,9 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
             mMaterialVertexCode.getCode(), mMaterialVertexCode.getLineOffset(),
             mMaterialDomain);
 
-    container.emplace<bool>(MaterialHasCustomDepthShader,
-            needsStandardDepthProgram() && !mUseDefaultDepthVariant);
+    bool const hasCustomDepthShader = needsStandardDepthProgram(info);
+    bool const hasCustomDepthFragmentShader = needsCustomDepthFragmentProgram(info);
+    container.emplace<bool>(MaterialHasCustomDepthShader, hasCustomDepthShader);
 
     std::atomic_bool cancelJobs(false);
     bool firstJob = true;
@@ -949,15 +959,20 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
         JobSystem::Job* parent = jobSystem.createJob();
 
         for (const auto& v : variants) {
+            if (isSurfaceDomain && !mIsDefaultMaterial &&
+                    filament::Variant::isMotionVectorsVariant(v.variant)) {
+                if (v.stage == ShaderStage::VERTEX && !hasCustomDepthShader) {
+                    continue;
+                }
+                if (v.stage == ShaderStage::FRAGMENT && !hasCustomDepthFragmentShader) {
+                    continue;
+                }
+            }
+
             if (params.featureLevel == FeatureLevel::FEATURE_LEVEL_0 && isSurfaceDomain) {
                 assert_invariant(params.shaderModel == ShaderModel::MOBILE);
                 assert_invariant(params.targetApi == TargetApi::OPENGL);
                 // skip all variants that can't be used with ESSL1
-                if (filament::Variant::isValidStandardVariant(v.variant)) {
-                    if (v.variant.hasDirectionalLighting()) {
-                        continue;
-                    }
-                }
                 if (filament::Variant::isShadowReceiverVariant(v.variant)) {
                     continue;
                 }
@@ -971,6 +986,9 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                     continue;
                 }
                 if (filament::Variant::isSSRVariant(v.variant)) {
+                    continue;
+                }
+                if (filament::Variant::isMotionVectorsVariant(v.variant)) {
                     continue;
                 }
             }
@@ -1584,14 +1602,28 @@ bool MaterialBuilder::hasCustomVaryings() const noexcept {
     return false;
 }
 
-bool MaterialBuilder::needsStandardDepthProgram() const noexcept {
-    const bool hasEmptyVertexCode = mMaterialVertexCode.getCode().empty();
-    return !hasEmptyVertexCode ||
-           hasCustomVaryings() ||
+bool MaterialBuilder::needsCustomDepthFragmentProgram(
+        MaterialInfo const& info) const noexcept {
+    if (mUseDefaultDepthVariant) {
+        return false;
+    }
+    return info.userMaterialHasCustomDepth ||
            mBlendingMode == BlendingMode::MASKED ||
            (mTransparentShadow &&
             (mBlendingMode == BlendingMode::TRANSPARENT ||
              mBlendingMode == BlendingMode::FADE));
+}
+
+bool MaterialBuilder::needsStandardDepthProgram(MaterialInfo const& info) const noexcept {
+    if (mUseDefaultDepthVariant) {
+        return false;
+    }
+    return needsCustomDepthFragmentProgram(info) ||
+           info.userMaterialVertexHasCustomDepth ||
+           mProperties[size_t(Property::CLIP_SPACE_TRANSFORM)] ||
+           mProperties[size_t(Property::CLIP_SPACE_POSITION)] ||
+           mVertexDomain != VertexDomain::OBJECT ||
+           mUseLegacyMorphing;
 }
 
 std::string MaterialBuilder::peek(backend::ShaderStage const stage,
@@ -1783,17 +1815,6 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
         container.emplace<uint8_t>(MaterialStereoscopicType, static_cast<uint8_t>(mStereoscopicType));
     }
 
-    // create a unique material id
-    auto const& vert = mMaterialVertexCode.getCode();
-    auto const& frag = mMaterialFragmentCode.getCode();
-    std::hash<std::string_view> const hasher;
-    size_t const materialId = hash::combine(
-            MATERIAL_VERSION,
-            hash::combine(
-                    hasher({ vert.data(), vert.size() }),
-                    hasher({ frag.data(), frag.size() })));
-
-    container.emplace<uint64_t>(MaterialCacheId, materialId);
     if (!mMaterialSource.empty()) {
         container.push<CompressedStringChunk>(
                 MaterialSource, mMaterialSource,

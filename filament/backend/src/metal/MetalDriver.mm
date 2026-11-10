@@ -255,10 +255,20 @@ MetalDriver::MetalDriver(PlatformMetal* platform,
             ThreadWorker::Config threadWorkerConfig{
                 "JobQueueThreadWorker", utils::JobSystem::Priority::NORMAL, []() {}, // onBegin
                 []() {},                                                             // onEnd
+                // This thread has no autorelease pool of its own, so anything a job autoreleases
+                // would live until the thread exits. Resetting the job inside the pool releases
+                // its captures there too.
+                [](JobQueue::Job& job) {                                             // wrapJob
+                    @autoreleasepool {
+                        job();
+                        job = nullptr;
+                    }
+                },
             };
             mJobWorker = ThreadWorker::create(mJobQueue, std::move(threadWorkerConfig));
         } else {
-            mJobWorker = AmortizationWorker::create(mJobQueue);
+            mJobWorker = AmortizationWorker::create(mJobQueue,
+                    driverConfig.asynchronousFrameBudget);
         }
     }
 
@@ -392,6 +402,17 @@ void MetalDriver::endFrame(uint32_t frameId) {
 #if defined(FILAMENT_METAL_PROFILING)
     os_signpost_interval_end(mContext->log, mContext->signpostId, "Frame encoding");
 #endif
+
+    // Queued async jobs run after the frame's own work.
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
+}
+
+void MetalDriver::skipFrame(int) {
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
 }
 
 void MetalDriver::updateDescriptorSetBuffer(
@@ -1476,7 +1497,7 @@ bool MetalDriver::isMSAASwapChainSupported(uint32_t) {
 }
 
 bool MetalDriver::isProtectedContentSupported() {
-    // the SWAP_CHAIN_CONFIG_PROTECTED_CONTENT flag is not supported
+    // TODO: Protected content is not supported on Metal yet.
     return false;
 }
 
@@ -1506,6 +1527,7 @@ bool MetalDriver::isDepthStencilBlitSupported(TextureFormat format) {
 }
 
 bool MetalDriver::isProtectedTexturesSupported() {
+    // TODO: Protected textures are not supported on Metal yet.
     return false;
 }
 

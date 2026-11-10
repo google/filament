@@ -38,6 +38,7 @@
 #include "details/RenderTarget.h"
 #include "details/Scene.h"
 #include "details/Skybox.h"
+#include "details/Texture.h"
 
 #if FILAMENT_ENABLE_FGVIEWER
 #include "fg/FgviewerManager.h"
@@ -51,6 +52,7 @@
 #include <filament/DebugRegistry.h>
 #include <filament/Exposure.h>
 #include <filament/Frustum.h>
+#include <filament/Texture.h>
 #include <filament/View.h>
 
 #include <backend/DriverEnums.h>
@@ -209,18 +211,19 @@ void FView::invalidateSceneCache() noexcept {
     mVisibleRenderableCount = -1;
 }
 
-void FView::setScene(FScene* scene) {
+void FView::setScene(FScene* scene) noexcept {
     if (mScene != scene) {
         if (mScene) {
             mScene->unregisterView(this);
         }
         mScene = scene;
         invalidateSceneCache();
+        resetMotionVectorsHistory();
         if (scene) {
-            scene->registerView(this);
             if (!mSceneCache) {
                 mSceneCache = std::make_unique<FScene::SceneCacheData>();
             }
+            scene->registerView(this);
         }
     }
 }
@@ -236,6 +239,8 @@ void FView::terminate(FEngine& engine) {
     driver.destroyBufferObject(mLightUbh);
     driver.destroyBufferObject(mRenderableUbh);
     clearFrameHistory(engine);
+
+    mIsMotionVectorsActive = false;
 
     ShadowMapManager::terminate(engine, mShadowMapManager);
     mUniforms.terminate(driver);
@@ -259,6 +264,7 @@ void FView::terminate(FEngine& engine) {
         fgviewerManager->destroyView(mFrameGraphViewerViewHandle);
     }
 #endif
+
 }
 
 void FView::finish(LinearAllocatorArena& arena) {
@@ -452,7 +458,7 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
 
     // dominant directional light is always as index 0
     Entity const entity = lightData.elementAt<FScene::LIGHT_ENTITY>(0);
-    FLightManager::Instance const directionalLight = engine.getLightManager().getInstance(entity);
+    FLightManager::Instance const directionalLight = lcm.getInstance(entity);
     const bool hasDirectionalShadows = directionalLight && lcm.isShadowCaster(directionalLight);
     if (UTILS_UNLIKELY(hasDirectionalShadows)) {
         const auto& shadowOptions = lcm.getShadowOptions(directionalLight);
@@ -472,8 +478,8 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
         // when we get here all the lights should be visible
         assert_invariant(lightData.elementAt<FScene::VISIBILITY>(l));
 
-        Entity const entity = lightData.elementAt<FScene::LIGHT_ENTITY>(l);
-        FLightManager::Instance const li = lcm.getInstance(entity);
+        Entity const le = lightData.elementAt<FScene::LIGHT_ENTITY>(l);
+        FLightManager::Instance const li = lcm.getInstance(le);
 
         if (UTILS_LIKELY(!li)) {
             continue; // invalid instance
@@ -495,7 +501,7 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
         if (shadowMapCount + shadowMapCountNeeded <= maxShadowMapCount) {
             shadowMapCount += shadowMapCountNeeded;
             const auto& shadowOptions = lcm.getShadowOptions(li);
-            builder.shadowMap(entity, l, spotLight, &shadowOptions);
+            builder.shadowMap(le, l, spotLight, &shadowOptions);
         }
 
         if (shadowMapCount >= maxShadowMapCount) {
@@ -518,14 +524,14 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
     FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     FScene* const scene = mScene;
-    auto const& lightData = mSceneCache->lightData;
+    auto& lightData = mSceneCache->lightData;
 
     /*
      * Dynamic lights
      */
 
     if (hasDynamicLighting()) {
-        scene->prepareDynamicLights(cameraInfo, mLightUbh, *mSceneCache);
+        scene->prepareDynamicLights(cameraInfo, mLightUbh, lightData);
     }
 
     // here the array of visible lights has been shrunk to CONFIG_MAX_LIGHT_COUNT
@@ -560,8 +566,9 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
      * Directional light (always at index 0)
      */
 
-    Entity const entity = lightData.elementAt<FScene::LIGHT_ENTITY>(0);
-    FLightManager::Instance const directionalLight = engine.getLightManager().getInstance(entity);
+    auto const& lcm = engine.getLightManager();
+    Entity const e = lightData.elementAt<FScene::LIGHT_ENTITY>(0);
+    FLightManager::Instance const directionalLight = lcm.getInstance(e);
     const float3 sceneSpaceDirection = lightData.elementAt<FScene::DIRECTION>(0); // guaranteed normalized
     getColorPassDescriptorSet().prepareDirectionalLight(engine, exposure, sceneSpaceDirection, directionalLight);
 
@@ -578,26 +585,26 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
 /*
  * Calculates an automatic grid size based on the camera frustum dimensions.
  * Handles both perspective and orthographic projections.
- * 
+ *
  * For perspective projections, it uses the width of the frustum at the far plane.
  * This ensures that the grid size scales with the visible volume and accounts for
  * field-of-view (zooming in reduces grid size to preserve precision).
  * For orthographic projections, it uses the absolute width of the frustum.
- * 
+ *
  * camera: The camera to use for the calculation.
  * Returns the calculated grid size (10% of the computed width, chosen as a
  * reasonable balance between precision and snapping frequency).
  */
 double FView::calculateAutomaticGridSize(const FCamera* camera) const noexcept {
     auto const& p = camera->getCullingProjectionMatrix();
-    
+
     // Base scale is the width of the frustum at Z=1 for perspective,
     // or the absolute width for orthographic.
     double baseScale = 2.0 / std::abs(p[0][0]);
-    
+
     // Detect perspective by checking if P[3][2] is non-zero
     bool const isPerspective = std::abs(p[3][2]) > 1e-5;
-    
+
     if (isPerspective) {
         double const zf = camera->getCullingFar();
         // Scale at far plane
@@ -612,11 +619,11 @@ double FView::calculateAutomaticGridSize(const FCamera* camera) const noexcept {
 /*
  * Computes a stable grid origin for the camera to improve floating-point precision.
  * Snapping only occurs when the camera moves beyond the grid boundary plus hysteresis.
- * 
+ *
  * This implementation follows Strategy A: only update the grid size when a position snap occurs.
  * This prevents instability when the frustum (and thus auto grid size) changes smoothly.
  * Alternative Strategy B (scale hysteresis) could be used if we want to respond to large scale changes without moving.
- * 
+ *
  * cameraPosition: The current world position of the camera.
  * currentGridSize: The grid size used in the previous frame (stable).
  * newGridSize: The new calculated grid size (target).
@@ -688,10 +695,10 @@ CameraInfo FView::computeCameraInfo(FEngine const& engine) const noexcept {
                 currentGridSize = newGridSize;
                 mEffectiveGridSize = currentGridSize;
             }
-            
+
             // Force snap if user manually changed grid size to a positive value
             bool const forceSnap = (mGridSize > 0.0 && mGridSize != currentGridSize);
-            
+
             constexpr double hysteresisRatio = 0.5; // Automatic 50% hysteresis
             translation = -computeGridOrigin(cameraPosition, currentGridSize, newGridSize, hysteresisRatio, forceSnap);
         } else {
@@ -721,6 +728,9 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
         FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
         FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
+    // Latch the motion vectors state first: everything below must agree on it for this frame.
+    updateMotionVectorsActive(engine);
+
     JobSystem& js = engine.getJobSystem();
 
     /*
@@ -747,13 +757,16 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
 
     FScene* const scene = getScene();
 
+    assert_invariant(mSceneCache);
+    auto& cache = *mSceneCache;
+
     /*
      * Gather all information needed to render this scene. Apply the world origin to all
      * objects in the scene.
      */
     scene->prepare(js, arena,
             cameraInfo.worldTransform,
-            hasVSM() || hasPCSS(), *mSceneCache);
+            hasVSM() || hasPCSS(), cache);
 
     /*
      * Light culling: runs in parallel with Renderable culling (below)
@@ -761,22 +774,22 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
 
     JobSystem::Job* froxelizeLightsJob = nullptr;
     JobSystem::Job* prepareVisibleLightsJob = nullptr;
-    size_t const lightCount = mSceneCache->lightData.size();
+    size_t const lightCount = cache.lightData.size();
     if (lightCount > FScene::DIRECTIONAL_LIGHTS_COUNT) {
         // create and start the prepareVisibleLights job
         // note: this job updates LightData (non const)
         // allocate a scratch buffer for distances outside the job below, so we don't need
         // to use a locked allocator; the downside is that we need to account for the worst case.
-        size_t const positionalLightCount = lightCount - FScene::DIRECTIONAL_LIGHTS_COUNT;
-        size_t const positionalLightCountRoundedUp = (positionalLightCount + 3u) & ~3u;
-        float* const distances = arena.alloc<float>(positionalLightCountRoundedUp, CACHELINE_SIZE);
-        mDistancesBuffer = { distances, positionalLightCountRoundedUp };
+        // computeLightCameraDistances() covers the directional light slot and rounds up to 4
+        size_t const distanceCount = (lightCount + 3u) & ~3u;
+        float* const distances = arena.alloc<float>(distanceCount, CACHELINE_SIZE);
+        mDistancesBuffer = { distances, distanceCount };
 
         prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
-                [&engine, distances, positionalLightCount, &viewMatrix = cameraInfo.view, &cullingFrustum,
-                 &lightData = mSceneCache->lightData](JobSystem&, JobSystem::Job*) {
+                [&engine, distances, distanceCount, &viewMatrix = cameraInfo.view, &cullingFrustum,
+                 &lightData = cache.lightData](JobSystem&, JobSystem::Job*) {
                     prepareVisibleLights(engine.getLightManager(),
-                            { distances, distances + positionalLightCount },
+                            { distances, distanceCount },
                             viewMatrix, cullingFrustum, lightData);
                 }));
     }
@@ -787,7 +800,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
     Range merged;
 
     { // all the operations in this scope must happen sequentially
-        FScene::RenderableSoa& renderableData = mSceneCache->renderableData;
+        FScene::RenderableSoa& renderableData = cache.renderableData;
 
         Slice<Culler::result_type> cullingMask = renderableData.slice<FScene::VISIBLE_MASK>();
         std::uninitialized_fill(cullingMask.begin(), cullingMask.end(), 0);
@@ -811,7 +824,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
         }
 
         // lightData is const from this point on (can only happen after prepareVisibleLightsJob)
-        auto const& lightData = mSceneCache->lightData;
+        auto const& lightData = cache.lightData;
 
         // now we know if we have dynamic lighting (i.e.: dynamic lights are visible)
         mHasDynamicLighting = lightData.size() > FScene::DIRECTIONAL_LIGHTS_COUNT;
@@ -820,8 +833,9 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
         mHasExtraDirectionalLights = mSceneCache->extraDirectionalLightCount > 0;
 
         // we also know if we have a directional light
-        FLightManager::Instance const directionalLight =
-                engine.getLightManager().getInstance(lightData.elementAt<FScene::LIGHT_ENTITY>(0));
+        auto& lcm = engine.getLightManager();
+        Entity const e = lightData.elementAt<FScene::LIGHT_ENTITY>(0);
+        FLightManager::Instance const directionalLight = lcm.getInstance(e);
         mHasDirectionalLighting = directionalLight.isValid();
 
         // As soon as prepareVisibleLight finishes, we can kick-off the froxelization
@@ -919,7 +933,12 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
         // TODO: when any spotlight is used, `merged` ends-up being the whole list. However,
         //       some of the items will end-up not being visible by any light. Can we do better?
         //       e.g. could we deffer some of the prepareVisibleRenderables() to later?
-        scene->prepareVisibleRenderables(merged, *mSceneCache);
+        scene->prepareVisibleRenderables(merged, cache);
+
+        // this must run after culling and before updateUBOs(), which uploads the UBO column
+        if (isMotionVectorsActive()) {
+            prepareMotionVectors(engine, cameraInfo.worldTransform, renderableData);
+        }
 
         // update those UBOs
         if (!merged.empty()) {
@@ -937,7 +956,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
 
     { // this must happen after mRenderableUbh is created/updated
         // prepare skinning, morphing and hybrid instancing
-        auto& sceneData = mSceneCache->renderableData;
+        auto& sceneData = cache.renderableData;
         for (uint32_t const i : merged) {
             auto const& skinning = sceneData.elementAt<FScene::SKINNING_BUFFER>(i);
             auto const& morphing = sceneData.elementAt<FScene::MORPHING_BUFFER>(i);
@@ -1132,6 +1151,10 @@ void FView::updateUBOs(
 
 
     // TODO: consider using JobSystem to parallelize this.
+    FScene::SceneCacheData::MotionVectorsState* const mv =
+            isMotionVectorsActive() ? &mSceneCache->motionVectors : nullptr;
+    FRenderableManager::Visibility* const visibility =
+            renderableData.data<FScene::VISIBILITY_STATE>();
     uint32_t j = rcount;
     for (uint32_t const i: visibleRenderables) {
         // even the instanced ones are copied here because we need to maintain the offsets
@@ -1141,9 +1164,20 @@ void FView::updateUBOs(
 
         auto& instancesInfo = instancesData[i];
         if (instancesInfo.buffer) {
-            instancesInfo.buffer->prepare(
-                    buffer,  j, instancesInfo.count,
-                    worldTransformData[i], uboData[i]);
+            FInstanceBuffer* const ib = instancesInfo.buffer;
+            mat4f const* prevLocalTransforms = nullptr;
+            // only the renderables visible from the camera are drawn by the motion vectors pass
+            // (prepareMotionVectors() tracks the InstanceBuffers of the others)
+            if (UTILS_UNLIKELY(mv && mVisibleRenderables.contains(i))) {
+                prevLocalTransforms = mv->trackInstanceBuffer(*ib);
+            }
+            bool const instancesMoved = ib->prepare(buffer, j, instancesInfo.count,
+                    worldTransformData[i], uboData[i], prevLocalTransforms);
+            if (UTILS_UNLIKELY(instancesMoved)) {
+                assert_invariant(mv);
+                visibility[i].motionMoved = true;
+                mv->hasMovingRenderables = true;
+            }
             j += instancesInfo.count;
         }
     }
@@ -1459,7 +1493,8 @@ void FView::prepareVisibleLights(FLightManager const& lcm,
     // number of point/spotlights
     size_t const positionalLightCount = visibleLightCount - FScene::DIRECTIONAL_LIGHTS_COUNT;
     if (positionalLightCount) {
-        assert_invariant(positionalLightCount <= scratch.size());
+        // computeLightCameraDistances() writes the directional light slot and rounds up to 4
+        assert_invariant(((visibleLightCount + 3u) & ~3u) <= scratch.size());
         // pre-compute the lights' distance to the camera, for sorting below
         // - we don't skip the directional light, because we don't care, it's ignored during sorting
         float* const UTILS_RESTRICT distances = scratch.data();
@@ -1496,15 +1531,6 @@ inline void FView::computeLightCameraDistances(
     }
 }
 
-void FView::updatePrimitivesLod(FScene::RenderableSoa& renderableData,
-        FEngine const& engine, CameraInfo const&, Range visible) noexcept {
-    FRenderableManager const& rcm = engine.getRenderableManager();
-    for (uint32_t const index : visible) {
-        uint8_t const level = 0; // TODO: pick the proper level of detail
-        auto ri = rcm.getInstance(renderableData.elementAt<FScene::RENDERABLE_ENTITY>(index));
-        renderableData.elementAt<FScene::PRIMITIVES>(index) = rcm.getRenderPrimitives(ri, level);
-    }
-}
 
 FrameGraphId<FrameGraphTexture> FView::renderShadowMaps(FEngine& engine, FrameGraph& fg,
         CameraInfo const& cameraInfo, float4 const& userTime,
@@ -1520,7 +1546,13 @@ void FView::commitFrameHistory(FEngine& engine) noexcept {
 
     FrameHistoryEntry& last = frameHistory.back();
     disposer.destroy(std::move(last.taa.color.handle));
+    disposer.destroy(std::move(last.taa.depth.handle));
     disposer.destroy(std::move(last.ssr.color.handle));
+    // (last.motionVectors holds no resources)
+
+    if (isMotionVectorsActive()) {
+        commitMotionVectorsHistory();
+    }
 
     // and then push the new history entry to the history stack
     frameHistory.commit();
@@ -1533,8 +1565,10 @@ void FView::clearFrameHistory(FEngine& engine) noexcept {
     for (size_t i = 0; i < frameHistory.size(); ++i) {
         FrameHistoryEntry& last = frameHistory[i];
         disposer.destroy(std::move(last.taa.color.handle));
+        disposer.destroy(std::move(last.taa.depth.handle));
         disposer.destroy(std::move(last.ssr.color.handle));
     }
+    resetMotionVectorsHistory();
 }
 
 void FView::executePickingQueries(DriverApi& driver,
@@ -1599,6 +1633,12 @@ void FView::clearPickingQueries() noexcept {
 void FView::setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) noexcept {
     options.feedback = clamp(options.feedback, 0.0f, 1.0f);
     options.filterWidth = std::max(0.2f, options.filterWidth); // below 0.2 causes issues
+    options.motionDeltaThreshold = std::max(1e-3f, options.motionDeltaThreshold);
+    options.minBoxStrength = clamp(options.minBoxStrength, 0.0f, 1.0f);
+    options.minAlphaStrength = clamp(options.minAlphaStrength, 0.0f, 1.0f);
+    options.skyDepthThreshold = std::max(1e-7f, options.skyDepthThreshold);
+    options.disocclusionDepthThreshold = std::max(1e-7f, options.disocclusionDepthThreshold);
+    options.motionHoldFrames = std::max(0.0f, options.motionHoldFrames);
     mTemporalAntiAliasingOptions = options;
 }
 
@@ -1622,6 +1662,168 @@ void FView::setScreenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions optio
 void FView::setGuardBandOptions(GuardBandOptions const options) noexcept {
     mGuardBandOptions = options;
 }
+
+void FView::setMotionVectorsOptions(MotionVectorsOptions const options) noexcept {
+    mMotionVectorsOptions = options;
+}
+
+void FView::setMotionVectorsReadback(MotionVectorsReadback const& readback) {
+    if (FTexture const* const texture = readback.texture) {
+        FILAMENT_CHECK_PRECONDITION(texture->getTarget() == Texture::Sampler::SAMPLER_2D &&
+                                    texture->getFormat() == Texture::InternalFormat::RG16F)
+                << "The motion vectors readback texture must be a RG16F 2D texture";
+        constexpr Texture::Usage usage =
+                Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::BLIT_DST;
+        FILAMENT_CHECK_PRECONDITION((texture->getUsage() & usage) == usage)
+                << "The motion vectors readback texture needs the COLOR_ATTACHMENT and BLIT_DST "
+                   "usages";
+    }
+    mMotionVectorsReadback = readback;
+}
+
+#if defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+bool FView::evaluateMotionVectorsActive(FEngine const& engine) const noexcept {
+    // Motion vectors are mono only and are only consumed by post-processing; their depth variant
+    // isn't built for feature level 0, and the object motion vectors pass renders into RG16F.
+    return mMotionVectorsOptions.enabled && hasPostProcessPass() && !hasStereo() &&
+           engine.getActiveFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1 &&
+           engine.isRG16FColorRenderTargetSupported();
+}
+
+void FView::updateMotionVectorsActive(FEngine const& engine) noexcept {
+    bool const active = evaluateMotionVectorsActive(engine);
+    if (UTILS_UNLIKELY(active != mIsMotionVectorsActive)) {
+        // either way, there is no usable history
+        resetMotionVectorsHistory();
+    }
+    mIsMotionVectorsActive = active;
+}
+
+void FView::resetMotionVectorsHistory() noexcept {
+    for (size_t i = 0; i < mFrameHistory.size(); ++i) {
+        mFrameHistory[i].motionVectors.valid = false;
+    }
+    mFrameHistory.getCurrent().motionVectors.valid = false;
+    if (mSceneCache) {
+        mSceneCache->motionVectors.reset();
+    }
+}
+
+void FView::prepareMotionVectors(FEngine const& engine, mat4 const& worldTransform,
+        FScene::RenderableSoa& renderableData) noexcept {
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    assert_invariant(mSceneCache);
+
+    auto& cache = *mSceneCache;
+    auto& mv = cache.motionVectors;
+    auto const& masterCache = cache.renderableCache;
+    FTransformManager const& tcm = engine.getTransformManager();
+
+    // This starts a new render. The InstanceBuffers that aren't used from now on are evicted at
+    // commit. Bumping the index here, rather than at commit, guarantees that a pending snapshot
+    // is never older than this render.
+    mv.renderIndex++;
+
+    Entity const* const entities = renderableData.data<FScene::RENDERABLE_ENTITY>();
+    FRenderableManager::Visibility* const visibility =
+            renderableData.data<FScene::VISIBILITY_STATE>();
+    PerRenderableData* const uboData = renderableData.data<FScene::UBO>();
+
+    // inverse(worldTransform), only computed if something moved
+    mat4 invWorldTransform;
+    bool hasInvWorldTransform = false;
+
+    bool hasMovingRenderables = false;
+    for (uint32_t const i : mVisibleRenderables) {
+        mat4f M{};  // identity, i.e. the renderable didn't move
+        bool moved = false;
+        if (UTILS_UNLIKELY(visibility[i].motionMoved)) {
+            Entity const e = entities[i];
+            // renderableData was copied from the master cache at this render, and the master
+            // cache hasn't changed since, so every visible row is in it.
+            uint32_t const row = masterCache.getIndex(e);
+            assert_invariant(row != 0xFFFFFFFF);
+            FScene::PrevTransform const& prev = masterCache.extraAt(row);
+            mat4 const currWorld = tcm.getWorldTransformAccurate(tcm.getInstance(e));
+            double const detCurrWorld = det(currWorld);
+            if (UTILS_VERY_LIKELY(detCurrWorld != 0.0)) {
+                mat4 prevWorld{ prev.world };
+                prevWorld[3].xyz += prev.lo;
+                if (!hasInvWorldTransform) {
+                    invWorldTransform = inverse(worldTransform);
+                    hasInvWorldTransform = true;
+                }
+                // From this frame's shader world space to the previous position, in this
+                // frame's shader world space. Computed in double precision.
+                M = mat4f{ worldTransform * prevWorld * inverse(currWorld, detCurrWorld) *
+                           invWorldTransform };
+                moved = true;
+            }
+        }
+        // Rows are reassigned every frame, so every visible row must be written. Auto-instancing
+        // and updateUBOs() copy this column.
+        uboData[i].prevWorldFromWorldMatrix = M;
+        visibility[i].motionMoved = moved;
+        hasMovingRenderables = hasMovingRenderables || moved;
+    }
+
+    // updateUBOs() may also set this, for renderables whose instances moved
+    mv.hasMovingRenderables = hasMovingRenderables;
+
+    // The previous transforms of the rows that moved, visible or not, have been used: they
+    // become this render's transforms.
+    cache.commitMovedRenderables();
+
+    // The InstanceBuffers of all the scene renderables are tracked, like their transforms, so
+    // that an instance entering the view reports its motion. updateUBOs() tracks the ones of the
+    // visible renderables; this tracks the others, at the cost of a read per row and a hash
+    // lookup per row that has an InstanceBuffer.
+    FRenderableManager::InstancesInfo const* const instancesData =
+            renderableData.data<FScene::INSTANCES>();
+    assert_invariant(mVisibleRenderables.first == 0);
+    for (uint32_t i = mVisibleRenderables.last, c = uint32_t(renderableData.size()); i < c; i++) {
+        if (UTILS_UNLIKELY(instancesData[i].buffer)) {
+            mv.trackInstanceBuffer(*instancesData[i].buffer);
+        }
+    }
+}
+
+void FView::commitMotionVectorsHistory() noexcept {
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    assert_invariant(mSceneCache);
+
+    auto& mv = mSceneCache->motionVectors;
+    mv.hasHistory = true;
+
+    // Evict the InstanceBuffers that no scene renderable used at this render, which bounds the
+    // map, and snapshot the ones that were added or changed.
+    for (auto it = mv.instanceBuffers.begin(); it != mv.instanceBuffers.end();) {
+        auto& history = it.value();
+        if (history.lastSeen != mv.renderIndex) {
+            it = mv.instanceBuffers.erase(it);
+            continue;
+        }
+        if (history.pendingSnapshot) {
+            FInstanceBuffer const* const ib = history.pendingSnapshot;
+            auto const& locals = ib->getLocalTransforms();
+            if (history.locals.size() == locals.size()) {
+                std::copy(locals.begin(), locals.end(), history.locals.begin());
+            } else {
+                history.locals = locals;
+            }
+            history.revision = ib->getRevision();
+            history.pendingSnapshot = nullptr;
+        }
+        ++it;
+    }
+}
+#else
+bool FView::evaluateMotionVectorsActive(FEngine const&) const noexcept { return false; }
+void FView::updateMotionVectorsActive(FEngine const&) noexcept {}
+void FView::resetMotionVectorsHistory() noexcept {}
+void FView::prepareMotionVectors(FEngine const&, mat4 const&, FScene::RenderableSoa&) noexcept {}
+void FView::commitMotionVectorsHistory() noexcept {}
+#endif
 
 void FView::setAmbientOcclusionOptions(AmbientOcclusionOptions options) noexcept {
     options.radius = max(0.0f, options.radius);
@@ -1731,6 +1933,7 @@ void FView::detachScene(FScene const* scene) noexcept {
     if (mScene == scene) {
         mScene = nullptr;
         invalidateSceneCache();
+        resetMotionVectorsHistory();
     }
 }
 

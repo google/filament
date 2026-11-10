@@ -31,9 +31,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <type_traits>
 #include <utility>
-#include <variant>
 #include <vector>
 
 
@@ -62,6 +60,30 @@ bool isTransformIdentical(mat4f const& a, mat4f const& b) noexcept {
 #endif
 }
 
+UTILS_ALWAYS_INLINE
+void decomposeDoubleTransform(mat4 const& model, mat4f& local, float3& localLo) noexcept {
+#if defined(__ARM_NEON) && defined(__aarch64__)
+    float32x4_t const c0 = vcvt_high_f32_f64(vcvt_f32_f64(vld1q_f64(&model[0].x)), vld1q_f64(&model[0].z));
+    float32x4_t const c1 = vcvt_high_f32_f64(vcvt_f32_f64(vld1q_f64(&model[1].x)), vld1q_f64(&model[1].z));
+    float32x4_t const c2 = vcvt_high_f32_f64(vcvt_f32_f64(vld1q_f64(&model[2].x)), vld1q_f64(&model[2].z));
+    float64x2_t const m3_xy = vld1q_f64(&model[3].x);
+    float64x2_t const m3_zw = vld1q_f64(&model[3].z);
+    float32x2_t const c3_xy = vcvt_f32_f64(m3_xy);
+    float32x4_t const c3 = vcvt_high_f32_f64(c3_xy, m3_zw);
+    vst1q_f32(&local[0].x, c0);
+    vst1q_f32(&local[1].x, c1);
+    vst1q_f32(&local[2].x, c2);
+    vst1q_f32(&local[3].x, c3);
+    float32x2_t const lo_xy = vcvt_f32_f64(vsubq_f64(m3_xy, vcvt_f64_f32(c3_xy)));
+    float const lo_z = float(vgetq_lane_f64(m3_zw, 0) - double(vgetq_lane_f32(c3, 2)));
+    vst1_f32(&localLo.x, lo_xy);
+    localLo.z = lo_z;
+#else
+    local = mat4f(model);
+    localLo = float3{ model[3].xyz - float3{ model[3].xyz } };
+#endif
+}
+
 } // namespace
 
 FTransformManager::FTransformManager(EntityManager& em) noexcept
@@ -77,7 +99,7 @@ void FTransformManager::setAccurateTranslationsEnabled(bool const enable) noexce
     if (enable != mAccurateTranslations) {
         mAccurateTranslations = enable;
         // when enabling accurate translations, we have to recompute all world transforms
-        if (enable && !mLocalTransformTransactionOpen) {
+        if (enable) {
             computeAllWorldTransforms();
         }
     }
@@ -96,27 +118,24 @@ void FTransformManager::markNodeDirty(Instance const i) noexcept UTILS_NO_THREAD
     }
 }
 
-inline void FTransformManager::createImpl(Entity const entity, Instance const parent,
-        std::variant<mat4, mat4f> localTransform) {
-    // addComponent() always appends, but destroying a zombie or a previous component for
-    // `entity` below may move the last component, invalidating existing Instances.
+UTILS_ALWAYS_INLINE
+FTransformManager::Instance FTransformManager::createImpl(
+        Entity const entity, Instance const parent) {
+    // addComponent() always appends, but destroying a previous component for `entity` below may
+    // move the last component, invalidating existing Instances.
     auto& manager = mManager;
-
-    Entity zombie;
-    if (UTILS_UNLIKELY(manager.popPendingZombie(entity, zombie))) {
-        destroy(zombie);
-    }
 
     // New components are appended out of topological order; gc() -> defragment() restores
     // BFS order (parent-before-child, contiguous siblings) incrementally over later frames.
-    if (UTILS_UNLIKELY(manager.hasComponent(entity))) {
+    auto [i, added] = manager.tryAddComponent(entity);
+    if (UTILS_UNLIKELY(!added && i)) {
         destroy(entity);
+        i = manager.addComponent(entity);
     }
-    Instance const i = manager.addComponent(entity);
     assert_invariant(i);
     assert_invariant(i != parent);
 
-    if (i && i != parent) {
+    if (UTILS_LIKELY(i && i != parent)) {
         manager[i].parent = 0;
         manager[i].next = 0;
         manager[i].prev = 0;
@@ -128,34 +147,44 @@ inline void FTransformManager::createImpl(Entity const entity, Instance const pa
         } else {
             markTopologyDirty();
         }
-        std::visit([this, &manager, i](auto&& arg) {
-            using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, mat4f>) {
-                manager[i].local = arg;
-                manager[i].localTranslationLo = float3{};
-            } else {
-                mat4f const local = mat4f(arg);
-                float3 const localLo = float3{ arg[3].xyz - float3{ arg[3].xyz } };
-                manager[i].local = local;
-                manager[i].localTranslationLo = localLo;
-            }
-            if (UTILS_LIKELY(!mLocalTransformTransactionOpen)) {
-                markNodeDirty(i);
-            }
-        }, localTransform);
+        return i;
+    }
+    return 0;
+}
+
+void FTransformManager::create(Entity const entity, Instance const parent) {
+    Instance const i = createImpl(entity, parent);
+    if (UTILS_LIKELY(i)) {
+        auto& manager = mManager;
+        manager[i].local = mat4f{};
+        manager[i].localTranslationLo = float3{};
+        markNodeDirty(i);
     }
 }
 
-void FTransformManager::create(Entity const entity) {
-    createImpl(entity, 0, mat4f{});
+void FTransformManager::create(Entity const entity, Instance const parent,
+        const mat4f& localTransform) {
+    Instance const i = createImpl(entity, parent);
+    if (UTILS_LIKELY(i)) {
+        auto& manager = mManager;
+        manager[i].local = localTransform;
+        manager[i].localTranslationLo = float3{};
+        markNodeDirty(i);
+    }
 }
 
-void FTransformManager::create(Entity const entity, Instance const parent, const mat4f& localTransform) {
-    createImpl(entity, parent, localTransform);
-}
-
-void FTransformManager::create(Entity const entity, Instance const parent, const mat4& localTransform) {
-    createImpl(entity, parent, localTransform);
+void FTransformManager::create(Entity const entity, Instance const parent,
+        const mat4& localTransform) {
+    Instance const i = createImpl(entity, parent);
+    if (UTILS_LIKELY(i)) {
+        auto& manager = mManager;
+        mat4f local;
+        float3 localLo;
+        decomposeDoubleTransform(localTransform, local, localLo);
+        manager[i].local = local;
+        manager[i].localTranslationLo = localLo;
+        markNodeDirty(i);
+    }
 }
 
 void FTransformManager::setParent(Instance const i, Instance const parent) noexcept {
@@ -177,13 +206,11 @@ void FTransformManager::setParent(Instance const i, Instance const parent) noexc
             } else {
                 markTopologyDirty();
             }
-            if (UTILS_LIKELY(!mLocalTransformTransactionOpen)) {
-                markNodeDirty(i);
-            }
+            markNodeDirty(i);
             // Note: setParent() doesn't reorder the child after the parent in the array,
             // but that's not a problem because TransformManager doesn't rely on that.
-            // Also note that commitLocalTransformTransaction() and defragment() reorder all
-            // children after their parent, as an optimization to calculate the world transform.
+            // Also note that defragment() reorders all children after their parent, as an
+            // optimization to calculate the world transform.
         }
     }
 }
@@ -234,19 +261,23 @@ void FTransformManager::destroyComponents(Entity const* entities, size_t const c
     std::vector<Entity> orphans;
     for (size_t k = 0; k < count; ++k) {
         Entity const e = entities[k];
-        Instance const i = manager.getInstance(e);
-        validateNode(i);
+        Instance oldParent = 0;
+        Instance firstChild = 0;
+        auto const [removed, moved] = manager.removeComponentWithCallback(e,
+                [this, &manager, &orphans, &oldParent, &firstChild](Instance const ci) noexcept {
+                    validateNode(ci);
+                    oldParent = manager[ci].parent;
+                    firstChild = manager[ci].firstChild;
+                    removeNode(ci);
+                    Instance child = firstChild;
+                    while (child) {
+                        manager[child].parent = 0;
+                        orphans.push_back(manager.getEntity(child));
+                        child = manager[child].next;
+                    }
+                });
+        Instance const i = removed;
         if (i) {
-            Instance const oldParent = manager[i].parent;
-            Instance const firstChild = manager[i].firstChild;
-            removeNode(i);
-            Instance child = firstChild;
-            while (child) {
-                manager[child].parent = 0;
-                orphans.push_back(manager.getEntity(child));
-                child = manager[child].next;
-            }
-            Instance const moved = manager.removeComponent(e);
             if (moved != i) {
                 updateNode(i);
             }
@@ -265,9 +296,8 @@ void FTransformManager::destroyComponents(Entity const* entities, size_t const c
 
     // Now that no more components move, mark the orphans dirty so their world transform becomes
     // their local transform (and their descendants follow). Orphans destroyed later in the loop
-    // no longer have a component and are skipped. During a transaction, the commit recomputes
-    // everything anyway.
-    if (UTILS_UNLIKELY(!orphans.empty()) && !mLocalTransformTransactionOpen) {
+    // no longer have a component and are skipped.
+    if (UTILS_UNLIKELY(!orphans.empty())) {
         for (Entity const e : orphans) {
             Instance const i = manager.getInstance(e);
             if (i) {
@@ -297,28 +327,9 @@ void FTransformManager::setTransform(Instance const ci, const mat4& model) noexc
     if (UTILS_LIKELY(ci)) {
         auto& manager = mManager;
         // store our local transform + accurate translation information
-#if defined(__ARM_NEON) && defined(__aarch64__)
-        float32x4_t const c0 = vcvt_high_f32_f64(vcvt_f32_f64(vld1q_f64(&model[0].x)), vld1q_f64(&model[0].z));
-        float32x4_t const c1 = vcvt_high_f32_f64(vcvt_f32_f64(vld1q_f64(&model[1].x)), vld1q_f64(&model[1].z));
-        float32x4_t const c2 = vcvt_high_f32_f64(vcvt_f32_f64(vld1q_f64(&model[2].x)), vld1q_f64(&model[2].z));
-        float64x2_t const m3_xy = vld1q_f64(&model[3].x);
-        float64x2_t const m3_zw = vld1q_f64(&model[3].z);
-        float32x2_t const c3_xy = vcvt_f32_f64(m3_xy);
-        float32x4_t const c3 = vcvt_high_f32_f64(c3_xy, m3_zw);
         mat4f local;
-        vst1q_f32(&local[0].x, c0);
-        vst1q_f32(&local[1].x, c1);
-        vst1q_f32(&local[2].x, c2);
-        vst1q_f32(&local[3].x, c3);
-        float32x2_t const lo_xy = vcvt_f32_f64(vsubq_f64(m3_xy, vcvt_f64_f32(c3_xy)));
-        float const lo_z = float(vgetq_lane_f64(m3_zw, 0) - double(vgetq_lane_f32(c3, 2)));
         float3 localLo;
-        vst1_f32(&localLo.x, lo_xy);
-        localLo.z = lo_z;
-#else
-        mat4f const local = mat4f(model);
-        float3 const localLo = float3{ model[3].xyz - float3{ model[3].xyz } };
-#endif
+        decomposeDoubleTransform(model, local, localLo);
         if (UTILS_UNLIKELY(isTransformIdentical(manager[ci].local, local)) &&
                 manager[ci].localTranslationLo == localLo) {
             return;
@@ -454,9 +465,6 @@ void FTransformManager::updateNodeTransform(Instance const i) noexcept {
 
 void FTransformManager::updateNodeTransform(Instance const i,
         mat4f const& local, float3 const& localLo, bool const zeroLo) noexcept {
-    if (UTILS_UNLIKELY(mLocalTransformTransactionOpen)) {
-        return;
-    }
     auto& manager = mManager;
     validateNode(i);
     assert_invariant(i);
@@ -489,17 +497,6 @@ void FTransformManager::updateNodeTransform(Instance const i,
                 manager[parent].worldTranslationLo, zeroLo ? float3{} : localLo);
     }
     manager.notifyChange(manager.getEntity(i));
-}
-
-void FTransformManager::openLocalTransformTransaction() noexcept {
-    mLocalTransformTransactionOpen = true;
-}
-
-void FTransformManager::commitLocalTransformTransaction() noexcept {
-    if (mLocalTransformTransactionOpen) {
-        mLocalTransformTransactionOpen = false;
-        computeAllWorldTransforms();
-    }
 }
 
 void FTransformManager::computeAllWorldTransforms() noexcept {

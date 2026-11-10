@@ -280,38 +280,48 @@ TEST(PagedArenaBitsetTest, IntersectMulti) {
 
 TEST(PagedArenaBitsetTest, IntersectMultiEmpty) {
     PagedArenaBitset bs1;
-    PagedArenaBitset const bs2;
+    PagedArenaBitset bs2;
+    PagedArenaBitset const bs3;
 
     bs1.add(1);
+    bs2.add(1);
 
-    PagedArenaBitset const res = PagedArenaBitset::intersect(bs1, bs2);
+    // Pass 3 operands so the variadic multi-way intersectInternal overload is exercised.
+    PagedArenaBitset const res = PagedArenaBitset::intersect(bs1, bs2, bs3);
     EXPECT_TRUE(res.empty());
 }
 
 TEST(PagedArenaBitsetTest, Defragment) {
     PagedArenaBitset bs;
-    bs.add(10); // Page 0
-    bs.add(5000); // Page 1 (since 5000 > 4096!)
+    bs.add(10);   // Page 0 (dirIdx 0)
+    bs.add(4103); // Page 1 (dirIdx 1, offset 7)
+    bs.add(8199); // Page 2 (dirIdx 2, offset 7)
+
+    EXPECT_EQ(bs.size(), 3);
+
+    // Remove all bits from page 1 so dirIdx 1 becomes a ghost page between page 0 and page 2.
+    bs.remove(4103);
 
     EXPECT_EQ(bs.size(), 2);
 
-    // Remove bits from page 1!
-    bs.remove(5000);
-
-    EXPECT_EQ(bs.size(), 1);
-
-    // Now page 1 is a ghost page!
-    // Let's defragment!
+    // Defragment drops ghost page 1 and relocates page 2 from physical index 2 to physical index 1.
     bs.defragment();
 
-    EXPECT_EQ(bs.size(), 1);
+    EXPECT_EQ(bs.size(), 2);
     EXPECT_TRUE(bs[10]);
-    EXPECT_FALSE(bs[5000]);
+    EXPECT_FALSE(bs[4103]);
+    EXPECT_TRUE(bs[8199]);
+
+    std::vector<uint32_t> extracted;
+    bs.extractTo(extracted);
+    ASSERT_EQ(extracted.size(), 2u);
+    EXPECT_EQ(extracted[0], 10u);
+    EXPECT_EQ(extracted[1], 8199u);
 }
 
 TEST(PagedArenaBitsetTest, LargeIndices) {
     PagedArenaBitset bs;
-    uint32_t const largeIndex = (1U << 25) - 1; // Limit suggested by user!
+    uint32_t const largeIndex = (1U << (PagedArenaBitset::DOMAIN_BITS - 1)) + 123u;
     bs.add(largeIndex);
     EXPECT_TRUE(bs[largeIndex]);
     EXPECT_EQ(bs.size(), 1);
@@ -412,7 +422,7 @@ TEST(PagedArenaBitsetTest, SelfIntersection) {
 
 TEST(PagedArenaBitsetTest, MaxIndex) {
     PagedArenaBitset bs;
-    uint32_t const maxIndex = (1U << 27) - 1;
+    uint32_t const maxIndex = (1U << PagedArenaBitset::DOMAIN_BITS) - 1;
     bs.add(maxIndex);
     EXPECT_TRUE(bs[maxIndex]);
     EXPECT_EQ(bs.size(), 1);
@@ -567,6 +577,133 @@ TEST(PagedArenaBitsetTest, MergeGhostBitBug) {
     EXPECT_EQ(result.size(), 0);
 }
 
+// The tests below cover stale directory entries. clear() and the static operations (which call
+// out->clear()) reset the masks but not the directory, and copyFrom() copies the directory
+// verbatim. Only the masks say which pages exist; reading a stale entry instead aliases two
+// pages onto the same arena slot, or indexes past the end of the arena.
+
+static std::vector<uint32_t> toVector(PagedArenaBitset const& bs) {
+    std::vector<uint32_t> bits;
+    bs.extractTo(bits);
+    return bits;
+}
+
+TEST(PagedArenaBitsetTest, MergeAfterClearIgnoresStaleDirectory) {
+    PagedArenaBitset a;
+    a.add(5000);    // page 1 -> arena[0]
+    a.clear();      // the directory entry for page 1 still says arena[0]
+    a.add(10);      // page 0 -> arena[0]
+
+    PagedArenaBitset b;
+    b.add(5001);    // page 1
+
+    a.merge(b);
+    EXPECT_EQ(toVector(a), (std::vector<uint32_t>{ 10, 5001 }));
+    EXPECT_EQ(a.size(), 2);
+}
+
+TEST(PagedArenaBitsetTest, MergeAfterCopyFromIgnoresStaleDirectory) {
+    // This is the sequence FScene uses: the pending set is cleared every frame, then copied
+    // into an empty set, which is then merged with another set.
+    PagedArenaBitset pending;
+    pending.add(4200);  // page 1 -> arena[0]
+    pending.clear();
+    pending.add(100);   // page 0 -> arena[0]
+
+    PagedArenaBitset destroyed;
+    destroyed.merge(pending);   // empty, so this is copyFrom(pending)
+
+    PagedArenaBitset removed;
+    removed.add(4300);  // page 1
+    destroyed.merge(removed);
+
+    EXPECT_EQ(toVector(destroyed), (std::vector<uint32_t>{ 100, 4300 }));
+    EXPECT_EQ(destroyed.size(), 2);
+}
+
+TEST(PagedArenaBitsetTest, MergeStaleDirectoryPastEndOfArena) {
+    PagedArenaBitset pending;
+    pending.add(100);   // page 0 -> arena[0]
+    pending.add(5000);  // page 1 -> arena[1]
+    pending.clear();
+    pending.add(200);   // page 0 -> arena[0]; the entry for page 1 still says arena[1]
+
+    PagedArenaBitset destroyed;
+    destroyed.merge(pending);   // copyFrom(): the arena has one page, the stale entry is copied
+
+    PagedArenaBitset removed;
+    removed.add(4300);  // page 1
+    destroyed.merge(removed);   // used to write arena[1], one page past the end
+
+    // A new page reuses arena[1]; with the bug it wiped 4300 and aliased page 1 onto page 2.
+    destroyed.add(9000);
+    EXPECT_EQ(toVector(destroyed), (std::vector<uint32_t>{ 200, 4300, 9000 }));
+    EXPECT_EQ(destroyed.size(), 3);
+}
+
+TEST(PagedArenaBitsetTest, MergeAfterStaticOperationIgnoresStaleDirectory) {
+    PagedArenaBitset a;
+    a.add(5000);    // page 1
+    PagedArenaBitset b;
+    b.add(5000);
+
+    PagedArenaBitset out;
+    PagedArenaBitset::intersect(&out, a, b);    // page 1 -> arena[0]
+    PagedArenaBitset c;
+    c.add(10);      // page 0
+    PagedArenaBitset::intersect(&out, c, c);    // clears out, page 0 -> arena[0]
+
+    PagedArenaBitset d;
+    d.add(5001);    // page 1
+    out.merge(d);
+    EXPECT_EQ(toVector(out), (std::vector<uint32_t>{ 10, 5001 }));
+}
+
+TEST(PagedArenaBitsetTest, MergeSizeIgnoresStaleDirectory) {
+    PagedArenaBitset a;
+    a.add(5000);    // page 1 -> arena[0]
+    a.clear();
+    a.add(100);     // page 0 -> arena[0]
+
+    PagedArenaBitset b;
+    b.add(4300);    // page 1
+
+    EXPECT_EQ(PagedArenaBitset::mergeSize(a, b), 2);
+    EXPECT_EQ(PagedArenaBitset::mergeSize(b, a), 2);
+}
+
+TEST(PagedArenaBitsetTest, StaticMergeIgnoresStaleDirectory) {
+    PagedArenaBitset a;
+    a.add(5000);    // page 1 -> arena[0]
+    a.clear();
+    a.add(100);     // page 0 -> arena[0]
+
+    PagedArenaBitset b;
+    b.add(4300);    // page 1
+
+    EXPECT_EQ(toVector(PagedArenaBitset::merge(a, b)), (std::vector<uint32_t>{ 100, 4300 }));
+    EXPECT_EQ(toVector(PagedArenaBitset::merge(b, a)), (std::vector<uint32_t>{ 100, 4300 }));
+}
+
+TEST(PagedArenaBitsetTest, CopyFromDoesNotKeepFreePages) {
+    PagedArenaBitset a;
+    a.add(10);      // page 0 -> arena[0]
+    a.add(5000);    // page 1 -> arena[1]
+    PagedArenaBitset drop;
+    drop.add(5000);
+    a.difference(drop);     // page 1 becomes empty, so arena[1] goes on a's free list
+
+    PagedArenaBitset src;
+    src.add(20);    // page 0 -> arena[0]
+    src.add(4200);  // page 1 -> arena[1]
+    a.copyFrom(src);
+
+    // A new page must not reuse arena[1], which now holds page 1.
+    a.add(9000);
+    EXPECT_EQ(toVector(a), (std::vector<uint32_t>{ 20, 4200, 9000 }));
+    EXPECT_EQ(a.size(), 3);
+}
+
 TEST(PagedArenaBitsetTest, Swap) {
     PagedArenaBitset bs1;
     PagedArenaBitset bs2;
@@ -708,17 +845,29 @@ TEST(PagedArenaBitsetTest, DefragmentEdgeCases) {
     EXPECT_TRUE(emptyBs.empty());
 
     PagedArenaBitset bs;
-    bs.add(10);    // Page 0
-    bs.add(5000);  // Page 1
-    bs.add(10000); // Page 2
+    bs.add(10);    // Page 0 (dirIdx 0)
+    bs.add(4105);  // Page 1 (dirIdx 1, offset 9)
+    bs.add(8201);  // Page 2 (dirIdx 2, offset 9)
+    bs.add(12297); // Page 3 (dirIdx 3, offset 9)
 
-    bs.remove(5000);  // Page 1 ghost
-    bs.remove(10000); // Page 2 ghost
+    bs.remove(4105); // Page 1 ghost
+    bs.remove(8201); // Page 2 ghost
 
-    // Defragmenting multiple consecutive ghosts
+    // Defragmenting multiple consecutive ghosts before an active higher page
     bs.defragment();
-    EXPECT_EQ(bs.size(), 1);
+    EXPECT_EQ(bs.size(), 2);
     EXPECT_TRUE(bs[10]);
+    EXPECT_FALSE(bs[4105]);
+    EXPECT_FALSE(bs[8201]);
+    EXPECT_TRUE(bs[12297]);
+
+    // Re-allocating page 1 after defragmentation must not alias page 3
+    bs.add(4100);
+    EXPECT_EQ(bs.size(), 3);
+    EXPECT_TRUE(bs[10]);
+    EXPECT_TRUE(bs[4100]);
+    EXPECT_FALSE(bs[4105]);
+    EXPECT_TRUE(bs[12297]);
 }
 
 TEST(PagedArenaBitsetTest, ExchangeAndSelfMove) {
@@ -843,28 +992,25 @@ TEST(PagedArenaBitsetTest, BatchAddSliceAndInvariants) {
         verifyEquivalent(batchBs, scalarBs);
     }
 
-    // 3. Multi-page & alternating-page stress across all 8 L0 Master Mask words (2^27 domain),
+    // 3. Multi-page & alternating-page stress across all 32 pages of the 2^17 domain,
     // forcing multiple mArena vector reallocations and cachedDirIdx thrashing + hits
     {
         std::vector<uint32_t> batch;
-        // Span all 8 master words (each master word covers 64 * 64 * 4096 = 16,777,216 indices)
-        for (uint32_t m = 0; m < 8; ++m) {
-            uint32_t const base = m * (1u << 24);
-            // Multiple pages per master word, multiple words per page
-            for (uint32_t p = 0; p < 40; ++p) {
-                uint32_t const pageBase = base + p * 4096u;
-                batch.push_back(pageBase + 0u);
-                batch.push_back(pageBase + 63u);
-                batch.push_back(pageBase + 64u + (p % 64u));
-                batch.push_back(pageBase + 4095u);
-            }
+        constexpr uint32_t kNumPages = 1u << (PagedArenaBitset::DOMAIN_BITS -
+                PagedArenaBitset::FILAMENT_PAGE_SHIFT);
+        for (uint32_t p = 0; p < kNumPages; ++p) {
+            uint32_t const pageBase = p * 4096u;
+            batch.push_back(pageBase + 0u);
+            batch.push_back(pageBase + 63u);
+            batch.push_back(pageBase + 64u + (p % 64u));
+            batch.push_back(pageBase + 4095u);
         }
         // Interleave alternating pages and duplicates to test cachedDirIdx transitions
-        for (size_t i = 0, n = batch.size(); i < n; i += 7) {
+        for (size_t i = 0, n = batch.size(); i < n; i += 3) {
             batch.push_back(batch[i]);
             batch.push_back(batch[n - 1 - i]);
         }
-        // Include highest valid index in the 2^27 domain
+        // Include highest valid index in the domain
         batch.push_back((1u << PagedArenaBitset::DOMAIN_BITS) - 1u);
 
         PagedArenaBitset batchBs;
@@ -923,4 +1069,87 @@ TEST(PagedArenaBitsetTest, BatchAddSliceAndInvariants) {
     }
 }
 
+TEST(PagedArenaBitsetTest, BatchAddFilteredSlice) {
+    PagedArenaBitset filter;
+    filter.add(10u);
+    filter.add(4096u + 5u);
+    filter.add(8192u + 77u);
 
+    std::vector<uint32_t> const batch = {
+        3u, 10u, 99u, 4096u + 5u, 4096u + 6u, 8192u + 77u, 16384u + 1u, 10u
+    };
+
+    PagedArenaBitset bs;
+    bs.add({ batch.data(), batch.size() }, &filter);
+
+    EXPECT_EQ(bs.size(), 3u);
+    EXPECT_TRUE(bs[10u]);
+    EXPECT_TRUE(bs[4096u + 5u]);
+    EXPECT_TRUE(bs[8192u + 77u]);
+    EXPECT_FALSE(bs[3u]);
+    EXPECT_FALSE(bs[99u]);
+    EXPECT_FALSE(bs[4096u + 6u]);
+    EXPECT_FALSE(bs[16384u + 1u]);
+
+    // Empty filter is a no-op
+    PagedArenaBitset emptyFilter;
+    PagedArenaBitset bsEmpty;
+    bsEmpty.add({ batch.data(), batch.size() }, &emptyFilter);
+    EXPECT_TRUE(bsEmpty.empty());
+
+    // Masked batch add strips high generation bits before bounds check, filter probe, and insertion
+    constexpr uint32_t kIndexMask = (1u << PagedArenaBitset::DOMAIN_BITS) - 1u;
+    std::vector<uint32_t> const generationalBatch = {
+        (5u << PagedArenaBitset::DOMAIN_BITS) | 10u,
+        (99u << PagedArenaBitset::DOMAIN_BITS) | (4096u + 6u), // filtered out
+        (255u << PagedArenaBitset::DOMAIN_BITS) | (8192u + 77u)
+    };
+    PagedArenaBitset bsMasked;
+    bsMasked.add({ generationalBatch.data(), generationalBatch.size() }, &filter, kIndexMask);
+    EXPECT_EQ(bsMasked.size(), 2u);
+    EXPECT_TRUE(bsMasked[10u]);
+    EXPECT_TRUE(bsMasked[8192u + 77u]);
+    EXPECT_FALSE(bsMasked[4096u + 6u]);
+}
+
+TEST(PagedArenaBitsetTest, OperatorSubscriptInvariants) {
+    PagedArenaBitset bs;
+    constexpr uint32_t kMaxIndex = (1u << PagedArenaBitset::DOMAIN_BITS) - 1u;
+
+    // Unallocated pages across the entire domain return false
+    EXPECT_FALSE(bs[0u]);
+    EXPECT_FALSE(bs[63u]);
+    EXPECT_FALSE(bs[64u]);
+    EXPECT_FALSE(bs[4095u]);
+    EXPECT_FALSE(bs[4096u]);
+    EXPECT_FALSE(bs[kMaxIndex]);
+
+    // Boundary bits within pages and words
+    std::vector<uint32_t> const testBits = {
+        0u, 1u, 63u, 64u, 65u, 4095u, 4096u, (1u << 16) + 123u, kMaxIndex
+    };
+    for (uint32_t const b : testBits) {
+        bs.add(b);
+    }
+
+    for (uint32_t const b : testBits) {
+        EXPECT_TRUE(bs[b]);
+    }
+    // Neighboring unset bits in allocated pages and unallocated pages
+    EXPECT_FALSE(bs[2u]);
+    EXPECT_FALSE(bs[62u]);
+    EXPECT_FALSE(bs[66u]);
+    EXPECT_FALSE(bs[4094u]);
+    EXPECT_FALSE(bs[4097u]);
+    EXPECT_FALSE(bs[kMaxIndex - 1u]);
+
+    // Removing a bit creating a ghost page still returns false
+    bs.remove(4096u);
+    EXPECT_FALSE(bs[4096u]);
+
+    // Clearing resets summary masks (while leaving stale directory entries) and must return false
+    bs.clear();
+    for (uint32_t const b : testBits) {
+        EXPECT_FALSE(bs[b]);
+    }
+}

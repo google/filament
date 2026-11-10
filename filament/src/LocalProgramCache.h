@@ -80,8 +80,9 @@ public:
     // Must be called outside of backend render pass.
     // Must be called before getProgram() below.
     backend::Handle<backend::HwProgram> prepareProgram(backend::DriverApi& driver,
-            Variant const variant, DynamicSpecConstKey const specKey,
+            Variant const variant, DynamicSpecConstKey specKey,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept {
+        filterForGetProgram(specKey);
         CacheKey const mappedKey =
                 mapCacheEntryKey(variant, specKey, mCachedPrograms.size());
         backend::Handle<backend::HwProgram> program = mCachedPrograms[mappedKey];
@@ -94,9 +95,9 @@ public:
     // getProgram returns the backend program for the material's given variant.
     // Must be called after prepareProgram().
     [[nodiscard]]
-    backend::Handle<backend::HwProgram> getProgram(Variant variant,
-            DynamicSpecConstKey const specKey) const noexcept {
-        variant = filterVariantForGetProgram(variant);
+    backend::Handle<backend::HwProgram> getProgram(Variant const variant,
+            DynamicSpecConstKey specKey) const noexcept {
+        filterForGetProgram(specKey);
         CacheKey const mappedKey =
                 mapCacheEntryKey(variant, specKey, mCachedPrograms.size());
         backend::Handle<backend::HwProgram> program = mCachedPrograms[mappedKey];
@@ -147,14 +148,14 @@ public:
 
 private:
     backend::Handle<backend::HwProgram> prepareProgramSlow(backend::DriverApi& driver,
-            Variant const variant,
-            DynamicSpecConstKey const specKey,
-            backend::CompilerPriorityQueue const priorityQueue) const noexcept;
+            Variant variant,
+            DynamicSpecConstKey specKey,
+            backend::CompilerPriorityQueue priorityQueue) const noexcept;
 
     ProgramSpecialization getProgramSpecialization(Variant variant,
             DynamicSpecConstKey specKey) const noexcept;
 
-    Variant filterVariantForGetProgram(Variant const variant) const noexcept;
+    void filterForGetProgram(DynamicSpecConstKey& specKey) const noexcept;
 
     void setConstantsImpl(utils::FixedCapacityVector<backend::Program::SpecializationConstant>
                     constants) noexcept;

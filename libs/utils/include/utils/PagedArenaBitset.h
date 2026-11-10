@@ -35,36 +35,34 @@ namespace utils {
  * @brief A highly optimized, cache-coherent sparse bitset tailored for Generational ECS indices.
  *
  * @details
- * This structure implements a 4-level hierarchical bitset designed to handle large,
- * sparse integer domains (e.g., 2^27) where bits are densely clustered in "islands".
- * It is specifically optimized for Entity Component Systems where Entity IDs combine a
- * monotonically increasing generation value with a dense, recyclable base index.
+ * This structure implements a 4-level hierarchical bitset designed to handle sparse or dense
+ * integer domains (e.g., 2^17 Entity indices) where bits are clustered in 4,096-bit pages.
+ * It is specifically optimized for Entity Component Systems where EBR guarantees that active
+ * and pending-destruction Entity indices are unique within the 17-bit base index space.
  *
  * ### Hierarchical Memory Architecture
  * @code
- * ENTITY ID [27 bits]
- * [ Master Word | Master Bit | Summary Bit | Word Idx | Bit Index ]
- * [   3 bits    |   6 bits   |   6 bits    |  6 bits  |   6 bits  ]
- * |             |            |             |          |
- * |             |            |             |          +->  [Level 3: Bit position in u64]
- * |             |            |             +------------>  [Level 3: Word position in Page]
- * |             |            +-------------------------->  [Level 1: Page presence in Summary]
- * |             +--------------------------------------->  [Level 0: Summary Word presence]
- * +------------------------------------------------------> [Level 0: Master Word selection]
+ * ENTITY INDEX [17 bits]
+ * [ Summary Bit | Word Idx | Bit Index ]
+ * [   5 bits    |  6 bits  |   6 bits  ]
+ * |             |          |
+ * |             |          +->  [Level 3: Bit position in u64]
+ * |             +------------>  [Level 3: Word position in Page]
+ * +-------------------------->  [Level 1: Page presence in Summary (gated by Level 0 Master)]
  *
  * VISUAL TOPOLOGY:
  * +-------------------------------------------------------+
- * | [Level 0] MASTER MASK (8 x u64)                       | <-- High-level Skip (512 bits)
- * | [ 11110000... ]                                       |
+ * | [Level 0] MASTER MASK (1 x u64)                       | <-- High-level Skip (64 bits)
+ * | [ 00000001... ]                                       |
  * +-----------|-------------------------------------------+
  *             v
  * +-------------------------------------------------------+
- * | [Level 1] SUMMARY MASK (512 x u64)                    | <-- Mid-level Skip (4 KB)
+ * | [Level 1] SUMMARY MASK (1 x u64)                      | <-- Mid-level Skip (8 B)
  * | [ ...00101100... ]                                    |
  * +-----------|-------------------------------------------+
  *             v
  * +-------------------------------------------------------+
- * | [Level 2] DIRECTORY (32,768 x u16)                    | <-- Logical -> Physical (64 KB)
+ * | [Level 2] DIRECTORY (32 x u16)                        | <-- Logical -> Physical (64 B)
  * | [ 0 | 5 | X | 2 | X | X | 1 | ... ] (X = Gated/Dirty) |
  * +-----------|-------------------------------------------+
  *             v
@@ -79,17 +77,18 @@ namespace utils {
  * @endcode
  *
  * ### Architecture (The "Trust the Mask" Design)
- * - **Level 0 (Master Mask):** A 512-bit mask where each bit maps 1:1 to a single word of the
- * Summary Mask. Enables ultra-fast O(1) skipping of 256k-bit empty generational gaps.
- * - **Level 1 (Summary Mask):** A 4KB mask where each bit flags the allocation of a single page.
- * - **Level 2 (Directory):** A 64KB array mapping logical page indices to physical arena indices.
- * *Note:* This memory is left uninitialized/garbage. It is strictly gated by the masks.
+ * - **Level 0 (Master Mask):** A bitmask where each bit maps 1:1 to a single word of the
+ * Summary Mask.
+ * - **Level 1 (Summary Mask):** A bitmask where each bit flags the allocation of a single page.
+ * - **Level 2 (Directory):** A compact array mapping logical page indices to physical arena
+ * indices. *Note:* This memory is left uninitialized/garbage on clear; it is strictly gated by the
+ * masks.
  * - **Level 3 (Arena):** A contiguous pool holding fixed 520-byte pages. Each page contains
  * 4,096 bits (64 words) and a 64-bit `activeWordsMask` to skip empty words during operations.
  *
  * ### Performance Guarantees & Assumptions
  * - **Zero-Cost Clear:** Because the architecture strictly "Trusts the Mask", initializing
- * or clearing the bitset requires no massive memory allocations or 64KB memsets. It drops
+ * or clearing the bitset requires no massive memory allocations or memsets. It drops
  * overhead to <20ns by only zeroing the small bitmasks.
  * - **Strict Move Semantics:** To prevent catastrophic, silent O(N) memory allocations
  * and L1 cache thrashing inside ECS update loops, implicit copy constructors are strictly
@@ -111,10 +110,10 @@ public:
     // Every mask size, directory size, and struct layout is derived mathematically from these.
     // ======================================================================================
 
-    // The total addressable capacity of the bitset (2^27 = ~134.2 million bits).
-    // This defines the maximum permissible Entity Index. It directly dictates the
-    // maximum size of the L2 Directory and the span of the Mask hierarchies.
-    static constexpr uint32_t DOMAIN_BITS = 27;
+    // The total addressable capacity of the bitset (2^17 = 131,072 bits).
+    // This matches Entity::GENERATION_SHIFT (the 17-bit Entity index space) and dictates
+    // the size of the L2 Directory and the span of the Mask hierarchies.
+    static constexpr uint32_t DOMAIN_BITS = 17;
 
     // The allocation granularity of the Arena, expressed as a bit-shift (2^12 = 4096 bits).
     // This is the "Page Size". Every active 4096-bit range allocates exactly one 512-byte
@@ -199,7 +198,21 @@ public:
      * @param index The bit index to test.
      * @return true if the bit is set, false otherwise.
      */
-    bool operator[](uint32_t index) const noexcept;
+    bool operator[](uint32_t const index) const noexcept {
+        assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
+        assert(index < (1ULL << DOMAIN_BITS) && "Index out of bounds");
+
+        uint32_t const dirIdx = index >> FILAMENT_PAGE_SHIFT;
+        uint32_t const maskIdx = dirIdx >> WORD_SHIFT;
+        uint32_t const bitInMask = dirIdx & WORD_MASK;
+
+        if ((mSummaryMask[maskIdx] & (1ULL << bitInMask)) == 0) return false;
+
+        uint16_t const pageIdx = mDirectory[dirIdx];
+        uint32_t const wordIdx = (index >> WORD_SHIFT) & WORD_MASK;
+        uint32_t const bitIdx = index & WORD_MASK;
+        return (mArena[pageIdx].words[wordIdx] >> bitIdx) & 1ULL;
+    }
 
     /**
      * @brief Sets a bit and returns its previous state.
@@ -223,9 +236,12 @@ public:
     }
 
     /**
-     * @brief Sets multiple bits in a batch.
+     * @brief Sets multiple bits in a batch, optionally masking each entry by @p indexMask and
+     *        restricting additions to bits present in @p filter.
      */
-    void add(Slice<const uint32_t> indices);
+    void add(Slice<const uint32_t> indices,
+            PagedArenaBitset const* UTILS_NULLABLE filter = nullptr,
+            uint32_t indexMask = ~0u);
 
     /**
      * @brief Clears a bit.
@@ -539,12 +555,11 @@ private:
     static constexpr uint32_t DIR_SIZE = 1U << (DOMAIN_BITS - FILAMENT_PAGE_SHIFT);
 
     // Summary Mask Size (1 bit per Directory Entry)
-    // Shifting right by WORD_SHIFT is equivalent to dividing by 64.
-    static constexpr uint32_t MASK_WORDS = DIR_SIZE >> WORD_SHIFT;
+    // Use integer ceiling division to guarantee at least 1 word when DIR_SIZE < 64.
+    static constexpr uint32_t MASK_WORDS = (DIR_SIZE + ((1U << WORD_SHIFT) - 1)) >> WORD_SHIFT;
 
     // Master Mask Size (1 bit per Summary Mask Word)
-    // We still use integer ceiling division here to guarantee at least 1 word
-    // in case a small domain results in MASK_WORDS < 64.
+    // Use integer ceiling division to guarantee at least 1 word when MASK_WORDS < 64.
     static constexpr uint32_t MASTER_WORDS = (MASK_WORDS + ((1U << WORD_SHIFT) - 1)) >> WORD_SHIFT;
 
     static constexpr uint32_t WORDS_PER_PAGE = 1U << (FILAMENT_PAGE_SHIFT - WORD_SHIFT);
@@ -565,9 +580,9 @@ private:
         uint32_t popcount() const noexcept;
     };
 
-    std::vector<uint64_t> mSummaryMask;     // always  4 KiB
-    std::vector<uint16_t> mDirectory;       // always 64 KiB
-    std::vector<Page> mArena;               // each page is 512 bytes
+    std::vector<uint64_t> mSummaryMask;     // MASK_WORDS * 8 bytes (8 B for 2^17 domain)
+    std::vector<uint16_t> mDirectory;       // DIR_SIZE * 2 bytes (64 B for 2^17 domain)
+    std::vector<Page> mArena;               // each page is 520 bytes
     std::vector<uint16_t> mFreePages;       // list of free pages
     std::array<uint64_t, MASTER_WORDS> mMasterMask = {};
     uint32_t mSize = 0;                     // size of the set (how many bits are 1)

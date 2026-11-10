@@ -22,6 +22,7 @@ std::ostream& operator<<(std::ostream& out, math::double4 v);
 const char* to_string(bool b);
 
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, uint8_t* val);
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, int8_t* val);
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, uint16_t* val);
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, uint32_t* val);
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, int* val);
@@ -97,6 +98,9 @@ std::ostream& operator<<(std::ostream& out, const ScreenSpaceReflectionsOptions&
 
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, GuardBandOptions* out);
 std::ostream& operator<<(std::ostream& out, const GuardBandOptions& in);
+
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, MotionVectorsOptions* out);
+std::ostream& operator<<(std::ostream& out, const MotionVectorsOptions& in);
 
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, AntiAliasing* out);
 std::ostream& operator<<(std::ostream& out, AntiAliasing in);

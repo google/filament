@@ -164,12 +164,18 @@ inline MTLPixelFormat getMetalFormat(PixelDataFormat format, PixelDataType type)
     CONVERT(RGBA, BYTE, RGBA8Snorm);
     CONVERT(RGBA_INTEGER, UBYTE, RGBA8Uint);
     CONVERT(RGBA_INTEGER, BYTE, RGBA8Sint);
+    CONVERT(R, USHORT, R16Unorm);
+    CONVERT(R, SHORT, R16Snorm);
     CONVERT(R_INTEGER, USHORT, R16Uint);
     CONVERT(R_INTEGER, SHORT, R16Sint);
     CONVERT(R, HALF, R16Float);
+    CONVERT(RG, USHORT, RG16Unorm);
+    CONVERT(RG, SHORT, RG16Snorm);
     CONVERT(RG_INTEGER, USHORT, RG16Uint);
     CONVERT(RG_INTEGER, SHORT, RG16Sint);
     CONVERT(RG, HALF, RG16Float);
+    CONVERT(RGBA, USHORT, RGBA16Unorm);
+    CONVERT(RGBA, SHORT, RGBA16Snorm);
     CONVERT(RGBA_INTEGER, USHORT, RGBA16Uint);
     CONVERT(RGBA_INTEGER, SHORT, RGBA16Sint);
     CONVERT(RGBA, HALF, RGBA16Float);
@@ -345,6 +351,8 @@ constexpr inline MTLBlendFactor getMetalBlendFactor(BlendFunction function) noex
         case BlendFunction::ONE_MINUS_DST_ALPHA: return MTLBlendFactorOneMinusDestinationAlpha;
         case BlendFunction::SRC_ALPHA_SATURATE: return MTLBlendFactorSourceAlphaSaturated;
     }
+    // should never happen
+    return MTLBlendFactorOne;
 }
 
 constexpr inline MTLCullMode getMetalCullMode(CullingMode cullMode) noexcept {

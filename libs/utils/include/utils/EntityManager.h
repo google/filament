@@ -56,8 +56,9 @@ class SingleInstanceComponentManagerBase;
  * This group is aimed at standard usage for applications, renderers, and game systems.
  * - **Entity Creation**: Methods like @p create() and @p create(size_t, Entity*) allocate new or recycled Entity
  *   identities.
- * - **Entity Destruction**: Methods like @p destroy(Entity) and @p destroy(size_t, Entity*) logically kill entities,
- *   instantly advancing the active timeline.
+ * - **Entity Destruction**: Methods like @p destroy(Entity) and @p destroy(size_t, Entity*) immediately mark entities
+ *   as dead (for @p isAlive()) and batch timeline and change-callback notifications until the internal buffer fills,
+ *   @p flushNotifications() is called, or @p advanceEpoch() seals the epoch.
  * - **Queries & Hooks**: Mechanisms to query logical presence (@p isAlive()) or subscribe to global destruction
  *   notifications via @p registerChangeCallback().
  *
@@ -200,10 +201,18 @@ public:
 
     /**
      * @brief Extracts the complete tracking bitset representing all logically alive Entities.
-     * @return PagedArenaBitset containing bits for every active 32-bit Entity index.
+     * @return PagedArenaBitset containing bits for every active 17-bit Entity index.
      */
     UTILS_NOAPIGEN
     PagedArenaBitset getAliveEntities() const noexcept;
+
+    /**
+     * @brief Copies the complete tracking bitset representing all logically alive Entities into
+     *        an existing bitset, reusing its allocated capacity.
+     * @param[out] out Destination bitset to populate.
+     */
+    UTILS_NOAPIGEN
+    void getAliveEntities(PagedArenaBitset& out) const noexcept;
 
     /**
      * @brief Registers a reader's watermark with the Epoch-Based Reclamation (EBR) system.
@@ -324,13 +333,27 @@ public:
 #endif
 
     /**
-     * @brief Use carefully, several entities can have the same index.
+     * @brief Use carefully, several entities can have the same index across time (never
+     *        simultaneously while alive or pending EBR reclamation).
      * @param e The entity to query.
-     * @return The entity index.
+     * @return The 17-bit entity index.
      */
     static Entity::Type getIndex(Entity const e) noexcept  {
         return e.getId() & INDEX_MASK;
     }
+
+    /**
+     * @brief Reinflates an Entity from its 17-bit index using the index's current generation.
+     *
+     * @details Lock-free. Safe to call when @p index is known to be alive or protected from EBR
+     * reclamation by the caller's registered watermark (e.g., an index read from a manager's or
+     * scene's PagedArenaBitset). Returns the null Entity if @p index is 0.
+     *
+     * @param index The 17-bit entity index (< RAW_INDEX_COUNT).
+     * @return The Entity with @p index and its current generation, or Entity{} if @p index is 0.
+     */
+    UTILS_NOAPIGEN
+    Entity getEntity(Entity::Type index) const noexcept;
 
 private:
     friend class EntityManagerImpl;
@@ -347,6 +370,11 @@ private:
     static constexpr size_t RAW_INDEX_COUNT     = Entity::RAW_INDEX_COUNT;
     static constexpr Entity::Type INDEX_MASK    = Entity::INDEX_MASK;
     static constexpr Entity::Type MAX_IDENTITY  = Entity::MAX_IDENTITY;
+
+    static_assert(PagedArenaBitset::DOMAIN_BITS == GENERATION_SHIFT,
+            "PagedArenaBitset::DOMAIN_BITS must match Entity::GENERATION_SHIFT");
+
+    void intersectCurrentGarbage(PagedArenaBitset& out, PagedArenaBitset const& filter) noexcept;
 
     static Entity::Type getGeneration(Entity const e) noexcept {
         return e.getId() >> GENERATION_SHIFT;

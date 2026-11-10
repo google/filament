@@ -386,9 +386,9 @@ bool PNGEncoder::encode(const LinearImage& image) {
                     break;
                 case PixelFormat::sRGB:
                     if (dstChannels == 4) {
-                        data = fromLinearTosRGB<uint8_t, 4>(image);
+                        data = fromLinearToSRGB<uint8_t, 4>(image);
                     } else {
-                        data = fromLinearTosRGB<uint8_t, 3>(image);
+                        data = fromLinearToSRGB<uint8_t, 3>(image);
                     }
                     break;
                 case PixelFormat::LINEAR_RGB:
@@ -730,7 +730,7 @@ bool PSDEncoder::encode(const LinearImage& image) {
                 for (uint32_t y = 0; y < height; y++) {
                     auto data = image.get<float3>(0, y);
                     for (size_t x = 0; x < width; x++) {
-                        write16(mStream, linearTosRGB((*data)[channel]));
+                        write16(mStream, linearToSRGB((*data)[channel]));
                         data++;
                     }
                 }
@@ -838,13 +838,15 @@ bool EXREncoder::encode(const LinearImage& image) {
         }
 
         unsigned char* outData;
-        const char* error;
+        // tinyexr leaves this untouched on some failure paths.
+        const char* error = nullptr;
         size_t size = SaveEXRImageToMemory(&exrImage, &header, &outData, &error);
         if (size > 0 && outData) {
             mStream.write(reinterpret_cast<char*>(outData), size);
             free(outData);
         } else {
-            std::cerr << "Runtime error while encoding EXR: " << error << std::endl;
+            std::cerr << "Runtime error while encoding EXR: " << (error ? error : "unknown")
+                    << std::endl;
             mStream.seekp(mStreamStartPos);
         }
 
@@ -1009,7 +1011,7 @@ bool DDSEncoder::encode(const LinearImage& image) {
                         for (uint32_t y = 0; y < height; y++) {
                             const float* data = image.getPixelRef(0, y);
                             for (size_t x = 0; x < width; x++) {
-                                uint8_t b = (uint8_t) (linearTosRGB(saturate(*data)) * 255);
+                                uint8_t b = (uint8_t) (linearToSRGB(saturate(*data)) * 255);
                                 mStream.write((const char*) &b, 1);
                                 data++;
                             }
@@ -1053,9 +1055,9 @@ bool DDSEncoder::encode(const LinearImage& image) {
                             const float2* data = reinterpret_cast<float2 const*>(image.getPixelRef(0, y));
                             for (size_t x = 0; x < width; x++) {
                                 uint8_t b;
-                                b = (uint8_t) (linearTosRGB(saturate(data->g)) * 255);
+                                b = (uint8_t) (linearToSRGB(saturate(data->g)) * 255);
                                 mStream.write((const char*) &b, 1);
-                                b = (uint8_t) (linearTosRGB(saturate(data->r)) * 255);
+                                b = (uint8_t) (linearToSRGB(saturate(data->r)) * 255);
                                 mStream.write((const char*) &b, 1);
                                 data++;
                             }
@@ -1101,9 +1103,9 @@ bool DDSEncoder::encode(const LinearImage& image) {
                         for (uint32_t y = 0; y < height; y++) {
                             auto data = image.get<float3>(0, y);
                             for (size_t x = 0; x < width; x++) {
-                                uint8_t r = (uint8_t) (linearTosRGB(saturate(data->r)) * 255);
-                                uint8_t g = (uint8_t) (linearTosRGB(saturate(data->g)) * 255);
-                                uint8_t b = (uint8_t) (linearTosRGB(saturate(data->b)) * 255);
+                                uint8_t r = (uint8_t) (linearToSRGB(saturate(data->r)) * 255);
+                                uint8_t g = (uint8_t) (linearToSRGB(saturate(data->g)) * 255);
+                                uint8_t b = (uint8_t) (linearToSRGB(saturate(data->b)) * 255);
                                 uint32_t p = (uint8_t) 0xff << 24 | b << 16 | g << 8 | r;
                                 mStream.write((const char*) &p, 4);
                                 data++;

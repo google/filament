@@ -5,6 +5,9 @@
 #endif
 #elif defined(SHADING_MODEL_SUBSURFACE) || defined(MATERIAL_HAS_CUSTOM_SURFACE_SHADING)
     // Cannot skip lighting
+#elif !defined(SHADING_MODEL_UNLIT) && !defined(SHADING_MODEL_SPECULAR_GLOSSINESS) && \
+        defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION)
+    // Cannot skip lighting
 #else
     #define MATERIAL_CAN_SKIP_LIGHTING
 #endif
@@ -58,7 +61,9 @@ struct MaterialInputs {
     float anisotropy;
     vec3  anisotropyDirection;
 
-#if defined(SHADING_MODEL_SUBSURFACE) || defined(MATERIAL_HAS_REFRACTION)
+#if defined(SHADING_MODEL_SUBSURFACE) || defined(MATERIAL_HAS_REFRACTION) || \
+    (!defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_UNLIT) && \
+     !defined(SHADING_MODEL_SPECULAR_GLOSSINESS) && defined(MATERIAL_HAS_THICKNESS))
     float thickness;
 #endif
 #if defined(SHADING_MODEL_SUBSURFACE)
@@ -111,6 +116,9 @@ struct MaterialInputs {
     float microThickness;
 #endif
 #elif !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+#if defined(MATERIAL_HAS_ABSORPTION)
+    vec3 absorption;
+#endif
 #if defined(MATERIAL_HAS_IOR)
     float ior;
 #endif
@@ -123,6 +131,20 @@ struct MaterialInputs {
 
 #if defined(MATERIAL_HAS_SPECULAR_COLOR_FACTOR)
     vec3 specularColorFactor;
+#endif
+
+#if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE) && !defined(SHADING_MODEL_UNLIT)
+#if !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+#if defined(MATERIAL_HAS_RETROREFLECTION)
+    float retroreflection;
+#endif
+#if defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION)
+    float diffuseTransmission;
+#endif
+#if defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION_COLOR)
+    vec3 diffuseTransmissionColor;
+#endif
+#endif
 #endif
 
 #if defined(MATERIAL_HAS_SHADOW_STRENGTH)
@@ -177,7 +199,9 @@ void initMaterial(out MaterialInputs material) {
     material.anisotropyDirection = vec3(1.0, 0.0, 0.0);
 #endif
 
-#if defined(SHADING_MODEL_SUBSURFACE) || defined(MATERIAL_HAS_REFRACTION)
+#if defined(SHADING_MODEL_SUBSURFACE) || defined(MATERIAL_HAS_REFRACTION) || \
+    (!defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_UNLIT) && \
+     !defined(SHADING_MODEL_SPECULAR_GLOSSINESS) && defined(MATERIAL_HAS_THICKNESS))
     material.thickness = 0.5;
 #endif
 #if defined(SHADING_MODEL_SUBSURFACE)
@@ -230,6 +254,9 @@ void initMaterial(out MaterialInputs material) {
     material.microThickness = 0.0;
 #endif
 #elif !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+#if defined(MATERIAL_HAS_ABSORPTION)
+    material.absorption = vec3(0.0);
+#endif
 #if defined(MATERIAL_HAS_IOR)
     material.ior = 1.5;
 #endif
@@ -242,6 +269,20 @@ void initMaterial(out MaterialInputs material) {
 
 #if defined(MATERIAL_HAS_SPECULAR_COLOR_FACTOR)
     material.specularColorFactor = vec3(1.0);
+#endif
+
+#if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE) && !defined(SHADING_MODEL_UNLIT)
+#if !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+#if defined(MATERIAL_HAS_RETROREFLECTION)
+    material.retroreflection = 0.0;
+#endif
+#if defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION)
+    material.diffuseTransmission = 0.0;
+#endif
+#if defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION_COLOR)
+    material.diffuseTransmissionColor = vec3(1.0);
+#endif
+#endif
 #endif
 
 #if defined(MATERIAL_HAS_SHADOW_STRENGTH)

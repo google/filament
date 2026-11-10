@@ -466,6 +466,13 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
                 // Renderer of the form [Mesa Intel(R) HD Graphics 505 (APL 3)]
                 // b/405252622
                 bugs->disable_invalidate_framebuffer = true;
+
+                // Seen on
+                // [Intel]
+                // [Mesa Intel(R) Arc(tm) A750 Graphics (DG2)]
+                // [4.6 (Core Profile) Mesa 26.0.8-1ubuntu0.3]
+                // [4.60]
+                bugs->disable_framebuffer_fetch_extension = true;
             }
         } else if (strstr(renderer, "PowerVR")) {
             // PowerVR GPU
@@ -711,6 +718,7 @@ void OpenGLContext::initExtensionsGLES(Extensions* ext, GLint major, GLint minor
     ext->EXT_texture_compression_bptc = exts.has("GL_EXT_texture_compression_bptc"sv);
     ext->EXT_texture_cube_map_array = exts.has("GL_EXT_texture_cube_map_array"sv) || exts.has("GL_OES_texture_cube_map_array"sv);
     ext->EXT_texture_filter_anisotropic = exts.has("GL_EXT_texture_filter_anisotropic"sv);
+    ext->EXT_texture_norm16 = exts.has("GL_EXT_texture_norm16"sv);
 #if !defined(FILAMENT_IOS)
     ext->EXT_texture_sRGB = exts.has("GL_EXT_sRGB"sv);
 #endif  // !defined(FILAMENT_IOS)
@@ -730,13 +738,16 @@ void OpenGLContext::initExtensionsGLES(Extensions* ext, GLint major, GLint minor
     ext->OES_texture_npot = exts.has("GL_OES_texture_npot"sv);
     ext->OES_vertex_array_object = exts.has("GL_OES_vertex_array_object"sv);
     ext->OVR_multiview2 = exts.has("GL_OVR_multiview2"sv);
+    ext->WEBGL_compressed_texture_astc = exts.has("WEBGL_compressed_texture_astc"sv);
     ext->WEBGL_compressed_texture_etc = exts.has("WEBGL_compressed_texture_etc"sv);
     ext->WEBGL_compressed_texture_s3tc = exts.has("WEBGL_compressed_texture_s3tc"sv);
     ext->WEBGL_compressed_texture_s3tc_srgb = exts.has("WEBGL_compressed_texture_s3tc_srgb"sv);
 
-    // ES 3.2 implies EXT_color_buffer_float (but not necessarily filterable)
+    // ES 3.2 implies EXT_color_buffer_float (but not necessarily filterable) and
+    // KHR_texture_compression_astc_ldr
     if (major > 3 || (major == 3 && minor >= 2)) {
         ext->EXT_color_buffer_float = true;
+        ext->KHR_texture_compression_astc_ldr = true;
     }
     // ES 3.x implies EXT_discard_framebuffer, OES_vertex_array_object and OES_texture_half_float_linear
     if (major >= 3) {
@@ -783,6 +794,7 @@ void OpenGLContext::initExtensionsGL(Extensions* ext, GLint major, GLint minor) 
     ext->EXT_texture_compression_s3tc_srgb = exts.has("GL_EXT_texture_compression_s3tc_srgb"sv);
     ext->EXT_texture_cube_map_array = true;
     ext->EXT_texture_filter_anisotropic = exts.has("GL_EXT_texture_filter_anisotropic"sv);
+    ext->EXT_texture_norm16 = true;
     ext->EXT_texture_sRGB = exts.has("GL_EXT_texture_sRGB"sv);
     ext->GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
     ext->KHR_parallel_shader_compile = exts.has("GL_KHR_parallel_shader_compile"sv);
@@ -798,6 +810,7 @@ void OpenGLContext::initExtensionsGL(Extensions* ext, GLint major, GLint minor) 
     ext->OES_texture_npot = true;
     ext->OES_vertex_array_object = true;
     ext->OVR_multiview2 = exts.has("GL_OVR_multiview2"sv);
+    ext->WEBGL_compressed_texture_astc = false;
     ext->WEBGL_compressed_texture_etc = false;
     ext->WEBGL_compressed_texture_s3tc = false;
     ext->WEBGL_compressed_texture_s3tc_srgb = false;

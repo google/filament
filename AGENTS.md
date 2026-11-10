@@ -32,3 +32,6 @@ AI agents **must** consult and strictly follow the corresponding skill files for
 ### 6. Code Review & Invariant Auditing
 *   [skills/code_review/SKILL.md](skills/code_review/SKILL.md): Adversarial systems, concurrency, memory-model, and architecture code review protocol.
 
+### 7. Feature-Specific Measurement Tools
+*   [tools/taa/taa_harness.md](tools/taa/taa_harness.md): Headless, deterministic TAA measurement tool. Consult this before judging any change to `taa.mat`, `TemporalAntiAliasingOptions`, or the TAA resolve path by eye.
+

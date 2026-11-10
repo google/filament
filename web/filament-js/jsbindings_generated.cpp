@@ -145,6 +145,16 @@ value_object<View::TemporalAntiAliasingOptions>("View$TemporalAntiAliasingOption
     .field("varianceGamma", &View::TemporalAntiAliasingOptions::varianceGamma)
     .field("preventFlickering", &View::TemporalAntiAliasingOptions::preventFlickering)
     .field("historyReprojection", &View::TemporalAntiAliasingOptions::historyReprojection)
+    .field("motionAdaptiveHistory", &View::TemporalAntiAliasingOptions::motionAdaptiveHistory)
+    .field("motionDeltaThreshold", &View::TemporalAntiAliasingOptions::motionDeltaThreshold)
+    .field("minBoxStrength", &View::TemporalAntiAliasingOptions::minBoxStrength)
+    .field("minAlphaStrength", &View::TemporalAntiAliasingOptions::minAlphaStrength)
+    .field("skyDepthThreshold", &View::TemporalAntiAliasingOptions::skyDepthThreshold)
+    .field("motionHoldFrames", &View::TemporalAntiAliasingOptions::motionHoldFrames)
+    .field("depthDisocclusion", &View::TemporalAntiAliasingOptions::depthDisocclusion)
+    .field("disocclusionDepthThreshold", &View::TemporalAntiAliasingOptions::disocclusionDepthThreshold)
+    .field("disocclusionHistoryNeighborhood", &View::TemporalAntiAliasingOptions::disocclusionHistoryNeighborhood)
+    .field("exactLanczosSupport", &View::TemporalAntiAliasingOptions::exactLanczosSupport)
     ;
 
 value_object<View::ScreenSpaceReflectionsOptions>("View$ScreenSpaceReflectionsOptions")
@@ -157,6 +167,10 @@ value_object<View::ScreenSpaceReflectionsOptions>("View$ScreenSpaceReflectionsOp
 
 value_object<View::GuardBandOptions>("View$GuardBandOptions")
     .field("enabled", &View::GuardBandOptions::enabled)
+    ;
+
+value_object<View::MotionVectorsOptions>("View$MotionVectorsOptions")
+    .field("enabled", &View::MotionVectorsOptions::enabled)
     ;
 
 value_object<View::VsmShadowOptions>("View$VsmShadowOptions")

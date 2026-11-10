@@ -112,9 +112,10 @@ TEST_F(MatTest, ConstexprMat2) {
     constexpr float2 f3 = diag(M0);
     constexpr mat2f M8 = transpose(M0);
     constexpr mat2f M9 = inverse(M0);
+    constexpr mat2f M9d = inverse(M0, det(M0));
     constexpr mat2f M12 = abs(M0);
     constexpr mat2f M11 = details::matrix::cof(M0);
-    constexpr mat2f M10 = M8 * M9;
+    constexpr mat2f M10 = M8 * M9 * M9d;
     constexpr float s0 = trace(M0);
     constexpr float f4 = M[0][0];
     constexpr float f5 = M(0, 0);
@@ -135,8 +136,9 @@ TEST_F(MatTest, ConstexprMat3) {
     constexpr float3 f3 = diag(M0);
     constexpr mat3f M8 = transpose(M0);
     constexpr mat3f M9 = inverse(M0);
+    constexpr mat3f M9d = inverse(M0, det(M0));
     constexpr mat3f M12 = details::matrix::cof(M0);
-    constexpr mat3f M10 = M8 * M9;
+    constexpr mat3f M10 = M8 * M9 * M9d;
     constexpr float s0 = trace(M0);
     constexpr quatf q;
     constexpr mat3f M11{q};
@@ -157,8 +159,9 @@ TEST_F(MatTest, ConstexprMat4) {
     constexpr float4 f3 = diag(M0);
     constexpr mat4f M8 = transpose(M0);
     constexpr mat4f M9 = inverse(M0);
+    constexpr mat4f M9d = inverse(M0, det(M0));
     constexpr mat4f M16 = details::matrix::cof(M0);
-    constexpr mat4f M10 = M8 * M9;
+    constexpr mat4f M10 = M8 * M9 * M9d;
     constexpr float s0 = trace(M0);
     constexpr quatf q;
     constexpr mat4f M11{q};
@@ -510,15 +513,20 @@ TYPED_TEST_SUITE(MatTestT, TestMatrixValueTypes);
 #define TEST_MATRIX_INVERSE(MATRIX, EPSILON)                                \
 {                                                                           \
     typedef decltype(MATRIX) MatrixType;                                    \
+    auto const d = det(MATRIX);                                             \
     MatrixType inv1 = inverse(MATRIX);                                      \
     MatrixType ident1 = MATRIX * inv1;                                      \
-    MatrixType inv2 = transpose(cof(MATRIX))/det(MATRIX);                   \
+    MatrixType inv2 = transpose(cof(MATRIX))/d;                             \
     MatrixType ident2 = MATRIX * inv2;                                      \
+    MatrixType inv3 = inverse(MATRIX, d);                                   \
+    MatrixType ident3 = MATRIX * inv3;                                      \
     static const MatrixType IDENTITY;                                       \
     for (int row = 0; row < MatrixType::ROW_SIZE; ++row) {                  \
         for (int col = 0; col < MatrixType::COL_SIZE; ++col) {              \
             EXPECT_NEAR(ident1[row][col], IDENTITY[row][col], EPSILON);     \
             EXPECT_NEAR(ident2[row][col], IDENTITY[row][col], EPSILON);     \
+            EXPECT_NEAR(ident3[row][col], IDENTITY[row][col], EPSILON);     \
+            EXPECT_EQ(inv1[row][col], inv3[row][col]);                      \
         }                                                                   \
     }                                                                       \
 }
@@ -868,6 +876,66 @@ TYPED_TEST(MatTestT, cofactor) {
         EXPECT_VEC_NEAR(c0[0], c1[0], value_eps);
         EXPECT_VEC_NEAR(c0[1], c1[1], value_eps);
         EXPECT_VEC_NEAR(c0[2], c1[2], value_eps);
+    }
+}
+
+TYPED_TEST(MatTestT, InverseWithDet) {
+    static constexpr TypeParam value_eps =
+            TypeParam(1000) * std::numeric_limits<TypeParam>::epsilon();
+
+    typedef filament::math::details::TMat22<TypeParam> M22T;
+    typedef filament::math::details::TMat33<TypeParam> M33T;
+    typedef filament::math::details::TMat44<TypeParam> M44T;
+    typedef filament::math::details::TVec3<TypeParam> V3T;
+
+    std::default_random_engine generator(424242); // NOLINT
+    std::uniform_real_distribution<TypeParam> angle_dist(-F_PI, F_PI);
+    std::uniform_real_distribution<TypeParam> scale_dist(0.5, 2.5);
+    std::uniform_real_distribution<TypeParam> trans_dist(-20.0, 20.0);
+
+    for (size_t i = 0; i < 100; ++i) {
+        // 4x4 affine transform (translation * rotation * non-uniform scale)
+        M44T const t = M44T::translation(V3T(trans_dist(generator), trans_dist(generator),
+                trans_dist(generator)));
+        M44T const r = M44T::eulerZYX(angle_dist(generator), angle_dist(generator),
+                angle_dist(generator));
+        M44T const s = M44T::scaling(V3T(scale_dist(generator), scale_dist(generator),
+                scale_dist(generator)));
+        M44T const m4 = t * r * s;
+        TypeParam const d4 = det(m4);
+        ASSERT_NE(d4, TypeParam(0));
+
+        M44T const inv4 = inverse(m4);
+        M44T const inv4d = inverse(m4, d4);
+        M44T const gj4 = details::matrix::gaussJordanInverse(m4);
+        for (size_t col = 0; col < 4; ++col) {
+            EXPECT_VEC_EQ(inv4[col], inv4d[col]);
+            EXPECT_VEC_NEAR(inv4d[col], gj4[col], value_eps);
+        }
+        TEST_MATRIX_INVERSE(m4, value_eps);
+
+        // 4x4 projective/general matrix (non-trivial 4th row)
+        M44T m4gen = m4;
+        m4gen[0][3] = TypeParam(0.05) * scale_dist(generator);
+        m4gen[1][3] = TypeParam(-0.04) * scale_dist(generator);
+        m4gen[2][3] = TypeParam(0.03) * scale_dist(generator);
+        m4gen[3][3] = TypeParam(1.5) + scale_dist(generator);
+        TypeParam const d4gen = det(m4gen);
+        ASSERT_NE(d4gen, TypeParam(0));
+        M44T const inv4gen = inverse(m4gen, d4gen);
+        M44T const gj4gen = details::matrix::gaussJordanInverse(m4gen);
+        for (size_t col = 0; col < 4; ++col) {
+            EXPECT_VEC_NEAR(inv4gen[col], gj4gen[col], value_eps);
+        }
+        TEST_MATRIX_INVERSE(m4gen, value_eps);
+
+        // 3x3 upper-left
+        M33T const m3 = m4.upperLeft();
+        TEST_MATRIX_INVERSE(m3, value_eps);
+
+        // 2x2 invertible
+        M22T const m2(m3[0][0], m3[0][1], m3[1][0], m3[1][1] + TypeParam(4.0));
+        TEST_MATRIX_INVERSE(m2, value_eps);
     }
 }
 

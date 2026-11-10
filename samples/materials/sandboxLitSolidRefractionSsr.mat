@@ -39,6 +39,30 @@ material {
         },
         {
             type : float,
+            name : iridescence
+        },
+        {
+            type : float,
+            name : iridescenceIor
+        },
+        {
+            type : float,
+            name : iridescenceThickness
+        },
+        {
+            type : float,
+            name : retroreflection
+        },
+        {
+            type : float,
+            name : diffuseTransmission
+        },
+        {
+            type : float3,
+            name : diffuseTransmissionColor
+        },
+        {
+            type : float,
             name : clearCoat
         },
         {
@@ -88,6 +112,12 @@ fragment {
         material.secondRoughnessWeight = materialParams.secondRoughnessWeight;
         material.sheenColor = materialParams.sheenColor;
         material.sheenRoughness = materialParams.sheenRoughness;
+        material.iridescence = materialParams.iridescence;
+        material.iridescenceIor = materialParams.iridescenceIor;
+        material.iridescenceThickness = materialParams.iridescenceThickness;
+        material.retroreflection = materialParams.retroreflection;
+        material.diffuseTransmission = materialParams.diffuseTransmission;
+        material.diffuseTransmissionColor = materialParams.diffuseTransmissionColor;
         material.clearCoat = materialParams.clearCoat;
         material.clearCoatRoughness = materialParams.clearCoatRoughness;
         material.anisotropy = materialParams.anisotropy;

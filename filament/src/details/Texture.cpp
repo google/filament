@@ -45,6 +45,7 @@
 
 #include <algorithm>
 #include <array>
+#include <limits>
 #include <type_traits>
 #include <utility>
 
@@ -481,14 +482,18 @@ void FTexture::setImageCommon(FEngine& engine, size_t const level,
             << "Operation not supported with multisample ("
             << unsigned(mSampleCount) << ") texture.";
 
-    FILAMENT_CHECK_PRECONDITION(xoffset + width <= valueForLevel(level, mWidth))
+    size_t const textureWidthAtLevel = valueForLevel(level, mWidth);
+    FILAMENT_CHECK_PRECONDITION(width <= textureWidthAtLevel &&
+            xoffset <= textureWidthAtLevel - width)
             << "xoffset (" << unsigned(xoffset) << ") + width (" << unsigned(width)
-            << ") > texture width (" << valueForLevel(level, mWidth) << ") at level ("
+            << ") > texture width (" << textureWidthAtLevel << ") at level ("
             << unsigned(level) << ")";
 
-    FILAMENT_CHECK_PRECONDITION(yoffset + height <= valueForLevel(level, mHeight))
+    size_t const textureHeightAtLevel = valueForLevel(level, mHeight);
+    FILAMENT_CHECK_PRECONDITION(height <= textureHeightAtLevel &&
+            yoffset <= textureHeightAtLevel - height)
             << "yoffset (" << unsigned(yoffset) << ") + height (" << unsigned(height)
-            << ") > texture height (" << valueForLevel(level, mHeight) << ") at level ("
+            << ") > texture height (" << textureHeightAtLevel << ") at level ("
             << unsigned(level) << ")";
 
     FILAMENT_CHECK_PRECONDITION(p.buffer) << "Data buffer is nullptr.";
@@ -515,10 +520,29 @@ void FTexture::setImageCommon(FEngine& engine, size_t const level,
             break;
     }
 
-    FILAMENT_CHECK_PRECONDITION(zoffset + depth <= effectiveTextureDepthOrLayers)
+    FILAMENT_CHECK_PRECONDITION(depth <= effectiveTextureDepthOrLayers &&
+            zoffset <= effectiveTextureDepthOrLayers - depth)
             << "zoffset (" << unsigned(zoffset) << ") + depth (" << unsigned(depth)
             << ") > texture depth (" << effectiveTextureDepthOrLayers << ") at level ("
             << unsigned(level) << ")";
+
+    // Vulkan stages each upload in a buffer tracked in 32 bits and GL takes compressed sizes as
+    // GLsizei, so a single upload is capped at INT32_MAX bytes. Checked before the empty-region
+    // return because the upload command is still sent in that case.
+    uint64_t const uploadSize = p.type == PixelDataType::COMPRESSED
+            ? p.size
+            : uint64_t(width) * height * depth *
+                      PixelBufferDescriptor::computeDataSize(p.format, p.type, 1, 1, 1);
+    FILAMENT_CHECK_PRECONDITION(uploadSize <= uint64_t(std::numeric_limits<int32_t>::max()))
+            << "upload of " << uploadSize << " bytes exceeds the maximum of "
+            << std::numeric_limits<int32_t>::max() << " bytes.";
+
+    // Some backends size their RGB to RGBA buffer as 4 * p.size / 3, so the multiply must not
+    // wrap.
+    FILAMENT_CHECK_PRECONDITION(
+            (p.format != PixelDataFormat::RGB && p.format != PixelDataFormat::RGB_INTEGER) ||
+            p.size <= SIZE_MAX / 4)
+            << "RGB pixel buffer is too large (size=" << size_t(p.size) << ")";
 
     if (UTILS_UNLIKELY(!width || !height || !depth)) {
         // The operation is a no-op, return immediately. The PixelBufferDescriptor callback
@@ -534,6 +558,22 @@ void FTexture::setImageCommon(FEngine& engine, size_t const level,
         size_t const bpr = PBD::computeDataSize(p.format, p.type, stride, 1, p.alignment);
         size_t const bpl = bpr * height; // TODO: PBD should have a "layer stride"
         // TODO: PBD should have a p.depth (# layers to skip)
+
+        // Vulkan's adjustedMemcpy infers the per-layer row count from the buffer
+        // (p.size / bpr / depth) and steps layers by that amount, while the check
+        // below assumes layers of exactly `height` rows. When the buffer holds more
+        // rows per layer than `height` and depth >= 2, the copy reads past the
+        // buffer even though the check below passes. Require the inferred layer
+        // height to cover the copied rows; this also promotes adjustedMemcpy's
+        // debug-only pbdHeight - top >= height assert to a release check.
+        size_t const inferredLayerHeight = bpr ? p.size / bpr / depth : 0;
+        FILAMENT_CHECK_PRECONDITION(p.top + height <= inferredLayerHeight)
+                << "buffer overflow: (size=" << size_t(p.size) << ", stride=" << size_t(p.stride)
+                << ", left=" << unsigned(p.left) << ", top=" << unsigned(p.top)
+                << ") smaller than specified region "
+                   "{{"
+                << unsigned(xoffset) << "," << unsigned(yoffset) << "," << unsigned(zoffset) << "},{"
+                << unsigned(width) << "," << unsigned(height) << "," << unsigned(depth) << "}}";
 
         /* Calculates the byte offset of the last pixel in a 3D sub-region. */
         auto const calculateLastPixelOffset = [bpp, bpr, bpl](
@@ -560,6 +600,25 @@ void FTexture::setImageCommon(FEngine& engine, size_t const level,
                    "{{"
                 << unsigned(xoffset) << "," << unsigned(yoffset) << "," << unsigned(zoffset) << "},{"
                 << unsigned(width) << "," << unsigned(height) << "," << unsigned(depth) << ")}}";
+    } else {
+        FILAMENT_CHECK_PRECONDITION(isCompressed())
+                << "Compressed data requires a compressed texture format, got internal format="
+                << unsigned(mFormat) << ".";
+
+        // Backends read whole blocks for the region, so a shorter buffer is read out of bounds.
+        uint64_t const blockWidth = backend::getBlockWidth(mFormat);
+        uint64_t const blockHeight = backend::getBlockHeight(mFormat);
+        uint64_t const bytesPerBlock = backend::getFormatSize(mFormat);
+        assert_invariant(blockWidth && blockHeight && bytesPerBlock);
+        uint64_t const requiredSize = ((width + blockWidth - 1) / blockWidth) *
+                                      ((height + blockHeight - 1) / blockHeight) *
+                                      depth * bytesPerBlock;
+
+        FILAMENT_CHECK_PRECONDITION(requiredSize <= p.size)
+                << "buffer overflow: (size=" << p.size << ") smaller than "
+                << requiredSize << " bytes required by compressed region {{"
+                << xoffset << "," << yoffset << "," << zoffset << "},{"
+                << width << "," << height << "," << depth << ")}}";
     }
 }
 
@@ -868,6 +927,8 @@ bool FTexture::validatePixelFormatAndType(TextureFormat const internalFormat,
     switch (internalFormat) {
         case TextureFormat::R8:
         case TextureFormat::R8_SNORM:
+        case TextureFormat::R16:
+        case TextureFormat::R16_SNORM:
         case TextureFormat::R16F:
         case TextureFormat::R32F:
             if (format != PixelDataFormat::R) {
@@ -888,6 +949,8 @@ bool FTexture::validatePixelFormatAndType(TextureFormat const internalFormat,
 
         case TextureFormat::RG8:
         case TextureFormat::RG8_SNORM:
+        case TextureFormat::RG16:
+        case TextureFormat::RG16_SNORM:
         case TextureFormat::RG16F:
         case TextureFormat::RG32F:
             if (format != PixelDataFormat::RG) {
@@ -912,6 +975,8 @@ bool FTexture::validatePixelFormatAndType(TextureFormat const internalFormat,
         case TextureFormat::SRGB8:
         case TextureFormat::RGB8_SNORM:
         case TextureFormat::R11F_G11F_B10F:
+        case TextureFormat::RGB16:
+        case TextureFormat::RGB16_SNORM:
         case TextureFormat::RGB16F:
         case TextureFormat::RGB32F:
             if (format != PixelDataFormat::RGB) {
@@ -936,6 +1001,8 @@ bool FTexture::validatePixelFormatAndType(TextureFormat const internalFormat,
         case TextureFormat::SRGB8_A8:
         case TextureFormat::RGBA8_SNORM:
         case TextureFormat::RGB10_A2:
+        case TextureFormat::RGBA16:
+        case TextureFormat::RGBA16_SNORM:
         case TextureFormat::RGBA16F:
         case TextureFormat::RGBA32F:
             if (format != PixelDataFormat::RGBA) {
@@ -1079,6 +1146,10 @@ bool FTexture::validatePixelFormatAndType(TextureFormat const internalFormat,
             }
             break;
 
+        case TextureFormat::R16:
+        case TextureFormat::RG16:
+        case TextureFormat::RGB16:
+        case TextureFormat::RGBA16:
         case TextureFormat::R16UI:
         case TextureFormat::RG16UI:
         case TextureFormat::RGB16UI:
@@ -1088,6 +1159,10 @@ bool FTexture::validatePixelFormatAndType(TextureFormat const internalFormat,
             }
             break;
 
+        case TextureFormat::R16_SNORM:
+        case TextureFormat::RG16_SNORM:
+        case TextureFormat::RGB16_SNORM:
+        case TextureFormat::RGBA16_SNORM:
         case TextureFormat::R16I:
         case TextureFormat::RG16I:
         case TextureFormat::RGB16I:

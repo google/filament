@@ -39,7 +39,8 @@ public:
         uint64_t offset = 0;
     };
 
-    WebGPUVertexBuffer(uint32_t vertexCount, size_t slotCount, Handle<HwVertexBufferInfo>);
+    WebGPUVertexBuffer(uint32_t vertexCount, size_t slotCount, Handle<HwVertexBufferInfo>,
+            bool asynchronous = false);
 
     [[nodiscard]] Handle<HwVertexBufferInfo>& getVertexBufferInfoHandle() {
         return mVertexBufferInfoHandle;

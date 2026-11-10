@@ -1,0 +1,21 @@
+# Code owners for paths restricted to project maintainers.
+#
+# These complement .github/workflows/auto-close-restricted-paths.yml, which
+# auto-closes outside PRs touching these paths. With "Require review from Code
+# Owners" enabled in the branch ruleset, changes to these paths also require an
+# approval from one of the owners below.
+#
+# Ownership is delegated to the @google/filament GitHub team; manage the list
+# of owners through the team's membership rather than by editing this file.
+#
+# Note: the last matching pattern takes precedence.
+
+# CI/CD configuration, workflows, and this file.
+/.github/       @google/filament
+
+# glTF loader library.
+/libs/gltfio/   @google/filament
+
+# Generated documentation. Normally updated only by the automated filamentbot
+# process (regenerated from docs_src/ on postsubmit via direct push).
+/docs/          @google/filament

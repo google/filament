@@ -159,6 +159,17 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
     return getSpecularDominantDirection(n, r, pixel.roughness);
 }
 
+#if defined(MATERIAL_HAS_RETROREFLECTION)
+vec3 getRetroReflectedVector(const PixelParams pixel, const vec3 n) {
+#if defined(MATERIAL_HAS_ANISOTROPY)
+    vec3 r = getReflectedVector(pixel, shading_reflected, n);
+#else
+    vec3 r = shading_view;
+#endif
+    return getSpecularDominantDirection(n, r, pixel.roughness);
+}
+#endif
+
 //------------------------------------------------------------------------------
 // Prefiltered importance sampling
 //------------------------------------------------------------------------------
@@ -443,6 +454,16 @@ void evaluateSubsurfaceIBL(const PixelParams pixel, const vec3 diffuseIrradiance
     Fd += pixel.subsurfaceColor * (viewIndependent + viewDependent) * attenuation;
 #elif defined(SHADING_MODEL_CLOTH) && defined(MATERIAL_HAS_SUBSURFACE_COLOR)
     Fd *= saturate(pixel.subsurfaceColor + shading_NoV);
+#endif
+}
+
+void evaluateDiffuseTransmissionIBL(const PixelParams pixel, const vec3 diffuseNormal,
+        inout vec3 Fd) {
+#if defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION)
+    if (pixel.diffuseTransmission > 0.0) {
+        vec3 Ft = pixel.diffuseTransmissionColor * diffuseIrradiance(-diffuseNormal);
+        Fd = mix(Fd, Ft, pixel.diffuseTransmission);
+    }
 #endif
 }
 
@@ -753,7 +774,11 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
 
 #if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
     vec3 E = specularDFG(pixel);
+#if defined(MATERIAL_HAS_RETROREFLECTION)
+    if (ssrFr.a < 1.0 && pixel.retroreflection < 1.0) { // prevent reading the IBL if possible
+#else
     if (ssrFr.a < 1.0) { // prevent reading the IBL if possible
+#endif
         vec3 r = getReflectedVector(pixel, shading_normal);
         Fr = E * prefilteredRadiance(r, perceptualRoughnessToLod(pixel.perceptualRoughness));
         Fr *= pixel.energyCompensation;
@@ -768,15 +793,25 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
         Fr = mix(Fr, secondFr, pixel.secondRoughnessWeight);
 #endif
     }
+
+#if defined(MATERIAL_HAS_RETROREFLECTION)
+    if (pixel.retroreflection > 0.0) {
+        vec3 r_retro = getRetroReflectedVector(pixel, shading_normal);
+        vec3 Fr_retro = E * prefilteredRadiance(r_retro,
+                perceptualRoughnessToLod(pixel.perceptualRoughness));
+        Fr_retro *= pixel.energyCompensation;
+        Fr = mix(Fr * (1.0 - ssrFr.a), Fr_retro, pixel.retroreflection);
+    }
+#endif
 #elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
     vec3 E = vec3(0.0); // TODO: fix for importance sampling
     if (ssrFr.a < 1.0) { // prevent evaluating the IBL if possible
         Fr = isEvaluateSpecularIBL(pixel, shading_normal, shading_view, shading_NoV);
-        # TODO: Second roughness
+        // TODO: Second roughness
     }
 #endif
 
-    // Ambient occlusion
+    // ambient occlusion
     float ssao = evaluateSSAO(interpolationCache);
     float diffuseAO = min(material.ambientOcclusion, ssao);
     float specularAO = specularAO(shading_NoV, diffuseAO, pixel.roughness, interpolationCache);
@@ -802,7 +837,13 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
 #elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
     vec3 diffuseIrradiance = isEvaluateDiffuseIBL(pixel, diffuseNormal, shading_view);
 #endif
-    vec3 Fd = pixel.diffuseColor * diffuseIrradiance * (1.0 - E) * diffuseBRDF;
+    vec3 Fd = pixel.diffuseColor * diffuseIrradiance;
+
+    // diffuse transmission layer
+    evaluateDiffuseTransmissionIBL(pixel, diffuseNormal, Fd);
+
+    // To apply to both diffuse and transmitted diffuse
+    Fd *= (1.0 - E) * diffuseBRDF;
 
     // subsurface layer
     evaluateSubsurfaceIBL(pixel, diffuseIrradiance, Fd, Fr);
@@ -827,7 +868,15 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
 #endif
 
 #if defined(MATERIAL_HAS_REFLECTIONS)
+#if defined(MATERIAL_HAS_RETROREFLECTION)
+    if (pixel.retroreflection > 0.0) {
+        Fr += (E * ssrFr.rgb) * (1.0 - pixel.retroreflection);
+    } else {
+        Fr = Fr * (1.0 - ssrFr.a) + (E * ssrFr.rgb);
+    }
+#else
     Fr = Fr * (1.0 - ssrFr.a) + (E * ssrFr.rgb);
+#endif
 #endif
 
     // Combine all terms

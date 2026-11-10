@@ -25,6 +25,11 @@ endif()
 # The following setting is required because we disable RTTI.
 set(COPTS "${COPTS} -DEMSCRIPTEN_HAS_UNBOUND_TYPE_NAMES=0")
 
+# emcc selects the libembind variant at link time based on -fno-rtti. Without it, the RTTI variant
+# is linked, which registers builtin types (bool, int, ...) under typeid-based IDs that do not match
+# the IDs used by our -fno-rtti bindings, leaving them unbound at runtime.
+set(LOPTS "${LOPTS} -fno-rtti")
+
 # Uncomment the following line to check for leaks
 # set(LOPTS "${LOPTS} --memoryprofiler")
 

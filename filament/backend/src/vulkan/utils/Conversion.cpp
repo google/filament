@@ -99,6 +99,8 @@ VkFormat getVkFormat(TextureFormat format) {
         case TextureFormat::STENCIL8:          return VK_FORMAT_S8_UINT;
 
         // 16 bits per element.
+        case TextureFormat::R16:               return VK_FORMAT_R16_UNORM;
+        case TextureFormat::R16_SNORM:         return VK_FORMAT_R16_SNORM;
         case TextureFormat::R16F:              return VK_FORMAT_R16_SFLOAT;
         case TextureFormat::R16UI:             return VK_FORMAT_R16_UINT;
         case TextureFormat::R16I:              return VK_FORMAT_R16_SINT;
@@ -126,6 +128,8 @@ VkFormat getVkFormat(TextureFormat format) {
         case TextureFormat::R32F:              return VK_FORMAT_R32_SFLOAT;
         case TextureFormat::R32UI:             return VK_FORMAT_R32_UINT;
         case TextureFormat::R32I:              return VK_FORMAT_R32_SINT;
+        case TextureFormat::RG16:              return VK_FORMAT_R16G16_UNORM;
+        case TextureFormat::RG16_SNORM:        return VK_FORMAT_R16G16_SNORM;
         case TextureFormat::RG16F:             return VK_FORMAT_R16G16_SFLOAT;
         case TextureFormat::RG16UI:            return VK_FORMAT_R16G16_UINT;
         case TextureFormat::RG16I:             return VK_FORMAT_R16G16_SINT;
@@ -143,6 +147,8 @@ VkFormat getVkFormat(TextureFormat format) {
 
         // 48 bits per element. In practice, very few GPU vendors support these. So, we simply
         // always reshape them into 64-bit formats.
+        case TextureFormat::RGB16:             return VK_FORMAT_R16G16B16A16_UNORM;
+        case TextureFormat::RGB16_SNORM:       return VK_FORMAT_R16G16B16A16_SNORM;
         case TextureFormat::RGB16F:            return VK_FORMAT_R16G16B16A16_SFLOAT;
         case TextureFormat::RGB16UI:           return VK_FORMAT_R16G16B16A16_UINT;
         case TextureFormat::RGB16I:            return VK_FORMAT_R16G16B16A16_SINT;
@@ -151,6 +157,8 @@ VkFormat getVkFormat(TextureFormat format) {
         case TextureFormat::RG32F:             return VK_FORMAT_R32G32_SFLOAT;
         case TextureFormat::RG32UI:            return VK_FORMAT_R32G32_UINT;
         case TextureFormat::RG32I:             return VK_FORMAT_R32G32_SINT;
+        case TextureFormat::RGBA16:            return VK_FORMAT_R16G16B16A16_UNORM;
+        case TextureFormat::RGBA16_SNORM:      return VK_FORMAT_R16G16B16A16_SNORM;
         case TextureFormat::RGBA16F:           return VK_FORMAT_R16G16B16A16_SFLOAT;
         case TextureFormat::RGBA16UI:          return VK_FORMAT_R16G16B16A16_UINT;
         case TextureFormat::RGBA16I:           return VK_FORMAT_R16G16B16A16_SINT;
@@ -552,12 +560,18 @@ VkFormat getVkFormat(PixelDataFormat format, PixelDataType type) {
     CONVERT(RGBA, BYTE, R8G8B8A8_SNORM);
     CONVERT(RGBA_INTEGER, UBYTE, R8G8B8A8_UINT);
     CONVERT(RGBA_INTEGER, BYTE, R8G8B8A8_SINT);
+    CONVERT(R, USHORT, R16_UNORM);
+    CONVERT(R, SHORT, R16_SNORM);
     CONVERT(R_INTEGER, USHORT, R16_UINT);
     CONVERT(R_INTEGER, SHORT, R16_SINT);
     CONVERT(R, HALF, R16_SFLOAT);
+    CONVERT(RG, USHORT, R16G16_UNORM);
+    CONVERT(RG, SHORT, R16G16_SNORM);
     CONVERT(RG_INTEGER, USHORT, R16G16_UINT);
     CONVERT(RG_INTEGER, SHORT, R16G16_SINT);
     CONVERT(RG, HALF, R16G16_SFLOAT);
+    CONVERT(RGBA, USHORT, R16G16B16A16_UNORM);
+    CONVERT(RGBA, SHORT, R16G16B16A16_SNORM);
     CONVERT(RGBA_INTEGER, USHORT, R16G16B16A16_UINT);
     CONVERT(RGBA_INTEGER, SHORT, R16G16B16A16_SINT);
     CONVERT(RGBA, HALF, R16G16B16A16_SFLOAT);
@@ -660,6 +674,8 @@ VkBlendFactor getBlendFactor(BlendFunction mode) {
         case BlendFunction::ONE_MINUS_DST_ALPHA:   return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
         case BlendFunction::SRC_ALPHA_SATURATE:    return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
     }
+    // should never happen
+    return VK_BLEND_FACTOR_ONE;
 }
 
 VkCullModeFlags getCullMode(CullingMode mode) {

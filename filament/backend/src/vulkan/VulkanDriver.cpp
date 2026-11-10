@@ -257,7 +257,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
                   mPlatform->getGraphicsQueueFamilyIndex(), mPlatform->getProtectedGraphicsQueue(),
                   mPlatform->getProtectedGraphicsQueueFamilyIndex(), mContext, &mSemaphoreManager),
           mPipelineLayoutCache(mPlatform->getDevice()),
-          mPipelineCache(*this, mPlatform->getDevice(), mContext),
+          mPipelineCache(*this, *mPlatform, mContext),
           mStagePool(mAllocator, &mResourceManager, &mCommands, mPlatform->getPhysicalDevice(),
                   &mContext.getPhysicalDeviceLimits()),
           mBufferCache(mContext, mResourceManager, mAllocator),
@@ -271,7 +271,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
                   [this](PixelBufferDescriptor&& pbd) { scheduleDestroy(std::move(pbd)); }),
           mDescriptorSetLayoutCache(mPlatform->getDevice(), &mResourceManager),
           mDescriptorSetCache(mPlatform->getDevice(), &mResourceManager),
-          mQueryManager(mPlatform->getDevice()),
+          mQueryManager(mContext, mPlatform->getDevice()),
           mExternalImageManager(&mSamplerCache, &mYcbcrConversionCache, &mDescriptorSetCache,
                   &mDescriptorSetLayoutCache),
           mStreamedImageManager(&mExternalImageManager),
@@ -293,7 +293,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
         // explicit synchronization model make the ThreadWorker hard to implement without
         // significant infrastructure refactor (transfer queues, thread-safe VMA, etc), which will
         // be done in Phase 2.
-        mJobWorker = AmortizationWorker::create(mJobQueue);
+        mJobWorker = AmortizationWorker::create(mJobQueue, driverConfig.asynchronousFrameBudget);
     }
 
     mContext.getDebugUtils().init(mPlatform->getInstance(), mPlatform->getDevice(),
@@ -458,11 +458,6 @@ void VulkanDriver::tick(int) {
     // Destroy the resources of the readbacks that completed on the readPixels thread.
     mReadPixels.gc();
 
-    if (getJobWorker()) {
-        // This number is randomly/heuristically chosen. Consider making the number optional.
-        getJobWorker()->process(5);
-    }
-
     // If the Renderer is skipping a lot of frames, it's possible for
     // commands to accumulate, since we only flush command buffers if
     // driver.flush() is called, or in endFrame(). This ensures that
@@ -535,6 +530,17 @@ void VulkanDriver::endFrame(uint32_t frameId) {
     FVK_PROFILE_MARKER(PROFILE_NAME_ENDFRAME);
     endCommandRecording();
     collectGarbage();
+
+    // Queued async jobs run after the frame's own work.
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
+}
+
+void VulkanDriver::skipFrame(int) {
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
 }
 
 void VulkanDriver::updateDescriptorSetBuffer(
@@ -1443,7 +1449,7 @@ Handle<HwSwapChain> VulkanDriver::createSwapChainHeadlessS() noexcept {
 Handle<HwTimerQuery> VulkanDriver::createTimerQueryS() noexcept {
     // The handle must be constructed here, as a synchronous call to getTimerQueryValue might happen
     // before createTimerQueryR is executed.
-    auto query = mQueryManager.getNextQuery(&mResourceManager);
+    auto query = resource_ptr<VulkanTimerQuery>::construct(&mResourceManager);
     query.inc();
     return Handle<VulkanTimerQuery>(query.id());
 }
@@ -1479,6 +1485,7 @@ void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
         return;
     }
     auto swapChain = resource_ptr<VulkanSwapChain>::cast(&mResourceManager, sch);
+
     if (mCurrentSwapChain == swapChain) {
         mCurrentSwapChain = {};
     }
@@ -1881,6 +1888,11 @@ bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
             // early exit condition is flattened in EASU code
             return vendorId == 0x5143; // Qualcomm
         }
+        case Workaround::POWER_VR_SHADER_WORKAROUNDS: {
+            auto const vendorId = mContext.getPhysicalDeviceVendorId();
+            // textureGather is slow on PowerVR + Vulkan (tested on Pixel11).
+            return vendorId == 0x1010; // ImgTec (PowerVR)
+        }
         case Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP:
             // Supporting depth attachment as both sampler and attachment is only possible if we set
             // the depth attachment as read-only (e.g. during SSAO pass), however note that the
@@ -2147,12 +2159,14 @@ void VulkanDriver::setupExternalImage(void* image) {
 }
 
 TimerQueryResult VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
-    auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
-    if (!vtq->isCompleted()) {
-        return TimerQueryResult::NOT_READY;
+    if (!tqh) {
+        return TimerQueryResult::ERROR;
     }
-
+    auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
     auto results = mQueryManager.getResult(vtq);
+    if (results.error) {
+        return TimerQueryResult::ERROR;
+    }
     if (results.beginAvailable == 0 || results.endAvailable == 0) {
         return TimerQueryResult::NOT_READY;
     }
@@ -2187,7 +2201,7 @@ void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {
     auto t = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
     assert_invariant(t);
 
-    int32_t layerCount = int32_t(t->depth);
+    uint32_t layerCount = uint32_t(t->depth);
     if (t->target == SamplerType::SAMPLER_CUBEMAP_ARRAY ||
         t->target == SamplerType::SAMPLER_CUBEMAP) {
         layerCount *= 6;
@@ -2208,15 +2222,15 @@ void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {
 
         // TODO: there should be a way to do this using layerCount in vkBlitImage
         // TODO: vkBlitImage should be able to handle 3D textures too
-        for (uint8_t layer = 0; layer < layerCount; layer++) {
+        for (uint32_t layer = 0; layer < layerCount; layer++) {
             VulkanAttachment dst {
                 .level = uint8_t(level + 1),
-                .layer = layer,
+                .layer = uint8_t(layer),
             };
             dst.texture = t;
             VulkanAttachment src {
                 .level = uint8_t(level),
-                .layer = layer,
+                .layer = uint8_t(layer),
             };
             src.texture = t;
             mBlitter.blit(VK_FILTER_LINEAR, dst, dstOffsets, src, srcOffsets);
@@ -2251,10 +2265,14 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // first render pass. Note however that its contents are often preserved on subsequent render
     // passes, due to multiple views.
     TargetBufferFlags discardStart = params.flags.discardStart;
+    fvkmemory::resource_ptr<VulkanSwapChain> swapchain;
     if (rt->isSwapChain()) {
-        fvkmemory::resource_ptr<VulkanSwapChain> sc = mCurrentSwapChain;
-        assert_invariant(sc);
-        if (sc->isFirstRenderPass()) {
+        // There should be no subpasses for the swapchain rendertarget. This is an assumption made
+        // to keep the swapchain FBO compatible without too much bookkeeping.
+        assert_invariant(params.subpassMask == 0);
+        swapchain = mCurrentSwapChain;
+        assert_invariant(swapchain);
+        if (swapchain->isFirstRenderPass()) {
             if (!acquireNextSwapchainImage()) {
                 // We've failed to acquire the next image. Subsequent calls cannot assume the render
                 // pass exists.
@@ -2262,7 +2280,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
                 return;
             } else {
                 discardStart |= TargetBufferFlags::COLOR;
-                sc->markFirstRenderPass();
+                swapchain->markFirstRenderPass();
             }
         }
     }
@@ -2338,8 +2356,21 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     rt->emitBarriersBeginRenderPass(*commandBuffer);
 
-    fvkmemory::resource_ptr<VulkanFramebuffer> vkfb =
-            mFramebufferCache.getFramebuffer(fbkey, &mResourceManager, rt);
+    fvkmemory::resource_ptr<VulkanFramebuffer> vkfb;
+    if (swapchain) {
+        // Swapchain framebuffers are owned by the swapchain so that they are never evicted. One is
+        // reused for every render pass on a given image since those render passes are compatible.
+        vkfb = swapchain->getCurrentFramebuffer();
+        if (!vkfb) {
+            // Cached framebuffers retain the render target to keep their VkImageView cache keys
+            // valid. Swapchain framebuffers are uncached and cleared when attachments change, so
+            // they do not need a render target reference.
+            vkfb = mFramebufferCache.createFramebuffer(fbkey, &mResourceManager, {});
+            swapchain->setCurrentFramebuffer(vkfb);
+        }
+    } else {
+        vkfb = mFramebufferCache.getFramebuffer(fbkey, &mResourceManager, rt);
+    }
 
     // Assign a label to the framebuffer for debugging purposes.
 
@@ -3065,11 +3096,17 @@ void VulkanDriver::scissor(Viewport scissorBox) {
 }
 
 void VulkanDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
+    if (!tqh) {
+        return;
+    }
     auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
     mQueryManager.beginQuery(&(mCommands.get()), vtq);
 }
 
 void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
+    if (!tqh) {
+        return;
+    }
     auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
     mQueryManager.endQuery(&(mCommands.get()), vtq);
 }
@@ -3140,9 +3177,9 @@ bool VulkanDriver::acquireNextSwapchainImage() {
     }
 
     auto const [acquired, backingChanged] = mCurrentSwapChain->acquire();
+    // Note that the swapchain releases its own framebuffers when its backing images change, so
+    // the FBO cache does not need to be reset here.
     if (backingChanged) {
-        mFramebufferCache.resetFramebuffers();
-
         if (mPlatform->getCustomization().flushAndWaitOnWindowResize) {
             // In this scenario the command buffer was flushed, so we need
             // to set again the pipeline state and descriptor set state.

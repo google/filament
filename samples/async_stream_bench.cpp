@@ -471,8 +471,11 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
             app->objects[i].position = { float(col) - 0.5f * float(cols - 1),
                     0.5f * float(rows - 1) - float(row), 0.0f };
         }
-        float const aspect = float(view->getViewport().width) / float(view->getViewport().height);
-        float const zoom = std::max(0.5f * float(cols) / aspect, 0.5f * float(rows)) + 0.5f;
+        double const aspect = double(view->getViewport().width) /
+                double(view->getViewport().height);
+        double const zoom =
+                std::max(0.5 * double(cols) / aspect, 0.5 * double(rows)) +
+                0.5;
         app->camera = EntityManager::get().create();
         app->cam = engine->createCamera(app->camera);
         app->cam->setProjection(Camera::Projection::ORTHO,

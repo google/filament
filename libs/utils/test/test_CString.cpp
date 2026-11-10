@@ -329,10 +329,10 @@ TEST(CString, ComparisonStringLiteral) {
     const CString CS2("abc");
     const CString CS3("def");
     const CString CS4("ab");
-    const char* sv1("abc");
-    const char* sv2("abc");
-    const char* sv3("def");
-    const char* sv4("ab");
+    const char sv1[] = "abc";
+    const char sv2[] = "abc";
+    const char sv3[] = "def";
+    const char sv4[] = "ab";
 
     EXPECT_TRUE(CS1 == sv2);
     EXPECT_TRUE(sv2 == CS1);
@@ -637,8 +637,8 @@ TEST(CString, ReplaceInPlace) {
 
 TEST(CString, ReplaceZeroLength) {
     {
-        std::string str("foobar");
-        str.replace(6, 0, "abc");
+        CString str("foobar");
+        str.replace(6, 0, CString("abc"));
         EXPECT_STREQ("foobarabc", str.c_str());
     }
     {

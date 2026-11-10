@@ -21,12 +21,20 @@
 
 #include "vulkan/utils/Conversion.h"
 
+#include <backend/platforms/VulkanPlatform.h>
+
 #include <private/utils/Tracing.h>
 
 #include <utils/compiler.h>
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
+
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <vector>
+
 #if defined(__clang__)
 // Vulkan functions often immediately dereference pointers, so it's fine to pass in a pointer
 // to a stack-allocated variable.
@@ -41,6 +49,33 @@ namespace filament::backend {
 namespace {
 
 using utils::JobSystem;
+
+// The blob-cache key the driver's VkPipelineCache is stored under. One entry: the data carries its
+// own header (vendor, device and pipelineCacheUUID), checked before it is used. Engines on
+// different devices in one application therefore replace each other's cache.
+constexpr char PIPELINE_CACHE_KEY[] = "filament.vulkan.VkPipelineCache";
+
+// Flush events without a new pipeline (on either thread) before gc() writes the cache. A scene's
+// first frames create pipelines frame after frame, and writing inside that burst would only mean
+// writing it again. Not left to terminate() alone because mobile applications are
+// usually killed, not torn down. The write runs on the compiler thread, so neither the copy nor
+// the application's insertBlob (typically a file write) stalls the driver thread.
+constexpr uint64_t PIPELINE_CACHE_SAVE_QUIET = 120;
+
+// Whether data is a pipeline cache written by this device and driver. The spec has a driver
+// ignore anything else, but not every driver does.
+bool isCompatiblePipelineCache(std::vector<uint8_t> const& data,
+        VkPhysicalDeviceProperties const& properties) {
+    if (data.size() < sizeof(VkPipelineCacheHeaderVersionOne)) {
+        return false;
+    }
+    auto const* header = reinterpret_cast<VkPipelineCacheHeaderVersionOne const*>(data.data());
+    return header->headerSize == sizeof(VkPipelineCacheHeaderVersionOne) &&
+           header->headerVersion == VK_PIPELINE_CACHE_HEADER_VERSION_ONE &&
+           header->vendorID == properties.vendorID &&
+           header->deviceID == properties.deviceID &&
+           memcmp(header->pipelineCacheUUID, properties.pipelineCacheUUID, VK_UUID_SIZE) == 0;
+}
 
 enum DynamicStateBits : uint16_t {
     DIRTY_NONE                 = 0,
@@ -134,20 +169,55 @@ void printPipelineFeedbackInfo(VkPipelineCreationFeedbackCreateInfo const& feedb
 
 } // namespace
 
-VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device, VulkanContext const& context)
-        : mDevice(device),
+VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VulkanPlatform& platform,
+        VulkanContext const& context)
+        : mDevice(platform.getDevice()),
+          mPlatform(platform),
           mCallbackManager(driver),
           mHasVertexInputDynamicState(context.isVertexInputDynamicStateSupported() && context.isPipelineDynamicStateEnabled()),
           mHasDynamicState(context.isExtendedDynamicStateSupported() && context.isPipelineDynamicStateEnabled()),
           mHasDynamicState2(context.isExtendedDynamicState2Supported() && context.isPipelineDynamicStateEnabled()),
           mHasColorWriteEnable(context.isColorWriteEnableSupported() && context.isPipelineDynamicStateEnabled()),
+          mHasPipelineProtectedAccess(context.isPipelineProtectedAccessSupported()),
+          mPipelineCacheThresholdEvictionEnabled(context.isPipelineCacheEvictionEnabled()),
           mContext(context) {
+    std::vector<uint8_t> initialData;
+    if (mContext.isPipelineCachePersistenceEnabled() && mPlatform.hasRetrieveBlobFunc()) {
+        uint8_t probe = 0;
+        size_t const size = mPlatform.retrieveBlob(PIPELINE_CACHE_KEY, sizeof(PIPELINE_CACHE_KEY),
+                &probe, 0);
+        if (size > 0) {
+            initialData.resize(size);
+            if (mPlatform.retrieveBlob(PIPELINE_CACHE_KEY, sizeof(PIPELINE_CACHE_KEY),
+                        initialData.data(), size) != size) {
+                initialData.clear();
+            }
+        }
+        if (!isCompatiblePipelineCache(initialData, mContext.getPhysicalDeviceProperties())) {
+            initialData.clear();
+        }
+    }
     VkPipelineCacheCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+        .initialDataSize = initialData.size(),
+        .pInitialData = initialData.data(),
     };
-    bluevk::vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &mPipelineCache);
+    VkPipelineCache cache = VK_NULL_HANDLE;
+    VkResult result = vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &cache);
+    if (result == VK_SUCCESS) {
+        mSavedCacheSize = initialData.size();
+    } else if (!initialData.empty()) {
+        // A matching header does not guarantee the driver takes the data.
+        createInfo.initialDataSize = 0;
+        createInfo.pInitialData = nullptr;
+        result = vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &cache);
+    }
+    if (result == VK_SUCCESS) {
+        mPipelineCache = cache;
+    }
 
-    if (mContext.shouldUsePipelineCachePrewarming()) {
+    if (mContext.shouldUsePipelineCachePrewarming() ||
+            mContext.isPipelineCachePersistenceEnabled()) {
         mCompilerThreadPool.init(
             /*threadCount=*/1,
             []() {
@@ -164,6 +234,7 @@ VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device, Vu
     FVK_LOGD << "Extended dynamic state supported: " << mHasDynamicState;
     FVK_LOGD << "Extended dynamic state 2 supported: " << mHasDynamicState2;
     FVK_LOGD << "Color write enable supported: " << mHasColorWriteEnable;
+    FVK_LOGD << "Pipeline protected access supported: " << mHasPipelineProtectedAccess;
 #endif
 }
 
@@ -193,6 +264,12 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::getOrCreatePipelin
 
 void VulkanPipelineCache::bindPipeline(VulkanCommandBuffer* commands) {
     VkCommandBuffer const cmdbuffer = commands->buffer();
+
+    // Pipelines that are restricted to protected (or unprotected) access can only be bound to
+    // protected (or unprotected) command buffers, so the protection is part of the key.
+    if (mHasPipelineProtectedAccess) {
+        mStaticPipelineKey.protectedAccess = commands->isProtected() ? 1 : 0;
+    }
 
     // The frontend's PipelineState may trigger a backend bindPipeline call due to dynamic
     // state changes (e.g. vertex buffer info, polygon offset, or raster state). However, when
@@ -230,6 +307,8 @@ void VulkanPipelineCache::asyncPrewarmCache(
         .renderPass = VK_NULL_HANDLE,
         .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         .subpassIndex = 0,
+        // Prewarming targets unprotected rendering.
+        .protectedAccess = 0,
         // We're using vertex input dynamic state, so these should be empty.
         .vertexAttributes = {},
         .vertexBuffers = {},
@@ -492,6 +571,14 @@ VkPipeline VulkanPipelineCache::createPipeline(
         .subpass = key.subpassIndex,
     };
 
+    // Restrict the pipeline to protected or unprotected command buffers if possible. This allows
+    // drivers to avoid the overhead of protected memory support in unprotected pipelines.
+    if (mHasPipelineProtectedAccess) {
+        pipelineCreateInfo.flags |= key.protectedAccess
+                ? VK_PIPELINE_CREATE_PROTECTED_ACCESS_ONLY_BIT_EXT
+                : VK_PIPELINE_CREATE_NO_PROTECTED_ACCESS_BIT_EXT;
+    }
+
     // There are no color attachments if there is no bound fragment shader.  (e.g. shadow map gen)
     // TODO: This should be handled in a higher layer.
     if (!hasFragmentShader) {
@@ -508,7 +595,7 @@ VkPipeline VulkanPipelineCache::createPipeline(
             .alphaBlendOp = (VkBlendOp) raster.alphaBlendOp,
             .colorWriteMask = raster.colorWriteMask,
         };
-        for (uint8_t i = 1; i < colorBlendState.attachmentCount; ++i) {
+        for (uint32_t i = 1; i < colorBlendState.attachmentCount; ++i) {
             colorBlendAttachments[i] = colorBlendAttachments[0];
         }
     }
@@ -571,6 +658,7 @@ VkPipeline VulkanPipelineCache::createPipeline(
         FVK_LOGE << "vkCreateGraphicsPipelines error " << error;
         return VK_NULL_HANDLE;
     }
+    mPipelinesCreated.fetch_add(1, std::memory_order_relaxed);
     return pipeline;
 }
 
@@ -637,7 +725,8 @@ void VulkanPipelineCache::bindRenderPass(
         fvkmemory::resource_ptr<VulkanRenderPass> renderPass,
         int subpassIndex) noexcept {
     mStaticPipelineKey.renderPass = renderPass->getVkRenderPass();
-    mStaticPipelineKey.subpassIndex = subpassIndex;
+    assert_invariant(subpassIndex >= 0 && subpassIndex <= 0xff);
+    mStaticPipelineKey.subpassIndex = uint8_t(subpassIndex);
 }
 
 void VulkanPipelineCache::bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept {
@@ -701,7 +790,35 @@ void VulkanPipelineCache::terminate() noexcept {
     mCallbackManager.terminate();
     mCompilerThreadPool.terminate();
 
+    // The pool dropped any queued save, so one is made here whenever this run created a pipeline
+    // (the size check skips the write if it already happened). Nothing created means nothing to
+    // add, and some drivers (e.g. SwiftShader) do not return loaded data unchanged.
+    if (mPipelinesCreated.load(std::memory_order_relaxed) > 0) {
+        savePipelineCache();
+    }
     vkDestroyPipelineCache(mDevice, mPipelineCache, VKALLOC);
+}
+
+bool VulkanPipelineCache::savePipelineCache() noexcept {
+    if (!mContext.isPipelineCachePersistenceEnabled() || !mPlatform.hasInsertBlobFunc() ||
+            mPipelineCache == VK_NULL_HANDLE) {
+        return true;
+    }
+    size_t size = 0;
+    if (vkGetPipelineCacheData(mDevice, mPipelineCache, &size, nullptr) != VK_SUCCESS) {
+        return false;
+    }
+    if (size == 0 || size == mSavedCacheSize) {
+        return true;
+    }
+    // VK_INCOMPLETE if a pipeline was created since the size was read; the next save gets it.
+    std::vector<uint8_t> data(size);
+    if (vkGetPipelineCacheData(mDevice, mPipelineCache, &size, data.data()) != VK_SUCCESS) {
+        return false;
+    }
+    mPlatform.insertBlob(PIPELINE_CACHE_KEY, sizeof(PIPELINE_CACHE_KEY), data.data(), size);
+    mSavedCacheSize = size;
+    return true;
 }
 
 void VulkanPipelineCache::gc() noexcept {
@@ -711,24 +828,82 @@ void VulkanPipelineCache::gc() noexcept {
     // being used by the GPU, and is therefore safe to destroy or reclaim.
     ++mCurrentTime;
 
+    if (mContext.isPipelineCachePersistenceEnabled()) {
+        uint32_t const created = mPipelinesCreated.load(std::memory_order_relaxed);
+        if (created != mPipelinesSeen) {
+            mPipelinesSeen = created;
+            mPipelinesSeenAt = mCurrentTime;
+            mPipelinesUnsaved.store(true, std::memory_order_relaxed);
+        }
+        if (mPipelinesUnsaved.load(std::memory_order_relaxed) &&
+                mCurrentTime - mPipelinesSeenAt > PIPELINE_CACHE_SAVE_QUIET) {
+            // A failed save is retried after another quiet period, not on every flush.
+            mPipelinesUnsaved.store(false, std::memory_order_relaxed);
+            mPipelinesSeenAt = mCurrentTime;
+            mCompilerThreadPool.queue(CompilerPriorityQueue::LOW, std::make_shared<ProgramToken>(),
+                    [this]() {
+                        if (!savePipelineCache()) {
+                            mPipelinesUnsaved.store(true, std::memory_order_relaxed);
+                        }
+                    });
+        }
+    }
+
     // The Vulkan spec says: "When a command buffer begins recording, all state in that command
     // buffer is undefined." Therefore, we need to clear all bindings at this time.
     resetBoundPipeline();
 
-    // NOTE: Due to robin_map restrictions, we cannot use auto or range-based loops.
+    if (mPipelineCacheThresholdEvictionEnabled) {
+        // Capacity based eviction
+        if (mPipelines.size() <= FVK_MAX_PIPELINE_COUNT) {
+            return;
+        }
 
-    // Evict any pipelines that have not been used in a while.
-    // Any pipeline older than FVK_MAX_COMMAND_BUFFERS can be safely destroyed.
-   using ConstPipeIterator = decltype(mPipelines)::const_iterator;
-   for (ConstPipeIterator iter = mPipelines.begin(); iter != mPipelines.end();) {
-       const PipelineCacheEntry& cacheEntry = iter.value();
-       if (cacheEntry.lastUsed + FVK_MAX_PIPELINE_AGE < mCurrentTime) {
-           vkDestroyPipeline(mDevice, iter->second.handle, VKALLOC);
-           iter = mPipelines.erase(iter);
-       } else {
-           ++iter;
-       }
-   }
+        // figure out which pipelines have exceeded their time to live.
+        using PipeIterator = decltype(mPipelines)::iterator;
+        std::vector<PipeIterator> expiredCandidates;
+        expiredCandidates.reserve(mPipelines.size());
+
+        for (PipeIterator iter = mPipelines.begin(); iter != mPipelines.end(); ++iter) {
+            const PipelineCacheEntry& cacheEntry = iter.value();
+            if (cacheEntry.lastUsed + FVK_MAX_PIPELINE_AGE < mCurrentTime) {
+                expiredCandidates.push_back(iter);
+            }
+        }
+
+        // If all pipelines are still within the TTL window, do not evict anything.
+        if (expiredCandidates.empty()) {
+            return;
+        }
+
+        // Sort expired piplines oldest first
+        std::sort(expiredCandidates.begin(), expiredCandidates.end(),
+                [](const PipeIterator& a, const PipeIterator& b) {
+                    return a.value().lastUsed < b.value().lastUsed;
+                });
+
+        // Compute how many expired pipelines to evict to meet capacity requirements
+        const size_t excessCount = mPipelines.size() - FVK_MAX_PIPELINE_COUNT;
+        const size_t evictCount = std::min(excessCount, expiredCandidates.size());
+
+        for (size_t i = 0; i < evictCount; ++i) {
+            PipeIterator iter = expiredCandidates[i];
+            vkDestroyPipeline(mDevice, iter.value().handle, VKALLOC);
+            mPipelines.erase(iter);
+        }
+    } else {
+        // Revert back to the previous behavior
+        using ConstPipeIterator = decltype(mPipelines)::const_iterator;
+        for (ConstPipeIterator iter = mPipelines.begin(); iter != mPipelines.end();) {
+            const PipelineCacheEntry& cacheEntry = iter.value();
+            if (cacheEntry.lastUsed + FVK_MAX_PIPELINE_AGE < mCurrentTime) {
+                vkDestroyPipeline(mDevice, iter->second.handle, VKALLOC);
+                iter = mPipelines.erase(iter);
+            } else {
+                ++iter;
+            }
+        }
+    }
 }
 
 bool VulkanPipelineCache::PipelineEqual::operator()(const PipelineKey& k1,

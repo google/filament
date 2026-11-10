@@ -14,43 +14,55 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include <utils/BinaryTreeArray.h>
+
+#include <gtest/gtest.h>
 
 using namespace utils;
 
 TEST(BinaryTreeArray, basic) {
-
-
     struct Node {
-        size_t index = 0;
-        size_t next = 0;
+        size_t index = ~size_t(0);
+        size_t next = ~size_t(0);
+        size_t visitOrder = 0;
         bool visited = false;
     };
     Node array[256];
 
-    BinaryTreeArray::traverse(1,
-            [&array](size_t index, size_t col, size_t next) {
-                array[index] = Node{ index, next, true };
-            },
-            [&array](size_t index, size_t l, size_t r, size_t next) {
-                EXPECT_TRUE(array[l].visited);
-                EXPECT_TRUE(array[r].visited);
-                array[index] = Node{ index, next };
-            });
+    auto runTraversal = [&array](size_t const height) {
+        for (auto& n : array) {
+            n = Node{};
+        }
+        size_t visitOrder = 0;
+        size_t expectedLeafCol = 0;
+        BinaryTreeArray::traverse(height,
+                [&](size_t index, size_t col, size_t next) {
+                    EXPECT_FALSE(array[index].visited);
+                    EXPECT_EQ(expectedLeafCol++, col);
+                    array[index] = Node{ index, next, ++visitOrder, true };
+                },
+                [&](size_t index, size_t l, size_t r, size_t next) {
+                    EXPECT_FALSE(array[index].visited);
+                    EXPECT_TRUE(array[l].visited);
+                    EXPECT_TRUE(array[r].visited);
+                    EXPECT_LT(array[l].visitOrder, array[r].visitOrder);
+                    EXPECT_EQ(index + 1, l);
+                    EXPECT_EQ(array[l].next, r);
+                    EXPECT_EQ(array[r].next, next);
+                    array[index] = Node{ index, next, ++visitOrder, true };
+                });
+        EXPECT_EQ(BinaryTreeArray::count(height), visitOrder);
+        EXPECT_EQ(size_t(1) << (height - 1), expectedLeafCol);
+        EXPECT_EQ(BinaryTreeArray::count(height), array[0].visitOrder);
+    };
+
+    runTraversal(1);
 
     EXPECT_EQ(0, array[0].index);
     EXPECT_EQ(1, array[0].next);
 
 
-    BinaryTreeArray::traverse(2,
-            [&array](size_t index, size_t col, size_t next) {
-                array[index] = Node{ index, next };
-            },
-            [&array](size_t index, size_t l, size_t r, size_t next) {
-                array[index] = Node{ index, next };
-            });
+    runTraversal(2);
 
     EXPECT_EQ(0, array[0].index);
     EXPECT_EQ(3, array[0].next);
@@ -62,13 +74,7 @@ TEST(BinaryTreeArray, basic) {
         EXPECT_EQ(3, array[2].next);
 
 
-    BinaryTreeArray::traverse(3,
-            [&array](size_t index, size_t col, size_t next) {
-                array[index] = Node{ index, next };
-            },
-            [&array](size_t index, size_t l, size_t r, size_t next) {
-                array[index] = Node{ index, next };
-            });
+    runTraversal(3);
 
     EXPECT_EQ(0, array[0].index);
     EXPECT_EQ(7, array[0].next);
@@ -92,13 +98,7 @@ TEST(BinaryTreeArray, basic) {
             EXPECT_EQ(7, array[6].next);
 
 
-    BinaryTreeArray::traverse(4,
-            [&array](size_t index, size_t col, size_t next) {
-                array[index] = Node{ index, next };
-            },
-            [&array](size_t index, size_t l, size_t r, size_t next) {
-                array[index] = Node{ index, next };
-            });
+    runTraversal(4);
 
     EXPECT_EQ(0, array[0].index);
     EXPECT_EQ(15, array[0].next);

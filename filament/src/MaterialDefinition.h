@@ -16,6 +16,7 @@
 #ifndef TNT_FILAMENT_MATERIALDEFINITION_H
 #define TNT_FILAMENT_MATERIALDEFINITION_H
 
+#include "DynamicSpecConstKey.h"
 #include "ProgramSpecialization.h"
 
 #include "ds/DescriptorSetLayout.h"
@@ -27,9 +28,13 @@
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
 
+#include <filament/MaterialEnums.h>
+
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
+
+#include <utils/compiler.h>
 
 #include <tsl/robin_set.h>
 
@@ -122,7 +127,7 @@ struct MaterialDefinition {
     //
     // The Variant:: predicates all encode MaterialDomain::SURFACE semantics; evaluating them on a
     // variant from another domain yields a silently meaningless answer (e.g. the post-process key
-    // 1 has the DIR bit set, so the directional-lighting user filter would clear it to 0). Prefer
+    // 1 has the STE bit set, so Variant::isStereoVariant() reports it as a stereo variant). Prefer
     // these accessors over calling Variant:: directly: they resolve to the surface semantics only
     // when this material actually has them, and are inert otherwise.
     bool hasSurfaceVariants() const noexcept {
@@ -149,12 +154,45 @@ struct MaterialDefinition {
         return hasSurfaceVariants() && Variant::isDepthMomentsVariant(variant);
     }
 
+    bool isSharedVariant(Variant const variant, bool const isDefaultMaterial) const noexcept {
+        // The default material explicitly filters VSM variants to reduce binary size, so it cannot
+        // provide the MNT | DEP variant as a shared program.
+        return !isDefaultMaterial && !hasCustomDepthShader &&
+               isValidDepthVariant(variant) &&
+               !isDepthMomentsVariant(variant);
+    }
+
+    bool isMotionVectorsVariant(Variant const variant) const noexcept {
+        return hasSurfaceVariants() && Variant::isMotionVectorsVariant(variant);
+    }
+
     // The user variant filter mask clears surface variant bits, so it must not be applied to a
     // key that isn't a surface variant bitfield -- doing so silently maps valid variants of the
     // other domains onto a different key.
     Variant filterUserVariant(Variant const variant,
             UserVariantFilterMask const filterMask) const noexcept {
         return hasSurfaceVariants() ? Variant::filterUserVariant(variant, filterMask) : variant;
+    }
+
+    // Materials compiled with variantFilter: [fog] have no fog code at all.
+    bool isFogSupported() const noexcept {
+        return !(variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::FOG));
+    }
+
+    // Material-aware version of DynamicSpecConstKey::filterProgramSpecKey(): on top of the
+    // generic variant/domain/lighting rules, it applies this material's compile-time
+    // restrictions (currently: no fog code when compiled with variantFilter: [fog]).
+    // Prefer this over the DynamicSpecConstKey version whenever a material is available.
+    // The result always passes the specKey checks of isValidProgram().
+    DynamicSpecConstKey filterProgramSpecKey(Variant const variant,
+            DynamicSpecConstKey specKey) const noexcept {
+        specKey = DynamicSpecConstKey::filterProgramSpecKey(
+                variant, specKey, materialDomain, isVariantLit);
+        // Without fog code, the fog specialization would be a redundant program.
+        if (UTILS_UNLIKELY(!isFogSupported())) {
+            specKey.setFog(false);
+        }
+        return specKey;
     }
 
     backend::DescriptorSetLayout const& getPerViewDescriptorSetLayoutDescription(
@@ -224,8 +262,11 @@ struct MaterialDefinition {
             pushConstants;
 
     utils::CString name;
-    uint64_t cacheId = 0;
     utils::CString source;
+
+    // Keys the program cache. Ids are never reused, so a stale program entry can't match a new
+    // definition. Reloading the same content after its definition is freed gets a new id.
+    uint64_t const uniqueId;
 
 private:
     friend class MaterialCache;

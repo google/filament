@@ -340,7 +340,7 @@ TEST(JobQueue, MultipleProducersConsumers) {
 
 TEST(AmortizationWorker, Process) {
     JobQueue::Ptr queue = JobQueue::create();
-    JobWorker::Ptr worker = AmortizationWorker::create(queue);
+    JobWorker::Ptr worker = AmortizationWorker::create(queue, {});
     int v = 0;
 
     queue->push([&v]() { v++; });
@@ -360,7 +360,7 @@ TEST(AmortizationWorker, Process) {
 
 TEST(AmortizationWorker, ProcessAll) {
     JobQueue::Ptr queue = JobQueue::create();
-    JobWorker::Ptr worker = AmortizationWorker::create(queue);
+    JobWorker::Ptr worker = AmortizationWorker::create(queue, {});
     int v = 0;
 
     queue->push([&v]() { v++; });
@@ -377,7 +377,7 @@ TEST(AmortizationWorker, ProcessAll) {
 
 TEST(AmortizationWorker, TerminateDrainsAllJobs) {
     JobQueue::Ptr queue = JobQueue::create();
-    JobWorker::Ptr worker = AmortizationWorker::create(queue);
+    JobWorker::Ptr worker = AmortizationWorker::create(queue, {});
     int v = 0;
 
     queue->push([&v]() { v++; });
@@ -395,7 +395,7 @@ TEST(AmortizationWorker, TerminateDrainsAllJobs) {
 
 TEST(AmortizationWorker, Drain) {
     JobQueue::Ptr queue = JobQueue::create();
-    JobWorker::Ptr worker = AmortizationWorker::create(queue);
+    JobWorker::Ptr worker = AmortizationWorker::create(queue, {});
     int v = 0;
 
     queue->push([&v]() { v++; });
@@ -411,7 +411,7 @@ TEST(AmortizationWorker, Drain) {
 
 TEST(AmortizationWorker, DrainChainedJobs) {
     JobQueue::Ptr queue = JobQueue::create();
-    JobWorker::Ptr worker = AmortizationWorker::create(queue);
+    JobWorker::Ptr worker = AmortizationWorker::create(queue, {});
     int v = 0;
 
     queue->push([&queue, &v]() {
@@ -423,6 +423,58 @@ TEST(AmortizationWorker, DrainChainedJobs) {
     EXPECT_EQ(11, v);
 }
 
+TEST(AmortizationWorker, ProcessFrameRunsOneJobWithZeroBudget) {
+    JobQueue::Ptr queue = JobQueue::create();
+    JobWorker::Ptr worker = AmortizationWorker::create(queue, std::chrono::nanoseconds(0));
+    int v = 0;
+
+    queue->push([&v]() { v++; });
+    queue->push([&v]() { v++; });
+    queue->push([&v]() { v++; });
+
+    worker->processFrame();
+    EXPECT_EQ(1, v);
+    worker->processFrame();
+    EXPECT_EQ(2, v);
+}
+
+TEST(AmortizationWorker, ProcessFrameDrainsWithinLargeBudget) {
+    JobQueue::Ptr queue = JobQueue::create();
+    JobWorker::Ptr worker = AmortizationWorker::create(queue, std::chrono::hours(1));
+    int v = 0;
+
+    queue->push([&v]() { v++; });
+    queue->push([&v]() { v++; });
+    queue->push([&v]() { v++; });
+
+    worker->processFrame();
+    EXPECT_EQ(3, v);
+}
+
+TEST(AmortizationWorker, ProcessFrameStopsAfterOverrun) {
+    using namespace std::chrono;
+    JobQueue::Ptr queue = JobQueue::create();
+    JobWorker::Ptr worker = AmortizationWorker::create(queue, milliseconds(1));
+    int v = 0;
+
+    auto const makeSlowJob = [&v]() {
+        return [&v]() {
+            auto const end = steady_clock::now() + milliseconds(2);
+            while (steady_clock::now() < end) {
+            }
+            v++;
+        };
+    };
+    queue->push(makeSlowJob());
+    queue->push(makeSlowJob());
+    queue->push(makeSlowJob());
+
+    // Each call gets a fresh budget, and the first job overruns it.
+    worker->processFrame();
+    EXPECT_EQ(1, v);
+    worker->processFrame();
+    EXPECT_EQ(2, v);
+}
 
 TEST(ThreadWorker, Process) {
     JobQueue::Ptr queue = JobQueue::create();
@@ -534,6 +586,40 @@ TEST(ThreadWorker, DestroyAfterTerminate) {
     }
 
     EXPECT_TRUE(endCalled);
+}
+
+TEST(ThreadWorker, WrapJobWrapsEachJobOnTheWorkerThread) {
+    JobQueue::Ptr queue = JobQueue::create();
+    std::thread::id const testThread = std::this_thread::get_id();
+    std::atomic_int wrapCount = { 0 };
+    std::atomic_bool insideWrapper = { false };
+    std::atomic_int ranInsideWrapperOnWorker = { 0 };
+
+    ThreadWorker::Config config = {
+        .wrapJob = [&](JobQueue::Job& job) {
+            wrapCount++;
+            insideWrapper.store(true);
+            job();
+            job = nullptr;
+            insideWrapper.store(false);
+        }
+    };
+    JobWorker::Ptr worker = ThreadWorker::create(queue, std::move(config));
+
+    auto const makeJob = [&]() {
+        return [&]() {
+            if (insideWrapper.load() && std::this_thread::get_id() != testThread) {
+                ranInsideWrapperOnWorker++;
+            }
+        };
+    };
+    queue->push(makeJob());
+    queue->push(makeJob());
+
+    // `terminate` runs the pending jobs without adding one of its own, unlike `drain`.
+    worker->terminate();
+    EXPECT_EQ(2, wrapCount.load());
+    EXPECT_EQ(2, ranInsideWrapperOnWorker.load());
 }
 
 // Destroying a worker without calling `terminate()` first is a programming error, and the process

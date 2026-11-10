@@ -22,6 +22,7 @@
 
 #include <math/mat4.h>
 #include <math/vec2.h>
+#include <math/vec4.h>
 
 #include <stdint.h>
 
@@ -34,15 +35,28 @@ struct FrameHistoryEntry {
     struct TemporalAA{
         FrameGraphTexture color;
         FrameGraphTexture::Descriptor desc;
+        FrameGraphTexture depth;
+        FrameGraphTexture::Descriptor depthDesc;
         math::mat4 projection;     // world space to clip space
         math::float2 jitter{};
         uint32_t frameId = 0;   // used for halton sequence
+        // frames remaining in motionAdaptiveHistory's global hold-off, counting down from
+        // TemporalAntiAliasingOptions::motionHoldFrames each time the camera (projection, not
+        // jitter) moves meaningfully frame to frame, reset to that value; see
+        // PostProcessManager::TaaJitterCamera for where it's measured and taa.mat for where it's
+        // consumed.
+        float motionHoldRemaining = 0.0f;
     } taa;
     struct {
         FrameGraphTexture color;
         FrameGraphTexture::Descriptor desc;
         math::mat4 projection;
     } ssr;
+    struct {
+        math::mat4 projection;          // unjittered clip-from-user-world, includes ts
+        math::float4 clipTransform{};   // ts as {sx, sy, tx, ty}
+        bool valid = false;             // set on frames rendered with motion vectors active
+    } motionVectors;
 };
 
 /*

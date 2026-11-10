@@ -32,7 +32,9 @@
 #include "ds/DescriptorSet.h"
 #include "ds/TypedUniformBuffer.h"
 
-#include "components/LightManager.h"
+#include "fg/FrameGraphTexture.h"
+#include "fg/FrameGraphId.h"
+
 #include "components/RenderableManager.h"
 
 #include "details/Camera.h"
@@ -50,7 +52,9 @@
 #include <backend/Handle.h>
 
 #include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/Entity.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/StructureOfArrays.h>
 #include <utils/Range.h>
 #include <utils/Slice.h>
@@ -64,6 +68,8 @@ namespace filament::fgviewer {
 #endif
 
 #include <math/mat4.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
 #include <math/vec4.h>
 
 #include <array>
@@ -89,9 +95,11 @@ class JobSystem;
 namespace filament {
 
 class FEngine;
+class FInstanceBuffer;
 class FMaterialInstance;
 class FRenderer;
 class FScene;
+class FTexture;
 
 // ------------------------------------------------------------------------------------------------
 
@@ -102,15 +110,6 @@ public:
 
     explicit FView(FEngine& engine);
     ~FView() noexcept;
-
-    FScene::RenderableSoa& getRenderableData() const noexcept {
-        assert_invariant(mSceneCache);
-        return mSceneCache->renderableData;
-    }
-    FScene::LightSoa& getLightData() const noexcept {
-        assert_invariant(mSceneCache);
-        return mSceneCache->lightData;
-    }
 
     void terminate(FEngine& engine);
 
@@ -125,9 +124,28 @@ public:
     // call at the end of frame rendering to free per-frame data
     void finish(LinearAllocatorArena& arena);
 
-    void setScene(FScene* scene);
+    void setScene(FScene* scene) noexcept;
     FScene const* getScene() const noexcept { return mScene; }
     FScene* getScene() noexcept { return mScene; }
+
+    FScene::RenderableSoa const& getRenderableData() const noexcept {
+        assert_invariant(mSceneCache);
+        return mSceneCache->renderableData;
+    }
+    FScene::RenderableSoa& getRenderableData() noexcept {
+        assert_invariant(mSceneCache);
+        return mSceneCache->renderableData;
+    }
+    FScene::LightSoa const& getLightData() const noexcept {
+        assert_invariant(mSceneCache);
+        return mSceneCache->lightData;
+    }
+    FScene::LightSoa& getLightData() noexcept {
+        assert_invariant(mSceneCache);
+        return mSceneCache->lightData;
+    }
+    FScene::SceneCacheData const* getSceneCache() const noexcept { return mSceneCache.get(); }
+    FScene::SceneCacheData* getSceneCache() noexcept { return mSceneCache.get(); }
 
     bool hasContactShadows() const noexcept;
     void detachScene(FScene const* scene) noexcept;
@@ -239,10 +257,6 @@ public:
             CameraInfo const& cameraInfo, math::float4 const& userTime,
             RenderPassBuilder const& passBuilder) noexcept;
 
-    static void updatePrimitivesLod(FScene::RenderableSoa& renderableData,
-            FEngine const& engine, CameraInfo const& camera,
-            Range visible) noexcept;
-
     void setShadowingEnabled(bool const enabled) noexcept { mShadowingEnabled = enabled; }
 
     bool isShadowingEnabled() const noexcept { return mShadowingEnabled; }
@@ -323,6 +337,52 @@ public:
 
     GuardBandOptions const& getGuardBandOptions() const noexcept {
         return mGuardBandOptions;
+    }
+
+    void setMotionVectorsOptions(MotionVectorsOptions options) noexcept;
+
+    MotionVectorsOptions const& getMotionVectorsOptions() const noexcept {
+        return mMotionVectorsOptions;
+    }
+
+    // Returns whether the motion vectors pass would run with the current options and engine
+    // state. Unlike isMotionVectorsActive(), this doesn't depend on prepare() having run.
+    bool evaluateMotionVectorsActive(FEngine const& engine) const noexcept;
+
+    // Returns whether the motion vectors pass runs this frame. This is latched once per frame
+    // at the start of prepare(), so that everything that depends on it agrees for the frame.
+    bool isMotionVectorsActive() const noexcept {
+#if defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+        return mIsMotionVectorsActive;
+#else
+        return false;
+#endif
+    }
+
+    // Returns whether any visible renderable moved since the previous render of this View.
+    // Valid after prepare(); always false when motion vectors aren't active.
+    bool hasMovingRenderables() const noexcept {
+        return isMotionVectorsActive() && mSceneCache &&
+               mSceneCache->motionVectors.hasMovingRenderables;
+    }
+
+    // For testing only: a copy of this View's object motion vectors (see
+    // PostProcessManager::motionVectors()), which can then be read back with
+    // Renderer::readPixels(). While `texture` is set, every render of this View with motion
+    // vectors active writes the object motion vectors of the color pass's viewport into it,
+    // starting at its origin, or zeros when there are none (fast path or no history). Without
+    // motion vectors, it's left untouched.
+    struct MotionVectorsReadback {
+        // A RG16F 2D texture with (at least) the COLOR_ATTACHMENT and BLIT_DST usages, normally
+        // the size of the viewport. It must outlive this setting: reset it before destroying
+        // the texture.
+        FTexture const* texture = nullptr;
+    };
+
+    void setMotionVectorsReadback(MotionVectorsReadback const& readback);
+
+    MotionVectorsReadback const& getMotionVectorsReadback() const noexcept {
+        return mMotionVectorsReadback;
     }
 
     void setColorGrading(FColorGrading const* colorGrading) noexcept {
@@ -563,6 +623,26 @@ private:
 
     void invalidateSceneCache() noexcept;
 
+    // Latches evaluateMotionVectorsActive() into mIsMotionVectorsActive. Called once per frame
+    // at the start of prepare().
+    void updateMotionVectorsActive(FEngine const& engine) noexcept;
+
+    // Discards the motion vectors history, so that the next render reports no motion. Called on
+    // activation transitions, when the scene changes and when the frame history is cleared.
+    void resetMotionVectorsHistory() noexcept;
+
+    // Computes prevWorldFromWorldMatrix and motionMoved for every visible renderable, from the
+    // transforms recorded at the previous render of this View, then commits those of the
+    // renderables that moved (see SceneCacheData::commitMovedRenderables()). Also tracks the
+    // InstanceBuffers of the non-visible renderables (updateUBOs() tracks the visible ones).
+    // Called by prepare() while motion vectors are active, after culling and before updateUBOs().
+    void prepareMotionVectors(FEngine const& engine, math::mat4 const& worldTransform,
+            FScene::RenderableSoa& renderableData) noexcept;
+
+    // Commits this render's motion vectors state as the history of the next render. Called by
+    // commitFrameHistory() while motion vectors are active.
+    void commitMotionVectorsHistory() noexcept;
+
     void prepareVisibleRenderables(utils::JobSystem& js,
             Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept;
 
@@ -641,6 +721,7 @@ private:
     MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
     ScreenSpaceReflectionsOptions mScreenSpaceReflectionsOptions;
     GuardBandOptions mGuardBandOptions;
+    MotionVectorsOptions mMotionVectorsOptions;
     StereoscopicOptions mStereoscopicOptions;
     BlendMode mBlendMode = BlendMode::OPAQUE;
     const FColorGrading* mColorGrading = nullptr;
@@ -661,6 +742,9 @@ private:
 
     mutable FrameHistory mFrameHistory{};
 
+    // for testing only, see setMotionVectorsReadback()
+    MotionVectorsReadback mMotionVectorsReadback;
+
     FPickingQuery* mActivePickingQueriesList = nullptr;
 
     utils::CString mName;
@@ -679,6 +763,7 @@ private:
     mutable bool mHasExtraDirectionalLights = false;
     mutable bool mHasShadowing = false;
     mutable bool mNeedsShadowMap = false;
+    bool mIsMotionVectorsActive = false;
 
     // State shared between Scene and driver callbacks.
     struct SharedState {

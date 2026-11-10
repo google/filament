@@ -74,7 +74,7 @@ void exportPPM(void* buffer, uint32_t width, uint32_t height, std::ofstream& out
     convertRGBAtoRGB(buffer, width, height);
 
     outstream << "P6 " << width << " " << height << " " << 255 << std::endl;
-    outstream.write(static_cast<char*>(buffer), width * height * 3);
+    outstream.write(static_cast<char*>(buffer), std::streamsize(width) * height * 3);
 }
 
 using ExportFormat = AutomationEngine::Options::ExportFormat;
@@ -90,7 +90,7 @@ constexpr char const* getExportFormatExtension(ExportFormat format) {
 void AutomationEngine::exportScreenshot(View* view, Renderer* renderer, std::string filename,
         bool autoclose, AutomationEngine* automationEngine) {
     const Viewport& vp = view->getViewport();
-    const size_t byteCount = vp.width * vp.height * 4;
+    const size_t byteCount = size_t(vp.width) * vp.height * 4;
 
     // Create a buffer descriptor that writes the PPM after the data becomes ready on the CPU.
     backend::PixelBufferDescriptor buffer(
@@ -114,8 +114,7 @@ void AutomationEngine::exportScreenshot(View* view, Renderer* renderer, std::str
                 exportPPM(buffer, vp.width, vp.height, outstream);
             } else if (extension == "tif" || extension == "tiff") {
                 image::LinearImage image = image::toLinearWithAlpha<uint8_t>(
-                        vp.width, vp.height, vp.width * 4, (uint8_t*) buffer,
-                        [](uint8_t v) { return v; }, image::sRGBToLinear<filament::math::float4>);
+                        vp.width, vp.height, vp.width * 4, (uint8_t*) buffer);
                 imageio_lite::ImageEncoder::encode(outstream,
                         imageio_lite::ImageEncoder::Format::TIFF, image, "", "");
             } else {

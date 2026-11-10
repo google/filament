@@ -364,7 +364,8 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform,
             // The worker operates on the same backend (engine) thread for the Amortization mode,
             // so use the same state.
             mWorkerState = mBackendState;
-            mJobWorker = AmortizationWorker::create(mJobQueue);
+            mJobWorker = AmortizationWorker::create(mJobQueue,
+                    driverConfig.asynchronousFrameBudget);
         }
     }
 }
@@ -1378,11 +1379,12 @@ void OpenGLDriver::createTextureViewSwizzleAsyncR(Handle<HwTexture> th, Handle<H
 
     assert_invariant(getJobQueue());
 
+    // No GL commands are issued in the worker thread, so no flush is needed. The job push
+    // keeps ordering, because src->gl is filled in by an earlier async createTexture job.
     getJobQueue()->push([this, th, srch, r, g, b, a, handler, callback, user,
             tag=std::move(tag)]() mutable {
         DEBUG_MARKER_NAME("createTextureViewSwizzleAsyncR")
         createTextureViewSwizzleCommon(th, srch, r, g, b, a, std::move(tag));
-        flushIfSharedContext();
         scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     });
 }
@@ -1591,12 +1593,13 @@ void OpenGLDriver::importTextureAsyncR(Handle<HwTexture> th, intptr_t const id,
 
     assert_invariant(getJobQueue());
 
+    // No GL commands are issued in the worker thread, so no flush is needed. The job push
+    // fires the callback after any previously queued worker jobs.
     getJobQueue()->push([this, th, id, target, levels, format, samples, width, height, depth, usage,
             handler, callback, user, tag=std::move(tag)]() mutable {
         DEBUG_MARKER_NAME("importTextureAsyncR")
         importTextureCommon(getWorkerState(), th, id, target, levels, format, samples, width, height, depth, usage,
             std::move(tag));
-        flushIfSharedContext();
         scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     });
 }
@@ -2531,6 +2534,7 @@ void OpenGLDriver::destroySwapChain(Handle<HwSwapChain> sch) {
 
     if (sch) {
         GLSwapChain const* sc = handle_cast<GLSwapChain*>(sch);
+        getBackendState().unbindFramebuffer(GL_FRAMEBUFFER);
         mPlatform.destroySwapChain(sc->swapChain);
         destruct(sch, sc);
     }
@@ -2893,7 +2897,22 @@ bool OpenGLDriver::isTextureFormatSupported(TextureFormat const format) {
         return  ext.EXT_texture_compression_bptc;
     }
     if (isASTCCompression(format)) {
-        return ext.KHR_texture_compression_astc_hdr;
+        return ext.KHR_texture_compression_astc_ldr ||
+               ext.KHR_texture_compression_astc_hdr ||
+               ext.WEBGL_compressed_texture_astc;
+    }
+    switch (format) {
+        case TextureFormat::R16:
+        case TextureFormat::R16_SNORM:
+        case TextureFormat::RG16:
+        case TextureFormat::RG16_SNORM:
+        case TextureFormat::RGB16:
+        case TextureFormat::RGB16_SNORM:
+        case TextureFormat::RGBA16:
+        case TextureFormat::RGBA16_SNORM:
+            return ext.EXT_texture_norm16;
+        default:
+            break;
     }
     if (mContext.isES2()) {
         return textureFormatToFormatAndType(format).first != GL_NONE;
@@ -2945,6 +2964,15 @@ bool OpenGLDriver::isTextureFormatFilterable(TextureFormat format) {
         case TextureFormat::R11F_G11F_B10F:
         case TextureFormat::RGB9_E5:
             return true;
+        case TextureFormat::R16:
+        case TextureFormat::R16_SNORM:
+        case TextureFormat::RG16:
+        case TextureFormat::RG16_SNORM:
+        case TextureFormat::RGB16:
+        case TextureFormat::RGB16_SNORM:
+        case TextureFormat::RGBA16:
+        case TextureFormat::RGBA16_SNORM:
+            return gl.ext.EXT_texture_norm16;
         case TextureFormat::R16F:
         case TextureFormat::RG16F:
         case TextureFormat::RGB16F:
@@ -3008,6 +3036,12 @@ bool OpenGLDriver::isRenderTargetFormatSupported(TextureFormat const format) {
         // Three-component SRGB is a color-renderable texture format in core OpenGL on desktop.
         case TextureFormat::SRGB8:
             return mContext.isAtLeastGL<4, 5>();
+
+        // 16-bit normalized formats from GL_EXT_texture_norm16.
+        case TextureFormat::R16:
+        case TextureFormat::RG16:
+        case TextureFormat::RGBA16:
+            return gl.ext.EXT_texture_norm16;
 
         // Half-float formats, requires extension.
         case TextureFormat::R16F:
@@ -4542,10 +4576,6 @@ void OpenGLDriver::tick(int) {
 #endif
     executeEveryNowAndThenOps();
     getShaderCompilerService().tick();
-    if (getJobWorker()) {
-        // This number is randomly/heuristically chosen. Consider making the number optional.
-        getJobWorker()->process(5);
-    }
 }
 
 void OpenGLDriver::beginFrame(
@@ -4618,6 +4648,17 @@ void OpenGLDriver::endFrame(UTILS_UNUSED uint32_t const frameId) {
     //glFinish();
     mPlatform.endFrame(frameId);
     insertEventMarker("endFrame");
+
+    // Queued async jobs run after the frame's own work.
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
+}
+
+void OpenGLDriver::skipFrame(int) {
+    if (getJobWorker()) {
+        getJobWorker()->processFrame();
+    }
 }
 
 void OpenGLDriver::updateDescriptorSetBuffer(

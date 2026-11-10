@@ -514,6 +514,76 @@ TEST_F(FilaflatSecurityTest, DictionarySpirvDecodedSizeExceedsRatio) {
 #endif // FILAMENT_DRIVER_SUPPORTS_VULKAN
 
 
+// 8. Stale heap bytes from an over-declared text shaderSize (b/533983147)
+// The lines decode to fewer bytes than shaderSize claims. The rest of the buffer still holds the
+// previous shader, and all of it was handed to the driver as source.
+class MaterialChunkShaderSizeTest : public FilaflatSecurityTest {
+protected:
+    // One shader whose single line is dictionary entry 0.
+    std::vector<uint8_t> makeGlslChunk(uint32_t shaderSize) {
+        std::vector<uint8_t> payload;
+        write16(payload, 0); // mSharedStrings
+        write16(payload, 0); // mVertexStrings
+        write16(payload, 0); // mFragmentStrings
+        write16(payload, 0); // mComputeStrings
+        write64(payload, 1); // numShaders
+        payload.push_back(1); // model
+        payload.push_back(0); // variant
+        payload.push_back(0); // stage
+        write32(payload, 23); // offset
+        write32(payload, shaderSize);
+        write32(payload, 1);  // lineCount
+        write32(payload, 0);  // extLength
+        write32(payload, 1);  // baseLength
+        write32(payload, 0);  // numericLength
+        payload.push_back(0); // lineIndex = 0
+
+        std::vector<uint8_t> fileData;
+        write64(fileData, (uint64_t)filamat::ChunkType::MaterialGlsl);
+        write32(fileData, payload.size());
+        fileData.insert(fileData.end(), payload.begin(), payload.end());
+        return fileData;
+    }
+
+    bool getShader(std::vector<uint8_t> const& fileData, ShaderContent& output) {
+        ChunkContainer container(fileData.data(), fileData.size());
+        EXPECT_TRUE(container.parse());
+        MaterialChunk chunk(container);
+        EXPECT_TRUE(chunk.initialize(filamat::ChunkType::MaterialGlsl));
+
+        const char line[] = "abc";
+        ShaderContent entry;
+        entry.reserve(sizeof(line));
+        entry.resize(sizeof(line));
+        memcpy(entry.data(), line, sizeof(line));
+        BlobDictionary dict;
+        dict.reserve(1);
+        dict.push_back(entry);
+
+        return chunk.getShader(output, dict, MaterialChunk::ShaderModel(1), filament::Variant{0},
+                MaterialChunk::ShaderStage(0));
+    }
+};
+
+TEST_F(MaterialChunkShaderSizeTest, ExactSizeStillParses) {
+    ShaderContent output;
+    ASSERT_TRUE(getShader(makeGlslChunk(4), output));
+    ASSERT_EQ(4u, output.size());
+    EXPECT_EQ(0, memcmp(output.data(), "abc", 4));
+}
+
+TEST_F(MaterialChunkShaderSizeTest, OverDeclaredSizeRejected) {
+    // Mimics the engine-wide buffer, which still holds the previous shader.
+    ShaderContent output;
+    output.reserve(100);
+    output.resize(100);
+    memset(output.data(), 'X', output.size());
+
+    EXPECT_FALSE(getShader(makeGlslChunk(100), output))
+            << "VULNERABILITY: " << (100 - 4) << " stale bytes accepted as shader source!";
+}
+
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     const int rv = RUN_ALL_TESTS();

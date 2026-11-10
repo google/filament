@@ -19,6 +19,8 @@
 #include "PerformanceCounters.h"
 
 #include "details/Engine.h"
+#include "details/Scene.h"
+#include "details/View.h"
 
 #include <filament/Box.h>
 #include <filament/ColorGrading.h>
@@ -1378,5 +1380,319 @@ BENCHMARK_F(TransformManagerFixture, defragmentSmartCursorDeepReparent)(benchmar
 
     scene.teardown(em, tcm);
 }
+
+BENCHMARK_F(TransformManagerFixture, createDestroyDefault)(benchmark::State& state) {
+    constexpr size_t COUNT = 1024;
+    std::vector<Entity> entities(COUNT);
+    em->create(COUNT, entities.data());
+
+    // Pre-warm capacities
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->create(entities[i]);
+    }
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->destroy(entities[i]);
+    }
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            for (size_t i = 0; i < COUNT; ++i) {
+                tcm->create(entities[i]);
+            }
+            for (size_t i = 0; i < COUNT; ++i) {
+                tcm->destroy(entities[i]);
+            }
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * COUNT);
+    }
+
+    em->destroy(COUNT, entities.data());
+}
+
+BENCHMARK_F(TransformManagerFixture, createDestroyMat4f)(benchmark::State& state) {
+    constexpr size_t COUNT = 1024;
+    std::vector<Entity> entities(COUNT);
+    em->create(COUNT, entities.data());
+    mat4f const local = mat4f::translation(float3{ 1.0f, 2.0f, 3.0f });
+
+    // Pre-warm capacities
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->create(entities[i], {}, local);
+    }
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->destroy(entities[i]);
+    }
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            for (size_t i = 0; i < COUNT; ++i) {
+                tcm->create(entities[i], {}, local);
+            }
+            for (size_t i = 0; i < COUNT; ++i) {
+                tcm->destroy(entities[i]);
+            }
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * COUNT);
+    }
+
+    em->destroy(COUNT, entities.data());
+}
+
+BENCHMARK_F(TransformManagerFixture, createDestroyMat4Accurate)(benchmark::State& state) {
+    tcm->setAccurateTranslationsEnabled(true);
+    constexpr size_t COUNT = 1024;
+    std::vector<Entity> entities(COUNT);
+    em->create(COUNT, entities.data());
+    mat4 const local = mat4::translation(double3{ 100000.125, -200000.25, 300000.5 });
+
+    // Pre-warm capacities
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->create(entities[i], {}, local);
+    }
+    for (size_t i = 0; i < COUNT; ++i) {
+        tcm->destroy(entities[i]);
+    }
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            for (size_t i = 0; i < COUNT; ++i) {
+                tcm->create(entities[i], {}, local);
+            }
+            for (size_t i = 0; i < COUNT; ++i) {
+                tcm->destroy(entities[i]);
+            }
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * COUNT);
+    }
+
+    em->destroy(COUNT, entities.data());
+}
+
+// -------------------------------------------------------------------------------------------------
+// SoaCache & SceneCache Benchmarks
+// -------------------------------------------------------------------------------------------------
+
+static void BM_SoaCache_GetIndex_Sequential(benchmark::State& state) {
+    Engine* engine = Engine::Builder().backend(Engine::Backend::NOOP).build();
+    EntityManager& em = engine->getEntityManager();
+    FScene::SceneCacheData::RenderableCache cache;
+
+    size_t const count = state.range(0);
+    std::vector<Entity> entities(count);
+    em.create(count, entities.data());
+    for (size_t i = 0; i < count; ++i) {
+        auto const [idx, _] = cache.acquire(entities[i], double3{ double(i), 0.0, 0.0 });
+        cache.getSoA().elementAt<FScene::RENDERABLE_ENTITY>(idx) = entities[i];
+    }
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            for (size_t i = 0; i < count; ++i) {
+                uint32_t const idx = cache.getIndex(entities[i]);
+                benchmark::DoNotOptimize(idx);
+            }
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * count);
+    }
+
+    em.destroy(count, entities.data());
+    em.advanceEpoch();
+    downcast(engine)->gc();
+    em.reclaimSafeEpochs();
+    Engine::destroy(&engine);
+}
+BENCHMARK(BM_SoaCache_GetIndex_Sequential)->Arg(1024)->Arg(8192);
+
+static void BM_SoaCache_GetIndex_Random(benchmark::State& state) {
+    Engine* engine = Engine::Builder().backend(Engine::Backend::NOOP).build();
+    EntityManager& em = engine->getEntityManager();
+    FScene::SceneCacheData::RenderableCache cache;
+
+    size_t const count = state.range(0);
+    std::vector<Entity> entities(count);
+    em.create(count, entities.data());
+    for (size_t i = 0; i < count; ++i) {
+        auto const [idx, _] = cache.acquire(entities[i], double3{ double(i), 0.0, 0.0 });
+        cache.getSoA().elementAt<FScene::RENDERABLE_ENTITY>(idx) = entities[i];
+    }
+
+    std::vector<Entity> queries = entities;
+    std::default_random_engine rng(42);
+    std::shuffle(queries.begin(), queries.end(), rng);
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            for (size_t i = 0; i < count; ++i) {
+                uint32_t const idx = cache.getIndex(queries[i]);
+                benchmark::DoNotOptimize(idx);
+            }
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * count);
+    }
+
+    em.destroy(count, entities.data());
+    em.advanceEpoch();
+    downcast(engine)->gc();
+    em.reclaimSafeEpochs();
+    Engine::destroy(&engine);
+}
+BENCHMARK(BM_SoaCache_GetIndex_Random)->Arg(1024)->Arg(8192);
+
+static void BM_SoaCache_AcquireExisting(benchmark::State& state) {
+    Engine* engine = Engine::Builder().backend(Engine::Backend::NOOP).build();
+    EntityManager& em = engine->getEntityManager();
+    FScene::SceneCacheData::RenderableCache cache;
+
+    size_t const count = state.range(0);
+    std::vector<Entity> entities(count);
+    em.create(count, entities.data());
+    for (size_t i = 0; i < count; ++i) {
+        auto const [idx, _] = cache.acquire(entities[i], double3{ double(i), 0.0, 0.0 });
+        cache.getSoA().elementAt<FScene::RENDERABLE_ENTITY>(idx) = entities[i];
+    }
+
+    double3 const translation{ 1.0, 2.0, 3.0 };
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            for (size_t i = 0; i < count; ++i) {
+                auto const res = cache.acquire(entities[i], translation);
+                benchmark::DoNotOptimize(res);
+            }
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * count);
+    }
+
+    em.destroy(count, entities.data());
+    em.advanceEpoch();
+    downcast(engine)->gc();
+    em.reclaimSafeEpochs();
+    Engine::destroy(&engine);
+}
+BENCHMARK(BM_SoaCache_AcquireExisting)->Arg(1024)->Arg(8192);
+
+static void BM_SoaCache_AcquireAndRemoveSwapPop(benchmark::State& state) {
+    Engine* engine = Engine::Builder().backend(Engine::Backend::NOOP).build();
+    EntityManager& em = engine->getEntityManager();
+    FScene::SceneCacheData::RenderableCache cache;
+
+    size_t const count = state.range(0);
+    std::vector<Entity> entities(count);
+    em.create(count, entities.data());
+
+    // Pre-warm SoA capacity
+    for (size_t i = 0; i < count; ++i) {
+        auto const [idx, _] = cache.acquire(entities[i], double3{ double(i), 0.0, 0.0 });
+        cache.getSoA().elementAt<FScene::RENDERABLE_ENTITY>(idx) = entities[i];
+    }
+    for (size_t i = 0; i < count; ++i) {
+        cache.remove(entities[i]);
+    }
+
+    double3 const translation{ 1.0, 2.0, 3.0 };
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            for (size_t i = 0; i < count; ++i) {
+                auto const [idx, _] = cache.acquire(entities[i], translation);
+                cache.getSoA().elementAt<FScene::RENDERABLE_ENTITY>(idx) = entities[i];
+            }
+            for (size_t i = 0; i < count; ++i) {
+                cache.remove(entities[i]);
+            }
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * count);
+    }
+
+    em.destroy(count, entities.data());
+    em.advanceEpoch();
+    downcast(engine)->gc();
+    em.reclaimSafeEpochs();
+    Engine::destroy(&engine);
+}
+BENCHMARK(BM_SoaCache_AcquireAndRemoveSwapPop)->Arg(1024)->Arg(8192);
+
+static void BM_SceneCache_ProcessDeferredUpdates_DirtyRenderables(benchmark::State& state) {
+    Engine* engine = Engine::Builder().backend(Engine::Backend::NOOP).build();
+    EntityManager& em = engine->getEntityManager();
+    TransformManager& tcm = engine->getTransformManager();
+    Scene* scene = engine->createScene();
+    View* view = engine->createView();
+    view->setScene(scene);
+
+    constexpr size_t TOTAL_COUNT = 4096;
+    size_t const dirtyCount = state.range(0);
+
+    std::vector<Entity> entities(TOTAL_COUNT);
+    std::vector<TransformManager::Instance> tcmInstances(TOTAL_COUNT);
+    em.create(TOTAL_COUNT, entities.data());
+    for (size_t i = 0; i < TOTAL_COUNT; ++i) {
+        tcm.create(entities[i], {}, mat4f::translation(float3{ float(i), 0.0f, 0.0f }));
+        tcmInstances[i] = tcm.getInstance(entities[i]);
+        RenderableManager::Builder(1)
+                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
+                .build(*engine, entities[i]);
+        scene->addEntity(entities[i]);
+    }
+
+    FScene* const fscene = downcast(scene);
+    FScene::SceneCacheData& cache = *downcast(view)->getSceneCache();
+    mat3 const worldRotation{};
+    // Initial full rebuild. processDeferredUpdates() clears dirtyEntities, hasEvictedEntities
+    // and needsFullUpdate itself on return.
+    fscene->processDeferredUpdates(worldRotation, false, cache);
+    cache.commitMovedRenderables();
+    // Pretend motion vectors are active so changed transforms go through the moved /
+    // commitMovedRenderables() path, as they do per frame in FView::prepare().
+    cache.motionVectors.hasHistory = true;
+
+    mat4f const matA = mat4f::translation(float3{ 1.0f, 2.0f, 3.0f });
+    mat4f const matB = mat4f::translation(float3{ 4.0f, 5.0f, 6.0f });
+    bool toggle = false;
+
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            toggle = !toggle;
+            mat4f const& m = toggle ? matA : matB;
+            for (size_t i = 0; i < dirtyCount; ++i) {
+                tcm.setTransform(tcmInstances[i], m);
+            }
+            fscene->processDeferredUpdates(worldRotation, false, cache);
+            cache.commitMovedRenderables();
+            benchmark::ClobberMemory();
+        }
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * dirtyCount);
+    }
+
+    engine->destroy(view);
+    engine->destroy(scene);
+    for (Entity const e : entities) {
+        engine->destroy(e);
+    }
+    em.destroy(TOTAL_COUNT, entities.data());
+    em.advanceEpoch();
+    downcast(engine)->gc();
+    em.reclaimSafeEpochs();
+    Engine::destroy(&engine);
+}
+BENCHMARK(BM_SceneCache_ProcessDeferredUpdates_DirtyRenderables)->Arg(256)->Arg(2048);
 
 

@@ -57,6 +57,7 @@
 #include "materials/flare/flare.h"
 #include "materials/fog/fog.h"
 #include "materials/fsr/fsr.h"
+#include "materials/motionVectors/motionVectors.h"
 #include "materials/sgsr/sgsr.h"
 #include "materials/ssao/ssao.h"
 
@@ -175,6 +176,12 @@ void PostProcessManager::PostProcessMaterial::loadMaterial(FEngine& engine) cons
     //       domain, load both OPAQUE and TRANSPARENT variants here.
     auto builder = Material::Builder();
     builder.package(mData, mSize);
+    // PostProcessMaterials are lazily loaded on first use during FrameGraph execution, after
+    // UboManager::beginFrame() has already run in FRenderer::beginFrame(). Any SURFACE-domain
+    // material here (e.g. clearDepth, fog) must disable UBO batching so its default instance can
+    // commit its descriptor set immediately without waiting for the next frame's UboManager slot
+    // allocation.
+    builder.uboBatching(Material::UboBatchingMode::DISABLED);
     for (auto const& constant: mConstants) {
         std::visit([&](auto&& arg) {
             builder.constant(constant.name.data(), constant.name.size(), arg);
@@ -322,11 +329,13 @@ void PostProcessManager::init() noexcept {
     auto& engine = mEngine;
     DriverApi& driver = engine.getDriverApi();
 
-    //FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     //debugRegistry.registerProperty("d.ssao.sampleCount", &engine.debug.ssao.sampleCount);
     //debugRegistry.registerProperty("d.ssao.spiralTurns", &engine.debug.ssao.spiralTurns);
     //debugRegistry.registerProperty("d.ssao.kernelSize", &engine.debug.ssao.kernelSize);
     //debugRegistry.registerProperty("d.ssao.stddev", &engine.debug.ssao.stddev);
+    FDebugRegistry& debugRegistry = engine.getDebugRegistry();
+    debugRegistry.registerProperty("d.taa.visualize_disocclusion",
+            &engine.debug.taa.visualize_disocclusion);
 
     mFullScreenQuadRph = engine.getFullScreenRenderPrimitive();
     mFullScreenQuadVbih = engine.getFullScreenVertexBuffer()->getVertexBufferInfoHandle();
@@ -361,6 +370,7 @@ void PostProcessManager::init() noexcept {
     mSsrPassDescriptorSet.init(engine);
     mPostProcessDescriptorSet.init(engine);
     mStructureDescriptorSet.init(engine);
+    mMotionVectorsDescriptorSet.init(engine);
 
     mWorkaroundSplitEasu =
             driver.isWorkaroundNeeded(Workaround::SPLIT_EASU);
@@ -414,6 +424,9 @@ void PostProcessManager::init() noexcept {
         for (auto const& info: getSsaoMaterialList()) {
             registerPostProcessMaterial(info.name, info);
         }
+        for (auto const& info: getMotionVectorsMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
     }
 
     if (engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1)) {
@@ -453,25 +466,26 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
     mPostProcessDescriptorSet.terminate(engine.getDescriptorSetLayoutFactory(), driver);
     mSsrPassDescriptorSet.terminate(driver);
     mStructureDescriptorSet.terminate(driver);
+    mMotionVectorsDescriptorSet.terminate(driver);
 }
 
-Handle<HwTexture> PostProcessManager::getOneTexture() const {
+Handle<HwTexture> PostProcessManager::getOneTexture() const noexcept {
     return mEngine.getOneTexture();
 }
 
-Handle<HwTexture> PostProcessManager::getZeroTexture() const {
+Handle<HwTexture> PostProcessManager::getZeroTexture() const noexcept {
     return mEngine.getZeroTexture();
 }
 
-Handle<HwTexture> PostProcessManager::getOneTextureArray() const {
+Handle<HwTexture> PostProcessManager::getOneTextureArray() const noexcept {
     return mEngine.getOneTextureArray();
 }
 
-Handle<HwTexture> PostProcessManager::getZeroTextureArray() const {
+Handle<HwTexture> PostProcessManager::getZeroTextureArray() const noexcept {
     return mEngine.getZeroTextureArray();
 }
 
-void PostProcessManager::resetForRender() {
+void PostProcessManager::resetForRender() noexcept {
     mMaterialInstanceManager.reset();
 }
 
@@ -738,6 +752,136 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::transparentPicking(FrameGrap
                 });
 
     return pickingRenderPass->picking;
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::motionVectors(FrameGraph& fg,
+        RenderPassBuilder const& passBuilder, uint8_t const renderFlags,
+        FrameGraphId<FrameGraphTexture> const depth,
+        filament::Viewport const& svp, filament::Viewport const& xvp) noexcept {
+
+    // A depth pass over the visible renderables, with the color pass's camera (jittered),
+    // resolution and coverage, in which the renderables that moved also write their motion
+    // vectors (MOT variant). When `depth` is provided (the color pass's depth buffer), it's
+    // attached read-only and only the renderables that moved are drawn; otherwise (e.g. with
+    // MSAA), a transient depth buffer is allocated and static renderables are drawn as occluders.
+    struct MotionVectorsPassData {
+        FrameGraphId<FrameGraphTexture> motionVectors;
+        FrameGraphId<FrameGraphTexture> depth;
+    };
+
+    auto const& motionVectorsPass = fg.addPass<MotionVectorsPassData>(
+            "Object Motion Vectors Pass",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                data.motionVectors = builder.createTexture("Object Motion Vectors", {
+                        .width = svp.width, .height = svp.height,
+                        .format = TextureFormat::RG16F });
+
+                data.motionVectors = builder.write(data.motionVectors,
+                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+
+                TargetBufferFlags clearFlags = TargetBufferFlags::COLOR0;
+                if (depth) {
+                    data.depth = builder.read(depth,
+                            FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+                } else {
+                    // Same format as the structure pass. This depth buffer is never read, so it's
+                    // discarded at the start and the end of the pass.
+                    data.depth = builder.createTexture("Object Motion Vectors Depth", {
+                            .width = svp.width, .height = svp.height,
+                            .format = TextureFormat::DEPTH32F });
+                    data.depth = builder.write(data.depth,
+                            FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+                    clearFlags |= TargetBufferFlags::DEPTH;
+                }
+
+                builder.declareRenderPass("Object Motion Vectors Target", {
+                        .attachments = { .color = { data.motionVectors }, .depth = data.depth },
+                        .clearFlags = clearFlags
+                });
+            },
+            [=, this, passBuilder = passBuilder](FrameGraphResources const& resources,
+                    auto const&, DriverApi& driver) mutable {
+                // bind the per-view descriptorSet that is used for the motion vectors pass
+                getMotionVectorsDescriptorSet().bind(driver);
+                bindPerRenderableDescriptorSet(driver);
+
+                passBuilder.renderFlags(renderFlags);
+                passBuilder.variant(Variant{ Variant::DEPTH_VARIANT });
+                auto commandTypeFlags = passBuilder.getCommandTypeFlags() |
+                        RenderPass::CommandTypeFlags::OBJECT_MOTION_VECTORS;
+                if (depth) {
+                    assert_invariant(!any(commandTypeFlags &
+                            RenderPass::CommandTypeFlags::MOTION_VECTORS_CHANNEL_DEPTH_CLEAR));
+                    commandTypeFlags |= RenderPass::CommandTypeFlags::MOTION_VECTORS_REUSE_DEPTH;
+                }
+                passBuilder.commandTypeFlags(commandTypeFlags);
+
+                RenderPass pass{ passBuilder.build(mEngine, driver) };
+                // same scissor as the color pass, which always renders into an intermediate
+                // buffer when motion vectors are active
+                pass.setScissorViewport(xvp);
+                pass.finalize(mEngine, driver);
+                auto const out = resources.getRenderPassInfo();
+                driver.beginRenderPass(out.target, out.params);
+                pass.getExecutor().execute(mEngine, driver);
+                driver.endRenderPass();
+                unbindAllDescriptorSets(driver);
+            });
+
+    return motionVectorsPass->motionVectors;
+}
+
+void PostProcessManager::readbackMotionVectors(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> const input, bool const hasData,
+        filament::Viewport const& xvp, Handle<HwTexture> const output,
+        uint2 const outputSize) noexcept {
+
+    struct ReadbackPassData {
+        FrameGraphId<FrameGraphTexture> input;
+        FrameGraphId<FrameGraphTexture> output;
+    };
+
+    FrameGraphId<FrameGraphTexture> target = fg.import("Motion Vectors Readback", {
+            .width = outputSize.x, .height = outputSize.y, .format = TextureFormat::RG16F },
+            FrameGraphTexture::Usage::COLOR_ATTACHMENT | FrameGraphTexture::Usage::BLIT_DST,
+            FrameGraphTexture{ .handle = output });
+
+    if (hasData) {
+        // Blit origins are bottom-left on all backends, like viewports.
+        uint2 const origin{ uint32_t(xvp.left), uint32_t(xvp.bottom) };
+        uint2 const size = min(uint2{ xvp.width, xvp.height }, outputSize);
+        auto const& readbackPass = fg.addPass<ReadbackPassData>("Motion Vectors Readback",
+                [&](FrameGraph::Builder& builder, auto& data) {
+                    data.input = builder.read(input, FrameGraphTexture::Usage::BLIT_SRC);
+                    data.output = builder.write(target, FrameGraphTexture::Usage::BLIT_DST);
+                },
+                [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                    driver.blit(resources.getTexture(data.output), 0, 0, { 0, 0 },
+                            resources.getTexture(data.input), 0, 0, origin, size);
+                });
+        target = readbackPass->output;
+    } else {
+        // The zero-texture substitute can't be blitted (format, size and usage differ), and
+        // the motion vectors it stands for are all zero.
+        auto const& readbackPass = fg.addPass<ReadbackPassData>("Motion Vectors Readback (Clear)",
+                [&](FrameGraph::Builder& builder, auto& data) {
+                    data.output = builder.write(target,
+                            FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                    builder.declareRenderPass("Motion Vectors Readback Target", {
+                            .attachments = { .color = { data.output } },
+                            .clearFlags = TargetBufferFlags::COLOR0 });
+                },
+                [](FrameGraphResources const& resources, auto const&, DriverApi& driver) {
+                    auto const out = resources.getRenderPassInfo();
+                    driver.beginRenderPass(out.target, out.params);
+                    driver.endRenderPass();
+                });
+        target = readbackPass->output;
+    }
+
+    // The texture is read outside the FrameGraph. This keeps the pass (and the motion vectors
+    // pass it reads from) from being culled, and its output from being discarded.
+    fg.present(target);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -2918,6 +3062,39 @@ void PostProcessManager::TaaJitterCamera(
     current.projection = inoutCameraInfo->projection * inoutCameraInfo->getUserViewMatrix();
     current.frameId = previous.frameId + 1;
 
+    // motionAdaptiveHistory's global hold-off (motionHoldFrames): did the camera itself move
+    // this frame? current.projection is computed above, before jitter is folded in below, so a
+    // truly static camera reproduces a bit-identical projection*view matrix every frame -- any
+    // real difference here is actual camera motion, not jitter. On a real difference (or when
+    // history is empty/reset, so a freshly-seeded single-sample history converges at full rate
+    // before relaxation begins), (re)start the countdown at motionHoldFrames; otherwise let it
+    // decay by one frame, floored at 0.
+    //
+    // motionHoldFrames' own value is not arbitrary -- it is sized to outlast history's
+    // exponential-moving-average recovery from a disocclusion, (1-feedback)^n of the original
+    // error after n frames, which bounds recovery to n = ln(threshold)/ln(1-alpha) frames
+    // (~10.8 at feedback's default 0.12 and taa_harness's own 25% recovery threshold; up to
+    // ~37.8 at the fully-relaxed rate this hold exists to avoid skipping). See
+    // TemporalAntiAliasingOptions::motionHoldFrames in Options.h for the full derivation and
+    // measured numbers -- it changes with `feedback`, so re-derive rather than assume it holds
+    // if that ever moves off its default.
+    constexpr double kCameraStaticThreshold = 1e-6;
+    bool cameraMoved = !previous.color.handle;
+    if (UTILS_LIKELY(!cameraMoved)) {
+        double const* const a = current.projection.asArray();
+        double const* const b = previous.projection.asArray();
+        #pragma nounroll
+        for (size_t i = 0; i < 16; i++) {
+            if (std::abs(a[i] - b[i]) > kCameraStaticThreshold) {
+                cameraMoved = true;
+                break;
+            }
+        }
+    }
+    current.motionHoldRemaining = cameraMoved
+            ? taaOptions.motionHoldFrames
+            : std::max(0.0f, previous.motionHoldRemaining - 1.0f);
+
     auto jitterPosition = [pattern = taaOptions.jitterPattern](size_t const frameIndex) -> float2 {
         using JitterPattern = TemporalAntiAliasingOptions::JitterPattern;
         switch (pattern) {
@@ -2960,7 +3137,7 @@ void PostProcessManager::TaaJitterCamera(
 }
 
 void PostProcessManager::configureTemporalAntiAliasingMaterial(backend::DriverApi& driver,
-        TemporalAntiAliasingOptions const& taaOptions) noexcept {
+        TemporalAntiAliasingOptions const& taaOptions, bool const hasMotionVectors) noexcept {
 
     FMaterial* const ma = getPostProcessMaterial("taa").getMaterial(mEngine);
     ma->getPrograms().setConstants({
@@ -2973,7 +3150,12 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(backend::DriverAp
         { "preventFlickering", taaOptions.preventFlickering },
         { "boxType", int32_t(taaOptions.boxType) },
         { "boxClipping", int32_t(taaOptions.boxClipping) },
-        { "varianceGamma", taaOptions.varianceGamma },
+        { "motionAdaptiveHistory", taaOptions.motionAdaptiveHistory },
+        { "depthDisocclusion", taaOptions.depthDisocclusion },
+        { "disocclusionHistoryNeighborhood", taaOptions.disocclusionHistoryNeighborhood },
+        { "exactLanczosSupport", taaOptions.exactLanczosSupport },
+        { "debugVisualizeDisocclusion", mEngine.debug.taa.visualize_disocclusion },
+        { "hasMotionVectors", hasMotionVectors },
     });
 }
 
@@ -3025,6 +3207,7 @@ FMaterialInstance* PostProcessManager::configureColorGradingMaterial(backend::Dr
 FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,
         FrameGraphId<FrameGraphTexture> const depth,
+        FrameGraphId<FrameGraphTexture> const objectMotionVectors,
         filament::Viewport const& xvp,
         filament::Viewport const& vp,
         FrameHistory& frameHistory,
@@ -3036,11 +3219,34 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
     auto const& previous = frameHistory.getPrevious().*pTaa;
     auto& current = frameHistory.getCurrent().*pTaa;
 
+    // TaaJitterCamera (above) only sees camera motion; if objectMotionVectors is non-null a
+    // visible renderable moved this frame, so also hold motionAdaptiveHistory at full strength
+    // during object motion and for motionHoldFrames after it stops (covering background pixels
+    // newly uncovered by the moving object, which have v == 0).
+    if (objectMotionVectors) {
+        current.motionHoldRemaining = taaOptions.motionHoldFrames;
+    }
+
     // if we don't have a history yet, just use the current color buffer as history
     FrameGraphId<FrameGraphTexture> colorHistory = input;
     if (UTILS_LIKELY(previous.color.handle)) {
         colorHistory = fg.import("TAA history", previous.desc,
                 FrameGraphTexture::Usage::SAMPLEABLE, previous.color);
+    }
+
+    // Same fallback for the depth history: with no history yet -- either the first frame, or
+    // the first frame after depthDisocclusion was turned on -- comparing the current depth
+    // against itself (below, in the material) is a no-op disocclusion test, which is what we
+    // want when there's nothing to disocclude from.
+    //
+    // Keeping the depth history is only free when it isn't kept: detaching a texture takes it
+    // out of the frame graph's pool, so it can't be recycled and the depth buffer is
+    // effectively double-buffered for as long as this is on. Skip all of it when the feature
+    // is off, which is the default.
+    FrameGraphId<FrameGraphTexture> depthHistory = depth;
+    if (taaOptions.depthDisocclusion && UTILS_LIKELY(previous.depth.handle)) {
+        depthHistory = fg.import("TAA depth history", previous.depthDesc,
+                FrameGraphTexture::Usage::SAMPLEABLE, previous.depth);
     }
 
     mat4 const& historyProjection = previous.color.handle ?
@@ -3049,7 +3255,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
     struct TAAData {
         FrameGraphId<FrameGraphTexture> color;
         FrameGraphId<FrameGraphTexture> depth;
+        FrameGraphId<FrameGraphTexture> objectMotionVectors;
         FrameGraphId<FrameGraphTexture> history;
+        FrameGraphId<FrameGraphTexture> depthHistory;
         FrameGraphId<FrameGraphTexture> output;
         FrameGraphId<FrameGraphTexture> tonemappedOutput;
     };
@@ -3062,7 +3270,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 }
                 data.color = builder.sample(input);
                 data.depth = builder.sample(depth);
+                // The object motion vectors are built against the previous frame's projection,
+                // which is historyProjection only when we have a history; otherwise the zero
+                // texture is used (which also lets the motion vectors pass be culled).
+                if (objectMotionVectors && previous.color.handle) {
+                    data.objectMotionVectors = builder.sample(objectMotionVectors);
+                }
                 data.history = builder.sample(colorHistory);
+                data.depthHistory = builder.sample(depthHistory);
                 data.output = builder.createTexture("TAA output", desc);
                 data.output = builder.write(data.output);
                 if (colorGradingConfig.asSubpass) {
@@ -3095,6 +3310,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 auto const color = resources.getTexture(data.color);
                 auto const depth = resources.getTexture(data.depth);
                 auto const history = resources.getTexture(data.history);
+                auto const depthHistory = resources.getTexture(data.depthHistory);
+
+                // The sampler is part of the material even when hasMotionVectors is false, so
+                // it's always set. The zero texture means "no object motion".
+                auto const objectMotionVectorsTexture = data.objectMotionVectors ?
+                        resources.getTexture(data.objectMotionVectors) : getZeroTexture();
 
                 auto const& colorDesc = resources.getDescriptor(data.color);
                 auto const& historyDesc = resources.getDescriptor(data.history);
@@ -3109,10 +3330,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 FMaterialInstance* mi = getMaterialInstance(driver, ma, variant);
                 mi->setParameter("color",  color, SamplerParams{});  // nearest
                 mi->setParameter("depth",  depth, SamplerParams{});  // nearest
+                mi->setParameter("objectMotionVectors",
+                        objectMotionVectorsTexture, SamplerParams{});  // nearest
                 mi->setParameter("history", history, SamplerParams{
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR
                 });
+                mi->setParameter("depthHistory", depthHistory, SamplerParams{});  // nearest
                 mi->setParameter("alpha", taaOptions.feedback);
 
                 // jitter is negated here because the material wants the sample jitter offset
@@ -3139,6 +3363,47 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 mi->setParameter("historyResolution",
                         float4{ historyDesc.width, historyDesc.height,
                         1.0f / historyDesc.width, 1.0f / historyDesc.height });
+
+                mi->setParameter("motionDeltaThreshold", taaOptions.motionDeltaThreshold);
+                mi->setParameter("minBoxStrength", taaOptions.minBoxStrength);
+                mi->setParameter("minAlphaStrength", taaOptions.minAlphaStrength);
+                mi->setParameter("skyDepthThreshold", taaOptions.skyDepthThreshold);
+                // Ramp: 1.0 right after the camera stopped, 0.0 once the hold has fully expired.
+                float const motionHoldAmount = taaOptions.motionHoldFrames > 0.0f
+                        ? std::clamp(current.motionHoldRemaining / taaOptions.motionHoldFrames,
+                                0.0f, 1.0f)
+                        : 0.0f;
+                mi->setParameter("motionHoldAmount", motionHoldAmount);
+                mi->setParameter("disocclusionDepthThreshold", taaOptions.disocclusionDepthThreshold);
+                // Same sign convention as "jitter" above. With no depth history yet we compare
+                // the current depth buffer against itself, so the delta must be zero.
+                mi->setParameter("previousJitter",
+                        -(previous.depth.handle ? previous.jitter : current.jitter));
+                // AABB_VARIANCE's mean/stdDev statistic is computed in the shader from 9 RENDER-
+                // texel samples around p, but under upscaling p is shared by every output pixel
+                // in the same render texel (see p's own comment in taa.mat) -- so without this
+                // scaling, every one of those output pixels would get clamped to the same
+                // render-texel-granularity statistic, discarding whatever finer, output-
+                // resolution detail history had built up between them via temporal jitter
+                // accumulation. Same "fixed support in OUTPUT-pixel space" question the
+                // reconstruction filter answers by scaling its own kernel argument by this same
+                // taaOptions.upscaling factor (see lanczos2()'s scale parameter) -- the analogous
+                // fix here is widening the statistic's tolerance by that factor, since a render-
+                // texel-granularity stdDev systematically understates the plausible variation at
+                // output resolution by roughly that much. Scaled once here rather than per pixel
+                // in the shader, since it's the same value for the whole frame.
+                //
+                // Measured (taa_harness, DamagedHelmet.glb, 2:1, static -- i.e. no motion to
+                // mask it): unscaled, sharpness_mean drops from AABB's own 0.96 to 0.81 and
+                // edge_rmse_mean rises 44% -- visually, a loss of resolution, gone at 1:1 (where
+                // this scale factor is 1, a no-op) or with plain AABB (no statistic to mis-
+                // scale). Scaled, sharpness_mean recovers to 0.96, matching AABB almost exactly,
+                // while the camera regime (real motion) keeps most of VARIANCE's intended
+                // benefit over AABB (edge_rmse_mean 0.069 vs AABB's 0.072 at 2:1; unscaled had
+                // over-corrected that to 0.062, tighter than intended).
+                float const varianceGamma = taaOptions.varianceGamma *
+                        (taaOptions.upscaling > 1.0f ? taaOptions.upscaling : 1.0f);
+                mi->setParameter("varianceGamma", varianceGamma);
 
                 mi->commit(driver, getUboManager());
                 mi->use(driver);
@@ -3167,18 +3432,34 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 colorGradingConfig.translucent ? RcasMode::ALPHA_PASSTHROUGH : RcasMode::OPAQUE);
     }
 
-    struct ExportColorHistoryData {
+    struct ExportHistoryData {
         FrameGraphId<FrameGraphTexture> color;
+        FrameGraphId<FrameGraphTexture> depth;
     };
-    fg.addPass<ExportColorHistoryData>("Export TAA history",
+    fg.addPass<ExportHistoryData>("Export TAA history",
             [&](FrameGraph::Builder& builder, auto& data) {
                 // We need to use sideEffect here to ensure this pass won't be culled.
                 // The "output" of this pass is going to be used during the next frame as
                 // an "import".
                 builder.sideEffect();
                 data.color = builder.sample(history); // FIXME: an access must be declared for detach(), why?
+                // Export this frame's depth the same way, so next frame's disocclusion test (see the taa
+                // material) has something to compare its reprojected depth against. Note this is the
+                // current frame's own depth buffer (the "depth" parameter above, at render resolution),
+                // not the TAA output -- unlike color, there's no post-TAA "depth" to export.
+                //
+                // Only while depthDisocclusion is on: the detach() below costs a depth buffer's
+                // worth of memory that the frame graph can no longer recycle. When the feature is
+                // turned off, current.depth stays null and the last exported texture is released
+                // as it rolls off the history.
+                if (taaOptions.depthDisocclusion) {
+                    data.depth = builder.sample(depth);
+                }
             }, [&current](FrameGraphResources const& resources, auto const& data) {
                 resources.detach(data.color, &current.color, &current.desc);
+                if (data.depth) {
+                    resources.detach(data.depth, &current.depth, &current.depthDesc);
+                }
             });
 
     return input;
@@ -4004,6 +4285,108 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugDisplayShadowTexture(
         input = shadomapDebugPass->color;
     }
     return input;
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::debugDisplayMotionVectors(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> const input,
+        FrameGraphId<FrameGraphTexture> const depth,
+        FrameGraphId<FrameGraphTexture> const objectMotionVectors,
+        filament::Viewport const& svp, filament::Viewport const& xvp,
+        FrameHistory const& frameHistory, bool const objectOnly,
+        float const scale) noexcept {
+    if (!objectMotionVectors) {
+        return input;
+    }
+
+    auto const& previous = frameHistory.getPrevious().motionVectors;
+    auto const& current = frameHistory.getCurrent().motionVectors;
+    assert_invariant(current.valid);
+
+    // Without a previous render, the motion vectors are all zero (objectMotionVectors is the
+    // imported zero texture).
+    bool const cameraMotion = !objectOnly && previous.valid;
+
+    mat4f reprojection;
+    float2 const k = previous.valid ? current.clipTransform.xy / previous.clipTransform.xy
+                                    : float2{ 1.0f };
+    if (cameraMotion) {
+        // The padding and guard band transform of a render (ts, see FRenderer::renderJob()), as a
+        // clip-space matrix.
+        auto const clipSpaceTransform = [](float4 const& clipTransform) {
+            mat4 ts = mat4::scaling(double3{ clipTransform.x, clipTransform.y, 1.0 });
+            ts[3].x = clipTransform.z;
+            ts[3].y = clipTransform.w;
+            return ts;
+        };
+
+        // R re-expresses the previous position with this render's padding. It's the identity
+        // unless the dynamic resolution changed ts. The object motion vectors are UV differences,
+        // so only the scale of R, k, applies to them.
+        mat4 const R = clipSpaceTransform(current.clipTransform) *
+                inverse(clipSpaceTransform(previous.clipTransform));
+
+        // Like TAA's, this reprojects a pixel's normalized render-target UV and depth to the clip
+        // space of the previous render, assuming it's static (see taa()).
+        constexpr mat4f normalizedToClip{ mat4f::row_major_init{
+                2, 0, 0, -1,
+                0, 2, 0, -1,
+                0, 0, 1,  0,
+                0, 0, 0,  1
+        }};
+        reprojection = mat4f{ R * previous.projection * inverse(current.projection) } *
+                normalizedToClip;
+    }
+
+    // `input` covers the viewport, which is the xvp region of the depth and motion vectors
+    // buffers. This maps one to the other, in normalized coordinates with a bottom-left origin,
+    // like TAA's colorViewport.
+    float4 const viewport{
+            float(xvp.left) / float(svp.width), float(xvp.bottom) / float(svp.height),
+            float(xvp.width) / float(svp.width), float(xvp.height) / float(svp.height) };
+
+    struct DebugMotionVectorsData {
+        FrameGraphId<FrameGraphTexture> color;
+        FrameGraphId<FrameGraphTexture> depth;
+        FrameGraphId<FrameGraphTexture> objectMotionVectors;
+        FrameGraphId<FrameGraphTexture> output;
+    };
+
+    auto const& debugPass = fg.addPass<DebugMotionVectorsData>("Motion Vectors Debug",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                auto const desc = builder.getDescriptor(input);
+                data.color = builder.sample(input);
+                if (cameraMotion) {
+                    data.depth = builder.sample(depth);
+                }
+                data.objectMotionVectors = builder.sample(objectMotionVectors);
+                data.output = builder.createTexture("Motion Vectors Debug", {
+                        .width = desc.width, .height = desc.height, .format = desc.format });
+                data.output = builder.declareRenderPass(data.output);
+            },
+            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                bindPostProcessDescriptorSet(driver);
+                bindPerRenderableDescriptorSet(driver);
+                auto const depthTexture = data.depth ?
+                        resources.getTexture(data.depth) : getZeroTexture();
+                auto const& material = getPostProcessMaterial("debugMotionVectors");
+                FMaterialInstance* const mi = getMaterialInstance(mEngine, driver, material);
+                mi->setParameter("color", resources.getTexture(data.color),
+                        SamplerParams{});   // nearest
+                mi->setParameter("depth", depthTexture,
+                        SamplerParams{});   // nearest
+                mi->setParameter("objectMotionVectors",
+                        resources.getTexture(data.objectMotionVectors),
+                        SamplerParams{});   // nearest
+                mi->setParameter("reprojection", reprojection);
+                mi->setParameter("objectMotionScale", k);
+                mi->setParameter("motionVectorsViewport", viewport);
+                mi->setParameter("scale", scale);
+                mi->setParameter("cameraMotion", cameraMotion);
+                commitAndRenderFullScreenQuad(driver, resources.getRenderPassInfo(), mi);
+                unbindAllDescriptorSets(driver);
+            });
+
+    return debugPass->output;
 }
 
 } // namespace filament

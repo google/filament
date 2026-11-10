@@ -45,6 +45,8 @@ def main():
         (r'option\(SKIP_SPIRV_TOOLS_INSTALL "Skip installation" \$\{SKIP_SPIRV_TOOLS_INSTALL\}\)\n', ""),
         (r'option\(SPIRV_WERROR "Enable error on warning" ON\)',
          r"set(SPIRV_WERROR OFF)"),
+        (r'if\(MSVC AND CMAKE_GENERATOR MATCHES "\^Visual Studio" AND NOT "\$\{CMAKE_CXX_COMPILER_ID\}" MATCHES "Clang"\)',
+         r'if(MSVC AND CMAKE_GENERATOR MATCHES "^Visual Studio" AND NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" AND NOT CCACHE_PROGRAM)'),
         (r"add_subdirectory\(test\)\n", ""),
         (r"add_subdirectory\(examples\)\n", ""),
         (r"^# Build pkg-config file[\s\S]*?^endif\(\)\n", ""),

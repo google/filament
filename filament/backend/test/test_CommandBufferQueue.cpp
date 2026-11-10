@@ -334,4 +334,96 @@ TEST_F(CommandBufferQueueTest, BackendExceptionHandling) {
 }
 #endif
 
+TEST_F(CommandBufferQueueTest, TwoBankPingPongHighWaterMark) {
+    const size_t blockSize = CircularBuffer::getBlockSize();
+    const size_t requiredSize = blockSize * 16;
+    const size_t bufferSize = requiredSize * 3;
+    CommandBufferQueue queue(requiredSize, bufferSize, false);
+    CircularBuffer& cb = queue.getCircularBuffer();
+
+    const size_t slicePayload = CommandBase::align(256);
+    const size_t sliceTotal = slicePayload + sizeof(NoopCommand);
+
+    // 1. Flush 1 in Bank 0 -> switches next write pointer to Bank 1 base.
+    char* const p1 = static_cast<char*>(cb.allocate(slicePayload));
+    memset(p1, 0x11, slicePayload);
+    char* const bank0Base = p1;
+    char* const bank1Base = bank0Base + cb.getBankStride();
+    EXPECT_EQ(0u, cb.getBank(p1));
+    queue.flush();
+
+    // 2. While Flush 1 is still in flight in Bank 0, Flush 2, 3, and 4 must land in Bank 1
+    // packed contiguously from bank1Base.
+    char* const p2 = static_cast<char*>(cb.allocate(slicePayload));
+    memset(p2, 0x22, slicePayload);
+    EXPECT_EQ(bank1Base, p2);
+    queue.flush();
+
+    char* const p3 = static_cast<char*>(cb.allocate(slicePayload));
+    memset(p3, 0x33, slicePayload);
+    EXPECT_EQ(bank1Base + sliceTotal, p3);
+    queue.flush();
+
+    char* const p4 = static_cast<char*>(cb.allocate(slicePayload));
+    memset(p4, 0x44, slicePayload);
+    EXPECT_EQ(bank1Base + 2 * sliceTotal, p4);
+    queue.flush();
+
+    // 3. Consumer pops all 4 buffers, but only releases Buffer 1 (draining Bank 0 while Buffers
+    // 2, 3, and 4 remain in flight in Bank 1).
+    auto batch1 = queue.waitForCommands();
+    ASSERT_EQ(4u, batch1.size());
+    verifyData(batch1[0], slicePayload, 0x11);
+    queue.releaseBuffer(batch1[0]);
+
+    // 4. Flush 5 starts in Bank 1 (at 3 * sliceTotal), and upon flush() sees Bank 0 is now empty,
+    // so it switches back to bank0Base even while Buffers 2, 3, 4, and 5 are in flight in Bank 1!
+    char* const p5 = static_cast<char*>(cb.allocate(slicePayload));
+    memset(p5, 0x55, slicePayload);
+    EXPECT_EQ(bank1Base + 3 * sliceTotal, p5);
+    queue.flush();
+
+    char* const p6 = static_cast<char*>(cb.allocate(slicePayload));
+    memset(p6, 0x66, slicePayload);
+    EXPECT_EQ(bank0Base, p6);
+    queue.flush();
+
+    // Release remaining buffers from batch1 and batch2.
+    verifyData(batch1[1], slicePayload, 0x22);
+    verifyData(batch1[2], slicePayload, 0x33);
+    verifyData(batch1[3], slicePayload, 0x44);
+    queue.releaseBuffer(batch1[1]);
+    queue.releaseBuffer(batch1[2]);
+    queue.releaseBuffer(batch1[3]);
+
+    auto batch2 = queue.waitForCommands();
+    ASSERT_EQ(2u, batch2.size());
+    verifyData(batch2[0], slicePayload, 0x55);
+    verifyData(batch2[1], slicePayload, 0x66);
+    queue.releaseBuffer(batch2[0]);
+    queue.releaseBuffer(batch2[1]);
+
+    // 5. Steady-state ping-pong across 200 flushes: even though 200 * sliceTotal far exceeds
+    // bufferSize, each bank only ever touches up to its peak in-flight watermark!
+    for (int i = 0; i < 200; ++i) {
+        char* const p = static_cast<char*>(cb.allocate(slicePayload));
+        memset(p, static_cast<uint8_t>(i & 0xFF), slicePayload);
+        if (i == 0) {
+            // At the time of Flush 6 (before batch1/batch2 were released), both banks had buffers
+            // in flight, so mTail advanced to bank0Base + sliceTotal.
+            EXPECT_EQ(bank0Base + sliceTotal, p);
+        } else {
+            // Once Flush (i=0) observes Bank 1 is empty, every subsequent flush ping-pongs between
+            // offset 0 of Bank 1 and offset 0 of Bank 0.
+            EXPECT_EQ((i % 2 == 1) ? bank1Base : bank0Base, p);
+        }
+        queue.flush();
+
+        auto buffers = queue.waitForCommands();
+        ASSERT_EQ(1u, buffers.size());
+        verifyData(buffers[0], slicePayload, static_cast<uint8_t>(i & 0xFF));
+        queue.releaseBuffer(buffers[0]);
+    }
+}
+
 } // namespace filament::backend
