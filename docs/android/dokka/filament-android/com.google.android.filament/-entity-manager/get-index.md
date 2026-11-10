@@ -5,11 +5,11 @@
 [main]\
 open fun [getIndex](get-index.md)(e: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
-Use carefully, several entities can have the same index.
+Use carefully, several entities can have the same index across time (never simultaneously while alive or pending EBR reclamation).
 
 #### Return
 
-The entity index.
+The 17-bit entity index.
 
 #### Parameters
 

@@ -19,10 +19,10 @@
 
 #include <camutils/Manipulator.h>
 
-#include <math/scalar.h>
 #include <math/mat3.h>
 #include <math/mat4.h>
 #include <math/quat.h>
+#include <math/scalar.h>
 
 #include <algorithm>
 #include <cmath>
@@ -240,7 +240,7 @@ private:
     FLOAT mScrollWheel = 0.0f;
     FLOAT mScrollPositionNormalized = 0.0f;
     FLOAT mMoveSpeed = 1.0f;
-    vec3 mEyeVelocity;
+    vec3 mEyeVelocity{};
 };
 
 } // namespace camutils
